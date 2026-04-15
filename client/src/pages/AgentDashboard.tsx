@@ -1,190 +1,254 @@
 import React, { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Link, Copy, Check, ExternalLink, Shield, Plus, Search, HelpCircle } from "lucide-react";
-import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Link, Copy, Check, Shield, Plus, Search, BarChart3, Zap } from "lucide-react";
+import { toast } from "sonner";
+import Navbar from "@/components/Navbar";
 
 export default function AgentDashboard() {
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"properties" | "links" | "claim">("properties");
 
-  // Queries
   const { data: myProperties, refetch: refetchProps, isLoading: loadingProps } = trpc.agent.getMyProperties.useQuery();
   const { data: availableProperties, refetch: refetchAvailable, isLoading: loadingAvailable } = trpc.agent.getAvailablePropertiesToClaim.useQuery();
   const { data: stealthLinks, refetch: refetchLinks, isLoading: loadingLinks } = trpc.agent.getStealthLinks.useQuery();
 
-  // Mutations
   const claimMutation = trpc.agent.claimProperty.useMutation({
     onSuccess: () => {
-      toast("Inmueble Captado", { description: "Ahora eres el Captador Oficial." });
-      refetchProps();
-      refetchAvailable();
+      toast.success("Inmueble Captado", { description: "Ahora eres el Captador Oficial. Genera tu enlace blindado." });
+      refetchProps(); refetchAvailable();
     }
   });
 
   const generateLinkMutation = trpc.agent.generateStealthLink.useMutation({
     onSuccess: () => {
-      toast("Enlace generado", { description: "Tu enlace Stealth está listo." });
+      toast.success("Enlace Blindado Generado", { description: "Cópialo y compártelo. El prospecto queda anclado a ti." });
       refetchLinks();
     }
   });
 
   const handleCopy = (token: string) => {
-    const url = `${window.location.origin}/property/${token}`; // We'll map token resolver later
+    const url = `${window.location.origin}/p/${token}`;
     navigator.clipboard.writeText(url);
     setCopiedToken(token);
     setTimeout(() => setCopiedToken(null), 3000);
     toast("Copiado al portapapeles");
   };
 
+  const tabs = [
+    { id: "properties", label: "Mis Inmuebles", icon: BarChart3, count: myProperties?.length },
+    { id: "links", label: "Red de Conexión", icon: Zap, count: stealthLinks?.length },
+    { id: "claim", label: "Captar Inmueble", icon: Plus },
+  ];
+
   return (
-    <div className="min-h-screen bg-black/95 text-zinc-100 pt-24 pb-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-          <div>
-            <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-400 to-amber-600">
-              Dashboard de Captador
+    <div className="min-h-screen bg-background text-foreground">
+      <Navbar />
+
+      <div className="pt-24 pb-16 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-6xl mx-auto animate-fade-in">
+
+          {/* ===== HEADER ===== */}
+          <div className="mb-10">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/30 flex items-center justify-center glow-gold-sm">
+                <Shield className="w-4 h-4 text-primary" />
+              </div>
+              <span className="text-xs font-bold text-muted-foreground uppercase tracking-[0.2em]">Panel del Captador Oficial</span>
+            </div>
+            <h1 className="page-header-gold text-4xl md:text-5xl font-black tracking-tight">
+              MURO DE FUEGO
             </h1>
-            <p className="text-zinc-400 mt-2 flex items-center">
-              <Shield className="w-4 h-4 mr-2 text-amber-500" />
-              Gestión centralizada de inmuebles y red Stealth.
+            <p className="text-muted-foreground mt-2 max-w-xl">
+              Gestiona tu portafolio, genera enlaces blindados y protege tus comisiones con el sistema de Ledger inmutable de Vecy.
             </p>
+            <div className="separator-gold mt-6" />
           </div>
-        </div>
 
-        <Tabs defaultValue="properties" className="w-full">
-          <TabsList className="bg-zinc-900 border border-zinc-800 rounded-full p-1 mb-8">
-            <TabsTrigger value="properties" className="rounded-full px-6 data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-amber-600 data-[state=active]:text-black">
-              Mis Inmuebles
-            </TabsTrigger>
-            <TabsTrigger value="links" className="rounded-full px-6 data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-amber-600 data-[state=active]:text-black">
-              Red de Conexión
-            </TabsTrigger>
-            <TabsTrigger value="claim" className="rounded-full px-6 data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-amber-600 data-[state=active]:text-black">
-              Asignar (Prueba)
-            </TabsTrigger>
-          </TabsList>
+          {/* ===== STAT PILLS ===== */}
+          <div className="flex flex-wrap gap-4 mb-10">
+            {[
+              { label: "Inmuebles Captados", value: myProperties?.length ?? "—" },
+              { label: "Enlaces Activos", value: stealthLinks?.length ?? "—" },
+              { label: "Prospectos en Ledger", value: "∞" },
+            ].map((stat) => (
+              <div key={stat.label} className="panel-card px-6 py-4 flex flex-col">
+                <span className="text-3xl font-black text-primary">{stat.value}</span>
+                <span className="text-xs text-muted-foreground uppercase tracking-wider mt-1">{stat.label}</span>
+              </div>
+            ))}
+          </div>
 
-          <TabsContent value="properties">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* ===== TABS ===== */}
+          <div className="flex gap-2 mb-8 p-1.5 bg-card rounded-2xl border border-border w-fit">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 ${
+                    isActive
+                      ? "panel-tab-active shadow-[0_0_15px_rgba(191,149,63,0.3)]"
+                      : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  {tab.label}
+                  {tab.count !== undefined && (
+                    <span className={`ml-1 px-2 py-0.5 rounded-full text-xs ${isActive ? "bg-black/20" : "bg-muted"}`}>
+                      {tab.count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* ===== TAB: MIS INMUEBLES ===== */}
+          {activeTab === "properties" && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
               {loadingProps ? (
-                Array(3).fill(0).map((_, i) => <Skeleton key={i} className="h-64 rounded-xl bg-zinc-900 border border-zinc-800" />)
+                Array(3).fill(0).map((_, i) => <Skeleton key={i} className="h-64 rounded-2xl bg-card" />)
               ) : myProperties?.length === 0 ? (
-                <div className="col-span-full py-16 text-center bg-zinc-900/50 rounded-xl border border-zinc-800/50">
-                  <Search className="w-12 h-12 mx-auto text-zinc-600 mb-4" />
-                  <p className="text-zinc-400">No tienes propiedades captadas todavía.</p>
+                <div className="col-span-full py-20 text-center panel-card">
+                  <Search className="w-12 h-12 mx-auto text-muted-foreground mb-4 opacity-50" />
+                  <p className="text-muted-foreground mb-2">No tienes inmuebles captados todavía.</p>
+                  <p className="text-xs text-muted-foreground/60">Ve a "Captar Inmueble" para comenzar.</p>
                 </div>
               ) : (
                 myProperties?.map(prop => (
-                  <Card key={prop.id} className="bg-zinc-900/80 border-amber-900/30 overflow-hidden relative group hover:border-amber-500/50 transition-colors">
-                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-400 to-amber-600 opacity-80" />
-                    <CardHeader className="pb-2">
-                       <div className="flex justify-between items-start">
-                         <Badge className="bg-black text-amber-400 border border-amber-500/30">Captador Oficial</Badge>
-                         <span className="text-xs font-mono text-zinc-500">{prop.matriculaInmobiliaria}</span>
-                       </div>
-                      <CardTitle className="mt-3 text-xl text-zinc-100">{prop.name}</CardTitle>
-                      <CardDescription className="text-zinc-400">{prop.location}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-2xl font-light text-amber-500">
-                        ${Number(prop.price).toLocaleString()}
+                  <div key={prop.id} className="panel-card p-0 overflow-hidden group">
+                    {/* Barra superior gold */}
+                    <div className="h-1 bg-gradient-to-r from-primary via-accent to-primary opacity-80" />
+                    <div className="p-6">
+                      <div className="flex justify-between items-start mb-4">
+                        <span className="badge-gold">Captador Oficial</span>
+                        {prop.matriculaInmobiliaria && (
+                          <span className="text-xs font-mono text-muted-foreground">{prop.matriculaInmobiliaria}</span>
+                        )}
+                      </div>
+                      <h3 className="text-lg font-bold text-foreground mb-1">{prop.name}</h3>
+                      <p className="text-sm text-muted-foreground mb-4">{prop.location}</p>
+                      <p className="text-2xl font-light text-primary mb-6">
+                        ${Number(prop.price).toLocaleString("es-CO")} COP
                       </p>
-                    </CardContent>
-                    <CardFooter>
-                      <Button 
+                      <button
                         onClick={() => generateLinkMutation.mutate({ propertyId: prop.id })}
                         disabled={generateLinkMutation.isPending}
-                        className="w-full bg-amber-500 hover:bg-amber-400 text-black font-semibold shadow-[0_0_15px_rgba(245,158,11,0.2)]"
+                        className="btn-gold w-full text-sm"
                       >
-                        <Link className="w-4 h-4 mr-2" />
+                        <Zap className="w-4 h-4 mr-2" />
                         Generar Enlace Blindado
-                      </Button>
-                    </CardFooter>
-                  </Card>
+                      </button>
+                    </div>
+                  </div>
                 ))
               )}
             </div>
-          </TabsContent>
+          )}
 
-          <TabsContent value="links">
-            <Card className="bg-zinc-900/80 border-zinc-800">
-              <CardHeader>
-                <CardTitle className="text-zinc-200">Fábrica de Enlaces Blindados</CardTitle>
-                <CardDescription className="text-zinc-400">Tus enlaces inmutables para compartir. Todos los prospectos que entren por aquí quedan respaldados y anclados directamente a ti.</CardDescription>
-              </CardHeader>
-              <CardContent>
+          {/* ===== TAB: RED DE CONEXIÓN ===== */}
+          {activeTab === "links" && (
+            <div className="animate-fade-in">
+              <div className="panel-card p-8">
+                <div className="flex items-center gap-3 mb-2">
+                  <Zap className="w-5 h-5 text-primary" />
+                  <h2 className="text-xl font-bold text-foreground">Fábrica de Enlaces Blindados</h2>
+                </div>
+                <p className="text-muted-foreground text-sm mb-8">
+                  Cada enlace es único, inmutable y te ancla legalmente al prospecto. 
+                  Compártelo por WhatsApp, email o redes sociales.
+                </p>
+
                 {loadingLinks ? (
-                  <Skeleton className="h-40 w-full bg-zinc-800" />
+                  <Skeleton className="h-40 w-full bg-secondary" />
                 ) : stealthLinks?.length === 0 ? (
-                  <div className="text-center py-8 text-zinc-500">No hay enlaces generados.</div>
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Zap className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                    <p>No hay enlaces generados. Ve a "Mis Inmuebles" y genera uno.</p>
+                  </div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {stealthLinks?.map(({ link, property }) => (
-                      <div key={link.id} className="flex flex-col md:flex-row items-center justify-between p-4 rounded-lg bg-black/50 border border-zinc-800/80 hover:border-amber-500/30 transition-all">
-                        <div className="mb-4 md:mb-0">
-                          <p className="font-medium text-amber-400">{property.name}</p>
-                          <p className="text-xs font-mono text-zinc-500 mt-1">Ref: {property.matriculaInmobiliaria}</p>
+                      <div
+                        key={link.id}
+                        className="flex flex-col md:flex-row items-start md:items-center justify-between p-5 rounded-xl bg-secondary/50 border border-border hover:border-primary/30 transition-all gap-4"
+                      >
+                        <div>
+                          <p className="font-semibold text-primary">{property.name}</p>
+                          <p className="text-xs font-mono text-muted-foreground mt-0.5">{property.location}</p>
                         </div>
-                        <div className="flex items-center space-x-4 w-full md:w-auto">
-                          <div className="bg-zinc-950 px-4 py-2 rounded-md font-mono text-sm text-zinc-300 border border-zinc-800 flex-1 md:flex-none">
-                            {window.location.origin}/p/{link.token.substring(0,8)}...
+                        <div className="flex items-center gap-4 w-full md:w-auto">
+                          <code className="flex-1 md:flex-none bg-background px-4 py-2 rounded-lg font-mono text-xs text-foreground/70 border border-border">
+                            /p/{link.token.substring(0, 10)}...
+                          </code>
+                          <div className="text-center px-3">
+                            <p className="text-xl font-bold text-foreground">{link.clicks}</p>
+                            <p className="text-xs text-muted-foreground">clics</p>
                           </div>
-                          <div className="flex flex-col items-center justify-center px-4">
-                            <span className="text-2xl font-bold text-zinc-200">{link.clicks}</span>
-                            <span className="text-xs text-zinc-500 uppercase tracking-wider">Clics</span>
-                          </div>
-                          <Button 
-                            variant="secondary" 
-                            className="bg-zinc-800 hover:bg-zinc-700 text-amber-500"
+                          <button
                             onClick={() => handleCopy(link.token)}
+                            className={`btn-electric p-2.5 rounded-lg transition-all ${copiedToken === link.token ? "border-green-500/50 text-green-400" : ""}`}
                           >
                             {copiedToken === link.token ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                          </Button>
+                          </button>
                         </div>
                       </div>
                     ))}
                   </div>
                 )}
-              </CardContent>
-            </Card>
-          </TabsContent>
+              </div>
+            </div>
+          )}
 
-          {/* Oculto en producción normal, pero para demo podemos asignarnos propiedades huerfanas */}
-          <TabsContent value="claim">
-             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {loadingAvailable ? (
-                Array(3).fill(0).map((_, i) => <Skeleton key={i} className="h-48 rounded-xl bg-zinc-900 border border-zinc-800" />)
-              ) : availableProperties?.length === 0 ? (
-                <div className="col-span-full py-8 text-center text-zinc-500">
-                  No hay propiedades disponibles para Captar.
+          {/* ===== TAB: CAPTAR INMUEBLE ===== */}
+          {activeTab === "claim" && (
+            <div className="animate-fade-in">
+              <div className="panel-card p-8 mb-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <Shield className="w-5 h-5 text-primary" />
+                  <h2 className="text-xl font-bold text-foreground">Captar Inmueble sin Agente</h2>
                 </div>
-              ) : (
-                availableProperties?.map(prop => (
-                  <Card key={prop.id} className="bg-black border-dashed border-zinc-700">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-lg text-zinc-300">{prop.name}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <Button 
+                <p className="text-muted-foreground text-sm">
+                  Los inmuebles mostrados aquí no tienen agente asignado. 
+                  Al captarlo, quedas registrado como intermediario oficial y puedes generar tu enlace blindado.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {loadingAvailable ? (
+                  Array(3).fill(0).map((_, i) => <Skeleton key={i} className="h-48 rounded-2xl bg-card" />)
+                ) : availableProperties?.length === 0 ? (
+                  <div className="col-span-full py-12 text-center text-muted-foreground panel-card">
+                    <p>No hay inmuebles sin agente disponibles.</p>
+                  </div>
+                ) : (
+                  availableProperties?.map(prop => (
+                    <div key={prop.id} className="panel-card p-6 border-dashed">
+                      <h3 className="text-base font-semibold text-foreground mb-1">{prop.name}</h3>
+                      <p className="text-sm text-muted-foreground mb-1">{prop.location}</p>
+                      <p className="text-lg font-light text-primary mb-5">
+                        ${Number(prop.price).toLocaleString("es-CO")}
+                      </p>
+                      <button
                         onClick={() => claimMutation.mutate({ propertyId: prop.id })}
                         disabled={claimMutation.isPending}
-                        variant="outline"
-                        className="w-full border-amber-500/50 text-amber-500 hover:bg-amber-500/10"
+                        className="btn-gold-outline w-full text-sm"
                       >
                         <Plus className="w-4 h-4 mr-2" />
-                        Asignarme como Captador
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))
-              )}
+                        Captarme como Agente
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
-          </TabsContent>
-        </Tabs>
+          )}
+
+        </div>
       </div>
     </div>
   );

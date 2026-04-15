@@ -1,7 +1,5 @@
 import { useState } from 'react';
-import { Plus, Edit2, Trash2, Eye, X, ChevronDown, ChevronUp, Check } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Plus, Edit2, Trash2, X } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
 
@@ -19,71 +17,42 @@ const PROPERTY_TYPES = [
 ];
 
 const emptyForm = {
-  name: '',
-  price: '',
-  location: '',
-  zone: '',
-  propertyType: 'apartment',
-  description: '',
-  bedrooms: '',
-  bathrooms: '',
-  garages: '',
-  stratum: '',
-  floor: '',
-  areaSquareMeters: '',
-  yearBuilt: '',
-  adminFee: '',
-  matriculaInmobiliaria: '',
-  wildcardFeature: '',
-  featured: false,
-  available: true,
+  name: '', price: '', location: '', zone: '',
+  propertyType: 'apartment', description: '',
+  bedrooms: '', bathrooms: '', garages: '', stratum: '',
+  floor: '', areaSquareMeters: '', yearBuilt: '',
+  adminFee: '', matriculaInmobiliaria: '', wildcardFeature: '',
+  featured: false, available: true,
 };
 
 export default function AdminProperties() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState({ ...emptyForm });
-  const [searchTerm, setSearchTerm] = useState('');
+  const [search, setSearch] = useState('');
 
-  // Real data from DB
   const { data: properties, isLoading, refetch } = trpc.properties.myList.useQuery();
 
   const createMutation = trpc.properties.create.useMutation({
-    onSuccess: () => {
-      toast.success('✅ Propiedad creada exitosamente');
-      refetch();
-      setShowForm(false);
-      setFormData({ ...emptyForm });
-    },
-    onError: (err) => toast.error('Error: ' + err.message),
+    onSuccess: () => { toast.success('✅ Inmueble publicado'); refetch(); cancelForm(); },
+    onError: (e) => toast.error('Error: ' + e.message),
   });
 
   const updateMutation = trpc.properties.update.useMutation({
-    onSuccess: () => {
-      toast.success('✅ Propiedad actualizada');
-      refetch();
-      setShowForm(false);
-      setEditingId(null);
-      setFormData({ ...emptyForm });
-    },
-    onError: (err) => toast.error('Error: ' + err.message),
+    onSuccess: () => { toast.success('✅ Inmueble actualizado'); refetch(); cancelForm(); },
+    onError: (e) => toast.error('Error: ' + e.message),
   });
 
   const deleteMutation = trpc.properties.delete.useMutation({
-    onSuccess: () => {
-      toast.success('Propiedad eliminada');
-      refetch();
-    },
-    onError: (err) => toast.error('Error: ' + err.message),
+    onSuccess: () => { toast.success('Inmueble eliminado'); refetch(); },
+    onError: (e) => toast.error('Error: ' + e.message),
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const payload = {
-      name: formData.name,
-      price: formData.price,
-      location: formData.location,
-      zone: formData.zone,
+      name: formData.name, price: formData.price,
+      location: formData.location, zone: formData.zone,
       propertyType: formData.propertyType as any,
       description: formData.description || undefined,
       bedrooms: formData.bedrooms ? parseInt(formData.bedrooms) : null,
@@ -96,333 +65,285 @@ export default function AdminProperties() {
       adminFee: formData.adminFee || null,
       matriculaInmobiliaria: formData.matriculaInmobiliaria || null,
       wildcardFeature: formData.wildcardFeature || null,
-      featured: formData.featured,
-      available: formData.available,
+      featured: formData.featured, available: formData.available,
     };
-
-    if (editingId) {
-      updateMutation.mutate({ id: editingId, data: payload });
-    } else {
-      createMutation.mutate(payload);
-    }
+    editingId ? updateMutation.mutate({ id: editingId, data: payload }) : createMutation.mutate(payload);
   };
 
   const startEdit = (prop: any) => {
     setEditingId(prop.id);
     setFormData({
-      name: prop.name || '',
-      price: prop.price || '',
-      location: prop.location || '',
-      zone: prop.zone || '',
+      name: prop.name || '', price: prop.price || '',
+      location: prop.location || '', zone: prop.zone || '',
       propertyType: prop.propertyType || 'apartment',
       description: prop.description || '',
-      bedrooms: prop.bedrooms?.toString() || '',
-      bathrooms: prop.bathrooms?.toString() || '',
-      garages: prop.garages?.toString() || '',
-      stratum: prop.stratum?.toString() || '',
-      floor: prop.floor?.toString() || '',
-      areaSquareMeters: prop.areaSquareMeters?.toString() || '',
-      yearBuilt: prop.yearBuilt?.toString() || '',
-      adminFee: prop.adminFee?.toString() || '',
+      bedrooms: prop.bedrooms?.toString() || '', bathrooms: prop.bathrooms?.toString() || '',
+      garages: prop.garages?.toString() || '', stratum: prop.stratum?.toString() || '',
+      floor: prop.floor?.toString() || '', areaSquareMeters: prop.areaSquareMeters?.toString() || '',
+      yearBuilt: prop.yearBuilt?.toString() || '', adminFee: prop.adminFee?.toString() || '',
       matriculaInmobiliaria: prop.matriculaInmobiliaria || '',
       wildcardFeature: prop.wildcardFeature || '',
-      featured: prop.featured || false,
-      available: prop.available ?? true,
+      featured: prop.featured || false, available: prop.available ?? true,
     });
     setShowForm(true);
   };
 
-  const cancelForm = () => {
-    setShowForm(false);
-    setEditingId(null);
-    setFormData({ ...emptyForm });
-  };
+  const cancelForm = () => { setShowForm(false); setEditingId(null); setFormData({ ...emptyForm }); };
 
   const filtered = (properties || []).filter(p =>
-    p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.location.toLowerCase().includes(searchTerm.toLowerCase())
+    p.name.toLowerCase().includes(search.toLowerCase()) ||
+    p.location.toLowerCase().includes(search.toLowerCase())
   );
 
-  const inputClass = "bg-zinc-950 border-zinc-800 text-white placeholder:text-zinc-600 focus:border-amber-500/50 focus:ring-amber-500/20";
-  const labelClass = "block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1";
+  // Shared input/label styles
+  const label = "block text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-1.5";
+  const input = "w-full input-vecy rounded-lg px-3 py-2.5 text-sm";
+  const sectionTitle = (text: string) => (
+    <p className="text-[11px] font-bold text-primary/60 uppercase tracking-widest mb-4 flex items-center gap-2">
+      <span className="w-6 h-px bg-primary/30 block" /> {text}
+    </p>
+  );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white">Gestión de Inmuebles</h2>
-          <p className="text-zinc-500 text-sm mt-1">
-            {isLoading ? 'Cargando...' : `${properties?.length || 0} propiedades en tu portafolio`}
+          <h2 className="text-2xl font-black text-foreground">Portafolio de Inmuebles</h2>
+          <p className="text-muted-foreground text-sm mt-1">
+            {isLoading ? 'Cargando...' : `${properties?.length ?? 0} inmueble${(properties?.length ?? 0) !== 1 ? 's' : ''} registrado${(properties?.length ?? 0) !== 1 ? 's' : ''}`}
           </p>
         </div>
-        <Button
+        <button
           onClick={() => { setShowForm(!showForm); setEditingId(null); setFormData({ ...emptyForm }); }}
-          className="bg-amber-500 hover:bg-amber-400 text-black font-bold flex items-center gap-2 shadow-[0_0_20px_rgba(245,158,11,0.2)]"
+          className="btn-gold text-sm gap-2"
         >
           <Plus className="w-4 h-4" />
           Crear Inmueble
-        </Button>
+        </button>
       </div>
 
       {/* Search */}
       {!showForm && (
-        <Input
+        <input
+          className={`${input} max-w-sm`}
           placeholder="Buscar por nombre o ubicación..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className={inputClass}
+          value={search}
+          onChange={e => setSearch(e.target.value)}
         />
       )}
 
       {/* ===== FORM ===== */}
       {showForm && (
-        <div className="bg-zinc-950 border border-amber-500/20 rounded-2xl p-8 shadow-[0_0_40px_rgba(245,158,11,0.05)]">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold text-amber-400">
-              {editingId ? '✏️ Editar Inmueble' : '🏢 Nuevo Inmueble'}
-            </h3>
-            <button onClick={cancelForm} className="text-zinc-500 hover:text-white transition-colors">
+        <div className="panel-card p-8 animate-fade-in">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h3 className="text-xl font-black text-foreground">
+                {editingId ? '✏️ Editar Inmueble' : '🏢 Nuevo Inmueble'}
+              </h3>
+              <p className="text-muted-foreground text-sm mt-1">Completa los datos del inmueble. Los campos con * son obligatorios.</p>
+            </div>
+            <button onClick={cancelForm} className="text-muted-foreground hover:text-foreground transition-colors p-2 rounded-lg hover:bg-secondary">
               <X className="w-5 h-5" />
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Sección 1: Identificación */}
-            <div>
-              <p className="text-xs font-bold text-amber-500/70 uppercase tracking-widest mb-4 flex items-center gap-2">
-                <span className="w-4 h-px bg-amber-500/30" /> Datos Básicos
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="md:col-span-2">
-                  <label className={labelClass}>Nombre del Inmueble *</label>
-                  <Input required placeholder="Ej. Apartamento Cedritos UBIK" value={formData.name}
-                    onChange={e => setFormData({ ...formData, name: e.target.value })} className={inputClass} />
-                </div>
-                <div>
-                  <label className={labelClass}>Tipo de Inmueble *</label>
-                  <select
-                    required
-                    value={formData.propertyType}
-                    onChange={e => setFormData({ ...formData, propertyType: e.target.value })}
-                    className="w-full bg-zinc-950 border border-zinc-800 text-white rounded-md px-3 py-2 focus:outline-none focus:border-amber-500/50"
-                  >
-                    {PROPERTY_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className={labelClass}>Matrícula Inmobiliaria</label>
-                  <Input placeholder="Ej. 50N-123456" value={formData.matriculaInmobiliaria}
-                    onChange={e => setFormData({ ...formData, matriculaInmobiliaria: e.target.value })} className={inputClass} />
-                </div>
+          <form onSubmit={handleSubmit} className="space-y-8">
+            {/* Sección 1 */}
+            {sectionTitle("Identificación")}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="md:col-span-2">
+                <label className={label}>Nombre del Inmueble *</label>
+                <input required className={input} placeholder="Ej. Apartamento Cedritos UBIK" value={formData.name}
+                  onChange={e => setFormData({ ...formData, name: e.target.value })} />
+              </div>
+              <div>
+                <label className={label}>Tipo *</label>
+                <select required value={formData.propertyType}
+                  onChange={e => setFormData({ ...formData, propertyType: e.target.value })}
+                  className={`${input} cursor-pointer`}>
+                  {PROPERTY_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className={label}>Matrícula Inmobiliaria</label>
+                <input className={input} placeholder="Ej. 50N-123456" value={formData.matriculaInmobiliaria}
+                  onChange={e => setFormData({ ...formData, matriculaInmobiliaria: e.target.value })} />
               </div>
             </div>
 
-            {/* Sección 2: Precio y Ubicación */}
-            <div>
-              <p className="text-xs font-bold text-amber-500/70 uppercase tracking-widest mb-4 flex items-center gap-2">
-                <span className="w-4 h-px bg-amber-500/30" /> Precio y Ubicación
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className={labelClass}>Precio de Venta/Arriendo * (solo números)</label>
-                  <Input required placeholder="Ej. 450000000" value={formData.price}
-                    onChange={e => setFormData({ ...formData, price: e.target.value })} className={inputClass} />
-                </div>
-                <div>
-                  <label className={labelClass}>Administración (mensual)</label>
-                  <Input placeholder="Ej. 350000" value={formData.adminFee}
-                    onChange={e => setFormData({ ...formData, adminFee: e.target.value })} className={inputClass} />
-                </div>
-                <div>
-                  <label className={labelClass}>Dirección / Ciudad *</label>
-                  <Input required placeholder="Ej. Bogotá, Usaquén" value={formData.location}
-                    onChange={e => setFormData({ ...formData, location: e.target.value })} className={inputClass} />
-                </div>
-                <div>
-                  <label className={labelClass}>Zona / Barrio *</label>
-                  <Input required placeholder="Ej. Cedritos" value={formData.zone}
-                    onChange={e => setFormData({ ...formData, zone: e.target.value })} className={inputClass} />
-                </div>
+            <div className="separator-gold" />
+
+            {/* Sección 2 */}
+            {sectionTitle("Precio y Ubicación")}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <label className={label}>Precio * (solo números, sin puntos ni comas)</label>
+                <input required className={input} placeholder="450000000" value={formData.price}
+                  onChange={e => setFormData({ ...formData, price: e.target.value })} />
+              </div>
+              <div>
+                <label className={label}>Administración mensual (COP)</label>
+                <input className={input} placeholder="350000" value={formData.adminFee}
+                  onChange={e => setFormData({ ...formData, adminFee: e.target.value })} />
+              </div>
+              <div>
+                <label className={label}>Ciudad / Dirección *</label>
+                <input required className={input} placeholder="Bogotá, Chapinero" value={formData.location}
+                  onChange={e => setFormData({ ...formData, location: e.target.value })} />
+              </div>
+              <div>
+                <label className={label}>Zona / Barrio *</label>
+                <input required className={input} placeholder="Cedritos" value={formData.zone}
+                  onChange={e => setFormData({ ...formData, zone: e.target.value })} />
               </div>
             </div>
 
-            {/* Sección 3: Características */}
-            <div>
-              <p className="text-xs font-bold text-amber-500/70 uppercase tracking-widest mb-4 flex items-center gap-2">
-                <span className="w-4 h-px bg-amber-500/30" /> Características
-              </p>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                  <label className={labelClass}>Habitaciones</label>
-                  <Input type="number" min="0" placeholder="3" value={formData.bedrooms}
-                    onChange={e => setFormData({ ...formData, bedrooms: e.target.value })} className={inputClass} />
+            <div className="separator-gold" />
+
+            {/* Sección 3 */}
+            {sectionTitle("Características")}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+              {[
+                { key: 'bedrooms', label: 'Habitaciones', ph: '3' },
+                { key: 'bathrooms', label: 'Baños', ph: '2' },
+                { key: 'garages', label: 'Parqueaderos', ph: '1' },
+                { key: 'stratum', label: 'Estrato', ph: '4' },
+                { key: 'floor', label: 'Piso', ph: '8' },
+                { key: 'areaSquareMeters', label: 'Área Total (m²)', ph: '54' },
+                { key: 'yearBuilt', label: 'Año Const.', ph: '2018' },
+                { key: 'wildcardFeature', label: 'Característica Extra', ph: 'Jacuzzi, vista...' },
+              ].map(f => (
+                <div key={f.key}>
+                  <label className={label}>{f.label}</label>
+                  <input
+                    className={input}
+                    placeholder={f.ph}
+                    type={['bedrooms','bathrooms','garages','stratum','floor','yearBuilt'].includes(f.key) ? 'number' : 'text'}
+                    value={(formData as any)[f.key]}
+                    onChange={e => setFormData({ ...formData, [f.key]: e.target.value })}
+                  />
                 </div>
-                <div>
-                  <label className={labelClass}>Baños</label>
-                  <Input type="number" min="0" placeholder="2" value={formData.bathrooms}
-                    onChange={e => setFormData({ ...formData, bathrooms: e.target.value })} className={inputClass} />
-                </div>
-                <div>
-                  <label className={labelClass}>Parqueaderos</label>
-                  <Input type="number" min="0" placeholder="1" value={formData.garages}
-                    onChange={e => setFormData({ ...formData, garages: e.target.value })} className={inputClass} />
-                </div>
-                <div>
-                  <label className={labelClass}>Estrato</label>
-                  <Input type="number" min="1" max="6" placeholder="4" value={formData.stratum}
-                    onChange={e => setFormData({ ...formData, stratum: e.target.value })} className={inputClass} />
-                </div>
-                <div>
-                  <label className={labelClass}>Piso</label>
-                  <Input type="number" min="1" placeholder="8" value={formData.floor}
-                    onChange={e => setFormData({ ...formData, floor: e.target.value })} className={inputClass} />
-                </div>
-                <div>
-                  <label className={labelClass}>Área Total (m²)</label>
-                  <Input placeholder="54" value={formData.areaSquareMeters}
-                    onChange={e => setFormData({ ...formData, areaSquareMeters: e.target.value })} className={inputClass} />
-                </div>
-                <div>
-                  <label className={labelClass}>Año Construcción</label>
-                  <Input type="number" placeholder="2018" value={formData.yearBuilt}
-                    onChange={e => setFormData({ ...formData, yearBuilt: e.target.value })} className={inputClass} />
-                </div>
-                <div>
-                  <label className={labelClass}>Característica Especial</label>
-                  <Input placeholder="Vista 360°, Jacuzzi..." value={formData.wildcardFeature}
-                    onChange={e => setFormData({ ...formData, wildcardFeature: e.target.value })} className={inputClass} />
-                </div>
-              </div>
+              ))}
             </div>
 
-            {/* Sección 4: Descripción */}
-            <div>
-              <label className={labelClass}>Descripción del Inmueble</label>
-              <textarea
-                rows={4}
-                placeholder="Describe las características más atractivas del inmueble..."
-                value={formData.description}
-                onChange={e => setFormData({ ...formData, description: e.target.value })}
-                className="w-full bg-zinc-950 border border-zinc-800 text-white rounded-md px-3 py-2 focus:outline-none focus:border-amber-500/50 placeholder:text-zinc-600 resize-none"
-              />
-            </div>
+            <div className="separator-gold" />
+
+            {/* Descripción */}
+            {sectionTitle("Descripción")}
+            <textarea
+              rows={4}
+              placeholder="Describe las características más atractivas del inmueble para los compradores..."
+              value={formData.description}
+              onChange={e => setFormData({ ...formData, description: e.target.value })}
+              className={`${input} resize-none h-28`}
+            />
 
             {/* Toggles */}
-            <div className="flex items-center gap-6">
-              <label className="flex items-center gap-3 cursor-pointer">
-                <div
-                  onClick={() => setFormData({ ...formData, featured: !formData.featured })}
-                  className={`w-10 h-6 rounded-full transition-colors ${formData.featured ? 'bg-amber-500' : 'bg-zinc-800'} relative`}
-                >
-                  <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${formData.featured ? 'left-5' : 'left-1'}`} />
-                </div>
-                <span className="text-sm text-zinc-400">Destacar en portada</span>
-              </label>
-              <label className="flex items-center gap-3 cursor-pointer">
-                <div
-                  onClick={() => setFormData({ ...formData, available: !formData.available })}
-                  className={`w-10 h-6 rounded-full transition-colors ${formData.available ? 'bg-green-600' : 'bg-zinc-800'} relative`}
-                >
-                  <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${formData.available ? 'left-5' : 'left-1'}`} />
-                </div>
-                <span className="text-sm text-zinc-400">Disponible para venta/arriendo</span>
-              </label>
+            <div className="flex items-center gap-8">
+              {[
+                { key: 'featured', label: 'Destacar en portada', color: 'bg-primary' },
+                { key: 'available', label: 'Disponible para venta/arriendo', color: 'bg-green-500' },
+              ].map(t => (
+                <label key={t.key} className="flex items-center gap-3 cursor-pointer">
+                  <div
+                    onClick={() => setFormData({ ...formData, [t.key]: !(formData as any)[t.key] })}
+                    className={`w-11 h-6 rounded-full transition-colors relative ${(formData as any)[t.key] ? t.color : 'bg-secondary'}`}
+                  >
+                    <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all shadow-sm ${(formData as any)[t.key] ? 'left-6' : 'left-1'}`} />
+                  </div>
+                  <span className="text-sm text-muted-foreground">{t.label}</span>
+                </label>
+              ))}
             </div>
 
             {/* Botones */}
             <div className="flex gap-4 pt-2">
-              <Button
+              <button
                 type="submit"
                 disabled={createMutation.isPending || updateMutation.isPending}
-                className="flex-1 bg-amber-500 hover:bg-amber-400 text-black font-bold h-12 text-base shadow-[0_0_20px_rgba(245,158,11,0.2)]"
+                className="btn-gold flex-1 h-12 text-base"
               >
                 {createMutation.isPending || updateMutation.isPending
                   ? 'Guardando...'
-                  : editingId ? 'Actualizar Inmueble' : '✅ Publicar Inmueble'}
-              </Button>
-              <Button type="button" onClick={cancelForm}
-                className="bg-zinc-900 hover:bg-zinc-800 text-zinc-300 h-12 px-8">
+                  : editingId ? '✅ Actualizar Inmueble' : '🏢 Publicar Inmueble'}
+              </button>
+              <button type="button" onClick={cancelForm} className="btn-electric px-8 h-12">
                 Cancelar
-              </Button>
+              </button>
             </div>
           </form>
         </div>
       )}
 
-      {/* ===== PROPERTIES TABLE ===== */}
+      {/* ===== TABLE ===== */}
       {!showForm && (
-        <div className="bg-zinc-950 border border-zinc-800/60 rounded-2xl overflow-hidden">
+        <div className="panel-card overflow-hidden">
           {isLoading ? (
-            <div className="py-20 text-center text-zinc-600">Cargando inmuebles...</div>
+            <div className="py-20 text-center text-muted-foreground">Cargando inmuebles...</div>
           ) : filtered.length === 0 ? (
             <div className="py-20 text-center">
-              <p className="text-zinc-500 mb-4">No tienes inmuebles publicados todavía.</p>
-              <Button onClick={() => setShowForm(true)} className="bg-amber-500 hover:bg-amber-400 text-black font-bold">
-                <Plus className="w-4 h-4 mr-2" /> Crear tu primer inmueble
-              </Button>
+              <p className="text-muted-foreground mb-4">{search ? 'Sin resultados para tu búsqueda.' : 'No hay inmuebles registrados aún.'}</p>
+              {!search && (
+                <button onClick={() => setShowForm(true)} className="btn-gold text-sm">
+                  <Plus className="w-4 h-4 mr-2" /> Crear primer inmueble
+                </button>
+              )}
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="bg-zinc-900/60 border-b border-zinc-800">
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider">Inmueble</th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider">Ubicación</th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider">Precio</th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider">Datos</th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider">Estado</th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider">Acciones</th>
+                  <tr className="border-b border-border">
+                    {['Inmueble', 'Ubicación', 'Precio', 'Datos', 'Estado', 'Acciones'].map(h => (
+                      <th key={h} className="px-6 py-4 text-left text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
+                        {h}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((prop) => (
-                    <tr key={prop.id} className="border-b border-zinc-800/50 hover:bg-zinc-900/40 transition-colors">
+                  {filtered.map(prop => (
+                    <tr key={prop.id} className="table-row-vecy">
                       <td className="px-6 py-4">
-                        <p className="text-white font-semibold">{prop.name}</p>
-                        <p className="text-zinc-600 text-xs capitalize mt-0.5">{prop.propertyType}</p>
+                        <p className="font-semibold text-foreground">{prop.name}</p>
+                        <p className="text-xs text-muted-foreground capitalize">{prop.propertyType}</p>
                       </td>
-                      <td className="px-6 py-4 text-zinc-400 text-sm">{prop.location}</td>
+                      <td className="px-6 py-4 text-sm text-muted-foreground">{prop.location}</td>
                       <td className="px-6 py-4">
-                        <span className="text-amber-400 font-semibold">
+                        <span className="font-semibold text-primary">
                           ${Number(prop.price).toLocaleString('es-CO')}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-zinc-500 text-sm">
-                        {prop.bedrooms && `${prop.bedrooms} hab`}
-                        {prop.bathrooms && ` · ${prop.bathrooms} baños`}
-                        {prop.areaSquareMeters && ` · ${prop.areaSquareMeters}m²`}
+                      <td className="px-6 py-4 text-sm text-muted-foreground">
+                        {[
+                          prop.bedrooms && `${prop.bedrooms} hab`,
+                          prop.bathrooms && `${prop.bathrooms} baños`,
+                          prop.areaSquareMeters && `${prop.areaSquareMeters}m²`,
+                        ].filter(Boolean).join(' · ') || '—'}
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                          prop.available
-                            ? 'bg-green-900/30 text-green-400 border border-green-800/40'
-                            : 'bg-zinc-900 text-zinc-500 border border-zinc-800'
-                        }`}>
-                          {prop.available ? 'Disponible' : 'No disponible'}
-                        </span>
-                        {prop.featured && (
-                          <span className="ml-2 px-2 py-1 rounded-full text-xs bg-amber-900/30 text-amber-400 border border-amber-800/40">
-                            ★ Destacado
+                        <div className="flex flex-wrap gap-1.5">
+                          <span className={prop.available ? 'badge-active' : 'badge-muted'}>
+                            {prop.available ? 'Disponible' : 'No disponible'}
                           </span>
-                        )}
+                          {prop.featured && <span className="badge-gold">★ Destacado</span>}
+                        </div>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="flex gap-2">
+                        <div className="flex gap-1">
                           <button
                             onClick={() => startEdit(prop)}
-                            className="p-2 hover:bg-amber-500/10 rounded-lg transition text-amber-500/70 hover:text-amber-400"
+                            className="p-2 hover:bg-primary/10 rounded-lg transition text-primary/60 hover:text-primary"
                             title="Editar"
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => {
-                              if (confirm(`¿Eliminar "${prop.name}"? Esta acción no se puede deshacer.`)) {
-                                deleteMutation.mutate({ id: prop.id });
-                              }
+                              if (confirm(`¿Eliminar "${prop.name}"?`)) deleteMutation.mutate({ id: prop.id });
                             }}
-                            className="p-2 hover:bg-red-900/20 rounded-lg transition text-red-500/50 hover:text-red-400"
+                            className="p-2 hover:bg-destructive/10 rounded-lg transition text-destructive/40 hover:text-destructive"
                             title="Eliminar"
                           >
                             <Trash2 className="w-4 h-4" />
