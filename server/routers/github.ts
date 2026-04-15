@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { publicProcedure, router } from '../_core/trpc';
 import { getDb } from '../db';
-import { properties } from '../../drizzle/schema';
+import { properties, users } from '../../drizzle/schema';
 import { eq } from 'drizzle-orm';
 import {
   initializeGitHubIntegration,
@@ -104,7 +104,15 @@ export const githubRouter = router({
 
       try {
         const { octokit, user } = await initializeGitHubIntegration(GITHUB_TOKEN);
-        
+
+        // Obtener el ID del superadmin de Vecy para asignarlo como agente
+        const adminUser = await db
+          .select()
+          .from(users)
+          .where(eq(users.email, 'vecybienesraices@gmail.com'))
+          .limit(1);
+        const adminId = adminUser.length > 0 ? adminUser[0].id : 1;
+
         // Get list of repos to sync
         let reposToSync = input.repositories || [];
         if (reposToSync.length === 0) {
@@ -138,14 +146,16 @@ export const githubRouter = router({
                   .update(properties)
                   .set({
                     ...propertyData,
+                    agentId: adminId,
                     sourceRepository: repoName,
                     lastSyncedAt: new Date(),
                   })
                   .where(eq(properties.id, existing[0].id));
               } else {
-                // Insert new property
+                // Insert new property — asignar superadmin como captador
                 await db.insert(properties).values({
                   ...propertyData,
+                  agentId: adminId,
                   sourceRepository: repoName,
                   lastSyncedAt: new Date(),
                 });

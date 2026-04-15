@@ -72,25 +72,45 @@ export default function Admin() {
           transition-all duration-300 ease-in-out`}
       >
         {/* Logo */}
-        <div className="p-6 border-b border-border flex items-center justify-between">
-          {sidebarOpen && (
+        <div className="p-4 border-b border-border flex items-center justify-between min-h-[72px]">
+          {sidebarOpen ? (
             <div className="flex items-center gap-3 animate-fade-in">
-              <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/30 flex items-center justify-center glow-gold-sm">
-                <span className="text-primary font-black text-xs">V</span>
-              </div>
-              <div>
-                <p className="text-primary font-extrabold text-sm tracking-widest uppercase">VECY</p>
-                <p className="text-muted-foreground text-[9px] uppercase tracking-[0.2em]">Panel Admin</p>
-              </div>
+              <img
+                src="/logo-vecy.png"
+                alt="Vecy Network"
+                className="h-9 w-auto object-contain"
+              />
+              <p className="text-muted-foreground text-[9px] uppercase tracking-[0.3em] whitespace-nowrap">
+                Panel Admin
+              </p>
+            </div>
+          ) : (
+            <div className="mx-auto">
+              <img
+                src="/logo-vecy.png"
+                alt="Vecy"
+                className="h-7 w-auto object-contain opacity-80"
+              />
             </div>
           )}
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="text-muted-foreground hover:text-primary transition-colors p-1.5 rounded-lg hover:bg-secondary"
-          >
-            {sidebarOpen ? <X className="w-4 h-4" /> : <Menu className="w-5 h-5" />}
-          </button>
+          {sidebarOpen && (
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="text-muted-foreground hover:text-primary transition-colors p-1.5 rounded-lg hover:bg-secondary ml-2"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
+        {/* Botón de expandir cuando está colapsado */}
+        {!sidebarOpen && (
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="mx-auto mt-3 text-muted-foreground hover:text-primary transition-colors p-1.5 rounded-lg hover:bg-secondary block"
+          >
+            <Menu className="w-4 h-4" />
+          </button>
+        )}
 
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto scrollbar-hide">
