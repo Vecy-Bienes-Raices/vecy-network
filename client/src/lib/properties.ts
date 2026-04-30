@@ -1,0 +1,87 @@
+// Base de datos de propiedades (Activos Reales Vecy)
+export const propertiesDatabase: { [key: string]: any } = {
+  'apto-cantalejo': {
+    id: 'apto-cantalejo',
+    name: 'Apartamento en Cantalejo',
+    location: 'Bogotá, Suba',
+    price: 470000000,
+    bedrooms: 3,
+    bathrooms: 2,
+    area: 71,
+    propertyType: 'Apartamento',
+    floor: 2,
+    totalFloors: 12,
+    yearBuilt: 2018,
+    images: Array.from({ length: 24 }, (_, i) => `https://ap-cantalejo-bogota.netlify.app/assets/${i + 1}.jpeg`),
+    amenities: ['Gimnasio Dotado', 'Terraza BBQ Panorámica', '2 Ascensores', 'Portería / Sala Espera', 'Cerca C.C. La Colina', 'Parques Cercanos', 'Vigilancia 24/7', 'Acceso Pavimentado', 'Paradero SITP a media cuadra'],
+    internalFeatures: ['Sala comedor en un mismo ambiente', 'Cocina Integral Funcional', 'Zona Lavandería Independiente', 'Habitación principal con baño', 'Estudio / Hall para Home Office', 'Balcón en área social'],
+    latitude: 4.7456,
+    longitude: -74.0537,
+    virtualTourVideo: 'https://ap-cantalejo-bogota.netlify.app/assets/Apartamento%20en%20venta%20en%20Cantalejo%20Bogot%C3%A1.mp4', 
+    propertyDetails: {
+      viewType: 'Exterior',
+      houseType: 'conjunto',
+      administrationFee: 500000,
+      privateArea: 64.44,
+      parking: '1 (Cubierto)',
+      estrato: 3,
+      estado: 'Ocupado / Crédito Hipotecario Vigente'
+    },
+    description: 'Elegante apartamento en segundo piso con balcón exterior. El espacio cuenta con iluminación natural en áreas sociales. Al recorrer el pasillo, un estudio ideal para home office conecta hacia el área privada. Ubicado estratégicamente en Cantalejo.',
+    stealthFichaUrl: 'https://ap-cantalejo-bogota.netlify.app/'
+  },
+  'apto-cedritos-ubik': {
+    id: 'apto-cedritos-ubik',
+    name: 'Apartamento Cedritos UBIK',
+    location: 'Bogotá, Usaquén',
+    price: 1300000000,
+    bedrooms: 3,
+    bathrooms: 4,
+    area: 151.70,
+    propertyType: 'Apartamento',
+    floor: 5,
+    totalFloors: 5,
+    yearBuilt: 2026,
+    images: Array.from({ length: 15 }, (_, i) => `https://ap-nuevo-cedritos-bog.netlify.app/assets/${i + 1}.jpeg`),
+    amenities: ['Terraza social con BBQ', 'Gimnasio dotado', 'Sauna', 'Salón social', 'Vigilancia 24/7', '2 Ascensores modernos'],
+    internalFeatures: ['3 Hab. con baño privado', '2 Hab. con Walk-in closets', 'Cocina abierta americana', 'Zona social amplia', 'Baño social', 'Lavandería independiente', 'Depósito privado', 'Hermosa vista al occidente de Bogotá'],
+    latitude: 4.723,
+    longitude: -74.045,
+    virtualTourVideo: 'https://ap-nuevo-cedritos-bog.netlify.app/assets/video_recorrido_inmueble_apto_150_mt2_y_terraza_84mt2.mp4',
+    propertyDetails: {
+      administrationFee: 420000,
+      parking: '2',
+      privateArea: 141.25,
+      estrato: 5,
+      estado: 'Libre de Gravámenes'
+    },
+    description: 'Disfruta de un oasis urbano con una terraza de 84 m² de uso exclusivo. Ideal para reuniones o asados al aire libre, con acabados de primera categoría en el corazón de Cedritos.',
+    stealthFichaUrl: 'https://ap-nuevo-cedritos-bog.netlify.app/'
+  },
+  'apto-cedritos-zaira': {
+    id: 'apto-cedritos-zaira',
+    name: 'Apartamento Cedritos - Zaira',
+    location: 'Bogotá, Usaquén',
+    price: 480000000,
+    bedrooms: 3,
+    bathrooms: 2,
+    area: 83,
+    propertyType: 'Apartamento',
+    yearBuilt: 1993,
+    images: Array.from({ length: 20 }, (_, i) => `https://ap-cedritos-bog-ce01.netlify.app/assets/${i + 1}.jpeg`),
+    amenities: ['C.C. Caobos a pasos', 'Construcción Clásica', 'Vigilancia 24/7', 'Ascensor Disponible'],
+    internalFeatures: ['3 Alcobas Amplias', 'Biblioteca / Home Office', '2 Baños Completos', 'Cocina Independiente', 'Cuarto Servicio / Depósito', 'Espacios Muy Iluminados'],
+    latitude: 4.725,
+    longitude: -74.048,
+    virtualTourVideo: 'https://ap-cedritos-bog-ce01.netlify.app/assets/video_presentacion_animada_recorrido_apto.mp4',
+    propertyDetails: {
+      administrationFee: 550000,
+      parking: '1',
+      privateArea: 82.98,
+      estrato: 4,
+      estado: 'Crédito Hipotecario Vigente'
+    },
+    description: 'Amplio apartamento clásico con un gran potencial para ser remodelado y revalorizado. Su distribución tradicional garantiza excelente iluminación natural y confort.',
+    stealthFichaUrl: 'https://ap-cedritos-bog-ce01.netlify.app/'
+  }
+};

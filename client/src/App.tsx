@@ -17,6 +17,7 @@ import Contact from "./pages/Contact";
 import JanIAWidget from "./components/JanIAWidget";
 import AgentDashboard from "./pages/AgentDashboard";
 import StealthPropertyView from "./pages/StealthPropertyView";
+import UnbrandedFicha from "./pages/UnbrandedFicha";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -32,6 +33,7 @@ function Router() {
       <Route path={"/admin"} component={Admin} />
       <Route path={"/agent-dashboard"} component={AgentDashboard} />
       <Route path={"/p/:token"} component={StealthPropertyView} />
+      <Route path={"/ficha/:id"} component={UnbrandedFicha} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
