@@ -33,7 +33,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   try {
     const genAI = new GoogleGenerativeAI(ENV.forgeApiKey);
     const model = genAI.getGenerativeModel({ 
-      model: "gemini-1.5-flash-latest",
+      model: "gemini-1.5-flash",
     });
 
     const systemMessage = params.messages.find(m => m.role === "system");

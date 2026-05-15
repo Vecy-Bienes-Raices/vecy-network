@@ -1,38 +1,18 @@
-2026/05/14-21:47:29.018 122e2 Reusing MANIFEST /home/eduardo/PROYECTOS/vecy-network/.wwebjs_auth/session/Default/IndexedDB/https_web.whatsapp.com_0.indexeddb.leveldb/MANIFEST-000001
-2026/05/14-21:47:29.019 122e2 Recovering log #714
-2026/05/14-21:47:29.027 122e2 Reusing old log /home/eduardo/PROYECTOS/vecy-network/.wwebjs_auth/session/Default/IndexedDB/https_web.whatsapp.com_0.indexeddb.leveldb/000714.log 
-2026/05/14-21:47:29.027 122e2 Delete type=2 #708
-2026/05/14-21:47:29.028 122e2 Delete type=2 #711
-2026/05/14-21:47:29.028 122e2 Delete type=2 #707
-2026/05/14-21:47:29.028 122e2 Delete type=2 #704
-2026/05/14-21:47:29.028 122e2 Delete type=2 #710
-2026/05/14-21:47:29.029 122e2 Delete type=2 #705
-2026/05/14-21:47:29.029 122e2 Delete type=2 #709
-2026/05/14-21:47:29.029 122e2 Delete type=2 #706
-2026/05/14-21:47:29.029 122e2 Delete type=2 #715
-2026/05/14-21:47:29.029 122e2 Delete type=2 #712
-2026/05/14-21:47:51.316 122e5 Level-0 table #727: started
-2026/05/14-21:47:51.347 122e5 Level-0 table #727: 1197075 bytes OK
-2026/05/14-21:47:51.359 122e5 Delete type=0 #714
-2026/05/14-21:47:51.362 122e5 Compacting 1@1 + 9@2 files
-2026/05/14-21:47:51.447 122e5 Generated table #728@1: 65165 keys, 2204708 bytes
-2026/05/14-21:47:51.531 122e5 Generated table #729@1: 78071 keys, 2229608 bytes
-2026/05/14-21:47:51.613 122e5 Generated table #730@1: 68981 keys, 2331115 bytes
-2026/05/14-21:47:51.685 122e5 Generated table #731@1: 43848 keys, 2200340 bytes
-2026/05/14-21:47:51.740 122e5 Generated table #732@1: 25033 keys, 2180162 bytes
-2026/05/14-21:47:51.770 122e5 Generated table #733@1: 584 keys, 2127343 bytes
-2026/05/14-21:47:51.866 122e5 Generated table #734@1: 24813 keys, 2219419 bytes
-2026/05/14-21:47:51.929 122e5 Generated table #735@1: 27476 keys, 2196236 bytes
-2026/05/14-21:47:51.978 122e5 Generated table #736@1: 20293 keys, 1514548 bytes
-2026/05/14-21:47:51.978 122e5 Compacted 1@1 + 9@2 files => 19203479 bytes
-2026/05/14-21:47:51.998 122e5 compacted to: files[ 0 0 9 0 0 0 0 ]
-2026/05/14-21:47:51.998 122e5 Delete type=2 #717
-2026/05/14-21:47:51.998 122e5 Delete type=2 #727
-2026/05/14-21:47:51.999 122e5 Delete type=2 #718
-2026/05/14-21:47:51.999 122e5 Delete type=2 #720
-2026/05/14-21:47:51.999 122e5 Delete type=2 #719
-2026/05/14-21:47:51.999 122e5 Delete type=2 #724
-2026/05/14-21:47:51.999 122e5 Delete type=2 #721
-2026/05/14-21:47:51.999 122e5 Delete type=2 #722
-2026/05/14-21:47:51.999 122e5 Delete type=2 #716
-2026/05/14-21:47:51.999 122e5 Delete type=2 #723
+2026/05/14-21:48:48.450 12403 Reusing MANIFEST /home/eduardo/PROYECTOS/vecy-network/.wwebjs_auth/session/Default/IndexedDB/https_web.whatsapp.com_0.indexeddb.leveldb/MANIFEST-000001
+2026/05/14-21:48:48.451 12403 Recovering log #726
+2026/05/14-21:48:48.500 12403 Reusing old log /home/eduardo/PROYECTOS/vecy-network/.wwebjs_auth/session/Default/IndexedDB/https_web.whatsapp.com_0.indexeddb.leveldb/000726.log 
+2026/05/14-21:48:50.995 12403 Level-0 table #739: started
+2026/05/14-21:48:51.033 12403 Level-0 table #739: 1061492 bytes OK
+2026/05/14-21:48:51.052 12403 Delete type=0 #726
+2026/05/14-21:48:51.621 12403 Compacting 1@1 + 9@2 files
+2026/05/14-21:48:51.718 12403 Generated table #740@1: 66037 keys, 2204608 bytes
+2026/05/14-21:48:51.833 12403 Generated table #741@1: 77461 keys, 2229145 bytes
+2026/05/14-21:48:51.911 12403 Generated table #742@1: 68726 keys, 2332328 bytes
+2026/05/14-21:48:51.983 12403 Generated table #743@1: 43889 keys, 2199606 bytes
+2026/05/14-21:48:52.048 12403 Generated table #744@1: 24963 keys, 2182955 bytes
+2026/05/14-21:48:52.073 12403 Generated table #745@1: 590 keys, 2127233 bytes
+2026/05/14-21:48:52.144 12403 Generated table #746@1: 25010 keys, 2220443 bytes
+2026/05/14-21:48:52.205 12403 Generated table #747@1: 27524 keys, 2196441 bytes
+2026/05/14-21:48:52.262 12403 Generated table #748@1: 20036 keys, 1504705 bytes
+2026/05/14-21:48:52.262 12403 Compacted 1@1 + 9@2 files => 19197464 bytes
+2026/05/14-21:48:52.275 12403 compacted to: files[ 0 0 9 0 0 0 0 ]
