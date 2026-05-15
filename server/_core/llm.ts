@@ -23,7 +23,7 @@ export type InvokeResult = {
 };
 
 /**
- * Invoke Google Gemini API using the official SDK (Stabilized for gemini-1.5-flash)
+ * Invoke Google Gemini API (Simplified & Stable)
  */
 export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   if (!ENV.forgeApiKey) {
@@ -32,9 +32,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
 
   try {
     const genAI = new GoogleGenerativeAI(ENV.forgeApiKey);
-    const model = genAI.getGenerativeModel({ 
-      model: "gemini-1.5-flash",
-    });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     const systemMessage = params.messages.find(m => m.role === "system");
     const userMessages = params.messages.filter(m => m.role !== "system");
@@ -44,19 +42,12 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
       parts: [{ text: m.content }]
     }));
 
-    console.log(`[LLM] Procesando solicitud con Gemini 1.5 Flash...`);
-
     const result = await model.generateContent({
       contents: contents,
-      systemInstruction: systemMessage ? {
-        role: 'system',
-        parts: [{ text: systemMessage.content }]
-      } : undefined,
+      systemInstruction: systemMessage ? systemMessage.content : undefined,
       generationConfig: {
         temperature: 0.7,
-        topP: 0.95,
-        topK: 40,
-        maxOutputTokens: 8192,
+        maxOutputTokens: 2048,
         responseMimeType: params.responseFormat?.type === "json_object" ? "application/json" : "text/plain",
       },
     });
@@ -64,20 +55,16 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     const response = await result.response;
     const text = response.text();
 
-    if (!text) {
-        throw new Error("Gemini devolvió una respuesta vacía.");
-    }
-
     return {
       choices: [{
         message: {
           role: "assistant",
-          content: text,
+          content: text || "Lo siento, no pude procesar el mensaje.",
         },
       }],
     };
   } catch (error: any) {
-    console.error(`[LLM Error] Error en la llamada a Gemini: ${error.message}`);
+    console.error(`[LLM ERROR] ${error.message}`);
     throw error;
   }
 }

@@ -97,6 +97,10 @@ jspm_packages/
 .out
 .storybook-out
 
+# WhatsApp Web session and cache
+.wwebjs_auth/
+.wwebjs_cache/
+
 # Temporary folders
 tmp/
 temp/
