@@ -1,3 +1,3 @@
-2026/05/14-21:52:24.310 12644 Reusing MANIFEST /home/eduardo/PROYECTOS/vecy-network/.wwebjs_auth/session/Default/Local Storage/leveldb/MANIFEST-000001
-2026/05/14-21:52:24.318 12644 Recovering log #13
-2026/05/14-21:52:24.319 12644 Reusing old log /home/eduardo/PROYECTOS/vecy-network/.wwebjs_auth/session/Default/Local Storage/leveldb/000013.log 
+2026/05/14-23:16:45.841 148e7 Reusing MANIFEST /home/eduardo/PROYECTOS/vecy-network/.wwebjs_auth/session/Default/Local Storage/leveldb/MANIFEST-000001
+2026/05/14-23:16:45.849 148e7 Recovering log #16
+2026/05/14-23:16:45.849 148e7 Reusing old log /home/eduardo/PROYECTOS/vecy-network/.wwebjs_auth/session/Default/Local Storage/leveldb/000016.log 
