@@ -7,7 +7,7 @@ import { processWhatsAppMessage } from './janIA';
 
 export class WhatsAppBot {
   private client: ClientType;
-  private targetGroupId: string = '120363260108880069@g.us';
+  private targetGroupId: string = '120363260108880069@g.us'; // VECY INMUEBLES NETWORK
   private lastMessageProcessed: string = '';
 
   constructor() {
@@ -17,11 +17,11 @@ export class WhatsAppBot {
         args: [
           '--no-sandbox', 
           '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage', // Ayuda con la lentitud/memoria en Linux
-          '--disable-gpu',           // Menos consumo de recursos
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
         ],
         executablePath: process.env.CHROME_PATH || undefined,
-        headless: true, // Forzamos modo sin cabeza para que no consuma recursos de pantalla
+        headless: true,
       }
     });
 
@@ -37,33 +37,52 @@ export class WhatsAppBot {
     this.client.on('authenticated', () => {
       console.log('✅ WhatsApp Autenticado');
     });
+this.client.on('ready', async () => {
+  this.botId = this.client.info.wid._serialized;
+  console.log('\n🚀 JANIA OPERATIVA - INTELIGENCIA MULTI-GRUPO ACTIVADA');
+  const chats = await this.client.getChats();
 
-    this.client.on('ready', async () => {
-      console.log('\n🚀 JANIA OPERATIVA - SERVIDOR OPTIMIZADO');
-      
-      try {
-        const chat = await this.client.getChatById(this.targetGroupId) as any;
-        console.log(`Fijada en: ${chat.name}`);
-        if (chat.name !== 'VECY INMUEBLES NETWORK') {
-           await chat.setSubject('VECY INMUEBLES NETWORK');
-           console.log('✅ Nombre del grupo corregido.');
-        }
-      } catch (err) {
-        console.warn('⚠️ No se pudo verificar/cambiar el nombre del grupo.');
-      }
-    });
+  // Filtro de grupos mejorado
+  const keywords = ['VECY', 'Expertos Inmobiliarios', 'Andrés Nieto', 'Brokers Bogotá', 'REQUE', 'Red Inmobiliaria', 'PERMUTA'];
+  const blacklist = ['SOLICITUDES VECY AGENDA'];
 
-    this.client.on('message_create', async (msg: Message) => {
-      try {
-        const chat = await msg.getChat();
-        
-        // Log para ver actividad (Solo grupo objetivo para no saturar terminal)
-        if (chat.id._serialized === this.targetGroupId) {
-            console.log(`\n[VECY NETWORK] De: ${msg.fromMe ? 'YO' : msg.from} | Texto: ${msg.body.substring(0, 50)}`);
-            await this.handleMessage(msg);
+  const importantChats = chats.filter(c => 
+    keywords.some(key => c.name.includes(key)) && 
+    !blacklist.some(b => c.name.includes(b))
+  );
+
+  console.log('\n--- GRUPOS EN VIGILANCIA ---');
+  importantChats.forEach(c => console.log(`👀 Vigilando: ${c.name} (${c.id._serialized})`));
+});
+
+this.client.on('message_create', async (msg: Message) => {
+  try {
+    const chat = await msg.getChat();
+    const isTargetGroup = chat.id._serialized === this.targetGroupId;
+
+    const blacklist = ['SOLICITUDES VECY AGENDA'];
+    const isImportantGroup = 
+        (chat.name.includes('Andrés Nieto') || 
+        chat.name.includes('Brokers Bogotá') || 
+        chat.name.includes('REQUE') || 
+        chat.name.includes('Red Inmobiliaria') || 
+        chat.name.includes('PERMUTA') ||
+        chat.name.includes('VECY') ||
+        chat.name.includes('Expertos Inmobiliarios')) &&
+        !blacklist.some(b => chat.name.includes(b));
+
+
+        // Solo procesamos si es el grupo principal o uno de los grupos de captura de datos
+        if (isTargetGroup || isImportantGroup) {
+            // Log de actividad para Eduardo
+            console.log(`[VECY INTEL] Mensaje en "${chat.name}" | De: ${msg.fromMe ? 'YO' : msg.from} | Texto: ${msg.body.substring(0, 30)}...`);
+            
+            // Si es un grupo importante pero NO es el principal, procesamos SILENCIOSAMENTE (solo guardar en Supabase)
+            const silent = !isTargetGroup;
+            await this.handleMessage(msg, silent);
         }
       } catch (e) {
-        console.error('Error en receptor:', e);
+        console.error('Error en receptor multi-grupo:', e);
       }
     });
   }
@@ -75,9 +94,6 @@ export class WhatsAppBot {
 
     try {
       let userName = "Colega";
-      
-      // FIX CRÍTICO: No llamar a getContact() si el mensaje es nuestro (fromMe)
-      // porque WhatsApp Web Multi-Device lanza un error fatal.
       if (!msg.fromMe) {
           const contact = await msg.getContact();
           userName = contact.pushname || contact.name || contact.number || "Colega";
@@ -85,22 +101,46 @@ export class WhatsAppBot {
           userName = "Eduardo";
       }
 
-      // COMANDO PRESÉNTATE
-      if (msg.body.toLowerCase().includes('jania preséntate') || msg.body.toLowerCase().includes('jania anuncia') || msg.body.toLowerCase().includes('confirma que estás lista')) {
-        if (!silent) {
-            const intro = `¡Hola @todos! 🌟 Soy *JanIA*, su Coach Inmobiliaria de VECY. 🎯\n\nConfirmado: ¡Estoy despierta, alerta y lista para trabajar! 🚀\n\nHe analizado el grupo y estoy lista para encontrar MATCHES entre sus ofertas y requerimientos. ¡Empecemos a cerrar negocios! 🏠💼`;
-            const chat = await msg.getChat();
-            await chat.sendMessage(intro);
+      const text = msg.body.toLowerCase();
+
+      // COMANDOS DE CONTROL (Solo en grupo principal y no silencioso)
+      if (!silent) {
+          if (text.includes('jania preséntate') || text.includes('jania anuncia') || text.includes('confirma que estás lista')) {
+            const intro = `¡Hola @todos! 🌟 Soy *JanIA*, su Coach Inmobiliaria de VECY. 🎯\n\nEstoy activa, vigilando múltiples grupos y lista para encontrar MATCHES. ¡Publiquen sus inmuebles y yo me encargo del resto! 🏠🚀`;
+            await this.client.sendMessage(this.targetGroupId, intro);
+            return;
+          }
+
+          if (text.includes('jania dime las reglas')) {
+            const chat = await this.client.getChatById(this.targetGroupId) as any;
+            msg.reply(`📝 *REGLAS DEL GRUPO:* \n\n${chat.description || 'No hay descripción'}`);
+            return;
+          }
+      }
+
+      // NO analizar mensajes propios de Eduardo para ahorrar tokens (a menos que sean comandos)
+      if (msg.fromMe && !silent) return;
+
+      // EXTRACCIÓN DE LINKS (Scraping) - Guardar en Supabase
+      const urlMatch = msg.body.match(/https?:\/\/[^\s]+/);
+      if (urlMatch) {
+        if (!silent) msg.reply(`🧐 Analizando este link para la red VECY...`);
+        try {
+            const data = await scrapePropertyLink(urlMatch[0]);
+            // El guardado en Supabase sucede dentro de scrapePropertyLink/JanIA
+            if (!silent) msg.reply(`✅ Inmueble registrado: ${data.name}. ¡Buscando matches!`);
+        } catch (e) {
+            console.error('Error scraping link:', e);
         }
         return;
       }
 
-      // SOLO PROCESAR IA PARA MENSAJES DE OTROS (Ahorro de tokens)
-      if (!msg.fromMe) {
-        const result = await processWhatsAppMessage(msg.body, msg.from, userName);
-        if (result && result.response && !silent) {
-          await msg.reply(result.response);
-        }
+      // PROCESAR CON IA (Clasificar y Guardar en Supabase)
+      // Si silent = true, JanIA guarda los datos pero no responde al chat (Ideal para grupos de terceros)
+      const result = await processWhatsAppMessage(msg.body, msg.from, userName);
+      
+      if (result && result.response && !silent) {
+        await this.client.sendMessage(msg.to, result.response, { mentions: [msg.from] });
       }
 
     } catch (e) {

@@ -1,7 +1,7 @@
 import { invokeLLM } from "./llm";
 import { getDb } from "../db";
 import { properties, requirements, InsertProperty, InsertRequirement } from "../../drizzle/schema";
-import { findMatchesForProperty } from "./matching";
+import { findMatchesForProperty, findMatchesForRequirement } from "./matching";
 import { geocodeAddress } from "./geocoding";
 
 export type JanIAResult = {
@@ -12,30 +12,27 @@ export type JanIAResult = {
 };
 
 const JANIA_PROMPT = `
-Eres JanIA, la Super Agente y COACH Inmobiliaria de VECY Network. Lideras el grupo "EXPERTOS INMOBILIARIOS DE COLOMBIA".
+Eres JanIA, la Super Agente y COACH Inmobiliaria de VECY Network para el grupo "VECY INMUEBLES NETWORK".
 
-TU OBJETIVO SUPREMO:
-Convertir cada mensaje en una oportunidad de negocio. No permitas que pasen mensajes incompletos sin "pulirlos".
+TU FILOSOFÍA:
+- No eres un simple bot, eres la MEMORIA y el MOTOR del grupo.
+- Tu misión es que ningún negocio se pierda. Por eso, TODO lo que se publica lo guardas en tu cerebro (Base de Datos Supabase).
+- Eres una COACH: Si alguien publica algo incompleto, no lo ignoras. Lo guardas y le pides amablemente lo que falta para que el "Match" sea posible.
 
-REGLAS DE ORO DE TU PERSONALIDAD:
-1. **Dirígete por Nombre:** Usa siempre el nombre del usuario que te proporciono. Ej: "¡Hola [Nombre]! Qué buena oportunidad..."
-2. **Detecta Vacíos:** Si alguien publica algo muy simple (ej: "Busco en Mazurén, 500M"), NO lo guardes simplemente. Responde pidiendo lo que falta.
-   **CAMPOS CRÍTICOS QUE SIEMPRE DEBES TENER:**
-   - Tipo de Inmueble (¿Apto, Casa, Bodega?)
-   - Operación (¿Venta o Arriendo?)
-   - Ubicación (Ciudad y Barrio/Zona)
-   - Precio/Presupuesto.
-   - Área (m2).
-   Si falta cualquiera de estos, clasifica como DATOS_INCOMPLETOS y pídelos amablemente. Ej: "¡Hola [Nombre]! Veo que buscas en Santa Bárbara con un super presupuesto, pero cuéntame: ¿Buscas Casa o Apto? ¿Y de cuántos metros más o menos? 🧐"
-3. **Clasificación DATOS_INCOMPLETOS:** Si faltan datos vitales (Tipo de inmueble, Ciudad/Zona, Presupuesto/Precio), usa esta clasificación y en tu 'response' pide amablemente los datos faltantes.
-4. **Entusiasmo y Liderazgo:** Si el mensaje es una oferta completa, anúncialo: "¡Atención Colegas! [Nombre] acaba de subir un SUPER INMUEBLE en [Zona]. Ya lo tengo mapeado."
-5. **Cero Bots Aburridos:** Varía tus frases. Usa emojis inmobiliarios (🏠, 🏢, 📍, 💰, 🎯).
+SUPERPODER DE REQUERIMIENTOS:
+- Debes motivar a los colegas a publicar sus REQUERIMIENTOS (qué buscan sus clientes). 
+- Diles que tú tienes una base de datos con cientos de inmuebles y que solo si publican su búsqueda, tú podrás avisarles si hay un match.
+- Si detectas una búsqueda, di: "¡Entendido [Nombre]! Ya guardé tu requerimiento en mi base de datos de VECY. Estoy escaneando ahora mismo para ver si algún colega tiene lo que buscas."
 
-ESTRUCTURA DE RESPUESTA (JSON):
-- classification: INMUEBLE, REQUERIMIENTO, CONSULTA_GENERAL, RESPUESTA_A_PREGUNTA_IA, o DATOS_INCOMPLETOS.
-- extractedData: Los datos que lograste rescatar.
-- missingFields: Lista de lo que falta para que el match sea perfecto.
-- response: Tu mensaje para el grupo (siempre mencionando al usuario).
+REGLAS DE CLASIFICACIÓN:
+- INMUEBLE: Oferta de venta, arriendo o permuta.
+- REQUERIMIENTO: Búsqueda de compra, arriendo o permuta.
+- DATOS_INCOMPLETOS: Si es una oferta/búsqueda pero le faltan datos vitales.
+
+IMPORTANTE: 
+- Clasifica como REQUERIMIENTO incluso si es simple (ej: "Busco en Santa Bárbara").
+- Extrae siempre el nombre del usuario.
+- Jamás uses código ni lenguaje técnico. Habla de "cierres", "comisiones" y "oportunidades".
 `;
 
 export async function processWhatsAppMessage(
@@ -53,13 +50,17 @@ export async function processWhatsAppMessage(
 
   const result = JSON.parse(response.choices[0].message.content as string) as JanIAResult;
   
-  // Logic to save to DB if complete
-  if (result.classification === "INMUEBLE" && (!result.missingFields || result.missingFields.length === 0)) {
+  // Logic to save EVERYTHING to Supabase, even if incomplete
+  if (result.classification === "INMUEBLE" || result.classification === "DATOS_INCOMPLETOS") {
     const data = result.extractedData as InsertProperty;
     
-    // Geocode before saving
+    // Fill mandatory fields to avoid Supabase errors
+    if (!data.name) data.name = `Inmueble de ${userName || userId}`;
+    if (!data.propertyType) data.propertyType = "apartment"; 
+    if (!data.price) data.price = "0";
+    if (!data.zone) data.zone = "Bogotá";
+
     if (data.zone) {
-      console.log(`[JanIA] Geocoding property location: ${data.zone}, ${data.city || 'Bogotá'}`);
       const geo = await geocodeAddress(`${data.zone}, ${data.city || 'Bogotá'}`);
       if (geo) {
         data.addressCity = geo.addressCity;
@@ -70,18 +71,20 @@ export async function processWhatsAppMessage(
     }
 
     const saved = await saveProperty(data, userId, text);
-    if (saved) {
+    if (saved && (!result.missingFields || result.missingFields.length === 0)) {
       const matches = await findMatchesForProperty(saved.id);
       if (matches.length > 0) {
-        result.response += `\n\n🎯 ¡Encontré ${matches.length} interesados para este inmueble! Los estoy contactando ahora mismo.`;
+        result.response += `\n\n🎯 ¡Atención! Encontré ${matches.length} colegas buscando algo así. ¡Hagamos el cierre!`;
       }
     }
-  } else if (result.classification === "REQUERIMIENTO" && (!result.missingFields || result.missingFields.length === 0)) {
+  } else if (result.classification === "REQUERIMIENTO" || result.classification === "DATOS_INCOMPLETOS") {
     const data = result.extractedData as InsertRequirement;
 
-    // Geocode before saving
+    // Fill mandatory fields
+    if (!data.tipoInmuebleDeseado) data.tipoInmuebleDeseado = "apartment";
+    if (!data.tipoNegocioDeseado) data.tipoNegocioDeseado = "venta";
+
     if (data.zonaDeseada) {
-      console.log(`[JanIA] Geocoding requirement location: ${data.zonaDeseada}, ${data.ciudadDeseada || 'Bogotá'}`);
       const geo = await geocodeAddress(`${data.zonaDeseada}, ${data.ciudadDeseada || 'Bogotá'}`);
       if (geo) {
         data.addressCity = geo.addressCity;
@@ -90,8 +93,13 @@ export async function processWhatsAppMessage(
       }
     }
 
-    await saveRequirement(data, userId, text);
-    result.response += `\n\n🔍 Guardado tu requerimiento. Estoy buscando en mi base de datos...`;
+    const saved = await saveRequirement(data, userId, text);
+    if (saved) {
+      const matches = await findMatchesForRequirement(saved.id);
+      if (matches.length > 0) {
+        result.response += `\n\n🎯 ¡Excelentes noticias! Tengo ${matches.length} inmuebles en mi base de datos que podrían servirte. ¡Revisemos!`;
+      }
+    }
   }
 
   return result;
@@ -116,15 +124,17 @@ async function saveProperty(data: InsertProperty, userId: string, rawText: strin
 
 async function saveRequirement(data: InsertRequirement, userId: string, rawText: string) {
   const db = await getDb();
-  if (!db) return;
+  if (!db) return null;
 
   try {
-    await db.insert(requirements).values({
+    const [result] = await db.insert(requirements).values({
       ...data,
       idUsuarioWhatsapp: userId,
       rawText: rawText,
-    });
+    }).returning();
+    return result;
   } catch (e) {
     console.error("Error saving requirement:", e);
+    return null;
   }
 }
