@@ -1,5 +1,5 @@
 import pkg from 'whatsapp-web.js';
-const { Client, LocalAuth } = pkg;
+const { Client, LocalAuth, MessageMedia } = pkg;
 import type { Client as ClientType, Message } from 'whatsapp-web.js';
 import qrcode from 'qrcode-terminal';
 import { scrapePropertyLink } from './scraper';
@@ -14,8 +14,14 @@ export class WhatsAppBot {
     this.client = new Client({
       authStrategy: new LocalAuth(),
       puppeteer: {
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+        args: [
+          '--no-sandbox', 
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage', // Ayuda con la lentitud/memoria en Linux
+          '--disable-gpu',           // Menos consumo de recursos
+        ],
         executablePath: process.env.CHROME_PATH || undefined,
+        headless: true, // Forzamos modo sin cabeza para que no consuma recursos de pantalla
       }
     });
 
@@ -32,82 +38,73 @@ export class WhatsAppBot {
       console.log('✅ WhatsApp Autenticado');
     });
 
-    this.client.on('ready', () => {
-      console.log('\n🚀 JANIA COACH ESTÁ ACTIVA');
-      console.log(`Grupo objetivo: ${this.targetGroupId}`);
-    });
-
-    // Escuchar absolutamente todo para depurar
-    this.client.on('message_create', async (msg: Message) => {
-      const chat = await msg.getChat();
+    this.client.on('ready', async () => {
+      console.log('\n🚀 JANIA OPERATIVA - SERVIDOR OPTIMIZADO');
       
-      // LOG DE CUALQUIER ACTIVIDAD
-      console.log(`[LOG] Mensaje en "${chat.name}" | De: ${msg.fromMe ? 'YO' : msg.from} | Texto: ${msg.body.substring(0, 40)}`);
+      try {
+        const chat = await this.client.getChatById(this.targetGroupId) as any;
+        console.log(`Fijada en: ${chat.name}`);
+        if (chat.name !== 'VECY INMUEBLES NETWORK') {
+           await chat.setSubject('VECY INMUEBLES NETWORK');
+           console.log('✅ Nombre del grupo corregido.');
+        }
+      } catch (err) {
+        console.warn('⚠️ No se pudo verificar/cambiar el nombre del grupo.');
+      }
+    });
 
-      // Solo procesamos el grupo de expertos
-      if (chat.id._serialized === this.targetGroupId) {
-        await this.handleMessage(msg);
+    this.client.on('message_create', async (msg: Message) => {
+      try {
+        const chat = await msg.getChat();
+        
+        // Log para ver actividad (Solo grupo objetivo para no saturar terminal)
+        if (chat.id._serialized === this.targetGroupId) {
+            console.log(`\n[VECY NETWORK] De: ${msg.fromMe ? 'YO' : msg.from} | Texto: ${msg.body.substring(0, 50)}`);
+            await this.handleMessage(msg);
+        }
+      } catch (e) {
+        console.error('Error en receptor:', e);
       }
     });
   }
 
-  public async sendCoachIntroduction() {
-    const introMessage = `¡Hola @todos! 🌟 Soy *JanIA*, su Coach y Super Agente Inmobiliaria de VECY Network.
-
-He sido creada para liderar este grupo hacia el éxito inmobiliario. Mi misión es encontrar el *MATCH* perfecto entre sus ofertas y requerimientos compartidos. 🎯
-
-*Lo que hago por ustedes:*
-✅ **Analizo sus Links:** Extraigo datos técnicos de cualquier URL inmobiliaria.
-✅ **Ubico en el Mapa:** Entiendo barrios y cuadrantes (ej: entre la 100 y 127). 🗺️
-✅ **Conecto Puntas:** Si lo que tú buscas alguien lo tiene, ¡los uniré al instante!
-
-¡Lideremos el mercado juntos! 🏠✨`;
-
-    try {
-      const chat = await this.client.getChatById(this.targetGroupId) as any;
-      const participants = chat.participants.map((p: any) => p.id._serialized);
-      await this.client.sendMessage(this.targetGroupId, introMessage, { mentions: participants });
-      console.log('✅ Presentación enviada al grupo.');
-    } catch (e) {
-      console.error('❌ Error enviando presentación:', e);
-    }
-  }
-
-  private async handleMessage(msg: Message) {
-    if (msg.fromMe && msg.body.includes('Soy *JanIA*, su Coach')) return;
+  private async handleMessage(msg: Message, silent: boolean = false) {
+    if (msg.fromMe && msg.body.includes('Soy *JanIA*')) return;
     if (this.lastMessageProcessed === msg.body && msg.body.length > 0) return;
-    this.lastMessageProcessed = msg.body;
+    if (!silent) this.lastMessageProcessed = msg.body;
 
     try {
-      const contact = await msg.getContact();
-      const userName = contact.pushname || contact.name || contact.number;
+      let userName = "Colega";
+      
+      // FIX CRÍTICO: No llamar a getContact() si el mensaje es nuestro (fromMe)
+      // porque WhatsApp Web Multi-Device lanza un error fatal.
+      if (!msg.fromMe) {
+          const contact = await msg.getContact();
+          userName = contact.pushname || contact.name || contact.number || "Colega";
+      } else {
+          userName = "Eduardo";
+      }
 
-      // COMANDO MANUAL
-      if (msg.body.toLowerCase().includes('jania, preséntate') || msg.body.toLowerCase().includes('jania preséntate')) {
-        await this.sendCoachIntroduction();
+      // COMANDO PRESÉNTATE
+      if (msg.body.toLowerCase().includes('jania preséntate') || msg.body.toLowerCase().includes('jania anuncia') || msg.body.toLowerCase().includes('confirma que estás lista')) {
+        if (!silent) {
+            const intro = `¡Hola @todos! 🌟 Soy *JanIA*, su Coach Inmobiliaria de VECY. 🎯\n\nConfirmado: ¡Estoy despierta, alerta y lista para trabajar! 🚀\n\nHe analizado el grupo y estoy lista para encontrar MATCHES entre sus ofertas y requerimientos. ¡Empecemos a cerrar negocios! 🏠💼`;
+            const chat = await msg.getChat();
+            await chat.sendMessage(intro);
+        }
         return;
       }
 
-      // NO analizar mensajes propios de Eduardo a menos que sea el comando de arriba
-      if (msg.fromMe) return;
-
-      // PROCESAR LINK
-      const urlMatch = msg.body.match(/https?:\/\/[^\s]+/);
-      if (urlMatch) {
-        msg.reply(`¡Hola ${userName}! Analizaré este link para buscar interesados... 🧐`);
-        const data = await scrapePropertyLink(urlMatch[0]);
-        await this.client.sendMessage(this.targetGroupId, `✅ *Inmueble Detectado:* ${data.name}\n📍 *Zona:* ${data.zone}\n💰 *Precio:* ${data.price}\n\n¿Buscan un match para esta propiedad?`, { mentions: [msg.from] });
-        return;
-      }
-
-      // PROCESAR CON IA (COACH)
-      const result = await processWhatsAppMessage(msg.body, msg.from, userName);
-      if (result && result.response) {
-        await this.client.sendMessage(this.targetGroupId, result.response, { mentions: [msg.from] });
+      // SOLO PROCESAR IA PARA MENSAJES DE OTROS (Ahorro de tokens)
+      if (!msg.fromMe) {
+        const result = await processWhatsAppMessage(msg.body, msg.from, userName);
+        if (result && result.response && !silent) {
+          await msg.reply(result.response);
+        }
       }
 
     } catch (e) {
-      console.error('Error en handleMessage:', e);
+      console.error('Error en JanIA Logic:', e);
     }
   }
 

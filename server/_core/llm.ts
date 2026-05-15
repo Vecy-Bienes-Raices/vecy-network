@@ -23,48 +23,60 @@ export type InvokeResult = {
 };
 
 /**
- * Invoke Google Gemini API (Simplified & Stable)
+ * Invoke Google Gemini API (Ultra-Stable & Verified)
  */
 export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   if (!ENV.forgeApiKey) {
     throw new Error("BUILT_IN_FORGE_API_KEY is not configured");
   }
 
+  const validMessages = params.messages.filter(m => m.content && m.content.trim().length > 0);
+  if (validMessages.filter(m => m.role !== "system").length === 0) {
+    return { choices: [{ message: { role: "assistant", content: "" } }] };
+  }
+
+  const genAI = new GoogleGenerativeAI(ENV.forgeApiKey);
+  
+  // Nombres de modelos verificados en tu consola
+  const MAIN_MODEL = "gemini-flash-latest";
+  const FALLBACK_MODEL = "gemini-pro-latest";
+
+  const systemMessage = validMessages.find(m => m.role === "system");
+  const userMessages = validMessages.filter(m => m.role !== "system");
+
+  const contents = userMessages.map(m => ({
+    role: m.role === "assistant" ? "model" : "user",
+    parts: [{ text: m.content }]
+  }));
+
+  const config = {
+    temperature: 0.7,
+    maxOutputTokens: 2048,
+    responseMimeType: params.responseFormat?.type === "json_object" ? "application/json" : "text/plain",
+  };
+
   try {
-    const genAI = new GoogleGenerativeAI(ENV.forgeApiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-    const systemMessage = params.messages.find(m => m.role === "system");
-    const userMessages = params.messages.filter(m => m.role !== "system");
-
-    const contents = userMessages.map(m => ({
-      role: m.role === "assistant" ? "model" : "user",
-      parts: [{ text: m.content }]
-    }));
-
+    console.log(`[LLM] Usando ${MAIN_MODEL}...`);
+    const model = genAI.getGenerativeModel({ model: MAIN_MODEL });
     const result = await model.generateContent({
-      contents: contents,
-      systemInstruction: systemMessage ? systemMessage.content : undefined,
-      generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 2048,
-        responseMimeType: params.responseFormat?.type === "json_object" ? "application/json" : "text/plain",
-      },
+      contents,
+      systemInstruction: systemMessage ? { role: 'system', parts: [{ text: systemMessage.content }] } : undefined,
+      generationConfig: config,
     });
-
-    const response = await result.response;
-    const text = response.text();
-
-    return {
-      choices: [{
-        message: {
-          role: "assistant",
-          content: text || "Lo siento, no pude procesar el mensaje.",
-        },
-      }],
-    };
+    return { choices: [{ message: { role: "assistant", content: (await result.response).text() } }] };
   } catch (error: any) {
-    console.error(`[LLM ERROR] ${error.message}`);
-    throw error;
+    console.warn(`[LLM Warn] Falló ${MAIN_MODEL}: ${error.message}`);
+    
+    try {
+        console.log(`[LLM] Reintentando con ${FALLBACK_MODEL}...`);
+        const model = genAI.getGenerativeModel({ model: FALLBACK_MODEL });
+        // Fallback robusto combinando todo en un prompt si falla la estructura de chat
+        const prompt = validMessages.map(m => `[${m.role.toUpperCase()}]: ${m.content}`).join("\n\n");
+        const result = await model.generateContent(prompt);
+        return { choices: [{ message: { role: "assistant", content: (await result.response).text() } }] };
+    } catch (e: any) {
+        console.error(`[LLM Critical Error] Ambos modelos fallaron: ${e.message}`);
+        throw e;
+    }
   }
 }
