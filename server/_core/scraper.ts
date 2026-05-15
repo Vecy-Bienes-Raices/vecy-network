@@ -1,0 +1,75 @@
+import axios from 'axios';
+import * as cheerio from 'cheerio';
+import { invokeLLM } from './llm';
+
+export async function scrapePropertyLink(url: string) {
+  try {
+    // 1. Descargar el HTML de la página
+    const response = await axios.get(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      },
+      timeout: 10000
+    });
+
+    const $ = cheerio.load(response.data);
+
+    // 2. Limpiar el HTML para que Gemini no se pierda entre scripts y estilos
+    $('script, style, nav, footer, iframe, header').remove();
+    const cleanText = $('body').text().replace(/\s+/g, ' ').trim().slice(0, 10000); // Tomamos los primeros 10k caracteres
+
+    // 3. Extraer todas las imágenes (muy importante para las fotos del inmueble)
+    const images: string[] = [];
+    $('img').each((_, el) => {
+      const src = $(el).attr('src');
+      if (src && (src.startsWith('http') || src.startsWith('https'))) {
+        images.push(src);
+      }
+    });
+
+    // 4. Usar JanIA para extraer la información estructurada
+    const extractionPrompt = `
+      Eres un extractor de datos inmobiliarios experto. He extraído el siguiente texto de una página web de un inmueble:
+      
+      URL: ${url}
+      TEXTO: ${cleanText}
+      IMAGENES ENCONTRADAS: ${images.slice(0, 20).join(', ')}
+      
+      Tu tarea es devolver un objeto JSON estrictamente formateado con los siguientes campos basándote SOLO en la información del texto:
+      - name: Un título atractivo para el inmueble.
+      - description: Una descripción detallada.
+      - propertyType: Uno de estos: "apartment", "house", "building", "warehouse", "farm", "hotel", "office", "land", "commercial", "loft", "consultorio".
+      - transactionType: "venta" o "arriendo".
+      - price: Solo el número (ej: 450000000).
+      - currency: "COP" o "USD".
+      - city: Nombre de la ciudad.
+      - zone: Barrio o sector.
+      - bedrooms: Número (si existe).
+      - bathrooms: Número (si existe).
+      - garages: Número (si existe).
+      - stratum: Número 1-6.
+      - areaTotal: Número en m2.
+      - areaPrivate: Número en m2.
+      - isAmoblado: boolean.
+      - amenities: Un objeto con booleanos (balcon, piscina, gimnasio, vigilancia, ascensor, terraza, deposito).
+      - images: Un array con las 10 mejores URLs de imágenes que parezcan del inmueble.
+      
+      Responde SOLO el JSON. Si no encuentras un dato, pon null.
+    `;
+
+    const aiResponse = await invokeLLM({
+      messages: [{ role: 'system', content: extractionPrompt }]
+    });
+
+    const content = aiResponse.choices[0]?.message?.content;
+    if (!content) throw new Error("No se pudo extraer información del inmueble");
+
+    // Limpiar posibles bloques de código markdown
+    const jsonStr = content.replace(/```json|```/g, '').trim();
+    return JSON.parse(jsonStr);
+
+  } catch (error) {
+    console.error('Error in property scraper:', error);
+    throw new Error(`Error al extraer datos del link: ${error}`);
+  }
+}

@@ -1,0 +1,25 @@
+## 7. Privacidad y Control del Agente en WhatsApp
+
+### 7.1. Acceso Exclusivo al Grupo
+
+Evolution API te permite controlar qué chats procesa tu webhook. En el código de tu backend (sección 4.2 de la Guía Técnica), hemos incluido una línea clave:
+
+```javascript
+  if (event.data.key.remoteJid !== 'ID_DE_TU_GRUPO_WHATSAPP@g.us') {
+    return res.status(200).send('Ignorando mensaje de otro chat.');
+  }
+```
+
+**`ID_DE_TU_GRUPO_WHATSAPP@g.us`** es el identificador único de tu grupo. Deberás obtenerlo (Evolution API suele proporcionarlo en los datos del webhook o puedes inspeccionar los logs). Al incluir esta verificación, tu agente **solo procesará mensajes de ese grupo específico**, ignorando cualquier otro chat individual o grupal en el WhatsApp conectado.
+
+### 7.2. Hardware y Número de Teléfono
+
+*   **¿Teléfono Físico?** No es estrictamente necesario. Evolution API funciona emulando una sesión de WhatsApp Web. Puedes escanear el código QR desde cualquier teléfono (incluso uno personal) y luego ese teléfono ya no necesita estar conectado a internet para que Evolution API funcione (aunque es recomendable mantenerlo activo para evitar desconexiones).
+*   **¿SIM Nueva / Número Aparte?** **Altamente recomendado.** Para evitar cualquier intrusión en tu vida personal y mantener la profesionalidad del agente, es ideal usar un número de teléfono dedicado para este propósito. Puede ser una SIM nueva o un número virtual si tu proveedor lo permite.
+*   **¿Con o Sin Plan de Datos/Minutos?** El número de WhatsApp conectado a Evolution API **solo necesita estar activo para el escaneo inicial del QR**. Una vez conectado, Evolution API gestiona la sesión. Sin embargo, para mayor estabilidad y para recibir notificaciones de WhatsApp (que no sean procesadas por el agente), un plan básico de datos y minutos en el teléfono físico asociado al número es una buena práctica, aunque no estrictamente indispensable para el funcionamiento del agente una vez conectado.
+
+### 7.3. Consideraciones de Seguridad
+
+*   **Claves API:** Nunca expongas tus claves API directamente en el código del frontend o en repositorios públicos. Usa variables de entorno seguras en Vercel/Netlify.
+*   **Evolution API:** Asegura tu instancia de Evolution API con un firewall y contraseñas robustas si la auto-alojas.
+*   **Supabase:** Configura las políticas de seguridad (Row Level Security) en Supabase para controlar estrictamente quién puede leer y escribir en tus tablas.
