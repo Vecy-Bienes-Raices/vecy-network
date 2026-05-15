@@ -48,7 +48,9 @@ export async function processWhatsAppMessage(
     responseFormat: { type: "json_object" }
   });
 
-  const result = JSON.parse(response.choices[0].message.content as string) as JanIAResult;
+  const rawContent = response.choices[0].message.content;
+  const cleanJson = rawContent.replace(/```json|```/g, "").trim();
+  const result = JSON.parse(cleanJson) as JanIAResult;
   
   // Logic to save EVERYTHING to Supabase, even if incomplete
   if (result.classification === "INMUEBLE" || result.classification === "DATOS_INCOMPLETOS") {
