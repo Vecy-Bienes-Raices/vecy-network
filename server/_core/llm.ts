@@ -25,6 +25,13 @@ export type InvokeResult = {
 /**
  * Invoke Google Gemini API (Ultra-Stable & Verified)
  */
+// Extrae el tiempo de espera sugerido por Google cuando responde 429
+function extractRetryDelay(errorMessage: string): number {
+  const match = errorMessage.match(/retryDelay['":\s]+["']?(\d+)s/);
+  if (match) return parseInt(match[1]) * 1000 + 1000; // +1 segundo extra de margen
+  return 15000; // 15 segundos por defecto si no especifica
+}
+
 export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   if (!ENV.forgeApiKey) {
     throw new Error("BUILT_IN_FORGE_API_KEY is not configured");
@@ -37,9 +44,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
 
   const genAI = new GoogleGenerativeAI(ENV.forgeApiKey);
   
-  // Modelos optimizados para potencia y bajo costo
-  const MAIN_MODEL = "gemini-flash-latest"; // Súper rápido, inteligente y absurdamente económico
-  const FALLBACK_MODEL = "gemini-flash-latest"; // Usamos el mismo como respaldo al ser el más estable
+  const MAIN_MODEL = "gemini-flash-latest";
 
   const systemMessage = validMessages.find(m => m.role === "system");
   const userMessages = validMessages.filter(m => m.role !== "system");
@@ -55,28 +60,36 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     responseMimeType: params.responseFormat?.type === "json_object" ? "application/json" : "text/plain",
   };
 
-  try {
-    console.log(`[LLM] Usando ${MAIN_MODEL}...`);
-    const model = genAI.getGenerativeModel({ model: MAIN_MODEL });
-    const result = await model.generateContent({
-      contents,
-      systemInstruction: systemMessage ? { role: 'system', parts: [{ text: systemMessage.content }] } : undefined,
-      generationConfig: config,
-    });
-    return { choices: [{ message: { role: "assistant", content: (await result.response).text() } }] };
-  } catch (error: any) {
-    console.warn(`[LLM Warn] Falló ${MAIN_MODEL}: ${error.message}`);
-    
+  const MAX_RETRIES = 3;
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-        console.log(`[LLM] Reintentando con ${FALLBACK_MODEL}...`);
-        const model = genAI.getGenerativeModel({ model: FALLBACK_MODEL });
-        // Fallback robusto combinando todo en un prompt si falla la estructura de chat
-        const prompt = validMessages.map(m => `[${m.role.toUpperCase()}]: ${m.content}`).join("\n\n");
-        const result = await model.generateContent(prompt);
-        return { choices: [{ message: { role: "assistant", content: (await result.response).text() } }] };
-    } catch (e: any) {
-        console.error(`[LLM Critical Error] Ambos modelos fallaron: ${e.message}`);
-        throw e;
+      console.log(`[LLM] Usando ${MAIN_MODEL} (intento ${attempt}/${MAX_RETRIES})...`);
+      const model = genAI.getGenerativeModel({ model: MAIN_MODEL });
+      const result = await model.generateContent({
+        contents,
+        systemInstruction: systemMessage ? { role: 'system', parts: [{ text: systemMessage.content }] } : undefined,
+        generationConfig: config,
+      });
+      return { choices: [{ message: { role: "assistant", content: (await result.response).text() } }] };
+    } catch (error: any) {
+      const is429 = error.message?.includes('429') || error.status === 429;
+      
+      if (is429 && attempt < MAX_RETRIES) {
+        const waitMs = extractRetryDelay(error.message);
+        console.warn(`[LLM] Cuota excedida, esperando ${waitMs/1000}s antes de reintentar...`);
+        await new Promise(resolve => setTimeout(resolve, waitMs));
+        continue;
+      }
+      
+      console.warn(`[LLM Warn] Falló ${MAIN_MODEL} (intento ${attempt}): ${error.message}`);
+
+      if (attempt === MAX_RETRIES) {
+        console.error(`[LLM Critical Error] ${MAX_RETRIES} intentos fallidos. Abortando.`);
+        throw error;
+      }
     }
   }
+
+  // Este punto nunca debería alcanzarse
+  throw new Error("[LLM] Error inesperado en el loop de reintentos.");
 }

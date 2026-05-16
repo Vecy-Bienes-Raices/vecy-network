@@ -44,8 +44,34 @@ export class WhatsAppBot {
       setTimeout(async () => {
         try {
           console.log(`🎯 Grupo Objetivo Confirmado por ID.`);
+
+          // CAPTURA SILENCIOSA DEL HISTORIAL: 
+          // Procesamos los últimos 200 mensajes sin responder en el grupo
+          // Esto llena la base de datos con todos los inmuebles y requerimientos publicados
+          console.log('📚 Iniciando captura silenciosa del historial del grupo...');
+          const chatToRead = await this.client.getChatById(this.targetGroupId) as any;
+          const historial = await chatToRead.fetchMessages({ limit: 200 });
+          
+          // Filtrar solo mensajes con texto real de inmuebles/requerimientos
+          const mensajesRelevantes = historial.filter((m: any) => 
+            !m.fromMe && m.body && m.body.length > 30
+          );
+          
+          console.log(`📚 ${mensajesRelevantes.length} mensajes relevantes encontrados. Procesando en silencio...`);
+          
+          let guardados = 0;
+          for (const m of mensajesRelevantes) {
+            try {
+              await this.handleMessage(m, true); // silencioso
+              guardados++;
+              // Pausa de 13 segundos entre mensajes para respetar límite gratuito (5/min)
+              await new Promise(resolve => setTimeout(resolve, 13000));
+            } catch(err) { /* ignorar errores individuales */ }
+          }
+          console.log(`📚 Captura completada: ${guardados}/${mensajesRelevantes.length} mensajes guardados en Supabase.`);
+
         } catch (err: any) {
-          console.warn('⚠️ Error al confirmar grupo:', err.message);
+          console.warn('⚠️ Error al cargar historial:', err.message);
         }
       }, 5000);
     });
@@ -88,6 +114,10 @@ export class WhatsAppBot {
     if (!silent) this.lastMessageProcessed = msg.body;
 
     try {
+      // En grupos: msg.author = quien escribe, msg.from = el grupo
+      // En privado: msg.from = quien escribe, msg.author = undefined
+      const senderId: string = (msg as any).author || msg.from;
+
       let userName = "Colega";
       if (!msg.fromMe) {
           const contact = await msg.getContact();
@@ -108,26 +138,22 @@ export class WhatsAppBot {
       // de lo contrario, se ignoran sus mensajes para no generar un bucle infinito.
       if (msg.fromMe && !text.includes('jania')) return;
 
-      // 1. Scraping de Links
+      // 1. Si hay link, intentar scrapear, pero SIEMPRE procesar el texto del mensaje también
       const urlMatch = msg.body.match(/https?:\/\/[^\s]+/);
       if (urlMatch) {
-        msg.reply(`🧐 Analizando este link para buscar un MATCH proactivo, ${userName}...`);
-        try {
-            const data = await scrapePropertyLink(urlMatch[0]);
-            // El matching bidireccional ocurre dentro de processWhatsAppMessage
-        } catch (e) {
-            console.error('Error scraping:', e);
-        }
-        return;
+        // Intentar scraping en paralelo pero no bloquear el flujo principal
+        scrapePropertyLink(urlMatch[0]).catch(e => {
+          console.log(`[Scraper] No se pudo extraer del link (procesando como texto): ${e.message}`);
+        });
       }
 
-      // 2. Inteligencia de Match 1000% Efectivo
-      const result = await processWhatsAppMessage(msg.body, msg.from, userName);
+      // 2. Inteligencia de Match 1000% Efectivo (SIEMPRE corre, con o sin link)
+      console.log(`[JanIA] Procesando mensaje de ${userName} (${senderId}): "${msg.body.substring(0, 60)}..."`);
+      const result = await processWhatsAppMessage(msg.body, senderId, userName);
       
       if (result && result.response && !silent) {
-        // Combinar el autor original y los agentes de los matches, sin duplicados
-        const allMentions = Array.from(new Set([msg.from, ...(result.mentions || [])]));
-        
+        // La mención debe ser al AUTOR del mensaje, no al grupo
+        const allMentions = Array.from(new Set([senderId, ...(result.mentions || [])]));
         await this.client.sendMessage(this.targetGroupId, result.response, { 
           mentions: allMentions 
         });

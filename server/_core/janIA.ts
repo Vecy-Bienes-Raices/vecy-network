@@ -24,8 +24,9 @@ TU FILOSOFÍA Y LIBRE ALBEDRÍO:
 
 SUPERPODER DE REQUERIMIENTOS:
 - Debes motivar a los colegas a publicar sus REQUERIMIENTOS (qué buscan sus clientes). 
-- Diles que tú tienes una base de datos con cientos de inmuebles y que solo si publican su búsqueda, tú podrás avisarles si hay un match.
-- Si detectas una búsqueda, di: "¡Entendido [Nombre]! Ya guardé tu requerimiento en mi base de datos de VECY. Estoy escaneando ahora mismo para ver si algún colega tiene lo que buscas."
+- Diles que tienes una base de datos y que si publican su búsqueda, podrás avisarles si hay un match.
+- Si detectas una búsqueda, responde con entusiasmo e invita a dar más detalles si faltan.
+- NUNCA digas "ya guardé" o "ya registré" en tu respuesta. El sistema lo hace automáticamente.
 
 REGLAS DE CLASIFICACIÓN:
 - INMUEBLE: Oferta de venta, arriendo o permuta.
@@ -41,7 +42,12 @@ DEBES RESPONDER ÚNICAMENTE CON UN OBJETO JSON VÁLIDO CON ESTA ESTRUCTURA EXACT
 {
   "classification": "INMUEBLE" | "REQUERIMIENTO" | "CONSULTA_GENERAL" | "DATOS_INCOMPLETOS",
   "response": "Tu respuesta persuasiva, natural y humana aquí (¡Nunca vacía!)",
-  "missingFields": ["campo1", "campo2"] // Solo si faltan datos vitales
+  "missingFields": ["campo1", "campo2"],
+  "extractedData": {
+    // Si es INMUEBLE o DATOS_INCOMPLETOS, incluye: name, propertyType (apartment/house/office/land/commercial), price, zone, city, area, rooms, bathrooms, stratum, description
+    // Si es REQUERIMIENTO, incluye: tipoInmuebleDeseado, tipoNegocioDeseado (venta/arriendo), zonaDeseada, ciudadDeseada, presupuestoMax, habitacionesMin
+    // Si es CONSULTA_GENERAL, deja este objeto vacío {}
+  }
 }
 `;
 
@@ -64,17 +70,22 @@ export async function processWhatsAppMessage(
   result.mentions = [];
   
   // Logic to save EVERYTHING to Supabase, even if incomplete
+  console.log(`[JanIA] Clasificación: ${result.classification}`);
+
   if (result.classification === "INMUEBLE" || result.classification === "DATOS_INCOMPLETOS") {
-    const data = result.extractedData as InsertProperty;
+    const rawData = (result.extractedData || {}) as Partial<InsertProperty>;
     
     // Fill mandatory fields to avoid Supabase errors
-    if (!data.name) data.name = `Inmueble de ${userName || userId}`;
-    if (!data.propertyType) data.propertyType = "apartment"; 
-    if (!data.price) data.price = "0";
-    if (!data.zone) data.zone = "Bogotá";
+    const data: InsertProperty = {
+      name: rawData.name || `Inmueble de ${userName || userId}`,
+      propertyType: rawData.propertyType || "apartment",
+      price: rawData.price || "0",
+      zone: rawData.zone || "Bogotá",
+      ...rawData,
+    };
 
     if (data.zone) {
-      const geo = await geocodeAddress(`${data.zone}, ${data.city || 'Bogotá'}`);
+      const geo = await geocodeAddress(`${data.zone}, ${(rawData as any).city || 'Bogotá'}`);
       if (geo) {
         data.addressCity = geo.addressCity;
         data.addressLocality = geo.addressLocality;
@@ -83,21 +94,29 @@ export async function processWhatsAppMessage(
       }
     }
 
+    console.log(`[JanIA] Guardando INMUEBLE en Supabase:`, data.name, data.zone);
     const saved = await saveProperty(data, userId, text);
-    if (saved && (!result.missingFields || result.missingFields.length === 0)) {
-      const matches = await findMatchesForProperty(saved.id);
-      if (matches.length > 0) {
-        result.response += `\n\n🎯 ¡Atención! Encontré ${matches.length} colegas buscando algo así. ¡Hagamos el cierre!`;
-        const matchedUsers = matches.map(m => m.idUsuarioWhatsapp).filter(Boolean);
-        result.mentions.push(...matchedUsers);
+    if (saved) {
+      console.log(`[JanIA] ✅ INMUEBLE guardado con ID: ${saved.id}`);
+      if (!result.missingFields || result.missingFields.length === 0) {
+        const matches = await findMatchesForProperty(saved.id);
+        if (matches.length > 0) {
+          result.response += `\n\n🎯 ¡Atención! Encontré ${matches.length} colegas buscando algo así. ¡Hagamos el cierre!`;
+          const matchedUsers = matches.map(m => m.idUsuarioWhatsapp).filter(Boolean);
+          result.mentions.push(...matchedUsers);
+        }
       }
+    } else {
+      console.error(`[JanIA] ❌ Error al guardar INMUEBLE en Supabase`);
     }
   } else if (result.classification === "REQUERIMIENTO") {
-    const data = result.extractedData as InsertRequirement;
+    const rawData = (result.extractedData || {}) as Partial<InsertRequirement>;
 
-    // Fill mandatory fields
-    if (!data.tipoInmuebleDeseado) data.tipoInmuebleDeseado = "apartment";
-    if (!data.tipoNegocioDeseado) data.tipoNegocioDeseado = "venta";
+    const data: InsertRequirement = {
+      tipoInmuebleDeseado: rawData.tipoInmuebleDeseado || "apartment",
+      tipoNegocioDeseado: rawData.tipoNegocioDeseado || "venta",
+      ...rawData,
+    };
 
     if (data.zonaDeseada) {
       const geo = await geocodeAddress(`${data.zonaDeseada}, ${data.ciudadDeseada || 'Bogotá'}`);
@@ -108,15 +127,21 @@ export async function processWhatsAppMessage(
       }
     }
 
+    console.log(`[JanIA] Guardando REQUERIMIENTO en Supabase:`, data.tipoNegocioDeseado, data.zonaDeseada);
     const saved = await saveRequirement(data, userId, text);
     if (saved) {
+      console.log(`[JanIA] ✅ REQUERIMIENTO guardado con ID: ${saved.id}`);
       const matches = await findMatchesForRequirement(saved.id);
       if (matches.length > 0) {
         result.response += `\n\n🎯 ¡Excelentes noticias! Tengo ${matches.length} inmuebles en mi base de datos que podrían servirte. ¡Revisemos!`;
         const matchedUsers = matches.map(m => m.idUsuarioWhatsapp).filter(Boolean);
         result.mentions.push(...matchedUsers);
       }
+    } else {
+      console.error(`[JanIA] ❌ Error al guardar REQUERIMIENTO en Supabase`);
     }
+  } else {
+    console.log(`[JanIA] Mensaje clasificado como ${result.classification} - no se guarda en Supabase.`);
   }
 
   return result;
