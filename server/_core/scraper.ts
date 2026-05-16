@@ -16,6 +16,9 @@ const DOMINIOS_PERMITIDOS = [
   'vivareal.co',
   'casacol.co',
   'habi.co',
+  'netlify.app', // Tus sitios de Netlify
+  'vecy.co',      // Tus sitios de Vecy
+  'github.io'    // Otros sitios estáticos
 ];
 
 // Redes sociales y sitios que requieren autenticación - los ignoramos
@@ -31,9 +34,16 @@ const DOMINIOS_BLOQUEADOS = [
 
 export function esDominioPermitido(url: string): boolean {
   try {
-    const hostname = new URL(url).hostname.replace('www.', '');
+    const hostname = new URL(url).hostname.replace('www.', '').toLowerCase();
+    // 1. Si es una red social bloqueada, nunca entramos
     if (DOMINIOS_BLOQUEADOS.some(d => hostname.includes(d))) return false;
-    return DOMINIOS_PERMITIDOS.some(d => hostname.includes(d));
+    
+    // 2. Si está en la lista de confianza, entramos de una
+    if (DOMINIOS_PERMITIDOS.some(d => hostname.includes(d))) return true;
+
+    // 3. Si es cualquier otro sitio, ¡dejamos que JanIA intente explorarlo!
+    // Solo bloqueamos lo que sabemos que NO es útil.
+    return true; 
   } catch {
     return false;
   }

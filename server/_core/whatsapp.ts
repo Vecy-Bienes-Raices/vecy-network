@@ -1,5 +1,5 @@
 import pkg from 'whatsapp-web.js';
-const { Client, LocalAuth, MessageMedia } = pkg;
+const { Client, LocalAuth } = pkg;
 import type { Client as ClientType, Message } from 'whatsapp-web.js';
 import qrcode from 'qrcode-terminal';
 import { scrapePropertyLink, esDominioPermitido } from './scraper';
@@ -8,7 +8,8 @@ import { processWhatsAppMessage } from './janIA';
 export class WhatsAppBot {
   private client: ClientType;
   private targetGroupId: string = '120363260108880069@g.us';
-  private lastMessageProcessed: string = '';
+  private messageBuffers: Map<string, { timer: NodeJS.Timeout, messages: string[], userName: string, hasMedia: boolean }> = new Map();
+  private startTime: number = Date.now();
 
   constructor() {
     this.client = new Client({
@@ -39,48 +40,33 @@ export class WhatsAppBot {
     });
 
     this.client.on('ready', () => {
-      console.log('\n🚀 JANIA OPERATIVA - SISTEMA DE MATCHES 1000% EFECTIVOS ACTIVADO');
-      
-      setTimeout(async () => {
-        try {
-          console.log(`🎯 Grupo Objetivo Confirmado por ID.`);
-
-          // CAPTURA SILENCIOSA DEL HISTORIAL: 
-          // Procesamos los últimos 200 mensajes sin responder en el grupo
-          // Esto llena la base de datos con todos los inmuebles y requerimientos publicados
-          console.log('📚 Iniciando captura silenciosa del historial del grupo...');
-          const chatToRead = await this.client.getChatById(this.targetGroupId) as any;
-          const historial = await chatToRead.fetchMessages({ limit: 200 });
-          
-          // Filtrar solo mensajes con texto real de inmuebles/requerimientos
-          const mensajesRelevantes = historial.filter((m: any) => 
-            !m.fromMe && m.body && m.body.length > 30
-          );
-          
-          console.log(`📚 ${mensajesRelevantes.length} mensajes relevantes encontrados. Procesando en silencio...`);
-          
-          let guardados = 0;
-          for (const m of mensajesRelevantes) {
-            try {
-              await this.handleMessage(m, true); // silencioso
-              guardados++;
-              // Pausa de 4s entre mensajes (llave de pago permite ~15 RPM)
-              await new Promise(resolve => setTimeout(resolve, 4000));
-            } catch(err) { /* ignorar errores individuales */ }
-          }
-          console.log(`📚 Captura completada: ${guardados}/${mensajesRelevantes.length} mensajes guardados en Supabase.`);
-
-        } catch (err: any) {
-          console.warn('⚠️ Error al cargar historial:', err.message);
-        }
-      }, 5000);
+      console.log('\n🚀 JANIA OPERATIVA - SISTEMA DE MATCHES PROFESIONAL ACTIVADO');
+      this.startTime = Date.now();
     });
 
     this.client.on('message_create', async (msg: Message) => {
+      // 1. Ignorar mensajes propios para evitar bucles
+      if (msg.fromMe) return;
+
+      // 2. Ignorar mensajes de antes de arrancar
+      if (msg.timestamp * 1000 < this.startTime) return;
+
       try {
         const chat = await msg.getChat();
         if (chat.id._serialized === this.targetGroupId) {
-            await this.handleMessage(msg);
+            const text = msg.body.toLowerCase();
+            
+            // Comandos inmediatos
+            if (text.includes('jania normas') || text.includes('jania preséntate')) {
+               await this.handleMessageImmediate(msg);
+               return;
+            }
+
+            // Detectar si tiene media (foto/video/documento)
+            const hasMedia = msg.hasMedia;
+
+            // Agrupar mensajes
+            await this.enqueueMessage(msg, hasMedia);
         }
       } catch (e) {
         console.error('Error en receptor:', e);
@@ -88,9 +74,83 @@ export class WhatsAppBot {
     });
   }
 
-  /**
-   * Publica las normas y formato oficial del grupo
-   */
+  private async enqueueMessage(msg: Message, hasMedia: boolean) {
+    const senderId = (msg as any).author || msg.from;
+    const contact = await msg.getContact();
+    const userName = contact.pushname || contact.name || contact.number || "Colega";
+
+    const buffer = this.messageBuffers.get(senderId);
+    if (buffer) {
+      clearTimeout(buffer.timer);
+      buffer.messages.push(msg.body);
+      if (hasMedia) buffer.hasMedia = true;
+      buffer.timer = setTimeout(() => this.processBuffer(senderId), 15000);
+    } else {
+      this.messageBuffers.set(senderId, {
+        messages: [msg.body],
+        userName,
+        hasMedia,
+        timer: setTimeout(() => this.processBuffer(senderId), 15000)
+      });
+    }
+  }
+
+  private async processBuffer(senderId: string) {
+    const buffer = this.messageBuffers.get(senderId);
+    if (!buffer) return;
+
+    const fullText = buffer.messages.join('\n\n');
+    const userName = buffer.userName;
+    const hasMedia = buffer.hasMedia;
+    this.messageBuffers.delete(senderId);
+
+    try {
+      // Scrapear links si existen
+      const urlMatch = fullText.match(/https?:\/\/[^\s]+/g);
+      if (urlMatch) {
+        for (const url of urlMatch) {
+          if (esDominioPermitido(url)) {
+            scrapePropertyLink(url).catch(() => {});
+          }
+        }
+      }
+
+      const result = await processWhatsAppMessage(fullText, senderId, userName, hasMedia);
+      
+      if (result && result.response) {
+        const allMentions = Array.from(new Set([senderId, ...(result.mentions || [])]));
+        await this.client.sendMessage(this.targetGroupId, result.response, { 
+          mentions: allMentions 
+        });
+      }
+    } catch (e) {
+      console.error('Error procesando bloque:', e);
+    }
+  }
+
+  private async handleMessageImmediate(msg: Message) {
+    const chat = await msg.getChat();
+    const senderId = (msg as any).author || msg.from;
+    
+    // Verificamos si el remitente es administrador
+    const participant = (chat as any).participants.find((p: any) => p.id._serialized === senderId);
+    const isAdmin = participant?.isAdmin || participant?.isSuperAdmin || msg.fromMe;
+
+    const text = msg.body.toLowerCase();
+    
+    if (text.includes('jania normas')) {
+      if (isAdmin) {
+        await this.sendGroupRules();
+      } else {
+        await this.client.sendMessage(this.targetGroupId, "¡Hola colega! 🧐 Solo los administradores pueden pedirme que publique las normas generales para no saturar el grupo. Pero si tienes dudas, ¡pregúntame lo que quieras! ✨");
+      }
+    } else if (text.includes('jania preséntate')) {
+      if (isAdmin) {
+        await this.sendGrandIntroduction();
+      }
+    }
+  }
+
   public async sendGroupRules() {
     const rulesText = `📋 *NORMAS Y FORMATO OFICIAL — VECY INMUEBLES NETWORK* 📋
 
@@ -102,9 +162,9 @@ Hola a todos 👋 Soy *JanIA*, la IA de VECY. Para que el sistema de MATCHES fun
 *VENDO / ARRIENDO:* [tipo de inmueble]
 📍 *Zona:* [barrio o sector]
 💰 *Precio:* [valor en pesos]
-📐 *Área:* [m2]
-🛏 *Hab / Baños:* [número]
-🏗 *Estrato:* [número]
+📅 *Antigüedad:* [años de construido]
+📐 *Área:* [m2] | 🛏️ *Hab / Baños / Garajes:* [número]
+🏗️ *Estrato:* [número]
 📝 *Descripción:* [detalles adicionales]
 
 ━━━━━━━━━━━━━━━━━━
@@ -113,123 +173,42 @@ Hola a todos 👋 Soy *JanIA*, la IA de VECY. Para que el sistema de MATCHES fun
 *BUSCO:* [tipo de inmueble]
 📍 *Zona deseada:* [barrio o sector]
 💰 *Presupuesto:* [valor máximo]
-📐 *Área mínima:* [m2]
-🛏 *Hab mínimas:* [número]
+📅 *Antigüedad máxima:* [años]
+📐 *Área mínima:* [m2] | 🛏️ *Hab / Baños / Garajes:* [número]
+📝 *Descripción:* [detalles adicionales]
 📅 *Urgencia:* [inmediato / próximas semanas / mes]
 
 ━━━━━━━━━━━━━━━━━━
 ⚠️ *REGLAS DEL GRUPO*
 ━━━━━━━━━━━━━━━━━━
-✅ Solo contenido inmobiliario profesional
-✅ Un mensaje por inmueble o requerimiento
-✅ Respeta a todos los colegas
-❌ No spam, no cadenas, no temas ajenos
-❌ No publicar el mismo inmueble más de 1 vez por semana
-❌ No insultos ni lenguaje inapropiado
+✅ Solo contenido inmobiliario profesional.
+✅ *FOTOS/VIDEOS:* 🚫 NO subir imágenes directas al grupo (saturan mi memoria). 
+✅ *LINKS ACEPTADOS:* Puedo leer automáticamente de:
+   - Wasi, FincaRaíz, MetroCuadrado, Properati, Ciencuadras, OLX.
+   - **¡Tus propios sitios web!** (.com, .co, .netlify, .vercel, etc.)
+❌ *NO ENVIAR LINKS DE:* Facebook, Instagram, TikTok, YouTube o Catálogos de WhatsApp. No puedo leerlos.
 
-💡 *¿Por qué el formato?* Yo, JanIA, leo cada publicación y la registro en nuestra base de datos. Entre más información incluyas, mayor es la probabilidad de que encuentre el MATCH perfecto y te notifique directamente. 🎯
+💡 *¿Por qué el formato?* Yo leo cada mensaje y lo registro. Entre más información incluyas, más rápido encontraré el MATCH perfecto y te notificaré. 🎯
 
-🔗 *LINKS ACEPTADOS POR JanIA*
-Puedo extraer datos automáticamente de:
-✅ wasi.co | fincaraiz.com.co | metrocuadrado.com | properati.com.co | ciencuadras.com | olx.com.co
-
-❌ NO enviar links de: Instagram, Facebook, YouTube, TikTok o Catálogos de WhatsApp. No puedo acceder a esos. En su lugar, escribe los datos directamente en el chat usando el formato de arriba.
-
-¡Gracias por hacer de este grupo el mejor equipo inmobiliario de Colombia! 🇨🇴🏆`;
+¡Gracias por hacer de este el mejor equipo inmobiliario de Colombia! 🇨🇴🏆`;
 
     try {
-      const chat = await this.client.getChatById(this.targetGroupId) as any;
-      const participants = chat.participants.map((p: any) => p.id._serialized);
-      await this.client.sendMessage(this.targetGroupId, rulesText, { mentions: participants });
-      console.log('✅ Normas del grupo publicadas.');
-    } catch (e) {
-      console.error('Error publicando normas:', e);
-    }
+      await this.client.sendMessage(this.targetGroupId, rulesText);
+      console.log('✅ Normas detalladas enviadas.');
+    } catch (e) { console.error(e); }
   }
-
 
   public async sendGrandIntroduction() {
-    const introText = `¡Hola @todos! 🌟 Soy *JanIA*, su agente IA Inmobiliaria de *VECY BIENES RAÍCES*. 🎯\n\nEstoy activa, y he sido entrenada para vigilar múltiples grupos y encontrar MATCHES que les notificaré directamente con el nombre de cada agente y públicamente en el grupo. ¡Publiquen sus inmuebles y requerimientos que yo me encargo del resto! 🏠🚀`;
+    const introText = `¡Hola, mis queridos colegas! 🌟 Soy *JanIA*, su agente IA y Coach Inmobiliaria. 🎯
+
+Estoy aquí para vigilarlos con amor y mucha diligencia. Mi trabajo es leer cada publicación y avisarles de inmediato cuando haya un negocio listo para cerrar. 
+
+Recuerden: *¡Links sí, fotos directas no!* 🧐 Ayúdenme a ayudarlos y hagamos de este el grupo más exitoso de Colombia. ¡Vamos por esos cierres! 🏠🚀✨`;
 
     try {
-      const chat = await this.client.getChatById(this.targetGroupId) as any;
-      const participants = chat.participants.map((p: any) => p.id._serialized);
-      
-      // WhatsApp interpretará @todos si enviamos las menciones técnicas de los participantes
-      await this.client.sendMessage(this.targetGroupId, introText, { 
-        mentions: participants 
-      });
-      console.log('✅ Presentación personalizada enviada con éxito.');
-    } catch (e) {
-      console.error('Error enviando presentación:', e);
-    }
-  }
-
-  private async handleMessage(msg: Message, silent: boolean = false) {
-    if (msg.fromMe && (msg.body.includes('Soy *JanIA*') || msg.body.includes('Soy JanIA'))) return;
-    if (this.lastMessageProcessed === msg.body && msg.body.length > 0) return;
-    if (!silent) this.lastMessageProcessed = msg.body;
-
-    try {
-      // En grupos: msg.author = quien escribe, msg.from = el grupo
-      // En privado: msg.from = quien escribe, msg.author = undefined
-      const senderId: string = (msg as any).author || msg.from;
-
-      let userName = "Colega";
-      if (!msg.fromMe) {
-          const contact = await msg.getContact();
-          userName = contact.pushname || contact.name || contact.number || "Colega";
-      } else {
-          userName = "Eduardo";
-      }
-
-      const text = msg.body.toLowerCase();
-
-      // COMANDO DE PRESENTACIÓN
-      if (text.includes('jania preséntate') || text.includes('jania anuncia') || text.includes('confirma que estás lista')) {
-        await this.sendGrandIntroduction();
-        return;
-      }
-
-      // COMANDO DE NORMAS DEL GRUPO
-      if (text.includes('jania normas') || text.includes('jania publica normas') || text.includes('jania reglas')) {
-        await this.sendGroupRules();
-        return;
-      }
-
-      // Permitir que Eduardo pruebe desde su propio número solo si invoca a JanIA por su nombre
-      // de lo contrario, se ignoran sus mensajes para no generar un bucle infinito.
-      if (msg.fromMe && !text.includes('jania')) return;
-
-      // 1. Si hay link de un portal inmobiliario conocido, intentar scrapear en paralelo
-      const urlMatch = msg.body.match(/https?:\/\/[^\s]+/);
-      if (urlMatch) {
-        if (esDominioPermitido(urlMatch[0])) {
-          // Portal inmobiliario conocido → scrapear sin bloquear el flujo
-          scrapePropertyLink(urlMatch[0]).catch(e => {
-            console.log(`[Scraper] Fallo en ${urlMatch[0]}: ${e.message}`);
-          });
-        } else {
-          // Red social o sitio no compatible → ignorar silenciosamente
-          console.log(`[Scraper] Dominio ignorado (no es portal inmobiliario): ${urlMatch[0].substring(0, 50)}`);
-        }
-      }
-
-      // 2. Inteligencia de Match 1000% Efectivo (SIEMPRE corre, con o sin link)
-      console.log(`[JanIA] Procesando mensaje de ${userName} (${senderId}): "${msg.body.substring(0, 60)}..."`);
-      const result = await processWhatsAppMessage(msg.body, senderId, userName);
-      
-      if (result && result.response && !silent) {
-        // La mención debe ser al AUTOR del mensaje, no al grupo
-        const allMentions = Array.from(new Set([senderId, ...(result.mentions || [])]));
-        await this.client.sendMessage(this.targetGroupId, result.response, { 
-          mentions: allMentions 
-        });
-      }
-
-    } catch (e) {
-      console.error('Error en JanIA:', e);
-    }
+      await this.client.sendMessage(this.targetGroupId, introText);
+      console.log('✅ Presentación enviada.');
+    } catch (e) { console.error(e); }
   }
 
   public initialize() {
