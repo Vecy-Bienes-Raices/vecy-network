@@ -32,27 +32,16 @@ function extractRetryDelay(errorMessage: string): number {
   return 15000; // 15 segundos por defecto si no especifica
 }
 
+const PROJECT_ID = "jania-evaluadora-pro";
+const LOCATION = "us-central1"; // La región más económica y estable
+
+const vertexAI = new VertexAI({ project: PROJECT_ID, location: LOCATION });
+
 export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
-  if (!ENV.forgeApiKey) {
-    throw new Error("BUILT_IN_FORGE_API_KEY is not configured");
-  }
-
-  const validMessages = params.messages.filter(m => m.content && m.content.trim().length > 0);
-  if (validMessages.filter(m => m.role !== "system").length === 0) {
-    return { choices: [{ message: { role: "assistant", content: "" } }] };
-  }
-
-  const genAI = new GoogleGenerativeAI(ENV.forgeApiKey);
+  const validMessages = params.messages.filter(m => m.content && m.content.trim() !== "");
   
-  const MAIN_MODEL = "gemini-2.0-flash"; // Más potente, disponible con llave de pago
-
-
-  // El servidor Node.js no envía Referer automáticamente como un navegador.
-  // Esta línea lo agrega manualmente usando localhost:5701 que está en la lista
-  // de URLs permitidas de la llave de Google Cloud. Es seguro y necesario.
-  const requestOptions = {
-    customHeaders: { "Referer": "http://localhost:5701/" }
-  };
+  // Usamos Gemini 2.0 Flash: Potente pero MUY barato ($0.10/M tokens)
+  const MAIN_MODEL = "gemini-2.0-flash-001"; 
 
   const systemMessage = validMessages.find(m => m.role === "system");
   const userMessages = validMessages.filter(m => m.role !== "system");
@@ -63,41 +52,33 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   }));
 
   const config = {
-    temperature: 0.7,
-    maxOutputTokens: 2048,
+    temperature: 0.2, // Más bajo = más preciso y menos "alucinaciones"
+    maxOutputTokens: 500, // LÍMITE DE SEGURIDAD: Evita respuestas excesivamente largas que cuesten más
     responseMimeType: params.responseFormat?.type === "json_object" ? "application/json" : "text/plain",
   };
 
-  const MAX_RETRIES = 3;
+  const MAX_RETRIES = 2;
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      console.log(`[LLM] Usando ${MAIN_MODEL} (intento ${attempt}/${MAX_RETRIES})...`);
-      const model = genAI.getGenerativeModel({ model: MAIN_MODEL }, requestOptions);
-      const result = await model.generateContent({
-        contents,
-        systemInstruction: systemMessage ? { role: 'system', parts: [{ text: systemMessage.content }] } : undefined,
+      console.log(`[VertexAI] Usando ${MAIN_MODEL} (intento ${attempt}/${MAX_RETRIES})...`);
+      
+      const model = vertexAI.getGenerativeModel({ 
+        model: MAIN_MODEL,
         generationConfig: config,
+        systemInstruction: systemMessage ? { role: 'system', parts: [{ text: systemMessage.content }] } : undefined,
       });
-      return { choices: [{ message: { role: "assistant", content: (await result.response).text() } }] };
-    } catch (error: any) {
-      const is429 = error.message?.includes('429') || error.status === 429;
-      
-      if (is429 && attempt < MAX_RETRIES) {
-        const waitMs = extractRetryDelay(error.message);
-        console.warn(`[LLM] Cuota excedida, esperando ${waitMs/1000}s antes de reintentar...`);
-        await new Promise(resolve => setTimeout(resolve, waitMs));
-        continue;
-      }
-      
-      console.warn(`[LLM Warn] Falló ${MAIN_MODEL} (intento ${attempt}): ${error.message}`);
 
-      if (attempt === MAX_RETRIES) {
-        console.error(`[LLM Critical Error] ${MAX_RETRIES} intentos fallidos. Abortando.`);
-        throw error;
-      }
+      const result = await model.generateContent({ contents });
+      const response = await result.response;
+      const content = response.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
+      return { choices: [{ message: { role: "assistant", content } }] };
+
+    } catch (error: any) {
+      console.error(`[VertexAI Error] Intento ${attempt}:`, error.message);
+      if (attempt === MAX_RETRIES) throw error;
+      await new Promise(resolve => setTimeout(resolve, 2000 * attempt));
     }
   }
-
-  // Este punto nunca debería alcanzarse
   throw new Error("[LLM] Error inesperado en el loop de reintentos.");
 }
