@@ -16,7 +16,7 @@ export class WhatsAppBot {
       authStrategy: new LocalAuth(),
       puppeteer: {
         args: [
-          '--no-sandbox', 
+          '--no-sandbox',
           '--disable-setuid-sandbox',
           '--disable-dev-shm-usage',
           '--disable-gpu',
@@ -54,19 +54,19 @@ export class WhatsAppBot {
       try {
         const chat = await msg.getChat();
         if (chat.id._serialized === this.targetGroupId) {
-            const text = msg.body.toLowerCase();
-            
-            // Comandos inmediatos
-            if (text.includes('jania normas') || text.includes('jania preséntate')) {
-               await this.handleMessageImmediate(msg);
-               return;
-            }
+          const text = msg.body.toLowerCase();
 
-            // Detectar si tiene media (foto/video/documento)
-            const hasMedia = msg.hasMedia;
+          // Comandos inmediatos
+          if (text.includes('jania normas') || text.includes('jania preséntate')) {
+            await this.handleMessageImmediate(msg);
+            return;
+          }
 
-            // Agrupar mensajes
-            await this.enqueueMessage(msg, hasMedia);
+          // Detectar si tiene media (foto/video/documento)
+          const hasMedia = msg.hasMedia;
+
+          // Agrupar mensajes
+          await this.enqueueMessage(msg, hasMedia);
         }
       } catch (e) {
         console.error('Error en receptor:', e);
@@ -110,17 +110,17 @@ export class WhatsAppBot {
       if (urlMatch) {
         for (const url of urlMatch) {
           if (esDominioPermitido(url)) {
-            scrapePropertyLink(url).catch(() => {});
+            scrapePropertyLink(url).catch(() => { });
           }
         }
       }
 
       const result = await processWhatsAppMessage(fullText, senderId, userName, hasMedia);
-      
+
       if (result && result.response) {
         const allMentions = Array.from(new Set([senderId, ...(result.mentions || [])]));
-        await this.client.sendMessage(this.targetGroupId, result.response, { 
-          mentions: allMentions 
+        await this.client.sendMessage(this.targetGroupId, result.response, {
+          mentions: allMentions
         });
       }
     } catch (e) {
@@ -131,13 +131,13 @@ export class WhatsAppBot {
   private async handleMessageImmediate(msg: Message) {
     const chat = await msg.getChat();
     const senderId = (msg as any).author || msg.from;
-    
+
     // Verificamos si el remitente es administrador
     const participant = (chat as any).participants.find((p: any) => p.id._serialized === senderId);
     const isAdmin = participant?.isAdmin || participant?.isSuperAdmin || msg.fromMe;
 
     const text = msg.body.toLowerCase();
-    
+
     if (text.includes('jania normas')) {
       if (isAdmin) {
         await this.sendGroupRules();
@@ -184,7 +184,7 @@ Hola a todos 👋 Soy *JanIA*, la IA de VECY. Para que el sistema de MATCHES fun
 ✅ Solo contenido inmobiliario profesional.
 ✅ *FOTOS/VIDEOS:* 🚫 NO subir imágenes directas al grupo (saturan mi memoria). 
 ✅ *LINKS ACEPTADOS:* Puedo leer automáticamente de:
-   - Wasi, FincaRaíz, MetroCuadrado, Properati, Ciencuadras, OLX.
+   - Wasi, Qrador, Habi, FincaRaíz, MetroCuadrado, Properati, Ciencuadras, OLX.
    - **¡Tus propios sitios web!** (.com, .co, .netlify, .vercel, etc.)
 ❌ *NO ENVIAR LINKS DE:* Facebook, Instagram, TikTok, YouTube o Catálogos de WhatsApp. No puedo leerlos.
 
