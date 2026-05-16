@@ -46,6 +46,12 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   
   const MAIN_MODEL = "gemini-flash-latest";
 
+  // Inyectar el Referer que Google Cloud tiene en su lista de URLs permitidas
+  // Esto permite usar la llave de pago desde el servidor Node.js
+  const requestOptions = {
+    customHeaders: { "Referer": "http://localhost:5701/" }
+  };
+
   const systemMessage = validMessages.find(m => m.role === "system");
   const userMessages = validMessages.filter(m => m.role !== "system");
 
@@ -64,7 +70,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
       console.log(`[LLM] Usando ${MAIN_MODEL} (intento ${attempt}/${MAX_RETRIES})...`);
-      const model = genAI.getGenerativeModel({ model: MAIN_MODEL });
+      const model = genAI.getGenerativeModel({ model: MAIN_MODEL }, requestOptions);
       const result = await model.generateContent({
         contents,
         systemInstruction: systemMessage ? { role: 'system', parts: [{ text: systemMessage.content }] } : undefined,

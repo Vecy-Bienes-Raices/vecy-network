@@ -89,8 +89,65 @@ export class WhatsAppBot {
   }
 
   /**
-   * Envía el mensaje de presentación con menciones reales a todos los miembros
+   * Publica las normas y formato oficial del grupo
    */
+  public async sendGroupRules() {
+    const rulesText = `📋 *NORMAS Y FORMATO OFICIAL — VECY INMUEBLES NETWORK* 📋
+
+Hola a todos 👋 Soy *JanIA*, la IA de VECY. Para que el sistema de MATCHES funcione al 100%, por favor sigan estas normas al publicar:
+
+━━━━━━━━━━━━━━━━━━
+🏠 *FORMATO PARA INMUEBLES*
+━━━━━━━━━━━━━━━━━━
+*VENDO / ARRIENDO:* [tipo de inmueble]
+📍 *Zona:* [barrio o sector]
+💰 *Precio:* [valor en pesos]
+📐 *Área:* [m2]
+🛏 *Hab / Baños:* [número]
+🏗 *Estrato:* [número]
+📝 *Descripción:* [detalles adicionales]
+
+━━━━━━━━━━━━━━━━━━
+🔍 *FORMATO PARA REQUERIMIENTOS*
+━━━━━━━━━━━━━━━━━━
+*BUSCO:* [tipo de inmueble]
+📍 *Zona deseada:* [barrio o sector]
+💰 *Presupuesto:* [valor máximo]
+📐 *Área mínima:* [m2]
+🛏 *Hab mínimas:* [número]
+📅 *Urgencia:* [inmediato / próximas semanas / mes]
+
+━━━━━━━━━━━━━━━━━━
+⚠️ *REGLAS DEL GRUPO*
+━━━━━━━━━━━━━━━━━━
+✅ Solo contenido inmobiliario profesional
+✅ Un mensaje por inmueble o requerimiento
+✅ Respeta a todos los colegas
+❌ No spam, no cadenas, no temas ajenos
+❌ No publicar el mismo inmueble más de 1 vez por semana
+❌ No insultos ni lenguaje inapropiado
+
+💡 *¿Por qué el formato?* Yo, JanIA, leo cada publicación y la registro en nuestra base de datos. Entre más información incluyas, mayor es la probabilidad de que encuentre el MATCH perfecto y te notifique directamente. 🎯
+
+🔗 *LINKS ACEPTADOS POR JanIA*
+Puedo extraer datos automáticamente de:
+✅ wasi.co | fincaraiz.com.co | metrocuadrado.com | properati.com.co | ciencuadras.com | olx.com.co
+
+❌ NO enviar links de: Instagram, Facebook, YouTube, TikTok o Catálogos de WhatsApp. No puedo acceder a esos. En su lugar, escribe los datos directamente en el chat usando el formato de arriba.
+
+¡Gracias por hacer de este grupo el mejor equipo inmobiliario de Colombia! 🇨🇴🏆`;
+
+    try {
+      const chat = await this.client.getChatById(this.targetGroupId) as any;
+      const participants = chat.participants.map((p: any) => p.id._serialized);
+      await this.client.sendMessage(this.targetGroupId, rulesText, { mentions: participants });
+      console.log('✅ Normas del grupo publicadas.');
+    } catch (e) {
+      console.error('Error publicando normas:', e);
+    }
+  }
+
+
   public async sendGrandIntroduction() {
     const introText = `¡Hola @todos! 🌟 Soy *JanIA*, su agente IA Inmobiliaria de *VECY BIENES RAÍCES*. 🎯\n\nEstoy activa, y he sido entrenada para vigilar múltiples grupos y encontrar MATCHES que les notificaré directamente con el nombre de cada agente y públicamente en el grupo. ¡Publiquen sus inmuebles y requerimientos que yo me encargo del resto! 🏠🚀`;
 
@@ -128,9 +185,15 @@ export class WhatsAppBot {
 
       const text = msg.body.toLowerCase();
 
-      // COMANDO DE PRESENTACIÓN SOLICITADO POR EDUARDO
+      // COMANDO DE PRESENTACIÓN
       if (text.includes('jania preséntate') || text.includes('jania anuncia') || text.includes('confirma que estás lista')) {
         await this.sendGrandIntroduction();
+        return;
+      }
+
+      // COMANDO DE NORMAS DEL GRUPO
+      if (text.includes('jania normas') || text.includes('jania publica normas') || text.includes('jania reglas')) {
+        await this.sendGroupRules();
         return;
       }
 
