@@ -37,9 +37,9 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
 
   const genAI = new GoogleGenerativeAI(ENV.forgeApiKey);
   
-  // Nombres de modelos verificados en tu consola
-  const MAIN_MODEL = "gemini-flash-latest";
-  const FALLBACK_MODEL = "gemini-pro-latest";
+  // Modelos optimizados para potencia y bajo costo
+  const MAIN_MODEL = "gemini-1.5-flash"; // Súper rápido, inteligente y absurdamente económico
+  const FALLBACK_MODEL = "gemini-1.5-pro"; // El más potente para tareas muy complejas
 
   const systemMessage = validMessages.find(m => m.role === "system");
   const userMessages = validMessages.filter(m => m.role !== "system");
