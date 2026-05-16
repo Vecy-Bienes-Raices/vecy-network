@@ -36,6 +36,13 @@ IMPORTANTE:
 - Clasifica como REQUERIMIENTO incluso si es simple (ej: "Busco en Santa Bárbara").
 - Extrae siempre el nombre del usuario.
 - Jamás uses código ni lenguaje técnico. Habla de "cierres", "comisiones" y "oportunidades".
+
+DEBES RESPONDER ÚNICAMENTE CON UN OBJETO JSON VÁLIDO CON ESTA ESTRUCTURA EXACTA:
+{
+  "classification": "INMUEBLE" | "REQUERIMIENTO" | "CONSULTA_GENERAL" | "DATOS_INCOMPLETOS",
+  "response": "Tu respuesta persuasiva, natural y humana aquí (¡Nunca vacía!)",
+  "missingFields": ["campo1", "campo2"] // Solo si faltan datos vitales
+}
 `;
 
 export async function processWhatsAppMessage(

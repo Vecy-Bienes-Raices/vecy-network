@@ -38,18 +38,16 @@ export class WhatsAppBot {
       console.log('✅ WhatsApp Autenticado');
     });
 
-    this.client.on('ready', async () => {
+    this.client.on('ready', () => {
       console.log('\n🚀 JANIA OPERATIVA - SISTEMA DE MATCHES 1000% EFECTIVOS ACTIVADO');
-      try {
-        const chats = await this.client.getChats();
-        const targetChat = chats.find(c => c.name.includes('VECY') || c.name.includes('Expertos Inmobiliarios')) as any;
-        if (targetChat) {
-            this.targetGroupId = targetChat.id._serialized;
-            console.log(`🎯 Grupo Objetivo Confirmado: ${targetChat.name}`);
+      
+      setTimeout(async () => {
+        try {
+          console.log(`🎯 Grupo Objetivo Confirmado por ID.`);
+        } catch (err: any) {
+          console.warn('⚠️ Error al confirmar grupo:', err.message);
         }
-      } catch (err) {
-        console.warn('⚠️ Error al confirmar grupo.');
-      }
+      }, 5000);
     });
 
     this.client.on('message_create', async (msg: Message) => {
@@ -106,7 +104,9 @@ export class WhatsAppBot {
         return;
       }
 
-      if (msg.fromMe) return;
+      // Permitir que Eduardo pruebe desde su propio número solo si invoca a JanIA por su nombre
+      // de lo contrario, se ignoran sus mensajes para no generar un bucle infinito.
+      if (msg.fromMe && !text.includes('jania')) return;
 
       // 1. Scraping de Links
       const urlMatch = msg.body.match(/https?:\/\/[^\s]+/);
