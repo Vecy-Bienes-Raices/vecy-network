@@ -39,41 +39,53 @@ export class WhatsAppBot {
     });
 
     this.client.on('ready', async () => {
-      console.log('\n🚀 JANIA OPERATIVA - SISTEMA DE MATCHES ACTIVADO');
-      
+      console.log('\n🚀 JANIA OPERATIVA - SISTEMA DE MATCHES 1000% EFECTIVOS ACTIVADO');
       try {
         const chats = await this.client.getChats();
-        // Intentar encontrar el grupo por nombre para asegurar el ID
         const targetChat = chats.find(c => c.name.includes('VECY') || c.name.includes('Expertos Inmobiliarios')) as any;
         if (targetChat) {
             this.targetGroupId = targetChat.id._serialized;
-            console.log(`🎯 Grupo Objetivo Confirmado: ${targetChat.name} (${this.targetGroupId})`);
+            console.log(`🎯 Grupo Objetivo Confirmado: ${targetChat.name}`);
         }
       } catch (err) {
-        console.warn('⚠️ Error al confirmar grupo objetivo.');
+        console.warn('⚠️ Error al confirmar grupo.');
       }
     });
 
     this.client.on('message_create', async (msg: Message) => {
       try {
         const chat = await msg.getChat();
-        
-        // Solo procesar si el mensaje es en el grupo objetivo
         if (chat.id._serialized === this.targetGroupId) {
-            console.log(`[VECY] Mensaje detectado: "${msg.body.substring(0, 30)}..."`);
             await this.handleMessage(msg);
         }
       } catch (e) {
-        console.error('Error en receptor de mensajes:', e);
+        console.error('Error en receptor:', e);
       }
     });
   }
 
+  /**
+   * Envía el mensaje de presentación con menciones reales a todos los miembros
+   */
+  public async sendGrandIntroduction() {
+    const introText = `¡Hola @todos! 🌟 Soy *JanIA*, su agente IA Inmobiliaria de *VECY BIENES RAÍCES*. 🎯\n\nEstoy activa, y he sido entrenada para vigilar múltiples grupos y encontrar MATCHES que les notificaré directamente con el nombre de cada agente y públicamente en el grupo. ¡Publiquen sus inmuebles y requerimientos que yo me encargo del resto! 🏠🚀`;
+
+    try {
+      const chat = await this.client.getChatById(this.targetGroupId) as any;
+      const participants = chat.participants.map((p: any) => p.id._serialized);
+      
+      // WhatsApp interpretará @todos si enviamos las menciones técnicas de los participantes
+      await this.client.sendMessage(this.targetGroupId, introText, { 
+        mentions: participants 
+      });
+      console.log('✅ Presentación personalizada enviada con éxito.');
+    } catch (e) {
+      console.error('Error enviando presentación:', e);
+    }
+  }
+
   private async handleMessage(msg: Message, silent: boolean = false) {
-    // Evitar que el bot se procese a sí mismo
-    if (msg.fromMe && msg.body.includes('Soy JanIA')) return;
-    
-    // Evitar duplicados rápidos
+    if (msg.fromMe && (msg.body.includes('Soy *JanIA*') || msg.body.includes('Soy JanIA'))) return;
     if (this.lastMessageProcessed === msg.body && msg.body.length > 0) return;
     if (!silent) this.lastMessageProcessed = msg.body;
 
@@ -88,46 +100,41 @@ export class WhatsAppBot {
 
       const text = msg.body.toLowerCase();
 
-      // --- COMANDOS ESPECIALES DE EDUARDO ---
-      
-      // COMANDO: PRESENTACIÓN PERSONALIZADA
+      // COMANDO DE PRESENTACIÓN SOLICITADO POR EDUARDO
       if (text.includes('jania preséntate') || text.includes('jania anuncia') || text.includes('confirma que estás lista')) {
-        console.log('🎯 Ejecutando Gran Presentación...');
-        const intro = `¡Hola @todos! 🌟 Soy *JanIA*, su Coach Inmobiliaria de VECY. 🎯\n\nEstoy activa, vigilando múltiples grupos y lista para encontrar MATCHES. ¡Publiquen sus inmuebles y requerimientos que yo me encargo del resto! 🏠🚀`;
-        
-        const chat = await msg.getChat() as any;
-        const participants = chat.participants.map((p: any) => p.id._serialized);
-        
-        await this.client.sendMessage(this.targetGroupId, intro, { mentions: participants });
+        await this.sendGrandIntroduction();
         return;
       }
 
-      // NO analizar con IA los mensajes que el propio Eduardo envía (ahorro de tokens)
       if (msg.fromMe) return;
 
-      // --- PROCESAMIENTO AUTOMÁTICO DE OPORTUNIDADES ---
-
-      // 1. Detección de Links
+      // 1. Scraping de Links
       const urlMatch = msg.body.match(/https?:\/\/[^\s]+/);
       if (urlMatch) {
-        if (!silent) msg.reply(`📍 ${userName}, JanIA está procesando este link para la red VECY...`);
+        msg.reply(`🧐 Analizando este link para buscar un MATCH proactivo, ${userName}...`);
         try {
-            await scrapePropertyLink(urlMatch[0]);
-            if (!silent) msg.reply(`✅ Inmueble registrado. ¡Buscando interesados!`);
+            const data = await scrapePropertyLink(urlMatch[0]);
+            // El matching bidireccional ocurre dentro de processWhatsAppMessage
         } catch (e) {
             console.error('Error scraping:', e);
         }
         return;
       }
 
-      // 2. Inteligencia Coach (Análisis de texto y Matches)
+      // 2. Inteligencia de Match 1000% Efectivo
       const result = await processWhatsAppMessage(msg.body, msg.from, userName);
+      
       if (result && result.response && !silent) {
-        await this.client.sendMessage(this.targetGroupId, result.response, { mentions: [msg.from] });
+        // Combinar el autor original y los agentes de los matches, sin duplicados
+        const allMentions = Array.from(new Set([msg.from, ...(result.mentions || [])]));
+        
+        await this.client.sendMessage(this.targetGroupId, result.response, { 
+          mentions: allMentions 
+        });
       }
 
     } catch (e) {
-      console.error('Error en la lógica de JanIA:', e);
+      console.error('Error en JanIA:', e);
     }
   }
 

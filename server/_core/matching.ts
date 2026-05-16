@@ -1,6 +1,6 @@
 import { getDb } from "../db";
 import { sql } from "drizzle-orm";
-import { propertyMatches } from "../../drizzle/schema";
+import { propertyMatches, properties, requirements } from "../../drizzle/schema";
 
 export async function findMatchesForProperty(propertyId: number) {
   const db = await getDb();
@@ -10,6 +10,7 @@ export async function findMatchesForProperty(propertyId: number) {
     SELECT * FROM buscar_matches_para_inmueble(${propertyId})
   `);
 
+  const validMatches = [];
   // Save matches to DB
   for (const match of results as any) {
     if (match.score > 15) { // Threshold for a good match
@@ -19,10 +20,14 @@ export async function findMatchesForProperty(propertyId: number) {
         matchScore: match.score.toString(),
         status: "suggested",
       }).onConflictDoNothing();
+      
+      const reqs = await db.select({ idUsuarioWhatsapp: requirements.idUsuarioWhatsapp }).from(requirements).where(sql`${requirements.id} = ${match.requirement_id}`);
+      if (reqs.length > 0) match.idUsuarioWhatsapp = reqs[0].idUsuarioWhatsapp;
+      validMatches.push(match);
     }
   }
 
-  return results;
+  return validMatches;
 }
 
 export async function findMatchesForRequirement(requirementId: number) {
@@ -33,6 +38,7 @@ export async function findMatchesForRequirement(requirementId: number) {
     SELECT * FROM buscar_matches_para_requerimiento(${requirementId})
   `);
 
+  const validMatches = [];
   // Save matches to DB
   for (const match of results as any) {
     if (match.score > 15) {
@@ -42,8 +48,12 @@ export async function findMatchesForRequirement(requirementId: number) {
         matchScore: match.score.toString(),
         status: "suggested",
       }).onConflictDoNothing();
+      
+      const props = await db.select({ idUsuarioWhatsapp: properties.idUsuarioWhatsapp }).from(properties).where(sql`${properties.id} = ${match.property_id}`);
+      if (props.length > 0) match.idUsuarioWhatsapp = props[0].idUsuarioWhatsapp;
+      validMatches.push(match);
     }
   }
 
-  return results;
+  return validMatches;
 }

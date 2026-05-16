@@ -9,6 +9,7 @@ export type JanIAResult = {
   extractedData?: Partial<InsertProperty | InsertRequirement>;
   missingFields?: string[];
   response: string;
+  mentions?: string[];
 };
 
 const JANIA_PROMPT = `
@@ -51,6 +52,7 @@ export async function processWhatsAppMessage(
   const rawContent = response.choices[0].message.content;
   const cleanJson = rawContent.replace(/```json|```/g, "").trim();
   const result = JSON.parse(cleanJson) as JanIAResult;
+  result.mentions = [];
   
   // Logic to save EVERYTHING to Supabase, even if incomplete
   if (result.classification === "INMUEBLE" || result.classification === "DATOS_INCOMPLETOS") {
@@ -77,9 +79,11 @@ export async function processWhatsAppMessage(
       const matches = await findMatchesForProperty(saved.id);
       if (matches.length > 0) {
         result.response += `\n\n🎯 ¡Atención! Encontré ${matches.length} colegas buscando algo así. ¡Hagamos el cierre!`;
+        const matchedUsers = matches.map(m => m.idUsuarioWhatsapp).filter(Boolean);
+        result.mentions.push(...matchedUsers);
       }
     }
-  } else if (result.classification === "REQUERIMIENTO" || result.classification === "DATOS_INCOMPLETOS") {
+  } else if (result.classification === "REQUERIMIENTO") {
     const data = result.extractedData as InsertRequirement;
 
     // Fill mandatory fields
@@ -100,6 +104,8 @@ export async function processWhatsAppMessage(
       const matches = await findMatchesForRequirement(saved.id);
       if (matches.length > 0) {
         result.response += `\n\n🎯 ¡Excelentes noticias! Tengo ${matches.length} inmuebles en mi base de datos que podrían servirte. ¡Revisemos!`;
+        const matchedUsers = matches.map(m => m.idUsuarioWhatsapp).filter(Boolean);
+        result.mentions.push(...matchedUsers);
       }
     }
   }
