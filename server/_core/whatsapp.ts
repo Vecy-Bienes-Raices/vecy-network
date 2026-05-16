@@ -184,7 +184,7 @@ Hola a todos 👋 Soy *JanIA*, la IA de VECY. Para que el sistema de MATCHES fun
 ✅ Solo contenido inmobiliario profesional.
 ✅ *FOTOS/VIDEOS:* 🚫 NO subir imágenes directas al grupo (saturan mi memoria). 
 ✅ *LINKS ACEPTADOS:* Puedo leer automáticamente de:
-   - Wasi, Qrador, Habi, FincaRaíz, MetroCuadrado, Properati, Ciencuadras, OLX.
+   - Wasi, Qrador, Habi, FincaRaíz, MetroCuadrado, Proppit, Ciencuadras, Mercadolibre.
    - **¡Tus propios sitios web!** (.com, .co, .netlify, .vercel, etc.)
 ❌ *NO ENVIAR LINKS DE:* Facebook, Instagram, TikTok, YouTube o Catálogos de WhatsApp. No puedo leerlos.
 

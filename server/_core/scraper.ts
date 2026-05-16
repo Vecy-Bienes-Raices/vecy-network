@@ -8,8 +8,8 @@ const DOMINIOS_PERMITIDOS = [
   'fincaraiz.com.co',
   'metrocuadrado.com',
   'ciencuadras.com',
-  'properati.com.co',
-  'olx.com.co',
+  'proppit.com',    // El nuevo Properati
+  'mercadolibre.com.co', // Muy usado en Colombia
   'mitula.com.co',
   'lamudi.com.co',
   'nuroa.com.co',
