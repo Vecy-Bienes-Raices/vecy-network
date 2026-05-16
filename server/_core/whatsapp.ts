@@ -64,8 +64,8 @@ export class WhatsAppBot {
             try {
               await this.handleMessage(m, true); // silencioso
               guardados++;
-              // Pausa de 13 segundos entre mensajes para respetar límite gratuito (5/min)
-              await new Promise(resolve => setTimeout(resolve, 13000));
+              // Pausa de 4s entre mensajes (llave de pago permite ~15 RPM)
+              await new Promise(resolve => setTimeout(resolve, 4000));
             } catch(err) { /* ignorar errores individuales */ }
           }
           console.log(`📚 Captura completada: ${guardados}/${mensajesRelevantes.length} mensajes guardados en Supabase.`);
