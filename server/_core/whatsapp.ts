@@ -2,7 +2,7 @@ import pkg from 'whatsapp-web.js';
 const { Client, LocalAuth, MessageMedia } = pkg;
 import type { Client as ClientType, Message } from 'whatsapp-web.js';
 import qrcode from 'qrcode-terminal';
-import { scrapePropertyLink } from './scraper';
+import { scrapePropertyLink, esDominioPermitido } from './scraper';
 import { processWhatsAppMessage } from './janIA';
 
 export class WhatsAppBot {
@@ -201,13 +201,18 @@ Puedo extraer datos automáticamente de:
       // de lo contrario, se ignoran sus mensajes para no generar un bucle infinito.
       if (msg.fromMe && !text.includes('jania')) return;
 
-      // 1. Si hay link, intentar scrapear, pero SIEMPRE procesar el texto del mensaje también
+      // 1. Si hay link de un portal inmobiliario conocido, intentar scrapear en paralelo
       const urlMatch = msg.body.match(/https?:\/\/[^\s]+/);
       if (urlMatch) {
-        // Intentar scraping en paralelo pero no bloquear el flujo principal
-        scrapePropertyLink(urlMatch[0]).catch(e => {
-          console.log(`[Scraper] No se pudo extraer del link (procesando como texto): ${e.message}`);
-        });
+        if (esDominioPermitido(urlMatch[0])) {
+          // Portal inmobiliario conocido → scrapear sin bloquear el flujo
+          scrapePropertyLink(urlMatch[0]).catch(e => {
+            console.log(`[Scraper] Fallo en ${urlMatch[0]}: ${e.message}`);
+          });
+        } else {
+          // Red social o sitio no compatible → ignorar silenciosamente
+          console.log(`[Scraper] Dominio ignorado (no es portal inmobiliario): ${urlMatch[0].substring(0, 50)}`);
+        }
       }
 
       // 2. Inteligencia de Match 1000% Efectivo (SIEMPRE corre, con o sin link)

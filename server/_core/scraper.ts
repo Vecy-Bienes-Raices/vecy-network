@@ -2,6 +2,44 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 import { invokeLLM } from './llm';
 
+// Portales inmobiliarios colombianos con HTML público que podemos leer
+const DOMINIOS_PERMITIDOS = [
+  'wasi.co',
+  'fincaraiz.com.co',
+  'metrocuadrado.com',
+  'ciencuadras.com',
+  'properati.com.co',
+  'olx.com.co',
+  'mitula.com.co',
+  'lamudi.com.co',
+  'nuroa.com.co',
+  'vivareal.co',
+  'casacol.co',
+  'habi.co',
+];
+
+// Redes sociales y sitios que requieren autenticación - los ignoramos
+const DOMINIOS_BLOQUEADOS = [
+  'facebook.com', 'fb.com', 'fb.watch',
+  'instagram.com',
+  'youtube.com', 'youtu.be',
+  'tiktok.com',
+  'twitter.com', 'x.com',
+  'wa.me', 'whatsapp.com',
+  'linkedin.com',
+];
+
+export function esDominioPermitido(url: string): boolean {
+  try {
+    const hostname = new URL(url).hostname.replace('www.', '');
+    if (DOMINIOS_BLOQUEADOS.some(d => hostname.includes(d))) return false;
+    return DOMINIOS_PERMITIDOS.some(d => hostname.includes(d));
+  } catch {
+    return false;
+  }
+}
+
+
 export async function scrapePropertyLink(url: string) {
   try {
     // 1. Descargar el HTML de la página
