@@ -46,8 +46,9 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   
   const MAIN_MODEL = "gemini-flash-latest";
 
-  // Inyectar el Referer que Google Cloud tiene en su lista de URLs permitidas
-  // Esto permite usar la llave de pago desde el servidor Node.js
+  // El servidor Node.js no envía Referer automáticamente como un navegador.
+  // Esta línea lo agrega manualmente usando localhost:5701 que está en la lista
+  // de URLs permitidas de la llave de Google Cloud. Es seguro y necesario.
   const requestOptions = {
     customHeaders: { "Referer": "http://localhost:5701/" }
   };
