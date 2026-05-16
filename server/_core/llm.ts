@@ -44,7 +44,8 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
 
   const genAI = new GoogleGenerativeAI(ENV.forgeApiKey);
   
-  const MAIN_MODEL = "gemini-flash-latest";
+  const MAIN_MODEL = "gemini-2.0-flash"; // Más potente, disponible con llave de pago
+
 
   // El servidor Node.js no envía Referer automáticamente como un navegador.
   // Esta línea lo agrega manualmente usando localhost:5701 que está en la lista
