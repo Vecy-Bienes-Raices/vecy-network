@@ -45,6 +45,7 @@ pids
 *.seed
 *.pid.lock
 *.bak
+.pending_welcome_count
 
 # Coverage directory used by tools like istanbul
 coverage/

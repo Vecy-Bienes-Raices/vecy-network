@@ -3,7 +3,9 @@ const { Client, LocalAuth } = pkg;
 import type { Client as ClientType, Message } from 'whatsapp-web.js';
 import qrcode from 'qrcode-terminal';
 import { scrapePropertyLink, esDominioPermitido } from './scraper';
-import { processWhatsAppMessage } from './janIA';
+import { processWhatsAppMessage, generateWelcomeMessage } from './janIA';
+import fs from 'fs';
+import path from 'path';
 
 export class WhatsAppBot {
   private client: ClientType;
@@ -11,9 +13,10 @@ export class WhatsAppBot {
   private messageBuffers: Map<string, { timer: NodeJS.Timeout, messages: string[], userName: string, hasMedia: boolean }> = new Map();
   private startTime: number = Date.now();
   private pendingWelcomeCount: number = 0;
-  private welcomeTimer: NodeJS.Timeout | null = null;
+  private counterFile: string = path.join(process.cwd(), '.pending_welcome_count');
 
   constructor() {
+    this.loadCounter();
     this.client = new Client({
       authStrategy: new LocalAuth(),
       webVersionCache: {
@@ -37,9 +40,29 @@ export class WhatsAppBot {
     this.setupWeeklySchedule();
   }
 
+  private loadCounter() {
+    try {
+      if (fs.existsSync(this.counterFile)) {
+        this.pendingWelcomeCount = parseInt(fs.readFileSync(this.counterFile, 'utf8')) || 0;
+        console.log(`[INIT] Contador de bienvenida cargado: ${this.pendingWelcomeCount}`);
+      }
+    } catch (e) {
+      console.error('Error cargando contador:', e);
+    }
+  }
+
+  private saveCounter() {
+    try {
+      fs.writeFileSync(this.counterFile, this.pendingWelcomeCount.toString(), 'utf8');
+    } catch (e) {
+      console.error('Error guardando contador:', e);
+    }
+  }
+
   private setupGracefulShutdown() {
     const shutdown = async () => {
       console.log('\n🛑 Cerrando WhatsApp Bot...');
+      this.saveCounter();
       try {
         await this.client.destroy();
         console.log('✅ Cliente de WhatsApp destruido correctamente.');
@@ -76,21 +99,22 @@ export class WhatsAppBot {
 
     this.client.on('ready', () => {
       console.log('\n🚀 JANIA OPERATIVA - SISTEMA DE MATCHES PROFESIONAL ACTIVADO');
+      console.log(`[CONFIG] Umbral de bienvenida: 10 personas. Actual: ${this.pendingWelcomeCount}`);
       this.startTime = Date.now();
     });
 
-    this.client.on('group_join', async (notification) => {
+    this.client.on('group_join', async (notification: any) => {
       if (notification.chatId !== this.targetGroupId) return;
 
-      this.pendingWelcomeCount++;
-      console.log(`[INFO] Nuevo integrante detectado. Total pendientes: ${this.pendingWelcomeCount}`);
+      // Algunos eventos de join pueden traer múltiples IDs en recipientIds
+      const joinedCount = notification.recipientIds?.length || 1;
+      this.pendingWelcomeCount += joinedCount;
+      
+      console.log(`[INFO] Nuevo(s) integrante(s) detectado(s) (${joinedCount}). Total pendientes: ${this.pendingWelcomeCount}`);
+      this.saveCounter();
 
-      if (this.welcomeTimer) clearTimeout(this.welcomeTimer);
-
-      if (this.pendingWelcomeCount >= 5) {
+      if (this.pendingWelcomeCount >= 10) {
         await this.sendBatchWelcome();
-      } else {
-        this.welcomeTimer = setTimeout(() => this.sendBatchWelcome(), 30 * 60000);
       }
     });
 
@@ -120,27 +144,18 @@ export class WhatsAppBot {
   private async sendBatchWelcome() {
     if (this.pendingWelcomeCount === 0) return;
     
-    console.log(`[ACTION] Enviando bienvenida por lote a ${this.pendingWelcomeCount} integrantes.`);
+    console.log(`[ACTION] Generando y enviando bienvenida dinámica para ${this.pendingWelcomeCount} integrantes.`);
+    
+    const count = this.pendingWelcomeCount;
     this.pendingWelcomeCount = 0;
-    if (this.welcomeTimer) clearTimeout(this.welcomeTimer);
-
-    const welcomeText = `¡Hola, mis estimados colegas! ✨ Qué alegría ver cómo crece este equipo. ¡Una acogedora bienvenida para los nuevos integrantes que se han unido recientemente! 🥳👋
-
-Soy *JanIA*, su asistente de Inteligencia Artificial y Coach Inmobiliaria. 🎯 Mi misión aquí es una sola: *Hacerles la vida más fácil y ayudarles a cerrar negocios más rápido.*
-
-💡 *¿Cuál es su beneficio por estar aquí?*
-Olvídense de pasar horas haciendo scroll buscando quién tiene lo que ustedes necesitan. Yo leo cada mensaje las 24 horas del día. En cuanto alguien publique un inmueble que encaje con el requerimiento de otro, *yo haré el MATCH por ustedes* y les avisaré de inmediato. 🚀
-
-🧐 *Para que yo pueda trabajar por ustedes, necesito que me ayuden con algo:*
-Por favor, revisen con mucho cuidado las *Normas y Formatos Oficiales* que les dejo a continuación (también las pueden consultar siempre en la descripción del grupo). Si usan el formato correcto, mi "cerebro electrónico" encontrará sus cierres en segundos. 🧠✨
-
-¡Bienvenidos al equipo más pro de Colombia! 🇨🇴🏠`;
+    this.saveCounter();
 
     try {
-      await this.client.sendMessage(this.targetGroupId, welcomeText);
-      setTimeout(() => this.sendGroupRules(), 3000);
+      const dynamicWelcome = await generateWelcomeMessage(count);
+      await this.client.sendMessage(this.targetGroupId, dynamicWelcome);
+      setTimeout(() => this.sendGroupRules(), 4000);
     } catch (e) {
-      console.error('Error enviando bienvenida:', e);
+      console.error('Error enviando bienvenida dinámica:', e);
     }
   }
 
