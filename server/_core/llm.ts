@@ -1,14 +1,32 @@
 import axios from "axios";
 import { ENV } from "./env";
 
+export type LLMProvider = "google" | "anthropic";
+
 /**
- * Invocación a Google Gemini vía REST (Google AI Studio)
- * Usando la nueva llave VECY INMUEBLES NETWORK sin restricciones.
+ * Invocación genérica a modelos de IA.
+ * Actualmente soporta Google Gemini y está preparado para Anthropic Claude.
  */
-export async function invokeLLM({ messages, responseFormat }: { messages: any[], responseFormat?: any }) {
+export async function invokeLLM({ 
+  messages, 
+  responseFormat, 
+  provider = "google" 
+}: { 
+  messages: any[], 
+  responseFormat?: any,
+  provider?: LLMProvider
+}) {
+  if (provider === "anthropic") {
+    return await invokeClaude(messages, responseFormat);
+  }
+  return await invokeGemini(messages, responseFormat);
+}
+
+/**
+ * Invocación a Google Gemini (Google AI Studio)
+ */
+async function invokeGemini(messages: any[], responseFormat?: any) {
   const API_KEY = process.env.GEMINI_API_KEY || ENV.forgeApiKey;
-  
-  // Usamos 'gemini-flash-latest' que en este proyecto apunta a una versión de alto rendimiento
   const MODEL = "gemini-flash-latest";
   const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${API_KEY}`;
 
@@ -33,29 +51,27 @@ export async function invokeLLM({ messages, responseFormat }: { messages: any[],
       }
     };
 
-    console.log(`[JanIA-LLM] Procesando con ${MODEL}...`);
-
-    const response = await axios.post(API_URL, payload, {
-      headers: { "Content-Type": "application/json" }
-    });
+    console.log(`[JanIA-LLM] Procesando con Gemini (${MODEL})...`);
+    const response = await axios.post(API_URL, payload);
 
     if (response.data.candidates && response.data.candidates[0]) {
-      const text = response.data.candidates[0].content.parts[0].text;
       return {
-        choices: [
-          {
-            message: {
-              content: text
-            }
-          }
-        ]
+        choices: [{ message: { content: response.data.candidates[0].content.parts[0].text } }]
       };
-    } else {
-      throw new Error("Respuesta de IA vacía o inválida");
     }
+    throw new Error("Respuesta de Gemini vacía");
   } catch (error: any) {
-    const errorDetail = error.response?.data?.error?.message || error.message;
-    console.error("[Gemini Error]:", errorDetail);
+    console.error("[Gemini Error]:", error.response?.data?.error?.message || error.message);
     throw error;
   }
+}
+
+/**
+ * Placeholder para Anthropic Claude (Estructura preparada para Fase 2/3)
+ */
+async function invokeClaude(messages: any[], responseFormat?: any) {
+  // Nota para el futuro: Cuando tengamos los recursos, implementar la llamada a Anthropic API aquí.
+  // Se requerirá la librería @anthropic-ai/sdk o axios a https://api.anthropic.com/v1/messages
+  console.log("[JanIA-LLM] Intentando procesar con Claude (Anthropic)...");
+  throw new Error("El proveedor Anthropic está preparado en código pero requiere API KEY y activación financiera.");
 }
