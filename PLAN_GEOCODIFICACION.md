@@ -1,3 +1,4 @@
+
 # Blueprint: Estandarización Geográfica Automatizada (Vecy Gold Edition)
 
 Este documento contiene el diseño de arquitectura y los pasos exactos que un Agente Inteligente / Desarrollador deberá ejecutar en el futuro, una vez que todas las fichas técnicas (repositorios de GitHub/Netlify) estén organizadas por parte del equipo vecinal. 
