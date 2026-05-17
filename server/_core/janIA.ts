@@ -57,8 +57,6 @@ export async function processWhatsAppMessage(
   userName?: string,
   hasMedia: boolean = false
 ): Promise<JanIAResult> {
-...
-`;
   try {
     // Si tiene media (foto/video), forzamos la amonestación
     const userMessage = hasMedia ? `[SISTEMA: EL USUARIO SUBIÓ UNA FOTO O VIDEO DIRECTO] ${text}` : `Mensaje de ${userName || userId}: ${text}`;
