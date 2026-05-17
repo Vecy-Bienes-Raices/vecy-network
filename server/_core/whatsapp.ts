@@ -10,10 +10,16 @@ export class WhatsAppBot {
   private targetGroupId: string = '120363260108880069@g.us';
   private messageBuffers: Map<string, { timer: NodeJS.Timeout, messages: string[], userName: string, hasMedia: boolean }> = new Map();
   private startTime: number = Date.now();
+  private pendingWelcomeCount: number = 0;
+  private welcomeTimer: NodeJS.Timeout | null = null;
 
   constructor() {
     this.client = new Client({
       authStrategy: new LocalAuth(),
+      webVersionCache: {
+        type: 'remote',
+        remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1012170943-alpha.html',
+      },
       puppeteer: {
         args: [
           '--no-sandbox',
@@ -27,6 +33,35 @@ export class WhatsAppBot {
     });
 
     this.setupEventListeners();
+    this.setupGracefulShutdown();
+    this.setupWeeklySchedule();
+  }
+
+  private setupGracefulShutdown() {
+    const shutdown = async () => {
+      console.log('\n🛑 Cerrando WhatsApp Bot...');
+      try {
+        await this.client.destroy();
+        console.log('✅ Cliente de WhatsApp destruido correctamente.');
+      } catch (e) {
+        console.error('Error al destruir cliente:', e);
+      }
+      process.exit(0);
+    };
+
+    process.on('SIGINT', shutdown);
+    process.on('SIGTERM', shutdown);
+  }
+
+  private setupWeeklySchedule() {
+    // Verificar cada minuto si es lunes a las 8 AM
+    setInterval(() => {
+      const now = new Date();
+      if (now.getDay() === 1 && now.getHours() === 8 && now.getMinutes() === 0) {
+        console.log('⏰ Ejecutando publicación semanal de normas (Lunes 8:00 AM)');
+        this.sendGroupRules();
+      }
+    }, 60000);
   }
 
   private setupEventListeners() {
@@ -44,11 +79,23 @@ export class WhatsAppBot {
       this.startTime = Date.now();
     });
 
-    this.client.on('message_create', async (msg: Message) => {
-      // 1. Ignorar mensajes propios para evitar bucles
-      if (msg.fromMe) return;
+    this.client.on('group_join', async (notification) => {
+      if (notification.chatId !== this.targetGroupId) return;
 
-      // 2. Ignorar mensajes de antes de arrancar
+      this.pendingWelcomeCount++;
+      console.log(`[INFO] Nuevo integrante detectado. Total pendientes: ${this.pendingWelcomeCount}`);
+
+      if (this.welcomeTimer) clearTimeout(this.welcomeTimer);
+
+      if (this.pendingWelcomeCount >= 5) {
+        await this.sendBatchWelcome();
+      } else {
+        this.welcomeTimer = setTimeout(() => this.sendBatchWelcome(), 30 * 60000);
+      }
+    });
+
+    this.client.on('message_create', async (msg: Message) => {
+      if (msg.fromMe) return;
       if (msg.timestamp * 1000 < this.startTime) return;
 
       try {
@@ -56,22 +103,45 @@ export class WhatsAppBot {
         if (chat.id._serialized === this.targetGroupId) {
           const text = msg.body.toLowerCase();
 
-          // Comandos inmediatos
           if (text.includes('jania normas') || text.includes('jania preséntate')) {
             await this.handleMessageImmediate(msg);
             return;
           }
 
-          // Detectar si tiene media (foto/video/documento)
           const hasMedia = msg.hasMedia;
-
-          // Agrupar mensajes
           await this.enqueueMessage(msg, hasMedia);
         }
       } catch (e) {
         console.error('Error en receptor:', e);
       }
     });
+  }
+
+  private async sendBatchWelcome() {
+    if (this.pendingWelcomeCount === 0) return;
+    
+    console.log(`[ACTION] Enviando bienvenida por lote a ${this.pendingWelcomeCount} integrantes.`);
+    this.pendingWelcomeCount = 0;
+    if (this.welcomeTimer) clearTimeout(this.welcomeTimer);
+
+    const welcomeText = `¡Hola, mis estimados colegas! ✨ Qué alegría ver cómo crece este equipo. ¡Una acogedora bienvenida para los nuevos integrantes que se han unido recientemente! 🥳👋
+
+Soy *JanIA*, su asistente de Inteligencia Artificial y Coach Inmobiliaria. 🎯 Mi misión aquí es una sola: *Hacerles la vida más fácil y ayudarles a cerrar negocios más rápido.*
+
+💡 *¿Cuál es su beneficio por estar aquí?*
+Olvídense de pasar horas haciendo scroll buscando quién tiene lo que ustedes necesitan. Yo leo cada mensaje las 24 horas del día. En cuanto alguien publique un inmueble que encaje con el requerimiento de otro, *yo haré el MATCH por ustedes* y les avisaré de inmediato. 🚀
+
+🧐 *Para que yo pueda trabajar por ustedes, necesito que me ayuden con algo:*
+Por favor, revisen con mucho cuidado las *Normas y Formatos Oficiales* que les dejo a continuación (también las pueden consultar siempre en la descripción del grupo). Si usan el formato correcto, mi "cerebro electrónico" encontrará sus cierres en segundos. 🧠✨
+
+¡Bienvenidos al equipo más pro de Colombia! 🇨🇴🏠`;
+
+    try {
+      await this.client.sendMessage(this.targetGroupId, welcomeText);
+      setTimeout(() => this.sendGroupRules(), 3000);
+    } catch (e) {
+      console.error('Error enviando bienvenida:', e);
+    }
   }
 
   private async enqueueMessage(msg: Message, hasMedia: boolean) {
@@ -105,7 +175,6 @@ export class WhatsAppBot {
     this.messageBuffers.delete(senderId);
 
     try {
-      // Scrapear links si existen
       const urlMatch = fullText.match(/https?:\/\/[^\s]+/g);
       if (urlMatch) {
         for (const url of urlMatch) {
@@ -132,8 +201,7 @@ export class WhatsAppBot {
     const chat = await msg.getChat();
     const senderId = (msg as any).author || msg.from;
 
-    // Verificamos si el remitente es administrador
-    const participant = (chat as any).participants.find((p: any) => p.id._serialized === senderId);
+    const participant = (chat as any).participants?.find((p: any) => p.id._serialized === senderId);
     const isAdmin = participant?.isAdmin || participant?.isSuperAdmin || msg.fromMe;
 
     const text = msg.body.toLowerCase();
