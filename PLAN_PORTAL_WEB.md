@@ -53,12 +53,12 @@ Este plan detalla la transformación para aniquilar la fricción y dominar el me
 
 El nombre **VECY NETWORK** nace de nuestra red de colaboración. No gastamos en publicidad tradicional; premiamos el "Voz a Voz".
 
-- [ ] **Sistema de vPoints (Gana-Gana):** 
+- [ ] **Sistema de Puntos (Gana-Gana):** 
     *   Cada vez que un agente comparte un inmueble del ecosistema (propio o ajeno) en sus redes sociales o WhatsApp, acumula puntos.
     *   Estos puntos se traducen en una **comisión de cierre** garantizada.
 - [ ] **Reparto de Comisión "Armagedón":** En cada cierre exitoso (venta o arriendo), la comisión total se divide de forma transparente:
     1.  **VECY Network:** Porcentaje fijo por uso de plataforma e IA.
-    2.  **Agentes Difusores (Multinivel):** Bolsa de puntos para quienes ayudaron a viralizar el activo.
+    2.  **Agentes Difusores (Multinivel):** Bolsa de puntos para quienes ayudaron a viralizar el activo (según sus puntos acumulados).
     3.  **Restante:** Dividido en partes **iguales (50/50)** entre el Agente Vendedor (Captador) y el Agente Comprador.
 - [ ] **Tracking de Viralidad:** Implementar un botón "Compartir y Ganar" que genere enlaces trackeables para medir cuántas veces y dónde se posteó el inmueble.
 

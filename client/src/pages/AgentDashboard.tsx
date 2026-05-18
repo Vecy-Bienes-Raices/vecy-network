@@ -71,7 +71,7 @@ export default function AgentDashboard() {
             {[
               { label: "Inmuebles Captados", value: myProperties?.length ?? "—" },
               { label: "Enlaces Activos", value: stealthLinks?.length ?? "—" },
-              { label: "Mis vPoints (Comisión)", value: "0" },
+              { label: "Mis Puntos (Comisión)", value: "0" },
               { label: "Prospectos en Ledger", value: "∞" },
             ].map((stat) => (
               <div key={stat.label} className="panel-card px-6 py-4 flex flex-col min-w-[180px]">
@@ -87,7 +87,7 @@ export default function AgentDashboard() {
               <h2 className="text-lg font-bold text-foreground italic">¡Novedad VECY Network!</h2>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Nuestro sistema **Gana-Gana** ya está activo. Al compartir cualquier inmueble del portal en tus redes, acumulas **vPoints**. Estos puntos se convierten en una comisión real de cierre (Multinivel) al momento del negocio. ¡Ayuda a tus colegas y gana tú también!
+              Nuestro sistema **Gana-Gana** ya está activo. Al compartir cualquier inmueble del portal en tus redes, acumulas **Puntos**. Estos puntos se convierten en una comisión real de cierre (Multinivel) al momento del negocio. ¡Ayuda a tus colegas y gana tú también!
             </p>
           </div>
 
