@@ -149,61 +149,88 @@ export default function RedColaboracion() {
         <div className="container relative z-10">
           <div className="text-center mb-16">
             <h2 className="vecy-title-section uppercase tracking-tighter">MATRIZ DE <span className="text-primary">GANANCIAS</span></h2>
-            <p className="vecy-subtitle max-w-2xl mx-auto">Ganas por viralizar, ganas por cerrar. Transparencia total.</p>
-            <div className="line-gold w-32 mx-auto mt-4"></div>
+            <p className="vecy-subtitle max-w-2xl mx-auto uppercase tracking-widest text-xs font-bold mt-4">Ganas por viralizar, ganas por captar, ganas por cerrar.</p>
+            <div className="line-gold w-32 mx-auto mt-6"></div>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-12 max-w-6xl mx-auto">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
             {/* ESCENARIO A: VIRALIZACIÓN */}
-            <ScrollReveal direction="left">
-              <div className="vecy-card-apple border-primary/20 bg-primary/5 p-10 h-full relative group">
+            <ScrollReveal direction="up" delay={0.1}>
+              <div className="vecy-card-apple border-primary/20 bg-primary/5 p-10 h-full relative group flex flex-col">
                 <div className="absolute top-4 right-4 bg-primary/10 text-primary px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Opción Red</div>
                 <div className="flex items-center gap-4 mb-8">
                   <Share2 className="w-10 h-10 text-primary" />
-                  <h3 className="text-2xl font-bold text-white uppercase">Solo Viralizas</h3>
+                  <h3 className="text-xl font-bold text-white uppercase leading-tight">Solo <br/>Viralizas</h3>
                 </div>
-                <p className="vecy-paragraph text-sm mb-8">
+                <p className="vecy-paragraph text-sm mb-8 flex-1">
                   Compartes el enlace de "Red de Apoyo" (Sin Marca) en tus redes. Acumulas puntos por cada clic y visualización.
                 </p>
                 <div className="space-y-4 mb-10">
                   <div className="flex justify-between items-center py-3 border-b border-white/5">
-                    <span className="text-gray-400 text-xs uppercase font-bold">Tu Tarea</span>
-                    <span className="text-white text-xs font-black uppercase">Postear y Difundir</span>
+                    <span className="text-gray-400 text-[10px] uppercase font-bold">Tu Tarea</span>
+                    <span className="text-white text-[10px] font-black uppercase">Difundir la Red</span>
                   </div>
                   <div className="flex justify-between items-center py-3 border-b border-white/5">
-                    <span className="text-gray-400 text-xs uppercase font-bold">Tu Recompensa</span>
-                    <span className="text-primary text-xs font-black uppercase">Participas del 15% Global</span>
+                    <span className="text-gray-400 text-[10px] uppercase font-bold">Tu Recompensa</span>
+                    <span className="text-primary text-base font-black uppercase">15% Global</span>
                   </div>
                 </div>
-                <div className="bg-black/40 p-6 rounded-2xl border border-white/5 italic text-gray-500 text-xs">
-                  "Si otro agente cierra el negocio, tú recibes una parte de la comisión proporcional a tus puntos acumulados por haber ayudado a que el inmueble fuera visible."
+                <div className="bg-black/40 p-5 rounded-2xl border border-white/5 italic text-gray-500 text-[10px] leading-relaxed">
+                  "Participas en la bolsa de puntos junto a otros difusores. Ganas por el simple hecho de ayudar a que el negocio sea visible."
                 </div>
               </div>
             </ScrollReveal>
 
-            {/* ESCENARIO B: CIERRE */}
-            <ScrollReveal direction="right">
-              <div className="vecy-card-apple border-accent/40 bg-accent/5 p-10 h-full relative group shadow-[0_0_50px_rgba(191,149,63,0.1)]">
-                <div className="absolute top-4 right-4 bg-accent/20 text-accent px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Premio Mayor</div>
+            {/* ESCENARIO B: CAPTACIÓN */}
+            <ScrollReveal direction="up" delay={0.2}>
+              <div className="vecy-card-apple border-white/20 bg-white/5 p-10 h-full relative group flex flex-col shadow-[0_20px_40px_rgba(255,255,255,0.02)]">
+                <div className="absolute top-4 right-4 bg-white/10 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Dueño del Activo</div>
                 <div className="flex items-center gap-4 mb-8">
-                  <Target className="w-10 h-10 text-accent" />
-                  <h3 className="text-2xl font-bold text-white uppercase">Tú Traes al Cliente</h3>
+                  <ShieldCheck className="w-10 h-10 text-primary" />
+                  <h3 className="text-xl font-bold text-white uppercase leading-tight">Tú <br/>Captas</h3>
                 </div>
-                <p className="vecy-paragraph text-sm mb-8">
-                  Viralizaste el inmueble y un cliente te contactó directamente. Gestionas la visita y cierras el negocio.
+                <p className="vecy-paragraph text-sm mb-8 flex-1">
+                  Tienes el inmueble bajo mandato directo. Lo subes a VECY y dejas que nuestra red de cientos de agentes lo viralice.
                 </p>
                 <div className="space-y-4 mb-10">
                   <div className="flex justify-between items-center py-3 border-b border-white/5">
-                    <span className="text-gray-400 text-xs uppercase font-bold">Tu Tarea</span>
-                    <span className="text-white text-xs font-black uppercase">Cierre Efectivo</span>
+                    <span className="text-gray-400 text-[10px] uppercase font-bold">Tu Tarea</span>
+                    <span className="text-white text-[10px] font-black uppercase">Captación y Gestión</span>
                   </div>
                   <div className="flex justify-between items-center py-3 border-b border-white/5">
-                    <span className="text-gray-400 text-xs uppercase font-bold">Tu Recompensa</span>
+                    <span className="text-gray-400 text-[10px] uppercase font-bold">Tu Recompensa</span>
+                    <span className="text-white text-base font-black uppercase">35% Íntegro</span>
+                  </div>
+                </div>
+                <div className="bg-black/40 p-5 rounded-2xl border border-white/5 italic text-gray-500 text-[10px] leading-relaxed text-center">
+                  Aseguras tu comisión por haber traído el inventario de calidad al ecosistema.
+                </div>
+              </div>
+            </ScrollReveal>
+
+            {/* ESCENARIO C: CIERRE */}
+            <ScrollReveal direction="up" delay={0.3}>
+              <div className="vecy-card-apple border-accent/40 bg-accent/5 p-10 h-full relative group shadow-[0_0_50px_rgba(191,149,63,0.1)] flex flex-col">
+                <div className="absolute top-4 right-4 bg-accent/20 text-accent px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Cerrador Pro</div>
+                <div className="flex items-center gap-4 mb-8">
+                  <Target className="w-10 h-10 text-accent" />
+                  <h3 className="text-xl font-bold text-white uppercase leading-tight">Tú Traes al <br/>Comprador</h3>
+                </div>
+                <p className="vecy-paragraph text-sm mb-8 flex-1">
+                  Viralizaste el inmueble y un cliente te contactó. Gestionas la visita y cierras el negocio con éxito.
+                </p>
+                <div className="space-y-4 mb-10">
+                  <div className="flex justify-between items-center py-3 border-b border-white/5">
+                    <span className="text-gray-400 text-[10px] uppercase font-bold">Tu Tarea</span>
+                    <span className="text-white text-[10px] font-black uppercase">Cierre de Negocio</span>
+                  </div>
+                  <div className="flex justify-between items-center py-3 border-b border-white/5">
+                    <span className="text-gray-400 text-[10px] uppercase font-bold">Tu Recompensa</span>
                     <span className="text-accent text-2xl font-black uppercase tracking-tighter">35% Íntegro</span>
                   </div>
                 </div>
-                <div className="bg-black/40 p-6 rounded-2xl border border-accent/20 text-accent text-xs font-bold uppercase tracking-widest text-center">
-                  ¡La mayor comisión del mercado para el cerrador!
+                <div className="bg-black/40 p-5 rounded-2xl border border-accent/20 text-accent text-[10px] font-bold uppercase tracking-widest text-center">
+                  ¡Premio máximo por cerrar la operación!
                 </div>
               </div>
             </ScrollReveal>
