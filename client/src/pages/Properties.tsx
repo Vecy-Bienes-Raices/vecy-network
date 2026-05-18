@@ -2,8 +2,6 @@
  * PROPERTIES PAGE - VECY TECH REAL ESTATE
  *
  * Catálogo completo de propiedades estandarizado (Gold Edition).
- * Todos los datos (Precio, Área, Antigüedad) están auditados y sincronizados
- * con las fichas técnicas oficiales de cada inmueble.
  */
 
 import Navbar from '@/components/Navbar';
@@ -11,6 +9,7 @@ import PropertyCard from '@/components/PropertyCard';
 import { useMemo, useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { Loader2 } from 'lucide-react';
+import { ScrollReveal } from '@/components/ScrollReveal';
 
 // ─── Filtros ──────────────────────────────────────────────────────────────────
 type FilterType = 'all' | 'apartment' | 'house' | 'building' | 'hotel' | 'farm' | 'office' | 'warehouse' | 'land' | 'commercial';
@@ -24,7 +23,7 @@ const FILTER_LABELS: Record<FilterType, string> = {
   farm: 'Fincas',
   office: 'Oficinas',
   warehouse: 'Bodegas',
-  land: 'Terrenos', // Para evitar alertas en TikTok/FB usamos Terrenos en lugar de Lotes
+  land: 'Terrenos',
   commercial: 'Comercial',
 };
 
@@ -51,86 +50,89 @@ export default function Properties() {
     <div className="min-h-screen bg-background text-foreground">
       <Navbar />
 
-      {/* ── Hero ── */}
-      <section className="pt-32 pb-10 bg-gradient-to-b from-black to-background">
-        <div className="container">
-          <div className="text-center mb-6">
-            <h1 className="text-5xl md:text-6xl font-display font-bold tracking-wider mb-4">
-              CATÁLOGO DE <span className="text-accent">PROPIEDADES</span>
+      {/* Hero Section */}
+      <section className="pt-40 pb-16 bg-gradient-to-b from-black to-background overflow-hidden border-b border-white/5">
+        <div className="container relative z-10 text-center">
+          <ScrollReveal delay={0.2}>
+            <p className="vecy-accent-tag">Catálogo Exclusivo</p>
+            <h1 className="vecy-title-hero uppercase">
+              PORTAFOLIO DE <span className="text-gradient-gold">ACTIVOS</span>
             </h1>
-            <p className="text-gray-400 max-w-2xl mx-auto text-sm">
-              Descubre nuestro portafolio exclusivo de propiedades premium en Bogotá y principales ciudades de Colombia
+            <p className="vecy-subtitle max-w-2xl mx-auto">
+              Descubre propiedades premium auditadas y sincronizadas bajo el estándar Gold Edition de VECY Network.
             </p>
-          </div>
+          </ScrollReveal>
         </div>
       </section>
 
-      {/* ── Filtros y ordenamiento ── */}
-      <section className="py-6 bg-background border-b border-white/10 sticky top-0 z-30 backdrop-blur-md bg-background/90">
-        <div className="container flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex gap-2 flex-wrap justify-center">
-            {(Object.keys(FILTER_LABELS) as FilterType[]).map((key) => (
-              <button
-                key={key}
-                onClick={() => setActiveFilter(key)}
-                className={`px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider transition-all duration-200 ${
-                  activeFilter === key
-                    ? 'bg-accent text-accent-foreground shadow-[0_0_12px_rgba(212,175,55,0.4)]'
-                    : 'bg-white/5 text-gray-400 hover:bg-white/5 hover:text-white border border-white/10'
-                }`}
+      {/* Filtros y ordenamiento */}
+      <section className="py-8 bg-background/80 backdrop-blur-xl border-b border-white/10 sticky top-20 z-30">
+        <div className="container flex flex-col lg:flex-row items-center justify-between gap-6">
+          <ScrollReveal direction="none" delay={0.1}>
+            <div className="flex gap-2 flex-wrap justify-center lg:justify-start">
+              {(Object.keys(FILTER_LABELS) as FilterType[]).map((key) => (
+                <button
+                  key={key}
+                  onClick={() => setActiveFilter(key)}
+                  className={`px-6 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all duration-300 ${
+                    activeFilter === key
+                      ? 'bg-accent text-accent-foreground shadow-[0_0_20px_rgba(191,149,63,0.3)] scale-105'
+                      : 'bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10'
+                  }`}
+                >
+                  {FILTER_LABELS[key]}
+                </button>
+              ))}
+            </div>
+          </ScrollReveal>
+
+          <ScrollReveal direction="none" delay={0.2}>
+            <div className="flex items-center gap-4 bg-white/5 px-4 py-2 rounded-xl border border-white/10">
+              <span className="text-[10px] text-gray-500 uppercase tracking-widest font-black">Ordenar:</span>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                className="bg-transparent text-gray-300 text-xs font-bold focus:outline-none cursor-pointer"
               >
-                {FILTER_LABELS[key]}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500 uppercase tracking-wider">Ordenar:</span>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-              className="bg-white/5 border border-white/10 text-gray-300 text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:border-accent"
-            >
-              <option value="default">Destacados primero</option>
-              <option value="price-asc">Menor precio</option>
-              <option value="price-desc">Mayor precio</option>
-            </select>
-          </div>
+                <option value="default" className="bg-card">Destacados</option>
+                <option value="price-asc" className="bg-card">Menor precio</option>
+                <option value="price-desc" className="bg-card">Mayor precio</option>
+              </select>
+            </div>
+          </ScrollReveal>
         </div>
       </section>
 
-      {/* ── Grid ── */}
-      <section className="py-12 bg-background">
+      {/* Grid de Propiedades */}
+      <section className="py-20 bg-background">
         <div className="container">
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold text-white uppercase tracking-wider">
-              {displayProperties.length}{' '}
-              {displayProperties.length === 1 ? 'Propiedad' : 'Propiedades'} en Portafolio
-            </h2>
-            <div className="line-gold w-16 mt-3" />
-          </div>
+          <ScrollReveal>
+            <div className="mb-12">
+              <h2 className="vecy-title-section">
+                {displayProperties.length}{' '}
+                {displayProperties.length === 1 ? 'Propiedad' : 'Propiedades'} Disponibles
+              </h2>
+              <div className="line-gold w-16 mt-4" />
+            </div>
+          </ScrollReveal>
 
           {isLoading ? (
-            <div className="flex justify-center items-center py-20 text-gray-400">
-              <Loader2 className="animate-spin w-8 h-8 text-accent mr-3" />
-              <span>Cargando catálogo...</span>
+            <div className="flex flex-col justify-center items-center py-40 text-gray-400 gap-4">
+              <Loader2 className="animate-spin w-10 h-10 text-accent" />
+              <p className="text-xs uppercase tracking-widest font-bold">Escaneando ecosistema...</p>
             </div>
           ) : displayProperties.length === 0 ? (
-            <div className="text-center py-20 text-gray-500">
-              No hay propiedades en esta categoría.
+            <div className="text-center py-40 border-2 border-dashed border-white/5 rounded-3xl">
+              <p className="text-gray-500 uppercase tracking-widest font-bold italic">No se detectaron activos en esta categoría.</p>
             </div>
           ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
               {displayProperties.map((prop, idx) => {
                 const images = prop.images as string[] | null;
                 const area = prop.areaSquareMeters ? Number(prop.areaSquareMeters) : 0;
                 
                 return (
-                  <div
-                    key={prop.id}
-                    className="animate-slide-in-up"
-                    style={{ animationDelay: `${idx * 0.04}s` }}
-                  >
+                  <ScrollReveal key={prop.id} delay={(idx % 3) * 0.1} direction="up">
                     <PropertyCard 
                       id={prop.id}
                       name={prop.name}
@@ -150,7 +152,7 @@ export default function Properties() {
                       gallery={images || []}
                       featured={prop.featured || false}
                     />
-                  </div>
+                  </ScrollReveal>
                 );
               })}
             </div>
@@ -158,53 +160,36 @@ export default function Properties() {
         </div>
       </section>
 
-      {/* ── CTA ── */}
-      <section className="py-20 bg-gradient-to-b from-background to-black">
+      {/* CTA Final */}
+      <section className="py-32 bg-gradient-to-t from-black to-background">
         <div className="container text-center">
-          <h2 className="text-4xl font-bold text-white mb-6 uppercase tracking-wider">
-            ¿No Encontraste Lo Que Buscas?
-          </h2>
-          <p className="text-gray-400 mb-8 max-w-2xl mx-auto text-sm">
-            Nuestro equipo de expertos puede ayudarte a encontrar la propiedad perfecta según tus necesidades específicas.
-          </p>
-          <a href="/#contacto" className="btn-gold">CONTACTAR A UN ASESOR</a>
+          <ScrollReveal>
+            <h2 className="vecy-title-hero uppercase">¿Buscas algo <span className="text-gradient-gold">específico</span>?</h2>
+            <p className="vecy-subtitle max-w-2xl mx-auto mb-10">
+              Activa nuestro motor de búsqueda personalizado y deja que JanIA encuentre el match perfecto para ti.
+            </p>
+            <button 
+              onClick={() => navigate('/contact')}
+              className="btn-gold px-12 py-5 text-lg tracking-widest uppercase"
+            >
+              CONTACTAR ASESOR
+            </button>
+          </ScrollReveal>
         </div>
       </section>
 
-      {/* ── Footer ── */}
-      <footer className="bg-black border-t border-white/10 py-12">
-        <div className="container">
-          <div className="grid md:grid-cols-4 gap-8 mb-8">
-            <div>
-              <h4 className="text-white font-bold mb-4 uppercase tracking-wider">Vecy</h4>
-              <p className="text-gray-400 text-sm">Liderazgo en tecnología inmobiliaria.</p>
-            </div>
-            <div>
-              <h4 className="text-white font-bold mb-4 uppercase tracking-wider">Navegación</h4>
-              <ul className="space-y-2 text-sm text-gray-400">
-                <li><a href="/" className="hover:text-accent transition-colors">Inicio</a></li>
-                <li><a href="/properties" className="hover:text-accent transition-colors">Propiedades</a></li>
-                <li><a href="/#blog" className="hover:text-accent transition-colors">Blog</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="text-white font-bold mb-4 uppercase tracking-wider">Legal</h4>
-              <ul className="space-y-2 text-sm text-gray-400">
-                <li><a href="#" className="hover:text-accent transition-colors">Términos</a></li>
-                <li><a href="#" className="hover:text-accent transition-colors">Privacidad</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="text-white font-bold mb-4 uppercase tracking-wider">Contacto</h4>
-              <p className="text-gray-400 text-sm">
-                +57 316 656 9719<br />
-                vecybienesraices@gmail.com
-              </p>
-            </div>
+      {/* Footer */}
+      <footer className="bg-black border-t border-white/10 py-20">
+        <div className="container text-center">
+          <img src="/logo-vecy.png" alt="Vecy" className="h-10 mx-auto mb-8 opacity-40 grayscale" />
+          <div className="flex justify-center gap-8 mb-12">
+            <button onClick={() => navigate('/')} className="text-[10px] font-bold uppercase tracking-widest text-gray-500 hover:text-primary transition-colors">Inicio</button>
+            <button onClick={() => navigate('/historia')} className="text-[10px] font-bold uppercase tracking-widest text-gray-500 hover:text-primary transition-colors">Historia</button>
+            <button onClick={() => navigate('/services')} className="text-[10px] font-bold uppercase tracking-widest text-gray-500 hover:text-primary transition-colors">Servicios</button>
           </div>
-          <div className="border-t border-white/10 pt-8 text-center text-gray-500 text-sm">
-            <p>&copy; 2026 Vecy. Todos los derechos reservados.</p>
-          </div>
+          <p className="text-gray-600 text-[10px] uppercase tracking-[0.4em]">
+            &copy; 2026 VECY NETWORK. Hecho para el Futuro.
+          </p>
         </div>
       </footer>
     </div>

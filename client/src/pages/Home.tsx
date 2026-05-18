@@ -1,48 +1,49 @@
-/**
- * HOME PAGE - VECY TECH REAL ESTATE
- * 
- * Design: Minimalismo Corporativo Oscuro con Acentos Dorados
- * Secciones principales: Hero, Propiedades, Servicios, Blog, Inversores
- */
-
 import { useState } from 'react';
+import { 
+  Building2, 
+  MapPin, 
+  Bed, 
+  Bath, 
+  Maximize, 
+  ChevronRight, 
+  BarChart3, 
+  Scale, 
+  CircleDollarSign,
+  Zap,
+  Shield,
+  Search
+} from 'lucide-react';
 import { useLocation } from 'wouter';
 import Navbar from '@/components/Navbar';
+import NetworkBackground from '@/components/NetworkBackground';
 import CaseStudyCarousel from '@/components/CaseStudyCarousel';
 import SimilarPropertiesCarousel from '@/components/SimilarPropertiesCarousel';
-import { ChevronRight, MapPin, DollarSign, Bed, Bath, Square, TrendingUp, BookOpen, Users, Download, Search, Building2, BarChart3, Scale, CircleDollarSign } from 'lucide-react';
-import { useAuth } from '@/_core/hooks/useAuth';
-import NetworkBackground from '@/components/NetworkBackground';
+import { ScrollReveal } from '@/components/ScrollReveal';
 
 export default function Home() {
-  // The userAuth hooks provides authentication state
-  // To implement login/logout functionality, simply call logout() or redirect to getLoginUrl()
-  let { user, loading, error, isAuthenticated, logout } = useAuth();
   const [, navigate] = useLocation();
 
-  const [activeTab, setActiveTab] = useState('all');
-
-  // Datos reales de propiedades destacadas - Sinergia con Fichas de Github
+  // Datos de propiedades destacadas (simulados)
   const properties = [
     {
-      id: 'apto-cantalejo',
-      name: 'Apartamento en Cantalejo',
-      price: '$470.000.000',
-      location: 'Bogotá, Suba',
-      beds: 3,
-      baths: 2,
-      sqft: '71',
-      image: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=800',
+      id: 'edificio-teusaquillo',
+      name: 'Edificio Teusaquillo - Inversión Pro',
+      price: '$2.450.000.000',
+      location: 'Bogotá, Teusaquillo',
+      beds: 12,
+      baths: 8,
+      sqft: '450',
+      image: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2070&auto=format&fit=crop',
       featured: true,
     },
     {
-      id: 'apto-cedritos-ubik',
-      name: 'Apartamento Cedritos UBIK',
-      price: '$450.000.000',
+      id: 'apto-santa-barbara',
+      name: 'Apartamento Santa Bárbara Alta',
+      price: '$1.150.000.000',
       location: 'Bogotá, Usaquén',
-      beds: 2,
-      baths: 2,
-      sqft: '54',
+      beds: 3,
+      baths: 3,
+      sqft: '145',
       image: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80&w=800',
       featured: true,
     },
@@ -116,30 +117,32 @@ export default function Home() {
 
         {/* Contenido Hero */}
         <div className="container relative z-10 text-center">
-          <div className="max-w-4xl mx-auto animate-fade-in pointer-events-none">
-            <p className="text-accent font-display tracking-[0.3em] uppercase text-sm mb-4 glow-gold-sm">
-              Ecosistema Inmobiliario 100% Digital
-            </p>
-            <h1 className="text-5xl md:text-8xl font-display font-bold tracking-tighter text-white mb-6 leading-tight">
-              VECY <span className="text-gradient-gold">NETWORK</span>
-            </h1>
-            <h2 className="text-xl md:text-2xl text-gray-200 mb-8 font-light italic tracking-wide">
-              "Sal de lo convencional. Evoluciona hacia lo extraordinario."
-            </h2>
-            <p className="text-lg text-gray-300 mb-10 max-w-2xl mx-auto leading-relaxed">
-              El bróker virtual definitivo. Fusionamos el rigor jurídico con 
-              <span className="text-accent font-semibold mx-1">Inteligencia Artificial de vanguardia</span> para 
-              estructurar negocios inmobiliarios inteligentes.
-            </p>
-            <div className="flex flex-col md:flex-row gap-6 justify-center pointer-events-auto">
-              <button className="btn-gold px-10 py-4 text-base tracking-widest" onClick={() => navigate('/properties')}>
-                EXPLORAR ACTIVOS
-              </button>
-              <button className="btn-gold-outline px-10 py-4 text-base tracking-widest" onClick={() => navigate('/contact')}>
-                INVERTIR AHORA
-              </button>
+          <ScrollReveal delay={0.2}>
+            <div className="max-w-4xl mx-auto pointer-events-none">
+              <p className="vecy-accent-tag">
+                Ecosistema Inmobiliario 100% Digital
+              </p>
+              <h1 className="vecy-title-hero uppercase">
+                VECY <span className="text-gradient-gold">NETWORK</span>
+              </h1>
+              <h2 className="text-xl md:text-2xl text-gray-200 mb-8 font-light italic tracking-wide">
+                "Sal de lo convencional. Evoluciona hacia lo extraordinario."
+              </h2>
+              <p className="vecy-paragraph max-w-2xl mx-auto mb-10">
+                El bróker virtual definitivo. Fusionamos el rigor jurídico con 
+                <span className="text-accent font-semibold mx-1">Inteligencia Artificial de vanguardia</span> para 
+                estructurar negocios inmobiliarios inteligentes.
+              </p>
+              <div className="flex flex-col md:flex-row gap-6 justify-center pointer-events-auto">
+                <button className="btn-gold px-10 py-4 text-base tracking-widest uppercase" onClick={() => navigate('/properties')}>
+                  EXPLORAR ACTIVOS
+                </button>
+                <button className="btn-gold-outline px-10 py-4 text-base tracking-widest uppercase" onClick={() => navigate('/contact')}>
+                  INVERTIR AHORA
+                </button>
+              </div>
             </div>
-          </div>
+          </ScrollReveal>
         </div>
 
         {/* Scroll indicator */}
@@ -149,259 +152,178 @@ export default function Home() {
       </section>
 
       {/* PROPIEDADES DESTACADAS */}
-      <section id="properties" className="py-20 bg-gradient-dark">
+      <section id="properties" className="py-24 bg-gradient-dark">
         <div className="container">
-          <div className="text-center mb-16">
-            <h2 className="text-5xl font-display font-bold tracking-wider mb-4 text-white">PROPIEDADES DESTACADAS</h2>
-            <div className="line-electric w-32 mx-auto mb-6"></div>
-            <p className="text-gray-300 max-w-2xl mx-auto font-light">
-              Selección exclusiva de propiedades premium en las mejores ubicaciones de Bogotá
-            </p>
-          </div>
+          <ScrollReveal>
+            <div className="text-center mb-16">
+              <h2 className="vecy-title-section uppercase">PROPIEDADES DESTACADAS</h2>
+              <div className="line-electric w-32 mx-auto mb-6"></div>
+              <p className="vecy-subtitle max-w-2xl mx-auto">
+                Selección exclusiva de propiedades premium en las mejores ubicaciones de Bogotá
+              </p>
+            </div>
+          </ScrollReveal>
 
           {/* Grid de propiedades */}
           <div className="grid md:grid-cols-3 gap-8">
             {properties.map((prop, idx) => (
-              <div
-                key={prop.id}
-                className="card-float group overflow-hidden hover:glow-gold transition-all duration-300 animate-slide-in-up"
-                style={{ animationDelay: `${idx * 0.1}s` }}
-              >
-                {/* Imagen */}
-                <div className="relative h-64 overflow-hidden">
-                  <img
-                    src={prop.image}
-                    alt={prop.name}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                  />
-                  {prop.featured && (
-                    <div className="absolute top-4 right-4 bg-accent text-accent-foreground px-4 py-2 rounded-lg font-bold text-sm">
-                      DESTACADO
+              <ScrollReveal key={prop.id} delay={idx * 0.1} direction="up">
+                <div
+                  className="vecy-card-apple group overflow-hidden hover:glow-gold transition-all duration-500 p-0"
+                >
+                  {/* Imagen */}
+                  <div className="relative h-64 overflow-hidden">
+                    <img
+                      src={prop.image}
+                      alt={prop.name}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    />
+                    {prop.featured && (
+                      <div className="absolute top-4 right-4 bg-accent text-accent-foreground px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-widest">
+                        DESTACADO
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Contenido */}
+                  <div className="p-8">
+                    <h3 className="text-xl font-bold text-white mb-2 uppercase tracking-tight">{prop.name}</h3>
+                    <div className="flex items-center gap-2 text-gray-400 mb-6">
+                      <MapPin size={16} className="text-accent" />
+                      <span className="text-xs uppercase tracking-wider">{prop.location}</span>
                     </div>
-                  )}
+
+                    {/* Precio destacado */}
+                    <div className="mb-6 pb-6 border-b border-white/10">
+                      <p className="text-3xl font-black text-accent">{prop.price}</p>
+                    </div>
+
+                    {/* Características */}
+                    <div className="grid grid-cols-3 gap-4 mb-8">
+                      <div className="text-center">
+                        <Bed size={20} className="mx-auto text-accent mb-2" />
+                        <span className="text-xs text-gray-300 font-bold uppercase">{prop.beds} Hab</span>
+                      </div>
+                      <div className="text-center">
+                        <Bath size={20} className="mx-auto text-accent mb-2" />
+                        <span className="text-xs text-gray-300 font-bold uppercase">{prop.baths} Baños</span>
+                      </div>
+                      <div className="text-center">
+                        <Maximize size={20} className="mx-auto text-accent mb-2" />
+                        <span className="text-xs text-gray-300 font-bold uppercase">{prop.sqft} m²</span>
+                      </div>
+                    </div>
+
+                    <button className="btn-gold-outline w-full text-sm py-3 tracking-widest uppercase" onClick={() => navigate(`/property/${prop.id}`)}>
+                      VER DETALLES
+                    </button>
+                  </div>
                 </div>
-
-                {/* Contenido */}
-                <div className="p-6">
-                  <h3 className="text-xl font-bold text-white mb-2">{prop.name}</h3>
-                  <div className="flex items-center gap-2 text-gray-300 mb-4">
-                    <MapPin size={16} className="text-accent" />
-                    <span className="text-sm">{prop.location}</span>
-                  </div>
-
-                  {/* Precio destacado */}
-                  <div className="mb-4 pb-4 border-b border-white/10">
-                    <p className="text-3xl font-bold text-accent">{prop.price}</p>
-                  </div>
-
-                  {/* Características */}
-                  <div className="grid grid-cols-3 gap-4 mb-6">
-                    <div className="text-center">
-                      <Bed size={20} className="mx-auto text-accent mb-2" />
-                      <p className="text-sm text-gray-300">{prop.beds} Hab</p>
-                    </div>
-                    <div className="text-center">
-                      <Bath size={20} className="mx-auto text-accent mb-2" />
-                      <p className="text-sm text-gray-300">{prop.baths} Baños</p>
-                    </div>
-                    <div className="text-center">
-                      <Square size={20} className="mx-auto text-accent mb-2" />
-                      <p className="text-sm text-gray-300">{prop.sqft} m²</p>
-                    </div>
-                  </div>
-
-                  <button className="w-full btn-gold text-sm">VER DETALLES</button>
-                </div>
-              </div>
+              </ScrollReveal>
             ))}
           </div>
         </div>
       </section>
 
-      {/* COMPARACIÓN DE MERCADO */}
-      <section className="py-20 bg-background">
-        <div className="container">
-          <div className="text-center mb-16">
-            <h2 className="text-5xl font-display font-bold tracking-wider mb-4">ANÁLISIS DE MERCADO BOGOTÁ</h2>
-            <div className="line-gold w-24 mx-auto mb-6"></div>
-            <p className="text-gray-300">Comparativa interactiva de precios y tendencias inmobiliarias</p>
-          </div>
-
-          {/* Tabla de comparación */}
-          <div className="glass rounded-2xl p-8 overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-white/10">
-                  <th className="text-left py-4 px-4 text-accent font-bold uppercase tracking-wider">Zona</th>
-                  <th className="text-left py-4 px-4 text-accent font-bold uppercase tracking-wider">Precio Promedio</th>
-                  <th className="text-left py-4 px-4 text-accent font-bold uppercase tracking-wider">Variación Anual</th>
-                  <th className="text-left py-4 px-4 text-accent font-bold uppercase tracking-wider">Demanda</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  { zone: 'Zona Rosa', price: '$750K - $1.2M', change: '+12%', demand: 'Muy Alta' },
-                  { zone: 'Chapinero', price: '$400K - $700K', change: '+8%', demand: 'Alta' },
-                  { zone: 'Usaquén', price: '$550K - $950K', change: '+15%', demand: 'Muy Alta' },
-                  { zone: 'Teusaquillo', price: '$350K - $600K', change: '+6%', demand: 'Media' },
-                ].map((row, idx) => (
-                  <tr key={idx} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                    <td className="py-4 px-4 text-white font-semibold">{row.zone}</td>
-                    <td className="py-4 px-4 text-accent font-bold">{row.price}</td>
-                    <td className="py-4 px-4 text-green-400 font-bold">{row.change}</td>
-                    <td className="py-4 px-4 text-gray-200">{row.demand}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+      {/* SECCIÓN DE IMPACTO: ARMAGEDÓN */}
+      <section className="py-24 bg-background relative overflow-hidden border-y border-white/5">
+        <div className="container relative z-10 text-center">
+          <ScrollReveal direction="none">
+            <h2 className="vecy-title-hero">
+              EL <span className="text-gradient-gold uppercase">ARMAGEDÓN</span> INMOBILIARIO
+            </h2>
+            <div className="line-electric w-48 mx-auto mb-10"></div>
+            <p className="vecy-subtitle max-w-3xl mx-auto text-xl">
+              Estamos extinguiendo los procesos obsoletos de los dinosaurios del sector. 
+              Velocidad, transparencia y tecnología de punta.
+            </p>
+            <button 
+              onClick={() => navigate('/historia')}
+              className="btn-gold px-12 py-5 text-lg tracking-widest uppercase shadow-[0_0_30px_rgba(191,149,63,0.2)]"
+            >
+              CONOCER LA LEYENDA
+            </button>
+          </ScrollReveal>
         </div>
       </section>
 
-      {/* SERVICIOS PROFESIONALES */}
-      <section id="services" className="py-20 bg-gradient-to-b from-black to-background">
+      {/* SERVICIOS */}
+      <section id="services" className="py-24 bg-gradient-dark">
         <div className="container">
-          <div className="text-center mb-16">
-            <h2 className="text-5xl font-display font-bold tracking-wider mb-4">SERVICIOS PROFESIONALES</h2>
-            <div className="line-gold w-24 mx-auto mb-6"></div>
-            <p className="text-gray-300">Soluciones integrales para tus necesidades inmobiliarias</p>
-          </div>
+          <ScrollReveal>
+            <div className="text-center mb-16">
+              <h2 className="vecy-title-section uppercase tracking-tighter">Nuestros <span className="text-primary">Servicios</span></h2>
+              <div className="line-gold w-32 mx-auto"></div>
+            </div>
+          </ScrollReveal>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid md:grid-cols-4 gap-8">
             {services.map((service, idx) => (
-              <div key={idx} className="card-float p-8 hover:glow-gold transition-all duration-300 transform hover:-translate-y-2">
-                <div className="mb-6 flex justify-center">{service.icon}</div>
-                <h3 className="text-2xl font-bold text-white mb-4 text-center">{service.title}</h3>
-                <p className="text-gray-300 text-center leading-relaxed">{service.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* BLOG Y OPINIONES */}
-      <section id="blog" className="py-20 bg-background">
-        <div className="container">
-          <div className="text-center mb-16">
-            <h2 className="text-5xl font-display font-bold tracking-wider mb-4">BLOG Y LIDERAZGO INTELECTUAL</h2>
-            <div className="line-gold w-24 mx-auto mb-6"></div>
-            <p className="text-gray-300">Análisis, tendencias y insights del mercado inmobiliario</p>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-8 mb-12">
-            {blogPosts.map((post, idx) => (
-              <div
-                key={post.id}
-                className="card-float overflow-hidden hover:glow-gold-sm transition-all duration-300 animate-slide-in-up"
-                style={{ animationDelay: `${idx * 0.1}s` }}
-              >
-                <img src={post.image} alt={post.title} className="w-full h-64 object-cover" />
-                <div className="p-6">
-                  <h3 className="text-2xl font-bold text-white mb-3">{post.title}</h3>
-                  <p className="text-gray-300 mb-4">{post.excerpt}</p>
-                  <div className="flex items-center justify-between text-sm text-gray-400 mb-4">
-                    <span>{post.author}</span>
-                    <span>{post.date}</span>
-                  </div>
-                  <button className="btn-gold-outline w-full text-sm">LEER MÁS</button>
+              <ScrollReveal key={idx} delay={idx * 0.1} direction="up">
+                <div className="vecy-card-apple h-full hover:bg-white/[0.08] transition-all text-center group">
+                  <div className="mb-6 flex justify-center group-hover:scale-110 transition-transform duration-500">{service.icon}</div>
+                  <h3 className="text-lg font-bold text-white mb-4 uppercase tracking-wide">{service.title}</h3>
+                  <p className="vecy-paragraph text-sm mb-0">
+                    {service.description}
+                  </p>
                 </div>
-              </div>
+              </ScrollReveal>
             ))}
-          </div>
-
-          <div className="text-center">
-            <button className="btn-gold">VER TODOS LOS ARTÍCULOS</button>
           </div>
         </div>
       </section>
 
-      {/* CENTRO DE INVERSORES */}
-      <section id="investors" className="py-20 bg-gradient-to-b from-black to-background">
+      {/* TESTIMONIOS / CASOS DE ÉXITO */}
+      <section className="py-24 bg-background overflow-hidden">
         <div className="container">
-          <div className="text-center mb-16">
-            <h2 className="text-5xl font-display font-bold tracking-wider mb-4">CENTRO DE INVERSORES</h2>
-            <div className="line-gold w-24 mx-auto mb-6"></div>
-            <p className="text-gray-300">Recursos y reportes para propietarios e inversores</p>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-8">
-            {/* Reportes */}
-            <div className="card-float p-8">
-              <TrendingUp size={40} className="text-accent mb-4" />
-              <h3 className="text-2xl font-bold text-white mb-4">Reportes de Mercado</h3>
-              <p className="text-gray-300 mb-6">
-                Acceso a análisis detallados sobre el comportamiento del mercado inmobiliario en Bogotá.
+          <ScrollReveal>
+            <div className="text-center mb-16">
+              <h2 className="vecy-title-section uppercase tracking-widest underline decoration-primary decoration-4 underline-offset-8">Casos de Éxito</h2>
+              <p className="vecy-subtitle mt-12 max-w-2xl mx-auto">
+                Resultados reales en tiempo récord gracias a nuestro ecosistema digital
               </p>
-              <button className="btn-gold w-full flex items-center justify-center gap-2">
-                <Download size={18} />
-                DESCARGAR REPORTES
-              </button>
             </div>
-
-            {/* Herramientas */}
-            <div className="card-float p-8">
-              <Search size={40} className="text-accent mb-4" />
-              <h3 className="text-2xl font-bold text-white mb-4">Herramientas de Búsqueda</h3>
-              <p className="text-gray-300 mb-6">
-                Plataforma avanzada para buscar y comparar propiedades con filtros personalizados.
-              </p>
-              <button className="btn-gold w-full">ACCEDER A HERRAMIENTAS</button>
-            </div>
-          </div>
-
-          {/* Estadísticas */}
-          <div className="grid md:grid-cols-3 gap-8 mt-12">
-            {[
-              { number: '500+', label: 'Propiedades Listadas' },
-              { number: '2.5K+', label: 'Inversores Activos' },
-              { number: '$2.1B', label: 'Volumen Transaccionado' },
-            ].map((stat, idx) => (
-              <div key={idx} className="text-center">
-                <p className="number-highlight mb-2">{stat.number}</p>
-                <p className="text-gray-300 uppercase tracking-wider text-sm">{stat.label}</p>
-              </div>
-            ))}
-          </div>
+          </ScrollReveal>
+          <ScrollReveal delay={0.2} direction="none">
+            <CaseStudyCarousel />
+          </ScrollReveal>
         </div>
       </section>
 
       {/* FOOTER */}
-      <footer className="bg-black border-t border-white/10 py-12">
+      <footer className="bg-black border-t border-white/10 py-20">
         <div className="container">
-          <div className="grid md:grid-cols-4 gap-8 mb-8">
-            <div>
-              <h4 className="text-white font-bold mb-4 uppercase tracking-wider">Vecy</h4>
-              <p className="text-gray-300 text-sm">Liderazgo en tecnología inmobiliaria y servicios profesionales.</p>
-            </div>
-            <div>
-              <h4 className="text-white font-bold mb-4 uppercase tracking-wider">Navegación</h4>
-              <ul className="space-y-2 text-sm text-gray-300">
-                <li><a href="#properties" className="hover:text-accent transition-colors">Propiedades</a></li>
-                <li><a href="#services" className="hover:text-accent transition-colors">Servicios</a></li>
-                <li><a href="#blog" className="hover:text-accent transition-colors">Blog</a></li>
-                <li><a href="#investors" className="hover:text-accent transition-colors">Inversores</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="text-white font-bold mb-4 uppercase tracking-wider">Legal</h4>
-              <ul className="space-y-2 text-sm text-gray-300">
-                <li><a href="#" className="hover:text-accent transition-colors">Términos</a></li>
-                <li><a href="#" className="hover:text-accent transition-colors">Privacidad</a></li>
-                <li><a href="#" className="hover:text-accent transition-colors">Cookies</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="text-white font-bold mb-4 uppercase tracking-wider">Contacto</h4>
-              <p className="text-gray-300 text-sm">
-                Bogotá, Colombia<br />
-                +57 (1) 1234-5678<br />
-                vecybienesraices@gmail.com
+          <div className="grid md:grid-cols-4 gap-12 mb-12">
+            <div className="col-span-2">
+              <div className="flex items-center gap-3 mb-6">
+                <img src="/logo-vecy.png" alt="Vecy" className="h-10 w-auto" />
+                <h2 className="text-2xl font-display font-bold text-white tracking-widest uppercase">VECY NETWORK</h2>
+              </div>
+              <p className="vecy-paragraph max-w-md text-sm">
+                Líderes en la transformación digital inmobiliaria de Colombia. 
+                Desde 2018 extinguiendo la burocracia y el papel.
               </p>
+            </div>
+            <div>
+              <h4 className="text-white font-bold mb-6 uppercase tracking-widest text-xs">Empresa</h4>
+              <ul className="space-y-4 text-sm text-gray-500 uppercase tracking-widest font-bold">
+                <li><button onClick={() => navigate('/historia')} className="hover:text-primary transition-colors">Nosotros</button></li>
+                <li><button onClick={() => navigate('/services')} className="hover:text-primary transition-colors">Servicios</button></li>
+                <li><button onClick={() => navigate('/blog')} className="hover:text-primary transition-colors">Blog</button></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-white font-bold mb-6 uppercase tracking-widest text-xs">Soporte</h4>
+              <ul className="space-y-4 text-sm text-gray-500 uppercase tracking-widest font-bold">
+                <li><button onClick={() => navigate('/contact')} className="hover:text-primary transition-colors">Contacto</button></li>
+                <li><a href="#" className="hover:text-primary transition-colors">Términos</a></li>
+                <li><a href="#" className="hover:text-primary transition-colors">Privacidad</a></li>
+              </ul>
             </div>
           </div>
 
-          <div className="border-t border-white/10 pt-8 text-center text-gray-400 text-sm">
-            <p>&copy; 2026 Vecy. Todos los derechos reservados.</p>
+          <div className="border-t border-white/10 pt-8 text-center text-gray-500 text-[10px] uppercase tracking-[0.3em]">
+            <p>&copy; 2026 VECY NETWORK. Todos los derechos reservados. | Hecho en Colombia 🇨🇴</p>
           </div>
         </div>
       </footer>

@@ -1,23 +1,19 @@
 import React from 'react';
 import Navbar from '@/components/Navbar';
 import { 
-  History, 
   Leaf, 
   Wifi, 
   Smartphone, 
   Mail, 
-  Signature, 
-  TrendingUp,
-  ShieldAlert,
-  Skull,
   Zap,
   Globe,
-  Award,
   ArrowRight,
-  ExternalLink
+  ExternalLink,
+  Skull
 } from 'lucide-react';
 import NetworkBackground from '@/components/NetworkBackground';
 import { useLocation } from 'wouter';
+import { ScrollReveal } from '@/components/ScrollReveal';
 
 export default function NuestraHistoria() {
   const [, navigate] = useLocation();
@@ -63,122 +59,157 @@ export default function NuestraHistoria() {
       <Navbar />
 
       {/* HERO SECTION */}
-      <section className="relative pt-32 pb-24 overflow-hidden border-b border-white/5">
+      <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden border-b border-white/5">
         <NetworkBackground />
-        <div className="container relative z-10">
-          <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-6xl md:text-9xl font-display font-black tracking-tighter text-white mb-8 leading-none animate-fade-in text-center">
+        <div className="container relative z-10 text-center">
+          <ScrollReveal delay={0.2}>
+            <p className="vecy-accent-tag">Nuestra Identidad Corporativa</p>
+            <h1 className="vecy-title-hero">
               SOMOS <span className="text-gradient-gold uppercase">VECY</span>
             </h1>
-            <p className="text-2xl text-gray-400 font-light mb-12 animate-fade-in delay-100 text-center">
-              "Liderando la evolución inmobiliaria con 8 años de visión tecnológica."
+            <p className="vecy-subtitle max-w-3xl mx-auto">
+              Liderando la evolución inmobiliaria con 8 años de visión tecnológica y un compromiso inquebrantable con la eficiencia.
             </p>
-            <div className="line-electric w-48 mx-auto mb-16"></div>
-          </div>
+            <div className="line-electric w-48 mx-auto mt-8"></div>
+          </ScrollReveal>
+        </div>
+      </section>
 
-          <div className="grid md:grid-cols-2 gap-12 mt-12">
+      {/* MANIFIESTO */}
+      <section className="py-24 bg-gradient-dark">
+        <div className="container">
+          <div className="grid md:grid-cols-2 gap-12">
             {/* LOS DINOSAURIOS */}
-            <div className="panel-card p-10 border-red-500/20 bg-red-500/5 group hover:border-red-500/40 transition-all">
-              <div className="flex items-center gap-4 mb-6">
-                <Skull className="w-10 h-10 text-red-500 opacity-70 group-hover:scale-110 transition-transform" />
-                <h2 className="text-3xl font-display font-bold text-white uppercase tracking-wider">Los Dinosaurios</h2>
+            <ScrollReveal direction="left" delay={0.1}>
+              <div className="vecy-card-apple border-red-500/10 bg-red-500/5 group hover:border-red-500/30">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-14 h-14 rounded-2xl bg-red-500/10 flex items-center justify-center">
+                    <Skull className="w-8 h-8 text-red-500 opacity-70 group-hover:scale-110 transition-transform" />
+                  </div>
+                  <h2 className="text-2xl font-display font-bold text-white uppercase tracking-wider">Los Dinosaurios</h2>
+                </div>
+                <ul className="space-y-4 text-gray-400">
+                  <li className="flex gap-3"><span className="text-red-500 font-bold">✕</span> Portales con buscadores obsoletos que ignoran la IA.</li>
+                  <li className="flex gap-3"><span className="text-red-500 font-bold">✕</span> Agentes que tildan el email de obsoleto por falta de visión.</li>
+                  <li className="flex gap-3"><span className="text-red-500 font-bold">✕</span> Negativa ante el avance tecnológico y la auto-preparación.</li>
+                  <li className="flex gap-3"><span className="text-red-500 font-bold">✕</span> Contaminación con avisos físicos y desperdicio de papel.</li>
+                </ul>
               </div>
-              <ul className="space-y-4 text-gray-400 text-sm">
-                <li className="flex gap-3"><span className="text-red-500 font-bold">✕</span> Portales con buscadores de filtros obsoletos que ignoran la IA.</li>
-                <li className="flex gap-3"><span className="text-red-500 font-bold">✕</span> Agentes que creen que el email es obsoleto, sin ver su potencial legal.</li>
-                <li className="flex gap-3"><span className="text-red-500 font-bold">✕</span> Negativa ante el avance tecnológico y la auto-preparación digital.</li>
-                <li className="flex gap-3"><span className="text-red-500 font-bold">✕</span> Contaminación con avisos físicos y desperdicio de recursos.</li>
-              </ul>
-            </div>
+            </ScrollReveal>
 
             {/* EL ARMAGEDÓN */}
-            <div className="panel-card p-10 border-primary/20 bg-primary/5 group hover:border-primary/40 transition-all shadow-[0_0_30px_rgba(191,149,63,0.05)]">
-              <div className="flex items-center gap-4 mb-6">
-                <Zap className="w-10 h-10 text-primary group-hover:scale-110 transition-transform shadow-primary" />
-                <h2 className="text-3xl font-display font-bold text-white uppercase tracking-wider">El Armagedón</h2>
+            <ScrollReveal direction="right" delay={0.1}>
+              <div className="vecy-card-apple border-primary/10 bg-primary/5 group hover:border-primary/40 shadow-[0_0_30px_rgba(191,149,63,0.05)]">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
+                    <Zap className="w-8 h-8 text-primary group-hover:scale-110 transition-transform" />
+                  </div>
+                  <h2 className="text-2xl font-display font-bold text-white uppercase tracking-wider">El Armagedón</h2>
+                </div>
+                <ul className="space-y-4 text-gray-400">
+                  <li className="flex gap-3"><span className="text-primary font-bold">✓</span> Matching quirúrgico y proactivo gestionado por JanIA.</li>
+                  <li className="flex gap-3"><span className="text-primary font-bold">✓</span> Blindaje total de procesos vía Email y Firma Digital.</li>
+                  <li className="flex gap-3"><span className="text-primary font-bold">✓</span> 8 años de trayectoria perfeccionando el corretaje virtual.</li>
+                  <li className="flex gap-3"><span className="text-primary font-bold">✓</span> Defensores del medio ambiente: Cero Avisos, Cero Papel.</li>
+                </ul>
               </div>
-              <ul className="space-y-4 text-gray-400 text-sm">
-                <li className="flex gap-3"><span className="text-primary font-bold">✓</span> Matching quirúrgico y proactivo gestionado por JanIA.</li>
-                <li className="flex gap-3"><span className="text-primary font-bold">✓</span> Blindaje total de procesos y alianzas vía Email y Firma Digital.</li>
-                <li className="flex gap-3"><span className="text-primary font-bold">✓</span> 8 años de trayectoria perfeccionando el corretaje virtual.</li>
-                <li className="flex gap-3"><span className="text-primary font-bold">✓</span> Defensores del medio ambiente: Cero Avisos, Cero Papel.</li>
-              </ul>
-            </div>
+            </ScrollReveal>
           </div>
         </div>
       </section>
 
-      {/* TRAJECTORY */}
-      <section className="py-24 bg-gradient-dark relative">
+      {/* TRAYECTORIA */}
+      <section className="py-24 bg-background relative overflow-hidden">
         <div className="container">
-          <div className="text-center mb-20">
-            <h2 className="text-5xl font-display font-bold text-white mb-4 uppercase">Nuestra <span className="text-primary">Trayectoria</span></h2>
-            <p className="text-gray-500 uppercase tracking-widest text-xs">Desde 2018 transformando el mercado</p>
-            <div className="line-gold w-32 mx-auto mt-4"></div>
-          </div>
+          <ScrollReveal>
+            <div className="text-center mb-20">
+              <h2 className="vecy-title-section">NUESTRA <span className="text-primary uppercase">TRAYECTORIA</span></h2>
+              <div className="line-gold w-32 mx-auto mt-4"></div>
+            </div>
+          </ScrollReveal>
 
           <div className="relative max-w-5xl mx-auto">
             <div className="absolute left-1/2 transform -translate-x-1/2 h-full w-px bg-white/10 hidden md:block"></div>
 
-            <div className="space-y-24">
+            <div className="space-y-32">
               {timeline.map((item, idx) => (
-                <div key={idx} className={`relative flex flex-col md:flex-row items-center gap-8 ${idx % 2 === 0 ? 'md:flex-row-reverse' : ''}`}>
-                  <div className="absolute left-1/2 transform -translate-x-1/2 w-12 h-12 rounded-full bg-card border-2 border-primary flex items-center justify-center z-20 shadow-gold-sm hidden md:flex">
-                    {item.icon}
-                  </div>
-                  <div className="w-full md:w-1/2 px-4">
-                    <div className="panel-card p-8 hover:border-primary/40 transition-all">
-                      <span className="text-5xl font-black text-primary/10 block mb-2">{item.year}</span>
-                      <h3 className="text-2xl font-bold text-white mb-4">{item.title}</h3>
-                      <p className="text-gray-400 leading-relaxed mb-6 text-sm">
-                        {item.description}
-                      </p>
-                      {item.links && (
-                        <div className="flex flex-wrap gap-4">
-                          {item.links.map((link, lIdx) => (
-                            <a key={lIdx} href={link.url} target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold text-primary flex items-center gap-1 hover:text-white transition-colors uppercase tracking-[0.2em]">
-                              {link.label} <ExternalLink className="w-3 h-3" />
-                            </a>
-                          ))}
-                        </div>
-                      )}
+                <ScrollReveal 
+                  key={idx} 
+                  direction={idx % 2 === 0 ? 'right' : 'left'}
+                  delay={0.1}
+                >
+                  <div className={`relative flex flex-col md:flex-row items-center gap-8 ${idx % 2 === 0 ? 'md:flex-row-reverse' : ''}`}>
+                    {/* Timeline Dot */}
+                    <div className="absolute left-1/2 transform -translate-x-1/2 w-12 h-12 rounded-full bg-card border-2 border-primary flex items-center justify-center z-20 shadow-gold-sm hidden md:flex">
+                      {item.icon}
                     </div>
+
+                    {/* Content Card */}
+                    <div className="w-full md:w-1/2 px-4">
+                      <div className="vecy-card-apple p-10 hover:border-primary/40 group">
+                        <span className="text-6xl font-black text-primary/10 block mb-4 group-hover:text-primary/20 transition-colors">{item.year}</span>
+                        <h3 className="text-2xl font-bold text-white mb-4">{item.title}</h3>
+                        <p className="vecy-paragraph text-sm mb-6">
+                          {item.description}
+                        </p>
+                        {item.links && (
+                          <div className="flex flex-wrap gap-4">
+                            {item.links.map((link, lIdx) => (
+                              <a 
+                                key={lIdx} 
+                                href={link.url} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="text-[10px] font-bold text-primary flex items-center gap-1 hover:text-white transition-colors uppercase tracking-[0.2em]"
+                              >
+                                {link.label} <ExternalLink className="w-3 h-3" />
+                              </a>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="hidden md:block w-1/2"></div>
                   </div>
-                  <div className="hidden md:block w-1/2"></div>
-                </div>
+                </ScrollReveal>
               ))}
             </div>
           </div>
         </div>
       </section>
 
-      {/* ENVIRONMENTAL COMMITMENT */}
-      <section className="py-24 border-y border-white/5 bg-black relative">
-        <div className="container text-center">
-          <Leaf className="w-16 h-16 text-green-500 mx-auto mb-8 animate-pulse" />
-          <h2 className="text-4xl md:text-6xl font-display font-black text-white mb-8">
-            COMPROMISO <span className="text-green-500 uppercase">Verde</span>
-          </h2>
-          <p className="text-xl text-gray-400 max-w-3xl mx-auto font-light leading-relaxed">
-            Nuestra naturaleza es digital porque amamos la física. Desde 2018 hemos eliminado miles de avisos de ventana y toneladas de papel, reduciendo la huella de carbono de cada negocio cerrado.
-          </p>
+      {/* COMPROMISO VERDE */}
+      <section className="py-24 bg-gradient-dark border-y border-white/5 relative overflow-hidden">
+        <div className="container text-center relative z-10">
+          <ScrollReveal delay={0.2}>
+            <Leaf className="w-16 h-16 text-green-500 mx-auto mb-8 animate-pulse" />
+            <h2 className="text-4xl md:text-6xl font-display font-black text-white mb-8">
+              COMPROMISO <span className="text-green-500 uppercase">Verde</span>
+            </h2>
+            <p className="vecy-subtitle max-w-3xl mx-auto">
+              Nuestra naturaleza es digital porque amamos la física. Desde 2018 hemos eliminado miles de avisos de ventana y toneladas de papel, reduciendo drásticamente la huella de carbono del corretaje inmobiliario.
+            </p>
+          </ScrollReveal>
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="py-32 bg-background">
-        <div className="container text-center">
-          <h2 className="text-5xl md:text-8xl font-display font-black text-white mb-8 tracking-tighter">
-            ÚNETE AL <span className="text-gradient-gold uppercase">Armagedón</span>
-          </h2>
-          <p className="text-xl text-gray-500 mb-12 max-w-2xl mx-auto">
-            Deja atrás la era de los dinosaurios. Sé parte de la red inmobiliaria más avanzada de Colombia.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-6 justify-center">
-            <button onClick={() => navigate('/agent-dashboard')} className="btn-gold px-16 py-6 text-xl tracking-widest uppercase text-center">
+      {/* CTA FINAL */}
+      <section className="py-32 bg-background relative overflow-hidden">
+        <div className="container text-center relative z-10">
+          <ScrollReveal>
+            <h2 className="vecy-title-hero">
+              SÉ PARTE DEL <span className="text-gradient-gold uppercase">Armagedón</span>
+            </h2>
+            <p className="vecy-subtitle max-w-2xl mx-auto mb-12">
+              Deja atrás la era de los dinosaurios. Únete a la red inmobiliaria más avanzada de Colombia y evoluciona hacia lo extraordinario.
+            </p>
+            <button 
+              onClick={() => navigate('/agent-dashboard')} 
+              className="btn-gold px-16 py-6 text-xl tracking-widest uppercase hover:scale-105 transition-transform"
+            >
               Empezar Ahora
             </button>
-          </div>
+          </ScrollReveal>
         </div>
       </section>
 

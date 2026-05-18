@@ -559,3 +559,36 @@
     box-shadow: 0 0 15px rgba(191,149,63,0.1);
   }
 
+  /* ── VECY GLOBAL TYPOGRAPHY ────────────────────────────────────────────────── */
+  
+  .vecy-title-hero {
+    @apply text-5xl md:text-8xl font-display font-bold tracking-tighter text-white mb-6 leading-tight;
+  }
+
+  .vecy-title-section {
+    @apply text-4xl md:text-5xl font-display font-bold tracking-wider text-white mb-4;
+  }
+
+  .vecy-subtitle {
+    @apply text-lg md:text-xl text-gray-300 font-light leading-relaxed mb-8;
+  }
+
+  .vecy-paragraph {
+    @apply text-base md:text-lg text-gray-400 leading-relaxed mb-6;
+  }
+
+  .vecy-accent-tag {
+    @apply text-accent font-display tracking-[0.3em] uppercase text-[10px] md:text-xs mb-4 glow-gold-sm;
+  }
+
+  /* ── APPLE STYLE CARDS ─────────────────────────────────────────────────────── */
+  
+  .vecy-card-apple {
+    @apply bg-white/5 border border-white/10 rounded-[2rem] p-8 transition-all duration-500 overflow-hidden relative;
+  }
+
+  .vecy-card-apple:hover {
+    @apply border-primary/30 shadow-[0_20px_50px_rgba(191,149,63,0.1)];
+    transform: translateY(-5px);
+  }
+

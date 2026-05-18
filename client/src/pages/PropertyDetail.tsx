@@ -1,102 +1,71 @@
-// @ts-nocheck
-import { useState, useMemo } from 'react';
-import { useRoute } from 'wouter';
-import { ChevronLeft, MapPin, Phone, Mail, Share2, Heart, CalendarCheck, ShieldAlert, Download } from 'lucide-react';
-import PropertyGallery from '@/components/PropertyGallery';
-import PropertySheet from '@/components/PropertySheet';
-import Navbar from '@/components/Navbar';
-
+import React, { useState, useEffect } from 'react';
+import { useRoute, useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
-import { Loader2 } from 'lucide-react';
-
+import Navbar from '@/components/Navbar';
+import PropertyGallery from '@/components/PropertyGallery';
+import PropertyFeatures from '@/components/PropertyFeatures';
+import Map from '@/components/Map';
+import { 
+  Loader2, 
+  MapPin, 
+  Share2, 
+  CalendarCheck, 
+  Download, 
+  ShieldAlert,
+  ArrowLeft,
+  Search,
+  Zap,
+  Award,
+  Globe
+} from 'lucide-react';
 import ShareModal from '@/components/ShareModal';
-
-/**
- * Genera código de referencia del inmueble basado en zona y rank consecutivo.
- */
-function generateRefCode(zone: string, rank: number): string {
-  const normalized = (zone || '').toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // quitar tildes
-    .trim();
-
-  const abbrevMap: Record<string, string> = {
-    'santa barbara central': 'SBC',
-    'santa barbara occidental': 'SBOCC',
-    'santa barbara oriental': 'SBORI',
-    'santa barbara': 'SB',
-    'chapinero': 'CHP',
-    'chapinero alto': 'CHRA',
-    'chapinero central': 'CHRC',
-    'usaquen': 'USQ',
-    'salitre': 'SAL',
-    'san patricio': 'SP',
-    'zona rosa': 'ZR',
-    'teusaquillo': 'TEU',
-    'el lago': 'LAG',
-    'la soledad': 'SOL',
-    'cedritos': 'CED',
-    'belmira': 'BEL',
-    'chico': 'CHC',
-    'chico norte': 'CHCN',
-    'santa ana': 'SNA',
-    'country': 'COU',
-    'rosales': 'ROS',
-    'nogal': 'NOG',
-  };
-
-  const abbrev = abbrevMap[normalized] ||
-    (zone || 'XX').split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 5);
-
-  const num = String(rank || 1).padStart(2, '0');
-  return `ID-BOG-${abbrev}${num}`;
-}
-
+import { toast } from 'sonner';
+import { ScrollReveal } from '@/components/ScrollReveal';
 
 export default function PropertyDetail() {
-  const [, params] = useRoute('/property/:id');
-  const [isFavorite, setIsFavorite] = useState(false);
-  const [showContactForm, setShowContactForm] = useState(false);
-  
-  // Modal de Compartir
+  const [match, params] = useRoute('/property/:id');
+  const [, navigate] = useLocation();
   const [shareModalOpen, setShareModalOpen] = useState(false);
-  const [shareModalConfig, setShareModalConfig] = useState({ text: '', url: '', modalTitle: '' });
+  const [shareModalConfig, setShareModalConfig] = useState({ text: "", url: "", modalTitle: "" });
 
-  // Stealth Mode Detection
-  const searchParams = new URLSearchParams(window.location.search);
-  const isStealth = searchParams.get('mode') === 'stealth';
+  const propertyId = params?.id ? parseInt(params.id) : null;
+  const isStealth = new URLSearchParams(window.location.search).get('mode') === 'stealth';
 
-  const propertyId = params?.id;
-  const { data: property, isLoading } = trpc.properties.getById.useQuery(
-    { id: Number(propertyId) },
-    { enabled: !!propertyId && !isNaN(Number(propertyId)) }
+  const { data: property, isLoading, error } = trpc.properties.getById.useQuery(
+    { id: propertyId || 0 },
+    { enabled: !!propertyId }
   );
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <Loader2 className="animate-spin w-10 h-10 text-accent" />
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
+        <Loader2 className="animate-spin w-10 h-10 text-primary" />
+        <p className="text-xs font-bold uppercase tracking-widest text-gray-500">Escaneando activo en el Ledger...</p>
       </div>
     );
   }
 
-  if (!property) {
+  if (error || !property) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold text-white mb-4">Propiedad No Encontrada</h1>
-          <p className="text-gray-400 mb-8">La propiedad que buscas no existe o ha sido removida.</p>
-          <a href="/properties" className="btn-gold">
-            Volver al Catálogo
-          </a>
-        </div>
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center">
+        <Search className="w-16 h-16 text-muted-foreground mb-6 opacity-20" />
+        <h2 className="text-2xl font-bold text-white mb-4">Activo No Detectado</h2>
+        <p className="text-gray-400 mb-8 max-w-sm">No pudimos encontrar la propiedad solicitada en nuestro ecosistema digital.</p>
+        <button onClick={() => navigate('/properties')} className="btn-gold px-8 py-3 uppercase tracking-widest text-sm">
+          VOLVER AL CATÁLOGO
+        </button>
       </div>
     );
   }
+
+  const generateRefCode = (zone: string, rank: number) => {
+     const zoneCode = zone.substring(0, 3).toUpperCase() || 'GEN';
+     return `ID-BOG-${zoneCode}${rank.toString().padStart(2, '0')}`;
+  };
 
   return (
-    <div className="min-h-screen bg-black overflow-x-hidden">
-      {/* Barra de Navegación Universal (OCULTA EN STEALTH) */}
-      {!isStealth && <Navbar />}
+    <div className="min-h-screen bg-background text-foreground">
+      <Navbar />
 
       {/* Indicador de Modo White-Label (Solo visible en Stealth) */}
       {isStealth && (
@@ -117,295 +86,183 @@ export default function PropertyDetail() {
       {/* Contenido Principal */}
       <main className={`container py-12 ${isStealth ? 'mt-10' : ''}`}>
         {/* Título y Precio */}
-        <div className="mb-12 animate-fade-in mt-14">
-          <h1 className="text-5xl md:text-6xl font-bold text-white mb-4 uppercase tracking-tighter">
-            {property.name}
-          </h1>
-          <div className="flex items-center gap-2 text-gray-400 mb-6">
-            <MapPin className="w-5 h-5 text-accent" />
-            <span>{property.addressNeighborhood ? `${property.addressNeighborhood}, ${property.addressCity || property.city || 'Bogotá'}` : property.location}</span>
-          </div>
-          <div className="text-4xl font-bold text-accent mb-8">
-            ${Number(property.price).toLocaleString('es-CO')} COP
-            {(property.propertyDetails as any)?.administrationFee && (
-              <span className="text-sm text-gray-400 font-normal ml-3 block sm:inline mt-2 sm:mt-0">
-                + ${(property.propertyDetails as any).administrationFee.toLocaleString('es-CO')} Admin
+        <ScrollReveal delay={0.1}>
+          <div className="mb-12 mt-14">
+            <div className="flex items-center gap-2 mb-4">
+              <button 
+                onClick={() => navigate('/properties')}
+                className="p-2 hover:bg-white/10 rounded-full transition-colors group"
+              >
+                <ArrowLeft className="w-5 h-5 text-primary group-hover:-translate-x-1 transition-transform" />
+              </button>
+              <span className="vecy-accent-tag mb-0">Detalle de Activo Gold</span>
+            </div>
+            <h1 className="vecy-title-hero text-left mb-4 uppercase">
+              {property.name}
+            </h1>
+            <div className="flex items-center gap-2 text-gray-400 mb-8 bg-white/5 w-fit px-4 py-2 rounded-full border border-white/5">
+              <MapPin className="w-4 h-4 text-primary" />
+              <span className="text-xs uppercase tracking-widest font-bold">
+                {property.addressNeighborhood ? `${property.addressNeighborhood}, ${property.addressCity || property.city || 'Bogotá'}` : property.location}
               </span>
-            )}
-          </div>
-          
-          {/* Botonera de Acción de la Propiedad */}
-          <div className="flex flex-col sm:flex-row gap-4 mt-8">
-            <button
-               onClick={() => {
-                 setShareModalConfig({
-                   text: `Mira este inmueble en Vecy Network: ${property.name}`,
-                   url: window.location.href,
-                   modalTitle: "Compartir Propiedad"
-                 });
-                 setShareModalOpen(true);
-               }}
-               className="btn-gold flex items-center justify-center gap-2"
-            >
-              <Share2 className="w-5 h-5"/> COMPARTIR INMUEBLE
-            </button>
-
-            <button
-               onClick={() => {
-                   // Código con zona: ID-BOG-SBOCC01, ID-BOG-SAL01, etc.
-                   const refCode = generateRefCode(property.zone || '', (property as any).zoneRank ?? 1);
-                   const agendaUrl = `${window.location.origin}/agenda/${property.id}?nombre=${encodeURIComponent(property.name)}&codigo=${encodeURIComponent(refCode)}`;
+            </div>
+            <div className="text-5xl font-black text-primary mb-10 flex flex-wrap items-baseline gap-4">
+              ${Number(property.price).toLocaleString('es-CO')}
+              <span className="text-xs text-gray-500 font-bold uppercase tracking-widest">COP</span>
+              {(property.propertyDetails as any)?.administrationFee && (
+                <span className="text-sm text-gray-400 font-normal block sm:inline mt-2 sm:mt-0">
+                  + ${(property.propertyDetails as any).administrationFee.toLocaleString('es-CO')} Admin
+                </span>
+              )}
+            </div>
+            
+            {/* Botonera de Acción */}
+            <div className="flex flex-col md:flex-row gap-4">
+              <button
+                 onClick={() => {
                    setShareModalConfig({
-                     text: `Agenda tu visita al inmueble "${property.name}" aquí:`,
-                     url: agendaUrl,
-                     modalTitle: "Compartir Link de Agenda"
+                     text: `Mira este inmueble en Vecy Network: ${property.name}`,
+                     url: window.location.href,
+                     modalTitle: "Compartir Propiedad"
                    });
                    setShareModalOpen(true);
-               }}
-               className="py-3 px-6 bg-esmeralda/20 border border-esmeralda/40 text-esmeralda hover:bg-esmeralda/30 hover:border-esmeralda transition-all duration-300 rounded-lg flex items-center justify-center gap-2 font-bold tracking-widest text-[10px] uppercase shadow-[0_0_15px_rgba(16,185,129,0.1)]"
-            >
-              <CalendarCheck className="w-5 h-5"/> COMPARTIR LINK DE AGENDA
-            </button>
-
-            {!isStealth && (
-              <a
-                href={`/ficha/${property.id}`} 
-                target="_blank" rel="noreferrer"
-                className="py-3 px-6 bg-black border border-white/20 text-white rounded-lg hover:border-accent hover:text-accent transition-colors flex items-center justify-center font-bold tracking-widest text-[10px] uppercase glow-gold-sm"
+                 }}
+                 className="btn-gold flex items-center justify-center gap-3 px-8"
               >
-                DESCARGAR FICHA SIN MARCA NI DATOS DE CONTACTO
-              </a>
-            )}
+                <Share2 className="w-5 h-5"/> COMPARTIR
+              </button>
+
+              <button
+                 onClick={() => {
+                     const refCode = generateRefCode(property.zone || '', (property as any).zoneRank ?? 1);
+                     const agendaUrl = `${window.location.origin}/agenda/${property.id}?nombre=${encodeURIComponent(property.name)}&codigo=${encodeURIComponent(refCode)}`;
+                     setShareModalConfig({
+                       text: `Agenda tu visita al inmueble "${property.name}" aquí:`,
+                       url: agendaUrl,
+                       modalTitle: "Compartir Link de Agenda"
+                     });
+                     setShareModalOpen(true);
+                 }}
+                 className="py-4 px-8 bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 transition-all duration-300 rounded-xl flex items-center justify-center gap-3 font-bold tracking-widest text-xs uppercase"
+              >
+                <CalendarCheck className="w-5 h-5"/> AGENDAR VISITA
+              </button>
+
+              {!isStealth && (
+                <a
+                  href={`/ficha/${property.id}`} 
+                  target="_blank" rel="noreferrer"
+                  className="py-4 px-8 bg-black border border-white/10 text-white rounded-xl hover:border-primary/50 transition-all flex items-center justify-center font-bold tracking-widest text-xs uppercase"
+                >
+                  DESCARGAR FICHA TÉCNICA
+                </a>
+              )}
+            </div>
+          </div>
+        </ScrollReveal>
+
+        {/* MEDIA SECTION */}
+        <div className="grid lg:grid-cols-3 gap-12 mb-20 animate-fade-in delay-200">
+          {/* Columna Video */}
+          {(property.propertyDetails as any)?.virtualTourVideo && (
+            <ScrollReveal direction="left" delay={0.3} className="lg:col-span-1">
+              <div className="flex flex-col">
+                <h3 className="text-sm font-black text-white mb-6 uppercase tracking-[0.3em] flex items-center gap-2">
+                   <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" /> Tour Virtual
+                </h3>
+                <div className="flex justify-center w-full">
+                  <div className="aspect-[9/16] w-full max-w-[320px] rounded-[3rem] overflow-hidden shadow-[0_0_50px_rgba(191,149,63,0.1)] border-[8px] border-[#1a1a1a] relative bg-black ring-1 ring-white/10">
+                    <iframe 
+                      className="w-full h-full"
+                      src={(property.propertyDetails as any).virtualTourVideo} 
+                      title="Virtual Tour"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                      allowFullScreen
+                    ></iframe>
+                  </div>
+                </div>
+              </div>
+            </ScrollReveal>
+          )}
+
+          {/* Columna Galería */}
+          <div className={`${(property.propertyDetails as any)?.virtualTourVideo ? 'lg:col-span-2' : 'lg:col-span-3'}`}>
+            <ScrollReveal delay={0.4}>
+              <h3 className="text-sm font-black text-white mb-6 uppercase tracking-[0.3em]">Galería de Activo</h3>
+              <PropertyGallery images={(property.images as string[]) || []} />
+            </ScrollReveal>
           </div>
         </div>
 
-        {/* MEDIA SECTION: Panel Dual (Video Izquierda, Galería Derecha en Desktop) */}
-        <div className="flex flex-col lg:flex-row gap-8 mb-16 animate-fade-in delay-200">
-          
-          {/* Columna Izquierda: Celular Empotrado (Corto) */}
-          {(property.propertyDetails as any)?.virtualTourVideo && (
-            <div className="lg:w-1/3 flex flex-col shrink-0">
-              <h3 className="text-2xl font-bold text-white mb-8 uppercase tracking-wider text-center lg:text-left xl:whitespace-nowrap">
-                 🎥 Video
-              </h3>
-              <div className="flex justify-center w-full">
-                <div className="aspect-[9/16] w-full max-w-[280px] sm:max-w-[320px] rounded-[2.5rem] overflow-hidden shadow-[0_0_40px_rgba(212,175,55,0.15)] border-[6px] border-[#161616] relative bg-black ring-1 ring-white/10 group-hover:shadow-[0_0_60px_rgba(212,175,55,0.3)] transition-shadow duration-500">
-                  <div className="absolute top-0 inset-x-0 h-6 z-20 flex justify-center">
-                    <div className="w-20 h-4 bg-[#161616] rounded-b-2xl flex justify-center items-center gap-1.5 border-b border-white/5">
-                      <div className="w-1.5 h-1.5 rounded-full bg-[#112a52]"></div>
-                      <div className="w-5 h-1 rounded-full bg-[#2a2a2a]"></div>
+        {/* INFO GRID */}
+        <div className="grid lg:grid-cols-3 gap-12 mb-20">
+          <div className="lg:col-span-2 space-y-12">
+            <ScrollReveal direction="left">
+              <div className="vecy-card-apple p-10">
+                <h3 className="text-2xl font-bold text-white mb-8 uppercase tracking-tight">Descripción del Activo</h3>
+                <p className="vecy-paragraph text-sm mb-0 whitespace-pre-wrap leading-relaxed">
+                  {property.description || property.rawText}
+                </p>
+              </div>
+            </ScrollReveal>
+
+            <ScrollReveal direction="left" delay={0.1}>
+              <div className="vecy-card-apple p-10">
+                <h3 className="text-2xl font-bold text-white mb-8 uppercase tracking-tight">Análisis de Mercado</h3>
+                <div className="grid md:grid-cols-2 gap-8">
+                  <div className="p-6 bg-white/5 rounded-2xl border border-white/5">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-widest font-black mb-2 text-center md:text-left">Valor por m²</p>
+                    <p className="text-3xl font-black text-primary text-center md:text-left">
+                      ${Math.round(Number(property.price) / (Number(property.areaTotal) || 1)).toLocaleString('es-CO')}
+                    </p>
+                  </div>
+                  <div className="p-6 bg-white/5 rounded-2xl border border-white/5 flex flex-col justify-center items-center md:items-start">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-widest font-black mb-2">Estado de Oportunidad</p>
+                    <div className="flex items-center gap-2">
+                      <Zap className="w-5 h-5 text-accent" />
+                      <span className="text-lg font-bold text-white uppercase tracking-wider">Óptimo para Cierre</span>
                     </div>
                   </div>
-                  <iframe 
-                    className="w-full h-full relative z-10 pt-[2px]"
-                    src={(property.propertyDetails as any).virtualTourVideo} 
-                    title="Recorrido Virtual"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
+                </div>
+              </div>
+            </ScrollReveal>
+          </div>
+
+          <div className="space-y-12">
+            <ScrollReveal direction="right">
+              <PropertyFeatures property={property} />
+            </ScrollReveal>
+            
+            <ScrollReveal direction="right" delay={0.2}>
+              <div className="vecy-card-apple p-10 border-primary/20 bg-primary/5">
+                <h3 className="text-xl font-bold text-white mb-6 uppercase tracking-wider">Ubicación Estratégica</h3>
+                <div className="h-64 rounded-2xl overflow-hidden border border-white/10">
+                  <Map 
+                    lat={Number(property.latitude) || 4.6097} 
+                    lng={Number(property.longitude) || -74.0817} 
+                    zoom={15}
                   />
                 </div>
               </div>
-            </div>
-          )}
-
-          {/* Columna Derecha: Galería Inmobiliaria */}
-          <div className={`${(property.propertyDetails as any)?.virtualTourVideo ? 'lg:w-2/3' : 'w-full'} flex flex-col`}>
-             <h3 className="text-2xl font-bold text-white mb-8 uppercase tracking-wider text-center lg:text-left">
-               📷 Fotos
-            </h3>
-            <div className="h-full w-full">
-              <PropertyGallery images={(property.images as string[]) || []} propertyName={property.name} />
-            </div>
+            </ScrollReveal>
           </div>
-        </div>
-
-        {/* Grid de Contenido */}
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Características y Detalles (USANDO PROPERTY SHEET DINÁMICO) */}
-          <div className="lg:col-span-2 animate-slide-in-up space-y-8">
-            <PropertySheet
-              propertyType={property.propertyType as any}
-              bedrooms={property.bedrooms || 0}
-              bathrooms={property.bathrooms || 0}
-              area={property.areaSquareMeters ? Number(property.areaSquareMeters) : 0}
-              yearBuilt={property.yearBuilt || undefined}
-              amenities={(property.amenities as string[]) || []}
-              internalFeatures={(property.propertyDetails as any)?.internalFeatures || []}
-              description={property.description || ""}
-              propertyDetails={property.propertyDetails as any}
-            />
-
-            {/* Mega Sección Interactiva: Ubicación y Entorno */}
-            <div className="card-float p-6 lg:p-10 border-t-2 border-accent/40 rounded-3xl mt-12 bg-gradient-to-br from-black to-[#0a0a0a]">
-              <div className="flex items-center gap-3 mb-8">
-                <MapPin className="w-8 h-8 text-accent shrink-0" />
-                <h3 className="text-2xl lg:text-3xl font-bold text-white uppercase tracking-wider">
-                   📍 Ubicación y Entorno
-                </h3>
-              </div>
-              
-              <div className="flex flex-col lg:flex-row gap-8">
-                <div className="w-full text-gray-300 text-sm leading-relaxed space-y-4 pr-0">
-                  <p>
-                    <strong className="text-accent uppercase text-xs tracking-widest block mb-1">Zona Estratégica: {property.location.split(',')[1] || property.location}</strong>
-                    Ubicado en uno de los ejes más estratégicos para revalorización. Sus colindancias garantizan alta demanda patrimonial.
-                  </p>
-                  <ul className="grid sm:grid-cols-2 gap-4 mt-4 py-2 border-t border-white/10 pt-4">
-                    <li className="flex gap-2">✔️ <span>Flujo vial primario y rápida descongestión.</span></li>
-                    <li className="flex gap-2">✔️ <span>Acceso inmediato a hipermercados y plazas AAA.</span></li>
-                    <li className="flex gap-2">✔️ <span>Zonas verdes.</span></li>
-                    <li className="flex gap-2">✔️ <span>Microentorno residencial altamente vigilado.</span></li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Sidebar: Contacto / CTA (OCULTO EN STEALTH) */}
-          {!isStealth ? (
-            <div className="space-y-6 animate-slide-in-right">
-              <div className="card-float p-6">
-                <h3 className="text-xl font-bold text-white mb-4 uppercase tracking-wider">
-                  Inversión Directa
-                </h3>
-                <div className="space-y-4">
-                  <a 
-                    href={`https://wa.me/573166569719?text=${encodeURIComponent(`¡Hola Vecy! 👋 Estoy interesado en el activo "${property.name}". ¿Podrían asesorarme?`)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-3 text-gray-300 hover:text-accent transition-colors group"
-                  >
-                    <div className="bg-accent/10 p-2 rounded-lg group-hover:bg-accent/20">
-                      <Phone className="w-5 h-5 text-accent" />
-                    </div>
-                    <span className="font-semibold">+57 316 656 9719</span>
-                  </a>
-                  <a 
-                    href="mailto:vecybienesraices@gmail.com"
-                    className="flex items-center gap-3 text-gray-300 hover:text-accent transition-colors group"
-                  >
-                    <div className="bg-accent/10 p-2 rounded-lg group-hover:bg-accent/20">
-                      <Mail className="w-5 h-5 text-accent" />
-                    </div>
-                    <span className="font-semibold text-sm sm:text-base break-words w-[200px] sm:w-auto">vecybienesraices@gmail.com</span>
-                  </a>
-                </div>
-
-                <button
-                  onClick={() => window.location.href = `/agenda/${property.id}`}
-                  className="btn-gold w-full mt-6 flex justify-center items-center gap-2"
-                >
-                  <CalendarCheck className="w-5 h-5" />
-                  Agendar Cita Inmediata
-                </button>
-
-                <button
-                  onClick={() => setShowContactForm(!showContactForm)}
-                  className="w-full mt-3 py-3 px-6 bg-black border border-white/10 text-white rounded-lg hover:bg-white/5 hover:border-accent transition-all duration-300 uppercase tracking-widest text-xs font-bold"
-                >
-                  Solicitar Información
-                </button>
-
-                {showContactForm && (
-                  <form className="mt-6 space-y-3 animate-fade-in">
-                    <input type="text" placeholder="Tu Nombre" className="w-full px-4 py-2 bg-black border border-white/10 rounded-lg text-white placeholder-gray-500 focus:border-accent focus:outline-none transition-colors" />
-                    <input type="email" placeholder="Tu Email" className="w-full px-4 py-2 bg-black border border-white/10 rounded-lg text-white placeholder-gray-500 focus:border-accent focus:outline-none transition-colors" />
-                    <textarea placeholder="Tu Mensaje" rows={3} className="w-full px-4 py-2 bg-black border border-white/10 rounded-lg text-white placeholder-gray-500 focus:border-accent focus:outline-none transition-colors resize-none"></textarea>
-                    <button type="submit" className="btn-gold w-full">Enviar Consulta</button>
-                  </form>
-                )}
-              </div>
-
-              <div className="card-float p-6">
-                <h4 className="text-lg font-bold text-white mb-4 uppercase tracking-wider">
-                  Detalles Legales
-                </h4>
-                <div className="space-y-2 text-sm text-gray-400">
-                  <p>✓ Documentación completa</p>
-                  <p>✓ Certificado de libertad y tradición</p>
-                  <p>✓ Avalúo catastral actualizado</p>
-                  <p>✓ Disponible para financiamiento</p>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-6 animate-slide-in-right">
-              {/* Sidebar alternativo para modo Stealth (Sin datos de contacto) */}
-              <div className="card-float p-8 border-accent/20 bg-accent/5">
-                <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center mb-6">
-                  <CalendarCheck className="w-6 h-6 text-accent" />
-                </div>
-                <h3 className="text-2xl font-bold text-white mb-4 uppercase tracking-tighter">
-                  ¿Quieres visitar este activo?
-                </h3>
-                <p className="text-gray-400 text-sm mb-8 leading-relaxed">
-                  Agenda tu cita directamente con la administración del inmueble para recibir atención prioritaria.
-                </p>
-                <button
-                  onClick={() => window.location.href = `/agenda/${property.id}`}
-                  className="btn-gold w-full flex justify-center items-center gap-3 py-4"
-                >
-                  <CalendarCheck className="w-6 h-6" />
-                  AGENDAR VISITA AHORA
-                </button>
-              </div>
-              
-              <div className="card-float p-6 opacity-50">
-                <p className="text-[10px] text-gray-500 uppercase tracking-widest text-center">
-                  Inmueble Protegido por Vecy Network
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Mega Mapa inmersivo */}
-        <div className="mt-20 pt-10 border-t border-white/5 animate-fade-in w-full">
-            <div className="text-center mb-8">
-              <h2 className="text-3xl font-bold text-white uppercase tracking-wider">
-                Geolocalización <span className="text-accent italic">VIP</span>
-              </h2>
-              <p className="text-sm text-gray-400 mt-2">Visión Satelital Completa del Entorno</p>
-            </div>
-            <div className="w-full h-[50vh] sm:h-[65vh] xl:h-[75vh] overflow-hidden bg-black shadow-[0_0_80px_rgba(212,175,55,0.06)] group relative border-y border-accent/20 mb-20">
-              <div className="absolute inset-0 pointer-events-none shadow-[inset_0_0_100px_rgba(0,0,0,0.8)] z-10"></div>
-              <iframe
-                title="Mega Mapa Satelital"
-                width="100%"
-                height="100%"
-                style={{ border: 'none', filter: 'contrast(1.1) saturate(1.1)' }}
-                src={property.coordinates 
-                  ? `https://maps.google.com/maps?q=${(property.coordinates as any).lat},${(property.coordinates as any).lng}&t=k&z=17&ie=UTF8&iwloc=&output=embed`
-                  : `https://maps.google.com/maps?q=${encodeURIComponent(property.addressNeighborhood ? `${property.addressNeighborhood}, ${property.addressCity || property.city || 'Bogotá'}` : property.location)}&t=k&z=17&ie=UTF8&iwloc=&output=embed`
-                }
-                allowFullScreen={true}
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-              ></iframe>
-            </div>
         </div>
       </main>
-
-      {/* Footer Constante (OCULTO EN STEALTH) */}
-      {!isStealth && (
-        <footer className="bg-black border-t border-accent/20 py-12">
-          <div className="container flex flex-col items-center">
-            <div className="flex items-center gap-3 mb-6 opacity-30 grayscale hover:grayscale-0 hover:opacity-100 transition-all cursor-pointer">
-                <img src="/logo-vecy.png" alt="Vecy Logo" className="w-8 h-8 object-contain" />
-                <span className="text-white font-bold tracking-tighter text-sm">VECY <span className="text-accent italic">BIENES RAÍCES</span></span>
-            </div>
-            <p className="text-gray-500 text-sm text-center">&copy; {new Date().getFullYear()} Vecy. Todos los derechos reservados.</p>
-          </div>
-        </footer>
-      )}
 
       <ShareModal 
         isOpen={shareModalOpen}
         onClose={() => setShareModalOpen(false)}
         text={shareModalConfig.text}
         url={shareModalConfig.url}
-        modalTitle={shareModalConfig.modalTitle}
+        title={shareModalConfig.modalTitle}
       />
+
+      <footer className="bg-black border-t border-white/10 py-20 mt-20">
+        <div className="container text-center">
+          <img src="/logo-vecy.png" alt="Vecy" className="h-8 mx-auto mb-8 opacity-30 grayscale" />
+          <p className="text-gray-600 text-[10px] uppercase tracking-[0.4em]">VECY Network — El Futuro Inmobiliario es Ahora.</p>
+        </div>
+      </footer>
     </div>
   );
 }
