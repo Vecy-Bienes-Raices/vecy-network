@@ -27,9 +27,9 @@ export default function Navbar() {
   const navItems = [
     { label: 'INICIO', href: '/' },
     { label: 'PROPIEDADES', href: '/properties' },
+    { label: 'RED GANA-GANA', href: '/red-colaboracion' },
     { label: 'SERVICIOS', href: '/services' },
-    { label: 'BLOG', href: '/blog' },
-    { label: 'RED AGENTES', href: '/agent-dashboard' },
+    { label: 'AGENTES', href: '/agent-dashboard' },
   ];
 
   return (

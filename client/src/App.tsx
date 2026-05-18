@@ -20,6 +20,7 @@ import AgentDashboard from "./pages/AgentDashboard";
 import StealthPropertyView from "./pages/StealthPropertyView";
 import UnbrandedFicha from "./pages/UnbrandedFicha";
 import Agenda from "./pages/Agenda";
+import RedColaboracion from "./pages/RedColaboracion";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -37,6 +38,7 @@ function Router() {
       <Route path={"/p/:token"} component={StealthPropertyView} />
       <Route path={"/ficha/:id"} component={UnbrandedFicha} />
       <Route path={"/agenda/:propertyId"} component={Agenda} />
+      <Route path={"/red-colaboracion"} component={RedColaboracion} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
