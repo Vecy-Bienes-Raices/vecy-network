@@ -344,44 +344,33 @@ export class WhatsAppBot {
 Hola a todos 👋 Soy *JanIA*, la IA de VECY. Para que el sistema de MATCHES funcione al 100%, por favor sigan estas normas al publicar:
 
 ━━━━━━━━━━━━━━━━━━
+🚀 *REGLA DE ORO: LÍMITE DE LOTES*
+━━━━━━━━━━━━━━━━━━
+✅ *MÁXIMO 3 INMUEBLES* por mensaje o ráfaga.
+✅ Si tienes más, por favor espera **5 minutos** entre cada lote de 3.
+❌ No satures mi motor de precisión con ráfagas masivas; esto garantiza que cada activo se procese con calidad quirúrgica.
+
+━━━━━━━━━━━━━━━━━━
 🏠 *FORMATO PARA INMUEBLES*
 ━━━━━━━━━━━━━━━━━━
 *VENDO / ARRIENDO:* [tipo de inmueble]
 📍 *Zona:* [barrio o sector]
 💰 *Precio:* [valor en pesos]
-📅 *Antigüedad:* [años de construido]
 📐 *Área:* [m2] | 🛏️ *Hab / Baños / Garajes:* [número]
-🏗️ *Estrato:* [número]
 📝 *Descripción:* [detalles adicionales]
 
 ━━━━━━━━━━━━━━━━━━
-🔍 *FORMATO PARA REQUERIMIENTOS*
-━━━━━━━━━━━━━━━━━━
-*BUSCO:* [tipo de inmueble]
-📍 *Zona deseada:* [barrio o sector]
-💰 *Presupuesto:* [valor máximo]
-📅 *Antigüedad máxima:* [años]
-📐 *Área mínima:* [m2] | 🛏️ *Hab / Baños / Garajes:* [número]
-📝 *Descripción:* [detalles adicionales]
-📅 *Urgencia:* [inmediato / próximas semanas / mes]
-
-━━━━━━━━━━━━━━━━━━
-⚠️ *REGLAS DEL GRUPO*
+⚠️ *REGLAS GENERALES*
 ━━━━━━━━━━━━━━━━━━
 ✅ Solo contenido inmobiliario profesional.
 ✅ *FOTOS/VIDEOS:* 🚫 NO subir imágenes directas al grupo (saturan mi memoria). 
-✅ *LINKS ACEPTADOS:* Puedo leer automáticamente de:
-   - Wasi, Qrador, Habi, FincaRaíz, MetroCuadrado, Proppit, Ciencuadras, Mercadolibre.
-   - **¡Tus propios sitios web!** (.com, .co, .netlify, .vercel, etc.)
-❌ *NO ENVIAR LINKS DE:* Facebook, Instagram, TikTok, YouTube o Catálogos de WhatsApp. No puedo leerlos.
-
-💡 *¿Por qué el formato?* Yo leo cada mensaje y lo registro. Entre más información incluyas, más rápido encontraré el MATCH perfecto y te notificaré. 🎯
+✅ *LINKS:* Puedo leer automáticamente de Wasi, FincaRaíz, MetroCuadrado, etc.
 
 ¡Gracias por hacer de este el mejor equipo inmobiliario de Colombia! 🇨🇴🏆`;
 
     try {
       await this.client.sendMessage(this.targetGroupId, rulesText);
-      console.log('✅ Normas detalladas enviadas.');
+      console.log('✅ Normas actualizadas enviadas.');
     } catch (e) { console.error(e); }
   }
 
