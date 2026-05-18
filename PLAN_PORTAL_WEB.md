@@ -73,6 +73,20 @@ El nombre **VECY NETWORK** nace de nuestra red de colaboración. No gastamos en 
 
 ---
 
+## 📜 VIII. EL STORYTELLING DEL ARMAGEDÓN (La Leyenda VECY)
+*Objetivo: Evangelizar sobre la evolución tecnológica.*
+
+No somos una empresa nueva; somos el resultado de 8 años de visión disruptiva (desde 2018).
+
+- [ ] **Página de Historia:** Crear `/historia` con una línea de tiempo interactiva:
+    *   **2018:** Nacimiento del "Broker Virtual". Digitalización total con JotForm.
+    *   **2020:** Resiliencia en Pandemia. Mientras otros cerraban, VECY operaba 100% digital.
+    *   **2024-2026:** El Armagedón. Integración de JanIA y extinción de procesos obsoletos.
+- [ ] **El Manifiesto Anti-Dinosaurio:** Explicar quiénes son los dinosaurios (portales con filtros arcaicos, agentes que ignoran el poder del email y la IA) y cómo VECY es el impacto tecnológico que cambia las reglas.
+- [ ] **Compromiso Ambiental:** Resaltar la "Política de Cero Papel" y la eliminación de avisos físicos como pilar ético de la marca.
+
+---
+
 > **FILOSOFÍA:** "Mientras los dinosaurios imprimen volantes, nosotros procesamos millones de datos para cerrar negocios en segundos."
 
 **Estatus del Proyecto:**

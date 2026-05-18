@@ -26,6 +26,7 @@ export default function Navbar() {
 
   const navItems = [
     { label: 'INICIO', href: '/' },
+    { label: 'HISTORIA', href: '/historia' },
     { label: 'PROPIEDADES', href: '/properties' },
     { label: 'RED GANA-GANA', href: '/red-colaboracion' },
     { label: 'SERVICIOS', href: '/services' },
