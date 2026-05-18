@@ -59,6 +59,10 @@
   --color-off-white: #f0f0f0;
   --color-esmeralda: #10b981;
   --shadow-luminous-gold: 0 0 20px rgba(212, 175, 55, 0.5), 0 0 40px rgba(212, 175, 55, 0.2);
+  
+  /* Fonts */
+  --font-display: "Playfair Display", serif;
+  --font-sans: "Inter", sans-serif;
 }
 
 :root {
@@ -559,14 +563,17 @@
     box-shadow: 0 0 15px rgba(191,149,63,0.1);
   }
 
-  /* ── VECY GLOBAL TYPOGRAPHY ────────────────────────────────────────────────── */
+@layer utilities {
+  /* ── VECY GLOBAL TYPOGRAPHY UTILITIES ───────────────────────────────────────── */
   
   .vecy-title-hero {
-    @apply text-5xl md:text-8xl font-display font-bold tracking-tighter text-white mb-6 leading-tight;
+    @apply text-5xl md:text-8xl font-bold tracking-tighter text-white mb-6 leading-tight;
+    font-family: "Playfair Display", serif;
   }
 
   .vecy-title-section {
-    @apply text-4xl md:text-5xl font-display font-bold tracking-wider text-white mb-4;
+    @apply text-4xl md:text-5xl font-bold tracking-wider text-white mb-4;
+    font-family: "Playfair Display", serif;
   }
 
   .vecy-subtitle {
@@ -578,10 +585,12 @@
   }
 
   .vecy-accent-tag {
-    @apply text-accent font-display tracking-[0.3em] uppercase text-[10px] md:text-xs mb-4 glow-gold-sm;
+    @apply text-accent tracking-[0.3em] uppercase text-[10px] md:text-xs mb-4;
+    font-family: "Playfair Display", serif;
+    text-shadow: 0 0 10px rgba(191, 149, 63, 0.5);
   }
 
-  /* ── APPLE STYLE CARDS ─────────────────────────────────────────────────────── */
+  /* ── APPLE STYLE CARDS ── */
   
   .vecy-card-apple {
     @apply bg-white/5 border border-white/10 rounded-[2rem] p-8 transition-all duration-500 overflow-hidden relative;
@@ -591,4 +600,5 @@
     @apply border-primary/30 shadow-[0_20px_50px_rgba(191,149,63,0.1)];
     transform: translateY(-5px);
   }
+}
 

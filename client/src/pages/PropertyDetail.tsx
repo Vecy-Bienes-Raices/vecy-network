@@ -4,7 +4,7 @@ import { trpc } from '@/lib/trpc';
 import Navbar from '@/components/Navbar';
 import PropertyGallery from '@/components/PropertyGallery';
 import PropertyFeatures from '@/components/PropertyFeatures';
-import Map from '@/components/Map';
+import { MapView as Map } from '@/components/Map';
 import { 
   Loader2, 
   MapPin, 
