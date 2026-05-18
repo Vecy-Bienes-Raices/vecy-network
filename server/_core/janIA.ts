@@ -28,23 +28,47 @@ Si el usuario envía múltiples enlaces o descripciones, resume lo que has proce
 
 PERSONALIDAD Y TONO:
 - Estrictamente profesional, directa y asertiva.
+- Usa un tono de TUTEO (tú, te, ti) para sonar amable y cercana con tus colegas.
 - Cero "cháchara" o preámbulos innecesarios.
-- Saluda por el nombre y despídete con: "Con cariño, su JanIA".
+- Saluda por el nombre y despídete con: "Con cariño, tu JanIA".
 
 PROTOCOLO PARA LOTES (BATCH):
 - Si procesas varios inmuebles a la vez, confirma la recepción de todos.
 - Si algunos están incompletos, indícalo claramente.
 - Mantén un tono ejecutivo y eficiente.
 
-... (rest of the prompt) ...
+PROTOCOLO DE RESPUESTA:
+- Si el inmueble/requerimiento está COMPLETO: Confirma el guardado, indica que estás buscando matches y anima a la red a viralizar para ganar Puntos.
+- Si faltan datos: Confirma lo recibido y solicita CLARAMENTE los campos faltantes uno por uno.
+- Para consultas generales: Responde de forma ejecutiva y útil.
+
+CAMPOS OBLIGATORIOS (EXTRACCIÓN):
+- INMUEBLE: name (nombre del usuario), propertyType, transactionType, price, zone, bedrooms, bathrooms, areaTotal.
+- REQUERIMIENTO: name (nombre del usuario), tipoInmuebleDeseado, tipoNegocioDeseado, presupuestoMax, zonaDeseada, habitacionesMin, banosMin, areaMin.
 
 RESPONDE ÚNICAMENTE CON ESTE JSON:
 {
   "classification": "INMUEBLE | REQUERIMIENTO | CONSULTA_GENERAL | DATOS_INCOMPLETOS",
-  "response": "Tu respuesta profesional obligatoria. Resume el procesamiento de lotes si aplica.",
+  "response": "Tu respuesta profesional obligatoria en tono de TUTEO. Resume el procesamiento de lotes si aplica.",
   "missingFields": ["campo1", "campo2"],
   "shouldSendDM": true | false,
-  "extractedData": { ... }
+  "extractedData": {
+    "name": "Nombre del Usuario",
+    "propertyType": "apartment | house | building | warehouse | farm | hotel | office | land | commercial | loft | consultorio",
+    "transactionType": "venta | arriendo | arriendo_temporal",
+    "price": "number",
+    "city": "Bogotá",
+    "zone": "Barrio/Sector",
+    "bedrooms": "number",
+    "bathrooms": "number",
+    "areaTotal": "number",
+    "tipoInmuebleDeseado": "apartment | house | building | warehouse | farm | hotel | office | land | commercial | loft | consultorio",
+    "tipoNegocioDeseado": "venta | arriendo | arriendo_temporal",
+    "presupuestoMax": "number",
+    "habitacionesMin": "number",
+    "banosMin": "number",
+    "zonaDeseada": "Barrio/Sector"
+  }
 }
 `;
 
@@ -96,7 +120,7 @@ export async function processWhatsAppMessage(
       if (saved && (!result.missingFields || result.missingFields.length === 0)) {
         const matches = await findMatchesForProperty(saved.id);
         if (matches.length > 0) {
-          const matchedUsers = matches.map(m => m.idUsuarioWhatsapp).filter((id): id is string => !!id);
+          const matchedUsers = matches.map(m => m.idUsuarioWhatsapp).filter((id): id is string => !!id && id.includes('@'));
           result.mentions.push(...matchedUsers);
           
           // Mensaje de match más explícito
@@ -117,11 +141,18 @@ export async function processWhatsAppMessage(
       if (saved && (!result.missingFields || result.missingFields.length === 0)) {
         const matches = await findMatchesForRequirement(saved.id);
         if (matches.length > 0) {
-          const matchedUsers = matches.map(m => m.idUsuarioWhatsapp).filter((id): id is string => !!id);
+          const matchedUsers = matches.map(m => m.idUsuarioWhatsapp).filter((id): id is string => !!id && id.includes('@'));
           result.mentions.push(...matchedUsers);
 
-          // Mensaje de match más explícito
-          result.response += `\n\n🎯 ¡EXCELENTE! He encontrado ${matches.length} inmuebles que coinciden exactamente con esta búsqueda. He etiquetado a los captadores para cerrar el negocio. 🏠✨`;
+          // Listar los inmuebles que hicieron match (top 3)
+          let matchDetails = "";
+          matches.slice(0, 3).forEach((m, idx) => {
+            const price = Number(m.price).toLocaleString('es-CO');
+            matchDetails += `\n🏠 ${idx + 1}. ${m.name} | 📍 ${m.zone} | 💰 $${price}`;
+          });
+
+          // Mensaje de match más explícito con detalles
+          result.response += `\n\n🎯 ¡EXCELENTE! He encontrado ${matches.length} inmuebles que coinciden con tu búsqueda. Aquí tienes los más destacados:${matchDetails}\n\nHe etiquetado a los captadores para cerrar el negocio contigo. 🏠✨`;
         }
       }
     }
@@ -161,7 +192,7 @@ export async function generateWelcomeMessage(count: number): Promise<string> {
     return response.choices[0].message.content.trim();
   } catch (error) {
     console.error("Error generating welcome message:", error);
-    return `Bienvenidos a VECY Network. ✨ Soy JanIA, su asistente IA. Estoy aquí para ayudarles con el matching automático de sus inmuebles y requerimientos. Por favor, sigan los formatos oficiales para mejores resultados.`;
+    return `Bienvenidos a VECY Network. ✨ Soy JanIA, tu asistente IA. Estoy aquí para ayudarte con el matching automático de tus inmuebles y requerimientos. Por favor, sigue los formatos oficiales para mejores resultados.`;
   }
 }
 

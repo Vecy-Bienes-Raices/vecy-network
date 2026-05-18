@@ -154,27 +154,6 @@ export class WhatsAppBot {
       console.log('\n🚀 JANIA OPERATIVA - SISTEMA DE MATCHES PROFESIONAL ACTIVADO');
       console.log(`[CONFIG] Umbral de bienvenida: 10 personas. Actual: ${this.pendingWelcomeCount}`);
       this.startTime = Date.now();
-
-      // ANUNCIO OFICIAL DE REGLAS (Versión con @todos)
-      try {
-        const adrianaId = '4900725465196@lid';
-        const chat = await this.client.getChatById(this.targetGroupId);
-        const participants = (chat as any).participants;
-        
-        // Incluimos @todos al inicio. Aunque WhatsApp no lo ponga azul por defecto, 
-        // las menciones en el array 'mentions' harán que a TODOS les llegue la notificación.
-        const announcement = `@todos 📢 *COMUNICADO OFICIAL: LA EVOLUCIÓN INEVITABLE* 🏛️\n\nHola colegas. Soy JanIA. Para mantener nuestra *precisión quirúrgica* y rapidez en los cierres, a partir de hoy solo procesaré un *MÁXIMO DE 3 INMUEBLES, LINKS O REQUERIMIENTOS* por mensaje.\n\n@4900725465196 y todos los miembros, agradezco su colaboración enviando la información en lotes pequeños para que mi motor de matching trabaje al 100% para ustedes. ¡Vamos por esos cierres! 🚀✨`;
-        
-        const mentionIds = participants.map((p: any) => p.id._serialized);
-        if (!mentionIds.includes(adrianaId)) mentionIds.push(adrianaId);
-
-        await this.client.sendMessage(this.targetGroupId, announcement, {
-          mentions: mentionIds
-        });
-        console.log('✅ Anuncio enviado con intención de @todos a todos los miembros.');
-      } catch (e) {
-        console.error('Error en anuncio:', e);
-      }
     });
 
     this.client.on('disconnected', (reason: string) => {
@@ -281,7 +260,7 @@ export class WhatsAppBot {
           if (esDominioPermitido(url)) {
             try {
               console.log(`[SCRAPER] Procesando: ${url}`);
-              await scrapePropertyLink(url); // AHORA SÍ ESPERAMOS
+              await scrapePropertyLink(url); 
               scrapedCount++;
             } catch (err) {
               console.error(`[SCRAPER] Fallo en ${url}:`, err);
@@ -294,13 +273,16 @@ export class WhatsAppBot {
       const result = await processWhatsAppMessage(fullText, senderId, userName, hasMedia);
 
       if (result && result.response) {
-        // 4. Mejorar el Etiquetado (@ en azul)
-        // El formato correcto es @numero y pasar el ID en el objeto options.mentions
+        // 4. Perfeccionar el Etiquetado Personal (@ en azul)
+        const adrianaId = '4900725465196@lid';
         const senderNumber = senderId.split('@')[0];
+        
+        // RESPUESTA PERSONALIZADA: Sin @todos para respuestas individuales
         let finalResponse = `@${senderNumber} ${result.response}`;
 
         const matchedUsers = Array.from(new Set(result.mentions || []));
-        const allMentionsIds = Array.from(new Set([senderId, ...matchedUsers]));
+        // Solo mencionamos a los involucrados directamente
+        const specificMentionsIds = Array.from(new Set([senderId, adrianaId, ...matchedUsers]));
 
         // Si excedió el límite de links, avisamos claramente
         if (urlMatch && urlMatch.length > 3) {
@@ -309,15 +291,15 @@ export class WhatsAppBot {
           finalResponse += `\n\n✅ He procesado exitosamente ${scrapedCount} enlace(s) inmobiliario(s).`;
         }
 
-        // Agregar menciones de interesados al final
+        // Agregar menciones de interesados al final de forma visible
         if (matchedUsers.length > 0) {
           const mentionTags = matchedUsers.map(id => `@${id.split('@')[0]}`).join(' ');
           finalResponse += `\n\n🔔 Notificando interesados: ${mentionTags}`;
         }
         
-        // 5. Enviar mensaje al grupo con menciones reales
+        // 5. Enviar mensaje al grupo con menciones ESPECÍFICAS
         await this.client.sendMessage(this.targetGroupId, finalResponse, {
-          mentions: allMentionsIds // Solo pasamos los IDs aquí, WPPJS se encarga
+          mentions: specificMentionsIds
         });
 
         // 6. Log outgoing response
@@ -336,7 +318,6 @@ export class WhatsAppBot {
       }
     } catch (e) {
       console.error('[WHATSAPP-BOT] Error crítico procesando bloque:', e);
-      // Fallback: informar del error en el grupo si es posible
       try {
         await this.client.sendMessage(this.targetGroupId, `⚠️ Tuve un pequeño inconveniente procesando este lote de información. Por favor, intenta enviar los datos de forma más fragmentada o revisa los enlaces. ✨`);
       } catch (inner) { }
