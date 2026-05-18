@@ -10,44 +10,54 @@ export type JanIAResult = {
   missingFields?: string[];
   response: string;
   mentions?: string[];
+  shouldSendDM?: boolean;
 };
 
 const JANIA_PROMPT = `
-Eres JanIA, la Super Agente, COACH, CONSULTORA JURÍDICA y EXPERTA NOTARIAL de VECY Network. 
+Eres JanIA, Agente Senior de VECY Network. Experta en Bienes Raíces y Consultoría Jurídica Inmobiliaria.
 
-TU HISTORIA Y EL ARMAGEDÓN INMOBILIARIO:
-- VECY no es una empresa tradicional; es el resultado de una "idea loca e inverosímil" que nació en el grupo de WhatsApp "Círculo Cero".
-- Eres el arma principal del ARMAGEDÓN que extinguirá a los dinosaurios inmobiliarios (portales y CRMs obsoletos) para dar vía a la nueva era del Círculo Cero: un ecosistema 100% digital, inteligente y extraordinario.
-- Mientras otros inventaron la rueda pero nunca la echaron a rodar, VECY ya tiene forma, peso y engranajes reales.
+OBJETIVO:
+Procesar información inmobiliaria con máxima precisión. No permitas que falten datos críticos.
 
-TU FILOSOFÍA: INNOVACIÓN CONSTANTE Y SOSTENIBLE (EL EFECTO ASTEROIDE):
-- Misión: Revolucionar el sector eliminando la fricción ("Cero Esfuerzo"). Automatizas el matching, análisis de mercado y consultoría.
-- Visión: Ser el Bróker Virtual Definitivo y la autoridad máxima en data de Colombia (hacia el Big Data con BigQuery y Claude).
-- Modelo SaaS: El acceso a tu inteligencia se gestiona vía suscripción externa (Stripe/Paddle), asegurando la sostenibilidad sin conflictos con WhatsApp.
+PERSONALIDAD Y TONO:
+- Estrictamente profesional, directa y asertiva.
+- Cero "cháchara" o preámbulos.
+- Saluda brevemente y despídete con: "Con cariño, su JanIA".
 
-TU PODER TÉCNICO Y ROADMAP (EDICIÓN GOLD):
-- Estandarización Geográfica: Utilizas geocodificación estructurada (Google Maps/Nominatim) para limpiar direcciones y barrios automáticamente.
-- Ingesta de Activos: Ya procesas activos reales (Edificios Teusaquillo, Santa Bárbara) y expandes categorías a bodegas, hoteles y lotes.
-- Ecosistema Pro: Cuentas con "Stealth Share" para compartir inmuebles con elegancia y sincronización con Google Reviews.
+PROTOCOLO PARA DATOS INCOMPLETOS:
+Si un usuario envía un INMUEBLE o REQUERIMIENTO pero faltan campos obligatorios (Precio, Zona, Tipo de Inmueble, Habitaciones, etc.):
+1. Clasifica como "DATOS_INCOMPLETOS".
+2. Identifica CADA campo faltante en el array "missingFields".
+3. En la "response", confirma lo recibido y PREGUNTA DIRECTAMENTE por los datos que faltan, uno por uno, de forma profesional.
+4. Indica que necesitas esta información para que el sistema de matching sea efectivo.
+5. Establece "shouldSendDM": true para que el sistema le envíe un recordatorio privado.
 
-TU ROL COMO CONSULTORA JURÍDICA Y EXPERTA NOTARIAL:
-- Conocimiento profundo del Derecho Inmobiliario Colombiano.
-- Recomiendas SIEMPRE la Firma Electrónica (Ley 527/99) para saltar la burocracia notarial lenta.
-
-NUEVA FACULTAD: TASACIÓN Y SONDEO (SOLO BOGOTÁ):
-- Realizas análisis de mercado rápidos en privado con Dirección, Barrio y Localidad, estableciendo valores promedio por m2.
-
-RESTRICCIÓN DE DOMINIO Y PERSONALIDAD:
-- Solo Bienes Raíces y ecosistema VECY. Declina temas ajenos con elegancia.
-- Eres profesional, diligente, educada, con humor cálido y "picardía sana".
-- Saluda con cariño y despídete: "Con cariño, su JanIA".
+CAMPOS OBLIGATORIOS (EXTRACCIÓN):
+- INMUEBLE: propertyType, transactionType, price, zone, bedrooms, bathrooms, areaTotal.
+- REQUERIMIENTO: tipoInmuebleDeseado, tipoNegocioDeseado, presupuestoMax, zonaDeseada, habitacionesMin, banosMin, areaMin.
 
 RESPONDE ÚNICAMENTE CON ESTE JSON:
 {
-  "classification": "...",
-  "response": "Tu respuesta humanizada, cordial y con un toque de picardía aquí.",
-  "missingFields": [],
-  "extractedData": { ... }
+  "classification": "INMUEBLE | REQUERIMIENTO | CONSULTA_GENERAL | DATOS_INCOMPLETOS",
+  "response": "Tu respuesta profesional pidiendo los datos faltantes o confirmando el éxito.",
+  "missingFields": ["campo1", "campo2"],
+  "shouldSendDM": true | false,
+  "extractedData": {
+    "propertyType": "apartment | house | building | warehouse | farm | hotel | office | land | commercial | loft | consultorio",
+    "transactionType": "venta | arriendo | arriendo_temporal",
+    "price": "number",
+    "city": "Bogotá",
+    "zone": "Barrio/Sector",
+    "bedrooms": "number",
+    "bathrooms": "number",
+    "areaTotal": "number",
+    "tipoInmuebleDeseado": "apartment | house | building | warehouse | farm | hotel | office | land | commercial | loft | consultorio",
+    "tipoNegocioDeseado": "venta | arriendo | arriendo_temporal",
+    "presupuestoMax": "number",
+    "habitacionesMin": "number",
+    "banosMin": "number",
+    "zonaDeseada": "Barrio/Sector"
+  }
 }
 `;
 
@@ -74,13 +84,18 @@ export async function processWhatsAppMessage(
     const result = JSON.parse(cleanJson) as JanIAResult;
     result.mentions = [];
 
-    // Lógica de guardado y matches (se mantiene igual)
-    if (result.classification === "INMUEBLE" || result.classification === "DATOS_INCOMPLETOS") {
+    const lowerText = text.toLowerCase();
+    const isRequirement = result.classification === "REQUERIMIENTO" || lowerText.includes("busco") || lowerText.includes("necesito");
+    const isProperty = result.classification === "INMUEBLE" || lowerText.includes("vendo") || lowerText.includes("arriendo") || !!result.extractedData?.propertyType;
+
+    // Lógica de guardado para INMUEBLES
+    if (isProperty && !isRequirement) {
       const data = {
         name: result.extractedData?.name || `Inmueble de ${userName || userId}`,
         propertyType: result.extractedData?.propertyType || "apartment",
         price: result.extractedData?.price || "0",
         zone: result.extractedData?.zone || "Bogotá",
+        transactionType: result.extractedData?.transactionType || "venta",
         ...result.extractedData
       } as InsertProperty;
 
@@ -88,12 +103,14 @@ export async function processWhatsAppMessage(
       if (saved && (!result.missingFields || result.missingFields.length === 0)) {
         const matches = await findMatchesForProperty(saved.id);
         if (matches.length > 0) {
-          result.response += `\n\n🎯 ¡Oigan! 🧐 Encontré ${matches.length} matches para esta joyita. ¡Llamen ya a sus clientes!`;
+          result.response += `\n\n🎯 He detectado ${matches.length} coincidencias potenciales.`;
           const matchedUsers = matches.map(m => m.idUsuarioWhatsapp).filter((id): id is string => !!id);
           result.mentions.push(...matchedUsers);
         }
       }
-    } else if (result.classification === "REQUERIMIENTO") {
+    } 
+    // Lógica de guardado para REQUERIMIENTOS
+    else if (isRequirement) {
       const data = {
         tipoInmuebleDeseado: result.extractedData?.tipoInmuebleDeseado || "apartment",
         tipoNegocioDeseado: result.extractedData?.tipoNegocioDeseado || "venta",
@@ -101,10 +118,10 @@ export async function processWhatsAppMessage(
       } as InsertRequirement;
 
       const saved = await saveRequirement(data, userId, text);
-      if (saved) {
+      if (saved && (!result.missingFields || result.missingFields.length === 0)) {
         const matches = await findMatchesForRequirement(saved.id);
         if (matches.length > 0) {
-          result.response += `\n\n🎯 ¡Mis queridos! Tengo ${matches.length} inmuebles en mi radar que le van a encantar a tu cliente. ✨`;
+          result.response += `\n\n🎯 Hay ${matches.length} inmuebles que coinciden con esta búsqueda.`;
           const matchedUsers = matches.map(m => m.idUsuarioWhatsapp).filter((id): id is string => !!id);
           result.mentions.push(...matchedUsers);
         }
@@ -116,7 +133,7 @@ export async function processWhatsAppMessage(
     console.error("Error in processWhatsAppMessage:", error);
     return {
       classification: "CONSULTA_GENERAL",
-      response: "Mil disculpas, colegas. 🧐 Tuve un pequeño inconveniente técnico momentáneo, pero ya estoy aquí lista para seguir apoyándolos en sus cierres. ¿En qué estábamos? ✨",
+      response: "Lo siento, tuve un inconveniente técnico momentáneo. Ya estoy operativa nuevamente. ¿En qué puedo apoyarte? ✨",
       mentions: []
     };
   }
@@ -128,16 +145,11 @@ export async function generateWelcomeMessage(count: number): Promise<string> {
       ${JANIA_PROMPT}
       
       INSTRUCCIÓN ADICIONAL:
-      Han ingresado ${count} nuevos integrantes al grupo de VECY Network. 
-      Escribe un mensaje de bienvenida cálido, profesional y con tu toque de picardía. 
+      Han ingresado ${count} nuevos integrantes a VECY Network. 
+      Escribe un mensaje de bienvenida profesional y directo. 
       
-      HABLA DEL ARMAGEDÓN Y EL CÍRCULO CERO:
-      Explícales que son parte del cambio que extinguirá a los dinosaurios inmobiliarios. 
-      Cuéntales brevemente de dónde venimos (Círculo Cero) y lo que hemos logrado (Ediciones Gold, automatización total).
+      Explícales que eres su asistente IA para matching automático y que deben seguir los formatos oficiales para garantizar resultados precisos. 
       
-      Explícales brevemente que eres su asistente IA, que haces MATCHES automáticos leyendo sus mensajes y que deben seguir las normas y formatos oficiales que se enviarán a continuación.
-      
-      VARÍA EL MENSAJE: No siempre digas lo mismo. Sé creativa, usa diferentes saludos y formas de motivarlos. 
       RESPONDE SOLO CON EL TEXTO DEL MENSAJE, NO USES JSON PARA ESTA TAREA.
     `;
 
@@ -151,7 +163,7 @@ export async function generateWelcomeMessage(count: number): Promise<string> {
     return response.choices[0].message.content.trim();
   } catch (error) {
     console.error("Error generating welcome message:", error);
-    return `¡Hola, mis estimados colegas! ✨ Qué alegría ver cómo crece este equipo. ¡Una acogedora bienvenida para los nuevos integrantes que se han unido recientemente! 🥳👋 Soy JanIA, su asistente de IA...`; // Fallback
+    return `Bienvenidos a VECY Network. ✨ Soy JanIA, su asistente IA. Estoy aquí para ayudarles con el matching automático de sus inmuebles y requerimientos. Por favor, sigan los formatos oficiales para mejores resultados.`;
   }
 }
 
@@ -161,7 +173,10 @@ async function saveProperty(data: InsertProperty, userId: string, rawText: strin
   try {
     const [result] = await db.insert(properties).values({ ...data, idUsuarioWhatsapp: userId, rawText }).returning();
     return result;
-  } catch (e) { return null; }
+  } catch (e) { 
+    console.error("Error saving property:", e);
+    return null; 
+  }
 }
 
 async function saveRequirement(data: InsertRequirement, userId: string, rawText: string) {
@@ -170,5 +185,8 @@ async function saveRequirement(data: InsertRequirement, userId: string, rawText:
   try {
     const [result] = await db.insert(requirements).values({ ...data, idUsuarioWhatsapp: userId, rawText }).returning();
     return result;
-  } catch (e) { return null; }
+  } catch (e) { 
+    console.error("Error saving requirement:", e);
+    return null; 
+  }
 }

@@ -89,18 +89,27 @@ export class WhatsAppBot {
 
   private setupEventListeners() {
     this.client.on('qr', (qr: string) => {
-      console.log('\n--- NUEVO CÓDIGO QR ---');
+      console.log('\n--- NUEVO CÓDIGO QR REQUERIDO ---');
+      console.log('Por favor, escanea este código para conectar a JanIA:');
       qrcode.generate(qr, { small: true });
     });
 
     this.client.on('authenticated', () => {
-      console.log('✅ WhatsApp Autenticado');
+      console.log('✅ WhatsApp Autenticado correctamente.');
+    });
+
+    this.client.on('auth_failure', (msg: string) => {
+      console.error('❌ Error de autenticación:', msg);
     });
 
     this.client.on('ready', () => {
       console.log('\n🚀 JANIA OPERATIVA - SISTEMA DE MATCHES PROFESIONAL ACTIVADO');
       console.log(`[CONFIG] Umbral de bienvenida: 10 personas. Actual: ${this.pendingWelcomeCount}`);
       this.startTime = Date.now();
+    });
+
+    this.client.on('disconnected', (reason: string) => {
+      console.log('⚠️ JanIA se ha desconectado. Razón:', reason);
     });
 
     this.client.on('group_join', async (notification: any) => {
@@ -203,9 +212,22 @@ export class WhatsAppBot {
 
       if (result && result.response) {
         const allMentions = Array.from(new Set([senderId, ...(result.mentions || [])]));
+        
+        // Respuesta en el grupo
         await this.client.sendMessage(this.targetGroupId, result.response, {
           mentions: allMentions
         });
+
+        // Nudge proactivo por mensaje directo si faltan datos
+        if (result.shouldSendDM) {
+          try {
+            const dmResponse = `¡Hola, ${userName}! 🧐 He recibido tu mensaje en el grupo, pero para que mi sistema de matching funcione con precisión, necesito que me ayudes completando los datos faltantes. \n\nPor favor, responde a este mensaje con la información requerida. ¡Gracias! ✨\n\n${result.response}`;
+            await this.client.sendMessage(senderId, dmResponse);
+            console.log(`[ACTION] DM enviado a ${senderId} por datos incompletos.`);
+          } catch (dmError) {
+            console.error(`Error enviando DM a ${senderId}:`, dmError);
+          }
+        }
       }
     } catch (e) {
       console.error('Error procesando bloque:', e);
