@@ -6,6 +6,9 @@ import { scrapePropertyLink, esDominioPermitido } from './scraper';
 import { processWhatsAppMessage, generateWelcomeMessage } from './janIA';
 import fs from 'fs';
 import path from 'path';
+import { getDb } from '../db';
+import { conversations, messages as dbMessages } from '../../drizzle/schema';
+import { eq } from 'drizzle-orm';
 
 export class WhatsAppBot {
   private client: ClientType;
@@ -38,6 +41,45 @@ export class WhatsAppBot {
     this.setupEventListeners();
     this.setupGracefulShutdown();
     this.setupWeeklySchedule();
+  }
+
+  private async logToDb(senderId: string, role: 'user' | 'janIA', content: string) {
+    try {
+      const db = await getDb();
+      if (!db) return;
+
+      // Get or create conversation for this WhatsApp user/group
+      let conv = await db.select().from(conversations).where(eq(conversations.sessionId, senderId)).limit(1);
+      let conversationId: number;
+
+      if (conv.length === 0) {
+        const [newConv] = await db.insert(conversations).values({
+          sessionId: senderId,
+          topic: 'whatsapp',
+          status: 'active'
+        }).returning();
+        conversationId = newConv.id;
+      } else {
+        conversationId = conv[0].id;
+      }
+
+      // Save message
+      await db.insert(dbMessages).values({
+        conversationId,
+        role,
+        content,
+        messageType: 'text'
+      });
+
+      // Update last message
+      await db.update(conversations).set({
+        lastMessage: content,
+        updatedAt: new Date()
+      }).where(eq(conversations.id, conversationId));
+
+    } catch (e) {
+      console.error('[LOG-DB] Error saving WhatsApp log:', e);
+    }
   }
 
   private loadCounter() {
@@ -199,11 +241,18 @@ export class WhatsAppBot {
     this.messageBuffers.delete(senderId);
 
     try {
+      // Log incoming message
+      await this.logToDb(senderId, 'user', fullText);
+
       const urlMatch = fullText.match(/https?:\/\/[^\s]+/g);
+      let processedLinks = 0;
       if (urlMatch) {
-        for (const url of urlMatch) {
+        // Limitamos a 5 links por ráfaga para evitar saturación del LLM y bloqueos
+        const linksToProcess = urlMatch.slice(0, 5);
+        for (const url of linksToProcess) {
           if (esDominioPermitido(url)) {
             scrapePropertyLink(url).catch(() => { });
+            processedLinks++;
           }
         }
       }
@@ -211,12 +260,33 @@ export class WhatsAppBot {
       const result = await processWhatsAppMessage(fullText, senderId, userName, hasMedia);
 
       if (result && result.response) {
-        const allMentions = Array.from(new Set([senderId, ...(result.mentions || [])]));
+        const matchedUsers = Array.from(new Set(result.mentions || []));
+        const allMentionsIds = Array.from(new Set([senderId, ...matchedUsers]));
         
-        // Respuesta en el grupo
-        await this.client.sendMessage(this.targetGroupId, result.response, {
-          mentions: allMentions
+        // Obtener contactos para formatear el @etiquetado correctamente
+        const contacts = await Promise.all(allMentionsIds.map(id => this.client.getContactById(id)));
+        
+        // Construimos el prefijo de mención para el remitente
+        const senderNumber = senderId.split('@')[0];
+        let finalResponse = `@${senderNumber} ${result.response}`;
+
+        // Si hay demasiados links, avisamos
+        if (urlMatch && urlMatch.length > 5) {
+          finalResponse += `\n\n⚠️ *Nota:* He detectado ${urlMatch.length} links, pero solo he procesado los primeros 5 para garantizar la precisión quirúrgica.`;
+        }
+
+        // Si hay matches, agregamos las menciones de los interesados al final para que les vibre el cel
+        if (matchedUsers.length > 0) {
+          finalResponse += `\n\nNotificando a interesados: ${matchedUsers.map(id => `@${id.split('@')[0]}`).join(' ')}`;
+        }
+        
+        // Respuesta en el grupo con el array de objetos de contacto para que WPP los reconozca
+        await this.client.sendMessage(this.targetGroupId, finalResponse, {
+          mentions: contacts
         });
+
+        // Log outgoing response
+        await this.logToDb(senderId, 'janIA', finalResponse);
 
         // Nudge proactivo por mensaje directo si faltan datos
         if (result.shouldSendDM) {
@@ -224,6 +294,7 @@ export class WhatsAppBot {
             const dmResponse = `¡Hola, ${userName}! 🧐 He recibido tu mensaje en el grupo, pero para que mi sistema de matching funcione con precisión, necesito que me ayudes completando los datos faltantes. \n\nPor favor, responde a este mensaje con la información requerida. ¡Gracias! ✨\n\n${result.response}`;
             await this.client.sendMessage(senderId, dmResponse);
             console.log(`[ACTION] DM enviado a ${senderId} por datos incompletos.`);
+            await this.logToDb(senderId, 'janIA', `[DM] ${dmResponse}`);
           } catch (dmError) {
             console.error(`Error enviando DM a ${senderId}:`, dmError);
           }
