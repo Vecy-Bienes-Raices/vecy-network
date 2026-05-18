@@ -49,11 +49,11 @@ export default function RedColaboracion() {
             <span className="text-xs font-bold uppercase tracking-widest text-primary">Economía Colaborativa 2.0</span>
           </div>
           <h1 className="text-5xl md:text-8xl font-display font-black tracking-tighter text-white mb-6 leading-tight animate-fade-in">
-            RED DE <span className="text-gradient-gold italic">COLABORACIÓN</span>
+            RED DE <span className="text-gradient-gold">COLABORACIÓN</span>
           </h1>
           <p className="text-xl text-gray-400 max-w-3xl mx-auto leading-relaxed animate-fade-in delay-100">
             En VECY NETWORK no gastamos en publicidad tradicional. Premiamos tu influencia. 
-            Ayuda a tus colegas a vender y **gana una parte de la comisión** sin ser el captador ni el comprador.
+            Ayuda a tus colegas a vender y <span className="font-bold text-white">gana una parte de la comisión</span> sin ser el captador ni el comprador.
           </p>
         </div>
       </section>
@@ -64,12 +64,12 @@ export default function RedColaboracion() {
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div className="space-y-8">
               <h2 className="text-4xl font-display font-bold text-white leading-tight">
-                El Fin de la Era <span className="text-primary italic">Dinosaurio</span>.
+                El Fin de la Era <span className="text-primary">Dinosaurio</span>.
               </h2>
               <div className="line-electric w-24"></div>
               <p className="text-gray-400 text-lg">
                 Los portales tradicionales te cobran por publicar y se quedan con tu dinero. En VECY, 
-                creamos un motor de **viralidad humana** donde todos los engranajes ganan.
+                creamos un motor de <span className="font-bold text-white">viralidad humana</span> donde todos los engranajes ganan.
               </p>
               
               <div className="space-y-6">
@@ -128,7 +128,7 @@ export default function RedColaboracion() {
               </div>
 
               <div className="mt-8 pt-8 border-t border-white/10 text-center">
-                <p className="text-xs text-gray-500 italic">
+                <p className="text-xs text-gray-500">
                   * Ejemplo basado en un reparto estándar de comisión del 3% o 5% del valor del inmueble.
                 </p>
               </div>
@@ -141,7 +141,7 @@ export default function RedColaboracion() {
       <section className="py-24 bg-background">
         <div className="container">
           <div className="text-center mb-16">
-            <h2 className="text-5xl font-display font-bold text-white mb-4">¿POR QUÉ <span className="text-primary">UNIRSE</span>?</h2>
+            <h2 className="text-5xl font-display font-bold text-white mb-4">¿POR QUÉ UNIRSE?</h2>
             <div className="line-gold w-32 mx-auto"></div>
           </div>
 
@@ -176,7 +176,7 @@ export default function RedColaboracion() {
         <div className="absolute inset-0 bg-primary/5 -skew-y-3 transform origin-right" />
         <div className="container relative z-10 text-center">
           <h2 className="text-4xl md:text-6xl font-display font-black text-white mb-8">
-            ¿LISTO PARA <span className="text-primary italic">EVOLUCIONAR</span>?
+            ¿LISTO PARA <span className="text-primary">EVOLUCIONAR</span>?
           </h2>
           <p className="text-xl text-gray-400 mb-12 max-w-2xl mx-auto">
             Únete a la primera red inmobiliaria en Colombia que realmente premia el voz a voz.
