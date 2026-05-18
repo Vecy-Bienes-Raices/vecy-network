@@ -241,59 +241,66 @@ export class WhatsAppBot {
     this.messageBuffers.delete(senderId);
 
     try {
-      // Log incoming message
+      // 1. Log incoming message immediately
       await this.logToDb(senderId, 'user', fullText);
 
+      // 2. Extract and process links SEQUENTIALLY
       const urlMatch = fullText.match(/https?:\/\/[^\s]+/g);
-      let processedLinks = 0;
+      let scrapedCount = 0;
       if (urlMatch) {
-        // Limitamos a 5 links por ráfaga para evitar saturación del LLM y bloqueos
-        const linksToProcess = urlMatch.slice(0, 5);
+        // Reducimos el límite a 3 links por mensaje para garantizar éxito total
+        const linksToProcess = urlMatch.slice(0, 3);
         for (const url of linksToProcess) {
           if (esDominioPermitido(url)) {
-            scrapePropertyLink(url).catch(() => { });
-            processedLinks++;
+            try {
+              console.log(`[SCRAPER] Procesando: ${url}`);
+              await scrapePropertyLink(url); // AHORA SÍ ESPERAMOS
+              scrapedCount++;
+            } catch (err) {
+              console.error(`[SCRAPER] Fallo en ${url}:`, err);
+            }
           }
         }
       }
 
+      // 3. Process the overall message with JanIA
       const result = await processWhatsAppMessage(fullText, senderId, userName, hasMedia);
 
       if (result && result.response) {
-        const matchedUsers = Array.from(new Set(result.mentions || []));
-        const allMentionsIds = Array.from(new Set([senderId, ...matchedUsers]));
-        
-        // Obtener contactos para formatear el @etiquetado correctamente
-        const contacts = await Promise.all(allMentionsIds.map(id => this.client.getContactById(id)));
-        
-        // Construimos el prefijo de mención para el remitente
+        // 4. Mejorar el Etiquetado (@ en azul)
+        // El formato correcto es @numero y pasar el ID en el objeto options.mentions
         const senderNumber = senderId.split('@')[0];
         let finalResponse = `@${senderNumber} ${result.response}`;
 
-        // Si hay demasiados links, avisamos
-        if (urlMatch && urlMatch.length > 5) {
-          finalResponse += `\n\n⚠️ *Nota:* He detectado ${urlMatch.length} links, pero solo he procesado los primeros 5 para garantizar la precisión quirúrgica.`;
+        const matchedUsers = Array.from(new Set(result.mentions || []));
+        const allMentionsIds = Array.from(new Set([senderId, ...matchedUsers]));
+
+        // Si excedió el límite de links, avisamos claramente
+        if (urlMatch && urlMatch.length > 3) {
+          finalResponse += `\n\n⚠️ *Nota:* He detectado ${urlMatch.length} links, pero solo he procesado los primeros 3 para mantener mi precisión al 100%. Por favor, envía los demás en grupos de 3.`;
+        } else if (scrapedCount > 0) {
+          finalResponse += `\n\n✅ He procesado exitosamente ${scrapedCount} enlace(s) inmobiliario(s).`;
         }
 
-        // Si hay matches, agregamos las menciones de los interesados al final para que les vibre el cel
+        // Agregar menciones de interesados al final
         if (matchedUsers.length > 0) {
-          finalResponse += `\n\nNotificando a interesados: ${matchedUsers.map(id => `@${id.split('@')[0]}`).join(' ')}`;
+          const mentionTags = matchedUsers.map(id => `@${id.split('@')[0]}`).join(' ');
+          finalResponse += `\n\n🔔 Notificando interesados: ${mentionTags}`;
         }
         
-        // Respuesta en el grupo con el array de objetos de contacto para que WPP los reconozca
+        // 5. Enviar mensaje al grupo con menciones reales
         await this.client.sendMessage(this.targetGroupId, finalResponse, {
-          mentions: contacts
+          mentions: allMentionsIds // Solo pasamos los IDs aquí, WPPJS se encarga
         });
 
-        // Log outgoing response
+        // 6. Log outgoing response
         await this.logToDb(senderId, 'janIA', finalResponse);
 
-        // Nudge proactivo por mensaje directo si faltan datos
+        // 7. Nudge por DM si faltan datos
         if (result.shouldSendDM) {
           try {
-            const dmResponse = `¡Hola, ${userName}! 🧐 He recibido tu mensaje en el grupo, pero para que mi sistema de matching funcione con precisión, necesito que me ayudes completando los datos faltantes. \n\nPor favor, responde a este mensaje con la información requerida. ¡Gracias! ✨\n\n${result.response}`;
+            const dmResponse = `¡Hola, ${userName}! 🧐 He recibido tu mensaje en el grupo, pero necesito que me ayudes completando los datos faltantes para que mi matching funcione. \n\nPor favor, responde aquí mismo. ¡Gracias! ✨\n\n${result.response}`;
             await this.client.sendMessage(senderId, dmResponse);
-            console.log(`[ACTION] DM enviado a ${senderId} por datos incompletos.`);
             await this.logToDb(senderId, 'janIA', `[DM] ${dmResponse}`);
           } catch (dmError) {
             console.error(`Error enviando DM a ${senderId}:`, dmError);
@@ -301,7 +308,11 @@ export class WhatsAppBot {
         }
       }
     } catch (e) {
-      console.error('Error procesando bloque:', e);
+      console.error('[WHATSAPP-BOT] Error crítico procesando bloque:', e);
+      // Fallback: informar del error en el grupo si es posible
+      try {
+        await this.client.sendMessage(this.targetGroupId, `⚠️ Tuve un pequeño inconveniente procesando este lote de información. Por favor, intenta enviar los datos de forma más fragmentada o revisa los enlaces. ✨`);
+      } catch (inner) { }
     }
   }
 
