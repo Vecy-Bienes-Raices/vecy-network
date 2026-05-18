@@ -16,8 +16,17 @@ export type JanIAResult = {
 const JANIA_PROMPT = `
 Eres JanIA, Agente Senior de VECY Network. Experta en Bienes Raíces y Consultoría Jurídica Inmobiliaria.
 
+FILOSOFÍA VECY NETWORK (Voz a Voz):
+- El nombre "VECY NETWORK" nace de nuestra red de colaboración viral.
+- Promueve activamente el sistema "Gana-Gana": Los agentes ganan vPoints compartiendo inmuebles del ecosistema (propios o ajenos) en redes y WhatsApp.
+- Al cerrar un negocio, la comisión se reparte así: 
+  1. Un porcentaje para VECY.
+  2. Una bolsa para los agentes difusores (según sus vPoints).
+  3. El resto se divide 50/50 entre el agente vendedor (captador) y el agente comprador.
+- Anima a los colegas a viralizar cada publicación para que todos ganen.
+
 OBJETIVO:
-Procesar información inmobiliaria con máxima precisión. No permitas que falten datos críticos.
+Procesar información inmobiliaria con máxima precisión y fomentar la colaboración masiva.
 
 PERSONALIDAD Y TONO:
 - Estrictamente profesional, directa y asertiva.
@@ -39,7 +48,7 @@ CAMPOS OBLIGATORIOS (EXTRACCIÓN):
 RESPONDE ÚNICAMENTE CON ESTE JSON:
 {
   "classification": "INMUEBLE | REQUERIMIENTO | CONSULTA_GENERAL | DATOS_INCOMPLETOS",
-  "response": "Tu respuesta profesional pidiendo los datos faltantes o confirmando el éxito.",
+  "response": "Tu respuesta profesional pidiendo los datos faltantes, confirmando el éxito o animando a compartir para ganar vPoints.",
   "missingFields": ["campo1", "campo2"],
   "shouldSendDM": true | false,
   "extractedData": {
@@ -83,6 +92,12 @@ export async function processWhatsAppMessage(
     const rawContent = response.choices[0].message.content;
     const cleanJson = rawContent.replace(/```json|```/g, "").trim();
     const result = JSON.parse(cleanJson) as JanIAResult;
+    
+    // Fix 'undefined' bug: Asegurar que response siempre sea un string
+    if (result.response === undefined || result.response === null) {
+      result.response = "";
+    }
+    
     result.mentions = [];
 
     const lowerText = text.toLowerCase();
@@ -104,9 +119,11 @@ export async function processWhatsAppMessage(
       if (saved && (!result.missingFields || result.missingFields.length === 0)) {
         const matches = await findMatchesForProperty(saved.id);
         if (matches.length > 0) {
-          result.response += `\n\n🎯 He detectado ${matches.length} coincidencias potenciales.`;
           const matchedUsers = matches.map(m => m.idUsuarioWhatsapp).filter((id): id is string => !!id);
           result.mentions.push(...matchedUsers);
+          
+          // Mensaje de match más explícito
+          result.response += `\n\n🎯 ¡ATENCIÓN! He detectado ${matches.length} interesados para este inmueble. Los he etiquetado para que revisen la oportunidad de inmediato. 🚀`;
         }
       }
     } 
@@ -123,9 +140,11 @@ export async function processWhatsAppMessage(
       if (saved && (!result.missingFields || result.missingFields.length === 0)) {
         const matches = await findMatchesForRequirement(saved.id);
         if (matches.length > 0) {
-          result.response += `\n\n🎯 Hay ${matches.length} inmuebles que coinciden con esta búsqueda.`;
           const matchedUsers = matches.map(m => m.idUsuarioWhatsapp).filter((id): id is string => !!id);
           result.mentions.push(...matchedUsers);
+
+          // Mensaje de match más explícito
+          result.response += `\n\n🎯 ¡EXCELENTE! He encontrado ${matches.length} inmuebles que coinciden exactamente con esta búsqueda. He etiquetado a los captadores para cerrar el negocio. 🏠✨`;
         }
       }
     }

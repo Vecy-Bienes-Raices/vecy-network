@@ -199,6 +199,19 @@ export const referralLinks = pgTable("referralLinks", {
 });
 
 /**
+ * Shares table - Tracking viral activity for the multilevel points system
+ */
+export const shares = pgTable("shares", {
+  id: serial("id").primaryKey(),
+  propertyId: integer("propertyId").references(() => properties.id).notNull(),
+  agentId: integer("agentId").references(() => users.id).notNull(),
+  platform: varchar("platform", { length: 50 }).notNull(), // WhatsApp, Facebook, Instagram, etc.
+  shareLink: text("shareLink"), // Optional: link to the specific post
+  pointsAwarded: integer("pointsAwarded").default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+/**
  * Client Ledger table - Commissions and attribution tracking
  */
 export const clientLedger = pgTable("clientLedger", {
@@ -208,6 +221,7 @@ export const clientLedger = pgTable("clientLedger", {
   propertyId: integer("propertyId").references(() => properties.id).notNull(),
   referralToken: varchar("referralToken", { length: 255 }),
   vPointsEarned: integer("vPointsEarned").default(0),
+  shareId: integer("shareId").references(() => shares.id), // Link to the specific share that brought the lead
   status: statusEnum("status").default("active"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
