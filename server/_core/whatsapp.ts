@@ -49,16 +49,22 @@ export class WhatsAppBot {
       if (!db) return;
 
       // Get or create conversation for this WhatsApp user/group
+      // Note: We use sessionId as the key for WhatsApp chats
       let conv = await db.select().from(conversations).where(eq(conversations.sessionId, senderId)).limit(1);
       let conversationId: number;
 
       if (conv.length === 0) {
-        const [newConv] = await db.insert(conversations).values({
-          sessionId: senderId,
-          topic: 'whatsapp',
-          status: 'active'
-        }).returning();
-        conversationId = newConv.id;
+        try {
+          const [newConv] = await db.insert(conversations).values({
+            sessionId: senderId,
+            status: 'active',
+            lastMessage: content.substring(0, 200)
+          }).returning();
+          conversationId = newConv.id;
+        } catch (insertErr) {
+          console.error('[LOG-DB] Failed to create conversation:', insertErr);
+          return;
+        }
       } else {
         conversationId = conv[0].id;
       }
@@ -73,7 +79,7 @@ export class WhatsAppBot {
 
       // Update last message
       await db.update(conversations).set({
-        lastMessage: content,
+        lastMessage: content.substring(0, 200),
         updatedAt: new Date()
       }).where(eq(conversations.id, conversationId));
 
@@ -144,10 +150,31 @@ export class WhatsAppBot {
       console.error('❌ Error de autenticación:', msg);
     });
 
-    this.client.on('ready', () => {
+    this.client.on('ready', async () => {
       console.log('\n🚀 JANIA OPERATIVA - SISTEMA DE MATCHES PROFESIONAL ACTIVADO');
       console.log(`[CONFIG] Umbral de bienvenida: 10 personas. Actual: ${this.pendingWelcomeCount}`);
       this.startTime = Date.now();
+
+      // ANUNCIO OFICIAL DE REGLAS (Versión con @todos)
+      try {
+        const adrianaId = '4900725465196@lid';
+        const chat = await this.client.getChatById(this.targetGroupId);
+        const participants = (chat as any).participants;
+        
+        // Incluimos @todos al inicio. Aunque WhatsApp no lo ponga azul por defecto, 
+        // las menciones en el array 'mentions' harán que a TODOS les llegue la notificación.
+        const announcement = `@todos 📢 *COMUNICADO OFICIAL: LA EVOLUCIÓN INEVITABLE* 🏛️\n\nHola colegas. Soy JanIA. Para mantener nuestra *precisión quirúrgica* y rapidez en los cierres, a partir de hoy solo procesaré un *MÁXIMO DE 3 INMUEBLES, LINKS O REQUERIMIENTOS* por mensaje.\n\n@4900725465196 y todos los miembros, agradezco su colaboración enviando la información en lotes pequeños para que mi motor de matching trabaje al 100% para ustedes. ¡Vamos por esos cierres! 🚀✨`;
+        
+        const mentionIds = participants.map((p: any) => p.id._serialized);
+        if (!mentionIds.includes(adrianaId)) mentionIds.push(adrianaId);
+
+        await this.client.sendMessage(this.targetGroupId, announcement, {
+          mentions: mentionIds
+        });
+        console.log('✅ Anuncio enviado con intención de @todos a todos los miembros.');
+      } catch (e) {
+        console.error('Error en anuncio:', e);
+      }
     });
 
     this.client.on('disconnected', (reason: string) => {
