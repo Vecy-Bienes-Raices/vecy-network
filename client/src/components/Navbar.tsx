@@ -11,7 +11,13 @@ import { useState, useEffect } from 'react';
 import { Menu, X } from 'lucide-react';
 import { useLocation } from 'wouter';
 
-export default function Navbar() {
+interface NavbarProps {
+  logoUrl?: string;
+  brandName?: string;
+  brandSubtitle?: string;
+}
+
+export default function Navbar({ logoUrl, brandName, brandSubtitle }: NavbarProps) {
   const [, navigate] = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -46,14 +52,18 @@ export default function Navbar() {
         <div className="flex items-center gap-3 group cursor-pointer" onClick={() => navigate('/')}>
           <div className="w-12 h-12 flex items-center justify-center transition-all group-hover:scale-105">
             <img 
-              src="/logo-vecy.png" 
-              alt="Vecy Network Logo" 
+              src={logoUrl || "/logo-vecy.png"} 
+              alt="Brand Logo" 
               className="w-full h-full object-contain"
             />
           </div>
           <div className="hidden sm:block">
-            <h1 className="text-xl font-display font-bold text-accent tracking-wider leading-none">VECY</h1>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em] mt-1 italic">NETWORK</p>
+            <h1 className="text-xl font-display font-bold text-accent tracking-wider leading-none">
+              {brandName || "VECY"}
+            </h1>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em] mt-1 italic font-black">
+              {brandSubtitle || "NETWORK"}
+            </p>
           </div>
         </div>
 

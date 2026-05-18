@@ -57,7 +57,11 @@ export default function Agenda() {
   if (isPropertyLoading) {
     return (
       <div className="min-h-screen bg-background text-foreground flex flex-col" style={customStyles}>
-        <Navbar logoUrl={agent?.customLogoUrl || undefined} />
+        <Navbar 
+          logoUrl={agent?.customLogoUrl || undefined} 
+          brandName={agent?.name?.split(' ')[0] || "VECY"}
+          brandSubtitle="AGENDA PRO"
+        />
         <div className="flex-1 flex justify-center items-center">
           <Loader2 className="animate-spin w-10 h-10 text-accent" />
         </div>
@@ -68,7 +72,11 @@ export default function Agenda() {
   if (!property) {
     return (
       <div className="min-h-screen bg-background text-foreground flex flex-col" style={customStyles}>
-        <Navbar logoUrl={agent?.customLogoUrl || undefined} />
+        <Navbar 
+          logoUrl={agent?.customLogoUrl || undefined} 
+          brandName={agent?.name?.split(' ')[0] || "VECY"}
+          brandSubtitle="AGENDA PRO"
+        />
         <div className="flex-1 flex flex-col justify-center items-center">
           <h2 className="text-2xl font-bold text-white mb-4">Inmueble no encontrado</h2>
           <Button variant="outline" className="btn-gold" onClick={() => navigate('/properties')}>
@@ -82,7 +90,11 @@ export default function Agenda() {
   if (isSubmitted) {
     return (
       <div className="min-h-screen bg-background text-foreground flex flex-col" style={customStyles}>
-        <Navbar logoUrl={agent?.customLogoUrl || undefined} />
+        <Navbar 
+          logoUrl={agent?.customLogoUrl || undefined} 
+          brandName={agent?.name?.split(' ')[0] || "VECY"}
+          brandSubtitle="AGENDA PRO"
+        />
         <div className="flex-1 flex flex-col justify-center items-center text-center p-8">
           <div className="bg-white/5 border border-white/10 rounded-2xl glass p-10 max-w-lg w-full">
             <h3 className="text-3xl font-bold text-accent mb-4">¡Solicitud Enviada!</h3>
@@ -100,7 +112,11 @@ export default function Agenda() {
 
   return (
     <div className="min-h-screen bg-background text-foreground" style={customStyles}>
-      <Navbar logoUrl={agent?.customLogoUrl || undefined} />
+      <Navbar 
+        logoUrl={agent?.customLogoUrl || undefined} 
+        brandName={agent?.name?.split(' ')[0] || "VECY"}
+        brandSubtitle="AGENDA PRO"
+      />
 
       <section className="pt-32 pb-20">
         <div className="container max-w-4xl">

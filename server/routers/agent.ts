@@ -1,11 +1,33 @@
 import { z } from "zod";
-import { protectedProcedure, router } from "../_core/trpc";
+import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import { eq, and, desc, isNull } from "drizzle-orm";
 import { getDb } from "../db";
 import { properties, referralLinks, users } from "../../drizzle/schema";
 import { TRPCError } from "@trpc/server";
 
 export const agentRouter = router({
+  // Public: Get agent profile for branding (Agenda Pro, Personal Shops)
+  getProfile: publicProcedure
+    .input(z.object({ id: z.number() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      const agent = await db.select({
+        id: users.id,
+        name: users.name,
+        customLogoUrl: users.customLogoUrl,
+        themeConfig: users.themeConfig,
+        subdomain: users.subdomain,
+      })
+      .from(users)
+      .where(eq(users.id, input.id))
+      .limit(1);
+
+      if (agent.length === 0) throw new TRPCError({ code: "NOT_FOUND", message: "Agent not found" });
+      return agent[0];
+    }),
+
   getMyProperties: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
