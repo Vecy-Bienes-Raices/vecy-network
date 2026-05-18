@@ -40,7 +40,7 @@ function AuthorizationCheckbox({ formData, handleChange, isAgentView, error }) {
   );
 }
 
-function AgendaForm({ propertyName, propertyCode, isLocked, onSuccess }) {
+function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo, onSuccess }) {
   const [, navigate] = useLocation();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -48,6 +48,8 @@ function AgendaForm({ propertyName, propertyCode, isLocked, onSuccess }) {
   const [consentGiven, setConsentGiven] = useState(false);
   const [session, setSession] = useState(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
+
+  const logoToDisplay = customLogo || '/logo-vecy.png';
 
   const normalizeCelular = (raw) => {
     if (!raw) return '+57';
@@ -131,6 +133,7 @@ function AgendaForm({ propertyName, propertyCode, isLocked, onSuccess }) {
       acompanantes: [],
       tipo_cliente: 'Persona', interesado_nombre: '', interesado_tipo_documento: '', interesado_documento: '',
       firma_virtual_base64: '', autorizacion: false, metodoFirma: '', firma_digital_archivo: null,
+      agent_id: agentId || sp.get('agentId') || null, // Atribución del agente
     };
   });
 
@@ -145,9 +148,10 @@ function AgendaForm({ propertyName, propertyCode, isLocked, onSuccess }) {
         ...prev,
         nombre_inmueble: fromUrl_nombre || propertyName || prev.nombre_inmueble,
         codigo_inmueble: fromUrl_codigo || propertyCode || prev.codigo_inmueble,
+        agent_id: agentId || sp2.get('agentId') || prev.agent_id,
       }));
     }
-  }, [propertyName, propertyCode, window.location.search]);
+  }, [propertyName, propertyCode, agentId, window.location.search]);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -283,6 +287,7 @@ function AgendaForm({ propertyName, propertyCode, isLocked, onSuccess }) {
       Object.keys(payload).forEach(key => { if (typeof payload[key] === 'string') payload[key] = payload[key].trim(); });
 
       // La Edge Function genera el ID, inserta en BD y envía notificaciones
+      // Importante: La función de backend ya sabe rutear al agente si agent_id está presente.
       await submitSolicitud(payload, session);
 
       if (onSuccess) {
@@ -328,7 +333,7 @@ function AgendaForm({ propertyName, propertyCode, isLocked, onSuccess }) {
     <>
       <form noValidate onSubmit={handleSubmit}>
         <div className="text-center mb-8">
-        <img src={logoUrl} alt="Logo oficial de Vecy" className="mx-auto h-20 w-20 mb-4 logo-glow-pulse" />
+        <img src={logoToDisplay} alt="Logo oficial" className="mx-auto h-20 w-20 mb-4 logo-glow-pulse object-contain" />
         <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mt-1 block">
           <span className="title-gold-gradient">Verificación de Identidad</span>
         </h2>
