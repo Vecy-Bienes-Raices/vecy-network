@@ -1,0 +1,1 @@
+ALTER TABLE "requirements" ADD COLUMN "name" varchar(255);

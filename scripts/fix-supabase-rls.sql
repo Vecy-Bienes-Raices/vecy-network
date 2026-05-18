@@ -25,9 +25,12 @@ CREATE POLICY "properties_read" ON "properties" FOR SELECT TO anon, authenticate
 DROP POLICY IF EXISTS "properties_write" ON "properties";
 CREATE POLICY "properties_write" ON "properties" FOR ALL TO service_role USING (true) WITH CHECK (true);
 
--- 3. TABLA: requirements (Demandas - Blindaje total para anon)
+-- 3. TABLA: requirements (Demandas - Blindaje para anon, acceso total para JanIA/Backend)
 DROP POLICY IF EXISTS "requirements_security" ON "requirements";
-CREATE POLICY "requirements_security" ON "requirements" FOR ALL TO anon, authenticated USING (false);
+CREATE POLICY "requirements_security" ON "requirements" FOR SELECT TO anon, authenticated USING (false);
+
+DROP POLICY IF EXISTS "requirements_write" ON "requirements";
+CREATE POLICY "requirements_write" ON "requirements" FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 -- 4. TABLA: leads (Privacidad absoluta)
 DROP POLICY IF EXISTS "leads_security" ON "leads";

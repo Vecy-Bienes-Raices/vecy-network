@@ -33,8 +33,8 @@ Si un usuario envía un INMUEBLE o REQUERIMIENTO pero faltan campos obligatorios
 5. Establece "shouldSendDM": true para que el sistema le envíe un recordatorio privado.
 
 CAMPOS OBLIGATORIOS (EXTRACCIÓN):
-- INMUEBLE: propertyType, transactionType, price, zone, bedrooms, bathrooms, areaTotal.
-- REQUERIMIENTO: tipoInmuebleDeseado, tipoNegocioDeseado, presupuestoMax, zonaDeseada, habitacionesMin, banosMin, areaMin.
+- INMUEBLE: name (nombre del usuario), propertyType, transactionType, price, zone, bedrooms, bathrooms, areaTotal.
+- REQUERIMIENTO: name (nombre del usuario), tipoInmuebleDeseado, tipoNegocioDeseado, presupuestoMax, zonaDeseada, habitacionesMin, banosMin, areaMin.
 
 RESPONDE ÚNICAMENTE CON ESTE JSON:
 {
@@ -43,6 +43,7 @@ RESPONDE ÚNICAMENTE CON ESTE JSON:
   "missingFields": ["campo1", "campo2"],
   "shouldSendDM": true | false,
   "extractedData": {
+    "name": "Nombre del Usuario",
     "propertyType": "apartment | house | building | warehouse | farm | hotel | office | land | commercial | loft | consultorio",
     "transactionType": "venta | arriendo | arriendo_temporal",
     "price": "number",
@@ -91,7 +92,7 @@ export async function processWhatsAppMessage(
     // Lógica de guardado para INMUEBLES
     if (isProperty && !isRequirement) {
       const data = {
-        name: result.extractedData?.name || `Inmueble de ${userName || userId}`,
+        name: result.extractedData?.name || userName || `Inmueble de ${userId}`,
         propertyType: result.extractedData?.propertyType || "apartment",
         price: result.extractedData?.price || "0",
         zone: result.extractedData?.zone || "Bogotá",
@@ -112,6 +113,7 @@ export async function processWhatsAppMessage(
     // Lógica de guardado para REQUERIMIENTOS
     else if (isRequirement) {
       const data = {
+        name: result.extractedData?.name || userName || `Requerimiento de ${userId}`,
         tipoInmuebleDeseado: result.extractedData?.tipoInmuebleDeseado || "apartment",
         tipoNegocioDeseado: result.extractedData?.tipoNegocioDeseado || "venta",
         ...result.extractedData
@@ -171,7 +173,24 @@ async function saveProperty(data: InsertProperty, userId: string, rawText: strin
   const db = await getDb();
   if (!db) return null;
   try {
-    const [result] = await db.insert(properties).values({ ...data, idUsuarioWhatsapp: userId, rawText }).returning();
+    // Ordenamos los campos explícitamente para el SQL: Nombre primero, luego el formato oficial
+    const orderedData = {
+      name: data.name,
+      propertyType: data.propertyType,
+      zone: data.zone,
+      price: data.price,
+      antiguedadAnos: data.antiguedadAnos,
+      areaTotal: data.areaTotal,
+      bedrooms: data.bedrooms,
+      bathrooms: data.bathrooms,
+      garages: data.garages,
+      stratum: data.stratum,
+      description: data.description,
+      idUsuarioWhatsapp: userId,
+      rawText: rawText,
+      ...data // Cualquier otro campo extraído
+    };
+    const [result] = await db.insert(properties).values(orderedData).returning();
     return result;
   } catch (e) { 
     console.error("Error saving property:", e);
@@ -183,7 +202,21 @@ async function saveRequirement(data: InsertRequirement, userId: string, rawText:
   const db = await getDb();
   if (!db) return null;
   try {
-    const [result] = await db.insert(requirements).values({ ...data, idUsuarioWhatsapp: userId, rawText }).returning();
+    // Ordenamos los campos explícitamente para el SQL: Nombre primero, luego el formato oficial
+    const orderedData = {
+      name: data.name,
+      tipoInmuebleDeseado: data.tipoInmuebleDeseado,
+      zonaDeseada: data.zonaDeseada,
+      presupuestoMax: data.presupuestoMax,
+      areaMin: data.areaMin,
+      habitacionesMin: data.habitacionesMin,
+      banosMin: data.banosMin,
+      status: "active",
+      idUsuarioWhatsapp: userId,
+      rawText: rawText,
+      ...data // Cualquier otro campo extraído
+    };
+    const [result] = await db.insert(requirements).values(orderedData).returning();
     return result;
   } catch (e) { 
     console.error("Error saving requirement:", e);

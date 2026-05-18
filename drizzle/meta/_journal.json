@@ -15,6 +15,13 @@
       "when": 1778800998577,
       "tag": "0001_colorful_starbolt",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1779066914767,
+      "tag": "0002_tan_harry_osborn",
+      "breakpoints": true
     }
   ]
 }

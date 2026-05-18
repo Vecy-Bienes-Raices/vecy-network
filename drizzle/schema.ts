@@ -100,6 +100,7 @@ export type InsertProperty = typeof properties.$inferInsert;
 export const requirements = pgTable("requirements", {
   id: serial("id").primaryKey(),
   userId: integer("userId").references(() => users.id),
+  name: varchar("name", { length: 255 }),
   tipoInmuebleDeseado: propertyTypeEnum("tipoInmuebleDeseado").notNull(),
   tipoNegocioDeseado: transactionTypeEnum("tipoNegocioDeseado").notNull(),
   ciudadDeseada: varchar("ciudadDeseada", { length: 100 }).notNull().default("Bogotá"),
