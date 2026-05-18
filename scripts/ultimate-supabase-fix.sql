@@ -1,8 +1,8 @@
 -- ============================================================
--- VECY NETWORK — ULTIMATE SECURITY HARDENING (RLS & FUNCTIONS)
+-- VECY NETWORK — ULTIMATE SECURITY DEFINITIVE FIX (RLS & FUNCTIONS)
 -- ============================================================
 
--- 1. Habilitar RLS en TODAS las tablas en el esquema public
+-- 1. Habilitar RLS en TODAS las tablas
 DO $$ 
 DECLARE 
     r record;
@@ -12,24 +12,15 @@ BEGIN
     END LOOP;
 END $$;
 
--- 2. Limpiar políticas existentes para evitar conflictos
-DO $$ 
-DECLARE 
-    r record;
-BEGIN
-    FOR r IN (SELECT tablename, policyname FROM pg_policies WHERE schemaname = 'public') LOOP
-        EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I;', r.policyname, r.tablename);
-    END LOOP;
-END $$;
-
--- 3. Crear Políticas Universales
--- Regla de Oro: service_role tiene acceso TOTAL, anon/authenticated NO tienen acceso a menos que se especifique.
-
+-- 2. Crear Políticas Universales con limpieza previa quirúrgica
 DO $$ 
 DECLARE 
     r record;
 BEGIN
     FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP
+        EXECUTE format('DROP POLICY IF EXISTS "service_access_all" ON public.%I;', r.tablename);
+        EXECUTE format('DROP POLICY IF EXISTS "public_deny_all" ON public.%I;', r.tablename);
+        
         -- Acceso total para service_role (JanIA y Backend interno)
         EXECUTE format('CREATE POLICY "service_access_all" ON public.%I FOR ALL TO service_role USING (true) WITH CHECK (true);', r.tablename);
         
@@ -38,20 +29,15 @@ BEGIN
     END LOOP;
 END $$;
 
--- 4. Excepciones Específicas para el Portal Web
--- properties: Lectura pública de inmuebles disponibles
-DROP POLICY IF EXISTS "public_deny_all" ON properties;
-CREATE POLICY "properties_read_public" ON properties FOR SELECT TO anon, authenticated USING (available = true);
-CREATE POLICY "service_access_all" ON properties FOR ALL TO service_role USING (true) WITH CHECK (true);
+-- 3. Excepciones Específicas para el Portal Web
+DROP POLICY IF EXISTS "properties_read_public" ON public.properties;
+CREATE POLICY "properties_read_public" ON public.properties FOR SELECT TO anon, authenticated USING (available = true);
 
--- propertyImages: Lectura pública de fotos
-DROP POLICY IF EXISTS "public_deny_all" ON "propertyImages";
-CREATE POLICY "images_read_public" ON "propertyImages" FOR SELECT TO anon, authenticated USING (true);
-CREATE POLICY "service_access_all" ON "propertyImages" FOR ALL TO service_role USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "images_read_public" ON public."propertyImages";
+CREATE POLICY "images_read_public" ON public."propertyImages" FOR SELECT TO anon, authenticated USING (true);
 
--- 5. Blindaje de Funciones (Search Path)
--- Esto soluciona el aviso de "mutable search_path"
-ALTER FUNCTION public.buscar_matches_para_inmueble(uuid) SET search_path = public;
+-- 4. Blindaje de Funciones (Corregido a INTEGER)
+ALTER FUNCTION public.buscar_matches_para_inmueble(integer) SET search_path = public;
 
 -- VERIFICACIÓN
 SELECT schemaname, tablename, rowsecurity FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename;
