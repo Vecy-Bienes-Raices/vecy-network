@@ -66,7 +66,7 @@ export default function RedColaboracion() {
             <div className="space-y-8">
               <ScrollReveal direction="left">
                 <h2 className="vecy-title-section">
-                  El Fin de la Era <span className="text-primary">Dinosaurio</span>.
+                  La Evolución <span className="text-primary uppercase">Inevitable</span>.
                 </h2>
                 <div className="line-electric w-24 mb-6"></div>
                 <p className="vecy-paragraph text-lg">
@@ -96,7 +96,7 @@ export default function RedColaboracion() {
             <ScrollReveal direction="right" delay={0.3}>
               <div className="vecy-card-apple p-10 relative overflow-hidden bg-white/[0.02]">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 blur-[100px] -z-10" />
-                <h3 className="text-2xl font-bold text-center text-white mb-10 tracking-widest uppercase">Reparto de Comisión Armagedón</h3>
+                <h3 className="text-2xl font-bold text-center text-white mb-10 tracking-widest uppercase text-balance">Reparto de Comisión: La Evolución Inevitable</h3>
                 
                 <div className="space-y-4">
                   {/* VECY SHARE */}
@@ -108,27 +108,27 @@ export default function RedColaboracion() {
 
                   {/* BOLSAS DE DIFUSORES */}
                   <div className="relative h-16 bg-white/5 rounded-lg border border-primary/40 flex items-center px-4 overflow-hidden group glow-gold-sm">
-                    <div className="absolute inset-0 bg-primary/40 w-[25%] animate-pulse" />
+                    <div className="absolute inset-0 bg-primary/40 w-[15%] animate-pulse" />
                     <div className="flex flex-col relative">
                       <span className="text-xs font-black text-white uppercase">RED DE DIFUSORES (PUNTOS)</span>
                       <span className="text-[10px] text-gray-300">Agentes que compartieron el activo</span>
                     </div>
-                    <span className="ml-auto relative text-lg font-black text-primary">25%</span>
+                    <span className="ml-auto relative text-lg font-black text-primary">15%</span>
                   </div>
 
                   {/* VENDEDOR Y COMPRADOR */}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="relative h-24 bg-white/5 rounded-lg border border-white/10 flex flex-col justify-center items-center group">
-                      <div className="absolute inset-0 bg-white/5 h-1/2 bottom-0 w-full" />
+                      <div className="absolute inset-0 bg-primary/10 h-1/2 bottom-0 w-full" />
                       <Users className="w-6 h-6 text-gray-400 mb-2" />
                       <span className="text-[10px] font-bold text-gray-300 uppercase tracking-tighter">Captador</span>
-                      <span className="text-xl font-black text-white">30%</span>
+                      <span className="text-xl font-black text-white">35%</span>
                     </div>
                     <div className="relative h-24 bg-white/5 rounded-lg border border-white/10 flex flex-col justify-center items-center group">
-                      <div className="absolute inset-0 bg-white/5 h-1/2 bottom-0 w-full" />
+                      <div className="absolute inset-0 bg-primary/10 h-1/2 bottom-0 w-full" />
                       <Target className="w-6 h-6 text-gray-400 mb-2" />
                       <span className="text-[10px] font-bold text-gray-300 uppercase tracking-tighter">Comprador</span>
-                      <span className="text-xl font-black text-white">30%</span>
+                      <span className="text-xl font-black text-white">35%</span>
                     </div>
                   </div>
                 </div>
@@ -158,7 +158,7 @@ export default function RedColaboracion() {
             <ScrollReveal delay={0.1}>
               <div className="vecy-card-apple h-full hover:glow-gold transition-all">
                 <Coins className="w-12 h-12 text-primary mb-6" />
-                <h3 className="text-2xl font-bold text-white mb-4">Ingresos Pasivos</h3>
+                <h3 className="text-2xl font-bold text-white mb-4 uppercase">Ingresos Pasivos</h3>
                 <p className="vecy-paragraph text-sm mb-0">
                   Gana dinero incluso si no tienes inventario propio. Tu única tarea es hacer que los inmuebles de la red lleguen a más personas.
                 </p>
@@ -167,7 +167,7 @@ export default function RedColaboracion() {
             <ScrollReveal delay={0.2}>
               <div className="vecy-card-apple h-full hover:glow-gold transition-all">
                 <Network className="w-12 h-12 text-primary mb-6" />
-                <h3 className="text-2xl font-bold text-white mb-4">Poder de Red</h3>
+                <h3 className="text-2xl font-bold text-white mb-4 uppercase">Poder de Red</h3>
                 <p className="vecy-paragraph text-sm mb-0">
                   Accede a una fuerza de ventas masiva. Cuando tú publicas, cientos de colegas se convierten en tus promotores por incentivos claros.
                 </p>
@@ -176,7 +176,7 @@ export default function RedColaboracion() {
             <ScrollReveal delay={0.3}>
               <div className="vecy-card-apple h-full hover:glow-gold transition-all">
                 <ShieldCheck className="w-12 h-12 text-primary mb-6" />
-                <h3 className="text-2xl font-bold text-white mb-4">Transparencia Total</h3>
+                <h3 className="text-2xl font-bold text-white mb-4 uppercase">Transparencia Total</h3>
                 <p className="vecy-paragraph text-sm mb-0">
                   Todo queda registrado en nuestro Ledger inmutable. Sabrás exactamente cuántos puntos tienes y cuánto ganarás al cierre.
                 </p>
@@ -192,9 +192,9 @@ export default function RedColaboracion() {
         <div className="container relative z-10 text-center">
           <ScrollReveal>
             <h2 className="vecy-title-hero uppercase">
-              ¿LISTO PARA <span className="text-primary">EVOLUCIONAR</span>?
+              ¿LISTO PARA <span className="text-primary uppercase">EVOLUCIONAR</span>?
             </h2>
-            <p className="vecy-subtitle max-w-2xl mx-auto mb-12 uppercase tracking-widest text-sm">
+            <p className="vecy-subtitle max-w-2xl mx-auto mb-12 uppercase tracking-widest text-sm font-bold">
               Únete a la primera red inmobiliaria en Colombia que realmente premia el voz a voz.
             </p>
             <div className="flex flex-col sm:flex-row gap-6 justify-center">
@@ -215,6 +215,7 @@ export default function RedColaboracion() {
         </div>
       </section>
 
+      {/* FOOTER */}
       <footer className="bg-black border-t border-white/10 py-12">
         <div className="container text-center">
           <img src="/logo-vecy.png" alt="Vecy" className="h-10 mx-auto mb-6 opacity-50 grayscale" />

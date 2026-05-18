@@ -22,6 +22,7 @@ import UnbrandedFicha from "./pages/UnbrandedFicha";
 import Agenda from "./pages/Agenda";
 import RedColaboracion from "./pages/RedColaboracion";
 import NuestraHistoria from "./pages/NuestraHistoria";
+import ScrollToTop from "./components/ScrollToTop";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -78,11 +79,12 @@ function App() {
     <ErrorBoundary>
       <ThemeProvider
         defaultTheme="dark"
-        // switchable
+        storageKey="vecy-ui-theme"
       >
         <TooltipProvider>
           <Toaster />
           <OAuthRedirectRestorer />
+          <ScrollToTop />
           <Router />
           <JanIAWidget />
         </TooltipProvider>

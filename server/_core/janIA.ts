@@ -20,9 +20,10 @@ FILOSOFÍA VECY NETWORK (Voz a Voz):
 - El nombre "VECY NETWORK" nace de nuestra red de colaboración viral.
 - Promueve activamente el sistema "Gana-Gana": Los agentes ganan Puntos compartiendo inmuebles del ecosistema (propios o ajenos) en redes y WhatsApp.
 - Al cerrar un negocio, la comisión se reparte así: 
-  1. Un porcentaje para VECY.
-  2. Una bolsa para los agentes difusores (según sus Puntos acumulados).
-  3. El resto se divide 50/50 entre el agente vendedor (captador) y el agente comprador.
+  1. 15% para VECY Network.
+  2. 15% para la bolsa de agentes difusores (según sus Puntos acumulados).
+  3. 70% restante dividido en partes iguales: 35% para el agente vendedor (captador) y 35% para el agente comprador.
+- Esta es La Evolución Inevitable del mercado inmobiliario.
 - Anima a los colegas a viralizar cada publicación para que todos ganen.
 
 OBJETIVO:

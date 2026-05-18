@@ -35,6 +35,10 @@ export default function JanIAWidget({ propertyId, leadId }: JanIAWidgetProps) {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
+  // TRPC Mutations (Properly placed at top level)
+  const chatMutation = trpc.janIA.chat.useMutation();
+  const analyzeFileMutation = trpc.janIA.analyzeFile.useMutation();
+
   // Scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -46,7 +50,7 @@ export default function JanIAWidget({ propertyId, leadId }: JanIAWidgetProps) {
       const welcomeMessage: Message = {
         id: `msg-${Date.now()}`,
         role: 'janIA',
-        content: '¡Hola! Soy JanIA, tu Consultora Senior Inmobiliaria. 🏢\n\nEstoy aquí para acompañarte a explorar nuestro portafolio de **oportunidades exclusivas**, ofrecerte nuestros análisis de mercado, o gestionar rápidamente tu agenda para visitar ese inmueble que ha capturado tu atención.\n\nPara poder brindarte un servicio de alto nivel, **¿con quién tengo el gusto de hablar y por dónde preferirías que comencemos?**',
+        content: '¡Hola! Soy JanIA, Agente Senior de VECY Network. 🏛️\n\nEstoy aquí para asistirte con nuestro portafolio de activos, análisis de mercado y gestión de cierres. Soy experta en optimizar procesos inmobiliarios con IA.\n\n**¿En qué puedo apoyarte hoy para que tu gestión sea más eficiente?**',
         messageType: 'text',
         timestamp: new Date(),
       };
@@ -71,8 +75,8 @@ export default function JanIAWidget({ propertyId, leadId }: JanIAWidgetProps) {
     setIsLoading(true);
 
     try {
-      // Call JanIA API
-      const response = await trpc.janIA.chat.useMutation().mutateAsync({
+      // Call JanIA API using the top-level mutation
+      const response = await chatMutation.mutateAsync({
         sessionId,
         message: inputValue,
         propertyId,
@@ -93,7 +97,7 @@ export default function JanIAWidget({ propertyId, leadId }: JanIAWidgetProps) {
       const errorMessage: Message = {
         id: `msg-${Date.now()}`,
         role: 'janIA',
-        content: 'Disculpa, ocurrió un error. Por favor intenta de nuevo.',
+        content: 'Lo siento, ocurrió un error técnico. Por favor, intenta de nuevo.',
         messageType: 'text',
         timestamp: new Date(),
       };
@@ -165,8 +169,8 @@ export default function JanIAWidget({ propertyId, leadId }: JanIAWidgetProps) {
 
       setMessages(prev => [...prev, userMessage]);
 
-      // Get JanIA response
-      const janIAResponse = await trpc.janIA.chat.useMutation().mutateAsync({
+      // Get JanIA response using the top-level mutation
+      const janIAResponse = await chatMutation.mutateAsync({
         sessionId,
         message: data.transcription || 'Audio message',
         propertyId,
@@ -219,8 +223,8 @@ export default function JanIAWidget({ propertyId, leadId }: JanIAWidgetProps) {
 
       setMessages(prev => [...prev, userMessage]);
 
-      // Get JanIA analysis
-      const janIAResponse = await trpc.janIA.analyzeFile.useMutation().mutateAsync({
+      // Get JanIA analysis using the top-level mutation
+      const janIAResponse = await analyzeFileMutation.mutateAsync({
         sessionId,
         fileUrl: data.fileUrl,
         fileType: file.type,

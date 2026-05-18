@@ -1,4 +1,4 @@
-# ARMAGEDÓN MASTER PLAN: El Extintor de Dinosaurios Inmobiliarios ☄️🏛️
+# LA EVOLUCIÓN INEVITABLE MASTER PLAN: El Futuro del Real Estate 🚀🏛️
 
 VECY NETWORK no es un sitio web; es un ecosistema híbrido que fusiona un **Portal de Clase Mundial** (MetroCuadrado/FincaRaíz) con un **CRM de Alta Performance** (Wasi), orquestado por la **Inteligencia Artificial** de JanIA.
 
@@ -56,10 +56,10 @@ El nombre **VECY NETWORK** nace de nuestra red de colaboración. No gastamos en 
 - [ ] **Sistema de Puntos (Gana-Gana):** 
     *   Cada vez que un agente comparte un inmueble del ecosistema (propio o ajeno) en sus redes sociales o WhatsApp, acumula puntos.
     *   Estos puntos se traducen en una **comisión de cierre** garantizada.
-- [ ] **Reparto de Comisión "Armagedón":** En cada cierre exitoso (venta o arriendo), la comisión total se divide de forma transparente:
-    1.  **VECY Network:** Porcentaje fijo por uso de plataforma e IA.
-    2.  **Agentes Difusores (Multinivel):** Bolsa de puntos para quienes ayudaron a viralizar el activo (según sus puntos acumulados).
-    3.  **Restante:** Dividido en partes **iguales (50/50)** entre el Agente Vendedor (Captador) y el Agente Comprador.
+- [ ] **Reparto de Comisión "La Evolución Inevitable":** En cada cierre exitoso (venta o arriendo), la comisión total se divide de forma transparente:
+    1.  **VECY Network:** 15% fijo por uso de plataforma e IA.
+    2.  **Agentes Difusores (Multinivel):** 15% en bolsa de puntos para quienes ayudaron a viralizar el activo.
+    3.  **Agentes del Cierre:** 70% restante dividido en partes **iguales (35% para el Captador y 35% para el Comprador)**.
 - [ ] **Tracking de Viralidad:** Implementar un botón "Compartir y Ganar" que genere enlaces trackeables para medir cuántas veces y dónde se posteó el inmueble.
 
 ---
@@ -73,7 +73,7 @@ El nombre **VECY NETWORK** nace de nuestra red de colaboración. No gastamos en 
 
 ---
 
-## 📜 VIII. EL STORYTELLING DEL ARMAGEDÓN (La Leyenda VECY)
+## 📜 VIII. EL STORYTELLING DE LA EVOLUCIÓN INEVITABLE (La Leyenda VECY)
 *Objetivo: Evangelizar sobre la evolución tecnológica.*
 
 No somos una empresa nueva; somos el resultado de 8 años de visión disruptiva (desde 2018).
@@ -81,7 +81,7 @@ No somos una empresa nueva; somos el resultado de 8 años de visión disruptiva 
 - [ ] **Página de Historia:** Crear `/historia` con una línea de tiempo interactiva:
     *   **2018:** Nacimiento del "Broker Virtual". Digitalización total con JotForm.
     *   **2020:** Resiliencia en Pandemia. Mientras otros cerraban, VECY operaba 100% digital.
-    *   **2024-2026:** El Armagedón. Integración de JanIA y extinción de procesos obsoletos.
+    *   **2024-2026:** La Evolución Inevitable. Integración de JanIA y extinción de procesos obsoletos.
 - [ ] **El Manifiesto Anti-Dinosaurio:** Explicar quiénes son los dinosaurios (portales con filtros arcaicos, agentes que ignoran el poder del email y la IA) y cómo VECY es el impacto tecnológico que cambia las reglas.
 - [ ] **Compromiso Ambiental:** Resaltar la "Política de Cero Papel" y la eliminación de avisos físicos como pilar ético de la marca.
 
