@@ -72,13 +72,12 @@ export default function Home() {
                 </div>
                 
                 <h1 className="vecy-title-hero text-left mb-6">
-                  LA <span className="text-gradient-gold uppercase">EVOLUCIÓN</span><br />
-                  INEVITABLE DEL SECTOR
+                  VECY <span className="text-gradient-gold uppercase">NETWORK</span>
                 </h1>
                 
                 <p className="vecy-subtitle text-left max-w-xl mb-10 text-xl md:text-2xl leading-relaxed">
-                  Eliminamos la fricción inmobiliaria con Inteligencia Artificial. 
-                  <span className="text-white font-bold block mt-4 italic opacity-80">Cero Esfuerzo. Máxima Precisión.</span>
+                  La evolución inevitable para el sector de los bienes raíces.
+                  <span className="text-white font-bold block mt-4 italic opacity-80">La Red Inmobiliaria Inteligente.</span>
                 </p>
                 
                 <div className="flex flex-col sm:flex-row gap-5">
@@ -122,16 +121,11 @@ export default function Home() {
                 
                 <div className="vecy-card-apple p-1 relative overflow-hidden group hover:scale-[1.02] transition-all duration-700 border-primary/20">
                   <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 via-transparent to-primary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
-                  <video 
-                    autoPlay 
-                    muted 
-                    loop 
-                    playsInline
+                  <img 
+                    src="/portada_vecy_1.png"
+                    alt="Vecy Network Portada"
                     className="w-full aspect-video object-cover rounded-2xl"
-                    poster="/portada_vecy_1.png"
-                  >
-                    <source src="/video_promocional.mp4" type="video/mp4" />
-                  </video>
+                  />
                   <div className="absolute top-6 right-6">
                     <div className="bg-black/60 backdrop-blur-md border border-white/10 px-4 py-2 rounded-full flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full bg-primary animate-ping"></div>
@@ -147,7 +141,7 @@ export default function Home() {
                       <Zap className="w-5 h-5 text-primary" />
                     </div>
                     <div>
-                      <h4 className="text-sm font-bold text-white">Matching Real-Time</h4>
+                      <h4 className="text-sm font-bold text-white">Red Inteligente</h4>
                       <p className="text-[10px] text-gray-400">JanIA Procesando 24/7</p>
                     </div>
                   </div>
