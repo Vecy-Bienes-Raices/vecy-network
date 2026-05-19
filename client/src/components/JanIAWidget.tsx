@@ -314,7 +314,7 @@ export default function JanIAWidget({ propertyId, leadId }: JanIAWidgetProps) {
                 </div>
                 <div>
                   <h3 className="text-primary font-bold text-sm tracking-widest uppercase">JanIA</h3>
-                  <p className="text-muted-foreground text-[10px] uppercase tracking-tighter">Tu Agente IA de VECY</p>
+                  <p className="text-muted-foreground text-[10px] uppercase tracking-tighter">Agente IA de VECY</p>
                 </div>
               </div>
               <button
