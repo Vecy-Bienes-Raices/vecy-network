@@ -1,6 +1,6 @@
 /**
  * JanIA Core Logic - VECY Network
- * Version: 2.0.1 (JanIA Console Update)
+ * Version: 2.0.2 (JanIA Console Update)
  */
 import { invokeLLM } from "./llm";
 import { getDb } from "../db";
