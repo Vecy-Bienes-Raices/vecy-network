@@ -1,6 +1,6 @@
 /**
  * JanIA Core Logic - VECY Network
- * Version: 2.0.3 (Production Ready)
+ * Version: 2.0.4 (Logic Refinement)
  */
 import { invokeLLM } from "./llm";
 import { getDb } from "../db";
@@ -18,40 +18,61 @@ export type JanIAResult = {
 };
 
 const JANIA_PROMPT = `
-Eres JanIA, la Inteligencia Artificial Maestra y Cerebro Logístico de VECY Network. Tu función es procesar datos en silencio y solo hablar para cerrar negocios o educar.
+Eres JanIA, la Inteligencia Artificial Maestra y Cerebro Logístico de VECY Network. Tu función es procesar datos en silencio y solo hablar para cerrar negocios o educar a la red sobre nuestra visión.
 
 DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
 {
-  "classification": "INMUEBLE" | "REQUERIMIENTO" | "CONSULTA_GENERAL" | "RESPUESTA_A_PREGUNTA_IA" | "DATOS_INCOMPLETOS" | "VIOLACION_DE_NORMAS" | "ANALISIS_DE_MERCADO",
-  "extractedData": {
-    // Si la clasificación es INMUEBLE o REQUERIMIENTO, extrae aquí los datos estructurados según el diccionario.
+  "classification": "INMUEBLE | REQUERIMIENTO | CONSULTA_GENERAL | RESPUESTA_A_PREGUNTA_IA | DATOS_INCOMPLETOS",
+  "extractedData": { 
+     "price": number (SOLO NÚMEROS, sin puntos ni signos),
+     "zone": "string",
+     "propertyType": "apartment | house | building | warehouse | farm | hotel | office | land | commercial | loft | consultorio",
+     "transactionType": "venta | arriendo",
+     "externalUrl": "string | null",
+     "description": "string"
   },
-  "missingFields": [
-    // Campos faltantes si aplica.
-  ],
-  "response": "Texto de tu respuesta (respetando la filosofía de comunicación de no usar firmas ni saludos formales).",
-  "shouldSendDM": boolean // true si faltan datos críticos y quieres iniciar un nudge en privado.
+  "missingFields": ["nombre_del_campo_faltante"],
+  "response": "Tu respuesta magistral, sensata y razonable.",
+  "shouldSendDM": boolean
 }
 
-TU FILOSOFÍA DE COMUNICACIÓN:
-1. SIN FIRMAS: Prohibido usar "JanIA", "Con cariño" o despedidas.
-2. SILENCIO OPERATIVO: En el grupo, NO confirmes recepciones de inmuebles o búsquedas. Si no hay match y no es consulta, quédate callada.
-3. RESPUESTAS SABIAS Y AMABLES: Al responder preguntas o consultas en el grupo, sé amable, clara, centrada y sumamente sabia en el sector inmobiliario.
-4. LOGÍSTICA DE MATCHES: Prioriza Link (URL) + @Nombre del Captador. Si es por escrito, resume los datos clave + @Usuario.
+REGLAS DE EXTRACCIÓN CRÍTICAS:
+1. PRICE: Si el usuario dice "$5.500.000", extrae SOLO 5500000 como número.
+2. PROPERTY TYPE: Mapea variaciones (ej: "apartaestudio" -> "apartment", "local" -> "commercial", "bodega" -> "warehouse").
+3. CLASIFICACIÓN: Si detectas datos de un inmueble pero falta el precio o la zona, marca como "DATOS_INCOMPLETOS".
 
-NORMAS Y FORMATOS OFICIALES (OBLIGATORIOS):
-🏠 FORMATO INMUEBLES: VENDO/ARRIENDO, Zona, Precio, Antigüedad, Área, Hab/Baños/Garajes, Estrato, Descripción.
-🔍 FORMATO REQUERIMIENTOS: BUSCO, Zona deseada, Presupuesto, Antigüedad máxima, Área mínima, Hab/Baños/Garajes, Descripción, Urgencia.
+TU IDENTIDAD Y MISIÓN:
+- Eres una Agente IA entrenada para extinguir el ruido y la ineficiencia de las búsquedas manuales en grupos de WhatsApp.
+- Tu misión es que los colegas dejen de trabajar duro para empezar a trabajar de forma INTELIGENTE.
+- Eres el puente tecnológico que conecta ofertas y demandas en segundos.
 
-REGLAS DE EXTRACCIÓN:
-- NAME: Debe ser siempre el Nombre del Colega (asesor). No el título del inmueble.
-- DESCRIPTION: Aquí debes poner el título profesional que generes (ej: "Apartamento en Venta San José de Bavaria") seguido de la descripción detallada.
+PROTOCOLO ANTE VIOLACIÓN DE NORMAS (FOTOS/VIDEOS):
+- Si el sistema te indica que el usuario subió una FOTO o VIDEO directo:
+  1. Marca la clasificación como "DATOS_INCOMPLETOS".
+  2. Activa "shouldSendDM": true.
+  3. En la "response", genera una explicación magistral sobre por qué no usamos fotos (saturación, falta de indexación).
+
+CÓMO EXPLICAS EL SISTEMA (LÓGICA MAGISTRAL DETALLADA):
+- No escatimes en detalles cuando se trate de educar. Si el usuario pregunta, explícale la ingeniería detrás de nuestra red para que entienda el valor real.
+1. TÚ PUBLICAS, YO CONECTO (OMNICANALIDAD DE LINKS):
+   - Registro cada inmueble y requerimiento. No importa dónde tengas alojada tu información.
+   - Extraigo datos de: Wasi, Metrocuadrado, Qrador, Habi, FincaRaíz, Proppit, Ciencuadras, Mercadolibre o sitios con DOMINIO PROPIO (.com, .co, etc.).
+   - Si publican por escrito, DEBEN seguir el formato oficial para que mi cerebro pueda indexarlos.
+   - "Cero Esfuerzo, Máxima Velocidad".
+2. BOLSA DE PUNTOS (EL MOTOR DE PLATA):
+   - Sistema "Gana-Gana". Premiamos la colaboración viral.
+   - Si compartes activos de colegas en tus redes, acumulas puntos.
+   - Al cerrar la venta, el 15% de la comisión alimenta una bolsa que se reparte entre quienes ayudaron a difundir.
+3. TECNOLOGÍA DE ÉLITE Y APOYO LOGÍSTICO:
+   - Aliada logística 24/7. Estructuro datos, analizas mercado y avisas de cierres sin que salgas del chat.
+
+FILOSOFÍA DE COMUNICACIÓN:
+- SIN FIRMAS: Prohibido usar "JanIA", "Con cariño" o despedidas.
+- SILENCIO OPERATIVO: Ingiere en silencio. Solo habla para Matches o Consultas.
+- TONO: Ejecutivo, sensato, razonable y directo. Tuteo profesional.
 
 MODELO DE NEGOCIO:
 - Repartición: 35% Captador, 35% Comprador, 15% VECY, 15% Bolsa de Puntos.
-
-PERSONALIDAD:
-Profesional, atenta, sabia, amable, centrada y enfocada en el negocio inmobiliario de VECY Network.
 `;
 
 export async function processWhatsAppMessage(
@@ -83,26 +104,26 @@ export async function processWhatsAppMessage(
     }
     
     result.mentions = [];
-
+    const extracted = result.extractedData;
     const lowerText = text.toLowerCase();
+    
     const isRequirement = result.classification === "REQUERIMIENTO" || lowerText.includes("busco") || lowerText.includes("necesito");
-    const isProperty = result.classification === "INMUEBLE" || lowerText.includes("vendo") || lowerText.includes("arriendo") || !!result.extractedData?.propertyType;
+    const isProperty = result.classification === "INMUEBLE" || lowerText.includes("vendo") || lowerText.includes("arriendo") || !!extracted?.propertyType;
 
-    // --- CASO A: NUEVO INMUEBLE BUSCANDO COMPRADORES (REQUERIMIENTOS) ---
+    // --- CASO A: INMUEBLE ---
     if (isProperty && !isRequirement) {
-      const extracted = result.extractedData;
+      const missing = [];
+      const priceVal = Number(String(extracted?.price || "0").replace(/[^0-9]/g, ""));
       
-      // CRITERIOS DE CALIDAD: Aceptamos Link OR Formato Escrito (Precio + Zona + Tipo)
-      const isComplete = 
-        extracted?.price && Number(extracted.price) > 0 && 
-        extracted?.zone && 
-        extracted?.propertyType;
+      if (!priceVal || priceVal <= 0) missing.push("Precio");
+      if (!extracted?.zone) missing.push("Zona/Barrio");
+      if (!extracted?.propertyType) missing.push("Tipo de Inmueble");
 
-      if (isComplete) {
+      if (missing.length === 0) {
         const data = {
-          name: userName || extracted?.name || `Asesor ${userId}`, 
+          name: userName || extracted?.name || `Asesor ${userId}`,
           propertyType: extracted?.propertyType || "apartment",
-          price: extracted?.price || "0",
+          price: String(priceVal),
           zone: extracted?.zone || "Bogotá",
           transactionType: extracted?.transactionType || "venta",
           externalUrl: extracted?.externalUrl || null,
@@ -120,29 +141,26 @@ export async function processWhatsAppMessage(
             let matchResponse = `🎯 ¡MATCH DETECTADO! 🎯\n\n`;
             matches.slice(0, 3).forEach((m, idx) => {
               matchResponse += `🔎 REQUERIMIENTO: ${m.tipoInmuebleDeseado.toUpperCase()} en ${m.zonaDeseada || 'Bogotá'} - @${m.idUsuarioWhatsapp?.split('@')[0]}\n`;
-              matchResponse += `🏠 INMUEBLES COMPATIBLES:\n`;
+              matchResponse += `🏠 INMUEBLE COMPATIBLE:\n`;
               matchResponse += `1. ${data.externalUrl || data.name} - @${userId.split('@')[0]}\n\n`;
             });
-            matchResponse += `¡Pónganse en contacto para cerrar! 🚀`;
             result.response = matchResponse;
           }
         }
       } else {
         result.classification = "DATOS_INCOMPLETOS";
         result.shouldSendDM = true;
-        result.response = "Ingesta pausada: Faltan datos críticos según el Formato Oficial (Precio o Zona). Revisa tu chat privado.";
+        result.missingFields = missing;
+        result.response = `Ingesta pausada: Me faltan estos datos clave: *${missing.join(", ")}*. Te he escrito por privado para completarlos. ✨`;
       }
     } 
-    // --- CASO B: NUEVA BÚSQUEDA ENCONTRANDO INVENTARIO (INMUEBLES) ---
+    // --- CASO B: REQUERIMIENTO ---
     else if (isRequirement) {
-      const extracted = result.extractedData;
+      const missing = [];
+      if (!extracted?.tipoInmuebleDeseado) missing.push("Qué tipo de inmueble buscas");
+      if (!extracted?.presupuestoMax && !extracted?.zonaDeseada) missing.push("Presupuesto o Zona");
 
-      // CRITERIOS DE CALIDAD REQUERIMIENTO: Tipo + (Presupuesto o Zona)
-      const isComplete = 
-        extracted?.tipoInmuebleDeseado && 
-        (extracted?.presupuestoMax || extracted?.zonaDeseada);
-
-      if (isComplete) {
+      if (missing.length === 0) {
         const data = {
           name: userName || extracted?.name || `Asesor ${userId}`,
           tipoInmuebleDeseado: extracted?.tipoInmuebleDeseado || "apartment",
@@ -163,14 +181,14 @@ export async function processWhatsAppMessage(
             matches.slice(0, 5).forEach((m, idx) => {
               matchResponse += `${idx + 1}. ${m.externalUrl || m.name} - @${m.idUsuarioWhatsapp?.split('@')[0]}\n`;
             });
-            matchResponse += `\n¡Soliciten la información completa al captador! ✨`;
             result.response = matchResponse;
           }
         }
       } else {
         result.classification = "DATOS_INCOMPLETOS";
         result.shouldSendDM = true;
-        result.response = "Búsqueda pausada: Revisa el Formato Oficial para Requerimientos. Te he enviado un mensaje privado.";
+        result.missingFields = missing;
+        result.response = `Búsqueda pausada: Para ayudarte necesito: *${missing.join(", ")}*. Revisa tu chat privado. ✨`;
       }
     }
 

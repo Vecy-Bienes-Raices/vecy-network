@@ -36,7 +36,7 @@ export class WhatsAppBot {
           '--disable-gpu',
         ],
         executablePath: process.env.CHROME_PATH || undefined,
-        headless: true,
+        headless: false,
         protocolTimeout: 300000,
         timeout: 120000,
       }
