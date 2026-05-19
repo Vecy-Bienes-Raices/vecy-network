@@ -567,7 +567,7 @@
   /* ── VECY GLOBAL TYPOGRAPHY UTILITIES ───────────────────────────────────────── */
   
   .vecy-title-hero {
-    @apply text-5xl md:text-8xl font-bold tracking-tighter text-white mb-8 leading-tight;
+    @apply text-6xl md:text-9xl font-bold tracking-tighter text-white mb-8 leading-tight;
     font-family: "Playfair Display", serif;
   }
 
