@@ -63,24 +63,24 @@ export default function Home() {
         <NetworkBackground />
         
         <div className="container relative z-10 px-4 md:px-6">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <ScrollReveal direction="left" delay={0.2}>
+          <div className="max-w-4xl mx-auto text-center">
+            <ScrollReveal delay={0.2}>
               <div>
-                <div className="flex items-center gap-3 mb-6">
+                <div className="flex items-center justify-center gap-3 mb-6">
                   <span className="vecy-accent-tag">Tecnología de Vanguardia</span>
                   <div className="h-px w-12 bg-primary/40"></div>
                 </div>
                 
-                <h1 className="vecy-title-hero text-left mb-6">
+                <h1 className="vecy-title-hero mb-6">
                   VECY <span className="text-gradient-gold uppercase">NETWORK</span>
                 </h1>
                 
-                <p className="vecy-subtitle text-left max-w-xl mb-10 text-xl md:text-2xl leading-relaxed">
+                <p className="vecy-subtitle max-w-2xl mx-auto mb-10 text-xl md:text-2xl leading-relaxed">
                   La evolución inevitable para el sector de los bienes raíces.
-                  <span className="text-white font-bold block mt-4 italic opacity-80">La Red Inmobiliaria Inteligente.</span>
+                  <span className="text-white font-bold block mt-4 italic opacity-80 uppercase tracking-widest text-sm">La Red Inmobiliaria Inteligente.</span>
                 </p>
                 
-                <div className="flex flex-col sm:flex-row gap-5">
+                <div className="flex flex-col sm:flex-row gap-5 justify-center">
                   <button 
                     onClick={() => navigate('/properties')}
                     className="btn-gold px-10 py-5 text-lg tracking-[0.2em] font-bold group"
@@ -96,7 +96,7 @@ export default function Home() {
                   </button>
                 </div>
 
-                <div className="mt-16 grid grid-cols-3 gap-8 border-t border-white/5 pt-12 max-w-lg">
+                <div className="mt-16 flex justify-center gap-12 border-t border-white/5 pt-12">
                   <div>
                     <p className="text-primary text-3xl font-display font-black mb-1 tracking-tighter">8+</p>
                     <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em]">Años de Visión</p>
@@ -108,45 +108,6 @@ export default function Home() {
                   <div>
                     <p className="text-primary text-3xl font-display font-black mb-1 tracking-tighter">∞</p>
                     <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em]">Efecto Viral</p>
-                  </div>
-                </div>
-              </div>
-            </ScrollReveal>
-
-            <ScrollReveal direction="right" delay={0.4} className="hidden lg:block">
-              <div className="relative group">
-                {/* Floating Elements */}
-                <div className="absolute -top-10 -right-10 w-32 h-32 bg-primary/20 blur-[100px] rounded-full group-hover:bg-primary/30 transition-all duration-700 animate-pulse"></div>
-                <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-primary/20 blur-[120px] rounded-full group-hover:bg-primary/40 transition-all duration-700 delay-300"></div>
-                
-                <div className="vecy-card-apple p-1 relative overflow-hidden group hover:scale-[1.02] transition-all duration-700 border-primary/20">
-                  <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 via-transparent to-primary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
-                  <img 
-                    src="/portada_vecy_1.png"
-                    alt="Vecy Network Portada"
-                    className="w-full aspect-video object-cover rounded-2xl"
-                  />
-                  <div className="absolute top-6 right-6">
-                    <div className="bg-black/60 backdrop-blur-md border border-white/10 px-4 py-2 rounded-full flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-primary animate-ping"></div>
-                      <span className="text-[10px] font-bold text-white tracking-[0.2em] uppercase">VECY CORE ACTIVO</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Info Overlay */}
-                <div className="absolute -bottom-12 -right-8 max-w-[280px] p-6 bg-black/80 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl transform translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-700 delay-200">
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
-                      <Zap className="w-5 h-5 text-primary" />
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-bold text-white">Red Inteligente</h4>
-                      <p className="text-[10px] text-gray-400">JanIA Procesando 24/7</p>
-                    </div>
-                  </div>
-                  <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
-                    <div className="h-full w-2/3 bg-primary animate-shimmer"></div>
                   </div>
                 </div>
               </div>
