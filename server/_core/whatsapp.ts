@@ -19,13 +19,15 @@ export class WhatsAppBot {
   private counterFile: string = path.join(process.cwd(), '.pending_welcome_count');
 
   constructor() {
+    console.log('[WHATSAPP-BOT] Cargando contador...');
     this.loadCounter();
+    
+    console.log('[WHATSAPP-BOT] Inicializando cliente de WhatsApp-Web.js...');
     this.client = new Client({
       authStrategy: new LocalAuth(),
-      webVersionCache: {
-        type: 'remote',
-        remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1012170943-alpha.html',
-      },
+      // No sobreescribimos webVersionCache — dejamos que whatsapp-web.js use
+      // su versión interna compatible (2.3000.1017054665 con caché local).
+      // Usar remotePath con versiones distintas rompe la inyección del cliente.
       puppeteer: {
         args: [
           '--no-sandbox',
@@ -35,12 +37,16 @@ export class WhatsAppBot {
         ],
         executablePath: process.env.CHROME_PATH || undefined,
         headless: true,
+        protocolTimeout: 300000,
+        timeout: 120000,
       }
     });
 
+    console.log('[WHATSAPP-BOT] Configurando escuchadores de eventos...');
     this.setupEventListeners();
     this.setupGracefulShutdown();
     this.setupWeeklySchedule();
+    console.log('[WHATSAPP-BOT] Constructor finalizado.');
   }
 
   private async logToDb(senderId: string, role: 'user' | 'janIA', content: string) {
@@ -416,6 +422,7 @@ Recuerden: *¡Links sí, fotos directas no!* 🧐 Ayúdenme a ayudarlos y hagamo
   }
 
   public initialize() {
+    console.log('[WHATSAPP-BOT] Ejecutando initialize()... (esto puede tardar unos segundos)');
     this.client.initialize();
   }
 }
