@@ -54,10 +54,10 @@ export async function processWhatsAppMessage(
   scrapedData: any[] = []
 ): Promise<JanIAResult> {
   try {
-    // Inyectamos los datos scrapeados en el contexto para evitar incoherencias
+    // Inyectamos los datos técnicos de los links si existen
     let contextText = `Mensaje de ${userName || userId}: ${text}`;
     if (scrapedData.length > 0) {
-      contextText += `\n\n[DATOS TÉCNICOS EXTRAÍDOS POR EL SCRAPER]:\n${JSON.stringify(scrapedData, null, 2)}`;
+      contextText += `\n\n[SISTEMA: DATOS EXTRAÍDOS DE LOS LINKS]:\n${JSON.stringify(scrapedData, null, 2)}`;
     }
 
     const userMessage = hasMedia ? `[SISTEMA: EL USUARIO SUBIÓ UNA FOTO O VIDEO DIRECTO] ${text}` : contextText;
@@ -71,7 +71,7 @@ export async function processWhatsAppMessage(
     });
 
     if (!response || !response.choices || !response.choices[0]) {
-      throw new Error("Respuesta inválida o vacía del LLM");
+      throw new Error("Respuesta inválida del LLM");
     }
     const rawContent = response.choices[0].message.content;
     const cleanJson = rawContent.replace(/```json|```/g, "").trim();

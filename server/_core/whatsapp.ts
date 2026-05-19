@@ -24,10 +24,10 @@ export class WhatsAppBot {
     
     console.log('[WHATSAPP-BOT] Inicializando cliente de WhatsApp-Web.js...');
     this.client = new Client({
-      authStrategy: new LocalAuth(),
-      // No sobreescribimos webVersionCache — dejamos que whatsapp-web.js use
-      // su versión interna compatible (2.3000.1017054665 con caché local).
-      // Usar remotePath con versiones distintas rompe la inyección del cliente.
+      authStrategy: new LocalAuth({
+        clientId: 'jania-main',
+        dataPath: './.wwebjs_auth'
+      }),
       puppeteer: {
         args: [
           '--no-sandbox',
@@ -36,9 +36,8 @@ export class WhatsAppBot {
           '--disable-gpu',
         ],
         executablePath: process.env.CHROME_PATH || undefined,
-        headless: false,
+        headless: true,
         protocolTimeout: 300000,
-        timeout: 120000,
       }
     });
 
@@ -323,6 +322,15 @@ export class WhatsAppBot {
           });
           
           await this.logToDb(senderId, 'janIA', finalResponse);
+        } else if (result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO") {
+          // 5. CONFIRMACIÓN PRIVADA (ÉXITO SIN MATCH)
+          // Si JanIA guardó algo pero no hubo match (silencio en grupo), avisamos por DM para paz mental.
+          try {
+            const type = result.classification === "INMUEBLE" ? "tu inmueble" : "tu búsqueda";
+            const successMsg = `¡Hola, ${userName}! 🧐 He registrado exitosamente ${type} en mi cerebro logístico. Por ahora no he encontrado un match inmediato en el grupo, pero seguiré monitoreando 24/7. ¡Te avisaré en cuanto haya negocio! 🚀✨`;
+            await this.client.sendMessage(senderId, successMsg);
+            await this.logToDb(senderId, 'janIA', `[DM-SUCCESS] ${successMsg}`);
+          } catch (e) {}
         }
 
         // 4. DM PROACTIVO: Solo si JanIA lo pide (shouldSendDM) y NO hubo match
