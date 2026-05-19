@@ -1,3 +1,7 @@
+/**
+ * JanIA Core Logic - VECY Network
+ * Version: 2.0.1 (JanIA Console Update)
+ */
 import { invokeLLM } from "./llm";
 import { getDb } from "../db";
 import { properties, requirements, InsertProperty, InsertRequirement } from "../../drizzle/schema";
