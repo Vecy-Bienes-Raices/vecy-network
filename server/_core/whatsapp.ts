@@ -313,7 +313,11 @@ export class WhatsAppBot {
         // Solo enviamos al GRUPO si es un MATCH o una CONSULTA_GENERAL.
         // En DM siempre respondemos.
         const isMatch = finalResponse.includes("MATCH DETECTADO");
-        const isConsultation = result.classification === "CONSULTA_GENERAL";
+        const isConsultation = 
+          result.classification === "CONSULTA_GENERAL" ||
+          result.classification === "RESPUESTA_A_PREGUNTA_IA" ||
+          result.classification === "ANALISIS_DE_MERCADO" ||
+          result.classification === "VIOLACION_DE_NORMAS";
         const shouldBroadcast = !isGroup || isMatch || isConsultation;
 
         if (shouldBroadcast) {
