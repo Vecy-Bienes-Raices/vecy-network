@@ -15,14 +15,15 @@ import Blog from "./pages/Blog";
 import Investors from "./pages/Investors";
 import Services from "./pages/Services";
 import Contact from "./pages/Contact";
-import JanIAWidget from "./components/JanIAWidget";
 import AgentDashboard from "./pages/AgentDashboard";
 import StealthPropertyView from "./pages/StealthPropertyView";
 import UnbrandedFicha from "./pages/UnbrandedFicha";
 import Agenda from "./pages/Agenda";
 import RedColaboracion from "./pages/RedColaboracion";
 import NuestraHistoria from "./pages/NuestraHistoria";
+import JanIAConsole from "./pages/JanIAConsole";
 import ScrollToTop from "./components/ScrollToTop";
+import JanIAFloatingButton from "./components/JanIAFloatingButton";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -42,6 +43,7 @@ function Router() {
       <Route path={"/agenda/:propertyId"} component={Agenda} />
       <Route path={"/red-colaboracion"} component={RedColaboracion} />
       <Route path={"/historia"} component={NuestraHistoria} />
+      <Route path={"/jania"} component={JanIAConsole} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
@@ -86,7 +88,7 @@ function App() {
           <OAuthRedirectRestorer />
           <ScrollToTop />
           <Router />
-          <JanIAWidget />
+          <JanIAFloatingButton />
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>
