@@ -1,19 +1,10 @@
 import React, { useState } from 'react';
 import Navbar from '@/components/Navbar';
-import PropertyCard from '@/components/PropertyCard';
 import { useLocation } from 'wouter';
 import { 
-  Building2, 
-  Search, 
-  TrendingUp, 
   MapPin, 
   ArrowRight,
-  ShieldCheck,
-  Zap,
-  Globe,
-  Clock,
-  Sparkles,
-  ChevronRight
+  Zap
 } from 'lucide-react';
 import NetworkBackground from '@/components/NetworkBackground';
 import { ScrollReveal } from '@/components/ScrollReveal';
@@ -65,8 +56,8 @@ export default function Home() {
         <div className="container relative z-10 px-4 md:px-6">
           <div className="max-w-4xl mx-auto text-center">
             <ScrollReveal delay={0.2}>
-              <div>
-                <div className="flex items-center justify-center gap-3 mb-6">
+              <div className="flex flex-col items-center">
+                <div className="flex items-center gap-3 mb-6">
                   <span className="vecy-accent-tag">Tecnología de Vanguardia</span>
                   <div className="h-px w-12 bg-primary/40"></div>
                 </div>
