@@ -295,7 +295,18 @@ export class WhatsAppBot {
 
       if (result && result.response) {
         const adrianaId = '4900725465196@lid';
-        const senderNumber = senderId.split('@')[0];
+        let senderNumber = senderId.split('@')[0];
+        let mentionJid = senderId;
+
+        try {
+          const contact = await this.client.getContactById(senderId);
+          if (contact && contact.id && contact.id.user) {
+            senderNumber = contact.id.user;
+            mentionJid = contact.id._serialized;
+          }
+        } catch (contactErr) {
+          console.error('[WHATSAPP-BOT] Error fetching contact info:', contactErr);
+        }
         
         let finalResponse = result.response;
 
@@ -303,11 +314,11 @@ export class WhatsAppBot {
         
         // En grupos, si no es un MATCH o una CONSULTA, añadimos la mención para que sepa de quién hablamos (aunque el bot esté en silencio, esto es por seguridad)
         if (isGroup && !finalResponse.includes("MATCH DETECTADO")) {
-          finalResponse = `@${senderNumber} ${result.response}`;
+          finalResponse = `¡Hola, @${senderNumber}! ${result.response}`;
         }
 
         const matchedUsers = Array.from(new Set(result.mentions || []));
-        const specificMentionsIds = Array.from(new Set([senderId, adrianaId, ...matchedUsers]));
+        const specificMentionsIds = Array.from(new Set([mentionJid, adrianaId, ...matchedUsers]));
 
         // LÓGICA DE SILENCIO: 
         // Solo enviamos al GRUPO si es un MATCH o una CONSULTA_GENERAL.
