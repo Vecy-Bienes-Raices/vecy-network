@@ -43,7 +43,7 @@ export default function NuestraHistoria() {
     },
     {
       year: "2024-2026",
-      title: "El Armagedón de la IA",
+      title: "Evolución Inevitable de la IA",
       description: "Surgimiento del ecosistema VECY GOLD. Integración total de JanIA, Avalúos Pro y agendamiento inteligente para extinguir la ineficiencia.",
       icon: <Zap className="w-6 h-6 text-primary" />,
       links: [
@@ -97,14 +97,14 @@ export default function NuestraHistoria() {
               </div>
             </ScrollReveal>
 
-            {/* EL ARMAGEDÓN */}
+            {/* EVOLUCIÓN INEVITABLE */}
             <ScrollReveal direction="right" delay={0.1}>
               <div className="vecy-card-apple border-primary/10 bg-primary/5 group hover:border-primary/40 shadow-[0_0_30px_rgba(191,149,63,0.05)]">
                 <div className="flex items-center gap-4 mb-6">
                   <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
                     <Zap className="w-8 h-8 text-primary group-hover:scale-110 transition-transform" />
                   </div>
-                  <h2 className="text-2xl font-display font-bold text-white uppercase tracking-wider">El Armagedón</h2>
+                  <h2 className="text-2xl font-display font-bold text-white uppercase tracking-wider">Evolución Inevitable</h2>
                 </div>
                 <ul className="space-y-4 text-gray-400">
                   <li className="flex gap-3"><span className="text-primary font-bold">✓</span> Matching quirúrgico y proactivo gestionado por JanIA.</li>
@@ -198,7 +198,7 @@ export default function NuestraHistoria() {
         <div className="container text-center relative z-10">
           <ScrollReveal>
             <h2 className="vecy-title-hero">
-              SÉ PARTE DEL <span className="text-gradient-gold uppercase">Armagedón</span>
+              SÉ PARTE DE LA <span className="text-gradient-gold uppercase">Evolución</span>
             </h2>
             <p className="vecy-subtitle max-w-2xl mx-auto mb-12">
               Deja atrás la era de los dinosaurios. Únete a la red inmobiliaria más avanzada de Colombia y evoluciona hacia lo extraordinario.

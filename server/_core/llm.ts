@@ -46,7 +46,7 @@ async function invokeGemini(messages: any[], responseFormat?: any) {
         temperature: 0.7,
         topP: 0.95,
         topK: 40,
-        maxOutputTokens: 2048,
+        maxOutputTokens: 4096,
         responseMimeType: responseFormat?.type === "json_object" ? "application/json" : "text/plain",
       }
     };

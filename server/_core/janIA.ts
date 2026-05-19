@@ -14,59 +14,26 @@ export type JanIAResult = {
 };
 
 const JANIA_PROMPT = `
-Eres JanIA, Agente Senior de VECY Network. Experta en Bienes Raíces y Consultoría Jurídica Inmobiliaria.
+Eres JanIA, la Inteligencia Artificial Maestra y Cerebro Logístico de VECY Network. Tu función es procesar datos en silencio y solo hablar para cerrar negocios o educar.
 
-FILOSOFÍA VECY NETWORK (Voz a Voz):
-- El nombre "VECY NETWORK" nace de nuestra red de colaboración viral.
-- Promueve activamente el sistema "Gana-Gana": Los agentes ganan Puntos compartiendo inmuebles (propios o ajenos) en redes y WhatsApp.
-- Al cerrar un negocio, la comisión se reparte así: 15% VECY, 15% Bolsa de Puntos, 35% Captador, 35% Comprador.
-- Esta es La Evolución Inevitable del mercado.
+TU FILOSOFÍA DE COMUNICACIÓN:
+1. SIN FIRMAS: Prohibido usar "JanIA", "Con cariño" o despedidas.
+2. SILENCIO OPERATIVO: En el grupo, NO confirmes recepciones. Si no hay match y no es consulta, quédate callada.
+3. LOGÍSTICA DE MATCHES: Prioriza Link (URL) + @Nombre del Captador. Si es por escrito, resume los datos clave + @Usuario.
 
-OBJETIVO:
-Procesar información inmobiliaria con máxima precisión. NUNCA respondas con un texto vacío. 
-Captura CUALQUIER texto (manuscrito, copiado o links) y estructúralo. 
-Si el usuario envía múltiples enlaces o descripciones, resume lo que has procesado y solicita lo que falte.
+NORMAS Y FORMATOS OFICIALES (OBLIGATORIOS):
+🏠 FORMATO INMUEBLES: VENDO/ARRIENDO, Zona, Precio, Antigüedad, Área, Hab/Baños/Garajes, Estrato, Descripción.
+🔍 FORMATO REQUERIMIENTOS: BUSCO, Zona deseada, Presupuesto, Antigüedad máxima, Área mínima, Hab/Baños/Garajes, Descripción, Urgencia.
 
-PERSONALIDAD Y TONO:
-- Estrictamente profesional, directa y asertiva.
-- Usa un tono de TUTEO (tú, te, ti) para sonar amable y cercana con tus colegas.
-- Cero "cháchara" o preámbulos innecesarios.
-- Saluda por el nombre y despídete con: "Con cariño, tu JanIA".
+REGLAS DE EXTRACCIÓN:
+- NAME: Debe ser siempre el Nombre del Colega (asesor). No el título del inmueble.
+- DESCRIPTION: Aquí debes poner el título profesional que generes (ej: "Apartamento en Venta San José de Bavaria") seguido de la descripción detallada.
 
-PROTOCOLO DE RESPUESTA:
-- Si el inmueble/requerimiento está COMPLETO: Confirma el guardado, indica que estás buscando matches y anima a la red a viralizar para ganar Puntos.
-- Si faltan datos: Confirma lo recibido y solicita CLARAMENTE los campos faltantes uno por uno.
-- Para requerimientos (búsquedas): Siempre reporta si hay matches y lista los Top 3 inmuebles encontrados (Nombre, Zona, Precio).
-- Para consultas generales: Responde de forma ejecutiva y útil.
+MODELO DE NEGOCIO:
+- Repartición: 35% Captador, 35% Comprador, 15% VECY, 15% Bolsa de Puntos.
 
-CAMPOS OBLIGATORIOS (EXTRACCIÓN):
-- INMUEBLE: name (nombre del usuario), propertyType, transactionType, price, zone, bedrooms, bathrooms, areaTotal.
-- REQUERIMIENTO: name (nombre del usuario), tipoInmuebleDeseado, tipoNegocioDeseado, presupuestoMax, zonaDeseada, habitacionesMin, banosMin, areaMin.
-
-RESPONDE ÚNICAMENTE CON ESTE JSON:
-{
-  "classification": "INMUEBLE | REQUERIMIENTO | CONSULTA_GENERAL | DATOS_INCOMPLETOS",
-  "response": "Tu respuesta profesional obligatoria en tono de TUTEO. Resume el procesamiento si aplica.",
-  "missingFields": ["campo1", "campo2"],
-  "shouldSendDM": true | false,
-  "extractedData": {
-    "name": "Nombre del Usuario",
-    "propertyType": "apartment | house | building | warehouse | farm | hotel | office | land | commercial | loft | consultorio",
-    "transactionType": "venta | arriendo | arriendo_temporal",
-    "price": "number",
-    "city": "Bogotá",
-    "zone": "Barrio/Sector",
-    "bedrooms": "number",
-    "bathrooms": "number",
-    "areaTotal": "number",
-    "tipoInmuebleDeseado": "apartment | house | building | warehouse | farm | hotel | office | land | commercial | loft | consultorio",
-    "tipoNegocioDeseado": "venta | arriendo | arriendo_temporal",
-    "presupuestoMax": "number",
-    "habitacionesMin": "number",
-    "banosMin": "number",
-    "zonaDeseada": "Barrio/Sector"
-  }
-}
+PERSONALIDAD:
+Ejecutiva, técnica, directa y asertiva.
 `;
 
 export async function processWhatsAppMessage(
@@ -76,7 +43,6 @@ export async function processWhatsAppMessage(
   hasMedia: boolean = false
 ): Promise<JanIAResult> {
   try {
-    // Si tiene media (foto/video), forzamos la amonestación
     const userMessage = hasMedia ? `[SISTEMA: EL USUARIO SUBIÓ UNA FOTO O VIDEO DIRECTO] ${text}` : `Mensaje de ${userName || userId}: ${text}`;
 
     const response = await invokeLLM({
@@ -91,7 +57,6 @@ export async function processWhatsAppMessage(
     const cleanJson = rawContent.replace(/```json|```/g, "").trim();
     const result = JSON.parse(cleanJson) as JanIAResult;
     
-    // Fix 'undefined' bug: Asegurar que response siempre sea un string
     if (result.response === undefined || result.response === null) {
       result.response = "";
     }
@@ -102,55 +67,89 @@ export async function processWhatsAppMessage(
     const isRequirement = result.classification === "REQUERIMIENTO" || lowerText.includes("busco") || lowerText.includes("necesito");
     const isProperty = result.classification === "INMUEBLE" || lowerText.includes("vendo") || lowerText.includes("arriendo") || !!result.extractedData?.propertyType;
 
-    // Lógica de guardado para INMUEBLES
+    // --- CASO A: NUEVO INMUEBLE BUSCANDO COMPRADORES (REQUERIMIENTOS) ---
     if (isProperty && !isRequirement) {
-      const data = {
-        name: result.extractedData?.name || userName || `Inmueble de ${userId}`,
-        propertyType: result.extractedData?.propertyType || "apartment",
-        price: result.extractedData?.price || "0",
-        zone: result.extractedData?.zone || "Bogotá",
-        transactionType: result.extractedData?.transactionType || "venta",
-        ...result.extractedData
-      } as InsertProperty;
+      const extracted = result.extractedData;
+      
+      // CRITERIOS DE CALIDAD: Aceptamos Link OR Formato Escrito (Precio + Zona + Tipo)
+      const isComplete = 
+        extracted?.price && Number(extracted.price) > 0 && 
+        extracted?.zone && 
+        extracted?.propertyType;
 
-      const saved = await saveProperty(data, userId, text);
-      if (saved && (!result.missingFields || result.missingFields.length === 0)) {
-        const matches = await findMatchesForProperty(saved.id);
-        if (matches.length > 0) {
-          const matchedUsers = matches.map(m => m.idUsuarioWhatsapp).filter((id): id is string => !!id && id.includes('@'));
-          result.mentions.push(...matchedUsers);
-          
-          // Mensaje de match más explícito
-          result.response += `\n\n🎯 ¡ATENCIÓN! He detectado ${matches.length} interesados para este inmueble. Los he etiquetado para que revisen la oportunidad de inmediato. 🚀`;
+      if (isComplete) {
+        const data = {
+          name: userName || extracted?.name || `Asesor ${userId}`, 
+          propertyType: extracted?.propertyType || "apartment",
+          price: extracted?.price || "0",
+          zone: extracted?.zone || "Bogotá",
+          transactionType: extracted?.transactionType || "venta",
+          externalUrl: extracted?.externalUrl || null,
+          description: extracted?.description || null,
+          ...extracted
+        } as InsertProperty;
+
+        const saved = await saveProperty(data, userId, text);
+        if (saved) {
+          const matches = await findMatchesForProperty(saved.id);
+          if (matches.length > 0) {
+            const matchedUsers = matches.map(m => m.idUsuarioWhatsapp).filter((id): id is string => !!id && id.includes('@'));
+            result.mentions.push(...matchedUsers, userId);
+
+            let matchResponse = `🎯 ¡MATCH DETECTADO! 🎯\n\n`;
+            matches.slice(0, 3).forEach((m, idx) => {
+              matchResponse += `🔎 REQUERIMIENTO: ${m.tipoInmuebleDeseado.toUpperCase()} en ${m.zonaDeseada || 'Bogotá'} - @${m.idUsuarioWhatsapp?.split('@')[0]}\n`;
+              matchResponse += `🏠 INMUEBLES COMPATIBLES:\n`;
+              matchResponse += `1. ${data.externalUrl || data.name} - @${userId.split('@')[0]}\n\n`;
+            });
+            matchResponse += `¡Pónganse en contacto para cerrar! 🚀`;
+            result.response = matchResponse;
+          }
         }
+      } else {
+        result.classification = "DATOS_INCOMPLETOS";
+        result.shouldSendDM = true;
+        result.response = "Ingesta pausada: Faltan datos críticos según el Formato Oficial (Precio o Zona). Revisa tu chat privado.";
       }
     } 
-    // Lógica de guardado para REQUERIMIENTOS
+    // --- CASO B: NUEVA BÚSQUEDA ENCONTRANDO INVENTARIO (INMUEBLES) ---
     else if (isRequirement) {
-      const data = {
-        name: result.extractedData?.name || userName || `Requerimiento de ${userId}`,
-        tipoInmuebleDeseado: result.extractedData?.tipoInmuebleDeseado || "apartment",
-        tipoNegocioDeseado: result.extractedData?.tipoNegocioDeseado || "venta",
-        ...result.extractedData
-      } as InsertRequirement;
+      const extracted = result.extractedData;
 
-      const saved = await saveRequirement(data, userId, text);
-      if (saved && (!result.missingFields || result.missingFields.length === 0)) {
-        const matches = await findMatchesForRequirement(saved.id);
-        if (matches.length > 0) {
-          const matchedUsers = matches.map(m => m.idUsuarioWhatsapp).filter((id): id is string => !!id && id.includes('@'));
-          result.mentions.push(...matchedUsers);
+      // CRITERIOS DE CALIDAD REQUERIMIENTO: Tipo + (Presupuesto o Zona)
+      const isComplete = 
+        extracted?.tipoInmuebleDeseado && 
+        (extracted?.presupuestoMax || extracted?.zonaDeseada);
 
-          // Listar los inmuebles que hicieron match (top 3)
-          let matchDetails = "";
-          matches.slice(0, 3).forEach((m, idx) => {
-            const price = Number(m.price).toLocaleString('es-CO');
-            matchDetails += `\n🏠 ${idx + 1}. ${m.name} | 📍 ${m.zone} | 💰 $${price}`;
-          });
+      if (isComplete) {
+        const data = {
+          name: userName || extracted?.name || `Asesor ${userId}`,
+          tipoInmuebleDeseado: extracted?.tipoInmuebleDeseado || "apartment",
+          tipoNegocioDeseado: extracted?.tipoNegocioDeseado || "venta",
+          ...extracted
+        } as InsertRequirement;
 
-          // Mensaje de match más explícito con detalles
-          result.response += `\n\n🎯 ¡EXCELENTE! He encontrado ${matches.length} inmuebles que coinciden con tu búsqueda. Aquí tienes los más destacados:${matchDetails}\n\nHe etiquetado a los captadores para cerrar el negocio contigo. 🏠✨`;
+        const saved = await saveRequirement(data, userId, text);
+        if (saved) {
+          const matches = await findMatchesForRequirement(saved.id);
+          if (matches.length > 0) {
+            const matchedUsers = matches.map(m => m.idUsuarioWhatsapp).filter((id): id is string => !!id && id.includes('@'));
+            result.mentions.push(...matchedUsers, userId);
+
+            let matchResponse = `🎯 ¡MATCH DETECTADO! 🎯\n\n`;
+            matchResponse += `🔎 REQUERIMIENTO: ${data.tipoInmuebleDeseado.toUpperCase()} en ${data.zonaDeseada || 'Bogotá'} - @${userId.split('@')[0]}\n\n`;
+            matchResponse += `🏠 INMUEBLES COMPATIBLES:\n`;
+            matches.slice(0, 5).forEach((m, idx) => {
+              matchResponse += `${idx + 1}. ${m.externalUrl || m.name} - @${m.idUsuarioWhatsapp?.split('@')[0]}\n`;
+            });
+            matchResponse += `\n¡Soliciten la información completa al captador! ✨`;
+            result.response = matchResponse;
+          }
         }
+      } else {
+        result.classification = "DATOS_INCOMPLETOS";
+        result.shouldSendDM = true;
+        result.response = "Búsqueda pausada: Revisa el Formato Oficial para Requerimientos. Te he enviado un mensaje privado.";
       }
     }
 
@@ -159,7 +158,7 @@ export async function processWhatsAppMessage(
     console.error("Error in processWhatsAppMessage:", error);
     return {
       classification: "CONSULTA_GENERAL",
-      response: "Lo siento, tuve un inconveniente técnico momentáneo. Ya estoy operativa nuevamente. ¿En qué puedo apoyarte? ✨",
+      response: "He tenido un inconveniente técnico momentáneo procesando esta lógica. Ya estoy operativa.",
       mentions: []
     };
   }
@@ -173,8 +172,7 @@ export async function generateWelcomeMessage(count: number): Promise<string> {
       INSTRUCCIÓN ADICIONAL:
       Han ingresado ${count} nuevos integrantes a VECY Network. 
       Escribe un mensaje de bienvenida profesional y directo. 
-      
-      Explícales que eres su asistente IA para matching automático y que deben seguir los formatos oficiales para garantizar resultados precisos. 
+      Explícales que eres el cerebro de matching y que deben seguir los formatos oficiales.
       
       RESPONDE SOLO CON EL TEXTO DEL MENSAJE, NO USES JSON PARA ESTA TAREA.
     `;
@@ -189,7 +187,7 @@ export async function generateWelcomeMessage(count: number): Promise<string> {
     return response.choices[0].message.content.trim();
   } catch (error) {
     console.error("Error generating welcome message:", error);
-    return `Bienvenidos a VECY Network. ✨ Soy JanIA, tu asistente IA. Estoy aquí para ayudarte con el matching automático de tus inmuebles y requerimientos. Por favor, sigue los formatos oficiales para mejores resultados.`;
+    return `Bienvenidos a VECY Network. ✨ Soy JanIA, el cerebro de matching automático. Por favor, sigan los formatos oficiales para garantizar cierres efectivos.`;
   }
 }
 
@@ -197,7 +195,6 @@ async function saveProperty(data: InsertProperty, userId: string, rawText: strin
   const db = await getDb();
   if (!db) return null;
   try {
-    // Ordenamos los campos explícitamente para el SQL: Nombre primero, luego el formato oficial
     const orderedData = {
       name: data.name,
       propertyType: data.propertyType,
@@ -210,9 +207,10 @@ async function saveProperty(data: InsertProperty, userId: string, rawText: strin
       garages: data.garages,
       stratum: data.stratum,
       description: data.description,
+      externalUrl: data.externalUrl,
       idUsuarioWhatsapp: userId,
       rawText: rawText,
-      ...data // Cualquier otro campo extraído
+      ...data
     };
     const [result] = await db.insert(properties).values(orderedData).returning();
     return result;
@@ -226,7 +224,6 @@ async function saveRequirement(data: InsertRequirement, userId: string, rawText:
   const db = await getDb();
   if (!db) return null;
   try {
-    // Ordenamos los campos explícitamente para el SQL: Nombre primero, luego el formato oficial
     const orderedData = {
       name: data.name,
       tipoInmuebleDeseado: data.tipoInmuebleDeseado,
@@ -238,7 +235,7 @@ async function saveRequirement(data: InsertRequirement, userId: string, rawText:
       status: "active",
       idUsuarioWhatsapp: userId,
       rawText: rawText,
-      ...data // Cualquier otro campo extraído
+      ...data
     };
     const [result] = await db.insert(requirements).values(orderedData).returning();
     return result;
