@@ -261,95 +261,79 @@ export class WhatsAppBot {
     const userName = buffer.userName;
     const hasMedia = buffer.hasMedia;
     const chatId = buffer.chatId;
-    
-    // El senderId real es la segunda parte de la llave
     const senderId = bufferKey.split('_')[1];
-    
     this.messageBuffers.delete(bufferKey);
 
     try {
-      // 1. Log incoming message immediately
+      // 1. Log incoming message
       await this.logToDb(senderId, 'user', fullText);
 
-      // 2. Extract and process links SEQUENTIALLY
+      // 2. SCRAPING PREVIO: Extraer datos técnicos antes de hablar con JanIA
       const urlMatch = fullText.match(/https?:\/\/[^\s]+/g);
-      let scrapedCount = 0;
+      const scrapedResults: any[] = [];
       if (urlMatch) {
-        // Reducimos el límite a 3 links por mensaje para garantizar éxito total
         const linksToProcess = urlMatch.slice(0, 3);
         for (const url of linksToProcess) {
           if (esDominioPermitido(url)) {
             try {
-              console.log(`[SCRAPER] Procesando: ${url}`);
-              await scrapePropertyLink(url); 
-              scrapedCount++;
+              console.log(`[WHATSAPP-BOT] Scrapeando link previo: ${url}`);
+              const data = await scrapePropertyLink(url);
+              if (data) scrapedResults.push(data);
             } catch (err) {
-              console.error(`[SCRAPER] Fallo en ${url}:`, err);
+              console.error(`[WHATSAPP-BOT] Fallo en scrapeo previo de ${url}:`, err);
             }
           }
         }
       }
 
-      // 3. Process the overall message with JanIA
-      const result = await processWhatsAppMessage(fullText, senderId, userName, hasMedia);
+      // 3. PROCESAMIENTO INTEGRADO: Pasamos los datos del scraper a JanIA
+      const result = await processWhatsAppMessage(fullText, senderId, userName, hasMedia, scrapedResults);
 
-      if (result && result.response) {
+      if (result) {
         const adrianaId = '4900725465196@lid';
         let senderNumber = senderId.split('@')[0];
-        let mentionJid = senderId;
-
+        
+        // Intentar obtener número limpio para mención
         try {
           const contact = await this.client.getContactById(senderId);
-          if (contact && contact.id && contact.id.user) {
-            senderNumber = contact.id.user;
-            mentionJid = contact.id._serialized;
-          }
-        } catch (contactErr) {
-          console.error('[WHATSAPP-BOT] Error fetching contact info:', contactErr);
-        }
-        
-        let finalResponse = result.response;
+          if (contact?.id?.user) senderNumber = contact.id.user;
+        } catch (e) {}
 
         const isGroup = chatId.includes('@g.us');
-        
-        // En grupos, si no es un MATCH o una CONSULTA, añadimos la mención para que sepa de quién hablamos (aunque el bot esté en silencio, esto es por seguridad)
-        if (isGroup && !finalResponse.includes("MATCH DETECTADO")) {
-          finalResponse = `¡Hola, @${senderNumber}! ${result.response}`;
-        }
-
-        const matchedUsers = Array.from(new Set(result.mentions || []));
-        const specificMentionsIds = Array.from(new Set([mentionJid, adrianaId, ...matchedUsers]));
-
-        // LÓGICA DE SILENCIO: 
-        // Solo enviamos al GRUPO si es un MATCH o una CONSULTA_GENERAL.
-        // En DM siempre respondemos.
-        const isMatch = finalResponse.includes("MATCH DETECTADO");
+        const isMatch = result.response.includes("MATCH DETECTADO");
         const isConsultation = 
           result.classification === "CONSULTA_GENERAL" ||
-          result.classification === "RESPUESTA_A_PREGUNTA_IA" ||
-          result.classification === "ANALISIS_DE_MERCADO" ||
-          result.classification === "VIOLACION_DE_NORMAS";
+          result.classification === "RESPUESTA_A_PREGUNTA_IA";
+
+        // LÓGICA DE SILENCIO TOTAL: Solo hablamos en grupo si es Match o Consulta
         const shouldBroadcast = !isGroup || isMatch || isConsultation;
 
-        if (shouldBroadcast) {
-          // Si excedió el límite de links y es una consulta o match, avisamos (opcional, lo mantenemos por utilidad)
-          if (urlMatch && urlMatch.length > 3 && (isConsultation || isMatch)) {
-            finalResponse += `\n\n⚠️ *Nota:* He detectado ${urlMatch.length} links, pero solo he procesado los primeros 3 para mantener mi precisión al 100%.`;
+        if (shouldBroadcast && result.response.trim() !== "") {
+          const matchedUsers = Array.from(new Set(result.mentions || []));
+          const specificMentionsIds = Array.from(new Set([senderId, adrianaId, ...matchedUsers]));
+
+          // En grupos, si es consulta, saludamos
+          let finalResponse = result.response;
+          if (isGroup && isConsultation) {
+            finalResponse = `¡Hola, @${senderNumber}! ${result.response}`;
           }
 
           await this.client.sendMessage(chatId, finalResponse, {
             mentions: isGroup ? specificMentionsIds : []
           });
           
-          // Log outgoing response
           await this.logToDb(senderId, 'janIA', finalResponse);
         }
 
-        // 7. Nudge por DM si faltan datos y el mensaje original fue en un grupo.
-        // Esto permite que JanIA sea "silenciosa" en el grupo pero asista al usuario por privado.
+        // 4. DM PROACTIVO: Solo si JanIA lo pide (shouldSendDM) y NO hubo match
         if (result.shouldSendDM && isGroup && !isMatch) {
           try {
-            const dmResponse = `¡Hola, ${userName}! 🧐 He recibido tu mensaje en el grupo, pero necesito que me ayudes completando estos datos para que mi matching funcione:\n\n${result.missingFields?.join(', ') || 'datos adicionales'}\n\nResponde aquí mismo. ✨`;
+            const missingText = result.missingFields && result.missingFields.length > 0 
+              ? `*${result.missingFields.join(", ")}*` 
+              : "datos adicionales";
+              
+            const dmResponse = `¡Hola, ${userName}! 🧐 He recibido tu mensaje en el grupo, pero para que mi matching funcione necesito completar: ${missingText}.\n\nPor favor, responde aquí mismo. ¡Gracias! ✨`;
+            
             await this.client.sendMessage(senderId, dmResponse);
             await this.logToDb(senderId, 'janIA', `[DM-NUDGE] ${dmResponse}`);
           } catch (dmError) {
@@ -358,10 +342,7 @@ export class WhatsAppBot {
         }
       }
     } catch (e) {
-      console.error('[WHATSAPP-BOT] Error crítico procesando bloque:', e);
-      try {
-        await this.client.sendMessage(chatId, `⚠️ Tuve un pequeño inconveniente procesando este lote de información. Por favor, intenta enviar los datos de forma más fragmentada o revisa los enlaces. ✨`);
-      } catch (inner) { }
+      console.error('[WHATSAPP-BOT] Error crítico:', e);
     }
   }
 

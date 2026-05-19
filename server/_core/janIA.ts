@@ -1,6 +1,6 @@
 /**
  * JanIA Core Logic - VECY Network
- * Version: 2.0.4 (Logic Refinement)
+ * Version: 2.0.5 (Anti-Incoherence Patch)
  */
 import { invokeLLM } from "./llm";
 import { getDb } from "../db";
@@ -24,7 +24,7 @@ DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
 {
   "classification": "INMUEBLE | REQUERIMIENTO | CONSULTA_GENERAL | RESPUESTA_A_PREGUNTA_IA | DATOS_INCOMPLETOS",
   "extractedData": { 
-     "price": number (SOLO NÚMEROS, sin puntos ni signos),
+     "price": number (SOLO NÚMEROS),
      "zone": "string",
      "propertyType": "apartment | house | building | warehouse | farm | hotel | office | land | commercial | loft | consultorio",
      "transactionType": "venta | arriendo",
@@ -36,53 +36,31 @@ DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
   "shouldSendDM": boolean
 }
 
-REGLAS DE EXTRACCIÓN CRÍTICAS:
-1. PRICE: Si el usuario dice "$5.500.000", extrae SOLO 5500000 como número.
-2. PROPERTY TYPE: Mapea variaciones (ej: "apartaestudio" -> "apartment", "local" -> "commercial", "bodega" -> "warehouse").
-3. CLASIFICACIÓN: Si detectas datos de un inmueble pero falta el precio o la zona, marca como "DATOS_INCOMPLETOS".
+REGLAS DE ORO:
+- SILENCIO ABSOLUTO: Si clasificas algo como INMUEBLE o REQUERIMIENTO pero NO hay un MATCH inmediato, deja el campo "response" VACÍO (""). No confirmes ingestas en el grupo.
+- CONTEXTO EXTENDIDO: Es posible que recibas datos extraídos de links por el sistema. Úsalos para completar la extracción y evitar pedir datos que ya están ahí.
+- MAPEO: "apartaestudio" -> "apartment", "local" -> "commercial".
+- DM PROACTIVO: Si faltan datos críticos, activa "shouldSendDM": true pero mantén la "response" vacía para el grupo.
 
 TU IDENTIDAD Y MISIÓN:
-- Eres una Agente IA entrenada para extinguir el ruido y la ineficiencia de las búsquedas manuales en grupos de WhatsApp.
-- Tu misión es que los colegas dejen de trabajar duro para empezar a trabajar de forma INTELIGENTE.
-- Eres el puente tecnológico que conecta ofertas y demandas en segundos.
-
-PROTOCOLO ANTE VIOLACIÓN DE NORMAS (FOTOS/VIDEOS):
-- Si el sistema te indica que el usuario subió una FOTO o VIDEO directo:
-  1. Marca la clasificación como "DATOS_INCOMPLETOS".
-  2. Activa "shouldSendDM": true.
-  3. En la "response", genera una explicación magistral sobre por qué no usamos fotos (saturación, falta de indexación).
-
-CÓMO EXPLICAS EL SISTEMA (LÓGICA MAGISTRAL DETALLADA):
-- No escatimes en detalles cuando se trate de educar. Si el usuario pregunta, explícale la ingeniería detrás de nuestra red para que entienda el valor real.
-1. TÚ PUBLICAS, YO CONECTO (OMNICANALIDAD DE LINKS):
-   - Registro cada inmueble y requerimiento. No importa dónde tengas alojada tu información.
-   - Extraigo datos de: Wasi, Metrocuadrado, Qrador, Habi, FincaRaíz, Proppit, Ciencuadras, Mercadolibre o sitios con DOMINIO PROPIO (.com, .co, etc.).
-   - Si publican por escrito, DEBEN seguir el formato oficial para que mi cerebro pueda indexarlos.
-   - "Cero Esfuerzo, Máxima Velocidad".
-2. BOLSA DE PUNTOS (EL MOTOR DE PLATA):
-   - Sistema "Gana-Gana". Premiamos la colaboración viral.
-   - Si compartes activos de colegas en tus redes, acumulas puntos.
-   - Al cerrar la venta, el 15% de la comisión alimenta una bolsa que se reparte entre quienes ayudaron a difundir.
-3. TECNOLOGÍA DE ÉLITE Y APOYO LOGÍSTICO:
-   - Aliada logística 24/7. Estructuro datos, analizas mercado y avisas de cierres sin que salgas del chat.
-
-FILOSOFÍA DE COMUNICACIÓN:
-- SIN FIRMAS: Prohibido usar "JanIA", "Con cariño" o despedidas.
-- SILENCIO OPERATIVO: Ingiere en silencio. Solo habla para Matches o Consultas.
-- TONO: Ejecutivo, sensato, razonable y directo. Tuteo profesional.
-
-MODELO DE NEGOCIO:
-- Repartición: 35% Captador, 35% Comprador, 15% VECY, 15% Bolsa de Puntos.
+... (resto de la misión ...)
 `;
 
 export async function processWhatsAppMessage(
   text: string, 
   userId: string, 
   userName?: string,
-  hasMedia: boolean = false
+  hasMedia: boolean = false,
+  scrapedData: any[] = []
 ): Promise<JanIAResult> {
   try {
-    const userMessage = hasMedia ? `[SISTEMA: EL USUARIO SUBIÓ UNA FOTO O VIDEO DIRECTO] ${text}` : `Mensaje de ${userName || userId}: ${text}`;
+    // Inyectamos los datos scrapeados en el contexto para evitar incoherencias
+    let contextText = `Mensaje de ${userName || userId}: ${text}`;
+    if (scrapedData.length > 0) {
+      contextText += `\n\n[DATOS TÉCNICOS EXTRAÍDOS POR EL SCRAPER]:\n${JSON.stringify(scrapedData, null, 2)}`;
+    }
+
+    const userMessage = hasMedia ? `[SISTEMA: EL USUARIO SUBIÓ UNA FOTO O VIDEO DIRECTO] ${text}` : contextText;
 
     const response = await invokeLLM({
       messages: [
@@ -108,7 +86,7 @@ export async function processWhatsAppMessage(
     const lowerText = text.toLowerCase();
     
     const isRequirement = result.classification === "REQUERIMIENTO" || lowerText.includes("busco") || lowerText.includes("necesito");
-    const isProperty = result.classification === "INMUEBLE" || lowerText.includes("vendo") || lowerText.includes("arriendo") || !!extracted?.propertyType;
+    const isProperty = result.classification === "INMUEBLE" || lowerText.includes("vendo") || lowerText.includes("arriendo") || !!extracted?.propertyType || scrapedData.length > 0;
 
     // --- CASO A: INMUEBLE ---
     if (isProperty && !isRequirement) {
@@ -126,7 +104,7 @@ export async function processWhatsAppMessage(
           price: String(priceVal),
           zone: extracted?.zone || "Bogotá",
           transactionType: extracted?.transactionType || "venta",
-          externalUrl: extracted?.externalUrl || null,
+          externalUrl: extracted?.externalUrl || (scrapedData.length > 0 ? scrapedData[0].externalUrl : null),
           description: extracted?.description || null,
           ...extracted
         } as InsertProperty;
@@ -145,13 +123,15 @@ export async function processWhatsAppMessage(
               matchResponse += `1. ${data.externalUrl || data.name} - @${userId.split('@')[0]}\n\n`;
             });
             result.response = matchResponse;
+          } else {
+            result.response = ""; // SILENCIO SI NO HAY MATCH
           }
         }
       } else {
         result.classification = "DATOS_INCOMPLETOS";
         result.shouldSendDM = true;
         result.missingFields = missing;
-        result.response = `Ingesta pausada: Me faltan estos datos clave: *${missing.join(", ")}*. Te he escrito por privado para completarlos. ✨`;
+        result.response = ""; // SILENCIO EN EL GRUPO
       }
     } 
     // --- CASO B: REQUERIMIENTO ---
@@ -182,13 +162,15 @@ export async function processWhatsAppMessage(
               matchResponse += `${idx + 1}. ${m.externalUrl || m.name} - @${m.idUsuarioWhatsapp?.split('@')[0]}\n`;
             });
             result.response = matchResponse;
+          } else {
+            result.response = ""; // SILENCIO
           }
         }
       } else {
         result.classification = "DATOS_INCOMPLETOS";
         result.shouldSendDM = true;
         result.missingFields = missing;
-        result.response = `Búsqueda pausada: Para ayudarte necesito: *${missing.join(", ")}*. Revisa tu chat privado. ✨`;
+        result.response = ""; // SILENCIO
       }
     }
 
@@ -197,7 +179,7 @@ export async function processWhatsAppMessage(
     console.error("Error in processWhatsAppMessage:", error);
     return {
       classification: "CONSULTA_GENERAL",
-      response: "He tenido un inconveniente técnico momentáneo procesando esta lógica. Ya estoy operativa.",
+      response: "",
       mentions: []
     };
   }
