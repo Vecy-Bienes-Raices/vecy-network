@@ -70,6 +70,9 @@ export async function processWhatsAppMessage(
       responseFormat: { type: "json_object" }
     });
 
+    if (!response || !response.choices || !response.choices[0]) {
+      throw new Error("Respuesta inválida o vacía del LLM");
+    }
     const rawContent = response.choices[0].message.content;
     const cleanJson = rawContent.replace(/```json|```/g, "").trim();
     const result = JSON.parse(cleanJson) as JanIAResult;
@@ -201,7 +204,10 @@ export async function generateWelcomeMessage(count: number): Promise<string> {
       ]
     });
 
-    return response.choices[0].message.content.trim();
+    if (response && response.choices && response.choices[0]) {
+      return response.choices[0].message.content.trim();
+    }
+    throw new Error("Respuesta inválida o vacía del LLM");
   } catch (error) {
     console.error("Error generating welcome message:", error);
     return `Bienvenidos a VECY Network. ✨ Soy JanIA, el cerebro de matching automático. Por favor, sigan los formatos oficiales para garantizar cierres efectivos.`;
@@ -213,21 +219,9 @@ async function saveProperty(data: InsertProperty, userId: string, rawText: strin
   if (!db) return null;
   try {
     const orderedData = {
-      name: data.name,
-      propertyType: data.propertyType,
-      zone: data.zone,
-      price: data.price,
-      antiguedadAnos: data.antiguedadAnos,
-      areaTotal: data.areaTotal,
-      bedrooms: data.bedrooms,
-      bathrooms: data.bathrooms,
-      garages: data.garages,
-      stratum: data.stratum,
-      description: data.description,
-      externalUrl: data.externalUrl,
+      ...data,
       idUsuarioWhatsapp: userId,
       rawText: rawText,
-      ...data
     };
     const [result] = await db.insert(properties).values(orderedData).returning();
     return result;
@@ -242,17 +236,10 @@ async function saveRequirement(data: InsertRequirement, userId: string, rawText:
   if (!db) return null;
   try {
     const orderedData = {
-      name: data.name,
-      tipoInmuebleDeseado: data.tipoInmuebleDeseado,
-      zonaDeseada: data.zonaDeseada,
-      presupuestoMax: data.presupuestoMax,
-      areaMin: data.areaMin,
-      habitacionesMin: data.habitacionesMin,
-      banosMin: data.banosMin,
-      status: "active",
+      ...data,
+      status: (data.status || "active") as "active" | "expired" | "converted",
       idUsuarioWhatsapp: userId,
       rawText: rawText,
-      ...data
     };
     const [result] = await db.insert(requirements).values(orderedData).returning();
     return result;
