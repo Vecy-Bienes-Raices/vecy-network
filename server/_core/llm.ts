@@ -26,7 +26,7 @@ export async function invokeLLM({
  * Invocación a Google Gemini (Google AI Studio)
  */
 async function invokeGemini(messages: any[], responseFormat?: any) {
-  const API_KEY = process.env.GEMINI_API_KEY || ENV.forgeApiKey;
+  const API_KEY = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || ENV.forgeApiKey;
   const MODEL = "gemini-flash-latest";
   const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${API_KEY}`;
 
