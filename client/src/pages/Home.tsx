@@ -68,7 +68,7 @@ export default function Home() {
                 
                 <p className="vecy-subtitle max-w-2xl mx-auto mb-10 text-xl md:text-2xl leading-relaxed">
                   La evolución inevitable para el sector de los bienes raíces.
-                  <span className="text-white font-bold block mt-4 italic opacity-80 uppercase tracking-widest text-sm">La Red Inmobiliaria Inteligente.</span>
+                  <span className="text-white font-bold block mt-4 italic opacity-80 uppercase tracking-widest text-sm">Tu Red Inmobiliaria Inteligente.</span>
                 </p>
                 
                 <div className="flex flex-col sm:flex-row gap-5 justify-center">
@@ -198,7 +198,7 @@ export default function Home() {
             <div className="col-span-2">
               <img src="/logo-vecy.png" alt="Vecy" className="h-12 mb-8" />
               <p className="vecy-paragraph max-w-md">
-                VECY es la red inmobiliaria inteligente que está redefiniendo los estándares de eficiencia en Colombia. 
+                VECY es tu red inmobiliaria inteligente que está redefiniendo los estándares de eficiencia en Colombia. 
                 Lideramos con tecnología y operamos con visión humana.
               </p>
             </div>
