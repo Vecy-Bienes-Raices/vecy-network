@@ -73,7 +73,7 @@ export const properties = pgTable("properties", {
   bathrooms: integer("bathrooms"),
   garages: integer("garages"),
   stratum: integer("stratum"),
-  floor: integer("floor"),
+  floorDetail: text("floor_detail"),
   areaTotal: decimal("areaTotal", { precision: 10, scale: 2 }),
   areaPrivate: decimal("areaPrivate", { precision: 10, scale: 2 }),
   yearBuilt: integer("yearBuilt"),

@@ -27,7 +27,7 @@ const propertyInputSchema = z.object({
   bathrooms: z.number().optional().nullable(),
   garages: z.number().optional().nullable(),
   stratum: z.number().optional().nullable(),
-  floor: z.number().optional().nullable(),
+  floorDetail: z.string().optional().nullable(),
   areaTotal: z.string().optional().nullable(),
   areaPrivate: z.string().optional().nullable(),
   yearBuilt: z.number().optional().nullable(),

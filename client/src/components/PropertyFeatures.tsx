@@ -7,43 +7,32 @@ interface Feature {
 }
 
 interface PropertyFeaturesProps {
-  bedrooms: number;
-  bathrooms: number;
-  area: number;
-  amenities: string[];
-  yearBuilt: number;
-  propertyType: string;
-  floor?: number;
-  totalFloors?: number;
-  propertyDetails?: any;
-  description?: string;
-  internalFeatures?: string[];
+  property: any;
 }
 
-export default function PropertyFeatures({
-  bedrooms,
-  bathrooms,
-  area,
-  amenities,
-  yearBuilt,
-  propertyType,
-  floor,
-  totalFloors,
-  propertyDetails,
-  description,
-  internalFeatures,
-}: PropertyFeaturesProps) {
+export default function PropertyFeatures({ property }: PropertyFeaturesProps) {
+  const bedrooms = property.bedrooms || 0;
+  const bathrooms = property.bathrooms || 0;
+  const area = Number(property.areaTotal || 0);
+  const amenities = (property.amenities as string[]) || [];
+  const yearBuilt = property.yearBuilt || 0;
+  const propertyType = property.propertyType || "";
+  const floorDetail = property.floorDetail;
+  const propertyDetails = property.propertyDetails || {};
+  const description = property.description || "";
+  const internalFeatures = property.internalFeatures || [];
+
   const mainFeatures: Feature[] = [
     { icon: <Bed className="w-6 h-6" />, label: 'Habitaciones', value: bedrooms.toString() },
     { icon: <Bath className="w-6 h-6" />, label: 'Baños', value: bathrooms.toString() },
     { icon: <Ruler className="w-6 h-6" />, label: 'Área', value: `${area.toLocaleString()} m²` },
   ];
 
-  if (floor && totalFloors) {
+  if (floorDetail) {
     mainFeatures.push({
       icon: <Zap className="w-6 h-6" />,
-      label: 'Piso',
-      value: `${floor}/${totalFloors}`,
+      label: 'Piso / Niveles / Altura',
+      value: floorDetail,
     });
   }
 

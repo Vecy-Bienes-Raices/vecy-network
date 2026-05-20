@@ -2,7 +2,8 @@ import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { properties, requirements, propertyMatches } from "../../drizzle/schema";
-import { eq, and, sql, desc } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
+import { evaluarMatch } from "../_core/matching";
 
 export const matchingRouter = router({
   /**
@@ -19,29 +20,17 @@ export const matchingRouter = router({
 
       const p = property[0];
 
-      // Lógica de Matching Ponderada (Blueprint de Manus)
-      // Buscamos requerimientos que coincidan en lo básico y calculamos score
-      const matches = await db.select({
-        requirementId: requirements.id,
-        score: sql<number>`(
-          CASE WHEN ${requirements.tipoInmuebleDeseado} = ${p.propertyType} THEN 30 ELSE 0 END +
-          CASE WHEN ${requirements.tipoNegocioDeseado} = ${p.transactionType} THEN 30 ELSE 0 END +
-          CASE WHEN ${requirements.ciudadDeseada} = ${p.city} THEN 15 ELSE 0 END +
-          CASE WHEN ${p.price} BETWEEN ${requirements.presupuestoMin} AND ${requirements.presupuestoMax} THEN 15 ELSE 0 END +
-          CASE WHEN ${p.bedrooms} >= ${requirements.habitacionesMin} THEN 5 ELSE 0 END +
-          CASE WHEN ${p.bathrooms} >= ${requirements.banosMin} THEN 5 ELSE 0 END
-        )`.as('score'),
-      })
-      .from(requirements)
-      .where(and(
-        eq(requirements.status, 'active'),
-        eq(requirements.tipoInmuebleDeseado, p.propertyType),
-        eq(requirements.tipoNegocioDeseado, p.transactionType)
-      ))
-      .orderBy(sql`score DESC`)
-      .limit(10);
+      // Buscar requerimientos activos que coincidan estrictamente
+      const activeReqs = await db.select().from(requirements).where(eq(requirements.status, 'active'));
 
-      return matches;
+      const matches = activeReqs
+        .filter(r => evaluarMatch(r, p))
+        .map(r => ({
+          requirementId: r.id,
+          score: 100
+        }));
+
+      return matches.slice(0, 10);
     }),
 
   /**
@@ -58,6 +47,10 @@ export const matchingRouter = router({
       zonaDeseada: z.string().optional(),
       presupuestoMax: z.string(),
       habitacionesMin: z.number().optional(),
+      banosMin: z.number().optional(),
+      garajes: z.number().optional(),
+      interiorExterior: z.enum(["interior", "exterior"]).optional(),
+      pisoDeseado: z.number().optional(),
       idUsuarioWhatsapp: z.string().optional(),
     }))
     .mutation(async ({ input }) => {
@@ -65,42 +58,45 @@ export const matchingRouter = router({
       if (!db) throw new Error("Database unavailable");
 
       const newReq = await db.insert(requirements).values({
-        ...input,
+        tipoInmuebleDeseado: input.tipoInmuebleDeseado,
+        tipoNegocioDeseado: input.tipoNegocioDeseado,
+        ciudadDeseada: input.ciudadDeseada,
+        zonaDeseada: input.zonaDeseada,
+        presupuestoMax: input.presupuestoMax,
         presupuestoMin: "0",
+        habitacionesMin: input.habitacionesMin || null,
+        banosMin: input.banosMin || null,
+        parqueaderosMin: input.garajes || null,
         status: "active",
+        idUsuarioWhatsapp: input.idUsuarioWhatsapp || null,
+        caracteristicasDeseadas: {
+          ...(input.interiorExterior ? { interiorExterior: input.interiorExterior } : {}),
+          ...(input.pisoDeseado !== undefined ? { pisoDeseado: input.pisoDeseado } : {})
+        }
       }).returning();
 
       const reqId = newReq[0].id;
+      const req = newReq[0];
 
-      // Buscar matches inmediatos con propiedades existentes
-      const matches = await db.select({
-        propertyId: properties.id,
-        score: sql<number>`(
-          CASE WHEN ${properties.propertyType} = ${input.tipoInmuebleDeseado} THEN 30 ELSE 0 END +
-          CASE WHEN ${properties.transactionType} = ${input.tipoNegocioDeseado} THEN 30 ELSE 0 END +
-          CASE WHEN ${properties.price} <= ${input.presupuestoMax} THEN 20 ELSE 0 END +
-          CASE WHEN ${properties.city} = ${input.ciudadDeseada} THEN 20 ELSE 0 END
-        )`.as('score')
-      })
-      .from(properties)
-      .where(and(
-        eq(properties.available, true),
-        eq(properties.propertyType, input.tipoInmuebleDeseado),
-        eq(properties.transactionType, input.tipoNegocioDeseado)
-      ))
-      .orderBy(sql`score DESC`)
-      .limit(5);
+      // Buscar todos los inmuebles disponibles
+      const activeProps = await db.select().from(properties).where(eq(properties.available, true));
+
+      // Filtrar usando el motor de decisión estricto
+      const matches = activeProps
+        .filter(p => evaluarMatch(req, p))
+        .map(p => ({
+          propertyId: p.id,
+          score: 100
+        }));
 
       // Guardar matches encontrados
       for (const m of matches) {
-        if (m.score > 50) { // Solo guardar si es un match relevante
-          await db.insert(propertyMatches).values({
-            requirementId: reqId,
-            propertyId: m.propertyId,
-            matchScore: m.score.toString(),
-            status: 'suggested'
-          });
-        }
+        await db.insert(propertyMatches).values({
+          requirementId: reqId,
+          propertyId: m.propertyId,
+          matchScore: "100.00",
+          status: 'suggested'
+        }).onConflictDoNothing();
       }
 
       return { requirementId: reqId, matchesFound: matches.length };

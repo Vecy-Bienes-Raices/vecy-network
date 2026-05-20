@@ -334,13 +334,20 @@ export class WhatsAppBot {
         }
 
         // 4. DM PROACTIVO: Solo si JanIA lo pide (shouldSendDM) y NO hubo match
-        if (result.shouldSendDM && isGroup && !isMatch) {
+        if (result.shouldSendDM && !isMatch) {
           try {
-            const missingText = result.missingFields && result.missingFields.length > 0 
-              ? `*${result.missingFields.join(", ")}*` 
-              : "datos adicionales";
+            let missingText = "datos adicionales";
+            if (result.missingFields && result.missingFields.length > 0) {
+              if (result.missingFields.length === 1) {
+                missingText = `\n\n*${result.missingFields[0]}*`;
+              } else {
+                missingText = `\n\n${result.missingFields.map(q => `- ${q}`).join("\n")}`;
+              }
+            }
               
-            const dmResponse = `¡Hola, ${userName}! 🧐 He recibido tu mensaje en el grupo, pero para que mi matching funcione necesito completar: ${missingText}.\n\nPor favor, responde aquí mismo. ¡Gracias! ✨`;
+            const dmResponse = isGroup
+              ? `¡Hola, ${userName}! 🧐 He recibido tu mensaje en el grupo, pero para que mi matching funcione necesito completar: ${missingText}\n\nPor favor, responde aquí mismo. ¡Gracias! ✨`
+              : `🧐 Para que mi matching funcione necesito completar: ${missingText}\n\nPor favor, responde aquí con esos datos. ¡Gracias! ✨`;
             
             await this.client.sendMessage(senderId, dmResponse);
             await this.logToDb(senderId, 'janIA', `[DM-NUDGE] ${dmResponse}`);

@@ -1,10 +1,94 @@
 import { getDb } from "../db";
-import { and, eq, gte, lte, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { propertyMatches, properties, requirements } from "../../drizzle/schema";
+import { normalizarTextoGeografico } from "./geography";
+
+/**
+ * Evalúa si una propiedad y un requerimiento cumplen con todas las reglas de matching.
+ * Aplica lógica de campos duros (100% obligatoria) y campos flexibles.
+ */
+export function evaluarMatch(req: any, prop: any): boolean {
+  // 1. CAMPOS DUROS (coincidencia 100% obligatoria)
+  
+  // Barrio
+  const propZone = normalizarTextoGeografico(prop.zone || "");
+  const reqZone = normalizarTextoGeografico(req.zonaDeseada || "");
+  if (propZone !== reqZone) return false;
+
+  // Localidad (derivada de barrio en post-procesamiento o guardada)
+  const propLoc = normalizarTextoGeografico(prop.addressLocality || "");
+  const reqLoc = normalizarTextoGeografico(req.addressLocality || "");
+  if (propLoc !== reqLoc) return false;
+
+  // Ciudad
+  const propCity = normalizarTextoGeografico(prop.city || "Bogota");
+  const reqCity = normalizarTextoGeografico(req.ciudadDeseada || "Bogota");
+  if (propCity !== reqCity) return false;
+
+  // Tipo de inmueble
+  if (prop.propertyType !== req.tipoInmuebleDeseado) return false;
+
+  // Habitaciones
+  if (Number(prop.bedrooms) !== Number(req.habitacionesMin)) return false;
+
+  // Baños
+  if (Number(prop.bathrooms) !== Number(req.banosMin)) return false;
+
+  // Garajes
+  if (Number(prop.garages) !== Number(req.parqueaderosMin)) return false;
+
+  // Interior / Exterior (solo aplica para apartment, office, commercial, loft, consultorio)
+  const appliesIntExt = ["apartment", "office", "commercial", "loft", "consultorio"].includes(prop.propertyType);
+  if (appliesIntExt && prop.propertyType === req.tipoInmuebleDeseado) {
+    const propIntExt = normalizarTextoGeografico((prop.amenities as any)?.interiorExterior || "");
+    const reqIntExt = normalizarTextoGeografico((req.caracteristicasDeseadas as any)?.interiorExterior || "");
+    if (reqIntExt && propIntExt !== reqIntExt) return false;
+  }
+
+  // 2. CAMPOS FLEXIBLES (toleran margen razonable)
+  
+  // Precio (±20% del presupuesto del requerimiento)
+  const propPrice = parseFloat(prop.price?.toString() || "0");
+  const reqBudget = parseFloat(req.presupuestoMax?.toString() || "0");
+  if (reqBudget > 0 && propPrice > 0) {
+    const minPrice = reqBudget * 0.80;
+    const maxPrice = reqBudget * 1.20;
+    if (propPrice < minPrice || propPrice > maxPrice) return false;
+  }
+
+  // Área (±15%)
+  const propArea = parseFloat(prop.areaTotal?.toString() || prop.areaPrivate?.toString() || "0");
+  const reqArea = parseFloat(req.areaMin?.toString() || "0");
+  if (reqArea > 0 && propArea > 0) {
+    const minArea = reqArea * 0.85;
+    const maxArea = reqArea * 1.15;
+    if (propArea < minArea || propArea > maxArea) return false;
+  }
+
+  // Estrato (±1)
+  if (prop.stratum !== null && prop.stratum !== undefined && req.estratoDeseado !== null && req.estratoDeseado !== undefined) {
+    let allowedEstratos: number[] = [];
+    if (Array.isArray(req.estratoDeseado)) {
+      allowedEstratos = req.estratoDeseado.map((e: any) => Number(e));
+    } else if (typeof req.estratoDeseado === "number") {
+      allowedEstratos = [req.estratoDeseado];
+    } else if (typeof req.estratoDeseado === "string") {
+      const parsed = parseInt(req.estratoDeseado);
+      if (!isNaN(parsed)) allowedEstratos = [parsed];
+    }
+    
+    if (allowedEstratos.length > 0) {
+      const propStratum = Number(prop.stratum);
+      const matchesEstrato = allowedEstratos.some(e => Math.abs(propStratum - e) <= 1);
+      if (!matchesEstrato) return false;
+    }
+  }
+
+  return true;
+}
 
 /**
  * Busca requerimientos que hagan match con un inmueble recién publicado.
- * Compara zona, tipo de negocio, tipo de inmueble y precio.
  */
 export async function findMatchesForProperty(propertyId: number) {
   const db = await getDb();
@@ -15,54 +99,30 @@ export async function findMatchesForProperty(propertyId: number) {
     const [property] = await db.select().from(properties).where(eq(properties.id, propertyId));
     if (!property) return [];
 
-    // Buscar requerimientos activos que coincidan
-    const allReqs = await db.select().from(requirements);
+    // Buscar requerimientos activos
+    const allReqs = await db.select().from(requirements).where(eq(requirements.status, "active"));
     
     const validMatches = [];
     
     for (const req of allReqs) {
-      let score = 0;
-
-      // Match por tipo de negocio (venta/arriendo) - peso alto
-      if (req.tipoNegocioDeseado === property.transactionType) score += 40;
-      else continue; // Si el tipo de negocio no coincide, skip
-
-      // Match por tipo de inmueble
-      if (req.tipoInmuebleDeseado === property.propertyType) score += 30;
-
-      // Match por zona (búsqueda parcial)
-      if (req.zonaDeseada && property.zone) {
-        const zonaReq = req.zonaDeseada.toLowerCase();
-        const zonaProp = property.zone.toLowerCase();
-        if (zonaReq.includes(zonaProp) || zonaProp.includes(zonaReq)) score += 20;
-      }
-
-      // Match por presupuesto
-      const price = parseFloat(property.price?.toString() || "0");
-      if (req.presupuestoMax && price > 0) {
-        const max = parseFloat(req.presupuestoMax.toString());
-        if (price <= max) score += 10;
-        else if (price <= max * 1.15) score += 5; // Dentro del 15% del presupuesto
-      }
-
-      if (score >= 40) { // Umbral mínimo: coincide tipo de negocio + algo más
+      if (evaluarMatch(req, property)) {
         // Guardar el match en la tabla propertyMatches
         await db.insert(propertyMatches).values({
           propertyId: propertyId,
           requirementId: req.id,
-          matchScore: score.toString(),
+          matchScore: "100.00",
           status: "suggested",
         }).onConflictDoNothing();
 
         validMatches.push({
           ...req,
-          score,
+          score: 100,
           idUsuarioWhatsapp: req.idUsuarioWhatsapp,
         });
       }
     }
 
-    console.log(`[Matching] Inmueble #${propertyId}: ${validMatches.length} matches encontrados`);
+    console.log(`[Matching] Inmueble #${propertyId}: ${validMatches.length} matches estrictos encontrados`);
     return validMatches;
   } catch (e: any) {
     console.error("[Matching] Error buscando matches para inmueble:", e.message);
@@ -83,52 +143,28 @@ export async function findMatchesForRequirement(requirementId: number) {
     if (!req) return [];
 
     // Buscar todos los inmuebles disponibles
-    const allProps = await db.select().from(properties);
+    const allProps = await db.select().from(properties).where(eq(properties.available, true));
     
     const validMatches = [];
 
     for (const property of allProps) {
-      let score = 0;
-
-      // Match por tipo de negocio - peso alto
-      if (req.tipoNegocioDeseado === property.transactionType) score += 40;
-      else continue;
-
-      // Match por tipo de inmueble
-      if (req.tipoInmuebleDeseado === property.propertyType) score += 30;
-
-      // Match por zona
-      if (req.zonaDeseada && property.zone) {
-        const zonaReq = req.zonaDeseada.toLowerCase();
-        const zonaProp = property.zone.toLowerCase();
-        if (zonaReq.includes(zonaProp) || zonaProp.includes(zonaReq)) score += 20;
-      }
-
-      // Match por presupuesto
-      const price = parseFloat(property.price?.toString() || "0");
-      if (req.presupuestoMax && price > 0) {
-        const max = parseFloat(req.presupuestoMax.toString());
-        if (price <= max) score += 10;
-        else if (price <= max * 1.15) score += 5;
-      }
-
-      if (score >= 40) {
+      if (evaluarMatch(req, property)) {
         await db.insert(propertyMatches).values({
           propertyId: property.id,
           requirementId: requirementId,
-          matchScore: score.toString(),
+          matchScore: "100.00",
           status: "suggested",
         }).onConflictDoNothing();
 
         validMatches.push({
           ...property,
-          score,
+          score: 100,
           idUsuarioWhatsapp: property.idUsuarioWhatsapp,
         });
       }
     }
 
-    console.log(`[Matching] Requerimiento #${requirementId}: ${validMatches.length} matches encontrados`);
+    console.log(`[Matching] Requerimiento #${requirementId}: ${validMatches.length} matches estrictos encontrados`);
     return validMatches;
   } catch (e: any) {
     console.error("[Matching] Error buscando matches para requerimiento:", e.message);

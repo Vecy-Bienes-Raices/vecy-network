@@ -20,7 +20,7 @@ const emptyForm = {
   name: '', price: '', location: '', zone: '',
   propertyType: 'apartment', description: '',
   bedrooms: '', bathrooms: '', garages: '', stratum: '',
-  floor: '', areaSquareMeters: '', yearBuilt: '',
+  floorDetail: '', areaSquareMeters: '', yearBuilt: '',
   adminFee: '', matriculaInmobiliaria: '', wildcardFeature: '',
   featured: false, available: true,
 };
@@ -59,7 +59,7 @@ export default function AdminProperties() {
       bathrooms: formData.bathrooms ? parseInt(formData.bathrooms) : null,
       garages: formData.garages ? parseInt(formData.garages) : null,
       stratum: formData.stratum ? parseInt(formData.stratum) : null,
-      floor: formData.floor ? parseInt(formData.floor) : null,
+      floorDetail: formData.floorDetail || null,
       areaSquareMeters: formData.areaSquareMeters || null,
       yearBuilt: formData.yearBuilt ? parseInt(formData.yearBuilt) : null,
       adminFee: formData.adminFee || null,
@@ -79,7 +79,7 @@ export default function AdminProperties() {
       description: prop.description || '',
       bedrooms: prop.bedrooms?.toString() || '', bathrooms: prop.bathrooms?.toString() || '',
       garages: prop.garages?.toString() || '', stratum: prop.stratum?.toString() || '',
-      floor: prop.floor?.toString() || '', areaSquareMeters: prop.areaSquareMeters?.toString() || '',
+      floorDetail: prop.floorDetail || '', areaSquareMeters: prop.areaSquareMeters?.toString() || '',
       yearBuilt: prop.yearBuilt?.toString() || '', adminFee: prop.adminFee?.toString() || '',
       matriculaInmobiliaria: prop.matriculaInmobiliaria || '',
       wildcardFeature: prop.wildcardFeature || '',
@@ -209,7 +209,7 @@ export default function AdminProperties() {
                 { key: 'bathrooms', label: 'Baños', ph: '2' },
                 { key: 'garages', label: 'Parqueaderos', ph: '1' },
                 { key: 'stratum', label: 'Estrato', ph: '4' },
-                { key: 'floor', label: 'Piso', ph: '8' },
+                { key: 'floorDetail', label: 'Piso / Niveles / Altura', ph: 'Piso 4 / 2 niveles / 8 metros' },
                 { key: 'areaSquareMeters', label: 'Área Total (m²)', ph: '54' },
                 { key: 'yearBuilt', label: 'Año Const.', ph: '2018' },
                 { key: 'wildcardFeature', label: 'Característica Extra', ph: 'Jacuzzi, vista...' },
@@ -219,7 +219,7 @@ export default function AdminProperties() {
                   <input
                     className={input}
                     placeholder={f.ph}
-                    type={['bedrooms','bathrooms','garages','stratum','floor','yearBuilt'].includes(f.key) ? 'number' : 'text'}
+                    type={['bedrooms','bathrooms','garages','stratum','yearBuilt'].includes(f.key) ? 'number' : 'text'}
                     value={(formData as any)[f.key]}
                     onChange={e => setFormData({ ...formData, [f.key]: e.target.value })}
                   />
