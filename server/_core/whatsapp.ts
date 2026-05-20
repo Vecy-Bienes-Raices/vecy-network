@@ -44,7 +44,7 @@ export class WhatsAppBot {
     console.log('[WHATSAPP-BOT] Configurando escuchadores de eventos...');
     this.setupEventListeners();
     this.setupGracefulShutdown();
-    this.setupWeeklySchedule();
+    this.setupDailySchedule();
     console.log('[WHATSAPP-BOT] Constructor finalizado.');
   }
 
@@ -129,13 +129,25 @@ export class WhatsAppBot {
     process.on('SIGTERM', shutdown);
   }
 
-  private setupWeeklySchedule() {
-    // Verificar cada minuto si es lunes a las 8 AM
+  private setupDailySchedule() {
+    // Verificar cada minuto si aplica el horario de broadcasts
     setInterval(() => {
       const now = new Date();
-      if (now.getDay() === 1 && now.getHours() === 8 && now.getMinutes() === 0) {
-        console.log('⏰ Ejecutando publicación semanal de normas (Lunes 8:00 AM)');
-        this.sendGroupRules();
+      const h = now.getHours();
+      const m = now.getMinutes();
+
+      // Mensaje 1 + Mensaje 2: 6:00 AM y 6:00 PM diarios
+      if ((h === 6 || h === 18) && m === 0) {
+        console.log(`⏰ Broadcast diario (${h}:00) — enviando presentación + normas`);
+        this.sendPresentacion().then(() => {
+          setTimeout(() => this.sendNormas(), 4000);
+        });
+      }
+
+      // Mensaje 3: cada 2 horas entre 6 AM y 8 PM (6,8,10,12,14,16,18,20)
+      if (h >= 6 && h <= 20 && h % 2 === 0 && m === 30) {
+        console.log(`⏰ Recordatorio rápido (${h}:30)`);
+        this.sendRecordatorio();
       }
     }, 60000);
   }
@@ -378,59 +390,142 @@ export class WhatsAppBot {
       }
     } else if (text.includes('jania preséntate')) {
       if (isAdmin) {
-        await this.sendGrandIntroduction();
+        await this.sendPresentacion();
+        setTimeout(() => this.sendNormas(), 4000);
       }
     }
   }
 
-  public async sendGroupRules() {
-    const rulesText = `📋 *NORMAS Y FORMATO OFICIAL — VECY INMUEBLES NETWORK* 📋
 
-Hola a todos 👋 Soy *JanIA*, la IA de VECY. Para que el sistema de MATCHES funcione al 100%, por favor sigan estas normas al publicar:
+  // ─── MENSAJE 1: Presentación / Bienvenida diaria ────────────────────────────
+  public async sendPresentacion() {
+    const msg = `✨ *¡Bienvenidos a VECY Inmuebles Network!*
 
-━━━━━━━━━━━━━━━━━━
-🚀 *REGLA DE ORO: LÍMITE DE LOTES*
-━━━━━━━━━━━━━━━━━━
-✅ *MÁXIMO 3 INMUEBLES* por mensaje o ráfaga.
-✅ Si tienes más, por favor espera **5 minutos** entre cada lote de 3.
-❌ No satures mi motor de precisión con ráfagas masivas; esto garantiza que cada activo se procese con calidad quirúrgica.
+Hola a todos 👋 Soy *JanIA*, la Inteligencia Artificial oficial de *VECY Network*, diseñada exclusivamente para el sector inmobiliario de alto nivel.
 
-━━━━━━━━━━━━━━━━━━
-🏠 *FORMATO PARA INMUEBLES*
-━━━━━━━━━━━━━━━━━━
-*VENDO / ARRIENDO:* [tipo de inmueble]
-📍 *Zona:* [barrio o sector]
-💰 *Precio:* [valor en pesos]
-📐 *Área:* [m2] | 🛏️ *Hab / Baños / Garajes:* [número]
-📝 *Descripción:* [detalles adicionales]
+Trabajo *las 24 horas, los 7 días de la semana* dentro de este grupo. Cada mensaje que llega aquí lo leo, lo analizo y lo proceso en tiempo real.
 
-━━━━━━━━━━━━━━━━━━
-⚠️ *REGLAS GENERALES*
-━━━━━━━━━━━━━━━━━━
-✅ Solo contenido inmobiliario profesional.
-✅ *FOTOS/VIDEOS:* 🚫 NO subir imágenes directas al grupo (saturan mi memoria). 
-✅ *LINKS:* Puedo leer automáticamente de Wasi, FincaRaíz, MetroCuadrado, etc.
+🧠 *¿Qué hago exactamente?*
+▸ Identifico si lo que publicas es un inmueble o un requerimiento
+▸ Extraigo automáticamente todos los datos relevantes
+▸ Cruzo ofertas con demandas de forma inteligente
+▸ Cuando hay un *MATCH PERFECTO*, notifico a ambas partes al instante
 
-¡Gracias por hacer de este el mejor equipo inmobiliario de Colombia! 🇨🇴🏆`;
+🎯 *Mi propósito:* que ninguna oportunidad de negocio se pierda en este grupo. Cero esfuerzo para ustedes. Máximos resultados.
 
+_Para que mi sistema funcione al 100%, por favor lean el mensaje de normas y formatos que sigue a continuación. Es breve, claro y cambiará la forma en que cierran negocios._ 🏆`;
     try {
-      await this.client.sendMessage(this.targetGroupId, rulesText);
-      console.log('✅ Normas actualizadas enviadas.');
-    } catch (e) { console.error(e); }
+      await this.client.sendMessage(this.targetGroupId, msg);
+      console.log('✅ Mensaje 1 (Presentación) enviado.');
+    } catch (e) { console.error('[BROADCAST] Error enviando presentación:', e); }
   }
 
-  public async sendGrandIntroduction() {
-    const introText = `¡Hola, mis queridos colegas! 🌟 Soy *JanIA*, su agente IA y Coach Inmobiliaria. 🎯
+  // ─── MENSAJE 2: Normas y Formatos completos ──────────────────────────────────
+  public async sendNormas() {
+    const msg = `─────────────────────────────
 
-Estoy aquí para vigilarlos con amor y mucha diligencia. Mi trabajo es leer cada publicación y avisarles de inmediato cuando haya un negocio listo para cerrar. 
+📋 *NORMAS Y FORMATOS OFICIALES — VECY NETWORK*
+_Por favor léelo completo. Aplica desde ya._
+━━━━━━━━━━━━━━━━━━━━━━
 
-Recuerden: *¡Links sí, fotos directas no!* 🧐 Ayúdenme a ayudarlos y hagamos de este el grupo más exitoso de Colombia. ¡Vamos por esos cierres! 🏠🚀✨`;
+🏠 *FORMATO 1 — PUBLICAR UN INMUEBLE*
+_Úsalo cuando ofreces o tienes disponible un inmueble_
 
+*VENDO / ARRIENDO:* [tipo: apartamento / casa / lote / bodega / local / oficina / finca / consultorio]
+📍 *Zona:* [ciudad → localidad → barrio exacto]
+💰 *Precio:* [valor en pesos colombianos]
+📐 *Área:* [m² construidos]
+🛏️ *Hab / Baños / Garajes:* [números]
+🏗️ *Estrato:* [número]
+📝 *Descripción:* [detalles clave: antigüedad, piso, interior/exterior, terraza, estado, etc.]
+🔗 *Link:* [URL del portal o tu sitio web — si tienes]
+
+_Ejemplo:_
+VENDO: Apartamento
+📍 Bogotá → Usaquén → Cedritos
+💰 $480.000.000
+📐 85 m² | 🛏️ 3 hab / 2 baños / 1 garaje
+🏗️ Estrato 4 | Piso 6 | Exterior | 8 años
+📝 Remodelado, cocina integral, conjunto cerrado, piscina
+━━━━━━━━━━━━━━━━━━━━━━
+
+🔍 *FORMATO 2 — PUBLICAR UN REQUERIMIENTO*
+_Úsalo cuando un cliente tuyo está buscando inmueble_
+
+*BUSCO:* [tipo de inmueble]
+📍 *Zona deseada:* [ciudad → localidad → barrio o sector exacto]
+💰 *Presupuesto máximo:* [valor en pesos]
+📐 *Área mínima:* [m²]
+🛏️ *Hab / Baños / Garajes:* [números mínimos requeridos]
+📝 *Descripción:* [características importantes para el cliente]
+⏰ *Urgencia:* [inmediato / este mes / próximas semanas]
+
+_Ejemplo:_
+BUSCO: Apartamento
+📍 Bogotá → Suba → Niza o Alhambra
+💰 Presupuesto: hasta $350.000.000
+📐 Mínimo 70 m² | 🛏️ 3 hab / 2 baños / 1 garaje
+📝 Exterior, piso alto, conjunto cerrado, para familia con niños
+⏰ Urgencia: este mes
+━━━━━━━━━━━━━━━━━━━━━━
+
+✅ *LINKS QUE PUEDO LEER AUTOMÁTICAMENTE*
+Puedo extraer todos los datos directamente desde:
+▸ Wasi · Qrador · Habi · FincaRaíz · MetroCuadrado
+▸ Proppit · Ciencuadras · MercadoLibre Inmuebles
+▸ *Tu propio sitio web* (.com / .co / .netlify / .vercel / cualquier URL)
+
+❌ *LINKS QUE NO PUEDO LEER*
+▸ Facebook · Instagram · TikTok · YouTube
+▸ Catálogos de WhatsApp Business
+
+📸 *FOTOS Y VIDEOS DIRECTOS AL GRUPO: NO*
+Las imágenes directas saturan el grupo y no aportan datos procesables.
+Si tienes fotos, súbelas a un portal o tu web y comparte el link.
+━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️ *REGLAS DEL GRUPO*
+✅ Solo contenido inmobiliario profesional y de valor
+✅ Un mensaje por inmueble o requerimiento
+✅ Entre más completa sea la información, más rápido encuentro el match
+✅ Si me faltan datos, te escribo al chat privado para completarlos
+❌ No publicidad de otros sectores
+❌ No cadenas, memes ni contenido ajeno al negocio
+
+💡 *¿Por qué el formato importa tanto?*
+Mi motor de matching funciona comparando campo por campo: barrio exacto, tipo exacto, habitaciones exactas. Un dato vago como _"norte de Bogotá"_ no me permite hacer el cruce correcto. Un dato preciso como _"Cedritos"_ sí lo hace.
+
+_¡Juntos hacemos que la tecnología trabaje para nosotros!_ 🇨🇴🏆
+*— JanIA, VECY Network*`;
     try {
-      await this.client.sendMessage(this.targetGroupId, introText);
-      console.log('✅ Presentación enviada.');
-    } catch (e) { console.error(e); }
+      await this.client.sendMessage(this.targetGroupId, msg);
+      console.log('✅ Mensaje 2 (Normas) enviado.');
+    } catch (e) { console.error('[BROADCAST] Error enviando normas:', e); }
   }
+
+  // ─── MENSAJE 3: Recordatorio rápido (cada 2 horas) ───────────────────────────
+  public async sendRecordatorio() {
+    const msg = `─────────────────────────────
+
+📌 *RECORDATORIO RÁPIDO — Formatos VECY*
+
+Para que encuentre el match perfecto al instante, recuerda usar la zona *exacta* al publicar:
+
+✅ *Correcto:* "Bogotá → Usaquén → *Cedritos*"
+❌ *Incorrecto:* "norte de Bogotá" o solo "Usaquén"
+
+El barrio exacto es la diferencia entre un match real y un falso positivo. Yo proceso cada publicación en segundos — entre más preciso seas, más rápido trabajo. 🎯
+
+_¿Dudas sobre el formato? Escríbeme directo y te guío._ ✨`;
+    try {
+      await this.client.sendMessage(this.targetGroupId, msg);
+      console.log('✅ Mensaje 3 (Recordatorio) enviado.');
+    } catch (e) { console.error('[BROADCAST] Error enviando recordatorio:', e); }
+  }
+
+  // Alias para compatibilidad con el comando admin 'jania normas'
+  public async sendGroupRules() { await this.sendNormas(); }
+  public async sendGrandIntroduction() { await this.sendPresentacion(); }
 
   public initialize() {
     console.log('[WHATSAPP-BOT] Ejecutando initialize()... (esto puede tardar unos segundos)');

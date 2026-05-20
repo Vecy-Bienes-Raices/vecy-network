@@ -28,22 +28,40 @@ export function evaluarMatch(req: any, prop: any): boolean {
   // Tipo de inmueble
   if (prop.propertyType !== req.tipoInmuebleDeseado) return false;
 
-  // Habitaciones
-  if (Number(prop.bedrooms) !== Number(req.habitacionesMin)) return false;
+  // Tipos que incluyen habitaciones como campo obligatorio
+  const tiposConHabitaciones = ["apartment", "house", "farm", "loft"];
+  // Tipos que incluyen baños como campo obligatorio
+  const tiposConBanos = ["apartment", "house", "farm", "loft", "office", "consultorio"];
+  // Tipos que incluyen garajes como campo obligatorio
+  const tiposConGarajes = ["apartment", "house", "loft", "office", "consultorio"];
+  // Tipos que aplican interior/exterior
+  const tiposConIntExt = ["apartment", "office", "commercial", "loft", "consultorio"];
 
-  // Baños
-  if (Number(prop.bathrooms) !== Number(req.banosMin)) return false;
+  // Habitaciones (solo aplica si el tipo de inmueble las requiere)
+  if (tiposConHabitaciones.includes(prop.propertyType)) {
+    if (req.habitacionesMin !== null && req.habitacionesMin !== undefined && prop.bedrooms !== null && prop.bedrooms !== undefined) {
+      if (Number(prop.bedrooms) !== Number(req.habitacionesMin)) return false;
+    }
+  }
 
-  // Garajes
-  if (Number(prop.garages) !== Number(req.parqueaderosMin)) return false;
+
+  // Baños (solo aplica si el tipo de inmueble los requiere)
+  if (tiposConBanos.includes(prop.propertyType)) {
+    if (Number(prop.bathrooms) !== Number(req.banosMin)) return false;
+  }
+
+  // Garajes (solo aplica si el tipo de inmueble los requiere)
+  if (tiposConGarajes.includes(prop.propertyType)) {
+    if (Number(prop.garages) !== Number(req.parqueaderosMin)) return false;
+  }
 
   // Interior / Exterior (solo aplica para apartment, office, commercial, loft, consultorio)
-  const appliesIntExt = ["apartment", "office", "commercial", "loft", "consultorio"].includes(prop.propertyType);
-  if (appliesIntExt && prop.propertyType === req.tipoInmuebleDeseado) {
+  if (tiposConIntExt.includes(prop.propertyType)) {
     const propIntExt = normalizarTextoGeografico((prop.amenities as any)?.interiorExterior || "");
     const reqIntExt = normalizarTextoGeografico((req.caracteristicasDeseadas as any)?.interiorExterior || "");
     if (reqIntExt && propIntExt !== reqIntExt) return false;
   }
+
 
   // 2. CAMPOS FLEXIBLES (toleran margen razonable)
   
