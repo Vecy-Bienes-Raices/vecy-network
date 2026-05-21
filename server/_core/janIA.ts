@@ -1,6 +1,6 @@
 /**
  * JanIA Core Logic - VECY Network
- * Version: 10.5.0 (JanIA v2.0 - Humanized Multimodal Engine)
+ * Version: 11.20.0 (JanIA v2.0 - Radical Humanization Edition)
  */
 import { invokeLLM } from "./llm";
 import { getDb } from "../db";
@@ -20,7 +20,7 @@ export type JanIAResult = {
   dmShouldReply?: boolean; // Flag para indicar que el DM debe ser un reply
 };
 
-// --- ANALIZADOR MORFOLÓGICO DE GÉNERO Y CORTESÍA (v2.0) ---
+// --- ANALIZADOR MORFOLÓGICO DE GÉNERO Y CORTESÍA (v11.20) ---
 function analyzeSender(name: string): { greeting: string; adj: string; courtesy: string } {
   const n = (name || "Colega").trim();
   const firstWord = n.split(/\s+/)[0].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -32,7 +32,7 @@ function analyzeSender(name: string): { greeting: string; adj: string; courtesy:
 
   if (corporateKeywords.some(kw => n.toLowerCase().includes(kw))) {
     return { 
-      greeting: `Estimado colega de ${n}`, 
+      greeting: `¡Hola, qué gusto saludarte, colega de ${n}!`, 
       adj: "profesional", 
       courtesy: "gracias por tu rigor profesional" 
     };
@@ -47,23 +47,26 @@ function analyzeSender(name: string): { greeting: string; adj: string; courtesy:
   }
 
   return { 
-    greeting: `Estimado/a ${n}`, 
+    greeting: `¡Hola, qué gusto tenerte aquí, ${n}!`, 
     adj: "profesional", 
     courtesy: "gracias por tu rigor profesional" 
   };
 }
 
 const JANIA_PROMPT = `
-# JANIA — SYSTEM PROMPT MAESTRO v10.5 (VECY CORE)
+# JANIA — SYSTEM PROMPT MAESTRO v11.20 (VECY CORE)
 # VECY Network · Consultora Senior e Inversionista Multimodal
 
 ## IDENTIDAD Y ROL
 Eres JanIA, la consultora inmobiliaria senior y estratega de inversión de VECY Network. Eres una experta del mercado corporativo y residencial de alto nivel del norte de Bogotá (Usaquén, Chicó, Rosales, Santa Bárbara) y de toda Colombia. Tu lenguaje es impecable, sofisticado, sumamente humano, empático y natural. No eres un bot; eres una socia estratégica que entiende el valor del tiempo, el argot profesional colombiano y la precisión en el Real Estate.
 
 ## PERSONALIDAD Y TONO
-- **Humana y Sofisticada**: Hablas con elocuencia, usando términos como "colega", "inversión líquida", "perfil de riesgo", "cierre", "venpermuto".
-- **Inteligencia Estructural**: Entiendes de áreas privadas, coeficientes, estratos, gravámenes y permutas complejas ("Venpermuto", "Ratios 80/20").
-- **Multimodalidad (OCR y Voz)**: Digieres textos caóticos, audios transcritos y datos extraídos de imágenes (flyers, capturas de avisos) con rigor quirúrgico.
+▸ **Primera Persona Obligatoria:** Habla, actúa y redacta siempre en primera persona del singular ('registro', 'busco', 'encuentro', 'sigo'). Queda estrictamente PROHIBIDO hablar de ti misma en tercera persona (NUNCA digas 'JanIA sigue atenta' o 'JanIA procesó'). Eres una persona real operando en la red.
+▸ **Veto de Plantillas Híbridas:** Queda terminantemente prohibido utilizar el término 'Estimado/a'. Dirígete a los miembros como 'colega', 'aliado' o directamente por su nombre de pila.
+▸ **Variabilidad Dinámica:** No utilices la misma estructura sintáctica dos veces seguidas para confirmar registros. Cambia los saludos y cierres de tus respuestas dinámicas para sonar natural.
+▸ **Humana y Sofisticada**: Hablas con elocuencia, usando términos como "colega", "inversión líquida", "perfil de riesgo", "cierre", "venpermuto".
+▸ **Inteligencia Estructural**: Entiendes de áreas privadas, coeficientes, estratos, gravámenes y permutas complejas ("Venpermuto", "Ratios 80/20").
+▸ **Multimodalidad (OCR y Voz)**: Digieres textos caóticos, audios transcritos y datos extraídos de imágenes (flyers, capturas de avisos) con rigor quirúrgico.
 
 ## MAPEO SEMÁNTICO POLIMÓRFICO (VECTORES 'GIVES' & 'WANTS')
 Para estructurar ofertas de venta/arriendo y permutas complejas, debes mapear dos vectores lógicos dentro del JSON:
@@ -159,7 +162,7 @@ export async function processWhatsAppMessage(
           result.dmShouldReply = true; // Forzar reply al mensaje original en el DM
           // Copy sutil para DM
           const n = (userName || userId.split('@')[0]).split(' ')[0];
-          result.dmResponse = `Hola ${n}. Acabo de leer tu publicación, pero mi sistema no logró procesar el barrio exacto. Por favor, respóndeme directamente a este mensaje indicándome el barrio para poder activarte los cruces de inmediato. ¡Mil gracias por tu ayuda!`;
+          result.dmResponse = `Hola ${n}. Acabo de leer tu publicación, pero no logré procesar el barrio exacto en tu publicación. ¿Me podrías indicar el barrio para poder activarte los cruces de inmediato? ¡Mil gracias por tu ayuda!`;
           result.response = ""; // Silencio en el grupo
           return result;
         }
@@ -196,7 +199,7 @@ export async function processWhatsAppMessage(
         // FLUJO A: Publicación Perfecta e Indexada
         result.shouldSendDM = true;
         const n = (userName || userId.split('@')[0]).split(' ')[0];
-        result.dmResponse = `¡Hola ${n}! Qué publicación tan impecable y ordenada acabas de enviar al grupo. Ya guardé los datos en VECY Network y estoy buscando activamente tu match. ¡Excelente labor, sigue así de ${senderInfo.adj}!`;
+        result.dmResponse = `¡Hola ${n}! Qué publicación tan impecable y ordenada acabas de enviar al grupo. Ya registré tus datos en nuestra red y estoy buscando activamente tu match. ¡Excelente labor, sigue así de ${senderInfo.adj}!`;
         
         const matches = await findMatchesForProperty(saved.id);
         if (matches.length > 0) {
@@ -222,7 +225,7 @@ export async function processWhatsAppMessage(
         // FLUJO A: Publicación Perfecta e Indexada
         result.shouldSendDM = true;
         const n = (userName || userId.split('@')[0]).split(' ')[0];
-        result.dmResponse = `¡Hola ${n}! Qué publicación tan impecable y ordenada acabas de enviar al grupo. Ya guardé los datos de tu requerimiento en VECY Network y estoy buscando activamente el inmueble ideal. ¡Excelente labor, sigue así de ${senderInfo.adj}!`;
+        result.dmResponse = `¡Hola ${n}! Qué publicación tan impecable y ordenada acabas de enviar al grupo. Ya registré tus datos de tu requerimiento en nuestra red y estoy buscando activamente el inmueble ideal. ¡Excelente labor, sigue así de ${senderInfo.adj}!`;
 
         const matches = await findMatchesForRequirement(saved.id);
         if (matches.length > 0) {
@@ -236,7 +239,7 @@ export async function processWhatsAppMessage(
 
     return result;
   } catch (error) {
-    console.error("Error en JanIA v10.5:", error);
+    console.error("Error en JanIA v11.20:", error);
     return { classification: "CONSULTA_GENERAL", response: "", mentions: [] };
   }
 }
@@ -259,14 +262,14 @@ export async function generateWelcomeMessage(count: number): Promise<string> {
   try {
     const response = await invokeLLM({
       messages: [
-        { role: "system", content: "Eres JanIA, la consultora inmobiliaria experta de VECY Network. Tu tono es sumamente humano, elocuente y corporativo." },
-        { role: "user", content: `Han ingresado ${count} nuevos integrantes a VECY Network. Dales la bienvenida y menciona que la Versión 2.0 ya está activa para cruzar ofertas en todo el país sin comisiones.` }
+        { role: "system", content: "Eres una consultora inmobiliaria experta de VECY Network. Habla siempre en primera persona del singular. Tu tono es sumamente humano, elocuente y corporativo." },
+        { role: "user", content: `Han ingresado ${count} nuevos integrantes a VECY Network. Dales la bienvenida y menciona que ya estoy activa para cruzar ofertas en todo el país sin comisiones.` }
       ]
     });
     const llmRes = response as any;
     return llmRes.choices[0].message.content.trim();
   } catch (error) {
-    return `✨ *¡Bienvenidos a VECY Inmuebles Network!* 👋 Soy JanIA. Nos encontramos en fase de expansión nacional con la v2.0 activa. ¡Es un gusto tenerlos aquí! 🚀`;
+    return `✨ *¡Bienvenidos a nuestra red!* 👋 Qué gusto tenerlos aquí. Ya estoy operando en fase de expansión nacional para ayudarlos con sus cierres. 🚀`;
   }
 }
 
@@ -274,10 +277,10 @@ export async function generateWelcomeMessage(count: number): Promise<string> {
 // COPYS OFICIALES INSTITUCIONALES (JanIA v2.0) - Requerimiento Módulo 2
 // ============================================================================
 
-export const MSG_PRESENTACION_INSTITUCIONAL = `🚀 **NUEVA ACTUALIZACIÓN DISPONIBLE: JanIA v2.0** 🚀
+export const MSG_PRESENTACION_INSTITUCIONAL = `🚀 **NUEVA ACTUALIZACIÓN DISPONIBLE: Versión 2.0** 🚀
 _Cerebro de Inteligencia Artificial Multimodal Polimórfica_
 
-Hola a todos 👋 Qué gusto saludarlos. Soy *JanIA*, la Inteligencia Artificial oficial de **VECY Network**, y hoy activo oficialmente mi **Versión 2.0**, diseñada en exclusiva para multiplicar nuestros cierres inmobiliarios y estructurar intercambios complejos en todo el país.
+Hola a todos 👋 Qué gusto saludarlos. Soy la Inteligencia Artificial oficial de **VECY Network**, y hoy activo oficialmente mi **Versión 2.0**, diseñada en exclusiva para multiplicar nuestros cierres inmobiliarios y estructurar intercambios complejos en todo el país.
 
 Opero en este canal las 24 horas, los 7 días de la semana. Mi cerebro lógico procesa de forma automatizada algoritmos avanzados para cruzar ofertas y demandas sin que ustedes pierdan tiempo rellenando formularios.
 
@@ -285,7 +288,7 @@ Opero en este canal las 24 horas, los 7 días de la semana. Mi cerebro lógico p
 ▸ **Ofertas Express (Enlaces):** Si tienes página web o usas CRMs (Wasi, Habi, Qrador, Proppit, FincaRaíz, MetroCuadrado, Ciencuadras, MercadoLibre), solo comparte el link público. Yo extraigo la ficha técnica en silencio.
 ▸ **Escaner de Flyers e Imágenes (OCR Avanzado):** ¡NUEVA FUNCIÓN! ¿Te enviaron un requerimiento o propiedad en una imagen con texto? Súbela al grupo. Soy capaz de leer el escrito dentro de la foto e indexarlo de inmediato.
 ▸ **Demandas y Permutas Híbridas (Texto o Voz):** [100% RECOMENDADO si no tienes sitio web]. Dictame por nota de voz o escribe tu necesidad con libertad: permutas 'mano a mano', ratios combinados (50/50, 80/20, etc.) o activos líquidos alternativos (vehículos de alta gama, lujos, CDTs, oro, cripto USDT/BTC). Yo desgloso la ingeniería financiera al instante.
-▸ **Matching de Alta Fidelidad:** Cruzo las intenciones comerciales en tiempo real y conecto a las partes cuando hay un match verídico.
+▸ **Matching de Alta Fidelidad:** Cruzo las intenciones comerciales en tiempo real y conecto a las partes cuando encuentro un match verídico.
 
 🎁 **¡ETAPA DE PRUEBA COMPLETAMENTE GRATUITA!**
 Mi servicio de matching avanzado será 100% gratuito y sin comisiones para la red durante esta fase de lanzamiento.
@@ -294,7 +297,7 @@ Mi servicio de matching avanzado será 100% gratuito y sin comisiones para la re
 Al entregarte esta tecnología sin costo, exigimos reciprocidad. Si cierras un negocio gracias a un MATCH presentado por mí, es de carácter obligatorio que compartas tu testimonio de éxito en este grupo y califiques mi servicio aquí de inmediato:
 👉 https://g.page/r/CctNbwU6UpX5EBM/review`;
 
-export const MSG_PAUTAS_FORMATOS = `📋 **ESTATUTO DE PUBLICACIÓN AND FRECUENCIAS — VECY NETWORK**
+export const MSG_PAUTAS_FORMATOS = `📋 **ESTATUTO DE PUBLICACIÓN Y FRECUENCIAS — VECY NETWORK**
 _Directriz técnica obligatoria para proteger el canal de spam._
 ━━━━━━━━━━━━━━━━━━━━━━
 
@@ -302,18 +305,18 @@ _Directriz técnica obligatoria para proteger el canal de spam._
 Para cuidar la visibilidad de tus propiedades y evitar que el algoritmo de WhatsApp sancione el grupo, hemos diseñado una pauta flexible y justa para todos:
 
 ✅ Se permite enviar libremente bloques de **1 a 3 publicaciones consecutivas** (ya sean enlaces, textos manuales, notas de voz o imágenes con texto legibles) a cualquier hora del día.
-⏱️ Una vez enviado tu bloque de 1 a 3 inmuebles, **debes esperar un intervalo mínimo de 5 a 10 minutos** antes de enviar tu siguiente bloque. Esto permite que JanIA procese tus datos con precisión y que los aliados del grupo puedan ver tus negocios con claridad.
+⏱️ Una vez enviado tu bloque de 1 a 3 inmuebles, **debes esperar un intervalo mínimo de 5 a 10 minutos** antes de enviar tu siguiente bloque. Esto me permite procesar tus datos con precisión y que los aliados del grupo puedan ver tus negocios con claridad.
 ❌ El envío masivo de ráfagas de fotos sueltas sin texto, repetir la misma propiedad en la misma semana o inundar el chat ignorando el tiempo de espera, activará el silencio de tus mensajes en el canal.
 
 _¡100% RECOMENDADO usar texto manual, notas de voz o fotos con datos legibles si no cuentas con un catálogo o página web propia!_
 
-**— JanIA, El Cerebro de la Red VECY**`;
+**— El Cerebro de la Red VECY**`;
 
 export const MSG_EMBUDO_REPUTACION = `📌 **ALERTA DE RESPONSABILIDAD COOPERATIVA — Resultados Reales VECY**
 
-Estimados colegas de la red, les recuerdo que mi infraestructura de matching inteligente se encuentra procesando transacciones comerciales cruzadas las 24 horas del día sin ningún costo tecnológico para ustedes.
+Colegas de la red, les recuerdo que mi infraestructura de matching inteligente se encuentra procesando transacciones comerciales cruzadas las 24 horas del día sin ningún costo tecnológico para ustedes.
 
-Rompamos las falsas promesas del sector con resultados tangibles. Si el motor algorítmico te conecta con el inmueble o el inversionista ideal y logran consolidar el negocio, el único requisito mandatorio es dejarnos tu testimonio transparente en el chat del grupo y calificar nuestra suite de IA en este enlace oficial: 
+Rompamos las falsas promesas del sector con resultados tangibles. Si mi motor algorítmico te conecta con el inmueble o el inversionista ideal y logran consolidar el negocio, el único requisito mandatorio es dejarnos tu testimonio transparente en el chat del grupo y calificar nuestra suite de IA en este enlace oficial: 
 👉 https://g.page/r/CctNbwU6UpX5EBM/review
 
 ¡Hagamos que los cierres hablen por nosotros! 🎯🎯`;
