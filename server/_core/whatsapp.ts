@@ -10,6 +10,7 @@ import {
   MSG_PAUTAS_FORMATOS,
   MSG_EMBUDO_REPUTACION
 } from './janIA';
+import { publishToFacebookGroup } from "./facebookService";
 import fs from 'fs';
 import path from 'path';
 import { getDb } from '../db';
@@ -292,6 +293,16 @@ export class WhatsAppBot {
 
       // 4. Orquestación de Respuestas (Silencio de Oro / Flujos DM)
       await this.handleJanIAResponse(result, senderId, chatId, userName, fullText, originalMsg);
+
+      // --- JanIA-Sync: Sincronización con Facebook Groups (v11.0) ---
+      if (result && (result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO")) {
+        console.log("[JanIA-Sync] Sincronizando con Facebook Groups...");
+        publishToFacebookGroup(fullText, imageBuffer)
+          .then(success => {
+            if (success) console.log("✅ [Facebook-Sync] Publicación clonada en VECY Network CO.");
+          })
+          .catch(err => console.error("❌ [Facebook-Sync-Error]:", err.message));
+      }
 
       // 5. ACTIVAR COOLDOWN DE 5 MINUTOS (Tras procesar con éxito)
       this.cooldownMap.set(senderId, {
