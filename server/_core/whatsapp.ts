@@ -3,7 +3,13 @@ const { Client, LocalAuth } = pkg;
 import type { Client as ClientType, Message } from 'whatsapp-web.js';
 import qrcode from 'qrcode-terminal';
 import { scrapePropertyLink, esDominioPermitido } from './scraper';
-import { processWhatsAppMessage, generateWelcomeMessage } from './janIA';
+import { 
+  processWhatsAppMessage, 
+  generateWelcomeMessage,
+  MSG_PRESENTACION_INSTITUCIONAL,
+  MSG_PAUTAS_FORMATOS,
+  MSG_EMBUDO_REPUTACION
+} from './janIA';
 import fs from 'fs';
 import path from 'path';
 import { getDb } from '../db';
@@ -407,18 +413,15 @@ export class WhatsAppBot {
   }
 
   public async sendPresentacion() {
-    const msg = `✨ *¡Bienvenidos a VECY Inmuebles Network!* 👋 Soy *JanIA*, la IA oficial diseñada para el sector inmobiliario nacional. Trabajo 24/7 conectando ofertas y demandas en todo Colombia. Cero esfuerzo, máximos resultados. 🏆`;
-    await this.client.sendMessage(this.targetGroupId, msg);
+    await this.client.sendMessage(this.targetGroupId, MSG_PRESENTACION_INSTITUCIONAL);
   }
 
   public async sendNormas() {
-    const msg = `📋 *NORMAS VECY v10.5*\n\n1. Publica bloques de máx. 3 mensajes.\n2. Espera 5 min entre bloques procesados.\n3. Indícame el barrio exacto para Bogotá o el municipio para el resto del país.\n\n📸 *Multimodalidad:* Ahora leo flyers y fotos de avisos. ¡Súbelos y yo los indexo! ✨`;
-    await this.client.sendMessage(this.targetGroupId, msg);
+    await this.client.sendMessage(this.targetGroupId, MSG_PAUTAS_FORMATOS);
   }
 
   public async sendRecordatorio() {
-    const msg = `📌 *RECORDATORIO:* JanIA procesa inventario en todo el territorio nacional. ¡Desde el Amazonas hasta La Guajira, estamos listos para el match! 🎯`;
-    await this.client.sendMessage(this.targetGroupId, msg);
+    await this.client.sendMessage(this.targetGroupId, MSG_EMBUDO_REPUTACION);
   }
 
   public async sendAnuncioComision() {
