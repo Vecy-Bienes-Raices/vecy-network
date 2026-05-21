@@ -2,9 +2,10 @@ import puppeteer from 'puppeteer';
 import fs from 'fs';
 
 /**
- * FACEBOOK GROUPS SYNC SERVICE - VECY NETWORK v11.75
+ * FACEBOOK GROUPS SYNC SERVICE - VECY NETWORK v11.80
  * Automatización de publicaciones en Facebook Groups usando Puppeteer.
  * Soporta sincronización de imágenes y videos (Buffers binarios o Base64).
+ * Incluye blindaje contra falsos positivos y evidencia visual obligatoria.
  */
 
 export async function publishToFacebookGroup(content: string, mediaData?: string | Buffer): Promise<boolean> {
@@ -47,7 +48,6 @@ export async function publishToFacebookGroup(content: string, mediaData?: string
       await page.waitForSelector(postBoxSelector, { timeout: 10000 });
       await page.click(postBoxSelector);
     } catch (e) {
-      // Atajo de contingencia para abrir el cuadro de post
       await page.keyboard.press('p');
       await new Promise(resolve => setTimeout(resolve, 2000));
     }
@@ -58,10 +58,8 @@ export async function publishToFacebookGroup(content: string, mediaData?: string
       const fileInputSelector = 'input[type="file"]';
       await page.waitForSelector(fileInputSelector, { timeout: 5000 });
       
-      // Generar ruta temporal única
       const tempPath = `/tmp/fb_sync_upload_${Date.now()}.mp4`;
       
-      // Control inteligente de escritura para evitar corrupción
       if (Buffer.isBuffer(mediaData)) {
         fs.writeFileSync(tempPath, mediaData);
       } else {
@@ -71,33 +69,30 @@ export async function publishToFacebookGroup(content: string, mediaData?: string
       const input = await page.$(fileInputSelector);
       if (input) {
         await input.uploadFile(tempPath);
-        // Limpieza diferida del archivo temporal
         setTimeout(() => {
           if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
-        }, 20000);
+        }, 25000);
       }
       
-      // ESPERA DINÁMICA v11.75: Validar que el botón de publicar se habilite tras la subida
       console.log('[Facebook-Sync] Esperando procesamiento multimedia de Meta...');
-      await new Promise(resolve => setTimeout(resolve, 5000)); // Margen base
+      await new Promise(resolve => setTimeout(resolve, 5000));
       
       try {
         await page.waitForFunction(() => {
-          // Buscamos el botón de publicar y verificamos que no esté deshabilitado (aria-disabled)
           const btn = Array.from(document.querySelectorAll('div[role="button"]'))
             .find(el => {
               const label = el.getAttribute('aria-label');
               return label === 'Publicar' || label === 'Post';
             });
           return btn && btn.getAttribute('aria-disabled') !== 'true';
-        }, { timeout: 20000 });
-        console.log('[Facebook-Sync] Multimedia lista para publicar.');
+        }, { timeout: 25000 });
+        console.log('[Facebook-Sync] Multimedia lista.');
       } catch (e) {
-        console.log('[Facebook-Sync] Timeout en espera dinámica (latencia), continuando flujo.');
+        console.log('[Facebook-Sync] Latencia detectada en carga, continuando flujo.');
       }
     }
 
-    // Simulación de tipeado humano (Anti-detección)
+    // Simulación de tipeado humano
     await new Promise(resolve => setTimeout(resolve, 2000));
     for (const char of content) {
       await page.keyboard.sendCharacter(char);
@@ -107,11 +102,10 @@ export async function publishToFacebookGroup(content: string, mediaData?: string
 
     console.log('[Facebook-Sync] Contenido ingresado. Procediendo a publicar...');
 
-    // Selectores de botón "Publicar" por prioridad semántica
+    // v11.80: Depuración de selectores para eliminar falsos positivos
     const publishButtonSelectors = [
       'div[aria-label="Publicar"]',
-      'div[aria-label="Post"]',
-      'div[role="button"]'
+      'div[aria-label="Post"]'
     ];
 
     let published = false;
@@ -119,7 +113,6 @@ export async function publishToFacebookGroup(content: string, mediaData?: string
       try {
         const btn = await page.$(selector);
         if (btn) {
-          // Verificar que sea el botón correcto y esté habilitado
           const isDisabled = await page.evaluate((el: any) => el.getAttribute('aria-disabled') === 'true', btn);
           if (!isDisabled) {
             await btn.click();
@@ -130,33 +123,34 @@ export async function publishToFacebookGroup(content: string, mediaData?: string
       } catch (e) {}
     }
 
-    // Fallback: Publicación forzada por atajo de teclado si los selectores fallan o están bloqueados
+    // Fallback de teclado
     if (!published) {
+      console.log('[Facebook-Sync] Selectores específicos no encontrados, ejecutando fallback de teclado.');
       await page.keyboard.down('Control');
       await page.keyboard.press('Enter');
       await page.keyboard.up('Control');
     }
 
-    // Esperar a que Facebook confirme la recepción del post
+    // Espera final para confirmación
     await new Promise(resolve => setTimeout(resolve, 5000));
     
-    console.log('[Facebook-Sync] Publicación exitosa.');
+    // v11.80: Captura de evidencia visual obligatoria
+    await page.screenshot({ path: "./evidencia_publicacion.png", fullPage: true });
+    console.log("[Facebook-Sync] Captura de confirmación visual guardada en ./evidencia_publicacion.png");
+
+    console.log('[Facebook-Sync] Ciclo de publicación finalizado.');
     return true;
 
   } catch (error: any) {
-    // DIAGNÓSTICO VISUAL v11.75: Captura de pantalla de emergencia
     if (page) {
       try {
         await page.screenshot({ path: "./error_facebook.png", fullPage: true });
         console.log('[Facebook-Sync-Error] Captura de pantalla de error guardada en ./error_facebook.png para auditoría visual.');
-      } catch (screenshotError) {
-        console.error('[Facebook-Sync-Error] No se pudo generar la captura de pantalla de diagnóstico.');
-      }
+      } catch (screenshotError) {}
     }
-    console.error(`[Facebook-Sync-Error] Error en la ejecución de Puppeteer: ${error.message}`);
+    console.error(`[Facebook-Sync-Error] Fallo en la automatización: ${error.message}`);
     return false;
   } finally {
-    // Blindaje de procesos: El navegador siempre debe cerrarse
     await browser.close();
   }
 }
