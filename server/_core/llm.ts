@@ -23,11 +23,12 @@ export async function invokeLLM({
 }
 
 /**
- * Invocación a Google Gemini (Google AI Studio)
+ * Invocación a Google Gemini (Google AI Studio) utilizando la infraestructura de frontera 3.1 Flash-Lite
  */
 async function invokeGemini(messages: any[], responseFormat?: any) {
   const API_KEY = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || ENV.forgeApiKey;
-  const MODEL = "gemini-flash-latest";
+  // Migración estratégica al modelo de bajo costo para pruebas masivas
+  const MODEL = "gemini-3.1-flash-lite";
   const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${API_KEY}`;
 
   try {
@@ -51,7 +52,7 @@ async function invokeGemini(messages: any[], responseFormat?: any) {
       }
     };
 
-    console.log(`[JanIA-LLM] Procesando con Gemini (${MODEL})...`);
+    console.log(`[JanIA-LLM] Procesando con infraestructura optimizada: Gemini (${MODEL})...`);
     const response = await axios.post(API_URL, payload);
 
     if (response.data.candidates && response.data.candidates[0]) {
@@ -67,11 +68,9 @@ async function invokeGemini(messages: any[], responseFormat?: any) {
 }
 
 /**
- * Placeholder para Anthropic Claude (Estructura preparada para Fase 2/3)
+ * Placeholder para Anthropic Claude (Estructura preparada para fases futuras)
  */
 async function invokeClaude(messages: any[], responseFormat?: any) {
-  // Nota para el futuro: Cuando tengamos los recursos, implementar la llamada a Anthropic API aquí.
-  // Se requerirá la librería @anthropic-ai/sdk o axios a https://api.anthropic.com/v1/messages
   console.log("[JanIA-LLM] Intentando procesar con Claude (Anthropic)...");
   throw new Error("El proveedor Anthropic está preparado en código pero requiere API KEY y activación financiera.");
 }

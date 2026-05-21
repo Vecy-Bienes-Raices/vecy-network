@@ -10,10 +10,20 @@ import { getDb } from '../db';
 import { conversations, messages as dbMessages } from '../../drizzle/schema';
 import { eq } from 'drizzle-orm';
 
+// Estado pendiente para completar registros cuando el usuario responde por DM
+interface PendingEntry {
+  originalText: string;       // Extracto de la publicación original en el grupo
+  extractedData: any;         // Datos ya extraídos por JanIA
+  classification: string;     // INMUEBLE | REQUERIMIENTO
+  missingFields: string[];    // Preguntas pendientes
+  expiresAt: number;          // Expira en 2 horas
+}
+
 export class WhatsAppBot {
   private client: ClientType;
   private targetGroupId: string = '120363260108880069@g.us';
   private messageBuffers: Map<string, { timer: NodeJS.Timeout, messages: string[], userName: string, hasMedia: boolean, chatId: string }> = new Map();
+  private pendingData: Map<string, PendingEntry> = new Map(); // Seguimiento de respuestas pendientes por DM
   private startTime: number = Date.now();
   private pendingWelcomeCount: number = 0;
   private counterFile: string = path.join(process.cwd(), '.pending_welcome_count');
@@ -205,7 +215,12 @@ export class WhatsAppBot {
         const text = msg.body.toLowerCase();
 
         // Comandos administrativos solo en el grupo objetivo
-        if (isTargetGroup && (text.includes('jania normas') || text.includes('jania preséntate'))) {
+        if (isTargetGroup && (
+          text.includes('jania normas') ||
+          text.includes('jania preséntate') ||
+          text.includes('jania anuncia') ||
+          text.includes('jania dipava')
+        )) {
           await this.handleMessageImmediate(msg);
           return;
         }
@@ -241,8 +256,28 @@ export class WhatsAppBot {
 
   private async enqueueMessage(msg: Message, hasMedia: boolean, chatId: string) {
     const senderId = (msg as any).author || msg.from;
+
+    // ✅ REGLA 3: Máximo 3 enlaces por publicación
+    const urlsFound = msg.body.match(/https?:\/\/[^\s]+/g) || [];
+    if (urlsFound.length > 3) {
+      const contact = await msg.getContact();
+      const userName = contact.pushname || contact.name || contact.number || "Colega";
+      const pushback =
+        `¡Hola, ${userName}! 🧐\n\n` +
+        `Detecté *${urlsFound.length} enlaces* en tu mensaje. Para que mi motor de matching funcione con máxima precisión y no se pierda ningún inmueble, necesito que los publiques de *máximo 3 en 3*.\n\n` +
+        `📋 *Lo ideal:*\n` +
+        `▸ Publica hasta 3 enlaces por mensaje\n` +
+        `▸ Espera *5 a 10 minutos* entre cada grupo mientras proceso los anteriores\n` +
+        `▸ Así garantizo que cada inmueble quede correctamente registrado en el sistema\n\n` +
+        `¡Gracias por tu colaboración! Entre más ordenado el proceso, más rápido encuentro los matches. 🏆`;
+      await this.client.sendMessage(senderId, pushback);
+      return;
+    }
+
     const contact = await msg.getContact();
-    const userName = contact.pushname || contact.name || contact.number || "Colega";
+    const phoneNumber = senderId.split('@')[0];
+    const userName = contact.pushname || contact.name || contact.number || phoneNumber;
+    console.log(`[DEBUG-CONTACT] ID: ${senderId} | pushname: "${contact.pushname}" | name: "${contact.name}" | number: "${contact.number}" → userName: "${userName}"`);
 
     // Usamos una combinación de senderId y chatId para evitar colisiones si alguien escribe en grupo y DM a la vez
     const bufferKey = `${chatId}_${senderId}`;
@@ -297,7 +332,56 @@ export class WhatsAppBot {
         }
       }
 
-      // 3. PROCESAMIENTO INTEGRADO: Pasamos los datos del scraper a JanIA
+      // 3. VERIFICAR SI ES UNA RESPUESTA A UN PENDIENTE (DM de seguimiento)
+      const isDM = !chatId.includes('@g.us');
+      const pending = isDM ? this.pendingData.get(senderId) : null;
+
+      if (pending && Date.now() < pending.expiresAt) {
+        // El usuario responde por DM con los datos que le faltaban
+        console.log(`[PENDING] Procesando respuesta de seguimiento de ${senderId}`);
+        const combinedText =
+          `[CONTEXTO — publicación original del usuario en el grupo]: "${pending.originalText}"
+[RESPUESTA DEL USUARIO con datos faltantes]: "${fullText}"
+
+Con esta información combinada, extrae y completa todos los campos posibles.`;
+
+        this.pendingData.delete(senderId);
+        const followUpResult = await processWhatsAppMessage(combinedText, senderId, userName, false, []);
+
+        if (followUpResult.classification === 'INMUEBLE' || followUpResult.classification === 'REQUERIMIENTO') {
+          const type = followUpResult.classification === 'INMUEBLE' ? 'inmueble' : 'requerimiento';
+          const confirmMsg =
+            `¡Perfecto, ${userName}! ✅
+
+Ya completé el registro de tu *${type}* con los datos que me enviaste. Todo quedó guardado correctamente en mi sistema.
+
+Seguiré monitoreando 24/7 y te aviso al instante si hay un match. 🎯✨`;
+          await this.client.sendMessage(senderId, confirmMsg);
+          await this.logToDb(senderId, 'janIA', `[DM-FOLLOWUP-OK] ${confirmMsg}`);
+        } else if (followUpResult.classification === 'DATOS_INCOMPLETOS') {
+          // Aún faltan datos, preguntar de nuevo
+          const stillMissing = (followUpResult.missingFields || []).map((q, i) => `${i + 1}. ${q}`).join('\n');
+          const retryMsg =
+            `🧠 Casi listo, ${userName}. Me falta un poco más de información para completar el registro:
+
+${stillMissing}
+
+¿Me puedes responder con esos datos? 🙏`;
+          await this.client.sendMessage(senderId, retryMsg);
+          // Actualizar el pendiente con lo nuevo que se pudo extraer
+          this.pendingData.set(senderId, {
+            originalText: pending.originalText,
+            extractedData: followUpResult.extractedData || pending.extractedData,
+            classification: pending.classification,
+            missingFields: followUpResult.missingFields || [],
+            expiresAt: Date.now() + 2 * 60 * 60 * 1000
+          });
+          await this.logToDb(senderId, 'janIA', `[DM-FOLLOWUP-RETRY] ${retryMsg}`);
+        }
+        return; // No procesar como mensaje nuevo
+      }
+
+      // 4. PROCESAMIENTO NORMAL: Pasamos los datos del scraper a JanIA
       const result = await processWhatsAppMessage(fullText, senderId, userName, hasMedia, scrapedResults);
 
       if (result) {
@@ -345,24 +429,46 @@ export class WhatsAppBot {
           } catch (e) {}
         }
 
-        // 4. DM PROACTIVO: Solo si JanIA lo pide (shouldSendDM) y NO hubo match
+        // 5. DM PROACTIVO para datos faltantes (siempre al privado del usuario)
         if (result.shouldSendDM && !isMatch) {
           try {
-            let missingText = "datos adicionales";
-            if (result.missingFields && result.missingFields.length > 0) {
-              if (result.missingFields.length === 1) {
-                missingText = `\n\n*${result.missingFields[0]}*`;
-              } else {
-                missingText = `\n\n${result.missingFields.map(q => `- ${q}`).join("\n")}`;
-              }
+            // Extracto de la publicación original para que el usuario sepa a qué se refiere JanIA
+            const snippet = fullText.length > 120
+              ? fullText.substring(0, 120).trim() + '...'
+              : fullText.trim();
+
+            const missingList = (result.missingFields || []).map((q, i) => `${i + 1}. ${q}`).join('\n');
+
+            const dmMsg =
+              `🧠 *Hola, ${userName}!*
+
+Recibí tu publicación en el grupo y la estoy procesando, pero me faltan algunos datos para poder registrarla correctamente y encontrar el match perfecto. 🎯
+
+` +
+              `📌 *Tu publicación:*
+_"${snippet}"_
+
+` +
+              `📋 *Necesito que me respondas AQUÍ (en este chat privado) con lo siguiente:*
+${missingList}
+
+` +
+              `Responde directamente a este mensaje y yo me encargo de completar y subir todo a la base de datos. ¡Gracias! 🙏✨`;
+
+            await this.client.sendMessage(senderId, dmMsg);
+            await this.logToDb(senderId, 'janIA', `[DM-NUDGE] ${dmMsg}`);
+
+            // Guardar estado pendiente para procesar la respuesta cuando el usuario conteste
+            if (isGroup) {
+              this.pendingData.set(senderId, {
+                originalText: fullText,
+                extractedData: result.extractedData || {},
+                classification: result.classification,
+                missingFields: result.missingFields || [],
+                expiresAt: Date.now() + 2 * 60 * 60 * 1000 // expira en 2 horas
+              });
+              console.log(`[PENDING] Guardado estado pendiente para ${senderId}. Expira en 2h.`);
             }
-              
-            const dmResponse = isGroup
-              ? `¡Hola, ${userName}! 🧐 He recibido tu mensaje en el grupo, pero para que mi matching funcione necesito completar: ${missingText}\n\nPor favor, responde aquí mismo. ¡Gracias! ✨`
-              : `🧐 Para que mi matching funcione necesito completar: ${missingText}\n\nPor favor, responde aquí con esos datos. ¡Gracias! ✨`;
-            
-            await this.client.sendMessage(senderId, dmResponse);
-            await this.logToDb(senderId, 'janIA', `[DM-NUDGE] ${dmResponse}`);
           } catch (dmError) {
             console.error(`Error enviando DM a ${senderId}:`, dmError);
           }
@@ -393,9 +499,123 @@ export class WhatsAppBot {
         await this.sendPresentacion();
         setTimeout(() => this.sendNormas(), 4000);
       }
+    } else if (text.includes('jania anuncia')) {
+      if (isAdmin) {
+        await this.sendAnuncioComision();
+      } else {
+        await this.client.sendMessage(this.targetGroupId, "Solo los administradores pueden pedirme que publique anuncios oficiales. 🙏");
+      }
+    } else if (text.includes('jania dipava')) {
+      if (isAdmin) {
+        await this.sendApologyDeLaPava();
+      }
     }
   }
 
+
+  // ─── DISCULPA + REGISTRO MANUAL: De La Pava Group ─────────────────────────
+  public async sendApologyDeLaPava() {
+    const deLaPavaId = '105188731928753@lid';
+
+    // 1. DISCULPA PÚBLICA en el grupo
+    const groupApology =
+      `🙏 *Querido grupo VECY — necesito pedirles disculpas.*\n\n` +
+      `El formato que compartí para publicar *REQUERIMIENTOS* estaba incompleto desde el principio: le faltaba la línea *"Tipo de Negocio"*, que es clave para el matching. El error fue mío y lo asumo con total responsabilidad. Ya está corregido.\n\n` +
+      `📋 *El formato correcto para REQUERIMIENTOS ahora es:*\n\n` +
+      `*BUSCO:* [tipo de inmueble]\n` +
+      `*Tipo de Negocio:* [Compra / Arriendo / Permuta] ← *esta línea faltaba*\n` +
+      `📍 *Zona deseada:* [ciudad → localidad → barrio/sector exacto]\n` +
+      `💰 *Presupuesto máximo:* [valor en pesos]\n` +
+      `📐 *Área mínima:* [m²]\n` +
+      `🛏️ *Hab / Baños / Garajes:* [números mínimos]\n` +
+      `📝 *Descripción:* [características]\n` +
+      `⏰ *Urgencia:* [timeframe]\n\n` +
+      `Me he comunicado directamente con De La Pava Group por el inconveniente. ¡Gracias a todos por la paciencia! 🇨🇴🏆\n*— JanIA, VECY Network*`;
+
+    try {
+      await this.client.sendMessage(this.targetGroupId, groupApology);
+      console.log('✅ Disculpa pública enviada al grupo.');
+    } catch (e) {
+      console.error('[GROUP] Error enviando disculpa pública:', e);
+    }
+
+    await new Promise(r => setTimeout(r, 3000));
+
+    // 2. Guardar el requerimiento en la base de datos
+    try {
+      const { processWhatsAppMessage } = await import('./janIA');
+      const reqText = `BUSCO: Casa Campestre
+Tipo de Negocio: Compra
+Zona deseada: Guaymaral, Suba, Bogotá
+Presupuesto máximo: 7000000000
+Área mínima: 250
+Habitaciones mínimas: 3
+Baños mínimos: 4
+Garajes: 3
+Descripción: Casa campestre, 3 o 4 habitaciones más cuarto de servicio, 4 o 5 baños, 3 parqueaderos. Antigüedad máxima 15 años.
+Urgencia: 1 a 3 meses`;
+      await processWhatsAppMessage(reqText, deLaPavaId, 'De La Pava Group Inmobiliario', false, []);
+      console.log('[MANUAL] Requerimiento De La Pava guardado.');
+    } catch (e) {
+      console.error('[MANUAL] Error guardando requerimiento De La Pava:', e);
+    }
+
+    // 3. DM PERSONAL a De La Pava
+    const dmMsg =
+      `🙏 *Mis más sinceras disculpas, De La Pava Group Inmobiliario.*\n\n` +
+      `El error fue mío desde el principio: el formato que compartí en el grupo para requerimientos estaba *incompleto* — le faltaba la línea "Tipo de Negocio". Eso generó toda la confusión. Su publicación estaba perfectamente bien.\n\n` +
+      `Ya registré su requerimiento correctamente en la base de datos. Así quedó organizado:\n\n` +
+      `―――――――――――――――――――――――\n` +
+      `🔍 *BUSCO:* Casa Campestre\n` +
+      `*Tipo de Negocio:* Compra\n` +
+      `📍 *Zona deseada:* Bogotá → Suba → Guaymaral (Lagos de Torca / Hda. San Simón - San Sebastián)\n` +
+      `💰 *Presupuesto máximo:* $7.000.000.000\n` +
+      `📐 *Área mínima:* 250 m²\n` +
+      `🛏️ *Hab / Baños / Garajes:* Mín. 3 hab + cuarto servicio / 4-5 baños / 3 garajes\n` +
+      `📝 *Descripción:* Casa campestre, 3-4 habitaciones más cuarto de servicio, 4-5 baños, 3 parqueaderos. Antigüedad máxima 15 años.\n` +
+      `⏰ *Urgencia:* 1 a 3 meses\n` +
+      `―――――――――――――――――――――――\n\n` +
+      `Estaré monitoreando 24/7 y le aviso al instante cuando haya match. ¡Gracias por su paciencia y confianza! 🎯✨\n\n` +
+      `*— JanIA, VECY Network*`;
+
+    try {
+      await this.client.sendMessage(deLaPavaId, dmMsg);
+      console.log('✅ DM de disculpa enviado a De La Pava Group.');
+    } catch (e) {
+      console.error('[DM] Error enviando disculpa a De La Pava:', e);
+    }
+  }
+
+  // ─── ANUNCIO OFICIAL: Comisiones y etapa de prueba ──────────────────────────
+  public async sendAnuncioComision() {
+    const msg =
+      `👋 *¡Hola a todos!*
+
+` +
+      `Quiero hacer dos aclaraciones importantes antes de continuar:
+
+` +
+      `*1️⃣ Sobre mis ajustes actuales:*
+` +
+      `Me encuentro en plena etapa de implementación. Es posible que encuentren algunas respuestas imprecisas o comportamientos inesperados de mi parte. Les pido paciencia — cada interacción me ayuda a aprender y mejorar. Si algo no funciona como esperan, escíbanme directamente por chat privado y lo resolvemos.
+
+` +
+      `*2️⃣ Sobre comisiones por los MATCH:*
+` +
+      `*Durante esta etapa de prueba, VECY no cobrará ninguna comisión* por los matches generados ni por los cierres que realicen. Las comisiones del negocio se dividen únicamente entre las partes que cierran el trato, según lo que pacten entre ustedes.
+
+` +
+      `Es posible que más adelante se anuncien planes y tarifas para acceder a funciones premium. Cuando eso ocurra, serán informados con suficiente tiempo de anticipación.
+
+` +
+      `Por ahora, ¡sigan disfrutando de esta herramienta y cerrando negocios! 🎯🏆
+` +
+      `— *JanIA, VECY Network*`;
+    try {
+      await this.client.sendMessage(this.targetGroupId, msg);
+      console.log('✅ Anuncio de comisiones enviado al grupo.');
+    } catch (e) { console.error('[BROADCAST] Error enviando anuncio comisiones:', e); }
+  }
 
   // ─── MENSAJE 1: Presentación / Bienvenida diaria ────────────────────────────
   public async sendPresentacion() {
@@ -431,7 +651,8 @@ _Por favor léelo completo. Aplica desde ya._
 🏠 *FORMATO 1 — PUBLICAR UN INMUEBLE*
 _Úsalo cuando ofreces o tienes disponible un inmueble_
 
-*VENDO / ARRIENDO:* [tipo: apartamento / casa / lote / bodega / local / oficina / finca / consultorio]
+*OFREZCO:* [tipo: Apartamento / Casa / Lote / Bodega / Local / Oficina / Finca / Consultorio]
+*Tipo de Negocio:* [Venta / Arriendo / Permuta]
 📍 *Zona:* [ciudad → localidad → barrio exacto]
 💰 *Precio:* [valor en pesos colombianos]
 📐 *Área:* [m² construidos]
@@ -441,7 +662,8 @@ _Úsalo cuando ofreces o tienes disponible un inmueble_
 🔗 *Link:* [URL del portal o tu sitio web — si tienes]
 
 _Ejemplo:_
-VENDO: Apartamento
+OFREZCO: Apartamento
+Tipo de Negocio: Venta
 📍 Bogotá → Usaquén → Cedritos
 💰 $480.000.000
 📐 85 m² | 🛏️ 3 hab / 2 baños / 1 garaje
@@ -453,6 +675,7 @@ VENDO: Apartamento
 _Úsalo cuando un cliente tuyo está buscando inmueble_
 
 *BUSCO:* [tipo de inmueble]
+*Tipo de Negocio:* [Compra / Arriendo / Permuta]
 📍 *Zona deseada:* [ciudad → localidad → barrio o sector exacto]
 💰 *Presupuesto máximo:* [valor en pesos]
 📐 *Área mínima:* [m²]
@@ -462,8 +685,9 @@ _Úsalo cuando un cliente tuyo está buscando inmueble_
 
 _Ejemplo:_
 BUSCO: Apartamento
+Tipo de Negocio: Compra
 📍 Bogotá → Suba → Niza o Alhambra
-💰 Presupuesto: hasta $350.000.000
+💰 Presupuesto máximo: $350.000.000
 📐 Mínimo 70 m² | 🛏️ 3 hab / 2 baños / 1 garaje
 📝 Exterior, piso alto, conjunto cerrado, para familia con niños
 ⏰ Urgencia: este mes
@@ -486,14 +710,14 @@ Si tienes fotos, súbelas a un portal o tu web y comparte el link.
 
 ⚠️ *REGLAS DEL GRUPO*
 ✅ Solo contenido inmobiliario profesional y de valor
-✅ Un mensaje por inmueble o requerimiento
+✅ Un mensaje por inmueble o requerimiento (máx. 3 links por mensaje)
 ✅ Entre más completa sea la información, más rápido encuentro el match
 ✅ Si me faltan datos, te escribo al chat privado para completarlos
 ❌ No publicidad de otros sectores
 ❌ No cadenas, memes ni contenido ajeno al negocio
 
 💡 *¿Por qué el formato importa tanto?*
-Mi motor de matching funciona comparando campo por campo: barrio exacto, tipo exacto, habitaciones exactas. Un dato vago como _"norte de Bogotá"_ no me permite hacer el cruce correcto. Un dato preciso como _"Cedritos"_ sí lo hace.
+Mi motor de matching funciona comparando campo por campo: barrio exacto, tipo exacto, habitaciones exactas. Un dato vago como Una zona vaga no permite cruce preciso. Una zona exacta sí lo hace. 🎯
 
 _¡Juntos hacemos que la tecnología trabaje para nosotros!_ 🇨🇴🏆
 *— JanIA, VECY Network*`;

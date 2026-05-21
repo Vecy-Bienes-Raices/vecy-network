@@ -20,7 +20,7 @@ const emptyForm = {
   name: '', price: '', location: '', zone: '',
   propertyType: 'apartment', description: '',
   bedrooms: '', bathrooms: '', garages: '', stratum: '',
-  floorDetail: '', areaSquareMeters: '', yearBuilt: '',
+  floorDetail: '', areaTotal: '', yearBuilt: '',
   adminFee: '', matriculaInmobiliaria: '', wildcardFeature: '',
   featured: false, available: true,
 };
@@ -60,7 +60,7 @@ export default function AdminProperties() {
       garages: formData.garages ? parseInt(formData.garages) : null,
       stratum: formData.stratum ? parseInt(formData.stratum) : null,
       floorDetail: formData.floorDetail || null,
-      areaSquareMeters: formData.areaSquareMeters || null,
+      areaTotal: formData.areaTotal || null,
       yearBuilt: formData.yearBuilt ? parseInt(formData.yearBuilt) : null,
       adminFee: formData.adminFee || null,
       matriculaInmobiliaria: formData.matriculaInmobiliaria || null,
@@ -79,7 +79,7 @@ export default function AdminProperties() {
       description: prop.description || '',
       bedrooms: prop.bedrooms?.toString() || '', bathrooms: prop.bathrooms?.toString() || '',
       garages: prop.garages?.toString() || '', stratum: prop.stratum?.toString() || '',
-      floorDetail: prop.floorDetail || '', areaSquareMeters: prop.areaSquareMeters?.toString() || '',
+      floorDetail: prop.floorDetail || '', areaTotal: prop.areaTotal?.toString() || '',
       yearBuilt: prop.yearBuilt?.toString() || '', adminFee: prop.adminFee?.toString() || '',
       matriculaInmobiliaria: prop.matriculaInmobiliaria || '',
       wildcardFeature: prop.wildcardFeature || '',
@@ -92,7 +92,7 @@ export default function AdminProperties() {
 
   const filtered = (properties || []).filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase()) ||
-    p.location.toLowerCase().includes(search.toLowerCase())
+    (p.location ?? '').toLowerCase().includes(search.toLowerCase())
   );
 
   // Shared input/label styles
@@ -210,7 +210,7 @@ export default function AdminProperties() {
                 { key: 'garages', label: 'Parqueaderos', ph: '1' },
                 { key: 'stratum', label: 'Estrato', ph: '4' },
                 { key: 'floorDetail', label: 'Piso / Niveles / Altura', ph: 'Piso 4 / 2 niveles / 8 metros' },
-                { key: 'areaSquareMeters', label: 'Área Total (m²)', ph: '54' },
+                { key: 'areaTotal', label: 'Área Total (m²)', ph: '54' },
                 { key: 'yearBuilt', label: 'Año Const.', ph: '2018' },
                 { key: 'wildcardFeature', label: 'Característica Extra', ph: 'Jacuzzi, vista...' },
               ].map(f => (
@@ -319,7 +319,7 @@ export default function AdminProperties() {
                         {[
                           prop.bedrooms && `${prop.bedrooms} hab`,
                           prop.bathrooms && `${prop.bathrooms} baños`,
-                          prop.areaSquareMeters && `${prop.areaSquareMeters}m²`,
+                          prop.areaTotal && `${prop.areaTotal}m²`,
                         ].filter(Boolean).join(' · ') || '—'}
                       </td>
                       <td className="px-6 py-4">

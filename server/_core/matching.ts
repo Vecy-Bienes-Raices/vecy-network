@@ -1,108 +1,63 @@
 import { getDb } from "../db";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, sql, desc, gte } from "drizzle-orm";
 import { propertyMatches, properties, requirements } from "../../drizzle/schema";
 import { normalizarTextoGeografico } from "./geography";
 
 /**
- * Evalúa si una propiedad y un requerimiento cumplen con todas las reglas de matching.
- * Aplica lógica de campos duros (100% obligatoria) y campos flexibles.
+ * Motor de Matching VECY CORE v7.5
+ * Calcula el matchScore directamente en SQL para máxima eficiencia y precisión.
  */
-export function evaluarMatch(req: any, prop: any): boolean {
-  // 1. CAMPOS DUROS (coincidencia 100% obligatoria)
-  
-  // Barrio
-  const propZone = normalizarTextoGeografico(prop.zone || "");
-  const reqZone = normalizarTextoGeografico(req.zonaDeseada || "");
-  if (propZone !== reqZone) return false;
 
-  // Localidad (derivada de barrio en post-procesamiento o guardada)
-  const propLoc = normalizarTextoGeografico(prop.addressLocality || "");
-  const reqLoc = normalizarTextoGeografico(req.addressLocality || "");
-  if (propLoc !== reqLoc) return false;
+function buildScoreSql() {
+  // Ponderaciones (v7.5)
+  // Geografía (35): Exact Barrio = 35, Locality = 15
+  // Financiero (25): <= budget = 25, <= +10% = 15, <= +20% = 5
+  // Estructural (20): Hab = 8, Bath = 6, Garage = 6
+  // Flexibles JSONB (20): Area ±15% = 8, Estrato exact = 6 (±1 = 3), Int/Ext = 6
 
-  // Ciudad
-  const propCity = normalizarTextoGeografico(prop.city || "Bogota");
-  const reqCity = normalizarTextoGeografico(req.ciudadDeseada || "Bogota");
-  if (propCity !== reqCity) return false;
+  const geoScore = sql`
+    CASE 
+      WHEN LOWER(NULLIF(${properties.addressNeighborhood}, '')) = LOWER(NULLIF(${requirements.addressNeighborhood}, '')) THEN 35
+      WHEN LOWER(NULLIF(${properties.addressLocality}, '')) = LOWER(NULLIF(${requirements.addressLocality}, '')) THEN 15
+      ELSE 0
+    END
+  `;
 
-  // Tipo de inmueble
-  if (prop.propertyType !== req.tipoInmuebleDeseado) return false;
+  const financialScore = sql`
+    CASE 
+      WHEN ${properties.price} <= ${requirements.presupuestoMax} THEN 25
+      WHEN ${properties.price} <= ${requirements.presupuestoMax} * 1.10 THEN 15
+      WHEN ${properties.price} <= ${requirements.presupuestoMax} * 1.20 THEN 5
+      ELSE 0
+    END
+  `;
 
-  // Tipos que incluyen habitaciones como campo obligatorio
-  const tiposConHabitaciones = ["apartment", "house", "farm", "loft"];
-  // Tipos que incluyen baños como campo obligatorio
-  const tiposConBanos = ["apartment", "house", "farm", "loft", "office", "consultorio"];
-  // Tipos que incluyen garajes como campo obligatorio
-  const tiposConGarajes = ["apartment", "house", "loft", "office", "consultorio"];
-  // Tipos que aplican interior/exterior
-  const tiposConIntExt = ["apartment", "office", "commercial", "loft", "consultorio"];
+  const structuralScore = sql`
+    (CASE WHEN ${properties.bedrooms} >= ${requirements.habitacionesMin} THEN 8 ELSE 0 END) +
+    (CASE WHEN ${properties.bathrooms} >= ${requirements.banosMin} THEN 6 ELSE 0 END) +
+    (CASE WHEN ${properties.garages} >= ${requirements.parqueaderosMin} THEN 6 ELSE 0 END)
+  `;
 
-  // Habitaciones (solo aplica si el tipo de inmueble las requiere)
-  if (tiposConHabitaciones.includes(prop.propertyType)) {
-    if (req.habitacionesMin !== null && req.habitacionesMin !== undefined && prop.bedrooms !== null && prop.bedrooms !== undefined) {
-      if (Number(prop.bedrooms) !== Number(req.habitacionesMin)) return false;
-    }
-  }
+  const flexibleScore = sql`
+    (CASE 
+      WHEN ${properties.areaTotal} BETWEEN (${requirements.areaMin} * 0.85) AND (${requirements.areaMin} * 1.15) THEN 8 
+      ELSE 0 
+    END) +
+    (CASE 
+      WHEN (${properties.stratum}::text) = ANY(SELECT jsonb_array_elements_text(${requirements.estratoDeseado})) THEN 6
+      WHEN EXISTS (
+        SELECT 1 FROM jsonb_array_elements_text(${requirements.estratoDeseado}) as e 
+        WHERE ABS(e::int - ${properties.stratum}) <= 1
+      ) THEN 3
+      ELSE 0 
+    END) +
+    (CASE 
+      WHEN (${properties.amenities}->>'interiorExterior') = (${requirements.caracteristicasDeseadas}->>'interiorExterior') THEN 6 
+      ELSE 0 
+    END)
+  `;
 
-
-  // Baños (solo aplica si el tipo de inmueble los requiere)
-  if (tiposConBanos.includes(prop.propertyType)) {
-    if (Number(prop.bathrooms) !== Number(req.banosMin)) return false;
-  }
-
-  // Garajes (solo aplica si el tipo de inmueble los requiere)
-  if (tiposConGarajes.includes(prop.propertyType)) {
-    if (Number(prop.garages) !== Number(req.parqueaderosMin)) return false;
-  }
-
-  // Interior / Exterior (solo aplica para apartment, office, commercial, loft, consultorio)
-  if (tiposConIntExt.includes(prop.propertyType)) {
-    const propIntExt = normalizarTextoGeografico((prop.amenities as any)?.interiorExterior || "");
-    const reqIntExt = normalizarTextoGeografico((req.caracteristicasDeseadas as any)?.interiorExterior || "");
-    if (reqIntExt && propIntExt !== reqIntExt) return false;
-  }
-
-
-  // 2. CAMPOS FLEXIBLES (toleran margen razonable)
-  
-  // Precio (±20% del presupuesto del requerimiento)
-  const propPrice = parseFloat(prop.price?.toString() || "0");
-  const reqBudget = parseFloat(req.presupuestoMax?.toString() || "0");
-  if (reqBudget > 0 && propPrice > 0) {
-    const minPrice = reqBudget * 0.80;
-    const maxPrice = reqBudget * 1.20;
-    if (propPrice < minPrice || propPrice > maxPrice) return false;
-  }
-
-  // Área (±15%)
-  const propArea = parseFloat(prop.areaTotal?.toString() || prop.areaPrivate?.toString() || "0");
-  const reqArea = parseFloat(req.areaMin?.toString() || "0");
-  if (reqArea > 0 && propArea > 0) {
-    const minArea = reqArea * 0.85;
-    const maxArea = reqArea * 1.15;
-    if (propArea < minArea || propArea > maxArea) return false;
-  }
-
-  // Estrato (±1)
-  if (prop.stratum !== null && prop.stratum !== undefined && req.estratoDeseado !== null && req.estratoDeseado !== undefined) {
-    let allowedEstratos: number[] = [];
-    if (Array.isArray(req.estratoDeseado)) {
-      allowedEstratos = req.estratoDeseado.map((e: any) => Number(e));
-    } else if (typeof req.estratoDeseado === "number") {
-      allowedEstratos = [req.estratoDeseado];
-    } else if (typeof req.estratoDeseado === "string") {
-      const parsed = parseInt(req.estratoDeseado);
-      if (!isNaN(parsed)) allowedEstratos = [parsed];
-    }
-    
-    if (allowedEstratos.length > 0) {
-      const propStratum = Number(prop.stratum);
-      const matchesEstrato = allowedEstratos.some(e => Math.abs(propStratum - e) <= 1);
-      if (!matchesEstrato) return false;
-    }
-  }
-
-  return true;
+  return sql`(${geoScore} + ${financialScore} + ${structuralScore} + ${flexibleScore})`;
 }
 
 /**
@@ -113,37 +68,51 @@ export async function findMatchesForProperty(propertyId: number) {
   if (!db) return [];
 
   try {
-    // Obtener el inmueble recién publicado
     const [property] = await db.select().from(properties).where(eq(properties.id, propertyId));
     if (!property) return [];
 
-    // Buscar requerimientos activos
-    const allReqs = await db.select().from(requirements).where(eq(requirements.status, "active"));
+    const scoreCalc = buildScoreSql();
     
+    const matches = await db
+      .select({
+        requirement: requirements,
+        matchScore: scoreCalc
+      })
+      .from(requirements)
+      .where(
+        and(
+          eq(requirements.status, "active"),
+          eq(requirements.tipoInmuebleDeseado, property.propertyType),
+          eq(requirements.tipoNegocioDeseado, property.transactionType)
+        )
+      )
+      .orderBy(desc(scoreCalc));
+
     const validMatches = [];
-    
-    for (const req of allReqs) {
-      if (evaluarMatch(req, property)) {
-        // Guardar el match en la tabla propertyMatches
+
+    for (const m of matches) {
+      const score = parseFloat(m.matchScore as string);
+      if (score >= 70) {
         await db.insert(propertyMatches).values({
           propertyId: propertyId,
-          requirementId: req.id,
-          matchScore: "100.00",
+          requirementId: m.requirement.id,
+          matchScore: score.toFixed(2),
+          matchReason: `VECY CORE v7.5 Scoring: ${score.toFixed(2)}/100`,
           status: "suggested",
         }).onConflictDoNothing();
 
         validMatches.push({
-          ...req,
-          score: 100,
-          idUsuarioWhatsapp: req.idUsuarioWhatsapp,
+          ...m.requirement,
+          score: score,
+          idUsuarioWhatsapp: m.requirement.idUsuarioWhatsapp,
         });
       }
     }
 
-    console.log(`[Matching] Inmueble #${propertyId}: ${validMatches.length} matches estrictos encontrados`);
+    console.log(`[Matching] Inmueble #${propertyId}: ${validMatches.length} matches detectados.`);
     return validMatches;
   } catch (e: any) {
-    console.error("[Matching] Error buscando matches para inmueble:", e.message);
+    console.error("[Matching] Error en findMatchesForProperty:", e.message);
     return [];
   }
 }
@@ -156,36 +125,51 @@ export async function findMatchesForRequirement(requirementId: number) {
   if (!db) return [];
 
   try {
-    // Obtener el requerimiento recién publicado
     const [req] = await db.select().from(requirements).where(eq(requirements.id, requirementId));
     if (!req) return [];
 
-    // Buscar todos los inmuebles disponibles
-    const allProps = await db.select().from(properties).where(eq(properties.available, true));
-    
+    const scoreCalc = buildScoreSql();
+
+    const matches = await db
+      .select({
+        property: properties,
+        matchScore: scoreCalc
+      })
+      .from(properties)
+      .where(
+        and(
+          eq(properties.available, true),
+          eq(properties.propertyType, req.tipoInmuebleDeseado),
+          eq(properties.transactionType, req.tipoNegocioDeseado)
+        )
+      )
+      .orderBy(desc(scoreCalc));
+
     const validMatches = [];
 
-    for (const property of allProps) {
-      if (evaluarMatch(req, property)) {
+    for (const m of matches) {
+      const score = parseFloat(m.matchScore as string);
+      if (score >= 70) {
         await db.insert(propertyMatches).values({
-          propertyId: property.id,
+          propertyId: m.property.id,
           requirementId: requirementId,
-          matchScore: "100.00",
+          matchScore: score.toFixed(2),
+          matchReason: `VECY CORE v7.5 Scoring: ${score.toFixed(2)}/100`,
           status: "suggested",
         }).onConflictDoNothing();
 
         validMatches.push({
-          ...property,
-          score: 100,
-          idUsuarioWhatsapp: property.idUsuarioWhatsapp,
+          ...m.property,
+          score: score,
+          idUsuarioWhatsapp: m.property.idUsuarioWhatsapp,
         });
       }
     }
 
-    console.log(`[Matching] Requerimiento #${requirementId}: ${validMatches.length} matches estrictos encontrados`);
+    console.log(`[Matching] Requerimiento #${requirementId}: ${validMatches.length} matches detectados.`);
     return validMatches;
   } catch (e: any) {
-    console.error("[Matching] Error buscando matches para requerimiento:", e.message);
+    console.error("[Matching] Error en findMatchesForRequirement:", e.message);
     return [];
   }
 }

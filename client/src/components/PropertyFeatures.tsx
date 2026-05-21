@@ -148,7 +148,7 @@ export default function PropertyFeatures({ property }: PropertyFeaturesProps) {
               <div className="pt-3 mt-3 border-t border-accent/20">
                 <span className="text-gray-400 block mb-3 font-bold uppercase text-[10px] tracking-widest text-accent">Distribución Interna</span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-300">
-                  {internalFeatures.map((feat, idx) => (
+                  {internalFeatures.map((feat: string, idx: number) => (
                     <div key={idx} className="flex gap-2 items-center">
                       <CheckCircle2 className="text-accent w-4 h-4 shrink-0" />
                       <span className="font-semibold text-xs">{feat}</span>

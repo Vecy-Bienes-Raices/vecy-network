@@ -1,88 +1,139 @@
 /**
- * Geography and Text Normalization Module - Bogotá & Sabana
- * Version: 2.0
+ * Geography and Text Normalization Module
+ * Version: 3.0 — Cobertura nacional Colombia
  */
+import { buscarLugarColombia } from './colombia-geography';
 
 export const DICCIONARIO_BOGOTA: Record<string, { localidad: string, barrios: string[] }> = {
   "usaquen": {
     localidad: "Usaquén",
     barrios: [
-      "Cedritos", "Los Cedros", "Santa Bárbara", "El Chicó", "Chicó Norte",
-      "Chicó Reservado", "Usaquén", "Toberín", "Country Club", "San Patricio",
-      "La Uribe", "Verbenal", "Barrancas", "Horizontes", "La Cita", "Tibabita"
+      "Cedritos", "Los Cedros", "Santa Bárbara", "Santa Bárbara Central",
+      "Santa Bárbara Norte", "El Chicó", "Chicó Norte", "Chicó Reservado",
+      "Usaquén", "Toberín", "Country Club", "San Patricio", "La Uribe",
+      "Verbenal", "Barrancas", "Horizontes", "La Cita", "Tibabita",
+      "La Cerámica", "La Unión", "Los Arrayanes", "Bosque Medina"
     ]
   },
   "chapinero": {
     localidad: "Chapinero",
     barrios: [
-      "El Lago", "El Retiro", "Rosales", "La Cabrera", "Chicó Reservado Norte",
-      "Chapinero Central", "Chapinero Alto", "Pardo Rubio", "Quinta Camacho"
+      "El Lago", "El Retiro", "Rosales", "Los Rosales", "La Cabrera",
+      "Chicó Reservado Norte", "Chapinero Central", "Chapinero Alto",
+      "Pardo Rubio", "Quinta Camacho", "El Castillo", "San Luis", "Juan XXIII"
     ]
   },
   "suba": {
     localidad: "Suba",
     barrios: [
+      // Suba tradicional
       "Niza", "Alhambra", "Floresta", "Lisboa", "Prado Veraniego", "Santa Cecilia",
-      "La Campiña", "Suba Centro", "Tibabuyes", "Rincón", "La Gaitana", "Bilbao", "Casablanca"
+      "La Campiña", "Suba Centro", "Tibabuyes", "Rincón", "La Gaitana",
+      "Bilbao", "Casablanca", "El Rinconcito", "Britalia",
+      // Norte de Suba (campestre / alto estrato)
+      "Guaymaral", "Lagos de Torca", "La Conejera", "Torca",
+      "San Pedro de Torca", "El Pradío", "Suba Rural", "Hacienda San Simón",
+      "Hacienda San Sebastián", "Club Los Lagartos", "Mirandela",
+      "San José del Prado", "El Cerezo", "La Isabela"
     ]
   },
   "barrios unidos": {
     localidad: "Barrios Unidos",
     barrios: [
       "Doce de Octubre", "Los Andes", "Polo Club", "Jorge Eliécer Gaitán",
-      "La Patria", "Alcázares", "Siete de Agosto"
+      "La Patria", "Alcázares", "Siete de Agosto", "Lourdes"
     ]
   },
   "teusaquillo": {
     localidad: "Teusaquillo",
     barrios: [
       "Quinta Paredes", "Armenia", "Palermo", "La Esmeralda", "Ciudad Salitre Occidental",
-      "Teusaquillo", "La Soledad", "Nicolás de Federmann"
+      "Teusaquillo", "La Soledad", "Nicolás de Federmann", "La Magdalena"
     ]
   },
   "engativa": {
     localidad: "Engativá",
     barrios: [
       "Engativá", "Boyacá Real", "Normandía", "Santa Helenita", "Villa Amalia",
-      "Álamos", "Las Ferias"
+      "Álamos", "Las Ferias", "Bolivia", "Garcimédina", "Quirigua"
     ]
   },
   "fontibon": {
     localidad: "Fontibón",
     barrios: [
       "Fontibón", "Modelia", "Capellanía", "Hayuelos", "Ciudad Salitre Oriental",
-      "Tintal Norte", "Zona Franca"
+      "Tintal Norte", "Zona Franca", "San Pablo", "El Refugio"
     ]
   },
   "kennedy": {
     localidad: "Kennedy",
     barrios: [
       "Kennedy Central", "Patio Bonito", "Bavaria", "Castilla", "Timiza",
-      "Américas", "Gran Britalia", "Techo"
+      "Américas", "Gran Britalia", "Techo", "Corabastos", "Kennedy Occidental"
     ]
   },
   "bosa": {
     localidad: "Bosa",
     barrios: [
-      "Bosa Central", "El Porvenir", "Bosa La Libertad", "Apogeo", "Santafé"
+      "Bosa Central", "El Porvenir", "Bosa La Libertad", "Apogeo", "Santafé",
+      "San Bernardino", "El Recreo"
     ]
   },
   "puente aranda": {
     localidad: "Puente Aranda",
     barrios: [
-      "Puente Aranda", "Ciudad Montes", "Muzú", "Alcázares Sur"
+      "Puente Aranda", "Ciudad Montes", "Muzú", "Alcázares Sur",
+      "Pradera", "Galán"
     ]
   },
-  "antonio narino / rafael uribe": {
-    localidad: "Antonio Nariño / Rafael Uribe",
+  "antonio narino": {
+    localidad: "Antonio Nariño",
+    barrios: ["Restrepo", "Eduardo Santos", "Trinidad Galán", "Bravo Páez", "Quiroga"]
+  },
+  "rafael uribe": {
+    localidad: "Rafael Uribe Uribe",
     barrios: [
-      "Restrepo", "Eduardo Santos", "Trinidad Galán", "Bravo Páez"
+      "Marco Fidel Suárez", "Muzu", "La Colonia", "Miragüez", "San Agustín",
+      "Diana Turbay", "Marruecos"
     ]
+  },
+  "santa fe": {
+    localidad: "Santa Fe",
+    barrios: [
+      "Las Cruces", "La Macarena", "La Candelaria", "Lourdes", "El Campin",
+      "Germania", "Bosque Izquierdo"
+    ]
+  },
+  "la candelaria": {
+    localidad: "La Candelaria",
+    barrios: ["La Candelaria", "Centro Histórico", "Las Aguas"]
+  },
+  "los martires": {
+    localidad: "Los Mártires",
+    barrios: ["La Favorita", "Eduardo Santos", "El Progreso", "Ricaurte"]
+  },
+  "san cristobal": {
+    localidad: "San Cristóbal",
+    barrios: ["20 de Julio", "La Victoria", "El Sosiego", "San Cristóbal"]
+  },
+  "usme": {
+    localidad: "Usme",
+    barrios: ["Usme Centro", "El Triangulo", "Comuneros", "Alfonso López"]
+  },
+  "tunjuelito": {
+    localidad: "Tunjuelito",
+    barrios: ["Tunjuelito", "Venecia", "Abraham Lincoln", "Falla"]
+  },
+  "ciudad bolivar": {
+    localidad: "Ciudad Bolívar",
+    barrios: ["Lucero", "El Tesoro", "Ismael Perdomo", "Meissen", "Sierra Morena"]
   }
 };
 
 export const MUNICIPIOS_CERCANOS = [
-  "Chía", "Cajicá", "Sopó", "La Calera", "Cota", "Funza", "Mosquera", "Madrid", "Facatativá"
+  "Chía", "Cajicá", "Sopó", "La Calera", "Cota", "Funza", "Mosquera",
+  "Madrid", "Facatativá", "Zípaquirá", "Tocancipá", "Tenjo", "Tabio",
+  "El Rosal", "Bojacá", "Subachoque", "Gachancipá"
 ];
 
 export type BarrioInfo = {
@@ -226,10 +277,23 @@ export function validarZona(zona: string): ValidacionZonaResult {
     };
   }
 
-  // Si no se encuentra en el mapa de barrios, se considera incompleto/desconocido
+  // === PASO 3: Búsqueda en base de datos nacional de Colombia ===
+  // Para zonas fuera de Bogotá: aceptar si se identifica cualquier ciudad, municipio o departamento colombiano
+  const lugarColombia = buscarLugarColombia(zona);
+  if (lugarColombia) {
+    return {
+      isValid: true,
+      barrioCanonico: zona.trim(),  // Conservamos la zona tal como la escribió el usuario
+      localidad: lugarColombia.departamento,
+      isMunicipio: true
+    };
+  }
+
+  // === PASO 4: Zona completamente desconocida ===
+  // No se encontró en Bogotá ni en ningún municipio colombiano
   return {
     isValid: false,
     errorType: "DATOS_INCOMPLETOS",
-    message: "No logré identificar el barrio. Por favor dime el barrio exacto en Bogotá o municipio específico."
+    message: "No logré identificar la ubicación. Por favor dime la ciudad, municipio o barrio exacto donde está el inmueble."
   };
 }
