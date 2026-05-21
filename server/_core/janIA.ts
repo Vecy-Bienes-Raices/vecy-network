@@ -1,6 +1,6 @@
 /**
  * JanIA Core Logic - VECY Network
- * Version: 11.60.0 (JanIA v2.0 - Contextual Cache Edition)
+ * Version: 11.70.0 (JanIA v2.0 - Conversational Naturalness Edition)
  */
 import { invokeLLM } from "./llm";
 import { getDb } from "../db";
@@ -20,53 +20,67 @@ export type JanIAResult = {
   dmShouldReply?: boolean; // Flag para indicar que el DM debe ser un reply
 };
 
-// --- 1. DECLARACIÓN DEL ALMACÉN DE MEMORIA (v11.60) ---
+// --- 1. ALMACENES DE MEMORIA (v11.70) ---
 const PENDING_SESSIONS = new Map<string, { type: "PROPERTY" | "REQUIREMENT"; extractedData: any; senderInfo: any; messageToProcess: string }>();
+const GREETED_TODAY = new Map<string, string>(); // Mapea userId -> fecha "YYYY-MM-DD"
 
 const REPUTATION_HOOK = "\n\n⚖️ COMPROMISO DE HONOR VECY: Al operar en Etapa de Prueba Gratuita y sin comisiones, si consolidan un negocio real gracias a este MATCH, es de carácter obligatorio compartir su testimonio de éxito en este grupo y registrar su reseña oficial y calificación aquí: https://g.page/r/CctNbwU6UpX5EBM/review";
 
-// --- ANALIZADOR MORFOLÓGICO DE GÉNERO Y CORTESÍA (v11.65) ---
-function analyzeSender(name: string): { greeting: string; adj: string; courtesy: string } {
+// Helper para capitalizar la primera letra
+function capitalize(text: string): string {
+  if (!text) return "";
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+// --- ANALIZADOR MORFOLÓGICO DE GÉNERO Y CORTESÍA (v11.70) ---
+function analyzeSender(name: string, userId: string): { greeting: string; adj: string; courtesy: string } {
   const n = (name || "Colega").trim();
   const normalizedFull = n.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
   const firstWord = n.split(/\s+/)[0].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
   
+  const todayStr = new Date().toISOString().split("T")[0];
+  const alreadyGreeted = GREETED_TODAY.get(userId) === todayStr;
+  if (!alreadyGreeted) GREETED_TODAY.set(userId, todayStr);
+
   const femaleNames = ["maria", "ana", "claudia", "martha", "adriana", "sandra", "jani", "natalia", "paola", "diana", "laura", "sofia", "valentina", "andrea", "milena", "patricia", "marcela", "liliana", "elena", "monica", "beatriz", "gloria", "carmen", "lucia", "angela", "isabel", "clara", "rosa", "teresa", "yolanda", "esperanza", "blanca", "pilar", "carolina", "juliana", "catalina", "viviana", "lizeth", "daniela", "camila"];
   const maleNames = ["juan", "carlos", "jose", "luis", "jorge", "andres", "felipe", "david", "mateo", "santiago", "daniel", "alejandro", "ricardo", "fernando", "eduardo", "pablo", "sergio", "javier", "alberto", "rafael", "mauricio", "german", "gustavo", "ramiro", "gabriel", "julio", "oscar", "ivan", "hugo", "diego", "wilson", "edgar", "mario", "hector", "victor"];
   
   const corporateKeywords = ["inmo", "bienes", "raices", "propiedades", "network", "group", "asesores", "servicios", "soluciones", "comercial", "ventas", "vecy", "sas", "ltda", "vende", "arrienda", "inmobiliaria", "finca", "raiz", "realestate"];
 
+  let baseGreeting = `¡Hola, qué gusto tenerte aquí, ${n}!`;
+  let adj = "profesional";
+  let courtesy = "gracias por tu rigor profesional";
+
   const isCorporate = corporateKeywords.some(kw => normalizedFull.includes(kw));
   if (isCorporate) {
-    return { 
-      greeting: `¡Hola, qué gusto saludarte, colega de ${n}!`, 
-      adj: "profesional", 
-      courtesy: "gracias por tu rigor profesional" 
-    };
-  }
+    baseGreeting = `¡Hola, qué gusto saludarte, colega de ${n}!`;
+  } else {
+    const isMale = maleNames.includes(firstWord) || maleNames.some(m => firstWord.startsWith(m));
+    const isFemale = femaleNames.includes(firstWord) || femaleNames.some(f => firstWord.startsWith(f));
 
-  const isMale = maleNames.includes(firstWord) || maleNames.some(m => firstWord.startsWith(m));
-  if (isMale) {
-    return { greeting: `¡Hola ${n}!`, adj: "juicioso", courtesy: "excelente labor, sigue así de juicioso" };
-  }
-
-  const isFemale = femaleNames.includes(firstWord) || femaleNames.some(f => firstWord.startsWith(f));
-  if (isFemale) {
-    return { greeting: `¡Hola ${n}!`, adj: "juiciosa", courtesy: "excelente labor, sigue así de juiciosa" };
-  }
-
-  if (firstWord.endsWith('a') || firstWord.endsWith('ia') || firstWord.endsWith('th')) {
-    return { greeting: `¡Hola ${n}!`, adj: "juiciosa", courtesy: "excelente labor, sigue así de juiciosa" };
-  }
-
-  if (firstWord.endsWith('o') || firstWord.endsWith('s') || firstWord.endsWith('r') || firstWord.endsWith('l') || firstWord.endsWith('n') || firstWord.endsWith('z')) {
-    return { greeting: `¡Hola ${n}!`, adj: "juicioso", courtesy: "excelente labor, sigue así de juicioso" };
+    if (isMale) {
+      baseGreeting = `¡Hola ${n}!`;
+      adj = "juicioso";
+      courtesy = "excelente labor, sigue así de juicioso";
+    } else if (isFemale) {
+      baseGreeting = `¡Hola ${n}!`;
+      adj = "juiciosa";
+      courtesy = "excelente labor, sigue así de juiciosa";
+    } else if (firstWord.endsWith('a') || firstWord.endsWith('ia') || firstWord.endsWith('th')) {
+      baseGreeting = `¡Hola ${n}!`;
+      adj = "juiciosa";
+      courtesy = "excelente labor, sigue así de juiciosa";
+    } else if (firstWord.endsWith('o') || firstWord.endsWith('s') || firstWord.endsWith('r') || firstWord.endsWith('l') || firstWord.endsWith('n') || firstWord.endsWith('z')) {
+      baseGreeting = `¡Hola ${n}!`;
+      adj = "juicioso";
+      courtesy = "excelente labor, sigue así de juicioso";
+    }
   }
 
   return { 
-    greeting: `¡Hola, qué gusto tenerte aquí, ${n}!`, 
-    adj: "profesional", 
-    courtesy: "gracias por tu rigor profesional" 
+    greeting: alreadyGreeted ? "" : baseGreeting, 
+    adj, 
+    courtesy 
   };
 }
 
@@ -132,7 +146,8 @@ export async function processWhatsAppMessage(
   imageBuffer?: string
 ): Promise<JanIAResult> {
   try {
-    const senderInfo = analyzeSender(userName || userId.split('@')[0]);
+    const senderInfo = analyzeSender(userName || userId.split('@')[0], userId);
+    const n = (userName || userId.split('@')[0]).split(' ')[0];
 
     // --- 2. GANCHO DE RECUPERACIÓN DE MEMORIA (v11.60) ---
     if (PENDING_SESSIONS.has(userId)) {
@@ -140,7 +155,6 @@ export async function processWhatsAppMessage(
       if (geoValidation.isValid) {
         const session = PENDING_SESSIONS.get(userId)!;
         PENDING_SESSIONS.delete(userId);
-        const nameForMsg = userName || userId.split('@')[0];
 
         if (session.type === "PROPERTY") {
           session.extractedData.zone = geoValidation.barrioCanonico;
@@ -148,7 +162,7 @@ export async function processWhatsAppMessage(
           
           const saved = await saveProperty({
             ...session.extractedData,
-            name: nameForMsg,
+            name: userName || userId,
             price: String(session.extractedData.price || 0),
             areaTotal: String(session.extractedData.area || 0),
             idUsuarioWhatsapp: userId,
@@ -162,7 +176,7 @@ export async function processWhatsAppMessage(
               classification: "INMUEBLE",
               extractedData: session.extractedData,
               shouldSendDM: true,
-              dmResponse: "¡Perfecto, " + nameForMsg + "! Con el barrio * " + geoValidation.barrioCanonico + "* acabo de completar el registro de tu activo en nuestra base de datos. Ya estoy buscando activamente tu MATCH comercial en la red. ¡Excelente labor!",
+              dmResponse: `Perfecto, ${n}! Con el barrio *${geoValidation.barrioCanonico}* acabo de completar el registro de tu activo en nuestra base de datos. Ya estoy buscando activamente tu MATCH comercial en la red. ¡Excelente labor!`,
               response: matches.length > 0 ? `🎯 ¡MATCH INTELIGENTE DETECTADO! 🎯\n\nHe encontrado ${matches.length} requerimientos compatibles con tu oferta.\n` + REPUTATION_HOOK : "",
               mentions: matches.length > 0 ? [...matches.map(m => m.idUsuarioWhatsapp!), userId] : []
             };
@@ -189,7 +203,7 @@ export async function processWhatsAppMessage(
               classification: "REQUERIMIENTO",
               extractedData: session.extractedData,
               shouldSendDM: true,
-              dmResponse: "¡Perfecto, " + nameForMsg + "! Con el barrio * " + geoValidation.barrioCanonico + "* acabo de completar el registro de tu requerimiento en nuestra base de datos. Ya estoy buscando activamente el inmueble ideal en la red. ¡Excelente labor!",
+              dmResponse: `Perfecto, ${n}! Con el barrio *${geoValidation.barrioCanonico}* acabo de completar el registro de tu requerimiento en nuestra base de datos. Ya estoy buscando activamente el inmueble ideal en la red. ¡Excelente labor!`,
               response: matches.length > 0 ? `🎯 ¡MATCH INTELIGENTE DETECTADO! 🎯\n\nTu búsqueda tiene ${matches.length} coincidencias exactas en nuestra red nacional.\n` + REPUTATION_HOOK : "",
               mentions: matches.length > 0 ? [...matches.map(m => m.idUsuarioWhatsapp!), userId] : []
             };
@@ -242,9 +256,11 @@ export async function processWhatsAppMessage(
           result.classification = "DATOS_INCOMPLETOS";
           result.shouldSendDM = true;
           result.dmShouldReply = true; // Forzar reply al mensaje original en el DM
-          // Copy sutil para DM
-          const n = (userName || userId.split('@')[0]).split(' ')[0];
-          result.dmResponse = `Hola ${n}. Acabo de leer tu publicación, pero no logré procesar el barrio exacto en tu publicación. ¿Me podrías indicar el barrio para poder activarte los cruces de inmediato? ¡Mil gracias por tu ayuda!`;
+          
+          const intro = senderInfo.greeting ? `${senderInfo.greeting} ` : "";
+          const mainText = "acabo de leer tu publicación, pero no logré procesar el barrio exacto en tu publicación. ¿Me podrías indicar el barrio para poder activarte los cruces de inmediato? ¡Mil gracias por tu ayuda!";
+          result.dmResponse = intro + (senderInfo.greeting ? mainText : capitalize(mainText));
+          
           result.response = ""; // Silencio en el grupo
 
           // v11.60 Almacenamiento en caché (REGLA 3)
@@ -265,8 +281,11 @@ export async function processWhatsAppMessage(
         result.classification = "DATOS_INCOMPLETOS";
         result.shouldSendDM = true;
         result.dmShouldReply = true;
-        const n = (userName || userId.split('@')[0]).split(' ')[0];
-        result.dmResponse = `Hola ${n}. Acabo de leer tu publicación, pero no me incluiste la zona. Por favor, respóndeme directamente a este mensaje indicándome el barrio o municipio exacto para activarte los cruces de inmediato. ¡Mil gracias por tu ayuda!`;
+        
+        const intro = senderInfo.greeting ? `${senderInfo.greeting} ` : "";
+        const mainText = "acabo de leer tu publicación, pero no me incluiste la zona. Por favor, respóndeme directamente a este mensaje indicándome el barrio o municipio exacto para activarte los cruces de inmediato. ¡Mil gracias por tu ayuda!";
+        result.dmResponse = intro + (senderInfo.greeting ? mainText : capitalize(mainText));
+        
         result.response = "";
 
         // v11.60 Almacenamiento en caché (REGLA 3)
@@ -296,8 +315,9 @@ export async function processWhatsAppMessage(
       if (saved) {
         // FLUJO A: Publicación Perfecta e Indexada
         result.shouldSendDM = true;
-        const n = (userName || userId.split('@')[0]).split(' ')[0];
-        result.dmResponse = `¡Hola ${n}! Qué publicación tan impecable y ordenada acabas de enviar al grupo. Ya registré tus datos en nuestra red y estoy buscando activamente tu match. ¡Excelente labor, sigue así de ${senderInfo.adj}!`;
+        const intro = senderInfo.greeting ? `${senderInfo.greeting} ` : "";
+        const mainText = `qué publicación tan impecable y ordenada acabas de enviar al grupo. Ya registré tus datos en nuestra red y estoy buscando activamente tu match. ¡Excelente labor, sigue así de ${senderInfo.adj}!`;
+        result.dmResponse = intro + (senderInfo.greeting ? mainText : capitalize(mainText));
         
         const matches = await findMatchesForProperty(saved.id);
         if (matches.length > 0) {
@@ -322,8 +342,9 @@ export async function processWhatsAppMessage(
       if (saved) {
         // FLUJO A: Publicación Perfecta e Indexada
         result.shouldSendDM = true;
-        const n = (userName || userId.split('@')[0]).split(' ')[0];
-        result.dmResponse = `¡Hola ${n}! Qué publicación tan impecable y ordenada acabas de enviar al grupo. Ya registré tus datos de tu requerimiento en nuestra red y estoy buscando activamente el inmueble ideal. ¡Excelente labor, sigue así de ${senderInfo.adj}!`;
+        const intro = senderInfo.greeting ? `${senderInfo.greeting} ` : "";
+        const mainText = `qué publicación tan impecable y ordenada acabas de enviar al grupo. Ya registré tus datos de tu requerimiento en nuestra red y estoy buscando activamente el inmueble ideal. ¡Excelente labor, sigue así de ${senderInfo.adj}!`;
+        result.dmResponse = intro + (senderInfo.greeting ? mainText : capitalize(mainText));
 
         const matches = await findMatchesForRequirement(saved.id);
         if (matches.length > 0) {
@@ -337,7 +358,7 @@ export async function processWhatsAppMessage(
 
     return result;
   } catch (error) {
-    console.error("Error en JanIA v11.60:", error);
+    console.error("Error en JanIA v11.70:", error);
     return { classification: "CONSULTA_GENERAL", response: "", mentions: [] };
   }
 }
