@@ -1,4 +1,4 @@
-import pkg from 'whatsapp-web.js';
+import pkg, { MessageMedia } from 'whatsapp-web.js';
 const { Client, LocalAuth } = pkg;
 import type { Client as ClientType, Message } from 'whatsapp-web.js';
 import qrcode from 'qrcode-terminal';
@@ -446,9 +446,14 @@ export class WhatsAppBot {
     await this.client.sendMessage(deLaPavaId, `Su requerimiento nacional ha sido indexado con éxito. ¡JanIA sigue atenta!`);
   }
 
-  public async sendToGroup(text: string) {
+  public async sendToGroup(text: string, mediaPath?: string) {
     try {
-      await this.client.sendMessage(this.targetGroupId, text);
+      if (mediaPath) {
+        const media = MessageMedia.fromFilePath(path.resolve(mediaPath));
+        await this.client.sendMessage(this.targetGroupId, media, { caption: text });
+      } else {
+        await this.client.sendMessage(this.targetGroupId, text);
+      }
     } catch (e) {
       console.error('[WHATSAPP-BOT] Error enviando mensaje al grupo:', e);
     }

@@ -28,7 +28,7 @@ export function initCronScheduler() {
       `▸ Escaneo tus flyers y fotos con OCR.\n` +
       `▸ Proceso tus notas de voz en segundos.\n\n` +
       `¡Hagamos que hoy sea un día de cierres masivos! 🏆`;
-    await whatsappBot.sendToGroup(motivation);
+    await whatsappBot.sendToGroup(motivation, './client/public/vecy_inmuebles_network.mp4');
   });
 
   // 07:00 AM: Presentación Institucional
