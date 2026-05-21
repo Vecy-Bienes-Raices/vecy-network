@@ -1,58 +1,84 @@
 import { getDb } from "../db";
 import { and, eq, sql, desc, gte } from "drizzle-orm";
 import { propertyMatches, properties, requirements } from "../../drizzle/schema";
-import { normalizarTextoGeografico } from "./geography";
 
 /**
- * Motor de Matching VECY CORE v7.5
- * Calcula el matchScore directamente en SQL para máxima eficiencia y precisión.
+ * Motor de Matching VECY CORE v11.25
+ * Calcula el matchScore directamente en SQL parametrizado para evitar errores de FROM-clause.
  */
 
-function buildScoreSql() {
-  // Ponderaciones (v7.5)
+function buildScoreSql(staticProperty?: any, staticRequirement?: any) {
+  // Ponderaciones
   // Geografía (35): Exact Barrio = 35, Locality = 15
   // Financiero (25): <= budget = 25, <= +10% = 15, <= +20% = 5
   // Estructural (20): Hab = 8, Bath = 6, Garage = 6
   // Flexibles JSONB (20): Area ±15% = 8, Estrato exact = 6 (±1 = 3), Int/Ext = 6
 
+  const propNeighborhood = staticProperty ? staticProperty.addressNeighborhood : properties.addressNeighborhood;
+  const reqNeighborhood = staticRequirement ? staticRequirement.addressNeighborhood : requirements.addressNeighborhood;
+
+  const propLocality = staticProperty ? staticProperty.addressLocality : properties.addressLocality;
+  const reqLocality = staticRequirement ? staticRequirement.addressLocality : requirements.addressLocality;
+
+  const propPrice = staticProperty ? staticProperty.price : properties.price;
+  const reqBudget = staticRequirement ? staticRequirement.presupuestoMax : requirements.presupuestoMax;
+
+  const propBedrooms = staticProperty ? staticProperty.bedrooms : properties.bedrooms;
+  const reqBedrooms = staticRequirement ? staticRequirement.habitacionesMin : requirements.habitacionesMin;
+
+  const propBathrooms = staticProperty ? staticProperty.bathrooms : properties.bathrooms;
+  const reqBathrooms = staticRequirement ? staticRequirement.banosMin : requirements.banosMin;
+
+  const propGarages = staticProperty ? staticProperty.garages : properties.garages;
+  const reqGarages = staticRequirement ? staticRequirement.parqueaderosMin : requirements.parqueaderosMin;
+
+  const propArea = staticProperty ? staticProperty.areaTotal : properties.areaTotal;
+  const reqArea = staticRequirement ? staticRequirement.areaMin : requirements.areaMin;
+
+  const propStratum = staticProperty ? staticProperty.stratum : properties.stratum;
+  const reqStratum = staticRequirement ? staticRequirement.estratoDeseado : requirements.estratoDeseado;
+
+  const propAmenities = staticProperty ? staticProperty.amenities : properties.amenities;
+  const reqCharacteristics = staticRequirement ? staticRequirement.caracteristicasDeseadas : requirements.caracteristicasDeseadas;
+
   const geoScore = sql`
     CASE 
-      WHEN LOWER(NULLIF(${properties.addressNeighborhood}, '')) = LOWER(NULLIF(${requirements.addressNeighborhood}, '')) THEN 35
-      WHEN LOWER(NULLIF(${properties.addressLocality}, '')) = LOWER(NULLIF(${requirements.addressLocality}, '')) THEN 15
+      WHEN LOWER(NULLIF(${propNeighborhood}, '')) = LOWER(NULLIF(${reqNeighborhood}, '')) THEN 35
+      WHEN LOWER(NULLIF(${propLocality}, '')) = LOWER(NULLIF(${reqLocality}, '')) THEN 15
       ELSE 0
     END
   `;
 
   const financialScore = sql`
     CASE 
-      WHEN ${properties.price} <= ${requirements.presupuestoMax} THEN 25
-      WHEN ${properties.price} <= ${requirements.presupuestoMax} * 1.10 THEN 15
-      WHEN ${properties.price} <= ${requirements.presupuestoMax} * 1.20 THEN 5
+      WHEN ${propPrice} <= ${reqBudget} THEN 25
+      WHEN ${propPrice} <= ${reqBudget} * 1.10 THEN 15
+      WHEN ${propPrice} <= ${reqBudget} * 1.20 THEN 5
       ELSE 0
     END
   `;
 
   const structuralScore = sql`
-    (CASE WHEN ${properties.bedrooms} >= ${requirements.habitacionesMin} THEN 8 ELSE 0 END) +
-    (CASE WHEN ${properties.bathrooms} >= ${requirements.banosMin} THEN 6 ELSE 0 END) +
-    (CASE WHEN ${properties.garages} >= ${requirements.parqueaderosMin} THEN 6 ELSE 0 END)
+    (CASE WHEN ${propBedrooms} >= ${reqBedrooms} THEN 8 ELSE 0 END) +
+    (CASE WHEN ${propBathrooms} >= ${reqBathrooms} THEN 6 ELSE 0 END) +
+    (CASE WHEN ${propGarages} >= ${reqGarages} THEN 6 ELSE 0 END)
   `;
 
   const flexibleScore = sql`
     (CASE 
-      WHEN ${properties.areaTotal} BETWEEN (${requirements.areaMin} * 0.85) AND (${requirements.areaMin} * 1.15) THEN 8 
+      WHEN ${propArea} BETWEEN (${reqArea} * 0.85) AND (${reqArea} * 1.15) THEN 8 
       ELSE 0 
     END) +
     (CASE 
-      WHEN (${properties.stratum}::text) = ANY(SELECT jsonb_array_elements_text(${requirements.estratoDeseado})) THEN 6
+      WHEN (${propStratum}::text) = ANY(SELECT jsonb_array_elements_text(${reqStratum}::jsonb)) THEN 6
       WHEN EXISTS (
-        SELECT 1 FROM jsonb_array_elements_text(${requirements.estratoDeseado}) as e 
-        WHERE ABS(e::int - ${properties.stratum}) <= 1
+        SELECT 1 FROM jsonb_array_elements_text(${reqStratum}::jsonb) as e 
+        WHERE ABS(e::int - ${propStratum}) <= 1
       ) THEN 3
       ELSE 0 
     END) +
     (CASE 
-      WHEN (${properties.amenities}->>'interiorExterior') = (${requirements.caracteristicasDeseadas}->>'interiorExterior') THEN 6 
+      WHEN (${propAmenities}::jsonb->>'interiorExterior') = (${reqCharacteristics}::jsonb->>'interiorExterior') THEN 6 
       ELSE 0 
     END)
   `;
@@ -71,7 +97,7 @@ export async function findMatchesForProperty(propertyId: number) {
     const [property] = await db.select().from(properties).where(eq(properties.id, propertyId));
     if (!property) return [];
 
-    const scoreCalc = buildScoreSql();
+    const scoreCalc = buildScoreSql(property, undefined);
     
     const matches = await db
       .select({
@@ -97,7 +123,7 @@ export async function findMatchesForProperty(propertyId: number) {
           propertyId: propertyId,
           requirementId: m.requirement.id,
           matchScore: score.toFixed(2),
-          matchReason: `VECY CORE v7.5 Scoring: ${score.toFixed(2)}/100`,
+          matchReason: `VECY CORE v11.25 Scoring: ${score.toFixed(2)}/100`,
           status: "suggested",
         }).onConflictDoNothing();
 
@@ -128,7 +154,7 @@ export async function findMatchesForRequirement(requirementId: number) {
     const [req] = await db.select().from(requirements).where(eq(requirements.id, requirementId));
     if (!req) return [];
 
-    const scoreCalc = buildScoreSql();
+    const scoreCalc = buildScoreSql(undefined, req);
 
     const matches = await db
       .select({
@@ -154,7 +180,7 @@ export async function findMatchesForRequirement(requirementId: number) {
           propertyId: m.property.id,
           requirementId: requirementId,
           matchScore: score.toFixed(2),
-          matchReason: `VECY CORE v7.5 Scoring: ${score.toFixed(2)}/100`,
+          matchReason: `VECY CORE v11.25 Scoring: ${score.toFixed(2)}/100`,
           status: "suggested",
         }).onConflictDoNothing();
 
