@@ -134,12 +134,8 @@ export async function transcribeAudio(
     formData.append("model", "whisper-1");
     formData.append("response_format", "verbose_json");
     
-    // Add prompt - use custom prompt if provided, otherwise generate based on language
-    const prompt = options.prompt || (
-      options.language 
-        ? `Transcribe the user's voice to text, the user's working language is ${getLanguageName(options.language)}`
-        : "Transcribe the user's voice to text"
-    );
+    // Add prompt - use custom prompt if provided, otherwise inject real estate lexicon (v11.55)
+    const prompt = options.prompt || "Notas de voz sobre bienes raíces, Real Estate, inversiones, corretaje, inmuebles, apartamentos y casas en Bogotá, Colombia. Vocabulario técnico y comercial obligatorio: venpermuto, permuta, corretaje, bróker, avalúo, estrato, arras, linderos, desenglobe, Wasi, Habi, Usaquén, Cedritos, Chicó, Rosales, Cabrera, Retiro, Santa Bárbara, San Patricio, Toberín, Suba, Niza, Alhambra.";
     formData.append("prompt", prompt);
 
     // Step 4: Call the transcription service
