@@ -1,6 +1,6 @@
 /**
  * JanIA Core Logic - VECY Network
- * Version: 7.5.0 (VECY CORE - North Bogotá Senior Broker Edition)
+ * Version: 10.2.0 (JanIA v2.0 - Humanized Multimodal Engine)
  */
 import { invokeLLM } from "./llm";
 import { getDb } from "../db";
@@ -13,32 +13,96 @@ export type JanIAResult = {
   classification: "INMUEBLE" | "REQUERIMIENTO" | "CONSULTA_GENERAL" | "RESPUESTA_A_PREGUNTA_IA" | "DATOS_INCOMPLETOS" | "VIOLACION_DE_NORMAS" | "ANALISIS_DE_MERCADO";
   extractedData?: any;
   missingFields?: string[];
-  response: string;
+  response: string;      // Respuesta para el grupo
+  dmResponse?: string;   // Respuesta para el chat privado (DM)
   mentions?: string[];
   shouldSendDM?: boolean;
+  dmShouldReply?: boolean; // Flag para indicar que el DM debe ser un reply
 };
 
+// --- ANALIZADOR MORFOLÓGICO DE GÉNERO Y CORTESÍA ---
+function analyzeSender(name: string): { greeting: string; adj: string; courtesy: string } {
+  const n = (name || "Colega").trim();
+  const firstWord = n.split(/\s+/)[0].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  
+  const femaleNames = ["maria", "ana", "claudia", "martha", "adriana", "sandra", "jani", "natalia", "paola", "diana", "laura", "sofia", "valentina", "andrea", "milena", "patricia", "marcela", "liliana", "elena", "monica", "beatriz", "gloria", "carmen", "lucia", "angela", "isabel", "clara", "rosa", "teresa", "yolanda", "esperanza", "blanca", "pilar"];
+  const maleNames = ["juan", "carlos", "jose", "luis", "jorge", "andres", "felipe", "david", "mateo", "santiago", "daniel", "alejandro", "ricardo", "fernando", "eduardo", "pablo", "sergio", "javier", "alberto", "rafael", "mauricio", "german", "gustavo", "ramiro", "gabriel", "julio", "oscar", "ivan", "hugo", "diego", "wilson", "edgar", "mario"];
+  
+  const corporateKeywords = ["inmo", "bienes", "raices", "propiedades", "network", "group", "asesores", "servicios", "soluciones", "comercial", "ventas", "vecy", "sas", "ltda", "vende", "arrienda", "inmobiliaria", "finca", "raiz"];
+
+  if (corporateKeywords.some(kw => n.toLowerCase().includes(kw))) {
+    return { 
+      greeting: "Estimado colega", 
+      adj: "profesional", 
+      courtesy: "gracias por tu rigor profesional" 
+    };
+  }
+
+  if (femaleNames.includes(firstWord) || (firstWord.endsWith('a') && !maleNames.includes(firstWord)) || firstWord.endsWith('ia')) {
+    return { greeting: `¡Hola ${n}!`, adj: "juiciosa", courtesy: "excelente labor, sigue así de juiciosa" };
+  }
+
+  if (maleNames.includes(firstWord) || firstWord.endsWith('o') || firstWord.endsWith('s') || firstWord.endsWith('r') || firstWord.endsWith('l') || firstWord.endsWith('n')) {
+    return { greeting: `¡Hola ${n}!`, adj: "juicioso", courtesy: "excelente labor, sigue así de juicioso" };
+  }
+
+  return { 
+    greeting: "Estimado colega", 
+    adj: "profesional", 
+    courtesy: "gracias por tu rigor profesional" 
+  };
+}
+
 const JANIA_PROMPT = `
-# JANIA — SYSTEM PROMPT MAESTRO v10.1 (VECY CORE)
-# VECY Network · Cerebro Inmobiliario Multimodal
+# JANIA — SYSTEM PROMPT MAESTRO v10.2 (VECY CORE)
+# VECY Network · Consultora Senior e Inversionista
 
 ## IDENTIDAD Y ROL
-Eres JanIA, la consultora inmobiliaria senior y bróker líder de VECY Network. Te expresas con la elocuencia, sofisticación y precisión de una experta del norte de Bogotá. Tu tono es extraordinariamente humano, directo y profesional. Entiendes profundamente el mercado inmobiliario corporativo y residencial de alto nivel en Colombia.
+Eres JanIA, la consultora inmobiliaria senior y estratega de inversión de VECY Network. Eres una experta del mercado de alto nivel del norte de Bogotá (Usaquén, Chicó, Rosales, Santa Bárbara, Cedritos). Tu lenguaje es impecable, sofisticado y sumamente humano. No eres un bot; eres una socia estratégica que entiende el valor del tiempo y la precisión en el Real Estate.
 
-## CAPACIDADES MULTIMODALES (VISIÓN OCR)
-Tienes la capacidad de "ver" imágenes (flyers, capturas de pantalla, fotos de fachadas con avisos). Si se adjunta una imagen, debes escanearla, transcribir los datos técnicos (precio, área, contacto, ubicación) y combinarlos con cualquier texto enviado para realizar un registro impecable.
+## PERSONALIDAD
+- **Sofisticación Bogotana**: Hablas con elegancia pero sin arrogancia. Eres directa, profesional y empática.
+- **Expertise Técnico**: Entiendes de áreas privadas, coeficientes, estratos, gravámenes y permutas complejas ("Venpermuto").
+- **Multimodalidad**: Digieres textos caóticos y extraes datos de imágenes (flyers, capturas de avisos) con rigor quirúrgico.
 
-## FILOSOFÍA DE OPERACIÓN (COBERTURA NACIONAL)
-1. **CERO ESFUERZO PARA OFERTAS (INMUEBLES)**: Los asesores solo envían links o imágenes. Nosotros extraemos todo.
-2. **FLEXIBILIDAD GEOGRÁFICA**: Aunque somos expertos en Bogotá y la Sabana, **operamos en toda Colombia**. Si un inmueble o requerimiento está en Meta, Valle, Boyacá, Silvania, etc., procésalo normalmente. No lo rechaces. Categorízalo bajo su ciudad/municipio correspondiente.
-3. **PRECISIÓN EN MATCHES**: Tu misión es el procesamiento silencioso de datos y la notificación impecable de matches de alta precisión (Score >= 70%).
+## MAPEO SEMÁNTICO (VECTORES 'GIVES' & 'WANTS')
+Debes clasificar cada publicación identificando los vectores de valor:
+1. **GIVES (Lo que se entrega)**: El activo que el usuario ofrece (inmueble, dinero, vehículo en permuta, etc.).
+2. **WANTS (Lo que se busca)**: El activo o requerimiento que el usuario desea recibir a cambio.
+
+## FILOSOFÍA DE OPERACIÓN (SILENCIO DE ORO)
+- **Grupo General**: Solo hablas en el grupo si hay un MATCH verídico (Score >= 70%) o si es una consulta directa.
+- **Chat Privado (DM)**: Toda la gestión de datos incompletos o confirmaciones de éxito se realiza por privado.
+- **Cobertura Nacional**: Aunque somos expertos en Bogotá, operamos en toda Colombia. No rechaces nada fuera de Bogotá; regístralo bajo su municipio.
 
 DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
-... (rest of the JSON structure is the same)
+{
+  "classification": "INMUEBLE | REQUERIMIENTO | CONSULTA_GENERAL | RESPUESTA_A_PREGUNTA_IA | DATOS_INCOMPLETOS | VIOLACION_DE_NORMAS | ANALISIS_DE_MERCADO",
+  "extractedData": {
+    "gives": { "item": "string", "details": "string" },
+    "wants": { "item": "string", "details": "string" },
+    "price": number,
+    "zone": "string (Barrio/Municipio)",
+    "city": "string",
+    "propertyType": "apartment | house | building | warehouse | office | farm | loft | consultorio",
+    "transactionType": "venta | arriendo | permuta",
+    "area": number,
+    "bedrooms": number,
+    "bathrooms": number,
+    "garages": number,
+    "stratum": number,
+    "isCollaborativePool": boolean (DEFAULT: true)
+  },
+  "isMatch": boolean,
+  "matchScore": number,
+  "response": "Tu respuesta elocuente para el grupo (solo si isMatch o consulta)",
+  "shouldSendDM": boolean,
+  "missingFields": ["string"]
+}
 `;
 
 /**
- * Procesa un mensaje de WhatsApp, manejando texto, audio, imágenes y datos extraídos de links.
+ * Procesa un mensaje de WhatsApp con inteligencia multimodal y humanización avanzada.
  */
 export async function processWhatsAppMessage(
   text: string, 
@@ -50,28 +114,19 @@ export async function processWhatsAppMessage(
   imageBuffer?: string
 ): Promise<JanIAResult> {
   try {
+    const senderInfo = analyzeSender(userName || userId.split('@')[0]);
     let messageToProcess = text;
 
-    // 1. Procesamiento de Voz (Whisper) si ingresa un audio
+    // 1. Transcripción de Voz
     if (audioUrl) {
-      console.log(`[JanIA] Transcribiendo nota de voz para ${userId}...`);
       const transcription = await transcribeAudio({ audioUrl });
-      if (!('error' in transcription)) {
-        messageToProcess = transcription.text;
-        console.log(`[JanIA] Voz transcripta: ${messageToProcess}`);
-      } else {
-        console.error(`[JanIA] Error en transcripción: ${transcription.error}`);
-      }
+      if (!('error' in transcription)) messageToProcess = transcription.text;
     }
 
+    // 2. Preparación de Contexto LLM
     let contextText = `Mensaje de ${userName || userId}: ${messageToProcess}`;
-    if (scrapedData.length > 0) {
-      contextText += `\n\n[SISTEMA: DATOS TÉCNICOS EXTRAÍDOS DEL LINK]:\n${JSON.stringify(scrapedData, null, 2)}`;
-    }
-
-    if (imageBuffer) {
-      contextText += `\n\n[SISTEMA: Se ha adjuntado una IMAGEN. Por favor, usa tus capacidades de VISIÓN para extraer datos del flyer o captura.]`;
-    }
+    if (scrapedData.length > 0) contextText += `\n[SCRAPED]: ${JSON.stringify(scrapedData)}`;
+    if (imageBuffer) contextText += `\n[SISTEMA: IMAGEN DETECTADA. Ejecuta visión OCR para extraer datos.]`;
 
     const response = await invokeLLM({
       messages: [
@@ -83,146 +138,112 @@ export async function processWhatsAppMessage(
     });
 
     const llmRes = response as any;
-    if (!llmRes || !llmRes.choices || !llmRes.choices[0]) throw new Error("Fallo de comunicación con el LLM");
     const result = JSON.parse(llmRes.choices[0].message.content) as JanIAResult;
     
     result.mentions = [];
     const extracted = result.extractedData;
-    const lowerText = messageToProcess.toLowerCase();
+    const isRequirement = result.classification === "REQUERIMIENTO";
+    const isProperty = result.classification === "INMUEBLE";
 
-    const isLinkPost = scrapedData.length > 0;
-    const isRequirement = result.classification === "REQUERIMIENTO" 
-      || lowerText.includes("busco") || lowerText.includes("necesito") || lowerText.includes("requiero");
-
-    const isProperty = !isRequirement && (result.classification === "INMUEBLE" || isLinkPost);
-
-    // --- CAPA DE DEFENSA GEOGRÁFICA RÍGIDA ---
+    // --- CAPA DE DEFENSA GEOGRÁFICA NACIONAL ---
     if (isProperty || isRequirement) {
-      const zoneToValidate = isProperty ? extracted?.zone : extracted?.zonaDeseada;
+      const zoneToValidate = isProperty ? extracted?.zone : extracted?.zonaDeseada || extracted?.zone;
       if (zoneToValidate) {
         const validation = validarZona(zoneToValidate);
         if (!validation.isValid) {
+          // FLUJO B: Datos Incompletos / Falta Barrio
           result.classification = "DATOS_INCOMPLETOS";
           result.shouldSendDM = true;
-          result.missingFields = [validation.message || "Barrio exacto en Bogotá"];
+          result.dmShouldReply = true; // Forzar reply al mensaje original
+          result.dmResponse = `${senderInfo.greeting}. Acabé de leer tu publicación, pero mi sistema no logró procesar el barrio exacto. Por favor, respóndeme directamente a este mensaje indicándome el barrio para poder activarte los cruces automáticos de inmediato. ¡Mil gracias por tu ayuda!`;
           result.response = ""; 
           return result;
         }
-        // Normalización Geográfica
-        const normZone = validation.barrioCanonico;
-        const normLoc = validation.localidad;
-        if (isProperty) {
-          extracted.zone = normZone;
-          extracted.addressNeighborhood = normZone;
-          extracted.addressLocality = normLoc;
-        } else {
-          extracted.zonaDeseada = normZone;
-          extracted.addressNeighborhood = normZone;
-          extracted.addressLocality = normLoc;
-        }
+        // Normalización
+        if (isProperty) { extracted.zone = validation.barrioCanonico; extracted.addressLocality = validation.localidad; }
+        else { extracted.zonaDeseada = validation.barrioCanonico; extracted.addressLocality = validation.localidad; }
+      } else {
+        // Falta zona del todo
+        result.classification = "DATOS_INCOMPLETOS";
+        result.shouldSendDM = true;
+        result.dmShouldReply = true;
+        result.dmResponse = `${senderInfo.greeting}. Me falta la ubicación exacta para poder procesar tu publicación. ¿Me podrías decir el barrio o municipio?`;
+        result.response = "";
+        return result;
       }
     }
 
-    const DISCLAIMER = "\n\n🎁 *Operando en Etapa de Prueba e Implementación Completa de la Suite Tecnológica — Acceso 100% Gratuito y Sin Compromisos por Tiempo Limitado.*";
+    const REPUTATION_HOOK = "\n\n⚖️ *COMPROMISO DE HONOR VECY:* Al operar en Etapa de Prueba Gratuita y sin comisiones, si consolidan un negocio real gracias a este MATCH, es de carácter obligatorio compartir su testimonio de éxito en este grupo y registrar su reseña oficial y calificación aquí: https://g.page/r/CctNbwU6UpX5EBM/review";
 
-    // --- LÓGICA DE PERSISTENCIA Y MATCHING v7.5 ---
+    // --- PERSISTENCIA Y MATCHING ---
     if (isProperty) {
-      const propData = {
-        name: userName || extracted?.name || userId.split('@')[0],
-        propertyType: (extracted?.propertyType || scrapedData[0]?.propertyType || "apartment") as any,
-        price: String(extracted?.price || scrapedData[0]?.price || "0"),
-        zone: extracted?.zone || scrapedData[0]?.zone || "Desconocido",
-        addressNeighborhood: extracted?.addressNeighborhood || scrapedData[0]?.zone || null,
-        addressLocality: extracted?.addressLocality || null,
-        transactionType: (extracted?.transactionType || scrapedData[0]?.transactionType || "venta") as any,
-        externalUrl: extracted?.externalUrl || scrapedData[0]?.externalUrl || null,
-        bedrooms: extracted?.bedrooms ?? scrapedData[0]?.bedrooms ?? null,
-        bathrooms: extracted?.bathrooms ?? scrapedData[0]?.bathrooms ?? null,
-        garages: extracted?.garages ?? scrapedData[0]?.garages ?? null,
-        areaTotal: String(extracted?.areaTotal || scrapedData[0]?.areaTotal || "0"),
-        amenities: { 
-          ...extracted?.amenities, 
-          isCollaborativePool: extracted?.isCollaborativePool ?? true,
-          interiorExterior: extracted?.interiorExterior || null 
-        }
-      } as InsertProperty;
-
-      const saved = await saveProperty(propData, userId, messageToProcess);
+      const saved = await saveProperty({
+        ...extracted,
+        name: userName || userId,
+        price: String(extracted.price || 0),
+        areaTotal: String(extracted.area || 0),
+        idUsuarioWhatsapp: userId,
+        rawText: messageToProcess,
+        amenities: { gives: extracted.gives, wants: extracted.wants, isCollaborativePool: extracted.isCollaborativePool }
+      }, userId);
+      
       if (saved) {
+        // FLUJO A: Éxito e Indexación Perfecta
+        result.shouldSendDM = true;
+        result.dmResponse = `${senderInfo.greeting} Qué publicación tan impecable y ordenada acabas de enviar al grupo. Ya guardé los datos en VECY Network y estoy buscando activamente tu match. ¡${senderInfo.courtesy}! 🚀`;
+        
         const matches = await findMatchesForProperty(saved.id);
         if (matches.length > 0) {
           result.mentions.push(...matches.map(m => m.idUsuarioWhatsapp!), userId);
-          let matchResponse = `🎯 ¡MATCH DETECTADO POR JANIA! 🎯\n\n`;
-          matches.slice(0, 3).forEach(m => {
-            matchResponse += `🔎 REQUERIMIENTO: ${m.tipoInmuebleDeseado.toUpperCase()} en ${m.zonaDeseada} — @${m.idUsuarioWhatsapp?.split('@')[0]}\n`;
-            matchResponse += `🏠 INMUEBLE COMPATIBLE: ${propData.externalUrl || propData.name} — @${userId.split('@')[0]}\n`;
-            if (propData.amenities && (propData.amenities as any).isCollaborativePool === false) {
-              matchResponse += `💰 *Liquidación Exclusiva:* 40% Captador / 40% Cerrador / 20% VECY\n`;
-            }
-            matchResponse += `\n`;
-          });
-          result.response = matchResponse + DISCLAIMER;
+          result.response = `🎯 ¡MATCH DETECTADO POR JANIA! 🎯\n\nHe encontrado ${matches.length} requerimientos compatibles con tu oferta.\n` + REPUTATION_HOOK;
         } else {
-          result.response = ""; 
+          result.response = ""; // Silencio de Oro
         }
       }
-    } 
-    else if (isRequirement) {
-      const reqData = {
-        name: userName || userId.split('@')[0],
-        tipoInmuebleDeseado: (extracted?.tipoInmuebleDeseado || extracted?.propertyType || "apartment") as any,
-        tipoNegocioDeseado: (extracted?.tipoNegocioDeseado || extracted?.transactionType || "venta") as any,
-        zonaDeseada: extracted?.zonaDeseada || extracted?.zone,
-        addressNeighborhood: extracted?.addressNeighborhood || extracted?.zone,
-        addressLocality: extracted?.addressLocality,
-        presupuestoMax: String(extracted?.presupuestoMax || "0"),
-        habitacionesMin: extracted?.habitacionesMin || null,
-        banosMin: extracted?.bañosMin || null,
-        parqueaderosMin: extracted?.garajesMin || null,
-        areaMin: String(extracted?.areaMin || "0"),
-        estratoDeseado: extracted?.estratoDeseado || null,
-        caracteristicasDeseadas: { interiorExterior: extracted?.interiorExterior || null }
-      } as InsertRequirement;
+    } else if (isRequirement) {
+      const saved = await saveRequirement({
+        ...extracted,
+        tipoInmuebleDeseado: extracted.propertyType,
+        tipoNegocioDeseado: extracted.transactionType,
+        zonaDeseada: extracted.zone,
+        presupuestoMax: String(extracted.price || 0),
+        idUsuarioWhatsapp: userId,
+        rawText: messageToProcess,
+        caracteristicasDeseadas: { gives: extracted.gives, wants: extracted.wants }
+      }, userId);
 
-      const saved = await saveRequirement(reqData, userId, messageToProcess);
       if (saved) {
+        result.shouldSendDM = true;
+        result.dmResponse = `${senderInfo.greeting} He registrado tu búsqueda con éxito. Estoy cruzando datos con todo nuestro inventario nacional para encontrarte la mejor opción. ¡${senderInfo.courtesy}! ✨`;
+
         const matches = await findMatchesForRequirement(saved.id);
         if (matches.length > 0) {
           result.mentions.push(...matches.map(m => m.idUsuarioWhatsapp!), userId);
-          let matchResponse = `🎯 ¡MATCH DETECTADO POR JANIA! 🎯\n\n`;
-          matchResponse += `🔎 REQUERIMIENTO: ${reqData.tipoInmuebleDeseado.toUpperCase()} en ${reqData.zonaDeseada} — @${userId.split('@')[0]}\n\n`;
-          matchResponse += `🏠 INMUEBLES COMPATIBLES:\n`;
-          matches.slice(0, 5).forEach((m, idx) => {
-            matchResponse += `${idx + 1}. ${m.externalUrl || m.name} — @${m.idUsuarioWhatsapp?.split('@')[0]}\n`;
-            if ((m.amenities as any)?.isCollaborativePool === false) {
-              matchResponse += `   💰 *Liquidación:* 40% Captador / 40% Cerrador / 20% VECY\n`;
-            }
-          });
-          result.response = matchResponse + DISCLAIMER;
+          result.response = `🎯 ¡MATCH DETECTADO POR JANIA! 🎯\n\nTu búsqueda tiene ${matches.length} coincidencias exactas en nuestra red.\n` + REPUTATION_HOOK;
         } else {
-          result.response = ""; 
+          result.response = "";
         }
       }
     }
 
     return result;
   } catch (error) {
-    console.error("Error en JanIA v7.5:", error);
+    console.error("Error en JanIA v10.2:", error);
     return { classification: "CONSULTA_GENERAL", response: "", mentions: [] };
   }
 }
 
-async function saveProperty(data: InsertProperty, userId: string, rawText: string) {
+async function saveProperty(data: any, userId: string) {
   const db = await getDb();
   if (!db) return null;
-  const [result] = await db.insert(properties).values({ ...data, idUsuarioWhatsapp: userId, rawText }).returning();
+  const [result] = await db.insert(properties).values(data).returning();
   return result;
 }
 
-async function saveRequirement(data: InsertRequirement, userId: string, rawText: string) {
+async function saveRequirement(data: any, userId: string) {
   const db = await getDb();
   if (!db) return null;
-  const [result] = await db.insert(requirements).values({ ...data, idUsuarioWhatsapp: userId, rawText }).returning();
+  const [result] = await db.insert(requirements).values(data).returning();
   return result;
 }
 
@@ -231,16 +252,12 @@ export async function generateWelcomeMessage(count: number): Promise<string> {
     const response = await invokeLLM({
       messages: [
         { role: "system", content: "Eres JanIA, la consultora inmobiliaria experta de VECY Network. Tu tono es sumamente humano, elocuente y corporativo." },
-        { role: "user", content: `Han ingresado ${count} nuevos integrantes a VECY Network. Redacta una bienvenida natural de alto nivel en español colombiano. Recuérdales de forma proactiva que estamos en 'Etapa de Prueba e Implementación Completa de la Suite Tecnológica', por lo que el servicio es 100% gratuito y sin compromisos por tiempo limitado. Enfatiza la facilidad de enviar solo el enlace de sus inmuebles.` }
+        { role: "user", content: `Han ingresado ${count} nuevos integrantes a VECY Network. Redacta una bienvenida natural de alto nivel en español colombiano. Menciona que operamos en toda Colombia.` }
       ]
     });
-    
     const llmRes = response as any;
-    if (llmRes?.choices?.[0]?.message?.content) {
-      return llmRes.choices[0].message.content.trim();
-    }
-    throw new Error("Respuesta inválida");
+    return llmRes.choices[0].message.content.trim();
   } catch (error) {
-    return `✨ *¡Bienvenidos a VECY Inmuebles Network!* 👋 Qué gusto saludarlos. Soy *JanIA*, la Inteligencia Artificial oficial del ecosistema. Nos encontramos en *Etapa de Prueba e Implementación de Herramientas*, por lo que mi servicio de matching automático será **100% gratuito** durante esta fase. 🚀`;
+    return `✨ *¡Bienvenidos a VECY Inmuebles Network!* 👋 Soy JanIA. Nos encontramos en fase de expansión nacional. ¡Es un gusto tenerlos aquí! 🚀`;
   }
 }

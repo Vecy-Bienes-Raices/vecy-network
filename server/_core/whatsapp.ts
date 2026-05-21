@@ -24,6 +24,7 @@ interface MessageBuffer {
   hasMedia: boolean;
   imageBuffer?: string;
   chatId: string;
+  originalMsg?: Message;
 }
 
 interface PendingEntry {
@@ -267,6 +268,7 @@ export class WhatsAppBot {
       buffer.messages.push(msg.body);
       buffer.hasMedia = buffer.hasMedia || msg.hasMedia;
       if (imageBuffer) buffer.imageBuffer = imageBuffer;
+      buffer.originalMsg = msg;
       buffer.timer = setTimeout(() => this.processBuffer(bufferKey), 15000);
     } else {
       this.messageBuffers.set(bufferKey, {
@@ -275,6 +277,7 @@ export class WhatsAppBot {
         hasMedia: msg.hasMedia,
         imageBuffer,
         chatId,
+        originalMsg: msg,
         timer: setTimeout(() => this.processBuffer(bufferKey), 15000)
       });
     }
@@ -289,6 +292,7 @@ export class WhatsAppBot {
     const hasMedia = buffer.hasMedia;
     const imageBuffer = buffer.imageBuffer;
     const chatId = buffer.chatId;
+    const originalMsg = buffer.originalMsg;
     const senderId = bufferKey.split('_')[1];
     
     this.messageBuffers.delete(bufferKey);
@@ -318,46 +322,51 @@ export class WhatsAppBot {
         const combinedText = `[CONTEXTO]: "${pending.originalText}"\n[RESPUESTA]: "${fullText}"`;
         this.pendingData.delete(senderId);
         const result = await processWhatsAppMessage(combinedText, senderId, userName, false, [], undefined, imageBuffer);
-        await this.handleJanIAResponse(result, senderId, chatId, userName, fullText, true);
+        await this.handleJanIAResponse(result, senderId, chatId, userName, fullText, true, originalMsg);
         return;
       }
 
       // Procesamiento JanIA Multimodal
       const result = await processWhatsAppMessage(fullText, senderId, userName, hasMedia, scrapedResults, undefined, imageBuffer);
-      await this.handleJanIAResponse(result, senderId, chatId, userName, fullText, false);
+      await this.handleJanIAResponse(result, senderId, chatId, userName, fullText, false, originalMsg);
 
     } catch (e) {
       console.error('[WHATSAPP-BOT] Error procesando buffer:', e);
     }
   }
 
-  private async handleJanIAResponse(result: any, senderId: string, chatId: string, userName: string, fullText: string, isFollowUp: boolean) {
+  private async handleJanIAResponse(result: any, senderId: string, chatId: string, userName: string, fullText: string, isFollowUp: boolean, originalMsg?: Message) {
     if (!result) return;
 
     const isGroup = chatId.includes('@g.us');
-    const isMatch = result.response.includes("MATCH DETECTADO");
+    const isMatch = result.response && result.response.includes("MATCH DETECTADO");
     const isConsultation = result.classification === "CONSULTA_GENERAL" || result.classification === "RESPUESTA_A_PREGUNTA_IA";
 
-    if ((!isGroup || isMatch || isConsultation) && result.response.trim() !== "") {
+    // --- RESPUESTA EN GRUPO (Silencio de Oro) ---
+    if ((!isGroup || isMatch || isConsultation) && result.response && result.response.trim() !== "") {
       const mentions = Array.from(new Set([...(result.mentions || []), senderId]));
       await this.client.sendMessage(chatId, result.response, { 
         mentions: isGroup ? mentions : [] 
       });
       await this.logToDb(senderId, 'janIA', result.response);
-    } else if (result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO") {
-      // Confirmación privada si no hubo match
-      const type = result.classification === "INMUEBLE" ? "tu inmueble" : "tu búsqueda";
-      const msg = `¡Hola, ${userName}! 🧐 He registrado exitosamente ${type} en mi cerebro logístico. Seguiré monitoreando 24/7 y te avisaré en cuanto haya negocio. 🚀`;
-      await this.client.sendMessage(senderId, msg);
     }
 
-    // Nudge para datos incompletos
-    if (result.shouldSendDM && !isMatch) {
-      const missingList = (result.missingFields || []).map((q, i) => `${i + 1}. ${q}`).join('\n');
-      const dmMsg = `🧠 *Hola, ${userName}!* Me faltan datos para completar el registro:\n\n${missingList}\n\nResponde aquí mismo. 🙏`;
-      await this.client.sendMessage(senderId, dmMsg);
+    // --- RESPUESTA POR DM (Personalización Avanzada JanIA v2.0) ---
+    if (result.shouldSendDM) {
+      const dmMsg = result.dmResponse || result.response;
       
-      if (isGroup) {
+      if (dmMsg && dmMsg.trim() !== "") {
+        // Si JanIA pide un reply al mensaje original (Flujo B: Datos Incompletos)
+        const options: any = {};
+        if (result.dmShouldReply && originalMsg) {
+          options.quotedMessageId = originalMsg.id._serialized;
+        }
+
+        await this.client.sendMessage(senderId, dmMsg, options);
+        await this.logToDb(senderId, 'janIA', `[DM] ${dmMsg}`);
+      }
+      
+      if (isGroup && result.classification !== "CONSULTA_GENERAL") {
         this.pendingData.set(senderId, {
           originalText: fullText,
           extractedData: result.extractedData || {},
