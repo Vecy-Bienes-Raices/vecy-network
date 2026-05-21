@@ -5,7 +5,7 @@ import puppeteer from 'puppeteer';
  * Automatización de publicaciones en Facebook Groups usando Puppeteer.
  */
 
-export async function publishToFacebookGroup(content: string, imageBuffer?: string): Promise<boolean> {
+export async function publishToFacebookGroup(content: string, mediaData?: string): Promise<boolean> {
   const groupUrl = process.env.FB_GROUP_URL || 'https://www.facebook.com/groups/vecy.inmuebles.network.co';
   const cookiesJson = process.env.FB_COOKIES_JSON;
 
@@ -38,36 +38,33 @@ export async function publishToFacebookGroup(content: string, imageBuffer?: stri
     await page.goto(groupUrl, { waitUntil: 'networkidle2' });
 
     // Esperar a que el cuadro de "Escribe algo..." esté disponible
-    const postBoxSelector = 'div[role="button"] span:last-child'; // Selector genérico para el botón de inicio de post
+    const postBoxSelector = 'div[role="button"] span:last-child';
     try {
       await page.waitForSelector(postBoxSelector, { timeout: 10000 });
       await page.click(postBoxSelector);
     } catch (e) {
-      // Intento alternativo si el selector cambia
-      await page.keyboard.press('p'); // Atajo de FB para crear post
+      await page.keyboard.press('p');
       await new Promise(resolve => setTimeout(resolve, 2000));
     }
 
-    // Manejo de Imagen (si existe)
-    if (imageBuffer) {
-      console.log('[Facebook-Sync] Cargando imagen adjunta...');
-      // FB utiliza un input de tipo file oculto para las imágenes
-      const fileInputSelector = 'input[type="file"][accept*="image"]';
+    // Manejo de Multimedia (Imagen o Video)
+    if (mediaData) {
+      console.log('[Facebook-Sync] Cargando multimedia adjunta...');
+      // Selector genérico para input de archivos en FB
+      const fileInputSelector = 'input[type="file"]';
       await page.waitForSelector(fileInputSelector, { timeout: 5000 });
       
-      // En Puppeteer, para cargar archivos desde un buffer, primero debemos guardarlo temporalmente
-      // o usar el método uploadFile. Como viene de memoria, usamos un path temporal.
-      const tempPath = `/tmp/fb_upload_${Date.now()}.jpg`;
+      // Guardamos el buffer temporalmente (usamos mp4 como extensión genérica compatible)
+      const tempPath = `/tmp/fb_upload_${Date.now()}.mp4`;
       const fs = await import('fs');
-      fs.writeFileSync(tempPath, Buffer.from(imageBuffer, 'base64'));
+      fs.writeFileSync(tempPath, Buffer.from(mediaData, 'base64'));
       
       const input = await page.$(fileInputSelector);
       if (input) {
         await input.uploadFile(tempPath);
-        // Limpiar archivo temporal
-        setTimeout(() => fs.unlinkSync(tempPath), 10000);
+        setTimeout(() => fs.unlinkSync(tempPath), 15000);
       }
-      await new Promise(resolve => setTimeout(resolve, 5000)); // Esperar carga
+      await new Promise(resolve => setTimeout(resolve, 8000)); // Más tiempo para videos
     }
 
     // Escribir el contenido con retraso humano

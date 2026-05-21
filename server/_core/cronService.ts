@@ -1,8 +1,11 @@
 import cron from 'node-cron';
+import fs from 'fs';
+import path from 'path';
 import { getDb } from '../db';
 import { propertyMatches, requirements, properties } from '../../drizzle/schema';
 import { gte, and, eq } from 'drizzle-orm';
 import { whatsappBot } from './whatsapp';
+import { publishToFacebookGroup } from './facebookService';
 import { 
   MSG_PRESENTACION_INSTITUCIONAL, 
   MSG_PAUTAS_FORMATOS 
@@ -10,7 +13,7 @@ import {
 
 /**
  * Servicio Cron de JanIA v2.0
- * Automatización de ráfagas educativas y reportes de matching.
+ * Automatización de ráfagas educativas, reportes de matching y embudos multicanal.
  */
 
 export function initCronScheduler() {
@@ -18,8 +21,8 @@ export function initCronScheduler() {
 
   // --- 1. BROADCASTS EDUCATIVOS E INSTITUCIONALES ---
 
-  // 06:00 AM: Inicio de jornada y motivación
-  cron.schedule('0 6 * * *', async () => {
+  // 12:30 PM: Saludo multimedia y replicación en Facebook con embudo (v11.9)
+  cron.schedule('30 12 * * *', async () => {
     const motivation = 
       `✨ *¡BUENOS DÍAS COMUNIDAD VECY!* ✨\n\n` +
       `Iniciamos una nueva jornada de oportunidades. El mercado inmobiliario no se detiene y JanIA v2.0 tampoco.\n\n` +
@@ -28,7 +31,34 @@ export function initCronScheduler() {
       `▸ Escaneo tus flyers y fotos con OCR.\n` +
       `▸ Proceso tus notas de voz en segundos.\n\n` +
       `¡Hagamos que hoy sea un día de cierres masivos! 🏆`;
-    await whatsappBot.sendToGroup(motivation, './client/public/vecy_inmuebles_network.mp4');
+      
+    const videoPath = './client/public/vecy_inmuebles_network.mp4';
+
+    // 1. Envío a WhatsApp (Copy original)
+    await whatsappBot.sendToGroup(motivation, videoPath);
+
+    // 2. Envío a Facebook Groups con Embudo (Copy + Invitación + Video)
+    try {
+      const fbInvitation = 
+        "\n\n━━━━━━━━━━━━━━━━━━━━━━\n" +
+        "💼 ¿Eres bróker, asesor o inversionista en Bogotá y Colombia?\n" +
+        "🚀 ¡Únete a nuestra Bolsa Colaborativa de Alta Velocidad en WhatsApp y accede a matches e inventario exclusivo en tiempo real!\n" +
+        "👉 Entra aquí: https://chat.whatsapp.com/K36KrHeB9nMEKJ56s8XFcM";
+      
+      const fbContent = motivation.replace(/\*/g, '') + fbInvitation;
+      
+      if (fs.existsSync(path.resolve(videoPath))) {
+        const videoBuffer = fs.readFileSync(path.resolve(videoPath));
+        
+        publishToFacebookGroup(fbContent, videoBuffer.toString('base64'))
+          .then(success => {
+            if (success) console.log("✅ [Cron-FB-Sync] Publicación de mediodía replicada con éxito.");
+          })
+          .catch(err => console.error("❌ [Cron-FB-Sync-Error]:", err.message));
+      }
+    } catch (e: any) {
+      console.error("[Cron-FB-Sync-Critical]:", e.message);
+    }
   });
 
   // 07:00 AM: Presentación Institucional

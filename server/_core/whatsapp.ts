@@ -1,5 +1,5 @@
-import pkg, { MessageMedia } from 'whatsapp-web.js';
-const { Client, LocalAuth } = pkg;
+import pkg from 'whatsapp-web.js';
+const { Client, LocalAuth, MessageMedia } = pkg;
 import type { Client as ClientType, Message } from 'whatsapp-web.js';
 import qrcode from 'qrcode-terminal';
 import { scrapePropertyLink, esDominioPermitido } from './scraper';
