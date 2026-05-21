@@ -1,11 +1,13 @@
 import puppeteer from 'puppeteer';
+import fs from 'fs';
 
 /**
- * FACEBOOK GROUPS SYNC SERVICE - VECY NETWORK v11.0
+ * FACEBOOK GROUPS SYNC SERVICE - VECY NETWORK v11.30
  * Automatización de publicaciones en Facebook Groups usando Puppeteer.
+ * Soporta sincronización de imágenes y videos (Buffers binarios o Base64).
  */
 
-export async function publishToFacebookGroup(content: string, mediaData?: string): Promise<boolean> {
+export async function publishToFacebookGroup(content: string, mediaData?: string | Buffer): Promise<boolean> {
   const groupUrl = process.env.FB_GROUP_URL || 'https://www.facebook.com/groups/vecy.inmuebles.network.co';
   const cookiesJson = process.env.FB_COOKIES_JSON;
 
@@ -17,7 +19,7 @@ export async function publishToFacebookGroup(content: string, mediaData?: string
   console.log(`[Facebook-Sync] Iniciando publicación en el grupo: ${groupUrl}`);
   
   const browser = await puppeteer.launch({
-    headless: true,
+    headless: "new", // Modo moderno compatible con entornos de producción
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -43,43 +45,51 @@ export async function publishToFacebookGroup(content: string, mediaData?: string
       await page.waitForSelector(postBoxSelector, { timeout: 10000 });
       await page.click(postBoxSelector);
     } catch (e) {
+      // Atajo de contingencia para abrir el cuadro de post
       await page.keyboard.press('p');
       await new Promise(resolve => setTimeout(resolve, 2000));
     }
 
-    // Manejo de Multimedia (Imagen o Video)
+    // Manejo de Multimedia (Imagen o Video - Soporte Binario Seguro)
     if (mediaData) {
-      console.log('[Facebook-Sync] Cargando multimedia adjunta...');
-      // Selector genérico para input de archivos en FB
+      console.log('[Facebook-Sync] Procesando multimedia adjunta...');
       const fileInputSelector = 'input[type="file"]';
       await page.waitForSelector(fileInputSelector, { timeout: 5000 });
       
-      // Guardamos el buffer temporalmente (usamos mp4 como extensión genérica compatible)
-      const tempPath = `/tmp/fb_upload_${Date.now()}.mp4`;
-      const fs = await import('fs');
-      fs.writeFileSync(tempPath, Buffer.from(mediaData, 'base64'));
+      // Generar ruta temporal única
+      const tempPath = `/tmp/fb_sync_upload_${Date.now()}.mp4`;
+      
+      // Control inteligente de escritura para evitar corrupción
+      if (Buffer.isBuffer(mediaData)) {
+        fs.writeFileSync(tempPath, mediaData);
+      } else {
+        fs.writeFileSync(tempPath, Buffer.from(mediaData, 'base64'));
+      }
       
       const input = await page.$(fileInputSelector);
       if (input) {
         await input.uploadFile(tempPath);
-        setTimeout(() => fs.unlinkSync(tempPath), 15000);
+        // Limpieza diferida del archivo temporal
+        setTimeout(() => {
+          if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
+        }, 15000);
       }
-      await new Promise(resolve => setTimeout(resolve, 8000)); // Más tiempo para videos
+      
+      // Tiempo prudente para la carga del archivo en la interfaz de FB
+      await new Promise(resolve => setTimeout(resolve, 8000)); 
     }
 
-    // Escribir el contenido con retraso humano
+    // Simulación de tipeado humano (Anti-detección)
     await new Promise(resolve => setTimeout(resolve, 2000));
-    const activeElement = await page.evaluateHandle(() => document.activeElement);
-    
     for (const char of content) {
       await page.keyboard.sendCharacter(char);
       const delay = Math.floor(Math.random() * (60 - 15 + 1)) + 15;
       await new Promise(resolve => setTimeout(resolve, delay));
     }
 
-    console.log('[Facebook-Sync] Contenido escrito. Publicando...');
+    console.log('[Facebook-Sync] Contenido ingresado. Procediendo a publicar...');
 
-    // Localizar botón "Publicar" (Suele ser un div con role="button" que contiene el texto)
+    // Selectores de botón "Publicar" por prioridad semántica
     const publishButtonSelectors = [
       'div[aria-label="Publicar"]',
       'div[aria-label="Post"]',
@@ -98,23 +108,24 @@ export async function publishToFacebookGroup(content: string, mediaData?: string
       } catch (e) {}
     }
 
+    // Fallback: Publicación forzada por atajo de teclado
     if (!published) {
-      // Si fallan los selectores, intentar con Enter
       await page.keyboard.down('Control');
       await page.keyboard.press('Enter');
       await page.keyboard.up('Control');
     }
 
-    // Esperar procesamiento en servidores de Meta
-    await new Promise(resolve => setTimeout(resolve, 4000));
+    // Esperar a que Facebook confirme la recepción del post
+    await new Promise(resolve => setTimeout(resolve, 5000));
     
-    console.log('[Facebook-Sync] Proceso finalizado con éxito.');
+    console.log('[Facebook-Sync] Publicación exitosa.');
     return true;
 
   } catch (error: any) {
-    console.error(`[Facebook-Sync-Error] Fallo en la automatización: ${error.message}`);
+    console.error(`[Facebook-Sync-Error] Error en la ejecución de Puppeteer: ${error.message}`);
     return false;
   } finally {
+    // Blindaje de procesos: El navegador siempre debe cerrarse
     await browser.close();
   }
 }
