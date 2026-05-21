@@ -10,22 +10,24 @@ export type LLMProvider = "google" | "anthropic";
 export async function invokeLLM({ 
   messages, 
   responseFormat, 
-  provider = "google" 
+  provider = "google",
+  imageBuffer
 }: { 
   messages: any[], 
   responseFormat?: any,
-  provider?: LLMProvider
+  provider?: LLMProvider,
+  imageBuffer?: string
 }) {
   if (provider === "anthropic") {
     return await invokeClaude(messages, responseFormat);
   }
-  return await invokeGemini(messages, responseFormat);
+  return await invokeGemini(messages, responseFormat, imageBuffer);
 }
 
 /**
  * Invocación a Google Gemini (Google AI Studio) utilizando la infraestructura de frontera 3.1 Flash-Lite
  */
-async function invokeGemini(messages: any[], responseFormat?: any) {
+async function invokeGemini(messages: any[], responseFormat?: any, imageBuffer?: string) {
   const API_KEY = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || ENV.forgeApiKey;
   // Migración estratégica al modelo de bajo costo para pruebas masivas
   const MODEL = "gemini-3.1-flash-lite";
@@ -35,10 +37,24 @@ async function invokeGemini(messages: any[], responseFormat?: any) {
     const systemMessage = messages.find(m => m.role === "system");
     const userMessages = messages.filter(m => m.role !== "system");
 
-    const contents = userMessages.map(m => ({
-      role: m.role === "assistant" ? "model" : "user",
-      parts: [{ text: m.content }]
-    }));
+    const contents = userMessages.map((m, idx) => {
+      const parts: any[] = [{ text: m.content }];
+      
+      // Si es el último mensaje del usuario y tenemos un buffer de imagen, lo adjuntamos
+      if (imageBuffer && idx === userMessages.length - 1 && m.role !== "assistant") {
+        parts.push({
+          inline_data: {
+            mime_type: "image/jpeg", // Asumimos JPEG por defecto del buffer de WhatsApp
+            data: imageBuffer
+          }
+        });
+      }
+
+      return {
+        role: m.role === "assistant" ? "model" : "user",
+        parts
+      };
+    });
 
     const payload = {
       contents,

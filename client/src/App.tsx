@@ -20,6 +20,7 @@ import StealthPropertyView from "./pages/StealthPropertyView";
 import UnbrandedFicha from "./pages/UnbrandedFicha";
 import Agenda from "./pages/Agenda";
 import RedColaboracion from "./pages/RedColaboracion";
+import RequirementsMarketplace from "./pages/RequirementsMarketplace";
 import NuestraHistoria from "./pages/NuestraHistoria";
 import JanIAConsole from "./pages/JanIAConsole";
 import ScrollToTop from "./components/ScrollToTop";
@@ -42,6 +43,7 @@ function Router() {
       <Route path={"/ficha/:id"} component={UnbrandedFicha} />
       <Route path={"/agenda/:propertyId"} component={Agenda} />
       <Route path={"/red-colaboracion"} component={RedColaboracion} />
+      <Route path={"/requerimientos"} component={RequirementsMarketplace} />
       <Route path={"/historia"} component={NuestraHistoria} />
       <Route path={"/jania"} component={JanIAConsole} />
       <Route path={"/404"} component={NotFound} />
