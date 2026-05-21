@@ -153,26 +153,81 @@ export class WhatsAppBot {
       try {
         const chat = await msg.getChat();
         const chatId = chat.id._serialized;
-        const isTargetGroup = chatId === this.targetGroupId;
         const isGroup = chat.isGroup;
+        const isTargetGroup = chatId === this.targetGroupId;
 
-        // Comandos de administración (JanIA v2.0)
-        const text = msg.body.toLowerCase();
-        if (isTargetGroup && text.includes('jania')) {
-          if (text.includes('normas') || text.includes('preséntate') || text.includes('anuncia') || text.includes('dipava')) {
-            await this.handleAdminCommand(msg);
-            return;
+        // 1. RAMA DE GRUPO (VECY INMUEBLES NETWORK)
+        if (isTargetGroup) {
+          const text = msg.body.toLowerCase();
+          // Comandos de administración
+          if (text.includes('jania')) {
+            if (text.includes('normas') || text.includes('preséntate') || text.includes('anuncia') || text.includes('dipava')) {
+              await this.handleAdminCommand(msg);
+              return;
+            }
           }
+          // Orquestación con Buffer y Cooldown (Lógica v10.5 intacta)
+          await this.handleIncomingMessage(msg, chatId);
+          return;
         }
 
-        // Orquestación principal (Reglas de Buffer y Geografía)
-        if (isTargetGroup || !isGroup) {
-          await this.handleIncomingMessage(msg, chatId);
+        // 2. RAMA Conversacional PRIVADA (DM Branch - v11.15)
+        if (!isGroup) {
+          await this.handlePrivateMessage(msg);
+          return;
         }
+
       } catch (e) {
-        console.error('[WHATSAPP-BOT] Error en receptor:', e);
+        console.error('[WHATSAPP-BOT] Error crítico en receptor principal:', e);
       }
     });
+  }
+
+  // --- 2. RAMA Conversacional PRIVADA (DM INBOUND LOOP) ---
+  private async handlePrivateMessage(msg: Message) {
+    try {
+      const senderId = msg.from;
+      const contact = await msg.getContact();
+      const userName = contact.pushname || contact.name || "Colega";
+
+      console.log(`[JanIA-DM] Atendiendo mensaje interno de ${userName} (${senderId})...`);
+
+      // Capa Multimodal OCR para DMs (Visión)
+      let imageBuffer: string | undefined;
+      if (msg.hasMedia && msg.type === 'image') {
+        try {
+          const media = await msg.downloadMedia();
+          if (media && media.mimetype.startsWith('image/')) {
+            imageBuffer = media.data;
+          }
+        } catch (e) {
+          console.error('[JanIA-DM-Vision] Error descargando imagen:', e);
+        }
+      }
+
+      // Procesamiento Directo (Sin esperas de buffer)
+      const result = await processWhatsAppMessage(
+        msg.body, 
+        senderId, 
+        userName, 
+        msg.hasMedia, 
+        [], // Sin scraping para DMs simples
+        undefined, 
+        imageBuffer
+      );
+
+      // Despacho de respuesta inmediata
+      if (result) {
+        const responseText = result.dmResponse || result.response;
+        if (responseText && responseText.trim() !== "") {
+          await this.client.sendMessage(senderId, responseText);
+          await this.logToDb(senderId, 'janIA', `[DM-Response] ${responseText}`);
+        }
+      }
+
+    } catch (error) {
+      console.error(`[JanIA-DM-Error] Fallo en atención privada para ${msg.from}:`, error);
+    }
   }
 
   // --- 1. LOGÍSTICA DEL BUFFER DINÁMICO Y ANTI-SPAM (CORE v10.5) ---
