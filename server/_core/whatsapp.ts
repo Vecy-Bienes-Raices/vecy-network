@@ -435,6 +435,14 @@ export class WhatsAppBot {
     await this.client.sendMessage(deLaPavaId, `Su requerimiento nacional ha sido indexado con éxito. ¡JanIA sigue atenta!`);
   }
 
+  public async sendToGroup(text: string) {
+    try {
+      await this.client.sendMessage(this.targetGroupId, text);
+    } catch (e) {
+      console.error('[WHATSAPP-BOT] Error enviando mensaje al grupo:', e);
+    }
+  }
+
   public initialize() {
     this.client.initialize();
   }

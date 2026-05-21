@@ -7,6 +7,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { whatsappBot } from "./whatsapp";
+import { initCronScheduler } from "./cronService";
 
 async function startServer() {
   const app = express();
@@ -139,6 +140,9 @@ async function startServer() {
     // Inicializar el Bot de WhatsApp de Vecy Network
     console.log("Iniciando WhatsApp Bot...");
     whatsappBot.initialize();
+
+    // Inicializar el orquestador de agendas automatizadas (Cron)
+    initCronScheduler();
   });
 }
 
