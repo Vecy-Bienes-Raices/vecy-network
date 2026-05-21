@@ -2,7 +2,7 @@ import puppeteer from 'puppeteer';
 import fs from 'fs';
 
 /**
- * FACEBOOK GROUPS SYNC SERVICE - VECY NETWORK v11.30
+ * FACEBOOK GROUPS SYNC SERVICE - VECY NETWORK v11.75
  * Automatización de publicaciones en Facebook Groups usando Puppeteer.
  * Soporta sincronización de imágenes y videos (Buffers binarios o Base64).
  */
@@ -19,7 +19,7 @@ export async function publishToFacebookGroup(content: string, mediaData?: string
   console.log(`[Facebook-Sync] Iniciando publicación en el grupo: ${groupUrl}`);
   
   const browser = await puppeteer.launch({
-    headless: "new", // Modo moderno compatible con entornos de producción
+    headless: "new",
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -29,8 +29,10 @@ export async function publishToFacebookGroup(content: string, mediaData?: string
     ]
   });
 
+  let page: any;
+
   try {
-    const page = await browser.newPage();
+    page = await browser.newPage();
     
     // Configurar cookies para mantener la sesión
     const cookies = JSON.parse(cookiesJson);
@@ -72,11 +74,27 @@ export async function publishToFacebookGroup(content: string, mediaData?: string
         // Limpieza diferida del archivo temporal
         setTimeout(() => {
           if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
-        }, 15000);
+        }, 20000);
       }
       
-      // Tiempo prudente para la carga del archivo en la interfaz de FB
-      await new Promise(resolve => setTimeout(resolve, 8000)); 
+      // ESPERA DINÁMICA v11.75: Validar que el botón de publicar se habilite tras la subida
+      console.log('[Facebook-Sync] Esperando procesamiento multimedia de Meta...');
+      await new Promise(resolve => setTimeout(resolve, 5000)); // Margen base
+      
+      try {
+        await page.waitForFunction(() => {
+          // Buscamos el botón de publicar y verificamos que no esté deshabilitado (aria-disabled)
+          const btn = Array.from(document.querySelectorAll('div[role="button"]'))
+            .find(el => {
+              const label = el.getAttribute('aria-label');
+              return label === 'Publicar' || label === 'Post';
+            });
+          return btn && btn.getAttribute('aria-disabled') !== 'true';
+        }, { timeout: 20000 });
+        console.log('[Facebook-Sync] Multimedia lista para publicar.');
+      } catch (e) {
+        console.log('[Facebook-Sync] Timeout en espera dinámica (latencia), continuando flujo.');
+      }
     }
 
     // Simulación de tipeado humano (Anti-detección)
@@ -101,14 +119,18 @@ export async function publishToFacebookGroup(content: string, mediaData?: string
       try {
         const btn = await page.$(selector);
         if (btn) {
-          await btn.click();
-          published = true;
-          break;
+          // Verificar que sea el botón correcto y esté habilitado
+          const isDisabled = await page.evaluate((el: any) => el.getAttribute('aria-disabled') === 'true', btn);
+          if (!isDisabled) {
+            await btn.click();
+            published = true;
+            break;
+          }
         }
       } catch (e) {}
     }
 
-    // Fallback: Publicación forzada por atajo de teclado
+    // Fallback: Publicación forzada por atajo de teclado si los selectores fallan o están bloqueados
     if (!published) {
       await page.keyboard.down('Control');
       await page.keyboard.press('Enter');
@@ -122,6 +144,15 @@ export async function publishToFacebookGroup(content: string, mediaData?: string
     return true;
 
   } catch (error: any) {
+    // DIAGNÓSTICO VISUAL v11.75: Captura de pantalla de emergencia
+    if (page) {
+      try {
+        await page.screenshot({ path: "./error_facebook.png", fullPage: true });
+        console.log('[Facebook-Sync-Error] Captura de pantalla de error guardada en ./error_facebook.png para auditoría visual.');
+      } catch (screenshotError) {
+        console.error('[Facebook-Sync-Error] No se pudo generar la captura de pantalla de diagnóstico.');
+      }
+    }
     console.error(`[Facebook-Sync-Error] Error en la ejecución de Puppeteer: ${error.message}`);
     return false;
   } finally {
