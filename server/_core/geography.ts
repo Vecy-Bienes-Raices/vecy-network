@@ -281,10 +281,20 @@ export function validarZona(zona: string): ValidacionZonaResult {
   // Para zonas fuera de Bogotá: aceptar si se identifica cualquier ciudad, municipio o departamento colombiano
   const lugarColombia = buscarLugarColombia(zona);
   if (lugarColombia) {
+    // Estandarización Canónica Nacional (v11.35)
+    // Extraemos nombres oficiales, quitamos tildes y capitalizamos para simetría total en DB
+    const cleanText = (txt: string) => txt.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .split(' ')
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(' ');
+
+    const formattedCity = cleanText(lugarColombia.nombreCanonico);
+    const formattedDept = cleanText(lugarColombia.departamento);
+
     return {
       isValid: true,
-      barrioCanonico: zona.trim(),  // Conservamos la zona tal como la escribió el usuario
-      localidad: lugarColombia.departamento,
+      barrioCanonico: formattedCity,
+      localidad: formattedDept,
       isMunicipio: true
     };
   }
