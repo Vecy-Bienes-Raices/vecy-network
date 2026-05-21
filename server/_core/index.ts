@@ -37,22 +37,41 @@ async function startServer() {
   app.get("/api/screenshot-chat", async (req, res) => {
     try {
       const client = (whatsappBot as any).client;
+      const targetGroupId = (whatsappBot as any).targetGroupId;
+
       if (!client || !client.pupPage) {
-        return res.status(400).send("No pupPage available");
+        return res.status(503).send("El navegador de WhatsApp aún no está listo. Intenta en unos segundos.");
       }
+
       const page = client.pupPage;
-      // Click chat by title
-      await page.evaluate(() => {
-        const span = Array.from(document.querySelectorAll('span')).find(el => el.textContent === 'VECY INMUEBLES NETWORK');
-        if (span) {
-          const parent = span.closest('div[role="row"]') || span.closest('div');
-          if (parent) {
-            (parent as any).click();
+
+      // Intentar obtener el nombre dinámico del grupo por su ID para evitar hardcoding
+      let chatTitle = "VECY INMUEBLES NETWORK";
+      try {
+        const chat = await client.getChatById(targetGroupId);
+        if (chat && chat.name) chatTitle = chat.name;
+      } catch (e) {}
+
+      // Seleccionar el chat correcto forzando el ID (más estable que selectores CSS)
+      await page.evaluate((id, title) => {
+        // Intentar encontrar el elemento por el atributo de ID de WhatsApp Web
+        const row = document.querySelector(`div[data-id*="${id}"]`) || 
+                    Array.from(document.querySelectorAll('div')).find(el => el.getAttribute('data-id')?.includes(id));
+        
+        if (row) {
+          (row as any).click();
+        } else {
+          // Fallback: Buscar por el título dinámico si el ID no está expuesto directamente
+          const span = Array.from(document.querySelectorAll('span')).find(el => el.textContent === title);
+          if (span) {
+            const parent = span.closest('div[role="row"]') || span.closest('div[data-testid="cell-frame-container"]') || span.closest('div');
+            if (parent) (parent as any).click();
           }
         }
-      });
-      // Wait for chat to open
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      }, targetGroupId, chatTitle);
+
+      // Esperar brevemente a que el chat se renderice
+      await new Promise(resolve => setTimeout(resolve, 2500));
       const screenshot = await page.screenshot({ type: "png" });
       res.setHeader("Content-Type", "image/png");
       res.send(screenshot);
@@ -145,5 +164,29 @@ async function startServer() {
     initCronScheduler();
   });
 }
+
+/**
+ * IMPLEMENTACIÓN DE SHUTDOWN LIMPIO (GRACEFUL SHUTDOWN)
+ * Captura señales de apagado para liberar recursos y cerrar procesos de Puppeteer.
+ */
+const gracefulShutdown = async (signal: string) => {
+  console.log(`\n[SYSTEM] Cerrando recursos de forma ordenada por señal: ${signal}`);
+  
+  try {
+    const client = (whatsappBot as any).client;
+    if (client) {
+      console.log("[SYSTEM] Destruyendo sesión de WhatsApp y cerrando Puppeteer...");
+      await client.destroy();
+    }
+  } catch (err) {
+    console.error("[SYSTEM] Error al cerrar el cliente de WhatsApp:", err);
+  }
+
+  console.log("[SYSTEM] Suite finalizada exitosamente. Hasta pronto.");
+  process.exit(0);
+};
+
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
 
 startServer().catch(console.error);
