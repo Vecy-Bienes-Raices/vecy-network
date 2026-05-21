@@ -51,9 +51,9 @@ function buildScoreSql(staticProperty?: any, staticRequirement?: any) {
 
   const financialScore = sql`
     CASE 
-      WHEN ${propPrice} <= ${reqBudget} THEN 25
-      WHEN ${propPrice} <= ${reqBudget} * 1.10 THEN 15
-      WHEN ${propPrice} <= ${reqBudget} * 1.20 THEN 5
+      WHEN (${propPrice})::numeric <= (${reqBudget})::numeric THEN 25
+      WHEN (${propPrice})::numeric <= (${reqBudget})::numeric * 1.10 THEN 15
+      WHEN (${propPrice})::numeric <= (${reqBudget})::numeric * 1.20 THEN 5
       ELSE 0
     END
   `;
@@ -66,14 +66,14 @@ function buildScoreSql(staticProperty?: any, staticRequirement?: any) {
 
   const flexibleScore = sql`
     (CASE 
-      WHEN ${propArea} BETWEEN (${reqArea} * 0.85) AND (${reqArea} * 1.15) THEN 8 
+      WHEN (${propArea})::numeric BETWEEN ((${reqArea})::numeric * 0.85) AND ((${reqArea})::numeric * 1.15) THEN 8 
       ELSE 0 
     END) +
     (CASE 
       WHEN (${propStratum}::text) = ANY(SELECT jsonb_array_elements_text(${reqStratum}::jsonb)) THEN 6
       WHEN EXISTS (
         SELECT 1 FROM jsonb_array_elements_text(${reqStratum}::jsonb) as e 
-        WHERE ABS(e::int - ${propStratum}) <= 1
+        WHERE ABS(e::int - (${propStratum})::int) <= 1
       ) THEN 3
       ELSE 0 
     END) +

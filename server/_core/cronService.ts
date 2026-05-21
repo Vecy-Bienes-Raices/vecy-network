@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { getDb } from '../db';
 import { propertyMatches, requirements, properties } from '../../drizzle/schema';
-import { gte, and, eq } from 'drizzle-orm';
+import { gte, and, eq, sql } from 'drizzle-orm';
 import { whatsappBot } from './whatsapp';
 import { publishToFacebookGroup } from './facebookService';
 import { 
@@ -21,10 +21,10 @@ export function initCronScheduler() {
 
   // --- 1. BROADCASTS EDUCATIVOS E INSTITUCIONALES ---
 
-  // 12:30 PM: Saludo multimedia y replicación en Facebook con embudo (v11.9)
+  // 12:30 PM: Saludo multimedia y replicación en Facebook con embudo (v11.45)
   cron.schedule('30 12 * * *', async () => {
     const motivation = 
-      `✨ *¡BUENOS DÍAS COMUNIDAD VECY!* ✨\n\n` +
+      `✨ *¡FELIZ MEDIODÍA, COMUNIDAD VECY!* ✨\n\n` +
       `Iniciamos una nueva jornada de oportunidades. El mercado inmobiliario no se detiene y JanIA v2.0 tampoco.\n\n` +
       `🚀 *Recordatorio de Superpoderes:* \n` +
       `▸ Leo tus links de CRM automáticamente.\n` +
@@ -50,7 +50,8 @@ export function initCronScheduler() {
       if (fs.existsSync(path.resolve(videoPath))) {
         const videoBuffer = fs.readFileSync(path.resolve(videoPath));
         
-        publishToFacebookGroup(fbContent, videoBuffer.toString('base64'))
+        // v11.45: Pasamos el buffer directo sin conversión base64
+        publishToFacebookGroup(fbContent, videoBuffer)
           .then(success => {
             if (success) console.log("✅ [Cron-FB-Sync] Publicación de mediodía replicada con éxito.");
           })
@@ -117,6 +118,7 @@ async function sendMatchBulletin(periodName: string) {
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
+    // v11.45: Filtro con casteo numérico explícito para evitar fallos lexicográficos
     const matches = await db.select({
       matchScore: propertyMatches.matchScore,
       buyerAdvisor: requirements.idUsuarioWhatsapp,
@@ -126,7 +128,7 @@ async function sendMatchBulletin(periodName: string) {
     .innerJoin(requirements, eq(propertyMatches.requirementId, requirements.id))
     .innerJoin(properties, eq(propertyMatches.propertyId, properties.id))
     .where(and(
-      gte(propertyMatches.matchScore, '70.00'),
+      gte(sql<number>`(${propertyMatches.matchScore})::numeric`, 70),
       gte(propertyMatches.createdAt, todayStart)
     ))
     .execute();
@@ -136,6 +138,7 @@ async function sendMatchBulletin(periodName: string) {
       return;
     }
 
+    const jidsToMention: string[] = [];
     let bulletin = `🎯 ¡BOLETÍN DE MATCHES ${periodName} VECY! 🎯\n` +
                    `Rompemos las promesas con resultados reales. He conectado los siguientes negocios en la jornada de hoy:\n\n`;
 
@@ -143,12 +146,18 @@ async function sendMatchBulletin(periodName: string) {
       const buyer = m.buyerAdvisor?.split('@')[0] || 'Asesor';
       const seller = m.sellerAdvisor?.split('@')[0] || 'Asesor';
       const score = Math.round(Number(m.matchScore));
+      
       bulletin += `• 🔎 REQUERIMIENTO de: @${buyer} ⇄ 🏠 INMUEBLE de: @${seller} (Coincidencia: ${score}%)\n`;
+      
+      // Implementación de menciones reales (v11.45)
+      if (m.buyerAdvisor) jidsToMention.push(m.buyerAdvisor);
+      if (m.sellerAdvisor) jidsToMention.push(m.sellerAdvisor);
     });
 
     bulletin += `\n¡Colegas, los invito a abrir sus chats privados y ponerse en contacto de inmediato para cerrar la operación! 🚀`;
 
-    await whatsappBot.sendToGroup(bulletin);
+    // Pasamos el arreglo de JIDs para activar las menciones en WhatsApp
+    await whatsappBot.sendToGroup(bulletin, undefined, [...new Set(jidsToMention)]);
     console.log(`[CRON-SERVICE] Boletín ${periodName} enviado con ${matches.length} matches.`);
 
   } catch (error) {

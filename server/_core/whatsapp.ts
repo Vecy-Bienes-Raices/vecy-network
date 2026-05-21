@@ -501,13 +501,18 @@ export class WhatsAppBot {
     await this.client.sendMessage(deLaPavaId, `Su requerimiento nacional ha sido indexado con éxito. ¡JanIA sigue atenta!`);
   }
 
-  public async sendToGroup(text: string, mediaPath?: string) {
+  public async sendToGroup(text: string, mediaPath?: string, mentions?: string[]) {
     try {
+      const options: any = {};
+      if (mentions && mentions.length > 0) {
+        options.mentions = mentions;
+      }
+
       if (mediaPath) {
         const media = MessageMedia.fromFilePath(path.resolve(mediaPath));
-        await this.client.sendMessage(this.targetGroupId, media, { caption: text });
+        await this.client.sendMessage(this.targetGroupId, media, { ...options, caption: text });
       } else {
-        await this.client.sendMessage(this.targetGroupId, text);
+        await this.client.sendMessage(this.targetGroupId, text, options);
       }
     } catch (e) {
       console.error('[WHATSAPP-BOT] Error enviando mensaje al grupo:', e);
