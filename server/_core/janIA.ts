@@ -1,6 +1,6 @@
 /**
  * JanIA Core Logic - VECY Network
- * Version: 11.20.0 (JanIA v2.0 - Radical Humanization Edition)
+ * Version: 11.60.0 (JanIA v2.0 - Contextual Cache Edition)
  */
 import { invokeLLM } from "./llm";
 import { getDb } from "../db";
@@ -20,17 +20,24 @@ export type JanIAResult = {
   dmShouldReply?: boolean; // Flag para indicar que el DM debe ser un reply
 };
 
-// --- ANALIZADOR MORFOLÓGICO DE GÉNERO Y CORTESÍA (v11.20) ---
+// --- 1. DECLARACIÓN DEL ALMACÉN DE MEMORIA (v11.60) ---
+const PENDING_SESSIONS = new Map<string, { type: "PROPERTY" | "REQUIREMENT"; extractedData: any; senderInfo: any; messageToProcess: string }>();
+
+const REPUTATION_HOOK = "\n\n⚖️ COMPROMISO DE HONOR VECY: Al operar en Etapa de Prueba Gratuita y sin comisiones, si consolidan un negocio real gracias a este MATCH, es de carácter obligatorio compartir su testimonio de éxito en este grupo y registrar su reseña oficial y calificación aquí: https://g.page/r/CctNbwU6UpX5EBM/review";
+
+// --- ANALIZADOR MORFOLÓGICO DE GÉNERO Y CORTESÍA (v11.65) ---
 function analyzeSender(name: string): { greeting: string; adj: string; courtesy: string } {
   const n = (name || "Colega").trim();
-  const firstWord = n.split(/\s+/)[0].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const normalizedFull = n.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+  const firstWord = n.split(/\s+/)[0].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
   
   const femaleNames = ["maria", "ana", "claudia", "martha", "adriana", "sandra", "jani", "natalia", "paola", "diana", "laura", "sofia", "valentina", "andrea", "milena", "patricia", "marcela", "liliana", "elena", "monica", "beatriz", "gloria", "carmen", "lucia", "angela", "isabel", "clara", "rosa", "teresa", "yolanda", "esperanza", "blanca", "pilar", "carolina", "juliana", "catalina", "viviana", "lizeth", "daniela", "camila"];
   const maleNames = ["juan", "carlos", "jose", "luis", "jorge", "andres", "felipe", "david", "mateo", "santiago", "daniel", "alejandro", "ricardo", "fernando", "eduardo", "pablo", "sergio", "javier", "alberto", "rafael", "mauricio", "german", "gustavo", "ramiro", "gabriel", "julio", "oscar", "ivan", "hugo", "diego", "wilson", "edgar", "mario", "hector", "victor"];
   
   const corporateKeywords = ["inmo", "bienes", "raices", "propiedades", "network", "group", "asesores", "servicios", "soluciones", "comercial", "ventas", "vecy", "sas", "ltda", "vende", "arrienda", "inmobiliaria", "finca", "raiz", "realestate"];
 
-  if (corporateKeywords.some(kw => n.toLowerCase().includes(kw))) {
+  const isCorporate = corporateKeywords.some(kw => normalizedFull.includes(kw));
+  if (isCorporate) {
     return { 
       greeting: `¡Hola, qué gusto saludarte, colega de ${n}!`, 
       adj: "profesional", 
@@ -38,11 +45,21 @@ function analyzeSender(name: string): { greeting: string; adj: string; courtesy:
     };
   }
 
-  if (femaleNames.includes(firstWord) || (firstWord.endsWith('a') && !maleNames.includes(firstWord)) || firstWord.endsWith('ia') || firstWord.endsWith('th')) {
+  const isMale = maleNames.includes(firstWord) || maleNames.some(m => firstWord.startsWith(m));
+  if (isMale) {
+    return { greeting: `¡Hola ${n}!`, adj: "juicioso", courtesy: "excelente labor, sigue así de juicioso" };
+  }
+
+  const isFemale = femaleNames.includes(firstWord) || femaleNames.some(f => firstWord.startsWith(f));
+  if (isFemale) {
     return { greeting: `¡Hola ${n}!`, adj: "juiciosa", courtesy: "excelente labor, sigue así de juiciosa" };
   }
 
-  if (maleNames.includes(firstWord) || firstWord.endsWith('o') || firstWord.endsWith('s') || firstWord.endsWith('r') || firstWord.endsWith('l') || firstWord.endsWith('n') || firstWord.endsWith('z')) {
+  if (firstWord.endsWith('a') || firstWord.endsWith('ia') || firstWord.endsWith('th')) {
+    return { greeting: `¡Hola ${n}!`, adj: "juiciosa", courtesy: "excelente labor, sigue así de juiciosa" };
+  }
+
+  if (firstWord.endsWith('o') || firstWord.endsWith('s') || firstWord.endsWith('r') || firstWord.endsWith('l') || firstWord.endsWith('n') || firstWord.endsWith('z')) {
     return { greeting: `¡Hola ${n}!`, adj: "juicioso", courtesy: "excelente labor, sigue así de juicioso" };
   }
 
@@ -116,6 +133,71 @@ export async function processWhatsAppMessage(
 ): Promise<JanIAResult> {
   try {
     const senderInfo = analyzeSender(userName || userId.split('@')[0]);
+
+    // --- 2. GANCHO DE RECUPERACIÓN DE MEMORIA (v11.60) ---
+    if (PENDING_SESSIONS.has(userId)) {
+      const geoValidation = validarZona(text);
+      if (geoValidation.isValid) {
+        const session = PENDING_SESSIONS.get(userId)!;
+        PENDING_SESSIONS.delete(userId);
+        const nameForMsg = userName || userId.split('@')[0];
+
+        if (session.type === "PROPERTY") {
+          session.extractedData.zone = geoValidation.barrioCanonico;
+          session.extractedData.addressLocality = geoValidation.localidad;
+          
+          const saved = await saveProperty({
+            ...session.extractedData,
+            name: nameForMsg,
+            price: String(session.extractedData.price || 0),
+            areaTotal: String(session.extractedData.area || 0),
+            idUsuarioWhatsapp: userId,
+            rawText: session.messageToProcess + " (Ubicación completada: " + text + ")",
+            amenities: { gives: session.extractedData.gives, wants: session.extractedData.wants, isCollaborativePool: session.extractedData.isCollaborativePool }
+          }, userId);
+
+          if (saved) {
+            const matches = await findMatchesForProperty(saved.id);
+            return {
+              classification: "INMUEBLE",
+              extractedData: session.extractedData,
+              shouldSendDM: true,
+              dmResponse: "¡Perfecto, " + nameForMsg + "! Con el barrio * " + geoValidation.barrioCanonico + "* acabo de completar el registro de tu activo en nuestra base de datos. Ya estoy buscando activamente tu MATCH comercial en la red. ¡Excelente labor!",
+              response: matches.length > 0 ? `🎯 ¡MATCH INTELIGENTE DETECTADO! 🎯\n\nHe encontrado ${matches.length} requerimientos compatibles con tu oferta.\n` + REPUTATION_HOOK : "",
+              mentions: matches.length > 0 ? [...matches.map(m => m.idUsuarioWhatsapp!), userId] : []
+            };
+          }
+        } else {
+          // REQUIREMENT
+          session.extractedData.zone = geoValidation.barrioCanonico;
+          session.extractedData.addressLocality = geoValidation.localidad;
+
+          const saved = await saveRequirement({
+            ...session.extractedData,
+            tipoInmuebleDeseado: session.extractedData.propertyType,
+            tipoNegocioDeseado: session.extractedData.transactionType,
+            zonaDeseada: geoValidation.barrioCanonico,
+            presupuestoMax: String(session.extractedData.price || 0),
+            idUsuarioWhatsapp: userId,
+            rawText: session.messageToProcess + " (Ubicación completada: " + text + ")",
+            caracteristicasDeseadas: { gives: session.extractedData.gives, wants: session.extractedData.wants }
+          }, userId);
+
+          if (saved) {
+            const matches = await findMatchesForRequirement(saved.id);
+            return {
+              classification: "REQUERIMIENTO",
+              extractedData: session.extractedData,
+              shouldSendDM: true,
+              dmResponse: "¡Perfecto, " + nameForMsg + "! Con el barrio * " + geoValidation.barrioCanonico + "* acabo de completar el registro de tu requerimiento en nuestra base de datos. Ya estoy buscando activamente el inmueble ideal en la red. ¡Excelente labor!",
+              response: matches.length > 0 ? `🎯 ¡MATCH INTELIGENTE DETECTADO! 🎯\n\nTu búsqueda tiene ${matches.length} coincidencias exactas en nuestra red nacional.\n` + REPUTATION_HOOK : "",
+              mentions: matches.length > 0 ? [...matches.map(m => m.idUsuarioWhatsapp!), userId] : []
+            };
+          }
+        }
+      }
+    }
+
     let messageToProcess = text;
 
     // 1. Transcripción de Voz
@@ -164,6 +246,15 @@ export async function processWhatsAppMessage(
           const n = (userName || userId.split('@')[0]).split(' ')[0];
           result.dmResponse = `Hola ${n}. Acabo de leer tu publicación, pero no logré procesar el barrio exacto en tu publicación. ¿Me podrías indicar el barrio para poder activarte los cruces de inmediato? ¡Mil gracias por tu ayuda!`;
           result.response = ""; // Silencio en el grupo
+
+          // v11.60 Almacenamiento en caché (REGLA 3)
+          PENDING_SESSIONS.set(userId, {
+            type: isProperty ? "PROPERTY" : "REQUIREMENT",
+            extractedData: extracted,
+            senderInfo: senderInfo,
+            messageToProcess: messageToProcess
+          });
+
           return result;
         }
         // Normalización Geográfica Nacional
@@ -177,11 +268,18 @@ export async function processWhatsAppMessage(
         const n = (userName || userId.split('@')[0]).split(' ')[0];
         result.dmResponse = `Hola ${n}. Acabo de leer tu publicación, pero no me incluiste la zona. Por favor, respóndeme directamente a este mensaje indicándome el barrio o municipio exacto para activarte los cruces de inmediato. ¡Mil gracias por tu ayuda!`;
         result.response = "";
+
+        // v11.60 Almacenamiento en caché (REGLA 3)
+        PENDING_SESSIONS.set(userId, {
+          type: isProperty ? "PROPERTY" : "REQUIREMENT",
+          extractedData: extracted,
+          senderInfo: senderInfo,
+          messageToProcess: messageToProcess
+        });
+
         return result;
       }
     }
-
-    const REPUTATION_HOOK = "\n\n⚖️ COMPROMISO DE HONOR VECY: Al operar en Etapa de Prueba Gratuita y sin comisiones, si consolidan un negocio real gracias a este MATCH, es de carácter obligatorio compartir su testimonio de éxito en este grupo y registrar su reseña oficial y calificación aquí: https://g.page/r/CctNbwU6UpX5EBM/review";
 
     // --- PERSISTENCIA Y MATCHING (Con Flujos DM) ---
     if (isProperty) {
@@ -239,7 +337,7 @@ export async function processWhatsAppMessage(
 
     return result;
   } catch (error) {
-    console.error("Error en JanIA v11.20:", error);
+    console.error("Error en JanIA v11.60:", error);
     return { classification: "CONSULTA_GENERAL", response: "", mentions: [] };
   }
 }
