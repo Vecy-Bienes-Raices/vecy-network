@@ -158,7 +158,7 @@ async function startServer() {
     
     // Inicializar el Bot de WhatsApp de Vecy Network
     console.log("Iniciando WhatsApp Bot...");
-    whatsappBot.initialize();
+    // whatsappBot.initialize(); // TODO: Descomentar al restaurar la línea de WhatsApp (v11.99 Active)
 
     // Inicializar el orquestador de agendas automatizadas (Cron)
     initCronScheduler();
