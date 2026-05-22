@@ -147,6 +147,10 @@ export class WhatsAppBot {
     });
 
     this.client.on('message_create', async (msg: Message) => {
+      // 1. FILTRO TEMPRANO DE SEGURIDAD (ANTI-SPAM BROADCAST)
+      if ((msg.from && msg.from.includes('status@broadcast')) || (msg.author && msg.author.includes('status@broadcast'))) {
+        return;
+      }
       if (msg.fromMe) return;
       if (msg.timestamp * 1000 < this.startTime) return;
 
@@ -188,9 +192,10 @@ export class WhatsAppBot {
     try {
       const senderId = msg.from;
       const contact = await msg.getContact();
-      const userName = contact.pushname || contact.name || "Colega";
+      const rawPhone = (msg.author || msg.from).split("@")[0];
+      const realName = contact.pushname || contact.name || `Asesor +${rawPhone}`;
 
-      console.log(`[JanIA-DM] Atendiendo mensaje interno de ${userName} (${senderId})...`);
+      console.log(`[JanIA-DM] Atendiendo mensaje interno de ${realName} (${senderId})...`);
 
       // Capa Multimodal OCR para DMs (Visión)
       let imageBuffer: string | undefined;
@@ -205,11 +210,10 @@ export class WhatsAppBot {
         }
       }
 
-      // Procesamiento Directo (Sin esperas de buffer)
       const result = await processWhatsAppMessage(
         msg.body, 
         senderId, 
-        userName, 
+        realName, 
         msg.hasMedia, 
         [], // Sin scraping para DMs simples
         undefined, 
@@ -243,11 +247,12 @@ export class WhatsAppBot {
     if (cooldown && (now - cooldown.lastBlockProcessedAt < COOLDOWN_PERIOD)) {
       if (!cooldown.warningSent) {
         const contact = await msg.getContact();
-        const userName = contact.pushname || contact.name || "colega";
+        const rawPhone = (msg.author || msg.from).split("@")[0];
+        const realName = contact.pushname || contact.name || `Asesor +${rawPhone}`;
         const warningText = 
-          `Estimado/a ${userName}, procesé con éxito tus primeras propiedades. ` +
+          `Estimado/a ${realName}, procesé con éxito tus primeras propiedades. ` +
           `Para cuidar la visibilidad de tus activos y no saturar la red de los aliados, ` +
-          `por favor espera 5 minutos antes de enviar tu siguiente bloque. ¡JanIA sigue atenta para ayudarte a cerrar! 🏆`;
+          `por favor espera 5 minutes antes de enviar tu siguiente bloque. ¡JanIA sigue atenta para ayudarte a cerrar! 🏆`;
         
         await this.client.sendMessage(senderId, warningText);
         cooldown.warningSent = true;
@@ -270,7 +275,8 @@ export class WhatsAppBot {
     }
 
     const contact = await msg.getContact();
-    const userName = contact.pushname || contact.name || contact.number || "Colega";
+    const rawPhone = (msg.author || msg.from).split("@")[0];
+    const realName = contact.pushname || contact.name || `Asesor +${rawPhone}`;
     const bufferKey = `${chatId}_${senderId}`;
     let buffer = this.messageBuffers.get(bufferKey);
     
@@ -291,7 +297,7 @@ export class WhatsAppBot {
       // Inicio de un nuevo bloque
       this.messageBuffers.set(bufferKey, {
         messages: [msg.body],
-        userName,
+        userName: realName,
         hasMedia: msg.hasMedia,
         imageBuffer,
         chatId,

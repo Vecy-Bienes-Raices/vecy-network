@@ -146,8 +146,11 @@ export async function processWhatsAppMessage(
   imageBuffer?: string
 ): Promise<JanIAResult> {
   try {
-    const senderInfo = analyzeSender(userName || userId.split('@')[0], userId);
-    const n = (userName || userId.split('@')[0]).split(' ')[0];
+    const rawPhone = userId.split('@')[0];
+    const realName = userName && userName.trim() !== "" ? userName : `Asesor +${rawPhone}`;
+
+    const senderInfo = analyzeSender(realName, userId);
+    const n = realName.split(' ')[0];
 
     // --- 2. GANCHO DE RECUPERACIÓN DE MEMORIA (v11.60) ---
     if (PENDING_SESSIONS.has(userId)) {
@@ -162,23 +165,27 @@ export async function processWhatsAppMessage(
           
           const saved = await saveProperty({
             ...session.extractedData,
-            name: userName || userId,
+            name: realName,
             price: String(session.extractedData.price || 0),
             areaTotal: String(session.extractedData.area || 0),
-            idUsuarioWhatsapp: userId,
+            idUsuarioWhatsapp: rawPhone,
             rawText: session.messageToProcess + " (Ubicación completada: " + text + ")",
             amenities: { gives: session.extractedData.gives, wants: session.extractedData.wants, isCollaborativePool: session.extractedData.isCollaborativePool }
           }, userId);
 
           if (saved) {
             const matches = await findMatchesForProperty(saved.id);
+            const formattedMentions = matches.length > 0 ? matches.map((m: any) => {
+              const phone = m.idUsuarioWhatsapp || '';
+              return phone.includes('@') ? phone : `${phone}@c.us`;
+            }) : [];
             return {
               classification: "INMUEBLE",
               extractedData: session.extractedData,
               shouldSendDM: true,
               dmResponse: `Perfecto, ${n}! Con el barrio *${geoValidation.barrioCanonico}* acabo de completar el registro de tu activo en nuestra base de datos. Ya estoy buscando activamente tu MATCH comercial en la red. ¡Excelente labor!`,
               response: matches.length > 0 ? `🎯 ¡MATCH INTELIGENTE DETECTADO! 🎯\n\nHe encontrado ${matches.length} requerimientos compatibles con tu oferta.\n` + REPUTATION_HOOK : "",
-              mentions: matches.length > 0 ? [...matches.map(m => m.idUsuarioWhatsapp!), userId] : []
+              mentions: matches.length > 0 ? [...formattedMentions, userId] : []
             };
           }
         } else {
@@ -192,20 +199,24 @@ export async function processWhatsAppMessage(
             tipoNegocioDeseado: session.extractedData.transactionType,
             zonaDeseada: geoValidation.barrioCanonico,
             presupuestoMax: String(session.extractedData.price || 0),
-            idUsuarioWhatsapp: userId,
+            idUsuarioWhatsapp: rawPhone,
             rawText: session.messageToProcess + " (Ubicación completada: " + text + ")",
             caracteristicasDeseadas: { gives: session.extractedData.gives, wants: session.extractedData.wants }
           }, userId);
 
           if (saved) {
             const matches = await findMatchesForRequirement(saved.id);
+            const formattedMentions = matches.length > 0 ? matches.map((m: any) => {
+              const phone = m.idUsuarioWhatsapp || '';
+              return phone.includes('@') ? phone : `${phone}@c.us`;
+            }) : [];
             return {
               classification: "REQUERIMIENTO",
               extractedData: session.extractedData,
               shouldSendDM: true,
               dmResponse: `Perfecto, ${n}! Con el barrio *${geoValidation.barrioCanonico}* acabo de completar el registro de tu requerimiento en nuestra base de datos. Ya estoy buscando activamente el inmueble ideal en la red. ¡Excelente labor!`,
               response: matches.length > 0 ? `🎯 ¡MATCH INTELIGENTE DETECTADO! 🎯\n\nTu búsqueda tiene ${matches.length} coincidencias exactas en nuestra red nacional.\n` + REPUTATION_HOOK : "",
-              mentions: matches.length > 0 ? [...matches.map(m => m.idUsuarioWhatsapp!), userId] : []
+              mentions: matches.length > 0 ? [...formattedMentions, userId] : []
             };
           }
         }
@@ -304,10 +315,10 @@ export async function processWhatsAppMessage(
     if (isProperty) {
       const saved = await saveProperty({
         ...extracted,
-        name: userName || userId,
+        name: realName,
         price: String(extracted.price || 0),
         areaTotal: String(extracted.area || 0),
-        idUsuarioWhatsapp: userId,
+        idUsuarioWhatsapp: rawPhone,
         rawText: messageToProcess,
         amenities: { gives: extracted.gives, wants: extracted.wants, isCollaborativePool: extracted.isCollaborativePool }
       }, userId);
@@ -321,7 +332,11 @@ export async function processWhatsAppMessage(
         
         const matches = await findMatchesForProperty(saved.id);
         if (matches.length > 0) {
-          result.mentions.push(...matches.map(m => m.idUsuarioWhatsapp!), userId);
+          const formattedMentions = matches.map((m: any) => {
+            const phone = m.idUsuarioWhatsapp || '';
+            return phone.includes('@') ? phone : `${phone}@c.us`;
+          });
+          result.mentions.push(...formattedMentions, userId);
           result.response = `🎯 ¡MATCH INTELIGENTE DETECTADO! 🎯\n\nHe encontrado ${matches.length} requerimientos compatibles con tu oferta.\n` + REPUTATION_HOOK;
         } else {
           result.response = ""; // Silencio de Oro en el grupo
@@ -334,7 +349,7 @@ export async function processWhatsAppMessage(
         tipoNegocioDeseado: extracted.transactionType,
         zonaDeseada: extracted.zonaDeseada || extracted.zone,
         presupuestoMax: String(extracted.price || 0),
-        idUsuarioWhatsapp: userId,
+        idUsuarioWhatsapp: rawPhone,
         rawText: messageToProcess,
         caracteristicasDeseadas: { gives: extracted.gives, wants: extracted.wants }
       }, userId);
@@ -348,7 +363,11 @@ export async function processWhatsAppMessage(
 
         const matches = await findMatchesForRequirement(saved.id);
         if (matches.length > 0) {
-          result.mentions.push(...matches.map(m => m.idUsuarioWhatsapp!), userId);
+          const formattedMentions = matches.map((m: any) => {
+            const phone = m.idUsuarioWhatsapp || '';
+            return phone.includes('@') ? phone : `${phone}@c.us`;
+          });
+          result.mentions.push(...formattedMentions, userId);
           result.response = `🎯 ¡MATCH INTELIGENTE DETECTADO! 🎯\n\nTu búsqueda tiene ${matches.length} coincidencias exactas en nuestra red nacional.\n` + REPUTATION_HOOK;
         } else {
           result.response = ""; // Silencio de Oro en el grupo
