@@ -17,6 +17,13 @@ import { getDb } from '../db';
 import { conversations, messages as dbMessages } from '../../drizzle/schema';
 import { eq } from 'drizzle-orm';
 
+// --- JanIA v2.0 Global Time Constraints (v11.97) ---
+const SERVER_BOOT_TIME = Math.floor(Date.now() / 1000);
+
+// --- JanIA v2.0 Human Simulation Helpers (v11.99) ---
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+let outgoingQueue: Promise<any> = Promise.resolve();
+
 // --- JanIA v2.0 Anti-Spam & Multi-Modal Types (v10.5) ---
 interface AntiSpamState {
   lastBlockProcessedAt: number; // Timestamp de la última vez que se procesó un bloque completo
@@ -50,9 +57,22 @@ export class WhatsAppBot {
   private cooldownMap: Map<string, AntiSpamState> = new Map();
   private pendingData: Map<string, PendingEntry> = new Map();
   
-  private startTime: number = Date.now();
   private pendingWelcomeCount: number = 0;
   private counterFile: string = path.join(process.cwd(), '.pending_welcome_count');
+
+  // --- ANTI-BURST QUEUED DISPATCH (v11.99) ---
+  private async queuedSend(chatId: string, content: any, options: any = {}) {
+    outgoingQueue = outgoingQueue.then(async () => {
+      try {
+        await this.client.sendMessage(chatId, content, options);
+        // Intervalo obligatorio de 10s a 15s
+        await delay(Math.floor(Math.random() * 5000) + 10000);
+      } catch (err) {
+        console.error('[Anti-Burst-Queue] Fallo en despacho secuencial:', err);
+      }
+    });
+    return outgoingQueue;
+  }
 
   constructor() {
     console.log('[WHATSAPP-BOT] Inicializando JanIA v2.0 (CORE v10.5 - Multimodal & Anti-Spam)...');
@@ -60,25 +80,26 @@ export class WhatsAppBot {
     
     this.client = new Client({
       authStrategy: new LocalAuth({
-        clientId: 'jania-main',
+        clientId: "session-jania-main",
         dataPath: './.wwebjs_auth'
       }),
+      webVersionCache: {
+        type: "remote",
+        remotePath: "https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1017.558-beta.html"
+      },
       puppeteer: {
+        headless: true,
+        executablePath: process.env.CHROME_PATH || undefined,
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
           '--disable-gpu',
           '--disable-extensions',
-          '--disable-dev-shm-usage',
+          '--disable-software-rasterizer',
+          '--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
         ],
-        executablePath: process.env.CHROME_PATH || undefined,
-        headless: true,
         protocolTimeout: 300000,
-        userAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-      },
-      webVersionCache: {
-        type: 'remote',
-        remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html'
       }
     });
 
@@ -141,7 +162,6 @@ export class WhatsAppBot {
 
     this.client.on('ready', () => {
       console.log('\n🚀 JANIA v2.0 CORE v10.5 — SISTEMA NACIONAL ELÁSTICO ACTIVADO');
-      this.startTime = Date.now();
     });
 
     this.client.on('group_join', async (notification: any) => {
@@ -157,11 +177,24 @@ export class WhatsAppBot {
       if ((msg.from && msg.from.includes('status@broadcast')) || (msg.author && msg.author.includes('status@broadcast'))) {
         return;
       }
+
+      // 2. FILTRO DE MENSAJES HISTÓRICOS (v11.97)
+      if (msg.timestamp < SERVER_BOOT_TIME) {
+        return;
+      }
+
+      // --- CAPA DE LECTURA HUMANA (v11.99) ---
+      // Simula tiempo de lectura entre 2 y 4 segundos
+      await delay(Math.floor(Math.random() * 2000) + 2000);
+
       if (msg.fromMe) return;
-      if (msg.timestamp * 1000 < this.startTime) return;
 
       try {
         const chat = await msg.getChat();
+        
+        // Activar estado "Escribiendo..." (Typing) para simular presencia humana
+        await chat.sendStateTyping();
+
         const chatId = chat.id._serialized;
         const isGroup = chat.isGroup;
         const isTargetGroup = chatId === this.targetGroupId;
@@ -226,11 +259,11 @@ export class WhatsAppBot {
         imageBuffer
       );
 
-      // Despacho de respuesta inmediata
+      // Despacho de respuesta inmediata (Secuencial v11.99)
       if (result) {
         const responseText = result.dmResponse || result.response;
         if (responseText && responseText.trim() !== "") {
-          await this.client.sendMessage(senderId, responseText);
+          await this.queuedSend(senderId, responseText);
           await this.logToDb(senderId, 'janIA', `[DM-Response] ${responseText}`);
         }
       }
@@ -260,7 +293,7 @@ export class WhatsAppBot {
           `Para cuidar la visibilidad de tus activos y no saturar la red de los aliados, ` +
           `por favor espera 5 minutes antes de enviar tu siguiente bloque. ¡JanIA sigue atenta para ayudarte a cerrar! 🏆`;
         
-        await this.client.sendMessage(senderId, warningText);
+        await this.queuedSend(senderId, warningText);
         cooldown.warningSent = true;
       }
       return; // Detener procesamiento del mensaje excedente
@@ -393,7 +426,7 @@ export class WhatsAppBot {
     // Notificación en el grupo (Solo Matches o Consultas)
     if ((!isGroup || isMatch || isConsultation) && result.response && result.response.trim() !== "") {
       const mentions = Array.from(new Set([...(result.mentions || []), senderId]));
-      await this.client.sendMessage(chatId, result.response, { 
+      await this.queuedSend(chatId, result.response, { 
         mentions: isGroup ? mentions : [] 
       });
       await this.logToDb(senderId, 'janIA', result.response);
@@ -407,7 +440,7 @@ export class WhatsAppBot {
         if (result.dmShouldReply && originalMsg) {
           options.quotedMessageId = originalMsg.id._serialized;
         }
-        await this.client.sendMessage(senderId, dmMsg, options);
+        await this.queuedSend(senderId, dmMsg, options);
         await this.logToDb(senderId, 'janIA', `[DM] ${dmMsg}`);
       }
 
@@ -485,46 +518,43 @@ export class WhatsAppBot {
     this.saveCounter();
     try {
       const welcome = await generateWelcomeMessage(count);
-      await this.client.sendMessage(this.targetGroupId, welcome);
+      await this.queuedSend(this.targetGroupId, welcome);
       setTimeout(() => this.sendNormas(), 4000);
     } catch (e) {}
   }
 
   public async sendPresentacion() {
-    await this.client.sendMessage(this.targetGroupId, MSG_PRESENTACION_INSTITUCIONAL);
+    await this.queuedSend(this.targetGroupId, MSG_PRESENTACION_INSTITUCIONAL);
   }
 
   public async sendNormas() {
-    await this.client.sendMessage(this.targetGroupId, MSG_PAUTAS_FORMATOS);
+    await this.queuedSend(this.targetGroupId, MSG_PAUTAS_FORMATOS);
   }
 
   public async sendRecordatorio() {
-    await this.client.sendMessage(this.targetGroupId, MSG_EMBUDO_REPUTACION);
+    await this.queuedSend(this.targetGroupId, MSG_EMBUDO_REPUTACION);
   }
 
   public async sendAnuncioComision() {
     const msg = `📢 *ANUNCIO:* Seguimos en etapa de prueba gratuita. VECY no cobra comisiones por los matches generados en este grupo. ¡A cerrar negocios! 🎯🏆`;
-    await this.client.sendMessage(this.targetGroupId, msg);
+    await this.queuedSend(this.targetGroupId, msg);
   }
 
   public async sendApologyDeLaPava() {
     const deLaPavaId = '105188731928753@lid';
-    await this.client.sendMessage(this.targetGroupId, `🙏 Ajuste de sistema realizado. Cobertura nacional elástica activada para todos los aliados.`);
-    await this.client.sendMessage(deLaPavaId, `Su requerimiento nacional ha sido indexado con éxito. ¡JanIA sigue atenta!`);
+    await this.queuedSend(this.targetGroupId, `🙏 Ajuste de sistema realizado. Cobertura nacional elástica activada para todos los aliados.`);
+    await this.queuedSend(deLaPavaId, `Su requerimiento nacional ha sido indexado con éxito. ¡JanIA sigue atenta!`);
   }
 
   public async sendToGroup(text: string, mediaPath?: string, mentions?: string[]) {
     try {
-      const options: any = {};
-      if (mentions && mentions.length > 0) {
-        options.mentions = mentions;
-      }
+      const options: any = { mentions: mentions || [] };
 
       if (mediaPath) {
         const media = MessageMedia.fromFilePath(path.resolve(mediaPath));
-        await this.client.sendMessage(this.targetGroupId, media, { ...options, caption: text });
+        await this.queuedSend(this.targetGroupId, media, { ...options, caption: text });
       } else {
-        await this.client.sendMessage(this.targetGroupId, text, options);
+        await this.queuedSend(this.targetGroupId, text, options);
       }
     } catch (e) {
       console.error('[WHATSAPP-BOT] Error enviando mensaje al grupo:', e);
