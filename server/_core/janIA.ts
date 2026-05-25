@@ -4,10 +4,12 @@
  */
 import { invokeLLM } from "./llm";
 import { getDb } from "../db";
-import { properties, requirements, InsertProperty, InsertRequirement } from "../../drizzle/schema";
+import { properties, requirements, users, propertyImages, InsertProperty, InsertRequirement } from "../../drizzle/schema";
 import { findMatchesForProperty, findMatchesForRequirement } from "./matching";
 import { validarZona } from "./geography";
 import { transcribeAudio } from "./voiceTranscription";
+import { eq } from "drizzle-orm";
+import { storagePut } from "../storage";
 
 export type JanIAResult = {
   classification: "INMUEBLE" | "REQUERIMIENTO" | "CONSULTA_GENERAL" | "RESPUESTA_A_PREGUNTA_IA" | "DATOS_INCOMPLETOS" | "VIOLACION_DE_NORMAS" | "ANALISIS_DE_MERCADO";
@@ -21,7 +23,7 @@ export type JanIAResult = {
 };
 
 // --- 1. ALMACENES DE MEMORIA (v11.70) ---
-const PENDING_SESSIONS = new Map<string, { type: "PROPERTY" | "REQUIREMENT"; extractedData: any; senderInfo: any; messageToProcess: string }>();
+const PENDING_SESSIONS = new Map<string, { type: "PROPERTY" | "REQUIREMENT"; extractedData: any; senderInfo: any; messageToProcess: string; imageBuffer?: string }>();
 const GREETED_TODAY = new Map<string, string>(); // Mapea userId -> fecha "YYYY-MM-DD"
 
 const REPUTATION_HOOK = "\n\n⚖️ COMPROMISO DE HONOR VECY: Al operar en Etapa de Prueba Gratuita y sin comisiones, si consolidan un negocio real gracias a este MATCH, es de carácter obligatorio compartir su testimonio de éxito en este grupo y registrar su reseña oficial y calificación aquí: https://g.page/r/CctNbwU6UpX5EBM/review";
@@ -113,6 +115,7 @@ DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
 {
   "classification": "INMUEBLE | REQUERIMIENTO | CONSULTA_GENERAL | RESPUESTA_A_PREGUNTA_IA | DATOS_INCOMPLETOS | VIOLACION_DE_NORMAS | ANALISIS_DE_MERCADO",
   "extractedData": {
+    "title": "string (un título comercial descriptivo y profesional en español de máximo 80 caracteres, ej: 'Apartamento de 3 habitaciones en Cedritos' o 'Casa en venta en Chicó Reservado')",
     "gives": { "item": "string", "details": "string" },
     "wants": { "item": "string", "details": "string" },
     "price": number,
@@ -163,15 +166,16 @@ export async function processWhatsAppMessage(
           session.extractedData.zone = geoValidation.barrioCanonico;
           session.extractedData.addressLocality = geoValidation.localidad;
           
+          const propertyTitle = session.extractedData.title || `${capitalize(session.extractedData.propertyType || 'inmueble')} en ${session.extractedData.zone || 'Bogotá'} para ${session.extractedData.transactionType || 'venta'}`;
           const saved = await saveProperty({
             ...session.extractedData,
-            name: realName,
+            name: propertyTitle,
             price: String(session.extractedData.price || 0),
             areaTotal: String(session.extractedData.area || 0),
             idUsuarioWhatsapp: rawPhone,
             rawText: session.messageToProcess + " (Ubicación completada: " + text + ")",
             amenities: { gives: session.extractedData.gives, wants: session.extractedData.wants, isCollaborativePool: session.extractedData.isCollaborativePool }
-          }, userId);
+          }, userId, realName, session.imageBuffer);
 
           if (saved) {
             const matches = await findMatchesForProperty(saved.id);
@@ -193,8 +197,10 @@ export async function processWhatsAppMessage(
           session.extractedData.zone = geoValidation.barrioCanonico;
           session.extractedData.addressLocality = geoValidation.localidad;
 
+          const reqTitle = session.extractedData.title || `Requerimiento de ${session.extractedData.propertyType || 'inmueble'} en ${geoValidation.barrioCanonico || 'Bogotá'} para ${session.extractedData.transactionType || 'venta'}`;
           const saved = await saveRequirement({
             ...session.extractedData,
+            name: reqTitle,
             tipoInmuebleDeseado: session.extractedData.propertyType,
             tipoNegocioDeseado: session.extractedData.transactionType,
             zonaDeseada: geoValidation.barrioCanonico,
@@ -202,7 +208,7 @@ export async function processWhatsAppMessage(
             idUsuarioWhatsapp: rawPhone,
             rawText: session.messageToProcess + " (Ubicación completada: " + text + ")",
             caracteristicasDeseadas: { gives: session.extractedData.gives, wants: session.extractedData.wants }
-          }, userId);
+          }, userId, realName);
 
           if (saved) {
             const matches = await findMatchesForRequirement(saved.id);
@@ -279,7 +285,8 @@ export async function processWhatsAppMessage(
             type: isProperty ? "PROPERTY" : "REQUIREMENT",
             extractedData: extracted,
             senderInfo: senderInfo,
-            messageToProcess: messageToProcess
+            messageToProcess: messageToProcess,
+            imageBuffer
           });
 
           return result;
@@ -304,7 +311,8 @@ export async function processWhatsAppMessage(
           type: isProperty ? "PROPERTY" : "REQUIREMENT",
           extractedData: extracted,
           senderInfo: senderInfo,
-          messageToProcess: messageToProcess
+          messageToProcess: messageToProcess,
+          imageBuffer
         });
 
         return result;
@@ -313,15 +321,16 @@ export async function processWhatsAppMessage(
 
     // --- PERSISTENCIA Y MATCHING (Con Flujos DM) ---
     if (isProperty) {
+      const propertyTitle = extracted.title || `${capitalize(extracted.propertyType || 'inmueble')} en ${extracted.zone || 'Bogotá'} para ${extracted.transactionType || 'venta'}`;
       const saved = await saveProperty({
         ...extracted,
-        name: realName,
+        name: propertyTitle,
         price: String(extracted.price || 0),
         areaTotal: String(extracted.area || 0),
         idUsuarioWhatsapp: rawPhone,
         rawText: messageToProcess,
         amenities: { gives: extracted.gives, wants: extracted.wants, isCollaborativePool: extracted.isCollaborativePool }
-      }, userId);
+      }, userId, realName, imageBuffer);
       
       if (saved) {
         // FLUJO A: Publicación Perfecta e Indexada
@@ -343,8 +352,10 @@ export async function processWhatsAppMessage(
         }
       }
     } else if (isRequirement) {
+      const reqTitle = extracted.title || `Requerimiento de ${extracted.propertyType || 'inmueble'} en ${extracted.zonaDeseada || extracted.zone || 'Bogotá'} para ${extracted.transactionType || 'venta'}`;
       const saved = await saveRequirement({
         ...extracted,
+        name: reqTitle,
         tipoInmuebleDeseado: extracted.propertyType,
         tipoNegocioDeseado: extracted.transactionType,
         zonaDeseada: extracted.zonaDeseada || extracted.zone,
@@ -352,7 +363,7 @@ export async function processWhatsAppMessage(
         idUsuarioWhatsapp: rawPhone,
         rawText: messageToProcess,
         caracteristicasDeseadas: { gives: extracted.gives, wants: extracted.wants }
-      }, userId);
+      }, userId, realName);
 
       if (saved) {
         // FLUJO A: Publicación Perfecta e Indexada
@@ -382,17 +393,149 @@ export async function processWhatsAppMessage(
   }
 }
 
-async function saveProperty(data: any, userId: string) {
+async function findOrCreateUserByPhone(phone: string, realName: string) {
   const db = await getDb();
   if (!db) return null;
-  const [result] = await db.insert(properties).values(data).returning();
+
+  // 1. Buscar por teléfono en la base de datos
+  let user = await db.select().from(users).where(eq(users.phone, phone)).limit(1).then(r => r[0]);
+
+  // 2. Si no lo encuentra, buscar por openId: `wa-${phone}`
+  if (!user) {
+    user = await db.select().from(users).where(eq(users.openId, `wa-${phone}`)).limit(1).then(r => r[0]);
+  }
+
+  // 3. Si no existe, crearlo
+  if (!user) {
+    const openId = `wa-${phone}`;
+    console.log(`[JanIA-findOrCreateUserByPhone] Creando nuevo usuario para WhatsApp: ${realName} (+${phone})`);
+    const [newUser] = await db.insert(users).values({
+      openId,
+      name: realName,
+      phone,
+      role: "agent",
+      loginMethod: "whatsapp"
+    }).returning();
+    user = newUser;
+  } else {
+    // Si ya existe pero el nombre es genérico, y tenemos un nombre real, actualizarlo
+    if (realName && !realName.startsWith("Asesor +") && (!user.name || user.name.startsWith("Asesor +"))) {
+      console.log(`[JanIA-findOrCreateUserByPhone] Actualizando nombre de usuario para ID ${user.id} a ${realName}`);
+      const [updatedUser] = await db.update(users).set({ name: realName }).where(eq(users.id, user.id)).returning();
+      user = updatedUser;
+    }
+  }
+
+  return user;
+}
+
+function sanitizePropertyType(type: string): "apartment" | "house" | "building" | "warehouse" | "farm" | "hotel" | "office" | "land" | "commercial" | "loft" | "consultorio" {
+  if (!type) return "apartment";
+  const t = type.toLowerCase().trim();
+  if (t === "apartment" || t === "apartamento" || t === "apto") return "apartment";
+  if (t === "house" || t === "casa") return "house";
+  if (t === "building" || t === "edificio") return "building";
+  if (t === "warehouse" || t === "bodega") return "warehouse";
+  if (t === "farm" || t === "finca") return "farm";
+  if (t === "hotel") return "hotel";
+  if (t === "office" || t === "oficina") return "office";
+  if (t === "land" || t === "lote" || t === "terreno") return "land";
+  if (t === "commercial" || t === "local" || t === "comercial") return "commercial";
+  if (t === "loft") return "loft";
+  if (t === "consultorio" || t === "office_medical") return "consultorio";
+  return "apartment";
+}
+
+function sanitizeTransactionType(type: string): "venta" | "arriendo" | "arriendo_temporal" {
+  if (!type) return "venta";
+  const t = type.toLowerCase().trim();
+  if (t === "venta" || t === "vender") return "venta";
+  if (t === "arriendo" || t === "alquiler" || t === "renta" || t === "rentar") return "arriendo";
+  if (t === "arriendo_temporal" || t === "temporal" || t === "vacacional") return "arriendo_temporal";
+  return "venta";
+}
+
+function sanitizeCurrency(curr: string): "COP" | "USD" {
+  if (!curr) return "COP";
+  const c = curr.toUpperCase().trim();
+  if (c === "USD" || c === "DOLARES" || c === "DOLAR") return "USD";
+  return "COP";
+}
+
+async function saveProperty(data: any, userId: string, realName: string, imageBuffer?: string) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const rawPhone = userId.split('@')[0];
+  const user = await findOrCreateUserByPhone(rawPhone, realName);
+
+  let imageUrl: string | undefined;
+  if (imageBuffer) {
+    try {
+      console.log(`[JanIA-SaveProperty] Subiendo imagen flyer de WhatsApp para ${realName}...`);
+      const buffer = Buffer.from(imageBuffer, 'base64');
+      const filename = `properties/whatsapp/wa_${Date.now()}_${rawPhone}.jpg`;
+      const uploadResult = await storagePut(filename, buffer, 'image/jpeg');
+      imageUrl = uploadResult.url;
+      console.log(`[JanIA-SaveProperty] Imagen subida exitosamente: ${imageUrl}`);
+    } catch (err) {
+      console.error("[JanIA-SaveProperty] Error subiendo imagen:", err);
+    }
+  }
+
+  // Combinar imágenes en data.images
+  const finalImages = data.images && Array.isArray(data.images) ? [...data.images] : [];
+  if (imageUrl) {
+    finalImages.push(imageUrl);
+  }
+
+  const insertData = {
+    ...data,
+    propertyType: sanitizePropertyType(data.propertyType),
+    transactionType: sanitizeTransactionType(data.transactionType),
+    currency: sanitizeCurrency(data.currency),
+    agentId: user ? user.id : null,
+    images: finalImages.length > 0 ? finalImages : null
+  };
+
+  const [result] = await db.insert(properties).values(insertData).returning();
+
+  // Si se subió una imagen, registrarla en la tabla propertyImages también
+  if (result && imageUrl) {
+    try {
+      await db.insert(propertyImages).values({
+        propertyId: result.id,
+        imageUrl: imageUrl,
+        isMainImage: true,
+        displayOrder: 1,
+        mimeType: "image/jpeg",
+        uploadedBy: "janIA"
+      });
+      console.log(`[JanIA-SaveProperty] Registro en propertyImages creado para propiedad ${result.id}`);
+    } catch (err) {
+      console.error("[JanIA-SaveProperty] Error creando registro en propertyImages:", err);
+    }
+  }
+
   return result;
 }
 
-async function saveRequirement(data: any, userId: string) {
+async function saveRequirement(data: any, userId: string, realName: string) {
   const db = await getDb();
   if (!db) return null;
-  const [result] = await db.insert(requirements).values(data).returning();
+
+  const rawPhone = userId.split('@')[0];
+  const user = await findOrCreateUserByPhone(rawPhone, realName);
+
+  const insertData = {
+    ...data,
+    tipoInmuebleDeseado: sanitizePropertyType(data.tipoInmuebleDeseado || data.propertyType),
+    tipoNegocioDeseado: sanitizeTransactionType(data.tipoNegocioDeseado || data.transactionType),
+    monedaPresupuesto: sanitizeCurrency(data.monedaPresupuesto || data.currency),
+    userId: user ? user.id : null
+  };
+
+  const [result] = await db.insert(requirements).values(insertData).returning();
   return result;
 }
 
