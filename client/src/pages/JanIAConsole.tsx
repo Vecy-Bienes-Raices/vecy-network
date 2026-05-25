@@ -18,7 +18,14 @@ import {
   Settings,
   MoreVertical,
   Paperclip,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Brain,
+  Cpu,
+  Database,
+  Search,
+  FileText,
+  Bell,
+  Users
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { trpc } from '@/lib/trpc';
@@ -33,6 +40,123 @@ interface Message {
   messageType: 'text' | 'image' | 'audio' | 'file' | 'video';
   attachments?: string[];
   timestamp: Date;
+}
+
+// ─── JANIA PROCESS LOADER (Gemini & Multi-task Style) ─────────────────────────
+function JanIARealtimeLoader() {
+  const [step, setStep] = useState(0);
+  const steps = [
+    { text: "Pensando", detail: "Orquestando JanIA v2.0 (Gemini Engine)...", icon: Brain, color: "text-[#bf953f]" },
+    { text: "Analizando lenguaje natural", detail: "Procesando semántica del mensaje...", icon: Cpu, color: "text-blue-400" },
+    { text: "Rastreando inmuebles", detail: "Buscando en base de datos nacional...", icon: Database, color: "text-emerald-400" },
+    { text: "Rastreando requerimientos", detail: "Analizando demandas activas...", icon: Search, color: "text-cyan-400" },
+    { text: "Buscando posibilidades de Match", detail: "Cruzando coeficientes de afinidad...", icon: Sparkles, color: "text-amber-400" },
+    { text: "Generando informe técnico", detail: "Estructurando ficha Gold Edition...", icon: FileText, color: "text-[#bf953f]" },
+    { text: "Notificando a la red de contactos", detail: "Preparando cola de envíos directos...", icon: Bell, color: "text-red-400" }
+  ];
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setStep((prev) => (prev + 1) % steps.length);
+    }, 1800);
+    return () => clearInterval(interval);
+  }, []);
+
+  const currentStep = steps[step];
+  const Icon = currentStep.icon;
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0 }}
+      className="flex gap-6 items-start w-full"
+    >
+      {/* Avatar Container with glowing rings */}
+      <div className="relative flex-shrink-0 w-10 h-10 mt-1">
+        {/* Animated glow halo */}
+        <motion.div 
+          animate={{ 
+            scale: [1, 1.2, 1],
+            opacity: [0.4, 0.8, 0.4],
+          }}
+          transition={{ 
+            duration: 2.5, 
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+          className="absolute -inset-1.5 rounded-full bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#00d2ff] opacity-60 blur-sm"
+        />
+        
+        {/* Actual Avatar */}
+        <div className="relative w-full h-full rounded-full overflow-hidden border border-primary/30 bg-black z-10">
+          <video src="/jania.mp4" autoPlay loop muted playsInline className="w-full h-full object-cover animate-pulse" />
+        </div>
+      </div>
+
+      {/* Main Processing Box */}
+      <div className="flex-1 max-w-[85%] space-y-2">
+        <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl p-6 relative overflow-hidden shadow-2xl">
+          
+          {/* Gemini-like waving aura background */}
+          <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 via-[#bf953f]/5 via-[#00d2ff]/5 to-pink-500/5 opacity-40 blur-xl" />
+          
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className={`p-3 rounded-2xl bg-white/5 border border-white/10 ${currentStep.color}`}>
+                <Icon className="w-5 h-5 animate-pulse" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h4 className="text-sm font-bold text-white uppercase tracking-wider">
+                    {currentStep.text}
+                  </h4>
+                  {/* Animated Ellipsis */}
+                  <span className="flex gap-1 items-center">
+                    <span className="h-1.5 w-1.5 rounded-full bg-accent animate-bounce [animation-delay:-0.3s]" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-accent animate-bounce [animation-delay:-0.15s]" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-accent animate-bounce" />
+                  </span>
+                </div>
+                <p className="text-xs text-gray-400 mt-1 font-light">
+                  {currentStep.detail}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Running Progress Bar (Gemini Style) */}
+          <div className="relative h-1 w-full bg-white/5 rounded-full overflow-hidden mt-6">
+            <motion.div 
+              initial={{ left: "-100%" }}
+              animate={{ left: "100%" }}
+              transition={{ 
+                duration: 2.2, 
+                repeat: Infinity,
+                ease: "linear"
+              }}
+              className="absolute top-0 bottom-0 w-1/2 bg-gradient-to-r from-transparent via-[#bf953f] via-[#fcf6ba] via-[#00d2ff] to-transparent"
+            />
+          </div>
+
+          {/* Holographic terminal specs underneath */}
+          <div className="mt-4 pt-4 border-t border-white/5 flex flex-wrap gap-x-6 gap-y-2 text-[10px] text-zinc-500 font-mono">
+            <span className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-ping" />
+              ENGINE: JANIA_GEMINI_CO
+            </span>
+            <span>MODEL_STATUS: ONLINE</span>
+            <span>NEURAL_RESOLVER: TRUE</span>
+          </div>
+
+        </div>
+        
+        <p className="text-[9px] font-black uppercase tracking-widest opacity-30 text-left">
+          Procesamiento Neuronal en Curso
+        </p>
+      </div>
+    </motion.div>
+  );
 }
 
 export default function JanIAConsole() {
@@ -271,14 +395,7 @@ export default function JanIAConsole() {
             </AnimatePresence>
             
             {isLoading && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-6">
-                <div className="w-10 h-10 rounded-full overflow-hidden glow-gold-sm opacity-50">
-                  <video src="/jania.mp4" autoPlay loop muted playsInline className="w-full h-full object-cover" />
-                </div>
-                <div className="bg-white/[0.01] border border-white/5 p-6 rounded-3xl flex gap-2">
-                  <div className="h-4 w-48 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-shimmer rounded" />
-                </div>
-              </motion.div>
+              <JanIARealtimeLoader />
             )}
             <div ref={messagesEndRef} />
           </div>
@@ -356,25 +473,4 @@ export default function JanIAConsole() {
   );
 }
 
-// Re-using Users icon from lucide-react if not imported
-function Users(props) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-      <circle cx="9" cy="7" r="4" />
-      <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-    </svg>
-  )
-}
+
