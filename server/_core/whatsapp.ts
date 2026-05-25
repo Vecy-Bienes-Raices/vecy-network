@@ -1,3 +1,4 @@
+import './setup-stealth'; // Configurar Stealth Puppeteer antes de importar whatsapp-web.js
 import pkg from 'whatsapp-web.js';
 const { Client, LocalAuth, MessageMedia } = pkg;
 import type { Client as ClientType, Message } from 'whatsapp-web.js';
@@ -60,11 +61,56 @@ export class WhatsAppBot {
   private pendingWelcomeCount: number = 0;
   private counterFile: string = path.join(process.cwd(), '.pending_welcome_count');
 
-  // --- ANTI-BURST QUEUED DISPATCH (v11.99) ---
+  // Control de límites y anti-flood (v12.0)
+  private dailyMessageLimit: number = 250;
+  private messagesSentToday: number = 0;
+  private lastResetDate: string = new Date().toDateString();
+  private chatMessageTimes: Map<string, number[]> = new Map();
+  private blockedChats: Map<string, number> = new Map();
+  private blacklistedBots: string[] = process.env.BLACKLISTED_BOTS ? process.env.BLACKLISTED_BOTS.split(',') : [];
+
+  // --- ANTI-BURST & ANTI-FLOOD QUEUED DISPATCH (v12.0) ---
   private async queuedSend(chatId: string, content: any, options: any = {}) {
+    // 1. Control de reseteo diario del Kill-Switch
+    const today = new Date().toDateString();
+    if (this.lastResetDate !== today) {
+      this.messagesSentToday = 0;
+      this.lastResetDate = today;
+    }
+
+    // 2. Control del Kill-Switch (Límite diario)
+    if (this.messagesSentToday >= this.dailyMessageLimit) {
+      console.warn(`[Kill-Switch] Límite diario de mensajes alcanzado (${this.dailyMessageLimit}). Cancelando envío a ${chatId}.`);
+      return;
+    }
+
+    // 3. Control de Anti-Flood por Chat
+    const now = Date.now();
+    const unblockTime = this.blockedChats.get(chatId);
+    if (unblockTime && now < unblockTime) {
+      console.warn(`[Anti-Flood] Ignorando mensaje a ${chatId} (bloqueado temporalmente por flood).`);
+      return;
+    }
+
+    // Registrar mensaje para la frecuencia del anti-flood
+    let timestamps = this.chatMessageTimes.get(chatId) || [];
+    timestamps = timestamps.filter(t => now - t < 60000); // Filtrar marcas más viejas de 1 minuto
+    timestamps.push(now);
+    this.chatMessageTimes.set(chatId, timestamps);
+
+    if (timestamps.length > 5) {
+      console.warn(`[Anti-Flood] ¡Alerta de Flood en ${chatId}! Bloqueando respuestas por 15 minutos.`);
+      this.blockedChats.set(chatId, now + 15 * 60 * 1000);
+      return;
+    }
+
     outgoingQueue = outgoingQueue.then(async () => {
       try {
+        if (this.messagesSentToday >= this.dailyMessageLimit) return;
+
         await this.client.sendMessage(chatId, content, options);
+        this.messagesSentToday++;
+        console.log(`[WhatsApp-Bot] Mensaje enviado a ${chatId}. Total hoy: ${this.messagesSentToday}/${this.dailyMessageLimit}`);
         // Intervalo obligatorio de 10s a 15s
         await delay(Math.floor(Math.random() * 5000) + 10000);
       } catch (err) {
@@ -183,11 +229,14 @@ export class WhatsAppBot {
         return;
       }
 
+      const senderId = (msg as any).author || msg.from;
+      if (msg.fromMe || this.blacklistedBots.includes(senderId)) {
+        return;
+      }
+
       // --- CAPA DE LECTURA HUMANA (v11.99) ---
       // Simula tiempo de lectura entre 2 y 4 segundos
       await delay(Math.floor(Math.random() * 2000) + 2000);
-
-      if (msg.fromMe) return;
 
       try {
         const chat = await msg.getChat();
@@ -432,16 +481,49 @@ export class WhatsAppBot {
       await this.logToDb(senderId, 'janIA', result.response);
     }
 
-    // Flujos Privados (DMs) para Éxito o Datos Incompletos
+    // Reaccionar con emojis a los mensajes del grupo para retroalimentación sin generar DMs fríos
+    if (isGroup && originalMsg) {
+      try {
+        if (result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO") {
+          await originalMsg.react('✅');
+        } else if (result.classification === "DATOS_INCOMPLETOS") {
+          await originalMsg.react('⚠️');
+        }
+      } catch (e) {
+        console.error('[React-Error] Fallo al reaccionar al mensaje original:', e);
+      }
+    }
+
+    // Flujos Privados (DMs) o Invitación a Opt-in
     if (result.shouldSendDM) {
       const dmMsg = result.dmResponse || result.response;
       if (dmMsg && dmMsg.trim() !== "") {
-        const options: any = {};
-        if (result.dmShouldReply && originalMsg) {
-          options.quotedMessageId = originalMsg.id._serialized;
+        if (isGroup) {
+          // Si proviene de un grupo y faltan datos, enviamos un link wa.me público con la advertencia en el grupo
+          if (result.classification === "DATOS_INCOMPLETOS") {
+            const botNumber = this.client.info?.wid?.user;
+            const rawPhone = senderId.split('@')[0];
+            const targetText = encodeURIComponent(`Hola JanIA, deseo completar mi publicación del barrio.`);
+            const waLink = botNumber ? `https://wa.me/${botNumber}?text=${targetText}` : `un chat privado conmigo`;
+            
+            const groupReplyText = `⚠️ *DATOS INCOMPLETOS* ⚠️\n\nHola @${rawPhone}, registré parte de tu publicación, pero me hace falta la ubicación exacta (barrio o municipio) para activar los cruces automáticos.\n\n👉 Por favor, presiona este enlace e inicia un chat privado para completarla de forma segura: ${waLink}`;
+            
+            await this.queuedSend(chatId, groupReplyText, {
+              mentions: [senderId],
+              quotedMessageId: originalMsg?.id?._serialized
+            });
+            await this.logToDb(senderId, 'janIA', `[Group-OptIn-Notice] ${groupReplyText}`);
+          }
+          // Para publicaciones perfectas, omitimos el DM de confirmación para evitar sospechas de spam en Meta (ya se marcó con ✅)
+        } else {
+          // Si el chat ya se originó en privado (DM), respondemos normalmente en privado
+          const options: any = {};
+          if (result.dmShouldReply && originalMsg) {
+            options.quotedMessageId = originalMsg.id._serialized;
+          }
+          await this.queuedSend(senderId, dmMsg, options);
+          await this.logToDb(senderId, 'janIA', `[DM] ${dmMsg}`);
         }
-        await this.queuedSend(senderId, dmMsg, options);
-        await this.logToDb(senderId, 'janIA', `[DM] ${dmMsg}`);
       }
 
       // Guardar pendiente si faltan datos
