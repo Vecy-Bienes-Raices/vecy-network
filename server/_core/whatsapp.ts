@@ -523,7 +523,7 @@ export class WhatsAppBot {
             const targetText = encodeURIComponent(`Hola JanIA, deseo completar mi publicación del barrio.`);
             const waLink = botNumber ? `https://wa.me/${botNumber}?text=${targetText}` : `un chat privado conmigo`;
             
-            const groupReplyText = `⚠️ *DATOS INCOMPLETOS* ⚠️\n\nHola @${rawPhone}, registré parte de tu publicación, pero me hace falta la ubicación exacta (barrio o municipio) para activar los cruces automáticos.\n\n👉 Por favor, presiona este enlace e inicia un chat privado para completarla de forma segura: ${waLink}`;
+            const groupReplyText = `⚠️ *DATOS INCOMPLETOS* ⚠️\n\nHola @${rawPhone}, logré registrar parte de tu publicación, pero mis motores no pudieron extraer el barrio, vereda o municipio del enlace o texto. Para poder activarte los cruces comerciales automáticos, ¡necesitamos completar la ubicación!\n\n👉 Por favor, presiona este enlace e inicia un chat privado conmigo para indicármelo: ${waLink} (¡No es por molestarte, es necesario para poder buscarte un MATCH de inmediato! 🚀)`;
             
             await this.queuedSend(chatId, groupReplyText, {
               mentions: [senderId],
