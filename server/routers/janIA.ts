@@ -50,7 +50,7 @@ export const janIARouter = router({
         leadId: z.number().optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new Error('Database not available');
 
@@ -66,15 +66,26 @@ export const janIARouter = router({
 
         if (conversation.length === 0) {
           // Create new conversation
-          const result = await db.insert(conversations).values({
+          const insertData: any = {
             sessionId: input.sessionId,
             topic: 'general',
             messageCount: 0,
             status: 'active',
-          }) as any;
-          conversationId = result.insertId || 1;
+          };
+          if (ctx.user) {
+            insertData.userId = String(ctx.user.id);
+          }
+          const result = await db.insert(conversations).values(insertData).returning();
+          conversationId = result[0]?.id || 1;
         } else {
           conversationId = conversation[0].id;
+          // Associate with user if not associated yet
+          if (ctx.user && !conversation[0].userId) {
+            await db
+              .update(conversations)
+              .set({ userId: String(ctx.user.id) })
+              .where(eq(conversations.id, conversationId));
+          }
         }
 
         // Get conversation history for context
@@ -143,6 +154,79 @@ export const janIARouter = router({
         };
       } catch (error) {
         console.error('Error in JanIA chat:', error);
+        throw error;
+      }
+    }),
+
+  // Get all conversations for a user
+  getUserConversations: publicProcedure
+    .query(async ({ ctx }) => {
+      if (!ctx.user) return [];
+      const db = await getDb();
+      if (!db) return [];
+
+      try {
+        return await db
+          .select()
+          .from(conversations)
+          .where(eq(conversations.userId, String(ctx.user.id)))
+          .orderBy(desc(conversations.updatedAt));
+      } catch (error) {
+        console.error('Error getting user conversations:', error);
+        return [];
+      }
+    }),
+
+  // Get messages for a conversation session
+  getConversationMessages: publicProcedure
+    .input(z.object({ sessionId: z.string() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return [];
+
+      try {
+        const conv = await db
+          .select()
+          .from(conversations)
+          .where(eq(conversations.sessionId, input.sessionId))
+          .limit(1);
+
+        if (conv.length === 0) return [];
+
+        return await db
+          .select()
+          .from(messages)
+          .where(eq(messages.conversationId, conv[0].id))
+          .orderBy(messages.createdAt);
+      } catch (error) {
+        console.error('Error getting conversation messages:', error);
+        return [];
+      }
+    }),
+
+  // Delete a conversation and its messages
+  deleteConversation: publicProcedure
+    .input(z.object({ sessionId: z.string() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+
+      try {
+        const conv = await db
+          .select()
+          .from(conversations)
+          .where(eq(conversations.sessionId, input.sessionId))
+          .limit(1);
+
+        if (conv.length > 0) {
+          // Delete messages first to satisfy foreign key constraints
+          await db.delete(messages).where(eq(messages.conversationId, conv[0].id));
+          await db.delete(conversations).where(eq(conversations.id, conv[0].id));
+        }
+
+        return { success: true };
+      } catch (error) {
+        console.error('Error deleting conversation:', error);
         throw error;
       }
     }),
