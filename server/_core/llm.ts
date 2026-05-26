@@ -17,9 +17,9 @@ export async function invokeLLM({
   responseFormat?: any,
   provider?: LLMProvider,
   imageBuffer?: string
-}) {
+}): Promise<{ choices: { message: { content: string } }[] }> {
   if (provider === "anthropic") {
-    return await invokeClaude(messages, responseFormat);
+    return await invokeClaude(messages, responseFormat) as any;
   }
   return await invokeGemini(messages, responseFormat, imageBuffer);
 }

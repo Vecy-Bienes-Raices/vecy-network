@@ -68,8 +68,6 @@ export const janIARouter = router({
           // Create new conversation
           const insertData: any = {
             sessionId: input.sessionId,
-            topic: 'general',
-            messageCount: 0,
             status: 'active',
           };
           if (ctx.user) {
@@ -142,7 +140,6 @@ export const janIARouter = router({
         await db
           .update(conversations)
           .set({
-            messageCount: conversationHistory.length + 2,
             lastMessage: janIAResponse,
             updatedAt: new Date(),
           })
@@ -277,7 +274,7 @@ export const janIARouter = router({
   getPropertyMatches: publicProcedure
     .input(
       z.object({
-        leadId: z.number(),
+        requirementId: z.number(),
         limit: z.number().default(5),
       })
     )
@@ -289,7 +286,7 @@ export const janIARouter = router({
         const matches = await db
           .select()
           .from(propertyMatches)
-          .where(eq(propertyMatches.leadId, input.leadId))
+          .where(eq(propertyMatches.requirementId, input.requirementId))
           .orderBy(desc(propertyMatches.matchScore))
           .limit(input.limit) as any[];
 
@@ -318,14 +315,20 @@ export const janIARouter = router({
       if (!db) throw new Error('Database not available');
 
       try {
+        const messageWithDetails = [
+          input.message,
+          input.budget ? `Presupuesto: ${input.budget}` : null,
+          input.preferredZones && input.preferredZones.length > 0 
+            ? `Zonas de interés: ${input.preferredZones.join(', ')}` 
+            : null
+        ].filter(Boolean).join('\n');
+
         const result = await db.insert(leads).values({
           name: input.name,
           email: input.email,
           phone: input.phone,
           inquiryType: input.inquiryType,
-          budget: input.budget,
-          preferredZones: input.preferredZones ? JSON.stringify(input.preferredZones) : null,
-          message: input.message,
+          message: messageWithDetails,
           source: 'janIA',
           status: 'new',
         });
