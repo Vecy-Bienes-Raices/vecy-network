@@ -8,8 +8,7 @@ import {
   processWhatsAppMessage, 
   generateWelcomeMessage,
   MSG_PRESENTACION_INSTITUCIONAL,
-  MSG_PAUTAS_FORMATOS,
-  MSG_EMBUDO_REPUTACION
+  MSG_PAUTAS_FORMATOS
 } from './janIA';
 import { publishToFacebookGroup } from "./facebookService";
 import fs from 'fs';
@@ -61,6 +60,8 @@ export class WhatsAppBot {
   
   private pendingWelcomeCount: number = 0;
   private counterFile: string = path.join(process.cwd(), '.pending_welcome_count');
+  public pendingWelcomeJids: string[] = [];
+  private jidsFile: string = path.join(process.cwd(), '.pending_welcome_jids');
 
   // Control de límites y anti-flood (v12.0)
   private dailyMessageLimit: number = 250;
@@ -159,7 +160,8 @@ export class WhatsAppBot {
 
     this.setupEventListeners();
     this.setupGracefulShutdown();
-    this.setupDailySchedule();
+    // Daily scheduled publications are now handled by server/_core/cronService.ts
+    // this.setupDailySchedule();
   }
 
   // --- PERSISTENCIA Y CIERRE ---
@@ -168,12 +170,16 @@ export class WhatsAppBot {
       if (fs.existsSync(this.counterFile)) {
         this.pendingWelcomeCount = parseInt(fs.readFileSync(this.counterFile, 'utf8')) || 0;
       }
+      if (fs.existsSync(this.jidsFile)) {
+        this.pendingWelcomeJids = JSON.parse(fs.readFileSync(this.jidsFile, 'utf8')) || [];
+      }
     } catch (e) {}
   }
 
   private saveCounter() {
     try {
       fs.writeFileSync(this.counterFile, this.pendingWelcomeCount.toString(), 'utf8');
+      fs.writeFileSync(this.jidsFile, JSON.stringify(this.pendingWelcomeJids), 'utf8');
     } catch (e) {}
   }
 
@@ -188,24 +194,7 @@ export class WhatsAppBot {
     process.on('SIGTERM', shutdown);
   }
 
-  // --- LOGÍSTICA DE BROADCASTS ---
-  private setupDailySchedule() {
-    setInterval(() => {
-      const now = new Date();
-      const h = now.getHours();
-      const m = now.getMinutes();
 
-      if ((h === 6 || h === 18) && m === 0) {
-        this.sendPresentacion().then(() => {
-          setTimeout(() => this.sendNormas(), 4000);
-        });
-      }
-
-      if (h >= 6 && h <= 20 && h % 2 === 0 && m === 30) {
-        this.sendRecordatorio();
-      }
-    }, 60000);
-  }
 
   // --- MANEJO DE EVENTOS ---
   private setupEventListeners() {
@@ -226,8 +215,9 @@ export class WhatsAppBot {
 
     this.client.on('group_join', async (notification: any) => {
       if (notification.chatId !== this.targetGroupId) return;
-      const joinedCount = notification.recipientIds?.length || 1;
-      this.pendingWelcomeCount += joinedCount;
+      const joinedIds = notification.recipientIds || [];
+      this.pendingWelcomeJids.push(...joinedIds);
+      this.pendingWelcomeCount = this.pendingWelcomeJids.length;
       this.saveCounter();
       if (this.pendingWelcomeCount >= 10) await this.sendBatchWelcome();
     });
@@ -623,12 +613,15 @@ export class WhatsAppBot {
   public async sendBatchWelcome() {
     const count = this.pendingWelcomeCount;
     this.pendingWelcomeCount = 0;
+    this.pendingWelcomeJids = [];
     this.saveCounter();
+
     try {
       const welcome = await generateWelcomeMessage(count);
       await this.queuedSend(this.targetGroupId, welcome);
-      setTimeout(() => this.sendNormas(), 4000);
-    } catch (e) {}
+    } catch (e: any) {
+      console.error("[Whatsapp-Bot] Error in sendBatchWelcome:", e.message);
+    }
   }
 
   public async sendPresentacion() {
@@ -639,9 +632,6 @@ export class WhatsAppBot {
     await this.queuedSend(this.targetGroupId, MSG_PAUTAS_FORMATOS);
   }
 
-  public async sendRecordatorio() {
-    await this.queuedSend(this.targetGroupId, MSG_EMBUDO_REPUTACION);
-  }
 
   public async sendAnuncioComision() {
     const msg = `📢 *ANUNCIO:* Seguimos en etapa de prueba gratuita. VECY no cobra comisiones por los matches generados en este grupo. ¡A cerrar negocios! 🎯🏆`;
@@ -655,11 +645,11 @@ export class WhatsAppBot {
   }
 
   public async sendAnuncioRetorno() {
-    const msg = `🚀 *¡JANIA ESTÁ DE VUELTA Y MÁS AFILADA QUE NUNCA!* 🤖🏛️\n\n` +
+    let msg = `🚀 *¡JANIA ESTÁ DE VUELTA Y MÁS AFILADA QUE NUNCA!* 🤖🏛️\n\n` +
       `¡Hola de nuevo, colegas y aliados! 👋 Tras un breve ajuste técnico para fortalecer nuestra infraestructura y preparar el lanzamiento del nuevo portal web privado, estoy de vuelta en el canal para encontrar esos MATCH tan deseados.\n\n` +
       `Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores más afilados que nunca para cuidar la calidad de la red y acelerar nuestros cierres:\n\n` +
       `🧠 *¿Qué puedo hacer por ti en esta v2.0?*\n` +
-      `▸ *Ofertas Express (Links):* Comparte el enlace público de tus inmuebles de cualquier portal o CRM, y extraeré la ficha técnica en segundos.\n` +
+      `▸ *Ofertas Express (Links):* Comparte el enlace de tus inmuebles de cualquier portal o CRM, y extraeré la ficha técnica en segundos.\n` +
       `▸ *Escáner de Flyers (OCR):* ¿Tienes fotos de inmuebles o requerimientos con texto? Súbelas al grupo y leeré la información dentro de la imagen.\n` +
       `▸ *Permutas e Intercambios (Voz o Texto):* Escríbeme o envíame un audio detallando permutas complejas como:\n` +
       `  * 🔄 *Mano a mano / Pelo a pelo* (intercambio directo de inmuebles de valor similar).\n` +
@@ -668,12 +658,31 @@ export class WhatsAppBot {
       `  * 📈 *CDTs, divisas o activos alternativos* como complemento de negocio.\n` +
       `▸ *Matching Inteligente:* Cruzo ofertas y demandas en tiempo real y les aviso en el acto cuando hay negocio viable.`;
 
+    const jidsToMention: string[] = [];
+    if (this.pendingWelcomeJids && this.pendingWelcomeJids.length > 0) {
+      msg += `\n\n━━━━━━━━━━━━━━━━━━━━━━\n` +
+             `✨ *¡BIENVENIDOS A LA RED VECY NETWORK!* ✨\n` +
+             `Damos una calurosa bienvenida a los nuevos aliados que se han unido a nuestro ecosistema colaborativo:\n`;
+      
+      this.pendingWelcomeJids.forEach((jid) => {
+        const phone = jid.split('@')[0];
+        msg += `▸ @${phone}\n`;
+        jidsToMention.push(jid);
+      });
+      
+      msg += `\nYa estoy 100% activa para escanear sus publicaciones y buscarles cierres sin cobro de comisiones. ¡Muchos éxitos en sus negocios! 🚀🎯`;
+      
+      this.pendingWelcomeJids = [];
+      this.pendingWelcomeCount = 0;
+      this.saveCounter();
+    }
+
     const imgPath = path.resolve('./client/public/jania_perfil.png');
     if (fs.existsSync(imgPath)) {
       const media = MessageMedia.fromFilePath(imgPath);
-      await this.queuedSend(this.targetGroupId, media, { caption: msg });
+      await this.queuedSend(this.targetGroupId, media, { caption: msg, mentions: jidsToMention });
     } else {
-      await this.queuedSend(this.targetGroupId, msg);
+      await this.queuedSend(this.targetGroupId, msg, { mentions: jidsToMention });
     }
   }
 

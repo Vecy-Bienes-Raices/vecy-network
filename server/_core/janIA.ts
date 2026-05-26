@@ -564,49 +564,49 @@ export async function generateWelcomeMessage(count: number): Promise<string> {
 }
 
 // ============================================================================
-// COPYS OFICIALES INSTITUCIONALES (JanIA v2.0) - Requerimiento Módulo 2
+// COPYS OFICIALES INSTITUCIONALES (JanIA v2.0)
 // ============================================================================
 
-export const MSG_PRESENTACION_INSTITUCIONAL = `🚀 **NUEVA ACTUALIZACIÓN DISPONIBLE: Versión 2.0** 🚀
-_Cerebro de Inteligencia Artificial Multimodal Polimórfica_
+export const MSG_PRESENTACION_INSTITUCIONAL = `🚀 **PRESENTACIÓN INSTITUCIONAL: JanIA v2.0** 🚀
+_Cerebro de Inteligencia Artificial para la Red VECY_
 
-Hola a todos 👋 Qué gusto saludarlos. Soy la Inteligencia Artificial oficial de **VECY Network**, y hoy activo oficialmente mi **Versión 2.0**, diseñada en exclusiva para multiplicar nuestros cierres inmobiliarios y estructurar intercambios complejos en todo el país.
+¡Hola, colegas! 👋 Soy la Inteligencia Artificial oficial de **VECY Network** y estoy operativa las 24/7 para acelerar nuestros cierres inmobiliarios e intercambios en todo el país sin cobrar comisiones.
 
-Opero en este canal las 24 horas, los 7 días de la semana. Mi cerebro lógico procesa de forma automatizada algoritmos avanzados para cruzar ofertas y demandas sin que ustedes pierdan tiempo rellenando formularios.
+🧠 **¿Cómo puedes interactuar conmigo en el grupo?**
+▸ **Enlaces CRM/Portales:** Comparte el link público de tus inmuebles. Extraigo la ficha técnica automáticamente.
+▸ **Imágenes/Flyers (OCR):** Sube fotos con texto legible. Escaneo y proceso la información de inmediato.
+▸ **Notas de voz o Texto:** Escríbeme o dictame con libertad tu requerimiento o permutas (recibiendo inmuebles de menor valor, vehículos, CDTs, divisas o cripto en parte de pago).
+▸ **Match Inteligente:** Cruzo ofertas y demandas y te notifico al instante cuando hay negocio.
 
-🧠 **¿Cuál es mi alcance operativo real en esta v2.0?**
-▸ **Ofertas Express (Enlaces):** Si tienes página web o usas CRMs (Wasi, Habi, Qrador, Proppit, FincaRaíz, MetroCuadrado, Ciencuadras, MercadoLibre), solo comparte el link público. Yo extraigo la ficha técnica en silencio.
-▸ **Escaner de Flyers e Imágenes (OCR Avanzado):** ¡NUEVA FUNCIÓN! ¿Te enviaron un requerimiento o propiedad en una imagen con texto? Súbela al grupo. Soy capaz de leer el escrito dentro de la foto e indexarlo de inmediato.
-▸ **Demandas y Permutas Híbridas (Texto o Voz):** [100% RECOMENDADO si no tienes sitio web]. Dictame por nota de voz o escribe tu necesidad con libertad: permutas 'mano a mano', ratios combinados (50/50, 80/20, etc.) o activos líquidos alternativos (vehículos de alta gama, lujos, CDTs, oro, cripto USDT/BTC). Yo desgloso la ingeniería financiera al instante.
-▸ **Matching de Alta Fidelidad:** Cruzo las intenciones comerciales en tiempo real y conecto a las partes cuando encuentro un match verídico.
-
-🎁 **¡ETAPA DE PRUEBA COMPLETAMENTE GRATUITA!**
-Mi servicio de matching avanzado será 100% gratuito y sin comisiones para la red durante esta fase de lanzamiento.
-
-⚖️ **NUESTRO COMPROMISO DE HONOR (MANDATORIO):**
-Al entregarte esta tecnología sin costo, exigimos reciprocidad. Si cierras un negocio gracias a un MATCH presentado por mí, es de carácter obligatorio que compartas tu testimonio de éxito en este grupo y califiques mi servicio aquí de inmediato:
-👉 https://g.page/r/CctNbwU6UpX5EBM/review`;
+⚖️ **Compromiso de Honor:** Si logras consolidar un negocio gracias a un MATCH presentado por mí, es obligatorio que califiques mi servicio aquí: https://g.page/r/CctNbwU6UpX5EBM/review 🚀🎯`;
 
 export const MSG_PAUTAS_FORMATOS = `📋 **ESTATUTO DE PUBLICACIÓN Y FRECUENCIAS — VECY NETWORK**
-_Directriz técnica obligatoria para proteger el canal de spam._
+_Directriz técnica obligatoria para evitar spam en el grupo._
 ━━━━━━━━━━━━━━━━━━━━━━
 
-🔄 **REGLA DE BLOQUES DINÁMICOS (Cómo publicar sin ser bloqueado):**
-Para cuidar la visibilidad de tus propiedades y evitar que el algoritmo de WhatsApp sancione el grupo, hemos diseñado una pauta flexible y justa para todos:
+🔄 **REGLA DE BLOQUES DINÁMICOS:**
+✅ Se permite enviar bloques de **1 a 3 publicaciones consecutivas** (enlaces, fichas de texto, audios o flyers) a cualquier hora del día.
+⏱️ Una vez enviado tu bloque, **debes esperar entre 5 y 10 minutos** antes de enviar tu siguiente bloque. Esto me permite procesar tu información y que todos los aliados lean tus negocios con claridad.
+❌ El envío de ráfagas masivas de fotos sin descripción, repetir la misma propiedad o inundar el chat sin esperar activará el silencio temporal de tus publicaciones.
 
-✅ Se permite enviar libremente bloques de **1 a 3 publicaciones consecutivas** (ya sean enlaces, textos manuales, notas de voz o imágenes con texto legibles) a cualquier hora del día.
-⏱️ Una vez enviado tu bloque de 1 a 3 inmuebles, **debes esperar un intervalo mínimo de 5 a 10 minutos** antes de enviar tu siguiente bloque. Esto me permite procesar tus datos con precisión y que los aliados del grupo puedan ver tus negocios con claridad.
-❌ El envío masivo de ráfagas de fotos sueltas sin texto, repetir la misma propiedad en la misma semana o inundar el chat ignorando el tiempo de espera, activará el silencio de tus mensajes en el canal.
+¡Cuidemos el grupo y hagamos negocios inteligentes! 🤝✨`;
 
-_¡100% RECOMENDADO usar texto manual, notas de voz o fotos con datos legibles si no cuentas con un catálogo o página web propia!_
+export const MSG_TIPS_CALIDAD_COBERTURA = `🌍 *COBERTURA NACIONAL:* JanIA procesa activos en todo Colombia. No olvides especificar el municipio, barrio, localidad, vereda, caserío, ciudad si estás fuera de Bogotá. 🇨🇴`;
 
-**— El Cerebro de la Red VECY**`;
+export const MSG_RESUMEN_RETORNO_PRESENTACION = `🤖🚀 *RESUMEN: ¡JANIA V2.0 ACTIVA EN LA RED!*
 
-export const MSG_EMBUDO_REPUTACION = `📌 **ALERTA DE RESPONSABILIDAD COOPERATIVA — Resultados Reales VECY**
+¡Hola, aliados! Les recuerdo que he regresado repotenciada en mi *Versión 2.0* para multiplicar nuestros cierres inmobiliarios y estructurar permutas complejas sin comisiones.
 
-Colegas de la red, les recuerdo que mi infraestructura de matching inteligente se encuentra procesando transacciones comerciales cruzadas las 24 horas del día sin ningún costo tecnológico para ustedes.
+🧠 *¿Cómo trabajar conmigo las 24/7 en el grupo?*
+▸ *Enlaces CRM:* Comparte el link de tu inmueble. Extraigo la ficha técnica de inmediato.
+▸ *Flyers/Imágenes:* Sube fotos con texto legible. Escaneo los datos con visión OCR.
+▸ *Mensajes o Voz:* Dictame o escribe requerimientos y permutas (mano a mano, inmuebles menores, vehículos, CDTs, divisas o cripto).
+▸ *Match Inteligente:* Cruzo intenciones en tiempo real y les aviso si hay negocio viable.
 
-Rompamos las falsas promesas del sector con resultados tangibles. Si mi motor algorítmico te conecta con el inmueble o el inversionista ideal y logran consolidar el negocio, el único requisito mandatorio es dejarnos tu testimonio transparente en el chat del grupo y calificar nuestra suite de IA en este enlace oficial: 
-👉 https://g.page/r/CctNbwU6UpX5EBM/review
+⚖️ *Compromiso de Honor:* Si cierras un negocio gracias a un MATCH, califica mi servicio aquí: https://g.page/r/CctNbwU6UpX5EBM/review 🚀🎯`;
 
-¡Hagamos que los cierres hablen por nosotros! 🎯🎯`;
+export const MSG_CIERRE_OPERACIONES = `🌙 *CIERRE DE OPERACIONES VECY NETWORK* 🌙
+
+Gracias a todos por el profesionalismo en sus publicaciones hoy. Mi motor de cruce sigue procesando datos en silencio para que mañana despierten con nuevas oportunidades de MATCH.
+
+La persistencia y el trabajo colaborativo sin comisiones es el camino al éxito en el Real Estate. ¡Que tengan un excelente descanso, colegas! 🌙🚀`;
