@@ -651,7 +651,9 @@ export class WhatsAppBot {
   }
 
   public initialize() {
-    this.client.initialize();
+    this.client.initialize().catch(err => {
+      console.error('[WHATSAPP-BOT] Error crítico durante la inicialización de whatsapp-web.js:', err);
+    });
   }
 }
 

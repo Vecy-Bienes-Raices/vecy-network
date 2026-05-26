@@ -9,6 +9,13 @@ import { serveStatic, setupVite } from "./vite";
 import { whatsappBot } from "./whatsapp";
 import { initCronScheduler } from "./cronService";
 
+process.on("uncaughtException", (error) => {
+  console.error("[SYSTEM-CRITICAL] Uncaught Exception detectada:", error);
+});
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("[SYSTEM-CRITICAL] Unhandled Rejection detectada en:", promise, "razón:", reason);
+});
+
 async function startServer() {
   const app = express();
   const server = createServer(app);
@@ -53,7 +60,7 @@ async function startServer() {
       } catch (e) {}
 
       // Seleccionar el chat correcto forzando el ID (más estable que selectores CSS)
-      await page.evaluate((id, title) => {
+      await page.evaluate((id: any, title: any) => {
         // Intentar encontrar el elemento por el atributo de ID de WhatsApp Web
         const row = document.querySelector(`div[data-id*="${id}"]`) || 
                     Array.from(document.querySelectorAll('div')).find(el => el.getAttribute('data-id')?.includes(id));
@@ -155,11 +162,9 @@ async function startServer() {
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
-    
     // Inicializar el Bot de WhatsApp de Vecy Network
     console.log("Iniciando WhatsApp Bot...");
-    // whatsappBot.initialize(); // TODO: Descomentar al restaurar la línea de WhatsApp (v11.99 Active)
-
+    whatsappBot.initialize();
     // Inicializar el orquestador de agendas automatizadas (Cron)
     initCronScheduler();
   });
