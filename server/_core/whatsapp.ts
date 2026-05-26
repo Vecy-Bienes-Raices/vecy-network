@@ -598,6 +598,7 @@ export class WhatsAppBot {
     }
     else if (text.includes('anuncia')) await this.sendAnuncioComision();
     else if (text.includes('dipava')) await this.sendApologyDeLaPava();
+    else if (text.includes('retorno')) await this.sendAnuncioRetorno();
   }
 
   // --- MÉTODOS DE BROADCAST ---
@@ -633,6 +634,18 @@ export class WhatsAppBot {
     const deLaPavaId = '105188731928753@lid';
     await this.queuedSend(this.targetGroupId, `🙏 Ajuste de sistema realizado. Cobertura nacional elástica activada para todos los aliados.`);
     await this.queuedSend(deLaPavaId, `Su requerimiento nacional ha sido indexado con éxito. ¡JanIA sigue atenta!`);
+  }
+
+  public async sendAnuncioRetorno() {
+    const msg = `🚀 *¡JANIA ESTÁ DE VUELTA Y MÁS AFILADA QUE NUNCA!* 🤖🏛️\n\n` +
+      `¡Hola de nuevo, colegas y aliados! 👋 Tras un breve ajuste técnico para fortalecer nuestra infraestructura y preparar el lanzamiento del nuevo portal web privado, estoy de vuelta en el canal.\n\n` +
+      `Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores más afilados que nunca para cuidar la calidad de la red y acelerar nuestros cierres:\n\n` +
+      `🧠 *¿Qué puedo hacer por ti en esta v2.0?*\n` +
+      `▸ *Ofertas Express (Links):* Comparte el enlace público de tus inmuebles de cualquier portal o CRM, y extraeré la ficha técnica en segundos.\n` +
+      `▸ *Escáner de Flyers (OCR):* ¿Tienes fotos de inmuebles o requerimientos con texto? Súbelas al grupo y leeré la información dentro de la imagen.\n` +
+      `▸ *Permutas y Notas de Voz:* Escríbeme o envíame un audio con tus requerimientos o permutas complejas (carros, CDTs, oro, USDT). Desgloso la ingeniería financiera de inmediato.\n` +
+      `▸ *Matching Inteligente:* Cruzo ofertas y demandas en tiempo real y les aviso en el acto cuando hay negocio viable.`;
+    await this.queuedSend(this.targetGroupId, msg);
   }
 
   public async sendToGroup(text: string, mediaPath?: string, mentions?: string[]) {

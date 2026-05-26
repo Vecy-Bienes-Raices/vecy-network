@@ -87,6 +87,15 @@ async function startServer() {
     }
   });
 
+  app.get("/api/send-comeback", async (req, res) => {
+    try {
+      await (whatsappBot as any).sendAnuncioRetorno();
+      res.send("Anuncio de retorno enviado exitosamente al grupo.");
+    } catch (err: any) {
+      res.status(500).send(err.message);
+    }
+  });
+
   app.get("/api/find-active-group", async (req, res) => {
     try {
       const client = (whatsappBot as any).client;
