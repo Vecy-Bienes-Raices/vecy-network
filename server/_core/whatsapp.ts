@@ -267,7 +267,7 @@ export class WhatsAppBot {
           const text = msg.body.toLowerCase();
           // Comandos de administración
           if (text.includes('jania')) {
-            if (text.includes('normas') || text.includes('preséntate') || text.includes('anuncia') || text.includes('dipava')) {
+            if (text.includes('normas') || text.includes('preséntate') || text.includes('anuncia') || text.includes('dipava') || text.includes('retorno')) {
               await this.handleAdminCommand(msg);
               return;
             }
@@ -277,9 +277,9 @@ export class WhatsAppBot {
           return;
         }
 
-        // 2. RAMA Conversacional PRIVADA (DM Branch - v11.15)
+        // 2. RAMA Conversacional PRIVADA (DM Branch - v11.15 - Con Buffer anti-duplicados)
         if (!isGroup) {
-          await this.handlePrivateMessage(msg);
+          await this.handleIncomingMessage(msg, chatId);
           return;
         }
 
@@ -344,9 +344,10 @@ export class WhatsAppBot {
     const MAX_BLOCK_SIZE = 3;             // Máximo 3 mensajes por bloque
 
     let cooldown = this.cooldownMap.get(senderId);
+    const isGroupChat = chatId.includes('@g.us');
 
-    // Verificación de Cooldown (Anti-Spam)
-    if (cooldown && (now - cooldown.lastBlockProcessedAt < COOLDOWN_PERIOD)) {
+    // Verificación de Cooldown (Anti-Spam - Solo aplica en Grupos)
+    if (isGroupChat && cooldown && (now - cooldown.lastBlockProcessedAt < COOLDOWN_PERIOD)) {
       if (!cooldown.warningSent) {
         const contact = await msg.getContact();
         const rawPhone = (msg.author || msg.from).split("@")[0];
@@ -487,8 +488,11 @@ export class WhatsAppBot {
     const isConsultation = result.classification === "CONSULTA_GENERAL" || result.classification === "RESPUESTA_A_PREGUNTA_IA";
     const isViolation = result.classification === "VIOLACION_DE_NORMAS";
 
-    // Notificación en el grupo (Solo Matches, Consultas o Violación de Normas)
-    if ((!isGroup || isMatch || isConsultation || isViolation) && result.response && result.response.trim() !== "") {
+    // Notificación en el grupo o DM (evitando duplicar si se procesará abajo en shouldSendDM)
+    const shouldSendGroup = isGroup && (isMatch || isConsultation || isViolation);
+    const shouldSendDMDirect = !isGroup && !result.shouldSendDM;
+
+    if ((shouldSendGroup || shouldSendDMDirect) && result.response && result.response.trim() !== "") {
       const mentions = Array.from(new Set([...(result.mentions || []), senderId]));
       const options: any = { 
         mentions: isGroup ? mentions : [] 
@@ -652,12 +656,16 @@ export class WhatsAppBot {
 
   public async sendAnuncioRetorno() {
     const msg = `🚀 *¡JANIA ESTÁ DE VUELTA Y MÁS AFILADA QUE NUNCA!* 🤖🏛️\n\n` +
-      `¡Hola de nuevo, colegas y aliados! 👋 Tras un breve ajuste técnico para fortalecer nuestra infraestructura y preparar el lanzamiento del nuevo portal web privado, estoy de vuelta en el canal.\n\n` +
+      `¡Hola de nuevo, colegas y aliados! 👋 Tras un breve ajuste técnico para fortalecer nuestra infraestructura y preparar el lanzamiento del nuevo portal web privado, estoy de vuelta en el canal para encontrar esos MATCH tan deseados.\n\n` +
       `Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores más afilados que nunca para cuidar la calidad de la red y acelerar nuestros cierres:\n\n` +
       `🧠 *¿Qué puedo hacer por ti en esta v2.0?*\n` +
       `▸ *Ofertas Express (Links):* Comparte el enlace público de tus inmuebles de cualquier portal o CRM, y extraeré la ficha técnica en segundos.\n` +
       `▸ *Escáner de Flyers (OCR):* ¿Tienes fotos de inmuebles o requerimientos con texto? Súbelas al grupo y leeré la información dentro de la imagen.\n` +
-      `▸ *Permutas y Notas de Voz:* Escríbeme o envíame un audio con tus requerimientos o permutas complejas (carros, CDTs, oro, USDT). Desgloso la ingeniería financiera de inmediato.\n` +
+      `▸ *Permutas e Intercambios (Voz o Texto):* Escríbeme o envíame un audio detallando permutas complejas como:\n` +
+      `  * 🔄 *Mano a mano / Pelo a pelo* (intercambio directo de inmuebles de valor similar).\n` +
+      `  * 🏠➕💵 *Inmueble de menor valor* como parte de pago por uno de mayor valor.\n` +
+      `  * 🚗 *Vehículos* recibidos como parte de pago.\n` +
+      `  * 📈 *CDTs, divisas o activos alternativos* como complemento de negocio.\n` +
       `▸ *Matching Inteligente:* Cruzo ofertas y demandas en tiempo real y les aviso en el acto cuando hay negocio viable.`;
     await this.queuedSend(this.targetGroupId, msg);
   }

@@ -93,13 +93,16 @@ async function startServer() {
     }
   });
 
-  app.get("/api/send-comeback", async (req, res) => {
+  app.get("/api/send-comeback", (req, res) => {
     try {
       if (!whatsappBot.isReady) {
         return res.status(503).send("El bot de WhatsApp no está listo todavía. Intenta en unos segundos.");
       }
-      await (whatsappBot as any).sendAnuncioRetorno();
-      res.send("Anuncio de retorno enviado exitosamente al grupo.");
+      // Encolar el envío en segundo plano y responder inmediatamente para evitar timeouts y reintentos (doble mensaje)
+      (whatsappBot as any).sendAnuncioRetorno().catch((err: any) => {
+        console.error("Error al enviar anuncio de retorno:", err);
+      });
+      res.send("Anuncio de retorno encolado exitosamente.");
     } catch (err: any) {
       res.status(500).send(err.message);
     }
