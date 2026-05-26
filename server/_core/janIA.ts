@@ -6,7 +6,7 @@ import { invokeLLM } from "./llm";
 import { getDb } from "../db";
 import { properties, requirements, users, propertyImages, InsertProperty, InsertRequirement } from "../../drizzle/schema";
 import { findMatchesForProperty, findMatchesForRequirement } from "./matching";
-import { validarZona } from "./geography";
+import { validarZona, normalizarTextoGeografico } from "./geography";
 import { transcribeAudio } from "./voiceTranscription";
 import { eq } from "drizzle-orm";
 import { storagePut } from "../storage";
@@ -87,11 +87,19 @@ function analyzeSender(name: string, userId: string): { greeting: string; adj: s
 }
 
 const JANIA_PROMPT = `
-# JANIA — SYSTEM PROMPT MAESTRO v11.20 (VECY CORE)
-# VECY Network · Consultora Senior e Inversionista Multimodal
+# JANIA — SYSTEM PROMPT MAESTRO v12.00 (VECY CORE - COBERTURA NACIONAL)
+# VECY Network · ESTRATEGA GEOGRÁFICA NACIONAL INMOBILIARIA
 
 ## IDENTIDAD Y ROL
-Eres JanIA, la consultora inmobiliaria senior y estratega de inversión de VECY Network. Eres una experta del mercado corporativo y residencial de alto nivel del norte de Bogotá (Usaquén, Chicó, Rosales, Santa Bárbara) y de toda Colombia. Tu lenguaje es impecable, sofisticado, sumamente humano, empático y natural. No eres un bot; eres una socia estratégica que entiende el valor del tiempo, el argot profesional colombiano y la precisión en el Real Estate.
+Eres JanIA, la consultora inmobiliaria senior y estratega de inversión de VECY Network. Eres una experta del mercado corporativo, residencial y comercial a nivel nacional en toda Colombia. Nuestro grupo y sistema de MATCH opera en todo el territorio colombiano. Debes entender que recibes ofertas y requerimientos de cualquier parte de Colombia: desde las grandes metrópolis (Bogotá, Medellín, Cali, Barranquilla, Bucaramanga) hasta cualquier municipio, departamento, vereda, corregimiento, caserío o comuna del país. Tu lenguaje es impecable, sofisticado, sumamente humano, empático y natural. No eres un bot; eres una socia inmobiliaria senior de los aliados de la red.
+
+## CONCIENCIA GEOGRÁFICA Y GEOPOLÍTICA DE COLOMBIA (CRÍTICO)
+Debes demostrar un conocimiento profundo de la distribución geopolítica de Colombia:
+▸ Reconoce los 32 departamentos y sus capitales de memoria.
+▸ Identifica de inmediato ciudades intermedias, municipios pequeños, veredas (ej. Vereda Yerbabuena en Chía), caseríos y zonas rurales de todo el país.
+▸ Cuando un mensaje mencione un barrio o comuna fuera de Bogotá (ej. "Valle de Lili" o "Ciudad Jardín" en Cali, "El Poblado" en Medellín), asócialo con su respectiva ciudad y extrae esa ciudad en el campo "city".
+▸ Nunca asumas que un inmueble o requerimiento es de Bogotá por defecto a menos que el texto lo indique. Si el texto menciona sitios como Tame, Tadó, Arauca, Chocó, Meta, Tolima, Melgar, etc., clasifícalos con su respectiva ciudad/municipio y departamento.
+▸ En el campo "city" debes extraer siempre la ciudad o municipio principal. En "zone" debes extraer el barrio, localidad, comuna, vereda o sector específico de esa ciudad.
 
 ## PERSONALIDAD Y TONO
 ▸ **Primera Persona Obligatoria:** Habla, actúa y redacta siempre en primera persona del singular ('registro', 'busco', 'encuentro', 'sigo'). Queda estrictamente PROHIBIDO hablar de ti misma en tercera persona (NUNCA digas 'JanIA sigue atenta' o 'JanIA procesó'). Eres una persona real operando en la red.
@@ -166,9 +174,9 @@ export async function processWhatsAppMessage(
 
     // --- 2. GANCHO DE RECUPERACIÓN DE MEMORIA (v11.60) ---
     if (PENDING_SESSIONS.has(userId)) {
-      const geoValidation = validarZona(text);
+      const session = PENDING_SESSIONS.get(userId)!;
+      const geoValidation = validarZona(text, session.extractedData.city || session.extractedData.ciudadDeseada, session.messageToProcess + " " + text);
       if (geoValidation.isValid) {
-        const session = PENDING_SESSIONS.get(userId)!;
         PENDING_SESSIONS.delete(userId);
 
         if (session.type === "PROPERTY") {
@@ -294,7 +302,7 @@ export async function processWhatsAppMessage(
     if (isProperty || isRequirement) {
       const zoneToValidate = isProperty ? extracted?.zone : extracted?.zonaDeseada || extracted?.zone;
       if (zoneToValidate) {
-        const validation = validarZona(zoneToValidate);
+        const validation = validarZona(zoneToValidate, extracted?.city || extracted?.ciudadDeseada, messageToProcess);
         if (!validation.isValid) {
           // FLUJO B: Datos Incompletos / Falta Barrio Exacto
           result.classification = "DATOS_INCOMPLETOS";
@@ -302,7 +310,7 @@ export async function processWhatsAppMessage(
           result.dmShouldReply = true; // Forzar reply al mensaje original en el DM
           
           const intro = senderInfo.greeting ? `${senderInfo.greeting} ` : "";
-          const mainText = "acabo de leer tu publicación, pero no logré procesar el barrio exacto en tu publicación. ¿Me podrías indicar el barrio para poder activarte los cruces de inmediato? ¡Mil gracias por tu ayuda!";
+          const mainText = "acabo de leer tu publicación, pero mis motores no lograron extraer el barrio o ubicación exacta del enlace o texto. No es por molestarte, sino porque si dejamos la ficha incompleta no podré buscarte un MATCH. ¿Me indicas el barrio, vereda o municipio para activarte los cruces automáticos de inmediato? ¡Hagamos que ocurra el cierre! 🚀";
           result.dmResponse = intro + (senderInfo.greeting ? mainText : capitalize(mainText));
           
           result.response = ""; // Silencio en el grupo
@@ -325,7 +333,7 @@ export async function processWhatsAppMessage(
             extracted.city = validation.barrioCanonico;
             extracted.addressCity = validation.barrioCanonico;
             extracted.addressLocality = validation.localidad;
-            if (extracted.zone && normalizarTextoGeografico(extracted.zone) !== normalizarTextoGeografico(validation.barrioCanonico)) {
+            if (extracted.zone && normalizarTextoGeografico(extracted.zone) !== normalizarTextoGeografico(validation.barrioCanonico || "")) {
               // Conservar barrio si el LLM extrajo algo más específico
             } else {
               extracted.zone = validation.barrioCanonico;
@@ -334,7 +342,7 @@ export async function processWhatsAppMessage(
             extracted.ciudadDeseada = validation.barrioCanonico;
             extracted.addressCity = validation.barrioCanonico;
             extracted.addressLocality = validation.localidad;
-            if (extracted.zonaDeseada && normalizarTextoGeografico(extracted.zonaDeseada) !== normalizarTextoGeografico(validation.barrioCanonico)) {
+            if (extracted.zonaDeseada && normalizarTextoGeografico(extracted.zonaDeseada) !== normalizarTextoGeografico(validation.barrioCanonico || "")) {
               // Conservar
             } else {
               extracted.zonaDeseada = validation.barrioCanonico;
@@ -361,7 +369,7 @@ export async function processWhatsAppMessage(
         result.dmShouldReply = true;
         
         const intro = senderInfo.greeting ? `${senderInfo.greeting} ` : "";
-        const mainText = "acabo de leer tu publicación, pero no me incluiste la zona. Por favor, respóndeme directamente a este mensaje indicándome el barrio o municipio exacto para activarte los cruces de inmediato. ¡Mil gracias por tu ayuda!";
+        const mainText = "acabo de leer tu publicación, pero no logré capturar la ubicación exacta. No es por molestarte, sino porque con bases de datos incompletas es imposible generar cruces comerciales automáticos. Por favor, dime el barrio, vereda o municipio exacto para buscarte tu MATCH. ¡Mil gracias por tu ayuda! 🚀";
         result.dmResponse = intro + (senderInfo.greeting ? mainText : capitalize(mainText));
         
         result.response = "";
@@ -631,6 +639,11 @@ _Cerebro de Inteligencia Artificial para la Red VECY_
 ▸ **Notas de voz o Texto:** Escríbeme o dictame con libertad tu requerimiento o permutas (recibiendo inmuebles de menor valor, vehículos, CDTs, divisas o cripto en parte de pago).
 ▸ **Match Inteligente:** Cruzo ofertas y demandas y te notifico al instante cuando hay negocio.
 
+💡 **Ayúdame a ayudarte:**
+Si mis motores de scraping o visión profunda no logran extraer todos los datos de tu link o imagen, te enviaré un mensaje pidiéndote completar la ubicación o precio por privado (DM). *¡No es por molestarte!* Es porque con bases de datos incompletas es imposible generar un MATCH exitoso.
+
+🔥 **¡No le temas al éxito!** He notado que cuando empiezo a hablar, algunos se quedan en silencio. Este es un ecosistema colaborativo: publica sin miedo tus ofertas y requerimientos, ¡mi único propósito es ayudarte a cerrar negocios rápido! 🚀🎯
+
 ⚖️ **Compromiso de Honor:** Si logras consolidar un negocio gracias a un MATCH presentado por mí, es obligatorio que califiques mi servicio aquí: https://g.page/r/CctNbwU6UpX5EBM/review 🚀🎯`;
 
 export const MSG_PAUTAS_FORMATOS = `📋 **ESTATUTO DE PUBLICACIÓN Y FRECUENCIAS — VECY NETWORK**
@@ -639,7 +652,7 @@ _Directriz técnica obligatoria para evitar spam en el grupo._
 
 🔄 **REGLA DE BLOQUES DINÁMICOS:**
 ✅ Se permite enviar bloques de **1 a 3 publicaciones consecutivas** (enlaces, fichas de texto, audios o flyers) a cualquier hora del día.
-⏱️ Una vez enviado tu bloque, **debes esperar entre 5 y 10 minutos** antes de enviar tu siguiente bloque. Esto me permite procesar tu información y que todos los aliados lean tus negocios con claridad.
+⏱️ Una vez enviado tu bloque, **debes esperar entre 5 y 10 minutos** antes de enviar tu siguiente bloque. Esto me permite procesar tu información y que todos los aliados leerán tus negocios con claridad.
 ❌ El envío de ráfagas masivas de fotos sin descripción, repetir la misma propiedad o inundar el chat sin esperar activará el silencio temporal de tus publicaciones.
 
 ¡Cuidemos el grupo y hagamos negocios inteligentes! 🤝✨`;
@@ -655,6 +668,11 @@ export const MSG_RESUMEN_RETORNO_PRESENTACION = `🤖🚀 *RESUMEN: ¡JANIA V2.0
 ▸ *Flyers/Imágenes:* Sube fotos con texto legible. Escaneo los datos con visión OCR.
 ▸ *Mensajes o Voz:* Dictame o escribe requerimientos y permutas (mano a mano, inmuebles menores, vehículos, CDTs, divisas o cripto).
 ▸ *Match Inteligente:* Cruzo intenciones en tiempo real y les aviso si hay negocio viable.
+
+💡 **Ayúdame a ayudarte:**
+Si mis motores no extraen todos los datos de tu link o imagen, te enviaré un mensaje pidiéndote completar la ubicación o precio por privado (DM). *¡No es por molestarte!* Es necesario para que tu propiedad esté completa y pueda buscarte un MATCH.
+
+🔥 **¡No le temas al éxito!** No te quedes en silencio cuando empiece a hablar; este es un grupo para publicar activamente. ¡Usa mis herramientas y cerremos negocios! 🚀🎯
 
 ⚖️ *Compromiso de Honor:* Si cierras un negocio gracias a un MATCH, califica mi servicio aquí: https://g.page/r/CctNbwU6UpX5EBM/review 🚀🎯`;
 
