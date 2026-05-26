@@ -471,13 +471,18 @@ export class WhatsAppBot {
     const isGroup = chatId.includes('@g.us');
     const isMatch = result.response && result.response.includes("MATCH DETECTADO");
     const isConsultation = result.classification === "CONSULTA_GENERAL" || result.classification === "RESPUESTA_A_PREGUNTA_IA";
+    const isViolation = result.classification === "VIOLACION_DE_NORMAS";
 
-    // Notificación en el grupo (Solo Matches o Consultas)
-    if ((!isGroup || isMatch || isConsultation) && result.response && result.response.trim() !== "") {
+    // Notificación en el grupo (Solo Matches, Consultas o Violación de Normas)
+    if ((!isGroup || isMatch || isConsultation || isViolation) && result.response && result.response.trim() !== "") {
       const mentions = Array.from(new Set([...(result.mentions || []), senderId]));
-      await this.queuedSend(chatId, result.response, { 
+      const options: any = { 
         mentions: isGroup ? mentions : [] 
-      });
+      };
+      if (isViolation && originalMsg) {
+        options.quotedMessageId = originalMsg.id._serialized;
+      }
+      await this.queuedSend(chatId, result.response, options);
       await this.logToDb(senderId, 'janIA', result.response);
     }
 
@@ -488,6 +493,8 @@ export class WhatsAppBot {
           await originalMsg.react('✅');
         } else if (result.classification === "DATOS_INCOMPLETOS") {
           await originalMsg.react('⚠️');
+        } else if (result.classification === "VIOLACION_DE_NORMAS") {
+          await originalMsg.react('❌');
         }
       } catch (e) {
         console.error('[React-Error] Fallo al reaccionar al mensaje original:', e);
