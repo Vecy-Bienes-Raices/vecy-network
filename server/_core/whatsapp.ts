@@ -448,7 +448,8 @@ export class WhatsAppBot {
       // 4. Orquestación de Respuestas (Silencio de Oro / Flujos DM)
       await this.handleJanIAResponse(result, senderId, chatId, userName, fullText, originalMsg);
 
-      // --- JanIA-Sync: Sincronización con Facebook Groups (v11.0) ---
+      // --- JanIA-Sync: Sincronización con Facebook Groups (v11.0) - DESACTIVADO POR AHORA ---
+      /*
       if (result && (result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO")) {
         console.log("[JanIA-Sync] Sincronizando con Facebook Groups...");
         publishToFacebookGroup(fullText, imageBuffer)
@@ -457,6 +458,7 @@ export class WhatsAppBot {
           })
           .catch(err => console.error("❌ [Facebook-Sync-Error]:", err.message));
       }
+      */
 
       // 5. ACTIVAR COOLDOWN DE 5 MINUTOS (Tras procesar con éxito)
       this.cooldownMap.set(senderId, {
