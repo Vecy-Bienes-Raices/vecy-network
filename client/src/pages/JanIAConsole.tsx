@@ -90,7 +90,7 @@ function JanIARealtimeLoader() {
         
         {/* Actual Avatar */}
         <div className="relative w-full h-full rounded-full overflow-hidden border border-primary/30 bg-black z-10">
-          <video src="/jania.mp4" autoPlay loop muted playsInline className="w-full h-full object-cover animate-pulse" />
+          <img src="/jania_perfil.png" className="w-full h-full object-cover animate-pulse" alt="JanIA Profile" />
         </div>
       </div>
 
@@ -345,7 +345,7 @@ export default function JanIAConsole() {
           </div>
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-full overflow-hidden border border-primary/20">
-              <video src="/jania.mp4" autoPlay loop muted playsInline className="w-full h-full object-cover" />
+              <img src="/jania_perfil.png" className="w-full h-full object-cover" alt="JanIA Profile" />
             </div>
             <Button variant="ghost" size="icon" onClick={() => navigate('/')} className="text-gray-400">
               <X className="w-5 h-5" />
@@ -366,7 +366,7 @@ export default function JanIAConsole() {
                 >
                   {message.role === 'janIA' && (
                     <div className="flex-shrink-0 w-10 h-10 rounded-full overflow-hidden glow-gold-sm mt-1">
-                      <video src="/jania.mp4" autoPlay loop muted playsInline className="w-full h-full object-cover" />
+                      <img src="/jania_perfil.png" className="w-full h-full object-cover" alt="JanIA Profile" />
                     </div>
                   )}
                   

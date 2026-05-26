@@ -283,7 +283,7 @@ export default function JanIAWidget({ propertyId, leadId }: JanIAWidgetProps) {
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 md:bottom-8 md:right-8 w-16 h-16 md:w-24 md:h-24 rounded-full flex items-center justify-center z-40 glow-gold pulse-glow overflow-hidden"
+          className="fixed bottom-6 right-6 md:bottom-8 md:right-8 w-16 h-16 md:w-24 md:h-24 rounded-full flex items-center justify-center z-40 glow-gold pulse-glow overflow-hidden bg-black border-2 border-primary/40"
           title="Chat con JanIA"
         >
           <video 
@@ -292,7 +292,7 @@ export default function JanIAWidget({ propertyId, leadId }: JanIAWidgetProps) {
             loop 
             muted 
             playsInline
-            className="w-full h-full object-cover contrast-110 saturate-105" 
+            className="w-[88%] h-[88%] rounded-full object-cover contrast-110 saturate-105" 
           />
         </motion.button>
       )}
@@ -309,8 +309,8 @@ export default function JanIAWidget({ propertyId, leadId }: JanIAWidgetProps) {
             {/* Header */}
             <div className="bg-gradient-to-r from-black via-accent/20 to-black p-4 rounded-t-2xl flex items-center justify-between border-b border-accent/20">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full overflow-hidden glow-gold-sm">
-                  <video src="/jania.mp4" autoPlay loop muted playsInline className="w-full h-full object-cover" />
+                <div className="w-10 h-10 rounded-full overflow-hidden glow-gold-sm border border-primary/20 bg-black flex items-center justify-center">
+                  <video src="/jania.mp4" autoPlay loop muted playsInline className="w-[88%] h-[88%] rounded-full object-cover" />
                 </div>
                 <div>
                   <h3 className="text-primary font-bold text-sm tracking-widest uppercase">JanIA</h3>

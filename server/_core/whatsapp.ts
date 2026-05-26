@@ -667,7 +667,14 @@ export class WhatsAppBot {
       `  * 🚗 *Vehículos* recibidos como parte de pago.\n` +
       `  * 📈 *CDTs, divisas o activos alternativos* como complemento de negocio.\n` +
       `▸ *Matching Inteligente:* Cruzo ofertas y demandas en tiempo real y les aviso en el acto cuando hay negocio viable.`;
-    await this.queuedSend(this.targetGroupId, msg);
+
+    const imgPath = path.resolve('./client/public/jania_perfil.png');
+    if (fs.existsSync(imgPath)) {
+      const media = MessageMedia.fromFilePath(imgPath);
+      await this.queuedSend(this.targetGroupId, media, { caption: msg });
+    } else {
+      await this.queuedSend(this.targetGroupId, msg);
+    }
   }
 
   public async sendToGroup(text: string, mediaPath?: string, mentions?: string[]) {

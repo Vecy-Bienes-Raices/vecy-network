@@ -19,6 +19,17 @@ import {
 export function initCronScheduler() {
   console.log('[CRON-SERVICE] Inicializando orquestador de agendas automatizadas...');
 
+  // --- ANUNCIO DE RETORNO PROGRAMADO (26 de Mayo a las 10:30 AM) ---
+  cron.schedule('30 10 26 5 *', async () => {
+    console.log('[CRON-SERVICE] Disparando anuncio de retorno programado...');
+    try {
+      await whatsappBot.sendAnuncioRetorno();
+      console.log('✅ [CRON-SERVICE] Anuncio de retorno programado enviado con éxito.');
+    } catch (e: any) {
+      console.error('❌ [CRON-SERVICE] Fallo al enviar el anuncio programado:', e.message);
+    }
+  });
+
   // --- 1. BROADCASTS EDUCATIVOS E INSTITUCIONALES ---
 
   // 12:30 PM: Saludo multimedia y replicación en Facebook con embudo (v11.45)
@@ -157,7 +168,7 @@ async function sendMatchBulletin(periodName: string) {
     bulletin += `\n¡Colegas, los invito a abrir sus chats privados y ponerse en contacto de inmediato para cerrar la operación! 🚀`;
 
     // Pasamos el arreglo de JIDs para activar las menciones en WhatsApp
-    await whatsappBot.sendToGroup(bulletin, undefined, [...new Set(jidsToMention)]);
+    await whatsappBot.sendToGroup(bulletin, undefined, Array.from(new Set(jidsToMention)));
     console.log(`[CRON-SERVICE] Boletín ${periodName} enviado con ${matches.length} matches.`);
 
   } catch (error) {
