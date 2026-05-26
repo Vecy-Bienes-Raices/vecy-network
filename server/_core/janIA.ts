@@ -172,8 +172,17 @@ export async function processWhatsAppMessage(
         PENDING_SESSIONS.delete(userId);
 
         if (session.type === "PROPERTY") {
-          session.extractedData.zone = geoValidation.barrioCanonico;
-          session.extractedData.addressLocality = geoValidation.localidad;
+          if (geoValidation.isMunicipio) {
+            session.extractedData.city = geoValidation.barrioCanonico;
+            session.extractedData.addressCity = geoValidation.barrioCanonico;
+            session.extractedData.addressLocality = geoValidation.localidad;
+            session.extractedData.zone = geoValidation.barrioCanonico;
+          } else {
+            session.extractedData.city = "Bogotá";
+            session.extractedData.addressCity = "Bogotá";
+            session.extractedData.zone = geoValidation.barrioCanonico;
+            session.extractedData.addressLocality = geoValidation.localidad;
+          }
           
           const propertyTitle = session.extractedData.title || `${capitalize(session.extractedData.propertyType || 'inmueble')} en ${session.extractedData.zone || 'Bogotá'} para ${session.extractedData.transactionType || 'venta'}`;
           const saved = await saveProperty({
@@ -203,16 +212,25 @@ export async function processWhatsAppMessage(
           }
         } else {
           // REQUIREMENT
-          session.extractedData.zone = geoValidation.barrioCanonico;
-          session.extractedData.addressLocality = geoValidation.localidad;
+          if (geoValidation.isMunicipio) {
+            session.extractedData.ciudadDeseada = geoValidation.barrioCanonico;
+            session.extractedData.addressCity = geoValidation.barrioCanonico;
+            session.extractedData.addressLocality = geoValidation.localidad;
+            session.extractedData.zonaDeseada = geoValidation.barrioCanonico;
+          } else {
+            session.extractedData.ciudadDeseada = "Bogotá";
+            session.extractedData.addressCity = "Bogotá";
+            session.extractedData.zonaDeseada = geoValidation.barrioCanonico;
+            session.extractedData.addressLocality = geoValidation.localidad;
+          }
 
-          const reqTitle = session.extractedData.title || `Requerimiento de ${session.extractedData.propertyType || 'inmueble'} en ${geoValidation.barrioCanonico || 'Bogotá'} para ${session.extractedData.transactionType || 'venta'}`;
+          const reqTitle = session.extractedData.title || `Requerimiento de ${session.extractedData.propertyType || 'inmueble'} en ${session.extractedData.zonaDeseada || 'Bogotá'} para ${session.extractedData.transactionType || 'venta'}`;
           const saved = await saveRequirement({
             ...session.extractedData,
             name: reqTitle,
             tipoInmuebleDeseado: session.extractedData.propertyType,
             tipoNegocioDeseado: session.extractedData.transactionType,
-            zonaDeseada: geoValidation.barrioCanonico,
+            zonaDeseada: session.extractedData.zonaDeseada,
             presupuestoMax: String(session.extractedData.price || 0),
             idUsuarioWhatsapp: rawPhone,
             rawText: session.messageToProcess + " (Ubicación completada: " + text + ")",
@@ -300,9 +318,42 @@ export async function processWhatsAppMessage(
 
           return result;
         }
-        // Normalización Geográfica Nacional
-        if (isProperty) { extracted.zone = validation.barrioCanonico; extracted.addressLocality = validation.localidad; }
-        else { extracted.zonaDeseada = validation.barrioCanonico; extracted.addressLocality = validation.localidad; }
+        // Normalización Geográfica Nacional (v12.5)
+        if (validation.isMunicipio) {
+          // Fuera de Bogotá (Cali, Medellín, Tame, Tadó, etc.)
+          if (isProperty) {
+            extracted.city = validation.barrioCanonico;
+            extracted.addressCity = validation.barrioCanonico;
+            extracted.addressLocality = validation.localidad;
+            if (extracted.zone && normalizarTextoGeografico(extracted.zone) !== normalizarTextoGeografico(validation.barrioCanonico)) {
+              // Conservar barrio si el LLM extrajo algo más específico
+            } else {
+              extracted.zone = validation.barrioCanonico;
+            }
+          } else {
+            extracted.ciudadDeseada = validation.barrioCanonico;
+            extracted.addressCity = validation.barrioCanonico;
+            extracted.addressLocality = validation.localidad;
+            if (extracted.zonaDeseada && normalizarTextoGeografico(extracted.zonaDeseada) !== normalizarTextoGeografico(validation.barrioCanonico)) {
+              // Conservar
+            } else {
+              extracted.zonaDeseada = validation.barrioCanonico;
+            }
+          }
+        } else {
+          // Dentro de Bogotá
+          if (isProperty) {
+            extracted.city = "Bogotá";
+            extracted.addressCity = "Bogotá";
+            extracted.zone = validation.barrioCanonico;
+            extracted.addressLocality = validation.localidad;
+          } else {
+            extracted.ciudadDeseada = "Bogotá";
+            extracted.addressCity = "Bogotá";
+            extracted.zonaDeseada = validation.barrioCanonico;
+            extracted.addressLocality = validation.localidad;
+          }
+        }
       } else {
         // Falta zona del todo (Flujo B)
         result.classification = "DATOS_INCOMPLETOS";
@@ -500,6 +551,7 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
 
   const insertData = {
     ...data,
+    city: data.city || data.ciudadDeseada || "Bogotá",
     propertyType: sanitizePropertyType(data.propertyType),
     transactionType: sanitizeTransactionType(data.transactionType),
     currency: sanitizeCurrency(data.currency),
@@ -538,6 +590,7 @@ async function saveRequirement(data: any, userId: string, realName: string) {
 
   const insertData = {
     ...data,
+    ciudadDeseada: data.ciudadDeseada || data.city || "Bogotá",
     tipoInmuebleDeseado: sanitizePropertyType(data.tipoInmuebleDeseado || data.propertyType),
     tipoNegocioDeseado: sanitizeTransactionType(data.tipoNegocioDeseado || data.transactionType),
     monedaPresupuesto: sanitizeCurrency(data.monedaPresupuesto || data.currency),
