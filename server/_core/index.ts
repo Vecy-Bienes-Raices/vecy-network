@@ -27,6 +27,9 @@ async function startServer() {
 
   app.get("/api/list-chats", async (req, res) => {
     try {
+      if (!whatsappBot.isReady) {
+        return res.status(503).send("El bot de WhatsApp no está listo todavía. Intenta en unos segundos.");
+      }
       const client = (whatsappBot as any).client;
       if (!client) {
         return res.status(400).send("Client not available");
@@ -43,6 +46,9 @@ async function startServer() {
 
   app.get("/api/screenshot-chat", async (req, res) => {
     try {
+      if (!whatsappBot.isReady) {
+        return res.status(503).send("El bot de WhatsApp no está listo todavía. Intenta en unos segundos.");
+      }
       const client = (whatsappBot as any).client;
       const targetGroupId = (whatsappBot as any).targetGroupId;
 
@@ -89,6 +95,9 @@ async function startServer() {
 
   app.get("/api/send-comeback", async (req, res) => {
     try {
+      if (!whatsappBot.isReady) {
+        return res.status(503).send("El bot de WhatsApp no está listo todavía. Intenta en unos segundos.");
+      }
       await (whatsappBot as any).sendAnuncioRetorno();
       res.send("Anuncio de retorno enviado exitosamente al grupo.");
     } catch (err: any) {
@@ -98,6 +107,9 @@ async function startServer() {
 
   app.get("/api/find-active-group", async (req, res) => {
     try {
+      if (!whatsappBot.isReady) {
+        return res.status(503).send("El bot de WhatsApp no está listo todavía. Intenta en unos segundos.");
+      }
       const client = (whatsappBot as any).client;
       if (!client) {
         return res.status(400).send("No client available");
@@ -133,6 +145,9 @@ async function startServer() {
 
   app.get("/api/check-ack", async (req, res) => {
     try {
+      if (!whatsappBot.isReady) {
+        return res.status(503).send("El bot de WhatsApp no está listo todavía. Intenta en unos segundos.");
+      }
       const client = (whatsappBot as any).client;
       if (!client) {
         return res.status(400).send("No client available");

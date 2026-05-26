@@ -52,6 +52,7 @@ interface PendingEntry {
 export class WhatsAppBot {
   private client: ClientType;
   private targetGroupId: string = '120363260108880069@g.us';
+  public isReady: boolean = false;
   
   // Estructuras de control dinámicas
   private messageBuffers: Map<string, MessageBuffer> = new Map();
@@ -108,13 +109,20 @@ export class WhatsAppBot {
       try {
         if (this.messagesSentToday >= this.dailyMessageLimit) return;
 
-        await this.client.sendMessage(chatId, content, options);
+        // Promesa de envío con timeout de 15 segundos para evitar bloqueos por chats inaccesibles o páginas caídas
+        const sendPromise = this.client.sendMessage(chatId, content, options);
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error(`Timeout al enviar mensaje de WhatsApp a ${chatId}`)), 15000)
+        );
+
+        await Promise.race([sendPromise, timeoutPromise]);
+
         this.messagesSentToday++;
         console.log(`[WhatsApp-Bot] Mensaje enviado a ${chatId}. Total hoy: ${this.messagesSentToday}/${this.dailyMessageLimit}`);
         // Intervalo obligatorio de 10s a 15s
         await delay(Math.floor(Math.random() * 5000) + 10000);
-      } catch (err) {
-        console.error('[Anti-Burst-Queue] Fallo en despacho secuencial:', err);
+      } catch (err: any) {
+        console.error('[Anti-Burst-Queue] Fallo en despacho secuencial:', err.message || err);
       }
     });
     return outgoingQueue;
@@ -208,6 +216,12 @@ export class WhatsAppBot {
 
     this.client.on('ready', () => {
       console.log('\n🚀 JANIA v2.0 CORE v10.5 — SISTEMA NACIONAL ELÁSTICO ACTIVADO');
+      this.isReady = true;
+    });
+
+    this.client.on('disconnected', (reason) => {
+      console.log('[WHATSAPP-BOT] Cliente desconectado:', reason);
+      this.isReady = false;
     });
 
     this.client.on('group_join', async (notification: any) => {
