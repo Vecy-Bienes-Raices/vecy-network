@@ -340,6 +340,7 @@ export class WhatsAppBot {
     // Verificación de Cooldown (Anti-Spam - Solo aplica en Grupos)
     if (isGroupChat && cooldown && (now - cooldown.lastBlockProcessedAt < COOLDOWN_PERIOD)) {
       if (!cooldown.warningSent) {
+        cooldown.warningSent = true; // Establecer de inmediato síncronamente para evitar condiciones de carrera por concurrencia
         const rawPhone = (msg.author || msg.from).split("@")[0];
         const warningText = 
           `Estimado/a @${rawPhone}, procesé con éxito tus primeras propiedades. ` +
@@ -350,7 +351,6 @@ export class WhatsAppBot {
           mentions: [senderId],
           quotedMessageId: msg.id._serialized
         });
-        cooldown.warningSent = true;
       }
       return; // Detener procesamiento del mensaje excedente
     }
@@ -380,6 +380,7 @@ export class WhatsAppBot {
       if (buffer.messages.length >= MAX_BLOCK_SIZE) {
         console.log(`[BUFFER] Límite de bloque alcanzado para ${senderId}.`);
         if (!buffer.warningSent && isGroupChat) {
+          buffer.warningSent = true; // Establecer de inmediato síncronamente antes del await para evitar duplicados por concurrencia
           const warningText = 
             `⚠️ *LÍMITE DE PUBLICACIÓN* ⚠️\n\n` +
             `Hola @${rawPhone}, detecté que estás enviando muchas publicaciones seguidas. ` +
@@ -390,7 +391,6 @@ export class WhatsAppBot {
             mentions: [senderId],
             quotedMessageId: msg.id._serialized
           });
-          buffer.warningSent = true;
         }
         return;
       }
