@@ -169,7 +169,6 @@ async function startServer() {
       res.status(500).send(err.message);
     }
   });
-
   // tRPC API
   app.use(
     "/api/trpc",

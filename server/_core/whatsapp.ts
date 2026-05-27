@@ -38,6 +38,7 @@ interface MessageBuffer {
   imageBuffer?: string;
   chatId: string;
   originalMsg?: Message;
+  warningSent?: boolean;
 }
 
 interface PendingEntry {
@@ -339,15 +340,16 @@ export class WhatsAppBot {
     // Verificación de Cooldown (Anti-Spam - Solo aplica en Grupos)
     if (isGroupChat && cooldown && (now - cooldown.lastBlockProcessedAt < COOLDOWN_PERIOD)) {
       if (!cooldown.warningSent) {
-        const contact = await msg.getContact();
         const rawPhone = (msg.author || msg.from).split("@")[0];
-        const realName = contact.pushname || contact.name || `Asesor +${rawPhone}`;
         const warningText = 
-          `Estimado/a ${realName}, procesé con éxito tus primeras propiedades. ` +
+          `Estimado/a @${rawPhone}, procesé con éxito tus primeras propiedades. ` +
           `Para cuidar la visibilidad de tus activos y no saturar la red de los aliados, ` +
-          `por favor espera 5 minutes antes de enviar tu siguiente bloque. ¡JanIA sigue atenta para ayudarte a cerrar! 🏆`;
+          `por favor espera 5 minutos antes de enviar tu siguiente bloque (máximo 3 publicaciones por bloque). ¡JanIA sigue atenta para ayudarte a cerrar! 🏆`;
         
-        await this.queuedSend(senderId, warningText);
+        await this.queuedSend(chatId, warningText, {
+          mentions: [senderId],
+          quotedMessageId: msg.id._serialized
+        });
         cooldown.warningSent = true;
       }
       return; // Detener procesamiento del mensaje excedente
@@ -374,9 +376,22 @@ export class WhatsAppBot {
     let buffer = this.messageBuffers.get(bufferKey);
     
     if (buffer) {
-      // Si el bloque ya llegó a 3 mensajes, ignoramos los siguientes dentro de la misma ráfaga
+      // Si el bloque ya llegó a 3 mensajes, advertimos en el grupo y descartamos los excedentes
       if (buffer.messages.length >= MAX_BLOCK_SIZE) {
         console.log(`[BUFFER] Límite de bloque alcanzado para ${senderId}.`);
+        if (!buffer.warningSent && isGroupChat) {
+          const warningText = 
+            `⚠️ *LÍMITE DE PUBLICACIÓN* ⚠️\n\n` +
+            `Hola @${rawPhone}, detecté que estás enviando muchas publicaciones seguidas. ` +
+            `Para evitar saturar el grupo y permitir que procese todo correctamente, por favor publica un máximo de *3 publicaciones por bloque*, espera unos *5 minutos* y luego envía el siguiente grupo. ` +
+            `¡Tus primeras 3 publicaciones ya están en proceso! 🚀`;
+          
+          await this.queuedSend(chatId, warningText, {
+            mentions: [senderId],
+            quotedMessageId: msg.id._serialized
+          });
+          buffer.warningSent = true;
+        }
         return;
       }
 
@@ -463,7 +478,7 @@ export class WhatsAppBot {
       // 5. ACTIVAR COOLDOWN DE 5 MINUTOS (Tras procesar con éxito)
       this.cooldownMap.set(senderId, {
         lastBlockProcessedAt: Date.now(),
-        warningSent: false
+        warningSent: buffer.warningSent || false
       });
 
     } catch (e) {
