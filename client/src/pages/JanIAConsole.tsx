@@ -180,6 +180,7 @@ export default function JanIAConsole() {
   const [inputValue, setInputValue] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [selectedModel, setSelectedModel] = useState('pro'); // 'pro' | 'flash'
@@ -212,6 +213,19 @@ export default function JanIAConsole() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth <= 768;
+      setIsMobile(mobile);
+      if (mobile) {
+        setIsSidebarOpen(false);
+      }
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Sync historical messages
   useEffect(() => {
@@ -537,12 +551,22 @@ export default function JanIAConsole() {
 
   return (
     <div className="flex h-screen bg-[#050505] text-foreground selection:bg-primary/30 overflow-hidden font-sans">
+      {/* Backdrop for mobile when sidebar is open */}
+      {isMobile && isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 z-20 transition-opacity duration-300"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
       {/* Collapsible Sidebar */}
       <motion.aside 
         initial={false}
-        animate={{ width: isSidebarOpen ? 280 : 64 }}
+        animate={{ width: isSidebarOpen ? 280 : (isMobile ? 0 : 64) }}
         transition={{ duration: 0.2, ease: "easeInOut" }}
-        className="bg-[#0a0a0a] border-r border-white/5 flex flex-col z-30 h-full relative overflow-hidden"
+        className={`bg-[#0a0a0a] border-r border-white/5 flex flex-col z-30 h-full overflow-hidden ${
+          isMobile ? 'fixed left-0 top-0 shadow-2xl' : 'relative'
+        }`}
       >
         {/* Top brand area */}
         {isSidebarOpen ? (
@@ -710,6 +734,21 @@ export default function JanIAConsole() {
 
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col relative h-full bg-[#050505] overflow-hidden">
+        {/* Mobile Sidebar Toggle */}
+        {isMobile && !isSidebarOpen && (
+          <div className="absolute top-4 left-4 z-20">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => setIsSidebarOpen(true)} 
+              className="text-zinc-400 hover:text-white hover:bg-white/5 rounded-full w-9 h-9 flex items-center justify-center border border-white/10 bg-black/40 backdrop-blur-md"
+              title="Abrir menú"
+            >
+              <PanelLeft className="w-5 h-5 text-primary" />
+            </Button>
+          </div>
+        )}
+
         {/* Floating exit control at top right */}
         <div className="absolute top-4 right-6 z-20 flex items-center gap-3">
           <Button 
