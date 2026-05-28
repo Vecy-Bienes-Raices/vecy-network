@@ -315,13 +315,41 @@ export class WhatsAppBot {
     this.client.on('group_membership_request', async (notification: any) => {
       try {
         console.log(`[WHATSAPP-BOT] Recibida solicitud de unión de ${notification.author} en el grupo ${notification.chatId}`);
-        await this.client.approveGroupMembershipRequests(notification.chatId, {
-          requesterIds: [notification.author],
-          sleep: null
-        });
-        console.log(`[WHATSAPP-BOT] Solicitud de unión de ${notification.author} aprobada con éxito.`);
+        
+        let requesterId = notification.author;
+        let resolvedId: string | null = null;
+        
+        if (requesterId && requesterId.endsWith('@lid')) {
+          try {
+            const contact = await this.client.getContactById(requesterId);
+            if (contact && contact.id && contact.id._serialized && contact.id._serialized.endsWith('@c.us')) {
+              resolvedId = contact.id._serialized;
+              console.log(`[WHATSAPP-BOT] Resolviendo requester ID de LID ${requesterId} a ${resolvedId}`);
+            }
+          } catch (e: any) {
+            console.error('[WHATSAPP-BOT] Error resolviendo requester ID de LID:', e.message || e);
+          }
+        }
+
+        const idsToApprove = [requesterId];
+        if (resolvedId) {
+          idsToApprove.push(resolvedId);
+        }
+
+        for (const jid of idsToApprove) {
+          try {
+            console.log(`[WHATSAPP-BOT] Intentando aprobar solicitud de unión para JID: ${jid}`);
+            await this.client.approveGroupMembershipRequests(notification.chatId, {
+              requesterIds: [jid],
+              sleep: null
+            });
+            console.log(`[WHATSAPP-BOT] Solicitud de unión de ${jid} aprobada con éxito.`);
+          } catch (err: any) {
+            console.warn(`[WHATSAPP-BOT] Falló aprobación directa para ${jid}: ${err.message || err}`);
+          }
+        }
       } catch (err: any) {
-        console.error('[WHATSAPP-BOT] Error al aprobar solicitud de unión:', err.message || err);
+        console.error('[WHATSAPP-BOT] Error general al aprobar solicitud de unión:', err.message || err);
       }
     });
 
