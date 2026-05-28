@@ -921,8 +921,105 @@ Si mis motores no extraen todos los datos de tu link o imagen, te enviaré un me
 
 ⚖️ *Compromiso de Honor:* Si cierras un negocio gracias a un MATCH, califica mi servicio aquí: https://g.page/r/CctNbwU6UpX5EBM/review 🚀🎯`;
 
+
 export const MSG_CIERRE_OPERACIONES = `🌙 *CIERRE DE OPERACIONES VECY NETWORK* 🌙
 
 Gracias a todos por el profesionalismo en sus publicaciones hoy. Mi motor de cruce sigue procesando datos en silencio para que mañana despierten con nuevas oportunidades de MATCH.
 
 La persistencia y el trabajo colaborativo sin comisiones es el camino al éxito en el Real Estate. ¡Que tengan un excelente descanso, colegas! 🌙🚀`;
+
+export const MSG_PROMO_JANIA = `✨ *VECY NETWORK — ¡EL CAMBIO COMIENZA AQUÍ!* ✨
+━━━━━━━━━━━━━━━━━━━━━━
+
+🖼️ _"Quedarse en lo conocido por miedo a lo desconocido, equivale a mantenerse con vida, pero no vivir."_
+— **VECY Network**
+
+Colegas y aliados, ¡es hora de dar el paso adelante! 🚀 
+
+Nuestra creación **JanIA** y el proyecto **VECY Network** no fueron creados en vano. Estamos demostrando con hechos que la tecnología y la colaboración inmobiliaria sin intermediarios ni comisiones son 100% reales y efectivas. Pero para ver resultados aún más positivos y alcanzar el éxito masivo, **necesitamos que todos publiquemos de manera juiciosa y activa**. 
+
+¡Entre más propiedades y requerimientos registremos, más coincidencias y MATCHES generaremos para todos! 🎯📈
+
+💡 **¿Cómo puedes publicar para que yo (JanIA) procese tus negocios?**
+1️⃣ 🔗 *Comparte enlaces de CRM o Portales:* Envía el link de tu inmueble y extraeré la ficha técnica al instante.
+2️⃣ 🖼️ *Sube Flyers o Imágenes:* Mis motores de visión OCR escanearán y leerán el texto de la imagen de inmediato.
+3️⃣ 🎙️ *Envía Notas de voz o Texto libre:* Escríbeme o háblame en lenguaje natural detallando requerimientos, ofertas o permutas.
+4️⃣ 🔄 *Estructura Permutas Complejas:* Recibe vehículos, propiedades de menor valor, CDTs o divisas como parte de pago.
+
+📢 **¡Haz crecer nuestra comunidad!**
+Te animamos a compartir este mensaje con otros colegas de confianza y a invitarlos a unirse a nuestra red colaborativa usando este enlace de invitación:
+👉 https://chat.whatsapp.com/K36KrHeB9nMEKJ56s8XFcM
+
+¡Hagamos equipo y demostremos que sí somos capaces de revolucionar el sector inmobiliario! 🏆💪`;
+
+/**
+ * Procesa una consulta para el Buzón de Consultoría Inmobiliaria 24/7.
+ * Soporta consultas jurídicas en Colombia y avalúos rápidos/análisis de mercado con búsqueda en internet.
+ */
+export async function processConsultingMessage(
+  text: string, 
+  userId: string, 
+  userName?: string,
+  imageBuffer?: string
+): Promise<JanIAResult> {
+  try {
+    const rawPhone = userId.split('@')[0];
+    const realName = userName && userName.trim() !== "" ? userName : `Asesor +${rawPhone}`;
+    const n = realName.split(' ')[0];
+
+    // Detectar si es una solicitud de avalúo, valor de venta, arriendo o precio del metro cuadrado
+    const textLower = text.toLowerCase();
+    const isValuationQuery = 
+      textLower.includes("valuar") || 
+      textLower.includes("avaluo") || 
+      textLower.includes("avalúo") || 
+      textLower.includes("cuanto vale") || 
+      textLower.includes("cuánto vale") || 
+      textLower.includes("valor metro cuadrado") || 
+      textLower.includes("valor m2") || 
+      textLower.includes("precio metro cuadrado") || 
+      textLower.includes("precio m2") || 
+      textLower.includes("cuanto puedo cobrar") || 
+      textLower.includes("cuánto puedo cobrar") || 
+      textLower.includes("en que valor") || 
+      textLower.includes("en qué valor") || 
+      textLower.includes("estimar precio");
+
+    const systemPrompt = 
+      `Eres JanIA, la Inteligencia Artificial especialista en Consultoría Jurídica y Comercial Inmobiliaria en Colombia para la red VECY Network. ` +
+      `Estás operando en el grupo "Buzón de Consultoría Inmobiliaria 24/7". Tu objetivo es responder con precisión quirúrgica, fundamentándote en la ley colombiana ` +
+      `(ej. Ley 820 de 2003 para arrendamientos, Código Civil, Código de Comercio para corretaje, etc.) y guiar paso a paso a los agentes inmobiliarios en sus trámites diarios ` +
+      `(como obtener certificados de tradición, paz y salvos del IDU, liquidación de prediales, tutelas, derechos de petición, etc.).\n\n` +
+      `Si el usuario te pide estimar el valor de un inmueble o del metro cuadrado en una zona (Bogotá o a nivel nacional), usa tus capacidades de búsqueda en internet ` +
+      `para encontrar publicaciones reales recientes en portales inmobiliarios de esa zona. Analiza los precios y calcula un valor estimado promedio por metro cuadrado. ` +
+      `Si el usuario te proporciona datos adicionales como dirección exacta, barrio, localidad, o ciudad, utilízalos para refinar tu búsqueda. Presenta un informe de avalúo rápido, claro, estructurado y profesional.\n\n` +
+      `Tus respuestas deben ser sumamente profesionales, cordiales, claras y estar formateadas en Markdown con emojis para facilitar la lectura rápida en WhatsApp. ` +
+      `Siempre dirígete al usuario de forma personalizada llamándolo por su primer nombre: ${n}.`;
+
+    const messages = [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: `Usuario: @${rawPhone} (${realName})\nConsulta: ${text}` }
+    ];
+
+    // Si es una solicitud de avalúo o contiene palabras clave de valor, activamos enableSearch para que Gemini busque en internet
+    const llmRes = await invokeLLM({
+      messages,
+      imageBuffer,
+      enableSearch: isValuationQuery
+    });
+
+    const replyContent = llmRes.choices[0].message.content || "Lo siento, en este momento no puedo procesar tu consulta. Intenta de nuevo más tarde.";
+
+    return {
+      classification: "CONSULTA_GENERAL",
+      response: replyContent
+    };
+
+  } catch (error: any) {
+    console.error("[processConsultingMessage Error]:", error.message);
+    return {
+      classification: "CONSULTA_GENERAL",
+      response: "⚠️ Ocurrió un error interno al procesar tu consulta jurídica. Por favor intenta de nuevo en unos momentos."
+    };
+  }
+}

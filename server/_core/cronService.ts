@@ -11,7 +11,8 @@ import {
   MSG_PAUTAS_FORMATOS,
   MSG_TIPS_CALIDAD_COBERTURA,
   MSG_RESUMEN_RETORNO_PRESENTACION,
-  MSG_CIERRE_OPERACIONES
+  MSG_CIERRE_OPERACIONES,
+  MSG_PROMO_JANIA
 } from './janIA';
 
 /**
@@ -50,6 +51,12 @@ export function initCronScheduler() {
     await whatsappBot.sendToGroup(MSG_TIPS_CALIDAD_COBERTURA);
   });
 
+  // 4.5. 11:30 AM = Publicación Promocional Diaria (Mañana)
+  cron.schedule('30 11 * * *', async () => {
+    console.log('[CRON-SERVICE] Enviando Publicación Promocional Diaria (Mañana)...');
+    await whatsappBot.broadcastToAllGroups(MSG_PROMO_JANIA, './client/public/jania_post.png');
+  });
+
   // 5. 12:30 PM = Saludo del Medio Día (Facebook replication commented out)
   cron.schedule('30 12 * * *', async () => {
     console.log('[CRON-SERVICE] Enviando Saludo del Medio Día...');
@@ -63,7 +70,7 @@ export function initCronScheduler() {
       `¡Hagamos que hoy sea un día de cierres masivos! 🏆`;
       
     const videoPath = './client/public/vecy_inmuebles_network.mp4';
-    await whatsappBot.sendToGroup(motivation, videoPath);
+    await whatsappBot.broadcastToAllGroups(motivation, videoPath);
 
     // DESACTIVADO POR AHORA: Replicación en Facebook Groups con Embudo
     // try {
@@ -98,6 +105,12 @@ export function initCronScheduler() {
   cron.schedule('30 15 * * *', async () => {
     console.log('[CRON-SERVICE] Enviando Resumen Unificado de Retorno y Presentación...');
     await whatsappBot.sendToGroup(MSG_RESUMEN_RETORNO_PRESENTACION);
+  });
+
+  // 7.5. 04:30 PM = Publicación Promocional Diaria (Tarde)
+  cron.schedule('30 16 * * *', async () => {
+    console.log('[CRON-SERVICE] Enviando Publicación Promocional Diaria (Tarde)...');
+    await whatsappBot.broadcastToAllGroups(MSG_PROMO_JANIA, './client/public/jania_post.png');
   });
 
   // 8. 05:00 PM = Estatuto y Frecuencia

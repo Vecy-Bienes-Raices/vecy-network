@@ -11,23 +11,25 @@ export async function invokeLLM({
   messages, 
   responseFormat, 
   provider = "google",
-  imageBuffer
+  imageBuffer,
+  enableSearch = false
 }: { 
   messages: any[], 
   responseFormat?: any,
   provider?: LLMProvider,
-  imageBuffer?: string
+  imageBuffer?: string,
+  enableSearch?: boolean
 }): Promise<{ choices: { message: { content: string } }[] }> {
   if (provider === "anthropic") {
     return await invokeClaude(messages, responseFormat) as any;
   }
-  return await invokeGemini(messages, responseFormat, imageBuffer);
+  return await invokeGemini(messages, responseFormat, imageBuffer, enableSearch);
 }
 
 /**
  * Invocación a Google Gemini (Google AI Studio) utilizando la infraestructura de frontera 3.1 Flash-Lite
  */
-async function invokeGemini(messages: any[], responseFormat?: any, imageBuffer?: string) {
+async function invokeGemini(messages: any[], responseFormat?: any, imageBuffer?: string, enableSearch?: boolean) {
   const API_KEY = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || ENV.forgeApiKey;
   // Migración estratégica al modelo de bajo costo para pruebas masivas
   const MODEL = "gemini-3.1-flash-lite";
@@ -56,7 +58,7 @@ async function invokeGemini(messages: any[], responseFormat?: any, imageBuffer?:
       };
     });
 
-    const payload = {
+    const payload: any = {
       contents,
       systemInstruction: systemMessage ? { parts: [{ text: systemMessage.content }] } : undefined,
       generationConfig: {
@@ -68,7 +70,11 @@ async function invokeGemini(messages: any[], responseFormat?: any, imageBuffer?:
       }
     };
 
-    console.log(`[JanIA-LLM] Procesando con infraestructura optimizada: Gemini (${MODEL})...`);
+    if (enableSearch) {
+      payload.tools = [{ googleSearch: {} }];
+    }
+
+    console.log(`[JanIA-LLM] Procesando con infraestructura optimizada: Gemini (${MODEL}) [Search: ${enableSearch}]...`);
     const response = await axios.post(API_URL, payload);
 
     if (response.data.candidates && response.data.candidates[0]) {

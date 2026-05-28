@@ -6,6 +6,7 @@ import qrcode from 'qrcode-terminal';
 import { scrapePropertyLink, esDominioPermitido } from './scraper';
 import { 
   processWhatsAppMessage, 
+  processConsultingMessage,
   generateWelcomeMessage,
   MSG_PRESENTACION_INSTITUCIONAL,
   MSG_PAUTAS_FORMATOS
@@ -52,6 +53,8 @@ interface PendingEntry {
 export class WhatsAppBot {
   private client: ClientType;
   private targetGroupId: string = '120363260108880069@g.us';
+  private buzonGroupId: string = '120363260445880355@g.us';
+  private circuloGroupId: string = '120363403507276533@g.us';
   public isReady: boolean = false;
   
   // Estructuras de control dinámicas
@@ -287,6 +290,7 @@ export class WhatsAppBot {
         const chatId = chat.id._serialized;
         const isGroup = chat.isGroup;
         const isTargetGroup = chatId === this.targetGroupId;
+        const isBuzonGroup = chatId === this.buzonGroupId;
 
         // 1. RAMA DE GRUPO (VECY INMUEBLES NETWORK)
         if (isTargetGroup) {
@@ -299,6 +303,12 @@ export class WhatsAppBot {
             }
           }
           // Orquestación con Buffer y Cooldown (Lógica v10.5 intacta)
+          await this.handleIncomingMessage(msg, chatId);
+          return;
+        }
+
+        // NUEVO: RAMA DE GRUPO (BUZÓN DE CONSULTORÍA 24/7)
+        if (isBuzonGroup) {
           await this.handleIncomingMessage(msg, chatId);
           return;
         }
@@ -370,10 +380,10 @@ export class WhatsAppBot {
     const MAX_BLOCK_SIZE = 3;             // Máximo 3 mensajes por bloque
 
     let cooldown = this.cooldownMap.get(senderId);
-    const isGroupChat = chatId.includes('@g.us');
 
-    // Verificación de Cooldown (Anti-Spam - Solo aplica en Grupos)
-    if (isGroupChat && cooldown && (now - cooldown.lastBlockProcessedAt < COOLDOWN_PERIOD)) {
+    // Verificación de Cooldown (Anti-Spam - Solo aplica en el grupo principal VECY INMUEBLES NETWORK)
+    const isMainGroup = chatId === this.targetGroupId;
+    if (isMainGroup && cooldown && (now - cooldown.lastBlockProcessedAt < COOLDOWN_PERIOD)) {
       if (!cooldown.warningSent) {
         cooldown.warningSent = true; // Establecer de inmediato síncronamente para evitar condiciones de carrera por concurrencia
         const rawPhone = (msg.author || msg.from).split("@")[0];
@@ -487,12 +497,16 @@ export class WhatsAppBot {
       const pending = isDM ? this.pendingData.get(senderId) : null;
 
       let result;
-      if (pending && Date.now() < pending.expiresAt) {
-        const combinedText = `[CONTEXTO]: "${pending.originalText}"\n[RESPUESTA]: "${fullText}"`;
-        this.pendingData.delete(senderId);
-        result = await processWhatsAppMessage(combinedText, senderId, userName, false, [], undefined, imageBuffer);
+      if (chatId === this.buzonGroupId) {
+        result = await processConsultingMessage(fullText, senderId, userName, imageBuffer);
       } else {
-        result = await processWhatsAppMessage(fullText, senderId, userName, hasMedia, scrapedResults, undefined, imageBuffer);
+        if (pending && Date.now() < pending.expiresAt) {
+          const combinedText = `[CONTEXTO]: "${pending.originalText}"\n[RESPUESTA]: "${fullText}"`;
+          this.pendingData.delete(senderId);
+          result = await processWhatsAppMessage(combinedText, senderId, userName, false, [], undefined, imageBuffer);
+        } else {
+          result = await processWhatsAppMessage(fullText, senderId, userName, hasMedia, scrapedResults, undefined, imageBuffer);
+        }
       }
 
       // 4. Orquestación de Respuestas (Silencio de Oro / Flujos DM)
@@ -697,7 +711,7 @@ export class WhatsAppBot {
   }
 
   public async sendAnuncioRetorno() {
-    let msg = `🚀 *¡JANIA ESTÁ DE VUELTA Y MÁS AFILADA QUE NUNCA!* 🤖🏛️\n\n` +
+    const baseMsg = `🚀 *¡JANIA ESTÁ DE VUELTA Y MÁS AFILADA QUE NUNCA!* 🤖🏛️\n\n` +
       `¡Hola de nuevo, colegas y aliados! 👋 Tras un breve ajuste técnico para fortalecer nuestra infraestructura y preparar el lanzamiento del nuevo portal web privado, estoy de vuelta en el canal para encontrar esos MATCH tan deseados.\n\n` +
       `Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores más afilados que nunca para cuidar la calidad de la red y acelerar nuestros cierres:\n\n` +
       `🧠 *¿Qué puedo hacer por ti en esta v2.0?*\n` +
@@ -711,30 +725,45 @@ export class WhatsAppBot {
       `▸ *Matching Inteligente:* Cruzo ofertas y demandas en tiempo real y les aviso en el acto cuando hay negocio viable.`;
 
     const jidsToMention: string[] = [];
+    let welcomePart = '';
     if (this.pendingWelcomeJids && this.pendingWelcomeJids.length > 0) {
-      msg += `\n\n━━━━━━━━━━━━━━━━━━━━━━\n` +
+      welcomePart += `\n\n━━━━━━━━━━━━━━━━━━━━━━\n` +
              `✨ *¡BIENVENIDOS A LA RED VECY NETWORK!* ✨\n` +
              `Damos una calurosa bienvenida a los nuevos aliados que se han unido a nuestro ecosistema colaborativo:\n`;
       
       this.pendingWelcomeJids.forEach((jid) => {
         const phone = jid.split('@')[0];
-        msg += `▸ @${phone}\n`;
+        welcomePart += `▸ @${phone}\n`;
         jidsToMention.push(jid);
       });
       
-      msg += `\nYa estoy 100% activa para escanear sus publicaciones y buscarles cierres sin cobro de comisiones. ¡Muchos éxitos en sus negocios! 🚀🎯`;
-      
+      welcomePart += `\nYa estoy 100% activa para escanear sus publicaciones y buscarles cierres sin cobro de comisiones. ¡Muchos éxitos en sus negocios! 🚀🎯`;
+    }
+
+    const groups = [this.targetGroupId, this.buzonGroupId, this.circuloGroupId];
+    const imgPath = path.resolve('./client/public/jania_perfil.png');
+
+    for (const group of groups) {
+      try {
+        const isMain = group === this.targetGroupId;
+        const msgToSend = isMain ? (baseMsg + welcomePart) : baseMsg;
+        const mentions = isMain ? jidsToMention : [];
+
+        if (fs.existsSync(imgPath)) {
+          const media = MessageMedia.fromFilePath(imgPath);
+          await this.queuedSend(group, media, { caption: msgToSend, mentions });
+        } else {
+          await this.queuedSend(group, msgToSend, { mentions });
+        }
+      } catch (e: any) {
+        console.error(`Error enviando anuncio de retorno al grupo ${group}:`, e.message);
+      }
+    }
+
+    if (this.pendingWelcomeJids && this.pendingWelcomeJids.length > 0) {
       this.pendingWelcomeJids = [];
       this.pendingWelcomeCount = 0;
       this.saveCounter();
-    }
-
-    const imgPath = path.resolve('./client/public/jania_perfil.png');
-    if (fs.existsSync(imgPath)) {
-      const media = MessageMedia.fromFilePath(imgPath);
-      await this.queuedSend(this.targetGroupId, media, { caption: msg, mentions: jidsToMention });
-    } else {
-      await this.queuedSend(this.targetGroupId, msg, { mentions: jidsToMention });
     }
   }
 
@@ -750,6 +779,23 @@ export class WhatsAppBot {
       }
     } catch (e) {
       console.error('[WHATSAPP-BOT] Error enviando mensaje al grupo:', e);
+    }
+  }
+
+  public async broadcastToAllGroups(text: string, mediaPath?: string, mentions?: string[]) {
+    const groups = [this.targetGroupId, this.buzonGroupId, this.circuloGroupId];
+    for (const group of groups) {
+      try {
+        const options: any = { mentions: mentions || [] };
+        if (mediaPath) {
+          const media = MessageMedia.fromFilePath(path.resolve(mediaPath));
+          await this.queuedSend(group, media, { ...options, caption: text });
+        } else {
+          await this.queuedSend(group, text, options);
+        }
+      } catch (err: any) {
+        console.error(`[WHATSAPP-BOT] Error al transmitir al grupo ${group}:`, err.message || err);
+      }
     }
   }
 

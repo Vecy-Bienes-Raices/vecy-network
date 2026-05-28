@@ -44,6 +44,34 @@ async function startServer() {
     }
   });
 
+  app.get("/api/inspect-groups", async (req, res) => {
+    try {
+      if (!whatsappBot.isReady) {
+        return res.status(503).send("El bot de WhatsApp no está listo todavía.");
+      }
+      const client = (whatsappBot as any).client;
+      if (!client) {
+        return res.status(400).send("Client not available");
+      }
+      const chats = await client.getChats();
+      const list = [];
+      for (const chat of chats) {
+        if (chat.isGroup) {
+          const groupChat = chat as any;
+          list.push({
+            id: groupChat.id._serialized,
+            name: groupChat.name,
+            isReadOnly: groupChat.isReadOnly,
+            participantsCount: groupChat.participants ? groupChat.participants.length : 0
+          });
+        }
+      }
+      res.json(list);
+    } catch (err: any) {
+      res.status(500).send(err.message);
+    }
+  });
+
   app.get("/api/screenshot-chat", async (req, res) => {
     try {
       if (!whatsappBot.isReady) {
