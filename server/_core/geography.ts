@@ -41,7 +41,7 @@ export const DICCIONARIO_BOGOTA: Record<string, { localidad: string, barrios: st
     localidad: "Barrios Unidos",
     barrios: [
       "Doce de Octubre", "Los Andes", "Polo Club", "Jorge Eliécer Gaitán",
-      "La Patria", "Alcázares", "Siete de Agosto", "Lourdes"
+      "La Patria", "Alcázares", "Siete de Agosto", "Lourdes", "San Felipe"
     ]
   },
   "teusaquillo": {
@@ -251,7 +251,7 @@ export function validarZona(zona: string, ciudad?: string, textoCompleto?: strin
     };
   }
 
-  // 2. Intentar buscar un lugar en Colombia usando la ciudad extraída, la zona extraída, o el texto completo
+  // 2. PRIORIDAD 1: Si el usuario especificó una ciudad nacional explícita (que NO sea Bogotá), validar a nivel nacional
   let lugar: any = null;
   const normSimple = (txt: string) => txt.toLowerCase()
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
@@ -260,15 +260,42 @@ export function validarZona(zona: string, ciudad?: string, textoCompleto?: strin
 
   if (normCity && normCity !== "bogota") {
     lugar = buscarLugarColombia(ciudad!);
+    if (lugar && normSimple(lugar.nombreCanonico) !== "bogota") {
+      const cleanText = (txt: string) => txt.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .split(' ')
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join(' ');
+
+      return {
+        isValid: true,
+        barrioCanonico: zona ? zona.trim() : cleanText(lugar.nombreCanonico),
+        localidad: cleanText(lugar.departamento),
+        city: cleanText(lugar.nombreCanonico),
+        isMunicipio: true
+      };
+    }
   }
-  if (!lugar && normZone) {
+
+  // 3. PRIORIDAD 2: Si no hay ciudad nacional explícita, ver si coincide exactamente con un barrio/municipio registrado en Bogotá o Sabana
+  if (MAPA_BARRIOS[normZone]) {
+    const info = MAPA_BARRIOS[normZone];
+    return {
+      isValid: true,
+      barrioCanonico: info.barrioCanonico,
+      localidad: info.localidad,
+      city: info.isMunicipio ? info.barrioCanonico : "Bogotá",
+      isMunicipio: info.isMunicipio || false
+    };
+  }
+
+  // 4. PRIORIDAD 3: Fallback nacional (si no está registrado localmente y se detecta una zona/ciudad nacional)
+  if (normZone) {
     lugar = buscarLugarColombia(zona);
   }
   if (!lugar && textoCompleto) {
     lugar = buscarLugarColombia(textoCompleto);
   }
 
-  // Si encontramos un lugar nacional fuera de Bogotá
   if (lugar && normSimple(lugar.nombreCanonico) !== "bogota") {
     const cleanText = (txt: string) => txt.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
       .split(' ')
@@ -287,19 +314,7 @@ export function validarZona(zona: string, ciudad?: string, textoCompleto?: strin
     };
   }
 
-  // 3. Si es en Bogotá (o si no se detectó otra ciudad)
-  // Si coincide exactamente con un barrio/municipio registrado
-  if (MAPA_BARRIOS[normZone]) {
-    const info = MAPA_BARRIOS[normZone];
-    return {
-      isValid: true,
-      barrioCanonico: info.barrioCanonico,
-      localidad: info.localidad,
-      city: info.isMunicipio ? info.barrioCanonico : "Bogotá",
-      isMunicipio: info.isMunicipio || false
-    };
-  }
-
+  // 5. PRIORIDAD 4: Validaciones de datos incompletos locales (Localidades solas o sectores amplios)
   // Si es una localidad completa (sin especificar barrio)
   if (MAPA_LOCALIDADES[normZone]) {
     return {
@@ -319,7 +334,7 @@ export function validarZona(zona: string, ciudad?: string, textoCompleto?: strin
     };
   }
 
-  // === PASO 4: Zona completamente desconocida ===
+  // === PASO 5: Zona completamente desconocida ===
   return {
     isValid: false,
     errorType: "DATOS_INCOMPLETOS",
