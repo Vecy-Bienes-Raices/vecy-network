@@ -10,35 +10,33 @@ import { whatsappBot } from '../server/_core/whatsapp';
 const SAMBONI_JID = '573112469375@c.us';
 
 const MENSAJE_RETO =
-`👋 *Un momento de atención, comunidad* 👋
+`👋 *Un momento de atención, comunidad de Círculo CERO* 👌
 
-Mis sensores detectaron una publicación promocional de *UBICAPP* aquí en el canal. Saludo con respeto al colega y emprendedor @573112469375 — *Christian Samboni*, fundador de Ubicapp, agente inmobiliario vallecaucano y hombre de muchos talentos. 🤝
+Saludo con respeto al colega @573112469375 — *Christian Samboni*, fundador de Ubicapp. 🤝
 
-Como me parece un tema de alto valor para nuestra comunidad, y dado que mencionas una plataforma que comparte —en la superficie— objetivos similares a los de VECY Network, me permito abrir un debate técnico y transparente para que la comunidad decida con información real:
+Christian, como asistente de moderación, lo primero que debo preguntarte con total cordialidad es: *¿por qué motivo decidiste ir en contra de las normas de convivencia del grupo haciendo publicidad directa de tu aplicación aquí, sabiendo que este canal está reservado exclusivamente para el desarrollo de la comunidad VECY?* 🚫⚠️
 
-🎤 *CHRISTIAN, TE HAGO 6 PREGUNTAS CONCRETAS.* 🎤
+Sin embargo, en lugar de aplicar una sanción automática, preferimos actuar con cordura y altura profesional. Por ello, **te invito formalmente a iniciar un debate público y constructivo en este grupo** para comparar objetivamente las diferencias, alcances y realidades entre nuestro ecosistema web **VECY NETWORK** y tu aplicación **UBICAPP**. 
 
-📌 *1. RESULTADOS VERIFICABLES:*
-Desde el lanzamiento de Ubicapp en la Cámara de Comercio de Bogotá (abril 2024), ¿cuántos negocios inmobiliarios reales, con nombre de asesor y ciudad, se han cerrado *gracias a tu plataforma*? ¿Tienes un solo caso documentado fuera de Bogotá?
+Para comenzar este debate técnico, me gustaría hacerte algunas preguntas muy puntuales:
 
-📌 *2. MASA CRÍTICA EN REGIONES:*
-Tu app depende de que haya suficientes agentes registrados en cada ciudad para que el matching funcione. ¿Cuántos agentes activos tienes hoy en Tuluá, Sogamoso, Apartadó o Riohacha? ¿Un asesor allá puede hacer un match real hoy?
+📌 *1. RESULTADOS REALES VS. EXPECTATIVAS:*
+A pesar del tiempo que lleva operando Ubicapp, en el gremio no hemos escuchado testimonios o relatos reales de aliados que confirmen haber cerrado negocios definitivos y cobrado comisiones gracias a los matches de tu APP. ¿Podrías compartirnos hoy casos de éxito verificables, con nombres de asesores y ciudades, que demuestren cierres reales?
 
-📌 *3. EL COSTO REAL:*
-$100.000 COP/mes × 12 = $1.200.000 COP/año por asesor. ¿Qué le ofreces a un asesor independiente de estrato medio que ya trabaja gratis con WhatsApp para justificar ese gasto recurrente?
+📌 *2. INFRAESTRUCTURA TECNOLÓGICA:*
+¿Cómo funciona realmente la arquitectura de Ubicapp por dentro? ¿Los inmuebles y requerimientos de tus usuarios se almacenan en una base de datos relacional robusta y escalable con motores de indexación semántica, o tu sistema corre detrás de escena sobre un esquema básico de hojas de cálculo tipo Google Sheets (.xls)? 📊💻
 
-📌 *4. EL MODELO 50/50:*
-¿La comisión compartida entre agentes es voluntaria u obligatoria dentro de Ubicapp? Si yo consigo un comprador para un inmueble que encontré en tu app, ¿puedo quedarme con el 100% de mi comisión?
+📌 *3. BARRERAS DE ADOPCIÓN Y COSTOS:*
+VECY Network opera de forma nativa en WhatsApp (donde ya viven más de 40 millones de colombianos y todo el gremio inmobiliario) de manera 100% gratuita y sin comisiones. Ubicapp exige descargar una app, registrarse en formularios manuales y pagar una suscripción de $100.000 COP mensuales ($1.200.000 COP al año por agente). ¿Cómo justificas ese costo recurrente para el asesor independiente frente al modelo de fricción cero y costo cero de VECY?
 
-📌 *5. INTELIGENCIA ARTIFICIAL REAL:*
-¿Tu app lee una nota de voz y extrae automáticamente los datos del inmueble sin que el asesor escriba nada? ¿Hace OCR de un flyer en segundos? ¿Busca datos en Fincaraiz o Metrocuadrado automáticamente para completar la ficha técnica? ¿O el asesor sigue llenando formularios manualmente?
+📌 *4. EL ESQUEMA DE COMISIONES:*
+En VECY, el match es libre y la comisión es 100% del asesor. En Ubicapp se promueve un esquema rígido del 50/50. ¿Es este porcentaje obligatorio para operar en tu plataforma o el asesor es verdaderamente dueño de sus honorarios?
 
-📌 *6. LA PREGUNTA QUE IMPORTA:*
-VECY Network es gratuito para siempre, nativo de WhatsApp (sin descarga adicional), con IA multimodal en tiempo real, comisiones 100% del asesor y cobertura en los 32 departamentos desde el primer día. Y además tenemos un portal de nueva generación en construcción que no va a ser otra vitrina pasiva como Fincaraiz. ¿En qué punto específico y concreto te diferencias?
+---
 
-🤝 El debate está abierto, Christian. Aquí hay profesionales serios que merecen información real para tomar decisiones. La pelota es tuya.
+La comunidad de aliados del Círculo CERO está compuesta por profesionales serios que merecen claridad y datos técnicos. Quedo atenta a tu respuesta, Christian. La pelota está en tu cancha. 🎾🎯
 
-_— JanIA · Inteligencia Estratégica de VECY Network 🚀_`;
+*— JanIA · Inteligencia Estratégica de VECY Network 🚀*`;
 
 async function main() {
   console.log('⏳ Esperando que el bot de WhatsApp esté listo...');
