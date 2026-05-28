@@ -574,6 +574,31 @@ export async function processWhatsAppMessage(
       }
     }
 
+    // Intercepción de consultas en el grupo de inmuebles para redirigir
+    const isConsultation = result.classification === "CONSULTA_GENERAL" || result.classification === "RESPUESTA_A_PREGUNTA_IA" || result.classification === "ANALISIS_DE_MERCADO";
+    if (isConsultation) {
+      const textLower = messageToProcess.toLowerCase();
+      const isAboutVecy = 
+        textLower.includes("vecy") || 
+        textLower.includes("proyecto") || 
+        textLower.includes("quien creo") || 
+        textLower.includes("quién creó") || 
+        textLower.includes("creadores") || 
+        textLower.includes("quien es jania") || 
+        textLower.includes("quién es jania") ||
+        textLower.includes("como funciona") || 
+        textLower.includes("cómo funciona") ||
+        textLower.includes("circulo cero") ||
+        textLower.includes("círculo cero");
+
+      if (isAboutVecy) {
+        result.response = `👌 *CÍRCULO CERO — CONEXIÓN VECY* 👌\n\nHola @${rawPhone}, veo que tienes dudas o quieres saber más sobre el proyecto VECY Network, beneficios, creadores o el plan colaborativo. Te invito a unirte y hacer tus preguntas en nuestro canal oficial **Círculo CERO 👌**:\n👉 https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU\n\n¡Es el espacio ideal para resolver todas tus inquietudes de la comunidad! 🤝✨`;
+      } else {
+        result.response = `💡 *BUZÓN DE CONSULTORÍA INMOBILIARIA* 💡\n\nHola @${rawPhone}, veo que tienes una consulta jurídica, procedimental o de avalúo. Para darte una respuesta detallada con mis motores legales y de mercado sin saturar este canal de ofertas y requerimientos, te invito a realizar tu pregunta en nuestro grupo especializado **Buzón de Consultoría Inmobiliaria 24/7**:\n👉 https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6\n\n¡Allí te responderé al instante con toda la información! 🚀🎯`;
+      }
+      result.classification = "CONSULTA_GENERAL";
+    }
+
     return result;
   } catch (error) {
     console.error("Error en JanIA v11.70:", error);
@@ -966,9 +991,56 @@ export async function processConsultingMessage(
     const rawPhone = userId.split('@')[0];
     const realName = userName && userName.trim() !== "" ? userName : `Asesor +${rawPhone}`;
     const n = realName.split(' ')[0];
+    const textLower = text.toLowerCase();
+
+    // 1. Redirección a VECY INMUEBLES NETWORK si parece una oferta o requerimiento comercial
+    const isListingOrReq = 
+      textLower.includes("vendo") || 
+      textLower.includes("arriendo") || 
+      textLower.includes("rento") || 
+      textLower.includes("permuto") || 
+      textLower.includes("busco") || 
+      textLower.includes("requiero") || 
+      textLower.includes("habs") || 
+      textLower.includes("baños") || 
+      textLower.includes("parqueadero") || 
+      textLower.includes("area") || 
+      textLower.includes("área") || 
+      textLower.includes("presupuesto") || 
+      textLower.includes("valor:") || 
+      textLower.includes("precio:") || 
+      textLower.includes("https://") || 
+      textLower.includes("http://");
+
+    if (isListingOrReq) {
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: `📢 *VECY INMUEBLES NETWORK* 📢\n\nHola @${rawPhone}, detecté que estás publicando una oferta o requerimiento inmobiliario. Para poder procesar tu publicación con mis motores automáticos, registrar tus datos y buscarte un MATCH de inmediato con otros aliados, por favor realiza tu publicación en nuestro grupo especializado **VECY INMUEBLES NETWORK**:\n👉 https://chat.whatsapp.com/K36KrHeB9nMEKJ56s8XFcM\n\n¡Hagamos equipo y cerremos negocios! 🚀🎯`
+      };
+    }
+
+    // 2. Redirección a Círculo Cero si preguntan cosas sobre VECY
+    const isAboutVecy = 
+      textLower.includes("vecy") || 
+      textLower.includes("proyecto") || 
+      textLower.includes("quien creo") || 
+      textLower.includes("quién creó") || 
+      textLower.includes("creadores") || 
+      textLower.includes("quien es jania") || 
+      textLower.includes("quién es jania") ||
+      textLower.includes("como funciona") || 
+      textLower.includes("cómo funciona") ||
+      textLower.includes("circulo cero") ||
+      textLower.includes("círculo cero");
+
+    if (isAboutVecy) {
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: `👌 *CÍRCULO CERO — CONEXIÓN VECY* 👌\n\nHola @${rawPhone}, veo que quieres saber más sobre el proyecto VECY Network, beneficios, creadores o el plan colaborativo. Te invito a unirte y hacer tus preguntas en nuestro canal oficial **Círculo CERO 👌**:\n👉 https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU\n\n¡Es el espacio ideal para resolver todas tus inquietudes de la comunidad! 🤝✨`
+      };
+    }
 
     // Detectar si es una solicitud de avalúo, valor de venta, arriendo o precio del metro cuadrado
-    const textLower = text.toLowerCase();
     const isValuationQuery = 
       textLower.includes("valuar") || 
       textLower.includes("avaluo") || 
@@ -1020,6 +1092,113 @@ export async function processConsultingMessage(
     return {
       classification: "CONSULTA_GENERAL",
       response: "⚠️ Ocurrió un error interno al procesar tu consulta jurídica. Por favor intenta de nuevo en unos momentos."
+    };
+  }
+}
+
+/**
+ * Procesa una consulta para el grupo Círculo CERO 👌.
+ * Responde preguntas cortas y contundentes sobre el proyecto VECY Network.
+ */
+export async function processCirculoMessage(
+  text: string, 
+  userId: string, 
+  userName?: string
+): Promise<JanIAResult> {
+  try {
+    const rawPhone = userId.split('@')[0];
+    const realName = userName && userName.trim() !== "" ? userName : `Asesor +${rawPhone}`;
+    const n = realName.split(' ')[0];
+    const textLower = text.toLowerCase();
+
+    // 1. Redirección a VECY INMUEBLES NETWORK si parece una oferta o requerimiento comercial
+    const isListingOrReq = 
+      textLower.includes("vendo") || 
+      textLower.includes("arriendo") || 
+      textLower.includes("rento") || 
+      textLower.includes("permuto") || 
+      textLower.includes("busco") || 
+      textLower.includes("requiero") || 
+      textLower.includes("habs") || 
+      textLower.includes("baños") || 
+      textLower.includes("parqueadero") || 
+      textLower.includes("area") || 
+      textLower.includes("área") || 
+      textLower.includes("presupuesto") || 
+      textLower.includes("valor:") || 
+      textLower.includes("precio:") || 
+      textLower.includes("https://") || 
+      textLower.includes("http://");
+
+    if (isListingOrReq) {
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: `📢 *VECY INMUEBLES NETWORK* 📢\n\nHola @${rawPhone}, detecté que estás publicando una oferta o requerimiento inmobiliario. Para poder procesar tu publicación con mis motores automáticos, registrar tus datos y buscarte un MATCH de inmediato con otros aliados, por favor realiza tu publicación en nuestro grupo especializado **VECY INMUEBLES NETWORK**:\n👉 https://chat.whatsapp.com/K36KrHeB9nMEKJ56s8XFcM\n\n¡Hagamos equipo y cerremos negocios! 🚀🎯`
+      };
+    }
+
+    // 2. Redirección a Buzón de Consultoría si es una consulta jurídica, predial, contratos o avalúo
+    const isLegalOrValuation = 
+      textLower.includes("ley") || 
+      textLower.includes("contrato") || 
+      textLower.includes("predial") || 
+      textLower.includes("avaluo") || 
+      textLower.includes("avalúo") || 
+      textLower.includes("embargo") || 
+      textLower.includes("curaduria") || 
+      textLower.includes("curaduría") || 
+      textLower.includes("inquilino") || 
+      textLower.includes("arrendatario") || 
+      textLower.includes("restitución") || 
+      textLower.includes("promesa") || 
+      textLower.includes("idu") || 
+      textLower.includes("derecho de peticion") || 
+      textLower.includes("derecho de petición") || 
+      textLower.includes("tutela");
+
+    if (isLegalOrValuation) {
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: `💡 *BUZÓN DE CONSULTORÍA INMOBILIARIA* 💡\n\nHola @${rawPhone}, veo que tienes una consulta jurídica, procedimental o de avalúo. Para darte una respuesta detallada con mis motores legales y de mercado, por favor realiza tu pregunta en nuestro grupo especializado **Buzón de Consultoría Inmobiliaria 24/7**:\n👉 https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6\n\n¡Allí te responderé al instante con toda la información! 🚀🎯`
+      };
+    }
+
+    // 3. Responder sobre el proyecto VECY Network (Corto, contundente, con emojis)
+    const systemPrompt = 
+      `Eres JanIA, la Inteligencia Artificial oficial de VECY Network. Estás operando en el grupo "Círculo CERO 👌". ` +
+      `Tu objetivo en este grupo es responder preguntas cortas, directas y fáciles de entender sobre el proyecto VECY Network.\n\n` +
+      `INFORMACIÓN CLAVE DEL PROYECTO (Responde basándote estrictamente en esto):\n` +
+      `- Qué es VECY Network: Una bolsa inmobiliaria colaborativa y gratuita en WhatsApp que conecta asesores y brókers en tiempo real.\n` +
+      `- Quiénes lo crearon: Creado por Eduardo A. Rivera (fundador y desarrollador) junto con el apoyo de todo el Equipo VECY (Eduardo y Jani).\n` +
+      `- Beneficios principales: Cero comisiones por los matches de negocios, cruces automatizados las 24/7 (matching), visión OCR para leer flyers/imágenes, transcripción de notas de voz y cobertura total en Colombia.\n` +
+      `- Historia: Nació de una "idea loca e inverosímil" en el grupo de WhatsApp "Círculo Cero" como un plan para revolucionar el sector.\n` +
+      `- Plan Colaborativo: Si un miembro cierra un negocio gracias a un MATCH de JanIA, su único compromiso de honor es dejar una reseña calificada aquí: https://g.page/r/CctNbwU6UpX5EBM/review\n\n` +
+      `DIRECTRICES DE RESPUESTA:\n` +
+      `- Las respuestas deben ser cortas, claras, contundentes y amigables.\n` +
+      `- Dirígete al usuario llamándolo por su primer nombre: \${n}. Usa emojis.`;
+
+    const messages = [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: `Usuario: @\${rawPhone} (\${realName})\nPregunta: \${text}` }
+    ];
+
+    const llmRes = await invokeLLM({
+      messages,
+      enableSearch: false
+    });
+
+    const replyContent = llmRes.choices[0].message.content || "Lo siento, en este momento no puedo responder tu consulta.";
+
+    return {
+      classification: "CONSULTA_GENERAL",
+      response: replyContent
+    };
+
+  } catch (error: any) {
+    console.error("[processCirculoMessage Error]:", error.message);
+    return {
+      classification: "CONSULTA_GENERAL",
+      response: "⚠️ Ocurrió un error al procesar tu consulta en Círculo Cero."
     };
   }
 }

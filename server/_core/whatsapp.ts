@@ -7,6 +7,7 @@ import { scrapePropertyLink, esDominioPermitido } from './scraper';
 import { 
   processWhatsAppMessage, 
   processConsultingMessage,
+  processCirculoMessage,
   generateWelcomeMessage,
   MSG_PRESENTACION_INSTITUCIONAL,
   MSG_PAUTAS_FORMATOS
@@ -292,6 +293,8 @@ export class WhatsAppBot {
         const isTargetGroup = chatId === this.targetGroupId;
         const isBuzonGroup = chatId === this.buzonGroupId;
 
+        const isCirculoGroup = chatId === this.circuloGroupId;
+
         // 1. RAMA DE GRUPO (VECY INMUEBLES NETWORK)
         if (isTargetGroup) {
           const text = msg.body.toLowerCase();
@@ -309,6 +312,12 @@ export class WhatsAppBot {
 
         // NUEVO: RAMA DE GRUPO (BUZÓN DE CONSULTORÍA 24/7)
         if (isBuzonGroup) {
+          await this.handleIncomingMessage(msg, chatId);
+          return;
+        }
+
+        // NUEVO: RAMA DE GRUPO (CÍRCULO CERO 👌)
+        if (isCirculoGroup) {
           await this.handleIncomingMessage(msg, chatId);
           return;
         }
@@ -499,6 +508,8 @@ export class WhatsAppBot {
       let result;
       if (chatId === this.buzonGroupId) {
         result = await processConsultingMessage(fullText, senderId, userName, imageBuffer);
+      } else if (chatId === this.circuloGroupId) {
+        result = await processCirculoMessage(fullText, senderId, userName);
       } else {
         if (pending && Date.now() < pending.expiresAt) {
           const combinedText = `[CONTEXTO]: "${pending.originalText}"\n[RESPUESTA]: "${fullText}"`;
@@ -569,6 +580,14 @@ export class WhatsAppBot {
           await originalMsg.react('⚠️');
         } else if (result.classification === "VIOLACION_DE_NORMAS") {
           await originalMsg.react('❌');
+        } else if (result.classification === "CONSULTA_GENERAL") {
+          // Si es un mensaje de redirección con un enlace de invitación de WhatsApp, reaccionar con 🔄
+          if (result.response && result.response.includes("chat.whatsapp.com")) {
+            await originalMsg.react('🔄');
+          } else {
+            // Respuesta de consultoría exitosa
+            await originalMsg.react('💡');
+          }
         }
       } catch (e) {
         console.error('[React-Error] Fallo al reaccionar al mensaje original:', e);
