@@ -328,7 +328,20 @@ export class WhatsAppBot {
     this.client.on('group_join', async (notification: any) => {
       if (notification.chatId !== this.targetGroupId) return;
       const joinedIds = notification.recipientIds || [];
-      this.pendingWelcomeJids.push(...joinedIds);
+      const resolvedIds = [];
+      for (const id of joinedIds) {
+        if (id && id.endsWith('@lid')) {
+          try {
+            const contact = await this.client.getContactById(id);
+            if (contact && contact.id && contact.id._serialized && contact.id._serialized.endsWith('@c.us')) {
+              resolvedIds.push(contact.id._serialized);
+              continue;
+            }
+          } catch (e) {}
+        }
+        resolvedIds.push(id);
+      }
+      this.pendingWelcomeJids.push(...resolvedIds);
       this.pendingWelcomeCount = this.pendingWelcomeJids.length;
       this.saveCounter();
       if (this.pendingWelcomeCount >= 10) await this.sendBatchWelcome();
@@ -343,7 +356,15 @@ export class WhatsAppBot {
           if (reaction.msgId.remote === targetGroupId && reaction.msgId.fromMe === true) {
             const msg = await this.client.getMessageById(reaction.msgId._serialized);
             if (msg) {
-              const senderId = reaction.senderId;
+              let senderId = reaction.senderId;
+              if (senderId && senderId.endsWith('@lid')) {
+                try {
+                  const contact = await this.client.getContactById(senderId);
+                  if (contact && contact.id && contact.id._serialized && contact.id._serialized.endsWith('@c.us')) {
+                    senderId = contact.id._serialized;
+                  }
+                } catch (e) {}
+              }
               const contact = await this.client.getContactById(senderId);
               const realName = contact.name || contact.pushname || `Asesor +${senderId.split('@')[0]}`;
               
@@ -367,6 +388,28 @@ export class WhatsAppBot {
     });
 
     this.client.on('message_create', async (msg: Message) => {
+      // CENTRALIZED LID TO REAL JID RESOLUTION
+      if (msg.author && msg.author.endsWith('@lid')) {
+        try {
+          const contact = await this.client.getContactById(msg.author);
+          if (contact && contact.id && contact.id._serialized && contact.id._serialized.endsWith('@c.us')) {
+            msg.author = contact.id._serialized;
+          }
+        } catch (e) {
+          console.error('[WHATSAPP-BOT] Error resolving msg.author LID:', e);
+        }
+      }
+      if (msg.from && msg.from.endsWith('@lid')) {
+        try {
+          const contact = await this.client.getContactById(msg.from);
+          if (contact && contact.id && contact.id._serialized && contact.id._serialized.endsWith('@c.us')) {
+            msg.from = contact.id._serialized;
+          }
+        } catch (e) {
+          console.error('[WHATSAPP-BOT] Error resolving msg.from LID:', e);
+        }
+      }
+
       // 1. FILTRO TEMPRANO DE SEGURIDAD (ANTI-SPAM BROADCAST)
       if ((msg.from && msg.from.includes('status@broadcast')) || (msg.author && msg.author.includes('status@broadcast'))) {
         return;
