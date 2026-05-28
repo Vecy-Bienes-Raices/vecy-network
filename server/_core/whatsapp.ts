@@ -61,7 +61,7 @@ interface PendingEntry {
 export class WhatsAppBot {
   private client: ClientType;
   private targetGroupId: string = '120363260108880069@g.us';
-  private buzonGroupId: string = '120363260445880355@g.us';
+  private buzonGroupId: string = '120363417740040773@g.us';
   private circuloGroupId: string = '120363403507276533@g.us';
   public isReady: boolean = false;
   
@@ -74,6 +74,8 @@ export class WhatsAppBot {
   private counterFile: string = path.join(process.cwd(), '.pending_welcome_count');
   public pendingWelcomeJids: string[] = [];
   private jidsFile: string = path.join(process.cwd(), '.pending_welcome_jids');
+  private cooldownFile: string = path.join(process.cwd(), '.cooldown_map.json');
+  private pendingDataFile: string = path.join(process.cwd(), '.pending_data.json');
 
   // Control de límites y anti-flood (v12.0)
   private dailyMessageLimit: number = 250;
@@ -144,6 +146,8 @@ export class WhatsAppBot {
   constructor() {
     console.log('[WHATSAPP-BOT] Inicializando JanIA v2.0 (CORE v10.5 - Multimodal & Anti-Spam)...');
     this.loadCounter();
+    this.loadCooldowns();
+    this.loadPendingData();
     
     this.client = new Client({
       authStrategy: new LocalAuth({
@@ -192,6 +196,38 @@ export class WhatsAppBot {
     try {
       fs.writeFileSync(this.counterFile, this.pendingWelcomeCount.toString(), 'utf8');
       fs.writeFileSync(this.jidsFile, JSON.stringify(this.pendingWelcomeJids), 'utf8');
+    } catch (e) {}
+  }
+
+  private loadCooldowns() {
+    try {
+      if (fs.existsSync(this.cooldownFile)) {
+        const raw = JSON.parse(fs.readFileSync(this.cooldownFile, 'utf8'));
+        this.cooldownMap = new Map(Object.entries(raw));
+      }
+    } catch (e) {}
+  }
+
+  private saveCooldowns() {
+    try {
+      const obj = Object.fromEntries(this.cooldownMap.entries());
+      fs.writeFileSync(this.cooldownFile, JSON.stringify(obj), 'utf8');
+    } catch (e) {}
+  }
+
+  private loadPendingData() {
+    try {
+      if (fs.existsSync(this.pendingDataFile)) {
+        const raw = JSON.parse(fs.readFileSync(this.pendingDataFile, 'utf8'));
+        this.pendingData = new Map(Object.entries(raw));
+      }
+    } catch (e) {}
+  }
+
+  private savePendingData() {
+    try {
+      const obj = Object.fromEntries(this.pendingData.entries());
+      fs.writeFileSync(this.pendingDataFile, JSON.stringify(obj), 'utf8');
     } catch (e) {}
   }
 
@@ -466,6 +502,7 @@ export class WhatsAppBot {
         } catch (e) {}
         if (!cooldown.warningSent) {
           cooldown.warningSent = true; // Establecer de inmediato síncronamente para evitar condiciones de carrera por concurrencia
+          this.saveCooldowns();
           const rawPhone = (msg.author || msg.from).split("@")[0];
           const warningText = 
             `⚠️ *COOLDOWN ACTIVO (5 MINUTOS)* ⚠️\n\n` +
@@ -570,36 +607,113 @@ export class WhatsAppBot {
         return urlMatch.some(url => esDominioPermitido(url));
       };
 
-      // Agrupar mensajes en sub-bloques independientes
-      const groups: BufferedMessage[][] = [];
-      let currentGroup: BufferedMessage[] = [];
+      // Helper para partir un mensaje largo en múltiples listings si viene numerado
+      const partitionTextByListings = (text: string): string[] => {
+        const lines = text.split('\n');
+        const listings: string[] = [];
+        let currentListing: string[] = [];
+        let header = "";
+
+        const itemRegex = /^\s*(\d+)\s*[-.)]\s*(?:ofrezco|busco|vendo|arriendo|apto|casa|bodega|oficina|lote|requerimiento|compro|necesito|local)/i;
+
+        for (const line of lines) {
+          const match = line.match(itemRegex);
+          if (match) {
+            if (currentListing.length > 0) {
+              listings.push(currentListing.join('\n'));
+              currentListing = [];
+            }
+            currentListing.push(line);
+          } else {
+            if (listings.length === 0 && currentListing.length === 0) {
+              header += line + '\n';
+            } else {
+              currentListing.push(line);
+            }
+          }
+        }
+        if (currentListing.length > 0) {
+          listings.push(currentListing.join('\n'));
+        }
+
+        if (listings.length > 1) {
+          return listings.map(l => (header.trim() ? header + '\n' + l : l));
+        }
+
+        return [text];
+      };
+
+      // Agrupar mensajes en sub-bloques independientes por links
+      const linkGroups: BufferedMessage[][] = [];
+      let currentLinkGroup: BufferedMessage[] = [];
 
       for (const m of buffer.messages) {
-        currentGroup.push(m);
-        // Si este mensaje tiene un enlace permitido, completa el sub-bloque actual
+        currentLinkGroup.push(m);
         if (hasPermittedLink(m.body)) {
-          groups.push(currentGroup);
-          currentGroup = [];
+          linkGroups.push(currentLinkGroup);
+          currentLinkGroup = [];
         }
       }
-      if (currentGroup.length > 0) {
-        groups.push(currentGroup);
+      if (currentLinkGroup.length > 0) {
+        linkGroups.push(currentLinkGroup);
       }
 
-      console.log(`[processBuffer] Procesando ${groups.length} sub-bloques para ${senderId} de un total de ${buffer.messages.length} mensajes.`);
-
-      // Procesar cada sub-bloque secuencialmente
-      for (const group of groups) {
+      // Desglosar cada grupo de links por si contiene listings numerados (ej: Diego Gómez)
+      const finalListingTexts: { text: string; hasMedia: boolean; imageBuffer?: string; originalMsg: Message }[] = [];
+      for (const group of linkGroups) {
         const groupText = group.map(m => m.body).join('\n\n');
         const groupHasMedia = group.some(m => m.hasMedia);
         const groupImageBuffer = group.find(m => m.imageBuffer)?.imageBuffer;
         const originalMsg = group[group.length - 1].originalMsg;
 
-        // 1. Log en DB
-        await this.logToDb(senderId, 'user', groupText);
+        const partitioned = partitionTextByListings(groupText);
+        for (const itemText of partitioned) {
+          finalListingTexts.push({
+            text: itemText,
+            hasMedia: groupHasMedia,
+            imageBuffer: groupImageBuffer,
+            originalMsg
+          });
+        }
+      }
 
-        // 2. Scraping para este sub-bloque
-        const urlMatch = groupText.match(/https?:\/\/[^\s]+/g);
+      console.log(`[processBuffer] Procesando ${finalListingTexts.length} listings para ${senderId} de un total de ${buffer.messages.length} mensajes en buffer.`);
+
+      // Procesar secuencialmente aplicando el límite estricto de 3 listings
+      let processedListingsCount = 0;
+      let warningSent = buffer.warningSent || false;
+
+      for (const item of finalListingTexts) {
+        processedListingsCount++;
+        
+        if (processedListingsCount > 3) {
+          console.log(`[processBuffer] Listing #${processedListingsCount} excede el límite de 3 para ${senderId}.`);
+          try {
+            await item.originalMsg.react('⚠️');
+          } catch (e) {}
+
+          if (!warningSent && chatId.includes('@g.us')) {
+            warningSent = true;
+            const rawPhone = senderId.split("@")[0];
+            const warningText = 
+              `⚠️ *LÍMITE DE PUBLICACIÓN* ⚠️\n\n` +
+              `Hola @${rawPhone}, detecté que estás enviando muchas publicaciones seguidas en tu mensaje/bloque. ` +
+              `Para cuidar la visibilidad de tus activos y no saturar el chat de los aliados, te pido que por favor me colabores con esta norma, ya que mis motores de extracción de datos solo pueden procesar un máximo de *3 publicaciones* por bloque a la vez.\n\n` +
+              `¡Tus primeras 3 publicaciones ya están en proceso! Por favor espera unos *5 minutos* antes de enviar las siguientes. 🚀🎯`;
+            
+            await this.queuedSend(chatId, warningText, {
+              mentions: [senderId],
+              quotedMessageId: item.originalMsg.id._serialized
+            });
+          }
+          continue;
+        }
+
+        // 1. Log en DB
+        await this.logToDb(senderId, 'user', item.text);
+
+        // 2. Scraping
+        const urlMatch = item.text.match(/https?:\/\/[^\s]+/g);
         const scrapedResults: any[] = [];
         if (urlMatch) {
           for (const url of urlMatch.slice(0, 3)) {
@@ -618,28 +732,30 @@ export class WhatsAppBot {
 
         let result;
         if (chatId === this.buzonGroupId) {
-          result = await processConsultingMessage(groupText, senderId, userName, groupImageBuffer);
+          result = await processConsultingMessage(item.text, senderId, userName, item.imageBuffer);
         } else if (chatId === this.circuloGroupId) {
-          result = await processCirculoMessage(groupText, senderId, userName);
+          result = await processCirculoMessage(item.text, senderId, userName);
         } else {
           if (pending && Date.now() < pending.expiresAt) {
-            const combinedText = `[CONTEXTO]: "${pending.originalText}"\n[RESPUESTA]: "${groupText}"`;
+            const combinedText = `[CONTEXTO]: "${pending.originalText}"\n[RESPUESTA]: "${item.text}"`;
             this.pendingData.delete(senderId);
-            result = await processWhatsAppMessage(combinedText, senderId, userName, false, [], undefined, groupImageBuffer);
+            this.savePendingData();
+            result = await processWhatsAppMessage(combinedText, senderId, userName, false, [], undefined, item.imageBuffer);
           } else {
-            result = await processWhatsAppMessage(groupText, senderId, userName, groupHasMedia, scrapedResults, undefined, groupImageBuffer);
+            result = await processWhatsAppMessage(item.text, senderId, userName, item.hasMedia, scrapedResults, undefined, item.imageBuffer);
           }
         }
 
         // 4. Orquestación de Respuestas (Silencio de Oro / Flujos DM)
-        await this.handleJanIAResponse(result, senderId, chatId, userName, groupText, originalMsg);
+        await this.handleJanIAResponse(result, senderId, chatId, userName, item.text, item.originalMsg);
       }
 
       // 5. ACTIVAR COOLDOWN DE 5 MINUTOS (Tras procesar con éxito)
       this.cooldownMap.set(senderId, {
         lastBlockProcessedAt: Date.now(),
-        warningSent: buffer.warningSent || false
+        warningSent: warningSent
       });
+      this.saveCooldowns();
 
     } catch (e) {
       console.error('[WHATSAPP-BOT] Error crítico en procesamiento de bloque:', e);
@@ -740,14 +856,16 @@ export class WhatsAppBot {
     if (isGroup && originalMsg) {
       try {
         let reaction = result.reactionEmoji;
-        if (!reaction) {
-          if (result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO") {
-            reaction = '✅';
-          } else if (result.classification === "DATOS_INCOMPLETOS") {
-            reaction = '⚠️';
-          } else if (result.classification === "VIOLACION_DE_NORMAS") {
-            reaction = '❌';
-          } else if (result.classification === "CONSULTA_GENERAL") {
+        
+        // Aplicar checklist estricto del usuario:
+        // ✅ = Primeras 3 publicaciones procesadas (INMUEBLE, REQUERIMIENTO, DATOS_INCOMPLETOS)
+        // ❌ = Infracciones de normas o inmuebles de otro país (VIOLACION_DE_NORMAS)
+        if (result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO" || result.classification === "DATOS_INCOMPLETOS") {
+          reaction = '✅';
+        } else if (result.classification === "VIOLACION_DE_NORMAS") {
+          reaction = '❌';
+        } else if (!reaction) {
+          if (result.classification === "CONSULTA_GENERAL") {
             if (result.response && result.response.includes("chat.whatsapp.com")) {
               reaction = '🔄';
             } else {
@@ -804,6 +922,7 @@ export class WhatsAppBot {
           missingFields: result.missingFields || [],
           expiresAt: Date.now() + 2 * 60 * 60 * 1000
         });
+        this.savePendingData();
       }
     }
   }
@@ -1007,6 +1126,27 @@ export class WhatsAppBot {
       }
     }
   }
+
+  public async sendOtherPromosNow(mediaPath?: string) {
+    const promos = [
+      { id: this.buzonGroupId, msg: MSG_PROMO_CONSULTAS },
+      { id: this.circuloGroupId, msg: MSG_PROMO_CIRCULO }
+    ];
+
+    for (const promo of promos) {
+      try {
+        if (mediaPath && fs.existsSync(path.resolve(mediaPath))) {
+          const media = MessageMedia.fromFilePath(path.resolve(mediaPath));
+          await this.queuedSend(promo.id, media, { caption: promo.msg });
+        } else {
+          await this.queuedSend(promo.id, promo.msg);
+        }
+      } catch (err: any) {
+        console.error(`[WHATSAPP-BOT] Error al transmitir promo al grupo ${promo.id}:`, err.message || err);
+      }
+    }
+  }
+
 
   public async exportRecentJoinsToFile() {
     try {

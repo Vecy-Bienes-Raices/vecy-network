@@ -198,6 +198,55 @@ async function startServer() {
       res.status(500).send(err.message);
     }
   });
+
+  app.get("/api/inspect-recent-messages", async (req, res) => {
+    try {
+      if (!whatsappBot.isReady) {
+        return res.status(503).send("El bot no está listo.");
+      }
+      const client = (whatsappBot as any).client;
+      const targetGroupId = (whatsappBot as any).targetGroupId;
+      const buzonGroupId = (whatsappBot as any).buzonGroupId;
+      const circuloGroupId = (whatsappBot as any).circuloGroupId;
+
+      const groups = [
+        { name: "VECY INMUEBLES NETWORK", id: targetGroupId },
+        { name: "Buzón de Consultoría", id: buzonGroupId },
+        { name: "Círculo CERO", id: circuloGroupId }
+      ];
+
+      const results = [];
+      for (const g of groups) {
+        try {
+          const chat = await client.getChatById(g.id);
+          const limit = g.name.includes("NETWORK") ? 50 : 15;
+          const msgs = await chat.fetchMessages({ limit });
+          results.push({
+            name: g.name,
+            id: g.id,
+            messages: msgs.map((m: any) => ({
+              fromMe: m.fromMe,
+              author: m.author || m.from,
+              body: m.body,
+              timestamp: m.timestamp,
+              date: new Date(m.timestamp * 1000).toLocaleString('es-CO', { timeZone: 'America/Bogota' })
+            }))
+          });
+
+        } catch (e: any) {
+          results.push({ name: g.name, id: g.id, error: e.message });
+        }
+      }
+      res.json(results);
+    } catch (err: any) {
+      res.status(500).send(err.message);
+    }
+  });
+
+
+
+
+
   app.get("/api/trigger-reaction-response", async (req, res) => {
     try {
       if (!whatsappBot.isReady) {

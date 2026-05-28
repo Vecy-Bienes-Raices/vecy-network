@@ -334,6 +334,26 @@ export function validarZona(zona: string, ciudad?: string, textoCompleto?: strin
     };
   }
 
+  // 6. PRIORIDAD 5: Si la zona tiene un largo suficiente y no fue catalogada como localidad o sector amplio,
+  // la aceptamos dinámicamente como barrio/sector para evitar rechazar zonas válidas no mapeadas en el diccionario.
+  if (normZone && normZone.length >= 3) {
+    const cleanText = (txt: string) => txt.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .split(' ')
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(' ');
+
+    const formattedCity = ciudad ? cleanText(ciudad) : "Bogotá";
+    const isBogota = normalizarTextoGeografico(formattedCity) === "bogota";
+
+    return {
+      isValid: true,
+      barrioCanonico: zona.trim(),
+      localidad: isBogota ? "Bogotá" : formattedCity,
+      city: formattedCity,
+      isMunicipio: !isBogota
+    };
+  }
+
   // === PASO 5: Zona completamente desconocida ===
   return {
     isValid: false,
