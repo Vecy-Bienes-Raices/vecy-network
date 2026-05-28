@@ -814,7 +814,14 @@ export class WhatsAppBot {
     const isGroup = chatId.includes('@g.us');
     // MATCH COMERCIAL DETECTADO es el string real en el response de JanIA
     const isMatch = result.response && (result.response.includes("MATCH COMERCIAL DETECTADO") || result.response.includes("MATCH DETECTADO") || result.response.includes("MATCH INTELIGENTE DETECTADO"));
-    const isConsultation = result.classification === "CONSULTA_GENERAL" || result.classification === "RESPUESTA_A_PREGUNTA_IA";
+    const isConsultation = 
+      result.classification === "CONSULTA_GENERAL" || 
+      result.classification === "RESPUESTA_A_PREGUNTA_IA" || 
+      result.classification === "INMUEBLE" || 
+      result.classification === "REQUERIMIENTO" || 
+      result.classification === "AVALUO_O_LEGAL" || 
+      result.classification === "DEBATE_COMPETIDOR" ||
+      result.classification === "SOBRE_VECY";
     const isViolation = result.classification === "VIOLACION_DE_NORMAS";
 
     // 1. Manejo de Infracciones y Permisos Admin (si es un grupo)
@@ -905,15 +912,15 @@ export class WhatsAppBot {
       try {
         let reaction = result.reactionEmoji;
         
-        // Aplicar checklist estricto del usuario:
-        // ✅ = Primeras 3 publicaciones procesadas (INMUEBLE, REQUERIMIENTO, DATOS_INCOMPLETOS)
-        // ❌ = Infracciones de normas o inmuebles de otro país (VIOLACION_DE_NORMAS)
-        if (result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO" || result.classification === "DATOS_INCOMPLETOS") {
+        const isBuzonOrCirculo = chatId === this.buzonGroupId || chatId === this.circuloGroupId;
+        if ((result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO" || result.classification === "DATOS_INCOMPLETOS") && !isBuzonOrCirculo) {
           reaction = '✅';
+        } else if ((result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO" || result.classification === "AVALUO_O_LEGAL" || result.classification === "SOBRE_VECY") && isBuzonOrCirculo) {
+          reaction = '🔄';
         } else if (result.classification === "VIOLACION_DE_NORMAS") {
           reaction = '❌';
         } else if (!reaction) {
-          if (result.classification === "CONSULTA_GENERAL") {
+          if (result.classification === "CONSULTA_GENERAL" || result.classification === "SOBRE_VECY" || result.classification === "AVALUO_O_LEGAL" || result.classification === "DEBATE_COMPETIDOR" || result.classification === "RESPUESTA_A_PREGUNTA_IA") {
             if (result.response && result.response.includes("chat.whatsapp.com")) {
               reaction = '🔄';
             } else {
