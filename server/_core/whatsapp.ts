@@ -521,7 +521,11 @@ export class WhatsAppBot {
     let cooldown = this.cooldownMap.get(senderId);
 
     // Verificación de Cooldown (Anti-Spam - Solo aplica en el grupo principal VECY INMUEBLES NETWORK)
+    // El cooldown es por grupo (no global): un aliado puede publicar en el Buzón o Círculo
+    // aunque tenga cooldown activo en el grupo principal VECY INMUEBLES NETWORK.
     const isMainGroup = chatId === this.targetGroupId;
+    const cooldownKey = `${chatId}_${senderId}`; // Clave compuesta grupo + usuario
+    cooldown = this.cooldownMap.get(cooldownKey) as AntiSpamState | undefined;
     if (isMainGroup && cooldown && (now - cooldown.lastBlockProcessedAt < COOLDOWN_PERIOD)) {
       if (isGroupChat) {
         try {
@@ -541,6 +545,8 @@ export class WhatsAppBot {
             mentions: [senderId],
             quotedMessageId: msg.id._serialized
           });
+          this.cooldownMap.set(cooldownKey, cooldown);
+          this.saveCooldowns();
         }
       }
       return; // Detener procesamiento del mensaje excedente
@@ -788,7 +794,9 @@ export class WhatsAppBot {
       }
 
       // 5. ACTIVAR COOLDOWN DE 5 MINUTOS (Tras procesar con éxito)
-      this.cooldownMap.set(senderId, {
+      // La clave incluye el chatId para que el cooldown sea por grupo (no global por usuario)
+      const cooldownKeyFinal = `${chatId}_${senderId}`;
+      this.cooldownMap.set(cooldownKeyFinal, {
         lastBlockProcessedAt: Date.now(),
         warningSent: warningSent
       });
@@ -804,7 +812,8 @@ export class WhatsAppBot {
     if (!result) return;
 
     const isGroup = chatId.includes('@g.us');
-    const isMatch = result.response && result.response.includes("MATCH DETECTADO");
+    // MATCH COMERCIAL DETECTADO es el string real en el response de JanIA
+    const isMatch = result.response && (result.response.includes("MATCH COMERCIAL DETECTADO") || result.response.includes("MATCH DETECTADO") || result.response.includes("MATCH INTELIGENTE DETECTADO"));
     const isConsultation = result.classification === "CONSULTA_GENERAL" || result.classification === "RESPUESTA_A_PREGUNTA_IA";
     const isViolation = result.classification === "VIOLACION_DE_NORMAS";
 
@@ -871,7 +880,9 @@ export class WhatsAppBot {
       const options: any = { 
         mentions: isGroup ? mentions : [] 
       };
-      if (isViolation && originalMsg && !isBotAdmin) {
+      // Siempre citar el mensaje original en violaciones para que los demás miembros
+      // vean a qué publicación se refiere la amonestación (independiente de si somos admin)
+      if (isViolation && originalMsg) {
         options.quotedMessageId = originalMsg.id._serialized;
       }
       await this.queuedSend(chatId, result.response, options);
