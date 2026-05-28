@@ -1219,7 +1219,7 @@ export async function processCirculoMessage(
       `Tu objetivo en este grupo es responder preguntas cortas, directas y fáciles de entender sobre el proyecto VECY Network.\n\n` +
       `INFORMACIÓN CLAVE DEL PROYECTO (Responde basándote estrictamente en esto):\n` +
       `- Qué es VECY Network: Una bolsa inmobiliaria colaborativa y gratuita en WhatsApp que conecta asesores y brókers en tiempo real.\n` +
-      `- Quiénes lo crearon: Creado por Eduardo A. Rivera (fundador y desarrollador) junto con el apoyo de todo el Equipo VECY (Eduardo y Jani).\n` +
+      `- Quiénes lo crearon: Creado por Eduardo A. Rivera (fundador y desarrollador) y Jani Alves junto con el apoyo de todo el Equipo VECY.\n` +
       `- Beneficios principales: Cero comisiones por los matches de negocios, cruces automatizados las 24/7 (matching), visión OCR para leer flyers/imágenes, transcripción de notas de voz y cobertura total en Colombia.\n` +
       `- Historia: Nació de una "idea loca e inverosímil" en el grupo de WhatsApp "Círculo Cero" como un plan para revolucionar el sector.\n` +
       `- Plan Colaborativo: Si un miembro cierra un negocio gracias a un MATCH de JanIA, su único compromiso de honor es dejar una reseña calificada aquí: https://g.page/r/CctNbwU6UpX5EBM/review\n\n` +
