@@ -131,7 +131,8 @@ Para estructurar ofertas de venta/arriendo y permutas complejas, debes mapear do
 ## DETECCIÓN DE VIOLACIONES DE NORMAS (MANDATORIO)
 Debes clasificar la entrada como 'VIOLACION_DE_NORMAS' en los siguientes casos:
 1. **Fotografías Decorativas o de Espacios sin Ficha Técnica**: Si la entrada es una imagen (flyer, foto adjunta, etc.) y detectas que es una simple foto de un ambiente (baño, cocina, habitación, sala, piscina), fachada de un edificio o cualquier objeto/lugar físico sin texto promocional ni datos comerciales de ficha técnica superpuestos en ella.
-2. **Contenido Fuera de Base / Off-Topic / Spam**: Si el mensaje o imagen contiene:
+2. **Propiedades o Requerimientos Fuera de Colombia (CRÍTICO)**: Si la publicación describe o busca un inmueble ubicado fuera de Colombia (por ejemplo, República Dominicana, Santo Domingo, Miami, Venezuela, Panamá, España, etc.). En VECY NETWORK únicamente se admiten operaciones inmobiliarias dentro del territorio colombiano.
+3. **Contenido Fuera de Base / Off-Topic / Spam**: Si el mensaje o imagen contiene:
    - Temas políticos (opiniones, memes, propaganda o debates sobre candidatos o partidos políticos).
    - Temas religiosos (oraciones, bendiciones, debates religiosos o proselitismo).
    - Enlaces de invitación a unirse a otros grupos de WhatsApp, Telegram, canales de difusión o redes sociales.
@@ -141,8 +142,8 @@ Debes clasificar la entrada como 'VIOLACION_DE_NORMAS' en los siguientes casos:
    - Cualquier producto o servicio no relacionado al sector inmobiliario (comida, masajes, diseño, etc.).
 
 Si clasificas la entrada como 'VIOLACION_DE_NORMAS':
-- Debes generar una respuesta en el campo 'response'. El mensaje debe ser sumamente educado, empático y profesional pero muy firme. Dirígete al usuario por su primer nombre, explícale amablemente qué norma violó, e invítalo cordialmente a retirar el mensaje de inmediato para mantener limpia y organizada nuestra comunidad. Adviértele de forma sutil que las normas están detalladas en la descripción del grupo y que el sistema remueve de forma automática a quienes acumulan 3 llamados de atención.
-- Debes rellenar el campo 'reactionEmoji' con un emoji coherente (como '❌' o '🚫').
+- Debes generar una respuesta en el campo 'response'. El mensaje debe ser sumamente educado, empático y profesional pero muy firme. Dirígete al usuario por su primer nombre, explícale amablemente qué norma violó (si es por estar fuera de Colombia, dile claramente que VECY Network opera de manera exclusiva y estricta en Colombia y no en otros países), e invítalo cordialmente a retirar el mensaje de inmediato para mantener limpia y organizada nuestra comunidad. Adviértele de forma sutil que las normas están detalladas en la descripción del grupo y que el sistema remueve de forma automática a quienes acumulan 3 llamados de atención.
+- Debes rellenar el campo 'reactionEmoji' con el emoji '❌' (obligatorio si es fuera de Colombia o violación crítica, o '🚫' / '⚠️' según corresponda).
 
 ## DEBATE, DETECCIÓN DE SARCASMO Y AUTO-DEFENSA PROFESIONAL (CRÍTICO)
 Debes ser capaz de identificar de manera intuitiva el sarcasmo humano, los tonos de burla, el escepticismo o comentarios con doble sentido dirigidos a ti o al sistema (tanto en forma de texto directo como en indicaciones de reacciones con emojis como 😂 o 🤣 que los usuarios pongan a tus mensajes):
@@ -1117,6 +1118,7 @@ export async function processConsultingMessage(
       `Siempre dirígete al usuario de forma personalizada llamándolo por su primer nombre: ${n}.\n\n` +
       `## REGLAS DE MODERACIÓN Y FILTRO DE SPAM (MANDATORIO)\n` +
       `Debes clasificar el mensaje como 'VIOLACION_DE_NORMAS' si detectas que la publicación no es una consulta legal/avalúo y viola las normas del grupo. Casos:\n` +
+      `- Inmuebles, búsquedas o consultas referentes a otros países fuera de Colombia (ej. Santo Domingo, República Dominicana, Miami, etc.). Sólo se admite contenido del territorio colombiano.\n` +
       `- Temas políticos (opiniones, memes, propaganda o debates sobre candidatos o partidos políticos).\n` +
       `- Temas religiosos (oraciones, bendiciones, debates religiosos o proselitismo).\n` +
       `- Enlaces de invitación a unirse a otros grupos de WhatsApp, Telegram, canales de difusión o redes sociales.\n` +
@@ -1127,7 +1129,7 @@ export async function processConsultingMessage(
       `DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:\n` +
       `{\n` +
       `  "classification": "CONSULTA_GENERAL | VIOLACION_DE_NORMAS",\n` +
-      `  "response": "Tu respuesta jurídica o comercial, o la advertencia amigable pero firme sobre la infracción si clasificas como VIOLACION_DE_NORMAS (pidiéndole eliminar el mensaje de inmediato para mantener limpia la comunidad y advirtiendo del límite de 3 strikes antes de ser expulsado). Por favor usa emojis coherentes.",\n` +
+      `  "response": "Tu respuesta jurídica o comercial, o la advertencia amigable pero firme sobre la infracción si clasificas como VIOLACION_DE_NORMAS (pidiéndole eliminar el mensaje de inmediato para mantener limpia la comunidad y advirtiendo del límite de 3 strikes antes de ser expulsado y usando la reacción '❌'). Por favor usa emojis coherentes.",\n` +
       `  "reactionEmoji": "string (emoji recomendado para reaccionar al post, ej: '💡', '❌', '🚫', '⚠️')"\n` +
       `}`;
 
@@ -1259,6 +1261,7 @@ export async function processCirculoMessage(
       `- Dirígete al usuario llamándolo por su primer nombre: ${n}. Usa emojis.\n\n` +
       `## REGLAS DE MODERACIÓN Y FILTRO DE SPAM (MANDATORIO)\n` +
       `Debes clasificar el mensaje como 'VIOLACION_DE_NORMAS' si detectas que la publicación viola las normas de Círculo Cero. Casos:\n` +
+      `- Contenido, ofertas o consultas referentes a otros países fuera de Colombia (ej. Santo Domingo, República Dominicana, Miami, etc.). Sólo se admite contenido del territorio colombiano.\n` +
       `- Temas políticos (opiniones, memes, propaganda o debates sobre candidatos o partidos políticos).\n` +
       `- Temas religiosos (oraciones, bendiciones, debates religiosos o proselitismo).\n` +
       `- Enlaces de invitación a unirse a otros grupos de WhatsApp, Telegram, canales de difusión o redes sociales.\n` +
@@ -1269,7 +1272,7 @@ export async function processCirculoMessage(
       `DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:\n` +
       `{\n` +
       `  "classification": "CONSULTA_GENERAL | VIOLACION_DE_NORMAS",\n` +
-      `  "response": "Tu respuesta elocuente y amigable, o tu advertencia empática pero firme si hay violación de normas (pidiéndole eliminar el mensaje de inmediato para mantener limpia la comunidad y advirtiendo del límite de 3 strikes antes de ser expulsado). Por favor usa emojis coherentes.",\n` +
+      `  "response": "Tu respuesta elocuente y amigable, o tu advertencia empática pero firme si hay violación de normas (pidiéndole eliminar el mensaje de inmediato para mantener limpia la comunidad y advirtiendo del límite de 3 strikes antes de ser expulsado y usando la reacción '❌'). Por favor usa emojis coherentes.",\n` +
       `  "reactionEmoji": "string (emoji recomendado para reaccionar al post, ej: '💡', '❌', '🚫', '⚠️')"\n` +
       `}`;
 

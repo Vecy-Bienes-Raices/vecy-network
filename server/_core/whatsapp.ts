@@ -460,18 +460,24 @@ export class WhatsAppBot {
     // Verificación de Cooldown (Anti-Spam - Solo aplica en el grupo principal VECY INMUEBLES NETWORK)
     const isMainGroup = chatId === this.targetGroupId;
     if (isMainGroup && cooldown && (now - cooldown.lastBlockProcessedAt < COOLDOWN_PERIOD)) {
-      if (!cooldown.warningSent) {
-        cooldown.warningSent = true; // Establecer de inmediato síncronamente para evitar condiciones de carrera por concurrencia
-        const rawPhone = (msg.author || msg.from).split("@")[0];
-        const warningText = 
-          `Estimado/a @${rawPhone}, procesé con éxito tus primeras propiedades. ` +
-          `Para cuidar la visibilidad de tus activos y no saturar la red de los aliados, ` +
-          `por favor espera 5 minutos antes de enviar tu siguiente bloque (máximo 3 publicaciones por bloque). ¡JanIA sigue atenta para ayudarte a cerrar! 🏆`;
-        
-        await this.queuedSend(chatId, warningText, {
-          mentions: [senderId],
-          quotedMessageId: msg.id._serialized
-        });
+      if (isGroupChat) {
+        try {
+          await msg.react('⚠️');
+        } catch (e) {}
+        if (!cooldown.warningSent) {
+          cooldown.warningSent = true; // Establecer de inmediato síncronamente para evitar condiciones de carrera por concurrencia
+          const rawPhone = (msg.author || msg.from).split("@")[0];
+          const warningText = 
+            `⚠️ *COOLDOWN ACTIVO (5 MINUTOS)* ⚠️\n\n` +
+            `Hola @${rawPhone}, acabo de procesar con éxito tus primeras propiedades. ` +
+            `Para cuidar la visibilidad de tus activos y no saturar la red de los aliados, te pido que por favor me colabores esperando los *5 minutos* de intervalo antes de enviar tu siguiente bloque (máximo 3 publicaciones).\n\n` +
+            `¡Mis motores necesitan este breve descanso para mantener tus fichas técnicas al 100% de calidad! JanIA sigue atenta. 🏆🎯`;
+          
+          await this.queuedSend(chatId, warningText, {
+            mentions: [senderId],
+            quotedMessageId: msg.id._serialized
+          });
+        }
       }
       return; // Detener procesamiento del mensaje excedente
     }
@@ -500,18 +506,23 @@ export class WhatsAppBot {
       // Si el bloque ya llegó a 3 mensajes, advertimos en el grupo y descartamos los excedentes
       if (buffer.messages.length >= MAX_BLOCK_SIZE) {
         console.log(`[BUFFER] Límite de bloque alcanzado para ${senderId}.`);
-        if (!buffer.warningSent && isGroupChat) {
-          buffer.warningSent = true; // Establecer de inmediato síncronamente antes del await para evitar duplicados por concurrencia
-          const warningText = 
-            `⚠️ *LÍMITE DE PUBLICACIÓN* ⚠️\n\n` +
-            `Hola @${rawPhone}, detecté que estás enviando muchas publicaciones seguidas. ` +
-            `Para evitar saturar el grupo y permitir que procese todo correctamente, por favor publica un máximo de *3 publicaciones por bloque*, espera unos *5 minutos* y luego envía el siguiente grupo. ` +
-            `¡Tus primeras 3 publicaciones ya están en proceso! 🚀`;
-          
-          await this.queuedSend(chatId, warningText, {
-            mentions: [senderId],
-            quotedMessageId: msg.id._serialized
-          });
+        if (isGroupChat) {
+          try {
+            await msg.react('⚠️');
+          } catch (e) {}
+          if (!buffer.warningSent) {
+            buffer.warningSent = true; // Establecer de inmediato síncronamente antes del await para evitar duplicados por concurrencia
+            const warningText = 
+              `⚠️ *LÍMITE DE PUBLICACIÓN* ⚠️\n\n` +
+              `Hola @${rawPhone}, detecté que estás enviando muchas publicaciones seguidas. ` +
+              `Para cuidar la visibilidad de tus activos y no saturar el chat de los aliados, te pido que por favor me colabores con esta norma, ya que mis motores de extracción de datos solo pueden procesar un máximo de *3 publicaciones* por bloque a la vez.\n\n` +
+              `¡Espera unos *5 minutos* y luego envía el siguiente grupo! Tus primeras 3 publicaciones ya están siendo procesadas y registradas. 🚀🎯`;
+            
+            await this.queuedSend(chatId, warningText, {
+              mentions: [senderId],
+              quotedMessageId: msg.id._serialized
+            });
+          }
         }
         return;
       }
