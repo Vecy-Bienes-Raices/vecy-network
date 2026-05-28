@@ -69,6 +69,8 @@ export class WhatsAppBot {
   private messageBuffers: Map<string, MessageBuffer> = new Map();
   private cooldownMap: Map<string, AntiSpamState> = new Map();
   private pendingData: Map<string, PendingEntry> = new Map();
+  // Mutex ligero por senderId para serializar mensajes concurrentes del mismo usuario (Fix: condición de carrera en álbumes)
+  private processingLocks: Map<string, Promise<void>> = new Map();
   
   private pendingWelcomeCount: number = 0;
   private counterFile: string = path.join(process.cwd(), '.pending_welcome_count');
@@ -484,8 +486,33 @@ export class WhatsAppBot {
   }
 
   // --- 1. LOGÍSTICA DEL BUFFER DINÁMICO Y ANTI-SPAM (CORE v10.5) ---
+  // Wrapper que serializa entradas por senderId usando un mutex ligero.
+  // Esto evita la condición de carrera cuando WhatsApp envía un álbum de imágenes
+  // y todos los mensajes llegan casi simultáneamente antes de que el buffer exista.
   private async handleIncomingMessage(msg: Message, chatId: string) {
     const senderId = (msg as any).author || msg.from;
+    const lockKey = `${chatId}_${senderId}`;
+
+    // Encadenar la ejecución real detrás de la promesa anterior del mismo usuario
+    const previousLock = this.processingLocks.get(lockKey) || Promise.resolve();
+    let resolveLock!: () => void;
+    const currentLock = new Promise<void>(resolve => { resolveLock = resolve; });
+    const chainedLock = previousLock.then(() => currentLock);
+    this.processingLocks.set(lockKey, chainedLock);
+
+    try {
+      await previousLock; // Esperar a que termine el mensaje anterior del mismo usuario
+      await this._processIncomingMessage(msg, chatId, senderId);
+    } finally {
+      resolveLock();
+      // Limpiar la entrada del lock si nadie más está esperando (somos los últimos en la cadena)
+      if (this.processingLocks.get(lockKey) === chainedLock) {
+        this.processingLocks.delete(lockKey);
+      }
+    }
+  }
+
+  private async _processIncomingMessage(msg: Message, chatId: string, senderId: string) {
     const now = Date.now();
     const COOLDOWN_PERIOD = 5 * 60 * 1000; // 5 Minutos de espera entre bloques
     const MAX_BLOCK_SIZE = 3;             // Máximo 3 mensajes por bloque
@@ -501,7 +528,7 @@ export class WhatsAppBot {
           await msg.react('⚠️');
         } catch (e) {}
         if (!cooldown.warningSent) {
-          cooldown.warningSent = true; // Establecer de inmediato síncronamente para evitar condiciones de carrera por concurrencia
+          cooldown.warningSent = true;
           this.saveCooldowns();
           const rawPhone = (msg.author || msg.from).split("@")[0];
           const warningText = 
@@ -519,36 +546,27 @@ export class WhatsAppBot {
       return; // Detener procesamiento del mensaje excedente
     }
 
-    // 2. CAPA DE VISIÓN ARTIFICIAL (OCR - REGLA 2)
-    let imageBuffer: string | undefined;
-    if (msg.hasMedia && msg.type === 'image') {
-      try {
-        console.log(`[VISION] Escaneando flyer/imagen de ${senderId}...`);
-        const media = await msg.downloadMedia();
-        if (media && media.mimetype.startsWith('image/')) {
-          imageBuffer = media.data; // Base64 directo a JanIA
-        }
-      } catch (err) {
-        console.error('[VISION] Error descargando media:', err);
-      }
-    }
-
     const contact = await msg.getContact();
     const rawPhone = (msg.author || msg.from).split("@")[0];
     const realName = contact.pushname || contact.name || `Asesor +${rawPhone}`;
     const bufferKey = `${chatId}_${senderId}`;
     let buffer = this.messageBuffers.get(bufferKey);
+
+    // NOTA: La descarga de media (downloadMedia) se realiza en processBuffer, NO aquí.
+    // Hacerla aquí causaba una condición de carrera: los mensajes de un álbum de imágenes
+    // llegan casi simultáneamente, y el await de downloadMedia hacía que todos leyeran
+    // el buffer vacío antes de que el primero lo creara, generando advertencias falsas.
     
     if (buffer) {
-      // Si el bloque ya llegó a 3 mensajes, advertimos en el grupo y descartamos los excedentes
+      // Si el bloque ya llegó a MAX_BLOCK_SIZE mensajes, advertimos y descartamos los excedentes
       if (buffer.messages.length >= MAX_BLOCK_SIZE) {
-        console.log(`[BUFFER] Límite de bloque alcanzado para ${senderId}.`);
+        console.log(`[BUFFER] Límite de bloque (${MAX_BLOCK_SIZE}) alcanzado para ${senderId}. Mensaje #${buffer.messages.length + 1} descartado.`);
         if (isGroupChat) {
           try {
             await msg.react('⚠️');
           } catch (e) {}
           if (!buffer.warningSent) {
-            buffer.warningSent = true; // Establecer de inmediato síncronamente antes del await para evitar duplicados por concurrencia
+            buffer.warningSent = true;
             const warningText = 
               `⚠️ *LÍMITE DE PUBLICACIÓN* ⚠️\n\n` +
               `Hola @${rawPhone}, detecté que estás enviando muchas publicaciones seguidas. ` +
@@ -568,17 +586,19 @@ export class WhatsAppBot {
       buffer.messages.push({
         body: msg.body,
         hasMedia: msg.hasMedia,
-        imageBuffer,
+        imageBuffer: undefined, // Se descargará en processBuffer
         originalMsg: msg
       });
+      console.log(`[BUFFER] Mensaje #${buffer.messages.length} agregado al buffer de ${senderId}.`);
       buffer.timer = setTimeout(() => this.processBuffer(bufferKey), 15000);
     } else {
       // Inicio de un nuevo bloque
+      console.log(`[BUFFER] Nuevo bloque iniciado para ${senderId}. Mensaje #1 registrado.`);
       this.messageBuffers.set(bufferKey, {
         messages: [{
           body: msg.body,
           hasMedia: msg.hasMedia,
-          imageBuffer,
+          imageBuffer: undefined, // Se descargará en processBuffer
           originalMsg: msg
         }],
         userName: realName,
@@ -597,6 +617,23 @@ export class WhatsAppBot {
     const senderId = bufferKey.split('_')[1];
     
     this.messageBuffers.delete(bufferKey);
+    console.log(`[processBuffer] Iniciando procesamiento de ${buffer.messages.length} mensajes en buffer de ${senderId}.`);
+
+    // DESCARGA DE MEDIA DIFERIDA: Se realiza aquí de forma secuencial, evitando la
+    // condición de carrera que existía cuando se descargaba en handleIncomingMessage.
+    for (const bufferedMsg of buffer.messages) {
+      if (bufferedMsg.hasMedia && bufferedMsg.originalMsg.type === 'image' && !bufferedMsg.imageBuffer) {
+        try {
+          console.log(`[VISION] Descargando imagen para ${senderId}...`);
+          const media = await bufferedMsg.originalMsg.downloadMedia();
+          if (media && media.mimetype.startsWith('image/')) {
+            bufferedMsg.imageBuffer = media.data;
+          }
+        } catch (err) {
+          console.error('[VISION] Error descargando media diferida:', err);
+        }
+      }
+    }
 
     try {
       // 1. Identificar si hay múltiples publicaciones independientes en el buffer.
