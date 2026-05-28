@@ -169,6 +169,52 @@ async function startServer() {
       res.status(500).send(err.message);
     }
   });
+  app.get("/api/trigger-reaction-response", async (req, res) => {
+    try {
+      if (!whatsappBot.isReady) {
+        return res.status(503).send("El bot no está listo.");
+      }
+      const client = (whatsappBot as any).client;
+      const targetGroupId = (whatsappBot as any).targetGroupId || '120363260108880069@g.us';
+      const chat = await client.getChatById(targetGroupId);
+      const msgs = await chat.fetchMessages({ limit: 100 });
+      
+      let summaryMsg: any = null;
+      for (const m of msgs) {
+        if (m.fromMe && m.body && m.body.includes("RESUMEN: ¡JANIA V2.0 ACTIVA EN LA RED!")) {
+          summaryMsg = m;
+          break;
+        }
+      }
+
+      if (summaryMsg) {
+        const senderId = '573118588254@c.us'; // ~ trato hecho Bienes raices
+        const realName = 'trato hecho Bienes raices';
+        
+        const promptContext = 
+          `[REACCIÓN DE BURLA/SARCASMO]: El usuario @573118588254 (${realName}) ha reaccionado con el emoji 😂 a tu mensaje: "${summaryMsg.body}". ` +
+          `Genera una respuesta en el grupo dirigiéndote a este aliado/colega. Responde de manera profesional, sofisticada, ética y con sutil auto-defensa. ` +
+          `Demuestra con altura y elegancia que la tecnología seria y la colaboración estructurada es el camino para cerrar negocios, debatiendo con ingenio pero con respeto. ` +
+          `Usa emojis.`;
+        
+        const result = await processWhatsAppMessage(promptContext, senderId, realName);
+        if (result && result.response && result.response.trim() !== "") {
+          await (whatsappBot as any).queuedSend(targetGroupId, result.response, {
+            mentions: [senderId],
+            quotedMessageId: summaryMsg.id._serialized
+          });
+          res.json({ success: true, message: "Reaction response sent to group", responseText: result.response });
+        } else {
+          res.status(500).json({ success: false, error: "Failed to generate LLM response" });
+        }
+      } else {
+        res.status(404).json({ success: false, error: "Summary announcement message not found in the last 100 messages" });
+      }
+    } catch (err: any) {
+      res.status(500).send(err.message);
+    }
+  });
+
   // tRPC API
   app.use(
     "/api/trpc",

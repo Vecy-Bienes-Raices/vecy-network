@@ -207,6 +207,9 @@ export class WhatsAppBot {
     this.client.on('ready', () => {
       console.log('\n🚀 JANIA v2.0 CORE v10.5 — SISTEMA NACIONAL ELÁSTICO ACTIVADO');
       this.isReady = true;
+      this.exportRecentJoinsToFile().catch(err => {
+        console.error('[WHATSAPP-BOT] Error al exportar uniones en ready:', err);
+      });
     });
 
     this.client.on('disconnected', (reason) => {
@@ -221,6 +224,38 @@ export class WhatsAppBot {
       this.pendingWelcomeCount = this.pendingWelcomeJids.length;
       this.saveCounter();
       if (this.pendingWelcomeCount >= 10) await this.sendBatchWelcome();
+    });
+
+    this.client.on('message_reaction', async (reaction: any) => {
+      try {
+        const negativeReactions = ['😂', '🤣', '😡', '😠', '😤', '😭', '❌', '❓', '❗'];
+        if (negativeReactions.includes(reaction.reaction)) {
+          const targetGroupId = this.targetGroupId;
+          
+          if (reaction.msgId.remote === targetGroupId && reaction.msgId.fromMe === true) {
+            const msg = await this.client.getMessageById(reaction.msgId._serialized);
+            if (msg) {
+              const senderId = reaction.senderId;
+              const contact = await this.client.getContactById(senderId);
+              const realName = contact.name || contact.pushname || `Asesor +${senderId.split('@')[0]}`;
+              
+              console.log(`[JanIA-Reaction] Reacción de desaprobación/sarcasmo detectada de ${realName}`);
+              
+              const promptContext = `[REACCIÓN NEGATIVA/SARCASMO/DESAPROBACIÓN]: El usuario @${senderId.split('@')[0]} (${realName}) ha reaccionado con el emoji ${reaction.reaction} a tu mensaje: "${msg.body}". Genera una respuesta en el grupo dirigiéndote a este aliado/colega. Responde de manera sumamente cordial, respetuosa y profesional, pero con total firmeza y una sutil pero brillante auto-defensa. Debes defender tus capacidades de inteligencia artificial, al equipo de desarrollo y fundadores de VECY (Jani y Eduardo), y el valor del proyecto VECY Network (red colaborativa gratuita y sin comisiones). Hazle ver con argumentos elocuentes e inteligentes que la tecnología seria y el trabajo estructurado es lo que genera matches y cierra negocios, rebatiendo su reacción con elegancia comercial. Usa emojis.`;
+              
+              const result = await processWhatsAppMessage(promptContext, senderId, realName);
+              if (result && result.response && result.response.trim() !== '') {
+                await this.queuedSend(targetGroupId, result.response, {
+                  mentions: [senderId],
+                  quotedMessageId: reaction.msgId._serialized
+                });
+              }
+            }
+          }
+        }
+      } catch (err: any) {
+        console.error('[WHATSAPP-BOT] Error procesando reacción:', err.message || err);
+      }
     });
 
     this.client.on('message_create', async (msg: Message) => {
@@ -715,6 +750,71 @@ export class WhatsAppBot {
       }
     } catch (e) {
       console.error('[WHATSAPP-BOT] Error enviando mensaje al grupo:', e);
+    }
+  }
+
+  public async exportRecentJoinsToFile() {
+    try {
+      console.log('[WHATSAPP-BOT] Exportando lista de recientes uniones al grupo...');
+      const chat = await this.client.getChatById(this.targetGroupId);
+      if (!chat) {
+        console.error('[WHATSAPP-BOT] No se pudo obtener el chat del grupo.');
+        return;
+      }
+      
+      const messages = await chat.fetchMessages({ limit: 1500 });
+      console.log(`[WHATSAPP-BOT] Analizando ${messages.length} mensajes en búsqueda de uniones...`);
+      
+      const joinList: any[] = [];
+      
+      for (const msg of messages) {
+        const isSystemJoin = msg.type === 'gp2' || msg.type === 'notification' || 
+                             (msg.body && (
+                               msg.body.toLowerCase().includes('unió') || 
+                               msg.body.toLowerCase().includes('unio') || 
+                               msg.body.toLowerCase().includes('joined') || 
+                               msg.body.toLowerCase().includes('añadió') || 
+                               msg.body.toLowerCase().includes('añadio') || 
+                               msg.body.toLowerCase().includes('added')
+                             ));
+                             
+        if (isSystemJoin) {
+          const timestamp = msg.timestamp * 1000;
+          const date = new Date(timestamp).toLocaleString('es-CO', { timeZone: 'America/Bogota' });
+          
+          const author = msg.author || msg.from;
+          const phone = author ? author.split('@')[0] : 'Desconocido';
+          
+          let contactName = 'Desconocido';
+          if (author) {
+            try {
+              const contact = await this.client.getContactById(author);
+              contactName = contact.name || contact.pushname || '';
+            } catch (e) {}
+          }
+          
+          joinList.push({
+            fecha: date,
+            timestamp: timestamp,
+            telefono: phone,
+            nombre: contactName,
+            mensaje: msg.body || `Mensaje de sistema de tipo ${msg.type}`
+          });
+        }
+      }
+      
+      joinList.sort((a, b) => b.timestamp - a.timestamp);
+      
+      let fileContent = `=== LISTADO DE UNIONES RECIENTES EN EL GRUPO ===\nGenerado el: ${new Date().toLocaleString('es-CO', { timeZone: 'America/Bogota' })}\n\n`;
+      for (const entry of joinList) {
+        fileContent += `📅 Fecha: ${entry.fecha}\n📞 Teléfono: +${entry.telefono}\n👤 Nombre: ${entry.nombre}\n💬 Evento: ${entry.mensaje}\n-------------------------------------------\n`;
+      }
+      
+      const outputPath = path.join(process.cwd(), 'recent_joins.txt');
+      fs.writeFileSync(outputPath, fileContent, 'utf8');
+      console.log(`[WHATSAPP-BOT] ¡Listado exportado con éxito a ${outputPath}!`);
+    } catch (err: any) {
+      console.error('[WHATSAPP-BOT] Error exportando uniones:', err.message || err);
     }
   }
 
