@@ -20,6 +20,7 @@ export type JanIAResult = {
   mentions?: string[];
   shouldSendDM?: boolean;
   dmShouldReply?: boolean; // Flag para indicar que el DM debe ser un reply
+  reactionEmoji?: string;  // Emoji que la IA recomienda para reaccionar al mensaje original
 };
 
 // --- 1. ALMACENES DE MEMORIA (v11.70) ---
@@ -122,11 +123,19 @@ Para estructurar ofertas de venta/arriendo y permutas complejas, debes mapear do
 
 ## DETECCIÓN DE VIOLACIONES DE NORMAS (MANDATORIO)
 Debes clasificar la entrada como 'VIOLACION_DE_NORMAS' en los siguientes casos:
-1. **Fotografías Decorativas o de Espacios sin Ficha Técnica**: Si la entrada es una imagen (flyer, foto adjunta, etc.) y detectas que es una simple foto de un ambiente (baño, cocina, habitación, sala, piscina), fachada de un edificio o cualquier objeto/lugar físico **sin texto promocional ni datos comerciales de ficha técnica** superpuestos en ella.
-2. **Publicidad Externa / Autopromoción**: Si el texto contiene enlaces a otros grupos de WhatsApp, invitaciones de afiliación, venta de cursos, autopromoción de sitios web externos que no sean portales inmobiliarios oficiales o cualquier contenido ajeno al corretaje de inmuebles.
+1. **Fotografías Decorativas o de Espacios sin Ficha Técnica**: Si la entrada es una imagen (flyer, foto adjunta, etc.) y detectas que es una simple foto de un ambiente (baño, cocina, habitación, sala, piscina), fachada de un edificio o cualquier objeto/lugar físico sin texto promocional ni datos comerciales de ficha técnica superpuestos en ella.
+2. **Contenido Fuera de Base / Off-Topic / Spam**: Si el mensaje o imagen contiene:
+   - Temas políticos (opiniones, memes, propaganda o debates sobre candidatos o partidos políticos).
+   - Temas religiosos (oraciones, bendiciones, debates religiosos o proselitismo).
+   - Enlaces de invitación a unirse a otros grupos de WhatsApp, Telegram, canales de difusión o redes sociales.
+   - Publicidad de terceros, autopromociones o venta de cursos.
+   - Enlaces sospechosos, spam, scam, esquemas de ganancias rápidas o pirámides.
+   - Ofertas de servicios profesionales ajenos o que no sean de la red VECY NETWORK.
+   - Cualquier producto o servicio no relacionado al sector inmobiliario (comida, masajes, diseño, etc.).
 
-Si clasificas la entrada como 'VIOLACION_DE_NORMAS', debes generar un mensaje en el campo 'response'. 
-El mensaje debe ser sumamente educado y empático pero firme, dirigiéndose al usuario por su primer nombre, explicándole amablemente que ha cometido un error, que por políticas y orden del canal no se permiten fotos decorativas ni publicidad de terceros, e invitándolo a eliminar la publicación para mantener limpia la red de los aliados.
+Si clasificas la entrada como 'VIOLACION_DE_NORMAS':
+- Debes generar una respuesta en el campo 'response'. El mensaje debe ser sumamente educado, empático y profesional pero muy firme. Dirígete al usuario por su primer nombre, explícale amablemente qué norma violó, e invítalo cordialmente a retirar el mensaje de inmediato para mantener limpia y organizada nuestra comunidad. Adviértele de forma sutil que las normas están detalladas en la descripción del grupo y que el sistema remueve de forma automática a quienes acumulan 3 llamados de atención.
+- Debes rellenar el campo 'reactionEmoji' con un emoji coherente (como '❌' o '🚫').
 
 ## DEBATE, DETECCIÓN DE SARCASMO Y AUTO-DEFENSA PROFESIONAL (CRÍTICO)
 Debes ser capaz de identificar de manera intuitiva el sarcasmo humano, los tonos de burla, el escepticismo o comentarios con doble sentido dirigidos a ti o al sistema (tanto en forma de texto directo como en indicaciones de reacciones con emojis como 😂 o 🤣 que los usuarios pongan a tus mensajes):
@@ -163,7 +172,8 @@ DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
   },
   "response": "Tu respuesta elocuente para el grupo (cadena vacía '' si no hay match ni es consulta)",
   "shouldSendDM": boolean,
-  "missingFields": ["string"]
+  "missingFields": ["string"],
+  "reactionEmoji": "string (emoji recomendado para reaccionar al mensaje original, ej: '❌', '🚫', '⚠️', '🔄', '✅', '💡', '🎯')"
 }
 `;
 function formatColombiaDateTime(dateVal: any) {
@@ -915,17 +925,28 @@ Si mis motores de scraping o visión profunda no logran extraer todos los datos 
 🔥 **¡No le temas al éxito!** He notado que cuando empiezo a hablar, algunos se quedan en silencio. Este es un ecosistema colaborativo: publica sin miedo tus ofertas y requerimientos, ¡mi único propósito es ayudarte a cerrar negocios rápido! 🚀🎯
 
 ⚖️ **Compromiso de Honor:** Si logras consolidar un negocio gracias a un MATCH presentado por mí, es obligatorio que califiques mi servicio aquí: https://g.page/r/CctNbwU6UpX5EBM/review 🚀🎯`;
-
-export const MSG_PAUTAS_FORMATOS = `📋 **ESTATUTO DE PUBLICACIÓN Y FRECUENCIAS — VECY NETWORK**
-_Directriz técnica obligatoria para evitar spam en el grupo._
+export const MSG_PAUTAS_FORMATOS = `📋 **ESTATUTO DE PUBLICACIÓN Y MODERACIÓN — VECY NETWORK**
+_Directriz técnica obligatoria para todos los aliados del canal._
 ━━━━━━━━━━━━━━━━━━━━━━
 
-🔄 **REGLA DE BLOQUES DINÁMICOS:**
-✅ Se permite enviar bloques de **1 a 3 publicaciones consecutivas** (enlaces, fichas de texto, audios o flyers) a cualquier hora del día.
-⏱️ Una vez enviado tu bloque, **debes esperar entre 5 y 10 minutos** antes de enviar tu siguiente bloque. Esto me permite procesar tu información y que todos los aliados leerán tus negocios con claridad.
-❌ El envío de ráfagas masivas de fotos sin descripción, repetir la misma propiedad o inundar el chat sin esperar activará el silencio temporal de tus publicaciones.
+🔄 **REGLAS DE PUBLICACIÓN:**
+✅ Se permite enviar bloques de **1 a 3 publicaciones** consecutivas (enlaces, fichas de texto, audios o flyers) a cualquier hora del día.
+⏱️ Una vez enviado tu bloque, **debes esperar al menos 5 minutos** antes de enviar tu siguiente bloque para evitar saturar el chat de los aliados.
 
-¡Cuidemos el grupo y hagamos negocios inteligentes! 🤝✨`;
+🚫 **CONTENIDO NO PERMITIDO (OFF-TOPIC):**
+Queda terminantemente prohibido publicar en este grupo:
+- Temas Políticos o Religiosos (opiniones, memes, propaganda o debates).
+- Enlaces de invitación a unirse a otros grupos, comunidades o redes sociales externas.
+- Publicidad propia, autopromociones o venta de cursos.
+- Enlaces sospechosos, spam, scam, esquemas de ganancias o pirámides.
+- Ofertas de servicios profesionales ajenos o que no sean de VECY Network (como masajes, diseño, etc.).
+
+🚨 **SISTEMA AUTOMÁTICO DE STRIKES (LLAMADOS DE ATENCIÓN):**
+- Mi motor de IA modera el canal las 24/7. Si detecto contenido no permitido, **eliminaré la publicación de forma inmediata** y emitiré un llamado de atención.
+- Al acumular **3 llamados de atención (strikes)**, serás expulsado y retirado del grupo de forma automática.
+
+¡Cuidemos el orden y hagamos negocios inteligentes de corretaje directo! 🤝✨`;
+
 
 export const MSG_TIPS_CALIDAD_COBERTURA = `🌍 *COBERTURA NACIONAL:* JanIA procesa activos en todo Colombia. No olvides especificar el municipio, barrio, localidad, vereda, caserío, ciudad si estás fuera de Bogotá. 🇨🇴`;
 
@@ -1015,7 +1036,8 @@ export async function processConsultingMessage(
     if (isListingOrReq) {
       return {
         classification: "CONSULTA_GENERAL",
-        response: `📢 *VECY INMUEBLES NETWORK* 📢\n\nHola @${rawPhone}, detecté que estás publicando una oferta o requerimiento inmobiliario. Para poder procesar tu publicación con mis motores automáticos, registrar tus datos y buscarte un MATCH de inmediato con otros aliados, por favor realiza tu publicación en nuestro grupo especializado **VECY INMUEBLES NETWORK**:\n👉 https://chat.whatsapp.com/K36KrHeB9nMEKJ56s8XFcM\n\n¡Hagamos equipo y cerremos negocios! 🚀🎯`
+        response: `📢 *VECY INMUEBLES NETWORK* 📢\n\nHola @${rawPhone}, detecté que estás publicando una oferta o requerimiento inmobiliario. Para poder procesar tu publicación con mis motores automáticos, registrar tus datos y buscarte un MATCH de inmediato con otros aliados, por favor realiza tu publicación en nuestro grupo especializado **VECY INMUEBLES NETWORK**:\n👉 https://chat.whatsapp.com/K36KrHeB9nMEKJ56s8XFcM\n\n¡Hagamos equipo y cerremos negocios! 🚀🎯`,
+        reactionEmoji: "🔄"
       };
     }
 
@@ -1036,7 +1058,8 @@ export async function processConsultingMessage(
     if (isAboutVecy) {
       return {
         classification: "CONSULTA_GENERAL",
-        response: `👌 *CÍRCULO CERO — CONEXIÓN VECY* 👌\n\nHola @${rawPhone}, veo que quieres saber más sobre el proyecto VECY Network, beneficios, creadores o el plan colaborativo. Te invito a unirte y hacer tus preguntas en nuestro canal oficial **Círculo CERO 👌**:\n👉 https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU\n\n¡Es el espacio ideal para resolver todas tus inquietudes de la comunidad! 🤝✨`
+        response: `👌 *CÍRCULO CERO — CONEXIÓN VECY* 👌\n\nHola @${rawPhone}, veo que quieres saber más sobre el proyecto VECY Network, beneficios, creadores o el plan colaborativo. Te invito a unirte y hacer tus preguntas en nuestro canal oficial **Círculo CERO 👌**:\n👉 https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU\n\n¡Es el espacio ideal para resolver todas tus inquietudes de la comunidad! 🤝✨`,
+        reactionEmoji: "🔄"
       };
     }
 
@@ -1066,7 +1089,22 @@ export async function processConsultingMessage(
       `para encontrar publicaciones reales recientes en portales inmobiliarios de esa zona. Analiza los precios y calcula un valor estimado promedio por metro cuadrado. ` +
       `Si el usuario te proporciona datos adicionales como dirección exacta, barrio, localidad, o ciudad, utilízalos para refinar tu búsqueda. Presenta un informe de avalúo rápido, claro, estructurado y profesional.\n\n` +
       `Tus respuestas deben ser sumamente profesionales, cordiales, claras y estar formateadas en Markdown con emojis para facilitar la lectura rápida en WhatsApp. ` +
-      `Siempre dirígete al usuario de forma personalizada llamándolo por su primer nombre: ${n}.`;
+      `Siempre dirígete al usuario de forma personalizada llamándolo por su primer nombre: ${n}.\n\n` +
+      `## REGLAS DE MODERACIÓN Y FILTRO DE SPAM (MANDATORIO)\n` +
+      `Debes clasificar el mensaje como 'VIOLACION_DE_NORMAS' si detectas que la publicación no es una consulta legal/avalúo y viola las normas del grupo. Casos:\n` +
+      `- Temas políticos (opiniones, memes, propaganda o debates sobre candidatos o partidos políticos).\n` +
+      `- Temas religiosos (oraciones, bendiciones, debates religiosos o proselitismo).\n` +
+      `- Enlaces de invitación a unirse a otros grupos de WhatsApp, Telegram, canales de difusión o redes sociales.\n` +
+      `- Publicidad de terceros, autopromociones o venta de cursos.\n` +
+      `- Enlaces sospechosos, spam, scam, esquemas de ganancias rápidas o pirámides.\n` +
+      `- Ofertas de servicios profesionales ajenos o que no sean de la red VECY NETWORK (masajes, diseño, etc.).\n` +
+      `- Cualquier producto o servicio no relacionado al sector inmobiliario.\n\n` +
+      `DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:\n` +
+      `{\n` +
+      `  "classification": "CONSULTA_GENERAL | VIOLACION_DE_NORMAS",\n` +
+      `  "response": "Tu respuesta jurídica o comercial, o la advertencia amigable pero firme sobre la infracción si clasificas como VIOLACION_DE_NORMAS (pidiéndole eliminar el mensaje de inmediato para mantener limpia la comunidad y advirtiendo del límite de 3 strikes antes de ser expulsado). Por favor usa emojis coherentes.",\n` +
+      `  "reactionEmoji": "string (emoji recomendado para reaccionar al post, ej: '💡', '❌', '🚫', '⚠️')"\n` +
+      `}`;
 
     const messages = [
       { role: "system", content: systemPrompt },
@@ -1076,16 +1114,26 @@ export async function processConsultingMessage(
     // Si es una solicitud de avalúo o contiene palabras clave de valor, activamos enableSearch para que Gemini busque en internet
     const llmRes = await invokeLLM({
       messages,
+      responseFormat: { type: "json_object" },
       imageBuffer,
       enableSearch: isValuationQuery
     });
 
-    const replyContent = llmRes.choices[0].message.content || "Lo siento, en este momento no puedo procesar tu consulta. Intenta de nuevo más tarde.";
-
-    return {
-      classification: "CONSULTA_GENERAL",
-      response: replyContent
-    };
+    try {
+      const parsed = JSON.parse(llmRes.choices[0].message.content);
+      return {
+        classification: parsed.classification || "CONSULTA_GENERAL",
+        response: parsed.response || "",
+        reactionEmoji: parsed.reactionEmoji || (parsed.classification === "VIOLACION_DE_NORMAS" ? "❌" : "💡")
+      };
+    } catch (e) {
+      const replyContent = llmRes.choices[0].message.content || "Lo siento, en este momento no puedo procesar tu consulta. Intenta de nuevo más tarde.";
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: replyContent,
+        reactionEmoji: "💡"
+      };
+    }
 
   } catch (error: any) {
     console.error("[processConsultingMessage Error]:", error.message);
@@ -1133,7 +1181,8 @@ export async function processCirculoMessage(
     if (isListingOrReq) {
       return {
         classification: "CONSULTA_GENERAL",
-        response: `📢 *VECY INMUEBLES NETWORK* 📢\n\nHola @${rawPhone}, detecté que estás publicando una oferta o requerimiento inmobiliario. Para poder procesar tu publicación con mis motores automáticos, registrar tus datos y buscarte un MATCH de inmediato con otros aliados, por favor realiza tu publicación en nuestro grupo especializado **VECY INMUEBLES NETWORK**:\n👉 https://chat.whatsapp.com/K36KrHeB9nMEKJ56s8XFcM\n\n¡Hagamos equipo y cerremos negocios! 🚀🎯`
+        response: `📢 *VECY INMUEBLES NETWORK* 📢\n\nHola @${rawPhone}, detecté que estás publicando una oferta o requerimiento inmobiliario. Para poder procesar tu publicación con mis motores automáticos, registrar tus datos y buscarte un MATCH de inmediato con otros aliados, por favor realiza tu publicación en nuestro grupo especializado **VECY INMUEBLES NETWORK**:\n👉 https://chat.whatsapp.com/K36KrHeB9nMEKJ56s8XFcM\n\n¡Hagamos equipo y cerremos negocios! 🚀🎯`,
+        reactionEmoji: "🔄"
       };
     }
 
@@ -1159,7 +1208,8 @@ export async function processCirculoMessage(
     if (isLegalOrValuation) {
       return {
         classification: "CONSULTA_GENERAL",
-        response: `💡 *BUZÓN DE CONSULTORÍA INMOBILIARIA* 💡\n\nHola @${rawPhone}, veo que tienes una consulta jurídica, procedimental o de avalúo. Para darte una respuesta detallada con mis motores legales y de mercado, por favor realiza tu pregunta en nuestro grupo especializado **Buzón de Consultoría Inmobiliaria 24/7**:\n👉 https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6\n\n¡Allí te responderé al instante con toda la información! 🚀🎯`
+        response: `💡 *BUZÓN DE CONSULTORÍA INMOBILIARIA* 💡\n\nHola @${rawPhone}, veo que tienes una consulta jurídica, procedimental o de avalúo. Para darte una respuesta detallada con mis motores legales y de mercado, por favor realiza tu pregunta en nuestro grupo especializado **Buzón de Consultoría Inmobiliaria 24/7**:\n👉 https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6\n\n¡Allí te responderé al instante con toda la información! 🚀🎯`,
+        reactionEmoji: "🔄"
       };
     }
 
@@ -1175,24 +1225,49 @@ export async function processCirculoMessage(
       `- Plan Colaborativo: Si un miembro cierra un negocio gracias a un MATCH de JanIA, su único compromiso de honor es dejar una reseña calificada aquí: https://g.page/r/CctNbwU6UpX5EBM/review\n\n` +
       `DIRECTRICES DE RESPUESTA:\n` +
       `- Las respuestas deben ser cortas, claras, contundentes y amigables.\n` +
-      `- Dirígete al usuario llamándolo por su primer nombre: \${n}. Usa emojis.`;
+      `- Dirígete al usuario llamándolo por su primer nombre: ${n}. Usa emojis.\n\n` +
+      `## REGLAS DE MODERACIÓN Y FILTRO DE SPAM (MANDATORIO)\n` +
+      `Debes clasificar el mensaje como 'VIOLACION_DE_NORMAS' si detectas que la publicación viola las normas de Círculo Cero. Casos:\n` +
+      `- Temas políticos (opiniones, memes, propaganda o debates sobre candidatos o partidos políticos).\n` +
+      `- Temas religiosos (oraciones, bendiciones, debates religiosos o proselitismo).\n` +
+      `- Enlaces de invitación a unirse a otros grupos de WhatsApp, Telegram, canales de difusión o redes sociales.\n` +
+      `- Publicidad de terceros, autopromociones o venta de cursos.\n` +
+      `- Enlaces sospechosos, spam, scam, esquemas de ganancias rápidas o pirámides.\n` +
+      `- Ofertas de servicios profesionales ajenos o que no sean de la red VECY NETWORK (masajes, diseño, etc.).\n` +
+      `- Cualquier producto o servicio no relacionado al ecosistema VECY.\n\n` +
+      `DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:\n` +
+      `{\n` +
+      `  "classification": "CONSULTA_GENERAL | VIOLACION_DE_NORMAS",\n` +
+      `  "response": "Tu respuesta elocuente y amigable, o tu advertencia empática pero firme si hay violación de normas (pidiéndole eliminar el mensaje de inmediato para mantener limpia la comunidad y advirtiendo del límite de 3 strikes antes de ser expulsado). Por favor usa emojis coherentes.",\n` +
+      `  "reactionEmoji": "string (emoji recomendado para reaccionar al post, ej: '💡', '❌', '🚫', '⚠️')"\n` +
+      `}`;
 
     const messages = [
       { role: "system", content: systemPrompt },
-      { role: "user", content: `Usuario: @\${rawPhone} (\${realName})\nPregunta: \${text}` }
+      { role: "user", content: `Usuario: @${rawPhone} (${realName})\nPregunta: ${text}` }
     ];
 
     const llmRes = await invokeLLM({
       messages,
+      responseFormat: { type: "json_object" },
       enableSearch: false
     });
 
-    const replyContent = llmRes.choices[0].message.content || "Lo siento, en este momento no puedo responder tu consulta.";
-
-    return {
-      classification: "CONSULTA_GENERAL",
-      response: replyContent
-    };
+    try {
+      const parsed = JSON.parse(llmRes.choices[0].message.content);
+      return {
+        classification: parsed.classification || "CONSULTA_GENERAL",
+        response: parsed.response || "",
+        reactionEmoji: parsed.reactionEmoji || (parsed.classification === "VIOLACION_DE_NORMAS" ? "❌" : "💡")
+      };
+    } catch (e) {
+      const replyContent = llmRes.choices[0].message.content || "Lo siento, en este momento no puedo responder tu consulta.";
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: replyContent,
+        reactionEmoji: "💡"
+      };
+    }
 
   } catch (error: any) {
     console.error("[processCirculoMessage Error]:", error.message);

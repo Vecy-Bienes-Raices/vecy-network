@@ -8,6 +8,7 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { whatsappBot } from "./whatsapp";
 import { initCronScheduler } from "./cronService";
+import { processWhatsAppMessage } from "./janIA";
 
 process.on("uncaughtException", (error) => {
   console.error("[SYSTEM-CRITICAL] Uncaught Exception detectada:", error);

@@ -199,7 +199,53 @@ export class WhatsAppBot {
     process.on('SIGTERM', shutdown);
   }
 
+  private getInfractionsPath(): string {
+    return path.join(process.cwd(), '.infractions.json');
+  }
 
+  private loadInfractions(): Record<string, Record<string, number>> {
+    const filePath = this.getInfractionsPath();
+    if (fs.existsSync(filePath)) {
+      try {
+        return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      } catch (e) {
+        console.error('[WHATSAPP-BOT] Error al leer .infractions.json:', e);
+      }
+    }
+    return {};
+  }
+
+  private saveInfractions(infractions: Record<string, Record<string, number>>) {
+    const filePath = this.getInfractionsPath();
+    try {
+      fs.writeFileSync(filePath, JSON.stringify(infractions, null, 2), 'utf8');
+    } catch (e) {
+      console.error('[WHATSAPP-BOT] Error al escribir .infractions.json:', e);
+    }
+  }
+
+  private incrementStrike(groupId: string, userId: string): number {
+    const infractions = this.loadInfractions();
+    if (!infractions[groupId]) {
+      infractions[groupId] = {};
+    }
+    const current = infractions[groupId][userId] || 0;
+    const next = current + 1;
+    infractions[groupId][userId] = next;
+    this.saveInfractions(infractions);
+    return next;
+  }
+
+  private resetStrikes(groupId: string, userId: string) {
+    const infractions = this.loadInfractions();
+    if (infractions[groupId] && infractions[groupId][userId]) {
+      delete infractions[groupId][userId];
+      if (Object.keys(infractions[groupId]).length === 0) {
+        delete infractions[groupId];
+      }
+      this.saveInfractions(infractions);
+    }
+  }
 
   // --- MANEJO DE EVENTOS ---
   private setupEventListeners() {
@@ -219,6 +265,19 @@ export class WhatsAppBot {
     this.client.on('disconnected', (reason) => {
       console.log('[WHATSAPP-BOT] Cliente desconectado:', reason);
       this.isReady = false;
+    });
+
+    this.client.on('group_membership_request', async (notification: any) => {
+      try {
+        console.log(`[WHATSAPP-BOT] Recibida solicitud de unión de ${notification.author} en el grupo ${notification.chatId}`);
+        await this.client.approveGroupMembershipRequests(notification.chatId, {
+          requesterIds: [notification.author],
+          sleep: null
+        });
+        console.log(`[WHATSAPP-BOT] Solicitud de unión de ${notification.author} aprobada con éxito.`);
+      } catch (err: any) {
+        console.error('[WHATSAPP-BOT] Error al aprobar solicitud de unión:', err.message || err);
+      }
     });
 
     this.client.on('group_join', async (notification: any) => {
@@ -387,6 +446,7 @@ export class WhatsAppBot {
     const now = Date.now();
     const COOLDOWN_PERIOD = 5 * 60 * 1000; // 5 Minutos de espera entre bloques
     const MAX_BLOCK_SIZE = 3;             // Máximo 3 mensajes por bloque
+    const isGroupChat = chatId.includes('@g.us');
 
     let cooldown = this.cooldownMap.get(senderId);
 
@@ -555,6 +615,60 @@ export class WhatsAppBot {
     const isConsultation = result.classification === "CONSULTA_GENERAL" || result.classification === "RESPUESTA_A_PREGUNTA_IA";
     const isViolation = result.classification === "VIOLACION_DE_NORMAS";
 
+    // 1. Manejo de Infracciones y Permisos Admin (si es un grupo)
+    let isBotAdmin = false;
+    let chat: any = null;
+    let strike = 0;
+
+    if (isGroup && originalMsg) {
+      try {
+        chat = await originalMsg.getChat();
+        const botId = this.client.info?.wid?._serialized;
+        if (botId && chat.participants) {
+          const botParticipant = chat.participants.find((p: any) => p.id._serialized === botId);
+          isBotAdmin = botParticipant?.isAdmin || botParticipant?.isSuperAdmin || false;
+        }
+      } catch (err) {
+        console.error('[WHATSAPP-BOT] Error al verificar permisos de administrador del bot:', err);
+      }
+    }
+
+    if (isViolation && isGroup) {
+      // Registrar e incrementar strike
+      strike = this.incrementStrike(chatId, senderId);
+      const phone = senderId.split('@')[0];
+
+      // Borrar mensaje infractor si es admin
+      if (isBotAdmin && originalMsg) {
+        try {
+          console.log(`[WHATSAPP-BOT] Borrando mensaje infractor de ${senderId} en el grupo ${chatId}`);
+          await originalMsg.delete(true);
+        } catch (delErr: any) {
+          console.error('[WHATSAPP-BOT] Error al borrar mensaje infractor:', delErr.message || delErr);
+        }
+      }
+
+      // Estructurar el encabezado de strike
+      let strikeHeader = '';
+      if (strike === 1) {
+        strikeHeader = `⚠️ *LLAMADO DE ATENCIÓN [1/3]* ⚠️\n\n`;
+      } else if (strike === 2) {
+        strikeHeader = `⚠️ *SEGUNDO LLAMADO DE ATENCIÓN [2/3]* ⚠️\n\n`;
+      } else {
+        strikeHeader = `🚨 *EXPULSIÓN AUTOMÁTICA [3/3]* 🚨\n\n`;
+      }
+
+      if (strike >= 3) {
+        result.response = `${strikeHeader}Colega @${phone}, has acumulado 3 llamados de atención por publicar contenido no permitido en el grupo.\n\nProcediendo a la expulsión automática del canal para cuidar el orden de la comunidad de aliados...`;
+      } else {
+        result.response = `${strikeHeader}${result.response}`;
+      }
+
+      if (!isBotAdmin) {
+        result.response += `\n\n_(Nota: Por favor nombra a JanIA Administradora del grupo para que pueda borrar los posts prohibidos e implementar la expulsión automática de infractores)._`;
+      }
+    }
+
     // Notificación en el grupo o DM (evitando duplicar si se procesará abajo en shouldSendDM)
     const shouldSendGroup = isGroup && (isMatch || isConsultation || isViolation);
     const shouldSendDMDirect = !isGroup && !result.shouldSendDM;
@@ -564,30 +678,45 @@ export class WhatsAppBot {
       const options: any = { 
         mentions: isGroup ? mentions : [] 
       };
-      if (isViolation && originalMsg) {
+      if (isViolation && originalMsg && !isBotAdmin) {
         options.quotedMessageId = originalMsg.id._serialized;
       }
       await this.queuedSend(chatId, result.response, options);
       await this.logToDb(senderId, 'janIA', result.response);
+
+      // Si es el 3er strike y somos admin, procedemos a retirar al usuario
+      if (isGroup && strike >= 3 && isBotAdmin && chat) {
+        try {
+          console.log(`[WHATSAPP-BOT] Retirando infractor ${senderId} del grupo ${chatId}`);
+          await chat.removeParticipants([senderId]);
+          this.resetStrikes(chatId, senderId);
+        } catch (kickErr: any) {
+          console.error('[WHATSAPP-BOT] Error al expulsar infractor:', kickErr.message || kickErr);
+        }
+      }
     }
 
     // Reaccionar con emojis a los mensajes del grupo para retroalimentación sin generar DMs fríos
     if (isGroup && originalMsg) {
       try {
-        if (result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO") {
-          await originalMsg.react('✅');
-        } else if (result.classification === "DATOS_INCOMPLETOS") {
-          await originalMsg.react('⚠️');
-        } else if (result.classification === "VIOLACION_DE_NORMAS") {
-          await originalMsg.react('❌');
-        } else if (result.classification === "CONSULTA_GENERAL") {
-          // Si es un mensaje de redirección con un enlace de invitación de WhatsApp, reaccionar con 🔄
-          if (result.response && result.response.includes("chat.whatsapp.com")) {
-            await originalMsg.react('🔄');
-          } else {
-            // Respuesta de consultoría exitosa
-            await originalMsg.react('💡');
+        let reaction = result.reactionEmoji;
+        if (!reaction) {
+          if (result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO") {
+            reaction = '✅';
+          } else if (result.classification === "DATOS_INCOMPLETOS") {
+            reaction = '⚠️';
+          } else if (result.classification === "VIOLACION_DE_NORMAS") {
+            reaction = '❌';
+          } else if (result.classification === "CONSULTA_GENERAL") {
+            if (result.response && result.response.includes("chat.whatsapp.com")) {
+              reaction = '🔄';
+            } else {
+              reaction = '💡';
+            }
           }
+        }
+        if (reaction) {
+          await originalMsg.react(reaction);
         }
       } catch (e) {
         console.error('[React-Error] Fallo al reaccionar al mensaje original:', e);
