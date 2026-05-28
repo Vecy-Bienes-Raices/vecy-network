@@ -609,7 +609,7 @@ export async function processWhatsAppMessage(
         textLower.includes("círculo cero");
 
       if (isAboutVecy) {
-        // Permitir que responda directamente sobre VECY en este grupo (no sobrescribimos result.response)
+        result.response = `👌 *CÍRCULO CERO — CONEXIÓN VECY* 👌\n\nHola @${rawPhone}, veo que tienes dudas o quieres saber más sobre el proyecto VECY Network, beneficios, creadores o el plan colaborativo. Te invito a unirte y hacer tus preguntas en nuestro canal oficial **Círculo CERO 👌**:\n👉 https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU\n\n¡Es el espacio ideal para resolver todas tus inquietudes de la comunidad! 🤝✨`;
       } else {
         result.response = `💡 *BUZÓN DE CONSULTORÍA INMOBILIARIA* 💡\n\nHola @${rawPhone}, veo que tienes una consulta jurídica, procedimental o de avalúo. Para darte una respuesta detallada con mis motores legales y de mercado sin saturar este canal de ofertas y requerimientos, te invito a realizar tu pregunta en nuestro grupo especializado **Buzón de Consultoría Inmobiliaria 24/7**:\n👉 https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6\n\n¡Allí te responderé al instante con toda la información! 🚀🎯`;
         result.classification = "CONSULTA_GENERAL";
@@ -1052,6 +1052,28 @@ export async function processConsultingMessage(
       return {
         classification: "CONSULTA_GENERAL",
         response: `📢 *VECY INMUEBLES NETWORK* 📢\n\nHola @${rawPhone}, detecté que estás publicando una oferta o requerimiento inmobiliario. Para poder procesar tu publicación con mis motores automáticos, registrar tus datos y buscarte un MATCH de inmediato con otros aliados, por favor realiza tu publicación en nuestro grupo especializado **VECY INMUEBLES NETWORK**:\n👉 https://chat.whatsapp.com/K36KrHeB9nMEKJ56s8XFcM\n\n¡Hagamos equipo y cerremos negocios! 🚀🎯`,
+        reactionEmoji: "🔄"
+      };
+    }
+
+    // 2. Redirección a Círculo Cero si preguntan cosas sobre VECY
+    const isAboutVecy = 
+      textLower.includes("vecy") || 
+      textLower.includes("proyecto") || 
+      textLower.includes("quien creo") || 
+      textLower.includes("quién creó") || 
+      textLower.includes("creadores") || 
+      textLower.includes("quien es jania") || 
+      textLower.includes("quién es jania") ||
+      textLower.includes("como funciona") || 
+      textLower.includes("cómo funciona") ||
+      textLower.includes("circulo cero") ||
+      textLower.includes("círculo cero");
+
+    if (isAboutVecy) {
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: `👌 *CÍRCULO CERO — CONEXIÓN VECY* 👌\n\nHola @${rawPhone}, veo que quieres saber más sobre el proyecto VECY Network, beneficios, creadores o el plan colaborativo. Te invito a unirte y hacer tus preguntas en nuestro canal oficial **Círculo CERO 👌**:\n👉 https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU\n\n¡Es el espacio ideal para resolver todas tus inquietudes de la comunidad! 🤝✨`,
         reactionEmoji: "🔄"
       };
     }
