@@ -116,6 +116,15 @@ export async function scrapePropertyLink(url: string) {
         "areaTotal": number | null,
         "areaPrivate": number | null,
         "isAmoblado": boolean,
+        "floorDetail": "string (ej: 'piso 5', '3 pisos', '8 metros', 'NA')",
+        "interiorExterior": "interior | exterior | NA",
+        "cuartoBanoServicio": "Si | No | NA",
+        "cocina": "cerrada | abierta | americana | NA",
+        "lavanderiaIndependiente": "Si | No | NA",
+        "tipoPisos": ["string"],
+        "depositos": number | null,
+        "comisiones": "string | number | null",
+        "antiguedad": "nuevo | 1-5 | 5-10 | 10+ | NA",
         "amenities": { "balcon": boolean, "piscina": boolean, "gimnasio": boolean, "vigilancia": boolean, "ascensor": boolean, "terraza": boolean, "deposito": boolean },
         "images": ["url1", "url2"]
       }

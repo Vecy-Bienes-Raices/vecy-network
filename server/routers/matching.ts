@@ -3,7 +3,7 @@ import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { properties, requirements, propertyMatches } from "../../drizzle/schema";
 import { eq, and } from "drizzle-orm";
-import { evaluarMatch } from "../_core/matching";
+import { evaluarMatch, calcularScoreMatch } from "../_core/matching";
 
 export const matchingRouter = router({
   /**
@@ -24,11 +24,11 @@ export const matchingRouter = router({
       const activeReqs = await db.select().from(requirements).where(eq(requirements.status, 'active'));
 
       const matches = activeReqs
-        .filter(r => evaluarMatch(r, p))
         .map(r => ({
           requirementId: r.id,
-          score: 100
-        }));
+          score: calcularScoreMatch(r, p)
+        }))
+        .filter(m => m.score >= 70);
 
       return matches.slice(0, 10);
     }),
@@ -83,18 +83,18 @@ export const matchingRouter = router({
 
       // Filtrar usando el motor de decisión estricto
       const matches = activeProps
-        .filter(p => evaluarMatch(req, p))
         .map(p => ({
           propertyId: p.id,
-          score: 100
-        }));
+          score: calcularScoreMatch(req, p)
+        }))
+        .filter(m => m.score >= 70);
 
       // Guardar matches encontrados
       for (const m of matches) {
         await db.insert(propertyMatches).values({
           requirementId: reqId,
           propertyId: m.propertyId,
-          matchScore: "100.00",
+          matchScore: m.score.toFixed(2),
           status: 'suggested'
         }).onConflictDoNothing();
       }

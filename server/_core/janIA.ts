@@ -8,7 +8,7 @@ import { properties, requirements, users, propertyImages, InsertProperty, Insert
 import { findMatchesForProperty, findMatchesForRequirement } from "./matching";
 import { validarZona, normalizarTextoGeografico } from "./geography";
 import { transcribeAudio } from "./voiceTranscription";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { storagePut } from "../storage";
 
 export type JanIAResult = {
@@ -150,13 +150,68 @@ DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
     "bathrooms": number,
     "garages": number,
     "stratum": number,
-    "isCollaborativePool": boolean (DEFAULT: true)
+    "isCollaborativePool": boolean (DEFAULT: true),
+    "interiorExterior": "interior | exterior | NA",
+    "cuartoBanoServicio": "Si | No | NA",
+    "cocina": "cerrada | abierta | americana | NA",
+    "lavanderiaIndependiente": "Si | No | NA",
+    "tipoPisos": ["string"],
+    "depositos": number,
+    "comisiones": "string | number | null",
+    "antiguedad": "nuevo | 1-5 | 5-10 | 10+ | NA",
+    "floorDetail": "string (ej: 'piso 5', '3 pisos', '8 metros de altura', 'NA')"
   },
   "response": "Tu respuesta elocuente para el grupo (cadena vacía '' si no hay match ni es consulta)",
   "shouldSendDM": boolean,
   "missingFields": ["string"]
 }
 `;
+function formatColombiaDateTime(dateVal: any) {
+  const d = new Date(dateVal);
+  const bogotaStr = d.toLocaleString('en-US', { timeZone: 'America/Bogota' });
+  const bogotaDate = new Date(bogotaStr);
+  
+  const day = String(bogotaDate.getDate()).padStart(2, '0');
+  const month = String(bogotaDate.getMonth() + 1).padStart(2, '0');
+  const year = bogotaDate.getFullYear();
+  
+  let hours = bogotaDate.getHours();
+  const minutes = String(bogotaDate.getMinutes()).padStart(2, '0');
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12;
+  hours = hours ? hours : 12;
+  const hourStr = String(hours).padStart(2, '0');
+  
+  return {
+    dateStr: `${day}/${month}/${year}`,
+    timeStr: `${hourStr}:${minutes} ${ampm}`
+  };
+}
+
+function translatePropertyType(type: string): string {
+  const map: Record<string, string> = {
+    apartment: "Apartamento",
+    house: "Casa",
+    building: "Edificio",
+    warehouse: "Bodega",
+    office: "Oficina",
+    farm: "Finca",
+    land: "Lote",
+    loft: "Loft",
+    consultorio: "Consultorio"
+  };
+  return map[type?.toLowerCase()] || capitalize(type || 'inmueble');
+}
+
+function translateTransactionType(type: string): string {
+  const map: Record<string, string> = {
+    venta: "VENTA",
+    arriendo: "ARRIENDO",
+    arriendo_temporal: "ARRIENDO TEMPORAL",
+    permuta: "PERMUTA"
+  };
+  return map[type?.toLowerCase()] || String(type || 'negocio').toUpperCase();
+}
 
 /**
  * Procesa un mensaje de WhatsApp con inteligencia multimodal y humanización avanzada.
@@ -306,31 +361,40 @@ export async function processWhatsAppMessage(
     // --- CAPA DE DEFENSA GEOGRÁFICA NACIONAL (Elástica) ---
     if (isProperty || isRequirement) {
       const zoneToValidate = isProperty ? extracted?.zone : extracted?.zonaDeseada || extracted?.zone;
-      if (zoneToValidate) {
-        const validation = validarZona(zoneToValidate, extracted?.city || extracted?.ciudadDeseada, messageToProcess);
-        if (!validation.isValid) {
-          // FLUJO B: Datos Incompletos / Falta Barrio Exacto
-          result.classification = "DATOS_INCOMPLETOS";
-          result.shouldSendDM = true;
-          result.dmShouldReply = true; // Forzar reply al mensaje original en el DM
-          
-          const intro = senderInfo.greeting ? `${senderInfo.greeting} ` : "";
-          const mainText = "acabo de leer tu publicación, pero mis motores no lograron extraer el barrio o ubicación exacta del enlace o texto. No es por molestarte, sino porque si dejamos la ficha incompleta no podré buscarte un MATCH. ¿Me indicas el barrio, vereda o municipio para activarte los cruces automáticos de inmediato? ¡Hagamos que ocurra el cierre! 🚀";
-          result.dmResponse = intro + (senderInfo.greeting ? mainText : capitalize(mainText));
-          
-          result.response = ""; // Silencio en el grupo
+      
+      let isValidGeo = false;
+      let geoValidation: any = null;
+      
+      if (zoneToValidate && zoneToValidate.trim() !== "") {
+        geoValidation = validarZona(zoneToValidate, extracted?.city || extracted?.ciudadDeseada, messageToProcess);
+        isValidGeo = geoValidation.isValid;
+      }
+      
+      if (!isValidGeo) {
+        // FLUJO B: Datos Incompletos / Falta Barrio Exacto
+        result.classification = "DATOS_INCOMPLETOS";
+        result.shouldSendDM = true;
+        result.dmShouldReply = true; // Forzar reply al mensaje original en el DM
+        
+        const intro = senderInfo.greeting ? `${senderInfo.greeting} ` : "";
+        const mainText = "acabo de leer tu publicación, pero mis motores no lograron extraer el barrio o ubicación exacta del enlace o texto. No es por molestarte, sino porque si dejamos la ficha incompleta no podré buscarte un MATCH. ¿Me indicas el barrio, vereda o municipio para activarte los cruces automáticos de inmediato? ¡Hagamos que ocurra el cierre! 🚀";
+        result.dmResponse = intro + (senderInfo.greeting ? mainText : capitalize(mainText));
+        
+        result.response = ""; // Silencio en el grupo
 
-          // v11.60 Almacenamiento en caché (REGLA 3)
-          PENDING_SESSIONS.set(userId, {
-            type: isProperty ? "PROPERTY" : "REQUIREMENT",
-            extractedData: extracted,
-            senderInfo: senderInfo,
-            messageToProcess: messageToProcess,
-            imageBuffer
-          });
+        // v11.60 Almacenamiento en caché (REGLA 3)
+        PENDING_SESSIONS.set(userId, {
+          type: isProperty ? "PROPERTY" : "REQUIREMENT",
+          extractedData: extracted,
+          senderInfo: senderInfo,
+          messageToProcess: messageToProcess,
+          imageBuffer
+        });
 
-          return result;
-        }
+        return result;
+      }
+
+      const validation = geoValidation;
         // Normalización Geográfica Nacional (v12.5)
         if (validation.isMunicipio) {
           // Fuera de Bogotá (Cali, Medellín, Tame, Tadó, etc.)
@@ -367,30 +431,7 @@ export async function processWhatsAppMessage(
             extracted.addressLocality = validation.localidad;
           }
         }
-      } else {
-        // Falta zona del todo (Flujo B)
-        result.classification = "DATOS_INCOMPLETOS";
-        result.shouldSendDM = true;
-        result.dmShouldReply = true;
-        
-        const intro = senderInfo.greeting ? `${senderInfo.greeting} ` : "";
-        const mainText = "acabo de leer tu publicación, pero no logré capturar la ubicación exacta. No es por molestarte, sino porque con bases de datos incompletas es imposible generar cruces comerciales automáticos. Por favor, dime el barrio, vereda o municipio exacto para buscarte tu MATCH. ¡Mil gracias por tu ayuda! 🚀";
-        result.dmResponse = intro + (senderInfo.greeting ? mainText : capitalize(mainText));
-        
-        result.response = "";
-
-        // v11.60 Almacenamiento en caché (REGLA 3)
-        PENDING_SESSIONS.set(userId, {
-          type: isProperty ? "PROPERTY" : "REQUIREMENT",
-          extractedData: extracted,
-          senderInfo: senderInfo,
-          messageToProcess: messageToProcess,
-          imageBuffer
-        });
-
-        return result;
       }
-    }
 
     // --- PERSISTENCIA Y MATCHING (Con Flujos DM) ---
     if (isProperty) {
@@ -419,7 +460,44 @@ export async function processWhatsAppMessage(
             return phone.includes('@') ? phone : `${phone}@c.us`;
           });
           result.mentions.push(...formattedMentions, userId);
-          result.response = `🎯 ¡MATCH INTELIGENTE DETECTADO! 🎯\n\nHe encontrado ${matches.length} requerimientos compatibles con tu oferta.\n` + REPUTATION_HOOK;
+
+          const propDateTime = formatColombiaDateTime(saved.createdAt || new Date());
+          const propPhone = saved.idUsuarioWhatsapp || '';
+          const propRawPhone = propPhone.split('@')[0];
+
+          const matchBlocks = [];
+          for (const req of matches) {
+            const reqDateTime = formatColombiaDateTime(req.createdAt || new Date());
+            const reqPhone = req.idUsuarioWhatsapp || '';
+            const reqRawPhone = reqPhone.split('@')[0];
+            const score = req.score || 70;
+
+            const block = `🎉🎈 *¡FELICITACIONES! MATCH COMERCIAL DETECTADO* (Coincidencia: ${score.toFixed(0)}%) 🎈🎉
+
+📣 *REQUERIMIENTO* 📣
+• 🏢 *INMUEBLE:* ${translatePropertyType(req.tipoInmuebleDeseado || 'inmueble')}
+• 💼 *NEGOCIO:* ${translateTransactionType(req.tipoNegocioDeseado || 'compra')}
+• 📅 *FECHA DE ENVÍO:* ${reqDateTime.dateStr}
+• ⏰ *HORA DE ENVÍO:* ${reqDateTime.timeStr}
+• 👤 *Autor:* @${reqRawPhone}
+• 💬 *PUBLICACIÓN:* ${req.rawText || 'Sin descripción'}
+• 📞 *CONTACTO:* https://wa.me/${reqRawPhone}
+
+────────────────────────────────
+
+🏠 *PROPIEDAD* 🏠
+• 🏢 *INMUEBLE:* ${translatePropertyType(saved.propertyType || 'inmueble')}
+• 💼 *NEGOCIO:* ${translateTransactionType(saved.transactionType || 'venta')}
+• 📅 *FECHA DE ENVÍO:* ${propDateTime.dateStr}
+• ⏰ *HORA DE ENVÍO:* ${propDateTime.timeStr}
+• 👤 *Autor:* @${propRawPhone}
+• 💬 *PUBLICACIÓN:* ${saved.rawText || 'Sin descripción'}
+• 📞 *CONTACTO:* https://wa.me/${propRawPhone}`;
+
+            matchBlocks.push(block);
+          }
+
+          result.response = matchBlocks.join('\n\n================================\n\n') + '\n\n' + REPUTATION_HOOK;
         } else {
           result.response = ""; // Silencio de Oro en el grupo
         }
@@ -452,7 +530,44 @@ export async function processWhatsAppMessage(
             return phone.includes('@') ? phone : `${phone}@c.us`;
           });
           result.mentions.push(...formattedMentions, userId);
-          result.response = `🎯 ¡MATCH INTELIGENTE DETECTADO! 🎯\n\nTu búsqueda tiene ${matches.length} coincidencias exactas en nuestra red nacional.\n` + REPUTATION_HOOK;
+
+          const reqDateTime = formatColombiaDateTime(saved.createdAt || new Date());
+          const reqPhone = saved.idUsuarioWhatsapp || '';
+          const reqRawPhone = reqPhone.split('@')[0];
+
+          const matchBlocks = [];
+          for (const prop of matches) {
+            const propDateTime = formatColombiaDateTime(prop.createdAt || new Date());
+            const propPhone = prop.idUsuarioWhatsapp || '';
+            const propRawPhone = propPhone.split('@')[0];
+            const score = prop.score || 70;
+
+            const block = `🎉🎈 *¡FELICITACIONES! MATCH COMERCIAL DETECTADO* (Coincidencia: ${score.toFixed(0)}%) 🎈🎉
+
+📣 *REQUERIMIENTO* 📣
+• 🏢 *INMUEBLE:* ${translatePropertyType(saved.tipoInmuebleDeseado || 'inmueble')}
+• 💼 *NEGOCIO:* ${translateTransactionType(saved.tipoNegocioDeseado || 'compra')}
+• 📅 *FECHA DE ENVÍO:* ${reqDateTime.dateStr}
+• ⏰ *HORA DE ENVÍO:* ${reqDateTime.timeStr}
+• 👤 *Autor:* @${reqRawPhone}
+• 💬 *PUBLICACIÓN:* ${saved.rawText || 'Sin descripción'}
+• 📞 *CONTACTO:* https://wa.me/${reqRawPhone}
+
+────────────────────────────────
+
+🏠 *PROPIEDAD* 🏠
+• 🏢 *INMUEBLE:* ${translatePropertyType(prop.propertyType || 'inmueble')}
+• 💼 *NEGOCIO:* ${translateTransactionType(prop.transactionType || 'venta')}
+• 📅 *FECHA DE ENVÍO:* ${propDateTime.dateStr}
+• ⏰ *HORA DE ENVÍO:* ${propDateTime.timeStr}
+• 👤 *Autor:* @${propRawPhone}
+• 💬 *PUBLICACIÓN:* ${prop.rawText || 'Sin descripción'}
+• 📞 *CONTACTO:* https://wa.me/${propRawPhone}`;
+
+            matchBlocks.push(block);
+          }
+
+          result.response = matchBlocks.join('\n\n================================\n\n') + '\n\n' + REPUTATION_HOOK;
         } else {
           result.response = ""; // Silencio de Oro en el grupo
         }
@@ -562,6 +677,20 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
     finalImages.push(imageUrl);
   }
 
+  const amenitiesObj = {
+    gives: data.gives || data.amenities?.gives,
+    wants: data.wants || data.amenities?.wants,
+    isCollaborativePool: data.isCollaborativePool !== undefined ? data.isCollaborativePool : data.amenities?.isCollaborativePool,
+    interiorExterior: data.interiorExterior || data.amenities?.interiorExterior,
+    cuartoBanoServicio: data.cuartoBanoServicio || data.amenities?.cuartoBanoServicio,
+    cocina: data.cocina || data.amenities?.cocina,
+    lavanderiaIndependiente: data.lavanderiaIndependiente || data.amenities?.lavanderiaIndependiente,
+    tipoPisos: data.tipoPisos || data.amenities?.tipoPisos,
+    depositos: data.depositos || data.amenities?.depositos,
+    comisiones: data.comisiones || data.amenities?.comisiones,
+    antiguedad: data.antiguedad || data.amenities?.antiguedad
+  };
+
   const insertData = {
     ...data,
     city: data.city || data.ciudadDeseada || "Bogotá",
@@ -569,8 +698,36 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
     transactionType: sanitizeTransactionType(data.transactionType),
     currency: sanitizeCurrency(data.currency),
     agentId: user ? user.id : null,
-    images: finalImages.length > 0 ? finalImages : null
+    images: finalImages.length > 0 ? finalImages : null,
+    amenities: amenitiesObj
   };
+
+  // Buscar duplicado activo del mismo usuario
+  const existing = await db
+    .select()
+    .from(properties)
+    .where(
+      and(
+        eq(properties.idUsuarioWhatsapp, rawPhone),
+        eq(properties.propertyType, insertData.propertyType),
+        eq(properties.transactionType, insertData.transactionType),
+        eq(properties.city, insertData.city),
+        eq(properties.zone, insertData.zone),
+        eq(properties.price, insertData.price),
+        eq(properties.available, true)
+      )
+    )
+    .limit(1);
+
+  if (existing.length > 0) {
+    const [updated] = await db
+      .update(properties)
+      .set({ updatedAt: new Date() })
+      .where(eq(properties.id, existing[0].id))
+      .returning();
+    console.log(`[Deduplication] Propiedad duplicada detectada y actualizada: #${updated.id}`);
+    return updated;
+  }
 
   const [result] = await db.insert(properties).values(insertData).returning();
 
@@ -601,14 +758,55 @@ async function saveRequirement(data: any, userId: string, realName: string) {
   const rawPhone = userId.split('@')[0];
   const user = await findOrCreateUserByPhone(rawPhone, realName);
 
+  const characteristicsObj = {
+    gives: data.gives || data.caracteristicasDeseadas?.gives,
+    wants: data.wants || data.caracteristicasDeseadas?.wants,
+    interiorExterior: data.interiorExterior || data.caracteristicasDeseadas?.interiorExterior,
+    cuartoBanoServicio: data.cuartoBanoServicio || data.caracteristicasDeseadas?.cuartoBanoServicio,
+    cocina: data.cocina || data.caracteristicasDeseadas?.cocina,
+    lavanderiaIndependiente: data.lavanderiaIndependiente || data.caracteristicasDeseadas?.lavanderiaIndependiente,
+    tipoPisos: data.tipoPisos || data.caracteristicasDeseadas?.tipoPisos,
+    depositos: data.depositos || data.caracteristicasDeseadas?.depositos,
+    comisiones: data.comisiones || data.caracteristicasDeseadas?.comisiones,
+    antiguedad: data.antiguedad || data.caracteristicasDeseadas?.antiguedad
+  };
+
   const insertData = {
     ...data,
     ciudadDeseada: data.ciudadDeseada || data.city || "Bogotá",
     tipoInmuebleDeseado: sanitizePropertyType(data.tipoInmuebleDeseado || data.propertyType),
     tipoNegocioDeseado: sanitizeTransactionType(data.tipoNegocioDeseado || data.transactionType),
     monedaPresupuesto: sanitizeCurrency(data.monedaPresupuesto || data.currency),
-    userId: user ? user.id : null
+    userId: user ? user.id : null,
+    caracteristicasDeseadas: characteristicsObj
   };
+
+  // Buscar duplicado activo del mismo usuario
+  const existing = await db
+    .select()
+    .from(requirements)
+    .where(
+      and(
+        eq(requirements.idUsuarioWhatsapp, rawPhone),
+        eq(requirements.tipoInmuebleDeseado, insertData.tipoInmuebleDeseado),
+        eq(requirements.tipoNegocioDeseado, insertData.tipoNegocioDeseado),
+        eq(requirements.ciudadDeseada, insertData.ciudadDeseada),
+        eq(requirements.zonaDeseada, insertData.zonaDeseada),
+        eq(requirements.presupuestoMax, insertData.presupuestoMax),
+        eq(requirements.status, "active")
+      )
+    )
+    .limit(1);
+
+  if (existing.length > 0) {
+    const [updated] = await db
+      .update(requirements)
+      .set({ updatedAt: new Date() })
+      .where(eq(requirements.id, existing[0].id))
+      .returning();
+    console.log(`[Deduplication] Requerimiento duplicado detectado y actualizado: #${updated.id}`);
+    return updated;
+  }
 
   const [result] = await db.insert(requirements).values(insertData).returning();
   return result;
@@ -627,6 +825,48 @@ export async function generateWelcomeMessage(count: number): Promise<string> {
   } catch (error) {
     return `✨ *¡Bienvenidos a nuestra red!* 👋 Qué gusto tenerlos aquí. Ya estoy operando en fase de expansión nacional para ayudarlos con sus cierres. 🚀`;
   }
+}
+
+export function obtenerCamposRequeridosYPreguntas(propertyType: string, isRequirement: boolean) {
+  const type = propertyType?.toLowerCase();
+  let requiredFields: string[] = [];
+  const fieldQuestions: Record<string, string> = {
+    floorDetail: "",
+    bedrooms: "cuántas habitaciones tiene",
+    interiorExterior: "¿el inmueble es interior o exterior?",
+    garages: "¿cuántos garajes tiene?",
+    areaTotal: "¿cuál es el área total del lote?",
+    antiguedad: "¿cuál es la antigüedad del inmueble (años o rango)?"
+  };
+
+  if (type === "apartment") {
+    requiredFields = ["bedrooms", "interiorExterior", "floorDetail", "garages"];
+    fieldQuestions.floorDetail = "¿en qué piso queda el apartamento?";
+  } else if (type === "house") {
+    requiredFields = ["bedrooms", "floorDetail"];
+    fieldQuestions.floorDetail = "¿cuántos pisos tiene la casa?";
+  } else if (type === "warehouse") {
+    requiredFields = ["floorDetail"];
+    fieldQuestions.floorDetail = "¿cuál es la altura libre de la bodega?";
+  } else if (type === "land") {
+    requiredFields = ["areaTotal"];
+  } else if (type === "building") {
+    requiredFields = ["floorDetail", "garages", "antiguedad"];
+    fieldQuestions.floorDetail = "¿de cuántos pisos es el edificio?";
+    fieldQuestions.garages = "¿cuántos parqueaderos tiene?";
+    fieldQuestions.antiguedad = "¿cuál es la antigüedad del edificio (años o rango)?";
+  } else if (type === "office") {
+    requiredFields = ["floorDetail"];
+    fieldQuestions.floorDetail = "¿en qué piso queda la oficina?";
+  } else if (type === "farm") {
+    requiredFields = ["floorDetail"];
+    fieldQuestions.floorDetail = "¿cuántos pisos tiene la casa principal de la finca?";
+  } else {
+    requiredFields = ["bedrooms", "floorDetail"];
+    fieldQuestions.floorDetail = "¿cuántos pisos tiene?";
+  }
+
+  return { requiredFields, fieldQuestions };
 }
 
 // ============================================================================
