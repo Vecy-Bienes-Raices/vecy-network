@@ -32,6 +32,13 @@ export function calcularScoreMatch(requirement: any, property: any): number {
     return 0;
   }
 
+  // 3.1. Localidad/Sector Mismatch (Si ambas están definidas y son diferentes localidades principales, es un mismatch rotundo)
+  const reqLoc = normalizarTextoGeografico(requirement.addressLocality || "");
+  const propLoc = normalizarTextoGeografico(property.addressLocality || "");
+  if (reqLoc && propLoc && reqLoc !== propLoc) {
+    return 0; // Hard mismatch: ej. Suba vs La Candelaria
+  }
+
   // 4. Habitaciones mínimas
   const reqBedrooms = requirement.habitacionesMin;
   if (reqBedrooms !== null && reqBedrooms !== undefined && reqBedrooms !== "NA" && String(reqBedrooms).trim() !== "") {
@@ -76,8 +83,6 @@ export function calcularScoreMatch(requirement: any, property: any): number {
   maxPoints += 25;
   const reqZone = normalizarTextoGeografico(requirement.zonaDeseada || requirement.addressNeighborhood || "");
   const propZone = normalizarTextoGeografico(property.zone || property.addressNeighborhood || "");
-  const reqLoc = normalizarTextoGeografico(requirement.addressLocality || "");
-  const propLoc = normalizarTextoGeografico(property.addressLocality || "");
 
   if (reqZone && propZone && reqZone === propZone) {
     totalPoints += 25;

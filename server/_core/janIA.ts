@@ -900,6 +900,13 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
     propertyType: sanitizePropertyType(data.propertyType),
     transactionType: sanitizeTransactionType(data.transactionType),
     currency: sanitizeCurrency(data.currency),
+    // Mapear explícitamente los campos para mayor robustez
+    price: data.price !== undefined && data.price !== null ? String(data.price) : null,
+    areaTotal: data.areaTotal !== undefined && data.areaTotal !== null ? String(data.areaTotal) : (data.area !== undefined && data.area !== null ? String(data.area) : null),
+    bedrooms: data.bedrooms !== undefined && data.bedrooms !== null ? Number(data.bedrooms) : null,
+    bathrooms: data.bathrooms !== undefined && data.bathrooms !== null ? Number(data.bathrooms) : null,
+    garages: data.garages !== undefined && data.garages !== null ? Number(data.garages) : null,
+    stratum: data.stratum !== undefined && data.stratum !== null ? Number(data.stratum) : null,
     agentId: user ? user.id : null,
     images: finalImages.length > 0 ? finalImages : null,
     amenities: amenitiesObj
@@ -980,6 +987,14 @@ async function saveRequirement(data: any, userId: string, realName: string) {
     tipoInmuebleDeseado: sanitizePropertyType(data.tipoInmuebleDeseado || data.propertyType),
     tipoNegocioDeseado: sanitizeTransactionType(data.tipoNegocioDeseado || data.transactionType),
     monedaPresupuesto: sanitizeCurrency(data.monedaPresupuesto || data.currency),
+    // Mapear campos desde el formato LLM/WhatsApp (data) a las columnas de la base de datos
+    presupuestoMin: data.presupuestoMin !== undefined && data.presupuestoMin !== null ? String(data.presupuestoMin) : null,
+    presupuestoMax: data.presupuestoMax !== undefined && data.presupuestoMax !== null ? String(data.presupuestoMax) : (data.price !== undefined && data.price !== null ? String(data.price) : null),
+    areaMin: data.areaMin !== undefined && data.areaMin !== null ? String(data.areaMin) : (data.area !== undefined && data.area !== null ? String(data.area) : null),
+    habitacionesMin: data.habitacionesMin !== undefined && data.habitacionesMin !== null ? Number(data.habitacionesMin) : (data.bedrooms !== undefined && data.bedrooms !== null ? Number(data.bedrooms) : null),
+    banosMin: data.banosMin !== undefined && data.banosMin !== null ? Number(data.banosMin) : (data.bathrooms !== undefined && data.bathrooms !== null ? Number(data.bathrooms) : null),
+    parqueaderosMin: data.parqueaderosMin !== undefined && data.parqueaderosMin !== null ? Number(data.parqueaderosMin) : (data.garages !== undefined && data.garages !== null ? Number(data.garages) : null),
+    estratoDeseado: data.estratoDeseado || (data.stratum !== undefined && data.stratum !== null ? [Number(data.stratum)] : null),
     userId: user ? user.id : null,
     caracteristicasDeseadas: characteristicsObj
   };

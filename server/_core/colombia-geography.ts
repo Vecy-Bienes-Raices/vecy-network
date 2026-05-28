@@ -343,9 +343,13 @@ export function buscarLugarColombia(texto: string): LugarInfo | null {
   let bestKeyLength = 0;
 
   for (const [key, lugar] of Object.entries(MAPA_COLOMBIA)) {
-    if (key.length >= 4 && n.includes(key) && key.length > bestKeyLength) {
-      bestMatch = lugar;
-      bestKeyLength = key.length;
+    if (key.length >= 4 && key.length > bestKeyLength) {
+      // Usar límites de palabra (inicio de string, fin de string o rodeado de espacios)
+      const regex = new RegExp(`(^|\\s)${key}(\\s|$)`);
+      if (regex.test(n)) {
+        bestMatch = lugar;
+        bestKeyLength = key.length;
+      }
     }
   }
   return bestMatch;
