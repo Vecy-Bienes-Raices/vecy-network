@@ -10,7 +10,10 @@ import {
   processCirculoMessage,
   generateWelcomeMessage,
   MSG_PRESENTACION_INSTITUCIONAL,
-  MSG_PAUTAS_FORMATOS
+  MSG_PAUTAS_FORMATOS,
+  MSG_PROMO_INMUEBLES,
+  MSG_PROMO_CONSULTAS,
+  MSG_PROMO_CIRCULO
 } from './janIA';
 import { publishToFacebookGroup } from "./facebookService";
 import fs from 'fs';
@@ -943,6 +946,27 @@ export class WhatsAppBot {
         }
       } catch (err: any) {
         console.error(`[WHATSAPP-BOT] Error al transmitir al grupo ${group}:`, err.message || err);
+      }
+    }
+  }
+
+  public async broadcastGroupPromos(mediaPath?: string) {
+    const promos = [
+      { id: this.targetGroupId, msg: MSG_PROMO_INMUEBLES },
+      { id: this.buzonGroupId, msg: MSG_PROMO_CONSULTAS },
+      { id: this.circuloGroupId, msg: MSG_PROMO_CIRCULO }
+    ];
+
+    for (const promo of promos) {
+      try {
+        if (mediaPath && fs.existsSync(path.resolve(mediaPath))) {
+          const media = MessageMedia.fromFilePath(path.resolve(mediaPath));
+          await this.queuedSend(promo.id, media, { caption: promo.msg });
+        } else {
+          await this.queuedSend(promo.id, promo.msg);
+        }
+      } catch (err: any) {
+        console.error(`[WHATSAPP-BOT] Error al transmitir promo al grupo ${promo.id}:`, err.message || err);
       }
     }
   }

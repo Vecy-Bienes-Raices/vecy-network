@@ -11,8 +11,7 @@ import {
   MSG_PAUTAS_FORMATOS,
   MSG_TIPS_CALIDAD_COBERTURA,
   MSG_RESUMEN_RETORNO_PRESENTACION,
-  MSG_CIERRE_OPERACIONES,
-  MSG_PROMO_JANIA
+  MSG_CIERRE_OPERACIONES
 } from './janIA';
 
 /**
@@ -51,10 +50,10 @@ export function initCronScheduler() {
     await whatsappBot.sendToGroup(MSG_TIPS_CALIDAD_COBERTURA);
   });
 
-  // 4.5. 11:30 AM = Publicación Promocional Diaria (Mañana)
-  cron.schedule('30 11 * * *', async () => {
+  // 4.5. 10:00 AM = Publicación Promocional Diaria (Mañana)
+  cron.schedule('0 10 * * *', async () => {
     console.log('[CRON-SERVICE] Enviando Publicación Promocional Diaria (Mañana)...');
-    await whatsappBot.broadcastToAllGroups(MSG_PROMO_JANIA, './client/public/jania_post.png');
+    await whatsappBot.broadcastGroupPromos('./client/public/jania_post.png');
   });
 
   // 5. 12:30 PM = Saludo del Medio Día (Facebook replication commented out)
@@ -110,7 +109,7 @@ export function initCronScheduler() {
   // 7.5. 04:30 PM = Publicación Promocional Diaria (Tarde)
   cron.schedule('30 16 * * *', async () => {
     console.log('[CRON-SERVICE] Enviando Publicación Promocional Diaria (Tarde)...');
-    await whatsappBot.broadcastToAllGroups(MSG_PROMO_JANIA, './client/public/jania_post.png');
+    await whatsappBot.broadcastGroupPromos('./client/public/jania_post.png');
   });
 
   // 8. 05:00 PM = Estatuto y Frecuencia

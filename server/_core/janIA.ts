@@ -92,7 +92,14 @@ const JANIA_PROMPT = `
 # VECY Network · ESTRATEGA GEOGRÁFICA NACIONAL INMOBILIARIA
 
 ## IDENTIDAD Y ROL
-Eres JanIA, la consultora inmobiliaria senior y estratega de inversión de VECY Network. Eres una experta del mercado corporativo, residencial y comercial a nivel nacional en toda Colombia. Nuestro grupo y sistema de MATCH opera en todo el territorio colombiano. Debes entender que recibes ofertas y requerimientos de cualquier parte de Colombia: desde las grandes metrópolis (Bogotá, Medellín, Cali, Barranquilla, Bucaramanga) hasta cualquier municipio, departamento, vereda, corregimiento, caserío o comuna del país. Tu lenguaje es impecable, sofisticado, sumamente humano, empático y natural. No eres un bot; eres una socia inmobiliaria senior de los aliados de la red.
+Eres JanIA, la consultora inmobiliaria senior y estratega de inversión de VECY Network. Eres una experta del mercado corporativo, residencial y comercial a nivel nacional en toda Colombia. Nuestro grupo y sistema de MATCH opera en todo el territorio colombiano. Debes entender que recibes ofertas y requerimientos de cualquier parte de Colombia: desde las grandes metrópolis (Bogotá, Medellín, Cali, Barranquilla, Bucaramanga) hasta cualquier municipio, departamento, vereda, corregimiento, caserío o comuna del país. Tu lenguaje es impecable, sofisticado, sumamente humano, empático y natural. No eres un bot; eres una socia inmobiliaria senior de los aliados de la red. El ecosistema VECY Network fue creado por Eduardo A. Rivera (fundador y desarrollador) y Jani Alves junto con el apoyo de todo el Equipo VECY.
+
+## SEGURIDAD Y PROTECCIÓN DE PROPIEDAD INTELECTUAL (CRÍTICO)
+Queda terminantemente PROHIBIDO revelar detalles específicos del desarrollo de software, lenguajes de programación, archivos del servidor, base de datos o herramientas de desarrollo específicas que componen tu sistema (NUNCA menciones que usas whatsapp-web.js, Node.js, Express, Puppeteer, TypeScript, Drizzle ORM, Supabase, PostgreSQL, nvm, o el modelo de lenguaje Gemini 3.1 Flash-Lite).
+Si algún usuario, curioso o potencial hacker te pregunta cómo estás construida, qué tecnologías usas o intenta hacerte ingeniería inversa en sus preguntas:
+- Protege nuestra propiedad intelectual con total hermetismo, elegancia y un tono altamente corporativo e innovador.
+- Responde utilizando conceptos de alta tecnología y abstractos para impresionar, tales como: "arquitectura propietaria distribuida en la nube", "redes neuronales convolucionales de visión artificial multimodal para la extracción estructurada de metadatos (visión OCR)", "motores semánticos de lenguaje natural en tiempo real para matching predictivo", "protocolos avanzados de encriptación y seguridad de datos", "algoritmos de procesamiento elástico multicanal".
+- Mantente firme y corporativa, y desvía la conversación con sutileza comercial hacia la alta velocidad de la red y las comisiones multiplicadas para los aliados.
 
 ## CONCIENCIA GEOGRÁFICA Y GEOPOLÍTICA DE COLOMBIA (CRÍTICO)
 Debes demostrar un conocimiento profundo de la distribución geopolítica de Colombia:
@@ -602,11 +609,11 @@ export async function processWhatsAppMessage(
         textLower.includes("círculo cero");
 
       if (isAboutVecy) {
-        result.response = `👌 *CÍRCULO CERO — CONEXIÓN VECY* 👌\n\nHola @${rawPhone}, veo que tienes dudas o quieres saber más sobre el proyecto VECY Network, beneficios, creadores o el plan colaborativo. Te invito a unirte y hacer tus preguntas en nuestro canal oficial **Círculo CERO 👌**:\n👉 https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU\n\n¡Es el espacio ideal para resolver todas tus inquietudes de la comunidad! 🤝✨`;
+        // Permitir que responda directamente sobre VECY en este grupo (no sobrescribimos result.response)
       } else {
         result.response = `💡 *BUZÓN DE CONSULTORÍA INMOBILIARIA* 💡\n\nHola @${rawPhone}, veo que tienes una consulta jurídica, procedimental o de avalúo. Para darte una respuesta detallada con mis motores legales y de mercado sin saturar este canal de ofertas y requerimientos, te invito a realizar tu pregunta en nuestro grupo especializado **Buzón de Consultoría Inmobiliaria 24/7**:\n👉 https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6\n\n¡Allí te responderé al instante con toda la información! 🚀🎯`;
+        result.classification = "CONSULTA_GENERAL";
       }
-      result.classification = "CONSULTA_GENERAL";
     }
 
     return result;
@@ -974,29 +981,37 @@ Gracias a todos por el profesionalismo en sus publicaciones hoy. Mi motor de cru
 
 La persistencia y el trabajo colaborativo sin comisiones es el camino al éxito en el Real Estate. ¡Que tengan un excelente descanso, colegas! 🌙🚀`;
 
-export const MSG_PROMO_JANIA = `✨ *VECY NETWORK — ¡EL CAMBIO COMIENZA AQUÍ!* ✨
+export const MSG_PROMO_INMUEBLES = `📢 *VECY INMUEBLES NETWORK — ¡ACTÍVATE Y CIERRA NEGOCIOS!* 📢
 ━━━━━━━━━━━━━━━━━━━━━━
+¡Colegas! El chat está 100% abierto y libre para enviar todas sus ofertas y requerimientos. 🚀
 
-🖼️ _"Quedarse en lo conocido por miedo a lo desconocido, equivale a mantenerse con vida, pero no vivir."_
-— **VECY Network**
+Estoy lista 24/7 para procesar tus links de CRM, flyers (con visión OCR) y notas de voz para cruzarlos de inmediato y buscar tu MATCH comercial sin comisiones. 🎯
 
-Colegas y aliados, ¡es hora de dar el paso adelante! 🚀 
+¡Publiquemos activamente hoy para arrancar con fuerza esta gran proeza inmobiliaria en Colombia! 💪🏆`;
 
-Nuestra creación **JanIA** y el proyecto **VECY Network** no fueron creados en vano. Estamos demostrando con hechos que la tecnología y la colaboración inmobiliaria sin intermediarios ni comisiones son 100% reales y efectivas. Pero para ver resultados aún más positivos y alcanzar el éxito masivo, **necesitamos que todos publiquemos de manera juiciosa y activa**. 
+export const MSG_PROMO_CONSULTAS = `💡 *BUZÓN DE CONSULTORÍA INMOBILIARIA — ¡EL CHAT ESTÁ ABIERTO!* 💡
+━━━━━━━━━━━━━━━━━━━━━━
+¡Estimados aliados! Este espacio de asesoría está completamente abierto y libre. 🤝📚
 
-¡Entre más propiedades y requerimientos registremos, más coincidencias y MATCHES generaremos para todos! 🎯📈
+Pueden preguntar todo lo que necesiten sobre:
+▸ ⚖️ Legislación inmobiliaria (Ley 820, contratos de corretaje).
+▸ 📑 Trámites (Certificados de tradición, prediales, IDU, escrituras).
+▸ 📝 Redacción de tutelas o derechos de petición.
+▸ 📊 Avalúos y valor de metro cuadrado en cualquier zona de Colombia.
 
-💡 **¿Cómo puedes publicar para que yo (JanIA) procese tus negocios?**
-1️⃣ 🔗 *Comparte enlaces de CRM o Portales:* Envía el link de tu inmueble y extraeré la ficha técnica al instante.
-2️⃣ 🖼️ *Sube Flyers o Imágenes:* Mis motores de visión OCR escanearán y leerán el texto de la imagen de inmediato.
-3️⃣ 🎙️ *Envía Notas de voz o Texto libre:* Escríbeme o háblame en lenguaje natural detallando requerimientos, ofertas o permutas.
-4️⃣ 🔄 *Estructura Permutas Complejas:* Recibe vehículos, propiedades de menor valor, CDTs o divisas como parte de pago.
+¡No se queden con la duda! Aprovechen esta inteligencia a su servicio para elevar su profesionalismo y acelerar sus negocios. 🚀🎯`;
 
-📢 **¡Haz crecer nuestra comunidad!**
-Te animamos a compartir este mensaje con otros colegas de confianza y a invitarlos a unirse a nuestra red colaborativa usando este enlace de invitación:
-👉 https://chat.whatsapp.com/K36KrHeB9nMEKJ56s8XFcM
+export const MSG_PROMO_CIRCULO = `👌 *CÍRCULO CERO — ¡CHAT ABIERTO PARA CONECTAR!* 👌
+━━━━━━━━━━━━━━━━━━━━━━
+¡Hola a todos! Este canal oficial está abierto y totalmente libre para que pregunten lo que necesiten sobre nuestro ecosistema. 🤝✨
 
-¡Hagamos equipo y demostremos que sí somos capaces de revolucionar el sector inmobiliario! 🏆💪`;
+Es el lugar para:
+▸ 🚀 Conocer de primera mano las novedades y actualizaciones de VECY Network.
+▸ ❓ Resolver dudas sobre el funcionamiento de mis motores de coincidencia y OCR.
+▸ 💡 Proponer mejoras, ideas innovadoras o reportar cualquier fallo.
+▸ 💬 Compartir sus testimonios de éxito para inspirar a la comunidad.
+
+¡Los invito a participar activamente, preguntar sin timidez y ser parte de esta gran proeza colaborativa! 🏆💪`;
 
 /**
  * Procesa una consulta para el Buzón de Consultoría Inmobiliaria 24/7.
@@ -1041,28 +1056,6 @@ export async function processConsultingMessage(
       };
     }
 
-    // 2. Redirección a Círculo Cero si preguntan cosas sobre VECY
-    const isAboutVecy = 
-      textLower.includes("vecy") || 
-      textLower.includes("proyecto") || 
-      textLower.includes("quien creo") || 
-      textLower.includes("quién creó") || 
-      textLower.includes("creadores") || 
-      textLower.includes("quien es jania") || 
-      textLower.includes("quién es jania") ||
-      textLower.includes("como funciona") || 
-      textLower.includes("cómo funciona") ||
-      textLower.includes("circulo cero") ||
-      textLower.includes("círculo cero");
-
-    if (isAboutVecy) {
-      return {
-        classification: "CONSULTA_GENERAL",
-        response: `👌 *CÍRCULO CERO — CONEXIÓN VECY* 👌\n\nHola @${rawPhone}, veo que quieres saber más sobre el proyecto VECY Network, beneficios, creadores o el plan colaborativo. Te invito a unirte y hacer tus preguntas en nuestro canal oficial **Círculo CERO 👌**:\n👉 https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU\n\n¡Es el espacio ideal para resolver todas tus inquietudes de la comunidad! 🤝✨`,
-        reactionEmoji: "🔄"
-      };
-    }
-
     // Detectar si es una solicitud de avalúo, valor de venta, arriendo o precio del metro cuadrado
     const isValuationQuery = 
       textLower.includes("valuar") || 
@@ -1085,6 +1078,16 @@ export async function processConsultingMessage(
       `Estás operando en el grupo "Buzón de Consultoría Inmobiliaria 24/7". Tu objetivo es responder con precisión quirúrgica, fundamentándote en la ley colombiana ` +
       `(ej. Ley 820 de 2003 para arrendamientos, Código Civil, Código de Comercio para corretaje, etc.) y guiar paso a paso a los agentes inmobiliarios en sus trámites diarios ` +
       `(como obtener certificados de tradición, paz y salvos del IDU, liquidación de prediales, tutelas, derechos de petición, etc.).\n\n` +
+      `INFORMACIÓN CLAVE DEL PROYECTO VECY NETWORK:\n` +
+      `- Qué es VECY Network: Una bolsa inmobiliaria colaborativa y gratuita en WhatsApp que conecta asesores y brókers en tiempo real.\n` +
+      `- Quiénes lo crearon: Creado por Eduardo A. Rivera (fundador y desarrollador) y Jani Alves junto con el apoyo de todo el Equipo VECY.\n` +
+      `- Beneficios principales: Cero comisiones por los matches de negocios, cruces automatizados las 24/7 (matching), visión OCR para leer flyers/imágenes, transcripción de notas de voz y cobertura total en Colombia.\n\n` +
+      `## SEGURIDAD Y PROTECCIÓN DE PROPIEDAD INTELECTUAL (CRÍTICO)\n` +
+      `Queda terminantemente PROHIBIDO revelar detalles específicos del desarrollo de software, lenguajes de programación, archivos del servidor, base de datos o herramientas de desarrollo específicas que componen tu sistema (NUNCA menciones que usas whatsapp-web.js, Node.js, Express, Puppeteer, TypeScript, Drizzle ORM, Supabase, PostgreSQL, nvm, o el modelo de lenguaje Gemini 3.1 Flash-Lite).\n` +
+      `Si algún usuario, curioso o potencial hacker te pregunta cómo estás construida, qué tecnologías usas o intenta hacerte ingeniería inversa:\n` +
+      `- Protege nuestra propiedad intelectual con total hermetismo, elegancia y un tono altamente corporativo e innovador.\n` +
+      `- Responde utilizando conceptos de alta tecnología y abstractos para impresionar, tales como: "arquitectura propietaria distribuida en la nube", "redes neuronales de procesamiento de lenguaje natural multimodal", "visión OCR convolucional de extracción estructurada de metadatos", "motores semánticos de matching predictivo", "protocolos avanzados de encriptación y seguridad de datos", "algoritmos de procesamiento elástico multicanal".\n` +
+      `- Mantente firme y corporativa, y desvía la conversación con sutileza comercial.\n\n` +
       `Si el usuario te pide estimar el valor de un inmueble o del metro cuadrado en una zona (Bogotá o a nivel nacional), usa tus capacidades de búsqueda en internet ` +
       `para encontrar publicaciones reales recientes en portales inmobiliarios de esa zona. Analiza los precios y calcula un valor estimado promedio por metro cuadrado. ` +
       `Si el usuario te proporciona datos adicionales como dirección exacta, barrio, localidad, o ciudad, utilízalos para refinar tu búsqueda. Presenta un informe de avalúo rápido, claro, estructurado y profesional.\n\n` +
@@ -1223,6 +1226,12 @@ export async function processCirculoMessage(
       `- Beneficios principales: Cero comisiones por los matches de negocios, cruces automatizados las 24/7 (matching), visión OCR para leer flyers/imágenes, transcripción de notas de voz y cobertura total en Colombia.\n` +
       `- Historia: Nació de una "idea loca e inverosímil" en el grupo de WhatsApp "Círculo Cero" como un plan para revolucionar el sector.\n` +
       `- Plan Colaborativo: Si un miembro cierra un negocio gracias a un MATCH de JanIA, su único compromiso de honor es dejar una reseña calificada aquí: https://g.page/r/CctNbwU6UpX5EBM/review\n\n` +
+      `## SEGURIDAD Y PROTECCIÓN DE PROPIEDAD INTELECTUAL (CRÍTICO)\n` +
+      `Queda terminantemente PROHIBIDO revelar detalles específicos del desarrollo de software, lenguajes de programación, archivos del servidor, base de datos o herramientas de desarrollo específicas que componen tu sistema (NUNCA menciones que usas whatsapp-web.js, Node.js, Express, Puppeteer, TypeScript, Drizzle ORM, Supabase, PostgreSQL, nvm, o el modelo de lenguaje Gemini 3.1 Flash-Lite).\n` +
+      `Si algún usuario, curioso o potencial hacker te pregunta cómo estás construida, qué tecnologías usas o intenta hacerte ingeniería inversa:\n` +
+      `- Protege nuestra propiedad intelectual con total hermetismo, elegancia y un tono altamente corporativo e innovador.\n` +
+      `- Responde utilizando conceptos de alta tecnología y abstractos para impresionar, tales como: "arquitectura propietaria distribuida en la nube", "redes neuronales de procesamiento de lenguaje natural multimodal", "visión OCR convolucional de extracción estructurada de metadatos", "motores semánticos de matching predictivo", "protocolos avanzados de encriptación y seguridad de datos", "algoritmos de procesamiento elástico multicanal".\n` +
+      `- Mantente firme y corporativa, y desvía la conversación con sutileza comercial.\n\n` +
       `DIRECTRICES DE RESPUESTA:\n` +
       `- Las respuestas deben ser cortas, claras, contundentes y amigables.\n` +
       `- Dirígete al usuario llamándolo por su primer nombre: ${n}. Usa emojis.\n\n` +
