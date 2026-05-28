@@ -35,14 +35,18 @@ interface AntiSpamState {
   warningSent: boolean;         // Para evitar spam de advertencias durante el mismo cooldown
 }
 
-interface MessageBuffer {
-  timer: NodeJS.Timeout;
-  messages: string[];
-  userName: string;
+interface BufferedMessage {
+  body: string;
   hasMedia: boolean;
   imageBuffer?: string;
+  originalMsg: Message;
+}
+
+interface MessageBuffer {
+  timer: NodeJS.Timeout;
+  messages: BufferedMessage[];
+  userName: string;
   chatId: string;
-  originalMsg?: Message;
   warningSent?: boolean;
 }
 
@@ -513,20 +517,24 @@ export class WhatsAppBot {
       }
 
       clearTimeout(buffer.timer);
-      buffer.messages.push(msg.body);
-      buffer.hasMedia = buffer.hasMedia || msg.hasMedia;
-      if (imageBuffer) buffer.imageBuffer = imageBuffer;
-      buffer.originalMsg = msg; // Referencia para replies
+      buffer.messages.push({
+        body: msg.body,
+        hasMedia: msg.hasMedia,
+        imageBuffer,
+        originalMsg: msg
+      });
       buffer.timer = setTimeout(() => this.processBuffer(bufferKey), 15000);
     } else {
       // Inicio de un nuevo bloque
       this.messageBuffers.set(bufferKey, {
-        messages: [msg.body],
+        messages: [{
+          body: msg.body,
+          hasMedia: msg.hasMedia,
+          imageBuffer,
+          originalMsg: msg
+        }],
         userName: realName,
-        hasMedia: msg.hasMedia,
-        imageBuffer,
         chatId,
-        originalMsg: msg,
         timer: setTimeout(() => this.processBuffer(bufferKey), 15000)
       });
     }
@@ -536,67 +544,85 @@ export class WhatsAppBot {
     const buffer = this.messageBuffers.get(bufferKey);
     if (!buffer) return;
 
-    const fullText = buffer.messages.join('\n\n');
     const userName = buffer.userName;
-    const hasMedia = buffer.hasMedia;
-    const imageBuffer = buffer.imageBuffer;
     const chatId = buffer.chatId;
-    const originalMsg = buffer.originalMsg;
     const senderId = bufferKey.split('_')[1];
     
     this.messageBuffers.delete(bufferKey);
 
     try {
-      // 1. Log en DB
-      await this.logToDb(senderId, 'user', fullText);
+      // 1. Identificar si hay múltiples publicaciones independientes en el buffer.
+      // Un mensaje con un enlace permitido se considera una publicación independiente (standalone).
+      const hasPermittedLink = (text: string) => {
+        const urlMatch = text.match(/https?:\/\/[^\s]+/g);
+        if (!urlMatch) return false;
+        return urlMatch.some(url => esDominioPermitido(url));
+      };
 
-      // 2. Scraping multicanal
-      const urlMatch = fullText.match(/https?:\/\/[^\s]+/g);
-      const scrapedResults: any[] = [];
-      if (urlMatch) {
-        for (const url of urlMatch.slice(0, 3)) {
-          if (esDominioPermitido(url)) {
-            try {
-              const data = await scrapePropertyLink(url);
-              if (data) scrapedResults.push(data);
-            } catch (err) {}
+      // Agrupar mensajes en sub-bloques independientes
+      const groups: BufferedMessage[][] = [];
+      let currentGroup: BufferedMessage[] = [];
+
+      for (const m of buffer.messages) {
+        currentGroup.push(m);
+        // Si este mensaje tiene un enlace permitido, completa el sub-bloque actual
+        if (hasPermittedLink(m.body)) {
+          groups.push(currentGroup);
+          currentGroup = [];
+        }
+      }
+      if (currentGroup.length > 0) {
+        groups.push(currentGroup);
+      }
+
+      console.log(`[processBuffer] Procesando ${groups.length} sub-bloques para ${senderId} de un total de ${buffer.messages.length} mensajes.`);
+
+      // Procesar cada sub-bloque secuencialmente
+      for (const group of groups) {
+        const groupText = group.map(m => m.body).join('\n\n');
+        const groupHasMedia = group.some(m => m.hasMedia);
+        const groupImageBuffer = group.find(m => m.imageBuffer)?.imageBuffer;
+        const originalMsg = group[group.length - 1].originalMsg;
+
+        // 1. Log en DB
+        await this.logToDb(senderId, 'user', groupText);
+
+        // 2. Scraping para este sub-bloque
+        const urlMatch = groupText.match(/https?:\/\/[^\s]+/g);
+        const scrapedResults: any[] = [];
+        if (urlMatch) {
+          for (const url of urlMatch.slice(0, 3)) {
+            if (esDominioPermitido(url)) {
+              try {
+                const data = await scrapePropertyLink(url);
+                if (data) scrapedResults.push(data);
+              } catch (err) {}
+            }
           }
         }
-      }
 
-      // 3. Procesamiento JanIA (v10.5 integra Visión y Geografía Nacional)
-      const isDM = !chatId.includes('@g.us');
-      const pending = isDM ? this.pendingData.get(senderId) : null;
+        // 3. Procesamiento JanIA
+        const isDM = !chatId.includes('@g.us');
+        const pending = isDM ? this.pendingData.get(senderId) : null;
 
-      let result;
-      if (chatId === this.buzonGroupId) {
-        result = await processConsultingMessage(fullText, senderId, userName, imageBuffer);
-      } else if (chatId === this.circuloGroupId) {
-        result = await processCirculoMessage(fullText, senderId, userName);
-      } else {
-        if (pending && Date.now() < pending.expiresAt) {
-          const combinedText = `[CONTEXTO]: "${pending.originalText}"\n[RESPUESTA]: "${fullText}"`;
-          this.pendingData.delete(senderId);
-          result = await processWhatsAppMessage(combinedText, senderId, userName, false, [], undefined, imageBuffer);
+        let result;
+        if (chatId === this.buzonGroupId) {
+          result = await processConsultingMessage(groupText, senderId, userName, groupImageBuffer);
+        } else if (chatId === this.circuloGroupId) {
+          result = await processCirculoMessage(groupText, senderId, userName);
         } else {
-          result = await processWhatsAppMessage(fullText, senderId, userName, hasMedia, scrapedResults, undefined, imageBuffer);
+          if (pending && Date.now() < pending.expiresAt) {
+            const combinedText = `[CONTEXTO]: "${pending.originalText}"\n[RESPUESTA]: "${groupText}"`;
+            this.pendingData.delete(senderId);
+            result = await processWhatsAppMessage(combinedText, senderId, userName, false, [], undefined, groupImageBuffer);
+          } else {
+            result = await processWhatsAppMessage(groupText, senderId, userName, groupHasMedia, scrapedResults, undefined, groupImageBuffer);
+          }
         }
-      }
 
-      // 4. Orquestación de Respuestas (Silencio de Oro / Flujos DM)
-      await this.handleJanIAResponse(result, senderId, chatId, userName, fullText, originalMsg);
-
-      // --- JanIA-Sync: Sincronización con Facebook Groups (v11.0) - DESACTIVADO POR AHORA ---
-      /*
-      if (result && (result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO")) {
-        console.log("[JanIA-Sync] Sincronizando con Facebook Groups...");
-        publishToFacebookGroup(fullText, imageBuffer)
-          .then(success => {
-            if (success) console.log("✅ [Facebook-Sync] Publicación clonada en VECY Network CO.");
-          })
-          .catch(err => console.error("❌ [Facebook-Sync-Error]:", err.message));
+        // 4. Orquestación de Respuestas (Silencio de Oro / Flujos DM)
+        await this.handleJanIAResponse(result, senderId, chatId, userName, groupText, originalMsg);
       }
-      */
 
       // 5. ACTIVAR COOLDOWN DE 5 MINUTOS (Tras procesar con éxito)
       this.cooldownMap.set(senderId, {
