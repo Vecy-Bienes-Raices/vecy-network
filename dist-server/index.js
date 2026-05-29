@@ -5266,44 +5266,53 @@ var { Client, LocalAuth, MessageMedia } = pkg;
 var SERVER_BOOT_TIME = Math.floor(Date.now() / 1e3);
 var delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 var outgoingQueue = Promise.resolve();
+async function buildTtsSSML(rawText) {
+  const fixed = rawText.replace(/VECY\s+Network/gi, "Veci N\xE9twork").replace(/\bVECY\b/gi, "Veci").replace(/\bJanIA\b/gi, "Jan\xEDa").replace(/\bRLS\b/g, "ere ele ese").replace(/\bSQL\b/g, "ese cu ele").replace(/\bDM\b/g, "di em").replace(/\bURL\b/g, "url").replace(/\bID\b/g, "ai di").replace(/[<>]/g, "").trim();
+  return {
+    ssml: `<speak><prosody rate="fast">${fixed}</prosody></speak>`
+  };
+}
 async function textToSpeechMedia(text2) {
   const cleanText = text2.replace(/[*#_`~\[\]]/g, "").replace(/[\u{1F300}-\u{1FAD6}]/gu, "").trim();
   if (!cleanText) return null;
   const googleApiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || ENV.forgeApiKey;
   if (googleApiKey) {
-    try {
-      const ttsUrl = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${googleApiKey}`;
-      const response = await fetch(ttsUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          input: { text: cleanText },
-          voice: {
-            languageCode: "es-US",
-            name: "es-US-Neural2-F",
-            // Voz femenina Neural2 de alta calidad
-            ssmlGender: "FEMALE"
-          },
-          audioConfig: {
-            audioEncoding: "MP3",
-            speakingRate: 1.05,
-            // Ligeramente más rápida que el estándar, más natural
-            pitch: 1
+    const ssmlInput = await buildTtsSSML(cleanText);
+    for (const voiceName of ["es-US-Journey-F", "es-US-Neural2-A"]) {
+      try {
+        const ttsUrl = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${googleApiKey}`;
+        const response = await fetch(ttsUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            input: ssmlInput,
+            voice: {
+              languageCode: "es-US",
+              name: voiceName,
+              ssmlGender: "FEMALE"
+            },
+            audioConfig: {
+              audioEncoding: "MP3",
+              speakingRate: 1.15,
+              // Un poco más rápida, más dinámica y natural
+              pitch: 0.5
+              // Leve calidez en el tono
+            }
+          })
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.audioContent) {
+            console.log(`[TTS-GoogleCloud] Voz "${voiceName}" generada (${cleanText.length} chars).`);
+            return new MessageMedia("audio/mpeg", data.audioContent, "voice-note.mp3");
           }
-        })
-      });
-      if (response.ok) {
-        const data = await response.json();
-        if (data.audioContent) {
-          console.log(`[TTS-GoogleCloud] Voz Neural2 generada con \xE9xito (${cleanText.length} chars).`);
-          return new MessageMedia("audio/mpeg", data.audioContent, "voice-note.mp3");
+        } else {
+          const errBody = await response.text().catch(() => "");
+          console.warn(`[TTS-GoogleCloud] ${voiceName} \u2192 Error ${response.status}: ${errBody.substring(0, 150)}`);
         }
-      } else {
-        const errBody = await response.text().catch(() => "");
-        console.warn(`[TTS-GoogleCloud] Error ${response.status}: ${errBody.substring(0, 200)}`);
+      } catch (err) {
+        console.error(`[TTS-GoogleCloud] Error con ${voiceName}:`, err);
       }
-    } catch (err) {
-      console.error("[TTS-GoogleCloud] Error llamando Google Cloud TTS:", err);
     }
   }
   try {
