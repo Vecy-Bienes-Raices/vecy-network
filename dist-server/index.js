@@ -5874,7 +5874,13 @@ var WhatsAppBot = class {
       await delay(Math.floor(Math.random() * 2e3) + 2e3);
       try {
         const chat = await msg.getChat();
-        await chat.sendStateTyping();
+        const msgText = (msg.body || "").toLowerCase();
+        const wantsVoice = msg.type === "audio" || msg.type === "ptt" || msgText.includes("audio") || msgText.includes("nota de voz") || msgText.includes("en voz");
+        if (wantsVoice) {
+          await chat.sendStateRecording();
+        } else {
+          await chat.sendStateTyping();
+        }
         const chatId = chat.id._serialized;
         const isGroup = chat.isGroup;
         const isTargetGroup = chatId === this.targetGroupId;
@@ -6434,6 +6440,11 @@ _(Nota: Por favor nombra a JanIA Administradora del grupo para que pueda borrar 
         options.quotedMessageId = originalMsg.id._serialized;
       }
       if (wantsVoice || result.wantsVoice) {
+        try {
+          const chatInstance = chat || await this.client.getChatById(chatId);
+          await chatInstance.sendStateRecording();
+        } catch (_) {
+        }
         console.log(`[TTS] Generando voz para ${chatId}...`);
         const voiceText = result.voiceResponse || result.response;
         const voiceMedia = await textToSpeechMedia(voiceText);
@@ -6490,6 +6501,11 @@ _(Nota: Por favor nombra a JanIA Administradora del grupo para que pueda borrar 
         if (isGroup) {
           if (result.classification === "DATOS_INCOMPLETOS") {
             if (wantsVoice || result.wantsVoice) {
+              try {
+                const dmChat = await this.client.getChatById(senderId);
+                await dmChat.sendStateRecording();
+              } catch (_) {
+              }
               const voiceText = result.voiceResponse || dmMsg;
               const media = await textToSpeechMedia(voiceText);
               if (media) {
@@ -6508,6 +6524,11 @@ _(Nota: Por favor nombra a JanIA Administradora del grupo para que pueda borrar 
             options.quotedMessageId = originalMsg.id._serialized;
           }
           if (wantsVoice || result.wantsVoice) {
+            try {
+              const dmChat = await this.client.getChatById(senderId);
+              await dmChat.sendStateRecording();
+            } catch (_) {
+            }
             console.log(`[TTS] Generando voz para ${senderId}...`);
             const voiceText = result.voiceResponse || dmMsg;
             const media = await textToSpeechMedia(voiceText);

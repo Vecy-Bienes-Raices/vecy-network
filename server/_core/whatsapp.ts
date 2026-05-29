@@ -763,8 +763,17 @@ export class WhatsAppBot {
       try {
         const chat = await msg.getChat();
         
-        // Activar estado "Escribiendo..." (Typing) para simular presencia humana
-        await chat.sendStateTyping();
+        // Activar estado "Grabando audio..." (Recording) o "Escribiendo..." (Typing)
+        const msgText = (msg.body || "").toLowerCase();
+        const wantsVoice = msg.type === 'audio' || msg.type === 'ptt' ||
+                           msgText.includes("audio") ||
+                           msgText.includes("nota de voz") ||
+                           msgText.includes("en voz");
+        if (wantsVoice) {
+          await chat.sendStateRecording();
+        } else {
+          await chat.sendStateTyping();
+        }
 
         const chatId = chat.id._serialized;
         const isGroup = chat.isGroup;
@@ -1446,6 +1455,12 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
       }
 
       if (wantsVoice || result.wantsVoice) {
+        // Mostrar "Grabando audio..." inmediatamente durante la síntesis y transcodificación
+        try {
+          const chatInstance = chat || await this.client.getChatById(chatId);
+          await chatInstance.sendStateRecording();
+        } catch (_) {}
+
         // Solo audio — sin texto. Si falla, cae al texto como respaldo.
         console.log(`[TTS] Generando voz para ${chatId}...`);
         const voiceText = result.voiceResponse || result.response;
@@ -1513,6 +1528,12 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
           // Si proviene de un grupo y faltan datos, enviamos la advertencia de geocodificación directamente por privado para mantener limpio el grupo
           if (result.classification === "DATOS_INCOMPLETOS") {
             if (wantsVoice || result.wantsVoice) {
+              // Mostrar "Grabando audio..." inmediatamente durante la síntesis y transcodificación en el DM
+              try {
+                const dmChat = await this.client.getChatById(senderId);
+                await dmChat.sendStateRecording();
+              } catch (_) {}
+
               // Solo audio
               const voiceText = result.voiceResponse || dmMsg;
               const media = await textToSpeechMedia(voiceText);
@@ -1534,6 +1555,12 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
           }
 
           if (wantsVoice || result.wantsVoice) {
+            // Mostrar "Grabando audio..." inmediatamente durante la síntesis y transcodificación en el DM
+            try {
+              const dmChat = await this.client.getChatById(senderId);
+              await dmChat.sendStateRecording();
+            } catch (_) {}
+
             // Solo audio
             console.log(`[TTS] Generando voz para ${senderId}...`);
             const voiceText = result.voiceResponse || dmMsg;
