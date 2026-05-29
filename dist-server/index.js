@@ -5324,7 +5324,7 @@ async function textToSpeechMedia(text2) {
   const elevenKey = process.env.ELEVENLABS_API_KEY;
   if (elevenKey) {
     try {
-      const voiceId = process.env.ELEVENLABS_VOICE_ID || "XB0fDUnXU5powFXDhCwa";
+      const voiceId = process.env.ELEVENLABS_VOICE_ID || "21m00Tcm4TlvDq8ikWAM";
       const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`, {
         method: "POST",
         headers: {
