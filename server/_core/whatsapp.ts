@@ -358,6 +358,12 @@ interface PendingEntry {
   expiresAt: number;
 }
 
+interface RecentGroupMessage {
+  senderId: string;
+  timestamp: number;
+  body: string;
+}
+
 export class WhatsAppBot {
   private client: ClientType;
   private targetGroupId: string = '120363260108880069@g.us';
@@ -369,6 +375,8 @@ export class WhatsAppBot {
   private messageBuffers: Map<string, MessageBuffer> = new Map();
   private cooldownMap: Map<string, AntiSpamState> = new Map();
   private pendingData: Map<string, PendingEntry> = new Map();
+  private recentGroupMessages: Map<string, RecentGroupMessage[]> = new Map();
+  private lastConversationWarningTime: Map<string, number> = new Map();
   // Mutex ligero por senderId para serializar mensajes concurrentes del mismo usuario (Fix: condición de carrera en álbumes)
   private processingLocks: Map<string, Promise<void>> = new Map();
   
@@ -1060,15 +1068,46 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
     const MAX_BLOCK_SIZE = 3;             // Máximo 3 mensajes por bloque
     const isGroupChat = chatId.includes('@g.us');
 
+    if (isGroupChat) {
+      // Ejecutar detección de conversación activa entre dos miembros (en background)
+      this.detectGroupConversation(chatId, senderId, msg).catch(err => {
+        console.error("[CONVERSATION-DETECTOR] Error:", err);
+      });
+    }
+
+    const isMainGroup = chatId === this.targetGroupId;
+    const textLower = (msg.body || "").toLowerCase();
+    
+    // Heurística para identificar posibles listados de propiedad/requerimiento
+    const isPossibleListing = 
+      (msg.body || "").length > 150 || 
+      (msg.body || "").split('\n').length > 2 || 
+      msg.hasMedia ||
+      textLower.includes("ofrezco") ||
+      textLower.includes("busco") ||
+      textLower.includes("vendo") ||
+      textLower.includes("arriendo") ||
+      textLower.includes("compro") ||
+      textLower.includes("necesito") ||
+      textLower.includes("renta") ||
+      textLower.includes("alquilo") ||
+      textLower.includes("permuto") ||
+      textLower.includes("casa") ||
+      textLower.includes("apto") ||
+      textLower.includes("apartamento") ||
+      textLower.includes("bodega") ||
+      textLower.includes("oficina") ||
+      textLower.includes("lote") ||
+      textLower.includes("local");
+
     let cooldown = this.cooldownMap.get(senderId);
 
-    // Verificación de Cooldown (Anti-Spam - Solo aplica en el grupo principal VECY INMUEBLES NETWORK)
+    // Verificación de Cooldown (Anti-Spam - Solo aplica en el grupo principal VECY INMUEBLES NETWORK y para posibles listings)
     // El cooldown es por grupo (no global): un aliado puede publicar en el Buzón o Círculo
     // aunque tenga cooldown activo en el grupo principal VECY INMUEBLES NETWORK.
-    const isMainGroup = chatId === this.targetGroupId;
     const cooldownKey = `${chatId}_${senderId}`; // Clave compuesta grupo + usuario
     cooldown = this.cooldownMap.get(cooldownKey) as AntiSpamState | undefined;
-    if (isMainGroup && cooldown && (now - cooldown.lastBlockProcessedAt < COOLDOWN_PERIOD)) {
+    if (isMainGroup && isPossibleListing && cooldown && (now - cooldown.lastBlockProcessedAt < COOLDOWN_PERIOD)) {
       if (isGroupChat) {
         try {
           await msg.react('⚠️');
@@ -1113,9 +1152,9 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
     // el buffer vacío antes de que el primero lo creara, generando advertencias falsas.
     
     if (buffer) {
-      // Si el bloque ya llegó al límite de mensajes, advertimos (solo en grupo principal) y descartamos los excedentes
+      // Si el bloque ya llegó al límite de mensajes, advertimos (solo en grupo principal y para listings) y descartamos los excedentes
       const limit = isMainGroup ? MAX_BLOCK_SIZE : 10;
-      if (buffer.messages.length >= limit) {
+      if (isPossibleListing && buffer.messages.length >= limit) {
         console.log(`[BUFFER] Límite de bloque (${limit}) alcanzado para ${senderId}. Mensaje #${buffer.messages.length + 1} descartado.`);
         if (isGroupChat && isMainGroup) {
           try {
@@ -1402,6 +1441,95 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
 
     } catch (e) {
       console.error('[WHATSAPP-BOT] Error crítico en procesamiento de bloque:', e);
+    }
+  }
+
+  // --- DETECTOR DE CONVERSACIÓN ACTIVA ENTRE MIEMBROS ---
+  private async detectGroupConversation(chatId: string, senderId: string, msg: Message) {
+    const isModeratedGroup = chatId === this.targetGroupId || chatId === this.buzonGroupId || chatId === this.circuloGroupId;
+    if (!isModeratedGroup) return;
+
+    // Ignorar si el mensaje es del propio bot o fromMe
+    const botJid = this.client.info?.wid?._serialized;
+    if (senderId === botJid || msg.fromMe) return;
+
+    // Ignorar si parece un listado de propiedad, requerimiento o contenido multimedia (excepto notas de voz)
+    const isPossibleListingMsg = 
+      (msg.body || "").length > 250 || 
+      (msg.body || "").split('\n').length > 3 ||
+      (msg.hasMedia && msg.type !== 'ptt' && msg.type !== 'audio');
+    if (isPossibleListingMsg) return;
+
+    const now = Date.now();
+    let recent = this.recentGroupMessages.get(chatId) || [];
+
+    // Filtrar mensajes de los últimos 3 minutos
+    recent = recent.filter(m => now - m.timestamp < 3 * 60 * 1000);
+
+    // Agregar el nuevo mensaje
+    recent.push({
+      senderId,
+      timestamp: now,
+      body: msg.body || ""
+    });
+    this.recentGroupMessages.set(chatId, recent);
+
+    // Agrupar mensajes consecutivos del mismo remitente
+    const grouped: { senderId: string; count: number }[] = [];
+    for (const m of recent) {
+      if (grouped.length === 0 || grouped[grouped.length - 1].senderId !== m.senderId) {
+        grouped.push({ senderId: m.senderId, count: 1 });
+      } else {
+        grouped[grouped.length - 1].count++;
+      }
+    }
+
+    // Si tenemos al menos 4 alternancias (A -> B -> A -> B)
+    const len = grouped.length;
+    if (len >= 4) {
+      const s1 = grouped[len - 4].senderId;
+      const s2 = grouped[len - 3].senderId;
+      const s3 = grouped[len - 2].senderId;
+      const s4 = grouped[len - 1].senderId; // Actual
+
+      // Verificar patrón alternante estricto entre exactamente 2 remitentes
+      if (s1 === s3 && s2 === s4 && s1 !== s2) {
+        // Cooldown de advertencia de conversación: 15 minutos por grupo
+        const lastWarning = this.lastConversationWarningTime.get(chatId) || 0;
+        if (now - lastWarning < 15 * 60 * 1000) {
+          return;
+        }
+
+        this.lastConversationWarningTime.set(chatId, now);
+        console.log(`[CONVERSATION-DETECTOR] Conversación activa detectada en ${chatId} entre ${s3} y ${s4}.`);
+
+        // Enviar indicador "Grabando audio..."
+        try {
+          const chat = await msg.getChat();
+          await chat.sendStateRecording();
+        } catch (_) {}
+
+        const voiceText = "Hola colegas... detecté que están conversando activamente en el grupo... Para cuidar el espacio de todos los aliados y no saturar el canal, les sugiero amablemente que continúen su charla por mensaje privado... ¡Muchas gracias, hagamos equipo y cerremos negocios!";
+        
+        console.log(`[CONVERSATION-DETECTOR] Generando audio de advertencia...`);
+        const voiceMedia = await textToSpeechMedia(voiceText);
+        if (voiceMedia) {
+          // Enviar nota de voz
+          await this.queuedSend(chatId, voiceMedia, { sendAudioAsVoice: true });
+          
+          // Enviar mensaje de texto con menciones justo después
+          const rawPhoneA = s3.split("@")[0];
+          const rawPhoneB = s4.split("@")[0];
+          const tagText = `👉 @${rawPhoneA} @${rawPhoneB}, por favor continúen por mensaje privado (DM) para no saturar el grupo. ¡Gracias! 🤝`;
+          
+          await this.queuedSend(chatId, tagText, {
+            mentions: [s3, s4],
+            quotedMessageId: msg.id._serialized
+          });
+          
+          console.log(`[CONVERSATION-DETECTOR] Advertencia enviada con éxito a ${chatId}.`);
+        }
+      }
     }
   }
 

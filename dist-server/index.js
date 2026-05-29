@@ -5575,6 +5575,8 @@ var WhatsAppBot = class {
   messageBuffers = /* @__PURE__ */ new Map();
   cooldownMap = /* @__PURE__ */ new Map();
   pendingData = /* @__PURE__ */ new Map();
+  recentGroupMessages = /* @__PURE__ */ new Map();
+  lastConversationWarningTime = /* @__PURE__ */ new Map();
   // Mutex ligero por senderId para serializar mensajes concurrentes del mismo usuario (Fix: condición de carrera en álbumes)
   processingLocks = /* @__PURE__ */ new Map();
   pendingWelcomeCount = 0;
@@ -6157,11 +6159,18 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
     const COOLDOWN_PERIOD = 5 * 60 * 1e3;
     const MAX_BLOCK_SIZE = 3;
     const isGroupChat = chatId.includes("@g.us");
-    let cooldown = this.cooldownMap.get(senderId);
+    if (isGroupChat) {
+      this.detectGroupConversation(chatId, senderId, msg).catch((err) => {
+        console.error("[CONVERSATION-DETECTOR] Error:", err);
+      });
+    }
     const isMainGroup = chatId === this.targetGroupId;
+    const textLower = (msg.body || "").toLowerCase();
+    const isPossibleListing = (msg.body || "").length > 150 || (msg.body || "").split("\n").length > 2 || msg.hasMedia || textLower.includes("ofrezco") || textLower.includes("busco") || textLower.includes("vendo") || textLower.includes("arriendo") || textLower.includes("compro") || textLower.includes("necesito") || textLower.includes("renta") || textLower.includes("alquilo") || textLower.includes("permuto") || textLower.includes("casa") || textLower.includes("apto") || textLower.includes("apartamento") || textLower.includes("bodega") || textLower.includes("oficina") || textLower.includes("lote") || textLower.includes("local");
+    let cooldown = this.cooldownMap.get(senderId);
     const cooldownKey = `${chatId}_${senderId}`;
     cooldown = this.cooldownMap.get(cooldownKey);
-    if (isMainGroup && cooldown && now - cooldown.lastBlockProcessedAt < COOLDOWN_PERIOD) {
+    if (isMainGroup && isPossibleListing && cooldown && now - cooldown.lastBlockProcessedAt < COOLDOWN_PERIOD) {
       if (isGroupChat) {
         try {
           await msg.react("\u26A0\uFE0F");
@@ -6200,7 +6209,7 @@ Hola @${rawPhone2}, acabo de procesar con \xE9xito tus primeras propiedades. Par
     let buffer = this.messageBuffers.get(bufferKey);
     if (buffer) {
       const limit = isMainGroup ? MAX_BLOCK_SIZE : 10;
-      if (buffer.messages.length >= limit) {
+      if (isPossibleListing && buffer.messages.length >= limit) {
         console.log(`[BUFFER] L\xEDmite de bloque (${limit}) alcanzado para ${senderId}. Mensaje #${buffer.messages.length + 1} descartado.`);
         if (isGroupChat && isMainGroup) {
           try {
@@ -6444,6 +6453,66 @@ Hola @${rawPhone}, detect\xE9 que est\xE1s enviando muchas publicaciones seguida
       }
     } catch (e) {
       console.error("[WHATSAPP-BOT] Error cr\xEDtico en procesamiento de bloque:", e);
+    }
+  }
+  // --- DETECTOR DE CONVERSACIÓN ACTIVA ENTRE MIEMBROS ---
+  async detectGroupConversation(chatId, senderId, msg) {
+    const isModeratedGroup = chatId === this.targetGroupId || chatId === this.buzonGroupId || chatId === this.circuloGroupId;
+    if (!isModeratedGroup) return;
+    const botJid = this.client.info?.wid?._serialized;
+    if (senderId === botJid || msg.fromMe) return;
+    const isPossibleListingMsg = (msg.body || "").length > 250 || (msg.body || "").split("\n").length > 3 || msg.hasMedia && msg.type !== "ptt" && msg.type !== "audio";
+    if (isPossibleListingMsg) return;
+    const now = Date.now();
+    let recent = this.recentGroupMessages.get(chatId) || [];
+    recent = recent.filter((m) => now - m.timestamp < 3 * 60 * 1e3);
+    recent.push({
+      senderId,
+      timestamp: now,
+      body: msg.body || ""
+    });
+    this.recentGroupMessages.set(chatId, recent);
+    const grouped = [];
+    for (const m of recent) {
+      if (grouped.length === 0 || grouped[grouped.length - 1].senderId !== m.senderId) {
+        grouped.push({ senderId: m.senderId, count: 1 });
+      } else {
+        grouped[grouped.length - 1].count++;
+      }
+    }
+    const len = grouped.length;
+    if (len >= 4) {
+      const s1 = grouped[len - 4].senderId;
+      const s2 = grouped[len - 3].senderId;
+      const s3 = grouped[len - 2].senderId;
+      const s4 = grouped[len - 1].senderId;
+      if (s1 === s3 && s2 === s4 && s1 !== s2) {
+        const lastWarning = this.lastConversationWarningTime.get(chatId) || 0;
+        if (now - lastWarning < 15 * 60 * 1e3) {
+          return;
+        }
+        this.lastConversationWarningTime.set(chatId, now);
+        console.log(`[CONVERSATION-DETECTOR] Conversaci\xF3n activa detectada en ${chatId} entre ${s3} y ${s4}.`);
+        try {
+          const chat = await msg.getChat();
+          await chat.sendStateRecording();
+        } catch (_) {
+        }
+        const voiceText = "Hola colegas... detect\xE9 que est\xE1n conversando activamente en el grupo... Para cuidar el espacio de todos los aliados y no saturar el canal, les sugiero amablemente que contin\xFAen su charla por mensaje privado... \xA1Muchas gracias, hagamos equipo y cerremos negocios!";
+        console.log(`[CONVERSATION-DETECTOR] Generando audio de advertencia...`);
+        const voiceMedia = await textToSpeechMedia(voiceText);
+        if (voiceMedia) {
+          await this.queuedSend(chatId, voiceMedia, { sendAudioAsVoice: true });
+          const rawPhoneA = s3.split("@")[0];
+          const rawPhoneB = s4.split("@")[0];
+          const tagText = `\u{1F449} @${rawPhoneA} @${rawPhoneB}, por favor contin\xFAen por mensaje privado (DM) para no saturar el grupo. \xA1Gracias! \u{1F91D}`;
+          await this.queuedSend(chatId, tagText, {
+            mentions: [s3, s4],
+            quotedMessageId: msg.id._serialized
+          });
+          console.log(`[CONVERSATION-DETECTOR] Advertencia enviada con \xE9xito a ${chatId}.`);
+        }
+      }
     }
   }
   // --- ORQUESTACIÓN DE RESPUESTAS Y PERSONALIZACIÓN (JanIA v2.0) ---
