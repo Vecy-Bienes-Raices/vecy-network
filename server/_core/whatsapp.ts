@@ -38,7 +38,6 @@ async function transcodeToOggOpus(inputBuffer: Buffer): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const ffmpeg = spawn("ffmpeg", [
       "-i", "pipe:0",           // Leer de stdin
-      "-af", "atempo=1.15",     // Aumentar velocidad a 1.15x (calibración humana óptima)
       "-c:a", "libopus",        // Usar codec Opus
       "-ac", "1",               // Canal mono
       "-ar", "16000",           // Frecuencia 16kHz
@@ -1310,6 +1309,12 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
       let warningSent = buffer.warningSent || false;
 
       for (const item of finalListingTexts) {
+        const isImageMessage = item.hasMedia && item.originalMsg.type === 'image';
+        if (!item.text.trim() && !isImageMessage) {
+          console.log(`[processBuffer] Saltando mensaje vacío (sin texto ni imagen) para ${senderId}`);
+          continue;
+        }
+
         processedListingsCount++;
         
         if (processedListingsCount > 3) {

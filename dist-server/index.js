@@ -5284,9 +5284,6 @@ async function transcodeToOggOpus(inputBuffer) {
       "-i",
       "pipe:0",
       // Leer de stdin
-      "-af",
-      "atempo=1.15",
-      // Aumentar velocidad a 1.15x (calibración humana óptima)
       "-c:a",
       "libopus",
       // Usar codec Opus
@@ -6339,6 +6336,11 @@ Hola @${rawPhone}, detect\xE9 que est\xE1s enviando muchas publicaciones seguida
       let processedListingsCount = 0;
       let warningSent = buffer.warningSent || false;
       for (const item of finalListingTexts) {
+        const isImageMessage = item.hasMedia && item.originalMsg.type === "image";
+        if (!item.text.trim() && !isImageMessage) {
+          console.log(`[processBuffer] Saltando mensaje vac\xEDo (sin texto ni imagen) para ${senderId}`);
+          continue;
+        }
         processedListingsCount++;
         if (processedListingsCount > 3) {
           console.log(`[processBuffer] Listing #${processedListingsCount} excede el l\xEDmite de 3 para ${senderId}.`);
