@@ -5260,12 +5260,57 @@ init_db();
 init_schema();
 import fs2 from "fs";
 import path3 from "path";
+import { spawn } from "child_process";
 import { eq as eq10 } from "drizzle-orm";
 init_env();
 var { Client, LocalAuth, MessageMedia } = pkg;
 var SERVER_BOOT_TIME = Math.floor(Date.now() / 1e3);
 var delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 var outgoingQueue = Promise.resolve();
+async function transcodeToOggOpus(inputBuffer) {
+  return new Promise((resolve, reject) => {
+    const ffmpeg = spawn("ffmpeg", [
+      "-i",
+      "pipe:0",
+      // Leer de stdin
+      "-c:a",
+      "libopus",
+      // Usar codec Opus
+      "-ac",
+      "1",
+      // Canal mono
+      "-ar",
+      "16000",
+      // Frecuencia 16kHz
+      "-b:a",
+      "16k",
+      // Bitrate de audio 16kbps (óptimo para voz)
+      "-f",
+      "ogg",
+      // Contenedor Ogg
+      "pipe:1"
+      // Escribir a stdout
+    ]);
+    const chunks = [];
+    ffmpeg.stdout.on("data", (chunk) => chunks.push(chunk));
+    let stderrData = "";
+    ffmpeg.stderr.on("data", (data) => {
+      stderrData += data.toString();
+    });
+    ffmpeg.on("close", (code) => {
+      if (code === 0) {
+        resolve(Buffer.concat(chunks));
+      } else {
+        reject(new Error(`ffmpeg fall\xF3 con c\xF3digo ${code}. Stderr: ${stderrData}`));
+      }
+    });
+    ffmpeg.on("error", (err) => {
+      reject(err);
+    });
+    ffmpeg.stdin.write(inputBuffer);
+    ffmpeg.stdin.end();
+  });
+}
 function prepareTtsText(rawText) {
   return rawText.replace(/VECY\s+Network/gi, "Veci N\xE9twork").replace(/\bVECY\b/gi, "Veci").replace(/\bJanIA\b/gi, "Jan\xEDa").replace(/\bRLS\b/g, "ere ele ese").replace(/\bSQL\b/g, "ese cu ele").replace(/\bDM\b/g, "di em").replace(/\bID\b/g, "ai di").replace(/[<>]/g, "").trim();
 }
@@ -5302,9 +5347,16 @@ async function textToSpeechMedia(text2) {
         if (buffer.byteLength < 1e3) {
           console.warn(`[TTS-ElevenLabs] Audio demasiado peque\xF1o (${buffer.byteLength} bytes), posible error.`);
         } else {
-          const base64 = Buffer.from(buffer).toString("base64");
-          console.log(`[TTS-ElevenLabs] \u2713 Voz Laura generada (${buffer.byteLength} bytes).`);
-          return new MessageMedia("audio/mpeg", base64, "voice-note.mp3");
+          try {
+            const oggBuffer = await transcodeToOggOpus(Buffer.from(buffer));
+            const base64Ogg = oggBuffer.toString("base64");
+            console.log(`[TTS-ElevenLabs] \u2713 Voz Laura generada y transcodificada a OGG_OPUS (${oggBuffer.byteLength} bytes).`);
+            return new MessageMedia("audio/ogg; codecs=opus", base64Ogg, "voice-note.ogg");
+          } catch (transcodeErr) {
+            console.error(`[TTS-ElevenLabs] Fall\xF3 transcodificaci\xF3n a Ogg, enviando MP3 de respaldo:`, transcodeErr);
+            const base64 = Buffer.from(buffer).toString("base64");
+            return new MessageMedia("audio/mpeg", base64, "voice-note.mp3");
+          }
         }
       } else {
         const err = await response.text().catch(() => "");
@@ -5372,9 +5424,16 @@ async function textToSpeechMedia(text2) {
       });
       if (response.ok) {
         const buffer = await response.arrayBuffer();
-        const base64Data = Buffer.from(buffer).toString("base64");
-        console.log(`[TTS-Forge] Voz nova generada con \xE9xito.`);
-        return new MessageMedia("audio/mpeg", base64Data, "voice-note.mp3");
+        try {
+          const oggBuffer = await transcodeToOggOpus(Buffer.from(buffer));
+          const base64Ogg = oggBuffer.toString("base64");
+          console.log(`[TTS-Forge] Voz nova transcodificada a OGG_OPUS (${oggBuffer.byteLength} bytes).`);
+          return new MessageMedia("audio/ogg; codecs=opus", base64Ogg, "voice-note.ogg");
+        } catch (transcodeErr) {
+          console.error(`[TTS-Forge] Fall\xF3 transcodificaci\xF3n a Ogg, enviando MP3 de respaldo:`, transcodeErr);
+          const base64Data = Buffer.from(buffer).toString("base64");
+          return new MessageMedia("audio/mpeg", base64Data, "voice-note.mp3");
+        }
       }
     }
   } catch (err) {
@@ -5410,7 +5469,15 @@ async function textToSpeechMedia(text2) {
     if (buffers.length > 0) {
       const combined = Buffer.concat(buffers);
       console.log(`[TTS-Translate] Voz Google Translate generada (fallback).`);
-      return new MessageMedia("audio/mpeg", combined.toString("base64"), "voice-note.mp3");
+      try {
+        const oggBuffer = await transcodeToOggOpus(combined);
+        const base64Ogg = oggBuffer.toString("base64");
+        console.log(`[TTS-Translate] Voz Google Translate transcodificada a OGG_OPUS (${oggBuffer.byteLength} bytes).`);
+        return new MessageMedia("audio/ogg; codecs=opus", base64Ogg, "voice-note.ogg");
+      } catch (transcodeErr) {
+        console.error(`[TTS-Translate] Fall\xF3 transcodificaci\xF3n a Ogg, enviando MP3 de respaldo:`, transcodeErr);
+        return new MessageMedia("audio/mpeg", combined.toString("base64"), "voice-note.mp3");
+      }
     }
   } catch (err) {
     console.error("[TTS-Translate] Fallback TTS failed:", err);
