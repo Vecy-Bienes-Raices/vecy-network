@@ -69,8 +69,14 @@ async function textToSpeechMedia(text: string): Promise<MessageMediaType | null>
     try {
       // Laura — voz femenina latina, cálida y natural (eleven_multilingual_v2)
       // Alternativas disponibles en elevenlabs.io/voice-library
-      const voiceId = process.env.ELEVENLABS_VOICE_ID || "FGY2WhTYpPnrIDTdsKH5";
-      const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+      // Voz recomendada: Charlotte (posh, energética, fluida en español)
+      // Puedes cambiarla con ELEVENLABS_VOICE_ID en el .env
+      // Otras buenas opciones: 
+      //   - Aria:     9BWtsMINqrJLrRacOk9x
+      //   - Charlotte: XB0fDUnXU5powFXDhCwa
+      //   - Valentina: XrExE9yKIg1WjnnlVkGX
+      const voiceId = process.env.ELEVENLABS_VOICE_ID || "XB0fDUnXU5powFXDhCwa"; // Charlotte
+      const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`, {
         method: "POST",
         headers: {
           "xi-api-key": elevenKey,
@@ -81,19 +87,24 @@ async function textToSpeechMedia(text: string): Promise<MessageMediaType | null>
           text: ttsText,
           model_id: "eleven_multilingual_v2",
           voice_settings: {
-            stability: 0.35,          // Más expresiva, menos monótona
-            similarity_boost: 0.80,   // Fiel al carácter de la voz
-            style: 0.45,              // Estilo conversacional con calidez
-            use_speaker_boost: true   // Más presencia y claridad
+            stability: 0.25,          // Baja = más expresiva, energética y variada
+            similarity_boost: 0.75,
+            style: 0.60,              // Alto estilo = más carácter y viveza
+            use_speaker_boost: true
           }
         })
       });
 
       if (response.ok) {
         const buffer = await response.arrayBuffer();
-        const base64 = Buffer.from(buffer).toString('base64');
-        console.log(`[TTS-ElevenLabs] ✓ Voz Laura generada (${ttsText.length} chars).`);
-        return new MessageMedia('audio/mpeg', base64, 'voice-note.mp3');
+        // Verificar que el buffer tiene datos reales
+        if (buffer.byteLength < 1000) {
+          console.warn(`[TTS-ElevenLabs] Audio demasiado pequeño (${buffer.byteLength} bytes), posible error.`);
+        } else {
+          const base64 = Buffer.from(buffer).toString('base64');
+          console.log(`[TTS-ElevenLabs] ✓ Voz Laura generada (${buffer.byteLength} bytes).`);
+          return new MessageMedia('audio/mpeg', base64, 'voice-note.mp3');
+        }
       } else {
         const err = await response.text().catch(() => "");
         console.warn(`[TTS-ElevenLabs] Error ${response.status}: ${err.substring(0, 150)}`);
@@ -124,9 +135,9 @@ async function textToSpeechMedia(text: string): Promise<MessageMediaType | null>
             input: { text: ttsText },
             voice: { languageCode: lang, name, ssmlGender: "FEMALE" },
             audioConfig: {
-              audioEncoding: "MP3",
-              speakingRate: 1.3,
-              pitch: -1.0
+              audioEncoding: "OGG_OPUS",
+              speakingRate: 1.55,  // Ágil y dinámica
+              pitch: 2.0           // Positivo = más fresco y energético (evita sonar 'borracha')
             }
           })
         });
@@ -134,8 +145,9 @@ async function textToSpeechMedia(text: string): Promise<MessageMediaType | null>
         if (response.ok) {
           const data = await response.json() as { audioContent: string };
           if (data.audioContent) {
-            console.log(`[TTS-Google] ✓ Voz "${name}" generada (${ttsText.length} chars).`);
-            return new MessageMedia('audio/mpeg', data.audioContent, 'voice-note.mp3');
+            console.log(`[TTS-Google] ✓ Voz "${name}" OGG_OPUS generada (${ttsText.length} chars).`);
+            // audio/ogg; codecs=opus → WhatsApp lo reproduce sin necesitar ffmpeg
+            return new MessageMedia('audio/ogg; codecs=opus', data.audioContent, 'voice-note.ogg');
           }
         } else {
           const errBody = await response.text().catch(() => "");
