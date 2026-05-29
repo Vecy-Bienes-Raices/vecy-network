@@ -6315,17 +6315,21 @@ _(Nota: Por favor nombra a JanIA Administradora del grupo para que pueda borrar 
       if (isViolation && originalMsg) {
         options.quotedMessageId = originalMsg.id._serialized;
       }
-      await this.queuedSend(chatId, result.response, options);
-      await this.logToDb(senderId, "janIA", result.response);
       if (wantsVoice || result.wantsVoice) {
-        console.log(`[TTS] Generando respuesta de voz para ${chatId}...`);
+        console.log(`[TTS] Generando voz para ${chatId}...`);
         const voiceText = result.voiceResponse || result.response;
-        const media = await textToSpeechMedia(voiceText);
-        if (media) {
-          await this.queuedSend(chatId, media, { sendAudioAsVoice: true });
-          console.log(`[TTS] Respuesta de voz enviada con \xE9xito a ${chatId}.`);
+        const voiceMedia = await textToSpeechMedia(voiceText);
+        if (voiceMedia) {
+          await this.queuedSend(chatId, voiceMedia, { sendAudioAsVoice: true });
+          console.log(`[TTS] \u2713 Solo audio enviado a ${chatId}.`);
+        } else {
+          console.warn(`[TTS] Audio fall\xF3, enviando texto como respaldo a ${chatId}.`);
+          await this.queuedSend(chatId, result.response, options);
         }
+      } else {
+        await this.queuedSend(chatId, result.response, options);
       }
+      await this.logToDb(senderId, "janIA", result.response);
       if (isGroup && strike >= 3 && isBotAdmin && chat) {
         try {
           console.log(`[WHATSAPP-BOT] Retirando infractor ${senderId} del grupo ${chatId}`);
@@ -6367,33 +6371,39 @@ _(Nota: Por favor nombra a JanIA Administradora del grupo para que pueda borrar 
       if (dmMsg && dmMsg.trim() !== "") {
         if (isGroup) {
           if (result.classification === "DATOS_INCOMPLETOS") {
-            await this.queuedSend(senderId, dmMsg);
-            await this.logToDb(senderId, "janIA", `[DM-Incompleto] ${dmMsg}`);
             if (wantsVoice || result.wantsVoice) {
-              console.log(`[TTS] Generando respuesta de voz (Incompleto) para ${senderId}...`);
               const voiceText = result.voiceResponse || dmMsg;
               const media = await textToSpeechMedia(voiceText);
               if (media) {
                 await this.queuedSend(senderId, media, { sendAudioAsVoice: true });
+              } else {
+                await this.queuedSend(senderId, dmMsg);
               }
+            } else {
+              await this.queuedSend(senderId, dmMsg);
             }
+            await this.logToDb(senderId, "janIA", `[DM-Incompleto] ${dmMsg}`);
           }
         } else {
           const options = {};
           if (result.dmShouldReply && originalMsg) {
             options.quotedMessageId = originalMsg.id._serialized;
           }
-          await this.queuedSend(senderId, dmMsg, options);
-          await this.logToDb(senderId, "janIA", `[DM] ${dmMsg}`);
           if (wantsVoice || result.wantsVoice) {
-            console.log(`[TTS] Generando respuesta de voz para ${senderId}...`);
+            console.log(`[TTS] Generando voz para ${senderId}...`);
             const voiceText = result.voiceResponse || dmMsg;
             const media = await textToSpeechMedia(voiceText);
             if (media) {
               await this.queuedSend(senderId, media, { sendAudioAsVoice: true });
-              console.log(`[TTS] Respuesta de voz enviada con \xE9xito a ${senderId}.`);
+              console.log(`[TTS] \u2713 Solo audio enviado a ${senderId}.`);
+            } else {
+              console.warn(`[TTS] Audio fall\xF3, enviando texto a ${senderId}.`);
+              await this.queuedSend(senderId, dmMsg, options);
             }
+          } else {
+            await this.queuedSend(senderId, dmMsg, options);
           }
+          await this.logToDb(senderId, "janIA", `[DM] ${dmMsg}`);
         }
       }
       if (isGroup && result.classification === "DATOS_INCOMPLETOS") {

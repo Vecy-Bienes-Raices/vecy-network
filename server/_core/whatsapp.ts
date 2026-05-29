@@ -1314,23 +1314,28 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
       const options: any = { 
         mentions: isGroup ? mentions : [] 
       };
-      // Siempre citar el mensaje original en violaciones para que los demás miembros
-      // vean a qué publicación se refiere la amonestación (independiente de si somos admin)
       if (isViolation && originalMsg) {
         options.quotedMessageId = originalMsg.id._serialized;
       }
-      await this.queuedSend(chatId, result.response, options);
-      await this.logToDb(senderId, 'janIA', result.response);
 
       if (wantsVoice || result.wantsVoice) {
-        console.log(`[TTS] Generando respuesta de voz para ${chatId}...`);
+        // Solo audio — sin texto. Si falla, cae al texto como respaldo.
+        console.log(`[TTS] Generando voz para ${chatId}...`);
         const voiceText = result.voiceResponse || result.response;
-        const media = await textToSpeechMedia(voiceText);
-        if (media) {
-          await this.queuedSend(chatId, media, { sendAudioAsVoice: true });
-          console.log(`[TTS] Respuesta de voz enviada con éxito a ${chatId}.`);
+        const voiceMedia = await textToSpeechMedia(voiceText);
+        if (voiceMedia) {
+          await this.queuedSend(chatId, voiceMedia, { sendAudioAsVoice: true });
+          console.log(`[TTS] ✓ Solo audio enviado a ${chatId}.`);
+        } else {
+          // Fallback: audio falló → enviar texto
+          console.warn(`[TTS] Audio falló, enviando texto como respaldo a ${chatId}.`);
+          await this.queuedSend(chatId, result.response, options);
         }
+      } else {
+        // Sin voz → texto normal
+        await this.queuedSend(chatId, result.response, options);
       }
+      await this.logToDb(senderId, 'janIA', result.response);
 
       // Si es el 3er strike y somos admin, procedemos a retirar al usuario
       if (isGroup && strike >= 3 && isBotAdmin && chat) {
@@ -1380,36 +1385,44 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         if (isGroup) {
           // Si proviene de un grupo y faltan datos, enviamos la advertencia de geocodificación directamente por privado para mantener limpio el grupo
           if (result.classification === "DATOS_INCOMPLETOS") {
-            await this.queuedSend(senderId, dmMsg);
-            await this.logToDb(senderId, 'janIA', `[DM-Incompleto] ${dmMsg}`);
-            
             if (wantsVoice || result.wantsVoice) {
-              console.log(`[TTS] Generando respuesta de voz (Incompleto) para ${senderId}...`);
+              // Solo audio
               const voiceText = result.voiceResponse || dmMsg;
               const media = await textToSpeechMedia(voiceText);
               if (media) {
                 await this.queuedSend(senderId, media, { sendAudioAsVoice: true });
+              } else {
+                await this.queuedSend(senderId, dmMsg); // fallback texto
               }
+            } else {
+              await this.queuedSend(senderId, dmMsg);
             }
+            await this.logToDb(senderId, 'janIA', `[DM-Incompleto] ${dmMsg}`);
           }
         } else {
-          // Si el chat ya se originó en privado (DM), respondemos normalmente en privado
+          // Chat privado (DM)
           const options: any = {};
           if (result.dmShouldReply && originalMsg) {
             options.quotedMessageId = originalMsg.id._serialized;
           }
-          await this.queuedSend(senderId, dmMsg, options);
-          await this.logToDb(senderId, 'janIA', `[DM] ${dmMsg}`);
-          
+
           if (wantsVoice || result.wantsVoice) {
-            console.log(`[TTS] Generando respuesta de voz para ${senderId}...`);
+            // Solo audio
+            console.log(`[TTS] Generando voz para ${senderId}...`);
             const voiceText = result.voiceResponse || dmMsg;
             const media = await textToSpeechMedia(voiceText);
             if (media) {
               await this.queuedSend(senderId, media, { sendAudioAsVoice: true });
-              console.log(`[TTS] Respuesta de voz enviada con éxito a ${senderId}.`);
+              console.log(`[TTS] ✓ Solo audio enviado a ${senderId}.`);
+            } else {
+              // Fallback: audio falló → texto
+              console.warn(`[TTS] Audio falló, enviando texto a ${senderId}.`);
+              await this.queuedSend(senderId, dmMsg, options);
             }
+          } else {
+            await this.queuedSend(senderId, dmMsg, options);
           }
+          await this.logToDb(senderId, 'janIA', `[DM] ${dmMsg}`);
         }
       }
 
