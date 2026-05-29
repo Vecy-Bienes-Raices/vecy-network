@@ -38,6 +38,7 @@ async function transcodeToOggOpus(inputBuffer: Buffer): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const ffmpeg = spawn("ffmpeg", [
       "-i", "pipe:0",           // Leer de stdin
+      "-af", "atempo=1.3",      // Aumentar velocidad a 1.3x sin alterar tono
       "-c:a", "libopus",        // Usar codec Opus
       "-ac", "1",               // Canal mono
       "-ar", "16000",           // Frecuencia 16kHz
@@ -75,13 +76,13 @@ async function transcodeToOggOpus(inputBuffer: Buffer): Promise<Buffer> {
 /** Prepara el texto para TTS: pronunciación natural en español */
 function prepareTtsText(rawText: string): string {
   return rawText
-    .replace(/VECY\s+Network/gi, "Veci Nétwork")   // "VECY Network" → "Veci Nétwork"
-    .replace(/\bVECY\b/gi, "Veci")                  // "VECY" solo → "Veci"
-    .replace(/\bJanIA\b/gi, "Janía")                // "JanIA" → "Janía"
-    .replace(/\bRLS\b/g, "ere ele ese")
-    .replace(/\bSQL\b/g, "ese cu ele")
-    .replace(/\bDM\b/g, "di em")
-    .replace(/\bID\b/g, "ai di")
+    .replace(/vecy\s+network/gi, "veci nétwork")   // "VECY Network" → "veci nétwork" en minúscula
+    .replace(/vecy/gi, "veci")                      // "VECY" solo → "veci" en minúscula
+    .replace(/jania/gi, "janía")                    // "JanIA" → "janía" en minúscula
+    .replace(/\bRLS\b/gi, "ere ele ese")
+    .replace(/\bSQL\b/gi, "ese cu ele")
+    .replace(/\bDM\b/gi, "di em")
+    .replace(/\bID\b/gi, "ai di")
     .replace(/[<>]/g, "")
     .trim();
 }

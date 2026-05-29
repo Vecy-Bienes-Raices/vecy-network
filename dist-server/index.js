@@ -5273,6 +5273,9 @@ async function transcodeToOggOpus(inputBuffer) {
       "-i",
       "pipe:0",
       // Leer de stdin
+      "-af",
+      "atempo=1.3",
+      // Aumentar velocidad a 1.3x sin alterar tono
       "-c:a",
       "libopus",
       // Usar codec Opus
@@ -5312,7 +5315,7 @@ async function transcodeToOggOpus(inputBuffer) {
   });
 }
 function prepareTtsText(rawText) {
-  return rawText.replace(/VECY\s+Network/gi, "Veci N\xE9twork").replace(/\bVECY\b/gi, "Veci").replace(/\bJanIA\b/gi, "Jan\xEDa").replace(/\bRLS\b/g, "ere ele ese").replace(/\bSQL\b/g, "ese cu ele").replace(/\bDM\b/g, "di em").replace(/\bID\b/g, "ai di").replace(/[<>]/g, "").trim();
+  return rawText.replace(/vecy\s+network/gi, "veci n\xE9twork").replace(/vecy/gi, "veci").replace(/jania/gi, "jan\xEDa").replace(/\bRLS\b/gi, "ere ele ese").replace(/\bSQL\b/gi, "ese cu ele").replace(/\bDM\b/gi, "di em").replace(/\bID\b/gi, "ai di").replace(/[<>]/g, "").trim();
 }
 async function textToSpeechMedia(text2) {
   const cleanText = text2.replace(/[*#_`~\[\]]/g, "").replace(new RegExp("[\\u{1F300}-\\u{1FAD6}]", "gu"), "").trim();
