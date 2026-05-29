@@ -5218,10 +5218,89 @@ init_schema();
 import fs2 from "fs";
 import path3 from "path";
 import { eq as eq10 } from "drizzle-orm";
+init_env();
 var { Client, LocalAuth, MessageMedia } = pkg;
 var SERVER_BOOT_TIME = Math.floor(Date.now() / 1e3);
 var delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 var outgoingQueue = Promise.resolve();
+async function textToSpeechMedia(text2) {
+  const cleanText = text2.replace(/[*#_`~]/g, "");
+  try {
+    if (ENV.forgeApiUrl && ENV.forgeApiKey) {
+      const baseUrl = ENV.forgeApiUrl.endsWith("/") ? ENV.forgeApiUrl : `${ENV.forgeApiUrl}/`;
+      const ttsUrl = new URL("v1/audio/speech", baseUrl).toString();
+      const response = await fetch(ttsUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${ENV.forgeApiKey}`
+        },
+        body: JSON.stringify({
+          model: "tts-1",
+          input: cleanText,
+          voice: "nova"
+        })
+      });
+      if (response.ok) {
+        const buffer = await response.arrayBuffer();
+        const base64Data = Buffer.from(buffer).toString("base64");
+        return new MessageMedia("audio/mpeg", base64Data, "voice-note.mp3");
+      }
+    }
+  } catch (err) {
+    console.error("[TTS-Forge] Error in Forge TTS:", err);
+  }
+  try {
+    const maxLen = 200;
+    if (cleanText.length <= maxLen) {
+      const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(cleanText)}&tl=es&client=tw-ob`;
+      const response = await fetch(url, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      });
+      if (response.ok) {
+        const buffer = await response.arrayBuffer();
+        const base64Data = Buffer.from(buffer).toString("base64");
+        return new MessageMedia("audio/mpeg", base64Data, "voice-note.mp3");
+      }
+    } else {
+      const words = cleanText.split(/\s+/);
+      const chunks = [];
+      let currentChunk = "";
+      for (const word of words) {
+        if ((currentChunk + " " + word).length > maxLen) {
+          if (currentChunk.trim()) chunks.push(currentChunk.trim());
+          currentChunk = word;
+        } else {
+          currentChunk += (currentChunk ? " " : "") + word;
+        }
+      }
+      if (currentChunk.trim()) chunks.push(currentChunk.trim());
+      const buffers = [];
+      for (const chunk of chunks) {
+        const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(chunk)}&tl=es&client=tw-ob`;
+        const response = await fetch(url, {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+          }
+        });
+        if (response.ok) {
+          buffers.push(Buffer.from(await response.arrayBuffer()));
+        }
+        await delay(250);
+      }
+      if (buffers.length > 0) {
+        const combined = Buffer.concat(buffers);
+        const base64Data = combined.toString("base64");
+        return new MessageMedia("audio/mpeg", base64Data, "voice-note.mp3");
+      }
+    }
+  } catch (err) {
+    console.error("[TTS-Google] Fallback TTS failed:", err);
+  }
+  return null;
+}
 function getAudioExtension(mimeType) {
   const mimeToExt = {
     "audio/webm": "webm",
@@ -6057,7 +6136,8 @@ Hola @${rawPhone}, detect\xE9 que est\xE1s enviando muchas publicaciones seguida
             result = await processWhatsAppMessage(item.text, senderId, userName, item.hasMedia, scrapedResults, item.audioUrl, item.imageBuffer, !isDM);
           }
         }
-        await this.handleJanIAResponse(result, senderId, chatId, userName, item.text, item.originalMsg);
+        const wantsVoice = !!item.audioUrl || item.text.toLowerCase().includes("env\xEDame un audio") || item.text.toLowerCase().includes("m\xE1ndame un audio") || item.text.toLowerCase().includes("nota de voz");
+        await this.handleJanIAResponse(result, senderId, chatId, userName, item.text, item.originalMsg, wantsVoice);
       }
       const cooldownKeyFinal = `${chatId}_${senderId}`;
       this.cooldownMap.set(cooldownKeyFinal, {
@@ -6070,7 +6150,7 @@ Hola @${rawPhone}, detect\xE9 que est\xE1s enviando muchas publicaciones seguida
     }
   }
   // --- ORQUESTACIÓN DE RESPUESTAS Y PERSONALIZACIÓN (JanIA v2.0) ---
-  async handleJanIAResponse(result, senderId, chatId, userName, fullText, originalMsg) {
+  async handleJanIAResponse(result, senderId, chatId, userName, fullText, originalMsg, wantsVoice = false) {
     if (!result) return;
     const isGroup = chatId.includes("@g.us");
     const isMatch = result.response && (result.response.includes("MATCH COMERCIAL DETECTADO") || result.response.includes("MATCH DETECTADO") || result.response.includes("MATCH INTELIGENTE DETECTADO"));
@@ -6141,6 +6221,14 @@ _(Nota: Por favor nombra a JanIA Administradora del grupo para que pueda borrar 
       }
       await this.queuedSend(chatId, result.response, options);
       await this.logToDb(senderId, "janIA", result.response);
+      if (wantsVoice) {
+        console.log(`[TTS] Generando respuesta de voz para ${chatId}...`);
+        const media = await textToSpeechMedia(result.response);
+        if (media) {
+          await this.queuedSend(chatId, media, { sendAudioAsVoice: true });
+          console.log(`[TTS] Respuesta de voz enviada con \xE9xito a ${chatId}.`);
+        }
+      }
       if (isGroup && strike >= 3 && isBotAdmin && chat) {
         try {
           console.log(`[WHATSAPP-BOT] Retirando infractor ${senderId} del grupo ${chatId}`);
@@ -6184,6 +6272,13 @@ _(Nota: Por favor nombra a JanIA Administradora del grupo para que pueda borrar 
           if (result.classification === "DATOS_INCOMPLETOS") {
             await this.queuedSend(senderId, dmMsg);
             await this.logToDb(senderId, "janIA", `[DM-Incompleto] ${dmMsg}`);
+            if (wantsVoice) {
+              console.log(`[TTS] Generando respuesta de voz (Incompleto) para ${senderId}...`);
+              const media = await textToSpeechMedia(dmMsg);
+              if (media) {
+                await this.queuedSend(senderId, media, { sendAudioAsVoice: true });
+              }
+            }
           }
         } else {
           const options = {};
@@ -6192,6 +6287,14 @@ _(Nota: Por favor nombra a JanIA Administradora del grupo para que pueda borrar 
           }
           await this.queuedSend(senderId, dmMsg, options);
           await this.logToDb(senderId, "janIA", `[DM] ${dmMsg}`);
+          if (wantsVoice) {
+            console.log(`[TTS] Generando respuesta de voz para ${senderId}...`);
+            const media = await textToSpeechMedia(dmMsg);
+            if (media) {
+              await this.queuedSend(senderId, media, { sendAudioAsVoice: true });
+              console.log(`[TTS] Respuesta de voz enviada con \xE9xito a ${senderId}.`);
+            }
+          }
         }
       }
       if (isGroup && result.classification === "DATOS_INCOMPLETOS") {

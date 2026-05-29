@@ -22,6 +22,7 @@ import { getDb } from '../db';
 import { conversations, messages as dbMessages, propertyMatches, properties, requirements, users } from '../../drizzle/schema';
 import { eq } from 'drizzle-orm';
 import { storagePut } from "../storage";
+import { ENV } from "./env";
 
 // --- JanIA v2.0 Global Time Constraints (v11.97) ---
 const SERVER_BOOT_TIME = Math.floor(Date.now() / 1000);
@@ -29,6 +30,87 @@ const SERVER_BOOT_TIME = Math.floor(Date.now() / 1000);
 // --- JanIA v2.0 Human Simulation Helpers (v11.99) ---
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 let outgoingQueue: Promise<any> = Promise.resolve();
+
+async function textToSpeechMedia(text: string): Promise<MessageMedia | null> {
+  const cleanText = text.replace(/[*#_`~]/g, "");
+  try {
+    if (ENV.forgeApiUrl && ENV.forgeApiKey) {
+      const baseUrl = ENV.forgeApiUrl.endsWith("/") ? ENV.forgeApiUrl : `${ENV.forgeApiUrl}/`;
+      const ttsUrl = new URL("v1/audio/speech", baseUrl).toString();
+      const response = await fetch(ttsUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${ENV.forgeApiKey}`
+        },
+        body: JSON.stringify({
+          model: "tts-1",
+          input: cleanText,
+          voice: "nova"
+        })
+      });
+      if (response.ok) {
+        const buffer = await response.arrayBuffer();
+        const base64Data = Buffer.from(buffer).toString('base64');
+        return new MessageMedia('audio/mpeg', base64Data, 'voice-note.mp3');
+      }
+    }
+  } catch (err) {
+    console.error("[TTS-Forge] Error in Forge TTS:", err);
+  }
+
+  try {
+    const maxLen = 200;
+    if (cleanText.length <= maxLen) {
+      const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(cleanText)}&tl=es&client=tw-ob`;
+      const response = await fetch(url, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      });
+      if (response.ok) {
+        const buffer = await response.arrayBuffer();
+        const base64Data = Buffer.from(buffer).toString('base64');
+        return new MessageMedia('audio/mpeg', base64Data, 'voice-note.mp3');
+      }
+    } else {
+      const words = cleanText.split(/\s+/);
+      const chunks: string[] = [];
+      let currentChunk = "";
+      for (const word of words) {
+        if ((currentChunk + " " + word).length > maxLen) {
+          if (currentChunk.trim()) chunks.push(currentChunk.trim());
+          currentChunk = word;
+        } else {
+          currentChunk += (currentChunk ? " " : "") + word;
+        }
+      }
+      if (currentChunk.trim()) chunks.push(currentChunk.trim());
+
+      const buffers: Buffer[] = [];
+      for (const chunk of chunks) {
+        const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(chunk)}&tl=es&client=tw-ob`;
+        const response = await fetch(url, {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+          }
+        });
+        if (response.ok) {
+          buffers.push(Buffer.from(await response.arrayBuffer()));
+        }
+        await delay(250);
+      }
+      if (buffers.length > 0) {
+        const combined = Buffer.concat(buffers);
+        const base64Data = combined.toString('base64');
+        return new MessageMedia('audio/mpeg', base64Data, 'voice-note.mp3');
+      }
+    }
+  } catch (err) {
+    console.error("[TTS-Google] Fallback TTS failed:", err);
+  }
+  return null;
+}
 
 function getAudioExtension(mimeType: string): string {
   const mimeToExt: Record<string, string> = {
@@ -1046,7 +1128,8 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         }
 
         // 4. Orquestación de Respuestas (Silencio de Oro / Flujos DM)
-        await this.handleJanIAResponse(result, senderId, chatId, userName, item.text, item.originalMsg);
+        const wantsVoice = !!item.audioUrl || item.text.toLowerCase().includes("envíame un audio") || item.text.toLowerCase().includes("mándame un audio") || item.text.toLowerCase().includes("nota de voz");
+        await this.handleJanIAResponse(result, senderId, chatId, userName, item.text, item.originalMsg, wantsVoice);
       }
 
       // 5. ACTIVAR COOLDOWN DE 5 MINUTOS (Tras procesar con éxito)
@@ -1064,7 +1147,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
   }
 
   // --- ORQUESTACIÓN DE RESPUESTAS Y PERSONALIZACIÓN (JanIA v2.0) ---
-  private async handleJanIAResponse(result: any, senderId: string, chatId: string, userName: string, fullText: string, originalMsg?: Message) {
+  private async handleJanIAResponse(result: any, senderId: string, chatId: string, userName: string, fullText: string, originalMsg?: Message, wantsVoice: boolean = false) {
     if (!result) return;
 
     const isGroup = chatId.includes('@g.us');
@@ -1151,6 +1234,15 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
       await this.queuedSend(chatId, result.response, options);
       await this.logToDb(senderId, 'janIA', result.response);
 
+      if (wantsVoice) {
+        console.log(`[TTS] Generando respuesta de voz para ${chatId}...`);
+        const media = await textToSpeechMedia(result.response);
+        if (media) {
+          await this.queuedSend(chatId, media, { sendAudioAsVoice: true });
+          console.log(`[TTS] Respuesta de voz enviada con éxito a ${chatId}.`);
+        }
+      }
+
       // Si es el 3er strike y somos admin, procedemos a retirar al usuario
       if (isGroup && strike >= 3 && isBotAdmin && chat) {
         try {
@@ -1201,6 +1293,14 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
           if (result.classification === "DATOS_INCOMPLETOS") {
             await this.queuedSend(senderId, dmMsg);
             await this.logToDb(senderId, 'janIA', `[DM-Incompleto] ${dmMsg}`);
+            
+            if (wantsVoice) {
+              console.log(`[TTS] Generando respuesta de voz (Incompleto) para ${senderId}...`);
+              const media = await textToSpeechMedia(dmMsg);
+              if (media) {
+                await this.queuedSend(senderId, media, { sendAudioAsVoice: true });
+              }
+            }
           }
         } else {
           // Si el chat ya se originó en privado (DM), respondemos normalmente en privado
@@ -1210,6 +1310,15 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
           }
           await this.queuedSend(senderId, dmMsg, options);
           await this.logToDb(senderId, 'janIA', `[DM] ${dmMsg}`);
+          
+          if (wantsVoice) {
+            console.log(`[TTS] Generando respuesta de voz para ${senderId}...`);
+            const media = await textToSpeechMedia(dmMsg);
+            if (media) {
+              await this.queuedSend(senderId, media, { sendAudioAsVoice: true });
+              console.log(`[TTS] Respuesta de voz enviada con éxito a ${senderId}.`);
+            }
+          }
         }
       }
 
