@@ -5315,7 +5315,7 @@ async function transcodeToOggOpus(inputBuffer) {
   });
 }
 function prepareTtsText(rawText) {
-  return rawText.replace(/vecy\s+network/gi, "vesi n\xE9twork").replace(/vecy/gi, "vesi").replace(/jania/gi, "jan\xEDa").replace(/\bRLS\b/gi, "ere ele ese").replace(/\bSQL\b/gi, "ese cu ele").replace(/\bDM\b/gi, "di em").replace(/\bID\b/gi, "ai di").replace(/[<>]/g, "").trim();
+  return rawText.replace(/vecy\s+network|veci\s+network/gi, "besi n\xE9twork").replace(/vecy|veci/gi, "besi").replace(/jania/gi, "jan\xEDa").replace(/\bRLS\b/gi, "ere ele ese").replace(/\bSQL\b/gi, "ese cu ele").replace(/\bDM\b/gi, "di em").replace(/\bID\b/gi, "ai di").replace(/[<>]/g, "").trim();
 }
 async function textToSpeechMedia(text2) {
   const cleanText = text2.replace(/[*#_`~\[\]]/g, "").replace(new RegExp("[\\u{1F300}-\\u{1FAD6}]", "gu"), "").trim();

@@ -76,9 +76,9 @@ async function transcodeToOggOpus(inputBuffer: Buffer): Promise<Buffer> {
 /** Prepara el texto para TTS: pronunciación natural en español */
 function prepareTtsText(rawText: string): string {
   return rawText
-    .replace(/vecy\s+network/gi, "vesi nétwork")   // "VECY Network" → "vesi nétwork" en minúscula (fonética latina)
-    .replace(/vecy/gi, "vesi")                      // "VECY" solo → "vesi" en minúscula (fonética latina)
-    .replace(/jania/gi, "janía")                    // "JanIA" → "janía" en minúscula
+    .replace(/vecy\s+network|veci\s+network/gi, "besi nétwork")   // "VECY/VECI Network" → "besi nétwork" (fonética latina con 'b' y 's')
+    .replace(/vecy|veci/gi, "besi")                                // "VECY/VECI" solo → "besi" (fonética latina con 'b' y 's')
+    .replace(/jania/gi, "janía")                                  // "JanIA" → "janía" en minúscula
     .replace(/\bRLS\b/gi, "ere ele ese")
     .replace(/\bSQL\b/gi, "ese cu ele")
     .replace(/\bDM\b/gi, "di em")
