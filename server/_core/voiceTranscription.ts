@@ -26,6 +26,7 @@
  * ```
  */
 import { ENV } from "./env";
+import axios from "axios";
 
 export type TranscribeOptions = {
   audioUrl: string; // URL to the audio file (e.g., S3 URL)
@@ -70,27 +71,104 @@ export type TranscriptionError = {
  * @param options - Audio data and metadata
  * @returns Transcription result or error
  */
+async function transcribeAudioWithGemini(audioBuffer: Buffer, mimeType: string): Promise<string> {
+  const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || ENV.forgeApiKey;
+  if (!apiKey) {
+    throw new Error("No GEMINI_API_KEY or GOOGLE_API_KEY found for transcription fallback.");
+  }
+  const model = "gemini-3.1-flash-lite";
+  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+  let cleanMime = mimeType.split(';')[0].trim();
+  if (cleanMime === 'audio/x-wav' || cleanMime === 'audio/wave') cleanMime = 'audio/wav';
+  if (cleanMime === 'audio/mpeg3' || cleanMime === 'audio/x-mpeg-3') cleanMime = 'audio/mpeg';
+
+  const payload = {
+    contents: [
+      {
+        role: "user",
+        parts: [
+          { text: "Transcribe el siguiente audio a texto en español de manera exacta y fluida. Devuelve únicamente el texto de la transcripción literal del audio, sin agregar introducciones, notas de autor ni comentarios adicionales. Si el audio está completamente vacío o solo contiene ruido ininteligible, devuelve una cadena vacía." },
+          {
+            inline_data: {
+              mime_type: cleanMime,
+              data: audioBuffer.toString("base64")
+            }
+          }
+        ]
+      }
+    ],
+    generationConfig: {
+      temperature: 0.1,
+      maxOutputTokens: 2048
+    }
+  };
+
+  const response = await axios.post(apiUrl, payload);
+  if (response.data.candidates && response.data.candidates[0]) {
+    return response.data.candidates[0].content.parts[0].text.trim();
+  }
+  throw new Error("Empty candidate response from Gemini API");
+}
+
+export async function transcribeAudioBuffer(
+  audioBuffer: Buffer,
+  mimeType: string,
+  prompt?: string
+): Promise<string> {
+  // Check file size (16MB limit)
+  const sizeMB = audioBuffer.length / (1024 * 1024);
+  if (sizeMB > 16) {
+    throw new Error(`Audio file exceeds maximum size limit (16MB). Current size: ${sizeMB.toFixed(2)}MB`);
+  }
+
+  // Fallback to Gemini if Forge API is not configured
+  if (!ENV.forgeApiUrl || !ENV.forgeApiKey) {
+    console.log(`[STT-Fallback] Forge API no configurada. Transcribiendo usando Gemini directamente...`);
+    return await transcribeAudioWithGemini(audioBuffer, mimeType);
+  }
+
+  // Create FormData for Whisper API
+  const formData = new FormData();
+  const filename = `audio.${getFileExtension(mimeType)}`;
+  const audioBlob = new Blob([new Uint8Array(audioBuffer)], { type: mimeType });
+  formData.append("file", audioBlob, filename);
+  formData.append("model", "whisper-1");
+  formData.append("response_format", "verbose_json");
+
+  const defaultPrompt = prompt || "Notas de voz sobre bienes raíces, Real Estate, inversiones, corretaje, inmuebles, apartamentos y casas en Bogotá, Colombia. Vocabulario técnico y comercial obligatorio: venpermuto, permuta, corretaje, bróker, avalúo, estrato, arras, linderos, desenglobe, Wasi, Habi, Usaquén, Cedritos, Chicó, Rosales, Cabrera, Retiro, Santa Bárbara, San Patricio, Toberín, Suba, Niza, Alhambra.";
+  formData.append("prompt", defaultPrompt);
+
+  const baseUrl = ENV.forgeApiUrl.endsWith("/") ? ENV.forgeApiUrl : `${ENV.forgeApiUrl}/`;
+  const fullUrl = new URL("v1/audio/transcriptions", baseUrl).toString();
+
+  const response = await fetch(fullUrl, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${ENV.forgeApiKey}`,
+      "Accept-Encoding": "identity",
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => "");
+    throw new Error(`Transcription service request failed (${response.status}): ${errorText}`);
+  }
+
+  const whisperResponse = await response.json() as WhisperResponse;
+  if (!whisperResponse.text || typeof whisperResponse.text !== 'string') {
+    throw new Error("Invalid transcription response: missing text field");
+  }
+
+  return whisperResponse.text;
+}
+
 export async function transcribeAudio(
   options: TranscribeOptions
 ): Promise<TranscriptionResponse | TranscriptionError> {
   try {
-    // Step 1: Validate environment configuration
-    if (!ENV.forgeApiUrl) {
-      return {
-        error: "Voice transcription service is not configured",
-        code: "SERVICE_ERROR",
-        details: "BUILT_IN_FORGE_API_URL is not set"
-      };
-    }
-    if (!ENV.forgeApiKey) {
-      return {
-        error: "Voice transcription service authentication is missing",
-        code: "SERVICE_ERROR",
-        details: "BUILT_IN_FORGE_API_KEY is not set"
-      };
-    }
-
-    // Step 2: Download audio from URL
+    // Step 1: Download audio from URL
     let audioBuffer: Buffer;
     let mimeType: string;
     try {
@@ -105,16 +183,6 @@ export async function transcribeAudio(
       
       audioBuffer = Buffer.from(await response.arrayBuffer());
       mimeType = response.headers.get('content-type') || 'audio/mpeg';
-      
-      // Check file size (16MB limit)
-      const sizeMB = audioBuffer.length / (1024 * 1024);
-      if (sizeMB > 16) {
-        return {
-          error: "Audio file exceeds maximum size limit",
-          code: "FILE_TOO_LARGE",
-          details: `File size is ${sizeMB.toFixed(2)}MB, maximum allowed is 16MB`
-        };
-      }
     } catch (error) {
       return {
         error: "Failed to fetch audio file",
@@ -123,65 +191,23 @@ export async function transcribeAudio(
       };
     }
 
-    // Step 3: Create FormData for multipart upload to Whisper API
-    const formData = new FormData();
-    
-    // Create a Blob from the buffer and append to form
-    const filename = `audio.${getFileExtension(mimeType)}`;
-    const audioBlob = new Blob([new Uint8Array(audioBuffer)], { type: mimeType });
-    formData.append("file", audioBlob, filename);
-    
-    formData.append("model", "whisper-1");
-    formData.append("response_format", "verbose_json");
-    
-    // Add prompt - use custom prompt if provided, otherwise inject real estate lexicon (v11.55)
-    const prompt = options.prompt || "Notas de voz sobre bienes raíces, Real Estate, inversiones, corretaje, inmuebles, apartamentos y casas en Bogotá, Colombia. Vocabulario técnico y comercial obligatorio: venpermuto, permuta, corretaje, bróker, avalúo, estrato, arras, linderos, desenglobe, Wasi, Habi, Usaquén, Cedritos, Chicó, Rosales, Cabrera, Retiro, Santa Bárbara, San Patricio, Toberín, Suba, Niza, Alhambra.";
-    formData.append("prompt", prompt);
-
-    // Step 4: Call the transcription service
-    const baseUrl = ENV.forgeApiUrl.endsWith("/")
-      ? ENV.forgeApiUrl
-      : `${ENV.forgeApiUrl}/`;
-    
-    const fullUrl = new URL(
-      "v1/audio/transcriptions",
-      baseUrl
-    ).toString();
-
-    const response = await fetch(fullUrl, {
-      method: "POST",
-      headers: {
-        authorization: `Bearer ${ENV.forgeApiKey}`,
-        "Accept-Encoding": "identity",
-      },
-      body: formData,
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => "");
+    try {
+      const text = await transcribeAudioBuffer(audioBuffer, mimeType, options.prompt);
       return {
-        error: "Transcription service request failed",
+        task: "transcribe",
+        language: "es",
+        duration: 0,
+        text: text,
+        segments: []
+      };
+    } catch (transcriptionError: any) {
+      return {
+        error: "Voice transcription failed",
         code: "TRANSCRIPTION_FAILED",
-        details: `${response.status} ${response.statusText}${errorText ? `: ${errorText}` : ""}`
+        details: transcriptionError.message || "Unknown error"
       };
     }
-
-    // Step 5: Parse and return the transcription result
-    const whisperResponse = await response.json() as WhisperResponse;
-    
-    // Validate response structure
-    if (!whisperResponse.text || typeof whisperResponse.text !== 'string') {
-      return {
-        error: "Invalid transcription response",
-        code: "SERVICE_ERROR",
-        details: "Transcription service returned an invalid response format"
-      };
-    }
-
-    return whisperResponse; // Return native Whisper API response directly
-
   } catch (error) {
-    // Handle unexpected errors
     return {
       error: "Voice transcription failed",
       code: "SERVICE_ERROR",

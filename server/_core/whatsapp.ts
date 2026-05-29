@@ -4,6 +4,7 @@ const { Client, LocalAuth, MessageMedia } = pkg;
 import type { Client as ClientType, Message, MessageMedia as MessageMediaType } from 'whatsapp-web.js';
 import qrcode from 'qrcode-terminal';
 import { scrapePropertyLink, esDominioPermitido } from './scraper';
+import { transcribeAudioBuffer } from './voiceTranscription';
 import { 
   processWhatsAppMessage, 
   processConsultingMessage,
@@ -966,13 +967,30 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
           if (media && media.data) {
             const cleanMime = media.mimetype.split(';')[0].trim();
             const bufferData = Buffer.from(media.data, 'base64');
-            const fileKey = `voice-notes/${senderId}-${Date.now()}.${getAudioExtension(cleanMime)}`;
-            const uploadResult = await storagePut(fileKey, bufferData, cleanMime);
-            bufferedMsg.audioUrl = uploadResult.url;
-            console.log(`[AUDIO] Audio subido exitosamente para ${senderId}. URL: ${bufferedMsg.audioUrl}`);
+
+            // Transcribir directamente a partir del buffer (evitamos fallos críticos si storage no está configurado)
+            console.log(`[AUDIO] Transcribiendo audio directamente desde el buffer de memoria para ${senderId}...`);
+            try {
+              const text = await transcribeAudioBuffer(bufferData, cleanMime);
+              bufferedMsg.body = text;
+              console.log(`[AUDIO] Transcripción directa exitosa para ${senderId}: "${text}"`);
+            } catch (transcribeErr: any) {
+              console.error('[AUDIO] Error al transcribir el buffer de audio:', transcribeErr.message || transcribeErr);
+              bufferedMsg.body = "";
+            }
+
+            // Opcionalmente subir a storage para obtener URL pública de Whisper/historial
+            try {
+              const fileKey = `voice-notes/${senderId}-${Date.now()}.${getAudioExtension(cleanMime)}`;
+              const uploadResult = await storagePut(fileKey, bufferData, cleanMime);
+              bufferedMsg.audioUrl = uploadResult.url;
+              console.log(`[AUDIO] Audio subido exitosamente a storage para ${senderId}. URL: ${bufferedMsg.audioUrl}`);
+            } catch (storageErr: any) {
+              console.warn('[AUDIO] Advertencia: No se pudo subir el audio a storage (puede deberse a falta de credenciales de Forge localmente):', storageErr.message || storageErr);
+            }
           }
         } catch (err) {
-          console.error('[AUDIO] Error procesando y subiendo audio diferido:', err);
+          console.error('[AUDIO] Error procesando audio diferido:', err);
         }
       }
     }
