@@ -16,7 +16,8 @@ import {
   MSG_PROMO_CONSULTAS,
   MSG_PROMO_CIRCULO,
   MSG_COMUNICADO_MATCH_NETWORK,
-  MSG_COMUNICADO_MATCH_CIRCULO
+  MSG_COMUNICADO_MATCH_CIRCULO,
+  REPUTATION_HOOK
 } from './janIA';
 import { publishToFacebookGroup } from "./facebookService";
 import fs from 'fs';
@@ -1642,6 +1643,12 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         await this.queuedSend(chatId, result.response, options);
       }
       await this.logToDb(senderId, 'janIA', result.response);
+
+      // Enviar REPUTATION_HOOK como mensaje separado para que resalte
+      if (isGroup && result.sendReputationHook) {
+        console.log(`[WhatsApp-Bot] Enviando REPUTATION_HOOK como mensaje separado a ${chatId}...`);
+        await this.queuedSend(chatId, REPUTATION_HOOK);
+      }
 
       // Si es el 3er strike y somos admin, procedemos a retirar al usuario
       if (isGroup && strike >= 3 && isBotAdmin && chat) {

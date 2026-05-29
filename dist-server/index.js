@@ -4074,7 +4074,7 @@ async function deletePendingSession(userId) {
   }
 }
 var GREETED_TODAY = /* @__PURE__ */ new Map();
-var REPUTATION_HOOK = "\n\n\u2696\uFE0F COMPROMISO DE HONOR VECY: Al operar en Etapa de Prueba Gratuita y sin comisiones, si consolidan un negocio real gracias a este MATCH, es de car\xE1cter obligatorio compartir su testimonio de \xE9xito en este grupo y registrar su rese\xF1a oficial y calificaci\xF3n aqu\xED: https://g.page/r/CctNbwU6UpX5EBM/review";
+var REPUTATION_HOOK = "\u26A0\uFE0F *IMPORTANTE:* Colega y cliente, recuerda que este ecosistema tecnol\xF3gico fue creado pensando en tu beneficio y en el de toda nuestra comunidad. Te contamos que operamos en *Etapa de Prueba Gratuita y 100% SIN COMISIONES*. Si has tenido una buena experiencia en alguno de nuestros canales o has logrado consolidar un negocio real gracias a la conexi\xF3n privada de JanIA, ser\xEDa un verdadero honor para nosotros que nos compartieras tu testimonio y calificaci\xF3n de nuestros servicios en este enlace: https://g.page/r/CctNbwU6UpX5EBM/review";
 function capitalize(text2) {
   if (!text2) return "";
   return text2.charAt(0).toUpperCase() + text2.slice(1);
@@ -4491,11 +4491,12 @@ _(Nota: El contacto mutuo se compartir\xE1 de inmediato \xFAnicamente si ambas p
     extraDMs.push({ jid: ownerJid, message: ownerDM });
     extraDMs.push({ jid: seekerJid, message: seekerDM });
   }
-  const responseText = matchBlocks.join("\n\n================================\n\n") + "\n\n" + REPUTATION_HOOK;
+  const responseText = matchBlocks.join("\n\n================================\n\n");
   return {
     response: responseText,
     mentions,
-    extraDMs
+    extraDMs,
+    sendReputationHook: true
   };
 }
 function translatePropertyType(type) {
@@ -4564,7 +4565,8 @@ async function processWhatsAppMessage(text2, userId, userName, hasMedia = false,
               dmResponse: `Perfecto, ${n}! Con el barrio *${geoValidation.barrioCanonico}* acabo de completar el registro de tu activo en nuestra base de datos. Ya estoy buscando activamente tu MATCH comercial en la red. \xA1Excelente labor!`,
               response: matchDetails.response,
               mentions: matchDetails.mentions,
-              extraDMs: matchDetails.extraDMs
+              extraDMs: matchDetails.extraDMs,
+              sendReputationHook: matchDetails.sendReputationHook
             };
           }
         } else {
@@ -4601,7 +4603,8 @@ async function processWhatsAppMessage(text2, userId, userName, hasMedia = false,
               dmResponse: `Perfecto, ${n}! Con el barrio *${geoValidation.barrioCanonico}* acabo de completar el registro de tu requerimiento en nuestra base de datos. Ya estoy buscando activamente el inmueble ideal en la red. \xA1Excelente labor!`,
               response: matchDetails.response,
               mentions: matchDetails.mentions,
-              extraDMs: matchDetails.extraDMs
+              extraDMs: matchDetails.extraDMs,
+              sendReputationHook: matchDetails.sendReputationHook
             };
           }
         }
@@ -4756,10 +4759,11 @@ Por lo tanto, DEBES hacer lo siguiente:
           result.dmResponse = intro + (senderInfo.greeting ? mainText : capitalize(mainText));
         }
         const matches = await findMatchesForProperty(saved.id);
-        const matchDetails = matches.length > 0 ? await handleDetectedMatches(matches, true, saved, userId, realName) : { response: "", mentions: [], extraDMs: [] };
+        const matchDetails = matches.length > 0 ? await handleDetectedMatches(matches, true, saved, userId, realName) : { response: "", mentions: [], extraDMs: [], sendReputationHook: false };
         result.response = matchDetails.response;
         result.mentions = matchDetails.mentions;
         result.extraDMs = matchDetails.extraDMs;
+        result.sendReputationHook = matchDetails.sendReputationHook;
       }
     } else if (isRequirement) {
       const reqTitle = extracted.title || `Requerimiento de ${extracted.propertyType || "inmueble"} en ${extracted.zonaDeseada || extracted.zone || "Bogot\xE1"} para ${extracted.transactionType || "venta"}`;
@@ -4782,10 +4786,11 @@ Por lo tanto, DEBES hacer lo siguiente:
           result.dmResponse = intro + (senderInfo.greeting ? mainText : capitalize(mainText));
         }
         const matches = await findMatchesForRequirement(saved.id);
-        const matchDetails = matches.length > 0 ? await handleDetectedMatches(matches, false, saved, userId, realName) : { response: "", mentions: [], extraDMs: [] };
+        const matchDetails = matches.length > 0 ? await handleDetectedMatches(matches, false, saved, userId, realName) : { response: "", mentions: [], extraDMs: [], sendReputationHook: false };
         result.response = matchDetails.response;
         result.mentions = matchDetails.mentions;
         result.extraDMs = matchDetails.extraDMs;
+        result.sendReputationHook = matchDetails.sendReputationHook;
       }
     }
     const isConsultation = result.classification === "CONSULTA_GENERAL" || result.classification === "RESPUESTA_A_PREGUNTA_IA" || result.classification === "ANALISIS_DE_MERCADO";
@@ -6606,6 +6611,10 @@ _(Nota: Por favor nombra a JanIA Administradora del grupo para que pueda borrar 
         await this.queuedSend(chatId, result.response, options);
       }
       await this.logToDb(senderId, "janIA", result.response);
+      if (isGroup && result.sendReputationHook) {
+        console.log(`[WhatsApp-Bot] Enviando REPUTATION_HOOK como mensaje separado a ${chatId}...`);
+        await this.queuedSend(chatId, REPUTATION_HOOK);
+      }
       if (isGroup && strike >= 3 && isBotAdmin && chat) {
         try {
           console.log(`[WHATSAPP-BOT] Retirando infractor ${senderId} del grupo ${chatId}`);

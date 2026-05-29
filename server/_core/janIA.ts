@@ -72,7 +72,7 @@ async function deletePendingSession(userId: string): Promise<void> {
 
 const GREETED_TODAY = new Map<string, string>(); // Mapea userId -> fecha "YYYY-MM-DD"
 
-const REPUTATION_HOOK = "\n\n⚖️ COMPROMISO DE HONOR VECY: Al operar en Etapa de Prueba Gratuita y sin comisiones, si consolidan un negocio real gracias a este MATCH, es de carácter obligatorio compartir su testimonio de éxito en este grupo y registrar su reseña oficial y calificación aquí: https://g.page/r/CctNbwU6UpX5EBM/review";
+export const REPUTATION_HOOK = "⚠️ *IMPORTANTE:* Colega y cliente, recuerda que este ecosistema tecnológico fue creado pensando en tu beneficio y en el de toda nuestra comunidad. Te contamos que operamos en *Etapa de Prueba Gratuita y 100% SIN COMISIONES*. Si has tenido una buena experiencia en alguno de nuestros canales o has logrado consolidar un negocio real gracias a la conexión privada de JanIA, sería un verdadero honor para nosotros que nos compartieras tu testimonio y calificación de nuestros servicios en este enlace: https://g.page/r/CctNbwU6UpX5EBM/review";
 
 // Helper para capitalizar la primera letra
 function capitalize(text: string): string {
@@ -434,7 +434,7 @@ async function handleDetectedMatches(
   savedRecord: any,
   userId: string,
   realName: string
-): Promise<{ response: string; mentions: string[]; extraDMs: { jid: string; message: string }[] }> {
+): Promise<{ response: string; mentions: string[]; extraDMs: { jid: string; message: string }[]; sendReputationHook?: boolean }> {
   const extraDMs: { jid: string; message: string }[] = [];
   const mentions: string[] = [userId];
   const matchBlocks: string[] = [];
@@ -525,12 +525,13 @@ _(Nota: El contacto mutuo se compartirá de inmediato únicamente si ambas parte
     extraDMs.push({ jid: seekerJid, message: seekerDM });
   }
 
-  const responseText = matchBlocks.join('\n\n================================\n\n') + '\n\n' + REPUTATION_HOOK;
+  const responseText = matchBlocks.join('\n\n================================\n\n');
 
   return {
     response: responseText,
     mentions: mentions,
-    extraDMs: extraDMs
+    extraDMs: extraDMs,
+    sendReputationHook: true
   };
 }
 
@@ -623,7 +624,8 @@ export async function processWhatsAppMessage(
               dmResponse: `Perfecto, ${n}! Con el barrio *${geoValidation.barrioCanonico}* acabo de completar el registro de tu activo en nuestra base de datos. Ya estoy buscando activamente tu MATCH comercial en la red. ¡Excelente labor!`,
               response: matchDetails.response,
               mentions: matchDetails.mentions,
-              extraDMs: matchDetails.extraDMs
+              extraDMs: matchDetails.extraDMs,
+              sendReputationHook: matchDetails.sendReputationHook
             };
           }
         } else {
@@ -666,7 +668,8 @@ export async function processWhatsAppMessage(
               dmResponse: `Perfecto, ${n}! Con el barrio *${geoValidation.barrioCanonico}* acabo de completar el registro de tu requerimiento en nuestra base de datos. Ya estoy buscando activamente el inmueble ideal en la red. ¡Excelente labor!`,
               response: matchDetails.response,
               mentions: matchDetails.mentions,
-              extraDMs: matchDetails.extraDMs
+              extraDMs: matchDetails.extraDMs,
+              sendReputationHook: matchDetails.sendReputationHook
             };
           }
         }
@@ -864,11 +867,12 @@ Por lo tanto, DEBES hacer lo siguiente:
         const matches = await findMatchesForProperty(saved.id);
         const matchDetails = matches.length > 0
           ? await handleDetectedMatches(matches, true, saved, userId, realName)
-          : { response: "", mentions: [], extraDMs: [] };
+          : { response: "", mentions: [], extraDMs: [], sendReputationHook: false };
 
         result.response = matchDetails.response;
         result.mentions = matchDetails.mentions;
         result.extraDMs = matchDetails.extraDMs;
+        result.sendReputationHook = matchDetails.sendReputationHook;
       }
     } else if (isRequirement) {
       const reqTitle = extracted.title || `Requerimiento de ${extracted.propertyType || 'inmueble'} en ${extracted.zonaDeseada || extracted.zone || 'Bogotá'} para ${extracted.transactionType || 'venta'}`;
@@ -896,11 +900,12 @@ Por lo tanto, DEBES hacer lo siguiente:
         const matches = await findMatchesForRequirement(saved.id);
         const matchDetails = matches.length > 0
           ? await handleDetectedMatches(matches, false, saved, userId, realName)
-          : { response: "", mentions: [], extraDMs: [] };
+          : { response: "", mentions: [], extraDMs: [], sendReputationHook: false };
 
         result.response = matchDetails.response;
         result.mentions = matchDetails.mentions;
         result.extraDMs = matchDetails.extraDMs;
+        result.sendReputationHook = matchDetails.sendReputationHook;
       }
     }
 
