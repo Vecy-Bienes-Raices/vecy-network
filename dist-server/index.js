@@ -5270,7 +5270,7 @@ function prepareTtsText(rawText) {
   return rawText.replace(/VECY\s+Network/gi, "Veci N\xE9twork").replace(/\bVECY\b/gi, "Veci").replace(/\bJanIA\b/gi, "Jan\xEDa").replace(/\bRLS\b/g, "ere ele ese").replace(/\bSQL\b/g, "ese cu ele").replace(/\bDM\b/g, "di em").replace(/\bID\b/g, "ai di").replace(/[<>]/g, "").trim();
 }
 async function textToSpeechMedia(text2) {
-  const cleanText = text2.replace(/[*#_`~\[\]]/g, "").replace(/[\u{1F300}-\u{1FAD6}]/gu, "").trim();
+  const cleanText = text2.replace(/[*#_`~\[\]]/g, "").replace(new RegExp("[\\u{1F300}-\\u{1FAD6}]", "gu"), "").trim();
   if (!cleanText) return null;
   const ttsText = prepareTtsText(cleanText);
   const elevenKey = process.env.ELEVENLABS_API_KEY;

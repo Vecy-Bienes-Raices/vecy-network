@@ -50,7 +50,7 @@ async function textToSpeechMedia(text: string): Promise<MessageMediaType | null>
   // Limpiar markdown y emojis
   const cleanText = text
     .replace(/[*#_`~\[\]]/g, "")
-    .replace(/[\u{1F300}-\u{1FAD6}]/gu, "")
+    .replace(new RegExp("[\\u{1F300}-\\u{1FAD6}]", "gu"), "")
     .trim();
 
   if (!cleanText) return null;
