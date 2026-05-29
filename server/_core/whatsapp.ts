@@ -393,8 +393,15 @@ export class WhatsAppBot {
                   }
                 } catch (e) {}
               }
-              const contact = await this.client.getContactById(senderId);
-              const realName = contact.name || contact.pushname || `Asesor +${senderId.split('@')[0]}`;
+              let realName = `Asesor +${senderId.split('@')[0]}`;
+              try {
+                const contact = await this.client.getContactById(senderId);
+                if (contact) {
+                  realName = contact.name || contact.pushname || realName;
+                }
+              } catch (e: any) {
+                console.warn(`[WHATSAPP-BOT] Falló getContactById para reacción del remitente ${senderId}:`, e.message || e);
+              }
               
               console.log(`[JanIA-Reaction] Reacción de desaprobación/sarcasmo detectada de ${realName}`);
               
@@ -513,9 +520,16 @@ export class WhatsAppBot {
   private async handlePrivateMessage(msg: Message) {
     try {
       const senderId = msg.from;
-      const contact = await msg.getContact();
       const rawPhone = (msg.author || msg.from).split("@")[0];
-      const realName = contact.pushname || contact.name || `Asesor +${rawPhone}`;
+      let realName = `Asesor +${rawPhone}`;
+      try {
+        const contact = await msg.getContact();
+        if (contact) {
+          realName = contact.pushname || contact.name || realName;
+        }
+      } catch (e: any) {
+        console.warn(`[WHATSAPP-BOT] Falló msg.getContact() en handlePrivateMessage para ${senderId}:`, e.message || e);
+      }
 
       console.log(`[JanIA-DM] Atendiendo mensaje interno de ${realName} (${senderId})...`);
 
@@ -623,9 +637,16 @@ export class WhatsAppBot {
       return; // Detener procesamiento del mensaje excedente
     }
 
-    const contact = await msg.getContact();
     const rawPhone = (msg.author || msg.from).split("@")[0];
-    const realName = contact.pushname || contact.name || `Asesor +${rawPhone}`;
+    let realName = `Asesor +${rawPhone}`;
+    try {
+      const contact = await msg.getContact();
+      if (contact) {
+        realName = contact.pushname || contact.name || realName;
+      }
+    } catch (e: any) {
+      console.warn(`[WHATSAPP-BOT] Falló msg.getContact() en _processIncomingMessage para ${senderId}:`, e.message || e);
+    }
     const bufferKey = `${chatId}_${senderId}`;
     let buffer = this.messageBuffers.get(bufferKey);
 

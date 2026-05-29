@@ -301,7 +301,7 @@ export const MAPA_COLOMBIA: Record<string, LugarInfo> = {};
 function norm(txt: string): string {
   return txt.toLowerCase()
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9 ]/g, "")
+    .replace(/[^a-z0-9]/g, " ")
     .replace(/\s+/g, " ").trim();
 }
 

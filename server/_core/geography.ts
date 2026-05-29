@@ -187,8 +187,8 @@ export function normalizarTextoGeografico(texto: string): string {
   // Limpiar saltos de línea y tabuladores
   n = n.replace(/[\r\n\t]/g, " ");
   
-  // Quitar caracteres no alfanuméricos excepto espacios
-  n = n.replace(/[^a-z0-9 ]/g, "");
+  // Reemplazar caracteres no alfanuméricos por espacios
+  n = n.replace(/[^a-z0-9]/g, " ");
   
   // Eliminar espacios dobles y trim
   n = n.replace(/\s+/g, " ").trim();
@@ -255,7 +255,7 @@ export function validarZona(zona: string, ciudad?: string, textoCompleto?: strin
   let lugar: any = null;
   const normSimple = (txt: string) => txt.toLowerCase()
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9 ]/g, "")
+    .replace(/[^a-z0-9]/g, " ")
     .replace(/\s+/g, " ").trim();
 
   if (normCity && normCity !== "bogota") {
