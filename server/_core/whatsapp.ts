@@ -1,7 +1,7 @@
 import './setup-stealth'; // Configurar Stealth Puppeteer antes de importar whatsapp-web.js
 import pkg from 'whatsapp-web.js';
 const { Client, LocalAuth, MessageMedia } = pkg;
-import type { Client as ClientType, Message } from 'whatsapp-web.js';
+import type { Client as ClientType, Message, MessageMedia as MessageMediaType } from 'whatsapp-web.js';
 import qrcode from 'qrcode-terminal';
 import { scrapePropertyLink, esDominioPermitido } from './scraper';
 import { 
@@ -31,7 +31,7 @@ const SERVER_BOOT_TIME = Math.floor(Date.now() / 1000);
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 let outgoingQueue: Promise<any> = Promise.resolve();
 
-async function textToSpeechMedia(text: string): Promise<MessageMedia | null> {
+async function textToSpeechMedia(text: string): Promise<MessageMediaType | null> {
   const cleanText = text.replace(/[*#_`~]/g, "");
   try {
     if (ENV.forgeApiUrl && ENV.forgeApiKey) {
