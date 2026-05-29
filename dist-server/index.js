@@ -5299,8 +5299,8 @@ async function textToSpeechMedia(text2) {
             },
             audioConfig: {
               audioEncoding: "MP3",
-              speakingRate: 1.6,
-              // Ágil, sin sonar acelerada artificialmente
+              speakingRate: 1.3,
+              // Ritmo natural y ágil
               pitch: -1
               // Tono ligeramente más grave = más cálido y seguro
             }

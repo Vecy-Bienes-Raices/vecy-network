@@ -91,7 +91,7 @@ async function textToSpeechMedia(text: string): Promise<MessageMediaType | null>
             },
             audioConfig: {
               audioEncoding: "MP3",
-              speakingRate: 1.6,   // Ágil, sin sonar acelerada artificialmente
+              speakingRate: 1.3,   // Ritmo natural y ágil
               pitch: -1.0          // Tono ligeramente más grave = más cálido y seguro
             }
           })
