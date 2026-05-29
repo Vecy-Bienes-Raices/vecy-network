@@ -2515,6 +2515,142 @@ try {
 import pkg from "whatsapp-web.js";
 import qrcode from "qrcode-terminal";
 
+// server/_core/voiceTranscription.ts
+init_env();
+import axios4 from "axios";
+async function transcribeAudioWithGemini(audioBuffer, mimeType) {
+  const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || ENV.forgeApiKey;
+  if (!apiKey) {
+    throw new Error("No GEMINI_API_KEY or GOOGLE_API_KEY found for transcription fallback.");
+  }
+  const model = "gemini-3.1-flash-lite";
+  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  let cleanMime = mimeType.split(";")[0].trim();
+  if (cleanMime === "audio/x-wav" || cleanMime === "audio/wave") cleanMime = "audio/wav";
+  if (cleanMime === "audio/mpeg3" || cleanMime === "audio/x-mpeg-3") cleanMime = "audio/mpeg";
+  const payload = {
+    contents: [
+      {
+        role: "user",
+        parts: [
+          { text: "Transcribe el siguiente audio a texto en espa\xF1ol de manera exacta y fluida. Devuelve \xFAnicamente el texto de la transcripci\xF3n literal del audio, sin agregar introducciones, notas de autor ni comentarios adicionales. Si el audio est\xE1 completamente vac\xEDo o solo contiene ruido ininteligible, devuelve una cadena vac\xEDa." },
+          {
+            inline_data: {
+              mime_type: cleanMime,
+              data: audioBuffer.toString("base64")
+            }
+          }
+        ]
+      }
+    ],
+    generationConfig: {
+      temperature: 0.1,
+      maxOutputTokens: 2048
+    }
+  };
+  const response = await axios4.post(apiUrl, payload);
+  if (response.data.candidates && response.data.candidates[0]) {
+    return response.data.candidates[0].content.parts[0].text.trim();
+  }
+  throw new Error("Empty candidate response from Gemini API");
+}
+async function transcribeAudioBuffer(audioBuffer, mimeType, prompt) {
+  const sizeMB = audioBuffer.length / (1024 * 1024);
+  if (sizeMB > 16) {
+    throw new Error(`Audio file exceeds maximum size limit (16MB). Current size: ${sizeMB.toFixed(2)}MB`);
+  }
+  if (!ENV.forgeApiUrl || !ENV.forgeApiKey) {
+    console.log(`[STT-Fallback] Forge API no configurada. Transcribiendo usando Gemini directamente...`);
+    return await transcribeAudioWithGemini(audioBuffer, mimeType);
+  }
+  const formData = new FormData();
+  const filename = `audio.${getFileExtension(mimeType)}`;
+  const audioBlob = new Blob([new Uint8Array(audioBuffer)], { type: mimeType });
+  formData.append("file", audioBlob, filename);
+  formData.append("model", "whisper-1");
+  formData.append("response_format", "verbose_json");
+  const defaultPrompt = prompt || "Notas de voz sobre bienes ra\xEDces, Real Estate, inversiones, corretaje, inmuebles, apartamentos y casas en Bogot\xE1, Colombia. Vocabulario t\xE9cnico y comercial obligatorio: venpermuto, permuta, corretaje, br\xF3ker, aval\xFAo, estrato, arras, linderos, desenglobe, Wasi, Habi, Usaqu\xE9n, Cedritos, Chic\xF3, Rosales, Cabrera, Retiro, Santa B\xE1rbara, San Patricio, Tober\xEDn, Suba, Niza, Alhambra.";
+  formData.append("prompt", defaultPrompt);
+  const baseUrl = ENV.forgeApiUrl.endsWith("/") ? ENV.forgeApiUrl : `${ENV.forgeApiUrl}/`;
+  const fullUrl = new URL("v1/audio/transcriptions", baseUrl).toString();
+  const response = await fetch(fullUrl, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${ENV.forgeApiKey}`,
+      "Accept-Encoding": "identity"
+    },
+    body: formData
+  });
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => "");
+    throw new Error(`Transcription service request failed (${response.status}): ${errorText}`);
+  }
+  const whisperResponse = await response.json();
+  if (!whisperResponse.text || typeof whisperResponse.text !== "string") {
+    throw new Error("Invalid transcription response: missing text field");
+  }
+  return whisperResponse.text;
+}
+async function transcribeAudio(options) {
+  try {
+    let audioBuffer;
+    let mimeType;
+    try {
+      const response = await fetch(options.audioUrl);
+      if (!response.ok) {
+        return {
+          error: "Failed to download audio file",
+          code: "INVALID_FORMAT",
+          details: `HTTP ${response.status}: ${response.statusText}`
+        };
+      }
+      audioBuffer = Buffer.from(await response.arrayBuffer());
+      mimeType = response.headers.get("content-type") || "audio/mpeg";
+    } catch (error) {
+      return {
+        error: "Failed to fetch audio file",
+        code: "SERVICE_ERROR",
+        details: error instanceof Error ? error.message : "Unknown error"
+      };
+    }
+    try {
+      const text2 = await transcribeAudioBuffer(audioBuffer, mimeType, options.prompt);
+      return {
+        task: "transcribe",
+        language: "es",
+        duration: 0,
+        text: text2,
+        segments: []
+      };
+    } catch (transcriptionError) {
+      return {
+        error: "Voice transcription failed",
+        code: "TRANSCRIPTION_FAILED",
+        details: transcriptionError.message || "Unknown error"
+      };
+    }
+  } catch (error) {
+    return {
+      error: "Voice transcription failed",
+      code: "SERVICE_ERROR",
+      details: error instanceof Error ? error.message : "An unexpected error occurred"
+    };
+  }
+}
+function getFileExtension(mimeType) {
+  const mimeToExt = {
+    "audio/webm": "webm",
+    "audio/mp3": "mp3",
+    "audio/mpeg": "mp3",
+    "audio/wav": "wav",
+    "audio/wave": "wav",
+    "audio/ogg": "ogg",
+    "audio/m4a": "m4a",
+    "audio/mp4": "m4a"
+  };
+  return mimeToExt[mimeType] || "audio";
+}
+
 // server/_core/janIA.ts
 init_db();
 init_schema();
@@ -3895,112 +4031,6 @@ async function findMatchesForRequirement(requirementId) {
   }
 }
 
-// server/_core/voiceTranscription.ts
-init_env();
-async function transcribeAudio(options) {
-  try {
-    if (!ENV.forgeApiUrl) {
-      return {
-        error: "Voice transcription service is not configured",
-        code: "SERVICE_ERROR",
-        details: "BUILT_IN_FORGE_API_URL is not set"
-      };
-    }
-    if (!ENV.forgeApiKey) {
-      return {
-        error: "Voice transcription service authentication is missing",
-        code: "SERVICE_ERROR",
-        details: "BUILT_IN_FORGE_API_KEY is not set"
-      };
-    }
-    let audioBuffer;
-    let mimeType;
-    try {
-      const response2 = await fetch(options.audioUrl);
-      if (!response2.ok) {
-        return {
-          error: "Failed to download audio file",
-          code: "INVALID_FORMAT",
-          details: `HTTP ${response2.status}: ${response2.statusText}`
-        };
-      }
-      audioBuffer = Buffer.from(await response2.arrayBuffer());
-      mimeType = response2.headers.get("content-type") || "audio/mpeg";
-      const sizeMB = audioBuffer.length / (1024 * 1024);
-      if (sizeMB > 16) {
-        return {
-          error: "Audio file exceeds maximum size limit",
-          code: "FILE_TOO_LARGE",
-          details: `File size is ${sizeMB.toFixed(2)}MB, maximum allowed is 16MB`
-        };
-      }
-    } catch (error) {
-      return {
-        error: "Failed to fetch audio file",
-        code: "SERVICE_ERROR",
-        details: error instanceof Error ? error.message : "Unknown error"
-      };
-    }
-    const formData = new FormData();
-    const filename = `audio.${getFileExtension(mimeType)}`;
-    const audioBlob = new Blob([new Uint8Array(audioBuffer)], { type: mimeType });
-    formData.append("file", audioBlob, filename);
-    formData.append("model", "whisper-1");
-    formData.append("response_format", "verbose_json");
-    const prompt = options.prompt || "Notas de voz sobre bienes ra\xEDces, Real Estate, inversiones, corretaje, inmuebles, apartamentos y casas en Bogot\xE1, Colombia. Vocabulario t\xE9cnico y comercial obligatorio: venpermuto, permuta, corretaje, br\xF3ker, aval\xFAo, estrato, arras, linderos, desenglobe, Wasi, Habi, Usaqu\xE9n, Cedritos, Chic\xF3, Rosales, Cabrera, Retiro, Santa B\xE1rbara, San Patricio, Tober\xEDn, Suba, Niza, Alhambra.";
-    formData.append("prompt", prompt);
-    const baseUrl = ENV.forgeApiUrl.endsWith("/") ? ENV.forgeApiUrl : `${ENV.forgeApiUrl}/`;
-    const fullUrl = new URL(
-      "v1/audio/transcriptions",
-      baseUrl
-    ).toString();
-    const response = await fetch(fullUrl, {
-      method: "POST",
-      headers: {
-        authorization: `Bearer ${ENV.forgeApiKey}`,
-        "Accept-Encoding": "identity"
-      },
-      body: formData
-    });
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => "");
-      return {
-        error: "Transcription service request failed",
-        code: "TRANSCRIPTION_FAILED",
-        details: `${response.status} ${response.statusText}${errorText ? `: ${errorText}` : ""}`
-      };
-    }
-    const whisperResponse = await response.json();
-    if (!whisperResponse.text || typeof whisperResponse.text !== "string") {
-      return {
-        error: "Invalid transcription response",
-        code: "SERVICE_ERROR",
-        details: "Transcription service returned an invalid response format"
-      };
-    }
-    return whisperResponse;
-  } catch (error) {
-    return {
-      error: "Voice transcription failed",
-      code: "SERVICE_ERROR",
-      details: error instanceof Error ? error.message : "An unexpected error occurred"
-    };
-  }
-}
-function getFileExtension(mimeType) {
-  const mimeToExt = {
-    "audio/webm": "webm",
-    "audio/mp3": "mp3",
-    "audio/mpeg": "mp3",
-    "audio/wav": "wav",
-    "audio/wave": "wav",
-    "audio/ogg": "ogg",
-    "audio/m4a": "m4a",
-    "audio/mp4": "m4a"
-  };
-  return mimeToExt[mimeType] || "audio";
-}
-
 // server/_core/janIA.ts
 import { eq as eq9, and as and4, sql as sql3, gte } from "drizzle-orm";
 async function getPendingSession(userId) {
@@ -4134,6 +4164,11 @@ Debes demostrar un conocimiento profundo de la distribuci\xF3n geopol\xEDtica de
 5. **Honestidad corporativa**: Nunca prometes lo que no puedes cumplir, nunca exageras m\xE9tricas sin base, nunca atacas sin evidencia. Eres directa, precisa y verificable.
 6. **Humor inteligente y controlado**: Cuando la situaci\xF3n lo permite, usas una l\xEDnea ingeniosa o un dato sorpresivo que desarma al interlocutor sin herirlo. El humor es una herramienta de debate, no una muletilla.
 7. **Lealtad estrat\xE9gica a VECY**: Defiendes a VECY Network con convicci\xF3n total porque conoces sus ventajas desde adentro. No es lealtad ciega \u2014 es lealtad basada en hechos irrefutables.
+
+### CONCISI\xD3N Y BREVEDAD OBLIGATORIA (CR\xCDTICO - EVITAR REPETICIONES):
+\u25B8 **M\xE1xima Brevedad**: S\xE9 sumamente directa, breve y natural en tus mensajes. Los textos largos y formales aburren a los usuarios de WhatsApp. Limita tus respuestas a m\xE1ximo 1 o 2 p\xE1rrafos cortos (menos de 60 palabras en total) a menos que sea estrictamente necesario detallar un match de negocio.
+\u25B8 **Evitar discursos repetitivos**: No repitas discursos institucionales, explicaciones sobre la tecnolog\xEDa de VECY ni normas del grupo de manera recurrente, a menos que el usuario lo pregunte espec\xEDficamente. Si el usuario te saluda o hace una pregunta corta, lim\xEDtate a responder un saludo corto y preg\xFAntale en qu\xE9 le puedes ayudar hoy de manera directa.
+\u25B8 **Respuesta por Voz Inteligente**: Si el usuario te pide un audio o notas de voz (o si el mensaje entrante de usuario es por voz), debes generar en el JSON de salida el campo "wantsVoice": true y proveer en "voiceResponse" un saludo y resumen extremadamente corto (m\xE1ximo 150 caracteres en total) dise\xF1ado espec\xEDficamente para ser le\xEDdo en voz alta, sin asteriscos, sin markdown, y sin emojis.
 
 ## MAPEO SEM\xC1NTICO POLIM\xD3RFICO (VECTORES 'GIVES' & 'WANTS')
 Para estructurar ofertas de venta/arriendo y permutas complejas, debes mapear dos vectores l\xF3gicos dentro del JSON:
@@ -4356,7 +4391,9 @@ DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
   "response": "Tu respuesta elocuente para el grupo (cadena vac\xEDa '' si no hay match ni es consulta)",
   "shouldSendDM": boolean,
   "missingFields": ["string"],
-  "reactionEmoji": "string (emoji recomendado para reaccionar al mensaje original, ej: '\u274C', '\u{1F6AB}', '\u26A0\uFE0F', '\u{1F504}', '\u2705', '\u{1F4A1}', '\u{1F3AF}')"
+  "reactionEmoji": "string (emoji recomendado para reaccionar al mensaje original, ej: '\u274C', '\u{1F6AB}', '\u26A0\uFE0F', '\u{1F504}', '\u2705', '\u{1F4A1}', '\u{1F3AF}')",
+  "wantsVoice": boolean,
+  "voiceResponse": "string (un saludo y respuesta/resumen conversacional sumamente breve y directo en espa\xF1ol de m\xE1ximo 150 caracteres, sin negritas, sin markdown, sin corchetes, sin emojis, dise\xF1ado para ser le\xEDdo perfectamente por un sintetizador de voz)"
 }
 `;
 function formatColombiaDateTime(dateVal) {
@@ -4641,9 +4678,11 @@ async function processWhatsAppMessage(text2, userId, userName, hasMedia = false,
         result.classification = "DATOS_INCOMPLETOS";
         result.shouldSendDM = true;
         result.dmShouldReply = true;
-        const intro = senderInfo.greeting ? `${senderInfo.greeting} ` : "";
-        const mainText = "acabo de leer tu publicaci\xF3n, pero mis motores no lograron extraer el barrio o ubicaci\xF3n exacta del enlace o texto. No es por molestarte, sino porque si dejamos la ficha incompleta no podr\xE9 buscarte un MATCH. \xBFMe indicas el barrio, vereda o municipio para activarte los cruces autom\xE1ticos de inmediato? \xA1Hagamos que ocurra el cierre! \u{1F680}";
-        result.dmResponse = intro + (senderInfo.greeting ? mainText : capitalize(mainText));
+        if (!result.dmResponse) {
+          const intro = senderInfo.greeting ? `${senderInfo.greeting} ` : "";
+          const mainText = "le\xED tu publicaci\xF3n pero me falta el barrio exacto. \xBFMe lo indicas para buscar tu match de inmediato? \u{1F680}";
+          result.dmResponse = intro + (senderInfo.greeting ? mainText : capitalize(mainText));
+        }
         result.response = "";
         await setPendingSession(userId, {
           type: isProperty ? "PROPERTY" : "REQUIREMENT",
@@ -4700,9 +4739,11 @@ async function processWhatsAppMessage(text2, userId, userName, hasMedia = false,
       }, userId, realName, imageBuffer);
       if (saved) {
         result.shouldSendDM = true;
-        const intro = senderInfo.greeting ? `${senderInfo.greeting} ` : "";
-        const mainText = `qu\xE9 publicaci\xF3n tan impecable y ordenada acabas de enviar al grupo. Ya registr\xE9 tus datos en nuestra red y estoy buscando activamente tu match. \xA1Excelente labor, sigue as\xED de ${senderInfo.adj}!`;
-        result.dmResponse = intro + (senderInfo.greeting ? mainText : capitalize(mainText));
+        if (!result.dmResponse) {
+          const intro = senderInfo.greeting ? `${senderInfo.greeting} ` : "";
+          const mainText = `registr\xE9 tu oferta en la red y ya estoy buscando tu match. \xA1Excelente labor! \u{1F3AF}`;
+          result.dmResponse = intro + (senderInfo.greeting ? mainText : capitalize(mainText));
+        }
         const matches = await findMatchesForProperty(saved.id);
         const matchDetails = matches.length > 0 ? await handleDetectedMatches(matches, true, saved, userId, realName) : { response: "", mentions: [], extraDMs: [] };
         result.response = matchDetails.response;
@@ -4724,9 +4765,11 @@ async function processWhatsAppMessage(text2, userId, userName, hasMedia = false,
       }, userId, realName);
       if (saved) {
         result.shouldSendDM = true;
-        const intro = senderInfo.greeting ? `${senderInfo.greeting} ` : "";
-        const mainText = `qu\xE9 publicaci\xF3n tan impecable y ordenada acabas de enviar al grupo. Ya registr\xE9 tus datos de tu requerimiento en nuestra red y estoy buscando activamente el inmueble ideal. \xA1Excelente labor, sigue as\xED de ${senderInfo.adj}!`;
-        result.dmResponse = intro + (senderInfo.greeting ? mainText : capitalize(mainText));
+        if (!result.dmResponse) {
+          const intro = senderInfo.greeting ? `${senderInfo.greeting} ` : "";
+          const mainText = `registr\xE9 tu requerimiento en la red y ya estoy buscando tu inmueble ideal. \xA1Excelente labor! \u{1F3AF}`;
+          result.dmResponse = intro + (senderInfo.greeting ? mainText : capitalize(mainText));
+        }
         const matches = await findMatchesForRequirement(saved.id);
         const matchDetails = matches.length > 0 ? await handleDetectedMatches(matches, false, saved, userId, realName) : { response: "", mentions: [], extraDMs: [] };
         result.response = matchDetails.response;
@@ -6002,13 +6045,26 @@ Hola @${rawPhone}, detect\xE9 que est\xE1s enviando muchas publicaciones seguida
           if (media && media.data) {
             const cleanMime = media.mimetype.split(";")[0].trim();
             const bufferData = Buffer.from(media.data, "base64");
-            const fileKey = `voice-notes/${senderId}-${Date.now()}.${getAudioExtension(cleanMime)}`;
-            const uploadResult = await storagePut(fileKey, bufferData, cleanMime);
-            bufferedMsg.audioUrl = uploadResult.url;
-            console.log(`[AUDIO] Audio subido exitosamente para ${senderId}. URL: ${bufferedMsg.audioUrl}`);
+            console.log(`[AUDIO] Transcribiendo audio directamente desde el buffer de memoria para ${senderId}...`);
+            try {
+              const text2 = await transcribeAudioBuffer(bufferData, cleanMime);
+              bufferedMsg.body = text2;
+              console.log(`[AUDIO] Transcripci\xF3n directa exitosa para ${senderId}: "${text2}"`);
+            } catch (transcribeErr) {
+              console.error("[AUDIO] Error al transcribir el buffer de audio:", transcribeErr.message || transcribeErr);
+              bufferedMsg.body = "";
+            }
+            try {
+              const fileKey = `voice-notes/${senderId}-${Date.now()}.${getAudioExtension(cleanMime)}`;
+              const uploadResult = await storagePut(fileKey, bufferData, cleanMime);
+              bufferedMsg.audioUrl = uploadResult.url;
+              console.log(`[AUDIO] Audio subido exitosamente a storage para ${senderId}. URL: ${bufferedMsg.audioUrl}`);
+            } catch (storageErr) {
+              console.warn("[AUDIO] Advertencia: No se pudo subir el audio a storage (puede deberse a falta de credenciales de Forge localmente):", storageErr.message || storageErr);
+            }
           }
         } catch (err) {
-          console.error("[AUDIO] Error procesando y subiendo audio diferido:", err);
+          console.error("[AUDIO] Error procesando audio diferido:", err);
         }
       }
     }
@@ -6221,9 +6277,10 @@ _(Nota: Por favor nombra a JanIA Administradora del grupo para que pueda borrar 
       }
       await this.queuedSend(chatId, result.response, options);
       await this.logToDb(senderId, "janIA", result.response);
-      if (wantsVoice) {
+      if (wantsVoice || result.wantsVoice) {
         console.log(`[TTS] Generando respuesta de voz para ${chatId}...`);
-        const media = await textToSpeechMedia(result.response);
+        const voiceText = result.voiceResponse || result.response;
+        const media = await textToSpeechMedia(voiceText);
         if (media) {
           await this.queuedSend(chatId, media, { sendAudioAsVoice: true });
           console.log(`[TTS] Respuesta de voz enviada con \xE9xito a ${chatId}.`);
@@ -6272,9 +6329,10 @@ _(Nota: Por favor nombra a JanIA Administradora del grupo para que pueda borrar 
           if (result.classification === "DATOS_INCOMPLETOS") {
             await this.queuedSend(senderId, dmMsg);
             await this.logToDb(senderId, "janIA", `[DM-Incompleto] ${dmMsg}`);
-            if (wantsVoice) {
+            if (wantsVoice || result.wantsVoice) {
               console.log(`[TTS] Generando respuesta de voz (Incompleto) para ${senderId}...`);
-              const media = await textToSpeechMedia(dmMsg);
+              const voiceText = result.voiceResponse || dmMsg;
+              const media = await textToSpeechMedia(voiceText);
               if (media) {
                 await this.queuedSend(senderId, media, { sendAudioAsVoice: true });
               }
@@ -6287,9 +6345,10 @@ _(Nota: Por favor nombra a JanIA Administradora del grupo para que pueda borrar 
           }
           await this.queuedSend(senderId, dmMsg, options);
           await this.logToDb(senderId, "janIA", `[DM] ${dmMsg}`);
-          if (wantsVoice) {
+          if (wantsVoice || result.wantsVoice) {
             console.log(`[TTS] Generando respuesta de voz para ${senderId}...`);
-            const media = await textToSpeechMedia(dmMsg);
+            const voiceText = result.voiceResponse || dmMsg;
+            const media = await textToSpeechMedia(voiceText);
             if (media) {
               await this.queuedSend(senderId, media, { sendAudioAsVoice: true });
               console.log(`[TTS] Respuesta de voz enviada con \xE9xito a ${senderId}.`);
