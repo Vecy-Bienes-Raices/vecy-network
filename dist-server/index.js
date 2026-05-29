@@ -5267,7 +5267,45 @@ var SERVER_BOOT_TIME = Math.floor(Date.now() / 1e3);
 var delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 var outgoingQueue = Promise.resolve();
 async function textToSpeechMedia(text2) {
-  const cleanText = text2.replace(/[*#_`~]/g, "");
+  const cleanText = text2.replace(/[*#_`~\[\]]/g, "").replace(/[\u{1F300}-\u{1FAD6}]/gu, "").trim();
+  if (!cleanText) return null;
+  const googleApiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || ENV.forgeApiKey;
+  if (googleApiKey) {
+    try {
+      const ttsUrl = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${googleApiKey}`;
+      const response = await fetch(ttsUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          input: { text: cleanText },
+          voice: {
+            languageCode: "es-US",
+            name: "es-US-Neural2-F",
+            // Voz femenina Neural2 de alta calidad
+            ssmlGender: "FEMALE"
+          },
+          audioConfig: {
+            audioEncoding: "MP3",
+            speakingRate: 1.05,
+            // Ligeramente más rápida que el estándar, más natural
+            pitch: 1
+          }
+        })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.audioContent) {
+          console.log(`[TTS-GoogleCloud] Voz Neural2 generada con \xE9xito (${cleanText.length} chars).`);
+          return new MessageMedia("audio/mpeg", data.audioContent, "voice-note.mp3");
+        }
+      } else {
+        const errBody = await response.text().catch(() => "");
+        console.warn(`[TTS-GoogleCloud] Error ${response.status}: ${errBody.substring(0, 200)}`);
+      }
+    } catch (err) {
+      console.error("[TTS-GoogleCloud] Error llamando Google Cloud TTS:", err);
+    }
+  }
   try {
     if (ENV.forgeApiUrl && ENV.forgeApiKey) {
       const baseUrl = ENV.forgeApiUrl.endsWith("/") ? ENV.forgeApiUrl : `${ENV.forgeApiUrl}/`;
@@ -5287,60 +5325,47 @@ async function textToSpeechMedia(text2) {
       if (response.ok) {
         const buffer = await response.arrayBuffer();
         const base64Data = Buffer.from(buffer).toString("base64");
+        console.log(`[TTS-Forge] Voz nova generada con \xE9xito.`);
         return new MessageMedia("audio/mpeg", base64Data, "voice-note.mp3");
       }
     }
   } catch (err) {
-    console.error("[TTS-Forge] Error in Forge TTS:", err);
+    console.error("[TTS-Forge] Error:", err);
   }
   try {
-    const maxLen = 200;
-    if (cleanText.length <= maxLen) {
-      const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(cleanText)}&tl=es&client=tw-ob`;
+    const maxLen = 190;
+    const words = cleanText.split(/\s+/);
+    const chunks = [];
+    let currentChunk = "";
+    for (const word of words) {
+      if ((currentChunk + " " + word).trim().length > maxLen) {
+        if (currentChunk.trim()) chunks.push(currentChunk.trim());
+        currentChunk = word;
+      } else {
+        currentChunk += (currentChunk ? " " : "") + word;
+      }
+    }
+    if (currentChunk.trim()) chunks.push(currentChunk.trim());
+    const buffers = [];
+    for (const chunk of chunks) {
+      const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(chunk)}&tl=es&client=tw-ob`;
       const response = await fetch(url, {
         headers: {
           "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         }
       });
       if (response.ok) {
-        const buffer = await response.arrayBuffer();
-        const base64Data = Buffer.from(buffer).toString("base64");
-        return new MessageMedia("audio/mpeg", base64Data, "voice-note.mp3");
+        buffers.push(Buffer.from(await response.arrayBuffer()));
       }
-    } else {
-      const words = cleanText.split(/\s+/);
-      const chunks = [];
-      let currentChunk = "";
-      for (const word of words) {
-        if ((currentChunk + " " + word).length > maxLen) {
-          if (currentChunk.trim()) chunks.push(currentChunk.trim());
-          currentChunk = word;
-        } else {
-          currentChunk += (currentChunk ? " " : "") + word;
-        }
-      }
-      if (currentChunk.trim()) chunks.push(currentChunk.trim());
-      const buffers = [];
-      for (const chunk of chunks) {
-        const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(chunk)}&tl=es&client=tw-ob`;
-        const response = await fetch(url, {
-          headers: {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-          }
-        });
-        if (response.ok) {
-          buffers.push(Buffer.from(await response.arrayBuffer()));
-        }
-        await delay(250);
-      }
-      if (buffers.length > 0) {
-        const combined = Buffer.concat(buffers);
-        const base64Data = combined.toString("base64");
-        return new MessageMedia("audio/mpeg", base64Data, "voice-note.mp3");
-      }
+      await delay(250);
+    }
+    if (buffers.length > 0) {
+      const combined = Buffer.concat(buffers);
+      console.log(`[TTS-Translate] Voz Google Translate generada (fallback).`);
+      return new MessageMedia("audio/mpeg", combined.toString("base64"), "voice-note.mp3");
     }
   } catch (err) {
-    console.error("[TTS-Google] Fallback TTS failed:", err);
+    console.error("[TTS-Translate] Fallback TTS failed:", err);
   }
   return null;
 }
