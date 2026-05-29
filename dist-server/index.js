@@ -5480,11 +5480,26 @@ var WhatsAppBot = class {
     outgoingQueue = outgoingQueue.then(async () => {
       try {
         if (this.messagesSentToday >= this.dailyMessageLimit) return;
+        try {
+          const chat = await this.client.getChatById(chatId);
+          const isAudio = content instanceof MessageMedia || typeof content === "object" && content?.mimetype?.startsWith("audio");
+          if (isAudio) {
+            await chat.sendStateRecording();
+          } else {
+            await chat.sendStateTyping();
+          }
+        } catch (_) {
+        }
         const sendPromise = this.client.sendMessage(chatId, content, options);
         const timeoutPromise = new Promise(
           (_, reject) => setTimeout(() => reject(new Error(`Timeout al enviar mensaje de WhatsApp a ${chatId}`)), 15e3)
         );
         await Promise.race([sendPromise, timeoutPromise]);
+        try {
+          const chat = await this.client.getChatById(chatId);
+          await chat.clearState();
+        } catch (_) {
+        }
         this.messagesSentToday++;
         console.log(`[WhatsApp-Bot] Mensaje enviado a ${chatId}. Total hoy: ${this.messagesSentToday}/${this.dailyMessageLimit}`);
         await delay(Math.floor(Math.random() * 5e3) + 1e4);

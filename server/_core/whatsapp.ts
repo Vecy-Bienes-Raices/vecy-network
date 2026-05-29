@@ -329,6 +329,18 @@ export class WhatsAppBot {
       try {
         if (this.messagesSentToday >= this.dailyMessageLimit) return;
 
+        // Indicador de estado: 🎙️ grabando si es audio, ✍️ escribiendo si es texto
+        try {
+          const chat = await this.client.getChatById(chatId);
+          const isAudio = content instanceof MessageMedia ||
+                          (typeof content === 'object' && content?.mimetype?.startsWith('audio'));
+          if (isAudio) {
+            await chat.sendStateRecording();  // 🎙️ Micrófono
+          } else {
+            await chat.sendStateTyping();     // ✍️ Tres puntitos
+          }
+        } catch (_) { /* ignorar si el chat no acepta el estado */ }
+
         // Promesa de envío con timeout de 15 segundos para evitar bloqueos por chats inaccesibles o páginas caídas
         const sendPromise = this.client.sendMessage(chatId, content, options);
         const timeoutPromise = new Promise((_, reject) =>
@@ -336,6 +348,12 @@ export class WhatsAppBot {
         );
 
         await Promise.race([sendPromise, timeoutPromise]);
+
+        // Limpiar el estado de presencia
+        try {
+          const chat = await this.client.getChatById(chatId);
+          await chat.clearState();
+        } catch (_) { /* ignorar */ }
 
         this.messagesSentToday++;
         console.log(`[WhatsApp-Bot] Mensaje enviado a ${chatId}. Total hoy: ${this.messagesSentToday}/${this.dailyMessageLimit}`);
