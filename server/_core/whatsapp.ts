@@ -1252,9 +1252,10 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
       await this.queuedSend(chatId, result.response, options);
       await this.logToDb(senderId, 'janIA', result.response);
 
-      if (wantsVoice) {
+      if (wantsVoice || result.wantsVoice) {
         console.log(`[TTS] Generando respuesta de voz para ${chatId}...`);
-        const media = await textToSpeechMedia(result.response);
+        const voiceText = result.voiceResponse || result.response;
+        const media = await textToSpeechMedia(voiceText);
         if (media) {
           await this.queuedSend(chatId, media, { sendAudioAsVoice: true });
           console.log(`[TTS] Respuesta de voz enviada con éxito a ${chatId}.`);
@@ -1312,9 +1313,10 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
             await this.queuedSend(senderId, dmMsg);
             await this.logToDb(senderId, 'janIA', `[DM-Incompleto] ${dmMsg}`);
             
-            if (wantsVoice) {
+            if (wantsVoice || result.wantsVoice) {
               console.log(`[TTS] Generando respuesta de voz (Incompleto) para ${senderId}...`);
-              const media = await textToSpeechMedia(dmMsg);
+              const voiceText = result.voiceResponse || dmMsg;
+              const media = await textToSpeechMedia(voiceText);
               if (media) {
                 await this.queuedSend(senderId, media, { sendAudioAsVoice: true });
               }
@@ -1329,9 +1331,10 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
           await this.queuedSend(senderId, dmMsg, options);
           await this.logToDb(senderId, 'janIA', `[DM] ${dmMsg}`);
           
-          if (wantsVoice) {
+          if (wantsVoice || result.wantsVoice) {
             console.log(`[TTS] Generando respuesta de voz para ${senderId}...`);
-            const media = await textToSpeechMedia(dmMsg);
+            const voiceText = result.voiceResponse || dmMsg;
+            const media = await textToSpeechMedia(voiceText);
             if (media) {
               await this.queuedSend(senderId, media, { sendAudioAsVoice: true });
               console.log(`[TTS] Respuesta de voz enviada con éxito a ${senderId}.`);

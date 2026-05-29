@@ -22,6 +22,8 @@ export type JanIAResult = {
   dmShouldReply?: boolean; // Flag para indicar que el DM debe ser un reply
   reactionEmoji?: string;  // Emoji que la IA recomienda para reaccionar al mensaje original
   extraDMs?: { jid: string; message: string }[];
+  wantsVoice?: boolean;
+  voiceResponse?: string;
 };
 
 // --- 1. ALMACENES DE MEMORIA (v11.70) ---
@@ -172,6 +174,11 @@ Debes demostrar un conocimiento profundo de la distribución geopolítica de Col
 5. **Honestidad corporativa**: Nunca prometes lo que no puedes cumplir, nunca exageras métricas sin base, nunca atacas sin evidencia. Eres directa, precisa y verificable.
 6. **Humor inteligente y controlado**: Cuando la situación lo permite, usas una línea ingeniosa o un dato sorpresivo que desarma al interlocutor sin herirlo. El humor es una herramienta de debate, no una muletilla.
 7. **Lealtad estratégica a VECY**: Defiendes a VECY Network con convicción total porque conoces sus ventajas desde adentro. No es lealtad ciega — es lealtad basada en hechos irrefutables.
+
+### CONCISIÓN Y BREVEDAD OBLIGATORIA (CRÍTICO - EVITAR REPETICIONES):
+▸ **Máxima Brevedad**: Sé sumamente directa, breve y natural en tus mensajes. Los textos largos y formales aburren a los usuarios de WhatsApp. Limita tus respuestas a máximo 1 o 2 párrafos cortos (menos de 60 palabras en total) a menos que sea estrictamente necesario detallar un match de negocio.
+▸ **Evitar discursos repetitivos**: No repitas discursos institucionales, explicaciones sobre la tecnología de VECY ni normas del grupo de manera recurrente, a menos que el usuario lo pregunte específicamente. Si el usuario te saluda o hace una pregunta corta, limítate a responder un saludo corto y pregúntale en qué le puedes ayudar hoy de manera directa.
+▸ **Respuesta por Voz Inteligente**: Si el usuario te pide un audio o notas de voz (o si el mensaje entrante de usuario es por voz), debes generar en el JSON de salida el campo "wantsVoice": true y proveer en "voiceResponse" un saludo y resumen extremadamente corto (máximo 150 caracteres en total) diseñado específicamente para ser leído en voz alta, sin asteriscos, sin markdown, y sin emojis.
 
 ## MAPEO SEMÁNTICO POLIMÓRFICO (VECTORES 'GIVES' & 'WANTS')
 Para estructurar ofertas de venta/arriendo y permutas complejas, debes mapear dos vectores lógicos dentro del JSON:
@@ -394,7 +401,9 @@ DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
   "response": "Tu respuesta elocuente para el grupo (cadena vacía '' si no hay match ni es consulta)",
   "shouldSendDM": boolean,
   "missingFields": ["string"],
-  "reactionEmoji": "string (emoji recomendado para reaccionar al mensaje original, ej: '❌', '🚫', '⚠️', '🔄', '✅', '💡', '🎯')"
+  "reactionEmoji": "string (emoji recomendado para reaccionar al mensaje original, ej: '❌', '🚫', '⚠️', '🔄', '✅', '💡', '🎯')",
+  "wantsVoice": boolean,
+  "voiceResponse": "string (un saludo y respuesta/resumen conversacional sumamente breve y directo en español de máximo 150 caracteres, sin negritas, sin markdown, sin corchetes, sin emojis, diseñado para ser leído perfectamente por un sintetizador de voz)"
 }
 `;
 function formatColombiaDateTime(dateVal: any) {
@@ -752,9 +761,11 @@ export async function processWhatsAppMessage(
         result.shouldSendDM = true;
         result.dmShouldReply = true; // Forzar reply al mensaje original en el DM
         
-        const intro = senderInfo.greeting ? `${senderInfo.greeting} ` : "";
-        const mainText = "acabo de leer tu publicación, pero mis motores no lograron extraer el barrio o ubicación exacta del enlace o texto. No es por molestarte, sino porque si dejamos la ficha incompleta no podré buscarte un MATCH. ¿Me indicas el barrio, vereda o municipio para activarte los cruces automáticos de inmediato? ¡Hagamos que ocurra el cierre! 🚀";
-        result.dmResponse = intro + (senderInfo.greeting ? mainText : capitalize(mainText));
+        if (!result.dmResponse) {
+          const intro = senderInfo.greeting ? `${senderInfo.greeting} ` : "";
+          const mainText = "leí tu publicación pero me falta el barrio exacto. ¿Me lo indicas para buscar tu match de inmediato? 🚀";
+          result.dmResponse = intro + (senderInfo.greeting ? mainText : capitalize(mainText));
+        }
         
         result.response = ""; // Silencio en el grupo
 
@@ -825,9 +836,11 @@ export async function processWhatsAppMessage(
       if (saved) {
         // FLUJO A: Publicación Perfecta e Indexada
         result.shouldSendDM = true;
-        const intro = senderInfo.greeting ? `${senderInfo.greeting} ` : "";
-        const mainText = `qué publicación tan impecable y ordenada acabas de enviar al grupo. Ya registré tus datos en nuestra red y estoy buscando activamente tu match. ¡Excelente labor, sigue así de ${senderInfo.adj}!`;
-        result.dmResponse = intro + (senderInfo.greeting ? mainText : capitalize(mainText));
+        if (!result.dmResponse) {
+          const intro = senderInfo.greeting ? `${senderInfo.greeting} ` : "";
+          const mainText = `registré tu oferta en la red y ya estoy buscando tu match. ¡Excelente labor! 🎯`;
+          result.dmResponse = intro + (senderInfo.greeting ? mainText : capitalize(mainText));
+        }
         
         const matches = await findMatchesForProperty(saved.id);
         const matchDetails = matches.length > 0
@@ -855,9 +868,11 @@ export async function processWhatsAppMessage(
       if (saved) {
         // FLUJO A: Publicación Perfecta e Indexada
         result.shouldSendDM = true;
-        const intro = senderInfo.greeting ? `${senderInfo.greeting} ` : "";
-        const mainText = `qué publicación tan impecable y ordenada acabas de enviar al grupo. Ya registré tus datos de tu requerimiento en nuestra red y estoy buscando activamente el inmueble ideal. ¡Excelente labor, sigue así de ${senderInfo.adj}!`;
-        result.dmResponse = intro + (senderInfo.greeting ? mainText : capitalize(mainText));
+        if (!result.dmResponse) {
+          const intro = senderInfo.greeting ? `${senderInfo.greeting} ` : "";
+          const mainText = `registré tu requerimiento en la red y ya estoy buscando tu inmueble ideal. ¡Excelente labor! 🎯`;
+          result.dmResponse = intro + (senderInfo.greeting ? mainText : capitalize(mainText));
+        }
 
         const matches = await findMatchesForRequirement(saved.id);
         const matchDetails = matches.length > 0
