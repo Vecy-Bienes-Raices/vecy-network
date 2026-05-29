@@ -1113,10 +1113,11 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
     // el buffer vacío antes de que el primero lo creara, generando advertencias falsas.
     
     if (buffer) {
-      // Si el bloque ya llegó a MAX_BLOCK_SIZE mensajes, advertimos y descartamos los excedentes
-      if (buffer.messages.length >= MAX_BLOCK_SIZE) {
-        console.log(`[BUFFER] Límite de bloque (${MAX_BLOCK_SIZE}) alcanzado para ${senderId}. Mensaje #${buffer.messages.length + 1} descartado.`);
-        if (isGroupChat) {
+      // Si el bloque ya llegó al límite de mensajes, advertimos (solo en grupo principal) y descartamos los excedentes
+      const limit = isMainGroup ? MAX_BLOCK_SIZE : 10;
+      if (buffer.messages.length >= limit) {
+        console.log(`[BUFFER] Límite de bloque (${limit}) alcanzado para ${senderId}. Mensaje #${buffer.messages.length + 1} descartado.`);
+        if (isGroupChat && isMainGroup) {
           try {
             await msg.react('⚠️');
           } catch (e) {}
@@ -1306,9 +1307,11 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
 
       console.log(`[processBuffer] Procesando ${finalListingTexts.length} listings para ${senderId} de un total de ${buffer.messages.length} mensajes en buffer.`);
 
-      // Procesar secuencialmente aplicando el límite estricto de 3 listings
+      // Procesar secuencialmente aplicando el límite estricto de 3 listings (solo en grupo principal)
       let processedListingsCount = 0;
       let warningSent = buffer.warningSent || false;
+      const isMainGroup = chatId === this.targetGroupId;
+      const limit = isMainGroup ? 3 : 10;
 
       for (const item of finalListingTexts) {
         const isImageMessage = item.hasMedia && item.originalMsg.type === 'image';
@@ -1319,25 +1322,27 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
 
         processedListingsCount++;
         
-        if (processedListingsCount > 3) {
-          console.log(`[processBuffer] Listing #${processedListingsCount} excede el límite de 3 para ${senderId}.`);
-          try {
-            await item.originalMsg.react('⚠️');
-          } catch (e) {}
+        if (processedListingsCount > limit) {
+          console.log(`[processBuffer] Listing #${processedListingsCount} excede el límite de ${limit} para ${senderId}.`);
+          if (isMainGroup) {
+            try {
+              await item.originalMsg.react('⚠️');
+            } catch (e) {}
 
-          if (!warningSent && chatId.includes('@g.us')) {
-            warningSent = true;
-            const rawPhone = senderId.split("@")[0];
-            const warningText = 
-              `⚠️ *LÍMITE DE PUBLICACIÓN* ⚠️\n\n` +
-              `Hola @${rawPhone}, detecté que estás enviando muchas publicaciones seguidas en tu mensaje/bloque. ` +
-              `Para cuidar la visibilidad de tus activos y no saturar el chat de los aliados, te pido que por favor me colabores con esta norma, ya que mis motores de extracción de datos solo pueden procesar un máximo de *3 publicaciones* por bloque a la vez.\n\n` +
-              `¡Tus primeras 3 publicaciones ya están en proceso! Por favor espera unos *5 minutos* antes de enviar las siguientes. 🚀🎯`;
-            
-            await this.queuedSend(chatId, warningText, {
-              mentions: [senderId],
-              quotedMessageId: item.originalMsg.id._serialized
-            });
+            if (!warningSent && chatId.includes('@g.us')) {
+              warningSent = true;
+              const rawPhone = senderId.split("@")[0];
+              const warningText = 
+                `⚠️ *LÍMITE DE PUBLICACIÓN* ⚠️\n\n` +
+                `Hola @${rawPhone}, detecté que estás enviando muchas publicaciones seguidas en tu mensaje/bloque. ` +
+                `Para cuidar la visibilidad de tus activos y no saturar el chat de los aliados, te pido que por favor me colabores con esta norma, ya que mis motores de extracción de datos solo pueden procesar un máximo de *3 publicaciones* por bloque a la vez.\n\n` +
+                `¡Tus primeras 3 publicaciones ya están en proceso! Por favor espera unos *5 minutos* antes de enviar las siguientes. 🚀🎯`;
+              
+              await this.queuedSend(chatId, warningText, {
+                mentions: [senderId],
+                quotedMessageId: item.originalMsg.id._serialized
+              });
+            }
           }
           continue;
         }
@@ -1384,14 +1389,16 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         await this.handleJanIAResponse(result, senderId, chatId, userName, item.text, item.originalMsg, wantsVoice);
       }
 
-      // 5. ACTIVAR COOLDOWN DE 5 MINUTOS (Tras procesar con éxito)
+      // 5. ACTIVAR COOLDOWN DE 5 MINUTOS (Tras procesar con éxito - solo en grupo principal)
       // La clave incluye el chatId para que el cooldown sea por grupo (no global por usuario)
-      const cooldownKeyFinal = `${chatId}_${senderId}`;
-      this.cooldownMap.set(cooldownKeyFinal, {
-        lastBlockProcessedAt: Date.now(),
-        warningSent: warningSent
-      });
-      this.saveCooldowns();
+      if (isMainGroup) {
+        const cooldownKeyFinal = `${chatId}_${senderId}`;
+        this.cooldownMap.set(cooldownKeyFinal, {
+          lastBlockProcessedAt: Date.now(),
+          warningSent: warningSent
+        });
+        this.saveCooldowns();
+      }
 
     } catch (e) {
       console.error('[WHATSAPP-BOT] Error crítico en procesamiento de bloque:', e);

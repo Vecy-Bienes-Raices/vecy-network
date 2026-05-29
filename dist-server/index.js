@@ -6199,9 +6199,10 @@ Hola @${rawPhone2}, acabo de procesar con \xE9xito tus primeras propiedades. Par
     const bufferKey = `${chatId}_${senderId}`;
     let buffer = this.messageBuffers.get(bufferKey);
     if (buffer) {
-      if (buffer.messages.length >= MAX_BLOCK_SIZE) {
-        console.log(`[BUFFER] L\xEDmite de bloque (${MAX_BLOCK_SIZE}) alcanzado para ${senderId}. Mensaje #${buffer.messages.length + 1} descartado.`);
-        if (isGroupChat) {
+      const limit = isMainGroup ? MAX_BLOCK_SIZE : 10;
+      if (buffer.messages.length >= limit) {
+        console.log(`[BUFFER] L\xEDmite de bloque (${limit}) alcanzado para ${senderId}. Mensaje #${buffer.messages.length + 1} descartado.`);
+        if (isGroupChat && isMainGroup) {
           try {
             await msg.react("\u26A0\uFE0F");
           } catch (e) {
@@ -6366,6 +6367,8 @@ Hola @${rawPhone}, detect\xE9 que est\xE1s enviando muchas publicaciones seguida
       console.log(`[processBuffer] Procesando ${finalListingTexts.length} listings para ${senderId} de un total de ${buffer.messages.length} mensajes en buffer.`);
       let processedListingsCount = 0;
       let warningSent = buffer.warningSent || false;
+      const isMainGroup = chatId === this.targetGroupId;
+      const limit = isMainGroup ? 3 : 10;
       for (const item of finalListingTexts) {
         const isImageMessage = item.hasMedia && item.originalMsg.type === "image";
         if (!item.text.trim() && !isImageMessage) {
@@ -6373,24 +6376,26 @@ Hola @${rawPhone}, detect\xE9 que est\xE1s enviando muchas publicaciones seguida
           continue;
         }
         processedListingsCount++;
-        if (processedListingsCount > 3) {
-          console.log(`[processBuffer] Listing #${processedListingsCount} excede el l\xEDmite de 3 para ${senderId}.`);
-          try {
-            await item.originalMsg.react("\u26A0\uFE0F");
-          } catch (e) {
-          }
-          if (!warningSent && chatId.includes("@g.us")) {
-            warningSent = true;
-            const rawPhone = senderId.split("@")[0];
-            const warningText = `\u26A0\uFE0F *L\xCDMITE DE PUBLICACI\xD3N* \u26A0\uFE0F
+        if (processedListingsCount > limit) {
+          console.log(`[processBuffer] Listing #${processedListingsCount} excede el l\xEDmite de ${limit} para ${senderId}.`);
+          if (isMainGroup) {
+            try {
+              await item.originalMsg.react("\u26A0\uFE0F");
+            } catch (e) {
+            }
+            if (!warningSent && chatId.includes("@g.us")) {
+              warningSent = true;
+              const rawPhone = senderId.split("@")[0];
+              const warningText = `\u26A0\uFE0F *L\xCDMITE DE PUBLICACI\xD3N* \u26A0\uFE0F
 
 Hola @${rawPhone}, detect\xE9 que est\xE1s enviando muchas publicaciones seguidas en tu mensaje/bloque. Para cuidar la visibilidad de tus activos y no saturar el chat de los aliados, te pido que por favor me colabores con esta norma, ya que mis motores de extracci\xF3n de datos solo pueden procesar un m\xE1ximo de *3 publicaciones* por bloque a la vez.
 
 \xA1Tus primeras 3 publicaciones ya est\xE1n en proceso! Por favor espera unos *5 minutos* antes de enviar las siguientes. \u{1F680}\u{1F3AF}`;
-            await this.queuedSend(chatId, warningText, {
-              mentions: [senderId],
-              quotedMessageId: item.originalMsg.id._serialized
-            });
+              await this.queuedSend(chatId, warningText, {
+                mentions: [senderId],
+                quotedMessageId: item.originalMsg.id._serialized
+              });
+            }
           }
           continue;
         }
@@ -6429,12 +6434,14 @@ Hola @${rawPhone}, detect\xE9 que est\xE1s enviando muchas publicaciones seguida
         const wantsVoice = !!item.audioUrl || item.text.toLowerCase().includes("env\xEDame un audio") || item.text.toLowerCase().includes("m\xE1ndame un audio") || item.text.toLowerCase().includes("nota de voz");
         await this.handleJanIAResponse(result, senderId, chatId, userName, item.text, item.originalMsg, wantsVoice);
       }
-      const cooldownKeyFinal = `${chatId}_${senderId}`;
-      this.cooldownMap.set(cooldownKeyFinal, {
-        lastBlockProcessedAt: Date.now(),
-        warningSent
-      });
-      this.saveCooldowns();
+      if (isMainGroup) {
+        const cooldownKeyFinal = `${chatId}_${senderId}`;
+        this.cooldownMap.set(cooldownKeyFinal, {
+          lastBlockProcessedAt: Date.now(),
+          warningSent
+        });
+        this.saveCooldowns();
+      }
     } catch (e) {
       console.error("[WHATSAPP-BOT] Error cr\xEDtico en procesamiento de bloque:", e);
     }
