@@ -782,7 +782,8 @@ export class WhatsAppBot {
       }
 
       const senderId = (msg as any).author || msg.from;
-      if (msg.fromMe || this.blacklistedBots.includes(senderId)) {
+      const botJid = this.client.info?.wid?._serialized;
+      if (msg.fromMe || (botJid && (senderId === botJid || msg.from === botJid || msg.author === botJid)) || this.blacklistedBots.includes(senderId)) {
         return;
       }
 

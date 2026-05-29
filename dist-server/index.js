@@ -5935,7 +5935,8 @@ var WhatsAppBot = class {
         return;
       }
       const senderId = msg.author || msg.from;
-      if (msg.fromMe || this.blacklistedBots.includes(senderId)) {
+      const botJid = this.client.info?.wid?._serialized;
+      if (msg.fromMe || botJid && (senderId === botJid || msg.from === botJid || msg.author === botJid) || this.blacklistedBots.includes(senderId)) {
         return;
       }
       await delay(Math.floor(Math.random() * 2e3) + 2e3);
