@@ -5266,52 +5266,58 @@ var { Client, LocalAuth, MessageMedia } = pkg;
 var SERVER_BOOT_TIME = Math.floor(Date.now() / 1e3);
 var delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 var outgoingQueue = Promise.resolve();
-async function buildTtsSSML(rawText) {
-  const fixed = rawText.replace(/VECY\s+Network/gi, "Veci N\xE9twork").replace(/\bVECY\b/gi, "Veci").replace(/\bJanIA\b/gi, "Jan\xEDa").replace(/\bRLS\b/g, "ere ele ese").replace(/\bSQL\b/g, "ese cu ele").replace(/\bDM\b/g, "di em").replace(/\bURL\b/g, "url").replace(/\bID\b/g, "ai di").replace(/[<>]/g, "").trim();
-  return {
-    ssml: `<speak><prosody rate="fast">${fixed}</prosody></speak>`
-  };
+function prepareTtsText(rawText) {
+  return rawText.replace(/VECY\s+Network/gi, "Veci N\xE9twork").replace(/\bVECY\b/gi, "Veci").replace(/\bJanIA\b/gi, "Jan\xEDa").replace(/\bRLS\b/g, "ere ele ese").replace(/\bSQL\b/g, "ese cu ele").replace(/\bDM\b/g, "di em").replace(/\bID\b/g, "ai di").replace(/[<>]/g, "").trim();
 }
 async function textToSpeechMedia(text2) {
   const cleanText = text2.replace(/[*#_`~\[\]]/g, "").replace(/[\u{1F300}-\u{1FAD6}]/gu, "").trim();
   if (!cleanText) return null;
+  const ttsText = prepareTtsText(cleanText);
   const googleApiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || ENV.forgeApiKey;
   if (googleApiKey) {
-    const ssmlInput = await buildTtsSSML(cleanText);
-    for (const voiceName of ["es-US-Journey-F", "es-US-Neural2-A"]) {
+    const voiceCandidates = [
+      // Chirp HD — voces ultra-naturales 2024 (v1beta1)
+      { endpoint: "v1beta1", name: "es-US-Chirp-HD-F", lang: "es-US" },
+      // Journey — muy fluida, conversacional
+      { endpoint: "v1", name: "es-US-Journey-F", lang: "es-US" },
+      // Neural2 — alternativa sólida femenina
+      { endpoint: "v1", name: "es-US-Neural2-C", lang: "es-US" }
+    ];
+    for (const { endpoint, name, lang } of voiceCandidates) {
       try {
-        const ttsUrl = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${googleApiKey}`;
+        const ttsUrl = `https://texttospeech.googleapis.com/${endpoint}/text:synthesize?key=${googleApiKey}`;
         const response = await fetch(ttsUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            input: ssmlInput,
+            input: { text: ttsText },
+            // Texto plano con pronunciación ya corregida
             voice: {
-              languageCode: "es-US",
-              name: voiceName,
+              languageCode: lang,
+              name,
               ssmlGender: "FEMALE"
             },
             audioConfig: {
               audioEncoding: "MP3",
-              speakingRate: 1.15,
-              // Un poco más rápida, más dinámica y natural
-              pitch: 0.5
-              // Leve calidez en el tono
+              speakingRate: 1.6,
+              // Ágil, sin sonar acelerada artificialmente
+              pitch: -1
+              // Tono ligeramente más grave = más cálido y seguro
             }
           })
         });
         if (response.ok) {
           const data = await response.json();
           if (data.audioContent) {
-            console.log(`[TTS-GoogleCloud] Voz "${voiceName}" generada (${cleanText.length} chars).`);
+            console.log(`[TTS] \u2713 Voz "${name}" generada (${ttsText.length} chars).`);
             return new MessageMedia("audio/mpeg", data.audioContent, "voice-note.mp3");
           }
         } else {
           const errBody = await response.text().catch(() => "");
-          console.warn(`[TTS-GoogleCloud] ${voiceName} \u2192 Error ${response.status}: ${errBody.substring(0, 150)}`);
+          console.warn(`[TTS] "${name}" \u2192 ${response.status}: ${errBody.substring(0, 120)}`);
         }
       } catch (err) {
-        console.error(`[TTS-GoogleCloud] Error con ${voiceName}:`, err);
+        console.error(`[TTS] Error con "${name}":`, err);
       }
     }
   }

@@ -32,33 +32,22 @@ const SERVER_BOOT_TIME = Math.floor(Date.now() / 1000);
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 let outgoingQueue: Promise<any> = Promise.resolve();
 
-async function buildTtsSSML(rawText: string): Promise<{ ssml: string }> {
-  // Pronunciación personalizada para que suene natural en español
-  const fixed = rawText
-    // VECY Network completo → "Veci Nétwork" (antes que VECY solo)
-    .replace(/VECY\s+Network/gi, "Veci Nétwork")
-    // VECY solo → "Veci" (palabra española, abreviatura de vecino)
-    .replace(/\bVECY\b/gi, "Veci")
-    // JanIA → "Janía" con acento para entonación correcta
-    .replace(/\bJanIA\b/gi, "Janía")
-    // Evitar que deletree siglas comunes: "RLS", "SQL", "DM" etc.
+/** Prepara el texto para TTS: pronunciación natural en español */
+function prepareTtsText(rawText: string): string {
+  return rawText
+    .replace(/VECY\s+Network/gi, "Veci Nétwork")   // "VECY Network" → "Veci Nétwork"
+    .replace(/\bVECY\b/gi, "Veci")                  // "VECY" solo → "Veci"
+    .replace(/\bJanIA\b/gi, "Janía")                // "JanIA" → "Janía"
     .replace(/\bRLS\b/g, "ere ele ese")
     .replace(/\bSQL\b/g, "ese cu ele")
     .replace(/\bDM\b/g, "di em")
-    .replace(/\bURL\b/g, "url")
     .replace(/\bID\b/g, "ai di")
-    // Limpiar símbolos sueltos que confunden al TTS
     .replace(/[<>]/g, "")
     .trim();
-
-  // Envolver en SSML con prosody para control de velocidad
-  return {
-    ssml: `<speak><prosody rate="fast">${fixed}</prosody></speak>`
-  };
 }
 
 async function textToSpeechMedia(text: string): Promise<MessageMediaType | null> {
-  // Limpiar markdown, asteriscos y emojis para TTS limpio
+  // Limpiar markdown y emojis
   const cleanText = text
     .replace(/[*#_`~\[\]]/g, "")
     .replace(/[\u{1F300}-\u{1FAD6}]/gu, "")
@@ -66,31 +55,44 @@ async function textToSpeechMedia(text: string): Promise<MessageMediaType | null>
 
   if (!cleanText) return null;
 
-  // --- OPCIÓN 1: Google Cloud TTS Journey / Neural2 (Voz femenina ultra-natural) ---
-  // Journey es el modelo más humano de Google Cloud TTS.
-  // Requiere Google Cloud TTS API habilitada en la consola de Google Cloud.
+  const ttsText = prepareTtsText(cleanText);
+
+  // ─────────────────────────────────────────────────────────────────
+  // OPCIÓN 1: Google Cloud TTS (Chirp HD → Journey → Neural2-C)
+  //
+  // Cascade de voces femeninas de mejor a peor calidad.
+  // Chirp HD es el modelo 2024 más natural de Google.
+  // speakingRate 1.6 sin SSML prosody (evita conflicto doble velocidad).
+  // ─────────────────────────────────────────────────────────────────
   const googleApiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || ENV.forgeApiKey;
   if (googleApiKey) {
-    const ssmlInput = await buildTtsSSML(cleanText);
+    // (endpoint, voice, languageCode)
+    const voiceCandidates: Array<{ endpoint: string; name: string; lang: string }> = [
+      // Chirp HD — voces ultra-naturales 2024 (v1beta1)
+      { endpoint: "v1beta1", name: "es-US-Chirp-HD-F",   lang: "es-US" },
+      // Journey — muy fluida, conversacional
+      { endpoint: "v1",      name: "es-US-Journey-F",    lang: "es-US" },
+      // Neural2 — alternativa sólida femenina
+      { endpoint: "v1",      name: "es-US-Neural2-C",    lang: "es-US" },
+    ];
 
-    // Intentar primero con Journey (más humana, más fluida)
-    for (const voiceName of ["es-US-Journey-F", "es-US-Neural2-A"]) {
+    for (const { endpoint, name, lang } of voiceCandidates) {
       try {
-        const ttsUrl = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${googleApiKey}`;
+        const ttsUrl = `https://texttospeech.googleapis.com/${endpoint}/text:synthesize?key=${googleApiKey}`;
         const response = await fetch(ttsUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            input: ssmlInput,
+            input: { text: ttsText },  // Texto plano con pronunciación ya corregida
             voice: {
-              languageCode: "es-US",
-              name: voiceName,
+              languageCode: lang,
+              name,
               ssmlGender: "FEMALE"
             },
             audioConfig: {
               audioEncoding: "MP3",
-              speakingRate: 1.15,   // Un poco más rápida, más dinámica y natural
-              pitch: 0.5            // Leve calidez en el tono
+              speakingRate: 1.6,   // Ágil, sin sonar acelerada artificialmente
+              pitch: -1.0          // Tono ligeramente más grave = más cálido y seguro
             }
           })
         });
@@ -98,16 +100,15 @@ async function textToSpeechMedia(text: string): Promise<MessageMediaType | null>
         if (response.ok) {
           const data = await response.json() as { audioContent: string };
           if (data.audioContent) {
-            console.log(`[TTS-GoogleCloud] Voz "${voiceName}" generada (${cleanText.length} chars).`);
+            console.log(`[TTS] ✓ Voz "${name}" generada (${ttsText.length} chars).`);
             return new MessageMedia('audio/mpeg', data.audioContent, 'voice-note.mp3');
           }
         } else {
           const errBody = await response.text().catch(() => "");
-          console.warn(`[TTS-GoogleCloud] ${voiceName} → Error ${response.status}: ${errBody.substring(0, 150)}`);
-          // Si Journey falla (no disponible), intenta con Neural2-A
+          console.warn(`[TTS] "${name}" → ${response.status}: ${errBody.substring(0, 120)}`);
         }
       } catch (err) {
-        console.error(`[TTS-GoogleCloud] Error con ${voiceName}:`, err);
+        console.error(`[TTS] Error con "${name}":`, err);
       }
     }
   }
