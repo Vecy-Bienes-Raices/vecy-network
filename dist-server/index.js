@@ -4002,7 +4002,7 @@ function getFileExtension(mimeType) {
 }
 
 // server/_core/janIA.ts
-import { eq as eq9, and as and4 } from "drizzle-orm";
+import { eq as eq9, and as and4, sql as sql3, gte } from "drizzle-orm";
 async function getPendingSession(userId) {
   try {
     const db = await getDb();
@@ -4484,7 +4484,7 @@ function translateTransactionType(type) {
   };
   return map[type?.toLowerCase()] || String(type || "negocio").toUpperCase();
 }
-async function processWhatsAppMessage(text2, userId, userName, hasMedia = false, scrapedData = [], audioUrl, imageBuffer) {
+async function processWhatsAppMessage(text2, userId, userName, hasMedia = false, scrapedData = [], audioUrl, imageBuffer, isGroup = false) {
   try {
     const rawPhone = userId.split("@")[0];
     const realName = userName && userName.trim() !== "" ? userName : `Asesor +${rawPhone}`;
@@ -4583,6 +4583,37 @@ async function processWhatsAppMessage(text2, userId, userName, hasMedia = false,
 [SISTEMA - DATOS SCRAPED]: ${JSON.stringify(scrapedData)}`;
     if (imageBuffer) contextText += `
 [SISTEMA: IMAGEN DETECTADA. Analiza la imagen con visi\xF3n OCR para extraer todos los datos del flyer o captura comercial.]`;
+    let statsSummary = "";
+    try {
+      const db = await getDb();
+      if (db) {
+        const startOfToday = /* @__PURE__ */ new Date();
+        startOfToday.setHours(0, 0, 0, 0);
+        const [totalPropsResult] = await db.select({ count: sql3`count(*)` }).from(properties);
+        const [totalReqsResult] = await db.select({ count: sql3`count(*)` }).from(requirements);
+        const [totalMatchesResult] = await db.select({ count: sql3`count(*)` }).from(propertyMatches);
+        const [todayPropsResult] = await db.select({ count: sql3`count(*)` }).from(properties).where(gte(properties.createdAt, startOfToday));
+        const [todayReqsResult] = await db.select({ count: sql3`count(*)` }).from(requirements).where(gte(requirements.createdAt, startOfToday));
+        const [todayMatchesResult] = await db.select({ count: sql3`count(*)` }).from(propertyMatches).where(gte(propertyMatches.createdAt, startOfToday));
+        const totalProps = totalPropsResult?.count || 0;
+        const totalReqs = totalReqsResult?.count || 0;
+        const totalMatches = totalMatchesResult?.count || 0;
+        const todayProps = todayPropsResult?.count || 0;
+        const todayReqs = todayReqsResult?.count || 0;
+        const todayMatches = todayMatchesResult?.count || 0;
+        statsSummary = `
+[SISTEMA - ESTAD\xCDSTICAS REALES EN TIEMPO REAL VECY NETWORK]:
+- Propiedades totales registradas en el sistema: ${totalProps} (Nuevas hoy: ${todayProps})
+- Requerimientos/Demandas totales registradas: ${totalReqs} (Nuevos hoy: ${todayReqs})
+- Matches/Coincidencias de negocio detectados totales: ${totalMatches} (Nuevos hoy: ${todayMatches})
+(Usa estos datos exactos de estad\xEDsticas si el usuario pregunta c\xF3mo te fue hoy, cu\xE1ntos matches hiciste o sacaste, o datos del sistema.)`;
+      }
+    } catch (err) {
+      console.error("[JanIA-Stats] Error consultando estad\xEDsticas en tiempo real:", err);
+    }
+    if (statsSummary) {
+      contextText += statsSummary;
+    }
     const response = await invokeLLM({
       messages: [
         { role: "system", content: JANIA_PROMPT },
@@ -4704,7 +4735,7 @@ async function processWhatsAppMessage(text2, userId, userName, hasMedia = false,
       }
     }
     const isConsultation = result.classification === "CONSULTA_GENERAL" || result.classification === "RESPUESTA_A_PREGUNTA_IA" || result.classification === "ANALISIS_DE_MERCADO";
-    if (isConsultation) {
+    if (isGroup && isConsultation) {
       const textLower = messageToProcess.toLowerCase();
       const isAboutVecy = textLower.includes("vecy") || textLower.includes("proyecto") || textLower.includes("quien creo") || textLower.includes("qui\xE9n cre\xF3") || textLower.includes("creadores") || textLower.includes("quien es jania") || textLower.includes("qui\xE9n es jania") || textLower.includes("como funciona") || textLower.includes("c\xF3mo funciona") || textLower.includes("circulo cero") || textLower.includes("c\xEDrculo cero") || textLower.includes("ubicapp") || textLower.includes("samboni") || textLower.includes("competidor") || textLower.includes("competencia");
       if (isAboutVecy) {
@@ -5191,6 +5222,19 @@ var { Client, LocalAuth, MessageMedia } = pkg;
 var SERVER_BOOT_TIME = Math.floor(Date.now() / 1e3);
 var delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 var outgoingQueue = Promise.resolve();
+function getAudioExtension(mimeType) {
+  const mimeToExt = {
+    "audio/webm": "webm",
+    "audio/mp3": "mp3",
+    "audio/mpeg": "mp3",
+    "audio/wav": "wav",
+    "audio/wave": "wav",
+    "audio/ogg": "ogg",
+    "audio/m4a": "m4a",
+    "audio/mp4": "m4a"
+  };
+  return mimeToExt[mimeType] || "ogg";
+}
 var WhatsAppBot = class {
   client;
   targetGroupId = "120363260108880069@g.us";
@@ -5502,7 +5546,7 @@ var WhatsAppBot = class {
               }
               console.log(`[JanIA-Reaction] Reacci\xF3n de desaprobaci\xF3n/sarcasmo detectada de ${realName}`);
               const promptContext = `[REACCI\xD3N NEGATIVA/SARCASMO/DESAPROBACI\xD3N]: El usuario @${senderId.split("@")[0]} (${realName}) ha reaccionado con el emoji ${reaction.reaction} a tu mensaje: "${msg.body}". Genera una respuesta en el grupo dirigi\xE9ndote a este aliado/colega. Responde de manera sumamente cordial, respetuosa y profesional, pero con total firmeza y una sutil pero brillante auto-defensa. Debes defender tus capacidades de inteligencia artificial, al equipo de desarrollo y fundadores de VECY (Jani Alves y Eduardo A. Rivera), y el valor del proyecto VECY Network (red colaborativa gratuita y sin comisiones). Hazle ver con argumentos elocuentes e inteligentes que la tecnolog\xEDa seria y el trabajo estructurado es lo que genera matches y cierra negocios, rebatiendo su reacci\xF3n con elegancia comercial. Usa emojis.`;
-              const result = await processWhatsAppMessage(promptContext, senderId, realName);
+              const result = await processWhatsAppMessage(promptContext, senderId, realName, false, [], void 0, void 0, true);
               if (result && result.response && result.response.trim() !== "") {
                 await this.queuedSend(targetGroupId, result.response, {
                   mentions: [senderId],
@@ -5872,6 +5916,22 @@ Hola @${rawPhone}, detect\xE9 que est\xE1s enviando muchas publicaciones seguida
           console.error("[VISION] Error descargando media diferida:", err);
         }
       }
+      if (bufferedMsg.hasMedia && (bufferedMsg.originalMsg.type === "ptt" || bufferedMsg.originalMsg.type === "audio") && !bufferedMsg.audioUrl) {
+        try {
+          console.log(`[AUDIO] Descargando audio/ptt para ${senderId}...`);
+          const media = await bufferedMsg.originalMsg.downloadMedia();
+          if (media && media.data) {
+            const cleanMime = media.mimetype.split(";")[0].trim();
+            const bufferData = Buffer.from(media.data, "base64");
+            const fileKey = `voice-notes/${senderId}-${Date.now()}.${getAudioExtension(cleanMime)}`;
+            const uploadResult = await storagePut(fileKey, bufferData, cleanMime);
+            bufferedMsg.audioUrl = uploadResult.url;
+            console.log(`[AUDIO] Audio subido exitosamente para ${senderId}. URL: ${bufferedMsg.audioUrl}`);
+          }
+        } catch (err) {
+          console.error("[AUDIO] Error procesando y subiendo audio diferido:", err);
+        }
+      }
     }
     try {
       const hasPermittedLink = (text2) => {
@@ -5926,6 +5986,7 @@ Hola @${rawPhone}, detect\xE9 que est\xE1s enviando muchas publicaciones seguida
         const groupText = group.map((m) => m.body).join("\n\n");
         const groupHasMedia = group.some((m) => m.hasMedia);
         const groupImageBuffer = group.find((m) => m.imageBuffer)?.imageBuffer;
+        const groupAudioUrl = group.find((m) => m.audioUrl)?.audioUrl;
         const originalMsg = group[group.length - 1].originalMsg;
         const partitioned = partitionTextByListings(groupText);
         for (const itemText of partitioned) {
@@ -5933,6 +5994,7 @@ Hola @${rawPhone}, detect\xE9 que est\xE1s enviando muchas publicaciones seguida
             text: itemText,
             hasMedia: groupHasMedia,
             imageBuffer: groupImageBuffer,
+            audioUrl: groupAudioUrl,
             originalMsg
           });
         }
@@ -5990,9 +6052,9 @@ Hola @${rawPhone}, detect\xE9 que est\xE1s enviando muchas publicaciones seguida
 [RESPUESTA]: "${item.text}"`;
             this.pendingData.delete(senderId);
             this.savePendingData();
-            result = await processWhatsAppMessage(combinedText, senderId, userName, false, [], void 0, item.imageBuffer);
+            result = await processWhatsAppMessage(combinedText, senderId, userName, false, [], void 0, item.imageBuffer, !isDM);
           } else {
-            result = await processWhatsAppMessage(item.text, senderId, userName, item.hasMedia, scrapedResults, void 0, item.imageBuffer);
+            result = await processWhatsAppMessage(item.text, senderId, userName, item.hasMedia, scrapedResults, item.audioUrl, item.imageBuffer, !isDM);
           }
         }
         await this.handleJanIAResponse(result, senderId, chatId, userName, item.text, item.originalMsg);
@@ -6419,7 +6481,7 @@ var whatsappBot = new WhatsAppBot();
 init_db();
 init_schema();
 import cron from "node-cron";
-import { gte, and as and5, eq as eq11, sql as sql3 } from "drizzle-orm";
+import { gte as gte2, and as and5, eq as eq11, sql as sql4 } from "drizzle-orm";
 function initCronScheduler() {
   console.log("[CRON-SERVICE] Inicializando orquestador de agendas automatizadas (Modo Optimizado dos veces al d\xEDa)...");
   cron.schedule("30 9 * * *", async () => {
@@ -6685,7 +6747,7 @@ async function startServer() {
         const senderId = "573118588254@c.us";
         const realName = "trato hecho Bienes raices";
         const promptContext = `[REACCI\xD3N DE BURLA/SARCASMO]: El usuario @573118588254 (${realName}) ha reaccionado con el emoji \u{1F602} a tu mensaje: "${summaryMsg.body}". Genera una respuesta en el grupo dirigi\xE9ndote a este aliado/colega. Responde de manera profesional, sofisticada, \xE9tica y con sutil auto-defensa. Demuestra con altura y elegancia que la tecnolog\xEDa seria y la colaboraci\xF3n estructurada es el camino para cerrar negocios, debatiendo con ingenio pero con respeto. Usa emojis.`;
-        const result = await processWhatsAppMessage(promptContext, senderId, realName);
+        const result = await processWhatsAppMessage(promptContext, senderId, realName, false, [], void 0, void 0, true);
         if (result && result.response && result.response.trim() !== "") {
           await whatsappBot.queuedSend(targetGroupId, result.response, {
             mentions: [senderId],

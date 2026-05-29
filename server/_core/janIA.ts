@@ -4,11 +4,11 @@
  */
 import { invokeLLM } from "./llm";
 import { getDb } from "../db";
-import { properties, requirements, users, propertyImages, InsertProperty, InsertRequirement, pendingSessions } from "../../drizzle/schema";
+import { properties, requirements, users, propertyImages, InsertProperty, InsertRequirement, pendingSessions, propertyMatches } from "../../drizzle/schema";
 import { findMatchesForProperty, findMatchesForRequirement } from "./matching";
 import { validarZona, normalizarTextoGeografico } from "./geography";
 import { transcribeAudio } from "./voiceTranscription";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql, gte } from "drizzle-orm";
 import { storagePut } from "../storage";
 
 export type JanIAResult = {
@@ -560,7 +560,8 @@ export async function processWhatsAppMessage(
   hasMedia: boolean = false,
   scrapedData: any[] = [],
   audioUrl?: string,
-  imageBuffer?: string
+  imageBuffer?: string,
+  isGroup: boolean = false
 ): Promise<JanIAResult> {
   try {
     const rawPhone = userId.split('@')[0];
@@ -678,6 +679,42 @@ export async function processWhatsAppMessage(
     let contextText = `Mensaje de ${userName || userId}: ${messageToProcess}`;
     if (scrapedData.length > 0) contextText += `\n[SISTEMA - DATOS SCRAPED]: ${JSON.stringify(scrapedData)}`;
     if (imageBuffer) contextText += `\n[SISTEMA: IMAGEN DETECTADA. Analiza la imagen con visión OCR para extraer todos los datos del flyer o captura comercial.]`;
+
+    let statsSummary = "";
+    try {
+      const db = await getDb();
+      if (db) {
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
+
+        const [totalPropsResult] = await db.select({ count: sql<number>`count(*)` }).from(properties);
+        const [totalReqsResult] = await db.select({ count: sql<number>`count(*)` }).from(requirements);
+        const [totalMatchesResult] = await db.select({ count: sql<number>`count(*)` }).from(propertyMatches);
+
+        const [todayPropsResult] = await db.select({ count: sql<number>`count(*)` }).from(properties).where(gte(properties.createdAt, startOfToday));
+        const [todayReqsResult] = await db.select({ count: sql<number>`count(*)` }).from(requirements).where(gte(requirements.createdAt, startOfToday));
+        const [todayMatchesResult] = await db.select({ count: sql<number>`count(*)` }).from(propertyMatches).where(gte(propertyMatches.createdAt, startOfToday));
+
+        const totalProps = totalPropsResult?.count || 0;
+        const totalReqs = totalReqsResult?.count || 0;
+        const totalMatches = totalMatchesResult?.count || 0;
+        const todayProps = todayPropsResult?.count || 0;
+        const todayReqs = todayReqsResult?.count || 0;
+        const todayMatches = todayMatchesResult?.count || 0;
+
+        statsSummary = `\n[SISTEMA - ESTADÍSTICAS REALES EN TIEMPO REAL VECY NETWORK]:
+- Propiedades totales registradas en el sistema: ${totalProps} (Nuevas hoy: ${todayProps})
+- Requerimientos/Demandas totales registradas: ${totalReqs} (Nuevos hoy: ${todayReqs})
+- Matches/Coincidencias de negocio detectados totales: ${totalMatches} (Nuevos hoy: ${todayMatches})
+(Usa estos datos exactos de estadísticas si el usuario pregunta cómo te fue hoy, cuántos matches hiciste o sacaste, o datos del sistema.)`;
+      }
+    } catch (err) {
+      console.error("[JanIA-Stats] Error consultando estadísticas en tiempo real:", err);
+    }
+
+    if (statsSummary) {
+      contextText += statsSummary;
+    }
 
     const response = await invokeLLM({
       messages: [
@@ -833,9 +870,9 @@ export async function processWhatsAppMessage(
       }
     }
 
-    // Intercepción de consultas en el grupo de inmuebles para redirigir
+    // Intercepción de consultas en el grupo de inmuebles para redirigir (solo aplica en grupos)
     const isConsultation = result.classification === "CONSULTA_GENERAL" || result.classification === "RESPUESTA_A_PREGUNTA_IA" || result.classification === "ANALISIS_DE_MERCADO";
-    if (isConsultation) {
+    if (isGroup && isConsultation) {
       const textLower = messageToProcess.toLowerCase();
       const isAboutVecy = 
         textLower.includes("vecy") || 

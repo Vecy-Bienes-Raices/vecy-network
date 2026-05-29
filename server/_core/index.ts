@@ -275,7 +275,7 @@ async function startServer() {
           `Demuestra con altura y elegancia que la tecnología seria y la colaboración estructurada es el camino para cerrar negocios, debatiendo con ingenio pero con respeto. ` +
           `Usa emojis.`;
         
-        const result = await processWhatsAppMessage(promptContext, senderId, realName);
+        const result = await processWhatsAppMessage(promptContext, senderId, realName, false, [], undefined, undefined, true);
         if (result && result.response && result.response.trim() !== "") {
           await (whatsappBot as any).queuedSend(targetGroupId, result.response, {
             mentions: [senderId],

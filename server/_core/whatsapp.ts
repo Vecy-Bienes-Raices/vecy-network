@@ -21,6 +21,7 @@ import path from 'path';
 import { getDb } from '../db';
 import { conversations, messages as dbMessages, propertyMatches, properties, requirements, users } from '../../drizzle/schema';
 import { eq } from 'drizzle-orm';
+import { storagePut } from "../storage";
 
 // --- JanIA v2.0 Global Time Constraints (v11.97) ---
 const SERVER_BOOT_TIME = Math.floor(Date.now() / 1000);
@@ -28,6 +29,20 @@ const SERVER_BOOT_TIME = Math.floor(Date.now() / 1000);
 // --- JanIA v2.0 Human Simulation Helpers (v11.99) ---
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 let outgoingQueue: Promise<any> = Promise.resolve();
+
+function getAudioExtension(mimeType: string): string {
+  const mimeToExt: Record<string, string> = {
+    'audio/webm': 'webm',
+    'audio/mp3': 'mp3',
+    'audio/mpeg': 'mp3',
+    'audio/wav': 'wav',
+    'audio/wave': 'wav',
+    'audio/ogg': 'ogg',
+    'audio/m4a': 'm4a',
+    'audio/mp4': 'm4a',
+  };
+  return mimeToExt[mimeType] || 'ogg';
+}
 
 // --- JanIA v2.0 Anti-Spam & Multi-Modal Types (v10.5) ---
 interface AntiSpamState {
@@ -39,6 +54,7 @@ interface BufferedMessage {
   body: string;
   hasMedia: boolean;
   imageBuffer?: string;
+  audioUrl?: string;
   originalMsg: Message;
 }
 
@@ -407,7 +423,7 @@ export class WhatsAppBot {
               
               const promptContext = `[REACCIÓN NEGATIVA/SARCASMO/DESAPROBACIÓN]: El usuario @${senderId.split('@')[0]} (${realName}) ha reaccionado con el emoji ${reaction.reaction} a tu mensaje: "${msg.body}". Genera una respuesta en el grupo dirigiéndote a este aliado/colega. Responde de manera sumamente cordial, respetuosa y profesional, pero con total firmeza y una sutil pero brillante auto-defensa. Debes defender tus capacidades de inteligencia artificial, al equipo de desarrollo y fundadores de VECY (Jani Alves y Eduardo A. Rivera), y el valor del proyecto VECY Network (red colaborativa gratuita y sin comisiones). Hazle ver con argumentos elocuentes e inteligentes que la tecnología seria y el trabajo estructurado es lo que genera matches y cierra negocios, rebatiendo su reacción con elegancia comercial. Usa emojis.`;
               
-              const result = await processWhatsAppMessage(promptContext, senderId, realName);
+              const result = await processWhatsAppMessage(promptContext, senderId, realName, false, [], undefined, undefined, true);
               if (result && result.response && result.response.trim() !== '') {
                 await this.queuedSend(targetGroupId, result.response, {
                   mentions: [senderId],
@@ -861,6 +877,22 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
           console.error('[VISION] Error descargando media diferida:', err);
         }
       }
+      if (bufferedMsg.hasMedia && (bufferedMsg.originalMsg.type === 'ptt' || bufferedMsg.originalMsg.type === 'audio') && !bufferedMsg.audioUrl) {
+        try {
+          console.log(`[AUDIO] Descargando audio/ptt para ${senderId}...`);
+          const media = await bufferedMsg.originalMsg.downloadMedia();
+          if (media && media.data) {
+            const cleanMime = media.mimetype.split(';')[0].trim();
+            const bufferData = Buffer.from(media.data, 'base64');
+            const fileKey = `voice-notes/${senderId}-${Date.now()}.${getAudioExtension(cleanMime)}`;
+            const uploadResult = await storagePut(fileKey, bufferData, cleanMime);
+            bufferedMsg.audioUrl = uploadResult.url;
+            console.log(`[AUDIO] Audio subido exitosamente para ${senderId}. URL: ${bufferedMsg.audioUrl}`);
+          }
+        } catch (err) {
+          console.error('[AUDIO] Error procesando y subiendo audio diferido:', err);
+        }
+      }
     }
 
     try {
@@ -924,11 +956,12 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
       }
 
       // Desglosar cada grupo de links por si contiene listings numerados (ej: Diego Gómez)
-      const finalListingTexts: { text: string; hasMedia: boolean; imageBuffer?: string; originalMsg: Message }[] = [];
+      const finalListingTexts: { text: string; hasMedia: boolean; imageBuffer?: string; audioUrl?: string; originalMsg: Message }[] = [];
       for (const group of linkGroups) {
         const groupText = group.map(m => m.body).join('\n\n');
         const groupHasMedia = group.some(m => m.hasMedia);
         const groupImageBuffer = group.find(m => m.imageBuffer)?.imageBuffer;
+        const groupAudioUrl = group.find(m => m.audioUrl)?.audioUrl;
         const originalMsg = group[group.length - 1].originalMsg;
 
         const partitioned = partitionTextByListings(groupText);
@@ -937,6 +970,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
             text: itemText,
             hasMedia: groupHasMedia,
             imageBuffer: groupImageBuffer,
+            audioUrl: groupAudioUrl,
             originalMsg
           });
         }
@@ -1005,9 +1039,9 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
             const combinedText = `[CONTEXTO]: "${pending.originalText}"\n[RESPUESTA]: "${item.text}"`;
             this.pendingData.delete(senderId);
             this.savePendingData();
-            result = await processWhatsAppMessage(combinedText, senderId, userName, false, [], undefined, item.imageBuffer);
+            result = await processWhatsAppMessage(combinedText, senderId, userName, false, [], undefined, item.imageBuffer, !isDM);
           } else {
-            result = await processWhatsAppMessage(item.text, senderId, userName, item.hasMedia, scrapedResults, undefined, item.imageBuffer);
+            result = await processWhatsAppMessage(item.text, senderId, userName, item.hasMedia, scrapedResults, item.audioUrl, item.imageBuffer, !isDM);
           }
         }
 
