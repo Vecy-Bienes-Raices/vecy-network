@@ -4651,6 +4651,17 @@ async function processWhatsAppMessage(text2, userId, userName, hasMedia = false,
     if (statsSummary) {
       contextText += statsSummary;
     }
+    const textLower = messageToProcess.toLowerCase();
+    const isReplicationRequest = textLower.includes("replica") || textLower.includes("repite") || textLower.includes("lee este") || textLower.includes("lee esto") || textLower.includes("lee literalmente") || textLower.includes("di literalmente") || textLower.includes("reproduce");
+    if (isReplicationRequest) {
+      contextText += `
+[INSTRUCCI\xD3N CR\xCDTICA DE REPLICACI\xD3N LITERAL DE AUDIO]: El usuario te est\xE1 pidiendo de manera expl\xEDcita que repliques, repitas o leas un texto o p\xE1rrafo espec\xEDfico en una nota de voz/audio.
+Por lo tanto, DEBES hacer lo siguiente:
+1. Establece obligatoriamente "wantsVoice": true.
+2. En el campo "voiceResponse", coloca EXACTAMENTE el texto o p\xE1rrafo literal que el usuario te solicit\xF3 que leyeras, eliminando emojis y markdown (como asteriscos o negritas) para que el sintetizador de voz lo lea de forma fluida y natural, sin deletrear. Por ejemplo, si te dice "replica esto: COMPROMISO DE HONOR VECY", el campo "voiceResponse" debe contener el texto de ese compromiso literalmente.
+3. En el campo "response", coloca tambi\xE9n el texto literal con su formato y emojis correspondientes.
+4. NUNCA respondas con confirmaciones conversacionales como "\xA1Entendido, colega! He procesado el comunicado...", ni agregues discursos tuyos. Tu respuesta "response" y "voiceResponse" debe ser \xFAnicamente el texto que te pidieron leer de forma exacta y literal.`;
+    }
     const response = await invokeLLM({
       messages: [
         { role: "system", content: JANIA_PROMPT },
@@ -4779,10 +4790,10 @@ async function processWhatsAppMessage(text2, userId, userName, hasMedia = false,
     }
     const isConsultation = result.classification === "CONSULTA_GENERAL" || result.classification === "RESPUESTA_A_PREGUNTA_IA" || result.classification === "ANALISIS_DE_MERCADO";
     if (isGroup && isConsultation) {
-      const textLower = messageToProcess.toLowerCase();
-      const isAboutVecy = textLower.includes("vecy") || textLower.includes("proyecto") || textLower.includes("quien creo") || textLower.includes("qui\xE9n cre\xF3") || textLower.includes("creadores") || textLower.includes("quien es jania") || textLower.includes("qui\xE9n es jania") || textLower.includes("como funciona") || textLower.includes("c\xF3mo funciona") || textLower.includes("circulo cero") || textLower.includes("c\xEDrculo cero") || textLower.includes("ubicapp") || textLower.includes("samboni") || textLower.includes("competidor") || textLower.includes("competencia");
+      const textLower2 = messageToProcess.toLowerCase();
+      const isAboutVecy = textLower2.includes("vecy") || textLower2.includes("proyecto") || textLower2.includes("quien creo") || textLower2.includes("qui\xE9n cre\xF3") || textLower2.includes("creadores") || textLower2.includes("quien es jania") || textLower2.includes("qui\xE9n es jania") || textLower2.includes("como funciona") || textLower2.includes("c\xF3mo funciona") || textLower2.includes("circulo cero") || textLower2.includes("c\xEDrculo cero") || textLower2.includes("ubicapp") || textLower2.includes("samboni") || textLower2.includes("competidor") || textLower2.includes("competencia");
       if (isAboutVecy) {
-        const isCompetitorQuery = textLower.includes("ubicapp") || textLower.includes("samboni") || textLower.includes("competidor") || textLower.includes("competencia");
+        const isCompetitorQuery = textLower2.includes("ubicapp") || textLower2.includes("samboni") || textLower2.includes("competidor") || textLower2.includes("competencia");
         if (isCompetitorQuery) {
           result.response = `\u{1F44C} *C\xCDRCULO CERO \u2014 DEBATE Y COMUNIDAD* \u{1F44C}
 
@@ -5324,7 +5335,7 @@ async function textToSpeechMedia(text2) {
   const elevenKey = process.env.ELEVENLABS_API_KEY;
   if (elevenKey) {
     try {
-      const voiceId = process.env.ELEVENLABS_VOICE_ID || "21m00Tcm4TlvDq8ikWAM";
+      const voiceId = process.env.ELEVENLABS_VOICE_ID || "XrExE9yKIg1WjnnlVkGX";
       const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`, {
         method: "POST",
         headers: {

@@ -116,7 +116,7 @@ async function textToSpeechMedia(text: string): Promise<MessageMediaType | null>
       //   - Aria:     9BWtsMINqrJLrRacOk9x
       //   - Charlotte: XB0fDUnXU5powFXDhCwa
       //   - Valentina: XrExE9yKIg1WjnnlVkGX
-      const voiceId = process.env.ELEVENLABS_VOICE_ID || "21m00Tcm4TlvDq8ikWAM"; // Rachel (Pre-made, compatible con plan gratuito)
+      const voiceId = process.env.ELEVENLABS_VOICE_ID || "XrExE9yKIg1WjnnlVkGX"; // Matilda (Pre-made, compatible con plan gratuito)
       const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`, {
         method: "POST",
         headers: {

@@ -725,6 +725,25 @@ export async function processWhatsAppMessage(
       contextText += statsSummary;
     }
 
+    const textLower = messageToProcess.toLowerCase();
+    const isReplicationRequest = 
+      textLower.includes("replica") ||
+      textLower.includes("repite") ||
+      textLower.includes("lee este") ||
+      textLower.includes("lee esto") ||
+      textLower.includes("lee literalmente") ||
+      textLower.includes("di literalmente") ||
+      textLower.includes("reproduce");
+
+    if (isReplicationRequest) {
+      contextText += `\n[INSTRUCCIÓN CRÍTICA DE REPLICACIÓN LITERAL DE AUDIO]: El usuario te está pidiendo de manera explícita que repliques, repitas o leas un texto o párrafo específico en una nota de voz/audio.
+Por lo tanto, DEBES hacer lo siguiente:
+1. Establece obligatoriamente "wantsVoice": true.
+2. En el campo "voiceResponse", coloca EXACTAMENTE el texto o párrafo literal que el usuario te solicitó que leyeras, eliminando emojis y markdown (como asteriscos o negritas) para que el sintetizador de voz lo lea de forma fluida y natural, sin deletrear. Por ejemplo, si te dice "replica esto: COMPROMISO DE HONOR VECY", el campo "voiceResponse" debe contener el texto de ese compromiso literalmente.
+3. En el campo "response", coloca también el texto literal con su formato y emojis correspondientes.
+4. NUNCA respondas con confirmaciones conversacionales como "¡Entendido, colega! He procesado el comunicado...", ni agregues discursos tuyos. Tu respuesta "response" y "voiceResponse" debe ser únicamente el texto que te pidieron leer de forma exacta y literal.`;
+    }
+
     const response = await invokeLLM({
       messages: [
         { role: "system", content: JANIA_PROMPT },
