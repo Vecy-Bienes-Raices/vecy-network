@@ -19,7 +19,7 @@ import { publishToFacebookGroup } from "./facebookService";
 import fs from 'fs';
 import path from 'path';
 import { getDb } from '../db';
-import { conversations, messages as dbMessages } from '../../drizzle/schema';
+import { conversations, messages as dbMessages, propertyMatches, properties, requirements, users } from '../../drizzle/schema';
 import { eq } from 'drizzle-orm';
 
 // --- JanIA v2.0 Global Time Constraints (v11.97) ---
@@ -533,6 +533,16 @@ export class WhatsAppBot {
 
       console.log(`[JanIA-DM] Atendiendo mensaje interno de ${realName} (${senderId})...`);
 
+      // Interceptar confirmaciones de Match (SÍ #M123 o NO #M123)
+      const matchConfirmationRegex = /^\s*(sí|si|no)\s+#m(\d+)\s*$/i;
+      const matchConf = msg.body.match(matchConfirmationRegex);
+      if (matchConf) {
+        const decision = matchConf[1].toLowerCase();
+        const matchId = parseInt(matchConf[2], 10);
+        await this.processMatchConfirmation(senderId, realName, matchId, decision);
+        return; // Detener flujo general de Gemini
+      }
+
       // Capa Multimodal OCR para DMs (Visión)
       let imageBuffer: string | undefined;
       if (msg.hasMedia && msg.type === 'image') {
@@ -567,6 +577,126 @@ export class WhatsAppBot {
 
     } catch (error) {
       console.error(`[JanIA-DM-Error] Fallo en atención privada para ${msg.from}:`, error);
+    }
+  }
+
+  private async processMatchConfirmation(senderId: string, realName: string, matchId: number, decision: string) {
+    try {
+      const db = await getDb();
+      if (!db) {
+        await this.queuedSend(senderId, "⚠️ El sistema de base de datos no está disponible en este momento. Inténtalo más tarde.");
+        return;
+      }
+
+      // 1. Buscar el match
+      const [match] = await db.select().from(propertyMatches).where(eq(propertyMatches.id, matchId)).limit(1);
+      if (!match) {
+        await this.queuedSend(senderId, `⚠️ No encontré ningún match registrado con el código *#M${matchId}*. Por favor verifica el número.`);
+        return;
+      }
+
+      // 2. Buscar propiedad y requerimiento asociados
+      const [prop] = await db.select().from(properties).where(eq(properties.id, match.propertyId)).limit(1);
+      const [req] = await db.select().from(requirements).where(eq(requirements.id, match.requirementId)).limit(1);
+
+      if (!prop || !req) {
+        await this.queuedSend(senderId, "⚠️ Hubo un problema al recuperar los detalles de este match.");
+        return;
+      }
+
+      const senderPhone = senderId.split('@')[0];
+      const ownerPhone = prop.idUsuarioWhatsapp || '';
+      const seekerPhone = req.idUsuarioWhatsapp || '';
+
+      const isOwner = senderPhone === ownerPhone.split('@')[0];
+      const isSeeker = senderPhone === seekerPhone.split('@')[0];
+
+      if (!isOwner && !isSeeker) {
+        await this.queuedSend(senderId, "⚠️ No estás autorizado para confirmar este match.");
+        return;
+      }
+
+      if (decision === 'no') {
+        // Cancelar el match
+        await db.update(propertyMatches).set({ status: 'rejected' }).where(eq(propertyMatches.id, matchId));
+        await this.queuedSend(senderId, `Entendido. He marcado el match *#M${matchId}* como cancelado. No se compartirán tus datos de contacto.`);
+        await this.logToDb(senderId, 'janIA', `[Match-Rejected] Match #M${matchId} rechazado por el usuario.`);
+        
+        // Notificar a la otra parte
+        const otherJid = isOwner ? (seekerPhone.includes('@') ? seekerPhone : `${seekerPhone}@c.us`) : (ownerPhone.includes('@') ? ownerPhone : `${ownerPhone}@c.us`);
+        await this.queuedSend(otherJid, `Aviso: El match *#M${matchId}* ha sido cancelado por la otra parte.`);
+        return;
+      }
+
+      // Si es SÍ
+      let updateFields: any = {};
+      if (isOwner) {
+        updateFields.ownerConfirmed = true;
+      }
+      if (isSeeker) {
+        updateFields.seekerConfirmed = true;
+      }
+
+      await db.update(propertyMatches).set(updateFields).where(eq(propertyMatches.id, matchId));
+
+      // Obtener el match actualizado
+      const [updatedMatch] = await db.select().from(propertyMatches).where(eq(propertyMatches.id, matchId)).limit(1);
+
+      if (updatedMatch.ownerConfirmed && updatedMatch.seekerConfirmed) {
+        // Ambas partes confirmaron
+        await db.update(propertyMatches).set({ status: 'interested' }).where(eq(propertyMatches.id, matchId));
+
+        let ownerName = "Oferente";
+        let seekerName = "Interesado";
+
+        try {
+          const [ownerUser] = await db.select().from(users).where(eq(users.phone, ownerPhone)).limit(1);
+          if (ownerUser && ownerUser.name) ownerName = ownerUser.name;
+        } catch {}
+
+        try {
+          const [seekerUser] = await db.select().from(users).where(eq(users.phone, seekerPhone)).limit(1);
+          if (seekerUser && seekerUser.name) seekerName = seekerUser.name;
+        } catch {}
+
+        const ownerJid = ownerPhone.includes('@') ? ownerPhone : `${ownerPhone}@c.us`;
+        const seekerJid = seekerPhone.includes('@') ? seekerPhone : `${seekerPhone}@c.us`;
+
+        const matchScoreFormatted = Number(updatedMatch.matchScore || 0).toFixed(0);
+
+        const msgToOwner = `🎉🎈 *¡MATCH CONFIRMADO Y CONECTADO!* 🎈🎉
+Felicidades, ambas partes han confirmado interés en el match *#M${matchId}* (Coincidencia: ${matchScoreFormatted}%).
+
+Aquí tienes el contacto directo del aliado interesado en tu propiedad:
+👤 *Nombre:* ${seekerName}
+📞 *WhatsApp:* https://wa.me/${seekerPhone}
+💬 *Su requerimiento:* ${req.rawText || 'Sin descripción'}
+
+¡Les deseamos mucho éxito en el cierre comercial! 🤝🚀`;
+
+        const msgToSeeker = `🎉🎈 *¡MATCH CONFIRMADO Y CONECTADO!* 🎈🎉
+Felicidades, ambas partes han confirmado interés en el match *#M${matchId}* (Coincidencia: ${matchScoreFormatted}%).
+
+Aquí tienes el contacto directo del aliado que ofrece la propiedad:
+👤 *Nombre:* ${ownerName}
+📞 *WhatsApp:* https://wa.me/${ownerPhone}
+💬 *Su oferta:* ${prop.rawText || 'Sin descripción'}
+
+¡Les deseamos mucho éxito en el cierre comercial! 🤝🚀`;
+
+        await this.queuedSend(ownerJid, msgToOwner);
+        await this.queuedSend(seekerJid, msgToSeeker);
+
+        await this.logToDb(ownerJid, 'janIA', `[Match-Connected] Contact shared: Seeker is ${seekerPhone}`);
+        await this.logToDb(seekerJid, 'janIA', `[Match-Connected] Contact shared: Owner is ${ownerPhone}`);
+      } else {
+        // Solo esta parte ha confirmado
+        await this.queuedSend(senderId, `¡Gracias! He registrado tu confirmación de interés para el match *#M${matchId}*.\n\nEn cuanto la otra parte también confirme, les compartiré mutuamente sus datos de contacto para que puedan cerrar el negocio. 🚀`);
+        await this.logToDb(senderId, 'janIA', `[Match-Confirmed-Waiting] User confirmed match #M${matchId}, waiting for peer.`);
+      }
+    } catch (err: any) {
+      console.error(`[processMatchConfirmation-Error] Error procesando confirmación para match #${matchId}:`, err);
+      await this.queuedSend(senderId, "⚠️ Ocurrió un error interno al procesar tu confirmación.");
     }
   }
 
@@ -1033,22 +1163,11 @@ export class WhatsAppBot {
       const dmMsg = result.dmResponse || result.response;
       if (dmMsg && dmMsg.trim() !== "") {
         if (isGroup) {
-          // Si proviene de un grupo y faltan datos, enviamos un link wa.me público con la advertencia en el grupo
+          // Si proviene de un grupo y faltan datos, enviamos la advertencia de geocodificación directamente por privado para mantener limpio el grupo
           if (result.classification === "DATOS_INCOMPLETOS") {
-            const botNumber = this.client.info?.wid?.user;
-            const rawPhone = senderId.split('@')[0];
-            const targetText = encodeURIComponent(`Hola JanIA, deseo completar mi publicación del barrio.`);
-            const waLink = botNumber ? `https://wa.me/${botNumber}?text=${targetText}` : `un chat privado conmigo`;
-            
-            const groupReplyText = `⚠️ *DATOS INCOMPLETOS* ⚠️\n\nHola @${rawPhone}, logré registrar parte de tu publicación, pero mis motores no pudieron extraer el barrio, vereda o municipio del enlace o texto. Para poder activarte los cruces comerciales automáticos, ¡necesitamos completar la ubicación!\n\n👉 Por favor, presiona este enlace e inicia un chat privado conmigo para indicármelo: ${waLink} (¡No es por molestarte, es necesario para poder buscarte un MATCH de inmediato! 🚀)`;
-            
-            await this.queuedSend(chatId, groupReplyText, {
-              mentions: [senderId],
-              quotedMessageId: originalMsg?.id?._serialized
-            });
-            await this.logToDb(senderId, 'janIA', `[Group-OptIn-Notice] ${groupReplyText}`);
+            await this.queuedSend(senderId, dmMsg);
+            await this.logToDb(senderId, 'janIA', `[DM-Incompleto] ${dmMsg}`);
           }
-          // Para publicaciones perfectas, omitimos el DM de confirmación para evitar sospechas de spam en Meta (ya se marcó con ✅)
         } else {
           // Si el chat ya se originó en privado (DM), respondemos normalmente en privado
           const options: any = {};
@@ -1070,6 +1189,18 @@ export class WhatsAppBot {
           expiresAt: Date.now() + 2 * 60 * 60 * 1000
         });
         this.savePendingData();
+      }
+    }
+    // Enviar DMs extra de confirmación
+    if (result.extraDMs && result.extraDMs.length > 0) {
+      for (const dm of result.extraDMs) {
+        try {
+          console.log(`[JanIA-MatchDM] Enviando confirmación de match a ${dm.jid}...`);
+          await this.queuedSend(dm.jid, dm.message);
+          await this.logToDb(dm.jid, 'janIA', `[Match-DM-Request] ${dm.message}`);
+        } catch (err: any) {
+          console.error(`[JanIA-MatchDM-Error] Fallo al enviar DM a ${dm.jid}:`, err.message || err);
+        }
       }
     }
   }

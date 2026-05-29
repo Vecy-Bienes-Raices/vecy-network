@@ -6,6 +6,7 @@ import { propertyMatches, requirements, properties } from '../../drizzle/schema'
 import { gte, and, eq, sql } from 'drizzle-orm';
 import { whatsappBot } from './whatsapp';
 import { publishToFacebookGroup } from './facebookService';
+import { invokeLLM } from './llm';
 import { 
   MSG_PRESENTACION_INSTITUCIONAL, 
   MSG_PAUTAS_FORMATOS,
@@ -20,120 +21,46 @@ import {
  */
 
 export function initCronScheduler() {
-  console.log('[CRON-SERVICE] Inicializando orquestador de agendas automatizadas...');
+  console.log('[CRON-SERVICE] Inicializando orquestador de agendas automatizadas (Modo Optimizado dos veces al día)...');
 
-  // 1. 08:00 AM = Presentación Institucional
-  cron.schedule('0 8 * * *', async () => {
-    console.log('[CRON-SERVICE] Enviando Presentación Institucional...');
-    await whatsappBot.sendToGroup(MSG_PRESENTACION_INSTITUCIONAL);
-  });
-
-  // 2. 09:30 AM = Estatuto y Frecuencia
+  // 1. 09:30 AM = Mensaje Dinámico Informativo de la Mañana
   cron.schedule('30 9 * * *', async () => {
-    console.log('[CRON-SERVICE] Enviando Estatuto y Frecuencias...');
-    await whatsappBot.sendToGroup(MSG_PAUTAS_FORMATOS);
-  });
-
-  // 3. 10:30 AM = Anuncio de Retorno (Y bienvenida a los nuevos)
-  cron.schedule('30 10 * * *', async () => {
-    console.log('[CRON-SERVICE] Enviando Anuncio de Retorno...');
+    console.log('[CRON-SERVICE] Generando y enviando Mensaje Dinámico de la Mañana...');
     try {
-      await whatsappBot.sendAnuncioRetorno();
+      const prompt = `[MENSAJE INFORMATIVO/EDUCATIVO DE LA MAÑANA] Genera un post corto y elocuente sobre cómo usar a JanIA v2.0 (CRM, OCR, audio), geocodificación de ubicación exacta, reglas de strikes del grupo, o consejos comerciales. Sé creativo y variado. Usa emojis de forma ordenada. Incluye el link de Google Reviews (https://g.page/r/CctNbwU6UpX5EBM/review) motivando al compromiso de honor si cierran un match.`;
+      const response = await invokeLLM({
+        messages: [
+          { role: 'system', content: 'Eres JanIA, la mente de inteligencia artificial de la red inmobiliaria colaborativa VECY Network en Colombia.' },
+          { role: 'user', content: prompt }
+        ]
+      });
+      const content = response.choices[0]?.message?.content;
+      if (content && content.trim() !== "") {
+        await whatsappBot.broadcastToAllGroups(content);
+      }
     } catch (e: any) {
-      console.error('❌ Error al enviar el anuncio de retorno:', e.message);
+      console.error('❌ Error al generar mensaje dinámico de la mañana:', e.message);
     }
   });
 
-  // 4. 11:00 AM = Tips de Calidad (Nivel Nacional)
-  cron.schedule('0 11 * * *', async () => {
-    console.log('[CRON-SERVICE] Enviando Tips de Calidad Nacional...');
-    await whatsappBot.sendToGroup(MSG_TIPS_CALIDAD_COBERTURA);
-  });
-
-  // 4.5. 10:00 AM = Publicación Promocional Diaria (Mañana)
-  cron.schedule('0 10 * * *', async () => {
-    console.log('[CRON-SERVICE] Enviando Publicación Promocional Diaria (Mañana)...');
-    await whatsappBot.broadcastGroupPromos('./client/public/jania_post.png');
-  });
-
-  // 5. 12:30 PM = Saludo del Medio Día (Facebook replication commented out)
-  cron.schedule('30 12 * * *', async () => {
-    console.log('[CRON-SERVICE] Enviando Saludo del Medio Día...');
-    const motivation = 
-      `✨ *¡FELIZ MEDIODÍA, COMUNIDAD VECY!* ✨\n\n` +
-      `Iniciamos una nueva jornada de oportunidades. El mercado inmobiliario no se detiene y JanIA v2.0 tampoco.\n\n` +
-      `🚀 *Recordatorio de Superpoderes:* \n` +
-      `▸ Leo tus links de CRM automáticamente.\n` +
-      `▸ Escaneo tus flyers y fotos con OCR.\n` +
-      `▸ Proceso tus notas de voz en segundos.\n\n` +
-      `¡Hagamos que hoy sea un día de cierres masivos! 🏆`;
-      
-    const videoPath = './client/public/vecy_inmuebles_network.mp4';
-    await whatsappBot.broadcastToAllGroups(motivation, videoPath);
-
-    // DESACTIVADO POR AHORA: Replicación en Facebook Groups con Embudo
-    // try {
-    //   const fbInvitation = 
-    //     "\n\n━━━━━━━━━━━━━━━━━━━━━━\n" +
-    //     "💼 ¿Eres bróker, asesor o inversionista en Bogotá y Colombia?\n" +
-    //     "🚀 ¡Únete a nuestra Bolsa Colaborativa de Alta Velocidad en WhatsApp y accede a matches e inventario exclusivo en tiempo real!\n" +
-    //     "👉 Entra aquí: https://chat.whatsapp.com/K36KrHeB9nMEKJ56s8XFcM";
-    //   
-    //   const fbContent = motivation.replace(/\*/g, '') + fbInvitation;
-    //   
-    //   if (fs.existsSync(path.resolve(videoPath))) {
-    //     const videoBuffer = fs.readFileSync(path.resolve(videoPath));
-    //     publishToFacebookGroup(fbContent, videoBuffer)
-    //       .then(success => {
-    //         if (success) console.log("✅ [Cron-FB-Sync] Publicación de mediodía replicada con éxito.");
-    //       })
-    //       .catch(err => console.error("❌ [Cron-FB-Sync-Error]:", err.message));
-    //   }
-    // } catch (e: any) {
-    //   console.error("[Cron-FB-Sync-Critical]:", e.message);
-    // }
-  });
-
-  // 6. 02:00 PM = Boletín Meridiano
-  cron.schedule('0 14 * * *', async () => {
-    console.log('[CRON-SERVICE] Enviando Boletín de Matches Meridiano...');
-    await sendMatchBulletin('MERIDIANO');
-  });
-
-  // 7. 03:30 PM = Anuncio de Retorno y Presentación Institucional (Resumen Unificado)
-  cron.schedule('30 15 * * *', async () => {
-    console.log('[CRON-SERVICE] Enviando Resumen Unificado de Retorno y Presentación...');
-    await whatsappBot.sendToGroup(MSG_RESUMEN_RETORNO_PRESENTACION);
-  });
-
-  // 7.5. 04:30 PM = Publicación Promocional Diaria (Tarde)
-  cron.schedule('30 16 * * *', async () => {
-    console.log('[CRON-SERVICE] Enviando Publicación Promocional Diaria (Tarde)...');
-    await whatsappBot.broadcastGroupPromos('./client/public/jania_post.png');
-  });
-
-  // 8. 05:00 PM = Estatuto y Frecuencia
-  cron.schedule('0 17 * * *', async () => {
-    console.log('[CRON-SERVICE] Enviando Estatuto y Frecuencias (Tarde)...');
-    await whatsappBot.sendToGroup(MSG_PAUTAS_FORMATOS);
-  });
-
-  // 9. 06:30 PM = Tips de Calidad
-  cron.schedule('30 18 * * *', async () => {
-    console.log('[CRON-SERVICE] Enviando Tips de Calidad Nacional (Tarde)...');
-    await whatsappBot.sendToGroup(MSG_TIPS_CALIDAD_COBERTURA);
-  });
-
-  // 10. 08:00 PM = Boletín Nocturno (Matches del día y recuento semanal/mensual)
-  cron.schedule('0 20 * * *', async () => {
-    console.log('[CRON-SERVICE] Enviando Boletín de Matches Nocturno y Estadísticas...');
-    await sendMatchBulletin('NOCTURNO DE CIERRE');
-  });
-
-  // 11. 09:30 PM = Cierre del día
-  cron.schedule('30 21 * * *', async () => {
-    console.log('[CRON-SERVICE] Enviando Cierre de Operaciones...');
-    await whatsappBot.sendToGroup(MSG_CIERRE_OPERACIONES);
+  // 2. 06:00 PM = Mensaje Dinámico de Motivación de la Tarde
+  cron.schedule('0 18 * * *', async () => {
+    console.log('[CRON-SERVICE] Generando y enviando Mensaje Dinámico de la Tarde...');
+    try {
+      const prompt = `[MENSAJE MOTIVACIONAL DE LA TARDE] Genera un post corto de motivación y tips comerciales para cerrar el día en VECY Network. Recuerda que no cobramos comisiones. Usa emojis de forma atractiva. Invita a calificar a JanIA con 5 estrellas si han tenido éxito con un match, como parte de nuestro compromiso de honor: https://g.page/r/CctNbwU6UpX5EBM/review`;
+      const response = await invokeLLM({
+        messages: [
+          { role: 'system', content: 'Eres JanIA, la mente de inteligencia artificial de la red inmobiliaria colaborativa VECY Network en Colombia.' },
+          { role: 'user', content: prompt }
+        ]
+      });
+      const content = response.choices[0]?.message?.content;
+      if (content && content.trim() !== "") {
+        await whatsappBot.broadcastToAllGroups(content);
+      }
+    } catch (e: any) {
+      console.error('❌ Error al generar mensaje dinámico de la tarde:', e.message);
+    }
   });
 }
 

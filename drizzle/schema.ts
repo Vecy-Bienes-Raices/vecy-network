@@ -187,8 +187,21 @@ export const propertyMatches = pgTable("propertyMatches", {
   matchScore: decimal("matchScore", { precision: 5, scale: 2 }), // 0-100
   matchReason: text("matchReason"),
   status: matchStatusEnum("status").default("suggested").notNull(),
+  ownerConfirmed: boolean("ownerConfirmed").default(false).notNull(),
+  seekerConfirmed: boolean("seekerConfirmed").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
+
+/**
+ * Pending Sessions table - Persisting WhatsApp conversation context
+ */
+export const pendingSessions = pgTable("pendingSessions", {
+  jid: varchar("jid", { length: 255 }).primaryKey(),
+  sessionData: jsonb("sessionData").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
 
 /**
  * Referral Links table - Stealth links for agents/affiliates

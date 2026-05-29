@@ -29,6 +29,13 @@
       "when": 1779253985200,
       "tag": "0003_sweet_human_cannonball",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1780021233189,
+      "tag": "0004_heavy_legion",
+      "breakpoints": true
     }
   ]
 }

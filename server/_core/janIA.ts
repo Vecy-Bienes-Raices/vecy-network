@@ -4,7 +4,7 @@
  */
 import { invokeLLM } from "./llm";
 import { getDb } from "../db";
-import { properties, requirements, users, propertyImages, InsertProperty, InsertRequirement } from "../../drizzle/schema";
+import { properties, requirements, users, propertyImages, InsertProperty, InsertRequirement, pendingSessions } from "../../drizzle/schema";
 import { findMatchesForProperty, findMatchesForRequirement } from "./matching";
 import { validarZona, normalizarTextoGeografico } from "./geography";
 import { transcribeAudio } from "./voiceTranscription";
@@ -21,10 +21,53 @@ export type JanIAResult = {
   shouldSendDM?: boolean;
   dmShouldReply?: boolean; // Flag para indicar que el DM debe ser un reply
   reactionEmoji?: string;  // Emoji que la IA recomienda para reaccionar al mensaje original
+  extraDMs?: { jid: string; message: string }[];
 };
 
 // --- 1. ALMACENES DE MEMORIA (v11.70) ---
-const PENDING_SESSIONS = new Map<string, { type: "PROPERTY" | "REQUIREMENT"; extractedData: any; senderInfo: any; messageToProcess: string; imageBuffer?: string }>();
+async function getPendingSession(userId: string): Promise<{ type: "PROPERTY" | "REQUIREMENT"; extractedData: any; senderInfo: any; messageToProcess: string; imageBuffer?: string } | null> {
+  try {
+    const db = await getDb();
+    if (!db) return null;
+    const [session] = await db.select().from(pendingSessions).where(eq(pendingSessions.jid, userId)).limit(1);
+    if (!session) return null;
+    return session.sessionData as any;
+  } catch (err) {
+    console.error("[Database] Error getting pending session:", err);
+    return null;
+  }
+}
+
+async function setPendingSession(userId: string, data: any): Promise<void> {
+  try {
+    const db = await getDb();
+    if (!db) return;
+    await db.insert(pendingSessions).values({
+      jid: userId,
+      sessionData: data,
+      updatedAt: new Date()
+    }).onConflictDoUpdate({
+      target: pendingSessions.jid,
+      set: {
+        sessionData: data,
+        updatedAt: new Date()
+      }
+    });
+  } catch (err) {
+    console.error("[Database] Error setting pending session:", err);
+  }
+}
+
+async function deletePendingSession(userId: string): Promise<void> {
+  try {
+    const db = await getDb();
+    if (!db) return;
+    await db.delete(pendingSessions).where(eq(pendingSessions.jid, userId));
+  } catch (err) {
+    console.error("[Database] Error deleting pending session:", err);
+  }
+}
+
 const GREETED_TODAY = new Map<string, string>(); // Mapea userId -> fecha "YYYY-MM-DD"
 
 const REPUTATION_HOOK = "\n\n⚖️ COMPROMISO DE HONOR VECY: Al operar en Etapa de Prueba Gratuita y sin comisiones, si consolidan un negocio real gracias a este MATCH, es de carácter obligatorio compartir su testimonio de éxito en este grupo y registrar su reseña oficial y calificación aquí: https://g.page/r/CctNbwU6UpX5EBM/review";
@@ -376,6 +419,112 @@ function formatColombiaDateTime(dateVal: any) {
   };
 }
 
+async function handleDetectedMatches(
+  matches: any[],
+  isProperty: boolean,
+  savedRecord: any,
+  userId: string,
+  realName: string
+): Promise<{ response: string; mentions: string[]; extraDMs: { jid: string; message: string }[] }> {
+  const extraDMs: { jid: string; message: string }[] = [];
+  const mentions: string[] = [userId];
+  const matchBlocks: string[] = [];
+
+  const savedDateTime = formatColombiaDateTime(savedRecord.createdAt || new Date());
+  const savedPhone = savedRecord.idUsuarioWhatsapp || '';
+  const savedRawPhone = savedPhone.split('@')[0];
+  const savedJid = savedPhone.includes('@') ? savedPhone : `${savedPhone}@c.us`;
+
+  for (const matchedItem of matches) {
+    const score = matchedItem.score || 70;
+    const matchId = matchedItem.matchId;
+
+    const matchedDateTime = formatColombiaDateTime(matchedItem.createdAt || new Date());
+    const matchedPhone = matchedItem.idUsuarioWhatsapp || '';
+    const matchedRawPhone = matchedPhone.split('@')[0];
+    const matchedJid = matchedPhone.includes('@') ? matchedPhone : `${matchedPhone}@c.us`;
+
+    if (matchedJid && !mentions.includes(matchedJid)) {
+      mentions.push(matchedJid);
+    }
+
+    const reqItem = isProperty ? matchedItem : savedRecord;
+    const propItem = isProperty ? savedRecord : matchedItem;
+
+    const reqDateTime = isProperty ? matchedDateTime : savedDateTime;
+    const propDateTime = isProperty ? savedDateTime : matchedDateTime;
+
+    const block = `🎉🎈 *¡FELICITACIONES! MATCH COMERCIAL DETECTADO* (Coincidencia: ${score.toFixed(0)}%) 🎈🎉
+📌 *Código de Match:* #M${matchId}
+
+📣 *REQUERIMIENTO* 📣
+• 🏢 *INMUEBLE:* ${translatePropertyType(reqItem.tipoInmuebleDeseado || reqItem.propertyType || 'inmueble')}
+• 💼 *NEGOCIO:* ${translateTransactionType(reqItem.tipoNegocioDeseado || reqItem.transactionType || 'compra')}
+• 📅 *FECHA DE ENVÍO:* ${reqDateTime.dateStr}
+• ⏰ *HORA DE ENVÍO:* ${reqDateTime.timeStr}
+• 👤 *Autor:* @${isProperty ? matchedRawPhone : savedRawPhone}
+• 💬 *PUBLICACIÓN:* ${reqItem.rawText || 'Sin descripción'}
+• 📞 *CONTACTO:* [Confirmación Pendiente - Se envió DM privado 📩]
+
+────────────────────────────────
+
+🏠 *PROPIEDAD* 🏠
+• 🏢 *INMUEBLE:* ${translatePropertyType(propItem.propertyType || 'inmueble')}
+• 💼 *NEGOCIO:* ${translateTransactionType(propItem.transactionType || 'venta')}
+• 📅 *FECHA DE ENVÍO:* ${propDateTime.dateStr}
+• ⏰ *HORA DE ENVÍO:* ${propDateTime.timeStr}
+• 👤 *Autor:* @${isProperty ? savedRawPhone : matchedRawPhone}
+• 💬 *PUBLICACIÓN:* ${propItem.rawText || 'Sin descripción'}
+• 📞 *CONTACTO:* [Confirmación Pendiente - Se envió DM privado 📩]`;
+
+    matchBlocks.push(block);
+
+    // El oferente (propietario)
+    const ownerJid = isProperty ? savedJid : matchedJid;
+    const ownerDM = `🤝 *CONFIRMACIÓN DE MATCH (#M${matchId})* 🤝
+
+Hola Colega, he detectado una coincidencia del *${score.toFixed(0)}%* de tu propiedad con un requerimiento de la red:
+• 🏢 *Inmueble:* ${translatePropertyType(reqItem.tipoInmuebleDeseado || reqItem.propertyType || 'inmueble')}
+• 💼 *Negocio:* ${translateTransactionType(reqItem.tipoNegocioDeseado || reqItem.transactionType || 'compra')}
+• 📍 *Ubicación:* ${reqItem.ciudadDeseada || reqItem.city || 'Bogotá'} - ${reqItem.zonaDeseada || reqItem.zone || ''}
+• 💬 *Publicación del aliado:* ${reqItem.rawText || 'Sin descripción'}
+
+Para conectar tu contacto con este aliado de forma segura, por favor responde a este mensaje diciendo:
+👉 *SÍ #M${matchId}* (si te interesa conectar)
+👉 *NO #M${matchId}* (si no te interesa)
+
+_(Nota: El contacto mutuo se compartirá de inmediato únicamente si ambas partes confirman con SÍ en un plazo de 24 horas)._`;
+
+    // El demandante (seeker)
+    const seekerJid = isProperty ? matchedJid : savedJid;
+    const seekerDM = `🤝 *CONFIRMACIÓN DE MATCH (#M${matchId})* 🤝
+
+Hola Colega, he detectado una coincidencia del *${score.toFixed(0)}%* de tu requerimiento con una propiedad disponible en la red:
+• 🏢 *Inmueble:* ${translatePropertyType(propItem.propertyType || 'inmueble')}
+• 💼 *Negocio:* ${translateTransactionType(propItem.transactionType || 'venta')}
+• 📍 *Ubicación:* ${propItem.city || 'Bogotá'} - ${propItem.zone || ''}
+• 💵 *Precio:* ${propItem.price ? Number(propItem.price).toLocaleString('es-CO') + ' COP' : 'N/A'}
+• 💬 *Publicación de la oferta:* ${propItem.rawText || 'Sin descripción'}
+
+Para conectar tu contacto con este aliado de forma segura, por favor responde a este mensaje diciendo:
+👉 *SÍ #M${matchId}* (si te interesa conectar)
+👉 *NO #M${matchId}* (si no te interesa)
+
+_(Nota: El contacto mutuo se compartirá de inmediato únicamente si ambas partes confirman con SÍ en un plazo de 24 horas)._`;
+
+    extraDMs.push({ jid: ownerJid, message: ownerDM });
+    extraDMs.push({ jid: seekerJid, message: seekerDM });
+  }
+
+  const responseText = matchBlocks.join('\n\n================================\n\n') + '\n\n' + REPUTATION_HOOK;
+
+  return {
+    response: responseText,
+    mentions: mentions,
+    extraDMs: extraDMs
+  };
+}
+
 function translatePropertyType(type: string): string {
   const map: Record<string, string> = {
     apartment: "Apartamento",
@@ -421,11 +570,11 @@ export async function processWhatsAppMessage(
     const n = realName.split(' ')[0];
 
     // --- 2. GANCHO DE RECUPERACIÓN DE MEMORIA (v11.60) ---
-    if (PENDING_SESSIONS.has(userId)) {
-      const session = PENDING_SESSIONS.get(userId)!;
+    const session = await getPendingSession(userId);
+    if (session) {
       const geoValidation = validarZona(text, session.extractedData.city || session.extractedData.ciudadDeseada, session.messageToProcess + " " + text);
       if (geoValidation.isValid) {
-        PENDING_SESSIONS.delete(userId);
+        await deletePendingSession(userId);
 
         if (session.type === "PROPERTY") {
           if (geoValidation.isMunicipio) {
@@ -453,17 +602,18 @@ export async function processWhatsAppMessage(
 
           if (saved) {
             const matches = await findMatchesForProperty(saved.id);
-            const formattedMentions = matches.length > 0 ? matches.map((m: any) => {
-              const phone = m.idUsuarioWhatsapp || '';
-              return phone.includes('@') ? phone : `${phone}@c.us`;
-            }) : [];
+            const matchDetails = matches.length > 0
+              ? await handleDetectedMatches(matches, true, saved, userId, realName)
+              : { response: "", mentions: [], extraDMs: [] };
+
             return {
               classification: "INMUEBLE",
               extractedData: session.extractedData,
               shouldSendDM: true,
               dmResponse: `Perfecto, ${n}! Con el barrio *${geoValidation.barrioCanonico}* acabo de completar el registro de tu activo en nuestra base de datos. Ya estoy buscando activamente tu MATCH comercial en la red. ¡Excelente labor!`,
-              response: matches.length > 0 ? `🎯 ¡MATCH INTELIGENTE DETECTADO! 🎯\n\nHe encontrado ${matches.length} requerimientos compatibles con tu oferta.\n` + REPUTATION_HOOK : "",
-              mentions: matches.length > 0 ? [...formattedMentions, userId] : []
+              response: matchDetails.response,
+              mentions: matchDetails.mentions,
+              extraDMs: matchDetails.extraDMs
             };
           }
         } else {
@@ -495,17 +645,18 @@ export async function processWhatsAppMessage(
 
           if (saved) {
             const matches = await findMatchesForRequirement(saved.id);
-            const formattedMentions = matches.length > 0 ? matches.map((m: any) => {
-              const phone = m.idUsuarioWhatsapp || '';
-              return phone.includes('@') ? phone : `${phone}@c.us`;
-            }) : [];
+            const matchDetails = matches.length > 0
+              ? await handleDetectedMatches(matches, false, saved, userId, realName)
+              : { response: "", mentions: [], extraDMs: [] };
+
             return {
               classification: "REQUERIMIENTO",
               extractedData: session.extractedData,
               shouldSendDM: true,
               dmResponse: `Perfecto, ${n}! Con el barrio *${geoValidation.barrioCanonico}* acabo de completar el registro de tu requerimiento en nuestra base de datos. Ya estoy buscando activamente el inmueble ideal en la red. ¡Excelente labor!`,
-              response: matches.length > 0 ? `🎯 ¡MATCH INTELIGENTE DETECTADO! 🎯\n\nTu búsqueda tiene ${matches.length} coincidencias exactas en nuestra red nacional.\n` + REPUTATION_HOOK : "",
-              mentions: matches.length > 0 ? [...formattedMentions, userId] : []
+              response: matchDetails.response,
+              mentions: matchDetails.mentions,
+              extraDMs: matchDetails.extraDMs
             };
           }
         }
@@ -571,7 +722,7 @@ export async function processWhatsAppMessage(
         result.response = ""; // Silencio en el grupo
 
         // v11.60 Almacenamiento en caché (REGLA 3)
-        PENDING_SESSIONS.set(userId, {
+        await setPendingSession(userId, {
           type: isProperty ? "PROPERTY" : "REQUIREMENT",
           extractedData: extracted,
           senderInfo: senderInfo,
@@ -642,53 +793,13 @@ export async function processWhatsAppMessage(
         result.dmResponse = intro + (senderInfo.greeting ? mainText : capitalize(mainText));
         
         const matches = await findMatchesForProperty(saved.id);
-        if (matches.length > 0) {
-          const formattedMentions = matches.map((m: any) => {
-            const phone = m.idUsuarioWhatsapp || '';
-            return phone.includes('@') ? phone : `${phone}@c.us`;
-          });
-          result.mentions.push(...formattedMentions, userId);
+        const matchDetails = matches.length > 0
+          ? await handleDetectedMatches(matches, true, saved, userId, realName)
+          : { response: "", mentions: [], extraDMs: [] };
 
-          const propDateTime = formatColombiaDateTime(saved.createdAt || new Date());
-          const propPhone = saved.idUsuarioWhatsapp || '';
-          const propRawPhone = propPhone.split('@')[0];
-
-          const matchBlocks = [];
-          for (const req of matches) {
-            const reqDateTime = formatColombiaDateTime(req.createdAt || new Date());
-            const reqPhone = req.idUsuarioWhatsapp || '';
-            const reqRawPhone = reqPhone.split('@')[0];
-            const score = req.score || 70;
-
-            const block = `🎉🎈 *¡FELICITACIONES! MATCH COMERCIAL DETECTADO* (Coincidencia: ${score.toFixed(0)}%) 🎈🎉
-
-📣 *REQUERIMIENTO* 📣
-• 🏢 *INMUEBLE:* ${translatePropertyType(req.tipoInmuebleDeseado || 'inmueble')}
-• 💼 *NEGOCIO:* ${translateTransactionType(req.tipoNegocioDeseado || 'compra')}
-• 📅 *FECHA DE ENVÍO:* ${reqDateTime.dateStr}
-• ⏰ *HORA DE ENVÍO:* ${reqDateTime.timeStr}
-• 👤 *Autor:* @${reqRawPhone}
-• 💬 *PUBLICACIÓN:* ${req.rawText || 'Sin descripción'}
-• 📞 *CONTACTO:* https://wa.me/${reqRawPhone}
-
-────────────────────────────────
-
-🏠 *PROPIEDAD* 🏠
-• 🏢 *INMUEBLE:* ${translatePropertyType(saved.propertyType || 'inmueble')}
-• 💼 *NEGOCIO:* ${translateTransactionType(saved.transactionType || 'venta')}
-• 📅 *FECHA DE ENVÍO:* ${propDateTime.dateStr}
-• ⏰ *HORA DE ENVÍO:* ${propDateTime.timeStr}
-• 👤 *Autor:* @${propRawPhone}
-• 💬 *PUBLICACIÓN:* ${saved.rawText || 'Sin descripción'}
-• 📞 *CONTACTO:* https://wa.me/${propRawPhone}`;
-
-            matchBlocks.push(block);
-          }
-
-          result.response = matchBlocks.join('\n\n================================\n\n') + '\n\n' + REPUTATION_HOOK;
-        } else {
-          result.response = ""; // Silencio de Oro en el grupo
-        }
+        result.response = matchDetails.response;
+        result.mentions = matchDetails.mentions;
+        result.extraDMs = matchDetails.extraDMs;
       }
     } else if (isRequirement) {
       const reqTitle = extracted.title || `Requerimiento de ${extracted.propertyType || 'inmueble'} en ${extracted.zonaDeseada || extracted.zone || 'Bogotá'} para ${extracted.transactionType || 'venta'}`;
@@ -712,53 +823,13 @@ export async function processWhatsAppMessage(
         result.dmResponse = intro + (senderInfo.greeting ? mainText : capitalize(mainText));
 
         const matches = await findMatchesForRequirement(saved.id);
-        if (matches.length > 0) {
-          const formattedMentions = matches.map((m: any) => {
-            const phone = m.idUsuarioWhatsapp || '';
-            return phone.includes('@') ? phone : `${phone}@c.us`;
-          });
-          result.mentions.push(...formattedMentions, userId);
+        const matchDetails = matches.length > 0
+          ? await handleDetectedMatches(matches, false, saved, userId, realName)
+          : { response: "", mentions: [], extraDMs: [] };
 
-          const reqDateTime = formatColombiaDateTime(saved.createdAt || new Date());
-          const reqPhone = saved.idUsuarioWhatsapp || '';
-          const reqRawPhone = reqPhone.split('@')[0];
-
-          const matchBlocks = [];
-          for (const prop of matches) {
-            const propDateTime = formatColombiaDateTime(prop.createdAt || new Date());
-            const propPhone = prop.idUsuarioWhatsapp || '';
-            const propRawPhone = propPhone.split('@')[0];
-            const score = prop.score || 70;
-
-            const block = `🎉🎈 *¡FELICITACIONES! MATCH COMERCIAL DETECTADO* (Coincidencia: ${score.toFixed(0)}%) 🎈🎉
-
-📣 *REQUERIMIENTO* 📣
-• 🏢 *INMUEBLE:* ${translatePropertyType(saved.tipoInmuebleDeseado || 'inmueble')}
-• 💼 *NEGOCIO:* ${translateTransactionType(saved.tipoNegocioDeseado || 'compra')}
-• 📅 *FECHA DE ENVÍO:* ${reqDateTime.dateStr}
-• ⏰ *HORA DE ENVÍO:* ${reqDateTime.timeStr}
-• 👤 *Autor:* @${reqRawPhone}
-• 💬 *PUBLICACIÓN:* ${saved.rawText || 'Sin descripción'}
-• 📞 *CONTACTO:* https://wa.me/${reqRawPhone}
-
-────────────────────────────────
-
-🏠 *PROPIEDAD* 🏠
-• 🏢 *INMUEBLE:* ${translatePropertyType(prop.propertyType || 'inmueble')}
-• 💼 *NEGOCIO:* ${translateTransactionType(prop.transactionType || 'venta')}
-• 📅 *FECHA DE ENVÍO:* ${propDateTime.dateStr}
-• ⏰ *HORA DE ENVÍO:* ${propDateTime.timeStr}
-• 👤 *Autor:* @${propRawPhone}
-• 💬 *PUBLICACIÓN:* ${prop.rawText || 'Sin descripción'}
-• 📞 *CONTACTO:* https://wa.me/${propRawPhone}`;
-
-            matchBlocks.push(block);
-          }
-
-          result.response = matchBlocks.join('\n\n================================\n\n') + '\n\n' + REPUTATION_HOOK;
-        } else {
-          result.response = ""; // Silencio de Oro en el grupo
-        }
+        result.response = matchDetails.response;
+        result.mentions = matchDetails.mentions;
+        result.extraDMs = matchDetails.extraDMs;
       }
     }
 

@@ -289,17 +289,32 @@ export async function findMatchesForProperty(propertyId: number) {
     for (const req of activeRequirements) {
       const score = calcularScoreMatch(req, property);
       if (score >= 70) {
-        await db.insert(propertyMatches).values({
-          propertyId: propertyId,
-          requirementId: req.id,
-          matchScore: score.toFixed(2),
-          matchReason: `VECY CORE TS Scoring: ${score.toFixed(2)}/100`,
-          status: "suggested",
-        }).onConflictDoNothing();
+        let matchId: number;
+        const existing = await db.select().from(propertyMatches).where(
+          and(
+            eq(propertyMatches.propertyId, propertyId),
+            eq(propertyMatches.requirementId, req.id)
+          )
+        ).limit(1);
+        if (existing.length > 0) {
+          matchId = existing[0].id;
+        } else {
+          const [newMatch] = await db.insert(propertyMatches).values({
+            propertyId: propertyId,
+            requirementId: req.id,
+            matchScore: score.toFixed(2),
+            matchReason: `VECY CORE TS Scoring: ${score.toFixed(2)}/100`,
+            status: "suggested",
+            ownerConfirmed: false,
+            seekerConfirmed: false,
+          }).returning();
+          matchId = newMatch.id;
+        }
 
         validMatches.push({
           ...req,
           score: score,
+          matchId: matchId,
           idUsuarioWhatsapp: req.idUsuarioWhatsapp,
         });
       }
@@ -340,17 +355,32 @@ export async function findMatchesForRequirement(requirementId: number) {
     for (const prop of availableProperties) {
       const score = calcularScoreMatch(req, prop);
       if (score >= 70) {
-        await db.insert(propertyMatches).values({
-          propertyId: prop.id,
-          requirementId: requirementId,
-          matchScore: score.toFixed(2),
-          matchReason: `VECY CORE TS Scoring: ${score.toFixed(2)}/100`,
-          status: "suggested",
-        }).onConflictDoNothing();
+        let matchId: number;
+        const existing = await db.select().from(propertyMatches).where(
+          and(
+            eq(propertyMatches.propertyId, prop.id),
+            eq(propertyMatches.requirementId, requirementId)
+          )
+        ).limit(1);
+        if (existing.length > 0) {
+          matchId = existing[0].id;
+        } else {
+          const [newMatch] = await db.insert(propertyMatches).values({
+            propertyId: prop.id,
+            requirementId: requirementId,
+            matchScore: score.toFixed(2),
+            matchReason: `VECY CORE TS Scoring: ${score.toFixed(2)}/100`,
+            status: "suggested",
+            ownerConfirmed: false,
+            seekerConfirmed: false,
+          }).returning();
+          matchId = newMatch.id;
+        }
 
         validMatches.push({
           ...prop,
           score: score,
+          matchId: matchId,
           idUsuarioWhatsapp: prop.idUsuarioWhatsapp,
         });
       }
