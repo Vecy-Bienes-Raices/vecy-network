@@ -1569,3 +1569,35 @@ export async function processCirculoMessage(
   }
 }
 
+export const MSG_COMUNICADO_MATCH_NETWORK = `🚀 ¡NUEVO SISTEMA DE MATCH PRIVADO Y SEGURO CON JanIA! 🎯🤝
+
+Estimados aliados, para asegurar que los MATCH comerciales se conviertan en cierres reales de negocios y proteger la privacidad de sus contactos, hemos implementado el flujo de *CONFIRMACIÓN BILATERAL PRIVADA*:
+
+¿Cómo funciona a partir de hoy?
+
+1️⃣ Publica tus ofertas o requerimientos en el grupo como siempre.
+2️⃣ Si hay coincidencia (Match), JanIA lo anunciará en el grupo para que la red vea el cruce, pero ocultará los contactos directos.
+3️⃣ JanIA te escribirá de inmediato por CHAT PRIVADO (DM) enviándote la ficha del colega y solicitando tu confirmación.
+4️⃣ Responde en ese chat privado con un simple:
+   👉 SÍ #M[Código]  (si te interesa conectar)
+   👉 NO #M[Código]  (si ya no está disponible)
+5️⃣ Si ambos confirman con SÍ, JanIA les entregará a cada uno en privado el contacto directo del otro para que coordinen la cita. 📲🤝
+
+⚠️ IMPORTANTE: Recuerden que operamos en Etapa de Prueba Gratuita y SIN COMISIONES. Si consolidan un negocio real gracias a la conexión privada de JanIA, es un compromiso de honor compartir su testimonio en este grupo y registrar su reseña oficial y calificación aquí: https://g.page/r/CctNbwU6UpX5EBM/review 
+
+¡El negocio ahora se activa directo en tu chat privado! Hagamos que el cierre ocurra. 🚀📈`;
+
+export const MSG_COMUNICADO_MATCH_CIRCULO = `⚖️ COMPROMISO DE HONOR VECY: EVOLUCIONAMOS AL MATCH PROACTIVO ⚖️
+
+Queridos colegas de Círculo Cero, la tecnología inmobiliaria más avanzada de Colombia se vuelve aún más efectiva para sus negocios. 
+
+JanIA ha dejado de ser un bot pasivo que solo publica alertas en el grupo. A partir de hoy, opera bajo el sistema de *Double Opt-In (Doble Confirmación)*:
+
+🔑 Beneficios del nuevo flujo:
+• Mayor Responsabilidad: Ya no basta con ver el match en el grupo. JanIA les pedirá confirmar el interés de forma directa en su WhatsApp privado.
+• Privacidad Protegida: Tus números de contacto y enlaces solo se compartirán con el otro asesor si ambos aprueban de forma explícita la conexión en privado.
+• Medición Real: Sabremos exactamente qué porcentaje de matches pasan a conversaciones reales y cierres de comisiones.
+
+⚠️ IMPORTANTE: Recuerden que operamos en Etapa de Prueba Gratuita y SIN COMISIONES. Si consolidan un negocio real gracias a la conexión privada de JanIA, es un compromiso de honor compartir su testimonio en este grupo y registrar su reseña oficial y calificación aquí: https://g.page/r/CctNbwU6UpX5EBM/review
+
+¡Sigamos demostrando el poder de la colaboración inteligente en Colombia! 🇨🇴🎯`;

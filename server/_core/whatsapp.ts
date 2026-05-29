@@ -14,7 +14,9 @@ import {
   MSG_PAUTAS_FORMATOS,
   MSG_PROMO_INMUEBLES,
   MSG_PROMO_CONSULTAS,
-  MSG_PROMO_CIRCULO
+  MSG_PROMO_CIRCULO,
+  MSG_COMUNICADO_MATCH_NETWORK,
+  MSG_COMUNICADO_MATCH_CIRCULO
 } from './janIA';
 import { publishToFacebookGroup } from "./facebookService";
 import fs from 'fs';
@@ -1682,6 +1684,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
       await this.sendPresentacion();
       setTimeout(() => this.sendNormas(), 4000);
     }
+    else if (text.includes('anuncia match') || text.includes('comunica match')) await this.sendComunicadoMatch();
     else if (text.includes('anuncia')) await this.sendAnuncioComision();
     else if (text.includes('dipava')) await this.sendApologyDeLaPava();
     else if (text.includes('retorno')) await this.sendAnuncioRetorno();
@@ -1776,6 +1779,18 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
       this.pendingWelcomeJids = [];
       this.pendingWelcomeCount = 0;
       this.saveCounter();
+    }
+  }
+
+  public async sendComunicadoMatch() {
+    try {
+      console.log(`[WHATSAPP-BOT] Enviando comunicado de notificaciones de match...`);
+      await this.queuedSend(this.targetGroupId, MSG_COMUNICADO_MATCH_NETWORK);
+      await delay(3000);
+      await this.queuedSend(this.circuloGroupId, MSG_COMUNICADO_MATCH_CIRCULO);
+      console.log("[WHATSAPP-BOT] Comunicado de match enviado con éxito.");
+    } catch (err: any) {
+      console.error("[WHATSAPP-BOT] Error al enviar el comunicado de match:", err.message || err);
     }
   }
 

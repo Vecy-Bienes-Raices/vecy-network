@@ -5265,6 +5265,37 @@ Pregunta: ${text2}` }
     };
   }
 }
+var MSG_COMUNICADO_MATCH_NETWORK = `\u{1F680} \xA1NUEVO SISTEMA DE MATCH PRIVADO Y SEGURO CON JanIA! \u{1F3AF}\u{1F91D}
+
+Estimados aliados, para asegurar que los MATCH comerciales se conviertan en cierres reales de negocios y proteger la privacidad de sus contactos, hemos implementado el flujo de *CONFIRMACI\xD3N BILATERAL PRIVADA*:
+
+\xBFC\xF3mo funciona a partir de hoy?
+
+1\uFE0F\u20E3 Publica tus ofertas o requerimientos en el grupo como siempre.
+2\uFE0F\u20E3 Si hay coincidencia (Match), JanIA lo anunciar\xE1 en el grupo para que la red vea el cruce, pero ocultar\xE1 los contactos directos.
+3\uFE0F\u20E3 JanIA te escribir\xE1 de inmediato por CHAT PRIVADO (DM) envi\xE1ndote la ficha del colega y solicitando tu confirmaci\xF3n.
+4\uFE0F\u20E3 Responde en ese chat privado con un simple:
+   \u{1F449} S\xCD #M[C\xF3digo]  (si te interesa conectar)
+   \u{1F449} NO #M[C\xF3digo]  (si ya no est\xE1 disponible)
+5\uFE0F\u20E3 Si ambos confirman con S\xCD, JanIA les entregar\xE1 a cada uno en privado el contacto directo del otro para que coordinen la cita. \u{1F4F2}\u{1F91D}
+
+\u26A0\uFE0F IMPORTANTE: Recuerden que operamos en Etapa de Prueba Gratuita y SIN COMISIONES. Si consolidan un negocio real gracias a la conexi\xF3n privada de JanIA, es un compromiso de honor compartir su testimonio en este grupo y registrar su rese\xF1a oficial y calificaci\xF3n aqu\xED: https://g.page/r/CctNbwU6UpX5EBM/review 
+
+\xA1El negocio ahora se activa directo en tu chat privado! Hagamos que el cierre ocurra. \u{1F680}\u{1F4C8}`;
+var MSG_COMUNICADO_MATCH_CIRCULO = `\u2696\uFE0F COMPROMISO DE HONOR VECY: EVOLUCIONAMOS AL MATCH PROACTIVO \u2696\uFE0F
+
+Queridos colegas de C\xEDrculo Cero, la tecnolog\xEDa inmobiliaria m\xE1s avanzada de Colombia se vuelve a\xFAn m\xE1s efectiva para sus negocios. 
+
+JanIA ha dejado de ser un bot pasivo que solo publica alertas en el grupo. A partir de hoy, opera bajo el sistema de *Double Opt-In (Doble Confirmaci\xF3n)*:
+
+\u{1F511} Beneficios del nuevo flujo:
+\u2022 Mayor Responsabilidad: Ya no basta con ver el match en el grupo. JanIA les pedir\xE1 confirmar el inter\xE9s de forma directa en su WhatsApp privado.
+\u2022 Privacidad Protegida: Tus n\xFAmeros de contacto y enlaces solo se compartir\xE1n con el otro asesor si ambos aprueban de forma expl\xEDcita la conexi\xF3n en privado.
+\u2022 Medici\xF3n Real: Sabremos exactamente qu\xE9 porcentaje de matches pasan a conversaciones reales y cierres de comisiones.
+
+\u26A0\uFE0F IMPORTANTE: Recuerden que operamos en Etapa de Prueba Gratuita y SIN COMISIONES. Si consolidan un negocio real gracias a la conexi\xF3n privada de JanIA, es un compromiso de honor compartir su testimonio en este grupo y registrar su rese\xF1a oficial y calificaci\xF3n aqu\xED: https://g.page/r/CctNbwU6UpX5EBM/review
+
+\xA1Sigamos demostrando el poder de la colaboraci\xF3n inteligente en Colombia! \u{1F1E8}\u{1F1F4}\u{1F3AF}`;
 
 // server/_core/whatsapp.ts
 init_db();
@@ -6649,7 +6680,8 @@ _(Nota: Por favor nombra a JanIA Administradora del grupo para que pueda borrar 
     else if (text2.includes("pres\xE9ntate")) {
       await this.sendPresentacion();
       setTimeout(() => this.sendNormas(), 4e3);
-    } else if (text2.includes("anuncia")) await this.sendAnuncioComision();
+    } else if (text2.includes("anuncia match") || text2.includes("comunica match")) await this.sendComunicadoMatch();
+    else if (text2.includes("anuncia")) await this.sendAnuncioComision();
     else if (text2.includes("dipava")) await this.sendApologyDeLaPava();
     else if (text2.includes("retorno")) await this.sendAnuncioRetorno();
   }
@@ -6736,6 +6768,17 @@ Ya estoy 100% activa para escanear sus publicaciones y buscarles cierres sin cob
       this.pendingWelcomeJids = [];
       this.pendingWelcomeCount = 0;
       this.saveCounter();
+    }
+  }
+  async sendComunicadoMatch() {
+    try {
+      console.log(`[WHATSAPP-BOT] Enviando comunicado de notificaciones de match...`);
+      await this.queuedSend(this.targetGroupId, MSG_COMUNICADO_MATCH_NETWORK);
+      await delay(3e3);
+      await this.queuedSend(this.circuloGroupId, MSG_COMUNICADO_MATCH_CIRCULO);
+      console.log("[WHATSAPP-BOT] Comunicado de match enviado con \xE9xito.");
+    } catch (err) {
+      console.error("[WHATSAPP-BOT] Error al enviar el comunicado de match:", err.message || err);
     }
   }
   async sendToGroup(text2, mediaPath, mentions) {
