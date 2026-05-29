@@ -38,7 +38,7 @@ async function transcodeToOggOpus(inputBuffer: Buffer): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const ffmpeg = spawn("ffmpeg", [
       "-i", "pipe:0",           // Leer de stdin
-      "-af", "atempo=1.3",      // Aumentar velocidad a 1.3x sin alterar tono
+      "-af", "atempo=1.15",     // Aumentar velocidad a 1.15x (calibración humana óptima)
       "-c:a", "libopus",        // Usar codec Opus
       "-ac", "1",               // Canal mono
       "-ar", "16000",           // Frecuencia 16kHz
@@ -108,16 +108,10 @@ async function textToSpeechMedia(text: string): Promise<MessageMediaType | null>
   const elevenKey = process.env.ELEVENLABS_API_KEY;
   if (elevenKey) {
     try {
-      // Laura — voz femenina latina, cálida y natural (eleven_multilingual_v2)
-      // Alternativas disponibles en elevenlabs.io/voice-library
-      // Voz recomendada: Charlotte (posh, energética, fluida en español)
-      // Puedes cambiarla con ELEVENLABS_VOICE_ID en el .env
-      // Otras buenas opciones: 
-      //   - Aria:     9BWtsMINqrJLrRacOk9x
-      //   - Charlotte: XB0fDUnXU5powFXDhCwa
-      //   - Valentina: XrExE9yKIg1WjnnlVkGX
-      const voiceId = process.env.ELEVENLABS_VOICE_ID || "XrExE9yKIg1WjnnlVkGX"; // Matilda (Pre-made, compatible con plan gratuito)
-      const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`, {
+      // Elena — voz profesional premium (ID: meyBySCAtUDmCr3eJJ1C)
+      // Si la cuenta es del plan gratuito, fallará con 402 y caerá automáticamente a Matilda (XrExE9yKIg1WjnnlVkGX)
+      const voiceId = process.env.ELEVENLABS_VOICE_ID || "meyBySCAtUDmCr3eJJ1C"; // Elena
+      let response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`, {
         method: "POST",
         headers: {
           "xi-api-key": elevenKey,
@@ -128,13 +122,40 @@ async function textToSpeechMedia(text: string): Promise<MessageMediaType | null>
           text: ttsText,
           model_id: "eleven_multilingual_v2",
           voice_settings: {
-            stability: 0.25,          // Baja = más expresiva, energética y variada
-            similarity_boost: 0.75,
-            style: 0.60,              // Alto estilo = más carácter y viveza
+            stability: 0.42,          // Calibrado para Elena humana (s42)
+            similarity_boost: 0.51,    // Clarity boost a 51% (sb51)
+            style: 0.43,              // Style exaggeration a 43% (se43)
             use_speaker_boost: true
           }
         })
       });
+
+      // Fallback automático si la voz profesional/library no está disponible en plan gratuito (error 402/400)
+      if (!response.ok && (response.status === 402 || response.status === 400)) {
+        const errText = await response.clone().text().catch(() => "");
+        if (errText.includes("paid_plan_required") || errText.includes("library voices")) {
+          const fallbackVoiceId = "XrExE9yKIg1WjnnlVkGX"; // Matilda (pre-made, 100% compatible con plan gratuito)
+          console.log(`[TTS-ElevenLabs] La voz ${voiceId} requiere plan de pago. Aplicando fallback automático a Matilda (${fallbackVoiceId})...`);
+          response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${fallbackVoiceId}?output_format=mp3_44100_128`, {
+            method: "POST",
+            headers: {
+              "xi-api-key": elevenKey,
+              "Content-Type": "application/json",
+              "Accept": "audio/mpeg"
+            },
+            body: JSON.stringify({
+              text: ttsText,
+              model_id: "eleven_multilingual_v2",
+              voice_settings: {
+                stability: 0.42,
+                similarity_boost: 0.51,
+                style: 0.43,
+                use_speaker_boost: true
+              }
+            })
+          });
+        }
+      }
 
       if (response.ok) {
         const buffer = await response.arrayBuffer();
@@ -145,7 +166,7 @@ async function textToSpeechMedia(text: string): Promise<MessageMediaType | null>
           try {
             const oggBuffer = await transcodeToOggOpus(Buffer.from(buffer));
             const base64Ogg = oggBuffer.toString('base64');
-            console.log(`[TTS-ElevenLabs] ✓ Voz Laura generada y transcodificada a OGG_OPUS (${oggBuffer.byteLength} bytes).`);
+            console.log(`[TTS-ElevenLabs] ✓ Voz generada y transcodificada a OGG_OPUS (${oggBuffer.byteLength} bytes).`);
             return new MessageMedia('audio/ogg; codecs=opus', base64Ogg, 'voice-note.ogg');
           } catch (transcodeErr) {
             console.error(`[TTS-ElevenLabs] Falló transcodificación a Ogg, enviando MP3 de respaldo:`, transcodeErr);
