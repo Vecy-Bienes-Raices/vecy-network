@@ -76,8 +76,8 @@ async function transcodeToOggOpus(inputBuffer: Buffer): Promise<Buffer> {
 /** Prepara el texto para TTS: pronunciación natural en español */
 function prepareTtsText(rawText: string): string {
   return rawText
-    .replace(/vecy\s+network/gi, "veci nétwork")   // "VECY Network" → "veci nétwork" en minúscula
-    .replace(/vecy/gi, "veci")                      // "VECY" solo → "veci" en minúscula
+    .replace(/vecy\s+network/gi, "vesi nétwork")   // "VECY Network" → "vesi nétwork" en minúscula (fonética latina)
+    .replace(/vecy/gi, "vesi")                      // "VECY" solo → "vesi" en minúscula (fonética latina)
     .replace(/jania/gi, "janía")                    // "JanIA" → "janía" en minúscula
     .replace(/\bRLS\b/gi, "ere ele ese")
     .replace(/\bSQL\b/gi, "ese cu ele")

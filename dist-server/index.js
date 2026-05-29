@@ -4168,7 +4168,7 @@ Debes demostrar un conocimiento profundo de la distribuci\xF3n geopol\xEDtica de
 ### CONCISI\xD3N Y BREVEDAD OBLIGATORIA (CR\xCDTICO - EVITAR REPETICIONES):
 \u25B8 **M\xE1xima Brevedad**: S\xE9 sumamente directa, breve y natural en tus mensajes. Los textos largos y formales aburren a los usuarios de WhatsApp. Limita tus respuestas a m\xE1ximo 1 o 2 p\xE1rrafos cortos (menos de 60 palabras en total) a menos que sea estrictamente necesario detallar un match de negocio.
 \u25B8 **Evitar discursos repetitivos**: No repitas discursos institucionales, explicaciones sobre la tecnolog\xEDa de VECY ni normas del grupo de manera recurrente, a menos que el usuario lo pregunte espec\xEDficamente. Si el usuario te saluda o hace una pregunta corta, lim\xEDtate a responder un saludo corto y preg\xFAntale en qu\xE9 le puedes ayudar hoy de manera directa.
-\u25B8 **Respuesta por Voz Inteligente**: Si el usuario te pide un audio o notas de voz (o si el mensaje entrante de usuario es por voz), debes generar en el JSON de salida el campo "wantsVoice": true y proveer en "voiceResponse" un saludo y resumen extremadamente corto (m\xE1ximo 150 caracteres en total) dise\xF1ado espec\xEDficamente para ser le\xEDdo en voz alta, sin asteriscos, sin markdown, y sin emojis.
+\u25B8 **Respuesta por Voz Inteligente**: Si el usuario te pide un audio o notas de voz (o si el mensaje entrante de usuario es por voz), debes generar en el JSON de salida el campo "wantsVoice": true y proveer en "voiceResponse" un saludo y respuesta conversacional extremadamente breve y directa (m\xE1ximo 150 caracteres en total) dise\xF1ada para leerse en voz alta, sin markdown/emojis. **CR\xCDTICO PARA LA HUMANIZACI\xD3N DE LA VOZ**: Redacta el texto con una cadencia muy humana. Utiliza comas (',') para pausas cortas, puntos suspensivos ('...') para pausas medianas de reflexi\xF3n o respiraci\xF3n natural, y signos de exclamaci\xF3n ('!') para dar entusiasmo y entonaci\xF3n. Evita oraciones largas y planas.
 
 ## MAPEO SEM\xC1NTICO POLIM\xD3RFICO (VECTORES 'GIVES' & 'WANTS')
 Para estructurar ofertas de venta/arriendo y permutas complejas, debes mapear dos vectores l\xF3gicos dentro del JSON:
@@ -4393,7 +4393,7 @@ DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
   "missingFields": ["string"],
   "reactionEmoji": "string (emoji recomendado para reaccionar al mensaje original, ej: '\u274C', '\u{1F6AB}', '\u26A0\uFE0F', '\u{1F504}', '\u2705', '\u{1F4A1}', '\u{1F3AF}')",
   "wantsVoice": boolean,
-  "voiceResponse": "string (un saludo y respuesta/resumen conversacional sumamente breve y directo en espa\xF1ol de m\xE1ximo 150 caracteres, sin negritas, sin markdown, sin corchetes, sin emojis, dise\xF1ado para ser le\xEDdo perfectamente por un sintetizador de voz)"
+  "voiceResponse": "string (un saludo y respuesta/resumen conversacional sumamente breve, directo y humanizado en espa\xF1ol de m\xE1ximo 150 caracteres, sin negritas/markdown/emojis. Usa comas y puntos suspensivos (...) de forma estrat\xE9gica para indicarle al sintetizador d\xF3nde hacer pausas naturales y respiraciones, y signos de exclamaci\xF3n para dar entonaci\xF3n)"
 }
 `;
 function formatColombiaDateTime(dateVal) {
@@ -5315,7 +5315,7 @@ async function transcodeToOggOpus(inputBuffer) {
   });
 }
 function prepareTtsText(rawText) {
-  return rawText.replace(/vecy\s+network/gi, "veci n\xE9twork").replace(/vecy/gi, "veci").replace(/jania/gi, "jan\xEDa").replace(/\bRLS\b/gi, "ere ele ese").replace(/\bSQL\b/gi, "ese cu ele").replace(/\bDM\b/gi, "di em").replace(/\bID\b/gi, "ai di").replace(/[<>]/g, "").trim();
+  return rawText.replace(/vecy\s+network/gi, "vesi n\xE9twork").replace(/vecy/gi, "vesi").replace(/jania/gi, "jan\xEDa").replace(/\bRLS\b/gi, "ere ele ese").replace(/\bSQL\b/gi, "ese cu ele").replace(/\bDM\b/gi, "di em").replace(/\bID\b/gi, "ai di").replace(/[<>]/g, "").trim();
 }
 async function textToSpeechMedia(text2) {
   const cleanText = text2.replace(/[*#_`~\[\]]/g, "").replace(new RegExp("[\\u{1F300}-\\u{1FAD6}]", "gu"), "").trim();
