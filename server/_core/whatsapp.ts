@@ -367,9 +367,9 @@ interface RecentGroupMessage {
 
 export class WhatsAppBot {
   private client: ClientType;
-  private targetGroupId: string = '120363260108880069@g.us';
-  private buzonGroupId: string = '120363417740040773@g.us';
-  private circuloGroupId: string = '120363403507276533@g.us';
+  public targetGroupId: string = '120363260108880069@g.us';
+  public buzonGroupId: string = '120363417740040773@g.us';
+  public circuloGroupId: string = '120363403507276533@g.us';
   public isReady: boolean = false;
   
   // Estructuras de control dinámicas
