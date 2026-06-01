@@ -366,7 +366,7 @@ interface RecentGroupMessage {
 }
 
 export class WhatsAppBot {
-  private client: ClientType;
+  private client!: ClientType;
   public targetGroupId: string = '120363260108880069@g.us';
   public buzonGroupId: string = '120363417740040773@g.us';
   public circuloGroupId: string = '120363403507276533@g.us';
@@ -395,6 +395,7 @@ export class WhatsAppBot {
   private chatMessageTimes: Map<string, number[]> = new Map();
   private blockedChats: Map<string, number> = new Map();
   private blacklistedBots: string[] = process.env.BLACKLISTED_BOTS ? process.env.BLACKLISTED_BOTS.split(',') : [];
+  private watchdogInterval: NodeJS.Timeout | null = null;
 
   // --- ANTI-BURST & ANTI-FLOOD QUEUED DISPATCH (v12.0) ---
   private async queuedSend(chatId: string, content: any, options: any = {}) {
@@ -478,35 +479,8 @@ export class WhatsAppBot {
     this.loadCooldowns();
     this.loadPendingData();
     
-    this.client = new Client({
-      authStrategy: new LocalAuth({
-        clientId: "session-jania-main",
-        dataPath: './.wwebjs_auth'
-      }),
-      webVersionCache: {
-        type: "remote",
-        remotePath: "https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1017.558-beta.html"
-      },
-      puppeteer: {
-        headless: true,
-        executablePath: process.env.CHROME_PATH || undefined,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-gpu',
-          '--disable-extensions',
-          '--disable-software-rasterizer',
-          '--disable-features=IsolateOrigins,site-per-process',
-          '--disable-site-isolation-trials',
-          '--no-zygote',
-          '--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
-        ],
-        protocolTimeout: 300000,
-      }
-    });
+    this.createClientInstance();
 
-    this.setupEventListeners();
     this.setupGracefulShutdown();
     // Daily scheduled publications are now handled by server/_core/cronService.ts
     // this.setupDailySchedule();
@@ -632,6 +606,7 @@ export class WhatsAppBot {
     this.client.on('ready', () => {
       console.log('\n🚀 JANIA v2.0 CORE v10.5 — SISTEMA NACIONAL ELÁSTICO ACTIVADO');
       this.isReady = true;
+      this.startWatchdog();
       this.exportRecentJoinsToFile().catch(err => {
         console.error('[WHATSAPP-BOT] Error al exportar uniones en ready:', err);
       });
@@ -2076,6 +2051,86 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
       console.log(`[WHATSAPP-BOT] ¡Listado exportado con éxito a ${outputPath}!`);
     } catch (err: any) {
       console.error('[WHATSAPP-BOT] Error exportando uniones:', err.message || err);
+    }
+  }
+
+  private createClientInstance() {
+    this.client = new Client({
+      authStrategy: new LocalAuth({
+        clientId: "session-jania-main",
+        dataPath: './.wwebjs_auth'
+      }),
+      webVersionCache: {
+        type: "remote",
+        remotePath: "https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1017.558-beta.html"
+      },
+      puppeteer: {
+        headless: true,
+        executablePath: process.env.CHROME_PATH || undefined,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+          '--disable-extensions',
+          '--disable-software-rasterizer',
+          '--disable-features=IsolateOrigins,site-per-process',
+          '--disable-site-isolation-trials',
+          '--no-zygote',
+          '--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+        ],
+        protocolTimeout: 300000,
+      }
+    });
+
+    this.setupEventListeners();
+  }
+
+  private startWatchdog() {
+    if (this.watchdogInterval) {
+      clearInterval(this.watchdogInterval);
+    }
+
+    console.log('[WHATSAPP-BOT] Iniciando Watchdog de Keep-Alive (5 min)...');
+    this.watchdogInterval = setInterval(async () => {
+      if (!this.isReady) return;
+
+      try {
+        const statePromise = this.client.getState();
+        const timeoutPromise = new Promise<null>((_, reject) => 
+          setTimeout(() => reject(new Error("Timeout al obtener estado de WhatsApp")), 15000)
+        );
+
+        const state = await Promise.race([statePromise, timeoutPromise]);
+        console.log(`[WHATSAPP-BOT] [Watchdog] Estado actual de conexión: ${state}`);
+        if (state !== 'CONNECTED') {
+          console.warn(`[WHATSAPP-BOT] [Watchdog] Estado anormal detectado: ${state}. Iniciando reconexión...`);
+          await this.reconnectClient();
+        }
+      } catch (err: any) {
+        console.error(`[WHATSAPP-BOT] [Watchdog] Falla o bloqueo detectado: ${err.message || err}. Iniciando reconexión...`);
+        await this.reconnectClient();
+      }
+    }, 5 * 60 * 1000);
+  }
+
+  private async reconnectClient() {
+    this.isReady = false;
+    try {
+      console.log('[WHATSAPP-BOT] Destruyendo cliente de WhatsApp actual...');
+      this.client.removeAllListeners();
+      await this.client.destroy();
+    } catch (destroyErr: any) {
+      console.error('[WHATSAPP-BOT] Error al destruir el cliente:', destroyErr.message || destroyErr);
+    }
+
+    console.log('[WHATSAPP-BOT] Re-inicializando cliente de WhatsApp...');
+    try {
+      this.createClientInstance();
+      await this.client.initialize();
+      console.log('[WHATSAPP-BOT] Cliente de WhatsApp re-inicializado exitosamente.');
+    } catch (initErr: any) {
+      console.error('[WHATSAPP-BOT] Error al re-inicializar el cliente:', initErr.message || initErr);
     }
   }
 
