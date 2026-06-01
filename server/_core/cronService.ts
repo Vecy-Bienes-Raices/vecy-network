@@ -45,7 +45,11 @@ Dirección obligatoria:
       });
       const content = response.choices[0]?.message?.content;
       if (content && content.trim() !== "") {
-        await whatsappBot.sendToGroup(content, undefined, []);
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[CRON-SERVICE] [DEV MODE] Omitiendo envío de mensaje de la mañana para Inmuebles. Contenido:\n', content);
+        } else {
+          await whatsappBot.sendToGroup(content, undefined, []);
+        }
       }
     } catch (e: any) {
       console.error('❌ Error al generar mensaje matutino para Inmuebles:', e.message);
@@ -70,7 +74,11 @@ Dirección obligatoria:
         const buzonJid = whatsappBot.buzonGroupId;
         const client = (whatsappBot as any).client;
         if (client && buzonJid) {
-          await client.sendMessage(buzonJid, content);
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[CRON-SERVICE] [DEV MODE] Omitiendo envío de mensaje de la mañana para Consultoría. Contenido:\n', content);
+          } else {
+            await client.sendMessage(buzonJid, content);
+          }
         }
       }
     } catch (e: any) {
@@ -98,7 +106,11 @@ Dirección obligatoria:
         const circuloJid = whatsappBot.circuloGroupId;
         const client = (whatsappBot as any).client;
         if (client && circuloJid) {
-          await client.sendMessage(circuloJid, content);
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[CRON-SERVICE] [DEV MODE] Omitiendo envío de mensaje de la mañana para Círculo Cero. Contenido:\n', content);
+          } else {
+            await client.sendMessage(circuloJid, content);
+          }
         }
       }
     } catch (e: any) {
@@ -125,7 +137,11 @@ Dirección obligatoria:
       });
       const content = response.choices[0]?.message?.content;
       if (content && content.trim() !== "") {
-        await whatsappBot.sendToGroup(content, undefined, []);
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[CRON-SERVICE] [DEV MODE] Omitiendo envío de mensaje de la tarde para Inmuebles. Contenido:\n', content);
+        } else {
+          await whatsappBot.sendToGroup(content, undefined, []);
+        }
       }
     } catch (e: any) {
       console.error('❌ Error al generar mensaje de la tarde para Inmuebles:', e.message);
@@ -148,7 +164,11 @@ Dirección obligatoria:
         const buzonJid = whatsappBot.buzonGroupId;
         const client = (whatsappBot as any).client;
         if (client && buzonJid) {
-          await client.sendMessage(buzonJid, content);
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[CRON-SERVICE] [DEV MODE] Omitiendo envío de mensaje de la tarde para Consultoría. Contenido:\n', content);
+          } else {
+            await client.sendMessage(buzonJid, content);
+          }
         }
       }
     } catch (e: any) {
@@ -172,7 +192,11 @@ Dirección obligatoria:
         const circuloJid = whatsappBot.circuloGroupId;
         const client = (whatsappBot as any).client;
         if (client && circuloJid) {
-          await client.sendMessage(circuloJid, content);
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[CRON-SERVICE] [DEV MODE] Omitiendo envío de mensaje de la tarde para Círculo Cero. Contenido:\n', content);
+          } else {
+            await client.sendMessage(circuloJid, content);
+          }
         }
       }
     } catch (e: any) {
@@ -262,7 +286,11 @@ async function sendMatchBulletin(periodName: string) {
                   `\n▸ Cruces en los últimos 30 días: *${countMes}*\n`;
     }
 
-    await whatsappBot.sendToGroup(bulletin, undefined, Array.from(new Set(jidsToMention)));
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[CRON-SERVICE] [DEV MODE] Omitiendo envío de boletín de matches. Contenido:\n', bulletin);
+    } else {
+      await whatsappBot.sendToGroup(bulletin, undefined, Array.from(new Set(jidsToMention)));
+    }
     console.log(`[CRON-SERVICE] Boletín ${periodName} enviado con éxito.`);
 
   } catch (error) {

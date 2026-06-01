@@ -497,6 +497,9 @@ export class WhatsAppBot {
           '--disable-gpu',
           '--disable-extensions',
           '--disable-software-rasterizer',
+          '--disable-features=IsolateOrigins,site-per-process',
+          '--disable-site-isolation-trials',
+          '--no-zygote',
           '--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
         ],
         protocolTimeout: 300000,

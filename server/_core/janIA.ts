@@ -4,7 +4,7 @@
  */
 import { invokeLLM } from "./llm";
 import { getDb } from "../db";
-import { properties, requirements, users, propertyImages, InsertProperty, InsertRequirement, pendingSessions, propertyMatches } from "../../drizzle/schema";
+import { properties, requirements, users, propertyImages, InsertProperty, InsertRequirement, pendingSessions, propertyMatches, messages as dbMessages, conversations as dbConversations } from "../../drizzle/schema";
 import { findMatchesForProperty, findMatchesForRequirement } from "./matching";
 import { validarZona, normalizarTextoGeografico } from "./geography";
 import { transcribeAudio } from "./voiceTranscription";
@@ -73,6 +73,47 @@ async function deletePendingSession(userId: string): Promise<void> {
 
 const GREETED_TODAY = new Map<string, string>(); // Mapea userId -> fecha "YYYY-MM-DD"
 
+async function hasGreetedUserToday(userId: string): Promise<boolean> {
+  try {
+    const db = await getDb();
+    if (!db) return false;
+
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    const recentMsgs = await db
+      .select({ id: dbMessages.id })
+      .from(dbMessages)
+      .innerJoin(dbConversations, eq(dbMessages.conversationId, dbConversations.id))
+      .where(
+        and(
+          eq(dbConversations.sessionId, userId),
+          eq(dbMessages.role, "janIA"),
+          gte(dbMessages.createdAt, startOfToday)
+        )
+      )
+      .limit(1);
+
+    return recentMsgs.length > 0;
+  } catch (err) {
+    console.error("[Database] Error checking if greeted today:", err);
+    return false;
+  }
+}
+
+async function checkAlreadyGreeted(userId: string): Promise<boolean> {
+  const todayStr = new Date().toISOString().split("T")[0];
+  if (GREETED_TODAY.get(userId) === todayStr) {
+    return true;
+  }
+  const dbGreeted = await hasGreetedUserToday(userId);
+  if (dbGreeted) {
+    GREETED_TODAY.set(userId, todayStr);
+    return true;
+  }
+  return false;
+}
+
 export const REPUTATION_HOOK = "⚠️ *IMPORTANTE:* Colega y cliente, recuerda que este ecosistema tecnológico fue creado pensando en tu beneficio y en el de toda nuestra comunidad. Te contamos que operamos en *Etapa de Prueba Gratuita y 100% SIN COMISIONES*. Si has tenido una buena experiencia en alguno de nuestros canales o has logrado consolidar un negocio real gracias a la conexión privada de JanIA, sería un verdadero honor para nosotros que nos compartieras tu testimonio y calificación de nuestros servicios en este enlace: https://g.page/r/CctNbwU6UpX5EBM/review";
 
 // Helper para capitalizar la primera letra
@@ -82,13 +123,12 @@ function capitalize(text: string): string {
 }
 
 // --- ANALIZADOR MORFOLÓGICO DE GÉNERO Y CORTESÍA (v11.70) ---
-function analyzeSender(name: string, userId: string): { greeting: string; adj: string; courtesy: string } {
+function analyzeSender(name: string, userId: string, alreadyGreeted: boolean): { greeting: string; adj: string; courtesy: string } {
   const n = (name || "Colega").trim();
   const normalizedFull = n.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
   const firstWord = n.split(/\s+/)[0].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
   
   const todayStr = new Date().toISOString().split("T")[0];
-  const alreadyGreeted = GREETED_TODAY.get(userId) === todayStr;
   if (!alreadyGreeted) GREETED_TODAY.set(userId, todayStr);
 
   const femaleNames = ["maria", "ana", "claudia", "martha", "adriana", "sandra", "jani", "natalia", "paola", "diana", "laura", "sofia", "valentina", "andrea", "milena", "patricia", "marcela", "liliana", "elena", "monica", "beatriz", "gloria", "carmen", "lucia", "angela", "isabel", "clara", "rosa", "teresa", "yolanda", "esperanza", "blanca", "pilar", "carolina", "juliana", "catalina", "viviana", "lizeth", "daniela", "camila"];
@@ -578,7 +618,8 @@ export async function processWhatsAppMessage(
     const rawPhone = userId.split('@')[0];
     const realName = userName && userName.trim() !== "" ? userName : `Asesor +${rawPhone}`;
 
-    const senderInfo = analyzeSender(realName, userId);
+    const alreadyGreeted = await checkAlreadyGreeted(userId);
+    const senderInfo = analyzeSender(realName, userId, alreadyGreeted);
     const n = realName.split(' ')[0];
 
     // --- 2. GANCHO DE RECUPERACIÓN DE MEMORIA (v11.60) ---
@@ -728,6 +769,21 @@ export async function processWhatsAppMessage(
     if (statsSummary) {
       contextText += statsSummary;
     }
+
+    const firstName = realName.split(' ')[0];
+    const greetingInstruction = `\n\n[SISTEMA - INSTRUCCIÓN DE SALUDO Y COMPORTAMIENTO]:
+- Ya has saludado al usuario hoy: ${alreadyGreeted ? "SÍ" : "NO"}.
+- Tipo de conversación actual: ${isGroup ? "GRUPO DE WHATSAPP" : "CHAT PRIVADO / DM"}.
+- Primer nombre del usuario: "${firstName}".
+- REGLAS CRÍTICAS DE RESPUESTA:
+  * Si "Ya has saludado al usuario hoy" es SÍ:
+    - ¡PROHIBIDO SALUDAR! No uses palabras como "Hola", "Buenas tardes", "Qué gusto", "Bienvenido", ni variantes de saludo o bienvenida.
+    - Si estás en un GRUPO DE WHATSAPP: Debes nombrar al usuario de manera natural y conversacional al inicio o dentro de tu respuesta (ej: "Mira ${firstName}, ...", "Te cuento, ${firstName}, que...", "Para complementar, ${firstName}, ...").
+    - Si estás en CHAT PRIVADO / DM: Ve directamente al grano en tu respuesta sin ningún tipo de saludo. Tienes libertad de nombrar ocasionalmente al usuario de forma esporádica (con un 30% de probabilidad) para sonar humana y natural (ej: "Claro ${firstName}, ..." o "Entiendo ${firstName}, ..."), pero NUNCA uses frases de saludo.
+  * Si "Ya has saludado al usuario hoy" es NO:
+    - Debes saludar de manera muy cordial y natural, incluyendo su nombre "${firstName}" o dirigiéndote a él/ella como colega/aliado/a.`;
+
+    contextText += greetingInstruction;
 
     const textLower = messageToProcess.toLowerCase();
     const isReplicationRequest = 
@@ -931,6 +987,8 @@ Por lo tanto, DEBES hacer lo siguiente:
         textLower.includes("competidor") ||
         textLower.includes("competencia");
 
+      const greetingPrefix = alreadyGreeted ? `Mira @${rawPhone}` : `Hola @${rawPhone}`;
+
       if (isAboutVecy) {
         const isCompetitorQuery = 
           textLower.includes("ubicapp") || 
@@ -939,12 +997,12 @@ Por lo tanto, DEBES hacer lo siguiente:
           textLower.includes("competencia");
           
         if (isCompetitorQuery) {
-          result.response = `👌 *CÍRCULO CERO — DEBATE Y COMUNIDAD* 👌\n\nHola @${rawPhone}, detecté una mención a plataformas competidoras o comparativas de servicios. Para mantener este canal enfocado exclusivamente en ofertas y requerimientos, te invito a plantear tus preguntas, comparar beneficios o participar en el debate en nuestro canal oficial **Círculo CERO 👌**:\n👉 https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU\n\n¡Allí debatimos abiertamente con total transparencia y profesionalismo! 🤝✨`;
+          result.response = `👌 *CÍRCULO CERO — DEBATE Y COMUNIDAD* 👌\n\n${greetingPrefix}, detecté una mención a plataformas competidoras o comparativas de servicios. Para mantener este canal enfocado exclusivamente en ofertas y requerimientos, te invito a plantear tus preguntas, comparar beneficios o participar en el debate en nuestro canal oficial **Círculo CERO 👌**:\n👉 https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU\n\n¡Allí debatimos abiertamente con total transparencia y profesionalismo! 🤝✨`;
         } else {
-          result.response = `👌 *CÍRCULO CERO — CONEXIÓN VECY* 👌\n\nHola @${rawPhone}, veo que tienes dudas o quieres saber más sobre el proyecto VECY Network, beneficios, creadores o el plan colaborativo. Te invito a unirte y hacer tus preguntas en nuestro canal oficial **Círculo CERO 👌**:\n👉 https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU\n\n¡Es el espacio ideal para resolver todas tus inquietudes de la comunidad! 🤝✨`;
+          result.response = `👌 *CÍRCULO CERO — CONEXIÓN VECY* 👌\n\n${greetingPrefix}, veo que tienes dudas o quieres saber más sobre el proyecto VECY Network, beneficios, creadores o el plan colaborativo. Te invito a unirte y hacer tus preguntas en nuestro canal oficial **Círculo CERO 👌**:\n👉 https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU\n\n¡Es el espacio ideal para resolver todas tus inquietudes de la comunidad! 🤝✨`;
         }
       } else {
-        result.response = `💡 *BUZÓN DE CONSULTORÍA INMOBILIARIA* 💡\n\nHola @${rawPhone}, veo que tienes una consulta jurídica, procedimental o de avalúo. Para darte una respuesta detallada con mis motores legales y de mercado sin saturar este canal de ofertas y requerimientos, te invito a realizar tu pregunta en nuestro grupo especializado **Buzón de Consultoría Inmobiliaria 24/7**:\n👉 https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6\n\n¡Allí te responderé al instante con toda la información! 🚀🎯`;
+        result.response = `💡 *BUZÓN DE CONSULTORÍA INMOBILIARIA* 💡\n\n${greetingPrefix}, veo que tienes una consulta jurídica, procedimental o de avalúo. Para darte una respuesta detallada con mis motores legales y de mercado sin saturar este canal de ofertas y requerimientos, te invito a realizar tu pregunta en nuestro grupo especializado **Buzón de Consultoría Inmobiliaria 24/7**:\n👉 https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6\n\n¡Allí te responderé al instante con toda la información! 🚀🎯`;
         result.classification = "CONSULTA_GENERAL";
       }
     }
@@ -1373,6 +1431,8 @@ export async function processConsultingMessage(
     const n = realName.split(' ')[0];
     const textLower = text.toLowerCase();
 
+    const alreadyGreeted = await checkAlreadyGreeted(userId);
+
     // Detectar si es una solicitud de avalúo, valor de venta, arriendo o precio del metro cuadrado
     const isValuationQuery = 
       textLower.includes("valuar") || 
@@ -1449,9 +1509,20 @@ export async function processConsultingMessage(
       `  "reactionEmoji": "string (emoji recomendado)"\n` +
       `}`;
 
+    const greetingInstruction = `\n\n[SISTEMA - INSTRUCCIÓN DE SALUDO Y COMPORTAMIENTO]:
+- Ya has saludado al usuario hoy: ${alreadyGreeted ? "SÍ" : "NO"}.
+- Tipo de conversación actual: GRUPO DE WHATSAPP.
+- Primer nombre del usuario: "${n}".
+- REGLAS CRÍTICAS DE RESPUESTA:
+  * Si "Ya has saludado al usuario hoy" es SÍ:
+    - ¡PROHIBIDO SALUDAR! No uses palabras como "Hola", "Buenas tardes", "Qué gusto", "Bienvenido", ni variantes de saludo o bienvenida.
+    - Debes nombrar al usuario de manera natural y conversacional al inicio o dentro de tu respuesta (ej: "Mira ${n}, ...", "Te cuento, ${n}, que...", "Para complementar, ${n}, ...").
+  * Si "Ya has saludado al usuario hoy" es NO:
+    - Debes saludar de manera muy cordial y natural, incluyendo su nombre "${n}" o dirigiéndose a él/ella como colega/aliado/a.`;
+
     const messages = [
       { role: "system", content: systemPrompt },
-      { role: "user", content: `Usuario: @${rawPhone} (${realName})\\nConsulta: ${text}` }
+      { role: "user", content: `Usuario: @${rawPhone} (${realName})\\nConsulta: ${text}${greetingInstruction}` }
     ];
 
     // Si es una solicitud de avalúo o contiene palabras clave de valor, activamos enableSearch para que Gemini busque en internet
@@ -1498,6 +1569,8 @@ export async function processCirculoMessage(
     const realName = userName && userName.trim() !== "" ? userName : `Asesor +${rawPhone}`;
     const n = realName.split(' ')[0];
     const textLower = text.toLowerCase();
+
+    const alreadyGreeted = await checkAlreadyGreeted(userId);
 
     const systemPrompt = 
       `Eres JanIA, la Inteligencia Artificial oficial de VECY Network. Estás operando en el grupo "Círculo CERO 👌". ` +
@@ -1546,9 +1619,20 @@ export async function processCirculoMessage(
       `  "reactionEmoji": "string (emoji recomendado)"\n` +
       `}`;
 
+    const greetingInstruction = `\n\n[SISTEMA - INSTRUCCIÓN DE SALUDO Y COMPORTAMIENTO]:
+- Ya has saludado al usuario hoy: ${alreadyGreeted ? "SÍ" : "NO"}.
+- Tipo de conversación actual: GRUPO DE WHATSAPP.
+- Primer nombre del usuario: "${n}".
+- REGLAS CRÍTICAS DE RESPUESTA:
+  * Si "Ya has saludado al usuario hoy" es SÍ:
+    - ¡PROHIBIDO SALUDAR! No uses palabras como "Hola", "Buenas tardes", "Qué gusto", "Bienvenido", ni variantes de saludo o bienvenida.
+    - Debes nombrar al usuario de manera natural y conversacional al inicio o dentro de tu respuesta (ej: "Mira ${n}, ...", "Te cuento, ${n}, que...", "Para complementar, ${n}, ...").
+  * Si "Ya has saludado al usuario hoy" es NO:
+    - Debes saludar de manera muy cordial y natural, incluyendo su nombre "${n}" o dirigiéndose a él/ella como colega/aliado/a.`;
+
     const messages = [
       { role: "system", content: systemPrompt },
-      { role: "user", content: `Usuario: @${rawPhone} (${realName})\nPregunta: ${text}` }
+      { role: "user", content: `Usuario: @${rawPhone} (${realName})\nPregunta: ${text}${greetingInstruction}` }
     ];
 
     const llmRes = await invokeLLM({
