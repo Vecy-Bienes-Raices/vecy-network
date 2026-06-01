@@ -1083,6 +1083,11 @@ function sanitizeCurrency(curr: string): "COP" | "USD" {
   return "COP";
 }
 
+function safeSlice(val: any, limit: number): string | undefined {
+  if (val === undefined || val === null) return undefined;
+  return String(val).slice(0, limit);
+}
+
 async function saveProperty(data: any, userId: string, realName: string, imageBuffer?: string) {
   const db = await getDb();
   if (!db) return null;
@@ -1126,7 +1131,15 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
 
   const insertData = {
     ...data,
-    city: data.city || data.ciudadDeseada || "Bogotá",
+    name: safeSlice(data.name || `Propiedad en ${data.city || "Bogotá"}`, 255) || "Propiedad",
+    city: safeSlice(data.city || data.ciudadDeseada || "Bogotá", 100) || "Bogotá",
+    zone: safeSlice(data.zone || "Bogotá", 100) || "Bogotá",
+    addressCity: safeSlice(data.addressCity || data.address_city, 100) || null,
+    addressLocality: safeSlice(data.addressLocality || data.address_locality, 100) || null,
+    addressNeighborhood: safeSlice(data.addressNeighborhood || data.address_neighborhood, 150) || null,
+    location: safeSlice(data.location, 255) || null,
+    matriculaInmobiliaria: safeSlice(data.matriculaInmobiliaria, 100) || null,
+    idUsuarioWhatsapp: safeSlice(data.idUsuarioWhatsapp || rawPhone, 100) || null,
     propertyType: sanitizePropertyType(data.propertyType),
     transactionType: sanitizeTransactionType(data.transactionType),
     currency: sanitizeCurrency(data.currency),
@@ -1213,7 +1226,13 @@ async function saveRequirement(data: any, userId: string, realName: string) {
 
   const insertData = {
     ...data,
-    ciudadDeseada: data.ciudadDeseada || data.city || "Bogotá",
+    name: safeSlice(data.name, 255) || null,
+    ciudadDeseada: safeSlice(data.ciudadDeseada || data.city || "Bogotá", 100) || "Bogotá",
+    zonaDeseada: safeSlice(data.zonaDeseada || data.zone, 100) || null,
+    addressCity: safeSlice(data.addressCity || data.address_city, 100) || null,
+    addressLocality: safeSlice(data.addressLocality || data.address_locality, 100) || null,
+    addressNeighborhood: safeSlice(data.addressNeighborhood || data.address_neighborhood, 150) || null,
+    idUsuarioWhatsapp: safeSlice(data.idUsuarioWhatsapp || rawPhone, 100) || null,
     tipoInmuebleDeseado: sanitizePropertyType(data.tipoInmuebleDeseado || data.propertyType),
     tipoNegocioDeseado: sanitizeTransactionType(data.tipoNegocioDeseado || data.transactionType),
     monedaPresupuesto: sanitizeCurrency(data.monedaPresupuesto || data.currency),
@@ -1252,7 +1271,7 @@ async function saveRequirement(data: any, userId: string, realName: string) {
       .set({ updatedAt: new Date() })
       .where(eq(requirements.id, existing[0].id))
       .returning();
-    console.log(`[Deduplication] Requerimiento duplicado detectado y actualizado: #${updated.id}`);
+    console.log(`[Deduplication] Requerimiento duplicado detectada y actualizada: #${updated.id}`);
     return updated;
   }
 
