@@ -399,6 +399,9 @@ export class WhatsAppBot {
 
   // --- ANTI-BURST & ANTI-FLOOD QUEUED DISPATCH (v12.0) ---
   private async queuedSend(chatId: string, content: any, options: any = {}) {
+    if (typeof content === 'string') {
+      content = content.replace(/\*\*/g, '*');
+    }
     // 1. Control de reseteo diario del Kill-Switch
     const today = new Date().toDateString();
     if (this.lastResetDate !== today) {
