@@ -29,6 +29,7 @@ import { conversations, messages as dbMessages, propertyMatches, properties, req
 import { eq, and, or, like, sql } from 'drizzle-orm';
 import { storagePut } from "../storage";
 import { ENV } from "./env";
+import { invokeLLM } from "./llm";
 
 // --- JanIA v2.0 Global Time Constraints (v11.97) ---
 const SERVER_BOOT_TIME = Math.floor(Date.now() / 1000);
@@ -801,7 +802,7 @@ export class WhatsAppBot {
           const text = msg.body.toLowerCase();
           // Comandos de administración
           if (text.includes('jania')) {
-            if (text.includes('normas') || text.includes('preséntate') || text.includes('anuncia') || text.includes('dipava') || text.includes('retorno') || text.includes('sincroniza') || text.includes('catchup')) {
+            if (text.includes('normas') || text.includes('preséntate') || text.includes('anuncia') || text.includes('dipava') || text.includes('retorno') || text.includes('sincroniza') || text.includes('catchup') || text.includes('cierre') || text.includes('audios')) {
               await this.handleAdminCommand(msg);
               return;
             }
@@ -1927,6 +1928,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
     else if (text.includes('dipava')) await this.sendApologyDeLaPava();
     else if (text.includes('retorno')) await this.sendAnuncioRetorno();
     else if (text.includes('sincroniza') || text.includes('catchup')) await this.catchUpMissedMessages();
+    else if (text.includes('cierre') || text.includes('audios')) await this.sendManualCierreAudios();
   }
 
   // --- MÉTODOS DE BROADCAST ---
@@ -2330,6 +2332,72 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
       await this.queuedSend(this.targetGroupId, `🔄 *Sincronización finalizada:* Se detectaron y procesaron exitosamente *${count}* publicaciones pendientes.`);
     } catch (err: any) {
       console.error('[WHATSAPP-BOT] [Catch-Up] Error durante el escaneo de mensajes:', err.message || err);
+    }
+  }
+
+  public async sendManualCierreAudios() {
+    console.log("[WHATSAPP-BOT] Generando y enviando audios de cierre manuales (Solo por hoy)...");
+
+    const grupos = [
+      { 
+        id: this.targetGroupId, 
+        nombre: "VECY INMUEBLES NETWORK", 
+        promptCierre: "Genera una nota de voz corta en español de despedida y cierre de jornada para el grupo de WhatsApp VECY INMUEBLES NETWORK. Agradece la actividad de hoy y despídete con calidez. Recuerda que no cobramos comisiones y que las ofertas y demandas cruzadas son el motor de la red." 
+      },
+      { 
+        id: this.buzonGroupId, 
+        nombre: "BUZÓN DE CONSULTORÍA INMOBILIARIA 24/7", 
+        promptCierre: "Genera una nota de voz corta en español de despedida y cierre de jornada para el grupo de WhatsApp Buzón de Consultoría. Agradece la atención a los casos jurídicos y de comisiones compartidas resueltos hoy, deseando un feliz descanso." 
+      },
+      { 
+        id: this.circuloGroupId, 
+        nombre: "CÍRCULO CERO", 
+        promptCierre: "Genera una nota de voz corta en español de despedida y cierre de jornada para el grupo de WhatsApp Círculo Cero. Agradece el debate y las sugerencias de hoy sobre el futuro del sector." 
+      }
+    ];
+
+    for (const grupo of grupos) {
+      if (!grupo.id) continue;
+
+      try {
+        // --- AUDIO 1: Cierre del día ---
+        const response1 = await invokeLLM({
+          messages: [
+            { role: 'system', content: 'Eres JanIA, la asistente de voz e inteligencia artificial de la red inmobiliaria colaborativa VECY Network. Te expresas de manera natural, humana, cálida y profesional.' },
+            { role: 'user', content: `${grupo.promptCierre}\n- IMPORTANTE: Debe sonar como un mensaje de voz natural de WhatsApp grabado de forma espontánea por una colega real. Empieza con naturalidad como: "Hola colegas", "Buenas tardes", etc. sin formalismos robóticos.\n- Máximo 350 caracteres.` }
+          ]
+        });
+        const content1 = response1.choices[0]?.message?.content;
+        if (content1 && content1.trim() !== "") {
+          await this.sendVoiceToGroup(content1, grupo.id);
+        }
+
+        await delay(6000);
+
+        // --- AUDIO 2: Motivación para mañana ---
+        const promptMotivacion = `Genera un segundo mensaje de voz corto y motivador en español para el grupo "${grupo.nombre}".
+Dirección obligatoria:
+- El objetivo es motivar a los miembros para que en la jornada de mañana comiencen a confiar más en JanIA y a probar el sistema sin miedo (ya sea escribiendo o enviando notas de voz sobre sus inmuebles o dudas).
+- Explícales que no deben tener miedo de interactuar con la IA y que estamos en fase de pruebas gratuitas listos para ayudarlos a conectar negocios.
+- Debe sonar sumamente cercano, entusiasta and amigable, como una colega entusiasmada por los éxitos del día siguiente.
+- Máximo 350 caracteres.`;
+
+        const response2 = await invokeLLM({
+          messages: [
+            { role: 'system', content: 'Eres JanIA, la asistente de voz e inteligencia artificial de la red inmobiliaria colaborativa VECY Network. Te expresas de manera natural, humana, cálida y profesional.' },
+            { role: 'user', content: promptMotivacion }
+          ]
+        });
+        const content2 = response2.choices[0]?.message?.content;
+        if (content2 && content2.trim() !== "") {
+          await this.sendVoiceToGroup(content2, grupo.id);
+        }
+
+        await delay(8000);
+
+      } catch (err: any) {
+        console.error(`❌ Error en sendManualCierreAudios para el grupo ${grupo.nombre}:`, err.message || err);
+      }
     }
   }
 
