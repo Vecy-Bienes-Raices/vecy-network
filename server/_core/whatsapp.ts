@@ -91,7 +91,7 @@ function prepareTtsText(rawText: string): string {
     .trim();
 }
 
-async function textToSpeechMedia(text: string): Promise<MessageMediaType | null> {
+export async function textToSpeechMedia(text: string): Promise<any> {
   // Limpiar markdown y emojis
   const cleanText = text
     .replace(/[*#_`~\[\]]/g, "")

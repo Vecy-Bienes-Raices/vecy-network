@@ -6,7 +6,7 @@ import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
-import { whatsappBot } from "./whatsapp";
+import { whatsappBot, textToSpeechMedia } from "./whatsapp";
 import { initCronScheduler } from "./cronService";
 import { processWhatsAppMessage } from "./janIA";
 
@@ -146,6 +146,29 @@ async function startServer() {
         console.error("Error al enviar los audios de cierre manuales:", err);
       });
       res.send("Audios de cierre encolados exitosamente.");
+    } catch (err: any) {
+      res.status(500).send(err.message);
+    }
+  });
+
+  app.get("/api/jania/tts", async (req, res) => {
+    try {
+      const text = req.query.text as string;
+      if (!text) {
+        return res.status(400).send("Falta el parámetro 'text'");
+      }
+
+      const media = await textToSpeechMedia(text);
+      if (!media) {
+        return res.status(500).send("No se pudo generar el audio");
+      }
+
+      const buffer = Buffer.from(media.data, "base64");
+      // Si el mimetype contiene codecs, algunos clientes Express fallan al hacer setHeader. 
+      // Limpiamos o seteamos el mimetype básico
+      let cleanMime = media.mimetype.split(';')[0].trim();
+      res.setHeader("Content-Type", cleanMime);
+      res.send(buffer);
     } catch (err: any) {
       res.status(500).send(err.message);
     }

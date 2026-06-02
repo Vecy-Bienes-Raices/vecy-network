@@ -185,7 +185,46 @@ export default function JanIAConsole() {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [selectedModel, setSelectedModel] = useState('pro'); // 'pro' | 'flash'
   const [sessionId, setSessionId] = useState(() => `session-${Date.now()}-${Math.random()}`);
-  
+  const [playingId, setPlayingId] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    return () => {
+      audioRef.current?.pause();
+    };
+  }, []);
+
+  const playMessageVoice = (msgId: string, text: string) => {
+    if (playingId === msgId) {
+      audioRef.current?.pause();
+      setPlayingId(null);
+      return;
+    }
+
+    if (audioRef.current) {
+      audioRef.current.pause();
+    }
+
+    const cleanText = text
+      .replace(/[*#_`~\[\]]/g, "")
+      .replace(/[\u{1F300}-\u{1FAD6}]/gu, "")
+      .trim();
+
+    const audioUrl = `/api/jania/tts?text=${encodeURIComponent(cleanText)}`;
+    const audio = new Audio(audioUrl);
+    audioRef.current = audio;
+    setPlayingId(msgId);
+    
+    audio.play().catch(err => {
+      console.error("Error playing audio:", err);
+      setPlayingId(null);
+    });
+
+    audio.onended = () => {
+      setPlayingId(null);
+    };
+  };
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -816,9 +855,20 @@ export default function JanIAConsole() {
                             {renderMessageContent(message.content)}
                           </p>
                         </div>
-                        <p className={`text-[9px] font-black uppercase tracking-widest opacity-30 ${message.role === 'user' ? 'text-right' : 'text-left'}`}>
-                          {message.timestamp.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
-                        </p>
+                        <div className="flex items-center gap-3 mt-1">
+                          <p className={`text-[9px] font-black uppercase tracking-widest opacity-30 ${message.role === 'user' ? 'text-right' : 'text-left'}`}>
+                            {message.timestamp.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                          {message.role === 'janIA' && (
+                            <button
+                              onClick={() => playMessageVoice(message.id, message.content)}
+                              className="text-zinc-500 hover:text-primary transition-colors p-1 rounded-full hover:bg-white/5 flex items-center justify-center"
+                              title="Escuchar respuesta"
+                            >
+                              <Volume2 className={`w-3.5 h-3.5 ${playingId === message.id ? 'text-primary animate-pulse' : ''}`} />
+                            </button>
+                          )}
+                        </div>
                       </div>
 
                       {message.role === 'user' && (
