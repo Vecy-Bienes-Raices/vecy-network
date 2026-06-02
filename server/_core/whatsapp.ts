@@ -25,7 +25,7 @@ import path from 'path';
 import { spawn } from 'child_process';
 import { getDb } from '../db';
 import { conversations, messages as dbMessages, propertyMatches, properties, requirements, users } from '../../drizzle/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { storagePut } from "../storage";
 import { ENV } from "./env";
 
@@ -800,7 +800,7 @@ export class WhatsAppBot {
           const text = msg.body.toLowerCase();
           // Comandos de administración
           if (text.includes('jania')) {
-            if (text.includes('normas') || text.includes('preséntate') || text.includes('anuncia') || text.includes('dipava') || text.includes('retorno')) {
+            if (text.includes('normas') || text.includes('preséntate') || text.includes('anuncia') || text.includes('dipava') || text.includes('retorno') || text.includes('sincroniza') || text.includes('catchup')) {
               await this.handleAdminCommand(msg);
               return;
             }
@@ -1812,6 +1812,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
     else if (text.includes('anuncia')) await this.sendAnuncioComision();
     else if (text.includes('dipava')) await this.sendApologyDeLaPava();
     else if (text.includes('retorno')) await this.sendAnuncioRetorno();
+    else if (text.includes('sincroniza') || text.includes('catchup')) await this.catchUpMissedMessages();
   }
 
   // --- MÉTODOS DE BROADCAST ---
@@ -2134,6 +2135,65 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
       console.log('[WHATSAPP-BOT] Cliente de WhatsApp re-inicializado exitosamente.');
     } catch (initErr: any) {
       console.error('[WHATSAPP-BOT] Error al re-inicializar el cliente:', initErr.message || initErr);
+    }
+  }
+
+  public async catchUpMissedMessages() {
+    try {
+      console.log('[WHATSAPP-BOT] [Catch-Up] Iniciando escaneo de mensajes perdidos en el grupo principal...');
+      const chat = await this.client.getChatById(this.targetGroupId);
+      const messages = await chat.fetchMessages({ limit: 50 });
+      
+      const db = await getDb();
+      if (!db) {
+        console.error('[WHATSAPP-BOT] [Catch-Up] Base de datos no disponible.');
+        return;
+      }
+
+      await this.queuedSend(this.targetGroupId, `🔄 *Iniciando sincronización:* Analizando las últimas 50 publicaciones para detectar registros perdidos...`);
+
+      let count = 0;
+      for (const msg of messages) {
+        // Ignorar mensajes enviados por el bot mismo o notificaciones de sistema sin cuerpo
+        if (msg.fromMe || !msg.body || msg.body.trim() === "") continue;
+
+        const senderId = msg.author || msg.from;
+        const botJid = this.client.info?.wid?._serialized;
+        if (senderId === botJid || this.blacklistedBots.includes(senderId)) continue;
+
+        // Comprobar si el mensaje ya está registrado en dbMessages
+        let conv = await db.select().from(conversations).where(eq(conversations.sessionId, senderId)).limit(1);
+        if (conv.length > 0) {
+          const existing = await db.select()
+            .from(dbMessages)
+            .where(
+              and(
+                eq(dbMessages.conversationId, conv[0].id),
+                eq(dbMessages.content, msg.body)
+              )
+            )
+            .limit(1);
+          
+          if (existing.length > 0) {
+            // Ya procesado en el pasado
+            continue;
+          }
+        }
+
+        // Si no existe, lo inyectamos al procesador principal
+        console.log(`[WHATSAPP-BOT] [Catch-Up] Detectado mensaje perdido de ${senderId}: "${msg.body.substring(0, 50)}..."`);
+        
+        // Simular recepción del mensaje
+        await this.handleIncomingMessage(msg, this.targetGroupId);
+        count++;
+        // Esperar un cooldown corto entre inyecciones para no saturar
+        await delay(5000);
+      }
+
+      console.log(`[WHATSAPP-BOT] [Catch-Up] Escaneo finalizado. Inyectados ${count} mensajes perdidos.`);
+      await this.queuedSend(this.targetGroupId, `🔄 *Sincronización finalizada:* Se detectaron y procesaron exitosamente *${count}* publicaciones pendientes.`);
+    } catch (err: any) {
+      console.error('[WHATSAPP-BOT] [Catch-Up] Error durante el escaneo de mensajes:', err.message || err);
     }
   }
 
