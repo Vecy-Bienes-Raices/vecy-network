@@ -72,7 +72,7 @@ export type TranscriptionError = {
  * @returns Transcription result or error
  */
 async function transcribeAudioWithGemini(audioBuffer: Buffer, mimeType: string): Promise<string> {
-  const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || ENV.forgeApiKey;
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || ENV.forgeApiKey;
   if (!apiKey) {
     throw new Error("No GEMINI_API_KEY or GOOGLE_API_KEY found for transcription fallback.");
   }
