@@ -505,8 +505,8 @@ async function handleDetectedMatches(
     const reqDateTime = isProperty ? matchedDateTime : savedDateTime;
     const propDateTime = isProperty ? savedDateTime : matchedDateTime;
 
-    const block = `🎉🎈 *¡FELICITACIONES! MATCH COMERCIAL DETECTADO* (Coincidencia: ${score.toFixed(0)}%) 🎈🎉
-📌 *Código de Match:* #M${matchId}
+    const block = `🎉🎈 *¡COINCIDENCIA DE NEGOCIO DETECTADA!* (Coincidencia: ${score.toFixed(0)}%) 🎈🎉
+📌 *Código de Coincidencia:* #M${matchId}
 
 📣 *REQUERIMIENTO* 📣
 • 🏢 *INMUEBLE:* ${translatePropertyType(reqItem.tipoInmuebleDeseado || reqItem.propertyType || 'inmueble')}
@@ -532,36 +532,44 @@ async function handleDetectedMatches(
 
     // El oferente (propietario)
     const ownerJid = isProperty ? savedJid : matchedJid;
-    const ownerDM = `🤝 *CONFIRMACIÓN DE MATCH (#M${matchId})* 🤝
+    const ownerDM = `🤝 *¡OPORTUNIDAD DE NEGOCIO DETECTADA!* 🤝
 
-Hola Colega, he detectado una coincidencia del *${score.toFixed(0)}%* de tu propiedad con un requerimiento de la red:
-• 🏢 *Inmueble:* ${translatePropertyType(reqItem.tipoInmuebleDeseado || reqItem.propertyType || 'inmueble')}
+Hola Colega, he detectado una coincidencia del *${score.toFixed(0)}%* entre tu propiedad en oferta y un requerimiento de compra/arriendo de otro aliado en la red:
+• 🏢 *Tipo de inmueble:* ${translatePropertyType(reqItem.tipoInmuebleDeseado || reqItem.propertyType || 'inmueble')}
 • 💼 *Negocio:* ${translateTransactionType(reqItem.tipoNegocioDeseado || reqItem.transactionType || 'compra')}
-• 📍 *Ubicación:* ${reqItem.ciudadDeseada || reqItem.city || 'Bogotá'} - ${reqItem.zonaDeseada || reqItem.zone || ''}
-• 💬 *Publicación del aliado:* ${reqItem.rawText || 'Sin descripción'}
+• 📍 *Ubicación del cliente:* ${reqItem.ciudadDeseada || reqItem.city || 'Bogotá'} - ${reqItem.zonaDeseada || reqItem.zone || ''}
+• 💬 *Detalle del requerimiento:* ${reqItem.rawText || 'Sin descripción'}
 
-Para conectar tu contacto con este aliado de forma segura, por favor responde a este mensaje diciendo:
-👉 *SÍ #M${matchId}* (si te interesa conectar)
-👉 *NO #M${matchId}* (si no te interesa)
+---
 
-_(Nota: El contacto mutuo se compartirá de inmediato únicamente si ambas partes confirman con SÍ en un plazo de 24 horas)._`;
+¿Te interesa que te ponga en contacto directo con este aliado para cerrar el negocio?
+
+Por favor responde a este mensaje diciendo únicamente:
+👉 *SÍ #M${matchId}* (Si te interesa que compartamos los números de contacto)
+👉 *NO #M${matchId}* (Si no te interesa esta coincidencia)
+
+⚠️ *Nota importante:* Los números de WhatsApp de ambos se compartirán de forma automática de inmediato únicamente si **ambas partes** confirman respondiendo *SÍ #M${matchId}* dentro de las próximas 24 horas.`;
 
     // El demandante (seeker)
     const seekerJid = isProperty ? matchedJid : savedJid;
-    const seekerDM = `🤝 *CONFIRMACIÓN DE MATCH (#M${matchId})* 🤝
+    const seekerDM = `🤝 *¡OPORTUNIDAD DE NEGOCIO DETECTADA!* 🤝
 
-Hola Colega, he detectado una coincidencia del *${score.toFixed(0)}%* de tu requerimiento con una propiedad disponible en la red:
-• 🏢 *Inmueble:* ${translatePropertyType(propItem.propertyType || 'inmueble')}
+Hola Colega, he detectado una coincidencia del *${score.toFixed(0)}%* entre tu requerimiento de búsqueda y una propiedad disponible de otro aliado en la red:
+• 🏢 *Tipo de inmueble:* ${translatePropertyType(propItem.propertyType || 'inmueble')}
 • 💼 *Negocio:* ${translateTransactionType(propItem.transactionType || 'venta')}
-• 📍 *Ubicación:* ${propItem.city || 'Bogotá'} - ${propItem.zone || ''}
+• 📍 *Ubicación del inmueble:* ${propItem.city || 'Bogotá'} - ${propItem.zone || ''}
 • 💵 *Precio:* ${propItem.price ? Number(propItem.price).toLocaleString('es-CO') + ' COP' : 'N/A'}
-• 💬 *Publicación de la oferta:* ${propItem.rawText || 'Sin descripción'}
+• 💬 *Detalle de la oferta:* ${propItem.rawText || 'Sin descripción'}
 
-Para conectar tu contacto con este aliado de forma segura, por favor responde a este mensaje diciendo:
-👉 *SÍ #M${matchId}* (si te interesa conectar)
-👉 *NO #M${matchId}* (si no te interesa)
+---
 
-_(Nota: El contacto mutuo se compartirá de inmediato únicamente si ambas partes confirman con SÍ en un plazo de 24 horas)._`;
+¿Te interesa que te ponga en contacto directo con este aliado para cerrar el negocio?
+
+Por favor responde a este mensaje diciendo únicamente:
+👉 *SÍ #M${matchId}* (Si te interesa que compartamos los números de contacto)
+👉 *NO #M${matchId}* (Si no te interesa esta coincidencia)
+
+⚠️ *Nota importante:* Los números de WhatsApp de ambos se compartirán de forma automática de inmediato únicamente si **ambas partes** confirman respondiendo *SÍ #M${matchId}* dentro de las próximas 24 horas.`;
 
     extraDMs.push({ jid: ownerJid, message: ownerDM });
     extraDMs.push({ jid: seekerJid, message: seekerDM });

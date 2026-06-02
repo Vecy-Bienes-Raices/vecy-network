@@ -1522,7 +1522,12 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
 
     const isGroup = chatId.includes('@g.us');
     // MATCH COMERCIAL DETECTADO es el string real en el response de JanIA
-    const isMatch = result.response && (result.response.includes("MATCH COMERCIAL DETECTADO") || result.response.includes("MATCH DETECTADO") || result.response.includes("MATCH INTELIGENTE DETECTADO"));
+    const isMatch = result.response && (
+      result.response.includes("MATCH COMERCIAL DETECTADO") || 
+      result.response.includes("MATCH DETECTADO") || 
+      result.response.includes("MATCH INTELIGENTE DETECTADO") ||
+      result.response.includes("COINCIDENCIA DE NEGOCIO DETECTADA")
+    );
     const isConsultation = 
       result.classification === "CONSULTA_GENERAL" || 
       result.classification === "RESPUESTA_A_PREGUNTA_IA" || 
