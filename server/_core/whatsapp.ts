@@ -1704,7 +1704,17 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         options.quotedMessageId = originalMsg.id._serialized;
       }
 
-      if (wantsVoice || result.wantsVoice) {
+      // Decidir si intercalamos audio (de forma aleatoria si el texto es corto y no es coincidencia, infracción ni consulta)
+      let finalWantsVoice = wantsVoice || result.wantsVoice;
+      if (!finalWantsVoice && result.response && result.response.length > 10 && result.response.length < 350 && !isMatch && !isViolation) {
+        // 35% de probabilidad de responder con audio de forma espontánea para intercalar
+        if (Math.random() < 0.35) {
+          finalWantsVoice = true;
+          console.log(`[TTS-Intercalado] ✓ Decidido enviar respuesta en audio de forma espontánea.`);
+        }
+      }
+
+      if (finalWantsVoice) {
         // Mostrar "Grabando audio..." inmediatamente durante la síntesis y transcodificación
         try {
           const chatInstance = chat || await this.client.getChatById(chatId);
@@ -2035,6 +2045,28 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
       }
     } catch (e) {
       console.error('[WHATSAPP-BOT] Error enviando mensaje al grupo:', e);
+    }
+  }
+
+  public async sendVoiceToGroup(text: string, groupId?: string) {
+    try {
+      const target = groupId || this.targetGroupId;
+      console.log(`[WHATSAPP-BOT] Generando nota de voz para enviar al grupo ${target}...`);
+      const voiceMedia = await textToSpeechMedia(text);
+      if (voiceMedia) {
+        try {
+          const chatInstance = await this.client.getChatById(target);
+          await chatInstance.sendStateRecording();
+        } catch (_) {}
+        
+        await this.queuedSend(target, voiceMedia, { sendAudioAsVoice: true });
+        console.log(`[WHATSAPP-BOT] ✓ Nota de voz enviada al grupo ${target}.`);
+      } else {
+        console.warn(`[WHATSAPP-BOT] TTS falló para el grupo ${target}, enviando texto.`);
+        await this.queuedSend(target, text);
+      }
+    } catch (e) {
+      console.error('[WHATSAPP-BOT] Error enviando nota de voz al grupo:', e);
     }
   }
 

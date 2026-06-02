@@ -203,6 +203,66 @@ Dirección obligatoria:
       console.error('❌ Error al generar mensaje de la tarde para Círculo Cero:', e.message);
     }
   });
+
+  // 3. 04:30 PM = Audios Motivadores e Interactivos Dinámicos (Mensajes de Voz para incentivar participación)
+  cron.schedule('30 16 * * *', async () => {
+    console.log('[CRON-SERVICE] Iniciando envío de Audios Motivadores a los grupos...');
+    
+    // Lista de temáticas solicitadas por el usuario para alternar/incluir en los audios motivadores
+    const tematicas = [
+      "Incentivar a los asesores a interactuar con JanIA sin miedo, ya sea por texto o enviando notas de voz en el grupo, preguntándole sobre inmuebles, requerimientos, leyes o funcionamiento.",
+      "Explicar de forma sencilla qué es VECY Network, el rol de JanIA como asistente de inteligencia artificial y cómo funciona el sistema de coincidencia (matching) en segundos.",
+      "Compartir la historia de VECY Network, quiénes somos (Jani Alves y Eduardo A. Rivera) y por qué creamos esta red colaborativa nacional.",
+      "Explicar los servicios que ofrecemos, cómo contactarnos y en qué redes sociales nos pueden encontrar.",
+      "Recordar que actualmente todo el proyecto y las herramientas son 100% gratuitos por estar en fase de pruebas, y hablar con entusiasmo de las grandes cosas que están por venir.",
+      "Preguntar a los colegas cómo ven el proyecto, qué les agrada más, qué les molesta, qué cambiarían o qué ideas/mejoras aportarían para que JanIA y el portal estén mejor a su servicio.",
+      "Hablar sobre el lanzamiento al aire de la web oficial de VECY, aclarando honestamente que saldrá apenas veamos que la comunidad realmente necesita y valora la herramienta en su día a día."
+    ];
+
+    const grupos = [
+      { id: whatsappBot.targetGroupId, nombre: "VECY INMUEBLES NETWORK", promptExtra: "Enfócate en la publicación activa de ofertas y demandas de inmuebles, el cruce comercial rápido, y la colaboración nacional sin pagar comisiones." },
+      { id: whatsappBot.buzonGroupId, nombre: "BUZÓN DE CONSULTORÍA INMOBILIARIA 24/7", promptExtra: "Enfócate en invitar a que consulten sobre temas jurídicos, disputas de comisiones de puntas compartidas, contratos de corretaje o avalúos." },
+      { id: whatsappBot.circuloGroupId, nombre: "CÍRCULO CERO", promptExtra: "Enfócate en la retroalimentación del sistema, sugerencias directas a los fundadores, ideas de mejora y el futuro del sector inmobiliario." }
+    ];
+
+    for (const grupo of grupos) {
+      if (!grupo.id) continue;
+      
+      try {
+        // Seleccionar una temática aleatoria para dar variedad diaria a cada grupo
+        const tematicaSeleccionada = tematicas[Math.floor(Math.random() * tematicas.length)];
+        
+        const promptVoz = `Genera un mensaje corto, cercano y motivador en español para ser enviado como nota de voz al grupo de WhatsApp "${grupo.nombre}".
+Dirección obligatoria:
+- La temática del audio de hoy debe ser: "${tematicaSeleccionada}"
+- ${grupo.promptExtra}
+- IMPORTANTE: Debe sonar como un mensaje de voz natural de WhatsApp grabado de forma espontánea por una colega real. Evita introducciones corporativas como "Estimados miembros" o frases robóticas. Empieza de forma muy natural como: "Hola colegas, ¿cómo van?", "Buenas tardes a todos por aquí", "Hola a todos, paso por aquí un momento...".
+- Mantén el texto relativamente corto y conciso (máximo 400 caracteres) para que la nota de voz generada dure aproximadamente de 30 a 40 segundos, lo cual es ideal para mantener la atención y optimizar recursos de voz. No uses viñetas ni formateo markdown complejo ya que se leerá como audio.`;
+
+        const response = await invokeLLM({
+          messages: [
+            { role: 'system', content: 'Eres JanIA, la asistente de voz e inteligencia artificial de la red colaborativa VECY Network. Te expresas de manera natural, humana, cálida y profesional.' },
+            { role: 'user', content: promptVoz }
+          ]
+        });
+
+        const content = response.choices[0]?.message?.content;
+        if (content && content.trim() !== "") {
+          if (process.env.NODE_ENV === 'development') {
+            console.log(`[CRON-SERVICE] [DEV MODE] Omitiendo envío de audio motivador para ${grupo.nombre}. Transcripción:\n`, content);
+          } else {
+            await whatsappBot.sendVoiceToGroup(content, grupo.id);
+          }
+        }
+        
+        // Esperar un pequeño retraso entre grupos para no saturar la API de TTS ni enviar todo a la vez
+        await new Promise(resolve => setTimeout(resolve, 8000));
+        
+      } catch (err: any) {
+        console.error(`❌ Error al generar audio motivador para grupo ${grupo.nombre}:`, err.message || err);
+      }
+    }
+  });
 }
 
 /**
