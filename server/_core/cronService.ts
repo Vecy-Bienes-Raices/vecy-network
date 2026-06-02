@@ -204,9 +204,16 @@ Dirección obligatoria:
     }
   });
 
-  // 3. 04:30 PM = Audios Motivadores e Interactivos Dinámicos (Mensajes de Voz para incentivar participación)
-  cron.schedule('30 16 * * *', async () => {
-    console.log('[CRON-SERVICE] Iniciando envío de Audios Motivadores a los grupos...');
+  // 3. 12:30 PM = Audios Motivadores e Interactivos Dinámicos (Mensajes de Voz - Día de por medio)
+  cron.schedule('30 12 * * *', async () => {
+    // Día de por medio utilizando los días transcurridos desde la época UNIX
+    const daysSinceEpoch = Math.floor(Date.now() / (1000 * 60 * 60 * 24));
+    if (daysSinceEpoch % 2 !== 0) {
+      console.log('[CRON-SERVICE] Día de por medio: Hoy no corresponde el envío de Audios Motivadores.');
+      return;
+    }
+
+    console.log('[CRON-SERVICE] Iniciando envío de Audios Motivadores (Día de por medio) a las 12:30 PM...');
     
     // Lista de temáticas solicitadas por el usuario para alternar/incluir en los audios motivadores
     const tematicas = [
@@ -219,6 +226,30 @@ Dirección obligatoria:
       "Hablar sobre el lanzamiento al aire de la web oficial de VECY, aclarando honestamente que saldrá apenas veamos que la comunidad realmente necesita y valora la herramienta en su día a día."
     ];
 
+    // Leer y rotar secuencialmente la temática para evitar repeticiones consecutivas
+    let lastIndex = -1;
+    const indexFilePath = path.join(__dirname, 'last_theme_index.txt');
+    try {
+      if (fs.existsSync(indexFilePath)) {
+        const fileContent = fs.readFileSync(indexFilePath, 'utf8').trim();
+        lastIndex = parseInt(fileContent, 10);
+        if (isNaN(lastIndex)) lastIndex = -1;
+      }
+    } catch (e) {
+      console.warn('[CRON-SERVICE] No se pudo leer el archivo de índice de temáticas:', e);
+    }
+
+    const nextIndex = (lastIndex + 1) % tematicas.length;
+
+    try {
+      fs.writeFileSync(indexFilePath, nextIndex.toString(), 'utf8');
+    } catch (e) {
+      console.warn('[CRON-SERVICE] No se pudo escribir el archivo de índice de temáticas:', e);
+    }
+
+    const tematicaSeleccionada = tematicas[nextIndex];
+    console.log(`[CRON-SERVICE] Temática seleccionada para hoy (índice ${nextIndex}): "${tematicaSeleccionada}"`);
+
     const grupos = [
       { id: whatsappBot.targetGroupId, nombre: "VECY INMUEBLES NETWORK", promptExtra: "Enfócate en la publicación activa de ofertas y demandas de inmuebles, el cruce comercial rápido, y la colaboración nacional sin pagar comisiones." },
       { id: whatsappBot.buzonGroupId, nombre: "BUZÓN DE CONSULTORÍA INMOBILIARIA 24/7", promptExtra: "Enfócate en invitar a que consulten sobre temas jurídicos, disputas de comisiones de puntas compartidas, contratos de corretaje o avalúos." },
@@ -229,9 +260,6 @@ Dirección obligatoria:
       if (!grupo.id) continue;
       
       try {
-        // Seleccionar una temática aleatoria para dar variedad diaria a cada grupo
-        const tematicaSeleccionada = tematicas[Math.floor(Math.random() * tematicas.length)];
-        
         const promptVoz = `Genera un mensaje corto, cercano y motivador en español para ser enviado como nota de voz al grupo de WhatsApp "${grupo.nombre}".
 Dirección obligatoria:
 - La temática del audio de hoy debe ser: "${tematicaSeleccionada}"
