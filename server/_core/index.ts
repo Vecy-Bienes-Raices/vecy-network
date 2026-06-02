@@ -137,6 +137,20 @@ async function startServer() {
     }
   });
 
+  app.get("/api/send-closing-voice", (req, res) => {
+    try {
+      if (!whatsappBot.isReady) {
+        return res.status(503).send("El bot de WhatsApp no está listo todavía. Intenta en unos segundos.");
+      }
+      whatsappBot.sendManualCierreAudios().catch((err: any) => {
+        console.error("Error al enviar los audios de cierre manuales:", err);
+      });
+      res.send("Audios de cierre encolados exitosamente.");
+    } catch (err: any) {
+      res.status(500).send(err.message);
+    }
+  });
+
   app.get("/api/find-active-group", async (req, res) => {
     try {
       if (!whatsappBot.isReady) {

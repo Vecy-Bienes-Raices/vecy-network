@@ -642,6 +642,43 @@ export function translateTransactionType(type: string): string {
   return map[type?.toLowerCase()] || String(type || 'negocio').toUpperCase();
 }
 
+async function getTimeOfDayGreetingForUser(phone: string, realName: string, alreadyGreeted: boolean, isGroup: boolean = false): Promise<string> {
+  const d = new Date();
+  const bogotaStr = d.toLocaleString('en-US', { timeZone: 'America/Bogota' });
+  const bogotaDate = new Date(bogotaStr);
+  const hour = bogotaDate.getHours();
+
+  let salutation = "";
+  if (hour >= 5 && hour < 12) {
+    salutation = "Buenos días";
+  } else if (hour >= 12 && hour < 18) {
+    salutation = "Buenas tardes";
+  } else {
+    salutation = "Buenas noches";
+  }
+
+  let nameToUse = realName;
+  try {
+    const db = await getDb();
+    if (db) {
+      const [u] = await db.select().from(users).where(eq(users.phone, phone)).limit(1);
+      if (u && u.name && u.name.trim() !== "") {
+        nameToUse = u.name;
+      }
+    }
+  } catch (e) {
+    console.warn("[JanIA-Greeting] Error buscando nombre de usuario para saludo:", e);
+  }
+
+  const firstName = nameToUse.split(' ')[0];
+
+  if (alreadyGreeted) {
+    return isGroup ? `Mira @${phone}` : `Mira ${firstName}`;
+  } else {
+    return isGroup ? `${salutation} @${phone}` : `${salutation} ${firstName}`;
+  }
+}
+
 /**
  * Procesa un mensaje de WhatsApp con inteligencia multimodal y humanización avanzada.
  */
@@ -1037,7 +1074,7 @@ Por lo tanto, DEBES hacer lo siguiente:
         textLower.includes("competidor") ||
         textLower.includes("competencia");
 
-      const greetingPrefix = alreadyGreeted ? `Mira @${rawPhone}` : `Hola @${rawPhone}`;
+      const greetingPrefix = await getTimeOfDayGreetingForUser(rawPhone, realName, alreadyGreeted, isGroup);
 
       if (isAboutVecy) {
         const isCompetitorQuery = 
