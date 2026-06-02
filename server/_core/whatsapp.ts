@@ -615,6 +615,27 @@ export class WhatsAppBot {
       this.exportRecentJoinsToFile().catch(err => {
         console.error('[WHATSAPP-BOT] Error al exportar uniones en ready:', err);
       });
+
+      // Optimización de rendimiento: bloquear hojas de estilo y fuentes en el navegador headless
+      (async () => {
+        try {
+          const page = this.client.pupPage;
+          if (page) {
+            await page.setRequestInterception(true);
+            page.on('request', (req) => {
+              const type = req.resourceType();
+              if (type === 'stylesheet' || type === 'font') {
+                req.abort();
+              } else {
+                req.continue();
+              }
+            });
+            console.log('[WHATSAPP-BOT] Optimización activa: Hojas de estilo y fuentes bloqueadas en el navegador invisible.');
+          }
+        } catch (e: any) {
+          console.warn('[WHATSAPP-BOT] No se pudo configurar la interceptación de solicitudes:', e.message || e);
+        }
+      })();
     });
 
     this.client.on('disconnected', (reason) => {
@@ -2219,7 +2240,18 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
           '--disable-features=IsolateOrigins,site-per-process',
           '--disable-site-isolation-trials',
           '--no-zygote',
-          '--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+          '--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+          // Optimizaciones de Rendimiento
+          '--disable-canvas-path-rendering',
+          '--disable-accelerated-2d-canvas',
+          '--disable-gl-drawing-for-tests',
+          '--mute-audio',
+          '--no-first-run',
+          '--no-default-browser-check',
+          '--disable-background-timer-throttling',
+          '--disable-backgrounding-occluded-windows',
+          '--disable-renderer-backgrounding',
+          '--js-flags=--max-old-space-size=512'
         ],
         protocolTimeout: 300000,
       }
