@@ -17,7 +17,8 @@ import {
   MSG_PROMO_CIRCULO,
   MSG_COMUNICADO_MATCH_NETWORK,
   MSG_COMUNICADO_MATCH_CIRCULO,
-  REPUTATION_HOOK
+  REPUTATION_HOOK,
+  translatePropertyType
 } from './janIA';
 import { publishToFacebookGroup } from "./facebookService";
 import fs from 'fs';
@@ -25,7 +26,7 @@ import path from 'path';
 import { spawn } from 'child_process';
 import { getDb } from '../db';
 import { conversations, messages as dbMessages, propertyMatches, properties, requirements, users } from '../../drizzle/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, or, like, sql } from 'drizzle-orm';
 import { storagePut } from "../storage";
 import { ENV } from "./env";
 
@@ -861,6 +862,104 @@ export class WhatsAppBot {
         return; // Detener flujo general de Gemini
       }
 
+      // Si dice algo como "si", "sí", "no", "acepto", "no acepto" pero sin código, intentamos ver si tiene coincidencia sugerida pendiente
+      const plainDecisionRegex = /^\s*(sí|si|no|acepto|no\s+acepto|aceptar|rechazar)\s*$/i;
+      const plainDecisionMatch = msg.body.match(plainDecisionRegex);
+      if (plainDecisionMatch) {
+        let decision = plainDecisionMatch[1].toLowerCase();
+        if (decision === 'si' || decision === 'sí' || decision === 'acepto' || decision === 'aceptar') {
+          decision = 'si';
+        } else {
+          decision = 'no';
+        }
+
+        const db = await getDb();
+        if (db) {
+          const senderPhone = senderId.split('@')[0];
+
+          // Buscar matches donde es el dueño y no ha confirmado
+          const ownerPending = await db
+            .select({
+              id: propertyMatches.id,
+              propertyType: properties.propertyType,
+              transactionType: properties.transactionType,
+              city: properties.city,
+              zone: properties.zone,
+              reqType: requirements.tipoInmuebleDeseado,
+              reqTx: requirements.tipoNegocioDeseado,
+              reqCity: requirements.ciudadDeseada,
+              reqZone: requirements.zonaDeseada,
+              score: propertyMatches.matchScore
+            })
+            .from(propertyMatches)
+            .innerJoin(properties, eq(propertyMatches.propertyId, properties.id))
+            .innerJoin(requirements, eq(propertyMatches.requirementId, requirements.id))
+            .where(
+              and(
+                eq(propertyMatches.status, "suggested"),
+                eq(propertyMatches.ownerConfirmed, false),
+                or(
+                  eq(properties.idUsuarioWhatsapp, senderId),
+                  like(properties.idUsuarioWhatsapp, senderPhone + '%')
+                )
+              )
+            );
+
+          // Buscar matches donde es el buscador y no ha confirmado
+          const seekerPending = await db
+            .select({
+              id: propertyMatches.id,
+              propertyType: properties.propertyType,
+              transactionType: properties.transactionType,
+              city: properties.city,
+              zone: properties.zone,
+              reqType: requirements.tipoInmuebleDeseado,
+              reqTx: requirements.tipoNegocioDeseado,
+              reqCity: requirements.ciudadDeseada,
+              reqZone: requirements.zonaDeseada,
+              score: propertyMatches.matchScore
+            })
+            .from(propertyMatches)
+            .innerJoin(properties, eq(propertyMatches.propertyId, properties.id))
+            .innerJoin(requirements, eq(propertyMatches.requirementId, requirements.id))
+            .where(
+              and(
+                eq(propertyMatches.status, "suggested"),
+                eq(propertyMatches.seekerConfirmed, false),
+                or(
+                  eq(requirements.idUsuarioWhatsapp, senderId),
+                  like(requirements.idUsuarioWhatsapp, senderPhone + '%')
+                )
+              )
+            );
+
+          const allPending = [...ownerPending, ...seekerPending];
+          const uniquePending = allPending.filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
+
+          if (uniquePending.length === 1) {
+            const matchId = uniquePending[0].id;
+            console.log(`[JanIA-DM] Auto-asociando decisión '${decision}' con la única coincidencia pendiente #${matchId} para ${senderId}`);
+            await this.processMatchConfirmation(senderId, realName, matchId, decision);
+            return;
+          } else if (uniquePending.length > 1) {
+            let listMsg = `Hola ${realName.split(' ')[0]}, veo que respondiste *${plainDecisionMatch[1].toUpperCase()}*, pero actualmente tienes *${uniquePending.length} coincidencias* sugeridas de negocio pendientes de confirmar.\n\nPara poder saber cuál de ellas deseas confirmar o rechazar, por favor responde utilizando el código de coincidencia de esta manera:\n`;
+            for (const item of uniquePending) {
+              const isOwnerForThis = ownerPending.some(o => o.id === item.id);
+              const scorePercent = Number(item.score || 0).toFixed(0);
+              if (isOwnerForThis) {
+                listMsg += `\n👉 *SÍ #M${item.id}* o *NO #M${item.id}* para tu propiedad (coincidencia del ${scorePercent}% con requerimiento de ${translatePropertyType(item.reqType)} en ${item.reqCity || 'Bogotá'}-${item.reqZone || ''})`;
+              } else {
+                listMsg += `\n👉 *SÍ #M${item.id}* o *NO #M${item.id}* para tu requerimiento (coincidencia del ${scorePercent}% con propiedad de ${translatePropertyType(item.propertyType)} en ${item.city || 'Bogotá'}-${item.zone || ''})`;
+              }
+            }
+            listMsg += `\n\n*(Nota: Tus números se compartirán solo si ambos confirman con SÍ)*`;
+            await this.queuedSend(senderId, listMsg);
+            await this.logToDb(senderId, 'janIA', `[DM-Response-Ambiguous] Solicitado código de coincidencia para decisión ambigua.`);
+            return;
+          }
+        }
+      }
+
       // Capa Multimodal OCR para DMs (Visión)
       let imageBuffer: string | undefined;
       if (msg.hasMedia && msg.type === 'image') {
@@ -909,7 +1008,7 @@ export class WhatsAppBot {
       // 1. Buscar el match
       const [match] = await db.select().from(propertyMatches).where(eq(propertyMatches.id, matchId)).limit(1);
       if (!match) {
-        await this.queuedSend(senderId, `⚠️ No encontré ningún match registrado con el código *#M${matchId}*. Por favor verifica el número.`);
+        await this.queuedSend(senderId, `⚠️ No encontré ninguna coincidencia registrada con el código *#M${matchId}*. Por favor verifica el número.`);
         return;
       }
 
@@ -918,7 +1017,7 @@ export class WhatsAppBot {
       const [req] = await db.select().from(requirements).where(eq(requirements.id, match.requirementId)).limit(1);
 
       if (!prop || !req) {
-        await this.queuedSend(senderId, "⚠️ Hubo un problema al recuperar los detalles de este match.");
+        await this.queuedSend(senderId, "⚠️ Hubo un problema al recuperar los detalles de esta coincidencia.");
         return;
       }
 
@@ -930,19 +1029,19 @@ export class WhatsAppBot {
       const isSeeker = senderPhone === seekerPhone.split('@')[0];
 
       if (!isOwner && !isSeeker) {
-        await this.queuedSend(senderId, "⚠️ No estás autorizado para confirmar este match.");
+        await this.queuedSend(senderId, "⚠️ No estás autorizado para confirmar esta coincidencia.");
         return;
       }
 
       if (decision === 'no') {
         // Cancelar el match
         await db.update(propertyMatches).set({ status: 'rejected' }).where(eq(propertyMatches.id, matchId));
-        await this.queuedSend(senderId, `Entendido. He marcado el match *#M${matchId}* como cancelado. No se compartirán tus datos de contacto.`);
+        await this.queuedSend(senderId, `Entendido. He marcado la coincidencia *#M${matchId}* como cancelada. No se compartirán tus datos de contacto.`);
         await this.logToDb(senderId, 'janIA', `[Match-Rejected] Match #M${matchId} rechazado por el usuario.`);
         
         // Notificar a la otra parte
         const otherJid = isOwner ? (seekerPhone.includes('@') ? seekerPhone : `${seekerPhone}@c.us`) : (ownerPhone.includes('@') ? ownerPhone : `${ownerPhone}@c.us`);
-        await this.queuedSend(otherJid, `Aviso: El match *#M${matchId}* ha sido cancelado por la otra parte.`);
+        await this.queuedSend(otherJid, `Aviso: La coincidencia *#M${matchId}* ha sido cancelada por la otra parte.`);
         return;
       }
 
@@ -982,8 +1081,8 @@ export class WhatsAppBot {
 
         const matchScoreFormatted = Number(updatedMatch.matchScore || 0).toFixed(0);
 
-        const msgToOwner = `🎉🎈 *¡MATCH CONFIRMADO Y CONECTADO!* 🎈🎉
-Felicidades, ambas partes han confirmado interés en el match *#M${matchId}* (Coincidencia: ${matchScoreFormatted}%).
+        const msgToOwner = `🎉🎈 *¡CONEXIÓN DE NEGOCIO EXITOSA!* 🎈🎉
+Felicidades, ambas partes han confirmado interés en la coincidencia *#M${matchId}* (Coincidencia: ${matchScoreFormatted}%).
 
 Aquí tienes el contacto directo del aliado interesado en tu propiedad:
 👤 *Nombre:* ${seekerName}
@@ -992,8 +1091,8 @@ Aquí tienes el contacto directo del aliado interesado en tu propiedad:
 
 ¡Les deseamos mucho éxito en el cierre comercial! 🤝🚀`;
 
-        const msgToSeeker = `🎉🎈 *¡MATCH CONFIRMADO Y CONECTADO!* 🎈🎉
-Felicidades, ambas partes han confirmado interés en el match *#M${matchId}* (Coincidencia: ${matchScoreFormatted}%).
+        const msgToSeeker = `🎉🎈 *¡CONEXIÓN DE NEGOCIO EXITOSA!* 🎈🎉
+Felicidades, ambas partes han confirmado interés en la coincidencia *#M${matchId}* (Coincidencia: ${matchScoreFormatted}%).
 
 Aquí tienes el contacto directo del aliado que ofrece la propiedad:
 👤 *Nombre:* ${ownerName}
@@ -1009,11 +1108,11 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         await this.logToDb(seekerJid, 'janIA', `[Match-Connected] Contact shared: Owner is ${ownerPhone}`);
       } else {
         // Solo esta parte ha confirmado
-        await this.queuedSend(senderId, `¡Gracias! He registrado tu confirmación de interés para el match *#M${matchId}*.\n\nEn cuanto la otra parte también confirme, les compartiré mutuamente sus datos de contacto para que puedan cerrar el negocio. 🚀`);
+        await this.queuedSend(senderId, `¡Gracias! He registrado tu confirmación de interés para la coincidencia *#M${matchId}*.\n\nEn cuanto la otra parte también confirme, les compartiré mutuamente sus datos de contacto para que puedan cerrar el negocio. 🚀`);
         await this.logToDb(senderId, 'janIA', `[Match-Confirmed-Waiting] User confirmed match #M${matchId}, waiting for peer.`);
       }
     } catch (err: any) {
-      console.error(`[processMatchConfirmation-Error] Error procesando confirmación para match #${matchId}:`, err);
+      console.error(`[processMatchConfirmation-Error] Error procesando confirmación para coincidencia #${matchId}:`, err);
       await this.queuedSend(senderId, "⚠️ Ocurrió un error interno al procesar tu confirmación.");
     }
   }

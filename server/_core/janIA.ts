@@ -457,6 +457,9 @@ function formatColombiaDateTime(dateVal: any) {
   const month = String(bogotaDate.getMonth() + 1).padStart(2, '0');
   const year = bogotaDate.getFullYear();
   
+  const daysOfWeek = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+  const dayName = daysOfWeek[bogotaDate.getDay()];
+  
   let hours = bogotaDate.getHours();
   const minutes = String(bogotaDate.getMinutes()).padStart(2, '0');
   const ampm = hours >= 12 ? 'PM' : 'AM';
@@ -466,7 +469,8 @@ function formatColombiaDateTime(dateVal: any) {
   
   return {
     dateStr: `${day}/${month}/${year}`,
-    timeStr: `${hourStr}:${minutes} ${ampm}`
+    timeStr: `${hourStr}:${minutes} ${ampm}`,
+    dayName
   };
 }
 
@@ -530,46 +534,74 @@ async function handleDetectedMatches(
 
     matchBlocks.push(block);
 
-    // El oferente (propietario)
+    // Obtener nombres de base de datos
+    let savedUserName = realName;
+    let matchedUserName = "Colega";
+
+    try {
+      const db = await getDb();
+      if (db) {
+        const [su] = await db.select().from(users).where(eq(users.phone, savedRawPhone)).limit(1);
+        if (su && su.name && su.name.trim() !== "") {
+          savedUserName = su.name;
+        }
+        
+        const [mu] = await db.select().from(users).where(eq(users.phone, matchedRawPhone)).limit(1);
+        if (mu && mu.name && mu.name.trim() !== "") {
+          matchedUserName = mu.name;
+        }
+      }
+    } catch (e) {
+      console.warn("[JanIA-Match] Error buscando nombres reales de usuarios:", e);
+    }
+
+    const savedFirstName = savedUserName.split(' ')[0];
+    const matchedFirstName = matchedUserName.split(' ')[0];
+
+    const ownerName = isProperty ? savedFirstName : matchedFirstName;
     const ownerJid = isProperty ? savedJid : matchedJid;
+    const ownerDateTime = isProperty ? savedDateTime : matchedDateTime;
+
+    const seekerName = isProperty ? matchedFirstName : savedFirstName;
+    const seekerJid = isProperty ? matchedJid : savedJid;
+    const seekerDateTime = isProperty ? savedDateTime : matchedDateTime;
+
+    // El oferente (propietario)
     const ownerDM = `🤝 *¡OPORTUNIDAD DE NEGOCIO DETECTADA!* 🤝
 
-Hola Colega, he detectado una coincidencia del *${score.toFixed(0)}%* entre tu propiedad en oferta y un requerimiento de compra/arriendo de otro aliado en la red:
-• 🏢 *Tipo de inmueble:* ${translatePropertyType(reqItem.tipoInmuebleDeseado || reqItem.propertyType || 'inmueble')}
+Hola ${ownerName}, mira que a tu *PROPIEDAD* (oferta) que publicaste en el grupo el día *${ownerDateTime.dayName}*, *${ownerDateTime.dateStr}* (a las ${ownerDateTime.timeStr}), le he encontrado similitudes que concuerdan con este *REQUERIMIENTO* (búsqueda) que publicó otro colega en la red:
+
+• 🏢 *Inmueble:* ${translatePropertyType(reqItem.tipoInmuebleDeseado || reqItem.propertyType || 'inmueble')}
 • 💼 *Negocio:* ${translateTransactionType(reqItem.tipoNegocioDeseado || reqItem.transactionType || 'compra')}
-• 📍 *Ubicación del cliente:* ${reqItem.ciudadDeseada || reqItem.city || 'Bogotá'} - ${reqItem.zonaDeseada || reqItem.zone || ''}
-• 💬 *Detalle del requerimiento:* ${reqItem.rawText || 'Sin descripción'}
+• 📍 *Ubicación buscada:* ${reqItem.ciudadDeseada || reqItem.city || 'Bogotá'} - ${reqItem.zonaDeseada || reqItem.zone || ''}
+• 💬 *Detalle de lo que busca:* ${reqItem.rawText || 'Sin descripción'}
 
----
-
-¿Te interesa que te ponga en contacto directo con este aliado para cerrar el negocio?
+¿*ACEPTAS* o *NO ACEPTAS* que te contacte con la persona que ha publicado este *REQUERIMIENTO* para que compartamos sus números de WhatsApp y puedan hacer negocio?
 
 Por favor responde a este mensaje diciendo únicamente:
-👉 *SÍ #M${matchId}* (Si te interesa que compartamos los números de contacto)
-👉 *NO #M${matchId}* (Si no te interesa esta coincidencia)
+👉 *SÍ #M${matchId}* (si Aceptas)
+👉 *NO #M${matchId}* (si No Aceptas)
 
-⚠️ *Nota importante:* Los números de WhatsApp de ambos se compartirán de forma automática de inmediato únicamente si **ambas partes** confirman respondiendo *SÍ #M${matchId}* dentro de las próximas 24 horas.`;
+⚠️ *Nota importante:* Debes incluir el código *#M${matchId}* para poder saber a cuál coincidencia te refieres. Los números de WhatsApp de ambos se compartirán de forma automática de inmediato únicamente si **ambas partes** confirman con *SÍ #M${matchId}* dentro de las próximas 24 horas.`;
 
     // El demandante (seeker)
-    const seekerJid = isProperty ? matchedJid : savedJid;
     const seekerDM = `🤝 *¡OPORTUNIDAD DE NEGOCIO DETECTADA!* 🤝
 
-Hola Colega, he detectado una coincidencia del *${score.toFixed(0)}%* entre tu requerimiento de búsqueda y una propiedad disponible de otro aliado en la red:
-• 🏢 *Tipo de inmueble:* ${translatePropertyType(propItem.propertyType || 'inmueble')}
+Hola ${seekerName}, mira que a tu *REQUERIMIENTO* (búsqueda) que publicaste en el grupo el día *${seekerDateTime.dayName}*, *${seekerDateTime.dateStr}* (a las ${seekerDateTime.timeStr}), le he encontrado similitudes que concuerdan con esta *PROPIEDAD* (oferta) que publicó otro colega en la red:
+
+• 🏢 *Inmueble:* ${translatePropertyType(propItem.propertyType || 'inmueble')}
 • 💼 *Negocio:* ${translateTransactionType(propItem.transactionType || 'venta')}
-• 📍 *Ubicación del inmueble:* ${propItem.city || 'Bogotá'} - ${propItem.zone || ''}
+• 📍 *Ubicación de la oferta:* ${propItem.city || 'Bogotá'} - ${propItem.zone || ''}
 • 💵 *Precio:* ${propItem.price ? Number(propItem.price).toLocaleString('es-CO') + ' COP' : 'N/A'}
-• 💬 *Detalle de la oferta:* ${propItem.rawText || 'Sin descripción'}
+• 💬 *Detalle de lo que ofrece:* ${propItem.rawText || 'Sin descripción'}
 
----
-
-¿Te interesa que te ponga en contacto directo con este aliado para cerrar el negocio?
+¿*ACEPTAS* o *NO ACEPTAS* que te contacte con la persona que ha publicado esta *PROPIEDAD* para que compartamos sus números de WhatsApp y puedan hacer negocio?
 
 Por favor responde a este mensaje diciendo únicamente:
-👉 *SÍ #M${matchId}* (Si te interesa que compartamos los números de contacto)
-👉 *NO #M${matchId}* (Si no te interesa esta coincidencia)
+👉 *SÍ #M${matchId}* (si Aceptas)
+👉 *NO #M${matchId}* (si No Aceptas)
 
-⚠️ *Nota importante:* Los números de WhatsApp de ambos se compartirán de forma automática de inmediato únicamente si **ambas partes** confirman respondiendo *SÍ #M${matchId}* dentro de las próximas 24 horas.`;
+⚠️ *Nota importante:* Debes incluir el código *#M${matchId}* para poder saber a cuál coincidencia te refieres. Los números de WhatsApp de ambos se compartirán de forma automática de inmediato únicamente si **ambas partes** confirman con *SÍ #M${matchId}* dentro de las próximas 24 horas.`;
 
     extraDMs.push({ jid: ownerJid, message: ownerDM });
     extraDMs.push({ jid: seekerJid, message: seekerDM });
@@ -585,7 +617,7 @@ Por favor responde a este mensaje diciendo únicamente:
   };
 }
 
-function translatePropertyType(type: string): string {
+export function translatePropertyType(type: string): string {
   const map: Record<string, string> = {
     apartment: "Apartamento",
     house: "Casa",
@@ -600,7 +632,7 @@ function translatePropertyType(type: string): string {
   return map[type?.toLowerCase()] || capitalize(type || 'inmueble');
 }
 
-function translateTransactionType(type: string): string {
+export function translateTransactionType(type: string): string {
   const map: Record<string, string> = {
     venta: "VENTA",
     arriendo: "ARRIENDO",
