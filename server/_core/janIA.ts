@@ -823,6 +823,15 @@ Por lo tanto, DEBES hacer lo siguiente:
     const isRequirement = result.classification === "REQUERIMIENTO";
     const isProperty = result.classification === "INMUEBLE";
 
+    // NUEVO: Bloquear publicaciones directas en chat privado / DM (Evitar desorden)
+    if ((isProperty || isRequirement) && !isGroup) {
+      return {
+        classification: "VIOLACION_DE_NORMAS",
+        response: `Hola *${firstName}*, noto que estás enviando una publicación de oferta o demanda por este chat privado.\n\nPara mantener el orden y la visibilidad de tus activos con todos los aliados, recuerda que *toda publicación debe enviarse directamente en el grupo VECY INMUEBLES NETWORK*.\n\nPor este chat privado solo atiendo consultas generales, preguntas sobre el sistema o confirmaciones bilaterales de MATCH. ¡Gracias por tu comprensión! 🤝🎯`,
+        shouldSendDM: false
+      };
+    }
+
     // --- CAPA DE DEFENSA GEOGRÁFICA NACIONAL (Elástica) ---
     if (isProperty || isRequirement) {
       const zoneToValidate = isProperty ? extracted?.zone : extracted?.zonaDeseada || extracted?.zone;
