@@ -1597,6 +1597,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
 
   // --- DETECTOR DE CONVERSACIÓN ACTIVA ENTRE MIEMBROS ---
   private async detectGroupConversation(chatId: string, senderId: string, msg: Message) {
+    return; // Desactivado para evitar el envío de audios/textos intrusivos no solicitados a miembros del grupo (anti-ban)
     const isModeratedGroup = chatId === this.targetGroupId || chatId === this.buzonGroupId || chatId === this.circuloGroupId;
     if (!isModeratedGroup) return;
 
@@ -1860,28 +1861,8 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
       const dmMsg = result.dmResponse || result.response;
       if (dmMsg && dmMsg.trim() !== "") {
         if (isGroup) {
-          // Si proviene de un grupo y faltan datos, enviamos la advertencia de geocodificación directamente por privado para mantener limpio el grupo
-          if (result.classification === "DATOS_INCOMPLETOS") {
-            if (wantsVoice) {
-              // Mostrar "Grabando audio..." inmediatamente durante la síntesis y transcodificación en el DM
-              try {
-                const dmChat = await this.client.getChatById(senderId);
-                await dmChat.sendStateRecording();
-              } catch (_) {}
-
-              // Solo audio
-              const voiceText = result.voiceResponse || dmMsg;
-              const media = await textToSpeechMedia(voiceText);
-              if (media) {
-                await this.queuedSend(senderId, media, { sendAudioAsVoice: true });
-              } else {
-                await this.queuedSend(senderId, dmMsg); // fallback texto
-              }
-            } else {
-              await this.queuedSend(senderId, dmMsg);
-            }
-            await this.logToDb(senderId, 'janIA', `[DM-Incompleto] ${dmMsg}`);
-          }
+          // Desactivado para evitar reportes de spam / bloqueos de WhatsApp al enviar DMs automáticos no solicitados a miembros de grupos.
+          console.log(`[WHATSAPP-BOT] Omitiendo DM automático para ${senderId} por DATOS_INCOMPLETOS desde grupo para prevenir reportes de spam.`);
         } else {
           // Chat privado (DM)
           const options: any = {};

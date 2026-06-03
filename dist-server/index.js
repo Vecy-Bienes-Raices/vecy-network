@@ -6778,6 +6778,7 @@ Hola @${rawPhone}, detect\xE9 que est\xE1s enviando muchas publicaciones seguida
   }
   // --- DETECTOR DE CONVERSACIÓN ACTIVA ENTRE MIEMBROS ---
   async detectGroupConversation(chatId, senderId, msg) {
+    return;
     const isModeratedGroup = chatId === this.targetGroupId || chatId === this.buzonGroupId || chatId === this.circuloGroupId;
     if (!isModeratedGroup) return;
     const botJid = this.client.info?.wid?._serialized;
@@ -6976,25 +6977,7 @@ _(Nota: Por favor nombra a JanIA Administradora del grupo para que pueda borrar 
       const dmMsg = result.dmResponse || result.response;
       if (dmMsg && dmMsg.trim() !== "") {
         if (isGroup) {
-          if (result.classification === "DATOS_INCOMPLETOS") {
-            if (wantsVoice) {
-              try {
-                const dmChat = await this.client.getChatById(senderId);
-                await dmChat.sendStateRecording();
-              } catch (_) {
-              }
-              const voiceText = result.voiceResponse || dmMsg;
-              const media = await textToSpeechMedia(voiceText);
-              if (media) {
-                await this.queuedSend(senderId, media, { sendAudioAsVoice: true });
-              } else {
-                await this.queuedSend(senderId, dmMsg);
-              }
-            } else {
-              await this.queuedSend(senderId, dmMsg);
-            }
-            await this.logToDb(senderId, "janIA", `[DM-Incompleto] ${dmMsg}`);
-          }
+          console.log(`[WHATSAPP-BOT] Omitiendo DM autom\xE1tico para ${senderId} por DATOS_INCOMPLETOS desde grupo para prevenir reportes de spam.`);
         } else {
           const options = {};
           if (result.dmShouldReply && originalMsg) {
