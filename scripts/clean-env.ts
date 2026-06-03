@@ -7,23 +7,19 @@ import * as path from 'path';
  * Purga procesos de navegación y rastros de sesión de whatsapp-web.js
  */
 
-const TARGET_PROCESSES = ['chrome', 'chromium'];
 const TARGET_PATHS = [
-  '.wwebjs_cache',
-  '.wwebjs_auth/session-jania-main'
+  '.wwebjs_cache'
 ];
 
 function killProcesses() {
-  console.log('🚀 Finalizando procesos de navegación...');
-  TARGET_PROCESSES.forEach(proc => {
-    try {
-      // pkill -f para buscar en la línea de comandos completa
-      execSync(`pkill -f ${proc}`);
-      console.log(`✅ Procesos '${proc}' terminados.`);
-    } catch (e) {
-      // Ignorar si no hay procesos
-    }
-  });
+  console.log('🚀 Finalizando procesos de navegación de JanIA...');
+  try {
+    // pkill -f para buscar únicamente procesos chrome que contengan "session-jania-main"
+    execSync('pkill -f "session-jania-main"');
+    console.log('✅ Procesos de navegación de JanIA terminados.');
+  } catch (e) {
+    // Ignorar si no hay procesos
+  }
 }
 
 function clearPaths() {
@@ -44,7 +40,7 @@ function clearPaths() {
   });
 
   // Limpieza adicional de SingletonLock por si acaso
-  const lockFile = path.resolve(process.cwd(), '.wwebjs_auth/session-jania-main/SingletonLock');
+  const lockFile = path.resolve(process.cwd(), '.wwebjs_auth/session-session-jania-main/SingletonLock');
   if (fs.existsSync(lockFile)) {
     try {
       fs.unlinkSync(lockFile);

@@ -7019,6 +7019,10 @@ _(Nota: Por favor nombra a JanIA Administradora del grupo para que pueda borrar 
     if (result.extraDMs && result.extraDMs.length > 0) {
       for (const dm of result.extraDMs) {
         try {
+          if (!dm.jid || !dm.jid.includes("@") || dm.jid.split("@")[0].length < 5) {
+            console.warn(`[JanIA-MatchDM] Omitiendo JID inv\xE1lido para confirmaci\xF3n de match: ${dm.jid}`);
+            continue;
+          }
           console.log(`[JanIA-MatchDM] Enviando confirmaci\xF3n de match a ${dm.jid}...`);
           await this.queuedSend(dm.jid, dm.message);
           await this.logToDb(dm.jid, "janIA", `[Match-DM-Request] ${dm.message}`);

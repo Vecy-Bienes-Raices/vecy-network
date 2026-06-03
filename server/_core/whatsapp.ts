@@ -1912,6 +1912,10 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
     if (result.extraDMs && result.extraDMs.length > 0) {
       for (const dm of result.extraDMs) {
         try {
+          if (!dm.jid || !dm.jid.includes('@') || dm.jid.split('@')[0].length < 5) {
+            console.warn(`[JanIA-MatchDM] Omitiendo JID inválido para confirmación de match: ${dm.jid}`);
+            continue;
+          }
           console.log(`[JanIA-MatchDM] Enviando confirmación de match a ${dm.jid}...`);
           await this.queuedSend(dm.jid, dm.message);
           await this.logToDb(dm.jid, 'janIA', `[Match-DM-Request] ${dm.message}`);
