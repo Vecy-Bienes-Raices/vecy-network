@@ -5878,7 +5878,7 @@ var WhatsAppBot = class {
         }
         this.messagesSentToday++;
         console.log(`[WhatsApp-Bot] Mensaje enviado a ${chatId}. Total hoy: ${this.messagesSentToday}/${this.dailyMessageLimit}`);
-        await delay(Math.floor(Math.random() * 5e3) + 1e4);
+        await delay(Math.floor(Math.random() * 2e3) + 3e3);
       } catch (err) {
         console.error("[Anti-Burst-Queue] Fallo en despacho secuencial:", err.message || err);
       }

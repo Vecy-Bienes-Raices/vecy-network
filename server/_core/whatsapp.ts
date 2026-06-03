@@ -507,8 +507,8 @@ export class WhatsAppBot {
 
         this.messagesSentToday++;
         console.log(`[WhatsApp-Bot] Mensaje enviado a ${chatId}. Total hoy: ${this.messagesSentToday}/${this.dailyMessageLimit}`);
-        // Intervalo obligatorio de 10s a 15s
-        await delay(Math.floor(Math.random() * 5000) + 10000);
+        // Intervalo de enfriamiento seguro de 3s a 5s
+        await delay(Math.floor(Math.random() * 2000) + 3000);
       } catch (err: any) {
         console.error('[Anti-Burst-Queue] Fallo en despacho secuencial:', err.message || err);
       }
