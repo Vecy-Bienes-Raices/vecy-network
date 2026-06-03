@@ -8035,8 +8035,12 @@ async function startServer() {
   const port = parseInt(process.env.PORT || "3000");
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
-    console.log("Iniciando WhatsApp Bot...");
-    whatsappBot.initialize();
+    if (process.env.ENABLE_WHATSAPP_BOT !== "false") {
+      console.log("Iniciando WhatsApp Bot...");
+      whatsappBot.initialize();
+    } else {
+      console.log("[WHATSAPP-BOT] Deshabilitado temporalmente mediante ENABLE_WHATSAPP_BOT=false.");
+    }
     initCronScheduler();
   });
 }

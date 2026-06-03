@@ -349,9 +349,15 @@ async function startServer() {
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
-    // Inicializar el Bot de WhatsApp de Vecy Network
-    console.log("Iniciando WhatsApp Bot...");
-    whatsappBot.initialize();
+    
+    // Inicializar el Bot de WhatsApp de Vecy Network solo si no está deshabilitado
+    if (process.env.ENABLE_WHATSAPP_BOT !== "false") {
+      console.log("Iniciando WhatsApp Bot...");
+      whatsappBot.initialize();
+    } else {
+      console.log("[WHATSAPP-BOT] Deshabilitado temporalmente mediante ENABLE_WHATSAPP_BOT=false.");
+    }
+    
     // Inicializar el orquestador de agendas automatizadas (Cron)
     initCronScheduler();
   });
