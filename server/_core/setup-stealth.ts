@@ -17,19 +17,35 @@ try {
   // Registrar el plugin de sigilo
   puppeteerExtra.use(StealthPlugin());
   
-  const puppeteerPath = require.resolve('puppeteer');
-  
   // Sobrescribir la caché del módulo para 'puppeteer'
-  (require as any).cache[puppeteerPath] = {
-    id: puppeteerPath,
-    filename: puppeteerPath,
-    loaded: true,
-    exports: puppeteerExtra,
-    parent: null,
-    children: []
-  };
+  try {
+    const puppeteerPath = require.resolve('puppeteer');
+    (require as any).cache[puppeteerPath] = {
+      id: puppeteerPath,
+      filename: puppeteerPath,
+      loaded: true,
+      exports: puppeteerExtra,
+      parent: null,
+      children: []
+    };
+    console.log('🛡️ [Stealth] Intercepción de Puppeteer (completo) exitosa.');
+  } catch (err) {}
+
+  // Sobrescribir la caché del módulo para 'puppeteer-core'
+  try {
+    const puppeteerCorePath = require.resolve('puppeteer-core');
+    (require as any).cache[puppeteerCorePath] = {
+      id: puppeteerCorePath,
+      filename: puppeteerCorePath,
+      loaded: true,
+      exports: puppeteerExtra,
+      parent: null,
+      children: []
+    };
+    console.log('🛡️ [Stealth] Intercepción de Puppeteer-Core exitosa.');
+  } catch (err) {}
   
-  console.log('🛡️ [Stealth] Intercepción de Puppeteer exitosa. Evasión de firmas activada para WhatsApp.');
+  console.log('🛡️ [Stealth] Evasión de firmas activada para WhatsApp de forma robusta.');
 } catch (error) {
   console.error('❌ [Stealth-Error] No se pudo configurar Stealth Puppeteer:', error);
 }

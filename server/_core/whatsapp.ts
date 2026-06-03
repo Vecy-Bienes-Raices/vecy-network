@@ -30,6 +30,7 @@ import { eq, and, or, like, sql } from 'drizzle-orm';
 import { storagePut } from "../storage";
 import { ENV } from "./env";
 import { invokeLLM } from "./llm";
+import * as jose from 'jose';
 
 // --- JanIA v2.0 Global Time Constraints (v11.97) ---
 const SERVER_BOOT_TIME = Math.floor(Date.now() / 1000);
@@ -77,6 +78,50 @@ async function transcodeToOggOpus(inputBuffer: Buffer): Promise<Buffer> {
   });
 }
 
+/** Obtiene un access token de OAuth2 para Google Cloud usando el archivo de Service Account */
+async function getGoogleAccessToken(): Promise<string | null> {
+  try {
+    const keyPath = path.resolve("./scratch/google-service-account.json");
+    if (!fs.existsSync(keyPath)) {
+      console.warn("[TTS-Google] Archivo google-service-account.json no encontrado en scratch.");
+      return null;
+    }
+
+    const serviceAccountJson = JSON.parse(fs.readFileSync(keyPath, "utf8"));
+    const privateKey = await jose.importPKCS8(serviceAccountJson.private_key, "RS256");
+    const jwt = await new jose.SignJWT({
+      scope: "https://www.googleapis.com/auth/cloud-platform"
+    })
+      .setProtectedHeader({ alg: "RS256" })
+      .setIssuer(serviceAccountJson.client_email)
+      .setAudience("https://oauth2.googleapis.com/token")
+      .setExpirationTime("1h")
+      .setIssuedAt()
+      .sign(privateKey);
+
+    const res = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+        assertion: jwt
+      })
+    });
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      console.error(`[TTS-Google] Error obteniendo OAuth2 token: ${res.status} - ${errText}`);
+      return null;
+    }
+
+    const data = await res.json() as { access_token: string };
+    return data.access_token;
+  } catch (err) {
+    console.error("[TTS-Google] Error en getGoogleAccessToken:", err);
+    return null;
+  }
+}
+
 /** Prepara el texto para TTS: pronunciación natural en español */
 function prepareTtsText(rawText: string): string {
   return rawText
@@ -87,8 +132,20 @@ function prepareTtsText(rawText: string): string {
     .replace(/\bSQL\b/gi, "ese cu ele")
     .replace(/\bDM\b/gi, "di em")
     .replace(/\bID\b/gi, "ai di")
-    .replace(/[<>]/g, "")
     .trim();
+}
+
+function escapeXml(unsafe: string): string {
+  return unsafe.replace(/[<>&'"]/g, (c) => {
+    switch (c) {
+      case '<': return '&lt;';
+      case '>': return '&gt;';
+      case '&': return '&amp;';
+      case '\'': return '&apos;';
+      case '"': return '&quot;';
+      default: return c;
+    }
+  });
 }
 
 export async function textToSpeechMedia(text: string): Promise<any> {
@@ -101,118 +158,85 @@ export async function textToSpeechMedia(text: string): Promise<any> {
   if (!cleanText) return null;
 
   const ttsText = prepareTtsText(cleanText);
+  const escapedText = escapeXml(ttsText);
+  // SSML con pausas de respiración naturales en puntos suspensivos (500ms) y comas (200ms)
+  const ssmlText = `<speak>${escapedText.replace(/\.\.\./g, '<break time="500ms"/>').replace(/,/g, ',<break time="200ms"/>')}</speak>`;
 
   // ═══════════════════════════════════════════════════════════════════
-  // OPCIÓN 0: ElevenLabs TTS (La más natural y expresiva — Latina)
-  //
-  // Requiere ELEVENLABS_API_KEY en el .env.
-  // Tier gratuito: 10,000 caracteres/mes.
-  // Voz: Laura (es-419) — cálida, expresiva, latinoamericana.
+  // OPCIÓN ÚNICA PRINCIPAL: Google Cloud TTS (Voces de Alta Definición es-CO)
   // ═══════════════════════════════════════════════════════════════════
-  const elevenKey = process.env.ELEVENLABS_API_KEY;
-  if (elevenKey) {
-    try {
-      // Elena — voz profesional premium (ID: meyBySCAtUDmCr3eJJ1C)
-      // Si la cuenta es del plan gratuito, fallará con 402 y caerá automáticamente a Matilda (XrExE9yKIg1WjnnlVkGX)
-      const voiceId = process.env.ELEVENLABS_VOICE_ID || "meyBySCAtUDmCr3eJJ1C"; // Elena
-      let response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`, {
-        method: "POST",
-        headers: {
-          "xi-api-key": elevenKey,
-          "Content-Type": "application/json",
-          "Accept": "audio/mpeg"
-        },
-        body: JSON.stringify({
-          text: ttsText,
-          model_id: "eleven_multilingual_v2",
-          voice_settings: {
-            stability: 0.42,          // Calibrado para Elena humana (s42)
-            similarity_boost: 0.51,    // Clarity boost a 51% (sb51)
-            style: 0.43,              // Style exaggeration a 43% (se43)
-            use_speaker_boost: true
-          }
-        })
-      });
-
-      // Fallback automático si la voz profesional/library no está disponible en plan gratuito (error 402/400)
-      if (!response.ok && (response.status === 402 || response.status === 400)) {
-        const errText = await response.clone().text().catch(() => "");
-        if (errText.includes("paid_plan_required") || errText.includes("library voices")) {
-          const fallbackVoiceId = "XrExE9yKIg1WjnnlVkGX"; // Matilda (pre-made, 100% compatible con plan gratuito)
-          console.log(`[TTS-ElevenLabs] La voz ${voiceId} requiere plan de pago. Aplicando fallback automático a Matilda (${fallbackVoiceId})...`);
-          response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${fallbackVoiceId}?output_format=mp3_44100_128`, {
-            method: "POST",
-            headers: {
-              "xi-api-key": elevenKey,
-              "Content-Type": "application/json",
-              "Accept": "audio/mpeg"
-            },
-            body: JSON.stringify({
-              text: ttsText,
-              model_id: "eleven_multilingual_v2",
-              voice_settings: {
-                stability: 0.42,
-                similarity_boost: 0.51,
-                style: 0.43,
-                use_speaker_boost: true
-              }
-            })
-          });
-        }
-      }
-
-      if (response.ok) {
-        const buffer = await response.arrayBuffer();
-        // Verificar que el buffer tiene datos reales
-        if (buffer.byteLength < 1000) {
-          console.warn(`[TTS-ElevenLabs] Audio demasiado pequeño (${buffer.byteLength} bytes), posible error.`);
-        } else {
-          try {
-            const oggBuffer = await transcodeToOggOpus(Buffer.from(buffer));
-            const base64Ogg = oggBuffer.toString('base64');
-            console.log(`[TTS-ElevenLabs] ✓ Voz generada y transcodificada a OGG_OPUS (${oggBuffer.byteLength} bytes).`);
-            return new MessageMedia('audio/ogg; codecs=opus', base64Ogg, 'voice-note.ogg');
-          } catch (transcodeErr) {
-            console.error(`[TTS-ElevenLabs] Falló transcodificación a Ogg, enviando MP3 de respaldo:`, transcodeErr);
-            const base64 = Buffer.from(buffer).toString('base64');
-            return new MessageMedia('audio/mpeg', base64, 'voice-note.mp3');
-          }
-        }
-      } else {
-        const err = await response.text().catch(() => "");
-        console.warn(`[TTS-ElevenLabs] Error ${response.status}: ${err.substring(0, 150)}`);
-      }
-    } catch (err) {
-      console.error("[TTS-ElevenLabs] Error:", err);
-    }
-  }
-
-  // ─────────────────────────────────────────────────────────────────
-  // OPCIÓN 1: Google Cloud TTS (Chirp HD → Journey → Neural2-C)
-  // ─────────────────────────────────────────────────────────────────
   const googleApiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || ENV.forgeApiKey;
   if (googleApiKey) {
-    const voiceCandidates: Array<{ endpoint: string; name: string; lang: string }> = [
-      { endpoint: "v1beta1", name: "es-US-Chirp-HD-F", lang: "es-US" },
-      { endpoint: "v1",      name: "es-US-Journey-F",  lang: "es-US" },
-      { endpoint: "v1",      name: "es-US-Neural2-C",  lang: "es-US" },
+    const voiceCandidates: Array<{ 
+      endpoint: string; 
+      name: string; 
+      lang: string; 
+      gender?: string; 
+      usePitch: boolean;
+      modelName?: string;
+      prompt?: string;
+    }> = [
+      { 
+        endpoint: "v1beta1", 
+        name: "Achernar", 
+        lang: "es-us", 
+        usePitch: false, 
+        modelName: "gemini-3.1-flash-tts-preview", 
+        prompt: "Leer en voz alta con un tono cálido y acogedor." 
+      },
+      { endpoint: "v1", name: "es-US-Journey-F",  lang: "es-US", gender: "FEMALE", usePitch: false },
+      { endpoint: "v1", name: "es-419-Neural2-C", lang: "es-419", gender: "FEMALE", usePitch: false },
+      { endpoint: "v1", name: "es-CO-Neural2-A", lang: "es-CO", gender: "FEMALE", usePitch: false },
+      { endpoint: "v1", name: "es-CO-Wavenet-A", lang: "es-CO", gender: "FEMALE", usePitch: false },
     ];
 
-    for (const { endpoint, name, lang } of voiceCandidates) {
+    let cachedAccessToken: string | null = null;
+
+    for (const candidate of voiceCandidates) {
+      const { endpoint, name, lang, gender, usePitch, modelName, prompt } = candidate;
       try {
-        const ttsUrl = `https://texttospeech.googleapis.com/${endpoint}/text:synthesize?key=${googleApiKey}`;
+        
+        let ttsUrl = `https://texttospeech.googleapis.com/${endpoint}/text:synthesize?key=${googleApiKey}`;
+        const headers: Record<string, string> = { "Content-Type": "application/json" };
+
+        if (modelName) {
+          if (!cachedAccessToken) {
+            cachedAccessToken = await getGoogleAccessToken();
+          }
+          if (cachedAccessToken) {
+            ttsUrl = `https://texttospeech.googleapis.com/${endpoint}/text:synthesize`;
+            headers["Authorization"] = `Bearer ${cachedAccessToken}`;
+          } else {
+            console.warn(`[TTS-Google] Omitiendo candidato "${name}" porque requiere OAuth2 y no se generó el token.`);
+            continue;
+          }
+        }
+        
+        // Construir cuerpo de petición dinámicamente para soportar Gemini TTS (preview) o Standard
+        const requestBody = {
+          audioConfig: modelName
+            ? {
+                audioEncoding: "OGG_OPUS",
+                pitch: 0,
+                speakingRate: 1.1
+              }
+            : {
+                audioEncoding: "OGG_OPUS",
+                speakingRate: 1.0,
+                ...(usePitch ? { pitch: 0.0 } : {})
+              },
+          input: modelName 
+            ? { text: ttsText, prompt: prompt }  // Gemini Flash TTS Preview usa text + prompt de estilo
+            : { ssml: ssmlText },                // Modelos estándar usan SSML
+          voice: modelName
+            ? { languageCode: lang, modelName, name }
+            : { languageCode: lang, name, ssmlGender: gender }
+        };
+
         const response = await fetch(ttsUrl, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            input: { text: ttsText },
-            voice: { languageCode: lang, name, ssmlGender: "FEMALE" },
-            audioConfig: {
-              audioEncoding: "OGG_OPUS",
-              speakingRate: 1.55,  // Ágil y dinámica
-              pitch: 2.0           // Positivo = más fresco y energético (evita sonar 'borracha')
-            }
-          })
+          headers,
+          body: JSON.stringify(requestBody)
         });
 
         if (response.ok) {
@@ -441,17 +465,31 @@ export class WhatsAppBot {
       try {
         if (this.messagesSentToday >= this.dailyMessageLimit) return;
 
-        // Indicador de estado: 🎙️ grabando si es audio, ✍️ escribiendo si es texto
+        // Indicador de estado y retardo realista (v12.5): 🎙️ grabando si es audio, ✍️ escribiendo si es texto
+        let typingDelay = 1000;
         try {
           const chat = await this.client.getChatById(chatId);
           const isAudio = content instanceof MessageMedia ||
-                          (typeof content === 'object' && content?.mimetype?.startsWith('audio'));
+                          (typeof content === 'object' && content?.mimetype?.startsWith('audio')) ||
+                          (options && options.sendAudioAsVoice);
           if (isAudio) {
             await chat.sendStateRecording();  // 🎙️ Micrófono
+            // Simular un retardo proporcional a la grabación (ej. entre 4 y 7 segundos para audio estándar)
+            typingDelay = Math.floor(Math.random() * 3000) + 4000;
           } else {
             await chat.sendStateTyping();     // ✍️ Tres puntitos
+            // Simular velocidad de escritura realista (aprox. 15-20 caracteres por segundo, máx 5s, mín 1.5s)
+            if (typeof content === 'string') {
+              typingDelay = Math.min(content.length * 20, 5000);
+              typingDelay = Math.max(typingDelay, 1500);
+            } else {
+              typingDelay = 2000;
+            }
           }
         } catch (_) { /* ignorar si el chat no acepta el estado */ }
+
+        // Esperar el retardo de presencia humana antes del envío real
+        await delay(typingDelay);
 
         // Promesa de envío con timeout de 15 segundos para evitar bloqueos por chats inaccesibles o páginas caídas
         const sendPromise = this.client.sendMessage(chatId, content, options);
@@ -625,9 +663,9 @@ export class WhatsAppBot {
             page.on('request', (req) => {
               const type = req.resourceType();
               if (type === 'stylesheet' || type === 'font') {
-                req.abort();
+                req.abort().catch(() => {});
               } else {
-                req.continue();
+                req.continue().catch(() => {});
               }
             });
             console.log('[WHATSAPP-BOT] Optimización activa: Hojas de estilo y fuentes bloqueadas en el navegador invisible.');
@@ -1528,7 +1566,16 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         }
 
         // 4. Orquestación de Respuestas (Silencio de Oro / Flujos DM)
-        const wantsVoice = !!item.audioUrl || item.text.toLowerCase().includes("envíame un audio") || item.text.toLowerCase().includes("mándame un audio") || item.text.toLowerCase().includes("nota de voz");
+        const textLower = item.text.toLowerCase();
+        const wantsVoice = !!item.audioUrl || 
+          textLower.includes("envíame un audio") || 
+          textLower.includes("mándame un audio") || 
+          textLower.includes("envíame audio") || 
+          textLower.includes("mándame audio") || 
+          textLower.includes("nota de voz") || 
+          textLower.includes("dime esto en un audio") ||
+          textLower.includes("léeme esto") ||
+          textLower.includes("háblame");
         await this.handleJanIAResponse(result, senderId, chatId, userName, item.text, item.originalMsg, wantsVoice);
       }
 
@@ -1641,6 +1688,13 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
   private async handleJanIAResponse(result: any, senderId: string, chatId: string, userName: string, fullText: string, originalMsg?: Message, wantsVoice: boolean = false) {
     if (!result) return;
 
+    // Control de antigüedad: Omitir envíos de WhatsApp para mensajes procesados con más de 2 horas de retraso (evita responder audios/textos de ayer)
+    const isOldMessage = originalMsg && (Math.floor(Date.now() / 1000) - originalMsg.timestamp > 2 * 60 * 60);
+    if (isOldMessage) {
+      console.log(`[WHATSAPP-BOT] Mensaje de ${senderId} en ${chatId} tiene más de 2 horas de antigüedad (${Math.round((Date.now() / 1000 - originalMsg.timestamp) / 60)} min). Registrado en DB, omitiendo respuesta en WhatsApp.`);
+      return;
+    }
+
     const isGroup = chatId.includes('@g.us');
     // MATCH COMERCIAL DETECTADO es el string real en el response de JanIA
     const isMatch = result.response && (
@@ -1726,15 +1780,8 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         options.quotedMessageId = originalMsg.id._serialized;
       }
 
-      // Decidir si intercalamos audio (de forma aleatoria si el texto es corto y no es coincidencia, infracción ni consulta)
-      let finalWantsVoice = wantsVoice || result.wantsVoice;
-      if (!finalWantsVoice && result.response && result.response.length > 10 && result.response.length < 350 && !isMatch && !isViolation) {
-        // 35% de probabilidad de responder con audio de forma espontánea para intercalar
-        if (Math.random() < 0.35) {
-          finalWantsVoice = true;
-          console.log(`[TTS-Intercalado] ✓ Decidido enviar respuesta en audio de forma espontánea.`);
-        }
-      }
+      // Decidir si enviar audio: solo si el mensaje original fue un audio o el usuario lo solicitó explícitamente
+      const finalWantsVoice = wantsVoice || result.wantsVoice;
 
       if (finalWantsVoice) {
         // Mostrar "Grabando audio..." inmediatamente durante la síntesis y transcodificación
@@ -1815,7 +1862,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         if (isGroup) {
           // Si proviene de un grupo y faltan datos, enviamos la advertencia de geocodificación directamente por privado para mantener limpio el grupo
           if (result.classification === "DATOS_INCOMPLETOS") {
-            if (wantsVoice || result.wantsVoice) {
+            if (wantsVoice) {
               // Mostrar "Grabando audio..." inmediatamente durante la síntesis y transcodificación en el DM
               try {
                 const dmChat = await this.client.getChatById(senderId);
@@ -1842,7 +1889,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
             options.quotedMessageId = originalMsg.id._serialized;
           }
 
-          if (wantsVoice || result.wantsVoice) {
+          if (wantsVoice) {
             // Mostrar "Grabando audio..." inmediatamente durante la síntesis y transcodificación en el DM
             try {
               const dmChat = await this.client.getChatById(senderId);

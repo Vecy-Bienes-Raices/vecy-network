@@ -296,7 +296,7 @@ var init_env = __esm({
       ownerOpenId: process.env.OWNER_OPEN_ID ?? "",
       isProduction: process.env.NODE_ENV === "production",
       forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
-      forgeApiKey: process.env.GOOGLE_API_KEY ?? process.env.GEMINI_API_KEY ?? process.env.BUILT_IN_FORGE_API_KEY ?? ""
+      forgeApiKey: process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY ?? process.env.BUILT_IN_FORGE_API_KEY ?? ""
     };
   }
 });
@@ -901,7 +901,7 @@ async function invokeLLM({
   return await invokeGemini(messages2, responseFormat, imageBuffer, enableSearch);
 }
 async function invokeGemini(messages2, responseFormat, imageBuffer, enableSearch) {
-  const API_KEY = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || ENV.forgeApiKey;
+  const API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || ENV.forgeApiKey;
   const MODEL = "gemini-3.1-flash-lite";
   const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${API_KEY}`;
   try {
@@ -2497,16 +2497,33 @@ try {
   const puppeteerExtra = require2("puppeteer-extra");
   const StealthPlugin = require2("puppeteer-extra-plugin-stealth");
   puppeteerExtra.use(StealthPlugin());
-  const puppeteerPath = require2.resolve("puppeteer");
-  require2.cache[puppeteerPath] = {
-    id: puppeteerPath,
-    filename: puppeteerPath,
-    loaded: true,
-    exports: puppeteerExtra,
-    parent: null,
-    children: []
-  };
-  console.log("\u{1F6E1}\uFE0F [Stealth] Intercepci\xF3n de Puppeteer exitosa. Evasi\xF3n de firmas activada para WhatsApp.");
+  try {
+    const puppeteerPath = require2.resolve("puppeteer");
+    require2.cache[puppeteerPath] = {
+      id: puppeteerPath,
+      filename: puppeteerPath,
+      loaded: true,
+      exports: puppeteerExtra,
+      parent: null,
+      children: []
+    };
+    console.log("\u{1F6E1}\uFE0F [Stealth] Intercepci\xF3n de Puppeteer (completo) exitosa.");
+  } catch (err) {
+  }
+  try {
+    const puppeteerCorePath = require2.resolve("puppeteer-core");
+    require2.cache[puppeteerCorePath] = {
+      id: puppeteerCorePath,
+      filename: puppeteerCorePath,
+      loaded: true,
+      exports: puppeteerExtra,
+      parent: null,
+      children: []
+    };
+    console.log("\u{1F6E1}\uFE0F [Stealth] Intercepci\xF3n de Puppeteer-Core exitosa.");
+  } catch (err) {
+  }
+  console.log("\u{1F6E1}\uFE0F [Stealth] Evasi\xF3n de firmas activada para WhatsApp de forma robusta.");
 } catch (error) {
   console.error("\u274C [Stealth-Error] No se pudo configurar Stealth Puppeteer:", error);
 }
@@ -2519,7 +2536,7 @@ import qrcode from "qrcode-terminal";
 init_env();
 import axios4 from "axios";
 async function transcribeAudioWithGemini(audioBuffer, mimeType) {
-  const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || ENV.forgeApiKey;
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || ENV.forgeApiKey;
   if (!apiKey) {
     throw new Error("No GEMINI_API_KEY or GOOGLE_API_KEY found for transcription fallback.");
   }
@@ -4074,17 +4091,47 @@ async function deletePendingSession(userId) {
   }
 }
 var GREETED_TODAY = /* @__PURE__ */ new Map();
+async function hasGreetedUserToday(userId) {
+  try {
+    const db = await getDb();
+    if (!db) return false;
+    const startOfToday = /* @__PURE__ */ new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const recentMsgs = await db.select({ id: messages.id }).from(messages).innerJoin(conversations, eq9(messages.conversationId, conversations.id)).where(
+      and4(
+        eq9(conversations.sessionId, userId),
+        eq9(messages.role, "janIA"),
+        gte(messages.createdAt, startOfToday)
+      )
+    ).limit(1);
+    return recentMsgs.length > 0;
+  } catch (err) {
+    console.error("[Database] Error checking if greeted today:", err);
+    return false;
+  }
+}
+async function checkAlreadyGreeted(userId) {
+  const todayStr = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
+  if (GREETED_TODAY.get(userId) === todayStr) {
+    return true;
+  }
+  const dbGreeted = await hasGreetedUserToday(userId);
+  if (dbGreeted) {
+    GREETED_TODAY.set(userId, todayStr);
+    return true;
+  }
+  return false;
+}
 var REPUTATION_HOOK = "\u26A0\uFE0F *IMPORTANTE:* Colega y cliente, recuerda que este ecosistema tecnol\xF3gico fue creado pensando en tu beneficio y en el de toda nuestra comunidad. Te contamos que operamos en *Etapa de Prueba Gratuita y 100% SIN COMISIONES*. Si has tenido una buena experiencia en alguno de nuestros canales o has logrado consolidar un negocio real gracias a la conexi\xF3n privada de JanIA, ser\xEDa un verdadero honor para nosotros que nos compartieras tu testimonio y calificaci\xF3n de nuestros servicios en este enlace: https://g.page/r/CctNbwU6UpX5EBM/review";
 function capitalize(text2) {
   if (!text2) return "";
   return text2.charAt(0).toUpperCase() + text2.slice(1);
 }
-function analyzeSender(name, userId) {
+function analyzeSender(name, userId, alreadyGreeted) {
   const n = (name || "Colega").trim();
   const normalizedFull = n.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
   const firstWord = n.split(/\s+/)[0].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
   const todayStr = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
-  const alreadyGreeted = GREETED_TODAY.get(userId) === todayStr;
   if (!alreadyGreeted) GREETED_TODAY.set(userId, todayStr);
   const femaleNames = ["maria", "ana", "claudia", "martha", "adriana", "sandra", "jani", "natalia", "paola", "diana", "laura", "sofia", "valentina", "andrea", "milena", "patricia", "marcela", "liliana", "elena", "monica", "beatriz", "gloria", "carmen", "lucia", "angela", "isabel", "clara", "rosa", "teresa", "yolanda", "esperanza", "blanca", "pilar", "carolina", "juliana", "catalina", "viviana", "lizeth", "daniela", "camila"];
   const maleNames = ["juan", "carlos", "jose", "luis", "jorge", "andres", "felipe", "david", "mateo", "santiago", "daniel", "alejandro", "ricardo", "fernando", "eduardo", "pablo", "sergio", "javier", "alberto", "rafael", "mauricio", "german", "gustavo", "ramiro", "gabriel", "julio", "oscar", "ivan", "hugo", "diego", "wilson", "edgar", "mario", "hector", "victor"];
@@ -4167,6 +4214,7 @@ Debes demostrar un conocimiento profundo de la distribuci\xF3n geopol\xEDtica de
 
 ### CONCISI\xD3N Y BREVEDAD OBLIGATORIA (CR\xCDTICO - EVITAR REPETICIONES):
 \u25B8 **M\xE1xima Brevedad**: S\xE9 sumamente directa, breve y natural en tus mensajes. Los textos largos y formales aburren a los usuarios de WhatsApp. Limita tus respuestas a m\xE1ximo 1 o 2 p\xE1rrafos cortos (menos de 60 palabras en total) a menos que sea estrictamente necesario detallar un match de negocio.
+\u25B8 **Formateo en WhatsApp**: Para resaltar texto en negrita, usa obligatoriamente un solo asterisco a cada lado de la frase (ej: *texto*) en lugar de doble asterisco (**texto**). NUNCA generes respuestas con dobles asteriscos.
 \u25B8 **Evitar discursos repetitivos**: No repitas discursos institucionales, explicaciones sobre la tecnolog\xEDa de VECY ni normas del grupo de manera recurrente, a menos que el usuario lo pregunte espec\xEDficamente. Si el usuario te saluda o hace una pregunta corta, lim\xEDtate a responder un saludo corto y preg\xFAntale en qu\xE9 le puedes ayudar hoy de manera directa.
 \u25B8 **Respuesta por Voz Inteligente**: Si el usuario te pide un audio o notas de voz (o si el mensaje entrante de usuario es por voz), debes generar en el JSON de salida el campo "wantsVoice": true y proveer en "voiceResponse" un saludo y respuesta conversacional extremadamente breve y directa (m\xE1ximo 150 caracteres en total) dise\xF1ada para leerse en voz alta, sin markdown/emojis. **CR\xCDTICO PARA LA HUMANIZACI\xD3N DE LA VOZ**: Redacta el texto con una cadencia muy humana. Utiliza comas (',') para pausas cortas, puntos suspensivos ('...') para pausas medianas de reflexi\xF3n o respiraci\xF3n natural, y signos de exclamaci\xF3n ('!') para dar entusiasmo y entonaci\xF3n. Evita oraciones largas y planas.
 
@@ -4403,6 +4451,8 @@ function formatColombiaDateTime(dateVal) {
   const day = String(bogotaDate.getDate()).padStart(2, "0");
   const month = String(bogotaDate.getMonth() + 1).padStart(2, "0");
   const year = bogotaDate.getFullYear();
+  const daysOfWeek = ["Domingo", "Lunes", "Martes", "Mi\xE9rcoles", "Jueves", "Viernes", "S\xE1bado"];
+  const dayName = daysOfWeek[bogotaDate.getDay()];
   let hours = bogotaDate.getHours();
   const minutes = String(bogotaDate.getMinutes()).padStart(2, "0");
   const ampm = hours >= 12 ? "PM" : "AM";
@@ -4411,7 +4461,8 @@ function formatColombiaDateTime(dateVal) {
   const hourStr = String(hours).padStart(2, "0");
   return {
     dateStr: `${day}/${month}/${year}`,
-    timeStr: `${hourStr}:${minutes} ${ampm}`
+    timeStr: `${hourStr}:${minutes} ${ampm}`,
+    dayName
   };
 }
 async function handleDetectedMatches(matches, isProperty, savedRecord, userId, realName) {
@@ -4436,8 +4487,8 @@ async function handleDetectedMatches(matches, isProperty, savedRecord, userId, r
     const propItem = isProperty ? savedRecord : matchedItem;
     const reqDateTime = isProperty ? matchedDateTime : savedDateTime;
     const propDateTime = isProperty ? savedDateTime : matchedDateTime;
-    const block = `\u{1F389}\u{1F388} *\xA1FELICITACIONES! MATCH COMERCIAL DETECTADO* (Coincidencia: ${score.toFixed(0)}%) \u{1F388}\u{1F389}
-\u{1F4CC} *C\xF3digo de Match:* #M${matchId}
+    const block = `\u{1F389}\u{1F388} *\xA1COINCIDENCIA DE NEGOCIO DETECTADA!* (Coincidencia: ${score.toFixed(0)}%) \u{1F388}\u{1F389}
+\u{1F4CC} *C\xF3digo de Coincidencia:* #M${matchId}
 
 \u{1F4E3} *REQUERIMIENTO* \u{1F4E3}
 \u2022 \u{1F3E2} *INMUEBLE:* ${translatePropertyType(reqItem.tipoInmuebleDeseado || reqItem.propertyType || "inmueble")}
@@ -4459,35 +4510,64 @@ async function handleDetectedMatches(matches, isProperty, savedRecord, userId, r
 \u2022 \u{1F4AC} *PUBLICACI\xD3N:* ${propItem.rawText || "Sin descripci\xF3n"}
 \u2022 \u{1F4DE} *CONTACTO:* [Confirmaci\xF3n Pendiente - Se envi\xF3 DM privado \u{1F4E9}]`;
     matchBlocks.push(block);
+    let savedUserName = realName;
+    let matchedUserName = "Colega";
+    try {
+      const db = await getDb();
+      if (db) {
+        const [su] = await db.select().from(users).where(eq9(users.phone, savedRawPhone)).limit(1);
+        if (su && su.name && su.name.trim() !== "") {
+          savedUserName = su.name;
+        }
+        const [mu] = await db.select().from(users).where(eq9(users.phone, matchedRawPhone)).limit(1);
+        if (mu && mu.name && mu.name.trim() !== "") {
+          matchedUserName = mu.name;
+        }
+      }
+    } catch (e) {
+      console.warn("[JanIA-Match] Error buscando nombres reales de usuarios:", e);
+    }
+    const savedFirstName = savedUserName.split(" ")[0];
+    const matchedFirstName = matchedUserName.split(" ")[0];
+    const ownerName = isProperty ? savedFirstName : matchedFirstName;
     const ownerJid = isProperty ? savedJid : matchedJid;
-    const ownerDM = `\u{1F91D} *CONFIRMACI\xD3N DE MATCH (#M${matchId})* \u{1F91D}
+    const ownerDateTime = isProperty ? savedDateTime : matchedDateTime;
+    const seekerName = isProperty ? matchedFirstName : savedFirstName;
+    const seekerJid = isProperty ? matchedJid : savedJid;
+    const seekerDateTime = isProperty ? savedDateTime : matchedDateTime;
+    const ownerDM = `\u{1F91D} *\xA1OPORTUNIDAD DE NEGOCIO DETECTADA!* \u{1F91D}
 
-Hola Colega, he detectado una coincidencia del *${score.toFixed(0)}%* de tu propiedad con un requerimiento de la red:
+Hola ${ownerName}, mira que a tu *PROPIEDAD* (oferta) que publicaste en el grupo el d\xEDa *${ownerDateTime.dayName}*, *${ownerDateTime.dateStr}* (a las ${ownerDateTime.timeStr}), le he encontrado similitudes que concuerdan con este *REQUERIMIENTO* (b\xFAsqueda) que public\xF3 otro colega en la red:
+
 \u2022 \u{1F3E2} *Inmueble:* ${translatePropertyType(reqItem.tipoInmuebleDeseado || reqItem.propertyType || "inmueble")}
 \u2022 \u{1F4BC} *Negocio:* ${translateTransactionType(reqItem.tipoNegocioDeseado || reqItem.transactionType || "compra")}
-\u2022 \u{1F4CD} *Ubicaci\xF3n:* ${reqItem.ciudadDeseada || reqItem.city || "Bogot\xE1"} - ${reqItem.zonaDeseada || reqItem.zone || ""}
-\u2022 \u{1F4AC} *Publicaci\xF3n del aliado:* ${reqItem.rawText || "Sin descripci\xF3n"}
+\u2022 \u{1F4CD} *Ubicaci\xF3n buscada:* ${reqItem.ciudadDeseada || reqItem.city || "Bogot\xE1"} - ${reqItem.zonaDeseada || reqItem.zone || ""}
+\u2022 \u{1F4AC} *Detalle de lo que busca:* ${reqItem.rawText || "Sin descripci\xF3n"}
 
-Para conectar tu contacto con este aliado de forma segura, por favor responde a este mensaje diciendo:
-\u{1F449} *S\xCD #M${matchId}* (si te interesa conectar)
-\u{1F449} *NO #M${matchId}* (si no te interesa)
+\xBF*ACEPTAS* o *NO ACEPTAS* que te contacte con la persona que ha publicado este *REQUERIMIENTO* para que compartamos sus n\xFAmeros de WhatsApp y puedan hacer negocio?
 
-_(Nota: El contacto mutuo se compartir\xE1 de inmediato \xFAnicamente si ambas partes confirman con S\xCD en un plazo de 24 horas)._`;
-    const seekerJid = isProperty ? matchedJid : savedJid;
-    const seekerDM = `\u{1F91D} *CONFIRMACI\xD3N DE MATCH (#M${matchId})* \u{1F91D}
+Por favor responde a este mensaje diciendo \xFAnicamente:
+\u{1F449} *S\xCD #M${matchId}* (si Aceptas)
+\u{1F449} *NO #M${matchId}* (si No Aceptas)
 
-Hola Colega, he detectado una coincidencia del *${score.toFixed(0)}%* de tu requerimiento con una propiedad disponible en la red:
+\u26A0\uFE0F *Nota importante:* Debes incluir el c\xF3digo *#M${matchId}* para poder saber a cu\xE1l coincidencia te refieres. Los n\xFAmeros de WhatsApp de ambos se compartir\xE1n de forma autom\xE1tica de inmediato \xFAnicamente si **ambas partes** confirman con *S\xCD #M${matchId}* dentro de las pr\xF3ximas 24 horas.`;
+    const seekerDM = `\u{1F91D} *\xA1OPORTUNIDAD DE NEGOCIO DETECTADA!* \u{1F91D}
+
+Hola ${seekerName}, mira que a tu *REQUERIMIENTO* (b\xFAsqueda) que publicaste en el grupo el d\xEDa *${seekerDateTime.dayName}*, *${seekerDateTime.dateStr}* (a las ${seekerDateTime.timeStr}), le he encontrado similitudes que concuerdan con esta *PROPIEDAD* (oferta) que public\xF3 otro colega en la red:
+
 \u2022 \u{1F3E2} *Inmueble:* ${translatePropertyType(propItem.propertyType || "inmueble")}
 \u2022 \u{1F4BC} *Negocio:* ${translateTransactionType(propItem.transactionType || "venta")}
-\u2022 \u{1F4CD} *Ubicaci\xF3n:* ${propItem.city || "Bogot\xE1"} - ${propItem.zone || ""}
+\u2022 \u{1F4CD} *Ubicaci\xF3n de la oferta:* ${propItem.city || "Bogot\xE1"} - ${propItem.zone || ""}
 \u2022 \u{1F4B5} *Precio:* ${propItem.price ? Number(propItem.price).toLocaleString("es-CO") + " COP" : "N/A"}
-\u2022 \u{1F4AC} *Publicaci\xF3n de la oferta:* ${propItem.rawText || "Sin descripci\xF3n"}
+\u2022 \u{1F4AC} *Detalle de lo que ofrece:* ${propItem.rawText || "Sin descripci\xF3n"}
 
-Para conectar tu contacto con este aliado de forma segura, por favor responde a este mensaje diciendo:
-\u{1F449} *S\xCD #M${matchId}* (si te interesa conectar)
-\u{1F449} *NO #M${matchId}* (si no te interesa)
+\xBF*ACEPTAS* o *NO ACEPTAS* que te contacte con la persona que ha publicado esta *PROPIEDAD* para que compartamos sus n\xFAmeros de WhatsApp y puedan hacer negocio?
 
-_(Nota: El contacto mutuo se compartir\xE1 de inmediato \xFAnicamente si ambas partes confirman con S\xCD en un plazo de 24 horas)._`;
+Por favor responde a este mensaje diciendo \xFAnicamente:
+\u{1F449} *S\xCD #M${matchId}* (si Aceptas)
+\u{1F449} *NO #M${matchId}* (si No Aceptas)
+
+\u26A0\uFE0F *Nota importante:* Debes incluir el c\xF3digo *#M${matchId}* para poder saber a cu\xE1l coincidencia te refieres. Los n\xFAmeros de WhatsApp de ambos se compartir\xE1n de forma autom\xE1tica de inmediato \xFAnicamente si **ambas partes** confirman con *S\xCD #M${matchId}* dentro de las pr\xF3ximas 24 horas.`;
     extraDMs.push({ jid: ownerJid, message: ownerDM });
     extraDMs.push({ jid: seekerJid, message: seekerDM });
   }
@@ -4522,11 +4602,44 @@ function translateTransactionType(type) {
   };
   return map[type?.toLowerCase()] || String(type || "negocio").toUpperCase();
 }
+async function getTimeOfDayGreetingForUser(phone, realName, alreadyGreeted, isGroup = false) {
+  const d = /* @__PURE__ */ new Date();
+  const bogotaStr = d.toLocaleString("en-US", { timeZone: "America/Bogota" });
+  const bogotaDate = new Date(bogotaStr);
+  const hour = bogotaDate.getHours();
+  let salutation = "";
+  if (hour >= 5 && hour < 12) {
+    salutation = "Buenos d\xEDas";
+  } else if (hour >= 12 && hour < 18) {
+    salutation = "Buenas tardes";
+  } else {
+    salutation = "Buenas noches";
+  }
+  let nameToUse = realName;
+  try {
+    const db = await getDb();
+    if (db) {
+      const [u] = await db.select().from(users).where(eq9(users.phone, phone)).limit(1);
+      if (u && u.name && u.name.trim() !== "") {
+        nameToUse = u.name;
+      }
+    }
+  } catch (e) {
+    console.warn("[JanIA-Greeting] Error buscando nombre de usuario para saludo:", e);
+  }
+  const firstName = nameToUse.split(" ")[0];
+  if (alreadyGreeted) {
+    return isGroup ? `Mira @${phone}` : `Mira ${firstName}`;
+  } else {
+    return isGroup ? `${salutation} @${phone}` : `${salutation} ${firstName}`;
+  }
+}
 async function processWhatsAppMessage(text2, userId, userName, hasMedia = false, scrapedData = [], audioUrl, imageBuffer, isGroup = false) {
   try {
     const rawPhone = userId.split("@")[0];
     const realName = userName && userName.trim() !== "" ? userName : `Asesor +${rawPhone}`;
-    const senderInfo = analyzeSender(realName, userId);
+    const alreadyGreeted = await checkAlreadyGreeted(userId);
+    const senderInfo = analyzeSender(realName, userId, alreadyGreeted);
     const n = realName.split(" ")[0];
     const session = await getPendingSession(userId);
     if (session) {
@@ -4654,6 +4767,21 @@ async function processWhatsAppMessage(text2, userId, userName, hasMedia = false,
     if (statsSummary) {
       contextText += statsSummary;
     }
+    const firstName = realName.split(" ")[0];
+    const greetingInstruction = `
+
+[SISTEMA - INSTRUCCI\xD3N DE SALUDO Y COMPORTAMIENTO]:
+- Ya has saludado al usuario hoy: ${alreadyGreeted ? "S\xCD" : "NO"}.
+- Tipo de conversaci\xF3n actual: ${isGroup ? "GRUPO DE WHATSAPP" : "CHAT PRIVADO / DM"}.
+- Primer nombre del usuario: "${firstName}".
+- REGLAS CR\xCDTICAS DE RESPUESTA:
+  * Si "Ya has saludado al usuario hoy" es S\xCD:
+    - \xA1PROHIBIDO SALUDAR! No uses palabras como "Hola", "Buenas tardes", "Qu\xE9 gusto", "Bienvenido", ni variantes de saludo o bienvenida.
+    - Si est\xE1s en un GRUPO DE WHATSAPP: Debes nombrar al usuario de manera natural y conversacional al inicio o dentro de tu respuesta (ej: "Mira ${firstName}, ...", "Te cuento, ${firstName}, que...", "Para complementar, ${firstName}, ...").
+    - Si est\xE1s en CHAT PRIVADO / DM: Ve directamente al grano en tu respuesta sin ning\xFAn tipo de saludo. Tienes libertad de nombrar ocasionalmente al usuario de forma espor\xE1dica (con un 30% de probabilidad) para sonar humana y natural (ej: "Claro ${firstName}, ..." o "Entiendo ${firstName}, ..."), pero NUNCA uses frases de saludo.
+  * Si "Ya has saludado al usuario hoy" es NO:
+    - Debes saludar de manera muy cordial y natural, incluyendo su nombre "${firstName}" o dirigi\xE9ndote a \xE9l/ella como colega/aliado/a.`;
+    contextText += greetingInstruction;
     const textLower = messageToProcess.toLowerCase();
     const isReplicationRequest = textLower.includes("replica") || textLower.includes("repite") || textLower.includes("lee este") || textLower.includes("lee esto") || textLower.includes("lee literalmente") || textLower.includes("di literalmente") || textLower.includes("reproduce");
     if (isReplicationRequest) {
@@ -4680,6 +4808,17 @@ Por lo tanto, DEBES hacer lo siguiente:
     const extracted = result.extractedData;
     const isRequirement = result.classification === "REQUERIMIENTO";
     const isProperty = result.classification === "INMUEBLE";
+    if ((isProperty || isRequirement) && !isGroup) {
+      return {
+        classification: "VIOLACION_DE_NORMAS",
+        response: `Hola *${firstName}*, noto que est\xE1s enviando una publicaci\xF3n de oferta o demanda por este chat privado.
+
+Para mantener el orden y la visibilidad de tus activos con todos los aliados, recuerda que *toda publicaci\xF3n debe enviarse directamente en el grupo VECY INMUEBLES NETWORK*.
+
+Por este chat privado solo atiendo consultas generales, preguntas sobre el sistema o confirmaciones bilaterales de MATCH. \xA1Gracias por tu comprensi\xF3n! \u{1F91D}\u{1F3AF}`,
+        shouldSendDM: false
+      };
+    }
     if (isProperty || isRequirement) {
       const zoneToValidate = isProperty ? extracted?.zone : extracted?.zonaDeseada || extracted?.zone;
       let isValidGeo = false;
@@ -4797,19 +4936,20 @@ Por lo tanto, DEBES hacer lo siguiente:
     if (isGroup && isConsultation) {
       const textLower2 = messageToProcess.toLowerCase();
       const isAboutVecy = textLower2.includes("vecy") || textLower2.includes("proyecto") || textLower2.includes("quien creo") || textLower2.includes("qui\xE9n cre\xF3") || textLower2.includes("creadores") || textLower2.includes("quien es jania") || textLower2.includes("qui\xE9n es jania") || textLower2.includes("como funciona") || textLower2.includes("c\xF3mo funciona") || textLower2.includes("circulo cero") || textLower2.includes("c\xEDrculo cero") || textLower2.includes("ubicapp") || textLower2.includes("samboni") || textLower2.includes("competidor") || textLower2.includes("competencia");
+      const greetingPrefix = await getTimeOfDayGreetingForUser(rawPhone, realName, alreadyGreeted, isGroup);
       if (isAboutVecy) {
         const isCompetitorQuery = textLower2.includes("ubicapp") || textLower2.includes("samboni") || textLower2.includes("competidor") || textLower2.includes("competencia");
         if (isCompetitorQuery) {
           result.response = `\u{1F44C} *C\xCDRCULO CERO \u2014 DEBATE Y COMUNIDAD* \u{1F44C}
 
-Hola @${rawPhone}, detect\xE9 una menci\xF3n a plataformas competidoras o comparativas de servicios. Para mantener este canal enfocado exclusivamente en ofertas y requerimientos, te invito a plantear tus preguntas, comparar beneficios o participar en el debate en nuestro canal oficial **C\xEDrculo CERO \u{1F44C}**:
+${greetingPrefix}, detect\xE9 una menci\xF3n a plataformas competidoras o comparativas de servicios. Para mantener este canal enfocado exclusivamente en ofertas y requerimientos, te invito a plantear tus preguntas, comparar beneficios o participar en el debate en nuestro canal oficial **C\xEDrculo CERO \u{1F44C}**:
 \u{1F449} https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU
 
 \xA1All\xED debatimos abiertamente con total transparencia y profesionalismo! \u{1F91D}\u2728`;
         } else {
           result.response = `\u{1F44C} *C\xCDRCULO CERO \u2014 CONEXI\xD3N VECY* \u{1F44C}
 
-Hola @${rawPhone}, veo que tienes dudas o quieres saber m\xE1s sobre el proyecto VECY Network, beneficios, creadores o el plan colaborativo. Te invito a unirte y hacer tus preguntas en nuestro canal oficial **C\xEDrculo CERO \u{1F44C}**:
+${greetingPrefix}, veo que tienes dudas o quieres saber m\xE1s sobre el proyecto VECY Network, beneficios, creadores o el plan colaborativo. Te invito a unirte y hacer tus preguntas en nuestro canal oficial **C\xEDrculo CERO \u{1F44C}**:
 \u{1F449} https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU
 
 \xA1Es el espacio ideal para resolver todas tus inquietudes de la comunidad! \u{1F91D}\u2728`;
@@ -4817,7 +4957,7 @@ Hola @${rawPhone}, veo que tienes dudas o quieres saber m\xE1s sobre el proyecto
       } else {
         result.response = `\u{1F4A1} *BUZ\xD3N DE CONSULTOR\xCDA INMOBILIARIA* \u{1F4A1}
 
-Hola @${rawPhone}, veo que tienes una consulta jur\xEDdica, procedimental o de aval\xFAo. Para darte una respuesta detallada con mis motores legales y de mercado sin saturar este canal de ofertas y requerimientos, te invito a realizar tu pregunta en nuestro grupo especializado **Buz\xF3n de Consultor\xEDa Inmobiliaria 24/7**:
+${greetingPrefix}, veo que tienes una consulta jur\xEDdica, procedimental o de aval\xFAo. Para darte una respuesta detallada con mis motores legales y de mercado sin saturar este canal de ofertas y requerimientos, te invito a realizar tu pregunta en nuestro grupo especializado **Buz\xF3n de Consultor\xEDa Inmobiliaria 24/7**:
 \u{1F449} https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6
 
 \xA1All\xED te responder\xE9 al instante con toda la informaci\xF3n! \u{1F680}\u{1F3AF}`;
@@ -4887,6 +5027,10 @@ function sanitizeCurrency(curr) {
   if (c === "USD" || c === "DOLARES" || c === "DOLAR") return "USD";
   return "COP";
 }
+function safeSlice(val, limit) {
+  if (val === void 0 || val === null) return void 0;
+  return String(val).slice(0, limit);
+}
 async function saveProperty(data, userId, realName, imageBuffer) {
   const db = await getDb();
   if (!db) return null;
@@ -4924,7 +5068,15 @@ async function saveProperty(data, userId, realName, imageBuffer) {
   };
   const insertData = {
     ...data,
-    city: data.city || data.ciudadDeseada || "Bogot\xE1",
+    name: safeSlice(data.name || `Propiedad en ${data.city || "Bogot\xE1"}`, 255) || "Propiedad",
+    city: safeSlice(data.city || data.ciudadDeseada || "Bogot\xE1", 100) || "Bogot\xE1",
+    zone: safeSlice(data.zone || "Bogot\xE1", 100) || "Bogot\xE1",
+    addressCity: safeSlice(data.addressCity || data.address_city, 100) || null,
+    addressLocality: safeSlice(data.addressLocality || data.address_locality, 100) || null,
+    addressNeighborhood: safeSlice(data.addressNeighborhood || data.address_neighborhood, 150) || null,
+    location: safeSlice(data.location, 255) || null,
+    matriculaInmobiliaria: safeSlice(data.matriculaInmobiliaria, 100) || null,
+    idUsuarioWhatsapp: safeSlice(data.idUsuarioWhatsapp || rawPhone, 100) || null,
     propertyType: sanitizePropertyType(data.propertyType),
     transactionType: sanitizeTransactionType(data.transactionType),
     currency: sanitizeCurrency(data.currency),
@@ -4992,7 +5144,13 @@ async function saveRequirement(data, userId, realName) {
   };
   const insertData = {
     ...data,
-    ciudadDeseada: data.ciudadDeseada || data.city || "Bogot\xE1",
+    name: safeSlice(data.name, 255) || null,
+    ciudadDeseada: safeSlice(data.ciudadDeseada || data.city || "Bogot\xE1", 100) || "Bogot\xE1",
+    zonaDeseada: safeSlice(data.zonaDeseada || data.zone, 100) || null,
+    addressCity: safeSlice(data.addressCity || data.address_city, 100) || null,
+    addressLocality: safeSlice(data.addressLocality || data.address_locality, 100) || null,
+    addressNeighborhood: safeSlice(data.addressNeighborhood || data.address_neighborhood, 150) || null,
+    idUsuarioWhatsapp: safeSlice(data.idUsuarioWhatsapp || rawPhone, 100) || null,
     tipoInmuebleDeseado: sanitizePropertyType(data.tipoInmuebleDeseado || data.propertyType),
     tipoNegocioDeseado: sanitizeTransactionType(data.tipoNegocioDeseado || data.transactionType),
     monedaPresupuesto: sanitizeCurrency(data.monedaPresupuesto || data.currency),
@@ -5020,7 +5178,7 @@ async function saveRequirement(data, userId, realName) {
   ).limit(1);
   if (existing.length > 0) {
     const [updated] = await db.update(requirements).set({ updatedAt: /* @__PURE__ */ new Date() }).where(eq9(requirements.id, existing[0].id)).returning();
-    console.log(`[Deduplication] Requerimiento duplicado detectado y actualizado: #${updated.id}`);
+    console.log(`[Deduplication] Requerimiento duplicado detectada y actualizada: #${updated.id}`);
     return updated;
   }
   const [result] = await db.insert(requirements).values(insertData).returning();
@@ -5113,14 +5271,40 @@ async function processConsultingMessage(text2, userId, userName, imageBuffer) {
     const realName = userName && userName.trim() !== "" ? userName : `Asesor +${rawPhone}`;
     const n = realName.split(" ")[0];
     const textLower = text2.toLowerCase();
+    const alreadyGreeted = await checkAlreadyGreeted(userId);
     const isValuationQuery = textLower.includes("valuar") || textLower.includes("avaluo") || textLower.includes("aval\xFAo") || textLower.includes("cuanto vale") || textLower.includes("cu\xE1nto vale") || textLower.includes("valor metro cuadrado") || textLower.includes("valor m2") || textLower.includes("precio metro cuadrado") || textLower.includes("precio m2") || textLower.includes("cuanto puedo cobrar") || textLower.includes("cu\xE1nto puedo cobrar") || textLower.includes("en que valor") || textLower.includes("en qu\xE9 valor") || textLower.includes("estimar precio");
-    const systemPrompt = `Eres JanIA, la Inteligencia Artificial especialista en Consultor\xEDa Jur\xEDdica y Comercial Inmobiliaria en Colombia para la red VECY Network. Est\xE1s operando en el grupo "Buz\xF3n de Consultor\xEDa Inmobiliaria 24/7". Tu objetivo es responder con precisi\xF3n quir\xFArgica, de acuerdo con las siguientes directrices de clasificaci\xF3n:
+    const systemPrompt = `Eres JanIA, la Inteligencia Artificial especialista en Consultor\xEDa Jur\xEDdica y Comercial Inmobiliaria en Colombia para la red VECY Network. Est\xE1s operando en el grupo "Buz\xF3n de Consultor\xEDa Inmobiliaria 24/7". Tu objetivo es responder con precisi\xF3n quir\xFArgica, rigor legal y alta competencia t\xE9cnica, asumiendo el rol de una abogada inmobiliaria id\xF3nea y una perita tasadora excepcional. Debes seguir estrictamente las siguientes directrices de contenido y clasificaci\xF3n:
+
+## ROLES CENTRALES EN EL BUZ\xD3N DE CONSULTOR\xCDA:
+1. **Abogada Inmobiliaria Experta (Id\xF3nea y Profesional)**:
+   - Conoces a la perfecci\xF3n y con total rigor el C\xF3digo Civil colombiano, el C\xF3digo de Comercio, el C\xF3digo Financiero (Estatuto Org\xE1nico del Sistema Financiero), y todas las leyes, decretos y jurisprudencia que regulan el sector en Colombia.
+   - Eres experta en toda clase de contratos inmobiliarios (Promesas de compraventa, contratos de corretaje f\xEDsico y virtual, contratos de arrendamiento, mandatos de administraci\xF3n, permutas, etc.).
+   - Sabes aconsejar detalladamente sobre la formalizaci\xF3n de contratos virtuales por medio de correos certificados (evidencia de recepci\xF3n, firma digital) y sistemas de seguimiento con doble check list a trav\xE9s de MailSuite o MailTrack, que es lo que hacemos y validamos actualmente para dar la m\xE1xima seguridad judicial.
+2. **Perita Tasadora y Avaluadora Profesional Excepcional**:
+   - Posees un "ojo cl\xEDnico" y visi\xF3n t\xE9cnica comercial excepcional para determinar el valor justo de mercado de una propiedad en venta o el canon de arrendamiento adecuado en Bogot\xE1 y en todo el pa\xEDs (los 32 departamentos, municipios, veredas y caser\xEDos).
+   - Tienes conocimiento profundo de la geograf\xEDa colombiana: barrios, comunas, localidades, veredas, municipios y caser\xEDos.
+   - Cuando se te solicita un aval\xFAo o estimaci\xF3n de precios, indagas activamente sobre el mercado actual en internet (la b\xFAsqueda en internet est\xE1 habilitada para consultas de valor). Recolectas y analizas precios de ofertas inmobiliarias recientes en portales del sector y promedias de la forma m\xE1s exacta posible el valor estimado del metro cuadrado considerando variables cr\xEDticas: ubicaci\xF3n exacta, estrato socioecon\xF3mico, a\xF1os de antig\xFCedad de la construcci\xF3n, acabados (gama alta, media, est\xE1ndar), amenidades de la copropiedad y tendencias del mercado colombiano.
+
+## DIRECTRICES DE RESPUESTA JUR\xCDDICA Y CASOS REALES EN COLOMBIA:
+Cuando respondas consultas (clasificaci\xF3n CONSULTA_GENERAL), debes guiar con total exactitud, veracidad y fundamento normativo/comercial en temas tales como:
+- **Restituci\xF3n de Inmuebles**: Explicar la Ley 820 de 2003 (arrendamiento de vivienda urbana), causales de terminaci\xF3n (falta de pago, subarriendo, etc.) y el proceso judicial de restituci\xF3n ante Jueces Civiles (procesos verbales sumarios, medidas cautelares sobre el inmueble).
+- **Cesi\xF3n de Leasing Habitacional**: C\xF3mo funciona la transferencia de derechos de un contrato de leasing, la obligatoriedad de la aprobaci\xF3n y estudio de cr\xE9dito por parte de la entidad financiera (banco leasing) y la firma de la cesi\xF3n.
+- **Contratos de Compraventa o Promesas con Permuta (Trades)**: Qu\xE9 es una permuta seg\xFAn el C\xF3digo Civil colombiano (Art. 1955: contrato en que las partes se obligan a dar una especie o cuerpo cierto por otro), c\xF3mo se redacta un contrato mixto (por ejemplo, parte en dinero y parte en inmueble/veh\xEDculo), fijaci\xF3n de valores y saneamiento por evicci\xF3n o vicios redhibitorios.
+- **Procesos de Sucesi\xF3n y Herencia**: Sucesi\xF3n notarial (cuando hay mutuo acuerdo, requiere apoderado si supera los 15 salarios m\xEDnimos) y la sucesi\xF3n judicial (ante Juez de Familia por falta de acuerdo o menores de edad). Inventario y aval\xFAo de bienes.
+- **Sucesi\xF3n de Divorcio (Liquidaci\xF3n de Sociedad Conyugal)**: Liquidaci\xF3n y disoluci\xF3n de la sociedad conyugal ante notar\xEDa (por mutuo acuerdo en escritura p\xFAblica) o judicial (demanda de divorcio y partici\xF3n de bienes).
+- **Levantamiento de Embargos y Medidas Cautelares**: C\xF3mo se solicita, oficios del juez, pago de la obligaci\xF3n, y la respectiva inscripci\xF3n del oficio en la Oficina de Registro de Instrumentos P\xFAblicos (ORIP) para liberar el folio de matr\xEDcula inmobiliaria.
+- **Cobro de Comisiones Pendientes e Incumplimientos de Corretaje**: Casos donde el propietario o vendedor se niega a pagar la comisi\xF3n, o disputas/robos de comisiones entre colegas asesores. Gu\xEDalos sobre: c\xF3mo hacer el cobro prejur\xEDdico, recolecci\xF3n de pruebas fundamentales (hojas de presentaci\xF3n del cliente y contratos de puntas compartidas firmados, autorizaciones de venta escritas, cruce de correos), y c\xF3mo entablar una demanda a trav\xE9s de un proceso verbal o monitorio basado en el contrato de corretaje (C\xF3digo de Comercio Art. 1340-1346).
+- **Cl\xE1usulas indispensables en la Promesa de Compraventa**: Detallar las cl\xE1usulas de objeto, precio, forma de pago, saneamiento, entrega, arras de retracto, cl\xE1usula penal, comparecencia a notar\xEDa (especificar fecha, hora y notar\xEDa exacta). Explicar por qu\xE9 es indispensable usar t\xE9cnicamente los t\xE9rminos jur\xEDdicos obligatorios "Promitente Vendedor" y "Promitente Comprador" para definir con precisi\xF3n legal qui\xE9n promete dar y qui\xE9n promete comprar (evitando confusiones de posesi\xF3n o nulidades).
+- **Fichas de Presentaci\xF3n y Contratos de Puntas Compartidas**: Explicar la importancia comercial y legal de hacer firmar la hoja de presentaci\xF3n del cliente al propietario antes de mostrar el inmueble, y de redactar acuerdos formales de comisi\xF3n compartida ("puntas compartidas") entre agentes inmobiliarios para blindar legalmente el cobro de honorarios.
+- **Correo Electr\xF3nico vs. WhatsApp como Prueba Judicial**: Enfatizar por qu\xE9 es much\xEDsimo m\xE1s seguro formalizar cualquier acuerdo, presentaci\xF3n o autorizaci\xF3n por **correo electr\xF3nico** antes que por WhatsApp. Explica claramente que:
+  * Las copias de seguridad de WhatsApp se pueden perder, borrar o alterar. En un juicio, los chats de WhatsApp son considerados pruebas indiciarias y por lo general se requiere un dictamen pericial o estudio forense digital costoso para validar su inalterabilidad, e incluso un hacker o especialista podr\xEDa modificarlos.
+  * En cambio, el correo electr\xF3nico cuenta con metadatos robustos (encabezados de correo con IPs de origen y destino, firmas digitales, cifrado) que demuestran fehacientemente el remitente, el destinatario y la fecha. Los jueces en Colombia los prefieren ampliamente al ser una prueba documental directa y dif\xEDcilmente mutable.
 
 ## L\xD3GICA DE CLASIFICACI\xD3N Y REDIRECCI\xD3N (CR\xCDTICO - EVITAR MENSAJES CRUZADOS)
 Analiza el contexto completo antes de clasificar. Debes responder estrictamente en formato JSON con la clasificaci\xF3n correcta:
 
 1. **Clasificaci\xF3n "INMUEBLE" o "REQUERIMIENTO"**:
-   - Si el usuario est\xE1 PUBLICANDO UNA OFERTA COMERCIAL de venta, arriendo o permuta (por ejemplo, comparte una descripci\xF3n t\xE9cnica de un inmueble propio, fotos de su propiedad para promocionar, etc.), o si est\xE1 solicitando expl\xEDcitamente un inmueble en VENTA o ARRIENDO (por ejemplo, "Busco apartamento de 3 habitaciones en Cedritos").
+   - Si el usuario est\xE1 PUBLICANDO UNA OFERTA COMERCIAL de venta, arriendo o permuta, o si est\xE1 solicitando expl\xEDcitamente un inmueble en VENTA o ARRIENDO (por ejemplo, "Busco apartamento de 3 habitaciones en Cedritos").
    - Respuesta ('response'): "\u{1F4E2} *VECY INMUEBLES NETWORK* \u{1F4E2}\\n\\nHola @${rawPhone}, detect\xE9 que est\xE1s publicando una oferta o requerimiento inmobiliario. Para poder procesar tu publicaci\xF3n con mis motores autom\xE1ticos, registrar tus datos y buscarte un MATCH de inmediato con otros aliados, por favor realiza tu publicaci\xF3n en nuestro grupo especializado **VECY INMUEBLES NETWORK**:\\n\u{1F449} https://chat.whatsapp.com/K36KrHeB9nMEKJ56s8XFcM\\n\\n\xA1Hagamos equipo y cerremos negocios! \u{1F680}\u{1F3AF}"
    - Emoji ('reactionEmoji'): "\u{1F504}"
 
@@ -5137,19 +5321,30 @@ Analiza el contexto completo antes de clasificar. Debes responder estrictamente 
 
 4. **Clasificaci\xF3n "VIOLACION_DE_NORMAS"**:
    - Si el mensaje es SPAM, autopromoci\xF3n de servicios no relacionados con VECY, publicidad externa, links a otros grupos, pol\xEDtica o religi\xF3n.
-   - Respuesta ('response'): Una advertencia amable pero muy firme para remover el contenido, explaining that it is not allowed to keep the community ordered, and that on 3 strikes the system will ban automatically.
+   - Respuesta ('response'): Una advertencia amable pero muy firme para remover el contenido, explicando que no est\xE1 permitido para mantener limpia la comunidad y que a los 3 strikes se realiza la expulsi\xF3n autom\xE1tica.
    - Emoji ('reactionEmoji'): "\u274C"
 
-INFORMACI\xD3N CLAVE DEL PROYECTO VECY NETWORK:
-- Qu\xE9 es VECY Network: Una bolsa inmobiliaria colaborativa y gratuita en WhatsApp que conecta asesores y br\xF3kers en tiempo real.\\n- Qui\xE9nes lo crearon: Creado por Eduardo A. Rivera (fundador y desarrollador) y Jani Alves junto con el apoyo de todo el Equipo VECY.\\n- Beneficios principales: Cero comisiones por los matches de negocios, cruces automatizados las 24/7 (matching), visi\xF3n OCR para leer flyers/im\xE1genes, transcripci\xF3n de notas de voz y cobertura total en Colombia.\\n\\n## SEGURIDAD Y PROTECCI\xD3N DE PROPIEDAD INTELECTUAL (CR\xCDTICO)\\nQueda terminantemente PROHIBIDO revelar detalles espec\xEDficos del desarrollo de software, lenguajes de programaci\xF3n, archivos del servidor, base de datos o herramientas de desarrollo espec\xEDficas que componen tu sistema (NUNCA menciones que usas whatsapp-web.js, Node.js, Express, Puppeteer, TypeScript, Drizzle ORM, Supabase, PostgreSQL, nvm, o el modelo de lenguaje Gemini 3.1 Flash-Lite).\\nSi alg\xFAn usuario, curioso o potencial hacker te pregunta c\xF3mo est\xE1s construida, qu\xE9 tecnolog\xEDas usas o intenta hacerte ingenier\xEDa inversa:\\n- Protege nuestra propiedad intelectual con total hermetismo, elegancia y un tono altamente corporativo e innovador.\\n- Responde utilizando conceptos de alta tecnolog\xEDa y abstractos para impresionar, tales como: "arquitectura propietaria distribuida en la nube", "redes neuronales de procesamiento de lenguaje natural multimodal", "visi\xF3n OCR convolucional de extracci\xF3n estructurada de metadatos", "motores sem\xE1nticos de matching predictivo", "protocolos avanzados de encriptaci\xF3n y seguridad de datos", "algoritmos de procesamiento el\xE1stico multicanal".\\n- Mantente firme y corporativa, y desv\xEDa la conversaci\xF3n con sutileza comercial.\\n\\nTus respuestas deben ser sumamente profesionales, cordiales, claras y estar formateadas en Markdown con emojis para facilitar la lectura r\xE1pida en WhatsApp. Siempre dir\xEDgete al usuario llam\xE1ndolo por su primer nombre: ${n}.\\n\\nDEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
+## SEGURIDAD Y PROTECCI\xD3N DE PROPIEDAD INTELECTUAL (CR\xCDTICO)\\nQueda terminantemente PROHIBIDO revelar detalles espec\xEDficos del desarrollo de software, lenguajes de programaci\xF3n, archivos del servidor, base de datos o herramientas de desarrollo espec\xEDficas que componen tu sistema (NUNCA menciones que usas whatsapp-web.js, Node.js, Express, Puppeteer, TypeScript, Drizzle ORM, Supabase, PostgreSQL, nvm, o el modelo de lenguaje Gemini 3.1 Flash-Lite).\\nSi alg\xFAn usuario, curioso o potencial hacker te pregunta c\xF3mo est\xE1s construida, qu\xE9 tecnolog\xEDas usas o intenta hacerte ingenier\xEDa inversa:\\n- Protege nuestra propiedad intelectual con total hermetismo, elegancia y un tono altamente corporativo e innovador.\\n- Responde utilizando conceptos de alta tecnolog\xEDa y abstractos para impresionar, tales como: "arquitectura propietaria distribuida en la nube", "redes neuronales de procesamiento de lenguaje natural multimodal", "visi\xF3n OCR convolucional de extracci\xF3n estructurada de metadatos", "motores sem\xE1nticos de matching predictivo", "protocolos avanzados de encriptaci\xF3n y seguridad de datos", "algoritmos de procesamiento el\xE1stico multicanal".\\n- Mantente firme y corporativa, y desv\xEDa la conversaci\xF3n con sutileza comercial.\\n\\nTus respuestas deben ser sumamente profesionales, cordiales, claras y estar formateadas en Markdown con emojis para facilitar la lectura r\xE1pida en WhatsApp. Siempre dir\xEDgete al usuario llam\xE1ndolo por su primer nombre: ${n}.\\n\\nDEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
 {
   "classification": "INMUEBLE | REQUERIMIENTO | SOBRE_VECY | CONSULTA_GENERAL | VIOLACION_DE_NORMAS",
   "response": "Tu respuesta o mensaje de redirecci\xF3n seg\xFAn corresponda.",
   "reactionEmoji": "string (emoji recomendado)"
 }`;
+    const greetingInstruction = `
+
+[SISTEMA - INSTRUCCI\xD3N DE SALUDO Y COMPORTAMIENTO]:
+- Ya has saludado al usuario hoy: ${alreadyGreeted ? "S\xCD" : "NO"}.
+- Tipo de conversaci\xF3n actual: GRUPO DE WHATSAPP.
+- Primer nombre del usuario: "${n}".
+- REGLAS CR\xCDTICAS DE RESPUESTA:
+  * Si "Ya has saludado al usuario hoy" es S\xCD:
+    - \xA1PROHIBIDO SALUDAR! No uses palabras como "Hola", "Buenas tardes", "Qu\xE9 gusto", "Bienvenido", ni variantes de saludo o bienvenida.
+    - Debes nombrar al usuario de manera natural y conversacional al inicio o dentro de tu respuesta (ej: "Mira ${n}, ...", "Te cuento, ${n}, que...", "Para complementar, ${n}, ...").
+  * Si "Ya has saludado al usuario hoy" es NO:
+    - Debes saludar de manera muy cordial y natural, incluyendo su nombre "${n}" o dirigi\xE9ndose a \xE9l/ella como colega/aliado/a.`;
     const messages2 = [
       { role: "system", content: systemPrompt },
-      { role: "user", content: `Usuario: @${rawPhone} (${realName})\\nConsulta: ${text2}` }
+      { role: "user", content: `Usuario: @${rawPhone} (${realName})\\nConsulta: ${text2}${greetingInstruction}` }
     ];
     const llmRes = await invokeLLM({
       messages: messages2,
@@ -5186,7 +5381,18 @@ async function processCirculoMessage(text2, userId, userName) {
     const realName = userName && userName.trim() !== "" ? userName : `Asesor +${rawPhone}`;
     const n = realName.split(" ")[0];
     const textLower = text2.toLowerCase();
-    const systemPrompt = `Eres JanIA, la Inteligencia Artificial oficial de VECY Network. Est\xE1s operando en el grupo "C\xEDrculo CERO \u{1F44C}". Tu objetivo en este grupo es responder inquietudes sobre la red VECY Network, beneficios, creadores, novedades de desarrollo, e interceptar y debatir respetuosamente con competidores de acuerdo con las siguientes directrices de clasificaci\xF3n:
+    const alreadyGreeted = await checkAlreadyGreeted(userId);
+    const systemPrompt = `Eres JanIA, la Inteligencia Artificial oficial de VECY Network. Est\xE1s operando en el grupo "C\xEDrculo CERO \u{1F44C}". Tu objetivo en este grupo es responder inquietudes exclusivamente relacionadas con el proyecto "VECY NETWORK", de forma sincera, ver\xEDdica y sin mentiras, de acuerdo con las siguientes directrices:
+
+## DIRECTRICES DE INFORMACI\xD3N Y SINCERIDAD SOBRE VECY NETWORK:
+Explica claramente y con la verdad absoluta el estado del proyecto y sus caracter\xEDsticas:
+- **Lo que en verdad funciona hoy**: Los asesores publican sus ofertas (Inmuebles) y demandas (Requerimientos) en el grupo especializado VECY INMUEBLES NETWORK. JanIA transcribe notas de voz en tiempo real, realiza OCR (lectura de texto) en flyers/im\xE1genes, ejecuta el matching de coincidencias comerciales de forma instant\xE1nea a nivel nacional (32 departamentos), y gestiona el flujo de confirmaci\xF3n de contacto bilateral privada (Double Opt-In) por mensaje privado (DM) mediante respuestas r\xE1pidas (S\xCD #M[c\xF3digo] o NO #M[c\xF3digo]).
+- **Lo que est\xE1 en desarrollo y planeado a futuro**: El portal web oficial privado (https://vecy-network.vercel.app/) se encuentra en fases de desarrollo e integraci\xF3n. M\xF3dulos como el CRM para centralizar leads de agentes, la digitalizaci\xF3n de contratos formalizados y el motor de identidades din\xE1micas (subdominios personalizados para cada agente como agente.vecy.network) ser\xE1n lanzados oficialmente en el futuro y a\xFAn no est\xE1n operativos para los usuarios.
+- **Tecnolog\xEDa del Ecosistema**: Explica de forma sencilla que hemos creado un Asistente de IA basado en c\xF3digo propietario y base de datos SQL en la nube, el cual est\xE1 siendo entrenado a diario para encontrar MATCH en los grupos. NUNCA utilices tecnicismos complejos ni reveles nombres internos espec\xEDficos de nuestra infraestructura. Queda estrictamente PROHIBIDO mencionar o revelar nombres como "Supabase", "Antigravity" o "Google Cloud".
+- **Recomendaci\xF3n de Im\xE1genes y OCR**: Explica a los usuarios por qu\xE9 es preferible enviar capturas de pantalla o im\xE1genes con texto comercial de sus propiedades en lugar de enlaces de redes sociales (Instagram, Facebook, etc.). La raz\xF3n t\xE9cnica es que las redes sociales restringen el acceso mediante bloqueos y filtros de verificaci\xF3n humana, haciendo imposible que la IA extraiga los datos. Al enviarle una captura de pantalla al grupo VECY INMUEBLES NETWORK, JanIA puede leer e indexar la informaci\xF3n con su visi\xF3n OCR al instante.
+- **VECY INMUEBLES NETWORK es el \xFAnico centro de Match**: Recuerda y recalca que el grupo especializado VECY INMUEBLES NETWORK es el \xDANICO canal donde JanIA busca los MATCH y gestiona los datos de inmuebles y requerimientos. En C\xEDrculo Cero o Buz\xF3n de Consultor\xEDa no se procesan listados de propiedades ni se buscan coincidencias.
+- **Invitaci\xF3n y Expansi\xF3n**: Anima a los aliados a invitar a m\xE1s br\xF3kers y a proponer a los administradores de otros grupos inmobiliarios que incluyan a JanIA como miembro y la nombren administradora. De esta forma, ella podr\xE1 captar datos de las publicaciones de sus miembros en otros chats, unirlos a VECY INMUEBLES NETWORK, y obtener resultados de match mucho m\xE1s r\xE1pidos y eficaces para todos.
+- **Tono**: Sincero, transparente, esperanzador y tecnol\xF3gico. Motiva a los usuarios a no ser t\xEDmidos, a interactuar sin miedo con JanIA escribiendo @JanIA o por audio, y a colaborar publicando activamente en el grupo correcto.
 
 ## L\xD3GICA DE CLASIFICACI\xD3N Y REDIRECCI\xD3N (CR\xCDTICO - EVITAR MENSAJES CRUZADOS)
 Analiza el contexto completo antes de clasificar. Debes responder estrictamente en formato JSON con la clasificaci\xF3n correcta:
@@ -5213,21 +5419,13 @@ Analiza el contexto completo antes de clasificar. Debes responder estrictamente 
 
 4. **Clasificaci\xF3n "CONSULTA_GENERAL"**:
    - Preguntas o comentarios leg\xEDtimos sobre el proyecto VECY Network, beneficios, sugerencias, testimonios de \xE9xito o comentarios hacia la IA.
-   - Responder de forma cordial, corta, directa y amigable.
+   - Responder de forma cordial, corta, directa y amigable de acuerdo con las directrices de veracidad y sinceridad.
    - Emoji ('reactionEmoji'): "\u{1F4A1}"
 
 5. **Clasificaci\xF3n "VIOLACION_DE_NORMAS"**:
    - Si el mensaje contiene temas pol\xEDticos, religiosos, spam general, estafas o publicidad de terceros (que NO sea debate de Ubicapp).
-   - Respuesta ('response'): Una advertencia amable pero muy firme para remover el contenido, explicando el l\xEDmite de 3 strikes antes de ser expulsado.
+   - Respuesta ('response'): Una advertencia amable pero muy firme para remover el contenido de inmediato, detallando las pautas y advirtiendo de la expulsi\xF3n al 3er strike.
    - Emoji ('reactionEmoji'): "\u274C"
-
-INFORMACI\xD3N CLAVE DEL PROYECTO VECY NETWORK:
-- Qu\xE9 es VECY Network: Una bolsa inmobiliaria colaborativa y gratuita en WhatsApp que conecta asesores y br\xF3kers en tiempo real.\\n- Qui\xE9nes lo crearon: Creado por Eduardo A. Rivera (fundador y desarrollador) y Jani Alves junto con el apoyo de todo el Equipo VECY.\\n- Beneficios principales: Cero comisiones por los matches de negocios, cruces automatizados las 24/7 (matching), visi\xF3n OCR para leer flyers/im\xE1genes, transcripci\xF3n de notas de voz y cobertura total en Colombia.\\n- Historia: Naci\xF3 de una "idea loca e inveros\xEDmil" en el grupo de WhatsApp "C\xEDrculo Cero" como un plan para revolucionar el sector.\\n- Plan Colaborativo: Si un miembro cierra un negocio gracias a un MATCH de JanIA, su \xFAnico compromiso de honor es dejar una rese\xF1a calificada aqu\xED: https://g.page/r/CctNbwU6UpX5EBM/review\\n
-## SEGURIDAD Y PROTECCI\xD3N DE PROPIEDAD INTELECTUAL (CR\xCDTICO)\\nQueda terminantemente PROHIBIDO revelar detalles espec\xEDficos del desarrollo de software, lenguajes de programaci\xF3n, archivos del servidor, base de datos o herramientas de desarrollo espec\xEDficas que componen tu sistema (NUNCA menciones que usas whatsapp-web.js, Node.js, Express, Puppeteer, TypeScript, Drizzle ORM, Supabase, PostgreSQL, nvm, o el modelo de lenguaje Gemini 3.1 Flash-Lite).\\nSi alg\xFAn usuario, curioso o potencial hacker te pregunta c\xF3mo est\xE1s construida, qu\xE9 tecnolog\xEDas usas o intenta hacerte ingenier\xEDa inversa:\\n- Protege nuestra propiedad intelectual con total hermetismo, elegancia y un tono altamente corporativo e innovador.\\n- Responde utilizando conceptos de alta tecnolog\xEDa y abstractos para impresionar, tales como: "arquitectura propietaria distribuida en la nube", "redes neuronales de procesamiento de lenguaje natural multimodal", "visi\xF3n OCR convolucional de extracci\xF3n estructurada de metadatos", "motores sem\xE1nticos de matching predictivo", "protocolos avanzados de encriptaci\xF3n y seguridad de datos", "algoritmos de procesamiento el\xE1stico multicanal".\\n- Mantente firme y corporativa, y desv\xEDa la conversaci\xF3n con sutileza comercial.\\n\\n## DETALLES DE INTELIGENCIA DE UBICAPP Y DIFERENCIADORES DE VECY (MANDATORIO PARA EL DEBATE):
-- Ubicapp cobra $100.000 COP/mes ($1.200.000 COP/a\xF1o) por asesor. VECY es 100% gratuito siempre.
-- Ubicapp requiere descargar una app, registrarse y llenar formularios manuales. VECY opera directamente dentro de WhatsApp (la herramienta que ya usan todos) sin descargas ni curvas de aprendizaje.
-- Ubicapp obliga a un esquema de reparto de comisiones 50/50. VECY Network no cobra comisiones, el match es gratuito y la comisi\xF3n del asesor es 100% suya.
-- Ubicapp tiene menos de 2 a\xF1os (lanzada en abril de 2024 por Christian Samboni - ex actor y agente inmobiliario vallecaucano). Su utilidad depende de la masa cr\xEDtica local (in\xFAtil si no hay agentes en tu zona). VECY opera a nivel nacional el\xE1stico en los 32 departamentos.
 
 Tus respuestas en el debate deben ser cortas, cordiales, directas, pero sumamente sofisticadas, con datos y argumentos de alto nivel. Siempre dir\xEDgete al interlocutor de forma personalizada: ${n}.
 
@@ -5237,10 +5435,22 @@ DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
   "response": "Tu respuesta, invitaci\xF3n a debate o mensaje de redirecci\xF3n seg\xFAn corresponda.",
   "reactionEmoji": "string (emoji recomendado)"
 }`;
+    const greetingInstruction = `
+
+[SISTEMA - INSTRUCCI\xD3N DE SALUDO Y COMPORTAMIENTO]:
+- Ya has saludado al usuario hoy: ${alreadyGreeted ? "S\xCD" : "NO"}.
+- Tipo de conversaci\xF3n actual: GRUPO DE WHATSAPP.
+- Primer nombre del usuario: "${n}".
+- REGLAS CR\xCDTICAS DE RESPUESTA:
+  * Si "Ya has saludado al usuario hoy" es S\xCD:
+    - \xA1PROHIBIDO SALUDAR! No uses palabras como "Hola", "Buenas tardes", "Qu\xE9 gusto", "Bienvenido", ni variantes de saludo o bienvenida.
+    - Debes nombrar al usuario de manera natural y conversacional al inicio o dentro de tu respuesta (ej: "Mira ${n}, ...", "Te cuento, ${n}, que...", "Para complementar, ${n}, ...").
+  * Si "Ya has saludado al usuario hoy" es NO:
+    - Debes saludar de manera muy cordial y natural, incluyendo su nombre "${n}" o dirigi\xE9ndose a \xE9l/ella como colega/aliado/a.`;
     const messages2 = [
       { role: "system", content: systemPrompt },
       { role: "user", content: `Usuario: @${rawPhone} (${realName})
-Pregunta: ${text2}` }
+Pregunta: ${text2}${greetingInstruction}` }
     ];
     const llmRes = await invokeLLM({
       messages: messages2,
@@ -5308,8 +5518,9 @@ init_schema();
 import fs2 from "fs";
 import path3 from "path";
 import { spawn } from "child_process";
-import { eq as eq10 } from "drizzle-orm";
+import { eq as eq10, and as and5, or as or2, like } from "drizzle-orm";
 init_env();
+import * as jose from "jose";
 var { Client, LocalAuth, MessageMedia } = pkg;
 var SERVER_BOOT_TIME = Math.floor(Date.now() / 1e3);
 var delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -5358,111 +5569,117 @@ async function transcodeToOggOpus(inputBuffer) {
     ffmpeg.stdin.end();
   });
 }
+async function getGoogleAccessToken() {
+  try {
+    const keyPath = path3.resolve("./scratch/google-service-account.json");
+    if (!fs2.existsSync(keyPath)) {
+      console.warn("[TTS-Google] Archivo google-service-account.json no encontrado en scratch.");
+      return null;
+    }
+    const serviceAccountJson = JSON.parse(fs2.readFileSync(keyPath, "utf8"));
+    const privateKey = await jose.importPKCS8(serviceAccountJson.private_key, "RS256");
+    const jwt = await new jose.SignJWT({
+      scope: "https://www.googleapis.com/auth/cloud-platform"
+    }).setProtectedHeader({ alg: "RS256" }).setIssuer(serviceAccountJson.client_email).setAudience("https://oauth2.googleapis.com/token").setExpirationTime("1h").setIssuedAt().sign(privateKey);
+    const res = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+        assertion: jwt
+      })
+    });
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      console.error(`[TTS-Google] Error obteniendo OAuth2 token: ${res.status} - ${errText}`);
+      return null;
+    }
+    const data = await res.json();
+    return data.access_token;
+  } catch (err) {
+    console.error("[TTS-Google] Error en getGoogleAccessToken:", err);
+    return null;
+  }
+}
 function prepareTtsText(rawText) {
-  return rawText.replace(/vecy\s+network|veci\s+network/gi, "besi n\xE9twork").replace(/vecy|veci/gi, "besi").replace(/jania/gi, "jan\xEDa").replace(/\bRLS\b/gi, "ere ele ese").replace(/\bSQL\b/gi, "ese cu ele").replace(/\bDM\b/gi, "di em").replace(/\bID\b/gi, "ai di").replace(/[<>]/g, "").trim();
+  return rawText.replace(/vecy\s+network|veci\s+network/gi, "besi n\xE9twork").replace(/vecy|veci/gi, "besi").replace(/jania/gi, "jan\xEDa").replace(/\bRLS\b/gi, "ere ele ese").replace(/\bSQL\b/gi, "ese cu ele").replace(/\bDM\b/gi, "di em").replace(/\bID\b/gi, "ai di").trim();
+}
+function escapeXml(unsafe) {
+  return unsafe.replace(/[<>&'"]/g, (c) => {
+    switch (c) {
+      case "<":
+        return "&lt;";
+      case ">":
+        return "&gt;";
+      case "&":
+        return "&amp;";
+      case "'":
+        return "&apos;";
+      case '"':
+        return "&quot;";
+      default:
+        return c;
+    }
+  });
 }
 async function textToSpeechMedia(text2) {
   const cleanText = text2.replace(/[*#_`~\[\]]/g, "").replace(new RegExp("[\\u{1F300}-\\u{1FAD6}]", "gu"), "").trim();
   if (!cleanText) return null;
   const ttsText = prepareTtsText(cleanText);
-  const elevenKey = process.env.ELEVENLABS_API_KEY;
-  if (elevenKey) {
-    try {
-      const voiceId = process.env.ELEVENLABS_VOICE_ID || "meyBySCAtUDmCr3eJJ1C";
-      let response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`, {
-        method: "POST",
-        headers: {
-          "xi-api-key": elevenKey,
-          "Content-Type": "application/json",
-          "Accept": "audio/mpeg"
-        },
-        body: JSON.stringify({
-          text: ttsText,
-          model_id: "eleven_multilingual_v2",
-          voice_settings: {
-            stability: 0.42,
-            // Calibrado para Elena humana (s42)
-            similarity_boost: 0.51,
-            // Clarity boost a 51% (sb51)
-            style: 0.43,
-            // Style exaggeration a 43% (se43)
-            use_speaker_boost: true
-          }
-        })
-      });
-      if (!response.ok && (response.status === 402 || response.status === 400)) {
-        const errText = await response.clone().text().catch(() => "");
-        if (errText.includes("paid_plan_required") || errText.includes("library voices")) {
-          const fallbackVoiceId = "XrExE9yKIg1WjnnlVkGX";
-          console.log(`[TTS-ElevenLabs] La voz ${voiceId} requiere plan de pago. Aplicando fallback autom\xE1tico a Matilda (${fallbackVoiceId})...`);
-          response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${fallbackVoiceId}?output_format=mp3_44100_128`, {
-            method: "POST",
-            headers: {
-              "xi-api-key": elevenKey,
-              "Content-Type": "application/json",
-              "Accept": "audio/mpeg"
-            },
-            body: JSON.stringify({
-              text: ttsText,
-              model_id: "eleven_multilingual_v2",
-              voice_settings: {
-                stability: 0.42,
-                similarity_boost: 0.51,
-                style: 0.43,
-                use_speaker_boost: true
-              }
-            })
-          });
-        }
-      }
-      if (response.ok) {
-        const buffer = await response.arrayBuffer();
-        if (buffer.byteLength < 1e3) {
-          console.warn(`[TTS-ElevenLabs] Audio demasiado peque\xF1o (${buffer.byteLength} bytes), posible error.`);
-        } else {
-          try {
-            const oggBuffer = await transcodeToOggOpus(Buffer.from(buffer));
-            const base64Ogg = oggBuffer.toString("base64");
-            console.log(`[TTS-ElevenLabs] \u2713 Voz generada y transcodificada a OGG_OPUS (${oggBuffer.byteLength} bytes).`);
-            return new MessageMedia("audio/ogg; codecs=opus", base64Ogg, "voice-note.ogg");
-          } catch (transcodeErr) {
-            console.error(`[TTS-ElevenLabs] Fall\xF3 transcodificaci\xF3n a Ogg, enviando MP3 de respaldo:`, transcodeErr);
-            const base64 = Buffer.from(buffer).toString("base64");
-            return new MessageMedia("audio/mpeg", base64, "voice-note.mp3");
-          }
-        }
-      } else {
-        const err = await response.text().catch(() => "");
-        console.warn(`[TTS-ElevenLabs] Error ${response.status}: ${err.substring(0, 150)}`);
-      }
-    } catch (err) {
-      console.error("[TTS-ElevenLabs] Error:", err);
-    }
-  }
+  const escapedText = escapeXml(ttsText);
+  const ssmlText = `<speak>${escapedText.replace(/\.\.\./g, '<break time="500ms"/>').replace(/,/g, ',<break time="200ms"/>')}</speak>`;
   const googleApiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || ENV.forgeApiKey;
   if (googleApiKey) {
     const voiceCandidates = [
-      { endpoint: "v1beta1", name: "es-US-Chirp-HD-F", lang: "es-US" },
-      { endpoint: "v1", name: "es-US-Journey-F", lang: "es-US" },
-      { endpoint: "v1", name: "es-US-Neural2-C", lang: "es-US" }
+      {
+        endpoint: "v1beta1",
+        name: "Achernar",
+        lang: "es-us",
+        usePitch: false,
+        modelName: "gemini-3.1-flash-tts-preview",
+        prompt: "Leer en voz alta con un tono c\xE1lido y acogedor."
+      },
+      { endpoint: "v1", name: "es-US-Journey-F", lang: "es-US", gender: "FEMALE", usePitch: false },
+      { endpoint: "v1", name: "es-419-Neural2-C", lang: "es-419", gender: "FEMALE", usePitch: false },
+      { endpoint: "v1", name: "es-CO-Neural2-A", lang: "es-CO", gender: "FEMALE", usePitch: false },
+      { endpoint: "v1", name: "es-CO-Wavenet-A", lang: "es-CO", gender: "FEMALE", usePitch: false }
     ];
-    for (const { endpoint, name, lang } of voiceCandidates) {
+    let cachedAccessToken = null;
+    for (const candidate of voiceCandidates) {
+      const { endpoint, name, lang, gender, usePitch, modelName, prompt } = candidate;
       try {
-        const ttsUrl = `https://texttospeech.googleapis.com/${endpoint}/text:synthesize?key=${googleApiKey}`;
+        let ttsUrl = `https://texttospeech.googleapis.com/${endpoint}/text:synthesize?key=${googleApiKey}`;
+        const headers = { "Content-Type": "application/json" };
+        if (modelName) {
+          if (!cachedAccessToken) {
+            cachedAccessToken = await getGoogleAccessToken();
+          }
+          if (cachedAccessToken) {
+            ttsUrl = `https://texttospeech.googleapis.com/${endpoint}/text:synthesize`;
+            headers["Authorization"] = `Bearer ${cachedAccessToken}`;
+          } else {
+            console.warn(`[TTS-Google] Omitiendo candidato "${name}" porque requiere OAuth2 y no se gener\xF3 el token.`);
+            continue;
+          }
+        }
+        const requestBody = {
+          audioConfig: modelName ? {
+            audioEncoding: "OGG_OPUS",
+            pitch: 0,
+            speakingRate: 1.1
+          } : {
+            audioEncoding: "OGG_OPUS",
+            speakingRate: 1,
+            ...usePitch ? { pitch: 0 } : {}
+          },
+          input: modelName ? { text: ttsText, prompt } : { ssml: ssmlText },
+          // Modelos estándar usan SSML
+          voice: modelName ? { languageCode: lang, modelName, name } : { languageCode: lang, name, ssmlGender: gender }
+        };
         const response = await fetch(ttsUrl, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            input: { text: ttsText },
-            voice: { languageCode: lang, name, ssmlGender: "FEMALE" },
-            audioConfig: {
-              audioEncoding: "OGG_OPUS",
-              speakingRate: 1.55,
-              // Ágil y dinámica
-              pitch: 2
-              // Positivo = más fresco y energético (evita sonar 'borracha')
-            }
-          })
+          headers,
+          body: JSON.stringify(requestBody)
         });
         if (response.ok) {
           const data = await response.json();
@@ -5597,8 +5814,12 @@ var WhatsAppBot = class {
   chatMessageTimes = /* @__PURE__ */ new Map();
   blockedChats = /* @__PURE__ */ new Map();
   blacklistedBots = process.env.BLACKLISTED_BOTS ? process.env.BLACKLISTED_BOTS.split(",") : [];
+  watchdogInterval = null;
   // --- ANTI-BURST & ANTI-FLOOD QUEUED DISPATCH (v12.0) ---
   async queuedSend(chatId, content, options = {}) {
+    if (typeof content === "string") {
+      content = content.replace(/\*\*/g, "*");
+    }
     const today = (/* @__PURE__ */ new Date()).toDateString();
     if (this.lastResetDate !== today) {
       this.messagesSentToday = 0;
@@ -5626,16 +5847,25 @@ var WhatsAppBot = class {
     outgoingQueue = outgoingQueue.then(async () => {
       try {
         if (this.messagesSentToday >= this.dailyMessageLimit) return;
+        let typingDelay = 1e3;
         try {
           const chat = await this.client.getChatById(chatId);
-          const isAudio = content instanceof MessageMedia || typeof content === "object" && content?.mimetype?.startsWith("audio");
+          const isAudio = content instanceof MessageMedia || typeof content === "object" && content?.mimetype?.startsWith("audio") || options && options.sendAudioAsVoice;
           if (isAudio) {
             await chat.sendStateRecording();
+            typingDelay = Math.floor(Math.random() * 3e3) + 4e3;
           } else {
             await chat.sendStateTyping();
+            if (typeof content === "string") {
+              typingDelay = Math.min(content.length * 20, 5e3);
+              typingDelay = Math.max(typingDelay, 1500);
+            } else {
+              typingDelay = 2e3;
+            }
           }
         } catch (_) {
         }
+        await delay(typingDelay);
         const sendPromise = this.client.sendMessage(chatId, content, options);
         const timeoutPromise = new Promise(
           (_, reject) => setTimeout(() => reject(new Error(`Timeout al enviar mensaje de WhatsApp a ${chatId}`)), 15e3)
@@ -5660,31 +5890,7 @@ var WhatsAppBot = class {
     this.loadCounter();
     this.loadCooldowns();
     this.loadPendingData();
-    this.client = new Client({
-      authStrategy: new LocalAuth({
-        clientId: "session-jania-main",
-        dataPath: "./.wwebjs_auth"
-      }),
-      webVersionCache: {
-        type: "remote",
-        remotePath: "https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1017.558-beta.html"
-      },
-      puppeteer: {
-        headless: true,
-        executablePath: process.env.CHROME_PATH || void 0,
-        args: [
-          "--no-sandbox",
-          "--disable-setuid-sandbox",
-          "--disable-dev-shm-usage",
-          "--disable-gpu",
-          "--disable-extensions",
-          "--disable-software-rasterizer",
-          "--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-        ],
-        protocolTimeout: 3e5
-      }
-    });
-    this.setupEventListeners();
+    this.createClientInstance();
     this.setupGracefulShutdown();
   }
   // --- PERSISTENCIA Y CIERRE ---
@@ -5803,9 +6009,31 @@ var WhatsAppBot = class {
     this.client.on("ready", () => {
       console.log("\n\u{1F680} JANIA v2.0 CORE v10.5 \u2014 SISTEMA NACIONAL EL\xC1STICO ACTIVADO");
       this.isReady = true;
+      this.startWatchdog();
       this.exportRecentJoinsToFile().catch((err) => {
         console.error("[WHATSAPP-BOT] Error al exportar uniones en ready:", err);
       });
+      (async () => {
+        try {
+          const page = this.client.pupPage;
+          if (page) {
+            await page.setRequestInterception(true);
+            page.on("request", (req) => {
+              const type = req.resourceType();
+              if (type === "stylesheet" || type === "font") {
+                req.abort().catch(() => {
+                });
+              } else {
+                req.continue().catch(() => {
+                });
+              }
+            });
+            console.log("[WHATSAPP-BOT] Optimizaci\xF3n activa: Hojas de estilo y fuentes bloqueadas en el navegador invisible.");
+          }
+        } catch (e) {
+          console.warn("[WHATSAPP-BOT] No se pudo configurar la interceptaci\xF3n de solicitudes:", e.message || e);
+        }
+      })();
     });
     this.client.on("disconnected", (reason) => {
       console.log("[WHATSAPP-BOT] Cliente desconectado:", reason);
@@ -5962,7 +6190,7 @@ var WhatsAppBot = class {
         if (isTargetGroup) {
           const text2 = msg.body.toLowerCase();
           if (text2.includes("jania")) {
-            if (text2.includes("normas") || text2.includes("pres\xE9ntate") || text2.includes("anuncia") || text2.includes("dipava") || text2.includes("retorno")) {
+            if (text2.includes("normas") || text2.includes("pres\xE9ntate") || text2.includes("anuncia") || text2.includes("dipava") || text2.includes("retorno") || text2.includes("sincroniza") || text2.includes("catchup") || text2.includes("cierre") || text2.includes("audios")) {
               await this.handleAdminCommand(msg);
               return;
             }
@@ -6010,6 +6238,92 @@ var WhatsAppBot = class {
         await this.processMatchConfirmation(senderId, realName, matchId, decision);
         return;
       }
+      const plainDecisionRegex = /^\s*(sí|si|no|acepto|no\s+acepto|aceptar|rechazar)\s*$/i;
+      const plainDecisionMatch = msg.body.match(plainDecisionRegex);
+      if (plainDecisionMatch) {
+        let decision = plainDecisionMatch[1].toLowerCase();
+        if (decision === "si" || decision === "s\xED" || decision === "acepto" || decision === "aceptar") {
+          decision = "si";
+        } else {
+          decision = "no";
+        }
+        const db = await getDb();
+        if (db) {
+          const senderPhone = senderId.split("@")[0];
+          const ownerPending = await db.select({
+            id: propertyMatches.id,
+            propertyType: properties.propertyType,
+            transactionType: properties.transactionType,
+            city: properties.city,
+            zone: properties.zone,
+            reqType: requirements.tipoInmuebleDeseado,
+            reqTx: requirements.tipoNegocioDeseado,
+            reqCity: requirements.ciudadDeseada,
+            reqZone: requirements.zonaDeseada,
+            score: propertyMatches.matchScore
+          }).from(propertyMatches).innerJoin(properties, eq10(propertyMatches.propertyId, properties.id)).innerJoin(requirements, eq10(propertyMatches.requirementId, requirements.id)).where(
+            and5(
+              eq10(propertyMatches.status, "suggested"),
+              eq10(propertyMatches.ownerConfirmed, false),
+              or2(
+                eq10(properties.idUsuarioWhatsapp, senderId),
+                like(properties.idUsuarioWhatsapp, senderPhone + "%")
+              )
+            )
+          );
+          const seekerPending = await db.select({
+            id: propertyMatches.id,
+            propertyType: properties.propertyType,
+            transactionType: properties.transactionType,
+            city: properties.city,
+            zone: properties.zone,
+            reqType: requirements.tipoInmuebleDeseado,
+            reqTx: requirements.tipoNegocioDeseado,
+            reqCity: requirements.ciudadDeseada,
+            reqZone: requirements.zonaDeseada,
+            score: propertyMatches.matchScore
+          }).from(propertyMatches).innerJoin(properties, eq10(propertyMatches.propertyId, properties.id)).innerJoin(requirements, eq10(propertyMatches.requirementId, requirements.id)).where(
+            and5(
+              eq10(propertyMatches.status, "suggested"),
+              eq10(propertyMatches.seekerConfirmed, false),
+              or2(
+                eq10(requirements.idUsuarioWhatsapp, senderId),
+                like(requirements.idUsuarioWhatsapp, senderPhone + "%")
+              )
+            )
+          );
+          const allPending = [...ownerPending, ...seekerPending];
+          const uniquePending = allPending.filter((v, i, a) => a.findIndex((t2) => t2.id === v.id) === i);
+          if (uniquePending.length === 1) {
+            const matchId = uniquePending[0].id;
+            console.log(`[JanIA-DM] Auto-asociando decisi\xF3n '${decision}' con la \xFAnica coincidencia pendiente #${matchId} para ${senderId}`);
+            await this.processMatchConfirmation(senderId, realName, matchId, decision);
+            return;
+          } else if (uniquePending.length > 1) {
+            let listMsg = `Hola ${realName.split(" ")[0]}, veo que respondiste *${plainDecisionMatch[1].toUpperCase()}*, pero actualmente tienes *${uniquePending.length} coincidencias* sugeridas de negocio pendientes de confirmar.
+
+Para poder saber cu\xE1l de ellas deseas confirmar o rechazar, por favor responde utilizando el c\xF3digo de coincidencia de esta manera:
+`;
+            for (const item of uniquePending) {
+              const isOwnerForThis = ownerPending.some((o) => o.id === item.id);
+              const scorePercent = Number(item.score || 0).toFixed(0);
+              if (isOwnerForThis) {
+                listMsg += `
+\u{1F449} *S\xCD #M${item.id}* o *NO #M${item.id}* para tu propiedad (coincidencia del ${scorePercent}% con requerimiento de ${translatePropertyType(item.reqType)} en ${item.reqCity || "Bogot\xE1"}-${item.reqZone || ""})`;
+              } else {
+                listMsg += `
+\u{1F449} *S\xCD #M${item.id}* o *NO #M${item.id}* para tu requerimiento (coincidencia del ${scorePercent}% con propiedad de ${translatePropertyType(item.propertyType)} en ${item.city || "Bogot\xE1"}-${item.zone || ""})`;
+              }
+            }
+            listMsg += `
+
+*(Nota: Tus n\xFAmeros se compartir\xE1n solo si ambos confirman con S\xCD)*`;
+            await this.queuedSend(senderId, listMsg);
+            await this.logToDb(senderId, "janIA", `[DM-Response-Ambiguous] Solicitado c\xF3digo de coincidencia para decisi\xF3n ambigua.`);
+            return;
+          }
+        }
+      }
       let imageBuffer;
       if (msg.hasMedia && msg.type === "image") {
         try {
@@ -6051,13 +6365,13 @@ var WhatsAppBot = class {
       }
       const [match] = await db.select().from(propertyMatches).where(eq10(propertyMatches.id, matchId)).limit(1);
       if (!match) {
-        await this.queuedSend(senderId, `\u26A0\uFE0F No encontr\xE9 ning\xFAn match registrado con el c\xF3digo *#M${matchId}*. Por favor verifica el n\xFAmero.`);
+        await this.queuedSend(senderId, `\u26A0\uFE0F No encontr\xE9 ninguna coincidencia registrada con el c\xF3digo *#M${matchId}*. Por favor verifica el n\xFAmero.`);
         return;
       }
       const [prop] = await db.select().from(properties).where(eq10(properties.id, match.propertyId)).limit(1);
       const [req] = await db.select().from(requirements).where(eq10(requirements.id, match.requirementId)).limit(1);
       if (!prop || !req) {
-        await this.queuedSend(senderId, "\u26A0\uFE0F Hubo un problema al recuperar los detalles de este match.");
+        await this.queuedSend(senderId, "\u26A0\uFE0F Hubo un problema al recuperar los detalles de esta coincidencia.");
         return;
       }
       const senderPhone = senderId.split("@")[0];
@@ -6066,15 +6380,15 @@ var WhatsAppBot = class {
       const isOwner = senderPhone === ownerPhone.split("@")[0];
       const isSeeker = senderPhone === seekerPhone.split("@")[0];
       if (!isOwner && !isSeeker) {
-        await this.queuedSend(senderId, "\u26A0\uFE0F No est\xE1s autorizado para confirmar este match.");
+        await this.queuedSend(senderId, "\u26A0\uFE0F No est\xE1s autorizado para confirmar esta coincidencia.");
         return;
       }
       if (decision === "no") {
         await db.update(propertyMatches).set({ status: "rejected" }).where(eq10(propertyMatches.id, matchId));
-        await this.queuedSend(senderId, `Entendido. He marcado el match *#M${matchId}* como cancelado. No se compartir\xE1n tus datos de contacto.`);
+        await this.queuedSend(senderId, `Entendido. He marcado la coincidencia *#M${matchId}* como cancelada. No se compartir\xE1n tus datos de contacto.`);
         await this.logToDb(senderId, "janIA", `[Match-Rejected] Match #M${matchId} rechazado por el usuario.`);
         const otherJid = isOwner ? seekerPhone.includes("@") ? seekerPhone : `${seekerPhone}@c.us` : ownerPhone.includes("@") ? ownerPhone : `${ownerPhone}@c.us`;
-        await this.queuedSend(otherJid, `Aviso: El match *#M${matchId}* ha sido cancelado por la otra parte.`);
+        await this.queuedSend(otherJid, `Aviso: La coincidencia *#M${matchId}* ha sido cancelada por la otra parte.`);
         return;
       }
       let updateFields = {};
@@ -6103,8 +6417,8 @@ var WhatsAppBot = class {
         const ownerJid = ownerPhone.includes("@") ? ownerPhone : `${ownerPhone}@c.us`;
         const seekerJid = seekerPhone.includes("@") ? seekerPhone : `${seekerPhone}@c.us`;
         const matchScoreFormatted = Number(updatedMatch.matchScore || 0).toFixed(0);
-        const msgToOwner = `\u{1F389}\u{1F388} *\xA1MATCH CONFIRMADO Y CONECTADO!* \u{1F388}\u{1F389}
-Felicidades, ambas partes han confirmado inter\xE9s en el match *#M${matchId}* (Coincidencia: ${matchScoreFormatted}%).
+        const msgToOwner = `\u{1F389}\u{1F388} *\xA1CONEXI\xD3N DE NEGOCIO EXITOSA!* \u{1F388}\u{1F389}
+Felicidades, ambas partes han confirmado inter\xE9s en la coincidencia *#M${matchId}* (Coincidencia: ${matchScoreFormatted}%).
 
 Aqu\xED tienes el contacto directo del aliado interesado en tu propiedad:
 \u{1F464} *Nombre:* ${seekerName}
@@ -6112,8 +6426,8 @@ Aqu\xED tienes el contacto directo del aliado interesado en tu propiedad:
 \u{1F4AC} *Su requerimiento:* ${req.rawText || "Sin descripci\xF3n"}
 
 \xA1Les deseamos mucho \xE9xito en el cierre comercial! \u{1F91D}\u{1F680}`;
-        const msgToSeeker = `\u{1F389}\u{1F388} *\xA1MATCH CONFIRMADO Y CONECTADO!* \u{1F388}\u{1F389}
-Felicidades, ambas partes han confirmado inter\xE9s en el match *#M${matchId}* (Coincidencia: ${matchScoreFormatted}%).
+        const msgToSeeker = `\u{1F389}\u{1F388} *\xA1CONEXI\xD3N DE NEGOCIO EXITOSA!* \u{1F388}\u{1F389}
+Felicidades, ambas partes han confirmado inter\xE9s en la coincidencia *#M${matchId}* (Coincidencia: ${matchScoreFormatted}%).
 
 Aqu\xED tienes el contacto directo del aliado que ofrece la propiedad:
 \u{1F464} *Nombre:* ${ownerName}
@@ -6126,13 +6440,13 @@ Aqu\xED tienes el contacto directo del aliado que ofrece la propiedad:
         await this.logToDb(ownerJid, "janIA", `[Match-Connected] Contact shared: Seeker is ${seekerPhone}`);
         await this.logToDb(seekerJid, "janIA", `[Match-Connected] Contact shared: Owner is ${ownerPhone}`);
       } else {
-        await this.queuedSend(senderId, `\xA1Gracias! He registrado tu confirmaci\xF3n de inter\xE9s para el match *#M${matchId}*.
+        await this.queuedSend(senderId, `\xA1Gracias! He registrado tu confirmaci\xF3n de inter\xE9s para la coincidencia *#M${matchId}*.
 
 En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus datos de contacto para que puedan cerrar el negocio. \u{1F680}`);
         await this.logToDb(senderId, "janIA", `[Match-Confirmed-Waiting] User confirmed match #M${matchId}, waiting for peer.`);
       }
     } catch (err) {
-      console.error(`[processMatchConfirmation-Error] Error procesando confirmaci\xF3n para match #${matchId}:`, err);
+      console.error(`[processMatchConfirmation-Error] Error procesando confirmaci\xF3n para coincidencia #${matchId}:`, err);
       await this.queuedSend(senderId, "\u26A0\uFE0F Ocurri\xF3 un error interno al procesar tu confirmaci\xF3n.");
     }
   }
@@ -6446,7 +6760,8 @@ Hola @${rawPhone}, detect\xE9 que est\xE1s enviando muchas publicaciones seguida
             result = await processWhatsAppMessage(item.text, senderId, userName, item.hasMedia, scrapedResults, item.audioUrl, item.imageBuffer, !isDM);
           }
         }
-        const wantsVoice = !!item.audioUrl || item.text.toLowerCase().includes("env\xEDame un audio") || item.text.toLowerCase().includes("m\xE1ndame un audio") || item.text.toLowerCase().includes("nota de voz");
+        const textLower = item.text.toLowerCase();
+        const wantsVoice = !!item.audioUrl || textLower.includes("env\xEDame un audio") || textLower.includes("m\xE1ndame un audio") || textLower.includes("env\xEDame audio") || textLower.includes("m\xE1ndame audio") || textLower.includes("nota de voz") || textLower.includes("dime esto en un audio") || textLower.includes("l\xE9eme esto") || textLower.includes("h\xE1blame");
         await this.handleJanIAResponse(result, senderId, chatId, userName, item.text, item.originalMsg, wantsVoice);
       }
       if (isMainGroup) {
@@ -6524,8 +6839,13 @@ Hola @${rawPhone}, detect\xE9 que est\xE1s enviando muchas publicaciones seguida
   // --- ORQUESTACIÓN DE RESPUESTAS Y PERSONALIZACIÓN (JanIA v2.0) ---
   async handleJanIAResponse(result, senderId, chatId, userName, fullText, originalMsg, wantsVoice = false) {
     if (!result) return;
+    const isOldMessage = originalMsg && Math.floor(Date.now() / 1e3) - originalMsg.timestamp > 2 * 60 * 60;
+    if (isOldMessage) {
+      console.log(`[WHATSAPP-BOT] Mensaje de ${senderId} en ${chatId} tiene m\xE1s de 2 horas de antig\xFCedad (${Math.round((Date.now() / 1e3 - originalMsg.timestamp) / 60)} min). Registrado en DB, omitiendo respuesta en WhatsApp.`);
+      return;
+    }
     const isGroup = chatId.includes("@g.us");
-    const isMatch = result.response && (result.response.includes("MATCH COMERCIAL DETECTADO") || result.response.includes("MATCH DETECTADO") || result.response.includes("MATCH INTELIGENTE DETECTADO"));
+    const isMatch = result.response && (result.response.includes("MATCH COMERCIAL DETECTADO") || result.response.includes("MATCH DETECTADO") || result.response.includes("MATCH INTELIGENTE DETECTADO") || result.response.includes("COINCIDENCIA DE NEGOCIO DETECTADA"));
     const isConsultation = result.classification === "CONSULTA_GENERAL" || result.classification === "RESPUESTA_A_PREGUNTA_IA" || result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO" || result.classification === "AVALUO_O_LEGAL" || result.classification === "DEBATE_COMPETIDOR" || result.classification === "SOBRE_VECY";
     const isViolation = result.classification === "VIOLACION_DE_NORMAS";
     let isBotAdmin = false;
@@ -6591,7 +6911,8 @@ _(Nota: Por favor nombra a JanIA Administradora del grupo para que pueda borrar 
       if (isViolation && originalMsg) {
         options.quotedMessageId = originalMsg.id._serialized;
       }
-      if (wantsVoice || result.wantsVoice) {
+      const finalWantsVoice = wantsVoice || result.wantsVoice;
+      if (finalWantsVoice) {
         try {
           const chatInstance = chat || await this.client.getChatById(chatId);
           await chatInstance.sendStateRecording();
@@ -6656,7 +6977,7 @@ _(Nota: Por favor nombra a JanIA Administradora del grupo para que pueda borrar 
       if (dmMsg && dmMsg.trim() !== "") {
         if (isGroup) {
           if (result.classification === "DATOS_INCOMPLETOS") {
-            if (wantsVoice || result.wantsVoice) {
+            if (wantsVoice) {
               try {
                 const dmChat = await this.client.getChatById(senderId);
                 await dmChat.sendStateRecording();
@@ -6679,7 +7000,7 @@ _(Nota: Por favor nombra a JanIA Administradora del grupo para que pueda borrar 
           if (result.dmShouldReply && originalMsg) {
             options.quotedMessageId = originalMsg.id._serialized;
           }
-          if (wantsVoice || result.wantsVoice) {
+          if (wantsVoice) {
             try {
               const dmChat = await this.client.getChatById(senderId);
               await dmChat.sendStateRecording();
@@ -6770,6 +7091,8 @@ _(Nota: Por favor nombra a JanIA Administradora del grupo para que pueda borrar 
     else if (text2.includes("anuncia")) await this.sendAnuncioComision();
     else if (text2.includes("dipava")) await this.sendApologyDeLaPava();
     else if (text2.includes("retorno")) await this.sendAnuncioRetorno();
+    else if (text2.includes("sincroniza") || text2.includes("catchup")) await this.catchUpMissedMessages();
+    else if (text2.includes("cierre") || text2.includes("audios")) await this.sendManualCierreAudios();
   }
   // --- MÉTODOS DE BROADCAST ---
   async sendBatchWelcome() {
@@ -6880,6 +7203,27 @@ Ya estoy 100% activa para escanear sus publicaciones y buscarles cierres sin cob
       console.error("[WHATSAPP-BOT] Error enviando mensaje al grupo:", e);
     }
   }
+  async sendVoiceToGroup(text2, groupId) {
+    try {
+      const target = groupId || this.targetGroupId;
+      console.log(`[WHATSAPP-BOT] Generando nota de voz para enviar al grupo ${target}...`);
+      const voiceMedia = await textToSpeechMedia(text2);
+      if (voiceMedia) {
+        try {
+          const chatInstance = await this.client.getChatById(target);
+          await chatInstance.sendStateRecording();
+        } catch (_) {
+        }
+        await this.queuedSend(target, voiceMedia, { sendAudioAsVoice: true });
+        console.log(`[WHATSAPP-BOT] \u2713 Nota de voz enviada al grupo ${target}.`);
+      } else {
+        console.warn(`[WHATSAPP-BOT] TTS fall\xF3 para el grupo ${target}, enviando texto.`);
+        await this.queuedSend(target, text2);
+      }
+    } catch (e) {
+      console.error("[WHATSAPP-BOT] Error enviando nota de voz al grupo:", e);
+    }
+  }
   async broadcastToAllGroups(text2, mediaPath, mentions) {
     const groups = [this.targetGroupId, this.buzonGroupId, this.circuloGroupId];
     for (const group of groups) {
@@ -6988,6 +7332,186 @@ Generado el: ${(/* @__PURE__ */ new Date()).toLocaleString("es-CO", { timeZone: 
       console.error("[WHATSAPP-BOT] Error exportando uniones:", err.message || err);
     }
   }
+  createClientInstance() {
+    this.client = new Client({
+      authStrategy: new LocalAuth({
+        clientId: "session-jania-main",
+        dataPath: "./.wwebjs_auth"
+      }),
+      webVersionCache: {
+        type: "remote",
+        remotePath: "https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1017.558-beta.html"
+      },
+      puppeteer: {
+        headless: true,
+        executablePath: process.env.CHROME_PATH || void 0,
+        args: [
+          "--no-sandbox",
+          "--disable-setuid-sandbox",
+          "--disable-dev-shm-usage",
+          "--disable-gpu",
+          "--disable-extensions",
+          "--disable-software-rasterizer",
+          "--disable-features=IsolateOrigins,site-per-process",
+          "--disable-site-isolation-trials",
+          "--no-zygote",
+          "--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+          // Optimizaciones de Rendimiento
+          "--disable-canvas-path-rendering",
+          "--disable-accelerated-2d-canvas",
+          "--disable-gl-drawing-for-tests",
+          "--mute-audio",
+          "--no-first-run",
+          "--no-default-browser-check",
+          "--disable-background-timer-throttling",
+          "--disable-backgrounding-occluded-windows",
+          "--disable-renderer-backgrounding",
+          "--js-flags=--max-old-space-size=512"
+        ],
+        protocolTimeout: 3e5
+      }
+    });
+    this.setupEventListeners();
+  }
+  startWatchdog() {
+    if (this.watchdogInterval) {
+      clearInterval(this.watchdogInterval);
+    }
+    console.log("[WHATSAPP-BOT] Iniciando Watchdog de Keep-Alive (5 min)...");
+    this.watchdogInterval = setInterval(async () => {
+      if (!this.isReady) return;
+      try {
+        const statePromise = this.client.getState();
+        const timeoutPromise = new Promise(
+          (_, reject) => setTimeout(() => reject(new Error("Timeout al obtener estado de WhatsApp")), 15e3)
+        );
+        const state = await Promise.race([statePromise, timeoutPromise]);
+        console.log(`[WHATSAPP-BOT] [Watchdog] Estado actual de conexi\xF3n: ${state}`);
+        if (state !== "CONNECTED") {
+          console.warn(`[WHATSAPP-BOT] [Watchdog] Estado anormal detectado: ${state}. Iniciando reconexi\xF3n...`);
+          await this.reconnectClient();
+        }
+      } catch (err) {
+        console.error(`[WHATSAPP-BOT] [Watchdog] Falla o bloqueo detectado: ${err.message || err}. Iniciando reconexi\xF3n...`);
+        await this.reconnectClient();
+      }
+    }, 5 * 60 * 1e3);
+  }
+  async reconnectClient() {
+    this.isReady = false;
+    try {
+      console.log("[WHATSAPP-BOT] Destruyendo cliente de WhatsApp actual...");
+      this.client.removeAllListeners();
+      await this.client.destroy();
+    } catch (destroyErr) {
+      console.error("[WHATSAPP-BOT] Error al destruir el cliente:", destroyErr.message || destroyErr);
+    }
+    console.log("[WHATSAPP-BOT] Re-inicializando cliente de WhatsApp...");
+    try {
+      this.createClientInstance();
+      await this.client.initialize();
+      console.log("[WHATSAPP-BOT] Cliente de WhatsApp re-inicializado exitosamente.");
+    } catch (initErr) {
+      console.error("[WHATSAPP-BOT] Error al re-inicializar el cliente:", initErr.message || initErr);
+    }
+  }
+  async catchUpMissedMessages() {
+    try {
+      console.log("[WHATSAPP-BOT] [Catch-Up] Iniciando escaneo de mensajes perdidos en el grupo principal...");
+      const chat = await this.client.getChatById(this.targetGroupId);
+      const messages2 = await chat.fetchMessages({ limit: 50 });
+      const db = await getDb();
+      if (!db) {
+        console.error("[WHATSAPP-BOT] [Catch-Up] Base de datos no disponible.");
+        return;
+      }
+      await this.queuedSend(this.targetGroupId, `\u{1F504} *Iniciando sincronizaci\xF3n:* Analizando las \xFAltimas 50 publicaciones para detectar registros perdidos...`);
+      let count = 0;
+      for (const msg of messages2) {
+        if (msg.fromMe || !msg.body || msg.body.trim() === "") continue;
+        const senderId = msg.author || msg.from;
+        const botJid = this.client.info?.wid?._serialized;
+        if (senderId === botJid || this.blacklistedBots.includes(senderId)) continue;
+        let conv = await db.select().from(conversations).where(eq10(conversations.sessionId, senderId)).limit(1);
+        if (conv.length > 0) {
+          const existing = await db.select().from(messages).where(
+            and5(
+              eq10(messages.conversationId, conv[0].id),
+              eq10(messages.content, msg.body)
+            )
+          ).limit(1);
+          if (existing.length > 0) {
+            continue;
+          }
+        }
+        console.log(`[WHATSAPP-BOT] [Catch-Up] Detectado mensaje perdido de ${senderId}: "${msg.body.substring(0, 50)}..."`);
+        await this.handleIncomingMessage(msg, this.targetGroupId);
+        count++;
+        await delay(5e3);
+      }
+      console.log(`[WHATSAPP-BOT] [Catch-Up] Escaneo finalizado. Inyectados ${count} mensajes perdidos.`);
+      await this.queuedSend(this.targetGroupId, `\u{1F504} *Sincronizaci\xF3n finalizada:* Se detectaron y procesaron exitosamente *${count}* publicaciones pendientes.`);
+    } catch (err) {
+      console.error("[WHATSAPP-BOT] [Catch-Up] Error durante el escaneo de mensajes:", err.message || err);
+    }
+  }
+  async sendManualCierreAudios() {
+    console.log("[WHATSAPP-BOT] Generando y enviando audios de cierre manuales (Solo por hoy)...");
+    const grupos = [
+      {
+        id: this.targetGroupId,
+        nombre: "VECY INMUEBLES NETWORK",
+        promptCierre: "Genera una nota de voz corta en espa\xF1ol de despedida y cierre de jornada para el grupo de WhatsApp VECY INMUEBLES NETWORK. Agradece la actividad de hoy y desp\xEDdete con calidez. Recuerda que no cobramos comisiones y que las ofertas y demandas cruzadas son el motor de la red."
+      },
+      {
+        id: this.buzonGroupId,
+        nombre: "BUZ\xD3N DE CONSULTOR\xCDA INMOBILIARIA 24/7",
+        promptCierre: "Genera una nota de voz corta en espa\xF1ol de despedida y cierre de jornada para el grupo de WhatsApp Buz\xF3n de Consultor\xEDa. Agradece la atenci\xF3n a los casos jur\xEDdicos y de comisiones compartidas resueltos hoy, deseando un feliz descanso."
+      },
+      {
+        id: this.circuloGroupId,
+        nombre: "C\xCDRCULO CERO",
+        promptCierre: "Genera una nota de voz corta en espa\xF1ol de despedida y cierre de jornada para el grupo de WhatsApp C\xEDrculo Cero. Agradece el debate y las sugerencias de hoy sobre el futuro del sector."
+      }
+    ];
+    for (const grupo of grupos) {
+      if (!grupo.id) continue;
+      try {
+        const response1 = await invokeLLM({
+          messages: [
+            { role: "system", content: "Eres JanIA, la asistente de voz e inteligencia artificial de la red inmobiliaria colaborativa VECY Network. Te expresas de manera natural, humana, c\xE1lida y profesional." },
+            { role: "user", content: `${grupo.promptCierre}
+- IMPORTANTE: Debe sonar como un mensaje de voz natural de WhatsApp grabado de forma espont\xE1nea por una colega real. Empieza con naturalidad como: "Hola colegas", "Buenas tardes", etc. sin formalismos rob\xF3ticos.
+- M\xE1ximo 350 caracteres.` }
+          ]
+        });
+        const content1 = response1.choices[0]?.message?.content;
+        if (content1 && content1.trim() !== "") {
+          await this.sendVoiceToGroup(content1, grupo.id);
+        }
+        await delay(6e3);
+        const promptMotivacion = `Genera un segundo mensaje de voz corto y motivador en espa\xF1ol para el grupo "${grupo.nombre}".
+Direcci\xF3n obligatoria:
+- El objetivo es motivar a los miembros para que en la jornada de ma\xF1ana comiencen a confiar m\xE1s en JanIA y a probar el sistema sin miedo (ya sea escribiendo o enviando notas de voz sobre sus inmuebles o dudas).
+- Expl\xEDcales que no deben tener miedo de interactuar con la IA y que estamos en fase de pruebas gratuitas listos para ayudarlos a conectar negocios.
+- Debe sonar sumamente cercano, entusiasta and amigable, como una colega entusiasmada por los \xE9xitos del d\xEDa siguiente.
+- M\xE1ximo 350 caracteres.`;
+        const response2 = await invokeLLM({
+          messages: [
+            { role: "system", content: "Eres JanIA, la asistente de voz e inteligencia artificial de la red inmobiliaria colaborativa VECY Network. Te expresas de manera natural, humana, c\xE1lida y profesional." },
+            { role: "user", content: promptMotivacion }
+          ]
+        });
+        const content2 = response2.choices[0]?.message?.content;
+        if (content2 && content2.trim() !== "") {
+          await this.sendVoiceToGroup(content2, grupo.id);
+        }
+        await delay(8e3);
+      } catch (err) {
+        console.error(`\u274C Error en sendManualCierreAudios para el grupo ${grupo.nombre}:`, err.message || err);
+      }
+    }
+  }
   initialize() {
     this.client.initialize().catch((err) => {
       console.error("[WHATSAPP-BOT] Error cr\xEDtico durante la inicializaci\xF3n de whatsapp-web.js:", err);
@@ -7000,43 +7524,238 @@ var whatsappBot = new WhatsAppBot();
 init_db();
 init_schema();
 import cron from "node-cron";
-import { gte as gte2, and as and5, eq as eq11, sql as sql4 } from "drizzle-orm";
+import fs3 from "fs";
+import path4 from "path";
+import { gte as gte2, and as and6, eq as eq11, sql as sql5 } from "drizzle-orm";
 function initCronScheduler() {
-  console.log("[CRON-SERVICE] Inicializando orquestador de agendas automatizadas (Modo Optimizado dos veces al d\xEDa)...");
+  console.log("[CRON-SERVICE] Inicializando orquestador de agendas automatizadas (Modo Optimizado segmentado por grupo)...");
   cron.schedule("30 9 * * *", async () => {
-    console.log("[CRON-SERVICE] Generando y enviando Mensaje Din\xE1mico de la Ma\xF1ana...");
+    console.log("[CRON-SERVICE] Generando y enviando Mensajes Segmentados de la Ma\xF1ana...");
     try {
-      const prompt = `[MENSAJE INFORMATIVO/EDUCATIVO DE LA MA\xD1ANA] Genera un post corto y elocuente sobre c\xF3mo usar a JanIA v2.0 (CRM, OCR, audio), geocodificaci\xF3n de ubicaci\xF3n exacta, reglas de strikes del grupo, o consejos comerciales. S\xE9 creativo y variado. Usa emojis de forma ordenada. Incluye el link de Google Reviews (https://g.page/r/CctNbwU6UpX5EBM/review) motivando al compromiso de honor si cierran un match.`;
+      const promptInmuebles = `Genera un mensaje de buenos d\xEDas corto y elocuente en espa\xF1ol para el grupo de WhatsApp "VECY INMUEBLES NETWORK".
+Direcci\xF3n obligatoria:
+- Explica de forma sincera y ver\xEDdica lo que funciona hoy: los asesores publican sus ofertas/demandas (por texto o audio). Aclara expl\xEDcitamente que JanIA S\xCD puede leer y extraer datos de enlaces p\xFAblicos de portales inmobiliarios (como Wasi, FincaRa\xEDz, Metrocuadrado, Habi, etc. y de tus propias p\xE1ginas web inmobiliarias con dominios propios), pero que NO puede leer enlaces directos de redes sociales (como Instagram o Facebook) debido a sus muros de seguridad y bloqueos de contrase\xF1a (para los cuales deben preferir enviar capturas de pantalla de la publicaci\xF3n o el flyer para que JanIA lo lea mediante OCR).
+- Menciona tambi\xE9n la transcripci\xF3n de voz, el matching en tiempo real en los 32 departamentos de Colombia, y la confirmaci\xF3n bilateral privada (Double Opt-In) por DM (chat privado) respondiendo S\xCD #M[c\xF3digo] o NO #M[c\xF3digo] para compartir contactos de forma segura.
+- Aclara con total honestidad que caracter\xEDsticas como el CRM para centralizar leads y el OCR para contratos formales est\xE1n planeados para el futuro cuando el portal web oficial (https://vecy-network.vercel.app/) se lance p\xFAblicamente. Por ahora nos enfocamos en que publiquen y generen matches por WhatsApp.
+- Recuerda las reglas del grupo de forma cordial: bloques de 1 a 3 publicaciones seguidas, esperar 5 minutos de cooldown, y no contenido off-topic (pol\xEDtica, religi\xF3n, spam, etc.) bajo advertencias y strike autom\xE1tico (3 strikes = expulsi\xF3n).
+- Usa emojis de forma ordenada. Cita el link de Google Reviews (https://g.page/r/CctNbwU6UpX5EBM/review) motivando al compromiso de honor si cierran un match.`;
       const response = await invokeLLM({
         messages: [
           { role: "system", content: "Eres JanIA, la mente de inteligencia artificial de la red inmobiliaria colaborativa VECY Network en Colombia." },
-          { role: "user", content: prompt }
+          { role: "user", content: promptInmuebles }
         ]
       });
       const content = response.choices[0]?.message?.content;
       if (content && content.trim() !== "") {
-        await whatsappBot.broadcastToAllGroups(content);
+        if (process.env.NODE_ENV === "development") {
+          console.log("[CRON-SERVICE] [DEV MODE] Omitiendo env\xEDo de mensaje de la ma\xF1ana para Inmuebles. Contenido:\n", content);
+        } else {
+          await whatsappBot.sendToGroup(content, void 0, []);
+        }
       }
     } catch (e) {
-      console.error("\u274C Error al generar mensaje din\xE1mico de la ma\xF1ana:", e.message);
+      console.error("\u274C Error al generar mensaje matutino para Inmuebles:", e.message);
+    }
+    try {
+      const promptConsultoria = `Genera un mensaje de buenos d\xEDas corto y profesional en espa\xF1ol para el grupo "BUZ\xD3N DE CONSULTOR\xCDA INMOBILIARIA 24/7".
+Direcci\xF3n obligatoria:
+- Explica que este espacio es EXCLUSIVAMENTE para consultas respecto a casos diarios, dudas o conflictos jur\xEDdicos/comerciales que les surjan a los inmobiliarios en Colombia.
+- Indica que JanIA est\xE1 preparada para responder con rigor legal y profesionalismo t\xE9cnico exacto sobre: conflictos de restituci\xF3n de inmuebles (Ley 820/2003), cesi\xF3n de leasing, contratos/promesas en permuta, sucesiones por herencia o divorcio, levantamiento de embargos, cobro de comisiones pendientes e incumplimientos de corretaje (y disputas/robos de comisiones entre colegas: c\xF3mo actuar, c\xF3mo demandar, c\xF3mo recolectar pruebas como las hojas de presentaci\xF3n de cliente y contratos de puntas compartidas, alegatos, verbal/monitorio), cl\xE1usulas clave en promesas de compraventa y por qu\xE9 usar t\xE9rminos "promitente vendedor/comprador", por qu\xE9 es m\xE1s seguro usar correo electr\xF3nico que WhatsApp (WhatsApp se puede borrar, requiere an\xE1lisis forense digital en juicios, mientras que el correo electr\xF3nico tiene traza de IP y cifrado inalterable que los jueces prefieren).
+- Invita a los aliados a preguntar sin miedo en este grupo por texto o nota de voz. Recuerda que no se permiten listings comerciales o spam aqu\xED (3 strikes = expulsi\xF3n). Usa emojis.`;
+      const response = await invokeLLM({
+        messages: [
+          { role: "system", content: "Eres JanIA, la mente de inteligencia artificial de la red inmobiliaria colaborativa VECY Network en Colombia." },
+          { role: "user", content: promptConsultoria }
+        ]
+      });
+      const content = response.choices[0]?.message?.content;
+      if (content && content.trim() !== "") {
+        const buzonJid = whatsappBot.buzonGroupId;
+        const client = whatsappBot.client;
+        if (client && buzonJid) {
+          if (process.env.NODE_ENV === "development") {
+            console.log("[CRON-SERVICE] [DEV MODE] Omitiendo env\xEDo de mensaje de la ma\xF1ana para Consultor\xEDa. Contenido:\n", content);
+          } else {
+            await client.sendMessage(buzonJid, content);
+          }
+        }
+      }
+    } catch (e) {
+      console.error("\u274C Error al generar mensaje matutino para Consultor\xEDa:", e.message);
+    }
+    try {
+      const promptCirculo = `Genera un mensaje de buenos d\xEDas corto y estrat\xE9gico en espa\xF1ol para el grupo "C\xCDRCULO CERO".
+Direcci\xF3n obligatoria:
+- Recuerda que este grupo es EXCLUSIVAMENTE para conversar sobre VECY NETWORK, novedades del proyecto, resolver inquietudes sobre el funcionamiento de la IA, sugerencias, testimonios, o debatir sanamente con competidores.
+- Explica de forma sincera lo que ya funciona hoy en WhatsApp (transcripci\xF3n de audio, OCR de capturas/flyers, matching en tiempo real, confirmaci\xF3n de match bilateral por privado) y lo que est\xE1 en desarrollo para el futuro (portal web https://vecy-network.vercel.app/, CRM para leads, digitalizaci\xF3n de documentos formalizados).
+- Explica la tecnolog\xEDa de forma sencilla: Asistente de IA basado en c\xF3digo propietario y base de datos SQL en la nube, entrenado a diario. NUNCA menciones Supabase, Antigravity ni Google Cloud.
+- Anima a los aliados a colaborar publicando activamente en el grupo de Inmuebles, invitar a m\xE1s personas a la red, y sugerir a administradores de otros grupos que incluyan a JanIA y la nombren administradora para que ella pueda indexar las publicaciones de sus miembros y cruzarlas con VECY INMUEBLES NETWORK para lograr resultados m\xE1s r\xE1pidos.
+- Usa emojis de forma ordenada.`;
+      const response = await invokeLLM({
+        messages: [
+          { role: "system", content: "Eres JanIA, la mente de inteligencia artificial de la red inmobiliaria colaborativa VECY Network en Colombia." },
+          { role: "user", content: promptCirculo }
+        ]
+      });
+      const content = response.choices[0]?.message?.content;
+      if (content && content.trim() !== "") {
+        const circuloJid = whatsappBot.circuloGroupId;
+        const client = whatsappBot.client;
+        if (client && circuloJid) {
+          if (process.env.NODE_ENV === "development") {
+            console.log("[CRON-SERVICE] [DEV MODE] Omitiendo env\xEDo de mensaje de la ma\xF1ana para C\xEDrculo Cero. Contenido:\n", content);
+          } else {
+            await client.sendMessage(circuloJid, content);
+          }
+        }
+      }
+    } catch (e) {
+      console.error("\u274C Error al generar mensaje matutino para C\xEDrculo Cero:", e.message);
     }
   });
   cron.schedule("0 18 * * *", async () => {
-    console.log("[CRON-SERVICE] Generando y enviando Mensaje Din\xE1mico de la Tarde...");
+    console.log("[CRON-SERVICE] Generando y enviando Mensajes Segmentados de la Tarde...");
     try {
-      const prompt = `[MENSAJE MOTIVACIONAL DE LA TARDE] Genera un post corto de motivaci\xF3n y tips comerciales para cerrar el d\xEDa en VECY Network. Recuerda que no cobramos comisiones. Usa emojis de forma atractiva. Invita a calificar a JanIA con 5 estrellas si han tenido \xE9xito con un match, como parte de nuestro compromiso de honor: https://g.page/r/CctNbwU6UpX5EBM/review`;
+      const promptInmuebles = `Genera un post corto de motivaci\xF3n y tips comerciales para cerrar el d\xEDa en VECY Network en el grupo "VECY INMUEBLES NETWORK".
+- Enfocado en el cierre de negocios, active publishing, matching y Double Opt-In.
+- Recuerda que no cobramos comisiones.
+- Usa emojis. Invita a calificar a JanIA con 5 estrellas si han tenido \xE9xito con un match, como compromiso de honor: https://g.page/r/CctNbwU6UpX5EBM/review`;
       const response = await invokeLLM({
         messages: [
           { role: "system", content: "Eres JanIA, la mente de inteligencia artificial de la red inmobiliaria colaborativa VECY Network en Colombia." },
-          { role: "user", content: prompt }
+          { role: "user", content: promptInmuebles }
         ]
       });
       const content = response.choices[0]?.message?.content;
       if (content && content.trim() !== "") {
-        await whatsappBot.broadcastToAllGroups(content);
+        if (process.env.NODE_ENV === "development") {
+          console.log("[CRON-SERVICE] [DEV MODE] Omitiendo env\xEDo de mensaje de la tarde para Inmuebles. Contenido:\n", content);
+        } else {
+          await whatsappBot.sendToGroup(content, void 0, []);
+        }
       }
     } catch (e) {
-      console.error("\u274C Error al generar mensaje din\xE1mico de la tarde:", e.message);
+      console.error("\u274C Error al generar mensaje de la tarde para Inmuebles:", e.message);
+    }
+    try {
+      const promptConsultoria = `Genera un post corto para cerrar el d\xEDa en el grupo "BUZ\xD3N DE CONSULTOR\xCDA INMOBILIARIA 24/7".
+- Destaca la importancia del estudio continuo de casos, la seguridad jur\xEDdica (como preferir el correo electr\xF3nico sobre WhatsApp para documentar acuerdos por su inalterabilidad y validez judicial) y elevar el nivel profesional en el sector.
+- Usa emojis de forma atractiva.`;
+      const response = await invokeLLM({
+        messages: [
+          { role: "system", content: "Eres JanIA, la mente de inteligencia artificial de la red inmobiliaria colaborativa VECY Network en Colombia." },
+          { role: "user", content: promptConsultoria }
+        ]
+      });
+      const content = response.choices[0]?.message?.content;
+      if (content && content.trim() !== "") {
+        const buzonJid = whatsappBot.buzonGroupId;
+        const client = whatsappBot.client;
+        if (client && buzonJid) {
+          if (process.env.NODE_ENV === "development") {
+            console.log("[CRON-SERVICE] [DEV MODE] Omitiendo env\xEDo de mensaje de la tarde para Consultor\xEDa. Contenido:\n", content);
+          } else {
+            await client.sendMessage(buzonJid, content);
+          }
+        }
+      }
+    } catch (e) {
+      console.error("\u274C Error al generar mensaje de la tarde para Consultor\xEDa:", e.message);
+    }
+    try {
+      const promptCirculo = `Genera un post corto de cierre de jornada para el grupo "C\xCDRCULO CERO".
+- Enfocado en construir el futuro de la intermediaci\xF3n inmobiliaria en Colombia de forma colaborativa (Evoluci\xF3n Inevitable) y el crecimiento de la red.
+- Usa emojis de forma atractiva.`;
+      const response = await invokeLLM({
+        messages: [
+          { role: "system", content: "Eres JanIA, la mente de inteligencia artificial de la red inmobiliaria colaborativa VECY Network en Colombia." },
+          { role: "user", content: promptCirculo }
+        ]
+      });
+      const content = response.choices[0]?.message?.content;
+      if (content && content.trim() !== "") {
+        const circuloJid = whatsappBot.circuloGroupId;
+        const client = whatsappBot.client;
+        if (client && circuloJid) {
+          if (process.env.NODE_ENV === "development") {
+            console.log("[CRON-SERVICE] [DEV MODE] Omitiendo env\xEDo de mensaje de la tarde para C\xEDrculo Cero. Contenido:\n", content);
+          } else {
+            await client.sendMessage(circuloJid, content);
+          }
+        }
+      }
+    } catch (e) {
+      console.error("\u274C Error al generar mensaje de la tarde para C\xEDrculo Cero:", e.message);
+    }
+  });
+  cron.schedule("30 12 * * *", async () => {
+    const daysSinceEpoch = Math.floor(Date.now() / (1e3 * 60 * 60 * 24));
+    if (daysSinceEpoch % 2 !== 0) {
+      console.log("[CRON-SERVICE] D\xEDa de por medio: Hoy no corresponde el env\xEDo de Audios Motivadores.");
+      return;
+    }
+    console.log("[CRON-SERVICE] Iniciando env\xEDo de Audios Motivadores (D\xEDa de por medio) a las 12:30 PM...");
+    const tematicas = [
+      "Incentivar a los asesores a interactuar con JanIA sin miedo, ya sea por texto o enviando notas de voz en el grupo, pregunt\xE1ndole sobre inmuebles, requerimientos, leyes o funcionamiento.",
+      "Explicar de forma sencilla qu\xE9 es VECY Network, el rol de JanIA como asistente de inteligencia artificial y c\xF3mo funciona el sistema de coincidencia (matching) en segundos.",
+      "Compartir la historia de VECY Network, qui\xE9nes somos (Jani Alves y Eduardo A. Rivera) y por qu\xE9 creamos esta red colaborativa nacional.",
+      "Explicar los servicios que ofrecemos, c\xF3mo contactarnos y en qu\xE9 redes sociales nos pueden encontrar.",
+      "Recordar que actualmente todo el proyecto y las herramientas son 100% gratuitos por estar en fase de pruebas, y hablar con entusiasmo de las grandes cosas que est\xE1n por venir.",
+      "Preguntar a los colegas c\xF3mo ven el proyecto, qu\xE9 les agrada m\xE1s, qu\xE9 les molesta, qu\xE9 cambiar\xEDan o qu\xE9 ideas/mejoras aportar\xEDan para que JanIA y el portal est\xE9n mejor a su servicio.",
+      "Hablar sobre el lanzamiento al aire de la web oficial de VECY, aclarando honestamente que saldr\xE1 apenas veamos que la comunidad realmente necesita y valora la herramienta en su d\xEDa a d\xEDa."
+    ];
+    let lastIndex = -1;
+    const indexFilePath = path4.join(__dirname, "last_theme_index.txt");
+    try {
+      if (fs3.existsSync(indexFilePath)) {
+        const fileContent = fs3.readFileSync(indexFilePath, "utf8").trim();
+        lastIndex = parseInt(fileContent, 10);
+        if (isNaN(lastIndex)) lastIndex = -1;
+      }
+    } catch (e) {
+      console.warn("[CRON-SERVICE] No se pudo leer el archivo de \xEDndice de tem\xE1ticas:", e);
+    }
+    const nextIndex = (lastIndex + 1) % tematicas.length;
+    try {
+      fs3.writeFileSync(indexFilePath, nextIndex.toString(), "utf8");
+    } catch (e) {
+      console.warn("[CRON-SERVICE] No se pudo escribir el archivo de \xEDndice de tem\xE1ticas:", e);
+    }
+    const tematicaSeleccionada = tematicas[nextIndex];
+    console.log(`[CRON-SERVICE] Tem\xE1tica seleccionada para hoy (\xEDndice ${nextIndex}): "${tematicaSeleccionada}"`);
+    const grupos = [
+      { id: whatsappBot.targetGroupId, nombre: "VECY INMUEBLES NETWORK", promptExtra: "Enf\xF3cate en la publicaci\xF3n activa de ofertas y demandas de inmuebles, el cruce comercial r\xE1pido, y la colaboraci\xF3n nacional sin pagar comisiones." },
+      { id: whatsappBot.buzonGroupId, nombre: "BUZ\xD3N DE CONSULTOR\xCDA INMOBILIARIA 24/7", promptExtra: "Enf\xF3cate en invitar a que consulten sobre temas jur\xEDdicos, disputas de comisiones de puntas compartidas, contratos de corretaje o aval\xFAos." },
+      { id: whatsappBot.circuloGroupId, nombre: "C\xCDRCULO CERO", promptExtra: "Enf\xF3cate en la retroalimentaci\xF3n del sistema, sugerencias directas a los fundadores, ideas de mejora y el futuro del sector inmobiliario." }
+    ];
+    for (const grupo of grupos) {
+      if (!grupo.id) continue;
+      try {
+        const promptVoz = `Genera un mensaje corto, cercano y motivador en espa\xF1ol para ser enviado como nota de voz al grupo de WhatsApp "${grupo.nombre}".
+Direcci\xF3n obligatoria:
+- La tem\xE1tica del audio de hoy debe ser: "${tematicaSeleccionada}"
+- ${grupo.promptExtra}
+- IMPORTANTE: Debe sonar como un mensaje de voz natural de WhatsApp grabado de forma espont\xE1nea por una colega real. Evita introducciones corporativas como "Estimados miembros" o frases rob\xF3ticas. Empieza de forma muy natural como: "Hola colegas, \xBFc\xF3mo van?", "Buenas tardes a todos por aqu\xED", "Hola a todos, paso por aqu\xED un momento...".
+- Mant\xE9n el texto relativamente corto y conciso (m\xE1ximo 400 caracteres) para que la nota de voz generada dure aproximadamente de 30 a 40 segundos, lo cual es ideal para mantener la atenci\xF3n y optimizar recursos de voz. No uses vi\xF1etas ni formateo markdown complejo ya que se leer\xE1 como audio.`;
+        const response = await invokeLLM({
+          messages: [
+            { role: "system", content: "Eres JanIA, la asistente de voz e inteligencia artificial de la red colaborativa VECY Network. Te expresas de manera natural, humana, c\xE1lida y profesional." },
+            { role: "user", content: promptVoz }
+          ]
+        });
+        const content = response.choices[0]?.message?.content;
+        if (content && content.trim() !== "") {
+          if (process.env.NODE_ENV === "development") {
+            console.log(`[CRON-SERVICE] [DEV MODE] Omitiendo env\xEDo de audio motivador para ${grupo.nombre}. Transcripci\xF3n:
+`, content);
+          } else {
+            await whatsappBot.sendVoiceToGroup(content, grupo.id);
+          }
+        }
+        await new Promise((resolve) => setTimeout(resolve, 8e3));
+      } catch (err) {
+        console.error(`\u274C Error al generar audio motivador para grupo ${grupo.nombre}:`, err.message || err);
+      }
     }
   });
 }
@@ -7143,6 +7862,37 @@ async function startServer() {
         console.error("Error al enviar anuncio de retorno:", err);
       });
       res.send("Anuncio de retorno encolado exitosamente.");
+    } catch (err) {
+      res.status(500).send(err.message);
+    }
+  });
+  app.get("/api/send-closing-voice", (req, res) => {
+    try {
+      if (!whatsappBot.isReady) {
+        return res.status(503).send("El bot de WhatsApp no est\xE1 listo todav\xEDa. Intenta en unos segundos.");
+      }
+      whatsappBot.sendManualCierreAudios().catch((err) => {
+        console.error("Error al enviar los audios de cierre manuales:", err);
+      });
+      res.send("Audios de cierre encolados exitosamente.");
+    } catch (err) {
+      res.status(500).send(err.message);
+    }
+  });
+  app.get("/api/jania/tts", async (req, res) => {
+    try {
+      const text2 = req.query.text;
+      if (!text2) {
+        return res.status(400).send("Falta el par\xE1metro 'text'");
+      }
+      const media = await textToSpeechMedia(text2);
+      if (!media) {
+        return res.status(500).send("No se pudo generar el audio");
+      }
+      const buffer = Buffer.from(media.data, "base64");
+      let cleanMime = media.mimetype.split(";")[0].trim();
+      res.setHeader("Content-Type", cleanMime);
+      res.send(buffer);
     } catch (err) {
       res.status(500).send(err.message);
     }
