@@ -467,18 +467,12 @@ export class WhatsAppBot {
 
         // Indicador de estado y retardo realista (v12.5): 🎙️ grabando si es audio, ✍️ escribiendo si es texto
         let typingDelay = 1000;
-        try {
-          const chat = await this.client.getChatById(chatId);
-          const isAudio = content instanceof MessageMedia ||
-                          (typeof content === 'object' && content?.mimetype?.startsWith('audio')) ||
+        if (process.env.USE_WHATSAPP_CLOUD_API === 'true') {
+          const isAudio = (content && content.mimetype && content.mimetype.startsWith('audio')) ||
                           (options && options.sendAudioAsVoice);
           if (isAudio) {
-            await chat.sendStateRecording();  // 🎙️ Micrófono
-            // Simular un retardo proporcional a la grabación (ej. entre 4 y 7 segundos para audio estándar)
             typingDelay = Math.floor(Math.random() * 3000) + 4000;
           } else {
-            await chat.sendStateTyping();     // ✍️ Tres puntitos
-            // Simular velocidad de escritura realista (aprox. 15-20 caracteres por segundo, máx 5s, mín 1.5s)
             if (typeof content === 'string') {
               typingDelay = Math.min(content.length * 20, 5000);
               typingDelay = Math.max(typingDelay, 1500);
@@ -486,7 +480,26 @@ export class WhatsAppBot {
               typingDelay = 2000;
             }
           }
-        } catch (_) { /* ignorar si el chat no acepta el estado */ }
+        } else {
+          try {
+            const chat = await this.client.getChatById(chatId);
+            const isAudio = content instanceof MessageMedia ||
+                            (typeof content === 'object' && content?.mimetype?.startsWith('audio')) ||
+                            (options && options.sendAudioAsVoice);
+            if (isAudio) {
+              await chat.sendStateRecording();  // 🎙️ Micrófono
+              typingDelay = Math.floor(Math.random() * 3000) + 4000;
+            } else {
+              await chat.sendStateTyping();     // ✍️ Tres puntitos
+              if (typeof content === 'string') {
+                typingDelay = Math.min(content.length * 20, 5000);
+                typingDelay = Math.max(typingDelay, 1500);
+              } else {
+                typingDelay = 2000;
+              }
+            }
+          } catch (_) { /* ignorar si el chat no acepta el estado */ }
+        }
 
         // Esperar el retardo de presencia humana antes del envío real
         await delay(typingDelay);
@@ -506,10 +519,12 @@ export class WhatsAppBot {
         await Promise.race([sendPromise, timeoutPromise]);
 
         // Limpiar el estado de presencia
-        try {
-          const chat = await this.client.getChatById(chatId);
-          await chat.clearState();
-        } catch (_) { /* ignorar */ }
+        if (process.env.USE_WHATSAPP_CLOUD_API !== 'true') {
+          try {
+            const chat = await this.client.getChatById(chatId);
+            await chat.clearState();
+          } catch (_) { /* ignorar */ }
+        }
 
         this.messagesSentToday++;
         console.log(`[WhatsApp-Bot] Mensaje enviado a ${chatId}. Total hoy: ${this.messagesSentToday}/${this.dailyMessageLimit}`);
