@@ -492,7 +492,13 @@ export class WhatsAppBot {
         await delay(typingDelay);
 
         // Promesa de envío con timeout de 15 segundos para evitar bloqueos por chats inaccesibles o páginas caídas
-        const sendPromise = this.client.sendMessage(chatId, content, options);
+        let sendPromise;
+        if (process.env.USE_WHATSAPP_CLOUD_API === 'true') {
+          const { sendCloudMessage } = await import("./whatsapp-cloud");
+          sendPromise = sendCloudMessage(chatId, content, options);
+        } else {
+          sendPromise = this.client.sendMessage(chatId, content, options);
+        }
         const timeoutPromise = new Promise((_, reject) =>
           setTimeout(() => reject(new Error(`Timeout al enviar mensaje de WhatsApp a ${chatId}`)), 15000)
         );
@@ -1181,7 +1187,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
   // Wrapper que serializa entradas por senderId usando un mutex ligero.
   // Esto evita la condición de carrera cuando WhatsApp envía un álbum de imágenes
   // y todos los mensajes llegan casi simultáneamente antes de que el buffer exista.
-  private async handleIncomingMessage(msg: Message, chatId: string) {
+  public async handleIncomingMessage(msg: Message, chatId: string) {
     const senderId = (msg as any).author || msg.from;
     const lockKey = `${chatId}_${senderId}`;
 

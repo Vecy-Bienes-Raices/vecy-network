@@ -9,6 +9,7 @@ import { serveStatic, setupVite } from "./vite";
 import { whatsappBot, textToSpeechMedia } from "./whatsapp";
 import { initCronScheduler } from "./cronService";
 import { processWhatsAppMessage } from "./janIA";
+import { handleIncomingWebhook } from "./whatsapp-cloud";
 
 process.on("uncaughtException", (error) => {
   console.error("[SYSTEM-CRITICAL] Uncaught Exception detectada:", error);
@@ -25,6 +26,35 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
+
+  // Webhook for WhatsApp Cloud API (Meta)
+  app.get("/api/whatsapp/webhook", (req, res) => {
+    const mode = req.query["hub.mode"];
+    const token = req.query["hub.verify_token"];
+    const challenge = req.query["hub.challenge"];
+
+    if (mode === "subscribe" && token === process.env.WEBHOOK_VERIFY_TOKEN) {
+      console.log("[WEBHOOK] Webhook verified successfully.");
+      return res.status(200).send(challenge);
+    } else {
+      console.warn("[WEBHOOK] Webhook verification failed.");
+      return res.sendStatus(403);
+    }
+  });
+
+  app.post("/api/whatsapp/webhook", async (req, res) => {
+    try {
+      // Respond to Meta immediately to avoid timeouts/re-sends (Meta expects 200 OK within 3 seconds)
+      res.status(200).send("EVENT_RECEIVED");
+
+      // Process webhook asynchronously
+      handleIncomingWebhook(req.body).catch((err) => {
+        console.error("[WEBHOOK-ERROR] Error handling incoming webhook:", err);
+      });
+    } catch (err: any) {
+      console.error("[WEBHOOK-ERROR] Exception in webhook endpoint:", err);
+    }
+  });
 
   app.get("/api/list-chats", async (req, res) => {
     try {
