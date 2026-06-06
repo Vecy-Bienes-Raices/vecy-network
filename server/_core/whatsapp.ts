@@ -1854,8 +1854,8 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
       }
     }
 
-    // Reaccionar con emojis a los mensajes del grupo para retroalimentación sin generar DMs fríos
-    if (isGroup && originalMsg) {
+    // Reaccionar con emojis a los mensajes para retroalimentación visual
+    if (originalMsg) {
       try {
         let reaction = result.reactionEmoji;
         
