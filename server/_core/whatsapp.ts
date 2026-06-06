@@ -392,6 +392,51 @@ interface RecentGroupMessage {
   body: string;
 }
 
+export function detectaVoz(text: string): boolean {
+  const t = text.toLowerCase();
+  const keywords = [
+    "audio",
+    "nota de voz",
+    "notas de voz",
+    "mandame un audio",
+    "mandame audio",
+    "mándame un audio",
+    "mándame audio",
+    "enviame un audio",
+    "enviame audio",
+    "envíame un audio",
+    "envíame audio",
+    "dime en voz",
+    "cuéntame",
+    "cuéntame por audio",
+    "leeme esto",
+    "léeme esto",
+    "hablame",
+    "háblame",
+    "voy conduciendo",
+    "estoy conduciendo",
+    "voy manejando",
+    "estoy manejando",
+    "sin manos",
+    "manos libres",
+    "no puedo leer",
+    "no puedo escribir",
+    "dímelo en audio",
+    "dimelo en audio",
+    "dímelo por audio",
+    "dimelo por audio",
+    "grábame un audio",
+    "grabame un audio",
+    "grábame audio",
+    "grabame audio",
+    "mándame nota de voz",
+    "mandame nota de voz",
+    "envíame nota de voz",
+    "enviame nota de voz"
+  ];
+  return keywords.some(kw => t.includes(kw));
+}
+
 export class WhatsAppBot {
   private client!: ClientType;
   public targetGroupId: string = '120363260108880069@g.us';
@@ -863,10 +908,7 @@ export class WhatsAppBot {
         
         // Activar estado "Grabando audio..." (Recording) o "Escribiendo..." (Typing)
         const msgText = (msg.body || "").toLowerCase();
-        const wantsVoice = msg.type === 'audio' || msg.type === 'ptt' ||
-                           msgText.includes("audio") ||
-                           msgText.includes("nota de voz") ||
-                           msgText.includes("en voz");
+        const wantsVoice = msg.type === 'audio' || msg.type === 'ptt' || detectaVoz(msgText);
         if (wantsVoice) {
           await chat.sendStateRecording();
         } else {
@@ -1595,15 +1637,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
 
         // 4. Orquestación de Respuestas (Silencio de Oro / Flujos DM)
         const textLower = item.text.toLowerCase();
-        const wantsVoice = item.hasAudio || !!item.audioUrl || 
-          textLower.includes("envíame un audio") || 
-          textLower.includes("mándame un audio") || 
-          textLower.includes("envíame audio") || 
-          textLower.includes("mándame audio") || 
-          textLower.includes("nota de voz") || 
-          textLower.includes("dime esto en un audio") ||
-          textLower.includes("léeme esto") ||
-          textLower.includes("háblame");
+        const wantsVoice = item.hasAudio || !!item.audioUrl || detectaVoz(textLower);
         await this.handleJanIAResponse(result, senderId, chatId, userName, item.text, item.originalMsg, wantsVoice);
       }
 

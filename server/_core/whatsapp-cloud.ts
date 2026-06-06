@@ -177,8 +177,8 @@ export async function sendCloudMessage(chatId: string, content: any, options: an
         to: phone,
         type,
         [type]: {
-          id: mediaId,
-          ...(isAudio && options.sendAudioAsVoice ? { ptt: true } : {})
+          id: mediaId
+          // Nota: Meta Cloud API no acepta el campo "ptt" — el audio OGG/OPUS se trata automáticamente como nota de voz
         }
       };
 
