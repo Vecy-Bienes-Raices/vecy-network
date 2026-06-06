@@ -2339,6 +2339,22 @@ async function deletePendingSession(userId) {
     console.error("[Database] Error deleting pending session:", err);
   }
 }
+async function resolveRealName(userId, userName) {
+  const rawPhone = userId.split("@")[0];
+  let name = userName && userName.trim() !== "" ? userName : `Asesor +${rawPhone}`;
+  try {
+    const db = await getDb();
+    if (db) {
+      const [u] = await db.select().from(users).where(eq9(users.phone, rawPhone)).limit(1);
+      if (u && u.name && u.name.trim() !== "") {
+        name = u.name;
+      }
+    }
+  } catch (e) {
+    console.warn("[JanIA-resolveRealName] Error buscando nombre de usuario en BD:", e);
+  }
+  return name;
+}
 async function hasGreetedUserToday(userId) {
   try {
     const db = await getDb();
@@ -2609,7 +2625,7 @@ async function getTimeOfDayGreetingForUser(phone, realName, alreadyGreeted, isGr
 async function processWhatsAppMessage(text2, userId, userName, hasMedia = false, scrapedData = [], audioUrl, imageBuffer, isGroup = false) {
   try {
     const rawPhone = userId.split("@")[0];
-    const realName = userName && userName.trim() !== "" ? userName : `Asesor +${rawPhone}`;
+    const realName = await resolveRealName(userId, userName);
     const alreadyGreeted = await checkAlreadyGreeted(userId);
     const senderInfo = analyzeSender(realName, userId, alreadyGreeted);
     const n = realName.split(" ")[0];
@@ -3173,7 +3189,7 @@ async function generateWelcomeMessage(count) {
 async function processConsultingMessage(text2, userId, userName, imageBuffer) {
   try {
     const rawPhone = userId.split("@")[0];
-    const realName = userName && userName.trim() !== "" ? userName : `Asesor +${rawPhone}`;
+    const realName = await resolveRealName(userId, userName);
     const n = realName.split(" ")[0];
     const textLower = text2.toLowerCase();
     const alreadyGreeted = await checkAlreadyGreeted(userId);
@@ -3283,7 +3299,7 @@ Analiza el contexto completo antes de clasificar. Debes responder estrictamente 
 async function processCirculoMessage(text2, userId, userName) {
   try {
     const rawPhone = userId.split("@")[0];
-    const realName = userName && userName.trim() !== "" ? userName : `Asesor +${rawPhone}`;
+    const realName = await resolveRealName(userId, userName);
     const n = realName.split(" ")[0];
     const textLower = text2.toLowerCase();
     const alreadyGreeted = await checkAlreadyGreeted(userId);
@@ -3923,8 +3939,8 @@ async function sendCloudMessage(chatId, content, options = {}) {
         to: phone,
         type,
         [type]: {
-          id: mediaId,
-          ...isAudio && options.sendAudioAsVoice ? { ptt: true } : {}
+          id: mediaId
+          // Nota: Meta Cloud API no acepta el campo "ptt" — el audio OGG/OPUS se trata automáticamente como nota de voz
         }
       };
       if (options.quotedMessageId) {
@@ -4360,6 +4376,50 @@ function getAudioExtension(mimeType) {
   };
   return mimeToExt[mimeType] || "ogg";
 }
+function detectaVoz(text2) {
+  const t2 = text2.toLowerCase();
+  const keywords = [
+    "audio",
+    "nota de voz",
+    "notas de voz",
+    "mandame un audio",
+    "mandame audio",
+    "m\xE1ndame un audio",
+    "m\xE1ndame audio",
+    "enviame un audio",
+    "enviame audio",
+    "env\xEDame un audio",
+    "env\xEDame audio",
+    "dime en voz",
+    "cu\xE9ntame",
+    "cu\xE9ntame por audio",
+    "leeme esto",
+    "l\xE9eme esto",
+    "hablame",
+    "h\xE1blame",
+    "voy conduciendo",
+    "estoy conduciendo",
+    "voy manejando",
+    "estoy manejando",
+    "sin manos",
+    "manos libres",
+    "no puedo leer",
+    "no puedo escribir",
+    "d\xEDmelo en audio",
+    "dimelo en audio",
+    "d\xEDmelo por audio",
+    "dimelo por audio",
+    "gr\xE1bame un audio",
+    "grabame un audio",
+    "gr\xE1bame audio",
+    "grabame audio",
+    "m\xE1ndame nota de voz",
+    "mandame nota de voz",
+    "env\xEDame nota de voz",
+    "enviame nota de voz"
+  ];
+  return keywords.some((kw) => t2.includes(kw));
+}
 var Client, LocalAuth, MessageMedia, SERVER_BOOT_TIME, delay, outgoingQueue, WhatsAppBot, whatsappBot;
 var init_whatsapp = __esm({
   "server/_core/whatsapp.ts"() {
@@ -4790,7 +4850,7 @@ var init_whatsapp = __esm({
           try {
             const chat = await msg.getChat();
             const msgText = (msg.body || "").toLowerCase();
-            const wantsVoice = msg.type === "audio" || msg.type === "ptt" || msgText.includes("audio") || msgText.includes("nota de voz") || msgText.includes("en voz");
+            const wantsVoice = msg.type === "audio" || msg.type === "ptt" || detectaVoz(msgText);
             if (wantsVoice) {
               await chat.sendStateRecording();
             } else {
@@ -4842,6 +4902,17 @@ var init_whatsapp = __esm({
             }
           } catch (e) {
             console.warn(`[WHATSAPP-BOT] Fall\xF3 msg.getContact() en handlePrivateMessage para ${senderId}:`, e.message || e);
+          }
+          try {
+            const db = await getDb();
+            if (db) {
+              const [u] = await db.select().from(users).where(eq10(users.phone, rawPhone)).limit(1);
+              if (u && u.name && u.name.trim() !== "") {
+                realName = u.name;
+              }
+            }
+          } catch (dbErr) {
+            console.warn(`[WHATSAPP-BOT] Error al buscar nombre en BD para ${rawPhone}:`, dbErr);
           }
           console.log(`[JanIA-DM] Atendiendo mensaje interno de ${realName} (${senderId})...`);
           const matchConfirmationRegex = /^\s*(sí|si|no)\s+#m(\d+)\s*$/i;
@@ -5139,6 +5210,17 @@ Hola @${rawPhone2}, acabo de procesar con \xE9xito tus primeras propiedades. Par
         } catch (e) {
           console.warn(`[WHATSAPP-BOT] Fall\xF3 msg.getContact() en _processIncomingMessage para ${senderId}:`, e.message || e);
         }
+        try {
+          const db = await getDb();
+          if (db) {
+            const [u] = await db.select().from(users).where(eq10(users.phone, rawPhone)).limit(1);
+            if (u && u.name && u.name.trim() !== "") {
+              realName = u.name;
+            }
+          }
+        } catch (dbErr) {
+          console.warn(`[WHATSAPP-BOT] Error al buscar nombre en BD para ${rawPhone}:`, dbErr);
+        }
         const bufferKey = `${chatId}_${senderId}`;
         let buffer = this.messageBuffers.get(bufferKey);
         if (buffer) {
@@ -5379,7 +5461,7 @@ Hola @${rawPhone}, detect\xE9 que est\xE1s enviando muchas publicaciones seguida
               }
             }
             const textLower = item.text.toLowerCase();
-            const wantsVoice = item.hasAudio || !!item.audioUrl || textLower.includes("env\xEDame un audio") || textLower.includes("m\xE1ndame un audio") || textLower.includes("env\xEDame audio") || textLower.includes("m\xE1ndame audio") || textLower.includes("nota de voz") || textLower.includes("dime esto en un audio") || textLower.includes("l\xE9eme esto") || textLower.includes("h\xE1blame");
+            const wantsVoice = item.hasAudio || !!item.audioUrl || detectaVoz(textLower);
             await this.handleJanIAResponse(result, senderId, chatId, userName, item.text, item.originalMsg, wantsVoice);
           }
           if (isMainGroup) {
@@ -8172,7 +8254,7 @@ async function startServer() {
   app.use(express2.json({ limit: "50mb" }));
   app.use(express2.urlencoded({ limit: "50mb", extended: true }));
   registerOAuthRoutes(app);
-  app.get("/api/whatsapp/webhook", (req, res) => {
+  const webhookGetHandler = (req, res) => {
     const mode = req.query["hub.mode"];
     const token = req.query["hub.verify_token"];
     const challenge = req.query["hub.challenge"];
@@ -8183,8 +8265,8 @@ async function startServer() {
       console.warn("[WEBHOOK] Webhook verification failed.");
       return res.sendStatus(403);
     }
-  });
-  app.post("/api/whatsapp/webhook", async (req, res) => {
+  };
+  const webhookPostHandler = async (req, res) => {
     try {
       res.status(200).send("EVENT_RECEIVED");
       handleIncomingWebhook(req.body).catch((err) => {
@@ -8193,7 +8275,11 @@ async function startServer() {
     } catch (err) {
       console.error("[WEBHOOK-ERROR] Exception in webhook endpoint:", err);
     }
-  });
+  };
+  app.get("/webhook", webhookGetHandler);
+  app.post("/webhook", webhookPostHandler);
+  app.get("/api/whatsapp/webhook", webhookGetHandler);
+  app.post("/api/whatsapp/webhook", webhookPostHandler);
   app.get("/api/list-chats", async (req, res) => {
     try {
       if (!whatsappBot.isReady) {

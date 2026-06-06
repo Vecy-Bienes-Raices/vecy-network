@@ -71,6 +71,23 @@ async function deletePendingSession(userId: string): Promise<void> {
   }
 }
 
+async function resolveRealName(userId: string, userName?: string): Promise<string> {
+  const rawPhone = userId.split('@')[0];
+  let name = userName && userName.trim() !== "" ? userName : `Asesor +${rawPhone}`;
+  try {
+    const db = await getDb();
+    if (db) {
+      const [u] = await db.select().from(users).where(eq(users.phone, rawPhone)).limit(1);
+      if (u && u.name && u.name.trim() !== "") {
+        name = u.name;
+      }
+    }
+  } catch (e) {
+    console.warn("[JanIA-resolveRealName] Error buscando nombre de usuario en BD:", e);
+  }
+  return name;
+}
+
 const GREETED_TODAY = new Map<string, string>(); // Mapea userId -> fecha "YYYY-MM-DD"
 
 async function hasGreetedUserToday(userId: string): Promise<boolean> {
@@ -695,7 +712,7 @@ export async function processWhatsAppMessage(
 ): Promise<JanIAResult> {
   try {
     const rawPhone = userId.split('@')[0];
-    const realName = userName && userName.trim() !== "" ? userName : `Asesor +${rawPhone}`;
+    const realName = await resolveRealName(userId, userName);
 
     const alreadyGreeted = await checkAlreadyGreeted(userId);
     const senderInfo = analyzeSender(realName, userId, alreadyGreeted);
@@ -1534,7 +1551,7 @@ export async function processConsultingMessage(
 ): Promise<JanIAResult> {
   try {
     const rawPhone = userId.split('@')[0];
-    const realName = userName && userName.trim() !== "" ? userName : `Asesor +${rawPhone}`;
+    const realName = await resolveRealName(userId, userName);
     const n = realName.split(' ')[0];
     const textLower = text.toLowerCase();
 
@@ -1673,7 +1690,7 @@ export async function processCirculoMessage(
 ): Promise<JanIAResult> {
   try {
     const rawPhone = userId.split('@')[0];
-    const realName = userName && userName.trim() !== "" ? userName : `Asesor +${rawPhone}`;
+    const realName = await resolveRealName(userId, userName);
     const n = realName.split(' ')[0];
     const textLower = text.toLowerCase();
 

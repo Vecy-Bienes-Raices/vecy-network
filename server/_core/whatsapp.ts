@@ -975,6 +975,17 @@ export class WhatsAppBot {
       } catch (e: any) {
         console.warn(`[WHATSAPP-BOT] Falló msg.getContact() en handlePrivateMessage para ${senderId}:`, e.message || e);
       }
+      try {
+        const db = await getDb();
+        if (db) {
+          const [u] = await db.select().from(users).where(eq(users.phone, rawPhone)).limit(1);
+          if (u && u.name && u.name.trim() !== "") {
+            realName = u.name;
+          }
+        }
+      } catch (dbErr) {
+        console.warn(`[WHATSAPP-BOT] Error al buscar nombre en BD para ${rawPhone}:`, dbErr);
+      }
 
       console.log(`[JanIA-DM] Atendiendo mensaje interno de ${realName} (${senderId})...`);
 
@@ -1350,6 +1361,17 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
       }
     } catch (e: any) {
       console.warn(`[WHATSAPP-BOT] Falló msg.getContact() en _processIncomingMessage para ${senderId}:`, e.message || e);
+    }
+    try {
+      const db = await getDb();
+      if (db) {
+        const [u] = await db.select().from(users).where(eq(users.phone, rawPhone)).limit(1);
+        if (u && u.name && u.name.trim() !== "") {
+          realName = u.name;
+        }
+      }
+    } catch (dbErr) {
+      console.warn(`[WHATSAPP-BOT] Error al buscar nombre en BD para ${rawPhone}:`, dbErr);
     }
     const bufferKey = `${chatId}_${senderId}`;
     let buffer = this.messageBuffers.get(bufferKey);
