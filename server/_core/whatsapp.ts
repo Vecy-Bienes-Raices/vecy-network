@@ -165,7 +165,8 @@ export async function textToSpeechMedia(text: string): Promise<any> {
   // ═══════════════════════════════════════════════════════════════════
   // OPCIÓN ÚNICA PRINCIPAL: Google Cloud TTS (Voces de Alta Definición es-CO)
   // ═══════════════════════════════════════════════════════════════════
-  const googleApiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || ENV.forgeApiKey;
+  // Priorizar claves que comienzan con "AIzaSy" ya que son válidas para Google Cloud API (como TTS)
+  const googleApiKey = [process.env.GEMINI_API_KEY, process.env.GOOGLE_API_KEY, ENV.forgeApiKey].find(k => k && k.startsWith("AIzaSy")) || process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || ENV.forgeApiKey;
   if (googleApiKey) {
     const voiceCandidates: Array<{ 
       endpoint: string; 

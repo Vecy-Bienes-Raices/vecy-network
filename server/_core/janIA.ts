@@ -905,7 +905,7 @@ Por lo tanto, DEBES hacer lo siguiente:
     if ((isProperty || isRequirement) && !isGroup) {
       return {
         classification: "VIOLACION_DE_NORMAS",
-        response: `Hola *${firstName}*, noto que estás enviando una publicación de oferta o demanda por este chat privado.\n\nPara mantener el orden y la visibilidad de tus activos con todos los aliados, recuerda que *toda publicación debe enviarse directamente en el grupo VECY INMUEBLES NETWORK*.\n\nPor este chat privado solo atiendo consultas generales, preguntas sobre el sistema o confirmaciones bilaterales de MATCH. ¡Gracias por tu comprensión! 🤝🎯`,
+        response: `¡Hola, *${firstName}*! 😊✨ Ay, noto que estás intentando publicar una oferta o demanda de inmueble directamente por aquí, en nuestro chat privado. 🏠📲\n\nPara que todos los aliados de la red puedan ver tu propiedad o requerimiento y logremos cerrar ese negocio súper rápido, recuerda que es súper importante enviar estas publicaciones directamente en el grupo principal: *VECY INMUEBLES NETWORK* 👥🚀.\n\nPor aquí, en tu chat privado, estoy 100% disponible para responder a tus consultas sobre el sistema, dudas generales, o para ayudarte a confirmar tus MATCH bilaterales. 🤝🎯 ¡Muchas gracias por tu ayuda para mantener el orden en la red! 🤗🏡`,
         shouldSendDM: false
       };
     }
