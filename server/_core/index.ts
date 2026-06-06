@@ -27,12 +27,11 @@ async function startServer() {
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
 
-  // Webhook for WhatsApp Cloud API (Meta)
-  app.get("/api/whatsapp/webhook", (req, res) => {
+  // Webhook handler compartido (Meta espera recibir en la URL exacta configurada)
+  const webhookGetHandler = (req: any, res: any) => {
     const mode = req.query["hub.mode"];
     const token = req.query["hub.verify_token"];
     const challenge = req.query["hub.challenge"];
-
     if (mode === "subscribe" && token === process.env.WEBHOOK_VERIFY_TOKEN) {
       console.log("[WEBHOOK] Webhook verified successfully.");
       return res.status(200).send(challenge);
@@ -40,21 +39,24 @@ async function startServer() {
       console.warn("[WEBHOOK] Webhook verification failed.");
       return res.sendStatus(403);
     }
-  });
+  };
 
-  app.post("/api/whatsapp/webhook", async (req, res) => {
+  const webhookPostHandler = async (req: any, res: any) => {
     try {
-      // Respond to Meta immediately to avoid timeouts/re-sends (Meta expects 200 OK within 3 seconds)
       res.status(200).send("EVENT_RECEIVED");
-
-      // Process webhook asynchronously
-      handleIncomingWebhook(req.body).catch((err) => {
+      handleIncomingWebhook(req.body).catch((err: any) => {
         console.error("[WEBHOOK-ERROR] Error handling incoming webhook:", err);
       });
     } catch (err: any) {
       console.error("[WEBHOOK-ERROR] Exception in webhook endpoint:", err);
     }
-  });
+  };
+
+  // Rutas del webhook — ambas apuntan al mismo handler para cubrir cualquier URL configurada en Meta
+  app.get("/webhook", webhookGetHandler);
+  app.post("/webhook", webhookPostHandler);
+  app.get("/api/whatsapp/webhook", webhookGetHandler);
+  app.post("/api/whatsapp/webhook", webhookPostHandler);
 
   app.get("/api/list-chats", async (req, res) => {
     try {
