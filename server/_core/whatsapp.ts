@@ -465,19 +465,20 @@ export class WhatsAppBot {
       try {
         if (this.messagesSentToday >= this.dailyMessageLimit) return;
 
-        // Indicador de estado y retardo realista (v12.5): 🎙️ grabando si es audio, ✍️ escribiendo si es texto
-        let typingDelay = 1000;
+        // Indicador de estado y retardo realista: 🎙️ grabando si es audio, ✍️ escribiendo si es texto
+        const isGroup = chatId.includes('@g.us');
+        let typingDelay = 500;
         if (process.env.USE_WHATSAPP_CLOUD_API === 'true') {
           const isAudio = (content && content.mimetype && content.mimetype.startsWith('audio')) ||
                           (options && options.sendAudioAsVoice);
           if (isAudio) {
-            typingDelay = Math.floor(Math.random() * 3000) + 4000;
+            typingDelay = isGroup ? (Math.floor(Math.random() * 2000) + 3000) : 1000;
           } else {
             if (typeof content === 'string') {
-              typingDelay = Math.min(content.length * 20, 5000);
-              typingDelay = Math.max(typingDelay, 1500);
+              typingDelay = isGroup ? Math.min(content.length * 15, 4000) : Math.min(content.length * 6, 1000);
+              typingDelay = Math.max(typingDelay, 500);
             } else {
-              typingDelay = 2000;
+              typingDelay = isGroup ? 1500 : 500;
             }
           }
         } else {
@@ -488,12 +489,12 @@ export class WhatsAppBot {
                             (options && options.sendAudioAsVoice);
             if (isAudio) {
               await chat.sendStateRecording();  // 🎙️ Micrófono
-              typingDelay = Math.floor(Math.random() * 3000) + 4000;
+              typingDelay = isGroup ? (Math.floor(Math.random() * 2000) + 3000) : 1000;
             } else {
               await chat.sendStateTyping();     // ✍️ Tres puntitos
               if (typeof content === 'string') {
-                typingDelay = Math.min(content.length * 20, 5000);
-                typingDelay = Math.max(typingDelay, 1500);
+                typingDelay = isGroup ? Math.min(content.length * 15, 4000) : Math.min(content.length * 6, 1000);
+                typingDelay = Math.max(typingDelay, 500);
               } else {
                 typingDelay = 2000;
               }
@@ -528,8 +529,9 @@ export class WhatsAppBot {
 
         this.messagesSentToday++;
         console.log(`[WhatsApp-Bot] Mensaje enviado a ${chatId}. Total hoy: ${this.messagesSentToday}/${this.dailyMessageLimit}`);
-        // Intervalo de enfriamiento seguro de 3s a 5s
-        await delay(Math.floor(Math.random() * 2000) + 3000);
+        // Intervalo de enfriamiento seguro: 2s a 3.5s para grupos, 500ms para DMs privados
+        const cooldownDelay = isGroup ? (Math.floor(Math.random() * 1500) + 2000) : 500;
+        await delay(cooldownDelay);
       } catch (err: any) {
         console.error('[Anti-Burst-Queue] Fallo en despacho secuencial:', err.message || err);
       }
@@ -1348,10 +1350,12 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         originalMsg: msg
       });
       console.log(`[BUFFER] Mensaje #${buffer.messages.length} agregado al buffer de ${senderId}.`);
-      buffer.timer = setTimeout(() => this.processBuffer(bufferKey), 15000);
+      const bufferTimeout = isGroupChat ? 12000 : 2000;
+      buffer.timer = setTimeout(() => this.processBuffer(bufferKey), bufferTimeout);
     } else {
       // Inicio de un nuevo bloque
       console.log(`[BUFFER] Nuevo bloque iniciado para ${senderId}. Mensaje #1 registrado.`);
+      const bufferTimeout = isGroupChat ? 12000 : 2000;
       this.messageBuffers.set(bufferKey, {
         messages: [{
           body: msg.body,
@@ -1361,7 +1365,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         }],
         userName: realName,
         chatId,
-        timer: setTimeout(() => this.processBuffer(bufferKey), 15000)
+        timer: setTimeout(() => this.processBuffer(bufferKey), bufferTimeout)
       });
     }
   }
@@ -1487,10 +1491,11 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
       }
 
       // Desglosar cada grupo de links por si contiene listings numerados (ej: Diego Gómez)
-      const finalListingTexts: { text: string; hasMedia: boolean; imageBuffer?: string; audioUrl?: string; originalMsg: Message }[] = [];
+      const finalListingTexts: { text: string; hasMedia: boolean; hasAudio: boolean; imageBuffer?: string; audioUrl?: string; originalMsg: Message }[] = [];
       for (const group of linkGroups) {
         const groupText = group.map(m => m.body).join('\n\n');
         const groupHasMedia = group.some(m => m.hasMedia);
+        const groupHasAudio = group.some(m => m.originalMsg.type === 'ptt' || m.originalMsg.type === 'audio');
         const groupImageBuffer = group.find(m => m.imageBuffer)?.imageBuffer;
         const groupAudioUrl = group.find(m => m.audioUrl)?.audioUrl;
         const originalMsg = group[group.length - 1].originalMsg;
@@ -1500,6 +1505,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
           finalListingTexts.push({
             text: itemText,
             hasMedia: groupHasMedia,
+            hasAudio: groupHasAudio,
             imageBuffer: groupImageBuffer,
             audioUrl: groupAudioUrl,
             originalMsg
@@ -1588,7 +1594,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
 
         // 4. Orquestación de Respuestas (Silencio de Oro / Flujos DM)
         const textLower = item.text.toLowerCase();
-        const wantsVoice = !!item.audioUrl || 
+        const wantsVoice = item.hasAudio || !!item.audioUrl || 
           textLower.includes("envíame un audio") || 
           textLower.includes("mándame un audio") || 
           textLower.includes("envíame audio") || 
