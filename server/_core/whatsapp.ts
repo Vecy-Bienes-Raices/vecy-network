@@ -125,9 +125,9 @@ async function getGoogleAccessToken(): Promise<string | null> {
 /** Prepara el texto para TTS: pronunciación natural en español */
 function prepareTtsText(rawText: string): string {
   return rawText
-    .replace(/vecy\s+network|veci\s+network/gi, "besi nétwork")   // "VECY/VECI Network" → "besi nétwork" (fonética latina con 'b' y 's')
-    .replace(/vecy|veci/gi, "besi")                                // "VECY/VECI" solo → "besi" (fonética latina con 'b' y 's')
-    .replace(/jania/gi, "janía")                                  // "JanIA" → "janía" en minúscula
+    .replace(/vecy\s+network|veci\s+network/gi, "besi network")   // "VECY/VECI Network" → "besi network" (sin tildes en inglés para evitar que el TTS diga "con acento agudo")
+    .replace(/vecy|veci/gi, "besi")                                // "VECY/VECI" solo → "besi"
+    .replace(/jania/gi, "yánia")                                  // "JanIA" → "yánia" (pronunciación con 'y' y acento en la 'á', tal como prefiere el usuario)
     .replace(/\bRLS\b/gi, "ere ele ese")
     .replace(/\bSQL\b/gi, "ese cu ele")
     .replace(/\bDM\b/gi, "di em")
@@ -468,18 +468,18 @@ export class WhatsAppBot {
 
         // Indicador de estado y retardo realista: 🎙️ grabando si es audio, ✍️ escribiendo si es texto
         const isGroup = chatId.includes('@g.us');
-        let typingDelay = 500;
+        let typingDelay = 200;
         if (process.env.USE_WHATSAPP_CLOUD_API === 'true') {
           const isAudio = (content && content.mimetype && content.mimetype.startsWith('audio')) ||
                           (options && options.sendAudioAsVoice);
           if (isAudio) {
-            typingDelay = isGroup ? (Math.floor(Math.random() * 2000) + 3000) : 1000;
+            typingDelay = isGroup ? (Math.floor(Math.random() * 2000) + 3000) : 300;
           } else {
             if (typeof content === 'string') {
-              typingDelay = isGroup ? Math.min(content.length * 15, 4000) : Math.min(content.length * 6, 1000);
-              typingDelay = Math.max(typingDelay, 500);
+              typingDelay = isGroup ? Math.min(content.length * 15, 4000) : Math.min(content.length * 3, 400);
+              typingDelay = Math.max(typingDelay, 200);
             } else {
-              typingDelay = isGroup ? 1500 : 500;
+              typingDelay = isGroup ? 1500 : 200;
             }
           }
         } else {
@@ -490,14 +490,14 @@ export class WhatsAppBot {
                             (options && options.sendAudioAsVoice);
             if (isAudio) {
               await chat.sendStateRecording();  // 🎙️ Micrófono
-              typingDelay = isGroup ? (Math.floor(Math.random() * 2000) + 3000) : 1000;
+              typingDelay = isGroup ? (Math.floor(Math.random() * 2000) + 3000) : 300;
             } else {
               await chat.sendStateTyping();     // ✍️ Tres puntitos
               if (typeof content === 'string') {
-                typingDelay = isGroup ? Math.min(content.length * 15, 4000) : Math.min(content.length * 6, 1000);
-                typingDelay = Math.max(typingDelay, 500);
+                typingDelay = isGroup ? Math.min(content.length * 15, 4000) : Math.min(content.length * 3, 400);
+                typingDelay = Math.max(typingDelay, 200);
               } else {
-                typingDelay = 2000;
+                typingDelay = isGroup ? 2000 : 200;
               }
             }
           } catch (_) { /* ignorar si el chat no acepta el estado */ }
@@ -530,8 +530,8 @@ export class WhatsAppBot {
 
         this.messagesSentToday++;
         console.log(`[WhatsApp-Bot] Mensaje enviado a ${chatId}. Total hoy: ${this.messagesSentToday}/${this.dailyMessageLimit}`);
-        // Intervalo de enfriamiento seguro: 2s a 3.5s para grupos, 500ms para DMs privados
-        const cooldownDelay = isGroup ? (Math.floor(Math.random() * 1500) + 2000) : 500;
+        // Intervalo de enfriamiento seguro: 2s a 3.5s para grupos, 200ms para DMs privados
+        const cooldownDelay = isGroup ? (Math.floor(Math.random() * 1500) + 2000) : 200;
         await delay(cooldownDelay);
       } catch (err: any) {
         console.error('[Anti-Burst-Queue] Fallo en despacho secuencial:', err.message || err);
@@ -1351,12 +1351,12 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         originalMsg: msg
       });
       console.log(`[BUFFER] Mensaje #${buffer.messages.length} agregado al buffer de ${senderId}.`);
-      const bufferTimeout = isGroupChat ? 12000 : 2000;
+      const bufferTimeout = isGroupChat ? 12000 : 800;
       buffer.timer = setTimeout(() => this.processBuffer(bufferKey), bufferTimeout);
     } else {
       // Inicio de un nuevo bloque
       console.log(`[BUFFER] Nuevo bloque iniciado para ${senderId}. Mensaje #1 registrado.`);
-      const bufferTimeout = isGroupChat ? 12000 : 2000;
+      const bufferTimeout = isGroupChat ? 12000 : 800;
       this.messageBuffers.set(bufferKey, {
         messages: [{
           body: msg.body,

@@ -4175,7 +4175,7 @@ async function getGoogleAccessToken() {
   }
 }
 function prepareTtsText(rawText) {
-  return rawText.replace(/vecy\s+network|veci\s+network/gi, "besi n\xE9twork").replace(/vecy|veci/gi, "besi").replace(/jania/gi, "jan\xEDa").replace(/\bRLS\b/gi, "ere ele ese").replace(/\bSQL\b/gi, "ese cu ele").replace(/\bDM\b/gi, "di em").replace(/\bID\b/gi, "ai di").trim();
+  return rawText.replace(/vecy\s+network|veci\s+network/gi, "besi network").replace(/vecy|veci/gi, "besi").replace(/jania/gi, "y\xE1nia").replace(/\bRLS\b/gi, "ere ele ese").replace(/\bSQL\b/gi, "ese cu ele").replace(/\bDM\b/gi, "di em").replace(/\bID\b/gi, "ai di").trim();
 }
 function escapeXml(unsafe) {
   return unsafe.replace(/[<>&'"]/g, (c) => {
@@ -4438,17 +4438,17 @@ var init_whatsapp = __esm({
           try {
             if (this.messagesSentToday >= this.dailyMessageLimit) return;
             const isGroup = chatId.includes("@g.us");
-            let typingDelay = 500;
+            let typingDelay = 200;
             if (process.env.USE_WHATSAPP_CLOUD_API === "true") {
               const isAudio = content && content.mimetype && content.mimetype.startsWith("audio") || options && options.sendAudioAsVoice;
               if (isAudio) {
-                typingDelay = isGroup ? Math.floor(Math.random() * 2e3) + 3e3 : 1e3;
+                typingDelay = isGroup ? Math.floor(Math.random() * 2e3) + 3e3 : 300;
               } else {
                 if (typeof content === "string") {
-                  typingDelay = isGroup ? Math.min(content.length * 15, 4e3) : Math.min(content.length * 6, 1e3);
-                  typingDelay = Math.max(typingDelay, 500);
+                  typingDelay = isGroup ? Math.min(content.length * 15, 4e3) : Math.min(content.length * 3, 400);
+                  typingDelay = Math.max(typingDelay, 200);
                 } else {
-                  typingDelay = isGroup ? 1500 : 500;
+                  typingDelay = isGroup ? 1500 : 200;
                 }
               }
             } else {
@@ -4457,14 +4457,14 @@ var init_whatsapp = __esm({
                 const isAudio = content instanceof MessageMedia || typeof content === "object" && content?.mimetype?.startsWith("audio") || options && options.sendAudioAsVoice;
                 if (isAudio) {
                   await chat.sendStateRecording();
-                  typingDelay = isGroup ? Math.floor(Math.random() * 2e3) + 3e3 : 1e3;
+                  typingDelay = isGroup ? Math.floor(Math.random() * 2e3) + 3e3 : 300;
                 } else {
                   await chat.sendStateTyping();
                   if (typeof content === "string") {
-                    typingDelay = isGroup ? Math.min(content.length * 15, 4e3) : Math.min(content.length * 6, 1e3);
-                    typingDelay = Math.max(typingDelay, 500);
+                    typingDelay = isGroup ? Math.min(content.length * 15, 4e3) : Math.min(content.length * 3, 400);
+                    typingDelay = Math.max(typingDelay, 200);
                   } else {
-                    typingDelay = 2e3;
+                    typingDelay = isGroup ? 2e3 : 200;
                   }
                 }
               } catch (_) {
@@ -4491,7 +4491,7 @@ var init_whatsapp = __esm({
             }
             this.messagesSentToday++;
             console.log(`[WhatsApp-Bot] Mensaje enviado a ${chatId}. Total hoy: ${this.messagesSentToday}/${this.dailyMessageLimit}`);
-            const cooldownDelay = isGroup ? Math.floor(Math.random() * 1500) + 2e3 : 500;
+            const cooldownDelay = isGroup ? Math.floor(Math.random() * 1500) + 2e3 : 200;
             await delay(cooldownDelay);
           } catch (err) {
             console.error("[Anti-Burst-Queue] Fallo en despacho secuencial:", err.message || err);
@@ -5174,11 +5174,11 @@ Hola @${rawPhone}, detect\xE9 que est\xE1s enviando muchas publicaciones seguida
             originalMsg: msg
           });
           console.log(`[BUFFER] Mensaje #${buffer.messages.length} agregado al buffer de ${senderId}.`);
-          const bufferTimeout = isGroupChat ? 12e3 : 2e3;
+          const bufferTimeout = isGroupChat ? 12e3 : 800;
           buffer.timer = setTimeout(() => this.processBuffer(bufferKey), bufferTimeout);
         } else {
           console.log(`[BUFFER] Nuevo bloque iniciado para ${senderId}. Mensaje #1 registrado.`);
-          const bufferTimeout = isGroupChat ? 12e3 : 2e3;
+          const bufferTimeout = isGroupChat ? 12e3 : 800;
           this.messageBuffers.set(bufferKey, {
             messages: [{
               body: msg.body,
