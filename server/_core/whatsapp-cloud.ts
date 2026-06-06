@@ -177,7 +177,8 @@ export async function sendCloudMessage(chatId: string, content: any, options: an
         to: phone,
         type,
         [type]: {
-          id: mediaId
+          id: mediaId,
+          ...(isAudio && options.sendAudioAsVoice ? { ptt: true } : {})
         }
       };
 
