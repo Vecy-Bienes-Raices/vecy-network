@@ -280,7 +280,7 @@ async function startServer() {
 
       const groups = [
         { name: "VECY INMUEBLES NETWORK", id: targetGroupId },
-        { name: "Buzón de Consultoría", id: buzonGroupId },
+        { name: "Consultoría Jurídica Inmobiliaria", id: buzonGroupId },
         { name: "Círculo CERO", id: circuloGroupId }
       ];
 
