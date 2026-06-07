@@ -12,24 +12,35 @@ export async function invokeLLM({
   responseFormat, 
   provider = "google",
   imageBuffer,
+  pdfBuffer,
+  pdfMimeType,
   enableSearch = false
 }: { 
   messages: any[], 
   responseFormat?: any,
   provider?: LLMProvider,
   imageBuffer?: string,
+  pdfBuffer?: string,
+  pdfMimeType?: string,
   enableSearch?: boolean
 }): Promise<{ choices: { message: { content: string } }[] }> {
   if (provider === "anthropic") {
     return await invokeClaude(messages, responseFormat) as any;
   }
-  return await invokeGemini(messages, responseFormat, imageBuffer, enableSearch);
+  return await invokeGemini(messages, responseFormat, imageBuffer, pdfBuffer, pdfMimeType, enableSearch);
 }
 
 /**
  * Invocación a Google Gemini (Google AI Studio) utilizando la infraestructura de frontera 3.1 Flash-Lite
  */
-async function invokeGemini(messages: any[], responseFormat?: any, imageBuffer?: string, enableSearch?: boolean) {
+async function invokeGemini(
+  messages: any[], 
+  responseFormat?: any, 
+  imageBuffer?: string, 
+  pdfBuffer?: string, 
+  pdfMimeType?: string, 
+  enableSearch?: boolean
+) {
   const API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || ENV.forgeApiKey;
   // Migración estratégica al modelo de bajo costo para pruebas masivas
   const MODEL = "gemini-3.1-flash-lite";
@@ -42,14 +53,24 @@ async function invokeGemini(messages: any[], responseFormat?: any, imageBuffer?:
     const contents = userMessages.map((m, idx) => {
       const parts: any[] = [{ text: m.content }];
       
-      // Si es el último mensaje del usuario y tenemos un buffer de imagen, lo adjuntamos
-      if (imageBuffer && idx === userMessages.length - 1 && m.role !== "assistant") {
-        parts.push({
-          inline_data: {
-            mime_type: "image/jpeg", // Asumimos JPEG por defecto del buffer de WhatsApp
-            data: imageBuffer
-          }
-        });
+      // Si es el último mensaje del usuario y tenemos un buffer de imagen o PDF, los adjuntamos
+      if (idx === userMessages.length - 1 && m.role !== "assistant") {
+        if (imageBuffer) {
+          parts.push({
+            inline_data: {
+              mime_type: "image/jpeg", // Asumimos JPEG por defecto del buffer de WhatsApp
+              data: imageBuffer
+            }
+          });
+        }
+        if (pdfBuffer) {
+          parts.push({
+            inline_data: {
+              mime_type: pdfMimeType || "application/pdf",
+              data: pdfBuffer
+            }
+          });
+        }
       }
 
       return {

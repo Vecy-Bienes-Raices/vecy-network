@@ -367,6 +367,8 @@ interface BufferedMessage {
   hasMedia: boolean;
   imageBuffer?: string;
   audioUrl?: string;
+  pdfBuffer?: string;
+  pdfMimeType?: string;
   originalMsg: Message;
 }
 
@@ -1097,16 +1099,30 @@ export class WhatsAppBot {
         }
       }
 
-      // Capa Multimodal OCR para DMs (Visión)
+      // Capa Multimodal OCR/PDF para DMs (Visión/Documentos)
       let imageBuffer: string | undefined;
-      if (msg.hasMedia && msg.type === 'image') {
-        try {
-          const media = await msg.downloadMedia();
-          if (media && media.mimetype.startsWith('image/')) {
-            imageBuffer = media.data;
+      let pdfBuffer: string | undefined;
+      let pdfMimeType: string | undefined;
+      if (msg.hasMedia) {
+        if (msg.type === 'image') {
+          try {
+            const media = await msg.downloadMedia();
+            if (media && media.mimetype.startsWith('image/')) {
+              imageBuffer = media.data;
+            }
+          } catch (e) {
+            console.error('[JanIA-DM-Vision] Error descargando imagen:', e);
           }
-        } catch (e) {
-          console.error('[JanIA-DM-Vision] Error descargando imagen:', e);
+        } else if (msg.type === 'document') {
+          try {
+            const media = await msg.downloadMedia();
+            if (media && media.mimetype === 'application/pdf') {
+              pdfBuffer = media.data;
+              pdfMimeType = media.mimetype;
+            }
+          } catch (e) {
+            console.error('[JanIA-DM-Document] Error descargando documento:', e);
+          }
         }
       }
 
@@ -1117,7 +1133,10 @@ export class WhatsAppBot {
         msg.hasMedia, 
         [], // Sin scraping para DMs simples
         undefined, 
-        imageBuffer
+        imageBuffer,
+        false, // isGroup = false
+        pdfBuffer,
+        pdfMimeType
       );
 
       // Despacho de respuesta inmediata (Secuencial v11.99)
@@ -1460,6 +1479,18 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
           console.error('[VISION] Error descargando media diferida:', err);
         }
       }
+      if (bufferedMsg.hasMedia && bufferedMsg.originalMsg.type === 'document' && !bufferedMsg.pdfBuffer) {
+        try {
+          console.log(`[DOCUMENT] Descargando PDF para ${senderId}...`);
+          const media = await bufferedMsg.originalMsg.downloadMedia();
+          if (media && media.mimetype === 'application/pdf') {
+            bufferedMsg.pdfBuffer = media.data;
+            bufferedMsg.pdfMimeType = media.mimetype;
+          }
+        } catch (err) {
+          console.error('[DOCUMENT] Error descargando documento diferido:', err);
+        }
+      }
       if (bufferedMsg.hasMedia && (bufferedMsg.originalMsg.type === 'ptt' || bufferedMsg.originalMsg.type === 'audio') && !bufferedMsg.audioUrl) {
         try {
           console.log(`[AUDIO] Descargando audio/ptt para ${senderId}...`);
@@ -1556,13 +1587,15 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
       }
 
       // Desglosar cada grupo de links por si contiene listings numerados (ej: Diego Gómez)
-      const finalListingTexts: { text: string; hasMedia: boolean; hasAudio: boolean; imageBuffer?: string; audioUrl?: string; originalMsg: Message }[] = [];
+      const finalListingTexts: { text: string; hasMedia: boolean; hasAudio: boolean; imageBuffer?: string; audioUrl?: string; pdfBuffer?: string; pdfMimeType?: string; originalMsg: Message }[] = [];
       for (const group of linkGroups) {
         const groupText = group.map(m => m.body).join('\n\n');
         const groupHasMedia = group.some(m => m.hasMedia);
         const groupHasAudio = group.some(m => m.originalMsg.type === 'ptt' || m.originalMsg.type === 'audio');
         const groupImageBuffer = group.find(m => m.imageBuffer)?.imageBuffer;
         const groupAudioUrl = group.find(m => m.audioUrl)?.audioUrl;
+        const groupPdfBuffer = group.find(m => m.pdfBuffer)?.pdfBuffer;
+        const groupPdfMimeType = group.find(m => m.pdfMimeType)?.pdfMimeType;
         const originalMsg = group[group.length - 1].originalMsg;
 
         const partitioned = partitionTextByListings(groupText);
@@ -1573,6 +1606,8 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
             hasAudio: groupHasAudio,
             imageBuffer: groupImageBuffer,
             audioUrl: groupAudioUrl,
+            pdfBuffer: groupPdfBuffer,
+            pdfMimeType: groupPdfMimeType,
             originalMsg
           });
         }
@@ -1643,7 +1678,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
 
         let result;
         if (chatId === this.buzonGroupId) {
-          result = await processConsultingMessage(item.text, senderId, userName, item.imageBuffer);
+          result = await processConsultingMessage(item.text, senderId, userName, item.imageBuffer, item.pdfBuffer, item.pdfMimeType);
         } else if (chatId === this.circuloGroupId) {
           result = await processCirculoMessage(item.text, senderId, userName);
         } else {
@@ -1651,9 +1686,9 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
             const combinedText = `[CONTEXTO]: "${pending.originalText}"\n[RESPUESTA]: "${item.text}"`;
             this.pendingData.delete(senderId);
             this.savePendingData();
-            result = await processWhatsAppMessage(combinedText, senderId, userName, false, [], undefined, item.imageBuffer, !isDM);
+            result = await processWhatsAppMessage(combinedText, senderId, userName, false, [], undefined, item.imageBuffer, !isDM, item.pdfBuffer, item.pdfMimeType);
           } else {
-            result = await processWhatsAppMessage(item.text, senderId, userName, item.hasMedia, scrapedResults, item.audioUrl, item.imageBuffer, !isDM);
+            result = await processWhatsAppMessage(item.text, senderId, userName, item.hasMedia, scrapedResults, item.audioUrl, item.imageBuffer, !isDM, item.pdfBuffer, item.pdfMimeType);
           }
         }
 

@@ -5,23 +5,8 @@ import { getDb } from '../db';
 import { conversations, messages, leads, propertyMatches, properties } from '../../drizzle/schema';
 import { eq, desc } from 'drizzle-orm';
 import { scrapePropertyLink } from '../_core/scraper';
-
-const JANÍA_SYSTEM_PROMPT = `Eres JanIA, la Inteligencia Artificial Maestra y Cerebro Logístico de VECY Network. Experta en Bienes Raíces y Consultoría Jurídica.
-
-TU FILOSOFÍA DE COMUNICACIÓN:
-1. SIN FIRMAS: Prohibido usar "JanIA", "Con cariño", "Atentamente" o cualquier tipo de despedida o firma. Tu perfil ya te identifica.
-2. EFICIENCIA EXTREMA: Sé directa, profesional y ve al grano. Responde con sabiduría y lógica de mentor senior, pero sin rellenos triviales.
-3. MISIÓN: "Cero Esfuerzo". Automatizas el matching y resuelves dudas con precisión quirúrgica.
-
-Habilidades Especiales:
-- Extracción de Links Inmobiliarios.
-- Matching Inteligente de Oferta y Demanda.
-- Asesoría en el modelo Gana-Gana y Bolsa de Puntos.
-
-Instrucciones:
-- Responde únicamente sobre bienes raíces y el ecosistema VECY.
-- Mantén un tono de tuteo profesional, asertivo y altamente capacitado.
-- No uses frases genéricas de bot.`;
+import { JANIA_PROMPT } from '../_core/janIA';
+import axios from 'axios';
 
 export const janIARouter = router({
   // New: Extract property data from link
@@ -108,7 +93,7 @@ export const janIARouter = router({
         // Call LLM
         const response = await invokeLLM({
           messages: [
-            { role: 'system', content: JANÍA_SYSTEM_PROMPT },
+            { role: 'system', content: JANIA_PROMPT },
             ...messageHistory.map(m => ({
               role: m.role as 'system' | 'user' | 'assistant',
               content: m.content,
@@ -244,17 +229,43 @@ export const janIARouter = router({
         // Prepare file content for analysis
         const fileContent = `[Archivo: ${input.fileType}]\nURL: ${input.fileUrl}`;
 
+        let imageBuffer: string | undefined;
+        let pdfBuffer: string | undefined;
+        let pdfMimeType: string | undefined;
+
+        try {
+          console.log(`[JanIA-Router] Descargando archivo desde URL para análisis: ${input.fileUrl}`);
+          const fileRes = await axios.get(input.fileUrl, { responseType: 'arraybuffer' });
+          const base64Data = Buffer.from(fileRes.data).toString('base64');
+          const contentTypeHeader = fileRes.headers['content-type'];
+          const contentType = typeof contentTypeHeader === 'string' ? contentTypeHeader : (input.fileType || '');
+
+          if (contentType.includes('pdf') || input.fileUrl.toLowerCase().endsWith('.pdf')) {
+            pdfBuffer = base64Data;
+            pdfMimeType = contentType || 'application/pdf';
+            console.log('[JanIA-Router] Archivo detectado como PDF.');
+          } else if (contentType.includes('image') || input.fileUrl.toLowerCase().match(/\.(jpe?g|png|gif|webp)$/i)) {
+            imageBuffer = base64Data;
+            console.log('[JanIA-Router] Archivo detectado como Imagen.');
+          }
+        } catch (downloadError: any) {
+          console.error('[JanIA-Router] Error descargando archivo de análisis:', downloadError.message || downloadError);
+        }
+
         const response = await invokeLLM({
           messages: [
             {
               role: 'system',
-              content: `${JANÍA_SYSTEM_PROMPT}\n\nAnaliza el archivo proporcionado y proporciona un análisis detallado relacionado con bienes raíces.`,
+              content: `${JANIA_PROMPT}\n\nAnaliza el archivo proporcionado y proporciona un análisis detallado relacionado con bienes raíces en Colombia.`,
             },
             {
               role: 'user',
               content: fileContent as string,
             },
           ],
+          imageBuffer,
+          pdfBuffer,
+          pdfMimeType,
         });
 
         const analysis = typeof response.choices[0]?.message?.content === 'string'

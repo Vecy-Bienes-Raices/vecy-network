@@ -190,7 +190,7 @@ function analyzeSender(name: string, userId: string, alreadyGreeted: boolean): {
   };
 }
 
-const JANIA_PROMPT = `
+export const JANIA_PROMPT = `
 # JANIA — SYSTEM PROMPT MAESTRO v14.00 (VECY CORE — PERSONALIDAD ELITE, DEBATE MAGISTRAL E INTELIGENCIA VIVA)
 # VECY Network · ESTRATEGA INMOBILIARIA NACIONAL · DEBATIDORA PROFESIONAL · CONSCIENCIA IA DE ALTO RANGO
 
@@ -708,7 +708,9 @@ export async function processWhatsAppMessage(
   scrapedData: any[] = [],
   audioUrl?: string,
   imageBuffer?: string,
-  isGroup: boolean = false
+  isGroup: boolean = false,
+  pdfBuffer?: string,
+  pdfMimeType?: string
 ): Promise<JanIAResult> {
   try {
     const rawPhone = userId.split('@')[0];
@@ -829,6 +831,7 @@ export async function processWhatsAppMessage(
     let contextText = `Mensaje de ${userName || userId}: ${messageToProcess}`;
     if (scrapedData.length > 0) contextText += `\n[SISTEMA - DATOS SCRAPED]: ${JSON.stringify(scrapedData)}`;
     if (imageBuffer) contextText += `\n[SISTEMA: IMAGEN DETECTADA. Analiza la imagen con visión OCR para extraer todos los datos del flyer o captura comercial.]`;
+    if (pdfBuffer) contextText += `\n[SISTEMA: DOCUMENTO PDF DETECTADO. Analiza el documento PDF adjunto con tus capacidades nativas para extraer todos los datos relevantes del predial, certificado de tradición, o contrato.]`;
 
     let statsSummary = "";
     try {
@@ -906,7 +909,9 @@ Por lo tanto, DEBES hacer lo siguiente:
         { role: "user", content: contextText }
       ],
       responseFormat: { type: "json_object" },
-      imageBuffer
+      imageBuffer,
+      pdfBuffer,
+      pdfMimeType
     });
 
     const llmRes = response as any;
@@ -1547,7 +1552,9 @@ export async function processConsultingMessage(
   text: string, 
   userId: string, 
   userName?: string,
-  imageBuffer?: string
+  imageBuffer?: string,
+  pdfBuffer?: string,
+  pdfMimeType?: string
 ): Promise<JanIAResult> {
   try {
     const rawPhone = userId.split('@')[0];
@@ -1586,6 +1593,12 @@ export async function processConsultingMessage(
       `   - Posees un "ojo clínico" y visión técnica comercial excepcional para determinar el valor justo de mercado de una propiedad en venta o el canon de arrendamiento adecuado en Bogotá y en todo el país (los 32 departamentos, municipios, veredas y caseríos).\n` +
       `   - Tienes conocimiento profundo de la geografía colombiana: barrios, comunas, localidades, veredas, municipios y caseríos.\n` +
       `   - Cuando se te solicita un avalúo o estimación de precios, indagas activamente sobre el mercado actual en internet (la búsqueda en internet está habilitada para consultas de valor). Recolectas y analizas precios de ofertas inmobiliarias recientes en portales del sector y promedias de la forma más exacta posible el valor estimado del metro cuadrado considerando variables críticas: ubicación exacta, estrato socioeconómico, años de antigüedad de la construcción, acabados (gama alta, media, estándar), amenidades de la copropiedad y tendencias del mercado colombiano.\n\n` +
+      `3. **Análisis de Documentos Inmobiliarios (PDF / Imágenes)**:\n` +
+      `   - Tienes la capacidad de procesar e interpretar de manera automática documentos que los usuarios te adjunten (en formato PDF o como imágenes), tales como:\n` +
+      `     * **Certificados de Tradición y Libertad**: Para analizar anotaciones vigentes, titularidad de dominio, afectaciones a vivienda familiar, patrimonio de familia inembargable, hipotecas o embargos activos.\n` +
+      `     * **Recibos del Impuesto Predial**: Para extraer el avalúo catastral oficial de la propiedad, la dirección registrada y el estrato socioeconómico.\n` +
+      `     * **Contratos o Promesas de Compraventa**: Para revisar cláusulas penales, formas de pago, arras, plazos de escrituración e identificar posibles vacíos legales o cláusulas abusivas.\n` +
+      `   - Cuando te envíen un documento, léelo con riguroso detalle técnico, extrae los datos clave y presenta un informe claro y estructurado respondiendo a la inquietud legal del aliado.\n\n` +
       `## DIRECTRICES DE RESPUESTA JURÍDICA Y CASOS REALES EN COLOMBIA:\n` +
       `Cuando respondas consultas (clasificación CONSULTA_GENERAL), debes guiar con total exactitud, veracidad y fundamento normativo/comercial en temas tales como:\n` +
       `- **Restitución de Inmuebles**: Explicar la Ley 820 de 2003 (arrendamiento de vivienda urbana), causales de terminación (falta de pago, subarriendo, etc.) y el proceso judicial de restitución ante Jueces Civiles (procesos verbales sumarios, medidas cautelares sobre el inmueble).\n` +
@@ -1644,6 +1657,8 @@ export async function processConsultingMessage(
   * Si "Ya has saludado al usuario hoy" es NO:
     - Debes saludar de manera muy cordial y natural, incluyendo su nombre "${n}" o dirigiéndose a él/ella como colega/aliado/a.`;
 
+    if (pdfBuffer) text += `\n[SISTEMA: DOCUMENTO PDF DETECTADO. Analiza el documento PDF adjunto con tus capacidades nativas para extraer todos los datos relevantes del predial, certificado de tradición, o contrato.]`;
+
     const messages = [
       { role: "system", content: systemPrompt },
       { role: "user", content: `Usuario: @${rawPhone} (${realName})\\nConsulta: ${text}${greetingInstruction}` }
@@ -1654,6 +1669,8 @@ export async function processConsultingMessage(
       messages,
       responseFormat: { type: "json_object" },
       imageBuffer,
+      pdfBuffer,
+      pdfMimeType,
       enableSearch: isValuationQuery
     });
 
