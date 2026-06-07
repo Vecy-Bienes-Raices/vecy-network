@@ -69,6 +69,7 @@ Dirección obligatoria:
           { role: 'user', content: promptConsultoria }
         ]
       });
+      const content = response.choices[0]?.message?.content;
       if (content && content.trim() !== "") {
         const buzonJid = whatsappBot.buzonGroupId;
         if (buzonJid) {
@@ -99,6 +100,7 @@ Dirección obligatoria:
           { role: 'user', content: promptCirculo }
         ]
       });
+      const content = response.choices[0]?.message?.content;
       if (content && content.trim() !== "") {
         const circuloJid = whatsappBot.circuloGroupId;
         if (circuloJid) {
@@ -155,6 +157,7 @@ Dirección obligatoria:
           { role: 'user', content: promptConsultoria }
         ]
       });
+      const content = response.choices[0]?.message?.content;
       if (content && content.trim() !== "") {
         const buzonJid = whatsappBot.buzonGroupId;
         if (buzonJid) {
@@ -181,6 +184,7 @@ Dirección obligatoria:
           { role: 'user', content: promptCirculo }
         ]
       });
+      const content = response.choices[0]?.message?.content;
       if (content && content.trim() !== "") {
         const circuloJid = whatsappBot.circuloGroupId;
         if (circuloJid) {
