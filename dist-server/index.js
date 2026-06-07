@@ -609,9 +609,9 @@ async function scrapePropertyLink(url) {
       ],
       responseFormat: { type: "json_object" }
     });
-    const content = aiResponse.choices[0]?.message?.content;
-    if (!content) throw new Error("JanIA no pudo estructurar la informaci\xF3n");
-    const jsonStr = content.replace(/```json|```/g, "").trim();
+    const content2 = aiResponse.choices[0]?.message?.content;
+    if (!content2) throw new Error("JanIA no pudo estructurar la informaci\xF3n");
+    const jsonStr = content2.replace(/```json|```/g, "").trim();
     return JSON.parse(jsonStr);
   } catch (error) {
     console.error("Error in property scraper:", error);
@@ -3879,7 +3879,7 @@ async function uploadMetaMedia(fileBuffer, mimeType, filename) {
     return null;
   }
 }
-async function sendCloudMessage(chatId, content, options = {}) {
+async function sendCloudMessage(chatId, content2, options = {}) {
   const token = process.env.WHATSAPP_API_TOKEN;
   const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
   if (!token || !phoneId) {
@@ -3888,7 +3888,7 @@ async function sendCloudMessage(chatId, content, options = {}) {
   }
   const phone = chatId.split("@")[0];
   try {
-    if (typeof content === "string") {
+    if (typeof content2 === "string") {
       const payload = {
         messaging_product: "whatsapp",
         recipient_type: "individual",
@@ -3896,7 +3896,7 @@ async function sendCloudMessage(chatId, content, options = {}) {
         type: "text",
         text: {
           preview_url: false,
-          body: content
+          body: content2
         }
       };
       if (options.quotedMessageId) {
@@ -3921,13 +3921,13 @@ async function sendCloudMessage(chatId, content, options = {}) {
       }
       return;
     }
-    if (content && typeof content === "object" && content.mimetype && content.data) {
-      const isAudio = content.mimetype.startsWith("audio/");
-      const isImage = content.mimetype.startsWith("image/");
-      const buffer = Buffer.from(content.data, "base64");
-      const filename = content.filename || (isAudio ? "voice-note.ogg" : isImage ? "image.jpg" : "file");
-      console.log(`[WHATSAPP-CLOUD] Uploading media (${content.mimetype}, ${buffer.byteLength} bytes) to Meta...`);
-      const mediaId = await uploadMetaMedia(buffer, content.mimetype, filename);
+    if (content2 && typeof content2 === "object" && content2.mimetype && content2.data) {
+      const isAudio = content2.mimetype.startsWith("audio/");
+      const isImage = content2.mimetype.startsWith("image/");
+      const buffer = Buffer.from(content2.data, "base64");
+      const filename = content2.filename || (isAudio ? "voice-note.ogg" : isImage ? "image.jpg" : "file");
+      console.log(`[WHATSAPP-CLOUD] Uploading media (${content2.mimetype}, ${buffer.byteLength} bytes) to Meta...`);
+      const mediaId = await uploadMetaMedia(buffer, content2.mimetype, filename);
       if (!mediaId) {
         console.error("[WHATSAPP-CLOUD] Failed to upload media, cannot send message");
         return;
@@ -3965,7 +3965,7 @@ async function sendCloudMessage(chatId, content, options = {}) {
       }
       return;
     }
-    console.warn("[WHATSAPP-CLOUD] Unknown content type passed to sendCloudMessage:", content);
+    console.warn("[WHATSAPP-CLOUD] Unknown content type passed to sendCloudMessage:", content2);
   } catch (err) {
     console.error("[WHATSAPP-CLOUD] Exception in sendCloudMessage:", err);
   }
@@ -4466,9 +4466,9 @@ var init_whatsapp = __esm({
       blacklistedBots = process.env.BLACKLISTED_BOTS ? process.env.BLACKLISTED_BOTS.split(",") : [];
       watchdogInterval = null;
       // --- ANTI-BURST & ANTI-FLOOD QUEUED DISPATCH (v12.0) ---
-      async queuedSend(chatId, content, options = {}) {
-        if (typeof content === "string") {
-          content = content.replace(/\*\*/g, "*");
+      async queuedSend(chatId, content2, options = {}) {
+        if (typeof content2 === "string") {
+          content2 = content2.replace(/\*\*/g, "*");
         }
         const today = (/* @__PURE__ */ new Date()).toDateString();
         if (this.lastResetDate !== today) {
@@ -4500,12 +4500,12 @@ var init_whatsapp = __esm({
             const isGroup = chatId.includes("@g.us");
             let typingDelay = 200;
             if (process.env.USE_WHATSAPP_CLOUD_API === "true") {
-              const isAudio = content && content.mimetype && content.mimetype.startsWith("audio") || options && options.sendAudioAsVoice;
+              const isAudio = content2 && content2.mimetype && content2.mimetype.startsWith("audio") || options && options.sendAudioAsVoice;
               if (isAudio) {
                 typingDelay = isGroup ? Math.floor(Math.random() * 2e3) + 3e3 : 300;
               } else {
-                if (typeof content === "string") {
-                  typingDelay = isGroup ? Math.min(content.length * 15, 4e3) : Math.min(content.length * 3, 400);
+                if (typeof content2 === "string") {
+                  typingDelay = isGroup ? Math.min(content2.length * 15, 4e3) : Math.min(content2.length * 3, 400);
                   typingDelay = Math.max(typingDelay, 200);
                 } else {
                   typingDelay = isGroup ? 1500 : 200;
@@ -4514,14 +4514,14 @@ var init_whatsapp = __esm({
             } else {
               try {
                 const chat = await this.client.getChatById(chatId);
-                const isAudio = content instanceof MessageMedia || typeof content === "object" && content?.mimetype?.startsWith("audio") || options && options.sendAudioAsVoice;
+                const isAudio = content2 instanceof MessageMedia || typeof content2 === "object" && content2?.mimetype?.startsWith("audio") || options && options.sendAudioAsVoice;
                 if (isAudio) {
                   await chat.sendStateRecording();
                   typingDelay = isGroup ? Math.floor(Math.random() * 2e3) + 3e3 : 300;
                 } else {
                   await chat.sendStateTyping();
-                  if (typeof content === "string") {
-                    typingDelay = isGroup ? Math.min(content.length * 15, 4e3) : Math.min(content.length * 3, 400);
+                  if (typeof content2 === "string") {
+                    typingDelay = isGroup ? Math.min(content2.length * 15, 4e3) : Math.min(content2.length * 3, 400);
                     typingDelay = Math.max(typingDelay, 200);
                   } else {
                     typingDelay = isGroup ? 2e3 : 200;
@@ -4534,9 +4534,9 @@ var init_whatsapp = __esm({
             let sendPromise;
             if (process.env.USE_WHATSAPP_CLOUD_API === "true") {
               const { sendCloudMessage: sendCloudMessage2 } = await Promise.resolve().then(() => (init_whatsapp_cloud(), whatsapp_cloud_exports));
-              sendPromise = sendCloudMessage2(chatId, content, options);
+              sendPromise = sendCloudMessage2(chatId, content2, options);
             } else {
-              sendPromise = this.client.sendMessage(chatId, content, options);
+              sendPromise = this.client.sendMessage(chatId, content2, options);
             }
             const timeoutPromise = new Promise(
               (_, reject) => setTimeout(() => reject(new Error(`Timeout al enviar mensaje de WhatsApp a ${chatId}`)), 15e3)
@@ -5733,7 +5733,7 @@ _(Nota: Por favor nombra a JanIA Administradora del grupo para que pueda borrar 
         }
       }
       // --- LOGÍSTICA DE BASE DE DATOS ---
-      async logToDb(senderId, role, content) {
+      async logToDb(senderId, role, content2) {
         try {
           const db = await getDb();
           if (!db) return;
@@ -5743,7 +5743,7 @@ _(Nota: Por favor nombra a JanIA Administradora del grupo para que pueda borrar 
             const [newConv] = await db.insert(conversations).values({
               sessionId: senderId,
               status: "active",
-              lastMessage: content.substring(0, 200)
+              lastMessage: content2.substring(0, 200)
             }).returning();
             conversationId = newConv.id;
           } else {
@@ -5752,11 +5752,11 @@ _(Nota: Por favor nombra a JanIA Administradora del grupo para que pueda borrar 
           await db.insert(messages).values({
             conversationId,
             role,
-            content,
+            content: content2,
             messageType: "text"
           });
           await db.update(conversations).set({
-            lastMessage: content.substring(0, 200),
+            lastMessage: content2.substring(0, 200),
             updatedAt: /* @__PURE__ */ new Date()
           }).where(eq10(conversations.id, conversationId));
         } catch (e) {
@@ -5877,17 +5877,18 @@ Ya estoy 100% activa para escanear sus publicaciones y buscarles cierres sin cob
           console.error("[WHATSAPP-BOT] Error al enviar el comunicado de match:", err.message || err);
         }
       }
-      async sendToGroup(text2, mediaPath, mentions) {
+      async sendToGroup(text2, mediaPath, mentions, groupId) {
         try {
           const options = { mentions: mentions || [] };
+          const target = groupId || this.targetGroupId;
           if (mediaPath) {
             const media = MessageMedia.fromFilePath(path3.resolve(mediaPath));
-            await this.queuedSend(this.targetGroupId, media, { ...options, caption: text2 });
+            await this.queuedSend(target, media, { ...options, caption: text2 });
           } else {
-            await this.queuedSend(this.targetGroupId, text2, options);
+            await this.queuedSend(target, text2, options);
           }
         } catch (e) {
-          console.error("[WHATSAPP-BOT] Error enviando mensaje al grupo:", e);
+          console.error(`[WHATSAPP-BOT] Error enviando mensaje al grupo ${groupId || this.targetGroupId}:`, e);
         }
       }
       async sendVoiceToGroup(text2, groupId) {
@@ -6543,23 +6544,23 @@ var validatePayload = (input) => {
     });
   }
   const title = trimValue(input.title);
-  const content = trimValue(input.content);
+  const content2 = trimValue(input.content);
   if (title.length > TITLE_MAX_LENGTH) {
     throw new TRPCError({
       code: "BAD_REQUEST",
       message: `Notification title must be at most ${TITLE_MAX_LENGTH} characters.`
     });
   }
-  if (content.length > CONTENT_MAX_LENGTH) {
+  if (content2.length > CONTENT_MAX_LENGTH) {
     throw new TRPCError({
       code: "BAD_REQUEST",
       message: `Notification content must be at most ${CONTENT_MAX_LENGTH} characters.`
     });
   }
-  return { title, content };
+  return { title, content: content2 };
 };
 async function notifyOwner(payload) {
-  const { title, content } = validatePayload(payload);
+  const { title, content: content2 } = validatePayload(payload);
   if (!ENV.forgeApiUrl) {
     throw new TRPCError({
       code: "INTERNAL_SERVER_ERROR",
@@ -6582,7 +6583,7 @@ async function notifyOwner(payload) {
         "content-type": "application/json",
         "connect-protocol-version": "1"
       },
-      body: JSON.stringify({ title, content })
+      body: JSON.stringify({ title, content: content2 })
     });
     if (!response.ok) {
       const detail = await response.text().catch(() => "");
@@ -8024,12 +8025,12 @@ Direcci\xF3n obligatoria:
           { role: "user", content: promptInmuebles }
         ]
       });
-      const content = response.choices[0]?.message?.content;
-      if (content && content.trim() !== "") {
+      const content2 = response.choices[0]?.message?.content;
+      if (content2 && content2.trim() !== "") {
         if (process.env.NODE_ENV === "development") {
-          console.log("[CRON-SERVICE] [DEV MODE] Omitiendo env\xEDo de mensaje de la ma\xF1ana para Inmuebles. Contenido:\n", content);
+          console.log("[CRON-SERVICE] [DEV MODE] Omitiendo env\xEDo de mensaje de la ma\xF1ana para Inmuebles. Contenido:\n", content2);
         } else {
-          await whatsappBot.sendToGroup(content, void 0, []);
+          await whatsappBot.sendToGroup(content2, void 0, []);
         }
       }
     } catch (e) {
@@ -8047,15 +8048,13 @@ Direcci\xF3n obligatoria:
           { role: "user", content: promptConsultoria }
         ]
       });
-      const content = response.choices[0]?.message?.content;
       if (content && content.trim() !== "") {
         const buzonJid = whatsappBot.buzonGroupId;
-        const client = whatsappBot.client;
-        if (client && buzonJid) {
+        if (buzonJid) {
           if (process.env.NODE_ENV === "development") {
             console.log("[CRON-SERVICE] [DEV MODE] Omitiendo env\xEDo de mensaje de la ma\xF1ana para Consultor\xEDa. Contenido:\n", content);
           } else {
-            await client.sendMessage(buzonJid, content);
+            await whatsappBot.sendToGroup(content, void 0, [], buzonJid);
           }
         }
       }
@@ -8076,15 +8075,13 @@ Direcci\xF3n obligatoria:
           { role: "user", content: promptCirculo }
         ]
       });
-      const content = response.choices[0]?.message?.content;
       if (content && content.trim() !== "") {
         const circuloJid = whatsappBot.circuloGroupId;
-        const client = whatsappBot.client;
-        if (client && circuloJid) {
+        if (circuloJid) {
           if (process.env.NODE_ENV === "development") {
             console.log("[CRON-SERVICE] [DEV MODE] Omitiendo env\xEDo de mensaje de la ma\xF1ana para C\xEDrculo Cero. Contenido:\n", content);
           } else {
-            await client.sendMessage(circuloJid, content);
+            await whatsappBot.sendToGroup(content, void 0, [], circuloJid);
           }
         }
       }
@@ -8105,12 +8102,12 @@ Direcci\xF3n obligatoria:
           { role: "user", content: promptInmuebles }
         ]
       });
-      const content = response.choices[0]?.message?.content;
-      if (content && content.trim() !== "") {
+      const content2 = response.choices[0]?.message?.content;
+      if (content2 && content2.trim() !== "") {
         if (process.env.NODE_ENV === "development") {
-          console.log("[CRON-SERVICE] [DEV MODE] Omitiendo env\xEDo de mensaje de la tarde para Inmuebles. Contenido:\n", content);
+          console.log("[CRON-SERVICE] [DEV MODE] Omitiendo env\xEDo de mensaje de la tarde para Inmuebles. Contenido:\n", content2);
         } else {
-          await whatsappBot.sendToGroup(content, void 0, []);
+          await whatsappBot.sendToGroup(content2, void 0, []);
         }
       }
     } catch (e) {
@@ -8126,15 +8123,13 @@ Direcci\xF3n obligatoria:
           { role: "user", content: promptConsultoria }
         ]
       });
-      const content = response.choices[0]?.message?.content;
       if (content && content.trim() !== "") {
         const buzonJid = whatsappBot.buzonGroupId;
-        const client = whatsappBot.client;
-        if (client && buzonJid) {
+        if (buzonJid) {
           if (process.env.NODE_ENV === "development") {
             console.log("[CRON-SERVICE] [DEV MODE] Omitiendo env\xEDo de mensaje de la tarde para Consultor\xEDa. Contenido:\n", content);
           } else {
-            await client.sendMessage(buzonJid, content);
+            await whatsappBot.sendToGroup(content, void 0, [], buzonJid);
           }
         }
       }
@@ -8151,15 +8146,13 @@ Direcci\xF3n obligatoria:
           { role: "user", content: promptCirculo }
         ]
       });
-      const content = response.choices[0]?.message?.content;
       if (content && content.trim() !== "") {
         const circuloJid = whatsappBot.circuloGroupId;
-        const client = whatsappBot.client;
-        if (client && circuloJid) {
+        if (circuloJid) {
           if (process.env.NODE_ENV === "development") {
             console.log("[CRON-SERVICE] [DEV MODE] Omitiendo env\xEDo de mensaje de la tarde para C\xEDrculo Cero. Contenido:\n", content);
           } else {
-            await client.sendMessage(circuloJid, content);
+            await whatsappBot.sendToGroup(content, void 0, [], circuloJid);
           }
         }
       }
@@ -8222,13 +8215,13 @@ Direcci\xF3n obligatoria:
             { role: "user", content: promptVoz }
           ]
         });
-        const content = response.choices[0]?.message?.content;
-        if (content && content.trim() !== "") {
+        const content2 = response.choices[0]?.message?.content;
+        if (content2 && content2.trim() !== "") {
           if (process.env.NODE_ENV === "development") {
             console.log(`[CRON-SERVICE] [DEV MODE] Omitiendo env\xEDo de audio motivador para ${grupo.nombre}. Transcripci\xF3n:
-`, content);
+`, content2);
           } else {
-            await whatsappBot.sendVoiceToGroup(content, grupo.id);
+            await whatsappBot.sendVoiceToGroup(content2, grupo.id);
           }
         }
         await new Promise((resolve) => setTimeout(resolve, 8e3));

@@ -69,15 +69,13 @@ Dirección obligatoria:
           { role: 'user', content: promptConsultoria }
         ]
       });
-      const content = response.choices[0]?.message?.content;
       if (content && content.trim() !== "") {
         const buzonJid = whatsappBot.buzonGroupId;
-        const client = (whatsappBot as any).client;
-        if (client && buzonJid) {
+        if (buzonJid) {
           if (process.env.NODE_ENV === 'development') {
             console.log('[CRON-SERVICE] [DEV MODE] Omitiendo envío de mensaje de la mañana para Consultoría. Contenido:\n', content);
           } else {
-            await client.sendMessage(buzonJid, content);
+            await whatsappBot.sendToGroup(content, undefined, [], buzonJid);
           }
         }
       }
@@ -101,15 +99,13 @@ Dirección obligatoria:
           { role: 'user', content: promptCirculo }
         ]
       });
-      const content = response.choices[0]?.message?.content;
       if (content && content.trim() !== "") {
         const circuloJid = whatsappBot.circuloGroupId;
-        const client = (whatsappBot as any).client;
-        if (client && circuloJid) {
+        if (circuloJid) {
           if (process.env.NODE_ENV === 'development') {
             console.log('[CRON-SERVICE] [DEV MODE] Omitiendo envío de mensaje de la mañana para Círculo Cero. Contenido:\n', content);
           } else {
-            await client.sendMessage(circuloJid, content);
+            await whatsappBot.sendToGroup(content, undefined, [], circuloJid);
           }
         }
       }
@@ -159,15 +155,13 @@ Dirección obligatoria:
           { role: 'user', content: promptConsultoria }
         ]
       });
-      const content = response.choices[0]?.message?.content;
       if (content && content.trim() !== "") {
         const buzonJid = whatsappBot.buzonGroupId;
-        const client = (whatsappBot as any).client;
-        if (client && buzonJid) {
+        if (buzonJid) {
           if (process.env.NODE_ENV === 'development') {
             console.log('[CRON-SERVICE] [DEV MODE] Omitiendo envío de mensaje de la tarde para Consultoría. Contenido:\n', content);
           } else {
-            await client.sendMessage(buzonJid, content);
+            await whatsappBot.sendToGroup(content, undefined, [], buzonJid);
           }
         }
       }
@@ -187,15 +181,13 @@ Dirección obligatoria:
           { role: 'user', content: promptCirculo }
         ]
       });
-      const content = response.choices[0]?.message?.content;
       if (content && content.trim() !== "") {
         const circuloJid = whatsappBot.circuloGroupId;
-        const client = (whatsappBot as any).client;
-        if (client && circuloJid) {
+        if (circuloJid) {
           if (process.env.NODE_ENV === 'development') {
             console.log('[CRON-SERVICE] [DEV MODE] Omitiendo envío de mensaje de la tarde para Círculo Cero. Contenido:\n', content);
           } else {
-            await client.sendMessage(circuloJid, content);
+            await whatsappBot.sendToGroup(content, undefined, [], circuloJid);
           }
         }
       }

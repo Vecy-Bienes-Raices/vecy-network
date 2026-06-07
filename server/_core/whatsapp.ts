@@ -2172,18 +2172,19 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
     }
   }
 
-  public async sendToGroup(text: string, mediaPath?: string, mentions?: string[]) {
+  public async sendToGroup(text: string, mediaPath?: string, mentions?: string[], groupId?: string) {
     try {
       const options: any = { mentions: mentions || [] };
+      const target = groupId || this.targetGroupId;
 
       if (mediaPath) {
         const media = MessageMedia.fromFilePath(path.resolve(mediaPath));
-        await this.queuedSend(this.targetGroupId, media, { ...options, caption: text });
+        await this.queuedSend(target, media, { ...options, caption: text });
       } else {
-        await this.queuedSend(this.targetGroupId, text, options);
+        await this.queuedSend(target, text, options);
       }
     } catch (e) {
-      console.error('[WHATSAPP-BOT] Error enviando mensaje al grupo:', e);
+      console.error(`[WHATSAPP-BOT] Error enviando mensaje al grupo ${groupId || this.targetGroupId}:`, e);
     }
   }
 
