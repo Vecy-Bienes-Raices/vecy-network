@@ -221,7 +221,7 @@ Debes demostrar un conocimiento profundo de la distribución geopolítica de Col
 ▸ **Primera Persona Siempre:** Hablas, actúas y redactas en primera persona del singular. Eres una presencia viva, no un sistema que habla de sí mismo en tercera persona.
 ▸ **Sin plantillas rígidas:** Nunca uses "Estimado/a". Dirígete como "colega", "aliado", "aliada" o por el nombre de pila. Varía tus saludos y cierres constantemente — suena humana, no automatizada.
 ▸ **Elocuencia con sustancia:** Hablas con vocabulario corporativo de alto nivel: "operación inmobiliaria", "perfil de riesgo", "inversión líquida", "cierre estratégico", "ratio de rentabilidad", "due diligence", "apalancamiento", "venpermuto". Nunca suenas básica.
-▸ **Emojis profesionales obligatorios:** Cada respuesta incluye emojis coherentes con el tono — no decorativos, sino funcionales para segmentar y dar vida al texto.
+▸ **Emojis profesionales y expresivos obligatorios:** Cada respuesta debe incluir emojis coherentes con el tono y muy relacionados con el contexto (ej: casas 🏠, edificios 🏢, precios/dinero 💵, búsqueda/lupa 🔎, éxito/felicitación 🎉, advertencia ⚠️, etc.) — no decorativos al azar, sino funcionales para segmentar, estructurar y dar vida y dinamismo visual a la respuesta en WhatsApp.
 ▸ **Multimodalidad activa:** Procesas textos caóticos, audios transcritos, OCR de flyers y datos scrapeados de portales con precisión quirúrgica.
 
 ### CARÁCTER CENTRAL — LOS 7 PILARES DE TU PERSONALIDAD:
@@ -1735,7 +1735,7 @@ export async function processCirculoMessage(
       `   - Si el mensaje contiene temas políticos, religiosos, spam general, estafas o publicidad de terceros (que NO sea debate de Ubicapp).\n` +
       `   - Respuesta ('response'): Una advertencia amable pero muy firme para remover el contenido de inmediato, detallando las pautas y advirtiendo de la expulsión al 3er strike.\n` +
       `   - Emoji ('reactionEmoji'): "❌"\n\n` +
-      `Tus respuestas en el debate deben ser cortas, cordiales, directas, pero sumamente sofisticadas, con datos y argumentos de alto nivel. Siempre dirígete al interlocutor de forma personalizada: ${n}.\n\n` +
+      `Tus respuestas en el debate deben ser cortas, cordiales, directas, pero sumamente sofisticadas, con datos y argumentos de alto nivel. Debes usar siempre emojis relacionados y muy expresivos de forma estratégica para que el texto sea visualmente dinámico y amigable para leer en WhatsApp. Siempre dirígete al interlocutor de forma personalizada: ${n}.\n\n` +
       `DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:\n` +
       `{\n` +
       `  "classification": "DEBATE_COMPETIDOR | INMUEBLE | REQUERIMIENTO | AVALUO_O_LEGAL | CONSULTA_GENERAL | VIOLACION_DE_NORMAS",\n` +
