@@ -45,11 +45,8 @@ Dirección obligatoria:
       });
       const content = response.choices[0]?.message?.content;
       if (content && content.trim() !== "") {
-        if (process.env.NODE_ENV === 'development') {
-          console.log('[CRON-SERVICE] [DEV MODE] Omitiendo envío de mensaje de la mañana para Inmuebles. Contenido:\n', content);
-        } else {
-          await whatsappBot.sendToGroup(content, undefined, []);
-        }
+        console.log('[CRON-SERVICE] Enviando mensaje matutino a VECY INMUEBLES NETWORK...');
+        await whatsappBot.sendToGroup(content, undefined, []);
       }
     } catch (e: any) {
       console.error('❌ Error al generar mensaje matutino para Inmuebles:', e.message);
@@ -73,11 +70,8 @@ Dirección obligatoria:
       if (content && content.trim() !== "") {
         const buzonJid = whatsappBot.buzonGroupId;
         if (buzonJid) {
-          if (process.env.NODE_ENV === 'development') {
-            console.log('[CRON-SERVICE] [DEV MODE] Omitiendo envío de mensaje de la mañana para Consultoría. Contenido:\n', content);
-          } else {
-            await whatsappBot.sendToGroup(content, undefined, [], buzonJid);
-          }
+          console.log('[CRON-SERVICE] Enviando mensaje matutino a CONSULTORÍA JURÍDICA INMOBILIARIA...');
+          await whatsappBot.sendToGroup(content, undefined, [], buzonJid);
         }
       }
     } catch (e: any) {
@@ -104,11 +98,8 @@ Dirección obligatoria:
       if (content && content.trim() !== "") {
         const circuloJid = whatsappBot.circuloGroupId;
         if (circuloJid) {
-          if (process.env.NODE_ENV === 'development') {
-            console.log('[CRON-SERVICE] [DEV MODE] Omitiendo envío de mensaje de la mañana para Círculo Cero. Contenido:\n', content);
-          } else {
-            await whatsappBot.sendToGroup(content, undefined, [], circuloJid);
-          }
+          console.log('[CRON-SERVICE] Enviando mensaje matutino a CÍRCULO CERO...');
+          await whatsappBot.sendToGroup(content, undefined, [], circuloJid);
         }
       }
     } catch (e: any) {
@@ -135,11 +126,8 @@ Dirección obligatoria:
       });
       const content = response.choices[0]?.message?.content;
       if (content && content.trim() !== "") {
-        if (process.env.NODE_ENV === 'development') {
-          console.log('[CRON-SERVICE] [DEV MODE] Omitiendo envío de mensaje de la tarde para Inmuebles. Contenido:\n', content);
-        } else {
-          await whatsappBot.sendToGroup(content, undefined, []);
-        }
+        console.log('[CRON-SERVICE] Enviando mensaje de la tarde a VECY INMUEBLES NETWORK...');
+        await whatsappBot.sendToGroup(content, undefined, []);
       }
     } catch (e: any) {
       console.error('❌ Error al generar mensaje de la tarde para Inmuebles:', e.message);
@@ -161,11 +149,8 @@ Dirección obligatoria:
       if (content && content.trim() !== "") {
         const buzonJid = whatsappBot.buzonGroupId;
         if (buzonJid) {
-          if (process.env.NODE_ENV === 'development') {
-            console.log('[CRON-SERVICE] [DEV MODE] Omitiendo envío de mensaje de la tarde para Consultoría. Contenido:\n', content);
-          } else {
-            await whatsappBot.sendToGroup(content, undefined, [], buzonJid);
-          }
+          console.log('[CRON-SERVICE] Enviando mensaje de la tarde a CONSULTORÍA JURÍDICA INMOBILIARIA...');
+          await whatsappBot.sendToGroup(content, undefined, [], buzonJid);
         }
       }
     } catch (e: any) {
@@ -188,11 +173,8 @@ Dirección obligatoria:
       if (content && content.trim() !== "") {
         const circuloJid = whatsappBot.circuloGroupId;
         if (circuloJid) {
-          if (process.env.NODE_ENV === 'development') {
-            console.log('[CRON-SERVICE] [DEV MODE] Omitiendo envío de mensaje de la tarde para Círculo Cero. Contenido:\n', content);
-          } else {
-            await whatsappBot.sendToGroup(content, undefined, [], circuloJid);
-          }
+          console.log('[CRON-SERVICE] Enviando mensaje de la tarde a CÍRCULO CERO...');
+          await whatsappBot.sendToGroup(content, undefined, [], circuloJid);
         }
       }
     } catch (e: any) {
@@ -272,11 +254,8 @@ Dirección obligatoria:
 
         const content = response.choices[0]?.message?.content;
         if (content && content.trim() !== "") {
-          if (process.env.NODE_ENV === 'development') {
-            console.log(`[CRON-SERVICE] [DEV MODE] Omitiendo envío de audio motivador para ${grupo.nombre}. Transcripción:\n`, content);
-          } else {
-            await whatsappBot.sendVoiceToGroup(content, grupo.id);
-          }
+          console.log(`[CRON-SERVICE] Enviando audio motivador a ${grupo.nombre}...`);
+          await whatsappBot.sendVoiceToGroup(content, grupo.id);
         }
         
         // Esperar un pequeño retraso entre grupos para no saturar la API de TTS ni enviar todo a la vez
@@ -370,11 +349,8 @@ async function sendMatchBulletin(periodName: string) {
                   `\n▸ Cruces en los últimos 30 días: *${countMes}*\n`;
     }
 
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[CRON-SERVICE] [DEV MODE] Omitiendo envío de boletín de matches. Contenido:\n', bulletin);
-    } else {
-      await whatsappBot.sendToGroup(bulletin, undefined, Array.from(new Set(jidsToMention)));
-    }
+    console.log('[CRON-SERVICE] Enviando boletín de matches a VECY INMUEBLES NETWORK...');
+    await whatsappBot.sendToGroup(bulletin, undefined, Array.from(new Set(jidsToMention)));
     console.log(`[CRON-SERVICE] Boletín ${periodName} enviado con éxito.`);
 
   } catch (error) {
