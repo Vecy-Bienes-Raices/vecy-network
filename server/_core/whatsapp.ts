@@ -747,9 +747,12 @@ export class WhatsAppBot {
       })();
     });
 
-    this.client.on('disconnected', (reason) => {
-      console.log('[WHATSAPP-BOT] Cliente desconectado:', reason);
+    this.client.on('disconnected', async (reason) => {
+      console.warn('[WHATSAPP-BOT] ⚠️ Cliente desconectado:', reason, '— iniciando reconexión automática en 10s...');
       this.isReady = false;
+      // Esperamos 10 segundos antes de reconectar para que WhatsApp libere sus recursos
+      await new Promise(resolve => setTimeout(resolve, 10000));
+      await this.reconnectClient();
     });
 
     this.client.on('group_membership_request', async (notification: any) => {
@@ -2586,6 +2589,11 @@ Dirección obligatoria:
   }
 
   public initialize() {
+    if (process.env.USE_WHATSAPP_CLOUD_API === 'true') {
+      console.log('[WHATSAPP-BOT] Inicializando en modo WhatsApp Cloud API (Meta) - Puppeteer desactivado.');
+      this.isReady = true;
+      return;
+    }
     this.client.initialize().catch(err => {
       console.error('[WHATSAPP-BOT] Error crítico durante la inicialización de whatsapp-web.js:', err);
     });
