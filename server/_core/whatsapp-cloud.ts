@@ -113,15 +113,19 @@ export async function sendCloudMessage(chatId: string, content: any, options: an
     return;
   }
 
-  const phone = chatId.split("@")[0];
+  // Detectar si el destino es un grupo (@g.us) o un individuo (@c.us)
+  const isGroup = chatId.includes("@g.us");
+  // Para grupos usamos el JID completo como "to"; para individuos solo el número
+  const to = isGroup ? chatId : chatId.split("@")[0];
+  const recipientType = isGroup ? "group" : "individual";
 
   try {
     // 1. Text message
     if (typeof content === "string") {
       const payload: any = {
         messaging_product: "whatsapp",
-        recipient_type: "individual",
-        to: phone,
+        recipient_type: recipientType,
+        to,
         type: "text",
         text: {
           preview_url: false,
@@ -135,7 +139,7 @@ export async function sendCloudMessage(chatId: string, content: any, options: an
         };
       }
 
-      console.log(`[WHATSAPP-CLOUD] Sending text message to ${phone}...`);
+      console.log(`[WHATSAPP-CLOUD] Sending text message to ${to} (${recipientType})...`);
       const res = await fetch(`https://graph.facebook.com/v18.0/${phoneId}/messages`, {
         method: "POST",
         headers: {
@@ -147,9 +151,9 @@ export async function sendCloudMessage(chatId: string, content: any, options: an
 
       if (!res.ok) {
         const errText = await res.text();
-        console.error(`[WHATSAPP-CLOUD] Text send failed: ${res.status} - ${errText}`);
+        console.error(`[WHATSAPP-CLOUD] Text send failed to ${to}: ${res.status} - ${errText}`);
       } else {
-        console.log(`[WHATSAPP-CLOUD] Text message successfully sent to ${phone}`);
+        console.log(`[WHATSAPP-CLOUD] ✅ Text message successfully sent to ${to} (${recipientType})`);
       }
       return;
     }
@@ -173,8 +177,8 @@ export async function sendCloudMessage(chatId: string, content: any, options: an
       const type = isAudio ? "audio" : isImage ? "image" : "document";
       const payload: any = {
         messaging_product: "whatsapp",
-        recipient_type: "individual",
-        to: phone,
+        recipient_type: recipientType,
+        to,
         type,
         [type]: {
           id: mediaId
@@ -188,7 +192,7 @@ export async function sendCloudMessage(chatId: string, content: any, options: an
         };
       }
 
-      console.log(`[WHATSAPP-CLOUD] Sending media message of type '${type}' to ${phone}...`);
+      console.log(`[WHATSAPP-CLOUD] Sending media message of type '${type}' to ${to} (${recipientType})...`);
       const res = await fetch(`https://graph.facebook.com/v18.0/${phoneId}/messages`, {
         method: "POST",
         headers: {
@@ -200,9 +204,9 @@ export async function sendCloudMessage(chatId: string, content: any, options: an
 
       if (!res.ok) {
         const errText = await res.text();
-        console.error(`[WHATSAPP-CLOUD] Media send failed (${type}): ${res.status} - ${errText}`);
+        console.error(`[WHATSAPP-CLOUD] Media send failed (${type}) to ${to}: ${res.status} - ${errText}`);
       } else {
-        console.log(`[WHATSAPP-CLOUD] Media message (${type}) successfully sent to ${phone}`);
+        console.log(`[WHATSAPP-CLOUD] ✅ Media message (${type}) successfully sent to ${to} (${recipientType})`);
       }
       return;
     }
