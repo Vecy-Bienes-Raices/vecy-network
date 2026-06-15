@@ -2331,7 +2331,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         return;
       }
       
-      const messages = await chat.fetchMessages({ limit: 1500 });
+      const messages = await chat.fetchMessages({ limit: 50 });
       console.log(`[WHATSAPP-BOT] Analizando ${messages.length} mensajes en búsqueda de uniones...`);
       
       const joinList: any[] = [];
@@ -2357,6 +2357,8 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
           let contactName = 'Desconocido';
           if (author) {
             try {
+              // Retardo de 500ms para evitar spam a la API de WhatsApp
+              await new Promise(resolve => setTimeout(resolve, 500));
               const contact = await this.client.getContactById(author);
               contactName = contact.name || contact.pushname || '';
             } catch (e) {}
