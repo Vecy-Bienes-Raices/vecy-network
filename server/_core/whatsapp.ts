@@ -468,6 +468,7 @@ export class WhatsAppBot {
   private lastResetDate: string = new Date().toDateString();
   private chatMessageTimes: Map<string, number[]> = new Map();
   private blockedChats: Map<string, number> = new Map();
+  private redirectCooldowns: Map<string, number> = new Map();
   private blacklistedBots: string[] = process.env.BLACKLISTED_BOTS ? process.env.BLACKLISTED_BOTS.split(',') : [];
   private watchdogInterval: NodeJS.Timeout | null = null;
 
@@ -515,8 +516,10 @@ export class WhatsAppBot {
 
         // Indicador de estado y retardo realista: 🎙️ grabando si es audio, ✍️ escribiendo si es texto
         const isGroup = chatId.includes('@g.us');
+        const shouldUseCloud = process.env.USE_WHATSAPP_CLOUD_API === 'true' && (!isGroup || process.env.ENABLE_PUPPETEER_FOR_GROUPS !== 'true');
+
         let typingDelay = 200;
-        if (process.env.USE_WHATSAPP_CLOUD_API === 'true') {
+        if (shouldUseCloud) {
           const isAudio = (content && content.mimetype && content.mimetype.startsWith('audio')) ||
                           (options && options.sendAudioAsVoice);
           if (isAudio) {
@@ -555,7 +558,7 @@ export class WhatsAppBot {
 
         // Promesa de envío con timeout de 15 segundos para evitar bloqueos por chats inaccesibles o páginas caídas
         let sendPromise;
-        if (process.env.USE_WHATSAPP_CLOUD_API === 'true') {
+        if (shouldUseCloud) {
           const { sendCloudMessage } = await import("./whatsapp-cloud");
           sendPromise = sendCloudMessage(chatId, content, options);
         } else {
@@ -568,7 +571,7 @@ export class WhatsAppBot {
         await Promise.race([sendPromise, timeoutPromise]);
 
         // Limpiar el estado de presencia
-        if (process.env.USE_WHATSAPP_CLOUD_API !== 'true') {
+        if (!shouldUseCloud) {
           try {
             const chat = await this.client.getChatById(chatId);
             await chat.clearState();
@@ -956,6 +959,18 @@ export class WhatsAppBot {
 
         // 2. RAMA Conversacional PRIVADA (DM Branch - v11.15 - Con Buffer anti-duplicados)
         if (!isGroup) {
+          if (process.env.USE_WHATSAPP_CLOUD_API === 'true' && process.env.ENABLE_PUPPETEER_FOR_GROUPS === 'true') {
+            const now = Date.now();
+            const lastRedirect = this.redirectCooldowns.get(senderId) || 0;
+            const TWELVE_HOURS = 12 * 60 * 60 * 1000;
+            if (now - lastRedirect > TWELVE_HOURS) {
+              this.redirectCooldowns.set(senderId, now);
+              const redirectLink = process.env.WHATSAPP_OFFICIAL_DM_LINK || 'https://wa.me/REEMPLAZAR_CON_NUMERO_DE_META_OFICIAL';
+              const welcomeText = `¡Hola! 🤖 Soy JanIA, la asistente de la Red VECY.\n\nEste número lo utilizo *únicamente para interactuar en los grupos inmobiliarios*.\n\nPara chatear conmigo en privado, buscar inmuebles, transcribir audios y usar todas mis herramientas, por favor escríbeme a mi chat oficial directo:\n\n👉 ${redirectLink}`;
+              await this.queuedSend(chatId, welcomeText);
+            }
+            return;
+          }
           await this.handleIncomingMessage(msg, chatId);
           return;
         }
@@ -2589,11 +2604,21 @@ Dirección obligatoria:
   }
 
   public initialize() {
-    if (process.env.USE_WHATSAPP_CLOUD_API === 'true') {
-      console.log('[WHATSAPP-BOT] Inicializando en modo WhatsApp Cloud API (Meta) - Puppeteer desactivado.');
+    const useCloud = process.env.USE_WHATSAPP_CLOUD_API === 'true';
+    const enablePupForGroups = process.env.ENABLE_PUPPETEER_FOR_GROUPS === 'true';
+
+    if (useCloud && !enablePupForGroups) {
+      console.log('[WHATSAPP-BOT] Inicializando en modo WhatsApp Cloud API (Meta) puro - Puppeteer desactivado.');
       this.isReady = true;
       return;
     }
+
+    if (useCloud && enablePupForGroups) {
+      console.log('[WHATSAPP-BOT] Inicializando en MODO HÍBRIDO: DMs por Cloud API (Meta) + Grupos por Puppeteer (inicializando cliente...).');
+    } else {
+      console.log('[WHATSAPP-BOT] Inicializando en modo Puppeteer puro (inicializando cliente...).');
+    }
+
     this.client.initialize().catch(err => {
       console.error('[WHATSAPP-BOT] Error crítico durante la inicialización de whatsapp-web.js:', err);
     });
