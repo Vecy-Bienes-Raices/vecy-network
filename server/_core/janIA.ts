@@ -640,6 +640,25 @@ Por favor responde a este mensaje diciendo únicamente:
 
     extraDMs.push({ jid: ownerJid, message: ownerDM });
     extraDMs.push({ jid: seekerJid, message: seekerDM });
+
+    // Enviar notificación por DM al administrador (3166569719)
+    const adminPhone = "573166569719";
+    const adminJid = `${adminPhone}@c.us`;
+    const adminMessage = `📢 *NUEVA COINCIDENCIA DETECTADA* (Coincidencia: ${score.toFixed(0)}%)
+📌 *Código:* #M${matchId}
+
+📣 *REQUERIMIENTO*
+• Autor: ${isProperty ? matchedUserName : savedUserName}
+• Teléfono: +${isProperty ? matchedRawPhone : savedRawPhone}
+• Detalle: ${reqItem.rawText || 'Sin descripción'}
+
+🏠 *PROPIEDAD*
+• Autor: ${isProperty ? savedUserName : matchedUserName}
+• Teléfono: +${isProperty ? savedRawPhone : matchedRawPhone}
+• Detalle: ${propItem.rawText || 'Sin descripción'}
+• Precio: ${propItem.price ? Number(propItem.price).toLocaleString('es-CO') + ' COP' : 'N/A'}`;
+    
+    extraDMs.push({ jid: adminJid, message: adminMessage });
   }
 
   const responseText = matchBlocks.join('\n\n================================\n\n');

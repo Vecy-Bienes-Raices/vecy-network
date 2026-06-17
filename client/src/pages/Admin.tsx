@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useLocation } from 'wouter';
 import {
-  LogOut, Home, Building2, Users, MessageSquare, BarChart3, Menu, X, GitBranch, Shield
+  LogOut, Home, Building2, Users, MessageSquare, BarChart3, Menu, X, GitBranch, Shield, Sparkles
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import AdminProperties from '@/components/admin/AdminProperties';
@@ -10,9 +10,11 @@ import AdminLeads from '@/components/admin/AdminLeads';
 import AdminConversations from '@/components/admin/AdminConversations';
 import AdminReports from '@/components/admin/AdminReports';
 import AdminGitHubSync from '@/components/admin/AdminGitHubSync';
+import AdminMatches from '@/components/admin/AdminMatches';
 
 const tabs = [
   { id: 'properties', label: 'Inmuebles', icon: Building2 },
+  { id: 'matches', label: 'Coincidencias', icon: Sparkles },
   { id: 'leads', label: 'Prospectos', icon: Users },
   { id: 'conversations', label: 'Conversaciones', icon: MessageSquare },
   { id: 'reports', label: 'Reportes', icon: BarChart3 },
@@ -54,6 +56,7 @@ export default function Admin() {
   const renderContent = () => {
     switch (activeTab) {
       case 'properties':    return <AdminProperties />;
+      case 'matches':       return <AdminMatches />;
       case 'github':        return <AdminGitHubSync />;
       case 'leads':         return <AdminLeads />;
       case 'conversations': return <AdminConversations />;

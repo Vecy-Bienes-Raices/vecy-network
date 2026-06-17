@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { publicProcedure, router } from '../_core/trpc';
 import { invokeLLM } from '../_core/llm';
 import { getDb } from '../db';
-import { conversations, messages, leads, propertyMatches, properties } from '../../drizzle/schema';
+import { conversations, messages, leads, propertyMatches, properties, requirements } from '../../drizzle/schema';
 import { eq, desc } from 'drizzle-orm';
 import { scrapePropertyLink } from '../_core/scraper';
 import { JANIA_PROMPT } from '../_core/janIA';
@@ -304,6 +304,55 @@ export const janIARouter = router({
         return matches;
       } catch (error) {
         console.error('Error getting property matches:', error);
+        throw error;
+      }
+    }),
+
+  // Get all matches in the network
+  getAllMatches: publicProcedure
+    .query(async () => {
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+
+      try {
+        const matches = await db
+          .select({
+            id: propertyMatches.id,
+            matchScore: propertyMatches.matchScore,
+            matchReason: propertyMatches.matchReason,
+            status: propertyMatches.status,
+            createdAt: propertyMatches.createdAt,
+            property: {
+              id: properties.id,
+              name: properties.name,
+              price: properties.price,
+              city: properties.city,
+              zone: properties.zone,
+              idUsuarioWhatsapp: properties.idUsuarioWhatsapp,
+              propertyType: properties.propertyType,
+              transactionType: properties.transactionType,
+              rawText: properties.rawText,
+            },
+            requirement: {
+              id: requirements.id,
+              name: requirements.name,
+              presupuestoMax: requirements.presupuestoMax,
+              ciudadDeseada: requirements.ciudadDeseada,
+              zonaDeseada: requirements.zonaDeseada,
+              idUsuarioWhatsapp: requirements.idUsuarioWhatsapp,
+              tipoInmuebleDeseado: requirements.tipoInmuebleDeseado,
+              tipoNegocioDeseado: requirements.tipoNegocioDeseado,
+              rawText: requirements.rawText,
+            }
+          })
+          .from(propertyMatches)
+          .innerJoin(properties, eq(propertyMatches.propertyId, properties.id))
+          .innerJoin(requirements, eq(propertyMatches.requirementId, requirements.id))
+          .orderBy(desc(propertyMatches.createdAt));
+
+        return matches;
+      } catch (error) {
+        console.error('Error getting all matches:', error);
         throw error;
       }
     }),
