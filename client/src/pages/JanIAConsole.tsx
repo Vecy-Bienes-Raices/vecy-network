@@ -186,7 +186,10 @@ export default function JanIAConsole() {
   const [selectedModel, setSelectedModel] = useState('pro'); // 'pro' | 'flash'
   const [sessionId, setSessionId] = useState(() => `session-${Date.now()}-${Math.random()}`);
   const [playingId, setPlayingId] = useState<string | null>(null);
+  const [isVoiceRecording, setIsVoiceRecording] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
   useEffect(() => {
     return () => {
@@ -224,6 +227,104 @@ export default function JanIAConsole() {
       setPlayingId(null);
     };
   };
+
+  // ── VOICE NOTE RECORDING ────────────────────────────────────────────────────
+  const handleStartVoiceRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const options = MediaRecorder.isTypeSupported('audio/webm') ? { mimeType: 'audio/webm' } : {};
+      const mediaRecorder = new MediaRecorder(stream, options);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        const mimeType = mediaRecorder.mimeType || 'audio/webm';
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+        stream.getTracks().forEach(t => t.stop());
+        await handleVoiceNoteUpload(audioBlob);
+      };
+
+      mediaRecorder.start(250); // collect data every 250ms
+      setIsVoiceRecording(true);
+    } catch (err) {
+      console.error('Mic error:', err);
+      alert('No se pudo acceder al micrófono. Verifica los permisos de tu navegador.');
+    }
+  };
+
+  const handleStopVoiceRecording = () => {
+    if (mediaRecorderRef.current && isVoiceRecording) {
+      mediaRecorderRef.current.stop();
+      setIsVoiceRecording(false);
+    }
+  };
+
+  const handleVoiceNoteUpload = async (audioBlob: Blob) => {
+    setIsLoading(true);
+    const userMsgId = `msg-${Date.now()}`;
+    try {
+      // Show placeholder while transcribing
+      const placeholderMsg: Message = {
+        id: userMsgId,
+        role: 'user',
+        content: '🎤 Transcribiendo nota de voz...',
+        messageType: 'audio',
+        timestamp: new Date(),
+      };
+      setMessages((prev: Message[]) => [...prev, placeholderMsg]);
+
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'voice-note.webm');
+      formData.append('sessionId', sessionId);
+
+      const transcribeRes = await fetch('/api/janIA/transcribe', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+      const transcribeData = await transcribeRes.json();
+      const transcribedText = transcribeData.transcription?.trim() || '[Nota de voz]';
+
+      // Update placeholder with actual transcription
+      setMessages((prev: Message[]) =>
+        prev.map(m => m.id === userMsgId
+          ? { ...m, content: `🎤 ${transcribedText}` }
+          : m
+        )
+      );
+
+      const response = await chatMutation.mutateAsync({ sessionId, message: transcribedText });
+
+      const janIAMsgId = `msg-${Date.now()}`;
+      const janIAMessage: Message = {
+        id: janIAMsgId,
+        role: 'janIA',
+        content: response.content,
+        messageType: 'text',
+        timestamp: new Date(),
+      };
+      setMessages((prev: Message[]) => [...prev, janIAMessage]);
+
+      // User sent voice → JanIA always responds with voice (conversational mode)
+      const textToSpeak = (response as any).voiceResponse || response.content;
+      playMessageVoice(janIAMsgId, textToSpeak);
+
+      if (isAuthenticated) refetchConversations();
+    } catch (err) {
+      console.error('Voice note error:', err);
+      setMessages((prev: Message[]) => [
+        ...prev.filter(m => m.id !== userMsgId),
+        { id: `msg-${Date.now()}`, role: 'janIA', content: '🎤 No pude procesar el audio. Intenta de nuevo.', messageType: 'text', timestamp: new Date() },
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  // ────────────────────────────────────────────────────────────────────────────
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -320,8 +421,9 @@ export default function JanIAConsole() {
         message: inputValue,
       });
 
+      const janIAMsgId = `msg-${Date.now()}`;
       const janIAMessage: Message = {
-        id: `msg-${Date.now()}`,
+        id: janIAMsgId,
         role: 'janIA',
         content: response.content,
         messageType: 'text',
@@ -329,7 +431,13 @@ export default function JanIAConsole() {
       };
 
       setMessages((prev: Message[]) => [...prev, janIAMessage]);
-      
+
+      // Auto-play JanIA voice when the LLM signals it wants audio
+      if ((response as any).wantsVoice) {
+        const textToSpeak = (response as any).voiceResponse || response.content;
+        playMessageVoice(janIAMsgId, textToSpeak);
+      }
+
       // Refresh sidebar list if user is logged in
       if (isAuthenticated) {
         refetchConversations();
@@ -562,9 +670,11 @@ export default function JanIAConsole() {
               <Button 
                 variant="ghost" 
                 size="icon" 
-                onClick={startSpeechRecognition}
-                className={`text-zinc-400 hover:text-primary hover:bg-white/5 rounded-full w-9 h-9 ${isRecording ? 'text-red-500 animate-pulse bg-red-500/10' : ''}`}
-                title="Grabar voz"
+                onClick={isVoiceRecording ? handleStopVoiceRecording : handleStartVoiceRecording}
+                className={`text-zinc-400 hover:text-primary hover:bg-white/5 rounded-full w-9 h-9 transition-all ${
+                  isVoiceRecording ? 'text-red-500 animate-pulse bg-red-500/10 scale-110' : ''
+                }`}
+                title={isVoiceRecording ? '⏹ Detener y enviar nota de voz' : '🎤 Enviar nota de voz'}
               >
                 <Mic className="w-5 h-5" />
               </Button>

@@ -34,6 +34,8 @@ export default function JanIAWidget({ propertyId, leadId }: JanIAWidgetProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
+  const [playingMsgId, setPlayingMsgId] = useState<string | null>(null);
 
   // TRPC Mutations (Properly placed at top level)
   const chatMutation = trpc.janIA.chat.useMutation();
@@ -92,6 +94,12 @@ export default function JanIAWidget({ propertyId, leadId }: JanIAWidgetProps) {
       };
 
       setMessages((prev: Message[]) => [...prev, janIAMessage]);
+
+      // Auto-play if JanIA wants to respond with voice
+      if ((response as any).wantsVoice) {
+        const textToSpeak = (response as any).voiceResponse || response.content;
+        handleSpeak(janIAMessage.id, textToSpeak);
+      }
     } catch (error) {
       console.error('Error sending message:', error);
       const errorMessage: Message = {
@@ -186,6 +194,10 @@ export default function JanIAWidget({ propertyId, leadId }: JanIAWidgetProps) {
       };
 
       setMessages(prev => [...prev, janIAMessage]);
+
+      // User sent voice note → JanIA always responds in voice (conversational mode)
+      const textToSpeak = (janIAResponse as any).voiceResponse || janIAResponse.content;
+      handleSpeak(janIAMessage.id, textToSpeak);
     } catch (error) {
       console.error('Error processing audio:', error);
     } finally {
@@ -248,13 +260,27 @@ export default function JanIAWidget({ propertyId, leadId }: JanIAWidgetProps) {
     }
   };
 
-  // Text to speech
-  const handleSpeak = (text: string) => {
-    if ('speechSynthesis' in window) {
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'es-CO';
-      window.speechSynthesis.speak(utterance);
+  // Text to speech using JanIA's real Achernar voice (Vertex AI / Google TTS)
+  const handleSpeak = (msgId: string, text: string) => {
+    // Stop any current playback
+    if (ttsAudioRef.current) {
+      ttsAudioRef.current.pause();
+      ttsAudioRef.current = null;
     }
+    setPlayingMsgId(null);
+
+    // Strip markdown and emoji for cleaner speech
+    const cleanText = text
+      .replace(/[*#_`~\[\]]/g, '')
+      .replace(/\n+/g, '. ')
+      .trim();
+
+    const audio = new Audio(`/api/jania/tts?text=${encodeURIComponent(cleanText)}`);
+    ttsAudioRef.current = audio;
+    setPlayingMsgId(msgId);
+    audio.play().catch(err => console.error('TTS playback error:', err));
+    audio.onended = () => { setPlayingMsgId(null); ttsAudioRef.current = null; };
+    audio.onerror = () => { setPlayingMsgId(null); ttsAudioRef.current = null; };
   };
 
   // Renderizador super ligero de Markdown para convertir **texto** en Bold
@@ -353,11 +379,19 @@ export default function JanIAWidget({ propertyId, leadId }: JanIAWidgetProps) {
                         ))}
                       </div>
                     )}
-                    <div className={`text-[10px] mt-2 opacity-50 ${message.role === 'user' ? 'text-black/70' : 'text-foreground/50'}`}>
-                      {message.timestamp.toLocaleTimeString('es-CO', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
+                    <div className={`flex items-center gap-2 mt-2 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                      <span className={`text-[10px] opacity-50 ${message.role === 'user' ? 'text-black/70' : 'text-foreground/50'}`}>
+                        {message.timestamp.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                      {message.role === 'janIA' && (
+                        <button
+                          onClick={() => handleSpeak(message.id, message.content)}
+                          className="p-1 rounded-full hover:bg-white/10 transition-colors"
+                          title="Escuchar con la voz de JanIA"
+                        >
+                          <Volume2 className={`w-3 h-3 ${playingMsgId === message.id ? 'text-primary animate-pulse' : 'text-foreground/40 hover:text-primary'}`} />
+                        </button>
+                      )}
                     </div>
                   </div>
                 </motion.div>
@@ -456,14 +490,14 @@ export default function JanIAWidget({ propertyId, leadId }: JanIAWidgetProps) {
               <button
                 className="w-full py-1 text-center text-primary/40 hover:text-primary transition-colors flex items-center justify-center gap-2"
                 onClick={() => {
-                  const lastMessage = messages[messages.length - 1];
-                  if (lastMessage?.role === 'janIA') {
-                    handleSpeak(lastMessage.content);
-                  }
+                  const lastMsg = messages[messages.length - 1];
+                  if (lastMsg?.role === 'janIA') handleSpeak(lastMsg.id, lastMsg.content);
                 }}
               >
-                <Volume2 className="w-3 h-3" />
-                <span className="text-[10px] uppercase font-bold tracking-tighter">Escuchar última respuesta</span>
+                <Volume2 className={`w-3 h-3 ${playingMsgId ? 'text-primary animate-pulse' : ''}`} />
+                <span className="text-[10px] uppercase font-bold tracking-tighter">
+                  {playingMsgId ? 'Reproduciendo...' : 'Escuchar última respuesta'}
+                </span>
               </button>
             </div>
           </motion.div>

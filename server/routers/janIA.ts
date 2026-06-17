@@ -105,16 +105,22 @@ export const janIARouter = router({
           ? response.choices[0].message.content 
           : 'No response';
 
-        // JanIA's system prompt instructs the LLM to always return a JSON object.
-        // We parse it and extract only the human-readable 'response' field for the web chat.
-        // If parsing fails (e.g., the model returned plain text), we use the raw string.
+        // JanIA's system prompt always returns a structured JSON object.
+        // Parse it to extract the human-readable fields for the web chat.
         let janIAResponse = rawLLMResponse;
+        let wantsVoice = false;
+        let voiceResponse = '';
         try {
-          // Strip possible markdown code fences (```json ... ```)
           const cleaned = rawLLMResponse.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim();
           const parsed = JSON.parse(cleaned);
           if (parsed && typeof parsed.response === 'string' && parsed.response.trim() !== '') {
             janIAResponse = parsed.response;
+          }
+          if (parsed && typeof parsed.wantsVoice === 'boolean') {
+            wantsVoice = parsed.wantsVoice;
+          }
+          if (parsed && typeof parsed.voiceResponse === 'string' && parsed.voiceResponse.trim() !== '') {
+            voiceResponse = parsed.voiceResponse;
           }
         } catch {
           // Not valid JSON — use the raw response as-is
@@ -147,8 +153,11 @@ export const janIARouter = router({
 
         return {
           content: janIAResponse,
+          wantsVoice,
+          voiceResponse: voiceResponse || janIAResponse,
           conversationId,
         };
+
       } catch (error) {
         console.error('Error in JanIA chat:', error);
         throw error;
