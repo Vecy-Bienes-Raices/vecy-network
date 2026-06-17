@@ -101,9 +101,24 @@ export const janIARouter = router({
           ],
         });
 
-        const janIAResponse = typeof response.choices[0]?.message?.content === 'string' 
+        const rawLLMResponse = typeof response.choices[0]?.message?.content === 'string' 
           ? response.choices[0].message.content 
           : 'No response';
+
+        // JanIA's system prompt instructs the LLM to always return a JSON object.
+        // We parse it and extract only the human-readable 'response' field for the web chat.
+        // If parsing fails (e.g., the model returned plain text), we use the raw string.
+        let janIAResponse = rawLLMResponse;
+        try {
+          // Strip possible markdown code fences (```json ... ```)
+          const cleaned = rawLLMResponse.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim();
+          const parsed = JSON.parse(cleaned);
+          if (parsed && typeof parsed.response === 'string' && parsed.response.trim() !== '') {
+            janIAResponse = parsed.response;
+          }
+        } catch {
+          // Not valid JSON — use the raw response as-is
+        }
 
         // Save user message
         await db.insert(messages).values({
@@ -113,7 +128,7 @@ export const janIARouter = router({
           messageType: 'text',
         });
 
-        // Save JanIA response
+        // Save JanIA response (clean text, not raw JSON)
         await db.insert(messages).values({
           conversationId: conversationId,
           role: 'janIA',
