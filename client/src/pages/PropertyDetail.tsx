@@ -109,9 +109,9 @@ export default function PropertyDetail() {
             <div className="text-5xl font-black text-primary mb-10 flex flex-wrap items-baseline gap-4">
               ${Number(property.price).toLocaleString('es-CO')}
               <span className="text-xs text-gray-500 font-bold uppercase tracking-widest">COP</span>
-              {(property.propertyDetails as any)?.administrationFee && (
+              {property.adminFee && (
                 <span className="text-sm text-gray-400 font-normal block sm:inline mt-2 sm:mt-0">
-                  + ${(property.propertyDetails as any).administrationFee.toLocaleString('es-CO')} Admin
+                  + ${Number(property.adminFee).toLocaleString('es-CO')} Admin
                 </span>
               )}
             </div>
@@ -164,7 +164,7 @@ export default function PropertyDetail() {
         {/* MEDIA SECTION */}
         <div className="grid lg:grid-cols-3 gap-12 mb-20 animate-fade-in delay-200">
           {/* Columna Video */}
-          {(property.propertyDetails as any)?.virtualTourVideo && (
+          {property.videoUrl && (
             <ScrollReveal direction="left" delay={0.3} className="lg:col-span-1">
               <div className="flex flex-col">
                 <h3 className="text-sm font-black text-white mb-6 uppercase tracking-[0.3em] flex items-center gap-2">
@@ -174,7 +174,7 @@ export default function PropertyDetail() {
                   <div className="aspect-[9/16] w-full max-w-[320px] rounded-[3rem] overflow-hidden shadow-[0_0_50px_rgba(191,149,63,0.1)] border-[8px] border-[#1a1a1a] relative bg-black ring-1 ring-white/10">
                     <iframe 
                       className="w-full h-full"
-                      src={(property.propertyDetails as any).virtualTourVideo} 
+                      src={property.videoUrl} 
                       title="Virtual Tour"
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
                       allowFullScreen
@@ -186,10 +186,10 @@ export default function PropertyDetail() {
           )}
 
           {/* Columna Galería */}
-          <div className={`${(property.propertyDetails as any)?.virtualTourVideo ? 'lg:col-span-2' : 'lg:col-span-3'}`}>
+          <div className={`${property.videoUrl ? 'lg:col-span-2' : 'lg:col-span-3'}`}>
             <ScrollReveal delay={0.4}>
               <h3 className="text-sm font-black text-white mb-6 uppercase tracking-[0.3em]">Galería de Activo</h3>
-              <PropertyGallery images={(property.images as string[]) || []} />
+              <PropertyGallery images={(property.images as string[]) || []} propertyName={property.name} />
             </ScrollReveal>
           </div>
         </div>
@@ -238,9 +238,11 @@ export default function PropertyDetail() {
                 <h3 className="text-xl font-bold text-white mb-6 uppercase tracking-wider">Ubicación Estratégica</h3>
                 <div className="h-64 rounded-2xl overflow-hidden border border-white/10">
                   <Map 
-                    lat={Number(property.latitude) || 4.6097} 
-                    lng={Number(property.longitude) || -74.0817} 
-                    zoom={15}
+                    initialCenter={{
+                      lat: Number(property.latitude) || 4.6097,
+                      lng: Number(property.longitude) || -74.0817
+                    }} 
+                    initialZoom={15}
                   />
                 </div>
               </div>
@@ -254,7 +256,7 @@ export default function PropertyDetail() {
         onClose={() => setShareModalOpen(false)}
         text={shareModalConfig.text}
         url={shareModalConfig.url}
-        title={shareModalConfig.modalTitle}
+        modalTitle={shareModalConfig.modalTitle}
       />
 
       <footer className="bg-black border-t border-white/10 py-20 mt-20">

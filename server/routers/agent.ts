@@ -117,6 +117,7 @@ export const agentRouter = router({
         id: properties.id,
         name: properties.name,
         matriculaInmobiliaria: properties.matriculaInmobiliaria,
+        location: properties.location,
       }
     })
     .from(referralLinks)

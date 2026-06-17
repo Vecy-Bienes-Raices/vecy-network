@@ -7,6 +7,7 @@
 import Navbar from '@/components/Navbar';
 import PropertyCard from '@/components/PropertyCard';
 import { useMemo, useState } from 'react';
+import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { Loader2 } from 'lucide-react';
 import { ScrollReveal } from '@/components/ScrollReveal';
@@ -28,6 +29,7 @@ const FILTER_LABELS: Record<FilterType, string> = {
 };
 
 export default function Properties() {
+  const [, navigate] = useLocation();
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [sortBy, setSortBy] = useState<'default' | 'price-asc' | 'price-desc'>('default');
 
@@ -129,7 +131,7 @@ export default function Properties() {
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
               {displayProperties.map((prop, idx) => {
                 const images = prop.images as string[] | null;
-                const area = prop.areaSquareMeters ? Number(prop.areaSquareMeters) : 0;
+                const area = prop.areaTotal ? Number(prop.areaTotal) : 0;
                 
                 return (
                   <ScrollReveal key={prop.id} delay={(idx % 3) * 0.1} direction="up">

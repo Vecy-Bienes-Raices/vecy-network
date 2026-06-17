@@ -144,6 +144,8 @@ var init_schema = __esm({
       featured: boolean("featured").default(false),
       available: boolean("available").default(true),
       idUsuarioWhatsapp: varchar("idUsuarioWhatsapp", { length: 100 }),
+      sourceRepository: varchar("sourceRepository", { length: 255 }),
+      lastSyncedAt: timestamp("lastSyncedAt"),
       createdAt: timestamp("createdAt").defaultNow().notNull(),
       updatedAt: timestamp("updatedAt").defaultNow().notNull()
     });
@@ -2526,6 +2528,22 @@ Por favor responde a este mensaje diciendo \xFAnicamente:
 \u26A0\uFE0F *Nota importante:* Debes incluir el c\xF3digo *#M${matchId}* para poder saber a cu\xE1l coincidencia te refieres. Los n\xFAmeros de WhatsApp de ambos se compartir\xE1n de forma autom\xE1tica de inmediato \xFAnicamente si **ambas partes** confirman con *S\xCD #M${matchId}* dentro de las pr\xF3ximas 24 horas.`;
     extraDMs.push({ jid: ownerJid, message: ownerDM });
     extraDMs.push({ jid: seekerJid, message: seekerDM });
+    const adminPhone = "573166569719";
+    const adminJid = `${adminPhone}@c.us`;
+    const adminMessage = `\u{1F4E2} *NUEVA COINCIDENCIA DETECTADA* (Coincidencia: ${score.toFixed(0)}%)
+\u{1F4CC} *C\xF3digo:* #M${matchId}
+
+\u{1F4E3} *REQUERIMIENTO*
+\u2022 Autor: ${isProperty ? matchedUserName : savedUserName}
+\u2022 Tel\xE9fono: +${isProperty ? matchedRawPhone : savedRawPhone}
+\u2022 Detalle: ${reqItem.rawText || "Sin descripci\xF3n"}
+
+\u{1F3E0} *PROPIEDAD*
+\u2022 Autor: ${isProperty ? savedUserName : matchedUserName}
+\u2022 Tel\xE9fono: +${isProperty ? savedRawPhone : matchedRawPhone}
+\u2022 Detalle: ${propItem.rawText || "Sin descripci\xF3n"}
+\u2022 Precio: ${propItem.price ? Number(propItem.price).toLocaleString("es-CO") + " COP" : "N/A"}`;
+    extraDMs.push({ jid: adminJid, message: adminMessage });
   }
   const responseText = matchBlocks.join("\n\n================================\n\n");
   return {
@@ -3616,6 +3634,22 @@ VECY est\xE1 construyendo el portal inmobiliario m\xE1s avanzado, funcional e in
 - **"\xBFPor qu\xE9 no usan Ubicapp?"**: "VECY y Ubicapp no se excluyen \u2014 de hecho, los usas en paralelo si quieres. Pero VECY tiene algo que ninguna app puede replicar: vive donde ya trabajas (WhatsApp), no te cuesta nada, y no toca tu comisi\xF3n. Eso no tiene precio."
 - **"Ubicapp tiene m\xE1s funciones"**: "Ubicapp tiene funciones documentales valiosas (contratos, actas). VECY tiene IA multimodal de matching en tiempo real que ninguna app tiene. Son fortalezas distintas. Usa Ubicapp para tus documentos y VECY para multiplicar tus cierres comerciales \u2014 sin pagar nada adicional."
 - **Tono siempre**: Sofisticado, seguro, elocuente, basado en hechos reales, nunca agresivo ni despectivo. Eres la socia estrat\xE9gica m\xE1s avanzada e informada de la red. Debates con elegancia corporativa y datos precisos.
+
+### FICHA DE COMPARACI\xD3N CON OTROS COMPETIDORES (Wasi, Qurador, MercadoLibre, Ciencuadras, etc.):
+- **Wasi**: Es un CRM y MLS tradicional.
+  \u25B8 *Desventaja*: Es un software pasivo de administraci\xF3n interna. Exige que el agente ingrese datos manualmente en su plataforma y pague una suscripci\xF3n mensual (de $20 USD a $50+ USD/mes). No cuenta con IA conversacional nativa en WhatsApp ni matching sem\xE1ntico predictivo instant\xE1neo y automatizado en tiempo real.
+  \u25B8 *Ventaja VECY*: Cero costo, cero registro manual tedioso (JanIA extrae todo de tu lenguaje natural o flyers), y el matching es autom\xE1tico e inmediato en segundos dentro del grupo.
+- **Qurador**: Plataforma cerrada de negocios inmobiliarios.
+  \u25B8 *Desventaja*: Es un sistema de intermediaci\xF3n que cobra membres\xEDas y comisiones altas a los asesores para permitirles cruzar y compartir negocios, oblig\xE1ndolos a salir de sus chats y operar en su entorno propietario.
+  \u25B8 *Ventaja VECY*: Colaboraci\xF3n 100% libre y gratuita. JanIA vive directamente en WhatsApp, promoviendo una red abierta nacional sin capturar porcentaje de tu comisi\xF3n.
+- **MercadoLibre (Inmuebles) / Portales Pasivos (Ciencuadras, Fincaraiz, Metrocuadrado)**: Directorios est\xE1ticos y pasivos de anuncios clasificados.
+  \u25B8 *Desventaja*: Cobran altas tarifas por paquetes de visibilidad que no garantizan cierres. Est\xE1n saturados de anuncios repetidos, duplicados, desactualizados y spam. No son colaborativos, promueven la guerra de precios y carecen de inteligencia de emparejamiento. El agente publica y espera pasivamente.
+  \u25B8 *Ventaja VECY*: Es un ecosistema activo y colaborativo. No es una vitrina muerta: JanIA busca y notifica de forma proactiva al agente su contraparte comercial en segundos tras publicar. Y es 100% gratis.
+
+- **Manejo de debates espec\xEDficos:**
+  \u25B8 *Si comparan con Wasi*: "Wasi es una excelente herramienta de gesti\xF3n interna de inventario (un CRM), pero no tiene matching en tiempo real, no tiene IA multimodal y requiere que dediques horas cargando datos en formularios. En VECY no te cobramos un centavo, puedes enviarme un audio o un flyer por WhatsApp, y te consigo el match en segundos. Son herramientas complementarias: usa Wasi de inventario si deseas, y VECY para cerrar negocios."
+  \u25B8 *Si comparan con Qurador*: "Qurador intenta centralizar a los br\xF3kers bajo cobros de comisi\xF3n y membres\xEDas exclusivas. Nosotros creemos en una red abierta, donde la tecnolog\xEDa sirve al asesor sin quitarle un solo peso de sus comisiones."
+  \u25B8 *Si comparan con MercadoLibre*: "MercadoLibre es una excelente vitrina para vender productos masivos, pero en inmuebles es un portal pasivo m\xE1s, lleno de datos duplicados y desactualizados, donde publicas y rezas para que te llamen. VECY cruza y te empareja de forma inteligente y activa al instante."
 
 ## BIT\xC1CORA DE APRENDIZAJE Y CASOS DE REFERENCIA (MEMORIA HIST\xD3RICA Y APRENDIZAJE CONTINUO)
 Para garantizar un comportamiento \xF3ptimo y evitar errores hist\xF3ricos, debes interiorizar y aplicar estrictamente las lecciones aprendidas en los siguientes casos de referencia:
@@ -6830,7 +6864,24 @@ var janIARouter = router({
           }))
         ]
       });
-      const janIAResponse = typeof response.choices[0]?.message?.content === "string" ? response.choices[0].message.content : "No response";
+      const rawLLMResponse = typeof response.choices[0]?.message?.content === "string" ? response.choices[0].message.content : "No response";
+      let janIAResponse = rawLLMResponse;
+      let wantsVoice = false;
+      let voiceResponse = "";
+      try {
+        const cleaned = rawLLMResponse.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
+        const parsed = JSON.parse(cleaned);
+        if (parsed && typeof parsed.response === "string" && parsed.response.trim() !== "") {
+          janIAResponse = parsed.response;
+        }
+        if (parsed && typeof parsed.wantsVoice === "boolean") {
+          wantsVoice = parsed.wantsVoice;
+        }
+        if (parsed && typeof parsed.voiceResponse === "string" && parsed.voiceResponse.trim() !== "") {
+          voiceResponse = parsed.voiceResponse;
+        }
+      } catch {
+      }
       await db.insert(messages).values({
         conversationId,
         role: "user",
@@ -6849,6 +6900,8 @@ var janIARouter = router({
       }).where(eq4(conversations.id, conversationId));
       return {
         content: janIAResponse,
+        wantsVoice,
+        voiceResponse: voiceResponse || janIAResponse,
         conversationId
       };
     } catch (error) {
@@ -6970,6 +7023,46 @@ Analiza el archivo proporcionado y proporciona un an\xE1lisis detallado relacion
       return matches;
     } catch (error) {
       console.error("Error getting property matches:", error);
+      throw error;
+    }
+  }),
+  // Get all matches in the network
+  getAllMatches: publicProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) throw new Error("Database not available");
+    try {
+      const matches = await db.select({
+        id: propertyMatches.id,
+        matchScore: propertyMatches.matchScore,
+        matchReason: propertyMatches.matchReason,
+        status: propertyMatches.status,
+        createdAt: propertyMatches.createdAt,
+        property: {
+          id: properties.id,
+          name: properties.name,
+          price: properties.price,
+          city: properties.city,
+          zone: properties.zone,
+          idUsuarioWhatsapp: properties.idUsuarioWhatsapp,
+          propertyType: properties.propertyType,
+          transactionType: properties.transactionType,
+          rawText: properties.rawText
+        },
+        requirement: {
+          id: requirements.id,
+          name: requirements.name,
+          presupuestoMax: requirements.presupuestoMax,
+          ciudadDeseada: requirements.ciudadDeseada,
+          zonaDeseada: requirements.zonaDeseada,
+          idUsuarioWhatsapp: requirements.idUsuarioWhatsapp,
+          tipoInmuebleDeseado: requirements.tipoInmuebleDeseado,
+          tipoNegocioDeseado: requirements.tipoNegocioDeseado,
+          rawText: requirements.rawText
+        }
+      }).from(propertyMatches).innerJoin(properties, eq4(propertyMatches.propertyId, properties.id)).innerJoin(requirements, eq4(propertyMatches.requirementId, requirements.id)).orderBy(desc(propertyMatches.createdAt));
+      return matches;
+    } catch (error) {
+      console.error("Error getting all matches:", error);
       throw error;
     }
   }),
@@ -7728,7 +7821,8 @@ var agentRouter = router({
       property: {
         id: properties.id,
         name: properties.name,
-        matriculaInmobiliaria: properties.matriculaInmobiliaria
+        matriculaInmobiliaria: properties.matriculaInmobiliaria,
+        location: properties.location
       }
     }).from(referralLinks).innerJoin(properties, eq7(referralLinks.propertyId, properties.id)).where(eq7(referralLinks.agentId, ctx.user.id)).orderBy(desc2(referralLinks.createdAt));
   })
@@ -7741,7 +7835,7 @@ init_schema();
 import { eq as eq8, sql as sql2 } from "drizzle-orm";
 import { TRPCError as TRPCError4 } from "@trpc/server";
 var leadsRouter = router({
-  resolveStealthLink: publicProcedure.input(z6.object({ token: z6.string() })).mutation(async ({ input }) => {
+  resolveStealthLink: publicProcedure.input(z6.object({ token: z6.string() })).query(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "Database err" });
     const linkRecord = await db.select().from(referralLinks).where(eq8(referralLinks.token, input.token)).limit(1);
@@ -7756,10 +7850,9 @@ var leadsRouter = router({
       price: properties.price,
       bedrooms: properties.bedrooms,
       bathrooms: properties.bathrooms,
-      areaSquareMeters: properties.areaSquareMeters,
+      areaSquareMeters: properties.areaTotal,
       zone: properties.zone,
       // specifically NOT returning full location/latitude/longitude/matricula
-      wildcardFeature: properties.wildcardFeature,
       images: properties.images
     }).from(properties).where(eq8(properties.id, link.propertyId)).limit(1);
     if (prop.length === 0) {
@@ -7797,7 +7890,7 @@ var leadsRouter = router({
       leadId: newLead[0].id,
       agentId: link.agentId,
       propertyId: link.propertyId,
-      token: link.token
+      referralToken: link.token
     });
     return { success: true };
   })
@@ -8094,7 +8187,7 @@ async function setupVite(app, server) {
   });
 }
 function serveStatic(app) {
-  const distPath = process.env.NODE_ENV === "development" ? path2.resolve(import.meta.dirname, "../..", "dist", "public") : path2.resolve(import.meta.dirname, "public");
+  const distPath = path2.resolve(import.meta.dirname, "..", "dist");
   if (!fs.existsSync(distPath)) {
     console.error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`
@@ -8328,6 +8421,8 @@ Direcci\xF3n obligatoria:
 // server/_core/index.ts
 init_janIA();
 init_whatsapp_cloud();
+init_voiceTranscription();
+import multer from "multer";
 process.on("uncaughtException", (error) => {
   console.error("[SYSTEM-CRITICAL] Uncaught Exception detectada:", error);
 });
@@ -8488,6 +8583,27 @@ async function startServer() {
       res.send(buffer);
     } catch (err) {
       res.status(500).send(err.message);
+    }
+  });
+  const upload = multer({
+    limits: {
+      fileSize: 16 * 1024 * 1024
+      // 16MB limit
+    }
+  });
+  app.post("/api/janIA/transcribe", upload.single("audio"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No se subi\xF3 ning\xFAn archivo de audio" });
+      }
+      const buffer = req.file.buffer;
+      const mimeType = req.file.mimetype || "audio/webm";
+      console.log(`[TRANSCRIBE-ROUTE] Recibido archivo de audio de tipo: ${mimeType}, tama\xF1o: ${buffer.length} bytes`);
+      const text2 = await transcribeAudioBuffer(buffer, mimeType);
+      res.json({ transcription: text2 });
+    } catch (err) {
+      console.error("[TRANSCRIBE-ROUTE] Error al transcribir:", err);
+      res.status(500).json({ error: err.message || "Error al procesar la transcripci\xF3n" });
     }
   });
   app.get("/api/find-active-group", async (req, res) => {

@@ -10,6 +10,8 @@ import { whatsappBot, textToSpeechMedia } from "./whatsapp";
 import { initCronScheduler } from "./cronService";
 import { processWhatsAppMessage } from "./janIA";
 import { handleIncomingWebhook } from "./whatsapp-cloud";
+import multer from "multer";
+import { transcribeAudioBuffer } from "./voiceTranscription";
 
 process.on("uncaughtException", (error) => {
   console.error("[SYSTEM-CRITICAL] Uncaught Exception detectada:", error);
@@ -203,6 +205,29 @@ async function startServer() {
       res.send(buffer);
     } catch (err: any) {
       res.status(500).send(err.message);
+    }
+  });
+
+  // Configure multer memory storage for transcription uploads
+  const upload = multer({
+    limits: {
+      fileSize: 16 * 1024 * 1024, // 16MB limit
+    }
+  });
+
+  app.post("/api/janIA/transcribe", upload.single("audio"), async (req: any, res: any) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No se subió ningún archivo de audio" });
+      }
+      const buffer = req.file.buffer;
+      const mimeType = req.file.mimetype || "audio/webm";
+      console.log(`[TRANSCRIBE-ROUTE] Recibido archivo de audio de tipo: ${mimeType}, tamaño: ${buffer.length} bytes`);
+      const text = await transcribeAudioBuffer(buffer, mimeType);
+      res.json({ transcription: text });
+    } catch (err: any) {
+      console.error("[TRANSCRIBE-ROUTE] Error al transcribir:", err);
+      res.status(500).json({ error: err.message || "Error al procesar la transcripción" });
     }
   });
 

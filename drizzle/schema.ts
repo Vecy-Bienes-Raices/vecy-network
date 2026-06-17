@@ -91,6 +91,8 @@ export const properties = pgTable("properties", {
   featured: boolean("featured").default(false),
   available: boolean("available").default(true),
   idUsuarioWhatsapp: varchar("idUsuarioWhatsapp", { length: 100 }),
+  sourceRepository: varchar("sourceRepository", { length: 255 }),
+  lastSyncedAt: timestamp("lastSyncedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });

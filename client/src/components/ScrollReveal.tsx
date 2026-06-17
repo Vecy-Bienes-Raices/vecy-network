@@ -35,7 +35,7 @@ export const ScrollReveal: React.FC<ScrollRevealProps> = ({
       transition: {
         duration: duration,
         delay: delay,
-        ease: [0.21, 0.47, 0.32, 0.98], // Apple-style ease-out
+        ease: [0.21, 0.47, 0.32, 0.98] as const, // Apple-style ease-out
       },
     },
   };

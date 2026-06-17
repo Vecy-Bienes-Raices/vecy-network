@@ -8,7 +8,7 @@ import { TRPCError } from "@trpc/server";
 export const leadsRouter = router({
   resolveStealthLink: publicProcedure
     .input(z.object({ token: z.string() }))
-    .mutation(async ({ input }) => {
+    .query(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database err" });
 
@@ -35,10 +35,9 @@ export const leadsRouter = router({
         price: properties.price,
         bedrooms: properties.bedrooms,
         bathrooms: properties.bathrooms,
-        areaSquareMeters: properties.areaSquareMeters,
+        areaSquareMeters: properties.areaTotal,
         zone: properties.zone,
         // specifically NOT returning full location/latitude/longitude/matricula
-        wildcardFeature: properties.wildcardFeature,
         images: properties.images
       }).from(properties)
         .where(eq(properties.id, link.propertyId))
@@ -93,7 +92,7 @@ export const leadsRouter = router({
         leadId: newLead[0].id,
         agentId: link.agentId,
         propertyId: link.propertyId,
-        token: link.token
+        referralToken: link.token
       });
 
       return { success: true };
