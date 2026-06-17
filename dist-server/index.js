@@ -442,14 +442,16 @@ async function invokeLLM({
   responseFormat,
   provider = "google",
   imageBuffer,
+  pdfBuffer,
+  pdfMimeType,
   enableSearch = false
 }) {
   if (provider === "anthropic") {
     return await invokeClaude(messages2, responseFormat);
   }
-  return await invokeGemini(messages2, responseFormat, imageBuffer, enableSearch);
+  return await invokeGemini(messages2, responseFormat, imageBuffer, pdfBuffer, pdfMimeType, enableSearch);
 }
-async function invokeGemini(messages2, responseFormat, imageBuffer, enableSearch) {
+async function invokeGemini(messages2, responseFormat, imageBuffer, pdfBuffer, pdfMimeType, enableSearch) {
   const API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || ENV.forgeApiKey;
   const MODEL = "gemini-3.1-flash-lite";
   const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${API_KEY}`;
@@ -458,14 +460,24 @@ async function invokeGemini(messages2, responseFormat, imageBuffer, enableSearch
     const userMessages = messages2.filter((m) => m.role !== "system");
     const contents = userMessages.map((m, idx) => {
       const parts = [{ text: m.content }];
-      if (imageBuffer && idx === userMessages.length - 1 && m.role !== "assistant") {
-        parts.push({
-          inline_data: {
-            mime_type: "image/jpeg",
-            // Asumimos JPEG por defecto del buffer de WhatsApp
-            data: imageBuffer
-          }
-        });
+      if (idx === userMessages.length - 1 && m.role !== "assistant") {
+        if (imageBuffer) {
+          parts.push({
+            inline_data: {
+              mime_type: "image/jpeg",
+              // Asumimos JPEG por defecto del buffer de WhatsApp
+              data: imageBuffer
+            }
+          });
+        }
+        if (pdfBuffer) {
+          parts.push({
+            inline_data: {
+              mime_type: pdfMimeType || "application/pdf",
+              data: pdfBuffer
+            }
+          });
+        }
       }
       return {
         role: m.role === "assistant" ? "model" : "user",
@@ -609,9 +621,9 @@ async function scrapePropertyLink(url) {
       ],
       responseFormat: { type: "json_object" }
     });
-    const content2 = aiResponse.choices[0]?.message?.content;
-    if (!content2) throw new Error("JanIA no pudo estructurar la informaci\xF3n");
-    const jsonStr = content2.replace(/```json|```/g, "").trim();
+    const content = aiResponse.choices[0]?.message?.content;
+    if (!content) throw new Error("JanIA no pudo estructurar la informaci\xF3n");
+    const jsonStr = content.replace(/```json|```/g, "").trim();
     return JSON.parse(jsonStr);
   } catch (error) {
     console.error("Error in property scraper:", error);
@@ -659,248 +671,6 @@ var init_scraper = __esm({
       "whatsapp.com",
       "linkedin.com"
     ];
-  }
-});
-
-// server/storage.ts
-function getStorageConfig() {
-  const baseUrl = ENV.forgeApiUrl;
-  const apiKey = ENV.forgeApiKey;
-  if (!baseUrl || !apiKey) {
-    throw new Error(
-      "Storage proxy credentials missing: set BUILT_IN_FORGE_API_URL and BUILT_IN_FORGE_API_KEY"
-    );
-  }
-  return { baseUrl: baseUrl.replace(/\/+$/, ""), apiKey };
-}
-function buildUploadUrl(baseUrl, relKey) {
-  const url = new URL("v1/storage/upload", ensureTrailingSlash(baseUrl));
-  url.searchParams.set("path", normalizeKey(relKey));
-  return url;
-}
-function ensureTrailingSlash(value) {
-  return value.endsWith("/") ? value : `${value}/`;
-}
-function normalizeKey(relKey) {
-  return relKey.replace(/^\/+/, "");
-}
-function toFormData(data, contentType, fileName) {
-  const blob = typeof data === "string" ? new Blob([data], { type: contentType }) : new Blob([data], { type: contentType });
-  const form = new FormData();
-  form.append("file", blob, fileName || "file");
-  return form;
-}
-function buildAuthHeaders(apiKey) {
-  return { Authorization: `Bearer ${apiKey}` };
-}
-async function storagePut(relKey, data, contentType = "application/octet-stream") {
-  const { baseUrl, apiKey } = getStorageConfig();
-  const key = normalizeKey(relKey);
-  const uploadUrl = buildUploadUrl(baseUrl, key);
-  const formData = toFormData(data, contentType, key.split("/").pop() ?? key);
-  const response = await fetch(uploadUrl, {
-    method: "POST",
-    headers: buildAuthHeaders(apiKey),
-    body: formData
-  });
-  if (!response.ok) {
-    const message = await response.text().catch(() => response.statusText);
-    throw new Error(
-      `Storage upload failed (${response.status} ${response.statusText}): ${message}`
-    );
-  }
-  const url = (await response.json()).url;
-  return { key, url };
-}
-var init_storage = __esm({
-  "server/storage.ts"() {
-    "use strict";
-    init_env();
-  }
-});
-
-// server/_core/setup-stealth.ts
-import { createRequire } from "module";
-var require2;
-var init_setup_stealth = __esm({
-  "server/_core/setup-stealth.ts"() {
-    "use strict";
-    require2 = createRequire(import.meta.url);
-    try {
-      const puppeteerExtra = require2("puppeteer-extra");
-      const StealthPlugin = require2("puppeteer-extra-plugin-stealth");
-      puppeteerExtra.use(StealthPlugin());
-      try {
-        const puppeteerPath = require2.resolve("puppeteer");
-        require2.cache[puppeteerPath] = {
-          id: puppeteerPath,
-          filename: puppeteerPath,
-          loaded: true,
-          exports: puppeteerExtra,
-          parent: null,
-          children: []
-        };
-        console.log("\u{1F6E1}\uFE0F [Stealth] Intercepci\xF3n de Puppeteer (completo) exitosa.");
-      } catch (err) {
-      }
-      try {
-        const puppeteerCorePath = require2.resolve("puppeteer-core");
-        require2.cache[puppeteerCorePath] = {
-          id: puppeteerCorePath,
-          filename: puppeteerCorePath,
-          loaded: true,
-          exports: puppeteerExtra,
-          parent: null,
-          children: []
-        };
-        console.log("\u{1F6E1}\uFE0F [Stealth] Intercepci\xF3n de Puppeteer-Core exitosa.");
-      } catch (err) {
-      }
-      console.log("\u{1F6E1}\uFE0F [Stealth] Evasi\xF3n de firmas activada para WhatsApp de forma robusta.");
-    } catch (error) {
-      console.error("\u274C [Stealth-Error] No se pudo configurar Stealth Puppeteer:", error);
-    }
-  }
-});
-
-// server/_core/voiceTranscription.ts
-import axios4 from "axios";
-async function transcribeAudioWithGemini(audioBuffer, mimeType) {
-  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || ENV.forgeApiKey;
-  if (!apiKey) {
-    throw new Error("No GEMINI_API_KEY or GOOGLE_API_KEY found for transcription fallback.");
-  }
-  const model = "gemini-3.1-flash-lite";
-  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-  let cleanMime = mimeType.split(";")[0].trim();
-  if (cleanMime === "audio/x-wav" || cleanMime === "audio/wave") cleanMime = "audio/wav";
-  if (cleanMime === "audio/mpeg3" || cleanMime === "audio/x-mpeg-3") cleanMime = "audio/mpeg";
-  const payload = {
-    contents: [
-      {
-        role: "user",
-        parts: [
-          { text: "Transcribe el siguiente audio a texto en espa\xF1ol de manera exacta y fluida. Devuelve \xFAnicamente el texto de la transcripci\xF3n literal del audio, sin agregar introducciones, notas de autor ni comentarios adicionales. Si el audio est\xE1 completamente vac\xEDo o solo contiene ruido ininteligible, devuelve una cadena vac\xEDa." },
-          {
-            inline_data: {
-              mime_type: cleanMime,
-              data: audioBuffer.toString("base64")
-            }
-          }
-        ]
-      }
-    ],
-    generationConfig: {
-      temperature: 0.1,
-      maxOutputTokens: 2048
-    }
-  };
-  const response = await axios4.post(apiUrl, payload);
-  if (response.data.candidates && response.data.candidates[0]) {
-    return response.data.candidates[0].content.parts[0].text.trim();
-  }
-  throw new Error("Empty candidate response from Gemini API");
-}
-async function transcribeAudioBuffer(audioBuffer, mimeType, prompt) {
-  const sizeMB = audioBuffer.length / (1024 * 1024);
-  if (sizeMB > 16) {
-    throw new Error(`Audio file exceeds maximum size limit (16MB). Current size: ${sizeMB.toFixed(2)}MB`);
-  }
-  if (!ENV.forgeApiUrl || !ENV.forgeApiKey) {
-    console.log(`[STT-Fallback] Forge API no configurada. Transcribiendo usando Gemini directamente...`);
-    return await transcribeAudioWithGemini(audioBuffer, mimeType);
-  }
-  const formData = new FormData();
-  const filename = `audio.${getFileExtension(mimeType)}`;
-  const audioBlob = new Blob([new Uint8Array(audioBuffer)], { type: mimeType });
-  formData.append("file", audioBlob, filename);
-  formData.append("model", "whisper-1");
-  formData.append("response_format", "verbose_json");
-  const defaultPrompt = prompt || "Notas de voz sobre bienes ra\xEDces, Real Estate, inversiones, corretaje, inmuebles, apartamentos y casas en Bogot\xE1, Colombia. Vocabulario t\xE9cnico y comercial obligatorio: venpermuto, permuta, corretaje, br\xF3ker, aval\xFAo, estrato, arras, linderos, desenglobe, Wasi, Habi, Usaqu\xE9n, Cedritos, Chic\xF3, Rosales, Cabrera, Retiro, Santa B\xE1rbara, San Patricio, Tober\xEDn, Suba, Niza, Alhambra.";
-  formData.append("prompt", defaultPrompt);
-  const baseUrl = ENV.forgeApiUrl.endsWith("/") ? ENV.forgeApiUrl : `${ENV.forgeApiUrl}/`;
-  const fullUrl = new URL("v1/audio/transcriptions", baseUrl).toString();
-  const response = await fetch(fullUrl, {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${ENV.forgeApiKey}`,
-      "Accept-Encoding": "identity"
-    },
-    body: formData
-  });
-  if (!response.ok) {
-    const errorText = await response.text().catch(() => "");
-    throw new Error(`Transcription service request failed (${response.status}): ${errorText}`);
-  }
-  const whisperResponse = await response.json();
-  if (!whisperResponse.text || typeof whisperResponse.text !== "string") {
-    throw new Error("Invalid transcription response: missing text field");
-  }
-  return whisperResponse.text;
-}
-async function transcribeAudio(options) {
-  try {
-    let audioBuffer;
-    let mimeType;
-    try {
-      const response = await fetch(options.audioUrl);
-      if (!response.ok) {
-        return {
-          error: "Failed to download audio file",
-          code: "INVALID_FORMAT",
-          details: `HTTP ${response.status}: ${response.statusText}`
-        };
-      }
-      audioBuffer = Buffer.from(await response.arrayBuffer());
-      mimeType = response.headers.get("content-type") || "audio/mpeg";
-    } catch (error) {
-      return {
-        error: "Failed to fetch audio file",
-        code: "SERVICE_ERROR",
-        details: error instanceof Error ? error.message : "Unknown error"
-      };
-    }
-    try {
-      const text2 = await transcribeAudioBuffer(audioBuffer, mimeType, options.prompt);
-      return {
-        task: "transcribe",
-        language: "es",
-        duration: 0,
-        text: text2,
-        segments: []
-      };
-    } catch (transcriptionError) {
-      return {
-        error: "Voice transcription failed",
-        code: "TRANSCRIPTION_FAILED",
-        details: transcriptionError.message || "Unknown error"
-      };
-    }
-  } catch (error) {
-    return {
-      error: "Voice transcription failed",
-      code: "SERVICE_ERROR",
-      details: error instanceof Error ? error.message : "An unexpected error occurred"
-    };
-  }
-}
-function getFileExtension(mimeType) {
-  const mimeToExt = {
-    "audio/webm": "webm",
-    "audio/mp3": "mp3",
-    "audio/mpeg": "mp3",
-    "audio/wav": "wav",
-    "audio/wave": "wav",
-    "audio/ogg": "ogg",
-    "audio/m4a": "m4a",
-    "audio/mp4": "m4a"
-  };
-  return mimeToExt[mimeType] || "audio";
-}
-var init_voiceTranscription = __esm({
-  "server/_core/voiceTranscription.ts"() {
-    "use strict";
-    init_env();
   }
 });
 
@@ -1982,7 +1752,7 @@ var init_geography = __esm({
 });
 
 // server/_core/matching.ts
-import { and as and3, eq as eq8 } from "drizzle-orm";
+import { and, eq as eq2 } from "drizzle-orm";
 function calcularScoreMatch(requirement, property) {
   const reqType = requirement.tipoInmuebleDeseado || requirement.propertyType;
   const propType = property.propertyType;
@@ -2186,13 +1956,13 @@ async function findMatchesForProperty(propertyId) {
   const db = await getDb();
   if (!db) return [];
   try {
-    const [property] = await db.select().from(properties).where(eq8(properties.id, propertyId));
+    const [property] = await db.select().from(properties).where(eq2(properties.id, propertyId));
     if (!property) return [];
     const activeRequirements = await db.select().from(requirements).where(
-      and3(
-        eq8(requirements.status, "active"),
-        eq8(requirements.tipoInmuebleDeseado, property.propertyType),
-        eq8(requirements.tipoNegocioDeseado, property.transactionType)
+      and(
+        eq2(requirements.status, "active"),
+        eq2(requirements.tipoInmuebleDeseado, property.propertyType),
+        eq2(requirements.tipoNegocioDeseado, property.transactionType)
       )
     );
     const validMatches = [];
@@ -2201,9 +1971,9 @@ async function findMatchesForProperty(propertyId) {
       if (score >= 70) {
         let matchId;
         const existing = await db.select().from(propertyMatches).where(
-          and3(
-            eq8(propertyMatches.propertyId, propertyId),
-            eq8(propertyMatches.requirementId, req.id)
+          and(
+            eq2(propertyMatches.propertyId, propertyId),
+            eq2(propertyMatches.requirementId, req.id)
           )
         ).limit(1);
         if (existing.length > 0) {
@@ -2239,13 +2009,13 @@ async function findMatchesForRequirement(requirementId) {
   const db = await getDb();
   if (!db) return [];
   try {
-    const [req] = await db.select().from(requirements).where(eq8(requirements.id, requirementId));
+    const [req] = await db.select().from(requirements).where(eq2(requirements.id, requirementId));
     if (!req) return [];
     const availableProperties = await db.select().from(properties).where(
-      and3(
-        eq8(properties.available, true),
-        eq8(properties.propertyType, req.tipoInmuebleDeseado),
-        eq8(properties.transactionType, req.tipoNegocioDeseado)
+      and(
+        eq2(properties.available, true),
+        eq2(properties.propertyType, req.tipoInmuebleDeseado),
+        eq2(properties.transactionType, req.tipoNegocioDeseado)
       )
     );
     const validMatches = [];
@@ -2254,9 +2024,9 @@ async function findMatchesForRequirement(requirementId) {
       if (score >= 70) {
         let matchId;
         const existing = await db.select().from(propertyMatches).where(
-          and3(
-            eq8(propertyMatches.propertyId, prop.id),
-            eq8(propertyMatches.requirementId, requirementId)
+          and(
+            eq2(propertyMatches.propertyId, prop.id),
+            eq2(propertyMatches.requirementId, requirementId)
           )
         ).limit(1);
         if (existing.length > 0) {
@@ -2297,13 +2067,211 @@ var init_matching = __esm({
   }
 });
 
+// server/_core/voiceTranscription.ts
+import axios4 from "axios";
+async function transcribeAudioWithGemini(audioBuffer, mimeType) {
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || ENV.forgeApiKey;
+  if (!apiKey) {
+    throw new Error("No GEMINI_API_KEY or GOOGLE_API_KEY found for transcription fallback.");
+  }
+  const model = "gemini-3.1-flash-lite";
+  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  let cleanMime = mimeType.split(";")[0].trim();
+  if (cleanMime === "audio/x-wav" || cleanMime === "audio/wave") cleanMime = "audio/wav";
+  if (cleanMime === "audio/mpeg3" || cleanMime === "audio/x-mpeg-3") cleanMime = "audio/mpeg";
+  const payload = {
+    contents: [
+      {
+        role: "user",
+        parts: [
+          { text: "Transcribe el siguiente audio a texto en espa\xF1ol de manera exacta y fluida. Devuelve \xFAnicamente el texto de la transcripci\xF3n literal del audio, sin agregar introducciones, notas de autor ni comentarios adicionales. Si el audio est\xE1 completamente vac\xEDo o solo contiene ruido ininteligible, devuelve una cadena vac\xEDa." },
+          {
+            inline_data: {
+              mime_type: cleanMime,
+              data: audioBuffer.toString("base64")
+            }
+          }
+        ]
+      }
+    ],
+    generationConfig: {
+      temperature: 0.1,
+      maxOutputTokens: 2048
+    }
+  };
+  const response = await axios4.post(apiUrl, payload);
+  if (response.data.candidates && response.data.candidates[0]) {
+    return response.data.candidates[0].content.parts[0].text.trim();
+  }
+  throw new Error("Empty candidate response from Gemini API");
+}
+async function transcribeAudioBuffer(audioBuffer, mimeType, prompt) {
+  const sizeMB = audioBuffer.length / (1024 * 1024);
+  if (sizeMB > 16) {
+    throw new Error(`Audio file exceeds maximum size limit (16MB). Current size: ${sizeMB.toFixed(2)}MB`);
+  }
+  if (!ENV.forgeApiUrl || !ENV.forgeApiKey) {
+    console.log(`[STT-Fallback] Forge API no configurada. Transcribiendo usando Gemini directamente...`);
+    return await transcribeAudioWithGemini(audioBuffer, mimeType);
+  }
+  const formData = new FormData();
+  const filename = `audio.${getFileExtension(mimeType)}`;
+  const audioBlob = new Blob([new Uint8Array(audioBuffer)], { type: mimeType });
+  formData.append("file", audioBlob, filename);
+  formData.append("model", "whisper-1");
+  formData.append("response_format", "verbose_json");
+  const defaultPrompt = prompt || "Notas de voz sobre bienes ra\xEDces, Real Estate, inversiones, corretaje, inmuebles, apartamentos y casas en Bogot\xE1, Colombia. Vocabulario t\xE9cnico y comercial obligatorio: venpermuto, permuta, corretaje, br\xF3ker, aval\xFAo, estrato, arras, linderos, desenglobe, Wasi, Habi, Usaqu\xE9n, Cedritos, Chic\xF3, Rosales, Cabrera, Retiro, Santa B\xE1rbara, San Patricio, Tober\xEDn, Suba, Niza, Alhambra.";
+  formData.append("prompt", defaultPrompt);
+  const baseUrl = ENV.forgeApiUrl.endsWith("/") ? ENV.forgeApiUrl : `${ENV.forgeApiUrl}/`;
+  const fullUrl = new URL("v1/audio/transcriptions", baseUrl).toString();
+  const response = await fetch(fullUrl, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${ENV.forgeApiKey}`,
+      "Accept-Encoding": "identity"
+    },
+    body: formData
+  });
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => "");
+    throw new Error(`Transcription service request failed (${response.status}): ${errorText}`);
+  }
+  const whisperResponse = await response.json();
+  if (!whisperResponse.text || typeof whisperResponse.text !== "string") {
+    throw new Error("Invalid transcription response: missing text field");
+  }
+  return whisperResponse.text;
+}
+async function transcribeAudio(options) {
+  try {
+    let audioBuffer;
+    let mimeType;
+    try {
+      const response = await fetch(options.audioUrl);
+      if (!response.ok) {
+        return {
+          error: "Failed to download audio file",
+          code: "INVALID_FORMAT",
+          details: `HTTP ${response.status}: ${response.statusText}`
+        };
+      }
+      audioBuffer = Buffer.from(await response.arrayBuffer());
+      mimeType = response.headers.get("content-type") || "audio/mpeg";
+    } catch (error) {
+      return {
+        error: "Failed to fetch audio file",
+        code: "SERVICE_ERROR",
+        details: error instanceof Error ? error.message : "Unknown error"
+      };
+    }
+    try {
+      const text2 = await transcribeAudioBuffer(audioBuffer, mimeType, options.prompt);
+      return {
+        task: "transcribe",
+        language: "es",
+        duration: 0,
+        text: text2,
+        segments: []
+      };
+    } catch (transcriptionError) {
+      return {
+        error: "Voice transcription failed",
+        code: "TRANSCRIPTION_FAILED",
+        details: transcriptionError.message || "Unknown error"
+      };
+    }
+  } catch (error) {
+    return {
+      error: "Voice transcription failed",
+      code: "SERVICE_ERROR",
+      details: error instanceof Error ? error.message : "An unexpected error occurred"
+    };
+  }
+}
+function getFileExtension(mimeType) {
+  const mimeToExt = {
+    "audio/webm": "webm",
+    "audio/mp3": "mp3",
+    "audio/mpeg": "mp3",
+    "audio/wav": "wav",
+    "audio/wave": "wav",
+    "audio/ogg": "ogg",
+    "audio/m4a": "m4a",
+    "audio/mp4": "m4a"
+  };
+  return mimeToExt[mimeType] || "audio";
+}
+var init_voiceTranscription = __esm({
+  "server/_core/voiceTranscription.ts"() {
+    "use strict";
+    init_env();
+  }
+});
+
+// server/storage.ts
+function getStorageConfig() {
+  const baseUrl = ENV.forgeApiUrl;
+  const apiKey = ENV.forgeApiKey;
+  if (!baseUrl || !apiKey) {
+    throw new Error(
+      "Storage proxy credentials missing: set BUILT_IN_FORGE_API_URL and BUILT_IN_FORGE_API_KEY"
+    );
+  }
+  return { baseUrl: baseUrl.replace(/\/+$/, ""), apiKey };
+}
+function buildUploadUrl(baseUrl, relKey) {
+  const url = new URL("v1/storage/upload", ensureTrailingSlash(baseUrl));
+  url.searchParams.set("path", normalizeKey(relKey));
+  return url;
+}
+function ensureTrailingSlash(value) {
+  return value.endsWith("/") ? value : `${value}/`;
+}
+function normalizeKey(relKey) {
+  return relKey.replace(/^\/+/, "");
+}
+function toFormData(data, contentType, fileName) {
+  const blob = typeof data === "string" ? new Blob([data], { type: contentType }) : new Blob([data], { type: contentType });
+  const form = new FormData();
+  form.append("file", blob, fileName || "file");
+  return form;
+}
+function buildAuthHeaders(apiKey) {
+  return { Authorization: `Bearer ${apiKey}` };
+}
+async function storagePut(relKey, data, contentType = "application/octet-stream") {
+  const { baseUrl, apiKey } = getStorageConfig();
+  const key = normalizeKey(relKey);
+  const uploadUrl = buildUploadUrl(baseUrl, key);
+  const formData = toFormData(data, contentType, key.split("/").pop() ?? key);
+  const response = await fetch(uploadUrl, {
+    method: "POST",
+    headers: buildAuthHeaders(apiKey),
+    body: formData
+  });
+  if (!response.ok) {
+    const message = await response.text().catch(() => response.statusText);
+    throw new Error(
+      `Storage upload failed (${response.status} ${response.statusText}): ${message}`
+    );
+  }
+  const url = (await response.json()).url;
+  return { key, url };
+}
+var init_storage = __esm({
+  "server/storage.ts"() {
+    "use strict";
+    init_env();
+  }
+});
+
 // server/_core/janIA.ts
-import { eq as eq9, and as and4, sql as sql3, gte } from "drizzle-orm";
+import { eq as eq3, and as and2, sql, gte } from "drizzle-orm";
 async function getPendingSession(userId) {
   try {
     const db = await getDb();
     if (!db) return null;
-    const [session] = await db.select().from(pendingSessions).where(eq9(pendingSessions.jid, userId)).limit(1);
+    const [session] = await db.select().from(pendingSessions).where(eq3(pendingSessions.jid, userId)).limit(1);
     if (!session) return null;
     return session.sessionData;
   } catch (err) {
@@ -2334,7 +2302,7 @@ async function deletePendingSession(userId) {
   try {
     const db = await getDb();
     if (!db) return;
-    await db.delete(pendingSessions).where(eq9(pendingSessions.jid, userId));
+    await db.delete(pendingSessions).where(eq3(pendingSessions.jid, userId));
   } catch (err) {
     console.error("[Database] Error deleting pending session:", err);
   }
@@ -2345,7 +2313,7 @@ async function resolveRealName(userId, userName) {
   try {
     const db = await getDb();
     if (db) {
-      const [u] = await db.select().from(users).where(eq9(users.phone, rawPhone)).limit(1);
+      const [u] = await db.select().from(users).where(eq3(users.phone, rawPhone)).limit(1);
       if (u && u.name && u.name.trim() !== "") {
         name = u.name;
       }
@@ -2361,10 +2329,10 @@ async function hasGreetedUserToday(userId) {
     if (!db) return false;
     const startOfToday = /* @__PURE__ */ new Date();
     startOfToday.setHours(0, 0, 0, 0);
-    const recentMsgs = await db.select({ id: messages.id }).from(messages).innerJoin(conversations, eq9(messages.conversationId, conversations.id)).where(
-      and4(
-        eq9(conversations.sessionId, userId),
-        eq9(messages.role, "janIA"),
+    const recentMsgs = await db.select({ id: messages.id }).from(messages).innerJoin(conversations, eq3(messages.conversationId, conversations.id)).where(
+      and2(
+        eq3(conversations.sessionId, userId),
+        eq3(messages.role, "janIA"),
         gte(messages.createdAt, startOfToday)
       )
     ).limit(1);
@@ -2503,11 +2471,11 @@ async function handleDetectedMatches(matches, isProperty, savedRecord, userId, r
     try {
       const db = await getDb();
       if (db) {
-        const [su] = await db.select().from(users).where(eq9(users.phone, savedRawPhone)).limit(1);
+        const [su] = await db.select().from(users).where(eq3(users.phone, savedRawPhone)).limit(1);
         if (su && su.name && su.name.trim() !== "") {
           savedUserName = su.name;
         }
-        const [mu] = await db.select().from(users).where(eq9(users.phone, matchedRawPhone)).limit(1);
+        const [mu] = await db.select().from(users).where(eq3(users.phone, matchedRawPhone)).limit(1);
         if (mu && mu.name && mu.name.trim() !== "") {
           matchedUserName = mu.name;
         }
@@ -2607,7 +2575,7 @@ async function getTimeOfDayGreetingForUser(phone, realName, alreadyGreeted, isGr
   try {
     const db = await getDb();
     if (db) {
-      const [u] = await db.select().from(users).where(eq9(users.phone, phone)).limit(1);
+      const [u] = await db.select().from(users).where(eq3(users.phone, phone)).limit(1);
       if (u && u.name && u.name.trim() !== "") {
         nameToUse = u.name;
       }
@@ -2622,7 +2590,7 @@ async function getTimeOfDayGreetingForUser(phone, realName, alreadyGreeted, isGr
     return isGroup ? `${salutation} @${phone}` : `${salutation} ${firstName}`;
   }
 }
-async function processWhatsAppMessage(text2, userId, userName, hasMedia = false, scrapedData = [], audioUrl, imageBuffer, isGroup = false) {
+async function processWhatsAppMessage(text2, userId, userName, hasMedia = false, scrapedData = [], audioUrl, imageBuffer, isGroup = false, pdfBuffer, pdfMimeType) {
   try {
     const rawPhone = userId.split("@")[0];
     const realName = await resolveRealName(userId, userName);
@@ -2724,18 +2692,20 @@ async function processWhatsAppMessage(text2, userId, userName, hasMedia = false,
 [SISTEMA - DATOS SCRAPED]: ${JSON.stringify(scrapedData)}`;
     if (imageBuffer) contextText += `
 [SISTEMA: IMAGEN DETECTADA. Analiza la imagen con visi\xF3n OCR para extraer todos los datos del flyer o captura comercial.]`;
+    if (pdfBuffer) contextText += `
+[SISTEMA: DOCUMENTO PDF DETECTADO. Analiza el documento PDF adjunto con tus capacidades nativas para extraer todos los datos relevantes del predial, certificado de tradici\xF3n, o contrato.]`;
     let statsSummary = "";
     try {
       const db = await getDb();
       if (db) {
         const startOfToday = /* @__PURE__ */ new Date();
         startOfToday.setHours(0, 0, 0, 0);
-        const [totalPropsResult] = await db.select({ count: sql3`count(*)` }).from(properties);
-        const [totalReqsResult] = await db.select({ count: sql3`count(*)` }).from(requirements);
-        const [totalMatchesResult] = await db.select({ count: sql3`count(*)` }).from(propertyMatches);
-        const [todayPropsResult] = await db.select({ count: sql3`count(*)` }).from(properties).where(gte(properties.createdAt, startOfToday));
-        const [todayReqsResult] = await db.select({ count: sql3`count(*)` }).from(requirements).where(gte(requirements.createdAt, startOfToday));
-        const [todayMatchesResult] = await db.select({ count: sql3`count(*)` }).from(propertyMatches).where(gte(propertyMatches.createdAt, startOfToday));
+        const [totalPropsResult] = await db.select({ count: sql`count(*)` }).from(properties);
+        const [totalReqsResult] = await db.select({ count: sql`count(*)` }).from(requirements);
+        const [totalMatchesResult] = await db.select({ count: sql`count(*)` }).from(propertyMatches);
+        const [todayPropsResult] = await db.select({ count: sql`count(*)` }).from(properties).where(gte(properties.createdAt, startOfToday));
+        const [todayReqsResult] = await db.select({ count: sql`count(*)` }).from(requirements).where(gte(requirements.createdAt, startOfToday));
+        const [todayMatchesResult] = await db.select({ count: sql`count(*)` }).from(propertyMatches).where(gte(propertyMatches.createdAt, startOfToday));
         const totalProps = totalPropsResult?.count || 0;
         const totalReqs = totalReqsResult?.count || 0;
         const totalMatches = totalMatchesResult?.count || 0;
@@ -2787,7 +2757,9 @@ Por lo tanto, DEBES hacer lo siguiente:
         { role: "user", content: contextText }
       ],
       responseFormat: { type: "json_object" },
-      imageBuffer
+      imageBuffer,
+      pdfBuffer,
+      pdfMimeType
     });
     const llmRes = response;
     if (!llmRes || !llmRes.choices || !llmRes.choices[0]) throw new Error("Fallo de comunicaci\xF3n con el LLM");
@@ -2943,9 +2915,9 @@ ${greetingPrefix}, veo que tienes dudas o quieres saber m\xE1s sobre el proyecto
 \xA1Es el espacio ideal para resolver todas tus inquietudes de la comunidad! \u{1F91D}\u2728`;
         }
       } else {
-        result.response = `\u{1F4A1} *BUZ\xD3N DE CONSULTOR\xCDA INMOBILIARIA* \u{1F4A1}
+        result.response = `\u{1F4A1} *CONSULTOR\xCDA JUR\xCDDICA INMOBILIARIA* \u{1F4A1}
 
-${greetingPrefix}, veo que tienes una consulta jur\xEDdica, procedimental o de aval\xFAo. Para darte una respuesta detallada con mis motores legales y de mercado sin saturar este canal de ofertas y requerimientos, te invito a realizar tu pregunta en nuestro grupo especializado **Buz\xF3n de Consultor\xEDa Inmobiliaria 24/7**:
+${greetingPrefix}, veo que tienes una consulta jur\xEDdica, procedimental o de aval\xFAo. Para darte una respuesta detallada con mis motores legales y de mercado sin saturar este canal de ofertas y requerimientos, te invito a realizar tu pregunta en nuestro grupo especializado **CONSULTOR\xCDA JUR\xCDDICA INMOBILIARIA**:
 \u{1F449} https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6
 
 \xA1All\xED te responder\xE9 al instante con toda la informaci\xF3n! \u{1F680}\u{1F3AF}`;
@@ -2961,9 +2933,9 @@ ${greetingPrefix}, veo que tienes una consulta jur\xEDdica, procedimental o de a
 async function findOrCreateUserByPhone(phone, realName) {
   const db = await getDb();
   if (!db) return null;
-  let user = await db.select().from(users).where(eq9(users.phone, phone)).limit(1).then((r) => r[0]);
+  let user = await db.select().from(users).where(eq3(users.phone, phone)).limit(1).then((r) => r[0]);
   if (!user) {
-    user = await db.select().from(users).where(eq9(users.openId, `wa-${phone}`)).limit(1).then((r) => r[0]);
+    user = await db.select().from(users).where(eq3(users.openId, `wa-${phone}`)).limit(1).then((r) => r[0]);
   }
   if (!user) {
     const openId = `wa-${phone}`;
@@ -2979,7 +2951,7 @@ async function findOrCreateUserByPhone(phone, realName) {
   } else {
     if (realName && !realName.startsWith("Asesor +") && (!user.name || user.name.startsWith("Asesor +"))) {
       console.log(`[JanIA-findOrCreateUserByPhone] Actualizando nombre de usuario para ID ${user.id} a ${realName}`);
-      const [updatedUser] = await db.update(users).set({ name: realName }).where(eq9(users.id, user.id)).returning();
+      const [updatedUser] = await db.update(users).set({ name: realName }).where(eq3(users.id, user.id)).returning();
       user = updatedUser;
     }
   }
@@ -3080,18 +3052,18 @@ async function saveProperty(data, userId, realName, imageBuffer) {
     amenities: amenitiesObj
   };
   const existing = await db.select().from(properties).where(
-    and4(
-      eq9(properties.idUsuarioWhatsapp, rawPhone),
-      eq9(properties.propertyType, insertData.propertyType),
-      eq9(properties.transactionType, insertData.transactionType),
-      eq9(properties.city, insertData.city),
-      eq9(properties.zone, insertData.zone),
-      eq9(properties.price, insertData.price),
-      eq9(properties.available, true)
+    and2(
+      eq3(properties.idUsuarioWhatsapp, rawPhone),
+      eq3(properties.propertyType, insertData.propertyType),
+      eq3(properties.transactionType, insertData.transactionType),
+      eq3(properties.city, insertData.city),
+      eq3(properties.zone, insertData.zone),
+      eq3(properties.price, insertData.price),
+      eq3(properties.available, true)
     )
   ).limit(1);
   if (existing.length > 0) {
-    const [updated] = await db.update(properties).set({ updatedAt: /* @__PURE__ */ new Date() }).where(eq9(properties.id, existing[0].id)).returning();
+    const [updated] = await db.update(properties).set({ updatedAt: /* @__PURE__ */ new Date() }).where(eq3(properties.id, existing[0].id)).returning();
     console.log(`[Deduplication] Propiedad duplicada detectada y actualizada: #${updated.id}`);
     return updated;
   }
@@ -3154,18 +3126,18 @@ async function saveRequirement(data, userId, realName) {
     caracteristicasDeseadas: characteristicsObj
   };
   const existing = await db.select().from(requirements).where(
-    and4(
-      eq9(requirements.idUsuarioWhatsapp, rawPhone),
-      eq9(requirements.tipoInmuebleDeseado, insertData.tipoInmuebleDeseado),
-      eq9(requirements.tipoNegocioDeseado, insertData.tipoNegocioDeseado),
-      eq9(requirements.ciudadDeseada, insertData.ciudadDeseada),
-      eq9(requirements.zonaDeseada, insertData.zonaDeseada),
-      eq9(requirements.presupuestoMax, insertData.presupuestoMax),
-      eq9(requirements.status, "active")
+    and2(
+      eq3(requirements.idUsuarioWhatsapp, rawPhone),
+      eq3(requirements.tipoInmuebleDeseado, insertData.tipoInmuebleDeseado),
+      eq3(requirements.tipoNegocioDeseado, insertData.tipoNegocioDeseado),
+      eq3(requirements.ciudadDeseada, insertData.ciudadDeseada),
+      eq3(requirements.zonaDeseada, insertData.zonaDeseada),
+      eq3(requirements.presupuestoMax, insertData.presupuestoMax),
+      eq3(requirements.status, "active")
     )
   ).limit(1);
   if (existing.length > 0) {
-    const [updated] = await db.update(requirements).set({ updatedAt: /* @__PURE__ */ new Date() }).where(eq9(requirements.id, existing[0].id)).returning();
+    const [updated] = await db.update(requirements).set({ updatedAt: /* @__PURE__ */ new Date() }).where(eq3(requirements.id, existing[0].id)).returning();
     console.log(`[Deduplication] Requerimiento duplicado detectada y actualizada: #${updated.id}`);
     return updated;
   }
@@ -3186,7 +3158,7 @@ async function generateWelcomeMessage(count) {
     return `\u2728 *\xA1Bienvenidos a nuestra red!* \u{1F44B} Qu\xE9 gusto tenerlos aqu\xED. Ya estoy operando en fase de expansi\xF3n nacional para ayudarlos con sus cierres. \u{1F680}`;
   }
 }
-async function processConsultingMessage(text2, userId, userName, imageBuffer) {
+async function processConsultingMessage(text2, userId, userName, imageBuffer, pdfBuffer, pdfMimeType) {
   try {
     const rawPhone = userId.split("@")[0];
     const realName = await resolveRealName(userId, userName);
@@ -3194,9 +3166,9 @@ async function processConsultingMessage(text2, userId, userName, imageBuffer) {
     const textLower = text2.toLowerCase();
     const alreadyGreeted = await checkAlreadyGreeted(userId);
     const isValuationQuery = textLower.includes("valuar") || textLower.includes("avaluo") || textLower.includes("aval\xFAo") || textLower.includes("cuanto vale") || textLower.includes("cu\xE1nto vale") || textLower.includes("valor metro cuadrado") || textLower.includes("valor m2") || textLower.includes("precio metro cuadrado") || textLower.includes("precio m2") || textLower.includes("cuanto puedo cobrar") || textLower.includes("cu\xE1nto puedo cobrar") || textLower.includes("en que valor") || textLower.includes("en qu\xE9 valor") || textLower.includes("estimar precio");
-    const systemPrompt = `Eres JanIA, la Inteligencia Artificial especialista en Consultor\xEDa Jur\xEDdica y Comercial Inmobiliaria en Colombia para la red VECY Network. Est\xE1s operando en el grupo "Buz\xF3n de Consultor\xEDa Inmobiliaria 24/7". Tu objetivo es responder con precisi\xF3n quir\xFArgica, rigor legal y alta competencia t\xE9cnica, asumiendo el rol de una abogada inmobiliaria id\xF3nea y una perita tasadora excepcional. Debes seguir estrictamente las siguientes directrices de contenido y clasificaci\xF3n:
+    const systemPrompt = `Eres JanIA, la Inteligencia Artificial especialista en Consultor\xEDa Jur\xEDdica y Comercial Inmobiliaria en Colombia para la red VECY Network. Est\xE1s operando en el grupo "CONSULTOR\xCDA JUR\xCDDICA INMOBILIARIA". Tu objetivo es responder con precisi\xF3n quir\xFArgica, rigor legal y alta competencia t\xE9cnica, asumiendo el rol de una abogada inmobiliaria id\xF3nea y una perita tasadora excepcional. Debes seguir estrictamente las siguientes directrices de contenido y clasificaci\xF3n:
 
-## ROLES CENTRALES EN EL BUZ\xD3N DE CONSULTOR\xCDA:
+## ROLES CENTRALES EN LA CONSULTOR\xCDA JUR\xCDDICA:
 1. **Abogada Inmobiliaria Experta (Id\xF3nea y Profesional)**:
    - Conoces a la perfecci\xF3n y con total rigor el C\xF3digo Civil colombiano, el C\xF3digo de Comercio, el C\xF3digo Financiero (Estatuto Org\xE1nico del Sistema Financiero), y todas las leyes, decretos y jurisprudencia que regulan el sector en Colombia.
    - Eres experta en toda clase de contratos inmobiliarios (Promesas de compraventa, contratos de corretaje f\xEDsico y virtual, contratos de arrendamiento, mandatos de administraci\xF3n, permutas, etc.).
@@ -3205,6 +3177,13 @@ async function processConsultingMessage(text2, userId, userName, imageBuffer) {
    - Posees un "ojo cl\xEDnico" y visi\xF3n t\xE9cnica comercial excepcional para determinar el valor justo de mercado de una propiedad en venta o el canon de arrendamiento adecuado en Bogot\xE1 y en todo el pa\xEDs (los 32 departamentos, municipios, veredas y caser\xEDos).
    - Tienes conocimiento profundo de la geograf\xEDa colombiana: barrios, comunas, localidades, veredas, municipios y caser\xEDos.
    - Cuando se te solicita un aval\xFAo o estimaci\xF3n de precios, indagas activamente sobre el mercado actual en internet (la b\xFAsqueda en internet est\xE1 habilitada para consultas de valor). Recolectas y analizas precios de ofertas inmobiliarias recientes en portales del sector y promedias de la forma m\xE1s exacta posible el valor estimado del metro cuadrado considerando variables cr\xEDticas: ubicaci\xF3n exacta, estrato socioecon\xF3mico, a\xF1os de antig\xFCedad de la construcci\xF3n, acabados (gama alta, media, est\xE1ndar), amenidades de la copropiedad y tendencias del mercado colombiano.
+
+3. **An\xE1lisis de Documentos Inmobiliarios (PDF / Im\xE1genes)**:
+   - Tienes la capacidad de procesar e interpretar de manera autom\xE1tica documentos que los usuarios te adjunten (en formato PDF o como im\xE1genes), tales como:
+     * **Certificados de Tradici\xF3n y Libertad**: Para analizar anotaciones vigentes, titularidad de dominio, afectaciones a vivienda familiar, patrimonio de familia inembargable, hipotecas o embargos activos.
+     * **Recibos del Impuesto Predial**: Para extraer el aval\xFAo catastral oficial de la propiedad, la direcci\xF3n registrada y el estrato socioecon\xF3mico.
+     * **Contratos o Promesas de Compraventa**: Para revisar cl\xE1usulas penales, formas de pago, arras, plazos de escrituraci\xF3n e identificar posibles vac\xEDos legales o cl\xE1usulas abusivas.
+   - Cuando te env\xEDen un documento, l\xE9elo con riguroso detalle t\xE9cnico, extrae los datos clave y presenta un informe claro y estructurado respondiendo a la inquietud legal del aliado.
 
 ## DIRECTRICES DE RESPUESTA JUR\xCDDICA Y CASOS REALES EN COLOMBIA:
 Cuando respondas consultas (clasificaci\xF3n CONSULTA_GENERAL), debes guiar con total exactitud, veracidad y fundamento normativo/comercial en temas tales como:
@@ -3217,9 +3196,11 @@ Cuando respondas consultas (clasificaci\xF3n CONSULTA_GENERAL), debes guiar con 
 - **Cobro de Comisiones Pendientes e Incumplimientos de Corretaje**: Casos donde el propietario o vendedor se niega a pagar la comisi\xF3n, o disputas/robos de comisiones entre colegas asesores. Gu\xEDalos sobre: c\xF3mo hacer el cobro prejur\xEDdico, recolecci\xF3n de pruebas fundamentales (hojas de presentaci\xF3n del cliente y contratos de puntas compartidas firmados, autorizaciones de venta escritas, cruce de correos), y c\xF3mo entablar una demanda a trav\xE9s de un proceso verbal o monitorio basado en el contrato de corretaje (C\xF3digo de Comercio Art. 1340-1346).
 - **Cl\xE1usulas indispensables en la Promesa de Compraventa**: Detallar las cl\xE1usulas de objeto, precio, forma de pago, saneamiento, entrega, arras de retracto, cl\xE1usula penal, comparecencia a notar\xEDa (especificar fecha, hora y notar\xEDa exacta). Explicar por qu\xE9 es indispensable usar t\xE9cnicamente los t\xE9rminos jur\xEDdicos obligatorios "Promitente Vendedor" y "Promitente Comprador" para definir con precisi\xF3n legal qui\xE9n promete dar y qui\xE9n promete comprar (evitando confusiones de posesi\xF3n o nulidades).
 - **Fichas de Presentaci\xF3n y Contratos de Puntas Compartidas**: Explicar la importancia comercial y legal de hacer firmar la hoja de presentaci\xF3n del cliente al propietario antes de mostrar el inmueble, y de redactar acuerdos formales de comisi\xF3n compartida ("puntas compartidas") entre agentes inmobiliarios para blindar legalmente el cobro de honorarios.
-- **Correo Electr\xF3nico vs. WhatsApp como Prueba Judicial**: Enfatizar por qu\xE9 es much\xEDsimo m\xE1s seguro formalizar cualquier acuerdo, presentaci\xF3n o autorizaci\xF3n por **correo electr\xF3nico** antes que por WhatsApp. Explica claramente que:
-  * Las copias de seguridad de WhatsApp se pueden perder, borrar o alterar. En un juicio, los chats de WhatsApp son considerados pruebas indiciarias y por lo general se requiere un dictamen pericial o estudio forense digital costoso para validar su inalterabilidad, e incluso un hacker o especialista podr\xEDa modificarlos.
-  * En cambio, el correo electr\xF3nico cuenta con metadatos robustos (encabezados de correo con IPs de origen y destino, firmas digitales, cifrado) que demuestran fehacientemente el remitente, el destinatario y la fecha. Los jueces en Colombia los prefieren ampliamente al ser una prueba documental directa y dif\xEDcilmente mutable.
+- **Validez Legal de Mensajes, WhatsApp y Correos en Colombia**: Explica con total claridad y fundamento la validez de los mensajes electr\xF3nicos y la diferencia clave entre pruebas simples y certificadas:
+  * **Equivalencia Funcional (Ley 527 de 1999)**: Los correos electr\xF3nicos, mensajes de texto y WhatsApp son considerados jur\xEDdicamente "mensajes de datos" y tienen el mismo valor probatorio y efectos que los documentos f\xEDsicos tradicionales. Rige el principio de **no repudio**: si hay trazabilidad de env\xEDo y entrega, el emisor no puede negar haber enviado el mensaje ni su contenido.
+  * **Notificaciones Judiciales (Ley 2213 de 2022)**: Permite notificar demandas, traslados y providencias judiciales por medios electr\xF3nicos (WhatsApp o correo). El Art\xEDculo 8 establece que la notificaci\xF3n se entiende surtida al probarse la entrega t\xE9cnica en el servidor o canal del destinatario (por ejemplo, con log SMTP de correos o checks de entrega de WhatsApp).
+  * **Jurisprudencia Clave**: Menciona la **Sentencia STC-16733 de 2022** (la Corte Suprema valida las notificaciones por WhatsApp siempre que se respete el debido proceso y debido derecho de defensa) y la **Sentencia STL 16151/2023** (donde se evidencian fallas de entrega y la importancia de contar con certificaciones robustas frente a simples capturas de pantalla).
+  * **Captura de Pantalla (Prueba D\xE9bil) vs. Mensajer\xEDa Certificada (Prueba Plena)**: Enfatiza que un pantallazo o captura simple de WhatsApp o un correo com\xFAn tiene poco peso probatorio (valor de indicio) por su alto riesgo de manipulaci\xF3n (falsedad digital). Para tener seguridad jur\xEDdica total y blindaje ante nulidades (Art. 133 CGP), se debe usar mensajer\xEDa electr\xF3nica certificada (como eDatec u hom\xF3logos acreditados por ONAC, con estampa cronol\xF3gica de la hora legal del Instituto Nacional de Metrolog\xEDa y cadena de custodia). Esto prueba irrefutablemente el log SMTP completo en email, y el log directo de estados (enviado, entregado, le\xEDdo) entregados por los servidores de META en WhatsApp.
 
 ## L\xD3GICA DE CLASIFICACI\xD3N Y REDIRECCI\xD3N (CR\xCDTICO - EVITAR MENSAJES CRUZADOS)
 Analiza el contexto completo antes de clasificar. Debes responder estrictamente en formato JSON con la clasificaci\xF3n correcta:
@@ -3238,6 +3219,7 @@ Analiza el contexto completo antes de clasificar. Debes responder estrictamente 
    - Si el mensaje es una consulta leg\xEDtima de tipo jur\xEDdico, tr\xE1mites, o aval\xFAos/precios de mercado en Colombia (ej. Ley 820/2003, contratos de arrendamiento, escrituraci\xF3n, paz y salvos, valor de metro cuadrado en una zona, etc.).
    - Si te piden estimar el valor de un inmueble o del metro cuadrado en una zona (Bogot\xE1 o a nivel nacional), usa tus capacidades de b\xFAsqueda en internet para encontrar publicaciones reales recientes en portales inmobiliarios de esa zona. Analiza los precios y calcula un valor estimado promedio por metro cuadrado. Si el usuario te proporciona datos adicionales como direcci\xF3n exacta, barrio, localidad, o ciudad, util\xEDzalos para refinar tu b\xFAsqueda. Presenta un informe de aval\xFAo r\xE1pido, claro, estructurado y profesional.
    - Responder con total rigor legal/comercial, de manera sofisticada, clara y en primera persona del singular.
+   - **REGLA OBLIGATORIA DE CIERRE**: Toda respuesta a una consulta jur\xEDdica o de aval\xFAo en esta clasificaci\xF3n DEBE finalizar recomendando expl\xEDcitamente al usuario que, para resolver casos jur\xEDdicos complejos o recibir una asesor\xEDa y resoluci\xF3n de casos de manera 100% personalizada, puede llamar o escribir directamente por WhatsApp al n\xFAmero *3166569719* preguntando por las Consultor\xEDas Personalizadas de VECY, o dejar sus dudas en el chat privado de *VECY BIENES RA\xCDCES*.
    - Emoji ('reactionEmoji'): "\u{1F4A1}"
 
 4. **Clasificaci\xF3n "VIOLACION_DE_NORMAS"**:
@@ -3263,6 +3245,8 @@ Analiza el contexto completo antes de clasificar. Debes responder estrictamente 
     - Debes nombrar al usuario de manera natural y conversacional al inicio o dentro de tu respuesta (ej: "Mira ${n}, ...", "Te cuento, ${n}, que...", "Para complementar, ${n}, ...").
   * Si "Ya has saludado al usuario hoy" es NO:
     - Debes saludar de manera muy cordial y natural, incluyendo su nombre "${n}" o dirigi\xE9ndose a \xE9l/ella como colega/aliado/a.`;
+    if (pdfBuffer) text2 += `
+[SISTEMA: DOCUMENTO PDF DETECTADO. Analiza el documento PDF adjunto con tus capacidades nativas para extraer todos los datos relevantes del predial, certificado de tradici\xF3n, o contrato.]`;
     const messages2 = [
       { role: "system", content: systemPrompt },
       { role: "user", content: `Usuario: @${rawPhone} (${realName})\\nConsulta: ${text2}${greetingInstruction}` }
@@ -3271,6 +3255,8 @@ Analiza el contexto completo antes de clasificar. Debes responder estrictamente 
       messages: messages2,
       responseFormat: { type: "json_object" },
       imageBuffer,
+      pdfBuffer,
+      pdfMimeType,
       enableSearch: isValuationQuery
     });
     try {
@@ -3311,7 +3297,7 @@ Explica claramente y con la verdad absoluta el estado del proyecto y sus caracte
 - **Lo que est\xE1 en desarrollo y planeado a futuro**: El portal web oficial privado (https://vecy-network.vercel.app/) se encuentra en fases de desarrollo e integraci\xF3n. M\xF3dulos como el CRM para centralizar leads de agentes, la digitalizaci\xF3n de contratos formalizados y el motor de identidades din\xE1micas (subdominios personalizados para cada agente como agente.vecy.network) ser\xE1n lanzados oficialmente en el futuro y a\xFAn no est\xE1n operativos para los usuarios.
 - **Tecnolog\xEDa del Ecosistema**: Explica de forma sencilla que hemos creado un Asistente de IA basado en c\xF3digo propietario y base de datos SQL en la nube, el cual est\xE1 siendo entrenado a diario para encontrar MATCH en los grupos. NUNCA utilices tecnicismos complejos ni reveles nombres internos espec\xEDficos de nuestra infraestructura. Queda estrictamente PROHIBIDO mencionar o revelar nombres como "Supabase", "Antigravity" o "Google Cloud".
 - **Recomendaci\xF3n de Im\xE1genes y OCR**: Explica a los usuarios por qu\xE9 es preferible enviar capturas de pantalla o im\xE1genes con texto comercial de sus propiedades en lugar de enlaces de redes sociales (Instagram, Facebook, etc.). La raz\xF3n t\xE9cnica es que las redes sociales restringen el acceso mediante bloqueos y filtros de verificaci\xF3n humana, haciendo imposible que la IA extraiga los datos. Al enviarle una captura de pantalla al grupo VECY INMUEBLES NETWORK, JanIA puede leer e indexar la informaci\xF3n con su visi\xF3n OCR al instante.
-- **VECY INMUEBLES NETWORK es el \xFAnico centro de Match**: Recuerda y recalca que el grupo especializado VECY INMUEBLES NETWORK es el \xDANICO canal donde JanIA busca los MATCH y gestiona los datos de inmuebles y requerimientos. En C\xEDrculo Cero o Buz\xF3n de Consultor\xEDa no se procesan listados de propiedades ni se buscan coincidencias.
+- **VECY INMUEBLES NETWORK es el \xFAnico centro de Match**: Recuerda y recalca que el grupo especializado VECY INMUEBLES NETWORK es el \xDANICO canal donde JanIA busca los MATCH y gestiona los datos de inmuebles y requerimientos. En C\xEDrculo Cero o Consultor\xEDa Jur\xEDdica Inmobiliaria no se procesan listados de propiedades ni se buscan coincidencias.
 - **Invitaci\xF3n y Expansi\xF3n**: Anima a los aliados a invitar a m\xE1s br\xF3kers y a proponer a los administradores de otros grupos inmobiliarios que incluyan a JanIA como miembro y la nombren administradora. De esta forma, ella podr\xE1 captar datos de las publicaciones de sus miembros en otros chats, unirlos a VECY INMUEBLES NETWORK, y obtener resultados de match mucho m\xE1s r\xE1pidos y eficaces para todos.
 - **Tono**: Sincero, transparente, esperanzador y tecnol\xF3gico. Motiva a los usuarios a no ser t\xEDmidos, a interactuar sin miedo con JanIA escribiendo @JanIA o por audio, y a colaborar publicando activamente en el grupo correcto.
 
@@ -3335,7 +3321,7 @@ Analiza el contexto completo antes de clasificar. Debes responder estrictamente 
 
 3. **Clasificaci\xF3n "AVALUO_O_LEGAL"**:
    - Si el usuario realiza una consulta jur\xEDdica (sobre contratos, leyes de arrendamiento, escrituraci\xF3n, etc.) o solicita un aval\xFAo r\xE1pido/precio estimado de metro cuadrado.
-   - Respuesta ('response'): "\u{1F4A1} *BUZ\xD3N DE CONSULTOR\xCDA INMOBILIARIA* \u{1F4A1}\\n\\nHola @${rawPhone}, veo que tienes una consulta jur\xEDdica, procedimental o de aval\xFAo. Para darte una respuesta detallada con mis motores legales y de mercado, por favor realiza tu pregunta en nuestro grupo especializado **Buz\xF3n de Consultor\xEDa Inmobiliaria 24/7**:\\n\u{1F449} https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6\\n\\n\xA1All\xED te responder\xE9 al instante con toda la informaci\xF3n! \u{1F680}\u{1F3AF}"
+   - Respuesta ('response'): "\u{1F4A1} *CONSULTOR\xCDA JUR\xCDDICA INMOBILIARIA* \u{1F4A1}\\n\\nHola @${rawPhone}, veo que tienes una consulta jur\xEDdica, procedimental o de aval\xFAo. Para darte una respuesta detallada con mis motores legales y de mercado, por favor realiza tu pregunta en nuestro grupo especializado **CONSULTOR\xCDA JUR\xCDDICA INMOBILIARIA**:\\n\u{1F449} https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6\\n\\n\xA1All\xED te responder\xE9 al instante con toda la informaci\xF3n! \u{1F680}\u{1F3AF}"
    - Emoji ('reactionEmoji'): "\u{1F504}"
 
 4. **Clasificaci\xF3n "CONSULTA_GENERAL"**:
@@ -3348,7 +3334,7 @@ Analiza el contexto completo antes de clasificar. Debes responder estrictamente 
    - Respuesta ('response'): Una advertencia amable pero muy firme para remover el contenido de inmediato, detallando las pautas y advirtiendo de la expulsi\xF3n al 3er strike.
    - Emoji ('reactionEmoji'): "\u274C"
 
-Tus respuestas en el debate deben ser cortas, cordiales, directas, pero sumamente sofisticadas, con datos y argumentos de alto nivel. Siempre dir\xEDgete al interlocutor de forma personalizada: ${n}.
+Tus respuestas en el debate deben ser cortas, cordiales, directas, pero sumamente sofisticadas, con datos y argumentos de alto nivel. Debes usar siempre emojis relacionados y muy expresivos de forma estrat\xE9gica para que el texto sea visualmente din\xE1mico y amigable para leer en WhatsApp. Siempre dir\xEDgete al interlocutor de forma personalizada: ${n}.
 
 DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
 {
@@ -3445,7 +3431,7 @@ Debes demostrar un conocimiento profundo de la distribuci\xF3n geopol\xEDtica de
 \u25B8 **Primera Persona Siempre:** Hablas, act\xFAas y redactas en primera persona del singular. Eres una presencia viva, no un sistema que habla de s\xED mismo en tercera persona.
 \u25B8 **Sin plantillas r\xEDgidas:** Nunca uses "Estimado/a". Dir\xEDgete como "colega", "aliado", "aliada" o por el nombre de pila. Var\xEDa tus saludos y cierres constantemente \u2014 suena humana, no automatizada.
 \u25B8 **Elocuencia con sustancia:** Hablas con vocabulario corporativo de alto nivel: "operaci\xF3n inmobiliaria", "perfil de riesgo", "inversi\xF3n l\xEDquida", "cierre estrat\xE9gico", "ratio de rentabilidad", "due diligence", "apalancamiento", "venpermuto". Nunca suenas b\xE1sica.
-\u25B8 **Emojis profesionales obligatorios:** Cada respuesta incluye emojis coherentes con el tono \u2014 no decorativos, sino funcionales para segmentar y dar vida al texto.
+\u25B8 **Emojis profesionales y expresivos obligatorios:** Cada respuesta debe incluir emojis coherentes con el tono y muy relacionados con el contexto (ej: casas \u{1F3E0}, edificios \u{1F3E2}, precios/dinero \u{1F4B5}, b\xFAsqueda/lupa \u{1F50E}, \xE9xito/felicitaci\xF3n \u{1F389}, advertencia \u26A0\uFE0F, etc.) \u2014 no decorativos al azar, sino funcionales para segmentar, estructurar y dar vida y dinamismo visual a la respuesta en WhatsApp.
 \u25B8 **Multimodalidad activa:** Procesas textos ca\xF3ticos, audios transcritos, OCR de flyers y datos scrapeados de portales con precisi\xF3n quir\xFArgica.
 
 ### CAR\xC1CTER CENTRAL \u2014 LOS 7 PILARES DE TU PERSONALIDAD:
@@ -3462,6 +3448,7 @@ Debes demostrar un conocimiento profundo de la distribuci\xF3n geopol\xEDtica de
 \u25B8 **Formateo en WhatsApp**: Para resaltar texto en negrita, usa obligatoriamente un solo asterisco a cada lado de la frase (ej: *texto*) en lugar de doble asterisco (**texto**). NUNCA generes respuestas con dobles asteriscos.
 \u25B8 **Evitar discursos repetitivos**: No repitas discursos institucionales, explicaciones sobre la tecnolog\xEDa de VECY ni normas del grupo de manera recurrente, a menos que el usuario lo pregunte espec\xEDficamente. Si el usuario te saluda o hace una pregunta corta, lim\xEDtate a responder un saludo corto y preg\xFAntale en qu\xE9 le puedes ayudar hoy de manera directa.
 \u25B8 **Llamadas y Contacto Telef\xF3nico (CR\xCDTICO)**: Si el usuario te pregunta si puede llamarte por tel\xE9fono, si pueden hablar por llamada/videollamada, o si solicita hablar telef\xF3nicamente, debes responder obligatoriamente y al pie de la letra (usando negritas simples de WhatsApp si es necesario) con esta respuesta exacta: "{nombre}, como soy un asistente virtual no puedo recibir llamadas directas por este medio, pero si deseas hablar con un agente humano, puedes llamar al n\xFAmero de VECY BIENES RA\xCDCES +57 3166569719 o escribirme aqu\xED mismo para agendarte una llamada con uno de nuestros asesores humanos." (remplazando {nombre} por su primer nombre).
+\u25B8 **Recomendaci\xF3n de Asesor\xEDa Personalizada (OBLIGATORIO)**: Para consultas legales o de negocio complejas en la web o WhatsApp, siempre debes recomendar al usuario que para resolver sus casos de forma personalizada y a la medida, llame o escriba al WhatsApp de VECY BIENES RA\xCDCES al *3166569719* y pregunte por las Consultor\xEDas Personalizadas, o deje sus preguntas detalladas en el chat privado de *VECY BIENES RA\xCDCES*.
 \u25B8 **Respuesta por Voz Inteligente**: Si el usuario te pide un audio o notas de voz (o si el mensaje entrante de usuario es por voz), debes generar en el JSON de salida el campo "wantsVoice": true y proveer en "voiceResponse" un saludo y respuesta conversacional extremadamente breve y directa (m\xE1ximo 150 caracteres en total) dise\xF1ada para leerse en voz alta, sin markdown/emojis. **CR\xCDTICO PARA LA HUMANIZACI\xD3N DE LA VOZ**: Redacta el texto con una cadencia muy humana. Utiliza comas (',') para pausas cortas, puntos suspensivos ('...') para pausas medianas de reflexi\xF3n o respiraci\xF3n natural, y signos de exclamaci\xF3n ('!') para dar entusiasmo y entonaci\xF3n. Evita oraciones largas y planas.
 
 ## MAPEO SEM\xC1NTICO POLIM\xD3RFICO (VECTORES 'GIVES' & 'WANTS')
@@ -3735,7 +3722,7 @@ Queda terminantemente prohibido publicar en este grupo:
 Estoy lista 24/7 para procesar tus links de CRM, flyers (con visi\xF3n OCR) y notas de voz para cruzarlos de inmediato y buscar tu MATCH comercial sin comisiones. \u{1F3AF}
 
 \xA1Publiquemos activamente hoy para arrancar con fuerza esta gran proeza inmobiliaria en Colombia! \u{1F4AA}\u{1F3C6}`;
-    MSG_PROMO_CONSULTAS = `\u{1F4A1} *BUZ\xD3N DE CONSULTOR\xCDA INMOBILIARIA \u2014 \xA1EL CHAT EST\xC1 ABIERTO!* \u{1F4A1}
+    MSG_PROMO_CONSULTAS = `\u{1F4A1} *CONSULTOR\xCDA JUR\xCDDICA INMOBILIARIA \u2014 \xA1EL CHAT EST\xC1 ABIERTO!* \u{1F4A1}
 \u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
 \xA1Estimados aliados! Este espacio de asesor\xEDa est\xE1 completamente abierto y libre. \u{1F91D}\u{1F4DA}
 
@@ -3788,6 +3775,50 @@ JanIA ha dejado de ser un bot pasivo que solo publica alertas en el grupo. A par
 \u26A0\uFE0F IMPORTANTE: Recuerden que operamos en Etapa de Prueba Gratuita y SIN COMISIONES. Si consolidan un negocio real gracias a la conexi\xF3n privada de JanIA, es un compromiso de honor compartir su testimonio en este grupo y registrar su rese\xF1a oficial y calificaci\xF3n aqu\xED: https://g.page/r/CctNbwU6UpX5EBM/review
 
 \xA1Sigamos demostrando el poder de la colaboraci\xF3n inteligente en Colombia! \u{1F1E8}\u{1F1F4}\u{1F3AF}`;
+  }
+});
+
+// server/_core/setup-stealth.ts
+import { createRequire } from "module";
+var require2;
+var init_setup_stealth = __esm({
+  "server/_core/setup-stealth.ts"() {
+    "use strict";
+    require2 = createRequire(import.meta.url);
+    try {
+      const puppeteerExtra = require2("puppeteer-extra");
+      const StealthPlugin = require2("puppeteer-extra-plugin-stealth");
+      puppeteerExtra.use(StealthPlugin());
+      try {
+        const puppeteerPath = require2.resolve("puppeteer");
+        require2.cache[puppeteerPath] = {
+          id: puppeteerPath,
+          filename: puppeteerPath,
+          loaded: true,
+          exports: puppeteerExtra,
+          parent: null,
+          children: []
+        };
+        console.log("\u{1F6E1}\uFE0F [Stealth] Intercepci\xF3n de Puppeteer (completo) exitosa.");
+      } catch (err) {
+      }
+      try {
+        const puppeteerCorePath = require2.resolve("puppeteer-core");
+        require2.cache[puppeteerCorePath] = {
+          id: puppeteerCorePath,
+          filename: puppeteerCorePath,
+          loaded: true,
+          exports: puppeteerExtra,
+          parent: null,
+          children: []
+        };
+        console.log("\u{1F6E1}\uFE0F [Stealth] Intercepci\xF3n de Puppeteer-Core exitosa.");
+      } catch (err) {
+      }
+      console.log("\u{1F6E1}\uFE0F [Stealth] Evasi\xF3n de firmas activada para WhatsApp de forma robusta.");
+    } catch (error) {
+      console.error("\u274C [Stealth-Error] No se pudo configurar Stealth Puppeteer:", error);
+    }
   }
 });
 
@@ -3879,24 +3910,26 @@ async function uploadMetaMedia(fileBuffer, mimeType, filename) {
     return null;
   }
 }
-async function sendCloudMessage(chatId, content2, options = {}) {
+async function sendCloudMessage(chatId, content, options = {}) {
   const token = process.env.WHATSAPP_API_TOKEN;
   const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
   if (!token || !phoneId) {
     console.error("[WHATSAPP-CLOUD] Error: WHATSAPP_API_TOKEN or WHATSAPP_PHONE_NUMBER_ID not configured");
     return;
   }
-  const phone = chatId.split("@")[0];
+  const isGroup = chatId.includes("@g.us");
+  const to = isGroup ? chatId : chatId.split("@")[0];
+  const recipientType = isGroup ? "group" : "individual";
   try {
-    if (typeof content2 === "string") {
+    if (typeof content === "string") {
       const payload = {
         messaging_product: "whatsapp",
-        recipient_type: "individual",
-        to: phone,
+        recipient_type: recipientType,
+        to,
         type: "text",
         text: {
           preview_url: false,
-          body: content2
+          body: content
         }
       };
       if (options.quotedMessageId) {
@@ -3904,7 +3937,7 @@ async function sendCloudMessage(chatId, content2, options = {}) {
           message_id: options.quotedMessageId
         };
       }
-      console.log(`[WHATSAPP-CLOUD] Sending text message to ${phone}...`);
+      console.log(`[WHATSAPP-CLOUD] Sending text message to ${to} (${recipientType})...`);
       const res = await fetch(`https://graph.facebook.com/v18.0/${phoneId}/messages`, {
         method: "POST",
         headers: {
@@ -3915,19 +3948,19 @@ async function sendCloudMessage(chatId, content2, options = {}) {
       });
       if (!res.ok) {
         const errText = await res.text();
-        console.error(`[WHATSAPP-CLOUD] Text send failed: ${res.status} - ${errText}`);
+        console.error(`[WHATSAPP-CLOUD] Text send failed to ${to}: ${res.status} - ${errText}`);
       } else {
-        console.log(`[WHATSAPP-CLOUD] Text message successfully sent to ${phone}`);
+        console.log(`[WHATSAPP-CLOUD] \u2705 Text message successfully sent to ${to} (${recipientType})`);
       }
       return;
     }
-    if (content2 && typeof content2 === "object" && content2.mimetype && content2.data) {
-      const isAudio = content2.mimetype.startsWith("audio/");
-      const isImage = content2.mimetype.startsWith("image/");
-      const buffer = Buffer.from(content2.data, "base64");
-      const filename = content2.filename || (isAudio ? "voice-note.ogg" : isImage ? "image.jpg" : "file");
-      console.log(`[WHATSAPP-CLOUD] Uploading media (${content2.mimetype}, ${buffer.byteLength} bytes) to Meta...`);
-      const mediaId = await uploadMetaMedia(buffer, content2.mimetype, filename);
+    if (content && typeof content === "object" && content.mimetype && content.data) {
+      const isAudio = content.mimetype.startsWith("audio/");
+      const isImage = content.mimetype.startsWith("image/");
+      const buffer = Buffer.from(content.data, "base64");
+      const filename = content.filename || (isAudio ? "voice-note.ogg" : isImage ? "image.jpg" : "file");
+      console.log(`[WHATSAPP-CLOUD] Uploading media (${content.mimetype}, ${buffer.byteLength} bytes) to Meta...`);
+      const mediaId = await uploadMetaMedia(buffer, content.mimetype, filename);
       if (!mediaId) {
         console.error("[WHATSAPP-CLOUD] Failed to upload media, cannot send message");
         return;
@@ -3935,8 +3968,8 @@ async function sendCloudMessage(chatId, content2, options = {}) {
       const type = isAudio ? "audio" : isImage ? "image" : "document";
       const payload = {
         messaging_product: "whatsapp",
-        recipient_type: "individual",
-        to: phone,
+        recipient_type: recipientType,
+        to,
         type,
         [type]: {
           id: mediaId
@@ -3948,7 +3981,7 @@ async function sendCloudMessage(chatId, content2, options = {}) {
           message_id: options.quotedMessageId
         };
       }
-      console.log(`[WHATSAPP-CLOUD] Sending media message of type '${type}' to ${phone}...`);
+      console.log(`[WHATSAPP-CLOUD] Sending media message of type '${type}' to ${to} (${recipientType})...`);
       const res = await fetch(`https://graph.facebook.com/v18.0/${phoneId}/messages`, {
         method: "POST",
         headers: {
@@ -3959,13 +3992,13 @@ async function sendCloudMessage(chatId, content2, options = {}) {
       });
       if (!res.ok) {
         const errText = await res.text();
-        console.error(`[WHATSAPP-CLOUD] Media send failed (${type}): ${res.status} - ${errText}`);
+        console.error(`[WHATSAPP-CLOUD] Media send failed (${type}) to ${to}: ${res.status} - ${errText}`);
       } else {
-        console.log(`[WHATSAPP-CLOUD] Media message (${type}) successfully sent to ${phone}`);
+        console.log(`[WHATSAPP-CLOUD] \u2705 Media message (${type}) successfully sent to ${to} (${recipientType})`);
       }
       return;
     }
-    console.warn("[WHATSAPP-CLOUD] Unknown content type passed to sendCloudMessage:", content2);
+    console.warn("[WHATSAPP-CLOUD] Unknown content type passed to sendCloudMessage:", content);
   } catch (err) {
     console.error("[WHATSAPP-CLOUD] Exception in sendCloudMessage:", err);
   }
@@ -4463,12 +4496,13 @@ var init_whatsapp = __esm({
       lastResetDate = (/* @__PURE__ */ new Date()).toDateString();
       chatMessageTimes = /* @__PURE__ */ new Map();
       blockedChats = /* @__PURE__ */ new Map();
+      redirectCooldowns = /* @__PURE__ */ new Map();
       blacklistedBots = process.env.BLACKLISTED_BOTS ? process.env.BLACKLISTED_BOTS.split(",") : [];
       watchdogInterval = null;
       // --- ANTI-BURST & ANTI-FLOOD QUEUED DISPATCH (v12.0) ---
-      async queuedSend(chatId, content2, options = {}) {
-        if (typeof content2 === "string") {
-          content2 = content2.replace(/\*\*/g, "*");
+      async queuedSend(chatId, content, options = {}) {
+        if (typeof content === "string") {
+          content = content.replace(/\*\*/g, "*");
         }
         const today = (/* @__PURE__ */ new Date()).toDateString();
         if (this.lastResetDate !== today) {
@@ -4498,14 +4532,15 @@ var init_whatsapp = __esm({
           try {
             if (this.messagesSentToday >= this.dailyMessageLimit) return;
             const isGroup = chatId.includes("@g.us");
+            const shouldUseCloud = process.env.USE_WHATSAPP_CLOUD_API === "true" && (!isGroup || process.env.ENABLE_PUPPETEER_FOR_GROUPS !== "true");
             let typingDelay = 200;
-            if (process.env.USE_WHATSAPP_CLOUD_API === "true") {
-              const isAudio = content2 && content2.mimetype && content2.mimetype.startsWith("audio") || options && options.sendAudioAsVoice;
+            if (shouldUseCloud) {
+              const isAudio = content && content.mimetype && content.mimetype.startsWith("audio") || options && options.sendAudioAsVoice;
               if (isAudio) {
                 typingDelay = isGroup ? Math.floor(Math.random() * 2e3) + 3e3 : 300;
               } else {
-                if (typeof content2 === "string") {
-                  typingDelay = isGroup ? Math.min(content2.length * 15, 4e3) : Math.min(content2.length * 3, 400);
+                if (typeof content === "string") {
+                  typingDelay = isGroup ? Math.min(content.length * 15, 4e3) : Math.min(content.length * 3, 400);
                   typingDelay = Math.max(typingDelay, 200);
                 } else {
                   typingDelay = isGroup ? 1500 : 200;
@@ -4514,14 +4549,14 @@ var init_whatsapp = __esm({
             } else {
               try {
                 const chat = await this.client.getChatById(chatId);
-                const isAudio = content2 instanceof MessageMedia || typeof content2 === "object" && content2?.mimetype?.startsWith("audio") || options && options.sendAudioAsVoice;
+                const isAudio = content instanceof MessageMedia || typeof content === "object" && content?.mimetype?.startsWith("audio") || options && options.sendAudioAsVoice;
                 if (isAudio) {
                   await chat.sendStateRecording();
                   typingDelay = isGroup ? Math.floor(Math.random() * 2e3) + 3e3 : 300;
                 } else {
                   await chat.sendStateTyping();
-                  if (typeof content2 === "string") {
-                    typingDelay = isGroup ? Math.min(content2.length * 15, 4e3) : Math.min(content2.length * 3, 400);
+                  if (typeof content === "string") {
+                    typingDelay = isGroup ? Math.min(content.length * 15, 4e3) : Math.min(content.length * 3, 400);
                     typingDelay = Math.max(typingDelay, 200);
                   } else {
                     typingDelay = isGroup ? 2e3 : 200;
@@ -4532,17 +4567,17 @@ var init_whatsapp = __esm({
             }
             await delay(typingDelay);
             let sendPromise;
-            if (process.env.USE_WHATSAPP_CLOUD_API === "true") {
+            if (shouldUseCloud) {
               const { sendCloudMessage: sendCloudMessage2 } = await Promise.resolve().then(() => (init_whatsapp_cloud(), whatsapp_cloud_exports));
-              sendPromise = sendCloudMessage2(chatId, content2, options);
+              sendPromise = sendCloudMessage2(chatId, content, options);
             } else {
-              sendPromise = this.client.sendMessage(chatId, content2, options);
+              sendPromise = this.client.sendMessage(chatId, content, options);
             }
             const timeoutPromise = new Promise(
               (_, reject) => setTimeout(() => reject(new Error(`Timeout al enviar mensaje de WhatsApp a ${chatId}`)), 15e3)
             );
             await Promise.race([sendPromise, timeoutPromise]);
-            if (process.env.USE_WHATSAPP_CLOUD_API !== "true") {
+            if (!shouldUseCloud) {
               try {
                 const chat = await this.client.getChatById(chatId);
                 await chat.clearState();
@@ -4709,9 +4744,11 @@ var init_whatsapp = __esm({
             }
           })();
         });
-        this.client.on("disconnected", (reason) => {
-          console.log("[WHATSAPP-BOT] Cliente desconectado:", reason);
+        this.client.on("disconnected", async (reason) => {
+          console.warn("[WHATSAPP-BOT] \u26A0\uFE0F Cliente desconectado:", reason, "\u2014 iniciando reconexi\xF3n autom\xE1tica en 10s...");
           this.isReady = false;
+          await new Promise((resolve) => setTimeout(resolve, 1e4));
+          await this.reconnectClient();
         });
         this.client.on("group_membership_request", async (notification) => {
           try {
@@ -4881,6 +4918,24 @@ var init_whatsapp = __esm({
               return;
             }
             if (!isGroup) {
+              if (process.env.USE_WHATSAPP_CLOUD_API === "true" && process.env.ENABLE_PUPPETEER_FOR_GROUPS === "true") {
+                const now = Date.now();
+                const lastRedirect = this.redirectCooldowns.get(senderId) || 0;
+                const TWELVE_HOURS = 12 * 60 * 60 * 1e3;
+                if (now - lastRedirect > TWELVE_HOURS) {
+                  this.redirectCooldowns.set(senderId, now);
+                  const redirectLink = process.env.WHATSAPP_OFFICIAL_DM_LINK || "https://wa.me/REEMPLAZAR_CON_NUMERO_DE_META_OFICIAL";
+                  const welcomeText = `\xA1Hola! \u{1F916} Soy JanIA, la asistente de la Red VECY.
+
+Este n\xFAmero lo utilizo *\xFAnicamente para interactuar en los grupos inmobiliarios*.
+
+Para chatear conmigo en privado, buscar inmuebles, transcribir audios y usar todas mis herramientas, por favor escr\xEDbeme a mi chat oficial directo:
+
+\u{1F449} ${redirectLink}`;
+                  await this.queuedSend(chatId, welcomeText);
+                }
+                return;
+              }
               await this.handleIncomingMessage(msg, chatId);
               return;
             }
@@ -5010,14 +5065,28 @@ Para poder saber cu\xE1l de ellas deseas confirmar o rechazar, por favor respond
             }
           }
           let imageBuffer;
-          if (msg.hasMedia && msg.type === "image") {
-            try {
-              const media = await msg.downloadMedia();
-              if (media && media.mimetype.startsWith("image/")) {
-                imageBuffer = media.data;
+          let pdfBuffer;
+          let pdfMimeType;
+          if (msg.hasMedia) {
+            if (msg.type === "image") {
+              try {
+                const media = await msg.downloadMedia();
+                if (media && media.mimetype.startsWith("image/")) {
+                  imageBuffer = media.data;
+                }
+              } catch (e) {
+                console.error("[JanIA-DM-Vision] Error descargando imagen:", e);
               }
-            } catch (e) {
-              console.error("[JanIA-DM-Vision] Error descargando imagen:", e);
+            } else if (msg.type === "document") {
+              try {
+                const media = await msg.downloadMedia();
+                if (media && media.mimetype === "application/pdf") {
+                  pdfBuffer = media.data;
+                  pdfMimeType = media.mimetype;
+                }
+              } catch (e) {
+                console.error("[JanIA-DM-Document] Error descargando documento:", e);
+              }
             }
           }
           const result = await processWhatsAppMessage(
@@ -5028,7 +5097,11 @@ Para poder saber cu\xE1l de ellas deseas confirmar o rechazar, por favor respond
             [],
             // Sin scraping para DMs simples
             void 0,
-            imageBuffer
+            imageBuffer,
+            false,
+            // isGroup = false
+            pdfBuffer,
+            pdfMimeType
           );
           if (result) {
             const responseText = result.dmResponse || result.response;
@@ -5295,6 +5368,18 @@ Hola @${rawPhone}, detect\xE9 que est\xE1s enviando muchas publicaciones seguida
               console.error("[VISION] Error descargando media diferida:", err);
             }
           }
+          if (bufferedMsg.hasMedia && bufferedMsg.originalMsg.type === "document" && !bufferedMsg.pdfBuffer) {
+            try {
+              console.log(`[DOCUMENT] Descargando PDF para ${senderId}...`);
+              const media = await bufferedMsg.originalMsg.downloadMedia();
+              if (media && media.mimetype === "application/pdf") {
+                bufferedMsg.pdfBuffer = media.data;
+                bufferedMsg.pdfMimeType = media.mimetype;
+              }
+            } catch (err) {
+              console.error("[DOCUMENT] Error descargando documento diferido:", err);
+            }
+          }
           if (bufferedMsg.hasMedia && (bufferedMsg.originalMsg.type === "ptt" || bufferedMsg.originalMsg.type === "audio") && !bufferedMsg.audioUrl) {
             try {
               console.log(`[AUDIO] Descargando audio/ptt para ${senderId}...`);
@@ -5380,6 +5465,8 @@ Hola @${rawPhone}, detect\xE9 que est\xE1s enviando muchas publicaciones seguida
             const groupHasAudio = group.some((m) => m.originalMsg.type === "ptt" || m.originalMsg.type === "audio");
             const groupImageBuffer = group.find((m) => m.imageBuffer)?.imageBuffer;
             const groupAudioUrl = group.find((m) => m.audioUrl)?.audioUrl;
+            const groupPdfBuffer = group.find((m) => m.pdfBuffer)?.pdfBuffer;
+            const groupPdfMimeType = group.find((m) => m.pdfMimeType)?.pdfMimeType;
             const originalMsg = group[group.length - 1].originalMsg;
             const partitioned = partitionTextByListings(groupText);
             for (const itemText of partitioned) {
@@ -5389,6 +5476,8 @@ Hola @${rawPhone}, detect\xE9 que est\xE1s enviando muchas publicaciones seguida
                 hasAudio: groupHasAudio,
                 imageBuffer: groupImageBuffer,
                 audioUrl: groupAudioUrl,
+                pdfBuffer: groupPdfBuffer,
+                pdfMimeType: groupPdfMimeType,
                 originalMsg
               });
             }
@@ -5446,7 +5535,7 @@ Hola @${rawPhone}, detect\xE9 que est\xE1s enviando muchas publicaciones seguida
             const pending = isDM ? this.pendingData.get(senderId) : null;
             let result;
             if (chatId === this.buzonGroupId) {
-              result = await processConsultingMessage(item.text, senderId, userName, item.imageBuffer);
+              result = await processConsultingMessage(item.text, senderId, userName, item.imageBuffer, item.pdfBuffer, item.pdfMimeType);
             } else if (chatId === this.circuloGroupId) {
               result = await processCirculoMessage(item.text, senderId, userName);
             } else {
@@ -5455,9 +5544,9 @@ Hola @${rawPhone}, detect\xE9 que est\xE1s enviando muchas publicaciones seguida
 [RESPUESTA]: "${item.text}"`;
                 this.pendingData.delete(senderId);
                 this.savePendingData();
-                result = await processWhatsAppMessage(combinedText, senderId, userName, false, [], void 0, item.imageBuffer, !isDM);
+                result = await processWhatsAppMessage(combinedText, senderId, userName, false, [], void 0, item.imageBuffer, !isDM, item.pdfBuffer, item.pdfMimeType);
               } else {
-                result = await processWhatsAppMessage(item.text, senderId, userName, item.hasMedia, scrapedResults, item.audioUrl, item.imageBuffer, !isDM);
+                result = await processWhatsAppMessage(item.text, senderId, userName, item.hasMedia, scrapedResults, item.audioUrl, item.imageBuffer, !isDM, item.pdfBuffer, item.pdfMimeType);
               }
             }
             const textLower = item.text.toLowerCase();
@@ -5733,7 +5822,7 @@ _(Nota: Por favor nombra a JanIA Administradora del grupo para que pueda borrar 
         }
       }
       // --- LOGÍSTICA DE BASE DE DATOS ---
-      async logToDb(senderId, role, content2) {
+      async logToDb(senderId, role, content) {
         try {
           const db = await getDb();
           if (!db) return;
@@ -5743,7 +5832,7 @@ _(Nota: Por favor nombra a JanIA Administradora del grupo para que pueda borrar 
             const [newConv] = await db.insert(conversations).values({
               sessionId: senderId,
               status: "active",
-              lastMessage: content2.substring(0, 200)
+              lastMessage: content.substring(0, 200)
             }).returning();
             conversationId = newConv.id;
           } else {
@@ -5752,11 +5841,11 @@ _(Nota: Por favor nombra a JanIA Administradora del grupo para que pueda borrar 
           await db.insert(messages).values({
             conversationId,
             role,
-            content: content2,
+            content,
             messageType: "text"
           });
           await db.update(conversations).set({
-            lastMessage: content2.substring(0, 200),
+            lastMessage: content.substring(0, 200),
             updatedAt: /* @__PURE__ */ new Date()
           }).where(eq10(conversations.id, conversationId));
         } catch (e) {
@@ -5973,7 +6062,7 @@ Ya estoy 100% activa para escanear sus publicaciones y buscarles cierres sin cob
             console.error("[WHATSAPP-BOT] No se pudo obtener el chat del grupo.");
             return;
           }
-          const messages2 = await chat.fetchMessages({ limit: 1500 });
+          const messages2 = await chat.fetchMessages({ limit: 50 });
           console.log(`[WHATSAPP-BOT] Analizando ${messages2.length} mensajes en b\xFAsqueda de uniones...`);
           const joinList = [];
           for (const msg of messages2) {
@@ -5986,6 +6075,7 @@ Ya estoy 100% activa para escanear sus publicaciones y buscarles cierres sin cob
               let contactName = "Desconocido";
               if (author) {
                 try {
+                  await new Promise((resolve) => setTimeout(resolve, 500));
                   const contact = await this.client.getContactById(author);
                   contactName = contact.name || contact.pushname || "";
                 } catch (e) {
@@ -6201,6 +6291,18 @@ Direcci\xF3n obligatoria:
         }
       }
       initialize() {
+        const useCloud = process.env.USE_WHATSAPP_CLOUD_API === "true";
+        const enablePupForGroups = process.env.ENABLE_PUPPETEER_FOR_GROUPS === "true";
+        if (useCloud && !enablePupForGroups) {
+          console.log("[WHATSAPP-BOT] Inicializando en modo WhatsApp Cloud API (Meta) puro - Puppeteer desactivado.");
+          this.isReady = true;
+          return;
+        }
+        if (useCloud && enablePupForGroups) {
+          console.log("[WHATSAPP-BOT] Inicializando en MODO H\xCDBRIDO: DMs por Cloud API (Meta) + Grupos por Puppeteer (inicializando cliente...).");
+        } else {
+          console.log("[WHATSAPP-BOT] Inicializando en modo Puppeteer puro (inicializando cliente...).");
+        }
         this.client.initialize().catch((err) => {
           console.error("[WHATSAPP-BOT] Error cr\xEDtico durante la inicializaci\xF3n de whatsapp-web.js:", err);
         });
@@ -6544,23 +6646,23 @@ var validatePayload = (input) => {
     });
   }
   const title = trimValue(input.title);
-  const content2 = trimValue(input.content);
+  const content = trimValue(input.content);
   if (title.length > TITLE_MAX_LENGTH) {
     throw new TRPCError({
       code: "BAD_REQUEST",
       message: `Notification title must be at most ${TITLE_MAX_LENGTH} characters.`
     });
   }
-  if (content2.length > CONTENT_MAX_LENGTH) {
+  if (content.length > CONTENT_MAX_LENGTH) {
     throw new TRPCError({
       code: "BAD_REQUEST",
       message: `Notification content must be at most ${CONTENT_MAX_LENGTH} characters.`
     });
   }
-  return { title, content: content2 };
+  return { title, content };
 };
 async function notifyOwner(payload) {
-  const { title, content: content2 } = validatePayload(payload);
+  const { title, content } = validatePayload(payload);
   if (!ENV.forgeApiUrl) {
     throw new TRPCError({
       code: "INTERNAL_SERVER_ERROR",
@@ -6583,7 +6685,7 @@ async function notifyOwner(payload) {
         "content-type": "application/json",
         "connect-protocol-version": "1"
       },
-      body: JSON.stringify({ title, content: content2 })
+      body: JSON.stringify({ title, content })
     });
     if (!response.ok) {
       const detail = await response.text().catch(() => "");
@@ -6663,23 +6765,9 @@ init_llm();
 init_db();
 init_schema();
 init_scraper();
-import { eq as eq2, desc } from "drizzle-orm";
-var JAN\u00CDA_SYSTEM_PROMPT = `Eres JanIA, la Inteligencia Artificial Maestra y Cerebro Log\xEDstico de VECY Network. Experta en Bienes Ra\xEDces y Consultor\xEDa Jur\xEDdica.
-
-TU FILOSOF\xCDA DE COMUNICACI\xD3N:
-1. SIN FIRMAS: Prohibido usar "JanIA", "Con cari\xF1o", "Atentamente" o cualquier tipo de despedida o firma. Tu perfil ya te identifica.
-2. EFICIENCIA EXTREMA: S\xE9 directa, profesional y ve al grano. Responde con sabidur\xEDa y l\xF3gica de mentor senior, pero sin rellenos triviales.
-3. MISI\xD3N: "Cero Esfuerzo". Automatizas el matching y resuelves dudas con precisi\xF3n quir\xFArgica.
-
-Habilidades Especiales:
-- Extracci\xF3n de Links Inmobiliarios.
-- Matching Inteligente de Oferta y Demanda.
-- Asesor\xEDa en el modelo Gana-Gana y Bolsa de Puntos.
-
-Instrucciones:
-- Responde \xFAnicamente sobre bienes ra\xEDces y el ecosistema VECY.
-- Mant\xE9n un tono de tuteo profesional, asertivo y altamente capacitado.
-- No uses frases gen\xE9ricas de bot.`;
+init_janIA();
+import { eq as eq4, desc } from "drizzle-orm";
+import axios5 from "axios";
 var janIARouter = router({
   // New: Extract property data from link
   extractFromLink: publicProcedure.input(z2.object({ url: z2.string().url() })).mutation(async ({ input }) => {
@@ -6706,7 +6794,7 @@ var janIARouter = router({
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     try {
-      let conversation = await db.select().from(conversations).where(eq2(conversations.sessionId, input.sessionId)).limit(1);
+      let conversation = await db.select().from(conversations).where(eq4(conversations.sessionId, input.sessionId)).limit(1);
       let conversationId;
       if (conversation.length === 0) {
         const insertData = {
@@ -6721,10 +6809,10 @@ var janIARouter = router({
       } else {
         conversationId = conversation[0].id;
         if (ctx.user && !conversation[0].userId) {
-          await db.update(conversations).set({ userId: String(ctx.user.id) }).where(eq2(conversations.id, conversationId));
+          await db.update(conversations).set({ userId: String(ctx.user.id) }).where(eq4(conversations.id, conversationId));
         }
       }
-      const conversationHistory = await db.select().from(messages).where(eq2(messages.conversationId, conversationId)).orderBy(messages.createdAt);
+      const conversationHistory = await db.select().from(messages).where(eq4(messages.conversationId, conversationId)).orderBy(messages.createdAt);
       const messageHistory = conversationHistory.map((msg) => ({
         role: msg.role,
         content: msg.content
@@ -6735,7 +6823,7 @@ var janIARouter = router({
       });
       const response = await invokeLLM({
         messages: [
-          { role: "system", content: JAN\u00CDA_SYSTEM_PROMPT },
+          { role: "system", content: JANIA_PROMPT },
           ...messageHistory.map((m) => ({
             role: m.role,
             content: m.content
@@ -6758,7 +6846,7 @@ var janIARouter = router({
       await db.update(conversations).set({
         lastMessage: janIAResponse,
         updatedAt: /* @__PURE__ */ new Date()
-      }).where(eq2(conversations.id, conversationId));
+      }).where(eq4(conversations.id, conversationId));
       return {
         content: janIAResponse,
         conversationId
@@ -6774,7 +6862,7 @@ var janIARouter = router({
     const db = await getDb();
     if (!db) return [];
     try {
-      return await db.select().from(conversations).where(eq2(conversations.userId, String(ctx.user.id))).orderBy(desc(conversations.updatedAt));
+      return await db.select().from(conversations).where(eq4(conversations.userId, String(ctx.user.id))).orderBy(desc(conversations.updatedAt));
     } catch (error) {
       console.error("Error getting user conversations:", error);
       return [];
@@ -6785,9 +6873,9 @@ var janIARouter = router({
     const db = await getDb();
     if (!db) return [];
     try {
-      const conv = await db.select().from(conversations).where(eq2(conversations.sessionId, input.sessionId)).limit(1);
+      const conv = await db.select().from(conversations).where(eq4(conversations.sessionId, input.sessionId)).limit(1);
       if (conv.length === 0) return [];
-      return await db.select().from(messages).where(eq2(messages.conversationId, conv[0].id)).orderBy(messages.createdAt);
+      return await db.select().from(messages).where(eq4(messages.conversationId, conv[0].id)).orderBy(messages.createdAt);
     } catch (error) {
       console.error("Error getting conversation messages:", error);
       return [];
@@ -6798,10 +6886,10 @@ var janIARouter = router({
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     try {
-      const conv = await db.select().from(conversations).where(eq2(conversations.sessionId, input.sessionId)).limit(1);
+      const conv = await db.select().from(conversations).where(eq4(conversations.sessionId, input.sessionId)).limit(1);
       if (conv.length > 0) {
-        await db.delete(messages).where(eq2(messages.conversationId, conv[0].id));
-        await db.delete(conversations).where(eq2(conversations.id, conv[0].id));
+        await db.delete(messages).where(eq4(messages.conversationId, conv[0].id));
+        await db.delete(conversations).where(eq4(conversations.id, conv[0].id));
       }
       return { success: true };
     } catch (error) {
@@ -6822,19 +6910,42 @@ var janIARouter = router({
     try {
       const fileContent = `[Archivo: ${input.fileType}]
 URL: ${input.fileUrl}`;
+      let imageBuffer;
+      let pdfBuffer;
+      let pdfMimeType;
+      try {
+        console.log(`[JanIA-Router] Descargando archivo desde URL para an\xE1lisis: ${input.fileUrl}`);
+        const fileRes = await axios5.get(input.fileUrl, { responseType: "arraybuffer" });
+        const base64Data = Buffer.from(fileRes.data).toString("base64");
+        const contentTypeHeader = fileRes.headers["content-type"];
+        const contentType = typeof contentTypeHeader === "string" ? contentTypeHeader : input.fileType || "";
+        if (contentType.includes("pdf") || input.fileUrl.toLowerCase().endsWith(".pdf")) {
+          pdfBuffer = base64Data;
+          pdfMimeType = contentType || "application/pdf";
+          console.log("[JanIA-Router] Archivo detectado como PDF.");
+        } else if (contentType.includes("image") || input.fileUrl.toLowerCase().match(/\.(jpe?g|png|gif|webp)$/i)) {
+          imageBuffer = base64Data;
+          console.log("[JanIA-Router] Archivo detectado como Imagen.");
+        }
+      } catch (downloadError) {
+        console.error("[JanIA-Router] Error descargando archivo de an\xE1lisis:", downloadError.message || downloadError);
+      }
       const response = await invokeLLM({
         messages: [
           {
             role: "system",
-            content: `${JAN\u00CDA_SYSTEM_PROMPT}
+            content: `${JANIA_PROMPT}
 
-Analiza el archivo proporcionado y proporciona un an\xE1lisis detallado relacionado con bienes ra\xEDces.`
+Analiza el archivo proporcionado y proporciona un an\xE1lisis detallado relacionado con bienes ra\xEDces en Colombia.`
           },
           {
             role: "user",
             content: fileContent
           }
-        ]
+        ],
+        imageBuffer,
+        pdfBuffer,
+        pdfMimeType
       });
       const analysis = typeof response.choices[0]?.message?.content === "string" ? response.choices[0].message.content : "No analysis available";
       return {
@@ -6855,7 +6966,7 @@ Analiza el archivo proporcionado y proporciona un an\xE1lisis detallado relacion
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     try {
-      const matches = await db.select().from(propertyMatches).where(eq2(propertyMatches.requirementId, input.requirementId)).orderBy(desc(propertyMatches.matchScore)).limit(input.limit);
+      const matches = await db.select().from(propertyMatches).where(eq4(propertyMatches.requirementId, input.requirementId)).orderBy(desc(propertyMatches.matchScore)).limit(input.limit);
       return matches;
     } catch (error) {
       console.error("Error getting property matches:", error);
@@ -6905,7 +7016,7 @@ Analiza el archivo proporcionado y proporciona un an\xE1lisis detallado relacion
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     try {
-      const zoneProperties = await db.select().from(properties).where(eq2(properties.zone, input.zone));
+      const zoneProperties = await db.select().from(properties).where(eq4(properties.zone, input.zone));
       if (zoneProperties.length === 0) {
         return {
           zone: input.zone,
@@ -6931,7 +7042,7 @@ Analiza el archivo proporcionado y proporciona un an\xE1lisis detallado relacion
 import { z as z3 } from "zod";
 init_db();
 init_schema();
-import { eq as eq3 } from "drizzle-orm";
+import { eq as eq5 } from "drizzle-orm";
 
 // server/github-integration.ts
 import { Octokit } from "@octokit/rest";
@@ -7307,7 +7418,7 @@ var githubRouter = router({
     if (!db) throw new Error("Database not available");
     try {
       const { octokit, user } = await initializeGitHubIntegration(GITHUB_TOKEN);
-      const adminUser = await db.select().from(users).where(eq3(users.email, "vecybienesraices@gmail.com")).limit(1);
+      const adminUser = await db.select().from(users).where(eq5(users.email, "vecybienesraices@gmail.com")).limit(1);
       const adminId = adminUser.length > 0 ? adminUser[0].id : 1;
       let reposToSync = input.repositories || [];
       if (reposToSync.length === 0) {
@@ -7324,14 +7435,14 @@ var githubRouter = router({
             repoName
           );
           if (propertyData) {
-            const existing = await db.select().from(properties).where(eq3(properties.sourceRepository, repoName)).limit(1);
+            const existing = await db.select().from(properties).where(eq5(properties.sourceRepository, repoName)).limit(1);
             if (existing.length > 0) {
               await db.update(properties).set({
                 ...propertyData,
                 agentId: adminId,
                 sourceRepository: repoName,
                 lastSyncedAt: /* @__PURE__ */ new Date()
-              }).where(eq3(properties.id, existing[0].id));
+              }).where(eq5(properties.id, existing[0].id));
             } else {
               await db.insert(properties).values({
                 ...propertyData,
@@ -7420,7 +7531,7 @@ init_storage();
 init_db();
 init_db();
 init_schema();
-import { eq as eq4 } from "drizzle-orm";
+import { eq as eq6 } from "drizzle-orm";
 var imagesRouter = {
   /**
    * Upload image to S3 and save to database
@@ -7445,7 +7556,7 @@ var imagesRouter = {
       if (input.isMainImage) {
         const db = await getDb();
         if (db) {
-          await db.update(propertyImages).set({ isMainImage: false }).where(eq4(propertyImages.propertyId, input.propertyId));
+          await db.update(propertyImages).set({ isMainImage: false }).where(eq6(propertyImages.propertyId, input.propertyId));
         }
       }
       const images = await getPropertyImages(input.propertyId);
@@ -7510,7 +7621,7 @@ var imagesRouter = {
     try {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
-      await db.update(propertyImages).set({ displayOrder: input.displayOrder }).where(eq4(propertyImages.id, input.imageId));
+      await db.update(propertyImages).set({ displayOrder: input.displayOrder }).where(eq6(propertyImages.id, input.imageId));
       return {
         success: true,
         message: "Image order updated successfully"
@@ -7531,8 +7642,8 @@ var imagesRouter = {
     try {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
-      await db.update(propertyImages).set({ isMainImage: false }).where(eq4(propertyImages.propertyId, input.propertyId));
-      await db.update(propertyImages).set({ isMainImage: true }).where(eq4(propertyImages.id, input.imageId));
+      await db.update(propertyImages).set({ isMainImage: false }).where(eq6(propertyImages.propertyId, input.propertyId));
+      await db.update(propertyImages).set({ isMainImage: true }).where(eq6(propertyImages.id, input.imageId));
       return {
         success: true,
         message: "Main image updated successfully"
@@ -7547,7 +7658,7 @@ var imagesRouter = {
 import { z as z5 } from "zod";
 init_db();
 init_schema();
-import { eq as eq5, and, desc as desc2, isNull } from "drizzle-orm";
+import { eq as eq7, and as and3, desc as desc2, isNull } from "drizzle-orm";
 import { TRPCError as TRPCError3 } from "@trpc/server";
 var agentRouter = router({
   // Public: Get agent profile for branding (Agenda Pro, Personal Shops)
@@ -7560,23 +7671,23 @@ var agentRouter = router({
       customLogoUrl: users.customLogoUrl,
       themeConfig: users.themeConfig,
       subdomain: users.subdomain
-    }).from(users).where(eq5(users.id, input.id)).limit(1);
+    }).from(users).where(eq7(users.id, input.id)).limit(1);
     if (agent.length === 0) throw new TRPCError3({ code: "NOT_FOUND", message: "Agent not found" });
     return agent[0];
   }),
   getMyProperties: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-    return await db.select().from(properties).where(eq5(properties.agentId, ctx.user.id)).orderBy(desc2(properties.createdAt));
+    return await db.select().from(properties).where(eq7(properties.agentId, ctx.user.id)).orderBy(desc2(properties.createdAt));
   }),
   // For testing: Allows an agent to claim a property that has no agent assigned
   claimProperty: protectedProcedure.input(z5.object({ propertyId: z5.number() })).mutation(async ({ ctx, input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-    const property = await db.select().from(properties).where(eq5(properties.id, input.propertyId)).limit(1);
+    const property = await db.select().from(properties).where(eq7(properties.id, input.propertyId)).limit(1);
     if (property.length === 0) throw new TRPCError3({ code: "NOT_FOUND", message: "Property not found" });
     if (property[0].agentId) throw new TRPCError3({ code: "FORBIDDEN", message: "Property already has an agent" });
-    await db.update(properties).set({ agentId: ctx.user.id }).where(eq5(properties.id, input.propertyId));
+    await db.update(properties).set({ agentId: ctx.user.id }).where(eq7(properties.id, input.propertyId));
     return { success: true };
   }),
   getAvailablePropertiesToClaim: protectedProcedure.query(async ({ ctx }) => {
@@ -7587,15 +7698,15 @@ var agentRouter = router({
   generateStealthLink: protectedProcedure.input(z5.object({ propertyId: z5.number() })).mutation(async ({ ctx, input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-    const property = await db.select().from(properties).where(eq5(properties.id, input.propertyId)).limit(1);
+    const property = await db.select().from(properties).where(eq7(properties.id, input.propertyId)).limit(1);
     if (property.length === 0) throw new TRPCError3({ code: "NOT_FOUND", message: "Property not found" });
     if (property[0].agentId !== ctx.user.id && ctx.user.role !== "admin") {
       throw new TRPCError3({ code: "FORBIDDEN", message: "You don't own this property" });
     }
     const existingLink = await db.select().from(referralLinks).where(
-      and(
-        eq5(referralLinks.propertyId, input.propertyId),
-        eq5(referralLinks.agentId, ctx.user.id)
+      and3(
+        eq7(referralLinks.propertyId, input.propertyId),
+        eq7(referralLinks.agentId, ctx.user.id)
       )
     ).limit(1);
     if (existingLink.length > 0) {
@@ -7619,7 +7730,7 @@ var agentRouter = router({
         name: properties.name,
         matriculaInmobiliaria: properties.matriculaInmobiliaria
       }
-    }).from(referralLinks).innerJoin(properties, eq5(referralLinks.propertyId, properties.id)).where(eq5(referralLinks.agentId, ctx.user.id)).orderBy(desc2(referralLinks.createdAt));
+    }).from(referralLinks).innerJoin(properties, eq7(referralLinks.propertyId, properties.id)).where(eq7(referralLinks.agentId, ctx.user.id)).orderBy(desc2(referralLinks.createdAt));
   })
 });
 
@@ -7627,18 +7738,18 @@ var agentRouter = router({
 import { z as z6 } from "zod";
 init_db();
 init_schema();
-import { eq as eq6, sql } from "drizzle-orm";
+import { eq as eq8, sql as sql2 } from "drizzle-orm";
 import { TRPCError as TRPCError4 } from "@trpc/server";
 var leadsRouter = router({
   resolveStealthLink: publicProcedure.input(z6.object({ token: z6.string() })).mutation(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "Database err" });
-    const linkRecord = await db.select().from(referralLinks).where(eq6(referralLinks.token, input.token)).limit(1);
+    const linkRecord = await db.select().from(referralLinks).where(eq8(referralLinks.token, input.token)).limit(1);
     if (linkRecord.length === 0) {
       throw new TRPCError4({ code: "NOT_FOUND", message: "Stealth Link invalido o expirado." });
     }
     const link = linkRecord[0];
-    await db.update(referralLinks).set({ clicks: sql`${referralLinks.clicks} + 1` }).where(eq6(referralLinks.id, link.id));
+    await db.update(referralLinks).set({ clicks: sql2`${referralLinks.clicks} + 1` }).where(eq8(referralLinks.id, link.id));
     const prop = await db.select({
       id: properties.id,
       name: properties.name,
@@ -7650,7 +7761,7 @@ var leadsRouter = router({
       // specifically NOT returning full location/latitude/longitude/matricula
       wildcardFeature: properties.wildcardFeature,
       images: properties.images
-    }).from(properties).where(eq6(properties.id, link.propertyId)).limit(1);
+    }).from(properties).where(eq8(properties.id, link.propertyId)).limit(1);
     if (prop.length === 0) {
       throw new TRPCError4({ code: "NOT_FOUND", message: "Inmueble no disponible." });
     }
@@ -7667,7 +7778,7 @@ var leadsRouter = router({
   })).mutation(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "Database err" });
-    const linkRecord = await db.select().from(referralLinks).where(eq6(referralLinks.token, input.token)).limit(1);
+    const linkRecord = await db.select().from(referralLinks).where(eq8(referralLinks.token, input.token)).limit(1);
     if (linkRecord.length === 0) {
       throw new TRPCError4({ code: "BAD_REQUEST", message: "Token invalido." });
     }
@@ -7696,7 +7807,7 @@ var leadsRouter = router({
 import { z as z7 } from "zod";
 init_db();
 init_schema();
-import { eq as eq7, desc as desc3, ilike, and as and2 } from "drizzle-orm";
+import { eq as eq9, desc as desc3, ilike, and as and4 } from "drizzle-orm";
 import { TRPCError as TRPCError5 } from "@trpc/server";
 var propertyInputSchema = z7.object({
   name: z7.string().min(2),
@@ -7756,16 +7867,16 @@ var propertiesRouter = router({
   }).optional()).query(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
-    const filters = [eq7(properties.available, true)];
-    if (input?.transactionType) filters.push(eq7(properties.transactionType, input.transactionType));
-    if (input?.type) filters.push(eq7(properties.propertyType, input.type));
+    const filters = [eq9(properties.available, true)];
+    if (input?.transactionType) filters.push(eq9(properties.transactionType, input.transactionType));
+    if (input?.type) filters.push(eq9(properties.propertyType, input.type));
     if (input?.zone) filters.push(ilike(properties.zone, `%${input.zone}%`));
-    return await db.select().from(properties).where(and2(...filters)).orderBy(desc3(properties.featured), desc3(properties.createdAt)).limit(input?.limit ?? 20).offset(input?.offset ?? 0);
+    return await db.select().from(properties).where(and4(...filters)).orderBy(desc3(properties.featured), desc3(properties.createdAt)).limit(input?.limit ?? 20).offset(input?.offset ?? 0);
   }),
   getById: publicProcedure.input(z7.object({ id: z7.number() })).query(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
-    const result = await db.select().from(properties).where(eq7(properties.id, input.id)).limit(1);
+    const result = await db.select().from(properties).where(eq9(properties.id, input.id)).limit(1);
     if (result.length === 0) throw new TRPCError5({ code: "NOT_FOUND", message: "Propiedad no encontrada" });
     const property = result[0];
     return property;
@@ -7786,23 +7897,23 @@ var propertiesRouter = router({
   })).mutation(async ({ ctx, input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
-    const existing = await db.select().from(properties).where(eq7(properties.id, input.id)).limit(1);
+    const existing = await db.select().from(properties).where(eq9(properties.id, input.id)).limit(1);
     if (existing.length === 0) throw new TRPCError5({ code: "NOT_FOUND" });
     const isOwner = existing[0].agentId === ctx.user.id;
     const isAdmin = ctx.user.role === "admin";
     if (!isOwner && !isAdmin) throw new TRPCError5({ code: "FORBIDDEN" });
-    const updated = await db.update(properties).set({ ...input.data, updatedAt: /* @__PURE__ */ new Date() }).where(eq7(properties.id, input.id)).returning();
+    const updated = await db.update(properties).set({ ...input.data, updatedAt: /* @__PURE__ */ new Date() }).where(eq9(properties.id, input.id)).returning();
     return updated[0];
   }),
   delete: protectedProcedure.input(z7.object({ id: z7.number() })).mutation(async ({ ctx, input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
-    const existing = await db.select().from(properties).where(eq7(properties.id, input.id)).limit(1);
+    const existing = await db.select().from(properties).where(eq9(properties.id, input.id)).limit(1);
     if (existing.length === 0) throw new TRPCError5({ code: "NOT_FOUND" });
     const isOwner = existing[0].agentId === ctx.user.id;
     const isAdmin = ctx.user.role === "admin";
     if (!isOwner && !isAdmin) throw new TRPCError5({ code: "FORBIDDEN" });
-    await db.delete(properties).where(eq7(properties.id, input.id));
+    await db.delete(properties).where(eq9(properties.id, input.id));
     return { success: true };
   }),
   // List my own properties (agent view)
@@ -7813,7 +7924,7 @@ var propertiesRouter = router({
     if (isAdmin) {
       return await db.select().from(properties).orderBy(desc3(properties.createdAt));
     }
-    return await db.select().from(properties).where(eq7(properties.agentId, ctx.user.id)).orderBy(desc3(properties.createdAt));
+    return await db.select().from(properties).where(eq9(properties.agentId, ctx.user.id)).orderBy(desc3(properties.createdAt));
   })
 });
 
@@ -8025,13 +8136,10 @@ Direcci\xF3n obligatoria:
           { role: "user", content: promptInmuebles }
         ]
       });
-      const content2 = response.choices[0]?.message?.content;
-      if (content2 && content2.trim() !== "") {
-        if (process.env.NODE_ENV === "development") {
-          console.log("[CRON-SERVICE] [DEV MODE] Omitiendo env\xEDo de mensaje de la ma\xF1ana para Inmuebles. Contenido:\n", content2);
-        } else {
-          await whatsappBot.sendToGroup(content2, void 0, []);
-        }
+      const content = response.choices[0]?.message?.content;
+      if (content && content.trim() !== "") {
+        console.log("[CRON-SERVICE] Enviando mensaje matutino a VECY INMUEBLES NETWORK...");
+        await whatsappBot.sendToGroup(content, void 0, []);
       }
     } catch (e) {
       console.error("\u274C Error al generar mensaje matutino para Inmuebles:", e.message);
@@ -8048,14 +8156,12 @@ Direcci\xF3n obligatoria:
           { role: "user", content: promptConsultoria }
         ]
       });
+      const content = response.choices[0]?.message?.content;
       if (content && content.trim() !== "") {
         const buzonJid = whatsappBot.buzonGroupId;
         if (buzonJid) {
-          if (process.env.NODE_ENV === "development") {
-            console.log("[CRON-SERVICE] [DEV MODE] Omitiendo env\xEDo de mensaje de la ma\xF1ana para Consultor\xEDa. Contenido:\n", content);
-          } else {
-            await whatsappBot.sendToGroup(content, void 0, [], buzonJid);
-          }
+          console.log("[CRON-SERVICE] Enviando mensaje matutino a CONSULTOR\xCDA JUR\xCDDICA INMOBILIARIA...");
+          await whatsappBot.sendToGroup(content, void 0, [], buzonJid);
         }
       }
     } catch (e) {
@@ -8075,14 +8181,12 @@ Direcci\xF3n obligatoria:
           { role: "user", content: promptCirculo }
         ]
       });
+      const content = response.choices[0]?.message?.content;
       if (content && content.trim() !== "") {
         const circuloJid = whatsappBot.circuloGroupId;
         if (circuloJid) {
-          if (process.env.NODE_ENV === "development") {
-            console.log("[CRON-SERVICE] [DEV MODE] Omitiendo env\xEDo de mensaje de la ma\xF1ana para C\xEDrculo Cero. Contenido:\n", content);
-          } else {
-            await whatsappBot.sendToGroup(content, void 0, [], circuloJid);
-          }
+          console.log("[CRON-SERVICE] Enviando mensaje matutino a C\xCDRCULO CERO...");
+          await whatsappBot.sendToGroup(content, void 0, [], circuloJid);
         }
       }
     } catch (e) {
@@ -8102,13 +8206,10 @@ Direcci\xF3n obligatoria:
           { role: "user", content: promptInmuebles }
         ]
       });
-      const content2 = response.choices[0]?.message?.content;
-      if (content2 && content2.trim() !== "") {
-        if (process.env.NODE_ENV === "development") {
-          console.log("[CRON-SERVICE] [DEV MODE] Omitiendo env\xEDo de mensaje de la tarde para Inmuebles. Contenido:\n", content2);
-        } else {
-          await whatsappBot.sendToGroup(content2, void 0, []);
-        }
+      const content = response.choices[0]?.message?.content;
+      if (content && content.trim() !== "") {
+        console.log("[CRON-SERVICE] Enviando mensaje de la tarde a VECY INMUEBLES NETWORK...");
+        await whatsappBot.sendToGroup(content, void 0, []);
       }
     } catch (e) {
       console.error("\u274C Error al generar mensaje de la tarde para Inmuebles:", e.message);
@@ -8123,14 +8224,12 @@ Direcci\xF3n obligatoria:
           { role: "user", content: promptConsultoria }
         ]
       });
+      const content = response.choices[0]?.message?.content;
       if (content && content.trim() !== "") {
         const buzonJid = whatsappBot.buzonGroupId;
         if (buzonJid) {
-          if (process.env.NODE_ENV === "development") {
-            console.log("[CRON-SERVICE] [DEV MODE] Omitiendo env\xEDo de mensaje de la tarde para Consultor\xEDa. Contenido:\n", content);
-          } else {
-            await whatsappBot.sendToGroup(content, void 0, [], buzonJid);
-          }
+          console.log("[CRON-SERVICE] Enviando mensaje de la tarde a CONSULTOR\xCDA JUR\xCDDICA INMOBILIARIA...");
+          await whatsappBot.sendToGroup(content, void 0, [], buzonJid);
         }
       }
     } catch (e) {
@@ -8146,14 +8245,12 @@ Direcci\xF3n obligatoria:
           { role: "user", content: promptCirculo }
         ]
       });
+      const content = response.choices[0]?.message?.content;
       if (content && content.trim() !== "") {
         const circuloJid = whatsappBot.circuloGroupId;
         if (circuloJid) {
-          if (process.env.NODE_ENV === "development") {
-            console.log("[CRON-SERVICE] [DEV MODE] Omitiendo env\xEDo de mensaje de la tarde para C\xEDrculo Cero. Contenido:\n", content);
-          } else {
-            await whatsappBot.sendToGroup(content, void 0, [], circuloJid);
-          }
+          console.log("[CRON-SERVICE] Enviando mensaje de la tarde a C\xCDRCULO CERO...");
+          await whatsappBot.sendToGroup(content, void 0, [], circuloJid);
         }
       }
     } catch (e) {
@@ -8197,7 +8294,7 @@ Direcci\xF3n obligatoria:
     console.log(`[CRON-SERVICE] Tem\xE1tica seleccionada para hoy (\xEDndice ${nextIndex}): "${tematicaSeleccionada}"`);
     const grupos = [
       { id: whatsappBot.targetGroupId, nombre: "VECY INMUEBLES NETWORK", promptExtra: "Enf\xF3cate en la publicaci\xF3n activa de ofertas y demandas de inmuebles, el cruce comercial r\xE1pido, y la colaboraci\xF3n nacional sin pagar comisiones." },
-      { id: whatsappBot.buzonGroupId, nombre: "BUZ\xD3N DE CONSULTOR\xCDA INMOBILIARIA 24/7", promptExtra: "Enf\xF3cate en invitar a que consulten sobre temas jur\xEDdicos, disputas de comisiones de puntas compartidas, contratos de corretaje o aval\xFAos." },
+      { id: whatsappBot.buzonGroupId, nombre: "CONSULTOR\xCDA JUR\xCDDICA INMOBILIARIA", promptExtra: "Enf\xF3cate en invitar a que consulten sobre temas jur\xEDdicos, disputas de comisiones de puntas compartidas, contratos de corretaje o aval\xFAos." },
       { id: whatsappBot.circuloGroupId, nombre: "C\xCDRCULO CERO", promptExtra: "Enf\xF3cate en la retroalimentaci\xF3n del sistema, sugerencias directas a los fundadores, ideas de mejora y el futuro del sector inmobiliario." }
     ];
     for (const grupo of grupos) {
@@ -8215,14 +8312,10 @@ Direcci\xF3n obligatoria:
             { role: "user", content: promptVoz }
           ]
         });
-        const content2 = response.choices[0]?.message?.content;
-        if (content2 && content2.trim() !== "") {
-          if (process.env.NODE_ENV === "development") {
-            console.log(`[CRON-SERVICE] [DEV MODE] Omitiendo env\xEDo de audio motivador para ${grupo.nombre}. Transcripci\xF3n:
-`, content2);
-          } else {
-            await whatsappBot.sendVoiceToGroup(content2, grupo.id);
-          }
+        const content = response.choices[0]?.message?.content;
+        if (content && content.trim() !== "") {
+          console.log(`[CRON-SERVICE] Enviando audio motivador a ${grupo.nombre}...`);
+          await whatsappBot.sendVoiceToGroup(content, grupo.id);
         }
         await new Promise((resolve) => setTimeout(resolve, 8e3));
       } catch (err) {
@@ -8467,7 +8560,7 @@ async function startServer() {
       const circuloGroupId = whatsappBot.circuloGroupId;
       const groups = [
         { name: "VECY INMUEBLES NETWORK", id: targetGroupId },
-        { name: "Buz\xF3n de Consultor\xEDa", id: buzonGroupId },
+        { name: "Consultor\xEDa Jur\xEDdica Inmobiliaria", id: buzonGroupId },
         { name: "C\xEDrculo CERO", id: circuloGroupId }
       ];
       const results = [];
