@@ -398,8 +398,11 @@ export function detectaVoz(text: string): boolean {
   const t = text.toLowerCase();
   const keywords = [
     "audio",
+    "adio",
     "nota de voz",
     "notas de voz",
+    "nota de vos",
+    "notas de vos",
     "mandame un audio",
     "mandame audio",
     "mándame un audio",
@@ -434,7 +437,11 @@ export function detectaVoz(text: string): boolean {
     "mándame nota de voz",
     "mandame nota de voz",
     "envíame nota de voz",
-    "enviame nota de voz"
+    "enviame nota de voz",
+    "mándame nota de vos",
+    "mandame nota de vos",
+    "envíame nota de vos",
+    "enviame nota de vos"
   ];
   return keywords.some(kw => t.includes(kw));
 }
