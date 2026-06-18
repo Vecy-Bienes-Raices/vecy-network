@@ -455,7 +455,7 @@ async function invokeLLM({
 }
 async function invokeGemini(messages2, responseFormat, imageBuffer, pdfBuffer, pdfMimeType, enableSearch) {
   const API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || ENV.forgeApiKey;
-  const MODEL = "gemini-3.1-flash-lite";
+  const MODEL = "gemini-flash-latest";
   const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${API_KEY}`;
   try {
     const systemMessage = messages2.find((m) => m.role === "system");
@@ -2076,7 +2076,7 @@ async function transcribeAudioWithGemini(audioBuffer, mimeType) {
   if (!apiKey) {
     throw new Error("No GEMINI_API_KEY or GOOGLE_API_KEY found for transcription fallback.");
   }
-  const model = "gemini-3.1-flash-lite";
+  const model = "gemini-flash-latest";
   const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
   let cleanMime = mimeType.split(";")[0].trim();
   if (cleanMime === "audio/x-wav" || cleanMime === "audio/wave") cleanMime = "audio/wav";
@@ -4447,8 +4447,11 @@ function detectaVoz(text2) {
   const t2 = text2.toLowerCase();
   const keywords = [
     "audio",
+    "adio",
     "nota de voz",
     "notas de voz",
+    "nota de vos",
+    "notas de vos",
     "mandame un audio",
     "mandame audio",
     "m\xE1ndame un audio",
@@ -4483,7 +4486,11 @@ function detectaVoz(text2) {
     "m\xE1ndame nota de voz",
     "mandame nota de voz",
     "env\xEDame nota de voz",
-    "enviame nota de voz"
+    "enviame nota de voz",
+    "m\xE1ndame nota de vos",
+    "mandame nota de vos",
+    "env\xEDame nota de vos",
+    "enviame nota de vos"
   ];
   return keywords.some((kw) => t2.includes(kw));
 }
