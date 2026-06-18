@@ -455,7 +455,7 @@ async function invokeLLM({
 }
 async function invokeGemini(messages2, responseFormat, imageBuffer, pdfBuffer, pdfMimeType, enableSearch) {
   const API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || ENV.forgeApiKey;
-  const MODEL = "gemini-flash-latest";
+  const MODEL = "gemini-2.5-flash";
   const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${API_KEY}`;
   try {
     const systemMessage = messages2.find((m) => m.role === "system");
@@ -2076,7 +2076,7 @@ async function transcribeAudioWithGemini(audioBuffer, mimeType) {
   if (!apiKey) {
     throw new Error("No GEMINI_API_KEY or GOOGLE_API_KEY found for transcription fallback.");
   }
-  const model = "gemini-flash-latest";
+  const model = "gemini-2.5-flash";
   const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
   let cleanMime = mimeType.split(";")[0].trim();
   if (cleanMime === "audio/x-wav" || cleanMime === "audio/wave") cleanMime = "audio/wav";
@@ -2269,6 +2269,47 @@ var init_storage = __esm({
 
 // server/_core/janIA.ts
 import { eq as eq3, and as and2, sql, gte } from "drizzle-orm";
+function parseSafeJSON(content) {
+  let text2 = content.trim();
+  if (text2.startsWith("```json")) {
+    text2 = text2.substring(7);
+  } else if (text2.startsWith("```")) {
+    text2 = text2.substring(3);
+  }
+  if (text2.endsWith("```")) {
+    text2 = text2.substring(0, text2.length - 3);
+  }
+  text2 = text2.trim();
+  try {
+    return JSON.parse(text2);
+  } catch (e) {
+    const start = text2.indexOf("{");
+    const end = text2.lastIndexOf("}");
+    if (start !== -1 && end !== -1 && end > start) {
+      const extracted = text2.substring(start, end + 1);
+      try {
+        return JSON.parse(extracted);
+      } catch (e2) {
+        try {
+          let insideString = false;
+          const chars = [...extracted];
+          for (let i = 0; i < chars.length; i++) {
+            if (chars[i] === '"' && (i === 0 || chars[i - 1] !== "\\")) {
+              insideString = !insideString;
+            }
+            if (insideString && chars[i] === "\n") {
+              chars[i] = "\\n";
+            }
+          }
+          return JSON.parse(chars.join(""));
+        } catch (e3) {
+          throw e;
+        }
+      }
+    }
+    throw e;
+  }
+}
 async function getPendingSession(userId) {
   try {
     const db = await getDb();
@@ -2781,8 +2822,24 @@ Por lo tanto, DEBES hacer lo siguiente:
     });
     const llmRes = response;
     if (!llmRes || !llmRes.choices || !llmRes.choices[0]) throw new Error("Fallo de comunicaci\xF3n con el LLM");
-    const result = JSON.parse(llmRes.choices[0].message.content);
-    result.mentions = [];
+    let result;
+    const rawContent = llmRes.choices[0].message.content;
+    try {
+      result = parseSafeJSON(rawContent);
+    } catch (parseErr) {
+      console.error("[JanIA-Parser-Error] Error al deserializar JSON de JanIA:", parseErr.message);
+      console.error("[JanIA-Parser-Error] Contenido crudo que fall\xF3:", rawContent);
+      if (rawContent && rawContent.trim() !== "") {
+        result = {
+          classification: "CONSULTA_GENERAL",
+          response: rawContent.replace(/[\{\}\[\]"]/g, "").trim() || "Lo siento, en este momento tengo un problema de formato interno.",
+          mentions: []
+        };
+      } else {
+        throw parseErr;
+      }
+    }
+    result.mentions = result.mentions || [];
     const extracted = result.extractedData;
     const isRequirement = result.classification === "REQUERIMIENTO";
     const isProperty = result.classification === "INMUEBLE";
@@ -3278,7 +3335,7 @@ Analiza el contexto completo antes de clasificar. Debes responder estrictamente 
       enableSearch: isValuationQuery
     });
     try {
-      const parsed = JSON.parse(llmRes.choices[0].message.content);
+      const parsed = parseSafeJSON(llmRes.choices[0].message.content);
       return {
         classification: parsed.classification || "CONSULTA_GENERAL",
         response: parsed.response || "",
@@ -3383,7 +3440,7 @@ Pregunta: ${text2}${greetingInstruction}` }
       enableSearch: false
     });
     try {
-      const parsed = JSON.parse(llmRes.choices[0].message.content);
+      const parsed = parseSafeJSON(llmRes.choices[0].message.content);
       return {
         classification: parsed.classification || "CONSULTA_GENERAL",
         response: parsed.response || "",

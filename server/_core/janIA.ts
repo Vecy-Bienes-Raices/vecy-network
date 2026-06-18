@@ -27,6 +27,49 @@ export type JanIAResult = {
   sendReputationHook?: boolean;
 };
 
+export function parseSafeJSON(content: string): any {
+  let text = content.trim();
+  if (text.startsWith("```json")) {
+    text = text.substring(7);
+  } else if (text.startsWith("```")) {
+    text = text.substring(3);
+  }
+  if (text.endsWith("```")) {
+    text = text.substring(0, text.length - 3);
+  }
+  text = text.trim();
+
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    const start = text.indexOf("{");
+    const end = text.lastIndexOf("}");
+    if (start !== -1 && end !== -1 && end > start) {
+      const extracted = text.substring(start, end + 1);
+      try {
+        return JSON.parse(extracted);
+      } catch (e2) {
+        try {
+          let insideString = false;
+          const chars = [...extracted];
+          for (let i = 0; i < chars.length; i++) {
+            if (chars[i] === '"' && (i === 0 || chars[i - 1] !== '\\')) {
+              insideString = !insideString;
+            }
+            if (insideString && chars[i] === '\n') {
+              chars[i] = '\\n';
+            }
+          }
+          return JSON.parse(chars.join(''));
+        } catch (e3) {
+          throw e;
+        }
+      }
+    }
+    throw e;
+  }
+}
+
 // --- 1. ALMACENES DE MEMORIA (v11.70) ---
 async function getPendingSession(userId: string): Promise<{ type: "PROPERTY" | "REQUIREMENT"; extractedData: any; senderInfo: any; messageToProcess: string; imageBuffer?: string } | null> {
   try {
@@ -952,9 +995,27 @@ Por lo tanto, DEBES hacer lo siguiente:
 
     const llmRes = response as any;
     if (!llmRes || !llmRes.choices || !llmRes.choices[0]) throw new Error("Fallo de comunicación con el LLM");
-    const result = JSON.parse(llmRes.choices[0].message.content) as JanIAResult;
     
-    result.mentions = [];
+    let result: JanIAResult;
+    const rawContent = llmRes.choices[0].message.content;
+    try {
+      result = parseSafeJSON(rawContent) as JanIAResult;
+    } catch (parseErr: any) {
+      console.error("[JanIA-Parser-Error] Error al deserializar JSON de JanIA:", parseErr.message);
+      console.error("[JanIA-Parser-Error] Contenido crudo que falló:", rawContent);
+      
+      if (rawContent && rawContent.trim() !== "") {
+        result = {
+          classification: "CONSULTA_GENERAL",
+          response: rawContent.replace(/[\{\}\[\]"]/g, "").trim() || "Lo siento, en este momento tengo un problema de formato interno.",
+          mentions: []
+        };
+      } else {
+        throw parseErr;
+      }
+    }
+    
+    result.mentions = result.mentions || [];
     const extracted = result.extractedData;
     const isRequirement = result.classification === "REQUERIMIENTO";
     const isProperty = result.classification === "INMUEBLE";
@@ -1714,7 +1775,7 @@ export async function processConsultingMessage(
     });
 
     try {
-      const parsed = JSON.parse(llmRes.choices[0].message.content);
+      const parsed = parseSafeJSON(llmRes.choices[0].message.content);
       return {
         classification: parsed.classification || "CONSULTA_GENERAL",
         response: parsed.response || "",
@@ -1822,7 +1883,7 @@ export async function processCirculoMessage(
     });
 
     try {
-      const parsed = JSON.parse(llmRes.choices[0].message.content);
+      const parsed = parseSafeJSON(llmRes.choices[0].message.content);
       return {
         classification: parsed.classification || "CONSULTA_GENERAL",
         response: parsed.response || "",
