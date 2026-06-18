@@ -5791,7 +5791,10 @@ _(Nota: Por favor nombra a JanIA Administradora del grupo para que pueda borrar 
         }
         const shouldSendGroup = isGroup && (isMatch || isConsultation || isViolation);
         const shouldSendDMDirect = !isGroup && !result.shouldSendDM;
-        if ((shouldSendGroup || shouldSendDMDirect) && result.response && result.response.trim() !== "") {
+        const textToDeliver = result.response || "";
+        const voiceToDeliver = result.voiceResponse || "";
+        const hasAnyContent = textToDeliver.trim() !== "" || voiceToDeliver.trim() !== "";
+        if ((shouldSendGroup || shouldSendDMDirect) && hasAnyContent) {
           const mentions = Array.from(/* @__PURE__ */ new Set([...result.mentions || [], senderId]));
           const options = {
             mentions: isGroup ? mentions : []
@@ -5807,19 +5810,24 @@ _(Nota: Por favor nombra a JanIA Administradora del grupo para que pueda borrar 
             } catch (_) {
             }
             console.log(`[TTS] Generando voz para ${chatId}...`);
-            const voiceText = result.voiceResponse || result.response;
+            const voiceText = voiceToDeliver || textToDeliver;
             const voiceMedia = await textToSpeechMedia(voiceText);
             if (voiceMedia) {
               await this.queuedSend(chatId, voiceMedia, { sendAudioAsVoice: true });
               console.log(`[TTS] \u2713 Solo audio enviado a ${chatId}.`);
             } else {
               console.warn(`[TTS] Audio fall\xF3, enviando texto como respaldo a ${chatId}.`);
-              await this.queuedSend(chatId, result.response, options);
+              const fallbackText = textToDeliver || voiceToDeliver;
+              if (fallbackText.trim() !== "") {
+                await this.queuedSend(chatId, fallbackText, options);
+              }
             }
           } else {
-            await this.queuedSend(chatId, result.response, options);
+            if (textToDeliver.trim() !== "") {
+              await this.queuedSend(chatId, textToDeliver, options);
+            }
           }
-          await this.logToDb(senderId, "janIA", result.response);
+          await this.logToDb(senderId, "janIA", textToDeliver || voiceToDeliver);
           if (isGroup && result.sendReputationHook) {
             console.log(`[WhatsApp-Bot] Enviando REPUTATION_HOOK como mensaje separado a ${chatId}...`);
             await this.queuedSend(chatId, REPUTATION_HOOK);
@@ -5861,8 +5869,10 @@ _(Nota: Por favor nombra a JanIA Administradora del grupo para que pueda borrar 
           }
         }
         if (result.shouldSendDM) {
-          const dmMsg = result.dmResponse || result.response;
-          if (dmMsg && dmMsg.trim() !== "") {
+          const dmMsg = result.dmResponse || result.response || "";
+          const voiceMsg = result.voiceResponse || "";
+          const hasDMContent = dmMsg.trim() !== "" || voiceMsg.trim() !== "";
+          if (hasDMContent) {
             if (isGroup) {
               console.log(`[WHATSAPP-BOT] Omitiendo DM autom\xE1tico para ${senderId} por DATOS_INCOMPLETOS desde grupo para prevenir reportes de spam.`);
             } else {
@@ -5870,26 +5880,32 @@ _(Nota: Por favor nombra a JanIA Administradora del grupo para que pueda borrar 
               if (result.dmShouldReply && originalMsg) {
                 options.quotedMessageId = originalMsg.id._serialized;
               }
-              if (wantsVoice) {
+              const finalWantsVoice = wantsVoice || result.wantsVoice;
+              if (finalWantsVoice) {
                 try {
                   const dmChat = await this.client.getChatById(senderId);
                   await dmChat.sendStateRecording();
                 } catch (_) {
                 }
                 console.log(`[TTS] Generando voz para ${senderId}...`);
-                const voiceText = result.voiceResponse || dmMsg;
+                const voiceText = voiceMsg || dmMsg;
                 const media = await textToSpeechMedia(voiceText);
                 if (media) {
                   await this.queuedSend(senderId, media, { sendAudioAsVoice: true });
                   console.log(`[TTS] \u2713 Solo audio enviado a ${senderId}.`);
                 } else {
                   console.warn(`[TTS] Audio fall\xF3, enviando texto a ${senderId}.`);
-                  await this.queuedSend(senderId, dmMsg, options);
+                  const fallbackText = dmMsg || voiceMsg;
+                  if (fallbackText.trim() !== "") {
+                    await this.queuedSend(senderId, fallbackText, options);
+                  }
                 }
               } else {
-                await this.queuedSend(senderId, dmMsg, options);
+                if (dmMsg.trim() !== "") {
+                  await this.queuedSend(senderId, dmMsg, options);
+                }
               }
-              await this.logToDb(senderId, "janIA", `[DM] ${dmMsg}`);
+              await this.logToDb(senderId, "janIA", `[DM] ${dmMsg || voiceMsg}`);
             }
           }
           if (isGroup && result.classification === "DATOS_INCOMPLETOS") {

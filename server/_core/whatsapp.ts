@@ -1916,7 +1916,11 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
     const shouldSendGroup = isGroup && (isMatch || isConsultation || isViolation);
     const shouldSendDMDirect = !isGroup && !result.shouldSendDM;
 
-    if ((shouldSendGroup || shouldSendDMDirect) && result.response && result.response.trim() !== "") {
+    const textToDeliver = result.response || "";
+    const voiceToDeliver = result.voiceResponse || "";
+    const hasAnyContent = textToDeliver.trim() !== "" || voiceToDeliver.trim() !== "";
+
+    if ((shouldSendGroup || shouldSendDMDirect) && hasAnyContent) {
       const mentions = Array.from(new Set([...(result.mentions || []), senderId]));
       const options: any = { 
         mentions: isGroup ? mentions : [] 
@@ -1937,7 +1941,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
 
         // Solo audio — sin texto. Si falla, cae al texto como respaldo.
         console.log(`[TTS] Generando voz para ${chatId}...`);
-        const voiceText = result.voiceResponse || result.response;
+        const voiceText = voiceToDeliver || textToDeliver;
         const voiceMedia = await textToSpeechMedia(voiceText);
         if (voiceMedia) {
           await this.queuedSend(chatId, voiceMedia, { sendAudioAsVoice: true });
@@ -1945,13 +1949,18 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         } else {
           // Fallback: audio falló → enviar texto
           console.warn(`[TTS] Audio falló, enviando texto como respaldo a ${chatId}.`);
-          await this.queuedSend(chatId, result.response, options);
+          const fallbackText = textToDeliver || voiceToDeliver;
+          if (fallbackText.trim() !== "") {
+            await this.queuedSend(chatId, fallbackText, options);
+          }
         }
       } else {
         // Sin voz → texto normal
-        await this.queuedSend(chatId, result.response, options);
+        if (textToDeliver.trim() !== "") {
+          await this.queuedSend(chatId, textToDeliver, options);
+        }
       }
-      await this.logToDb(senderId, 'janIA', result.response);
+      await this.logToDb(senderId, 'janIA', textToDeliver || voiceToDeliver);
 
       // Enviar REPUTATION_HOOK como mensaje separado para que resalte
       if (isGroup && result.sendReputationHook) {
@@ -2002,8 +2011,10 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
 
     // Flujos Privados (DMs) o Invitación a Opt-in
     if (result.shouldSendDM) {
-      const dmMsg = result.dmResponse || result.response;
-      if (dmMsg && dmMsg.trim() !== "") {
+      const dmMsg = result.dmResponse || result.response || "";
+      const voiceMsg = result.voiceResponse || "";
+      const hasDMContent = dmMsg.trim() !== "" || voiceMsg.trim() !== "";
+      if (hasDMContent) {
         if (isGroup) {
           // Desactivado para evitar reportes de spam / bloqueos de WhatsApp al enviar DMs automáticos no solicitados a miembros de grupos.
           console.log(`[WHATSAPP-BOT] Omitiendo DM automático para ${senderId} por DATOS_INCOMPLETOS desde grupo para prevenir reportes de spam.`);
@@ -2014,7 +2025,8 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
             options.quotedMessageId = originalMsg.id._serialized;
           }
 
-          if (wantsVoice) {
+          const finalWantsVoice = wantsVoice || result.wantsVoice;
+          if (finalWantsVoice) {
             // Mostrar "Grabando audio..." inmediatamente durante la síntesis y transcodificación en el DM
             try {
               const dmChat = await this.client.getChatById(senderId);
@@ -2023,7 +2035,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
 
             // Solo audio
             console.log(`[TTS] Generando voz para ${senderId}...`);
-            const voiceText = result.voiceResponse || dmMsg;
+            const voiceText = voiceMsg || dmMsg;
             const media = await textToSpeechMedia(voiceText);
             if (media) {
               await this.queuedSend(senderId, media, { sendAudioAsVoice: true });
@@ -2031,12 +2043,17 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
             } else {
               // Fallback: audio falló → texto
               console.warn(`[TTS] Audio falló, enviando texto a ${senderId}.`);
-              await this.queuedSend(senderId, dmMsg, options);
+              const fallbackText = dmMsg || voiceMsg;
+              if (fallbackText.trim() !== "") {
+                await this.queuedSend(senderId, fallbackText, options);
+              }
             }
           } else {
-            await this.queuedSend(senderId, dmMsg, options);
+            if (dmMsg.trim() !== "") {
+              await this.queuedSend(senderId, dmMsg, options);
+            }
           }
-          await this.logToDb(senderId, 'janIA', `[DM] ${dmMsg}`);
+          await this.logToDb(senderId, 'janIA', `[DM] ${dmMsg || voiceMsg}`);
         }
       }
 
