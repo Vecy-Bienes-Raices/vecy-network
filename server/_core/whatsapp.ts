@@ -2649,6 +2649,24 @@ Dirección obligatoria:
       console.error('[WHATSAPP-BOT] Error crítico durante la inicialización de whatsapp-web.js:', err);
     });
   }
+
+  public setPendingDataForUser(
+    senderId: string,
+    originalText: string,
+    extractedData: any,
+    classification: string,
+    missingFields: string[]
+  ) {
+    this.pendingData.set(senderId, {
+      originalText,
+      extractedData: extractedData || {},
+      classification,
+      missingFields: missingFields || [],
+      expiresAt: Date.now() + 2 * 60 * 60 * 1000
+    });
+    this.savePendingData();
+    console.log(`[WHATSAPP-BOT] Guardada sesión de datos incompletos en memoria para ${senderId}`);
+  }
 }
 
 export const whatsappBot = new WhatsAppBot();
@@ -2670,5 +2688,18 @@ export async function sendAdminNotification(text: string): Promise<void> {
 export async function sendUserDM(jid: string, text: string): Promise<void> {
   const formattedJid = jid.includes('@') ? jid : `${jid}@c.us`;
   await (whatsappBot as any).queuedSend(formattedJid, text);
+}
+
+/**
+ * Guarda una sesión de datos incompletos en el bot principal para combinar las respuestas futuras.
+ */
+export function setBotPendingData(
+  senderId: string,
+  originalText: string,
+  extractedData: any,
+  classification: string,
+  missingFields: string[]
+): void {
+  whatsappBot.setPendingDataForUser(senderId, originalText, extractedData, classification, missingFields);
 }
 

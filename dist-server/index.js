@@ -2546,6 +2546,113 @@ function capitalize(text2) {
   if (!text2) return "";
   return text2.charAt(0).toUpperCase() + text2.slice(1);
 }
+function buildIncompleteDataMessage(text2, hasMedia, scrapedData, imageBuffer, pdfBuffer, extracted, isGeoInvalid, intro) {
+  let medio = "publicaci\xF3n escrita";
+  if (pdfBuffer) {
+    medio = "documento PDF";
+  } else if (imageBuffer || hasMedia && !pdfBuffer) {
+    medio = "flyer o imagen comercial";
+  } else if (scrapedData && scrapedData.length > 0) {
+    medio = "enlace o URL";
+  }
+  const propTypeRaw = (extracted?.propertyType || extracted?.tipoInmuebleDeseado || "inmueble").toLowerCase();
+  let propertyName = "inmueble";
+  if (propTypeRaw === "apartment") propertyName = "apartamento";
+  else if (propTypeRaw === "house") propertyName = "casa";
+  else if (propTypeRaw === "building") propertyName = "edificio";
+  else if (propTypeRaw === "warehouse") propertyName = "bodega";
+  else if (propTypeRaw === "office") propertyName = "oficina";
+  else if (propTypeRaw === "farm" || propTypeRaw === "finca") propertyName = "finca";
+  else if (propTypeRaw === "land" || propTypeRaw === "lote") propertyName = "lote";
+  else if (propTypeRaw === "consultorio") propertyName = "consultorio";
+  else if (propTypeRaw === "loft") propertyName = "loft";
+  const isRequirement = text2.toLowerCase().includes("busco") || text2.toLowerCase().includes("necesito") || text2.toLowerCase().includes("requiero") || !!extracted?.tipoInmuebleDeseado;
+  const txTypeRaw = (extracted?.transactionType || extracted?.tipoNegocioDeseado || "venta").toLowerCase();
+  const missingList = [];
+  const city = isRequirement ? extracted?.ciudadDeseada : extracted?.city;
+  if (!city || city.trim() === "" || city.toLowerCase() === "na") {
+    missingList.push("la ciudad");
+  }
+  const zone = isRequirement ? extracted?.zonaDeseada || extracted?.zone : extracted?.zone;
+  if (isGeoInvalid || !zone || zone.trim() === "" || zone.toLowerCase() === "na") {
+    missingList.push("el barrio exacto");
+  }
+  const price = isRequirement ? Number(extracted?.presupuestoMax || extracted?.price || 0) : Number(extracted?.price || 0);
+  if (!price || price <= 0) {
+    if (isRequirement) {
+      missingList.push("el presupuesto m\xE1ximo");
+    } else {
+      if (txTypeRaw === "arriendo") {
+        missingList.push("el precio de arriendo");
+      } else if (txTypeRaw === "permuta") {
+        missingList.push("el valor estimado de la permuta");
+      } else {
+        missingList.push("el precio de venta");
+      }
+    }
+  }
+  const area = Number(extracted?.area || 0);
+  if (!area || area <= 0) {
+    if (propertyName === "finca") {
+      missingList.push("la cantidad de hect\xE1reas o fanegadas");
+    } else {
+      missingList.push("el metraje en metros cuadrados");
+    }
+  }
+  const stratum = Number(extracted?.stratum || 0);
+  if ((!stratum || stratum <= 0) && propertyName !== "finca" && propertyName !== "lote" && propertyName !== "bodega") {
+    missingList.push("el estrato");
+  }
+  if (propertyName === "apartamento" || propertyName === "casa" || propertyName === "loft" || propertyName === "inmueble") {
+    const bedrooms = Number(extracted?.bedrooms || 0);
+    if (!bedrooms || bedrooms <= 0) {
+      missingList.push("el n\xFAmero de habitaciones");
+    }
+    const bathrooms = Number(extracted?.bathrooms || 0);
+    if (!bathrooms || bathrooms <= 0) {
+      missingList.push("el n\xFAmero de ba\xF1os");
+    }
+  }
+  const garages = extracted?.garages;
+  if ((garages === void 0 || garages === null || garages < 0) && propertyName !== "lote") {
+    missingList.push("el n\xFAmero de garajes/parqueaderos");
+  }
+  if (propertyName === "apartamento" || propertyName === "oficina" || propertyName === "consultorio") {
+    const floor = extracted?.floorDetail;
+    if (!floor || floor.trim() === "" || floor.toUpperCase() === "NA") {
+      missingList.push("el n\xFAmero de piso");
+    }
+    const intExt = extracted?.interiorExterior;
+    if (!intExt || intExt.trim() === "" || intExt.toUpperCase() === "NA") {
+      missingList.push("si queda en el interior o al exterior");
+    }
+  } else if (propertyName === "casa" || propertyName === "edificio") {
+    const floor = extracted?.floorDetail;
+    if (!floor || floor.trim() === "" || floor.toUpperCase() === "NA") {
+      missingList.push("la cantidad de pisos o niveles de la propiedad");
+    }
+  } else if (propertyName === "bodega") {
+    const floor = extracted?.floorDetail;
+    if (!floor || floor.trim() === "" || floor.toUpperCase() === "NA") {
+      missingList.push("la altura \xFAtil de la bodega (ej: doble o triple altura)");
+    }
+  }
+  if (missingList.length === 0) {
+    missingList.push("el barrio exacto");
+  }
+  let missingStr = "";
+  if (missingList.length === 1) {
+    missingStr = missingList[0];
+  } else if (missingList.length === 2) {
+    missingStr = `${missingList[0]} o ${missingList[1]}`;
+  } else {
+    const last = missingList.pop();
+    missingStr = `${missingList.join(", ")}, o ${last}`;
+  }
+  return `${intro}Estuve revisando el/la *${medio}* de tu *${propertyName}* que enviaste al grupo, pero mi sistema de lectura inteligente no alcanza a extraer cierta informaci\xF3n clave del inmueble y me hace falta: *${missingStr}*.
+
+\xBFMe podr\xEDas indicar este dato por aqu\xED para registrar tu publicaci\xF3n correctamente y buscarte un MATCH comercial de inmediato? \u{1F680}\u{1F91D}`;
+}
 function analyzeSender(name, userId, alreadyGreeted) {
   const n = (name || "Colega").trim();
   const normalizedFull = n.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
@@ -2999,6 +3106,33 @@ Por aqu\xED, en tu chat privado, estoy 100% disponible para responder a tus cons
         shouldSendDM: false
       };
     }
+    const isLLMIncomplete = result.classification === "DATOS_INCOMPLETOS";
+    if (isLLMIncomplete) {
+      result.shouldSendDM = true;
+      result.dmShouldReply = true;
+      result.response = "";
+      const inferredType = messageToProcess.toLowerCase().includes("vendo") || messageToProcess.toLowerCase().includes("ofrezco") || messageToProcess.toLowerCase().includes("arriendo") || !!extracted?.propertyType ? "PROPERTY" : "REQUIREMENT";
+      const firstName2 = realName.split(" ")[0];
+      const customIntro = `\xA1Hola, *${firstName2}*! \u{1F60A} `;
+      result.dmResponse = buildIncompleteDataMessage(
+        messageToProcess,
+        hasMedia,
+        scrapedData,
+        imageBuffer,
+        pdfBuffer,
+        extracted,
+        false,
+        customIntro
+      );
+      await setPendingSession(userId, {
+        type: inferredType,
+        extractedData: extracted || {},
+        senderInfo,
+        messageToProcess,
+        imageBuffer
+      });
+      return result;
+    }
     if (isProperty || isRequirement) {
       const zoneToValidate = isProperty ? extracted?.zone : extracted?.zonaDeseada || extracted?.zone;
       let isValidGeo = false;
@@ -3011,15 +3145,23 @@ Por aqu\xED, en tu chat privado, estoy 100% disponible para responder a tus cons
         result.classification = "DATOS_INCOMPLETOS";
         result.shouldSendDM = true;
         result.dmShouldReply = true;
-        if (!result.dmResponse) {
-          const intro = senderInfo.greeting ? `${senderInfo.greeting} ` : "";
-          const mainText = "le\xED tu publicaci\xF3n pero me falta el barrio exacto. \xBFMe lo indicas para buscar tu match de inmediato? \u{1F680}";
-          result.dmResponse = intro + (senderInfo.greeting ? mainText : capitalize(mainText));
-        }
         result.response = "";
+        const inferredType = isProperty ? "PROPERTY" : "REQUIREMENT";
+        const firstName2 = realName.split(" ")[0];
+        const customIntro = `\xA1Hola, *${firstName2}*! \u{1F60A} `;
+        result.dmResponse = buildIncompleteDataMessage(
+          messageToProcess,
+          hasMedia,
+          scrapedData,
+          imageBuffer,
+          pdfBuffer,
+          extracted,
+          true,
+          customIntro
+        );
         await setPendingSession(userId, {
-          type: isProperty ? "PROPERTY" : "REQUIREMENT",
-          extractedData: extracted,
+          type: inferredType,
+          extractedData: extracted || {},
           senderInfo,
           messageToProcess,
           imageBuffer
@@ -3686,6 +3828,24 @@ Los br\xF3kers y agentes de bienes ra\xEDces en Colombia suelen escribir de mane
 \u25B8 "adm", "admin", "admon", "administraci\xF3n", "admn" \u2794 Valor de la administraci\xF3n de la copropiedad. Identifica el valor y as\xEDgnalo a "adminFee".
 \u25B8 "permuto", "venpermuto", "se recibe menor valor", "recibo propiedad", "recibo veh\xEDculo" \u2794 Asigna "permuta" al campo "transactionType".
 \u25B8 "estrato", "estr" \u2794 Estrato socioecon\xF3mico. Identifica el n\xFAmero asociado y as\xEDgnalo a "stratum".
+
+## DISCERNIMIENTO INMOBILIARIO AVANZADO Y DESAMBIGUACI\xD3N (CR\xCDTICO)
+Debes demostrar un discernimiento absoluto sobre la naturaleza del mercado de bienes ra\xEDces y c\xF3mo var\xEDan las caracter\xEDsticas seg\xFAn el tipo de inmueble:
+1. **Desambiguaci\xF3n de Pisos y Alturas (CR\xCDTICO)**:
+   - **Apartamento, Loft, Oficina, Consultorio**: La palabra "piso" indica la planta espec\xEDfica donde se encuentra el inmueble (ej. "piso 4" significa que la unidad est\xE1 en la planta n\xFAmero 4). Mapea esto en "floorDetail" como "piso 4".
+   - **Casa, Caba\xF1a, Chalet**: La expresi\xF3n "de 4 pisos" o "casa de 3 niveles" indica el n\xFAmero de plantas totales que tiene la construcci\xF3n completa. Mapea esto en "floorDetail" como "3 niveles" o "4 pisos".
+   - **Bodega (Warehouse)**: Las referencias a pisos o alturas (ej. "bodega de triple altura" o "bodega con altura de 4 pisos") representan la altura vertical libre \xFAtil para almacenamiento o carga, no apartamentos habitacionales. Mapea esto en "floorDetail" como "triple altura" o "altura de 4 pisos".
+   - **Edificio**: Las referencias a pisos (ej. "edificio de 5 pisos") indican la altura de la estructura. Mapea en "floorDetail" como "edificio de 5 pisos".
+2. **Clasificaci\xF3n de Subtipos de Propiedades**:
+   - Aunque la base de datos almacene tipos de propiedad gen\xE9ricos (apartment, house, building, warehouse, office, farm, land, loft, consultorio), debes capturar con precisi\xF3n los subtipos espec\xEDficos en el "title" de la propiedad y en la "description" para mantener la riqueza del inventario:
+     - **Casas**: Identifica si es "casa de barrio" (casa de calle normal), "casa en conjunto", "casa en condominio", "casa campestre", "casa quinta", "casa lote" (casa con un lote grande de terreno), "chalet".
+     - **Apartamentos**: Identifica si es "apartaestudio", "loft", "apartamento d\xFAplex", o "penthouse".
+     - **Bodegas**: Identifica si es "bodega industrial", "bodega comercial" o "bodega de almacenamiento".
+     - **Lotes / Terrenos**: Distingue si es lote urbano, lote rural, lote campestre o lote industrial.
+     - **Fincas**: Identifica si es finca de recreo, finca de producci\xF3n/agr\xEDcola, o finca campestre.
+     - **Alojamiento Comercial**: Identifica si es hotel, hostal, hospedaje o motel.
+3. **Mapeo de Caracter\xEDsticas de Edificios Completos**:
+   - Si una publicaci\xF3n describe la venta de un edificio completo ("Edificio en venta de 26 apartamentos"), NO sumes las habitaciones, ba\xF1os o garajes de todas las unidades en los campos globales "bedrooms", "bathrooms" o "garages" del JSON (estos campos representan la distribuci\xF3n de una unidad individual para el cruce de matching). En su lugar, describe la cantidad de unidades en el campo "description" y el t\xEDtulo, y deja "bedrooms": null, "bathrooms": null, a menos que el edificio sea de alquiler unificado tipo hospedaje/motel con habitaciones individuales en oferta ("Edificio con 20 habitaciones de alquiler").
 
 ## MAPEO SEM\xC1NTICO POLIM\xD3RFICO (VECTORES 'GIVES' & 'WANTS')
 Para estructurar ofertas de venta/arriendo y permutas complejas, debes mapear dos vectores l\xF3gicos dentro del JSON:
@@ -4720,6 +4880,9 @@ async function sendAdminNotification(text2) {
 async function sendUserDM(jid, text2) {
   const formattedJid = jid.includes("@") ? jid : `${jid}@c.us`;
   await whatsappBot.queuedSend(formattedJid, text2);
+}
+function setBotPendingData(senderId, originalText, extractedData, classification, missingFields) {
+  whatsappBot.setPendingDataForUser(senderId, originalText, extractedData, classification, missingFields);
 }
 var Client, LocalAuth, MessageMedia, SERVER_BOOT_TIME, delay, outgoingQueue, WhatsAppBot, whatsappBot;
 var init_whatsapp = __esm({
@@ -6591,6 +6754,17 @@ Direcci\xF3n obligatoria:
           console.error("[WHATSAPP-BOT] Error cr\xEDtico durante la inicializaci\xF3n de whatsapp-web.js:", err);
         });
       }
+      setPendingDataForUser(senderId, originalText, extractedData, classification, missingFields) {
+        this.pendingData.set(senderId, {
+          originalText,
+          extractedData: extractedData || {},
+          classification,
+          missingFields: missingFields || [],
+          expiresAt: Date.now() + 2 * 60 * 60 * 1e3
+        });
+        this.savePendingData();
+        console.log(`[WHATSAPP-BOT] Guardada sesi\xF3n de datos incompletos en memoria para ${senderId}`);
+      }
     };
     whatsappBot = new WhatsAppBot();
   }
@@ -6982,6 +7156,15 @@ Para hablar en privado conmigo, buscar inmuebles en la base de datos o hacerme c
             if (result.shouldSendDM && result.dmResponse && result.dmResponse.trim() !== "") {
               console.log(`[JANIA-MATCH] [Stealth] Derivando confirmaci\xF3n DM de ${senderId} al bot principal.`);
               await sendUserDM(senderId, result.dmResponse);
+              if (result.classification === "DATOS_INCOMPLETOS") {
+                setBotPendingData(
+                  senderId,
+                  fullText,
+                  result.extractedData || {},
+                  result.classification,
+                  result.missingFields || []
+                );
+              }
             }
             if (result.extraDMs && result.extraDMs.length > 0) {
               for (const dm of result.extraDMs) {

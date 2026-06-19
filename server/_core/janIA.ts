@@ -182,6 +182,135 @@ function capitalize(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
+function buildIncompleteDataMessage(
+  text: string,
+  hasMedia: boolean,
+  scrapedData: any[],
+  imageBuffer: any,
+  pdfBuffer: any,
+  extracted: any,
+  isGeoInvalid: boolean,
+  intro: string
+): string {
+  let medio = "publicación escrita";
+  if (pdfBuffer) {
+    medio = "documento PDF";
+  } else if (imageBuffer || (hasMedia && !pdfBuffer)) {
+    medio = "flyer o imagen comercial";
+  } else if (scrapedData && scrapedData.length > 0) {
+    medio = "enlace o URL";
+  }
+
+  const propTypeRaw = (extracted?.propertyType || extracted?.tipoInmuebleDeseado || "inmueble").toLowerCase();
+  let propertyName = "inmueble";
+  if (propTypeRaw === "apartment") propertyName = "apartamento";
+  else if (propTypeRaw === "house") propertyName = "casa";
+  else if (propTypeRaw === "building") propertyName = "edificio";
+  else if (propTypeRaw === "warehouse") propertyName = "bodega";
+  else if (propTypeRaw === "office") propertyName = "oficina";
+  else if (propTypeRaw === "farm" || propTypeRaw === "finca") propertyName = "finca";
+  else if (propTypeRaw === "land" || propTypeRaw === "lote") propertyName = "lote";
+  else if (propTypeRaw === "consultorio") propertyName = "consultorio";
+  else if (propTypeRaw === "loft") propertyName = "loft";
+
+  const isRequirement = text.toLowerCase().includes("busco") || text.toLowerCase().includes("necesito") || text.toLowerCase().includes("requiero") || !!extracted?.tipoInmuebleDeseado;
+  const txTypeRaw = (extracted?.transactionType || extracted?.tipoNegocioDeseado || "venta").toLowerCase();
+
+  const missingList: string[] = [];
+
+  const city = isRequirement ? extracted?.ciudadDeseada : extracted?.city;
+  if (!city || city.trim() === "" || city.toLowerCase() === "na") {
+    missingList.push("la ciudad");
+  }
+
+  const zone = isRequirement ? (extracted?.zonaDeseada || extracted?.zone) : extracted?.zone;
+  if (isGeoInvalid || !zone || zone.trim() === "" || zone.toLowerCase() === "na") {
+    missingList.push("el barrio exacto");
+  }
+
+  const price = isRequirement ? Number(extracted?.presupuestoMax || extracted?.price || 0) : Number(extracted?.price || 0);
+  if (!price || price <= 0) {
+    if (isRequirement) {
+      missingList.push("el presupuesto máximo");
+    } else {
+      if (txTypeRaw === "arriendo") {
+        missingList.push("el precio de arriendo");
+      } else if (txTypeRaw === "permuta") {
+        missingList.push("el valor estimado de la permuta");
+      } else {
+        missingList.push("el precio de venta");
+      }
+    }
+  }
+
+  const area = Number(extracted?.area || 0);
+  if (!area || area <= 0) {
+    if (propertyName === "finca") {
+      missingList.push("la cantidad de hectáreas o fanegadas");
+    } else {
+      missingList.push("el metraje en metros cuadrados");
+    }
+  }
+
+  const stratum = Number(extracted?.stratum || 0);
+  if ((!stratum || stratum <= 0) && propertyName !== "finca" && propertyName !== "lote" && propertyName !== "bodega") {
+    missingList.push("el estrato");
+  }
+
+  if (propertyName === "apartamento" || propertyName === "casa" || propertyName === "loft" || propertyName === "inmueble") {
+    const bedrooms = Number(extracted?.bedrooms || 0);
+    if (!bedrooms || bedrooms <= 0) {
+      missingList.push("el número de habitaciones");
+    }
+    const bathrooms = Number(extracted?.bathrooms || 0);
+    if (!bathrooms || bathrooms <= 0) {
+      missingList.push("el número de baños");
+    }
+  }
+
+  const garages = extracted?.garages;
+  if ((garages === undefined || garages === null || garages < 0) && propertyName !== "lote") {
+    missingList.push("el número de garajes/parqueaderos");
+  }
+
+  if (propertyName === "apartamento" || propertyName === "oficina" || propertyName === "consultorio") {
+    const floor = extracted?.floorDetail;
+    if (!floor || floor.trim() === "" || floor.toUpperCase() === "NA") {
+      missingList.push("el número de piso");
+    }
+    const intExt = extracted?.interiorExterior;
+    if (!intExt || intExt.trim() === "" || intExt.toUpperCase() === "NA") {
+      missingList.push("si queda en el interior o al exterior");
+    }
+  } else if (propertyName === "casa" || propertyName === "edificio") {
+    const floor = extracted?.floorDetail;
+    if (!floor || floor.trim() === "" || floor.toUpperCase() === "NA") {
+      missingList.push("la cantidad de pisos o niveles de la propiedad");
+    }
+  } else if (propertyName === "bodega") {
+    const floor = extracted?.floorDetail;
+    if (!floor || floor.trim() === "" || floor.toUpperCase() === "NA") {
+      missingList.push("la altura útil de la bodega (ej: doble o triple altura)");
+    }
+  }
+
+  if (missingList.length === 0) {
+    missingList.push("el barrio exacto");
+  }
+
+  let missingStr = "";
+  if (missingList.length === 1) {
+    missingStr = missingList[0];
+  } else if (missingList.length === 2) {
+    missingStr = `${missingList[0]} o ${missingList[1]}`;
+  } else {
+    const last = missingList.pop();
+    missingStr = `${missingList.join(", ")}, o ${last}`;
+  }
+
+  return `${intro}Estuve revisando el/la *${medio}* de tu *${propertyName}* que enviaste al grupo, pero mi sistema de lectura inteligente no alcanza a extraer cierta información clave del inmueble y me hace falta: *${missingStr}*.\n\n¿Me podrías indicar este dato por aquí para registrar tu publicación correctamente y buscarte un MATCH comercial de inmediato? 🚀🤝`;
+}
+
 // --- ANALIZADOR MORFOLÓGICO DE GÉNERO Y CORTESÍA (v11.70) ---
 function analyzeSender(name: string, userId: string, alreadyGreeted: boolean): { greeting: string; adj: string; courtesy: string } {
   const n = (name || "Colega").trim();
@@ -295,6 +424,24 @@ Los brókers y agentes de bienes raíces en Colombia suelen escribir de manera m
 ▸ "adm", "admin", "admon", "administración", "admn" ➔ Valor de la administración de la copropiedad. Identifica el valor y asígnalo a "adminFee".
 ▸ "permuto", "venpermuto", "se recibe menor valor", "recibo propiedad", "recibo vehículo" ➔ Asigna "permuta" al campo "transactionType".
 ▸ "estrato", "estr" ➔ Estrato socioeconómico. Identifica el número asociado y asígnalo a "stratum".
+
+## DISCERNIMIENTO INMOBILIARIO AVANZADO Y DESAMBIGUACIÓN (CRÍTICO)
+Debes demostrar un discernimiento absoluto sobre la naturaleza del mercado de bienes raíces y cómo varían las características según el tipo de inmueble:
+1. **Desambiguación de Pisos y Alturas (CRÍTICO)**:
+   - **Apartamento, Loft, Oficina, Consultorio**: La palabra "piso" indica la planta específica donde se encuentra el inmueble (ej. "piso 4" significa que la unidad está en la planta número 4). Mapea esto en "floorDetail" como "piso 4".
+   - **Casa, Cabaña, Chalet**: La expresión "de 4 pisos" o "casa de 3 niveles" indica el número de plantas totales que tiene la construcción completa. Mapea esto en "floorDetail" como "3 niveles" o "4 pisos".
+   - **Bodega (Warehouse)**: Las referencias a pisos o alturas (ej. "bodega de triple altura" o "bodega con altura de 4 pisos") representan la altura vertical libre útil para almacenamiento o carga, no apartamentos habitacionales. Mapea esto en "floorDetail" como "triple altura" o "altura de 4 pisos".
+   - **Edificio**: Las referencias a pisos (ej. "edificio de 5 pisos") indican la altura de la estructura. Mapea en "floorDetail" como "edificio de 5 pisos".
+2. **Clasificación de Subtipos de Propiedades**:
+   - Aunque la base de datos almacene tipos de propiedad genéricos (apartment, house, building, warehouse, office, farm, land, loft, consultorio), debes capturar con precisión los subtipos específicos en el "title" de la propiedad y en la "description" para mantener la riqueza del inventario:
+     - **Casas**: Identifica si es "casa de barrio" (casa de calle normal), "casa en conjunto", "casa en condominio", "casa campestre", "casa quinta", "casa lote" (casa con un lote grande de terreno), "chalet".
+     - **Apartamentos**: Identifica si es "apartaestudio", "loft", "apartamento dúplex", o "penthouse".
+     - **Bodegas**: Identifica si es "bodega industrial", "bodega comercial" o "bodega de almacenamiento".
+     - **Lotes / Terrenos**: Distingue si es lote urbano, lote rural, lote campestre o lote industrial.
+     - **Fincas**: Identifica si es finca de recreo, finca de producción/agrícola, o finca campestre.
+     - **Alojamiento Comercial**: Identifica si es hotel, hostal, hospedaje o motel.
+3. **Mapeo de Características de Edificios Completos**:
+   - Si una publicación describe la venta de un edificio completo ("Edificio en venta de 26 apartamentos"), NO sumes las habitaciones, baños o garajes de todas las unidades en los campos globales "bedrooms", "bathrooms" o "garages" del JSON (estos campos representan la distribución de una unidad individual para el cruce de matching). En su lugar, describe la cantidad de unidades en el campo "description" y el título, y deja "bedrooms": null, "bathrooms": null, a menos que el edificio sea de alquiler unificado tipo hospedaje/motel con habitaciones individuales en oferta ("Edificio con 20 habitaciones de alquiler").
 
 ## MAPEO SEMÁNTICO POLIMÓRFICO (VECTORES 'GIVES' & 'WANTS')
 Para estructurar ofertas de venta/arriendo y permutas complejas, debes mapear dos vectores lógicos dentro del JSON:
@@ -1042,9 +1189,43 @@ Por lo tanto, DEBES hacer lo siguiente:
       };
     }
 
+    const isLLMIncomplete = result.classification === "DATOS_INCOMPLETOS";
+
+    if (isLLMIncomplete) {
+      result.shouldSendDM = true;
+      result.dmShouldReply = true;
+      result.response = "";
+
+      const inferredType = (messageToProcess.toLowerCase().includes("vendo") || messageToProcess.toLowerCase().includes("ofrezco") || messageToProcess.toLowerCase().includes("arriendo") || !!extracted?.propertyType) ? "PROPERTY" : "REQUIREMENT";
+      
+      const firstName = realName.split(' ')[0];
+      const customIntro = `¡Hola, *${firstName}*! 😊 `;
+
+      result.dmResponse = buildIncompleteDataMessage(
+        messageToProcess,
+        hasMedia,
+        scrapedData,
+        imageBuffer,
+        pdfBuffer,
+        extracted,
+        false,
+        customIntro
+      );
+
+      await setPendingSession(userId, {
+        type: inferredType,
+        extractedData: extracted || {},
+        senderInfo: senderInfo,
+        messageToProcess: messageToProcess,
+        imageBuffer
+      });
+
+      return result;
+    }
+
     // --- CAPA DE DEFENSA GEOGRÁFICA NACIONAL (Elástica) ---
     if (isProperty || isRequirement) {
-      const zoneToValidate = isProperty ? extracted?.zone : extracted?.zonaDeseada || extracted?.zone;
+      const zoneToValidate = isProperty ? extracted?.zone : (extracted?.zonaDeseada || extracted?.zone);
       
       let isValidGeo = false;
       let geoValidation: any = null;
@@ -1055,23 +1236,30 @@ Por lo tanto, DEBES hacer lo siguiente:
       }
       
       if (!isValidGeo) {
-        // FLUJO B: Datos Incompletos / Falta Barrio Exacto
         result.classification = "DATOS_INCOMPLETOS";
         result.shouldSendDM = true;
-        result.dmShouldReply = true; // Forzar reply al mensaje original en el DM
-        
-        if (!result.dmResponse) {
-          const intro = senderInfo.greeting ? `${senderInfo.greeting} ` : "";
-          const mainText = "leí tu publicación pero me falta el barrio exacto. ¿Me lo indicas para buscar tu match de inmediato? 🚀";
-          result.dmResponse = intro + (senderInfo.greeting ? mainText : capitalize(mainText));
-        }
-        
-        result.response = ""; // Silencio en el grupo
+        result.dmShouldReply = true;
+        result.response = "";
 
-        // v11.60 Almacenamiento en caché (REGLA 3)
+        const inferredType = isProperty ? "PROPERTY" : "REQUIREMENT";
+        
+        const firstName = realName.split(' ')[0];
+        const customIntro = `¡Hola, *${firstName}*! 😊 `;
+
+        result.dmResponse = buildIncompleteDataMessage(
+          messageToProcess,
+          hasMedia,
+          scrapedData,
+          imageBuffer,
+          pdfBuffer,
+          extracted,
+          true,
+          customIntro
+        );
+
         await setPendingSession(userId, {
-          type: isProperty ? "PROPERTY" : "REQUIREMENT",
-          extractedData: extracted,
+          type: inferredType,
+          extractedData: extracted || {},
           senderInfo: senderInfo,
           messageToProcess: messageToProcess,
           imageBuffer
@@ -1081,43 +1269,43 @@ Por lo tanto, DEBES hacer lo siguiente:
       }
 
       const validation = geoValidation;
-        // Normalización Geográfica Nacional (v12.5)
-        if (validation.isMunicipio) {
-          // Fuera de Bogotá (Cali, Medellín, Tame, Tadó, etc.)
-          if (isProperty) {
-            extracted.city = validation.barrioCanonico;
-            extracted.addressCity = validation.barrioCanonico;
-            extracted.addressLocality = validation.localidad;
-            if (extracted.zone && normalizarTextoGeografico(extracted.zone) !== normalizarTextoGeografico(validation.barrioCanonico || "")) {
-              // Conservar barrio si el LLM extrajo algo más específico
-            } else {
-              extracted.zone = validation.barrioCanonico;
-            }
+      // Normalización Geográfica Nacional (v12.5)
+      if (validation.isMunicipio) {
+        // Fuera de Bogotá (Cali, Medellín, Tame, Tadó, etc.)
+        if (isProperty) {
+          extracted.city = validation.barrioCanonico;
+          extracted.addressCity = validation.barrioCanonico;
+          extracted.addressLocality = validation.localidad;
+          if (extracted.zone && normalizarTextoGeografico(extracted.zone) !== normalizarTextoGeografico(validation.barrioCanonico || "")) {
+            // Conservar barrio si el LLM extrajo algo más específico
           } else {
-            extracted.ciudadDeseada = validation.barrioCanonico;
-            extracted.addressCity = validation.barrioCanonico;
-            extracted.addressLocality = validation.localidad;
-            if (extracted.zonaDeseada && normalizarTextoGeografico(extracted.zonaDeseada) !== normalizarTextoGeografico(validation.barrioCanonico || "")) {
-              // Conservar
-            } else {
-              extracted.zonaDeseada = validation.barrioCanonico;
-            }
+            extracted.zone = validation.barrioCanonico;
           }
         } else {
-          // Dentro de Bogotá
-          if (isProperty) {
-            extracted.city = "Bogotá";
-            extracted.addressCity = "Bogotá";
-            extracted.zone = validation.barrioCanonico;
-            extracted.addressLocality = validation.localidad;
+          extracted.ciudadDeseada = validation.barrioCanonico;
+          extracted.addressCity = validation.barrioCanonico;
+          extracted.addressLocality = validation.localidad;
+          if (extracted.zonaDeseada && normalizarTextoGeografico(extracted.zonaDeseada) !== normalizarTextoGeografico(validation.barrioCanonico || "")) {
+            // Conservar
           } else {
-            extracted.ciudadDeseada = "Bogotá";
-            extracted.addressCity = "Bogotá";
             extracted.zonaDeseada = validation.barrioCanonico;
-            extracted.addressLocality = validation.localidad;
           }
         }
+      } else {
+        // Dentro de Bogotá
+        if (isProperty) {
+          extracted.city = "Bogotá";
+          extracted.addressCity = "Bogotá";
+          extracted.zone = validation.barrioCanonico;
+          extracted.addressLocality = validation.localidad;
+        } else {
+          extracted.ciudadDeseada = "Bogotá";
+          extracted.addressCity = "Bogotá";
+          extracted.zonaDeseada = validation.barrioCanonico;
+          extracted.addressLocality = validation.localidad;
+        }
       }
+    }
 
     // --- PERSISTENCIA Y MATCHING (Con Flujos DM) ---
     if (isProperty) {

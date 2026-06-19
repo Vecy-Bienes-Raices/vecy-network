@@ -8,7 +8,7 @@ import path from 'path';
 import { getDb } from '../db';
 import { conversations, messages as dbMessages, users } from '../../drizzle/schema';
 import { eq, and } from 'drizzle-orm';
-import { textToSpeechMedia, detectaVoz, sendAdminNotification, sendUserDM } from './whatsapp';
+import { textToSpeechMedia, detectaVoz, sendAdminNotification, sendUserDM, setBotPendingData } from './whatsapp';
 import { 
   processWhatsAppMessage, 
   processConsultingMessage, 
@@ -467,10 +467,20 @@ export class JaniaMatchBot {
 
       // 4. MODO STEALTH: Redirección al bot principal
       if (result) {
-        // A. Confirmación de guardado ("registré tu oferta...")
+        // A. Confirmación de guardado ("registré tu oferta...") o solicitud de datos incompletos
         if (result.shouldSendDM && result.dmResponse && result.dmResponse.trim() !== "") {
           console.log(`[JANIA-MATCH] [Stealth] Derivando confirmación DM de ${senderId} al bot principal.`);
           await sendUserDM(senderId, result.dmResponse);
+
+          if (result.classification === "DATOS_INCOMPLETOS") {
+            setBotPendingData(
+              senderId,
+              fullText,
+              result.extractedData || {},
+              result.classification,
+              result.missingFields || []
+            );
+          }
         }
 
         // B. Confirmaciones de Match a los involucrados y administrador
