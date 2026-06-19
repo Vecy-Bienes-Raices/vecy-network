@@ -198,10 +198,10 @@ async function startServer() {
       }
 
       const buffer = Buffer.from(media.data, "base64");
-      // Si el mimetype contiene codecs, algunos clientes Express fallan al hacer setHeader. 
-      // Limpiamos o seteamos el mimetype básico
-      let cleanMime = media.mimetype.split(';')[0].trim();
-      res.setHeader("Content-Type", cleanMime);
+      // Preservamos el mimetype completo incluyendo codecs (ej: "audio/ogg; codecs=opus")
+      // ya que el navegador necesita la info del codec para reproducir OGG/Opus correctamente
+      res.setHeader("Content-Type", media.mimetype);
+      res.setHeader("Content-Length", buffer.length);
       res.send(buffer);
     } catch (err: any) {
       res.status(500).send(err.message);

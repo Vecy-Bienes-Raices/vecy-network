@@ -9301,8 +9301,8 @@ async function startServer() {
         return res.status(500).send("No se pudo generar el audio");
       }
       const buffer = Buffer.from(media.data, "base64");
-      let cleanMime = media.mimetype.split(";")[0].trim();
-      res.setHeader("Content-Type", cleanMime);
+      res.setHeader("Content-Type", media.mimetype);
+      res.setHeader("Content-Length", buffer.length);
       res.send(buffer);
     } catch (err) {
       res.status(500).send(err.message);
