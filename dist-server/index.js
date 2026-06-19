@@ -9318,8 +9318,13 @@ async function startServer() {
     }
     if (process.env.ENABLE_JANIA_MATCH_BOT === "true") {
       console.log("Iniciando WhatsApp Bot Match (Ojos y O\xEDdos)...");
-      Promise.resolve().then(() => (init_whatsapp_match(), whatsapp_match_exports)).then(({ janiaMatchBot: janiaMatchBot2 }) => {
-        janiaMatchBot2.initialize();
+      Promise.resolve().then(() => (init_whatsapp_match(), whatsapp_match_exports)).then((module) => {
+        const bot = module?.janiaMatchBot || module?.default?.janiaMatchBot;
+        if (bot && typeof bot.initialize === "function") {
+          bot.initialize();
+        } else {
+          console.warn("[JANIA-MATCH] Advertencia: No se pudo obtener la instancia del Match Bot en esta recarga.");
+        }
       }).catch((err) => {
         console.error("Error al cargar JanIA Match Bot:", err);
       });
