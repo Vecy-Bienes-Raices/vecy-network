@@ -455,7 +455,7 @@ async function invokeLLM({
 }
 async function invokeGemini(messages2, responseFormat, imageBuffer, pdfBuffer, pdfMimeType, enableSearch) {
   const API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || ENV.forgeApiKey;
-  const MODEL = "gemini-2.5-flash";
+  const MODEL = "gemini-3.1-flash-lite";
   const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${API_KEY}`;
   try {
     const systemMessage = messages2.find((m) => m.role === "system");
@@ -2148,14 +2148,68 @@ var init_matching = __esm({
 
 // server/_core/voiceTranscription.ts
 import axios4 from "axios";
+import { spawn } from "child_process";
+async function transcodeWebmToWav(inputBuffer) {
+  return new Promise((resolve, reject) => {
+    const ffmpeg = spawn("ffmpeg", [
+      "-i",
+      "pipe:0",
+      // Read from stdin
+      "-vn",
+      // Disable video
+      "-c:a",
+      "pcm_s16le",
+      // Output uncompressed WAV (PCM 16-bit)
+      "-ac",
+      "1",
+      // Mono
+      "-ar",
+      "16000",
+      // 16kHz
+      "-f",
+      "wav",
+      // WAV container
+      "pipe:1"
+      // Write to stdout
+    ]);
+    const chunks = [];
+    ffmpeg.stdout.on("data", (chunk) => chunks.push(chunk));
+    let stderrData = "";
+    ffmpeg.stderr.on("data", (data) => {
+      stderrData += data.toString();
+    });
+    ffmpeg.on("close", (code) => {
+      if (code === 0) {
+        resolve(Buffer.concat(chunks));
+      } else {
+        reject(new Error(`ffmpeg fall\xF3 con c\xF3digo ${code}. Stderr: ${stderrData}`));
+      }
+    });
+    ffmpeg.on("error", (err) => {
+      reject(err);
+    });
+    ffmpeg.stdin.write(inputBuffer);
+    ffmpeg.stdin.end();
+  });
+}
 async function transcribeAudioWithGemini(audioBuffer, mimeType) {
   const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || ENV.forgeApiKey;
   if (!apiKey) {
     throw new Error("No GEMINI_API_KEY or GOOGLE_API_KEY found for transcription fallback.");
   }
-  const model = "gemini-2.5-flash";
+  const model = "gemini-3.1-flash-lite";
   const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-  let cleanMime = mimeType.split(";")[0].trim();
+  let cleanMime = mimeType.split(";")[0].trim().toLowerCase();
+  let bufferToUse = audioBuffer;
+  if (cleanMime.includes("webm") || cleanMime.includes("octet-stream")) {
+    try {
+      console.log(`[STT-Fallback] Detectado audio en formato ${cleanMime}. Transcodificando a WAV usando ffmpeg...`);
+      bufferToUse = await transcodeWebmToWav(audioBuffer);
+      cleanMime = "audio/wav";
+    } catch (e) {
+      console.error(`[STT-Fallback] Error al transcodificar de WebM/octet-stream a WAV con ffmpeg:`, e.message);
+    }
+  }
   if (cleanMime === "audio/x-wav" || cleanMime === "audio/wave") cleanMime = "audio/wav";
   if (cleanMime === "audio/mpeg3" || cleanMime === "audio/x-mpeg-3") cleanMime = "audio/mpeg";
   const payload = {
@@ -2167,7 +2221,7 @@ async function transcribeAudioWithGemini(audioBuffer, mimeType) {
           {
             inline_data: {
               mime_type: cleanMime,
-              data: audioBuffer.toString("base64")
+              data: bufferToUse.toString("base64")
             }
           }
         ]
@@ -2178,7 +2232,7 @@ async function transcribeAudioWithGemini(audioBuffer, mimeType) {
       maxOutputTokens: 2048
     }
   };
-  const response = await axios4.post(apiUrl, payload);
+  const response = await axios4.post(apiUrl, payload, { timeout: 15e3 });
   if (response.data.candidates && response.data.candidates[0]) {
     return response.data.candidates[0].content.parts[0].text.trim();
   }
@@ -4328,12 +4382,12 @@ import pkg from "whatsapp-web.js";
 import qrcode from "qrcode-terminal";
 import fs2 from "fs";
 import path3 from "path";
-import { spawn } from "child_process";
+import { spawn as spawn2 } from "child_process";
 import { eq as eq10, and as and5, or as or2, like } from "drizzle-orm";
 import * as jose from "jose";
 async function transcodeToOggOpus(inputBuffer) {
   return new Promise((resolve, reject) => {
-    const ffmpeg = spawn("ffmpeg", [
+    const ffmpeg = spawn2("ffmpeg", [
       "-i",
       "pipe:0",
       // Leer de stdin
