@@ -8,13 +8,12 @@ import path from 'path';
 import { getDb } from '../db';
 import { conversations, messages as dbMessages, users } from '../../drizzle/schema';
 import { eq, and } from 'drizzle-orm';
-import { textToSpeechMedia, detectaVoz, sendAdminNotification } from './whatsapp';
+import { textToSpeechMedia, detectaVoz, sendAdminNotification, sendUserDM } from './whatsapp';
 import { 
   processWhatsAppMessage, 
   processConsultingMessage, 
   processCirculoMessage 
 } from './janIA';
-import { sendCloudMessage } from './whatsapp-cloud';
 import { esDominioPermitido, scrapePropertyLink } from './scraper';
 
 // Tiempo de arranque para omitir mensajes históricos
@@ -471,7 +470,7 @@ export class JaniaMatchBot {
         // A. Confirmación de guardado ("registré tu oferta...")
         if (result.shouldSendDM && result.dmResponse && result.dmResponse.trim() !== "") {
           console.log(`[JANIA-MATCH] [Stealth] Derivando confirmación DM de ${senderId} al bot principal.`);
-          await sendCloudMessage(senderId, result.dmResponse);
+          await sendUserDM(senderId, result.dmResponse);
         }
 
         // B. Confirmaciones de Match a los involucrados y administrador
@@ -483,8 +482,8 @@ export class JaniaMatchBot {
               // Admin: enviar por whatsapp-web.js (sin restricción de ventana de 24h)
               await sendAdminNotification(dm.message);
             } else {
-              // Demás involucrados: Cloud API
-              await sendCloudMessage(dm.jid, dm.message);
+              // Demás involucrados: enviar por whatsapp-web.js (sendUserDM) para evitar restricciones de 24h de Cloud API
+              await sendUserDM(dm.jid, dm.message);
             }
           }
         }

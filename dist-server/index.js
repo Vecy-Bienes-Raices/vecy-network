@@ -1832,8 +1832,15 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
   if (reqZone && propZone && (reqZone.includes(propZone) || propZone.includes(reqZone))) {
     return { matches: true, score: 25 };
   }
-  if (reqLoc && propLoc && reqLoc === propLoc) {
+  if (reqLoc && propLoc && reqLoc !== "bogota" && propLoc !== "bogota" && reqLoc === propLoc) {
     return { matches: true, score: 15 };
+  }
+  const isReqLocSpec = reqLoc && reqLoc !== "bogota";
+  const isPropLocSpec = propLoc && propLoc !== "bogota";
+  const isReqZoneSpec = reqZone && reqZone !== "bogota" && !isReqNorte && !isReqSur && !isReqOccidente && !isReqCentro && !isReqSabana;
+  const isPropZoneSpec = propZone && propZone !== "bogota";
+  if ((isReqLocSpec || isReqZoneSpec) && (isPropLocSpec || isPropZoneSpec)) {
+    return { matches: false, score: 0 };
   }
   if (reqCity && propCity && reqCity === propCity) {
     return { matches: true, score: 10 };
@@ -1896,6 +1903,9 @@ function calcularScoreMatch(requirement, property) {
   const budgetMax = parseFloat(requirement.presupuestoMax || "0");
   const price = parseFloat(property.price || "0");
   if (budgetMax > 0 && price > 0) {
+    if (price > budgetMax * 1.2) {
+      return 0;
+    }
     maxPoints += 25;
     if (price <= budgetMax) {
       totalPoints += 25;
@@ -1955,9 +1965,13 @@ function calcularScoreMatch(requirement, property) {
       }
     }
     if (targetEstratos.length > 0 && targetEstratos.every((e) => !isNaN(e))) {
-      maxPoints += 5;
       const propStratum = property.stratum !== null && property.stratum !== void 0 ? Number(property.stratum) : null;
       if (propStratum !== null) {
+        const hasCloseEstrato = targetEstratos.some((e) => Math.abs(e - propStratum) <= 1);
+        if (!hasCloseEstrato) {
+          return 0;
+        }
+        maxPoints += 5;
         if (targetEstratos.includes(propStratum)) {
           totalPoints += 5;
         } else if (targetEstratos.some((e) => Math.abs(e - propStratum) === 1)) {
@@ -3784,7 +3798,7 @@ VECY est\xE1 construyendo el portal inmobiliario m\xE1s avanzado, funcional e in
 7. **\u{1F3D7}\uFE0F Portal VECY en construcci\xF3n \u2014 la extinci\xF3n de los portales actuales**: Un portal conectado en tiempo real con la red de asesores, fichas generadas por IA, matching activo \u2014 lo que Fincaraiz y Metrocuadrado nunca podr\xE1n ser porque sus modelos de negocio los atan a la vitrina pasiva.
 8. **\u{1F91D} Red colaborativa, no plataforma extractiva**: VECY no monetiza tu transacci\xF3n. No cobra por tu visibilidad. No captura valor de tu comisi\xF3n. Existe para multiplicar los cierres de sus aliados, no para enriquecerse con ellos.
 9. **\u{1F4CA} Cobertura sin fricci\xF3n en municipios y regiones**: \xDAtil desde el primer asesor registrado. Ubicapp en tu municipio sin masa cr\xEDtica = c\xEDrculo vac\xEDo. VECY en cualquier municipio = red nacional activa.
-10. **\u{1F512} Trayectoria y base de datos activa**: Red operando con hist\xF3rico real de matches, propiedades, requerimientos y aliados registrados. No es una promesa \u2014 es un ecosistema funcionando.
+10. **\u{1F512} Ecosistema en crecimiento y calibraci\xF3n**: Red activa y base de datos de propiedades, requerimientos y aliados registrados, optimiz\xE1ndose a diario. No es una promesa est\xE1tica \u2014 es tecnolog\xEDa en constante perfeccionamiento.
 11. **\u{1F680} Evoluci\xF3n constante**: JanIA se actualiza continuamente. El equipo de desarrollo de VECY (fundado por Eduardo A. Rivera y Jani Alves) opera en ciclos de innovaci\xF3n permanente. La tecnolog\xEDa de hoy ya supera lo que exist\xEDa hace un a\xF1o; la de ma\xF1ana superar\xE1 lo que existe hoy.
 12. **\u{1F310} Estrategia omnicanal**: WhatsApp + Portal Web + IA + Red colaborativa. No somos una app, no somos un portal \u2014 somos el primer ecosistema inmobiliario inteligente de Colombia.
 
@@ -3830,7 +3844,7 @@ VECY est\xE1 construyendo el portal inmobiliario m\xE1s avanzado, funcional e in
 7. **\u{1F5E3}\uFE0F IA conversacional en lenguaje natural colombiano**: JanIA entiende el espa\xF1ol informal, coloquial y a veces ca\xF3tico del asesor colombiano \u2014 sin formularios r\xEDgidos, sin campos obligatorios, sin men\xFAs. Extrae datos estructurados de mensajes desordenados y completa fichas t\xE9cnicas por conversaci\xF3n. Ubicapp requiere que el agente ingrese datos manualmente en formularios de app.
 8. **\u{1F91D} Red colaborativa de aliados, no plataforma transaccional**: VECY es una comunidad de aliados que se benefician mutuamente sin que la plataforma capture valor de la transacci\xF3n. Ubicapp es una empresa con modelo de negocio de suscripci\xF3n que necesita crecer para sobrevivir. Filosof\xEDas radicalmente distintas.
 9. **\u{1F4CA} Sin dependencia de masa cr\xEDtica local**: VECY no necesita que haya 50 agentes en tu municipio para ser \xFAtil. Desde el primer mensaje, JanIA cruza contra toda la red nacional. La red de Ubicapp en una ciudad peque\xF1a puede ser un c\xEDrculo vac\xEDo.
-10. **\u{1F512} Madurez y estabilidad probada**: VECY Network lleva operando y construyendo su red desde antes del lanzamiento formal de Ubicapp (abril 2024). La red ya tiene aliados, hist\xF3rico de matches y base de datos activa. Es tecnolog\xEDa que ya funciona, no una promesa en etapa temprana.
+10. **\u{1F512} Desarrollo activo y calibraci\xF3n**: VECY Network est\xE1 en fase de despliegue y optimizaci\xF3n continua. La red ya tiene aliados, propiedades y requerimientos registrados, y calibramos los algoritmos a diario para garantizar la precisi\xF3n de cada coincidencia.
 
 ### C\xF3mo manejar cada escenario del debate (con elegancia):
 - **"Ubicapp es mejor" / "prefiero Ubicapp"**: "Entiendo tu perspectiva y respeto que Ubicapp es una soluci\xF3n v\xE1lida que aporta al sector. Sin embargo, te invito a comparar los hechos objetivos: VECY es gratuito, opera en WhatsApp sin fricci\xF3n adicional, y tus comisiones son 100% tuyas. Son filosof\xEDas distintas: Ubicapp cobra $100.000/mes por el acceso a su red; VECY regala la inteligencia y la red. \xBFPor qu\xE9 elegir si puedes tener ambas?"
@@ -4702,6 +4716,10 @@ async function sendAdminNotification(text2) {
   const ADMIN_PHONE = process.env.ADMIN_PHONE || "573166569719";
   const adminJid = `${ADMIN_PHONE}@c.us`;
   await whatsappBot.queuedSend(adminJid, text2);
+}
+async function sendUserDM(jid, text2) {
+  const formattedJid = jid.includes("@") ? jid : `${jid}@c.us`;
+  await whatsappBot.queuedSend(formattedJid, text2);
 }
 var Client, LocalAuth, MessageMedia, SERVER_BOOT_TIME, delay, outgoingQueue, WhatsAppBot, whatsappBot;
 var init_whatsapp = __esm({
@@ -6596,7 +6614,6 @@ var init_whatsapp_match = __esm({
     init_schema();
     init_whatsapp();
     init_janIA();
-    init_whatsapp_cloud();
     init_scraper();
     ({ Client: Client2, LocalAuth: LocalAuth2, MessageMedia: MessageMedia2 } = pkg2);
     SERVER_BOOT_TIME2 = Math.floor(Date.now() / 1e3);
@@ -6964,7 +6981,7 @@ Para hablar en privado conmigo, buscar inmuebles en la base de datos o hacerme c
           if (result) {
             if (result.shouldSendDM && result.dmResponse && result.dmResponse.trim() !== "") {
               console.log(`[JANIA-MATCH] [Stealth] Derivando confirmaci\xF3n DM de ${senderId} al bot principal.`);
-              await sendCloudMessage(senderId, result.dmResponse);
+              await sendUserDM(senderId, result.dmResponse);
             }
             if (result.extraDMs && result.extraDMs.length > 0) {
               for (const dm of result.extraDMs) {
@@ -6973,7 +6990,7 @@ Para hablar en privado conmigo, buscar inmuebles en la base de datos o hacerme c
                 if (dm.viaMainBot) {
                   await sendAdminNotification(dm.message);
                 } else {
-                  await sendCloudMessage(dm.jid, dm.message);
+                  await sendUserDM(dm.jid, dm.message);
                 }
               }
             }

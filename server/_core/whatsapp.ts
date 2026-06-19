@@ -2662,3 +2662,13 @@ export async function sendAdminNotification(text: string): Promise<void> {
   const adminJid = `${ADMIN_PHONE}@c.us`;
   await (whatsappBot as any).queuedSend(adminJid, text);
 }
+
+/**
+ * Envía un mensaje directo a un usuario a través del bot principal (whatsapp-web.js),
+ * evitando las restricciones de la API de Cloud (Meta) cuando no hay ventana de 24h activa.
+ */
+export async function sendUserDM(jid: string, text: string): Promise<void> {
+  const formattedJid = jid.includes('@') ? jid : `${jid}@c.us`;
+  await (whatsappBot as any).queuedSend(formattedJid, text);
+}
+
