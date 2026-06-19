@@ -1,0 +1,113 @@
+# Manual de Arquitectura y Decisiones Técnicas de JanIA 🤖🏛️
+_Documento técnico de referencia persistente para el desarrollo y mantenimiento del ecosistema VECY Network._
+
+---
+
+## 1. Filosofía y Propósito del Sistema
+**JanIA** es la mente estratégica central de **VECY Network**, la primera red inmobiliaria colaborativa inteligente de Colombia que opera de forma nativa en WhatsApp. Fue concebida por **Eduardo A. Rivera** (Arquitecto Tecnológico) y **Jani Alves**, diseñada para ser una socia comercial y técnica del asesor inmobiliario colombiano, facilitando el registro de inmuebles, la detección de requerimientos y el cruce de negocios en tiempo real (matching) sin comisiones obligatorias por parte de la plataforma.
+
+---
+
+## 2. Arquitectura de Componentes
+El ecosistema técnico de JanIA está compuesto por los siguientes módulos integrados en la carpeta `server/_core/`:
+
+```mermaid
+graph TD
+    A[Grupos de WhatsApp] -->|Escucha Silenciosa| B(JanIA Match Bot - Puppeteer)
+    B -->|Envía datos para procesar| C(Bot Principal - WhatsApp Cloud API)
+    C -->|Clasificación y Extracción| D(Cerebro LLM - janIA.ts)
+    D -->|PostgreSQL / Drizzle| E[(Base de Datos Vecy)]
+    E -->|Cruce en Tiempo Real| F(Motor de Matching - matching.ts)
+    F -->|Match Detectado| C
+    C -->|Menciones Públicas / DMs| A
+    C -->|Alertas / Notificación| G[Administrador / Soporte]
+```
+
+### A. Bot Principal (WhatsApp Cloud API - Meta)
+*   **Archivo**: [whatsapp.ts](file:///home/eddu/Proyectos/vecy-network/server/_core/whatsapp.ts)
+*   **Número**: `+57 3185462265` (JanIA v3.5 - Soporte e Interacción Directa)
+*   **Tecnología**: Integración directa con los Webhooks oficiales de Meta WhatsApp Cloud API.
+*   **Propósito**: Envío de respuestas oficiales, solicitudes de datos faltantes (`DATOS_INCOMPLETOS`), alertas de infracción, mensajería de soporte directo (DMs privados) y envío de audios mediante notas de voz.
+*   **Nota de Diseño**: No utiliza Puppeteer para las respuestas salientes a usuarios a gran escala, eliminando de raíz el riesgo de baneo de Meta en este número principal.
+
+### B. Bot Ojos y Oídos (JanIA Match Bot)
+*   **Archivo**: [whatsapp-match.ts](file:///home/eddu/Proyectos/vecy-network/server/_core/whatsapp-match.ts)
+*   **Número**: `+57 3223019130` (JanIA Match)
+*   **Tecnología**: WhatsApp Web automatizado con Puppeteer (`whatsapp-web.js`) empleando técnicas de evasión de firmas (`Stealth`) y optimización de rendimiento (bloqueo de descarga de imágenes/recursos visuales para ahorro de memoria en el VPS).
+*   **Propósito**: Monitorea de forma 100% silenciosa los grupos de WhatsApp configurados en la variable de entorno `JANIA_MATCH_GROUPS`. Capta ofertas de propiedades, requerimientos y archivos PDFs, redirigiendo el flujo al bot principal.
+*   **Regla de Redirección**: Si un usuario chatea por privado con este número, el bot responderá una vez al día dirigiéndolo a interactuar con la versión principal de soporte (+57 3185462265) a través del enlace: `https://wa.me/573185462265`.
+
+### C. Cerebro de Inteligencia Artificial (LLM)
+*   **Archivo**: [janIA.ts](file:///home/eddu/Proyectos/vecy-network/server/_core/janIA.ts)
+*   **Modelos Activos**: 
+    *   Procesamiento general: `gemini-2.5-flash` o `gemini-3.1-flash-lite` (llamado a través de `invokeLLM`).
+    *   Generación de notas de voz: `gemini-3.1-flash-tts-preview` vía Google Cloud Text-to-Speech API.
+*   **Propósito**: Clasifica los mensajes entrantes (en categorías como `INMUEBLE`, `REQUERIMIENTO`, `DATOS_INCOMPLETOS`, `VIOLACION_DE_NORMAS`, `CONSULTA_GENERAL`), extrae fichas técnicas estructuradas y valida datos geográficos (ciudades y barrios de Colombia) y fonéticos del español.
+
+### D. Motor de Matching y Base de Datos (Drizzle ORM)
+*   **Archivos**: `server/db.ts`, [schema.ts](file:///home/eddu/Proyectos/vecy-network/drizzle/schema.ts) y [matching.ts](file:///home/eddu/Proyectos/vecy-network/server/_core/matching.ts)
+*   **Tecnología**: PostgreSQL con Drizzle ORM como capa relacional.
+*   **Propósito**: Registra las entidades inmobiliarias extraídas (`properties` y `requirements`) y ejecuta búsquedas de emparejamiento semántico/numérico en tiempo real al insertar un registro. Si el `matchScore` es mayor o igual a **70%**, se activa una alerta automática de negocio viable.
+*   **Regla de Desduplicación**: Si un usuario vuelve a publicar un inmueble o requerimiento, el sistema no duplica la fila en la base de datos; en su lugar, detecta el número de teléfono y el tipo del activo y actualiza los campos modificados (como precio, administración o descripción).
+
+---
+
+## 3. Reglas de Negocio Estrictas e Inquebrantables
+
+### 🎙️ Voz Oficial de JanIA
+*   **Proveedor**: **Google Cloud Text-to-Speech (TTS) API (v1beta1)**.
+*   **Configuración obligatoria**:
+    *   `modelName`: `"gemini-3.1-flash-tts-preview"`
+    *   `name`: `"Achernar"` (idioma `es-us`)
+    *   `prompt` de estilo: `"Leer en voz alta con un tono cálido y acogedor."`
+    *   `speakingRate`: `1.1`
+*   **Formatos**:
+    *   Para WhatsApp: Codificación `OGG_OPUS` (se reproduce nativamente como nota de voz humana).
+    *   Para Videos Comerciales / Scripting: Codificación `MP3`.
+*   **Prohibición**: Queda terminantemente prohibido proponer o utilizar ElevenLabs o voces sintéticas estándar de Google. Para generar audios MP3 en el proyecto, debe utilizarse el script utilitario local:
+    `npx tsx scratch/generar_voz_jania.ts "Texto"`
+
+### 📈 Comisiones e Inteligencia de Arrendamientos
+*   **Comisión en Arrendamientos**: En Colombia, la costumbre mercantil para comisiones en arrendamientos es de **un canon de arriendo mensual** (o porcentaje correspondiente en contratos de larga duración). JanIA no debe calcular comisiones de arriendo basándose en el 3% de ventas.
+*   **Desglose de Administración (admon)**: En arriendos, es obligatorio saber si el canon incluye o no la administración:
+    *   Si no se especifica en el mensaje, JanIA está instruida a preguntar activamente: *¿el valor de la administración está incluido en el canon o cuánto es?*
+    *   El campo `adminFee` se mapea explícitamente en la base de datos en la columna `adminFee` como `decimal` y se captura en el esquema del LLM.
+
+### 🛡️ Moderación Híbrida Inteligente (Mitigación de Baneos)
+Para evitar que los usuarios del grupo reporten el bot principal como spam debido a mensajes privados no solicitados, se aplica la siguiente directriz híbrida:
+*   **Advertencias por Datos Incompletos (`DATOS_INCOMPLETOS`)**:
+    *   *Usuario Conocido* (con historial de chat previo con el bot): Se le envía la solicitud de completar datos de forma silenciosa por privado (DM).
+    *   *Usuario Nuevo* (sin interacción previa): Se le advierte **públicamente en el grupo** mediante una mención, invitándolo a iniciar el chat con el bot en `https://wa.me/573185462265` para completar su registro.
+*   **Infracciones de Normas (`VIOLACION_DE_NORMAS`)**: Siempre se alertan de forma pública en el grupo etiquetando al remitente para educar a la comunidad.
+
+### 📋 Estatuto de Publicación y Normas de WhatsApp
+Las normas oficiales de publicación del grupo que JanIA debe conocer de memoria y hacer cumplir en su prompt maestro son las siguientes:
+1.  **Cómo Publicar para Match**: Las publicaciones de inmuebles o requerimientos deben contar con:
+    *   *Ubicación*: Ciudad y Barrio exacto (Ej: Bogotá, Polo Club).
+    *   *Precio*: Valor exacto (en arriendos, aclarar si la administración está incluida o su costo; en permutas, detallar qué se entrega y qué se busca).
+    *   *Ficha Técnica*: Área en m², habitaciones, baños, parqueaderos y estrato.
+2.  **Formatos y Enlaces Permitidos**:
+    *   *Enlaces Aceptados*: Links públicos de portales inmobiliarios y CRMs (Wasi, Fincaraiz, Metrocuadrado, Ciencuadras, Habi, Curador o webs con dominio de la inmobiliaria).
+    *   *Formatos Aceptados*: Texto directo en el chat, fichas en archivos PDF, y notas de voz dictando los datos.
+    *   *Imágenes y Flyers*: Sube flyers con texto comercial detallado. Prohibido fotos de espacios vacíos (fachadas, baños, cocinas sin texto).
+    *   *Enlaces Prohibidos*: Redes sociales (TikTok, YouTube, Facebook, Instagram, LinkedIn, X, Threads, Pinterest) por falta de acceso y video.
+3.  **Reglas de Convivencia**:
+    *   *Frecuencia*: Máximo 3 publicaciones consecutivas al día. Espera al menos 5 minutos entre cada mensaje para no saturar el chat.
+    *   *Contenido Prohibido*: Cero política, religión, publicidad externa o enlaces de invitación a otros grupos.
+4.  **Moderación**: Faltas de datos clave conllevan advertencia 🤔 en grupo o privado; violaciones de normas conllevan ❌ y eliminación del mensaje.
+
+---
+
+## 4. Logística de Mensajes en Grupo (Anti-Spam)
+Para prevenir la saturación y procesar correctamente los álbumes de imágenes (donde WhatsApp envía múltiples mensajes seguidos de forma casi simultánea), se emplea un mutex ligero y un buffer por usuario:
+1.  **handleIncomingMessage**: Serializa las peticiones usando un mapa de promesas (`processingLocks`) por usuario (`${chatId}_${senderId}`).
+2.  **Dynamic Buffer**: Agrupa los mensajes del mismo usuario durante **12 segundos** (en chats grupales) antes de enviarlos a procesar en un solo bloque unificado.
+3.  **Frecuencia (Anti-Spam)**: 
+    *   Límite de mensajes por bloque: Máximo 3 mensajes (`MAX_BLOCK_SIZE = 3`). Los mensajes excedentes se descartan reaccionando con ⚠️ en el grupo.
+    *   Cooldown entre bloques: Una vez procesado un bloque de mensajes, el usuario entra en un cooldown de **5 minutos** (`COOLDOWN_PERIOD = 5 * 60 * 1000`). Si intenta publicar otro listing durante este periodo, se le advierte públicamente.
+
+---
+
+## 5. El Modelo "Bolsa VECY"
+*   **Regla de Oro**: Los propietarios directos y los inversores son bienvenidos a aportar sus activos y presupuestos al ecosistema de la Bolsa VECY. Sin embargo, **ningún cliente directo opera solo o de forma directa en el grupo**. 
+*   Siempre se les asignará y representará de manera obligatoria por un **agente inmobiliario aliado y certificado de la red VECY**, quien gestionará el activo o la búsqueda para garantizar el corretaje profesional, proteger las comisiones de la red de aliados y evitar la desintermediación directa en el canal de trabajo.
