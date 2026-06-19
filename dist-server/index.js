@@ -7228,8 +7228,8 @@ Si deseas completar tus datos o tienes dudas, por favor contacta directamente a 
                   await this.logToDb(senderId, "janIA", `[PUBLIC-WARNING] ${publicWarning}`);
                 } else {
                   console.log(`[JANIA-MATCH] [Stealth] Enviando advertencia privada de datos incompletos a ${senderId} (Usuario conocido).`);
-                  await sendUserDM(senderId, result.dmResponse);
-                  await this.logToDb(senderId, "janIA", `[DM-Stealth] ${result.dmResponse}`);
+                  await sendUserDM(senderId, result.dmResponse || "");
+                  await this.logToDb(senderId, "janIA", `[DM-Stealth] ${result.dmResponse || ""}`);
                 }
                 if (result.classification === "DATOS_INCOMPLETOS") {
                   setBotPendingData(

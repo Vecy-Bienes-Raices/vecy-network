@@ -519,8 +519,8 @@ export class JaniaMatchBot {
             } else {
               // DATOS_INCOMPLETOS en privado (usuario conocido con historial de confianza)
               console.log(`[JANIA-MATCH] [Stealth] Enviando advertencia privada de datos incompletos a ${senderId} (Usuario conocido).`);
-              await sendUserDM(senderId, result.dmResponse);
-              await this.logToDb(senderId, 'janIA', `[DM-Stealth] ${result.dmResponse}`);
+              await sendUserDM(senderId, result.dmResponse || "");
+              await this.logToDb(senderId, 'janIA', `[DM-Stealth] ${result.dmResponse || ""}`);
             }
 
             if (result.classification === "DATOS_INCOMPLETOS") {
