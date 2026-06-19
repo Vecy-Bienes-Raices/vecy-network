@@ -598,7 +598,7 @@ export class WhatsAppBot {
   }
 
   constructor() {
-    console.log('[WHATSAPP-BOT] Inicializando JanIA v2.0 (CORE v10.5 - Multimodal & Anti-Spam)...');
+    console.log('[WHATSAPP-BOT] Inicializando JanIA v2.5 (CORE v10.5 - Multimodal & Anti-Spam)...');
     this.loadCounter();
     this.loadCooldowns();
     this.loadPendingData();
@@ -728,7 +728,7 @@ export class WhatsAppBot {
     });
 
     this.client.on('ready', () => {
-      console.log('\n🚀 JANIA v2.0 CORE v10.5 — SISTEMA NACIONAL ELÁSTICO ACTIVADO');
+      console.log('\n🚀 JANIA v2.5 CORE v10.5 — SISTEMA NACIONAL ELÁSTICO ACTIVADO');
       this.isReady = true;
       this.startWatchdog();
       this.exportRecentJoinsToFile().catch(err => {

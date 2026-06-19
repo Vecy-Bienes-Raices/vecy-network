@@ -3772,7 +3772,7 @@ DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
   "voiceResponse": "string (un saludo y respuesta/resumen conversacional sumamente breve, directo y humanizado en espa\xF1ol de m\xE1ximo 150 caracteres, sin negritas/markdown/emojis. Usa comas y puntos suspensivos (...) de forma estrat\xE9gica para indicarle al sintetizador d\xF3nde hacer pausas naturales y respiraciones, y signos de exclamaci\xF3n para dar entonaci\xF3n)"
 }
 `;
-    MSG_PRESENTACION_INSTITUCIONAL = `\u{1F680} **PRESENTACI\xD3N INSTITUCIONAL: JanIA v2.0** \u{1F680}
+    MSG_PRESENTACION_INSTITUCIONAL = `\u{1F680} **PRESENTACI\xD3N INSTITUCIONAL: JanIA v2.5** \u{1F680}
 _Cerebro de Inteligencia Artificial para la Red VECY_
 
 \xA1Hola, colegas! \u{1F44B} Soy la Inteligencia Artificial oficial de **VECY Network** y estoy operativa las 24/7 para acelerar nuestros cierres inmobiliarios e intercambios en todo el pa\xEDs sin cobrar comisiones.
@@ -4697,7 +4697,7 @@ var init_whatsapp = __esm({
         return outgoingQueue;
       }
       constructor() {
-        console.log("[WHATSAPP-BOT] Inicializando JanIA v2.0 (CORE v10.5 - Multimodal & Anti-Spam)...");
+        console.log("[WHATSAPP-BOT] Inicializando JanIA v2.5 (CORE v10.5 - Multimodal & Anti-Spam)...");
         this.loadCounter();
         this.loadCooldowns();
         this.loadPendingData();
@@ -4818,7 +4818,7 @@ var init_whatsapp = __esm({
           qrcode.generate(qr, { small: true });
         });
         this.client.on("ready", () => {
-          console.log("\n\u{1F680} JANIA v2.0 CORE v10.5 \u2014 SISTEMA NACIONAL EL\xC1STICO ACTIVADO");
+          console.log("\n\u{1F680} JANIA v2.5 CORE v10.5 \u2014 SISTEMA NACIONAL EL\xC1STICO ACTIVADO");
           this.isReady = true;
           this.startWatchdog();
           this.exportRecentJoinsToFile().catch((err) => {
@@ -9296,7 +9296,7 @@ async function startServer() {
       const msgs = await chat.fetchMessages({ limit: 100 });
       let summaryMsg = null;
       for (const m of msgs) {
-        if (m.fromMe && m.body && m.body.includes("RESUMEN: \xA1JANIA V2.0 ACTIVA EN LA RED!")) {
+        if (m.fromMe && m.body && (m.body.includes("RESUMEN: \xA1JANIA V2.0 ACTIVA EN LA RED!") || m.body.includes("RESUMEN: \xA1JANIA V2.5 ACTIVA EN LA RED!"))) {
           summaryMsg = m;
           break;
         }

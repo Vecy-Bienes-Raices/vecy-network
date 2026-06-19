@@ -8,7 +8,7 @@ async function triggerImmediatePublish() {
 
     const testContent =
         `🎯 ¡SISTEMA OPERATIVO VECY NETWORK ACTIVO! 🎯\n\n` +
-        `JanIA v2.0 ejecutando la automatización multicanal con éxito. Inteligencia Artificial PropTech para el norte de Bogotá.\n\n` +
+        `JanIA v2.5 ejecutando la automatización multicanal con éxito. Inteligencia Artificial PropTech para el norte de Bogotá.\n\n` +
         `💼 ¿Eres bróker, asesor o inversionista?\n` +
         `👉 Únete a la red: https://chat.whatsapp.com/K36KrHeB9nMEKJ56s8XFcM`;
 

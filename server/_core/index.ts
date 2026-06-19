@@ -353,7 +353,7 @@ async function startServer() {
       
       let summaryMsg: any = null;
       for (const m of msgs) {
-        if (m.fromMe && m.body && m.body.includes("RESUMEN: ¡JANIA V2.0 ACTIVA EN LA RED!")) {
+        if (m.fromMe && m.body && (m.body.includes("RESUMEN: ¡JANIA V2.0 ACTIVA EN LA RED!") || m.body.includes("RESUMEN: ¡JANIA V2.5 ACTIVA EN LA RED!"))) {
           summaryMsg = m;
           break;
         }

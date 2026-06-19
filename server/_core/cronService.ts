@@ -16,7 +16,7 @@ import {
 } from './janIA';
 
 /**
- * Servicio Cron de JanIA v2.0
+ * Servicio Cron de JanIA v2.5
  * Automatización de ráfagas educativas, reportes de matching y embudos multicanal.
  */
 

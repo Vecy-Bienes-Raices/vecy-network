@@ -50,7 +50,7 @@ interface Message {
 function JanIARealtimeLoader() {
   const [step, setStep] = useState(0);
   const steps = [
-    { text: "Pensando", detail: "Orquestando JanIA v2.0 (Gemini Engine)...", icon: Brain, color: "text-[#bf953f]" },
+    { text: "Pensando", detail: "Orquestando JanIA v2.5 (Gemini Engine)...", icon: Brain, color: "text-[#bf953f]" },
     { text: "Analizando lenguaje natural", detail: "Procesando semántica del mensaje...", icon: Cpu, color: "text-blue-400" },
     { text: "Rastreando inmuebles", detail: "Buscando en base de datos nacional...", icon: Database, color: "text-emerald-400" },
     { text: "Rastreando requerimientos", detail: "Analizando demandas activas...", icon: Search, color: "text-cyan-400" },

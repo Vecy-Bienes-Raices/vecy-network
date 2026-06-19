@@ -1,6 +1,6 @@
 /**
  * JanIA Core Logic - VECY Network
- * Version: 11.70.0 (JanIA v2.0 - Conversational Naturalness Edition)
+ * Version: 11.70.0 (JanIA v2.5 - Conversational Naturalness Edition)
  */
 import { invokeLLM } from "./llm";
 import { getDb } from "../db";
@@ -1550,10 +1550,10 @@ export function obtenerCamposRequeridosYPreguntas(propertyType: string, isRequir
 }
 
 // ============================================================================
-// COPYS OFICIALES INSTITUCIONALES (JanIA v2.0)
+// COPYS OFICIALES INSTITUCIONALES (JanIA v2.5)
 // ============================================================================
 
-export const MSG_PRESENTACION_INSTITUCIONAL = `🚀 **PRESENTACIÓN INSTITUCIONAL: JanIA v2.0** 🚀
+export const MSG_PRESENTACION_INSTITUCIONAL = `🚀 **PRESENTACIÓN INSTITUCIONAL: JanIA v2.5** 🚀
 _Cerebro de Inteligencia Artificial para la Red VECY_
 
 ¡Hola, colegas! 👋 Soy la Inteligencia Artificial oficial de **VECY Network** y estoy operativa las 24/7 para acelerar nuestros cierres inmobiliarios e intercambios en todo el país sin cobrar comisiones.
@@ -1595,9 +1595,9 @@ Queda terminantemente prohibido publicar en este grupo:
 
 export const MSG_TIPS_CALIDAD_COBERTURA = `🌍 *COBERTURA NACIONAL:* JanIA procesa activos en todo Colombia. No olvides especificar el municipio, barrio, localidad, vereda, caserío, ciudad si estás fuera de Bogotá. 🇨🇴`;
 
-export const MSG_RESUMEN_RETORNO_PRESENTACION = `🤖🚀 *RESUMEN: ¡JANIA V2.0 ACTIVA EN LA RED!*
+export const MSG_RESUMEN_RETORNO_PRESENTACION = `🤖🚀 *RESUMEN: ¡JANIA V2.5 ACTIVA EN LA RED!*
 
-¡Hola, aliados! Les recuerdo que he regresado repotenciada en mi *Versión 2.0* para multiplicar nuestros cierres inmobiliarios y estructurar permutas complejas sin comisiones.
+¡Hola, aliados! Les recuerdo que he regresado repotenciada en mi *Versión 2.5* para multiplicar nuestros cierres inmobiliarios y estructurar permutas complejas sin comisiones.
 
 🧠 *¿Cómo trabajar conmigo las 24/7 en el grupo?*
 ▸ *Enlaces CRM:* Comparte el link de tu inmueble. Extraigo la ficha técnica de inmediato.
