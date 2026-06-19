@@ -2715,7 +2715,7 @@ Por favor responde a este mensaje diciendo \xFAnicamente:
 \u2022 Tel\xE9fono: +${isProperty ? savedRawPhone : matchedRawPhone}
 \u2022 Detalle: ${propItem.rawText || "Sin descripci\xF3n"}
 \u2022 Precio: ${propItem.price ? Number(propItem.price).toLocaleString("es-CO") + " COP" : "N/A"}`;
-    extraDMs.push({ jid: adminJid, message: adminMessage });
+    extraDMs.push({ jid: adminJid, message: adminMessage, viaMainBot: true });
   }
   const responseText = matchBlocks.join("\n\n================================\n\n");
   return {
@@ -4697,6 +4697,11 @@ function detectaVoz(text2) {
     "enviame nota de vos"
   ];
   return keywords.some((kw) => t2.includes(kw));
+}
+async function sendAdminNotification(text2) {
+  const ADMIN_PHONE = process.env.ADMIN_PHONE || "573166569719";
+  const adminJid = `${ADMIN_PHONE}@c.us`;
+  await whatsappBot.queuedSend(adminJid, text2);
 }
 var Client, LocalAuth, MessageMedia, SERVER_BOOT_TIME, delay, outgoingQueue, WhatsAppBot, whatsappBot;
 var init_whatsapp = __esm({
@@ -6965,7 +6970,11 @@ Para hablar en privado conmigo, buscar inmuebles en la base de datos o hacerme c
               for (const dm of result.extraDMs) {
                 if (!dm.jid || !dm.jid.includes("@") || dm.jid.split("@")[0].length < 5) continue;
                 console.log(`[JANIA-MATCH] [Stealth] Derivando notificaci\xF3n de Match para ${dm.jid} al bot principal.`);
-                await sendCloudMessage(dm.jid, dm.message);
+                if (dm.viaMainBot) {
+                  await sendAdminNotification(dm.message);
+                } else {
+                  await sendCloudMessage(dm.jid, dm.message);
+                }
               }
             }
           }

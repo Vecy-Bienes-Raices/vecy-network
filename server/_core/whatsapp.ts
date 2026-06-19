@@ -2652,3 +2652,13 @@ Dirección obligatoria:
 }
 
 export const whatsappBot = new WhatsAppBot();
+
+/**
+ * Envía una notificación al administrador a través del bot principal (whatsapp-web.js),
+ * que tiene conversación establecida con el admin sin restricción de ventana de 24h.
+ */
+export async function sendAdminNotification(text: string): Promise<void> {
+  const ADMIN_PHONE = process.env.ADMIN_PHONE || "573166569719";
+  const adminJid = `${ADMIN_PHONE}@c.us`;
+  await (whatsappBot as any).queuedSend(adminJid, text);
+}

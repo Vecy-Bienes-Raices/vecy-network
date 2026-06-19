@@ -8,7 +8,7 @@ import path from 'path';
 import { getDb } from '../db';
 import { conversations, messages as dbMessages, users } from '../../drizzle/schema';
 import { eq, and } from 'drizzle-orm';
-import { textToSpeechMedia, detectaVoz } from './whatsapp';
+import { textToSpeechMedia, detectaVoz, sendAdminNotification } from './whatsapp';
 import { 
   processWhatsAppMessage, 
   processConsultingMessage, 
@@ -479,7 +479,13 @@ export class JaniaMatchBot {
           for (const dm of result.extraDMs) {
             if (!dm.jid || !dm.jid.includes('@') || dm.jid.split('@')[0].length < 5) continue;
             console.log(`[JANIA-MATCH] [Stealth] Derivando notificación de Match para ${dm.jid} al bot principal.`);
-            await sendCloudMessage(dm.jid, dm.message);
+            if (dm.viaMainBot) {
+              // Admin: enviar por whatsapp-web.js (sin restricción de ventana de 24h)
+              await sendAdminNotification(dm.message);
+            } else {
+              // Demás involucrados: Cloud API
+              await sendCloudMessage(dm.jid, dm.message);
+            }
           }
         }
       }

@@ -21,7 +21,7 @@ export type JanIAResult = {
   shouldSendDM?: boolean;
   dmShouldReply?: boolean; // Flag para indicar que el DM debe ser un reply
   reactionEmoji?: string;  // Emoji que la IA recomienda para reaccionar al mensaje original
-  extraDMs?: { jid: string; message: string }[];
+  extraDMs?: { jid: string; message: string; viaMainBot?: boolean }[];
   wantsVoice?: boolean;
   voiceResponse?: string;
   sendReputationHook?: boolean;
@@ -570,8 +570,8 @@ async function handleDetectedMatches(
   savedRecord: any,
   userId: string,
   realName: string
-): Promise<{ response: string; mentions: string[]; extraDMs: { jid: string; message: string }[]; sendReputationHook?: boolean }> {
-  const extraDMs: { jid: string; message: string }[] = [];
+): Promise<{ response: string; mentions: string[]; extraDMs: { jid: string; message: string; viaMainBot?: boolean }[]; sendReputationHook?: boolean }> {
+  const extraDMs: { jid: string; message: string; viaMainBot?: boolean }[] = [];
   const mentions: string[] = [userId];
   const matchBlocks: string[] = [];
 
@@ -713,7 +713,8 @@ Por favor responde a este mensaje diciendo únicamente:
 • Detalle: ${propItem.rawText || 'Sin descripción'}
 • Precio: ${propItem.price ? Number(propItem.price).toLocaleString('es-CO') + ' COP' : 'N/A'}`;
     
-    extraDMs.push({ jid: adminJid, message: adminMessage });
+    // Notificación al admin: usar el bot principal (whatsapp-web.js) para garantizar entrega
+    extraDMs.push({ jid: adminJid, message: adminMessage, viaMainBot: true });
   }
 
   const responseText = matchBlocks.join('\n\n================================\n\n');
