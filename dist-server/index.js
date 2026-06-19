@@ -6725,6 +6725,21 @@ Para hablar en privado conmigo, buscar inmuebles en la base de datos o hacerme c
           }
         }
       }
+      getReactionEmoji(result) {
+        const completeEmojis = ["\u{1F44D}", "\u{1F44C}", "\u2705", "\u2714\uFE0F", "\u2611\uFE0F"];
+        const incompleteEmojis = ["\u2753", "\u2049\uFE0F", "\u2754", "\u{1F914}", "\u{1F610}", "\u{1FAEA}"];
+        const violationEmojis = ["\u{1F621}", "\u{1F624}", "\u{1F620}", "\u{1F616}", "\u2639\uFE0F", "\u274C", "\u{1F6AB}", "\u2622\uFE0F"];
+        if (result.classification === "VIOLACION_DE_NORMAS") {
+          return violationEmojis[Math.floor(Math.random() * violationEmojis.length)];
+        }
+        if (result.classification === "DATOS_INCOMPLETOS" || result.missingFields && result.missingFields.length > 0) {
+          return incompleteEmojis[Math.floor(Math.random() * incompleteEmojis.length)];
+        }
+        if (result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO") {
+          return completeEmojis[Math.floor(Math.random() * completeEmojis.length)];
+        }
+        return result.reactionEmoji || null;
+      }
       async processGroupBuffer(bufferKey) {
         const buffer = this.messageBuffers.get(bufferKey);
         if (!buffer) return;
@@ -6786,6 +6801,18 @@ Para hablar en privado conmigo, buscar inmuebles en la base de datos o hacerme c
             pdfMsg?.pdfBuffer,
             pdfMsg?.pdfMimeType
           );
+          if (result) {
+            const emoji = this.getReactionEmoji(result);
+            if (emoji) {
+              try {
+                const lastMsg = buffer.messages[buffer.messages.length - 1].originalMsg;
+                console.log(`[JANIA-MATCH] Reaccionando con ${emoji} al mensaje de ${senderId}`);
+                await lastMsg.react(emoji);
+              } catch (reactErr) {
+                console.error("[JANIA-MATCH] Error al reaccionar al mensaje:", reactErr.message);
+              }
+            }
+          }
           if (result) {
             if (result.shouldSendDM && result.dmResponse && result.dmResponse.trim() !== "") {
               console.log(`[JANIA-MATCH] [Stealth] Derivando confirmaci\xF3n DM de ${senderId} al bot principal.`);

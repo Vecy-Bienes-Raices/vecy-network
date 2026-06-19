@@ -360,6 +360,29 @@ export class JaniaMatchBot {
     }
   }
 
+  private getReactionEmoji(result: any): string | null {
+    const completeEmojis = ['👍', '👌', '✅', '✔️', '☑️'];
+    const incompleteEmojis = ['❓', '⁉️', '❔', '🤔', '😐', '🫪'];
+    const violationEmojis = ['😡', '😤', '😠', '😖', '☹️', '❌', '🚫', '☢️'];
+
+    if (result.classification === 'VIOLACION_DE_NORMAS') {
+      return violationEmojis[Math.floor(Math.random() * violationEmojis.length)];
+    }
+    
+    if (
+      result.classification === 'DATOS_INCOMPLETOS' || 
+      (result.missingFields && result.missingFields.length > 0)
+    ) {
+      return incompleteEmojis[Math.floor(Math.random() * incompleteEmojis.length)];
+    }
+
+    if (result.classification === 'INMUEBLE' || result.classification === 'REQUERIMIENTO') {
+      return completeEmojis[Math.floor(Math.random() * completeEmojis.length)];
+    }
+
+    return result.reactionEmoji || null;
+  }
+
   private async processGroupBuffer(bufferKey: string) {
     const buffer = this.messageBuffers.get(bufferKey);
     if (!buffer) return;
@@ -428,6 +451,20 @@ export class JaniaMatchBot {
         pdfMsg?.pdfBuffer,
         pdfMsg?.pdfMimeType
       );
+
+      // --- REACCIONAR A LA PUBLICACIÓN ---
+      if (result) {
+        const emoji = this.getReactionEmoji(result);
+        if (emoji) {
+          try {
+            const lastMsg = buffer.messages[buffer.messages.length - 1].originalMsg;
+            console.log(`[JANIA-MATCH] Reaccionando con ${emoji} al mensaje de ${senderId}`);
+            await lastMsg.react(emoji);
+          } catch (reactErr: any) {
+            console.error('[JANIA-MATCH] Error al reaccionar al mensaje:', reactErr.message);
+          }
+        }
+      }
 
       // 4. MODO STEALTH: Redirección al bot principal
       if (result) {
