@@ -3322,12 +3322,12 @@ async function findOrCreateUserByPhone(phone, realName) {
 function sanitizePropertyType(type) {
   if (!type) return "apartment";
   const t2 = type.toLowerCase().trim();
-  if (t2 === "apartment" || t2 === "apartamento" || t2 === "apto") return "apartment";
-  if (t2 === "house" || t2 === "casa") return "house";
+  if (t2 === "apartment" || t2 === "apartamento" || t2 === "apto" || t2.includes("apartaestudio") || t2.includes("penthouse") || t2 === "loft") return "apartment";
+  if (t2 === "house" || t2 === "casa" || t2.includes("chalet") || t2.includes("caba\xF1a") || t2.includes("cabana") || t2.includes("quinta") || t2.includes("campestre")) return "house";
   if (t2 === "building" || t2 === "edificio") return "building";
   if (t2 === "warehouse" || t2 === "bodega") return "warehouse";
   if (t2 === "farm" || t2 === "finca") return "farm";
-  if (t2 === "hotel") return "hotel";
+  if (t2 === "hotel" || t2.includes("hostal") || t2.includes("hospedaje") || t2.includes("motel") || t2.includes("hostel")) return "hotel";
   if (t2 === "office" || t2 === "oficina") return "office";
   if (t2 === "land" || t2 === "lote" || t2 === "terreno") return "land";
   if (t2 === "commercial" || t2 === "local" || t2 === "comercial") return "commercial";

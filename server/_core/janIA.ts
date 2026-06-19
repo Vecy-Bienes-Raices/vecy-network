@@ -1461,12 +1461,12 @@ async function findOrCreateUserByPhone(phone: string, realName: string) {
 function sanitizePropertyType(type: string): "apartment" | "house" | "building" | "warehouse" | "farm" | "hotel" | "office" | "land" | "commercial" | "loft" | "consultorio" {
   if (!type) return "apartment";
   const t = type.toLowerCase().trim();
-  if (t === "apartment" || t === "apartamento" || t === "apto") return "apartment";
-  if (t === "house" || t === "casa") return "house";
+  if (t === "apartment" || t === "apartamento" || t === "apto" || t.includes("apartaestudio") || t.includes("penthouse") || t === "loft") return "apartment";
+  if (t === "house" || t === "casa" || t.includes("chalet") || t.includes("cabaña") || t.includes("cabana") || t.includes("quinta") || t.includes("campestre")) return "house";
   if (t === "building" || t === "edificio") return "building";
   if (t === "warehouse" || t === "bodega") return "warehouse";
   if (t === "farm" || t === "finca") return "farm";
-  if (t === "hotel") return "hotel";
+  if (t === "hotel" || t.includes("hostal") || t.includes("hospedaje") || t.includes("motel") || t.includes("hostel")) return "hotel";
   if (t === "office" || t === "oficina") return "office";
   if (t === "land" || t === "lote" || t === "terreno") return "land";
   if (t === "commercial" || t === "local" || t === "comercial") return "commercial";
