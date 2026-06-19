@@ -6797,7 +6797,7 @@ __export(whatsapp_match_exports, {
 });
 import pkg2 from "whatsapp-web.js";
 import qrcode2 from "qrcode-terminal";
-import { eq as eq12 } from "drizzle-orm";
+import { eq as eq12, and as and7 } from "drizzle-orm";
 var Client2, LocalAuth2, MessageMedia2, SERVER_BOOT_TIME2, delay2, outgoingQueue2, JaniaMatchBot, janiaMatchBot;
 var init_whatsapp_match = __esm({
   "server/_core/whatsapp-match.ts"() {
@@ -6989,9 +6989,9 @@ var init_whatsapp_match = __esm({
           const redirectLink = "https://wa.me/573185462265";
           const redirectText = `\xA1Hola! \u{1F916} Soy *JanIA Match* \u{1F50C}\u{1F498}.
 
-Este n\xFAmero lo utilizo *\xFAnicamente para escuchar y emparejar ofertas/demandas de inmuebles en los grupos*.
+Este n\xFAmero est\xE1 destinado *\xFAnicamente a trabajar, escuchar y gestionar los grupos de la red*.
 
-Para hablar en privado conmigo, buscar inmuebles en la base de datos o hacerme consultas de todo tipo, por favor comun\xEDcate directamente con mi versi\xF3n principal: **JanIA v3.5** aqu\xED:
+Para hablar en privado, buscar propiedades, hacer consultas o recibir soporte y atenci\xF3n, por favor escribe directamente a mi versi\xF3n principal, *JanIA v3.5*:
 
 \u{1F449} ${redirectLink}`;
           this.queuedSend(chatId, redirectText);
@@ -7172,17 +7172,80 @@ Para hablar en privado conmigo, buscar inmuebles en la base de datos o hacerme c
             }
           }
           if (result) {
-            if (result.shouldSendDM && result.dmResponse && result.dmResponse.trim() !== "") {
-              console.log(`[JANIA-MATCH] [Stealth] Derivando confirmaci\xF3n DM de ${senderId} al bot principal.`);
-              await sendUserDM(senderId, result.dmResponse);
-              if (result.classification === "DATOS_INCOMPLETOS") {
-                setBotPendingData(
-                  senderId,
-                  fullText,
-                  result.extractedData || {},
-                  result.classification,
-                  result.missingFields || []
-                );
+            const isWarning = result.classification === "DATOS_INCOMPLETOS" || result.classification === "VIOLACION_DE_NORMAS";
+            if (isWarning) {
+              const warningText = result.dmResponse || result.response || "";
+              if (warningText.trim() !== "") {
+                let cleanDmResponse = warningText;
+                cleanDmResponse = cleanDmResponse.replace(/¡Hola,\s+\*[^*]+\*!\s+😊\s*/i, "");
+                cleanDmResponse = cleanDmResponse.replace(/¡Hola!\s+😊\s*/i, "");
+                let hasInteracted = false;
+                try {
+                  const db = await getDb();
+                  if (db) {
+                    const checkInteracted = await db.select({ id: messages.id }).from(messages).innerJoin(conversations, eq12(messages.conversationId, conversations.id)).where(
+                      and7(
+                        eq12(conversations.sessionId, senderId),
+                        eq12(messages.role, "janIA")
+                      )
+                    ).limit(1);
+                    hasInteracted = checkInteracted.length > 0;
+                  }
+                } catch (err) {
+                  console.error("[JANIA-MATCH] Error checking user interaction history:", err);
+                }
+                const shouldSendPublic = result.classification === "VIOLACION_DE_NORMAS" || !hasInteracted;
+                if (shouldSendPublic) {
+                  let publicWarning = "";
+                  if (result.classification === "VIOLACION_DE_NORMAS") {
+                    publicWarning = `\u{1F6A8} *LLAMADO DE ATENCI\xD3N* \u{1F6A8}
+
+Hola @${senderId.split("@")[0]},
+
+He detectado que tu publicaci\xF3n infringe las normas de nuestro canal.
+
+*Detalle de la infracci\xF3n:*
+${cleanDmResponse}
+
+*Nota:* Como casi nadie se toma la molestia de leer las normas en la descripci\xF3n del grupo, te aclaro que estas reglas existen para mantener la comunidad ordenada y efectiva para todos.
+
+Si tienes dudas, por favor contacta a mi otro yo *JanIA v3.5* (atenci\xF3n y soporte al usuario) al +573185462265 o escribi\xE9ndole directamente aqu\xED:
+\u{1F449} https://wa.me/573185462265`;
+                  } else {
+                    publicWarning = `\u26A0\uFE0F *INFORMACI\xD3N PENDIENTE* \u26A0\uFE0F
+
+Hola @${senderId.split("@")[0]},
+
+${cleanDmResponse}
+
+*Nota:* Hacemos \xE9nfasis en esto porque casi nadie se toma la molestia de leer las normas de publicaci\xF3n en la descripci\xF3n del grupo, pero estos datos son 100% obligatorios para que pueda procesar tu propiedad y buscarte un MATCH comercial.
+
+Si deseas completar tus datos o tienes dudas, por favor contacta directamente a mi versi\xF3n principal de soporte, *JanIA v3.5*, escribi\xE9ndole al enlace:
+\u{1F449} https://wa.me/573185462265`;
+                  }
+                  console.log(`[JANIA-MATCH] [Public-Moderation] Enviando advertencia grupal a ${senderId} en ${chatId}`);
+                  await this.queuedSend(chatId, publicWarning, { mentions: [senderId] });
+                  await this.logToDb(senderId, "janIA", `[PUBLIC-WARNING] ${publicWarning}`);
+                } else {
+                  console.log(`[JANIA-MATCH] [Stealth] Enviando advertencia privada de datos incompletos a ${senderId} (Usuario conocido).`);
+                  await sendUserDM(senderId, result.dmResponse);
+                  await this.logToDb(senderId, "janIA", `[DM-Stealth] ${result.dmResponse}`);
+                }
+                if (result.classification === "DATOS_INCOMPLETOS") {
+                  setBotPendingData(
+                    senderId,
+                    fullText,
+                    result.extractedData || {},
+                    result.classification,
+                    result.missingFields || []
+                  );
+                }
+              }
+            } else {
+              if (result.shouldSendDM && result.dmResponse && result.dmResponse.trim() !== "") {
+                console.log(`[JANIA-MATCH] [Stealth] Derivando confirmaci\xF3n DM de ${senderId} al bot principal.`);
+                await sendUserDM(senderId, result.dmResponse);
+                await this.logToDb(senderId, "janIA", `[DM-Stealth] ${result.dmResponse}`);
               }
             }
             if (result.extraDMs && result.extraDMs.length > 0) {

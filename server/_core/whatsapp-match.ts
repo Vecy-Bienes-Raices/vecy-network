@@ -255,7 +255,7 @@ export class JaniaMatchBot {
     if (now - lastRedirect > ONCE_A_DAY) {
       this.redirectCooldowns.set(senderId, now);
       const redirectLink = "https://wa.me/573185462265";
-      const redirectText = `¡Hola! 🤖 Soy *JanIA Match* 🔌💘.\n\nEste número lo utilizo *únicamente para escuchar y emparejar ofertas/demandas de inmuebles en los grupos*.\n\nPara hablar en privado conmigo, buscar inmuebles en la base de datos o hacerme consultas de todo tipo, por favor comunícate directamente con mi versión principal: **JanIA v3.5** aquí:\n\n👉 ${redirectLink}`;
+      const redirectText = `¡Hola! 🤖 Soy *JanIA Match* 🔌💘.\n\nEste número está destinado *únicamente a trabajar, escuchar y gestionar los grupos de la red*.\n\nPara hablar en privado, buscar propiedades, hacer consultas o recibir soporte y atención, por favor escribe directamente a mi versión principal, *JanIA v3.5*:\n\n👉 ${redirectLink}`;
       
       this.queuedSend(chatId, redirectText);
     }
@@ -465,21 +465,81 @@ export class JaniaMatchBot {
         }
       }
 
-      // 4. MODO STEALTH: Redirección al bot principal
+      // 4. MODO STEALTH: Redirección al bot principal u oportuna advertencia grupal
       if (result) {
-        // A. Confirmación de guardado ("registré tu oferta...") o solicitud de datos incompletos
-        if (result.shouldSendDM && result.dmResponse && result.dmResponse.trim() !== "") {
-          console.log(`[JANIA-MATCH] [Stealth] Derivando confirmación DM de ${senderId} al bot principal.`);
-          await sendUserDM(senderId, result.dmResponse);
+        const isWarning = result.classification === "DATOS_INCOMPLETOS" || result.classification === "VIOLACION_DE_NORMAS";
 
-          if (result.classification === "DATOS_INCOMPLETOS") {
-            setBotPendingData(
-              senderId,
-              fullText,
-              result.extractedData || {},
-              result.classification,
-              result.missingFields || []
-            );
+        if (isWarning) {
+          const warningText = result.dmResponse || result.response || "";
+          if (warningText.trim() !== "") {
+            let cleanDmResponse = warningText;
+            // Limpieza robusta de saludos
+            cleanDmResponse = cleanDmResponse.replace(/¡Hola,\s+\*[^*]+\*!\s+😊\s*/i, "");
+            cleanDmResponse = cleanDmResponse.replace(/¡Hola!\s+😊\s*/i, "");
+
+            let hasInteracted = false;
+            try {
+              const db = await getDb();
+              if (db) {
+                const checkInteracted = await db
+                  .select({ id: dbMessages.id })
+                  .from(dbMessages)
+                  .innerJoin(conversations, eq(dbMessages.conversationId, conversations.id))
+                  .where(
+                    and(
+                      eq(conversations.sessionId, senderId),
+                      eq(dbMessages.role, 'janIA')
+                    )
+                  )
+                  .limit(1);
+                hasInteracted = checkInteracted.length > 0;
+              }
+            } catch (err) {
+              console.error('[JANIA-MATCH] Error checking user interaction history:', err);
+            }
+
+            // Regla Híbrida: si es una infracción de normas o si es datos incompletos de un usuario nuevo (sin interacción previa) -> PUBLICAR en el grupo.
+            // Si es datos incompletos de un usuario conocido -> enviar DM privado directamente.
+            const shouldSendPublic = result.classification === "VIOLACION_DE_NORMAS" || !hasInteracted;
+
+            if (shouldSendPublic) {
+              let publicWarning = "";
+              if (result.classification === "VIOLACION_DE_NORMAS") {
+                publicWarning = `🚨 *LLAMADO DE ATENCIÓN* 🚨\n\nHola @${senderId.split('@')[0]},\n\nHe detectado que tu publicación infringe las normas de nuestro canal.\n\n*Detalle de la infracción:*\n${cleanDmResponse}\n\n*Nota:* Como casi nadie se toma la molestia de leer las normas en la descripción del grupo, te aclaro que estas reglas existen para mantener la comunidad ordenada y efectiva para todos.\n\nSi tienes dudas, por favor contacta a mi otro yo *JanIA v3.5* (atención y soporte al usuario) al +573185462265 o escribiéndole directamente aquí:\n👉 https://wa.me/573185462265`;
+              } else {
+                // DATOS_INCOMPLETOS público
+                publicWarning = `⚠️ *INFORMACIÓN PENDIENTE* ⚠️\n\nHola @${senderId.split('@')[0]},\n\n${cleanDmResponse}\n\n*Nota:* Hacemos énfasis en esto porque casi nadie se toma la molestia de leer las normas de publicación en la descripción del grupo, pero estos datos son 100% obligatorios para que pueda procesar tu propiedad y buscarte un MATCH comercial.\n\nSi deseas completar tus datos o tienes dudas, por favor contacta directamente a mi versión principal de soporte, *JanIA v3.5*, escribiéndole al enlace:\n👉 https://wa.me/573185462265`;
+              }
+
+              console.log(`[JANIA-MATCH] [Public-Moderation] Enviando advertencia grupal a ${senderId} en ${chatId}`);
+              await this.queuedSend(chatId, publicWarning, { mentions: [senderId] });
+
+              // Registrar en BD para auditoría grupal
+              await this.logToDb(senderId, 'janIA', `[PUBLIC-WARNING] ${publicWarning}`);
+            } else {
+              // DATOS_INCOMPLETOS en privado (usuario conocido con historial de confianza)
+              console.log(`[JANIA-MATCH] [Stealth] Enviando advertencia privada de datos incompletos a ${senderId} (Usuario conocido).`);
+              await sendUserDM(senderId, result.dmResponse);
+              await this.logToDb(senderId, 'janIA', `[DM-Stealth] ${result.dmResponse}`);
+            }
+
+            if (result.classification === "DATOS_INCOMPLETOS") {
+              setBotPendingData(
+                senderId,
+                fullText,
+                result.extractedData || {},
+                result.classification,
+                result.missingFields || []
+              );
+            }
+          }
+        } else {
+          // Publicaciones exitosas o consultas generales: derivar confirmaciones privadas normales
+          if (result.shouldSendDM && result.dmResponse && result.dmResponse.trim() !== "") {
+            console.log(`[JANIA-MATCH] [Stealth] Derivando confirmación DM de ${senderId} al bot principal.`);
+            await sendUserDM(senderId, result.dmResponse);
+            // Registrar en BD también para auditoría completa
+            await this.logToDb(senderId, 'janIA', `[DM-Stealth] ${result.dmResponse}`);
           }
         }
 
