@@ -3133,13 +3133,15 @@ async function saveProperty(data, userId, realName, imageBuffer) {
       eq3(properties.transactionType, insertData.transactionType),
       eq3(properties.city, insertData.city),
       eq3(properties.zone, insertData.zone),
-      eq3(properties.price, insertData.price),
       eq3(properties.available, true)
     )
   ).limit(1);
   if (existing.length > 0) {
-    const [updated] = await db.update(properties).set({ updatedAt: /* @__PURE__ */ new Date() }).where(eq3(properties.id, existing[0].id)).returning();
-    console.log(`[Deduplication] Propiedad duplicada detectada y actualizada: #${updated.id}`);
+    const [updated] = await db.update(properties).set({
+      ...insertData,
+      updatedAt: /* @__PURE__ */ new Date()
+    }).where(eq3(properties.id, existing[0].id)).returning();
+    console.log(`[Deduplication] Propiedad existente detectada. Actualizando datos (ID: ${updated.id})`);
     return updated;
   }
   const [result] = await db.insert(properties).values(insertData).returning();
@@ -3207,13 +3209,15 @@ async function saveRequirement(data, userId, realName) {
       eq3(requirements.tipoNegocioDeseado, insertData.tipoNegocioDeseado),
       eq3(requirements.ciudadDeseada, insertData.ciudadDeseada),
       eq3(requirements.zonaDeseada, insertData.zonaDeseada),
-      eq3(requirements.presupuestoMax, insertData.presupuestoMax),
       eq3(requirements.status, "active")
     )
   ).limit(1);
   if (existing.length > 0) {
-    const [updated] = await db.update(requirements).set({ updatedAt: /* @__PURE__ */ new Date() }).where(eq3(requirements.id, existing[0].id)).returning();
-    console.log(`[Deduplication] Requerimiento duplicado detectada y actualizada: #${updated.id}`);
+    const [updated] = await db.update(requirements).set({
+      ...insertData,
+      updatedAt: /* @__PURE__ */ new Date()
+    }).where(eq3(requirements.id, existing[0].id)).returning();
+    console.log(`[Deduplication] Requerimiento existente detectado. Actualizando datos (ID: ${updated.id})`);
     return updated;
   }
   const [result] = await db.insert(requirements).values(insertData).returning();
@@ -6426,6 +6430,474 @@ Direcci\xF3n obligatoria:
   }
 });
 
+// server/_core/whatsapp-match.ts
+var whatsapp_match_exports = {};
+__export(whatsapp_match_exports, {
+  JaniaMatchBot: () => JaniaMatchBot,
+  janiaMatchBot: () => janiaMatchBot
+});
+import pkg2 from "whatsapp-web.js";
+import qrcode2 from "qrcode-terminal";
+import { eq as eq12 } from "drizzle-orm";
+var Client2, LocalAuth2, MessageMedia2, SERVER_BOOT_TIME2, delay2, outgoingQueue2, JaniaMatchBot, janiaMatchBot;
+var init_whatsapp_match = __esm({
+  "server/_core/whatsapp-match.ts"() {
+    "use strict";
+    init_setup_stealth();
+    init_db();
+    init_schema();
+    init_whatsapp();
+    init_janIA();
+    init_whatsapp_cloud();
+    init_scraper();
+    ({ Client: Client2, LocalAuth: LocalAuth2, MessageMedia: MessageMedia2 } = pkg2);
+    SERVER_BOOT_TIME2 = Math.floor(Date.now() / 1e3);
+    delay2 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    outgoingQueue2 = Promise.resolve();
+    JaniaMatchBot = class {
+      client;
+      isReady = false;
+      // Grupos autorizados y configuraciones
+      authorizedGroups = [];
+      messageBuffers = /* @__PURE__ */ new Map();
+      redirectCooldowns = /* @__PURE__ */ new Map();
+      processingLocks = /* @__PURE__ */ new Map();
+      watchdogInterval = null;
+      constructor() {
+        console.log("[JANIA-MATCH] Inicializando JanIA Match Bot (Ojos y O\xEDdos)...");
+        const groupsEnv = process.env.JANIA_MATCH_GROUPS;
+        if (groupsEnv) {
+          this.authorizedGroups = groupsEnv.split(",").map((g) => g.trim());
+        } else {
+          this.authorizedGroups = [
+            "120363260108880069@g.us",
+            // VECY INMUEBLES NETWORK
+            "120363417740040773@g.us",
+            // CONSULTORÍA JURÍDICA INMOBILIARIA
+            "120363403507276533@g.us"
+            // CÍRCULO CERO 👌
+          ];
+        }
+        this.createClientInstance();
+        this.setupGracefulShutdown();
+      }
+      createClientInstance() {
+        this.client = new Client2({
+          authStrategy: new LocalAuth2({
+            clientId: process.env.JANIA_MATCH_CLIENT_ID || "session-jania-match",
+            dataPath: "./.wwebjs_auth"
+          }),
+          webVersionCache: {
+            type: "remote",
+            remotePath: "https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1017.558-beta.html"
+          },
+          puppeteer: {
+            headless: true,
+            executablePath: process.env.CHROME_PATH || void 0,
+            args: [
+              "--no-sandbox",
+              "--disable-setuid-sandbox",
+              "--disable-dev-shm-usage",
+              "--disable-gpu",
+              "--disable-extensions",
+              "--disable-software-rasterizer",
+              "--disable-features=IsolateOrigins,site-per-process",
+              "--disable-site-isolation-trials",
+              "--no-zygote",
+              "--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+              // Optimizaciones de memoria
+              "--disable-canvas-path-rendering",
+              "--disable-accelerated-2d-canvas",
+              "--disable-gl-drawing-for-tests",
+              "--mute-audio",
+              "--no-first-run",
+              "--no-default-browser-check",
+              "--disable-background-timer-throttling",
+              "--disable-backgrounding-occluded-windows",
+              "--disable-renderer-backgrounding",
+              "--js-flags=--max-old-space-size=512"
+            ],
+            protocolTimeout: 3e5
+          }
+        });
+        this.setupEventListeners();
+      }
+      setupEventListeners() {
+        this.client.on("qr", (qr) => {
+          console.log("\n[JANIA-MATCH] \u{1F50C} ESCANEA ESTE C\xD3DIGO QR PARA INICIAR JANIA MATCH:");
+          qrcode2.generate(qr, { small: true });
+        });
+        this.client.on("ready", () => {
+          console.log("\n\u{1F680} JANIA MATCH\u{1F50C}\u{1F498} \u2014 BOT DE ESCUCHA Y MATCHES ACTIVADO CORRECTAMENTE");
+          this.isReady = true;
+          this.startWatchdog();
+          (async () => {
+            try {
+              const page = this.client.pupPage;
+              if (page) {
+                await page.setRequestInterception(true);
+                page.on("request", (req) => {
+                  const type = req.resourceType();
+                  if (type === "stylesheet" || type === "font") {
+                    req.abort().catch(() => {
+                    });
+                  } else {
+                    req.continue().catch(() => {
+                    });
+                  }
+                });
+                console.log("[JANIA-MATCH] Optimizaci\xF3n activa: Recursos visuales bloqueados.");
+              }
+            } catch (e) {
+              console.warn("[JANIA-MATCH] Error configurando interceptor de Puppeteer:", e.message);
+            }
+          })();
+        });
+        this.client.on("disconnected", async (reason) => {
+          console.warn("[JANIA-MATCH] \u26A0\uFE0F Cliente desconectado:", reason, "\u2014 reconectando en 10s...");
+          this.isReady = false;
+          await new Promise((resolve) => setTimeout(resolve, 1e4));
+          this.reconnectClient();
+        });
+        this.client.on("message_create", async (msg) => {
+          if (msg.from && msg.from.includes("status@broadcast") || msg.author && msg.author.includes("status@broadcast")) {
+            return;
+          }
+          if (msg.timestamp < SERVER_BOOT_TIME2) {
+            return;
+          }
+          if (msg.author && msg.author.endsWith("@lid")) {
+            try {
+              const contact = await this.client.getContactById(msg.author);
+              if (contact?.id?._serialized?.endsWith("@c.us")) {
+                msg.author = contact.id._serialized;
+              }
+            } catch (e) {
+            }
+          }
+          if (msg.from && msg.from.endsWith("@lid")) {
+            try {
+              const contact = await this.client.getContactById(msg.from);
+              if (contact?.id?._serialized?.endsWith("@c.us")) {
+                msg.from = contact.id._serialized;
+              }
+            } catch (e) {
+            }
+          }
+          const senderId = msg.author || msg.from;
+          const botJid = this.client.info?.wid?._serialized;
+          if (msg.fromMe || botJid && (senderId === botJid || msg.from === botJid || msg.author === botJid)) {
+            return;
+          }
+          try {
+            const chat = await msg.getChat();
+            const chatId = chat.id._serialized;
+            const isGroup = chat.isGroup;
+            if (isGroup) {
+              if (!this.authorizedGroups.includes(chatId)) {
+                return;
+              }
+              const textLower = (msg.body || "").toLowerCase();
+              const hasDirectMention = textLower.includes("jania");
+              if (hasDirectMention) {
+                console.log(`[JANIA-MATCH] Pregunta directa de ${senderId} en grupo ${chatId}: "${msg.body}"`);
+                await this.handleDirectGroupQuestion(msg, chatId, senderId);
+                return;
+              }
+              const isPossibleListing = (msg.body || "").length > 120 || (msg.body || "").split("\n").length > 2 || msg.hasMedia || textLower.includes("ofrezco") || textLower.includes("busco") || textLower.includes("vendo") || textLower.includes("arriendo") || textLower.includes("compro") || textLower.includes("necesito");
+              if (isPossibleListing) {
+                await this.handleIncomingGroupMessage(msg, chatId);
+              }
+              return;
+            }
+            if (!isGroup) {
+              console.log(`[JANIA-MATCH] DM entrante de ${senderId}. Aplicando redirecci\xF3n a JanIA principal.`);
+              await this.handlePrivateDmRedirect(chatId, senderId);
+              return;
+            }
+          } catch (err) {
+            console.error("[JANIA-MATCH] Error en procesador de eventos de mensaje:", err);
+          }
+        });
+      }
+      // --- REDIRECCIÓN DE CHATS PRIVADOS ---
+      async handlePrivateDmRedirect(chatId, senderId) {
+        const now = Date.now();
+        const lastRedirect = this.redirectCooldowns.get(senderId) || 0;
+        const ONCE_A_DAY = 24 * 60 * 60 * 1e3;
+        if (now - lastRedirect > ONCE_A_DAY) {
+          this.redirectCooldowns.set(senderId, now);
+          const redirectLink = "https://wa.me/573185462265";
+          const redirectText = `\xA1Hola! \u{1F916} Soy *JanIA Match* \u{1F50C}\u{1F498}.
+
+Este n\xFAmero lo utilizo *\xFAnicamente para escuchar y emparejar ofertas/demandas de inmuebles en los grupos*.
+
+Para hablar en privado conmigo, buscar inmuebles en la base de datos o hacerme consultas de todo tipo, por favor comun\xEDcate directamente con mi versi\xF3n principal: **JanIA v3.5** aqu\xED:
+
+\u{1F449} ${redirectLink}`;
+          this.queuedSend(chatId, redirectText);
+        }
+      }
+      // --- RESPUESTA DIRECTA A PREGUNTAS EN GRUPOS ---
+      async handleDirectGroupQuestion(msg, chatId, senderId) {
+        try {
+          const contact = await msg.getContact();
+          const realName = contact?.pushname || contact?.name || `Asesor +${senderId.split("@")[0]}`;
+          const textLower = msg.body.toLowerCase();
+          const chat = await msg.getChat();
+          const wantsVoice = msg.type === "audio" || msg.type === "ptt" || detectaVoz(textLower);
+          if (wantsVoice) {
+            await chat.sendStateRecording();
+          } else {
+            await chat.sendStateTyping();
+          }
+          await delay2(2e3);
+          let result;
+          if (chatId === "120363417740040773@g.us") {
+            result = await processConsultingMessage(msg.body, senderId, realName);
+          } else if (chatId === "120363403507276533@g.us") {
+            result = await processCirculoMessage(msg.body, senderId, realName);
+          } else {
+            result = await processWhatsAppMessage(msg.body, senderId, realName, false, [], void 0, void 0, true);
+          }
+          if (result && result.response && result.response.trim() !== "") {
+            const textToDeliver = result.response;
+            const voiceToDeliver = result.voiceResponse || "";
+            if (wantsVoice && voiceToDeliver.trim() !== "") {
+              const media = await textToSpeechMedia(voiceToDeliver);
+              if (media) {
+                await this.queuedSend(chatId, media, { sendAudioAsVoice: true });
+              } else {
+                await this.queuedSend(chatId, textToDeliver);
+              }
+            } else {
+              await this.queuedSend(chatId, textToDeliver);
+            }
+          }
+          await chat.clearState();
+        } catch (err) {
+          console.error("[JANIA-MATCH] Error al responder pregunta directa en grupo:", err);
+        }
+      }
+      // --- LOGÍSTICA DE BUFFER GRUPAL ---
+      async handleIncomingGroupMessage(msg, chatId) {
+        const senderId = msg.author || msg.from;
+        const lockKey = `${chatId}_${senderId}`;
+        const previousLock = this.processingLocks.get(lockKey) || Promise.resolve();
+        let resolveLock;
+        const currentLock = new Promise((resolve) => {
+          resolveLock = resolve;
+        });
+        const chainedLock = previousLock.then(() => currentLock);
+        this.processingLocks.set(lockKey, chainedLock);
+        try {
+          await previousLock;
+          const contact = await msg.getContact();
+          const realName = contact?.pushname || contact?.name || `Asesor +${senderId.split("@")[0]}`;
+          const bufferKey = `${chatId}_${senderId}`;
+          let buffer = this.messageBuffers.get(bufferKey);
+          const bufferTimeout = 12e3;
+          if (buffer) {
+            clearTimeout(buffer.timer);
+            buffer.messages.push({
+              body: msg.body,
+              hasMedia: msg.hasMedia,
+              originalMsg: msg
+            });
+            buffer.timer = setTimeout(() => this.processGroupBuffer(bufferKey), bufferTimeout);
+          } else {
+            this.messageBuffers.set(bufferKey, {
+              messages: [{
+                body: msg.body,
+                hasMedia: msg.hasMedia,
+                originalMsg: msg
+              }],
+              userName: realName,
+              chatId,
+              timer: setTimeout(() => this.processGroupBuffer(bufferKey), bufferTimeout)
+            });
+          }
+        } finally {
+          resolveLock();
+          if (this.processingLocks.get(lockKey) === chainedLock) {
+            this.processingLocks.delete(lockKey);
+          }
+        }
+      }
+      async processGroupBuffer(bufferKey) {
+        const buffer = this.messageBuffers.get(bufferKey);
+        if (!buffer) return;
+        this.messageBuffers.delete(bufferKey);
+        const senderId = bufferKey.split("_")[1];
+        const chatId = buffer.chatId;
+        const userName = buffer.userName;
+        console.log(`[JANIA-MATCH] Procesando buffer de ${buffer.messages.length} mensajes para ${senderId} (Silencioso)...`);
+        for (const bufferedMsg of buffer.messages) {
+          if (bufferedMsg.hasMedia && bufferedMsg.originalMsg.type === "image") {
+            try {
+              const media = await bufferedMsg.originalMsg.downloadMedia();
+              if (media && media.mimetype.startsWith("image/")) {
+                bufferedMsg.imageBuffer = media.data;
+              }
+            } catch (e) {
+            }
+          }
+          if (bufferedMsg.hasMedia && bufferedMsg.originalMsg.type === "document") {
+            try {
+              const media = await bufferedMsg.originalMsg.downloadMedia();
+              if (media && media.mimetype === "application/pdf") {
+                bufferedMsg.pdfBuffer = media.data;
+                bufferedMsg.pdfMimeType = media.mimetype;
+              }
+            } catch (e) {
+            }
+          }
+        }
+        try {
+          const fullText = buffer.messages.map((m) => m.body).join("\n\n");
+          const hasMedia = buffer.messages.some((m) => m.hasMedia);
+          const imageMsg = buffer.messages.find((m) => m.imageBuffer);
+          const pdfMsg = buffer.messages.find((m) => m.pdfBuffer);
+          const urlMatch = fullText.match(/https?:\/\/[^\s]+/g);
+          const scrapedResults = [];
+          if (urlMatch) {
+            for (const url of urlMatch.slice(0, 3)) {
+              if (esDominioPermitido(url)) {
+                try {
+                  const data = await scrapePropertyLink(url);
+                  if (data) scrapedResults.push(data);
+                } catch (err) {
+                }
+              }
+            }
+          }
+          await this.logToDb(senderId, "user", fullText);
+          const result = await processWhatsAppMessage(
+            fullText,
+            senderId,
+            userName,
+            hasMedia,
+            scrapedResults,
+            void 0,
+            imageMsg?.imageBuffer,
+            true,
+            // isGroup = true
+            pdfMsg?.pdfBuffer,
+            pdfMsg?.pdfMimeType
+          );
+          if (result) {
+            if (result.shouldSendDM && result.dmResponse && result.dmResponse.trim() !== "") {
+              console.log(`[JANIA-MATCH] [Stealth] Derivando confirmaci\xF3n DM de ${senderId} al bot principal.`);
+              await sendCloudMessage(senderId, result.dmResponse);
+            }
+            if (result.extraDMs && result.extraDMs.length > 0) {
+              for (const dm of result.extraDMs) {
+                if (!dm.jid || !dm.jid.includes("@") || dm.jid.split("@")[0].length < 5) continue;
+                console.log(`[JANIA-MATCH] [Stealth] Derivando notificaci\xF3n de Match para ${dm.jid} al bot principal.`);
+                await sendCloudMessage(dm.jid, dm.message);
+              }
+            }
+          }
+        } catch (err) {
+          console.error("[JANIA-MATCH] Error procesando buffer de grupo silencioso:", err);
+        }
+      }
+      // --- LOGÍSTICA DE BD ---
+      async logToDb(senderId, role, content) {
+        try {
+          const db = await getDb();
+          if (!db) return;
+          let conv = await db.select().from(conversations).where(eq12(conversations.sessionId, senderId)).limit(1);
+          let conversationId;
+          if (conv.length === 0) {
+            const [newConv] = await db.insert(conversations).values({
+              sessionId: senderId,
+              status: "active",
+              lastMessage: content.slice(0, 150)
+            }).returning();
+            conversationId = newConv.id;
+          } else {
+            conversationId = conv[0].id;
+            await db.update(conversations).set({
+              lastMessage: content.slice(0, 150),
+              updatedAt: /* @__PURE__ */ new Date()
+            }).where(eq12(conversations.id, conversationId));
+          }
+          await db.insert(messages).values({
+            conversationId,
+            role,
+            content,
+            messageType: "text"
+          });
+        } catch (e) {
+          console.error("[JANIA-MATCH] Error al registrar logs en BD:", e);
+        }
+      }
+      // --- ENVÍO LOCAL (Solo para respuestas directas permitidas) ---
+      async queuedSend(chatId, content, options = {}) {
+        outgoingQueue2 = outgoingQueue2.then(async () => {
+          try {
+            await this.client.sendMessage(chatId, content, options);
+            await delay2(1e3);
+          } catch (err) {
+            console.error("[JANIA-MATCH] Error en despacho de mensaje local:", err.message);
+          }
+        });
+        return outgoingQueue2;
+      }
+      // --- WATCHDOG ---
+      startWatchdog() {
+        if (this.watchdogInterval) clearInterval(this.watchdogInterval);
+        this.watchdogInterval = setInterval(async () => {
+          if (!this.isReady) return;
+          try {
+            const state = await this.client.getState();
+            if (state !== "CONNECTED") {
+              console.warn(`[JANIA-MATCH] [Watchdog] Conexi\xF3n inestable (${state}). Reiniciando...`);
+              this.reconnectClient();
+            }
+          } catch (err) {
+            console.error("[JANIA-MATCH] [Watchdog] Falla de respuesta. Reiniciando...");
+            this.reconnectClient();
+          }
+        }, 5 * 60 * 1e3);
+      }
+      async reconnectClient() {
+        this.isReady = false;
+        try {
+          this.client.removeAllListeners();
+          await this.client.destroy();
+        } catch (e) {
+        }
+        try {
+          this.createClientInstance();
+          await this.client.initialize();
+          console.log("[JANIA-MATCH] Reconexi\xF3n exitosa.");
+        } catch (e) {
+          console.error("[JANIA-MATCH] Fall\xF3 reconexi\xF3n:", e);
+        }
+      }
+      initialize() {
+        this.client.initialize().catch((err) => {
+          console.error("[JANIA-MATCH] Error cr\xEDtico al inicializar el cliente:", err);
+        });
+      }
+      setupGracefulShutdown() {
+        const shutdown = async () => {
+          console.log("\n\u{1F6D1} Cerrando JanIA Match Bot...");
+          try {
+            await this.client.destroy();
+          } catch (e) {
+          }
+        };
+        process.on("SIGINT", shutdown);
+        process.on("SIGTERM", shutdown);
+      }
+    };
+    janiaMatchBot = new JaniaMatchBot();
+  }
+});
+
 // server/_core/index.ts
 import "dotenv/config";
 import express2 from "express";
@@ -8138,11 +8610,11 @@ async function createContext(opts) {
       if (user.role !== "admin") {
         try {
           const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
-          const { users: users2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-          const { eq: eq12 } = await import("drizzle-orm");
+          const { users: users3 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+          const { eq: eq13 } = await import("drizzle-orm");
           const db = await getDb2();
           if (db) {
-            await db.update(users2).set({ role: "admin" }).where(eq12(users2.id, user.id));
+            await db.update(users3).set({ role: "admin" }).where(eq13(users3.id, user.id));
             user = { ...user, role: "admin" };
             console.log(`[Auth] \u2705 Admin auto-promocionado: ${user.email}`);
           }
@@ -8155,15 +8627,15 @@ async function createContext(opts) {
     if (process.env.NODE_ENV === "development") {
       try {
         const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
-        const { users: users2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-        const { eq: eq12 } = await import("drizzle-orm");
+        const { users: users3 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+        const { eq: eq13 } = await import("drizzle-orm");
         const db = await getDb2();
         if (db) {
-          const existingUser = await db.select().from(users2).where(eq12(users2.openId, "mock-local-user")).limit(1);
+          const existingUser = await db.select().from(users3).where(eq13(users3.openId, "mock-local-user")).limit(1);
           if (existingUser.length > 0) {
             user = existingUser[0];
           } else {
-            const newUser = await db.insert(users2).values({
+            const newUser = await db.insert(users3).values({
               openId: "mock-local-user",
               name: "Eddu Mendoza (Local Agent)",
               email: "demo@vecynetwork.co",
@@ -8843,6 +9315,14 @@ async function startServer() {
     } else {
       console.log("[WHATSAPP-BOT] Deshabilitado temporalmente mediante ENABLE_WHATSAPP_BOT=false.");
     }
+    if (process.env.ENABLE_JANIA_MATCH_BOT === "true") {
+      console.log("Iniciando WhatsApp Bot Match (Ojos y O\xEDdos)...");
+      Promise.resolve().then(() => (init_whatsapp_match(), whatsapp_match_exports)).then(({ janiaMatchBot: janiaMatchBot2 }) => {
+        janiaMatchBot2.initialize();
+      }).catch((err) => {
+        console.error("Error al cargar JanIA Match Bot:", err);
+      });
+    }
     initCronScheduler();
   });
 }
@@ -8856,7 +9336,19 @@ var gracefulShutdown = async (signal) => {
       await client.destroy();
     }
   } catch (err) {
-    console.error("[SYSTEM] Error al cerrar el cliente de WhatsApp:", err);
+    console.error("[SYSTEM] Error al cerrar el cliente de WhatsApp principal:", err);
+  }
+  try {
+    if (process.env.ENABLE_JANIA_MATCH_BOT === "true") {
+      const { janiaMatchBot: janiaMatchBot2 } = await Promise.resolve().then(() => (init_whatsapp_match(), whatsapp_match_exports));
+      const matchClient = janiaMatchBot2.client;
+      if (matchClient) {
+        console.log("[SYSTEM] Destruyendo sesi\xF3n de JanIA Match y cerrando Puppeteer...");
+        await matchClient.destroy();
+      }
+    }
+  } catch (err) {
+    console.error("[SYSTEM] Error al cerrar el cliente de JanIA Match:", err);
   }
   console.log("[SYSTEM] Suite finalizada exitosamente. Hasta pronto.");
   process.exit(0);

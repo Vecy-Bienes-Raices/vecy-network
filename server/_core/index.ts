@@ -414,6 +414,16 @@ async function startServer() {
     } else {
       console.log("[WHATSAPP-BOT] Deshabilitado temporalmente mediante ENABLE_WHATSAPP_BOT=false.");
     }
+
+    // Inicializar el Bot Match de WhatsApp (Ojos y Oídos) si está habilitado
+    if (process.env.ENABLE_JANIA_MATCH_BOT === "true") {
+      console.log("Iniciando WhatsApp Bot Match (Ojos y Oídos)...");
+      import("./whatsapp-match").then(({ janiaMatchBot }) => {
+        janiaMatchBot.initialize();
+      }).catch(err => {
+        console.error("Error al cargar JanIA Match Bot:", err);
+      });
+    }
     
     // Inicializar el orquestador de agendas automatizadas (Cron)
     initCronScheduler();
@@ -434,7 +444,20 @@ const gracefulShutdown = async (signal: string) => {
       await client.destroy();
     }
   } catch (err) {
-    console.error("[SYSTEM] Error al cerrar el cliente de WhatsApp:", err);
+    console.error("[SYSTEM] Error al cerrar el cliente de WhatsApp principal:", err);
+  }
+
+  try {
+    if (process.env.ENABLE_JANIA_MATCH_BOT === "true") {
+      const { janiaMatchBot } = await import("./whatsapp-match");
+      const matchClient = (janiaMatchBot as any).client;
+      if (matchClient) {
+        console.log("[SYSTEM] Destruyendo sesión de JanIA Match y cerrando Puppeteer...");
+        await matchClient.destroy();
+      }
+    }
+  } catch (err) {
+    console.error("[SYSTEM] Error al cerrar el cliente de JanIA Match:", err);
   }
 
   console.log("[SYSTEM] Suite finalizada exitosamente. Hasta pronto.");

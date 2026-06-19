@@ -1362,7 +1362,7 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
     amenities: amenitiesObj
   };
 
-  // Buscar duplicado activo del mismo usuario
+  // Buscar duplicado activo del mismo usuario (mismo tipo, negocio, ciudad y barrio)
   const existing = await db
     .select()
     .from(properties)
@@ -1373,19 +1373,22 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
         eq(properties.transactionType, insertData.transactionType),
         eq(properties.city, insertData.city),
         eq(properties.zone, insertData.zone),
-        eq(properties.price, insertData.price),
         eq(properties.available, true)
       )
     )
     .limit(1);
 
   if (existing.length > 0) {
+    // Si ya existe, actualizamos los datos (por si cambió precio, admin, fotos, descripción, etc.)
     const [updated] = await db
       .update(properties)
-      .set({ updatedAt: new Date() })
+      .set({
+        ...insertData,
+        updatedAt: new Date()
+      })
       .where(eq(properties.id, existing[0].id))
       .returning();
-    console.log(`[Deduplication] Propiedad duplicada detectada y actualizada: #${updated.id}`);
+    console.log(`[Deduplication] Propiedad existente detectada. Actualizando datos (ID: ${updated.id})`);
     return updated;
   }
 
@@ -1455,7 +1458,7 @@ async function saveRequirement(data: any, userId: string, realName: string) {
     caracteristicasDeseadas: characteristicsObj
   };
 
-  // Buscar duplicado activo del mismo usuario
+  // Buscar duplicado activo del mismo usuario (mismo tipo, negocio, ciudad y barrio deseados)
   const existing = await db
     .select()
     .from(requirements)
@@ -1466,19 +1469,22 @@ async function saveRequirement(data: any, userId: string, realName: string) {
         eq(requirements.tipoNegocioDeseado, insertData.tipoNegocioDeseado),
         eq(requirements.ciudadDeseada, insertData.ciudadDeseada),
         eq(requirements.zonaDeseada, insertData.zonaDeseada),
-        eq(requirements.presupuestoMax, insertData.presupuestoMax),
         eq(requirements.status, "active")
       )
     )
     .limit(1);
 
   if (existing.length > 0) {
+    // Si ya existe, actualizamos los datos (por si cambió presupuesto, área, descripción, etc.)
     const [updated] = await db
       .update(requirements)
-      .set({ updatedAt: new Date() })
+      .set({
+        ...insertData,
+        updatedAt: new Date()
+      })
       .where(eq(requirements.id, existing[0].id))
       .returning();
-    console.log(`[Deduplication] Requerimiento duplicado detectada y actualizada: #${updated.id}`);
+    console.log(`[Deduplication] Requerimiento existente detectado. Actualizando datos (ID: ${updated.id})`);
     return updated;
   }
 
