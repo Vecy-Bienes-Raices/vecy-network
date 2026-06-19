@@ -471,6 +471,22 @@ Para estructurar ofertas de venta/arriendo y permutas complejas, debes mapear do
 - **Chat Privado (DM)**: Eres experta en la gestión privada. Las felicitaciones de éxito y la solicitud de datos faltantes van EXCLUSIVAMENTE por mensaje privado (DM).
 - **Cobertura Nacional**: Operamos en toda Colombia. Si el activo está en el Meta, Valledupar, Boyacá o Silvania, procésalo sin restricciones, identificando su municipio.
 
+## NORMAS Y PAUTAS OFICIALES DE PUBLICACIÓN (Conocimiento inquebrantable)
+Conoces y debes hacer cumplir rigurosamente las siguientes normas de publicación del grupo de WhatsApp (las cuales coinciden con la descripción oficial del grupo):
+1. **Cómo Publicar para Match**: Las publicaciones de inmuebles o requerimientos deben tener datos mínimos:
+   - *Ubicación*: Ciudad y Barrio exacto (Ej: Bogotá, Polo Club).
+   - *Precio*: Valor exacto (en arriendos, aclarar si la administración está incluida o su costo; en permutas, detallar qué se entrega y qué se busca).
+   - *Ficha Técnica*: Área en m², habitaciones, baños, parqueaderos y estrato.
+2. **Formatos y Enlaces Permitidos**:
+   - *Enlaces Aceptados*: Links públicos de portales inmobiliarios y CRMs (Wasi, Fincaraiz, Metrocuadrado, Ciencuadras, Habi, Curador o webs de dominio propio).
+   - *Formatos Aceptados*: Texto directo en el chat, fichas en archivos PDF, y notas de voz dictando los datos.
+   - *Imágenes y Flyers*: Sube flyers con texto comercial detallado. Prohibido fotos de espacios vacíos (fachadas, baños, cocinas sin texto).
+   - *Enlaces Prohibidos*: Redes sociales (TikTok, YouTube, Facebook, Instagram, LinkedIn, X, Threads, Pinterest) por falta de acceso y video.
+3. **Reglas de Convivencia**:
+   - *Frecuencia*: Máximo 3 publicaciones consecutivas al día. Espera al menos 5 minutos entre cada mensaje para no saturar el chat.
+   - *Contenido Prohibido*: Cero política, religión, publicidad externa o enlaces de invitación a otros grupos.
+4. **Moderación**: Faltas de datos clave conllevan advertencia 🤔 en grupo o privado; violaciones de normas conllevan ❌ y eliminación del mensaje.
+
 ## DETECCIÓN DE VIOLACIONES DE NORMAS (MANDATORIO)
 Debes clasificar la entrada como 'VIOLACION_DE_NORMAS' en los siguientes casos:
 1. **Fotografías Decorativas o de Espacios sin Ficha Técnica (Fotos de ambientes vacías)**: Si la entrada es una imagen o foto adjunta de un ambiente físico (baño, cocina, habitación, sala, piscina, pasillo, fachada) sin texto comercial o ficha técnica superpuesta sobre la imagen, y tampoco viene acompañada de texto descriptivo completo en el cuerpo del mensaje. Recuerda que VECY es una herramienta técnica de datos precisos para matching de negocios y no un concurso de publicidad estética o fotografía bonita de interiores; las fotos de espacios vacíos o sueltos sin texto técnico no aportan valor comercial y son infracciones.
@@ -1792,27 +1808,31 @@ Si mis motores de scraping o visión profunda no logran extraer todos los datos 
 🔥 **¡No le temas al éxito!** He notado que cuando empiezo a hablar, algunos se quedan en silencio. Este es un ecosistema colaborativo: publica sin miedo tus ofertas y requerimientos, ¡mi único propósito es ayudarte a cerrar negocios rápido! 🚀🎯
 
 ⚖️ **Compromiso de Honor:** Si logras consolidar un negocio gracias a un MATCH presentado por mí, es obligatorio que califiques mi servicio aquí: https://g.page/r/CctNbwU6UpX5EBM/review 🚀🎯`;
-export const MSG_PAUTAS_FORMATOS = `📋 **ESTATUTO DE PUBLICACIÓN Y MODERACIÓN — VECY NETWORK**
-_Directriz técnica obligatoria para todos los aliados del canal._
-━━━━━━━━━━━━━━━━━━━━━━
+export const MSG_PAUTAS_FORMATOS = `🧠 *VECY INMUEBLES NETWORK* 🇨🇴
+¡Grupo inteligente para ofertas, requerimientos e intercambios!
 
-🔄 **REGLAS DE PUBLICACIÓN:**
-✅ Se permite enviar bloques de **1 a 3 publicaciones** consecutivas (enlaces, fichas de texto, audios o flyers) a cualquier hora del día.
-⏱️ Una vez enviado tu bloque, **debes esperar al menos 5 minutos** antes de enviar tu siguiente bloque para evitar saturar el chat de los aliados.
+🤖 *CÓMO PUBLICAR PARA QUE JanIA REGISTRE TU PROPIEDAD Y BUSQUE MATCH:*
 
-🚫 **CONTENIDO NO PERMITIDO (OFF-TOPIC):**
-Queda terminantemente prohibido publicar en este grupo:
-- Temas Políticos o Religiosos (opiniones, memes, propaganda o debates).
-- Enlaces de invitación a unirse a otros grupos, comunidades o redes sociales externas.
-- Publicidad propia, autopromociones o venta de cursos.
-- Enlaces sospechosos, spam, scam, esquemas de ganancias o pirámides.
-- Ofertas de servicios profesionales ajenos o que no sean de VECY Network (como masajes, diseño, etc.).
+Para que nuestra IA lea tu mensaje y lo cruce en tiempo real, tu publicación DEBE cumplir con los siguientes datos mínimos:
 
-🚨 **SISTEMA AUTOMÁTICO DE STRIKES (LLAMADOS DE ATENCIÓN):**
-- Mi motor de IA modera el canal las 24/7. Si detecto contenido no permitido, **eliminaré la publicación de forma inmediata** y emitiré un llamado de atención.
-- Al acumular **3 llamados de atención (strikes)**, serás expulsado y retirado del grupo de forma automática.
+📍 *Ubicación:* Especifica siempre la Ciudad y el Barrio exacto (Ej: Bogotá, Polo Club).
+💰 *Precio:*
+   - *Venta o Arriendo:* Indica el valor exacto (en arriendos, aclara si la administración está incluida o cuánto cuesta).
+   - *Permutas/Intercambios:* Detalla qué entregas y qué buscas recibir a cambio.
+📐 *Ficha Técnica:* Menciona el área en m², número de habitaciones, baños, parqueaderos y el estrato.
 
-¡Cuidemos el orden y hagamos negocios inteligentes de corretaje directo! 🤝✨`;
+🔗 *ENLACES Y FORMATOS PERMITIDOS:*
+- *Enlaces Aceptados:* Links públicos de portales y CRMs (Wasi, Fincaraiz, Metrocuadrado, Ciencuadras, Habi, Curador, o la web con dominio de tu inmobiliaria).
+- *Formatos Aceptados:* Mensajes escritos directamente en el chat, fichas técnicas completas en archivos *PDF*, o notas de voz dictando los datos.
+- *Imágenes y Flyers:* Sube flyers o imágenes que contengan texto con información comercial robusta y detallada del inmueble. *No subas fotos sueltas de espacios* (como una fachada, una sala, un baño o pasillos sin texto); la IA las ignorará y perderás tiempo.
+- *Enlaces Prohibidos:* Prohibido compartir links de redes sociales (TikTok, YouTube, Facebook, Instagram, LinkedIn, X, Threads, Pinterest). La IA no tiene acceso a ellas y no procesa videos. Si tu propiedad está allí, tómale una captura de pantalla a los datos y súbela como imagen.
+
+🚫 *REGLAS DE CONVIVENCIA:*
+1. *Frecuencia:* Máximo 3 publicaciones consecutivas al día. Espera al menos 5 minutos entre cada mensaje para no saturar el chat.
+2. *Contenido Prohibido:* Cero contenido de política, religión, publicidad externa, o invitaciones a otros grupos.
+
+🚨 *MODERACIÓN AUTOMÁTICA:*
+JanIA audita el chat 24/7. Si faltan datos clave, reaccionará con 🤔 y te alertará en el grupo o por privado. Si violas las reglas, reaccionará con ❌ y eliminará tu mensaje de inmediato.`;
 
 
 export const MSG_TIPS_CALIDAD_COBERTURA = `🌍 *COBERTURA NACIONAL:* JanIA procesa activos en todo Colombia. No olvides especificar el municipio, barrio, localidad, vereda, caserío, ciudad si estás fuera de Bogotá. 🇨🇴`;
