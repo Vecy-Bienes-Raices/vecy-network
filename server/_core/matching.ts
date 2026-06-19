@@ -64,8 +64,6 @@ export function matchesGeography(
   }
 
   // 4. Evaluar listas o múltiples barrios / ciudades (separados por comas, espacios, "y", "o", "/")
-  // Ej: "rosales, chico, virrey" vs "chico reservado"
-  // Ej: "la vega, fusa, la mesa" vs "fusagasuga"
   const cleanTerms = (text: string) => {
     return text.split(/[\s,y/o\-]+/)
       .map(w => w.trim())
@@ -91,12 +89,23 @@ export function matchesGeography(
     return { matches: true, score: 25 };
   }
 
-  // 5. Mismo sector/comuna/localidad
-  if (reqLoc && propLoc && reqLoc === propLoc) {
+  // 5. Mismo sector/comuna/localidad (excluyendo fallbacks genéricos de ciudad)
+  if (reqLoc && propLoc && reqLoc !== "bogota" && propLoc !== "bogota" && reqLoc === propLoc) {
     return { matches: true, score: 15 };
   }
 
-  // 6. Misma ciudad por defecto
+  // Si no ha coincidido en nada específico, y AMBOS especifican alguna ubicación específica (barrio o localidad concreta),
+  // entonces es un HARD MISMATCH geográfico.
+  const isReqLocSpec = reqLoc && reqLoc !== "bogota";
+  const isPropLocSpec = propLoc && propLoc !== "bogota";
+  const isReqZoneSpec = reqZone && reqZone !== "bogota" && !isReqNorte && !isReqSur && !isReqOccidente && !isReqCentro && !isReqSabana;
+  const isPropZoneSpec = propZone && propZone !== "bogota";
+
+  if ((isReqLocSpec || isReqZoneSpec) && (isPropLocSpec || isPropZoneSpec)) {
+    return { matches: false, score: 0 };
+  }
+
+  // 6. Misma ciudad por defecto (solo si al menos uno es genérico y no hay mismatch explícito)
   if (reqCity && propCity && reqCity === propCity) {
     return { matches: true, score: 10 };
   }
@@ -181,6 +190,10 @@ export function calcularScoreMatch(requirement: any, property: any): number {
   const budgetMax = parseFloat(requirement.presupuestoMax || "0");
   const price = parseFloat(property.price || "0");
   if (budgetMax > 0 && price > 0) {
+    // Si el precio supera al presupuesto en más del 20%, es un Hard Mismatch
+    if (price > budgetMax * 1.20) {
+      return 0;
+    }
     maxPoints += 25;
     if (price <= budgetMax) {
       totalPoints += 25;
@@ -249,9 +262,14 @@ export function calcularScoreMatch(requirement: any, property: any): number {
       }
     }
     if (targetEstratos.length > 0 && targetEstratos.every(e => !isNaN(e))) {
-      maxPoints += 5;
       const propStratum = property.stratum !== null && property.stratum !== undefined ? Number(property.stratum) : null;
       if (propStratum !== null) {
+        // Si el estrato difiere en más de 1 nivel, es un Hard Mismatch
+        const hasCloseEstrato = targetEstratos.some(e => Math.abs(e - propStratum) <= 1);
+        if (!hasCloseEstrato) {
+          return 0;
+        }
+        maxPoints += 5;
         if (targetEstratos.includes(propStratum)) {
           totalPoints += 5;
         } else if (targetEstratos.some(e => Math.abs(e - propStratum) === 1)) {
