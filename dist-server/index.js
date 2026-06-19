@@ -2591,6 +2591,13 @@ function buildIncompleteDataMessage(text2, hasMedia, scrapedData, imageBuffer, p
       }
     }
   }
+  if (txTypeRaw === "arriendo" && !isRequirement) {
+    const hasAdminFee = extracted?.adminFee !== void 0 && extracted?.adminFee !== null && Number(extracted.adminFee) >= 0;
+    const textHasAdmin = text2.toLowerCase().includes("adm") || text2.toLowerCase().includes("administra");
+    if (!hasAdminFee && !textHasAdmin) {
+      missingList.push("si el valor de la administraci\xF3n est\xE1 incluido en el canon o cu\xE1nto es");
+    }
+  }
   const area = Number(extracted?.area || 0);
   if (!area || area <= 0) {
     if (propertyName === "finca") {
@@ -3409,6 +3416,7 @@ async function saveProperty(data, userId, realName, imageBuffer) {
     bathrooms: data.bathrooms !== void 0 && data.bathrooms !== null ? Number(data.bathrooms) : null,
     garages: data.garages !== void 0 && data.garages !== null ? Number(data.garages) : null,
     stratum: data.stratum !== void 0 && data.stratum !== null ? Number(data.stratum) : null,
+    adminFee: data.adminFee !== void 0 && data.adminFee !== null ? String(data.adminFee) : null,
     agentId: user ? user.id : null,
     images: finalImages.length > 0 ? finalImages : null,
     amenities: amenitiesObj
@@ -4080,6 +4088,7 @@ DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
     "bathrooms": number,
     "garages": number,
     "stratum": number,
+    "adminFee": number,
     "isCollaborativePool": boolean (DEFAULT: true),
     "interiorExterior": "interior | exterior | NA",
     "cuartoBanoServicio": "Si | No | NA",

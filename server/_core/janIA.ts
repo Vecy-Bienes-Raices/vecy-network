@@ -243,6 +243,15 @@ function buildIncompleteDataMessage(
     }
   }
 
+  // --- NUEVO: Validar Administración para Arriendos ---
+  if (txTypeRaw === "arriendo" && !isRequirement) {
+    const hasAdminFee = extracted?.adminFee !== undefined && extracted?.adminFee !== null && Number(extracted.adminFee) >= 0;
+    const textHasAdmin = text.toLowerCase().includes("adm") || text.toLowerCase().includes("administra");
+    if (!hasAdminFee && !textHasAdmin) {
+      missingList.push("si el valor de la administración está incluido en el canon o cuánto es");
+    }
+  }
+
   const area = Number(extracted?.area || 0);
   if (!area || area <= 0) {
     if (propertyName === "finca") {
@@ -675,6 +684,7 @@ DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
     "bathrooms": number,
     "garages": number,
     "stratum": number,
+    "adminFee": number,
     "isCollaborativePool": boolean (DEFAULT: true),
     "interiorExterior": "interior | exterior | NA",
     "cuartoBanoServicio": "Si | No | NA",
@@ -1567,6 +1577,7 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
     bathrooms: data.bathrooms !== undefined && data.bathrooms !== null ? Number(data.bathrooms) : null,
     garages: data.garages !== undefined && data.garages !== null ? Number(data.garages) : null,
     stratum: data.stratum !== undefined && data.stratum !== null ? Number(data.stratum) : null,
+    adminFee: data.adminFee !== undefined && data.adminFee !== null ? String(data.adminFee) : null,
     agentId: user ? user.id : null,
     images: finalImages.length > 0 ? finalImages : null,
     amenities: amenitiesObj
