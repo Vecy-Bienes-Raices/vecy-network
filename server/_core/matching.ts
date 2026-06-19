@@ -9,6 +9,101 @@ import { normalizarTextoGeografico } from "./geography";
  * rangos de área y tolerancias de campos N/A por tipo de inmueble.
  */
 
+export function matchesGeography(
+  reqZoneRaw: string,
+  propZoneRaw: string,
+  reqLocRaw: string,
+  propLocRaw: string,
+  reqCityRaw: string,
+  propCityRaw: string
+): { matches: boolean; score: number } {
+  const reqZone = normalizarTextoGeografico(reqZoneRaw || "");
+  const propZone = normalizarTextoGeografico(propZoneRaw || "");
+  const reqLoc = normalizarTextoGeografico(reqLocRaw || "");
+  const propLoc = normalizarTextoGeografico(propLocRaw || "");
+  const reqCity = normalizarTextoGeografico(reqCityRaw || "");
+  const propCity = normalizarTextoGeografico(propCityRaw || "");
+
+  // 1. Si las ciudades no coinciden, hard mismatch (0)
+  if (reqCity && propCity && reqCity !== propCity) {
+    return { matches: false, score: 0 };
+  }
+
+  // 2. Si son idénticos los barrios/zonas, es match perfecto
+  if (reqZone && propZone && reqZone === propZone) {
+    return { matches: true, score: 25 };
+  }
+
+  // 3. Evaluar áreas amplias (norte, sur, occidente, centro, sabana)
+  const norteLocalities = ["usaquen", "suba", "barrios unidos", "chapinero"];
+  const surLocalities = ["bosa", "kennedy", "ciudad bolivar", "tunjuelito", "usme", "san cristobal", "antonio narino", "rafael uribe"];
+  const occidenteLocalities = ["engativa", "fontibon"];
+  const centroLocalities = ["santa fe", "la candelaria", "los martires", "teusaquillo"];
+  const sabanaMunicipalities = ["sabana de bogota", "chia", "cajica", "sopo", "la calera", "cota", "funza", "mosquera", "madrid", "facatativa", "zipaquira", "tocancipa", "tenjo", "tabio", "el rosal", "bojaca", "subachoque", "gachancipa"];
+
+  const isReqNorte = reqZone.includes("norte");
+  const isReqSur = reqZone.includes("sur");
+  const isReqOccidente = reqZone.includes("occidente");
+  const isReqCentro = reqZone.includes("centro");
+  const isReqSabana = reqZone.includes("sabana") || reqZone.includes("municipios cercanos");
+
+  if (isReqNorte && norteLocalities.includes(propLoc)) {
+    return { matches: true, score: 20 };
+  }
+  if (isReqSur && surLocalities.includes(propLoc)) {
+    return { matches: true, score: 20 };
+  }
+  if (isReqOccidente && occidenteLocalities.includes(propLoc)) {
+    return { matches: true, score: 20 };
+  }
+  if (isReqCentro && centroLocalities.includes(propLoc)) {
+    return { matches: true, score: 20 };
+  }
+  if (isReqSabana && (sabanaMunicipalities.includes(propZone) || propLoc === "sabana de bogota")) {
+    return { matches: true, score: 20 };
+  }
+
+  // 4. Evaluar listas o múltiples barrios / ciudades (separados por comas, espacios, "y", "o", "/")
+  // Ej: "rosales, chico, virrey" vs "chico reservado"
+  // Ej: "la vega, fusa, la mesa" vs "fusagasuga"
+  const cleanTerms = (text: string) => {
+    return text.split(/[\s,y/o\-]+/)
+      .map(w => w.trim())
+      .filter(w => w.length >= 3 && w !== "bogota" && w !== "norte" && w !== "sur" && w !== "centro" && w !== "occidente");
+  };
+
+  const reqTerms = cleanTerms(reqZone);
+  const propTerms = cleanTerms(propZone);
+
+  // Si hay algún término común en los barrios/zonas (o uno contiene al otro)
+  if (reqTerms.length > 0 && propTerms.length > 0) {
+    for (const rt of reqTerms) {
+      for (const pt of propTerms) {
+        if (pt.includes(rt) || rt.includes(pt)) {
+          return { matches: true, score: 25 };
+        }
+      }
+    }
+  }
+
+  // Si el barrio del inmueble está explícito en la zona deseada del requerimiento (ej: "rosales chico" contiene "rosales")
+  if (reqZone && propZone && (reqZone.includes(propZone) || propZone.includes(reqZone))) {
+    return { matches: true, score: 25 };
+  }
+
+  // 5. Mismo sector/comuna/localidad
+  if (reqLoc && propLoc && reqLoc === propLoc) {
+    return { matches: true, score: 15 };
+  }
+
+  // 6. Misma ciudad por defecto
+  if (reqCity && propCity && reqCity === propCity) {
+    return { matches: true, score: 10 };
+  }
+
+  return { matches: false, score: 0 };
+}
+
 export function calcularScoreMatch(requirement: any, property: any): number {
   // Hard mismatches
   // 1. Tipo de inmueble debe ser idéntico
@@ -25,18 +120,17 @@ export function calcularScoreMatch(requirement: any, property: any): number {
     return 0;
   }
 
-  // 3. Ciudad debe ser la misma
-  const reqCity = normalizarTextoGeografico(requirement.ciudadDeseada || requirement.city || "");
-  const propCity = normalizarTextoGeografico(property.city || property.addressCity || "");
-  if (reqCity && propCity && reqCity !== propCity) {
-    return 0;
-  }
+  // 3. Validación Geográfica Nacional (Ciudad, Localidad y Zona)
+  const reqCity = requirement.ciudadDeseada || requirement.city || "";
+  const propCity = property.city || property.addressCity || "";
+  const reqLoc = requirement.addressLocality || "";
+  const propLoc = property.addressLocality || "";
+  const reqZone = requirement.zonaDeseada || requirement.addressNeighborhood || "";
+  const propZone = property.zone || property.addressNeighborhood || "";
 
-  // 3.1. Localidad/Sector Mismatch (Si ambas están definidas y son diferentes localidades principales, es un mismatch rotundo)
-  const reqLoc = normalizarTextoGeografico(requirement.addressLocality || "");
-  const propLoc = normalizarTextoGeografico(property.addressLocality || "");
-  if (reqLoc && propLoc && reqLoc !== propLoc) {
-    return 0; // Hard mismatch: ej. Suba vs La Candelaria
+  const geoResult = matchesGeography(reqZone, propZone, reqLoc, propLoc, reqCity, propCity);
+  if (!geoResult.matches) {
+    return 0; // Hard geographic mismatch
   }
 
   // 4. Habitaciones mínimas
@@ -81,16 +175,7 @@ export function calcularScoreMatch(requirement: any, property: any): number {
 
   // 1. Ubicación (Peso: 25)
   maxPoints += 25;
-  const reqZone = normalizarTextoGeografico(requirement.zonaDeseada || requirement.addressNeighborhood || "");
-  const propZone = normalizarTextoGeografico(property.zone || property.addressNeighborhood || "");
-
-  if (reqZone && propZone && reqZone === propZone) {
-    totalPoints += 25;
-  } else if (reqLoc && propLoc && reqLoc === propLoc) {
-    totalPoints += 15;
-  } else if (reqCity && propCity && reqCity === propCity) {
-    totalPoints += 10;
-  }
+  totalPoints += geoResult.score;
 
   // 2. Precios (Peso: 25)
   const budgetMax = parseFloat(requirement.presupuestoMax || "0");

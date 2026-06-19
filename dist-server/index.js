@@ -1369,9 +1369,13 @@ function normalizarTextoGeografico(texto) {
   n = n.replace(/\bapto\b/g, "apartamento");
   n = n.replace(/\bhab\b/g, "habitacion");
   n = n.replace(/\bhabs\b/g, "habitaciones");
+  n = n.replace(/\bfusa\b/g, "fusagasuga");
+  n = n.replace(/\bfaca\b/g, "facatativa");
+  n = n.replace(/\bzipa\b/g, "zipaquira");
+  n = n.replace(/\bgirardor\b/g, "girardot");
   return n;
 }
-function validarZona(zona, ciudad, textoCompleto) {
+function validarZona(zona, ciudad, textoCompleto, isRequirement = false) {
   const normZone = normalizarTextoGeografico(zona);
   const normCity = ciudad ? normalizarTextoGeografico(ciudad) : "";
   const normFullText = textoCompleto ? normalizarTextoGeografico(textoCompleto) : "";
@@ -1443,6 +1447,15 @@ function validarZona(zona, ciudad, textoCompleto) {
     };
   }
   if (MAPA_LOCALIDADES[normZone]) {
+    if (isRequirement) {
+      return {
+        isValid: true,
+        barrioCanonico: MAPA_LOCALIDADES[normZone],
+        localidad: MAPA_LOCALIDADES[normZone],
+        city: "Bogot\xE1",
+        isMunicipio: false
+      };
+    }
     return {
       isValid: false,
       errorType: "DATOS_INCOMPLETOS",
@@ -1451,6 +1464,15 @@ function validarZona(zona, ciudad, textoCompleto) {
   }
   const sectoresAmplios = ["norte", "norte de bogota", "sur", "centro", "occidente", "salitre", "bogota", "sabana de bogota", "municipios cercanos"];
   if (sectoresAmplios.includes(normZone)) {
+    if (isRequirement) {
+      return {
+        isValid: true,
+        barrioCanonico: zona.trim(),
+        localidad: "Bogot\xE1",
+        city: "Bogot\xE1",
+        isMunicipio: false
+      };
+    }
     return {
       isValid: false,
       errorType: "DATOS_INCOMPLETOS",
@@ -1755,6 +1777,69 @@ var init_geography = __esm({
 
 // server/_core/matching.ts
 import { and, eq as eq2 } from "drizzle-orm";
+function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCityRaw, propCityRaw) {
+  const reqZone = normalizarTextoGeografico(reqZoneRaw || "");
+  const propZone = normalizarTextoGeografico(propZoneRaw || "");
+  const reqLoc = normalizarTextoGeografico(reqLocRaw || "");
+  const propLoc = normalizarTextoGeografico(propLocRaw || "");
+  const reqCity = normalizarTextoGeografico(reqCityRaw || "");
+  const propCity = normalizarTextoGeografico(propCityRaw || "");
+  if (reqCity && propCity && reqCity !== propCity) {
+    return { matches: false, score: 0 };
+  }
+  if (reqZone && propZone && reqZone === propZone) {
+    return { matches: true, score: 25 };
+  }
+  const norteLocalities = ["usaquen", "suba", "barrios unidos", "chapinero"];
+  const surLocalities = ["bosa", "kennedy", "ciudad bolivar", "tunjuelito", "usme", "san cristobal", "antonio narino", "rafael uribe"];
+  const occidenteLocalities = ["engativa", "fontibon"];
+  const centroLocalities = ["santa fe", "la candelaria", "los martires", "teusaquillo"];
+  const sabanaMunicipalities = ["sabana de bogota", "chia", "cajica", "sopo", "la calera", "cota", "funza", "mosquera", "madrid", "facatativa", "zipaquira", "tocancipa", "tenjo", "tabio", "el rosal", "bojaca", "subachoque", "gachancipa"];
+  const isReqNorte = reqZone.includes("norte");
+  const isReqSur = reqZone.includes("sur");
+  const isReqOccidente = reqZone.includes("occidente");
+  const isReqCentro = reqZone.includes("centro");
+  const isReqSabana = reqZone.includes("sabana") || reqZone.includes("municipios cercanos");
+  if (isReqNorte && norteLocalities.includes(propLoc)) {
+    return { matches: true, score: 20 };
+  }
+  if (isReqSur && surLocalities.includes(propLoc)) {
+    return { matches: true, score: 20 };
+  }
+  if (isReqOccidente && occidenteLocalities.includes(propLoc)) {
+    return { matches: true, score: 20 };
+  }
+  if (isReqCentro && centroLocalities.includes(propLoc)) {
+    return { matches: true, score: 20 };
+  }
+  if (isReqSabana && (sabanaMunicipalities.includes(propZone) || propLoc === "sabana de bogota")) {
+    return { matches: true, score: 20 };
+  }
+  const cleanTerms = (text2) => {
+    return text2.split(/[\s,y/o\-]+/).map((w) => w.trim()).filter((w) => w.length >= 3 && w !== "bogota" && w !== "norte" && w !== "sur" && w !== "centro" && w !== "occidente");
+  };
+  const reqTerms = cleanTerms(reqZone);
+  const propTerms = cleanTerms(propZone);
+  if (reqTerms.length > 0 && propTerms.length > 0) {
+    for (const rt of reqTerms) {
+      for (const pt of propTerms) {
+        if (pt.includes(rt) || rt.includes(pt)) {
+          return { matches: true, score: 25 };
+        }
+      }
+    }
+  }
+  if (reqZone && propZone && (reqZone.includes(propZone) || propZone.includes(reqZone))) {
+    return { matches: true, score: 25 };
+  }
+  if (reqLoc && propLoc && reqLoc === propLoc) {
+    return { matches: true, score: 15 };
+  }
+  if (reqCity && propCity && reqCity === propCity) {
+    return { matches: true, score: 10 };
+  }
+  return { matches: false, score: 0 };
+}
 function calcularScoreMatch(requirement, property) {
   const reqType = requirement.tipoInmuebleDeseado || requirement.propertyType;
   const propType = property.propertyType;
@@ -1766,14 +1851,14 @@ function calcularScoreMatch(requirement, property) {
   if (reqBiz && propBiz && reqBiz.toLowerCase() !== propBiz.toLowerCase()) {
     return 0;
   }
-  const reqCity = normalizarTextoGeografico(requirement.ciudadDeseada || requirement.city || "");
-  const propCity = normalizarTextoGeografico(property.city || property.addressCity || "");
-  if (reqCity && propCity && reqCity !== propCity) {
-    return 0;
-  }
-  const reqLoc = normalizarTextoGeografico(requirement.addressLocality || "");
-  const propLoc = normalizarTextoGeografico(property.addressLocality || "");
-  if (reqLoc && propLoc && reqLoc !== propLoc) {
+  const reqCity = requirement.ciudadDeseada || requirement.city || "";
+  const propCity = property.city || property.addressCity || "";
+  const reqLoc = requirement.addressLocality || "";
+  const propLoc = property.addressLocality || "";
+  const reqZone = requirement.zonaDeseada || requirement.addressNeighborhood || "";
+  const propZone = property.zone || property.addressNeighborhood || "";
+  const geoResult = matchesGeography(reqZone, propZone, reqLoc, propLoc, reqCity, propCity);
+  if (!geoResult.matches) {
     return 0;
   }
   const reqBedrooms = requirement.habitacionesMin;
@@ -1807,15 +1892,7 @@ function calcularScoreMatch(requirement, property) {
   let totalPoints = 0;
   let maxPoints = 0;
   maxPoints += 25;
-  const reqZone = normalizarTextoGeografico(requirement.zonaDeseada || requirement.addressNeighborhood || "");
-  const propZone = normalizarTextoGeografico(property.zone || property.addressNeighborhood || "");
-  if (reqZone && propZone && reqZone === propZone) {
-    totalPoints += 25;
-  } else if (reqLoc && propLoc && reqLoc === propLoc) {
-    totalPoints += 15;
-  } else if (reqCity && propCity && reqCity === propCity) {
-    totalPoints += 10;
-  }
+  totalPoints += geoResult.score;
   const budgetMax = parseFloat(requirement.presupuestoMax || "0");
   const price = parseFloat(property.price || "0");
   if (budgetMax > 0 && price > 0) {

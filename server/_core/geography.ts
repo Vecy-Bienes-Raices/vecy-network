@@ -199,6 +199,10 @@ export function normalizarTextoGeografico(texto: string): string {
   n = n.replace(/\bapto\b/g, "apartamento");
   n = n.replace(/\bhab\b/g, "habitacion");
   n = n.replace(/\bhabs\b/g, "habitaciones");
+  n = n.replace(/\bfusa\b/g, "fusagasuga");
+  n = n.replace(/\bfaca\b/g, "facatativa");
+  n = n.replace(/\bzipa\b/g, "zipaquira");
+  n = n.replace(/\bgirardor\b/g, "girardot");
   
   return n;
 }
@@ -217,7 +221,7 @@ export type ValidacionZonaResult = {
  * Valida si una zona ingresada corresponde a un barrio exacto,
  * maneja ambigüedades, sectores amplios y busca coincidencias en toda Colombia.
  */
-export function validarZona(zona: string, ciudad?: string, textoCompleto?: string): ValidacionZonaResult {
+export function validarZona(zona: string, ciudad?: string, textoCompleto?: string, isRequirement: boolean = false): ValidacionZonaResult {
   const normZone = normalizarTextoGeografico(zona);
   const normCity = ciudad ? normalizarTextoGeografico(ciudad) : "";
   const normFullText = textoCompleto ? normalizarTextoGeografico(textoCompleto) : "";
@@ -317,6 +321,15 @@ export function validarZona(zona: string, ciudad?: string, textoCompleto?: strin
   // 5. PRIORIDAD 4: Validaciones de datos incompletos locales (Localidades solas o sectores amplios)
   // Si es una localidad completa (sin especificar barrio)
   if (MAPA_LOCALIDADES[normZone]) {
+    if (isRequirement) {
+      return {
+        isValid: true,
+        barrioCanonico: MAPA_LOCALIDADES[normZone],
+        localidad: MAPA_LOCALIDADES[normZone],
+        city: "Bogotá",
+        isMunicipio: false
+      };
+    }
     return {
       isValid: false,
       errorType: "DATOS_INCOMPLETOS",
@@ -327,6 +340,15 @@ export function validarZona(zona: string, ciudad?: string, textoCompleto?: strin
   // Si es un sector amplio o ciudad sola
   const sectoresAmplios = ["norte", "norte de bogota", "sur", "centro", "occidente", "salitre", "bogota", "sabana de bogota", "municipios cercanos"];
   if (sectoresAmplios.includes(normZone)) {
+    if (isRequirement) {
+      return {
+        isValid: true,
+        barrioCanonico: zona.trim(),
+        localidad: "Bogotá",
+        city: "Bogotá",
+        isMunicipio: false
+      };
+    }
     return {
       isValid: false,
       errorType: "DATOS_INCOMPLETOS",
