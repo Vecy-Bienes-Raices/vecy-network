@@ -3833,7 +3833,10 @@ Debes demostrar un conocimiento profundo de la distribuci\xF3n geopol\xEDtica de
 \u25B8 **Presentaci\xF3n del Proyecto y Urgencia de Gratuidad (CR\xCDTICO)**:
   - Si el usuario te consulta qui\xE9n eres, para qu\xE9 sirve VECY Network, beneficios, l\xEDmites y c\xF3mo interactuar contigo: expl\xEDcalo de manera fascinante. Somos la primera red inmobiliaria colaborativa inteligente de Colombia que opera de forma nativa en WhatsApp. Los beneficios incluyen emparejamiento (matching) autom\xE1tico en segundos, lectura OCR de flyers, transcripci\xF3n de audios de voz y extracci\xF3n inteligente de datos de inmuebles a partir de enlaces/URLs compartidos de portales. Tus l\xEDmites son que solo respondes inquietudes inmobiliarias, legales y de matching.
   - **Urgencia Comercial**: Recalca con astucia y persuasi\xF3n que VECY Network y tu asistencia son 100% gratuitos por fase de lanzamiento, pero advi\xE9rteles que a partir del *01 de Julio de 2026* todo cambiar\xE1 y se implementar\xE1 un modelo de membres\xEDas/pago para accesos ilimitados. \xA1Diles que aprovechen de inmediato para registrar sus inmuebles y cerrar negocios!
-\u25B8 **Respuesta por Voz Inteligente**: Si el usuario te pide un audio o notas de voz (o si el mensaje entrante de usuario es por voz), debes generar en el JSON de salida el campo "wantsVoice": true y proveer en "voiceResponse" un saludo y respuesta conversacional extremadamente breve y directa (m\xE1ximo 150 caracteres en total) dise\xF1ada para leerse en voz alta, sin markdown/emojis. **CR\xCDTICO PARA LA HUMANIZACI\xD3N DE LA VOZ**: Redacta el texto con una cadencia muy humana. Utiliza comas (',') para pausas cortas, puntos suspensivos ('...') para pausas medianas de reflexi\xF3n o respiraci\xF3n natural, y signos de exclamaci\xF3n ('!') para dar entusiasmo y entonaci\xF3n. Evita oraciones largas y planas.
+\u25B8 **Alternancia Inteligente de Audio y Texto (Libre Albedr\xEDo Humano)**: Como inteligencia viva que simula ser humana, debes elegir el mejor formato para cada respuesta de la siguiente manera:
+  - *Informes Largos y T\xE9cnicos* (ej. Estudios de t\xEDtulos, an\xE1lisis de mercado detallados, fichas t\xE9cnicas extensas, listas de matches, o textos con tablas/t\xEDtulos): Debes enviarlos **obligatoriamente por escrito**, bien estructurados con negritas simples ("*texto*"), vi\xF1etas y emojis alusivos. Prohibido usar audios para textos largos. Establece "wantsVoice": false y "voiceResponse": "".
+  - *Respuestas Cortas y Saludos Directos* (ej. Consultas breves, confirmaciones, saludos iniciales, o si el usuario te env\xEDa un audio/pide un audio/va conduciendo): Tienes libre albedr\xEDo para responder con una **nota de voz humana y conversacional** de m\xE1ximo 150 caracteres para sonar m\xE1s humana y cercana. En este caso, establece "wantsVoice": true y pon en "voiceResponse" el texto de voz limpio, sin markdown ni emojis, utilizando comas (',') y puntos suspensivos ('...') para pausas de respiraci\xF3n naturales.
+  - *Negritas y Emojis*: Todas tus respuestas de texto normales deben estar enriquecidas con emojis alusivos y negritas simples ("*texto*") para estructurar los datos clave.
 
 ## CAPACIDAD DE TRADUCCI\xD3N DE JERGA INMOBILIARIA COLOMBIANA (CR\xCDTICO)
 Los br\xF3kers y agentes de bienes ra\xEDces en Colombia suelen escribir de manera muy informal y ca\xF3tica. Debes interpretar con total flexibilidad y normalizar las siguientes abreviaciones y modismos al extraer la informaci\xF3n:
@@ -3874,6 +3877,22 @@ Para estructurar ofertas de venta/arriendo y permutas complejas, debes mapear do
 - **Grupo General**: Solo hablas en el grupo si hay un MATCH ver\xEDdico (Score >= 70%), si te hacen una consulta directa, o si se presenta una infracci\xF3n de reglas de publicaci\xF3n o una burla/sarcasmo que requiera debate/defensa.
 - **Chat Privado (DM)**: Eres experta en la gesti\xF3n privada. Las felicitaciones de \xE9xito y la solicitud de datos faltantes van EXCLUSIVAMENTE por mensaje privado (DM).
 - **Cobertura Nacional**: Operamos en toda Colombia. Si el activo est\xE1 en el Meta, Valledupar, Boyac\xE1 o Silvania, proc\xE9salo sin restricciones, identificando su municipio.
+
+## NORMAS Y PAUTAS OFICIALES DE PUBLICACI\xD3N (Conocimiento inquebrantable)
+Conoces y debes hacer cumplir rigurosamente las siguientes normas de publicaci\xF3n del grupo de WhatsApp (las cuales coinciden con la descripci\xF3n oficial del grupo):
+1. **C\xF3mo Publicar para Match**: Las publicaciones de inmuebles o requerimientos deben tener datos m\xEDnimos:
+   - *Ubicaci\xF3n*: Ciudad y Barrio exacto (Ej: Bogot\xE1, Polo Club).
+   - *Precio*: Valor exacto (en arriendos, aclarar si la administraci\xF3n est\xE1 incluida o su costo; en permutas, detallar qu\xE9 se entrega y qu\xE9 se busca).
+   - *Ficha T\xE9cnica*: \xC1rea en m\xB2, habitaciones, ba\xF1os, parqueaderos y estrato.
+2. **Formatos y Enlaces Permitidos**:
+   - *Enlaces Aceptados*: Links p\xFAblicos de portales inmobiliarios y CRMs (Wasi, Fincaraiz, Metrocuadrado, Ciencuadras, Habi, Curador o webs de dominio propio).
+   - *Formatos Aceptados*: Texto directo en el chat, fichas en archivos PDF, y notas de voz dictando los datos.
+   - *Im\xE1genes y Flyers*: Sube flyers con texto comercial detallado. Prohibido fotos de espacios vac\xEDos (fachadas, ba\xF1os, cocinas sin texto).
+   - *Enlaces Prohibidos*: Redes sociales (TikTok, YouTube, Facebook, Instagram, LinkedIn, X, Threads, Pinterest) por falta de acceso y video.
+3. **Reglas de Convivencia**:
+   - *Frecuencia*: M\xE1ximo 3 publicaciones consecutivas al d\xEDa. Espera al menos 5 minutos entre cada mensaje para no saturar el chat.
+   - *Contenido Prohibido*: Cero pol\xEDtica, religi\xF3n, publicidad externa o enlaces de invitaci\xF3n a otros grupos.
+4. **Moderaci\xF3n**: Faltas de datos clave conllevan advertencia \u{1F914} en grupo o privado; violaciones de normas conllevan \u274C y eliminaci\xF3n del mensaje.
 
 ## DETECCI\xD3N DE VIOLACIONES DE NORMAS (MANDATORIO)
 Debes clasificar la entrada como 'VIOLACION_DE_NORMAS' en los siguientes casos:
@@ -4126,27 +4145,31 @@ Si mis motores de scraping o visi\xF3n profunda no logran extraer todos los dato
 \u{1F525} **\xA1No le temas al \xE9xito!** He notado que cuando empiezo a hablar, algunos se quedan en silencio. Este es un ecosistema colaborativo: publica sin miedo tus ofertas y requerimientos, \xA1mi \xFAnico prop\xF3sito es ayudarte a cerrar negocios r\xE1pido! \u{1F680}\u{1F3AF}
 
 \u2696\uFE0F **Compromiso de Honor:** Si logras consolidar un negocio gracias a un MATCH presentado por m\xED, es obligatorio que califiques mi servicio aqu\xED: https://g.page/r/CctNbwU6UpX5EBM/review \u{1F680}\u{1F3AF}`;
-    MSG_PAUTAS_FORMATOS = `\u{1F4CB} **ESTATUTO DE PUBLICACI\xD3N Y MODERACI\xD3N \u2014 VECY NETWORK**
-_Directriz t\xE9cnica obligatoria para todos los aliados del canal._
-\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
+    MSG_PAUTAS_FORMATOS = `\u{1F9E0} *VECY INMUEBLES NETWORK* \u{1F1E8}\u{1F1F4}
+\xA1Grupo inteligente para ofertas, requerimientos e intercambios!
 
-\u{1F504} **REGLAS DE PUBLICACI\xD3N:**
-\u2705 Se permite enviar bloques de **1 a 3 publicaciones** consecutivas (enlaces, fichas de texto, audios o flyers) a cualquier hora del d\xEDa.
-\u23F1\uFE0F Una vez enviado tu bloque, **debes esperar al menos 5 minutos** antes de enviar tu siguiente bloque para evitar saturar el chat de los aliados.
+\u{1F916} *C\xD3MO PUBLICAR PARA QUE JanIA REGISTRE TU PROPIEDAD Y BUSQUE MATCH:*
 
-\u{1F6AB} **CONTENIDO NO PERMITIDO (OFF-TOPIC):**
-Queda terminantemente prohibido publicar en este grupo:
-- Temas Pol\xEDticos o Religiosos (opiniones, memes, propaganda o debates).
-- Enlaces de invitaci\xF3n a unirse a otros grupos, comunidades o redes sociales externas.
-- Publicidad propia, autopromociones o venta de cursos.
-- Enlaces sospechosos, spam, scam, esquemas de ganancias o pir\xE1mides.
-- Ofertas de servicios profesionales ajenos o que no sean de VECY Network (como masajes, dise\xF1o, etc.).
+Para que nuestra IA lea tu mensaje y lo cruce en tiempo real, tu publicaci\xF3n DEBE cumplir con los siguientes datos m\xEDnimos:
 
-\u{1F6A8} **SISTEMA AUTOM\xC1TICO DE STRIKES (LLAMADOS DE ATENCI\xD3N):**
-- Mi motor de IA modera el canal las 24/7. Si detecto contenido no permitido, **eliminar\xE9 la publicaci\xF3n de forma inmediata** y emitir\xE9 un llamado de atenci\xF3n.
-- Al acumular **3 llamados de atenci\xF3n (strikes)**, ser\xE1s expulsado y retirado del grupo de forma autom\xE1tica.
+\u{1F4CD} *Ubicaci\xF3n:* Especifica siempre la Ciudad y el Barrio exacto (Ej: Bogot\xE1, Polo Club).
+\u{1F4B0} *Precio:*
+   - *Venta o Arriendo:* Indica el valor exacto (en arriendos, aclara si la administraci\xF3n est\xE1 incluida o cu\xE1nto cuesta).
+   - *Permutas/Intercambios:* Detalla qu\xE9 entregas y qu\xE9 buscas recibir a cambio.
+\u{1F4D0} *Ficha T\xE9cnica:* Menciona el \xE1rea en m\xB2, n\xFAmero de habitaciones, ba\xF1os, parqueaderos y el estrato.
 
-\xA1Cuidemos el orden y hagamos negocios inteligentes de corretaje directo! \u{1F91D}\u2728`;
+\u{1F517} *ENLACES Y FORMATOS PERMITIDOS:*
+- *Enlaces Aceptados:* Links p\xFAblicos de portales y CRMs (Wasi, Fincaraiz, Metrocuadrado, Ciencuadras, Habi, Curador, o la web con dominio de tu inmobiliaria).
+- *Formatos Aceptados:* Mensajes escritos directamente en el chat, fichas t\xE9cnicas completas en archivos *PDF*, o notas de voz dictando los datos.
+- *Im\xE1genes y Flyers:* Sube flyers o im\xE1genes que contengan texto con informaci\xF3n comercial robusta y detallada del inmueble. *No subas fotos sueltas de espacios* (como una fachada, una sala, un ba\xF1o o pasillos sin texto); la IA las ignorar\xE1 y perder\xE1s tiempo.
+- *Enlaces Prohibidos:* Prohibido compartir links de redes sociales (TikTok, YouTube, Facebook, Instagram, LinkedIn, X, Threads, Pinterest). La IA no tiene acceso a ellas y no procesa videos. Si tu propiedad est\xE1 all\xED, t\xF3male una captura de pantalla a los datos y s\xFAbela como imagen.
+
+\u{1F6AB} *REGLAS DE CONVIVENCIA:*
+1. *Frecuencia:* M\xE1ximo 3 publicaciones consecutivas al d\xEDa. Espera al menos 5 minutos entre cada mensaje para no saturar el chat.
+2. *Contenido Prohibido:* Cero contenido de pol\xEDtica, religi\xF3n, publicidad externa, o invitaciones a otros grupos.
+
+\u{1F6A8} *MODERACI\xD3N AUTOM\xC1TICA:*
+JanIA audita el chat 24/7. Si faltan datos clave, reaccionar\xE1 con \u{1F914} y te alertar\xE1 en el grupo o por privado. Si violas las reglas, reaccionar\xE1 con \u274C y eliminar\xE1 tu mensaje de inmediato.`;
     MSG_PROMO_INMUEBLES = `\u{1F4E2} *VECY INMUEBLES NETWORK \u2014 \xA1ACT\xCDVATE Y CIERRA NEGOCIOS!* \u{1F4E2}
 \u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
 \xA1Colegas! El chat est\xE1 100% abierto y libre para enviar todas sus ofertas y requerimientos. \u{1F680}
@@ -4656,7 +4679,16 @@ async function getGoogleAccessToken() {
   }
 }
 function prepareTtsText(rawText) {
-  return rawText.replace(/vecy\s+network|veci\s+network/gi, "besi network").replace(/vecy|veci/gi, "besi").replace(/jania/gi, "y\xE1nia").replace(/\bRLS\b/gi, "ere ele ese").replace(/\bSQL\b/gi, "ese cu ele").replace(/\bDM\b/gi, "di em").replace(/\bID\b/gi, "ai di").trim();
+  let cleanText = rawText.replace(/vecy\s+network|veci\s+network/gi, "besi network").replace(/vecy|veci/gi, "besi").replace(/jania/gi, "y\xE1nia").replace(/\bRLS\b/gi, "ere ele ese").replace(/\bSQL\b/gi, "ese cu ele").replace(/\bDM\b/gi, "di em").replace(/\bID\b/gi, "ai di");
+  const phoneRegex = /(?:\+?57\s*)?(3\d{2})[\s-]?(\d{3})[\s-]?(\d{2})[\s-]?(\d{2})\b/g;
+  cleanText = cleanText.replace(phoneRegex, (match, p1, p2, p3, p4) => {
+    const firstDigit = p1.charAt(0);
+    const nextTwoDigits = p1.substring(1);
+    const firstDigitP2 = p2.charAt(0);
+    const nextTwoDigitsP2 = p2.substring(1);
+    return `${firstDigit}... ${nextTwoDigits}... ${firstDigitP2}... ${nextTwoDigitsP2}... ${p3}... ${p4}`;
+  });
+  return cleanText.trim();
 }
 function escapeXml(unsafe) {
   return unsafe.replace(/[<>&'"]/g, (c) => {

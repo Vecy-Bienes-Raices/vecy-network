@@ -141,8 +141,10 @@ function prepareTtsText(rawText: string): string {
   cleanText = cleanText.replace(phoneRegex, (match, p1, p2, p3, p4) => {
     const firstDigit = p1.charAt(0); // "3"
     const nextTwoDigits = p1.substring(1); // "18"
-    // Retornamos formateado con pausas: "3... 18... 546... 22... 65"
-    return `${firstDigit}... ${nextTwoDigits}... ${p2}... ${p3}... ${p4}`;
+    const firstDigitP2 = p2.charAt(0); // "5"
+    const nextTwoDigitsP2 = p2.substring(1); // "46"
+    // Retornamos formateado con pausas: "3... 18... 5... 46... 22... 65"
+    return `${firstDigit}... ${nextTwoDigits}... ${firstDigitP2}... ${nextTwoDigitsP2}... ${p3}... ${p4}`;
   });
 
   return cleanText.trim();
