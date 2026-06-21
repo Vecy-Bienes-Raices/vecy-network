@@ -2,6 +2,10 @@ import cron from 'node-cron';
 import fs from 'fs';
 import path from 'path';
 import { getDb } from '../db';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 import { propertyMatches, requirements, properties } from '../../drizzle/schema';
 import { gte, and, eq, sql } from 'drizzle-orm';
 import { whatsappBot } from './whatsapp';

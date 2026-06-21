@@ -9341,7 +9341,10 @@ init_llm();
 import cron from "node-cron";
 import fs3 from "fs";
 import path4 from "path";
+import { fileURLToPath } from "url";
 import { gte as gte2, and as and6, eq as eq11, sql as sql5 } from "drizzle-orm";
+var __filename = fileURLToPath(import.meta.url);
+var __dirname = path4.dirname(__filename);
 function initCronScheduler() {
   console.log("[CRON-SERVICE] Inicializando orquestador de agendas automatizadas (Modo Optimizado segmentado por grupo)...");
   cron.schedule("30 9 * * *", async () => {
