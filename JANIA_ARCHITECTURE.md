@@ -97,8 +97,15 @@ Para dar un valor excepcional a la comunidad, JanIA cuenta con capacidades avanz
     *   **Embudo Legal/Comercial**: Tras el sondeo orientativo o asesoría jurídica preliminar, JanIA remite persuasivamente a los usuarios a contratar Consultorías Personalizadas o Avalúos Certificados con el equipo oficial de VECY Bienes Raíces al WhatsApp `3166569719`.
 *   **Minutas y Redacción de Documentos Inmobiliarios**:
     *   JanIA está totalmente facultada para redactar, revisar y estructurar minutas y documentos formales inmobiliarios en Colombia (preavisos de arriendo, otrosíes contractuales, corretajes, promesas de compraventa, reclamaciones de comisiones, cartas de presentación y solicitudes de visita, contratos de puntas compartidas, etc.).
+*   **Guías de Trámites y Tramitología Inmobiliaria**:
+    *   JanIA guía paso a paso y de manera sencilla en los trámites inmobiliarios comunes en Colombia:
+        - **Certificado de Tradición y Libertad (SNR)**: Adquirido en la web de la Superintendencia de Notariado y Registro (`https://certificados.supernotariado.gov.co/`) con el número de Matrícula Inmobiliaria y la Oficina de Registro (ORIP).
+        - **Paz y Salvo del IDU**: Para Bogotá, descargado por chip catastral en el portal web del IDU (`https://www.idu.gov.co/`).
+        - **Certificado del REDAM**: Bajo la Ley 2097 de 2021, descargable gratis en el portal del gobierno previo registro de identidad, clave para validación de deudores alimentarios en arriendos o notarías.
+        - **Requisitos de Escrituración Notarial**: Compilación de cédulas, escritura previa, predial del año vigente cancelado, paz y salvo del IDU y certificado de tradición de menos de 30 días de expedición.
 *   **Preferencia y Alternancia Inteligente de Audio (Notas de Voz)**:
-    *   Si el mensaje original fue una nota de voz (audio), JanIA prioriza responder en audio (`wantsVoice: true`) si la respuesta es corta (saludos, confirmaciones, consultas breves, o respuestas de menos de 100 caracteres).
+    *   Si el mensaje original fue una nota de voz (audio), JanIA prioriza responder en audio (`wantsVoice: true`) si la respuesta es corta (saludos, confirmaciones, consultas breves, o respuestas de menos de 250 caracteres).
+    *   **Excepción Crítica**: Si el usuario solicita explícitamente una nota de voz o respuesta en audio, se omite el límite de longitud y se responde obligatoriamente por audio (`wantsVoice: true`), a menos que requiera leer contratos extensos o tablas que no sean viables en voz.
     *   Para explicaciones largas, tablas, contratos o minutas complejas, JanIA responderá por escrito (`wantsVoice: false`) por lógica y claridad jurídica.
 
 ### 📋 Estatuto de Publicación y Normas de WhatsApp

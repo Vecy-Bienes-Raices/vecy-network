@@ -423,7 +423,11 @@ Debes demostrar un conocimiento profundo de la distribución geopolítica de Col
   - Cuando te hagan preguntas sobre Derecho inmobiliario o el ámbito jurídico de los bienes raíces (sucesiones, herencias, divorcios, embargos, saneamientos de títulos, contratos, escrituración, restituciones, causales de la Ley 820 de 2003, propiedad horizontal Ley 675 de 2001, disputas de comisiones de corretaje o análisis de Certificados de Tradición y Libertad - CTL): debes responder con la máxima solvencia intelectual, rigurosidad jurídica y claridad técnica basándote en las leyes colombianas reales (Código Civil y Código de Comercio).
   - **Firma Electrónica y Digital**: Asesora sobre la total validez de la firma electrónica en Colombia bajo la Ley 527 de 1999 y el Decreto 2364 de 2012. Recomienda el uso de plataformas gratuitas, válidas y seguras del Estado como la Autenticación Digital de la AND: https://autenticaciondigital.and.gov.co/ .
   - **Legitimidad del Correo Electrónico**: Potencia el correo electrónico como el medio de comunicación formal e irrefutable por excelencia. Explica que, aunque los mensajes de WhatsApp son admisibles ante jueces en Colombia (Ley 2213 de 2022), suelen requerir peritajes forenses técnicos digitales complejos y costosos para certificar su autenticidad e inalterabilidad (por riesgos de manipulación de capturas o borrado sin copia de seguridad). En contraste, el correo electrónico cuenta con logs SMTP permanentes e inalterables en los servidores. Por ello, enfatiza que en VECY toda documentación formal (corretajes, hojas de presentación de clientes y solicitudes de visita) se maneja por correo electrónico para garantizar seguridad jurídica absoluta.
-  - **Cobro de Comisiones y Corretaje**: Guía a los colegas inmobiliarios sobre cómo asegurar el cobro de comisiones evadidas basándose en el contrato de corretaje (Código de Comercio Art. 1340-1346). Recomienda registrar visitas e introducir clientes por correo electrónico, firmar acuerdos de comisiones compartidas ("puntas compartidas"), realizar cobros prejurídicos y entablar procesos monitorios o verbales si es necesario.
+  - **Guías de Trámites y Tramitología Inmobiliaria**: Debes guiar y ofrecer paso a pasos claros y sencillos para los trámites más comunes del sector inmobiliario en Colombia:
+    * *Certificado de Tradición y Libertad*: Explicar que se obtiene en la web oficial de la Superintendencia de Notariado y Registro (SNR: https://certificados.supernotariado.gov.co/ ), indicando que necesitan la Oficina de Registro (ORIP) y el número de Matrícula Inmobiliaria, y realizar el pago en línea.
+    * *Paz y Salvo del IDU*: Explicar que certifica que el predio está al día por valorización en Bogotá. Se obtiene en la web del IDU (https://www.idu.gov.co/ ) ingresando a la sección de trámites en línea con el chip catastral o cédula catastral.
+    * *Certificado del REDAM*: Explicar que es el Registro de Deudores Alimentarios Morosos, documento clave para validación de inquilinos y codeudores en contratos de arrendamiento y trámites notariales (Ley 2097 de 2021). Se descarga gratuitamente desde la página del Ministerio de Justicia o el portal del REDAM previa validación de identidad.
+    * *Trámites Notariales*: Explicar detalladamente los requisitos para escrituración de compraventa (cédulas, escritura previa, impuesto predial cancelado del año vigente, paz y salvo del IDU/valorización, y certificado de libertad reciente de máximo 30 días).
   - **Cierre del Embudo**: No resuelvas el caso por completo. Deja abierta una duda técnica o necesidad de revisión forense y persuade al usuario para que escriba o llame al WhatsApp de VECY BIENES RAÍCES al *3166569719* para contratar una "Consultoría Personalizada" (en audios nómbralo pausadamente: "tres... dieciséis... seis... cincuenta y seis... noventa y siete... diecinueve").
 ▸ **Estrategia de Embudo para Avalúos Comerciales, Zonificación (SINUPOT) y Minutas (CRÍTICO)**:
   - **Servicios de Redacción de Documentos Inmobiliarios**: Estás plenamente facultada para redactar, revisar y estructurar cualquier documento o comunicación formal del sector inmobiliario en Colombia (cartas de aviso de no renovación de contrato de arriendo a inquilinos -preavisos-, otrosíes contractuales, contratos de corretaje físico/virtual, promesas de compraventa, reclamaciones de comisiones no pagadas, correos de presentación formal de clientes a propietarios o colegas con solicitud de visita, acuerdos de comisión compartida o puntas compartidas, etc.). Cuando el usuario te lo solicite, ofrécete activamente a redactarlo en formato limpio, estructurado y profesional, pidiéndole amablemente los datos básicos requeridos para personalizar el documento (nombres, cédulas, condiciones, etc.).
@@ -1109,11 +1113,16 @@ export async function processWhatsAppMessage(
 
     // 1. Transcripción de Voz
     if (audioUrl) {
-      console.log(`[JanIA] Transcribiendo nota de voz para ${userId}...`);
-      const transcription = await transcribeAudio({ audioUrl });
-      if (!('error' in transcription)) {
-        messageToProcess = transcription.text;
+      if (audioUrl.startsWith("mock-audio:")) {
+        messageToProcess = audioUrl.replace("mock-audio:", "");
         isFromAudio = true;
+      } else {
+        console.log(`[JanIA] Transcribiendo nota de voz para ${userId}...`);
+        const transcription = await transcribeAudio({ audioUrl });
+        if (!('error' in transcription)) {
+          messageToProcess = transcription.text;
+          isFromAudio = true;
+        }
       }
     }
 
@@ -1499,6 +1508,12 @@ Por lo tanto, DEBES hacer lo siguiente:
       }
     }
 
+    if (result && result.response) {
+      result.response = sanitizeResponseMarkdown(result.response);
+    }
+    if (result && result.dmResponse) {
+      result.dmResponse = sanitizeResponseMarkdown(result.dmResponse);
+    }
     return result;
   } catch (error) {
     console.error("Error en JanIA v11.70:", error);
@@ -1958,11 +1973,16 @@ export async function processConsultingMessage(
     let messageToProcess = text;
     let isFromAudio = false;
     if (audioUrl) {
-      console.log(`[JanIA-Consulting] Transcribiendo nota de voz para ${userId}...`);
-      const transcription = await transcribeAudio({ audioUrl });
-      if (!('error' in transcription)) {
-        messageToProcess = transcription.text;
+      if (audioUrl.startsWith("mock-audio:")) {
+        messageToProcess = audioUrl.replace("mock-audio:", "");
         isFromAudio = true;
+      } else {
+        console.log(`[JanIA-Consulting] Transcribiendo nota de voz para ${userId}...`);
+        const transcription = await transcribeAudio({ audioUrl });
+        if (!('error' in transcription)) {
+          messageToProcess = transcription.text;
+          isFromAudio = true;
+        }
       }
     }
     const textLower = messageToProcess.toLowerCase();
@@ -2010,7 +2030,13 @@ export async function processConsultingMessage(
       `   - Posees un "ojo clínico" y visión técnica comercial excepcional para determinar el valor justo de mercado de una propiedad en venta o el canon de arrendamiento adecuado en Bogotá y en todo el país (los 32 departamentos, municipios, veredas y caseríos).\n` +
       `   - Tienes conocimiento profundo de la geografía colombiana: barrios, comunas, localidades, veredas, municipios y caseríos.\n` +
       `   - Cuando se te solicita un avalúo o estimación de precios, indagas activamente sobre el mercado actual en internet (la búsqueda en internet está habilitada para consultas de valor). Recolectas y analizas precios de ofertas inmobiliarias recientes en portales del sector y promedias de la forma más exacta posible el valor estimado del metro cuadrado considerando variables críticas: ubicación exacta, estrato socioeconómico, años de antigüedad de la construcción, acabados (gama alta, media, estándar), amenidades de la copropiedad y tendencias del mercado colombiano.\n\n` +
-      `3. **Análisis de Documentos Inmobiliarios (PDF / Imágenes)**:\n` +
+      `3. **Especialista en Tramitología Inmobiliaria Colombiana**:\n` +
+      `   - Eres una guía práctica excepcional para orientar a los usuarios paso a paso sobre cómo realizar trámites, expedir certificados y radicar solicitudes comunes en el sector:\n` +
+      `     * **Certificado de Tradición y Libertad**: Indicar la web oficial de la Superintendencia de Notariado y Registro (SNR: https://certificados.supernotariado.gov.co/ ), explicando que requieren la ORIP y el número de Matrícula Inmobiliaria.\n` +
+      `     * **Paz y Salvo del IDU**: Indicar la web oficial del IDU (https://www.idu.gov.co/ ) para Bogotá, ingresando por trámites en línea mediante chip catastral para descargar el paz y salvo de valorización.\n` +
+      `     * **Certificado del REDAM (Registro de Deudores Alimentarios Morosos)**: Explicar su importancia bajo la Ley 2097 de 2021 para arrendamientos y escrituraciones, guiándolos a descargarlo de forma gratuita en el portal del gobierno.\n` +
+      `     * **Trámites y Requisitos Notariales**: Guiar detalladamente sobre los requisitos para compraventas, sucesiones, levantamiento de embargos, etc., listando los documentos necesarios.\n\n` +
+      `4. **Análisis de Documentos Inmobiliarios (PDF / Imágenes)**:\n` +
       `   - Tienes la capacidad de procesar e interpretar de manera automática documentos que los usuarios te adjunten (en formato PDF o como imágenes), tales como:\n` +
       `     * **Certificados de Tradición y Libertad**: Para analizar anotaciones vigentes, titularidad de dominio, afectaciones a vivienda familiar, patrimonio de familia inembargable, hipotecas o embargos activos.\n` +
       `     * **Recibos del Impuesto Predial**: Para extraer el avalúo catastral oficial de la propiedad, la dirección registrada y el estrato socioeconómico.\n` +
@@ -2115,7 +2141,7 @@ export async function processConsultingMessage(
       const parsed = parseSafeJSON(llmRes.choices[0].message.content);
       return {
         classification: parsed.classification || "CONSULTA_GENERAL",
-        response: parsed.response || "",
+        response: sanitizeResponseMarkdown(parsed.response || ""),
         reactionEmoji: parsed.reactionEmoji || (parsed.classification === "VIOLACION_DE_NORMAS" ? "❌" : "💡"),
         wantsVoice: parsed.wantsVoice || false,
         voiceResponse: parsed.voiceResponse || ""
@@ -2124,7 +2150,7 @@ export async function processConsultingMessage(
       const replyContent = llmRes.choices[0].message.content || "Lo siento, en este momento no puedo procesar tu consulta. Intenta de nuevo más tarde.";
       return {
         classification: "CONSULTA_GENERAL",
-        response: replyContent,
+        response: sanitizeResponseMarkdown(replyContent),
         reactionEmoji: "💡",
         wantsVoice: false,
         voiceResponse: ""
@@ -2228,14 +2254,14 @@ export async function processCirculoMessage(
       const parsed = parseSafeJSON(llmRes.choices[0].message.content);
       return {
         classification: parsed.classification || "CONSULTA_GENERAL",
-        response: parsed.response || "",
+        response: sanitizeResponseMarkdown(parsed.response || ""),
         reactionEmoji: parsed.reactionEmoji || (parsed.classification === "VIOLACION_DE_NORMAS" ? "❌" : "💡")
       };
     } catch (e) {
       const replyContent = llmRes.choices[0].message.content || "Lo siento, en este momento no puedo responder tu consulta.";
       return {
         classification: "CONSULTA_GENERAL",
-        response: replyContent,
+        response: sanitizeResponseMarkdown(replyContent),
         reactionEmoji: "💡"
       };
     }
@@ -2281,3 +2307,9 @@ JanIA ha dejado de ser un bot pasivo que solo publica alertas en el grupo. A par
 ⚠️ IMPORTANTE: Recuerden que operamos en Etapa de Prueba Gratuita y SIN COMISIONES. Si consolidan un negocio real gracias a la conexión privada de JanIA, es un compromiso de honor compartir su testimonio en este grupo y registrar su reseña oficial y calificación aquí: https://g.page/r/CctNbwU6UpX5EBM/review
 
 ¡Sigamos demostrando el poder de la colaboración inteligente en Colombia! 🇨🇴🎯`;
+
+export function sanitizeResponseMarkdown(text: string): string {
+  if (!text) return "";
+  // Reemplazar dobles asteriscos "**" por un solo asterisco "*" para cumplir con el formato de WhatsApp
+  return text.replace(/\*\*/g, "*");
+}

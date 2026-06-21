@@ -3000,11 +3000,16 @@ async function processWhatsAppMessage(text2, userId, userName, hasMedia = false,
     let messageToProcess = text2;
     let isFromAudio = false;
     if (audioUrl) {
-      console.log(`[JanIA] Transcribiendo nota de voz para ${userId}...`);
-      const transcription = await transcribeAudio({ audioUrl });
-      if (!("error" in transcription)) {
-        messageToProcess = transcription.text;
+      if (audioUrl.startsWith("mock-audio:")) {
+        messageToProcess = audioUrl.replace("mock-audio:", "");
         isFromAudio = true;
+      } else {
+        console.log(`[JanIA] Transcribiendo nota de voz para ${userId}...`);
+        const transcription = await transcribeAudio({ audioUrl });
+        if (!("error" in transcription)) {
+          messageToProcess = transcription.text;
+          isFromAudio = true;
+        }
       }
     }
     let contextText = `Mensaje de ${userName || userId}: ${messageToProcess}`;
@@ -3303,6 +3308,12 @@ ${greetingPrefix}, veo que tienes una consulta jur\xEDdica, procedimental o de a
         result.classification = "CONSULTA_GENERAL";
       }
     }
+    if (result && result.response) {
+      result.response = sanitizeResponseMarkdown(result.response);
+    }
+    if (result && result.dmResponse) {
+      result.dmResponse = sanitizeResponseMarkdown(result.dmResponse);
+    }
     return result;
   } catch (error) {
     console.error("Error en JanIA v11.70:", error);
@@ -3550,11 +3561,16 @@ async function processConsultingMessage(text2, userId, userName, imageBuffer, pd
     let messageToProcess = text2;
     let isFromAudio = false;
     if (audioUrl) {
-      console.log(`[JanIA-Consulting] Transcribiendo nota de voz para ${userId}...`);
-      const transcription = await transcribeAudio({ audioUrl });
-      if (!("error" in transcription)) {
-        messageToProcess = transcription.text;
+      if (audioUrl.startsWith("mock-audio:")) {
+        messageToProcess = audioUrl.replace("mock-audio:", "");
         isFromAudio = true;
+      } else {
+        console.log(`[JanIA-Consulting] Transcribiendo nota de voz para ${userId}...`);
+        const transcription = await transcribeAudio({ audioUrl });
+        if (!("error" in transcription)) {
+          messageToProcess = transcription.text;
+          isFromAudio = true;
+        }
       }
     }
     const textLower = messageToProcess.toLowerCase();
@@ -3574,7 +3590,14 @@ async function processConsultingMessage(text2, userId, userName, imageBuffer, pd
    - Tienes conocimiento profundo de la geograf\xEDa colombiana: barrios, comunas, localidades, veredas, municipios y caser\xEDos.
    - Cuando se te solicita un aval\xFAo o estimaci\xF3n de precios, indagas activamente sobre el mercado actual en internet (la b\xFAsqueda en internet est\xE1 habilitada para consultas de valor). Recolectas y analizas precios de ofertas inmobiliarias recientes en portales del sector y promedias de la forma m\xE1s exacta posible el valor estimado del metro cuadrado considerando variables cr\xEDticas: ubicaci\xF3n exacta, estrato socioecon\xF3mico, a\xF1os de antig\xFCedad de la construcci\xF3n, acabados (gama alta, media, est\xE1ndar), amenidades de la copropiedad y tendencias del mercado colombiano.
 
-3. **An\xE1lisis de Documentos Inmobiliarios (PDF / Im\xE1genes)**:
+3. **Especialista en Tramitolog\xEDa Inmobiliaria Colombiana**:
+   - Eres una gu\xEDa pr\xE1ctica excepcional para orientar a los usuarios paso a paso sobre c\xF3mo realizar tr\xE1mites, expedir certificados y radicar solicitudes comunes en el sector:
+     * **Certificado de Tradici\xF3n y Libertad**: Indicar la web oficial de la Superintendencia de Notariado y Registro (SNR: https://certificados.supernotariado.gov.co/ ), explicando que requieren la ORIP y el n\xFAmero de Matr\xEDcula Inmobiliaria.
+     * **Paz y Salvo del IDU**: Indicar la web oficial del IDU (https://www.idu.gov.co/ ) para Bogot\xE1, ingresando por tr\xE1mites en l\xEDnea mediante chip catastral para descargar el paz y salvo de valorizaci\xF3n.
+     * **Certificado del REDAM (Registro de Deudores Alimentarios Morosos)**: Explicar su importancia bajo la Ley 2097 de 2021 para arrendamientos y escrituraciones, gui\xE1ndolos a descargarlo de forma gratuita en el portal del gobierno.
+     * **Tr\xE1mites y Requisitos Notariales**: Guiar detalladamente sobre los requisitos para compraventas, sucesiones, levantamiento de embargos, etc., listando los documentos necesarios.
+
+4. **An\xE1lisis de Documentos Inmobiliarios (PDF / Im\xE1genes)**:
    - Tienes la capacidad de procesar e interpretar de manera autom\xE1tica documentos que los usuarios te adjunten (en formato PDF o como im\xE1genes), tales como:
      * **Certificados de Tradici\xF3n y Libertad**: Para analizar anotaciones vigentes, titularidad de dominio, afectaciones a vivienda familiar, patrimonio de familia inembargable, hipotecas o embargos activos.
      * **Recibos del Impuesto Predial**: Para extraer el aval\xFAo catastral oficial de la propiedad, la direcci\xF3n registrada y el estrato socioecon\xF3mico.
@@ -3676,7 +3699,7 @@ Analiza el contexto completo antes de clasificar. Debes responder estrictamente 
       const parsed = parseSafeJSON(llmRes.choices[0].message.content);
       return {
         classification: parsed.classification || "CONSULTA_GENERAL",
-        response: parsed.response || "",
+        response: sanitizeResponseMarkdown(parsed.response || ""),
         reactionEmoji: parsed.reactionEmoji || (parsed.classification === "VIOLACION_DE_NORMAS" ? "\u274C" : "\u{1F4A1}"),
         wantsVoice: parsed.wantsVoice || false,
         voiceResponse: parsed.voiceResponse || ""
@@ -3685,7 +3708,7 @@ Analiza el contexto completo antes de clasificar. Debes responder estrictamente 
       const replyContent = llmRes.choices[0].message.content || "Lo siento, en este momento no puedo procesar tu consulta. Intenta de nuevo m\xE1s tarde.";
       return {
         classification: "CONSULTA_GENERAL",
-        response: replyContent,
+        response: sanitizeResponseMarkdown(replyContent),
         reactionEmoji: "\u{1F4A1}",
         wantsVoice: false,
         voiceResponse: ""
@@ -3786,14 +3809,14 @@ Pregunta: ${text2}${greetingInstruction}` }
       const parsed = parseSafeJSON(llmRes.choices[0].message.content);
       return {
         classification: parsed.classification || "CONSULTA_GENERAL",
-        response: parsed.response || "",
+        response: sanitizeResponseMarkdown(parsed.response || ""),
         reactionEmoji: parsed.reactionEmoji || (parsed.classification === "VIOLACION_DE_NORMAS" ? "\u274C" : "\u{1F4A1}")
       };
     } catch (e) {
       const replyContent = llmRes.choices[0].message.content || "Lo siento, en este momento no puedo responder tu consulta.";
       return {
         classification: "CONSULTA_GENERAL",
-        response: replyContent,
+        response: sanitizeResponseMarkdown(replyContent),
         reactionEmoji: "\u{1F4A1}"
       };
     }
@@ -3804,6 +3827,10 @@ Pregunta: ${text2}${greetingInstruction}` }
       response: "\u26A0\uFE0F Ocurri\xF3 un error al procesar tu consulta en C\xEDrculo Cero."
     };
   }
+}
+function sanitizeResponseMarkdown(text2) {
+  if (!text2) return "";
+  return text2.replace(/\*\*/g, "*");
 }
 var GREETED_TODAY, REPUTATION_HOOK, JANIA_PROMPT, MSG_PRESENTACION_INSTITUCIONAL, MSG_PAUTAS_FORMATOS, MSG_PROMO_INMUEBLES, MSG_PROMO_CONSULTAS, MSG_PROMO_CIRCULO, MSG_COMUNICADO_MATCH_NETWORK, MSG_COMUNICADO_MATCH_CIRCULO;
 var init_janIA = __esm({
@@ -3870,7 +3897,11 @@ Debes demostrar un conocimiento profundo de la distribuci\xF3n geopol\xEDtica de
   - Cuando te hagan preguntas sobre Derecho inmobiliario o el \xE1mbito jur\xEDdico de los bienes ra\xEDces (sucesiones, herencias, divorcios, embargos, saneamientos de t\xEDtulos, contratos, escrituraci\xF3n, restituciones, causales de la Ley 820 de 2003, propiedad horizontal Ley 675 de 2001, disputas de comisiones de corretaje o an\xE1lisis de Certificados de Tradici\xF3n y Libertad - CTL): debes responder con la m\xE1xima solvencia intelectual, rigurosidad jur\xEDdica y claridad t\xE9cnica bas\xE1ndote en las leyes colombianas reales (C\xF3digo Civil y C\xF3digo de Comercio).
   - **Firma Electr\xF3nica y Digital**: Asesora sobre la total validez de la firma electr\xF3nica en Colombia bajo la Ley 527 de 1999 y el Decreto 2364 de 2012. Recomienda el uso de plataformas gratuitas, v\xE1lidas y seguras del Estado como la Autenticaci\xF3n Digital de la AND: https://autenticaciondigital.and.gov.co/ .
   - **Legitimidad del Correo Electr\xF3nico**: Potencia el correo electr\xF3nico como el medio de comunicaci\xF3n formal e irrefutable por excelencia. Explica que, aunque los mensajes de WhatsApp son admisibles ante jueces en Colombia (Ley 2213 de 2022), suelen requerir peritajes forenses t\xE9cnicos digitales complejos y costosos para certificar su autenticidad e inalterabilidad (por riesgos de manipulaci\xF3n de capturas o borrado sin copia de seguridad). En contraste, el correo electr\xF3nico cuenta con logs SMTP permanentes e inalterables en los servidores. Por ello, enfatiza que en VECY toda documentaci\xF3n formal (corretajes, hojas de presentaci\xF3n de clientes y solicitudes de visita) se maneja por correo electr\xF3nico para garantizar seguridad jur\xEDdica absoluta.
-  - **Cobro de Comisiones y Corretaje**: Gu\xEDa a los colegas inmobiliarios sobre c\xF3mo asegurar el cobro de comisiones evadidas bas\xE1ndose en el contrato de corretaje (C\xF3digo de Comercio Art. 1340-1346). Recomienda registrar visitas e introducir clientes por correo electr\xF3nico, firmar acuerdos de comisiones compartidas ("puntas compartidas"), realizar cobros prejur\xEDdicos y entablar procesos monitorios o verbales si es necesario.
+  - **Gu\xEDas de Tr\xE1mites y Tramitolog\xEDa Inmobiliaria**: Debes guiar y ofrecer paso a pasos claros y sencillos para los tr\xE1mites m\xE1s comunes del sector inmobiliario en Colombia:
+    * *Certificado de Tradici\xF3n y Libertad*: Explicar que se obtiene en la web oficial de la Superintendencia de Notariado y Registro (SNR: https://certificados.supernotariado.gov.co/ ), indicando que necesitan la Oficina de Registro (ORIP) y el n\xFAmero de Matr\xEDcula Inmobiliaria, y realizar el pago en l\xEDnea.
+    * *Paz y Salvo del IDU*: Explicar que certifica que el predio est\xE1 al d\xEDa por valorizaci\xF3n en Bogot\xE1. Se obtiene en la web del IDU (https://www.idu.gov.co/ ) ingresando a la secci\xF3n de tr\xE1mites en l\xEDnea con el chip catastral o c\xE9dula catastral.
+    * *Certificado del REDAM*: Explicar que es el Registro de Deudores Alimentarios Morosos, documento clave para validaci\xF3n de inquilinos y codeudores en contratos de arrendamiento y tr\xE1mites notariales (Ley 2097 de 2021). Se descarga gratuitamente desde la p\xE1gina del Ministerio de Justicia o el portal del REDAM previa validaci\xF3n de identidad.
+    * *Tr\xE1mites Notariales*: Explicar detalladamente los requisitos para escrituraci\xF3n de compraventa (c\xE9dulas, escritura previa, impuesto predial cancelado del a\xF1o vigente, paz y salvo del IDU/valorizaci\xF3n, y certificado de libertad reciente de m\xE1ximo 30 d\xEDas).
   - **Cierre del Embudo**: No resuelvas el caso por completo. Deja abierta una duda t\xE9cnica o necesidad de revisi\xF3n forense y persuade al usuario para que escriba o llame al WhatsApp de VECY BIENES RA\xCDCES al *3166569719* para contratar una "Consultor\xEDa Personalizada" (en audios n\xF3mbralo pausadamente: "tres... diecis\xE9is... seis... cincuenta y seis... noventa y siete... diecinueve").
 \u25B8 **Estrategia de Embudo para Aval\xFAos Comerciales, Zonificaci\xF3n (SINUPOT) y Minutas (CR\xCDTICO)**:
   - **Servicios de Redacci\xF3n de Documentos Inmobiliarios**: Est\xE1s plenamente facultada para redactar, revisar y estructurar cualquier documento o comunicaci\xF3n formal del sector inmobiliario en Colombia (cartas de aviso de no renovaci\xF3n de contrato de arriendo a inquilinos -preavisos-, otros\xEDes contractuales, contratos de corretaje f\xEDsico/virtual, promesas de compraventa, reclamaciones de comisiones no pagadas, correos de presentaci\xF3n formal de clientes a propietarios o colegas con solicitud de visita, acuerdos de comisi\xF3n compartida o puntas compartidas, etc.). Cuando el usuario te lo solicite, ofr\xE9cete activamente a redactarlo en formato limpio, estructurado y profesional, pidi\xE9ndole amablemente los datos b\xE1sicos requeridos para personalizar el documento (nombres, c\xE9dulas, condiciones, etc.).
