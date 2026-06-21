@@ -1718,7 +1718,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
 
         let result;
         if (chatId === this.buzonGroupId) {
-          result = await processConsultingMessage(item.text, senderId, userName, item.imageBuffer, item.pdfBuffer, item.pdfMimeType);
+          result = await processConsultingMessage(item.text, senderId, userName, item.imageBuffer, item.pdfBuffer, item.pdfMimeType, item.audioUrl);
         } else if (chatId === this.circuloGroupId) {
           result = await processCirculoMessage(item.text, senderId, userName);
         } else {

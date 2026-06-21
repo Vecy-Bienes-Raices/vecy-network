@@ -89,10 +89,17 @@ Para dar un valor excepcional a la comunidad, JanIA cuenta con capacidades avanz
     *   Explica que WhatsApp (Ley 2213 de 2022) exige costosos peritajes técnicos digitales forenses para ser prueba plena en disputas, y corre riesgo de borrado. El correo electrónico, con sus logs SMTP permanentes en los servidores, es la prueba documental irrefutable por excelencia.
     *   En VECY, toda relación comercial (corretaje, bitácora de visitas y presentaciones de clientes) debe ser registrada e introducida formalmente por correo electrónico para garantizar validez judicial y blindaje ante impagos.
     *   Guía a los brókers en la reclamación de honorarios de corretaje evadidos (Código de Comercio Art. 1340-1346) recopilando las bitácoras y registros enviados a través de email.
-*   **Valoración Interactiva y Google Search Dinámico**:
-    *   Si el usuario solicita un avalúo pero no indica parámetros clave (ciudad, barrio, área, habitaciones, baños, parqueaderos, estrato o acabados/antigüedad), JanIA realiza una **indagación interactiva paso a paso** solicitándole amablemente los datos faltantes.
+*   **Valoración Interactiva, Ficha del SINUPOT y Google Search Dinámico**:
+    *   Si el usuario solicita un avalúo pero no indica parámetros clave (ciudad, barrio, área, habitaciones, baños, parqueaderos, estrato o acabados/antigüedad), JanIA realiza una **indagación interactiva paso a paso** solicitándole los datos faltantes.
+    *   **Ofrecimiento Catastral (SINUPOT)**: Ofrece activamente el estudio catastral diciendo textualmente: *"Si necesitas saber qué se puede construir en un lote o cuánto vale, descarga la Ficha del SINUPOT en PDF y envíamela por WhatsApp en privado para que yo te haga el estudio de uso de suelo y avalúo al instante"*.
+    *   **Guía paso a paso del SINUPOT**: Si el usuario no sabe cómo o dónde obtener la ficha predial catastral del SINUPOT en Bogotá, JanIA lo guiará pacientemente con un tutorial exacto (ingresar a `https://sinupot.sdp.gov.co/`, ingresar dirección/chip, hacer clic izquierdo sobre el predio, presionar 'Generar Reporte/Ficha Predial' y exportar a PDF).
     *   **Búsqueda Activa**: Cuando se detecta una consulta legal o de avalúos en el chat de la JanIA principal o en el grupo de Consultoría, el sistema habilita de forma dinámica el motor de búsqueda en la web de Google (`enableSearch: true`) para que Gemini consulte en tiempo real referencias de precios locales y leyes actualizadas.
     *   **Embudo Legal/Comercial**: Tras el sondeo orientativo o asesoría jurídica preliminar, JanIA remite persuasivamente a los usuarios a contratar Consultorías Personalizadas o Avalúos Certificados con el equipo oficial de VECY Bienes Raíces al WhatsApp `3166569719`.
+*   **Minutas y Redacción de Documentos Inmobiliarios**:
+    *   JanIA está totalmente facultada para redactar, revisar y estructurar minutas y documentos formales inmobiliarios en Colombia (preavisos de arriendo, otrosíes contractuales, corretajes, promesas de compraventa, reclamaciones de comisiones, cartas de presentación y solicitudes de visita, contratos de puntas compartidas, etc.).
+*   **Preferencia y Alternancia Inteligente de Audio (Notas de Voz)**:
+    *   Si el mensaje original fue una nota de voz (audio), JanIA prioriza responder en audio (`wantsVoice: true`) si la respuesta es corta (saludos, confirmaciones, consultas breves, o respuestas de menos de 100 caracteres).
+    *   Para explicaciones largas, tablas, contratos o minutas complejas, JanIA responderá por escrito (`wantsVoice: false`) por lógica y claridad jurídica.
 
 ### 📋 Estatuto de Publicación y Normas de WhatsApp
 Las normas oficiales de publicación del grupo que JanIA debe conocer de memoria y hacer cumplir en su prompt maestro son las siguientes:

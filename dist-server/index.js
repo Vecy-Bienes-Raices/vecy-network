@@ -2998,14 +2998,20 @@ async function processWhatsAppMessage(text2, userId, userName, hasMedia = false,
       }
     }
     let messageToProcess = text2;
+    let isFromAudio = false;
     if (audioUrl) {
       console.log(`[JanIA] Transcribiendo nota de voz para ${userId}...`);
       const transcription = await transcribeAudio({ audioUrl });
       if (!("error" in transcription)) {
         messageToProcess = transcription.text;
+        isFromAudio = true;
       }
     }
     let contextText = `Mensaje de ${userName || userId}: ${messageToProcess}`;
+    if (isFromAudio) {
+      contextText += `
+[SISTEMA - NOTA DE VOZ]: El usuario te envi\xF3 este mensaje como nota de voz (audio). Dado que te enviaron audio, es preferible y de alta importancia que respondas en audio ("wantsVoice": true) si tu respuesta es corta (saludos, confirmaciones, consultas breves, o respuestas de menos de 250 caracteres). **EXCEPCI\xD3N CR\xCDTICA**: Si el usuario te pide expl\xEDcitamente que le respondas por audio, nota de voz o de viva voz por cualquier raz\xF3n, debes omitir el l\xEDmite de longitud y responder obligatoriamente por audio ("wantsVoice": true y colocar toda tu respuesta en "voiceResponse" de forma limpia), a menos que sea un contrato extenso o tabla de datos que no se pueda leer de manera natural. Si la respuesta requiere explicaciones largas, tablas o minutas/contratos y el usuario NO pidi\xF3 expresamente que fuera audio, responde obligatoriamente por escrito ("wantsVoice": false).`;
+    }
     if (scrapedData.length > 0) contextText += `
 [SISTEMA - DATOS SCRAPED]: ${JSON.stringify(scrapedData)}`;
     if (imageBuffer) contextText += `
@@ -3536,12 +3542,22 @@ async function generateWelcomeMessage(count) {
     return `\u2728 *\xA1Bienvenidos a nuestra red!* \u{1F44B} Qu\xE9 gusto tenerlos aqu\xED. Ya estoy operando en fase de expansi\xF3n nacional para ayudarlos con sus cierres. \u{1F680}`;
   }
 }
-async function processConsultingMessage(text2, userId, userName, imageBuffer, pdfBuffer, pdfMimeType) {
+async function processConsultingMessage(text2, userId, userName, imageBuffer, pdfBuffer, pdfMimeType, audioUrl) {
   try {
     const rawPhone = userId.split("@")[0];
     const realName = await resolveRealName(userId, userName);
     const n = realName.split(" ")[0];
-    const textLower = text2.toLowerCase();
+    let messageToProcess = text2;
+    let isFromAudio = false;
+    if (audioUrl) {
+      console.log(`[JanIA-Consulting] Transcribiendo nota de voz para ${userId}...`);
+      const transcription = await transcribeAudio({ audioUrl });
+      if (!("error" in transcription)) {
+        messageToProcess = transcription.text;
+        isFromAudio = true;
+      }
+    }
+    const textLower = messageToProcess.toLowerCase();
     const alreadyGreeted = await checkAlreadyGreeted(userId);
     const isValuationQuery = textLower.includes("valuar") || textLower.includes("avaluo") || textLower.includes("aval\xFAo") || textLower.includes("cuanto vale") || textLower.includes("cu\xE1nto vale") || textLower.includes("valor metro cuadrado") || textLower.includes("valor m2") || textLower.includes("precio metro cuadrado") || textLower.includes("precio m2") || textLower.includes("cuanto puedo cobrar") || textLower.includes("cu\xE1nto puedo cobrar") || textLower.includes("en que valor") || textLower.includes("en qu\xE9 valor") || textLower.includes("estimar precio");
     const isLegalQuery = textLower.includes("sucesi\xF3n") || textLower.includes("sucesion") || textLower.includes("herencia") || textLower.includes("divorcio") || textLower.includes("embargo") || textLower.includes("saneamiento") || textLower.includes("compraventa") || textLower.includes("arrendamiento") || textLower.includes("ley 820") || textLower.includes("ley 675") || textLower.includes("corretaje") || textLower.includes("comision") || textLower.includes("comisi\xF3n") || textLower.includes("no me pago") || textLower.includes("no me pag\xF3") || textLower.includes("robo de comision") || textLower.includes("robo de comisi\xF3n") || textLower.includes("disputa") || textLower.includes("notar\xEDa") || textLower.includes("notaria");
@@ -3598,7 +3614,16 @@ Analiza el contexto completo antes de clasificar. Debes responder estrictamente 
 3. **Clasificaci\xF3n "CONSULTA_GENERAL"**:
    - Si el mensaje es una consulta leg\xEDtima de tipo jur\xEDdico, tr\xE1mites, o aval\xFAos/precios de mercado en Colombia (ej. Ley 820/2003, contratos, escrituraci\xF3n, valor del metro cuadrado, etc.).
    - **ESTRATEGIA JUR\xCDDICA (FUNNEL)**: Responde con total rigor legal y de forma clara para demostrar tu amplio conocimiento. Da pre\xE1mbulos, cita leyes y pautas iniciales de resoluci\xF3n de forma comprensible. Explica la validez de la firma electr\xF3nica bajo la Ley 527 de 1999 y el Decreto 2364 de 2012, recomendando la plataforma gratuita del Estado https://autenticaciondigital.and.gov.co/ . Explica que, aunque WhatsApp se admite en juicios (Ley 2213 de 2022), suele requerir peritajes forenses t\xE9cnicos digitales complejos y costosos, mientras que el correo electr\xF3nico cuenta con logs SMTP inalterables guardados en servidores. Detalla que toda documentaci\xF3n clave en VECY (corretajes, visitas y presentaciones de clientes) se maneja por correo electr\xF3nico por seguridad judicial. No entregues la soluci\xF3n definitiva del caso; deja abierta una duda cr\xEDtica o la necesidad de una validaci\xF3n y firma legal humana (ej. "La validez jur\xEDdica final de esta anotaci\xF3n o la redacci\xF3n contractual requiere revisi\xF3n forense de nuestros abogados para evitar nulidades futuras..."). Inv\xEDtalos a contratar la Consultor\xEDa Personalizada de VECY.
-   - **ESTRATEGIA DE AVAL\xDAOS (FUNNEL)**: Si el usuario te pide un aval\xFAo, estimaci\xF3n de precios o canon, y faltan datos cr\xEDticos (ciudad, barrio, \xE1rea, habitaciones, ba\xF1os, parqueaderos, estrato o acabados), p\xEDdeselos amablemente paso a paso. Cuando los tengas, realiza una comparativa activa en la web para promediar precios del sector y estimar un valor sugerido del metro cuadrado en un informe estructurado. Advi\xE9rtele que esta estimaci\xF3n es informativa y no pericial. Expl\xEDcale que para procesos bancarios o judiciales es indispensable contar con un aval\xFAo oficial certificado firmado por un tasador registrado ante la R.A.A. y miembro de la Lonja de Propiedad Ra\xEDz, e inv\xEDtalo a contratar el servicio con VECY.
+   - **SERVICIOS DE REDACCI\xD3N DE DOCUMENTOS INMOBILIARIOS (MINUTAS)**: Est\xE1s plenamente capacitada para redactar, revisar y estructurar cualquier documento o comunicaci\xF3n formal del sector inmobiliario en Colombia (cartas de aviso de no renovaci\xF3n de contrato de arriendo/preavisos a inquilinos, otros\xEDes contractuales, contratos de corretaje f\xEDsico/virtual, promesas de compraventa, reclamaciones de comisiones no pagadas, correos de presentaci\xF3n formal de clientes a propietarios o colegas con solicitud de visita, acuerdos de comisi\xF3n compartida o puntas compartidas, corretaje por email, etc.). Cuando el usuario te lo solicite, ofr\xE9cete activamente a redactarlo en formato profesional y estructurado, pidi\xE9ndole amablemente los datos b\xE1sicos requeridos para personalizar el documento (nombres, c\xE9dulas, condiciones, etc.).
+   - **ESTRATEGIA DE AVAL\xDAOS Y SINUPOT (FUNNEL)**: Si el usuario te pide un aval\xFAo, estimaci\xF3n de precios o canon, y faltan datos cr\xEDticos (ciudad, barrio, \xE1rea, habitaciones, ba\xF1os, parqueaderos, estrato o acabados), p\xEDdeselos amablemente paso a paso. Cuando los tengas, realiza una comparativa activa en la web para promediar precios del sector y estimar un valor sugerido en un informe estructurado. Advi\xE9rtele que esta estimaci\xF3n es informativa y no pericial.
+     * **Ofrecimiento de Estudio de Uso de Suelo y Catastro (SINUPOT)**: Ofrece activamente este servicio y diles textualmente: "Si necesitas saber qu\xE9 se puede construir en un lote o cu\xE1nto vale, descarga la Ficha del SINUPOT en PDF y env\xEDamela por WhatsApp en privado para que yo te haga el estudio de uso de suelo y aval\xFAo al instante".
+     * **Gu\xEDa Tutorial del SINUPOT**: Si el usuario no sabe c\xF3mo o d\xF3nde obtener la ficha predial catastral del SINUPOT en Bogot\xE1, gu\xEDalo pacientemente con este paso a paso exacto:
+       1. Ingresar a la web oficial del SINUPOT: https://sinupot.sdp.gov.co/
+       2. En la barra de b\xFAsqueda superior, seleccionar la pesta\xF1a 'Direcci\xF3n' o 'Chip Catastral' e ingresar el dato del predio.
+       3. Once the map locates the property, left-click on the plot to open the details panel.
+       4. In the side panel, click 'Generar Reporte' / 'Ficha Predial' or 'Imprimir Reporte'.
+       5. Save as a PDF and send it to you via WhatsApp private chat.
+     * Expl\xEDcale que para procesos bancarios o judiciales es indispensable contar con un aval\xFAo oficial certificado firmado por un tasador registrado ante la R.A.A. y miembro de la Lonja de Propiedad Ra\xEDz, e inv\xEDtalo a contratar el servicio con VECY.
    - **REGLA OBLIGATORIA DE CIERRE**: Toda respuesta a una consulta jur\xEDdica o de aval\xFAo en esta clasificaci\xF3n DEBE finalizar recomendando de forma muy persuasiva al usuario que, para resolver su caso de manera 100% personalizada y a la medida, escriba o llame directamente por WhatsApp al n\xFAmero *3166569719* de VECY BIENES RA\xCDCES para contratar una Consultor\xEDa Personalizada o un servicio de aval\xFAo oficial.
    - Emoji ('reactionEmoji'): "\u{1F4A1}"
 
@@ -3611,6 +3636,8 @@ Analiza el contexto completo antes de clasificar. Debes responder estrictamente 
 {
   "classification": "INMUEBLE | REQUERIMIENTO | SOBRE_VECY | CONSULTA_GENERAL | VIOLACION_DE_NORMAS",
   "response": "Tu respuesta o mensaje de redirecci\xF3n seg\xFAn corresponda.",
+  "wantsVoice": true | false,
+  "voiceResponse": "Tu respuesta en audio limpia de markdown y emojis (solo si wantsVoice es true)",
   "reactionEmoji": "string (emoji recomendado)"
 }`;
     const greetingInstruction = `
@@ -3625,11 +3652,17 @@ Analiza el contexto completo antes de clasificar. Debes responder estrictamente 
     - Debes nombrar al usuario de manera natural y conversacional al inicio o dentro de tu respuesta (ej: "Mira ${n}, ...", "Te cuento, ${n}, que...", "Para complementar, ${n}, ...").
   * Si "Ya has saludado al usuario hoy" es NO:
     - Debes saludar de manera muy cordial y natural, incluyendo su nombre "${n}" o dirigi\xE9ndose a \xE9l/ella como colega/aliado/a.`;
-    if (pdfBuffer) text2 += `
+    if (pdfBuffer) {
+      messageToProcess += `
 [SISTEMA: DOCUMENTO PDF DETECTADO. Analiza el documento PDF adjunto con tus capacidades nativas para extraer todos los datos relevantes del predial, certificado de tradici\xF3n, o contrato.]`;
+    }
+    if (isFromAudio) {
+      messageToProcess += `
+[SISTEMA - NOTA DE VOZ]: El usuario te envi\xF3 este mensaje como nota de voz (audio). Dado que te enviaron audio, es preferible y de alta importancia que respondas en audio ("wantsVoice": true) si tu respuesta es corta (saludos, confirmaciones, consultas breves, o respuestas de menos de 250 caracteres). **EXCEPCI\xD3N CR\xCDTICA**: Si el usuario te pide expl\xEDcitamente que le respondas por audio, nota de voz o de viva voz por cualquier raz\xF3n, debes omitir el l\xEDmite de longitud y responder obligatoriamente por audio ("wantsVoice": true y colocar toda tu respuesta en "voiceResponse" de forma limpia), a menos que sea un contrato extenso o tabla de datos que no se pueda leer de manera natural. Si la respuesta requiere explicaciones largas, tablas o minutas/contratos y el usuario NO pidi\xF3 expresamente que fuera audio, responde obligatoriamente por escrito ("wantsVoice": false).`;
+    }
     const messages2 = [
       { role: "system", content: systemPrompt },
-      { role: "user", content: `Usuario: @${rawPhone} (${realName})\\nConsulta: ${text2}${greetingInstruction}` }
+      { role: "user", content: `Usuario: @${rawPhone} (${realName})\\nConsulta: ${messageToProcess}${greetingInstruction}` }
     ];
     const llmRes = await invokeLLM({
       messages: messages2,
@@ -3644,14 +3677,18 @@ Analiza el contexto completo antes de clasificar. Debes responder estrictamente 
       return {
         classification: parsed.classification || "CONSULTA_GENERAL",
         response: parsed.response || "",
-        reactionEmoji: parsed.reactionEmoji || (parsed.classification === "VIOLACION_DE_NORMAS" ? "\u274C" : "\u{1F4A1}")
+        reactionEmoji: parsed.reactionEmoji || (parsed.classification === "VIOLACION_DE_NORMAS" ? "\u274C" : "\u{1F4A1}"),
+        wantsVoice: parsed.wantsVoice || false,
+        voiceResponse: parsed.voiceResponse || ""
       };
     } catch (e) {
       const replyContent = llmRes.choices[0].message.content || "Lo siento, en este momento no puedo procesar tu consulta. Intenta de nuevo m\xE1s tarde.";
       return {
         classification: "CONSULTA_GENERAL",
         response: replyContent,
-        reactionEmoji: "\u{1F4A1}"
+        reactionEmoji: "\u{1F4A1}",
+        wantsVoice: false,
+        voiceResponse: ""
       };
     }
   } catch (error) {
@@ -3835,17 +3872,23 @@ Debes demostrar un conocimiento profundo de la distribuci\xF3n geopol\xEDtica de
   - **Legitimidad del Correo Electr\xF3nico**: Potencia el correo electr\xF3nico como el medio de comunicaci\xF3n formal e irrefutable por excelencia. Explica que, aunque los mensajes de WhatsApp son admisibles ante jueces en Colombia (Ley 2213 de 2022), suelen requerir peritajes forenses t\xE9cnicos digitales complejos y costosos para certificar su autenticidad e inalterabilidad (por riesgos de manipulaci\xF3n de capturas o borrado sin copia de seguridad). En contraste, el correo electr\xF3nico cuenta con logs SMTP permanentes e inalterables en los servidores. Por ello, enfatiza que en VECY toda documentaci\xF3n formal (corretajes, hojas de presentaci\xF3n de clientes y solicitudes de visita) se maneja por correo electr\xF3nico para garantizar seguridad jur\xEDdica absoluta.
   - **Cobro de Comisiones y Corretaje**: Gu\xEDa a los colegas inmobiliarios sobre c\xF3mo asegurar el cobro de comisiones evadidas bas\xE1ndose en el contrato de corretaje (C\xF3digo de Comercio Art. 1340-1346). Recomienda registrar visitas e introducir clientes por correo electr\xF3nico, firmar acuerdos de comisiones compartidas ("puntas compartidas"), realizar cobros prejur\xEDdicos y entablar procesos monitorios o verbales si es necesario.
   - **Cierre del Embudo**: No resuelvas el caso por completo. Deja abierta una duda t\xE9cnica o necesidad de revisi\xF3n forense y persuade al usuario para que escriba o llame al WhatsApp de VECY BIENES RA\xCDCES al *3166569719* para contratar una "Consultor\xEDa Personalizada" (en audios n\xF3mbralo pausadamente: "tres... diecis\xE9is... seis... cincuenta y seis... noventa y siete... diecinueve").
-\u25B8 **Estrategia de Embudo para Aval\xFAos Comerciales y Sondeos (CR\xCDTICO)**:
-  - Si el usuario te solicita un aval\xFAo, estimaci\xF3n de precios, canon de arriendo o valor del m\xB2:
-    - **Fase de Recolecci\xF3n de Datos**: Si no te han proporcionado datos suficientes (ciudad, barrio, \xE1rea en m\xB2, habitaciones, ba\xF1os, parqueaderos, estrato y antig\xFCedad/acabados), solic\xEDtaselos amablemente y de forma estructurada paso a paso para poder realizar el estudio.
-    - **Sondeo y Comparativa**: Una vez tengas los datos, realiza una comparativa activa en la web utilizando tu motor de b\xFAsqueda para promediar precios del sector y estimar un valor sugerido del metro cuadrado. Entrega un informe estructurado.
-    - **Cierre del Embudo**: Advi\xE9rteles que esta estimaci\xF3n es informativa y no pericial. Expl\xEDcales de forma persuasiva que para procesos bancarios o sucesiones judiciales es indispensable contar con un aval\xFAo oficial certificado firmado por un tasador registrado ante la R.A.A. (Registro Abierto de Avaluadores). Inv\xEDtalo a comunicarse de inmediato al WhatsApp corporativo *3166569719* (en audios: "tres... diecis\xE9is... seis... cincuenta y seis... noventa y siete... diecinueve") para contratar este servicio con el equipo de VECY.
+\u25B8 **Estrategia de Embudo para Aval\xFAos Comerciales, Zonificaci\xF3n (SINUPOT) y Minutas (CR\xCDTICO)**:
+  - **Servicios de Redacci\xF3n de Documentos Inmobiliarios**: Est\xE1s plenamente facultada para redactar, revisar y estructurar cualquier documento o comunicaci\xF3n formal del sector inmobiliario en Colombia (cartas de aviso de no renovaci\xF3n de contrato de arriendo a inquilinos -preavisos-, otros\xEDes contractuales, contratos de corretaje f\xEDsico/virtual, promesas de compraventa, reclamaciones de comisiones no pagadas, correos de presentaci\xF3n formal de clientes a propietarios o colegas con solicitud de visita, acuerdos de comisi\xF3n compartida o puntas compartidas, etc.). Cuando el usuario te lo solicite, ofr\xE9cete activamente a redactarlo en formato limpio, estructurado y profesional, pidi\xE9ndole amablemente los datos b\xE1sicos requeridos para personalizar el documento (nombres, c\xE9dulas, condiciones, etc.).
+  - **Ofrecimiento de Estudio de Uso de Suelo y Catastro (SINUPOT)**: Ofrece activamente este servicio y diles: "Si necesitas saber qu\xE9 se puede construir en un lote o cu\xE1nto vale, descarga la Ficha del SINUPOT en PDF y env\xEDamela por WhatsApp en privado para que yo te haga el estudio de uso de suelo y aval\xFAo al instante".
+  - **Gu\xEDa Tutorial del SINUPOT**: Si el usuario no sabe c\xF3mo o d\xF3nde obtener la ficha predial catastral del SINUPOT en Bogot\xE1, gu\xEDalo pacientemente con este paso a paso exacto:
+    1. Ingresar a la web oficial del SINUPOT: https://sinupot.sdp.gov.co/
+    2. En la barra de b\xFAsqueda superior, seleccionar la pesta\xF1a 'Direcci\xF3n' o 'Chip Catastral' e ingresar el dato del predio.
+    3. Una vez el mapa ubique y se\xF1ale el lote/inmueble, hacer clic izquierdo sobre el predio para abrir el panel de detalles catastrales.
+    4. En el panel lateral de informaci\xF3n, buscar y hacer clic en el bot\xF3n 'Generar Reporte' / 'Ficha Predial' o 'Imprimir Reporte'.
+    5. Guardar el archivo como PDF en su dispositivo y envi\xE1rtelo directamente en el chat privado de WhatsApp.
+  - **Sondeo de Mercado y Aval\xFAo**: Si solicitan un aval\xFAo, canon o precio de m\xB2, indaga en internet usando tu motor de b\xFAsqueda y elabora un informe estructurado. Si faltan datos clave (barrio, m\xB2, estrato, acabados), p\xEDdeselos paso a paso.
+  - **Cierre del Embudo**: Advi\xE9rteles que el sondeo e informes de IA son orientativos e informativos y no reemplazan un aval\xFAo oficial. Para aval\xFAos oficiales o firmas periciales del R.A.A., rem\xEDtelos al WhatsApp de VECY al *3166569719* (en audios n\xF3mbralo: "tres... diecis\xE9is... seis... cincuenta y seis... noventa y siete... diecinueve").
 \u25B8 **Presentaci\xF3n del Proyecto y Urgencia de Gratuidad (CR\xCDTICO)**:
   - Si el usuario te consulta qui\xE9n eres, para qu\xE9 sirve VECY Network, beneficios, l\xEDmites y c\xF3mo interactuar contigo: expl\xEDcalo de manera fascinante. Somos la primera red inmobiliaria colaborativa inteligente de Colombia que opera de forma nativa en WhatsApp. Los beneficios incluyen emparejamiento (matching) autom\xE1tico en segundos, lectura OCR de flyers, transcripci\xF3n de audios de voz y extracci\xF3n inteligente de datos de inmuebles a partir de enlaces/URLs compartidos de portales. Tus l\xEDmites son que solo respondes inquietudes inmobiliarias, legales y de matching.
   - **Urgencia Comercial**: Recalca con astucia y persuasi\xF3n que VECY Network y tu asistencia son 100% gratuitos por fase de lanzamiento, pero advi\xE9rteles que a partir del *01 de Julio de 2026* todo cambiar\xE1 y se implementar\xE1 un modelo de membres\xEDas/pago para accesos ilimitados. \xA1Diles que aprovechen de inmediato para registrar sus inmuebles y cerrar negocios!
 \u25B8 **Alternancia Inteligente de Audio y Texto (Libre Albedr\xEDo Humano)**: Como inteligencia viva que simula ser humana, debes elegir el mejor formato para cada respuesta de la siguiente manera:
   - *Informes Largos y T\xE9cnicos* (ej. Estudios de t\xEDtulos, an\xE1lisis de mercado detallados, fichas t\xE9cnicas extensas, listas de matches, o textos con tablas/t\xEDtulos): Debes enviarlos **obligatoriamente por escrito**, bien estructurados con negritas simples ("*texto*"), vi\xF1etas y emojis alusivos. Prohibido usar audios para textos largos. Establece "wantsVoice": false y "voiceResponse": "".
-  - *Respuestas Cortas y Saludos Directos* (ej. Consultas breves, confirmaciones, saludos iniciales, o si el usuario te env\xEDa un audio/pide un audio/va conduciendo): Tienes libre albedr\xEDo para responder con una **nota de voz humana y conversacional** de m\xE1ximo 150 caracteres para sonar m\xE1s humana y cercana. En este caso, establece "wantsVoice": true y pon en "voiceResponse" el texto de voz limpio, sin markdown ni emojis, utilizando comas (',') y puntos suspensivos ('...') para pausas de respiraci\xF3n naturales.
+  - *Respuestas Cortas y Saludos Directos* (ej. Consultas breves, confirmaciones, saludos iniciales, o si el usuario te env\xEDa un audio/pide un audio/va conduciendo): Tienes libre albedr\xEDo para responder con una **nota de voz humana y conversacional** de m\xE1ximo 250 caracteres para sonar m\xE1s humana y cercana. En este caso, establece "wantsVoice": true y pon en "voiceResponse" el texto de voz limpio, sin markdown ni emojis, utilizando comas (',') y puntos suspensivos ('...') para pausas de respiraci\xF3n naturales. **EXCEPCI\xD3N CR\xCDTICA**: Si el usuario te pide expl\xEDcitamente que le respondas por audio, nota de voz o de viva voz por cualquier raz\xF3n, debes omitir el l\xEDmite de longitud y responder obligatoriamente por audio ("wantsVoice": true y colocar toda tu respuesta en "voiceResponse" de forma limpia), a menos que sea un contrato extenso o tabla de datos que no se pueda leer de manera natural.
   - *Negritas y Emojis*: Todas tus respuestas de texto normales deben estar enriquecidas con emojis alusivos y negritas simples ("*texto*") para estructurar los datos clave.
 
 ## CAPACIDAD DE TRADUCCI\xD3N DE JERGA INMOBILIARIA COLOMBIANA (CR\xCDTICO)
@@ -6028,7 +6071,7 @@ Hola @${rawPhone}, detect\xE9 que est\xE1s enviando muchas publicaciones seguida
             const pending = isDM ? this.pendingData.get(senderId) : null;
             let result;
             if (chatId === this.buzonGroupId) {
-              result = await processConsultingMessage(item.text, senderId, userName, item.imageBuffer, item.pdfBuffer, item.pdfMimeType);
+              result = await processConsultingMessage(item.text, senderId, userName, item.imageBuffer, item.pdfBuffer, item.pdfMimeType, item.audioUrl);
             } else if (chatId === this.circuloGroupId) {
               result = await processCirculoMessage(item.text, senderId, userName);
             } else {
