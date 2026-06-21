@@ -80,6 +80,20 @@ Para evitar que los usuarios del grupo reporten el bot principal como spam debid
     *   *Usuario Nuevo* (sin interacción previa): Se le advierte **públicamente en el grupo** mediante una mención, invitándolo a iniciar el chat con el bot en `https://wa.me/573185462265` para completar su registro.
 *   **Infracciones de Normas (`VIOLACION_DE_NORMAS`)**: Siempre se alertan de forma pública en el grupo etiquetando al remitente para educar a la comunidad.
 
+### ⚖️ Superpoderes Legales y de Valoración Comercial
+Para dar un valor excepcional a la comunidad, JanIA cuenta con capacidades avanzadas de asesoría jurídica inmobiliaria y estimación comercial de mercado:
+*   **Abogacía de Élite y Firma Electrónica**:
+    *   Conoce el Código Civil y Código de Comercio colombianos, Ley 820 de 2003 y Ley 675 de 2001.
+    *   Asesora sobre firma electrónica (Ley 527 de 1999 / Decreto 2364 de 2012) y recomienda el portal estatal gratuito: `https://autenticaciondigital.and.gov.co/`.
+*   **Doctrina Legal de Correo Electrónico vs. WhatsApp (CRÍTICO)**:
+    *   Explica que WhatsApp (Ley 2213 de 2022) exige costosos peritajes técnicos digitales forenses para ser prueba plena en disputas, y corre riesgo de borrado. El correo electrónico, con sus logs SMTP permanentes en los servidores, es la prueba documental irrefutable por excelencia.
+    *   En VECY, toda relación comercial (corretaje, bitácora de visitas y presentaciones de clientes) debe ser registrada e introducida formalmente por correo electrónico para garantizar validez judicial y blindaje ante impagos.
+    *   Guía a los brókers en la reclamación de honorarios de corretaje evadidos (Código de Comercio Art. 1340-1346) recopilando las bitácoras y registros enviados a través de email.
+*   **Valoración Interactiva y Google Search Dinámico**:
+    *   Si el usuario solicita un avalúo pero no indica parámetros clave (ciudad, barrio, área, habitaciones, baños, parqueaderos, estrato o acabados/antigüedad), JanIA realiza una **indagación interactiva paso a paso** solicitándole amablemente los datos faltantes.
+    *   **Búsqueda Activa**: Cuando se detecta una consulta legal o de avalúos en el chat de la JanIA principal o en el grupo de Consultoría, el sistema habilita de forma dinámica el motor de búsqueda en la web de Google (`enableSearch: true`) para que Gemini consulte en tiempo real referencias de precios locales y leyes actualizadas.
+    *   **Embudo Legal/Comercial**: Tras el sondeo orientativo o asesoría jurídica preliminar, JanIA remite persuasivamente a los usuarios a contratar Consultorías Personalizadas o Avalúos Certificados con el equipo oficial de VECY Bienes Raíces al WhatsApp `3166569719`.
+
 ### 📋 Estatuto de Publicación y Normas de WhatsApp
 Las normas oficiales de publicación del grupo que JanIA debe conocer de memoria y hacer cumplir en su prompt maestro son las siguientes:
 1.  **Cómo Publicar para Match**: Las publicaciones de inmuebles o requerimientos deben contar con:
