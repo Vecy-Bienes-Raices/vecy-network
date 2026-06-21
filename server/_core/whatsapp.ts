@@ -124,15 +124,28 @@ async function getGoogleAccessToken(): Promise<string | null> {
 
 /** Prepara el texto para TTS: pronunciación natural en español */
 function prepareTtsText(rawText: string): string {
-  return rawText
-    .replace(/vecy\s+network|veci\s+network/gi, "besi network")   // "VECY/VECI Network" → "besi network" (sin tildes en inglés para evitar que el TTS diga "con acento agudo")
+  let cleanText = rawText
+    .replace(/vecy\s+network|veci\s+network/gi, "besi network")   // "VECY/VECI Network" → "besi network"
     .replace(/vecy|veci/gi, "besi")                                // "VECY/VECI" solo → "besi"
-    .replace(/jania/gi, "yánia")                                  // "JanIA" → "yánia" (pronunciación con 'y' y acento en la 'á', tal como prefiere el usuario)
+    .replace(/jania/gi, "yánia")                                  // "JanIA" → "yánia"
     .replace(/\bRLS\b/gi, "ere ele ese")
     .replace(/\bSQL\b/gi, "ese cu ele")
     .replace(/\bDM\b/gi, "di em")
-    .replace(/\bID\b/gi, "ai di")
-    .trim();
+    .replace(/\bID\b/gi, "ai di");
+
+  // Buscar números de teléfono celular de Colombia de 10 dígitos (que empiezan con 3)
+  // Permitimos opcionalmente el indicativo de país +57 o 57 al inicio
+  // y permitimos opcionalmente espacios o guiones entre los dígitos.
+  // Ejemplo: +57 318 546 2265, 318-546-2265, 3185462265
+  const phoneRegex = /(?:\+?57\s*)?(3\d{2})[\s-]?(\d{3})[\s-]?(\d{2})[\s-]?(\d{2})\b/g;
+  cleanText = cleanText.replace(phoneRegex, (match, p1, p2, p3, p4) => {
+    const firstDigit = p1.charAt(0); // "3"
+    const nextTwoDigits = p1.substring(1); // "18"
+    // Retornamos formateado con pausas: "3... 18... 546... 22... 65"
+    return `${firstDigit}... ${nextTwoDigits}... ${p2}... ${p3}... ${p4}`;
+  });
+
+  return cleanText.trim();
 }
 
 function escapeXml(unsafe: string): string {
