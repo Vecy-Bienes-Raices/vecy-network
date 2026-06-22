@@ -320,6 +320,130 @@ function buildIncompleteDataMessage(
   return `${intro}Estuve revisando el/la *${medio}* de tu *${propertyName}* que enviaste al grupo, pero mi sistema de lectura inteligente no alcanza a extraer cierta información clave del inmueble y me hace falta: *${missingStr}*.\n\n¿Me podrías indicar este dato por aquí para registrar tu publicación correctamente y buscarte un MATCH comercial de inmediato? 🚀🤝`;
 }
 
+function buildGroupIncompleteMessage(
+  text: string,
+  userId: string,
+  extracted: any
+): string {
+  const phone = userId.split('@')[0];
+  const propTypeRaw = (extracted?.propertyType || extracted?.tipoInmuebleDeseado || "inmueble").toLowerCase();
+  let propertyName = "inmueble";
+  if (propTypeRaw === "apartment") propertyName = "apartamento";
+  else if (propTypeRaw === "house") propertyName = "casa";
+  else if (propTypeRaw === "building") propertyName = "edificio";
+  else if (propTypeRaw === "warehouse") propertyName = "bodega";
+  else if (propTypeRaw === "office") propertyName = "oficina";
+  else if (propTypeRaw === "farm" || propTypeRaw === "finca") propertyName = "finca";
+  else if (propTypeRaw === "land" || propTypeRaw === "lote") propertyName = "lote";
+  else if (propTypeRaw === "consultorio") propertyName = "consultorio";
+  else if (propTypeRaw === "loft") propertyName = "loft";
+
+  const isRequirement = text.toLowerCase().includes("busco") || text.toLowerCase().includes("necesito") || text.toLowerCase().includes("requiero") || !!extracted?.tipoInmuebleDeseado;
+  const txTypeRaw = (extracted?.transactionType || extracted?.tipoNegocioDeseado || "venta").toLowerCase();
+
+  const missingList: string[] = [];
+
+  const city = isRequirement ? extracted?.ciudadDeseada : extracted?.city;
+  if (!city || city.trim() === "" || city.toLowerCase() === "na") {
+    missingList.push("la ciudad");
+  }
+
+  const zone = isRequirement ? (extracted?.zonaDeseada || extracted?.zone) : extracted?.zone;
+  if (!zone || zone.trim() === "" || zone.toLowerCase() === "na") {
+    missingList.push("el barrio exacto");
+  }
+
+  const price = isRequirement ? Number(extracted?.presupuestoMax || extracted?.price || 0) : Number(extracted?.price || 0);
+  if (!price || price <= 0) {
+    if (isRequirement) {
+      missingList.push("el presupuesto máximo");
+    } else {
+      if (txTypeRaw === "arriendo") {
+        missingList.push("el precio de arriendo");
+      } else if (txTypeRaw === "permuta") {
+        missingList.push("el valor de la permuta");
+      } else {
+        missingList.push("el precio de venta");
+      }
+    }
+  }
+
+  if (txTypeRaw === "arriendo" && !isRequirement) {
+    const hasAdminFee = extracted?.adminFee !== undefined && extracted?.adminFee !== null && Number(extracted.adminFee) >= 0;
+    const textHasAdmin = text.toLowerCase().includes("adm") || text.toLowerCase().includes("administra");
+    if (!hasAdminFee && !textHasAdmin) {
+      missingList.push("el valor de la administración");
+    }
+  }
+
+  const area = Number(extracted?.area || 0);
+  if (!area || area <= 0) {
+    if (propertyName === "finca") {
+      missingList.push("las hectáreas o fanegadas");
+    } else {
+      missingList.push("el metraje en metros cuadrados");
+    }
+  }
+
+  const stratum = Number(extracted?.stratum || 0);
+  if ((!stratum || stratum <= 0) && propertyName !== "finca" && propertyName !== "lote" && propertyName !== "bodega") {
+    missingList.push("el estrato");
+  }
+
+  if (propertyName === "apartamento" || propertyName === "casa" || propertyName === "loft" || propertyName === "inmueble") {
+    const bedrooms = Number(extracted?.bedrooms || 0);
+    if (!bedrooms || bedrooms <= 0) {
+      missingList.push("las habitaciones");
+    }
+    const bathrooms = Number(extracted?.bathrooms || 0);
+    if (!bathrooms || bathrooms <= 0) {
+      missingList.push("los baños");
+    }
+  }
+
+  const garages = extracted?.garages;
+  if ((garages === undefined || garages === null || garages < 0) && propertyName !== "lote") {
+    missingList.push("los garajes/parqueaderos");
+  }
+
+  if (propertyName === "apartamento" || propertyName === "oficina" || propertyName === "consultorio") {
+    const floor = extracted?.floorDetail;
+    if (!floor || floor.trim() === "" || floor.toUpperCase() === "NA") {
+      missingList.push("el piso");
+    }
+    const intExt = extracted?.interiorExterior;
+    if (!intExt || intExt.trim() === "" || intExt.toUpperCase() === "NA") {
+      missingList.push("si es interior o exterior");
+    }
+  } else if (propertyName === "casa" || propertyName === "edificio") {
+    const floor = extracted?.floorDetail;
+    if (!floor || floor.trim() === "" || floor.toUpperCase() === "NA") {
+      missingList.push("la cantidad de pisos");
+    }
+  } else if (propertyName === "bodega") {
+    const floor = extracted?.floorDetail;
+    if (!floor || floor.trim() === "" || floor.toUpperCase() === "NA") {
+      missingList.push("la altura útil");
+    }
+  }
+
+  if (missingList.length === 0) {
+    missingList.push("el barrio exacto");
+  }
+
+  let missingStr = "";
+  if (missingList.length === 1) {
+    missingStr = missingList[0];
+  } else if (missingList.length === 2) {
+    missingStr = `${missingList[0]} y ${missingList[1]}`;
+  } else {
+    const last = missingList.pop();
+    missingStr = `${missingList.join(", ")}, y ${last}`;
+  }
+
+  return `🤔 *¡PUBLICACIÓN INCOMPLETA!* 🤔\n\nHola @${phone}, noto que estás publicando un(a) *${propertyName}*, pero a tu mensaje le faltan datos importantes: *${missingStr}*.\n\nPara registrar tu oferta/requerimiento y buscarte un MATCH de inmediato, haz clic en este enlace para enviarme los datos por privado: 👇\n👉 https://wa.me/573185462265?text=${encodeURIComponent('Hola JanIA, aquí están los datos de mi publicación')}`;
+}
+
 // --- ANALIZADOR MORFOLÓGICO DE GÉNERO Y CORTESÍA (v11.70) ---
 function analyzeSender(name: string, userId: string, alreadyGreeted: boolean): { greeting: string; adj: string; courtesy: string } {
   const n = (name || "Colega").trim();
@@ -1273,37 +1397,79 @@ Por lo tanto, DEBES hacer lo siguiente:
     const isRequirement = result.classification === "REQUERIMIENTO";
     const isProperty = result.classification === "INMUEBLE";
 
-    // NUEVO: Bloquear publicaciones directas en chat privado / DM (Evitar desorden)
-    if ((isProperty || isRequirement) && !isGroup) {
-      return {
-        classification: "VIOLACION_DE_NORMAS",
-        response: `¡Hola, *${firstName}*! 😊✨ Ay, noto que estás intentando publicar una oferta o demanda de inmueble directamente por aquí, en nuestro chat privado. 🏠📲\n\nPara que todos los aliados de la red puedan ver tu propiedad o requerimiento y logremos cerrar ese negocio súper rápido, recuerda que es súper importante enviar estas publicaciones directamente en el grupo principal: *VECY INMUEBLES NETWORK* 👥🚀.\n\nPor aquí, en tu chat privado, estoy 100% disponible para responder a tus consultas sobre el sistema, dudas generales, o para ayudarte a confirmar tus MATCH bilaterales. 🤝🎯 ¡Muchas gracias por tu ayuda para mantener el orden en la red! 🤗🏡`,
-        shouldSendDM: false
-      };
+    // El procesamiento de ofertas y requerimientos se permite ahora tanto en grupos como en chat privado (DM)
+    // para que JanIA pueda registrar los inmuebles/búsquedas y buscar matches en la base de datos directamente desde el chat privado.
+
+    let isLLMIncomplete = result.classification === "DATOS_INCOMPLETOS";
+
+    // Forzar clasificación DATOS_INCOMPLETOS si faltan datos clave según las mismas reglas de buildIncompleteDataMessage
+    if (isProperty || isRequirement) {
+      const isReq = isRequirement || messageToProcess.toLowerCase().includes("busco") || messageToProcess.toLowerCase().includes("necesito") || messageToProcess.toLowerCase().includes("requiero") || !!extracted?.tipoInmuebleDeseado;
+      const propTypeRaw = (extracted?.propertyType || extracted?.tipoInmuebleDeseado || "inmueble").toLowerCase();
+      let propertyName = "inmueble";
+      if (propTypeRaw === "apartment") propertyName = "apartamento";
+      else if (propTypeRaw === "house") propertyName = "casa";
+      else if (propTypeRaw === "building") propertyName = "edificio";
+      else if (propTypeRaw === "warehouse") propertyName = "bodega";
+      else if (propTypeRaw === "office") propertyName = "oficina";
+      else if (propTypeRaw === "farm" || propTypeRaw === "finca") propertyName = "finca";
+      else if (propTypeRaw === "land" || propTypeRaw === "lote") propertyName = "lote";
+      else if (propTypeRaw === "consultorio") propertyName = "consultorio";
+      else if (propTypeRaw === "loft") propertyName = "loft";
+
+      const city = isReq ? extracted?.ciudadDeseada : extracted?.city;
+      const zone = isReq ? (extracted?.zonaDeseada || extracted?.zone) : extracted?.zone;
+      const price = isReq ? Number(extracted?.presupuestoMax || extracted?.price || 0) : Number(extracted?.price || 0);
+      const area = Number(extracted?.area || 0);
+
+      const hasMissingCity = !city || city.trim() === "" || city.toLowerCase() === "na";
+      const hasMissingZone = !zone || zone.trim() === "" || zone.toLowerCase() === "na";
+      const hasMissingPrice = !price || price <= 0;
+      const hasMissingArea = !area || area <= 0;
+      
+      let hasMissingBedrooms = false;
+      let hasMissingBathrooms = false;
+      if (propertyName === "apartamento" || propertyName === "casa" || propertyName === "loft" || propertyName === "inmueble") {
+        const bedrooms = Number(extracted?.bedrooms || 0);
+        hasMissingBedrooms = !bedrooms || bedrooms <= 0;
+        const bathrooms = Number(extracted?.bathrooms || 0);
+        hasMissingBathrooms = !bathrooms || bathrooms <= 0;
+      }
+
+      if (hasMissingCity || hasMissingZone || hasMissingPrice || hasMissingArea || hasMissingBedrooms || hasMissingBathrooms) {
+        isLLMIncomplete = true;
+        result.classification = "DATOS_INCOMPLETOS";
+      }
     }
 
-    const isLLMIncomplete = result.classification === "DATOS_INCOMPLETOS";
-
     if (isLLMIncomplete) {
-      result.shouldSendDM = true;
-      result.dmShouldReply = true;
-      result.response = "";
-
       const inferredType = (messageToProcess.toLowerCase().includes("vendo") || messageToProcess.toLowerCase().includes("ofrezco") || messageToProcess.toLowerCase().includes("arriendo") || !!extracted?.propertyType) ? "PROPERTY" : "REQUIREMENT";
-      
-      const firstName = realName.split(' ')[0];
-      const customIntro = `¡Hola, *${firstName}*! 😊 `;
 
-      result.dmResponse = buildIncompleteDataMessage(
-        messageToProcess,
-        hasMedia,
-        scrapedData,
-        imageBuffer,
-        pdfBuffer,
-        extracted,
-        false,
-        customIntro
-      );
+      if (isGroup) {
+        // En el grupo se publica una advertencia pública etiquetando al usuario y dándole un link para opt-in por interno
+        result.response = buildGroupIncompleteMessage(messageToProcess, userId, extracted);
+        result.shouldSendDM = false;
+        result.dmResponse = "";
+      } else {
+        // En chat privado (DM) se le asiste de forma directa preguntando por los datos faltantes
+        result.shouldSendDM = true;
+        result.dmShouldReply = true;
+        result.response = "";
+
+        const firstName = realName.split(' ')[0];
+        const customIntro = `¡Hola, *${firstName}*! 😊 `;
+
+        result.dmResponse = buildIncompleteDataMessage(
+          messageToProcess,
+          hasMedia,
+          scrapedData,
+          imageBuffer,
+          pdfBuffer,
+          extracted,
+          false,
+          customIntro
+        );
+      }
 
       await setPendingSession(userId, {
         type: inferredType,

@@ -1928,7 +1928,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
     }
 
     // Notificación en el grupo o DM (evitando duplicar si se procesará abajo en shouldSendDM)
-    const shouldSendGroup = isGroup && (isMatch || isConsultation || isViolation);
+    const shouldSendGroup = isGroup && (isMatch || isConsultation || isViolation || result.classification === "DATOS_INCOMPLETOS");
     const shouldSendDMDirect = !isGroup && !result.shouldSendDM;
 
     const textToDeliver = result.response || "";
@@ -2001,8 +2001,10 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         let reaction = result.reactionEmoji;
         
         const isBuzonOrCirculo = chatId === this.buzonGroupId || chatId === this.circuloGroupId;
-        if ((result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO" || result.classification === "DATOS_INCOMPLETOS") && !isBuzonOrCirculo) {
+        if ((result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO") && !isBuzonOrCirculo) {
           reaction = '✅';
+        } else if (result.classification === "DATOS_INCOMPLETOS" && !isBuzonOrCirculo) {
+          reaction = '🤔';
         } else if ((result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO" || result.classification === "AVALUO_O_LEGAL" || result.classification === "SOBRE_VECY") && isBuzonOrCirculo) {
           reaction = '🔄';
         } else if (result.classification === "VIOLACION_DE_NORMAS") {
