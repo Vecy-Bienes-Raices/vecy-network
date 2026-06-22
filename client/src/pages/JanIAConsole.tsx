@@ -539,12 +539,13 @@ export default function JanIAConsole() {
 
   const renderMessageContent = (content: string) => {
     if (!content) return null;
-    const parts = content.split(/(\*\*.*?\*\*)/g);
+    const unifiedContent = content.replace(/\*\*/g, '*');
+    const parts = unifiedContent.split(/(\*[^*\n]+?\*)/g);
     return parts.map((part, index) => {
-      if (part.startsWith('**') && part.endsWith('**')) {
+      if (part.startsWith('*') && part.endsWith('*') && part.length > 2) {
         return (
           <strong key={index} className="font-bold text-accent">
-            {part.slice(2, -2)}
+            {part.slice(1, -1)}
           </strong>
         );
       }
