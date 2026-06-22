@@ -600,7 +600,7 @@ export class JaniaMatchBot {
   }
 
   // --- ENVÍO LOCAL (Solo para respuestas directas permitidas) ---
-  private async queuedSend(chatId: string, content: any, options: any = {}) {
+  public async queuedSend(chatId: string, content: any, options: any = {}) {
     outgoingQueue = outgoingQueue.then(async () => {
       try {
         await this.client.sendMessage(chatId, content, options);

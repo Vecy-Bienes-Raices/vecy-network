@@ -1445,30 +1445,30 @@ Por lo tanto, DEBES hacer lo siguiente:
     if (isLLMIncomplete) {
       const inferredType = (messageToProcess.toLowerCase().includes("vendo") || messageToProcess.toLowerCase().includes("ofrezco") || messageToProcess.toLowerCase().includes("arriendo") || !!extracted?.propertyType) ? "PROPERTY" : "REQUIREMENT";
 
+      const firstName = realName.split(' ')[0];
+      const customIntro = `¡Hola, *${firstName}*! 😊 `;
+
+      // Generar el mensaje de DM privado por si acaso (ej. si el usuario es conocido y se decide moderación privada)
+      result.dmResponse = buildIncompleteDataMessage(
+        messageToProcess,
+        hasMedia,
+        scrapedData,
+        imageBuffer,
+        pdfBuffer,
+        extracted,
+        false,
+        customIntro
+      );
+
       if (isGroup) {
         // En el grupo se publica una advertencia pública etiquetando al usuario y dándole un link para opt-in por interno
         result.response = buildGroupIncompleteMessage(messageToProcess, userId, extracted);
         result.shouldSendDM = false;
-        result.dmResponse = "";
       } else {
         // En chat privado (DM) se le asiste de forma directa preguntando por los datos faltantes
         result.shouldSendDM = true;
         result.dmShouldReply = true;
         result.response = "";
-
-        const firstName = realName.split(' ')[0];
-        const customIntro = `¡Hola, *${firstName}*! 😊 `;
-
-        result.dmResponse = buildIncompleteDataMessage(
-          messageToProcess,
-          hasMedia,
-          scrapedData,
-          imageBuffer,
-          pdfBuffer,
-          extracted,
-          false,
-          customIntro
-        );
       }
 
       await setPendingSession(userId, {

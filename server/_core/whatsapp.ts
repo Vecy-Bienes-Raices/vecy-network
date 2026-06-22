@@ -581,8 +581,22 @@ export class WhatsAppBot {
         // Promesa de envío con timeout de 15 segundos para evitar bloqueos por chats inaccesibles o páginas caídas
         let sendPromise;
         if (shouldUseCloud) {
-          const { sendCloudMessage } = await import("./whatsapp-cloud");
-          sendPromise = sendCloudMessage(chatId, content, options);
+          if (isGroup) {
+            // Si es un grupo y estamos usando Cloud API, el bot principal no tiene Puppeteer activo para grupos.
+            // Delegamos el envío al bot de Match (janiaMatchBot) que sí tiene Puppeteer activo para grupos.
+            console.log(`[WHATSAPP-BOT] Delegando mensaje de grupo ${chatId} a JanIA Match Bot (Puppeteer)...`);
+            const { janiaMatchBot } = await import("./whatsapp-match");
+            if (janiaMatchBot && janiaMatchBot.isReady) {
+              sendPromise = janiaMatchBot.queuedSend(chatId, content, options);
+            } else {
+              console.warn(`[WHATSAPP-BOT] JanIA Match Bot no está listo. Intentando con Cloud API (fallará)...`);
+              const { sendCloudMessage } = await import("./whatsapp-cloud");
+              sendPromise = sendCloudMessage(chatId, content, options);
+            }
+          } else {
+            const { sendCloudMessage } = await import("./whatsapp-cloud");
+            sendPromise = sendCloudMessage(chatId, content, options);
+          }
         } else {
           sendPromise = this.client.sendMessage(chatId, content, options);
         }
