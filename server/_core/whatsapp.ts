@@ -163,7 +163,7 @@ function escapeXml(unsafe: string): string {
   });
 }
 
-export async function textToSpeechMedia(text: string): Promise<any> {
+export async function textToSpeechMedia(text: string, format: "OGG_OPUS" | "MP3" = "OGG_OPUS"): Promise<any> {
   // Limpiar markdown y emojis
   const cleanText = text
     .replace(/[*#_`~\[\]]/g, "")
@@ -232,12 +232,12 @@ export async function textToSpeechMedia(text: string): Promise<any> {
         const requestBody = {
           audioConfig: modelName
             ? {
-                audioEncoding: "OGG_OPUS",
+                audioEncoding: format,
                 pitch: 0,
                 speakingRate: 1.1
               }
             : {
-                audioEncoding: "OGG_OPUS",
+                audioEncoding: format,
                 speakingRate: 1.0,
                 ...(usePitch ? { pitch: 0.0 } : {})
               },
@@ -258,9 +258,10 @@ export async function textToSpeechMedia(text: string): Promise<any> {
         if (response.ok) {
           const data = await response.json() as { audioContent: string };
           if (data.audioContent) {
-            console.log(`[TTS-Google] ✓ Voz "${name}" OGG_OPUS generada (${ttsText.length} chars).`);
-            // audio/ogg; codecs=opus → WhatsApp lo reproduce sin necesitar ffmpeg
-            return new MessageMedia('audio/ogg; codecs=opus', data.audioContent, 'voice-note.ogg');
+            console.log(`[TTS-Google] ✓ Voz "${name}" ${format} generada (${ttsText.length} chars).`);
+            const mimeType = format === "MP3" ? "audio/mpeg" : "audio/ogg; codecs=opus";
+            const filename = format === "MP3" ? "voice-note.mp3" : "voice-note.ogg";
+            return new MessageMedia(mimeType, data.audioContent, filename);
           }
         } else {
           const errBody = await response.text().catch(() => "");
@@ -291,6 +292,10 @@ export async function textToSpeechMedia(text: string): Promise<any> {
       });
       if (response.ok) {
         const buffer = await response.arrayBuffer();
+        if (format === "MP3") {
+          const base64Data = Buffer.from(buffer).toString('base64');
+          return new MessageMedia('audio/mpeg', base64Data, 'voice-note.mp3');
+        }
         try {
           const oggBuffer = await transcodeToOggOpus(Buffer.from(buffer));
           const base64Ogg = oggBuffer.toString('base64');
@@ -340,6 +345,9 @@ export async function textToSpeechMedia(text: string): Promise<any> {
     if (buffers.length > 0) {
       const combined = Buffer.concat(buffers);
       console.log(`[TTS-Translate] Voz Google Translate generada (fallback).`);
+      if (format === "MP3") {
+        return new MessageMedia('audio/mpeg', combined.toString('base64'), 'voice-note.mp3');
+      }
       try {
         const oggBuffer = await transcodeToOggOpus(combined);
         const base64Ogg = oggBuffer.toString('base64');

@@ -192,14 +192,14 @@ async function startServer() {
         return res.status(400).send("Falta el parámetro 'text'");
       }
 
-      const media = await textToSpeechMedia(text);
+      // Por defecto para la web pedimos MP3 para compatibilidad HTML5 universal
+      const format = (req.query.format as string) === "ogg" ? "OGG_OPUS" : "MP3";
+      const media = await textToSpeechMedia(text, format);
       if (!media) {
         return res.status(500).send("No se pudo generar el audio");
       }
 
       const buffer = Buffer.from(media.data, "base64");
-      // Preservamos el mimetype completo incluyendo codecs (ej: "audio/ogg; codecs=opus")
-      // ya que el navegador necesita la info del codec para reproducir OGG/Opus correctamente
       res.setHeader("Content-Type", media.mimetype);
       res.setHeader("Content-Length", buffer.length);
       res.send(buffer);
