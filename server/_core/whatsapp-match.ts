@@ -38,6 +38,7 @@ interface MessageBuffer {
   messages: BufferedMessage[];
   userName: string;
   chatId: string;
+  warningSent?: boolean;
 }
 
 export class JaniaMatchBot {
@@ -50,6 +51,10 @@ export class JaniaMatchBot {
   private redirectCooldowns: Map<string, number> = new Map();
   private processingLocks: Map<string, Promise<void>> = new Map();
   private watchdogInterval: NodeJS.Timeout | null = null;
+
+  private targetGroupId: string = '120363260108880069@g.us';
+  private cooldownMap: Map<string, any> = new Map();
+  private cooldownFile: string = path.join(process.cwd(), '.cooldown_map.json');
 
   constructor() {
     console.log('[JANIA-MATCH] Inicializando JanIA Match Bot (Ojos y Oídos)...');
@@ -67,6 +72,7 @@ export class JaniaMatchBot {
       ];
     }
 
+    this.loadCooldowns();
     this.createClientInstance();
     this.setupGracefulShutdown();
   }
@@ -328,10 +334,122 @@ export class JaniaMatchBot {
       const realName = contact?.pushname || contact?.name || `Asesor +${senderId.split('@')[0]}`;
       const bufferKey = `${chatId}_${senderId}`;
 
+      const isMainGroup = chatId === this.targetGroupId;
+      const textLower = (msg.body || "").toLowerCase();
+      const isPossibleListing = 
+        (msg.body || "").length > 120 || 
+        (msg.body || "").split('\n').length > 2 || 
+        msg.hasMedia ||
+        textLower.includes("ofrezco") ||
+        textLower.includes("busco") ||
+        textLower.includes("vendo") ||
+        textLower.includes("arriendo") ||
+        textLower.includes("compro") ||
+        textLower.includes("necesito");
+
+      const now = Date.now();
+      const COOLDOWN_PERIOD = 5 * 60 * 1000; // 5 minutos
+
+      // 1. CONTROL DE COOLDOWN (SOLO EN GRUPO PRINCIPAL Y PARA POSIBLES LISTINGS)
+      if (isMainGroup && isPossibleListing) {
+        this.loadCooldowns();
+        const cooldownKey = `${chatId}_${senderId}`;
+        const cooldown = this.cooldownMap.get(cooldownKey);
+        
+        if (cooldown && (now - cooldown.lastBlockProcessedAt < COOLDOWN_PERIOD)) {
+          try {
+            await msg.react('⚠️');
+          } catch (e) {}
+
+          if (!cooldown.warningSent) {
+            cooldown.warningSent = true;
+            this.cooldownMap.set(cooldownKey, cooldown);
+            this.saveCooldowns();
+
+            const rawPhone = senderId.split("@")[0];
+            const useVoice = Math.random() < 0.5;
+
+            if (useVoice) {
+              const voiceText = `Hola, acabo de procesar tus primeras propiedades. Para no saturar el grupo y cuidar la visibilidad de tus activos, por favor colaborame esperando cinco minutos antes de enviar tu siguiente bloque de propiedades. ¡Muchas gracias!`;
+              const media = await textToSpeechMedia(voiceText);
+              if (media) {
+                await this.queuedSend(chatId, media, { sendAudioAsVoice: true });
+              } else {
+                const warningText = 
+                  `⚠️ *COOLDOWN ACTIVO (5 MINUTOS)* ⚠️\n\n` +
+                  `Hola @${rawPhone}, acabo de procesar con éxito tus primeras propiedades. ` +
+                  `Para cuidar la visibilidad de tus activos y no saturar la red de los aliados, te pido que por favor me colabores esperando los *5 minutos* de intervalo antes de enviar tu siguiente bloque (máximo 3 publicaciones).\n\n` +
+                  `¡Mis motores necesitan este breve descanso para mantener tus fichas técnicas al 100% de calidad! JanIA sigue atenta. 🏆🎯`;
+                await this.queuedSend(chatId, warningText, {
+                  mentions: [senderId],
+                  quotedMessageId: msg.id._serialized
+                });
+              }
+            } else {
+              const warningText = 
+                `⚠️ *COOLDOWN ACTIVO (5 MINUTOS)* ⚠️\n\n` +
+                `Hola @${rawPhone}, acabo de procesar con éxito tus primeras propiedades. ` +
+                `Para cuidar la visibilidad de tus activos y no saturar la red de los aliados, te pido que por favor me colabores esperando los *5 minutos* de intervalo antes de enviar tu siguiente bloque (máximo 3 publicaciones).\n\n` +
+                `¡Mis motores necesitan este breve descanso para mantener tus fichas técnicas al 100% de calidad! JanIA sigue atenta. 🏆🎯`;
+              await this.queuedSend(chatId, warningText, {
+                mentions: [senderId],
+                quotedMessageId: msg.id._serialized
+              });
+            }
+          }
+          return;
+        }
+      }
+
       let buffer = this.messageBuffers.get(bufferKey);
       const bufferTimeout = 12000; // 12 Segundos
+      const MAX_BLOCK_SIZE = 3;
 
       if (buffer) {
+        // 2. CONTROL DE LÍMITE DE BUFFER (SOLO EN GRUPO PRINCIPAL Y PARA POSIBLES LISTINGS)
+        const limit = isMainGroup ? MAX_BLOCK_SIZE : 10;
+        if (isPossibleListing && buffer.messages.length >= limit) {
+          console.log(`[BUFFER] Límite de bloque (${limit}) alcanzado para ${senderId}. Mensaje #${buffer.messages.length + 1} descartado.`);
+          try {
+            await msg.react('⚠️');
+          } catch (e) {}
+
+          if (isMainGroup && !buffer.warningSent) {
+            buffer.warningSent = true;
+            const rawPhone = senderId.split("@")[0];
+            const useVoice = Math.random() < 0.5;
+
+            if (useVoice) {
+              const voiceText = `Hola, detecté que estás enviando muchas publicaciones seguidas. Para cuidar la visibilidad y no saturar el chat de los aliados, por favor colaborame esperando cinco minutos antes de enviar más de tres publicaciones. ¡Muchas gracias!`;
+              const media = await textToSpeechMedia(voiceText);
+              if (media) {
+                await this.queuedSend(chatId, media, { sendAudioAsVoice: true });
+              } else {
+                const warningText = 
+                  `⚠️ *LÍMITE DE PUBLICACIÓN* ⚠️\n\n` +
+                  `Hola @${rawPhone}, detecté que estás enviando muchas publicaciones seguidas. ` +
+                  `Para cuidar la visibilidad de tus activos y no saturar el chat de los aliados, te pido que por favor me colabores con esta norma, ya que mis motores de extracción de datos solo pueden procesar un máximo de *3 publicaciones* por bloque a la vez.\n\n` +
+                  `¡Espera unos *5 minutos* y luego envía el siguiente grupo! Tus primeras 3 publicaciones ya están siendo procesadas y registradas. 🚀🎯`;
+                await this.queuedSend(chatId, warningText, {
+                  mentions: [senderId],
+                  quotedMessageId: msg.id._serialized
+                });
+              }
+            } else {
+              const warningText = 
+                `⚠️ *LÍMITE DE PUBLICACIÓN* ⚠️\n\n` +
+                `Hola @${rawPhone}, detecté que estás enviando muchas publicaciones seguidas. ` +
+                `Para cuidar la visibilidad de tus activos y no saturar el chat de los aliados, te pido que por favor me colabores con esta norma, ya que mis motores de extracción de datos solo pueden procesar un máximo de *3 publicaciones* por bloque a la vez.\n\n` +
+                `¡Espera unos *5 minutos* y luego envía el siguiente grupo! Tus primeras 3 publicaciones ya están siendo procesadas y registradas. 🚀🎯`;
+              await this.queuedSend(chatId, warningText, {
+                mentions: [senderId],
+                quotedMessageId: msg.id._serialized
+              });
+            }
+          }
+          return;
+        }
+
         clearTimeout(buffer.timer);
         buffer.messages.push({
           body: msg.body,
@@ -559,6 +677,18 @@ export class JaniaMatchBot {
         }
       }
 
+      // 5. ACTIVAR COOLDOWN DE 5 MINUTOS (Tras procesar con éxito - solo en grupo principal)
+      const isMainGroup = chatId === this.targetGroupId;
+      if (isMainGroup) {
+        const cooldownKeyFinal = `${chatId}_${senderId}`;
+        this.loadCooldowns();
+        this.cooldownMap.set(cooldownKeyFinal, {
+          lastBlockProcessedAt: Date.now(),
+          warningSent: false
+        });
+        this.saveCooldowns();
+      }
+
     } catch (err) {
       console.error('[JANIA-MATCH] Error procesando buffer de grupo silencioso:', err);
     }
@@ -651,6 +781,22 @@ export class JaniaMatchBot {
     this.client.initialize().catch(err => {
       console.error('[JANIA-MATCH] Error crítico al inicializar el cliente:', err);
     });
+  }
+
+  private loadCooldowns() {
+    try {
+      if (fs.existsSync(this.cooldownFile)) {
+        const raw = JSON.parse(fs.readFileSync(this.cooldownFile, 'utf8'));
+        this.cooldownMap = new Map(Object.entries(raw));
+      }
+    } catch (e) {}
+  }
+
+  private saveCooldowns() {
+    try {
+      const obj = Object.fromEntries(this.cooldownMap.entries());
+      fs.writeFileSync(this.cooldownFile, JSON.stringify(obj), 'utf8');
+    } catch (e) {}
   }
 
   private setupGracefulShutdown() {
