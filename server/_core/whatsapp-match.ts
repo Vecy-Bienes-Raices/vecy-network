@@ -407,9 +407,67 @@ export class JaniaMatchBot {
 
       if (buffer) {
         // 2. CONTROL DE LÍMITE DE BUFFER (SOLO EN GRUPO PRINCIPAL Y PARA POSIBLES LISTINGS)
+        
+        // A. Validar si intentan enviar una SEGUNDA propiedad en el mismo bloque de 12 segundos
+        const hasExistingListing = buffer.messages.some(m => {
+          const bodyLower = (m.body || "").toLowerCase();
+          return (m.body || "").length > 120 || 
+                 (m.body || "").split('\n').length > 2 || 
+                 m.hasMedia ||
+                 bodyLower.includes("ofrezco") ||
+                 bodyLower.includes("busco") ||
+                 bodyLower.includes("vendo") ||
+                 bodyLower.includes("arriendo") ||
+                 bodyLower.includes("compro") ||
+                 bodyLower.includes("necesito");
+        });
+
+        if (isMainGroup && isPossibleListing && hasExistingListing) {
+          console.log(`[BUFFER] Intento de múltiple propiedad detectado para ${senderId}. Mensaje descartado.`);
+          try {
+            await msg.react('⚠️');
+          } catch (e) {}
+
+          if (!buffer.warningSent) {
+            buffer.warningSent = true;
+            const rawPhone = senderId.split("@")[0];
+            const useVoice = Math.random() < 0.5;
+
+            if (useVoice) {
+              const voiceText = `Hola, detecté que estás enviando varias propiedades al mismo tiempo. Mi sistema está diseñado para procesar un solo inmueble por bloque. Por favor, envía cada propiedad en un mensaje separado y espera cinco minutos entre cada una para poder registrarla correctamente. ¡Muchas gracias!`;
+              const media = await textToSpeechMedia(voiceText);
+              if (media) {
+                await this.queuedSend(chatId, media, { sendAudioAsVoice: true });
+              } else {
+                const warningText = 
+                  `⚠️ *UN INMUEBLE A LA VEZ* ⚠️\n\n` +
+                  `Hola @${rawPhone}, detecté que estás enviando varias propiedades en el mismo bloque.\n\n` +
+                  `Mi sistema está diseñado para procesar únicamente *un (1) solo inmueble* por mensaje. Si envías varios al mismo tiempo, quedarán sin registrar en la base de datos y no podré buscarte coincidencias (matches) automáticas.\n\n` +
+                  `Por favor, envía cada propiedad por separado y espera los *5 minutos* de cooldown reglamentarios entre cada una. ¡Tus primeras publicaciones ya están siendo procesadas! 🚀🎯`;
+                await this.queuedSend(chatId, warningText, {
+                  mentions: [senderId],
+                  quotedMessageId: msg.id._serialized
+                });
+              }
+            } else {
+              const warningText = 
+                `⚠️ *UN INMUEBLE A LA VEZ* ⚠️\n\n` +
+                `Hola @${rawPhone}, detecté que estás enviando varias propiedades en el mismo bloque.\n\n` +
+                `Mi sistema está diseñado para procesar únicamente *un (1) solo inmueble* por mensaje. Si envías varios al mismo tiempo, quedarán sin registrar en la base de datos y no podré buscarte coincidencias (matches) automáticas.\n\n` +
+                `Por favor, envía cada propiedad por separado y espera los *5 minutos* de cooldown reglamentarios entre cada una. ¡Tus primeras publicaciones ya están siendo procesadas! 🚀🎯`;
+              await this.queuedSend(chatId, warningText, {
+                mentions: [senderId],
+                quotedMessageId: msg.id._serialized
+              });
+            }
+          }
+          return;
+        }
+
+        // B. Límite físico de mensajes en el buffer (inundación / flood)
         const limit = isMainGroup ? MAX_BLOCK_SIZE : 10;
-        if (isPossibleListing && buffer.messages.length >= limit) {
-          console.log(`[BUFFER] Límite de bloque (${limit}) alcanzado para ${senderId}. Mensaje #${buffer.messages.length + 1} descartado.`);
+        if (buffer.messages.length >= limit) {
+          console.log(`[BUFFER] Límite de mensajes del bloque (${limit}) alcanzado para ${senderId}. Mensaje #${buffer.messages.length + 1} descartado.`);
           try {
             await msg.react('⚠️');
           } catch (e) {}
@@ -420,7 +478,7 @@ export class JaniaMatchBot {
             const useVoice = Math.random() < 0.5;
 
             if (useVoice) {
-              const voiceText = `Hola, detecté que estás enviando muchas publicaciones seguidas. Para cuidar la visibilidad y no saturar el chat de los aliados, por favor colaborame esperando cinco minutos antes de enviar más de tres publicaciones. ¡Muchas gracias!`;
+              const voiceText = `Hola, veo que estás enviando muchas publicaciones seguidas. Para cuidar la visibilidad y no saturar el chat de los aliados, por favor colaborame esperando cinco minutos antes de enviar más de tres publicaciones. ¡Muchas gracias!`;
               const media = await textToSpeechMedia(voiceText);
               if (media) {
                 await this.queuedSend(chatId, media, { sendAudioAsVoice: true });
