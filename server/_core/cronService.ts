@@ -113,8 +113,8 @@ Dirección obligatoria:
     timezone: 'America/Bogota'
   });
 
-  // 2. 06:00 PM = Mensaje Dinámico de Motivación de la Tarde por Grupo (Lunes y Miércoles en Zona Horaria Colombia)
-  cron.schedule('0 18 * * 1,3', async () => {
+  // 2. 06:00 PM = Mensaje Dinámico de Motivación de la Tarde por Grupo (Lunes y Sábados en Zona Horaria Colombia)
+  cron.schedule('0 18 * * 1,6', async () => {
     console.log('[CRON-SERVICE] Generando y enviando Mensajes Segmentados de la Tarde...');
     
     // --- GRUPO 1: VECY INMUEBLES NETWORK ---
