@@ -27,8 +27,8 @@ import {
 export function initCronScheduler() {
   console.log('[CRON-SERVICE] Inicializando orquestador de agendas automatizadas (Modo Optimizado segmentado por grupo)...');
 
-  // 1. 09:30 AM = Mensajes Dinámicos Informativos de la Mañana por Grupo
-  cron.schedule('30 9 * * *', async () => {
+  // 1. 09:30 AM = Mensajes Dinámicos Informativos de la Mañana por Grupo (Martes y Jueves en Zona Horaria Colombia)
+  cron.schedule('30 9 * * 2,4', async () => {
     console.log('[CRON-SERVICE] Generando y enviando Mensajes Segmentados de la Mañana...');
     
     // --- GRUPO 1: VECY INMUEBLES NETWORK ---
@@ -109,10 +109,12 @@ Dirección obligatoria:
     } catch (e: any) {
       console.error('❌ Error al generar mensaje matutino para Círculo Cero:', e.message);
     }
+  }, {
+    timezone: 'America/Bogota'
   });
 
-  // 2. 06:00 PM = Mensaje Dinámico de Motivación de la Tarde por Grupo
-  cron.schedule('0 18 * * *', async () => {
+  // 2. 06:00 PM = Mensaje Dinámico de Motivación de la Tarde por Grupo (Lunes y Miércoles en Zona Horaria Colombia)
+  cron.schedule('0 18 * * 1,3', async () => {
     console.log('[CRON-SERVICE] Generando y enviando Mensajes Segmentados de la Tarde...');
     
     // --- GRUPO 1: VECY INMUEBLES NETWORK ---
@@ -184,18 +186,13 @@ Dirección obligatoria:
     } catch (e: any) {
       console.error('❌ Error al generar mensaje de la tarde para Círculo Cero:', e.message);
     }
+  }, {
+    timezone: 'America/Bogota'
   });
 
-  // 3. 12:30 PM = Audios Motivadores e Interactivos Dinámicos (Mensajes de Voz - Día de por medio)
-  cron.schedule('30 12 * * *', async () => {
-    // Día de por medio utilizando los días transcurridos desde la época UNIX
-    const daysSinceEpoch = Math.floor(Date.now() / (1000 * 60 * 60 * 24));
-    if (daysSinceEpoch % 2 !== 0) {
-      console.log('[CRON-SERVICE] Día de por medio: Hoy no corresponde el envío de Audios Motivadores.');
-      return;
-    }
-
-    console.log('[CRON-SERVICE] Iniciando envío de Audios Motivadores (Día de por medio) a las 12:30 PM...');
+  // 3. 12:30 PM = Audios Motivadores e Interactivos Dinámicos (Mensajes de Voz - Miércoles y Viernes en Zona Horaria Colombia)
+  cron.schedule('30 12 * * 3,5', async () => {
+    console.log('[CRON-SERVICE] Iniciando envío de Audios Motivadores (Bi-semanal) a las 12:30 PM...');
     
     // Lista de temáticas solicitadas por el usuario para alternar/incluir en los audios motivadores
     const tematicas = [
@@ -269,6 +266,8 @@ Dirección obligatoria:
         console.error(`❌ Error al generar audio motivador para grupo ${grupo.nombre}:`, err.message || err);
       }
     }
+  }, {
+    timezone: 'America/Bogota'
   });
 }
 
