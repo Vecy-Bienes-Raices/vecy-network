@@ -157,6 +157,24 @@ async function startServer() {
     }
   });
 
+  app.get("/api/match-qr-screenshot", async (req, res) => {
+    try {
+      const { janiaMatchBot } = await import("./whatsapp-match");
+      if (!janiaMatchBot || !(janiaMatchBot as any).client) {
+        return res.status(503).send("El bot de Match no está inicializado.");
+      }
+      const page = (janiaMatchBot as any).client.pupPage;
+      if (!page) {
+        return res.status(503).send("La página de Puppeteer del bot de Match no está lista.");
+      }
+      const screenshot = await page.screenshot({ type: "png" });
+      res.setHeader("Content-Type", "image/png");
+      res.send(screenshot);
+    } catch (err: any) {
+      res.status(500).send(err.message);
+    }
+  });
+
   app.get("/api/send-comeback", (req, res) => {
     try {
       if (!whatsappBot.isReady) {
