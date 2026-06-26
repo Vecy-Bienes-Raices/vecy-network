@@ -2307,8 +2307,9 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
   public async sendVoiceToGroup(text: string, groupId?: string) {
     try {
       const target = groupId || this.targetGroupId;
+      const cleaned = cleanVoiceText(text);
       console.log(`[WHATSAPP-BOT] Generando nota de voz para enviar al grupo ${target}...`);
-      const voiceMedia = await textToSpeechMedia(text);
+      const voiceMedia = await textToSpeechMedia(cleaned);
       if (voiceMedia) {
         try {
           const chatInstance = await this.client.getChatById(target);
@@ -2319,7 +2320,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         console.log(`[WHATSAPP-BOT] ✓ Nota de voz enviada al grupo ${target}.`);
       } else {
         console.warn(`[WHATSAPP-BOT] TTS falló para el grupo ${target}, enviando texto.`);
-        await this.queuedSend(target, text);
+        await this.queuedSend(target, cleaned);
       }
     } catch (e) {
       console.error('[WHATSAPP-BOT] Error enviando nota de voz al grupo:', e);
@@ -2631,7 +2632,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         const response1 = await invokeLLM({
           messages: [
             { role: 'system', content: 'Eres JanIA, la asistente de voz e inteligencia artificial de la red inmobiliaria colaborativa VECY Network. Te expresas de manera natural, humana, cálida y profesional.' },
-            { role: 'user', content: `${grupo.promptCierre}\n- IMPORTANTE: Debe sonar como un mensaje de voz natural de WhatsApp grabado de forma espontánea por una colega real. Empieza con naturalidad como: "Hola colegas", "Buenas tardes", etc. sin formalismos robóticos.\n- Máximo 350 caracteres.` }
+            { role: 'user', content: `${grupo.promptCierre}\n- IMPORTANTE: Debe sonar como un mensaje de voz natural de WhatsApp grabado de forma espontánea por una colega real. Empieza con naturalidad como: "Hola colegas", "Buenas tardes", etc. sin formalismos robóticos.\n- Máximo 350 caracteres.\n- CRÍTICO: Responde ÚNICAMENTE con las palabras habladas de la nota de voz. NO agregues preámbulos, comentarios ni envuelvas el texto en comillas, llaves o corchetes.` }
           ]
         });
         const content1 = response1.choices[0]?.message?.content;
@@ -2647,7 +2648,8 @@ Dirección obligatoria:
 - El objetivo es motivar a los miembros para que en la jornada de mañana comiencen a confiar más en JanIA y a probar el sistema sin miedo (ya sea escribiendo o enviando notas de voz sobre sus inmuebles o dudas).
 - Explícales que no deben tener miedo de interactuar con la IA y que estamos en fase de pruebas gratuitas listos para ayudarlos a conectar negocios.
 - Debe sonar sumamente cercano, entusiasta and amigable, como una colega entusiasmada por los éxitos del día siguiente.
-- Máximo 350 caracteres.`;
+- Máximo 350 caracteres.
+- CRÍTICO: Responde ÚNICAMENTE con el texto hablado de la nota de voz. NO agregues preámbulos, comentarios ni envuelvas el texto en comillas, llaves o corchetes.`;
 
         const response2 = await invokeLLM({
           messages: [
@@ -2740,5 +2742,39 @@ export function setBotPendingData(
   missingFields: string[]
 ): void {
   whatsappBot.setPendingDataForUser(senderId, originalText, extractedData, classification, missingFields);
+}
+
+/**
+ * Limpia el texto generado dinámicamente por la IA para audios,
+ * eliminando preámbulos, explicaciones y envolturas como llaves {{...}} o corchetes [...].
+ */
+export function cleanVoiceText(text: string): string {
+  if (!text) return "";
+  
+  let cleaned = text.trim();
+  
+  // 1. Quitar llaves dobles o simples que a veces envuelve el LLM (como {{...}} o [...])
+  cleaned = cleaned.replace(/^\{\{[\s\S]*?\}\}/g, '').trim();
+  cleaned = cleaned.replace(/^\[[\s\S]*?\]/g, '').trim();
+  cleaned = cleaned.replace(/^\{\s*|\s*\}$/g, '').trim();
+  cleaned = cleaned.replace(/^"|"$/g, '').trim(); // Quitar comillas externas
+  
+  // 2. Eliminar preámbulos típicos en español del LLM
+  const preambulos = [
+    /^(aquí\s+tienes|aqui\s+tienes|aquí\s+está|aqui\s+esta|aquí\s+te\s+presento|esta\s+es|este\s+es)\s+(la\s+propuesta|el\s+guión|el\s+guion|la\s+nota\s+de\s+voz|el\s+mensaje|la\s+redacción|la\s+redaccion|el\s+texto)[^:]*:\s*/i,
+    /^claro\s*,\s*(aquí\s+tienes|aquí\s+está|te\s+comparto)[^:]*:\s*/i,
+    /^(propuesta\s+de\s+(guión|guion|nota|mensaje|audio|texto)[^:]*):\s*/i,
+    /^(guión\s+de\s+voz|guion\s+de\s+voz|nota\s+de\s+voz|mensaje\s+de\s+voz|guión\s+de\s+audio|guion\s+de\s+audio|guión|guion)\s*:\s*/i,
+  ];
+  
+  for (const regex of preambulos) {
+    cleaned = cleaned.replace(regex, '');
+  }
+  
+  // 3. Limpiar cualquier remanente de comillas o dos puntos al inicio
+  cleaned = cleaned.replace(/^:\s*/, '').trim();
+  cleaned = cleaned.replace(/^"|"$/g, '').trim();
+  
+  return cleaned.trim();
 }
 
