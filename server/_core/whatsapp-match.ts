@@ -67,7 +67,7 @@ export class JaniaMatchBot {
       // Valores predeterminados si no se configuran
       this.authorizedGroups = [
         '120363260108880069@g.us', // VECY INMUEBLES NETWORK
-        '120363417740040773@g.us', // CONSULTORÍA JURÍDICA INMOBILIARIA
+        '120363417740040773@g.us', // VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS
         '120363403507276533@g.us'  // CÍRCULO CERO 👌
       ];
     }

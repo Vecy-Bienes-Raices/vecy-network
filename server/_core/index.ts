@@ -346,7 +346,7 @@ async function startServer() {
 
       const groups = [
         { name: "VECY INMUEBLES NETWORK", id: targetGroupId },
-        { name: "Consultoría Jurídica Inmobiliaria", id: buzonGroupId },
+        { name: "VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS", id: buzonGroupId },
         { name: "Círculo CERO", id: circuloGroupId }
       ];
 
@@ -460,7 +460,7 @@ async function startServer() {
 
       if (groupType === 'consultoria') {
         targetId = whatsappBot.buzonGroupId;
-        nombreGrupo = "CONSULTORÍA JURÍDICA INMOBILIARIA";
+        nombreGrupo = "VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS";
         promptExtra = "Enfócate en invitar a que consulten sobre temas jurídicos, disputas de comisiones de puntas compartidas, contratos de corretaje o avalúos.";
       } else if (groupType === 'inmuebles') {
         targetId = whatsappBot.targetGroupId;

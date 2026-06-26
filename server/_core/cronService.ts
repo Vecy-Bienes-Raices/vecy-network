@@ -74,7 +74,7 @@ Dirección obligatoria:
       if (content && content.trim() !== "") {
         const buzonJid = whatsappBot.buzonGroupId;
         if (buzonJid) {
-          console.log('[CRON-SERVICE] Enviando mensaje matutino a CONSULTORÍA JURÍDICA INMOBILIARIA...');
+          console.log('[CRON-SERVICE] Enviando mensaje matutino a VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS...');
           await whatsappBot.sendToGroup(content, undefined, [], buzonJid);
         }
       }
@@ -155,7 +155,7 @@ Dirección obligatoria:
       if (content && content.trim() !== "") {
         const buzonJid = whatsappBot.buzonGroupId;
         if (buzonJid) {
-          console.log('[CRON-SERVICE] Enviando mensaje de la tarde a CONSULTORÍA JURÍDICA INMOBILIARIA...');
+          console.log('[CRON-SERVICE] Enviando mensaje de la tarde a VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS...');
           await whatsappBot.sendToGroup(content, undefined, [], buzonJid);
         }
       }
@@ -231,7 +231,7 @@ Dirección obligatoria:
 
     const grupos = [
       { id: whatsappBot.targetGroupId, nombre: "VECY INMUEBLES NETWORK", promptExtra: "Enfócate en la publicación activa de ofertas y demandas de inmuebles, el cruce comercial rápido, y la colaboración nacional sin pagar comisiones." },
-      { id: whatsappBot.buzonGroupId, nombre: "CONSULTORÍA JURÍDICA INMOBILIARIA", promptExtra: "Enfócate en invitar a que consulten sobre temas jurídicos, disputas de comisiones de puntas compartidas, contratos de corretaje o avalúos." },
+      { id: whatsappBot.buzonGroupId, nombre: "VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS", promptExtra: "Enfócate en invitar a que consulten sobre temas jurídicos, disputas de comisiones de puntas compartidas, contratos de corretaje o avalúos." },
       { id: whatsappBot.circuloGroupId, nombre: "CÍRCULO CERO", promptExtra: "Enfócate en la retroalimentación del sistema, sugerencias directas a los fundadores, ideas de mejora y el futuro del sector inmobiliario." }
     ];
 

@@ -1669,7 +1669,7 @@ Por lo tanto, DEBES hacer lo siguiente:
           result.response = `👌 *CÍRCULO CERO — CONEXIÓN VECY* 👌\n\n${greetingPrefix}, veo que tienes dudas o quieres saber más sobre el proyecto VECY Network, beneficios, creadores o el plan colaborativo. Te invito a unirte y hacer tus preguntas en nuestro canal oficial **Círculo CERO 👌**:\n👉 https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU\n\n¡Es el espacio ideal para resolver todas tus inquietudes de la comunidad! 🤝✨`;
         }
       } else {
-        result.response = `💡 *CONSULTORÍA JURÍDICA INMOBILIARIA* 💡\n\n${greetingPrefix}, veo que tienes una consulta jurídica, procedimental o de avalúo. Para darte una respuesta detallada con mis motores legales y de mercado sin saturar este canal de ofertas y requerimientos, te invito a realizar tu pregunta en nuestro grupo especializado **CONSULTORÍA JURÍDICA INMOBILIARIA**:\n👉 https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6\n\n¡Allí te responderé al instante con toda la información! 🚀🎯`;
+        result.response = `💡 *VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS* 💡\n\n${greetingPrefix}, veo que tienes una consulta jurídica, procedimental o de avalúo. Para darte una respuesta detallada con mis motores legales y de mercado sin saturar este canal de ofertas y requerimientos, te invito a realizar tu pregunta en nuestro grupo especializado **VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS**:\n👉 https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6\n\n¡Allí te responderé al instante con toda la información! 🚀🎯`;
         result.classification = "CONSULTA_GENERAL";
       }
     }
@@ -2098,7 +2098,7 @@ Estoy lista 24/7 para procesar tus links de CRM, flyers (con visión OCR) y nota
 
 ¡Publiquemos activamente hoy para arrancar con fuerza esta gran proeza inmobiliaria en Colombia! 💪🏆`;
 
-export const MSG_PROMO_CONSULTAS = `💡 *CONSULTORÍA JURÍDICA INMOBILIARIA — ¡EL CHAT ESTÁ ABIERTO!* 💡
+export const MSG_PROMO_CONSULTAS = `💡 *VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS — ¡EL CHAT ESTÁ ABIERTO!* 💡
 ━━━━━━━━━━━━━━━━━━━━━━
 ¡Estimados aliados! Este espacio de asesoría está completamente abierto y libre. 🤝📚
 
@@ -2184,8 +2184,8 @@ export async function processConsultingMessage(
       textLower.includes("disputa") || textLower.includes("notaría") || textLower.includes("notaria");
 
     const systemPrompt = 
-      `Eres JanIA, la Inteligencia Artificial especialista en Consultoría Jurídica y Comercial Inmobiliaria en Colombia para la red VECY Network. ` +
-      `Estás operando en el grupo "CONSULTORÍA JURÍDICA INMOBILIARIA". Tu objetivo es responder con precisión quirúrgica, rigor legal y alta competencia técnica, asumiendo el rol de una abogada inmobiliaria idónea y una perita tasadora excepcional. Debes seguir estrictamente las siguientes directrices de contenido y clasificación:\n\n` +
+      `Eres JanIA, la Inteligencia Artificial especialista en Consultoría Jurídica, Contratos, Avalúos y Comercial Inmobiliaria en Colombia para la red VECY Network. ` +
+      `Estás operando en el grupo "VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS". Tu objetivo es responder con precisión quirúrgica, rigor legal y alta competencia técnica, asumiendo el rol de una abogada inmobiliaria idónea y una perita tasadora excepcional. Debes seguir estrictamente las siguientes directrices de contenido y clasificación:\n\n` +
       `## ROLES CENTRALES EN LA CONSULTORÍA JURÍDICA:\n` +
       `1. **Abogada Inmobiliaria Experta (Idónea y Profesional)**:\n` +
       `   - Conoces a la perfección y con total rigor el Código Civil colombiano, el Código de Comercio, el Código Financiero (Estatuto Orgánico del Sistema Financiero), y todas las leyes, decretos y jurisprudencia que regulan el sector en Colombia.\n` +
@@ -2356,7 +2356,7 @@ export async function processCirculoMessage(
       `- **Urgencia Comercial y Tarifas**: Enfatiza que toda la plataforma, incluyendo el matching de JanIA en WhatsApp y la carga de inmuebles, es 100% gratuita por lanzamiento. Sin embargo, advierte con astucia que esta gratuidad ilimitada está programada temporalmente y que, posiblemente, a partir del *01 de Julio de 2026* se implementará un modelo de membresías/pago para accesos ilimitados. ¡Debe servir de urgencia para registrarse y publicar hoy mismo!\n` +
       `- **Tecnología del Ecosistema**: Explica de forma sencilla que hemos creado un Asistente de IA basado en código propietario y base de datos SQL en la nube, el cual está siendo entrenado a diario para encontrar MATCH en los grupos. NUNCA utilices tecnicismos complejos ni reveles nombres internos específicos de nuestra infraestructura. Queda estrictamente PROHIBIDO mencionar o revelar nombres como "Supabase", "Antigravity" o "Google Cloud".\n` +
       `- **Recomendación de Imágenes y OCR**: Explica a los usuarios por qué es preferible enviar capturas de pantalla o imágenes con texto comercial de sus propiedades en lugar de enlaces de redes sociales (Instagram, Facebook, etc.). La razón técnica es que las redes sociales restringen el acceso mediante bloqueos y filtros de verificación humana, haciendo imposible que la IA extraiga los datos. Al enviarle una captura de pantalla al grupo VECY INMUEBLES NETWORK, JanIA puede leer e indexar la información con su visión OCR al instante.\n` +
-      `- **VECY INMUEBLES NETWORK es el único centro de Match**: Recuerda y recalca que el grupo especializado VECY INMUEBLES NETWORK es el ÚNICO canal donde JanIA busca los MATCH y gestiona los datos de inmuebles y requerimientos. En Círculo Cero o Consultoría Jurídica Inmobiliaria no se procesan listados de propiedades ni se buscan coincidencias.\n` +
+      `- **VECY INMUEBLES NETWORK es el único centro de Match**: Recuerda y recalca que el grupo especializado VECY INMUEBLES NETWORK es el ÚNICO canal donde JanIA busca los MATCH y gestiona los datos de inmuebles y requerimientos. En Círculo Cero o VECY: Soporte Legal, Contratos y Avalúos no se procesan listados de propiedades ni se buscan coincidencias.\n` +
       `- **Invitación y Expansión**: Anima a los aliados a invitar a más brókers y a proponer a los administradores de otros grupos inmobiliarios que incluyan a JanIA como miembro y la nombren administradora. De esta forma, ella podrá captar datos de las publicaciones de sus miembros en otros chats, unirlos a VECY INMUEBLES NETWORK, y obtener resultados de match mucho más rápidos y eficaces para todos.\n` +
       `- **Tono**: Sincero, transparente, esperanzador, persuasivo y tecnológico. Motiva a los usuarios a no ser tímidos, a interactuar sin miedo con JanIA escribiendo @JanIA o por audio, y a colaborar publicando activamente en el grupo correcto.\n\n` +
       `## LÓGICA DE CLASIFICACIÓN Y REDIRECCIÓN (CRÍTICO - EVITAR MENSAJES CRUZADOS)\n` +
@@ -2376,7 +2376,7 @@ export async function processCirculoMessage(
       `   - Emoji ('reactionEmoji'): "🔄"\n\n` +
       `3. **Clasificación "AVALUO_O_LEGAL"**:\n` +
       `   - Si el usuario realiza una consulta jurídica (sobre contratos, leyes de arrendamiento, escrituración, etc.) o solicita un avalúo rápido/precio estimado de metro cuadrado.\n` +
-      `   - Respuesta ('response'): "💡 *CONSULTORÍA JURÍDICA INMOBILIARIA* 💡\\n\\nHola @${rawPhone}, veo que tienes una consulta jurídica, procedimental o de avalúo. Para darte una respuesta detallada con mis motores legales y de mercado, por favor realiza tu pregunta en nuestro grupo especializado **CONSULTORÍA JURÍDICA INMOBILIARIA**:\\n👉 https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6\\n\\n¡Allí te responderé al instante con toda la información! 🚀🎯"\n` +
+      `   - Respuesta ('response'): "💡 *VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS* 💡\\n\\nHola @${rawPhone}, veo que tienes una consulta jurídica, procedimental o de avalúo. Para darte una respuesta detallada con mis motores legales y de mercado, por favor realiza tu pregunta en nuestro grupo especializado **VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS**:\\n👉 https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6\\n\\n¡Allí te responderé al instante con toda la información! 🚀🎯"\n` +
       `   - Emoji ('reactionEmoji'): "🔄"\n\n` +
       `4. **Clasificación "CONSULTA_GENERAL"**:\n` +
       `   - Preguntas o comentarios legítimos sobre el proyecto VECY Network, beneficios, sugerencias, testimonios de éxito o comentarios hacia la IA.\n` +
