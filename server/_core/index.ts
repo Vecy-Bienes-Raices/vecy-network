@@ -175,6 +175,28 @@ async function startServer() {
     }
   });
 
+  app.get("/api/match-qr-refresh", async (req, res) => {
+    try {
+      const { janiaMatchBot } = await import("./whatsapp-match");
+      if (!janiaMatchBot || !(janiaMatchBot as any).client) {
+        return res.status(503).send("El bot de Match no está inicializado.");
+      }
+      const page = (janiaMatchBot as any).client.pupPage;
+      if (!page) {
+        return res.status(503).send("La página de Puppeteer del bot de Match no está lista.");
+      }
+      console.log("[ADMIN] Recargando página de WhatsApp Web...");
+      await page.reload({ waitUntil: "domcontentloaded" }).catch(() => {});
+      // Esperar a que se renderice el nuevo QR
+      await new Promise(resolve => setTimeout(resolve, 8000));
+      const screenshot = await page.screenshot({ type: "png" });
+      res.setHeader("Content-Type", "image/png");
+      res.send(screenshot);
+    } catch (err: any) {
+      res.status(500).send(err.message);
+    }
+  });
+
   app.get("/api/send-comeback", (req, res) => {
     try {
       if (!whatsappBot.isReady) {
