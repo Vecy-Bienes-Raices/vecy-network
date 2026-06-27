@@ -364,15 +364,24 @@ export function validarZona(zona: string, ciudad?: string, textoCompleto?: strin
       .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
       .join(' ');
 
-    const formattedCity = ciudad ? cleanText(ciudad) : "Bogotá";
-    const isBogota = normalizarTextoGeografico(formattedCity) === "bogota";
+    let finalCity = "Bogotá";
+    let isMun = false;
+
+    if (ciudad) {
+      const cleanCity = cleanText(ciudad);
+      const lugarCity = buscarLugarColombia(cleanCity);
+      if (lugarCity && normalizarTextoGeografico(lugarCity.nombreCanonico) !== "bogota") {
+        finalCity = cleanText(lugarCity.nombreCanonico);
+        isMun = true;
+      }
+    }
 
     return {
       isValid: true,
       barrioCanonico: zona.trim(),
-      localidad: isBogota ? "Bogotá" : formattedCity,
-      city: formattedCity,
-      isMunicipio: !isBogota
+      localidad: isMun ? finalCity : "Bogotá",
+      city: finalCity,
+      isMunicipio: isMun
     };
   }
 

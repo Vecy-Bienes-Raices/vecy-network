@@ -1734,7 +1734,7 @@ Por lo tanto, DEBES hacer lo siguiente:
   }
 }
 
-function isGenericName(n: string | null | undefined): boolean {
+export function isGenericName(n: string | null | undefined): boolean {
   if (!n) return true;
   const lower = n.toLowerCase().trim();
   return lower.startsWith("asesor +") || 
