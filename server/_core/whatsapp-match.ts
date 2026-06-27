@@ -219,6 +219,8 @@ export class JaniaMatchBot {
             (msg.body || "").length > 120 || 
             (msg.body || "").split('\n').length > 2 || 
             msg.hasMedia ||
+            textLower.includes("http") ||
+            textLower.includes("www") ||
             textLower.includes("ofrezco") ||
             textLower.includes("busco") ||
             textLower.includes("vendo") ||
@@ -364,6 +366,8 @@ export class JaniaMatchBot {
         (msg.body || "").length > 120 || 
         (msg.body || "").split('\n').length > 2 || 
         msg.hasMedia ||
+        textLower.includes("http") ||
+        textLower.includes("www") ||
         textLower.includes("ofrezco") ||
         textLower.includes("busco") ||
         textLower.includes("vendo") ||
@@ -432,12 +436,13 @@ export class JaniaMatchBot {
       if (buffer) {
         // 2. CONTROL DE LÍMITE DE BUFFER (SOLO EN GRUPO PRINCIPAL Y PARA POSIBLES LISTINGS)
         
-        // A. Validar si intentan enviar una SEGUNDA propiedad en el mismo bloque de 12 segundos
         const hasExistingListing = buffer.messages.some(m => {
           const bodyLower = (m.body || "").toLowerCase();
           return (m.body || "").length > 120 || 
                  (m.body || "").split('\n').length > 2 || 
                  m.hasMedia ||
+                 bodyLower.includes("http") ||
+                 bodyLower.includes("www") ||
                  bodyLower.includes("ofrezco") ||
                  bodyLower.includes("busco") ||
                  bodyLower.includes("vendo") ||
