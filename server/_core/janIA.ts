@@ -1685,8 +1685,13 @@ Por lo tanto, DEBES hacer lo siguiente:
 
       const greetingPrefix = await getTimeOfDayGreetingForUser(rawPhone, realName, alreadyGreeted, isGroup);
 
+      let welcomePart = "";
+      if (!alreadyGreeted) {
+        welcomePart = ` ¡Te doy la más cordial bienvenida a nuestra comunidad! 🤝✨`;
+      }
+
       if (isAboutPublishing) {
-        result.response = `📢 *¿CÓMO PUBLICAR EN VECY NETWORK?* 📢\n\n${greetingPrefix}, es muy sencillo y totalmente gratuito. Puedes publicar tus *ofertas* (venta/arriendo) o *requerimientos* (búsquedas) directamente aquí en el grupo de las siguientes formas:\n\n` +
+        result.response = `📢 *¿CÓMO PUBLICAR EN VECY NETWORK?* 📢\n\n${greetingPrefix},${welcomePart} es muy sencillo y totalmente gratuito. Puedes publicar tus *ofertas* (venta/arriendo) o *requerimientos* (búsquedas) directamente aquí en el grupo de las siguientes formas:\n\n` +
           `✍️ *Texto*: Envía una descripción con la ubicación (Ciudad y Barrio), precio y ficha técnica (área, habitaciones, baños, parqueaderos y estrato).\n` +
           `📄 *PDF*: Sube la ficha técnica de la propiedad en formato PDF.\n` +
           `🎙️ *Nota de Voz*: Graba un audio dictando los datos del inmueble.\n` +
