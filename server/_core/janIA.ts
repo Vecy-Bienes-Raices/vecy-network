@@ -1637,6 +1637,37 @@ Por lo tanto, DEBES hacer lo siguiente:
     const isConsultation = result.classification === "CONSULTA_GENERAL" || result.classification === "RESPUESTA_A_PREGUNTA_IA" || result.classification === "ANALISIS_DE_MERCADO";
     if (isGroup && isConsultation) {
       const textLower = messageToProcess.toLowerCase();
+
+      // A. Consultas sobre cómo publicar o subir inmuebles o cómo funciona el grupo
+      const isAboutPublishing = 
+        textLower.includes("subir") || 
+        textLower.includes("cómo subo") || 
+        textLower.includes("como subo") ||
+        textLower.includes("publicar") || 
+        textLower.includes("cómo publico") || 
+        textLower.includes("como publico") ||
+        textLower.includes("cómo se publica") || 
+        textLower.includes("como se publica") ||
+        textLower.includes("cómo registrar") || 
+        textLower.includes("como registrar") ||
+        textLower.includes("cómo funciona") || 
+        textLower.includes("como funciona") ||
+        textLower.includes("de qué consiste") || 
+        textLower.includes("de que consiste") ||
+        textLower.includes("en qué consiste") || 
+        textLower.includes("en que consiste") ||
+        textLower.includes("cómo hago para") || 
+        textLower.includes("como hago para") ||
+        textLower.includes("cómo buscar") || 
+        textLower.includes("como buscar") ||
+        textLower.includes("cómo encontrar") || 
+        textLower.includes("como encontrar") ||
+        textLower.includes("instrucciones") ||
+        textLower.includes("ayuda") ||
+        textLower.includes("explicar") || 
+        textLower.includes("explicame") || 
+        textLower.includes("explícame");
+
       const isAboutVecy = 
         textLower.includes("vecy") || 
         textLower.includes("proyecto") || 
@@ -1645,8 +1676,6 @@ Por lo tanto, DEBES hacer lo siguiente:
         textLower.includes("creadores") || 
         textLower.includes("quien es jania") || 
         textLower.includes("quién es jania") ||
-        textLower.includes("como funciona") || 
-        textLower.includes("cómo funciona") ||
         textLower.includes("circulo cero") ||
         textLower.includes("círculo cero") ||
         textLower.includes("ubicapp") ||
@@ -1656,7 +1685,19 @@ Por lo tanto, DEBES hacer lo siguiente:
 
       const greetingPrefix = await getTimeOfDayGreetingForUser(rawPhone, realName, alreadyGreeted, isGroup);
 
-      if (isAboutVecy) {
+      if (isAboutPublishing) {
+        result.response = `📢 *¿CÓMO PUBLICAR EN VECY NETWORK?* 📢\n\n${greetingPrefix}, es muy sencillo y totalmente gratuito. Puedes publicar tus *ofertas* (venta/arriendo) o *requerimientos* (búsquedas) directamente aquí en el grupo de las siguientes formas:\n\n` +
+          `✍️ *Texto*: Envía una descripción con la ubicación (Ciudad y Barrio), precio y ficha técnica (área, habitaciones, baños, parqueaderos y estrato).\n` +
+          `📄 *PDF*: Sube la ficha técnica de la propiedad en formato PDF.\n` +
+          `🎙️ *Nota de Voz*: Graba un audio dictando los datos del inmueble.\n` +
+          `🖼️ *Flyer/Captura*: Comparte una imagen o flyer que contenga los detalles comerciales en el texto.\n\n` +
+          `*¿Cómo funciona?*\n` +
+          `1️⃣ Al publicar, mi sistema registrará la propiedad e iniciará una búsqueda de coincidencias (matches) automáticamente a nivel nacional.\n` +
+          `2️⃣ Si encuentro un MATCH, te notificaré y te enviaré un mensaje por *chat privado (DM)* solicitando tu confirmación.\n` +
+          `3️⃣ Si ambos aliados confirman interés en privado, les entregaré sus contactos directos para que cierren el negocio. 🤝🚀\n\n` +
+          `Si tienes dudas o prefieres usar mi menú de soporte y búsqueda de propiedades privado, escríbeme directamente al enlace:\n👉 https://wa.me/573185462265`;
+        result.classification = "CONSULTA_GENERAL";
+      } else if (isAboutVecy) {
         const isCompetitorQuery = 
           textLower.includes("ubicapp") || 
           textLower.includes("samboni") || 

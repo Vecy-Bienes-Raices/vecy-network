@@ -214,13 +214,6 @@ export class JaniaMatchBot {
           const textLower = (msg.body || "").toLowerCase();
           const hasDirectMention = textLower.includes("jania");
 
-          // A. Si se le pregunta directamente al bot en el grupo, responde activamente
-          if (hasDirectMention) {
-            console.log(`[JANIA-MATCH] Pregunta directa de ${senderId} en grupo ${chatId}: "${msg.body}"`);
-            await this.handleDirectGroupQuestion(msg, chatId, senderId);
-            return;
-          }
-
           // B. Si es una publicación comercial, procesar con el buffer extractor (Modo Silencioso)
           const isPossibleListing = 
             (msg.body || "").length > 120 || 
@@ -232,6 +225,31 @@ export class JaniaMatchBot {
             textLower.includes("arriendo") ||
             textLower.includes("compro") ||
             textLower.includes("necesito");
+
+          // Detectar consultas comunes sobre cómo publicar, cómo funciona el bot/grupo, ayuda, etc.
+          const isHelpOrSystemQuery = 
+            !isPossibleListing && (
+              textLower.includes("cómo subo") || textLower.includes("como subo") ||
+              textLower.includes("cómo publico") || textLower.includes("como publico") ||
+              textLower.includes("cómo se publica") || textLower.includes("como se publica") ||
+              textLower.includes("cómo registrar") || textLower.includes("como registrar") ||
+              textLower.includes("cómo funciona") || textLower.includes("como funciona") ||
+              textLower.includes("de qué consiste") || textLower.includes("de que consiste") ||
+              textLower.includes("en qué consiste") || textLower.includes("en que consiste") ||
+              textLower.includes("cómo hago para") || textLower.includes("como hago para") ||
+              textLower.includes("cómo buscar") || textLower.includes("como buscar") ||
+              textLower.includes("cómo encontrar") || textLower.includes("como encontrar") ||
+              (textLower.includes("ayuda") && textLower.includes("inmueble")) ||
+              (textLower.includes("explicar") && textLower.includes("grupo")) ||
+              (textLower.includes("cómo") && textLower.includes("grupo"))
+            );
+
+          // A. Si se le pregunta directamente al bot en el grupo, o si es una consulta de ayuda/sistema
+          if (hasDirectMention || isHelpOrSystemQuery) {
+            console.log(`[JANIA-MATCH] Pregunta directa/ayuda de ${senderId} en grupo ${chatId}: "${msg.body}"`);
+            await this.handleDirectGroupQuestion(msg, chatId, senderId);
+            return;
+          }
 
           if (isPossibleListing) {
             await this.handleIncomingGroupMessage(msg, chatId);
@@ -304,10 +322,16 @@ export class JaniaMatchBot {
           if (media) {
             await this.queuedSend(chatId, media, { sendAudioAsVoice: true });
           } else {
-            await this.queuedSend(chatId, textToDeliver);
+            await this.queuedSend(chatId, textToDeliver, {
+              mentions: [senderId],
+              quotedMessageId: msg.id._serialized
+            });
           }
         } else {
-          await this.queuedSend(chatId, textToDeliver);
+          await this.queuedSend(chatId, textToDeliver, {
+            mentions: [senderId],
+            quotedMessageId: msg.id._serialized
+          });
         }
       }
 
