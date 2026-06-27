@@ -1693,6 +1693,7 @@ Por lo tanto, DEBES hacer lo siguiente:
       if (isAboutPublishing) {
         result.response = `📢 *¿CÓMO PUBLICAR EN VECY NETWORK?* 📢\n\n${greetingPrefix},${welcomePart} es muy sencillo y totalmente gratuito. Puedes publicar tus *ofertas* (venta/arriendo) o *requerimientos* (búsquedas) directamente aquí en el grupo de las siguientes formas:\n\n` +
           `✍️ *Texto*: Envía una descripción con la ubicación (Ciudad y Barrio), precio y ficha técnica (área, habitaciones, baños, parqueaderos y estrato).\n` +
+          `🔗 *Enlaces/Links*: Comparte enlaces de portales inmobiliarios permitidos o de tu propia web (Wasi, Fincaraiz, Metrocuadrado, Ciencuadras, Habi, etc.) y extraeré los datos automáticamente.\n` +
           `📄 *PDF*: Sube la ficha técnica de la propiedad en formato PDF.\n` +
           `🎙️ *Nota de Voz*: Graba un audio dictando los datos del inmueble.\n` +
           `🖼️ *Flyer/Captura*: Comparte una imagen o flyer que contenga los detalles comerciales en el texto.\n\n` +
