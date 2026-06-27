@@ -270,6 +270,56 @@ Dirección obligatoria:
   }, {
     timezone: 'America/Bogota'
   });
+
+  // 4. Lunes 08:00 AM = Audio animoso de inicio de semana
+  cron.schedule('0 8 * * 1', async () => {
+    console.log('[CRON-SERVICE] Generando y enviando Mensajes de Voz de Lunes por la Mañana...');
+    const grupos = [
+      { id: whatsappBot.targetGroupId, nombre: "VECY INMUEBLES NETWORK", promptExtra: "Enfócate en iniciar la semana con la mejor energía, invitando a publicar activamente ofertas y requerimientos para lograr cierres comerciales rápidos en la red." },
+      { id: whatsappBot.buzonGroupId, nombre: "VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS", promptExtra: "Enfócate en desear un feliz inicio de semana y recordar que el equipo de soporte legal y avalúos está listo para resolver cualquier consulta en sus operaciones semanales." },
+      { id: whatsappBot.circuloGroupId, nombre: "CÍRCULO CERO", promptExtra: "Enfócate en motivar a los aliados a seguir expandiendo la red colaborativa de VECY Network en Colombia esta nueva semana." }
+    ];
+
+    for (const grupo of grupos) {
+      if (!grupo.id) continue;
+      
+      try {
+        const promptVoz = `Genera un mensaje de voz de buenos días, sumamente animoso, positivo y elocuente en español para ser enviado como nota de voz al grupo de WhatsApp "${grupo.nombre}" para iniciar la semana laboral (Lunes).
+Dirección obligatoria:
+- Debe ser un mensaje lleno de energía, motivación y entusiasmo por el inicio de semana.
+- ${grupo.promptExtra}
+- IMPORTANTE: Debe sonar como un mensaje de voz natural de WhatsApp grabado de forma espontánea por una colega real. Evita introducciones corporativas. Empieza de forma muy natural como: "Hola colegas, ¡excelente inicio de semana para todos!", "Muy buenos días a todos por aquí, feliz lunes...".
+- Mantén el texto relativamente corto y conciso (máximo 400 caracteres) para que la nota de voz generada dure aproximadamente de 30 a 40 segundos. No uses viñetas ni formateo markdown.
+- CRÍTICO: Responde ÚNICAMENTE con el guion hablado de la nota de voz sin comentarios ni comillas.`;
+
+        const response = await invokeLLM({
+          messages: [
+            { role: 'system', content: 'Eres JanIA, la asistente de voz e inteligencia artificial de la red colaborativa VECY Network. Te expresas de manera natural, humana, cálida y profesional.' },
+            { role: 'user', content: promptVoz }
+          ]
+        });
+
+        const content = response.choices[0]?.message?.content;
+        if (content && content.trim() !== "") {
+          console.log(`[CRON-SERVICE] Enviando audio de inicio de semana a ${grupo.nombre}...`);
+          await whatsappBot.sendVoiceToGroup(content, grupo.id);
+        }
+        await new Promise(resolve => setTimeout(resolve, 8000));
+      } catch (err: any) {
+        console.error(`❌ Error al generar audio de Lunes por la mañana para grupo ${grupo.nombre}:`, err.message || err);
+      }
+    }
+  }, {
+    timezone: 'America/Bogota'
+  });
+
+  // 5. Viernes 07:00 PM = Informe Semanal de Actividad (con datos 100% reales de BD)
+  cron.schedule('0 19 * * 5', async () => {
+    console.log('[CRON-SERVICE] Generando y enviando Informe Semanal de Actividad...');
+    await sendWeeklyReport();
+  }, {
+    timezone: 'America/Bogota'
+  });
 }
 
 /**
@@ -359,5 +409,82 @@ async function sendMatchBulletin(periodName: string) {
 
   } catch (error) {
     console.error(`[CRON-SERVICE] Error generando boletín ${periodName}:`, error);
+  }
+}
+
+/**
+ * Genera y envía el informe semanal de actividad comercial con datos reales de la BD
+ */
+async function sendWeeklyReport() {
+  try {
+    const db = await getDb();
+    if (!db) return;
+
+    // 1. Contar totales reales en la base de datos
+    const propertiesCountRes = await db.select({ count: sql<number>`count(*)` }).from(properties).execute();
+    const requirementsCountRes = await db.select({ count: sql<number>`count(*)` }).from(requirements).execute();
+    
+    // Contamos matches con score >= 70
+    const matchesCountRes = await db.select({ count: sql<number>`count(*)` })
+      .from(propertyMatches)
+      .where(gte(sql<number>`(${propertyMatches.matchScore})::numeric`, 70))
+      .execute();
+
+    const totalProperties = propertiesCountRes[0]?.count || 0;
+    const totalRequirements = requirementsCountRes[0]?.count || 0;
+    const totalMatches = matchesCountRes[0]?.count || 0;
+
+    // 2. Obtener matches reales de los últimos 7 días
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const matchesThisWeek = await db.select({
+      matchScore: propertyMatches.matchScore,
+      buyerAdvisor: requirements.idUsuarioWhatsapp,
+      sellerAdvisor: properties.idUsuarioWhatsapp,
+    })
+    .from(propertyMatches)
+    .innerJoin(requirements, eq(propertyMatches.requirementId, requirements.id))
+    .innerJoin(properties, eq(propertyMatches.propertyId, properties.id))
+    .where(and(
+      gte(sql<number>`(${propertyMatches.matchScore})::numeric`, 70),
+      gte(propertyMatches.createdAt, sevenDaysAgo)
+    ))
+    .execute();
+
+    // 3. Construir el reporte con datos 100% verdaderos
+    let report = `📊 *INFORME SEMANAL DE ACTIVIDAD - VECY NETWORK* 📊\n\n` +
+                 `Estimados aliados de la red, les comparto el balance oficial del estado de nuestra base de datos al día de hoy. ¡Cifras 100% reales y verificadas!:\n\n` +
+                 `🏠 *Total Ofertas Inmobiliarias Activas*: *${totalProperties}*\n` +
+                 `🔎 *Total Requerimientos de Compra/Renta*: *${totalRequirements}*\n` +
+                 `🎯 *Coincidencias (Matches) de Negocio Históricas*: *${totalMatches}*\n\n` +
+                 `📈 *COINCIDENCIAS REGISTRADAS ESTA SEMANA:* (${matchesThisWeek.length} detectadas)\n`;
+
+    const jidsToMention: string[] = [];
+
+    if (matchesThisWeek.length > 0) {
+      matchesThisWeek.forEach(m => {
+        const buyer = m.buyerAdvisor?.split('@')[0] || 'Asesor';
+        const seller = m.sellerAdvisor?.split('@')[0] || 'Asesor';
+        const score = Math.round(Number(m.matchScore));
+        
+        report += `▸ @${buyer} (Comprador) ⇄ @${seller} (Vendedor) — Coincidencia del *${score}%* 🎯\n`;
+        
+        if (m.buyerAdvisor) jidsToMention.push(m.buyerAdvisor);
+        if (m.sellerAdvisor) jidsToMention.push(m.sellerAdvisor);
+      });
+      report += `\n¡Felicidades a los colegas involucrados! Si ves tu número arriba, por favor revisa tu chat privado de WhatsApp donde JanIA te envió los detalles de contacto bilateral (Double Opt-In) para coordinar la cita de negocios. 🤝🚀`;
+    } else {
+      report += `▸ No se detectaron cruces automáticos en los últimos 7 días. ¡Los invito a seguir publicando activamente sus inmuebles y requerimientos para que el sistema pueda unirlos! 💪`;
+    }
+
+    report += `\n\n⚠️ *COMPROMISO DE HONOR:* Recuerden que nuestra plataforma es *100% gratuita y libre de comisiones*. Si logran cerrar un negocio real gracias a la conexión privada de JanIA, es un compromiso de honor compartir su testimonio en este grupo y dejar su reseña oficial aquí: https://g.page/r/CctNbwU6UpX5EBM/review`;
+
+    // 4. Enviar reporte al grupo principal VECY INMUEBLES NETWORK
+    console.log('[CRON-SERVICE] Enviando reporte semanal de actividad...');
+    await whatsappBot.sendToGroup(report, undefined, Array.from(new Set(jidsToMention)));
+
+  } catch (error) {
+    console.error('[CRON-SERVICE] Error al generar el informe semanal:', error);
   }
 }
