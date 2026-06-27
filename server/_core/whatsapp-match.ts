@@ -735,7 +735,16 @@ export class JaniaMatchBot {
           }
         } else {
           // Publicaciones exitosas o consultas generales: derivar confirmaciones privadas normales
-          if (result.shouldSendDM && result.dmResponse && result.dmResponse.trim() !== "") {
+          const isConsultation = result.classification === "CONSULTA_GENERAL" || result.classification === "RESPUESTA_A_PREGUNTA_IA" || result.classification === "ANALISIS_DE_MERCADO";
+          
+          if (isConsultation && result.response && result.response.trim() !== "") {
+            console.log(`[JANIA-MATCH] Enviando respuesta a consulta general en el grupo para ${senderId}`);
+            await this.queuedSend(chatId, result.response, {
+              mentions: [senderId],
+              quotedMessageId: buffer.messages[buffer.messages.length - 1].originalMsg.id._serialized
+            });
+            await this.logToDb(senderId, 'janIA', `[GROUP-REPLY] ${result.response}`);
+          } else if (result.shouldSendDM && result.dmResponse && result.dmResponse.trim() !== "") {
             console.log(`[JANIA-MATCH] [Stealth] Derivando confirmación DM de ${senderId} al bot principal.`);
             await sendUserDM(senderId, result.dmResponse);
             // Registrar en BD también para auditoría completa
