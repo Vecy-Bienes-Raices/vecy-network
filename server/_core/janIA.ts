@@ -2006,17 +2006,30 @@ async function saveRequirement(data: any, userId: string, realName: string) {
   return result;
 }
 
-export async function generateWelcomeMessage(count: number): Promise<string> {
+export async function generateWelcomeMessage(count: number, chatId?: string): Promise<string> {
   try {
+    let groupDescription = "VECY Network (nuestra red de ofertas y requerimientos inmobiliarios). Dales la bienvenida y menciona que ya estoy activa para cruzar ofertas en todo el país sin comisiones.";
+    
+    if (chatId === "120363417740040773@g.us") { // Soporte Legal
+      groupDescription = "VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS. Dales la bienvenida y explica amablemente que aquí pueden realizar cualquier consulta jurídica, procedimental, disputas de comisiones, o de avalúos, y yo les responderé de inmediato.";
+    } else if (chatId === "120363403507276533@g.us") { // Círculo Cero
+      groupDescription = "CÍRCULO CERO 👌 (nuestro canal de debate y comunidad). Dales la bienvenida y explica que este es el canal para charlar sobre el proyecto VECY Network, debatir sanamente, proponer mejoras y resolver dudas generales.";
+    }
+
     const response = await invokeLLM({
       messages: [
         { role: "system", content: "Eres una consultora inmobiliaria experta de VECY Network. Habla siempre en primera persona del singular. Tu tono es sumamente humano, elocuente y corporativo." },
-        { role: "user", content: `Han ingresado ${count} nuevos integrantes a VECY Network. Dales la bienvenida y menciona que ya estoy activa para cruzar ofertas en todo el país sin comisiones.` }
+        { role: "user", content: `Han ingresado ${count} nuevos integrantes a ${groupDescription}` }
       ]
     });
     const llmRes = response as any;
     return llmRes.choices[0].message.content.trim();
   } catch (error) {
+    if (chatId === "120363417740040773@g.us") {
+      return `✨ *¡Bienvenidos al grupo VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS!* 👋 Qué gusto tenerlos aquí. Estoy atenta para responder de inmediato cualquier consulta jurídica, procedimental o de avalúos que tengan en su día a día. 🚀⚖️`;
+    } else if (chatId === "120363403507276533@g.us") {
+      return `✨ *¡Bienvenidos al grupo CÍRCULO CERO 👌!* 👋 Qué gusto tenerlos aquí. Este es el espacio oficial de debate y comunidad de VECY Network para compartir novedades, sugerencias e ideas de mejora. ¡Bienvenidos aliados! 🚀🤝`;
+    }
     return `✨ *¡Bienvenidos a nuestra red!* 👋 Qué gusto tenerlos aquí. Ya estoy operando en fase de expansión nacional para ayudarlos con sus cierres. 🚀`;
   }
 }

@@ -488,6 +488,10 @@ export class WhatsAppBot {
   private pendingWelcomeCount: number = 0;
   private counterFile: string = path.join(process.cwd(), '.pending_welcome_count');
   public pendingWelcomeJids: string[] = [];
+  public pendingWelcomeBuzon: string[] = [];
+  public pendingWelcomeCirculo: string[] = [];
+  private buzonWelcomeTimer: any = null;
+  private circuloWelcomeTimer: any = null;
   private jidsFile: string = path.join(process.cwd(), '.pending_welcome_jids');
   private cooldownFile: string = path.join(process.cwd(), '.cooldown_map.json');
   private pendingDataFile: string = path.join(process.cwd(), '.pending_data.json');
@@ -844,7 +848,13 @@ export class WhatsAppBot {
     });
 
     this.client.on('group_join', async (notification: any) => {
-      if (notification.chatId !== this.targetGroupId) return;
+      const chatId = notification.chatId;
+      const isMain = chatId === this.targetGroupId;
+      const isBuzon = chatId === this.buzonGroupId;
+      const isCirculo = chatId === this.circuloGroupId;
+
+      if (!isMain && !isBuzon && !isCirculo) return;
+
       const joinedIds = notification.recipientIds || [];
       const resolvedIds = [];
       for (const id of joinedIds) {
@@ -859,10 +869,39 @@ export class WhatsAppBot {
         }
         resolvedIds.push(id);
       }
-      this.pendingWelcomeJids.push(...resolvedIds);
-      this.pendingWelcomeCount = this.pendingWelcomeJids.length;
-      this.saveCounter();
-      if (this.pendingWelcomeCount >= 10) await this.sendBatchWelcome();
+
+      if (isMain) {
+        this.pendingWelcomeJids.push(...resolvedIds);
+        this.pendingWelcomeCount = this.pendingWelcomeJids.length;
+        this.saveCounter();
+        if (this.pendingWelcomeCount >= 10) {
+          await this.sendBatchWelcome();
+        }
+      } else if (isBuzon) {
+        this.pendingWelcomeBuzon.push(...resolvedIds);
+        if (this.pendingWelcomeBuzon.length >= 3) {
+          await this.sendBatchWelcomeForGroup(this.buzonGroupId, this.pendingWelcomeBuzon);
+        } else {
+          if (this.buzonWelcomeTimer) clearTimeout(this.buzonWelcomeTimer);
+          this.buzonWelcomeTimer = setTimeout(async () => {
+            if (this.pendingWelcomeBuzon.length > 0) {
+              await this.sendBatchWelcomeForGroup(this.buzonGroupId, this.pendingWelcomeBuzon);
+            }
+          }, 10000);
+        }
+      } else if (isCirculo) {
+        this.pendingWelcomeCirculo.push(...resolvedIds);
+        if (this.pendingWelcomeCirculo.length >= 3) {
+          await this.sendBatchWelcomeForGroup(this.circuloGroupId, this.pendingWelcomeCirculo);
+        } else {
+          if (this.circuloWelcomeTimer) clearTimeout(this.circuloWelcomeTimer);
+          this.circuloWelcomeTimer = setTimeout(async () => {
+            if (this.pendingWelcomeCirculo.length > 0) {
+              await this.sendBatchWelcomeForGroup(this.circuloGroupId, this.pendingWelcomeCirculo);
+            }
+          }, 10000);
+        }
+      }
     });
 
     this.client.on('message_reaction', async (reaction: any) => {
@@ -2187,15 +2226,34 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
   // --- MÉTODOS DE BROADCAST ---
   public async sendBatchWelcome() {
     const count = this.pendingWelcomeCount;
+    const jids = [...this.pendingWelcomeJids];
     this.pendingWelcomeCount = 0;
     this.pendingWelcomeJids = [];
     this.saveCounter();
 
     try {
-      const welcome = await generateWelcomeMessage(count);
-      await this.queuedSend(this.targetGroupId, welcome);
+      const welcome = await generateWelcomeMessage(count, this.targetGroupId);
+      await this.queuedSend(this.targetGroupId, welcome, { mentions: jids });
     } catch (e: any) {
       console.error("[Whatsapp-Bot] Error in sendBatchWelcome:", e.message);
+    }
+  }
+
+  public async sendBatchWelcomeForGroup(chatId: string, jids: string[]) {
+    const count = jids.length;
+    const listCopy = [...jids];
+    
+    if (chatId === this.buzonGroupId) {
+      this.pendingWelcomeBuzon = [];
+    } else if (chatId === this.circuloGroupId) {
+      this.pendingWelcomeCirculo = [];
+    }
+
+    try {
+      const welcome = await generateWelcomeMessage(count, chatId);
+      await this.queuedSend(chatId, welcome, { mentions: listCopy });
+    } catch (e: any) {
+      console.error(`[Whatsapp-Bot] Error in sendBatchWelcomeForGroup for ${chatId}:`, e.message);
     }
   }
 
