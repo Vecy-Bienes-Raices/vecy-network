@@ -2008,29 +2008,74 @@ async function saveRequirement(data: any, userId: string, realName: string) {
 
 export async function generateWelcomeMessage(count: number, chatId?: string): Promise<string> {
   try {
-    let groupDescription = "VECY Network (nuestra red de ofertas y requerimientos inmobiliarios). Dales la bienvenida y menciona que ya estoy activa para cruzar ofertas en todo el país sin comisiones.";
+    let groupDescription = "";
     
     if (chatId === "120363417740040773@g.us") { // Soporte Legal
-      groupDescription = "VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS. Dales la bienvenida y explica amablemente que aquí pueden realizar cualquier consulta jurídica, procedimental, disputas de comisiones, o de avalúos, y yo les responderé de inmediato.";
+      groupDescription = `el grupo de WhatsApp "VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS".
+Dirección obligatoria para redactar el saludo de bienvenida:
+- Dales una muy cálida bienvenida y menciónales que este es el canal oficial para resolver dudas jurídicas, procedimentales, disputas de comisiones y temas de avalúos.
+- Explícales de manera clara y directa las Pautas del Grupo en viñetas bien organizadas con emojis:
+  * Qué SE PUEDE hacer: Realizar consultas de soporte legal inmobiliario, subir archivos o contratos en PDF para revisión del equipo, o enviar notas de voz detallando casos legales.
+  * Qué NO SE PUEDE hacer: Publicar listados de ofertas o requerimientos inmobiliarios (estos pertenecen única y exclusivamente al grupo principal de inmuebles).
+  * Cómo hacerlo bien: Escribir sus consultas de forma detallada o enviar notas de voz claras para que yo (JanIA) y el equipo de abogados podamos asistirles rápidamente.`;
     } else if (chatId === "120363403507276533@g.us") { // Círculo Cero
-      groupDescription = "CÍRCULO CERO 👌 (nuestro canal de debate y comunidad). Dales la bienvenida y explica que este es el canal para charlar sobre el proyecto VECY Network, debatir sanamente, proponer mejoras y resolver dudas generales.";
+      groupDescription = `el grupo de WhatsApp "CÍRCULO CERO 👌" (nuestro canal oficial de debate y comunidad de aliados).
+Dirección obligatoria para redactar el saludo de bienvenida:
+- Dales una muy cálida bienvenida a la mesa redonda de aliados.
+- Explícales de manera clara y directa las Pautas del Grupo en viñetas bien organizadas con emojis:
+  * Qué SE PUEDE hacer: Sugerir ideas de mejora tecnológica para VECY, comentar novedades sobre el portal web privado, debatir de forma constructiva sobre el mercado inmobiliario en Colombia.
+  * Qué NO SE PUEDE hacer: Publicar listados de inmuebles ni realizar consultas jurídicas complejas (ya que para eso existen los otros grupos dedicados).
+  * Cómo hacerlo bien: Mantener un tono respetuoso, constructivo e interactuar con los otros aliados para fortalecer la comunidad.`;
+    } else { // VECY INMUEBLES NETWORK (targetGroupId)
+      groupDescription = `el grupo de WhatsApp principal "VECY INMUEBLES NETWORK" (nuestra red nacional de ofertas y requerimientos inmobiliarios).
+Dirección obligatoria para redactar el saludo de bienvenida:
+- Dales una muy cálida bienvenida a la red y menciónales que ya estoy lista para cruzar sus ofertas y requerimientos en segundos sin comisiones.
+- Explícales de manera muy clara y directa las Pautas Obligatorias del Grupo para evitar advertencias o bloqueos en el sistema:
+  * Qué FORMATOS están permitidos y cómo publicar correctamente:
+    1. ✍️ *Texto descriptivo completo*: Incluyendo los datos técnicos indispensables (Ciudad, barrio, precio, área en m², habitaciones, baños, parqueaderos y estrato).
+    2. 🎙️ *Nota de Voz*: Grabando un audio corto (de unos 30-40 segundos) dictando las características.
+    3. 📄 *Ficha técnica en PDF*: Subiendo el archivo PDF de la propiedad.
+    4. 🖼️ *Flyer comercial*: Subiendo una imagen que tenga toda la información técnica escrita encima del diseño.
+    5. 🔗 *Enlaces o Links públicos*: Pegando enlaces de portales públicos autorizados (como Metrocuadrado, Ciencuadras, Habi, Wasi, MercadoLibre, Fincaraiz, Curador o su propia web de dominio propio).
+  * Lo que NO está permitido y debes evitar para no recibir advertencias de JanIA:
+    1. Enlaces a Redes Sociales (Facebook, Instagram, YouTube, TikTok, etc.).
+    2. Publicaciones repetidas o duplicados de la misma propiedad de forma inmediata.
+    3. Enviar múltiples publicaciones seguidas en menos de 5 minutos (límite anti-spam de 5 minutos).
+    4. Publicaciones incompletas (por ejemplo, sin precio o sin ciudad). JanIA les pondrá una advertencia de datos incompletos.
+- Cierra con un tono motivador invitándolos a publicar correctamente para que el sistema pueda encontrarles MATCH de inmediato y acelerar sus cierres.`;
     }
 
     const response = await invokeLLM({
       messages: [
-        { role: "system", content: "Eres una consultora inmobiliaria experta de VECY Network. Habla siempre en primera persona del singular. Tu tono es sumamente humano, elocuente y corporativo." },
-        { role: "user", content: `Han ingresado ${count} nuevos integrantes a ${groupDescription}` }
+        { 
+          role: "system", 
+          content: "Eres JanIA, la asistente inteligente y experta de VECY Network. Hablas siempre en primera persona del singular, con un tono sumamente humano, profesional, elocuente y cercano." 
+        },
+        { 
+          role: "user", 
+          content: `Han ingresado ${count} nuevos integrantes a ${groupDescription}. 
+          Redacta el mensaje de bienvenida usando viñetas claras y emojis llamativos. Asegúrate de que las reglas se lean organizadas, directas y fáciles de entender para que no cometan infracciones.` 
+        }
       ]
     });
     const llmRes = response as any;
     return llmRes.choices[0].message.content.trim();
   } catch (error) {
     if (chatId === "120363417740040773@g.us") {
-      return `✨ *¡Bienvenidos al grupo VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS!* 👋 Qué gusto tenerlos aquí. Estoy atenta para responder de inmediato cualquier consulta jurídica, procedimental o de avalúos que tengan en su día a día. 🚀⚖️`;
+      return `✨ *¡Bienvenidos al grupo VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS!* 👋\n\n` +
+             `Aquí resolvemos sus dudas jurídicas, disputas de comisión y avalúos. Podrán subir PDFs o audios de sus casos.\n` +
+             `⚠️ *Nota:* Por favor, eviten publicar inmuebles aquí; esos van en el grupo principal. ¡Estoy lista para responder! 🚀⚖️`;
     } else if (chatId === "120363403507276533@g.us") {
-      return `✨ *¡Bienvenidos al grupo CÍRCULO CERO 👌!* 👋 Qué gusto tenerlos aquí. Este es el espacio oficial de debate y comunidad de VECY Network para compartir novedades, sugerencias e ideas de mejora. ¡Bienvenidos aliados! 🚀🤝`;
+      return `✨ *¡Bienvenidos a CÍRCULO CERO 👌!* 👋\n\n` +
+             `Este es el canal de debate y comunidad para sugerir mejoras y charlar de VECY.\n` +
+             `⚠️ *Nota:* Evitemos ofertas de inmuebles aquí. ¡Bienvenidos aliados! 🚀🤝`;
     }
-    return `✨ *¡Bienvenidos a nuestra red!* 👋 Qué gusto tenerlos aquí. Ya estoy operando en fase de expansión nacional para ayudarlos con sus cierres. 🚀`;
+    return `✨ *¡Bienvenidos a VECY INMUEBLES NETWORK!* 👋\n\n` +
+           `Ya estoy activa para cruzar sus ofertas sin comisiones.\n` +
+           `📝 *Pautas rápidas de publicación*:\n` +
+           `▸ *Permitido:* Texto técnico completo, PDFs, notas de voz, flyers con datos y enlaces públicos (Wasi, Fincaraiz, etc.).\n` +
+           `▸ *No permitido:* Enlaces de Redes Sociales, publicaciones repetidas, datos incompletos (sin precio/ciudad) o envíos seguidos en menos de 5 minutos.\n\n` +
+           `¡Publiquen correctamente para encontrarles un MATCH inmediato! 🚀🎯`;
   }
 }
 

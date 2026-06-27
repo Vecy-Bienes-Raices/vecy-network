@@ -490,6 +490,7 @@ export class WhatsAppBot {
   public pendingWelcomeJids: string[] = [];
   public pendingWelcomeBuzon: string[] = [];
   public pendingWelcomeCirculo: string[] = [];
+  private mainWelcomeTimer: any = null;
   private buzonWelcomeTimer: any = null;
   private circuloWelcomeTimer: any = null;
   private jidsFile: string = path.join(process.cwd(), '.pending_welcome_jids');
@@ -874,8 +875,15 @@ export class WhatsAppBot {
         this.pendingWelcomeJids.push(...resolvedIds);
         this.pendingWelcomeCount = this.pendingWelcomeJids.length;
         this.saveCounter();
-        if (this.pendingWelcomeCount >= 10) {
+        if (this.pendingWelcomeCount >= 3) {
           await this.sendBatchWelcome();
+        } else {
+          if (this.mainWelcomeTimer) clearTimeout(this.mainWelcomeTimer);
+          this.mainWelcomeTimer = setTimeout(async () => {
+            if (this.pendingWelcomeJids.length > 0) {
+              await this.sendBatchWelcome();
+            }
+          }, 10000);
         }
       } else if (isBuzon) {
         this.pendingWelcomeBuzon.push(...resolvedIds);
