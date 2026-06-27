@@ -1734,6 +1734,16 @@ Por lo tanto, DEBES hacer lo siguiente:
   }
 }
 
+function isGenericName(n: string | null | undefined): boolean {
+  if (!n) return true;
+  const lower = n.toLowerCase().trim();
+  return lower.startsWith("asesor +") || 
+         lower === "asesor" || 
+         lower === "nuevo asesor" || 
+         lower === "colega" || 
+         lower === "";
+}
+
 async function findOrCreateUserByPhone(phone: string, realName: string) {
   const db = await getDb();
   if (!db) return null;
@@ -1759,8 +1769,8 @@ async function findOrCreateUserByPhone(phone: string, realName: string) {
     }).returning();
     user = newUser;
   } else {
-    // Si ya existe pero el nombre es genérico, y tenemos un nombre real, actualizarlo
-    if (realName && !realName.startsWith("Asesor +") && (!user.name || user.name.startsWith("Asesor +"))) {
+    // Si ya existe pero el nombre es genérico (o era "Nuevo Asesor"), y tenemos un nombre real, actualizarlo
+    if (realName && !isGenericName(realName) && isGenericName(user.name)) {
       console.log(`[JanIA-findOrCreateUserByPhone] Actualizando nombre de usuario para ID ${user.id} a ${realName}`);
       const [updatedUser] = await db.update(users).set({ name: realName }).where(eq(users.id, user.id)).returning();
       user = updatedUser;
