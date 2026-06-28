@@ -1136,14 +1136,16 @@ export async function processWhatsAppMessage(
     const senderInfo = analyzeSender(realName, userId, alreadyGreeted);
     const n = realName.split(' ')[0];
 
-    // --- 2. GANCHO DE RECUPERACIÓN DE MEMORIA (v11.60) ---
     const session = await getPendingSession(userId);
     if (session) {
-      const geoValidation = validarZona(text, session.extractedData.city || session.extractedData.ciudadDeseada, session.messageToProcess + " " + text);
+      const geoValidation = await validarZona(text, session.extractedData.city || session.extractedData.ciudadDeseada, session.messageToProcess + " " + text);
       if (geoValidation.isValid) {
         await deletePendingSession(userId);
 
         if (session.type === "PROPERTY") {
+          session.extractedData.latitude = geoValidation.latitude || null;
+          session.extractedData.longitude = geoValidation.longitude || null;
+
           if (geoValidation.isMunicipio) {
             session.extractedData.city = geoValidation.barrioCanonico;
             session.extractedData.addressCity = geoValidation.barrioCanonico;
@@ -1490,7 +1492,7 @@ Por lo tanto, DEBES hacer lo siguiente:
       let geoValidation: any = null;
       
       if (zoneToValidate && zoneToValidate.trim() !== "") {
-        geoValidation = validarZona(zoneToValidate, extracted?.city || extracted?.ciudadDeseada, messageToProcess);
+        geoValidation = await validarZona(zoneToValidate, extracted?.city || extracted?.ciudadDeseada, messageToProcess);
         isValidGeo = geoValidation.isValid;
       }
       
@@ -1528,6 +1530,10 @@ Por lo tanto, DEBES hacer lo siguiente:
       }
 
       const validation = geoValidation;
+      if (isProperty && validation.isValid) {
+        extracted.latitude = validation.latitude || null;
+        extracted.longitude = validation.longitude || null;
+      }
       // Normalización Geográfica Nacional (v12.5)
       if (validation.isMunicipio) {
         // Fuera de Bogotá (Cali, Medellín, Tame, Tadó, etc.)
@@ -1882,6 +1888,8 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
     stratum: data.stratum !== undefined && data.stratum !== null ? Number(data.stratum) : null,
     adminFee: data.adminFee !== undefined && data.adminFee !== null ? String(data.adminFee) : null,
     agentId: user ? user.id : null,
+    latitude: data.latitude !== undefined && data.latitude !== null ? String(data.latitude) : null,
+    longitude: data.longitude !== undefined && data.longitude !== null ? String(data.longitude) : null,
     images: finalImages.length > 0 ? finalImages : null,
     amenities: amenitiesObj
   };

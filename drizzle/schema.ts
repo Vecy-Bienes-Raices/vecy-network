@@ -274,3 +274,20 @@ export const marketAnalysis = pgTable("marketAnalysis", {
 export const favorites = pgTable("favorites", {
   id: serial("id").primaryKey(),
 });
+
+/**
+ * Colombia Geography table - Official DANE DIVIPOLA codes for municipalities
+ */
+export const colombiaGeography = pgTable("colombia_geography", {
+  id: serial("id").primaryKey(),
+  codeDept: varchar("code_dept", { length: 5 }).notNull(),
+  nameDept: varchar("name_dept", { length: 100 }).notNull(),
+  codeMun: varchar("code_mun", { length: 10 }).notNull().unique(),
+  nameMun: varchar("name_mun", { length: 100 }).notNull(),
+  type: varchar("type", { length: 50 }).notNull(),
+  longitude: varchar("longitude", { length: 50 }),
+  latitude: varchar("latitude", { length: 50 }),
+});
+
+export type ColombiaGeography = typeof colombiaGeography.$inferSelect;
+export type InsertColombiaGeography = typeof colombiaGeography.$inferInsert;

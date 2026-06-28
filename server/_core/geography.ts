@@ -3,6 +3,10 @@
  * Version: 3.0 — Cobertura nacional Colombia
  */
 import { buscarLugarColombia } from './colombia-geography';
+import { geocodeAddress } from './geocoding';
+import { getDb } from '../db';
+import { colombiaGeography } from '../../drizzle/schema';
+import { sql } from 'drizzle-orm';
 
 export const DICCIONARIO_BOGOTA: Record<string, { localidad: string, barrios: string[] }> = {
   "usaquen": {
@@ -215,13 +219,16 @@ export type ValidacionZonaResult = {
   isMunicipio?: boolean;
   errorType?: "DATOS_INCOMPLETOS" | "AMBIGUO";
   message?: string;
+  latitude?: string;
+  longitude?: string;
 };
 
 /**
  * Valida si una zona ingresada corresponde a un barrio exacto,
  * maneja ambigüedades, sectores amplios y busca coincidencias en toda Colombia.
+ * Híbrido: Google Maps Geocoding API + Fallback local base de datos DIVIPOLA (DANE).
  */
-export function validarZona(zona: string, ciudad?: string, textoCompleto?: string, isRequirement: boolean = false): ValidacionZonaResult {
+export async function validarZona(zona: string, ciudad?: string, textoCompleto?: string, isRequirement: boolean = false): Promise<ValidacionZonaResult> {
   const normZone = normalizarTextoGeografico(zona);
   const normCity = ciudad ? normalizarTextoGeografico(ciudad) : "";
   const normFullText = textoCompleto ? normalizarTextoGeografico(textoCompleto) : "";
@@ -255,32 +262,60 @@ export function validarZona(zona: string, ciudad?: string, textoCompleto?: strin
     };
   }
 
-  // 2. PRIORIDAD 1: Si el usuario especificó una ciudad nacional explícita (que NO sea Bogotá), validar a nivel nacional
+  // --- CAPA DE GEOLOCALIZACIÓN 1: Google Maps Geocoding API ---
+  const queryAddress = ciudad && normalizarTextoGeografico(ciudad) !== "bogota"
+    ? `${zona}, ${ciudad}, Colombia`
+    : `${zona}, Bogotá, Colombia`;
+
+  const googleResult = await geocodeAddress(queryAddress);
+  if (googleResult && googleResult.isValid) {
+    const normGoogleCity = normalizarTextoGeografico(googleResult.city);
+    const isBogota = normGoogleCity === "bogota";
+
+    return {
+      isValid: true,
+      barrioCanonico: googleResult.zone,
+      localidad: googleResult.locality,
+      city: googleResult.city,
+      isMunicipio: !isBogota,
+      latitude: googleResult.latitude,
+      longitude: googleResult.longitude
+    };
+  }
+
+  // --- CAPA DE GEOLOCALIZACIÓN 2: Fallback local (DIVIPOLA & Diccionarios estáticos) ---
+  const db = await getDb();
   let lugar: any = null;
   const normSimple = (txt: string) => txt.toLowerCase()
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]/g, " ")
     .replace(/\s+/g, " ").trim();
 
-  if (normCity && normCity !== "bogota") {
-    lugar = buscarLugarColombia(ciudad!);
-    if (lugar && normSimple(lugar.nombreCanonico) !== "bogota") {
-      const cleanText = (txt: string) => txt.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-        .split(' ')
-        .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-        .join(' ');
+  // 2. PRIORIDAD 1: Si el usuario especificó una ciudad nacional de la DIVIPOLA en la DB
+  if (db && ciudad) {
+    const cleanCity = ciudad.trim();
+    try {
+      const [divipolaMatch] = await db
+        .select()
+        .from(colombiaGeography)
+        .where(sql`LOWER(name_mun) = LOWER(${cleanCity})`)
+        .limit(1);
 
-      return {
-        isValid: true,
-        barrioCanonico: zona ? zona.trim() : cleanText(lugar.nombreCanonico),
-        localidad: cleanText(lugar.departamento),
-        city: cleanText(lugar.nombreCanonico),
-        isMunicipio: true
-      };
+      if (divipolaMatch && normalizarTextoGeografico(divipolaMatch.nameMun) !== "bogota") {
+        return {
+          isValid: true,
+          barrioCanonico: zona.trim(),
+          localidad: divipolaMatch.nameDept,
+          city: divipolaMatch.nameMun,
+          isMunicipio: true
+        };
+      }
+    } catch (err: any) {
+      console.error("[Geography-DB] Error consultando DIVIPOLA por ciudad:", err.message);
     }
   }
 
-  // 3. PRIORIDAD 2: Si no hay ciudad nacional explícita, ver si coincide exactamente con un barrio/municipio registrado en Bogotá o Sabana
+  // 3. PRIORIDAD 2: Coincidencia exacta con el diccionario estático de Bogotá
   if (MAPA_BARRIOS[normZone]) {
     const info = MAPA_BARRIOS[normZone];
     return {
@@ -292,7 +327,30 @@ export function validarZona(zona: string, ciudad?: string, textoCompleto?: strin
     };
   }
 
-  // 4. PRIORIDAD 3: Fallback nacional (si no está registrado localmente y se detecta una zona/ciudad nacional)
+  // 4. PRIORIDAD 3: Buscar en la base de datos DIVIPOLA usando el nombre de la zona (si es un municipio externo)
+  if (db && normZone) {
+    try {
+      const [divipolaMatch] = await db
+        .select()
+        .from(colombiaGeography)
+        .where(sql`LOWER(name_mun) = LOWER(${zona.trim()})`)
+        .limit(1);
+
+      if (divipolaMatch && normalizarTextoGeografico(divipolaMatch.nameMun) !== "bogota") {
+        return {
+          isValid: true,
+          barrioCanonico: divipolaMatch.nameMun,
+          localidad: divipolaMatch.nameDept,
+          city: divipolaMatch.nameMun,
+          isMunicipio: true
+        };
+      }
+    } catch (err: any) {
+      console.error("[Geography-DB] Error consultando DIVIPOLA por zona:", err.message);
+    }
+  }
+
+  // 5. PRIORIDAD 4: Fallback estático nacional (buscarLugarColombia)
   if (normZone) {
     lugar = buscarLugarColombia(zona);
   }
@@ -318,8 +376,7 @@ export function validarZona(zona: string, ciudad?: string, textoCompleto?: strin
     };
   }
 
-  // 5. PRIORIDAD 4: Validaciones de datos incompletos locales (Localidades solas o sectores amplios)
-  // Si es una localidad completa (sin especificar barrio)
+  // 6. PRIORIDAD 5: Validaciones de datos incompletos locales (Localidades solas o sectores amplios)
   if (MAPA_LOCALIDADES[normZone]) {
     if (isRequirement) {
       return {
@@ -337,7 +394,6 @@ export function validarZona(zona: string, ciudad?: string, textoCompleto?: strin
     };
   }
 
-  // Si es un sector amplio o ciudad sola
   const sectoresAmplios = ["norte", "norte de bogota", "sur", "centro", "occidente", "salitre", "bogota", "sabana de bogota", "municipios cercanos"];
   if (sectoresAmplios.includes(normZone)) {
     if (isRequirement) {
@@ -356,8 +412,7 @@ export function validarZona(zona: string, ciudad?: string, textoCompleto?: strin
     };
   }
 
-  // 6. PRIORIDAD 5: Si la zona tiene un largo suficiente y no fue catalogada como localidad o sector amplio,
-  // la aceptamos dinámicamente como barrio/sector para evitar rechazar zonas válidas no mapeadas en el diccionario.
+  // 7. PRIORIDAD 6: Si la zona tiene largo suficiente, se acepta dinámicamente como barrio de Bogotá o de una ciudad válida
   if (normZone && normZone.length >= 3) {
     const cleanText = (txt: string) => txt.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
       .split(' ')
@@ -385,7 +440,6 @@ export function validarZona(zona: string, ciudad?: string, textoCompleto?: strin
     };
   }
 
-  // === PASO 5: Zona completamente desconocida ===
   return {
     isValid: false,
     errorType: "DATOS_INCOMPLETOS",
