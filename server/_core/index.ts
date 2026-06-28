@@ -11,6 +11,8 @@ import { initCronScheduler } from "./cronService";
 import { processWhatsAppMessage } from "./janIA";
 import { handleIncomingWebhook } from "./whatsapp-cloud";
 import multer from "multer";
+import fs from "fs";
+import path from "path";
 import { transcribeAudioBuffer } from "./voiceTranscription";
 import { invokeLLM } from "./llm";
 
@@ -269,6 +271,47 @@ async function startServer() {
     } catch (err: any) {
       console.error("[TRANSCRIBE-ROUTE] Error al transcribir:", err);
       res.status(500).json({ error: err.message || "Error al procesar la transcripción" });
+    }
+  });
+
+  // Ensure uploads directory exists
+  const uploadsDir = path.resolve(process.cwd(), "public/uploads");
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+
+  // Serve the uploads statically
+  app.use("/uploads", express.static(uploadsDir));
+
+  // Configure multer storage for disk saving
+  const diskStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+      cb(null, uploadsDir);
+    },
+    filename: (req, file, cb) => {
+      const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+      cb(null, uniqueSuffix + path.extname(file.originalname));
+    }
+  });
+
+  const uploadDisk = multer({
+    storage: diskStorage,
+    limits: {
+      fileSize: 50 * 1024 * 1024 // 50MB limit
+    }
+  });
+
+  app.post("/api/janIA/upload", uploadDisk.single("file"), async (req: any, res: any) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No se subió ningún archivo" });
+      }
+      const fileUrl = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
+      console.log(`[UPLOAD-ROUTE] Archivo guardado localmente en: ${req.file.path} ➔ URL: ${fileUrl}`);
+      res.json({ fileUrl });
+    } catch (err: any) {
+      console.error("[UPLOAD-ROUTE] Error al guardar archivo:", err);
+      res.status(500).json({ error: err.message || "Error al subir el archivo" });
     }
   });
 
