@@ -3,7 +3,7 @@ import type { User } from "../../drizzle/schema";
 import { sdk } from "./sdk";
 
 // Emails que SIEMPRE tienen acceso de superadministrador
-const SUPERADMIN_EMAILS = ["vecybienesraices@gmail.com"];
+const SUPERADMIN_EMAILS = ["vecybienesraices@gmail.com", "jani79alves@gmail.com"];
 
 export type TrpcContext = {
   req: CreateExpressContextOptions["req"];
