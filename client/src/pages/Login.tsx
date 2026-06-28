@@ -160,11 +160,11 @@ export default function Login() {
           ) : (
             <div className="space-y-4">
               {/* OAuth Buttons */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="w-full">
                 <button
                   type="button"
                   onClick={() => handleOAuthLogin('google')}
-                  className="btn-electric flex items-center justify-center gap-2 py-3 text-xs"
+                  className="w-full btn-electric flex items-center justify-center gap-3 py-3 text-xs uppercase tracking-wider font-semibold"
                 >
                   <svg className="w-4 h-4" viewBox="0 0 24 24">
                     <path
@@ -184,17 +184,7 @@ export default function Login() {
                       d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                     />
                   </svg>
-                  Google
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleOAuthLogin('facebook')}
-                  className="btn-electric flex items-center justify-center gap-2 py-3 text-xs"
-                >
-                  <svg className="w-4 h-4 text-[#1877F2]" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M22 12c0-5.52-4.48-10-10-10S2 6.48 2 12c0 4.84 3.44 8.87 8 9.8V15H8v-3h2V9.5C10 7.57 11.57 6 13.5 6H16v3h-2c-.55 0-1 .45-1 1v2h3v3h-3v6.95c4.56-.93 8-4.96 8-9.75z" />
-                  </svg>
-                  Facebook
+                  Continuar con Google
                 </button>
               </div>
 
