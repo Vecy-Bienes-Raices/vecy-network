@@ -11,6 +11,7 @@ import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { Loader2 } from 'lucide-react';
 import { ScrollReveal } from '@/components/ScrollReveal';
+import { useAuth } from '@/_core/hooks/useAuth';
 
 // ─── Filtros ──────────────────────────────────────────────────────────────────
 type FilterType = 'all' | 'apartment' | 'house' | 'building' | 'hotel' | 'farm' | 'office' | 'warehouse' | 'land' | 'commercial';
@@ -32,6 +33,7 @@ export default function Properties() {
   const [, navigate] = useLocation();
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [sortBy, setSortBy] = useState<'default' | 'price-asc' | 'price-desc'>('default');
+  const { user } = useAuth();
 
   const { data: propertiesData, isLoading } = trpc.properties.list.useQuery();
 
@@ -63,6 +65,16 @@ export default function Properties() {
             <p className="vecy-subtitle max-w-2xl mx-auto">
               Descubre propiedades premium auditadas y sincronizadas bajo el estándar Gold Edition de VECY Network.
             </p>
+            {user && ['admin', 'agent'].includes(user.role as string) && (
+              <div className="mt-8">
+                <button
+                  onClick={() => navigate('/admin')}
+                  className="btn-gold px-8 py-3 text-xs tracking-widest uppercase gap-2 inline-flex items-center"
+                >
+                  Ir al Panel de Administración
+                </button>
+              </div>
+            )}
           </ScrollReveal>
         </div>
       </section>

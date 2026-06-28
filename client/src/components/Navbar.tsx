@@ -10,6 +10,7 @@
 import { useState, useEffect } from 'react';
 import { Menu, X } from 'lucide-react';
 import { useLocation } from 'wouter';
+import { useAuth } from '@/_core/hooks/useAuth';
 
 interface NavbarProps {
   logoUrl?: string;
@@ -21,6 +22,7 @@ export default function Navbar({ logoUrl, brandName, brandSubtitle }: NavbarProp
   const [, navigate] = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -40,6 +42,10 @@ export default function Navbar({ logoUrl, brandName, brandSubtitle }: NavbarProp
     { label: 'SERVICIOS', href: '/services' },
     { label: 'AGENTES', href: '/agent-dashboard' },
   ];
+
+  if (user && ['admin', 'agent'].includes(user.role as string)) {
+    navItems.push({ label: 'ADMINISTRACIÓN', href: '/admin' });
+  }
 
   return (
     <nav
