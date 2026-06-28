@@ -211,6 +211,11 @@ export class JaniaMatchBot {
             return;
           }
 
+          // Ignorar stickers en los grupos
+          if (msg.type === 'sticker') {
+            return;
+          }
+
           const textLower = (msg.body || "").toLowerCase();
           const hasDirectMention = textLower.includes("jania");
 
@@ -312,7 +317,7 @@ export class JaniaMatchBot {
         result = await processCirculoMessage(msg.body, senderId, realName);
       } else {
         // Grupo principal u otros
-        result = await processWhatsAppMessage(msg.body, senderId, realName, false, [], undefined, undefined, true);
+        result = await processWhatsAppMessage(msg.body, senderId, realName, false, [], undefined, undefined, true, undefined, undefined, chatId);
       }
 
       if (result && result.response && result.response.trim() !== '') {
@@ -643,18 +648,37 @@ export class JaniaMatchBot {
       await this.logToDb(senderId, 'user', fullText);
 
       // 3. Procesar mediante JanIA (guardará en DB de forma automática)
-      const result = await processWhatsAppMessage(
-        fullText,
-        senderId,
-        userName,
-        hasMedia,
-        scrapedResults,
-        undefined,
-        imageMsg?.imageBuffer,
-        true, // isGroup = true
-        pdfMsg?.pdfBuffer,
-        pdfMsg?.pdfMimeType
-      );
+      let result;
+      if (chatId === '120363417740040773@g.us') {
+        result = await processConsultingMessage(
+          fullText,
+          senderId,
+          userName,
+          imageMsg?.imageBuffer,
+          pdfMsg?.pdfBuffer,
+          pdfMsg?.pdfMimeType
+        );
+      } else if (chatId === '120363403507276533@g.us') {
+        result = await processCirculoMessage(
+          fullText,
+          senderId,
+          userName
+        );
+      } else {
+        result = await processWhatsAppMessage(
+          fullText,
+          senderId,
+          userName,
+          hasMedia,
+          scrapedResults,
+          undefined,
+          imageMsg?.imageBuffer,
+          true,
+          pdfMsg?.pdfBuffer,
+          pdfMsg?.pdfMimeType,
+          chatId
+        );
+      }
 
       // --- REACCIONAR A LA PUBLICACIÓN ---
       if (result) {

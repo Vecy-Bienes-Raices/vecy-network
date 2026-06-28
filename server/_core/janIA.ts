@@ -10,6 +10,8 @@ import { validarZona, normalizarTextoGeografico } from "./geography";
 import { transcribeAudio } from "./voiceTranscription";
 import { eq, and, sql, gte } from "drizzle-orm";
 import { storagePut } from "../storage";
+import fs from "fs";
+import path from "path";
 
 export type JanIAResult = {
   classification: "INMUEBLE" | "REQUERIMIENTO" | "CONSULTA_GENERAL" | "RESPUESTA_A_PREGUNTA_IA" | "DATOS_INCOMPLETOS" | "VIOLACION_DE_NORMAS" | "ANALISIS_DE_MERCADO";
@@ -493,6 +495,42 @@ function analyzeSender(name: string, userId: string, alreadyGreeted: boolean): {
     adj, 
     courtesy 
   };
+}
+
+let promptCache: Record<string, string> = {};
+
+export function buildSystemPrompt(groupJid?: string): string {
+  const cacheKey = groupJid || 'web';
+  if (promptCache[cacheKey]) {
+    return promptCache[cacheKey];
+  }
+
+  try {
+    const baseDir = path.resolve(process.cwd(), "server/_core/prompts");
+    const basePrompt = fs.readFileSync(path.join(baseDir, "base.md"), "utf-8");
+    
+    let specificPrompt = "";
+    if (groupJid === '120363260108880069@g.us') {
+      specificPrompt = fs.readFileSync(path.join(baseDir, "inmuebles.md"), "utf-8");
+    } else if (groupJid === '120363417740040773@g.us') {
+      specificPrompt = fs.readFileSync(path.join(baseDir, "legal.md"), "utf-8");
+    } else if (groupJid === '120363403507276533@g.us') {
+      specificPrompt = fs.readFileSync(path.join(baseDir, "circulo_cero.md"), "utf-8");
+    } else {
+      specificPrompt = fs.readFileSync(path.join(baseDir, "web_console.md"), "utf-8");
+    }
+
+    const fullPrompt = `${basePrompt}\n\n${specificPrompt}`;
+    promptCache[cacheKey] = fullPrompt;
+    return fullPrompt;
+  } catch (err: any) {
+    console.error("[Prompts-Loader] Error loading prompt files, falling back to old JANIA_PROMPT:", err.message);
+    return JANIA_PROMPT;
+  }
+}
+
+export function clearPromptCache() {
+  promptCache = {};
 }
 
 export const JANIA_PROMPT = `
@@ -1134,7 +1172,8 @@ export async function processWhatsAppMessage(
   imageBuffer?: string,
   isGroup: boolean = false,
   pdfBuffer?: string,
-  pdfMimeType?: string
+  pdfMimeType?: string,
+  groupJid?: string
 ): Promise<JanIAResult> {
   try {
     const rawPhone = userId.split('@')[0];
@@ -1370,7 +1409,7 @@ Por lo tanto, DEBES hacer lo siguiente:
 
     const response = await invokeLLM({
       messages: [
-        { role: "system", content: JANIA_PROMPT },
+        { role: "system", content: buildSystemPrompt(groupJid) },
         { role: "user", content: contextText }
       ],
       responseFormat: { type: "json_object" },
@@ -1647,9 +1686,10 @@ Por lo tanto, DEBES hacer lo siguiente:
       }
     }
 
-    // Intercepción de consultas en el grupo de inmuebles para redirigir (solo aplica en grupos)
+    // Intercepción de consultas en el grupo de inmuebles para redirigir (solo aplica en el grupo principal de inmuebles)
     const isConsultation = result.classification === "CONSULTA_GENERAL" || result.classification === "RESPUESTA_A_PREGUNTA_IA" || result.classification === "ANALISIS_DE_MERCADO";
-    if (isGroup && isConsultation) {
+    const isMainPropertiesGroup = !groupJid || groupJid === '120363260108880069@g.us';
+    if (isGroup && isConsultation && isMainPropertiesGroup) {
       const textLower = messageToProcess.toLowerCase();
 
       // A. Consultas sobre cómo publicar o subir inmuebles o cómo funciona el grupo
