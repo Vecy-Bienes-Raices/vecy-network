@@ -5,7 +5,7 @@ import { getDb } from '../db';
 import { conversations, messages, leads, propertyMatches, properties, requirements } from '../../drizzle/schema';
 import { eq, desc } from 'drizzle-orm';
 import { scrapePropertyLink } from '../_core/scraper';
-import { JANIA_PROMPT } from '../_core/janIA';
+import { JANIA_PROMPT, processWhatsAppMessage } from '../_core/janIA';
 import axios from 'axios';
 
 export const janIARouter = router({
@@ -71,60 +71,23 @@ export const janIARouter = router({
           }
         }
 
-        // Get conversation history for context
-        const conversationHistory = await db
-          .select()
-          .from(messages)
-          .where(eq(messages.conversationId, conversationId))
-          .orderBy(messages.createdAt);
+        const mockUserId = ctx.user ? `web-user-${ctx.user.id}` : `web-session-${input.sessionId}`;
+        const mockUserName = ctx.user ? ctx.user.name : "Usuario Web";
 
-        // Build message history for LLM
-        const messageHistory = conversationHistory.map(msg => ({
-          role: msg.role as 'user' | 'janIA' | 'system',
-          content: msg.content,
-        }));
+        const result = await processWhatsAppMessage(
+          input.message,
+          mockUserId,
+          mockUserName,
+          false,
+          [],
+          undefined,
+          undefined,
+          false
+        );
 
-        // Add current user message
-        messageHistory.push({
-          role: 'user',
-          content: input.message,
-        });
-
-        // Call LLM
-        const response = await invokeLLM({
-          messages: [
-            { role: 'system', content: JANIA_PROMPT },
-            ...messageHistory.map(m => ({
-              role: m.role as 'system' | 'user' | 'assistant',
-              content: m.content,
-            })),
-          ],
-        });
-
-        const rawLLMResponse = typeof response.choices[0]?.message?.content === 'string' 
-          ? response.choices[0].message.content 
-          : 'No response';
-
-        // JanIA's system prompt always returns a structured JSON object.
-        // Parse it to extract the human-readable fields for the web chat.
-        let janIAResponse = rawLLMResponse;
-        let wantsVoice = false;
-        let voiceResponse = '';
-        try {
-          const cleaned = rawLLMResponse.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim();
-          const parsed = JSON.parse(cleaned);
-          if (parsed && typeof parsed.response === 'string' && parsed.response.trim() !== '') {
-            janIAResponse = parsed.response;
-          }
-          if (parsed && typeof parsed.wantsVoice === 'boolean') {
-            wantsVoice = parsed.wantsVoice;
-          }
-          if (parsed && typeof parsed.voiceResponse === 'string' && parsed.voiceResponse.trim() !== '') {
-            voiceResponse = parsed.voiceResponse;
-          }
-        } catch {
-          // Not valid JSON — use the raw response as-is
-        }
+        const janIAResponse = result.dmResponse || result.response;
+        const wantsVoice = result.wantsVoice || false;
+        const voiceResponse = result.voiceResponse || janIAResponse;
 
         // Save user message
         await db.insert(messages).values({
@@ -134,7 +97,7 @@ export const janIARouter = router({
           messageType: 'text',
         });
 
-        // Save JanIA response (clean text, not raw JSON)
+        // Save JanIA response (clean text)
         await db.insert(messages).values({
           conversationId: conversationId,
           role: 'janIA',
@@ -248,11 +211,11 @@ export const janIARouter = router({
         leadId: z.number().optional(),
       })
     )
-    .mutation(async ({ input }) => {
-      try {
-        // Prepare file content for analysis
-        const fileContent = `[Archivo: ${input.fileType}]\nURL: ${input.fileUrl}`;
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
 
+      try {
         let imageBuffer: string | undefined;
         let pdfBuffer: string | undefined;
         let pdfMimeType: string | undefined;
@@ -276,25 +239,60 @@ export const janIARouter = router({
           console.error('[JanIA-Router] Error descargando archivo de análisis:', downloadError.message || downloadError);
         }
 
-        const response = await invokeLLM({
-          messages: [
-            {
-              role: 'system',
-              content: `${JANIA_PROMPT}\n\nAnaliza el archivo proporcionado y proporciona un análisis detallado relacionado con bienes raíces en Colombia.`,
-            },
-            {
-              role: 'user',
-              content: fileContent as string,
-            },
-          ],
-          imageBuffer,
-          pdfBuffer,
-          pdfMimeType,
-        });
+        const mockUserId = ctx.user ? `web-user-${ctx.user.id}` : `web-session-${input.sessionId}`;
+        const mockUserName = ctx.user ? ctx.user.name : "Usuario Web";
 
-        const analysis = typeof response.choices[0]?.message?.content === 'string'
-          ? response.choices[0].message.content
-          : 'No analysis available';
+        const result = await processWhatsAppMessage(
+          `[Archivo: ${input.fileType}]`,
+          mockUserId,
+          mockUserName,
+          true, // hasMedia
+          [],   // scrapedData
+          undefined, // audioUrl
+          imageBuffer,
+          false,     // isGroup
+          pdfBuffer,
+          pdfMimeType
+        );
+
+        const analysis = result.dmResponse || result.response;
+
+        // Save conversation history in DB if it exists
+        const conversation = await db
+          .select()
+          .from(conversations)
+          .where(eq(conversations.sessionId, input.sessionId))
+          .limit(1);
+
+        if (conversation.length > 0) {
+          const conversationId = conversation[0].id;
+          
+          // Save user message with attachment URL
+          await db.insert(messages).values({
+            conversationId: conversationId,
+            role: 'user',
+            content: `[Archivo: ${input.fileType}]`,
+            messageType: imageBuffer ? 'image' : 'file',
+            attachments: [input.fileUrl],
+          });
+
+          // Save JanIA response
+          await db.insert(messages).values({
+            conversationId: conversationId,
+            role: 'janIA',
+            content: analysis,
+            messageType: 'text',
+          });
+
+          // Update conversation last message
+          await db
+            .update(conversations)
+            .set({
+              lastMessage: analysis,
+              updatedAt: new Date(),
+            })
+            .where(eq(conversations.id, conversationId));
+        }
 
         return {
           analysis,
