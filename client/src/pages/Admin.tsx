@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useLocation } from 'wouter';
+import { getLoginUrl } from '@/const';
 import {
   LogOut, Home, Building2, Users, MessageSquare, BarChart3, Menu, X, GitBranch, Shield, Sparkles
 } from 'lucide-react';
@@ -38,16 +39,41 @@ export default function Admin() {
     );
   }
 
-  if (!user || !['admin', 'agent'].includes(user.role as string)) {
+  if (!user) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="panel-card p-10 text-center max-w-sm">
+          <Shield className="w-12 h-12 text-accent mx-auto mb-4 opacity-70" />
+          <h1 className="text-xl font-bold text-foreground mb-2">Iniciar Sesión</h1>
+          <p className="text-muted-foreground text-sm mb-6">Debes iniciar sesión con una cuenta autorizada para acceder al panel.</p>
+          <button onClick={() => { window.location.href = getLoginUrl(); }} className="btn-gold w-full">
+            Iniciar Sesión
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!['admin', 'agent'].includes(user.role as string)) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="panel-card p-10 text-center max-w-md">
           <Shield className="w-12 h-12 text-destructive mx-auto mb-4 opacity-70" />
           <h1 className="text-xl font-bold text-foreground mb-2">Acceso Denegado</h1>
-          <p className="text-muted-foreground text-sm mb-6">No tienes permisos para acceder a esta área.</p>
-          <button onClick={() => navigate('/')} className="btn-electric w-full">
-            Volver al Inicio
-          </button>
+          <p className="text-muted-foreground text-sm mb-2">
+            Tu cuenta (<span className="text-accent">{user.email}</span>) no tiene permisos de administrador o agente.
+          </p>
+          <p className="text-muted-foreground text-xs mb-6">
+            Por favor, ponte en contacto con soporte técnico para actualizar tu rol a "agent" o "admin".
+          </p>
+          <div className="flex flex-col gap-3">
+            <button onClick={() => logout()} className="btn-electric w-full">
+              Cerrar Sesión / Cambiar Cuenta
+            </button>
+            <button onClick={() => navigate('/')} className="text-sm text-muted-foreground hover:text-foreground transition-colors py-2">
+              Volver al Inicio
+            </button>
+          </div>
         </div>
       </div>
     );
