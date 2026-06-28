@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
 import Admin from "@/pages/Admin";
+import Login from "@/pages/Login";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -39,6 +40,7 @@ function Router() {
       <Route path={"/services"} component={Services} />
       <Route path={"/contact"} component={Contact} />
       <Route path={"/admin"} component={Admin} />
+      <Route path={"/login"} component={Login} />
       <Route path={"/agent-dashboard"} component={AgentDashboard} />
       <Route path={"/p/:token"} component={StealthPropertyView} />
       <Route path={"/ficha/:id"} component={UnbrandedFicha} />
