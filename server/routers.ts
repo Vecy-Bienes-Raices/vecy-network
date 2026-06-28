@@ -81,6 +81,7 @@ export const appRouter = router({
           return {
             success: true,
             user,
+            sessionToken,
           };
         } catch (error) {
           console.error("[Auth] loginWithSupabaseToken error:", error);

@@ -23,7 +23,10 @@ export default function Login() {
   const exchangeToken = async (accessToken: string) => {
     try {
       setLoading(true);
-      await loginMutation.mutateAsync({ accessToken });
+      const res = await loginMutation.mutateAsync({ accessToken });
+      if (res && res.sessionToken) {
+        localStorage.setItem("jania-session-token", res.sessionToken);
+      }
       await refresh();
       toast.success('Sesión iniciada correctamente');
       navigate('/admin');
