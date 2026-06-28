@@ -749,11 +749,23 @@ export class JaniaMatchBot {
               quotedMessageId: buffer.messages[buffer.messages.length - 1].originalMsg.id._serialized
             });
             await this.logToDb(senderId, 'janIA', `[GROUP-REPLY] ${result.response}`);
-          } else if (result.shouldSendDM && result.dmResponse && result.dmResponse.trim() !== "") {
-            console.log(`[JANIA-MATCH] [Stealth] Derivando confirmación DM de ${senderId} al bot principal.`);
-            await sendUserDM(senderId, result.dmResponse);
-            // Registrar en BD también para auditoría completa
-            await this.logToDb(senderId, 'janIA', `[DM-Stealth] ${result.dmResponse}`);
+          } else {
+            // Si hay un MATCH (coincidencia de negocio) detectado, lo publicamos en el grupo etiquetando a los involucrados
+            if (result.response && result.response.trim() !== "") {
+              console.log(`[JANIA-MATCH] Enviando notificación de Match en el grupo para ${senderId}`);
+              await this.queuedSend(chatId, result.response, {
+                mentions: result.mentions || [senderId],
+                quotedMessageId: buffer.messages[buffer.messages.length - 1].originalMsg.id._serialized
+              });
+              await this.logToDb(senderId, 'janIA', `[GROUP-MATCH] ${result.response}`);
+            }
+
+            // También enviamos la confirmación privada de registro al usuario (Stealth)
+            if (result.shouldSendDM && result.dmResponse && result.dmResponse.trim() !== "") {
+              console.log(`[JANIA-MATCH] [Stealth] Derivando confirmación DM de ${senderId} al bot principal.`);
+              await sendUserDM(senderId, result.dmResponse);
+              await this.logToDb(senderId, 'janIA', `[DM-Stealth] ${result.dmResponse}`);
+            }
           }
         }
 

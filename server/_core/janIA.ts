@@ -1041,7 +1041,15 @@ Por favor responde a este mensaje diciendo únicamente:
     extraDMs.push({ jid: adminJid, message: adminMessage, viaMainBot: true });
   }
 
-  const responseText = matchBlocks.join('\n\n================================\n\n');
+  const rawSenderPhone = userId.split('@')[0];
+  let introPrefix = "";
+  if (isProperty) {
+    introPrefix = `Mira @${rawSenderPhone}, encontré este/os requerimiento/s que coinciden con tu inmueble en oferta, confírmame si hay alguno que en realidad te llame la atención para poderte compartir los datos de quien busca dicho inmueble y puedas hacer una posible negociación:\n\n`;
+  } else {
+    introPrefix = `Mira @${rawSenderPhone}, encontré este/os inmueble/s que coinciden con tu requerimiento, confírmame si hay alguno que en realidad te llame la atención para poderte compartir los datos de quien publicó dicho inmueble y puedas hacer una posible negociación:\n\n`;
+  }
+
+  const responseText = introPrefix + matchBlocks.join('\n\n================================\n\n');
 
   return {
     response: responseText,

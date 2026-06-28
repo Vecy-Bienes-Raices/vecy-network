@@ -23,6 +23,7 @@ const emptyForm = {
   floorDetail: '', areaTotal: '', yearBuilt: '',
   adminFee: '', matriculaInmobiliaria: '', wildcardFeature: '',
   featured: false, available: true,
+  images: [] as string[],
 };
 
 export default function AdminProperties() {
@@ -30,6 +31,41 @@ export default function AdminProperties() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState({ ...emptyForm });
   const [search, setSearch] = useState('');
+  const [uploading, setUploading] = useState(false);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    setUploading(true);
+    const filesArray = Array.from(e.target.files);
+    const newImages = [...formData.images];
+
+    for (const file of filesArray) {
+      const data = new FormData();
+      data.append('file', file);
+      try {
+        const response = await fetch('/api/janIA/upload', {
+          method: 'POST',
+          body: data,
+        });
+        if (!response.ok) throw new Error('Upload failed');
+        const resJson = await response.json();
+        if (resJson.fileUrl) {
+          newImages.push(resJson.fileUrl);
+        }
+      } catch (err) {
+        toast.error(`Error al subir ${file.name}`);
+      }
+    }
+    setFormData(prev => ({ ...prev, images: newImages }));
+    setUploading(false);
+  };
+
+  const removeImage = (indexToRemove: number) => {
+    setFormData(prev => ({
+      ...prev,
+      images: prev.images.filter((_, idx) => idx !== indexToRemove)
+    }));
+  };
 
   const { data: properties, isLoading, refetch } = trpc.properties.myList.useQuery();
 
@@ -66,6 +102,7 @@ export default function AdminProperties() {
       matriculaInmobiliaria: formData.matriculaInmobiliaria || null,
       wildcardFeature: formData.wildcardFeature || null,
       featured: formData.featured, available: formData.available,
+      images: formData.images,
     };
     editingId ? updateMutation.mutate({ id: editingId, data: payload }) : createMutation.mutate(payload);
   };
@@ -84,6 +121,7 @@ export default function AdminProperties() {
       matriculaInmobiliaria: prop.matriculaInmobiliaria || '',
       wildcardFeature: prop.wildcardFeature || '',
       featured: prop.featured || false, available: prop.available ?? true,
+      images: Array.isArray(prop.images) ? (prop.images as string[]) : [],
     });
     setShowForm(true);
   };
@@ -225,6 +263,55 @@ export default function AdminProperties() {
                   />
                 </div>
               ))}
+            </div>
+
+            <div className="separator-gold" />
+
+            {/* Fotos */}
+            {sectionTitle("Fotos del Inmueble")}
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                {formData.images.map((img, idx) => (
+                  <div key={idx} className="relative aspect-video rounded-xl overflow-hidden border border-white/10 group bg-card">
+                    <img src={img} alt={`Foto ${idx + 1}`} className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(idx)}
+                      className="absolute top-1.5 right-1.5 p-1.5 bg-black/80 hover:bg-destructive rounded-lg transition-colors opacity-0 group-hover:opacity-100 duration-200"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-white" />
+                    </button>
+                    <span className="absolute bottom-1 left-1.5 text-[8px] bg-black/60 px-1.5 py-0.5 rounded-full font-bold uppercase tracking-widest text-primary">
+                      Foto {idx + 1}
+                    </span>
+                  </div>
+                ))}
+                
+                {/* Upload Button Box */}
+                <label className="flex flex-col items-center justify-center aspect-video rounded-xl border border-dashed border-white/20 hover:border-primary/50 bg-white/5 hover:bg-white/10 cursor-pointer transition-all duration-300 group">
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="hidden"
+                    disabled={uploading}
+                  />
+                  {uploading ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="w-5 h-5 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+                      <span className="text-[9px] uppercase tracking-widest text-gray-500 font-bold">Subiendo...</span>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-1.5">
+                      <Plus className="w-5 h-5 text-gray-400 group-hover:text-primary transition-colors" />
+                      <span className="text-[9px] uppercase tracking-widest text-gray-400 group-hover:text-primary transition-colors font-bold">
+                        Añadir Fotos
+                      </span>
+                    </div>
+                  )}
+                </label>
+              </div>
             </div>
 
             <div className="separator-gold" />

@@ -85,7 +85,9 @@ export const janIARouter = router({
           false
         );
 
-        const janIAResponse = result.dmResponse || result.response;
+        const janIAResponse = result.response && result.response.trim() !== "" 
+          ? (result.dmResponse ? result.dmResponse + "\n\n" : "") + result.response 
+          : (result.dmResponse || result.response);
         const wantsVoice = result.wantsVoice || false;
         const voiceResponse = result.voiceResponse || janIAResponse;
 
@@ -255,7 +257,9 @@ export const janIARouter = router({
           pdfMimeType
         );
 
-        const analysis = result.dmResponse || result.response;
+        const analysis = result.response && result.response.trim() !== "" 
+          ? (result.dmResponse ? result.dmResponse + "\n\n" : "") + result.response 
+          : (result.dmResponse || result.response);
 
         // Save conversation history in DB if it exists
         const conversation = await db

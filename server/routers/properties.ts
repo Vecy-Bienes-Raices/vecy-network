@@ -42,6 +42,7 @@ const propertyInputSchema = z.object({
   featured: z.boolean().optional().default(false),
   available: z.boolean().optional().default(true),
   idUsuarioWhatsapp: z.string().optional().nullable(),
+  images: z.array(z.string()).optional().nullable(),
 });
 
 export const propertiesRouter = router({
