@@ -2792,6 +2792,7 @@ export async function sendAdminNotification(text: string): Promise<void> {
   const ADMIN_PHONE = process.env.ADMIN_PHONE || "573166569719";
   const adminJid = `${ADMIN_PHONE}@c.us`;
   try {
+    console.log('[DEBUG-DM] global.janiaMatchBotInstance exists:', !!(global as any).janiaMatchBotInstance, 'isReady:', (global as any).janiaMatchBotInstance?.isReady);
     const matchBot = (global as any).janiaMatchBotInstance;
     if (matchBot && matchBot.isReady) {
       console.log(`[WHATSAPP-BOT] Enviando notificación de admin a ${adminJid} vía JanIA Match Bot (Puppeteer)...`);
