@@ -123,11 +123,21 @@ export class JaniaMatchBot {
     this.setupEventListeners();
   }
 
-  private setupEventListeners() {
     // Generar código QR para vinculación
     this.client.on('qr', (qr: string) => {
       console.log('\n[JANIA-MATCH] 🔌 ESCANEA ESTE CÓDIGO QR PARA INICIAR JANIA MATCH:');
       qrcode.generate(qr, { small: true });
+      // Guardar el QR como imagen PNG accesible desde el navegador
+      try {
+        const QRCode = require('qrcode');
+        const qrPath = path.join(process.cwd(), 'dist', 'qr-match.png');
+        QRCode.toFile(qrPath, qr, { width: 400, margin: 2 }, (err: any) => {
+          if (err) console.error('[JANIA-MATCH] Error guardando QR PNG:', err.message);
+          else console.log(`[JANIA-MATCH] 📸 QR guardado como imagen → https://vecy-network.vercel.app/qr-match.png (también en http://<servidor>:3000/qr-match.png)`);
+        });
+      } catch (e: any) {
+        console.warn('[JANIA-MATCH] qrcode no disponible para PNG, solo terminal.');
+      }
     });
 
     this.client.on('ready', () => {
