@@ -484,10 +484,10 @@ async function startServer() {
                 "Aliado VECY"
               );
 
-              // Enviar al grupo
-              if (matchDetails.response && whatsappBot.targetGroupId) {
-                await whatsappBot.sendToGroup(matchDetails.response, undefined, matchDetails.mentions);
-              }
+              // Enviar al grupo (Omitido para no spamear ni saturar el grupo principal con alertas repetitivas)
+              // if (matchDetails.response && whatsappBot.targetGroupId) {
+              //   await whatsappBot.sendToGroup(matchDetails.response, undefined, matchDetails.mentions);
+              // }
 
               // Enviar al admin
               if (matchDetails.extraDMs && matchDetails.extraDMs.length > 0) {

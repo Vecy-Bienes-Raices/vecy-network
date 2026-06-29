@@ -2785,7 +2785,16 @@ export const whatsappBot = new WhatsAppBot();
 export async function sendAdminNotification(text: string): Promise<void> {
   const ADMIN_PHONE = process.env.ADMIN_PHONE || "573166569719";
   const adminJid = `${ADMIN_PHONE}@c.us`;
-  await (whatsappBot as any).queuedSend(adminJid, text);
+  try {
+    const { janiaMatchBot } = await import("./whatsapp-match");
+    if (janiaMatchBot && janiaMatchBot.isReady) {
+      await janiaMatchBot.queuedSend(adminJid, text);
+    } else {
+      await (whatsappBot as any).queuedSend(adminJid, text);
+    }
+  } catch (e) {
+    await (whatsappBot as any).queuedSend(adminJid, text);
+  }
 }
 
 /**
@@ -2794,7 +2803,16 @@ export async function sendAdminNotification(text: string): Promise<void> {
  */
 export async function sendUserDM(jid: string, text: string): Promise<void> {
   const formattedJid = jid.includes('@') ? jid : `${jid}@c.us`;
-  await (whatsappBot as any).queuedSend(formattedJid, text);
+  try {
+    const { janiaMatchBot } = await import("./whatsapp-match");
+    if (janiaMatchBot && janiaMatchBot.isReady) {
+      await janiaMatchBot.queuedSend(formattedJid, text);
+    } else {
+      await (whatsappBot as any).queuedSend(formattedJid, text);
+    }
+  } catch (e) {
+    await (whatsappBot as any).queuedSend(formattedJid, text);
+  }
 }
 
 /**
