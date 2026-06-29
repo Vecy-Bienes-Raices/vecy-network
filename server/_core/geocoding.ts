@@ -15,9 +15,9 @@ export interface GeocodedAddress {
  * Restringe la búsqueda estrictamente a Colombia para evitar coincidencias internacionales.
  */
 export async function geocodeAddress(address: string): Promise<GeocodedAddress | null> {
-  const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+  const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.GOOGLE_API_KEY;
   if (!apiKey || apiKey.trim() === "") {
-    console.warn("[Geocoding] GOOGLE_MAPS_API_KEY no está configurada.");
+    console.warn("[Geocoding] GOOGLE_MAPS_API_KEY nor GOOGLE_API_KEY is configured.");
     return null;
   }
 
