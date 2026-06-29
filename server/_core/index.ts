@@ -419,10 +419,17 @@ async function startServer() {
     } catch (err: any) {
       res.status(500).send(err.message);
     }
+  });  app.get("/api/trigger-nightly-rematch", async (req, res) => {
+    try {
+      const { runNightlyRematch } = await import("../jobs/nightlyRematch");
+      console.log("[API-TRIGGER] Ejecutando cruce masivo manual desde endpoint...");
+      await runNightlyRematch();
+      res.send("Cruce masivo ejecutado con éxito.");
+    } catch (err: any) {
+      console.error("[API-TRIGGER] Error al ejecutar cruce manual:", err);
+      res.status(500).send(err.message);
+    }
   });
-
-
-
 
 
   app.get("/api/trigger-reaction-response", async (req, res) => {
