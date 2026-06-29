@@ -5,8 +5,8 @@ import type { Client as ClientType, Message, MessageMedia as MessageMediaType } 
 import qrcode from 'qrcode-terminal';
 import { scrapePropertyLink, esDominioPermitido } from './scraper';
 import { transcribeAudioBuffer } from './voiceTranscription';
-import { 
-  processWhatsAppMessage, 
+import {
+  processWhatsAppMessage,
   processConsultingMessage,
   processCirculoMessage,
   generateWelcomeMessage,
@@ -60,7 +60,7 @@ async function transcodeToOggOpus(inputBuffer: Buffer): Promise<Buffer> {
 
     const chunks: Buffer[] = [];
     ffmpeg.stdout.on("data", (chunk) => chunks.push(chunk));
-    
+
     // Capturar errores en stderr para diagnóstico
     let stderrData = "";
     ffmpeg.stderr.on("data", (data) => {
@@ -189,35 +189,35 @@ export async function textToSpeechMedia(text: string, format: "OGG_OPUS" | "MP3"
   // Priorizar claves que comienzan con "AIzaSy" ya que son válidas para Google Cloud API (como TTS)
   const googleApiKey = [process.env.GEMINI_API_KEY, process.env.GOOGLE_API_KEY, ENV.forgeApiKey].find(k => k && k.startsWith("AIzaSy")) || process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || ENV.forgeApiKey;
   if (googleApiKey) {
-    const voiceCandidates: Array<{ 
-      endpoint: string; 
-      name: string; 
-      lang: string; 
-      gender?: string; 
+    const voiceCandidates: Array<{
+      endpoint: string;
+      name: string;
+      lang: string;
+      gender?: string;
       usePitch: boolean;
       modelName?: string;
       prompt?: string;
     }> = [
-      { 
-        endpoint: "v1beta1", 
-        name: "Achernar", 
-        lang: "es-us", 
-        usePitch: false, 
-        modelName: "gemini-3.1-flash-tts-preview", 
-        prompt: "Leer en voz alta con un tono cálido y acogedor." 
-      },
-      { endpoint: "v1", name: "es-US-Journey-F",  lang: "es-US", gender: "FEMALE", usePitch: false },
-      { endpoint: "v1", name: "es-419-Neural2-C", lang: "es-419", gender: "FEMALE", usePitch: false },
-      { endpoint: "v1", name: "es-CO-Neural2-A", lang: "es-CO", gender: "FEMALE", usePitch: false },
-      { endpoint: "v1", name: "es-CO-Wavenet-A", lang: "es-CO", gender: "FEMALE", usePitch: false },
-    ];
+        {
+          endpoint: "v1beta1",
+          name: "Achernar",
+          lang: "es-us",
+          usePitch: false,
+          modelName: "gemini-3.1-flash-tts-preview",
+          prompt: "Leer en voz alta con un tono cálido y acogedor."
+        },
+        { endpoint: "v1", name: "es-US-Journey-F", lang: "es-US", gender: "FEMALE", usePitch: false },
+        { endpoint: "v1", name: "es-419-Neural2-C", lang: "es-419", gender: "FEMALE", usePitch: false },
+        { endpoint: "v1", name: "es-CO-Neural2-A", lang: "es-CO", gender: "FEMALE", usePitch: false },
+        { endpoint: "v1", name: "es-CO-Wavenet-A", lang: "es-CO", gender: "FEMALE", usePitch: false },
+      ];
 
     let cachedAccessToken: string | null = null;
 
     for (const candidate of voiceCandidates) {
       const { endpoint, name, lang, gender, usePitch, modelName, prompt } = candidate;
       try {
-        
+
         let ttsUrl = `https://texttospeech.googleapis.com/${endpoint}/text:synthesize?key=${googleApiKey}`;
         const headers: Record<string, string> = { "Content-Type": "application/json" };
 
@@ -233,21 +233,21 @@ export async function textToSpeechMedia(text: string, format: "OGG_OPUS" | "MP3"
             continue;
           }
         }
-        
+
         // Construir cuerpo de petición dinámicamente para soportar Gemini TTS (preview) o Standard
         const requestBody = {
           audioConfig: modelName
             ? {
-                audioEncoding: format,
-                pitch: 0,
-                speakingRate: 1.1
-              }
+              audioEncoding: format,
+              pitch: 0,
+              speakingRate: 1.1
+            }
             : {
-                audioEncoding: format,
-                speakingRate: 1.0,
-                ...(usePitch ? { pitch: 0.0 } : {})
-              },
-          input: modelName 
+              audioEncoding: format,
+              speakingRate: 1.0,
+              ...(usePitch ? { pitch: 0.0 } : {})
+            },
+          input: modelName
             ? { text: ttsText, prompt: prompt }  // Gemini Flash TTS Preview usa text + prompt de estilo
             : { ssml: ssmlText },                // Modelos estándar usan SSML
           voice: modelName
@@ -481,7 +481,7 @@ export class WhatsAppBot {
   public buzonGroupId: string = '120363417740040773@g.us';
   public circuloGroupId: string = '120363403507276533@g.us';
   public isReady: boolean = false;
-  
+
   // Estructuras de control dinámicas
   private messageBuffers: Map<string, MessageBuffer> = new Map();
   private cooldownMap: Map<string, AntiSpamState> = new Map();
@@ -490,7 +490,7 @@ export class WhatsAppBot {
   private lastConversationWarningTime: Map<string, number> = new Map();
   // Mutex ligero por senderId para serializar mensajes concurrentes del mismo usuario (Fix: condición de carrera en álbumes)
   private processingLocks: Map<string, Promise<void>> = new Map();
-  
+
   private pendingWelcomeCount: number = 0;
   private counterFile: string = path.join(process.cwd(), '.pending_welcome_count');
   public pendingWelcomeJids: string[] = [];
@@ -562,7 +562,7 @@ export class WhatsAppBot {
         let typingDelay = 200;
         if (shouldUseCloud) {
           const isAudio = (content && content.mimetype && content.mimetype.startsWith('audio')) ||
-                          (options && options.sendAudioAsVoice);
+            (options && options.sendAudioAsVoice);
           if (isAudio) {
             typingDelay = isGroup ? (Math.floor(Math.random() * 2000) + 3000) : 300;
           } else {
@@ -577,8 +577,8 @@ export class WhatsAppBot {
           try {
             const chat = await this.client.getChatById(chatId);
             const isAudio = content instanceof MessageMedia ||
-                            (typeof content === 'object' && content?.mimetype?.startsWith('audio')) ||
-                            (options && options.sendAudioAsVoice);
+              (typeof content === 'object' && content?.mimetype?.startsWith('audio')) ||
+              (options && options.sendAudioAsVoice);
             if (isAudio) {
               await chat.sendStateRecording();  // 🎙️ Micrófono
               typingDelay = isGroup ? (Math.floor(Math.random() * 2000) + 3000) : 300;
@@ -613,8 +613,15 @@ export class WhatsAppBot {
               sendPromise = sendCloudMessage(chatId, content, options);
             }
           } else {
-            const { sendCloudMessage } = await import("./whatsapp-cloud");
-            sendPromise = sendCloudMessage(chatId, content, options);
+            // DMs privados (@c.us): si JanIA Match Bot (Puppeteer) está listo, delegamos el envío para evitar restricciones de 24h
+            const matchBot = (global as any).janiaMatchBotInstance;
+            if (matchBot && matchBot.isReady) {
+              console.log(`[WHATSAPP-BOT] Delegando DM a ${chatId} a JanIA Match Bot (Puppeteer)...`);
+              sendPromise = matchBot.queuedSend(chatId, content, options);
+            } else {
+              const { sendCloudMessage } = await import("./whatsapp-cloud");
+              sendPromise = sendCloudMessage(chatId, content, options);
+            }
           }
         } else {
           sendPromise = this.client.sendMessage(chatId, content, options);
@@ -650,7 +657,7 @@ export class WhatsAppBot {
     this.loadCounter();
     this.loadCooldowns();
     this.loadPendingData();
-    
+
     this.createClientInstance();
 
     this.setupGracefulShutdown();
@@ -667,14 +674,14 @@ export class WhatsAppBot {
       if (fs.existsSync(this.jidsFile)) {
         this.pendingWelcomeJids = JSON.parse(fs.readFileSync(this.jidsFile, 'utf8')) || [];
       }
-    } catch (e) {}
+    } catch (e) { }
   }
 
   private saveCounter() {
     try {
       fs.writeFileSync(this.counterFile, this.pendingWelcomeCount.toString(), 'utf8');
       fs.writeFileSync(this.jidsFile, JSON.stringify(this.pendingWelcomeJids), 'utf8');
-    } catch (e) {}
+    } catch (e) { }
   }
 
   private loadCooldowns() {
@@ -683,14 +690,14 @@ export class WhatsAppBot {
         const raw = JSON.parse(fs.readFileSync(this.cooldownFile, 'utf8'));
         this.cooldownMap = new Map(Object.entries(raw));
       }
-    } catch (e) {}
+    } catch (e) { }
   }
 
   private saveCooldowns() {
     try {
       const obj = Object.fromEntries(this.cooldownMap.entries());
       fs.writeFileSync(this.cooldownFile, JSON.stringify(obj), 'utf8');
-    } catch (e) {}
+    } catch (e) { }
   }
 
   private loadPendingData() {
@@ -699,21 +706,21 @@ export class WhatsAppBot {
         const raw = JSON.parse(fs.readFileSync(this.pendingDataFile, 'utf8'));
         this.pendingData = new Map(Object.entries(raw));
       }
-    } catch (e) {}
+    } catch (e) { }
   }
 
   private savePendingData() {
     try {
       const obj = Object.fromEntries(this.pendingData.entries());
       fs.writeFileSync(this.pendingDataFile, JSON.stringify(obj), 'utf8');
-    } catch (e) {}
+    } catch (e) { }
   }
 
   private setupGracefulShutdown() {
     const shutdown = async () => {
       console.log('\n🛑 Cerrando WhatsApp Bot...');
       this.saveCounter();
-      try { await this.client.destroy(); } catch (e) {}
+      try { await this.client.destroy(); } catch (e) { }
       process.exit(0);
     };
     process.on('SIGINT', shutdown);
@@ -792,9 +799,9 @@ export class WhatsAppBot {
             page.on('request', (req) => {
               const type = req.resourceType();
               if (type === 'stylesheet' || type === 'font') {
-                req.abort().catch(() => {});
+                req.abort().catch(() => { });
               } else {
-                req.continue().catch(() => {});
+                req.continue().catch(() => { });
               }
             });
             console.log('[WHATSAPP-BOT] Optimización activa: Hojas de estilo y fuentes bloqueadas en el navegador invisible.');
@@ -816,10 +823,10 @@ export class WhatsAppBot {
     this.client.on('group_membership_request', async (notification: any) => {
       try {
         console.log(`[WHATSAPP-BOT] Recibida solicitud de unión de ${notification.author} en el grupo ${notification.chatId}`);
-        
+
         let requesterId = notification.author;
         let resolvedId: string | null = null;
-        
+
         if (requesterId && requesterId.endsWith('@lid')) {
           try {
             const contact = await this.client.getContactById(requesterId);
@@ -872,7 +879,7 @@ export class WhatsAppBot {
               resolvedIds.push(contact.id._serialized);
               continue;
             }
-          } catch (e) {}
+          } catch (e) { }
         }
         resolvedIds.push(id);
       }
@@ -923,7 +930,7 @@ export class WhatsAppBot {
         const negativeReactions = ['😂', '🤣', '😡', '😠', '😤', '😭', '❌', '❓', '❗'];
         if (negativeReactions.includes(reaction.reaction)) {
           const targetGroupId = this.targetGroupId;
-          
+
           if (reaction.msgId.remote === targetGroupId && reaction.msgId.fromMe === true) {
             const msg = await this.client.getMessageById(reaction.msgId._serialized);
             if (msg) {
@@ -934,7 +941,7 @@ export class WhatsAppBot {
                   if (contact && contact.id && contact.id._serialized && contact.id._serialized.endsWith('@c.us')) {
                     senderId = contact.id._serialized;
                   }
-                } catch (e) {}
+                } catch (e) { }
               }
               let realName = `Asesor +${senderId.split('@')[0]}`;
               try {
@@ -945,11 +952,11 @@ export class WhatsAppBot {
               } catch (e: any) {
                 console.warn(`[WHATSAPP-BOT] Falló getContactById para reacción del remitente ${senderId}:`, e.message || e);
               }
-              
+
               console.log(`[JanIA-Reaction] Reacción de desaprobación/sarcasmo detectada de ${realName}`);
-              
+
               const promptContext = `[REACCIÓN NEGATIVA/SARCASMO/DESAPROBACIÓN]: El usuario @${senderId.split('@')[0]} (${realName}) ha reaccionado con el emoji ${reaction.reaction} a tu mensaje: "${msg.body}". Genera una respuesta en el grupo dirigiéndote a este aliado/colega. Responde de manera sumamente cordial, respetuosa y profesional, pero con total firmeza y una sutil pero brillante auto-defensa. Debes defender tus capacidades de inteligencia artificial, al equipo de desarrollo y fundadores de VECY (Jani Alves y Eduardo A. Rivera), y el valor del proyecto VECY Network (red colaborativa gratuita y sin comisiones). Hazle ver con argumentos elocuentes e inteligentes que la tecnología seria y el trabajo estructurado es lo que genera matches y cierra negocios, rebatiendo su reacción con elegancia comercial. Usa emojis.`;
-              
+
               const result = await processWhatsAppMessage(promptContext, senderId, realName, false, [], undefined, undefined, true);
               if (result && result.response && result.response.trim() !== '') {
                 await this.queuedSend(targetGroupId, result.response, {
@@ -1010,7 +1017,7 @@ export class WhatsAppBot {
 
       try {
         const chat = await msg.getChat();
-        
+
         // Activar estado "Grabando audio..." (Recording) o "Escribiendo..." (Typing)
         const msgText = (msg.body || "").toLowerCase();
         const wantsVoice = msg.type === 'audio' || msg.type === 'ptt' || detectaVoz(msgText);
@@ -1242,12 +1249,12 @@ export class WhatsAppBot {
       }
 
       const result = await processWhatsAppMessage(
-        msg.body, 
-        senderId, 
-        realName, 
-        msg.hasMedia, 
+        msg.body,
+        senderId,
+        realName,
+        msg.hasMedia,
         [], // Sin scraping para DMs simples
-        undefined, 
+        undefined,
         imageBuffer,
         false, // isGroup = false
         pdfBuffer,
@@ -1309,7 +1316,7 @@ export class WhatsAppBot {
         await db.update(propertyMatches).set({ status: 'rejected' }).where(eq(propertyMatches.id, matchId));
         await this.queuedSend(senderId, `Entendido. He marcado la coincidencia *#M${matchId}* como cancelada. No se compartirán tus datos de contacto.`);
         await this.logToDb(senderId, 'janIA', `[Match-Rejected] Match #M${matchId} rechazado por el usuario.`);
-        
+
         // Notificar a la otra parte
         const otherJid = isOwner ? (seekerPhone.includes('@') ? seekerPhone : `${seekerPhone}@c.us`) : (ownerPhone.includes('@') ? ownerPhone : `${ownerPhone}@c.us`);
         await this.queuedSend(otherJid, `Aviso: La coincidencia *#M${matchId}* ha sido cancelada por la otra parte.`);
@@ -1340,12 +1347,12 @@ export class WhatsAppBot {
         try {
           const [ownerUser] = await db.select().from(users).where(eq(users.phone, ownerPhone)).limit(1);
           if (ownerUser && ownerUser.name) ownerName = ownerUser.name;
-        } catch {}
+        } catch { }
 
         try {
           const [seekerUser] = await db.select().from(users).where(eq(users.phone, seekerPhone)).limit(1);
           if (seekerUser && seekerUser.name) seekerName = seekerUser.name;
-        } catch {}
+        } catch { }
 
         const ownerJid = ownerPhone.includes('@') ? ownerPhone : `${ownerPhone}@c.us`;
         const seekerJid = seekerPhone.includes('@') ? seekerPhone : `${seekerPhone}@c.us`;
@@ -1430,11 +1437,11 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
 
     const isMainGroup = chatId === this.targetGroupId;
     const textLower = (msg.body || "").toLowerCase();
-    
+
     // Heurística para identificar posibles listados de propiedad/requerimiento
-    const isPossibleListing = 
-      (msg.body || "").length > 150 || 
-      (msg.body || "").split('\n').length > 2 || 
+    const isPossibleListing =
+      (msg.body || "").length > 150 ||
+      (msg.body || "").split('\n').length > 2 ||
       msg.hasMedia ||
       textLower.includes("ofrezco") ||
       textLower.includes("busco") ||
@@ -1464,17 +1471,17 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
       if (isGroupChat) {
         try {
           await msg.react('⚠️');
-        } catch (e) {}
+        } catch (e) { }
         if (!cooldown.warningSent) {
           cooldown.warningSent = true;
           this.saveCooldowns();
           const rawPhone = (msg.author || msg.from).split("@")[0];
-          const warningText = 
+          const warningText =
             `⚠️ *COOLDOWN ACTIVO (5 MINUTOS)* ⚠️\n\n` +
             `Hola @${rawPhone}, acabo de procesar con éxito tus primeras propiedades. ` +
             `Para cuidar la visibilidad de tus activos y no saturar la red de los aliados, te pido que por favor me colabores esperando los *5 minutos* de intervalo antes de enviar tu siguiente bloque (máximo 3 publicaciones).\n\n` +
             `¡Mis motores necesitan este breve descanso para mantener tus fichas técnicas al 100% de calidad! JanIA sigue atenta. 🏆🎯`;
-          
+
           await this.queuedSend(chatId, warningText, {
             mentions: [senderId],
             quotedMessageId: msg.id._serialized
@@ -1514,7 +1521,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
     // Hacerla aquí causaba una condición de carrera: los mensajes de un álbum de imágenes
     // llegan casi simultáneamente, y el await de downloadMedia hacía que todos leyeran
     // el buffer vacío antes de que el primero lo creara, generando advertencias falsas.
-    
+
     if (buffer) {
       // Si el bloque ya llegó al límite de mensajes, advertimos (solo en grupo principal y para listings) y descartamos los excedentes
       const limit = isMainGroup ? MAX_BLOCK_SIZE : 10;
@@ -1523,15 +1530,15 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         if (isGroupChat && isMainGroup) {
           try {
             await msg.react('⚠️');
-          } catch (e) {}
+          } catch (e) { }
           if (!buffer.warningSent) {
             buffer.warningSent = true;
-            const warningText = 
+            const warningText =
               `⚠️ *LÍMITE DE PUBLICACIÓN* ⚠️\n\n` +
               `Hola @${rawPhone}, detecté que estás enviando muchas publicaciones seguidas. ` +
               `Para cuidar la visibilidad de tus activos y no saturar el chat de los aliados, te pido que por favor me colabores con esta norma, ya que mis motores de extracción de datos solo pueden procesar un máximo de *3 publicaciones* por bloque a la vez.\n\n` +
               `¡Espera unos *5 minutos* y luego envía el siguiente grupo! Tus primeras 3 publicaciones ya están siendo procesadas y registradas. 🚀🎯`;
-            
+
             await this.queuedSend(chatId, warningText, {
               mentions: [senderId],
               quotedMessageId: msg.id._serialized
@@ -1576,7 +1583,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
     const userName = buffer.userName;
     const chatId = buffer.chatId;
     const senderId = bufferKey.split('_')[1];
-    
+
     this.messageBuffers.delete(bufferKey);
     console.log(`[processBuffer] Iniciando procesamiento de ${buffer.messages.length} mensajes en buffer de ${senderId}.`);
 
@@ -1744,23 +1751,23 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         }
 
         processedListingsCount++;
-        
+
         if (processedListingsCount > limit) {
           console.log(`[processBuffer] Listing #${processedListingsCount} excede el límite de ${limit} para ${senderId}.`);
           if (isMainGroup) {
             try {
               await item.originalMsg.react('⚠️');
-            } catch (e) {}
+            } catch (e) { }
 
             if (!warningSent && chatId.includes('@g.us')) {
               warningSent = true;
               const rawPhone = senderId.split("@")[0];
-              const warningText = 
+              const warningText =
                 `⚠️ *LÍMITE DE PUBLICACIÓN* ⚠️\n\n` +
                 `Hola @${rawPhone}, detecté que estás enviando muchas publicaciones seguidas en tu mensaje/bloque. ` +
                 `Para cuidar la visibilidad de tus activos y no saturar el chat de los aliados, te pido que por favor me colabores con esta norma, ya que mis motores de extracción de datos solo pueden procesar un máximo de *3 publicaciones* por bloque a la vez.\n\n` +
                 `¡Tus primeras 3 publicaciones ya están en proceso! Por favor espera unos *5 minutos* antes de enviar las siguientes. 🚀🎯`;
-              
+
               await this.queuedSend(chatId, warningText, {
                 mentions: [senderId],
                 quotedMessageId: item.originalMsg.id._serialized
@@ -1782,7 +1789,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
               try {
                 const data = await scrapePropertyLink(url);
                 if (data) scrapedResults.push(data);
-              } catch (err) {}
+              } catch (err) { }
             }
           }
         }
@@ -1840,8 +1847,8 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
     if (senderId === botJid || msg.fromMe) return;
 
     // Ignorar si parece un listado de propiedad, requerimiento o contenido multimedia (excepto notas de voz)
-    const isPossibleListingMsg = 
-      (msg.body || "").length > 250 || 
+    const isPossibleListingMsg =
+      (msg.body || "").length > 250 ||
       (msg.body || "").split('\n').length > 3 ||
       (msg.hasMedia && msg.type !== 'ptt' && msg.type !== 'audio');
     if (isPossibleListingMsg) return;
@@ -1893,26 +1900,26 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         try {
           const chat = await msg.getChat();
           await chat.sendStateRecording();
-        } catch (_) {}
+        } catch (_) { }
 
         const voiceText = "Hola colegas... detecté que están conversando activamente en el grupo... Para cuidar el espacio de todos los aliados y no saturar el canal, les sugiero amablemente que continúen su charla por mensaje privado... ¡Muchas gracias, hagamos equipo y cerremos negocios!";
-        
+
         console.log(`[CONVERSATION-DETECTOR] Generando audio de advertencia...`);
         const voiceMedia = await textToSpeechMedia(voiceText);
         if (voiceMedia) {
           // Enviar nota de voz
           await this.queuedSend(chatId, voiceMedia, { sendAudioAsVoice: true });
-          
+
           // Enviar mensaje de texto con menciones justo después
           const rawPhoneA = s3.split("@")[0];
           const rawPhoneB = s4.split("@")[0];
           const tagText = `👉 @${rawPhoneA} @${rawPhoneB}, por favor continúen por mensaje privado (DM) para no saturar el grupo. ¡Gracias! 🤝`;
-          
+
           await this.queuedSend(chatId, tagText, {
             mentions: [s3, s4],
             quotedMessageId: msg.id._serialized
           });
-          
+
           console.log(`[CONVERSATION-DETECTOR] Advertencia enviada con éxito a ${chatId}.`);
         }
       }
@@ -1933,17 +1940,17 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
     const isGroup = chatId.includes('@g.us');
     // MATCH COMERCIAL DETECTADO es el string real en el response de JanIA
     const isMatch = result.response && (
-      result.response.includes("MATCH COMERCIAL DETECTADO") || 
-      result.response.includes("MATCH DETECTADO") || 
+      result.response.includes("MATCH COMERCIAL DETECTADO") ||
+      result.response.includes("MATCH DETECTADO") ||
       result.response.includes("MATCH INTELIGENTE DETECTADO") ||
       result.response.includes("COINCIDENCIA DE NEGOCIO DETECTADA")
     );
-    const isConsultation = 
-      result.classification === "CONSULTA_GENERAL" || 
-      result.classification === "RESPUESTA_A_PREGUNTA_IA" || 
-      result.classification === "INMUEBLE" || 
-      result.classification === "REQUERIMIENTO" || 
-      result.classification === "AVALUO_O_LEGAL" || 
+    const isConsultation =
+      result.classification === "CONSULTA_GENERAL" ||
+      result.classification === "RESPUESTA_A_PREGUNTA_IA" ||
+      result.classification === "INMUEBLE" ||
+      result.classification === "REQUERIMIENTO" ||
+      result.classification === "AVALUO_O_LEGAL" ||
       result.classification === "DEBATE_COMPETIDOR" ||
       result.classification === "SOBRE_VECY";
     const isViolation = result.classification === "VIOLACION_DE_NORMAS";
@@ -2012,8 +2019,8 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
 
     if ((shouldSendGroup || shouldSendDMDirect) && hasAnyContent) {
       const mentions = Array.from(new Set([...(result.mentions || []), senderId]));
-      const options: any = { 
-        mentions: isGroup ? mentions : [] 
+      const options: any = {
+        mentions: isGroup ? mentions : []
       };
       if (isViolation && originalMsg) {
         options.quotedMessageId = originalMsg.id._serialized;
@@ -2027,7 +2034,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         try {
           const chatInstance = chat || await this.client.getChatById(chatId);
           await chatInstance.sendStateRecording();
-        } catch (_) {}
+        } catch (_) { }
 
         // Solo audio — sin texto. Si falla, cae al texto como respaldo.
         console.log(`[TTS] Generando voz para ${chatId}...`);
@@ -2074,7 +2081,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
     if (originalMsg) {
       try {
         let reaction = result.reactionEmoji;
-        
+
         const isBuzonOrCirculo = chatId === this.buzonGroupId || chatId === this.circuloGroupId;
         if ((result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO") && !isBuzonOrCirculo) {
           reaction = '✅';
@@ -2123,7 +2130,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
             try {
               const dmChat = await this.client.getChatById(senderId);
               await dmChat.sendStateRecording();
-            } catch (_) {}
+            } catch (_) { }
 
             // Solo audio
             console.log(`[TTS] Generando voz para ${senderId}...`);
@@ -2211,7 +2218,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         updatedAt: new Date()
       }).where(eq(conversations.id, conversationId));
 
-    } catch (e) {}
+    } catch (e) { }
   }
 
   // --- COMANDOS ADMINISTRATIVOS ---
@@ -2256,7 +2263,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
   public async sendBatchWelcomeForGroup(chatId: string, jids: string[]) {
     const count = jids.length;
     const listCopy = [...jids];
-    
+
     if (chatId === this.buzonGroupId) {
       this.pendingWelcomeBuzon = [];
     } else if (chatId === this.circuloGroupId) {
@@ -2309,15 +2316,15 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
     let welcomePart = '';
     if (this.pendingWelcomeJids && this.pendingWelcomeJids.length > 0) {
       welcomePart += `\n\n━━━━━━━━━━━━━━━━━━━━━━\n` +
-             `✨ *¡BIENVENIDOS A LA RED VECY NETWORK!* ✨\n` +
-             `Damos una calurosa bienvenida a los nuevos aliados que se han unido a nuestro ecosistema colaborativo:\n`;
-      
+        `✨ *¡BIENVENIDOS A LA RED VECY NETWORK!* ✨\n` +
+        `Damos una calurosa bienvenida a los nuevos aliados que se han unido a nuestro ecosistema colaborativo:\n`;
+
       this.pendingWelcomeJids.forEach((jid) => {
         const phone = jid.split('@')[0];
         welcomePart += `▸ @${phone}\n`;
         jidsToMention.push(jid);
       });
-      
+
       welcomePart += `\nYa estoy 100% activa para escanear sus publicaciones y buscarles cierres sin cobro de comisiones. ¡Muchos éxitos en sus negocios! 🚀🎯`;
     }
 
@@ -2386,8 +2393,8 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         try {
           const chatInstance = await this.client.getChatById(target);
           await chatInstance.sendStateRecording();
-        } catch (_) {}
-        
+        } catch (_) { }
+
         await this.queuedSend(target, voiceMedia, { sendAudioAsVoice: true });
         console.log(`[WHATSAPP-BOT] ✓ Nota de voz enviada al grupo ${target}.`);
       } else {
@@ -2466,30 +2473,30 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         console.error('[WHATSAPP-BOT] No se pudo obtener el chat del grupo.');
         return;
       }
-      
+
       const messages = await chat.fetchMessages({ limit: 50 });
       console.log(`[WHATSAPP-BOT] Analizando ${messages.length} mensajes en búsqueda de uniones...`);
-      
+
       const joinList: any[] = [];
-      
+
       for (const msg of messages) {
-        const isSystemJoin = msg.type === 'gp2' || msg.type === 'notification' || 
-                             (msg.body && (
-                               msg.body.toLowerCase().includes('unió') || 
-                               msg.body.toLowerCase().includes('unio') || 
-                               msg.body.toLowerCase().includes('joined') || 
-                               msg.body.toLowerCase().includes('añadió') || 
-                               msg.body.toLowerCase().includes('añadio') || 
-                               msg.body.toLowerCase().includes('added')
-                             ));
-                             
+        const isSystemJoin = msg.type === 'gp2' || msg.type === 'notification' ||
+          (msg.body && (
+            msg.body.toLowerCase().includes('unió') ||
+            msg.body.toLowerCase().includes('unio') ||
+            msg.body.toLowerCase().includes('joined') ||
+            msg.body.toLowerCase().includes('añadió') ||
+            msg.body.toLowerCase().includes('añadio') ||
+            msg.body.toLowerCase().includes('added')
+          ));
+
         if (isSystemJoin) {
           const timestamp = msg.timestamp * 1000;
           const date = new Date(timestamp).toLocaleString('es-CO', { timeZone: 'America/Bogota' });
-          
+
           const author = msg.author || msg.from;
           const phone = author ? author.split('@')[0] : 'Desconocido';
-          
+
           let contactName = 'Desconocido';
           if (author) {
             try {
@@ -2497,9 +2504,9 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
               await new Promise(resolve => setTimeout(resolve, 500));
               const contact = await this.client.getContactById(author);
               contactName = contact.name || contact.pushname || '';
-            } catch (e) {}
+            } catch (e) { }
           }
-          
+
           joinList.push({
             fecha: date,
             timestamp: timestamp,
@@ -2509,14 +2516,14 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
           });
         }
       }
-      
+
       joinList.sort((a, b) => b.timestamp - a.timestamp);
-      
+
       let fileContent = `=== LISTADO DE UNIONES RECIENTES EN EL GRUPO ===\nGenerado el: ${new Date().toLocaleString('es-CO', { timeZone: 'America/Bogota' })}\n\n`;
       for (const entry of joinList) {
         fileContent += `📅 Fecha: ${entry.fecha}\n📞 Teléfono: +${entry.telefono}\n👤 Nombre: ${entry.nombre}\n💬 Evento: ${entry.mensaje}\n-------------------------------------------\n`;
       }
-      
+
       const outputPath = path.join(process.cwd(), 'recent_joins.txt');
       fs.writeFileSync(outputPath, fileContent, 'utf8');
       console.log(`[WHATSAPP-BOT] ¡Listado exportado con éxito a ${outputPath}!`);
@@ -2579,7 +2586,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
 
       try {
         const statePromise = this.client.getState();
-        const timeoutPromise = new Promise<null>((_, reject) => 
+        const timeoutPromise = new Promise<null>((_, reject) =>
           setTimeout(() => reject(new Error("Timeout al obtener estado de WhatsApp")), 15000)
         );
 
@@ -2621,7 +2628,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
       console.log('[WHATSAPP-BOT] [Catch-Up] Iniciando escaneo de mensajes perdidos en el grupo principal...');
       const chat = await this.client.getChatById(this.targetGroupId);
       const messages = await chat.fetchMessages({ limit: 50 });
-      
+
       const db = await getDb();
       if (!db) {
         console.error('[WHATSAPP-BOT] [Catch-Up] Base de datos no disponible.');
@@ -2651,7 +2658,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
               )
             )
             .limit(1);
-          
+
           if (existing.length > 0) {
             // Ya procesado en el pasado
             continue;
@@ -2660,7 +2667,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
 
         // Si no existe, lo inyectamos al procesador principal
         console.log(`[WHATSAPP-BOT] [Catch-Up] Detectado mensaje perdido de ${senderId}: "${msg.body.substring(0, 50)}..."`);
-        
+
         // Simular recepción del mensaje
         await this.handleIncomingMessage(msg, this.targetGroupId);
         count++;
@@ -2679,20 +2686,20 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
     console.log("[WHATSAPP-BOT] Generando y enviando audios de cierre manuales (Solo por hoy)...");
 
     const grupos = [
-      { 
-        id: this.targetGroupId, 
-        nombre: "VECY INMUEBLES NETWORK", 
-        promptCierre: "Genera una nota de voz corta en español de despedida y cierre de jornada para el grupo de WhatsApp VECY INMUEBLES NETWORK. Agradece la actividad de hoy y despídete con calidez. Recuerda que no cobramos comisiones y que las ofertas y demandas cruzadas son el motor de la red." 
+      {
+        id: this.targetGroupId,
+        nombre: "VECY INMUEBLES NETWORK",
+        promptCierre: "Genera una nota de voz corta en español de despedida y cierre de jornada para el grupo de WhatsApp VECY INMUEBLES NETWORK. Agradece la actividad de hoy y despídete con calidez. Recuerda que no cobramos comisiones y que las ofertas y demandas cruzadas son el motor de la red."
       },
-      { 
-        id: this.buzonGroupId, 
-        nombre: "BUZÓN DE CONSULTORÍA INMOBILIARIA 24/7", 
-        promptCierre: "Genera una nota de voz corta en español de despedida y cierre de jornada para el grupo de WhatsApp Buzón de Consultoría. Agradece la atención a los casos jurídicos y de comisiones compartidas resueltos hoy, deseando un feliz descanso." 
+      {
+        id: this.buzonGroupId,
+        nombre: "BUZÓN DE CONSULTORÍA INMOBILIARIA 24/7",
+        promptCierre: "Genera una nota de voz corta en español de despedida y cierre de jornada para el grupo de WhatsApp Buzón de Consultoría. Agradece la atención a los casos jurídicos y de comisiones compartidas resueltos hoy, deseando un feliz descanso."
       },
-      { 
-        id: this.circuloGroupId, 
-        nombre: "CÍRCULO CERO", 
-        promptCierre: "Genera una nota de voz corta en español de despedida y cierre de jornada para el grupo de WhatsApp Círculo Cero. Agradece el debate y las sugerencias de hoy sobre el futuro del sector." 
+      {
+        id: this.circuloGroupId,
+        nombre: "CÍRCULO CERO",
+        promptCierre: "Genera una nota de voz corta en español de despedida y cierre de jornada para el grupo de WhatsApp Círculo Cero. Agradece el debate y las sugerencias de hoy sobre el futuro del sector."
       }
     ];
 
@@ -2843,15 +2850,15 @@ export function setBotPendingData(
  */
 export function cleanVoiceText(text: string): string {
   if (!text) return "";
-  
+
   let cleaned = text.trim();
-  
+
   // 1. Quitar llaves dobles o simples que a veces envuelve el LLM (como {{...}} o [...])
   cleaned = cleaned.replace(/^\{\{[\s\S]*?\}\}/g, '').trim();
   cleaned = cleaned.replace(/^\[[\s\S]*?\]/g, '').trim();
   cleaned = cleaned.replace(/^\{\s*|\s*\}$/g, '').trim();
   cleaned = cleaned.replace(/^"|"$/g, '').trim(); // Quitar comillas externas
-  
+
   // 2. Eliminar preámbulos típicos en español del LLM
   const preambulos = [
     /^(aquí\s+tienes|aqui\s+tienes|aquí\s+está|aqui\s+esta|aquí\s+te\s+presento|esta\s+es|este\s+es)\s+(la\s+propuesta|el\s+guión|el\s+guion|la\s+nota\s+de\s+voz|el\s+mensaje|la\s+redacción|la\s+redaccion|el\s+texto)[^:]*:\s*/i,
@@ -2859,15 +2866,15 @@ export function cleanVoiceText(text: string): string {
     /^(propuesta\s+de\s+(guión|guion|nota|mensaje|audio|texto)[^:]*):\s*/i,
     /^(guión\s+de\s+voz|guion\s+de\s+voz|nota\s+de\s+voz|mensaje\s+de\s+voz|guión\s+de\s+audio|guion\s+de\s+audio|guión|guion)\s*:\s*/i,
   ];
-  
+
   for (const regex of preambulos) {
     cleaned = cleaned.replace(regex, '');
   }
-  
+
   // 3. Limpiar cualquier remanente de comillas o dos puntos al inicio
   cleaned = cleaned.replace(/^:\s*/, '').trim();
   cleaned = cleaned.replace(/^"|"$/g, '').trim();
-  
+
   return cleaned.trim();
 }
 
