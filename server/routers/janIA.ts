@@ -72,7 +72,7 @@ export const janIARouter = router({
         }
 
         const mockUserId = ctx.user ? `web-user-${ctx.user.id}` : `web-session-${input.sessionId}`;
-        const mockUserName = ctx.user ? ctx.user.name : "Usuario Web";
+        const mockUserName = ctx.user ? (ctx.user.name ?? undefined) : "Usuario Web";
 
         const result = await processWhatsAppMessage(
           input.message,
@@ -242,7 +242,7 @@ export const janIARouter = router({
         }
 
         const mockUserId = ctx.user ? `web-user-${ctx.user.id}` : `web-session-${input.sessionId}`;
-        const mockUserName = ctx.user ? ctx.user.name : "Usuario Web";
+        const mockUserName = ctx.user ? (ctx.user.name ?? undefined) : "Usuario Web";
 
         const result = await processWhatsAppMessage(
           `[Archivo: ${input.fileType}]`,
@@ -277,7 +277,7 @@ export const janIARouter = router({
             role: 'user',
             content: `[Archivo: ${input.fileType}]`,
             messageType: imageBuffer ? 'image' : 'file',
-            attachments: [input.fileUrl],
+            metadata: { attachments: [input.fileUrl] },
           });
 
           // Save JanIA response
