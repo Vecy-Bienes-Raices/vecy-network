@@ -347,27 +347,48 @@ export const janIARouter = router({
             matchScore: propertyMatches.matchScore,
             matchReason: propertyMatches.matchReason,
             status: propertyMatches.status,
+            ownerConfirmed: propertyMatches.ownerConfirmed,
+            seekerConfirmed: propertyMatches.seekerConfirmed,
             createdAt: propertyMatches.createdAt,
             property: {
               id: properties.id,
               name: properties.name,
+              description: properties.description,
               price: properties.price,
               city: properties.city,
               zone: properties.zone,
+              addressNeighborhood: properties.addressNeighborhood,
               idUsuarioWhatsapp: properties.idUsuarioWhatsapp,
               propertyType: properties.propertyType,
               transactionType: properties.transactionType,
+              bedrooms: properties.bedrooms,
+              bathrooms: properties.bathrooms,
+              garages: properties.garages,
+              stratum: properties.stratum,
+              areaTotal: properties.areaTotal,
+              areaPrivate: properties.areaPrivate,
+              adminFee: properties.adminFee,
+              isAmoblado: properties.isAmoblado,
               rawText: properties.rawText,
+              externalUrl: properties.externalUrl,
             },
             requirement: {
               id: requirements.id,
               name: requirements.name,
+              presupuestoMin: requirements.presupuestoMin,
               presupuestoMax: requirements.presupuestoMax,
               ciudadDeseada: requirements.ciudadDeseada,
               zonaDeseada: requirements.zonaDeseada,
+              addressNeighborhood: requirements.addressNeighborhood,
               idUsuarioWhatsapp: requirements.idUsuarioWhatsapp,
               tipoInmuebleDeseado: requirements.tipoInmuebleDeseado,
               tipoNegocioDeseado: requirements.tipoNegocioDeseado,
+              habitacionesMin: requirements.habitacionesMin,
+              banosMin: requirements.banosMin,
+              parqueaderosMin: requirements.parqueaderosMin,
+              areaMin: requirements.areaMin,
+              estratoDeseado: requirements.estratoDeseado,
+              amobladoDeseado: requirements.amobladoDeseado,
               rawText: requirements.rawText,
             }
           })
@@ -382,6 +403,7 @@ export const janIARouter = router({
         throw error;
       }
     }),
+
 
   // Create lead from conversation
   createLead: publicProcedure
