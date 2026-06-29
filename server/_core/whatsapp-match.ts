@@ -51,6 +51,7 @@ export class JaniaMatchBot {
   private redirectCooldowns: Map<string, number> = new Map();
   private processingLocks: Map<string, Promise<void>> = new Map();
   private watchdogInterval: NodeJS.Timeout | null = null;
+  private watchdogFailures: number = 0;
 
   private targetGroupId: string = '120363260108880069@g.us';
   private cooldownMap: Map<string, any> = new Map();
@@ -878,17 +879,37 @@ export class JaniaMatchBot {
   private startWatchdog() {
     if (this.watchdogInterval) clearInterval(this.watchdogInterval);
     
+    this.watchdogFailures = 0;
     this.watchdogInterval = setInterval(async () => {
       if (!this.isReady) return;
       try {
-        const state = await this.client.getState();
-        if (state !== 'CONNECTED') {
-          console.warn(`[JANIA-MATCH] [Watchdog] Conexión inestable (${state}). Reiniciando...`);
+        const statePromise = this.client.getState();
+        const timeoutPromise = new Promise<null>((_, reject) => 
+          setTimeout(() => reject(new Error("Timeout al obtener estado de WhatsApp")), 15000)
+        );
+
+        const state = await Promise.race([statePromise, timeoutPromise]);
+        console.log(`[JANIA-MATCH] [Watchdog] Estado actual de conexión: ${state}`);
+        
+        if (state === 'CONNECTED') {
+          this.watchdogFailures = 0; // Reset counter on success
+        } else {
+          this.watchdogFailures++;
+          console.warn(`[JANIA-MATCH] [Watchdog] Estado anormal detectado: ${state} (Fallo consecutivo #${this.watchdogFailures}/3).`);
+          if (this.watchdogFailures >= 3) {
+            console.error('[JANIA-MATCH] [Watchdog] Demasiados fallos consecutivos. Reiniciando cliente...');
+            this.watchdogFailures = 0;
+            this.reconnectClient();
+          }
+        }
+      } catch (err: any) {
+        this.watchdogFailures++;
+        console.error(`[JANIA-MATCH] [Watchdog] Falla o bloqueo detectado: ${err.message || err} (Fallo consecutivo #${this.watchdogFailures}/3).`);
+        if (this.watchdogFailures >= 3) {
+          console.error('[JANIA-MATCH] [Watchdog] Demasiados fallos consecutivos. Reiniciando cliente...');
+          this.watchdogFailures = 0;
           this.reconnectClient();
         }
-      } catch (err) {
-        console.error('[JANIA-MATCH] [Watchdog] Falla de respuesta. Reiniciando...');
-        this.reconnectClient();
       }
     }, 5 * 60 * 1000);
   }
