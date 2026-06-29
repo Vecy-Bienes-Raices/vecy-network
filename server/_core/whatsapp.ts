@@ -39,6 +39,12 @@ const SERVER_BOOT_TIME = Math.floor(Date.now() / 1000);
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 let outgoingQueue: Promise<any> = Promise.resolve();
 
+// Circular dependency helper
+export let matchBotInstance: any = null;
+export function setMatchBotInstance(instance: any) {
+  matchBotInstance = instance;
+}
+
 /** Transcodifica un buffer de audio (MP3, WAV, etc) a OGG/OPUS usando ffmpeg */
 async function transcodeToOggOpus(inputBuffer: Buffer): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -2786,9 +2792,9 @@ export async function sendAdminNotification(text: string): Promise<void> {
   const ADMIN_PHONE = process.env.ADMIN_PHONE || "573166569719";
   const adminJid = `${ADMIN_PHONE}@c.us`;
   try {
-    const { janiaMatchBot } = await import("./whatsapp-match");
-    if (janiaMatchBot && janiaMatchBot.isReady) {
-      await janiaMatchBot.queuedSend(adminJid, text);
+    if (matchBotInstance && matchBotInstance.isReady) {
+      console.log(`[WHATSAPP-BOT] Enviando notificación de admin a ${adminJid} vía JanIA Match Bot (Puppeteer)...`);
+      await matchBotInstance.queuedSend(adminJid, text);
     } else {
       await (whatsappBot as any).queuedSend(adminJid, text);
     }
@@ -2804,9 +2810,9 @@ export async function sendAdminNotification(text: string): Promise<void> {
 export async function sendUserDM(jid: string, text: string): Promise<void> {
   const formattedJid = jid.includes('@') ? jid : `${jid}@c.us`;
   try {
-    const { janiaMatchBot } = await import("./whatsapp-match");
-    if (janiaMatchBot && janiaMatchBot.isReady) {
-      await janiaMatchBot.queuedSend(formattedJid, text);
+    if (matchBotInstance && matchBotInstance.isReady) {
+      console.log(`[WHATSAPP-BOT] Enviando DM a ${formattedJid} vía JanIA Match Bot (Puppeteer)...`);
+      await matchBotInstance.queuedSend(formattedJid, text);
     } else {
       await (whatsappBot as any).queuedSend(formattedJid, text);
     }

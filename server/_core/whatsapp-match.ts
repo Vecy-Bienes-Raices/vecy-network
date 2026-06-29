@@ -8,7 +8,7 @@ import path from 'path';
 import { getDb } from '../db';
 import { conversations, messages as dbMessages, users } from '../../drizzle/schema';
 import { eq, and } from 'drizzle-orm';
-import { textToSpeechMedia, detectaVoz, sendAdminNotification, sendUserDM, setBotPendingData } from './whatsapp';
+import { textToSpeechMedia, detectaVoz, sendAdminNotification, sendUserDM, setBotPendingData, setMatchBotInstance } from './whatsapp';
 import { 
   processWhatsAppMessage, 
   processConsultingMessage, 
@@ -58,6 +58,7 @@ export class JaniaMatchBot {
   private cooldownFile: string = path.join(process.cwd(), '.cooldown_map.json');
 
   constructor() {
+    setMatchBotInstance(this);
     console.log('[JANIA-MATCH] Inicializando JanIA Match Bot (Ojos y Oídos)...');
     
     // Cargar grupos desde la configuración o usar defaults
