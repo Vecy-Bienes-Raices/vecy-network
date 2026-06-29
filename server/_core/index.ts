@@ -431,6 +431,89 @@ async function startServer() {
     }
   });
 
+  app.get("/api/resend-today-matches", async (req, res) => {
+    try {
+      const { getDb } = await import("../db");
+      const { propertyMatches, requirements, properties } = await import("../../drizzle/schema");
+      const { eq, gte } = await import("drizzle-orm");
+      const { handleDetectedMatches } = await import("./janIA");
+
+      const db = await getDb();
+      if (!db) return res.status(500).send("No DB connection");
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const matches = await db.select().from(propertyMatches).where(gte(propertyMatches.createdAt, today));
+      console.log(`[API] Encontrados ${matches.length} matches creados hoy en la BD.`);
+
+      const seen = new Set<string>();
+      const uniqueMatches: typeof matches = [];
+      for (const m of matches) {
+        const key = `${m.requirementId}-${m.propertyId}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          uniqueMatches.push(m);
+        }
+      }
+
+      console.log(`[API] Re-enviando ${uniqueMatches.length} matches únicos creados hoy...`);
+
+      // Ejecutar en segundo plano para no bloquear el response HTTP
+      (async () => {
+        let count = 0;
+        for (const match of uniqueMatches) {
+          try {
+            const [reqRec] = await db.select().from(requirements).where(eq(requirements.id, match.requirementId)).limit(1);
+            const [propRec] = await db.select().from(properties).where(eq(properties.id, match.propertyId)).limit(1);
+
+            if (reqRec && propRec) {
+              const score = Number(match.matchScore);
+              const matchedItem = {
+                ...propRec,
+                score: score,
+                matchId: match.id,
+                idUsuarioWhatsapp: propRec.idUsuarioWhatsapp
+              };
+
+              const matchDetails = await handleDetectedMatches(
+                [matchedItem],
+                false,
+                reqRec,
+                reqRec.idUsuarioWhatsapp || "",
+                "Aliado VECY"
+              );
+
+              // Enviar al grupo
+              if (matchDetails.response && whatsappBot.targetGroupId) {
+                await whatsappBot.sendToGroup(matchDetails.response, undefined, matchDetails.mentions);
+              }
+
+              // Enviar al admin
+              if (matchDetails.extraDMs && matchDetails.extraDMs.length > 0) {
+                for (const dm of matchDetails.extraDMs) {
+                  await whatsappBot.queuedSend(dm.jid, dm.message);
+                }
+              }
+
+              count++;
+              console.log(`[API-RESEND] Match #${match.id} reenviado con éxito (${count}/${uniqueMatches.length}).`);
+              await new Promise(resolve => setTimeout(resolve, 15000)); // Retardo de 15 segundos entre envíos
+            }
+          } catch (e: any) {
+            console.error(`[API-RESEND] Error reenviando match #${match.id}:`, e.message || e);
+          }
+        }
+        console.log(`[API-RESEND] Finalizado reenvío de ${count} matches.`);
+      })().catch(console.error);
+
+      res.send(`Iniciado reenvío en segundo plano de ${uniqueMatches.length} matches únicos.`);
+    } catch (err: any) {
+      console.error(err);
+      res.status(500).send(err.message);
+    }
+  });
+
 
   app.get("/api/trigger-reaction-response", async (req, res) => {
     try {
