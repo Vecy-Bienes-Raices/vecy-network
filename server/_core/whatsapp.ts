@@ -2792,9 +2792,10 @@ export async function sendAdminNotification(text: string): Promise<void> {
   const ADMIN_PHONE = process.env.ADMIN_PHONE || "573166569719";
   const adminJid = `${ADMIN_PHONE}@c.us`;
   try {
-    if (matchBotInstance && matchBotInstance.isReady) {
+    const matchBot = (global as any).janiaMatchBotInstance;
+    if (matchBot && matchBot.isReady) {
       console.log(`[WHATSAPP-BOT] Enviando notificación de admin a ${adminJid} vía JanIA Match Bot (Puppeteer)...`);
-      await matchBotInstance.queuedSend(adminJid, text);
+      await matchBot.queuedSend(adminJid, text);
     } else {
       await (whatsappBot as any).queuedSend(adminJid, text);
     }
@@ -2810,9 +2811,10 @@ export async function sendAdminNotification(text: string): Promise<void> {
 export async function sendUserDM(jid: string, text: string): Promise<void> {
   const formattedJid = jid.includes('@') ? jid : `${jid}@c.us`;
   try {
-    if (matchBotInstance && matchBotInstance.isReady) {
+    const matchBot = (global as any).janiaMatchBotInstance;
+    if (matchBot && matchBot.isReady) {
       console.log(`[WHATSAPP-BOT] Enviando DM a ${formattedJid} vía JanIA Match Bot (Puppeteer)...`);
-      await matchBotInstance.queuedSend(formattedJid, text);
+      await matchBot.queuedSend(formattedJid, text);
     } else {
       await (whatsappBot as any).queuedSend(formattedJid, text);
     }
