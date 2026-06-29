@@ -123,6 +123,7 @@ export class JaniaMatchBot {
     this.setupEventListeners();
   }
 
+  private setupEventListeners() {
     // Generar código QR para vinculación
     this.client.on('qr', (qr: string) => {
       console.log('\n[JANIA-MATCH] 🔌 ESCANEA ESTE CÓDIGO QR PARA INICIAR JANIA MATCH:');
