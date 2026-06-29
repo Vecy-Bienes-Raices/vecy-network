@@ -508,7 +508,7 @@ export class WhatsAppBot {
   private watchdogInterval: NodeJS.Timeout | null = null;
 
   // --- ANTI-BURST & ANTI-FLOOD QUEUED DISPATCH (v12.0) ---
-  private async queuedSend(chatId: string, content: any, options: any = {}) {
+  public async queuedSend(chatId: string, content: any, options: any = {}) {
     if (typeof content === 'string') {
       content = content.replace(/\*\*/g, '*');
     }

@@ -511,13 +511,15 @@ export function buildSystemPrompt(groupJid?: string): string {
     
     let specificPrompt = "";
     if (groupJid === '120363260108880069@g.us') {
-      specificPrompt = fs.readFileSync(path.join(baseDir, "inmuebles.md"), "utf-8");
+      specificPrompt = fs.readFileSync(path.join(baseDir, "grupos/inmuebles.md"), "utf-8");
     } else if (groupJid === '120363417740040773@g.us') {
-      specificPrompt = fs.readFileSync(path.join(baseDir, "legal.md"), "utf-8");
+      const legalPrompt = fs.readFileSync(path.join(baseDir, "grupos/legal.md"), "utf-8");
+      const avaluosPrompt = fs.readFileSync(path.join(baseDir, "modulos/avaluos.md"), "utf-8");
+      specificPrompt = `${legalPrompt}\n\n${avaluosPrompt}`;
     } else if (groupJid === '120363403507276533@g.us') {
-      specificPrompt = fs.readFileSync(path.join(baseDir, "circulo_cero.md"), "utf-8");
+      specificPrompt = fs.readFileSync(path.join(baseDir, "grupos/circulo_cero.md"), "utf-8");
     } else {
-      specificPrompt = fs.readFileSync(path.join(baseDir, "web_console.md"), "utf-8");
+      specificPrompt = fs.readFileSync(path.join(baseDir, "web/web_console.md"), "utf-8");
     }
 
     const fullPrompt = `${basePrompt}\n\n${specificPrompt}`;
@@ -619,7 +621,9 @@ Los brókers y agentes de bienes raíces en Colombia suelen escribir de manera m
 ▸ "ba", "bñ", "bns", "bcs", "baños", "bnd" ➔ Baños. Identifica el número asociado y asígnalo a "bathrooms".
 ▸ "pq", "pqr", "pje", "gar", "gars", "parq", "estac", "gajes" ➔ Garajes/Parqueaderos. Identifica el número asociado y asígnalo a "garages".
 ▸ "adm", "admin", "admon", "administración", "admn" ➔ Valor de la administración de la copropiedad. Identifica el valor y asígnalo a "adminFee".
-▸ "permuto", "venpermuto", "se recibe menor valor", "recibo propiedad", "recibo vehículo" ➔ Asigna "permuta" al campo "transactionType".
+▸ "permuto", "venpermuto", "se recibe menor valor", "recibo propiedad", "recibo vehículo", "acepto permuta", "cambio de inmueble", "parte de pago en bien" ➔ Agrega "permuta" al array "transactionTypes" Y asigna "permuta" al campo "transactionType".
+▸ "aporte", "aporte mi lote", "aporte de lote", "participo en proyecto", "acepto aporte", "unidades a cambio", "constructora", "no solo vendo" ➔ Agrega "aporte" al array "transactionTypes" Y asigna "aporte" al campo "transactionType".
+▸ Si la publicación menciona MÚLTIPLES modalidades (ej: "venta o permuta", "venta, arriendo o aporte"), captura TODAS en el array "transactionTypes" y el más principal en "transactionType".
 ▸ "estrato", "estr" ➔ Estrato socioeconómico. Identifica el número asociado y asígnalo a "stratum".
 
 ## DISCERNIMIENTO INMOBILIARIO AVANZADO Y DESAMBIGUACIÓN (CRÍTICO)
@@ -646,7 +650,7 @@ Para estructurar ofertas de venta/arriendo y permutas complejas, debes mapear do
 2. **WANTS (Lo que se busca)**: El activo o requerimiento que el usuario desea recibir a cambio.
 
 ## FILOSOFÍA DE OPERACIÓN (SILENCIO DE ORO)
-- **Grupo General**: Solo hablas en el grupo si hay un MATCH verídico (Score >= 70%), si te hacen una consulta directa, o si se presenta una infracción de reglas de publicación o una burla/sarcasmo que requiera debate/defensa.
+- **Grupo General**: Solo hablas en el grupo si hay un MATCH verídico (Score >= 60%), si te hacen una consulta directa, o si se presenta una infracción de reglas de publicación o una burla/sarcasmo que requiera debate/defensa.
 - **Chat Privado (DM)**: Eres experta en la gestión privada. Las felicitaciones de éxito y la solicitud de datos faltantes van EXCLUSIVAMENTE por mensaje privado (DM).
 - **Cobertura Nacional**: Operamos en toda Colombia. Si el activo está en el Meta, Valledupar, Boyacá o Silvania, procésalo sin restricciones, identificando su municipio.
 
@@ -874,7 +878,8 @@ DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
     "zone": "string (Barrio/Municipio exacto)",
     "city": "string",
     "propertyType": "apartment | house | building | warehouse | office | farm | loft | consultorio",
-    "transactionType": "venta | arriendo | permuta",
+    "transactionType": "venta | arriendo | arriendo_temporal | permuta | aporte (el tipo de negocio PRINCIPAL)",
+    "transactionTypes": ["array con TODOS los tipos aceptados, ej: ['venta','permuta'] o ['venta','aporte'] o ['venta']. Captura múltiples cuando el mensaje menciona varias modalidades."],
     "area": number,
     "bedrooms": number,
     "bathrooms": number,
@@ -926,7 +931,7 @@ function formatColombiaDateTime(dateVal: any) {
   };
 }
 
-async function handleDetectedMatches(
+export async function handleDetectedMatches(
   matches: any[],
   isProperty: boolean,
   savedRecord: any,
@@ -1018,45 +1023,8 @@ async function handleDetectedMatches(
     const seekerJid = isProperty ? matchedJid : savedJid;
     const seekerDateTime = isProperty ? savedDateTime : matchedDateTime;
 
-    // El oferente (propietario)
-    const ownerDM = `🤝 *¡OPORTUNIDAD DE NEGOCIO DETECTADA!* 🤝
-
-Hola ${ownerName}, mira que a tu *PROPIEDAD* (oferta) que publicaste en el grupo el día *${ownerDateTime.dayName}*, *${ownerDateTime.dateStr}* (a las ${ownerDateTime.timeStr}), le he encontrado similitudes que concuerdan con este *REQUERIMIENTO* (búsqueda) que publicó otro colega en la red:
-
-• 🏢 *Inmueble:* ${translatePropertyType(reqItem.tipoInmuebleDeseado || reqItem.propertyType || 'inmueble')}
-• 💼 *Negocio:* ${translateTransactionType(reqItem.tipoNegocioDeseado || reqItem.transactionType || 'compra')}
-• 📍 *Ubicación buscada:* ${reqItem.ciudadDeseada || reqItem.city || 'Bogotá'} - ${reqItem.zonaDeseada || reqItem.zone || ''}
-• 💬 *Detalle de lo que busca:* ${reqItem.rawText || 'Sin descripción'}
-
-¿*ACEPTAS* o *NO ACEPTAS* que te contacte con la persona que ha publicado este *REQUERIMIENTO* para que compartamos sus números de WhatsApp y puedan hacer negocio?
-
-Por favor responde a este mensaje diciendo únicamente:
-👉 *SÍ #M${matchId}* (si Aceptas)
-👉 *NO #M${matchId}* (si No Aceptas)
-
-⚠️ *Nota importante:* Debes incluir el código *#M${matchId}* para poder saber a cuál coincidencia te refieres. Los números de WhatsApp de ambos se compartirán de forma automática de inmediato únicamente si **ambas partes** confirman con *SÍ #M${matchId}* dentro de las próximas 24 horas.`;
-
-    // El demandante (seeker)
-    const seekerDM = `🤝 *¡OPORTUNIDAD DE NEGOCIO DETECTADA!* 🤝
-
-Hola ${seekerName}, mira que a tu *REQUERIMIENTO* (búsqueda) que publicaste en el grupo el día *${seekerDateTime.dayName}*, *${seekerDateTime.dateStr}* (a las ${seekerDateTime.timeStr}), le he encontrado similitudes que concuerdan con esta *PROPIEDAD* (oferta) que publicó otro colega en la red:
-
-• 🏢 *Inmueble:* ${translatePropertyType(propItem.propertyType || 'inmueble')}
-• 💼 *Negocio:* ${translateTransactionType(propItem.transactionType || 'venta')}
-• 📍 *Ubicación de la oferta:* ${propItem.city || 'Bogotá'} - ${propItem.zone || ''}
-• 💵 *Precio:* ${propItem.price ? Number(propItem.price).toLocaleString('es-CO') + ' COP' : 'N/A'}
-• 💬 *Detalle de lo que ofrece:* ${propItem.rawText || 'Sin descripción'}
-
-¿*ACEPTAS* o *NO ACEPTAS* que te contacte con la persona que ha publicado esta *PROPIEDAD* para que compartamos sus números de WhatsApp y puedan hacer negocio?
-
-Por favor responde a este mensaje diciendo únicamente:
-👉 *SÍ #M${matchId}* (si Aceptas)
-👉 *NO #M${matchId}* (si No Aceptas)
-
-⚠️ *Nota importante:* Debes incluir el código *#M${matchId}* para poder saber a cuál coincidencia te refieres. Los números de WhatsApp de ambos se compartirán de forma automática de inmediato únicamente si **ambas partes** confirman con *SÍ #M${matchId}* dentro de las próximas 24 horas.`;
-
-    extraDMs.push({ jid: ownerJid, message: ownerDM });
-    extraDMs.push({ jid: seekerJid, message: seekerDM });
+    // DO NOT send DMs to the buyers and sellers (keep matches private for manual mediation and billing)
+    // We comment out or delete the owner/seeker DM logic and do not push them to extraDMs.
 
     // Enviar notificación por DM al administrador (3166569719)
     const adminPhone = "573166569719";
@@ -1079,21 +1047,14 @@ Por favor responde a este mensaje diciendo únicamente:
     extraDMs.push({ jid: adminJid, message: adminMessage, viaMainBot: true });
   }
 
-  const rawSenderPhone = userId.split('@')[0];
-  let introPrefix = "";
-  if (isProperty) {
-    introPrefix = `Mira @${rawSenderPhone}, encontré este/os requerimiento/s que coinciden con tu inmueble en oferta, confírmame si hay alguno que en realidad te llame la atención para poderte compartir los datos de quien busca dicho inmueble y puedas hacer una posible negociación:\n\n`;
-  } else {
-    introPrefix = `Mira @${rawSenderPhone}, encontré este/os inmueble/s que coinciden con tu requerimiento, confírmame si hay alguno que en realidad te llame la atención para poderte compartir los datos de quien publicó dicho inmueble y puedas hacer una posible negociación:\n\n`;
-  }
-
-  const responseText = introPrefix + matchBlocks.join('\n\n================================\n\n');
+  // Generic and anonymous notification for the WhatsApp group to prevent direct contact
+  const responseText = `📢 *¡ATENCIÓN!* Hemos detectado un posible Match 🎯, Por favor @todos pendientes. En breve uno de nuestros agentes 🙋🏻‍♀️🙋🏻‍♂️ contactará a los beneficiarios para compartirles los datos de las coincidencias encontradas 🔍. Saludos 👋`;
 
   return {
     response: responseText,
-    mentions: mentions,
+    mentions: [],
     extraDMs: extraDMs,
-    sendReputationHook: true
+    sendReputationHook: false
   };
 }
 
@@ -1851,13 +1812,31 @@ function sanitizePropertyType(type: string): "apartment" | "house" | "building" 
   return "apartment";
 }
 
-function sanitizeTransactionType(type: string): "venta" | "arriendo" | "arriendo_temporal" {
+function sanitizeTransactionType(type: string): "venta" | "arriendo" | "arriendo_temporal" | "permuta" | "aporte" {
   if (!type) return "venta";
   const t = type.toLowerCase().trim();
-  if (t === "venta" || t === "vender") return "venta";
-  if (t === "arriendo" || t === "alquiler" || t === "renta" || t === "rentar") return "arriendo";
-  if (t === "arriendo_temporal" || t === "temporal" || t === "vacacional") return "arriendo_temporal";
+  if (t === "venta" || t === "vender" || t === "compra" || t === "comprar") return "venta";
+  if (t === "arriendo" || t === "alquiler" || t === "renta" || t === "rentar" || t === "arrendar") return "arriendo";
+  if (t === "arriendo_temporal" || t === "temporal" || t === "vacacional" || t === "vacaciones") return "arriendo_temporal";
+  if (t === "permuta" || t === "permuto" || t === "venpermuto" || t === "cambio" || t.includes("permuta")) return "permuta";
+  if (t === "aporte" || t.includes("aporte") || t === "proyecto") return "aporte";
   return "venta";
+}
+
+// Captura MÚLTIPLES tipos de negocio cuando el usuario menciona varias modalidades
+function sanitizeTransactionTypes(raw: string | string[] | undefined): string[] {
+  const input = Array.isArray(raw) ? raw.join(" ") : (raw || "");
+  const n = input.toLowerCase();
+  const result: string[] = [];
+  if (n.includes("venta") || n.includes("vender") || n.includes("compra") || n.includes("comprar")) result.push("venta");
+  if (n.includes("arriendo") || n.includes("alquiler") || n.includes("renta") || n.includes("rentar")) result.push("arriendo");
+  if (n.includes("temporal") || n.includes("vacacional") || n.includes("vacaciones")) result.push("arriendo_temporal");
+  if (n.includes("permuta") || n.includes("permuto") || n.includes("venpermuto") ||
+      n.includes("recibo propiedad") || n.includes("recibo vehiculo") || n.includes("parte de pago") ||
+      n.includes("cambio de inmueble")) result.push("permuta");
+  if (n.includes("aporte") || n.includes("participo en proyecto") || n.includes("constructora") ||
+      n.includes("unidades a cambio") || n.includes("utilidades")) result.push("aporte");
+  return result.length > 0 ? result : [sanitizeTransactionType(input)];
 }
 
 function sanitizeCurrency(curr: string): "COP" | "USD" {
@@ -1926,6 +1905,7 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
     idUsuarioWhatsapp: safeSlice(data.idUsuarioWhatsapp || rawPhone, 100) || null,
     propertyType: sanitizePropertyType(data.propertyType),
     transactionType: sanitizeTransactionType(data.transactionType),
+    acceptedTransactionTypes: sanitizeTransactionTypes(data.transactionTypes || data.transactionType),
     currency: sanitizeCurrency(data.currency),
     // Mapear explícitamente los campos para mayor robustez
     price: data.price !== undefined && data.price !== null ? String(data.price) : null,
@@ -2025,6 +2005,7 @@ async function saveRequirement(data: any, userId: string, realName: string) {
     idUsuarioWhatsapp: safeSlice(data.idUsuarioWhatsapp || rawPhone, 100) || null,
     tipoInmuebleDeseado: sanitizePropertyType(data.tipoInmuebleDeseado || data.propertyType),
     tipoNegocioDeseado: sanitizeTransactionType(data.tipoNegocioDeseado || data.transactionType),
+    tiposNegocioAceptados: sanitizeTransactionTypes(data.transactionTypes || data.tipoNegocioDeseado || data.transactionType),
     monedaPresupuesto: sanitizeCurrency(data.monedaPresupuesto || data.currency),
     // Mapear campos desde el formato LLM/WhatsApp (data) a las columnas de la base de datos
     presupuestoMin: data.presupuestoMin !== undefined && data.presupuestoMin !== null ? String(data.presupuestoMin) : null,

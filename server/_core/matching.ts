@@ -122,11 +122,30 @@ export function calcularScoreMatch(requirement: any, property: any): number {
     return 0;
   }
 
-  // 2. Tipo de negocio debe ser idéntico
+  // 2. Tipo de negocio — intersección de conjuntos (no igualdad exacta)
+  // Un inmueble en "venta" puede hacer match con un requerimiento de "permuta"
+  // ya que el comprador puede proponer permuta sobre un inmueble listado en venta.
   const reqBiz = requirement.tipoNegocioDeseado || requirement.transactionType;
   const propBiz = property.transactionType;
-  if (reqBiz && propBiz && reqBiz.toLowerCase() !== propBiz.toLowerCase()) {
-    return 0;
+  const reqTypes: string[] = Array.isArray(requirement.tiposNegocioAceptados) && requirement.tiposNegocioAceptados.length > 0
+    ? requirement.tiposNegocioAceptados
+    : (reqBiz ? [reqBiz] : ["venta"]);
+  const propTypes: string[] = Array.isArray(property.acceptedTransactionTypes) && property.acceptedTransactionTypes.length > 0
+    ? property.acceptedTransactionTypes
+    : (propBiz ? [propBiz] : ["venta"]);
+
+  // Regla de compatibilidad: venta <-> permuta son compatibles (permuta es una forma de pagar la venta)
+  const typesCompatible = reqTypes.some(rt =>
+    propTypes.some(pt =>
+      pt === rt ||
+      (rt === "venta" && pt === "permuta") ||
+      (rt === "permuta" && pt === "venta") ||
+      (rt === "venta" && pt === "aporte") ||
+      (rt === "aporte" && pt === "venta")
+    )
+  );
+  if (!typesCompatible) {
+    return 0; // Hard mismatch: tipos de negocio completamente incompatibles
   }
 
   // 3. Validación Geográfica Nacional (Ciudad, Localidad y Zona)
@@ -362,7 +381,7 @@ export function calcularScoreMatch(requirement: any, property: any): number {
 }
 
 export function evaluarMatch(requirement: any, property: any): boolean {
-  return calcularScoreMatch(requirement, property) >= 70;
+  return calcularScoreMatch(requirement, property) >= 60;
 }
 
 /**
@@ -376,22 +395,17 @@ export async function findMatchesForProperty(propertyId: number) {
     const [property] = await db.select().from(properties).where(eq(properties.id, propertyId));
     if (!property) return [];
 
+    // Carga TODOS los requerimientos activos — el score se encarga de filtrar compatibilidad
     const activeRequirements = await db
       .select()
       .from(requirements)
-      .where(
-        and(
-          eq(requirements.status, "active"),
-          eq(requirements.tipoInmuebleDeseado, property.propertyType),
-          eq(requirements.tipoNegocioDeseado, property.transactionType)
-        )
-      );
+      .where(eq(requirements.status, "active"));
 
     const validMatches = [];
 
     for (const req of activeRequirements) {
       const score = calcularScoreMatch(req, property);
-      if (score >= 70) {
+      if (score >= 60) {
         let matchId: number;
         const existing = await db.select().from(propertyMatches).where(
           and(
@@ -442,22 +456,17 @@ export async function findMatchesForRequirement(requirementId: number) {
     const [req] = await db.select().from(requirements).where(eq(requirements.id, requirementId));
     if (!req) return [];
 
+    // Carga TODOS los inmuebles disponibles — el score se encarga de filtrar compatibilidad
     const availableProperties = await db
       .select()
       .from(properties)
-      .where(
-        and(
-          eq(properties.available, true),
-          eq(properties.propertyType, req.tipoInmuebleDeseado),
-          eq(properties.transactionType, req.tipoNegocioDeseado)
-        )
-      );
+      .where(eq(properties.available, true));
 
     const validMatches = [];
 
     for (const prop of availableProperties) {
       const score = calcularScoreMatch(req, prop);
-      if (score >= 70) {
+      if (score >= 60) {
         let matchId: number;
         const existing = await db.select().from(propertyMatches).where(
           and(

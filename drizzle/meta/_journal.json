@@ -43,6 +43,13 @@
       "when": 1782607101821,
       "tag": "0005_fuzzy_magneto",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1782713215598,
+      "tag": "0006_sudden_wraith",
+      "breakpoints": true
     }
   ]
 }

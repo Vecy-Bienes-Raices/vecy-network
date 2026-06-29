@@ -6,7 +6,7 @@ export const propertyTypeEnum = pgEnum("propertyType", [
   "apartment", "house", "building", "warehouse", "farm", "hotel", 
   "office", "land", "commercial", "loft", "consultorio"
 ]);
-export const transactionTypeEnum = pgEnum("transactionType", ["venta", "arriendo", "arriendo_temporal"]);
+export const transactionTypeEnum = pgEnum("transactionType", ["venta", "arriendo", "arriendo_temporal", "permuta", "aporte"]);
 export const mandateStatusEnum = pgEnum("mandateStatus", ["pending", "signed"]);
 export const mandateTypeEnum = pgEnum("mandateType", ["direct_owner", "agent_electronic_link", "agent_uploaded_paper"]);
 export const inquiryTypeEnum = pgEnum("inquiryType", ["buy", "sell", "rent", "invest", "general"]);
@@ -93,6 +93,8 @@ export const properties = pgTable("properties", {
   idUsuarioWhatsapp: varchar("idUsuarioWhatsapp", { length: 100 }),
   sourceRepository: varchar("sourceRepository", { length: 255 }),
   lastSyncedAt: timestamp("lastSyncedAt"),
+  // Array of all accepted transaction types (e.g. ["venta","permuta"] or ["venta","aporte"])
+  acceptedTransactionTypes: text("accepted_transaction_types").array(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
@@ -109,6 +111,8 @@ export const requirements = pgTable("requirements", {
   name: varchar("name", { length: 255 }),
   tipoInmuebleDeseado: propertyTypeEnum("tipoInmuebleDeseado").notNull(),
   tipoNegocioDeseado: transactionTypeEnum("tipoNegocioDeseado").notNull(),
+  // Array of all accepted transaction types for matching flexibility (e.g. ["venta","permuta"])
+  tiposNegocioAceptados: text("tipos_negocio_aceptados").array(),
   ciudadDeseada: varchar("ciudadDeseada", { length: 100 }).notNull().default("Bogotá"),
   zonaDeseada: varchar("zonaDeseada", { length: 100 }), // Candidate for refactor to addressNeighborhood
   addressCity: varchar("address_city", { length: 100 }),

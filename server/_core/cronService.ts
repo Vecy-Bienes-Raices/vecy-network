@@ -18,6 +18,7 @@ import {
   MSG_RESUMEN_RETORNO_PRESENTACION,
   MSG_CIERRE_OPERACIONES
 } from './janIA';
+import { runNightlyRematch } from '../jobs/nightlyRematch';
 
 /**
  * Servicio Cron de JanIA v2.5
@@ -56,11 +57,11 @@ Dirección obligatoria:
       console.error('❌ Error al generar mensaje matutino para Inmuebles:', e.message);
     }
 
-    // --- GRUPO 2: BUZÓN DE CONSULTORÍA INMOBILIARIA 24/7 ---
+    // --- GRUPO 2: VECY: SOPORTE LEGAL, TRIBUTARIO Y AVALÚOS ---
     try {
-      const promptConsultoria = `Genera un mensaje de buenos días corto y profesional en español para el grupo "BUZÓN DE CONSULTORÍA INMOBILIARIA 24/7".
+      const promptConsultoria = `Genera un mensaje de buenos días corto y profesional en español para el grupo "VECY: SOPORTE LEGAL, TRIBUTARIO Y AVALÚOS".
 Dirección obligatoria:
-- Explica que este espacio es EXCLUSIVAMENTE para consultas respecto a casos diarios, dudas o conflictos jurídicos/comerciales que les surjan a los inmobiliarios en Colombia.
+- Explica que este espacio es EXCLUSIVAMENTE para consultas respecto a casos diarios, dudas o conflictos jurídicos, contables, tributarios o de avalúos que les surjan a los inmobiliarios en Colombia.
 - Indica que JanIA está preparada para responder con rigor legal y profesionalismo técnico exacto sobre: conflictos de restitución de inmuebles (Ley 820/2003), cesión de leasing, contratos/promesas en permuta, sucesiones por herencia o divorcio, levantamiento de embargos, cobro de comisiones pendientes e incumplimientos de corretaje (y disputas/robos de comisiones entre colegas: cómo actuar, cómo demandar, cómo recolectar pruebas como las hojas de presentación de cliente y contratos de puntas compartidas, alegatos, verbal/monitorio), cláusulas clave en promesas de compraventa y por qué usar términos "promitente vendedor/comprador", por qué es más seguro usar correo electrónico que WhatsApp (WhatsApp se puede borrar, requiere análisis forense digital en juicios, mientras que el correo electrónico tiene traza de IP y cifrado inalterable que los jueces prefieren).
 - Invita a los aliados a preguntar sin miedo en este grupo por texto o nota de voz. Recuerda que no se permiten listings comerciales o spam aquí (3 strikes = expulsión). Usa emojis.`;
 
@@ -74,7 +75,7 @@ Dirección obligatoria:
       if (content && content.trim() !== "") {
         const buzonJid = whatsappBot.buzonGroupId;
         if (buzonJid) {
-          console.log('[CRON-SERVICE] Enviando mensaje matutino a VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS...');
+          console.log('[CRON-SERVICE] Enviando mensaje matutino a VECY: SOPORTE LEGAL, TRIBUTARIO Y AVALÚOS...');
           await whatsappBot.sendToGroup(content, undefined, [], buzonJid);
         }
       }
@@ -139,10 +140,10 @@ Dirección obligatoria:
       console.error('❌ Error al generar mensaje de la tarde para Inmuebles:', e.message);
     }
 
-    // --- GRUPO 2: BUZÓN DE CONSULTORÍA INMOBILIARIA 24/7 ---
+    // --- GRUPO 2: VECY: SOPORTE LEGAL, TRIBUTARIO Y AVALÚOS ---
     try {
-      const promptConsultoria = `Genera un post corto para cerrar el día en el grupo "BUZÓN DE CONSULTORÍA INMOBILIARIA 24/7".
-- Destaca la importancia del estudio continuo de casos, la seguridad jurídica (como preferir el correo electrónico sobre WhatsApp para documentar acuerdos por su inalterabilidad y validez judicial) y elevar el nivel profesional en el sector.
+      const promptConsultoria = `Genera un post corto para cerrar el día en el grupo "VECY: SOPORTE LEGAL, TRIBUTARIO Y AVALÚOS".
+- Destaca la importancia del estudio continuo de casos, la seguridad jurídica, la tributación y el cálculo de la ganancia ocasional, retenciones en la fuente y elevar el nivel profesional en el sector.
 - Usa emojis de forma atractiva.`;
 
       const response = await invokeLLM({
@@ -155,7 +156,7 @@ Dirección obligatoria:
       if (content && content.trim() !== "") {
         const buzonJid = whatsappBot.buzonGroupId;
         if (buzonJid) {
-          console.log('[CRON-SERVICE] Enviando mensaje de la tarde a VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS...');
+          console.log('[CRON-SERVICE] Enviando mensaje de la tarde a VECY: SOPORTE LEGAL, TRIBUTARIO Y AVALÚOS...');
           await whatsappBot.sendToGroup(content, undefined, [], buzonJid);
         }
       }
@@ -231,7 +232,7 @@ Dirección obligatoria:
 
     const grupos = [
       { id: whatsappBot.targetGroupId, nombre: "VECY INMUEBLES NETWORK", promptExtra: "Enfócate en la publicación activa de ofertas y demandas de inmuebles, el cruce comercial rápido, y la colaboración nacional sin pagar comisiones." },
-      { id: whatsappBot.buzonGroupId, nombre: "VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS", promptExtra: "Enfócate en invitar a que consulten sobre temas jurídicos, disputas de comisiones de puntas compartidas, contratos de corretaje o avalúos." },
+      { id: whatsappBot.buzonGroupId, nombre: "VECY: SOPORTE LEGAL, TRIBUTARIO Y AVALÚOS", promptExtra: "Enfócate en invitar a que consulten sobre temas jurídicos, tributarios, liquidaciones, ganancia ocasional o avalúos." },
       { id: whatsappBot.circuloGroupId, nombre: "CÍRCULO CERO", promptExtra: "Enfócate en la retroalimentación del sistema, sugerencias directas a los fundadores, ideas de mejora y el futuro del sector inmobiliario." }
     ];
 
@@ -276,7 +277,7 @@ Dirección obligatoria:
     console.log('[CRON-SERVICE] Generando y enviando Mensajes de Voz de Lunes por la Mañana...');
     const grupos = [
       { id: whatsappBot.targetGroupId, nombre: "VECY INMUEBLES NETWORK", promptExtra: "Enfócate en iniciar la semana con la mejor energía, invitando a publicar activamente ofertas y requerimientos para lograr cierres comerciales rápidos en la red." },
-      { id: whatsappBot.buzonGroupId, nombre: "VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS", promptExtra: "Enfócate en desear un feliz inicio de semana y recordar que el equipo de soporte legal y avalúos está listo para resolver cualquier consulta en sus operaciones semanales." },
+      { id: whatsappBot.buzonGroupId, nombre: "VECY: SOPORTE LEGAL, TRIBUTARIO Y AVALÚOS", promptExtra: "Enfócate en desear un feliz inicio de semana y recordar que el equipo de soporte legal, tributario y avalúos está listo para resolver cualquier consulta en sus operaciones semanales." },
       { id: whatsappBot.circuloGroupId, nombre: "CÍRCULO CERO", promptExtra: "Enfócate en motivar a los aliados a seguir expandiendo la red colaborativa de VECY Network en Colombia esta nueva semana." }
     ];
 
@@ -320,10 +321,22 @@ Dirección obligatoria:
   }, {
     timezone: 'America/Bogota'
   });
+
+  // 6. Todos los días a las 08:00 AM = Cruce Masivo de la mañana (Re-matching de base de datos)
+  cron.schedule('0 8 * * *', async () => {
+    console.log('[CRON-SERVICE] Ejecutando cruce masivo (Re-matching)...');
+    try {
+      await runNightlyRematch();
+    } catch (err: any) {
+      console.error('[CRON-SERVICE] Error en el job de re-matching masivo:', err.message || err);
+    }
+  }, {
+    timezone: 'America/Bogota'
+  });
 }
 
 /**
- * Consulta la base de datos y genera el boletín de matches calificados (Score >= 70)
+ * Consulta la base de datos y genera el boletín de matches calificados (Score >= 60)
  * Incluye acumulados históricos si el periodo es NOCTURNO.
  */
 async function sendMatchBulletin(periodName: string) {
@@ -344,7 +357,7 @@ async function sendMatchBulletin(periodName: string) {
     .innerJoin(requirements, eq(propertyMatches.requirementId, requirements.id))
     .innerJoin(properties, eq(propertyMatches.propertyId, properties.id))
     .where(and(
-      gte(sql<number>`(${propertyMatches.matchScore})::numeric`, 70),
+      gte(sql<number>`(${propertyMatches.matchScore})::numeric`, 60),
       gte(propertyMatches.createdAt, todayStart)
     ))
     .execute();
@@ -424,10 +437,10 @@ async function sendWeeklyReport() {
     const propertiesCountRes = await db.select({ count: sql<number>`count(*)` }).from(properties).execute();
     const requirementsCountRes = await db.select({ count: sql<number>`count(*)` }).from(requirements).execute();
     
-    // Contamos matches con score >= 70
+    // Contamos matches con score >= 60
     const matchesCountRes = await db.select({ count: sql<number>`count(*)` })
       .from(propertyMatches)
-      .where(gte(sql<number>`(${propertyMatches.matchScore})::numeric`, 70))
+      .where(gte(sql<number>`(${propertyMatches.matchScore})::numeric`, 60))
       .execute();
 
     const totalProperties = propertiesCountRes[0]?.count || 0;
@@ -447,7 +460,7 @@ async function sendWeeklyReport() {
     .innerJoin(requirements, eq(propertyMatches.requirementId, requirements.id))
     .innerJoin(properties, eq(propertyMatches.propertyId, properties.id))
     .where(and(
-      gte(sql<number>`(${propertyMatches.matchScore})::numeric`, 70),
+      gte(sql<number>`(${propertyMatches.matchScore})::numeric`, 60),
       gte(propertyMatches.createdAt, sevenDaysAgo)
     ))
     .execute();
