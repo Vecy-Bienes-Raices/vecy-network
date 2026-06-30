@@ -95,3 +95,65 @@ export async function runNightlyRematch() {
     console.error("[NIGHTLY-REMATCH] Error durante el cruce masivo nocturno:", error.message || error);
   }
 }
+
+/**
+ * Recalcula todos los matches de la base de datos aplicando las nuevas reglas de negocio estrictas.
+ * Si el score calculado es < 60, elimina el match de la base de datos para depurar reportes obsoletos.
+ * Si el score es >= 60 pero diferente, actualiza la puntuación.
+ */
+export async function recalculateAndCleanupMatches() {
+  console.log("[MATCH-CLEANUP] Iniciando recalculo y limpieza de matches en BD...");
+  const db = await getDb();
+  if (!db) {
+    console.error("[MATCH-CLEANUP] No se pudo conectar a la base de datos.");
+    return;
+  }
+
+  try {
+    const allMatches = await db
+      .select({
+        id: propertyMatches.id,
+        propertyId: propertyMatches.propertyId,
+        requirementId: propertyMatches.requirementId,
+        matchScore: propertyMatches.matchScore,
+      })
+      .from(propertyMatches);
+
+    console.log(`[MATCH-CLEANUP] Encontrados ${allMatches.length} registros para evaluar.`);
+    let deletedCount = 0;
+    let updatedCount = 0;
+
+    for (const m of allMatches) {
+      const [prop] = await db.select().from(properties).where(eq(properties.id, m.propertyId)).limit(1);
+      const [req] = await db.select().from(requirements).where(eq(requirements.id, m.requirementId)).limit(1);
+
+      if (!prop || !req) {
+        console.log(`[MATCH-CLEANUP] Eliminando Match #${m.id} por propiedad o requerimiento inexistente.`);
+        await db.delete(propertyMatches).where(eq(propertyMatches.id, m.id));
+        deletedCount++;
+        continue;
+      }
+
+      const newScore = calcularScoreMatch(req, prop);
+      if (newScore < 60) {
+        console.log(`[MATCH-CLEANUP] Eliminando Match #${m.id} por incompatibilidad (Nuevo Score: ${newScore}%, Score anterior: ${m.matchScore}%).`);
+        await db.delete(propertyMatches).where(eq(propertyMatches.id, m.id));
+        deletedCount++;
+      } else {
+        const storedScore = parseFloat(String(m.matchScore));
+        if (Math.abs(storedScore - newScore) > 0.1) {
+          console.log(`[MATCH-CLEANUP] Actualizando Score de Match #${m.id}: ${storedScore}% -> ${newScore}%`);
+          await db
+            .update(propertyMatches)
+            .set({ matchScore: newScore.toFixed(2), matchReason: `Recalculado con VECY CORE v12.0` })
+            .where(eq(propertyMatches.id, m.id));
+          updatedCount++;
+        }
+      }
+    }
+
+    console.log(`[MATCH-CLEANUP] Limpieza finalizada. Eliminados: ${deletedCount}, Actualizados: ${updatedCount}`);
+  } catch (error: any) {
+    console.error("[MATCH-CLEANUP] Error durante la limpieza:", error.message || error);
+  }
+}

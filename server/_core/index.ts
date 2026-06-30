@@ -662,6 +662,15 @@ Dirección obligatoria:
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
     
+    // Ejecutar recalculo y limpieza de matches obsoletos en la BD en segundo plano al iniciar
+    import("../jobs/nightlyRematch").then(({ recalculateAndCleanupMatches }) => {
+      recalculateAndCleanupMatches().catch(err => {
+        console.error("[STARTUP-CLEANUP] Error ejecutando la limpieza de matches:", err);
+      });
+    }).catch(err => {
+      console.error("[STARTUP-CLEANUP] Error importando función de limpieza:", err);
+    });
+
     // Inicializar el Bot de WhatsApp de Vecy Network solo si no está deshabilitado
     if (process.env.ENABLE_WHATSAPP_BOT !== "false") {
       console.log("Iniciando WhatsApp Bot...");

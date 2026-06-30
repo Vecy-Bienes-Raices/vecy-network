@@ -95,51 +95,171 @@ function scoreRows(req: any, prop: any) {
     rows.push({ label, required, found, status, icon });
   };
 
-  const typeS: MatchStatus = !req.tipoInmuebleDeseado || req.tipoInmuebleDeseado === prop.propertyType ? "exact" : "missing";
-  add("Tipo de Inmueble", getPropTypeLabel(req.tipoInmuebleDeseado), getPropTypeLabel(prop.propertyType), typeS, 20, <Building2 className="w-3.5 h-3.5" />);
+  const cleanText = (t: string) => (t || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
 
-  const txS: MatchStatus = !req.tipoNegocioDeseado || req.tipoNegocioDeseado === prop.transactionType ? "exact" : "missing";
-  add("Tipo de Negocio", getTransactionLabel(req.tipoNegocioDeseado), getTransactionLabel(prop.transactionType), txS, 15, <ArrowRightLeft className="w-3.5 h-3.5" />);
+  // 1. Tipo de Inmueble
+  const reqType = req.tipoInmuebleDeseado || req.propertyType;
+  const propType = prop.propertyType;
+  const typeS: MatchStatus = !reqType || !propType || reqType.toLowerCase() === propType.toLowerCase() ? "exact" : "missing";
+  add("Tipo de Inmueble", getPropTypeLabel(reqType), getPropTypeLabel(propType), typeS, 20, <Building2 className="w-3.5 h-3.5" />);
 
-  const cityOk = !req.ciudadDeseada || req.ciudadDeseada?.toLowerCase() === prop.city?.toLowerCase();
-  const zoneOk = !req.zonaDeseada || !prop.zone || prop.zone.toLowerCase().includes(req.zonaDeseada.toLowerCase()) || req.zonaDeseada.toLowerCase().includes(prop.zone.toLowerCase());
-  const locS: MatchStatus = cityOk && zoneOk ? "exact" : cityOk ? "warn" : "missing";
+  // 2. Tipo de Negocio
+  const reqBiz = req.tipoNegocioDeseado || req.transactionType;
+  const propBiz = prop.transactionType;
+  const reqTypes: string[] = Array.isArray(req.tiposNegocioAceptados) && req.tiposNegocioAceptados.length > 0
+    ? req.tiposNegocioAceptados
+    : (reqBiz ? [reqBiz] : ["venta"]);
+  const propTypes: string[] = Array.isArray(prop.acceptedTransactionTypes) && prop.acceptedTransactionTypes.length > 0
+    ? prop.acceptedTransactionTypes
+    : (propBiz ? [propBiz] : ["venta"]);
+
+  const txCompatible = reqTypes.some(rt =>
+    propTypes.some(pt =>
+      pt === rt ||
+      (rt === "venta" && pt === "permuta") ||
+      (rt === "permuta" && pt === "venta") ||
+      (rt === "venta" && pt === "aporte") ||
+      (rt === "aporte" && pt === "venta")
+    )
+  );
+  const txS: MatchStatus = txCompatible ? "exact" : "missing";
+  add("Tipo de Negocio", getTransactionLabel(reqBiz), getTransactionLabel(propBiz), txS, 15, <ArrowRightLeft className="w-3.5 h-3.5" />);
+
+  // 3. Ubicación / Barrio
+  const reqCity = req.ciudadDeseada || req.city || "";
+  const propCity = prop.city || prop.addressCity || "";
+  const reqZone = req.zonaDeseada || req.addressNeighborhood || "";
+  const propZone = prop.zone || prop.addressNeighborhood || "";
+  
+  const reqCityClean = cleanText(reqCity);
+  const propCityClean = cleanText(propCity);
+  const reqZoneClean = cleanText(reqZone);
+  const propZoneClean = cleanText(propZone);
+  
+  let locS: MatchStatus = "exact";
+  if (reqCityClean && propCityClean && reqCityClean !== propCityClean) {
+    locS = "missing";
+  } else if (reqZoneClean) {
+    const santas = ["santa barbara oriental", "santa barbara central", "santa barbara occidental", "santa ana oriental", "santa ana occidental", "santa paula", "santa bibiana", "san patricio", "navarra", "chico navarra", "molinos norte", "usaquen", "multicentro"];
+    const chico = ["chico norte", "chico reservado", "chico reservado norte", "chico", "chico navarra", "chico sur"];
+    
+    const isSantas = (z: string) => z.includes("santas") || z === "santa barbara" || z === "santa ana";
+    const isChico = (z: string) => z.includes("chico");
+    
+    const hasNominal = propZoneClean.includes(reqZoneClean) || reqZoneClean.includes(propZoneClean);
+    const hasColoquial = (isSantas(reqZoneClean) && santas.some(s => propZoneClean.includes(s))) ||
+                         (isChico(reqZoneClean) && chico.some(c => propZoneClean.includes(c)));
+    
+    if (hasNominal || hasColoquial) {
+      locS = "exact";
+    } else if (reqZoneClean.includes("aledan") || reqZoneClean.includes("cercan") || reqZoneClean.includes("alrededor") || reqZoneClean.includes("similar") || reqZoneClean.includes("proxim") || reqZoneClean.includes("otro")) {
+      locS = "warn";
+    } else {
+      locS = "missing";
+    }
+  }
   add("Ubicación / Barrio", `${req.zonaDeseada || "Cualquiera"}, ${req.ciudadDeseada || "N/E"}`, `${prop.zone || "N/E"}, ${prop.city || "N/E"}`, locS, 20, <MapPin className="w-3.5 h-3.5" />);
 
+  // 4. Presupuesto Máx
   const budget = parseFloat(req.presupuestoMax || "0");
   const price = parseFloat(prop.price || "0");
   let budS: MatchStatus = "missing";
   if (!budget || !price) budS = "missing";
   else if (price <= budget) budS = "exact";
-  else if (price <= budget * 1.10) budS = "warn";
+  else if (price <= budget * 1.05) budS = "warn";
+  else budS = "missing";
   add("Presupuesto Máx.", req.presupuestoMax ? `Hasta ${formatCOP(req.presupuestoMax)}` : "N/E", formatCOP(prop.price), budS, 15, <DollarSign className="w-3.5 h-3.5" />);
 
+  // 5. Área Total
   const areaR = parseFloat(req.areaMin || "0");
-  const areaP = parseFloat(prop.areaTotal || "0");
-  const areS: MatchStatus = !areaR ? "exact" : areaP >= areaR ? "exact" : areaP >= areaR * 0.90 ? "warn" : "missing";
+  const areaP = parseFloat(prop.areaTotal || prop.areaPrivate || "0");
+  let areS: MatchStatus = "exact";
+  if (areaR > 0) {
+    if (areaP >= areaR && areaP <= areaR * 1.15) {
+      areS = "exact";
+    } else if (areaP > areaR * 1.15 && areaP <= areaR * 1.30) {
+      areS = "warn";
+    } else {
+      areS = "missing";
+    }
+  }
   add("Área Total", req.areaMin ? `>= ${req.areaMin} m²` : "N/E", prop.areaTotal ? `${prop.areaTotal} m²` : "N/E", areS, 10, <Ruler className="w-3.5 h-3.5" />);
 
-  const bedR = req.habitacionesMin || 0;
-  const bedP = prop.bedrooms || 0;
-  const bedS: MatchStatus = !bedR ? "exact" : bedP >= bedR ? "exact" : "missing";
-  add("Habitaciones", bedR ? `>= ${bedR} hab.` : "N/E", bedP ? `${bedP} hab.` : "N/E", bedS, 8, <Bed className="w-3.5 h-3.5" />);
+  // 6. Habitaciones (Exactas)
+  const bedR = req.habitacionesMin ? Number(req.habitacionesMin) : 0;
+  const bedP = prop.bedrooms ? Number(prop.bedrooms) : 0;
+  const bedS: MatchStatus = !bedR ? "exact" : bedP === bedR ? "exact" : "missing";
+  add("Habitaciones", bedR ? `${bedR} hab. (Exacto)` : "N/E", bedP ? `${bedP} hab.` : "N/E", bedS, 8, <Bed className="w-3.5 h-3.5" />);
 
-  const bathR = req.banosMin || 0;
-  const bathP = prop.bathrooms || 0;
-  const bathS: MatchStatus = !bathR ? "exact" : bathP >= bathR ? "exact" : "missing";
-  add("Baños", bathR ? `>= ${bathR} baños` : "N/E", bathP ? `${bathP} baños` : "N/E", bathS, 5, <Bath className="w-3.5 h-3.5" />);
+  // 7. Baños (Exactos)
+  const bathR = req.banosMin ? Number(req.banosMin) : 0;
+  const bathP = prop.bathrooms ? Number(prop.bathrooms) : 0;
+  const bathS: MatchStatus = !bathR ? "exact" : bathP === bathR ? "exact" : "missing";
+  add("Baños", bathR ? `${bathR} baños (Exacto)` : "N/E", bathP ? `${bathP} baños` : "N/E", bathS, 5, <Bath className="w-3.5 h-3.5" />);
 
-  const garR = req.parqueaderosMin || 0;
-  const garP = prop.garages || 0;
-  const garS: MatchStatus = !garR ? "exact" : garP >= garR ? "exact" : garP >= garR - 1 ? "warn" : "missing";
-  add("Parqueaderos", garR ? `>= ${garR}` : "N/E", garP ? `${garP}` : "N/E", garS, 5, <Car className="w-3.5 h-3.5" />);
+  // 8. Parqueaderos (Exactos)
+  const garR = req.parqueaderosMin ? Number(req.parqueaderosMin) : 0;
+  const garP = prop.garages ? Number(prop.garages) : 0;
+  const garS: MatchStatus = !garR ? "exact" : garP === garR ? "exact" : "missing";
+  add("Parqueaderos", garR ? `${garR} garajes (Exacto)` : "N/E", garP ? `${garP} garajes` : "N/E", garS, 5, <Car className="w-3.5 h-3.5" />);
 
+  // 9. Estrato
   const estratoArr: number[] = Array.isArray(req.estratoDeseado) ? req.estratoDeseado : [];
   const estratoP = prop.stratum;
   const estS: MatchStatus = !estratoArr.length || !estratoP ? "exact" : estratoArr.includes(estratoP) ? "exact" : "warn";
   add("Estrato", estratoArr.length ? `Estrato(s) ${estratoArr.join(", ")}` : "Cualquiera", estratoP ? `Estrato ${estratoP}` : "N/E", estS, 7, <Shield className="w-3.5 h-3.5" />);
 
-  return { rows, autoScore: max > 0 ? Math.round((pts / max) * 100) : 0 };
+  // 10. Piso / Altura
+  const reqFloor = req.caracteristicasDeseadas?.floorDetail || req.floorDetail;
+  const propFloor = prop.floorDetail || prop.amenities?.floorDetail;
+  let floorS: MatchStatus = "exact";
+  if (reqFloor && propFloor && reqFloor !== "NA" && propFloor !== "NA" && String(reqFloor).trim() !== "" && String(propFloor).trim() !== "") {
+    if (propType === "house") {
+      const cleanF = (f: string) => cleanText(f).replace(/\b(pisos|niveles|piso|nivel|plantas|planta)\b/g, "").trim();
+      floorS = cleanF(reqFloor) === cleanF(propFloor) ? "exact" : "missing";
+    } else if (propType === "apartment") {
+      const rFNum = parseInt(String(reqFloor).replace(/\D/g, ""));
+      const pFNum = parseInt(String(propFloor).replace(/\D/g, ""));
+      if (!isNaN(rFNum) && !isNaN(pFNum)) {
+        if (pFNum === rFNum) {
+          floorS = "exact";
+        } else if (pFNum === rFNum + 1) {
+          floorS = "warn";
+        } else {
+          floorS = "missing";
+        }
+      } else {
+        floorS = cleanText(String(propFloor)) === cleanText(String(reqFloor)) ? "exact" : "missing";
+      }
+    }
+  }
+  if (reqFloor || propFloor) {
+    add("Piso / Altura", reqFloor || "N/E", propFloor || "N/E", floorS, 5, <SlidersHorizontal className="w-3.5 h-3.5" />);
+  }
+
+  // 11. Características Especiales
+  const reqTextNorm = cleanText(req.rawText || "");
+  const propTextNorm = cleanText(prop.rawText || prop.description || "");
+  const keywordsToCheck = [
+    { label: "Terraza", terms: ["terraza"] },
+    { label: "Balcón", terms: ["balcon", "balcón"] },
+    { label: "Chimenea", terms: ["chimene"] },
+    { label: "Club House", terms: ["club house", "clubhouse", "club-house"] },
+    { label: "Estudio", terms: ["estudio"] }
+  ];
+  keywordsToCheck.forEach(kw => {
+    const requested = kw.terms.some(t => reqTextNorm.includes(t));
+    if (requested) {
+      const found = kw.terms.some(t => propTextNorm.includes(t));
+      const status = found ? "exact" : "missing";
+      add(kw.label, "Solicitado", found ? "Presente" : "No mencionado", status, 5, <Sparkles className="w-3.5 h-3.5" />);
+    }
+  });
+
+  const hasHardMismatch = rows.some(r => r.status === "missing");
+  const finalScore = hasHardMismatch ? 0 : (max > 0 ? Math.round((pts / max) * 100) : 0);
+
+  return { rows, autoScore: finalScore };
 }
 
 function MatchCard({ m, idx }: { m: any; idx: number }) {
