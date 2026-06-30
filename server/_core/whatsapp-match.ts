@@ -2,7 +2,7 @@ import './setup-stealth'; // Configurar Stealth Puppeteer antes de importar what
 import pkg from 'whatsapp-web.js';
 const { Client, LocalAuth, MessageMedia } = pkg;
 import type { Client as ClientType, Message } from 'whatsapp-web.js';
-import qrcode from 'qrcode-terminal';
+import qrcodeTerminal from 'qrcode-terminal';
 import fs from 'fs';
 import path from 'path';
 import { getDb } from '../db';
@@ -15,6 +15,8 @@ import {
   processCirculoMessage 
 } from './janIA';
 import { esDominioPermitido, scrapePropertyLink } from './scraper';
+import axios from 'axios';
+import QRCode from 'qrcode';
 
 // Tiempo de arranque para omitir mensajes históricos
 const SERVER_BOOT_TIME = Math.floor(Date.now() / 1000);
@@ -39,6 +41,29 @@ interface MessageBuffer {
   userName: string;
   chatId: string;
   warningSent?: boolean;
+}
+
+async function getLatestWAWebVersion(): Promise<string> {
+  const fallback = "https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1042391138-alpha.html";
+  try {
+    const res = await axios.get("https://api.github.com/repos/wppconnect-team/wa-version/contents/html", {
+      headers: { 'User-Agent': 'Mozilla/5.0' },
+      timeout: 5000
+    });
+    if (Array.isArray(res.data) && res.data.length > 0) {
+      const files = res.data
+        .map((f: any) => f.name)
+        .filter((name: string) => name.endsWith('.html'));
+      if (files.length > 0) {
+        files.sort();
+        const latestFile = files[files.length - 1];
+        return `https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/${latestFile}`;
+      }
+    }
+  } catch (err: any) {
+    console.warn("[JANIA-MATCH] Error fetching latest WA Web version from GitHub API, using fallback:", err.message);
+  }
+  return fallback;
 }
 
 export class JaniaMatchBot {
@@ -79,7 +104,7 @@ export class JaniaMatchBot {
     this.setupGracefulShutdown();
   }
 
-  private createClientInstance() {
+  private createClientInstance(remotePath?: string) {
     this.client = new Client({
       authStrategy: new LocalAuth({
         clientId: process.env.JANIA_MATCH_CLIENT_ID || "session-jania-match",
@@ -88,7 +113,7 @@ export class JaniaMatchBot {
       userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
       webVersionCache: {
         type: "remote",
-        remotePath: "https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1017.558-beta.html"
+        remotePath: remotePath || "https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1042391138-alpha.html"
       },
       puppeteer: {
         headless: true,
@@ -127,17 +152,16 @@ export class JaniaMatchBot {
     // Generar código QR para vinculación
     this.client.on('qr', (qr: string) => {
       console.log('\n[JANIA-MATCH] 🔌 ESCANEA ESTE CÓDIGO QR PARA INICIAR JANIA MATCH:');
-      qrcode.generate(qr, { small: true });
+      qrcodeTerminal.generate(qr, { small: true });
       // Guardar el QR como imagen PNG accesible desde el navegador
       try {
-        const QRCode = require('qrcode');
         const qrPath = path.join(process.cwd(), 'dist', 'qr-match.png');
         QRCode.toFile(qrPath, qr, { width: 400, margin: 2 }, (err: any) => {
           if (err) console.error('[JANIA-MATCH] Error guardando QR PNG:', err.message);
           else console.log(`[JANIA-MATCH] 📸 QR guardado como imagen → https://vecy-network.vercel.app/qr-match.png (también en http://<servidor>:3000/qr-match.png)`);
         });
       } catch (e: any) {
-        console.warn('[JANIA-MATCH] qrcode no disponible para PNG, solo terminal.');
+        console.warn('[JANIA-MATCH] qrcode no disponible para PNG, solo terminal.', e.message);
       }
     });
 
@@ -934,7 +958,9 @@ export class JaniaMatchBot {
     } catch (e) {}
 
     try {
-      this.createClientInstance();
+      const remotePath = await getLatestWAWebVersion();
+      console.log(`[JANIA-MATCH] [Reconexión] Usando versión de WhatsApp Web: ${remotePath}`);
+      this.createClientInstance(remotePath);
       await this.client.initialize();
       console.log('[JANIA-MATCH] Reconexión exitosa.');
     } catch (e) {
@@ -942,10 +968,15 @@ export class JaniaMatchBot {
     }
   }
 
-  public initialize() {
-    this.client.initialize().catch(err => {
+  public async initialize() {
+    try {
+      const remotePath = await getLatestWAWebVersion();
+      console.log(`[JANIA-MATCH] Usando versión de WhatsApp Web: ${remotePath}`);
+      this.createClientInstance(remotePath);
+      await this.client.initialize();
+    } catch (err: any) {
       console.error('[JANIA-MATCH] Error crítico al inicializar el cliente:', err);
-    });
+    }
   }
 
   private loadCooldowns() {

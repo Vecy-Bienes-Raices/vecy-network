@@ -29,6 +29,30 @@ import { conversations, messages as dbMessages, propertyMatches, properties, req
 import { eq, and, or, like, sql } from 'drizzle-orm';
 import { storagePut } from "../storage";
 import { ENV } from "./env";
+import axios from 'axios';
+
+async function getLatestWAWebVersion(): Promise<string> {
+  const fallback = "https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1042391138-alpha.html";
+  try {
+    const res = await axios.get("https://api.github.com/repos/wppconnect-team/wa-version/contents/html", {
+      headers: { 'User-Agent': 'Mozilla/5.0' },
+      timeout: 5000
+    });
+    if (Array.isArray(res.data) && res.data.length > 0) {
+      const files = res.data
+        .map((f: any) => f.name)
+        .filter((name: string) => name.endsWith('.html'));
+      if (files.length > 0) {
+        files.sort();
+        const latestFile = files[files.length - 1];
+        return `https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/${latestFile}`;
+      }
+    }
+  } catch (err: any) {
+    console.warn("[WHATSAPP-BOT] Error fetching latest WA Web version from GitHub API, using fallback:", err.message);
+  }
+  return fallback;
+}
 import { invokeLLM } from "./llm";
 import * as jose from 'jose';
 
@@ -2532,7 +2556,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
     }
   }
 
-  private createClientInstance() {
+  private createClientInstance(remotePath?: string) {
     this.client = new Client({
       authStrategy: new LocalAuth({
         clientId: "session-jania-main",
@@ -2540,7 +2564,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
       }),
       webVersionCache: {
         type: "remote",
-        remotePath: "https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1017.558-beta.html"
+        remotePath: remotePath || "https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1042391138-alpha.html"
       },
       puppeteer: {
         headless: true,
@@ -2615,7 +2639,9 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
 
     console.log('[WHATSAPP-BOT] Re-inicializando cliente de WhatsApp...');
     try {
-      this.createClientInstance();
+      const remotePath = await getLatestWAWebVersion();
+      console.log(`[WHATSAPP-BOT] [Reconexión] Usando versión de WhatsApp Web: ${remotePath}`);
+      this.createClientInstance(remotePath);
       await this.client.initialize();
       console.log('[WHATSAPP-BOT] Cliente de WhatsApp re-inicializado exitosamente.');
     } catch (initErr: any) {
@@ -2749,7 +2775,7 @@ Dirección obligatoria:
     }
   }
 
-  public initialize() {
+  public async initialize() {
     const useCloud = process.env.USE_WHATSAPP_CLOUD_API === 'true';
     const enablePupForGroups = process.env.ENABLE_PUPPETEER_FOR_GROUPS === 'true';
 
@@ -2765,9 +2791,14 @@ Dirección obligatoria:
       console.log('[WHATSAPP-BOT] Inicializando en modo Puppeteer puro (inicializando cliente...).');
     }
 
-    this.client.initialize().catch(err => {
+    try {
+      const remotePath = await getLatestWAWebVersion();
+      console.log(`[WHATSAPP-BOT] Usando versión de WhatsApp Web: ${remotePath}`);
+      this.createClientInstance(remotePath);
+      await this.client.initialize();
+    } catch (err: any) {
       console.error('[WHATSAPP-BOT] Error crítico durante la inicialización de whatsapp-web.js:', err);
-    });
+    }
   }
 
   public setPendingDataForUser(
