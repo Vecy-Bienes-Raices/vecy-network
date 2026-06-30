@@ -199,6 +199,23 @@ async function startServer() {
     }
   });
 
+  app.get("/api/match-pairing-code", async (req, res) => {
+    try {
+      const { phone } = req.query;
+      if (!phone || typeof phone !== "string") {
+        return res.status(400).send("Debe proporcionar un parámetro de teléfono válido. Ejemplo: ?phone=573166569719");
+      }
+      const { janiaMatchBot } = await import("./whatsapp-match");
+      if (!janiaMatchBot) {
+        return res.status(503).send("El bot de Match no está inicializado.");
+      }
+      const code = await janiaMatchBot.getPairingCode(phone);
+      res.json({ ok: true, phone, code });
+    } catch (err: any) {
+      res.status(500).send(err.message || err);
+    }
+  });
+
   app.get("/api/send-comeback", (req, res) => {
     try {
       if (!whatsappBot.isReady) {

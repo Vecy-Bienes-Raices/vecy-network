@@ -979,6 +979,22 @@ export class JaniaMatchBot {
     }
   }
 
+  public async getPairingCode(phone: string): Promise<string> {
+    const cleanPhone = phone.replace(/\D/g, "");
+    console.log(`[JANIA-MATCH] Solicitando código de vinculación por número para: ${cleanPhone}`);
+    if (!this.client) {
+      throw new Error("Cliente no inicializado");
+    }
+    try {
+      const code = await this.client.requestPairingCode(cleanPhone);
+      console.log(`[JANIA-MATCH] Código de vinculación generado: ${code}`);
+      return code;
+    } catch (err: any) {
+      console.error("[JANIA-MATCH] Error al solicitar código de vinculación:", err.message || err);
+      throw err;
+    }
+  }
+
   private loadCooldowns() {
     try {
       if (fs.existsSync(this.cooldownFile)) {
