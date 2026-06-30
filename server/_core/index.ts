@@ -216,6 +216,64 @@ async function startServer() {
     }
   });
 
+  app.get("/api/match-click-cancel", async (req, res) => {
+    try {
+      const { janiaMatchBot } = await import("./whatsapp-match");
+      if (!janiaMatchBot || !(janiaMatchBot as any).client) {
+        return res.status(503).send("El bot de Match no está inicializado.");
+      }
+      const page = (janiaMatchBot as any).client.pupPage;
+      if (!page) {
+        return res.status(503).send("La página de Puppeteer del bot de Match no está lista.");
+      }
+      const result = await page.evaluate(() => {
+        const elements = Array.from(document.querySelectorAll('a, button, span, div'));
+        const cancelEl = elements.find(el => el.textContent?.trim().toLowerCase() === 'cancel');
+        if (cancelEl) {
+          (cancelEl as any).click();
+          return "Clicked Cancel";
+        }
+        return "Cancel button not found";
+      });
+      console.log(`[ADMIN] Click Cancel result: ${result}`);
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      const screenshot = await page.screenshot({ type: "png" });
+      res.setHeader("Content-Type", "image/png");
+      res.send(screenshot);
+    } catch (err: any) {
+      res.status(500).send(err.message || err);
+    }
+  });
+
+  app.get("/api/match-click-continue", async (req, res) => {
+    try {
+      const { janiaMatchBot } = await import("./whatsapp-match");
+      if (!janiaMatchBot || !(janiaMatchBot as any).client) {
+        return res.status(503).send("El bot de Match no está inicializado.");
+      }
+      const page = (janiaMatchBot as any).client.pupPage;
+      if (!page) {
+        return res.status(503).send("La página de Puppeteer del bot de Match no está lista.");
+      }
+      const result = await page.evaluate(() => {
+        const elements = Array.from(document.querySelectorAll('a, button, span, div'));
+        const continueEl = elements.find(el => el.textContent?.trim().toLowerCase().includes('continue'));
+        if (continueEl) {
+          (continueEl as any).click();
+          return "Clicked Continue";
+        }
+        return "Continue button not found";
+      });
+      console.log(`[ADMIN] Click Continue result: ${result}`);
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      const screenshot = await page.screenshot({ type: "png" });
+      res.setHeader("Content-Type", "image/png");
+      res.send(screenshot);
+    } catch (err: any) {
+      res.status(500).send(err.message || err);
+    }
+  });
+
   app.get("/api/send-comeback", (req, res) => {
     try {
       if (!whatsappBot.isReady) {
