@@ -139,3 +139,33 @@ Para prevenir la saturación y procesar correctamente los álbumes de imágenes 
 ## 5. El Modelo "Bolsa VECY"
 *   **Regla de Oro**: Los propietarios directos y los inversores son bienvenidos a aportar sus activos y presupuestos al ecosistema de la Bolsa VECY. Sin embargo, **ningún cliente directo opera solo o de forma directa en el grupo**. 
 *   Siempre se les asignará y representará de manera obligatoria por un **agente inmobiliario aliado y certificado de la red VECY**, quien gestionará el activo o la búsqueda para garantizar el corretaje profesional, proteger las comisiones de la red de aliados y evitar la desintermediación directa en el canal de trabajo.
+
+---
+
+## 6. Lógica Detallada del Motor de Matching (Cotejamiento Exacto y Tolerancias)
+El algoritmo implementado en `server/_core/matching.ts` calibra los cruces de negocios garantizando alta especificidad y eliminando falsos positivos en base a las siguientes reglas matemáticas:
+
+### A. Filtros Duros (Cero Tolerancia)
+Cualquier discrepancia en estos parámetros cancela inmediatamente el match (Score = 0%):
+1. **Municipio/Ciudad**: Coincidencia exacta estricta obligatoria.
+2. **Habitaciones, Baños y Parqueaderos**: No se permiten oscilaciones. El número ofrecido debe ser **exactamente igual** al número solicitado.
+3. **Ubicación Geográfica (Barrios/Zonas)**:
+   * **Cotejamiento de Frases Geográficas Completas**: Evita falsos positivos con tokens individuales genéricos de Colombia (como "santa", "villa", "prado"). Si la frase pertenece al listado de palabras genéricas, se exige coincidencia nominal exacta.
+   * **Protección "Las Santas"**: Soporte de equivalencia de la zona coloquial "Las Santas" en Bogotá (se expande a Santa Bárbara, Santa Ana, San Patricio, Navarra, Molinos Norte, etc.). Se eliminó explícitamente "Los Santos" para evitar falsas correspondencias.
+   * **Restricción "Aledaños"**: Si el requerimiento no incluye explícitamente términos de proximidad ("aledaños", "cercanos", "alrededores"), la ubicación debe coincidir nominalmente de forma exacta. Si los incluye, se admite concordancia de barrios dentro de la misma localidad.
+4. **Comodidades Especiales Exigidas**: Si el requerimiento solicita explícitamente `Terraza`, `Balcón`, `Chimenea`, `Club House` o `Estudio` en su texto libre, el inmueble debe contener esa palabra o términos equivalentes en su descripción. De lo contrario, se descarta.
+5. **Nivel (Pisos) de Casas**: El número de pisos de una casa debe coincidir de forma exacta.
+6. **Piso de Ubicación en Apartamentos**: El piso del apartamento ofrecido debe ser **exactamente igual o a lo sumo un piso por encima** del piso solicitado.
+7. **Precio Máximo**: El precio del inmueble no debe superar el presupuesto máximo por más de un **5%** (tolerancia límite).
+8. **Área Mínima**: El área total de la propiedad no debe ser menor al área mínima solicitada.
+
+### B. Puntuaciones y Tolerancias Flexibles (Peso 100%)
+Si los filtros duros son superados, el porcentaje de coincidencia se calcula mediante la escala:
+*   **Tipo de Inmueble (20%)**: Coincidencia de tipo.
+*   **Precio (25%)**: 25 puntos si es menor o igual al presupuesto; 15 puntos si está en el rango de tolerancia (+0.1% a +5% por encima).
+*   **Área (20%)**: 20 puntos si es igual o hasta +15% superior; 10 puntos si está entre +16% y +30% del área mínima solicitada. Si supera el 30% por encima, se descarta.
+*   **Bloque de Habitaciones (7%), Baños (5%), Garajes (5%) y Estrato (3%) (20%)**: Puntuación exacta por concordancia.
+*   **Características Estructurales/Extras (15%)**: Mapeo y cruce de variables adicionales (cocina, lavandería independiente, tipo de pisos, depósitos, antigüedad).
+
+### C. Umbral de Alerta
+Solo los matches con un **score final igual o superior al 70%** se registran como activos y disparan notificaciones al canal de negocio.
