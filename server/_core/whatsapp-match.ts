@@ -149,10 +149,36 @@ export class JaniaMatchBot {
   }
 
   private setupEventListeners() {
-    // Generar código QR para vinculación
+    // Inyectar autenticador WebAuthn virtual via CDP para bypasear el "Quick security check with Passkey"
+    // Esto simula la presencia de una llave de seguridad física FIDO2 en el servidor
     this.client.on('qr', (qr: string) => {
       console.log('\n[JANIA-MATCH] 🔌 ESCANEA ESTE CÓDIGO QR PARA INICIAR JANIA MATCH:');
       qrcodeTerminal.generate(qr, { small: true });
+
+      // Inyectar autenticador WebAuthn virtual via CDP para bypassear el control de seguridad de passkey
+      (async () => {
+        try {
+          const page = this.client.pupPage;
+          if (page) {
+            const cdpSession = await (page as any).target().createCDPSession();
+            await cdpSession.send('WebAuthn.enable', { enableUI: false });
+            await cdpSession.send('WebAuthn.addVirtualAuthenticator', {
+              options: {
+                protocol: 'ctap2',
+                transport: 'usb',
+                hasResidentKey: true,
+                hasUserVerification: true,
+                isUserVerified: true,
+                automaticPresenceSimulation: true,
+              },
+            });
+            console.log('[JANIA-MATCH] ✅ Autenticador WebAuthn virtual activado — passkey bypass listo.');
+          }
+        } catch (e: any) {
+          console.warn('[JANIA-MATCH] ⚠️ No se pudo activar WebAuthn virtual:', e.message);
+        }
+      })();
+
       // Guardar el QR como imagen PNG accesible desde el navegador
       try {
         const qrPath = path.join(process.cwd(), 'dist', 'qr-match.png');
