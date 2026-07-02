@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { FaFacebook, FaEnvelope, FaLock, FaEye, FaEyeSlash } from 'react-icons/fa';
+import { FaEnvelope, FaLock, FaEye, FaEyeSlash } from 'react-icons/fa';
 import { FcGoogle } from 'react-icons/fc';
 
 const AuthModal = ({ isOpen, onClose }) => {
@@ -166,15 +166,7 @@ const AuthModal = ({ isOpen, onClose }) => {
                         Continuar con Google
                     </button>
 
-                    {/* Facebook */}
-                    <button
-                        onClick={() => handleOAuthLogin('facebook')}
-                        disabled={loading}
-                        className="w-full flex items-center justify-center gap-3 bg-[#1877F2] text-white font-semibold py-3 px-4 rounded-xl hover:bg-[#166fe5] transition-all duration-300 shadow-md transform hover:-translate-y-0.5 disabled:opacity-50"
-                    >
-                        <FaFacebook className="text-xl" />
-                        Continuar con Facebook
-                    </button>
+
 
                     {/* Divisor */}
                     <div className="relative my-4">

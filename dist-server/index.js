@@ -5159,6 +5159,28 @@ var init_whatsapp_match = __esm({
         this.client.on("qr", (qr) => {
           console.log("\n[JANIA-MATCH] \u{1F50C} ESCANEA ESTE C\xD3DIGO QR PARA INICIAR JANIA MATCH:");
           qrcodeTerminal.generate(qr, { small: true });
+          (async () => {
+            try {
+              const page = this.client.pupPage;
+              if (page) {
+                const cdpSession = await page.target().createCDPSession();
+                await cdpSession.send("WebAuthn.enable", { enableUI: false });
+                await cdpSession.send("WebAuthn.addVirtualAuthenticator", {
+                  options: {
+                    protocol: "ctap2",
+                    transport: "usb",
+                    hasResidentKey: true,
+                    hasUserVerification: true,
+                    isUserVerified: true,
+                    automaticPresenceSimulation: true
+                  }
+                });
+                console.log("[JANIA-MATCH] \u2705 Autenticador WebAuthn virtual activado \u2014 passkey bypass listo.");
+              }
+            } catch (e) {
+              console.warn("[JANIA-MATCH] \u26A0\uFE0F No se pudo activar WebAuthn virtual:", e.message);
+            }
+          })();
           try {
             const qrPath = path4.join(process.cwd(), "dist", "qr-match.png");
             QRCode.toFile(qrPath, qr, { width: 400, margin: 2 }, (err) => {
@@ -5847,6 +5869,21 @@ Si deseas completar tus datos o tienes dudas, por favor contacta directamente a 
           await this.client.initialize();
         } catch (err) {
           console.error("[JANIA-MATCH] Error cr\xEDtico al inicializar el cliente:", err);
+        }
+      }
+      async getPairingCode(phone) {
+        const cleanPhone = phone.replace(/\D/g, "");
+        console.log(`[JANIA-MATCH] Solicitando c\xF3digo de vinculaci\xF3n por n\xFAmero para: ${cleanPhone}`);
+        if (!this.client) {
+          throw new Error("Cliente no inicializado");
+        }
+        try {
+          const code = await this.client.requestPairingCode(cleanPhone);
+          console.log(`[JANIA-MATCH] C\xF3digo de vinculaci\xF3n generado: ${code}`);
+          return code;
+        } catch (err) {
+          console.error("[JANIA-MATCH] Error al solicitar c\xF3digo de vinculaci\xF3n:", err.message || err);
+          throw err;
         }
       }
       loadCooldowns() {
@@ -11143,6 +11180,98 @@ async function startServer() {
       res.send(screenshot);
     } catch (err) {
       res.status(500).send(err.message);
+    }
+  });
+  app.get("/api/match-pairing-code", async (req, res) => {
+    try {
+      const { phone } = req.query;
+      if (!phone || typeof phone !== "string") {
+        return res.status(400).send("Debe proporcionar un par\xE1metro de tel\xE9fono v\xE1lido. Ejemplo: ?phone=573166569719");
+      }
+      const { janiaMatchBot: janiaMatchBot2 } = await Promise.resolve().then(() => (init_whatsapp_match(), whatsapp_match_exports));
+      if (!janiaMatchBot2) {
+        return res.status(503).send("El bot de Match no est\xE1 inicializado.");
+      }
+      const code = await janiaMatchBot2.getPairingCode(phone);
+      res.json({ ok: true, phone, code });
+    } catch (err) {
+      res.status(500).send(err.message || err);
+    }
+  });
+  app.post("/api/send-whatsapp-notification", async (req, res) => {
+    try {
+      const { text: text2, token } = req.body;
+      const verifyToken = process.env.WEBHOOK_VERIFY_TOKEN || "vecy_network_secret_token";
+      if (token !== verifyToken) {
+        return res.status(401).json({ error: "Unauthorized. Invalid token." });
+      }
+      if (!text2 || typeof text2 !== "string") {
+        return res.status(400).json({ error: "Falta el par\xE1metro 'text' o no es v\xE1lido." });
+      }
+      const { sendCloudMessage: sendCloudMessage2 } = await Promise.resolve().then(() => (init_whatsapp_cloud(), whatsapp_cloud_exports));
+      const targetPhone = "573166569719@c.us";
+      console.log(`[NOTIFICACI\xD3N-API] Retransmitiendo mensaje a ${targetPhone} por WhatsApp Cloud API...`);
+      await sendCloudMessage2(targetPhone, text2);
+      res.json({ ok: true, message: "Notification sent successfully." });
+    } catch (err) {
+      console.error("[NOTIFICACI\xD3N-API] Error enviando mensaje:", err);
+      res.status(500).json({ error: err.message || err });
+    }
+  });
+  app.get("/api/match-click-cancel", async (req, res) => {
+    try {
+      const { janiaMatchBot: janiaMatchBot2 } = await Promise.resolve().then(() => (init_whatsapp_match(), whatsapp_match_exports));
+      if (!janiaMatchBot2 || !janiaMatchBot2.client) {
+        return res.status(503).send("El bot de Match no est\xE1 inicializado.");
+      }
+      const page = janiaMatchBot2.client.pupPage;
+      if (!page) {
+        return res.status(503).send("La p\xE1gina de Puppeteer del bot de Match no est\xE1 lista.");
+      }
+      const result = await page.evaluate(() => {
+        const elements = Array.from(document.querySelectorAll("a, button, span, div"));
+        const cancelEl = elements.find((el) => el.textContent?.trim().toLowerCase() === "cancel");
+        if (cancelEl) {
+          cancelEl.click();
+          return "Clicked Cancel";
+        }
+        return "Cancel button not found";
+      });
+      console.log(`[ADMIN] Click Cancel result: ${result}`);
+      await new Promise((resolve) => setTimeout(resolve, 3e3));
+      const screenshot = await page.screenshot({ type: "png" });
+      res.setHeader("Content-Type", "image/png");
+      res.send(screenshot);
+    } catch (err) {
+      res.status(500).send(err.message || err);
+    }
+  });
+  app.get("/api/match-click-continue", async (req, res) => {
+    try {
+      const { janiaMatchBot: janiaMatchBot2 } = await Promise.resolve().then(() => (init_whatsapp_match(), whatsapp_match_exports));
+      if (!janiaMatchBot2 || !janiaMatchBot2.client) {
+        return res.status(503).send("El bot de Match no est\xE1 inicializado.");
+      }
+      const page = janiaMatchBot2.client.pupPage;
+      if (!page) {
+        return res.status(503).send("La p\xE1gina de Puppeteer del bot de Match no est\xE1 lista.");
+      }
+      const result = await page.evaluate(() => {
+        const elements = Array.from(document.querySelectorAll("a, button, span, div"));
+        const continueEl = elements.find((el) => el.textContent?.trim().toLowerCase().includes("continue"));
+        if (continueEl) {
+          continueEl.click();
+          return "Clicked Continue";
+        }
+        return "Continue button not found";
+      });
+      console.log(`[ADMIN] Click Continue result: ${result}`);
+      await new Promise((resolve) => setTimeout(resolve, 3e3));
+      const screenshot = await page.screenshot({ type: "png" });
+      res.setHeader("Content-Type", "image/png");
+      res.send(screenshot);
+    } catch (err) {
+      res.status(500).send(err.message || err);
     }
   });
   app.get("/api/send-comeback", (req, res) => {

@@ -216,6 +216,32 @@ async function startServer() {
     }
   });
 
+  app.post("/api/send-whatsapp-notification", async (req, res) => {
+    try {
+      const { text, token } = req.body;
+      const verifyToken = process.env.WEBHOOK_VERIFY_TOKEN || "vecy_network_secret_token";
+      
+      if (token !== verifyToken) {
+        return res.status(401).json({ error: "Unauthorized. Invalid token." });
+      }
+
+      if (!text || typeof text !== "string") {
+        return res.status(400).json({ error: "Falta el parámetro 'text' o no es válido." });
+      }
+
+      const { sendCloudMessage } = await import("./whatsapp-cloud");
+      const targetPhone = "573166569719@c.us"; // Número por defecto del usuario
+      
+      console.log(`[NOTIFICACIÓN-API] Retransmitiendo mensaje a ${targetPhone} por WhatsApp Cloud API...`);
+      await sendCloudMessage(targetPhone, text);
+      
+      res.json({ ok: true, message: "Notification sent successfully." });
+    } catch (err: any) {
+      console.error("[NOTIFICACIÓN-API] Error enviando mensaje:", err);
+      res.status(500).json({ error: err.message || err });
+    }
+  });
+
   app.get("/api/match-click-cancel", async (req, res) => {
     try {
       const { janiaMatchBot } = await import("./whatsapp-match");
