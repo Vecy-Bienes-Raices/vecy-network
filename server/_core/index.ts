@@ -218,7 +218,7 @@ async function startServer() {
 
   app.post("/api/send-whatsapp-notification", async (req, res) => {
     try {
-      const { text, token } = req.body;
+      const { text, token, phone } = req.body;
       const verifyToken = process.env.WEBHOOK_VERIFY_TOKEN || "vecy_network_secret_token";
       
       if (token !== verifyToken) {
@@ -230,7 +230,14 @@ async function startServer() {
       }
 
       const { sendCloudMessage } = await import("./whatsapp-cloud");
-      const targetPhone = "573166569719@c.us"; // Número por defecto del usuario
+      
+      // Obtener el teléfono del body, del env de administración, o usar el default de respaldo
+      const defaultAdminPhone = process.env.ADMIN_PHONE || "573166569719";
+      const rawPhone = phone || defaultAdminPhone;
+      
+      // Limpiar y formatear a JID de WhatsApp (@c.us)
+      const cleanPhone = typeof rawPhone === "string" ? rawPhone.replace(/\D/g, "") : String(rawPhone).replace(/\D/g, "");
+      const targetPhone = cleanPhone.endsWith("@c.us") ? cleanPhone : `${cleanPhone}@c.us`;
       
       console.log(`[NOTIFICACIÓN-API] Retransmitiendo mensaje a ${targetPhone} por WhatsApp Cloud API...`);
       await sendCloudMessage(targetPhone, text);
