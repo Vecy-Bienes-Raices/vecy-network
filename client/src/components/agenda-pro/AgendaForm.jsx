@@ -2,6 +2,8 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { Link, useLocation, useSearch } from 'wouter';
 import { supabase } from '../../lib/supabase';
 import FormInput from './FormInput';
+import { Share2, Check } from 'lucide-react';
+import { toast } from 'sonner';
 // Lazy load del componente de firma para no cargar la librería 'signature_pad' al inicio
 const SignaturePadComponent = React.lazy(() => import('./SignaturePad'));
 
@@ -48,6 +50,15 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
   const [consentGiven, setConsentGiven] = useState(false);
   const [session, setSession] = useState(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleShare = () => {
+    const currentUrl = window.location.href;
+    navigator.clipboard.writeText(currentUrl);
+    setCopied(true);
+    toast.success("¡Enlace de agenda copiado al portapapeles! 🔗");
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const logoToDisplay = customLogo || '/logo-vecy.png';
 
@@ -375,7 +386,22 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
                 </p>
               )}
             </div>
-            <div className="shrink-0 text-2xl" title="Inmueble confirmado">🔒</div>
+            <button
+              type="button"
+              onClick={handleShare}
+              className="shrink-0 p-2.5 rounded-xl border border-soft-gold/30 bg-soft-gold/10 hover:bg-soft-gold/25 transition-all text-soft-gold flex items-center justify-center gap-1.5 font-semibold text-xs tracking-wider"
+              title="Copiar enlace de agenda"
+            >
+              {copied ? (
+                <>
+                  <Check className="w-4 h-4 text-esmeralda animate-scale" /> Copiado
+                </>
+              ) : (
+                <>
+                  <Share2 className="w-4 h-4" /> Compartir
+                </>
+              )}
+            </button>
           </div>
         </div>
       )}

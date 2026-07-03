@@ -135,13 +135,7 @@ export default function PropertyDetail() {
               <button
                  onClick={() => {
                      const refCode = generateRefCode(property.zone || '', (property as any).zoneRank ?? 1);
-                     const agendaUrl = `${window.location.origin}/agenda/${property.id}?nombre=${encodeURIComponent(property.name)}&codigo=${encodeURIComponent(refCode)}`;
-                     setShareModalConfig({
-                       text: `Agenda tu visita al inmueble "${property.name}" aquí:`,
-                       url: agendaUrl,
-                       modalTitle: "Compartir Link de Agenda"
-                     });
-                     setShareModalOpen(true);
+                     navigate(`/agenda/${property.id}?nombre=${encodeURIComponent(property.name)}&codigo=${encodeURIComponent(refCode)}`);
                  }}
                  className="py-4 px-8 bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 transition-all duration-300 rounded-xl flex items-center justify-center gap-3 font-bold tracking-widest text-xs uppercase"
               >
