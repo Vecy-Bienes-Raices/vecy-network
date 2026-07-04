@@ -61,10 +61,25 @@ export const submitSolicitud = async (payload, session) => {
 
     if (error) {
       console.error('❌ Error detallado de la Edge Function:', error);
-      // Intentar extraer el mensaje de error del cuerpo si existe
       let detail = error.message;
-      if (error.context?.statusText) detail = `${error.context.statusText} (${error.context.status})`;
-      throw new Error(`Error del servidor: ${detail}. Por favor contacta a soporte si el problema persiste.`);
+      if (error.context) {
+        try {
+          if (typeof error.context.text === 'function') {
+            const responseText = await error.context.text();
+            try {
+              const responseJson = JSON.parse(responseText);
+              detail = responseJson.error || responseJson.message || responseText;
+            } catch (jsonErr) {
+              detail = responseText;
+            }
+          } else if (error.context.statusText) {
+            detail = `${error.context.statusText} (${error.context.status})`;
+          }
+        } catch (contextErr) {
+          console.error('No se pudo extraer el texto del error.context:', contextErr);
+        }
+      }
+      throw new Error(`Error del servidor: ${detail}`);
     }
 
     console.log('✅ Solicitud procesada exitosamente en el servidor.');
