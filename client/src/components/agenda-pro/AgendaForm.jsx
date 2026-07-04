@@ -302,7 +302,7 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
       await submitSolicitud(payload, session);
 
       if (onSuccess) {
-        onSuccess();
+        onSuccess(payload);
       } else {
         navigate('/properties');
       }

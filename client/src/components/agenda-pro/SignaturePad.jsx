@@ -17,7 +17,7 @@ function SignaturePadComponent({ onSignatureChange }) {
 
         // Inicializamos SignaturePad con el color de tinta dorado
         signaturePadRef.current = new SignaturePad(canvas, {
-          penColor: '#bf953f' // Oro Vecy
+          penColor: '#000000' // Negro
         });
 
         signaturePadRef.current.addEventListener("endStroke", () => {
