@@ -127,3 +127,7 @@ recent_joins.txt
 
 # Scratch / temporary dev scripts
 scratch/
+
+# Supabase temporary files
+supabase/.temp/
+supabase/temp/
