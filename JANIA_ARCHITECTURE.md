@@ -13,14 +13,13 @@ El ecosistema técnico de JanIA está compuesto por los siguientes módulos inte
 
 ```mermaid
 graph TD
-    A[Grupos de WhatsApp] -->|Escucha Silenciosa| B(JanIA Match Bot - Puppeteer)
+    A[Grupos de WhatsApp] -->|Escucha Silenciosa| B(JanIA Match Bot - Baileys)
     B -->|Envía datos para procesar| C(Bot Principal - WhatsApp Cloud API)
+    B -->|Notifica Matches Privadamente| G[Administrador / Soporte]
     C -->|Clasificación y Extracción| D(Cerebro LLM - janIA.ts)
     D -->|PostgreSQL / Drizzle| E[(Base de Datos Vecy)]
     E -->|Cruce en Tiempo Real| F(Motor de Matching - matching.ts)
-    F -->|Match Detectado| C
-    C -->|Menciones Públicas / DMs| A
-    C -->|Alertas / Notificación| G[Administrador / Soporte]
+    F -->|Match Detectado| B
 ```
 
 ### A. Bot Principal (WhatsApp Cloud API - Meta)
@@ -33,8 +32,8 @@ graph TD
 ### B. Bot Ojos y Oídos (JanIA Match Bot)
 *   **Archivo**: [whatsapp-match.ts](file:///home/eddu/Proyectos/vecy-network/server/_core/whatsapp-match.ts)
 *   **Número**: `+57 3223019130` (JanIA Match)
-*   **Tecnología**: WhatsApp Web automatizado con Puppeteer (`whatsapp-web.js`) empleando técnicas de evasión de firmas (`Stealth`) y optimización de rendimiento (bloqueo de descarga de imágenes/recursos visuales para ahorro de memoria en el VPS).
-*   **Propósito**: Monitorea de forma 100% silenciosa los grupos de WhatsApp configurados en la variable de entorno `JANIA_MATCH_GROUPS`. Capta ofertas de propiedades, requerimientos y archivos PDFs, redirigiendo el flujo al bot principal.
+*   **Tecnología**: Conexión nativa de socket por WebSocket utilizando `@whiskeysockets/baileys` con persistencia de sesión cifrada en `.baileys_auth/`. Esto elimina por completo Puppeteer y Chrome, reduciendo el consumo de RAM/CPU al mínimo y garantizando la máxima estabilidad contra baneos.
+*   **Propósito**: Monitorea de forma 100% silenciosa los grupos de WhatsApp configurados en la variable de entorno `JANIA_MATCH_GROUPS`. Capta ofertas de propiedades, requerimientos y archivos PDFs, redirigiendo el flujo al bot principal para la respuesta (o al administrador para alertas de Match).
 *   **Regla de Redirección**: Si un usuario chatea por privado con este número, el bot responderá una vez al día dirigiéndolo a interactuar con la versión principal de soporte (+57 3185462265) a través del enlace: `https://wa.me/573185462265`.
 
 ### C. Cerebro de Inteligencia Artificial (LLM)

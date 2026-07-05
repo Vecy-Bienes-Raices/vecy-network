@@ -70,6 +70,7 @@ Este plan detalla la transformación para aniquilar la fricción, empoderar al a
 - [x] Lógica de Atribución en Requerimientos.
 - [x] Rebranding a "La Evolución Inevitable".
 - [x] Unificación Estética (Montserrat + ScrollReveal).
+- [x] Migración completa de JanIA Match a Baileys (Estabilidad, velocidad y ahorro de RAM en VPS sin Puppeteer).
 - [ ] **Siguiente Gran Paso:** Preparar `users` table para el "Motor de Identidad Dinámica".
 
 *VECY Network: Evoluciona hacia lo extraordinario.*

@@ -161,17 +161,12 @@ async function startServer() {
 
   app.get("/api/match-qr-screenshot", async (req, res) => {
     try {
-      const { janiaMatchBot } = await import("./whatsapp-match");
-      if (!janiaMatchBot || !(janiaMatchBot as any).client) {
-        return res.status(503).send("El bot de Match no está inicializado.");
+      const qrPath = path.join(process.cwd(), 'dist', 'qr-match.png');
+      if (fs.existsSync(qrPath)) {
+        res.setHeader("Content-Type", "image/png");
+        return res.sendFile(qrPath);
       }
-      const page = (janiaMatchBot as any).client.pupPage;
-      if (!page) {
-        return res.status(503).send("La página de Puppeteer del bot de Match no está lista.");
-      }
-      const screenshot = await page.screenshot({ type: "png" });
-      res.setHeader("Content-Type", "image/png");
-      res.send(screenshot);
+      res.status(404).send("QR no disponible todavía. Por favor vincula o refresca.");
     } catch (err: any) {
       res.status(500).send(err.message);
     }
@@ -180,20 +175,19 @@ async function startServer() {
   app.get("/api/match-qr-refresh", async (req, res) => {
     try {
       const { janiaMatchBot } = await import("./whatsapp-match");
-      if (!janiaMatchBot || !(janiaMatchBot as any).client) {
+      if (!janiaMatchBot) {
         return res.status(503).send("El bot de Match no está inicializado.");
       }
-      const page = (janiaMatchBot as any).client.pupPage;
-      if (!page) {
-        return res.status(503).send("La página de Puppeteer del bot de Match no está lista.");
+      console.log("[ADMIN] Re-inicializando sesión de Baileys para refrescar QR...");
+      await janiaMatchBot.initialize();
+      await new Promise(resolve => setTimeout(resolve, 4000));
+      
+      const qrPath = path.join(process.cwd(), 'dist', 'qr-match.png');
+      if (fs.existsSync(qrPath)) {
+        res.setHeader("Content-Type", "image/png");
+        return res.sendFile(qrPath);
       }
-      console.log("[ADMIN] Recargando página de WhatsApp Web...");
-      await page.reload({ waitUntil: "domcontentloaded" }).catch(() => {});
-      // Esperar a que se renderice el nuevo QR
-      await new Promise(resolve => setTimeout(resolve, 8000));
-      const screenshot = await page.screenshot({ type: "png" });
-      res.setHeader("Content-Type", "image/png");
-      res.send(screenshot);
+      res.status(404).send("QR no disponible todavía.");
     } catch (err: any) {
       res.status(500).send(err.message);
     }
@@ -229,18 +223,21 @@ async function startServer() {
         return res.status(400).json({ error: "Falta el parámetro 'text' o no es válido." });
       }
 
-      const { sendCloudMessage } = await import("./whatsapp-cloud");
-      
-      // Obtener el teléfono del body, del env de administración, o usar el default de respaldo
       const defaultAdminPhone = process.env.ADMIN_PHONE || "573166569719";
       const rawPhone = phone || defaultAdminPhone;
-      
-      // Limpiar y formatear a JID de WhatsApp (@c.us)
       const cleanPhone = typeof rawPhone === "string" ? rawPhone.replace(/\D/g, "") : String(rawPhone).replace(/\D/g, "");
-      const targetPhone = cleanPhone.endsWith("@c.us") ? cleanPhone : `${cleanPhone}@c.us`;
-      
-      console.log(`[NOTIFICACIÓN-API] Retransmitiendo mensaje a ${targetPhone} por WhatsApp Cloud API...`);
-      await sendCloudMessage(targetPhone, text);
+
+      const matchBot = (global as any).janiaMatchBotInstance;
+      if (matchBot && matchBot.isReady) {
+        const targetPhone = cleanPhone.endsWith("@s.whatsapp.net") ? cleanPhone : `${cleanPhone}@s.whatsapp.net`;
+        console.log(`[NOTIFICACIÓN-API] Retransmitiendo mensaje a ${targetPhone} vía JanIA Match Bot (Baileys)...`);
+        await matchBot.queuedSend(targetPhone, text);
+      } else {
+        const targetPhone = cleanPhone.endsWith("@c.us") ? cleanPhone : `${cleanPhone}@c.us`;
+        console.log(`[NOTIFICACIÓN-API] Retransmitiendo mensaje a ${targetPhone} por WhatsApp Cloud API...`);
+        const { sendCloudMessage } = await import("./whatsapp-cloud");
+        await sendCloudMessage(targetPhone, text);
+      }
       
       res.json({ ok: true, message: "Notification sent successfully." });
     } catch (err: any) {
@@ -251,59 +248,17 @@ async function startServer() {
 
   app.get("/api/match-click-cancel", async (req, res) => {
     try {
-      const { janiaMatchBot } = await import("./whatsapp-match");
-      if (!janiaMatchBot || !(janiaMatchBot as any).client) {
-        return res.status(503).send("El bot de Match no está inicializado.");
-      }
-      const page = (janiaMatchBot as any).client.pupPage;
-      if (!page) {
-        return res.status(503).send("La página de Puppeteer del bot de Match no está lista.");
-      }
-      const result = await page.evaluate(() => {
-        const elements = Array.from(document.querySelectorAll('a, button, span, div'));
-        const cancelEl = elements.find(el => el.textContent?.trim().toLowerCase() === 'cancel');
-        if (cancelEl) {
-          (cancelEl as any).click();
-          return "Clicked Cancel";
-        }
-        return "Cancel button not found";
-      });
-      console.log(`[ADMIN] Click Cancel result: ${result}`);
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      const screenshot = await page.screenshot({ type: "png" });
-      res.setHeader("Content-Type", "image/png");
-      res.send(screenshot);
+      res.send("Baileys no requiere bypass de botón Cancel.");
     } catch (err: any) {
-      res.status(500).send(err.message || err);
+      res.status(500).send(err.message);
     }
   });
 
   app.get("/api/match-click-continue", async (req, res) => {
     try {
-      const { janiaMatchBot } = await import("./whatsapp-match");
-      if (!janiaMatchBot || !(janiaMatchBot as any).client) {
-        return res.status(503).send("El bot de Match no está inicializado.");
-      }
-      const page = (janiaMatchBot as any).client.pupPage;
-      if (!page) {
-        return res.status(503).send("La página de Puppeteer del bot de Match no está lista.");
-      }
-      const result = await page.evaluate(() => {
-        const elements = Array.from(document.querySelectorAll('a, button, span, div'));
-        const continueEl = elements.find(el => el.textContent?.trim().toLowerCase().includes('continue'));
-        if (continueEl) {
-          (continueEl as any).click();
-          return "Clicked Continue";
-        }
-        return "Continue button not found";
-      });
-      console.log(`[ADMIN] Click Continue result: ${result}`);
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      const screenshot = await page.screenshot({ type: "png" });
-      res.setHeader("Content-Type", "image/png");
-      res.send(screenshot);
+      res.send("Baileys no requiere bypass de botón Continue.");
     } catch (err: any) {
-      res.status(500).send(err.message || err);
+      res.status(500).send(err.message);
     }
   });
 

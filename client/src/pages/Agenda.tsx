@@ -6,6 +6,7 @@ import Navbar from "@/components/Navbar";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import AgendaForm from "@/components/agenda-pro/AgendaForm";
+import GraciasScreen from "@/components/agenda-pro/GraciasScreen";
 
 function AnimatedCheck() {
   return (
@@ -123,9 +124,6 @@ export default function Agenda() {
   }
 
   if (isSubmitted) {
-    const nombreSolicitante = submittedData?.solicitante_nombre?.split(' ')[0] || 'tú';
-    const emailSolicitante = submittedData?.solicitante_email || 'tu correo';
-
     return (
       <div className="min-h-screen bg-background text-foreground flex flex-col" style={customStyles}>
         <Navbar 
@@ -134,39 +132,11 @@ export default function Agenda() {
           brandSubtitle="AGENDA PRO"
         />
         <div className="flex-1 flex flex-col justify-center items-center text-center p-8">
-          <div className="bg-black/40 border border-white/10 rounded-2xl glass p-10 max-w-2xl w-full shadow-2xl transition-all duration-500">
-            {!showContent ? (
-              <div className="py-6 animate-pulse">
-                <h2 className="text-2xl font-bold text-white mb-4">Procesando tu solicitud...</h2>
-                <p className="text-gray-400 mb-8">Estamos finalizando los detalles y preparando tu confirmación.</p>
-                <div className="flex justify-center items-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-2 border-primary/20 border-t-primary"></div>
-                </div>
-              </div>
-            ) : (
-              <div className="transition-opacity duration-700 opacity-100">
-                <AnimatedCheck />
-                <h1 className="text-3xl sm:text-4xl font-bold text-white mt-6 mb-3">¡Gracias, {nombreSolicitante}!</h1>
-                <p className="text-lg text-gray-400 max-w-2xl mx-auto">
-                  Hemos recibido tu solicitud para <strong>{property.name}</strong> correctamente.
-                </p>
-                
-                <div className="mt-8 bg-black/20 p-6 rounded-xl border border-white/10 text-left">
-                  <h3 className="font-bold text-primary text-lg mb-2">📋 Siguientes Pasos</h3>
-                  <p className="text-gray-300 text-sm leading-relaxed mb-3">
-                    Te hemos enviado un mensaje de confirmación y la dirección exacta del inmueble a tu **WhatsApp** y a tu correo de confirmación: <strong className="text-white">{emailSolicitante}</strong>.
-                  </p>
-                  <p className="text-xs text-gray-500 leading-relaxed border-t border-white/10 pt-3">
-                    <strong>Importante:</strong> El correo ha sido enviado por el remitente <span className="text-primary font-semibold">vecybienesraices@gmail.com</span> y puede tardar unos minutos en llegar mientras generamos los documentos del contrato. Por favor, revisa también tu carpeta de correo no deseado (spam).
-                  </p>
-                </div>
-
-                <Button className="btn-gold w-full py-6 mt-8 text-sm tracking-widest font-bold uppercase rounded-xl" onClick={() => navigate('/properties')}>
-                  Volver al Catálogo
-                </Button>
-              </div>
-            )}
-          </div>
+          <GraciasScreen 
+            formData={submittedData} 
+            propertyName={property.name} 
+            onBackToCatalog={() => navigate('/properties')} 
+          />
         </div>
       </div>
     );

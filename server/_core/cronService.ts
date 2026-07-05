@@ -20,6 +20,44 @@ import {
 } from './janIA';
 import { runNightlyRematch } from '../jobs/nightlyRematch';
 
+function cleanPromptLeak(text: string | undefined | null): string {
+  if (!text) return "";
+  let cleaned = text.trim();
+  
+  const preambles = [
+    /^(¡Hola!|Hola).*Aquí tienes (una propuesta|un post|un mensaje|una opción|el contenido).*:/i,
+    /^Aquí tienes (una propuesta|un post|un mensaje|una opción|el contenido).*:/i,
+    /^(Claro|Por supuesto),? aquí tienes.*:/i,
+    /^Claro,? aquí está.*:/i,
+    /^Entendido,? aquí tienes.*:/i,
+    /^(¡Hola!|Hola).*aquí te presento.*:/i,
+    /^Este es el post.*:/i,
+    /^Mensaje propuesto.*:/i,
+    /^Propuesta de mensaje.*:/i,
+    /^Propuesta de post.*:/i,
+    /^Cierre de jornada propuesto.*:/i,
+    /^Aquí tienes una propuesta de cierre de jornada.*:/i,
+    /^Aquí tienes una propuesta.*:/i,
+    /^Aquí tienes un mensaje.*:/i
+  ];
+
+  for (const regex of preambles) {
+    if (regex.test(cleaned)) {
+      cleaned = cleaned.replace(regex, "");
+      break;
+    }
+  }
+
+  cleaned = cleaned.trim();
+  if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
+    cleaned = cleaned.slice(1, -1);
+  } else if (cleaned.startsWith("'") && cleaned.endsWith("'")) {
+    cleaned = cleaned.slice(1, -1);
+  }
+
+  return cleaned.trim();
+}
+
 /**
  * Servicio Cron de JanIA v2.5
  * Automatización de ráfagas educativas, reportes de matching y embudos multicanal.
@@ -48,7 +86,7 @@ Dirección obligatoria:
           { role: 'user', content: promptInmuebles }
         ]
       });
-      const content = response.choices[0]?.message?.content;
+      const content = cleanPromptLeak(response.choices[0]?.message?.content);
       if (content && content.trim() !== "") {
         console.log('[CRON-SERVICE] Enviando mensaje matutino a VECY INMUEBLES NETWORK...');
         await whatsappBot.sendToGroup(content, undefined, []);
@@ -71,7 +109,7 @@ Dirección obligatoria:
           { role: 'user', content: promptConsultoria }
         ]
       });
-      const content = response.choices[0]?.message?.content;
+      const content = cleanPromptLeak(response.choices[0]?.message?.content);
       if (content && content.trim() !== "") {
         const buzonJid = whatsappBot.buzonGroupId;
         if (buzonJid) {
@@ -99,7 +137,7 @@ Dirección obligatoria:
           { role: 'user', content: promptCirculo }
         ]
       });
-      const content = response.choices[0]?.message?.content;
+      const content = cleanPromptLeak(response.choices[0]?.message?.content);
       if (content && content.trim() !== "") {
         const circuloJid = whatsappBot.circuloGroupId;
         if (circuloJid) {
@@ -131,7 +169,7 @@ Dirección obligatoria:
           { role: 'user', content: promptInmuebles }
         ]
       });
-      const content = response.choices[0]?.message?.content;
+      const content = cleanPromptLeak(response.choices[0]?.message?.content);
       if (content && content.trim() !== "") {
         console.log('[CRON-SERVICE] Enviando mensaje de la tarde a VECY INMUEBLES NETWORK...');
         await whatsappBot.sendToGroup(content, undefined, []);
@@ -152,7 +190,7 @@ Dirección obligatoria:
           { role: 'user', content: promptConsultoria }
         ]
       });
-      const content = response.choices[0]?.message?.content;
+      const content = cleanPromptLeak(response.choices[0]?.message?.content);
       if (content && content.trim() !== "") {
         const buzonJid = whatsappBot.buzonGroupId;
         if (buzonJid) {
@@ -176,7 +214,7 @@ Dirección obligatoria:
           { role: 'user', content: promptCirculo }
         ]
       });
-      const content = response.choices[0]?.message?.content;
+      const content = cleanPromptLeak(response.choices[0]?.message?.content);
       if (content && content.trim() !== "") {
         const circuloJid = whatsappBot.circuloGroupId;
         if (circuloJid) {
@@ -255,7 +293,7 @@ Dirección obligatoria:
           ]
         });
 
-        const content = response.choices[0]?.message?.content;
+        const content = cleanPromptLeak(response.choices[0]?.message?.content);
         if (content && content.trim() !== "") {
           console.log(`[CRON-SERVICE] Enviando audio motivador a ${grupo.nombre}...`);
           await whatsappBot.sendVoiceToGroup(content, grupo.id);
@@ -300,7 +338,7 @@ Dirección obligatoria:
           ]
         });
 
-        const content = response.choices[0]?.message?.content;
+        const content = cleanPromptLeak(response.choices[0]?.message?.content);
         if (content && content.trim() !== "") {
           console.log(`[CRON-SERVICE] Enviando audio de inicio de semana a ${grupo.nombre}...`);
           await whatsappBot.sendVoiceToGroup(content, grupo.id);

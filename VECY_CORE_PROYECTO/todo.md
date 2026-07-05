@@ -18,3 +18,10 @@
 
 ## GitHub Integration - Property Synchronization
 ...
+
+## Migración a Baileys (Estabilidad y Cero Puppeteer) 🔌
+- [x] Instalación de `@whiskeysockets/baileys` y `@hapi/boom`
+- [x] Re-implementación completa de `whatsapp-match.ts`
+- [x] Conexión por WebSocket nativo con almacenamiento en `.baileys_auth/`
+- [x] Guardado dinámico de QR como imagen a `dist/qr-match.png`
+- [x] Reemplazo de CallMeBot en la Edge Function mediante POST nativo al backend con retransmisión por Baileys (o fallback Cloud API)

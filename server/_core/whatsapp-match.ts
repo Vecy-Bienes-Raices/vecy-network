@@ -1,7 +1,11 @@
-import './setup-stealth'; // Configurar Stealth Puppeteer antes de importar whatsapp-web.js
-import pkg from 'whatsapp-web.js';
-const { Client, LocalAuth, MessageMedia } = pkg;
-import type { Client as ClientType, Message } from 'whatsapp-web.js';
+import makeWASocket, { 
+  useMultiFileAuthState, 
+  DisconnectReason, 
+  delay,
+  downloadMediaMessage,
+  proto
+} from '@whiskeysockets/baileys';
+import { Boom } from '@hapi/boom';
 import qrcodeTerminal from 'qrcode-terminal';
 import fs from 'fs';
 import path from 'path';
@@ -15,12 +19,10 @@ import {
   processCirculoMessage 
 } from './janIA';
 import { esDominioPermitido, scrapePropertyLink } from './scraper';
-import axios from 'axios';
 import QRCode from 'qrcode';
 
 // Tiempo de arranque para omitir mensajes históricos
 const SERVER_BOOT_TIME = Math.floor(Date.now() / 1000);
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 // Cola de despacho secuencial para evitar bloqueos
 let outgoingQueue: Promise<any> = Promise.resolve();
@@ -32,7 +34,7 @@ interface BufferedMessage {
   audioUrl?: string;
   pdfBuffer?: string;
   pdfMimeType?: string;
-  originalMsg: Message;
+  originalMsg: proto.IWebMessageInfo;
 }
 
 interface MessageBuffer {
@@ -43,31 +45,8 @@ interface MessageBuffer {
   warningSent?: boolean;
 }
 
-async function getLatestWAWebVersion(): Promise<string> {
-  const fallback = "https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1042391138-alpha.html";
-  try {
-    const res = await axios.get("https://api.github.com/repos/wppconnect-team/wa-version/contents/html", {
-      headers: { 'User-Agent': 'Mozilla/5.0' },
-      timeout: 5000
-    });
-    if (Array.isArray(res.data) && res.data.length > 0) {
-      const files = res.data
-        .map((f: any) => f.name)
-        .filter((name: string) => name.endsWith('.html'));
-      if (files.length > 0) {
-        files.sort();
-        const latestFile = files[files.length - 1];
-        return `https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/${latestFile}`;
-      }
-    }
-  } catch (err: any) {
-    console.warn("[JANIA-MATCH] Error fetching latest WA Web version from GitHub API, using fallback:", err.message);
-  }
-  return fallback;
-}
-
 export class JaniaMatchBot {
-  private client!: ClientType;
+  public sock: any = null;
   public isReady: boolean = false;
   
   // Grupos autorizados y configuraciones
@@ -75,8 +54,6 @@ export class JaniaMatchBot {
   private messageBuffers: Map<string, MessageBuffer> = new Map();
   private redirectCooldowns: Map<string, number> = new Map();
   private processingLocks: Map<string, Promise<void>> = new Map();
-  private watchdogInterval: NodeJS.Timeout | null = null;
-  private watchdogFailures: number = 0;
 
   private targetGroupId: string = '120363260108880069@g.us';
   private cooldownMap: Map<string, any> = new Map();
@@ -84,14 +61,13 @@ export class JaniaMatchBot {
 
   constructor() {
     (global as any).janiaMatchBotInstance = this;
-    console.log('[JANIA-MATCH] Inicializando JanIA Match Bot (Ojos y Oídos)...');
+    console.log('[JANIA-MATCH] Inicializando JanIA Match Bot (Ojos y Oídos) con Baileys...');
     
     // Cargar grupos desde la configuración o usar defaults
     const groupsEnv = process.env.JANIA_MATCH_GROUPS;
     if (groupsEnv) {
       this.authorizedGroups = groupsEnv.split(',').map(g => g.trim());
     } else {
-      // Valores predeterminados si no se configuran
       this.authorizedGroups = [
         '120363260108880069@g.us', // VECY INMUEBLES NETWORK
         '120363417740040773@g.us', // VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS
@@ -100,242 +76,178 @@ export class JaniaMatchBot {
     }
 
     this.loadCooldowns();
-    this.createClientInstance();
     this.setupGracefulShutdown();
   }
 
-  private createClientInstance(remotePath?: string) {
-    this.client = new Client({
-      authStrategy: new LocalAuth({
-        clientId: process.env.JANIA_MATCH_CLIENT_ID || "session-jania-match",
-        dataPath: './.wwebjs_auth'
-      }),
-      userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-      webVersionCache: {
-        type: "remote",
-        remotePath: remotePath || "https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1042391138-alpha.html"
-      },
-      puppeteer: {
-        headless: true,
-        executablePath: process.env.CHROME_PATH || undefined,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-gpu',
-          '--disable-extensions',
-          '--disable-software-rasterizer',
-          '--disable-features=IsolateOrigins,site-per-process',
-          '--disable-site-isolation-trials',
-          '--no-zygote',
-          '--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-          // Optimizaciones de memoria
-          '--disable-canvas-path-rendering',
-          '--disable-accelerated-2d-canvas',
-          '--disable-gl-drawing-for-tests',
-          '--mute-audio',
-          '--no-first-run',
-          '--no-default-browser-check',
-          '--disable-background-timer-throttling',
-          '--disable-backgrounding-occluded-windows',
-          '--disable-renderer-backgrounding',
-          '--js-flags=--max-old-space-size=512'
-        ],
-        protocolTimeout: 300000,
-      }
-    });
+  public async initialize() {
+    try {
+      const sessionDir = path.join(process.cwd(), '.baileys_auth');
+      const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
+      
+      console.log('[JANIA-MATCH] Estableciendo conexión por WebSocket...');
+      this.sock = makeWASocket({
+        auth: state,
+        printQRInTerminal: false, // Lo manejamos nosotros de forma personalizada
+        browser: ["Vecy Network", "Chrome", "1.0.0"],
+      });
 
-    this.setupEventListeners();
+      this.setupEventListeners(saveCreds);
+    } catch (err: any) {
+      console.error('[JANIA-MATCH] Error crítico al inicializar el cliente Baileys:', err);
+    }
   }
 
-  private setupEventListeners() {
-    // Inyectar autenticador WebAuthn virtual via CDP para bypasear el "Quick security check with Passkey"
-    // Esto simula la presencia de una llave de seguridad física FIDO2 en el servidor
-    this.client.on('qr', (qr: string) => {
-      console.log('\n[JANIA-MATCH] 🔌 ESCANEA ESTE CÓDIGO QR PARA INICIAR JANIA MATCH:');
-      qrcodeTerminal.generate(qr, { small: true });
+  private setupEventListeners(saveCreds: () => Promise<void>) {
+    this.sock.ev.on('creds.update', saveCreds);
 
-      // Inyectar autenticador WebAuthn virtual via CDP para bypassear el control de seguridad de passkey
-      (async () => {
+    this.sock.ev.on('connection.update', async (update: any) => {
+      const { connection, lastDisconnect, qr } = update;
+
+      if (qr) {
+        console.log('\n[JANIA-MATCH] 🔌 ESCANEA ESTE CÓDIGO QR PARA INICIAR JANIA MATCH:');
+        qrcodeTerminal.generate(qr, { small: true });
+
+        // Guardar el QR como imagen PNG accesible desde el navegador
         try {
-          const page = this.client.pupPage;
-          if (page) {
-            const cdpSession = await (page as any).target().createCDPSession();
-            await cdpSession.send('WebAuthn.enable', { enableUI: false });
-            await cdpSession.send('WebAuthn.addVirtualAuthenticator', {
-              options: {
-                protocol: 'ctap2',
-                transport: 'usb',
-                hasResidentKey: true,
-                hasUserVerification: true,
-                isUserVerified: true,
-                automaticPresenceSimulation: true,
-              },
-            });
-            console.log('[JANIA-MATCH] ✅ Autenticador WebAuthn virtual activado — passkey bypass listo.');
+          const qrPath = path.join(process.cwd(), 'dist', 'qr-match.png');
+          if (!fs.existsSync(path.join(process.cwd(), 'dist'))) {
+            fs.mkdirSync(path.join(process.cwd(), 'dist'), { recursive: true });
           }
+          QRCode.toFile(qrPath, qr, { width: 400, margin: 2 }, (err: any) => {
+            if (err) console.error('[JANIA-MATCH] Error guardando QR PNG:', err.message);
+            else console.log(`[JANIA-MATCH] 📸 QR guardado como imagen → https://vecy-network.vercel.app/qr-match.png`);
+          });
         } catch (e: any) {
-          console.warn('[JANIA-MATCH] ⚠️ No se pudo activar WebAuthn virtual:', e.message);
+          console.warn('[JANIA-MATCH] qrcode no disponible para PNG.', e.message);
         }
-      })();
+      }
 
-      // Guardar el QR como imagen PNG accesible desde el navegador
-      try {
-        const qrPath = path.join(process.cwd(), 'dist', 'qr-match.png');
-        QRCode.toFile(qrPath, qr, { width: 400, margin: 2 }, (err: any) => {
-          if (err) console.error('[JANIA-MATCH] Error guardando QR PNG:', err.message);
-          else console.log(`[JANIA-MATCH] 📸 QR guardado como imagen → https://vecy-network.vercel.app/qr-match.png (también en http://<servidor>:3000/qr-match.png)`);
-        });
-      } catch (e: any) {
-        console.warn('[JANIA-MATCH] qrcode no disponible para PNG, solo terminal.', e.message);
+      if (connection === 'close') {
+        const error = lastDisconnect?.error as Boom;
+        const statusCode = error?.output?.statusCode;
+        const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+        
+        console.warn(`[JANIA-MATCH] ⚠️ Conexión Baileys cerrada: ${error?.message || error}. Reconectando en 60s: ${shouldReconnect}`);
+        this.isReady = false;
+
+        if (shouldReconnect) {
+          setTimeout(() => this.initialize(), 60000); // 60s cooldown para evitar spam de login
+        } else {
+          console.error('[JANIA-MATCH] Sesión de WhatsApp cerrada (Logged Out). Limpiando credenciales...');
+          fs.rmSync(path.join(process.cwd(), '.baileys_auth'), { recursive: true, force: true });
+          setTimeout(() => this.initialize(), 5000);
+        }
+      } else if (connection === 'open') {
+        console.log('\n🚀 JANIA MATCH🔌💘 — BOT DE ESCUCHA Y MATCHES ACTIVADO CORRECTAMENTE CON BAILEYS');
+        this.isReady = true;
       }
     });
 
-    this.client.on('ready', () => {
-      console.log('\n🚀 JANIA MATCH🔌💘 — BOT DE ESCUCHA Y MATCHES ACTIVADO CORRECTAMENTE');
-      this.isReady = true;
-      this.startWatchdog();
+    this.sock.ev.on('messages.upsert', async (m: { messages: proto.IWebMessageInfo[], type: string }) => {
+      if (m.type !== 'notify') return;
 
-      // Optimización de Puppeteer: bloquear fuentes y CSS para ahorrar consumo en VPS
-      (async () => {
-        try {
-          const page = this.client.pupPage;
-          if (page) {
-            await page.setRequestInterception(true);
-            page.on('request', (req) => {
-              const type = req.resourceType();
-              if (type === 'stylesheet' || type === 'font') {
-                req.abort().catch(() => {});
-              } else {
-                req.continue().catch(() => {});
-              }
-            });
-            console.log('[JANIA-MATCH] Optimización activa: Recursos visuales bloqueados.');
-          }
-        } catch (e: any) {
-          console.warn('[JANIA-MATCH] Error configurando interceptor de Puppeteer:', e.message);
+      for (const msg of m.messages) {
+        if (!msg.key || !msg.message) continue;
+
+        // Omitir si proviene de nosotros mismos
+        const fromMe = msg.key.fromMe;
+        if (fromMe) continue;
+
+        const chatId = msg.key.remoteJid;
+        if (!chatId) continue;
+        const isGroup = chatId.endsWith('@g.us');
+
+        const senderId = isGroup ? msg.key.participant : chatId;
+        if (!senderId) continue;
+
+        // Omitir si proviene de status broadcast
+        if (chatId.includes('status@broadcast') || senderId.includes('status@broadcast')) {
+          continue;
         }
-      })();
-    });
 
-    this.client.on('disconnected', async (reason) => {
-      console.warn('[JANIA-MATCH] ⚠️ Cliente desconectado:', reason, '— reconectando en 10s...');
-      this.isReady = false;
-      await new Promise(resolve => setTimeout(resolve, 10000));
-      this.reconnectClient();
-    });
+        // Omitir mensajes previos a la inicialización del servidor
+        const timestamp = msg.messageTimestamp;
+        if (timestamp && Number(timestamp) < SERVER_BOOT_TIME) {
+          continue;
+        }
 
-    this.client.on('message_create', async (msg: Message) => {
-      // 1. Filtrar mensajes de status broadcast
-      if ((msg.from && msg.from.includes('status@broadcast')) || (msg.author && msg.author.includes('status@broadcast'))) {
-        return;
-      }
-
-      // 2. Omitir mensajes previos a la inicialización
-      if (msg.timestamp < SERVER_BOOT_TIME) {
-        return;
-      }
-
-      // Resoluciones LID a JID
-      if (msg.author && msg.author.endsWith('@lid')) {
         try {
-          const contact = await this.client.getContactById(msg.author);
-          if (contact?.id?._serialized?.endsWith('@c.us')) {
-            msg.author = contact.id._serialized;
-          }
-        } catch (e) {}
-      }
-      if (msg.from && msg.from.endsWith('@lid')) {
-        try {
-          const contact = await this.client.getContactById(msg.from);
-          if (contact?.id?._serialized?.endsWith('@c.us')) {
-            msg.from = contact.id._serialized;
-          }
-        } catch (e) {}
-      }
+          // --- FLUJO 1: MENSAJES DE GRUPO ---
+          if (isGroup) {
+            if (!this.authorizedGroups.includes(chatId)) {
+              return;
+            }
 
-      const senderId = msg.author || msg.from;
-      const botJid = this.client.info?.wid?._serialized;
+            // Ignorar stickers
+            if (msg.message.stickerMessage) {
+              return;
+            }
 
-      // Omitir si proviene de nosotros mismos
-      if (msg.fromMe || (botJid && (senderId === botJid || msg.from === botJid || msg.author === botJid))) {
-        return;
-      }
+            let body = '';
+            if (msg.message.conversation) body = msg.message.conversation;
+            else if (msg.message.extendedTextMessage) body = msg.message.extendedTextMessage.text || '';
+            else if (msg.message.imageMessage) body = msg.message.imageMessage.caption || '';
+            else if (msg.message.documentMessage) body = msg.message.documentMessage.caption || '';
+            else if (msg.message.videoMessage) body = msg.message.videoMessage.caption || '';
 
-      try {
-        const chat = await msg.getChat();
-        const chatId = chat.id._serialized;
-        const isGroup = chat.isGroup;
+            const textLower = body.toLowerCase();
+            const hasDirectMention = textLower.includes("jania");
 
-        // --- FLUJO 1: MENSAJES DE GRUPO ---
-        if (isGroup) {
-          // Omitir si no es un grupo autorizado
-          if (!this.authorizedGroups.includes(chatId)) {
+            // Si es una publicación comercial, procesar con el buffer extractor (Modo Silencioso)
+            const isPossibleListing = 
+              body.length > 120 || 
+              body.split('\n').length > 2 || 
+              !!msg.message.imageMessage ||
+              !!msg.message.documentMessage ||
+              textLower.includes("http") ||
+              textLower.includes("www") ||
+              textLower.includes("ofrezco") ||
+              textLower.includes("busco") ||
+              textLower.includes("vendo") ||
+              textLower.includes("arriendo") ||
+              textLower.includes("compro") ||
+              textLower.includes("necesito");
+
+            // Detectar consultas comunes sobre cómo publicar, cómo funciona el bot/grupo, ayuda, etc.
+            const isHelpOrSystemQuery = 
+              !isPossibleListing && (
+                textLower.includes("cómo subo") || textLower.includes("como subo") ||
+                textLower.includes("cómo publico") || textLower.includes("como publico") ||
+                textLower.includes("cómo se publica") || textLower.includes("como se publica") ||
+                textLower.includes("cómo registrar") || textLower.includes("como registrar") ||
+                textLower.includes("cómo funciona") || textLower.includes("como funciona") ||
+                textLower.includes("de qué consiste") || textLower.includes("de que consiste") ||
+                textLower.includes("en qué consiste") || textLower.includes("en que consiste") ||
+                textLower.includes("cómo hago para") || textLower.includes("como hago para") ||
+                textLower.includes("cómo buscar") || textLower.includes("como buscar") ||
+                textLower.includes("cómo encontrar") || textLower.includes("como encontrar") ||
+                (textLower.includes("ayuda") && textLower.includes("inmueble")) ||
+                (textLower.includes("explicar") && textLower.includes("grupo")) ||
+                (textLower.includes("cómo") && textLower.includes("grupo"))
+              );
+
+            if (hasDirectMention || isHelpOrSystemQuery) {
+              console.log(`[JANIA-MATCH] Pregunta directa/ayuda de ${senderId} en grupo ${chatId}: "${body}"`);
+              await this.handleDirectGroupQuestion(msg, chatId, senderId, body);
+              return;
+            }
+
+            if (isPossibleListing) {
+              await this.handleIncomingGroupMessage(msg, chatId, body);
+            }
             return;
           }
 
-          // Ignorar stickers en los grupos
-          if (msg.type === 'sticker') {
+          // --- FLUJO 2: CHATS PRIVADOS (DMs) ---
+          if (!isGroup) {
+            console.log(`[JANIA-MATCH] DM entrante de ${senderId}. Aplicando redirección a JanIA principal.`);
+            await this.handlePrivateDmRedirect(chatId, senderId);
             return;
           }
 
-          const textLower = (msg.body || "").toLowerCase();
-          const hasDirectMention = textLower.includes("jania");
-
-          // B. Si es una publicación comercial, procesar con el buffer extractor (Modo Silencioso)
-          const isPossibleListing = 
-            (msg.body || "").length > 120 || 
-            (msg.body || "").split('\n').length > 2 || 
-            msg.hasMedia ||
-            textLower.includes("http") ||
-            textLower.includes("www") ||
-            textLower.includes("ofrezco") ||
-            textLower.includes("busco") ||
-            textLower.includes("vendo") ||
-            textLower.includes("arriendo") ||
-            textLower.includes("compro") ||
-            textLower.includes("necesito");
-
-          // Detectar consultas comunes sobre cómo publicar, cómo funciona el bot/grupo, ayuda, etc.
-          const isHelpOrSystemQuery = 
-            !isPossibleListing && (
-              textLower.includes("cómo subo") || textLower.includes("como subo") ||
-              textLower.includes("cómo publico") || textLower.includes("como publico") ||
-              textLower.includes("cómo se publica") || textLower.includes("como se publica") ||
-              textLower.includes("cómo registrar") || textLower.includes("como registrar") ||
-              textLower.includes("cómo funciona") || textLower.includes("como funciona") ||
-              textLower.includes("de qué consiste") || textLower.includes("de que consiste") ||
-              textLower.includes("en qué consiste") || textLower.includes("en que consiste") ||
-              textLower.includes("cómo hago para") || textLower.includes("como hago para") ||
-              textLower.includes("cómo buscar") || textLower.includes("como buscar") ||
-              textLower.includes("cómo encontrar") || textLower.includes("como encontrar") ||
-              (textLower.includes("ayuda") && textLower.includes("inmueble")) ||
-              (textLower.includes("explicar") && textLower.includes("grupo")) ||
-              (textLower.includes("cómo") && textLower.includes("grupo"))
-            );
-
-          // A. Si se le pregunta directamente al bot en el grupo, o si es una consulta de ayuda/sistema
-          if (hasDirectMention || isHelpOrSystemQuery) {
-            console.log(`[JANIA-MATCH] Pregunta directa/ayuda de ${senderId} en grupo ${chatId}: "${msg.body}"`);
-            await this.handleDirectGroupQuestion(msg, chatId, senderId);
-            return;
-          }
-
-          if (isPossibleListing) {
-            await this.handleIncomingGroupMessage(msg, chatId);
-          }
-          return;
+        } catch (err) {
+          console.error('[JANIA-MATCH] Error en procesador de eventos de mensaje:', err);
         }
-
-        // --- FLUJO 2: CHATS PRIVADOS (DMs) ---
-        if (!isGroup) {
-          console.log(`[JANIA-MATCH] DM entrante de ${senderId}. Aplicando redirección a JanIA principal.`);
-          await this.handlePrivateDmRedirect(chatId, senderId);
-          return;
-        }
-
-      } catch (err) {
-        console.error('[JANIA-MATCH] Error en procesador de eventos de mensaje:', err);
       }
     });
   }
@@ -356,31 +268,27 @@ export class JaniaMatchBot {
   }
 
   // --- RESPUESTA DIRECTA A PREGUNTAS EN GRUPOS ---
-  private async handleDirectGroupQuestion(msg: Message, chatId: string, senderId: string) {
+  private async handleDirectGroupQuestion(msg: proto.IWebMessageInfo, chatId: string, senderId: string, bodyText: string) {
     try {
-      const contact = await msg.getContact();
-      const realName = contact?.pushname || contact?.name || `Asesor +${senderId.split('@')[0]}`;
-      const textLower = msg.body.toLowerCase();
+      const realName = msg.pushName || `Asesor +${senderId.split('@')[0]}`;
+      const textLower = bodyText.toLowerCase();
 
-      // Indicar que se está respondiendo
-      const chat = await msg.getChat();
-      const wantsVoice = msg.type === 'audio' || msg.type === 'ptt' || detectaVoz(textLower);
+      const wantsVoice = msg.message?.audioMessage || detectaVoz(textLower);
       if (wantsVoice) {
-        await chat.sendStateRecording();
+        await this.sock.sendPresenceUpdate('recording', chatId);
       } else {
-        await chat.sendStateTyping();
+        await this.sock.sendPresenceUpdate('composing', chatId);
       }
 
       await delay(2000);
 
       let result;
       if (chatId === '120363417740040773@g.us') { // Buzón Consultoría
-        result = await processConsultingMessage(msg.body, senderId, realName);
+        result = await processConsultingMessage(bodyText, senderId, realName);
       } else if (chatId === '120363403507276533@g.us') { // Círculo Cero
-        result = await processCirculoMessage(msg.body, senderId, realName);
+        result = await processCirculoMessage(bodyText, senderId, realName);
       } else {
-        // Grupo principal u otros
-        result = await processWhatsAppMessage(msg.body, senderId, realName, false, [], undefined, undefined, true, undefined, undefined, chatId);
+        result = await processWhatsAppMessage(bodyText, senderId, realName, false, [], undefined, undefined, true, undefined, undefined, chatId);
       }
 
       if (result && result.response && result.response.trim() !== '') {
@@ -390,30 +298,31 @@ export class JaniaMatchBot {
         if (wantsVoice && voiceToDeliver.trim() !== "") {
           const media = await textToSpeechMedia(voiceToDeliver);
           if (media) {
-            await this.queuedSend(chatId, media, { sendAudioAsVoice: true });
+            await this.queuedSend(chatId, media, { sendAudioAsVoice: true, quoted: msg });
           } else {
             await this.queuedSend(chatId, textToDeliver, {
               mentions: [senderId],
-              quotedMessageId: msg.id._serialized
+              quoted: msg
             });
           }
         } else {
           await this.queuedSend(chatId, textToDeliver, {
             mentions: [senderId],
-            quotedMessageId: msg.id._serialized
+            quoted: msg
           });
         }
       }
 
-      await chat.clearState();
+      await this.sock.sendPresenceUpdate('paused', chatId);
     } catch (err) {
       console.error('[JANIA-MATCH] Error al responder pregunta directa en grupo:', err);
     }
   }
 
   // --- LOGÍSTICA DE BUFFER GRUPAL ---
-  private async handleIncomingGroupMessage(msg: Message, chatId: string) {
-    const senderId = msg.author || msg.from;
+  private async handleIncomingGroupMessage(msg: proto.IWebMessageInfo, chatId: string, bodyText: string) {
+    if (!msg.key || !msg.message) return;
+    const senderId = msg.key.participant || msg.key.remoteJid || '';
     const lockKey = `${chatId}_${senderId}`;
 
     const previousLock = this.processingLocks.get(lockKey) || Promise.resolve();
@@ -424,37 +333,24 @@ export class JaniaMatchBot {
 
     try {
       await previousLock;
-      const contact = await msg.getContact();
-      const realName = contact?.pushname || contact?.name || `Asesor +${senderId.split('@')[0]}`;
+      const realName = msg.pushName || `Asesor +${senderId.split('@')[0]}`;
       const bufferKey = `${chatId}_${senderId}`;
 
       const isMainGroup = chatId === this.targetGroupId;
-      const textLower = (msg.body || "").toLowerCase();
-      const isPossibleListing = 
-        (msg.body || "").length > 120 || 
-        (msg.body || "").split('\n').length > 2 || 
-        msg.hasMedia ||
-        textLower.includes("http") ||
-        textLower.includes("www") ||
-        textLower.includes("ofrezco") ||
-        textLower.includes("busco") ||
-        textLower.includes("vendo") ||
-        textLower.includes("arriendo") ||
-        textLower.includes("compro") ||
-        textLower.includes("necesito");
+      const textLower = bodyText.toLowerCase();
 
       const now = Date.now();
       const COOLDOWN_PERIOD = 5 * 60 * 1000; // 5 minutos
 
       // 1. CONTROL DE COOLDOWN (SOLO EN GRUPO PRINCIPAL Y PARA POSIBLES LISTINGS)
-      if (isMainGroup && isPossibleListing) {
+      if (isMainGroup) {
         this.loadCooldowns();
         const cooldownKey = `${chatId}_${senderId}`;
         const cooldown = this.cooldownMap.get(cooldownKey);
         
         if (cooldown && (now - cooldown.lastBlockProcessedAt < COOLDOWN_PERIOD)) {
           try {
-            await msg.react('⚠️');
+            await this.sock.sendMessage(chatId, { react: { text: '⚠️', key: msg.key } });
           } catch (e) {}
 
           if (!cooldown.warningSent) {
@@ -478,7 +374,7 @@ export class JaniaMatchBot {
                   `¡Mis motores necesitan este breve descanso para mantener tus fichas técnicas al 100% de calidad! JanIA sigue atenta. 🏆🎯`;
                 await this.queuedSend(chatId, warningText, {
                   mentions: [senderId],
-                  quotedMessageId: msg.id._serialized
+                  quoted: msg
                 });
               }
             } else {
@@ -489,7 +385,7 @@ export class JaniaMatchBot {
                 `¡Mis motores necesitan este breve descanso para mantener tus fichas técnicas al 100% de calidad! JanIA sigue atenta. 🏆🎯`;
               await this.queuedSend(chatId, warningText, {
                 mentions: [senderId],
-                quotedMessageId: msg.id._serialized
+                quoted: msg
               });
             }
           }
@@ -502,12 +398,11 @@ export class JaniaMatchBot {
       const MAX_BLOCK_SIZE = 3;
 
       if (buffer) {
-        // 2. CONTROL DE LÍMITE DE BUFFER (SOLO EN GRUPO PRINCIPAL Y PARA POSIBLES LISTINGS)
-        
+        // LÍMITE DE BUFFER (SOLO EN GRUPO PRINCIPAL Y PARA POSIBLES LISTINGS)
         const hasExistingListing = buffer.messages.some(m => {
-          const bodyLower = (m.body || "").toLowerCase();
-          return (m.body || "").length > 120 || 
-                 (m.body || "").split('\n').length > 2 || 
+          const bodyLower = m.body.toLowerCase();
+          return m.body.length > 120 || 
+                 m.body.split('\n').length > 2 || 
                  m.hasMedia ||
                  bodyLower.includes("http") ||
                  bodyLower.includes("www") ||
@@ -519,10 +414,10 @@ export class JaniaMatchBot {
                  bodyLower.includes("necesito");
         });
 
-        if (isMainGroup && isPossibleListing && hasExistingListing) {
+        if (isMainGroup && hasExistingListing) {
           console.log(`[BUFFER] Intento de múltiple propiedad detectado para ${senderId}. Mensaje descartado.`);
           try {
-            await msg.react('⚠️');
+            await this.sock.sendMessage(chatId, { react: { text: '⚠️', key: msg.key } });
           } catch (e) {}
 
           if (!buffer.warningSent) {
@@ -543,7 +438,7 @@ export class JaniaMatchBot {
                   `Por favor, envía cada propiedad por separado y espera los *5 minutos* de cooldown reglamentarios entre cada una. ¡Tus primeras publicaciones ya están siendo procesadas! 🚀🎯`;
                 await this.queuedSend(chatId, warningText, {
                   mentions: [senderId],
-                  quotedMessageId: msg.id._serialized
+                  quoted: msg
                 });
               }
             } else {
@@ -554,19 +449,19 @@ export class JaniaMatchBot {
                 `Por favor, envía cada propiedad por separado y espera los *5 minutos* de cooldown reglamentarios entre cada una. ¡Tus primeras publicaciones ya están siendo procesadas! 🚀🎯`;
               await this.queuedSend(chatId, warningText, {
                 mentions: [senderId],
-                quotedMessageId: msg.id._serialized
+                quoted: msg
               });
             }
           }
           return;
         }
 
-        // B. Límite físico de mensajes en el buffer (inundación / flood)
+        // Límite físico de mensajes en el buffer
         const limit = isMainGroup ? MAX_BLOCK_SIZE : 10;
         if (buffer.messages.length >= limit) {
-          console.log(`[BUFFER] Límite de mensajes del bloque (${limit}) alcanzado para ${senderId}. Mensaje #${buffer.messages.length + 1} descartado.`);
+          console.log(`[BUFFER] Límite de mensajes del bloque (${limit}) alcanzado para ${senderId}. Mensaje descartado.`);
           try {
-            await msg.react('⚠️');
+            await this.sock.sendMessage(chatId, { react: { text: '⚠️', key: msg.key } });
           } catch (e) {}
 
           if (isMainGroup && !buffer.warningSent) {
@@ -587,7 +482,7 @@ export class JaniaMatchBot {
                   `¡Espera unos *5 minutos* y luego envía el siguiente grupo! Tus primeras 3 publicaciones ya están siendo procesadas y registradas. 🚀🎯`;
                 await this.queuedSend(chatId, warningText, {
                   mentions: [senderId],
-                  quotedMessageId: msg.id._serialized
+                  quoted: msg
                 });
               }
             } else {
@@ -598,7 +493,7 @@ export class JaniaMatchBot {
                 `¡Espera unos *5 minutos* y luego envía el siguiente grupo! Tus primeras 3 publicaciones ya están siendo procesadas y registradas. 🚀🎯`;
               await this.queuedSend(chatId, warningText, {
                 mentions: [senderId],
-                quotedMessageId: msg.id._serialized
+                quoted: msg
               });
             }
           }
@@ -607,16 +502,16 @@ export class JaniaMatchBot {
 
         clearTimeout(buffer.timer);
         buffer.messages.push({
-          body: msg.body,
-          hasMedia: msg.hasMedia,
+          body: bodyText,
+          hasMedia: !!msg.message.imageMessage || !!msg.message.documentMessage,
           originalMsg: msg
         });
         buffer.timer = setTimeout(() => this.processGroupBuffer(bufferKey), bufferTimeout);
       } else {
         this.messageBuffers.set(bufferKey, {
           messages: [{
-            body: msg.body,
-            hasMedia: msg.hasMedia,
+            body: bodyText,
+            hasMedia: !!msg.message.imageMessage || !!msg.message.documentMessage,
             originalMsg: msg
           }],
           userName: realName,
@@ -668,21 +563,17 @@ export class JaniaMatchBot {
 
     // Descarga de imágenes o documentos adjuntos
     for (const bufferedMsg of buffer.messages) {
-      if (bufferedMsg.hasMedia && bufferedMsg.originalMsg.type === 'image') {
+      if (bufferedMsg.hasMedia && bufferedMsg.originalMsg.message?.imageMessage) {
         try {
-          const media = await bufferedMsg.originalMsg.downloadMedia();
-          if (media && media.mimetype.startsWith('image/')) {
-            bufferedMsg.imageBuffer = media.data;
-          }
+          const mediaBuffer = await downloadMediaMessage(bufferedMsg.originalMsg as any, 'buffer', {});
+          bufferedMsg.imageBuffer = mediaBuffer.toString('base64');
         } catch (e) {}
       }
-      if (bufferedMsg.hasMedia && bufferedMsg.originalMsg.type === 'document') {
+      if (bufferedMsg.hasMedia && bufferedMsg.originalMsg.message?.documentMessage) {
         try {
-          const media = await bufferedMsg.originalMsg.downloadMedia();
-          if (media && media.mimetype === 'application/pdf') {
-            bufferedMsg.pdfBuffer = media.data;
-            bufferedMsg.pdfMimeType = media.mimetype;
-          }
+          const mediaBuffer = await downloadMediaMessage(bufferedMsg.originalMsg as any, 'buffer', {});
+          bufferedMsg.pdfBuffer = mediaBuffer.toString('base64');
+          bufferedMsg.pdfMimeType = bufferedMsg.originalMsg.message.documentMessage.mimetype || 'application/pdf';
         } catch (e) {}
       }
     }
@@ -693,7 +584,7 @@ export class JaniaMatchBot {
       const imageMsg = buffer.messages.find(m => m.imageBuffer);
       const pdfMsg = buffer.messages.find(m => m.pdfBuffer);
 
-      // 1. Scraping de enlaces si existen
+      // Scraping de enlaces si existen
       const urlMatch = fullText.match(/https?:\/\/[^\s]+/g);
       const scrapedResults: any[] = [];
       if (urlMatch) {
@@ -707,10 +598,10 @@ export class JaniaMatchBot {
         }
       }
 
-      // 2. Guardar logs en BD
+      // Guardar logs en BD
       await this.logToDb(senderId, 'user', fullText);
 
-      // 3. Procesar mediante JanIA (guardará en DB de forma automática)
+      // Procesar mediante JanIA (guardará en DB de forma automática)
       let result;
       if (chatId === '120363417740040773@g.us') {
         result = await processConsultingMessage(
@@ -750,14 +641,14 @@ export class JaniaMatchBot {
           try {
             const lastMsg = buffer.messages[buffer.messages.length - 1].originalMsg;
             console.log(`[JANIA-MATCH] Reaccionando con ${emoji} al mensaje de ${senderId}`);
-            await lastMsg.react(emoji);
+            await this.sock.sendMessage(chatId, { react: { text: emoji, key: lastMsg.key } });
           } catch (reactErr: any) {
-            console.error('[JANIA-MATCH] Error al reaccionar al mensaje:', reactErr.message);
+            console.error('[JANIA-MATCH] Error al reaccionar al mensaje:', reactErr.message || reactErr);
           }
         }
       }
 
-      // 4. MODO STEALTH: Redirección al bot principal u oportuna advertencia grupal
+      // --- MODO STEALTH: Redirección al bot principal u oportuna advertencia grupal ---
       if (result) {
         const isWarning = result.classification === "DATOS_INCOMPLETOS" || result.classification === "VIOLACION_DE_NORMAS";
 
@@ -765,7 +656,6 @@ export class JaniaMatchBot {
           const warningText = result.dmResponse || result.response || "";
           if (warningText.trim() !== "") {
             let cleanDmResponse = warningText;
-            // Limpieza robusta de saludos
             cleanDmResponse = cleanDmResponse.replace(/¡Hola,\s+\*[^*]+\*!\s+😊\s*/i, "");
             cleanDmResponse = cleanDmResponse.replace(/¡Hola!\s+😊\s*/i, "");
 
@@ -790,8 +680,6 @@ export class JaniaMatchBot {
               console.error('[JANIA-MATCH] Error checking user interaction history:', err);
             }
 
-            // Regla Híbrida: si es una infracción de normas o si es datos incompletos de un usuario nuevo (sin interacción previa) -> PUBLICAR en el grupo.
-            // Si es datos incompletos de un usuario conocido -> enviar DM privado directamente.
             const shouldSendPublic = result.classification === "VIOLACION_DE_NORMAS" || !hasInteracted;
 
             if (shouldSendPublic) {
@@ -799,18 +687,14 @@ export class JaniaMatchBot {
               if (result.classification === "VIOLACION_DE_NORMAS") {
                 publicWarning = `🚨 *LLAMADO DE ATENCIÓN* 🚨\n\nHola @${senderId.split('@')[0]},\n\nHe detectado que tu publicación infringe las normas de nuestro canal.\n\n*Detalle de la infracción:*\n${cleanDmResponse}\n\n*Nota:* Como casi nadie se toma la molestia de leer las normas en la descripción del grupo, te aclaro que estas reglas existen para mantener la comunidad ordenada y efectiva para todos.\n\nSi tienes dudas, por favor contacta a mi otro yo *JanIA v3.5* (atención y soporte al usuario) al +573185462265 o escribiéndole directamente aquí:\n👉 https://wa.me/573185462265`;
               } else {
-                // DATOS_INCOMPLETOS público
                 publicWarning = `⚠️ *INFORMACIÓN PENDIENTE* ⚠️\n\nHola @${senderId.split('@')[0]},\n\n${cleanDmResponse}\n\n*Nota:* Hacemos énfasis en esto porque casi nadie se toma la molestia de leer las normas de publicación en la descripción del grupo, pero estos datos son 100% obligatorios para que pueda procesar tu propiedad y buscarte un MATCH comercial.\n\nSi deseas completar tus datos o tienes dudas, por favor contacta directamente a mi versión principal de soporte, *JanIA v3.5*, escribiéndole al enlace:\n👉 https://wa.me/573185462265`;
               }
 
               console.log(`[JANIA-MATCH] [Public-Moderation] Enviando advertencia grupal a ${senderId} en ${chatId}`);
               await this.queuedSend(chatId, publicWarning, { mentions: [senderId] });
-
-              // Registrar en BD para auditoría grupal
               await this.logToDb(senderId, 'janIA', `[PUBLIC-WARNING] ${publicWarning}`);
             } else {
-              // DATOS_INCOMPLETOS en privado (usuario conocido con historial de confianza)
-              console.log(`[JANIA-MATCH] [Stealth] Enviando advertencia privada de datos incompletos a ${senderId} (Usuario conocido).`);
+              console.log(`[JANIA-MATCH] [Stealth] Derivando advertencia privada de datos incompletos a ${senderId} (Usuario conocido).`);
               await sendUserDM(senderId, result.dmResponse || "");
               await this.logToDb(senderId, 'janIA', `[DM-Stealth] ${result.dmResponse || ""}`);
             }
@@ -826,28 +710,25 @@ export class JaniaMatchBot {
             }
           }
         } else {
-          // Publicaciones exitosas o consultas generales: derivar confirmaciones privadas normales
           const isConsultation = result.classification === "CONSULTA_GENERAL" || result.classification === "RESPUESTA_A_PREGUNTA_IA" || result.classification === "ANALISIS_DE_MERCADO";
           
           if (isConsultation && result.response && result.response.trim() !== "") {
             console.log(`[JANIA-MATCH] Enviando respuesta a consulta general en el grupo para ${senderId}`);
             await this.queuedSend(chatId, result.response, {
               mentions: [senderId],
-              quotedMessageId: buffer.messages[buffer.messages.length - 1].originalMsg.id._serialized
+              quoted: buffer.messages[buffer.messages.length - 1].originalMsg
             });
             await this.logToDb(senderId, 'janIA', `[GROUP-REPLY] ${result.response}`);
           } else {
-            // Si hay un MATCH (coincidencia de negocio) detectado, lo publicamos en el grupo etiquetando a los involucrados
+            // SILENCIAR NOTIFICACIONES DE MATCH PÚBLICAS EN GRUPOS
+            // En su lugar, se notifica únicamente al administrador de forma privada (seguro de baneo)
             if (result.response && result.response.trim() !== "") {
-              console.log(`[JANIA-MATCH] Enviando notificación de Match en el grupo para ${senderId}`);
-              await this.queuedSend(chatId, result.response, {
-                mentions: result.mentions || [senderId],
-                quotedMessageId: buffer.messages[buffer.messages.length - 1].originalMsg.id._serialized
-              });
-              await this.logToDb(senderId, 'janIA', `[GROUP-MATCH] ${result.response}`);
+              console.log(`[JANIA-MATCH] Match detectado silenciosamente. Alertas enviadas al administrador.`);
+              await sendAdminNotification(`🎯 *[MATCH DETECTADO]*\n\n${result.response}`);
+              await this.logToDb(senderId, 'janIA', `[SILENT-MATCH] ${result.response}`);
             }
 
-            // También enviamos la confirmación privada de registro al usuario (Stealth)
+            // Confirmación privada de registro al usuario (Stealth)
             if (result.shouldSendDM && result.dmResponse && result.dmResponse.trim() !== "") {
               console.log(`[JANIA-MATCH] [Stealth] Derivando confirmación DM de ${senderId} al bot principal.`);
               await sendUserDM(senderId, result.dmResponse);
@@ -856,23 +737,21 @@ export class JaniaMatchBot {
           }
         }
 
-        // B. Confirmaciones de Match a los involucrados y administrador
+        // Confirmaciones de Match adicionales
         if (result.extraDMs && result.extraDMs.length > 0) {
           for (const dm of result.extraDMs) {
             if (!dm.jid || !dm.jid.includes('@') || dm.jid.split('@')[0].length < 5) continue;
             console.log(`[JANIA-MATCH] [Stealth] Derivando notificación de Match para ${dm.jid} al bot principal.`);
             if (dm.viaMainBot) {
-              // Admin: enviar por whatsapp-web.js (sin restricción de ventana de 24h)
               await sendAdminNotification(dm.message);
             } else {
-              // Demás involucrados: enviar por whatsapp-web.js (sendUserDM) para evitar restricciones de 24h de Cloud API
               await sendUserDM(dm.jid, dm.message);
             }
           }
         }
       }
 
-      // 5. ACTIVAR COOLDOWN DE 5 MINUTOS (Tras procesar con éxito - solo en grupo principal)
+      // ACTIVAR COOLDOWN DE 5 MINUTOS (solo en grupo principal)
       const isMainGroup = chatId === this.targetGroupId;
       if (isMainGroup) {
         const cooldownKeyFinal = `${chatId}_${senderId}`;
@@ -924,95 +803,71 @@ export class JaniaMatchBot {
     }
   }
 
-  // --- ENVÍO LOCAL (Solo para respuestas directas permitidas) ---
+  // --- ENVÍO LOCAL (Baileys) ---
   public async queuedSend(chatId: string, content: any, options: any = {}) {
     outgoingQueue = outgoingQueue.then(async () => {
       try {
-        await this.client.sendMessage(chatId, content, options);
+        if (!this.sock) {
+          throw new Error("Cliente Baileys no inicializado");
+        }
+
+        let messagePayload: any = {};
+
+        // Si es un string
+        if (typeof content === 'string') {
+          messagePayload = { text: content };
+          if (options.mentions) {
+            messagePayload.mentions = options.mentions;
+          }
+        } 
+        // Si es un objeto de tipo MessageMedia (de whatsapp-web.js)
+        else if (content && content.data && content.mimetype) {
+          const buffer = Buffer.from(content.data, 'base64');
+          if (content.mimetype.startsWith('audio/')) {
+            messagePayload = {
+              audio: buffer,
+              mimetype: content.mimetype,
+              ptt: options.sendAudioAsVoice || false
+            };
+          } else if (content.mimetype.startsWith('image/')) {
+            messagePayload = {
+              image: buffer,
+              mimetype: content.mimetype
+            };
+          } else {
+            messagePayload = {
+              document: buffer,
+              mimetype: content.mimetype,
+              fileName: content.filename || 'archivo'
+            };
+          }
+        }
+
+        const sendOptions: any = {};
+        if (options.quoted) {
+          sendOptions.quoted = options.quoted;
+        }
+
+        await this.sock.sendMessage(chatId, messagePayload, sendOptions);
         await delay(1000);
       } catch (err: any) {
-        console.error('[JANIA-MATCH] Error en despacho de mensaje local:', err.message);
+        console.error('[JANIA-MATCH] Error en despacho de mensaje Baileys:', err.message || err);
       }
     });
     return outgoingQueue;
   }
 
-  // --- WATCHDOG ---
-  private startWatchdog() {
-    if (this.watchdogInterval) clearInterval(this.watchdogInterval);
-    
-    this.watchdogFailures = 0;
-    this.watchdogInterval = setInterval(async () => {
-      if (!this.isReady) return;
-      try {
-        const statePromise = this.client.getState();
-        const timeoutPromise = new Promise<null>((_, reject) => 
-          setTimeout(() => reject(new Error("Timeout al obtener estado de WhatsApp")), 15000)
-        );
-
-        const state = await Promise.race([statePromise, timeoutPromise]);
-        console.log(`[JANIA-MATCH] [Watchdog] Estado actual de conexión: ${state}`);
-        
-        if (state === 'CONNECTED') {
-          this.watchdogFailures = 0; // Reset counter on success
-        } else {
-          this.watchdogFailures++;
-          console.warn(`[JANIA-MATCH] [Watchdog] Estado anormal detectado: ${state} (Fallo consecutivo #${this.watchdogFailures}/3).`);
-          if (this.watchdogFailures >= 3) {
-            console.error('[JANIA-MATCH] [Watchdog] Demasiados fallos consecutivos. Reiniciando cliente...');
-            this.watchdogFailures = 0;
-            this.reconnectClient();
-          }
-        }
-      } catch (err: any) {
-        this.watchdogFailures++;
-        console.error(`[JANIA-MATCH] [Watchdog] Falla o bloqueo detectado: ${err.message || err} (Fallo consecutivo #${this.watchdogFailures}/3).`);
-        if (this.watchdogFailures >= 3) {
-          console.error('[JANIA-MATCH] [Watchdog] Demasiados fallos consecutivos. Reiniciando cliente...');
-          this.watchdogFailures = 0;
-          this.reconnectClient();
-        }
-      }
-    }, 5 * 60 * 1000);
-  }
-
-  private async reconnectClient() {
-    this.isReady = false;
-    try {
-      this.client.removeAllListeners();
-      await this.client.destroy();
-    } catch (e) {}
-
-    try {
-      const remotePath = await getLatestWAWebVersion();
-      console.log(`[JANIA-MATCH] [Reconexión] Usando versión de WhatsApp Web: ${remotePath}`);
-      this.createClientInstance(remotePath);
-      await this.client.initialize();
-      console.log('[JANIA-MATCH] Reconexión exitosa.');
-    } catch (e) {
-      console.error('[JANIA-MATCH] Falló reconexión:', e);
-    }
-  }
-
-  public async initialize() {
-    try {
-      const remotePath = await getLatestWAWebVersion();
-      console.log(`[JANIA-MATCH] Usando versión de WhatsApp Web: ${remotePath}`);
-      this.createClientInstance(remotePath);
-      await this.client.initialize();
-    } catch (err: any) {
-      console.error('[JANIA-MATCH] Error crítico al inicializar el cliente:', err);
-    }
-  }
-
   public async getPairingCode(phone: string): Promise<string> {
     const cleanPhone = phone.replace(/\D/g, "");
     console.log(`[JANIA-MATCH] Solicitando código de vinculación por número para: ${cleanPhone}`);
-    if (!this.client) {
-      throw new Error("Cliente no inicializado");
+    if (!this.sock) {
+      throw new Error("Cliente Baileys no inicializado");
     }
     try {
-      const code = await this.client.requestPairingCode(cleanPhone);
+      if (this.sock.authState?.creds?.registered) {
+        throw new Error("El bot de Match ya está registrado en este dispositivo.");
+      }
+      const code = await this.sock.requestPairingCode(cleanPhone);
       console.log(`[JANIA-MATCH] Código de vinculación generado: ${code}`);
       return code;
     } catch (err: any) {
@@ -1039,8 +894,12 @@ export class JaniaMatchBot {
 
   private setupGracefulShutdown() {
     const shutdown = async () => {
-      console.log('\n🛑 Cerrando JanIA Match Bot...');
-      try { await this.client.destroy(); } catch (e) {}
+      console.log('\n🛑 Cerrando JanIA Match Bot (Baileys)...');
+      try {
+        if (this.sock) {
+          await this.sock.end();
+        }
+      } catch (e) {}
     };
     process.on('SIGINT', shutdown);
     process.on('SIGTERM', shutdown);

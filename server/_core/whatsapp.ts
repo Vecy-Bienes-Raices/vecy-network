@@ -2850,13 +2850,7 @@ export async function sendAdminNotification(text: string): Promise<void> {
 export async function sendUserDM(jid: string, text: string): Promise<void> {
   const formattedJid = jid.includes('@') ? jid : `${jid}@c.us`;
   try {
-    const matchBot = (global as any).janiaMatchBotInstance;
-    if (matchBot && matchBot.isReady) {
-      console.log(`[WHATSAPP-BOT] Enviando DM a ${formattedJid} vía JanIA Match Bot (Puppeteer)...`);
-      await matchBot.queuedSend(formattedJid, text);
-    } else {
-      await (whatsappBot as any).queuedSend(formattedJid, text);
-    }
+    await (whatsappBot as any).queuedSend(formattedJid, text);
   } catch (e) {
     await (whatsappBot as any).queuedSend(formattedJid, text);
   }
