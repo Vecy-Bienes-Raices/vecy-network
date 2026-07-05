@@ -104,22 +104,52 @@ export default function AgentDashboard() {
     onSuccess: (res) => {
       if (res && res.success && res.data) {
         const d = res.data;
-        if (d.titulo) setFormName(d.titulo);
-        if (d.descripcion) setFormDescription(d.descripcion);
-        if (d.precio) {
-          const priceClean = String(d.precio).replace(/\D/g, "");
+        const nameVal = d.name || d.titulo;
+        if (nameVal) setFormName(nameVal);
+
+        const descVal = d.description || d.descripcion;
+        if (descVal) setFormDescription(descVal);
+
+        const priceVal = d.price || d.precio;
+        if (priceVal) {
+          const priceClean = String(priceVal).replace(/\D/g, "");
           setFormPrice(priceClean);
         }
-        if (d.habitaciones) setFormBedrooms(Number(d.habitaciones));
-        if (d.banos) setFormBathrooms(Number(d.banos));
-        if (d.parqueaderos) setFormGarages(Number(d.parqueaderos));
-        if (d.area) setFormAreaTotal(String(d.area));
-        if (d.estrato) setFormStratum(Number(d.estrato));
-        if (d.barrio) setFormNeighborhood(d.barrio);
-        if (d.ciudad) setFormCity(d.ciudad);
-        if (d.sector) setFormZone(d.sector);
+
+        const bedroomsVal = d.bedrooms !== undefined && d.bedrooms !== null ? d.bedrooms : d.habitaciones;
+        if (bedroomsVal !== undefined && bedroomsVal !== null) setFormBedrooms(Number(bedroomsVal));
+
+        const bathroomsVal = d.bathrooms !== undefined && d.bathrooms !== null ? d.bathrooms : d.banos;
+        if (bathroomsVal !== undefined && bathroomsVal !== null) setFormBathrooms(Number(bathroomsVal));
+
+        const garagesVal = d.garages !== undefined && d.garages !== null ? d.garages : d.parqueaderos;
+        if (garagesVal !== undefined && garagesVal !== null) setFormGarages(Number(garagesVal));
+
+        const areaVal = d.areaTotal || d.area;
+        if (areaVal) setFormAreaTotal(String(areaVal));
+
+        const stratumVal = d.stratum !== undefined && d.stratum !== null ? d.stratum : d.estrato;
+        if (stratumVal !== undefined && stratumVal !== null) setFormStratum(Number(stratumVal));
+
+        const neighborhoodVal = d.addressNeighborhood || d.barrio;
+        if (neighborhoodVal) setFormNeighborhood(neighborhoodVal);
+
+        const cityVal = d.city || d.ciudad;
+        if (cityVal) setFormCity(cityVal);
+
+        const zoneVal = d.zone || d.sector;
+        if (zoneVal) setFormZone(zoneVal);
+
+        const typeVal = d.propertyType;
+        if (typeVal) setFormPropertyType(typeVal);
+
+        const transVal = d.transactionType;
+        if (transVal) setFormTransactionType(transVal === "arriendo" ? "arriendo" : "venta");
+
+        const amobladoVal = d.isAmoblado;
+        if (amobladoVal !== undefined && amobladoVal !== null) setFormIsAmoblado(Boolean(amobladoVal));
         
-        toast.success("Enlace Escaneado", { description: "Datos extraídos con éxito." });
+        toast.success("Enlace Escaneado", { description: "Datos del inmueble extraídos con éxito." });
       }
     },
     onError: (err) => {
