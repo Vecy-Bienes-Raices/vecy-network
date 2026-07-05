@@ -100,6 +100,53 @@ export const propertiesRouter = router({
       return newProperty[0];
     }),
 
+  parseText: protectedProcedure
+    .input(z.object({ text: z.string() }))
+    .mutation(async ({ input }) => {
+      try {
+        const { invokeLLM } = await import("../_core/llm");
+        const prompt = `Actúas como un extractor de datos de inmuebles ultra preciso para Colombia.
+Tu tarea es leer una descripción de un inmueble (generalmente copiada de WhatsApp) y estructurar sus datos en formato JSON.
+
+Sigue estrictamente este esquema para el JSON de salida:
+{
+  "name": "Título corto y llamativo del inmueble (máximo 60 caracteres)",
+  "description": "Resumen claro y bien formateado de la descripción",
+  "propertyType": "apartment" | "house" | "building" | "warehouse" | "farm" | "hotel" | "office" | "land" | "commercial" | "loft" | "consultorio",
+  "transactionType": "venta" | "arriendo" | "arriendo_temporal",
+  "price": "Número entero como string (sin puntos, comas ni símbolos de moneda, ej: '450000000')",
+  "city": "Ciudad del inmueble (ej: 'Bogotá')",
+  "zone": "Zona o localidad (ej: 'Usaquén')",
+  "addressNeighborhood": "Barrio (ej: 'Cedritos')",
+  "bedrooms": número entero o null,
+  "bathrooms": número entero o null,
+  "garages": número entero o null,
+  "stratum": número entero o null,
+  "areaTotal": "Número de metros cuadrados como string o null (solo el número, ej: '85')",
+  "isAmoblado": boolean
+}
+
+Si no encuentras un valor para alguno de los campos numéricos o de texto específicos, déjalo como null o el valor por defecto. El valor de "propertyType" debe ser uno de los permitidos en el esquema.
+Texto a analizar:
+"${input.text}"`;
+
+        const res = await invokeLLM({
+          messages: [
+            { role: "system", content: "Devuelve únicamente un objeto JSON válido según las instrucciones dadas sin preámbulos ni marcas de código markdown." },
+            { role: "user", content: prompt }
+          ],
+          responseFormat: { type: "json_object" }
+        });
+
+        const rawContent = res.choices[0].message.content;
+        console.log("[JANIA-PARSER] Extracción finalizada:", rawContent);
+        return JSON.parse(rawContent);
+      } catch (err: any) {
+        console.error("[JANIA-PARSER] Error parseando texto de inmueble:", err);
+        throw new Error("No se pudo analizar el texto de forma automática.");
+      }
+    }),
+
 
   update: protectedProcedure
     .input(z.object({
