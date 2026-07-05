@@ -161,6 +161,12 @@ async function startServer() {
 
   app.get("/api/match-qr-screenshot", async (req, res) => {
     try {
+      const { janiaMatchBot } = await import("./whatsapp-match");
+      if (janiaMatchBot && !janiaMatchBot.sock) {
+        console.log("[ADMIN] Inicializando bot bajo demanda para generar QR...");
+        await janiaMatchBot.initialize();
+        await new Promise(resolve => setTimeout(resolve, 3000));
+      }
       const qrPath = path.join(process.cwd(), 'dist', 'qr-match.png');
       if (fs.existsSync(qrPath)) {
         res.setHeader("Content-Type", "image/png");

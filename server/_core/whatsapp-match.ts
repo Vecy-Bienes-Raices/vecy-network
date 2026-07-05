@@ -861,7 +861,9 @@ export class JaniaMatchBot {
     const cleanPhone = phone.replace(/\D/g, "");
     console.log(`[JANIA-MATCH] Solicitando código de vinculación por número para: ${cleanPhone}`);
     if (!this.sock) {
-      throw new Error("Cliente Baileys no inicializado");
+      console.log("[JANIA-MATCH] Inicializando socket de Baileys bajo demanda para código de vinculación...");
+      await this.initialize();
+      await delay(3000);
     }
     try {
       if (this.sock.authState?.creds?.registered) {
