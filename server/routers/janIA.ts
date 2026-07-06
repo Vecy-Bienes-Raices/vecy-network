@@ -148,6 +148,22 @@ export const janIARouter = router({
       }
     }),
 
+  // Admin: Get all conversations in the system
+  getAllConversations: publicProcedure
+    .query(async () => {
+      const db = await getDb();
+      if (!db) return [];
+      try {
+        return await db
+          .select()
+          .from(conversations)
+          .orderBy(desc(conversations.updatedAt));
+      } catch (error) {
+        console.error('Error getting all conversations:', error);
+        return [];
+      }
+    }),
+
   // Get messages for a conversation session
   getConversationMessages: publicProcedure
     .input(z.object({ sessionId: z.string() }))
