@@ -245,66 +245,63 @@ function buildIncompleteDataMessage(
     }
   }
 
-  // Si es un requerimiento, NO exigimos áreas, estratos, habitaciones, baños, garajes ni pisos.
-  if (!isRequirement) {
-    // --- Validar Administración para Arriendos ---
-    if (txTypeRaw === "arriendo") {
-      const hasAdminFee = extracted?.adminFee !== undefined && extracted?.adminFee !== null && Number(extracted.adminFee) >= 0;
-      const textHasAdmin = text.toLowerCase().includes("adm") || text.toLowerCase().includes("administra");
-      if (!hasAdminFee && !textHasAdmin) {
-        missingList.push("si el valor de la administración está incluido en el canon o cuánto es");
-      }
+  // --- Validar Administración para Arriendos ---
+  if (txTypeRaw === "arriendo") {
+    const hasAdminFee = extracted?.adminFee !== undefined && extracted?.adminFee !== null && Number(extracted.adminFee) >= 0;
+    const textHasAdmin = text.toLowerCase().includes("adm") || text.toLowerCase().includes("administra");
+    if (!hasAdminFee && !textHasAdmin) {
+      missingList.push("si el valor de la administración está incluido en el canon o cuánto es");
     }
+  }
 
-    const area = Number(extracted?.area || 0);
-    if (!area || area <= 0) {
-      if (propertyName === "finca") {
-        missingList.push("la cantidad de hectáreas o fanegadas");
-      } else {
-        missingList.push("el metraje en metros cuadrados");
-      }
+  const area = Number(extracted?.area || 0);
+  if (!area || area <= 0) {
+    if (propertyName === "finca") {
+      missingList.push("la cantidad de hectáreas o fanegadas");
+    } else {
+      missingList.push("el metraje en metros cuadrados");
     }
+  }
 
-    const stratum = Number(extracted?.stratum || 0);
-    if ((!stratum || stratum <= 0) && propertyName !== "finca" && propertyName !== "lote" && propertyName !== "bodega") {
-      missingList.push("el estrato");
+  const stratum = Number(extracted?.stratum || 0);
+  if ((!stratum || stratum <= 0) && propertyName !== "finca" && propertyName !== "lote" && propertyName !== "bodega") {
+    missingList.push("el estrato");
+  }
+
+  if (propertyName === "apartamento" || propertyName === "casa" || propertyName === "loft" || propertyName === "inmueble") {
+    const bedrooms = Number(extracted?.bedrooms || 0);
+    if (!bedrooms || bedrooms <= 0) {
+      missingList.push("el número de habitaciones");
     }
-
-    if (propertyName === "apartamento" || propertyName === "casa" || propertyName === "loft" || propertyName === "inmueble") {
-      const bedrooms = Number(extracted?.bedrooms || 0);
-      if (!bedrooms || bedrooms <= 0) {
-        missingList.push("el número de habitaciones");
-      }
-      const bathrooms = Number(extracted?.bathrooms || 0);
-      if (!bathrooms || bathrooms <= 0) {
-        missingList.push("el número de baños");
-      }
+    const bathrooms = Number(extracted?.bathrooms || 0);
+    if (!bathrooms || bathrooms <= 0) {
+      missingList.push("el número de baños");
     }
+  }
 
-    const garages = extracted?.garages;
-    if ((garages === undefined || garages === null || garages < 0) && propertyName !== "lote") {
-      missingList.push("el número de garajes/parqueaderos");
+  const garages = extracted?.garages;
+  if ((garages === undefined || garages === null || garages < 0) && propertyName !== "lote") {
+    missingList.push("el número de garajes/parqueaderos");
+  }
+
+  if (propertyName === "apartamento" || propertyName === "oficina" || propertyName === "consultorio") {
+    const floor = extracted?.floorDetail;
+    if (!floor || floor.trim() === "" || floor.toUpperCase() === "NA") {
+      missingList.push("el número de piso");
     }
-
-    if (propertyName === "apartamento" || propertyName === "oficina" || propertyName === "consultorio") {
-      const floor = extracted?.floorDetail;
-      if (!floor || floor.trim() === "" || floor.toUpperCase() === "NA") {
-        missingList.push("el número de piso");
-      }
-      const intExt = extracted?.interiorExterior;
-      if (!intExt || intExt.trim() === "" || intExt.toUpperCase() === "NA") {
-        missingList.push("si queda en el interior o al exterior");
-      }
-    } else if (propertyName === "casa" || propertyName === "edificio") {
-      const floor = extracted?.floorDetail;
-      if (!floor || floor.trim() === "" || floor.toUpperCase() === "NA") {
-        missingList.push("la cantidad de pisos o niveles de la propiedad");
-      }
-    } else if (propertyName === "bodega") {
-      const floor = extracted?.floorDetail;
-      if (!floor || floor.trim() === "" || floor.toUpperCase() === "NA") {
-        missingList.push("la altura útil de la bodega (ej: doble o triple altura)");
-      }
+    const intExt = extracted?.interiorExterior;
+    if (!intExt || intExt.trim() === "" || intExt.toUpperCase() === "NA") {
+      missingList.push("si queda en el interior o al exterior");
+    }
+  } else if (propertyName === "casa" || propertyName === "edificio") {
+    const floor = extracted?.floorDetail;
+    if (!floor || floor.trim() === "" || floor.toUpperCase() === "NA") {
+      missingList.push("la cantidad de pisos o niveles de la propiedad");
+    }
+  } else if (propertyName === "bodega") {
+    const floor = extracted?.floorDetail;
+    if (!floor || floor.trim() === "" || floor.toUpperCase() === "NA") {
+      missingList.push("la altura útil de la bodega (ej: doble o triple altura)");
     }
   }
 
@@ -1150,100 +1147,22 @@ export async function processWhatsAppMessage(
 
     const session = await getPendingSession(userId);
     if (session) {
-      const geoValidation = await validarZona(text, session.extractedData.city || session.extractedData.ciudadDeseada, session.messageToProcess + " " + text);
-      if (geoValidation.isValid) {
-        await deletePendingSession(userId);
-
-        if (session.type === "PROPERTY") {
-          session.extractedData.latitude = geoValidation.latitude || null;
-          session.extractedData.longitude = geoValidation.longitude || null;
-
-          if (geoValidation.isMunicipio) {
-            session.extractedData.city = geoValidation.barrioCanonico;
-            session.extractedData.addressCity = geoValidation.barrioCanonico;
-            session.extractedData.addressLocality = geoValidation.localidad;
-            session.extractedData.zone = geoValidation.barrioCanonico;
-          } else {
-            session.extractedData.city = "Bogotá";
-            session.extractedData.addressCity = "Bogotá";
-            session.extractedData.zone = geoValidation.barrioCanonico;
-            session.extractedData.addressLocality = geoValidation.localidad;
-          }
-          
-          const propertyTitle = session.extractedData.title || `${capitalize(session.extractedData.propertyType || 'inmueble')} en ${session.extractedData.zone || 'Bogotá'} para ${session.extractedData.transactionType || 'venta'}`;
-          const saved = await saveProperty({
-            ...session.extractedData,
-            name: propertyTitle,
-            price: String(session.extractedData.price || 0),
-            areaTotal: String(session.extractedData.area || 0),
-            idUsuarioWhatsapp: rawPhone,
-            rawText: session.messageToProcess + " (Ubicación completada: " + text + ")",
-            amenities: { gives: session.extractedData.gives, wants: session.extractedData.wants, isCollaborativePool: session.extractedData.isCollaborativePool }
-          }, userId, realName, session.imageBuffer);
-
-          if (saved) {
-            const matches = await findMatchesForProperty(saved.id);
-            const matchDetails = matches.length > 0
-              ? await handleDetectedMatches(matches, true, saved, userId, realName)
-              : { response: "", mentions: [], extraDMs: [] };
-
-            return {
-              classification: "INMUEBLE",
-              extractedData: session.extractedData,
-              shouldSendDM: true,
-              dmResponse: `¡Excelente, ${n}! 🎉 Acabo de guardar tu oferta en la base de datos de VECY con el barrio *${geoValidation.barrioCanonico}*. Tu publicación ya está activa y en espera de coincidencias. Te notificaré de inmediato por aquí en privado en cuanto detecte un MATCH comercial. 🤝🚀`,
-              response: matchDetails.response,
-              mentions: matchDetails.mentions,
-              extraDMs: matchDetails.extraDMs,
-              sendReputationHook: matchDetails.sendReputationHook
-            };
-          }
-        } else {
-          // REQUIREMENT
-          if (geoValidation.isMunicipio) {
-            session.extractedData.ciudadDeseada = geoValidation.barrioCanonico;
-            session.extractedData.addressCity = geoValidation.barrioCanonico;
-            session.extractedData.addressLocality = geoValidation.localidad;
-            session.extractedData.zonaDeseada = geoValidation.barrioCanonico;
-          } else {
-            session.extractedData.ciudadDeseada = "Bogotá";
-            session.extractedData.addressCity = "Bogotá";
-            session.extractedData.zonaDeseada = geoValidation.barrioCanonico;
-            session.extractedData.addressLocality = geoValidation.localidad;
-          }
-
-          const reqTitle = session.extractedData.title || `Requerimiento de ${session.extractedData.propertyType || 'inmueble'} en ${session.extractedData.zonaDeseada || 'Bogotá'} para ${session.extractedData.transactionType || 'venta'}`;
-          const saved = await saveRequirement({
-            ...session.extractedData,
-            name: reqTitle,
-            tipoInmuebleDeseado: session.extractedData.propertyType,
-            tipoNegocioDeseado: session.extractedData.transactionType,
-            zonaDeseada: session.extractedData.zonaDeseada,
-            presupuestoMax: String(session.extractedData.price || 0),
-            idUsuarioWhatsapp: rawPhone,
-            rawText: session.messageToProcess + " (Ubicación completada: " + text + ")",
-            caracteristicasDeseadas: { gives: session.extractedData.gives, wants: session.extractedData.wants }
-          }, userId, realName);
-
-          if (saved) {
-            const matches = await findMatchesForRequirement(saved.id);
-            const matchDetails = matches.length > 0
-              ? await handleDetectedMatches(matches, false, saved, userId, realName)
-              : { response: "", mentions: [], extraDMs: [] };
-
-            return {
-              classification: "REQUERIMIENTO",
-              extractedData: session.extractedData,
-              shouldSendDM: true,
-              dmResponse: `¡Excelente, ${n}! 🎉 Acabo de guardar tu requerimiento en la base de datos de VECY con el barrio *${geoValidation.barrioCanonico}*. Tu búsqueda ya está activa y en espera de coincidencias. Te notificaré de inmediato por aquí en privado en cuanto detecte un MATCH comercial. 🤝🚀`,
-              response: matchDetails.response,
-              mentions: matchDetails.mentions,
-              extraDMs: matchDetails.extraDMs,
-              sendReputationHook: matchDetails.sendReputationHook
-            };
-          }
-        }
-      }
+      const combinedText = session.messageToProcess + " \n[COMPLEMENTO]: " + text;
+      await deletePendingSession(userId);
+      console.log(`[JanIA-PendingSession] Resolviendo sesión pendiente para ${userId}. Combinando textos y re-procesando...`);
+      return await processWhatsAppMessage(
+        combinedText,
+        userId,
+        userName,
+        hasMedia || !!session.imageBuffer,
+        scrapedData,
+        audioUrl,
+        imageBuffer || session.imageBuffer,
+        isGroup,
+        pdfBuffer,
+        pdfMimeType,
+        groupJid
+      );
     }
 
     let messageToProcess = text;
@@ -1439,26 +1358,27 @@ Por lo tanto, DEBES hacer lo siguiente:
       const hasMissingZone = !zone || zone.trim() === "" || zone.toLowerCase() === "na";
       const hasMissingPrice = !price || price <= 0;
 
-      let isMissing = false;
-      if (isReq) {
-        // Requerimientos: Solo exigen ciudad, barrio/sector y presupuesto
-        isMissing = hasMissingCity || hasMissingZone || hasMissingPrice;
-      } else {
-        // Propiedades: Exigen ciudad, barrio/sector, precio, metraje y habitaciones/baños si aplica
-        const area = Number(extracted?.area || 0);
-        const hasMissingArea = !area || area <= 0;
+      const area = Number(extracted?.area || 0);
+      const hasMissingArea = !area || area <= 0;
 
-        let hasMissingBedrooms = false;
-        let hasMissingBathrooms = false;
-        if (propertyName === "apartamento" || propertyName === "casa" || propertyName === "loft" || propertyName === "inmueble") {
-          const bedrooms = Number(extracted?.bedrooms || 0);
-          hasMissingBedrooms = !bedrooms || bedrooms <= 0;
-          const bathrooms = Number(extracted?.bathrooms || 0);
-          hasMissingBathrooms = !bathrooms || bathrooms <= 0;
-        }
+      let hasMissingBedrooms = false;
+      let hasMissingBathrooms = false;
+      let hasMissingStratum = false;
 
-        isMissing = hasMissingCity || hasMissingZone || hasMissingPrice || hasMissingArea || hasMissingBedrooms || hasMissingBathrooms;
+      if (propertyName === "apartamento" || propertyName === "casa" || propertyName === "loft" || propertyName === "inmueble") {
+        const bedrooms = Number(extracted?.bedrooms || 0);
+        hasMissingBedrooms = !bedrooms || bedrooms <= 0;
+        const bathrooms = Number(extracted?.bathrooms || 0);
+        hasMissingBathrooms = !bathrooms || bathrooms <= 0;
+
+        const stratum = Number(extracted?.stratum || 0);
+        hasMissingStratum = !stratum || stratum <= 0;
+      } else if (propertyName !== "lote" && propertyName !== "finca") {
+        const stratum = Number(extracted?.stratum || 0);
+        hasMissingStratum = !stratum || stratum <= 0;
       }
+
+      const isMissing = hasMissingCity || hasMissingZone || hasMissingPrice || hasMissingArea || hasMissingBedrooms || hasMissingBathrooms || hasMissingStratum;
 
       if (isMissing) {
         isLLMIncomplete = true;
