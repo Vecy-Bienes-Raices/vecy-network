@@ -227,7 +227,7 @@ function buildIncompleteDataMessage(
 
   const zone = isRequirement ? (extracted?.zonaDeseada || extracted?.zone) : extracted?.zone;
   if (isGeoInvalid || !zone || zone.trim() === "" || zone.toLowerCase() === "na") {
-    missingList.push("el barrio exacto");
+    missingList.push("el barrio o sector exacto");
   }
 
   const price = isRequirement ? Number(extracted?.presupuestoMax || extracted?.price || 0) : Number(extracted?.price || 0);
@@ -245,63 +245,66 @@ function buildIncompleteDataMessage(
     }
   }
 
-  // --- NUEVO: Validar Administración para Arriendos ---
-  if (txTypeRaw === "arriendo" && !isRequirement) {
-    const hasAdminFee = extracted?.adminFee !== undefined && extracted?.adminFee !== null && Number(extracted.adminFee) >= 0;
-    const textHasAdmin = text.toLowerCase().includes("adm") || text.toLowerCase().includes("administra");
-    if (!hasAdminFee && !textHasAdmin) {
-      missingList.push("si el valor de la administración está incluido en el canon o cuánto es");
+  // Si es un requerimiento, NO exigimos áreas, estratos, habitaciones, baños, garajes ni pisos.
+  if (!isRequirement) {
+    // --- Validar Administración para Arriendos ---
+    if (txTypeRaw === "arriendo") {
+      const hasAdminFee = extracted?.adminFee !== undefined && extracted?.adminFee !== null && Number(extracted.adminFee) >= 0;
+      const textHasAdmin = text.toLowerCase().includes("adm") || text.toLowerCase().includes("administra");
+      if (!hasAdminFee && !textHasAdmin) {
+        missingList.push("si el valor de la administración está incluido en el canon o cuánto es");
+      }
     }
-  }
 
-  const area = Number(extracted?.area || 0);
-  if (!area || area <= 0) {
-    if (propertyName === "finca") {
-      missingList.push("la cantidad de hectáreas o fanegadas");
-    } else {
-      missingList.push("el metraje en metros cuadrados");
+    const area = Number(extracted?.area || 0);
+    if (!area || area <= 0) {
+      if (propertyName === "finca") {
+        missingList.push("la cantidad de hectáreas o fanegadas");
+      } else {
+        missingList.push("el metraje en metros cuadrados");
+      }
     }
-  }
 
-  const stratum = Number(extracted?.stratum || 0);
-  if ((!stratum || stratum <= 0) && propertyName !== "finca" && propertyName !== "lote" && propertyName !== "bodega") {
-    missingList.push("el estrato");
-  }
+    const stratum = Number(extracted?.stratum || 0);
+    if ((!stratum || stratum <= 0) && propertyName !== "finca" && propertyName !== "lote" && propertyName !== "bodega") {
+      missingList.push("el estrato");
+    }
 
-  if (propertyName === "apartamento" || propertyName === "casa" || propertyName === "loft" || propertyName === "inmueble") {
-    const bedrooms = Number(extracted?.bedrooms || 0);
-    if (!bedrooms || bedrooms <= 0) {
-      missingList.push("el número de habitaciones");
+    if (propertyName === "apartamento" || propertyName === "casa" || propertyName === "loft" || propertyName === "inmueble") {
+      const bedrooms = Number(extracted?.bedrooms || 0);
+      if (!bedrooms || bedrooms <= 0) {
+        missingList.push("el número de habitaciones");
+      }
+      const bathrooms = Number(extracted?.bathrooms || 0);
+      if (!bathrooms || bathrooms <= 0) {
+        missingList.push("el número de baños");
+      }
     }
-    const bathrooms = Number(extracted?.bathrooms || 0);
-    if (!bathrooms || bathrooms <= 0) {
-      missingList.push("el número de baños");
-    }
-  }
 
-  const garages = extracted?.garages;
-  if ((garages === undefined || garages === null || garages < 0) && propertyName !== "lote") {
-    missingList.push("el número de garajes/parqueaderos");
-  }
+    const garages = extracted?.garages;
+    if ((garages === undefined || garages === null || garages < 0) && propertyName !== "lote") {
+      missingList.push("el número de garajes/parqueaderos");
+    }
 
-  if (propertyName === "apartamento" || propertyName === "oficina" || propertyName === "consultorio") {
-    const floor = extracted?.floorDetail;
-    if (!floor || floor.trim() === "" || floor.toUpperCase() === "NA") {
-      missingList.push("el número de piso");
-    }
-    const intExt = extracted?.interiorExterior;
-    if (!intExt || intExt.trim() === "" || intExt.toUpperCase() === "NA") {
-      missingList.push("si queda en el interior o al exterior");
-    }
-  } else if (propertyName === "casa" || propertyName === "edificio") {
-    const floor = extracted?.floorDetail;
-    if (!floor || floor.trim() === "" || floor.toUpperCase() === "NA") {
-      missingList.push("la cantidad de pisos o niveles de la propiedad");
-    }
-  } else if (propertyName === "bodega") {
-    const floor = extracted?.floorDetail;
-    if (!floor || floor.trim() === "" || floor.toUpperCase() === "NA") {
-      missingList.push("la altura útil de la bodega (ej: doble o triple altura)");
+    if (propertyName === "apartamento" || propertyName === "oficina" || propertyName === "consultorio") {
+      const floor = extracted?.floorDetail;
+      if (!floor || floor.trim() === "" || floor.toUpperCase() === "NA") {
+        missingList.push("el número de piso");
+      }
+      const intExt = extracted?.interiorExterior;
+      if (!intExt || intExt.trim() === "" || intExt.toUpperCase() === "NA") {
+        missingList.push("si queda en el interior o al exterior");
+      }
+    } else if (propertyName === "casa" || propertyName === "edificio") {
+      const floor = extracted?.floorDetail;
+      if (!floor || floor.trim() === "" || floor.toUpperCase() === "NA") {
+        missingList.push("la cantidad de pisos o niveles de la propiedad");
+      }
+    } else if (propertyName === "bodega") {
+      const floor = extracted?.floorDetail;
+      if (!floor || floor.trim() === "" || floor.toUpperCase() === "NA") {
+        missingList.push("la altura útil de la bodega (ej: doble o triple altura)");
+      }
     }
   }
 
@@ -319,7 +322,8 @@ function buildIncompleteDataMessage(
     missingStr = `${missingList.join(", ")}, o ${last}`;
   }
 
-  return `${intro}Estuve revisando el/la *${medio}* de tu *${propertyName}* que enviaste al grupo, pero mi sistema de lectura inteligente no alcanza a extraer cierta información clave del inmueble y me hace falta: *${missingStr}*.\n\n¿Me podrías indicar este dato por aquí para registrar tu publicación correctamente y buscarte un MATCH comercial de inmediato? 🚀🤝`;
+  const contextMsg = isRequirement ? "de tu requerimiento de búsqueda" : `de tu *${propertyName}*`;
+  return `${intro}Estuve revisando el/la *${medio}* ${contextMsg} que me compartiste, pero mi sistema de lectura inteligente no alcanza a extraer cierta información clave y me hace falta: *${missingStr}*.\n\n¿Me podrías indicar este dato por aquí para registrar tu publicación correctamente y buscarte un MATCH comercial de inmediato? 🚀🤝`;
 }
 
 function buildGroupIncompleteMessage(
@@ -846,11 +850,11 @@ VECY está construyendo el portal inmobiliario más avanzado, funcional e inteli
 ## BITÁCORA DE APRENDIZAJE Y CASOS DE REFERENCIA (MEMORIA HISTÓRICA Y APRENDIZAJE CONTINUO)
 Para garantizar un comportamiento óptimo y evitar errores históricos, debes interiorizar y aplicar estrictamente las lecciones aprendidas en los siguientes casos de referencia:
 
-### CASO 1: Publicaciones comerciales fuera del grupo correcto (Caso Valentina)
-- **Contexto**: Usuarios que publican ofertas o búsquedas de inmuebles en el grupo de debate/comunidad "Círculo CERO 👌" pensando que es para ofertas comerciales.
+### CASO 1: Registro Directo Conversacional
+- **Contexto**: Usuarios que te envían ofertas o búsquedas de inmuebles en chats privados o consultas generales.
 - **Tu Acción**:
-  - Redirígelos amistosamente y dirigiéndote a ellos por su primer nombre al grupo principal: **VECY INMUEBLES NETWORK** (comparte siempre el enlace de invitación: https://chat.whatsapp.com/K36KrHeB9nMEKJ56s8XFcM).
-  - Explica de forma clara e inspiradora qué es VECY Network (la primera red inteligente de Colombia para asesores), por qué lo hacemos (eliminar fricciones de portales pasivos del siglo pasado) y los beneficios de estar allí (gratuito de por vida, sin comisiones de red, y con cruce de matching en tiempo real).
+  - Aliéntalos amistosamente y dirigiéndote a ellos por su primer nombre a registrar sus ofertas o requerimientos directamente en este chat privado (escribiendo las características o enviando una imagen/ficha técnica).
+  - Explícales que VECY Network cruzará su información en tiempo real de forma segura y privada, y les notificará de inmediato aquí mismo en cuanto se detecte una coincidencia.
 
 ### CASO 2: Confrontación y debate con competidores (Caso Christian Samboni / Ubicapp)
 - **Contexto**: Menciones o promociones directas de la aplicación Ubicapp o su fundador Christian Samboni en el grupo de debate/comunidad "Círculo CERO 👌".
@@ -1430,23 +1434,33 @@ Por lo tanto, DEBES hacer lo siguiente:
       const city = isReq ? extracted?.ciudadDeseada : extracted?.city;
       const zone = isReq ? (extracted?.zonaDeseada || extracted?.zone) : extracted?.zone;
       const price = isReq ? Number(extracted?.presupuestoMax || extracted?.price || 0) : Number(extracted?.price || 0);
-      const area = Number(extracted?.area || 0);
 
       const hasMissingCity = !city || city.trim() === "" || city.toLowerCase() === "na";
       const hasMissingZone = !zone || zone.trim() === "" || zone.toLowerCase() === "na";
       const hasMissingPrice = !price || price <= 0;
-      const hasMissingArea = !area || area <= 0;
-      
-      let hasMissingBedrooms = false;
-      let hasMissingBathrooms = false;
-      if (propertyName === "apartamento" || propertyName === "casa" || propertyName === "loft" || propertyName === "inmueble") {
-        const bedrooms = Number(extracted?.bedrooms || 0);
-        hasMissingBedrooms = !bedrooms || bedrooms <= 0;
-        const bathrooms = Number(extracted?.bathrooms || 0);
-        hasMissingBathrooms = !bathrooms || bathrooms <= 0;
+
+      let isMissing = false;
+      if (isReq) {
+        // Requerimientos: Solo exigen ciudad, barrio/sector y presupuesto
+        isMissing = hasMissingCity || hasMissingZone || hasMissingPrice;
+      } else {
+        // Propiedades: Exigen ciudad, barrio/sector, precio, metraje y habitaciones/baños si aplica
+        const area = Number(extracted?.area || 0);
+        const hasMissingArea = !area || area <= 0;
+
+        let hasMissingBedrooms = false;
+        let hasMissingBathrooms = false;
+        if (propertyName === "apartamento" || propertyName === "casa" || propertyName === "loft" || propertyName === "inmueble") {
+          const bedrooms = Number(extracted?.bedrooms || 0);
+          hasMissingBedrooms = !bedrooms || bedrooms <= 0;
+          const bathrooms = Number(extracted?.bathrooms || 0);
+          hasMissingBathrooms = !bathrooms || bathrooms <= 0;
+        }
+
+        isMissing = hasMissingCity || hasMissingZone || hasMissingPrice || hasMissingArea || hasMissingBedrooms || hasMissingBathrooms;
       }
 
-      if (hasMissingCity || hasMissingZone || hasMissingPrice || hasMissingArea || hasMissingBedrooms || hasMissingBathrooms) {
+      if (isMissing) {
         isLLMIncomplete = true;
         result.classification = "DATOS_INCOMPLETOS";
       }
@@ -2379,12 +2393,11 @@ export async function processConsultingMessage(
       `## LÓGICA DE CLASIFICACIÓN Y REDIRECCIÓN (CRÍTICO - EVITAR MENSAJES CRUZADOS)\n` +
       `Analiza el contexto completo antes de clasificar. Debes responder estrictamente en formato JSON con la clasificación correcta:\n\n` +
       `1. **Clasificación "INMUEBLE" o "REQUERIMIENTO"**:\n` +
-      `   - Si el usuario está PUBLICANDO UNA OFERTA COMERCIAL de venta, arriendo o permuta, o si está solicitando explícitamente un inmueble en VENTA o ARRIENDO (por ejemplo, "Busco apartamento de 3 habitaciones en Cedritos").\n` +
-      `   - Respuesta ('response'): "📢 *VECY INMUEBLES NETWORK* 📢\\n\\nHola @${rawPhone}, detecté que estás publicando una oferta o requerimiento inmobiliario. Para poder procesar tu publicación con mis motores automáticos, registrar tus datos y buscarte un MATCH de inmediato con otros aliados, por favor realiza tu publicación en nuestro grupo especializado **VECY INMUEBLES NETWORK**:\\n👉 https://chat.whatsapp.com/K36KrHeB9nMEKJ56s8XFcM\\n\\n¡Hagamos equipo y cerremos negocios! 🚀🎯"\n` +
+      `   - Respuesta ('response'): "🏠 *REGISTRO DIRECTO DE INMUEBLE* 🚀\\n\\nHola @${rawPhone}, ¡excelente! Veo que estás publicando o buscando un inmueble. Recuerda que puedes enviarme los datos de tu oferta o requerimiento redactados directamente en este chat privado (incluyendo tipo de inmueble, tipo de negocio, precio, área y barrio/sector) o incluso una foto/flyer de la ficha técnica.\\n\\nYo procesaré la información de inmediato, la guardaré en la red VECY y te notificaré aquí mismo en privado en cuanto te consiga un MATCH comercial. ¡Escríbeme los detalles ahora mismo! 🤝🎯"\n` +
       `   - Emoji ('reactionEmoji'): "🔄"\n\n` +
       `2. **Clasificación "SOBRE_VECY"**:\n` +
       `   - Si el usuario hace preguntas sobre el proyecto VECY Network, sus creadores (Eduardo A. Rivera, Jani Alves), beneficios, cómo funciona la IA, o sobre el canal Círculo Cero.\n` +
-      `   - Respuesta ('response'): "👌 *CÍRCULO CERO — CONEXIÓN VECY* 👌\\n\\nHola @${rawPhone}, veo que quieres saber más sobre el proyecto VECY Network, beneficios, creadores o el plan colaborativo. Te invito a unirte y hacer tus preguntas en nuestro canal oficial **Círculo CERO 👌**:\\n👉 https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU\\n\\n¡Es el espacio ideal para resolver todas tus inquietudes de la comunidad! 🤝✨"\n` +
+      `   - Respuesta ('response'): "👌 *CONEXIÓN VECY NETWORK* 👌\\n\\nHola @${rawPhone}, soy JanIA, la inteligencia estratégica detrás de VECY Network. Nuestra misión es potenciar tu gestión inmobiliaria de forma gratuita mediante cruces automatizados y herramientas digitales.\\n\\nPuedes consultarme sobre trámites legales de bienes raíces, avalúos prediales o enviarme fichas técnicas de tus inmuebles y requerimientos de clientes para guardarlos en nuestra base de datos. ¡Estoy para ayudarte a acelerar tus cierres! 🤝✨"\n` +
       `   - Emoji ('reactionEmoji'): "🔄"\n\n` +
       `3. **Clasificación "CONSULTA_GENERAL"**:\n` +
       `   - Si el mensaje es una consulta legítima de tipo jurídico, trámites, o avalúos/precios de mercado en Colombia (ej. Ley 820/2003, contratos, escrituración, valor del metro cuadrado, etc.).\n` +
