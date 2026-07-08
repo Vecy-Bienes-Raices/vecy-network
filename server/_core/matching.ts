@@ -170,6 +170,14 @@ export function matchesGeography(
 }
 
 export function calcularScoreMatch(requirement: any, property: any): number {
+  // 0. Si el requerimiento está vacío (sin presupuesto, sin metraje y sin zona parsed), se descarta de inmediato
+  const reqBudget = parseFloat(requirement.presupuestoMax || "0");
+  const reqArea = parseFloat(requirement.areaMin || "0");
+  const reqZoneText = requirement.zonaDeseada || requirement.addressNeighborhood || "";
+  if (reqBudget <= 0 && reqArea <= 0 && !reqZoneText) {
+    return 0; // Evita generar falsos matches masivos por datos estructurados vacíos en la DB
+  }
+
   // Hard mismatches
   // 1. Tipo de inmueble debe ser idéntico
   const reqType = requirement.tipoInmuebleDeseado || requirement.propertyType;
@@ -217,30 +225,30 @@ export function calcularScoreMatch(requirement: any, property: any): number {
     return 0; // Hard geographic mismatch
   }
 
-  // 4. Habitaciones exactas
+  // 4. Habitaciones mínimas
   const reqBedrooms = requirement.habitacionesMin;
   if (reqBedrooms !== null && reqBedrooms !== undefined && reqBedrooms !== "NA" && String(reqBedrooms).trim() !== "") {
     const pBedrooms = property.bedrooms !== null && property.bedrooms !== undefined ? Number(property.bedrooms) : 0;
-    if (pBedrooms !== Number(reqBedrooms)) {
-      return 0; // Hard mismatch: exact bedrooms required
+    if (pBedrooms < Number(reqBedrooms)) {
+      return 0; // Hard mismatch: minimum bedrooms not met
     }
   }
 
-  // 5. Baños exactos
+  // 5. Baños mínimos
   const reqBathrooms = requirement.banosMin;
   if (reqBathrooms !== null && reqBathrooms !== undefined && reqBathrooms !== "NA" && String(reqBathrooms).trim() !== "") {
     const pBathrooms = property.bathrooms !== null && property.bathrooms !== undefined ? Number(property.bathrooms) : 0;
-    if (pBathrooms !== Number(reqBathrooms)) {
-      return 0; // Hard mismatch: exact bathrooms required
+    if (pBathrooms < Number(reqBathrooms)) {
+      return 0; // Hard mismatch: minimum bathrooms not met
     }
   }
 
-  // 6. Parqueaderos exactos
+  // 6. Parqueaderos mínimos
   const reqGarages = requirement.parqueaderosMin;
   if (reqGarages !== null && reqGarages !== undefined && reqGarages !== "NA" && String(reqGarages).trim() !== "") {
     const pGarages = property.garages !== null && property.garages !== undefined ? Number(property.garages) : 0;
-    if (pGarages !== Number(reqGarages)) {
-      return 0; // Hard mismatch: exact garages required
+    if (pGarages < Number(reqGarages)) {
+      return 0; // Hard mismatch: minimum garages not met
     }
   }
 
@@ -328,8 +336,8 @@ export function calcularScoreMatch(requirement: any, property: any): number {
   const areaMin = parseFloat(requirement.areaMin || "0");
   const areaProp = parseFloat(property.areaTotal || property.areaPrivate || "0");
   if (areaMin > 0 && areaProp > 0) {
-    // Si el área es menor que el mínimo, o supera el 30% por encima, es un Hard Mismatch
-    if (areaProp < areaMin || areaProp > areaMin * 1.30) {
+    // Si el área es menor que el mínimo, es descarte. Pero si supera por arriba, NO se descarta.
+    if (areaProp < areaMin) {
       return 0;
     }
     maxPoints += 20;
@@ -345,7 +353,7 @@ export function calcularScoreMatch(requirement: any, property: any): number {
   if (reqBedrooms !== null && reqBedrooms !== undefined && reqBedrooms !== "NA" && String(reqBedrooms).trim() !== "") {
     maxPoints += 7;
     const pBedrooms = property.bedrooms !== null && property.bedrooms !== undefined ? Number(property.bedrooms) : 0;
-    if (pBedrooms === Number(reqBedrooms)) {
+    if (pBedrooms >= Number(reqBedrooms)) {
       totalPoints += 7;
     }
   }
@@ -353,7 +361,7 @@ export function calcularScoreMatch(requirement: any, property: any): number {
   if (reqBathrooms !== null && reqBathrooms !== undefined && reqBathrooms !== "NA" && String(reqBathrooms).trim() !== "") {
     maxPoints += 5;
     const pBathrooms = property.bathrooms !== null && property.bathrooms !== undefined ? Number(property.bathrooms) : 0;
-    if (pBathrooms === Number(reqBathrooms)) {
+    if (pBathrooms >= Number(reqBathrooms)) {
       totalPoints += 5;
     }
   }
@@ -361,7 +369,7 @@ export function calcularScoreMatch(requirement: any, property: any): number {
   if (reqGarages !== null && reqGarages !== undefined && reqGarages !== "NA" && String(reqGarages).trim() !== "") {
     maxPoints += 5;
     const pGarages = property.garages !== null && property.garages !== undefined ? Number(property.garages) : 0;
-    if (pGarages === Number(reqGarages)) {
+    if (pGarages >= Number(reqGarages)) {
       totalPoints += 5;
     }
   }

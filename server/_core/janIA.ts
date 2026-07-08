@@ -8,7 +8,7 @@ import { properties, requirements, users, propertyImages, InsertProperty, Insert
 import { findMatchesForProperty, findMatchesForRequirement } from "./matching";
 import { validarZona, normalizarTextoGeografico } from "./geography";
 import { transcribeAudio } from "./voiceTranscription";
-import { eq, and, sql, gte, desc } from "drizzle-orm";
+import { eq, and, sql, gte, desc, or, isNotNull } from "drizzle-orm";
 import { storagePut } from "../storage";
 import fs from "fs";
 import path from "path";
@@ -1236,11 +1236,12 @@ export async function processWhatsAppMessage(
         const startOfToday = new Date();
         startOfToday.setHours(0, 0, 0, 0);
 
-        const [totalPropsResult] = await db.select({ count: sql<number>`count(*)` }).from(properties);
+        const isRealProperty = or(isNotNull(properties.idUsuarioWhatsapp), isNotNull(properties.agentId));
+        const [totalPropsResult] = await db.select({ count: sql<number>`count(*)` }).from(properties).where(isRealProperty);
         const [totalReqsResult] = await db.select({ count: sql<number>`count(*)` }).from(requirements);
         const [totalMatchesResult] = await db.select({ count: sql<number>`count(*)` }).from(propertyMatches);
 
-        const [todayPropsResult] = await db.select({ count: sql<number>`count(*)` }).from(properties).where(gte(properties.createdAt, startOfToday));
+        const [todayPropsResult] = await db.select({ count: sql<number>`count(*)` }).from(properties).where(and(gte(properties.createdAt, startOfToday), isRealProperty));
         const [todayReqsResult] = await db.select({ count: sql<number>`count(*)` }).from(requirements).where(gte(requirements.createdAt, startOfToday));
         const [todayMatchesResult] = await db.select({ count: sql<number>`count(*)` }).from(propertyMatches).where(gte(propertyMatches.createdAt, startOfToday));
 
