@@ -229,15 +229,12 @@ function buildIncompleteDataMessage(
   pdfBuffer: any,
   extracted: any,
   isGeoInvalid: boolean,
-  intro: string
+  intro: string,
+  firstName: string
 ): string {
-  let medio = "publicación escrita";
-  if (pdfBuffer) {
-    medio = "documento PDF";
-  } else if (imageBuffer || (hasMedia && !pdfBuffer)) {
-    medio = "flyer o imagen comercial";
-  } else if (scrapedData && scrapedData.length > 0) {
-    medio = "enlace o URL";
+  const isSocialMedia = /instagram\.com|facebook\.com|fb\.watch|tiktok\.com|youtube\.com|youtu\.be/i.test(text);
+  if (isSocialMedia) {
+    return `Oye *${firstName}*, veo que compartiste un enlace de redes sociales o video comercial. 📲 Por políticas de la red VECY y seguridad de datos, no puedo leer publicaciones de Instagram, Facebook, TikTok o YouTube.\n\nPero ¡no te preocupes! Puedes enviarme por aquí mismo los detalles escritos (área, precio, ubicación, habitaciones, etc.), la imagen del flyer comercial o un archivo en PDF de la propiedad y lo procesaré de inmediato. 😉🤝`;
   }
 
   const propTypeRaw = (extracted?.propertyType || extracted?.tipoInmuebleDeseado || "inmueble").toLowerCase();
@@ -255,109 +252,96 @@ function buildIncompleteDataMessage(
   const isRequirement = text.toLowerCase().includes("busco") || text.toLowerCase().includes("necesito") || text.toLowerCase().includes("requiero") || !!extracted?.tipoInmuebleDeseado;
   const txTypeRaw = (extracted?.transactionType || extracted?.tipoNegocioDeseado || "venta").toLowerCase();
 
-  const missingList: string[] = [];
-
+  // Recolectar campos faltantes en orden de prioridad
   const city = isRequirement ? extracted?.ciudadDeseada : extracted?.city;
   if (!city || city.trim() === "" || city.toLowerCase() === "na") {
-    missingList.push("la ciudad");
+    return isRequirement
+      ? `Oye *${firstName}*, ¿en qué ciudad estás buscando el/la *${propertyName}*? 📍`
+      : `Oye *${firstName}*, ¿en qué ciudad queda ubicado el/la *${propertyName}* que quieres publicar? 📍`;
   }
 
   const zone = isRequirement ? (extracted?.zonaDeseada || extracted?.zone) : extracted?.zone;
   if (isGeoInvalid || !zone || zone.trim() === "" || zone.toLowerCase() === "na") {
-    missingList.push("el barrio o sector exacto");
+    return isRequirement
+      ? `Oye *${firstName}*, ¿en qué barrio o sector de *${city}* buscas el/la *${propertyName}*? 🏡 (Si tienes varias opciones de barrio, escríbelas separadas por comas)`
+      : `Oye *${firstName}*, ¿en qué barrio o sector exacto de *${city}* queda el/la *${propertyName}*? 🏡`;
   }
 
   const price = isRequirement ? Number(extracted?.presupuestoMax || extracted?.price || 0) : Number(extracted?.price || 0);
   if (!price || price <= 0) {
     if (isRequirement) {
-      missingList.push("el presupuesto máximo");
+      return `Oye *${firstName}*, ¿cuál es tu presupuesto máximo para ${txTypeRaw === "arriendo" ? "arrendar" : "comprar"} el/la *${propertyName}*? 💰`;
     } else {
-      if (txTypeRaw === "arriendo") {
-        missingList.push("el precio de arriendo");
-      } else if (txTypeRaw === "permuta") {
-        missingList.push("el valor estimado de la permuta");
-      } else {
-        missingList.push("el precio de venta");
-      }
+      return `Oye *${firstName}*, ¿cuál es el precio de ${txTypeRaw === "arriendo" ? "arriendo mensual" : "venta"} del/la *${propertyName}*? 💰`;
     }
   }
 
-  // --- Validar Administración para Arriendos ---
   if (txTypeRaw === "arriendo") {
     const hasAdminFee = extracted?.adminFee !== undefined && extracted?.adminFee !== null && Number(extracted.adminFee) >= 0;
     const textHasAdmin = text.toLowerCase().includes("adm") || text.toLowerCase().includes("administra");
     if (!hasAdminFee && !textHasAdmin) {
-      missingList.push("si el valor de la administración está incluido en el canon o cuánto es");
+      return `Oye *${firstName}*, ¿el valor de la administración está incluido en el arriendo del/la *${propertyName}* o cuánto cuesta por separado? 📋`;
     }
   }
 
   const area = Number(extracted?.area || 0);
   if (!area || area <= 0) {
     if (propertyName === "finca") {
-      missingList.push("la cantidad de hectáreas o fanegadas");
+      return `Oye *${firstName}*, ¿cuántas hectáreas o fanegadas de extensión tiene la finca? 📐`;
     } else {
-      missingList.push("el metraje en metros cuadrados");
+      return `Oye *${firstName}*, ¿cuál es el área o metraje en metros cuadrados del/la *${propertyName}*? 📐`;
     }
   }
 
   const stratum = Number(extracted?.stratum || 0);
   if ((!stratum || stratum <= 0) && propertyName !== "finca" && propertyName !== "lote" && propertyName !== "bodega") {
-    missingList.push("el estrato");
+    return `Oye *${firstName}*, ¿de qué estrato es el/la *${propertyName}*? 🏢`;
   }
 
   if (propertyName === "apartamento" || propertyName === "casa" || propertyName === "loft" || propertyName === "inmueble") {
     const bedrooms = Number(extracted?.bedrooms || 0);
     if (!bedrooms || bedrooms <= 0) {
-      missingList.push("el número de habitaciones");
+      return isRequirement
+        ? `Oye *${firstName}*, ¿podrías repetirme de cuántas habitaciones lo necesitas? 🛏️`
+        : `Oye *${firstName}*, ¿podrías repetirme de cuántas habitaciones es? 🛏️`;
     }
     const bathrooms = Number(extracted?.bathrooms || 0);
     if (!bathrooms || bathrooms <= 0) {
-      missingList.push("el número de baños");
+      return isRequirement
+        ? `Oye *${firstName}*, ¿de cuántos baños lo requieres? 🚽`
+        : `Oye *${firstName}*, ¿de cuántos baños dispone el/la *${propertyName}*? 🚽`;
     }
   }
 
   const garages = extracted?.garages;
   if ((garages === undefined || garages === null || garages < 0) && propertyName !== "lote") {
-    missingList.push("el número de garajes/parqueaderos");
+    return isRequirement
+      ? `Oye *${firstName}*, ¿cuántos parqueaderos o garajes necesitas como mínimo? 🚗`
+      : `Oye *${firstName}*, ¿de cuántos garajes o parqueaderos dispone el/la *${propertyName}*? 🚗`;
   }
 
   if (propertyName === "apartamento" || propertyName === "oficina" || propertyName === "consultorio") {
     const floor = extracted?.floorDetail;
     if (!floor || floor.trim() === "" || floor.toUpperCase() === "NA") {
-      missingList.push("el número de piso");
+      return `Oye *${firstName}*, ¿en qué piso está ubicado el/la *${propertyName}*? 🏢`;
     }
     const intExt = extracted?.interiorExterior;
     if (!intExt || intExt.trim() === "" || intExt.toUpperCase() === "NA") {
-      missingList.push("si queda en el interior o al exterior");
+      return `Oye *${firstName}*, ¿la ubicación del/la *${propertyName}* es interior o exterior? 🏙️`;
     }
   } else if (propertyName === "casa" || propertyName === "edificio") {
     const floor = extracted?.floorDetail;
     if (!floor || floor.trim() === "" || floor.toUpperCase() === "NA") {
-      missingList.push("la cantidad de pisos o niveles de la propiedad");
+      return `Oye *${firstName}*, ¿de cuántos pisos o niveles es la/el *${propertyName}*? 🏛️`;
     }
   } else if (propertyName === "bodega") {
     const floor = extracted?.floorDetail;
     if (!floor || floor.trim() === "" || floor.toUpperCase() === "NA") {
-      missingList.push("la altura útil de la bodega (ej: doble o triple altura)");
+      return `Oye *${firstName}*, ¿qué altura útil tiene la bodega? ¿Es de sencilla, doble o triple altura? 🏗️`;
     }
   }
 
-  if (missingList.length === 0) {
-    missingList.push("el barrio exacto");
-  }
-
-  let missingStr = "";
-  if (missingList.length === 1) {
-    missingStr = missingList[0];
-  } else if (missingList.length === 2) {
-    missingStr = `${missingList[0]} o ${missingList[1]}`;
-  } else {
-    const last = missingList.pop();
-    missingStr = `${missingList.join(", ")}, o ${last}`;
-  }
-
-  const contextMsg = isRequirement ? "de tu requerimiento de búsqueda" : `de tu *${propertyName}*`;
-  return `${intro}Estuve revisando el/la *${medio}* ${contextMsg} que me compartiste, pero mi sistema de lectura inteligente no alcanza a extraer cierta información clave y me hace falta: *${missingStr}*.\n\n¿Me podrías indicar este dato por aquí para registrar tu publicación correctamente y buscarte un MATCH comercial de inmediato? 🚀🤝`;
+  return `Oye *${firstName}*, ¿me podrías confirmar la ubicación o el barrio exacto para registrarlo correctamente en VECY? 🔎`;
 }
 
 function buildGroupIncompleteMessage(
@@ -1453,7 +1437,8 @@ Por lo tanto, DEBES hacer lo siguiente:
         pdfBuffer,
         extracted,
         false,
-        customIntro
+        customIntro,
+        firstName
       );
 
       if (isGroup) {
@@ -1509,7 +1494,8 @@ Por lo tanto, DEBES hacer lo siguiente:
           pdfBuffer,
           extracted,
           true,
-          customIntro
+          customIntro,
+          firstName
         );
 
         await setPendingSession(userId, {
