@@ -8,7 +8,7 @@ import { properties, requirements, users, propertyImages, InsertProperty, Insert
 import { findMatchesForProperty, findMatchesForRequirement } from "./matching";
 import { validarZona, normalizarTextoGeografico } from "./geography";
 import { transcribeAudio } from "./voiceTranscription";
-import { eq, and, sql, gte } from "drizzle-orm";
+import { eq, and, sql, gte, desc } from "drizzle-orm";
 import { storagePut } from "../storage";
 import fs from "fs";
 import path from "path";
@@ -174,6 +174,43 @@ async function checkAlreadyGreeted(userId: string): Promise<boolean> {
     return true;
   }
   return false;
+}
+
+async function getRecentChatHistory(userId: string, limit = 20): Promise<{ role: "user" | "assistant", content: string }[]> {
+  try {
+    const db = await getDb();
+    if (!db) return [];
+
+    const fourDaysAgo = new Date();
+    fourDaysAgo.setDate(fourDaysAgo.getDate() - 4);
+
+    const history = await db
+      .select({
+        role: dbMessages.role,
+        content: dbMessages.content,
+        createdAt: dbMessages.createdAt
+      })
+      .from(dbMessages)
+      .innerJoin(dbConversations, eq(dbMessages.conversationId, dbConversations.id))
+      .where(
+        and(
+          eq(dbConversations.sessionId, userId),
+          gte(dbMessages.createdAt, fourDaysAgo)
+        )
+      )
+      .orderBy(desc(dbMessages.createdAt))
+      .limit(limit);
+
+    return history
+      .reverse()
+      .map(h => ({
+        role: h.role === "janIA" ? "assistant" : "user",
+        content: h.content
+      }));
+  } catch (err) {
+    console.error("[Database] Error fetching chat history:", err);
+    return [];
+  }
 }
 
 export const REPUTATION_HOOK = "⚠️ *IMPORTANTE:* Colega y cliente, recuerda que este ecosistema tecnológico fue creado pensando en tu beneficio y en el de toda nuestra comunidad. Te contamos que operamos en *Etapa de Prueba Gratuita y 100% SIN COMISIONES*. Si has tenido una buena experiencia en alguno de nuestros canales o has logrado consolidar un negocio real gracias a la conexión privada de JanIA, sería un verdadero honor para nosotros que nos compartieras tu testimonio y calificación de nuestros servicios en este enlace: https://g.page/r/CctNbwU6UpX5EBM/review";
@@ -1291,11 +1328,25 @@ Por lo tanto, DEBES hacer lo siguiente:
 
     const enableSearch = isValuationQuery || isLegalQuery;
 
+    // Obtener historial de chat reciente (Supercerebro)
+    const history = await getRecentChatHistory(userId, 20);
+    const llmMessages = [
+      { role: "system", content: buildSystemPrompt(groupJid) }
+    ];
+
+    if (history.length > 0) {
+      if (
+        history[history.length - 1].role === "user" &&
+        history[history.length - 1].content.trim() === contextText.trim()
+      ) {
+        history.pop();
+      }
+      llmMessages.push(...history);
+    }
+    llmMessages.push({ role: "user", content: contextText });
+
     const response = await invokeLLM({
-      messages: [
-        { role: "system", content: buildSystemPrompt(groupJid) },
-        { role: "user", content: contextText }
-      ],
+      messages: llmMessages,
       responseFormat: { type: "json_object" },
       imageBuffer,
       pdfBuffer,
