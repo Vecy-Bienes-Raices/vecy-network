@@ -154,7 +154,38 @@ async function getGoogleAccessToken(): Promise<string | null> {
 
 /** Prepara el texto para TTS: pronunciación natural en español */
 function prepareTtsText(rawText: string): string {
-  let cleanText = rawText
+  let cleanText = rawText;
+
+  // Reemplazar URLs con pronunciación natural en español
+  cleanText = cleanText.replace(/https:\/\/g\.page\/r\/[a-zA-Z0-9_-]+\/review/gi, "el enlace de Google que te comparto por escrito");
+
+  cleanText = cleanText.replace(/https:\/\/vecy-network\.vercel\.app\/jania/gi, "besi guión al medio network punto vercel punto ap diagonal yánia");
+  cleanText = cleanText.replace(/https:\/\/vecy-network\.vercel\.app\/agent-dashboard/gi, "besi guión al medio network punto vercel punto ap diagonal eiyent guión dashbord");
+  cleanText = cleanText.replace(/https:\/\/vecy-network\.vercel\.app\/properties/gi, "besi guión al medio network punto vercel punto ap diagonal properties");
+  cleanText = cleanText.replace(/https:\/\/vecy-network\.vercel\.app\/requerimientos/gi, "besi guión al medio network punto vercel punto ap diagonal requerimientos");
+  cleanText = cleanText.replace(/https:\/\/vecy-network\.vercel\.app\/historia/gi, "besi guión al medio network punto vercel punto ap diagonal historia");
+  cleanText = cleanText.replace(/https:\/\/vecy-network\.vercel\.app\/?/gi, "besi guión al medio network punto vercel punto ap");
+
+  // URLs generales: reemplazar por el nombre de dominio y avisar que el enlace completo está por escrito
+  const urlRegex = /https?:\/\/(?:www\.)?([a-zA-Z0-9-]+\.[a-zA-Z0-9.-]+)([^\s]*)/gi;
+  cleanText = cleanText.replace(urlRegex, (match, domain, path) => {
+    let cleanDomain = domain.toLowerCase();
+    cleanDomain = cleanDomain
+      .replace(/\.com\.co/g, " punto com punto co")
+      .replace(/\.com/g, " punto com")
+      .replace(/\.co/g, " punto co")
+      .replace(/\.net/g, " punto net")
+      .replace(/\.org/g, " punto org")
+      .replace(/\.app/g, " punto ap");
+    
+    if (path && path.length > 3) {
+      return `${cleanDomain} (cuyo enlace completo te dejé aquí por escrito)`;
+    }
+    return cleanDomain;
+  });
+
+  // Reemplazar nombres y terminología del sistema
+  cleanText = cleanText
     .replace(/vecy\s+network|veci\s+network/gi, "besi network")   // "VECY/VECI Network" → "besi network"
     .replace(/vecy|veci/gi, "besi")                                // "VECY/VECI" solo → "besi"
     .replace(/jania/gi, "yánia")                                  // "JanIA" → "yánia"
