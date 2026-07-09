@@ -453,6 +453,10 @@ var init_db = __esm({
 });
 
 // server/_core/llm.ts
+var llm_exports = {};
+__export(llm_exports, {
+  invokeLLM: () => invokeLLM
+});
 import axios2 from "axios";
 async function invokeLLM({
   messages: messages2,
@@ -2127,6 +2131,12 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
   return { matches: false, score: 0 };
 }
 function calcularScoreMatch(requirement, property) {
+  const reqBudget = parseFloat(requirement.presupuestoMax || "0");
+  const reqArea = parseFloat(requirement.areaMin || "0");
+  const reqZoneText = requirement.zonaDeseada || requirement.addressNeighborhood || "";
+  if (reqBudget <= 0 && reqArea <= 0 && !reqZoneText) {
+    return 0;
+  }
   const reqType = requirement.tipoInmuebleDeseado || requirement.propertyType;
   const propType = property.propertyType;
   if (reqType && propType && reqType.toLowerCase() !== propType.toLowerCase()) {
@@ -2157,21 +2167,21 @@ function calcularScoreMatch(requirement, property) {
   const reqBedrooms = requirement.habitacionesMin;
   if (reqBedrooms !== null && reqBedrooms !== void 0 && reqBedrooms !== "NA" && String(reqBedrooms).trim() !== "") {
     const pBedrooms = property.bedrooms !== null && property.bedrooms !== void 0 ? Number(property.bedrooms) : 0;
-    if (pBedrooms !== Number(reqBedrooms)) {
+    if (pBedrooms < Number(reqBedrooms)) {
       return 0;
     }
   }
   const reqBathrooms = requirement.banosMin;
   if (reqBathrooms !== null && reqBathrooms !== void 0 && reqBathrooms !== "NA" && String(reqBathrooms).trim() !== "") {
     const pBathrooms = property.bathrooms !== null && property.bathrooms !== void 0 ? Number(property.bathrooms) : 0;
-    if (pBathrooms !== Number(reqBathrooms)) {
+    if (pBathrooms < Number(reqBathrooms)) {
       return 0;
     }
   }
   const reqGarages = requirement.parqueaderosMin;
   if (reqGarages !== null && reqGarages !== void 0 && reqGarages !== "NA" && String(reqGarages).trim() !== "") {
     const pGarages = property.garages !== null && property.garages !== void 0 ? Number(property.garages) : 0;
-    if (pGarages !== Number(reqGarages)) {
+    if (pGarages < Number(reqGarages)) {
       return 0;
     }
   }
@@ -2241,7 +2251,7 @@ function calcularScoreMatch(requirement, property) {
   const areaMin = parseFloat(requirement.areaMin || "0");
   const areaProp = parseFloat(property.areaTotal || property.areaPrivate || "0");
   if (areaMin > 0 && areaProp > 0) {
-    if (areaProp < areaMin || areaProp > areaMin * 1.3) {
+    if (areaProp < areaMin) {
       return 0;
     }
     maxPoints += 20;
@@ -2254,21 +2264,21 @@ function calcularScoreMatch(requirement, property) {
   if (reqBedrooms !== null && reqBedrooms !== void 0 && reqBedrooms !== "NA" && String(reqBedrooms).trim() !== "") {
     maxPoints += 7;
     const pBedrooms = property.bedrooms !== null && property.bedrooms !== void 0 ? Number(property.bedrooms) : 0;
-    if (pBedrooms === Number(reqBedrooms)) {
+    if (pBedrooms >= Number(reqBedrooms)) {
       totalPoints += 7;
     }
   }
   if (reqBathrooms !== null && reqBathrooms !== void 0 && reqBathrooms !== "NA" && String(reqBathrooms).trim() !== "") {
     maxPoints += 5;
     const pBathrooms = property.bathrooms !== null && property.bathrooms !== void 0 ? Number(property.bathrooms) : 0;
-    if (pBathrooms === Number(reqBathrooms)) {
+    if (pBathrooms >= Number(reqBathrooms)) {
       totalPoints += 5;
     }
   }
   if (reqGarages !== null && reqGarages !== void 0 && reqGarages !== "NA" && String(reqGarages).trim() !== "") {
     maxPoints += 5;
     const pGarages = property.garages !== null && property.garages !== void 0 ? Number(property.garages) : 0;
-    if (pGarages === Number(reqGarages)) {
+    if (pGarages >= Number(reqGarages)) {
       totalPoints += 5;
     }
   }
@@ -2758,6 +2768,7 @@ __export(janIA_exports, {
   generateWelcomeMessage: () => generateWelcomeMessage,
   handleDetectedMatches: () => handleDetectedMatches,
   isGenericName: () => isGenericName,
+  isOutsideWorkingHours: () => isOutsideWorkingHours,
   obtenerCamposRequeridosYPreguntas: () => obtenerCamposRequeridosYPreguntas,
   parseSafeJSON: () => parseSafeJSON,
   processCirculoMessage: () => processCirculoMessage,
@@ -2767,7 +2778,7 @@ __export(janIA_exports, {
   translatePropertyType: () => translatePropertyType,
   translateTransactionType: () => translateTransactionType
 });
-import { eq as eq3, and as and2, sql as sql2, gte } from "drizzle-orm";
+import { eq as eq3, and as and2, sql as sql2, gte, desc, or, isNotNull } from "drizzle-orm";
 import fs from "fs";
 import path from "path";
 function parseSafeJSON(content) {
@@ -2898,18 +2909,54 @@ async function checkAlreadyGreeted(userId) {
   }
   return false;
 }
+async function getRecentChatHistory(userId, limit = 20) {
+  try {
+    const db = await getDb();
+    if (!db) return [];
+    const fourDaysAgo = /* @__PURE__ */ new Date();
+    fourDaysAgo.setDate(fourDaysAgo.getDate() - 4);
+    const history = await db.select({
+      role: messages.role,
+      content: messages.content,
+      createdAt: messages.createdAt
+    }).from(messages).innerJoin(conversations, eq3(messages.conversationId, conversations.id)).where(
+      and2(
+        eq3(conversations.sessionId, userId),
+        gte(messages.createdAt, fourDaysAgo)
+      )
+    ).orderBy(desc(messages.createdAt)).limit(limit);
+    return history.reverse().map((h) => ({
+      role: h.role === "janIA" ? "assistant" : "user",
+      content: h.content
+    }));
+  } catch (err) {
+    console.error("[Database] Error fetching chat history:", err);
+    return [];
+  }
+}
+function isOutsideWorkingHours() {
+  const dateStr = (/* @__PURE__ */ new Date()).toLocaleString("en-US", { timeZone: "America/Bogota" });
+  const bogotaDate = new Date(dateStr);
+  const weekday = bogotaDate.getDay();
+  const hour = bogotaDate.getHours();
+  if (weekday === 0) {
+    return true;
+  }
+  if (weekday === 6) {
+    return hour < 8 || hour >= 13;
+  }
+  return hour < 8 || hour >= 18;
+}
 function capitalize(text2) {
   if (!text2) return "";
   return text2.charAt(0).toUpperCase() + text2.slice(1);
 }
-function buildIncompleteDataMessage(text2, hasMedia, scrapedData, imageBuffer, pdfBuffer, extracted, isGeoInvalid, intro) {
-  let medio = "publicaci\xF3n escrita";
-  if (pdfBuffer) {
-    medio = "documento PDF";
-  } else if (imageBuffer || hasMedia && !pdfBuffer) {
-    medio = "flyer o imagen comercial";
-  } else if (scrapedData && scrapedData.length > 0) {
-    medio = "enlace o URL";
+function buildIncompleteDataMessage(text2, hasMedia, scrapedData, imageBuffer, pdfBuffer, extracted, isGeoInvalid, intro, firstName) {
+  const isSocialMedia = /instagram\.com|facebook\.com|fb\.watch|tiktok\.com|youtube\.com|youtu\.be/i.test(text2);
+  if (isSocialMedia) {
+    return `Oye *${firstName}*, veo que compartiste un enlace de redes sociales o video comercial. \u{1F4F2} Por pol\xEDticas de la red VECY y seguridad de datos, no puedo leer publicaciones de Instagram, Facebook, TikTok o YouTube.
+
+Pero \xA1no te preocupes! Puedes enviarme por aqu\xED mismo los detalles escritos (\xE1rea, precio, ubicaci\xF3n, habitaciones, etc.), la imagen del flyer comercial o un archivo en PDF de la propiedad y lo procesar\xE9 de inmediato. \u{1F609}\u{1F91D}`;
   }
   const propTypeRaw = (extracted?.propertyType || extracted?.tipoInmuebleDeseado || "inmueble").toLowerCase();
   let propertyName = "inmueble";
@@ -2924,97 +2971,76 @@ function buildIncompleteDataMessage(text2, hasMedia, scrapedData, imageBuffer, p
   else if (propTypeRaw === "loft") propertyName = "loft";
   const isRequirement = text2.toLowerCase().includes("busco") || text2.toLowerCase().includes("necesito") || text2.toLowerCase().includes("requiero") || !!extracted?.tipoInmuebleDeseado;
   const txTypeRaw = (extracted?.transactionType || extracted?.tipoNegocioDeseado || "venta").toLowerCase();
-  const missingList = [];
   const city = isRequirement ? extracted?.ciudadDeseada : extracted?.city;
   if (!city || city.trim() === "" || city.toLowerCase() === "na") {
-    missingList.push("la ciudad");
+    return isRequirement ? `Oye *${firstName}*, \xBFen qu\xE9 ciudad est\xE1s buscando el/la *${propertyName}*? \u{1F4CD}` : `Oye *${firstName}*, \xBFen qu\xE9 ciudad queda ubicado el/la *${propertyName}* que quieres publicar? \u{1F4CD}`;
   }
   const zone = isRequirement ? extracted?.zonaDeseada || extracted?.zone : extracted?.zone;
   if (isGeoInvalid || !zone || zone.trim() === "" || zone.toLowerCase() === "na") {
-    missingList.push("el barrio exacto");
+    return isRequirement ? `Oye *${firstName}*, \xBFen qu\xE9 barrio o sector de *${city}* buscas el/la *${propertyName}*? \u{1F3E1} (Si tienes varias opciones de barrio, escr\xEDbelas separadas por comas)` : `Oye *${firstName}*, \xBFen qu\xE9 barrio o sector exacto de *${city}* queda el/la *${propertyName}*? \u{1F3E1}`;
   }
   const price = isRequirement ? Number(extracted?.presupuestoMax || extracted?.price || 0) : Number(extracted?.price || 0);
   if (!price || price <= 0) {
     if (isRequirement) {
-      missingList.push("el presupuesto m\xE1ximo");
+      return `Oye *${firstName}*, \xBFcu\xE1l es tu presupuesto m\xE1ximo para ${txTypeRaw === "arriendo" ? "arrendar" : "comprar"} el/la *${propertyName}*? \u{1F4B0}`;
     } else {
-      if (txTypeRaw === "arriendo") {
-        missingList.push("el precio de arriendo");
-      } else if (txTypeRaw === "permuta") {
-        missingList.push("el valor estimado de la permuta");
-      } else {
-        missingList.push("el precio de venta");
-      }
+      return `Oye *${firstName}*, \xBFcu\xE1l es el precio de ${txTypeRaw === "arriendo" ? "arriendo mensual" : "venta"} del/la *${propertyName}*? \u{1F4B0}`;
     }
   }
-  if (txTypeRaw === "arriendo" && !isRequirement) {
+  if (txTypeRaw === "arriendo") {
     const hasAdminFee = extracted?.adminFee !== void 0 && extracted?.adminFee !== null && Number(extracted.adminFee) >= 0;
     const textHasAdmin = text2.toLowerCase().includes("adm") || text2.toLowerCase().includes("administra");
     if (!hasAdminFee && !textHasAdmin) {
-      missingList.push("si el valor de la administraci\xF3n est\xE1 incluido en el canon o cu\xE1nto es");
+      return `Oye *${firstName}*, \xBFel valor de la administraci\xF3n est\xE1 incluido en el arriendo del/la *${propertyName}* o cu\xE1nto cuesta por separado? \u{1F4CB}`;
     }
   }
   const area = Number(extracted?.area || 0);
   if (!area || area <= 0) {
     if (propertyName === "finca") {
-      missingList.push("la cantidad de hect\xE1reas o fanegadas");
+      return `Oye *${firstName}*, \xBFcu\xE1ntas hect\xE1reas o fanegadas de extensi\xF3n tiene la finca? \u{1F4D0}`;
     } else {
-      missingList.push("el metraje en metros cuadrados");
+      return `Oye *${firstName}*, \xBFcu\xE1l es el \xE1rea o metraje en metros cuadrados del/la *${propertyName}*? \u{1F4D0}`;
     }
   }
   const stratum = Number(extracted?.stratum || 0);
   if ((!stratum || stratum <= 0) && propertyName !== "finca" && propertyName !== "lote" && propertyName !== "bodega") {
-    missingList.push("el estrato");
+    return `Oye *${firstName}*, \xBFde qu\xE9 estrato es el/la *${propertyName}*? \u{1F3E2}`;
   }
   if (propertyName === "apartamento" || propertyName === "casa" || propertyName === "loft" || propertyName === "inmueble") {
     const bedrooms = Number(extracted?.bedrooms || 0);
     if (!bedrooms || bedrooms <= 0) {
-      missingList.push("el n\xFAmero de habitaciones");
+      return isRequirement ? `Oye *${firstName}*, \xBFpodr\xEDas repetirme de cu\xE1ntas habitaciones lo necesitas? \u{1F6CF}\uFE0F` : `Oye *${firstName}*, \xBFpodr\xEDas repetirme de cu\xE1ntas habitaciones es? \u{1F6CF}\uFE0F`;
     }
     const bathrooms = Number(extracted?.bathrooms || 0);
     if (!bathrooms || bathrooms <= 0) {
-      missingList.push("el n\xFAmero de ba\xF1os");
+      return isRequirement ? `Oye *${firstName}*, \xBFde cu\xE1ntos ba\xF1os lo requieres? \u{1F6BD}` : `Oye *${firstName}*, \xBFde cu\xE1ntos ba\xF1os dispone el/la *${propertyName}*? \u{1F6BD}`;
     }
   }
   const garages = extracted?.garages;
   if ((garages === void 0 || garages === null || garages < 0) && propertyName !== "lote") {
-    missingList.push("el n\xFAmero de garajes/parqueaderos");
+    return isRequirement ? `Oye *${firstName}*, \xBFcu\xE1ntos parqueaderos o garajes necesitas como m\xEDnimo? \u{1F697}` : `Oye *${firstName}*, \xBFde cu\xE1ntos garajes o parqueaderos dispone el/la *${propertyName}*? \u{1F697}`;
   }
   if (propertyName === "apartamento" || propertyName === "oficina" || propertyName === "consultorio") {
     const floor = extracted?.floorDetail;
     if (!floor || floor.trim() === "" || floor.toUpperCase() === "NA") {
-      missingList.push("el n\xFAmero de piso");
+      return `Oye *${firstName}*, \xBFen qu\xE9 piso est\xE1 ubicado el/la *${propertyName}*? \u{1F3E2}`;
     }
     const intExt = extracted?.interiorExterior;
     if (!intExt || intExt.trim() === "" || intExt.toUpperCase() === "NA") {
-      missingList.push("si queda en el interior o al exterior");
+      return `Oye *${firstName}*, \xBFla ubicaci\xF3n del/la *${propertyName}* es interior o exterior? \u{1F3D9}\uFE0F`;
     }
   } else if (propertyName === "casa" || propertyName === "edificio") {
     const floor = extracted?.floorDetail;
     if (!floor || floor.trim() === "" || floor.toUpperCase() === "NA") {
-      missingList.push("la cantidad de pisos o niveles de la propiedad");
+      return `Oye *${firstName}*, \xBFde cu\xE1ntos pisos o niveles es la/el *${propertyName}*? \u{1F3DB}\uFE0F`;
     }
   } else if (propertyName === "bodega") {
     const floor = extracted?.floorDetail;
     if (!floor || floor.trim() === "" || floor.toUpperCase() === "NA") {
-      missingList.push("la altura \xFAtil de la bodega (ej: doble o triple altura)");
+      return `Oye *${firstName}*, \xBFqu\xE9 altura \xFAtil tiene la bodega? \xBFEs de sencilla, doble o triple altura? \u{1F3D7}\uFE0F`;
     }
   }
-  if (missingList.length === 0) {
-    missingList.push("el barrio exacto");
-  }
-  let missingStr = "";
-  if (missingList.length === 1) {
-    missingStr = missingList[0];
-  } else if (missingList.length === 2) {
-    missingStr = `${missingList[0]} o ${missingList[1]}`;
-  } else {
-    const last = missingList.pop();
-    missingStr = `${missingList.join(", ")}, o ${last}`;
-  }
-  return `${intro}Estuve revisando el/la *${medio}* de tu *${propertyName}* que enviaste al grupo, pero mi sistema de lectura inteligente no alcanza a extraer cierta informaci\xF3n clave del inmueble y me hace falta: *${missingStr}*.
-
-\xBFMe podr\xEDas indicar este dato por aqu\xED para registrar tu publicaci\xF3n correctamente y buscarte un MATCH comercial de inmediato? \u{1F680}\u{1F91D}`;
+  return `Oye *${firstName}*, \xBFme podr\xEDas confirmar la ubicaci\xF3n o el barrio exacto para registrarlo correctamente en VECY? \u{1F50E}`;
 }
 function buildGroupIncompleteMessage(text2, userId, extracted) {
   const phone = userId.split("@")[0];
@@ -3383,87 +3409,22 @@ async function processWhatsAppMessage(text2, userId, userName, hasMedia = false,
     const n = realName.split(" ")[0];
     const session = await getPendingSession(userId);
     if (session) {
-      const geoValidation = await validarZona(text2, session.extractedData.city || session.extractedData.ciudadDeseada, session.messageToProcess + " " + text2);
-      if (geoValidation.isValid) {
-        await deletePendingSession(userId);
-        if (session.type === "PROPERTY") {
-          session.extractedData.latitude = geoValidation.latitude || null;
-          session.extractedData.longitude = geoValidation.longitude || null;
-          if (geoValidation.isMunicipio) {
-            session.extractedData.city = geoValidation.barrioCanonico;
-            session.extractedData.addressCity = geoValidation.barrioCanonico;
-            session.extractedData.addressLocality = geoValidation.localidad;
-            session.extractedData.zone = geoValidation.barrioCanonico;
-          } else {
-            session.extractedData.city = "Bogot\xE1";
-            session.extractedData.addressCity = "Bogot\xE1";
-            session.extractedData.zone = geoValidation.barrioCanonico;
-            session.extractedData.addressLocality = geoValidation.localidad;
-          }
-          const propertyTitle = session.extractedData.title || `${capitalize(session.extractedData.propertyType || "inmueble")} en ${session.extractedData.zone || "Bogot\xE1"} para ${session.extractedData.transactionType || "venta"}`;
-          const saved = await saveProperty({
-            ...session.extractedData,
-            name: propertyTitle,
-            price: String(session.extractedData.price || 0),
-            areaTotal: String(session.extractedData.area || 0),
-            idUsuarioWhatsapp: rawPhone,
-            rawText: session.messageToProcess + " (Ubicaci\xF3n completada: " + text2 + ")",
-            amenities: { gives: session.extractedData.gives, wants: session.extractedData.wants, isCollaborativePool: session.extractedData.isCollaborativePool }
-          }, userId, realName, session.imageBuffer);
-          if (saved) {
-            const matches = await findMatchesForProperty(saved.id);
-            const matchDetails = matches.length > 0 ? await handleDetectedMatches(matches, true, saved, userId, realName) : { response: "", mentions: [], extraDMs: [] };
-            return {
-              classification: "INMUEBLE",
-              extractedData: session.extractedData,
-              shouldSendDM: true,
-              dmResponse: `\xA1Excelente, ${n}! \u{1F389} Acabo de guardar tu oferta en la base de datos de VECY con el barrio *${geoValidation.barrioCanonico}*. Tu publicaci\xF3n ya est\xE1 activa y en espera de coincidencias. Te notificar\xE9 de inmediato por aqu\xED en privado en cuanto detecte un MATCH comercial. \u{1F91D}\u{1F680}`,
-              response: matchDetails.response,
-              mentions: matchDetails.mentions,
-              extraDMs: matchDetails.extraDMs,
-              sendReputationHook: matchDetails.sendReputationHook
-            };
-          }
-        } else {
-          if (geoValidation.isMunicipio) {
-            session.extractedData.ciudadDeseada = geoValidation.barrioCanonico;
-            session.extractedData.addressCity = geoValidation.barrioCanonico;
-            session.extractedData.addressLocality = geoValidation.localidad;
-            session.extractedData.zonaDeseada = geoValidation.barrioCanonico;
-          } else {
-            session.extractedData.ciudadDeseada = "Bogot\xE1";
-            session.extractedData.addressCity = "Bogot\xE1";
-            session.extractedData.zonaDeseada = geoValidation.barrioCanonico;
-            session.extractedData.addressLocality = geoValidation.localidad;
-          }
-          const reqTitle = session.extractedData.title || `Requerimiento de ${session.extractedData.propertyType || "inmueble"} en ${session.extractedData.zonaDeseada || "Bogot\xE1"} para ${session.extractedData.transactionType || "venta"}`;
-          const saved = await saveRequirement({
-            ...session.extractedData,
-            name: reqTitle,
-            tipoInmuebleDeseado: session.extractedData.propertyType,
-            tipoNegocioDeseado: session.extractedData.transactionType,
-            zonaDeseada: session.extractedData.zonaDeseada,
-            presupuestoMax: String(session.extractedData.price || 0),
-            idUsuarioWhatsapp: rawPhone,
-            rawText: session.messageToProcess + " (Ubicaci\xF3n completada: " + text2 + ")",
-            caracteristicasDeseadas: { gives: session.extractedData.gives, wants: session.extractedData.wants }
-          }, userId, realName);
-          if (saved) {
-            const matches = await findMatchesForRequirement(saved.id);
-            const matchDetails = matches.length > 0 ? await handleDetectedMatches(matches, false, saved, userId, realName) : { response: "", mentions: [], extraDMs: [] };
-            return {
-              classification: "REQUERIMIENTO",
-              extractedData: session.extractedData,
-              shouldSendDM: true,
-              dmResponse: `\xA1Excelente, ${n}! \u{1F389} Acabo de guardar tu requerimiento en la base de datos de VECY con el barrio *${geoValidation.barrioCanonico}*. Tu b\xFAsqueda ya est\xE1 activa y en espera de coincidencias. Te notificar\xE9 de inmediato por aqu\xED en privado en cuanto detecte un MATCH comercial. \u{1F91D}\u{1F680}`,
-              response: matchDetails.response,
-              mentions: matchDetails.mentions,
-              extraDMs: matchDetails.extraDMs,
-              sendReputationHook: matchDetails.sendReputationHook
-            };
-          }
-        }
-      }
+      const combinedText = session.messageToProcess + " \n[COMPLEMENTO]: " + text2;
+      await deletePendingSession(userId);
+      console.log(`[JanIA-PendingSession] Resolviendo sesi\xF3n pendiente para ${userId}. Combinando textos y re-procesando...`);
+      return await processWhatsAppMessage(
+        combinedText,
+        userId,
+        userName,
+        hasMedia || !!session.imageBuffer,
+        scrapedData,
+        audioUrl,
+        imageBuffer || session.imageBuffer,
+        isGroup,
+        pdfBuffer,
+        pdfMimeType,
+        groupJid
+      );
     }
     let messageToProcess = text2;
     let isFromAudio = false;
@@ -3497,10 +3458,11 @@ async function processWhatsAppMessage(text2, userId, userName, hasMedia = false,
       if (db) {
         const startOfToday = /* @__PURE__ */ new Date();
         startOfToday.setHours(0, 0, 0, 0);
-        const [totalPropsResult] = await db.select({ count: sql2`count(*)` }).from(properties);
+        const isRealProperty = or(isNotNull(properties.idUsuarioWhatsapp), isNotNull(properties.agentId));
+        const [totalPropsResult] = await db.select({ count: sql2`count(*)` }).from(properties).where(isRealProperty);
         const [totalReqsResult] = await db.select({ count: sql2`count(*)` }).from(requirements);
         const [totalMatchesResult] = await db.select({ count: sql2`count(*)` }).from(propertyMatches);
-        const [todayPropsResult] = await db.select({ count: sql2`count(*)` }).from(properties).where(gte(properties.createdAt, startOfToday));
+        const [todayPropsResult] = await db.select({ count: sql2`count(*)` }).from(properties).where(and2(gte(properties.createdAt, startOfToday), isRealProperty));
         const [todayReqsResult] = await db.select({ count: sql2`count(*)` }).from(requirements).where(gte(requirements.createdAt, startOfToday));
         const [todayMatchesResult] = await db.select({ count: sql2`count(*)` }).from(propertyMatches).where(gte(propertyMatches.createdAt, startOfToday));
         const totalProps = totalPropsResult?.count || 0;
@@ -3537,6 +3499,14 @@ async function processWhatsAppMessage(text2, userId, userName, hasMedia = false,
   * Si "Ya has saludado al usuario hoy" es NO:
     - Debes saludar de manera muy cordial y natural, incluyendo su nombre "${firstName}" o dirigi\xE9ndote a \xE9l/ella como colega/aliado/a.`;
     contextText += greetingInstruction;
+    const outsideHours = isOutsideWorkingHours();
+    if (!alreadyGreeted && outsideHours && !isGroup) {
+      contextText += `
+[INSTRUCCI\xD3N CR\xCDTICA DE PRESENTACI\xD3N FUERA DE HORARIO]:
+Como esta es tu primera interacci\xF3n con este usuario el d\xEDa de hoy, y nos encontramos fuera de horario de oficina, debes presentarte de manera muy c\xE1lida y entusiasta al inicio de tu respuesta:
+"\xA1Hola, *${n}*! \u{1F60A} Soy JanIA, la asistente virtual de Inteligencia Artificial de la Red VECY, creada y entrenada por VECY Bienes Ra\xEDces y VECY Match. Estoy aqu\xED para atenderte de forma personalizada y ayudarte a registrar tus inmuebles o requerimientos de forma \xE1gil mientras nuestros asesores humanos descansan. \xBFEn qu\xE9 te puedo colaborar hoy? \u{1F680}\u{1F91D}"
+Redacta esta bienvenida integrada con tu respuesta a su pregunta, usando emojis alusivos de manera elocuente. Adem\xE1s, si la respuesta a su consulta es corta, establece "wantsVoice": true y coloca una versi\xF3n hablada muy amigable de esta bienvenida y su respuesta en "voiceResponse" (sin vi\xF1etas o asteriscos de negrita) para que el usuario reciba un audio de tu voz present\xE1ndote de forma humana.`;
+    }
     const textLower = messageToProcess.toLowerCase();
     const isReplicationRequest = textLower.includes("replica") || textLower.includes("repite") || textLower.includes("lee este") || textLower.includes("lee esto") || textLower.includes("lee literalmente") || textLower.includes("di literalmente") || textLower.includes("reproduce");
     if (isReplicationRequest) {
@@ -3551,11 +3521,19 @@ Por lo tanto, DEBES hacer lo siguiente:
     const isValuationQuery = textLower.includes("valuar") || textLower.includes("avaluo") || textLower.includes("aval\xFAo") || textLower.includes("cuanto vale") || textLower.includes("cu\xE1nto vale") || textLower.includes("valor metro cuadrado") || textLower.includes("valor m2") || textLower.includes("precio metro cuadrado") || textLower.includes("precio m2") || textLower.includes("cuanto puedo cobrar") || textLower.includes("cu\xE1nto puedo cobrar") || textLower.includes("en que valor") || textLower.includes("en qu\xE9 valor") || textLower.includes("estimar precio");
     const isLegalQuery = textLower.includes("sucesi\xF3n") || textLower.includes("sucesion") || textLower.includes("herencia") || textLower.includes("divorcio") || textLower.includes("embargo") || textLower.includes("saneamiento") || textLower.includes("compraventa") || textLower.includes("arrendamiento") || textLower.includes("ley 820") || textLower.includes("ley 675") || textLower.includes("corretaje") || textLower.includes("comision") || textLower.includes("comisi\xF3n") || textLower.includes("no me pago") || textLower.includes("no me pag\xF3") || textLower.includes("robo de comision") || textLower.includes("robo de comisi\xF3n") || textLower.includes("disputa") || textLower.includes("notar\xEDa") || textLower.includes("notaria");
     const enableSearch = isValuationQuery || isLegalQuery;
+    const history = await getRecentChatHistory(userId, 20);
+    const llmMessages = [
+      { role: "system", content: buildSystemPrompt(groupJid) }
+    ];
+    if (history.length > 0) {
+      if (history[history.length - 1].role === "user" && history[history.length - 1].content.trim() === contextText.trim()) {
+        history.pop();
+      }
+      llmMessages.push(...history);
+    }
+    llmMessages.push({ role: "user", content: contextText });
     const response = await invokeLLM({
-      messages: [
-        { role: "system", content: buildSystemPrompt(groupJid) },
-        { role: "user", content: contextText }
-      ],
+      messages: llmMessages,
       responseFormat: { type: "json_object" },
       imageBuffer,
       pdfBuffer,
@@ -3602,22 +3580,41 @@ Por lo tanto, DEBES hacer lo siguiente:
       const city = isReq ? extracted?.ciudadDeseada : extracted?.city;
       const zone = isReq ? extracted?.zonaDeseada || extracted?.zone : extracted?.zone;
       const price = isReq ? Number(extracted?.presupuestoMax || extracted?.price || 0) : Number(extracted?.price || 0);
-      const area = Number(extracted?.area || 0);
       const hasMissingCity = !city || city.trim() === "" || city.toLowerCase() === "na";
       const hasMissingZone = !zone || zone.trim() === "" || zone.toLowerCase() === "na";
       const hasMissingPrice = !price || price <= 0;
+      const area = Number(extracted?.area || 0);
       const hasMissingArea = !area || area <= 0;
       let hasMissingBedrooms = false;
       let hasMissingBathrooms = false;
+      let hasMissingStratum = false;
       if (propertyName === "apartamento" || propertyName === "casa" || propertyName === "loft" || propertyName === "inmueble") {
         const bedrooms = Number(extracted?.bedrooms || 0);
         hasMissingBedrooms = !bedrooms || bedrooms <= 0;
         const bathrooms = Number(extracted?.bathrooms || 0);
         hasMissingBathrooms = !bathrooms || bathrooms <= 0;
+        const stratum = Number(extracted?.stratum || 0);
+        hasMissingStratum = !stratum || stratum <= 0;
+      } else if (propertyName !== "lote" && propertyName !== "finca") {
+        const stratum = Number(extracted?.stratum || 0);
+        hasMissingStratum = !stratum || stratum <= 0;
       }
-      if (hasMissingCity || hasMissingZone || hasMissingPrice || hasMissingArea || hasMissingBedrooms || hasMissingBathrooms) {
-        isLLMIncomplete = true;
-        result.classification = "DATOS_INCOMPLETOS";
+      const isMissing = hasMissingCity || hasMissingZone || hasMissingPrice || hasMissingArea || hasMissingBedrooms || hasMissingBathrooms || hasMissingStratum;
+      if (isMissing) {
+        result.missingFields = [];
+        if (hasMissingCity) result.missingFields.push("city");
+        if (hasMissingZone) result.missingFields.push("zone");
+        if (hasMissingPrice) result.missingFields.push("price");
+        if (hasMissingArea) result.missingFields.push("area");
+        if (hasMissingBedrooms) result.missingFields.push("bedrooms");
+        if (hasMissingBathrooms) result.missingFields.push("bathrooms");
+        if (hasMissingStratum) result.missingFields.push("stratum");
+        if (isGroup || groupJid) {
+          isLLMIncomplete = false;
+        } else {
+          isLLMIncomplete = true;
+          result.classification = "DATOS_INCOMPLETOS";
+        }
       }
     }
     if (isLLMIncomplete) {
@@ -3632,7 +3629,8 @@ Por lo tanto, DEBES hacer lo siguiente:
         pdfBuffer,
         extracted,
         false,
-        customIntro
+        customIntro,
+        firstName2
       );
       if (isGroup) {
         result.response = buildGroupIncompleteMessage(messageToProcess, userId, extracted);
@@ -3660,66 +3658,75 @@ Por lo tanto, DEBES hacer lo siguiente:
         isValidGeo = geoValidation.isValid;
       }
       if (!isValidGeo) {
-        result.classification = "DATOS_INCOMPLETOS";
-        result.shouldSendDM = true;
-        result.dmShouldReply = true;
-        result.response = "";
-        const inferredType = isProperty ? "PROPERTY" : "REQUIREMENT";
-        const firstName2 = realName.split(" ")[0];
-        const customIntro = `\xA1Hola, *${firstName2}*! \u{1F60A} `;
-        result.dmResponse = buildIncompleteDataMessage(
-          messageToProcess,
-          hasMedia,
-          scrapedData,
-          imageBuffer,
-          pdfBuffer,
-          extracted,
-          true,
-          customIntro
-        );
-        await setPendingSession(userId, {
-          type: inferredType,
-          extractedData: extracted || {},
-          senderInfo,
-          messageToProcess,
-          imageBuffer
-        });
-        return result;
+        if (isGroup || groupJid) {
+          isValidGeo = true;
+          if (!result.missingFields) result.missingFields = [];
+          if (!result.missingFields.includes("zone")) result.missingFields.push("zone");
+        } else {
+          result.classification = "DATOS_INCOMPLETOS";
+          result.shouldSendDM = true;
+          result.dmShouldReply = true;
+          result.response = "";
+          const inferredType = isProperty ? "PROPERTY" : "REQUIREMENT";
+          const firstName2 = realName.split(" ")[0];
+          const customIntro = `\xA1Hola, *${firstName2}*! \u{1F60A} `;
+          result.dmResponse = buildIncompleteDataMessage(
+            messageToProcess,
+            hasMedia,
+            scrapedData,
+            imageBuffer,
+            pdfBuffer,
+            extracted,
+            true,
+            customIntro,
+            firstName2
+          );
+          await setPendingSession(userId, {
+            type: inferredType,
+            extractedData: extracted || {},
+            senderInfo,
+            messageToProcess,
+            imageBuffer
+          });
+          return result;
+        }
       }
       const validation = geoValidation;
-      if (isProperty && validation.isValid) {
-        extracted.latitude = validation.latitude || null;
-        extracted.longitude = validation.longitude || null;
-      }
-      if (validation.isMunicipio) {
-        if (isProperty) {
-          extracted.city = validation.barrioCanonico;
-          extracted.addressCity = validation.barrioCanonico;
-          extracted.addressLocality = validation.localidad;
-          if (extracted.zone && normalizarTextoGeografico(extracted.zone) !== normalizarTextoGeografico(validation.barrioCanonico || "")) {
-          } else {
-            extracted.zone = validation.barrioCanonico;
-          }
-        } else {
-          extracted.ciudadDeseada = validation.barrioCanonico;
-          extracted.addressCity = validation.barrioCanonico;
-          extracted.addressLocality = validation.localidad;
-          if (extracted.zonaDeseada && normalizarTextoGeografico(extracted.zonaDeseada) !== normalizarTextoGeografico(validation.barrioCanonico || "")) {
-          } else {
-            extracted.zonaDeseada = validation.barrioCanonico;
-          }
+      if (validation) {
+        if (isProperty && validation.isValid) {
+          extracted.latitude = validation.latitude || null;
+          extracted.longitude = validation.longitude || null;
         }
-      } else {
-        if (isProperty) {
-          extracted.city = "Bogot\xE1";
-          extracted.addressCity = "Bogot\xE1";
-          extracted.zone = validation.barrioCanonico;
-          extracted.addressLocality = validation.localidad;
+        if (validation.isMunicipio) {
+          if (isProperty) {
+            extracted.city = validation.barrioCanonico;
+            extracted.addressCity = validation.barrioCanonico;
+            extracted.addressLocality = validation.localidad;
+            if (extracted.zone && normalizarTextoGeografico(extracted.zone) !== normalizarTextoGeografico(validation.barrioCanonico || "")) {
+            } else {
+              extracted.zone = validation.barrioCanonico;
+            }
+          } else {
+            extracted.ciudadDeseada = validation.barrioCanonico;
+            extracted.addressCity = validation.barrioCanonico;
+            extracted.addressLocality = validation.localidad;
+            if (extracted.zonaDeseada && normalizarTextoGeografico(extracted.zonaDeseada) !== normalizarTextoGeografico(validation.barrioCanonico || "")) {
+            } else {
+              extracted.zonaDeseada = validation.barrioCanonico;
+            }
+          }
         } else {
-          extracted.ciudadDeseada = "Bogot\xE1";
-          extracted.addressCity = "Bogot\xE1";
-          extracted.zonaDeseada = validation.barrioCanonico;
-          extracted.addressLocality = validation.localidad;
+          if (isProperty) {
+            extracted.city = "Bogot\xE1";
+            extracted.addressCity = "Bogot\xE1";
+            extracted.zone = validation.barrioCanonico;
+            extracted.addressLocality = validation.localidad;
+          } else {
+            extracted.ciudadDeseada = "Bogot\xE1";
+            extracted.addressCity = "Bogot\xE1";
+            extracted.zonaDeseada = validation.barrioCanonico;
+            extracted.addressLocality = validation.localidad;
+          }
         }
       }
     }
@@ -4271,13 +4278,12 @@ Cuando respondas consultas (clasificaci\xF3n CONSULTA_GENERAL), debes guiar con 
 Analiza el contexto completo antes de clasificar. Debes responder estrictamente en formato JSON con la clasificaci\xF3n correcta:
 
 1. **Clasificaci\xF3n "INMUEBLE" o "REQUERIMIENTO"**:
-   - Si el usuario est\xE1 PUBLICANDO UNA OFERTA COMERCIAL de venta, arriendo o permuta, o si est\xE1 solicitando expl\xEDcitamente un inmueble en VENTA o ARRIENDO (por ejemplo, "Busco apartamento de 3 habitaciones en Cedritos").
-   - Respuesta ('response'): "\u{1F4E2} *VECY INMUEBLES NETWORK* \u{1F4E2}\\n\\nHola @${rawPhone}, detect\xE9 que est\xE1s publicando una oferta o requerimiento inmobiliario. Para poder procesar tu publicaci\xF3n con mis motores autom\xE1ticos, registrar tus datos y buscarte un MATCH de inmediato con otros aliados, por favor realiza tu publicaci\xF3n en nuestro grupo especializado **VECY INMUEBLES NETWORK**:\\n\u{1F449} https://chat.whatsapp.com/K36KrHeB9nMEKJ56s8XFcM\\n\\n\xA1Hagamos equipo y cerremos negocios! \u{1F680}\u{1F3AF}"
+   - Respuesta ('response'): "\u{1F3E0} *REGISTRO DIRECTO DE INMUEBLE* \u{1F680}\\n\\nHola @${rawPhone}, \xA1excelente! Veo que est\xE1s publicando o buscando un inmueble. Recuerda que puedes enviarme los datos de tu oferta o requerimiento redactados directamente en este chat privado (incluyendo tipo de inmueble, tipo de negocio, precio, \xE1rea y barrio/sector) o incluso una foto/flyer de la ficha t\xE9cnica.\\n\\nYo procesar\xE9 la informaci\xF3n de inmediato, la guardar\xE9 en la red VECY y te notificar\xE9 aqu\xED mismo en privado en cuanto te consiga un MATCH comercial. \xA1Escr\xEDbeme los detalles ahora mismo! \u{1F91D}\u{1F3AF}"
    - Emoji ('reactionEmoji'): "\u{1F504}"
 
 2. **Clasificaci\xF3n "SOBRE_VECY"**:
    - Si el usuario hace preguntas sobre el proyecto VECY Network, sus creadores (Eduardo A. Rivera, Jani Alves), beneficios, c\xF3mo funciona la IA, o sobre el canal C\xEDrculo Cero.
-   - Respuesta ('response'): "\u{1F44C} *C\xCDRCULO CERO \u2014 CONEXI\xD3N VECY* \u{1F44C}\\n\\nHola @${rawPhone}, veo que quieres saber m\xE1s sobre el proyecto VECY Network, beneficios, creadores o el plan colaborativo. Te invito a unirte y hacer tus preguntas en nuestro canal oficial **C\xEDrculo CERO \u{1F44C}**:\\n\u{1F449} https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU\\n\\n\xA1Es el espacio ideal para resolver todas tus inquietudes de la comunidad! \u{1F91D}\u2728"
+   - Respuesta ('response'): "\u{1F44C} *CONEXI\xD3N VECY NETWORK* \u{1F44C}\\n\\nHola @${rawPhone}, soy JanIA, la inteligencia estrat\xE9gica detr\xE1s de VECY Network. Nuestra misi\xF3n es potenciar tu gesti\xF3n inmobiliaria de forma gratuita mediante cruces automatizados y herramientas digitales.\\n\\nPuedes consultarme sobre tr\xE1mites legales de bienes ra\xEDces, aval\xFAos prediales o enviarme fichas t\xE9cnicas de tus inmuebles y requerimientos de clientes para guardarlos en nuestra base de datos. \xA1Estoy para ayudarte a acelerar tus cierres! \u{1F91D}\u2728"
    - Emoji ('reactionEmoji'): "\u{1F504}"
 
 3. **Clasificaci\xF3n "CONSULTA_GENERAL"**:
@@ -4803,11 +4809,11 @@ VECY est\xE1 construyendo el portal inmobiliario m\xE1s avanzado, funcional e in
 ## BIT\xC1CORA DE APRENDIZAJE Y CASOS DE REFERENCIA (MEMORIA HIST\xD3RICA Y APRENDIZAJE CONTINUO)
 Para garantizar un comportamiento \xF3ptimo y evitar errores hist\xF3ricos, debes interiorizar y aplicar estrictamente las lecciones aprendidas en los siguientes casos de referencia:
 
-### CASO 1: Publicaciones comerciales fuera del grupo correcto (Caso Valentina)
-- **Contexto**: Usuarios que publican ofertas o b\xFAsquedas de inmuebles en el grupo de debate/comunidad "C\xEDrculo CERO \u{1F44C}" pensando que es para ofertas comerciales.
+### CASO 1: Registro Directo Conversacional
+- **Contexto**: Usuarios que te env\xEDan ofertas o b\xFAsquedas de inmuebles en chats privados o consultas generales.
 - **Tu Acci\xF3n**:
-  - Redir\xEDgelos amistosamente y dirigi\xE9ndote a ellos por su primer nombre al grupo principal: **VECY INMUEBLES NETWORK** (comparte siempre el enlace de invitaci\xF3n: https://chat.whatsapp.com/K36KrHeB9nMEKJ56s8XFcM).
-  - Explica de forma clara e inspiradora qu\xE9 es VECY Network (la primera red inteligente de Colombia para asesores), por qu\xE9 lo hacemos (eliminar fricciones de portales pasivos del siglo pasado) y los beneficios de estar all\xED (gratuito de por vida, sin comisiones de red, y con cruce de matching en tiempo real).
+  - Ali\xE9ntalos amistosamente y dirigi\xE9ndote a ellos por su primer nombre a registrar sus ofertas o requerimientos directamente en este chat privado (escribiendo las caracter\xEDsticas o enviando una imagen/ficha t\xE9cnica).
+  - Expl\xEDcales que VECY Network cruzar\xE1 su informaci\xF3n en tiempo real de forma segura y privada, y les notificar\xE1 de inmediato aqu\xED mismo en cuanto se detecte una coincidencia.
 
 ### CASO 2: Confrontaci\xF3n y debate con competidores (Caso Christian Samboni / Ubicapp)
 - **Contexto**: Menciones o promociones directas de la aplicaci\xF3n Ubicapp o su fundador Christian Samboni en el grupo de debate/comunidad "C\xEDrculo CERO \u{1F44C}".
@@ -5039,63 +5045,41 @@ __export(whatsapp_match_exports, {
   JaniaMatchBot: () => JaniaMatchBot,
   janiaMatchBot: () => janiaMatchBot
 });
-import pkg from "whatsapp-web.js";
+import makeWASocket, {
+  useMultiFileAuthState,
+  DisconnectReason,
+  delay,
+  downloadMediaMessage
+} from "@whiskeysockets/baileys";
 import qrcodeTerminal from "qrcode-terminal";
 import fs3 from "fs";
 import path4 from "path";
-import { eq as eq10, and as and5 } from "drizzle-orm";
-import axios7 from "axios";
+import { eq as eq10 } from "drizzle-orm";
 import QRCode from "qrcode";
-async function getLatestWAWebVersion() {
-  const fallback = "https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1042391138-alpha.html";
-  try {
-    const res = await axios7.get("https://api.github.com/repos/wppconnect-team/wa-version/contents/html", {
-      headers: { "User-Agent": "Mozilla/5.0" },
-      timeout: 5e3
-    });
-    if (Array.isArray(res.data) && res.data.length > 0) {
-      const files = res.data.map((f) => f.name).filter((name) => name.endsWith(".html"));
-      if (files.length > 0) {
-        files.sort();
-        const latestFile = files[files.length - 1];
-        return `https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/${latestFile}`;
-      }
-    }
-  } catch (err) {
-    console.warn("[JANIA-MATCH] Error fetching latest WA Web version from GitHub API, using fallback:", err.message);
-  }
-  return fallback;
-}
-var Client, LocalAuth, MessageMedia, SERVER_BOOT_TIME, delay, outgoingQueue, JaniaMatchBot, janiaMatchBot;
+var SERVER_BOOT_TIME, outgoingQueue, JaniaMatchBot, janiaMatchBot;
 var init_whatsapp_match = __esm({
   "server/_core/whatsapp-match.ts"() {
     "use strict";
-    init_setup_stealth();
     init_db();
     init_schema();
-    init_whatsapp();
-    init_janIA();
     init_scraper();
-    ({ Client, LocalAuth, MessageMedia } = pkg);
     SERVER_BOOT_TIME = Math.floor(Date.now() / 1e3);
-    delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     outgoingQueue = Promise.resolve();
     JaniaMatchBot = class {
-      client;
+      sock = null;
       isReady = false;
       // Grupos autorizados y configuraciones
       authorizedGroups = [];
       messageBuffers = /* @__PURE__ */ new Map();
       redirectCooldowns = /* @__PURE__ */ new Map();
       processingLocks = /* @__PURE__ */ new Map();
-      watchdogInterval = null;
-      watchdogFailures = 0;
+      lastGroupMessageTime = /* @__PURE__ */ new Map();
       targetGroupId = "120363260108880069@g.us";
       cooldownMap = /* @__PURE__ */ new Map();
       cooldownFile = path4.join(process.cwd(), ".cooldown_map.json");
       constructor() {
         global.janiaMatchBotInstance = this;
-        console.log("[JANIA-MATCH] Inicializando JanIA Match Bot (Ojos y O\xEDdos)...");
+        console.log("[JANIA-MATCH] Inicializando JanIA Match Bot (Ojos y O\xEDdos) con Baileys...");
         const groupsEnv = process.env.JANIA_MATCH_GROUPS;
         if (groupsEnv) {
           this.authorizedGroups = groupsEnv.split(",").map((g) => g.trim());
@@ -5110,181 +5094,187 @@ var init_whatsapp_match = __esm({
           ];
         }
         this.loadCooldowns();
-        this.createClientInstance();
         this.setupGracefulShutdown();
       }
-      createClientInstance(remotePath) {
-        this.client = new Client({
-          authStrategy: new LocalAuth({
-            clientId: process.env.JANIA_MATCH_CLIENT_ID || "session-jania-match",
-            dataPath: "./.wwebjs_auth"
-          }),
-          userAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-          webVersionCache: {
-            type: "remote",
-            remotePath: remotePath || "https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1042391138-alpha.html"
-          },
-          puppeteer: {
-            headless: true,
-            executablePath: process.env.CHROME_PATH || void 0,
-            args: [
-              "--no-sandbox",
-              "--disable-setuid-sandbox",
-              "--disable-dev-shm-usage",
-              "--disable-gpu",
-              "--disable-extensions",
-              "--disable-software-rasterizer",
-              "--disable-features=IsolateOrigins,site-per-process",
-              "--disable-site-isolation-trials",
-              "--no-zygote",
-              "--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-              // Optimizaciones de memoria
-              "--disable-canvas-path-rendering",
-              "--disable-accelerated-2d-canvas",
-              "--disable-gl-drawing-for-tests",
-              "--mute-audio",
-              "--no-first-run",
-              "--no-default-browser-check",
-              "--disable-background-timer-throttling",
-              "--disable-backgrounding-occluded-windows",
-              "--disable-renderer-backgrounding",
-              "--js-flags=--max-old-space-size=512"
-            ],
-            protocolTimeout: 3e5
-          }
-        });
-        this.setupEventListeners();
+      async initialize() {
+        try {
+          const sessionDir = path4.join(process.cwd(), ".baileys_auth");
+          const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
+          console.log("[JANIA-MATCH] Estableciendo conexi\xF3n por WebSocket...");
+          this.sock = makeWASocket({
+            auth: state,
+            printQRInTerminal: false,
+            // Lo manejamos nosotros de forma personalizada
+            browser: ["Vecy Network", "Chrome", "1.0.0"]
+          });
+          this.setupEventListeners(saveCreds);
+        } catch (err) {
+          console.error("[JANIA-MATCH] Error cr\xEDtico al inicializar el cliente Baileys:", err);
+        }
       }
-      setupEventListeners() {
-        this.client.on("qr", (qr) => {
-          console.log("\n[JANIA-MATCH] \u{1F50C} ESCANEA ESTE C\xD3DIGO QR PARA INICIAR JANIA MATCH:");
-          qrcodeTerminal.generate(qr, { small: true });
-          (async () => {
+      setupEventListeners(saveCreds) {
+        this.sock.ev.on("creds.update", saveCreds);
+        this.sock.ev.on("connection.update", async (update) => {
+          const { connection, lastDisconnect, qr } = update;
+          if (qr) {
+            console.log("\n[JANIA-MATCH] \u{1F50C} ESCANEA ESTE C\xD3DIGO QR PARA INICIAR JANIA MATCH:");
+            qrcodeTerminal.generate(qr, { small: true });
             try {
-              const page = this.client.pupPage;
-              if (page) {
-                const cdpSession = await page.target().createCDPSession();
-                await cdpSession.send("WebAuthn.enable", { enableUI: false });
-                await cdpSession.send("WebAuthn.addVirtualAuthenticator", {
-                  options: {
-                    protocol: "ctap2",
-                    transport: "usb",
-                    hasResidentKey: true,
-                    hasUserVerification: true,
-                    isUserVerified: true,
-                    automaticPresenceSimulation: true
-                  }
-                });
-                console.log("[JANIA-MATCH] \u2705 Autenticador WebAuthn virtual activado \u2014 passkey bypass listo.");
+              const qrPath = path4.join(process.cwd(), "dist", "qr-match.png");
+              if (!fs3.existsSync(path4.join(process.cwd(), "dist"))) {
+                fs3.mkdirSync(path4.join(process.cwd(), "dist"), { recursive: true });
               }
+              QRCode.toFile(qrPath, qr, { width: 400, margin: 2 }, (err) => {
+                if (err) console.error("[JANIA-MATCH] Error guardando QR PNG:", err.message);
+                else console.log(`[JANIA-MATCH] \u{1F4F8} QR guardado como imagen \u2192 https://vecy-network.vercel.app/qr-match.png`);
+              });
             } catch (e) {
-              console.warn("[JANIA-MATCH] \u26A0\uFE0F No se pudo activar WebAuthn virtual:", e.message);
+              console.warn("[JANIA-MATCH] qrcode no disponible para PNG.", e.message);
             }
-          })();
-          try {
-            const qrPath = path4.join(process.cwd(), "dist", "qr-match.png");
-            QRCode.toFile(qrPath, qr, { width: 400, margin: 2 }, (err) => {
-              if (err) console.error("[JANIA-MATCH] Error guardando QR PNG:", err.message);
-              else console.log(`[JANIA-MATCH] \u{1F4F8} QR guardado como imagen \u2192 https://vecy-network.vercel.app/qr-match.png (tambi\xE9n en http://<servidor>:3000/qr-match.png)`);
-            });
-          } catch (e) {
-            console.warn("[JANIA-MATCH] qrcode no disponible para PNG, solo terminal.", e.message);
+          }
+          if (connection === "close") {
+            const error = lastDisconnect?.error;
+            const statusCode = error?.output?.statusCode;
+            const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+            console.warn(`[JANIA-MATCH] \u26A0\uFE0F Conexi\xF3n Baileys cerrada: ${error?.message || error}. Reconectando en 60s: ${shouldReconnect}`);
+            this.isReady = false;
+            if (shouldReconnect) {
+              setTimeout(() => this.initialize(), 6e4);
+            } else {
+              console.error("[JANIA-MATCH] Sesi\xF3n de WhatsApp cerrada (Logged Out). Limpiando credenciales...");
+              fs3.rmSync(path4.join(process.cwd(), ".baileys_auth"), { recursive: true, force: true });
+              setTimeout(() => this.initialize(), 5e3);
+            }
+          } else if (connection === "open") {
+            console.log("\n\u{1F680} JANIA MATCH\u{1F50C}\u{1F498} \u2014 BOT DE ESCUCHA Y MATCHES ACTIVADO CORRECTAMENTE CON BAILEYS");
+            this.isReady = true;
           }
         });
-        this.client.on("ready", () => {
-          console.log("\n\u{1F680} JANIA MATCH\u{1F50C}\u{1F498} \u2014 BOT DE ESCUCHA Y MATCHES ACTIVADO CORRECTAMENTE");
-          this.isReady = true;
-          this.startWatchdog();
-          (async () => {
+        this.sock.ev.on("messages.upsert", async (m) => {
+          if (m.type !== "notify") return;
+          for (const msg of m.messages) {
+            if (!msg.key || !msg.message) continue;
+            const fromMe = msg.key.fromMe;
+            if (fromMe) continue;
+            const chatId = msg.key.remoteJid;
+            if (!chatId) continue;
+            const isGroup = chatId.endsWith("@g.us");
+            const senderId = isGroup ? msg.key.participant : chatId;
+            if (!senderId) continue;
+            if (chatId.includes("status@broadcast") || senderId.includes("status@broadcast")) {
+              continue;
+            }
+            const timestamp2 = msg.messageTimestamp;
+            if (timestamp2 && Number(timestamp2) < SERVER_BOOT_TIME) {
+              continue;
+            }
             try {
-              const page = this.client.pupPage;
-              if (page) {
-                await page.setRequestInterception(true);
-                page.on("request", (req) => {
-                  const type = req.resourceType();
-                  if (type === "stylesheet" || type === "font") {
-                    req.abort().catch(() => {
-                    });
+              if (isGroup) {
+                if (msg.message.stickerMessage) {
+                  return;
+                }
+                let body = "";
+                if (msg.message.conversation) body = msg.message.conversation;
+                else if (msg.message.extendedTextMessage) body = msg.message.extendedTextMessage.text || "";
+                else if (msg.message.imageMessage) body = msg.message.imageMessage.caption || "";
+                else if (msg.message.documentMessage) body = msg.message.documentMessage.caption || "";
+                else if (msg.message.videoMessage) body = msg.message.videoMessage.caption || "";
+                const textLower = body.toLowerCase();
+                const hasDirectMention = textLower.includes("jania");
+                const isPossibleListing = body.length > 120 || body.split("\n").length > 2 || !!msg.message.imageMessage || !!msg.message.documentMessage || textLower.includes("http") || textLower.includes("www") || textLower.includes("ofrezco") || textLower.includes("busco") || textLower.includes("vendo") || textLower.includes("arriendo") || textLower.includes("compro") || textLower.includes("necesito");
+                const isHelpOrSystemQuery = !isPossibleListing && (textLower.includes("c\xF3mo subo") || textLower.includes("como subo") || textLower.includes("c\xF3mo publico") || textLower.includes("como publico") || textLower.includes("c\xF3mo se publica") || textLower.includes("como se publica") || textLower.includes("c\xF3mo registrar") || textLower.includes("como registrar") || textLower.includes("c\xF3mo funciona") || textLower.includes("como funciona") || textLower.includes("de qu\xE9 consiste") || textLower.includes("de que consiste") || textLower.includes("en qu\xE9 consiste") || textLower.includes("en que consiste") || textLower.includes("c\xF3mo hago para") || textLower.includes("como hago para") || textLower.includes("c\xF3mo buscar") || textLower.includes("como buscar") || textLower.includes("c\xF3mo encontrar") || textLower.includes("como encontrar") || textLower.includes("ayuda") && textLower.includes("inmueble") || textLower.includes("explicar") && textLower.includes("grupo") || textLower.includes("c\xF3mo") && textLower.includes("grupo"));
+                if (hasDirectMention || isHelpOrSystemQuery) {
+                  const { isOutsideWorkingHours: isOutsideWorkingHours2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+                  const isOffHours = isOutsideWorkingHours2();
+                  let isBotAdmin = false;
+                  try {
+                    const metadata = await this.sock.groupMetadata(chatId);
+                    const me = this.sock.user?.id ? this.sock.user.id.split(":")[0] : "";
+                    const myParticipant = metadata.participants.find((p) => p.id.split("@")[0] === me);
+                    isBotAdmin = !!myParticipant && (myParticipant.admin === "admin" || myParticipant.admin === "superadmin");
+                  } catch (err) {
+                    isBotAdmin = false;
+                  }
+                  if (isBotAdmin && isOffHours) {
+                    console.log(`[JANIA-MATCH] Menci\xF3n/Ayuda de ${senderId} en grupo ${chatId}. Respondiendo (BotAdmin=true, OffHours=true).`);
+                    await this.handleDirectGroupQuestion(msg, chatId, senderId, body);
                   } else {
-                    req.continue().catch(() => {
-                    });
+                    console.log(`[JANIA-MATCH] Menci\xF3n/Ayuda de ${senderId} en grupo ${chatId} ignorada (BotAdmin=${isBotAdmin}, OffHours=${isOffHours}).`);
                   }
-                });
-                console.log("[JANIA-MATCH] Optimizaci\xF3n activa: Recursos visuales bloqueados.");
-              }
-            } catch (e) {
-              console.warn("[JANIA-MATCH] Error configurando interceptor de Puppeteer:", e.message);
-            }
-          })();
-        });
-        this.client.on("disconnected", async (reason) => {
-          console.warn("[JANIA-MATCH] \u26A0\uFE0F Cliente desconectado:", reason, "\u2014 reconectando en 10s...");
-          this.isReady = false;
-          await new Promise((resolve) => setTimeout(resolve, 1e4));
-          this.reconnectClient();
-        });
-        this.client.on("message_create", async (msg) => {
-          if (msg.from && msg.from.includes("status@broadcast") || msg.author && msg.author.includes("status@broadcast")) {
-            return;
-          }
-          if (msg.timestamp < SERVER_BOOT_TIME) {
-            return;
-          }
-          if (msg.author && msg.author.endsWith("@lid")) {
-            try {
-              const contact = await this.client.getContactById(msg.author);
-              if (contact?.id?._serialized?.endsWith("@c.us")) {
-                msg.author = contact.id._serialized;
-              }
-            } catch (e) {
-            }
-          }
-          if (msg.from && msg.from.endsWith("@lid")) {
-            try {
-              const contact = await this.client.getContactById(msg.from);
-              if (contact?.id?._serialized?.endsWith("@c.us")) {
-                msg.from = contact.id._serialized;
-              }
-            } catch (e) {
-            }
-          }
-          const senderId = msg.author || msg.from;
-          const botJid = this.client.info?.wid?._serialized;
-          if (msg.fromMe || botJid && (senderId === botJid || msg.from === botJid || msg.author === botJid)) {
-            return;
-          }
-          try {
-            const chat = await msg.getChat();
-            const chatId = chat.id._serialized;
-            const isGroup = chat.isGroup;
-            if (isGroup) {
-              if (!this.authorizedGroups.includes(chatId)) {
+                  return;
+                }
+                if (isPossibleListing) {
+                  await this.handleIncomingGroupMessage(msg, chatId, body);
+                }
                 return;
               }
-              if (msg.type === "sticker") {
+              if (!isGroup) {
+                const rawPhone = senderId.split("@")[0];
+                const ADMIN_PHONE = process.env.ADMIN_PHONE || "573166569719";
+                const isAdmin = rawPhone.includes(ADMIN_PHONE) || rawPhone === ADMIN_PHONE || rawPhone === "573166569719" || rawPhone.includes("573185462265");
+                const userName = msg.pushName || `Asesor +${rawPhone}`;
+                let body = "";
+                if (msg.message.conversation) body = msg.message.conversation;
+                else if (msg.message.extendedTextMessage) body = msg.message.extendedTextMessage.text || "";
+                else if (msg.message.imageMessage) body = msg.message.imageMessage.caption || "";
+                else if (msg.message.documentMessage) body = msg.message.documentMessage.caption || "";
+                else if (msg.message.videoMessage) body = msg.message.videoMessage.caption || "";
+                if (!isAdmin) {
+                  const db = await getDb();
+                  let isNewUser = false;
+                  if (db) {
+                    try {
+                      const existingMessages = await db.select({ id: messages.id }).from(messages).innerJoin(conversations, eq10(messages.conversationId, conversations.id)).where(eq10(conversations.sessionId, senderId)).limit(1);
+                      isNewUser = existingMessages.length === 0;
+                    } catch (dbErr) {
+                      console.warn("[JANIA-MATCH] Error al verificar si el usuario es nuevo en DM:", dbErr);
+                    }
+                  }
+                  if (isNewUser) {
+                    console.log(`[JANIA-MATCH] Nuevo usuario detectado: ${senderId}. Enviando bienvenida.`);
+                    const welcomeText = `\xA1Hola! Te damos una muy c\xE1lida bienvenida a *VECY Bienes Ra\xEDces* y *VECY Match* \u{1F3E0}\u2728. Gracias por contactarte con nosotros. Hemos recibido tu mensaje y uno de nuestros asesores humanos se comunicar\xE1 contigo muy pronto para brindarte la mejor atenci\xF3n. Mientras tanto, si gustas, puedes detallarnos tu requerimiento o enviarnos la informaci\xF3n de tu inmueble. \xA1Es un gusto saludarte! \u{1F91D}\u{1F680}`;
+                    await this.queuedSend(senderId, welcomeText);
+                    await this.logToDb(senderId, "user", body);
+                    await this.logToDb(senderId, "janIA", welcomeText);
+                    return;
+                  }
+                  const { isOutsideWorkingHours: isOutsideWorkingHours2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+                  const isOffHours = isOutsideWorkingHours2();
+                  if (isOffHours) {
+                    const nowTime = Date.now();
+                    const lastOffHoursGreet = this.redirectCooldowns.get(senderId + "_offhours") || 0;
+                    const ONCE_A_DAY = 24 * 60 * 60 * 1e3;
+                    if (nowTime - lastOffHoursGreet > ONCE_A_DAY) {
+                      this.redirectCooldowns.set(senderId + "_offhours", nowTime);
+                      const outOfOfficeText = `\xA1Hola! Gracias por escribir a *VECY Bienes Ra\xEDces* \u{1F3E0}\u2728. En este momento nuestros asesores humanos se encuentran descansando (fuera de nuestro horario laboral). Te presentamos a *JanIA*, nuestra asistente de Inteligencia Artificial creada y entrenada por nosotros. Ella registrar\xE1 de forma autom\xE1tica cualquier inmueble o requerimiento de b\xFAsqueda que nos env\xEDes en este chat para que est\xE9 listo a primera hora. Si es una consulta general, uno de nuestros agentes humanos te responder\xE1 tan pronto regresemos a la oficina. \xA1Que tengas un excelente descanso! \u{1F319}\u{1F680}`;
+                      await this.queuedSend(senderId, outOfOfficeText);
+                      await this.logToDb(senderId, "user", body);
+                      await this.logToDb(senderId, "janIA", outOfOfficeText);
+                    }
+                    await this.logToDb(senderId, "user", body);
+                    await this.handlePrivateDmConversation(msg, senderId, rawPhone, body);
+                    return;
+                  } else {
+                    console.log(`[JANIA-MATCH] DM de ${rawPhone} recibido en horario laboral. Silenciado.`);
+                    await this.logToDb(senderId, "user", body);
+                    return;
+                  }
+                }
+                console.log(`[JANIA-MATCH] [Admin/Test] Atendiendo mensaje de admin/test ${senderId}...`);
+                const matchConfirmationRegex = /^\s*(sí|si|no)\s+#m(\d+)\s*$/i;
+                const matchConf = body.match(matchConfirmationRegex);
+                if (matchConf) {
+                  const decision = matchConf[1].toLowerCase();
+                  const matchId = parseInt(matchConf[2], 10);
+                  await this.processMatchConfirmation(senderId, userName, matchId, decision);
+                  return;
+                }
+                await this.handleDirectGroupQuestion(msg, chatId, senderId, body);
                 return;
               }
-              const textLower = (msg.body || "").toLowerCase();
-              const hasDirectMention = textLower.includes("jania");
-              const isPossibleListing = (msg.body || "").length > 120 || (msg.body || "").split("\n").length > 2 || msg.hasMedia || textLower.includes("http") || textLower.includes("www") || textLower.includes("ofrezco") || textLower.includes("busco") || textLower.includes("vendo") || textLower.includes("arriendo") || textLower.includes("compro") || textLower.includes("necesito");
-              const isHelpOrSystemQuery = !isPossibleListing && (textLower.includes("c\xF3mo subo") || textLower.includes("como subo") || textLower.includes("c\xF3mo publico") || textLower.includes("como publico") || textLower.includes("c\xF3mo se publica") || textLower.includes("como se publica") || textLower.includes("c\xF3mo registrar") || textLower.includes("como registrar") || textLower.includes("c\xF3mo funciona") || textLower.includes("como funciona") || textLower.includes("de qu\xE9 consiste") || textLower.includes("de que consiste") || textLower.includes("en qu\xE9 consiste") || textLower.includes("en que consiste") || textLower.includes("c\xF3mo hago para") || textLower.includes("como hago para") || textLower.includes("c\xF3mo buscar") || textLower.includes("como buscar") || textLower.includes("c\xF3mo encontrar") || textLower.includes("como encontrar") || textLower.includes("ayuda") && textLower.includes("inmueble") || textLower.includes("explicar") && textLower.includes("grupo") || textLower.includes("c\xF3mo") && textLower.includes("grupo"));
-              if (hasDirectMention || isHelpOrSystemQuery) {
-                console.log(`[JANIA-MATCH] Pregunta directa/ayuda de ${senderId} en grupo ${chatId}: "${msg.body}"`);
-                await this.handleDirectGroupQuestion(msg, chatId, senderId);
-                return;
-              }
-              if (isPossibleListing) {
-                await this.handleIncomingGroupMessage(msg, chatId);
-              }
-              return;
+            } catch (err) {
+              console.error("[JANIA-MATCH] Error en procesador de eventos de mensaje:", err);
             }
-            if (!isGroup) {
-              console.log(`[JANIA-MATCH] DM entrante de ${senderId}. Aplicando redirecci\xF3n a JanIA principal.`);
-              await this.handlePrivateDmRedirect(chatId, senderId);
-              return;
-            }
-          } catch (err) {
-            console.error("[JANIA-MATCH] Error en procesador de eventos de mensaje:", err);
           }
         });
       }
@@ -5307,55 +5297,62 @@ Para hablar en privado, buscar propiedades, hacer consultas o recibir soporte y 
         }
       }
       // --- RESPUESTA DIRECTA A PREGUNTAS EN GRUPOS ---
-      async handleDirectGroupQuestion(msg, chatId, senderId) {
+      async handleDirectGroupQuestion(msg, chatId, senderId, bodyText) {
         try {
-          const contact = await msg.getContact();
-          const realName = contact?.pushname || contact?.name || `Asesor +${senderId.split("@")[0]}`;
-          const textLower = msg.body.toLowerCase();
-          const chat = await msg.getChat();
-          const wantsVoice = msg.type === "audio" || msg.type === "ptt" || detectaVoz(textLower);
+          const realName = msg.pushName || `Asesor +${senderId.split("@")[0]}`;
+          const textLower = bodyText.toLowerCase();
+          const { detectaVoz: detectaVoz2, textToSpeechMedia: textToSpeechMedia2 } = await Promise.resolve().then(() => (init_whatsapp(), whatsapp_exports));
+          const { processWhatsAppMessage: processWhatsAppMessage2, processConsultingMessage: processConsultingMessage2, processCirculoMessage: processCirculoMessage2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+          const wantsVoice = msg.message?.audioMessage || detectaVoz2(textLower);
           if (wantsVoice) {
-            await chat.sendStateRecording();
+            await this.sock.sendPresenceUpdate("recording", chatId);
           } else {
-            await chat.sendStateTyping();
+            await this.sock.sendPresenceUpdate("composing", chatId);
           }
           await delay(2e3);
           let result;
           if (chatId === "120363417740040773@g.us") {
-            result = await processConsultingMessage(msg.body, senderId, realName);
+            result = await processConsultingMessage2(bodyText, senderId, realName);
           } else if (chatId === "120363403507276533@g.us") {
-            result = await processCirculoMessage(msg.body, senderId, realName);
+            result = await processCirculoMessage2(bodyText, senderId, realName);
           } else {
-            result = await processWhatsAppMessage(msg.body, senderId, realName, false, [], void 0, void 0, true, void 0, void 0, chatId);
+            const redirectMsg = `\xA1Hola! \u{1F60A} Para resolver tus inquietudes inmobiliarias, dudas de corretaje, soporte t\xE9cnico o de cuenta, te invito a consultarme en privado a mi otro yo: **JanIA de Soporte y Atenci\xF3n** \u{1F4F2} en el n\xFAmero +57 3185462265 o haciendo clic aqu\xED: https://wa.me/573185462265. \xA1All\xED con gusto te responder\xE9 a profundidad! \u{1F680}`;
+            await this.queuedSend(chatId, redirectMsg, {
+              mentions: [senderId],
+              quoted: msg
+            });
+            await this.sock.sendPresenceUpdate("paused", chatId);
+            return;
           }
           if (result && result.response && result.response.trim() !== "") {
             const textToDeliver = result.response;
             const voiceToDeliver = result.voiceResponse || "";
             if (wantsVoice && voiceToDeliver.trim() !== "") {
-              const media = await textToSpeechMedia(voiceToDeliver);
+              const media = await textToSpeechMedia2(voiceToDeliver);
               if (media) {
-                await this.queuedSend(chatId, media, { sendAudioAsVoice: true });
+                await this.queuedSend(chatId, media, { sendAudioAsVoice: true, quoted: msg });
               } else {
                 await this.queuedSend(chatId, textToDeliver, {
                   mentions: [senderId],
-                  quotedMessageId: msg.id._serialized
+                  quoted: msg
                 });
               }
             } else {
               await this.queuedSend(chatId, textToDeliver, {
                 mentions: [senderId],
-                quotedMessageId: msg.id._serialized
+                quoted: msg
               });
             }
           }
-          await chat.clearState();
+          await this.sock.sendPresenceUpdate("paused", chatId);
         } catch (err) {
           console.error("[JANIA-MATCH] Error al responder pregunta directa en grupo:", err);
         }
       }
       // --- LOGÍSTICA DE BUFFER GRUPAL ---
-      async handleIncomingGroupMessage(msg, chatId) {
-        const senderId = msg.author || msg.from;
+      async handleIncomingGroupMessage(msg, chatId, bodyText) {
+        if (!msg.key || !msg.message) return;
+        const senderId = msg.key.participant || msg.key.remoteJid || "";
         const lockKey = `${chatId}_${senderId}`;
         const previousLock = this.processingLocks.get(lockKey) || Promise.resolve();
         let resolveLock;
@@ -5366,55 +5363,44 @@ Para hablar en privado, buscar propiedades, hacer consultas o recibir soporte y 
         this.processingLocks.set(lockKey, chainedLock);
         try {
           await previousLock;
-          const contact = await msg.getContact();
-          const realName = contact?.pushname || contact?.name || `Asesor +${senderId.split("@")[0]}`;
+          const realName = msg.pushName || `Asesor +${senderId.split("@")[0]}`;
           const bufferKey = `${chatId}_${senderId}`;
           const isMainGroup = chatId === this.targetGroupId;
-          const textLower = (msg.body || "").toLowerCase();
-          const isPossibleListing = (msg.body || "").length > 120 || (msg.body || "").split("\n").length > 2 || msg.hasMedia || textLower.includes("http") || textLower.includes("www") || textLower.includes("ofrezco") || textLower.includes("busco") || textLower.includes("vendo") || textLower.includes("arriendo") || textLower.includes("compro") || textLower.includes("necesito");
+          const textLower = bodyText.toLowerCase();
           const now = Date.now();
           const COOLDOWN_PERIOD = 5 * 60 * 1e3;
-          if (isMainGroup && isPossibleListing) {
+          let isBotAdmin = false;
+          try {
+            const metadata = await this.sock.groupMetadata(chatId);
+            const me = this.sock.user?.id ? this.sock.user.id.split(":")[0] : "";
+            const myParticipant = metadata.participants.find((p) => p.id.split("@")[0] === me);
+            isBotAdmin = !!myParticipant && (myParticipant.admin === "admin" || myParticipant.admin === "superadmin");
+          } catch (_) {
+          }
+          if (isBotAdmin) {
+            const lastMsgTime = this.lastGroupMessageTime.get(`${chatId}_${senderId}`) || 0;
+            const ONE_MINUTE = 60 * 1e3;
+            if (now - lastMsgTime < ONE_MINUTE) {
+              console.log(`[JANIA-MATCH] Doble posteo detectado para ${senderId} en ${chatId} (Mismo minuto).`);
+              try {
+                await this.sock.sendMessage(chatId, { react: { text: "\u{1F6A8}", key: msg.key } });
+                const warningText = `\xA1Hola! \u26A0\uFE0F He detectado que est\xE1s enviando m\xFAltiples publicaciones consecutivas en menos de un minuto. Debes publicar cada una pero con un intervalo de tiempo justificable de por lo menos UN MINUTO o DOS de diferencia entre cada publicaci\xF3n para poder hacer el proceso perfectamente y poderlo subir a nuestra base de datos de manera correcta, ya que NO puedo revisar tantos inmuebles de un solo tajo ni incluirlos en la base de datos de inmediato. Esto es con el fin de mantener el buen funcionamiento del sistema y ver si le encontramos una coincidencia o MATCH a tus publicaciones. \xA1Gracias por tu amable comprensi\xF3n! \u{1F91D}\u{1F680}`;
+                await this.queuedSend(chatId, warningText, { quoted: msg, mentions: [senderId] });
+              } catch (e) {
+              }
+              return;
+            }
+            this.lastGroupMessageTime.set(`${chatId}_${senderId}`, now);
+          }
+          if (isMainGroup) {
             this.loadCooldowns();
             const cooldownKey = `${chatId}_${senderId}`;
             const cooldown = this.cooldownMap.get(cooldownKey);
             if (cooldown && now - cooldown.lastBlockProcessedAt < COOLDOWN_PERIOD) {
-              try {
-                await msg.react("\u26A0\uFE0F");
-              } catch (e) {
-              }
-              if (!cooldown.warningSent) {
-                cooldown.warningSent = true;
-                this.cooldownMap.set(cooldownKey, cooldown);
-                this.saveCooldowns();
-                const rawPhone = senderId.split("@")[0];
-                const useVoice = Math.random() < 0.5;
-                if (useVoice) {
-                  const voiceText = `Hola, acabo de procesar tus primeras propiedades. Para no saturar el grupo y cuidar la visibilidad de tus activos, por favor colaborame esperando cinco minutos antes de enviar tu siguiente bloque de propiedades. \xA1Muchas gracias!`;
-                  const media = await textToSpeechMedia(voiceText);
-                  if (media) {
-                    await this.queuedSend(chatId, media, { sendAudioAsVoice: true });
-                  } else {
-                    const warningText = `\u26A0\uFE0F *COOLDOWN ACTIVO (5 MINUTOS)* \u26A0\uFE0F
-
-Hola @${rawPhone}, acabo de procesar con \xE9xito tus primeras propiedades. Para cuidar la visibilidad de tus activos y no saturar la red de los aliados, te pido que por favor me colabores esperando los *5 minutos* de intervalo antes de enviar tu siguiente bloque (m\xE1ximo 3 publicaciones).
-
-\xA1Mis motores necesitan este breve descanso para mantener tus fichas t\xE9cnicas al 100% de calidad! JanIA sigue atenta. \u{1F3C6}\u{1F3AF}`;
-                    await this.queuedSend(chatId, warningText, {
-                      mentions: [senderId],
-                      quotedMessageId: msg.id._serialized
-                    });
-                  }
-                } else {
-                  const warningText = `\u26A0\uFE0F *COOLDOWN ACTIVO (5 MINUTOS)* \u26A0\uFE0F
-
-Hola @${rawPhone}, acabo de procesar con \xE9xito tus primeras propiedades. Para cuidar la visibilidad de tus activos y no saturar la red de los aliados, te pido que por favor me colabores esperando los *5 minutos* de intervalo antes de enviar tu siguiente bloque (m\xE1ximo 3 publicaciones).
-
-\xA1Mis motores necesitan este breve descanso para mantener tus fichas t\xE9cnicas al 100% de calidad! JanIA sigue atenta. \u{1F3C6}\u{1F3AF}`;
-                  await this.queuedSend(chatId, warningText, {
-                    mentions: [senderId],
-                    quotedMessageId: msg.id._serialized
-                  });
+              if (this.authorizedGroups.includes(chatId)) {
+                try {
+                  await this.sock.sendMessage(chatId, { react: { text: "\u26A0\uFE0F", key: msg.key } });
+                } catch (e) {
                 }
               }
               return;
@@ -5425,106 +5411,42 @@ Hola @${rawPhone}, acabo de procesar con \xE9xito tus primeras propiedades. Para
           const MAX_BLOCK_SIZE = 3;
           if (buffer) {
             const hasExistingListing = buffer.messages.some((m) => {
-              const bodyLower = (m.body || "").toLowerCase();
-              return (m.body || "").length > 120 || (m.body || "").split("\n").length > 2 || m.hasMedia || bodyLower.includes("http") || bodyLower.includes("www") || bodyLower.includes("ofrezco") || bodyLower.includes("busco") || bodyLower.includes("vendo") || bodyLower.includes("arriendo") || bodyLower.includes("compro") || bodyLower.includes("necesito");
+              const bodyLower = m.body.toLowerCase();
+              return m.body.length > 120 || m.body.split("\n").length > 2 || m.hasMedia || bodyLower.includes("http") || bodyLower.includes("www") || bodyLower.includes("ofrezco") || bodyLower.includes("busco") || bodyLower.includes("vendo") || bodyLower.includes("arriendo") || bodyLower.includes("compro") || bodyLower.includes("necesito");
             });
-            if (isMainGroup && isPossibleListing && hasExistingListing) {
+            if (isMainGroup && hasExistingListing) {
               console.log(`[BUFFER] Intento de m\xFAltiple propiedad detectado para ${senderId}. Mensaje descartado.`);
-              try {
-                await msg.react("\u26A0\uFE0F");
-              } catch (e) {
-              }
-              if (!buffer.warningSent) {
-                buffer.warningSent = true;
-                const rawPhone = senderId.split("@")[0];
-                const useVoice = Math.random() < 0.5;
-                if (useVoice) {
-                  const voiceText = `Hola, detect\xE9 que est\xE1s enviando varias propiedades al mismo tiempo. Mi sistema est\xE1 dise\xF1ado para procesar un solo inmueble por bloque. Por favor, env\xEDa cada propiedad en un mensaje separado y espera cinco minutos entre cada una para poder registrarla correctamente. \xA1Muchas gracias!`;
-                  const media = await textToSpeechMedia(voiceText);
-                  if (media) {
-                    await this.queuedSend(chatId, media, { sendAudioAsVoice: true });
-                  } else {
-                    const warningText = `\u26A0\uFE0F *UN INMUEBLE A LA VEZ* \u26A0\uFE0F
-
-Hola @${rawPhone}, detect\xE9 que est\xE1s enviando varias propiedades en el mismo bloque.
-
-Mi sistema est\xE1 dise\xF1ado para procesar \xFAnicamente *un (1) solo inmueble* por mensaje. Si env\xEDas varios al mismo tiempo, quedar\xE1n sin registrar en la base de datos y no podr\xE9 buscarte coincidencias (matches) autom\xE1ticas.
-
-Por favor, env\xEDa cada propiedad por separado y espera los *5 minutos* de cooldown reglamentarios entre cada una. \xA1Tus primeras publicaciones ya est\xE1n siendo procesadas! \u{1F680}\u{1F3AF}`;
-                    await this.queuedSend(chatId, warningText, {
-                      mentions: [senderId],
-                      quotedMessageId: msg.id._serialized
-                    });
-                  }
-                } else {
-                  const warningText = `\u26A0\uFE0F *UN INMUEBLE A LA VEZ* \u26A0\uFE0F
-
-Hola @${rawPhone}, detect\xE9 que est\xE1s enviando varias propiedades en el mismo bloque.
-
-Mi sistema est\xE1 dise\xF1ado para procesar \xFAnicamente *un (1) solo inmueble* por mensaje. Si env\xEDas varios al mismo tiempo, quedar\xE1n sin registrar en la base de datos y no podr\xE9 buscarte coincidencias (matches) autom\xE1ticas.
-
-Por favor, env\xEDa cada propiedad por separado y espera los *5 minutos* de cooldown reglamentarios entre cada una. \xA1Tus primeras publicaciones ya est\xE1n siendo procesadas! \u{1F680}\u{1F3AF}`;
-                  await this.queuedSend(chatId, warningText, {
-                    mentions: [senderId],
-                    quotedMessageId: msg.id._serialized
-                  });
+              if (this.authorizedGroups.includes(chatId)) {
+                try {
+                  await this.sock.sendMessage(chatId, { react: { text: "\u26A0\uFE0F", key: msg.key } });
+                } catch (e) {
                 }
               }
               return;
             }
             const limit = isMainGroup ? MAX_BLOCK_SIZE : 10;
             if (buffer.messages.length >= limit) {
-              console.log(`[BUFFER] L\xEDmite de mensajes del bloque (${limit}) alcanzado para ${senderId}. Mensaje #${buffer.messages.length + 1} descartado.`);
-              try {
-                await msg.react("\u26A0\uFE0F");
-              } catch (e) {
-              }
-              if (isMainGroup && !buffer.warningSent) {
-                buffer.warningSent = true;
-                const rawPhone = senderId.split("@")[0];
-                const useVoice = Math.random() < 0.5;
-                if (useVoice) {
-                  const voiceText = `Hola, veo que est\xE1s enviando muchas publicaciones seguidas. Para cuidar la visibilidad y no saturar el chat de los aliados, por favor colaborame esperando cinco minutos antes de enviar m\xE1s de tres publicaciones. \xA1Muchas gracias!`;
-                  const media = await textToSpeechMedia(voiceText);
-                  if (media) {
-                    await this.queuedSend(chatId, media, { sendAudioAsVoice: true });
-                  } else {
-                    const warningText = `\u26A0\uFE0F *L\xCDMITE DE PUBLICACI\xD3N* \u26A0\uFE0F
-
-Hola @${rawPhone}, detect\xE9 que est\xE1s enviando muchas publicaciones seguidas. Para cuidar la visibilidad de tus activos y no saturar el chat de los aliados, te pido que por favor me colabores con esta norma, ya que mis motores de extracci\xF3n de datos solo pueden procesar un m\xE1ximo de *3 publicaciones* por bloque a la vez.
-
-\xA1Espera unos *5 minutos* y luego env\xEDa el siguiente grupo! Tus primeras 3 publicaciones ya est\xE1n siendo procesadas y registradas. \u{1F680}\u{1F3AF}`;
-                    await this.queuedSend(chatId, warningText, {
-                      mentions: [senderId],
-                      quotedMessageId: msg.id._serialized
-                    });
-                  }
-                } else {
-                  const warningText = `\u26A0\uFE0F *L\xCDMITE DE PUBLICACI\xD3N* \u26A0\uFE0F
-
-Hola @${rawPhone}, detect\xE9 que est\xE1s enviando muchas publicaciones seguidas. Para cuidar la visibilidad de tus activos y no saturar el chat de los aliados, te pido que por favor me colabores con esta norma, ya que mis motores de extracci\xF3n de datos solo pueden procesar un m\xE1ximo de *3 publicaciones* por bloque a la vez.
-
-\xA1Espera unos *5 minutos* y luego env\xEDa el siguiente grupo! Tus primeras 3 publicaciones ya est\xE1n siendo procesadas y registradas. \u{1F680}\u{1F3AF}`;
-                  await this.queuedSend(chatId, warningText, {
-                    mentions: [senderId],
-                    quotedMessageId: msg.id._serialized
-                  });
+              console.log(`[BUFFER] L\xEDmite de mensajes del bloque (${limit}) alcanzado para ${senderId}. Mensaje descartado.`);
+              if (this.authorizedGroups.includes(chatId)) {
+                try {
+                  await this.sock.sendMessage(chatId, { react: { text: "\u26A0\uFE0F", key: msg.key } });
+                } catch (e) {
                 }
               }
               return;
             }
             clearTimeout(buffer.timer);
             buffer.messages.push({
-              body: msg.body,
-              hasMedia: msg.hasMedia,
+              body: bodyText,
+              hasMedia: !!msg.message.imageMessage || !!msg.message.documentMessage,
               originalMsg: msg
             });
             buffer.timer = setTimeout(() => this.processGroupBuffer(bufferKey), bufferTimeout);
           } else {
             this.messageBuffers.set(bufferKey, {
               messages: [{
-                body: msg.body,
-                hasMedia: msg.hasMedia,
+                body: bodyText,
+                hasMedia: !!msg.message.imageMessage || !!msg.message.documentMessage,
                 originalMsg: msg
               }],
               userName: realName,
@@ -5540,9 +5462,13 @@ Hola @${rawPhone}, detect\xE9 que est\xE1s enviando muchas publicaciones seguida
         }
       }
       getReactionEmoji(result) {
-        const completeEmojis = ["\u{1F44D}", "\u{1F44C}", "\u2705", "\u2714\uFE0F", "\u2611\uFE0F"];
-        const incompleteEmojis = ["\u2753", "\u2049\uFE0F", "\u2754", "\u{1F914}", "\u{1F610}", "\u{1FAEA}"];
-        const violationEmojis = ["\u{1F621}", "\u{1F624}", "\u{1F620}", "\u{1F616}", "\u2639\uFE0F", "\u274C", "\u{1F6AB}", "\u2622\uFE0F"];
+        const completeEmojis = ["\u{1F44D}", "\u{1F44C}", "\u{1F91D}", "\u2705", "\u{1F197}", "\u2714\uFE0F", "\u2611\uFE0F"];
+        const incompleteEmojis = ["\u{1F633}", "\u{1F9D0}", "\u{1FAEA}", "\u{1F632}", "\u{1F62E}", "\u{1F914}", "\u{1F937}\u{1F3FB}\u200D\u2640\uFE0F", "\u2753"];
+        const violationEmojis = ["\u{1F6AB}", "\u{1F648}", "\u{1F645}\u200D\u2642\uFE0F", "\u{1F6A8}", "\u{1F612}", "\u274C", "\u{1F198}", "\u274E", "\u{1F44E}", "\u{1F640}", "\u{1F644}"];
+        if (result.reactionEmoji && typeof result.reactionEmoji === "string") {
+          const trimmed = result.reactionEmoji.trim();
+          if (trimmed) return trimmed;
+        }
         if (result.classification === "VIOLACION_DE_NORMAS") {
           return violationEmojis[Math.floor(Math.random() * violationEmojis.length)];
         }
@@ -5552,7 +5478,7 @@ Hola @${rawPhone}, detect\xE9 que est\xE1s enviando muchas publicaciones seguida
         if (result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO") {
           return completeEmojis[Math.floor(Math.random() * completeEmojis.length)];
         }
-        return result.reactionEmoji || null;
+        return null;
       }
       async processGroupBuffer(bufferKey) {
         const buffer = this.messageBuffers.get(bufferKey);
@@ -5563,22 +5489,18 @@ Hola @${rawPhone}, detect\xE9 que est\xE1s enviando muchas publicaciones seguida
         const userName = buffer.userName;
         console.log(`[JANIA-MATCH] Procesando buffer de ${buffer.messages.length} mensajes para ${senderId} (Silencioso)...`);
         for (const bufferedMsg of buffer.messages) {
-          if (bufferedMsg.hasMedia && bufferedMsg.originalMsg.type === "image") {
+          if (bufferedMsg.hasMedia && bufferedMsg.originalMsg.message?.imageMessage) {
             try {
-              const media = await bufferedMsg.originalMsg.downloadMedia();
-              if (media && media.mimetype.startsWith("image/")) {
-                bufferedMsg.imageBuffer = media.data;
-              }
+              const mediaBuffer = await downloadMediaMessage(bufferedMsg.originalMsg, "buffer", {});
+              bufferedMsg.imageBuffer = mediaBuffer.toString("base64");
             } catch (e) {
             }
           }
-          if (bufferedMsg.hasMedia && bufferedMsg.originalMsg.type === "document") {
+          if (bufferedMsg.hasMedia && bufferedMsg.originalMsg.message?.documentMessage) {
             try {
-              const media = await bufferedMsg.originalMsg.downloadMedia();
-              if (media && media.mimetype === "application/pdf") {
-                bufferedMsg.pdfBuffer = media.data;
-                bufferedMsg.pdfMimeType = media.mimetype;
-              }
+              const mediaBuffer = await downloadMediaMessage(bufferedMsg.originalMsg, "buffer", {});
+              bufferedMsg.pdfBuffer = mediaBuffer.toString("base64");
+              bufferedMsg.pdfMimeType = bufferedMsg.originalMsg.message.documentMessage.mimetype || "application/pdf";
             } catch (e) {
             }
           }
@@ -5602,9 +5524,11 @@ Hola @${rawPhone}, detect\xE9 que est\xE1s enviando muchas publicaciones seguida
             }
           }
           await this.logToDb(senderId, "user", fullText);
+          const { processWhatsAppMessage: processWhatsAppMessage2, processConsultingMessage: processConsultingMessage2, processCirculoMessage: processCirculoMessage2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+          const { sendAdminNotification: sendAdminNotification2 } = await Promise.resolve().then(() => (init_whatsapp(), whatsapp_exports));
           let result;
           if (chatId === "120363417740040773@g.us") {
-            result = await processConsultingMessage(
+            result = await processConsultingMessage2(
               fullText,
               senderId,
               userName,
@@ -5613,13 +5537,13 @@ Hola @${rawPhone}, detect\xE9 que est\xE1s enviando muchas publicaciones seguida
               pdfMsg?.pdfMimeType
             );
           } else if (chatId === "120363403507276533@g.us") {
-            result = await processCirculoMessage(
+            result = await processCirculoMessage2(
               fullText,
               senderId,
               userName
             );
           } else {
-            result = await processWhatsAppMessage(
+            result = await processWhatsAppMessage2(
               fullText,
               senderId,
               userName,
@@ -5639,116 +5563,60 @@ Hola @${rawPhone}, detect\xE9 que est\xE1s enviando muchas publicaciones seguida
               try {
                 const lastMsg = buffer.messages[buffer.messages.length - 1].originalMsg;
                 console.log(`[JANIA-MATCH] Reaccionando con ${emoji} al mensaje de ${senderId}`);
-                await lastMsg.react(emoji);
+                await this.sock.sendMessage(chatId, { react: { text: emoji, key: lastMsg.key } });
               } catch (reactErr) {
-                console.error("[JANIA-MATCH] Error al reaccionar al mensaje:", reactErr.message);
+                console.error("[JANIA-MATCH] Error al reaccionar al mensaje:", reactErr.message || reactErr);
               }
             }
           }
           if (result) {
             const isWarning = result.classification === "DATOS_INCOMPLETOS" || result.classification === "VIOLACION_DE_NORMAS";
-            if (isWarning) {
-              const warningText = result.dmResponse || result.response || "";
-              if (warningText.trim() !== "") {
-                let cleanDmResponse = warningText;
-                cleanDmResponse = cleanDmResponse.replace(/¡Hola,\s+\*[^*]+\*!\s+😊\s*/i, "");
-                cleanDmResponse = cleanDmResponse.replace(/¡Hola!\s+😊\s*/i, "");
-                let hasInteracted = false;
-                try {
-                  const db = await getDb();
-                  if (db) {
-                    const checkInteracted = await db.select({ id: messages.id }).from(messages).innerJoin(conversations, eq10(messages.conversationId, conversations.id)).where(
-                      and5(
-                        eq10(conversations.sessionId, senderId),
-                        eq10(messages.role, "janIA")
-                      )
-                    ).limit(1);
-                    hasInteracted = checkInteracted.length > 0;
-                  }
-                } catch (err) {
-                  console.error("[JANIA-MATCH] Error checking user interaction history:", err);
-                }
-                const shouldSendPublic = result.classification === "VIOLACION_DE_NORMAS" || !hasInteracted;
-                if (shouldSendPublic) {
-                  let publicWarning = "";
-                  if (result.classification === "VIOLACION_DE_NORMAS") {
-                    publicWarning = `\u{1F6A8} *LLAMADO DE ATENCI\xD3N* \u{1F6A8}
+            let isBotAdmin = false;
+            try {
+              const metadata = await this.sock.groupMetadata(chatId);
+              const me = this.sock.user?.id ? this.sock.user.id.split(":")[0] : "";
+              const myParticipant = metadata.participants.find((p) => p.id.split("@")[0] === me);
+              isBotAdmin = !!myParticipant && (myParticipant.admin === "admin" || myParticipant.admin === "superadmin");
+            } catch (_) {
+            }
+            if (!isWarning) {
+              const isConsultation = result.classification === "CONSULTA_GENERAL" || result.classification === "RESPUESTA_A_PREGUNTA_IA" || result.classification === "ANALISIS_DE_MERCADO";
+              if (isConsultation) {
+                console.log(`[JANIA-MATCH] Consulta general de ${senderId} en ${chatId} procesada en silencio.`);
+              } else {
+                if (result.response && result.response.trim() !== "") {
+                  console.log(`[JANIA-MATCH] Match detectado silenciosamente. Alertas enviadas al administrador.`);
+                  await sendAdminNotification2(`\u{1F3AF} *[MATCH DETECTADO]*
 
-Hola @${senderId.split("@")[0]},
-
-He detectado que tu publicaci\xF3n infringe las normas de nuestro canal.
-
-*Detalle de la infracci\xF3n:*
-${cleanDmResponse}
-
-*Nota:* Como casi nadie se toma la molestia de leer las normas en la descripci\xF3n del grupo, te aclaro que estas reglas existen para mantener la comunidad ordenada y efectiva para todos.
-
-Si tienes dudas, por favor contacta a mi otro yo *JanIA v3.5* (atenci\xF3n y soporte al usuario) al +573185462265 o escribi\xE9ndole directamente aqu\xED:
-\u{1F449} https://wa.me/573185462265`;
-                  } else {
-                    publicWarning = `\u26A0\uFE0F *INFORMACI\xD3N PENDIENTE* \u26A0\uFE0F
-
-Hola @${senderId.split("@")[0]},
-
-${cleanDmResponse}
-
-*Nota:* Hacemos \xE9nfasis en esto porque casi nadie se toma la molestia de leer las normas de publicaci\xF3n en la descripci\xF3n del grupo, pero estos datos son 100% obligatorios para que pueda procesar tu propiedad y buscarte un MATCH comercial.
-
-Si deseas completar tus datos o tienes dudas, por favor contacta directamente a mi versi\xF3n principal de soporte, *JanIA v3.5*, escribi\xE9ndole al enlace:
-\u{1F449} https://wa.me/573185462265`;
-                  }
-                  console.log(`[JANIA-MATCH] [Public-Moderation] Enviando advertencia grupal a ${senderId} en ${chatId}`);
-                  await this.queuedSend(chatId, publicWarning, { mentions: [senderId] });
-                  await this.logToDb(senderId, "janIA", `[PUBLIC-WARNING] ${publicWarning}`);
-                } else {
-                  console.log(`[JANIA-MATCH] [Stealth] Enviando advertencia privada de datos incompletos a ${senderId} (Usuario conocido).`);
-                  await sendUserDM(senderId, result.dmResponse || "");
-                  await this.logToDb(senderId, "janIA", `[DM-Stealth] ${result.dmResponse || ""}`);
-                }
-                if (result.classification === "DATOS_INCOMPLETOS") {
-                  setBotPendingData(
-                    senderId,
-                    fullText,
-                    result.extractedData || {},
-                    result.classification,
-                    result.missingFields || []
-                  );
+${result.response}`);
+                  await this.logToDb(senderId, "janIA", `[SILENT-MATCH] ${result.response}`);
                 }
               }
             } else {
-              const isConsultation = result.classification === "CONSULTA_GENERAL" || result.classification === "RESPUESTA_A_PREGUNTA_IA" || result.classification === "ANALISIS_DE_MERCADO";
-              if (isConsultation && result.response && result.response.trim() !== "") {
-                console.log(`[JANIA-MATCH] Enviando respuesta a consulta general en el grupo para ${senderId}`);
-                await this.queuedSend(chatId, result.response, {
-                  mentions: [senderId],
-                  quotedMessageId: buffer.messages[buffer.messages.length - 1].originalMsg.id._serialized
-                });
-                await this.logToDb(senderId, "janIA", `[GROUP-REPLY] ${result.response}`);
-              } else {
-                if (result.response && result.response.trim() !== "") {
-                  console.log(`[JANIA-MATCH] Enviando notificaci\xF3n de Match en el grupo para ${senderId}`);
-                  await this.queuedSend(chatId, result.response, {
-                    mentions: result.mentions || [senderId],
-                    quotedMessageId: buffer.messages[buffer.messages.length - 1].originalMsg.id._serialized
-                  });
-                  await this.logToDb(senderId, "janIA", `[GROUP-MATCH] ${result.response}`);
+              console.log(`[JANIA-MATCH] Publicaci\xF3n con advertencia/incompleta de ${senderId} en ${chatId} procesada.`);
+              if (result.classification === "VIOLACION_DE_NORMAS" && isBotAdmin && result.response && result.response.trim() !== "") {
+                const textToDeliver = result.response;
+                const { textToSpeechMedia: textToSpeechMedia2 } = await Promise.resolve().then(() => (init_whatsapp(), whatsapp_exports));
+                const voiceToDeliver = result.voiceResponse || textToDeliver;
+                try {
+                  const media = await textToSpeechMedia2(voiceToDeliver);
+                  if (media) {
+                    const lastMsg2 = buffer.messages[buffer.messages.length - 1].originalMsg;
+                    await this.queuedSend(chatId, media, { sendAudioAsVoice: true, quoted: lastMsg2 });
+                  }
+                } catch (audioErr) {
+                  console.error("[JANIA-MATCH] Error al enviar audio de amonestaci\xF3n:", audioErr);
                 }
-                if (result.shouldSendDM && result.dmResponse && result.dmResponse.trim() !== "") {
-                  console.log(`[JANIA-MATCH] [Stealth] Derivando confirmaci\xF3n DM de ${senderId} al bot principal.`);
-                  await sendUserDM(senderId, result.dmResponse);
-                  await this.logToDb(senderId, "janIA", `[DM-Stealth] ${result.dmResponse}`);
-                }
+                const lastMsg = buffer.messages[buffer.messages.length - 1].originalMsg;
+                await this.queuedSend(chatId, textToDeliver, { quoted: lastMsg });
+                await this.logToDb(chatId, "janIA", `[GROUP-WARNING] ${textToDeliver}`);
               }
             }
             if (result.extraDMs && result.extraDMs.length > 0) {
               for (const dm of result.extraDMs) {
                 if (!dm.jid || !dm.jid.includes("@") || dm.jid.split("@")[0].length < 5) continue;
-                console.log(`[JANIA-MATCH] [Stealth] Derivando notificaci\xF3n de Match para ${dm.jid} al bot principal.`);
-                if (dm.viaMainBot) {
-                  await sendAdminNotification(dm.message);
-                } else {
-                  await sendUserDM(dm.jid, dm.message);
-                }
+                console.log(`[JANIA-MATCH] [Stealth] Derivando notificaci\xF3n de Match adicional para ${dm.jid} a alertas de administrador.`);
+                await sendAdminNotification2(dm.message);
               }
             }
           }
@@ -5797,88 +5665,297 @@ Si deseas completar tus datos o tienes dudas, por favor contacta directamente a 
           console.error("[JANIA-MATCH] Error al registrar logs en BD:", e);
         }
       }
-      // --- ENVÍO LOCAL (Solo para respuestas directas permitidas) ---
+      async parseAndSaveSilently(msg, senderId, rawPhone, bodyText) {
+        try {
+          let imageBuffer;
+          let pdfBuffer;
+          let pdfMimeType;
+          if (msg.message?.imageMessage) {
+            try {
+              const mediaBuffer = await downloadMediaMessage(msg, "buffer", {});
+              imageBuffer = mediaBuffer.toString("base64");
+            } catch (e) {
+              console.error("[JanIA-DM-Vision-Silent] Error descargando imagen:", e);
+            }
+          } else if (msg.message?.documentMessage) {
+            try {
+              const mediaBuffer = await downloadMediaMessage(msg, "buffer", {});
+              pdfBuffer = mediaBuffer.toString("base64");
+              pdfMimeType = msg.message.documentMessage.mimetype || "application/pdf";
+            } catch (e) {
+              console.error("[JanIA-DM-Document-Silent] Error descargando documento:", e);
+            }
+          }
+          const realName = msg.pushName || `Asesor +${rawPhone}`;
+          const { processWhatsAppMessage: processWhatsAppMessage2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+          const result = await processWhatsAppMessage2(
+            bodyText,
+            senderId,
+            realName,
+            !!imageBuffer || !!pdfBuffer,
+            [],
+            void 0,
+            imageBuffer,
+            true,
+            // isGroup = true (forces parsing)
+            pdfBuffer,
+            pdfMimeType,
+            senderId
+          );
+          if (result) {
+            let reaction = "";
+            if (result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO") {
+              reaction = "\u2705";
+            } else if (result.classification === "DATOS_INCOMPLETOS" || result.missingFields && result.missingFields.length > 0) {
+              reaction = "\u{1F914}";
+            }
+            if (reaction) {
+              try {
+                await this.sock.sendMessage(senderId, { react: { text: reaction, key: msg.key } });
+              } catch (_) {
+              }
+            }
+            if (result.response && result.response.trim() !== "" && result.classification !== "DATOS_INCOMPLETOS" && result.classification !== "VIOLACION_DE_NORMAS") {
+              const isMatch = result.response.includes("MATCH COMERCIAL DETECTADO") || result.response.includes("MATCH DETECTADO") || result.response.includes("MATCH INTELIGENTE DETECTADO") || result.response.includes("COINCIDENCIA DE NEGOCIO DETECTADA");
+              if (isMatch) {
+                const { sendAdminNotification: sendAdminNotification2 } = await Promise.resolve().then(() => (init_whatsapp(), whatsapp_exports));
+                await sendAdminNotification2(`\u{1F3AF} *[MATCH DETECTADO POR DM]*
+
+${result.response}`);
+              }
+            }
+          }
+        } catch (err) {
+          console.error("[JANIA-MATCH] Fallo en parseAndSaveSilently:", err);
+        }
+      }
+      async handlePrivateDmConversation(msg, senderId, rawPhone, bodyText) {
+        try {
+          const realName = msg.pushName || `Asesor +${rawPhone}`;
+          const textLower = bodyText.toLowerCase();
+          const { detectaVoz: detectaVoz2, textToSpeechMedia: textToSpeechMedia2 } = await Promise.resolve().then(() => (init_whatsapp(), whatsapp_exports));
+          const { processWhatsAppMessage: processWhatsAppMessage2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+          const wantsVoice = msg.message?.audioMessage || detectaVoz2(textLower);
+          if (wantsVoice) {
+            await this.sock.sendPresenceUpdate("recording", senderId);
+          } else {
+            await this.sock.sendPresenceUpdate("composing", senderId);
+          }
+          await delay(2e3);
+          let imageBuffer;
+          let pdfBuffer;
+          let pdfMimeType;
+          if (msg.message?.imageMessage) {
+            try {
+              const mediaBuffer = await downloadMediaMessage(msg, "buffer", {});
+              imageBuffer = mediaBuffer.toString("base64");
+            } catch (e) {
+            }
+          } else if (msg.message?.documentMessage) {
+            try {
+              const mediaBuffer = await downloadMediaMessage(msg, "buffer", {});
+              pdfBuffer = mediaBuffer.toString("base64");
+              pdfMimeType = msg.message.documentMessage.mimetype || "application/pdf";
+            } catch (e) {
+            }
+          }
+          const result = await processWhatsAppMessage2(
+            bodyText,
+            senderId,
+            realName,
+            !!imageBuffer || !!pdfBuffer,
+            [],
+            void 0,
+            imageBuffer,
+            false,
+            // isGroup = false
+            pdfBuffer,
+            pdfMimeType,
+            void 0
+            // groupJid = undefined
+          );
+          if (result && result.response && result.response.trim() !== "") {
+            const textToDeliver = result.response;
+            const voiceToDeliver = result.voiceResponse || "";
+            if (wantsVoice && voiceToDeliver.trim() !== "") {
+              const media = await textToSpeechMedia2(voiceToDeliver);
+              if (media) {
+                await this.queuedSend(senderId, media, { sendAudioAsVoice: true, quoted: msg });
+              } else {
+                await this.queuedSend(senderId, textToDeliver, { quoted: msg });
+              }
+            } else {
+              await this.queuedSend(senderId, textToDeliver, { quoted: msg });
+            }
+            const isMatch = result.response.includes("MATCH COMERCIAL DETECTADO") || result.response.includes("MATCH DETECTADO") || result.response.includes("MATCH INTELIGENTE DETECTADO") || result.response.includes("COINCIDENCIA DE NEGOCIO DETECTADA");
+            if (isMatch) {
+              const { sendAdminNotification: sendAdminNotification2 } = await Promise.resolve().then(() => (init_whatsapp(), whatsapp_exports));
+              await sendAdminNotification2(`\u{1F3AF} *[MATCH DETECTADO POR DM]*
+
+${result.response}`);
+            }
+          }
+          await this.sock.sendPresenceUpdate("paused", senderId);
+        } catch (err) {
+          console.error("[JANIA-MATCH] Error al procesar conversaci\xF3n de DM privado:", err);
+        }
+      }
+      async processMatchConfirmation(senderId, realName, matchId, decision) {
+        try {
+          const db = await getDb();
+          if (!db) {
+            await this.queuedSend(senderId, "\u26A0\uFE0F El sistema de base de datos no est\xE1 disponible en este momento. Int\xE9ntalo m\xE1s tarde.");
+            return;
+          }
+          const [match] = await db.select().from(propertyMatches).where(eq10(propertyMatches.id, matchId)).limit(1);
+          if (!match) {
+            await this.queuedSend(senderId, `\u26A0\uFE0F No encontr\xE9 ninguna coincidencia registrada con el c\xF3digo *#M${matchId}*. Por favor verifica el n\xFAmero.`);
+            return;
+          }
+          const [prop] = await db.select().from(properties).where(eq10(properties.id, match.propertyId)).limit(1);
+          const [req] = await db.select().from(requirements).where(eq10(requirements.id, match.requirementId)).limit(1);
+          if (!prop || !req) {
+            await this.queuedSend(senderId, "\u26A0\uFE0F Hubo un problema al recuperar los detalles de esta coincidencia.");
+            return;
+          }
+          const senderPhone = senderId.split("@")[0];
+          const ownerPhone = prop.idUsuarioWhatsapp || "";
+          const seekerPhone = req.idUsuarioWhatsapp || "";
+          const isOwner = senderPhone === ownerPhone.split("@")[0];
+          const isSeeker = senderPhone === seekerPhone.split("@")[0];
+          if (!isOwner && !isSeeker) {
+            await this.queuedSend(senderId, "\u26A0\uFE0F No est\xE1s autorizado para confirmar esta coincidencia.");
+            return;
+          }
+          if (decision === "no") {
+            await db.update(propertyMatches).set({ status: "rejected" }).where(eq10(propertyMatches.id, matchId));
+            await this.queuedSend(senderId, `Entendido. He marcado la coincidencia *#M${matchId}* como cancelada. No se compartir\xE1n tus datos de contacto.`);
+            await this.logToDb(senderId, "janIA", `[Match-Rejected] Match #M${matchId} rechazado por el usuario.`);
+            const otherJid = isOwner ? seekerPhone.includes("@") ? seekerPhone : `${seekerPhone}@s.whatsapp.net` : ownerPhone.includes("@") ? ownerPhone : `${ownerPhone}@s.whatsapp.net`;
+            await this.queuedSend(otherJid, `Aviso: La coincidencia *#M${matchId}* ha sido cancelada por la otra parte.`);
+            return;
+          }
+          let updateFields = {};
+          if (isOwner) {
+            updateFields.ownerConfirmed = true;
+          }
+          if (isSeeker) {
+            updateFields.seekerConfirmed = true;
+          }
+          await db.update(propertyMatches).set(updateFields).where(eq10(propertyMatches.id, matchId));
+          const [updatedMatch] = await db.select().from(propertyMatches).where(eq10(propertyMatches.id, matchId)).limit(1);
+          if (updatedMatch.ownerConfirmed && updatedMatch.seekerConfirmed) {
+            await db.update(propertyMatches).set({ status: "interested" }).where(eq10(propertyMatches.id, matchId));
+            let ownerName = "Oferente";
+            let seekerName = "Interesado";
+            try {
+              const [ownerUser] = await db.select().from(users).where(eq10(users.phone, ownerPhone)).limit(1);
+              if (ownerUser && ownerUser.name) ownerName = ownerUser.name;
+            } catch {
+            }
+            try {
+              const [seekerUser] = await db.select().from(users).where(eq10(users.phone, seekerPhone)).limit(1);
+              if (seekerUser && seekerUser.name) seekerName = seekerUser.name;
+            } catch {
+            }
+            const ownerJid = ownerPhone.includes("@") ? ownerPhone : `${ownerPhone}@s.whatsapp.net`;
+            const seekerJid = seekerPhone.includes("@") ? seekerPhone : `${seekerPhone}@s.whatsapp.net`;
+            const matchScoreFormatted = Number(updatedMatch.matchScore || 0).toFixed(0);
+            const msgToOwner = `\u{1F389}\u{1F388} *\xA1CONEXI\xD3N DE NEGOCIO EXITOSA!* \u{1F388}\u{1F389}
+Felicidades, ambas partes han confirmado inter\xE9s en la coincidencia *#M${matchId}* (Coincidencia: ${matchScoreFormatted}%).
+
+Aqu\xED tienes el contacto directo del aliado interesado en tu propiedad:
+\u{1F464} *Nombre:* ${seekerName}
+\u{1F4DE} *WhatsApp:* https://wa.me/${seekerPhone.split("@")[0]}
+\u{1F4AC} *Su requerimiento:* ${req.rawText || "Sin descripci\xF3n"}
+
+\xA1Les deseamos mucho \xE9xito en el cierre comercial! \u{1F91D}\u{1F680}`;
+            const msgToSeeker = `\u{1F389}\u{1F388} *\xA1CONEXI\xD3N DE NEGOCIO EXITOSA!* \u{1F388}\u{1F389}
+Felicidades, ambas partes han confirmado inter\xE9s en la coincidencia *#M${matchId}* (Coincidencia: ${matchScoreFormatted}%).
+
+Aqu\xED tienes el contacto directo del aliado que ofrece la propiedad:
+\u{1F464} *Nombre:* ${ownerName}
+\u{1F4DE} *WhatsApp:* https://wa.me/${ownerPhone.split("@")[0]}
+\u{1F4AC} *Su oferta:* ${prop.rawText || "Sin descripci\xF3n"}
+
+\xA1Les deseamos mucho \xE9xito en el cierre comercial! \u{1F91D}\u{1F680}`;
+            await this.queuedSend(ownerJid, msgToOwner);
+            await this.queuedSend(seekerJid, msgToSeeker);
+            await this.logToDb(ownerJid, "janIA", `[Match-Connected] Contact shared: Seeker is ${seekerPhone}`);
+            await this.logToDb(seekerJid, "janIA", `[Match-Connected] Contact shared: Owner is ${ownerPhone}`);
+          } else {
+            await this.queuedSend(senderId, `\xA1Gracias! He registrado tu confirmaci\xF3n de inter\xE9s para la coincidencia *#M${matchId}*.
+
+En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus datos de contacto para que puedan cerrar el negocio. \u{1F680}`);
+            await this.logToDb(senderId, "janIA", `[Match-Confirmed-Waiting] User confirmed match #M${matchId}, waiting for peer.`);
+          }
+        } catch (err) {
+          console.error(`[JANIA-MATCH] Error procesando confirmaci\xF3n para coincidencia #${matchId}:`, err);
+          await this.queuedSend(senderId, "\u26A0\uFE0F Ocurri\xF3 un error interno al procesar tu confirmaci\xF3n.");
+        }
+      }
       async queuedSend(chatId, content, options = {}) {
         outgoingQueue = outgoingQueue.then(async () => {
           try {
-            await this.client.sendMessage(chatId, content, options);
+            if (!this.sock) {
+              throw new Error("Cliente Baileys no inicializado");
+            }
+            let targetJid = chatId;
+            if (targetJid.endsWith("@c.us")) {
+              targetJid = targetJid.replace("@c.us", "@s.whatsapp.net");
+            }
+            let messagePayload = {};
+            if (typeof content === "string") {
+              messagePayload = { text: content };
+              if (options.mentions) {
+                messagePayload.mentions = options.mentions;
+              }
+            } else if (content && content.data && content.mimetype) {
+              const buffer = Buffer.from(content.data, "base64");
+              if (content.mimetype.startsWith("audio/")) {
+                messagePayload = {
+                  audio: buffer,
+                  mimetype: content.mimetype,
+                  ptt: options.sendAudioAsVoice || false
+                };
+              } else if (content.mimetype.startsWith("image/")) {
+                messagePayload = {
+                  image: buffer,
+                  mimetype: content.mimetype
+                };
+              } else {
+                messagePayload = {
+                  document: buffer,
+                  mimetype: content.mimetype,
+                  fileName: content.filename || "archivo"
+                };
+              }
+            }
+            const sendOptions = {};
+            if (options.quoted) {
+              sendOptions.quoted = options.quoted;
+            }
+            await this.sock.sendMessage(targetJid, messagePayload, sendOptions);
             await delay(1e3);
           } catch (err) {
-            console.error("[JANIA-MATCH] Error en despacho de mensaje local:", err.message);
+            console.error("[JANIA-MATCH] Error en despacho de mensaje Baileys:", err.message || err);
           }
         });
         return outgoingQueue;
       }
-      // --- WATCHDOG ---
-      startWatchdog() {
-        if (this.watchdogInterval) clearInterval(this.watchdogInterval);
-        this.watchdogFailures = 0;
-        this.watchdogInterval = setInterval(async () => {
-          if (!this.isReady) return;
-          try {
-            const statePromise = this.client.getState();
-            const timeoutPromise = new Promise(
-              (_, reject) => setTimeout(() => reject(new Error("Timeout al obtener estado de WhatsApp")), 15e3)
-            );
-            const state = await Promise.race([statePromise, timeoutPromise]);
-            console.log(`[JANIA-MATCH] [Watchdog] Estado actual de conexi\xF3n: ${state}`);
-            if (state === "CONNECTED") {
-              this.watchdogFailures = 0;
-            } else {
-              this.watchdogFailures++;
-              console.warn(`[JANIA-MATCH] [Watchdog] Estado anormal detectado: ${state} (Fallo consecutivo #${this.watchdogFailures}/3).`);
-              if (this.watchdogFailures >= 3) {
-                console.error("[JANIA-MATCH] [Watchdog] Demasiados fallos consecutivos. Reiniciando cliente...");
-                this.watchdogFailures = 0;
-                this.reconnectClient();
-              }
-            }
-          } catch (err) {
-            this.watchdogFailures++;
-            console.error(`[JANIA-MATCH] [Watchdog] Falla o bloqueo detectado: ${err.message || err} (Fallo consecutivo #${this.watchdogFailures}/3).`);
-            if (this.watchdogFailures >= 3) {
-              console.error("[JANIA-MATCH] [Watchdog] Demasiados fallos consecutivos. Reiniciando cliente...");
-              this.watchdogFailures = 0;
-              this.reconnectClient();
-            }
-          }
-        }, 5 * 60 * 1e3);
-      }
-      async reconnectClient() {
-        this.isReady = false;
-        try {
-          this.client.removeAllListeners();
-          await this.client.destroy();
-        } catch (e) {
-        }
-        try {
-          const remotePath = await getLatestWAWebVersion();
-          console.log(`[JANIA-MATCH] [Reconexi\xF3n] Usando versi\xF3n de WhatsApp Web: ${remotePath}`);
-          this.createClientInstance(remotePath);
-          await this.client.initialize();
-          console.log("[JANIA-MATCH] Reconexi\xF3n exitosa.");
-        } catch (e) {
-          console.error("[JANIA-MATCH] Fall\xF3 reconexi\xF3n:", e);
-        }
-      }
-      async initialize() {
-        try {
-          const remotePath = await getLatestWAWebVersion();
-          console.log(`[JANIA-MATCH] Usando versi\xF3n de WhatsApp Web: ${remotePath}`);
-          this.createClientInstance(remotePath);
-          await this.client.initialize();
-        } catch (err) {
-          console.error("[JANIA-MATCH] Error cr\xEDtico al inicializar el cliente:", err);
-        }
-      }
       async getPairingCode(phone) {
         const cleanPhone = phone.replace(/\D/g, "");
         console.log(`[JANIA-MATCH] Solicitando c\xF3digo de vinculaci\xF3n por n\xFAmero para: ${cleanPhone}`);
-        if (!this.client) {
-          throw new Error("Cliente no inicializado");
+        if (!this.sock) {
+          console.log("[JANIA-MATCH] Inicializando socket de Baileys bajo demanda para c\xF3digo de vinculaci\xF3n...");
+          await this.initialize();
+          await delay(3e3);
         }
         try {
-          const code = await this.client.requestPairingCode(cleanPhone);
+          if (this.sock.authState?.creds?.registered) {
+            throw new Error("El bot de Match ya est\xE1 registrado en este dispositivo.");
+          }
+          const code = await this.sock.requestPairingCode(cleanPhone);
           console.log(`[JANIA-MATCH] C\xF3digo de vinculaci\xF3n generado: ${code}`);
           return code;
         } catch (err) {
@@ -5904,9 +5981,11 @@ Si deseas completar tus datos o tienes dudas, por favor contacta directamente a 
       }
       setupGracefulShutdown() {
         const shutdown = async () => {
-          console.log("\n\u{1F6D1} Cerrando JanIA Match Bot...");
+          console.log("\n\u{1F6D1} Cerrando JanIA Match Bot (Baileys)...");
           try {
-            await this.client.destroy();
+            if (this.sock) {
+              await this.sock.end();
+            }
           } catch (e) {
           }
         };
@@ -6236,18 +6315,31 @@ var init_whatsapp_cloud = __esm({
 });
 
 // server/_core/whatsapp.ts
-import pkg2 from "whatsapp-web.js";
+var whatsapp_exports = {};
+__export(whatsapp_exports, {
+  WhatsAppBot: () => WhatsAppBot,
+  cleanVoiceText: () => cleanVoiceText,
+  detectaVoz: () => detectaVoz,
+  matchBotInstance: () => matchBotInstance,
+  sendAdminNotification: () => sendAdminNotification,
+  sendUserDM: () => sendUserDM,
+  setBotPendingData: () => setBotPendingData,
+  setMatchBotInstance: () => setMatchBotInstance,
+  textToSpeechMedia: () => textToSpeechMedia,
+  whatsappBot: () => whatsappBot
+});
+import pkg from "whatsapp-web.js";
 import qrcode from "qrcode-terminal";
 import fs4 from "fs";
 import path5 from "path";
 import { spawn as spawn2 } from "child_process";
-import { eq as eq11, and as and6, or as or2, like } from "drizzle-orm";
-import axios8 from "axios";
+import { eq as eq11, and as and6, or as or3, like } from "drizzle-orm";
+import axios7 from "axios";
 import * as jose from "jose";
-async function getLatestWAWebVersion2() {
+async function getLatestWAWebVersion() {
   const fallback = "https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1042391138-alpha.html";
   try {
-    const res = await axios8.get("https://api.github.com/repos/wppconnect-team/wa-version/contents/html", {
+    const res = await axios7.get("https://api.github.com/repos/wppconnect-team/wa-version/contents/html", {
       headers: { "User-Agent": "Mozilla/5.0" },
       timeout: 5e3
     });
@@ -6263,6 +6355,9 @@ async function getLatestWAWebVersion2() {
     console.warn("[WHATSAPP-BOT] Error fetching latest WA Web version from GitHub API, using fallback:", err.message);
   }
   return fallback;
+}
+function setMatchBotInstance(instance) {
+  matchBotInstance = instance;
 }
 async function transcodeToOggOpus(inputBuffer) {
   return new Promise((resolve, reject) => {
@@ -6341,7 +6436,24 @@ async function getGoogleAccessToken() {
   }
 }
 function prepareTtsText(rawText) {
-  let cleanText = rawText.replace(/vecy\s+network|veci\s+network/gi, "besi network").replace(/vecy|veci/gi, "besi").replace(/jania/gi, "y\xE1nia").replace(/\bRLS\b/gi, "ere ele ese").replace(/\bSQL\b/gi, "ese cu ele").replace(/\bDM\b/gi, "di em").replace(/\bID\b/gi, "ai di");
+  let cleanText = rawText;
+  cleanText = cleanText.replace(/https:\/\/g\.page\/r\/[a-zA-Z0-9_-]+\/review/gi, "el enlace de Google que te comparto por escrito");
+  cleanText = cleanText.replace(/https:\/\/vecy-network\.vercel\.app\/jania/gi, "besi gui\xF3n al medio network punto vercel punto ap diagonal y\xE1nia");
+  cleanText = cleanText.replace(/https:\/\/vecy-network\.vercel\.app\/agent-dashboard/gi, "besi gui\xF3n al medio network punto vercel punto ap diagonal eiyent gui\xF3n dashbord");
+  cleanText = cleanText.replace(/https:\/\/vecy-network\.vercel\.app\/properties/gi, "besi gui\xF3n al medio network punto vercel punto ap diagonal properties");
+  cleanText = cleanText.replace(/https:\/\/vecy-network\.vercel\.app\/requerimientos/gi, "besi gui\xF3n al medio network punto vercel punto ap diagonal requerimientos");
+  cleanText = cleanText.replace(/https:\/\/vecy-network\.vercel\.app\/historia/gi, "besi gui\xF3n al medio network punto vercel punto ap diagonal historia");
+  cleanText = cleanText.replace(/https:\/\/vecy-network\.vercel\.app\/?/gi, "besi gui\xF3n al medio network punto vercel punto ap");
+  const urlRegex = /https?:\/\/(?:www\.)?([a-zA-Z0-9-]+\.[a-zA-Z0-9.-]+)([^\s]*)/gi;
+  cleanText = cleanText.replace(urlRegex, (match, domain, path8) => {
+    let cleanDomain = domain.toLowerCase();
+    cleanDomain = cleanDomain.replace(/\.com\.co/g, " punto com punto co").replace(/\.com/g, " punto com").replace(/\.co/g, " punto co").replace(/\.net/g, " punto net").replace(/\.org/g, " punto org").replace(/\.app/g, " punto ap");
+    if (path8 && path8.length > 3) {
+      return `${cleanDomain} (cuyo enlace completo te dej\xE9 aqu\xED por escrito)`;
+    }
+    return cleanDomain;
+  });
+  cleanText = cleanText.replace(/vecy\s+network|veci\s+network/gi, "besi network").replace(/vecy|veci/gi, "besi").replace(/jania/gi, "y\xE1nia").replace(/\bRLS\b/gi, "ere ele ese").replace(/\bSQL\b/gi, "ese cu ele").replace(/\bDM\b/gi, "di em").replace(/\bID\b/gi, "ai di");
   const phoneRegex = /(?:\+?57\s*)?(3\d{2})[\s-]?(\d{3})[\s-]?(\d{2})[\s-]?(\d{2})\b/g;
   cleanText = cleanText.replace(phoneRegex, (match, p1, p2, p3, p4) => {
     const firstDigit = p1.charAt(0);
@@ -6435,7 +6547,7 @@ async function textToSpeechMedia(text2, format = "OGG_OPUS") {
             console.log(`[TTS-Google] \u2713 Voz "${name}" ${format} generada (${ttsText.length} chars).`);
             const mimeType = format === "MP3" ? "audio/mpeg" : "audio/ogg; codecs=opus";
             const filename = format === "MP3" ? "voice-note.mp3" : "voice-note.ogg";
-            return new MessageMedia2(mimeType, data.audioContent, filename);
+            return new MessageMedia(mimeType, data.audioContent, filename);
           }
         } else {
           const errBody = await response.text().catch(() => "");
@@ -6466,17 +6578,17 @@ async function textToSpeechMedia(text2, format = "OGG_OPUS") {
         const buffer = await response.arrayBuffer();
         if (format === "MP3") {
           const base64Data = Buffer.from(buffer).toString("base64");
-          return new MessageMedia2("audio/mpeg", base64Data, "voice-note.mp3");
+          return new MessageMedia("audio/mpeg", base64Data, "voice-note.mp3");
         }
         try {
           const oggBuffer = await transcodeToOggOpus(Buffer.from(buffer));
           const base64Ogg = oggBuffer.toString("base64");
           console.log(`[TTS-Forge] Voz nova transcodificada a OGG_OPUS (${oggBuffer.byteLength} bytes).`);
-          return new MessageMedia2("audio/ogg; codecs=opus", base64Ogg, "voice-note.ogg");
+          return new MessageMedia("audio/ogg; codecs=opus", base64Ogg, "voice-note.ogg");
         } catch (transcodeErr) {
           console.error(`[TTS-Forge] Fall\xF3 transcodificaci\xF3n a Ogg, enviando MP3 de respaldo:`, transcodeErr);
           const base64Data = Buffer.from(buffer).toString("base64");
-          return new MessageMedia2("audio/mpeg", base64Data, "voice-note.mp3");
+          return new MessageMedia("audio/mpeg", base64Data, "voice-note.mp3");
         }
       }
     }
@@ -6514,16 +6626,16 @@ async function textToSpeechMedia(text2, format = "OGG_OPUS") {
       const combined = Buffer.concat(buffers);
       console.log(`[TTS-Translate] Voz Google Translate generada (fallback).`);
       if (format === "MP3") {
-        return new MessageMedia2("audio/mpeg", combined.toString("base64"), "voice-note.mp3");
+        return new MessageMedia("audio/mpeg", combined.toString("base64"), "voice-note.mp3");
       }
       try {
         const oggBuffer = await transcodeToOggOpus(combined);
         const base64Ogg = oggBuffer.toString("base64");
         console.log(`[TTS-Translate] Voz Google Translate transcodificada a OGG_OPUS (${oggBuffer.byteLength} bytes).`);
-        return new MessageMedia2("audio/ogg; codecs=opus", base64Ogg, "voice-note.ogg");
+        return new MessageMedia("audio/ogg; codecs=opus", base64Ogg, "voice-note.ogg");
       } catch (transcodeErr) {
         console.error(`[TTS-Translate] Fall\xF3 transcodificaci\xF3n a Ogg, enviando MP3 de respaldo:`, transcodeErr);
-        return new MessageMedia2("audio/mpeg", combined.toString("base64"), "voice-note.mp3");
+        return new MessageMedia("audio/mpeg", combined.toString("base64"), "voice-note.mp3");
       }
     }
   } catch (err) {
@@ -6614,13 +6726,7 @@ async function sendAdminNotification(text2) {
 async function sendUserDM(jid, text2) {
   const formattedJid = jid.includes("@") ? jid : `${jid}@c.us`;
   try {
-    const matchBot = global.janiaMatchBotInstance;
-    if (matchBot && matchBot.isReady) {
-      console.log(`[WHATSAPP-BOT] Enviando DM a ${formattedJid} v\xEDa JanIA Match Bot (Puppeteer)...`);
-      await matchBot.queuedSend(formattedJid, text2);
-    } else {
-      await whatsappBot.queuedSend(formattedJid, text2);
-    }
+    await whatsappBot.queuedSend(formattedJid, text2);
   } catch (e) {
     await whatsappBot.queuedSend(formattedJid, text2);
   }
@@ -6648,7 +6754,7 @@ function cleanVoiceText(text2) {
   cleaned = cleaned.replace(/^"|"$/g, "").trim();
   return cleaned.trim();
 }
-var Client2, LocalAuth2, MessageMedia2, SERVER_BOOT_TIME2, delay2, outgoingQueue2, WhatsAppBot, whatsappBot;
+var Client, LocalAuth, MessageMedia, SERVER_BOOT_TIME2, delay2, outgoingQueue2, matchBotInstance, WhatsAppBot, whatsappBot;
 var init_whatsapp = __esm({
   "server/_core/whatsapp.ts"() {
     "use strict";
@@ -6661,10 +6767,11 @@ var init_whatsapp = __esm({
     init_storage();
     init_env();
     init_llm();
-    ({ Client: Client2, LocalAuth: LocalAuth2, MessageMedia: MessageMedia2 } = pkg2);
+    ({ Client, LocalAuth, MessageMedia } = pkg);
     SERVER_BOOT_TIME2 = Math.floor(Date.now() / 1e3);
     delay2 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     outgoingQueue2 = Promise.resolve();
+    matchBotInstance = null;
     WhatsAppBot = class {
       client;
       targetGroupId = "120363260108880069@g.us";
@@ -6749,7 +6856,7 @@ var init_whatsapp = __esm({
             } else {
               try {
                 const chat = await this.client.getChatById(chatId);
-                const isAudio = content instanceof MessageMedia2 || typeof content === "object" && content?.mimetype?.startsWith("audio") || options && options.sendAudioAsVoice;
+                const isAudio = content instanceof MessageMedia || typeof content === "object" && content?.mimetype?.startsWith("audio") || options && options.sendAudioAsVoice;
                 if (isAudio) {
                   await chat.sendStateRecording();
                   typingDelay = isGroup ? Math.floor(Math.random() * 2e3) + 3e3 : 300;
@@ -7202,10 +7309,133 @@ Para chatear conmigo en privado, buscar inmuebles, transcribir audios y usar tod
         });
       }
       // --- 2. RAMA Conversacional PRIVADA (DM INBOUND LOOP) ---
+      // Historial de usuarios saludados fuera de horario
+      offHoursGreetedToday = /* @__PURE__ */ new Map();
+      async parseAndSaveSilently(msg, senderId, rawPhone) {
+        try {
+          let imageBuffer;
+          let pdfBuffer;
+          let pdfMimeType;
+          if (msg.hasMedia) {
+            if (msg.type === "image") {
+              try {
+                const media = await msg.downloadMedia();
+                if (media && media.mimetype.startsWith("image/")) {
+                  imageBuffer = media.data;
+                }
+              } catch (e) {
+                console.error("[JanIA-DM-Vision-Silent] Error descargando imagen:", e);
+              }
+            } else if (msg.type === "document") {
+              try {
+                const media = await msg.downloadMedia();
+                if (media && media.mimetype === "application/pdf") {
+                  pdfBuffer = media.data;
+                  pdfMimeType = media.mimetype;
+                }
+              } catch (e) {
+                console.error("[JanIA-DM-Document-Silent] Error descargando documento:", e);
+              }
+            }
+          }
+          let realName = `Asesor +${rawPhone}`;
+          try {
+            const contact = await msg.getContact();
+            if (contact) {
+              realName = contact.pushname || contact.name || realName;
+            }
+          } catch (_) {
+          }
+          const result = await processWhatsAppMessage(
+            msg.body,
+            senderId,
+            realName,
+            msg.hasMedia,
+            [],
+            void 0,
+            imageBuffer,
+            true,
+            // isGroup = true
+            pdfBuffer,
+            pdfMimeType,
+            senderId
+            // groupJid = senderId
+          );
+          if (result) {
+            let reaction = "";
+            if (result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO") {
+              reaction = "\u2705";
+            } else if (result.classification === "DATOS_INCOMPLETOS" || result.missingFields && result.missingFields.length > 0) {
+              reaction = "\u{1F914}";
+            }
+            if (reaction) {
+              try {
+                await msg.react(reaction);
+              } catch (_) {
+              }
+            }
+            if (result.response && result.response.trim() !== "" && result.classification !== "DATOS_INCOMPLETOS" && result.classification !== "VIOLACION_DE_NORMAS") {
+              const isMatch = result.response.includes("MATCH COMERCIAL DETECTADO") || result.response.includes("MATCH DETECTADO") || result.response.includes("MATCH INTELIGENTE DETECTADO") || result.response.includes("COINCIDENCIA DE NEGOCIO DETECTADA");
+              if (isMatch) {
+                await sendAdminNotification(`\u{1F3AF} *[MATCH DETECTADO POR DM]*
+
+${result.response}`);
+              }
+            }
+          }
+        } catch (err) {
+          console.error("[WHATSAPP-BOT] Fallo en parseAndSaveSilently:", err);
+        }
+      }
+      // --- 2. RAMA Conversacional PRIVADA (DM INBOUND LOOP) ---
       async handlePrivateMessage(msg) {
         try {
           const senderId = msg.from;
           const rawPhone = (msg.author || msg.from).split("@")[0];
+          const ADMIN_PHONE = process.env.ADMIN_PHONE || "573166569719";
+          const isAdmin = rawPhone.includes(ADMIN_PHONE) || rawPhone === ADMIN_PHONE || rawPhone === "573166569719" || rawPhone.includes("573185462265");
+          if (!isAdmin) {
+            const db = await getDb();
+            let isNewUser = false;
+            if (db) {
+              try {
+                const existingMessages = await db.select({ id: messages.id }).from(messages).innerJoin(conversations, eq11(messages.conversationId, conversations.id)).where(eq11(conversations.sessionId, senderId)).limit(1);
+                isNewUser = existingMessages.length === 0;
+              } catch (dbErr) {
+                console.warn("[WHATSAPP-BOT] Error al verificar si el usuario es nuevo:", dbErr);
+              }
+            }
+            if (isNewUser) {
+              console.log(`[WHATSAPP-BOT] Nuevo usuario detectado: ${senderId}. Enviando bienvenida.`);
+              const welcomeText = `\xA1Hola! Te damos una muy c\xE1lida bienvenida a *VECY Bienes Ra\xEDces* y *VECY Match* \u{1F3E0}\u2728. Gracias por contactarte con nosotros. Hemos recibido tu mensaje y uno de nuestros asesores humanos se comunicar\xE1 contigo muy pronto para brindarte la mejor atenci\xF3n. Mientras tanto, si gustas, puedes detallarnos tu requerimiento o enviarnos la informaci\xF3n de tu inmueble. \xA1Es un gusto saludarte! \u{1F91D}\u{1F680}`;
+              await this.queuedSend(senderId, welcomeText);
+              await this.logToDb(senderId, "user", msg.body);
+              await this.logToDb(senderId, "janIA", welcomeText);
+              return;
+            }
+            const isOffHours = isOutsideWorkingHours();
+            if (isOffHours) {
+              const todayStr = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
+              const hasReceivedOutOfOfficeToday = this.offHoursGreetedToday.get(senderId) === todayStr;
+              if (!hasReceivedOutOfOfficeToday) {
+                this.offHoursGreetedToday.set(senderId, todayStr);
+                const outOfOfficeText = `\xA1Hola! Gracias por escribir a *VECY Bienes Ra\xEDces* \u{1F3E0}\u2728. En este momento nuestros asesores humanos se encuentran descansando (fuera de nuestro horario laboral). Te presentamos a *JanIA*, nuestra asistente de Inteligencia Artificial creada y entrenada por nosotros. Ella registrar\xE1 de forma autom\xE1tica cualquier inmueble o requerimiento de b\xFAsqueda que nos env\xEDes en este chat para que est\xE9 listo a primera hora. Si es una consulta general, uno de nuestros agentes humanos te responder\xE1 tan pronto regresemos a la oficina. \xA1Que tengas un excelente descanso! \u{1F319}\u{1F680}`;
+                await this.queuedSend(senderId, outOfOfficeText);
+                await this.logToDb(senderId, "user", msg.body);
+                await this.logToDb(senderId, "janIA", outOfOfficeText);
+                await this.parseAndSaveSilently(msg, senderId, rawPhone);
+                return;
+              } else {
+                await this.logToDb(senderId, "user", msg.body);
+                await this.parseAndSaveSilently(msg, senderId, rawPhone);
+                return;
+              }
+            } else {
+              console.log(`[WHATSAPP-BOT] DM de ${rawPhone} recibido en horario laboral. Silenciado.`);
+              await this.logToDb(senderId, "user", msg.body);
+              return;
+            }
+          }
           let realName = `Asesor +${rawPhone}`;
           try {
             const contact = await msg.getContact();
@@ -7226,7 +7456,7 @@ Para chatear conmigo en privado, buscar inmuebles, transcribir audios y usar tod
           } catch (dbErr) {
             console.warn(`[WHATSAPP-BOT] Error al buscar nombre en BD para ${rawPhone}:`, dbErr);
           }
-          console.log(`[JanIA-DM] Atendiendo mensaje interno de ${realName} (${senderId})...`);
+          console.log(`[JanIA-DM] [Admin/Test] Atendiendo mensaje interno de ${realName} (${senderId})...`);
           const matchConfirmationRegex = /^\s*(sí|si|no)\s+#m(\d+)\s*$/i;
           const matchConf = msg.body.match(matchConfirmationRegex);
           if (matchConf) {
@@ -7262,7 +7492,7 @@ Para chatear conmigo en privado, buscar inmuebles, transcribir audios y usar tod
                 and6(
                   eq11(propertyMatches.status, "suggested"),
                   eq11(propertyMatches.ownerConfirmed, false),
-                  or2(
+                  or3(
                     eq11(properties.idUsuarioWhatsapp, senderId),
                     like(properties.idUsuarioWhatsapp, senderPhone + "%")
                   )
@@ -7283,7 +7513,7 @@ Para chatear conmigo en privado, buscar inmuebles, transcribir audios y usar tod
                 and6(
                   eq11(propertyMatches.status, "suggested"),
                   eq11(propertyMatches.seekerConfirmed, false),
-                  or2(
+                  or3(
                     eq11(requirements.idUsuarioWhatsapp, senderId),
                     like(requirements.idUsuarioWhatsapp, senderPhone + "%")
                   )
@@ -8231,7 +8461,7 @@ Ya estoy 100% activa para escanear sus publicaciones y buscarles cierres sin cob
             const msgToSend = isMain ? baseMsg + welcomePart : baseMsg;
             const mentions = isMain ? jidsToMention : [];
             if (fs4.existsSync(imgPath)) {
-              const media = MessageMedia2.fromFilePath(imgPath);
+              const media = MessageMedia.fromFilePath(imgPath);
               await this.queuedSend(group, media, { caption: msgToSend, mentions });
             } else {
               await this.queuedSend(group, msgToSend, { mentions });
@@ -8262,7 +8492,7 @@ Ya estoy 100% activa para escanear sus publicaciones y buscarles cierres sin cob
           const options = { mentions: mentions || [] };
           const target = groupId || this.targetGroupId;
           if (mediaPath) {
-            const media = MessageMedia2.fromFilePath(path5.resolve(mediaPath));
+            const media = MessageMedia.fromFilePath(path5.resolve(mediaPath));
             await this.queuedSend(target, media, { ...options, caption: text2 });
           } else {
             await this.queuedSend(target, text2, options);
@@ -8299,7 +8529,7 @@ Ya estoy 100% activa para escanear sus publicaciones y buscarles cierres sin cob
           try {
             const options = { mentions: mentions || [] };
             if (mediaPath) {
-              const media = MessageMedia2.fromFilePath(path5.resolve(mediaPath));
+              const media = MessageMedia.fromFilePath(path5.resolve(mediaPath));
               await this.queuedSend(group, media, { ...options, caption: text2 });
             } else {
               await this.queuedSend(group, text2, options);
@@ -8318,7 +8548,7 @@ Ya estoy 100% activa para escanear sus publicaciones y buscarles cierres sin cob
         for (const promo of promos) {
           try {
             if (mediaPath && fs4.existsSync(path5.resolve(mediaPath))) {
-              const media = MessageMedia2.fromFilePath(path5.resolve(mediaPath));
+              const media = MessageMedia.fromFilePath(path5.resolve(mediaPath));
               await this.queuedSend(promo.id, media, { caption: promo.msg });
             } else {
               await this.queuedSend(promo.id, promo.msg);
@@ -8336,7 +8566,7 @@ Ya estoy 100% activa para escanear sus publicaciones y buscarles cierres sin cob
         for (const promo of promos) {
           try {
             if (mediaPath && fs4.existsSync(path5.resolve(mediaPath))) {
-              const media = MessageMedia2.fromFilePath(path5.resolve(mediaPath));
+              const media = MessageMedia.fromFilePath(path5.resolve(mediaPath));
               await this.queuedSend(promo.id, media, { caption: promo.msg });
             } else {
               await this.queuedSend(promo.id, promo.msg);
@@ -8403,8 +8633,8 @@ Generado el: ${(/* @__PURE__ */ new Date()).toLocaleString("es-CO", { timeZone: 
         }
       }
       createClientInstance(remotePath) {
-        this.client = new Client2({
-          authStrategy: new LocalAuth2({
+        this.client = new Client({
+          authStrategy: new LocalAuth({
             clientId: "session-jania-main",
             dataPath: "./.wwebjs_auth"
           }),
@@ -8478,7 +8708,7 @@ Generado el: ${(/* @__PURE__ */ new Date()).toLocaleString("es-CO", { timeZone: 
         }
         console.log("[WHATSAPP-BOT] Re-inicializando cliente de WhatsApp...");
         try {
-          const remotePath = await getLatestWAWebVersion2();
+          const remotePath = await getLatestWAWebVersion();
           console.log(`[WHATSAPP-BOT] [Reconexi\xF3n] Usando versi\xF3n de WhatsApp Web: ${remotePath}`);
           this.createClientInstance(remotePath);
           await this.client.initialize();
@@ -8600,7 +8830,7 @@ Direcci\xF3n obligatoria:
           console.log("[WHATSAPP-BOT] Inicializando en modo Puppeteer puro (inicializando cliente...).");
         }
         try {
-          const remotePath = await getLatestWAWebVersion2();
+          const remotePath = await getLatestWAWebVersion();
           console.log(`[WHATSAPP-BOT] Usando versi\xF3n de WhatsApp Web: ${remotePath}`);
           this.createClientInstance(remotePath);
           await this.client.initialize();
@@ -8775,7 +9005,7 @@ function isSecureRequest(req) {
   const forwardedProto = req.headers["x-forwarded-proto"];
   if (!forwardedProto) return false;
   const protoList = Array.isArray(forwardedProto) ? forwardedProto : forwardedProto.split(",");
-  return protoList.some((proto) => proto.trim().toLowerCase() === "https");
+  return protoList.some((proto2) => proto2.trim().toLowerCase() === "https");
 }
 function getSessionCookieOptions(req) {
   const isProd = process.env.NODE_ENV === "production";
@@ -9211,7 +9441,7 @@ init_db();
 init_schema();
 init_scraper();
 init_janIA();
-import { eq as eq4, desc } from "drizzle-orm";
+import { eq as eq4, desc as desc2 } from "drizzle-orm";
 import axios6 from "axios";
 var janIARouter = router({
   // New: Extract property data from link
@@ -9305,9 +9535,20 @@ var janIARouter = router({
     const db = await getDb();
     if (!db) return [];
     try {
-      return await db.select().from(conversations).where(eq4(conversations.userId, String(ctx.user.id))).orderBy(desc(conversations.updatedAt));
+      return await db.select().from(conversations).where(eq4(conversations.userId, String(ctx.user.id))).orderBy(desc2(conversations.updatedAt));
     } catch (error) {
       console.error("Error getting user conversations:", error);
+      return [];
+    }
+  }),
+  // Admin: Get all conversations in the system
+  getAllConversations: publicProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) return [];
+    try {
+      return await db.select().from(conversations).orderBy(desc2(conversations.updatedAt));
+    } catch (error) {
+      console.error("Error getting all conversations:", error);
       return [];
     }
   }),
@@ -9431,7 +9672,7 @@ var janIARouter = router({
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     try {
-      const matches = await db.select().from(propertyMatches).where(eq4(propertyMatches.requirementId, input.requirementId)).orderBy(desc(propertyMatches.matchScore)).limit(input.limit);
+      const matches = await db.select().from(propertyMatches).where(eq4(propertyMatches.requirementId, input.requirementId)).orderBy(desc2(propertyMatches.matchScore)).limit(input.limit);
       return matches;
     } catch (error) {
       console.error("Error getting property matches:", error);
@@ -9492,7 +9733,7 @@ var janIARouter = router({
           amobladoDeseado: requirements.amobladoDeseado,
           rawText: requirements.rawText
         }
-      }).from(propertyMatches).innerJoin(properties, eq4(propertyMatches.propertyId, properties.id)).innerJoin(requirements, eq4(propertyMatches.requirementId, requirements.id)).orderBy(desc(propertyMatches.createdAt));
+      }).from(propertyMatches).innerJoin(properties, eq4(propertyMatches.propertyId, properties.id)).innerJoin(requirements, eq4(propertyMatches.requirementId, requirements.id)).orderBy(desc2(propertyMatches.createdAt));
       return matches;
     } catch (error) {
       console.error("Error getting all matches:", error);
@@ -10184,7 +10425,7 @@ var imagesRouter = {
 import { z as z5 } from "zod";
 init_db();
 init_schema();
-import { eq as eq7, and as and3, desc as desc2, isNull } from "drizzle-orm";
+import { eq as eq7, and as and3, desc as desc3, isNull } from "drizzle-orm";
 import { TRPCError as TRPCError3 } from "@trpc/server";
 var agentRouter = router({
   // Public: Get agent profile for branding (Agenda Pro, Personal Shops)
@@ -10204,7 +10445,7 @@ var agentRouter = router({
   getMyProperties: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-    return await db.select().from(properties).where(eq7(properties.agentId, ctx.user.id)).orderBy(desc2(properties.createdAt));
+    return await db.select().from(properties).where(eq7(properties.agentId, ctx.user.id)).orderBy(desc3(properties.createdAt));
   }),
   // For testing: Allows an agent to claim a property that has no agent assigned
   claimProperty: protectedProcedure.input(z5.object({ propertyId: z5.number() })).mutation(async ({ ctx, input }) => {
@@ -10219,7 +10460,7 @@ var agentRouter = router({
   getAvailablePropertiesToClaim: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-    return await db.select().from(properties).where(isNull(properties.agentId)).orderBy(desc2(properties.createdAt));
+    return await db.select().from(properties).where(isNull(properties.agentId)).orderBy(desc3(properties.createdAt));
   }),
   generateStealthLink: protectedProcedure.input(z5.object({ propertyId: z5.number() })).mutation(async ({ ctx, input }) => {
     const db = await getDb();
@@ -10257,7 +10498,7 @@ var agentRouter = router({
         matriculaInmobiliaria: properties.matriculaInmobiliaria,
         location: properties.location
       }
-    }).from(referralLinks).innerJoin(properties, eq7(referralLinks.propertyId, properties.id)).where(eq7(referralLinks.agentId, ctx.user.id)).orderBy(desc2(referralLinks.createdAt));
+    }).from(referralLinks).innerJoin(properties, eq7(referralLinks.propertyId, properties.id)).where(eq7(referralLinks.agentId, ctx.user.id)).orderBy(desc3(referralLinks.createdAt));
   })
 });
 
@@ -10333,7 +10574,7 @@ var leadsRouter = router({
 import { z as z7 } from "zod";
 init_db();
 init_schema();
-import { eq as eq9, desc as desc3, ilike, and as and4 } from "drizzle-orm";
+import { eq as eq9, desc as desc4, ilike, and as and4 } from "drizzle-orm";
 import { TRPCError as TRPCError5 } from "@trpc/server";
 var propertyInputSchema = z7.object({
   name: z7.string().min(2),
@@ -10398,7 +10639,7 @@ var propertiesRouter = router({
     if (input?.transactionType) filters.push(eq9(properties.transactionType, input.transactionType));
     if (input?.type) filters.push(eq9(properties.propertyType, input.type));
     if (input?.zone) filters.push(ilike(properties.zone, `%${input.zone}%`));
-    return await db.select().from(properties).where(and4(...filters)).orderBy(desc3(properties.featured), desc3(properties.createdAt)).limit(input?.limit ?? 20).offset(input?.offset ?? 0);
+    return await db.select().from(properties).where(and4(...filters)).orderBy(desc4(properties.featured), desc4(properties.createdAt)).limit(input?.limit ?? 20).offset(input?.offset ?? 0);
   }),
   getById: publicProcedure.input(z7.object({ id: z7.number() })).query(async ({ input }) => {
     const db = await getDb();
@@ -10417,6 +10658,48 @@ var propertiesRouter = router({
       agentId: ctx.user.id
     }).returning();
     return newProperty[0];
+  }),
+  parseText: protectedProcedure.input(z7.object({ text: z7.string() })).mutation(async ({ input }) => {
+    try {
+      const { invokeLLM: invokeLLM2 } = await Promise.resolve().then(() => (init_llm(), llm_exports));
+      const prompt = `Act\xFAas como un extractor de datos de inmuebles ultra preciso para Colombia.
+Tu tarea es leer una descripci\xF3n de un inmueble (generalmente copiada de WhatsApp) y estructurar sus datos en formato JSON.
+
+Sigue estrictamente este esquema para el JSON de salida:
+{
+  "name": "T\xEDtulo corto y llamativo del inmueble (m\xE1ximo 60 caracteres)",
+  "description": "Resumen claro y bien formateado de la descripci\xF3n",
+  "propertyType": "apartment" | "house" | "building" | "warehouse" | "farm" | "hotel" | "office" | "land" | "commercial" | "loft" | "consultorio",
+  "transactionType": "venta" | "arriendo" | "arriendo_temporal",
+  "price": "N\xFAmero entero como string (sin puntos, comas ni s\xEDmbolos de moneda, ej: '450000000')",
+  "city": "Ciudad del inmueble (ej: 'Bogot\xE1')",
+  "zone": "Zona o localidad (ej: 'Usaqu\xE9n')",
+  "addressNeighborhood": "Barrio (ej: 'Cedritos')",
+  "bedrooms": n\xFAmero entero o null,
+  "bathrooms": n\xFAmero entero o null,
+  "garages": n\xFAmero entero o null,
+  "stratum": n\xFAmero entero o null,
+  "areaTotal": "N\xFAmero de metros cuadrados como string o null (solo el n\xFAmero, ej: '85')",
+  "isAmoblado": boolean
+}
+
+Si no encuentras un valor para alguno de los campos num\xE9ricos o de texto espec\xEDficos, d\xE9jalo como null o el valor por defecto. El valor de "propertyType" debe ser uno de los permitidos en el esquema.
+Texto a analizar:
+"${input.text}"`;
+      const res = await invokeLLM2({
+        messages: [
+          { role: "system", content: "Devuelve \xFAnicamente un objeto JSON v\xE1lido seg\xFAn las instrucciones dadas sin pre\xE1mbulos ni marcas de c\xF3digo markdown." },
+          { role: "user", content: prompt }
+        ],
+        responseFormat: { type: "json_object" }
+      });
+      const rawContent = res.choices[0].message.content;
+      console.log("[JANIA-PARSER] Extracci\xF3n finalizada:", rawContent);
+      return JSON.parse(rawContent);
+    } catch (err) {
+      console.error("[JANIA-PARSER] Error parseando texto de inmueble:", err);
+      throw new Error("No se pudo analizar el texto de forma autom\xE1tica.");
+    }
   }),
   update: protectedProcedure.input(z7.object({
     id: z7.number(),
@@ -10449,9 +10732,9 @@ var propertiesRouter = router({
     if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
     const isAdmin = ctx.user.role === "admin";
     if (isAdmin) {
-      return await db.select().from(properties).orderBy(desc3(properties.createdAt));
+      return await db.select().from(properties).orderBy(desc4(properties.createdAt));
     }
-    return await db.select().from(properties).where(eq9(properties.agentId, ctx.user.id)).orderBy(desc3(properties.createdAt));
+    return await db.select().from(properties).where(eq9(properties.agentId, ctx.user.id)).orderBy(desc4(properties.createdAt));
   })
 });
 
@@ -10545,11 +10828,11 @@ async function createContext(opts) {
       if (user.role !== "admin") {
         try {
           const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
-          const { users: users3 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+          const { users: users2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
           const { eq: eq14 } = await import("drizzle-orm");
           const db = await getDb2();
           if (db) {
-            await db.update(users3).set({ role: "admin" }).where(eq14(users3.id, user.id));
+            await db.update(users2).set({ role: "admin" }).where(eq14(users2.id, user.id));
             user = { ...user, role: "admin" };
             console.log(`[Auth] \u2705 Admin auto-promocionado: ${user.email}`);
           }
@@ -10562,15 +10845,15 @@ async function createContext(opts) {
     if (process.env.NODE_ENV === "development") {
       try {
         const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
-        const { users: users3 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+        const { users: users2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
         const { eq: eq14 } = await import("drizzle-orm");
         const db = await getDb2();
         if (db) {
-          const existingUser = await db.select().from(users3).where(eq14(users3.openId, "mock-local-user")).limit(1);
+          const existingUser = await db.select().from(users2).where(eq14(users2.openId, "mock-local-user")).limit(1);
           if (existingUser.length > 0) {
             user = existingUser[0];
           } else {
-            const newUser = await db.insert(users3).values({
+            const newUser = await db.insert(users2).values({
               openId: "mock-local-user",
               name: "Eddu Mendoza (Local Agent)",
               email: "demo@vecynetwork.co",
@@ -10702,6 +10985,39 @@ import { fileURLToPath } from "url";
 import { gte as gte2, and as and8, eq as eq13, sql as sql6 } from "drizzle-orm";
 var __filename = fileURLToPath(import.meta.url);
 var __dirname = path6.dirname(__filename);
+function cleanPromptLeak(text2) {
+  if (!text2) return "";
+  let cleaned = text2.trim();
+  const preambles = [
+    /^(¡Hola!|Hola).*Aquí tienes (una propuesta|un post|un mensaje|una opción|el contenido).*:/i,
+    /^Aquí tienes (una propuesta|un post|un mensaje|una opción|el contenido).*:/i,
+    /^(Claro|Por supuesto),? aquí tienes.*:/i,
+    /^Claro,? aquí está.*:/i,
+    /^Entendido,? aquí tienes.*:/i,
+    /^(¡Hola!|Hola).*aquí te presento.*:/i,
+    /^Este es el post.*:/i,
+    /^Mensaje propuesto.*:/i,
+    /^Propuesta de mensaje.*:/i,
+    /^Propuesta de post.*:/i,
+    /^Cierre de jornada propuesto.*:/i,
+    /^Aquí tienes una propuesta de cierre de jornada.*:/i,
+    /^Aquí tienes una propuesta.*:/i,
+    /^Aquí tienes un mensaje.*:/i
+  ];
+  for (const regex of preambles) {
+    if (regex.test(cleaned)) {
+      cleaned = cleaned.replace(regex, "");
+      break;
+    }
+  }
+  cleaned = cleaned.trim();
+  if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
+    cleaned = cleaned.slice(1, -1);
+  } else if (cleaned.startsWith("'") && cleaned.endsWith("'")) {
+    cleaned = cleaned.slice(1, -1);
+  }
+  return cleaned.trim();
+}
 function initCronScheduler() {
   console.log("[CRON-SERVICE] Inicializando orquestador de agendas automatizadas (Modo Optimizado segmentado por grupo)...");
   cron.schedule("30 9 * * 2,4", async () => {
@@ -10720,7 +11036,7 @@ Direcci\xF3n obligatoria:
           { role: "user", content: promptInmuebles }
         ]
       });
-      const content = response.choices[0]?.message?.content;
+      const content = cleanPromptLeak(response.choices[0]?.message?.content);
       if (content && content.trim() !== "") {
         console.log("[CRON-SERVICE] Enviando mensaje matutino a VECY INMUEBLES NETWORK...");
         await whatsappBot.sendToGroup(content, void 0, []);
@@ -10740,7 +11056,7 @@ Direcci\xF3n obligatoria:
           { role: "user", content: promptConsultoria }
         ]
       });
-      const content = response.choices[0]?.message?.content;
+      const content = cleanPromptLeak(response.choices[0]?.message?.content);
       if (content && content.trim() !== "") {
         const buzonJid = whatsappBot.buzonGroupId;
         if (buzonJid) {
@@ -10765,7 +11081,7 @@ Direcci\xF3n obligatoria:
           { role: "user", content: promptCirculo }
         ]
       });
-      const content = response.choices[0]?.message?.content;
+      const content = cleanPromptLeak(response.choices[0]?.message?.content);
       if (content && content.trim() !== "") {
         const circuloJid = whatsappBot.circuloGroupId;
         if (circuloJid) {
@@ -10792,7 +11108,7 @@ Direcci\xF3n obligatoria:
           { role: "user", content: promptInmuebles }
         ]
       });
-      const content = response.choices[0]?.message?.content;
+      const content = cleanPromptLeak(response.choices[0]?.message?.content);
       if (content && content.trim() !== "") {
         console.log("[CRON-SERVICE] Enviando mensaje de la tarde a VECY INMUEBLES NETWORK...");
         await whatsappBot.sendToGroup(content, void 0, []);
@@ -10810,7 +11126,7 @@ Direcci\xF3n obligatoria:
           { role: "user", content: promptConsultoria }
         ]
       });
-      const content = response.choices[0]?.message?.content;
+      const content = cleanPromptLeak(response.choices[0]?.message?.content);
       if (content && content.trim() !== "") {
         const buzonJid = whatsappBot.buzonGroupId;
         if (buzonJid) {
@@ -10831,7 +11147,7 @@ Direcci\xF3n obligatoria:
           { role: "user", content: promptCirculo }
         ]
       });
-      const content = response.choices[0]?.message?.content;
+      const content = cleanPromptLeak(response.choices[0]?.message?.content);
       if (content && content.trim() !== "") {
         const circuloJid = whatsappBot.circuloGroupId;
         if (circuloJid) {
@@ -10896,7 +11212,7 @@ Direcci\xF3n obligatoria:
             { role: "user", content: promptVoz }
           ]
         });
-        const content = response.choices[0]?.message?.content;
+        const content = cleanPromptLeak(response.choices[0]?.message?.content);
         if (content && content.trim() !== "") {
           console.log(`[CRON-SERVICE] Enviando audio motivador a ${grupo.nombre}...`);
           await whatsappBot.sendVoiceToGroup(content, grupo.id);
@@ -10932,7 +11248,7 @@ Direcci\xF3n obligatoria:
             { role: "user", content: promptVoz }
           ]
         });
-        const content = response.choices[0]?.message?.content;
+        const content = cleanPromptLeak(response.choices[0]?.message?.content);
         if (content && content.trim() !== "") {
           console.log(`[CRON-SERVICE] Enviando audio de inicio de semana a ${grupo.nombre}...`);
           await whatsappBot.sendVoiceToGroup(content, grupo.id);
@@ -11023,6 +11339,7 @@ init_janIA();
 init_whatsapp_cloud();
 init_voiceTranscription();
 init_llm();
+init_whatsapp_match();
 import multer from "multer";
 import fs6 from "fs";
 import path7 from "path";
@@ -11147,16 +11464,17 @@ async function startServer() {
   app.get("/api/match-qr-screenshot", async (req, res) => {
     try {
       const { janiaMatchBot: janiaMatchBot2 } = await Promise.resolve().then(() => (init_whatsapp_match(), whatsapp_match_exports));
-      if (!janiaMatchBot2 || !janiaMatchBot2.client) {
-        return res.status(503).send("El bot de Match no est\xE1 inicializado.");
+      if (janiaMatchBot2 && !janiaMatchBot2.sock) {
+        console.log("[ADMIN] Inicializando bot bajo demanda para generar QR...");
+        await janiaMatchBot2.initialize();
+        await new Promise((resolve) => setTimeout(resolve, 3e3));
       }
-      const page = janiaMatchBot2.client.pupPage;
-      if (!page) {
-        return res.status(503).send("La p\xE1gina de Puppeteer del bot de Match no est\xE1 lista.");
+      const qrPath = path7.join(process.cwd(), "dist", "qr-match.png");
+      if (fs6.existsSync(qrPath)) {
+        res.setHeader("Content-Type", "image/png");
+        return res.sendFile(qrPath);
       }
-      const screenshot = await page.screenshot({ type: "png" });
-      res.setHeader("Content-Type", "image/png");
-      res.send(screenshot);
+      res.status(404).send("QR no disponible todav\xEDa. Por favor vincula o refresca.");
     } catch (err) {
       res.status(500).send(err.message);
     }
@@ -11164,20 +11482,18 @@ async function startServer() {
   app.get("/api/match-qr-refresh", async (req, res) => {
     try {
       const { janiaMatchBot: janiaMatchBot2 } = await Promise.resolve().then(() => (init_whatsapp_match(), whatsapp_match_exports));
-      if (!janiaMatchBot2 || !janiaMatchBot2.client) {
+      if (!janiaMatchBot2) {
         return res.status(503).send("El bot de Match no est\xE1 inicializado.");
       }
-      const page = janiaMatchBot2.client.pupPage;
-      if (!page) {
-        return res.status(503).send("La p\xE1gina de Puppeteer del bot de Match no est\xE1 lista.");
+      console.log("[ADMIN] Re-inicializando sesi\xF3n de Baileys para refrescar QR...");
+      await janiaMatchBot2.initialize();
+      await new Promise((resolve) => setTimeout(resolve, 4e3));
+      const qrPath = path7.join(process.cwd(), "dist", "qr-match.png");
+      if (fs6.existsSync(qrPath)) {
+        res.setHeader("Content-Type", "image/png");
+        return res.sendFile(qrPath);
       }
-      console.log("[ADMIN] Recargando p\xE1gina de WhatsApp Web...");
-      await page.reload({ waitUntil: "domcontentloaded" }).catch(() => {
-      });
-      await new Promise((resolve) => setTimeout(resolve, 8e3));
-      const screenshot = await page.screenshot({ type: "png" });
-      res.setHeader("Content-Type", "image/png");
-      res.send(screenshot);
+      res.status(404).send("QR no disponible todav\xEDa.");
     } catch (err) {
       res.status(500).send(err.message);
     }
@@ -11200,7 +11516,7 @@ async function startServer() {
   });
   app.post("/api/send-whatsapp-notification", async (req, res) => {
     try {
-      const { text: text2, token } = req.body;
+      const { text: text2, token, phone } = req.body;
       const verifyToken = process.env.WEBHOOK_VERIFY_TOKEN || "vecy_network_secret_token";
       if (token !== verifyToken) {
         return res.status(401).json({ error: "Unauthorized. Invalid token." });
@@ -11208,10 +11524,20 @@ async function startServer() {
       if (!text2 || typeof text2 !== "string") {
         return res.status(400).json({ error: "Falta el par\xE1metro 'text' o no es v\xE1lido." });
       }
-      const { sendCloudMessage: sendCloudMessage2 } = await Promise.resolve().then(() => (init_whatsapp_cloud(), whatsapp_cloud_exports));
-      const targetPhone = "573166569719@c.us";
-      console.log(`[NOTIFICACI\xD3N-API] Retransmitiendo mensaje a ${targetPhone} por WhatsApp Cloud API...`);
-      await sendCloudMessage2(targetPhone, text2);
+      const defaultAdminPhone = "573166569719";
+      const rawPhone = phone || defaultAdminPhone;
+      const cleanPhone = typeof rawPhone === "string" ? rawPhone.replace(/\D/g, "") : String(rawPhone).replace(/\D/g, "");
+      const matchBot = global.janiaMatchBotInstance;
+      if (matchBot && matchBot.isReady) {
+        const targetPhone = cleanPhone.endsWith("@s.whatsapp.net") ? cleanPhone : `${cleanPhone}@s.whatsapp.net`;
+        console.log(`[NOTIFICACI\xD3N-API] Retransmitiendo mensaje a ${targetPhone} v\xEDa JanIA Match Bot (Baileys)...`);
+        await matchBot.queuedSend(targetPhone, text2);
+      } else {
+        const targetPhone = cleanPhone.endsWith("@c.us") ? cleanPhone : `${cleanPhone}@c.us`;
+        console.log(`[NOTIFICACI\xD3N-API] Retransmitiendo mensaje a ${targetPhone} por WhatsApp Cloud API...`);
+        const { sendCloudMessage: sendCloudMessage2 } = await Promise.resolve().then(() => (init_whatsapp_cloud(), whatsapp_cloud_exports));
+        await sendCloudMessage2(targetPhone, text2);
+      }
       res.json({ ok: true, message: "Notification sent successfully." });
     } catch (err) {
       console.error("[NOTIFICACI\xD3N-API] Error enviando mensaje:", err);
@@ -11220,58 +11546,16 @@ async function startServer() {
   });
   app.get("/api/match-click-cancel", async (req, res) => {
     try {
-      const { janiaMatchBot: janiaMatchBot2 } = await Promise.resolve().then(() => (init_whatsapp_match(), whatsapp_match_exports));
-      if (!janiaMatchBot2 || !janiaMatchBot2.client) {
-        return res.status(503).send("El bot de Match no est\xE1 inicializado.");
-      }
-      const page = janiaMatchBot2.client.pupPage;
-      if (!page) {
-        return res.status(503).send("La p\xE1gina de Puppeteer del bot de Match no est\xE1 lista.");
-      }
-      const result = await page.evaluate(() => {
-        const elements = Array.from(document.querySelectorAll("a, button, span, div"));
-        const cancelEl = elements.find((el) => el.textContent?.trim().toLowerCase() === "cancel");
-        if (cancelEl) {
-          cancelEl.click();
-          return "Clicked Cancel";
-        }
-        return "Cancel button not found";
-      });
-      console.log(`[ADMIN] Click Cancel result: ${result}`);
-      await new Promise((resolve) => setTimeout(resolve, 3e3));
-      const screenshot = await page.screenshot({ type: "png" });
-      res.setHeader("Content-Type", "image/png");
-      res.send(screenshot);
+      res.send("Baileys no requiere bypass de bot\xF3n Cancel.");
     } catch (err) {
-      res.status(500).send(err.message || err);
+      res.status(500).send(err.message);
     }
   });
   app.get("/api/match-click-continue", async (req, res) => {
     try {
-      const { janiaMatchBot: janiaMatchBot2 } = await Promise.resolve().then(() => (init_whatsapp_match(), whatsapp_match_exports));
-      if (!janiaMatchBot2 || !janiaMatchBot2.client) {
-        return res.status(503).send("El bot de Match no est\xE1 inicializado.");
-      }
-      const page = janiaMatchBot2.client.pupPage;
-      if (!page) {
-        return res.status(503).send("La p\xE1gina de Puppeteer del bot de Match no est\xE1 lista.");
-      }
-      const result = await page.evaluate(() => {
-        const elements = Array.from(document.querySelectorAll("a, button, span, div"));
-        const continueEl = elements.find((el) => el.textContent?.trim().toLowerCase().includes("continue"));
-        if (continueEl) {
-          continueEl.click();
-          return "Clicked Continue";
-        }
-        return "Continue button not found";
-      });
-      console.log(`[ADMIN] Click Continue result: ${result}`);
-      await new Promise((resolve) => setTimeout(resolve, 3e3));
-      const screenshot = await page.screenshot({ type: "png" });
-      res.setHeader("Content-Type", "image/png");
-      res.send(screenshot);
+      res.send("Baileys no requiere bypass de bot\xF3n Continue.");
     } catch (err) {
-      res.status(500).send(err.message || err);
+      res.status(500).send(err.message);
     }
   });
   app.get("/api/send-comeback", (req, res) => {
@@ -11683,16 +11967,11 @@ Direcci\xF3n obligatoria:
     }
     if (process.env.ENABLE_JANIA_MATCH_BOT === "true") {
       console.log("Iniciando WhatsApp Bot Match (Ojos y O\xEDdos)...");
-      Promise.resolve().then(() => (init_whatsapp_match(), whatsapp_match_exports)).then((module) => {
-        const bot = module?.janiaMatchBot || module?.default?.janiaMatchBot;
-        if (bot && typeof bot.initialize === "function") {
-          bot.initialize();
-        } else {
-          console.warn("[JANIA-MATCH] Advertencia: No se pudo obtener la instancia del Match Bot en esta recarga.");
-        }
-      }).catch((err) => {
-        console.error("Error al cargar JanIA Match Bot:", err);
-      });
+      if (janiaMatchBot && typeof janiaMatchBot.initialize === "function") {
+        janiaMatchBot.initialize();
+      } else {
+        console.warn("[JANIA-MATCH] Advertencia: No se pudo obtener la instancia del Match Bot.");
+      }
     }
     initCronScheduler();
   });
