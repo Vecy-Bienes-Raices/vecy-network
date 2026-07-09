@@ -1256,10 +1256,32 @@ export class WhatsAppBot {
 
         if (isNewUser) {
           console.log(`[WHATSAPP-BOT] Nuevo usuario detectado: ${senderId}. Enviando bienvenida.`);
-          const welcomeText = `¡Hola! Te damos una muy cálida bienvenida a *VECY Bienes Raíces* y *VECY Match* 🏠✨. Gracias por contactarte con nosotros. Hemos recibido tu mensaje y uno de nuestros asesores humanos se comunicará contigo muy pronto para brindarte la mejor atención. Mientras tanto, si gustas, puedes detallarnos tu requerimiento o enviarnos la información de tu inmueble. ¡Es un gusto saludarte! 🤝🚀`;
+          let realName = 'inversionista';
+          try {
+            const contact = await msg.getContact();
+            const pushName = contact.pushname || contact.name || '';
+            if (pushName.trim()) {
+              realName = pushName.trim();
+            }
+          } catch (e: any) {
+            console.warn(`[WHATSAPP-BOT] Falló msg.getContact() en handlePrivateMessage para ${senderId}:`, e.message || e);
+          }
+
+          const isOffHours = isOutsideWorkingHours();
+          let welcomeText = '';
+          if (isOffHours) {
+            welcomeText = `¡Hola ${realName}! 🙋🏻‍♀️ Soy JanIA tu asistente IA 🤖✨. Te doy la bienvenida a *VECY Bienes Raíces* nuestro bróker virtual inmobiliario 🏠✨. Gracias por contactarte con nosotros. En estos momentos nuestros agentes humanos no pueden responder tu mensaje, si gustas, puedes dejar tu mensaje aquí para que uno de nuestros agentes te responda mañana o si quieres puedes continuar la conversación conmigo y contarme de qué se trata o cómo puedo ayudarte. ¡Será un gusto poder atenderte ${realName}! 🤝🚀`;
+          } else {
+            welcomeText = `¡Hola ${realName}! 🙋🏻‍♀️ Soy JanIA tu asistente IA 🤖✨. Te doy la bienvenida a *VECY Bienes Raíces* nuestro bróker virtual inmobiliario 🏠✨. Gracias por contactarte con nosotros. En unos instantes uno de nuestros agentes humanos responderá tu mensaje, si gustas, puedes ir detallándonos tu requerimiento o enviarnos la información de tu inmueble. ¡Es un gusto poder atenderte! 🤝🚀`;
+          }
+
           await this.queuedSend(senderId, welcomeText);
           await this.logToDb(senderId, 'user', msg.body);
           await this.logToDb(senderId, 'janIA', welcomeText);
+
+          if (isOffHours) {
+            await this.parseAndSaveSilently(msg, senderId, rawPhone);
+          }
           return;
         }
 

@@ -160,6 +160,25 @@ async function startServer() {
     }
   });
 
+  app.get("/qr-match.png", (req, res) => {
+    try {
+      const qrPath = path.join(process.cwd(), 'qr-match.png');
+      const distQrPath = path.join(process.cwd(), 'dist', 'qr-match.png');
+      const activePath = fs.existsSync(qrPath) ? qrPath : distQrPath;
+      
+      if (fs.existsSync(activePath)) {
+        res.setHeader("Content-Type", "image/png");
+        res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+        res.setHeader("Pragma", "no-cache");
+        res.setHeader("Expires", "0");
+        return res.sendFile(activePath);
+      }
+      res.status(404).send("QR no disponible todavía.");
+    } catch (err: any) {
+      res.status(500).send(err.message);
+    }
+  });
+
   app.get("/api/match-qr-screenshot", async (req, res) => {
     try {
       const { janiaMatchBot } = await import("./whatsapp-match");
@@ -168,13 +187,16 @@ async function startServer() {
         await janiaMatchBot.initialize();
         await new Promise(resolve => setTimeout(resolve, 3000));
       }
-      const qrPath = path.join(process.cwd(), 'dist', 'qr-match.png');
-      if (fs.existsSync(qrPath)) {
+      const qrPath = path.join(process.cwd(), 'qr-match.png');
+      const distQrPath = path.join(process.cwd(), 'dist', 'qr-match.png');
+      const activePath = fs.existsSync(qrPath) ? qrPath : distQrPath;
+      
+      if (fs.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
         res.setHeader("Pragma", "no-cache");
         res.setHeader("Expires", "0");
-        return res.sendFile(qrPath);
+        return res.sendFile(activePath);
       }
       res.status(404).send("QR no disponible todavía. Por favor vincula o refresca.");
     } catch (err: any) {
@@ -192,10 +214,13 @@ async function startServer() {
       await janiaMatchBot.initialize();
       await new Promise(resolve => setTimeout(resolve, 4000));
       
-      const qrPath = path.join(process.cwd(), 'dist', 'qr-match.png');
-      if (fs.existsSync(qrPath)) {
+      const qrPath = path.join(process.cwd(), 'qr-match.png');
+      const distQrPath = path.join(process.cwd(), 'dist', 'qr-match.png');
+      const activePath = fs.existsSync(qrPath) ? qrPath : distQrPath;
+      
+      if (fs.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
-        return res.sendFile(qrPath);
+        return res.sendFile(activePath);
       }
       res.status(404).send("QR no disponible todavía.");
     } catch (err: any) {

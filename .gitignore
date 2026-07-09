@@ -1,6 +1,8 @@
 # Dependencies
 **/node_modules
 .pnpm-store/
+.baileys_auth/
+qr-match.png
 
 # Build outputs
 dist/

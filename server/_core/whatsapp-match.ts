@@ -140,13 +140,10 @@ export class JaniaMatchBot {
 
         // Guardar el QR como imagen PNG accesible desde el navegador
         try {
-          const qrPath = path.join(process.cwd(), 'dist', 'qr-match.png');
-          if (!fs.existsSync(path.join(process.cwd(), 'dist'))) {
-            fs.mkdirSync(path.join(process.cwd(), 'dist'), { recursive: true });
-          }
+          const qrPath = path.join(process.cwd(), 'qr-match.png');
           QRCode.toFile(qrPath, qr, { width: 400, margin: 2 }, (err: any) => {
             if (err) console.error('[JANIA-MATCH] Error guardando QR PNG:', err.message);
-            else console.log(`[JANIA-MATCH] 📸 QR guardado como imagen → https://vecy-network.vercel.app/qr-match.png`);
+            else console.log(`[JANIA-MATCH] 📸 QR guardado como imagen en la raíz del proyecto.`);
           });
         } catch (e: any) {
           console.warn('[JANIA-MATCH] qrcode no disponible para PNG.', e.message);
@@ -158,14 +155,20 @@ export class JaniaMatchBot {
         const statusCode = error?.output?.statusCode;
         const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
         
-        console.warn(`[JANIA-MATCH] ⚠️ Conexión Baileys cerrada: ${error?.message || error}. Reconectando en 60s: ${shouldReconnect}`);
+        const isRestart = statusCode === DisconnectReason.restartRequired;
+        const isConnectionLost = statusCode === DisconnectReason.connectionLost;
+        const delayMs = (isRestart || isConnectionLost) ? 1000 : 5000;
+        
+        console.warn(`[JANIA-MATCH] ⚠️ Conexión Baileys cerrada (código: ${statusCode}): ${error?.message || error}. Reconectando en ${delayMs}ms: ${shouldReconnect}`);
         this.isReady = false;
 
         if (shouldReconnect) {
-          setTimeout(() => this.initialize(), 60000); // 60s cooldown para evitar spam de login
+          setTimeout(() => this.initialize(), delayMs);
         } else {
           console.error('[JANIA-MATCH] Sesión de WhatsApp cerrada (Logged Out). Limpiando credenciales...');
-          fs.rmSync(path.join(process.cwd(), '.baileys_auth'), { recursive: true, force: true });
+          try {
+            fs.rmSync(path.join(process.cwd(), '.baileys_auth'), { recursive: true, force: true });
+          } catch (e: any) {}
           setTimeout(() => this.initialize(), 5000);
         }
       } else if (connection === 'open') {
@@ -319,10 +322,41 @@ export class JaniaMatchBot {
 
               if (isNewUser) {
                 console.log(`[JANIA-MATCH] Nuevo usuario detectado: ${senderId}. Enviando bienvenida.`);
-                const welcomeText = `¡Hola! Te damos una muy cálida bienvenida a *VECY Bienes Raíces* y *VECY Match* 🏠✨. Gracias por contactarte con nosotros. Hemos recibido tu mensaje y uno de nuestros asesores humanos se comunicará contigo muy pronto para brindarte la mejor atención. Mientras tanto, si gustas, puedes detallarnos tu requerimiento o enviarnos la información de tu inmueble. ¡Es un gusto saludarte! 🤝🚀`;
-                await this.queuedSend(senderId, welcomeText);
+                const { isOutsideWorkingHours } = await import('./janIA');
+                const isOffHours = isOutsideWorkingHours();
+
+                const pushName = msg.pushName || '';
+                const nombre_usuario = pushName.trim() ? pushName.trim() : 'inversionista';
+
+                let welcomeText = '';
+                if (isOffHours) {
+                  welcomeText = `¡Hola ${nombre_usuario}! 🙋🏻‍♀️ Soy JanIA tu asistente IA 🤖✨. Te doy la bienvenida a *VECY Bienes Raíces* nuestro bróker virtual inmobiliario 🏠✨. Gracias por contactarte con nosotros. En estos momentos nuestros agentes humanos no pueden responder tu mensaje, si gustas, puedes dejar tu mensaje aquí para que uno de nuestros agentes te responda mañana o si quieres puedes continuar la conversación conmigo y contarme de qué se trata o cómo puedo ayudarte. ¡Será un gusto poder atenderte ${nombre_usuario}! 🤝🚀`;
+                } else {
+                  welcomeText = `¡Hola ${nombre_usuario}! 🙋🏻‍♀️ Soy JanIA tu asistente IA 🤖✨. Te doy la bienvenida a *VECY Bienes Raíces* nuestro bróker virtual inmobiliario 🏠✨. Gracias por contactarte con nosotros. En unos instantes uno de nuestros agentes humanos responderá tu mensaje, si gustas, puedes ir detallándonos tu requerimiento o enviarnos la información de tu inmueble. ¡Es un gusto poder atenderte! 🤝🚀`;
+                }
+
+                // Intentar generar el mensaje en audio mediante TTS
+                let media = null;
+                try {
+                  const { textToSpeechMedia } = await import('./whatsapp');
+                  media = await textToSpeechMedia(welcomeText);
+                } catch (ttsErr: any) {
+                  console.warn("[JANIA-MATCH] Error al generar TTS para bienvenida:", ttsErr.message || ttsErr);
+                }
+
+                if (media) {
+                  await this.queuedSend(senderId, media, { sendAudioAsVoice: true });
+                } else {
+                  await this.queuedSend(senderId, welcomeText);
+                }
+
                 await this.logToDb(senderId, 'user', body);
                 await this.logToDb(senderId, 'janIA', welcomeText);
+
+                if (isOffHours) {
+                  // Si estamos fuera de horario, además de la bienvenida, procesamos el mensaje con la IA
+                  await this.handlePrivateDmConversation(msg, senderId, rawPhone, body);
+                }
                 return;
               }
 

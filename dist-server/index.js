@@ -5152,13 +5152,10 @@ var init_whatsapp_match = __esm({
             console.log("\n[JANIA-MATCH] \u{1F50C} ESCANEA ESTE C\xD3DIGO QR PARA INICIAR JANIA MATCH:");
             qrcodeTerminal.generate(qr, { small: true });
             try {
-              const qrPath = path4.join(process.cwd(), "dist", "qr-match.png");
-              if (!fs3.existsSync(path4.join(process.cwd(), "dist"))) {
-                fs3.mkdirSync(path4.join(process.cwd(), "dist"), { recursive: true });
-              }
+              const qrPath = path4.join(process.cwd(), "qr-match.png");
               QRCode.toFile(qrPath, qr, { width: 400, margin: 2 }, (err) => {
                 if (err) console.error("[JANIA-MATCH] Error guardando QR PNG:", err.message);
-                else console.log(`[JANIA-MATCH] \u{1F4F8} QR guardado como imagen \u2192 https://vecy-network.vercel.app/qr-match.png`);
+                else console.log(`[JANIA-MATCH] \u{1F4F8} QR guardado como imagen en la ra\xEDz del proyecto.`);
               });
             } catch (e) {
               console.warn("[JANIA-MATCH] qrcode no disponible para PNG.", e.message);
@@ -5168,13 +5165,19 @@ var init_whatsapp_match = __esm({
             const error = lastDisconnect?.error;
             const statusCode = error?.output?.statusCode;
             const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
-            console.warn(`[JANIA-MATCH] \u26A0\uFE0F Conexi\xF3n Baileys cerrada: ${error?.message || error}. Reconectando en 60s: ${shouldReconnect}`);
+            const isRestart = statusCode === DisconnectReason.restartRequired;
+            const isConnectionLost = statusCode === DisconnectReason.connectionLost;
+            const delayMs = isRestart || isConnectionLost ? 1e3 : 5e3;
+            console.warn(`[JANIA-MATCH] \u26A0\uFE0F Conexi\xF3n Baileys cerrada (c\xF3digo: ${statusCode}): ${error?.message || error}. Reconectando en ${delayMs}ms: ${shouldReconnect}`);
             this.isReady = false;
             if (shouldReconnect) {
-              setTimeout(() => this.initialize(), 6e4);
+              setTimeout(() => this.initialize(), delayMs);
             } else {
               console.error("[JANIA-MATCH] Sesi\xF3n de WhatsApp cerrada (Logged Out). Limpiando credenciales...");
-              fs3.rmSync(path4.join(process.cwd(), ".baileys_auth"), { recursive: true, force: true });
+              try {
+                fs3.rmSync(path4.join(process.cwd(), ".baileys_auth"), { recursive: true, force: true });
+              } catch (e) {
+              }
               setTimeout(() => this.initialize(), 5e3);
             }
           } else if (connection === "open") {
@@ -5264,10 +5267,33 @@ var init_whatsapp_match = __esm({
                   }
                   if (isNewUser) {
                     console.log(`[JANIA-MATCH] Nuevo usuario detectado: ${senderId}. Enviando bienvenida.`);
-                    const welcomeText = `\xA1Hola! Te damos una muy c\xE1lida bienvenida a *VECY Bienes Ra\xEDces* y *VECY Match* \u{1F3E0}\u2728. Gracias por contactarte con nosotros. Hemos recibido tu mensaje y uno de nuestros asesores humanos se comunicar\xE1 contigo muy pronto para brindarte la mejor atenci\xF3n. Mientras tanto, si gustas, puedes detallarnos tu requerimiento o enviarnos la informaci\xF3n de tu inmueble. \xA1Es un gusto saludarte! \u{1F91D}\u{1F680}`;
-                    await this.queuedSend(senderId, welcomeText);
+                    const { isOutsideWorkingHours: isOutsideWorkingHours3 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+                    const isOffHours2 = isOutsideWorkingHours3();
+                    const pushName = msg.pushName || "";
+                    const nombre_usuario = pushName.trim() ? pushName.trim() : "inversionista";
+                    let welcomeText = "";
+                    if (isOffHours2) {
+                      welcomeText = `\xA1Hola ${nombre_usuario}! \u{1F64B}\u{1F3FB}\u200D\u2640\uFE0F Soy JanIA tu asistente IA \u{1F916}\u2728. Te doy la bienvenida a *VECY Bienes Ra\xEDces* nuestro br\xF3ker virtual inmobiliario \u{1F3E0}\u2728. Gracias por contactarte con nosotros. En estos momentos nuestros agentes humanos no pueden responder tu mensaje, si gustas, puedes dejar tu mensaje aqu\xED para que uno de nuestros agentes te responda ma\xF1ana o si quieres puedes continuar la conversaci\xF3n conmigo y contarme de qu\xE9 se trata o c\xF3mo puedo ayudarte. \xA1Ser\xE1 un gusto poder atenderte ${nombre_usuario}! \u{1F91D}\u{1F680}`;
+                    } else {
+                      welcomeText = `\xA1Hola ${nombre_usuario}! \u{1F64B}\u{1F3FB}\u200D\u2640\uFE0F Soy JanIA tu asistente IA \u{1F916}\u2728. Te doy la bienvenida a *VECY Bienes Ra\xEDces* nuestro br\xF3ker virtual inmobiliario \u{1F3E0}\u2728. Gracias por contactarte con nosotros. En unos instantes uno de nuestros agentes humanos responder\xE1 tu mensaje, si gustas, puedes ir detall\xE1ndonos tu requerimiento o enviarnos la informaci\xF3n de tu inmueble. \xA1Es un gusto poder atenderte! \u{1F91D}\u{1F680}`;
+                    }
+                    let media = null;
+                    try {
+                      const { textToSpeechMedia: textToSpeechMedia2 } = await Promise.resolve().then(() => (init_whatsapp(), whatsapp_exports));
+                      media = await textToSpeechMedia2(welcomeText);
+                    } catch (ttsErr) {
+                      console.warn("[JANIA-MATCH] Error al generar TTS para bienvenida:", ttsErr.message || ttsErr);
+                    }
+                    if (media) {
+                      await this.queuedSend(senderId, media, { sendAudioAsVoice: true });
+                    } else {
+                      await this.queuedSend(senderId, welcomeText);
+                    }
                     await this.logToDb(senderId, "user", body);
                     await this.logToDb(senderId, "janIA", welcomeText);
+                    if (isOffHours2) {
+                      await this.handlePrivateDmConversation(msg, senderId, rawPhone, body);
+                    }
                     return;
                   }
                   const { isOutsideWorkingHours: isOutsideWorkingHours2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
@@ -7449,10 +7475,29 @@ ${result.response}`);
             }
             if (isNewUser) {
               console.log(`[WHATSAPP-BOT] Nuevo usuario detectado: ${senderId}. Enviando bienvenida.`);
-              const welcomeText = `\xA1Hola! Te damos una muy c\xE1lida bienvenida a *VECY Bienes Ra\xEDces* y *VECY Match* \u{1F3E0}\u2728. Gracias por contactarte con nosotros. Hemos recibido tu mensaje y uno de nuestros asesores humanos se comunicar\xE1 contigo muy pronto para brindarte la mejor atenci\xF3n. Mientras tanto, si gustas, puedes detallarnos tu requerimiento o enviarnos la informaci\xF3n de tu inmueble. \xA1Es un gusto saludarte! \u{1F91D}\u{1F680}`;
+              let realName2 = "inversionista";
+              try {
+                const contact = await msg.getContact();
+                const pushName = contact.pushname || contact.name || "";
+                if (pushName.trim()) {
+                  realName2 = pushName.trim();
+                }
+              } catch (e) {
+                console.warn(`[WHATSAPP-BOT] Fall\xF3 msg.getContact() en handlePrivateMessage para ${senderId}:`, e.message || e);
+              }
+              const isOffHours2 = isOutsideWorkingHours();
+              let welcomeText = "";
+              if (isOffHours2) {
+                welcomeText = `\xA1Hola ${realName2}! \u{1F64B}\u{1F3FB}\u200D\u2640\uFE0F Soy JanIA tu asistente IA \u{1F916}\u2728. Te doy la bienvenida a *VECY Bienes Ra\xEDces* nuestro br\xF3ker virtual inmobiliario \u{1F3E0}\u2728. Gracias por contactarte con nosotros. En estos momentos nuestros agentes humanos no pueden responder tu mensaje, si gustas, puedes dejar tu mensaje aqu\xED para que uno de nuestros agentes te responda ma\xF1ana o si quieres puedes continuar la conversaci\xF3n conmigo y contarme de qu\xE9 se trata o c\xF3mo puedo ayudarte. \xA1Ser\xE1 un gusto poder atenderte ${realName2}! \u{1F91D}\u{1F680}`;
+              } else {
+                welcomeText = `\xA1Hola ${realName2}! \u{1F64B}\u{1F3FB}\u200D\u2640\uFE0F Soy JanIA tu asistente IA \u{1F916}\u2728. Te doy la bienvenida a *VECY Bienes Ra\xEDces* nuestro br\xF3ker virtual inmobiliario \u{1F3E0}\u2728. Gracias por contactarte con nosotros. En unos instantes uno de nuestros agentes humanos responder\xE1 tu mensaje, si gustas, puedes ir detall\xE1ndonos tu requerimiento o enviarnos la informaci\xF3n de tu inmueble. \xA1Es un gusto poder atenderte! \u{1F91D}\u{1F680}`;
+              }
               await this.queuedSend(senderId, welcomeText);
               await this.logToDb(senderId, "user", msg.body);
               await this.logToDb(senderId, "janIA", welcomeText);
+              if (isOffHours2) {
+                await this.parseAndSaveSilently(msg, senderId, rawPhone);
+              }
               return;
             }
             const isOffHours = isOutsideWorkingHours();
@@ -11503,6 +11548,23 @@ async function startServer() {
       res.status(500).send(err.message);
     }
   });
+  app.get("/qr-match.png", (req, res) => {
+    try {
+      const qrPath = path7.join(process.cwd(), "qr-match.png");
+      const distQrPath = path7.join(process.cwd(), "dist", "qr-match.png");
+      const activePath = fs6.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs6.existsSync(activePath)) {
+        res.setHeader("Content-Type", "image/png");
+        res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+        res.setHeader("Pragma", "no-cache");
+        res.setHeader("Expires", "0");
+        return res.sendFile(activePath);
+      }
+      res.status(404).send("QR no disponible todav\xEDa.");
+    } catch (err) {
+      res.status(500).send(err.message);
+    }
+  });
   app.get("/api/match-qr-screenshot", async (req, res) => {
     try {
       const { janiaMatchBot: janiaMatchBot2 } = await Promise.resolve().then(() => (init_whatsapp_match(), whatsapp_match_exports));
@@ -11511,13 +11573,15 @@ async function startServer() {
         await janiaMatchBot2.initialize();
         await new Promise((resolve) => setTimeout(resolve, 3e3));
       }
-      const qrPath = path7.join(process.cwd(), "dist", "qr-match.png");
-      if (fs6.existsSync(qrPath)) {
+      const qrPath = path7.join(process.cwd(), "qr-match.png");
+      const distQrPath = path7.join(process.cwd(), "dist", "qr-match.png");
+      const activePath = fs6.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs6.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
         res.setHeader("Pragma", "no-cache");
         res.setHeader("Expires", "0");
-        return res.sendFile(qrPath);
+        return res.sendFile(activePath);
       }
       res.status(404).send("QR no disponible todav\xEDa. Por favor vincula o refresca.");
     } catch (err) {
@@ -11533,10 +11597,12 @@ async function startServer() {
       console.log("[ADMIN] Re-inicializando sesi\xF3n de Baileys para refrescar QR...");
       await janiaMatchBot2.initialize();
       await new Promise((resolve) => setTimeout(resolve, 4e3));
-      const qrPath = path7.join(process.cwd(), "dist", "qr-match.png");
-      if (fs6.existsSync(qrPath)) {
+      const qrPath = path7.join(process.cwd(), "qr-match.png");
+      const distQrPath = path7.join(process.cwd(), "dist", "qr-match.png");
+      const activePath = fs6.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs6.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
-        return res.sendFile(qrPath);
+        return res.sendFile(activePath);
       }
       res.status(404).send("QR no disponible todav\xEDa.");
     } catch (err) {
