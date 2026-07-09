@@ -5050,7 +5050,8 @@ import makeWASocket, {
   DisconnectReason,
   delay,
   downloadMediaMessage,
-  fetchLatestBaileysVersion
+  fetchLatestBaileysVersion,
+  Browsers
 } from "@whiskeysockets/baileys";
 import qrcodeTerminal from "qrcode-terminal";
 import fs3 from "fs";
@@ -5119,7 +5120,11 @@ var init_whatsapp_match = __esm({
             version,
             printQRInTerminal: false,
             // Lo manejamos nosotros de forma personalizada
-            browser: ["macOS", "Chrome", "10.15.7"]
+            browser: Browsers.macOS("Desktop"),
+            syncFullHistory: false,
+            markOnlineOnConnect: false,
+            connectTimeoutMs: 6e4,
+            defaultQueryTimeoutMs: 6e4
           });
           this.setupEventListeners(saveCreds);
         } catch (err) {

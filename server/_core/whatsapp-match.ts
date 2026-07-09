@@ -4,7 +4,8 @@ import makeWASocket, {
   delay,
   downloadMediaMessage,
   proto,
-  fetchLatestBaileysVersion
+  fetchLatestBaileysVersion,
+  Browsers
 } from '@whiskeysockets/baileys';
 import { Boom } from '@hapi/boom';
 import qrcodeTerminal from 'qrcode-terminal';
@@ -101,7 +102,11 @@ export class JaniaMatchBot {
         auth: state,
         version,
         printQRInTerminal: false, // Lo manejamos nosotros de forma personalizada
-        browser: ["macOS", "Chrome", "10.15.7"],
+        browser: Browsers.macOS('Desktop'),
+        syncFullHistory: false,
+        markOnlineOnConnect: false,
+        connectTimeoutMs: 60000,
+        defaultQueryTimeoutMs: 60000,
       });
 
       this.setupEventListeners(saveCreds);
