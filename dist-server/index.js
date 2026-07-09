@@ -5101,6 +5101,10 @@ var init_whatsapp_match = __esm({
         try {
           const sessionDir = path4.join(process.cwd(), ".baileys_auth");
           const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
+          if (!fs3.existsSync(path4.join(sessionDir, "creds.json"))) {
+            await saveCreds();
+            console.log("[JANIA-MATCH] \u{1F4BE} Guardadas credenciales iniciales de Baileys en el disco.");
+          }
           let version = [2, 3e3, 1017531287];
           try {
             const { version: latestVersion } = await fetchLatestBaileysVersion();
@@ -5969,15 +5973,25 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
       async getPairingCode(phone) {
         const cleanPhone = phone.replace(/\D/g, "");
         console.log(`[JANIA-MATCH] Solicitando c\xF3digo de vinculaci\xF3n por n\xFAmero para: ${cleanPhone}`);
-        if (!this.sock) {
-          console.log("[JANIA-MATCH] Inicializando socket de Baileys bajo demanda para c\xF3digo de vinculaci\xF3n...");
-          await this.initialize();
-          await delay(3e3);
-        }
+        console.log("[JANIA-MATCH] Limpiando sesi\xF3n previa para solicitar nuevo c\xF3digo...");
         try {
-          if (this.sock.authState?.creds?.registered) {
-            throw new Error("El bot de Match ya est\xE1 registrado en este dispositivo.");
+          if (this.sock) {
+            this.sock.end(void 0);
           }
+        } catch (e) {
+        }
+        const sessionDir = path4.join(process.cwd(), ".baileys_auth");
+        if (fs3.existsSync(sessionDir)) {
+          try {
+            fs3.rmSync(sessionDir, { recursive: true, force: true });
+          } catch (err) {
+            console.warn("[JANIA-MATCH] No se pudo borrar .baileys_auth:", err.message);
+          }
+        }
+        this.sock = null;
+        await this.initialize();
+        await delay(3e3);
+        try {
           const code = await this.sock.requestPairingCode(cleanPhone);
           console.log(`[JANIA-MATCH] C\xF3digo de vinculaci\xF3n generado: ${code}`);
           return code;

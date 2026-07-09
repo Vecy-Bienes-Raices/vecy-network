@@ -80,6 +80,12 @@ export class JaniaMatchBot {
       const sessionDir = path.join(process.cwd(), '.baileys_auth');
       const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
       
+      // Guardar las credenciales iniciales de inmediato en disco para evitar que se pierdan
+      if (!fs.existsSync(path.join(sessionDir, 'creds.json'))) {
+        await saveCreds();
+        console.log('[JANIA-MATCH] 💾 Guardadas credenciales iniciales de Baileys en el disco.');
+      }
+      
       // Obtener la versión de WhatsApp Web más reciente para evitar el error de stream 515
       let version: any = [2, 3000, 1017531287];
       try {
@@ -1152,15 +1158,29 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
   public async getPairingCode(phone: string): Promise<string> {
     const cleanPhone = phone.replace(/\D/g, "");
     console.log(`[JANIA-MATCH] Solicitando código de vinculación por número para: ${cleanPhone}`);
-    if (!this.sock) {
-      console.log("[JANIA-MATCH] Inicializando socket de Baileys bajo demanda para código de vinculación...");
-      await this.initialize();
-      await delay(3000);
-    }
+    
+    // Forzar limpieza y reinicio para asegurar un estado limpio al solicitar un nuevo código de emparejamiento
+    console.log("[JANIA-MATCH] Limpiando sesión previa para solicitar nuevo código...");
     try {
-      if (this.sock.authState?.creds?.registered) {
-        throw new Error("El bot de Match ya está registrado en este dispositivo.");
+      if (this.sock) {
+        this.sock.end(undefined);
       }
+    } catch(e) {}
+    
+    const sessionDir = path.join(process.cwd(), '.baileys_auth');
+    if (fs.existsSync(sessionDir)) {
+      try {
+        fs.rmSync(sessionDir, { recursive: true, force: true });
+      } catch (err: any) {
+        console.warn("[JANIA-MATCH] No se pudo borrar .baileys_auth:", err.message);
+      }
+    }
+    
+    this.sock = null;
+    await this.initialize();
+    await delay(3000);
+    
+    try {
       const code = await this.sock.requestPairingCode(cleanPhone);
       console.log(`[JANIA-MATCH] Código de vinculación generado: ${code}`);
       return code;
