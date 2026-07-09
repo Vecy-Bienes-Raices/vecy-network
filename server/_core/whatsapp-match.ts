@@ -12,12 +12,6 @@ import path from 'path';
 import { getDb } from '../db';
 import { conversations, messages as dbMessages, users } from '../../drizzle/schema';
 import { eq, and } from 'drizzle-orm';
-import { textToSpeechMedia, detectaVoz, sendAdminNotification, sendUserDM, setBotPendingData } from './whatsapp';
-import { 
-  processWhatsAppMessage, 
-  processConsultingMessage, 
-  processCirculoMessage 
-} from './janIA';
 import { esDominioPermitido, scrapePropertyLink } from './scraper';
 import QRCode from 'qrcode';
 
@@ -271,6 +265,9 @@ export class JaniaMatchBot {
       const realName = msg.pushName || `Asesor +${senderId.split('@')[0]}`;
       const textLower = bodyText.toLowerCase();
 
+      const { detectaVoz, textToSpeechMedia } = await import('./whatsapp');
+      const { processWhatsAppMessage, processConsultingMessage, processCirculoMessage } = await import('./janIA');
+
       const wantsVoice = msg.message?.audioMessage || detectaVoz(textLower);
       if (wantsVoice) {
         await this.sock.sendPresenceUpdate('recording', chatId);
@@ -499,6 +496,9 @@ export class JaniaMatchBot {
 
       // Guardar logs en BD
       await this.logToDb(senderId, 'user', fullText);
+
+      const { processWhatsAppMessage, processConsultingMessage, processCirculoMessage } = await import('./janIA');
+      const { sendAdminNotification } = await import('./whatsapp');
 
       // Procesar mediante JanIA (guardará en DB de forma automática)
       let result;

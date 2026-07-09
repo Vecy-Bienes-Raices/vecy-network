@@ -15,6 +15,7 @@ import fs from "fs";
 import path from "path";
 import { transcribeAudioBuffer } from "./voiceTranscription";
 import { invokeLLM } from "./llm";
+import { janiaMatchBot } from "./whatsapp-match";
 
 process.on("uncaughtException", (error) => {
   console.error("[SYSTEM-CRITICAL] Uncaught Exception detectada:", error);
@@ -751,16 +752,11 @@ Dirección obligatoria:
     // Inicializar el Bot Match de WhatsApp (Ojos y Oídos) si está habilitado
     if (process.env.ENABLE_JANIA_MATCH_BOT === "true") {
       console.log("Iniciando WhatsApp Bot Match (Ojos y Oídos)...");
-      import("./whatsapp-match").then((module) => {
-        const bot = module?.janiaMatchBot || (module as any)?.default?.janiaMatchBot;
-        if (bot && typeof bot.initialize === "function") {
-          bot.initialize();
-        } else {
-          console.warn("[JANIA-MATCH] Advertencia: No se pudo obtener la instancia del Match Bot en esta recarga.");
-        }
-      }).catch(err => {
-        console.error("Error al cargar JanIA Match Bot:", err);
-      });
+      if (janiaMatchBot && typeof janiaMatchBot.initialize === "function") {
+        janiaMatchBot.initialize();
+      } else {
+        console.warn("[JANIA-MATCH] Advertencia: No se pudo obtener la instancia del Match Bot.");
+      }
     }
     
     // Inicializar el orquestador de agendas automatizadas (Cron)
