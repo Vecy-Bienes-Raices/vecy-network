@@ -4,50 +4,32 @@ _Documento técnico de referencia persistente para el desarrollo y mantenimiento
 ---
 
 ## 1. Filosofía y Propósito del Sistema
-**JanIA** es la mente estratégica central de **VECY Network**, la primera red inmobiliaria colaborativa inteligente de Colombia que opera de forma nativa en WhatsApp. Fue concebida por **Eduardo A. Rivera** (Arquitecto Tecnológico) y **Jani Alves**, diseñada para ser una socia comercial y técnica del asesor inmobiliario colombiano, facilitando el registro de inmuebles, la detección de requerimientos y el cruce de negocios en tiempo real (matching) sin comisiones obligatorias por parte de la plataforma.
+**VECY Network** (La Red Inmobiliaria Inteligente) es un ecosistema tecnológico colaborativo para el sector inmobiliario en Colombia. Fui creada y entrenada por el **Equipo de Desarrollo, Avance e Innovación Tecnológica de VECY**, liderado por **Eduardo A. Rivera** (director de tecnología) y **Jani Alves**.
+
+JanIA es la consciencia y cerebro de inteligencia artificial del sistema. VECY Network opera como un **Bróker Virtual Inmobiliario**, diseñado con la misión de ser socio estratégico del asesor. Su foco primordial y número uno es la **Compraventa de Inmuebles** y la asesoría a inversionistas para encontrar sus mejores opciones rentables. Los servicios de arriendo, permuta, arriendo con opción de compra o aportes de lote son complementarios y de apoyo.
 
 ---
 
 ## 2. Arquitectura de Componentes
-El ecosistema técnico de JanIA está compuesto por los siguientes módulos integrados en la carpeta `server/_core/`:
+El bot de WhatsApp opera de forma unificada utilizando la conexión por WebSocket nativo `@whiskeysockets/baileys` con persistencia de sesión cifrada en `.baileys_auth/`. Esto elimina por completo Puppeteer y Chrome de la escucha de mensajes, garantizando máxima estabilidad y reduciendo el consumo de RAM/CPU.
 
 ```mermaid
 graph TD
-    A[Grupos de WhatsApp] -->|Escucha Silenciosa| B(JanIA Match Bot - Baileys)
-    B -->|Envía datos para procesar| C(Bot Principal - WhatsApp Cloud API)
-    B -->|Notifica Matches Privadamente| G[Administrador / Soporte]
-    C -->|Clasificación y Extracción| D(Cerebro LLM - janIA.ts)
-    D -->|PostgreSQL / Drizzle| E[(Base de Datos Vecy)]
-    E -->|Cruce en Tiempo Real| F(Motor de Matching - matching.ts)
-    F -->|Match Detectado| B
+    A[Grupos de WhatsApp] -->|Escucha Silenciosa y Extracción| B(VECY MATCH Bot - Baileys)
+    H[Chats Privados - DMs] -->|Interacción Conversacional / Soporte / IA| B
+    B -->|Envío de Datos| C(Cerebro LLM - janIA.ts)
+    C -->|PostgreSQL / Drizzle| D[(Base de Datos Vecy)]
+    D -->|Cruce en Tiempo Real| E(Motor de Matching - matching.ts)
+    E -->|Alerta de Match| F[WhatsApp del Administrador]
 ```
 
-### A. Bot Principal (WhatsApp Cloud API - Meta)
-*   **Archivo**: [whatsapp.ts](file:///home/eddu/Proyectos/vecy-network/server/_core/whatsapp.ts)
-*   **Número**: `+57 3185462265` (JanIA v3.5 - Soporte e Interacción Directa)
-*   **Tecnología**: Integración directa con los Webhooks oficiales de Meta WhatsApp Cloud API.
-*   **Propósito**: Envío de respuestas oficiales, solicitudes de datos faltantes (`DATOS_INCOMPLETOS`), alertas de infracción, mensajería de soporte directo (DMs privados) y envío de audios mediante notas de voz.
-*   **Nota de Diseño**: No utiliza Puppeteer para las respuestas salientes a usuarios a gran escala, eliminando de raíz el riesgo de baneo de Meta en este número principal.
-
-### B. Bot Ojos y Oídos (JanIA Match Bot)
+### A. Bot Unificado (VECY MATCH)
 *   **Archivo**: [whatsapp-match.ts](file:///home/eddu/Proyectos/vecy-network/server/_core/whatsapp-match.ts)
-*   **Número**: `+57 3223019130` (JanIA Match)
-*   **Tecnología**: Conexión nativa de socket por WebSocket utilizando `@whiskeysockets/baileys` con persistencia de sesión cifrada en `.baileys_auth/`. Esto elimina por completo Puppeteer y Chrome, reduciendo el consumo de RAM/CPU al mínimo y garantizando la máxima estabilidad contra baneos.
-*   **Propósito**: Monitorea de forma 100% silenciosa los grupos de WhatsApp configurados en la variable de entorno `JANIA_MATCH_GROUPS`. Capta ofertas de propiedades, requerimientos y archivos PDFs, redirigiendo el flujo al bot principal para la respuesta (o al administrador para alertas de Match).
-*   **Regla de Redirección**: Si un usuario chatea por privado con este número, el bot responderá una vez al día dirigiéndolo a interactuar con la versión principal de soporte (+57 3185462265) a través del enlace: `https://wa.me/573185462265`.
-
-### C. Cerebro de Inteligencia Artificial (LLM)
-*   **Archivo**: [janIA.ts](file:///home/eddu/Proyectos/vecy-network/server/_core/janIA.ts)
-*   **Modelos Activos**: 
-    *   Procesamiento general: `gemini-2.5-flash` o `gemini-3.1-flash-lite` (llamado a través de `invokeLLM`).
-    *   Generación de notas de voz: `gemini-3.1-flash-tts-preview` vía Google Cloud Text-to-Speech API.
-*   **Propósito**: Clasifica los mensajes entrantes (en categorías como `INMUEBLE`, `REQUERIMIENTO`, `DATOS_INCOMPLETOS`, `VIOLACION_DE_NORMAS`, `CONSULTA_GENERAL`), extrae fichas técnicas estructuradas y valida datos geográficos (ciudades y barrios de Colombia) y fonéticos del español.
-
-### D. Motor de Matching y Base de Datos (Drizzle ORM)
-*   **Archivos**: `server/db.ts`, [schema.ts](file:///home/eddu/Proyectos/vecy-network/drizzle/schema.ts) y [matching.ts](file:///home/eddu/Proyectos/vecy-network/server/_core/matching.ts)
-*   **Tecnología**: PostgreSQL con Drizzle ORM como capa relacional.
-*   **Propósito**: Registra las entidades inmobiliarias extraídas (`properties` y `requirements`) y ejecuta búsquedas de emparejamiento semántico/numérico en tiempo real al insertar un registro. Si el `matchScore` es mayor o igual a **70%**, se activa una alerta automática de negocio viable.
-*   **Regla de Desduplicación**: Si un usuario vuelve a publicar un inmueble o requerimiento, el sistema no duplica la fila en la base de datos; en su lugar, detecta el número de teléfono y el tipo del activo y actualiza los campos modificados (como precio, administración o descripción).
+*   **Número Oficial**: `+57 3166569719`
+*   **Tecnología**: WebSocket nativo (`@whiskeysockets/baileys`).
+*   **Propósito Doble**:
+    1.  **Ojos y Oídos (Grupos)**: Escucha de forma 100% silenciosa los grupos configurados (como `VECY INMUEBLES NETWORK`, `SOPORTE LEGAL` y `CÍRCULO CERO`) y cualquier otro grupo donde la cuenta sea miembro o administrador. Su objetivo es recopilar la mayor cantidad de información técnica (ofertas de Inmuebles y requerimientos de Búsqueda) para alimentar la base de datos de VECY sin generar spam.
+    2.  **Cerebro y Boca (DMs Privados)**: Atiende en privado a los usuarios. Si es un usuario nuevo, le da la bienvenida; si está fuera del horario de oficina, responde con un mensaje de fuera de oficina y procesa la información en silencio; si es horario laboral de oficina, guarda el mensaje en silencio para la atención de los asesores humanos. Si el que escribe es el administrador, responde de forma 100% interactiva mediante el LLM (Gemini).
 
 ---
 
@@ -66,7 +48,7 @@ graph TD
 *   **Prohibición**: Queda terminantemente prohibido proponer o utilizar ElevenLabs o voces sintéticas estándar de Google. Para generar audios MP3 en el proyecto, debe utilizarse el script utilitario local:
     `npx tsx scratch/generar_voz_jania.ts "Texto"`
 
-### 📈 Comisiones e Inteligencia de Arrendamientos
+### 📈 Comisiones e Inteligencia de Arrendamientos (Secundario)
 *   **Comisión en Arrendamientos**: En Colombia, la costumbre mercantil para comisiones en arrendamientos es de **un canon de arriendo mensual** (o porcentaje correspondiente en contratos de larga duración). JanIA no debe calcular comisiones de arriendo basándose en el 3% de ventas.
 *   **Desglose de Administración (admon)**: En arriendos, es obligatorio saber si el canon incluye o no la administración:
     *   Si no se especifica en el mensaje, JanIA está instruida a preguntar activamente: *¿el valor de la administración está incluido en el canon o cuánto es?*
@@ -76,26 +58,24 @@ graph TD
 Para evitar que los usuarios del grupo reporten el bot principal como spam debido a mensajes privados no solicitados, se aplica la siguiente directriz híbrida:
 *   **Advertencias por Datos Incompletos (`DATOS_INCOMPLETOS`)**:
     *   *Usuario Conocido* (con historial de chat previo con el bot): Se le envía la solicitud de completar datos de forma silenciosa por privado (DM).
-    *   *Usuario Nuevo* (sin interacción previa): Se le advierte **públicamente en el grupo** mediante una mención, invitándolo a iniciar el chat con el bot en `https://wa.me/573185462265` para completar su registro.
+    *   *Usuario Nuevo* (sin interacción previa): Se le advierte **públicamente en el grupo** mediante una mención, invitándolo a iniciar el chat con el bot en `https://wa.me/573166569719` para completar su registro.
 *   **Infracciones de Normas (`VIOLACION_DE_NORMAS`)**: Siempre se alertan de forma pública en el grupo etiquetando al remitente para educar a la comunidad.
 
 ### ⚖️ Superpoderes Legales y de Valoración Comercial
 Para dar un valor excepcional a la comunidad, JanIA cuenta con capacidades avanzadas de asesoría jurídica inmobiliaria y estimación comercial de mercado:
-*   **Abogacía de Élite y Firma Electrónica**:
+*   **Abogacía de Élite, Contratos e Instrumentos de Compraventa**:
     *   Conoce el Código Civil y Código de Comercio colombianos, Ley 820 de 2003 y Ley 675 de 2001.
+    *   Redacta, revisa y estructura minutas e instrumentos formales de compraventa: **Contratos de corretaje comercial**, **Promesas de compraventa** y **Contratos de puntas compartidas** (comisión compartida entre agentes aliados).
     *   Asesora sobre firma electrónica (Ley 527 de 1999 / Decreto 2364 de 2012) y recomienda el portal estatal gratuito: `https://autenticaciondigital.and.gov.co/`.
-*   **Doctrina Legal de Correo Electrónico vs. WhatsApp (CRÍTICO)**:
-    *   Explica que WhatsApp (Ley 2213 de 2022) exige costosos peritajes técnicos digitales forenses para ser prueba plena en disputas, y corre riesgo de borrado. El correo electrónico, con sus logs SMTP permanentes en los servidores, es la prueba documental irrefutable por excelencia.
-    *   En VECY, toda relación comercial (corretaje, bitácora de visitas y presentaciones de clientes) debe ser registrada e introducida formalmente por correo electrónico para garantizar validez judicial y blindaje ante impagos.
-    *   Guía a los brókers en la reclamación de honorarios de corretaje evadidos (Código de Comercio Art. 1340-1346) recopilando las bitácoras y registros enviados a través de email.
+*   **Doctrina Legal de Correo Electrónico Certificado (CRÍTICO)**:
+    *   Explica que WhatsApp (Ley 2213 de 2022) exige costosos peritajes técnicos digitales forenses para ser prueba plena en disputas, y corre riesgo de borrado.
+    *   En VECY, toda relación comercial (corretajes, promesas de compraventa, bitácora de visitas y presentaciones de clientes, acuerdos de puntas compartidas) **debe ser enviada mediante correo electrónico certificado** para salvaguardar y validar plenamente las firmas digitales o electrónicas, asegurando mérito ejecutivo e inmutabilidad probatoria ante impagos.
 *   **Valoración Interactiva, Ficha del SINUPOT y Google Search Dinámico**:
     *   Si el usuario solicita un avalúo pero no indica parámetros clave (ciudad, barrio, área, habitaciones, baños, parqueaderos, estrato o acabados/antigüedad), JanIA realiza una **indagación interactiva paso a paso** solicitándole los datos faltantes.
     *   **Ofrecimiento Catastral (SINUPOT)**: Ofrece activamente el estudio catastral diciendo textualmente: *"Si necesitas saber qué se puede construir en un lote o cuánto vale, descarga la Ficha del SINUPOT en PDF y envíamela por WhatsApp en privado para que yo te haga el estudio de uso de suelo y avalúo al instante"*.
     *   **Guía paso a paso del SINUPOT**: Si el usuario no sabe cómo o dónde obtener la ficha predial catastral del SINUPOT en Bogotá, JanIA lo guiará pacientemente con un tutorial exacto (ingresar a `https://sinupot.sdp.gov.co/`, ingresar dirección/chip, hacer clic izquierdo sobre el predio, presionar 'Generar Reporte/Ficha Predial' y exportar a PDF).
     *   **Búsqueda Activa**: Cuando se detecta una consulta legal o de avalúos en el chat de la JanIA principal o en el grupo de Soporte Legal, Contratos y Avalúos, el sistema habilita de forma dinámica el motor de búsqueda en la web de Google (`enableSearch: true`) para que Gemini consulte en tiempo real referencias de precios locales y leyes actualizadas.
     *   **Embudo Legal/Comercial**: Tras el sondeo orientativo o asesoría jurídica preliminar, JanIA remite persuasivamente a los usuarios a contratar Consultorías Personalizadas o Avalúos Certificados con el equipo oficial de VECY Bienes Raíces al WhatsApp `3166569719`.
-*   **Minutas y Redacción de Documentos Inmobiliarios**:
-    *   JanIA está totalmente facultada para redactar, revisar y estructurar minutas y documentos formales inmobiliarios en Colombia (preavisos de arriendo, otrosíes contractuales, corretajes, promesas de compraventa, reclamaciones de comisiones, cartas de presentación y solicitudes de visita, contratos de puntas compartidas, etc.).
 *   **Guías de Trámites y Tramitología Inmobiliaria**:
     *   JanIA guía paso a paso y de manera sencilla en los trámites inmobiliarios comunes en Colombia:
         - **Certificado de Tradición y Libertad (SNR)**: Adquirido en la web de la Superintendencia de Notariado y Registro (`https://certificados.supernotariado.gov.co/`) con el número de Matrícula Inmobiliaria y la Oficina de Registro (ORIP).
@@ -146,7 +126,7 @@ El algoritmo implementado en `server/_core/matching.ts` calibra los cruces de ne
 
 ### A. Filtros Duros (Cero Tolerancia)
 Cualquier discrepancia en estos parámetros cancela inmediatamente el match (Score = 0%):
-1. **Municipio/Ciudad**: Coincidencia exacta estricta obligatoria.
+1. **Municipio/Ciudad**: Coincidencia exacta strica obligatoria.
 2. **Habitaciones, Baños y Parqueaderos**: No se permiten oscilaciones. El número ofrecido debe ser **exactamente igual** al número solicitado.
 3. **Ubicación Geográfica (Barrios/Zonas)**:
    * **Cotejamiento de Frases Geográficas Completas**: Evita falsos positivos con tokens individuales genéricos de Colombia (como "santa", "villa", "prado"). Si la frase pertenece al listado de palabras genéricas, se exige coincidencia nominal exacta.

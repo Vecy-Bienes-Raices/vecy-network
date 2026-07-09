@@ -230,7 +230,7 @@ async function startServer() {
         return res.status(400).json({ error: "Falta el parámetro 'text' o no es válido." });
       }
 
-      const defaultAdminPhone = process.env.ADMIN_PHONE || "573166569719";
+      const defaultAdminPhone = "573166569719";
       const rawPhone = phone || defaultAdminPhone;
       const cleanPhone = typeof rawPhone === "string" ? rawPhone.replace(/\D/g, "") : String(rawPhone).replace(/\D/g, "");
 
