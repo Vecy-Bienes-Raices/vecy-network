@@ -83,7 +83,7 @@ export class JaniaMatchBot {
       this.sock = makeWASocket({
         auth: state,
         printQRInTerminal: false, // Lo manejamos nosotros de forma personalizada
-        browser: ["Vecy Network", "Chrome", "1.0.0"],
+        browser: ["macOS", "Chrome", "10.15.7"],
       });
 
       this.setupEventListeners(saveCreds);

@@ -171,6 +171,9 @@ async function startServer() {
       const qrPath = path.join(process.cwd(), 'dist', 'qr-match.png');
       if (fs.existsSync(qrPath)) {
         res.setHeader("Content-Type", "image/png");
+        res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+        res.setHeader("Pragma", "no-cache");
+        res.setHeader("Expires", "0");
         return res.sendFile(qrPath);
       }
       res.status(404).send("QR no disponible todavía. Por favor vincula o refresca.");

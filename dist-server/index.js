@@ -5105,7 +5105,7 @@ var init_whatsapp_match = __esm({
             auth: state,
             printQRInTerminal: false,
             // Lo manejamos nosotros de forma personalizada
-            browser: ["Vecy Network", "Chrome", "1.0.0"]
+            browser: ["macOS", "Chrome", "10.15.7"]
           });
           this.setupEventListeners(saveCreds);
         } catch (err) {
@@ -11472,6 +11472,9 @@ async function startServer() {
       const qrPath = path7.join(process.cwd(), "dist", "qr-match.png");
       if (fs6.existsSync(qrPath)) {
         res.setHeader("Content-Type", "image/png");
+        res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+        res.setHeader("Pragma", "no-cache");
+        res.setHeader("Expires", "0");
         return res.sendFile(qrPath);
       }
       res.status(404).send("QR no disponible todav\xEDa. Por favor vincula o refresca.");
