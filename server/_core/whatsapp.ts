@@ -1294,8 +1294,33 @@ export class WhatsAppBot {
 
           if (!hasReceivedOutOfOfficeToday) {
             this.offHoursGreetedToday.set(senderId, todayStr);
-            const outOfOfficeText = `¡Hola! Gracias por escribir a *VECY Bienes Raíces* 🏠✨. En este momento nuestros asesores humanos se encuentran descansando (fuera de nuestro horario laboral). Te presentamos a *JanIA*, nuestra asistente de Inteligencia Artificial creada y entrenada por nosotros. Ella registrará de forma automática cualquier inmueble o requerimiento de búsqueda que nos envíes en este chat para que esté listo a primera hora. Si es una consulta general, uno de nuestros agentes humanos te responderá tan pronto regresemos a la oficina. ¡Que tengas un excelente descanso! 🌙🚀`;
-            await this.queuedSend(senderId, outOfOfficeText);
+            
+            let realName = 'inversionista';
+            try {
+              const contact = await msg.getContact();
+              const pushName = contact.pushname || contact.name || '';
+              if (pushName.trim()) {
+                realName = pushName.trim();
+              }
+            } catch (e: any) {
+              console.warn(`[WHATSAPP-BOT] Falló msg.getContact() en handlePrivateMessage para ${senderId}:`, e.message || e);
+            }
+
+            const outOfOfficeText = `¡Hola ${realName}! 🙋🏻‍♀️ Qué bueno saludarte de nuevo. En este momento nuestros agentes humanos se encuentran descansando 🌙✨. Si gustas, puedes dejar tu mensaje aquí para que te respondamos mañana a primera hora, o si prefieres, puedes continuar la conversación conmigo y contarme en qué puedo ayudarte hoy. ¡Siempre es un gusto atenderte! 🤝🚀`;
+            
+            let media = null;
+            try {
+              media = await textToSpeechMedia(outOfOfficeText);
+            } catch (ttsErr) {
+              console.warn("[WHATSAPP-BOT] Error al generar TTS para fuera de horario:", ttsErr);
+            }
+
+            if (media) {
+              await this.queuedSend(senderId, media, { sendAudioAsVoice: true });
+            } else {
+              await this.queuedSend(senderId, outOfOfficeText);
+            }
+
             await this.logToDb(senderId, 'user', msg.body);
             await this.logToDb(senderId, 'janIA', outOfOfficeText);
             

@@ -371,8 +371,26 @@ export class JaniaMatchBot {
 
                 if (nowTime - lastOffHoursGreet > ONCE_A_DAY) {
                   this.redirectCooldowns.set(senderId + "_offhours", nowTime);
-                  const outOfOfficeText = `¡Hola! Gracias por escribir a *VECY Bienes Raíces* 🏠✨. En este momento nuestros asesores humanos se encuentran descansando (fuera de nuestro horario laboral). Te presentamos a *JanIA*, nuestra asistente de Inteligencia Artificial creada y entrenada por nosotros. Ella registrará de forma automática cualquier inmueble o requerimiento de búsqueda que nos envíes en este chat para que esté listo a primera hora. Si es una consulta general, uno de nuestros agentes humanos te responderá tan pronto regresemos a la oficina. ¡Que tengas un excelente descanso! 🌙🚀`;
-                  await this.queuedSend(senderId, outOfOfficeText);
+                  
+                  const pushName = msg.pushName || '';
+                  const nombre_usuario = pushName.trim() ? pushName.trim() : 'inversionista';
+                  
+                  const outOfOfficeText = `¡Hola ${nombre_usuario}! 🙋🏻‍♀️ Qué bueno saludarte de nuevo. En este momento nuestros agentes humanos se encuentran descansando 🌙✨. Si gustas, puedes dejar tu mensaje aquí para que te respondamos mañana a primera hora, o si prefieres, puedes continuar la conversación conmigo y contarme en qué puedo ayudarte hoy. ¡Siempre es un gusto atenderte! 🤝🚀`;
+                  
+                  let media = null;
+                  try {
+                    const { textToSpeechMedia } = await import('./whatsapp');
+                    media = await textToSpeechMedia(outOfOfficeText);
+                  } catch (ttsErr: any) {
+                    console.warn("[JANIA-MATCH] Error al generar TTS para fuera de horario:", ttsErr.message || ttsErr);
+                  }
+
+                  if (media) {
+                    await this.queuedSend(senderId, media, { sendAudioAsVoice: true });
+                  } else {
+                    await this.queuedSend(senderId, outOfOfficeText);
+                  }
+
                   await this.logToDb(senderId, 'user', body);
                   await this.logToDb(senderId, 'janIA', outOfOfficeText);
                 }

@@ -5304,8 +5304,21 @@ var init_whatsapp_match = __esm({
                     const ONCE_A_DAY = 24 * 60 * 60 * 1e3;
                     if (nowTime - lastOffHoursGreet > ONCE_A_DAY) {
                       this.redirectCooldowns.set(senderId + "_offhours", nowTime);
-                      const outOfOfficeText = `\xA1Hola! Gracias por escribir a *VECY Bienes Ra\xEDces* \u{1F3E0}\u2728. En este momento nuestros asesores humanos se encuentran descansando (fuera de nuestro horario laboral). Te presentamos a *JanIA*, nuestra asistente de Inteligencia Artificial creada y entrenada por nosotros. Ella registrar\xE1 de forma autom\xE1tica cualquier inmueble o requerimiento de b\xFAsqueda que nos env\xEDes en este chat para que est\xE9 listo a primera hora. Si es una consulta general, uno de nuestros agentes humanos te responder\xE1 tan pronto regresemos a la oficina. \xA1Que tengas un excelente descanso! \u{1F319}\u{1F680}`;
-                      await this.queuedSend(senderId, outOfOfficeText);
+                      const pushName = msg.pushName || "";
+                      const nombre_usuario = pushName.trim() ? pushName.trim() : "inversionista";
+                      const outOfOfficeText = `\xA1Hola ${nombre_usuario}! \u{1F64B}\u{1F3FB}\u200D\u2640\uFE0F Qu\xE9 bueno saludarte de nuevo. En este momento nuestros agentes humanos se encuentran descansando \u{1F319}\u2728. Si gustas, puedes dejar tu mensaje aqu\xED para que te respondamos ma\xF1ana a primera hora, o si prefieres, puedes continuar la conversaci\xF3n conmigo y contarme en qu\xE9 puedo ayudarte hoy. \xA1Siempre es un gusto atenderte! \u{1F91D}\u{1F680}`;
+                      let media = null;
+                      try {
+                        const { textToSpeechMedia: textToSpeechMedia2 } = await Promise.resolve().then(() => (init_whatsapp(), whatsapp_exports));
+                        media = await textToSpeechMedia2(outOfOfficeText);
+                      } catch (ttsErr) {
+                        console.warn("[JANIA-MATCH] Error al generar TTS para fuera de horario:", ttsErr.message || ttsErr);
+                      }
+                      if (media) {
+                        await this.queuedSend(senderId, media, { sendAudioAsVoice: true });
+                      } else {
+                        await this.queuedSend(senderId, outOfOfficeText);
+                      }
                       await this.logToDb(senderId, "user", body);
                       await this.logToDb(senderId, "janIA", outOfOfficeText);
                     }
@@ -7506,8 +7519,28 @@ ${result.response}`);
               const hasReceivedOutOfOfficeToday = this.offHoursGreetedToday.get(senderId) === todayStr;
               if (!hasReceivedOutOfOfficeToday) {
                 this.offHoursGreetedToday.set(senderId, todayStr);
-                const outOfOfficeText = `\xA1Hola! Gracias por escribir a *VECY Bienes Ra\xEDces* \u{1F3E0}\u2728. En este momento nuestros asesores humanos se encuentran descansando (fuera de nuestro horario laboral). Te presentamos a *JanIA*, nuestra asistente de Inteligencia Artificial creada y entrenada por nosotros. Ella registrar\xE1 de forma autom\xE1tica cualquier inmueble o requerimiento de b\xFAsqueda que nos env\xEDes en este chat para que est\xE9 listo a primera hora. Si es una consulta general, uno de nuestros agentes humanos te responder\xE1 tan pronto regresemos a la oficina. \xA1Que tengas un excelente descanso! \u{1F319}\u{1F680}`;
-                await this.queuedSend(senderId, outOfOfficeText);
+                let realName2 = "inversionista";
+                try {
+                  const contact = await msg.getContact();
+                  const pushName = contact.pushname || contact.name || "";
+                  if (pushName.trim()) {
+                    realName2 = pushName.trim();
+                  }
+                } catch (e) {
+                  console.warn(`[WHATSAPP-BOT] Fall\xF3 msg.getContact() en handlePrivateMessage para ${senderId}:`, e.message || e);
+                }
+                const outOfOfficeText = `\xA1Hola ${realName2}! \u{1F64B}\u{1F3FB}\u200D\u2640\uFE0F Qu\xE9 bueno saludarte de nuevo. En este momento nuestros agentes humanos se encuentran descansando \u{1F319}\u2728. Si gustas, puedes dejar tu mensaje aqu\xED para que te respondamos ma\xF1ana a primera hora, o si prefieres, puedes continuar la conversaci\xF3n conmigo y contarme en qu\xE9 puedo ayudarte hoy. \xA1Siempre es un gusto atenderte! \u{1F91D}\u{1F680}`;
+                let media = null;
+                try {
+                  media = await textToSpeechMedia(outOfOfficeText);
+                } catch (ttsErr) {
+                  console.warn("[WHATSAPP-BOT] Error al generar TTS para fuera de horario:", ttsErr);
+                }
+                if (media) {
+                  await this.queuedSend(senderId, media, { sendAudioAsVoice: true });
+                } else {
+                  await this.queuedSend(senderId, outOfOfficeText);
+                }
                 await this.logToDb(senderId, "user", msg.body);
                 await this.logToDb(senderId, "janIA", outOfOfficeText);
                 await this.parseAndSaveSilently(msg, senderId, rawPhone);
