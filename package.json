@@ -4,7 +4,7 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
-    "dev": "pnpm clean:deep && cross-env NODE_ENV=development tsx watch --exclude '.cooldown_map.json' --exclude '.pending_data.json' --exclude 'recent_joins.txt' --exclude '.pending_welcome_count' --exclude '.pending_welcome_jids' --exclude '.wwebjs_auth/**' --exclude '.wwebjs_cache/**' server/_core/index.ts",
+    "dev": "pnpm clean:deep && cross-env NODE_ENV=development tsx watch --exclude '.cooldown_map.json' --exclude '.pending_data.json' --exclude 'recent_joins.txt' --exclude '.pending_welcome_count' --exclude '.pending_welcome_jids' --exclude '.wwebjs_auth/**' --exclude '.wwebjs_cache/**' --exclude '.baileys_auth/**' server/_core/index.ts",
     "clean:deep": "tsx scripts/clean-env.ts",
     "build": "vite build && esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist-server",
     "start": "cross-env NODE_ENV=production node dist-server/index.js",

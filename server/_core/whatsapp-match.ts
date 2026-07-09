@@ -3,7 +3,8 @@ import makeWASocket, {
   DisconnectReason, 
   delay,
   downloadMediaMessage,
-  proto
+  proto,
+  fetchLatestBaileysVersion
 } from '@whiskeysockets/baileys';
 import { Boom } from '@hapi/boom';
 import qrcodeTerminal from 'qrcode-terminal';
@@ -79,9 +80,20 @@ export class JaniaMatchBot {
       const sessionDir = path.join(process.cwd(), '.baileys_auth');
       const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
       
+      // Obtener la versión de WhatsApp Web más reciente para evitar el error de stream 515
+      let version: any = [2, 3000, 1017531287];
+      try {
+        const { version: latestVersion } = await fetchLatestBaileysVersion();
+        version = latestVersion;
+        console.log(`[JANIA-MATCH] Usando versión de WhatsApp Web: ${version.join('.')}`);
+      } catch (e: any) {
+        console.warn('[JANIA-MATCH] No se pudo obtener la versión dinámica de WhatsApp Web, usando fallback:', e.message);
+      }
+
       console.log('[JANIA-MATCH] Estableciendo conexión por WebSocket...');
       this.sock = makeWASocket({
         auth: state,
+        version,
         printQRInTerminal: false, // Lo manejamos nosotros de forma personalizada
         browser: ["macOS", "Chrome", "10.15.7"],
       });

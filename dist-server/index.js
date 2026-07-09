@@ -5049,7 +5049,8 @@ import makeWASocket, {
   useMultiFileAuthState,
   DisconnectReason,
   delay,
-  downloadMediaMessage
+  downloadMediaMessage,
+  fetchLatestBaileysVersion
 } from "@whiskeysockets/baileys";
 import qrcodeTerminal from "qrcode-terminal";
 import fs3 from "fs";
@@ -5100,9 +5101,18 @@ var init_whatsapp_match = __esm({
         try {
           const sessionDir = path4.join(process.cwd(), ".baileys_auth");
           const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
+          let version = [2, 3e3, 1017531287];
+          try {
+            const { version: latestVersion } = await fetchLatestBaileysVersion();
+            version = latestVersion;
+            console.log(`[JANIA-MATCH] Usando versi\xF3n de WhatsApp Web: ${version.join(".")}`);
+          } catch (e) {
+            console.warn("[JANIA-MATCH] No se pudo obtener la versi\xF3n din\xE1mica de WhatsApp Web, usando fallback:", e.message);
+          }
           console.log("[JANIA-MATCH] Estableciendo conexi\xF3n por WebSocket...");
           this.sock = makeWASocket({
             auth: state,
+            version,
             printQRInTerminal: false,
             // Lo manejamos nosotros de forma personalizada
             browser: ["macOS", "Chrome", "10.15.7"]
