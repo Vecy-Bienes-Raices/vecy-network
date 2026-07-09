@@ -174,9 +174,8 @@ export class JaniaMatchBot {
         try {
           // --- FLUJO 1: MENSAJES DE GRUPO ---
           if (isGroup) {
-            if (!this.authorizedGroups.includes(chatId)) {
-              return;
-            }
+            // Escuchamos de forma global todos los grupos en los que participamos.
+            // authorizedGroups se usará abajo únicamente para reaccionar con emojis.
 
             // Ignorar stickers
             if (msg.message.stickerMessage) {
@@ -227,8 +226,7 @@ export class JaniaMatchBot {
               );
 
             if (hasDirectMention || isHelpOrSystemQuery) {
-              console.log(`[JANIA-MATCH] Pregunta directa/ayuda de ${senderId} en grupo ${chatId}: "${body}"`);
-              await this.handleDirectGroupQuestion(msg, chatId, senderId, body);
+              console.log(`[JANIA-MATCH] Pregunta directa/ayuda de ${senderId} en grupo ${chatId} ignorada en el bot de escucha (Modo Silencioso).`);
               return;
             }
 
@@ -349,45 +347,10 @@ export class JaniaMatchBot {
         const cooldown = this.cooldownMap.get(cooldownKey);
         
         if (cooldown && (now - cooldown.lastBlockProcessedAt < COOLDOWN_PERIOD)) {
-          try {
-            await this.sock.sendMessage(chatId, { react: { text: '⚠️', key: msg.key } });
-          } catch (e) {}
-
-          if (!cooldown.warningSent) {
-            cooldown.warningSent = true;
-            this.cooldownMap.set(cooldownKey, cooldown);
-            this.saveCooldowns();
-
-            const rawPhone = senderId.split("@")[0];
-            const useVoice = Math.random() < 0.5;
-
-            if (useVoice) {
-              const voiceText = `Hola, acabo de procesar tus primeras propiedades. Para no saturar el grupo y cuidar la visibilidad de tus activos, por favor colaborame esperando cinco minutos antes de enviar tu siguiente bloque de propiedades. ¡Muchas gracias!`;
-              const media = await textToSpeechMedia(voiceText);
-              if (media) {
-                await this.queuedSend(chatId, media, { sendAudioAsVoice: true });
-              } else {
-                const warningText = 
-                  `⚠️ *COOLDOWN ACTIVO (5 MINUTOS)* ⚠️\n\n` +
-                  `Hola @${rawPhone}, acabo de procesar con éxito tus primeras propiedades. ` +
-                  `Para cuidar la visibilidad de tus activos y no saturar la red de los aliados, te pido que por favor me colabores esperando los *5 minutos* de intervalo antes de enviar tu siguiente bloque (máximo 3 publicaciones).\n\n` +
-                  `¡Mis motores necesitan este breve descanso para mantener tus fichas técnicas al 100% de calidad! JanIA sigue atenta. 🏆🎯`;
-                await this.queuedSend(chatId, warningText, {
-                  mentions: [senderId],
-                  quoted: msg
-                });
-              }
-            } else {
-              const warningText = 
-                `⚠️ *COOLDOWN ACTIVO (5 MINUTOS)* ⚠️\n\n` +
-                `Hola @${rawPhone}, acabo de procesar con éxito tus primeras propiedades. ` +
-                `Para cuidar la visibilidad de tus activos y no saturar la red de los aliados, te pido que por favor me colabores esperando los *5 minutos* de intervalo antes de enviar tu siguiente bloque (máximo 3 publicaciones).\n\n` +
-                `¡Mis motores necesitan este breve descanso para mantener tus fichas técnicas al 100% de calidad! JanIA sigue atenta. 🏆🎯`;
-              await this.queuedSend(chatId, warningText, {
-                mentions: [senderId],
-                quoted: msg
-              });
-            }
+          if (this.authorizedGroups.includes(chatId)) {
+            try {
+              await this.sock.sendMessage(chatId, { react: { text: '⚠️', key: msg.key } });
+            } catch (e) {}
           }
           return;
         }
@@ -416,42 +379,10 @@ export class JaniaMatchBot {
 
         if (isMainGroup && hasExistingListing) {
           console.log(`[BUFFER] Intento de múltiple propiedad detectado para ${senderId}. Mensaje descartado.`);
-          try {
-            await this.sock.sendMessage(chatId, { react: { text: '⚠️', key: msg.key } });
-          } catch (e) {}
-
-          if (!buffer.warningSent) {
-            buffer.warningSent = true;
-            const rawPhone = senderId.split("@")[0];
-            const useVoice = Math.random() < 0.5;
-
-            if (useVoice) {
-              const voiceText = `Hola, detecté que estás enviando varias propiedades al mismo tiempo. Mi sistema está diseñado para procesar un solo inmueble por bloque. Por favor, envía cada propiedad en un mensaje separado y espera cinco minutos entre cada una para poder registrarla correctamente. ¡Muchas gracias!`;
-              const media = await textToSpeechMedia(voiceText);
-              if (media) {
-                await this.queuedSend(chatId, media, { sendAudioAsVoice: true });
-              } else {
-                const warningText = 
-                  `⚠️ *UN INMUEBLE A LA VEZ* ⚠️\n\n` +
-                  `Hola @${rawPhone}, detecté que estás enviando varias propiedades en el mismo bloque.\n\n` +
-                  `Mi sistema está diseñado para procesar únicamente *un (1) solo inmueble* por mensaje. Si envías varios al mismo tiempo, quedarán sin registrar en la base de datos y no podré buscarte coincidencias (matches) automáticas.\n\n` +
-                  `Por favor, envía cada propiedad por separado y espera los *5 minutos* de cooldown reglamentarios entre cada una. ¡Tus primeras publicaciones ya están siendo procesadas! 🚀🎯`;
-                await this.queuedSend(chatId, warningText, {
-                  mentions: [senderId],
-                  quoted: msg
-                });
-              }
-            } else {
-              const warningText = 
-                `⚠️ *UN INMUEBLE A LA VEZ* ⚠️\n\n` +
-                `Hola @${rawPhone}, detecté que estás enviando varias propiedades en el mismo bloque.\n\n` +
-                `Mi sistema está diseñado para procesar únicamente *un (1) solo inmueble* por mensaje. Si envías varios al mismo tiempo, quedarán sin registrar en la base de datos y no podré buscarte coincidencias (matches) automáticas.\n\n` +
-                `Por favor, envía cada propiedad por separado y espera los *5 minutos* de cooldown reglamentarios entre cada una. ¡Tus primeras publicaciones ya están siendo procesadas! 🚀🎯`;
-              await this.queuedSend(chatId, warningText, {
-                mentions: [senderId],
-                quoted: msg
-              });
-            }
+          if (this.authorizedGroups.includes(chatId)) {
+            try {
+              await this.sock.sendMessage(chatId, { react: { text: '⚠️', key: msg.key } });
+            } catch (e) {}
           }
           return;
         }
@@ -460,42 +391,10 @@ export class JaniaMatchBot {
         const limit = isMainGroup ? MAX_BLOCK_SIZE : 10;
         if (buffer.messages.length >= limit) {
           console.log(`[BUFFER] Límite de mensajes del bloque (${limit}) alcanzado para ${senderId}. Mensaje descartado.`);
-          try {
-            await this.sock.sendMessage(chatId, { react: { text: '⚠️', key: msg.key } });
-          } catch (e) {}
-
-          if (isMainGroup && !buffer.warningSent) {
-            buffer.warningSent = true;
-            const rawPhone = senderId.split("@")[0];
-            const useVoice = Math.random() < 0.5;
-
-            if (useVoice) {
-              const voiceText = `Hola, veo que estás enviando muchas publicaciones seguidas. Para cuidar la visibilidad y no saturar el chat de los aliados, por favor colaborame esperando cinco minutos antes de enviar más de tres publicaciones. ¡Muchas gracias!`;
-              const media = await textToSpeechMedia(voiceText);
-              if (media) {
-                await this.queuedSend(chatId, media, { sendAudioAsVoice: true });
-              } else {
-                const warningText = 
-                  `⚠️ *LÍMITE DE PUBLICACIÓN* ⚠️\n\n` +
-                  `Hola @${rawPhone}, detecté que estás enviando muchas publicaciones seguidas. ` +
-                  `Para cuidar la visibilidad de tus activos y no saturar el chat de los aliados, te pido que por favor me colabores con esta norma, ya que mis motores de extracción de datos solo pueden procesar un máximo de *3 publicaciones* por bloque a la vez.\n\n` +
-                  `¡Espera unos *5 minutos* y luego envía el siguiente grupo! Tus primeras 3 publicaciones ya están siendo procesadas y registradas. 🚀🎯`;
-                await this.queuedSend(chatId, warningText, {
-                  mentions: [senderId],
-                  quoted: msg
-                });
-              }
-            } else {
-              const warningText = 
-                `⚠️ *LÍMITE DE PUBLICACIÓN* ⚠️\n\n` +
-                `Hola @${rawPhone}, detecté que estás enviando muchas publicaciones seguidas. ` +
-                `Para cuidar la visibilidad de tus activos y no saturar el chat de los aliados, te pido que por favor me colabores con esta norma, ya que mis motores de extracción de datos solo pueden procesar un máximo de *3 publicaciones* por bloque a la vez.\n\n` +
-                `¡Espera unos *5 minutos* y luego envía el siguiente grupo! Tus primeras 3 publicaciones ya están siendo procesadas y registradas. 🚀🎯`;
-              await this.queuedSend(chatId, warningText, {
-                mentions: [senderId],
-                quoted: msg
-              });
-            }
+          if (this.authorizedGroups.includes(chatId)) {
+            try {
+              await this.sock.sendMessage(chatId, { react: { text: '⚠️', key: msg.key } });
+            } catch (e) {}
           }
           return;
         }
@@ -635,7 +534,7 @@ export class JaniaMatchBot {
       }
 
       // --- REACCIONAR A LA PUBLICACIÓN ---
-      if (result) {
+      if (result && this.authorizedGroups.includes(chatId)) {
         const emoji = this.getReactionEmoji(result);
         if (emoji) {
           try {
@@ -648,105 +547,35 @@ export class JaniaMatchBot {
         }
       }
 
-      // --- MODO STEALTH: Redirección al bot principal u oportuna advertencia grupal ---
+      // --- MODO SILENCIOSO TOTAL GRUPAL BAILEYS ---
+      // No se envían respuestas textuales, DMs ni advertencias a usuarios normales en ningún grupo.
+      // Únicamente se reportan los matches reales de forma privada al administrador.
       if (result) {
         const isWarning = result.classification === "DATOS_INCOMPLETOS" || result.classification === "VIOLACION_DE_NORMAS";
-
-        if (isWarning) {
-          const warningText = result.dmResponse || result.response || "";
-          if (warningText.trim() !== "") {
-            let cleanDmResponse = warningText;
-            cleanDmResponse = cleanDmResponse.replace(/¡Hola,\s+\*[^*]+\*!\s+😊\s*/i, "");
-            cleanDmResponse = cleanDmResponse.replace(/¡Hola!\s+😊\s*/i, "");
-
-            let hasInteracted = false;
-            try {
-              const db = await getDb();
-              if (db) {
-                const checkInteracted = await db
-                  .select({ id: dbMessages.id })
-                  .from(dbMessages)
-                  .innerJoin(conversations, eq(dbMessages.conversationId, conversations.id))
-                  .where(
-                    and(
-                      eq(conversations.sessionId, senderId),
-                      eq(dbMessages.role, 'janIA')
-                    )
-                  )
-                  .limit(1);
-                hasInteracted = checkInteracted.length > 0;
-              }
-            } catch (err) {
-              console.error('[JANIA-MATCH] Error checking user interaction history:', err);
-            }
-
-            const shouldSendPublic = result.classification === "VIOLACION_DE_NORMAS" || !hasInteracted;
-
-            if (shouldSendPublic) {
-              let publicWarning = "";
-              if (result.classification === "VIOLACION_DE_NORMAS") {
-                publicWarning = `🚨 *LLAMADO DE ATENCIÓN* 🚨\n\nHola @${senderId.split('@')[0]},\n\nHe detectado que tu publicación infringe las normas de nuestro canal.\n\n*Detalle de la infracción:*\n${cleanDmResponse}\n\n*Nota:* Como casi nadie se toma la molestia de leer las normas en la descripción del grupo, te aclaro que estas reglas existen para mantener la comunidad ordenada y efectiva para todos.\n\nSi tienes dudas, por favor contacta a mi otro yo *JanIA v3.5* (atención y soporte al usuario) al +573185462265 o escribiéndole directamente aquí:\n👉 https://wa.me/573185462265`;
-              } else {
-                publicWarning = `⚠️ *INFORMACIÓN PENDIENTE* ⚠️\n\nHola @${senderId.split('@')[0]},\n\n${cleanDmResponse}\n\n*Nota:* Hacemos énfasis en esto porque casi nadie se toma la molestia de leer las normas de publicación en la descripción del grupo, pero estos datos son 100% obligatorios para que pueda procesar tu propiedad y buscarte un MATCH comercial.\n\nSi deseas completar tus datos o tienes dudas, por favor contacta directamente a mi versión principal de soporte, *JanIA v3.5*, escribiéndole al enlace:\n👉 https://wa.me/573185462265`;
-              }
-
-              console.log(`[JANIA-MATCH] [Public-Moderation] Enviando advertencia grupal a ${senderId} en ${chatId}`);
-              await this.queuedSend(chatId, publicWarning, { mentions: [senderId] });
-              await this.logToDb(senderId, 'janIA', `[PUBLIC-WARNING] ${publicWarning}`);
-            } else {
-              console.log(`[JANIA-MATCH] [Stealth] Derivando advertencia privada de datos incompletos a ${senderId} (Usuario conocido).`);
-              await sendUserDM(senderId, result.dmResponse || "");
-              await this.logToDb(senderId, 'janIA', `[DM-Stealth] ${result.dmResponse || ""}`);
-            }
-
-            if (result.classification === "DATOS_INCOMPLETOS") {
-              setBotPendingData(
-                senderId,
-                fullText,
-                result.extractedData || {},
-                result.classification,
-                result.missingFields || []
-              );
-            }
-          }
-        } else {
+        
+        if (!isWarning) {
           const isConsultation = result.classification === "CONSULTA_GENERAL" || result.classification === "RESPUESTA_A_PREGUNTA_IA" || result.classification === "ANALISIS_DE_MERCADO";
           
-          if (isConsultation && result.response && result.response.trim() !== "") {
-            console.log(`[JANIA-MATCH] Enviando respuesta a consulta general en el grupo para ${senderId}`);
-            await this.queuedSend(chatId, result.response, {
-              mentions: [senderId],
-              quoted: buffer.messages[buffer.messages.length - 1].originalMsg
-            });
-            await this.logToDb(senderId, 'janIA', `[GROUP-REPLY] ${result.response}`);
+          if (isConsultation) {
+            console.log(`[JANIA-MATCH] Consulta general de ${senderId} en ${chatId} procesada en silencio.`);
           } else {
-            // SILENCIAR NOTIFICACIONES DE MATCH PÚBLICAS EN GRUPOS
-            // En su lugar, se notifica únicamente al administrador de forma privada (seguro de baneo)
+            // Inmueble o Requerimiento exitoso -> reportar match si existe
             if (result.response && result.response.trim() !== "") {
               console.log(`[JANIA-MATCH] Match detectado silenciosamente. Alertas enviadas al administrador.`);
               await sendAdminNotification(`🎯 *[MATCH DETECTADO]*\n\n${result.response}`);
               await this.logToDb(senderId, 'janIA', `[SILENT-MATCH] ${result.response}`);
             }
-
-            // Confirmación privada de registro al usuario (Stealth)
-            if (result.shouldSendDM && result.dmResponse && result.dmResponse.trim() !== "") {
-              console.log(`[JANIA-MATCH] [Stealth] Derivando confirmación DM de ${senderId} al bot principal.`);
-              await sendUserDM(senderId, result.dmResponse);
-              await this.logToDb(senderId, 'janIA', `[DM-Stealth] ${result.dmResponse}`);
-            }
           }
+        } else {
+          console.log(`[JANIA-MATCH] Publicación con advertencia/incompleta de ${senderId} en ${chatId} procesada y guardada en silencio.`);
         }
 
-        // Confirmaciones de Match adicionales
+        // Alertas de matches adicionales (derivadas a administración en vez de DMs de usuario)
         if (result.extraDMs && result.extraDMs.length > 0) {
           for (const dm of result.extraDMs) {
             if (!dm.jid || !dm.jid.includes('@') || dm.jid.split('@')[0].length < 5) continue;
-            console.log(`[JANIA-MATCH] [Stealth] Derivando notificación de Match para ${dm.jid} al bot principal.`);
-            if (dm.viaMainBot) {
-              await sendAdminNotification(dm.message);
-            } else {
-              await sendUserDM(dm.jid, dm.message);
-            }
+            console.log(`[JANIA-MATCH] [Stealth] Derivando notificación de Match adicional para ${dm.jid} a alertas de administrador.`);
+            await sendAdminNotification(dm.message);
           }
         }
       }

@@ -18,7 +18,8 @@ import {
   MSG_COMUNICADO_MATCH_NETWORK,
   MSG_COMUNICADO_MATCH_CIRCULO,
   REPUTATION_HOOK,
-  translatePropertyType
+  translatePropertyType,
+  isOutsideWorkingHours
 } from './janIA';
 import { publishToFacebookGroup } from "./facebookService";
 import fs from 'fs';
@@ -1141,10 +1142,159 @@ export class WhatsAppBot {
   }
 
   // --- 2. RAMA Conversacional PRIVADA (DM INBOUND LOOP) ---
+  // Historial de usuarios saludados fuera de horario
+  private offHoursGreetedToday: Map<string, string> = new Map();
+
+  private async parseAndSaveSilently(msg: Message, senderId: string, rawPhone: string) {
+    try {
+      let imageBuffer: string | undefined;
+      let pdfBuffer: string | undefined;
+      let pdfMimeType: string | undefined;
+      
+      if (msg.hasMedia) {
+        if (msg.type === 'image') {
+          try {
+            const media = await msg.downloadMedia();
+            if (media && media.mimetype.startsWith('image/')) {
+              imageBuffer = media.data;
+            }
+          } catch (e) {
+            console.error('[JanIA-DM-Vision-Silent] Error descargando imagen:', e);
+          }
+        } else if (msg.type === 'document') {
+          try {
+            const media = await msg.downloadMedia();
+            if (media && media.mimetype === 'application/pdf') {
+              pdfBuffer = media.data;
+              pdfMimeType = media.mimetype;
+            }
+          } catch (e) {
+            console.error('[JanIA-DM-Document-Silent] Error descargando documento:', e);
+          }
+        }
+      }
+
+      let realName = `Asesor +${rawPhone}`;
+      try {
+        const contact = await msg.getContact();
+        if (contact) {
+          realName = contact.pushname || contact.name || realName;
+        }
+      } catch (_) {}
+
+      // Procesamos forzando isGroup y groupJid para que janIA.ts guarde "tal cual" sin rechazar por incompletitud
+      const result = await processWhatsAppMessage(
+        msg.body,
+        senderId,
+        realName,
+        msg.hasMedia,
+        [],
+        undefined,
+        imageBuffer,
+        true, // isGroup = true
+        pdfBuffer,
+        pdfMimeType,
+        senderId // groupJid = senderId
+      );
+
+      if (result) {
+        let reaction = "";
+        if (result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO") {
+          reaction = '✅';
+        } else if (result.classification === "DATOS_INCOMPLETOS" || (result.missingFields && result.missingFields.length > 0)) {
+          reaction = '🤔';
+        }
+        if (reaction) {
+          try {
+            await msg.react(reaction);
+          } catch (_) {}
+        }
+
+        // Si hay matches reales detectados, notificar al administrador
+        if (result.response && result.response.trim() !== "" && result.classification !== "DATOS_INCOMPLETOS" && result.classification !== "VIOLACION_DE_NORMAS") {
+          const isMatch = result.response.includes("MATCH COMERCIAL DETECTADO") ||
+                          result.response.includes("MATCH DETECTADO") ||
+                          result.response.includes("MATCH INTELIGENTE DETECTADO") ||
+                          result.response.includes("COINCIDENCIA DE NEGOCIO DETECTADA");
+          if (isMatch) {
+            await sendAdminNotification(`🎯 *[MATCH DETECTADO POR DM]*\n\n${result.response}`);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("[WHATSAPP-BOT] Fallo en parseAndSaveSilently:", err);
+    }
+  }
+
+  // --- 2. RAMA Conversacional PRIVADA (DM INBOUND LOOP) ---
   private async handlePrivateMessage(msg: Message) {
     try {
       const senderId = msg.from;
       const rawPhone = (msg.author || msg.from).split("@")[0];
+
+      // Verificar si es administrador
+      const ADMIN_PHONE = process.env.ADMIN_PHONE || "573166569719";
+      const isAdmin = rawPhone.includes(ADMIN_PHONE) || rawPhone === ADMIN_PHONE || rawPhone === "573166569719" || rawPhone.includes("573185462265");
+
+      if (!isAdmin) {
+        // A. Verificar si es usuario nuevo (no tiene historial en base de datos)
+        const db = await getDb();
+        let isNewUser = false;
+        if (db) {
+          try {
+            const existingMessages = await db
+              .select({ id: dbMessages.id })
+              .from(dbMessages)
+              .innerJoin(conversations, eq(dbMessages.conversationId, conversations.id))
+              .where(eq(conversations.sessionId, senderId))
+              .limit(1);
+            isNewUser = existingMessages.length === 0;
+          } catch (dbErr) {
+            console.warn("[WHATSAPP-BOT] Error al verificar si el usuario es nuevo:", dbErr);
+          }
+        }
+
+        if (isNewUser) {
+          console.log(`[WHATSAPP-BOT] Nuevo usuario detectado: ${senderId}. Enviando bienvenida.`);
+          const welcomeText = `¡Hola! Te damos una muy cálida bienvenida a *VECY Bienes Raíces* y *VECY Match* 🏠✨. Gracias por contactarte con nosotros. Hemos recibido tu mensaje y uno de nuestros asesores humanos se comunicará contigo muy pronto para brindarte la mejor atención. Mientras tanto, si gustas, puedes detallarnos tu requerimiento o enviarnos la información de tu inmueble. ¡Es un gusto saludarte! 🤝🚀`;
+          await this.queuedSend(senderId, welcomeText);
+          await this.logToDb(senderId, 'user', msg.body);
+          await this.logToDb(senderId, 'janIA', welcomeText);
+          return;
+        }
+
+        // B. Verificar si estamos fuera de horario laboral (Colombia)
+        const isOffHours = isOutsideWorkingHours();
+
+        if (isOffHours) {
+          const todayStr = new Date().toISOString().split("T")[0];
+          const hasReceivedOutOfOfficeToday = this.offHoursGreetedToday.get(senderId) === todayStr;
+
+          if (!hasReceivedOutOfOfficeToday) {
+            this.offHoursGreetedToday.set(senderId, todayStr);
+            const outOfOfficeText = `¡Hola! Gracias por escribir a *VECY Bienes Raíces* 🏠✨. En este momento nuestros asesores humanos se encuentran descansando (fuera de nuestro horario laboral). Te presentamos a *JanIA*, nuestra asistente de Inteligencia Artificial creada y entrenada por nosotros. Ella registrará de forma automática cualquier inmueble o requerimiento de búsqueda que nos envíes en este chat para que esté listo a primera hora. Si es una consulta general, uno de nuestros agentes humanos te responderá tan pronto regresemos a la oficina. ¡Que tengas un excelente descanso! 🌙🚀`;
+            await this.queuedSend(senderId, outOfOfficeText);
+            await this.logToDb(senderId, 'user', msg.body);
+            await this.logToDb(senderId, 'janIA', outOfOfficeText);
+            
+            // Registrar silenciosamente el inmueble o requerimiento en Supabase
+            await this.parseAndSaveSilently(msg, senderId, rawPhone);
+            return;
+          } else {
+            // Solo registrar en la BD y procesar en silencio sin enviar mensajes salientes al usuario
+            await this.logToDb(senderId, 'user', msg.body);
+            await this.parseAndSaveSilently(msg, senderId, rawPhone);
+            return;
+          }
+        } else {
+          // Dentro de horario laboral: el bot de DMs no interfiere. Silencio absoluto
+          console.log(`[WHATSAPP-BOT] DM de ${rawPhone} recibido en horario laboral. Silenciado.`);
+          await this.logToDb(senderId, 'user', msg.body);
+          return;
+        }
+      }
+
+      // --- FLUJO ADMINISTRADOR O BYPASS DE TEST ---
       let realName = `Asesor +${rawPhone}`;
       try {
         const contact = await msg.getContact();
@@ -1166,7 +1316,7 @@ export class WhatsAppBot {
         console.warn(`[WHATSAPP-BOT] Error al buscar nombre en BD para ${rawPhone}:`, dbErr);
       }
 
-      console.log(`[JanIA-DM] Atendiendo mensaje interno de ${realName} (${senderId})...`);
+      console.log(`[JanIA-DM] [Admin/Test] Atendiendo mensaje interno de ${realName} (${senderId})...`);
 
       // Interceptar confirmaciones de Match (SÍ #M123 o NO #M123)
       const matchConfirmationRegex = /^\s*(sí|si|no)\s+#m(\d+)\s*$/i;

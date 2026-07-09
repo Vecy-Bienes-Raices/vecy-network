@@ -215,6 +215,27 @@ async function getRecentChatHistory(userId: string, limit = 20): Promise<{ role:
 
 export const REPUTATION_HOOK = "⚠️ *IMPORTANTE:* Colega y cliente, recuerda que este ecosistema tecnológico fue creado pensando en tu beneficio y en el de toda nuestra comunidad. Te contamos que operamos en *Etapa de Prueba Gratuita y 100% SIN COMISIONES*. Si has tenido una buena experiencia en alguno de nuestros canales o has logrado consolidar un negocio real gracias a la conexión privada de JanIA, sería un verdadero honor para nosotros que nos compartieras tu testimonio y calificación de nuestros servicios en este enlace: https://g.page/r/CctNbwU6UpX5EBM/review";
 
+export function isOutsideWorkingHours(): boolean {
+  // Obtener fecha y hora en la zona horaria de Bogotá, Colombia
+  const dateStr = new Date().toLocaleString("en-US", { timeZone: "America/Bogota" });
+  const bogotaDate = new Date(dateStr);
+  const weekday = bogotaDate.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  const hour = bogotaDate.getHours();  // 0-23
+
+  // Horario Laboral:
+  // Lunes a Viernes: 8:00 AM a 6:00 PM (18:00)
+  // Sábado: 8:00 AM a 1:00 PM (13:00)
+  // Domingo: Cerrado (siempre fuera de horario)
+  if (weekday === 0) { // Domingo
+    return true;
+  }
+  if (weekday === 6) { // Sábado
+    return hour < 8 || hour >= 13;
+  }
+  // Lunes a Viernes (1-5)
+  return hour < 8 || hour >= 18;
+}
+
 // Helper para capitalizar la primera letra
 function capitalize(text: string): string {
   if (!text) return "";
@@ -1265,6 +1286,14 @@ export async function processWhatsAppMessage(
 
     contextText += greetingInstruction;
 
+    const outsideHours = isOutsideWorkingHours();
+    if (!alreadyGreeted && outsideHours && !isGroup) {
+      contextText += `\n[INSTRUCCIÓN CRÍTICA DE PRESENTACIÓN FUERA DE HORARIO]:
+Como esta es tu primera interacción con este usuario el día de hoy, y nos encontramos fuera de horario de oficina, debes presentarte de manera muy cálida y entusiasta al inicio de tu respuesta:
+"¡Hola, *${n}*! 😊 Soy JanIA, la asistente virtual de Inteligencia Artificial de la Red VECY, creada y entrenada por VECY Bienes Raíces y VECY Match. Estoy aquí para atenderte de forma personalizada y ayudarte a registrar tus inmuebles o requerimientos de forma ágil mientras nuestros asesores humanos descansan. ¿En qué te puedo colaborar hoy? 🚀🤝"
+Redacta esta bienvenida integrada con tu respuesta a su pregunta, usando emojis alusivos de manera elocuente. Además, si la respuesta a su consulta es corta, establece "wantsVoice": true y coloca una versión hablada muy amigable de esta bienvenida y su respuesta en "voiceResponse" (sin viñetas o asteriscos de negrita) para que el usuario reciba un audio de tu voz presentándote de forma humana.`;
+    }
+
     const textLower = messageToProcess.toLowerCase();
     const isReplicationRequest = 
       textLower.includes("replica") ||
@@ -1417,8 +1446,21 @@ Por lo tanto, DEBES hacer lo siguiente:
       const isMissing = hasMissingCity || hasMissingZone || hasMissingPrice || hasMissingArea || hasMissingBedrooms || hasMissingBathrooms || hasMissingStratum;
 
       if (isMissing) {
-        isLLMIncomplete = true;
-        result.classification = "DATOS_INCOMPLETOS";
+        result.missingFields = [];
+        if (hasMissingCity) result.missingFields.push("city");
+        if (hasMissingZone) result.missingFields.push("zone");
+        if (hasMissingPrice) result.missingFields.push("price");
+        if (hasMissingArea) result.missingFields.push("area");
+        if (hasMissingBedrooms) result.missingFields.push("bedrooms");
+        if (hasMissingBathrooms) result.missingFields.push("bathrooms");
+        if (hasMissingStratum) result.missingFields.push("stratum");
+
+        if (isGroup || groupJid) {
+          isLLMIncomplete = false;
+        } else {
+          isLLMIncomplete = true;
+          result.classification = "DATOS_INCOMPLETOS";
+        }
       }
     }
 
@@ -1476,78 +1518,86 @@ Por lo tanto, DEBES hacer lo siguiente:
       }
       
       if (!isValidGeo) {
-        result.classification = "DATOS_INCOMPLETOS";
-        result.shouldSendDM = true;
-        result.dmShouldReply = true;
-        result.response = "";
+        if (isGroup || groupJid) {
+          isValidGeo = true;
+          if (!result.missingFields) result.missingFields = [];
+          if (!result.missingFields.includes("zone")) result.missingFields.push("zone");
+        } else {
+          result.classification = "DATOS_INCOMPLETOS";
+          result.shouldSendDM = true;
+          result.dmShouldReply = true;
+          result.response = "";
 
-        const inferredType = isProperty ? "PROPERTY" : "REQUIREMENT";
-        
-        const firstName = realName.split(' ')[0];
-        const customIntro = `¡Hola, *${firstName}*! 😊 `;
+          const inferredType = isProperty ? "PROPERTY" : "REQUIREMENT";
+          
+          const firstName = realName.split(' ')[0];
+          const customIntro = `¡Hola, *${firstName}*! 😊 `;
 
-        result.dmResponse = buildIncompleteDataMessage(
-          messageToProcess,
-          hasMedia,
-          scrapedData,
-          imageBuffer,
-          pdfBuffer,
-          extracted,
-          true,
-          customIntro,
-          firstName
-        );
+          result.dmResponse = buildIncompleteDataMessage(
+            messageToProcess,
+            hasMedia,
+            scrapedData,
+            imageBuffer,
+            pdfBuffer,
+            extracted,
+            true,
+            customIntro,
+            firstName
+          );
 
-        await setPendingSession(userId, {
-          type: inferredType,
-          extractedData: extracted || {},
-          senderInfo: senderInfo,
-          messageToProcess: messageToProcess,
-          imageBuffer
-        });
+          await setPendingSession(userId, {
+            type: inferredType,
+            extractedData: extracted || {},
+            senderInfo: senderInfo,
+            messageToProcess: messageToProcess,
+            imageBuffer
+          });
 
-        return result;
+          return result;
+        }
       }
 
       const validation = geoValidation;
-      if (isProperty && validation.isValid) {
-        extracted.latitude = validation.latitude || null;
-        extracted.longitude = validation.longitude || null;
-      }
-      // Normalización Geográfica Nacional (v12.5)
-      if (validation.isMunicipio) {
-        // Fuera de Bogotá (Cali, Medellín, Tame, Tadó, etc.)
-        if (isProperty) {
-          extracted.city = validation.barrioCanonico;
-          extracted.addressCity = validation.barrioCanonico;
-          extracted.addressLocality = validation.localidad;
-          if (extracted.zone && normalizarTextoGeografico(extracted.zone) !== normalizarTextoGeografico(validation.barrioCanonico || "")) {
-            // Conservar barrio si el LLM extrajo algo más específico
-          } else {
-            extracted.zone = validation.barrioCanonico;
-          }
-        } else {
-          extracted.ciudadDeseada = validation.barrioCanonico;
-          extracted.addressCity = validation.barrioCanonico;
-          extracted.addressLocality = validation.localidad;
-          if (extracted.zonaDeseada && normalizarTextoGeografico(extracted.zonaDeseada) !== normalizarTextoGeografico(validation.barrioCanonico || "")) {
-            // Conservar
-          } else {
-            extracted.zonaDeseada = validation.barrioCanonico;
-          }
+      if (validation) {
+        if (isProperty && validation.isValid) {
+          extracted.latitude = validation.latitude || null;
+          extracted.longitude = validation.longitude || null;
         }
-      } else {
-        // Dentro de Bogotá
-        if (isProperty) {
-          extracted.city = "Bogotá";
-          extracted.addressCity = "Bogotá";
-          extracted.zone = validation.barrioCanonico;
-          extracted.addressLocality = validation.localidad;
+        // Normalización Geográfica Nacional (v12.5)
+        if (validation.isMunicipio) {
+          // Fuera de Bogotá (Cali, Medellín, Tame, Tadó, etc.)
+          if (isProperty) {
+            extracted.city = validation.barrioCanonico;
+            extracted.addressCity = validation.barrioCanonico;
+            extracted.addressLocality = validation.localidad;
+            if (extracted.zone && normalizarTextoGeografico(extracted.zone) !== normalizarTextoGeografico(validation.barrioCanonico || "")) {
+              // Conservar barrio si el LLM extrajo algo más específico
+            } else {
+              extracted.zone = validation.barrioCanonico;
+            }
+          } else {
+            extracted.ciudadDeseada = validation.barrioCanonico;
+            extracted.addressCity = validation.barrioCanonico;
+            extracted.addressLocality = validation.localidad;
+            if (extracted.zonaDeseada && normalizarTextoGeografico(extracted.zonaDeseada) !== normalizarTextoGeografico(validation.barrioCanonico || "")) {
+              // Conservar
+            } else {
+              extracted.zonaDeseada = validation.barrioCanonico;
+            }
+          }
         } else {
-          extracted.ciudadDeseada = "Bogotá";
-          extracted.addressCity = "Bogotá";
-          extracted.zonaDeseada = validation.barrioCanonico;
-          extracted.addressLocality = validation.localidad;
+          // Dentro de Bogotá
+          if (isProperty) {
+            extracted.city = "Bogotá";
+            extracted.addressCity = "Bogotá";
+            extracted.zone = validation.barrioCanonico;
+            extracted.addressLocality = validation.localidad;
+          } else {
+            extracted.ciudadDeseada = "Bogotá";
+            extracted.addressCity = "Bogotá";
+            extracted.zonaDeseada = validation.barrioCanonico;
+            extracted.addressLocality = validation.localidad;
+          }
         }
       }
     }
