@@ -2238,21 +2238,33 @@ function calcularScoreMatch(requirement, property) {
   const budgetMax = parseFloat(requirement.presupuestoMax || "0");
   const price = parseFloat(property.price || "0");
   if (budgetMax > 0 && price > 0) {
-    if (price > budgetMax * 1.05) {
+    const minPrice = budgetMax * 0.75;
+    const maxPrice = budgetMax * 1.05;
+    if (price < minPrice || price > maxPrice) {
       return 0;
     }
     maxPoints += 25;
     if (price <= budgetMax) {
       totalPoints += 25;
-    } else if (price <= budgetMax * 1.05) {
+    } else {
       totalPoints += 15;
     }
   }
   const areaMin = parseFloat(requirement.areaMin || "0");
   const areaProp = parseFloat(property.areaTotal || property.areaPrivate || "0");
   if (areaMin > 0 && areaProp > 0) {
-    if (areaProp < areaMin) {
-      return 0;
+    const propTypeLower = (propType || "").toLowerCase();
+    const isLargePropertyType = propTypeLower === "warehouse" || propTypeLower === "lot" || propTypeLower === "land" || propTypeLower === "farm";
+    if (isLargePropertyType) {
+      if (areaProp < areaMin * 0.85) {
+        return 0;
+      }
+    } else {
+      const minArea = areaMin * 0.85;
+      const maxArea = areaMin * 1.4;
+      if (areaProp < minArea || areaProp > maxArea) {
+        return 0;
+      }
     }
     maxPoints += 20;
     if (areaProp >= areaMin && areaProp <= areaMin * 1.15) {
@@ -3992,10 +4004,10 @@ async function saveProperty(data, userId, realName, imageBuffer) {
     // Mapear explícitamente los campos para mayor robustez
     price: data.price !== void 0 && data.price !== null ? String(data.price) : null,
     areaTotal: data.areaTotal !== void 0 && data.areaTotal !== null ? String(data.areaTotal) : data.area !== void 0 && data.area !== null ? String(data.area) : null,
-    bedrooms: data.bedrooms !== void 0 && data.bedrooms !== null ? Number(data.bedrooms) : null,
-    bathrooms: data.bathrooms !== void 0 && data.bathrooms !== null ? Number(data.bathrooms) : null,
-    garages: data.garages !== void 0 && data.garages !== null ? Number(data.garages) : null,
-    stratum: data.stratum !== void 0 && data.stratum !== null ? Number(data.stratum) : null,
+    bedrooms: data.bedrooms !== void 0 && data.bedrooms !== null ? Math.round(Number(data.bedrooms)) : null,
+    bathrooms: data.bathrooms !== void 0 && data.bathrooms !== null ? Math.round(Number(data.bathrooms)) : null,
+    garages: data.garages !== void 0 && data.garages !== null ? Math.round(Number(data.garages)) : null,
+    stratum: data.stratum !== void 0 && data.stratum !== null ? Math.round(Number(data.stratum)) : null,
     adminFee: data.adminFee !== void 0 && data.adminFee !== null ? String(data.adminFee) : null,
     agentId: user ? user.id : null,
     latitude: data.latitude !== void 0 && data.latitude !== null ? String(data.latitude) : null,
@@ -4073,10 +4085,10 @@ async function saveRequirement(data, userId, realName) {
     presupuestoMin: data.presupuestoMin !== void 0 && data.presupuestoMin !== null ? String(data.presupuestoMin) : null,
     presupuestoMax: data.presupuestoMax !== void 0 && data.presupuestoMax !== null ? String(data.presupuestoMax) : data.price !== void 0 && data.price !== null ? String(data.price) : null,
     areaMin: data.areaMin !== void 0 && data.areaMin !== null ? String(data.areaMin) : data.area !== void 0 && data.area !== null ? String(data.area) : null,
-    habitacionesMin: data.habitacionesMin !== void 0 && data.habitacionesMin !== null ? Number(data.habitacionesMin) : data.bedrooms !== void 0 && data.bedrooms !== null ? Number(data.bedrooms) : null,
-    banosMin: data.banosMin !== void 0 && data.banosMin !== null ? Number(data.banosMin) : data.bathrooms !== void 0 && data.bathrooms !== null ? Number(data.bathrooms) : null,
-    parqueaderosMin: data.parqueaderosMin !== void 0 && data.parqueaderosMin !== null ? Number(data.parqueaderosMin) : data.garages !== void 0 && data.garages !== null ? Number(data.garages) : null,
-    estratoDeseado: data.estratoDeseado || (data.stratum !== void 0 && data.stratum !== null ? [Number(data.stratum)] : null),
+    habitacionesMin: data.habitacionesMin !== void 0 && data.habitacionesMin !== null ? Math.round(Number(data.habitacionesMin)) : data.bedrooms !== void 0 && data.bedrooms !== null ? Math.round(Number(data.bedrooms)) : null,
+    banosMin: data.banosMin !== void 0 && data.banosMin !== null ? Math.round(Number(data.banosMin)) : data.bathrooms !== void 0 && data.bathrooms !== null ? Math.round(Number(data.bathrooms)) : null,
+    parqueaderosMin: data.parqueaderosMin !== void 0 && data.parqueaderosMin !== null ? Math.round(Number(data.parqueaderosMin)) : data.garages !== void 0 && data.garages !== null ? Math.round(Number(data.garages)) : null,
+    estratoDeseado: data.estratoDeseado || (data.stratum !== void 0 && data.stratum !== null ? [Math.round(Number(data.stratum))] : null),
     userId: user ? user.id : null,
     caracteristicasDeseadas: characteristicsObj
   };

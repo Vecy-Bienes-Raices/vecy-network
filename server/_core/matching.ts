@@ -320,14 +320,16 @@ export function calcularScoreMatch(requirement: any, property: any): number {
   const budgetMax = parseFloat(requirement.presupuestoMax || "0");
   const price = parseFloat(property.price || "0");
   if (budgetMax > 0 && price > 0) {
-    // Si el precio supera al presupuesto en más del 5%, es un Hard Mismatch
-    if (price > budgetMax * 1.05) {
-      return 0;
+    // Tolerancia estricta en ambos sentidos: precio debe ser al menos 75% del presupuesto y máximo 105%
+    const minPrice = budgetMax * 0.75;
+    const maxPrice = budgetMax * 1.05;
+    if (price < minPrice || price > maxPrice) {
+      return 0; // Hard Mismatch: precio fuera de rango tolerable
     }
     maxPoints += 25;
     if (price <= budgetMax) {
       totalPoints += 25;
-    } else if (price <= budgetMax * 1.05) {
+    } else {
       totalPoints += 15;
     }
   }
@@ -336,10 +338,24 @@ export function calcularScoreMatch(requirement: any, property: any): number {
   const areaMin = parseFloat(requirement.areaMin || "0");
   const areaProp = parseFloat(property.areaTotal || property.areaPrivate || "0");
   if (areaMin > 0 && areaProp > 0) {
-    // Si el área es menor que el mínimo, es descarte. Pero si supera por arriba, NO se descarta.
-    if (areaProp < areaMin) {
-      return 0;
+    // Tipo de propiedad
+    const propTypeLower = (propType || '').toLowerCase();
+    const isLargePropertyType = propTypeLower === "warehouse" || propTypeLower === "lot" || propTypeLower === "land" || propTypeLower === "farm";
+
+    if (isLargePropertyType) {
+      // Para bodegas y lotes permitimos áreas mucho mayores, pero con tolerancia del 15% por debajo
+      if (areaProp < areaMin * 0.85) {
+        return 0; // Hard Mismatch: área muy pequeña
+      }
+    } else {
+      // Para casas, apartamentos, locales, etc. el área debe variar muy poco en ambos sentidos (85% a 140%)
+      const minArea = areaMin * 0.85;
+      const maxArea = areaMin * 1.40;
+      if (areaProp < minArea || areaProp > maxArea) {
+        return 0; // Hard Mismatch: área fuera de rango tolerable
+      }
     }
+
     maxPoints += 20;
     if (areaProp >= areaMin && areaProp <= areaMin * 1.15) {
       totalPoints += 20;
