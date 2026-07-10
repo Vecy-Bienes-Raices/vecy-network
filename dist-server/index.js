@@ -2943,7 +2943,7 @@ function isOutsideWorkingHours() {
     return true;
   }
   if (weekday === 6) {
-    return hour < 8 || hour >= 13;
+    return hour < 8 || hour >= 18;
   }
   return hour < 8 || hour >= 20;
 }
