@@ -981,14 +981,22 @@ export async function handleDetectedMatches(
   userId: string,
   realName: string
 ): Promise<{ response: string; mentions: string[]; extraDMs: { jid: string; message: string; viaMainBot?: boolean }[]; sendReputationHook?: boolean }> {
-  const extraDMs: { jid: string; message: string; viaMainBot?: boolean }[] = [];
-  const mentions: string[] = [userId];
-  const matchBlocks: string[] = [];
+  const getReqText = (item: any) => {
+    if (item.rawText && item.rawText.trim()) return item.rawText.trim();
+    if (item.caracteristicasDeseadas?.wants?.details) {
+      return `${item.name || 'Requerimiento'} - ${item.caracteristicasDeseadas.wants.details}`;
+    }
+    return item.name || 'Sin descripción';
+  };
 
-  const savedDateTime = formatColombiaDateTime(savedRecord.createdAt || new Date());
-  const savedPhone = savedRecord.idUsuarioWhatsapp || '';
-  const savedRawPhone = savedPhone.split('@')[0];
-  const savedJid = savedPhone.includes('@') ? savedPhone : `${savedPhone}@c.us`;
+  const getPropText = (item: any) => {
+    if (item.rawText && item.rawText.trim()) return item.rawText.trim();
+    if (item.description && item.description.trim()) return item.description.trim();
+    if (item.amenities?.gives?.details) {
+      return `${item.name || 'Propiedad'} - ${item.amenities.gives.details}`;
+    }
+    return item.name || 'Sin descripción';
+  };
 
   for (const matchedItem of matches) {
     const score = matchedItem.score || 70;
@@ -1018,7 +1026,7 @@ export async function handleDetectedMatches(
 • 📅 *FECHA DE ENVÍO:* ${reqDateTime.dateStr}
 • ⏰ *HORA DE ENVÍO:* ${reqDateTime.timeStr}
 • 👤 *Autor:* @${isProperty ? matchedRawPhone : savedRawPhone}
-• 💬 *PUBLICACIÓN:* ${reqItem.rawText || 'Sin descripción'}
+• 💬 *PUBLICACIÓN:* ${getReqText(reqItem)}
 • 📞 *CONTACTO:* [Confirmación Pendiente - Se envió DM privado 📩]
 
 ────────────────────────────────
@@ -1029,7 +1037,7 @@ export async function handleDetectedMatches(
 • 📅 *FECHA DE ENVÍO:* ${propDateTime.dateStr}
 • ⏰ *HORA DE ENVÍO:* ${propDateTime.timeStr}
 • 👤 *Autor:* @${isProperty ? savedRawPhone : matchedRawPhone}
-• 💬 *PUBLICACIÓN:* ${propItem.rawText || 'Sin descripción'}
+• 💬 *PUBLICACIÓN:* ${getPropText(propItem)}
 • 📞 *CONTACTO:* [Confirmación Pendiente - Se envió DM privado 📩]`;
 
     matchBlocks.push(block);
@@ -1078,12 +1086,12 @@ export async function handleDetectedMatches(
 📣 *REQUERIMIENTO*
 • Autor: ${isProperty ? matchedUserName : savedUserName}
 • Teléfono: +${isProperty ? matchedRawPhone : savedRawPhone}
-• Detalle: ${reqItem.rawText || 'Sin descripción'}
+• Detalle: ${getReqText(reqItem)}
 
 🏠 *PROPIEDAD*
 • Autor: ${isProperty ? savedUserName : matchedUserName}
 • Teléfono: +${isProperty ? savedRawPhone : matchedRawPhone}
-• Detalle: ${propItem.rawText || 'Sin descripción'}
+• Detalle: ${getPropText(propItem)}
 • Precio: ${propItem.price ? Number(propItem.price).toLocaleString('es-CO') + ' COP' : 'N/A'}`;
     
     // Notificación al admin: usar el bot principal (whatsapp-web.js) para garantizar entrega

@@ -9,22 +9,28 @@ async function main() {
     return;
   }
   try {
-    const propertiesCols = await db.execute(sql`
-      SELECT column_name, data_type 
-      FROM information_schema.columns 
-      WHERE table_name = 'properties'
+    const matchRes = await db.execute(sql`
+      SELECT * FROM "propertyMatches" WHERE id = 498
     `);
-    console.log("properties columns:", propertiesCols);
+    console.log("MATCH RECORD:", JSON.stringify(matchRes, null, 2));
 
-    const requirementsCols = await db.execute(sql`
-      SELECT column_name, data_type 
-      FROM information_schema.columns 
-      WHERE table_name = 'requirements'
-    `);
-    console.log("requirements columns:", requirementsCols);
+    if (matchRes && matchRes.length > 0) {
+      const match = matchRes[0] as any;
+      
+      const reqRes = await db.execute(sql`
+        SELECT * FROM "requirements" WHERE id = ${match.requirementId}
+      `);
+      console.log("REQUIREMENT RECORD:", JSON.stringify(reqRes, null, 2));
 
+      const propRes = await db.execute(sql`
+        SELECT * FROM "properties" WHERE id = ${match.propertyId}
+      `);
+      console.log("PROPERTY RECORD:", JSON.stringify(propRes, null, 2));
+    } else {
+      console.log("Match 498 not found!");
+    }
   } catch (error) {
-    console.error("Error checking columns:", error);
+    console.error("Error checking match 498:", error);
   }
   process.exit(0);
 }

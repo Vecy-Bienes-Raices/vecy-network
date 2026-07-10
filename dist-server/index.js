@@ -3251,13 +3251,21 @@ function formatColombiaDateTime(dateVal) {
   };
 }
 async function handleDetectedMatches(matches, isProperty, savedRecord, userId, realName) {
-  const extraDMs = [];
-  const mentions = [userId];
-  const matchBlocks = [];
-  const savedDateTime = formatColombiaDateTime(savedRecord.createdAt || /* @__PURE__ */ new Date());
-  const savedPhone = savedRecord.idUsuarioWhatsapp || "";
-  const savedRawPhone = savedPhone.split("@")[0];
-  const savedJid = savedPhone.includes("@") ? savedPhone : `${savedPhone}@c.us`;
+  const getReqText = (item) => {
+    if (item.rawText && item.rawText.trim()) return item.rawText.trim();
+    if (item.caracteristicasDeseadas?.wants?.details) {
+      return `${item.name || "Requerimiento"} - ${item.caracteristicasDeseadas.wants.details}`;
+    }
+    return item.name || "Sin descripci\xF3n";
+  };
+  const getPropText = (item) => {
+    if (item.rawText && item.rawText.trim()) return item.rawText.trim();
+    if (item.description && item.description.trim()) return item.description.trim();
+    if (item.amenities?.gives?.details) {
+      return `${item.name || "Propiedad"} - ${item.amenities.gives.details}`;
+    }
+    return item.name || "Sin descripci\xF3n";
+  };
   for (const matchedItem of matches) {
     const score = matchedItem.score || 70;
     const matchId = matchedItem.matchId;
@@ -3281,7 +3289,7 @@ async function handleDetectedMatches(matches, isProperty, savedRecord, userId, r
 \u2022 \u{1F4C5} *FECHA DE ENV\xCDO:* ${reqDateTime.dateStr}
 \u2022 \u23F0 *HORA DE ENV\xCDO:* ${reqDateTime.timeStr}
 \u2022 \u{1F464} *Autor:* @${isProperty ? matchedRawPhone : savedRawPhone}
-\u2022 \u{1F4AC} *PUBLICACI\xD3N:* ${reqItem.rawText || "Sin descripci\xF3n"}
+\u2022 \u{1F4AC} *PUBLICACI\xD3N:* ${getReqText(reqItem)}
 \u2022 \u{1F4DE} *CONTACTO:* [Confirmaci\xF3n Pendiente - Se envi\xF3 DM privado \u{1F4E9}]
 
 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
@@ -3292,7 +3300,7 @@ async function handleDetectedMatches(matches, isProperty, savedRecord, userId, r
 \u2022 \u{1F4C5} *FECHA DE ENV\xCDO:* ${propDateTime.dateStr}
 \u2022 \u23F0 *HORA DE ENV\xCDO:* ${propDateTime.timeStr}
 \u2022 \u{1F464} *Autor:* @${isProperty ? savedRawPhone : matchedRawPhone}
-\u2022 \u{1F4AC} *PUBLICACI\xD3N:* ${propItem.rawText || "Sin descripci\xF3n"}
+\u2022 \u{1F4AC} *PUBLICACI\xD3N:* ${getPropText(propItem)}
 \u2022 \u{1F4DE} *CONTACTO:* [Confirmaci\xF3n Pendiente - Se envi\xF3 DM privado \u{1F4E9}]`;
     matchBlocks.push(block);
     let savedUserName = realName;
@@ -3328,12 +3336,12 @@ async function handleDetectedMatches(matches, isProperty, savedRecord, userId, r
 \u{1F4E3} *REQUERIMIENTO*
 \u2022 Autor: ${isProperty ? matchedUserName : savedUserName}
 \u2022 Tel\xE9fono: +${isProperty ? matchedRawPhone : savedRawPhone}
-\u2022 Detalle: ${reqItem.rawText || "Sin descripci\xF3n"}
+\u2022 Detalle: ${getReqText(reqItem)}
 
 \u{1F3E0} *PROPIEDAD*
 \u2022 Autor: ${isProperty ? savedUserName : matchedUserName}
 \u2022 Tel\xE9fono: +${isProperty ? savedRawPhone : matchedRawPhone}
-\u2022 Detalle: ${propItem.rawText || "Sin descripci\xF3n"}
+\u2022 Detalle: ${getPropText(propItem)}
 \u2022 Precio: ${propItem.price ? Number(propItem.price).toLocaleString("es-CO") + " COP" : "N/A"}`;
     extraDMs.push({ jid: adminJid, message: adminMessage, viaMainBot: true });
   }
@@ -8304,9 +8312,9 @@ _(Nota: Por favor nombra a JanIA Administradora del grupo para que pueda borrar 
         const voiceToDeliver = result.voiceResponse || "";
         const hasAnyContent = textToDeliver.trim() !== "" || voiceToDeliver.trim() !== "";
         if ((shouldSendGroup || shouldSendDMDirect) && hasAnyContent) {
-          const mentions = Array.from(/* @__PURE__ */ new Set([...result.mentions || [], senderId]));
+          const mentions2 = Array.from(/* @__PURE__ */ new Set([...result.mentions || [], senderId]));
           const options = {
-            mentions: isGroup ? mentions : []
+            mentions: isGroup ? mentions2 : []
           };
           if (isViolation && originalMsg) {
             options.quotedMessageId = originalMsg.id._serialized;
@@ -8579,12 +8587,12 @@ Ya estoy 100% activa para escanear sus publicaciones y buscarles cierres sin cob
           try {
             const isMain = group === this.targetGroupId;
             const msgToSend = isMain ? baseMsg + welcomePart : baseMsg;
-            const mentions = isMain ? jidsToMention : [];
+            const mentions2 = isMain ? jidsToMention : [];
             if (fs4.existsSync(imgPath)) {
               const media = MessageMedia.fromFilePath(imgPath);
-              await this.queuedSend(group, media, { caption: msgToSend, mentions });
+              await this.queuedSend(group, media, { caption: msgToSend, mentions: mentions2 });
             } else {
-              await this.queuedSend(group, msgToSend, { mentions });
+              await this.queuedSend(group, msgToSend, { mentions: mentions2 });
             }
           } catch (e) {
             console.error(`Error enviando anuncio de retorno al grupo ${group}:`, e.message);
@@ -8607,9 +8615,9 @@ Ya estoy 100% activa para escanear sus publicaciones y buscarles cierres sin cob
           console.error("[WHATSAPP-BOT] Error al enviar el comunicado de match:", err.message || err);
         }
       }
-      async sendToGroup(text2, mediaPath, mentions, groupId) {
+      async sendToGroup(text2, mediaPath, mentions2, groupId) {
         try {
-          const options = { mentions: mentions || [] };
+          const options = { mentions: mentions2 || [] };
           const target = groupId || this.targetGroupId;
           if (mediaPath) {
             const media = MessageMedia.fromFilePath(path5.resolve(mediaPath));
@@ -8643,11 +8651,11 @@ Ya estoy 100% activa para escanear sus publicaciones y buscarles cierres sin cob
           console.error("[WHATSAPP-BOT] Error enviando nota de voz al grupo:", e);
         }
       }
-      async broadcastToAllGroups(text2, mediaPath, mentions) {
+      async broadcastToAllGroups(text2, mediaPath, mentions2) {
         const groups = [this.targetGroupId, this.buzonGroupId, this.circuloGroupId];
         for (const group of groups) {
           try {
-            const options = { mentions: mentions || [] };
+            const options = { mentions: mentions2 || [] };
             if (mediaPath) {
               const media = MessageMedia.fromFilePath(path5.resolve(mediaPath));
               await this.queuedSend(group, media, { ...options, caption: text2 });
