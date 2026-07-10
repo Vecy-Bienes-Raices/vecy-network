@@ -2945,7 +2945,7 @@ function isOutsideWorkingHours() {
   if (weekday === 6) {
     return hour < 8 || hour >= 13;
   }
-  return hour < 8 || hour >= 18;
+  return hour < 8 || hour >= 20;
 }
 function capitalize(text2) {
   if (!text2) return "";

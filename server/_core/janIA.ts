@@ -223,7 +223,7 @@ export function isOutsideWorkingHours(): boolean {
   const hour = bogotaDate.getHours();  // 0-23
 
   // Horario Laboral:
-  // Lunes a Viernes: 8:00 AM a 6:00 PM (18:00)
+  // Lunes a Viernes: 8:00 AM a 8:00 PM (20:00)
   // Sábado: 8:00 AM a 1:00 PM (13:00)
   // Domingo: Cerrado (siempre fuera de horario)
   if (weekday === 0) { // Domingo
@@ -233,7 +233,7 @@ export function isOutsideWorkingHours(): boolean {
     return hour < 8 || hour >= 13;
   }
   // Lunes a Viernes (1-5)
-  return hour < 8 || hour >= 18;
+  return hour < 8 || hour >= 20;
 }
 
 // Helper para capitalizar la primera letra
