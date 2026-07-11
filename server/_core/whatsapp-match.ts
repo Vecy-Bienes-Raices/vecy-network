@@ -237,11 +237,17 @@ export class JaniaMatchBot {
             }
 
             let body = '';
+            let isAudioPTT = false;
             if (msg.message.conversation) body = msg.message.conversation;
             else if (msg.message.extendedTextMessage) body = msg.message.extendedTextMessage.text || '';
             else if (msg.message.imageMessage) body = msg.message.imageMessage.caption || '';
             else if (msg.message.documentMessage) body = msg.message.documentMessage.caption || '';
             else if (msg.message.videoMessage) body = msg.message.videoMessage.caption || '';
+            else if (msg.message.audioMessage) {
+              // Audio de voz (PTT) sin transcripción disponible
+              isAudioPTT = true;
+              body = '[audio]'; // Placeholder para que los filtros no lo descarten
+            }
 
             const textLower = body.toLowerCase();
             const hasDirectMention = textLower.includes("jania");
@@ -298,13 +304,16 @@ export class JaniaMatchBot {
                 (textLower.includes("cómo") && textLower.includes("grupo"))
               );
 
-            // En Soporte Legal y Círculo Cero: responder a cualquier texto que no sea cortesía muy corta (sin necesidad de mencionar @JanIA)
+            // En Soporte Legal y Círculo Cero: responder a cualquier texto que no sea cortesía muy corta
+            // Los audios PTT nunca se consideran cortesía corta
             const textClean = body.toLowerCase().trim();
             const isShortCourtesy = 
-              textClean.length < 6 ||
-              ["ok", "listo", "vale", "claro", "gracias", "hola", "hola!", "jaja", "jajaja", "👍", "✅", "👏", "😊", "🙏"].includes(textClean);
+              !isAudioPTT && (
+                textClean.length < 6 ||
+                ["ok", "listo", "vale", "claro", "gracias", "hola", "hola!", "jaja", "jajaja", "👍", "✅", "👏", "😊", "🙏"].includes(textClean)
+              );
 
-            const isInteractiveGroupQuery = !isPossibleListing && (isBuzonGroup || isCirculoGroup) && !isShortCourtesy;
+            const isInteractiveGroupQuery = !isPossibleListing && (isAudioPTT || ((isBuzonGroup || isCirculoGroup) && !isShortCourtesy));
 
             const shouldRespond = hasDirectMention || isHelpOrSystemQuery || isInteractiveGroupQuery;
 
@@ -565,11 +574,17 @@ export class JaniaMatchBot {
 
       await delay(2000);
 
+      // Si el mensaje era un audio PTT sin transcripción, usamos un texto coherente para el LLM
+      const effectiveBody = bodyText === '[audio]'
+        ? `${realName} acaba de enviar una nota de voz en el grupo. Lamentablemente no puedo transcribir audios en grupos por limitaciones técnicas de WhatsApp. Respóndele de forma amigable, explicando que no pudiste escuchar su audio aquí en el grupo, que puede escribirte por texto en este mismo grupo o enviarte su consulta directamente al chat privado de JanIA en https://wa.me/573185462265 donde sí puedes procesar notas de voz. Sé breve y cálida.`
+        : bodyText;
+
       let result;
       if (chatId === '120363417740040773@g.us') { // Buzón Consultoría
-        result = await processConsultingMessage(bodyText, senderId, realName);
+        result = await processConsultingMessage(effectiveBody, senderId, realName);
       } else if (chatId === '120363403507276533@g.us') { // Círculo Cero
-        result = await processCirculoMessage(bodyText, senderId, realName);
+        result = await processCirculoMessage(effectiveBody, senderId, realName);
+
       } else {
         const redirectMsg = `¡Hola! 😊 Para resolver tus inquietudes inmobiliarias, dudas de corretaje, soporte técnico o de cuenta, te invito a consultarme en privado a mi otro yo: **JanIA de Soporte y Atención** 📲 en el número +57 3185462265 o haciendo clic aquí: https://wa.me/573185462265. ¡Allí con gusto te responderé a profundidad! 🚀`;
         await this.queuedSend(chatId, redirectMsg, {

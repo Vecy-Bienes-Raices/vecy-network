@@ -11,8 +11,14 @@ let _client: ReturnType<typeof postgres> | null = null;
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      // Supabase pooler requires prepare: false usually
-      _client = postgres(process.env.DATABASE_URL, { prepare: false });
+      _client = postgres(process.env.DATABASE_URL, {
+        prepare: false,          // Requerido por Supabase pooler (pgBouncer)
+        connect_timeout: 10,     // 10 segundos máximo para conectar
+        idle_timeout: 20,        // Cerrar conexiones inactivas tras 20 segundos
+        max_lifetime: 1800,      // Reciclar conexiones cada 30 minutos
+        max: 5,                  // Máximo 5 conexiones simultáneas al pool de Supabase
+        onnotice: () => {},      // Silenciar NOTICEs innecesarios de PostgreSQL
+      });
       _db = drizzle(_client);
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
@@ -21,6 +27,7 @@ export async function getDb() {
   }
   return _db;
 }
+
 
 export async function upsertUser(user: InsertUser): Promise<void> {
   if (!user.openId) {
