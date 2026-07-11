@@ -1148,88 +1148,23 @@ export class JaniaMatchBot {
   private async handlePrivateDmConversation(msg: proto.IWebMessageInfo, senderId: string, rawPhone: string, bodyText: string) {
     try {
       const realName = msg.pushName || `Asesor +${rawPhone}`;
-      const textLower = bodyText.toLowerCase();
-
-      const { detectaVoz, textToSpeechMedia } = await import('./whatsapp');
-      const { processWhatsAppMessage } = await import('./janIA');
-
-      const wantsVoice = msg.message?.audioMessage || detectaVoz(textLower);
-      
-      if (wantsVoice) {
-        await this.sock.sendPresenceUpdate('recording', senderId);
-      } else {
-        await this.sock.sendPresenceUpdate('composing', senderId);
-      }
-
+      await this.sock.sendPresenceUpdate('composing', senderId);
       await delay(2000);
 
-      // Descargar imágenes o PDFs si existen
-      let imageBuffer: string | undefined;
-      let pdfBuffer: string | undefined;
-      let pdfMimeType: string | undefined;
+      const redirectMsg = 
+        `Hola ${realName} 👋🏻. Si deseas que JanIA Match te responda de inmediato, por favor postea tu pregunta directamente en el chat del grupo oficial de VECY. 🏠\n\n` +
+        `Si deseas chatear en privado de forma interactiva, por favor escribe a mi otra yo, **JanIA v3.5** 📲, a su número oficial directo: +57 3185462265 o haz clic aquí: https://wa.me/573185462265.\n\n` +
+        `⚠️ **Nota importante**: Recuerda que aunque somos inteligencias conversacionales preparadas para darte datos y análisis en tiempo real, **no tenemos la habilidad de generar informes con gráficas ni elaborar documentos en archivos PDF a través del chat**.\n\n` +
+        `Si requieres un análisis de mercado formal con gráficas y PDF detallado, este servicio lo realiza nuestro personal humano experto. Comunícate llamando al **+57 3166569719** para solicitar la cotización y elaboración del informe por nuestro equipo. 📈💼`;
 
-      if (msg.message?.imageMessage) {
-        try {
-          const mediaBuffer = await downloadMediaMessage(msg as any, 'buffer', {});
-          imageBuffer = mediaBuffer.toString('base64');
-        } catch (e) {}
-      } else if (msg.message?.documentMessage) {
-        try {
-          const mediaBuffer = await downloadMediaMessage(msg as any, 'buffer', {});
-          pdfBuffer = mediaBuffer.toString('base64');
-          pdfMimeType = msg.message.documentMessage.mimetype || 'application/pdf';
-        } catch (e) {}
-      }
-
-      // Procesar mediante JanIA con isGroup = false (conversación directa interactiva)
-      const result = await processWhatsAppMessage(
-        bodyText,
-        senderId,
-        realName,
-        !!imageBuffer || !!pdfBuffer,
-        [],
-        undefined,
-        imageBuffer,
-        false, // isGroup = false
-        pdfBuffer,
-        pdfMimeType,
-        undefined // groupJid = undefined
-      );
-
-      if (result && result.response && result.response.trim() !== '') {
-        const textToDeliver = result.response;
-        const voiceToDeliver = result.voiceResponse || "";
-
-        if (wantsVoice && voiceToDeliver.trim() !== "") {
-          const media = await textToSpeechMedia(voiceToDeliver);
-          if (media) {
-            await this.queuedSend(senderId, media, { sendAudioAsVoice: true, quoted: msg });
-          } else {
-            await this.queuedSend(senderId, textToDeliver, { quoted: msg });
-          }
-        } else {
-          await this.queuedSend(senderId, textToDeliver, { quoted: msg });
-        }
-
-        // Registrar la respuesta enviada por JanIA en la BD de mensajes para mantener el hilo de la conversación
-        await this.logToDb(senderId, 'janIA', textToDeliver);
-
-        // Si es un match comercial, notificar al administrador
-        const isMatch = result.response.includes("MATCH COMERCIAL DETECTADO") ||
-                        result.response.includes("MATCH DETECTADO") ||
-                        result.response.includes("MATCH INTELIGENTE DETECTADO") ||
-                        result.response.includes("COINCIDENCIA DE NEGOCIO DETECTADA");
-        if (isMatch) {
-          const { sendAdminNotification } = await import('./whatsapp');
-          await sendAdminNotification(`🎯 *[MATCH DETECTADO POR DM]*\n\n${result.response}`);
-        }
-      }
-
+      await this.queuedSend(senderId, redirectMsg, { quoted: msg });
+      await this.logToDb(senderId, 'janIA', redirectMsg);
       await this.sock.sendPresenceUpdate('paused', senderId);
     } catch (err) {
-      console.error('[JANIA-MATCH] Error al procesar conversación de DM privado:', err);
+      console.error('[JANIA-MATCH] Error al enviar mensaje de redirección de DM privado:', err);
     }
   }
+
 
   private async processMatchConfirmation(senderId: string, realName: string, matchId: number, decision: string) {
     try {
