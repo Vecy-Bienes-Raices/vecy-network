@@ -2793,6 +2793,36 @@ __export(janIA_exports, {
 import { eq as eq3, and as and2, sql as sql2, gte, desc, or, isNotNull } from "drizzle-orm";
 import fs from "fs";
 import path from "path";
+function extractFirstName(fullName) {
+  const clean = fullName.trim();
+  if (!clean) return "";
+  if (/^\+?[\d\s-]{6,}$/.test(clean)) return "";
+  const words = clean.split(/\s+/).map((w) => w.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, ""));
+  if (words.length === 0 || !words[0]) return "";
+  const w1 = words[0].toLowerCase();
+  const w2 = words[1] ? words[1].toLowerCase() : "";
+  if (w2 && COMMON_FIRST_NAMES.has(w1) && COMMON_FIRST_NAMES.has(w2)) {
+    const first = words[0].charAt(0).toUpperCase() + words[0].slice(1).toLowerCase();
+    const second = words[1].charAt(0).toUpperCase() + words[1].slice(1).toLowerCase();
+    return `${first} ${second}`;
+  }
+  return words[0].charAt(0).toUpperCase() + words[0].slice(1).toLowerCase();
+}
+function getColombiaHour() {
+  const utc = Date.now() + (/* @__PURE__ */ new Date()).getTimezoneOffset() * 6e4;
+  const colTime = new Date(utc + 36e5 * -5);
+  return colTime.getHours();
+}
+function getGreetingByTime() {
+  const hour = getColombiaHour();
+  if (hour >= 6 && hour < 12) {
+    return "Buenos d\xEDas";
+  } else if (hour >= 12 && hour < 18) {
+    return "Buenas tardes";
+  } else {
+    return "Buenas noches";
+  }
+}
 function parseSafeJSON(content) {
   let text2 = content.trim();
   if (text2.startsWith("```json")) {
@@ -3413,7 +3443,7 @@ async function getTimeOfDayGreetingForUser(phone, realName, alreadyGreeted, isGr
   } catch (e) {
     console.warn("[JanIA-Greeting] Error buscando nombre de usuario para saludo:", e);
   }
-  const firstName = nameToUse.split(" ")[0];
+  const firstName = extractFirstName(nameToUse) || "colega";
   if (alreadyGreeted) {
     return isGroup ? `Mira @${phone}` : `Mira ${firstName}`;
   } else {
@@ -3426,7 +3456,7 @@ async function processWhatsAppMessage(text2, userId, userName, hasMedia = false,
     const realName = await resolveRealName(userId, userName);
     const alreadyGreeted = await checkAlreadyGreeted(userId);
     const senderInfo = analyzeSender(realName, userId, alreadyGreeted);
-    const n = realName.split(" ")[0];
+    const n = extractFirstName(realName) || "colega";
     const session = await getPendingSession(userId);
     if (session) {
       const combinedText = session.messageToProcess + " \n[COMPLEMENTO]: " + text2;
@@ -3504,7 +3534,7 @@ async function processWhatsAppMessage(text2, userId, userName, hasMedia = false,
     if (statsSummary) {
       contextText += statsSummary;
     }
-    const firstName = realName.split(" ")[0];
+    const firstName = extractFirstName(realName) || "colega";
     const greetingInstruction = `
 
 [SISTEMA - INSTRUCCI\xD3N DE SALUDO Y COMPORTAMIENTO]:
@@ -3521,10 +3551,11 @@ async function processWhatsAppMessage(text2, userId, userName, hasMedia = false,
     contextText += greetingInstruction;
     const outsideHours = isOutsideWorkingHours();
     if (!alreadyGreeted && outsideHours && !isGroup) {
+      const saludo = getGreetingByTime();
       contextText += `
 [INSTRUCCI\xD3N CR\xCDTICA DE PRESENTACI\xD3N FUERA DE HORARIO]:
 Como esta es tu primera interacci\xF3n con este usuario el d\xEDa de hoy, y nos encontramos fuera de horario de oficina, debes presentarte de manera muy c\xE1lida y entusiasta al inicio de tu respuesta:
-"\xA1Hola, *${n}*! \u{1F60A} Soy JanIA, la asistente virtual de Inteligencia Artificial de la Red VECY, creada y entrenada por VECY Bienes Ra\xEDces y VECY Match. Estoy aqu\xED para atenderte de forma personalizada y ayudarte a registrar tus inmuebles o requerimientos de forma \xE1gil mientras nuestros asesores humanos descansan. \xBFEn qu\xE9 te puedo colaborar hoy? \u{1F680}\u{1F91D}"
+"\xA1${saludo}, *${n}*! \u{1F60A} Soy JanIA, la asistente virtual de Inteligencia Artificial de VECY, creada y entrenada por el equipo de desarrollo de VECY Bienes Ra\xEDces. Estoy aqu\xED para atenderte de forma personalizada, resolver tus inquietudes y ayudarte a registrar tus inmuebles o requerimientos de forma \xE1gil mientras nuestros asesores humanos regresan a su horario habitual de 8:00 am a 8:00 pm. \u{1F680}\u{1F91D} \xBFCu\xE9ntame en qu\xE9 puedo ayudarte en este momento?"
 Redacta esta bienvenida integrada con tu respuesta a su pregunta, usando emojis alusivos de manera elocuente. Adem\xE1s, si la respuesta a su consulta es corta, establece "wantsVoice": true y coloca una versi\xF3n hablada muy amigable de esta bienvenida y su respuesta en "voiceResponse" (sin vi\xF1etas o asteriscos de negrita) para que el usuario reciba un audio de tu voz present\xE1ndote de forma humana.`;
     }
     const textLower = messageToProcess.toLowerCase();
@@ -3635,8 +3666,9 @@ Por lo tanto, DEBES hacer lo siguiente:
     }
     if (isLLMIncomplete) {
       const inferredType = messageToProcess.toLowerCase().includes("vendo") || messageToProcess.toLowerCase().includes("ofrezco") || messageToProcess.toLowerCase().includes("arriendo") || !!extracted?.propertyType ? "PROPERTY" : "REQUIREMENT";
-      const firstName2 = realName.split(" ")[0];
-      const customIntro = `\xA1Hola, *${firstName2}*! \u{1F60A} `;
+      const firstName2 = extractFirstName(realName) || "colega";
+      const saludo = getGreetingByTime();
+      const customIntro = `\xA1${saludo}, *${firstName2}*! \u{1F60A} `;
       result.dmResponse = buildIncompleteDataMessage(
         messageToProcess,
         hasMedia,
@@ -3684,8 +3716,9 @@ Por lo tanto, DEBES hacer lo siguiente:
           result.dmShouldReply = true;
           result.response = "";
           const inferredType = isProperty ? "PROPERTY" : "REQUIREMENT";
-          const firstName2 = realName.split(" ")[0];
-          const customIntro = `\xA1Hola, *${firstName2}*! \u{1F60A} `;
+          const firstName2 = extractFirstName(realName) || "colega";
+          const saludo = getGreetingByTime();
+          const customIntro = `\xA1${saludo}, *${firstName2}*! \u{1F60A} `;
           result.dmResponse = buildIncompleteDataMessage(
             messageToProcess,
             hasMedia,
@@ -4500,7 +4533,7 @@ function sanitizeResponseMarkdown(text2) {
   if (!text2) return "";
   return text2.replace(/\*\*/g, "*");
 }
-var GREETED_TODAY, REPUTATION_HOOK, promptCache, JANIA_PROMPT, MSG_PRESENTACION_INSTITUCIONAL, MSG_PAUTAS_FORMATOS, MSG_TIPS_CALIDAD_COBERTURA, MSG_RESUMEN_RETORNO_PRESENTACION, MSG_CIERRE_OPERACIONES, MSG_PROMO_INMUEBLES, MSG_PROMO_CONSULTAS, MSG_PROMO_CIRCULO, MSG_COMUNICADO_MATCH_NETWORK, MSG_COMUNICADO_MATCH_CIRCULO;
+var COMMON_FIRST_NAMES, GREETED_TODAY, REPUTATION_HOOK, promptCache, JANIA_PROMPT, MSG_PRESENTACION_INSTITUCIONAL, MSG_PAUTAS_FORMATOS, MSG_TIPS_CALIDAD_COBERTURA, MSG_RESUMEN_RETORNO_PRESENTACION, MSG_CIERRE_OPERACIONES, MSG_PROMO_INMUEBLES, MSG_PROMO_CONSULTAS, MSG_PROMO_CIRCULO, MSG_COMUNICADO_MATCH_NETWORK, MSG_COMUNICADO_MATCH_CIRCULO;
 var init_janIA = __esm({
   "server/_core/janIA.ts"() {
     "use strict";
@@ -4511,6 +4544,116 @@ var init_janIA = __esm({
     init_geography();
     init_voiceTranscription();
     init_storage();
+    COMMON_FIRST_NAMES = /* @__PURE__ */ new Set([
+      "juan",
+      "ana",
+      "maria",
+      "mar\xEDa",
+      "jose",
+      "jos\xE9",
+      "luis",
+      "carlos",
+      "jorge",
+      "victor",
+      "v\xEDctor",
+      "sandra",
+      "diana",
+      "laura",
+      "gloria",
+      "eduardo",
+      "flor",
+      "esteban",
+      "pedro",
+      "julio",
+      "oscar",
+      "\xF3scar",
+      "angela",
+      "\xE1ngela",
+      "pablo",
+      "arturo",
+      "alba",
+      "fernanda",
+      "alberto",
+      "david",
+      "manuel",
+      "fernando",
+      "alejandro",
+      "andres",
+      "andr\xE9s",
+      "felipe",
+      "milena",
+      "patricia",
+      "cristina",
+      "beatriz",
+      "isabel",
+      "helena",
+      "elena",
+      "sofia",
+      "sof\xEDa",
+      "lucia",
+      "luc\xEDa",
+      "carolina",
+      "claudia",
+      "marta",
+      "martha",
+      "adriana",
+      "diego",
+      "javier",
+      "camilo",
+      "santiago",
+      "alejandra",
+      "paola",
+      "liliana",
+      "elizabeth",
+      "esperanza",
+      "yolanda",
+      "blanca",
+      "rosa",
+      "carmen",
+      "teresa",
+      "cecilia",
+      "ines",
+      "in\xE9s",
+      "amparo",
+      "pilar",
+      "rocio",
+      "roc\xEDo",
+      "soraya",
+      "johanna",
+      "yudy",
+      "judy",
+      "tatiana",
+      "mateo",
+      "sebastian",
+      "sebasti\xE1n",
+      "nicolas",
+      "nicol\xE1s",
+      "daniel",
+      "cristian",
+      "jhon",
+      "john",
+      "alexander",
+      "gustavo",
+      "hernando",
+      "alvaro",
+      "\xE1lvaro",
+      "humberto",
+      "jaime",
+      "ricardo",
+      "mauricio",
+      "cesar",
+      "c\xE9sar",
+      "nelson",
+      "ruben",
+      "rub\xE9n",
+      "ivan",
+      "iv\xE1n",
+      "wilson",
+      "olga",
+      "luz",
+      "stella",
+      "estela"
+    ]);
     GREETED_TODAY = /* @__PURE__ */ new Map();
     REPUTATION_HOOK = "\u26A0\uFE0F *IMPORTANTE:* Colega y cliente, recuerda que este ecosistema tecnol\xF3gico fue creado pensando en tu beneficio y en el de toda nuestra comunidad. Te contamos que operamos en *Etapa de Prueba Gratuita y 100% SIN COMISIONES*. Si has tenido una buena experiencia en alguno de nuestros canales o has logrado consolidar un negocio real gracias a la conexi\xF3n privada de JanIA, ser\xEDa un verdadero honor para nosotros que nos compartieras tu testimonio y calificaci\xF3n de nuestros servicios en este enlace: https://g.page/r/CctNbwU6UpX5EBM/review";
     promptCache = {};
@@ -5344,8 +5487,8 @@ var init_whatsapp_match = __esm({
                       return;
                     }
                     const pushName = msg.pushName || "";
-                    const saludo = getGreetingByTime();
-                    const firstName = extractFirstName(pushName);
+                    const saludo = getGreetingByTime2();
+                    const firstName = extractFirstName2(pushName);
                     const greetingName = firstName ? ` ${firstName}` : "";
                     const welcomeText = `\xA1${saludo}${greetingName}! \u{1F64B}\u{1F3FB}\u200D\u2640\uFE0F Soy JanIA tu asistente IA \u{1F916}\u2728. Te doy la bienvenida a *VECY Bienes Ra\xEDces* nuestro br\xF3ker virtual inmobiliario \u{1F3E0}\u2728. Gracias por contactarte con nosotros. En estos momentos nuestros agentes humanos no pueden responder tu mensaje, si gustas, puedes dejar tu mensaje aqu\xED para que uno de nuestros agentes te responda ma\xF1ana o si quieres puedes continuar la conversaci\xF3n conmigo y contarme de qu\xE9 se trata o c\xF3mo puedo ayudarte. \xA1Ser\xE1 un gusto poder atenderte${greetingName}! \u{1F91D}\u{1F680}`;
                     let media = null;
@@ -5374,8 +5517,8 @@ var init_whatsapp_match = __esm({
                     if (nowTime - lastOffHoursGreet > ONCE_A_DAY) {
                       this.redirectCooldowns.set(senderId + "_offhours", nowTime);
                       const pushName = msg.pushName || "";
-                      const saludo = getGreetingByTime();
-                      const firstName = extractFirstName(pushName);
+                      const saludo = getGreetingByTime2();
+                      const firstName = extractFirstName2(pushName);
                       const greetingName = firstName ? ` ${firstName}` : "";
                       const outOfOfficeText = `\xA1${saludo}${greetingName}! \u{1F64B}\u{1F3FB}\u200D\u2640\uFE0F Qu\xE9 bueno saludarte de nuevo. En este momento nuestros agentes humanos se encuentran descansando \u{1F319}\u2728. Si gustas, puedes dejar tu mensaje aqu\xED para que te respondamos ma\xF1ana a primera hora, o si prefieres, puedes continuar la conversaci\xF3n conmigo y contarme en qu\xE9 puedo ayudarte hoy. \xA1Siempre es un gusto atenderte! \u{1F91D}\u{1F680}`;
                       let media = null;
@@ -6476,9 +6619,9 @@ __export(whatsapp_exports, {
   WhatsAppBot: () => WhatsAppBot,
   cleanVoiceText: () => cleanVoiceText,
   detectaVoz: () => detectaVoz,
-  extractFirstName: () => extractFirstName,
-  getColombiaHour: () => getColombiaHour,
-  getGreetingByTime: () => getGreetingByTime,
+  extractFirstName: () => extractFirstName2,
+  getColombiaHour: () => getColombiaHour2,
+  getGreetingByTime: () => getGreetingByTime2,
   matchBotInstance: () => matchBotInstance,
   sendAdminNotification: () => sendAdminNotification,
   sendUserDM: () => sendUserDM,
@@ -6866,13 +7009,13 @@ function detectaVoz(text2) {
   ];
   return keywords.some((kw) => t2.includes(kw));
 }
-function getColombiaHour() {
+function getColombiaHour2() {
   const utc = Date.now() + (/* @__PURE__ */ new Date()).getTimezoneOffset() * 6e4;
   const colTime = new Date(utc + 36e5 * -5);
   return colTime.getHours();
 }
-function getGreetingByTime() {
-  const hour = getColombiaHour();
+function getGreetingByTime2() {
+  const hour = getColombiaHour2();
   if (hour >= 6 && hour < 12) {
     return "Buenos d\xEDas";
   } else if (hour >= 12 && hour < 18) {
@@ -6881,14 +7024,20 @@ function getGreetingByTime() {
     return "Buenas noches";
   }
 }
-function extractFirstName(fullName) {
+function extractFirstName2(fullName) {
   const clean = fullName.trim();
   if (!clean) return "";
   if (/^\+?[\d\s-]{6,}$/.test(clean)) return "";
-  let name = clean.split(/\s+/)[0];
-  name = name.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, "");
-  if (!name) return "";
-  return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+  const words = clean.split(/\s+/).map((w) => w.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, ""));
+  if (words.length === 0 || !words[0]) return "";
+  const w1 = words[0].toLowerCase();
+  const w2 = words[1] ? words[1].toLowerCase() : "";
+  if (w2 && COMMON_FIRST_NAMES2.has(w1) && COMMON_FIRST_NAMES2.has(w2)) {
+    const first = words[0].charAt(0).toUpperCase() + words[0].slice(1).toLowerCase();
+    const second = words[1].charAt(0).toUpperCase() + words[1].slice(1).toLowerCase();
+    return `${first} ${second}`;
+  }
+  return words[0].charAt(0).toUpperCase() + words[0].slice(1).toLowerCase();
 }
 async function sendAdminNotification(text2) {
   const ADMIN_PHONE = process.env.ADMIN_PHONE || "573166569719";
@@ -6937,7 +7086,7 @@ function cleanVoiceText(text2) {
   cleaned = cleaned.replace(/^"|"$/g, "").trim();
   return cleaned.trim();
 }
-var Client, LocalAuth, MessageMedia, SERVER_BOOT_TIME2, delay2, outgoingQueue2, matchBotInstance, WhatsAppBot, whatsappBot;
+var Client, LocalAuth, MessageMedia, SERVER_BOOT_TIME2, delay2, outgoingQueue2, matchBotInstance, COMMON_FIRST_NAMES2, WhatsAppBot, whatsappBot;
 var init_whatsapp = __esm({
   "server/_core/whatsapp.ts"() {
     "use strict";
@@ -6955,6 +7104,116 @@ var init_whatsapp = __esm({
     delay2 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     outgoingQueue2 = Promise.resolve();
     matchBotInstance = null;
+    COMMON_FIRST_NAMES2 = /* @__PURE__ */ new Set([
+      "juan",
+      "ana",
+      "maria",
+      "mar\xEDa",
+      "jose",
+      "jos\xE9",
+      "luis",
+      "carlos",
+      "jorge",
+      "victor",
+      "v\xEDctor",
+      "sandra",
+      "diana",
+      "laura",
+      "gloria",
+      "eduardo",
+      "flor",
+      "esteban",
+      "pedro",
+      "julio",
+      "oscar",
+      "\xF3scar",
+      "angela",
+      "\xE1ngela",
+      "pablo",
+      "arturo",
+      "alba",
+      "fernanda",
+      "alberto",
+      "david",
+      "manuel",
+      "fernando",
+      "alejandro",
+      "andres",
+      "andr\xE9s",
+      "felipe",
+      "milena",
+      "patricia",
+      "cristina",
+      "beatriz",
+      "isabel",
+      "helena",
+      "elena",
+      "sofia",
+      "sof\xEDa",
+      "lucia",
+      "luc\xEDa",
+      "carolina",
+      "claudia",
+      "marta",
+      "martha",
+      "adriana",
+      "diego",
+      "javier",
+      "camilo",
+      "santiago",
+      "alejandra",
+      "paola",
+      "liliana",
+      "elizabeth",
+      "esperanza",
+      "yolanda",
+      "blanca",
+      "rosa",
+      "carmen",
+      "teresa",
+      "cecilia",
+      "ines",
+      "in\xE9s",
+      "amparo",
+      "pilar",
+      "rocio",
+      "roc\xEDo",
+      "soraya",
+      "johanna",
+      "yudy",
+      "judy",
+      "tatiana",
+      "mateo",
+      "sebastian",
+      "sebasti\xE1n",
+      "nicolas",
+      "nicol\xE1s",
+      "daniel",
+      "cristian",
+      "jhon",
+      "john",
+      "alexander",
+      "gustavo",
+      "hernando",
+      "alvaro",
+      "\xE1lvaro",
+      "humberto",
+      "jaime",
+      "ricardo",
+      "mauricio",
+      "cesar",
+      "c\xE9sar",
+      "nelson",
+      "ruben",
+      "rub\xE9n",
+      "ivan",
+      "iv\xE1n",
+      "wilson",
+      "olga",
+      "luz",
+      "stella",
+      "estela"
+    ]);
     WhatsAppBot = class {
       client;
       targetGroupId = "120363260108880069@g.us";
@@ -7597,8 +7856,8 @@ ${result.response}`);
               } catch (e) {
                 console.warn(`[WHATSAPP-BOT] Fall\xF3 msg.getContact() en handlePrivateMessage para ${senderId}:`, e.message || e);
               }
-              const saludo = getGreetingByTime();
-              const firstName = extractFirstName(rawName);
+              const saludo = getGreetingByTime2();
+              const firstName = extractFirstName2(rawName);
               const greetingName = firstName ? ` ${firstName}` : "";
               const isOffHours2 = isOutsideWorkingHours();
               let welcomeText = "";
@@ -7638,8 +7897,8 @@ ${result.response}`);
                 } catch (e) {
                   console.warn(`[WHATSAPP-BOT] Fall\xF3 msg.getContact() en handlePrivateMessage para ${senderId}:`, e.message || e);
                 }
-                const saludo = getGreetingByTime();
-                const firstName = extractFirstName(rawName);
+                const saludo = getGreetingByTime2();
+                const firstName = extractFirstName2(rawName);
                 const greetingName = firstName ? ` ${firstName}` : "";
                 const outOfOfficeText = `\xA1${saludo}${greetingName}! \u{1F64B}\u{1F3FB}\u200D\u2640\uFE0F Qu\xE9 bueno saludarte de nuevo. En este momento nuestros agentes humanos se encuentran descansando \u{1F319}\u2728. Si gustas, puedes dejar tu mensaje aqu\xED para que te respondamos ma\xF1ana a primera hora, o si prefieres, puedes continuar la conversaci\xF3n conmigo y contarme en qu\xE9 puedo ayudarte hoy. \xA1Siempre es un gusto atenderte! \u{1F91D}\u{1F680}`;
                 let media = null;

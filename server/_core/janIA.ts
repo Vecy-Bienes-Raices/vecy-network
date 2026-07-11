@@ -29,6 +29,60 @@ export type JanIAResult = {
   sendReputationHook?: boolean;
 };
 
+const COMMON_FIRST_NAMES = new Set([
+  "juan", "ana", "maria", "maría", "jose", "josé", "luis", "carlos", "jorge", 
+  "victor", "víctor", "sandra", "diana", "laura", "gloria", "eduardo", "flor", 
+  "esteban", "pedro", "julio", "oscar", "óscar", "angela", "ángela", "pablo", 
+  "arturo", "alba", "fernanda", "alberto", "david", "manuel", "fernando", 
+  "alejandro", "andres", "andrés", "felipe", "milena", "patricia", "cristina", 
+  "beatriz", "isabel", "helena", "elena", "sofia", "sofía", "lucia", "lucía", 
+  "carolina", "claudia", "marta", "martha", "adriana", "diego", "javier", 
+  "camilo", "santiago", "alejandra", "paola", "liliana", "elizabeth", "esperanza",
+  "yolanda", "blanca", "rosa", "carmen", "teresa", "cecilia", "ines", "inés", "amparo",
+  "pilar", "rocio", "rocío", "soraya", "johanna", "yudy", "judy", "tatiana",
+  "mateo", "sebastian", "sebastián", "nicolas", "nicolás", "daniel", "cristian",
+  "jhon", "john", "alexander", "gustavo", "hernando", "alvaro", "álvaro", "humberto",
+  "jaime", "ricardo", "mauricio", "cesar", "césar", "nelson", "ruben", "rubén",
+  "ivan", "iván", "wilson", "olga", "luz", "stella", "estela"
+]);
+
+function extractFirstName(fullName: string): string {
+  const clean = fullName.trim();
+  if (!clean) return "";
+  if (/^\+?[\d\s-]{6,}$/.test(clean)) return "";
+  
+  const words = clean.split(/\s+/).map(w => w.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, ""));
+  if (words.length === 0 || !words[0]) return "";
+  
+  const w1 = words[0].toLowerCase();
+  const w2 = words[1] ? words[1].toLowerCase() : "";
+  
+  if (w2 && COMMON_FIRST_NAMES.has(w1) && COMMON_FIRST_NAMES.has(w2)) {
+    const first = words[0].charAt(0).toUpperCase() + words[0].slice(1).toLowerCase();
+    const second = words[1].charAt(0).toUpperCase() + words[1].slice(1).toLowerCase();
+    return `${first} ${second}`;
+  }
+  
+  return words[0].charAt(0).toUpperCase() + words[0].slice(1).toLowerCase();
+}
+
+function getColombiaHour(): number {
+  const utc = Date.now() + (new Date().getTimezoneOffset() * 60000);
+  const colTime = new Date(utc + (3600000 * -5));
+  return colTime.getHours();
+}
+
+function getGreetingByTime(): string {
+  const hour = getColombiaHour();
+  if (hour >= 6 && hour < 12) {
+    return "Buenos días";
+  } else if (hour >= 12 && hour < 18) {
+    return "Buenas tardes";
+  } else {
+    return "Buenas noches";
+  }
+}
+
 export function parseSafeJSON(content: string): any {
   let text = content.trim();
   if (text.startsWith("```json")) {
@@ -1162,7 +1216,7 @@ async function getTimeOfDayGreetingForUser(phone: string, realName: string, alre
     console.warn("[JanIA-Greeting] Error buscando nombre de usuario para saludo:", e);
   }
 
-  const firstName = nameToUse.split(' ')[0];
+  const firstName = extractFirstName(nameToUse) || 'colega';
 
   if (alreadyGreeted) {
     return isGroup ? `Mira @${phone}` : `Mira ${firstName}`;
@@ -1193,7 +1247,7 @@ export async function processWhatsAppMessage(
 
     const alreadyGreeted = await checkAlreadyGreeted(userId);
     const senderInfo = analyzeSender(realName, userId, alreadyGreeted);
-    const n = realName.split(' ')[0];
+    const n = extractFirstName(realName) || 'colega';
 
     const session = await getPendingSession(userId);
     if (session) {
@@ -1279,7 +1333,7 @@ export async function processWhatsAppMessage(
       contextText += statsSummary;
     }
 
-    const firstName = realName.split(' ')[0];
+    const firstName = extractFirstName(realName) || 'colega';
     const greetingInstruction = `\n\n[SISTEMA - INSTRUCCIÓN DE SALUDO Y COMPORTAMIENTO]:
 - Ya has saludado al usuario hoy: ${alreadyGreeted ? "SÍ" : "NO"}.
 - Tipo de conversación actual: ${isGroup ? "GRUPO DE WHATSAPP" : "CHAT PRIVADO / DM"}.
@@ -1296,9 +1350,10 @@ export async function processWhatsAppMessage(
 
     const outsideHours = isOutsideWorkingHours();
     if (!alreadyGreeted && outsideHours && !isGroup) {
+      const saludo = getGreetingByTime();
       contextText += `\n[INSTRUCCIÓN CRÍTICA DE PRESENTACIÓN FUERA DE HORARIO]:
 Como esta es tu primera interacción con este usuario el día de hoy, y nos encontramos fuera de horario de oficina, debes presentarte de manera muy cálida y entusiasta al inicio de tu respuesta:
-"¡Hola, *${n}*! 😊 Soy JanIA, la asistente virtual de Inteligencia Artificial de la Red VECY, creada y entrenada por VECY Bienes Raíces y VECY Match. Estoy aquí para atenderte de forma personalizada y ayudarte a registrar tus inmuebles o requerimientos de forma ágil mientras nuestros asesores humanos descansan. ¿En qué te puedo colaborar hoy? 🚀🤝"
+"¡${saludo}, *${n}*! 😊 Soy JanIA, la asistente virtual de Inteligencia Artificial de VECY, creada y entrenada por el equipo de desarrollo de VECY Bienes Raíces. Estoy aquí para atenderte de forma personalizada, resolver tus inquietudes y ayudarte a registrar tus inmuebles o requerimientos de forma ágil mientras nuestros asesores humanos regresan a su horario habitual de 8:00 am a 8:00 pm. 🚀🤝 ¿Cuéntame en qué puedo ayudarte en este momento?"
 Redacta esta bienvenida integrada con tu respuesta a su pregunta, usando emojis alusivos de manera elocuente. Además, si la respuesta a su consulta es corta, establece "wantsVoice": true y coloca una versión hablada muy amigable de esta bienvenida y su respuesta en "voiceResponse" (sin viñetas o asteriscos de negrita) para que el usuario reciba un audio de tu voz presentándote de forma humana.`;
     }
 
@@ -1471,8 +1526,9 @@ Por lo tanto, DEBES hacer lo siguiente:
     if (isLLMIncomplete) {
       const inferredType = (messageToProcess.toLowerCase().includes("vendo") || messageToProcess.toLowerCase().includes("ofrezco") || messageToProcess.toLowerCase().includes("arriendo") || !!extracted?.propertyType) ? "PROPERTY" : "REQUIREMENT";
 
-      const firstName = realName.split(' ')[0];
-      const customIntro = `¡Hola, *${firstName}*! 😊 `;
+      const firstName = extractFirstName(realName) || 'colega';
+      const saludo = getGreetingByTime();
+      const customIntro = `¡${saludo}, *${firstName}*! 😊 `;
 
       // Generar el mensaje de DM privado por si acaso (ej. si el usuario es conocido y se decide moderación privada)
       result.dmResponse = buildIncompleteDataMessage(
@@ -1534,8 +1590,9 @@ Por lo tanto, DEBES hacer lo siguiente:
 
           const inferredType = isProperty ? "PROPERTY" : "REQUIREMENT";
           
-          const firstName = realName.split(' ')[0];
-          const customIntro = `¡Hola, *${firstName}*! 😊 `;
+          const firstName = extractFirstName(realName) || 'colega';
+          const saludo = getGreetingByTime();
+          const customIntro = `¡${saludo}, *${firstName}*! 😊 `;
 
           result.dmResponse = buildIncompleteDataMessage(
             messageToProcess,

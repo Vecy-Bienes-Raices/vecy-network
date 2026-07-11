@@ -553,17 +553,44 @@ export function getGreetingByTime(): string {
   }
 }
 
+const COMMON_FIRST_NAMES = new Set([
+  "juan", "ana", "maria", "maría", "jose", "josé", "luis", "carlos", "jorge", 
+  "victor", "víctor", "sandra", "diana", "laura", "gloria", "eduardo", "flor", 
+  "esteban", "pedro", "julio", "oscar", "óscar", "angela", "ángela", "pablo", 
+  "arturo", "alba", "fernanda", "alberto", "david", "manuel", "fernando", 
+  "alejandro", "andres", "andrés", "felipe", "milena", "patricia", "cristina", 
+  "beatriz", "isabel", "helena", "elena", "sofia", "sofía", "lucia", "lucía", 
+  "carolina", "claudia", "marta", "martha", "adriana", "diego", "javier", 
+  "camilo", "santiago", "alejandra", "paola", "liliana", "elizabeth", "esperanza",
+  "yolanda", "blanca", "rosa", "carmen", "teresa", "cecilia", "ines", "inés", "amparo",
+  "pilar", "rocio", "rocío", "soraya", "johanna", "yudy", "judy", "tatiana",
+  "mateo", "sebastian", "sebastián", "nicolas", "nicolás", "daniel", "cristian",
+  "jhon", "john", "alexander", "gustavo", "hernando", "alvaro", "álvaro", "humberto",
+  "jaime", "ricardo", "mauricio", "cesar", "césar", "nelson", "ruben", "rubén",
+  "ivan", "iván", "wilson", "olga", "luz", "stella", "estela"
+]);
+
 export function extractFirstName(fullName: string): string {
   const clean = fullName.trim();
   if (!clean) return "";
   // Si es un número telefónico o contiene indicativos de número, retornar vacío
   if (/^\+?[\d\s-]{6,}$/.test(clean)) return "";
-  // Tomar la primera palabra
-  let name = clean.split(/\s+/)[0];
-  // Remover caracteres especiales, emojis o signos que no sean letras
-  name = name.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, "");
-  if (!name) return "";
-  return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+  
+  const words = clean.split(/\s+/).map(w => w.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, ""));
+  if (words.length === 0 || !words[0]) return "";
+  
+  const w1 = words[0].toLowerCase();
+  const w2 = words[1] ? words[1].toLowerCase() : "";
+  
+  // Si hay al menos dos palabras y ambas están en la lista de nombres comunes, es un nombre compuesto
+  if (w2 && COMMON_FIRST_NAMES.has(w1) && COMMON_FIRST_NAMES.has(w2)) {
+    const first = words[0].charAt(0).toUpperCase() + words[0].slice(1).toLowerCase();
+    const second = words[1].charAt(0).toUpperCase() + words[1].slice(1).toLowerCase();
+    return `${first} ${second}`;
+  }
+  
+  // De lo contrario, retornar solo la primera palabra
+  return words[0].charAt(0).toUpperCase() + words[0].slice(1).toLowerCase();
 }
 
 export class WhatsAppBot {
