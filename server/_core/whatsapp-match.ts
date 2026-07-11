@@ -214,9 +214,10 @@ export class JaniaMatchBot {
         // Para DMs privados, permitimos pasar los mensajes propios (fromMe) para poder detectar la intervención humana
         if (fromMe && isGroup) continue;
 
-        const rawSenderId = isGroup ? msg.key.participant : rawChatId;
-        if (!rawSenderId) continue;
+        const rawSenderId = isGroup ? (msg.key.participant || msg.participant) : rawChatId;
+        if (!rawSenderId || (isGroup && rawSenderId.endsWith('@g.us'))) continue;
         const senderId = cleanJid(rawSenderId);
+
 
         // Omitir si proviene de status broadcast
         if (chatId.includes('status@broadcast') || senderId.includes('status@broadcast')) {
@@ -702,8 +703,14 @@ export class JaniaMatchBot {
   // --- LOGÍSTICA DE BUFFER GRUPAL ---
   private async handleIncomingGroupMessage(msg: proto.IWebMessageInfo, chatId: string, bodyText: string) {
     if (!msg.key || !msg.message) return;
-    const senderId = msg.key.participant || msg.key.remoteJid || '';
+    const rawSender = msg.key.participant || msg.participant || '';
+    if (!rawSender || rawSender.endsWith('@g.us')) {
+      console.warn(`[JANIA-MATCH] Omitiendo mensaje de grupo: sender individual inválido (${rawSender})`);
+      return;
+    }
+    const senderId = rawSender.includes('@') ? `${rawSender.split('@')[0].split(':')[0]}@${rawSender.split('@')[1]}` : rawSender.split(':')[0];
     const lockKey = `${chatId}_${senderId}`;
+
 
     const previousLock = this.processingLocks.get(lockKey) || Promise.resolve();
     let resolveLock!: () => void;
