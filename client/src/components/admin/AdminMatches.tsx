@@ -44,13 +44,32 @@ function scoreRows(req: any, prop: any) {
     const p = cleanText(propType);
     if (r === p || r.includes(p) || p.includes(r)) {
       typeS = "exact";
-    } else if (
-      (r.includes("apart") && p.includes("apartaestudio")) || 
-      (r.includes("apartaestudio") && p.includes("apart"))
-    ) {
-      typeS = "warn";
     }
   }
+
+  // Regla estricta: Apartamento vs Apartaestudio vs Loft no coinciden
+  const reqRawText = cleanText(req.rawText || req.name || "");
+  const propRawText = cleanText(prop.rawText || prop.name || "");
+  
+  const reqIsStudio = reqRawText.includes("apartaestudio") || reqRawText.includes("aparta estudio");
+  const propIsStudio = propRawText.includes("apartaestudio") || propRawText.includes("aparta estudio");
+  
+  const reqIsLoft = reqRawText.includes("loft");
+  const propIsLoft = propRawText.includes("loft");
+
+  let reqSubtype = "apartamento_estandar";
+  if (reqIsStudio) reqSubtype = "apartaestudio";
+  else if (reqIsLoft) reqSubtype = "loft";
+
+  let propSubtype = "apartamento_estandar";
+  if (propIsStudio) propSubtype = "apartaestudio";
+  else if (propIsLoft) propSubtype = "loft";
+
+  if (reqSubtype !== propSubtype) {
+    typeS = "missing"; // Si difieren los subtipos (apartamento, apartaestudio o loft), no coinciden
+  }
+
+
   add("Tipo de Inmueble", reqType || "N/E", propType || "N/E", typeS, 18, <Building2 className="w-3.5 h-3.5" />);
 
   // 2. Tipo de Negocio

@@ -178,13 +178,36 @@ export function calcularScoreMatch(requirement: any, property: any): number {
     return 0; // Evita generar falsos matches masivos por datos estructurados vacíos en la DB
   }
 
-  // Hard mismatches
   // 1. Tipo de inmueble debe ser idéntico
   const reqType = requirement.tipoInmuebleDeseado || requirement.propertyType;
   const propType = property.propertyType;
   if (reqType && propType && reqType.toLowerCase() !== propType.toLowerCase()) {
     return 0;
   }
+
+  // Regla estricta: Apartamento vs Apartaestudio vs Loft no coinciden
+  const reqRawText = (requirement.rawText || requirement.name || "").toLowerCase();
+  const propRawText = (property.rawText || property.name || "").toLowerCase();
+  
+  const reqIsStudio = reqRawText.includes("apartaestudio") || reqRawText.includes("aparta estudio");
+  const propIsStudio = propRawText.includes("apartaestudio") || propRawText.includes("aparta estudio");
+  
+  const reqIsLoft = reqRawText.includes("loft");
+  const propIsLoft = propRawText.includes("loft");
+
+  let reqSubtype = "apartamento_estandar";
+  if (reqIsStudio) reqSubtype = "apartaestudio";
+  else if (reqIsLoft) reqSubtype = "loft";
+
+  let propSubtype = "apartamento_estandar";
+  if (propIsStudio) propSubtype = "apartaestudio";
+  else if (propIsLoft) propSubtype = "loft";
+
+  if (reqSubtype !== propSubtype) {
+    return 0; // Hard mismatch: si difieren los subtipos (apartamento, apartaestudio o loft), no coinciden
+  }
+
+
 
   // 2. Tipo de negocio — intersección de conjuntos (no igualdad exacta)
   // Un inmueble en "venta" puede hacer match con un requerimiento de "permuta"
