@@ -3528,7 +3528,7 @@ async function processWhatsAppMessage(text2, userId, userName, hasMedia = false,
 - Propiedades totales registradas en el sistema: ${totalProps} (Nuevas hoy: ${todayProps})
 - Requerimientos/Demandas totales registradas: ${totalReqs} (Nuevos hoy: ${todayReqs})
 - Matches/Coincidencias de negocio detectados totales: ${totalMatches} (Nuevos hoy: ${todayMatches})
-(Usa estos datos exactos de estad\xEDsticas si el usuario pregunta c\xF3mo te fue hoy, cu\xE1ntos matches hiciste o sacaste, o datos del sistema.)`;
+[REGLA DE USO CR\xCDTICA]: \xDAnicamente menciona o utiliza estas estad\xEDsticas si el usuario te pregunta directamente por cifras del sistema, cantidades de propiedades o requerimientos, reportes de actividad, o c\xF3mo va el d\xEDa. Queda terminantemente PROHIBIDO incluirlas de forma espont\xE1nea en saludos, bienvenidas o respuestas ordinarias.`;
       }
     } catch (err) {
       console.error("[JanIA-Stats] Error consultando estad\xEDsticas en tiempo real:", err);
@@ -5236,7 +5236,6 @@ var init_whatsapp_match = __esm({
     init_db();
     init_schema();
     init_scraper();
-    init_whatsapp();
     SERVER_BOOT_TIME = Math.floor(Date.now() / 1e3);
     outgoingQueue = Promise.resolve();
     JaniaMatchBot = class {
@@ -5365,12 +5364,23 @@ var init_whatsapp_match = __esm({
           for (const msg of m.messages) {
             if (!msg.key || !msg.message) continue;
             const fromMe = msg.key.fromMe;
-            if (fromMe) continue;
-            const chatId = msg.key.remoteJid;
-            if (!chatId) continue;
+            const rawChatId = msg.key.remoteJid;
+            if (!rawChatId) continue;
+            const cleanJid = (jid) => {
+              if (!jid) return "";
+              if (jid.includes("@")) {
+                const [userPart, domain] = jid.split("@");
+                const cleanUser = userPart.split(":")[0];
+                return `${cleanUser}@${domain}`;
+              }
+              return jid.split(":")[0];
+            };
+            const chatId = cleanJid(rawChatId);
             const isGroup = chatId.endsWith("@g.us");
-            const senderId = isGroup ? msg.key.participant : chatId;
-            if (!senderId) continue;
+            if (fromMe && isGroup) continue;
+            const rawSenderId = isGroup ? msg.key.participant : rawChatId;
+            if (!rawSenderId) continue;
+            const senderId = cleanJid(rawSenderId);
             if (chatId.includes("status@broadcast") || senderId.includes("status@broadcast")) {
               continue;
             }
@@ -5537,74 +5547,10 @@ var init_whatsapp_match = __esm({
             }
             return;
           }
-          const db = await getDb();
-          let isNewUser = false;
-          if (db) {
-            try {
-              const existingMessages = await db.select({ id: messages.id }).from(messages).innerJoin(conversations, eq10(messages.conversationId, conversations.id)).where(eq10(conversations.sessionId, senderId)).limit(1);
-              isNewUser = existingMessages.length === 0;
-            } catch (dbErr) {
-              console.warn("[JANIA-MATCH] Error al verificar si el usuario es nuevo en DM:", dbErr);
-            }
-          }
-          if (isNewUser) {
-            console.log(`[JANIA-MATCH] Nuevo usuario detectado: ${senderId}. Enviando bienvenida.`);
-            const { isOutsideWorkingHours: isOutsideWorkingHours3 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
-            const isOffHours2 = isOutsideWorkingHours3();
-            if (!isOffHours2) {
-              console.log(`[JANIA-MATCH] Nuevo usuario en horario laboral. Silencio total.`);
-              return;
-            }
-            const pushName = mainMsg.pushName || "";
-            const saludo = getGreetingByTime2();
-            const firstName = extractFirstName2(pushName);
-            const greetingName = firstName ? ` ${firstName}` : "";
-            const welcomeText = `\xA1${saludo}${greetingName}! \u{1F64B}\u{1F3FB}\u200D\u2640\uFE0F Soy JanIA tu asistente IA \u{1F916}\u2728. Te doy la bienvenida a *VECY Bienes Ra\xEDces* nuestro br\xF3ker virtual inmobiliario \u{1F3E0}\u2728. Gracias por contactarte con nosotros. En estos momentos nuestros agentes humanos no pueden responder tu mensaje, si gustas, puedes dejar tu mensaje aqu\xED para que uno de nuestros agentes te responda ma\xF1ana o si quieres puedes continuar la conversaci\xF3n conmigo y contarme de qu\xE9 se trata o c\xF3mo puedo ayudarte. \xA1Ser\xE1 un gusto poder atenderte${greetingName}! \u{1F91D}\u{1F680}`;
-            let media = null;
-            try {
-              const { textToSpeechMedia: textToSpeechMedia2 } = await Promise.resolve().then(() => (init_whatsapp(), whatsapp_exports));
-              media = await textToSpeechMedia2(welcomeText);
-            } catch (ttsErr) {
-              console.warn("[JANIA-MATCH] Error al generar TTS para bienvenida:", ttsErr.message || ttsErr);
-            }
-            if (media) {
-              await this.queuedSend(senderId, media, { sendAudioAsVoice: true });
-            } else {
-              await this.queuedSend(senderId, welcomeText);
-            }
-            await this.logToDb(senderId, "user", body);
-            await this.logToDb(senderId, "janIA", welcomeText);
-            await this.handlePrivateDmConversation(mainMsg, senderId, rawPhone, body);
-            return;
-          }
           const { isOutsideWorkingHours: isOutsideWorkingHours2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
           const isOffHours = isOutsideWorkingHours2();
           if (isOffHours) {
-            const nowTime = Date.now();
-            const lastOffHoursGreet = this.redirectCooldowns.get(senderId + "_offhours") || 0;
-            const ONCE_A_DAY = 24 * 60 * 60 * 1e3;
-            if (nowTime - lastOffHoursGreet > ONCE_A_DAY) {
-              this.redirectCooldowns.set(senderId + "_offhours", nowTime);
-              const pushName = mainMsg.pushName || "";
-              const saludo = getGreetingByTime2();
-              const firstName = extractFirstName2(pushName);
-              const greetingName = firstName ? ` ${firstName}` : "";
-              const outOfOfficeText = `\xA1${saludo}${greetingName}! \u{1F64B}\u{1F3FB}\u200D\u2640\uFE0F Qu\xE9 bueno saludarte de nuevo. En este momento nuestros agentes humanos se encuentran descansando \u{1F319}\u2728. Si gustas, puedes dejar tu mensaje aqu\xED para que te respondamos ma\xF1ana a primera hora, o si prefieres, puedes continuar la conversaci\xF3n conmigo y contarme en qu\xE9 puedo ayudarte hoy. \xA1Siempre es un gusto atenderte! \u{1F91D}\u{1F680}`;
-              let media = null;
-              try {
-                const { textToSpeechMedia: textToSpeechMedia2 } = await Promise.resolve().then(() => (init_whatsapp(), whatsapp_exports));
-                media = await textToSpeechMedia2(outOfOfficeText);
-              } catch (ttsErr) {
-                console.warn("[JANIA-MATCH] Error al generar TTS para fuera de horario:", ttsErr.message || ttsErr);
-              }
-              if (media) {
-                await this.queuedSend(senderId, media, { sendAudioAsVoice: true });
-              } else {
-                await this.queuedSend(senderId, outOfOfficeText);
-              }
-              await this.logToDb(senderId, "user", body);
-              await this.logToDb(senderId, "janIA", outOfOfficeText);
-            }
+            console.log(`[JANIA-MATCH] Conversaci\xF3n DM fuera de horario con ${senderId}.`);
             await this.logToDb(senderId, "user", body);
             await this.handlePrivateDmConversation(mainMsg, senderId, rawPhone, body);
             return;
@@ -5691,6 +5637,7 @@ Para hablar en privado, buscar propiedades, hacer consultas o recibir soporte y 
                 quoted: msg
               });
             }
+            await this.logToDb(chatId, "janIA", textToDeliver);
           }
           await this.sock.sendPresenceUpdate("paused", chatId);
         } catch (err) {
@@ -6139,6 +6086,7 @@ ${result.response}`);
             } else {
               await this.queuedSend(senderId, textToDeliver, { quoted: msg });
             }
+            await this.logToDb(senderId, "janIA", textToDeliver);
             const isMatch = result.response.includes("MATCH COMERCIAL DETECTADO") || result.response.includes("MATCH DETECTADO") || result.response.includes("MATCH INTELIGENTE DETECTADO") || result.response.includes("COINCIDENCIA DE NEGOCIO DETECTADA");
             if (isMatch) {
               const { sendAdminNotification: sendAdminNotification2 } = await Promise.resolve().then(() => (init_whatsapp(), whatsapp_exports));

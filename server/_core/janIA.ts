@@ -1326,7 +1326,7 @@ export async function processWhatsAppMessage(
 - Propiedades totales registradas en el sistema: ${totalProps} (Nuevas hoy: ${todayProps})
 - Requerimientos/Demandas totales registradas: ${totalReqs} (Nuevos hoy: ${todayReqs})
 - Matches/Coincidencias de negocio detectados totales: ${totalMatches} (Nuevos hoy: ${todayMatches})
-(Usa estos datos exactos de estadísticas si el usuario pregunta cómo te fue hoy, cuántos matches hiciste o sacaste, o datos del sistema.)`;
+[REGLA DE USO CRÍTICA]: Únicamente menciona o utiliza estas estadísticas si el usuario te pregunta directamente por cifras del sistema, cantidades de propiedades o requerimientos, reportes de actividad, o cómo va el día. Queda terminantemente PROHIBIDO incluirlas de forma espontánea en saludos, bienvenidas o respuestas ordinarias.`;
       }
     } catch (err) {
       console.error("[JanIA-Stats] Error consultando estadísticas en tiempo real:", err);

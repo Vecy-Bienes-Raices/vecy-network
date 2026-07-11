@@ -187,16 +187,29 @@ export class JaniaMatchBot {
       for (const msg of m.messages) {
         if (!msg.key || !msg.message) continue;
 
-        // Omitir si proviene de nosotros mismos
         const fromMe = msg.key.fromMe;
-        if (fromMe) continue;
+        const rawChatId = msg.key.remoteJid;
+        if (!rawChatId) continue;
 
-        const chatId = msg.key.remoteJid;
-        if (!chatId) continue;
+        const cleanJid = (jid: string) => {
+          if (!jid) return "";
+          if (jid.includes('@')) {
+            const [userPart, domain] = jid.split('@');
+            const cleanUser = userPart.split(':')[0];
+            return `${cleanUser}@${domain}`;
+          }
+          return jid.split(':')[0];
+        };
+
+        const chatId = cleanJid(rawChatId);
         const isGroup = chatId.endsWith('@g.us');
 
-        const senderId = isGroup ? msg.key.participant : chatId;
-        if (!senderId) continue;
+        // Para DMs privados, permitimos pasar los mensajes propios (fromMe) para poder detectar la intervención humana
+        if (fromMe && isGroup) continue;
+
+        const rawSenderId = isGroup ? msg.key.participant : rawChatId;
+        if (!rawSenderId) continue;
+        const senderId = cleanJid(rawSenderId);
 
         // Omitir si proviene de status broadcast
         if (chatId.includes('status@broadcast') || senderId.includes('status@broadcast')) {
@@ -451,101 +464,12 @@ export class JaniaMatchBot {
         return;
       }
 
-      // A. Verificar si es usuario nuevo (no tiene historial en base de datos)
-      const db = await getDb();
-      let isNewUser = false;
-      if (db) {
-        try {
-          const existingMessages = await db
-            .select({ id: dbMessages.id })
-            .from(dbMessages)
-            .innerJoin(conversations, eq(dbMessages.conversationId, conversations.id))
-            .where(eq(conversations.sessionId, senderId))
-            .limit(1);
-          isNewUser = existingMessages.length === 0;
-        } catch (dbErr) {
-          console.warn("[JANIA-MATCH] Error al verificar si el usuario es nuevo en DM:", dbErr);
-        }
-      }
-
-      if (isNewUser) {
-        console.log(`[JANIA-MATCH] Nuevo usuario detectado: ${senderId}. Enviando bienvenida.`);
-        const { isOutsideWorkingHours } = await import('./janIA');
-        const isOffHours = isOutsideWorkingHours();
-
-        // En horario diurno laboral, el bot de Match tiene PROHIBIDO hablar/responder
-        if (!isOffHours) {
-          console.log(`[JANIA-MATCH] Nuevo usuario en horario laboral. Silencio total.`);
-          return;
-        }
-
-        const pushName = mainMsg.pushName || '';
-        const saludo = getGreetingByTime();
-        const firstName = extractFirstName(pushName);
-        const greetingName = firstName ? ` ${firstName}` : '';
-
-        const welcomeText = `¡${saludo}${greetingName}! 🙋🏻‍♀️ Soy JanIA tu asistente IA 🤖✨. Te doy la bienvenida a *VECY Bienes Raíces* nuestro bróker virtual inmobiliario 🏠✨. Gracias por contactarte con nosotros. En estos momentos nuestros agentes humanos no pueden responder tu mensaje, si gustas, puedes dejar tu mensaje aquí para que uno de nuestros agentes te responda mañana o si quieres puedes continuar la conversación conmigo y contarme de qué se trata o cómo puedo ayudarte. ¡Será un gusto poder atenderte${greetingName}! 🤝🚀`;
-
-        // Intentar generar el mensaje en audio mediante TTS
-        let media = null;
-        try {
-          const { textToSpeechMedia } = await import('./whatsapp');
-          media = await textToSpeechMedia(welcomeText);
-        } catch (ttsErr: any) {
-          console.warn("[JANIA-MATCH] Error al generar TTS para bienvenida:", ttsErr.message || ttsErr);
-        }
-
-        if (media) {
-          await this.queuedSend(senderId, media, { sendAudioAsVoice: true });
-        } else {
-          await this.queuedSend(senderId, welcomeText);
-        }
-
-        await this.logToDb(senderId, 'user', body);
-        await this.logToDb(senderId, 'janIA', welcomeText);
-
-        await this.handlePrivateDmConversation(mainMsg, senderId, rawPhone, body);
-        return;
-      }
-
-      // B. Verificar si estamos fuera de horario laboral (Colombia)
+      // Verificar si estamos fuera de horario laboral (Colombia)
       const { isOutsideWorkingHours } = await import('./janIA');
       const isOffHours = isOutsideWorkingHours();
 
       if (isOffHours) {
-        const nowTime = Date.now();
-        const lastOffHoursGreet = this.redirectCooldowns.get(senderId + "_offhours") || 0;
-        const ONCE_A_DAY = 24 * 60 * 60 * 1000;
-
-        if (nowTime - lastOffHoursGreet > ONCE_A_DAY) {
-          this.redirectCooldowns.set(senderId + "_offhours", nowTime);
-          
-          const pushName = mainMsg.pushName || '';
-          const saludo = getGreetingByTime();
-          const firstName = extractFirstName(pushName);
-          const greetingName = firstName ? ` ${firstName}` : '';
-          
-          const outOfOfficeText = `¡${saludo}${greetingName}! 🙋🏻‍♀️ Qué bueno saludarte de nuevo. En este momento nuestros agentes humanos se encuentran descansando 🌙✨. Si gustas, puedes dejar tu mensaje aquí para que te respondamos mañana a primera hora, o si prefieres, puedes continuar la conversación conmigo y contarme en qué puedo ayudarte hoy. ¡Siempre es un gusto atenderte! 🤝🚀`;
-          
-          let media = null;
-          try {
-            const { textToSpeechMedia } = await import('./whatsapp');
-            media = await textToSpeechMedia(outOfOfficeText);
-          } catch (ttsErr: any) {
-            console.warn("[JANIA-MATCH] Error al generar TTS para fuera de horario:", ttsErr.message || ttsErr);
-          }
-
-          if (media) {
-            await this.queuedSend(senderId, media, { sendAudioAsVoice: true });
-          } else {
-            await this.queuedSend(senderId, outOfOfficeText);
-          }
-
-          await this.logToDb(senderId, 'user', body);
-          await this.logToDb(senderId, 'janIA', outOfOfficeText);
-        }
-
-        // Fuera de horario laboral: conversar con el usuario activamente y resolver sus inquietudes
+        console.log(`[JANIA-MATCH] Conversación DM fuera de horario con ${senderId}.`);
         await this.logToDb(senderId, 'user', body);
         await this.handlePrivateDmConversation(mainMsg, senderId, rawPhone, body);
         return;
@@ -642,6 +566,9 @@ export class JaniaMatchBot {
             quoted: msg
           });
         }
+
+        // Registrar la respuesta enviada por JanIA en la BD de mensajes para mantener el hilo de la conversación
+        await this.logToDb(chatId, 'janIA', textToDeliver);
       }
 
       await this.sock.sendPresenceUpdate('paused', chatId);
@@ -1163,6 +1090,9 @@ export class JaniaMatchBot {
         } else {
           await this.queuedSend(senderId, textToDeliver, { quoted: msg });
         }
+
+        // Registrar la respuesta enviada por JanIA en la BD de mensajes para mantener el hilo de la conversación
+        await this.logToDb(senderId, 'janIA', textToDeliver);
 
         // Si es un match comercial, notificar al administrador
         const isMatch = result.response.includes("MATCH COMERCIAL DETECTADO") ||
