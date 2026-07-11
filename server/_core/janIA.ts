@@ -1295,15 +1295,39 @@ export async function processWhatsAppMessage(
 
       const hasOnTopicKeyword = onTopicKeywords.some(keyword => cleanText.includes(keyword));
       if (!hasOnTopicKeyword) {
-        console.log(`[JanIA-OffTopic] Mensaje fuera de tema detectado para ${userId}: "${text.substring(0, 50)}...". Retornando estático.`);
-        const staticText = `Hola ${realName || 'colega'} 👋🏻. Como asistente de VECY Network, estoy entrenada exclusivamente para ayudarte con temas de bienes raíces (buscar, publicar o cruzar inmuebles), asesorías legales de corretaje y arrendamientos, o el soporte de nuestra plataforma. 🏠✨\n\nPor favor, hazme una consulta que esté relacionada con estos temas. ¡Con gusto te responderé! 😊`;
+        console.log(`[JanIA-OffTopic] Mensaje fuera de tema detectado para ${userId} en ${groupJid || 'DM'}: "${text.substring(0, 50)}...".`);
+        
+        let staticText = "";
+        if (isGroup || groupJid) {
+          const jid = groupJid || "";
+          let groupRulesName = "el grupo";
+          let acceptedTopics = "publicar y buscar propiedades para hacer matching comercial de inmuebles y requerimientos";
+          
+          if (jid === '120363417740040773@g.us') {
+            groupRulesName = "VECY: SOPORTE LEGAL, TRIBUTARIO Y AVALÚOS";
+            acceptedTopics = "consultas jurídicas, contratos, arrendamientos, tributación y avalúos de inmuebles";
+          } else if (jid === '120363403507276533@g.us') {
+            groupRulesName = "Círculo CERO 👌";
+            acceptedTopics = "temas de debate, soporte y sugerencias sobre el ecosistema VECY Network";
+          } else {
+            groupRulesName = "VECY INMUEBLES NETWORK";
+            acceptedTopics = "publicación directa de ofertas (Inmuebles) y demandas (Requerimientos) comerciales";
+          }
+
+          staticText = `Hola @${rawPhone} 👋🏻. Detecté que tu publicación trata sobre un tema que no corresponde al propósito de este canal (fechas festivas, política, religión o contenido ajeno al corretaje).\n\nTe recuerdo que en el grupo *${groupRulesName}* solo se admiten temas de: **${acceptedTopics}**.\n\nTe solicito amablemente que elimines tu mensaje para mantener el orden del chat, y te invito a revisar y comprender las normas completas del grupo que se encuentran en su descripción. ¡Gracias por tu colaboración y cultura de red! 🤝🚀`;
+        } else {
+          staticText = `Hola ${realName || 'colega'} 👋🏻. Como asistente de VECY Network, estoy entrenada exclusivamente para ayudarte con temas de bienes raíces (buscar, publicar o cruzar inmuebles), asesorías legales de corretaje y arrendamientos, o el soporte de nuestra plataforma. 🏠✨\n\nPor favor, hazme una consulta que esté relacionada con estos temas. ¡Con gusto te responderé! 😊`;
+        }
+
         return {
           classification: "VIOLACION_DE_NORMAS",
           response: staticText,
-          dmResponse: staticText
+          dmResponse: staticText,
+          reactionEmoji: "❌"
         };
       }
     }
+
 
 
     // 1. Transcripción de Voz
