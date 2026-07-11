@@ -2416,8 +2416,40 @@ export async function processConsultingMessage(
     const realName = await resolveRealName(userId, userName);
     const n = realName.split(' ')[0];
 
+    // Intercepción rápida de mensajes OFF-TOPIC para ahorrar tokens de Gemini
+    const cleanText = text.toLowerCase().trim();
+    const isMediaOrAudio = !!imageBuffer || !!pdfBuffer || !!audioUrl;
+
+    if (!isMediaOrAudio && cleanText.length > 15) {
+      const onTopicKeywords = [
+        "apto", "apartamento", "casa", "lote", "finca", "bodega", "oficina", "local", "inmueble", "propiedad",
+        "predio", "terreno", "proyecto", "arriendo", "alquiler", "vendo", "venta", "compro", "compra", "busco",
+        "ofrezco", "necesito", "permuto", "venpermuto", "estrato", "m2", "metros", "habitacion", "habitación",
+        "baño", "baños", "cocina", "garaje", "parqueadero", "canon", "administracion", "administración", "precio",
+        "millones", "cop", "arrendar", "vender", "comprar", "bogota", "bogotá", "medellin", "medellín", "cali",
+        "barranquilla", "bucaramanga", "cartagena", "barrio", "sector", "zona", "calle", "carrera", "avenida",
+        "contrato", "arrendamiento", "promesa", "escritura", "notaria", "notaría", "registro", "sucesión",
+        "sucesion", "herencia", "embargo", "saneamiento", "comision", "comisión", "corretaje", "avalúo", "avaluo",
+        "jania", "vecy", "bot", "ayuda", "cómo", "como", "funciona", "publicar", "registrar", "match",
+        "coincidencia", "contacto", "cuenta", "hola", "gracias", "saludo"
+      ];
+
+      const hasOnTopicKeyword = onTopicKeywords.some(keyword => cleanText.includes(keyword));
+      if (!hasOnTopicKeyword) {
+        console.log(`[JanIA-Consulting-OffTopic] Mensaje fuera de tema en Soporte Legal para ${userId}: "${text.substring(0, 50)}...". Retornando estático.`);
+        const staticText = `Hola @${rawPhone} 👋🏻. Este grupo está reservado exclusivamente para consultas jurídicas, contratos, arrendamientos, ganancia ocasional, avalúos y soporte de la plataforma VECY. 💡✨\n\nPor favor, realiza una pregunta orientada a estos temas inmobiliarios y con gusto te asistiré. 😊`;
+        return {
+          classification: "VIOLACION_DE_NORMAS",
+          response: staticText,
+          dmResponse: staticText,
+          reactionEmoji: "❌"
+        };
+      }
+    }
+
     let messageToProcess = text;
     let isFromAudio = false;
+
     if (audioUrl) {
       if (audioUrl.startsWith("mock-audio:")) {
         messageToProcess = audioUrl.replace("mock-audio:", "");
@@ -2621,7 +2653,39 @@ export async function processCirculoMessage(
     const rawPhone = userId.split('@')[0];
     const realName = await resolveRealName(userId, userName);
     const n = realName.split(' ')[0];
+
+    // Intercepción rápida de mensajes OFF-TOPIC para ahorrar tokens de Gemini
+    const cleanText = text.toLowerCase().trim();
+
+    if (cleanText.length > 15) {
+      const onTopicKeywords = [
+        "apto", "apartamento", "casa", "lote", "finca", "bodega", "oficina", "local", "inmueble", "propiedad",
+        "predio", "terreno", "proyecto", "arriendo", "alquiler", "vendo", "venta", "compro", "compra", "busco",
+        "ofrezco", "necesito", "permuto", "venpermuto", "estrato", "m2", "metros", "habitacion", "habitación",
+        "baño", "baños", "cocina", "garaje", "parqueadero", "canon", "administracion", "administración", "precio",
+        "millones", "cop", "arrendar", "vender", "comprar", "bogota", "bogotá", "medellin", "medellín", "cali",
+        "barranquilla", "bucaramanga", "cartagena", "barrio", "sector", "zona", "calle", "carrera", "avenida",
+        "contrato", "arrendamiento", "promesa", "escritura", "notaria", "notaría", "registro", "sucesión",
+        "sucesion", "herencia", "embargo", "saneamiento", "comision", "comisión", "corretaje", "avalúo", "avaluo",
+        "jania", "vecy", "bot", "ayuda", "cómo", "como", "funciona", "publicar", "registrar", "match",
+        "coincidencia", "contacto", "cuenta", "hola", "gracias", "saludo", "cristian", "samboni", "ubicapp"
+      ];
+
+      const hasOnTopicKeyword = onTopicKeywords.some(keyword => cleanText.includes(keyword));
+      if (!hasOnTopicKeyword) {
+        console.log(`[JanIA-Circulo-OffTopic] Mensaje fuera de tema en Círculo Cero para ${userId}: "${text.substring(0, 50)}...". Retornando estático.`);
+        const staticText = `Hola @${rawPhone} 👋🏻. Este grupo está reservado exclusivamente para temas, debates, testimonios y soporte relacionados con la red de VECY Network e Inteligencia Artificial. 💡✨\n\nPor favor, realiza una pregunta o comentario relacionado con nuestro ecosistema. 😊`;
+        return {
+          classification: "VIOLACION_DE_NORMAS",
+          response: staticText,
+          dmResponse: staticText,
+          reactionEmoji: "❌"
+        };
+      }
+    }
+
     const textLower = text.toLowerCase();
+
 
     const alreadyGreeted = await checkAlreadyGreeted(userId);
 
