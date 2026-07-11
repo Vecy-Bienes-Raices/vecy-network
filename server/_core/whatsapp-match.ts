@@ -16,6 +16,7 @@ import { conversations, messages as dbMessages, users, propertyMatches, properti
 import { eq, and } from 'drizzle-orm';
 import { esDominioPermitido, scrapePropertyLink } from './scraper';
 import QRCode from 'qrcode';
+import { extractFirstName, getGreetingByTime } from './whatsapp';
 
 // Tiempo de arranque para omitir mensajes históricos
 const SERVER_BOOT_TIME = Math.floor(Date.now() / 1000);
@@ -303,6 +304,74 @@ export class JaniaMatchBot {
             else if (msg.message.videoMessage) body = msg.message.videoMessage.caption || '';
 
             if (!isAdmin) {
+              const textLower = body.toLowerCase();
+              const isPossibleListing = 
+                body.length > 120 || 
+                body.split('\n').length > 2 || 
+                !!msg.message.imageMessage ||
+                !!msg.message.documentMessage ||
+                textLower.includes("http") ||
+                textLower.includes("www") ||
+                textLower.includes("ofrezco") ||
+                textLower.includes("busco") ||
+                textLower.includes("vendo") ||
+                textLower.includes("arriendo") ||
+                textLower.includes("compro") ||
+                textLower.includes("necesito");
+
+              if (isPossibleListing) {
+                console.log(`[JANIA-MATCH] Detectada publicación comercial en DM privado de ${senderId}. Procesando...`);
+                let imageBuffer: string | undefined;
+                let pdfBuffer: string | undefined;
+                let pdfMimeType: string | undefined;
+
+                if (msg.message?.imageMessage) {
+                  try {
+                    const media = await downloadMediaMessage(msg, 'buffer', {});
+                    imageBuffer = media.toString('base64');
+                  } catch (e) {}
+                }
+                if (msg.message?.documentMessage) {
+                  try {
+                    const media = await downloadMediaMessage(msg, 'buffer', {});
+                    pdfBuffer = media.toString('base64');
+                    pdfMimeType = msg.message.documentMessage.mimetype || 'application/pdf';
+                  } catch (e) {}
+                }
+
+                await this.logToDb(senderId, 'user', body);
+
+                const { processWhatsAppMessage } = await import('./janIA');
+                const result = await processWhatsAppMessage(
+                  body,
+                  senderId,
+                  userName,
+                  !!imageBuffer || !!pdfBuffer,
+                  [],
+                  undefined,
+                  imageBuffer,
+                  false, // isGroup = false
+                  pdfBuffer,
+                  pdfMimeType
+                );
+
+                if (result) {
+                  const emoji = this.getReactionEmoji(result);
+                  if (emoji) {
+                    try {
+                      await this.sock.sendMessage(chatId, { react: { text: emoji, key: msg.key } });
+                    } catch (e) {}
+                  }
+
+                  const { isOutsideWorkingHours } = await import('./janIA');
+                  const isOffHours = isOutsideWorkingHours();
+                  if (isOffHours && result.shouldSendDM && result.dmResponse && result.dmResponse.trim() !== "") {
+                    await this.queuedSend(senderId, result.dmResponse);
+                  }
+                }
+                return;
+              }
+
               // A. Verificar si es usuario nuevo (no tiene historial en base de datos)
               const db = await getDb();
               let isNewUser = false;
@@ -325,15 +394,18 @@ export class JaniaMatchBot {
                 const { isOutsideWorkingHours } = await import('./janIA');
                 const isOffHours = isOutsideWorkingHours();
 
-                const pushName = msg.pushName || '';
-                const nombre_usuario = pushName.trim() ? pushName.trim() : 'inversionista';
-
-                let welcomeText = '';
-                if (isOffHours) {
-                  welcomeText = `¡Hola ${nombre_usuario}! 🙋🏻‍♀️ Soy JanIA tu asistente IA 🤖✨. Te doy la bienvenida a *VECY Bienes Raíces* nuestro bróker virtual inmobiliario 🏠✨. Gracias por contactarte con nosotros. En estos momentos nuestros agentes humanos no pueden responder tu mensaje, si gustas, puedes dejar tu mensaje aquí para que uno de nuestros agentes te responda mañana o si quieres puedes continuar la conversación conmigo y contarme de qué se trata o cómo puedo ayudarte. ¡Será un gusto poder atenderte ${nombre_usuario}! 🤝🚀`;
-                } else {
-                  welcomeText = `¡Hola ${nombre_usuario}! 🙋🏻‍♀️ Soy JanIA tu asistente IA 🤖✨. Te doy la bienvenida a *VECY Bienes Raíces* nuestro bróker virtual inmobiliario 🏠✨. Gracias por contactarte con nosotros. En unos instantes uno de nuestros agentes humanos responderá tu mensaje, si gustas, puedes ir detallándonos tu requerimiento o enviarnos la información de tu inmueble. ¡Es un gusto poder atenderte! 🤝🚀`;
+                // En horario diurno laboral, el bot de Match tiene PROHIBIDO hablar/responder
+                if (!isOffHours) {
+                  console.log(`[JANIA-MATCH] Nuevo usuario en horario laboral. Silencio total.`);
+                  return;
                 }
+
+                const pushName = msg.pushName || '';
+                const saludo = getGreetingByTime();
+                const firstName = extractFirstName(pushName);
+                const greetingName = firstName ? ` ${firstName}` : '';
+
+                const welcomeText = `¡${saludo}${greetingName}! 🙋🏻‍♀️ Soy JanIA tu asistente IA 🤖✨. Te doy la bienvenida a *VECY Bienes Raíces* nuestro bróker virtual inmobiliario 🏠✨. Gracias por contactarte con nosotros. En estos momentos nuestros agentes humanos no pueden responder tu mensaje, si gustas, puedes dejar tu mensaje aquí para que uno de nuestros agentes te responda mañana o si quieres puedes continuar la conversación conmigo y contarme de qué se trata o cómo puedo ayudarte. ¡Será un gusto poder atenderte${greetingName}! 🤝🚀`;
 
                 // Intentar generar el mensaje en audio mediante TTS
                 let media = null;
@@ -353,10 +425,7 @@ export class JaniaMatchBot {
                 await this.logToDb(senderId, 'user', body);
                 await this.logToDb(senderId, 'janIA', welcomeText);
 
-                if (isOffHours) {
-                  // Si estamos fuera de horario, además de la bienvenida, procesamos el mensaje con la IA
-                  await this.handlePrivateDmConversation(msg, senderId, rawPhone, body);
-                }
+                await this.handlePrivateDmConversation(msg, senderId, rawPhone, body);
                 return;
               }
 
@@ -373,9 +442,11 @@ export class JaniaMatchBot {
                   this.redirectCooldowns.set(senderId + "_offhours", nowTime);
                   
                   const pushName = msg.pushName || '';
-                  const nombre_usuario = pushName.trim() ? pushName.trim() : 'inversionista';
+                  const saludo = getGreetingByTime();
+                  const firstName = extractFirstName(pushName);
+                  const greetingName = firstName ? ` ${firstName}` : '';
                   
-                  const outOfOfficeText = `¡Hola ${nombre_usuario}! 🙋🏻‍♀️ Qué bueno saludarte de nuevo. En este momento nuestros agentes humanos se encuentran descansando 🌙✨. Si gustas, puedes dejar tu mensaje aquí para que te respondamos mañana a primera hora, o si prefieres, puedes continuar la conversación conmigo y contarme en qué puedo ayudarte hoy. ¡Siempre es un gusto atenderte! 🤝🚀`;
+                  const outOfOfficeText = `¡${saludo}${greetingName}! 🙋🏻‍♀️ Qué bueno saludarte de nuevo. En este momento nuestros agentes humanos se encuentran descansando 🌙✨. Si gustas, puedes dejar tu mensaje aquí para que te respondamos mañana a primera hora, o si prefieres, puedes continuar la conversación conmigo y contarme en qué puedo ayudarte hoy. ¡Siempre es un gusto atenderte! 🤝🚀`;
                   
                   let media = null;
                   try {
@@ -803,19 +874,23 @@ export class JaniaMatchBot {
             const voiceToDeliver = result.voiceResponse || textToDeliver;
 
             // 1. Enviar el audio de amonestación si es viable
+            let audioSent = false;
             try {
               const media = await textToSpeechMedia(voiceToDeliver);
               if (media) {
                 const lastMsg = buffer.messages[buffer.messages.length - 1].originalMsg;
                 await this.queuedSend(chatId, media, { sendAudioAsVoice: true, quoted: lastMsg });
+                audioSent = true;
               }
             } catch (audioErr) {
               console.error('[JANIA-MATCH] Error al enviar audio de amonestación:', audioErr);
             }
 
-            // 2. Enviar texto a la comunidad amonestando al usuario
-            const lastMsg = buffer.messages[buffer.messages.length - 1].originalMsg;
-            await this.queuedSend(chatId, textToDeliver, { quoted: lastMsg });
+            // 2. Enviar texto a la comunidad amonestando al usuario solo si falló el audio
+            if (!audioSent) {
+              const lastMsg = buffer.messages[buffer.messages.length - 1].originalMsg;
+              await this.queuedSend(chatId, textToDeliver, { quoted: lastMsg });
+            }
             await this.logToDb(chatId, 'janIA', `[GROUP-WARNING] ${textToDeliver}`);
           }
         }

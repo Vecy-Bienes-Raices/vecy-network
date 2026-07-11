@@ -1463,12 +1463,8 @@ Por lo tanto, DEBES hacer lo siguiente:
         if (hasMissingBathrooms) result.missingFields.push("bathrooms");
         if (hasMissingStratum) result.missingFields.push("stratum");
 
-        if (isGroup || groupJid) {
-          isLLMIncomplete = false;
-        } else {
-          isLLMIncomplete = true;
-          result.classification = "DATOS_INCOMPLETOS";
-        }
+        isLLMIncomplete = true;
+        result.classification = "DATOS_INCOMPLETOS";
       }
     }
 

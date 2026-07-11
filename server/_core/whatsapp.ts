@@ -226,10 +226,15 @@ function escapeXml(unsafe: string): string {
 }
 
 export async function textToSpeechMedia(text: string, format: "OGG_OPUS" | "MP3" = "OGG_OPUS"): Promise<any> {
-  // Limpiar markdown y emojis
+  // Limpiar markdown, emojis y símbolos especiales que TTS pronuncia erróneamente
   const cleanText = text
     .replace(/[*#_`~\[\]]/g, "")
-    .replace(new RegExp("[\\u{1F300}-\\u{1FAD6}]", "gu"), "")
+    .replace(/\p{Extended_Pictographic}/gu, "")
+    .replace(/[\u2600-\u27BF]/g, "") // Sparkles, female signs, etc.
+    .replace(/[\uE000-\uF8FF]|\uD83C[\uDF00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|\uD83E[\uDD00-\uDFFF]/g, "")
+    .replace(/[\u200B-\u200D\uFE0F]/g, "") // ZWJ y selectores de variación
+    .replace(/\s+/g, " ")
+    .replace(/\s\./g, ".")
     .trim();
 
   if (!cleanText) return null;
@@ -529,6 +534,36 @@ export function detectaVoz(text: string): boolean {
     "enviame nota de vos"
   ];
   return keywords.some(kw => t.includes(kw));
+}
+
+export function getColombiaHour(): number {
+  const utc = Date.now() + (new Date().getTimezoneOffset() * 60000);
+  const colTime = new Date(utc + (3600000 * -5));
+  return colTime.getHours();
+}
+
+export function getGreetingByTime(): string {
+  const hour = getColombiaHour();
+  if (hour >= 6 && hour < 12) {
+    return "Buenos días";
+  } else if (hour >= 12 && hour < 18) {
+    return "Buenas tardes";
+  } else {
+    return "Buenas noches";
+  }
+}
+
+export function extractFirstName(fullName: string): string {
+  const clean = fullName.trim();
+  if (!clean) return "";
+  // Si es un número telefónico o contiene indicativos de número, retornar vacío
+  if (/^\+?[\d\s-]{6,}$/.test(clean)) return "";
+  // Tomar la primera palabra
+  let name = clean.split(/\s+/)[0];
+  // Remover caracteres especiales, emojis o signos que no sean letras
+  name = name.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, "");
+  if (!name) return "";
+  return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
 }
 
 export class WhatsAppBot {
@@ -1256,26 +1291,40 @@ export class WhatsAppBot {
 
         if (isNewUser) {
           console.log(`[WHATSAPP-BOT] Nuevo usuario detectado: ${senderId}. Enviando bienvenida.`);
-          let realName = 'inversionista';
+          let rawName = '';
           try {
             const contact = await msg.getContact();
-            const pushName = contact.pushname || contact.name || '';
-            if (pushName.trim()) {
-              realName = pushName.trim();
-            }
+            rawName = contact.pushname || contact.name || '';
           } catch (e: any) {
             console.warn(`[WHATSAPP-BOT] Falló msg.getContact() en handlePrivateMessage para ${senderId}:`, e.message || e);
           }
 
+          const saludo = getGreetingByTime();
+          const firstName = extractFirstName(rawName);
+          const greetingName = firstName ? ` ${firstName}` : '';
+
           const isOffHours = isOutsideWorkingHours();
           let welcomeText = '';
           if (isOffHours) {
-            welcomeText = `¡Hola ${realName}! 🙋🏻‍♀️ Soy JanIA tu asistente IA 🤖✨. Te doy la bienvenida a *VECY Bienes Raíces* nuestro bróker virtual inmobiliario 🏠✨. Gracias por contactarte con nosotros. En estos momentos nuestros agentes humanos no pueden responder tu mensaje, si gustas, puedes dejar tu mensaje aquí para que uno de nuestros agentes te responda mañana o si quieres puedes continuar la conversación conmigo y contarme de qué se trata o cómo puedo ayudarte. ¡Será un gusto poder atenderte ${realName}! 🤝🚀`;
+            welcomeText = `¡${saludo}${greetingName}! 🙋🏻‍♀️ Soy JanIA tu asistente IA 🤖✨. Te doy la bienvenida a *VECY Bienes Raíces* nuestro bróker virtual inmobiliario 🏠✨. Gracias por contactarte con nosotros. En estos momentos nuestros agentes humanos no pueden responder tu mensaje, si gustas, puedes dejar tu mensaje aquí para que uno de nuestros agentes te responda mañana o si quieres puedes continuar la conversación conmigo y contarme de qué se trata o cómo puedo ayudarte. ¡Será un gusto poder atenderte${greetingName}! 🤝🚀`;
           } else {
-            welcomeText = `¡Hola ${realName}! 🙋🏻‍♀️ Soy JanIA tu asistente IA 🤖✨. Te doy la bienvenida a *VECY Bienes Raíces* nuestro bróker virtual inmobiliario 🏠✨. Gracias por contactarte con nosotros. En unos instantes uno de nuestros agentes humanos responderá tu mensaje, si gustas, puedes ir detallándonos tu requerimiento o enviarnos la información de tu inmueble. ¡Es un gusto poder atenderte! 🤝🚀`;
+            welcomeText = `¡${saludo}${greetingName}! 🙋🏻‍♀️ Soy JanIA tu asistente IA 🤖✨. Te doy la bienvenida a *VECY Bienes Raíces* nuestro bróker virtual inmobiliario 🏠✨. Gracias por contactarte con nosotros. En unos instantes uno de nuestros agentes humanos responderá tu mensaje, si gustas, puedes ir detallándonos tu requerimiento o enviarnos la información de tu inmueble. ¡Es un gusto poder atenderte! 🤝🚀`;
           }
 
-          await this.queuedSend(senderId, welcomeText);
+          // Intentar generar y enviar el audio mediante TTS
+          let media = null;
+          try {
+            media = await textToSpeechMedia(welcomeText);
+          } catch (ttsErr: any) {
+            console.warn("[WHATSAPP-BOT] Error al generar TTS para bienvenida:", ttsErr.message || ttsErr);
+          }
+
+          if (media) {
+            await this.queuedSend(senderId, media, { sendAudioAsVoice: true });
+          } else {
+            await this.queuedSend(senderId, welcomeText);
+          }
+
           await this.logToDb(senderId, 'user', msg.body);
           await this.logToDb(senderId, 'janIA', welcomeText);
 
@@ -1295,18 +1344,19 @@ export class WhatsAppBot {
           if (!hasReceivedOutOfOfficeToday) {
             this.offHoursGreetedToday.set(senderId, todayStr);
             
-            let realName = 'inversionista';
+            let rawName = '';
             try {
               const contact = await msg.getContact();
-              const pushName = contact.pushname || contact.name || '';
-              if (pushName.trim()) {
-                realName = pushName.trim();
-              }
+              rawName = contact.pushname || contact.name || '';
             } catch (e: any) {
               console.warn(`[WHATSAPP-BOT] Falló msg.getContact() en handlePrivateMessage para ${senderId}:`, e.message || e);
             }
 
-            const outOfOfficeText = `¡Hola ${realName}! 🙋🏻‍♀️ Qué bueno saludarte de nuevo. En este momento nuestros agentes humanos se encuentran descansando 🌙✨. Si gustas, puedes dejar tu mensaje aquí para que te respondamos mañana a primera hora, o si prefieres, puedes continuar la conversación conmigo y contarme en qué puedo ayudarte hoy. ¡Siempre es un gusto atenderte! 🤝🚀`;
+            const saludo = getGreetingByTime();
+            const firstName = extractFirstName(rawName);
+            const greetingName = firstName ? ` ${firstName}` : '';
+
+            const outOfOfficeText = `¡${saludo}${greetingName}! 🙋🏻‍♀️ Qué bueno saludarte de nuevo. En este momento nuestros agentes humanos se encuentran descansando 🌙✨. Si gustas, puedes dejar tu mensaje aquí para que te respondamos mañana a primera hora, o si prefieres, puedes continuar la conversación conmigo y contarme en qué puedo ayudarte hoy. ¡Siempre es un gusto atenderte! 🤝🚀`;
             
             let media = null;
             try {
