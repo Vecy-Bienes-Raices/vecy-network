@@ -3,7 +3,7 @@ import { useAuth } from '@/_core/hooks/useAuth';
 import { useLocation } from 'wouter';
 import { getLoginUrl } from '@/const';
 import {
-  LogOut, Home, Building2, Users, MessageSquare, BarChart3, Menu, X, GitBranch, Shield, Sparkles
+  LogOut, Home, Building2, Users, MessageSquare, BarChart3, Menu, X, GitBranch, Shield, Sparkles, ClipboardList, Radio
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import AdminProperties from '@/components/admin/AdminProperties';
@@ -12,15 +12,59 @@ import AdminConversations from '@/components/admin/AdminConversations';
 import AdminReports from '@/components/admin/AdminReports';
 import AdminGitHubSync from '@/components/admin/AdminGitHubSync';
 import AdminMatches from '@/components/admin/AdminMatches';
+import AdminRequirements from '@/components/admin/AdminRequirements';
 
 const tabs = [
   { id: 'properties', label: 'Inmuebles', icon: Building2 },
+  { id: 'requirements', label: 'Requerimientos', icon: ClipboardList },
   { id: 'matches', label: 'Coincidencias', icon: Sparkles },
   { id: 'leads', label: 'Prospectos', icon: Users },
   { id: 'conversations', label: 'Conversaciones', icon: MessageSquare },
   { id: 'reports', label: 'Reportes', icon: BarChart3 },
   { id: 'github', label: 'GitHub Sync', icon: GitBranch },
 ];
+
+function BotStatusWidget() {
+  const { data: status, isLoading } = trpc.janIA.getBotStatus.useQuery(undefined, {
+    refetchInterval: 10000, // Refrescar en tiempo real cada 10 segundos
+  });
+
+  if (isLoading || !status) {
+    return (
+      <div className="flex items-center gap-2 text-zinc-500 text-xs bg-zinc-900/50 px-3 py-1.5 rounded-xl border border-white/5">
+        <Radio className="w-3.5 h-3.5 animate-pulse" />
+        <span>Cargando estado del bot...</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+      {/* Indicador de conexión */}
+      <div className="flex items-center gap-2 bg-zinc-900/50 border border-white/5 px-3 py-1.5 rounded-xl text-xs">
+        <span className={`w-2 h-2 rounded-full ${status.isReady ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
+        <span className="font-semibold text-zinc-300">
+          JanIA Match: {status.isReady ? 'Conectado' : 'Desconectado'}
+        </span>
+        {status.isReady && status.phone && (
+          <span className="text-[10px] text-zinc-500 font-mono font-light border-l border-zinc-800 pl-2">
+            +{status.phone}
+          </span>
+        )}
+      </div>
+
+      {/* Contadores del día en tiempo real */}
+      <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-zinc-400 font-bold">
+        <span className="bg-emerald-500/10 text-emerald-400 px-2.5 py-1 rounded-lg border border-emerald-500/20">
+          {status.todayProperties} Inmuebles Hoy
+        </span>
+        <span className="bg-indigo-500/10 text-indigo-400 px-2.5 py-1 rounded-lg border border-indigo-500/20">
+          {status.todayRequirements} Reqs Hoy
+        </span>
+      </div>
+    </div>
+  );
+}
 
 export default function Admin() {
   const { user, logout, loading } = useAuth();
@@ -82,6 +126,7 @@ export default function Admin() {
   const renderContent = () => {
     switch (activeTab) {
       case 'properties':    return <AdminProperties />;
+      case 'requirements':  return <AdminRequirements />;
       case 'matches':       return <AdminMatches />;
       case 'github':        return <AdminGitHubSync />;
       case 'leads':         return <AdminLeads />;
@@ -90,6 +135,7 @@ export default function Admin() {
       default:              return <AdminProperties />;
     }
   };
+
 
   return (
     <div className="min-h-screen bg-background flex text-foreground">
@@ -192,7 +238,7 @@ export default function Admin() {
         {/* Top bar */}
         <header className="bg-card/80 backdrop-blur-md border-b border-border px-8 py-5 flex items-center justify-between sticky top-0 z-10">
           <div>
-            <h1 className="text-2xl font-black text-foreground tracking-tight">
+            <h1 className="text-2xl font-black text-foreground tracking-tight flex items-center gap-2">
               {tabs.find(t => t.id === activeTab)?.label ?? 'Panel'}
             </h1>
             <div className="flex items-center gap-2 mt-1">
@@ -208,13 +254,20 @@ export default function Admin() {
               </p>
             </div>
           </div>
-          <div className="hidden md:block text-right">
-            <p className="text-xs font-bold uppercase tracking-widest text-primary">Sistema Activo</p>
-            <p className="text-muted-foreground text-[11px] mt-0.5">
-              {new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-            </p>
+
+          <div className="flex items-center gap-6">
+            {/* BOT STATUS INDICATOR */}
+            <BotStatusWidget />
+            
+            <div className="hidden md:block text-right border-l border-border pl-6">
+              <p className="text-xs font-bold uppercase tracking-widest text-primary">Sistema Activo</p>
+              <p className="text-muted-foreground text-[11px] mt-0.5">
+                {new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+              </p>
+            </div>
           </div>
         </header>
+
 
         {/* Content */}
         <main className="flex-1 overflow-y-auto p-8 bg-background animate-fade-in">

@@ -3,7 +3,8 @@ import { publicProcedure, router } from '../_core/trpc';
 import { invokeLLM } from '../_core/llm';
 import { getDb } from '../db';
 import { conversations, messages, leads, propertyMatches, properties, requirements } from '../../drizzle/schema';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, sql } from 'drizzle-orm';
+
 import { scrapePropertyLink } from '../_core/scraper';
 import { JANIA_PROMPT, processWhatsAppMessage } from '../_core/janIA';
 import axios from 'axios';
@@ -506,6 +507,55 @@ export const janIARouter = router({
         throw error;
       }
     }),
+
+  // Get current WhatsApp bot connection status and ingestion stats
+  getBotStatus: publicProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) return { isReady: false, phone: null, todayProperties: 0, todayRequirements: 0 };
+    
+    try {
+      const { janiaMatchBot } = await import('../_core/whatsapp-match');
+      
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const [propTodayCount] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(properties)
+        .where(sql`${properties.createdAt} >= ${today}`);
+        
+      const [reqTodayCount] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(requirements)
+        .where(sql`${requirements.createdAt} >= ${today}`);
+
+      return {
+        isReady: janiaMatchBot?.isReady || false,
+        phone: janiaMatchBot?.sock?.user?.id ? janiaMatchBot.sock.user.id.split('@')[0].split(':')[0] : null,
+        todayProperties: propTodayCount?.count || 0,
+        todayRequirements: reqTodayCount?.count || 0
+      };
+    } catch (err) {
+      console.error('Error getting bot status:', err);
+      return { isReady: false, phone: null, todayProperties: 0, todayRequirements: 0 };
+    }
+  }),
+
+  // Get all requirements registered in the database
+  getAllRequirements: publicProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+    try {
+      return await db
+        .select()
+        .from(requirements)
+        .orderBy(desc(requirements.createdAt));
+    } catch (error) {
+      console.error('Error getting all requirements:', error);
+      throw error;
+    }
+  }),
 });
 
 export type JanIARouter = typeof janIARouter;
+

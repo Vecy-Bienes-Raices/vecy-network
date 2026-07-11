@@ -1038,7 +1038,15 @@ export async function handleDetectedMatches(
   userId: string,
   realName: string
 ): Promise<{ response: string; mentions: string[]; extraDMs: { jid: string; message: string; viaMainBot?: boolean }[]; sendReputationHook?: boolean }> {
+  const mentions: string[] = [];
+  const matchBlocks: string[] = [];
+  const extraDMs: { jid: string; message: string; viaMainBot?: boolean }[] = [];
+  const savedDateTime = formatColombiaDateTime(savedRecord.createdAt || new Date());
+  const savedRawPhone = userId.split('@')[0];
+  const savedJid = userId.includes('@') ? userId : `${userId}@c.us`;
+
   const getReqText = (item: any) => {
+
     if (item.rawText && item.rawText.trim()) return item.rawText.trim();
     if (item.caracteristicasDeseadas?.wants?.details) {
       return `${item.name || 'Requerimiento'} - ${item.caracteristicasDeseadas.wants.details}`;
