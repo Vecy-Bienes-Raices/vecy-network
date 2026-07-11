@@ -21,7 +21,6 @@ import {
   translatePropertyType,
   isOutsideWorkingHours
 } from './janIA';
-import { publishToFacebookGroup } from "./facebookService";
 import fs from 'fs';
 import path from 'path';
 import { spawn } from 'child_process';
