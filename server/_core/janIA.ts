@@ -1275,6 +1275,37 @@ export async function processWhatsAppMessage(
     let messageToProcess = text;
     let isFromAudio = false;
 
+    // Intercepción rápida de mensajes OFF-TOPIC para ahorrar tokens de Gemini
+    const cleanText = text.toLowerCase().trim();
+    const isMediaOrAudio = hasMedia || !!audioUrl || !!imageBuffer || !!pdfBuffer;
+
+    if (!isMediaOrAudio && cleanText.length > 15) {
+      const onTopicKeywords = [
+        "apto", "apartamento", "casa", "lote", "finca", "bodega", "oficina", "local", "inmueble", "propiedad",
+        "predio", "terreno", "proyecto", "arriendo", "alquiler", "vendo", "venta", "compro", "compra", "busco",
+        "ofrezco", "necesito", "permuto", "venpermuto", "estrato", "m2", "metros", "habitacion", "habitación",
+        "baño", "baños", "cocina", "garaje", "parqueadero", "canon", "administracion", "administración", "precio",
+        "millones", "cop", "arrendar", "vender", "comprar", "bogota", "bogotá", "medellin", "medellín", "cali",
+        "barranquilla", "bucaramanga", "cartagena", "barrio", "sector", "zona", "calle", "carrera", "avenida",
+        "contrato", "arrendamiento", "promesa", "escritura", "notaria", "notaría", "registro", "sucesión",
+        "sucesion", "herencia", "embargo", "saneamiento", "comision", "comisión", "corretaje", "avalúo", "avaluo",
+        "jania", "vecy", "bot", "ayuda", "cómo", "como", "funciona", "publicar", "registrar", "match",
+        "coincidencia", "contacto", "cuenta", "hola", "gracias", "saludo"
+      ];
+
+      const hasOnTopicKeyword = onTopicKeywords.some(keyword => cleanText.includes(keyword));
+      if (!hasOnTopicKeyword) {
+        console.log(`[JanIA-OffTopic] Mensaje fuera de tema detectado para ${userId}: "${text.substring(0, 50)}...". Retornando estático.`);
+        const staticText = `Hola ${realName || 'colega'} 👋🏻. Como asistente de VECY Network, estoy entrenada exclusivamente para ayudarte con temas de bienes raíces (buscar, publicar o cruzar inmuebles), asesorías legales de corretaje y arrendamientos, o el soporte de nuestra plataforma. 🏠✨\n\nPor favor, hazme una consulta que esté relacionada con estos temas. ¡Con gusto te responderé! 😊`;
+        return {
+          classification: "VIOLACION_DE_NORMAS",
+          response: staticText,
+          dmResponse: staticText
+        };
+      }
+    }
+
+
     // 1. Transcripción de Voz
     if (audioUrl) {
       if (audioUrl.startsWith("mock-audio:")) {

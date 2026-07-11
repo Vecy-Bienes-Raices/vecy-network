@@ -312,7 +312,9 @@ function MatchCard({ m, idx }: { m: any; idx: number }) {
           <span className="text-[10px] uppercase font-bold tracking-widest text-[#bf953f] bg-[#bf953f]/5 px-2 py-0.5 rounded border border-[#bf953f]/15">🏢 Inmueble / Oferta</span>
           <h4 className="text-base font-bold text-white mt-1">{m.property.name}</h4>
           {(m.property.rawText || m.property.description) && (
-            <p className="text-xs text-zinc-500 italic leading-relaxed line-clamp-3">"{m.property.rawText || m.property.description}"</p>
+            <p className="text-xs text-zinc-300 bg-white/[0.02] border border-white/5 p-3 rounded-xl italic leading-relaxed whitespace-pre-wrap">
+              "{m.property.rawText || m.property.description}"
+            </p>
           )}
           <div className="bg-[#bf953f]/5 border border-[#bf953f]/10 rounded-2xl p-3 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
@@ -320,6 +322,7 @@ function MatchCard({ m, idx }: { m: any; idx: number }) {
               <div>
                 <p className="text-[9px] text-zinc-500 uppercase tracking-wider font-semibold">Asesor Captador (Owner)</p>
                 <p className="text-xs font-bold text-zinc-200">{formatPhoneDisplay(m.property.idUsuarioWhatsapp)}</p>
+                <p className="text-[10px] text-zinc-500 font-mono select-all">+{m.property.idUsuarioWhatsapp?.split('@')[0]}</p>
               </div>
             </div>
             {m.property.idUsuarioWhatsapp && (
@@ -336,7 +339,9 @@ function MatchCard({ m, idx }: { m: any; idx: number }) {
           <span className="text-[10px] uppercase font-bold tracking-widest text-cyan-400 bg-cyan-500/5 px-2 py-0.5 rounded border border-cyan-500/15">🔍 Requerimiento / Demanda</span>
           <h4 className="text-base font-bold text-white mt-1">{m.requirement.name || `Requerimiento #${m.requirement.id}`}</h4>
           {m.requirement.rawText && (
-            <p className="text-xs text-zinc-500 italic leading-relaxed line-clamp-3">"{m.requirement.rawText}"</p>
+            <p className="text-xs text-zinc-300 bg-white/[0.02] border border-white/5 p-3 rounded-xl italic leading-relaxed whitespace-pre-wrap">
+              "{m.requirement.rawText}"
+            </p>
           )}
           <div className="bg-cyan-500/5 border border-cyan-500/10 rounded-2xl p-3 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
@@ -344,6 +349,7 @@ function MatchCard({ m, idx }: { m: any; idx: number }) {
               <div>
                 <p className="text-[9px] text-zinc-500 uppercase tracking-wider font-semibold">Asesor Buscador (Seeker)</p>
                 <p className="text-xs font-bold text-zinc-200">{formatPhoneDisplay(m.requirement.idUsuarioWhatsapp)}</p>
+                <p className="text-[10px] text-zinc-500 font-mono select-all">+{m.requirement.idUsuarioWhatsapp?.split('@')[0]}</p>
               </div>
             </div>
             {m.requirement.idUsuarioWhatsapp && (
@@ -354,6 +360,7 @@ function MatchCard({ m, idx }: { m: any; idx: number }) {
             )}
           </div>
         </div>
+
       </div>
 
       {/* Expandable comparison table */}
