@@ -67,7 +67,10 @@ export default function AdminProperties() {
     }));
   };
 
-  const { data: properties, isLoading, refetch } = trpc.properties.myList.useQuery();
+  const { data: properties, isLoading, refetch } = trpc.properties.myList.useQuery(undefined, {
+    refetchInterval: 10000,
+  });
+
 
   const createMutation = trpc.properties.create.useMutation({
     onSuccess: () => { toast.success('✅ Inmueble publicado'); refetch(); cancelForm(); },

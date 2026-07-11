@@ -195,8 +195,11 @@ export default function AdminMatches() {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [minScore, setMinScore] = React.useState('50');
 
-  // Fetch matches directly from server API
-  const { data: matches = [], isLoading, refetch } = trpc.janIA.getAllMatches.useQuery();
+  // Fetch matches directly from server API with auto-refresh every 10s
+  const { data: matches = [], isLoading, refetch } = trpc.janIA.getAllMatches.useQuery(undefined, {
+    refetchInterval: 10000,
+  });
+
 
   const getStatusColor = (status: string) => {
     switch (status) {

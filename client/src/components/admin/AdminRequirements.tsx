@@ -6,7 +6,10 @@ import {
 } from 'lucide-react';
 
 export default function AdminRequirements() {
-  const { data: requirements = [], isLoading, refetch } = trpc.janIA.getAllRequirements.useQuery();
+  const { data: requirements = [], isLoading, refetch } = trpc.janIA.getAllRequirements.useQuery(undefined, {
+    refetchInterval: 10000,
+  });
+
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [filterNeg, setFilterNeg] = useState('all');
