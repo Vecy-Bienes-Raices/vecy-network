@@ -596,6 +596,40 @@ function analyzeSender(name: string, userId: string, alreadyGreeted: boolean): {
 
 let promptCache: Record<string, string> = {};
 
+// Consulta los contadores reales de la base de datos en tiempo real
+export async function getLiveStats(): Promise<string> {
+  try {
+    const db = await getDb();
+    if (!db) return "";
+
+    const [propCount] = await db.select({ total: sql<number>`count(*)::int` }).from(properties);
+    const [reqCount]  = await db.select({ total: sql<number>`count(*)::int` }).from(requirements);
+    const [matchCount] = await db.select({ total: sql<number>`count(*)::int` }).from(propertyMatches);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const [propHoy]  = await db.select({ total: sql<number>`count(*)::int` }).from(properties).where(sql`${properties.createdAt} >= ${today}`);
+    const [reqHoy]   = await db.select({ total: sql<number>`count(*)::int` }).from(requirements).where(sql`${requirements.createdAt} >= ${today}`);
+    const [matchHoy] = await db.select({ total: sql<number>`count(*)::int` }).from(propertyMatches).where(sql`${propertyMatches.createdAt} >= ${today}`);
+
+    const now = new Date().toLocaleString('es-CO', { timeZone: 'America/Bogota', dateStyle: 'short', timeStyle: 'short' });
+    return `
+## 📊 ESTADÍSTICAS EN TIEMPO REAL DE VECY NETWORK (Actualizado: ${now} hora Colombia)
+Esta información es EXACTA y proviene directamente de la base de datos en este preciso instante. Úsala cuando alguien pregunte cuántos inmuebles, requerimientos o coincidencias tenemos:
+
+| Categoría | Total Histórico | Nuevos Hoy |
+|-----------|----------------|------------|
+| 🏢 Inmuebles publicados | **${propCount?.total ?? 0}** | ${propHoy?.total ?? 0} |
+| 📋 Requerimientos de búsqueda | **${reqCount?.total ?? 0}** | ${reqHoy?.total ?? 0} |
+| 🎯 Coincidencias (Matches) detectadas | **${matchCount?.total ?? 0}** | ${matchHoy?.total ?? 0} |
+
+Si alguien te pregunta por estos números, responde CON PRECISIÓN usando exactamente los datos de esta tabla. No inventes, no estimes. Estos son los datos reales del sistema VECY en este momento.`;
+  } catch (err) {
+    console.warn("[JanIA-LiveStats] No se pudo obtener estadísticas en tiempo real:", err);
+    return "";
+  }
+}
+
 export function buildSystemPrompt(groupJid?: string): string {
   const cacheKey = groupJid || 'web';
   if (promptCache[cacheKey]) {
@@ -1473,8 +1507,14 @@ Por lo tanto, DEBES hacer lo siguiente:
 
     // Obtener historial de chat reciente (Supercerebro)
     const history = await getRecentChatHistory(userId, 20);
+    // Obtener estadísticas en tiempo real para que JanIA pueda responder con datos exactos
+    const liveStats = await getLiveStats();
+    const systemContent = liveStats
+      ? `${buildSystemPrompt(groupJid)}\n\n${liveStats}`
+      : buildSystemPrompt(groupJid);
+
     const llmMessages = [
-      { role: "system", content: buildSystemPrompt(groupJid) }
+      { role: "system", content: systemContent }
     ];
 
     if (history.length > 0) {
