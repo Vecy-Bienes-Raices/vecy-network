@@ -615,6 +615,9 @@ export function buildSystemPrompt(groupJid?: string): string {
       specificPrompt = `${legalPrompt}\n\n${avaluosPrompt}`;
     } else if (groupJid === '120363403507276533@g.us') {
       specificPrompt = fs.readFileSync(path.join(baseDir, "grupos/circulo_cero.md"), "utf-8");
+    } else if (groupJid && (groupJid.endsWith('@g.us') || groupJid.includes('@us'))) {
+      // Cualquier otro grupo de WhatsApp procesa inmuebles/requerimientos
+      specificPrompt = fs.readFileSync(path.join(baseDir, "grupos/inmuebles.md"), "utf-8");
     } else {
       specificPrompt = fs.readFileSync(path.join(baseDir, "web/web_console.md"), "utf-8");
     }
@@ -1846,26 +1849,37 @@ async function findOrCreateUserByPhone(phone: string, realName: string) {
   const db = await getDb();
   if (!db) return null;
 
-  // 1. Buscar por teléfono en la base de datos
-  let user = await db.select().from(users).where(eq(users.phone, phone)).limit(1).then(r => r[0]);
+  const cleanPhone = phone.split(':')[0];
 
-  // 2. Si no lo encuentra, buscar por openId: `wa-${phone}`
+  // 1. Buscar por teléfono en la base de datos
+  let user = await db.select().from(users).where(eq(users.phone, cleanPhone)).limit(1).then(r => r[0]);
+
+  // 2. Si no lo encuentra, buscar por openId: `wa-${cleanPhone}`
   if (!user) {
-    user = await db.select().from(users).where(eq(users.openId, `wa-${phone}`)).limit(1).then(r => r[0]);
+    user = await db.select().from(users).where(eq(users.openId, `wa-${cleanPhone}`)).limit(1).then(r => r[0]);
   }
 
   // 3. Si no existe, crearlo
   if (!user) {
-    const openId = `wa-${phone}`;
-    console.log(`[JanIA-findOrCreateUserByPhone] Creando nuevo usuario para WhatsApp: ${realName} (+${phone})`);
-    const [newUser] = await db.insert(users).values({
-      openId,
-      name: realName,
-      phone,
-      role: "agent",
-      loginMethod: "whatsapp"
-    }).returning();
-    user = newUser;
+    const openId = `wa-${cleanPhone}`;
+    console.log(`[JanIA-findOrCreateUserByPhone] Creando nuevo usuario para WhatsApp: ${realName} (+${cleanPhone})`);
+    try {
+      const [newUser] = await db.insert(users).values({
+        openId,
+        name: realName,
+        phone: cleanPhone,
+        role: "agent",
+        loginMethod: "whatsapp"
+      }).returning();
+      user = newUser;
+    } catch (insertErr: any) {
+      if (insertErr.code === '23505' || String(insertErr).includes('unique constraint')) {
+        console.log(`[JanIA-findOrCreateUserByPhone] Colisión concurrente detectada para ${cleanPhone}. Re-buscando usuario...`);
+        user = await db.select().from(users).where(eq(users.openId, openId)).limit(1).then(r => r[0]);
+      } else {
+        throw insertErr;
+      }
+    }
   } else {
     // Si ya existe pero el nombre es genérico (o era "Nuevo Asesor"), y tenemos un nombre real, actualizarlo
     if (realName && !isGenericName(realName) && isGenericName(user.name)) {
@@ -1938,7 +1952,7 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
   const db = await getDb();
   if (!db) return null;
 
-  const rawPhone = userId.split('@')[0];
+  const rawPhone = userId.split(':')[0].split('@')[0];
   const user = await findOrCreateUserByPhone(rawPhone, realName);
 
   let imageUrl: string | undefined;
@@ -2061,7 +2075,7 @@ async function saveRequirement(data: any, userId: string, realName: string) {
   const db = await getDb();
   if (!db) return null;
 
-  const rawPhone = userId.split('@')[0];
+  const rawPhone = userId.split(':')[0].split('@')[0];
   const user = await findOrCreateUserByPhone(rawPhone, realName);
 
   const characteristicsObj = {

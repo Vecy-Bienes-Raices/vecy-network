@@ -3255,6 +3255,8 @@ function buildSystemPrompt(groupJid) {
 ${avaluosPrompt}`;
     } else if (groupJid === "120363403507276533@g.us") {
       specificPrompt = fs.readFileSync(path.join(baseDir, "grupos/circulo_cero.md"), "utf-8");
+    } else if (groupJid && (groupJid.endsWith("@g.us") || groupJid.includes("@us"))) {
+      specificPrompt = fs.readFileSync(path.join(baseDir, "grupos/inmuebles.md"), "utf-8");
     } else {
       specificPrompt = fs.readFileSync(path.join(baseDir, "web/web_console.md"), "utf-8");
     }
@@ -3909,21 +3911,31 @@ function isGenericName(n) {
 async function findOrCreateUserByPhone(phone, realName) {
   const db = await getDb();
   if (!db) return null;
-  let user = await db.select().from(users).where(eq3(users.phone, phone)).limit(1).then((r) => r[0]);
+  const cleanPhone = phone.split(":")[0];
+  let user = await db.select().from(users).where(eq3(users.phone, cleanPhone)).limit(1).then((r) => r[0]);
   if (!user) {
-    user = await db.select().from(users).where(eq3(users.openId, `wa-${phone}`)).limit(1).then((r) => r[0]);
+    user = await db.select().from(users).where(eq3(users.openId, `wa-${cleanPhone}`)).limit(1).then((r) => r[0]);
   }
   if (!user) {
-    const openId = `wa-${phone}`;
-    console.log(`[JanIA-findOrCreateUserByPhone] Creando nuevo usuario para WhatsApp: ${realName} (+${phone})`);
-    const [newUser] = await db.insert(users).values({
-      openId,
-      name: realName,
-      phone,
-      role: "agent",
-      loginMethod: "whatsapp"
-    }).returning();
-    user = newUser;
+    const openId = `wa-${cleanPhone}`;
+    console.log(`[JanIA-findOrCreateUserByPhone] Creando nuevo usuario para WhatsApp: ${realName} (+${cleanPhone})`);
+    try {
+      const [newUser] = await db.insert(users).values({
+        openId,
+        name: realName,
+        phone: cleanPhone,
+        role: "agent",
+        loginMethod: "whatsapp"
+      }).returning();
+      user = newUser;
+    } catch (insertErr) {
+      if (insertErr.code === "23505" || String(insertErr).includes("unique constraint")) {
+        console.log(`[JanIA-findOrCreateUserByPhone] Colisi\xF3n concurrente detectada para ${cleanPhone}. Re-buscando usuario...`);
+        user = await db.select().from(users).where(eq3(users.openId, openId)).limit(1).then((r) => r[0]);
+      } else {
+        throw insertErr;
+      }
+    }
   } else {
     if (realName && !isGenericName(realName) && isGenericName(user.name)) {
       console.log(`[JanIA-findOrCreateUserByPhone] Actualizando nombre de usuario para ID ${user.id} a ${realName}`);
@@ -3983,7 +3995,7 @@ function safeSlice(val, limit) {
 async function saveProperty(data, userId, realName, imageBuffer) {
   const db = await getDb();
   if (!db) return null;
-  const rawPhone = userId.split("@")[0];
+  const rawPhone = userId.split(":")[0].split("@")[0];
   const user = await findOrCreateUserByPhone(rawPhone, realName);
   let imageUrl;
   if (imageBuffer) {
@@ -4083,7 +4095,7 @@ async function saveProperty(data, userId, realName, imageBuffer) {
 async function saveRequirement(data, userId, realName) {
   const db = await getDb();
   if (!db) return null;
-  const rawPhone = userId.split("@")[0];
+  const rawPhone = userId.split(":")[0].split("@")[0];
   const user = await findOrCreateUserByPhone(rawPhone, realName);
   const characteristicsObj = {
     gives: data.gives || data.caracteristicasDeseadas?.gives,
