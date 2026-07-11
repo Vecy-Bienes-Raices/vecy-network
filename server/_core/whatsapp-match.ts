@@ -114,8 +114,10 @@ export class JaniaMatchBot {
         browser: Browsers.macOS('Desktop'),
         syncFullHistory: false,
         markOnlineOnConnect: false,
-        connectTimeoutMs: 60000,
-        defaultQueryTimeoutMs: 60000,
+        connectTimeoutMs: 90000, // Aumentado a 90s para conexiones lentas
+        defaultQueryTimeoutMs: 90000,
+        keepAliveIntervalMs: 20000, // Ping Keep-Alive de WebSocket cada 20 segundos
+        emitOwnEvents: true,
       });
 
       this.setupEventListeners(saveCreds);
