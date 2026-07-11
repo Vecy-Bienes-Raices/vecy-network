@@ -17,6 +17,8 @@ import { eq, and } from 'drizzle-orm';
 import { esDominioPermitido, scrapePropertyLink } from './scraper';
 import QRCode from 'qrcode';
 import { extractFirstName, getGreetingByTime } from './whatsapp';
+import { transcribeAudioBuffer } from './voiceTranscription';
+
 
 // Tiempo de arranque para omitir mensajes históricos
 const SERVER_BOOT_TIME = Math.floor(Date.now() / 1000);
@@ -244,9 +246,27 @@ export class JaniaMatchBot {
             else if (msg.message.documentMessage) body = msg.message.documentMessage.caption || '';
             else if (msg.message.videoMessage) body = msg.message.videoMessage.caption || '';
             else if (msg.message.audioMessage) {
-              // Audio de voz (PTT) sin transcripción disponible
               isAudioPTT = true;
-              body = '[audio]'; // Placeholder para que los filtros no lo descarten
+              // Transcribir el audio real usando Gemini vía Baileys downloadMediaMessage
+              try {
+                console.log(`[JANIA-MATCH] Transcribiendo audio PTT de ${senderId} en grupo ${chatId}...`);
+                const audioBuffer = await downloadMediaMessage(msg as any, 'buffer', {}) as Buffer;
+                if (audioBuffer && audioBuffer.length > 0) {
+                  const mimeType = msg.message.audioMessage.mimetype || 'audio/ogg; codecs=opus';
+                  const transcription = await transcribeAudioBuffer(audioBuffer, mimeType);
+                  if (transcription && transcription.trim() !== '') {
+                    body = transcription.trim();
+                    console.log(`[JANIA-MATCH] Transcripción exitosa: "${body.substring(0, 80)}..."`);
+                  } else {
+                    body = '[audio-vacío]';
+                  }
+                } else {
+                  body = '[audio-sin-buffer]';
+                }
+              } catch (audioErr: any) {
+                console.error('[JANIA-MATCH] Error al transcribir audio PTT:', audioErr.message || audioErr);
+                body = '[audio-error]';
+              }
             }
 
             const textLower = body.toLowerCase();
@@ -305,15 +325,20 @@ export class JaniaMatchBot {
               );
 
             // En Soporte Legal y Círculo Cero: responder a cualquier texto que no sea cortesía muy corta
-            // Los audios PTT nunca se consideran cortesía corta
+            // Los audios PTT nunca se consideran cortesía corta (aunque fallen la transcripción)
             const textClean = body.toLowerCase().trim();
+            const isAudioFailed = body === '[audio-vacío]' || body === '[audio-sin-buffer]' || body === '[audio-error]';
             const isShortCourtesy = 
               !isAudioPTT && (
                 textClean.length < 6 ||
                 ["ok", "listo", "vale", "claro", "gracias", "hola", "hola!", "jaja", "jajaja", "👍", "✅", "👏", "😊", "🙏"].includes(textClean)
               );
 
-            const isInteractiveGroupQuery = !isPossibleListing && (isAudioPTT || ((isBuzonGroup || isCirculoGroup) && !isShortCourtesy));
+            // Los audios fallidos tienen su propio manejo en handleDirectGroupQuestion
+            const isInteractiveGroupQuery = !isPossibleListing && (
+              isAudioPTT ||
+              ((isBuzonGroup || isCirculoGroup || isMainGroup) && !isShortCourtesy)
+            );
 
             const shouldRespond = hasDirectMention || isHelpOrSystemQuery || isInteractiveGroupQuery;
 
@@ -574,16 +599,62 @@ export class JaniaMatchBot {
 
       await delay(2000);
 
-      // Si el mensaje era un audio PTT sin transcripción, usamos un texto coherente para el LLM
-      const effectiveBody = bodyText === '[audio]'
-        ? `${realName} acaba de enviar una nota de voz en el grupo. Lamentablemente no puedo transcribir audios en grupos por limitaciones técnicas de WhatsApp. Respóndele de forma amigable, explicando que no pudiste escuchar su audio aquí en el grupo, que puede escribirte por texto en este mismo grupo o enviarte su consulta directamente al chat privado de JanIA en https://wa.me/573185462265 donde sí puedes procesar notas de voz. Sé breve y cálida.`
-        : bodyText;
+      // Si la transcripción del audio falló, respondemos con un mensaje específico
+      const isAudioFailed = bodyText === '[audio-vacío]' || bodyText === '[audio-sin-buffer]' || bodyText === '[audio-error]';
+      if (isAudioFailed) {
+        const failMsg = `Hola ${realName} 👋🏻, escuché que enviaste una nota de voz. Lamentablemente tuve un inconveniente técnico al procesarla en este momento. 🙏\n\nTe pido que:\n✏️ Escribas tu consulta por texto aquí en el grupo, o\n📲 Me la envíes directamente en mi chat privado: https://wa.me/573166569719\n\n¡En el chat privado puedo escuchar y procesar tus audios sin problemas! 😊`;
+        await this.queuedSend(chatId, failMsg, { mentions: [senderId], quoted: msg });
+        await this.sock.sendPresenceUpdate('paused', chatId);
+        return;
+      }
+
+      // Detectar si el mensaje en VECY INMUEBLES NETWORK es off-topic (legal, tributario, círculo)
+      const isMainGroupChat = chatId === this.targetGroupId;
+      if (isMainGroupChat) {
+        const textLower = bodyText.toLowerCase();
+        const isOffTopicLegal =
+          textLower.includes('contrato') || textLower.includes('arrendamiento') ||
+          textLower.includes('promesa') || textLower.includes('sucesión') ||
+          textLower.includes('sucesion') || textLower.includes('herencia') ||
+          textLower.includes('embargo') || textLower.includes('comisión') ||
+          textLower.includes('comision') || textLower.includes('tributar') ||
+          textLower.includes('impuesto') || textLower.includes('retención') ||
+          textLower.includes('retencion') || textLower.includes('ganancia ocasional') ||
+          textLower.includes('avalúo') || textLower.includes('avaluo') ||
+          textLower.includes('escritura') || textLower.includes('notaría') ||
+          textLower.includes('juridic') || textLower.includes('demandar') ||
+          textLower.includes('demanda') || textLower.includes('ley ') ||
+          textLower.includes('juzgado') || textLower.includes('abogado');
+
+        const isOffTopicCirculo =
+          textLower.includes('vecy network') || textLower.includes('proyecto') ||
+          textLower.includes('sugerencia') || textLower.includes('portal web') ||
+          textLower.includes('jania funciona') || textLower.includes('inteligencia artificial') ||
+          textLower.includes('cómo funciona la ia') || textLower.includes('como funciona la ia') ||
+          textLower.includes('competencia') || textLower.includes('testimonio') ||
+          textLower.includes('fundador') || textLower.includes('jani alves') ||
+          textLower.includes('eduardo');
+
+        if (isOffTopicLegal || isOffTopicCirculo) {
+          const groupName = isOffTopicLegal ? 'VECY: SOPORTE LEGAL, TRIBUTARIO Y AVALÚOS' : 'Círculo CERO 👌';
+          const redirectMsg =
+            `Hola ${realName} 👋🏻, veo que tu consulta es sobre ${isOffTopicLegal ? 'temas jurídicos, tributarios o de avalúos' : 'el funcionamiento de VECY Network y JanIA'}. ¡Perfecto! 🎯\n\n` +
+            `Ese tipo de preguntas las atiendo con más profundidad en el grupo *${groupName}* de nuestra comunidad de WhatsApp. 🏠\n\n` +
+            `También puedes consultarme directamente en mi chat privado con mi otra yo *JanIA v3.5* 📲: https://wa.me/573166569719\n\n` +
+            `¡Allí te atiendo con todo el detalle que mereces! 😊`;
+          await this.queuedSend(chatId, redirectMsg, { mentions: [senderId], quoted: msg });
+          await this.sock.sendPresenceUpdate('paused', chatId);
+          return;
+        }
+      }
 
       let result;
-      if (chatId === '120363417740040773@g.us') { // Buzón Consultoría
-        result = await processConsultingMessage(effectiveBody, senderId, realName);
-      } else if (chatId === '120363403507276533@g.us') { // Círculo Cero
-        result = await processCirculoMessage(effectiveBody, senderId, realName);
+      if (chatId === this.buzonGroupId) { // Soporte Legal, Tributario y Avalúos
+        result = await processConsultingMessage(bodyText, senderId, realName);
+      } else if (chatId === this.circuloGroupId) { // Círculo Cero
+        result = await processCirculoMessage(bodyText, senderId, realName);
+      } else if (isMainGroupChat) { // VECY INMUEBLES NETWORK — preguntas sobre el grupo/sistema
+        result = await processWhatsAppMessage(bodyText, senderId, realName);
 
       } else {
         const redirectMsg = `¡Hola! 😊 Para resolver tus inquietudes inmobiliarias, dudas de corretaje, soporte técnico o de cuenta, te invito a consultarme en privado a mi otro yo: **JanIA de Soporte y Atención** 📲 en el número +57 3185462265 o haciendo clic aquí: https://wa.me/573185462265. ¡Allí con gusto te responderé a profundidad! 🚀`;
