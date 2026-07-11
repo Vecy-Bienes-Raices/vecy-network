@@ -57,8 +57,11 @@ export class JaniaMatchBot {
   private dmMessageBuffers: Map<string, { messages: any[]; timer: NodeJS.Timeout | null }> = new Map();
 
   private targetGroupId: string = '120363260108880069@g.us';
+  private buzonGroupId: string = '120363417740040773@g.us';
+  private circuloGroupId: string = '120363403507276533@g.us';
   private cooldownMap: Map<string, any> = new Map();
   private cooldownFile: string = path.join(process.cwd(), '.cooldown_map.json');
+
 
   constructor() {
     (global as any).janiaMatchBotInstance = this;
@@ -258,7 +261,14 @@ export class JaniaMatchBot {
               textLower.includes("compro") ||
               textLower.includes("necesito");
 
-            // Detectar consultas comunes sobre cómo publicar, cómo funciona el bot/grupo, ayuda, etc.
+            // --- IDENTIFICACIÓN DE GRUPOS OFICIALES VECY ---
+            const isMainGroup = chatId === this.targetGroupId;     // VECY INMUEBLES NETWORK
+            const isBuzonGroup = chatId === this.buzonGroupId;     // SOPORTE LEGAL, TRIBUTARIO Y AVALÚOS
+            const isCirculoGroup = chatId === this.circuloGroupId; // Círculo CERO 👌
+            const isOfficialGroup = isMainGroup || isBuzonGroup || isCirculoGroup;
+
+
+            // Detectar consultas comunes sobre cómo publicar, cómo funciona el bot/grupo, guardado, mecánica, datos faltantes, etc.
             const isHelpOrSystemQuery = 
               !isPossibleListing && (
                 textLower.includes("cómo subo") || textLower.includes("como subo") ||
@@ -271,15 +281,34 @@ export class JaniaMatchBot {
                 textLower.includes("cómo hago para") || textLower.includes("como hago para") ||
                 textLower.includes("cómo buscar") || textLower.includes("como buscar") ||
                 textLower.includes("cómo encontrar") || textLower.includes("como encontrar") ||
+                textLower.includes("mecánica del grupo") || textLower.includes("mecanica del grupo") ||
+                textLower.includes("quedó guardado") || textLower.includes("quedo guardado") ||
+                textLower.includes("se guardó") || textLower.includes("se guardo") ||
+                textLower.includes("fue guardado") ||
+                textLower.includes("faltó algún dato") || textLower.includes("falto algun dato") ||
+                textLower.includes("faltó un dato") || textLower.includes("falto un dato") ||
+                textLower.includes("datos faltantes") ||
+                textLower.includes("subió correctamente") || textLower.includes("subio correctamente") ||
+                textLower.includes("fue subido") ||
+                textLower.includes("mejor forma de publicar") ||
+                textLower.includes("cómo es mejor") || textLower.includes("como es mejor") ||
+                textLower.includes("para obtener resultados") ||
                 (textLower.includes("ayuda") && textLower.includes("inmueble")) ||
                 (textLower.includes("explicar") && textLower.includes("grupo")) ||
                 (textLower.includes("cómo") && textLower.includes("grupo"))
               );
 
-            if (hasDirectMention || isHelpOrSystemQuery) {
-              const { isOutsideWorkingHours } = await import('./janIA');
-              const isOffHours = isOutsideWorkingHours();
+            // En Soporte Legal y Círculo Cero: responder a cualquier texto que no sea cortesía muy corta (sin necesidad de mencionar @JanIA)
+            const textClean = body.toLowerCase().trim();
+            const isShortCourtesy = 
+              textClean.length < 6 ||
+              ["ok", "listo", "vale", "claro", "gracias", "hola", "hola!", "jaja", "jajaja", "👍", "✅", "👏", "😊", "🙏"].includes(textClean);
 
+            const isInteractiveGroupQuery = !isPossibleListing && (isBuzonGroup || isCirculoGroup) && !isShortCourtesy;
+
+            const shouldRespond = hasDirectMention || isHelpOrSystemQuery || isInteractiveGroupQuery;
+
+            if (shouldRespond) {
               let isBotAdmin = false;
               try {
                 const metadata = await this.sock.groupMetadata(chatId);
@@ -290,11 +319,16 @@ export class JaniaMatchBot {
                 isBotAdmin = false;
               }
 
-              if (isBotAdmin && isOffHours) {
-                console.log(`[JANIA-MATCH] Mención/Ayuda de ${senderId} en grupo ${chatId}. Respondiendo (BotAdmin=true, OffHours=true).`);
+              // Los 3 grupos oficiales responden 24/7; grupos externos solo fuera de horario
+              const { isOutsideWorkingHours } = await import('./janIA');
+              const isOffHours = isOutsideWorkingHours();
+              const canRespond = isBotAdmin && (isOfficialGroup || isOffHours);
+
+              if (canRespond) {
+                console.log(`[JANIA-MATCH] Respondiendo en grupo ${chatId} (Oficial=${isOfficialGroup}, OffHours=${isOffHours}).`);
                 await this.handleDirectGroupQuestion(msg, chatId, senderId, body);
               } else {
-                console.log(`[JANIA-MATCH] Mención/Ayuda de ${senderId} en grupo ${chatId} ignorada (BotAdmin=${isBotAdmin}, OffHours=${isOffHours}).`);
+                console.log(`[JANIA-MATCH] Ignorado en ${chatId} (BotAdmin=${isBotAdmin}, Oficial=${isOfficialGroup}, OffHours=${isOffHours}).`);
               }
               return;
             }
