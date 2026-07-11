@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { trpc } from '@/lib/trpc';
 import { motion, AnimatePresence } from 'framer-motion';
 
-type MatchStatus = "exact" | "warn" | "missing" | "ok";
+type MatchStatus = "exact" | "warn" | "missing" | "ok" | "neutral";
 
 interface ScoreRow {
   label: string;
@@ -28,8 +28,9 @@ function scoreRows(req: any, prop: any) {
 
   const add = (label: string, reqVal: string, propVal: string, status: MatchStatus, weight: number, icon: React.ReactNode) => {
     rows.push({ label, reqVal, propVal, status, weight, icon });
+    // Para el cálculo de puntaje, los campos no restringidos (neutral) heredan puntaje completo para no penalizar la aptitud
     max += weight;
-    if (status === "exact" || status === "ok") pts += weight;
+    if (status === "exact" || status === "ok" || status === "neutral") pts += weight;
     else if (status === "warn") pts += weight * 0.5;
   };
 
@@ -69,7 +70,6 @@ function scoreRows(req: any, prop: any) {
     typeS = "missing"; // Si difieren los subtipos (apartamento, apartaestudio o loft), no coinciden
   }
 
-
   add("Tipo de Inmueble", reqType || "N/E", propType || "N/E", typeS, 18, <Building2 className="w-3.5 h-3.5" />);
 
   // 2. Tipo de Negocio
@@ -88,7 +88,7 @@ function scoreRows(req: any, prop: any) {
   const propZone = prop.zone || "";
   let locS: MatchStatus = "missing";
   if (!reqZone) {
-    locS = "exact"; // Si busca en cualquier lugar de la ciudad
+    locS = "neutral"; // Si busca en cualquier lugar de la ciudad (no restringido)
   } else {
     const reqZoneClean = cleanText(reqZone);
     const propZoneClean = cleanText(propZone);
@@ -115,8 +115,9 @@ function scoreRows(req: any, prop: any) {
   // 4. Presupuesto Máx
   const budget = parseFloat(req.presupuestoMax || "0");
   const price = parseFloat(prop.price || "0");
-  let budS: MatchStatus = "missing";
-  if (!budget || !price) budS = "missing";
+  let budS: MatchStatus = "neutral";
+  if (!budget || budget === 0) budS = "neutral"; // Si no se especificó presupuesto, no hay restricción
+  else if (!price) budS = "missing";
   else if (price <= budget) budS = "exact";
   else if (price <= budget * 1.05) budS = "warn";
   else budS = "missing";
@@ -125,8 +126,10 @@ function scoreRows(req: any, prop: any) {
   // 5. Área Total
   const areaR = parseFloat(req.areaMin || "0");
   const areaP = parseFloat(prop.areaTotal || prop.areaPrivate || "0");
-  let areS: MatchStatus = "exact";
-  if (areaR > 0) {
+  let areS: MatchStatus = "neutral";
+  if (!areaR || areaR === 0) {
+    areS = "neutral"; // No restringido
+  } else {
     if (areaP >= areaR && areaP <= areaR * 1.15) {
       areS = "exact";
     } else if (areaP > areaR * 1.15 && areaP <= areaR * 1.30) {
@@ -140,25 +143,25 @@ function scoreRows(req: any, prop: any) {
   // 6. Habitaciones
   const bedR = req.habitacionesMin ? Number(req.habitacionesMin) : 0;
   const bedP = prop.bedrooms ? Number(prop.bedrooms) : 0;
-  const bedS: MatchStatus = !bedR ? "exact" : bedP === bedR ? "exact" : "missing";
+  const bedS: MatchStatus = !bedR ? "neutral" : bedP === bedR ? "exact" : "missing";
   add("Habitaciones", bedR ? `${bedR} hab. (Exacto)` : "N/E", bedP ? `${bedP} hab.` : "N/E", bedS, 8, <Bed className="w-3.5 h-3.5" />);
 
   // 7. Baños
   const bathR = req.banosMin ? Number(req.banosMin) : 0;
   const bathP = prop.bathrooms ? Number(prop.bathrooms) : 0;
-  const bathS: MatchStatus = !bathR ? "exact" : bathP === bathR ? "exact" : "missing";
+  const bathS: MatchStatus = !bathR ? "neutral" : bathP === bathR ? "exact" : "missing";
   add("Baños", bathR ? `${bathR} baños (Exacto)` : "N/E", bathP ? `${bathP} baños` : "N/E", bathS, 5, <Bath className="w-3.5 h-3.5" />);
 
   // 8. Parqueaderos
   const garR = req.parqueaderosMin ? Number(req.parqueaderosMin) : 0;
   const garP = prop.garages ? Number(prop.garages) : 0;
-  const garS: MatchStatus = !garR ? "exact" : garP === garR ? "exact" : "missing";
+  const garS: MatchStatus = !garR ? "neutral" : garP === garR ? "exact" : "missing";
   add("Parqueaderos", garR ? `${garR} garajes (Exacto)` : "N/E", garP ? `${garP} garajes` : "N/E", garS, 5, <Car className="w-3.5 h-3.5" />);
 
   // 9. Estrato
   const estratoArr: number[] = Array.isArray(req.estratoDeseado) ? req.estratoDeseado : [];
   const estratoP = prop.stratum;
-  const estS: MatchStatus = !estratoArr.length || !estratoP ? "exact" : estratoArr.includes(estratoP) ? "exact" : "warn";
+  const estS: MatchStatus = !estratoArr.length || !estratoP ? "neutral" : estratoArr.includes(estratoP) ? "exact" : "warn";
   add("Estrato", estratoArr.length ? `Estrato(s) ${estratoArr.join(", ")}` : "Cualquiera", estratoP ? `Estrato ${estratoP}` : "N/E", estS, 7, <Shield className="w-3.5 h-3.5" />);
 
   // Penalización por falta de datos críticos para evitar puntuaciones falsas del 100%
@@ -496,14 +499,18 @@ export default function AdminMatches() {
                           {rows.map((row, rIdx) => {
                             const isExact = row.status === "exact" || row.status === "ok";
                             const isWarn = row.status === "warn";
+                            const isNeutral = row.status === "neutral";
                             
                             const badgeBg = isExact 
                               ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" 
                               : isWarn 
                                 ? "bg-amber-500/10 text-amber-400 border border-amber-500/20" 
-                                : "bg-red-500/10 text-red-400 border border-red-500/20";
+                                : isNeutral
+                                  ? "bg-zinc-800 text-zinc-400 border border-zinc-700/50"
+                                  : "bg-red-500/10 text-red-400 border border-red-500/20";
                             
-                            const badgeText = isExact ? "Coincide" : isWarn ? "Aproximado" : "Diferente";
+                            const badgeText = isExact ? "Coincide" : isWarn ? "Aproximado" : isNeutral ? "No Restringido" : "Diferente";
+
 
                             return (
                               <tr key={rIdx} className="border-b border-white/5 hover:bg-white/[0.01] transition-colors">
