@@ -1154,8 +1154,9 @@ export class JaniaMatchBot {
       const redirectMsg = 
         `Hola ${realName} 👋🏻. Si deseas que JanIA Match te responda de inmediato, por favor postea tu pregunta directamente en el chat del grupo oficial de VECY. 🏠\n\n` +
         `Si deseas chatear en privado de forma interactiva, por favor escribe a mi otra yo, **JanIA v3.5** 📲, a su número oficial directo: +57 3185462265 o haz clic aquí: https://wa.me/573185462265.\n\n` +
-        `⚠️ **Nota importante**: Recuerda que aunque somos inteligencias conversacionales preparadas para darte datos y análisis en tiempo real, **no tenemos la habilidad de generar informes con gráficas ni elaborar documentos en archivos PDF a través del chat**.\n\n` +
-        `Si requieres un análisis de mercado formal con gráficas y PDF detallado, este servicio lo realiza nuestro personal humano experto. Comunícate llamando al **+57 3166569719** para solicitar la cotización y elaboración del informe por nuestro equipo. 📈💼`;
+        `⚠️ **Nota importante**: Recuerda que somos inteligencias netamente conversacionales. Sí podemos resolver tus inquietudes, redactar descripciones comerciales, hacer análisis y estructurar textos directamente aquí en el chat. Sin embargo, **no tenemos la habilidad de crear imágenes, videos, informes con gráficas, ni de elaborar o enviar archivos PDF a través del chat**.\n\n` +
+        `Si requieres un análisis de mercado formal con gráficas y PDF detallado, o piezas visuales/videos profesionales, este servicio lo realiza nuestro personal humano experto. Comunícate llamando al **+57 3166569719** para solicitar la cotización e informe de nuestro equipo. 📈💼`;
+
 
       await this.queuedSend(senderId, redirectMsg, { quoted: msg });
       await this.logToDb(senderId, 'janIA', redirectMsg);
