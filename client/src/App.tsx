@@ -24,7 +24,6 @@ import RedColaboracion from "./pages/RedColaboracion";
 import RequirementsMarketplace from "./pages/RequirementsMarketplace";
 import NuestraHistoria from "./pages/NuestraHistoria";
 import JanIAConsole from "./pages/JanIAConsole";
-import MatchesReport from "./pages/MatchesReport";
 import ScrollToTop from "./components/ScrollToTop";
 import JanIAFloatingButton from "./components/JanIAFloatingButton";
 
@@ -49,7 +48,6 @@ function Router() {
       <Route path={"/requerimientos"} component={RequirementsMarketplace} />
       <Route path={"/historia"} component={NuestraHistoria} />
       <Route path={"/jania"} component={JanIAConsole} />
-      <Route path={"/coincidencias"} component={MatchesReport} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
