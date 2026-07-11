@@ -5236,6 +5236,9 @@ var init_whatsapp_match = __esm({
       redirectCooldowns = /* @__PURE__ */ new Map();
       processingLocks = /* @__PURE__ */ new Map();
       lastGroupMessageTime = /* @__PURE__ */ new Map();
+      botSentMessageIds = /* @__PURE__ */ new Set();
+      lastHumanIntervention = /* @__PURE__ */ new Map();
+      dmMessageBuffers = /* @__PURE__ */ new Map();
       targetGroupId = "120363260108880069@g.us";
       cooldownMap = /* @__PURE__ */ new Map();
       cooldownFile = path4.join(process.cwd(), ".cooldown_map.json");
@@ -5408,153 +5411,37 @@ var init_whatsapp_match = __esm({
                 const ADMIN_PHONE = process.env.ADMIN_PHONE || "573166569719";
                 const isAdmin = rawPhone.includes(ADMIN_PHONE) || rawPhone === ADMIN_PHONE || rawPhone === "573166569719" || rawPhone.includes("573185462265");
                 const userName = msg.pushName || `Asesor +${rawPhone}`;
-                let body = "";
-                if (msg.message.conversation) body = msg.message.conversation;
-                else if (msg.message.extendedTextMessage) body = msg.message.extendedTextMessage.text || "";
-                else if (msg.message.imageMessage) body = msg.message.imageMessage.caption || "";
-                else if (msg.message.documentMessage) body = msg.message.documentMessage.caption || "";
-                else if (msg.message.videoMessage) body = msg.message.videoMessage.caption || "";
-                if (!isAdmin) {
-                  const textLower = body.toLowerCase();
-                  const isPossibleListing = body.length > 120 || body.split("\n").length > 2 || !!msg.message.imageMessage || !!msg.message.documentMessage || textLower.includes("http") || textLower.includes("www") || textLower.includes("ofrezco") || textLower.includes("busco") || textLower.includes("vendo") || textLower.includes("arriendo") || textLower.includes("compro") || textLower.includes("necesito");
-                  if (isPossibleListing) {
-                    console.log(`[JANIA-MATCH] Detectada publicaci\xF3n comercial en DM privado de ${senderId}. Procesando...`);
-                    let imageBuffer;
-                    let pdfBuffer;
-                    let pdfMimeType;
-                    if (msg.message?.imageMessage) {
-                      try {
-                        const media = await downloadMediaMessage(msg, "buffer", {});
-                        imageBuffer = media.toString("base64");
-                      } catch (e) {
-                      }
-                    }
-                    if (msg.message?.documentMessage) {
-                      try {
-                        const media = await downloadMediaMessage(msg, "buffer", {});
-                        pdfBuffer = media.toString("base64");
-                        pdfMimeType = msg.message.documentMessage.mimetype || "application/pdf";
-                      } catch (e) {
-                      }
-                    }
-                    await this.logToDb(senderId, "user", body);
-                    const { processWhatsAppMessage: processWhatsAppMessage2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
-                    const result = await processWhatsAppMessage2(
-                      body,
-                      senderId,
-                      userName,
-                      !!imageBuffer || !!pdfBuffer,
-                      [],
-                      void 0,
-                      imageBuffer,
-                      false,
-                      // isGroup = false
-                      pdfBuffer,
-                      pdfMimeType
-                    );
-                    if (result) {
-                      const emoji = this.getReactionEmoji(result);
-                      if (emoji) {
-                        try {
-                          await this.sock.sendMessage(chatId, { react: { text: emoji, key: msg.key } });
-                        } catch (e) {
-                        }
-                      }
-                      const { isOutsideWorkingHours: isOutsideWorkingHours3 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
-                      const isOffHours2 = isOutsideWorkingHours3();
-                      if (isOffHours2 && result.shouldSendDM && result.dmResponse && result.dmResponse.trim() !== "") {
-                        await this.queuedSend(senderId, result.dmResponse);
-                      }
-                    }
-                    return;
+                if (msg.key.fromMe) {
+                  const msgId = msg.key.id || "";
+                  if (!this.botSentMessageIds.has(msgId)) {
+                    console.log(`[JANIA-MATCH] Intervenci\xF3n humana detectada en DM ${senderId}. Silenciando bot.`);
+                    this.lastHumanIntervention.set(senderId, Date.now());
                   }
-                  const db = await getDb();
-                  let isNewUser = false;
-                  if (db) {
-                    try {
-                      const existingMessages = await db.select({ id: messages.id }).from(messages).innerJoin(conversations, eq10(messages.conversationId, conversations.id)).where(eq10(conversations.sessionId, senderId)).limit(1);
-                      isNewUser = existingMessages.length === 0;
-                    } catch (dbErr) {
-                      console.warn("[JANIA-MATCH] Error al verificar si el usuario es nuevo en DM:", dbErr);
-                    }
-                  }
-                  if (isNewUser) {
-                    console.log(`[JANIA-MATCH] Nuevo usuario detectado: ${senderId}. Enviando bienvenida.`);
-                    const { isOutsideWorkingHours: isOutsideWorkingHours3 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
-                    const isOffHours2 = isOutsideWorkingHours3();
-                    if (!isOffHours2) {
-                      console.log(`[JANIA-MATCH] Nuevo usuario en horario laboral. Silencio total.`);
-                      return;
-                    }
-                    const pushName = msg.pushName || "";
-                    const saludo = getGreetingByTime2();
-                    const firstName = extractFirstName2(pushName);
-                    const greetingName = firstName ? ` ${firstName}` : "";
-                    const welcomeText = `\xA1${saludo}${greetingName}! \u{1F64B}\u{1F3FB}\u200D\u2640\uFE0F Soy JanIA tu asistente IA \u{1F916}\u2728. Te doy la bienvenida a *VECY Bienes Ra\xEDces* nuestro br\xF3ker virtual inmobiliario \u{1F3E0}\u2728. Gracias por contactarte con nosotros. En estos momentos nuestros agentes humanos no pueden responder tu mensaje, si gustas, puedes dejar tu mensaje aqu\xED para que uno de nuestros agentes te responda ma\xF1ana o si quieres puedes continuar la conversaci\xF3n conmigo y contarme de qu\xE9 se trata o c\xF3mo puedo ayudarte. \xA1Ser\xE1 un gusto poder atenderte${greetingName}! \u{1F91D}\u{1F680}`;
-                    let media = null;
-                    try {
-                      const { textToSpeechMedia: textToSpeechMedia2 } = await Promise.resolve().then(() => (init_whatsapp(), whatsapp_exports));
-                      media = await textToSpeechMedia2(welcomeText);
-                    } catch (ttsErr) {
-                      console.warn("[JANIA-MATCH] Error al generar TTS para bienvenida:", ttsErr.message || ttsErr);
-                    }
-                    if (media) {
-                      await this.queuedSend(senderId, media, { sendAudioAsVoice: true });
-                    } else {
-                      await this.queuedSend(senderId, welcomeText);
-                    }
-                    await this.logToDb(senderId, "user", body);
-                    await this.logToDb(senderId, "janIA", welcomeText);
-                    await this.handlePrivateDmConversation(msg, senderId, rawPhone, body);
-                    return;
-                  }
-                  const { isOutsideWorkingHours: isOutsideWorkingHours2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
-                  const isOffHours = isOutsideWorkingHours2();
-                  if (isOffHours) {
-                    const nowTime = Date.now();
-                    const lastOffHoursGreet = this.redirectCooldowns.get(senderId + "_offhours") || 0;
-                    const ONCE_A_DAY = 24 * 60 * 60 * 1e3;
-                    if (nowTime - lastOffHoursGreet > ONCE_A_DAY) {
-                      this.redirectCooldowns.set(senderId + "_offhours", nowTime);
-                      const pushName = msg.pushName || "";
-                      const saludo = getGreetingByTime2();
-                      const firstName = extractFirstName2(pushName);
-                      const greetingName = firstName ? ` ${firstName}` : "";
-                      const outOfOfficeText = `\xA1${saludo}${greetingName}! \u{1F64B}\u{1F3FB}\u200D\u2640\uFE0F Qu\xE9 bueno saludarte de nuevo. En este momento nuestros agentes humanos se encuentran descansando \u{1F319}\u2728. Si gustas, puedes dejar tu mensaje aqu\xED para que te respondamos ma\xF1ana a primera hora, o si prefieres, puedes continuar la conversaci\xF3n conmigo y contarme en qu\xE9 puedo ayudarte hoy. \xA1Siempre es un gusto atenderte! \u{1F91D}\u{1F680}`;
-                      let media = null;
-                      try {
-                        const { textToSpeechMedia: textToSpeechMedia2 } = await Promise.resolve().then(() => (init_whatsapp(), whatsapp_exports));
-                        media = await textToSpeechMedia2(outOfOfficeText);
-                      } catch (ttsErr) {
-                        console.warn("[JANIA-MATCH] Error al generar TTS para fuera de horario:", ttsErr.message || ttsErr);
-                      }
-                      if (media) {
-                        await this.queuedSend(senderId, media, { sendAudioAsVoice: true });
-                      } else {
-                        await this.queuedSend(senderId, outOfOfficeText);
-                      }
-                      await this.logToDb(senderId, "user", body);
-                      await this.logToDb(senderId, "janIA", outOfOfficeText);
-                    }
-                    await this.logToDb(senderId, "user", body);
-                    await this.handlePrivateDmConversation(msg, senderId, rawPhone, body);
-                    return;
-                  } else {
-                    console.log(`[JANIA-MATCH] DM de ${rawPhone} recibido en horario laboral. Silenciado.`);
-                    await this.logToDb(senderId, "user", body);
-                    return;
-                  }
-                }
-                console.log(`[JANIA-MATCH] [Admin/Test] Atendiendo mensaje de admin/test ${senderId}...`);
-                const matchConfirmationRegex = /^\s*(sí|si|no)\s+#m(\d+)\s*$/i;
-                const matchConf = body.match(matchConfirmationRegex);
-                if (matchConf) {
-                  const decision = matchConf[1].toLowerCase();
-                  const matchId = parseInt(matchConf[2], 10);
-                  await this.processMatchConfirmation(senderId, userName, matchId, decision);
                   return;
                 }
-                await this.handleDirectGroupQuestion(msg, chatId, senderId, body);
+                const lastIntervention = this.lastHumanIntervention.get(senderId) || 0;
+                const cooldownPeriod = 30 * 60 * 1e3;
+                if (Date.now() - lastIntervention < cooldownPeriod) {
+                  console.log(`[JANIA-MATCH] Bot silenciado en DM ${senderId} debido a intervenci\xF3n humana reciente (${Math.round((Date.now() - lastIntervention) / 1e3)}s).`);
+                  return;
+                }
+                let buffer = this.dmMessageBuffers.get(senderId);
+                if (!buffer) {
+                  buffer = { messages: [], timer: null };
+                  this.dmMessageBuffers.set(senderId, buffer);
+                }
+                buffer.messages.push(msg);
+                if (buffer.timer) {
+                  clearTimeout(buffer.timer);
+                }
+                buffer.timer = setTimeout(async () => {
+                  this.dmMessageBuffers.delete(senderId);
+                  try {
+                    await this.processBufferedDmMessages(senderId, userName, rawPhone, buffer.messages, isAdmin);
+                  } catch (err) {
+                    console.error("[JANIA-MATCH] Error al procesar mensajes de DM acumulados:", err);
+                  }
+                }, 2500);
                 return;
               }
             } catch (err) {
@@ -5562,6 +5449,170 @@ var init_whatsapp_match = __esm({
             }
           }
         });
+      }
+      async processBufferedDmMessages(senderId, userName, rawPhone, messages2, isAdmin) {
+        let combinedBody = "";
+        let mainMsg = messages2[messages2.length - 1];
+        let imageBuffer;
+        let pdfBuffer;
+        let pdfMimeType;
+        for (const msg of messages2) {
+          let body2 = "";
+          if (msg.message?.conversation) body2 = msg.message.conversation;
+          else if (msg.message?.extendedTextMessage) body2 = msg.message.extendedTextMessage.text || "";
+          else if (msg.message?.imageMessage) body2 = msg.message.imageMessage.caption || "";
+          else if (msg.message?.documentMessage) body2 = msg.message.documentMessage.caption || "";
+          else if (msg.message?.videoMessage) body2 = msg.message.videoMessage.caption || "";
+          if (body2.trim()) {
+            combinedBody += (combinedBody ? "\n" : "") + body2.trim();
+          }
+          if (msg.message?.imageMessage && !imageBuffer) {
+            try {
+              const media = await downloadMediaMessage(msg, "buffer", {});
+              imageBuffer = media.toString("base64");
+              mainMsg = msg;
+            } catch (e) {
+            }
+          }
+          if (msg.message?.documentMessage && !pdfBuffer) {
+            try {
+              const media = await downloadMediaMessage(msg, "buffer", {});
+              pdfBuffer = media.toString("base64");
+              pdfMimeType = msg.message.documentMessage.mimetype || "application/pdf";
+              mainMsg = msg;
+            } catch (e) {
+            }
+          }
+        }
+        if (!combinedBody.trim() && !imageBuffer && !pdfBuffer) {
+          return;
+        }
+        const chatId = senderId;
+        const body = combinedBody;
+        if (!isAdmin) {
+          const textLower = body.toLowerCase();
+          const isPossibleListing = body.length > 120 || body.split("\n").length > 2 || !!imageBuffer || !!pdfBuffer || textLower.includes("http") || textLower.includes("www") || textLower.includes("ofrezco") || textLower.includes("busco") || textLower.includes("vendo") || textLower.includes("arriendo") || textLower.includes("compro") || textLower.includes("necesito");
+          if (isPossibleListing) {
+            console.log(`[JANIA-MATCH] Detectada publicaci\xF3n comercial agrupada en DM privado de ${senderId}. Procesando...`);
+            await this.logToDb(senderId, "user", body);
+            const { processWhatsAppMessage: processWhatsAppMessage2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+            const result = await processWhatsAppMessage2(
+              body,
+              senderId,
+              userName,
+              !!imageBuffer || !!pdfBuffer,
+              [],
+              void 0,
+              imageBuffer,
+              false,
+              // isGroup = false
+              pdfBuffer,
+              pdfMimeType
+            );
+            if (result) {
+              const emoji = this.getReactionEmoji(result);
+              if (emoji) {
+                try {
+                  await this.sock.sendMessage(chatId, { react: { text: emoji, key: mainMsg.key } });
+                } catch (e) {
+                }
+              }
+              const { isOutsideWorkingHours: isOutsideWorkingHours3 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+              const isOffHours2 = isOutsideWorkingHours3();
+              if (isOffHours2 && result.shouldSendDM && result.dmResponse && result.dmResponse.trim() !== "") {
+                await this.queuedSend(senderId, result.dmResponse);
+              }
+            }
+            return;
+          }
+          const db = await getDb();
+          let isNewUser = false;
+          if (db) {
+            try {
+              const existingMessages = await db.select({ id: messages.id }).from(messages).innerJoin(conversations, eq10(messages.conversationId, conversations.id)).where(eq10(conversations.sessionId, senderId)).limit(1);
+              isNewUser = existingMessages.length === 0;
+            } catch (dbErr) {
+              console.warn("[JANIA-MATCH] Error al verificar si el usuario es nuevo en DM:", dbErr);
+            }
+          }
+          if (isNewUser) {
+            console.log(`[JANIA-MATCH] Nuevo usuario detectado: ${senderId}. Enviando bienvenida.`);
+            const { isOutsideWorkingHours: isOutsideWorkingHours3 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+            const isOffHours2 = isOutsideWorkingHours3();
+            if (!isOffHours2) {
+              console.log(`[JANIA-MATCH] Nuevo usuario en horario laboral. Silencio total.`);
+              return;
+            }
+            const pushName = mainMsg.pushName || "";
+            const saludo = getGreetingByTime2();
+            const firstName = extractFirstName2(pushName);
+            const greetingName = firstName ? ` ${firstName}` : "";
+            const welcomeText = `\xA1${saludo}${greetingName}! \u{1F64B}\u{1F3FB}\u200D\u2640\uFE0F Soy JanIA tu asistente IA \u{1F916}\u2728. Te doy la bienvenida a *VECY Bienes Ra\xEDces* nuestro br\xF3ker virtual inmobiliario \u{1F3E0}\u2728. Gracias por contactarte con nosotros. En estos momentos nuestros agentes humanos no pueden responder tu mensaje, si gustas, puedes dejar tu mensaje aqu\xED para que uno de nuestros agentes te responda ma\xF1ana o si quieres puedes continuar la conversaci\xF3n conmigo y contarme de qu\xE9 se trata o c\xF3mo puedo ayudarte. \xA1Ser\xE1 un gusto poder atenderte${greetingName}! \u{1F91D}\u{1F680}`;
+            let media = null;
+            try {
+              const { textToSpeechMedia: textToSpeechMedia2 } = await Promise.resolve().then(() => (init_whatsapp(), whatsapp_exports));
+              media = await textToSpeechMedia2(welcomeText);
+            } catch (ttsErr) {
+              console.warn("[JANIA-MATCH] Error al generar TTS para bienvenida:", ttsErr.message || ttsErr);
+            }
+            if (media) {
+              await this.queuedSend(senderId, media, { sendAudioAsVoice: true });
+            } else {
+              await this.queuedSend(senderId, welcomeText);
+            }
+            await this.logToDb(senderId, "user", body);
+            await this.logToDb(senderId, "janIA", welcomeText);
+            await this.handlePrivateDmConversation(mainMsg, senderId, rawPhone, body);
+            return;
+          }
+          const { isOutsideWorkingHours: isOutsideWorkingHours2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+          const isOffHours = isOutsideWorkingHours2();
+          if (isOffHours) {
+            const nowTime = Date.now();
+            const lastOffHoursGreet = this.redirectCooldowns.get(senderId + "_offhours") || 0;
+            const ONCE_A_DAY = 24 * 60 * 60 * 1e3;
+            if (nowTime - lastOffHoursGreet > ONCE_A_DAY) {
+              this.redirectCooldowns.set(senderId + "_offhours", nowTime);
+              const pushName = mainMsg.pushName || "";
+              const saludo = getGreetingByTime2();
+              const firstName = extractFirstName2(pushName);
+              const greetingName = firstName ? ` ${firstName}` : "";
+              const outOfOfficeText = `\xA1${saludo}${greetingName}! \u{1F64B}\u{1F3FB}\u200D\u2640\uFE0F Qu\xE9 bueno saludarte de nuevo. En este momento nuestros agentes humanos se encuentran descansando \u{1F319}\u2728. Si gustas, puedes dejar tu mensaje aqu\xED para que te respondamos ma\xF1ana a primera hora, o si prefieres, puedes continuar la conversaci\xF3n conmigo y contarme en qu\xE9 puedo ayudarte hoy. \xA1Siempre es un gusto atenderte! \u{1F91D}\u{1F680}`;
+              let media = null;
+              try {
+                const { textToSpeechMedia: textToSpeechMedia2 } = await Promise.resolve().then(() => (init_whatsapp(), whatsapp_exports));
+                media = await textToSpeechMedia2(outOfOfficeText);
+              } catch (ttsErr) {
+                console.warn("[JANIA-MATCH] Error al generar TTS para fuera de horario:", ttsErr.message || ttsErr);
+              }
+              if (media) {
+                await this.queuedSend(senderId, media, { sendAudioAsVoice: true });
+              } else {
+                await this.queuedSend(senderId, outOfOfficeText);
+              }
+              await this.logToDb(senderId, "user", body);
+              await this.logToDb(senderId, "janIA", outOfOfficeText);
+            }
+            await this.logToDb(senderId, "user", body);
+            await this.handlePrivateDmConversation(mainMsg, senderId, rawPhone, body);
+            return;
+          } else {
+            console.log(`[JANIA-MATCH] DM de ${rawPhone} recibido en horario laboral. Silenciado.`);
+            await this.logToDb(senderId, "user", body);
+            return;
+          }
+        }
+        console.log(`[JANIA-MATCH] [Admin/Test] Atendiendo mensaje de admin/test ${senderId}...`);
+        const matchConfirmationRegex = /^\s*(sí|si|no)\s+#m(\d+)\s*$/i;
+        const matchConfirm = body.match(matchConfirmationRegex);
+        if (matchConfirm) {
+          const decision = matchConfirm[1].toLowerCase();
+          const matchId = parseInt(matchConfirm[2], 10);
+          await this.processMatchConfirmation(senderId, userName, matchId, decision);
+          return;
+        }
+        await this.logToDb(senderId, "user", body);
+        await this.handlePrivateDmConversation(mainMsg, senderId, rawPhone, body);
       }
       // --- REDIRECCIÓN DE CHATS PRIVADOS ---
       async handlePrivateDmRedirect(chatId, senderId) {
@@ -6224,7 +6275,10 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
             if (options.quoted) {
               sendOptions.quoted = options.quoted;
             }
-            await this.sock.sendMessage(targetJid, messagePayload, sendOptions);
+            const sent = await this.sock.sendMessage(targetJid, messagePayload, sendOptions);
+            if (sent && sent.key && sent.key.id) {
+              this.botSentMessageIds.add(sent.key.id);
+            }
             await delay(1e3);
           } catch (err) {
             console.error("[JANIA-MATCH] Error en despacho de mensaje Baileys:", err.message || err);
