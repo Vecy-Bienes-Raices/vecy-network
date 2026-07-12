@@ -7,7 +7,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 import { propertyMatches, requirements, properties } from '../../drizzle/schema';
 import { gte, and, eq, sql } from 'drizzle-orm';
-import { whatsappBot } from './whatsapp';
+import { janiaMatchBot as whatsappBot } from './whatsapp-match';
 import { runNightlyRematch } from '../jobs/nightlyRematch';
 
 /**
@@ -113,11 +113,7 @@ async function sendVideoPromo(groupId: string, groupName: string) {
     // Obtener todos los participantes del grupo para el @todos
     let mentions: string[] = [];
     try {
-      const chat = await (whatsappBot as any).client.getChatById(groupId);
-      const participants = (chat as any).participants;
-      if (Array.isArray(participants)) {
-        mentions = participants.map((p: any) => p.id._serialized || p.id);
-      }
+      mentions = await whatsappBot.getGroupParticipants(groupId);
     } catch (mentionErr) {
       console.warn(`[CRON-SERVICE] No se pudieron obtener participantes de ${groupName}:`, mentionErr);
     }

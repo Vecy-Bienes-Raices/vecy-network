@@ -6,7 +6,7 @@ import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
-import { whatsappBot, textToSpeechMedia } from "./whatsapp";
+import { whatsappBot as oldWhatsappBot, textToSpeechMedia } from "./whatsapp";
 import { initCronScheduler } from "./cronService";
 import { processWhatsAppMessage } from "./janIA";
 import { handleIncomingWebhook } from "./whatsapp-cloud";
@@ -15,7 +15,7 @@ import fs from "fs";
 import path from "path";
 import { transcribeAudioBuffer } from "./voiceTranscription";
 import { invokeLLM } from "./llm";
-import { janiaMatchBot } from "./whatsapp-match";
+import { janiaMatchBot as whatsappBot, janiaMatchBot } from "./whatsapp-match";
 
 process.on("uncaughtException", (error) => {
   console.error("[SYSTEM-CRITICAL] Uncaught Exception detectada:", error);
@@ -66,10 +66,10 @@ async function startServer() {
 
   app.get("/api/list-chats", async (req, res) => {
     try {
-      if (!whatsappBot.isReady) {
+      if (!oldWhatsappBot.isReady) {
         return res.status(503).send("El bot de WhatsApp no está listo todavía. Intenta en unos segundos.");
       }
-      const client = (whatsappBot as any).client;
+      const client = (oldWhatsappBot as any).client;
       if (!client) {
         return res.status(400).send("Client not available");
       }
@@ -85,10 +85,10 @@ async function startServer() {
 
   app.get("/api/inspect-groups", async (req, res) => {
     try {
-      if (!whatsappBot.isReady) {
+      if (!oldWhatsappBot.isReady) {
         return res.status(503).send("El bot de WhatsApp no está listo todavía.");
       }
-      const client = (whatsappBot as any).client;
+      const client = (oldWhatsappBot as any).client;
       if (!client) {
         return res.status(400).send("Client not available");
       }
@@ -113,11 +113,11 @@ async function startServer() {
 
   app.get("/api/screenshot-chat", async (req, res) => {
     try {
-      if (!whatsappBot.isReady) {
+      if (!oldWhatsappBot.isReady) {
         return res.status(503).send("El bot de WhatsApp no está listo todavía. Intenta en unos segundos.");
       }
-      const client = (whatsappBot as any).client;
-      const targetGroupId = (whatsappBot as any).targetGroupId;
+      const client = (oldWhatsappBot as any).client;
+      const targetGroupId = (oldWhatsappBot as any).targetGroupId;
 
       if (!client || !client.pupPage) {
         return res.status(503).send("El navegador de WhatsApp aún no está listo. Intenta en unos segundos.");
@@ -800,7 +800,7 @@ const gracefulShutdown = async (signal: string) => {
   console.log(`\n[SYSTEM] Cerrando recursos de forma ordenada por señal: ${signal}`);
   
   try {
-    const client = (whatsappBot as any).client;
+    const client = (oldWhatsappBot as any).client;
     if (client) {
       console.log("[SYSTEM] Destruyendo sesión de WhatsApp y cerrando Puppeteer...");
       await client.destroy();

@@ -58,9 +58,9 @@ export class JaniaMatchBot {
   private lastHumanIntervention: Map<string, number> = new Map();
   private dmMessageBuffers: Map<string, { messages: any[]; timer: NodeJS.Timeout | null }> = new Map();
 
-  private targetGroupId: string = '120363260108880069@g.us';
-  private buzonGroupId: string = '120363417740040773@g.us';
-  private circuloGroupId: string = '120363403507276533@g.us';
+  public targetGroupId: string = '120363260108880069@g.us';
+  public buzonGroupId: string = '120363417740040773@g.us';
+  public circuloGroupId: string = '120363403507276533@g.us';
   private cooldownMap: Map<string, any> = new Map();
   private cooldownFile: string = path.join(process.cwd(), '.cooldown_map.json');
 
@@ -1350,6 +1350,13 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
             messagePayload.mentions = options.mentions;
           }
         } 
+        // Si ya es un payload directo de Baileys
+        else if (content && (content.text || content.audio || content.image || content.video || content.document)) {
+          messagePayload = content;
+          if (options.mentions) {
+            messagePayload.mentions = options.mentions;
+          }
+        }
         // Si es un objeto de tipo MessageMedia (de whatsapp-web.js)
         else if (content && content.data && content.mimetype) {
           const buffer = Buffer.from(content.data, 'base64');
@@ -1388,6 +1395,185 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
       }
     });
     return outgoingQueue;
+  }
+
+  public async sendToGroup(text: string, mediaPath?: string, mentions?: string[], groupId?: string) {
+    try {
+      const target = groupId || this.targetGroupId;
+      let targetJid = target;
+      if (targetJid.endsWith('@c.us')) {
+        targetJid = targetJid.replace('@c.us', '@s.whatsapp.net');
+      }
+
+      let messagePayload: any = {};
+      if (mediaPath) {
+        const fs = await import('fs');
+        const buffer = fs.readFileSync(mediaPath);
+        const path = await import('path');
+        const ext = path.extname(mediaPath).toLowerCase();
+        
+        if (ext === '.mp4') {
+          messagePayload = {
+            video: buffer,
+            caption: text,
+            mimetype: 'video/mp4'
+          };
+        } else if (ext === '.jpg' || ext === '.jpeg' || ext === '.png') {
+          messagePayload = {
+            image: buffer,
+            caption: text,
+            mimetype: ext === '.png' ? 'image/png' : 'image/jpeg'
+          };
+        } else {
+          messagePayload = {
+            document: buffer,
+            caption: text,
+            mimetype: 'application/octet-stream',
+            fileName: path.basename(mediaPath)
+          };
+        }
+      } else {
+        messagePayload = { text };
+      }
+
+      if (mentions && mentions.length > 0) {
+        messagePayload.mentions = mentions.map(m => m.endsWith('@s.whatsapp.net') ? m : m.replace('@c.us', '@s.whatsapp.net'));
+      }
+
+      await this.queuedSend(targetJid, messagePayload);
+      console.log(`[JANIA-MATCH] ✓ Mensaje enviado al grupo ${targetJid}.`);
+    } catch (e: any) {
+      console.error(`[JANIA-MATCH] Error enviando mensaje al grupo ${groupId || this.targetGroupId}:`, e.message || e);
+    }
+  }
+
+  public async sendVoiceToGroup(text: string, groupId?: string) {
+    try {
+      const target = groupId || this.targetGroupId;
+      let targetJid = target;
+      if (targetJid.endsWith('@c.us')) {
+        targetJid = targetJid.replace('@c.us', '@s.whatsapp.net');
+      }
+
+      const { cleanVoiceText } = await import('./whatsapp');
+      const cleaned = cleanVoiceText(text);
+      console.log(`[JANIA-MATCH] Generando nota de voz para enviar al grupo ${targetJid}...`);
+      
+      const { textToSpeechMedia } = await import('./whatsapp');
+      const voiceMedia = await textToSpeechMedia(cleaned);
+
+      if (voiceMedia && voiceMedia.data) {
+        const buffer = Buffer.from(voiceMedia.data, 'base64');
+        await this.queuedSend(targetJid, {
+          audio: buffer,
+          mimetype: voiceMedia.mimetype || 'audio/ogg; codecs=opus',
+          ptt: true
+        });
+        console.log(`[JANIA-MATCH] ✓ Nota de voz enviada al grupo ${targetJid}.`);
+      } else {
+        console.warn(`[JANIA-MATCH] TTS falló para el grupo ${targetJid}, enviando texto.`);
+        await this.queuedSend(targetJid, cleaned);
+      }
+    } catch (e: any) {
+      console.error('[JANIA-MATCH] Error enviando nota de voz al grupo:', e.message || e);
+    }
+  }
+
+  public async getGroupParticipants(groupId: string): Promise<string[]> {
+    try {
+      if (!this.sock) return [];
+      const metadata = await this.sock.groupMetadata(groupId);
+      return metadata.participants.map((p: any) => p.id);
+    } catch (err) {
+      console.warn(`[JANIA-MATCH] Error al obtener participantes del grupo ${groupId}:`, err);
+      return [];
+    }
+  }
+
+  public async sendManualCierreAudios() {
+    console.log("[JANIA-MATCH] Generando y enviando audios de cierre manuales (Solo por hoy)...");
+    const grupos = [
+      {
+        nombre: "VECY INMUEBLES NETWORK",
+        id: this.targetGroupId,
+        promptCierre: "Genera una nota de voz corta en español de despedida y cierre de jornada para el grupo de WhatsApp VECY INMUEBLES NETWORK. Agradece la actividad de hoy y despídete con calidez. Recuerda que no cobramos comisiones y que las ofertas y demandas cruzadas son el motor de la red."
+      },
+      {
+        nombre: "Buzón de Consultoría",
+        id: this.buzonGroupId,
+        promptCierre: "Genera una nota de voz corta en español de despedida y cierre de jornada para el grupo de WhatsApp Buzón de Consultoría. Agradece la atención a los casos jurídicos y de comisiones compartidas resueltos hoy, deseando un feliz descanso."
+      },
+      {
+        nombre: "Círculo Cero",
+        id: this.circuloGroupId,
+        promptCierre: "Genera una nota de voz corta en español de despedida y cierre de jornada para el grupo de WhatsApp Círculo Cero. Agradece el debate y las sugerencias de hoy sobre el futuro del sector."
+      }
+    ];
+
+    const { invokeLLM } = await import('./llm');
+
+    for (const grupo of grupos) {
+      try {
+        if (!grupo.id) continue;
+        console.log(`[JANIA-MATCH] Generando audio de cierre para el grupo ${grupo.nombre}...`);
+        
+        const response1 = await invokeLLM({
+          messages: [
+            { role: 'system', content: 'Eres JanIA, la asistente de voz e inteligencia artificial de la red colaborativa VECY Network. Te expresas de manera natural, humana, cálida y profesional.' },
+            { role: 'user', content: `${grupo.promptCierre}\n- IMPORTANTE: Debe sonar como un mensaje de voz natural de WhatsApp grabado de forma espontánea por una colega real. Empieza con naturalidad como: "Hola colegas", "Buenas tardes", etc. sin formalismos robóticos.\n- Máximo 350 caracteres.\n- CRÍTICO: Responde ÚNICAMENTE con las palabras habladas de la nota de voz. NO agregues preámbulos, comentarios ni envuelvas el texto en comillas, llaves o corchetes.` }
+          ]
+        });
+
+        const content1 = response1.choices[0]?.message?.content;
+        if (content1 && content1.trim() !== "") {
+          await this.sendVoiceToGroup(content1, grupo.id);
+        }
+      } catch (err: any) {
+        console.error(`❌ Error en sendManualCierreAudios para el grupo ${grupo.nombre}:`, err.message || err);
+      }
+    }
+  }
+
+  public pendingWelcomeJids: string[] = [];
+
+  public async sendAnuncioRetorno() {
+    const baseMsg = `🚀 *¡JANIA ESTÁ DE VUELTA Y MÁS AFILADA QUE NUNCA!* 🤖🏛️\n\n` +
+      `¡Hola de nuevo, colegas y aliados! 👋 Tras un breve ajuste técnico para fortalecer nuestra infraestructura y preparar el lanzamiento del nuevo portal web privado, estoy de vuelta en el canal para encontrar esos MATCH tan deseados.\n\n` +
+      `Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores más afilados que nunca para cuidar la calidad de la red y acelerar nuestros cierres:\n\n` +
+      `🧠 *¿Qué puedo hacer por ti en esta v2.0?*\n` +
+      `▸ *Ofertas Express (Links):* Comparte el enlace de tus inmuebles de cualquier portal o CRM, y extraeré la ficha técnica en segundos.\n` +
+      `▸ *Escáner de Flyers (OCR):* ¿Tienes fotos de inmuebles o requerimientos con texto? Súbelas al grupo y leeré la información dentro de la imagen.\n` +
+      `▸ *Permutas e Intercambios (Voz o Texto):* Escríbeme o envíame un audio detallando permutas complejas como:\n` +
+      `  * 🔄 *Mano a mano / Pelo a pelo* (intercambio directo de inmuebles de valor similar).\n` +
+      `  * 🏠➕💵 *Inmueble de menor valor* como parte de pago por uno de mayor valor.\n` +
+      `  * 🚗 *Vehículos* recibidos como parte de pago.\n` +
+      `  * 📈 *CDTs, divisas o activos alternativos* como complemento de negocio.\n` +
+      `  * 🏢 *Proyectos de construcción* o aportes de lote.\n` +
+      `▸ *Matching Inteligente:* Cruzo ofertas y demandas en tiempo real y les aviso en el acto cuando hay negocio viable.`;
+
+    const groups = [this.targetGroupId, this.buzonGroupId, this.circuloGroupId];
+    const imgPath = path.resolve('./client/public/jania_perfil.png');
+
+    for (const group of groups) {
+      try {
+        await this.sendToGroup(baseMsg, imgPath, [], group);
+      } catch (e: any) {
+        console.error(`Error enviando anuncio de retorno al grupo ${group}:`, e.message);
+      }
+    }
+  }
+
+  public async sendComunicadoMatch() {
+    try {
+      console.log(`[JANIA-MATCH] Enviando comunicado de notificaciones de match...`);
+      const { MSG_COMUNICADO_MATCH_NETWORK, MSG_COMUNICADO_MATCH_CIRCULO } = await import('./whatsapp');
+      await this.queuedSend(this.targetGroupId, MSG_COMUNICADO_MATCH_NETWORK);
+      await delay(3000);
+      await this.queuedSend(this.circuloGroupId, MSG_COMUNICADO_MATCH_CIRCULO);
+      console.log("[JANIA-MATCH] Comunicado de match enviado con éxito.");
+    } catch (err: any) {
+      console.error("[JANIA-MATCH] Error al enviar el comunicado de match:", err.message || err);
+    }
   }
 
   public async getPairingCode(phone: string): Promise<string> {
