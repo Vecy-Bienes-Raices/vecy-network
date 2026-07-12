@@ -1434,7 +1434,16 @@ export async function processWhatsAppMessage(
     }
 
     const firstName = extractFirstName(realName) || 'colega';
-    const greetingInstruction = `\n\n[SISTEMA - INSTRUCCIÓN DE SALUDO Y COMPORTAMIENTO]:
+    const bogotaTime = new Date().toLocaleString("es-CO", { timeZone: "America/Bogota", hour: "2-digit", minute: "2-digit", hour12: false });
+    const userGender = senderInfo.adj === "juiciosa" ? "Femenino" : (senderInfo.adj === "juicioso" ? "Masculino" : "No Especificado");
+
+    const greetingInstruction = `\n\n[SISTEMA - METADATOS DEL MENSAJE (VARIABLES CRÍTICAS)]:
+- {{hora}}: ${bogotaTime}
+- {{canal}}: ${isGroup ? "grupo" : "dm"}
+- {{genero}}: ${userGender}
+- {{es_nuevo_usuario}}: ${!alreadyGreeted ? "true" : "false"}
+
+[SISTEMA - INSTRUCCIÓN DE SALUDO Y COMPORTAMIENTO]:
 - Ya has saludado al usuario hoy: ${alreadyGreeted ? "SÍ" : "NO"}.
 - Tipo de conversación actual: ${isGroup ? "GRUPO DE WHATSAPP" : "CHAT PRIVADO / DM"}.
 - Primer nombre del usuario: "${firstName}".
