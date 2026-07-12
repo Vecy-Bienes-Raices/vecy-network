@@ -12,6 +12,8 @@ import { eq, and, sql, gte, desc, or, isNotNull } from "drizzle-orm";
 import { storagePut } from "../storage";
 import fs from "fs";
 import path from "path";
+import axios from "axios";
+
 
 export type JanIAResult = {
   classification: "INMUEBLE" | "REQUERIMIENTO" | "CONSULTA_GENERAL" | "RESPUESTA_A_PREGUNTA_IA" | "DATOS_INCOMPLETOS" | "VIOLACION_DE_NORMAS" | "ANALISIS_DE_MERCADO";
@@ -1271,6 +1273,30 @@ async function getTimeOfDayGreetingForUser(phone: string, realName: string, alre
 }
 
 /**
+ * Scrapea una URL utilizando la API de Jina Reader (r.jina.ai).
+ */
+export async function fetchJinaReader(url: string): Promise<string> {
+  try {
+    console.log(`[JinaReader] Scrapeando enlace: ${url}`);
+    const jinaUrl = `https://r.jina.ai/${encodeURIComponent(url)}`;
+    const response = await axios.get(jinaUrl, {
+      timeout: 8000,
+      headers: {
+        "Accept": "text/plain",
+        "X-Return-Format": "markdown"
+      }
+    });
+    if (response.status === 200 && response.data) {
+      return typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
+    }
+    return "";
+  } catch (error: any) {
+    console.warn(`[JinaReader] Falló el scrapeo de ${url}:`, error.message);
+    return "";
+  }
+}
+
+/**
  * Procesa un mensaje de WhatsApp con inteligencia multimodal y humanización avanzada.
  */
 export async function processWhatsAppMessage(
@@ -1315,6 +1341,23 @@ export async function processWhatsAppMessage(
     }
 
     let messageToProcess = text;
+    
+    // Extraer y procesar enlaces vía Jina Reader
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const urls = text.match(urlRegex);
+    let jinaExtractedText = "";
+    if (urls && urls.length > 0) {
+      for (const url of urls) {
+        const content = await fetchJinaReader(url);
+        if (content) {
+          jinaExtractedText += `\n\n[CONTENIDO DE ENLACE WEB EXTRAÍDO DE ${url}]:\n${content.substring(0, 15000)}\n[FIN CONTENIDO ENLACE]\n`;
+        }
+      }
+    }
+    if (jinaExtractedText) {
+      messageToProcess += jinaExtractedText;
+    }
+
     let isFromAudio = false;
 
     // Intercepción rápida de mensajes OFF-TOPIC para ahorrar tokens de Gemini

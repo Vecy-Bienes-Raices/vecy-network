@@ -170,377 +170,112 @@ export function matchesGeography(
 }
 
 export function calcularScoreMatch(requirement: any, property: any): number {
-  // 0. Si el requerimiento está vacío (sin presupuesto, sin metraje y sin zona parsed), se descarta de inmediato
-  const reqBudget = parseFloat(requirement.presupuestoMax || "0");
-  const reqArea = parseFloat(requirement.areaMin || "0");
-  const reqZoneText = requirement.zonaDeseada || requirement.addressNeighborhood || "";
-  if (reqBudget <= 0 && reqArea <= 0 && !reqZoneText) {
-    return 0; // Evita generar falsos matches masivos por datos estructurados vacíos en la DB
-  }
+  // 1. REGLAS DE FILTRADO ESTRICTO (HARD FILTERS - 0% MATCH SI NO CUMPLEN)
 
-  // 1. Tipo de inmueble debe ser idéntico
-  const reqType = requirement.tipoInmuebleDeseado || requirement.propertyType;
-  const propType = property.propertyType;
-  if (reqType && propType && reqType.toLowerCase() !== propType.toLowerCase()) {
+  // A. transactionType (Venta o Arriendo)
+  const reqBiz = (requirement.tipoNegocioDeseado || requirement.transactionType || "").toLowerCase();
+  const propBiz = (property.transactionType || "").toLowerCase();
+  if (!reqBiz || !propBiz || reqBiz !== propBiz) {
     return 0;
   }
 
-  // Regla estricta: Apartamento vs Apartaestudio vs Loft no coinciden
-  const reqRawText = (requirement.rawText || requirement.name || "").toLowerCase();
-  const propRawText = (property.rawText || property.name || "").toLowerCase();
+  // B. city (Ciudad)
+  const reqCity = normalizarTextoGeografico(requirement.ciudadDeseada || requirement.city || "");
+  const propCity = normalizarTextoGeografico(property.city || property.addressCity || "");
+  if (!reqCity || !propCity || reqCity !== propCity) {
+    return 0;
+  }
+
+  // Parse prices, budgets, areas and layout numbers
+  const price = parseFloat(String(property.price || "0"));
+  const budgetMin = parseFloat(String(requirement.presupuestoMin || "0"));
+  const budgetMax = parseFloat(String(requirement.presupuestoMax || "0"));
   
-  const reqIsStudio = reqRawText.includes("apartaestudio") || reqRawText.includes("aparta estudio");
-  const propIsStudio = propRawText.includes("apartaestudio") || propRawText.includes("aparta estudio");
+  const reqZone = normalizarTextoGeografico(requirement.zonaDeseada || requirement.addressNeighborhood || "");
+  const propZone = normalizarTextoGeografico(property.zone || property.addressNeighborhood || "");
+
+  const reqLoc = normalizarTextoGeografico(requirement.addressLocality || "");
+  const propLoc = normalizarTextoGeografico(property.addressLocality || "");
+
+  const reqType = (requirement.tipoInmuebleDeseado || requirement.propertyType || "").toLowerCase();
+  const propType = (property.propertyType || "").toLowerCase();
+
+  const pBedrooms = property.bedrooms !== null && property.bedrooms !== undefined ? Number(property.bedrooms) : 0;
+  const reqBedrooms = requirement.habitacionesMin !== null && requirement.habitacionesMin !== undefined ? Number(requirement.habitacionesMin) : 0;
+
+  const pBathrooms = property.bathrooms !== null && property.bathrooms !== undefined ? Number(property.bathrooms) : 0;
+  const reqBathrooms = requirement.banosMin !== null && requirement.banosMin !== undefined ? Number(requirement.banosMin) : 0;
+
+  const pGarages = property.garages !== null && property.garages !== undefined ? Number(property.garages) : 0;
+  const reqGarages = requirement.parqueaderosMin !== null && requirement.parqueaderosMin !== undefined ? Number(requirement.parqueaderosMin) : 0;
+
+  // Helpers for exact match checks
+  const samePropertyType = reqType === propType;
+  const sameZone = reqZone && propZone && (reqZone === propZone || reqZone.includes(propZone) || propZone.includes(reqZone));
   
-  const reqIsLoft = reqRawText.includes("loft");
-  const propIsLoft = propRawText.includes("loft");
+  // Price matching checks
+  const priceInBudget = (budgetMax > 0 ? price <= budgetMax : true) && (budgetMin > 0 ? price >= budgetMin : true);
+  const priceWithin5PercentOver = budgetMax > 0 ? (price > budgetMax && price <= budgetMax * 1.05) : false;
+  const priceWithin6To15PercentOver = budgetMax > 0 ? (price > budgetMax * 1.05 && price <= budgetMax * 1.15) : false;
 
-  let reqSubtype = "apartamento_estandar";
-  if (reqIsStudio) reqSubtype = "apartaestudio";
-  else if (reqIsLoft) reqSubtype = "loft";
+  // Layout matching checks
+  const meetsBedrooms = pBedrooms >= reqBedrooms;
+  const meetsBathrooms = pBathrooms >= reqBathrooms;
+  const meetsLayout = meetsBedrooms && meetsBathrooms;
 
-  let propSubtype = "apartamento_estandar";
-  if (propIsStudio) propSubtype = "apartaestudio";
-  else if (propIsLoft) propSubtype = "loft";
+  // Missing layout by exactly 1 unit
+  const missingExactly1Bedroom = reqBedrooms > 0 && pBedrooms === (reqBedrooms - 1);
+  const missingExactly1Garage = reqGarages > 0 && pGarages === (reqGarages - 1);
 
-  if (reqSubtype !== propSubtype) {
-    return 0; // Hard mismatch: si difieren los subtipos (apartamento, apartaestudio o loft), no coinciden
+  // EVALUAR NIVELES DE COINCIDENCIA (SCORING TIERS)
+
+  // --- TIER 1: Match 90% - 100% (Coincidencia Ideal) ---
+  if (
+    samePropertyType &&
+    sameZone &&
+    (priceInBudget || priceWithin5PercentOver) &&
+    meetsLayout
+  ) {
+    // Si cumple perfecto, 100%. Si está 1-5% sobre presupuesto o tiene just-meets, 95%.
+    return priceInBudget ? 100 : 92;
   }
 
-
-
-  // 2. Tipo de negocio — intersección de conjuntos (no igualdad exacta)
-  // Un inmueble en "venta" puede hacer match con un requerimiento de "permuta"
-  // ya que el comprador puede proponer permuta sobre un inmueble listado en venta.
-  const reqBiz = requirement.tipoNegocioDeseado || requirement.transactionType;
-  const propBiz = property.transactionType;
-  const reqTypes: string[] = Array.isArray(requirement.tiposNegocioAceptados) && requirement.tiposNegocioAceptados.length > 0
-    ? requirement.tiposNegocioAceptados
-    : (reqBiz ? [reqBiz] : ["venta"]);
-  const propTypes: string[] = Array.isArray(property.acceptedTransactionTypes) && property.acceptedTransactionTypes.length > 0
-    ? property.acceptedTransactionTypes
-    : (propBiz ? [propBiz] : ["venta"]);
-
-  // Regla de compatibilidad: venta <-> permuta son compatibles (permuta es una forma de pagar la venta)
-  const typesCompatible = reqTypes.some(rt =>
-    propTypes.some(pt =>
-      pt === rt ||
-      (rt === "venta" && pt === "permuta") ||
-      (rt === "permuta" && pt === "venta") ||
-      (rt === "venta" && pt === "aporte") ||
-      (rt === "aporte" && pt === "venta")
-    )
-  );
-  if (!typesCompatible) {
-    return 0; // Hard mismatch: tipos de negocio completamente incompatibles
-  }
-
-  // 3. Validación Geográfica Nacional (Ciudad, Localidad y Zona)
-  const reqCity = requirement.ciudadDeseada || requirement.city || "";
-  const propCity = property.city || property.addressCity || "";
-  const reqLoc = requirement.addressLocality || "";
-  const propLoc = property.addressLocality || "";
-  const reqZone = requirement.zonaDeseada || requirement.addressNeighborhood || "";
-  const propZone = property.zone || property.addressNeighborhood || "";
-
-  const geoResult = matchesGeography(reqZone, propZone, reqLoc, propLoc, reqCity, propCity);
-  if (!geoResult.matches) {
-    return 0; // Hard geographic mismatch
-  }
-
-  // 4. Habitaciones mínimas
-  const reqBedrooms = requirement.habitacionesMin;
-  if (reqBedrooms !== null && reqBedrooms !== undefined && reqBedrooms !== "NA" && String(reqBedrooms).trim() !== "") {
-    const pBedrooms = property.bedrooms !== null && property.bedrooms !== undefined ? Number(property.bedrooms) : 0;
-    if (pBedrooms < Number(reqBedrooms)) {
-      return 0; // Hard mismatch: minimum bedrooms not met
+  // --- TIER 2: Match 70% - 80% (Coincidencia Muy Alta) ---
+  if (samePropertyType && sameZone) {
+    // Condición A: El precio se sale del presupuesto entre un 6% y un 15%
+    if (priceWithin6To15PercentOver && meetsLayout) {
+      return 78;
+    }
+    // Condición B: Precio es perfecto, pero le falta 1 habitación o 1 parqueadero
+    if (priceInBudget && meetsBathrooms && ((missingExactly1Bedroom && pGarages >= reqGarages) || (meetsBedrooms && missingExactly1Garage))) {
+      return 75;
     }
   }
 
-  // 5. Baños mínimos
-  const reqBathrooms = requirement.banosMin;
-  if (reqBathrooms !== null && reqBathrooms !== undefined && reqBathrooms !== "NA" && String(reqBathrooms).trim() !== "") {
-    const pBathrooms = property.bathrooms !== null && property.bathrooms !== undefined ? Number(property.bathrooms) : 0;
-    if (pBathrooms < Number(reqBathrooms)) {
-      return 0; // Hard mismatch: minimum bathrooms not met
-    }
+  // --- TIER 3: Match 50% - 60% (Alternativa Geográfica) ---
+  // Mismo propertyType, price encaja perfecto, no está en el barrio exacto, pero coincide la localidad (addressLocality)
+  const sameLocality = reqLoc && propLoc && reqLoc === propLoc;
+  if (
+    samePropertyType &&
+    priceInBudget &&
+    !sameZone &&
+    sameLocality
+  ) {
+    return 55;
   }
 
-  // 6. Parqueaderos mínimos
-  const reqGarages = requirement.parqueaderosMin;
-  if (reqGarages !== null && reqGarages !== undefined && reqGarages !== "NA" && String(reqGarages).trim() !== "") {
-    const pGarages = property.garages !== null && property.garages !== undefined ? Number(property.garages) : 0;
-    if (pGarages < Number(reqGarages)) {
-      return 0; // Hard mismatch: minimum garages not met
-    }
+  // --- TIER 4: Match 30% - 40% (Match Exploratorio) ---
+  // Price encaja perfecto, misma zone, pero difiere en el propertyType
+  if (
+    priceInBudget &&
+    sameZone &&
+    !samePropertyType
+  ) {
+    return 35;
   }
 
-  // 7. Interior / Exterior mismatch
-  const reqIntExt = requirement.caracteristicasDeseadas?.interiorExterior || requirement.interiorExterior;
-  const propIntExt = property.amenities?.interiorExterior || property.interiorExterior;
-  if (reqIntExt && propIntExt && reqIntExt !== "NA" && propIntExt !== "NA" && reqIntExt.trim() !== "" && propIntExt.trim() !== "") {
-    if (reqIntExt.toLowerCase() !== propIntExt.toLowerCase()) {
-      return 0; // Hard mismatch
-    }
-  }
-
-  // 8. Validación de características especiales exactas solicitadas (Terraza, Balcón, Chimenea, Club House, Estudio)
-  const reqText = normalizarTextoGeografico(requirement.rawText || "");
-  const propText = normalizarTextoGeografico(property.rawText || property.description || "");
-
-  const keywordsToCheck = [
-    { key: "terraza", terms: ["terraza"] },
-    { key: "balcon", terms: ["balcon", "balcón"] },
-    { key: "chimenea", terms: ["chimene"] },
-    { key: "clubhouse", terms: ["club house", "clubhouse", "club-house"] },
-    { key: "estudio", terms: ["estudio"] }
-  ];
-
-  for (const kw of keywordsToCheck) {
-    const reqMentions = kw.terms.some(t => reqText.includes(t));
-    if (reqMentions) {
-      const propHasIt = kw.terms.some(t => propText.includes(t));
-      if (!propHasIt) {
-        return 0; // Hard mismatch: la característica especial solicitada debe estar presente
-      }
-    }
-  }
-
-  // 9. Número de pisos si es casa (debe ser exacto)
-  const reqFloor = requirement.caracteristicasDeseadas?.floorDetail || requirement.floorDetail;
-  const propFloor = property.floorDetail || property.amenities?.floorDetail;
-  if (propType === "house" && reqFloor && propFloor && reqFloor !== "NA" && propFloor !== "NA" && reqFloor.trim() !== "" && propFloor.trim() !== "") {
-    const cleanFloor = (f: string) => normalizarTextoGeografico(f).replace(/\b(pisos|niveles|piso|nivel|plantas|planta)\b/g, "").trim();
-    if (cleanFloor(reqFloor) !== cleanFloor(propFloor)) {
-      return 0; // Hard mismatch: número de pisos para casas debe ser exacto
-    }
-  }
-
-  // 10. Piso de ubicación en altura si es apartamento (igual o a lo sumo un piso por encima)
-  if (propType === "apartment" && reqFloor && propFloor && reqFloor !== "NA" && propFloor !== "NA" && reqFloor.trim() !== "" && propFloor.trim() !== "") {
-    const rFNum = parseInt(reqFloor.replace(/\D/g, ""));
-    const pFNum = parseInt(propFloor.replace(/\D/g, ""));
-    if (!isNaN(rFNum) && !isNaN(pFNum)) {
-      if (pFNum !== rFNum && pFNum !== rFNum + 1) {
-        return 0; // Hard mismatch: debe ser igual o a lo sumo un piso por encima
-      }
-    } else {
-      if (propFloor.toLowerCase() !== reqFloor.toLowerCase()) {
-        return 0; // Hard mismatch
-      }
-    }
-  }
-
-  // PUNTOS Y MÁXIMOS POSIBLES
-  let totalPoints = 0;
-  let maxPoints = 0;
-
-  // 1. Tipo de Inmueble (Peso: 20)
-  maxPoints += 20;
-  totalPoints += 20;
-
-  // 2. Precios (Peso: 25)
-  const budgetMax = parseFloat(requirement.presupuestoMax || "0");
-  const price = parseFloat(property.price || "0");
-  if (budgetMax > 0 && price > 0) {
-    // Tolerancia estricta en ambos sentidos: precio debe ser al menos 75% del presupuesto y máximo 105%
-    const minPrice = budgetMax * 0.75;
-    const maxPrice = budgetMax * 1.05;
-    if (price < minPrice || price > maxPrice) {
-      return 0; // Hard Mismatch: precio fuera de rango tolerable
-    }
-    maxPoints += 25;
-    if (price <= budgetMax) {
-      totalPoints += 25;
-    } else {
-      totalPoints += 15;
-    }
-  }
-
-  // 3. Áreas (Peso: 20)
-  const areaMin = parseFloat(requirement.areaMin || "0");
-  const areaProp = parseFloat(property.areaTotal || property.areaPrivate || "0");
-  if (areaMin > 0 && areaProp > 0) {
-    // Tipo de propiedad
-    const propTypeLower = (propType || '').toLowerCase();
-    const isLargePropertyType = propTypeLower === "warehouse" || propTypeLower === "lot" || propTypeLower === "land" || propTypeLower === "farm";
-
-    if (isLargePropertyType) {
-      // Para bodegas y lotes permitimos áreas mucho mayores, pero con tolerancia del 15% por debajo
-      if (areaProp < areaMin * 0.85) {
-        return 0; // Hard Mismatch: área muy pequeña
-      }
-    } else {
-      // Para casas, apartamentos, locales, etc. el área debe variar muy poco en ambos sentidos (85% a 140%)
-      const minArea = areaMin * 0.85;
-      const maxArea = areaMin * 1.40;
-      if (areaProp < minArea || areaProp > maxArea) {
-        return 0; // Hard Mismatch: área fuera de rango tolerable
-      }
-    }
-
-    maxPoints += 20;
-    if (areaProp >= areaMin && areaProp <= areaMin * 1.15) {
-      totalPoints += 20;
-    } else {
-      totalPoints += 10;
-    }
-  }
-
-  // 4. Habitaciones, Baños, Garajes y Estrato (Peso: 20)
-  // Habitaciones (Peso: 7)
-  if (reqBedrooms !== null && reqBedrooms !== undefined && reqBedrooms !== "NA" && String(reqBedrooms).trim() !== "") {
-    maxPoints += 7;
-    const pBedrooms = property.bedrooms !== null && property.bedrooms !== undefined ? Number(property.bedrooms) : 0;
-    if (pBedrooms >= Number(reqBedrooms)) {
-      totalPoints += 7;
-    }
-  }
-  // Baños (Peso: 5)
-  if (reqBathrooms !== null && reqBathrooms !== undefined && reqBathrooms !== "NA" && String(reqBathrooms).trim() !== "") {
-    maxPoints += 5;
-    const pBathrooms = property.bathrooms !== null && property.bathrooms !== undefined ? Number(property.bathrooms) : 0;
-    if (pBathrooms >= Number(reqBathrooms)) {
-      totalPoints += 5;
-    }
-  }
-  // Garajes (Peso: 5)
-  if (reqGarages !== null && reqGarages !== undefined && reqGarages !== "NA" && String(reqGarages).trim() !== "") {
-    maxPoints += 5;
-    const pGarages = property.garages !== null && property.garages !== undefined ? Number(property.garages) : 0;
-    if (pGarages >= Number(reqGarages)) {
-      totalPoints += 5;
-    }
-  }
-  // Estrato (Peso: 3)
-  if (requirement.estratoDeseado !== null && requirement.estratoDeseado !== undefined) {
-    let targetEstratos: number[] = [];
-    if (Array.isArray(requirement.estratoDeseado)) {
-      targetEstratos = requirement.estratoDeseado.map(Number);
-    } else if (typeof requirement.estratoDeseado === 'number') {
-      targetEstratos = [requirement.estratoDeseado];
-    } else if (typeof requirement.estratoDeseado === 'string' && requirement.estratoDeseado !== 'NA' && requirement.estratoDeseado.trim() !== '') {
-      try {
-        const parsed = JSON.parse(requirement.estratoDeseado);
-        if (Array.isArray(parsed)) {
-          targetEstratos = parsed.map(Number);
-        } else {
-          targetEstratos = [Number(parsed)];
-        }
-      } catch {
-        targetEstratos = [parseInt(requirement.estratoDeseado)];
-      }
-    }
-    if (targetEstratos.length > 0 && targetEstratos.every(e => !isNaN(e))) {
-      const propStratum = property.stratum !== null && property.stratum !== undefined ? Number(property.stratum) : null;
-      if (propStratum !== null) {
-        // Si el estrato difiere en más de 1 nivel, es un Hard Mismatch
-        const hasCloseEstrato = targetEstratos.some(e => Math.abs(e - propStratum) <= 1);
-        if (!hasCloseEstrato) {
-          return 0;
-        }
-        maxPoints += 3;
-        if (targetEstratos.includes(propStratum)) {
-          totalPoints += 3;
-        } else if (targetEstratos.some(e => Math.abs(e - propStratum) === 1)) {
-          totalPoints += 2;
-        }
-      }
-    }
-  }
-
-  // 5. Estructurales Específicos (Peso: 15)
-  // Ubicación del edificio (Interior/Exterior/NA) - 3 pts
-  if (reqIntExt && reqIntExt !== "NA" && reqIntExt !== "N/A" && reqIntExt.trim() !== "") {
-    maxPoints += 3;
-    if (propIntExt && propIntExt.toLowerCase() === reqIntExt.toLowerCase()) {
-      totalPoints += 3;
-    }
-  }
-
-  // Cuarto y Baño de servicio (Si/No/NA) - 2 pts
-  const reqServicio = requirement.caracteristicasDeseadas?.cuartoBanoServicio;
-  const propServicio = property.amenities?.cuartoBanoServicio;
-  if (reqServicio && reqServicio !== "NA" && reqServicio !== "N/A" && reqServicio.trim() !== "") {
-    maxPoints += 2;
-    if (propServicio && (propServicio === reqServicio || String(propServicio).toLowerCase() === String(reqServicio).toLowerCase())) {
-      totalPoints += 2;
-    }
-  }
-
-  // Tipo de Cocina (Cerrada/Abierta/etc.) - 2 pts
-  const reqCocina = requirement.caracteristicasDeseadas?.cocina;
-  const propCocina = property.amenities?.cocina;
-  if (reqCocina && reqCocina !== "NA" && reqCocina !== "N/A" && reqCocina.trim() !== "") {
-    maxPoints += 2;
-    if (propCocina && propCocina.toLowerCase() === reqCocina.toLowerCase()) {
-      totalPoints += 2;
-    }
-  }
-
-  // Zona de lavandería e independencia - 3 pts
-  const reqLavanderia = requirement.caracteristicasDeseadas?.lavanderiaIndependiente;
-  const propLavanderia = property.amenities?.lavanderiaIndependiente;
-  if (reqLavanderia && reqLavanderia !== "NA" && reqLavanderia !== "N/A" && reqLavanderia.trim() !== "") {
-    maxPoints += 3;
-    if (propLavanderia && (propLavanderia === reqLavanderia || String(propLavanderia).toLowerCase() === String(reqLavanderia).toLowerCase())) {
-      totalPoints += 3;
-    }
-  }
-
-  // Tipo de Pisos (Cruce de arreglos) - 2 pts
-  const reqPisos = requirement.caracteristicasDeseadas?.tipoPisos;
-  const propPisos = property.amenities?.tipoPisos;
-  if (Array.isArray(reqPisos) && reqPisos.length > 0) {
-    maxPoints += 2;
-    if (Array.isArray(propPisos) && propPisos.some(p => reqPisos.includes(p))) {
-      totalPoints += 2;
-    }
-  }
-
-  // Piso de ubicación - 1 pt
-  if (reqFloor && reqFloor !== "NA" && reqFloor !== "N/A" && reqFloor.trim() !== "") {
-    maxPoints += 1;
-    if (propFloor && propFloor !== "NA" && propFloor !== "N/A" && propFloor.trim() !== "") {
-      if (propType === "apartment") {
-        const rFNum = parseInt(reqFloor.replace(/\D/g, ""));
-        const pFNum = parseInt(propFloor.replace(/\D/g, ""));
-        if (!isNaN(rFNum) && !isNaN(pFNum)) {
-          if (Math.abs(rFNum - pFNum) <= 2) {
-            totalPoints += 1;
-          }
-        } else if (propFloor.toLowerCase() === reqFloor.toLowerCase() || propFloor.toLowerCase().includes(reqFloor.toLowerCase()) || reqFloor.toLowerCase().includes(propFloor.toLowerCase())) {
-          totalPoints += 1;
-        }
-      } else {
-        if (propFloor.toLowerCase() === reqFloor.toLowerCase() || propFloor.toLowerCase().includes(reqFloor.toLowerCase()) || reqFloor.toLowerCase().includes(propFloor.toLowerCase())) {
-          totalPoints += 1;
-        }
-      }
-    }
-  }
-
-  // Depósitos y Antigüedad - 2 pts
-  const reqDepositos = requirement.caracteristicasDeseadas?.depositos;
-  const propDepositos = property.amenities?.depositos;
-  if (reqDepositos !== undefined && reqDepositos !== null && reqDepositos !== "NA" && reqDepositos !== "N/A") {
-    maxPoints += 1;
-    if (propDepositos !== undefined && propDepositos !== null && Number(propDepositos) >= Number(reqDepositos)) {
-      totalPoints += 1;
-    }
-  }
-
-  const reqAntiguedad = requirement.caracteristicasDeseadas?.antiguedad;
-  const propAntiguedad = property.antiguedadAnos || property.amenities?.antiguedad;
-  if (reqAntiguedad !== undefined && reqAntiguedad !== null && reqAntiguedad !== "NA" && reqAntiguedad !== "N/A") {
-    maxPoints += 1;
-    if (propAntiguedad !== undefined && propAntiguedad !== null && String(propAntiguedad).toLowerCase() === String(reqAntiguedad).toLowerCase()) {
-      totalPoints += 1;
-    }
-  }
-
-  const score = maxPoints > 0 ? (totalPoints / maxPoints) * 100 : 0;
-  return score;
+  // Si no encaja en ninguna categoría, es un 0%
+  return 0;
 }
 
 export function evaluarMatch(requirement: any, property: any): boolean {

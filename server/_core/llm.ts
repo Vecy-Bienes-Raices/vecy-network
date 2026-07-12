@@ -14,7 +14,8 @@ export async function invokeLLM({
   imageBuffer,
   pdfBuffer,
   pdfMimeType,
-  enableSearch = false
+  enableSearch = false,
+  tools
 }: { 
   messages: any[], 
   responseFormat?: any,
@@ -22,12 +23,13 @@ export async function invokeLLM({
   imageBuffer?: string,
   pdfBuffer?: string,
   pdfMimeType?: string,
-  enableSearch?: boolean
-}): Promise<{ choices: { message: { content: string } }[] }> {
+  enableSearch?: boolean,
+  tools?: any[]
+}): Promise<{ choices: { message: { content: string; functionCall?: any } }[] }> {
   if (provider === "anthropic") {
     return await invokeClaude(messages, responseFormat) as any;
   }
-  return await invokeGemini(messages, responseFormat, imageBuffer, pdfBuffer, pdfMimeType, enableSearch);
+  return await invokeGemini(messages, responseFormat, imageBuffer, pdfBuffer, pdfMimeType, enableSearch, tools);
 }
 
 /**
@@ -39,7 +41,8 @@ async function invokeGemini(
   imageBuffer?: string, 
   pdfBuffer?: string, 
   pdfMimeType?: string, 
-  enableSearch?: boolean
+  enableSearch?: boolean,
+  tools?: any[]
 ) {
   const API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || ENV.forgeApiKey;
   const MODEL = "gemini-3.1-flash-lite";
@@ -92,17 +95,32 @@ async function invokeGemini(
         }
       };
 
-      if (enableSearch) {
+      if (tools && tools.length > 0) {
+        payload.tools = tools;
+      } else if (enableSearch) {
         payload.tools = [{ googleSearch: {} }];
       }
 
-      console.log(`[JanIA-LLM] Intento ${attempt}/${MAX_RETRIES} — Gemini (${MODEL}) [Search: ${enableSearch}]...`);
+      console.log(`[JanIA-LLM] Intento ${attempt}/${MAX_RETRIES} — Gemini (${MODEL}) [Search: ${enableSearch}, Tools: ${!!tools}]...`);
       const response = await axios.post(API_URL, payload);
 
       if (response.data.candidates && response.data.candidates[0]) {
-        const text = response.data.candidates[0].content?.parts?.[0]?.text;
-        if (text && text.trim() !== '') {
-          return { choices: [{ message: { content: text } }] };
+        const firstPart = response.data.candidates[0].content?.parts?.[0];
+        if (firstPart) {
+          if (firstPart.functionCall) {
+            return {
+              choices: [{
+                message: {
+                  content: JSON.stringify({ functionCall: firstPart.functionCall }),
+                  functionCall: firstPart.functionCall
+                }
+              }]
+            };
+          }
+          const text = firstPart.text;
+          if (text && text.trim() !== '') {
+            return { choices: [{ message: { content: text } }] };
+          }
         }
       }
 
