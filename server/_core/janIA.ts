@@ -1273,14 +1273,87 @@ async function getTimeOfDayGreetingForUser(phone: string, realName: string, alre
 }
 
 /**
- * Scrapea una URL utilizando la API de Jina Reader (r.jina.ai).
+ * Scrapea una URL utilizando APIs especializadas en evasión de bloqueos (Bypass) como ZenRows, ScrapingBee o Firecrawl.
+ * Si no hay keys configuradas o fallan, hace fallback al pre-procesador de Jina Reader.
  */
-export async function fetchJinaReader(url: string): Promise<string> {
+export async function scrapeUrlWithBypass(url: string): Promise<string> {
+  const cleanUrl = url.trim();
+
+  // 1. ZENROWS (Bypass Premium)
+  const zenrowsKey = process.env.ZENROWS_API_KEY;
+  if (zenrowsKey) {
+    try {
+      console.log(`[Scraper-Bypass] Intentando extraer con ZenRows: ${cleanUrl}`);
+      // Usamos js_render=true y premium_proxy=true para evadir Cloudflare/Captchas
+      const response = await axios.get("https://api.zenrows.com/v1/", {
+        params: {
+          key: zenrowsKey,
+          url: cleanUrl,
+          js_render: "true",
+          premium_proxy: "true",
+          markdown: "true"
+        },
+        timeout: 20000
+      });
+      if (response.status === 200 && response.data) {
+        return typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
+      }
+    } catch (err: any) {
+      console.warn(`[Scraper-Bypass] Error en ZenRows para ${cleanUrl}:`, err.message);
+    }
+  }
+
+  // 2. SCRAPINGBEE (Bypass Premium)
+  const scrapingbeeKey = process.env.SCRAPINGBEE_API_KEY;
+  if (scrapingbeeKey) {
+    try {
+      console.log(`[Scraper-Bypass] Intentando extraer con ScrapingBee: ${cleanUrl}`);
+      const response = await axios.get("https://app.scrapingbee.com/api/v1/", {
+        params: {
+          api_key: scrapingbeeKey,
+          url: cleanUrl,
+          render_js: "true",
+          premium_proxy: "true"
+        },
+        timeout: 20000
+      });
+      if (response.status === 200 && response.data) {
+        return typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
+      }
+    } catch (err: any) {
+      console.warn(`[Scraper-Bypass] Error en ScrapingBee para ${cleanUrl}:`, err.message);
+    }
+  }
+
+  // 3. FIRECRAWL (Bypass Premium)
+  const firecrawlKey = process.env.FIRECRAWL_API_KEY;
+  if (firecrawlKey) {
+    try {
+      console.log(`[Scraper-Bypass] Intentando extraer con Firecrawl: ${cleanUrl}`);
+      const response = await axios.post("https://api.firecrawl.dev/v1/scrape", {
+        url: cleanUrl,
+        formats: ["markdown"]
+      }, {
+        headers: {
+          "Authorization": `Bearer ${firecrawlKey}`,
+          "Content-Type": "application/json"
+        },
+        timeout: 20000
+      });
+      if (response.status === 200 && response.data && response.data.data && response.data.data.markdown) {
+        return response.data.data.markdown;
+      }
+    } catch (err: any) {
+      console.warn(`[Scraper-Bypass] Error en Firecrawl para ${cleanUrl}:`, err.message);
+    }
+  }
+
+  // 4. FALLBACK: Jina Reader (r.jina.ai)
   try {
-    console.log(`[JinaReader] Scrapeando enlace: ${url}`);
-    const jinaUrl = `https://r.jina.ai/${encodeURIComponent(url)}`;
+    console.log(`[Scraper-Bypass] Usando Jina Reader como fallback para: ${cleanUrl}`);
+    const jinaUrl = `https://r.jina.ai/${encodeURIComponent(cleanUrl)}`;
     const response = await axios.get(jinaUrl, {
-      timeout: 8000,
+      timeout: 10000,
       headers: {
         "Accept": "text/plain",
         "X-Return-Format": "markdown"
@@ -1289,11 +1362,11 @@ export async function fetchJinaReader(url: string): Promise<string> {
     if (response.status === 200 && response.data) {
       return typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
     }
-    return "";
   } catch (error: any) {
-    console.warn(`[JinaReader] Falló el scrapeo de ${url}:`, error.message);
-    return "";
+    console.warn(`[Scraper-Bypass] Falló el fallback de Jina Reader para ${cleanUrl}:`, error.message);
   }
+
+  return "";
 }
 
 /**
@@ -1342,13 +1415,13 @@ export async function processWhatsAppMessage(
 
     let messageToProcess = text;
     
-    // Extraer y procesar enlaces vía Jina Reader
+    // Extraer y procesar enlaces con evasión de bloqueos (Bypass)
     const urlRegex = /(https?:\/\/[^\s]+)/g;
     const urls = text.match(urlRegex);
     let jinaExtractedText = "";
     if (urls && urls.length > 0) {
       for (const url of urls) {
-        const content = await fetchJinaReader(url);
+        const content = await scrapeUrlWithBypass(url);
         if (content) {
           jinaExtractedText += `\n\n[CONTENIDO DE ENLACE WEB EXTRAÍDO DE ${url}]:\n${content.substring(0, 15000)}\n[FIN CONTENIDO ENLACE]\n`;
         }
