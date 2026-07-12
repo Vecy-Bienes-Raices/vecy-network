@@ -540,14 +540,15 @@ export class JaniaMatchBot {
       const isOffHours = isOutsideWorkingHours();
 
       if (isOffHours) {
-        console.log(`[JANIA-MATCH] Conversación DM fuera de horario con ${senderId}.`);
+        console.log(`[JANIA-MATCH] Conversación DM fuera de horario con ${senderId}. Enviando nota de voz.`);
         await this.logToDb(senderId, 'user', body);
         await this.handlePrivateDmConversation(mainMsg, senderId, rawPhone, body);
         return;
       } else {
-        // Dentro de horario laboral: el bot de DMs no interfiere. Silencio absoluto
-        console.log(`[JANIA-MATCH] DM de ${rawPhone} recibido en horario laboral. Silenciado.`);
+        // En horario laboral: responder con el mensaje de texto de redirección a JanIA v3.5
+        console.log(`[JANIA-MATCH] DM de ${rawPhone} recibido en horario laboral. Redirigiendo con texto.`);
         await this.logToDb(senderId, 'user', body);
+        await this.handleRedirectText(mainMsg, senderId, rawPhone);
         return;
       }
     }
@@ -1157,6 +1158,38 @@ export class JaniaMatchBot {
   private async handlePrivateDmConversation(msg: proto.IWebMessageInfo, senderId: string, rawPhone: string, bodyText: string) {
     try {
       const realName = msg.pushName || `Asesor +${rawPhone}`;
+      await this.sock.sendPresenceUpdate('recording', senderId);
+
+      const saludo = getGreetingByTime();
+      const firstName = extractFirstName(realName);
+      const greetingName = firstName ? ` ${firstName}` : '';
+
+      const outOfOfficeText = `¡${saludo}${greetingName}! 🙋🏻‍♀️ Qué bueno saludarte de nuevo. En este momento nuestros agentes humanos se encuentran descansando 🌙✨. Si gustas, puedes dejar tu mensaje aquí para que te respondamos mañana a primera hora, o si prefieres, puedes continuar la conversación conmigo y contarme en qué puedo ayudarte hoy. ¡Siempre es un gusto atenderte! 🤝🚀`;
+
+      // Intentar generar y enviar el audio mediante TTS
+      const { textToSpeechMedia } = await import('./whatsapp');
+      let media = null;
+      try {
+        media = await textToSpeechMedia(outOfOfficeText);
+      } catch (ttsErr: any) {
+        console.warn("[JANIA-MATCH] Error al generar TTS para fuera de horario:", ttsErr.message || ttsErr);
+      }
+
+      if (media) {
+        await this.queuedSend(senderId, media, { sendAudioAsVoice: true, quoted: msg });
+      } else {
+        await this.queuedSend(senderId, outOfOfficeText, { quoted: msg });
+      }
+
+      await this.logToDb(senderId, 'janIA', outOfOfficeText);
+      await this.sock.sendPresenceUpdate('paused', senderId);
+    } catch (err) {
+      console.error('[JANIA-MATCH] Error en handlePrivateDmConversation:', err);
+  }
+
+  private async handleRedirectText(msg: proto.IWebMessageInfo, senderId: string, rawPhone: string) {
+    try {
+      const realName = msg.pushName || `Asesor +${rawPhone}`;
       await this.sock.sendPresenceUpdate('composing', senderId);
       await delay(2000);
 
@@ -1165,7 +1198,6 @@ export class JaniaMatchBot {
         `Si deseas chatear en privado de forma interactiva, por favor escribe a mi otra yo, **JanIA v3.5** 📲, a su número oficial directo: +57 3185462265 o haz clic aquí: https://wa.me/573185462265.\n\n` +
         `⚠️ **Nota importante**: Recuerda que somos inteligencias netamente conversacionales. Sí podemos resolver tus inquietudes, redactar descripciones comerciales, hacer análisis y estructurar textos directamente aquí en el chat. Sin embargo, **no tenemos la habilidad de crear imágenes, videos, informes con gráficas, ni de elaborar o enviar archivos PDF a través del chat**.\n\n` +
         `Si requieres un análisis de mercado formal con gráficas y PDF detallado, o piezas visuales/videos profesionales, este servicio lo realiza nuestro personal humano experto. Comunícate llamando al **+57 3166569719** para solicitar la cotización e informe de nuestro equipo. 📈💼`;
-
 
       await this.queuedSend(senderId, redirectMsg, { quoted: msg });
       await this.logToDb(senderId, 'janIA', redirectMsg);
