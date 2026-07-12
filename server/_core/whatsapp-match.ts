@@ -1185,6 +1185,7 @@ export class JaniaMatchBot {
       await this.sock.sendPresenceUpdate('paused', senderId);
     } catch (err) {
       console.error('[JANIA-MATCH] Error en handlePrivateDmConversation:', err);
+    }
   }
 
   private async handleRedirectText(msg: proto.IWebMessageInfo, senderId: string, rawPhone: string) {
