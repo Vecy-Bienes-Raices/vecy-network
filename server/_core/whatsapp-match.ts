@@ -1566,7 +1566,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
   public async sendComunicadoMatch() {
     try {
       console.log(`[JANIA-MATCH] Enviando comunicado de notificaciones de match...`);
-      const { MSG_COMUNICADO_MATCH_NETWORK, MSG_COMUNICADO_MATCH_CIRCULO } = await import('./whatsapp');
+      const { MSG_COMUNICADO_MATCH_NETWORK, MSG_COMUNICADO_MATCH_CIRCULO } = await import('./janIA');
       await this.queuedSend(this.targetGroupId, MSG_COMUNICADO_MATCH_NETWORK);
       await delay(3000);
       await this.queuedSend(this.circuloGroupId, MSG_COMUNICADO_MATCH_CIRCULO);
