@@ -39,8 +39,8 @@ graph TD
 *   **Proveedor**: **Google Cloud Text-to-Speech (TTS) API (v1beta1)**.
 *   **Configuración obligatoria**:
     *   `modelName`: `"gemini-3.1-flash-tts-preview"`
-    *   `name`: `"Achernar"` (idioma `es-us`)
-    *   `prompt` de estilo: `"Leer en voz alta con un tono cálido y acogedor."`
+    *   `name`: `"Laomedeia"` (idioma `es-us`)
+    *   `prompt` de estilo: `"Leer en voz alta con un tono maduro, serio, experto y autoritario pero empático."`
     *   `speakingRate`: `1.1`
 *   **Formatos**:
     *   Para WhatsApp: Codificación `OGG_OPUS` (se reproduce nativamente como nota de voz humana).

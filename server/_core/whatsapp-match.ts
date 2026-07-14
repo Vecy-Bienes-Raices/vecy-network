@@ -275,6 +275,41 @@ export class JaniaMatchBot {
             const textLower = body.toLowerCase();
             const hasDirectMention = textLower.includes("jania");
 
+            // --- IDENTIFICACIÓN DE GRUPOS OFICIALES VECY ---
+            const isMainGroup = chatId === this.targetGroupId;     // VECY INMUEBLES NETWORK
+            const isBuzonGroup = chatId === this.buzonGroupId;     // SOPORTE LEGAL, TRIBUTARIO Y AVALÚOS
+            const isCirculoGroup = chatId === this.circuloGroupId; // Círculo CERO 👌
+            const isOfficialGroup = isMainGroup || isBuzonGroup || isCirculoGroup;
+
+            // --- OBTENCIÓN DEL NOMBRE DEL GRUPO Y BLACKLIST ---
+            let groupName = "Nombre Real del Grupo";
+            try {
+              const metadata = await this.sock.groupMetadata(chatId);
+              if (metadata && metadata.subject) {
+                groupName = metadata.subject;
+              }
+            } catch (e) {}
+
+            const NEGOTIATION_GROUPS_BLACKLIST = [
+              "Venta Alameda", 
+              "Negociación ARRECIFES"
+            ];
+            if (NEGOTIATION_GROUPS_BLACKLIST.some(name => groupName.includes(name))) {
+              console.log(`[JANIA-MATCH] Mensaje omitido: el grupo "${groupName}" está en la blacklist de negociación.`);
+              return;
+            }
+
+            // --- FILTRO ANTI-BAN DE LONGITUD PARA GRUPOS EXTERNOS ---
+            if (!isOfficialGroup) {
+              const words = body.trim().split(/\s+/).filter(w => w.length > 0);
+              const hasLinks = textLower.includes("http") || textLower.includes("www");
+              const hasAttachments = !!msg.message.imageMessage || !!msg.message.documentMessage || !!msg.message.videoMessage || isAudioPTT;
+              if (words.length < 10 && !hasLinks && !hasAttachments) {
+                console.log(`[JANIA-MATCH] Omitiendo mensaje corto de grupo externo "${groupName}" por Protocolo Anti-Ban (Palabras: ${words.length}).`);
+                return;
+              }
+            }
+
             // Si es una publicación comercial, procesar con el buffer extractor (Modo Silencioso)
             const isPossibleListing = 
               body.length > 120 || 
@@ -288,13 +323,18 @@ export class JaniaMatchBot {
               textLower.includes("vendo") ||
               textLower.includes("arriendo") ||
               textLower.includes("compro") ||
-              textLower.includes("necesito");
-
-            // --- IDENTIFICACIÓN DE GRUPOS OFICIALES VECY ---
-            const isMainGroup = chatId === this.targetGroupId;     // VECY INMUEBLES NETWORK
-            const isBuzonGroup = chatId === this.buzonGroupId;     // SOPORTE LEGAL, TRIBUTARIO Y AVALÚOS
-            const isCirculoGroup = chatId === this.circuloGroupId; // Círculo CERO 👌
-            const isOfficialGroup = isMainGroup || isBuzonGroup || isCirculoGroup;
+              textLower.includes("necesito") ||
+              textLower.includes("renta") ||
+              textLower.includes("alquilo") ||
+              textLower.includes("permuto") ||
+              textLower.includes("requiero") ||
+              textLower.includes("casa") ||
+              textLower.includes("apto") ||
+              textLower.includes("apartamento") ||
+              textLower.includes("bodega") ||
+              textLower.includes("oficina") ||
+              textLower.includes("lote") ||
+              textLower.includes("local");
 
 
             // Detectar consultas comunes sobre cómo publicar, cómo funciona el bot/grupo, guardado, mecánica, datos faltantes, etc.
@@ -359,13 +399,13 @@ export class JaniaMatchBot {
               // Los 3 grupos oficiales responden 24/7; grupos externos solo fuera de horario
               const { isOutsideWorkingHours } = await import('./janIA');
               const isOffHours = isOutsideWorkingHours();
-              const canRespond = isBotAdmin && (isOfficialGroup || isOffHours);
+              const canRespond = isOfficialGroup || isOffHours;
 
               if (canRespond) {
-                console.log(`[JANIA-MATCH] Respondiendo en grupo ${chatId} (Oficial=${isOfficialGroup}, OffHours=${isOffHours}).`);
+                console.log(`[JANIA-MATCH] Respondiendo en grupo ${chatId} (Oficial=${isOfficialGroup}, OffHours=${isOffHours}, BotAdmin=${isBotAdmin}).`);
                 await this.handleDirectGroupQuestion(msg, chatId, senderId, body);
               } else {
-                console.log(`[JANIA-MATCH] Ignorado en ${chatId} (BotAdmin=${isBotAdmin}, Oficial=${isOfficialGroup}, OffHours=${isOffHours}).`);
+                console.log(`[JANIA-MATCH] Ignorado en ${chatId} (Oficial=${isOfficialGroup}, OffHours=${isOffHours}, BotAdmin=${isBotAdmin}).`);
               }
               return;
             }
@@ -521,9 +561,19 @@ export class JaniaMatchBot {
         if (result) {
           const emoji = this.getReactionEmoji(result);
           if (emoji) {
-            try {
-              await this.sock.sendMessage(chatId, { react: { text: emoji, key: mainMsg.key } });
-            } catch (e) {}
+            const sendReaction = async () => {
+              try {
+                await this.sock.sendMessage(chatId, { react: { text: emoji, key: mainMsg.key } });
+              } catch (e) {}
+            };
+
+            if (result.inserted && (emoji === '✅' || emoji === '👍' || emoji === '🤝')) {
+              const delayMs = Math.floor(Math.random() * (12000 - 4000 + 1)) + 4000;
+              console.log(`[JANIA-MATCH] Inserción confirmada en DM. Retrasando reacción ${emoji} por ${delayMs}ms (Protocolo Anti-Ban)...`);
+              setTimeout(sendReaction, delayMs);
+            } else {
+              await sendReaction();
+            }
           }
 
           const { isOutsideWorkingHours } = await import('./janIA');
@@ -658,7 +708,27 @@ export class JaniaMatchBot {
       } else if (chatId === this.circuloGroupId) { // Círculo Cero
         result = await processCirculoMessage(bodyText, senderId, realName);
       } else if (isMainGroupChat) { // VECY INMUEBLES NETWORK — preguntas sobre el grupo/sistema
-        result = await processWhatsAppMessage(bodyText, senderId, realName);
+        let groupName = "VECY INMUEBLES NETWORK";
+        try {
+          const metadata = await this.sock.groupMetadata(chatId);
+          if (metadata && metadata.subject) {
+            groupName = metadata.subject;
+          }
+        } catch (e) {}
+        result = await processWhatsAppMessage(
+          bodyText,
+          senderId,
+          realName,
+          false,
+          [],
+          undefined,
+          undefined,
+          true,
+          undefined,
+          undefined,
+          chatId,
+          groupName
+        );
 
       } else {
         const redirectMsg = `¡Hola! 😊 Para resolver tus inquietudes inmobiliarias, dudas de corretaje, soporte técnico o de cuenta, te invito a consultarme en privado a mi otro yo: **JanIA de Soporte y Atención** 📲 en el número +57 3185462265 o haciendo clic aquí: https://wa.me/573185462265. ¡Allí con gusto te responderé a profundidad! 🚀`;
@@ -939,6 +1009,13 @@ export class JaniaMatchBot {
           userName
         );
       } else {
+        let groupName = "Nombre Real del Grupo";
+        try {
+          const metadata = await this.sock.groupMetadata(chatId);
+          if (metadata && metadata.subject) {
+            groupName = metadata.subject;
+          }
+        } catch (e) {}
         result = await processWhatsAppMessage(
           fullText,
           senderId,
@@ -950,7 +1027,8 @@ export class JaniaMatchBot {
           true,
           pdfMsg?.pdfBuffer,
           pdfMsg?.pdfMimeType,
-          chatId
+          chatId,
+          groupName
         );
       }
 
@@ -958,12 +1036,22 @@ export class JaniaMatchBot {
       if (result) {
         const emoji = this.getReactionEmoji(result);
         if (emoji) {
-          try {
-            const lastMsg = buffer.messages[buffer.messages.length - 1].originalMsg;
-            console.log(`[JANIA-MATCH] Reaccionando con ${emoji} al mensaje de ${senderId}`);
-            await this.sock.sendMessage(chatId, { react: { text: emoji, key: lastMsg.key } });
-          } catch (reactErr: any) {
-            console.error('[JANIA-MATCH] Error al reaccionar al mensaje:', reactErr.message || reactErr);
+          const sendReaction = async () => {
+            try {
+              const lastMsg = buffer.messages[buffer.messages.length - 1].originalMsg;
+              console.log(`[JANIA-MATCH] Reaccionando con ${emoji} al mensaje de ${senderId}`);
+              await this.sock.sendMessage(chatId, { react: { text: emoji, key: lastMsg.key } });
+            } catch (reactErr: any) {
+              console.error('[JANIA-MATCH] Error al reaccionar al mensaje:', reactErr.message || reactErr);
+            }
+          };
+
+          if (result.inserted && (emoji === '✅' || emoji === '👍' || emoji === '🤝')) {
+            const delayMs = Math.floor(Math.random() * (12000 - 4000 + 1)) + 4000;
+            console.log(`[JANIA-MATCH] Inserción confirmada en Grupo. Retrasando reacción ${emoji} por ${delayMs}ms (Protocolo Anti-Ban)...`);
+            setTimeout(sendReaction, delayMs);
+          } else {
+            await sendReaction();
           }
         }
       }
@@ -1134,9 +1222,19 @@ export class JaniaMatchBot {
           reaction = '🤔';
         }
         if (reaction) {
-          try {
-            await this.sock.sendMessage(senderId, { react: { text: reaction, key: msg.key } });
-          } catch (_) {}
+          const sendReaction = async () => {
+            try {
+              await this.sock.sendMessage(senderId, { react: { text: reaction, key: msg.key } });
+            } catch (_) {}
+          };
+
+          if (result.inserted && reaction === '✅') {
+            const delayMs = Math.floor(Math.random() * (12000 - 4000 + 1)) + 4000;
+            console.log(`[JANIA-MATCH] Inserción confirmada en parseAndSaveSilently. Retrasando reacción ${reaction} por ${delayMs}ms (Protocolo Anti-Ban)...`);
+            setTimeout(sendReaction, delayMs);
+          } else {
+            await sendReaction();
+          }
         }
 
         if (result.response && result.response.trim() !== "" && result.classification !== "DATOS_INCOMPLETOS" && result.classification !== "VIOLACION_DE_NORMAS") {

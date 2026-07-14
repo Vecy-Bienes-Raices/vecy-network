@@ -260,11 +260,11 @@ export async function textToSpeechMedia(text: string, format: "OGG_OPUS" | "MP3"
     }> = [
         {
           endpoint: "v1beta1",
-          name: "Achernar",
+          name: "Laomedeia",
           lang: "es-us",
           usePitch: false,
           modelName: "gemini-3.1-flash-tts-preview",
-          prompt: "Leer en voz alta con un tono cálido y acogedor."
+          prompt: "Leer en voz alta con un tono maduro, serio, experto y autoritario pero empático."
         },
         { endpoint: "v1", name: "es-US-Journey-F", lang: "es-US", gender: "FEMALE", usePitch: false },
         { endpoint: "v1", name: "es-419-Neural2-C", lang: "es-419", gender: "FEMALE", usePitch: false },
@@ -1074,7 +1074,15 @@ export class WhatsAppBot {
 
               const promptContext = `[REACCIÓN NEGATIVA/SARCASMO/DESAPROBACIÓN]: El usuario @${senderId.split('@')[0]} (${realName}) ha reaccionado con el emoji ${reaction.reaction} a tu mensaje: "${msg.body}". Genera una respuesta en el grupo dirigiéndote a este aliado/colega. Responde de manera sumamente cordial, respetuosa y profesional, pero con total firmeza y una sutil pero brillante auto-defensa. Debes defender tus capacidades de inteligencia artificial, al equipo de desarrollo y fundadores de VECY (Jani Alves y Eduardo A. Rivera), y el valor del proyecto VECY Network (red colaborativa gratuita y sin comisiones). Hazle ver con argumentos elocuentes e inteligentes que la tecnología seria y el trabajo estructurado es lo que genera matches y cierra negocios, rebatiendo su reacción con elegancia comercial. Usa emojis.`;
 
-              const result = await processWhatsAppMessage(promptContext, senderId, realName, false, [], undefined, undefined, true);
+              let groupName = "VECY INMUEBLES NETWORK";
+              try {
+                const chat = await this.client.getChatById(targetGroupId);
+                if (chat && chat.name) {
+                  groupName = chat.name;
+                }
+              } catch (e) {}
+
+              const result = await processWhatsAppMessage(promptContext, senderId, realName, false, [], undefined, undefined, true, undefined, undefined, targetGroupId, groupName);
               if (result && result.response && result.response.trim() !== '') {
                 await this.queuedSend(targetGroupId, result.response, {
                   mentions: [senderId],
@@ -1151,29 +1159,39 @@ export class WhatsAppBot {
 
         const isCirculoGroup = chatId === this.circuloGroupId;
 
-        // 1. RAMA DE GRUPO (VECY INMUEBLES NETWORK)
-        if (isTargetGroup) {
+        // 1. RAMA DE GRUPO
+        if (isGroup) {
+          const groupName = chat.name || "Nombre Real del Grupo";
+          const NEGOTIATION_GROUPS_BLACKLIST = [
+            "Venta Alameda", 
+            "Negociación ARRECIFES"
+          ];
+          if (NEGOTIATION_GROUPS_BLACKLIST.some(name => groupName.includes(name))) {
+            console.log(`[WHATSAPP-BOT] Mensaje omitido: el grupo "${groupName}" está en la blacklist de negociación.`);
+            return;
+          }
+
+          const isOfficialGroup = isTargetGroup || isBuzonGroup || isCirculoGroup;
+
+          // --- FILTRO ANTI-BAN DE LONGITUD PARA GRUPOS EXTERNOS ---
+          if (!isOfficialGroup) {
+            const words = msg.body.trim().split(/\s+/).filter(w => w.length > 0);
+            const hasLinks = msg.body.toLowerCase().includes("http") || msg.body.toLowerCase().includes("www");
+            const hasAttachments = msg.hasMedia || msg.type === 'image' || msg.type === 'document' || msg.type === 'video' || msg.type === 'audio' || msg.type === 'ptt';
+            if (words.length < 10 && !hasLinks && !hasAttachments) {
+              console.log(`[WHATSAPP-BOT] Omitiendo mensaje corto de grupo externo "${groupName}" por Protocolo Anti-Ban (Palabras: ${words.length}).`);
+              return;
+            }
+          }
+
           const text = msg.body.toLowerCase();
-          // Comandos de administración
-          if (text.includes('jania')) {
+          // Comandos de administración (solo en el grupo principal)
+          if (isTargetGroup && text.includes('jania')) {
             if (text.includes('normas') || text.includes('preséntate') || text.includes('anuncia') || text.includes('dipava') || text.includes('retorno') || text.includes('sincroniza') || text.includes('catchup') || text.includes('cierre') || text.includes('audios')) {
               await this.handleAdminCommand(msg);
               return;
             }
           }
-          // Orquestación con Buffer y Cooldown (Lógica v10.5 intacta)
-          await this.handleIncomingMessage(msg, chatId);
-          return;
-        }
-
-        // NUEVO: RAMA DE GRUPO (BUZÓN DE CONSULTORÍA 24/7)
-        if (isBuzonGroup) {
-          await this.handleIncomingMessage(msg, chatId);
-          return;
-        }
-
-        // NUEVO: RAMA DE GRUPO (CÍRCULO CERO 👌)
-        if (isCirculoGroup) {
           await this.handleIncomingMessage(msg, chatId);
           return;
         }
@@ -1266,9 +1284,19 @@ export class WhatsAppBot {
           reaction = '🤔';
         }
         if (reaction) {
-          try {
-            await msg.react(reaction);
-          } catch (_) {}
+          const sendReaction = async () => {
+            try {
+              await msg.react(reaction);
+            } catch (_) {}
+          };
+
+          if (result.inserted && reaction === '✅') {
+            const delayMs = Math.floor(Math.random() * (12000 - 4000 + 1)) + 4000;
+            console.log(`[WHATSAPP-BOT] Inserción confirmada en parseAndSaveSilently. Retrasando reacción ${reaction} por ${delayMs}ms (Protocolo Anti-Ban)...`);
+            setTimeout(sendReaction, delayMs);
+          } else {
+            await sendReaction();
+          }
         }
 
         // Si hay matches reales detectados, notificar al administrador
@@ -1912,8 +1940,20 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
     const chatId = buffer.chatId;
     const senderId = bufferKey.split('_')[1];
 
+    let groupName: string | undefined = undefined;
+    if (chatId.includes('@g.us')) {
+      try {
+        const chat = await this.client.getChatById(chatId);
+        if (chat && chat.name) {
+          groupName = chat.name;
+        }
+      } catch (e) {
+        console.error("[processBuffer] Error fetching group name for WhatsApp-web:", e);
+      }
+    }
+
     this.messageBuffers.delete(bufferKey);
-    console.log(`[processBuffer] Iniciando procesamiento de ${buffer.messages.length} mensajes en buffer de ${senderId}.`);
+    console.log(`[processBuffer] Iniciando procesamiento de ${buffer.messages.length} mensajes en buffer de ${senderId}. GroupName: ${groupName || 'none'}`);
 
     // DESCARGA DE MEDIA DIFERIDA: Se realiza aquí de forma secuencial, evitando la
     // condición de carrera que existía cuando se descargaba en handleIncomingMessage.
@@ -2136,9 +2176,9 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
             const combinedText = `[CONTEXTO]: "${pending.originalText}"\n[RESPUESTA]: "${item.text}"`;
             this.pendingData.delete(senderId);
             this.savePendingData();
-            result = await processWhatsAppMessage(combinedText, senderId, userName, false, [], undefined, item.imageBuffer, !isDM, item.pdfBuffer, item.pdfMimeType);
+            result = await processWhatsAppMessage(combinedText, senderId, userName, false, [], undefined, item.imageBuffer, !isDM, item.pdfBuffer, item.pdfMimeType, isDM ? undefined : chatId, groupName);
           } else {
-            result = await processWhatsAppMessage(item.text, senderId, userName, item.hasMedia, scrapedResults, item.audioUrl, item.imageBuffer, !isDM, item.pdfBuffer, item.pdfMimeType);
+            result = await processWhatsAppMessage(item.text, senderId, userName, item.hasMedia, scrapedResults, item.audioUrl, item.imageBuffer, !isDM, item.pdfBuffer, item.pdfMimeType, isDM ? undefined : chatId, groupName);
           }
         }
 
@@ -2429,7 +2469,21 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
           }
         }
         if (reaction) {
-          await originalMsg.react(reaction);
+          const sendReaction = async () => {
+            try {
+              await originalMsg.react(reaction);
+            } catch (e) {
+              console.error('[React-Error] Fallo al reaccionar al mensaje original:', e);
+            }
+          };
+
+          if (result.inserted && reaction === '✅') {
+            const delayMs = Math.floor(Math.random() * (12000 - 4000 + 1)) + 4000;
+            console.log(`[WHATSAPP-BOT] Inserción confirmada en Grupo. Retrasando reacción ${reaction} por ${delayMs}ms (Protocolo Anti-Ban)...`);
+            setTimeout(sendReaction, delayMs);
+          } else {
+            await sendReaction();
+          }
         }
       } catch (e) {
         console.error('[React-Error] Fallo al reaccionar al mensaje original:', e);

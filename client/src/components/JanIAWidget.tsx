@@ -260,7 +260,7 @@ export default function JanIAWidget({ propertyId, leadId }: JanIAWidgetProps) {
     }
   };
 
-  // Text to speech using JanIA's real Achernar voice (Vertex AI / Google TTS)
+  // Text to speech using JanIA's real Laomedeia voice (Vertex AI / Google TTS)
   const handleSpeak = (msgId: string, text: string) => {
     // Stop any current playback
     if (ttsAudioRef.current) {
