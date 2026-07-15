@@ -129,12 +129,58 @@ export function parseSafeJSON(content: string): any {
   }
 }
 
-// --- 1. ALMACENES DE MEMORIA (v11.70) ---
-async function getPendingSession(userId: string): Promise<{ type: "PROPERTY" | "REQUIREMENT"; extractedData: any; senderInfo: any; messageToProcess: string; imageBuffer?: string } | null> {
+// --- 1. ALMACENES DE MEMORIA (v12.0) ---
+function cleanSessionJid(jid: string): string {
+  if (!jid) return "";
+  return jid.split(':')[0].split('@')[0];
+}
+
+export async function muteSession(userId: string, isMuted: boolean): Promise<void> {
+  try {
+    const db = await getDb();
+    if (!db) return;
+    const cleanJid = cleanSessionJid(userId);
+    const [existing] = await db.select().from(pendingSessions).where(eq(pendingSessions.jid, cleanJid)).limit(1);
+    const data = existing ? (existing.sessionData as any) : {};
+    data.isMuted = isMuted;
+
+    await db.insert(pendingSessions).values({
+      jid: cleanJid,
+      sessionData: data,
+      updatedAt: new Date()
+    }).onConflictDoUpdate({
+      target: pendingSessions.jid,
+      set: {
+        sessionData: data,
+        updatedAt: new Date()
+      }
+    });
+    console.log(`[JanIA-Mute] Sesión ${cleanJid} marcada como isMuted = ${isMuted}`);
+  } catch (err) {
+    console.error("[Database] Error muting session:", err);
+  }
+}
+
+export async function isSessionMuted(userId: string): Promise<boolean> {
+  try {
+    const db = await getDb();
+    if (!db) return false;
+    const cleanJid = cleanSessionJid(userId);
+    const [existing] = await db.select().from(pendingSessions).where(eq(pendingSessions.jid, cleanJid)).limit(1);
+    if (!existing) return false;
+    return !!(existing.sessionData as any)?.isMuted;
+  } catch (err) {
+    console.error("[Database] Error checking if session is muted:", err);
+    return false;
+  }
+}
+
+async function getPendingSession(userId: string): Promise<{ type: "PROPERTY" | "REQUIREMENT"; extractedData: any; senderInfo: any; messageToProcess: string; imageBuffer?: string; isMuted?: boolean } | null> {
   try {
     const db = await getDb();
     if (!db) return null;
-    const [session] = await db.select().from(pendingSessions).where(eq(pendingSessions.jid, userId)).limit(1);
+    const cleanJid = cleanSessionJid(userId);
+    const [session] = await db.select().from(pendingSessions).where(eq(pendingSessions.jid, cleanJid)).limit(1);
     if (!session) return null;
     return session.sessionData as any;
   } catch (err) {
@@ -147,8 +193,9 @@ async function setPendingSession(userId: string, data: any): Promise<void> {
   try {
     const db = await getDb();
     if (!db) return;
+    const cleanJid = cleanSessionJid(userId);
     await db.insert(pendingSessions).values({
-      jid: userId,
+      jid: cleanJid,
       sessionData: data,
       updatedAt: new Date()
     }).onConflictDoUpdate({
@@ -167,7 +214,8 @@ async function deletePendingSession(userId: string): Promise<void> {
   try {
     const db = await getDb();
     if (!db) return;
-    await db.delete(pendingSessions).where(eq(pendingSessions.jid, userId));
+    const cleanJid = cleanSessionJid(userId);
+    await db.delete(pendingSessions).where(eq(pendingSessions.jid, cleanJid));
   } catch (err) {
     console.error("[Database] Error deleting pending session:", err);
   }
@@ -1634,6 +1682,10 @@ Por lo tanto, DEBES hacer lo siguiente:
     }
 
     // --- PERSISTENCIA Y MATCHING (Con Flujos DM) ---
+    const origenTipo = (isGroup || groupJid) ? "grupo" : "contacto_directo";
+    const origenId = (isGroup || groupJid) ? (groupJid || userId) : userId;
+    const origenNombre = (isGroup || groupJid) ? (groupName || "Grupo WhatsApp") : (userName || realName || "Contacto Directo");
+
     if (isProperty) {
       const propertyTitle = extracted.title || `${capitalize(extracted.propertyType || 'inmueble')} en ${extracted.zone || 'Bogotá'} para ${extracted.transactionType || 'venta'}`;
       const saved = await saveProperty({
@@ -1643,28 +1695,24 @@ Por lo tanto, DEBES hacer lo siguiente:
         areaTotal: String(extracted.area || 0),
         idUsuarioWhatsapp: rawPhone,
         rawText: messageToProcess,
-        amenities: { gives: extracted.gives, wants: extracted.wants, isCollaborativePool: extracted.isCollaborativePool }
+        amenities: { gives: extracted.gives, wants: extracted.wants, isCollaborativePool: extracted.isCollaborativePool },
+        origenTipo,
+        origenId,
+        origenNombre,
+        fechaExtraccion: new Date()
       }, userId, realName, imageBuffer);
       
       if (saved) {
         result.inserted = true;
-        // FLUJO A: Publicación Perfecta e Indexada
-        result.shouldSendDM = true;
-        if (!result.dmResponse) {
-          const intro = senderInfo.greeting ? `${senderInfo.greeting} ` : "";
-          const mainText = `registré tu oferta en la red y ya estoy buscando tu match. ¡Excelente labor! 🎯`;
-          result.dmResponse = intro + (senderInfo.greeting ? mainText : capitalize(mainText));
-        }
-        
-        const matches = await findMatchesForProperty(saved.id);
-        const matchDetails = matches.length > 0
-          ? await handleDetectedMatches(matches, true, saved, userId, realName)
-          : { response: "", mentions: [], extraDMs: [], sendReputationHook: false };
+        result.shouldSendDM = false;
+        result.dmResponse = "";
+        result.response = "";
+        result.mentions = [];
+        result.extraDMs = [];
+        result.sendReputationHook = false;
 
-        result.response = matchDetails.response;
-        result.mentions = matchDetails.mentions;
-        result.extraDMs = matchDetails.extraDMs;
-        result.sendReputationHook = matchDetails.sendReputationHook;
+        const { executeMatchEngine } = await import("./matching");
+        executeMatchEngine(saved.id, null).catch(err => console.error("Error executing match engine:", err));
       }
     } else if (isRequirement) {
       const reqTitle = extracted.title || `Requerimiento de ${extracted.propertyType || 'inmueble'} en ${extracted.zonaDeseada || extracted.zone || 'Bogotá'} para ${extracted.transactionType || 'venta'}`;
@@ -1677,28 +1725,24 @@ Por lo tanto, DEBES hacer lo siguiente:
         presupuestoMax: String(extracted.price || 0),
         idUsuarioWhatsapp: rawPhone,
         rawText: messageToProcess,
-        caracteristicasDeseadas: { gives: extracted.gives, wants: extracted.wants }
+        caracteristicasDeseadas: { gives: extracted.gives, wants: extracted.wants },
+        origenTipo,
+        origenId,
+        origenNombre,
+        fechaExtraccion: new Date()
       }, userId, realName);
 
       if (saved) {
         result.inserted = true;
-        // FLUJO A: Publicación Perfecta e Indexada
-        result.shouldSendDM = true;
-        if (!result.dmResponse) {
-          const intro = senderInfo.greeting ? `${senderInfo.greeting} ` : "";
-          const mainText = `registré tu requerimiento en la red y ya estoy buscando tu inmueble ideal. ¡Excelente labor! 🎯`;
-          result.dmResponse = intro + (senderInfo.greeting ? mainText : capitalize(mainText));
-        }
+        result.shouldSendDM = false;
+        result.dmResponse = "";
+        result.response = "";
+        result.mentions = [];
+        result.extraDMs = [];
+        result.sendReputationHook = false;
 
-        const matches = await findMatchesForRequirement(saved.id);
-        const matchDetails = matches.length > 0
-          ? await handleDetectedMatches(matches, false, saved, userId, realName)
-          : { response: "", mentions: [], extraDMs: [], sendReputationHook: false };
-
-        result.response = matchDetails.response;
-        result.mentions = matchDetails.mentions;
-        result.extraDMs = matchDetails.extraDMs;
-        result.sendReputationHook = matchDetails.sendReputationHook;
+        const { executeMatchEngine } = await import("./matching");
+        executeMatchEngine(null, saved.id).catch(err => console.error("Error executing match engine:", err));
       }
     }
 
@@ -1985,7 +2029,11 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
     latitude: data.latitude !== undefined && data.latitude !== null ? String(data.latitude) : null,
     longitude: data.longitude !== undefined && data.longitude !== null ? String(data.longitude) : null,
     images: finalImages.length > 0 ? finalImages : null,
-    amenities: amenitiesObj
+    amenities: amenitiesObj,
+    origenTipo: data.origenTipo || null,
+    origenId: data.origenId || null,
+    origenNombre: data.origenNombre || null,
+    fechaExtraccion: data.fechaExtraccion || new Date()
   };
 
   // Buscar duplicado activo del mismo usuario (mismo tipo, negocio, ciudad y barrio)
@@ -2082,7 +2130,11 @@ async function saveRequirement(data: any, userId: string, realName: string) {
     parqueaderosMin: data.parqueaderosMin !== undefined && data.parqueaderosMin !== null ? Math.round(Number(data.parqueaderosMin)) : (data.garages !== undefined && data.garages !== null ? Math.round(Number(data.garages)) : null),
     estratoDeseado: data.estratoDeseado || (data.stratum !== undefined && data.stratum !== null ? [Math.round(Number(data.stratum))] : null),
     userId: user ? user.id : null,
-    caracteristicasDeseadas: characteristicsObj
+    caracteristicasDeseadas: characteristicsObj,
+    origenTipo: data.origenTipo || null,
+    origenId: data.origenId || null,
+    origenNombre: data.origenNombre || null,
+    fechaExtraccion: data.fechaExtraccion || new Date()
   };
 
   // Buscar duplicado activo del mismo usuario (mismo tipo, negocio, ciudad y barrio deseados)

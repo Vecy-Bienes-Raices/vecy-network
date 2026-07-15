@@ -423,6 +423,13 @@ export class JaniaMatchBot {
             const isAdmin = rawPhone.includes(ADMIN_PHONE) || rawPhone === ADMIN_PHONE || rawPhone === "573166569719" || rawPhone.includes("573185462265");
             const userName = msg.pushName || `Asesor +${rawPhone}`;
 
+            let body = '';
+            if (msg.message?.conversation) body = msg.message.conversation;
+            else if (msg.message?.extendedTextMessage) body = msg.message.extendedTextMessage.text || '';
+            else if (msg.message?.imageMessage) body = msg.message.imageMessage.caption || '';
+            else if (msg.message?.documentMessage) body = msg.message.documentMessage.caption || '';
+            else if (msg.message?.videoMessage) body = msg.message.videoMessage.caption || '';
+
             // 1. Detectar si el mensaje es del bot o de un humano (fromMe)
             if (msg.key.fromMe) {
               const msgId = msg.key.id || "";
@@ -430,16 +437,31 @@ export class JaniaMatchBot {
                 // Intervención humana detectada
                 console.log(`[JANIA-MATCH] Intervención humana detectada en DM ${senderId}. Silenciando bot.`);
                 this.lastHumanIntervention.set(senderId, Date.now());
+                const { muteSession } = await import('./janIA');
+                await muteSession(senderId, true).catch(err => console.error("Error muting session in database:", err));
               }
               return;
             }
 
-            // 2. Verificar si hay una intervención humana activa (últimos 30 minutos)
+            // 2. Verificar reactivación ("Agente JanIA")
+            const cleanStart = body.trim().toLowerCase().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ");
+            
+            const { isSessionMuted, muteSession } = await import('./janIA');
+            let isMuted = await isSessionMuted(senderId);
+
+            if (isMuted) {
+              if (cleanStart.startsWith("agente jania")) {
+                await muteSession(senderId, false).catch(err => console.error("Error unmuting session:", err));
+                isMuted = false;
+                console.log(`[JANIA-MATCH] Sesión reactivada mediante comando de cliente para ${senderId}`);
+              }
+            }
+
+            // 3. Verificar si hay una intervención humana activa (últimos 30 minutos)
             const lastIntervention = this.lastHumanIntervention.get(senderId) || 0;
             const cooldownPeriod = 30 * 60 * 1000; // 30 minutos
-            if (Date.now() - lastIntervention < cooldownPeriod) {
-              console.log(`[JANIA-MATCH] Bot silenciado en DM ${senderId} debido a intervención humana reciente (${Math.round((Date.now() - lastIntervention) / 1000)}s).`);
-              return;
+            if (isMuted || (Date.now() - lastIntervention < cooldownPeriod)) {
+              // Módulo 7: chateo interactivo bloqueado. Si es posible listing se procesará silenciosamente más abajo.
             }
 
             // 3. Buffer de mensajes de DM privado
@@ -566,22 +588,19 @@ export class JaniaMatchBot {
                 await this.sock.sendMessage(chatId, { react: { text: emoji, key: mainMsg.key } });
               } catch (e) {}
             };
-
-            if (result.inserted && (emoji === '✅' || emoji === '👍' || emoji === '🤝')) {
-              const delayMs = Math.floor(Math.random() * (12000 - 4000 + 1)) + 4000;
-              console.log(`[JANIA-MATCH] Inserción confirmada en DM. Retrasando reacción ${emoji} por ${delayMs}ms (Protocolo Anti-Ban)...`);
-              setTimeout(sendReaction, delayMs);
-            } else {
-              await sendReaction();
-            }
-          }
-
-          const { isOutsideWorkingHours } = await import('./janIA');
-          const isOffHours = isOutsideWorkingHours();
-          if (isOffHours && result.shouldSendDM && result.dmResponse && result.dmResponse.trim() !== "") {
-            await this.queuedSend(senderId, result.dmResponse);
+            const delayMs = Math.floor(Math.random() * (12000 - 4000 + 1)) + 4000;
+            console.log(`[JANIA-MATCH] Inserción confirmada en DM. Retrasando reacción ${emoji} por ${delayMs}ms (Protocolo Anti-Ban)...`);
+            setTimeout(sendReaction, delayMs);
           }
         }
+        return;
+      }
+
+      // Si está silenciado por intervención humana, NO procesar respuestas de texto/conversación/redirección interactivas
+      const { isSessionMuted } = await import('./janIA');
+      const isMuted = await isSessionMuted(senderId);
+      if (isMuted) {
+        console.log(`[JANIA-MATCH] Chat silenciado (isMuted === true) para ${senderId}. Ignorando mensaje interactivo.`);
         return;
       }
 
@@ -638,7 +657,19 @@ export class JaniaMatchBot {
   // --- RESPUESTA DIRECTA A PREGUNTAS EN GRUPOS ---
   private async handleDirectGroupQuestion(msg: proto.IWebMessageInfo, chatId: string, senderId: string, bodyText: string) {
     try {
-      const realName = msg.pushName || `Asesor +${senderId.split('@')[0]}`;
+      let resolvedSenderId = senderId;
+      if (senderId.endsWith('@lid') && this.sock?.signalRepository?.lidMapping?.getPNForLID) {
+        try {
+          const mappedPn = await this.sock.signalRepository.lidMapping.getPNForLID(senderId);
+          if (mappedPn) {
+            const cleanUser = mappedPn.split(':')[0].split('@')[0];
+            resolvedSenderId = `${cleanUser}@s.whatsapp.net`;
+            console.log(`[JANIA-MATCH] [DirectGroupQuestion] Resolviendo LID ${senderId} to PN ${resolvedSenderId}`);
+          }
+        } catch (err) {}
+      }
+
+      const realName = msg.pushName || `Asesor +${resolvedSenderId.split('@')[0]}`;
       const textLower = bodyText.toLowerCase();
 
       const { detectaVoz, textToSpeechMedia } = await import('./whatsapp');
@@ -704,9 +735,9 @@ export class JaniaMatchBot {
 
       let result;
       if (chatId === this.buzonGroupId) { // Soporte Legal, Tributario y Avalúos
-        result = await processConsultingMessage(bodyText, senderId, realName);
+        result = await processConsultingMessage(bodyText, resolvedSenderId, realName);
       } else if (chatId === this.circuloGroupId) { // Círculo Cero
-        result = await processCirculoMessage(bodyText, senderId, realName);
+        result = await processCirculoMessage(bodyText, resolvedSenderId, realName);
       } else if (isMainGroupChat) { // VECY INMUEBLES NETWORK — preguntas sobre el grupo/sistema
         let groupName = "VECY INMUEBLES NETWORK";
         try {
@@ -717,7 +748,7 @@ export class JaniaMatchBot {
         } catch (e) {}
         result = await processWhatsAppMessage(
           bodyText,
-          senderId,
+          resolvedSenderId,
           realName,
           false,
           [],
@@ -733,7 +764,7 @@ export class JaniaMatchBot {
       } else {
         const redirectMsg = `¡Hola! 😊 Para resolver tus inquietudes inmobiliarias, dudas de corretaje, soporte técnico o de cuenta, te invito a consultarme en privado a mi otro yo: **JanIA de Soporte y Atención** 📲 en el número +57 3185462265 o haciendo clic aquí: https://wa.me/573185462265. ¡Allí con gusto te responderé a profundidad! 🚀`;
         await this.queuedSend(chatId, redirectMsg, {
-          mentions: [senderId],
+          mentions: [resolvedSenderId],
           quoted: msg
         });
         await this.sock.sendPresenceUpdate('paused', chatId);
@@ -910,30 +941,10 @@ export class JaniaMatchBot {
   }
 
   private getReactionEmoji(result: any): string | null {
-    const completeEmojis = ['👍', '👌', '🤝', '✅', '🆗', '✔️', '☑️'];
-    const incompleteEmojis = ['😳', '🧐', '🫪', '😲', '😮', '🤔', '🤷🏻‍♀️', '❓'];
-    const violationEmojis = ['🚫', '🙈', '🙅‍♂️', '🚨', '😒', '❌', '🆘', '❎', '👎', '🙀', '🙄'];
-
-    if (result.classification === 'VIOLACION_DE_NORMAS') {
-      return violationEmojis[Math.floor(Math.random() * violationEmojis.length)];
+    if (result && result.inserted) {
+      const allowedEmojis = ['👍', '👌', '✅', '🆗', '🧡'];
+      return allowedEmojis[Math.floor(Math.random() * allowedEmojis.length)];
     }
-    
-    if (
-      result.classification === 'DATOS_INCOMPLETOS' || 
-      (result.missingFields && result.missingFields.length > 0)
-    ) {
-      return '🤔'; // Forzar emoji de duda para advertencias / datos incompletos
-    }
-
-    if (result.reactionEmoji && typeof result.reactionEmoji === 'string') {
-      const trimmed = result.reactionEmoji.trim();
-      if (trimmed) return trimmed;
-    }
-
-    if (result.classification === 'INMUEBLE' || result.classification === 'REQUERIMIENTO') {
-      return completeEmojis[Math.floor(Math.random() * completeEmojis.length)];
-    }
-
     return null;
   }
 
@@ -946,7 +957,21 @@ export class JaniaMatchBot {
     const chatId = buffer.chatId;
     const userName = buffer.userName;
 
-    console.log(`[JANIA-MATCH] Procesando buffer de ${buffer.messages.length} mensajes para ${senderId} (Silencioso)...`);
+    let resolvedSenderId = senderId;
+    if (senderId.endsWith('@lid') && this.sock?.signalRepository?.lidMapping?.getPNForLID) {
+      try {
+        const mappedPn = await this.sock.signalRepository.lidMapping.getPNForLID(senderId);
+        if (mappedPn) {
+          const cleanUser = mappedPn.split(':')[0].split('@')[0];
+          resolvedSenderId = `${cleanUser}@s.whatsapp.net`;
+          console.log(`[JANIA-MATCH] Resolviendo LID ${senderId} a PN ${resolvedSenderId}`);
+        }
+      } catch (err) {
+        console.warn(`[JANIA-MATCH] No se pudo resolver PN para LID ${senderId}:`, err);
+      }
+    }
+
+    console.log(`[JANIA-MATCH] Procesando buffer de ${buffer.messages.length} mensajes para ${resolvedSenderId} (Silencioso)...`);
 
     // Descarga de imágenes o documentos adjuntos
     for (const bufferedMsg of buffer.messages) {
@@ -986,7 +1011,7 @@ export class JaniaMatchBot {
       }
 
       // Guardar logs en BD
-      await this.logToDb(senderId, 'user', fullText);
+      await this.logToDb(resolvedSenderId, 'user', fullText);
 
       const { processWhatsAppMessage, processConsultingMessage, processCirculoMessage } = await import('./janIA');
       const { sendAdminNotification } = await import('./whatsapp');
@@ -996,7 +1021,7 @@ export class JaniaMatchBot {
       if (chatId === '120363417740040773@g.us') {
         result = await processConsultingMessage(
           fullText,
-          senderId,
+          resolvedSenderId,
           userName,
           imageMsg?.imageBuffer,
           pdfMsg?.pdfBuffer,
@@ -1005,7 +1030,7 @@ export class JaniaMatchBot {
       } else if (chatId === '120363403507276533@g.us') {
         result = await processCirculoMessage(
           fullText,
-          senderId,
+          resolvedSenderId,
           userName
         );
       } else {
@@ -1018,7 +1043,7 @@ export class JaniaMatchBot {
         } catch (e) {}
         result = await processWhatsAppMessage(
           fullText,
-          senderId,
+          resolvedSenderId,
           userName,
           hasMedia,
           scrapedResults,
@@ -1046,13 +1071,9 @@ export class JaniaMatchBot {
             }
           };
 
-          if (result.inserted && (emoji === '✅' || emoji === '👍' || emoji === '🤝')) {
-            const delayMs = Math.floor(Math.random() * (12000 - 4000 + 1)) + 4000;
-            console.log(`[JANIA-MATCH] Inserción confirmada en Grupo. Retrasando reacción ${emoji} por ${delayMs}ms (Protocolo Anti-Ban)...`);
-            setTimeout(sendReaction, delayMs);
-          } else {
-            await sendReaction();
-          }
+          const delayMs = Math.floor(Math.random() * (12000 - 4000 + 1)) + 4000;
+          console.log(`[JANIA-MATCH] Inserción confirmada en Grupo. Retrasando reacción ${emoji} por ${delayMs}ms (Protocolo Anti-Ban)...`);
+          setTimeout(sendReaction, delayMs);
         }
       }
 

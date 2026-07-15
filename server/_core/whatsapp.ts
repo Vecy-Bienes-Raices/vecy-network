@@ -627,6 +627,7 @@ export class WhatsAppBot {
   private chatMessageTimes: Map<string, number[]> = new Map();
   private blockedChats: Map<string, number> = new Map();
   private redirectCooldowns: Map<string, number> = new Map();
+  private botSentMessageIds: Set<string> = new Set();
   private blacklistedBots: string[] = process.env.BLACKLISTED_BOTS ? process.env.BLACKLISTED_BOTS.split(',') : [];
   private watchdogInterval: NodeJS.Timeout | null = null;
 
@@ -741,7 +742,12 @@ export class WhatsAppBot {
             }
           }
         } else {
-          sendPromise = this.client.sendMessage(chatId, content, options);
+          sendPromise = this.client.sendMessage(chatId, content, options).then((sentMsg: any) => {
+            if (sentMsg && sentMsg.id && sentMsg.id.id) {
+              this.botSentMessageIds.add(sentMsg.id.id);
+            }
+            return sentMsg;
+          });
         }
         const timeoutPromise = new Promise((_, reject) =>
           setTimeout(() => reject(new Error(`Timeout al enviar mensaje de WhatsApp a ${chatId}`)), 15000)
@@ -1132,7 +1138,19 @@ export class WhatsAppBot {
 
       const senderId = (msg as any).author || msg.from;
       const botJid = this.client.info?.wid?._serialized;
-      if (msg.fromMe || (botJid && (senderId === botJid || msg.from === botJid || msg.author === botJid)) || this.blacklistedBots.includes(senderId)) {
+
+      if (msg.fromMe) {
+        const msgId = msg.id?.id || "";
+        if (!this.botSentMessageIds.has(msgId)) {
+          const chatJid = msg.to;
+          console.log(`[WWEBJS] Intervención humana detectada en DM ${chatJid}. Silenciando bot.`);
+          const { muteSession } = await import('./janIA');
+          await muteSession(chatJid, true).catch(err => console.error("Error muting session in database:", err));
+        }
+        return;
+      }
+
+      if ((botJid && (senderId === botJid || msg.from === botJid || msg.author === botJid)) || this.blacklistedBots.includes(senderId)) {
         return;
       }
 
@@ -1940,6 +1958,19 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
     const chatId = buffer.chatId;
     const senderId = bufferKey.split('_')[1];
 
+    const isDM = !chatId.includes('@g.us');
+    if (isDM) {
+      const combinedText = buffer.messages.map(m => m.body).join('\n\n');
+      const cleanStart = combinedText.trim().toLowerCase().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ");
+
+      const { isSessionMuted, muteSession } = await import('./janIA');
+      const isMuted = await isSessionMuted(senderId);
+      if (isMuted && cleanStart.startsWith("agente jania")) {
+        await muteSession(senderId, false).catch(err => console.error("Error unmuting session:", err));
+        console.log(`[WWEBJS] Sesión reactivada mediante comando del cliente para ${senderId}`);
+      }
+    }
+
     let groupName: string | undefined = undefined;
     if (chatId.includes('@g.us')) {
       try {
@@ -2297,6 +2328,30 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
   // --- ORQUESTACIÓN DE RESPUESTAS Y PERSONALIZACIÓN (JanIA v2.0) ---
   private async handleJanIAResponse(result: any, senderId: string, chatId: string, userName: string, fullText: string, originalMsg?: Message, wantsVoice: boolean = false) {
     if (!result) return;
+
+    // Módulo 2 & 3 & 7: Silencio de extracciones exitosas y bloqueo de respuestas en chats silenciados
+    if (result.inserted) {
+      const allowedEmojis = ['👍', '👌', '✅', '🆗', '🧡'];
+      const reaction = allowedEmojis[Math.floor(Math.random() * allowedEmojis.length)];
+      if (originalMsg) {
+        const delayMs = Math.floor(Math.random() * (12000 - 4000 + 1)) + 4000;
+        console.log(`[WHATSAPP-BOT] Inserción exitosa. Retrasando reacción ${reaction} por ${delayMs}ms...`);
+        setTimeout(async () => {
+          try {
+            await originalMsg.react(reaction);
+          } catch (e) {}
+        }, delayMs);
+      }
+      return;
+    }
+
+    const isDM = !chatId.includes('@g.us');
+    const { isSessionMuted } = await import('./janIA');
+    const isMuted = await isSessionMuted(senderId);
+    if (isDM && isMuted) {
+      console.log(`[WHATSAPP-BOT] Chat silenciado (isMuted === true) para ${senderId}. Ignorando respuesta interactiva.`);
+      return;
+    }
 
     // Control de antigüedad: Omitir envíos de WhatsApp para mensajes procesados con más de 2 horas de retraso (evita responder audios/textos de ayer)
     const isOldMessage = originalMsg && (Math.floor(Date.now() / 1000) - originalMsg.timestamp > 2 * 60 * 60);
@@ -2954,6 +3009,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
       }
     });
 
+    (global as any).whatsappClient = this.client;
     this.setupEventListeners();
   }
 

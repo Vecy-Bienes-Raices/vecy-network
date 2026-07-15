@@ -97,6 +97,10 @@ export const properties = pgTable("properties", {
   acceptedTransactionTypes: text("accepted_transaction_types").array(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  fechaExtraccion: timestamp("fecha_extraccion").defaultNow(),
+  origenTipo: varchar("origen_tipo", { length: 50 }),
+  origenId: varchar("origen_id", { length: 100 }),
+  origenNombre: varchar("origen_nombre", { length: 255 }),
 });
 
 export type Property = typeof properties.$inferSelect;
@@ -133,6 +137,10 @@ export const requirements = pgTable("requirements", {
   rawText: text("rawText"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  fechaExtraccion: timestamp("fecha_extraccion").defaultNow(),
+  origenTipo: varchar("origen_tipo", { length: 50 }),
+  origenId: varchar("origen_id", { length: 100 }),
+  origenNombre: varchar("origen_nombre", { length: 255 }),
 });
 
 export type Requirement = typeof requirements.$inferSelect;

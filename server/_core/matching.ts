@@ -403,3 +403,153 @@ export async function findMatchesForRequirement(requirementId: number) {
     return [];
   }
 }
+
+/**
+ * MÓDULO 5 & MÓDULO 6: Motor de Match Real y Alertas Directas y Confidenciales a Socios
+ */
+export async function executeMatchEngine(propertyId: number | null, requirementId: number | null): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+
+  try {
+    let props: typeof properties.$inferSelect[] = [];
+    let reqs: typeof requirements.$inferSelect[] = [];
+
+    if (propertyId) {
+      props = await db.select().from(properties).where(eq(properties.id, propertyId));
+    } else {
+      props = await db.select().from(properties).where(eq(properties.available, true));
+    }
+
+    if (requirementId) {
+      reqs = await db.select().from(requirements).where(eq(requirements.id, requirementId));
+    } else {
+      reqs = await db.select().from(requirements).where(eq(requirements.status, "active"));
+    }
+
+    const { users } = await import("../../drizzle/schema");
+
+    for (const prop of props) {
+      for (const req of reqs) {
+        // 1. Match de Negocio
+        const pBiz = (prop.transactionType || "").toLowerCase();
+        const rBiz = (req.tipoNegocioDeseado || "").toLowerCase();
+        if (pBiz !== rBiz) continue;
+
+        // 2. Match de Tipo
+        const pType = (prop.propertyType || "").toLowerCase();
+        const rType = (req.tipoInmuebleDeseado || "").toLowerCase();
+        if (pType !== rType) continue;
+
+        // 3. Match Financiero
+        const price = parseFloat(String(prop.price || "0"));
+        const budgetMax = parseFloat(String(req.presupuestoMax || "0"));
+        if (budgetMax > 0 && price > budgetMax) continue;
+
+        // 4. Match Geográfico (DAVIPOLA)
+        const pCity = normalizarTextoGeografico(prop.city || prop.addressCity || "");
+        const rCity = normalizarTextoGeografico(req.ciudadDeseada || "");
+        if (!pCity || !rCity || pCity !== rCity) continue;
+
+        // Scoring de barrio/vereda
+        const pZone = normalizarTextoGeografico(prop.zone || prop.addressNeighborhood || "");
+        const rZone = normalizarTextoGeografico(req.zonaDeseada || req.addressNeighborhood || "");
+        const zoneMatch = rZone && pZone && (rZone === pZone || rZone.includes(pZone) || pZone.includes(rZone));
+
+        let score = 70;
+        if (zoneMatch) {
+          score = 100;
+        } else if (!rZone) {
+          score = 85;
+        }
+
+        // Registrar coincidencia en Supabase
+        let matchId: number;
+        let isNewMatch = false;
+
+        const existing = await db.select().from(propertyMatches).where(
+          and(
+            eq(propertyMatches.propertyId, prop.id),
+            eq(propertyMatches.requirementId, req.id)
+          )
+        ).limit(1);
+
+        if (existing.length > 0) {
+          matchId = existing[0].id;
+          await db.update(propertyMatches).set({
+            matchScore: score.toFixed(2),
+            matchReason: `VECY Core Engine: Match de ${score}%`,
+            createdAt: new Date()
+          }).where(eq(propertyMatches.id, matchId));
+        } else {
+          isNewMatch = true;
+          const [newMatch] = await db.insert(propertyMatches).values({
+            propertyId: prop.id,
+            requirementId: req.id,
+            matchScore: score.toFixed(2),
+            matchReason: `VECY Core Engine: Match de ${score}%`,
+            status: "suggested",
+            ownerConfirmed: false,
+            seekerConfirmed: false,
+          }).returning();
+          matchId = newMatch.id;
+        }
+
+        // Si es un match nuevo, enviar la alerta privada confidencial
+        if (isNewMatch) {
+          const [propUser] = await db.select().from(users).where(eq(users.phone, prop.idUsuarioWhatsapp || "")).limit(1);
+          const [reqUser] = await db.select().from(users).where(eq(users.phone, req.idUsuarioWhatsapp || "")).limit(1);
+
+          const ownerName = propUser?.name || "Colega Oferente";
+          const ownerPhone = prop.idUsuarioWhatsapp || propUser?.phone || "Desconocido";
+
+          const seekerName = reqUser?.name || "Colega Demandante";
+          const seekerPhone = req.idUsuarioWhatsapp || reqUser?.phone || "Desconocido";
+
+          const formatCurrency = (val: number) => {
+            return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(val);
+          };
+
+          const alertMsg = `🎯 *[COINCIDENCIA INMOBILIARIA DETECTADA]*\n\n` +
+            `• *Porcentaje de Match:* ${score}%\n` +
+            `• *Inmueble:* ${prop.propertyType.toUpperCase()} en ${prop.city} (${prop.zone || 'Sector general'})\n` +
+            `• *Negocio:* ${prop.transactionType.toUpperCase()}\n` +
+            `• *Valores:* Oferta: ${formatCurrency(price)} | Presupuesto Máx: ${formatCurrency(budgetMax)}\n\n` +
+            `👥 *CONTACTOS INVOLUCRADOS:*\n\n` +
+            `🔑 *Dueño/Captador (Oferta):*\n` +
+            `  - Nombre: ${ownerName}\n` +
+            `  - Teléfono: wa.me/${ownerPhone.replace(/[^0-9]/g, "")} (+${ownerPhone})\n\n` +
+            `🔎 *Buscador (Demanda):*\n` +
+            `  - Nombre: ${seekerName}\n` +
+            `  - Teléfono: wa.me/${seekerPhone.replace(/[^0-9]/g, "")} (+${seekerPhone})\n\n` +
+            `💼 _Proceder con el cierre comercial directamente de forma confidencial._`;
+
+          // Enviar alerta a Eduardo y Jani simultáneamente
+          await sendDirectAlertToAdmins(alertMsg);
+        }
+      }
+    }
+  } catch (err: any) {
+    console.error("[Matching-Engine] Error running match engine:", err.message || err);
+  }
+}
+
+async function sendDirectAlertToAdmins(message: string): Promise<void> {
+  const matchBot = (global as any).janiaMatchBotInstance;
+  if (matchBot && matchBot.isReady) {
+    console.log("[Matching-Notification] Enviando alerta de Match a administradores vía Baileys...");
+    await matchBot.queuedSend("573192919978@s.whatsapp.net", message).catch((e: any) => console.error("Error al notificar a Eduardo por Baileys:", e));
+    await matchBot.queuedSend("573188096811@s.whatsapp.net", message).catch((e: any) => console.error("Error al notificar a Jani por Baileys:", e));
+    return;
+  }
+
+  const wwebClient = (global as any).whatsappClient;
+  if (wwebClient) {
+    console.log("[Matching-Notification] Enviando alerta de Match a administradores vía WWEBJS...");
+    await wwebClient.sendMessage("573192919978@c.us", message).catch((e: any) => console.error("Error al notificar a Eduardo por WWEBJS:", e));
+    await wwebClient.sendMessage("573188096811@c.us", message).catch((e: any) => console.error("Error al notificar a Jani por WWEBJS:", e));
+    return;
+  }
+
+  console.warn("[Matching-Notification] Ningún cliente de WhatsApp disponible en global para enviar la alerta.");
+}
