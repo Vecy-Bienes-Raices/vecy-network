@@ -386,27 +386,7 @@ export class JaniaMatchBot {
             const shouldRespond = hasDirectMention || isHelpOrSystemQuery || isInteractiveGroupQuery;
 
             if (shouldRespond) {
-              let isBotAdmin = false;
-              try {
-                const metadata = await this.sock.groupMetadata(chatId);
-                const me = this.sock.user?.id ? this.sock.user.id.split(':')[0] : '';
-                const myParticipant = metadata.participants.find((p: any) => p.id.split('@')[0] === me);
-                isBotAdmin = !!myParticipant && (myParticipant.admin === 'admin' || myParticipant.admin === 'superadmin');
-              } catch (err) {
-                isBotAdmin = false;
-              }
-
-              // Los 3 grupos oficiales responden 24/7; grupos externos solo fuera de horario
-              const { isOutsideWorkingHours } = await import('./janIA');
-              const isOffHours = isOutsideWorkingHours();
-              const canRespond = isOfficialGroup || isOffHours;
-
-              if (canRespond) {
-                console.log(`[JANIA-MATCH] Respondiendo en grupo ${chatId} (Oficial=${isOfficialGroup}, OffHours=${isOffHours}, BotAdmin=${isBotAdmin}).`);
-                await this.handleDirectGroupQuestion(msg, chatId, senderId, body);
-              } else {
-                console.log(`[JANIA-MATCH] Ignorado en ${chatId} (Oficial=${isOfficialGroup}, OffHours=${isOffHours}, BotAdmin=${isBotAdmin}).`);
-              }
+              console.log(`[JANIA-MATCH] Ignorado en grupo ${chatId} debido a SILENCIO TEXTUAL ABSOLUTO.`);
               return;
             }
 
@@ -596,30 +576,9 @@ export class JaniaMatchBot {
         return;
       }
 
-      // Si está silenciado por intervención humana, NO procesar respuestas de texto/conversación/redirección interactivas
-      const { isSessionMuted } = await import('./janIA');
-      const isMuted = await isSessionMuted(senderId);
-      if (isMuted) {
-        console.log(`[JANIA-MATCH] Chat silenciado (isMuted === true) para ${senderId}. Ignorando mensaje interactivo.`);
-        return;
-      }
-
-      // Verificar si estamos fuera de horario laboral (Colombia)
-      const { isOutsideWorkingHours } = await import('./janIA');
-      const isOffHours = isOutsideWorkingHours();
-
-      if (isOffHours) {
-        console.log(`[JANIA-MATCH] Conversación DM fuera de horario con ${senderId}. Enviando nota de voz.`);
-        await this.logToDb(senderId, 'user', body);
-        await this.handlePrivateDmConversation(mainMsg, senderId, rawPhone, body);
-        return;
-      } else {
-        // En horario laboral: responder con el mensaje de texto de redirección a JanIA v3.5
-        console.log(`[JANIA-MATCH] DM de ${rawPhone} recibido en horario laboral. Redirigiendo con texto.`);
-        await this.logToDb(senderId, 'user', body);
-        await this.handleRedirectText(mainMsg, senderId, rawPhone);
-        return;
-      }
+      // Módulo 2 & 7: Silencio total en DMs si no es listing o si no hay inserción exitosa.
+      console.log(`[JANIA-MATCH] Mensaje común recibido en DM ${senderId}. Silencio absoluto, ignorando.`);
+      return;
     }
 
     // --- FLUJO ADMINISTRADOR O BYPASS DE TEST ---

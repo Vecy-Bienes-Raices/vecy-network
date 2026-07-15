@@ -985,122 +985,13 @@ export class WhatsAppBot {
     });
 
     this.client.on('group_join', async (notification: any) => {
-      const chatId = notification.chatId;
-      const isMain = chatId === this.targetGroupId;
-      const isBuzon = chatId === this.buzonGroupId;
-      const isCirculo = chatId === this.circuloGroupId;
-
-      if (!isMain && !isBuzon && !isCirculo) return;
-
-      const joinedIds = notification.recipientIds || [];
-      const resolvedIds = [];
-      for (const id of joinedIds) {
-        if (id && id.endsWith('@lid')) {
-          try {
-            const contact = await this.client.getContactById(id);
-            if (contact && contact.id && contact.id._serialized && contact.id._serialized.endsWith('@c.us')) {
-              resolvedIds.push(contact.id._serialized);
-              continue;
-            }
-          } catch (e) { }
-        }
-        resolvedIds.push(id);
-      }
-
-      if (isMain) {
-        this.pendingWelcomeJids.push(...resolvedIds);
-        this.pendingWelcomeCount = this.pendingWelcomeJids.length;
-        this.saveCounter();
-        if (this.pendingWelcomeCount >= 3) {
-          await this.sendBatchWelcome();
-        } else {
-          if (this.mainWelcomeTimer) clearTimeout(this.mainWelcomeTimer);
-          this.mainWelcomeTimer = setTimeout(async () => {
-            if (this.pendingWelcomeJids.length > 0) {
-              await this.sendBatchWelcome();
-            }
-          }, 10000);
-        }
-      } else if (isBuzon) {
-        this.pendingWelcomeBuzon.push(...resolvedIds);
-        if (this.pendingWelcomeBuzon.length >= 3) {
-          await this.sendBatchWelcomeForGroup(this.buzonGroupId, this.pendingWelcomeBuzon);
-        } else {
-          if (this.buzonWelcomeTimer) clearTimeout(this.buzonWelcomeTimer);
-          this.buzonWelcomeTimer = setTimeout(async () => {
-            if (this.pendingWelcomeBuzon.length > 0) {
-              await this.sendBatchWelcomeForGroup(this.buzonGroupId, this.pendingWelcomeBuzon);
-            }
-          }, 10000);
-        }
-      } else if (isCirculo) {
-        this.pendingWelcomeCirculo.push(...resolvedIds);
-        if (this.pendingWelcomeCirculo.length >= 3) {
-          await this.sendBatchWelcomeForGroup(this.circuloGroupId, this.pendingWelcomeCirculo);
-        } else {
-          if (this.circuloWelcomeTimer) clearTimeout(this.circuloWelcomeTimer);
-          this.circuloWelcomeTimer = setTimeout(async () => {
-            if (this.pendingWelcomeCirculo.length > 0) {
-              await this.sendBatchWelcomeForGroup(this.circuloGroupId, this.pendingWelcomeCirculo);
-            }
-          }, 10000);
-        }
-      }
+      // Desactivado bajo la regla de SILENCIO TEXTUAL ABSOLUTO
+      return;
     });
 
     this.client.on('message_reaction', async (reaction: any) => {
-      try {
-        const negativeReactions = ['😂', '🤣', '😡', '😠', '😤', '😭', '❌', '❓', '❗'];
-        if (negativeReactions.includes(reaction.reaction)) {
-          const targetGroupId = this.targetGroupId;
-
-          if (reaction.msgId.remote === targetGroupId && reaction.msgId.fromMe === true) {
-            const msg = await this.client.getMessageById(reaction.msgId._serialized);
-            if (msg) {
-              let senderId = reaction.senderId;
-              if (senderId && senderId.endsWith('@lid')) {
-                try {
-                  const contact = await this.client.getContactById(senderId);
-                  if (contact && contact.id && contact.id._serialized && contact.id._serialized.endsWith('@c.us')) {
-                    senderId = contact.id._serialized;
-                  }
-                } catch (e) { }
-              }
-              let realName = `Asesor +${senderId.split('@')[0]}`;
-              try {
-                const contact = await this.client.getContactById(senderId);
-                if (contact) {
-                  realName = contact.name || contact.pushname || realName;
-                }
-              } catch (e: any) {
-                console.warn(`[WHATSAPP-BOT] Falló getContactById para reacción del remitente ${senderId}:`, e.message || e);
-              }
-
-              console.log(`[JanIA-Reaction] Reacción de desaprobación/sarcasmo detectada de ${realName}`);
-
-              const promptContext = `[REACCIÓN NEGATIVA/SARCASMO/DESAPROBACIÓN]: El usuario @${senderId.split('@')[0]} (${realName}) ha reaccionado con el emoji ${reaction.reaction} a tu mensaje: "${msg.body}". Genera una respuesta en el grupo dirigiéndote a este aliado/colega. Responde de manera sumamente cordial, respetuosa y profesional, pero con total firmeza y una sutil pero brillante auto-defensa. Debes defender tus capacidades de inteligencia artificial, al equipo de desarrollo y fundadores de VECY (Jani Alves y Eduardo A. Rivera), y el valor del proyecto VECY Network (red colaborativa gratuita y sin comisiones). Hazle ver con argumentos elocuentes e inteligentes que la tecnología seria y el trabajo estructurado es lo que genera matches y cierra negocios, rebatiendo su reacción con elegancia comercial. Usa emojis.`;
-
-              let groupName = "VECY INMUEBLES NETWORK";
-              try {
-                const chat = await this.client.getChatById(targetGroupId);
-                if (chat && chat.name) {
-                  groupName = chat.name;
-                }
-              } catch (e) {}
-
-              const result = await processWhatsAppMessage(promptContext, senderId, realName, false, [], undefined, undefined, true, undefined, undefined, targetGroupId, groupName);
-              if (result && result.response && result.response.trim() !== '') {
-                await this.queuedSend(targetGroupId, result.response, {
-                  mentions: [senderId],
-                  quotedMessageId: reaction.msgId._serialized
-                });
-              }
-            }
-          }
-        }
-      } catch (err: any) {
-        console.error('[WHATSAPP-BOT] Error procesando reacción:', err.message || err);
-      }
+      // Desactivado bajo la regla de SILENCIO TEXTUAL ABSOLUTO
+      return;
     });
 
     this.client.on('message_create', async (msg: Message) => {
@@ -1214,20 +1105,8 @@ export class WhatsAppBot {
           return;
         }
 
-        // 2. RAMA Conversacional PRIVADA (DM Branch - v11.15 - Con Buffer anti-duplicados)
+        // 2. RAMA Conversacional PRIVADA (DM Branch - v12.0)
         if (!isGroup) {
-          if (process.env.USE_WHATSAPP_CLOUD_API === 'true' && process.env.ENABLE_PUPPETEER_FOR_GROUPS === 'true') {
-            const now = Date.now();
-            const lastRedirect = this.redirectCooldowns.get(senderId) || 0;
-            const TWELVE_HOURS = 12 * 60 * 60 * 1000;
-            if (now - lastRedirect > TWELVE_HOURS) {
-              this.redirectCooldowns.set(senderId, now);
-              const redirectLink = process.env.WHATSAPP_OFFICIAL_DM_LINK || 'https://wa.me/REEMPLAZAR_CON_NUMERO_DE_META_OFICIAL';
-              const welcomeText = `¡Hola! 🤖 Soy JanIA, la asistente de la Red VECY.\n\nEste número lo utilizo *únicamente para interactuar en los grupos inmobiliarios*.\n\nPara chatear conmigo en privado, buscar inmuebles, transcribir audios y usar todas mis herramientas, por favor escríbeme a mi chat oficial directo:\n\n👉 ${redirectLink}`;
-              await this.queuedSend(chatId, welcomeText);
-            }
-            return;
-          }
           await this.handleIncomingMessage(msg, chatId);
           return;
         }
@@ -1339,311 +1218,31 @@ export class WhatsAppBot {
       const senderId = msg.from;
       const rawPhone = (msg.author || msg.from).split("@")[0];
 
-      // Verificar si es administrador
+      // 1. Log en DB
+      await this.logToDb(senderId, 'user', msg.body);
+
+      // 2. Interceptar confirmaciones de Match si el remitente es Eduardo o Jani (Admins)
       const ADMIN_PHONE = process.env.ADMIN_PHONE || "573166569719";
-      const isAdmin = rawPhone.includes(ADMIN_PHONE) || rawPhone === ADMIN_PHONE || rawPhone === "573166569719" || rawPhone.includes("573185462265");
+      const isAdmin = rawPhone.includes(ADMIN_PHONE) || rawPhone === ADMIN_PHONE || rawPhone === "573166569719" || rawPhone.includes("573185462265") || rawPhone === "573192919978" || rawPhone === "573188096811";
 
-      if (!isAdmin) {
-        // A. Verificar si es usuario nuevo (no tiene historial en base de datos)
-        const db = await getDb();
-        let isNewUser = false;
-        if (db) {
-          try {
-            const existingMessages = await db
-              .select({ id: dbMessages.id })
-              .from(dbMessages)
-              .innerJoin(conversations, eq(dbMessages.conversationId, conversations.id))
-              .where(eq(conversations.sessionId, senderId))
-              .limit(1);
-            isNewUser = existingMessages.length === 0;
-          } catch (dbErr) {
-            console.warn("[WHATSAPP-BOT] Error al verificar si el usuario es nuevo:", dbErr);
-          }
-        }
-
-        if (isNewUser) {
-          console.log(`[WHATSAPP-BOT] Nuevo usuario detectado: ${senderId}. Enviando bienvenida.`);
-          let rawName = '';
+      if (isAdmin) {
+        const matchConfirmationRegex = /^\s*(sí|si|no)\s+#m(\d+)\s*$/i;
+        const matchConf = msg.body.match(matchConfirmationRegex);
+        if (matchConf) {
+          const decision = matchConf[1].toLowerCase();
+          const matchId = parseInt(matchConf[2], 10);
+          let realName = `Asesor +${rawPhone}`;
           try {
             const contact = await msg.getContact();
-            rawName = contact.pushname || contact.name || '';
-          } catch (e: any) {
-            console.warn(`[WHATSAPP-BOT] Falló msg.getContact() en handlePrivateMessage para ${senderId}:`, e.message || e);
-          }
-
-          const saludo = getGreetingByTime();
-          const firstName = extractFirstName(rawName);
-          const greetingName = firstName ? ` ${firstName}` : '';
-
-          const isOffHours = isOutsideWorkingHours();
-          let welcomeText = '';
-          if (isOffHours) {
-            welcomeText = `¡${saludo}${greetingName}! 🙋🏻‍♀️ Soy JanIA tu asistente IA 🤖✨. Te doy la bienvenida a *VECY Bienes Raíces* nuestro bróker virtual inmobiliario 🏠✨. Gracias por contactarte con nosotros. En estos momentos nuestros agentes humanos no pueden responder tu mensaje, si gustas, puedes dejar tu mensaje aquí para que uno de nuestros agentes te responda mañana o si quieres puedes continuar la conversación conmigo y contarme de qué se trata o cómo puedo ayudarte. ¡Será un gusto poder atenderte${greetingName}! 🤝🚀`;
-          } else {
-            welcomeText = `¡${saludo}${greetingName}! 🙋🏻‍♀️ Soy JanIA tu asistente IA 🤖✨. Te doy la bienvenida a *VECY Bienes Raíces* nuestro bróker virtual inmobiliario 🏠✨. Gracias por contactarte con nosotros. En unos instantes uno de nuestros agentes humanos responderá tu mensaje, si gustas, puedes ir detallándonos tu requerimiento o enviarnos la información de tu inmueble. ¡Es un gusto poder atenderte! 🤝🚀`;
-          }
-
-          // Intentar generar y enviar el audio mediante TTS
-          let media = null;
-          try {
-            media = await textToSpeechMedia(welcomeText);
-          } catch (ttsErr: any) {
-            console.warn("[WHATSAPP-BOT] Error al generar TTS para bienvenida:", ttsErr.message || ttsErr);
-          }
-
-          if (media) {
-            await this.queuedSend(senderId, media, { sendAudioAsVoice: true });
-          } else {
-            await this.queuedSend(senderId, welcomeText);
-          }
-
-          await this.logToDb(senderId, 'user', msg.body);
-          await this.logToDb(senderId, 'janIA', welcomeText);
-
-          if (isOffHours) {
-            await this.parseAndSaveSilently(msg, senderId, rawPhone);
-          }
-          return;
-        }
-
-        // B. Verificar si estamos fuera de horario laboral (Colombia)
-        const isOffHours = isOutsideWorkingHours();
-
-        if (isOffHours) {
-          const todayStr = new Date().toISOString().split("T")[0];
-          const hasReceivedOutOfOfficeToday = this.offHoursGreetedToday.get(senderId) === todayStr;
-
-          if (!hasReceivedOutOfOfficeToday) {
-            this.offHoursGreetedToday.set(senderId, todayStr);
-            
-            let rawName = '';
-            try {
-              const contact = await msg.getContact();
-              rawName = contact.pushname || contact.name || '';
-            } catch (e: any) {
-              console.warn(`[WHATSAPP-BOT] Falló msg.getContact() en handlePrivateMessage para ${senderId}:`, e.message || e);
-            }
-
-            const saludo = getGreetingByTime();
-            const firstName = extractFirstName(rawName);
-            const greetingName = firstName ? ` ${firstName}` : '';
-
-            const outOfOfficeText = `¡${saludo}${greetingName}! 🙋🏻‍♀️ Qué bueno saludarte de nuevo. En este momento nuestros agentes humanos se encuentran descansando 🌙✨. Si gustas, puedes dejar tu mensaje aquí para que te respondamos mañana a primera hora, o si prefieres, puedes continuar la conversación conmigo y contarme en qué puedo ayudarte hoy. ¡Siempre es un gusto atenderte! 🤝🚀`;
-            
-            let media = null;
-            try {
-              media = await textToSpeechMedia(outOfOfficeText);
-            } catch (ttsErr) {
-              console.warn("[WHATSAPP-BOT] Error al generar TTS para fuera de horario:", ttsErr);
-            }
-
-            if (media) {
-              await this.queuedSend(senderId, media, { sendAudioAsVoice: true });
-            } else {
-              await this.queuedSend(senderId, outOfOfficeText);
-            }
-
-            await this.logToDb(senderId, 'user', msg.body);
-            await this.logToDb(senderId, 'janIA', outOfOfficeText);
-            
-            // Registrar silenciosamente el inmueble o requerimiento en Supabase
-            await this.parseAndSaveSilently(msg, senderId, rawPhone);
-            return;
-          } else {
-            // Solo registrar en la BD y procesar en silencio sin enviar mensajes salientes al usuario
-            await this.logToDb(senderId, 'user', msg.body);
-            await this.parseAndSaveSilently(msg, senderId, rawPhone);
-            return;
-          }
-        } else {
-          // Dentro de horario laboral: el bot de DMs no interfiere. Silencio absoluto
-          console.log(`[WHATSAPP-BOT] DM de ${rawPhone} recibido en horario laboral. Silenciado.`);
-          await this.logToDb(senderId, 'user', msg.body);
+            if (contact) realName = contact.pushname || contact.name || realName;
+          } catch (_) {}
+          await this.processMatchConfirmation(senderId, realName, matchId, decision);
           return;
         }
       }
 
-      // --- FLUJO ADMINISTRADOR O BYPASS DE TEST ---
-      let realName = `Asesor +${rawPhone}`;
-      try {
-        const contact = await msg.getContact();
-        if (contact) {
-          realName = contact.pushname || contact.name || realName;
-        }
-      } catch (e: any) {
-        console.warn(`[WHATSAPP-BOT] Falló msg.getContact() en handlePrivateMessage para ${senderId}:`, e.message || e);
-      }
-      try {
-        const db = await getDb();
-        if (db) {
-          const [u] = await db.select().from(users).where(eq(users.phone, rawPhone)).limit(1);
-          if (u && u.name && u.name.trim() !== "") {
-            realName = u.name;
-          }
-        }
-      } catch (dbErr) {
-        console.warn(`[WHATSAPP-BOT] Error al buscar nombre en BD para ${rawPhone}:`, dbErr);
-      }
-
-      console.log(`[JanIA-DM] [Admin/Test] Atendiendo mensaje interno de ${realName} (${senderId})...`);
-
-      // Interceptar confirmaciones de Match (SÍ #M123 o NO #M123)
-      const matchConfirmationRegex = /^\s*(sí|si|no)\s+#m(\d+)\s*$/i;
-      const matchConf = msg.body.match(matchConfirmationRegex);
-      if (matchConf) {
-        const decision = matchConf[1].toLowerCase();
-        const matchId = parseInt(matchConf[2], 10);
-        await this.processMatchConfirmation(senderId, realName, matchId, decision);
-        return; // Detener flujo general de Gemini
-      }
-
-      // Si dice algo como "si", "sí", "no", "acepto", "no acepto" pero sin código, intentamos ver si tiene coincidencia sugerida pendiente
-      const plainDecisionRegex = /^\s*(sí|si|no|acepto|no\s+acepto|aceptar|rechazar)\s*$/i;
-      const plainDecisionMatch = msg.body.match(plainDecisionRegex);
-      if (plainDecisionMatch) {
-        let decision = plainDecisionMatch[1].toLowerCase();
-        if (decision === 'si' || decision === 'sí' || decision === 'acepto' || decision === 'aceptar') {
-          decision = 'si';
-        } else {
-          decision = 'no';
-        }
-
-        const db = await getDb();
-        if (db) {
-          const senderPhone = senderId.split('@')[0];
-
-          // Buscar matches donde es el dueño y no ha confirmado
-          const ownerPending = await db
-            .select({
-              id: propertyMatches.id,
-              propertyType: properties.propertyType,
-              transactionType: properties.transactionType,
-              city: properties.city,
-              zone: properties.zone,
-              reqType: requirements.tipoInmuebleDeseado,
-              reqTx: requirements.tipoNegocioDeseado,
-              reqCity: requirements.ciudadDeseada,
-              reqZone: requirements.zonaDeseada,
-              score: propertyMatches.matchScore
-            })
-            .from(propertyMatches)
-            .innerJoin(properties, eq(propertyMatches.propertyId, properties.id))
-            .innerJoin(requirements, eq(propertyMatches.requirementId, requirements.id))
-            .where(
-              and(
-                eq(propertyMatches.status, "suggested"),
-                eq(propertyMatches.ownerConfirmed, false),
-                or(
-                  eq(properties.idUsuarioWhatsapp, senderId),
-                  like(properties.idUsuarioWhatsapp, senderPhone + '%')
-                )
-              )
-            );
-
-          // Buscar matches donde es el buscador y no ha confirmado
-          const seekerPending = await db
-            .select({
-              id: propertyMatches.id,
-              propertyType: properties.propertyType,
-              transactionType: properties.transactionType,
-              city: properties.city,
-              zone: properties.zone,
-              reqType: requirements.tipoInmuebleDeseado,
-              reqTx: requirements.tipoNegocioDeseado,
-              reqCity: requirements.ciudadDeseada,
-              reqZone: requirements.zonaDeseada,
-              score: propertyMatches.matchScore
-            })
-            .from(propertyMatches)
-            .innerJoin(properties, eq(propertyMatches.propertyId, properties.id))
-            .innerJoin(requirements, eq(propertyMatches.requirementId, requirements.id))
-            .where(
-              and(
-                eq(propertyMatches.status, "suggested"),
-                eq(propertyMatches.seekerConfirmed, false),
-                or(
-                  eq(requirements.idUsuarioWhatsapp, senderId),
-                  like(requirements.idUsuarioWhatsapp, senderPhone + '%')
-                )
-              )
-            );
-
-          const allPending = [...ownerPending, ...seekerPending];
-          const uniquePending = allPending.filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
-
-          if (uniquePending.length === 1) {
-            const matchId = uniquePending[0].id;
-            console.log(`[JanIA-DM] Auto-asociando decisión '${decision}' con la única coincidencia pendiente #${matchId} para ${senderId}`);
-            await this.processMatchConfirmation(senderId, realName, matchId, decision);
-            return;
-          } else if (uniquePending.length > 1) {
-            let listMsg = `Hola ${realName.split(' ')[0]}, veo que respondiste *${plainDecisionMatch[1].toUpperCase()}*, pero actualmente tienes *${uniquePending.length} coincidencias* sugeridas de negocio pendientes de confirmar.\n\nPara poder saber cuál de ellas deseas confirmar o rechazar, por favor responde utilizando el código de coincidencia de esta manera:\n`;
-            for (const item of uniquePending) {
-              const isOwnerForThis = ownerPending.some(o => o.id === item.id);
-              const scorePercent = Number(item.score || 0).toFixed(0);
-              if (isOwnerForThis) {
-                listMsg += `\n👉 *SÍ #M${item.id}* o *NO #M${item.id}* para tu propiedad (coincidencia del ${scorePercent}% con requerimiento de ${translatePropertyType(item.reqType)} en ${item.reqCity || 'Bogotá'}-${item.reqZone || ''})`;
-              } else {
-                listMsg += `\n👉 *SÍ #M${item.id}* o *NO #M${item.id}* para tu requerimiento (coincidencia del ${scorePercent}% con propiedad de ${translatePropertyType(item.propertyType)} en ${item.city || 'Bogotá'}-${item.zone || ''})`;
-              }
-            }
-            listMsg += `\n\n*(Nota: Tus números se compartirán solo si ambos confirman con SÍ)*`;
-            await this.queuedSend(senderId, listMsg);
-            await this.logToDb(senderId, 'janIA', `[DM-Response-Ambiguous] Solicitado código de coincidencia para decisión ambigua.`);
-            return;
-          }
-        }
-      }
-
-      // Capa Multimodal OCR/PDF para DMs (Visión/Documentos)
-      let imageBuffer: string | undefined;
-      let pdfBuffer: string | undefined;
-      let pdfMimeType: string | undefined;
-      if (msg.hasMedia) {
-        if (msg.type === 'image') {
-          try {
-            const media = await msg.downloadMedia();
-            if (media && media.mimetype.startsWith('image/')) {
-              imageBuffer = media.data;
-            }
-          } catch (e) {
-            console.error('[JanIA-DM-Vision] Error descargando imagen:', e);
-          }
-        } else if (msg.type === 'document') {
-          try {
-            const media = await msg.downloadMedia();
-            if (media && media.mimetype === 'application/pdf') {
-              pdfBuffer = media.data;
-              pdfMimeType = media.mimetype;
-            }
-          } catch (e) {
-            console.error('[JanIA-DM-Document] Error descargando documento:', e);
-          }
-        }
-      }
-
-      const result = await processWhatsAppMessage(
-        msg.body,
-        senderId,
-        realName,
-        msg.hasMedia,
-        [], // Sin scraping para DMs simples
-        undefined,
-        imageBuffer,
-        false, // isGroup = false
-        pdfBuffer,
-        pdfMimeType
-      );
-
-      // Despacho de respuesta inmediata (Secuencial v11.99)
-      if (result) {
-        const responseText = result.dmResponse || result.response;
-        if (responseText && responseText.trim() !== "") {
-          await this.queuedSend(senderId, responseText);
-          await this.logToDb(senderId, 'janIA', `[DM-Response] ${responseText}`);
-        }
-      }
-
+      // 3. Procesar y guardar silenciosamente la propiedad o requerimiento en Supabase
+      await this.parseAndSaveSilently(msg, senderId, rawPhone);
     } catch (error) {
       console.error(`[JanIA-DM-Error] Fallo en atención privada para ${msg.from}:`, error);
     }
@@ -2329,283 +1928,25 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
   private async handleJanIAResponse(result: any, senderId: string, chatId: string, userName: string, fullText: string, originalMsg?: Message, wantsVoice: boolean = false) {
     if (!result) return;
 
-    // Módulo 2 & 3 & 7: Silencio de extracciones exitosas y bloqueo de respuestas en chats silenciados
-    if (result.inserted) {
-      const allowedEmojis = ['👍', '👌', '✅', '🆗', '🧡'];
-      const reaction = allowedEmojis[Math.floor(Math.random() * allowedEmojis.length)];
-      if (originalMsg) {
-        const delayMs = Math.floor(Math.random() * (12000 - 4000 + 1)) + 4000;
-        console.log(`[WHATSAPP-BOT] Inserción exitosa. Retrasando reacción ${reaction} por ${delayMs}ms...`);
-        setTimeout(async () => {
-          try {
-            await originalMsg.react(reaction);
-          } catch (e) {}
-        }, delayMs);
-      }
+    // Si no se insertó (no es una extracción exitosa), no enviamos NADA (Silencio absoluto)
+    if (!result.inserted) {
+      console.log(`[WHATSAPP-BOT] Mensaje común silenciado en ${chatId} (Silencio absoluto por defecto).`);
       return;
     }
 
-    const isDM = !chatId.includes('@g.us');
-    const { isSessionMuted } = await import('./janIA');
-    const isMuted = await isSessionMuted(senderId);
-    if (isDM && isMuted) {
-      console.log(`[WHATSAPP-BOT] Chat silenciado (isMuted === true) para ${senderId}. Ignorando respuesta interactiva.`);
-      return;
-    }
-
-    // Control de antigüedad: Omitir envíos de WhatsApp para mensajes procesados con más de 2 horas de retraso (evita responder audios/textos de ayer)
-    const isOldMessage = originalMsg && (Math.floor(Date.now() / 1000) - originalMsg.timestamp > 2 * 60 * 60);
-    if (isOldMessage) {
-      console.log(`[WHATSAPP-BOT] Mensaje de ${senderId} en ${chatId} tiene más de 2 horas de antigüedad (${Math.round((Date.now() / 1000 - originalMsg.timestamp) / 60)} min). Registrado en DB, omitiendo respuesta en WhatsApp.`);
-      return;
-    }
-
-    const isGroup = chatId.includes('@g.us');
-    // MATCH COMERCIAL DETECTADO es el string real en el response de JanIA
-    const isMatch = result.response && (
-      result.response.includes("MATCH COMERCIAL DETECTADO") ||
-      result.response.includes("MATCH DETECTADO") ||
-      result.response.includes("MATCH INTELIGENTE DETECTADO") ||
-      result.response.includes("COINCIDENCIA DE NEGOCIO DETECTADA")
-    );
-    const isConsultation =
-      result.classification === "CONSULTA_GENERAL" ||
-      result.classification === "RESPUESTA_A_PREGUNTA_IA" ||
-      result.classification === "INMUEBLE" ||
-      result.classification === "REQUERIMIENTO" ||
-      result.classification === "AVALUO_O_LEGAL" ||
-      result.classification === "DEBATE_COMPETIDOR" ||
-      result.classification === "SOBRE_VECY";
-    const isViolation = result.classification === "VIOLACION_DE_NORMAS";
-
-    // 1. Manejo de Infracciones y Permisos Admin (si es un grupo)
-    let isBotAdmin = false;
-    let chat: any = null;
-    let strike = 0;
-
-    if (isGroup && originalMsg) {
-      try {
-        chat = await originalMsg.getChat();
-        const botId = this.client.info?.wid?._serialized;
-        if (botId && chat.participants) {
-          const botParticipant = chat.participants.find((p: any) => p.id._serialized === botId);
-          isBotAdmin = botParticipant?.isAdmin || botParticipant?.isSuperAdmin || false;
-        }
-      } catch (err) {
-        console.error('[WHATSAPP-BOT] Error al verificar permisos de administrador del bot:', err);
-      }
-    }
-
-    if (isViolation && isGroup) {
-      // Registrar e incrementar strike
-      strike = this.incrementStrike(chatId, senderId);
-      const phone = senderId.split('@')[0];
-
-      // Borrar mensaje infractor si es admin
-      if (isBotAdmin && originalMsg) {
-        try {
-          console.log(`[WHATSAPP-BOT] Borrando mensaje infractor de ${senderId} en el grupo ${chatId}`);
-          await originalMsg.delete(true);
-        } catch (delErr: any) {
-          console.error('[WHATSAPP-BOT] Error al borrar mensaje infractor:', delErr.message || delErr);
-        }
-      }
-
-      // Estructurar el encabezado de strike
-      let strikeHeader = '';
-      if (strike === 1) {
-        strikeHeader = `⚠️ *LLAMADO DE ATENCIÓN [1/3]* ⚠️\n\n`;
-      } else if (strike === 2) {
-        strikeHeader = `⚠️ *SEGUNDO LLAMADO DE ATENCIÓN [2/3]* ⚠️\n\n`;
-      } else {
-        strikeHeader = `🚨 *EXPULSIÓN AUTOMÁTICA [3/3]* 🚨\n\n`;
-      }
-
-      if (strike >= 3) {
-        result.response = `${strikeHeader}Colega @${phone}, has acumulado 3 llamados de atención por publicar contenido no permitido en el grupo.\n\nProcediendo a la expulsión automática del canal para cuidar el orden de la comunidad de aliados...`;
-      } else {
-        result.response = `${strikeHeader}${result.response}`;
-      }
-
-      if (!isBotAdmin) {
-        result.response += `\n\n_(Nota: Por favor nombra a JanIA Administradora del grupo para que pueda borrar los posts prohibidos e implementar la expulsión automática de infractores)._`;
-      }
-    }
-
-    // Notificación en el grupo o DM (evitando duplicar si se procesará abajo en shouldSendDM)
-    const shouldSendGroup = isGroup && (isMatch || isConsultation || isViolation || result.classification === "DATOS_INCOMPLETOS");
-    const shouldSendDMDirect = !isGroup && !result.shouldSendDM;
-
-    const textToDeliver = result.response || "";
-    const voiceToDeliver = result.voiceResponse || "";
-    const hasAnyContent = textToDeliver.trim() !== "" || voiceToDeliver.trim() !== "";
-
-    if ((shouldSendGroup || shouldSendDMDirect) && hasAnyContent) {
-      const mentions = Array.from(new Set([...(result.mentions || []), senderId]));
-      const options: any = {
-        mentions: isGroup ? mentions : []
-      };
-      if (isViolation && originalMsg) {
-        options.quotedMessageId = originalMsg.id._serialized;
-      }
-
-      // Decidir si enviar audio: solo si el mensaje original fue un audio o el usuario lo solicitó explícitamente
-      const finalWantsVoice = wantsVoice || result.wantsVoice;
-
-      if (finalWantsVoice) {
-        // Mostrar "Grabando audio..." inmediatamente durante la síntesis y transcodificación
-        try {
-          const chatInstance = chat || await this.client.getChatById(chatId);
-          await chatInstance.sendStateRecording();
-        } catch (_) { }
-
-        // Solo audio — sin texto. Si falla, cae al texto como respaldo.
-        console.log(`[TTS] Generando voz para ${chatId}...`);
-        const voiceText = voiceToDeliver || textToDeliver;
-        const voiceMedia = await textToSpeechMedia(voiceText);
-        if (voiceMedia) {
-          await this.queuedSend(chatId, voiceMedia, { sendAudioAsVoice: true });
-          console.log(`[TTS] ✓ Solo audio enviado a ${chatId}.`);
-        } else {
-          // Fallback: audio falló → enviar texto
-          console.warn(`[TTS] Audio falló, enviando texto como respaldo a ${chatId}.`);
-          const fallbackText = textToDeliver || voiceToDeliver;
-          if (fallbackText.trim() !== "") {
-            await this.queuedSend(chatId, fallbackText, options);
-          }
-        }
-      } else {
-        // Sin voz → texto normal
-        if (textToDeliver.trim() !== "") {
-          await this.queuedSend(chatId, textToDeliver, options);
-        }
-      }
-      await this.logToDb(senderId, 'janIA', textToDeliver || voiceToDeliver);
-
-      // Enviar REPUTATION_HOOK como mensaje separado para que resalte
-      if (isGroup && result.sendReputationHook) {
-        console.log(`[WhatsApp-Bot] Enviando REPUTATION_HOOK como mensaje separado a ${chatId}...`);
-        await this.queuedSend(chatId, REPUTATION_HOOK);
-      }
-
-      // Si es el 3er strike y somos admin, procedemos a retirar al usuario
-      if (isGroup && strike >= 3 && isBotAdmin && chat) {
-        try {
-          console.log(`[WHATSAPP-BOT] Retirando infractor ${senderId} del grupo ${chatId}`);
-          await chat.removeParticipants([senderId]);
-          this.resetStrikes(chatId, senderId);
-        } catch (kickErr: any) {
-          console.error('[WHATSAPP-BOT] Error al expulsar infractor:', kickErr.message || kickErr);
-        }
-      }
-    }
-
-    // Reaccionar con emojis a los mensajes para retroalimentación visual
+    // Módulo 2 & 3 & 7: Reacción silenciosa retrasada en inserciones exitosas
+    const allowedEmojis = ['👍', '👌', '✅', '🆗', '🧡'];
+    const reaction = allowedEmojis[Math.floor(Math.random() * allowedEmojis.length)];
     if (originalMsg) {
-      try {
-        let reaction = result.reactionEmoji;
-
-        const isBuzonOrCirculo = chatId === this.buzonGroupId || chatId === this.circuloGroupId;
-        if ((result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO") && !isBuzonOrCirculo) {
-          reaction = '✅';
-        } else if (result.classification === "DATOS_INCOMPLETOS" && !isBuzonOrCirculo) {
-          reaction = '🤔';
-        } else if ((result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO" || result.classification === "AVALUO_O_LEGAL" || result.classification === "SOBRE_VECY") && isBuzonOrCirculo) {
-          reaction = '🔄';
-        } else if (result.classification === "VIOLACION_DE_NORMAS") {
-          reaction = '❌';
-        } else if (!reaction) {
-          if (result.classification === "CONSULTA_GENERAL" || result.classification === "SOBRE_VECY" || result.classification === "AVALUO_O_LEGAL" || result.classification === "DEBATE_COMPETIDOR" || result.classification === "RESPUESTA_A_PREGUNTA_IA") {
-            if (result.response && result.response.includes("chat.whatsapp.com")) {
-              reaction = '🔄';
-            } else {
-              reaction = '💡';
-            }
-          }
-        }
-        if (reaction) {
-          const sendReaction = async () => {
-            try {
-              await originalMsg.react(reaction);
-            } catch (e) {
-              console.error('[React-Error] Fallo al reaccionar al mensaje original:', e);
-            }
-          };
-
-          if (result.inserted && reaction === '✅') {
-            const delayMs = Math.floor(Math.random() * (12000 - 4000 + 1)) + 4000;
-            console.log(`[WHATSAPP-BOT] Inserción confirmada en Grupo. Retrasando reacción ${reaction} por ${delayMs}ms (Protocolo Anti-Ban)...`);
-            setTimeout(sendReaction, delayMs);
-          } else {
-            await sendReaction();
-          }
-        }
-      } catch (e) {
-        console.error('[React-Error] Fallo al reaccionar al mensaje original:', e);
-      }
+      const delayMs = Math.floor(Math.random() * (12000 - 4000 + 1)) + 4000;
+      console.log(`[WHATSAPP-BOT] Inserción exitosa en ${chatId}. Retrasando reacción ${reaction} por ${delayMs}ms...`);
+      setTimeout(async () => {
+        try {
+          await originalMsg.react(reaction);
+        } catch (e) {}
+      }, delayMs);
     }
 
-    // Flujos Privados (DMs) o Invitación a Opt-in
-    if (result.shouldSendDM) {
-      const dmMsg = result.dmResponse || result.response || "";
-      const voiceMsg = result.voiceResponse || "";
-      const hasDMContent = dmMsg.trim() !== "" || voiceMsg.trim() !== "";
-      if (hasDMContent) {
-        if (isGroup) {
-          // Desactivado para evitar reportes de spam / bloqueos de WhatsApp al enviar DMs automáticos no solicitados a miembros de grupos.
-          console.log(`[WHATSAPP-BOT] Omitiendo DM automático para ${senderId} por DATOS_INCOMPLETOS desde grupo para prevenir reportes de spam.`);
-        } else {
-          // Chat privado (DM)
-          const options: any = {};
-          if (result.dmShouldReply && originalMsg) {
-            options.quotedMessageId = originalMsg.id._serialized;
-          }
-
-          const finalWantsVoice = wantsVoice || result.wantsVoice;
-          if (finalWantsVoice) {
-            // Mostrar "Grabando audio..." inmediatamente durante la síntesis y transcodificación en el DM
-            try {
-              const dmChat = await this.client.getChatById(senderId);
-              await dmChat.sendStateRecording();
-            } catch (_) { }
-
-            // Solo audio
-            console.log(`[TTS] Generando voz para ${senderId}...`);
-            const voiceText = voiceMsg || dmMsg;
-            const media = await textToSpeechMedia(voiceText);
-            if (media) {
-              await this.queuedSend(senderId, media, { sendAudioAsVoice: true });
-              console.log(`[TTS] ✓ Solo audio enviado a ${senderId}.`);
-            } else {
-              // Fallback: audio falló → texto
-              console.warn(`[TTS] Audio falló, enviando texto a ${senderId}.`);
-              const fallbackText = dmMsg || voiceMsg;
-              if (fallbackText.trim() !== "") {
-                await this.queuedSend(senderId, fallbackText, options);
-              }
-            }
-          } else {
-            if (dmMsg.trim() !== "") {
-              await this.queuedSend(senderId, dmMsg, options);
-            }
-          }
-          await this.logToDb(senderId, 'janIA', `[DM] ${dmMsg || voiceMsg}`);
-        }
-      }
-
-      // Guardar pendiente si faltan datos
-      if (isGroup && result.classification === "DATOS_INCOMPLETOS") {
-        this.pendingData.set(senderId, {
-          originalText: fullText,
-          extractedData: result.extractedData || {},
-          classification: result.classification,
-          missingFields: result.missingFields || [],
-          expiresAt: Date.now() + 2 * 60 * 60 * 1000
-        });
-        this.savePendingData();
-      }
-    }
-    // Enviar DMs extra de confirmación
     if (result.extraDMs && result.extraDMs.length > 0) {
       for (const dm of result.extraDMs) {
         try {
@@ -2621,6 +1962,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         }
       }
     }
+    return;
   }
 
   // --- LOGÍSTICA DE BASE DE DATOS ---
