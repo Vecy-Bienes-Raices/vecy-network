@@ -1445,23 +1445,6 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         try {
           await msg.react('⚠️');
         } catch (e) { }
-        if (!cooldown.warningSent) {
-          cooldown.warningSent = true;
-          this.saveCooldowns();
-          const rawPhone = (msg.author || msg.from).split("@")[0];
-          const warningText =
-            `⚠️ *COOLDOWN ACTIVO (5 MINUTOS)* ⚠️\n\n` +
-            `Hola @${rawPhone}, acabo de procesar con éxito tus primeras propiedades. ` +
-            `Para cuidar la visibilidad de tus activos y no saturar la red de los aliados, te pido que por favor me colabores esperando los *5 minutos* de intervalo antes de enviar tu siguiente bloque (máximo 3 publicaciones).\n\n` +
-            `¡Mis motores necesitan este breve descanso para mantener tus fichas técnicas al 100% de calidad! JanIA sigue atenta. 🏆🎯`;
-
-          await this.queuedSend(chatId, warningText, {
-            mentions: [senderId],
-            quotedMessageId: msg.id._serialized
-          });
-          this.cooldownMap.set(cooldownKey, cooldown);
-          this.saveCooldowns();
-        }
       }
       return; // Detener procesamiento del mensaje excedente
     }
@@ -1504,19 +1487,6 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
           try {
             await msg.react('⚠️');
           } catch (e) { }
-          if (!buffer.warningSent) {
-            buffer.warningSent = true;
-            const warningText =
-              `⚠️ *LÍMITE DE PUBLICACIÓN* ⚠️\n\n` +
-              `Hola @${rawPhone}, detecté que estás enviando muchas publicaciones seguidas. ` +
-              `Para cuidar la visibilidad de tus activos y no saturar el chat de los aliados, te pido que por favor me colabores con esta norma, ya que mis motores de extracción de datos solo pueden procesar un máximo de *3 publicaciones* por bloque a la vez.\n\n` +
-              `¡Espera unos *5 minutos* y luego envía el siguiente grupo! Tus primeras 3 publicaciones ya están siendo procesadas y registradas. 🚀🎯`;
-
-            await this.queuedSend(chatId, warningText, {
-              mentions: [senderId],
-              quotedMessageId: msg.id._serialized
-            });
-          }
         }
         return;
       }

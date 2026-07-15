@@ -7077,22 +7077,6 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
               await msg.react("\u26A0\uFE0F");
             } catch (e) {
             }
-            if (!cooldown.warningSent) {
-              cooldown.warningSent = true;
-              this.saveCooldowns();
-              const rawPhone2 = (msg.author || msg.from).split("@")[0];
-              const warningText = `\u26A0\uFE0F *COOLDOWN ACTIVO (5 MINUTOS)* \u26A0\uFE0F
-
-Hola @${rawPhone2}, acabo de procesar con \xE9xito tus primeras propiedades. Para cuidar la visibilidad de tus activos y no saturar la red de los aliados, te pido que por favor me colabores esperando los *5 minutos* de intervalo antes de enviar tu siguiente bloque (m\xE1ximo 3 publicaciones).
-
-\xA1Mis motores necesitan este breve descanso para mantener tus fichas t\xE9cnicas al 100% de calidad! JanIA sigue atenta. \u{1F3C6}\u{1F3AF}`;
-              await this.queuedSend(chatId, warningText, {
-                mentions: [senderId],
-                quotedMessageId: msg.id._serialized
-              });
-              this.cooldownMap.set(cooldownKey, cooldown);
-              this.saveCooldowns();
-            }
           }
           return;
         }
@@ -7127,18 +7111,6 @@ Hola @${rawPhone2}, acabo de procesar con \xE9xito tus primeras propiedades. Par
               try {
                 await msg.react("\u26A0\uFE0F");
               } catch (e) {
-              }
-              if (!buffer.warningSent) {
-                buffer.warningSent = true;
-                const warningText = `\u26A0\uFE0F *L\xCDMITE DE PUBLICACI\xD3N* \u26A0\uFE0F
-
-Hola @${rawPhone}, detect\xE9 que est\xE1s enviando muchas publicaciones seguidas. Para cuidar la visibilidad de tus activos y no saturar el chat de los aliados, te pido que por favor me colabores con esta norma, ya que mis motores de extracci\xF3n de datos solo pueden procesar un m\xE1ximo de *3 publicaciones* por bloque a la vez.
-
-\xA1Espera unos *5 minutos* y luego env\xEDa el siguiente grupo! Tus primeras 3 publicaciones ya est\xE1n siendo procesadas y registradas. \u{1F680}\u{1F3AF}`;
-                await this.queuedSend(chatId, warningText, {
-                  mentions: [senderId],
-                  quotedMessageId: msg.id._serialized
-                });
               }
             }
             return;
