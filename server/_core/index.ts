@@ -769,22 +769,13 @@ Dirección obligatoria:
       console.error("[STARTUP-CLEANUP] Error importando función de limpieza:", err);
     });
 
-    // Inicializar el Bot de WhatsApp de Vecy Network solo si no está deshabilitado
-    if (process.env.ENABLE_WHATSAPP_BOT !== "false") {
-      console.log("Iniciando WhatsApp Bot...");
-      whatsappBot.initialize();
+    // Inicializar el Bot de WhatsApp de Vecy Network (Baileys) de forma unificada para evitar conflictos de stream
+    const shouldStartBot = process.env.ENABLE_WHATSAPP_BOT !== "false" || process.env.ENABLE_JANIA_MATCH_BOT === "true";
+    if (shouldStartBot) {
+      console.log("Iniciando WhatsApp Bot Unificado (Baileys)...");
+      janiaMatchBot.initialize();
     } else {
-      console.log("[WHATSAPP-BOT] Deshabilitado temporalmente mediante ENABLE_WHATSAPP_BOT=false.");
-    }
-
-    // Inicializar el Bot Match de WhatsApp (Ojos y Oídos) si está habilitado
-    if (process.env.ENABLE_JANIA_MATCH_BOT === "true") {
-      console.log("Iniciando WhatsApp Bot Match (Ojos y Oídos)...");
-      if (janiaMatchBot && typeof janiaMatchBot.initialize === "function") {
-        janiaMatchBot.initialize();
-      } else {
-        console.warn("[JANIA-MATCH] Advertencia: No se pudo obtener la instancia del Match Bot.");
-      }
+      console.log("[WHATSAPP-BOT] Deshabilitado temporalmente mediante variables de entorno.");
     }
     
     // Inicializar el orquestador de agendas automatizadas (Cron)

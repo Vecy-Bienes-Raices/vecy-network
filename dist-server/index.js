@@ -12495,19 +12495,12 @@ Direcci\xF3n obligatoria:
     }).catch((err) => {
       console.error("[STARTUP-CLEANUP] Error importando funci\xF3n de limpieza:", err);
     });
-    if (process.env.ENABLE_WHATSAPP_BOT !== "false") {
-      console.log("Iniciando WhatsApp Bot...");
+    const shouldStartBot = process.env.ENABLE_WHATSAPP_BOT !== "false" || process.env.ENABLE_JANIA_MATCH_BOT === "true";
+    if (shouldStartBot) {
+      console.log("Iniciando WhatsApp Bot Unificado (Baileys)...");
       janiaMatchBot.initialize();
     } else {
-      console.log("[WHATSAPP-BOT] Deshabilitado temporalmente mediante ENABLE_WHATSAPP_BOT=false.");
-    }
-    if (process.env.ENABLE_JANIA_MATCH_BOT === "true") {
-      console.log("Iniciando WhatsApp Bot Match (Ojos y O\xEDdos)...");
-      if (janiaMatchBot && typeof janiaMatchBot.initialize === "function") {
-        janiaMatchBot.initialize();
-      } else {
-        console.warn("[JANIA-MATCH] Advertencia: No se pudo obtener la instancia del Match Bot.");
-      }
+      console.log("[WHATSAPP-BOT] Deshabilitado temporalmente mediante variables de entorno.");
     }
     initCronScheduler();
   });
