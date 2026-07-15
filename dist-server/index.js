@@ -8113,15 +8113,8 @@ var init_whatsapp_match = __esm({
       }
       setupEventListeners(saveCreds) {
         this.sock.ev.on("creds.update", async () => {
-          console.log("[JANIA-MATCH] \u{1F4BE} Evento creds.update disparado.");
           try {
             await saveCreds();
-            console.log("[JANIA-MATCH] \u{1F4BE} saveCreds() ejecutado con \xE9xito.");
-            const sessionDir = path3.join(process.cwd(), ".baileys_auth");
-            if (fs3.existsSync(sessionDir)) {
-              const files = fs3.readdirSync(sessionDir);
-              console.log("[JANIA-MATCH] \u{1F4BE} Archivos en .baileys_auth:", files);
-            }
           } catch (err) {
             console.error("[JANIA-MATCH] \u274C Error al guardar credenciales:", err.message || err);
           }

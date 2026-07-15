@@ -128,15 +128,8 @@ export class JaniaMatchBot {
 
   private setupEventListeners(saveCreds: () => Promise<void>) {
     this.sock.ev.on('creds.update', async () => {
-      console.log('[JANIA-MATCH] 💾 Evento creds.update disparado.');
       try {
         await saveCreds();
-        console.log('[JANIA-MATCH] 💾 saveCreds() ejecutado con éxito.');
-        const sessionDir = path.join(process.cwd(), '.baileys_auth');
-        if (fs.existsSync(sessionDir)) {
-          const files = fs.readdirSync(sessionDir);
-          console.log('[JANIA-MATCH] 💾 Archivos en .baileys_auth:', files);
-        }
       } catch (err: any) {
         console.error('[JANIA-MATCH] ❌ Error al guardar credenciales:', err.message || err);
       }
