@@ -3264,9 +3264,9 @@ async function getLiveStats() {
     const [matchCount] = await db.select({ total: sql2`count(*)::int` }).from(propertyMatches);
     const today = /* @__PURE__ */ new Date();
     today.setHours(0, 0, 0, 0);
-    const [propHoy] = await db.select({ total: sql2`count(*)::int` }).from(properties).where(sql2`${properties.createdAt} >= ${today}`);
-    const [reqHoy] = await db.select({ total: sql2`count(*)::int` }).from(requirements).where(sql2`${requirements.createdAt} >= ${today}`);
-    const [matchHoy] = await db.select({ total: sql2`count(*)::int` }).from(propertyMatches).where(sql2`${propertyMatches.createdAt} >= ${today}`);
+    const [propHoy] = await db.select({ total: sql2`count(*)::int` }).from(properties).where(gte(properties.createdAt, today));
+    const [reqHoy] = await db.select({ total: sql2`count(*)::int` }).from(requirements).where(gte(requirements.createdAt, today));
+    const [matchHoy] = await db.select({ total: sql2`count(*)::int` }).from(propertyMatches).where(gte(propertyMatches.createdAt, today));
     const now = (/* @__PURE__ */ new Date()).toLocaleString("es-CO", { timeZone: "America/Bogota", dateStyle: "short", timeStyle: "short" });
     return `
 ## \u{1F4CA} ESTAD\xCDSTICAS EN TIEMPO REAL DE VECY NETWORK (Actualizado: ${now} hora Colombia)

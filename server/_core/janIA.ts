@@ -659,9 +659,9 @@ export async function getLiveStats(): Promise<string> {
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const [propHoy]  = await db.select({ total: sql<number>`count(*)::int` }).from(properties).where(sql`${properties.createdAt} >= ${today}`);
-    const [reqHoy]   = await db.select({ total: sql<number>`count(*)::int` }).from(requirements).where(sql`${requirements.createdAt} >= ${today}`);
-    const [matchHoy] = await db.select({ total: sql<number>`count(*)::int` }).from(propertyMatches).where(sql`${propertyMatches.createdAt} >= ${today}`);
+    const [propHoy]  = await db.select({ total: sql<number>`count(*)::int` }).from(properties).where(gte(properties.createdAt, today));
+    const [reqHoy]   = await db.select({ total: sql<number>`count(*)::int` }).from(requirements).where(gte(requirements.createdAt, today));
+    const [matchHoy] = await db.select({ total: sql<number>`count(*)::int` }).from(propertyMatches).where(gte(propertyMatches.createdAt, today));
 
     const now = new Date().toLocaleString('es-CO', { timeZone: 'America/Bogota', dateStyle: 'short', timeStyle: 'short' });
     return `
