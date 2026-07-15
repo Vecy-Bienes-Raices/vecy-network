@@ -107,9 +107,22 @@ export class JaniaMatchBot {
       }
 
       console.log('[JANIA-MATCH] Estableciendo conexión por WebSocket...');
+      const silentLogger = {
+        level: 'silent',
+        log: () => {},
+        trace: () => {},
+        debug: () => {},
+        info: () => {},
+        warn: () => {},
+        error: () => {},
+        fatal: () => {},
+        child: () => silentLogger
+      };
+
       this.sock = makeWASocket({
         auth: state,
         version,
+        logger: silentLogger as any,
         printQRInTerminal: false, // Lo manejamos nosotros de forma personalizada
         browser: Browsers.macOS('Desktop'),
         syncFullHistory: false,

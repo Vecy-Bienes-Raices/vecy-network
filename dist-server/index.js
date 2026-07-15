@@ -8091,9 +8091,28 @@ var init_whatsapp_match = __esm({
             console.warn("[JANIA-MATCH] No se pudo obtener la versi\xF3n din\xE1mica de WhatsApp Web, usando fallback:", e.message);
           }
           console.log("[JANIA-MATCH] Estableciendo conexi\xF3n por WebSocket...");
+          const silentLogger = {
+            level: "silent",
+            log: () => {
+            },
+            trace: () => {
+            },
+            debug: () => {
+            },
+            info: () => {
+            },
+            warn: () => {
+            },
+            error: () => {
+            },
+            fatal: () => {
+            },
+            child: () => silentLogger
+          };
           this.sock = makeWASocket({
             auth: state,
             version,
+            logger: silentLogger,
             printQRInTerminal: false,
             // Lo manejamos nosotros de forma personalizada
             browser: Browsers.macOS("Desktop"),
