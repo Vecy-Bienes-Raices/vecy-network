@@ -914,11 +914,6 @@ export class JaniaMatchBot {
     const incompleteEmojis = ['😳', '🧐', '🫪', '😲', '😮', '🤔', '🤷🏻‍♀️', '❓'];
     const violationEmojis = ['🚫', '🙈', '🙅‍♂️', '🚨', '😒', '❌', '🆘', '❎', '👎', '🙀', '🙄'];
 
-    if (result.reactionEmoji && typeof result.reactionEmoji === 'string') {
-      const trimmed = result.reactionEmoji.trim();
-      if (trimmed) return trimmed;
-    }
-
     if (result.classification === 'VIOLACION_DE_NORMAS') {
       return violationEmojis[Math.floor(Math.random() * violationEmojis.length)];
     }
@@ -927,7 +922,12 @@ export class JaniaMatchBot {
       result.classification === 'DATOS_INCOMPLETOS' || 
       (result.missingFields && result.missingFields.length > 0)
     ) {
-      return incompleteEmojis[Math.floor(Math.random() * incompleteEmojis.length)];
+      return '🤔'; // Forzar emoji de duda para advertencias / datos incompletos
+    }
+
+    if (result.reactionEmoji && typeof result.reactionEmoji === 'string') {
+      const trimmed = result.reactionEmoji.trim();
+      if (trimmed) return trimmed;
     }
 
     if (result.classification === 'INMUEBLE' || result.classification === 'REQUERIMIENTO') {

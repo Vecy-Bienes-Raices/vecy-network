@@ -695,7 +695,10 @@ Tienes dominio absoluto sobre 4 pilares fundamentales. Usa este conocimiento par
 # MOTOR DE EXTRACCIÓN Y MATCHING (Tu Función Operativa)
 Constantemente recibes datos en diversos formatos (Texto plano, URLs de portales como Wasi, FincaRaiz, Mercado Libre, y PDFs).
 
-- **Extracción (Aspiradora de Datos):** Si el usuario menciona o adjunta un inmueble disponible o lo que un cliente está buscando (requerimiento), tu DEBER ABSOLUTO es invocar las herramientas (\`insertProperty\` o \`insertRequirement\`).
+- **Clasificación Rigurosa:**
+  - **INMUEBLE:** Mensajes que ofertan/ofrecen un inmueble (venta, arriendo, alquiler o permuta) que el emisor tiene disponible (ej: "Ofrezco apartamento", "Tengo en arriendo casa", "En venta local", "Disponible oficina").
+  - **REQUERIMIENTO:** Mensajes que buscan, demandan o necesitan un inmueble para un cliente/comprador (ej: "Busco apartamento en arriendo", "Requiero casa", "Necesito oficina para pauta", "Cliente compra lote").
+- **Extracción (Aspiradora de Datos):** Si el usuario menciona o adjunta un inmueble disponible o lo que un cliente está buscando (requerimiento), tu DEBER ABSOLUTO es clasificarlo correctamente e invocar las herramientas (\`insertProperty\` o \`insertRequirement\`).
 - **El Matching Perfecto:** Cuando un usuario pregunte por coincidencias, utiliza tu herramienta de búsqueda en la base de datos. Analiza los porcentajes de compatibilidad que te devuelve el sistema (precio, zona, tipo) y preséntalos al cliente de forma real, argumentando *por qué* ese inmueble es el ideal para su requerimiento específico basándote en los datos reales de la tabla. No inventes coincidencias.
 
 # PROTOCOLO DE INTERACCIÓN (Variables Inyectadas)
@@ -1391,6 +1394,36 @@ Por lo tanto, DEBES hacer lo siguiente:
     }
     
     result.mentions = result.mentions || [];
+
+    // --- HEURÍSTICA DE SEGURIDAD PARA CORREGIR CLASIFICACIÓN ---
+    if (result.classification === "INMUEBLE" && messageToProcess) {
+      const cleanText = messageToProcess.toLowerCase();
+      const indicatesRequirement = cleanText.includes("busco") || 
+                                   cleanText.includes("necesito") || 
+                                   cleanText.includes("requiero") || 
+                                   cleanText.includes("buscamos") || 
+                                   cleanText.includes("compro") || 
+                                   cleanText.includes("compra") ||
+                                   cleanText.includes("para cliente") ||
+                                   cleanText.includes("para un cliente") ||
+                                   cleanText.includes("para una cliente");
+      
+      const indicatesProperty = cleanText.includes("vendo") || 
+                                cleanText.includes("ofrezco") || 
+                                cleanText.includes("tengo") || 
+                                cleanText.includes("rento") || 
+                                cleanText.includes("alquilo") || 
+                                cleanText.includes("alquiler") ||
+                                cleanText.includes("venta") ||
+                                cleanText.includes("arriendo apartamento") ||
+                                cleanText.includes("arriendo casa");
+
+      if (indicatesRequirement && !indicatesProperty) {
+        console.log("[JANIA-CORRECTION] Cambiando clasificación de INMUEBLE a REQUERIMIENTO basado en heurística de texto.");
+        result.classification = "REQUERIMIENTO";
+      }
+    }
+
     const extracted = result.extractedData;
     const isRequirement = result.classification === "REQUERIMIENTO";
     const isProperty = result.classification === "INMUEBLE";

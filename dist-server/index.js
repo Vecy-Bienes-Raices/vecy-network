@@ -3525,6 +3525,15 @@ ${liveStats}` : buildSystemPrompt(groupJid);
       }
     }
     result.mentions = result.mentions || [];
+    if (result.classification === "INMUEBLE" && messageToProcess) {
+      const cleanText2 = messageToProcess.toLowerCase();
+      const indicatesRequirement = cleanText2.includes("busco") || cleanText2.includes("necesito") || cleanText2.includes("requiero") || cleanText2.includes("buscamos") || cleanText2.includes("compro") || cleanText2.includes("compra") || cleanText2.includes("para cliente") || cleanText2.includes("para un cliente") || cleanText2.includes("para una cliente");
+      const indicatesProperty = cleanText2.includes("vendo") || cleanText2.includes("ofrezco") || cleanText2.includes("tengo") || cleanText2.includes("rento") || cleanText2.includes("alquilo") || cleanText2.includes("alquiler") || cleanText2.includes("venta") || cleanText2.includes("arriendo apartamento") || cleanText2.includes("arriendo casa");
+      if (indicatesRequirement && !indicatesProperty) {
+        console.log("[JANIA-CORRECTION] Cambiando clasificaci\xF3n de INMUEBLE a REQUERIMIENTO basado en heur\xEDstica de texto.");
+        result.classification = "REQUERIMIENTO";
+      }
+    }
     const extracted = result.extractedData;
     const isRequirement = result.classification === "REQUERIMIENTO";
     const isProperty = result.classification === "INMUEBLE";
@@ -4826,7 +4835,10 @@ Tienes dominio absoluto sobre 4 pilares fundamentales. Usa este conocimiento par
 # MOTOR DE EXTRACCI\xD3N Y MATCHING (Tu Funci\xF3n Operativa)
 Constantemente recibes datos en diversos formatos (Texto plano, URLs de portales como Wasi, FincaRaiz, Mercado Libre, y PDFs).
 
-- **Extracci\xF3n (Aspiradora de Datos):** Si el usuario menciona o adjunta un inmueble disponible o lo que un cliente est\xE1 buscando (requerimiento), tu DEBER ABSOLUTO es invocar las herramientas (\`insertProperty\` o \`insertRequirement\`).
+- **Clasificaci\xF3n Rigurosa:**
+  - **INMUEBLE:** Mensajes que ofertan/ofrecen un inmueble (venta, arriendo, alquiler o permuta) que el emisor tiene disponible (ej: "Ofrezco apartamento", "Tengo en arriendo casa", "En venta local", "Disponible oficina").
+  - **REQUERIMIENTO:** Mensajes que buscan, demandan o necesitan un inmueble para un cliente/comprador (ej: "Busco apartamento en arriendo", "Requiero casa", "Necesito oficina para pauta", "Cliente compra lote").
+- **Extracci\xF3n (Aspiradora de Datos):** Si el usuario menciona o adjunta un inmueble disponible o lo que un cliente est\xE1 buscando (requerimiento), tu DEBER ABSOLUTO es clasificarlo correctamente e invocar las herramientas (\`insertProperty\` o \`insertRequirement\`).
 - **El Matching Perfecto:** Cuando un usuario pregunte por coincidencias, utiliza tu herramienta de b\xFAsqueda en la base de datos. Analiza los porcentajes de compatibilidad que te devuelve el sistema (precio, zona, tipo) y pres\xE9ntalos al cliente de forma real, argumentando *por qu\xE9* ese inmueble es el ideal para su requerimiento espec\xEDfico bas\xE1ndote en los datos reales de la tabla. No inventes coincidencias.
 
 # PROTOCOLO DE INTERACCI\xD3N (Variables Inyectadas)
@@ -8832,15 +8844,15 @@ Tambi\xE9n puedes consultarme directamente en mi chat privado con mi otra yo *Ja
         const completeEmojis = ["\u{1F44D}", "\u{1F44C}", "\u{1F91D}", "\u2705", "\u{1F197}", "\u2714\uFE0F", "\u2611\uFE0F"];
         const incompleteEmojis = ["\u{1F633}", "\u{1F9D0}", "\u{1FAEA}", "\u{1F632}", "\u{1F62E}", "\u{1F914}", "\u{1F937}\u{1F3FB}\u200D\u2640\uFE0F", "\u2753"];
         const violationEmojis = ["\u{1F6AB}", "\u{1F648}", "\u{1F645}\u200D\u2642\uFE0F", "\u{1F6A8}", "\u{1F612}", "\u274C", "\u{1F198}", "\u274E", "\u{1F44E}", "\u{1F640}", "\u{1F644}"];
-        if (result.reactionEmoji && typeof result.reactionEmoji === "string") {
-          const trimmed = result.reactionEmoji.trim();
-          if (trimmed) return trimmed;
-        }
         if (result.classification === "VIOLACION_DE_NORMAS") {
           return violationEmojis[Math.floor(Math.random() * violationEmojis.length)];
         }
         if (result.classification === "DATOS_INCOMPLETOS" || result.missingFields && result.missingFields.length > 0) {
-          return incompleteEmojis[Math.floor(Math.random() * incompleteEmojis.length)];
+          return "\u{1F914}";
+        }
+        if (result.reactionEmoji && typeof result.reactionEmoji === "string") {
+          const trimmed = result.reactionEmoji.trim();
+          if (trimmed) return trimmed;
         }
         if (result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO") {
           return completeEmojis[Math.floor(Math.random() * completeEmojis.length)];
