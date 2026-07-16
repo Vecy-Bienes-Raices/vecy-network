@@ -305,16 +305,9 @@ export class JaniaMatchBot {
               return;
             }
 
-            // --- FILTRO ANTI-BAN DE LONGITUD PARA GRUPOS EXTERNOS ---
-            if (!isOfficialGroup) {
-              const words = body.trim().split(/\s+/).filter(w => w.length > 0);
-              const hasLinks = textLower.includes("http") || textLower.includes("www");
-              const hasAttachments = !!msg.message.imageMessage || !!msg.message.documentMessage || !!msg.message.videoMessage || isAudioPTT;
-              if (words.length < 10 && !hasLinks && !hasAttachments) {
-                console.log(`[JANIA-MATCH] Omitiendo mensaje corto de grupo externo "${groupName}" por Protocolo Anti-Ban (Palabras: ${words.length}).`);
-                return;
-              }
-            }
+            // Grupos externos: JanIA capta todo sin discriminar por longitud.
+            // La calificación de completitud (✔️ a 💖) refleja la calidad del dato.
+
 
             // Si es una publicación comercial, procesar con el buffer extractor (Modo Silencioso)
             const isPossibleListing = 
