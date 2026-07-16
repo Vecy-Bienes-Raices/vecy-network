@@ -804,79 +804,21 @@ export class JaniaMatchBot {
         isBotAdmin = !!myParticipant && (myParticipant.admin === 'admin' || myParticipant.admin === 'superadmin');
       } catch (_) {}
 
+      // Modo Fantasma: sin amonestaciones por doble posteo.
+      // Se registra el timestamp para uso interno pero sin bloquear el flujo.
       if (isBotAdmin) {
-        const lastMsgTime = this.lastGroupMessageTime.get(`${chatId}_${senderId}`) || 0;
-        const ONE_MINUTE = 60 * 1000;
-        if (now - lastMsgTime < ONE_MINUTE) {
-          console.log(`[JANIA-MATCH] Doble posteo detectado para ${senderId} en ${chatId} (Mismo minuto).`);
-          try {
-            await this.sock.sendMessage(chatId, { react: { text: '🚨', key: msg.key } });
-            const warningText = `¡Hola! ⚠️ He detectado que estás enviando múltiples publicaciones consecutivas en menos de un minuto. Debes publicar cada una pero con un intervalo de tiempo justificable de por lo menos UN MINUTO o DOS de diferencia entre cada publicación para poder hacer el proceso perfectamente y poderlo subir a nuestra base de datos de manera correcta, ya que NO puedo revisar tantos inmuebles de un solo tajo ni incluirlos en la base de datos de inmediato. Esto es con el fin de mantener el buen funcionamiento del sistema y ver si le encontramos una coincidencia o MATCH a tus publicaciones. ¡Gracias por tu amable comprensión! 🤝🚀`;
-            await this.queuedSend(chatId, warningText, { quoted: msg, mentions: [senderId] });
-          } catch (e) {}
-          return;
-        }
         this.lastGroupMessageTime.set(`${chatId}_${senderId}`, now);
       }
 
-      // 1. CONTROL DE COOLDOWN (SOLO EN GRUPO PRINCIPAL Y PARA POSIBLES LISTINGS)
-      if (isMainGroup) {
-        this.loadCooldowns();
-        const cooldownKey = `${chatId}_${senderId}`;
-        const cooldown = this.cooldownMap.get(cooldownKey);
-        
-        if (cooldown && (now - cooldown.lastBlockProcessedAt < COOLDOWN_PERIOD)) {
-          if (this.authorizedGroups.includes(chatId)) {
-            try {
-              await this.sock.sendMessage(chatId, { react: { text: '⚠️', key: msg.key } });
-            } catch (e) {}
-          }
-          return;
-        }
-      }
+      // Cooldown silencioso: no se bloquea la captura, solo se registra el tiempo del último bloque.
 
       let buffer = this.messageBuffers.get(bufferKey);
       const bufferTimeout = 12000; // 12 Segundos
       const MAX_BLOCK_SIZE = 3;
 
       if (buffer) {
-        // LÍMITE DE BUFFER (SOLO EN GRUPO PRINCIPAL Y PARA POSIBLES LISTINGS)
-        const hasExistingListing = buffer.messages.some(m => {
-          const bodyLower = m.body.toLowerCase();
-          return m.body.length > 120 || 
-                 m.body.split('\n').length > 2 || 
-                 m.hasMedia ||
-                 bodyLower.includes("http") ||
-                 bodyLower.includes("www") ||
-                 bodyLower.includes("ofrezco") ||
-                 bodyLower.includes("busco") ||
-                 bodyLower.includes("vendo") ||
-                 bodyLower.includes("arriendo") ||
-                 bodyLower.includes("compro") ||
-                 bodyLower.includes("necesito");
-        });
-
-        if (isMainGroup && hasExistingListing) {
-          console.log(`[BUFFER] Intento de múltiple propiedad detectado para ${senderId}. Mensaje descartado.`);
-          if (this.authorizedGroups.includes(chatId)) {
-            try {
-              await this.sock.sendMessage(chatId, { react: { text: '⚠️', key: msg.key } });
-            } catch (e) {}
-          }
-          return;
-        }
-
-        // Límite físico de mensajes en el buffer
-        const limit = isMainGroup ? MAX_BLOCK_SIZE : 10;
-        if (buffer.messages.length >= limit) {
-          console.log(`[BUFFER] Límite de mensajes del bloque (${limit}) alcanzado para ${senderId}. Mensaje descartado.`);
-          if (this.authorizedGroups.includes(chatId)) {
-            try {
-              await this.sock.sendMessage(chatId, { react: { text: '⚠️', key: msg.key } });
-            } catch (e) {}
-          }
-          return;
-        }
+        // Modo Fantasma: sin límite de propiedades por bloque, sin ⚠️.
+        // Se agrega el mensaje al buffer existente siempre que sea posible.
 
         clearTimeout(buffer.timer);
         buffer.messages.push({

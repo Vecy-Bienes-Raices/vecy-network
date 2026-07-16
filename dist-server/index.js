@@ -8779,63 +8779,12 @@ Tambi\xE9n puedes consultarme directamente en mi chat privado con mi otra yo *Ja
           } catch (_) {
           }
           if (isBotAdmin) {
-            const lastMsgTime = this.lastGroupMessageTime.get(`${chatId}_${senderId}`) || 0;
-            const ONE_MINUTE = 60 * 1e3;
-            if (now - lastMsgTime < ONE_MINUTE) {
-              console.log(`[JANIA-MATCH] Doble posteo detectado para ${senderId} en ${chatId} (Mismo minuto).`);
-              try {
-                await this.sock.sendMessage(chatId, { react: { text: "\u{1F6A8}", key: msg.key } });
-                const warningText = `\xA1Hola! \u26A0\uFE0F He detectado que est\xE1s enviando m\xFAltiples publicaciones consecutivas en menos de un minuto. Debes publicar cada una pero con un intervalo de tiempo justificable de por lo menos UN MINUTO o DOS de diferencia entre cada publicaci\xF3n para poder hacer el proceso perfectamente y poderlo subir a nuestra base de datos de manera correcta, ya que NO puedo revisar tantos inmuebles de un solo tajo ni incluirlos en la base de datos de inmediato. Esto es con el fin de mantener el buen funcionamiento del sistema y ver si le encontramos una coincidencia o MATCH a tus publicaciones. \xA1Gracias por tu amable comprensi\xF3n! \u{1F91D}\u{1F680}`;
-                await this.queuedSend(chatId, warningText, { quoted: msg, mentions: [senderId] });
-              } catch (e) {
-              }
-              return;
-            }
             this.lastGroupMessageTime.set(`${chatId}_${senderId}`, now);
-          }
-          if (isMainGroup) {
-            this.loadCooldowns();
-            const cooldownKey = `${chatId}_${senderId}`;
-            const cooldown = this.cooldownMap.get(cooldownKey);
-            if (cooldown && now - cooldown.lastBlockProcessedAt < COOLDOWN_PERIOD) {
-              if (this.authorizedGroups.includes(chatId)) {
-                try {
-                  await this.sock.sendMessage(chatId, { react: { text: "\u26A0\uFE0F", key: msg.key } });
-                } catch (e) {
-                }
-              }
-              return;
-            }
           }
           let buffer = this.messageBuffers.get(bufferKey);
           const bufferTimeout = 12e3;
           const MAX_BLOCK_SIZE = 3;
           if (buffer) {
-            const hasExistingListing = buffer.messages.some((m) => {
-              const bodyLower = m.body.toLowerCase();
-              return m.body.length > 120 || m.body.split("\n").length > 2 || m.hasMedia || bodyLower.includes("http") || bodyLower.includes("www") || bodyLower.includes("ofrezco") || bodyLower.includes("busco") || bodyLower.includes("vendo") || bodyLower.includes("arriendo") || bodyLower.includes("compro") || bodyLower.includes("necesito");
-            });
-            if (isMainGroup && hasExistingListing) {
-              console.log(`[BUFFER] Intento de m\xFAltiple propiedad detectado para ${senderId}. Mensaje descartado.`);
-              if (this.authorizedGroups.includes(chatId)) {
-                try {
-                  await this.sock.sendMessage(chatId, { react: { text: "\u26A0\uFE0F", key: msg.key } });
-                } catch (e) {
-                }
-              }
-              return;
-            }
-            const limit = isMainGroup ? MAX_BLOCK_SIZE : 10;
-            if (buffer.messages.length >= limit) {
-              console.log(`[BUFFER] L\xEDmite de mensajes del bloque (${limit}) alcanzado para ${senderId}. Mensaje descartado.`);
-              if (this.authorizedGroups.includes(chatId)) {
-                try {
-                  await this.sock.sendMessage(chatId, { react: { text: "\u26A0\uFE0F", key: msg.key } });
-                } catch (e) {
-                }
-              }
-              return;
-            }
             clearTimeout(buffer.timer);
             buffer.messages.push({
               body: bodyText,
