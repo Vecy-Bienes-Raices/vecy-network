@@ -555,6 +555,48 @@ export const janIARouter = router({
       throw error;
     }
   }),
+
+  // Real-time report stats from DB
+  getReportStats: publicProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+    try {
+      const [propTotal] = await db.select({ count: sql<number>`count(*)::int` }).from(properties);
+      const [propActive] = await db.select({ count: sql<number>`count(*)::int` }).from(properties).where(sql`${properties.available} = true`);
+      const [reqTotal] = await db.select({ count: sql<number>`count(*)::int` }).from(requirements);
+      const [reqActive] = await db.select({ count: sql<number>`count(*)::int` }).from(requirements).where(eq(requirements.status, 'active'));
+      const [matchTotal] = await db.select({ count: sql<number>`count(*)::int` }).from(propertyMatches);
+      const [convTotal] = await db.select({ count: sql<number>`count(*)::int` }).from(conversations);
+
+      // Tendencia mensual de los últimos 6 meses (propiedades y requerimientos)
+      const monthlyProps = await db.execute(sql`
+        SELECT to_char(date_trunc('month', "createdAt"), 'Mon YYYY') as mes,
+               count(*)::int as total
+        FROM properties
+        WHERE "createdAt" >= now() - interval '6 months'
+        GROUP BY 1 ORDER BY 1
+      `);
+      const monthlyReqs = await db.execute(sql`
+        SELECT to_char(date_trunc('month', "createdAt"), 'Mon YYYY') as mes,
+               count(*)::int as total
+        FROM requirements
+        WHERE "createdAt" >= now() - interval '6 months'
+        GROUP BY 1 ORDER BY 1
+      `);
+
+      return {
+        properties: { total: propTotal.count, active: propActive.count },
+        requirements: { total: reqTotal.count, active: reqActive.count },
+        matches: { total: matchTotal.count },
+        conversations: { total: convTotal.count },
+        monthlyProps: monthlyProps.rows as { mes: string; total: number }[],
+        monthlyReqs: monthlyReqs.rows as { mes: string; total: number }[],
+      };
+    } catch (error) {
+      console.error('Error getting report stats:', error);
+      throw error;
+    }
+  }),
 });
 
 export type JanIARouter = typeof janIARouter;

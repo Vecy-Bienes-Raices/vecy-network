@@ -179,12 +179,28 @@ export function calcularScoreMatch(requirement: any, property: any): number {
     return 0;
   }
 
-  // B. city (Ciudad)
-  const reqCity = normalizarTextoGeografico(requirement.ciudadDeseada || requirement.city || "");
-  const propCity = normalizarTextoGeografico(property.city || property.addressCity || "");
+  // B. city (Ciudad) — usamos addressCity como fuente primaria si existe,
+  // ya que el campo city a veces contiene el barrio en vez de la ciudad.
+  const CIUDADES_CO = ["bogota", "medellin", "cali", "barranquilla", "cartagena",
+    "bucaramanga", "pereira", "manizales", "cucuta", "ibague", "santa marta",
+    "villavicencio", "pasto", "monteria", "valledupar", "sincelejo", "chia",
+    "zipaquira", "cajica", "envigado", "bello", "sabaneta", "itagui", "tenjo", "mosquera"];
+
+  const resolveCityField = (raw1: string, raw2: string): string => {
+    const n1 = normalizarTextoGeografico(raw1 || "");
+    const n2 = normalizarTextoGeografico(raw2 || "");
+    // Preferir el que coincide con alguna ciudad colombiana conocida
+    if (CIUDADES_CO.some(c => n1.includes(c) || n1 === c)) return n1;
+    if (CIUDADES_CO.some(c => n2.includes(c) || n2 === c)) return n2;
+    return n1 || n2; // fallback: usar el primero disponible
+  };
+
+  const reqCity = resolveCityField(requirement.ciudadDeseada || "", requirement.city || "");
+  const propCity = resolveCityField(property.addressCity || "", property.city || "");
   if (!reqCity || !propCity || reqCity !== propCity) {
     return 0;
   }
+
 
   // Parse prices, budgets, areas and layout numbers
   const price = parseFloat(String(property.price || "0"));

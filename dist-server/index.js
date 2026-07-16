@@ -2548,8 +2548,42 @@ function calcularScoreMatch(requirement, property) {
   if (!reqBiz || !propBiz || reqBiz !== propBiz) {
     return 0;
   }
-  const reqCity = normalizarTextoGeografico(requirement.ciudadDeseada || requirement.city || "");
-  const propCity = normalizarTextoGeografico(property.city || property.addressCity || "");
+  const CIUDADES_CO = [
+    "bogota",
+    "medellin",
+    "cali",
+    "barranquilla",
+    "cartagena",
+    "bucaramanga",
+    "pereira",
+    "manizales",
+    "cucuta",
+    "ibague",
+    "santa marta",
+    "villavicencio",
+    "pasto",
+    "monteria",
+    "valledupar",
+    "sincelejo",
+    "chia",
+    "zipaquira",
+    "cajica",
+    "envigado",
+    "bello",
+    "sabaneta",
+    "itagui",
+    "tenjo",
+    "mosquera"
+  ];
+  const resolveCityField = (raw1, raw2) => {
+    const n1 = normalizarTextoGeografico(raw1 || "");
+    const n2 = normalizarTextoGeografico(raw2 || "");
+    if (CIUDADES_CO.some((c) => n1.includes(c) || n1 === c)) return n1;
+    if (CIUDADES_CO.some((c) => n2.includes(c) || n2 === c)) return n2;
+    return n1 || n2;
+  };
+  const reqCity = resolveCityField(requirement.ciudadDeseada || "", requirement.city || "");
+  const propCity = resolveCityField(property.addressCity || "", property.city || "");
   if (!reqCity || !propCity || reqCity !== propCity) {
     return 0;
   }
@@ -8490,15 +8524,6 @@ var init_whatsapp_match = __esm({
                   console.log(`[JANIA-MATCH] Mensaje omitido: el grupo "${groupName}" est\xE1 en la blacklist de negociaci\xF3n.`);
                   return;
                 }
-                if (!isOfficialGroup) {
-                  const words = body.trim().split(/\s+/).filter((w) => w.length > 0);
-                  const hasLinks = textLower.includes("http") || textLower.includes("www");
-                  const hasAttachments = !!msg.message.imageMessage || !!msg.message.documentMessage || !!msg.message.videoMessage || isAudioPTT;
-                  if (words.length < 10 && !hasLinks && !hasAttachments) {
-                    console.log(`[JANIA-MATCH] Omitiendo mensaje corto de grupo externo "${groupName}" por Protocolo Anti-Ban (Palabras: ${words.length}).`);
-                    return;
-                  }
-                }
                 const isPossibleListing = body.length > 120 || body.split("\n").length > 2 || !!msg.message.imageMessage || !!msg.message.documentMessage || textLower.includes("http") || textLower.includes("www") || textLower.includes("ofrezco") || textLower.includes("busco") || textLower.includes("vendo") || textLower.includes("arriendo") || textLower.includes("compro") || textLower.includes("necesito") || textLower.includes("renta") || textLower.includes("alquilo") || textLower.includes("permuto") || textLower.includes("requiero") || textLower.includes("casa") || textLower.includes("apto") || textLower.includes("apartamento") || textLower.includes("bodega") || textLower.includes("oficina") || textLower.includes("lote") || textLower.includes("local");
                 const isHelpOrSystemQuery = !isPossibleListing && (textLower.includes("c\xF3mo subo") || textLower.includes("como subo") || textLower.includes("c\xF3mo publico") || textLower.includes("como publico") || textLower.includes("c\xF3mo se publica") || textLower.includes("como se publica") || textLower.includes("c\xF3mo registrar") || textLower.includes("como registrar") || textLower.includes("c\xF3mo funciona") || textLower.includes("como funciona") || textLower.includes("de qu\xE9 consiste") || textLower.includes("de que consiste") || textLower.includes("en qu\xE9 consiste") || textLower.includes("en que consiste") || textLower.includes("c\xF3mo hago para") || textLower.includes("como hago para") || textLower.includes("c\xF3mo buscar") || textLower.includes("como buscar") || textLower.includes("c\xF3mo encontrar") || textLower.includes("como encontrar") || textLower.includes("mec\xE1nica del grupo") || textLower.includes("mecanica del grupo") || textLower.includes("qued\xF3 guardado") || textLower.includes("quedo guardado") || textLower.includes("se guard\xF3") || textLower.includes("se guardo") || textLower.includes("fue guardado") || textLower.includes("falt\xF3 alg\xFAn dato") || textLower.includes("falto algun dato") || textLower.includes("falt\xF3 un dato") || textLower.includes("falto un dato") || textLower.includes("datos faltantes") || textLower.includes("subi\xF3 correctamente") || textLower.includes("subio correctamente") || textLower.includes("fue subido") || textLower.includes("mejor forma de publicar") || textLower.includes("c\xF3mo es mejor") || textLower.includes("como es mejor") || textLower.includes("para obtener resultados") || textLower.includes("ayuda") && textLower.includes("inmueble") || textLower.includes("explicar") && textLower.includes("grupo") || textLower.includes("c\xF3mo") && textLower.includes("grupo"));
                 const textClean = body.toLowerCase().trim();
@@ -10568,6 +10593,44 @@ var janIARouter = router({
       return await db.select().from(requirements).orderBy(desc2(requirements.createdAt));
     } catch (error) {
       console.error("Error getting all requirements:", error);
+      throw error;
+    }
+  }),
+  // Real-time report stats from DB
+  getReportStats: publicProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) throw new Error("Database not available");
+    try {
+      const [propTotal] = await db.select({ count: sql4`count(*)::int` }).from(properties);
+      const [propActive] = await db.select({ count: sql4`count(*)::int` }).from(properties).where(sql4`${properties.available} = true`);
+      const [reqTotal] = await db.select({ count: sql4`count(*)::int` }).from(requirements);
+      const [reqActive] = await db.select({ count: sql4`count(*)::int` }).from(requirements).where(eq6(requirements.status, "active"));
+      const [matchTotal] = await db.select({ count: sql4`count(*)::int` }).from(propertyMatches);
+      const [convTotal] = await db.select({ count: sql4`count(*)::int` }).from(conversations);
+      const monthlyProps = await db.execute(sql4`
+        SELECT to_char(date_trunc('month', "createdAt"), 'Mon YYYY') as mes,
+               count(*)::int as total
+        FROM properties
+        WHERE "createdAt" >= now() - interval '6 months'
+        GROUP BY 1 ORDER BY 1
+      `);
+      const monthlyReqs = await db.execute(sql4`
+        SELECT to_char(date_trunc('month', "createdAt"), 'Mon YYYY') as mes,
+               count(*)::int as total
+        FROM requirements
+        WHERE "createdAt" >= now() - interval '6 months'
+        GROUP BY 1 ORDER BY 1
+      `);
+      return {
+        properties: { total: propTotal.count, active: propActive.count },
+        requirements: { total: reqTotal.count, active: reqActive.count },
+        matches: { total: matchTotal.count },
+        conversations: { total: convTotal.count },
+        monthlyProps: monthlyProps.rows,
+        monthlyReqs: monthlyReqs.rows
+      };
+    } catch (error) {
+      console.error("Error getting report stats:", error);
       throw error;
     }
   })
