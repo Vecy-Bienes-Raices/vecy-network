@@ -57,6 +57,13 @@
       "when": 1784136974250,
       "tag": "0007_salty_night_nurse",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1784159689847,
+      "tag": "0008_magenta_namorita",
+      "breakpoints": true
     }
   ]
 }

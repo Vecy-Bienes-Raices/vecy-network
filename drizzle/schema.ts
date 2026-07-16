@@ -101,6 +101,7 @@ export const properties = pgTable("properties", {
   origenTipo: varchar("origen_tipo", { length: 50 }),
   origenId: varchar("origen_id", { length: 100 }),
   origenNombre: varchar("origen_nombre", { length: 255 }),
+  calificacion: varchar("calificacion", { length: 50 }),
 });
 
 export type Property = typeof properties.$inferSelect;
@@ -141,6 +142,7 @@ export const requirements = pgTable("requirements", {
   origenTipo: varchar("origen_tipo", { length: 50 }),
   origenId: varchar("origen_id", { length: 100 }),
   origenNombre: varchar("origen_nombre", { length: 255 }),
+  calificacion: varchar("calificacion", { length: 50 }),
 });
 
 export type Requirement = typeof requirements.$inferSelect;

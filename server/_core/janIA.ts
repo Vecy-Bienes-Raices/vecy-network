@@ -1710,6 +1710,7 @@ Por lo tanto, DEBES hacer lo siguiente:
         result.mentions = [];
         result.extraDMs = [];
         result.sendReputationHook = false;
+        result.reactionEmoji = getEmojiForCalificacion(saved.calificacion || undefined);
 
         const { executeMatchEngine } = await import("./matching");
         executeMatchEngine(saved.id, null).catch(err => console.error("Error executing match engine:", err));
@@ -1740,6 +1741,7 @@ Por lo tanto, DEBES hacer lo siguiente:
         result.mentions = [];
         result.extraDMs = [];
         result.sendReputationHook = false;
+        result.reactionEmoji = getEmojiForCalificacion(saved.calificacion || undefined);
 
         const { executeMatchEngine } = await import("./matching");
         executeMatchEngine(null, saved.id).catch(err => console.error("Error executing match engine:", err));
@@ -1961,6 +1963,89 @@ function safeSlice(val: any, limit: number): string | undefined {
   return String(val).slice(0, limit);
 }
 
+export function calcularCalificacionCompletitud(extracted: any, isProperty: boolean): { score: number, label: string } {
+  if (!extracted) return { score: 0, label: "Mediocre" };
+
+  let fieldsCount = 7;
+  let presentCount = 0;
+
+  // 1. Precio (price o presupuestoMax / presupuestoMin)
+  const priceVal = isProperty ? extracted.price : (extracted.presupuestoMax || extracted.presupuestoMin || extracted.price);
+  if (priceVal !== undefined && priceVal !== null && String(priceVal).trim() !== "" && String(priceVal) !== "0") {
+    presentCount++;
+  }
+
+  // 2. Área (areaTotal / area / areaMin)
+  const areaVal = isProperty ? (extracted.areaTotal || extracted.area) : (extracted.areaMin || extracted.area);
+  if (areaVal !== undefined && areaVal !== null && String(areaVal).trim() !== "" && String(areaVal) !== "0") {
+    presentCount++;
+  }
+
+  // 3. Habitaciones (bedrooms / habitacionesMin)
+  const bedroomsVal = isProperty ? extracted.bedrooms : (extracted.habitacionesMin || extracted.bedrooms);
+  if (bedroomsVal !== undefined && bedroomsVal !== null && String(bedroomsVal).trim() !== "" && Number(bedroomsVal) > 0) {
+    presentCount++;
+  }
+
+  // 4. Baños (bathrooms / banosMin)
+  const bathroomsVal = isProperty ? extracted.bathrooms : (extracted.banosMin || extracted.bathrooms);
+  if (bathroomsVal !== undefined && bathroomsVal !== null && String(bathroomsVal).trim() !== "" && Number(bathroomsVal) > 0) {
+    presentCount++;
+  }
+
+  // 5. Parqueaderos (garages / parqueaderosMin)
+  const garagesVal = isProperty ? extracted.garages : (extracted.parqueaderosMin || extracted.garages);
+  if (garagesVal !== undefined && garagesVal !== null && String(garagesVal).trim() !== "" && Number(garagesVal) >= 0) {
+    presentCount++;
+  }
+
+  // 6. Ubicación exacta (zone / zonaDeseada)
+  const zoneVal = isProperty ? extracted.zone : (extracted.zonaDeseada || extracted.zone);
+  if (zoneVal !== undefined && zoneVal !== null && String(zoneVal).trim() !== "" && String(zoneVal).toLowerCase() !== "bogotá" && String(zoneVal).toLowerCase() !== "bogota") {
+    presentCount++;
+  }
+
+  // 7. Contacto (idUsuarioWhatsapp)
+  const contactVal = extracted.idUsuarioWhatsapp;
+  if (contactVal !== undefined && contactVal !== null && String(contactVal).trim() !== "") {
+    presentCount++;
+  }
+
+  const score = (presentCount / fieldsCount) * 100;
+  let label = "Mediocre";
+
+  if (score < 30) {
+    label = "Mediocre";
+  } else if (score >= 30 && score < 45) {
+    label = "Incompleta";
+  } else if (score >= 45 && score < 60) {
+    label = "Regular";
+  } else if (score >= 60 && score < 70) {
+    label = "Mejor";
+  } else if (score >= 70 && score < 85) {
+    label = "Bien";
+  } else if (score >= 85 && score < 95) {
+    label = "Perfecta";
+  } else {
+    label = "Excelente";
+  }
+
+  return { score, label };
+}
+
+export function getEmojiForCalificacion(calificacion?: string): string {
+  switch (calificacion) {
+    case "Mediocre": return "✔️";
+    case "Incompleta": return "☑️";
+    case "Regular": return "✅";
+    case "Mejor": return "🆗";
+    case "Bien": return "👍";
+    case "Perfecta": return "👌";
+    case "Excelente": return "💎";
+    default: return "👍";
+  }
+}
+
 async function saveProperty(data: any, userId: string, realName: string, imageBuffer?: string) {
   const db = await getDb();
   if (!db) return null;
@@ -2052,12 +2137,18 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
     )
     .limit(1);
 
+  const { label: calif } = calcularCalificacionCompletitud(insertData, true);
+  const insertDataWithCalif = {
+    ...insertData,
+    calificacion: calif
+  };
+
   if (existing.length > 0) {
     // Si ya existe, actualizamos los datos (por si cambió precio, admin, fotos, descripción, etc.)
     const [updated] = await db
       .update(properties)
       .set({
-        ...insertData,
+        ...insertDataWithCalif,
         updatedAt: new Date()
       })
       .where(eq(properties.id, existing[0].id))
@@ -2066,7 +2157,7 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
     return updated;
   }
 
-  const [result] = await db.insert(properties).values(insertData).returning();
+  const [result] = await db.insert(properties).values(insertDataWithCalif).returning();
 
   // Si se subió una imagen, registrarla en la tabla propertyImages también
   if (result && imageUrl) {
@@ -2153,12 +2244,18 @@ async function saveRequirement(data: any, userId: string, realName: string) {
     )
     .limit(1);
 
+  const { label: calif } = calcularCalificacionCompletitud(insertData, false);
+  const insertDataWithCalif = {
+    ...insertData,
+    calificacion: calif
+  };
+
   if (existing.length > 0) {
     // Si ya existe, actualizamos los datos (por si cambió presupuesto, área, descripción, etc.)
     const [updated] = await db
       .update(requirements)
       .set({
-        ...insertData,
+        ...insertDataWithCalif,
         updatedAt: new Date()
       })
       .where(eq(requirements.id, existing[0].id))
@@ -2167,7 +2264,7 @@ async function saveRequirement(data: any, userId: string, realName: string) {
     return updated;
   }
 
-  const [result] = await db.insert(requirements).values(insertData).returning();
+  const [result] = await db.insert(requirements).values(insertDataWithCalif).returning();
   return result;
 }
 

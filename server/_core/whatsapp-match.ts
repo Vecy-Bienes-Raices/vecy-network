@@ -907,8 +907,7 @@ export class JaniaMatchBot {
 
   private getReactionEmoji(result: any): string | null {
     if (result && result.inserted) {
-      const allowedEmojis = ['👍', '👌', '✅', '🆗', '🧡'];
-      return allowedEmojis[Math.floor(Math.random() * allowedEmojis.length)];
+      return result.reactionEmoji || '👍';
     }
     return null;
   }

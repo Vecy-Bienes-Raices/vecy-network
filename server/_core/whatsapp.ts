@@ -1904,12 +1904,11 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
       return;
     }
 
-    // Módulo 2 & 3 & 7: Reacción silenciosa retrasada en inserciones exitosas
-    const allowedEmojis = ['👍', '👌', '✅', '🆗', '🧡'];
-    const reaction = allowedEmojis[Math.floor(Math.random() * allowedEmojis.length)];
+    // Módulo 2 & 3 & 7: Reacción silenciosa retrasada en inserciones exitosas con el emoji correspondiente
+    const reaction = result.reactionEmoji || '👍';
     if (originalMsg) {
       const delayMs = Math.floor(Math.random() * (12000 - 4000 + 1)) + 4000;
-      console.log(`[WHATSAPP-BOT] Inserción exitosa en ${chatId}. Retrasando reacción ${reaction} por ${delayMs}ms...`);
+      console.log(`[WHATSAPP-BOT] Inserción exitosa en ${chatId}. Calificación emoji: ${reaction}. Retrasando reacción por ${delayMs}ms...`);
       setTimeout(async () => {
         try {
           await originalMsg.react(reaction);

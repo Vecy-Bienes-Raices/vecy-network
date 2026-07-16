@@ -268,19 +268,32 @@ export async function validarZona(zona: string, ciudad?: string, textoCompleto?:
     : `${zona}, Bogotá, Colombia`;
 
   const googleResult = await geocodeAddress(queryAddress);
-  if (googleResult && googleResult.isValid) {
-    const normGoogleCity = normalizarTextoGeografico(googleResult.city);
-    const isBogota = normGoogleCity === "bogota";
+  if (googleResult) {
+    if (googleResult.isValid) {
+      const normGoogleCity = normalizarTextoGeografico(googleResult.city);
+      const isBogota = normGoogleCity === "bogota";
 
-    return {
-      isValid: true,
-      barrioCanonico: googleResult.zone,
-      localidad: googleResult.locality,
-      city: googleResult.city,
-      isMunicipio: !isBogota,
-      latitude: googleResult.latitude,
-      longitude: googleResult.longitude
-    };
+      return {
+        isValid: true,
+        barrioCanonico: googleResult.zone,
+        localidad: googleResult.locality,
+        city: googleResult.city,
+        isMunicipio: !isBogota,
+        latitude: googleResult.latitude,
+        longitude: googleResult.longitude
+      };
+    } else if (googleResult.isApiError) {
+      console.warn(`[validarZona] API de Google Maps falló (Status/Keys). Activando fallback silencioso con coordenadas nulas para no descartar el registro.`);
+      return {
+        isValid: true,
+        barrioCanonico: zona.trim(),
+        localidad: ciudad || "Bogotá",
+        city: ciudad || "Bogotá",
+        isMunicipio: ciudad ? normalizarTextoGeografico(ciudad) !== "bogota" : false,
+        latitude: undefined,
+        longitude: undefined
+      };
+    }
   }
 
   // --- CAPA DE GEOLOCALIZACIÓN 2: Fallback local (DIVIPOLA & Diccionarios estáticos) ---

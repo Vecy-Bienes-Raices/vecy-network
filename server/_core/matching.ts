@@ -510,7 +510,10 @@ export async function executeMatchEngine(propertyId: number | null, requirementI
             return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(val);
           };
 
-          const alertMsg = `🎯 *[COINCIDENCIA INMOBILIARIA DETECTADA]*\n\n` +
+          const headerEmoji = score === 100 ? "🧡" : "🎯";
+          const headerText = score === 100 ? "COINCIDENCIA INMOBILIARIA 100% PERFECTA DETECTADA" : "COINCIDENCIA INMOBILIARIA DETECTADA";
+
+          const alertMsg = `${headerEmoji} *[${headerText}]*\n\n` +
             `• *Porcentaje de Match:* ${score}%\n` +
             `• *Inmueble:* ${prop.propertyType.toUpperCase()} en ${prop.city} (${prop.zone || 'Sector general'})\n` +
             `• *Negocio:* ${prop.transactionType.toUpperCase()}\n` +

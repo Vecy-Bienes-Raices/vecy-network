@@ -154,7 +154,8 @@ var init_schema = __esm({
       fechaExtraccion: timestamp("fecha_extraccion").defaultNow(),
       origenTipo: varchar("origen_tipo", { length: 50 }),
       origenId: varchar("origen_id", { length: 100 }),
-      origenNombre: varchar("origen_nombre", { length: 255 })
+      origenNombre: varchar("origen_nombre", { length: 255 }),
+      calificacion: varchar("calificacion", { length: 50 })
     });
     requirements = pgTable("requirements", {
       id: serial("id").primaryKey(),
@@ -189,7 +190,8 @@ var init_schema = __esm({
       fechaExtraccion: timestamp("fecha_extraccion").defaultNow(),
       origenTipo: varchar("origen_tipo", { length: 50 }),
       origenId: varchar("origen_id", { length: 100 }),
-      origenNombre: varchar("origen_nombre", { length: 255 })
+      origenNombre: varchar("origen_nombre", { length: 255 }),
+      calificacion: varchar("calificacion", { length: 50 })
     });
     leads = pgTable("leads", {
       id: serial("id").primaryKey(),
@@ -1436,7 +1438,16 @@ async function geocodeAddress(address) {
   const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.GOOGLE_API_KEY;
   if (!apiKey || apiKey.trim() === "") {
     console.warn("[Geocoding] GOOGLE_MAPS_API_KEY nor GOOGLE_API_KEY is configured.");
-    return null;
+    return {
+      isValid: false,
+      city: "",
+      zone: "",
+      locality: "",
+      latitude: "",
+      longitude: "",
+      formattedAddress: "",
+      isApiError: true
+    };
   }
   try {
     const url = `https://maps.googleapis.com/maps/api/geocode/json`;
@@ -1448,8 +1459,21 @@ async function geocodeAddress(address) {
       }
     });
     const data = response.data;
-    if (data.status !== "OK" || !data.results || data.results.length === 0) {
+    if (data.status !== "OK") {
       console.log(`[Geocoding] No se encontraron resultados en Google Maps para: "${address}" (Status: ${data.status})`);
+      const isApiError = data.status === "REQUEST_DENIED" || data.status === "OVER_QUERY_LIMIT" || data.status === "UNKNOWN_ERROR" || data.status === "INVALID_REQUEST";
+      return {
+        isValid: false,
+        city: "",
+        zone: "",
+        locality: "",
+        latitude: "",
+        longitude: "",
+        formattedAddress: "",
+        isApiError
+      };
+    }
+    if (!data.results || data.results.length === 0) {
       return null;
     }
     const result = data.results[0];
@@ -1506,7 +1530,16 @@ async function geocodeAddress(address) {
     };
   } catch (err) {
     console.error("[Geocoding] Error en geocodeAddress:", err.message);
-    return null;
+    return {
+      isValid: false,
+      city: "",
+      zone: "",
+      locality: "",
+      latitude: "",
+      longitude: "",
+      formattedAddress: "",
+      isApiError: true
+    };
   }
 }
 var init_geocoding = __esm({
@@ -1566,18 +1599,31 @@ async function validarZona(zona, ciudad, textoCompleto, isRequirement = false) {
   }
   const queryAddress = ciudad && normalizarTextoGeografico(ciudad) !== "bogota" ? `${zona}, ${ciudad}, Colombia` : `${zona}, Bogot\xE1, Colombia`;
   const googleResult = await geocodeAddress(queryAddress);
-  if (googleResult && googleResult.isValid) {
-    const normGoogleCity = normalizarTextoGeografico(googleResult.city);
-    const isBogota = normGoogleCity === "bogota";
-    return {
-      isValid: true,
-      barrioCanonico: googleResult.zone,
-      localidad: googleResult.locality,
-      city: googleResult.city,
-      isMunicipio: !isBogota,
-      latitude: googleResult.latitude,
-      longitude: googleResult.longitude
-    };
+  if (googleResult) {
+    if (googleResult.isValid) {
+      const normGoogleCity = normalizarTextoGeografico(googleResult.city);
+      const isBogota = normGoogleCity === "bogota";
+      return {
+        isValid: true,
+        barrioCanonico: googleResult.zone,
+        localidad: googleResult.locality,
+        city: googleResult.city,
+        isMunicipio: !isBogota,
+        latitude: googleResult.latitude,
+        longitude: googleResult.longitude
+      };
+    } else if (googleResult.isApiError) {
+      console.warn(`[validarZona] API de Google Maps fall\xF3 (Status/Keys). Activando fallback silencioso con coordenadas nulas para no descartar el registro.`);
+      return {
+        isValid: true,
+        barrioCanonico: zona.trim(),
+        localidad: ciudad || "Bogot\xE1",
+        city: ciudad || "Bogot\xE1",
+        isMunicipio: ciudad ? normalizarTextoGeografico(ciudad) !== "bogota" : false,
+        latitude: void 0,
+        longitude: void 0
+      };
+    }
   }
   const db = await getDb();
   let lugar = null;
@@ -2678,7 +2724,9 @@ async function executeMatchEngine(propertyId, requirementId) {
           const formatCurrency = (val) => {
             return new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(val);
           };
-          const alertMsg = `\u{1F3AF} *[COINCIDENCIA INMOBILIARIA DETECTADA]*
+          const headerEmoji = score === 100 ? "\u{1F9E1}" : "\u{1F3AF}";
+          const headerText = score === 100 ? "COINCIDENCIA INMOBILIARIA 100% PERFECTA DETECTADA" : "COINCIDENCIA INMOBILIARIA DETECTADA";
+          const alertMsg = `${headerEmoji} *[${headerText}]*
 
 \u2022 *Porcentaje de Match:* ${score}%
 \u2022 *Inmueble:* ${prop.propertyType.toUpperCase()} en ${prop.city} (${prop.zone || "Sector general"})
@@ -2746,8 +2794,10 @@ __export(janIA_exports, {
   MSG_TIPS_CALIDAD_COBERTURA: () => MSG_TIPS_CALIDAD_COBERTURA,
   REPUTATION_HOOK: () => REPUTATION_HOOK,
   buildSystemPrompt: () => buildSystemPrompt,
+  calcularCalificacionCompletitud: () => calcularCalificacionCompletitud,
   clearPromptCache: () => clearPromptCache,
   generateWelcomeMessage: () => generateWelcomeMessage,
+  getEmojiForCalificacion: () => getEmojiForCalificacion,
   getLiveStats: () => getLiveStats,
   handleDetectedMatches: () => handleDetectedMatches,
   isGenericName: () => isGenericName,
@@ -4116,6 +4166,7 @@ ${liveStats}` : buildSystemPrompt(groupJid);
         result.mentions = [];
         result.extraDMs = [];
         result.sendReputationHook = false;
+        result.reactionEmoji = getEmojiForCalificacion(saved.calificacion || void 0);
         const { executeMatchEngine: executeMatchEngine2 } = await Promise.resolve().then(() => (init_matching(), matching_exports));
         executeMatchEngine2(saved.id, null).catch((err) => console.error("Error executing match engine:", err));
       }
@@ -4144,6 +4195,7 @@ ${liveStats}` : buildSystemPrompt(groupJid);
         result.mentions = [];
         result.extraDMs = [];
         result.sendReputationHook = false;
+        result.reactionEmoji = getEmojiForCalificacion(saved.calificacion || void 0);
         const { executeMatchEngine: executeMatchEngine2 } = await Promise.resolve().then(() => (init_matching(), matching_exports));
         executeMatchEngine2(null, saved.id).catch((err) => console.error("Error executing match engine:", err));
       }
@@ -4306,6 +4358,77 @@ function safeSlice(val, limit) {
   if (val === void 0 || val === null) return void 0;
   return String(val).slice(0, limit);
 }
+function calcularCalificacionCompletitud(extracted, isProperty) {
+  if (!extracted) return { score: 0, label: "Mediocre" };
+  let fieldsCount = 7;
+  let presentCount = 0;
+  const priceVal = isProperty ? extracted.price : extracted.presupuestoMax || extracted.presupuestoMin || extracted.price;
+  if (priceVal !== void 0 && priceVal !== null && String(priceVal).trim() !== "" && String(priceVal) !== "0") {
+    presentCount++;
+  }
+  const areaVal = isProperty ? extracted.areaTotal || extracted.area : extracted.areaMin || extracted.area;
+  if (areaVal !== void 0 && areaVal !== null && String(areaVal).trim() !== "" && String(areaVal) !== "0") {
+    presentCount++;
+  }
+  const bedroomsVal = isProperty ? extracted.bedrooms : extracted.habitacionesMin || extracted.bedrooms;
+  if (bedroomsVal !== void 0 && bedroomsVal !== null && String(bedroomsVal).trim() !== "" && Number(bedroomsVal) > 0) {
+    presentCount++;
+  }
+  const bathroomsVal = isProperty ? extracted.bathrooms : extracted.banosMin || extracted.bathrooms;
+  if (bathroomsVal !== void 0 && bathroomsVal !== null && String(bathroomsVal).trim() !== "" && Number(bathroomsVal) > 0) {
+    presentCount++;
+  }
+  const garagesVal = isProperty ? extracted.garages : extracted.parqueaderosMin || extracted.garages;
+  if (garagesVal !== void 0 && garagesVal !== null && String(garagesVal).trim() !== "" && Number(garagesVal) >= 0) {
+    presentCount++;
+  }
+  const zoneVal = isProperty ? extracted.zone : extracted.zonaDeseada || extracted.zone;
+  if (zoneVal !== void 0 && zoneVal !== null && String(zoneVal).trim() !== "" && String(zoneVal).toLowerCase() !== "bogot\xE1" && String(zoneVal).toLowerCase() !== "bogota") {
+    presentCount++;
+  }
+  const contactVal = extracted.idUsuarioWhatsapp;
+  if (contactVal !== void 0 && contactVal !== null && String(contactVal).trim() !== "") {
+    presentCount++;
+  }
+  const score = presentCount / fieldsCount * 100;
+  let label = "Mediocre";
+  if (score < 30) {
+    label = "Mediocre";
+  } else if (score >= 30 && score < 45) {
+    label = "Incompleta";
+  } else if (score >= 45 && score < 60) {
+    label = "Regular";
+  } else if (score >= 60 && score < 70) {
+    label = "Mejor";
+  } else if (score >= 70 && score < 85) {
+    label = "Bien";
+  } else if (score >= 85 && score < 95) {
+    label = "Perfecta";
+  } else {
+    label = "Excelente";
+  }
+  return { score, label };
+}
+function getEmojiForCalificacion(calificacion) {
+  switch (calificacion) {
+    case "Mediocre":
+      return "\u2714\uFE0F";
+    case "Incompleta":
+      return "\u2611\uFE0F";
+    case "Regular":
+      return "\u2705";
+    case "Mejor":
+      return "\u{1F197}";
+    case "Bien":
+      return "\u{1F44D}";
+    case "Perfecta":
+      return "\u{1F44C}";
+    case "Excelente":
+      return "\u{1F48E}";
+    default:
+      return "\u{1F44D}";
+  }
+}
 async function saveProperty(data, userId, realName, imageBuffer) {
   const db = await getDb();
   if (!db) return null;
@@ -4384,15 +4507,20 @@ async function saveProperty(data, userId, realName, imageBuffer) {
       eq3(properties.available, true)
     )
   ).limit(1);
+  const { label: calif } = calcularCalificacionCompletitud(insertData, true);
+  const insertDataWithCalif = {
+    ...insertData,
+    calificacion: calif
+  };
   if (existing.length > 0) {
     const [updated] = await db.update(properties).set({
-      ...insertData,
+      ...insertDataWithCalif,
       updatedAt: /* @__PURE__ */ new Date()
     }).where(eq3(properties.id, existing[0].id)).returning();
     console.log(`[Deduplication] Propiedad existente detectada. Actualizando datos (ID: ${updated.id})`);
     return updated;
   }
-  const [result] = await db.insert(properties).values(insertData).returning();
+  const [result] = await db.insert(properties).values(insertDataWithCalif).returning();
   if (result && imageUrl) {
     try {
       await db.insert(propertyImages).values({
@@ -4465,15 +4593,20 @@ async function saveRequirement(data, userId, realName) {
       eq3(requirements.status, "active")
     )
   ).limit(1);
+  const { label: calif } = calcularCalificacionCompletitud(insertData, false);
+  const insertDataWithCalif = {
+    ...insertData,
+    calificacion: calif
+  };
   if (existing.length > 0) {
     const [updated] = await db.update(requirements).set({
-      ...insertData,
+      ...insertDataWithCalif,
       updatedAt: /* @__PURE__ */ new Date()
     }).where(eq3(requirements.id, existing[0].id)).returning();
     console.log(`[Deduplication] Requerimiento existente detectado. Actualizando datos (ID: ${updated.id})`);
     return updated;
   }
-  const [result] = await db.insert(requirements).values(insertData).returning();
+  const [result] = await db.insert(requirements).values(insertDataWithCalif).returning();
   return result;
 }
 async function generateWelcomeMessage(count, chatId) {
@@ -7450,11 +7583,10 @@ Hola @${rawPhone}, detect\xE9 que est\xE1s enviando muchas publicaciones seguida
           console.log(`[WHATSAPP-BOT] Mensaje com\xFAn silenciado en ${chatId} (Silencio absoluto por defecto).`);
           return;
         }
-        const allowedEmojis = ["\u{1F44D}", "\u{1F44C}", "\u2705", "\u{1F197}", "\u{1F9E1}"];
-        const reaction = allowedEmojis[Math.floor(Math.random() * allowedEmojis.length)];
+        const reaction = result.reactionEmoji || "\u{1F44D}";
         if (originalMsg) {
           const delayMs = Math.floor(Math.random() * (12e3 - 4e3 + 1)) + 4e3;
-          console.log(`[WHATSAPP-BOT] Inserci\xF3n exitosa en ${chatId}. Retrasando reacci\xF3n ${reaction} por ${delayMs}ms...`);
+          console.log(`[WHATSAPP-BOT] Inserci\xF3n exitosa en ${chatId}. Calificaci\xF3n emoji: ${reaction}. Retrasando reacci\xF3n por ${delayMs}ms...`);
           setTimeout(async () => {
             try {
               await originalMsg.react(reaction);
@@ -8695,8 +8827,7 @@ Tambi\xE9n puedes consultarme directamente en mi chat privado con mi otra yo *Ja
       }
       getReactionEmoji(result) {
         if (result && result.inserted) {
-          const allowedEmojis = ["\u{1F44D}", "\u{1F44C}", "\u2705", "\u{1F197}", "\u{1F9E1}"];
-          return allowedEmojis[Math.floor(Math.random() * allowedEmojis.length)];
+          return result.reactionEmoji || "\u{1F44D}";
         }
         return null;
       }

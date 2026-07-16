@@ -8,6 +8,7 @@ export interface GeocodedAddress {
   latitude: string;
   longitude: string;
   formattedAddress: string;
+  isApiError?: boolean;
 }
 
 /**
@@ -18,7 +19,16 @@ export async function geocodeAddress(address: string): Promise<GeocodedAddress |
   const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.GOOGLE_API_KEY;
   if (!apiKey || apiKey.trim() === "") {
     console.warn("[Geocoding] GOOGLE_MAPS_API_KEY nor GOOGLE_API_KEY is configured.");
-    return null;
+    return {
+      isValid: false,
+      city: "",
+      zone: "",
+      locality: "",
+      latitude: "",
+      longitude: "",
+      formattedAddress: "",
+      isApiError: true
+    };
   }
 
   try {
@@ -32,8 +42,24 @@ export async function geocodeAddress(address: string): Promise<GeocodedAddress |
     });
 
     const data = response.data;
-    if (data.status !== "OK" || !data.results || data.results.length === 0) {
+    if (data.status !== "OK") {
       console.log(`[Geocoding] No se encontraron resultados en Google Maps para: "${address}" (Status: ${data.status})`);
+      
+      const isApiError = data.status === "REQUEST_DENIED" || data.status === "OVER_QUERY_LIMIT" || data.status === "UNKNOWN_ERROR" || data.status === "INVALID_REQUEST";
+      
+      return {
+        isValid: false,
+        city: "",
+        zone: "",
+        locality: "",
+        latitude: "",
+        longitude: "",
+        formattedAddress: "",
+        isApiError
+      };
+    }
+
+    if (!data.results || data.results.length === 0) {
       return null;
     }
 
@@ -102,6 +128,15 @@ export async function geocodeAddress(address: string): Promise<GeocodedAddress |
     };
   } catch (err: any) {
     console.error("[Geocoding] Error en geocodeAddress:", err.message);
-    return null;
+    return {
+      isValid: false,
+      city: "",
+      zone: "",
+      locality: "",
+      latitude: "",
+      longitude: "",
+      formattedAddress: "",
+      isApiError: true
+    };
   }
 }
