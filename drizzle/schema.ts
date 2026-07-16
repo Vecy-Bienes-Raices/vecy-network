@@ -1,4 +1,4 @@
-import { serial, integer, pgEnum, pgTable, text, timestamp, varchar, decimal, boolean, jsonb } from "drizzle-orm/pg-core";
+import { serial, integer, pgEnum, pgTable, text, timestamp, varchar, decimal, boolean, jsonb, bigint, uuid } from "drizzle-orm/pg-core";
 
 // Enums expanded based on VECY CORE Blueprint
 export const roleEnum = pgEnum("role", ["user", "janIA", "system", "admin", "agent"]);
@@ -305,3 +305,52 @@ export const colombiaGeography = pgTable("colombia_geography", {
 
 export type ColombiaGeography = typeof colombiaGeography.$inferSelect;
 export type InsertColombiaGeography = typeof colombiaGeography.$inferInsert;
+
+export const profiles = pgTable("profiles", {
+  id: uuid("id").primaryKey(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }),
+  username: text("username"),
+  fullName: text("full_name"),
+  avatarUrl: text("avatar_url"),
+  website: text("website"),
+  celular: text("celular"),
+  tipoDocumento: text("tipo_documento"),
+  numeroDocumento: text("numero_documento"),
+  tipoCliente: text("tipo_cliente"),
+  perfil: text("perfil"),
+});
+
+export const counters = pgTable("counters", {
+  name: text("name").primaryKey(),
+  currentValue: bigint("current_value", { mode: "number" }).notNull(),
+});
+
+export const solicitudes = pgTable("solicitudes", {
+  id: bigint("id", { mode: "number" }).primaryKey(),
+  solicitudId: bigint("solicitud_id", { mode: "number" }),
+  solicitanteNombre: text("solicitante_nombre"),
+  solicitanteTipoPersona: text("solicitante_tipo_persona"),
+  solicitantePerfil: text("solicitante_perfil"),
+  solicitanteEmail: text("solicitante_email"),
+  solicitanteCelular: text("solicitante_celular"),
+  solicitanteTipoDocumento: text("solicitante_tipo_documento"),
+  solicitanteNumeroDocumento: text("solicitante_numero_documento"),
+  servicioSolicitado: text("servicio_solicitado"),
+  nombreInmueble: text("nombre_inmueble"),
+  codigoInmueble: text("codigo_inmueble"),
+  opcionNegocio: text("opcion_negocio"),
+  fechaCitaTexto: text("fecha_cita_texto"),
+  horaCita: text("hora_cita"),
+  cantidadPersonas: integer("cantidad_personas"),
+  interesadoNombre: text("interesado_nombre"),
+  interesadoTipoDocumento: text("interesado_tipo_documento"),
+  interesadoDocumento: text("interesado_documento"),
+  tipoCliente: text("tipo_cliente"),
+  acompanantes: jsonb("acompanantes"),
+  firmaVirtualBase64: text("firma_virtual_base64"),
+  firmaFechahoraAudit: timestamp("firma_fechahora_audit", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }),
+  solicitanteRepresentanteLegal: text("solicitante_representante_legal"),
+  autorizacion: boolean("autorizacion"),
+  agentId: text("agent_id"),
+});

@@ -15,6 +15,7 @@ __export(schema_exports, {
   colombiaGeography: () => colombiaGeography,
   conversationStatusEnum: () => conversationStatusEnum,
   conversations: () => conversations,
+  counters: () => counters,
   currencyEnum: () => currencyEnum,
   demandLevelEnum: () => demandLevelEnum,
   favorites: () => favorites,
@@ -29,6 +30,7 @@ __export(schema_exports, {
   messageTypeEnum: () => messageTypeEnum,
   messages: () => messages,
   pendingSessions: () => pendingSessions,
+  profiles: () => profiles,
   properties: () => properties,
   propertyImages: () => propertyImages,
   propertyMatches: () => propertyMatches,
@@ -37,13 +39,14 @@ __export(schema_exports, {
   requirements: () => requirements,
   roleEnum: () => roleEnum,
   shares: () => shares,
+  solicitudes: () => solicitudes,
   statusEnum: () => statusEnum,
   supplyLevelEnum: () => supplyLevelEnum,
   transactionTypeEnum: () => transactionTypeEnum,
   users: () => users
 });
-import { serial, integer, pgEnum, pgTable, text, timestamp, varchar, decimal, boolean, jsonb } from "drizzle-orm/pg-core";
-var roleEnum, propertyTypeEnum, transactionTypeEnum, mandateStatusEnum, mandateTypeEnum, inquiryTypeEnum, leadStatusEnum, conversationStatusEnum, matchStatusEnum, statusEnum, messageTypeEnum, demandLevelEnum, supplyLevelEnum, marketTrendEnum, currencyEnum, users, properties, requirements, leads, conversations, messages, propertyMatches, pendingSessions, referralLinks, shares, clientLedger, propertyImages, marketAnalysis, favorites, colombiaGeography;
+import { serial, integer, pgEnum, pgTable, text, timestamp, varchar, decimal, boolean, jsonb, bigint, uuid } from "drizzle-orm/pg-core";
+var roleEnum, propertyTypeEnum, transactionTypeEnum, mandateStatusEnum, mandateTypeEnum, inquiryTypeEnum, leadStatusEnum, conversationStatusEnum, matchStatusEnum, statusEnum, messageTypeEnum, demandLevelEnum, supplyLevelEnum, marketTrendEnum, currencyEnum, users, properties, requirements, leads, conversations, messages, propertyMatches, pendingSessions, referralLinks, shares, clientLedger, propertyImages, marketAnalysis, favorites, colombiaGeography, profiles, counters, solicitudes;
 var init_schema = __esm({
   "drizzle/schema.ts"() {
     "use strict";
@@ -306,6 +309,52 @@ var init_schema = __esm({
       type: varchar("type", { length: 50 }).notNull(),
       longitude: varchar("longitude", { length: 50 }),
       latitude: varchar("latitude", { length: 50 })
+    });
+    profiles = pgTable("profiles", {
+      id: uuid("id").primaryKey(),
+      updatedAt: timestamp("updated_at", { withTimezone: true }),
+      username: text("username"),
+      fullName: text("full_name"),
+      avatarUrl: text("avatar_url"),
+      website: text("website"),
+      celular: text("celular"),
+      tipoDocumento: text("tipo_documento"),
+      numeroDocumento: text("numero_documento"),
+      tipoCliente: text("tipo_cliente"),
+      perfil: text("perfil")
+    });
+    counters = pgTable("counters", {
+      name: text("name").primaryKey(),
+      currentValue: bigint("current_value", { mode: "number" }).notNull()
+    });
+    solicitudes = pgTable("solicitudes", {
+      id: bigint("id", { mode: "number" }).primaryKey(),
+      solicitudId: bigint("solicitud_id", { mode: "number" }),
+      solicitanteNombre: text("solicitante_nombre"),
+      solicitanteTipoPersona: text("solicitante_tipo_persona"),
+      solicitantePerfil: text("solicitante_perfil"),
+      solicitanteEmail: text("solicitante_email"),
+      solicitanteCelular: text("solicitante_celular"),
+      solicitanteTipoDocumento: text("solicitante_tipo_documento"),
+      solicitanteNumeroDocumento: text("solicitante_numero_documento"),
+      servicioSolicitado: text("servicio_solicitado"),
+      nombreInmueble: text("nombre_inmueble"),
+      codigoInmueble: text("codigo_inmueble"),
+      opcionNegocio: text("opcion_negocio"),
+      fechaCitaTexto: text("fecha_cita_texto"),
+      horaCita: text("hora_cita"),
+      cantidadPersonas: integer("cantidad_personas"),
+      interesadoNombre: text("interesado_nombre"),
+      interesadoTipoDocumento: text("interesado_tipo_documento"),
+      interesadoDocumento: text("interesado_documento"),
+      tipoCliente: text("tipo_cliente"),
+      acompanantes: jsonb("acompanantes"),
+      firmaVirtualBase64: text("firma_virtual_base64"),
+      firmaFechahoraAudit: timestamp("firma_fechahora_audit", { withTimezone: true }),
+      createdAt: timestamp("created_at", { withTimezone: true }),
+      solicitanteRepresentanteLegal: text("solicitante_representante_legal"),
+      autorizacion: boolean("autorizacion"),
+      agentId: text("agent_id")
     });
   }
 });
