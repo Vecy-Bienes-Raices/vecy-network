@@ -2712,29 +2712,68 @@ async function executeMatchEngine(propertyId, requirementId) {
       reqs = await db.select().from(requirements).where(eq2(requirements.status, "active"));
     }
     const { users: users2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+    const formatCurrency = (val) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(val);
+    const cleanPhone = (raw) => {
+      if (!raw) return "";
+      let digits = raw.replace(/[^0-9]/g, "");
+      if (digits.startsWith("57") && digits.length > 11) {
+        digits = digits.slice(2);
+      }
+      if (digits.startsWith("0") && digits.length === 10) {
+        digits = digits.slice(1);
+      }
+      if (digits.length === 10 && digits.startsWith("3")) {
+        return `57${digits}`;
+      }
+      if (digits.length === 12 && digits.startsWith("57")) {
+        return digits;
+      }
+      return "";
+    };
     for (const prop of props) {
       for (const req of reqs) {
         const pBiz = (prop.transactionType || "").toLowerCase();
         const rBiz = (req.tipoNegocioDeseado || "").toLowerCase();
-        if (pBiz !== rBiz) continue;
+        if (!pBiz || !rBiz || pBiz !== rBiz) continue;
         const pType = (prop.propertyType || "").toLowerCase();
         const rType = (req.tipoInmuebleDeseado || "").toLowerCase();
-        if (pType !== rType) continue;
-        const price = parseFloat(String(prop.price || "0"));
-        const budgetMax = parseFloat(String(req.presupuestoMax || "0"));
-        if (budgetMax > 0 && price > budgetMax) continue;
+        if (!pType || !rType || pType !== rType) continue;
         const pCity = normalizarTextoGeografico(prop.city || prop.addressCity || "");
         const rCity = normalizarTextoGeografico(req.ciudadDeseada || "");
         if (!pCity || !rCity || pCity !== rCity) continue;
         const pZone = normalizarTextoGeografico(prop.zone || prop.addressNeighborhood || "");
         const rZone = normalizarTextoGeografico(req.zonaDeseada || req.addressNeighborhood || "");
-        const zoneMatch = rZone && pZone && (rZone === pZone || rZone.includes(pZone) || pZone.includes(rZone));
-        let score = 70;
-        if (zoneMatch) {
-          score = 100;
-        } else if (!rZone) {
-          score = 85;
+        if (rZone && pZone) {
+          const zonaMatch = rZone === pZone || rZone.includes(pZone) || pZone.includes(rZone);
+          if (!zonaMatch) continue;
         }
+        const pArea = parseFloat(String(prop.areaTotal || prop.areaPrivate || "0"));
+        const rAreaMin = parseFloat(String(req.areaMin || "0"));
+        if (pArea > 0 && rAreaMin > 0) {
+          const areaMaxLimit = rAreaMin * 1.1;
+          const areaMinLimit = rAreaMin * 0.9;
+          if (pArea < areaMinLimit || pArea > areaMaxLimit) continue;
+        }
+        const price = parseFloat(String(prop.price || "0"));
+        const adminFee = parseFloat(String(prop.adminFee || "0"));
+        const totalCost = price + adminFee;
+        const budgetMax = parseFloat(String(req.presupuestoMax || "0"));
+        const budgetMin = parseFloat(String(req.presupuestoMin || "0"));
+        if (budgetMax > 0 && totalCost > budgetMax * 1.05) continue;
+        if (budgetMin > 0 && price < budgetMin * 0.9) continue;
+        const pBedrooms = Number(prop.bedrooms || 0);
+        const rBedrooms = Number(req.habitacionesMin || 0);
+        if (rBedrooms > 0 && pBedrooms > 0 && pBedrooms < rBedrooms) continue;
+        let score = 70;
+        const zonaExacta = rZone && pZone && (rZone === pZone || rZone.includes(pZone) || pZone.includes(rZone));
+        const precioExacto = price <= (budgetMax > 0 ? budgetMax : price);
+        const habitacionesExactas = rBedrooms === 0 || pBedrooms === rBedrooms;
+        const areaExacta = rAreaMin === 0 || pArea > 0 && Math.abs(pArea - rAreaMin) / rAreaMin <= 0.05;
+        if (zonaExacta) score += 10;
+        if (precioExacto) score += 10;
+        if (habitacionesExactas) score += 5;
+        if (areaExacta) score += 5;
+        score = Math.min(score, 100);
         let matchId;
         let isNewMatch = false;
         const existing = await db.select().from(propertyMatches).where(
@@ -2747,7 +2786,7 @@ async function executeMatchEngine(propertyId, requirementId) {
           matchId = existing[0].id;
           await db.update(propertyMatches).set({
             matchScore: score.toFixed(2),
-            matchReason: `VECY Core Engine: Match de ${score}%`,
+            matchReason: `VECY Core Engine: Match estricto ${score}%`,
             createdAt: /* @__PURE__ */ new Date()
           }).where(eq2(propertyMatches.id, matchId));
         } else {
@@ -2756,7 +2795,7 @@ async function executeMatchEngine(propertyId, requirementId) {
             propertyId: prop.id,
             requirementId: req.id,
             matchScore: score.toFixed(2),
-            matchReason: `VECY Core Engine: Match de ${score}%`,
+            matchReason: `VECY Core Engine: Match estricto ${score}%`,
             status: "suggested",
             ownerConfirmed: false,
             seekerConfirmed: false
@@ -2766,34 +2805,54 @@ async function executeMatchEngine(propertyId, requirementId) {
         if (isNewMatch) {
           const [propUser] = await db.select().from(users2).where(eq2(users2.phone, prop.idUsuarioWhatsapp || "")).limit(1);
           const [reqUser] = await db.select().from(users2).where(eq2(users2.phone, req.idUsuarioWhatsapp || "")).limit(1);
-          const ownerName = propUser?.name || "Colega Oferente";
-          const ownerPhone = prop.idUsuarioWhatsapp || propUser?.phone || "Desconocido";
-          const seekerName = reqUser?.name || "Colega Demandante";
-          const seekerPhone = req.idUsuarioWhatsapp || reqUser?.phone || "Desconocido";
-          const formatCurrency = (val) => {
-            return new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(val);
-          };
-          const headerEmoji = score === 100 ? "\u{1F9E1}" : "\u{1F3AF}";
-          const headerText = score === 100 ? "COINCIDENCIA INMOBILIARIA 100% PERFECTA DETECTADA" : "COINCIDENCIA INMOBILIARIA DETECTADA";
+          const ownerName = propUser?.name || prop.name || "Colega Oferente";
+          const ownerRawPhone = prop.idUsuarioWhatsapp || propUser?.phone || "";
+          const ownerPhone = cleanPhone(ownerRawPhone);
+          const ownerPhoneDisplay = ownerPhone ? `+${ownerPhone}` : "No disponible";
+          const ownerWaLink = ownerPhone ? `https://wa.me/${ownerPhone}` : "No disponible";
+          const seekerName = reqUser?.name || req.name || "Colega Demandante";
+          const seekerRawPhone = req.idUsuarioWhatsapp || reqUser?.phone || "";
+          const seekerPhone = cleanPhone(seekerRawPhone);
+          const seekerPhoneDisplay = seekerPhone ? `+${seekerPhone}` : "No disponible";
+          const seekerWaLink = seekerPhone ? `https://wa.me/${seekerPhone}` : "No disponible";
+          const headerEmoji = score === 100 ? "\u{1F498}" : "\u{1F3AF}";
+          const headerText = score === 100 ? "COINCIDENCIA INMOBILIARIA 100% PERFECTA" : "COINCIDENCIA INMOBILIARIA DETECTADA";
           const alertMsg = `${headerEmoji} *[${headerText}]*
+\u{1F4CA} *Match: ${score}%*  |  \u{1F194} Ref: #M${matchId}
 
-\u2022 *Porcentaje de Match:* ${score}%
-\u2022 *Inmueble:* ${prop.propertyType.toUpperCase()} en ${prop.city} (${prop.zone || "Sector general"})
-\u2022 *Negocio:* ${prop.transactionType.toUpperCase()}
-\u2022 *Valores:* Oferta: ${formatCurrency(price)} | Presupuesto M\xE1x: ${formatCurrency(budgetMax)}
+\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
+\u{1F3E0} *INMUEBLE OFERTADO:*
+  \u2022 Tipo: ${prop.propertyType?.toUpperCase() || "N/A"}
+  \u2022 Negocio: ${prop.transactionType?.toUpperCase() || "N/A"}
+  \u2022 Ciudad: ${prop.city || "N/A"}
+  \u2022 Barrio: ${prop.zone || prop.addressNeighborhood || "N/A"}
+  \u2022 \xC1rea: ${pArea > 0 ? `${pArea} m\xB2` : "N/A"}
+  \u2022 Habitaciones: ${pBedrooms > 0 ? pBedrooms : "N/A"}
+  \u2022 Precio: ${price > 0 ? formatCurrency(price) : "N/A"}${adminFee > 0 ? ` + Adm. ${formatCurrency(adminFee)}` : ""}
 
-\u{1F465} *CONTACTOS INVOLUCRADOS:*
+\u{1F50D} *REQUERIMIENTO:*
+  \u2022 Tipo: ${req.tipoInmuebleDeseado?.toUpperCase() || "N/A"}
+  \u2022 Negocio: ${req.tipoNegocioDeseado?.toUpperCase() || "N/A"}
+  \u2022 Ciudad: ${req.ciudadDeseada || "N/A"}
+  \u2022 Barrio deseado: ${req.zonaDeseada || req.addressNeighborhood || "N/A"}
+  \u2022 \xC1rea m\xEDn: ${rAreaMin > 0 ? `${rAreaMin} m\xB2` : "N/A"}
+  \u2022 Habitaciones m\xEDn: ${rBedrooms > 0 ? rBedrooms : "N/A"}
+  \u2022 Presupuesto: ${budgetMin > 0 ? formatCurrency(budgetMin) : "Desde N/A"} \u2013 ${budgetMax > 0 ? formatCurrency(budgetMax) : "Hasta N/A"}
 
-\u{1F511} *Due\xF1o/Captador (Oferta):*
-  - Nombre: ${ownerName}
-  - Tel\xE9fono: wa.me/${ownerPhone.replace(/[^0-9]/g, "")} (+${ownerPhone})
+\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
+\u{1F465} *CONTACTOS:*
 
-\u{1F50E} *Buscador (Demanda):*
-  - Nombre: ${seekerName}
-  - Tel\xE9fono: wa.me/${seekerPhone.replace(/[^0-9]/g, "")} (+${seekerPhone})
+\u{1F511} *Oferente (${ownerName}):*
+  \u{1F4DE} ${ownerPhoneDisplay}
+  \u{1F517} ${ownerWaLink}
 
-\u{1F4BC} _Proceder con el cierre comercial directamente de forma confidencial._`;
+\u{1F50E} *Demandante (${seekerName}):*
+  \u{1F4DE} ${seekerPhoneDisplay}
+  \u{1F517} ${seekerWaLink}
+
+\u{1F4BC} _Coordinar el contacto directo de forma confidencial._`;
           await sendDirectAlertToAdmins(alertMsg);
+          console.log(`[Matching-Engine] \u2705 Match #${matchId} (${score}%) registrado y alertado a admins.`);
         }
       }
     }
@@ -4461,7 +4520,7 @@ function getEmojiForCalificacion(calificacion) {
     case "Perfecta":
       return "\u{1F44C}";
     case "Excelente":
-      return "\u{1F48E}";
+      return "\u{1F496}";
     default:
       return "\u{1F44D}";
   }

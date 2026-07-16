@@ -2030,7 +2030,7 @@ export function getEmojiForCalificacion(calificacion?: string): string {
     case "Mejor": return "🆗";
     case "Bien": return "👍";
     case "Perfecta": return "👌";
-    case "Excelente": return "💎";
+    case "Excelente": return "💖";
     default: return "👍";
   }
 }

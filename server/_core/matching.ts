@@ -406,6 +406,7 @@ export async function findMatchesForRequirement(requirementId: number) {
 
 /**
  * MÓDULO 5 & MÓDULO 6: Motor de Match Real y Alertas Directas y Confidenciales a Socios
+ * Reglas estrictas de Eduardo: mismo tipo, mismo barrio/ciudad, área ±10%, precio+admin dentro del presupuesto, mismas habitaciones.
  */
 export async function executeMatchEngine(propertyId: number | null, requirementId: number | null): Promise<void> {
   const db = await getDb();
@@ -429,41 +430,101 @@ export async function executeMatchEngine(propertyId: number | null, requirementI
 
     const { users } = await import("../../drizzle/schema");
 
+    const formatCurrency = (val: number) =>
+      new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(val);
+
+    // Limpia el JID/teléfono a un número colombiano real (57XXXXXXXXXX)
+    const cleanPhone = (raw: string): string => {
+      if (!raw) return "";
+      // Extraer solo dígitos
+      let digits = raw.replace(/[^0-9]/g, "");
+      // Quitar el código 57 si ya está incluido al inicio para reconstruirlo limpio
+      if (digits.startsWith("57") && digits.length > 11) {
+        digits = digits.slice(2);
+      }
+      // Si empieza con 0 (celular colombiano local), quitar el 0
+      if (digits.startsWith("0") && digits.length === 10) {
+        digits = digits.slice(1);
+      }
+      // Solo aceptar números de Colombia: 10 dígitos empezando por 3
+      if (digits.length === 10 && digits.startsWith("3")) {
+        return `57${digits}`;
+      }
+      // Si ya tiene 12 dígitos y empieza con 57, es válido
+      if (digits.length === 12 && digits.startsWith("57")) {
+        return digits;
+      }
+      // Retornar vacío si no es un número colombiano real
+      return "";
+    };
+
     for (const prop of props) {
       for (const req of reqs) {
-        // 1. Match de Negocio
+
+        // ── FILTRO 1: Mismo tipo de negocio (Venta / Arriendo) ──────────────
         const pBiz = (prop.transactionType || "").toLowerCase();
         const rBiz = (req.tipoNegocioDeseado || "").toLowerCase();
-        if (pBiz !== rBiz) continue;
+        if (!pBiz || !rBiz || pBiz !== rBiz) continue;
 
-        // 2. Match de Tipo
+        // ── FILTRO 2: Mismo tipo de inmueble ─────────────────────────────────
         const pType = (prop.propertyType || "").toLowerCase();
         const rType = (req.tipoInmuebleDeseado || "").toLowerCase();
-        if (pType !== rType) continue;
+        if (!pType || !rType || pType !== rType) continue;
 
-        // 3. Match Financiero
-        const price = parseFloat(String(prop.price || "0"));
-        const budgetMax = parseFloat(String(req.presupuestoMax || "0"));
-        if (budgetMax > 0 && price > budgetMax) continue;
-
-        // 4. Match Geográfico (DAVIPOLA)
+        // ── FILTRO 3: Misma ciudad ────────────────────────────────────────────
         const pCity = normalizarTextoGeografico(prop.city || prop.addressCity || "");
         const rCity = normalizarTextoGeografico(req.ciudadDeseada || "");
         if (!pCity || !rCity || pCity !== rCity) continue;
 
-        // Scoring de barrio/vereda
+        // ── FILTRO 4: Mismo barrio (zona) — coincidencia estricta ─────────────
         const pZone = normalizarTextoGeografico(prop.zone || prop.addressNeighborhood || "");
         const rZone = normalizarTextoGeografico(req.zonaDeseada || req.addressNeighborhood || "");
-        const zoneMatch = rZone && pZone && (rZone === pZone || rZone.includes(pZone) || pZone.includes(rZone));
-
-        let score = 70;
-        if (zoneMatch) {
-          score = 100;
-        } else if (!rZone) {
-          score = 85;
+        // Si el requerimiento especifica zona, DEBE coincidir exactamente o por inclusión
+        if (rZone && pZone) {
+          const zonaMatch = rZone === pZone || rZone.includes(pZone) || pZone.includes(rZone);
+          if (!zonaMatch) continue;
         }
 
-        // Registrar coincidencia en Supabase
+        // ── FILTRO 5: Área dentro de un rango pequeño (±10%) ─────────────────
+        const pArea = parseFloat(String(prop.areaTotal || prop.areaPrivate || "0"));
+        const rAreaMin = parseFloat(String(req.areaMin || "0"));
+        // Solo hay areaMin en requerimientos, usar ±10% como límite superior
+        if (pArea > 0 && rAreaMin > 0) {
+          const areaMaxLimit = rAreaMin * 1.10;
+          const areaMinLimit = rAreaMin * 0.90;
+          if (pArea < areaMinLimit || pArea > areaMaxLimit) continue;
+        }
+
+        // ── FILTRO 6: Precio dentro del presupuesto (incluida administración) ──
+        const price = parseFloat(String(prop.price || "0"));
+        const adminFee = parseFloat(String(prop.adminFee || "0"));
+        const totalCost = price + adminFee; // Para arriendo la admin suma al costo real
+        const budgetMax = parseFloat(String(req.presupuestoMax || "0"));
+        const budgetMin = parseFloat(String(req.presupuestoMin || "0"));
+        if (budgetMax > 0 && totalCost > budgetMax * 1.05) continue; // Tolerancia del 5%
+        if (budgetMin > 0 && price < budgetMin * 0.90) continue;
+
+        // ── FILTRO 7: Habitaciones ────────────────────────────────────────────
+        const pBedrooms = Number(prop.bedrooms || 0);
+        const rBedrooms = Number(req.habitacionesMin || 0);
+        // Si el requerimiento especifica habitaciones, el inmueble debe tenerlas
+        if (rBedrooms > 0 && pBedrooms > 0 && pBedrooms < rBedrooms) continue;
+
+        // ── CÁLCULO DE SCORE ──────────────────────────────────────────────────
+        // Con todos los filtros pasados, calcular score según qué tan exactos son los datos
+        let score = 70;
+        const zonaExacta = rZone && pZone && (rZone === pZone || rZone.includes(pZone) || pZone.includes(rZone));
+        const precioExacto = price <= (budgetMax > 0 ? budgetMax : price);
+        const habitacionesExactas = rBedrooms === 0 || pBedrooms === rBedrooms;
+        const areaExacta = rAreaMin === 0 || (pArea > 0 && Math.abs(pArea - rAreaMin) / rAreaMin <= 0.05);
+
+        if (zonaExacta) score += 10;
+        if (precioExacto) score += 10;
+        if (habitacionesExactas) score += 5;
+        if (areaExacta) score += 5;
+        score = Math.min(score, 100);
+
+        // ── REGISTRO EN BASE DE DATOS ─────────────────────────────────────────
         let matchId: number;
         let isNewMatch = false;
 
@@ -478,7 +539,7 @@ export async function executeMatchEngine(propertyId: number | null, requirementI
           matchId = existing[0].id;
           await db.update(propertyMatches).set({
             matchScore: score.toFixed(2),
-            matchReason: `VECY Core Engine: Match de ${score}%`,
+            matchReason: `VECY Core Engine: Match estricto ${score}%`,
             createdAt: new Date()
           }).where(eq(propertyMatches.id, matchId));
         } else {
@@ -487,7 +548,7 @@ export async function executeMatchEngine(propertyId: number | null, requirementI
             propertyId: prop.id,
             requirementId: req.id,
             matchScore: score.toFixed(2),
-            matchReason: `VECY Core Engine: Match de ${score}%`,
+            matchReason: `VECY Core Engine: Match estricto ${score}%`,
             status: "suggested",
             ownerConfirmed: false,
             seekerConfirmed: false,
@@ -495,40 +556,60 @@ export async function executeMatchEngine(propertyId: number | null, requirementI
           matchId = newMatch.id;
         }
 
-        // Si es un match nuevo, enviar la alerta privada confidencial
+        // ── ALERTA PRIVADA CONFIDENCIAL A EDUARDO Y JANI ─────────────────────
         if (isNewMatch) {
           const [propUser] = await db.select().from(users).where(eq(users.phone, prop.idUsuarioWhatsapp || "")).limit(1);
           const [reqUser] = await db.select().from(users).where(eq(users.phone, req.idUsuarioWhatsapp || "")).limit(1);
 
-          const ownerName = propUser?.name || "Colega Oferente";
-          const ownerPhone = prop.idUsuarioWhatsapp || propUser?.phone || "Desconocido";
+          const ownerName = propUser?.name || prop.name || "Colega Oferente";
+          const ownerRawPhone = prop.idUsuarioWhatsapp || propUser?.phone || "";
+          const ownerPhone = cleanPhone(ownerRawPhone);
+          const ownerPhoneDisplay = ownerPhone ? `+${ownerPhone}` : "No disponible";
+          const ownerWaLink = ownerPhone ? `https://wa.me/${ownerPhone}` : "No disponible";
 
-          const seekerName = reqUser?.name || "Colega Demandante";
-          const seekerPhone = req.idUsuarioWhatsapp || reqUser?.phone || "Desconocido";
+          const seekerName = reqUser?.name || req.name || "Colega Demandante";
+          const seekerRawPhone = req.idUsuarioWhatsapp || reqUser?.phone || "";
+          const seekerPhone = cleanPhone(seekerRawPhone);
+          const seekerPhoneDisplay = seekerPhone ? `+${seekerPhone}` : "No disponible";
+          const seekerWaLink = seekerPhone ? `https://wa.me/${seekerPhone}` : "No disponible";
 
-          const formatCurrency = (val: number) => {
-            return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(val);
-          };
+          const headerEmoji = score === 100 ? "💘" : "🎯";
+          const headerText = score === 100
+            ? "COINCIDENCIA INMOBILIARIA 100% PERFECTA"
+            : "COINCIDENCIA INMOBILIARIA DETECTADA";
 
-          const headerEmoji = score === 100 ? "🧡" : "🎯";
-          const headerText = score === 100 ? "COINCIDENCIA INMOBILIARIA 100% PERFECTA DETECTADA" : "COINCIDENCIA INMOBILIARIA DETECTADA";
+          const alertMsg =
+            `${headerEmoji} *[${headerText}]*\n` +
+            `📊 *Match: ${score}%*  |  🆔 Ref: #M${matchId}\n\n` +
+            `━━━━━━━━━━━━━━━━━━━━━\n` +
+            `🏠 *INMUEBLE OFERTADO:*\n` +
+            `  • Tipo: ${prop.propertyType?.toUpperCase() || "N/A"}\n` +
+            `  • Negocio: ${prop.transactionType?.toUpperCase() || "N/A"}\n` +
+            `  • Ciudad: ${prop.city || "N/A"}\n` +
+            `  • Barrio: ${prop.zone || prop.addressNeighborhood || "N/A"}\n` +
+            `  • Área: ${pArea > 0 ? `${pArea} m²` : "N/A"}\n` +
+            `  • Habitaciones: ${pBedrooms > 0 ? pBedrooms : "N/A"}\n` +
+            `  • Precio: ${price > 0 ? formatCurrency(price) : "N/A"}${adminFee > 0 ? ` + Adm. ${formatCurrency(adminFee)}` : ""}\n\n` +
+            `🔍 *REQUERIMIENTO:*\n` +
+            `  • Tipo: ${req.tipoInmuebleDeseado?.toUpperCase() || "N/A"}\n` +
+            `  • Negocio: ${req.tipoNegocioDeseado?.toUpperCase() || "N/A"}\n` +
+            `  • Ciudad: ${req.ciudadDeseada || "N/A"}\n` +
+            `  • Barrio deseado: ${req.zonaDeseada || req.addressNeighborhood || "N/A"}\n` +
+            `  • Área mín: ${rAreaMin > 0 ? `${rAreaMin} m²` : "N/A"}\n` +
+            `  • Habitaciones mín: ${rBedrooms > 0 ? rBedrooms : "N/A"}\n` +
+            `  • Presupuesto: ${budgetMin > 0 ? formatCurrency(budgetMin) : "Desde N/A"} – ${budgetMax > 0 ? formatCurrency(budgetMax) : "Hasta N/A"}\n\n` +
+            `━━━━━━━━━━━━━━━━━━━━━\n` +
+            `👥 *CONTACTOS:*\n\n` +
+            `🔑 *Oferente (${ownerName}):*\n` +
+            `  📞 ${ownerPhoneDisplay}\n` +
+            `  🔗 ${ownerWaLink}\n\n` +
+            `🔎 *Demandante (${seekerName}):*\n` +
+            `  📞 ${seekerPhoneDisplay}\n` +
+            `  🔗 ${seekerWaLink}\n\n` +
+            `💼 _Coordinar el contacto directo de forma confidencial._`;
 
-          const alertMsg = `${headerEmoji} *[${headerText}]*\n\n` +
-            `• *Porcentaje de Match:* ${score}%\n` +
-            `• *Inmueble:* ${prop.propertyType.toUpperCase()} en ${prop.city} (${prop.zone || 'Sector general'})\n` +
-            `• *Negocio:* ${prop.transactionType.toUpperCase()}\n` +
-            `• *Valores:* Oferta: ${formatCurrency(price)} | Presupuesto Máx: ${formatCurrency(budgetMax)}\n\n` +
-            `👥 *CONTACTOS INVOLUCRADOS:*\n\n` +
-            `🔑 *Dueño/Captador (Oferta):*\n` +
-            `  - Nombre: ${ownerName}\n` +
-            `  - Teléfono: wa.me/${ownerPhone.replace(/[^0-9]/g, "")} (+${ownerPhone})\n\n` +
-            `🔎 *Buscador (Demanda):*\n` +
-            `  - Nombre: ${seekerName}\n` +
-            `  - Teléfono: wa.me/${seekerPhone.replace(/[^0-9]/g, "")} (+${seekerPhone})\n\n` +
-            `💼 _Proceder con el cierre comercial directamente de forma confidencial._`;
-
-          // Enviar alerta a Eduardo y Jani simultáneamente
           await sendDirectAlertToAdmins(alertMsg);
+          console.log(`[Matching-Engine] ✅ Match #${matchId} (${score}%) registrado y alertado a admins.`);
         }
       }
     }
@@ -538,6 +619,7 @@ export async function executeMatchEngine(propertyId: number | null, requirementI
 }
 
 async function sendDirectAlertToAdmins(message: string): Promise<void> {
+
   const matchBot = (global as any).janiaMatchBotInstance;
   if (matchBot && matchBot.isReady) {
     console.log("[Matching-Notification] Enviando alerta de Match a administradores vía Baileys...");
