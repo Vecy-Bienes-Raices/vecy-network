@@ -8476,8 +8476,9 @@ var init_whatsapp_match = __esm({
                 let body = "";
                 let isAudioPTT = false;
                 if (msg.message.conversation) body = msg.message.conversation;
-                else if (msg.message.extendedTextMessage) body = msg.message.extendedTextMessage.text || "";
-                else if (msg.message.imageMessage) body = msg.message.imageMessage.caption || "";
+                else if (msg.message.extendedTextMessage) {
+                  body = msg.message.extendedTextMessage.text || "";
+                } else if (msg.message.imageMessage) body = msg.message.imageMessage.caption || "";
                 else if (msg.message.documentMessage) body = msg.message.documentMessage.caption || "";
                 else if (msg.message.videoMessage) body = msg.message.videoMessage.caption || "";
                 else if (msg.message.audioMessage) {
@@ -8501,6 +8502,20 @@ var init_whatsapp_match = __esm({
                     console.error("[JANIA-MATCH] Error al transcribir audio PTT:", audioErr.message || audioErr);
                     body = "[audio-error]";
                   }
+                } else if (msg.message.templateMessage) {
+                  const tmpl = msg.message.templateMessage;
+                  body = tmpl.hydratedTemplate?.hydratedContentText || tmpl.hydratedFourRowTemplate?.hydratedContentText || "";
+                } else if (msg.message.buttonsMessage) {
+                  body = msg.message.buttonsMessage.contentText || "";
+                } else if (msg.message.listMessage) {
+                  body = msg.message.listMessage.description || msg.message.listMessage.title || "";
+                } else if (msg.message.productMessage) {
+                  const prod = msg.message.productMessage?.product;
+                  body = [prod?.title, prod?.description, prod?.priceAmount1000 ? `$${Math.round(prod.priceAmount1000 / 1e3).toLocaleString("es-CO")}` : ""].filter(Boolean).join(" - ");
+                }
+                if (!body && msg.message.extendedTextMessage?.contextInfo?.quotedMessage) {
+                  const qm = msg.message.extendedTextMessage.contextInfo.quotedMessage;
+                  body = qm.conversation || qm.extendedTextMessage?.text || qm.imageMessage?.caption || "";
                 }
                 const textLower = body.toLowerCase();
                 const hasDirectMention = textLower.includes("jania");
@@ -8524,19 +8539,19 @@ var init_whatsapp_match = __esm({
                   console.log(`[JANIA-MATCH] Mensaje omitido: el grupo "${groupName}" est\xE1 en la blacklist de negociaci\xF3n.`);
                   return;
                 }
-                const isPossibleListing = body.length > 120 || body.split("\n").length > 2 || !!msg.message.imageMessage || !!msg.message.documentMessage || textLower.includes("http") || textLower.includes("www") || textLower.includes("ofrezco") || textLower.includes("busco") || textLower.includes("vendo") || textLower.includes("arriendo") || textLower.includes("compro") || textLower.includes("necesito") || textLower.includes("renta") || textLower.includes("alquilo") || textLower.includes("permuto") || textLower.includes("requiero") || textLower.includes("casa") || textLower.includes("apto") || textLower.includes("apartamento") || textLower.includes("bodega") || textLower.includes("oficina") || textLower.includes("lote") || textLower.includes("local");
+                const isPossibleListing = body.length > 120 || body.split("\n").length > 2 || !!msg.message.imageMessage || !!msg.message.documentMessage || textLower.includes("http") || textLower.includes("www") || textLower.includes("ofrezco") || textLower.includes("busco") || textLower.includes("vendo") || textLower.includes("venta") || textLower.includes("arriendo") || textLower.includes("ariendo") || textLower.includes("compro") || textLower.includes("necesito") || textLower.includes("renta") || textLower.includes("alquilo") || textLower.includes("permuto") || textLower.includes("permuta") || textLower.includes("requiero") || textLower.includes("requerimiento") || textLower.includes("casa") || textLower.includes("apto") || textLower.includes("apartamento") || textLower.includes("bodega") || textLower.includes("oficina") || textLower.includes("lote") || textLower.includes("local") || textLower.includes("finca") || textLower.includes("terreno") || textLower.includes("predio") || textLower.includes("campestre") || textLower.includes("fanegada") || textLower.includes("fanegadas") || textLower.includes("hectarea") || textLower.includes("hect\xE1rea") || textLower.includes("hect") || textLower.includes("parque") || textLower.includes("inversion") || textLower.includes("inversi\xF3n") || textLower.includes("penthouse") || textLower.includes("apartaestudio") || textLower.includes("duplex") || textLower.includes("d\xFAplex") || textLower.includes("parqueadero") || textLower.includes("alcoba") || textLower.includes("habitacion") || textLower.includes("habitaci\xF3n") || textLower.includes("metro") || textLower.includes("mts") || textLower.includes("mts2") || textLower.includes("m2") || textLower.includes("precio") || textLower.includes("presupuesto") || textLower.includes("millones") || textLower.includes("millon") || textLower.includes("canon") || textLower.includes("valor");
                 const isHelpOrSystemQuery = !isPossibleListing && (textLower.includes("c\xF3mo subo") || textLower.includes("como subo") || textLower.includes("c\xF3mo publico") || textLower.includes("como publico") || textLower.includes("c\xF3mo se publica") || textLower.includes("como se publica") || textLower.includes("c\xF3mo registrar") || textLower.includes("como registrar") || textLower.includes("c\xF3mo funciona") || textLower.includes("como funciona") || textLower.includes("de qu\xE9 consiste") || textLower.includes("de que consiste") || textLower.includes("en qu\xE9 consiste") || textLower.includes("en que consiste") || textLower.includes("c\xF3mo hago para") || textLower.includes("como hago para") || textLower.includes("c\xF3mo buscar") || textLower.includes("como buscar") || textLower.includes("c\xF3mo encontrar") || textLower.includes("como encontrar") || textLower.includes("mec\xE1nica del grupo") || textLower.includes("mecanica del grupo") || textLower.includes("qued\xF3 guardado") || textLower.includes("quedo guardado") || textLower.includes("se guard\xF3") || textLower.includes("se guardo") || textLower.includes("fue guardado") || textLower.includes("falt\xF3 alg\xFAn dato") || textLower.includes("falto algun dato") || textLower.includes("falt\xF3 un dato") || textLower.includes("falto un dato") || textLower.includes("datos faltantes") || textLower.includes("subi\xF3 correctamente") || textLower.includes("subio correctamente") || textLower.includes("fue subido") || textLower.includes("mejor forma de publicar") || textLower.includes("c\xF3mo es mejor") || textLower.includes("como es mejor") || textLower.includes("para obtener resultados") || textLower.includes("ayuda") && textLower.includes("inmueble") || textLower.includes("explicar") && textLower.includes("grupo") || textLower.includes("c\xF3mo") && textLower.includes("grupo"));
                 const textClean = body.toLowerCase().trim();
                 const isAudioFailed = body === "[audio-vac\xEDo]" || body === "[audio-sin-buffer]" || body === "[audio-error]";
                 const isShortCourtesy = !isAudioPTT && (textClean.length < 6 || ["ok", "listo", "vale", "claro", "gracias", "hola", "hola!", "jaja", "jajaja", "\u{1F44D}", "\u2705", "\u{1F44F}", "\u{1F60A}", "\u{1F64F}"].includes(textClean));
                 const isInteractiveGroupQuery = !isPossibleListing && (isAudioPTT || (isBuzonGroup || isCirculoGroup || isMainGroup) && !isShortCourtesy);
                 const shouldRespond = hasDirectMention || isHelpOrSystemQuery || isInteractiveGroupQuery;
-                if (shouldRespond) {
-                  console.log(`[JANIA-MATCH] Ignorado en grupo ${chatId} debido a SILENCIO TEXTUAL ABSOLUTO.`);
-                  return;
-                }
                 if (isPossibleListing) {
                   await this.handleIncomingGroupMessage(msg, chatId, body);
+                  return;
+                }
+                if (shouldRespond) {
+                  await this.handleDirectGroupQuestion(msg, chatId, senderId, body);
                 }
                 return;
               }
@@ -8896,8 +8911,13 @@ Tambi\xE9n puedes consultarme directamente en mi chat privado con mi otra yo *Ja
         }
       }
       getReactionEmoji(result) {
-        if (result && result.inserted) {
+        if (!result) return null;
+        if (result.inserted) {
           return result.reactionEmoji || "\u{1F44D}";
+        }
+        const classification = result.classification || "";
+        if (classification.includes("INMUEBLE") || classification.includes("REQUERIMIENTO") || classification.includes("PROPIEDAD")) {
+          return result.reactionEmoji || "\u2714\uFE0F";
         }
         return null;
       }

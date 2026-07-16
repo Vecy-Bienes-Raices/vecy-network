@@ -250,7 +250,10 @@ export class JaniaMatchBot {
             let body = '';
             let isAudioPTT = false;
             if (msg.message.conversation) body = msg.message.conversation;
-            else if (msg.message.extendedTextMessage) body = msg.message.extendedTextMessage.text || '';
+            else if (msg.message.extendedTextMessage) {
+              // Mensajes normales Y mensajes reenviados (contextInfo.isForwarded)
+              body = msg.message.extendedTextMessage.text || '';
+            }
             else if (msg.message.imageMessage) body = msg.message.imageMessage.caption || '';
             else if (msg.message.documentMessage) body = msg.message.documentMessage.caption || '';
             else if (msg.message.videoMessage) body = msg.message.videoMessage.caption || '';
@@ -276,6 +279,26 @@ export class JaniaMatchBot {
                 console.error('[JANIA-MATCH] Error al transcribir audio PTT:', audioErr.message || audioErr);
                 body = '[audio-error]';
               }
+            }
+            // Tipos especiales: links preview, botones, catálogo, productos de WhatsApp
+            else if ((msg.message as any).templateMessage) {
+              const tmpl = (msg.message as any).templateMessage;
+              body = tmpl.hydratedTemplate?.hydratedContentText || tmpl.hydratedFourRowTemplate?.hydratedContentText || '';
+            }
+            else if ((msg.message as any).buttonsMessage) {
+              body = (msg.message as any).buttonsMessage.contentText || '';
+            }
+            else if ((msg.message as any).listMessage) {
+              body = (msg.message as any).listMessage.description || (msg.message as any).listMessage.title || '';
+            }
+            else if ((msg.message as any).productMessage) {
+              const prod = (msg.message as any).productMessage?.product;
+              body = [prod?.title, prod?.description, prod?.priceAmount1000 ? `$${Math.round(prod.priceAmount1000/1000).toLocaleString('es-CO')}` : ''].filter(Boolean).join(' - ');
+            }
+            // Si NINGÚN campo tiene texto pero hay una imagen con contexto (enlace de catálogo, etc.), extraer title/description del contexto
+            if (!body && msg.message.extendedTextMessage?.contextInfo?.quotedMessage) {
+              const qm = msg.message.extendedTextMessage.contextInfo.quotedMessage;
+              body = qm.conversation || qm.extendedTextMessage?.text || qm.imageMessage?.caption || '';
             }
 
             const textLower = body.toLowerCase();
@@ -320,20 +343,54 @@ export class JaniaMatchBot {
               textLower.includes("ofrezco") ||
               textLower.includes("busco") ||
               textLower.includes("vendo") ||
+              textLower.includes("venta") ||
               textLower.includes("arriendo") ||
+              textLower.includes("ariendo") ||
               textLower.includes("compro") ||
               textLower.includes("necesito") ||
               textLower.includes("renta") ||
               textLower.includes("alquilo") ||
               textLower.includes("permuto") ||
+              textLower.includes("permuta") ||
               textLower.includes("requiero") ||
+              textLower.includes("requerimiento") ||
               textLower.includes("casa") ||
               textLower.includes("apto") ||
               textLower.includes("apartamento") ||
               textLower.includes("bodega") ||
               textLower.includes("oficina") ||
               textLower.includes("lote") ||
-              textLower.includes("local");
+              textLower.includes("local") ||
+              textLower.includes("finca") ||
+              textLower.includes("terreno") ||
+              textLower.includes("predio") ||
+              textLower.includes("campestre") ||
+              textLower.includes("fanegada") ||
+              textLower.includes("fanegadas") ||
+              textLower.includes("hectarea") ||
+              textLower.includes("hectárea") ||
+              textLower.includes("hect") ||
+              textLower.includes("parque") ||
+              textLower.includes("inversion") ||
+              textLower.includes("inversión") ||
+              textLower.includes("penthouse") ||
+              textLower.includes("apartaestudio") ||
+              textLower.includes("duplex") ||
+              textLower.includes("dúplex") ||
+              textLower.includes("parqueadero") ||
+              textLower.includes("alcoba") ||
+              textLower.includes("habitacion") ||
+              textLower.includes("habitación") ||
+              textLower.includes("metro") ||
+              textLower.includes("mts") ||
+              textLower.includes("mts2") ||
+              textLower.includes("m2") ||
+              textLower.includes("precio") ||
+              textLower.includes("presupuesto") ||
+              textLower.includes("millones") ||
+              textLower.includes("millon") ||
+              textLower.includes("canon") ||
+              textLower.includes("valor");
 
 
             // Detectar consultas comunes sobre cómo publicar, cómo funciona el bot/grupo, guardado, mecánica, datos faltantes, etc.
@@ -384,13 +441,16 @@ export class JaniaMatchBot {
 
             const shouldRespond = hasDirectMention || isHelpOrSystemQuery || isInteractiveGroupQuery;
 
-            if (shouldRespond) {
-              console.log(`[JANIA-MATCH] Ignorado en grupo ${chatId} debido a SILENCIO TEXTUAL ABSOLUTO.`);
+            // IMPORTANTE: si el mensaje es a la vez una posible publicación Y tiene mención/consulta,
+            // la publicación tiene prioridad — la capturamos primero y luego respondemos solo si aplica.
+            if (isPossibleListing) {
+              await this.handleIncomingGroupMessage(msg, chatId, body);
               return;
             }
 
-            if (isPossibleListing) {
-              await this.handleIncomingGroupMessage(msg, chatId, body);
+            if (shouldRespond) {
+              // Solo respondemos texto si NO hay publicación que capturar
+              await this.handleDirectGroupQuestion(msg, chatId, senderId, body);
             }
             return;
           }
@@ -841,8 +901,20 @@ export class JaniaMatchBot {
   }
 
   private getReactionEmoji(result: any): string | null {
-    if (result && result.inserted) {
+    // Reaccionar si se insertó en DB, O si se clasificó exitosamente como inmueble/requerimiento
+    if (!result) return null;
+    if (result.inserted) {
       return result.reactionEmoji || '👍';
+    }
+    // Si no se insertó pero sí se clasificó (inmueble o requerimiento detectado con info parcial)
+    const classification = result.classification || '';
+    if (
+      classification.includes('INMUEBLE') ||
+      classification.includes('REQUERIMIENTO') ||
+      classification.includes('PROPIEDAD')
+    ) {
+      // Reaccionar con el emoji del resultado o con ✔️ (Mediocre) como mínimo
+      return result.reactionEmoji || '✔️';
     }
     return null;
   }
