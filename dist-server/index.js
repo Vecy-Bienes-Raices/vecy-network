@@ -4060,19 +4060,7 @@ ${liveStats}` : buildSystemPrompt(groupJid);
         const stratum = Number(extracted?.stratum || 0);
         hasMissingStratum = !stratum || stratum <= 0;
       }
-      const isMissing = hasMissingCity || hasMissingZone || hasMissingPrice || hasMissingArea || hasMissingBedrooms || hasMissingBathrooms || hasMissingStratum;
-      if (isMissing) {
-        result.missingFields = [];
-        if (hasMissingCity) result.missingFields.push("city");
-        if (hasMissingZone) result.missingFields.push("zone");
-        if (hasMissingPrice) result.missingFields.push("price");
-        if (hasMissingArea) result.missingFields.push("area");
-        if (hasMissingBedrooms) result.missingFields.push("bedrooms");
-        if (hasMissingBathrooms) result.missingFields.push("bathrooms");
-        if (hasMissingStratum) result.missingFields.push("stratum");
-        isLLMIncomplete = true;
-        result.classification = "DATOS_INCOMPLETOS";
-      }
+      const isMissing = false;
     }
     if (isLLMIncomplete) {
       const inferredType = messageToProcess.toLowerCase().includes("vendo") || messageToProcess.toLowerCase().includes("ofrezco") || messageToProcess.toLowerCase().includes("arriendo") || !!extracted?.propertyType ? "PROPERTY" : "REQUIREMENT";

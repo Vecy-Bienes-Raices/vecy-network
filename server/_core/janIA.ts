@@ -1524,21 +1524,10 @@ Por lo tanto, DEBES hacer lo siguiente:
         hasMissingStratum = !stratum || stratum <= 0;
       }
 
-      const isMissing = hasMissingCity || hasMissingZone || hasMissingPrice || hasMissingArea || hasMissingBedrooms || hasMissingBathrooms || hasMissingStratum;
-
-      if (isMissing) {
-        result.missingFields = [];
-        if (hasMissingCity) result.missingFields.push("city");
-        if (hasMissingZone) result.missingFields.push("zone");
-        if (hasMissingPrice) result.missingFields.push("price");
-        if (hasMissingArea) result.missingFields.push("area");
-        if (hasMissingBedrooms) result.missingFields.push("bedrooms");
-        if (hasMissingBathrooms) result.missingFields.push("bathrooms");
-        if (hasMissingStratum) result.missingFields.push("stratum");
-
-        isLLMIncomplete = true;
-        result.classification = "DATOS_INCOMPLETOS";
-      }
+      // Para soportar el Modo Fantasma y las calificaciones de Eduardo en producción,
+      // no invalidamos las extracciones por datos incompletos. Todo lead de oferta o demanda
+      // se procesará, guardará y calificará cualitativamente.
+      const isMissing = false;
     }
 
     if (isLLMIncomplete) {
