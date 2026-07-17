@@ -181,6 +181,8 @@ var init_schema = __esm({
       habitacionesMin: integer("habitacionesMin"),
       banosMin: integer("banosMin"),
       parqueaderosMin: integer("parqueaderosMin"),
+      adminFeeMax: decimal("adminFeeMax", { precision: 15, scale: 2 }),
+      // Admón mensual máxima aceptada (null = N/A o sin restricción)
       estratoDeseado: jsonb("estratoDeseado"),
       // Array: [3, 4, 5]
       amobladoDeseado: boolean("amobladoDeseado"),
@@ -2598,6 +2600,8 @@ function calcularScoreMatch(requirement, property) {
   const reqBathrooms = requirement.banosMin != null ? Number(requirement.banosMin) : -1;
   const pGarages = property.garages != null ? Number(property.garages) : -1;
   const reqGarages = requirement.parqueaderosMin != null ? Number(requirement.parqueaderosMin) : -1;
+  const pAdminFee = property.adminFee != null ? parseFloat(String(property.adminFee)) : -1;
+  const reqAdminMax = requirement.adminFeeMax != null ? parseFloat(String(requirement.adminFeeMax)) : -1;
   const pEstrato = property.stratum != null ? Number(property.stratum) : property.estrato != null ? Number(property.estrato) : -1;
   const reqEstrato = requirement.estratoDeseado != null ? Number(requirement.estratoDeseado) : -1;
   const reqType = (requirement.tipoInmuebleDeseado || requirement.propertyType || "").toLowerCase().trim();
@@ -2676,6 +2680,15 @@ function calcularScoreMatch(requirement, property) {
     if (pGarages < reqGarages) hardFail = true;
     else score += pGarages === reqGarages ? 5 : 4;
     totalW += 5;
+  }
+  if (reqAdminMax >= 0 && pAdminFee > 0) {
+    if (pAdminFee > reqAdminMax) {
+      hardFail = true;
+    } else {
+      const ratio = pAdminFee / reqAdminMax;
+      score += ratio <= 1 && ratio >= 0.85 ? 7 : 5;
+    }
+    totalW += 7;
   }
   if (hardFail) return 0;
   const compScore = totalW > 0 ? Math.round(score / totalW * 40) : 40;

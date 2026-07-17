@@ -130,6 +130,7 @@ export const requirements = pgTable("requirements", {
   habitacionesMin: integer("habitacionesMin"),
   banosMin: integer("banosMin"),
   parqueaderosMin: integer("parqueaderosMin"),
+  adminFeeMax: decimal("adminFeeMax", { precision: 15, scale: 2 }), // Admón mensual máxima aceptada (null = N/A o sin restricción)
   estratoDeseado: jsonb("estratoDeseado"), // Array: [3, 4, 5]
   amobladoDeseado: boolean("amobladoDeseado"),
   caracteristicasDeseadas: jsonb("caracteristicasDeseadas"),

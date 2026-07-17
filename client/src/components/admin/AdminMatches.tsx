@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { 
   Phone, MapPin, Search, Download, Building2, Calendar, 
   Sparkles, CheckCircle2, AlertTriangle, XCircle, SlidersHorizontal, 
-  DollarSign, Ruler, Bed, Bath, Car, Shield, ExternalLink
+  DollarSign, Ruler, Bed, Bath, Car, Shield, ExternalLink, Receipt
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -183,6 +183,43 @@ function scoreRows(req: any, prop: any) {
     estS = estratoArr.includes(Number(estratoP)) ? "exact" : "missing"; // Debe ser IDÉNTICO
   }
   add("Estrato", estratoArr.length ? `Estrato ${estratoArr.join(", ")} (exacto)` : "Cualquiera", estratoP ? `Estrato ${estratoP}` : "N/E", estS, 7, <Shield className="w-3.5 h-3.5" />);
+
+  // 10. Administración mensual — el inmueble NUNCA puede superar el máximo del requiriente
+  // Si el inmueble no tiene admón ($0 o N/A) siempre pasa.
+  // Si el requerimiento no especifica admón, es neutral (sin restricción).
+  const reqAdminMax = req.adminFeeMax ? parseFloat(String(req.adminFeeMax)) : 0;
+  const propAdminFee = prop.adminFee ? parseFloat(String(prop.adminFee)) : 0;
+
+  // Detectar si el tipo de inmueble NO suele tener administración
+  const propTypeForAdmin = (prop.propertyType || "").toLowerCase();
+  const tieneAdmonPorTipo = ![
+    "casa", "lote", "terreno", "predio", "finca"
+  ].some(t => propTypeForAdmin.includes(t));
+
+  let admS: MatchStatus = "neutral";
+  let admReqLabel = "N/E";
+  let admPropLabel = "N/A";
+
+  if (reqAdminMax > 0) {
+    admReqLabel = `Máx. ${formatCOP(reqAdminMax)}/mes`;
+    if (!propAdminFee || propAdminFee === 0) {
+      // Inmueble sin admón → pasa siempre (es mejor para el requiriente)
+      admPropLabel = tieneAdmonPorTipo ? "Sin admón registrada" : "N/A";
+      admS = "ok";
+    } else if (propAdminFee <= reqAdminMax) {
+      admPropLabel = formatCOP(propAdminFee) + "/mes";
+      admS = "exact";
+    } else {
+      admPropLabel = `${formatCOP(propAdminFee)}/mes ⚠️ supera el máximo`;
+      admS = "missing"; // Supera el máximo → descarte
+    }
+  } else {
+    // Requiriente no especificó admón máxima
+    admReqLabel = "Sin restricción";
+    admPropLabel = propAdminFee > 0 ? formatCOP(propAdminFee) + "/mes" : "N/A";
+    admS = "neutral";
+  }
+  add("Administración", admReqLabel, admPropLabel, admS, 7, <Receipt className="w-3.5 h-3.5" />);
 
   // Penalización: si alguna fila obligatoria falla (missing), el score es 0
   const hasHardMismatch = rows.some(r => r.status === "missing");

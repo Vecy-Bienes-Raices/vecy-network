@@ -228,6 +228,9 @@ export function calcularScoreMatch(requirement: any, property: any): number {
   const pGarages    = property.garages    != null ? Number(property.garages)    : -1;
   const reqGarages  = requirement.parqueaderosMin != null ? Number(requirement.parqueaderosMin) : -1;
 
+  const pAdminFee   = property.adminFee   != null ? parseFloat(String(property.adminFee))   : -1; // -1 = N/A
+  const reqAdminMax = requirement.adminFeeMax != null ? parseFloat(String(requirement.adminFeeMax)) : -1; // -1 = sin restricción
+
   const pEstrato    = property.stratum    != null ? Number(property.stratum)    :
                       property.estrato    != null ? Number(property.estrato)    : -1;
   const reqEstrato  = requirement.estratoDeseado != null ? Number(requirement.estratoDeseado) : -1;
@@ -327,6 +330,20 @@ export function calcularScoreMatch(requirement: any, property: any): number {
     if (pGarages < reqGarages) hardFail = true;
     else score += pGarages === reqGarages ? 5 : 4;
     totalW += 5;
+  }
+
+  // 10. Administración mensual: el inmueble NUNCA puede superar el máximo del requiriente
+  // Si el inmueble tiene admón 0 o N/A siempre pasa (mejor para el requiriente)
+  // Si el requerimiento no especifica admón máxima, no hay restricción
+  if (reqAdminMax >= 0 && pAdminFee > 0) {
+    if (pAdminFee > reqAdminMax) {
+      hardFail = true; // Admón supera el máximo exigido
+    } else {
+      // Admón dentro del rango: ms cercana al máximo = 7pts, mucho menor = 5pts
+      const ratio = pAdminFee / reqAdminMax;
+      score += ratio <= 1.0 && ratio >= 0.85 ? 7 : 5;
+    }
+    totalW += 7;
   }
 
   if (hardFail) return 0;

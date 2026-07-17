@@ -64,6 +64,13 @@
       "when": 1784159689847,
       "tag": "0008_magenta_namorita",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1784248139982,
+      "tag": "0009_sudden_morg",
+      "breakpoints": true
     }
   ]
 }
