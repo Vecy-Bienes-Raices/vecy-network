@@ -202,96 +202,138 @@ export function calcularScoreMatch(requirement: any, property: any): number {
   }
 
 
-  // Parse prices, budgets, areas and layout numbers
-  const price = parseFloat(String(property.price || "0"));
-  const budgetMin = parseFloat(String(requirement.presupuestoMin || "0"));
-  const budgetMax = parseFloat(String(requirement.presupuestoMax || "0"));
-  
-  const reqZone = normalizarTextoGeografico(requirement.zonaDeseada || requirement.addressNeighborhood || "");
+  // ==========================================================================
+  // REGLAS VECY CORE v13 — Motor de Afinidad Comercial
+  // Definidas por Eduardo Alves (Fundador VECY) — Julio 2026
+  //
+  // FILTROS DUROS (obligatorios al 100%): tipo, negocio (ya verificado), ciudad (ya verificada), zona, estrato
+  // COMPLEMENTARIOS: precio ±5%, área >= requerida (hasta +20m²), habitaciones exactas o +1,
+  //                  baños >= requeridos, parqueaderos >= requeridos
+  // Score final: 60 pts base (filtros duros OK) + hasta 40 pts complementarios = 100 máximo
+  // ==========================================================================
+
+  const price       = parseFloat(String(property.price || "0"));
+  const budgetMax   = parseFloat(String(requirement.presupuestoMax || "0"));
+  const budgetMin   = parseFloat(String(requirement.presupuestoMin || "0"));
+
+  const propArea    = parseFloat(String(property.areaTotal || property.area || "0"));
+  const reqAreaMin  = parseFloat(String(requirement.areaMin || requirement.areaMinimaM2 || "0"));
+
+  const pBedrooms   = property.bedrooms   != null ? Number(property.bedrooms)   : -1;
+  const reqBedrooms = requirement.habitacionesMin != null ? Number(requirement.habitacionesMin) : -1;
+
+  const pBathrooms  = property.bathrooms  != null ? Number(property.bathrooms)  : -1;
+  const reqBathrooms = requirement.banosMin != null ? Number(requirement.banosMin) : -1;
+
+  const pGarages    = property.garages    != null ? Number(property.garages)    : -1;
+  const reqGarages  = requirement.parqueaderosMin != null ? Number(requirement.parqueaderosMin) : -1;
+
+  const pEstrato    = property.stratum    != null ? Number(property.stratum)    :
+                      property.estrato    != null ? Number(property.estrato)    : -1;
+  const reqEstrato  = requirement.estratoDeseado != null ? Number(requirement.estratoDeseado) : -1;
+
+  const reqType  = (requirement.tipoInmuebleDeseado || requirement.propertyType || "").toLowerCase().trim();
+  const propType = (property.propertyType || "").toLowerCase().trim();
+
+  const reqZone  = normalizarTextoGeografico(requirement.zonaDeseada || requirement.addressNeighborhood || "");
   const propZone = normalizarTextoGeografico(property.zone || property.addressNeighborhood || "");
+  const reqLoc   = normalizarTextoGeografico(requirement.addressLocality || "");
+  const propLoc  = normalizarTextoGeografico(property.addressLocality || "");
 
-  const reqLoc = normalizarTextoGeografico(requirement.addressLocality || "");
-  const propLoc = normalizarTextoGeografico(property.addressLocality || "");
-
-  const reqType = (requirement.tipoInmuebleDeseado || requirement.propertyType || "").toLowerCase();
-  const propType = (property.propertyType || "").toLowerCase();
-
-  const pBedrooms = property.bedrooms !== null && property.bedrooms !== undefined ? Number(property.bedrooms) : 0;
-  const reqBedrooms = requirement.habitacionesMin !== null && requirement.habitacionesMin !== undefined ? Number(requirement.habitacionesMin) : 0;
-
-  const pBathrooms = property.bathrooms !== null && property.bathrooms !== undefined ? Number(property.bathrooms) : 0;
-  const reqBathrooms = requirement.banosMin !== null && requirement.banosMin !== undefined ? Number(requirement.banosMin) : 0;
-
-  const pGarages = property.garages !== null && property.garages !== undefined ? Number(property.garages) : 0;
-  const reqGarages = requirement.parqueaderosMin !== null && requirement.parqueaderosMin !== undefined ? Number(requirement.parqueaderosMin) : 0;
-
-  // Helpers for exact match checks
-  const samePropertyType = reqType === propType;
-  const sameZone = reqZone && propZone && (reqZone === propZone || reqZone.includes(propZone) || propZone.includes(reqZone));
-  
-  // Price matching checks
-  const priceInBudget = (budgetMax > 0 ? price <= budgetMax : true) && (budgetMin > 0 ? price >= budgetMin : true);
-  const priceWithin5PercentOver = budgetMax > 0 ? (price > budgetMax && price <= budgetMax * 1.05) : false;
-  const priceWithin6To15PercentOver = budgetMax > 0 ? (price > budgetMax * 1.05 && price <= budgetMax * 1.15) : false;
-
-  // Layout matching checks
-  const meetsBedrooms = pBedrooms >= reqBedrooms;
-  const meetsBathrooms = pBathrooms >= reqBathrooms;
-  const meetsLayout = meetsBedrooms && meetsBathrooms;
-
-  // Missing layout by exactly 1 unit
-  const missingExactly1Bedroom = reqBedrooms > 0 && pBedrooms === (reqBedrooms - 1);
-  const missingExactly1Garage = reqGarages > 0 && pGarages === (reqGarages - 1);
-
-  // EVALUAR NIVELES DE COINCIDENCIA (SCORING TIERS)
-
-  // --- TIER 1: Match 90% - 100% (Coincidencia Ideal) ---
-  if (
-    samePropertyType &&
-    sameZone &&
-    (priceInBudget || priceWithin5PercentOver) &&
-    meetsLayout
-  ) {
-    // Si cumple perfecto, 100%. Si está 1-5% sobre presupuesto o tiene just-meets, 95%.
-    return priceInBudget ? 100 : 92;
+  // ── FILTRO DURO 1: Tipo de inmueble — 100% obligatorio ──
+  if (reqType && propType) {
+    const aliases: Record<string, string[]> = {
+      "apartamento": ["apto", "apartamento"],
+      "apto":        ["apto", "apartamento"],
+      "casa":        ["casa", "chalet", "casa campestre"],
+      "finca":       ["finca", "finca raiz", "finca raíz"],
+      "lote":        ["lote", "terreno", "predio"],
+      "terreno":     ["lote", "terreno", "predio"],
+      "predio":      ["lote", "terreno", "predio"],
+      "bodega":      ["bodega", "bodega industrial"],
+      "local":       ["local", "local comercial"],
+      "oficina":     ["oficina", "consultorio"],
+    };
+    const reqAlias  = aliases[reqType]  || [reqType];
+    const propAlias = aliases[propType] || [propType];
+    if (!reqAlias.some(a => propAlias.includes(a))) return 0;
   }
 
-  // --- TIER 2: Match 70% - 80% (Coincidencia Muy Alta) ---
-  if (samePropertyType && sameZone) {
-    // Condición A: El precio se sale del presupuesto entre un 6% y un 15%
-    if (priceWithin6To15PercentOver && meetsLayout) {
-      return 78;
+  // ── FILTRO DURO 3: Ubicación / Barrio — mismo barrio/zona si ambos lo especifican ──
+  if (reqZone && propZone) {
+    const geoResult = matchesGeography(
+      requirement.zonaDeseada || requirement.addressNeighborhood || "",
+      property.zone || property.addressNeighborhood || "",
+      requirement.addressLocality || "",
+      property.addressLocality || "",
+      requirement.ciudadDeseada || requirement.city || "",
+      property.addressCity || property.city || ""
+    );
+    if (!geoResult.matches) return 0;
+  }
+
+  // ── FILTRO DURO 4: Estrato — idéntico si ambos lo especifican ──
+  if (reqEstrato >= 1 && pEstrato >= 1 && reqEstrato !== pEstrato) return 0;
+
+  // ── FILTROS COMPLEMENTARIOS: cada uno suma puntos. Si falla → score 0 ──
+  let score = 0;
+  let totalW = 0;
+  let hardFail = false;
+
+  // 5. Precio: entre 95% y 105% del presupuesto máximo
+  if (budgetMax > 0 && price > 0) {
+    const low  = budgetMax * 0.95;
+    const high = budgetMax * 1.05;
+    const budMinOk = budgetMin > 0 ? price >= budgetMin * 0.95 : true;
+    if (price >= low && price <= high && budMinOk) {
+      const diff = Math.abs(price - budgetMax) / budgetMax;
+      score += diff <= 0.01 ? 12 : 10;
+    } else {
+      hardFail = true;
     }
-    // Condición B: Precio es perfecto, pero le falta 1 habitación o 1 parqueadero
-    if (priceInBudget && meetsBathrooms && ((missingExactly1Bedroom && pGarages >= reqGarages) || (meetsBedrooms && missingExactly1Garage))) {
-      return 75;
+    totalW += 12;
+  }
+
+  // 6. Área: nunca inferior al mínimo requerido, hasta +20m² ideal
+  if (reqAreaMin > 0 && propArea > 0) {
+    if (propArea < reqAreaMin) {
+      hardFail = true;
+    } else {
+      const exceso = propArea - reqAreaMin;
+      score += exceso <= 20 ? 10 : exceso <= 50 ? 7 : 4;
     }
+    totalW += 10;
   }
 
-  // --- TIER 3: Match 50% - 60% (Alternativa Geográfica) ---
-  // Mismo propertyType, price encaja perfecto, no está en el barrio exacto, pero coincide la localidad (addressLocality)
-  const sameLocality = reqLoc && propLoc && reqLoc === propLoc;
-  if (
-    samePropertyType &&
-    priceInBudget &&
-    !sameZone &&
-    sameLocality
-  ) {
-    return 55;
+  // 7. Habitaciones: exactas o una más; jamás menos
+  if (reqBedrooms >= 0 && pBedrooms >= 0) {
+    if (pBedrooms < reqBedrooms) {
+      hardFail = true;
+    } else {
+      score += pBedrooms === reqBedrooms ? 8 : pBedrooms === reqBedrooms + 1 ? 6 : 3;
+    }
+    totalW += 8;
   }
 
-  // --- TIER 4: Match 30% - 40% (Match Exploratorio) ---
-  // Price encaja perfecto, misma zone, pero difiere en el propertyType
-  if (
-    priceInBudget &&
-    sameZone &&
-    !samePropertyType
-  ) {
-    return 35;
+  // 8. Baños: igual o mayor, nunca menos
+  if (reqBathrooms >= 0 && pBathrooms >= 0) {
+    if (pBathrooms < reqBathrooms) hardFail = true;
+    else score += pBathrooms === reqBathrooms ? 5 : 4;
+    totalW += 5;
   }
 
-  // Si no encaja en ninguna categoría, es un 0%
-  return 0;
+  // 9. Parqueaderos: igual o mayor, nunca menos
+  if (reqGarages >= 0 && pGarages >= 0) {
+    if (pGarages < reqGarages) hardFail = true;
+    else score += pGarages === reqGarages ? 5 : 4;
+    totalW += 5;
+  }
+
+  if (hardFail) return 0;
+
+  // Score final: 60 base (filtros duros OK) + proporcional complementarios (hasta 40)
+  const compScore = totalW > 0 ? Math.round((score / totalW) * 40) : 40;
+  return Math.min(100, 60 + compScore);
 }
 
 export function evaluarMatch(requirement: any, property: any): boolean {

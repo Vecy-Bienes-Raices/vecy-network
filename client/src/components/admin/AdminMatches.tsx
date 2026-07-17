@@ -116,61 +116,81 @@ function scoreRows(req: any, prop: any) {
   const budget = parseFloat(req.presupuestoMax || "0");
   const price = parseFloat(prop.price || "0");
   let budS: MatchStatus = "neutral";
-  if (!budget || budget === 0) budS = "neutral"; // Si no se especificó presupuesto, no hay restricción
+  if (!budget || budget === 0) budS = "neutral";
   else if (!price) budS = "missing";
-  else if (price <= budget) budS = "exact";
-  else if (price <= budget * 1.05) budS = "warn";
-  else budS = "missing";
-  add("Presupuesto Máx.", req.presupuestoMax ? `Hasta ${formatCOP(req.presupuestoMax)}` : "N/E", formatCOP(prop.price), budS, 15, <DollarSign className="w-3.5 h-3.5" />);
+  else {
+    const low = budget * 0.95;
+    const high = budget * 1.05;
+    if (price >= low && price <= high) budS = "exact";
+    else budS = "missing"; // Fuera del rango ±5% → no es match
+  }
+  add("Presupuesto Máx.", req.presupuestoMax ? `${formatCOP(req.presupuestoMax)} ±5%` : "N/E", formatCOP(prop.price), budS, 15, <DollarSign className="w-3.5 h-3.5" />);
 
-  // 5. Área Total
+  // 5. Área Total — El inmueble NUNCA puede ser inferior al mínimo; puede ser hasta +20m²
   const areaR = parseFloat(req.areaMin || "0");
   const areaP = parseFloat(prop.areaTotal || prop.areaPrivate || "0");
   let areS: MatchStatus = "neutral";
   if (!areaR || areaR === 0) {
-    areS = "neutral"; // No restringido
+    areS = "neutral";
+  } else if (!areaP) {
+    areS = "missing";
+  } else if (areaP < areaR) {
+    areS = "missing"; // Inferior al mínimo → descarte inmediato
+  } else if (areaP <= areaR + 20) {
+    areS = "exact"; // En el rango ideal (igual a +20m²)
   } else {
-    if (areaP >= areaR && areaP <= areaR * 1.15) {
-      areS = "exact";
-    } else if (areaP > areaR * 1.15 && areaP <= areaR * 1.30) {
-      areS = "warn";
-    } else {
-      areS = "missing";
-    }
+    areS = "ok"; // Más grande de lo ideal, pero sigue siendo válido
   }
-  add("Área Total", req.areaMin ? `>= ${req.areaMin} m²` : "N/E", prop.areaTotal ? `${prop.areaTotal} m²` : "N/E", areS, 10, <Ruler className="w-3.5 h-3.5" />);
+  add("Área Total", req.areaMin ? `≥ ${req.areaMin} m² (máx +20m²)` : "N/E", prop.areaTotal ? `${prop.areaTotal} m²` : "N/E", areS, 10, <Ruler className="w-3.5 h-3.5" />);
 
-  // 6. Habitaciones
+  // 6. Habitaciones — Exactas o una más; jamás menos
   const bedR = req.habitacionesMin ? Number(req.habitacionesMin) : 0;
   const bedP = prop.bedrooms ? Number(prop.bedrooms) : 0;
-  const bedS: MatchStatus = !bedR ? "neutral" : bedP === bedR ? "exact" : "missing";
-  add("Habitaciones", bedR ? `${bedR} hab. (Exacto)` : "N/E", bedP ? `${bedP} hab.` : "N/E", bedS, 8, <Bed className="w-3.5 h-3.5" />);
+  let bedS: MatchStatus = "neutral";
+  if (!bedR) bedS = "neutral";
+  else if (bedP < bedR) bedS = "missing";
+  else if (bedP === bedR) bedS = "exact";
+  else if (bedP === bedR + 1) bedS = "ok"; // Una más → aceptable
+  else bedS = "warn"; // Más de una extra
+  add("Habitaciones", bedR ? `${bedR} hab. (exactas o +1)` : "N/E", bedP ? `${bedP} hab.` : "N/E", bedS, 8, <Bed className="w-3.5 h-3.5" />);
 
-  // 7. Baños
+  // 7. Baños — Igual o mayor, nunca menos
   const bathR = req.banosMin ? Number(req.banosMin) : 0;
   const bathP = prop.bathrooms ? Number(prop.bathrooms) : 0;
-  const bathS: MatchStatus = !bathR ? "neutral" : bathP === bathR ? "exact" : "missing";
-  add("Baños", bathR ? `${bathR} baños (Exacto)` : "N/E", bathP ? `${bathP} baños` : "N/E", bathS, 5, <Bath className="w-3.5 h-3.5" />);
+  let bathS: MatchStatus = "neutral";
+  if (!bathR) bathS = "neutral";
+  else if (bathP < bathR) bathS = "missing";
+  else if (bathP === bathR) bathS = "exact";
+  else bathS = "ok"; // Más baños → siempre bienvenido
+  add("Baños", bathR ? `≥ ${bathR} baños` : "N/E", bathP ? `${bathP} baños` : "N/E", bathS, 5, <Bath className="w-3.5 h-3.5" />);
 
-  // 8. Parqueaderos
+  // 8. Parqueaderos — Igual o mayor, nunca menos
   const garR = req.parqueaderosMin ? Number(req.parqueaderosMin) : 0;
   const garP = prop.garages ? Number(prop.garages) : 0;
-  const garS: MatchStatus = !garR ? "neutral" : garP === garR ? "exact" : "missing";
-  add("Parqueaderos", garR ? `${garR} garajes (Exacto)` : "N/E", garP ? `${garP} garajes` : "N/E", garS, 5, <Car className="w-3.5 h-3.5" />);
+  let garS: MatchStatus = "neutral";
+  if (!garR) garS = "neutral";
+  else if (garP < garR) garS = "missing";
+  else if (garP === garR) garS = "exact";
+  else garS = "ok";
+  add("Parqueaderos", garR ? `≥ ${garR} garajes` : "N/E", garP ? `${garP} garajes` : "N/E", garS, 5, <Car className="w-3.5 h-3.5" />);
 
-  // 9. Estrato
-  const estratoArr: number[] = Array.isArray(req.estratoDeseado) ? req.estratoDeseado : [];
-  const estratoP = prop.stratum;
-  const estS: MatchStatus = !estratoArr.length || !estratoP ? "neutral" : estratoArr.includes(estratoP) ? "exact" : "warn";
-  add("Estrato", estratoArr.length ? `Estrato(s) ${estratoArr.join(", ")}` : "Cualquiera", estratoP ? `Estrato ${estratoP}` : "N/E", estS, 7, <Shield className="w-3.5 h-3.5" />);
+  // 9. Estrato — 100% idéntico
+  const estratoArr: number[] = Array.isArray(req.estratoDeseado) ? req.estratoDeseado
+    : req.estratoDeseado ? [Number(req.estratoDeseado)] : [];
+  const estratoP = prop.stratum || prop.estrato;
+  let estS: MatchStatus = "neutral";
+  if (estratoArr.length && estratoP) {
+    estS = estratoArr.includes(Number(estratoP)) ? "exact" : "missing"; // Debe ser IDÉNTICO
+  }
+  add("Estrato", estratoArr.length ? `Estrato ${estratoArr.join(", ")} (exacto)` : "Cualquiera", estratoP ? `Estrato ${estratoP}` : "N/E", estS, 7, <Shield className="w-3.5 h-3.5" />);
 
-  // Penalización por falta de datos críticos para evitar puntuaciones falsas del 100%
+  // Penalización: si alguna fila obligatoria falla (missing), el score es 0
   const hasHardMismatch = rows.some(r => r.status === "missing");
   let finalScore = hasHardMismatch ? 0 : (max > 0 ? Math.round((pts / max) * 100) : 0);
 
-  // Si no especificaron ni presupuesto ni área, penalizamos un 40% de afinidad comercial
+  // Si no especificaron ni presupuesto ni área, bajar a 60% máximo
   if (finalScore === 100 && (!budget || budget === 0) && (!areaR || areaR === 0)) {
-    finalScore = 60; // Baja el match a 60% por falta de precisión comercial
+    finalScore = 60;
   }
 
   return { rows, autoScore: finalScore };
@@ -193,7 +213,7 @@ function formatPhoneDisplay(phone: string | null | undefined) {
 
 export default function AdminMatches() {
   const [searchTerm, setSearchTerm] = React.useState('');
-  const [minScore, setMinScore] = React.useState('50');
+  const [minScore, setMinScore] = React.useState('70'); // Mínimo 70% por las nuevas reglas VECY
 
   // Fetch matches directly from server API with auto-refresh every 10s
   const { data: matches = [], isLoading, refetch } = trpc.janIA.getAllMatches.useQuery(undefined, {
@@ -307,11 +327,12 @@ export default function AdminMatches() {
             onChange={(e) => setMinScore(e.target.value)}
             className="bg-transparent border-none text-white focus:ring-0 text-xs font-semibold cursor-pointer outline-none"
           >
-            <option className="bg-[#0c0c0c]" value="30">30%</option>
-            <option className="bg-[#0c0c0c]" value="50">50%</option>
-            <option className="bg-[#0c0c0c]" value="70">70%</option>
+            <option className="bg-[#0c0c0c]" value="70">70% — Mínimo válido</option>
+            <option className="bg-[#0c0c0c]" value="75">75%</option>
             <option className="bg-[#0c0c0c]" value="80">80%</option>
             <option className="bg-[#0c0c0c]" value="90">90%</option>
+            <option className="bg-[#0c0c0c]" value="95">95%</option>
+            <option className="bg-[#0c0c0c]" value="100">100% — Perfecto</option>
           </select>
         </div>
       </div>

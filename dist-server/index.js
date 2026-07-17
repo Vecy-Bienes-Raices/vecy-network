@@ -2588,49 +2588,98 @@ function calcularScoreMatch(requirement, property) {
     return 0;
   }
   const price = parseFloat(String(property.price || "0"));
-  const budgetMin = parseFloat(String(requirement.presupuestoMin || "0"));
   const budgetMax = parseFloat(String(requirement.presupuestoMax || "0"));
+  const budgetMin = parseFloat(String(requirement.presupuestoMin || "0"));
+  const propArea = parseFloat(String(property.areaTotal || property.area || "0"));
+  const reqAreaMin = parseFloat(String(requirement.areaMin || requirement.areaMinimaM2 || "0"));
+  const pBedrooms = property.bedrooms != null ? Number(property.bedrooms) : -1;
+  const reqBedrooms = requirement.habitacionesMin != null ? Number(requirement.habitacionesMin) : -1;
+  const pBathrooms = property.bathrooms != null ? Number(property.bathrooms) : -1;
+  const reqBathrooms = requirement.banosMin != null ? Number(requirement.banosMin) : -1;
+  const pGarages = property.garages != null ? Number(property.garages) : -1;
+  const reqGarages = requirement.parqueaderosMin != null ? Number(requirement.parqueaderosMin) : -1;
+  const pEstrato = property.stratum != null ? Number(property.stratum) : property.estrato != null ? Number(property.estrato) : -1;
+  const reqEstrato = requirement.estratoDeseado != null ? Number(requirement.estratoDeseado) : -1;
+  const reqType = (requirement.tipoInmuebleDeseado || requirement.propertyType || "").toLowerCase().trim();
+  const propType = (property.propertyType || "").toLowerCase().trim();
   const reqZone = normalizarTextoGeografico(requirement.zonaDeseada || requirement.addressNeighborhood || "");
   const propZone = normalizarTextoGeografico(property.zone || property.addressNeighborhood || "");
   const reqLoc = normalizarTextoGeografico(requirement.addressLocality || "");
   const propLoc = normalizarTextoGeografico(property.addressLocality || "");
-  const reqType = (requirement.tipoInmuebleDeseado || requirement.propertyType || "").toLowerCase();
-  const propType = (property.propertyType || "").toLowerCase();
-  const pBedrooms = property.bedrooms !== null && property.bedrooms !== void 0 ? Number(property.bedrooms) : 0;
-  const reqBedrooms = requirement.habitacionesMin !== null && requirement.habitacionesMin !== void 0 ? Number(requirement.habitacionesMin) : 0;
-  const pBathrooms = property.bathrooms !== null && property.bathrooms !== void 0 ? Number(property.bathrooms) : 0;
-  const reqBathrooms = requirement.banosMin !== null && requirement.banosMin !== void 0 ? Number(requirement.banosMin) : 0;
-  const pGarages = property.garages !== null && property.garages !== void 0 ? Number(property.garages) : 0;
-  const reqGarages = requirement.parqueaderosMin !== null && requirement.parqueaderosMin !== void 0 ? Number(requirement.parqueaderosMin) : 0;
-  const samePropertyType = reqType === propType;
-  const sameZone = reqZone && propZone && (reqZone === propZone || reqZone.includes(propZone) || propZone.includes(reqZone));
-  const priceInBudget = (budgetMax > 0 ? price <= budgetMax : true) && (budgetMin > 0 ? price >= budgetMin : true);
-  const priceWithin5PercentOver = budgetMax > 0 ? price > budgetMax && price <= budgetMax * 1.05 : false;
-  const priceWithin6To15PercentOver = budgetMax > 0 ? price > budgetMax * 1.05 && price <= budgetMax * 1.15 : false;
-  const meetsBedrooms = pBedrooms >= reqBedrooms;
-  const meetsBathrooms = pBathrooms >= reqBathrooms;
-  const meetsLayout = meetsBedrooms && meetsBathrooms;
-  const missingExactly1Bedroom = reqBedrooms > 0 && pBedrooms === reqBedrooms - 1;
-  const missingExactly1Garage = reqGarages > 0 && pGarages === reqGarages - 1;
-  if (samePropertyType && sameZone && (priceInBudget || priceWithin5PercentOver) && meetsLayout) {
-    return priceInBudget ? 100 : 92;
+  if (reqType && propType) {
+    const aliases = {
+      "apartamento": ["apto", "apartamento"],
+      "apto": ["apto", "apartamento"],
+      "casa": ["casa", "chalet", "casa campestre"],
+      "finca": ["finca", "finca raiz", "finca ra\xEDz"],
+      "lote": ["lote", "terreno", "predio"],
+      "terreno": ["lote", "terreno", "predio"],
+      "predio": ["lote", "terreno", "predio"],
+      "bodega": ["bodega", "bodega industrial"],
+      "local": ["local", "local comercial"],
+      "oficina": ["oficina", "consultorio"]
+    };
+    const reqAlias = aliases[reqType] || [reqType];
+    const propAlias = aliases[propType] || [propType];
+    if (!reqAlias.some((a) => propAlias.includes(a))) return 0;
   }
-  if (samePropertyType && sameZone) {
-    if (priceWithin6To15PercentOver && meetsLayout) {
-      return 78;
+  if (reqZone && propZone) {
+    const geoResult = matchesGeography(
+      requirement.zonaDeseada || requirement.addressNeighborhood || "",
+      property.zone || property.addressNeighborhood || "",
+      requirement.addressLocality || "",
+      property.addressLocality || "",
+      requirement.ciudadDeseada || requirement.city || "",
+      property.addressCity || property.city || ""
+    );
+    if (!geoResult.matches) return 0;
+  }
+  if (reqEstrato >= 1 && pEstrato >= 1 && reqEstrato !== pEstrato) return 0;
+  let score = 0;
+  let totalW = 0;
+  let hardFail = false;
+  if (budgetMax > 0 && price > 0) {
+    const low = budgetMax * 0.95;
+    const high = budgetMax * 1.05;
+    const budMinOk = budgetMin > 0 ? price >= budgetMin * 0.95 : true;
+    if (price >= low && price <= high && budMinOk) {
+      const diff = Math.abs(price - budgetMax) / budgetMax;
+      score += diff <= 0.01 ? 12 : 10;
+    } else {
+      hardFail = true;
     }
-    if (priceInBudget && meetsBathrooms && (missingExactly1Bedroom && pGarages >= reqGarages || meetsBedrooms && missingExactly1Garage)) {
-      return 75;
+    totalW += 12;
+  }
+  if (reqAreaMin > 0 && propArea > 0) {
+    if (propArea < reqAreaMin) {
+      hardFail = true;
+    } else {
+      const exceso = propArea - reqAreaMin;
+      score += exceso <= 20 ? 10 : exceso <= 50 ? 7 : 4;
     }
+    totalW += 10;
   }
-  const sameLocality = reqLoc && propLoc && reqLoc === propLoc;
-  if (samePropertyType && priceInBudget && !sameZone && sameLocality) {
-    return 55;
+  if (reqBedrooms >= 0 && pBedrooms >= 0) {
+    if (pBedrooms < reqBedrooms) {
+      hardFail = true;
+    } else {
+      score += pBedrooms === reqBedrooms ? 8 : pBedrooms === reqBedrooms + 1 ? 6 : 3;
+    }
+    totalW += 8;
   }
-  if (priceInBudget && sameZone && !samePropertyType) {
-    return 35;
+  if (reqBathrooms >= 0 && pBathrooms >= 0) {
+    if (pBathrooms < reqBathrooms) hardFail = true;
+    else score += pBathrooms === reqBathrooms ? 5 : 4;
+    totalW += 5;
   }
-  return 0;
+  if (reqGarages >= 0 && pGarages >= 0) {
+    if (pGarages < reqGarages) hardFail = true;
+    else score += pGarages === reqGarages ? 5 : 4;
+    totalW += 5;
+  }
+  if (hardFail) return 0;
+  const compScore = totalW > 0 ? Math.round(score / totalW * 40) : 40;
+  return Math.min(100, 60 + compScore);
 }
 function evaluarMatch(requirement, property) {
   return calcularScoreMatch(requirement, property) >= 70;
