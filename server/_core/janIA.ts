@@ -2205,6 +2205,7 @@ async function saveRequirement(data: any, userId: string, realName: string) {
     presupuestoMin: data.presupuestoMin !== undefined && data.presupuestoMin !== null ? String(data.presupuestoMin) : null,
     presupuestoMax: data.presupuestoMax !== undefined && data.presupuestoMax !== null ? String(data.presupuestoMax) : (data.price !== undefined && data.price !== null ? String(data.price) : null),
     areaMin: data.areaMin !== undefined && data.areaMin !== null ? String(data.areaMin) : (data.area !== undefined && data.area !== null ? String(data.area) : null),
+    adminFeeMax: data.adminFeeMax !== undefined && data.adminFeeMax !== null ? String(data.adminFeeMax) : (data.adminFee !== undefined && data.adminFee !== null ? String(data.adminFee) : null),
     habitacionesMin: data.habitacionesMin !== undefined && data.habitacionesMin !== null ? Math.round(Number(data.habitacionesMin)) : (data.bedrooms !== undefined && data.bedrooms !== null ? Math.round(Number(data.bedrooms)) : null),
     banosMin: data.banosMin !== undefined && data.banosMin !== null ? Math.round(Number(data.banosMin)) : (data.bathrooms !== undefined && data.bathrooms !== null ? Math.round(Number(data.bathrooms)) : null),
     parqueaderosMin: data.parqueaderosMin !== undefined && data.parqueaderosMin !== null ? Math.round(Number(data.parqueaderosMin)) : (data.garages !== undefined && data.garages !== null ? Math.round(Number(data.garages)) : null),

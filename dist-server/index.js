@@ -4764,6 +4764,7 @@ async function saveRequirement(data, userId, realName) {
     presupuestoMin: data.presupuestoMin !== void 0 && data.presupuestoMin !== null ? String(data.presupuestoMin) : null,
     presupuestoMax: data.presupuestoMax !== void 0 && data.presupuestoMax !== null ? String(data.presupuestoMax) : data.price !== void 0 && data.price !== null ? String(data.price) : null,
     areaMin: data.areaMin !== void 0 && data.areaMin !== null ? String(data.areaMin) : data.area !== void 0 && data.area !== null ? String(data.area) : null,
+    adminFeeMax: data.adminFeeMax !== void 0 && data.adminFeeMax !== null ? String(data.adminFeeMax) : data.adminFee !== void 0 && data.adminFee !== null ? String(data.adminFee) : null,
     habitacionesMin: data.habitacionesMin !== void 0 && data.habitacionesMin !== null ? Math.round(Number(data.habitacionesMin)) : data.bedrooms !== void 0 && data.bedrooms !== null ? Math.round(Number(data.bedrooms)) : null,
     banosMin: data.banosMin !== void 0 && data.banosMin !== null ? Math.round(Number(data.banosMin)) : data.bathrooms !== void 0 && data.bathrooms !== null ? Math.round(Number(data.bathrooms)) : null,
     parqueaderosMin: data.parqueaderosMin !== void 0 && data.parqueaderosMin !== null ? Math.round(Number(data.parqueaderosMin)) : data.garages !== void 0 && data.garages !== null ? Math.round(Number(data.garages)) : null,
