@@ -1473,8 +1473,8 @@ Por lo tanto, DEBES hacer lo siguiente:
     }
 
     const extracted = result.extractedData;
-    const isRequirement = result.classification === "REQUERIMIENTO";
-    const isProperty = result.classification === "INMUEBLE";
+    let isRequirement = result.classification === "REQUERIMIENTO";
+    let isProperty = result.classification === "INMUEBLE";
 
     // El procesamiento de ofertas y requerimientos se permite ahora tanto en grupos como en chat privado (DM)
     // para que JanIA pueda registrar los inmuebles/búsquedas y buscar matches en la base de datos directamente desde el chat privado.
@@ -1532,6 +1532,13 @@ Por lo tanto, DEBES hacer lo siguiente:
 
     if (isLLMIncomplete) {
       const inferredType = (messageToProcess.toLowerCase().includes("vendo") || messageToProcess.toLowerCase().includes("ofrezco") || messageToProcess.toLowerCase().includes("arriendo") || !!extracted?.propertyType) ? "PROPERTY" : "REQUIREMENT";
+      if (inferredType === "PROPERTY") {
+        isProperty = true;
+        isRequirement = false;
+      } else {
+        isProperty = false;
+        isRequirement = true;
+      }
 
       const firstName = extractFirstName(realName) || 'colega';
       const saludo = getGreetingByTime();
@@ -1569,7 +1576,7 @@ Por lo tanto, DEBES hacer lo siguiente:
         imageBuffer
       });
 
-      return result;
+      // No retornamos temprano, permitimos que se guarde el registro en la BD
     }
 
     // --- CAPA DE DEFENSA GEOGRÁFICA NACIONAL (Elástica) ---
@@ -1585,7 +1592,7 @@ Por lo tanto, DEBES hacer lo siguiente:
       }
       
       if (!isValidGeo) {
-        if (isGroup || groupJid) {
+        if (isGroup || groupJid || isLLMIncomplete) {
           isValidGeo = true;
           if (!result.missingFields) result.missingFields = [];
           if (!result.missingFields.includes("zone")) result.missingFields.push("zone");
@@ -1693,9 +1700,11 @@ Por lo tanto, DEBES hacer lo siguiente:
       
       if (saved) {
         result.inserted = true;
-        result.shouldSendDM = false;
-        result.dmResponse = "";
-        result.response = "";
+        if (!isLLMIncomplete) {
+          result.shouldSendDM = false;
+          result.dmResponse = "";
+          result.response = "";
+        }
         result.mentions = [];
         result.extraDMs = [];
         result.sendReputationHook = false;
@@ -1724,9 +1733,11 @@ Por lo tanto, DEBES hacer lo siguiente:
 
       if (saved) {
         result.inserted = true;
-        result.shouldSendDM = false;
-        result.dmResponse = "";
-        result.response = "";
+        if (!isLLMIncomplete) {
+          result.shouldSendDM = false;
+          result.dmResponse = "";
+          result.response = "";
+        }
         result.mentions = [];
         result.extraDMs = [];
         result.sendReputationHook = false;

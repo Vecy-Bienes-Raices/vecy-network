@@ -4177,8 +4177,8 @@ ${liveStats}` : buildSystemPrompt(groupJid);
       }
     }
     const extracted = result.extractedData;
-    const isRequirement = result.classification === "REQUERIMIENTO";
-    const isProperty = result.classification === "INMUEBLE";
+    let isRequirement = result.classification === "REQUERIMIENTO";
+    let isProperty = result.classification === "INMUEBLE";
     let isLLMIncomplete = result.classification === "DATOS_INCOMPLETOS";
     if (isProperty || isRequirement) {
       const isReq = isRequirement || messageToProcess.toLowerCase().includes("busco") || messageToProcess.toLowerCase().includes("necesito") || messageToProcess.toLowerCase().includes("requiero") || !!extracted?.tipoInmuebleDeseado;
@@ -4219,6 +4219,13 @@ ${liveStats}` : buildSystemPrompt(groupJid);
     }
     if (isLLMIncomplete) {
       const inferredType = messageToProcess.toLowerCase().includes("vendo") || messageToProcess.toLowerCase().includes("ofrezco") || messageToProcess.toLowerCase().includes("arriendo") || !!extracted?.propertyType ? "PROPERTY" : "REQUIREMENT";
+      if (inferredType === "PROPERTY") {
+        isProperty = true;
+        isRequirement = false;
+      } else {
+        isProperty = false;
+        isRequirement = true;
+      }
       const firstName2 = extractFirstName(realName) || "colega";
       const saludo = getGreetingByTime();
       const customIntro = `\xA1${saludo}, *${firstName2}*! \u{1F60A} `;
@@ -4248,7 +4255,6 @@ ${liveStats}` : buildSystemPrompt(groupJid);
         messageToProcess,
         imageBuffer
       });
-      return result;
     }
     if (isProperty || isRequirement) {
       const zoneToValidate = isProperty ? extracted?.zone : extracted?.zonaDeseada || extracted?.zone;
@@ -4259,7 +4265,7 @@ ${liveStats}` : buildSystemPrompt(groupJid);
         isValidGeo = geoValidation.isValid;
       }
       if (!isValidGeo) {
-        if (isGroup || groupJid) {
+        if (isGroup || groupJid || isLLMIncomplete) {
           isValidGeo = true;
           if (!result.missingFields) result.missingFields = [];
           if (!result.missingFields.includes("zone")) result.missingFields.push("zone");
@@ -4352,9 +4358,11 @@ ${liveStats}` : buildSystemPrompt(groupJid);
       }, userId, realName, imageBuffer);
       if (saved) {
         result.inserted = true;
-        result.shouldSendDM = false;
-        result.dmResponse = "";
-        result.response = "";
+        if (!isLLMIncomplete) {
+          result.shouldSendDM = false;
+          result.dmResponse = "";
+          result.response = "";
+        }
         result.mentions = [];
         result.extraDMs = [];
         result.sendReputationHook = false;
@@ -4381,9 +4389,11 @@ ${liveStats}` : buildSystemPrompt(groupJid);
       }, userId, realName);
       if (saved) {
         result.inserted = true;
-        result.shouldSendDM = false;
-        result.dmResponse = "";
-        result.response = "";
+        if (!isLLMIncomplete) {
+          result.shouldSendDM = false;
+          result.dmResponse = "";
+          result.response = "";
+        }
         result.mentions = [];
         result.extraDMs = [];
         result.sendReputationHook = false;
