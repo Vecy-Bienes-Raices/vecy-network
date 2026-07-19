@@ -3,11 +3,14 @@
  * Adds canonical external ID fields, commercial tracking fields
  * and the property_publication_history relational table to Supabase.
  *
- * Safe to run multiple times (uses IF NOT EXISTS / IF NOT EXISTS).
+ * Safe to run multiple times (uses IF NOT EXISTS).
  *
  * Usage (from project root):
- *   npx tsx -r dotenv/config scripts/add_history_and_canonical_columns.ts
+ *   npx tsx scripts/add_history_and_canonical_columns.ts
  */
+
+// Load .env automatically — no need for -r dotenv/config flag
+import "dotenv/config";
 
 import { getDb } from "../server/db";
 import { sql } from "drizzle-orm";
