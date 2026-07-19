@@ -102,6 +102,15 @@ export const properties = pgTable("properties", {
   origenId: varchar("origen_id", { length: 100 }),
   origenNombre: varchar("origen_nombre", { length: 255 }),
   calificacion: varchar("calificacion", { length: 50 }),
+  portal: varchar("portal", { length: 50 }),
+  externalListingId: varchar("external_listing_id", { length: 100 }),
+  canonicalExternalId: varchar("canonical_external_id", { length: 150 }).unique(),
+  fechaPrimeraPublicacion: timestamp("fecha_primera_publicacion").defaultNow(),
+  fechaUltimaPublicacion: timestamp("fecha_ultima_publicacion").defaultNow(),
+  republicacionesCount: integer("republicaciones_count").default(0).notNull(),
+  estadoComercial: varchar("estado_comercial", { length: 50 }).default("ACTIVO").notNull(),
+  ultimaActividad: varchar("ultima_actividad", { length: 50 }).default("PUBLICACIÓN").notNull(),
+  vigenciaIa: varchar("vigencia_ia", { length: 50 }).default("VIGENTE").notNull(),
 });
 
 export type Property = typeof properties.$inferSelect;
@@ -373,3 +382,20 @@ export const solicitudes = pgTable("solicitudes", {
   autorizacion: boolean("autorizacion"),
   agentId: text("agent_id"),
 });
+
+export const propertyPublicationHistory = pgTable("property_publication_history", {
+  id: serial("id").primaryKey(),
+  propertyId: integer("propertyId").references(() => properties.id).notNull(),
+  fecha: timestamp("fecha").defaultNow().notNull(),
+  grupo: varchar("grupo", { length: 255 }),
+  broker: varchar("broker", { length: 255 }),
+  brokerPhone: varchar("broker_phone", { length: 50 }),
+  accion: varchar("accion", { length: 50 }).notNull(), // PUBLICADO | REPUBLICADO | ACTUALIZADO | etc.
+  portal: varchar("portal", { length: 50 }),
+  externalListingId: varchar("external_listing_id", { length: 100 }),
+  mensajeWhatsappId: varchar("mensaje_whatsapp_id", { length: 255 }),
+  detalles: text("detalles")
+});
+
+export type PropertyPublicationHistory = typeof propertyPublicationHistory.$inferSelect;
+export type InsertPropertyPublicationHistory = typeof propertyPublicationHistory.$inferInsert;

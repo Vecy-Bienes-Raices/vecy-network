@@ -4,12 +4,13 @@
  */
 import { invokeLLM } from "./llm";
 import { getDb } from "../db";
-import { properties, requirements, users, propertyImages, InsertProperty, InsertRequirement, pendingSessions, propertyMatches, messages as dbMessages, conversations as dbConversations } from "../../drizzle/schema";
+import { properties, requirements, users, propertyImages, InsertProperty, InsertRequirement, pendingSessions, propertyMatches, messages as dbMessages, conversations as dbConversations, propertyPublicationHistory } from "../../drizzle/schema";
 import { findMatchesForProperty, findMatchesForRequirement } from "./matching";
 import { validarZona, normalizarTextoGeografico } from "./geography";
 import { transcribeAudio } from "./voiceTranscription";
 import { eq, and, sql, gte, desc, or, isNotNull } from "drizzle-orm";
 import { storagePut } from "../storage";
+import { esDominioPermitido, extractPortalAndListingId } from "./scraper";
 import fs from "fs";
 import path from "path";
 import axios from "axios";
@@ -1275,8 +1276,9 @@ export async function processWhatsAppMessage(
     let jinaExtractedText = "";
     if (urls && urls.length > 0) {
       for (const url of urls) {
-        const content = await scrapeUrlWithBypass(url);
+        let content = await scrapeUrlWithBypass(url);
         if (content) {
+          content = content.replace(/\!\[.*?\]\(.*?\)/g, ''); // Remover imágenes markdown
           jinaExtractedText += `\n\n[CONTENIDO DE ENLACE WEB EXTRAÍDO DE ${url}]:\n${content.substring(0, 15000)}\n[FIN CONTENIDO ENLACE]\n`;
         }
       }
@@ -1717,6 +1719,15 @@ Por lo tanto, DEBES hacer lo siguiente:
 
     if (isProperty) {
       const propertyTitle = extracted.title || `${capitalize(extracted.propertyType || 'inmueble')} en ${extracted.zone || 'Bogotá'} para ${extracted.transactionType || 'venta'}`;
+      
+      let externalUrl: string | undefined = undefined;
+      if (urls && urls.length > 0) {
+        const permitted = urls.find(url => esDominioPermitido(url));
+        if (permitted) {
+          externalUrl = permitted;
+        }
+      }
+
       const saved = await saveProperty({
         ...extracted,
         name: propertyTitle,
@@ -1728,6 +1739,7 @@ Por lo tanto, DEBES hacer lo siguiente:
         origenTipo,
         origenId,
         origenNombre,
+        externalUrl,
         fechaExtraccion: new Date()
       }, userId, realName, imageBuffer);
       
@@ -2108,8 +2120,8 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
     }
   }
 
-  // Combinar imágenes en data.images
-  const finalImages = data.images && Array.isArray(data.images) ? [...data.images] : [];
+  // Para VRIF Core v1.0, descartamos imágenes externas del scraper y guardamos solo el flyer directo de WhatsApp
+  const finalImages = [];
   if (imageUrl) {
     finalImages.push(imageUrl);
   }
@@ -2162,43 +2174,152 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
     fechaExtraccion: data.fechaExtraccion || new Date()
   };
 
-  // Buscar duplicado activo del mismo usuario (mismo tipo, negocio, ciudad y barrio)
-  const existing = await db
-    .select()
-    .from(properties)
-    .where(
-      and(
-        eq(properties.idUsuarioWhatsapp, rawPhone),
-        eq(properties.propertyType, insertData.propertyType),
-        eq(properties.transactionType, insertData.transactionType),
-        eq(properties.city, insertData.city),
-        eq(properties.zone, insertData.zone),
-        eq(properties.available, true)
-      )
-    )
-    .limit(1);
+  // Calcular portal, listingId y canonicalExternalId a partir de externalUrl
+  let portal: string | null = null;
+  let externalListingId: string | null = null;
+  let canonicalExternalId: string | null = null;
 
-  const { label: calif } = calcularCalificacionCompletitud(insertData, true);
-  const insertDataWithCalif = {
+  if (data.externalUrl) {
+    const extractedInfo = extractPortalAndListingId(data.externalUrl);
+    portal = extractedInfo.portal;
+    externalListingId = extractedInfo.listingId;
+    if (portal && externalListingId) {
+      canonicalExternalId = `${portal.toUpperCase()}:${externalListingId}`;
+    }
+  }
+
+  const finalInsertData = {
     ...insertData,
+    portal,
+    externalListingId,
+    canonicalExternalId,
+    externalUrl: data.externalUrl || null,
+    fechaPrimeraPublicacion: new Date(),
+    fechaUltimaPublicacion: new Date(),
+    republicacionesCount: 0,
+    estadoComercial: "ACTIVO",
+    ultimaActividad: "PUBLICACIÓN",
+    vigenciaIa: "VIGENTE"
+  };
+
+  // Búsqueda jerárquica de duplicados
+  let existing: any[] = [];
+
+  // 1. Por ID Canónico
+  if (canonicalExternalId) {
+    existing = await db
+      .select()
+      .from(properties)
+      .where(
+        and(
+          eq(properties.canonicalExternalId, canonicalExternalId),
+          eq(properties.available, true)
+        )
+      )
+      .limit(1);
+  }
+
+  // 2. Por Matrícula Inmobiliaria (si está presente)
+  if (existing.length === 0 && finalInsertData.matriculaInmobiliaria) {
+    existing = await db
+      .select()
+      .from(properties)
+      .where(
+        and(
+          eq(properties.matriculaInmobiliaria, finalInsertData.matriculaInmobiliaria),
+          eq(properties.available, true)
+        )
+      )
+      .limit(1);
+  }
+
+  // 3. Fallback comercial (Mismo broker, tipo, negocio, ciudad y barrio)
+  if (existing.length === 0) {
+    existing = await db
+      .select()
+      .from(properties)
+      .where(
+        and(
+          eq(properties.idUsuarioWhatsapp, rawPhone),
+          eq(properties.propertyType, finalInsertData.propertyType),
+          eq(properties.transactionType, finalInsertData.transactionType),
+          eq(properties.city, finalInsertData.city),
+          eq(properties.zone, finalInsertData.zone),
+          eq(properties.available, true)
+        )
+      )
+      .limit(1);
+  }
+
+  const { label: calif } = calcularCalificacionCompletitud(finalInsertData, true);
+  const insertDataWithCalif = {
+    ...finalInsertData,
     calificacion: calif
   };
 
   if (existing.length > 0) {
-    // Si ya existe, actualizamos los datos (por si cambió precio, admin, fotos, descripción, etc.)
+    // Si ya existe, actualizamos los datos comerciales y de trazabilidad
+    const updatedCount = (existing[0].republicacionesCount || 0) + 1;
     const [updated] = await db
       .update(properties)
       .set({
-        ...insertDataWithCalif,
-        updatedAt: new Date()
+        price: insertDataWithCalif.price,
+        description: insertDataWithCalif.description || existing[0].description,
+        adminFee: insertDataWithCalif.adminFee || existing[0].adminFee,
+        images: finalImages.length > 0 ? finalImages : existing[0].images,
+        origenTipo: insertDataWithCalif.origenTipo,
+        origenId: insertDataWithCalif.origenId,
+        origenNombre: insertDataWithCalif.origenNombre,
+        idUsuarioWhatsapp: insertDataWithCalif.idUsuarioWhatsapp,
+        fechaUltimaPublicacion: new Date(),
+        updatedAt: new Date(),
+        republicacionesCount: updatedCount,
+        estadoComercial: "REPUBLICADO",
+        ultimaActividad: "REPUBLICACIÓN",
+        vigenciaIa: "VIGENTE"
       })
       .where(eq(properties.id, existing[0].id))
       .returning();
-    console.log(`[Deduplication] Propiedad existente detectada. Actualizando datos (ID: ${updated.id})`);
+
+    console.log(`[Deduplication] Propiedad existente detectada (${canonicalExternalId || 'Comercial'}). Actualizando datos (ID: ${updated.id}, Republicado: ${updatedCount})`);
+
+    // Insertar auditoría histórica de la republicación
+    try {
+      await db.insert(propertyPublicationHistory).values({
+        propertyId: existing[0].id,
+        grupo: insertDataWithCalif.origenNombre,
+        broker: realName,
+        brokerPhone: rawPhone,
+        accion: "REPUBLICACIÓN",
+        portal: portal,
+        externalListingId: externalListingId,
+        detalles: `Inmueble republicado en ${insertDataWithCalif.origenNombre || 'WhatsApp'}. Precio: ${insertDataWithCalif.price}`
+      });
+    } catch (histErr) {
+      console.error("[JanIA-History] Error al registrar historial de republicación:", histErr);
+    }
+
     return updated;
   }
 
+  // Creación de propiedad nueva
   const [result] = await db.insert(properties).values(insertDataWithCalif).returning();
+
+  // Insertar auditoría histórica inicial
+  try {
+    await db.insert(propertyPublicationHistory).values({
+      propertyId: result.id,
+      grupo: insertDataWithCalif.origenNombre,
+      broker: realName,
+      brokerPhone: rawPhone,
+      accion: "PUBLICACIÓN",
+      portal: portal,
+      externalListingId: externalListingId,
+      detalles: `Inmueble ingresado por primera vez desde ${insertDataWithCalif.origenNombre || 'WhatsApp'}. Precio: ${insertDataWithCalif.price}`
+    });
+  } catch (histErr) {
+    console.error("[JanIA-History] Error al registrar historial inicial:", histErr);
+  }
 
   // Si se subió una imagen, registrarla en la tabla propertyImages también
   if (result && imageUrl) {

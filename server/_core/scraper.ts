@@ -77,17 +77,8 @@ export async function scrapePropertyLink(url: string) {
       CONTENIDO GENERAL: ${bodyText}
     `.slice(0, 12000);
 
-    // 3. Extraer Imágenes con Calidad
+    // 3. Extraer Imágenes con Calidad (DESHABILITADO para VRIF Core v1.0)
     const images: string[] = [];
-    $('img').each((_, el) => {
-      const src = $(el).attr('src') || $(el).attr('data-src') || $(el).attr('data-lazy-src');
-      if (src && (src.startsWith('http') || src.startsWith('https'))) {
-        // Evitamos iconos pequeños y logos (heurística simple)
-        if (!src.includes('logo') && !src.includes('icon') && !src.includes('marker') && src.length < 500) {
-          images.push(src);
-        }
-      }
-    });
 
     // 4. Invocación Magistral a JanIA para Estructuración
     const systemPrompt = `
@@ -97,7 +88,6 @@ export async function scrapePropertyLink(url: string) {
       - PRICE: Busca el valor numérico más alto que parezca el precio (ej: 550000000). Ignora la administración. Devuelve SOLO el número.
       - NAME: Genera un nombre profesional (ej: "Apartamento en Venta San José de Bavaria").
       - PROPERTY TYPE: apartment, house, building, warehouse, farm, hotel, office, land, commercial, loft, consultorio.
-      - IMAGES: Selecciona las 5 mejores URLs que sean fotos reales del inmueble.
       
       RESPONDE ÚNICAMENTE CON ESTE JSON:
       {
@@ -125,8 +115,7 @@ export async function scrapePropertyLink(url: string) {
         "depositos": number | null,
         "comisiones": "string | number | null",
         "antiguedad": "nuevo | 1-5 | 5-10 | 10+ | NA",
-        "amenities": { "balcon": boolean, "piscina": boolean, "gimnasio": boolean, "vigilancia": boolean, "ascensor": boolean, "terraza": boolean, "deposito": boolean },
-        "images": ["url1", "url2"]
+        "amenities": { "balcon": boolean, "piscina": boolean, "gimnasio": boolean, "vigilancia": boolean, "ascensor": boolean, "terraza": boolean, "deposito": boolean }
       }
     `;
 
@@ -134,8 +123,6 @@ export async function scrapePropertyLink(url: string) {
       URL: ${url}
       CONTENIDO EXTRAIDO:
       ${combinedContent}
-      
-      IMAGENES CANDIDATAS: ${images.slice(0, 15).join(', ')}
       
       Extrae los datos en JSON.
     `;
@@ -157,5 +144,49 @@ export async function scrapePropertyLink(url: string) {
   } catch (error) {
     console.error('Error in property scraper:', error);
     throw new Error(`Fallo en la extracción de datos: ${error}`);
+  }
+}
+
+export function extractPortalAndListingId(urlStr: string): { portal: string | null; listingId: string | null } {
+  try {
+    const url = new URL(urlStr);
+    const host = url.hostname.toLowerCase();
+    let portal: string | null = null;
+    let listingId: string | null = null;
+
+    if (host.includes("wasi.co")) portal = "Wasi";
+    else if (host.includes("fincaraiz")) portal = "FincaRaíz";
+    else if (host.includes("metrocuadrado")) portal = "Metrocuadrado";
+    else if (host.includes("ciencuadras")) portal = "Ciencuadras";
+    else if (host.includes("habi.co")) portal = "Habi";
+    else if (host.includes("mercadolibre")) portal = "MercadoLibre";
+    else if (host.includes("properati") || host.includes("proppit")) portal = "Properati";
+    else {
+      const parts = host.replace("www.", "").split(".");
+      portal = parts[0] ? parts[0].charAt(0).toUpperCase() + parts[0].slice(1) : "Externo";
+    }
+
+    const pathSegments = url.pathname.split("/").filter(Boolean);
+    for (const segment of pathSegments) {
+      if (/^\d{5,12}$/.test(segment)) {
+        listingId = segment;
+        break;
+      }
+      if (/^[a-zA-Z0-9]+-\w+$/.test(segment)) {
+        listingId = segment;
+        break;
+      }
+    }
+
+    if (!listingId) {
+      const match = url.pathname.match(/\/(\d{5,12})(?:\/|\?|$|\.|#)/);
+      if (match) {
+        listingId = match[1];
+      }
+    }
+
+    return { portal, listingId };
+  } catch {
+    return { portal: null, listingId: null };
   }
 }

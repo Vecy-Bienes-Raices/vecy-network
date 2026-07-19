@@ -2,8 +2,8 @@ import { z } from 'zod';
 import { publicProcedure, router } from '../_core/trpc';
 import { invokeLLM } from '../_core/llm';
 import { getDb } from '../db';
-import { conversations, messages, leads, propertyMatches, properties, requirements } from '../../drizzle/schema';
-import { eq, desc, sql } from 'drizzle-orm';
+import { conversations, messages, leads, propertyMatches, properties, requirements, propertyPublicationHistory } from '../../drizzle/schema';
+import { eq, desc, sql, inArray } from 'drizzle-orm';
 
 import { scrapePropertyLink } from '../_core/scraper';
 import { JANIA_PROMPT, processWhatsAppMessage } from '../_core/janIA';
@@ -390,6 +390,15 @@ export const janIARouter = router({
               isAmoblado: properties.isAmoblado,
               rawText: properties.rawText,
               externalUrl: properties.externalUrl,
+              portal: properties.portal,
+              externalListingId: properties.externalListingId,
+              canonicalExternalId: properties.canonicalExternalId,
+              fechaPrimeraPublicacion: properties.fechaPrimeraPublicacion,
+              fechaUltimaPublicacion: properties.fechaUltimaPublicacion,
+              republicacionesCount: properties.republicacionesCount,
+              estadoComercial: properties.estadoComercial,
+              ultimaActividad: properties.ultimaActividad,
+              vigenciaIa: properties.vigenciaIa
             },
             requirement: {
               id: requirements.id,
@@ -415,6 +424,26 @@ export const janIARouter = router({
           .innerJoin(properties, eq(propertyMatches.propertyId, properties.id))
           .innerJoin(requirements, eq(propertyMatches.requirementId, requirements.id))
           .orderBy(desc(propertyMatches.createdAt));
+
+        const propertyIds = matches.map(m => m.property.id).filter(Boolean);
+        if (propertyIds.length > 0) {
+          const histories = await db
+            .select()
+            .from(propertyPublicationHistory)
+            .where(inArray(propertyPublicationHistory.propertyId, propertyIds))
+            .orderBy(desc(propertyPublicationHistory.fecha));
+
+          return matches.map(m => {
+            const propertyHistory = histories.filter(h => h.propertyId === m.property.id);
+            return {
+              ...m,
+              property: {
+                ...m.property,
+                publicationHistory: propertyHistory
+              }
+            };
+          });
+        }
 
         return matches;
       } catch (error) {

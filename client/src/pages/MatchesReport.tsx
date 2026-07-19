@@ -326,16 +326,106 @@ function calcularScoresMatch(m: any): { tecnico: number; comercial: number; fina
 
 function calcularVigencia(m: any): { label: string; color: string; badge: string } {
   const ageDays = (Date.now() - new Date(m.createdAt || new Date()).getTime()) / (1000 * 60 * 60 * 24);
+  const vigenteDias = import.meta.env.VITE_VIGENTE_DIAS ? parseInt(import.meta.env.VITE_VIGENTE_DIAS) : 7;
+  const verificarDias = import.meta.env.VITE_VERIFICAR_DIAS ? parseInt(import.meta.env.VITE_VERIFICAR_DIAS) : 30;
+
   if (m.status === "rejected") {
     return { label: "Probablemente vendido", color: "text-red-400 bg-red-500/10 border-red-500/20", badge: "🔴 Vendido" };
   }
-  if (ageDays < 7) {
+  if (ageDays < vigenteDias) {
     return { label: "Vigente", color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20", badge: "🟢 Vigente" };
   }
-  if (ageDays <= 30) {
+  if (ageDays <= verificarDias) {
     return { label: "Verificar vigencia", color: "text-amber-400 bg-amber-500/10 border-amber-500/20", badge: "🟡 Verificar" };
   }
   return { label: "Probablemente vendido", color: "text-red-400 bg-red-500/10 border-red-500/20", badge: "🔴 Expirado" };
+}
+
+function PropertyTraceability({ property }: { property: any }) {
+  const p = property;
+  if (!p) return null;
+
+  const firstPub = p.fechaPrimeraPublicacion ? new Date(p.fechaPrimeraPublicacion).toLocaleDateString("es-CO", { day: "numeric", month: "short", year: "numeric" }) : "N/E";
+  const lastPub = p.fechaUltimaPublicacion ? new Date(p.fechaUltimaPublicacion).toLocaleDateString("es-CO", { day: "numeric", month: "short", year: "numeric" }) : "N/E";
+
+  const history = p.publicationHistory || [];
+  const visibleHistory = history.slice(0, 20);
+
+  return (
+    <div className="bg-white/[0.01] border border-white/5 rounded-2xl p-4 space-y-4">
+      <div className="flex items-center justify-between border-b border-white/5 pb-2">
+        <div className="flex items-center gap-2">
+          <Clock className="w-3.5 h-3.5 text-[#bf953f]" />
+          <h4 className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Memoria Comercial del Inmueble</h4>
+        </div>
+        <span className="text-[9px] text-zinc-600 font-mono">
+          Canónico: {p.canonicalExternalId || `LOCAL:${p.id}`}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-center">
+        <div className="bg-white/[0.01] border border-white/5 rounded-xl p-2">
+          <p className="text-[7px] uppercase tracking-wider text-zinc-500 font-extrabold">Primera Publicación</p>
+          <p className="text-xs font-bold text-zinc-300 mt-0.5">{firstPub}</p>
+        </div>
+        <div className="bg-white/[0.01] border border-white/5 rounded-xl p-2">
+          <p className="text-[7px] uppercase tracking-wider text-zinc-500 font-extrabold">Última Publicación</p>
+          <p className="text-xs font-bold text-zinc-300 mt-0.5">{lastPub}</p>
+        </div>
+        <div className="bg-white/[0.01] border border-white/5 rounded-xl p-2">
+          <p className="text-[7px] uppercase tracking-wider text-[#bf953f] font-extrabold">Republicaciones</p>
+          <p className="text-xs font-black text-[#bf953f] mt-0.5">{p.republicacionesCount || 0}</p>
+        </div>
+        <div className="bg-white/[0.01] border border-white/5 rounded-xl p-2">
+          <p className="text-[7px] uppercase tracking-wider text-zinc-500 font-extrabold">Estado Comercial</p>
+          <p className="text-xs font-bold text-emerald-400 mt-0.5">{p.estadoComercial || "ACTIVO"}</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs border-t border-white/5 pt-3">
+        <div className="space-y-0.5">
+          <span className="text-zinc-600 text-[8px] uppercase font-bold tracking-wider">Portal</span>
+          <p className="text-zinc-400 font-medium">{p.portal || "WhatsApp / Directo"}</p>
+        </div>
+        <div className="space-y-0.5">
+          <span className="text-zinc-600 text-[8px] uppercase font-bold tracking-wider">Código Portal</span>
+          <p className="text-zinc-400 font-medium font-mono truncate">{p.externalListingId || "N/A"}</p>
+        </div>
+        <div className="space-y-0.5">
+          <span className="text-zinc-600 text-[8px] uppercase font-bold tracking-wider">Vigencia IA</span>
+          <p className="text-zinc-400 font-medium">{p.vigenciaIa || "VIGENTE"}</p>
+        </div>
+      </div>
+
+      {visibleHistory.length > 0 && (
+        <div className="space-y-2 border-t border-white/5 pt-3">
+          <div className="flex items-center justify-between">
+            <span className="text-zinc-500 text-[8px] uppercase font-black tracking-widest">Cronología de Publicación</span>
+            <span className="text-[8px] text-zinc-600 font-mono">(Historial visible: {visibleHistory.length})</span>
+          </div>
+          <div className="max-h-[140px] overflow-y-auto border border-white/5 rounded-xl divide-y divide-white/5 bg-black/20">
+            {visibleHistory.map((item: any, idx: number) => {
+              const itemDate = new Date(item.fecha).toLocaleString("es-CO", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+              return (
+                <div key={idx} className="p-2 text-[10px] flex items-center justify-between gap-2 hover:bg-white/[0.01] transition-all">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[8px] font-mono text-zinc-500 bg-white/5 px-1.5 py-0.2 rounded uppercase font-bold">{item.accion}</span>
+                    <div>
+                      <p className="text-zinc-300 font-semibold">{item.broker || "Asesor desconocido"}</p>
+                      <p className="text-zinc-500 text-[9px]">{item.grupo || "WhatsApp"}</p>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span className="text-[9px] text-zinc-500 font-mono">{itemDate}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 // Componente para renderizar el Semáforo VRIF
@@ -604,12 +694,20 @@ function MatchCard({ m, idx }: { m: any; idx: number }) {
                 <p className="text-[10px] text-zinc-500 font-mono select-all">+{m.property.idUsuarioWhatsapp?.split('@')[0]}</p>
               </div>
             </div>
-            {m.property.idUsuarioWhatsapp && (
-              <a href={getWhatsAppLink(m.property.idUsuarioWhatsapp)} target="_blank" rel="noopener noreferrer"
-                className="bg-[#25D366] hover:bg-[#20ba5a] text-black text-[10px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors">
-                WA <ExternalLink className="w-2.5 h-2.5" />
-              </a>
-            )}
+            <div className="flex items-center gap-2">
+              {m.property.externalUrl && (
+                <a href={m.property.externalUrl} target="_blank" rel="noopener noreferrer"
+                  className="bg-white/10 hover:bg-white/20 text-white text-[10px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors">
+                  Ver en {m.property.portal || "Portal"} <ExternalLink className="w-2.5 h-2.5" />
+                </a>
+              )}
+              {m.property.idUsuarioWhatsapp && (
+                <a href={getWhatsAppLink(m.property.idUsuarioWhatsapp)} target="_blank" rel="noopener noreferrer"
+                  className="bg-[#25D366] hover:bg-[#20ba5a] text-black text-[10px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors">
+                  WA <ExternalLink className="w-2.5 h-2.5" />
+                </a>
+              )}
+            </div>
           </div>
         </div>
 
@@ -685,6 +783,7 @@ function MatchCard({ m, idx }: { m: any; idx: number }) {
                 <div className="space-y-6">
                   <IpcBreakdown ipc={m.ipc} />
                   <VrifTimeline m={m} />
+                  <PropertyTraceability property={m.property} />
                 </div>
 
               </div>
@@ -1193,7 +1292,7 @@ export default function MatchesReport() {
                           <AnimatePresence>
                             {isExpanded && (
                               <tr>
-                                <td colSpan={9} className="bg-white/[0.01] border-b border-white/5 p-6">
+                                <td colSpan={11} className="bg-white/[0.01] border-b border-white/5 p-6">
                                   <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
                                     
                                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -1241,6 +1340,7 @@ export default function MatchesReport() {
                                       <div className="space-y-6">
                                         <IpcBreakdown ipc={m.ipc} />
                                         <VrifTimeline m={m} />
+                                        <PropertyTraceability property={m.property} />
                                       </div>
 
                                     </div>
