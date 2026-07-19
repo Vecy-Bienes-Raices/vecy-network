@@ -286,6 +286,14 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   const positives: string[] = [];
   const negatives: string[] = [];
 
+  // 0. Evitar auto-match (mismo broker)
+  const propBroker = (property.idUsuarioWhatsapp || "").split('@')[0];
+  const reqBroker = (requirement.idUsuarioWhatsapp || "").split('@')[0];
+  if (propBroker && reqBroker && propBroker === reqBroker) {
+    blockers.push("Auto-match: el inmueble y el requerimiento pertenecen al mismo asesor.");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+
   // A. transactionType (Venta o Arriendo)
   const reqBiz = (requirement.tipoNegocioDeseado || requirement.transactionType || "").toLowerCase();
   const propBiz = (property.transactionType || "").toLowerCase();
@@ -304,8 +312,26 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   const resolveCityField = (raw1: string, raw2: string): string => {
     const n1 = normalizarTextoGeografico(raw1 || "");
     const n2 = normalizarTextoGeografico(raw2 || "");
+    
+    const SECTORES_BOGOTA = [
+      "cedritos", "usaquen", "chico", "chapinero", "suba", "engativa", 
+      "teusaquillo", "kennedy", "fontibon", "bosa", "salitre", "rosales", 
+      "colina", "niza", "cabrera", "nogal", "recreo", "castellana", 
+      "patricio", "barbara", "belmira", "suiza", "navarra", "floresta",
+      "granada", "colsubsidio"
+    ];
+    
+    const isBogotaSector = (val: string) => {
+      return SECTORES_BOGOTA.some(sector => val.includes(sector));
+    };
+
     if (CIUDADES_CO.some(c => n1.includes(c) || n1 === c)) return n1;
     if (CIUDADES_CO.some(c => n2.includes(c) || n2 === c)) return n2;
+    
+    if (isBogotaSector(n1) || isBogotaSector(n2)) {
+      return "bogota";
+    }
+
     return n1 || n2;
   };
 
