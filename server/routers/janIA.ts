@@ -3,7 +3,7 @@ import { publicProcedure, router } from '../_core/trpc';
 import { invokeLLM } from '../_core/llm';
 import { getDb } from '../db';
 import { conversations, messages, leads, propertyMatches, properties, requirements, propertyPublicationHistory, pendingSessions } from '../../drizzle/schema';
-import { eq, desc, sql, inArray } from 'drizzle-orm';
+import { eq, desc, sql, inArray, gte } from 'drizzle-orm';
 
 import { scrapePropertyLink } from '../_core/scraper';
 import { JANIA_PROMPT, processWhatsAppMessage } from '../_core/janIA';
@@ -579,16 +579,17 @@ export const janIARouter = router({
       
       const today = new Date();
       today.setHours(0, 0, 0, 0);
+      const todayStr = today.toISOString();
       
       const [propTodayCount] = await db
         .select({ count: sql<number>`count(*)::int` })
         .from(properties)
-        .where(sql`${properties.createdAt} >= ${today}`);
+        .where(sql`${properties.createdAt} >= ${todayStr}`);
         
       const [reqTodayCount] = await db
         .select({ count: sql<number>`count(*)::int` })
         .from(requirements)
-        .where(sql`${requirements.createdAt} >= ${today}`);
+        .where(sql`${requirements.createdAt} >= ${todayStr}`);
 
       return {
         isReady,
