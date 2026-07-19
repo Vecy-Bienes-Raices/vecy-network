@@ -32,8 +32,8 @@ async function rebuild() {
       // Calcular score (usando el motor con bloqueador de auto-match y subtipos estrictos)
       const score = calcularScoreMatch(req, prop);
       
-      // Guardar si el score es aceptable (mínimo 60% para matches de valor)
-      if (score >= 60) {
+      // Guardar si el score es aceptable (mínimo 35% para que aparezca en el panel admin con filtros)
+      if (score >= 35) {
         await db.insert(propertyMatches).values({
           propertyId: prop.id,
           requirementId: req.id,
