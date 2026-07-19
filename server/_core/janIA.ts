@@ -1790,7 +1790,7 @@ Por lo tanto, DEBES hacer lo siguiente:
       
       if (saved) {
         result.inserted = true;
-        if (!isLLMIncomplete) {
+        if (!isLLMIncomplete && !userId.startsWith("web-")) {
           result.shouldSendDM = false;
           result.dmResponse = "";
           result.response = "";
@@ -1801,7 +1801,9 @@ Por lo tanto, DEBES hacer lo siguiente:
         result.reactionEmoji = getEmojiForCalificacion(saved.calificacion || undefined);
 
         const { executeMatchEngine } = await import("./matching");
-        executeMatchEngine(saved.id, null).catch(err => console.error("Error executing match engine:", err));
+        setImmediate(() => {
+          executeMatchEngine(saved.id, null).catch(err => console.error("Error executing match engine:", err));
+        });
       }
     } else if (isRequirement) {
       const reqTitle = extracted.title || `Requerimiento de ${extracted.propertyType || 'inmueble'} en ${extracted.zonaDeseada || extracted.zone || 'Bogotá'} para ${extracted.transactionType || 'venta'}`;
@@ -1823,7 +1825,7 @@ Por lo tanto, DEBES hacer lo siguiente:
 
       if (saved) {
         result.inserted = true;
-        if (!isLLMIncomplete) {
+        if (!isLLMIncomplete && !userId.startsWith("web-")) {
           result.shouldSendDM = false;
           result.dmResponse = "";
           result.response = "";
@@ -1834,7 +1836,9 @@ Por lo tanto, DEBES hacer lo siguiente:
         result.reactionEmoji = getEmojiForCalificacion(saved.calificacion || undefined);
 
         const { executeMatchEngine } = await import("./matching");
-        executeMatchEngine(null, saved.id).catch(err => console.error("Error executing match engine:", err));
+        setImmediate(() => {
+          executeMatchEngine(null, saved.id).catch(err => console.error("Error executing match engine:", err));
+        });
       }
     }
 
