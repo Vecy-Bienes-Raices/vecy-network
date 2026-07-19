@@ -1269,6 +1269,11 @@ export async function processWhatsAppMessage(
     }
 
     let messageToProcess = text;
+
+    // Texto limpio del usuario — lo que realmente escribió en WhatsApp, sin el volcado del scraper.
+    // Es lo que se guarda en rawText (para el panel) y lo que ve el bróker.
+    // NUNCA debe contener el bloque [CONTENIDO DE ENLACE WEB...] del scraper.
+    const rawUserText = text.replace(/(https?:\/\/[^\s]+)/g, '').trim();
     
     // Extraer y procesar enlaces con evasión de bloqueos (Bypass)
     const urlRegex = /(https?:\/\/[^\s]+)/g;
@@ -1278,11 +1283,17 @@ export async function processWhatsAppMessage(
       for (const url of urls) {
         let content = await scrapeUrlWithBypass(url);
         if (content) {
-          content = content.replace(/\!\[.*?\]\(.*?\)/g, ''); // Remover imágenes markdown
+          // Remover imágenes markdown y líneas con solo URLs (contaminación visual)
+          content = content
+            .replace(/!\[.*?\]\(.*?\)/g, '')          // imágenes markdown ![]()
+            .replace(/^https?:\/\/[^\s]+$/gm, '')      // líneas que son solo URLs
+            .replace(/\n{3,}/g, '\n\n')                // colapsar saltos excesivos
+            .trim();
           jinaExtractedText += `\n\n[CONTENIDO DE ENLACE WEB EXTRAÍDO DE ${url}]:\n${content.substring(0, 15000)}\n[FIN CONTENIDO ENLACE]\n`;
         }
       }
     }
+    // messageToProcess lleva el contexto completo para el LLM (con el texto del portal)
     if (jinaExtractedText) {
       messageToProcess += jinaExtractedText;
     }
@@ -1734,7 +1745,10 @@ Por lo tanto, DEBES hacer lo siguiente:
         price: String(extracted.price || 0),
         areaTotal: String(extracted.area || 0),
         idUsuarioWhatsapp: rawPhone,
-        rawText: messageToProcess,
+        // rawText guarda el mensaje original del usuario — sin el volcado del scraper.
+        // El LLM ya procesó el contenido del portal; lo que le mostramos al bróker en el
+        // panel es solo lo que él escribió en WhatsApp.
+        rawText: rawUserText || text,
         amenities: { gives: extracted.gives, wants: extracted.wants, isCollaborativePool: extracted.isCollaborativePool },
         origenTipo,
         origenId,
