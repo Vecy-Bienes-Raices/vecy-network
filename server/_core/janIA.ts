@@ -1274,13 +1274,42 @@ export async function processWhatsAppMessage(
     // Es lo que se guarda en rawText (para el panel) y lo que ve el bróker.
     // NUNCA debe contener el bloque [CONTENIDO DE ENLACE WEB...] del scraper.
     const rawUserText = text.replace(/(https?:\/\/[^\s]+)/g, '').trim();
-    
+
+    // Dominios que nunca deben raparse — redes sociales, links de WhatsApp, etc.
+    // Scraping these returns marketing pages, login walls, or contact info — not property data.
+    const SCRAPE_BLOCKLIST = [
+      'wa.me', 'whatsapp.com', 'whatsapp.net',
+      'facebook.com', 'fb.com', 'fb.watch',
+      'instagram.com',
+      'youtube.com', 'youtu.be',
+      'tiktok.com',
+      'twitter.com', 'x.com',
+      'linkedin.com',
+      'maps.google.com', 'photos.app.goo.gl', 'photos.google.com',
+      'drive.google.com', 'docs.google.com',
+      'bit.ly', 'tinyurl.com', 'goo.gl',
+    ];
+
+    function isScrapeable(url: string): boolean {
+      try {
+        const hostname = new URL(url).hostname.replace('www.', '').toLowerCase();
+        return !SCRAPE_BLOCKLIST.some(blocked => hostname.includes(blocked));
+      } catch {
+        return false;
+      }
+    }
+
     // Extraer y procesar enlaces con evasión de bloqueos (Bypass)
     const urlRegex = /(https?:\/\/[^\s]+)/g;
     const urls = text.match(urlRegex);
     let jinaExtractedText = "";
     if (urls && urls.length > 0) {
       for (const url of urls) {
+        // Saltar dominios bloqueados — jamas raspar wa.me, redes sociales, etc.
+        if (!isScrapeable(url)) {
+          console.log(`[Scraper-Bypass] Dominio bloqueado, omitiendo scraping: ${url}`);
+          continue;
+        }
         let content = await scrapeUrlWithBypass(url);
         if (content) {
           // Remover imágenes markdown y líneas con solo URLs (contaminación visual)
@@ -1289,7 +1318,9 @@ export async function processWhatsAppMessage(
             .replace(/^https?:\/\/[^\s]+$/gm, '')      // líneas que son solo URLs
             .replace(/\n{3,}/g, '\n\n')                // colapsar saltos excesivos
             .trim();
-          jinaExtractedText += `\n\n[CONTENIDO DE ENLACE WEB EXTRAÍDO DE ${url}]:\n${content.substring(0, 15000)}\n[FIN CONTENIDO ENLACE]\n`;
+          if (content.length > 50) { // Ignorar contenido trivial
+            jinaExtractedText += `\n\n[CONTENIDO DE ENLACE WEB EXTRAÍDO DE ${url}]:\n${content.substring(0, 15000)}\n[FIN CONTENIDO ENLACE]\n`;
+          }
         }
       }
     }
