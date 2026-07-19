@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { publicProcedure, router } from '../_core/trpc';
 import { invokeLLM } from '../_core/llm';
 import { getDb } from '../db';
-import { conversations, messages, leads, propertyMatches, properties, requirements, propertyPublicationHistory } from '../../drizzle/schema';
+import { conversations, messages, leads, propertyMatches, properties, requirements, propertyPublicationHistory, pendingSessions } from '../../drizzle/schema';
 import { eq, desc, sql, inArray } from 'drizzle-orm';
 
 import { scrapePropertyLink } from '../_core/scraper';
@@ -545,10 +545,37 @@ export const janIARouter = router({
     if (!db) return { isReady: false, phone: null, todayProperties: 0, todayRequirements: 0 };
     
     try {
-      // Use the global singleton registered by JaniaMatchBot constructor.
-      // The dynamic import can return a stale/different object in the compiled bundle;
-      // global is always the live instance.
-      const bot = (global as any).janiaMatchBotInstance;
+      let isReady = false;
+      let phone: string | null = null;
+
+      // 1. Query the database-persisted bot status heartbeat (written by the VPS bot)
+      const [statusRow] = await db
+        .select()
+        .from(pendingSessions)
+        .where(eq(pendingSessions.jid, "system:bot_status"))
+        .limit(1);
+
+      if (statusRow) {
+        const data = statusRow.sessionData as { isReady: boolean; phone: string | null; updatedAt: string };
+        if (data && data.isReady) {
+          const lastUpdate = new Date(data.updatedAt).getTime();
+          const now = Date.now();
+          // Heartbeat must be updated within the last 90 seconds to be considered alive
+          if (now - lastUpdate < 90000) {
+            isReady = true;
+            phone = data.phone;
+          }
+        }
+      }
+
+      // 2. Fallback to the local global singleton instance if database doesn't have it or is stale
+      if (!isReady) {
+        const bot = (global as any).janiaMatchBotInstance;
+        if (bot && bot.isReady) {
+          isReady = true;
+          phone = bot.sock?.user?.id ? bot.sock.user.id.split('@')[0].split(':')[0] : null;
+        }
+      }
       
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -564,8 +591,8 @@ export const janIARouter = router({
         .where(sql`${requirements.createdAt} >= ${today}`);
 
       return {
-        isReady: bot?.isReady || false,
-        phone: bot?.sock?.user?.id ? bot.sock.user.id.split('@')[0].split(':')[0] : null,
+        isReady,
+        phone,
         todayProperties: propTodayCount?.count || 0,
         todayRequirements: reqTodayCount?.count || 0
       };

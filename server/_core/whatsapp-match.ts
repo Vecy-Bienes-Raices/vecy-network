@@ -12,7 +12,7 @@ import qrcodeTerminal from 'qrcode-terminal';
 import fs from 'fs';
 import path from 'path';
 import { getDb } from '../db';
-import { conversations, messages as dbMessages, users, propertyMatches, properties, requirements } from '../../drizzle/schema';
+import { conversations, messages as dbMessages, users, propertyMatches, properties, requirements, pendingSessions } from '../../drizzle/schema';
 import { eq, and } from 'drizzle-orm';
 import { esDominioPermitido, scrapePropertyLink } from './scraper';
 import QRCode from 'qrcode';
@@ -83,6 +83,44 @@ export class JaniaMatchBot {
 
     this.loadCooldowns();
     this.setupGracefulShutdown();
+    this.startDbHeartbeat();
+  }
+
+  private startDbHeartbeat() {
+    // Initial status update
+    this.updateStatusInDb().catch(err => console.error("[JANIA-MATCH-DB] Error in initial status update:", err));
+
+    // Send heartbeat every 30 seconds
+    setInterval(() => {
+      this.updateStatusInDb().catch(err => console.error("[JANIA-MATCH-DB] Error in heartbeat status update:", err));
+    }, 30000);
+  }
+
+  public async updateStatusInDb() {
+    try {
+      const db = await getDb();
+      if (!db) return;
+
+      const phone = this.sock?.user?.id ? this.sock.user.id.split('@')[0].split(':')[0] : null;
+
+      await db
+        .insert(pendingSessions)
+        .values({
+          jid: "system:bot_status",
+          sessionData: { isReady: this.isReady, phone, updatedAt: new Date().toISOString() },
+          createdAt: new Date(),
+        })
+        .onConflictDoUpdate({
+          target: pendingSessions.jid,
+          set: {
+            sessionData: { isReady: this.isReady, phone, updatedAt: new Date().toISOString() },
+          },
+        });
+      
+      console.log(`[JANIA-MATCH-DB] Bot status heartbeat updated: isReady=${this.isReady}, phone=${phone}`);
+    } catch (err: any) {
+      console.error("[JANIA-MATCH-DB] Failed to update bot status in DB:", err.message);
+    }
   }
 
   public async initialize() {
@@ -178,6 +216,7 @@ export class JaniaMatchBot {
         
         console.warn(`[JANIA-MATCH] ⚠️ Conexión Baileys cerrada (código: ${statusCode}): ${error?.message || error}. Reconectando en ${delayMs}ms: ${shouldReconnect}`);
         this.isReady = false;
+        this.updateStatusInDb().catch(err => console.error("[JANIA-MATCH-DB] Error updating status on close:", err));
 
         if (shouldReconnect) {
           setTimeout(() => this.initialize(), delayMs);
@@ -191,6 +230,7 @@ export class JaniaMatchBot {
       } else if (connection === 'open') {
         console.log('\n🚀 JANIA MATCH🔌💘 — BOT DE ESCUCHA Y MATCHES ACTIVADO CORRECTAMENTE CON BAILEYS');
         this.isReady = true;
+        this.updateStatusInDb().catch(err => console.error("[JANIA-MATCH-DB] Error updating status on open:", err));
       }
     });
 
