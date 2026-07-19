@@ -545,7 +545,10 @@ export const janIARouter = router({
     if (!db) return { isReady: false, phone: null, todayProperties: 0, todayRequirements: 0 };
     
     try {
-      const { janiaMatchBot } = await import('../_core/whatsapp-match');
+      // Use the global singleton registered by JaniaMatchBot constructor.
+      // The dynamic import can return a stale/different object in the compiled bundle;
+      // global is always the live instance.
+      const bot = (global as any).janiaMatchBotInstance;
       
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -561,8 +564,8 @@ export const janIARouter = router({
         .where(sql`${requirements.createdAt} >= ${today}`);
 
       return {
-        isReady: janiaMatchBot?.isReady || false,
-        phone: janiaMatchBot?.sock?.user?.id ? janiaMatchBot.sock.user.id.split('@')[0].split(':')[0] : null,
+        isReady: bot?.isReady || false,
+        phone: bot?.sock?.user?.id ? bot.sock.user.id.split('@')[0].split(':')[0] : null,
         todayProperties: propTodayCount?.count || 0,
         todayRequirements: reqTodayCount?.count || 0
       };
