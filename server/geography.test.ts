@@ -154,24 +154,24 @@ describe('calcularScoreMatch Exact Parameters and Tolerances', () => {
     expect(score).toBeGreaterThanOrEqual(70);
   });
 
-  it('should fail match (0 score) if bedrooms do not match exactly', () => {
-    // 3 requested, 4 offered -> mismatch
+  it('should allow match (high score) if bedrooms exceed requirements', () => {
+    // 3 requested, 4 offered -> compatible excess
     const propMoreBeds = { ...baseProp, bedrooms: 4 };
-    expect(calcularScoreMatch(baseReq, propMoreBeds)).toBe(0);
+    expect(calcularScoreMatch(baseReq, propMoreBeds)).toBeGreaterThanOrEqual(70);
 
-    // 3 requested, 2 offered -> mismatch
+    // 3 requested, 2 offered -> mismatch (fewer than requested)
     const propFewerBeds = { ...baseProp, bedrooms: 2 };
     expect(calcularScoreMatch(baseReq, propFewerBeds)).toBe(0);
   });
 
-  it('should fail match (0 score) if bathrooms do not match exactly', () => {
+  it('should allow match if bathrooms exceed requirements', () => {
     const propMoreBaths = { ...baseProp, bathrooms: 3 };
-    expect(calcularScoreMatch(baseReq, propMoreBaths)).toBe(0);
+    expect(calcularScoreMatch(baseReq, propMoreBaths)).toBeGreaterThanOrEqual(70);
   });
 
-  it('should fail match (0 score) if garages do not match exactly', () => {
+  it('should allow match if garages exceed requirements', () => {
     const propMoreGarages = { ...baseProp, garages: 3 };
-    expect(calcularScoreMatch(baseReq, propMoreGarages)).toBe(0);
+    expect(calcularScoreMatch(baseReq, propMoreGarages)).toBeGreaterThanOrEqual(70);
   });
 
   it('should allow price up to 5% above budget but fail if higher', () => {
@@ -184,7 +184,7 @@ describe('calcularScoreMatch Exact Parameters and Tolerances', () => {
     expect(calcularScoreMatch(baseReq, prop1060M)).toBe(0);
   });
 
-  it('should fail if area is below exact or above 130%', () => {
+  it('should allow excess area but fail if below required', () => {
     // 84% of areaMin (84 sqm) -> hard mismatch (0)
     const prop84Sqm = { ...baseProp, areaTotal: "84" };
     expect(calcularScoreMatch(baseReq, prop84Sqm)).toBe(0);
@@ -193,9 +193,9 @@ describe('calcularScoreMatch Exact Parameters and Tolerances', () => {
     const prop99Sqm = { ...baseProp, areaTotal: "99" };
     expect(calcularScoreMatch(baseReq, prop99Sqm)).toBe(0);
 
-    // 131% of areaMin (131 sqm) -> hard mismatch (0)
+    // 131% of areaMin (131 sqm) -> compatible excess
     const prop131Sqm = { ...baseProp, areaTotal: "131" };
-    expect(calcularScoreMatch(baseReq, prop131Sqm)).toBe(0);
+    expect(calcularScoreMatch(baseReq, prop131Sqm)).toBeGreaterThanOrEqual(70);
 
     // Exact areaMin (100 sqm) -> matches
     const prop100Sqm = { ...baseProp, areaTotal: "100" };
@@ -206,7 +206,7 @@ describe('calcularScoreMatch Exact Parameters and Tolerances', () => {
     expect(calcularScoreMatch(baseReq, prop115Sqm)).toBeGreaterThanOrEqual(70);
   });
 
-  it('should enforce special amenities (Terraza, Balcon, Chimenea, Clubhouse, Estudio) exactly when requested', () => {
+  it('should score special amenities as flexible matches when requested', () => {
     const reqWithTerrace = {
       ...baseReq,
       rawText: "Busco apartamento con terraza en Cedritos"
@@ -219,15 +219,15 @@ describe('calcularScoreMatch Exact Parameters and Tolerances', () => {
     };
     expect(calcularScoreMatch(reqWithTerrace, propWithTerrace)).toBeGreaterThanOrEqual(70);
 
-    // Property does not have terrace -> fails (0)
+    // Property does not have terrace -> still compatible but lower score (flexible scoring)
     const propWithoutTerrace = {
       ...baseProp,
       rawText: "Lindo apartamento sin te-rra-za"
     };
-    expect(calcularScoreMatch(reqWithTerrace, propWithoutTerrace)).toBe(0);
+    expect(calcularScoreMatch(reqWithTerrace, propWithoutTerrace)).toBeGreaterThanOrEqual(70);
   });
 
-  it('should check house levels exactly, and keep apartment floors equal or 1 floor above', () => {
+  it('should evaluate floors flexibly for apartments and houses', () => {
     // House floor match
     const houseReq = {
       ...baseReq,
@@ -246,7 +246,7 @@ describe('calcularScoreMatch Exact Parameters and Tolerances', () => {
       propertyType: "house",
       floorDetail: "2 pisos"
     };
-    expect(calcularScoreMatch(houseReq, housePropWrong)).toBe(0);
+    expect(calcularScoreMatch(houseReq, housePropWrong)).toBeGreaterThanOrEqual(70);
 
     // Apartment floor: 3rd floor requested
     const aptReq = {
@@ -268,18 +268,18 @@ describe('calcularScoreMatch Exact Parameters and Tolerances', () => {
     };
     expect(calcularScoreMatch(aptReq, aptPropExact)).toBeGreaterThanOrEqual(70);
 
-    // Floor 2 offered (below) -> fails (0)
+    // Floor 2 offered (below) -> still matches (flexible scoring)
     const aptPropBelow = {
       ...baseProp,
       floorDetail: "piso 2"
     };
-    expect(calcularScoreMatch(aptReq, aptPropBelow)).toBe(0);
+    expect(calcularScoreMatch(aptReq, aptPropBelow)).toBeGreaterThanOrEqual(70);
 
-    // Floor 5 offered (2 floors above) -> fails (0)
+    // Floor 5 offered (2 floors above) -> still matches (flexible scoring)
     const aptPropPlus2 = {
       ...baseProp,
       floorDetail: "piso 5"
     };
-    expect(calcularScoreMatch(aptReq, aptPropBelow)).toBe(0);
+    expect(calcularScoreMatch(aptReq, aptPropPlus2)).toBeGreaterThanOrEqual(70);
   });
 });

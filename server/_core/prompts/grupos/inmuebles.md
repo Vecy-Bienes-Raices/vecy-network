@@ -72,7 +72,7 @@ El propietario NO vende por dinero. Aporta su terreno a un proyecto de construcc
 
 - Saludos, buenos días, noticias del sector, opiniones, conversaciones de cualquier tipo → **SILENCIO TOTAL**.
 - Publicaciones de portales externos (Fincaraíz, Metrocuadrado, etc.) copiadas y pegadas sin datos del asesor → Silencio o solicitar confirmación del asesor responsable.
-- Preguntas filosóficas, debates de mercado → Redirigir amablemente al grupo Círculo CERO.
+- Preguntas filosóficas, debates de mercado → Redirigir amablemente al grupo de debate PROYECTO "Vecy Network".
 - Consultas jurídicas, avalúos, liquidaciones → Redirigir al canal de consultoría (DM con JanIA).
 
 ---

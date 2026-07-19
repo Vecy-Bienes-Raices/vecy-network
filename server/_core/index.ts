@@ -16,6 +16,7 @@ import path from "path";
 import { transcribeAudioBuffer } from "./voiceTranscription";
 import { invokeLLM } from "./llm";
 import { janiaMatchBot as whatsappBot, janiaMatchBot } from "./whatsapp-match";
+import "./notification";
 
 process.on("uncaughtException", (error) => {
   console.error("[SYSTEM-CRITICAL] Uncaught Exception detectada:", error);
@@ -488,7 +489,7 @@ async function startServer() {
       const groups = [
         { name: "VECY INMUEBLES NETWORK", id: targetGroupId },
         { name: "VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS", id: buzonGroupId },
-        { name: "Círculo CERO", id: circuloGroupId }
+        { name: process.env.GROUP_ZERO_NAME || 'PROYECTO "Vecy Network"', id: circuloGroupId }
       ];
 
       const results = [];

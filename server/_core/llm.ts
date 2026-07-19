@@ -92,6 +92,7 @@ async function invokeGemini(
           topK: 40,
           maxOutputTokens: 4096,
           responseMimeType: responseFormat?.type === "json_object" ? "application/json" : "text/plain",
+          responseSchema: responseFormat?.schema || undefined,
         }
       };
 

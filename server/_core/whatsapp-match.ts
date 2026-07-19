@@ -584,6 +584,16 @@ export class JaniaMatchBot {
     const chatId = senderId;
     const body = combinedBody;
 
+    // Interceptar confirmaciones de Match (SÍ #M123 o NO #M123) para cualquier usuario (Double Opt-In)
+    const matchConfirmationRegex = /^\s*(sí|si|no)\s+#m(\d+)\s*$/i;
+    const matchConfirm = body.match(matchConfirmationRegex);
+    if (matchConfirm) {
+      const decision = matchConfirm[1].toLowerCase();
+      const matchId = parseInt(matchConfirm[2], 10);
+      await this.processMatchConfirmation(senderId, userName, matchId, decision);
+      return;
+    }
+
     if (!isAdmin) {
       const textLower = body.toLowerCase();
       const isPossibleListing = 
@@ -642,15 +652,6 @@ export class JaniaMatchBot {
 
     // --- FLUJO ADMINISTRADOR O BYPASS DE TEST ---
     console.log(`[JANIA-MATCH] [Admin/Test] Atendiendo mensaje de admin/test ${senderId}...`);
-    // Interceptar confirmaciones de Match (SÍ #M123 o NO #M123)
-    const matchConfirmationRegex = /^\s*(sí|si|no)\s+#m(\d+)\s*$/i;
-    const matchConfirm = body.match(matchConfirmationRegex);
-    if (matchConfirm) {
-      const decision = matchConfirm[1].toLowerCase();
-      const matchId = parseInt(matchConfirm[2], 10);
-      await this.processMatchConfirmation(senderId, userName, matchId, decision);
-      return;
-    }
 
     // Por defecto chatea libremente con administrador o cuenta de test
     await this.logToDb(senderId, 'user', body);
@@ -739,7 +740,7 @@ export class JaniaMatchBot {
           textLower.includes('eduardo');
 
         if (isOffTopicLegal || isOffTopicCirculo) {
-          const groupName = isOffTopicLegal ? 'VECY: SOPORTE LEGAL, TRIBUTARIO Y AVALÚOS' : 'Círculo CERO 👌';
+          const groupName = isOffTopicLegal ? 'VECY: SOPORTE LEGAL, TRIBUTARIO Y AVALÚOS' : (process.env.GROUP_ZERO_NAME || 'PROYECTO "Vecy Network"');
           const redirectMsg =
             `Hola ${realName} 👋🏻, veo que tu consulta es sobre ${isOffTopicLegal ? 'temas jurídicos, tributarios o de avalúos' : 'el funcionamiento de VECY Network y JanIA'}. ¡Perfecto! 🎯\n\n` +
             `Ese tipo de preguntas las atiendo con más profundidad en el grupo *${groupName}* de nuestra comunidad de WhatsApp. 🏠\n\n` +

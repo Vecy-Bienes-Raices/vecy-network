@@ -16,7 +16,7 @@ import axios from "axios";
 
 
 export type JanIAResult = {
-  classification: "INMUEBLE" | "REQUERIMIENTO" | "CONSULTA_GENERAL" | "RESPUESTA_A_PREGUNTA_IA" | "DATOS_INCOMPLETOS" | "VIOLACION_DE_NORMAS" | "ANALISIS_DE_MERCADO";
+  classification: "INMUEBLE" | "REQUERIMIENTO" | "CONSULTA_GENERAL" | "RESPUESTA_A_PREGUNTA_IA" | "DATOS_INCOMPLETOS" | "VIOLACION_DE_NORMAS" | "ANALISIS_DE_MERCADO" | "RESPUESTA_A_BURLA";
   extractedData?: any;
   missingFields?: string[];
   response: string;      // Respuesta para el grupo (Silencio de Oro si no hay match)
@@ -30,6 +30,106 @@ export type JanIAResult = {
   voiceResponse?: string;
   sendReputationHook?: boolean;
   inserted?: boolean;
+};
+
+export const janiaResultSchema = {
+  type: "OBJECT",
+  properties: {
+    classification: {
+      type: "STRING",
+      enum: [
+        "INMUEBLE",
+        "REQUERIMIENTO",
+        "CONSULTA_GENERAL",
+        "RESPUESTA_A_PREGUNTA_IA",
+        "DATOS_INCOMPLETOS",
+        "VIOLACION_DE_NORMAS",
+        "ANALISIS_DE_MERCADO",
+        "RESPUESTA_A_BURLA"
+      ]
+    },
+    response: { type: "STRING" },
+    dmResponse: { type: "STRING" },
+    shouldSendDM: { type: "BOOLEAN" },
+    dmShouldReply: { type: "BOOLEAN" },
+    reactionEmoji: { type: "STRING" },
+    wantsVoice: { type: "BOOLEAN" },
+    voiceResponse: { type: "STRING" },
+    missingFields: {
+      type: "ARRAY",
+      items: { type: "STRING" }
+    },
+    extractedData: {
+      type: "OBJECT",
+      properties: {
+        title: { type: "STRING" },
+        gives: {
+          type: "OBJECT",
+          properties: {
+            item: { type: "STRING" },
+            details: { type: "STRING" }
+          }
+        },
+        wants: {
+          type: "OBJECT",
+          properties: {
+            item: { type: "STRING" },
+            details: { type: "STRING" }
+          }
+        },
+        price: { type: "NUMBER" },
+        zone: { type: "STRING" },
+        city: { type: "STRING" },
+        propertyType: {
+          type: "STRING",
+          enum: ["apartment", "house", "building", "warehouse", "office", "farm", "loft", "consultorio"]
+        },
+        transactionType: {
+          type: "STRING",
+          enum: ["venta", "arriendo", "arriendo_temporal", "permuta", "aporte"]
+        },
+        transactionTypes: {
+          type: "ARRAY",
+          items: { type: "STRING" }
+        },
+        area: { type: "NUMBER" },
+        bedrooms: { type: "NUMBER" },
+        bathrooms: { type: "NUMBER" },
+        garages: { type: "NUMBER" },
+        stratum: { type: "NUMBER" },
+        adminFee: { type: "NUMBER" },
+        isCollaborativePool: { type: "BOOLEAN" },
+        interiorExterior: {
+          type: "STRING",
+          enum: ["interior", "exterior", "NA"]
+        },
+        cuartoBanoServicio: {
+          type: "STRING",
+          enum: ["Si", "No", "NA"]
+        },
+        cocina: {
+          type: "STRING",
+          enum: ["cerrada", "abierta", "americana", "NA"]
+        },
+        lavanderiaIndependiente: {
+          type: "STRING",
+          enum: ["Si", "No", "NA"]
+        },
+        tipoPisos: {
+          type: "ARRAY",
+          items: { type: "STRING" }
+        },
+        depositos: { type: "NUMBER" },
+        comisiones: { type: "STRING" },
+        antiguedad: {
+          type: "STRING",
+          enum: ["nuevo", "1-5", "5-10", "10+", "NA"]
+        },
+        floorDetail: { type: "STRING" }
+      }
+    }
+  },
+  required: ["classification", "response"]
 };
 
 const COMMON_FIRST_NAMES = new Set([
@@ -1219,7 +1319,7 @@ export async function processWhatsAppMessage(
             groupRulesName = "VECY: SOPORTE LEGAL, TRIBUTARIO Y AVALÚOS";
             acceptedTopics = "consultas jurídicas, contratos, arrendamientos, tributación y avalúos de inmuebles";
           } else if (jid === '120363403507276533@g.us') {
-            groupRulesName = "Círculo CERO 👌";
+            groupRulesName = process.env.GROUP_ZERO_NAME || 'PROYECTO "Vecy Network"';
             acceptedTopics = "temas de debate, soporte y sugerencias sobre el ecosistema VECY Network";
           } else {
             groupRulesName = "VECY INMUEBLES NETWORK";
@@ -1412,7 +1512,7 @@ Por lo tanto, DEBES hacer lo siguiente:
 
     const response = await invokeLLM({
       messages: llmMessages,
-      responseFormat: { type: "json_object" },
+      responseFormat: { type: "json_object", schema: janiaResultSchema },
       imageBuffer,
       pdfBuffer,
       pdfMimeType,
@@ -1540,43 +1640,10 @@ Por lo tanto, DEBES hacer lo siguiente:
         isRequirement = true;
       }
 
-      const firstName = extractFirstName(realName) || 'colega';
-      const saludo = getGreetingByTime();
-      const customIntro = `¡${saludo}, *${firstName}*! 😊 `;
-
-      // Generar el mensaje de DM privado por si acaso (ej. si el usuario es conocido y se decide moderación privada)
-      result.dmResponse = buildIncompleteDataMessage(
-        messageToProcess,
-        hasMedia,
-        scrapedData,
-        imageBuffer,
-        pdfBuffer,
-        extracted,
-        false,
-        customIntro,
-        firstName
-      );
-
-      if (isGroup) {
-        // En el grupo se publica una advertencia pública etiquetando al usuario y dándole un link para opt-in por interno
-        result.response = buildGroupIncompleteMessage(messageToProcess, userId, extracted);
-        result.shouldSendDM = false;
-      } else {
-        // En chat privado (DM) se le asiste de forma directa preguntando por los datos faltantes
-        result.shouldSendDM = true;
-        result.dmShouldReply = true;
-        result.response = "";
-      }
-
-      await setPendingSession(userId, {
-        type: inferredType,
-        extractedData: extracted || {},
-        senderInfo: senderInfo,
-        messageToProcess: messageToProcess,
-        imageBuffer
-      });
-
-      // No retornamos temprano, permitimos que se guarde el registro en la BD
+      // Principio de Mínima Intervención (VRIF): JanIA observa silenciosamente
+      result.shouldSendDM = false;
+      result.dmResponse = "";
+      result.response = "";
     }
 
     // --- CAPA DE DEFENSA GEOGRÁFICA NACIONAL (Elástica) ---
@@ -1592,44 +1659,10 @@ Por lo tanto, DEBES hacer lo siguiente:
       }
       
       if (!isValidGeo) {
-        if (isGroup || groupJid || isLLMIncomplete) {
-          isValidGeo = true;
-          if (!result.missingFields) result.missingFields = [];
-          if (!result.missingFields.includes("zone")) result.missingFields.push("zone");
-        } else {
-          result.classification = "DATOS_INCOMPLETOS";
-          result.shouldSendDM = true;
-          result.dmShouldReply = true;
-          result.response = "";
-
-          const inferredType = isProperty ? "PROPERTY" : "REQUIREMENT";
-          
-          const firstName = extractFirstName(realName) || 'colega';
-          const saludo = getGreetingByTime();
-          const customIntro = `¡${saludo}, *${firstName}*! 😊 `;
-
-          result.dmResponse = buildIncompleteDataMessage(
-            messageToProcess,
-            hasMedia,
-            scrapedData,
-            imageBuffer,
-            pdfBuffer,
-            extracted,
-            true,
-            customIntro,
-            firstName
-          );
-
-          await setPendingSession(userId, {
-            type: inferredType,
-            extractedData: extracted || {},
-            senderInfo: senderInfo,
-            messageToProcess: messageToProcess,
-            imageBuffer
-          });
-
-          return result;
-        }
+        // En modo sensor silencioso, se admite la geografía no validada marcándola en missingFields y continuando
+        isValidGeo = true;
+        if (!result.missingFields) result.missingFields = [];
+        if (!result.missingFields.includes("zone")) result.missingFields.push("zone");
       }
 
       const validation = geoValidation;
@@ -1826,10 +1859,11 @@ Por lo tanto, DEBES hacer lo siguiente:
           textLower.includes("competidor") || 
           textLower.includes("competencia");
           
+        const groupZeroName = process.env.GROUP_ZERO_NAME || 'PROYECTO "Vecy Network"';
         if (isCompetitorQuery) {
-          result.response = `👌 *CÍRCULO CERO — DEBATE Y COMUNIDAD* 👌\n\n${greetingPrefix}, detecté una mención a plataformas competidoras o comparativas de servicios. Para mantener este canal enfocado exclusivamente en ofertas y requerimientos, te invito a plantear tus preguntas, comparar beneficios o participar en el debate en nuestro canal oficial **Círculo CERO 👌**:\n👉 https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU\n\n¡Allí debatimos abiertamente con total transparencia y profesionalismo! 🤝✨`;
+          result.response = `👌 *${groupZeroName.toUpperCase()} — DEBATE Y COMUNIDAD* 👌\n\n${greetingPrefix}, detecté una mención a plataformas competidoras o comparativas de servicios. Para mantener este canal enfocado exclusivamente en ofertas y requerimientos, te invito a plantear tus preguntas, comparar beneficios o participar en el debate en nuestro canal oficial **${groupZeroName}**:\n👉 https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU\n\n¡Allí debatimos abiertamente con total transparencia y profesionalismo! 🤝✨`;
         } else {
-          result.response = `👌 *CÍRCULO CERO — CONEXIÓN VECY* 👌\n\n${greetingPrefix}, veo que tienes dudas o quieres saber más sobre el proyecto VECY Network, beneficios, creadores o el plan colaborativo. Te invito a unirte y hacer tus preguntas en nuestro canal oficial **Círculo CERO 👌**:\n👉 https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU\n\n¡Es el espacio ideal para resolver todas tus inquietudes de la comunidad! 🤝✨`;
+          result.response = `👌 *${groupZeroName.toUpperCase()} — CONEXIÓN VECY* 👌\n\n${greetingPrefix}, veo que tienes dudas o quieres saber más sobre el proyecto VECY Network, beneficios, creadores o el plan colaborativo. Te invito a unirte y hacer tus preguntas en nuestro canal oficial **${groupZeroName}**:\n👉 https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU\n\n¡Es el espacio ideal para resolver todas tus inquietudes de la comunidad! 🤝✨`;
         }
       } else {
         result.response = `💡 *VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS* 💡\n\n${greetingPrefix}, veo que tienes una consulta jurídica, procedimental o de avalúo. Para darte una respuesta detallada con mis motores legales y de mercado sin saturar este canal de ofertas y requerimientos, te invito a realizar tu pregunta en nuestro grupo especializado **VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS**:\n👉 https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6\n\n¡Allí te responderé al instante con toda la información! 🚀🎯`;
@@ -2035,14 +2069,21 @@ export function calcularCalificacionCompletitud(extracted: any, isProperty: bool
 
 export function getEmojiForCalificacion(calificacion?: string): string {
   switch (calificacion) {
-    case "Mediocre": return "✔️";
-    case "Incompleta": return "☑️";
-    case "Regular": return "✅";
-    case "Mejor": return "🆗";
-    case "Bien": return "👍";
-    case "Perfecta": return "👌";
-    case "Excelente": return "💖";
-    default: return "👍";
+    case "Mediocre":
+    case "Incompleta":
+    case "DATOS_INCOMPLETOS":
+      return "🤔";
+    case "Regular":
+    case "Mejor":
+    case "Bien":
+    case "Perfecta":
+    case "Excelente":
+      return "🟢";
+    case "INVALID_LEAD":
+    case "VIOLACION_DE_NORMAS":
+      return "❌";
+    default:
+      return "🟢";
   }
 }
 
@@ -2777,8 +2818,9 @@ export async function processCirculoMessage(
 
     const alreadyGreeted = await checkAlreadyGreeted(userId);
 
+    const groupZeroName = process.env.GROUP_ZERO_NAME || 'PROYECTO "Vecy Network"';
     const systemPrompt = 
-      `Eres JanIA, la Inteligencia Artificial oficial de VECY Network. Estás operando en el grupo "Círculo CERO 👌". ` +
+      `Eres JanIA, la Inteligencia Artificial oficial de VECY Network. Estás operando en el grupo "${groupZeroName}". ` +
       `Tu objetivo en este grupo es responder inquietudes exclusivamente relacionadas con el proyecto "VECY NETWORK", de forma sincera, verídica y sin mentiras, de acuerdo con las siguientes directrices:\n\n` +
       `## DIRECTRICES DE INFORMACIÓN Y SINCERIDAD SOBRE VECY NETWORK:\n` +
       `Explica claramente y con la verdad absoluta el estado del proyecto y sus características:\n` +

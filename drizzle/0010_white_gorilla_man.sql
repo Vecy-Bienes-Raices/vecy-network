@@ -1,0 +1,1 @@
+ALTER TABLE "propertyMatches" ADD COLUMN "matchExplanation" jsonb;

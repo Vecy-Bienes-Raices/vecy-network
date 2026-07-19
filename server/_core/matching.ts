@@ -169,18 +169,133 @@ export function matchesGeography(
   return { matches: false, score: 0 };
 }
 
-export function calcularScoreMatch(requirement: any, property: any): number {
-  // 1. REGLAS DE FILTRADO ESTRICTO (HARD FILTERS - 0% MATCH SI NO CUMPLEN)
+import { vrifEvents } from "./events";
+
+export interface MatchExplanation {
+  score: number;
+  blockers: string[];
+  positives: string[];
+  negatives: string[];
+  confidence: number;
+  generatedAt: string;
+  engineVersion: string; // VRIF Engine Version (e.g. VRIF-2.0)
+  ipc?: MatchIpc;
+}
+
+export interface MatchIpc {
+  score: number;
+  factors: {
+    matching: number;
+    freshness: number;
+    brokerTrust: number;
+    dataQuality: number;
+    marketDemand: number;
+  };
+  generatedAt: string;
+  version: string;
+}
+
+export function calcularIPC(requirement: any, property: any, matchScore: number): MatchIpc {
+  // 1. Matching
+  const matching = Math.round(matchScore);
+
+  // 2. Freshness (Recencia)
+  const propAgeDays = Math.max(0, (Date.now() - new Date(property.createdAt || new Date()).getTime()) / (1000 * 60 * 60 * 24));
+  const reqAgeDays = Math.max(0, (Date.now() - new Date(requirement.createdAt || new Date()).getTime()) / (1000 * 60 * 60 * 24));
+  
+  const getAgeFactor = (days: number) => {
+    if (days <= 3) return 100;
+    if (days <= 7) return 90;
+    if (days <= 15) return 75;
+    if (days <= 30) return 55;
+    return 30;
+  };
+  const freshness = Math.round((getAgeFactor(propAgeDays) + getAgeFactor(reqAgeDays)) / 2);
+
+  // 3. Broker Trust (Confianza)
+  const propBrokerHasInfo = property.idUsuarioWhatsapp ? 90 : 70;
+  const reqBrokerHasInfo = requirement.idUsuarioWhatsapp ? 90 : 70;
+  const brokerTrust = Math.round((propBrokerHasInfo + reqBrokerHasInfo) / 2);
+
+  // 4. Data Quality (Completitud)
+  const getCompletitud = (item: any, isProp: boolean) => {
+    let fields = 6;
+    let present = 0;
+    const priceVal = isProp ? item.price : (item.presupuestoMax || item.presupuestoMin);
+    if (priceVal && parseFloat(String(priceVal)) > 0) present++;
+    const areaVal = isProp ? item.areaTotal : item.areaMin;
+    if (areaVal && parseFloat(String(areaVal)) > 0) present++;
+    const bedVal = isProp ? item.bedrooms : item.habitacionesMin;
+    if (bedVal && Number(bedVal) > 0) present++;
+    const bathVal = isProp ? item.bathrooms : item.banosMin;
+    if (bathVal && Number(bathVal) > 0) present++;
+    const zoneVal = isProp ? item.zone : item.zonaDeseada;
+    if (zoneVal && zoneVal.trim() !== "" && zoneVal !== "NA") present++;
+    if (item.idUsuarioWhatsapp) present++;
+    return Math.round((present / fields) * 100);
+  };
+  const dataQuality = Math.round((getCompletitud(property, true) + getCompletitud(requirement, false)) / 2);
+
+  // 5. Market Demand (Precio / Demanda)
+  const priceNum = parseFloat(String(property.price || "0"));
+  let marketDemand = 70;
+  if (priceNum > 0) {
+    if (priceNum <= 300_000_000) marketDemand = 95;
+    else if (priceNum <= 600_000_000) marketDemand = 85;
+    else if (priceNum <= 1_200_000_000) marketDemand = 75;
+    else marketDemand = 60;
+  }
+
+  // Weight formula: IPC = 40% matching + 20% freshness + 10% brokerTrust + 20% dataQuality + 10% marketDemand
+  const finalScore = Math.round(
+    (matching * 0.4) +
+    (freshness * 0.2) +
+    (brokerTrust * 0.1) +
+    (dataQuality * 0.2) +
+    (marketDemand * 0.1)
+  );
+
+  return {
+    score: finalScore,
+    factors: {
+      matching,
+      freshness,
+      brokerTrust,
+      dataQuality,
+      marketDemand
+    },
+    generatedAt: new Date().toISOString(),
+    version: "VRIF-2.0"
+  };
+}
+
+function buildExplanationResult(score: number, blockers: string[], positives: string[], negatives: string[]): MatchExplanation {
+  return {
+    score,
+    blockers,
+    positives,
+    negatives,
+    confidence: 1.0,
+    generatedAt: new Date().toISOString(),
+    engineVersion: "VRIF-2.0"
+  };
+}
+
+export function explicarMatch(requirement: any, property: any): MatchExplanation {
+  const blockers: string[] = [];
+  const positives: string[] = [];
+  const negatives: string[] = [];
 
   // A. transactionType (Venta o Arriendo)
   const reqBiz = (requirement.tipoNegocioDeseado || requirement.transactionType || "").toLowerCase();
   const propBiz = (property.transactionType || "").toLowerCase();
   if (!reqBiz || !propBiz || reqBiz !== propBiz) {
-    return 0;
+    blockers.push(`Incompatibilidad de negocio: deseado ${reqBiz}, ofrecido ${propBiz}`);
+    return buildExplanationResult(0, blockers, positives, negatives);
   }
+  positives.push(`Tipo de negocio coincide: ${reqBiz}`);
 
-  // B. city (Ciudad) — usamos addressCity como fuente primaria si existe,
-  // ya que el campo city a veces contiene el barrio en vez de la ciudad.
+  // B. city (Ciudad)
   const CIUDADES_CO = ["bogota", "medellin", "cali", "barranquilla", "cartagena",
     "bucaramanga", "pereira", "manizales", "cucuta", "ibague", "santa marta",
     "villavicencio", "pasto", "monteria", "valledupar", "sincelejo", "chia",
@@ -189,28 +304,18 @@ export function calcularScoreMatch(requirement: any, property: any): number {
   const resolveCityField = (raw1: string, raw2: string): string => {
     const n1 = normalizarTextoGeografico(raw1 || "");
     const n2 = normalizarTextoGeografico(raw2 || "");
-    // Preferir el que coincide con alguna ciudad colombiana conocida
     if (CIUDADES_CO.some(c => n1.includes(c) || n1 === c)) return n1;
     if (CIUDADES_CO.some(c => n2.includes(c) || n2 === c)) return n2;
-    return n1 || n2; // fallback: usar el primero disponible
+    return n1 || n2;
   };
 
   const reqCity = resolveCityField(requirement.ciudadDeseada || "", requirement.city || "");
   const propCity = resolveCityField(property.addressCity || "", property.city || "");
   if (!reqCity || !propCity || reqCity !== propCity) {
-    return 0;
+    blockers.push(`Incompatibilidad de ciudad: deseada ${reqCity}, ofrecida ${propCity}`);
+    return buildExplanationResult(0, blockers, positives, negatives);
   }
-
-
-  // ==========================================================================
-  // REGLAS VECY CORE v13 — Motor de Afinidad Comercial
-  // Definidas por Eduardo Alves (Fundador VECY) — Julio 2026
-  //
-  // FILTROS DUROS (obligatorios al 100%): tipo, negocio (ya verificado), ciudad (ya verificada), zona, estrato
-  // COMPLEMENTARIOS: precio ±5%, área >= requerida (hasta +20m²), habitaciones exactas o +1,
-  //                  baños >= requeridos, parqueaderos >= requeridos
-  // Score final: 60 pts base (filtros duros OK) + hasta 40 pts complementarios = 100 máximo
-  // ==========================================================================
+  positives.push(`Ciudad coincide: ${reqCity}`);
 
   const price       = parseFloat(String(property.price || "0"));
   const budgetMax   = parseFloat(String(requirement.presupuestoMax || "0"));
@@ -228,8 +333,8 @@ export function calcularScoreMatch(requirement: any, property: any): number {
   const pGarages    = property.garages    != null ? Number(property.garages)    : -1;
   const reqGarages  = requirement.parqueaderosMin != null ? Number(requirement.parqueaderosMin) : -1;
 
-  const pAdminFee   = property.adminFee   != null ? parseFloat(String(property.adminFee))   : -1; // -1 = N/A
-  const reqAdminMax = requirement.adminFeeMax != null ? parseFloat(String(requirement.adminFeeMax)) : -1; // -1 = sin restricción
+  const pAdminFee   = property.adminFee   != null ? parseFloat(String(property.adminFee))   : -1;
+  const reqAdminMax = requirement.adminFeeMax != null ? parseFloat(String(requirement.adminFeeMax)) : -1;
 
   const pEstrato    = property.stratum    != null ? Number(property.stratum)    :
                       property.estrato    != null ? Number(property.estrato)    : -1;
@@ -243,7 +348,7 @@ export function calcularScoreMatch(requirement: any, property: any): number {
   const reqLoc   = normalizarTextoGeografico(requirement.addressLocality || "");
   const propLoc  = normalizarTextoGeografico(property.addressLocality || "");
 
-  // ── FILTRO DURO 1: Tipo de inmueble — 100% obligatorio ──
+  // ── FILTRO DURO 1: Tipo de inmueble ──
   if (reqType && propType) {
     const aliases: Record<string, string[]> = {
       "apartamento": ["apto", "apartamento"],
@@ -259,10 +364,14 @@ export function calcularScoreMatch(requirement: any, property: any): number {
     };
     const reqAlias  = aliases[reqType]  || [reqType];
     const propAlias = aliases[propType] || [propType];
-    if (!reqAlias.some(a => propAlias.includes(a))) return 0;
+    if (!reqAlias.some(a => propAlias.includes(a))) {
+      blockers.push(`Tipo de activo incompatible: deseado ${reqType}, ofrecido ${propType}`);
+      return buildExplanationResult(0, blockers, positives, negatives);
+    }
   }
+  positives.push(`Tipo de activo compatible: ${propType}`);
 
-  // ── FILTRO DURO 3: Ubicación / Barrio — mismo barrio/zona si ambos lo especifican ──
+  // ── FILTRO DURO 3: Ubicación / Barrio ──
   if (reqZone && propZone) {
     const geoResult = matchesGeography(
       requirement.zonaDeseada || requirement.addressNeighborhood || "",
@@ -272,18 +381,27 @@ export function calcularScoreMatch(requirement: any, property: any): number {
       requirement.ciudadDeseada || requirement.city || "",
       property.addressCity || property.city || ""
     );
-    if (!geoResult.matches) return 0;
+    if (!geoResult.matches) {
+      blockers.push(`Ubicación incompatible: requerida zona ${requirement.zonaDeseada || ""}, ofrecida ${property.zone || ""}`);
+      return buildExplanationResult(0, blockers, positives, negatives);
+    }
+    positives.push(`Ubicación compatible en zona: ${property.zone || ""}`);
   }
 
-  // ── FILTRO DURO 4: Estrato — idéntico si ambos lo especifican ──
-  if (reqEstrato >= 1 && pEstrato >= 1 && reqEstrato !== pEstrato) return 0;
+  // ── FILTRO DURO 4: Estrato ──
+  if (reqEstrato >= 1 && pEstrato >= 1 && reqEstrato !== pEstrato) {
+    blockers.push(`Estrato incompatible: deseado ${reqEstrato}, ofrecido ${pEstrato}`);
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  if (reqEstrato >= 1) {
+    positives.push(`Estrato compatible: ${pEstrato}`);
+  }
 
-  // ── FILTROS COMPLEMENTARIOS: cada uno suma puntos. Si falla → score 0 ──
   let score = 0;
   let totalW = 0;
   let hardFail = false;
 
-  // 5. Precio: entre 95% y 105% del presupuesto máximo
+  // 5. Precio
   if (budgetMax > 0 && price > 0) {
     const low  = budgetMax * 0.95;
     const high = budgetMax * 1.05;
@@ -291,66 +409,94 @@ export function calcularScoreMatch(requirement: any, property: any): number {
     if (price >= low && price <= high && budMinOk) {
       const diff = Math.abs(price - budgetMax) / budgetMax;
       score += diff <= 0.01 ? 12 : 10;
+      positives.push(`Precio de $${price.toLocaleString()} dentro de la tolerancia del presupuesto máximo de $${budgetMax.toLocaleString()}`);
     } else {
+      blockers.push(`Precio $${price.toLocaleString()} fuera del rango de tolerancia para presupuesto $${budgetMax.toLocaleString()}`);
       hardFail = true;
     }
     totalW += 12;
   }
 
-  // 6. Área: nunca inferior al mínimo requerido, hasta +20m² ideal
+  // 6. Área
   if (reqAreaMin > 0 && propArea > 0) {
     if (propArea < reqAreaMin) {
+      blockers.push(`Área de ${propArea}m² es menor a la mínima requerida de ${reqAreaMin}m²`);
       hardFail = true;
     } else {
       const exceso = propArea - reqAreaMin;
       score += exceso <= 20 ? 10 : exceso <= 50 ? 7 : 4;
+      positives.push(`Área de ${propArea}m² es compatible con el requerimiento de ${reqAreaMin}m²`);
+      if (exceso > 50) {
+        negatives.push(`Área excede el requerimiento por más de 50m² (${exceso}m² de exceso)`);
+      }
     }
     totalW += 10;
   }
 
-  // 7. Habitaciones: exactas o una más; jamás menos
+  // 7. Habitaciones
   if (reqBedrooms >= 0 && pBedrooms >= 0) {
     if (pBedrooms < reqBedrooms) {
+      blockers.push(`Habitaciones ofrecidas (${pBedrooms}) menores a las requeridas (${reqBedrooms})`);
       hardFail = true;
     } else {
       score += pBedrooms === reqBedrooms ? 8 : pBedrooms === reqBedrooms + 1 ? 6 : 3;
+      positives.push(`Habitaciones ofrecidas (${pBedrooms}) son compatibles con las requeridas (${reqBedrooms})`);
+      if (pBedrooms > reqBedrooms + 1) {
+        negatives.push(`Habitaciones ofrecidas (${pBedrooms}) exceden las requeridas (${reqBedrooms}) por más de 1`);
+      }
     }
     totalW += 8;
   }
 
-  // 8. Baños: igual o mayor, nunca menos
+  // 8. Baños
   if (reqBathrooms >= 0 && pBathrooms >= 0) {
-    if (pBathrooms < reqBathrooms) hardFail = true;
-    else score += pBathrooms === reqBathrooms ? 5 : 4;
+    if (pBathrooms < reqBathrooms) {
+      blockers.push(`Baños ofrecidos (${pBathrooms}) menores a los requeridos (${reqBathrooms})`);
+      hardFail = true;
+    } else {
+      score += pBathrooms === reqBathrooms ? 5 : 4;
+      positives.push(`Baños ofrecidos (${pBathrooms}) son compatibles con los requeridos (${reqBathrooms})`);
+    }
     totalW += 5;
   }
 
-  // 9. Parqueaderos: igual o mayor, nunca menos
+  // 9. Parqueaderos
   if (reqGarages >= 0 && pGarages >= 0) {
-    if (pGarages < reqGarages) hardFail = true;
-    else score += pGarages === reqGarages ? 5 : 4;
+    if (pGarages < reqGarages) {
+      blockers.push(`Parqueaderos ofrecidos (${pGarages}) menores a los requeridos (${reqGarages})`);
+      hardFail = true;
+    } else {
+      score += pGarages === reqGarages ? 5 : 4;
+      positives.push(`Parqueaderos ofrecidos (${pGarages}) son compatibles con los requeridos (${reqGarages})`);
+    }
     totalW += 5;
   }
 
-  // 10. Administración mensual: el inmueble NUNCA puede superar el máximo del requiriente
-  // Si el inmueble tiene admón 0 o N/A siempre pasa (mejor para el requiriente)
-  // Si el requerimiento no especifica admón máxima, no hay restricción
+  // 10. Administración
   if (reqAdminMax >= 0 && pAdminFee > 0) {
     if (pAdminFee > reqAdminMax) {
-      hardFail = true; // Admón supera el máximo exigido
+      blockers.push(`Cuota de administración ($${pAdminFee.toLocaleString()}) supera la máxima requerida ($${reqAdminMax.toLocaleString()})`);
+      hardFail = true;
     } else {
-      // Admón dentro del rango: ms cercana al máximo = 7pts, mucho menor = 5pts
       const ratio = pAdminFee / reqAdminMax;
       score += ratio <= 1.0 && ratio >= 0.85 ? 7 : 5;
+      positives.push(`Administración de $${pAdminFee.toLocaleString()} es compatible con el máximo de $${reqAdminMax.toLocaleString()}`);
     }
     totalW += 7;
   }
 
-  if (hardFail) return 0;
+  if (hardFail) {
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
 
-  // Score final: 60 base (filtros duros OK) + proporcional complementarios (hasta 40)
   const compScore = totalW > 0 ? Math.round((score / totalW) * 40) : 40;
-  return Math.min(100, 60 + compScore);
+  const finalScore = Math.min(100, 60 + compScore);
+
+  return buildExplanationResult(finalScore, blockers, positives, negatives);
+}
+
+export function calcularScoreMatch(requirement: any, property: any): number {
+  return explicarMatch(requirement, property).score;
 }
 
 export function evaluarMatch(requirement: any, property: any): boolean {
@@ -377,7 +523,8 @@ export async function findMatchesForProperty(propertyId: number) {
     const validMatches = [];
 
     for (const req of activeRequirements) {
-      const score = calcularScoreMatch(req, property);
+      const explanation = explicarMatch(req, property);
+      const score = explanation.score;
       if (score >= 70) {
         let matchId: number;
         const existing = await db.select().from(propertyMatches).where(
@@ -386,19 +533,31 @@ export async function findMatchesForProperty(propertyId: number) {
             eq(propertyMatches.requirementId, req.id)
           )
         ).limit(1);
+        const ipcObj = calcularIPC(req, property, score);
+        explanation.ipc = ipcObj;
         if (existing.length > 0) {
           matchId = existing[0].id;
+          await db.update(propertyMatches).set({
+            matchScore: score.toFixed(2),
+            matchExplanation: explanation,
+            ipc: ipcObj,
+            createdAt: new Date()
+          }).where(eq(propertyMatches.id, matchId));
         } else {
           const [newMatch] = await db.insert(propertyMatches).values({
             propertyId: propertyId,
             requirementId: req.id,
             matchScore: score.toFixed(2),
             matchReason: `VECY CORE TS Scoring: ${score.toFixed(2)}/100`,
+            matchExplanation: explanation,
+            ipc: ipcObj,
             status: "suggested",
             ownerConfirmed: false,
             seekerConfirmed: false,
           }).returning();
           matchId = newMatch.id;
+          // Emitir evento de dominio desacoplado
+          vrifEvents.emit("match:created", matchId);
         }
 
         validMatches.push({
@@ -438,7 +597,8 @@ export async function findMatchesForRequirement(requirementId: number) {
     const validMatches = [];
 
     for (const prop of availableProperties) {
-      const score = calcularScoreMatch(req, prop);
+      const explanation = explicarMatch(req, prop);
+      const score = explanation.score;
       if (score >= 70) {
         let matchId: number;
         const existing = await db.select().from(propertyMatches).where(
@@ -447,19 +607,31 @@ export async function findMatchesForRequirement(requirementId: number) {
             eq(propertyMatches.requirementId, requirementId)
           )
         ).limit(1);
+        const ipcObj = calcularIPC(req, prop, score);
+        explanation.ipc = ipcObj;
         if (existing.length > 0) {
           matchId = existing[0].id;
+          await db.update(propertyMatches).set({
+            matchScore: score.toFixed(2),
+            matchExplanation: explanation,
+            ipc: ipcObj,
+            createdAt: new Date()
+          }).where(eq(propertyMatches.id, matchId));
         } else {
           const [newMatch] = await db.insert(propertyMatches).values({
             propertyId: prop.id,
             requirementId: requirementId,
             matchScore: score.toFixed(2),
             matchReason: `VECY CORE TS Scoring: ${score.toFixed(2)}/100`,
+            matchExplanation: explanation,
+            ipc: ipcObj,
             status: "suggested",
             ownerConfirmed: false,
             seekerConfirmed: false,
           }).returning();
           matchId = newMatch.id;
+          // Emitir evento de dominio desacoplado
+          vrifEvents.emit("match:created", matchId);
         }
 
         validMatches.push({
@@ -585,19 +757,9 @@ export async function executeMatchEngine(propertyId: number | null, requirementI
         // Si el requerimiento especifica habitaciones, el inmueble debe tenerlas
         if (rBedrooms > 0 && pBedrooms > 0 && pBedrooms < rBedrooms) continue;
 
-        // ── CÁLCULO DE SCORE ──────────────────────────────────────────────────
-        // Con todos los filtros pasados, calcular score según qué tan exactos son los datos
-        let score = 70;
-        const zonaExacta = rZone && pZone && (rZone === pZone || rZone.includes(pZone) || pZone.includes(rZone));
-        const precioExacto = price <= (budgetMax > 0 ? budgetMax : price);
-        const habitacionesExactas = rBedrooms === 0 || pBedrooms === rBedrooms;
-        const areaExacta = rAreaMin === 0 || (pArea > 0 && Math.abs(pArea - rAreaMin) / rAreaMin <= 0.05);
-
-        if (zonaExacta) score += 10;
-        if (precioExacto) score += 10;
-        if (habitacionesExactas) score += 5;
-        if (areaExacta) score += 5;
-        score = Math.min(score, 100);
+        // ── CÁLCULO DE SCORE & EXPLICACIÓN ─────────────────────────────────────
+        const explanation = explicarMatch(req, prop);
+        const score = explanation.score;
 
         // ── REGISTRO EN BASE DE DATOS ─────────────────────────────────────────
         let matchId: number;
@@ -610,11 +772,14 @@ export async function executeMatchEngine(propertyId: number | null, requirementI
           )
         ).limit(1);
 
+        const ipcObj = calcularIPC(req, prop, score);
+        explanation.ipc = ipcObj;
         if (existing.length > 0) {
           matchId = existing[0].id;
           await db.update(propertyMatches).set({
             matchScore: score.toFixed(2),
-            matchReason: `VECY Core Engine: Match estricto ${score}%`,
+            matchExplanation: explanation,
+            ipc: ipcObj,
             createdAt: new Date()
           }).where(eq(propertyMatches.id, matchId));
         } else {
@@ -624,67 +789,16 @@ export async function executeMatchEngine(propertyId: number | null, requirementI
             requirementId: req.id,
             matchScore: score.toFixed(2),
             matchReason: `VECY Core Engine: Match estricto ${score}%`,
+            matchExplanation: explanation,
+            ipc: ipcObj,
             status: "suggested",
             ownerConfirmed: false,
             seekerConfirmed: false,
           }).returning();
           matchId = newMatch.id;
-        }
-
-        // ── ALERTA PRIVADA CONFIDENCIAL A EDUARDO Y JANI ─────────────────────
-        if (isNewMatch) {
-          const [propUser] = await db.select().from(users).where(eq(users.phone, prop.idUsuarioWhatsapp || "")).limit(1);
-          const [reqUser] = await db.select().from(users).where(eq(users.phone, req.idUsuarioWhatsapp || "")).limit(1);
-
-          const ownerName = propUser?.name || prop.name || "Colega Oferente";
-          const ownerRawPhone = prop.idUsuarioWhatsapp || propUser?.phone || "";
-          const ownerPhone = cleanPhone(ownerRawPhone);
-          const ownerPhoneDisplay = ownerPhone ? `+${ownerPhone}` : "No disponible";
-          const ownerWaLink = ownerPhone ? `https://wa.me/${ownerPhone}` : "No disponible";
-
-          const seekerName = reqUser?.name || req.name || "Colega Demandante";
-          const seekerRawPhone = req.idUsuarioWhatsapp || reqUser?.phone || "";
-          const seekerPhone = cleanPhone(seekerRawPhone);
-          const seekerPhoneDisplay = seekerPhone ? `+${seekerPhone}` : "No disponible";
-          const seekerWaLink = seekerPhone ? `https://wa.me/${seekerPhone}` : "No disponible";
-
-          const headerEmoji = score === 100 ? "💘" : "🎯";
-          const headerText = score === 100
-            ? "COINCIDENCIA INMOBILIARIA 100% PERFECTA"
-            : "COINCIDENCIA INMOBILIARIA DETECTADA";
-
-          const alertMsg =
-            `${headerEmoji} *[${headerText}]*\n` +
-            `📊 *Match: ${score}%*  |  🆔 Ref: #M${matchId}\n\n` +
-            `━━━━━━━━━━━━━━━━━━━━━\n` +
-            `🏠 *INMUEBLE OFERTADO:*\n` +
-            `  • Tipo: ${prop.propertyType?.toUpperCase() || "N/A"}\n` +
-            `  • Negocio: ${prop.transactionType?.toUpperCase() || "N/A"}\n` +
-            `  • Ciudad: ${prop.city || "N/A"}\n` +
-            `  • Barrio: ${prop.zone || prop.addressNeighborhood || "N/A"}\n` +
-            `  • Área: ${pArea > 0 ? `${pArea} m²` : "N/A"}\n` +
-            `  • Habitaciones: ${pBedrooms > 0 ? pBedrooms : "N/A"}\n` +
-            `  • Precio: ${price > 0 ? formatCurrency(price) : "N/A"}${adminFee > 0 ? ` + Adm. ${formatCurrency(adminFee)}` : ""}\n\n` +
-            `🔍 *REQUERIMIENTO:*\n` +
-            `  • Tipo: ${req.tipoInmuebleDeseado?.toUpperCase() || "N/A"}\n` +
-            `  • Negocio: ${req.tipoNegocioDeseado?.toUpperCase() || "N/A"}\n` +
-            `  • Ciudad: ${req.ciudadDeseada || "N/A"}\n` +
-            `  • Barrio deseado: ${req.zonaDeseada || req.addressNeighborhood || "N/A"}\n` +
-            `  • Área mín: ${rAreaMin > 0 ? `${rAreaMin} m²` : "N/A"}\n` +
-            `  • Habitaciones mín: ${rBedrooms > 0 ? rBedrooms : "N/A"}\n` +
-            `  • Presupuesto: ${budgetMin > 0 ? formatCurrency(budgetMin) : "Desde N/A"} – ${budgetMax > 0 ? formatCurrency(budgetMax) : "Hasta N/A"}\n\n` +
-            `━━━━━━━━━━━━━━━━━━━━━\n` +
-            `👥 *CONTACTOS:*\n\n` +
-            `🔑 *Oferente (${ownerName}):*\n` +
-            `  📞 ${ownerPhoneDisplay}\n` +
-            `  🔗 ${ownerWaLink}\n\n` +
-            `🔎 *Demandante (${seekerName}):*\n` +
-            `  📞 ${seekerPhoneDisplay}\n` +
-            `  🔗 ${seekerWaLink}\n\n` +
-            `💼 _Coordinar el contacto directo de forma confidencial._`;
-
-          await sendDirectAlertToAdmins(alertMsg);
-          console.log(`[Matching-Engine] ✅ Match #${matchId} (${score}%) registrado y alertado a admins.`);
+          // Emitir evento desacoplado
+          vrifEvents.emit("match:created", matchId);
+          console.log(`[Matching-Engine] ✅ Match #${matchId} (${score}%) registrado y evento emitido.`);
         }
       }
     }

@@ -137,13 +137,13 @@ export const requirements = pgTable("requirements", {
   status: statusEnum("status").default("active"),
   idUsuarioWhatsapp: varchar("idUsuarioWhatsapp", { length: 100 }),
   rawText: text("rawText"),
+  calificacion: varchar("calificacion", { length: 50 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
   fechaExtraccion: timestamp("fecha_extraccion").defaultNow(),
   origenTipo: varchar("origen_tipo", { length: 50 }),
   origenId: varchar("origen_id", { length: 100 }),
   origenNombre: varchar("origen_nombre", { length: 255 }),
-  calificacion: varchar("calificacion", { length: 50 }),
 });
 
 export type Requirement = typeof requirements.$inferSelect;
@@ -203,10 +203,28 @@ export const propertyMatches = pgTable("propertyMatches", {
   propertyId: integer("propertyId").references(() => properties.id).notNull(),
   matchScore: decimal("matchScore", { precision: 5, scale: 2 }), // 0-100
   matchReason: text("matchReason"),
+  matchExplanation: jsonb("matchExplanation"),
+  ipc: jsonb("ipc"), // VRIF Core v2.0: { score: number, factors: { matching: number, ... }, version: string, generatedAt: string }
   status: matchStatusEnum("status").default("suggested").notNull(),
   ownerConfirmed: boolean("ownerConfirmed").default(false).notNull(),
   seekerConfirmed: boolean("seekerConfirmed").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+/**
+ * Notification Logs table - audit trails for match notifications
+ */
+export const notificationLogs = pgTable("notificationLogs", {
+  id: serial("id").primaryKey(),
+  matchId: integer("matchId").references(() => propertyMatches.id),
+  brokerId: integer("brokerId").references(() => users.id),
+  brokerPhone: varchar("brokerPhone", { length: 50 }).notNull(),
+  channel: varchar("channel", { length: 50 }).default("whatsapp").notNull(),
+  status: varchar("status", { length: 50 }).default("pending").notNull(), // pending | sent | delivered | failed
+  sentAt: timestamp("sentAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  error: text("error"),
+  triggerSource: varchar("triggerSource", { length: 100 }).default("match_created"),
 });
 
 /**

@@ -5,7 +5,8 @@ import {
   ArrowRightLeft, RefreshCw, Calendar, MessageSquare, CheckCircle2,
   XCircle, AlertTriangle, SlidersHorizontal, ExternalLink, Lock,
   Eye, EyeOff, BarChart3, Shield, Bed, Bath, Car, Ruler, Building2,
-  TrendingUp, ChevronDown, ChevronUp
+  TrendingUp, ChevronDown, ChevronUp, Star, CircleDot, Check, HelpCircle,
+  Flame, Clock, CheckCircle, Ban, Zap, ArrowRight, Info
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "@/components/Navbar";
@@ -262,6 +263,254 @@ function scoreRows(req: any, prop: any) {
   return { rows, autoScore: finalScore };
 }
 
+// Componente para calcular el Índice de Acción Comercial (IAc)
+function calcularIAc(m: any): { score: number; label: string; color: string; badge: string } {
+  const matchScore = parseFloat(m.matchScore?.toString() || "0");
+  let score = matchScore;
+  
+  const ageDays = (Date.now() - new Date(m.createdAt || new Date()).getTime()) / (1000 * 60 * 60 * 24);
+  
+  // Factor de Recencia
+  if (ageDays <= 0.083) { // < 2 horas
+    score += 15;
+  } else if (ageDays <= 1) { // < 24 horas
+    score += 10;
+  } else if (ageDays >= 30) {
+    score -= 30;
+  }
+
+  // Factor de Actividad / Doble Opt-In
+  if (m.ownerConfirmed || m.seekerConfirmed) {
+    score += 15;
+  }
+  
+  score = Math.max(0, Math.min(100, Math.round(score)));
+
+  let label = "Oportunidad activa. Enviar propuesta.";
+  let color = "text-cyan-400 bg-cyan-500/10 border-cyan-500/20";
+  let badge = "💼 Activa";
+
+  if (ageDays >= 30) {
+    label = "⚠️ Verificar vigencia de publicación antes de contactar.";
+    color = "text-red-400 bg-red-500/10 border-red-500/20";
+    badge = "⚠️ Verificar";
+  } else if (score >= 90) {
+    label = "🔥 Llame ahora. Alta probabilidad de concretar.";
+    color = "text-emerald-400 bg-emerald-500/10 border-emerald-500/20 shadow-[0_0_8px_rgba(16,185,129,0.2)]";
+    badge = "🔥 Urgente";
+  } else if (m.status === "interested") {
+    label = "Conexión exitosa. Negociación en progreso.";
+    color = "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
+    badge = "🤝 Conectado";
+  } else if (m.status === "rejected") {
+    label = "Coincidencia descartada.";
+    color = "text-zinc-500 bg-zinc-500/10 border-zinc-500/20";
+    badge = "❌ Archivada";
+  }
+
+  return { score, label, color, badge };
+}
+
+function calcularScoresMatch(m: any): { tecnico: number; comercial: number; final: number } {
+  const tecnico = Math.round(parseFloat(m.matchScore?.toString() || "0"));
+  let comercial = 70; // fallback base
+  if (m.ipc && (m.ipc as any).factors) {
+    const f = (m.ipc as any).factors;
+    comercial = Math.round(
+      ((f.freshness || 0) + (f.brokerTrust || 0) + (f.dataQuality || 0) + (f.marketDemand || 0)) / 4
+    );
+  }
+  const final = Math.round((tecnico * 0.6) + (comercial * 0.4));
+  return { tecnico, comercial, final };
+}
+
+function calcularVigencia(m: any): { label: string; color: string; badge: string } {
+  const ageDays = (Date.now() - new Date(m.createdAt || new Date()).getTime()) / (1000 * 60 * 60 * 24);
+  if (m.status === "rejected") {
+    return { label: "Probablemente vendido", color: "text-red-400 bg-red-500/10 border-red-500/20", badge: "🔴 Vendido" };
+  }
+  if (ageDays < 7) {
+    return { label: "Vigente", color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20", badge: "🟢 Vigente" };
+  }
+  if (ageDays <= 30) {
+    return { label: "Verificar vigencia", color: "text-amber-400 bg-amber-500/10 border-amber-500/20", badge: "🟡 Verificar" };
+  }
+  return { label: "Probablemente vendido", color: "text-red-400 bg-red-500/10 border-red-500/20", badge: "🔴 Expirado" };
+}
+
+// Componente para renderizar el Semáforo VRIF
+function VrifTrafficLight({ score }: { score: number }) {
+  let colorClass = "";
+  let labelText = "";
+  let glowClass = "";
+
+  if (score >= 95) {
+    colorClass = "bg-emerald-500 border-emerald-400";
+    glowClass = "shadow-[0_0_12px_rgba(16,185,129,0.7)]";
+    labelText = "Nivel 1: Match Certificado";
+  } else if (score >= 80) {
+    colorClass = "bg-[#bf953f] border-[#d4aa55]";
+    glowClass = "shadow-[0_0_12px_rgba(191,149,63,0.6)]";
+    labelText = "Nivel 2: Alta Afinidad";
+  } else {
+    colorClass = "bg-amber-600 border-amber-500";
+    glowClass = "shadow-[0_0_12px_rgba(217,119,6,0.6)]";
+    labelText = "Nivel 3: Ajuste Sugerido";
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className={`h-3 w-3 rounded-full border ${colorClass} ${glowClass} inline-block`} />
+      <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">{labelText}</span>
+    </div>
+  );
+}
+
+// Componente para renderizar las estrellas de confianza
+function TrustStars({ dataQuality }: { dataQuality: number }) {
+  const starsCount = dataQuality > 80 ? 5 : dataQuality > 60 ? 4 : dataQuality > 40 ? 3 : dataQuality > 20 ? 2 : 1;
+  return (
+    <div className="flex items-center gap-0.5">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <Star
+          key={i}
+          className={`w-3.5 h-3.5 ${
+            i < starsCount ? "text-amber-400 fill-amber-400" : "text-zinc-700 fill-zinc-800"
+          }`}
+        />
+      ))}
+    </div>
+  );
+}
+
+// Componente para renderizar el desglose del IPC
+function IpcBreakdown({ ipc }: { ipc: any }) {
+  if (!ipc || !ipc.factors) {
+    return (
+      <div className="bg-white/[0.01] border border-white/5 rounded-2xl p-4 flex items-center justify-center h-full">
+        <span className="text-zinc-600 text-xs italic">IPC no disponible para este match (v1.0)</span>
+      </div>
+    );
+  }
+
+  const { score, factors } = ipc;
+  const labels: Record<string, string> = {
+    matching: "Afinidad Core",
+    freshness: "Recencia / Frescura",
+    brokerTrust: "Confianza Perfil",
+    dataQuality: "Calidad de Datos",
+    marketDemand: "Demanda / Precio"
+  };
+
+  return (
+    <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h5 className="text-[10px] font-bold uppercase tracking-widest text-[#bf953f]">Métricas del Cierre</h5>
+          <h4 className="text-xs font-semibold text-zinc-300 mt-0.5">Índice Probabilidad de Cierre (IPC)</h4>
+        </div>
+        <div className="text-right">
+          <div className="flex items-center justify-end gap-1.5">
+            <span className="text-2xl font-black text-amber-400 tracking-tight">{score}%</span>
+          </div>
+          <p className="text-[8px] text-zinc-500 uppercase tracking-widest font-mono">Alta Probabilidad de Cierre</p>
+        </div>
+      </div>
+
+      <div className="space-y-2.5 border-t border-white/5 pt-3">
+        {Object.entries(factors).map(([key, val]: any) => (
+          <div key={key} className="space-y-1">
+            <div className="flex justify-between text-[10px]">
+              <span className="text-zinc-400">{labels[key] || key}</span>
+              <span className="text-zinc-300 font-mono font-bold">{val}%</span>
+            </div>
+            <div className="w-full bg-white/5 h-1.5 rounded-full overflow-hidden">
+              <div
+                className="bg-[#bf953f] h-full rounded-full transition-all duration-500"
+                style={{ width: `${val}%` }}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="text-[9px] text-zinc-500 text-right font-mono italic">
+        Última calibración: VRIF Core 2.0
+      </div>
+    </div>
+  );
+}
+
+// Línea de tiempo interactiva VRIF del Match
+function VrifTimeline({ m }: { m: any }) {
+  const score = parseFloat(m.matchScore?.toString() || "0");
+  const dateStr = new Date(m.createdAt || new Date()).toLocaleDateString("es-CO", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+
+  const steps = [
+    {
+      title: "1. Match Encontrado",
+      desc: `Afinidad del ${score.toFixed(0)}% calculada por el motor de matching.`,
+      status: "done",
+      info: dateStr
+    },
+    {
+      title: "2. Doble Confirmación (Bilateral)",
+      desc: "Ambos corredores deben autorizar de manera privada compartir la información.",
+      status: m.ownerConfirmed && m.seekerConfirmed ? "done" : (m.ownerConfirmed || m.seekerConfirmed ? "pending" : "waiting"),
+      details: (
+        <div className="flex gap-4 mt-2">
+          <div className="flex items-center gap-1 bg-white/[0.02] border border-white/5 px-2 py-1 rounded text-[10px]">
+            <span className={`w-1.5 h-1.5 rounded-full ${m.ownerConfirmed ? "bg-emerald-500" : "bg-zinc-600"}`} />
+            <span className="text-zinc-400">Oferente: {m.ownerConfirmed ? "Confirmó" : "Pendiente"}</span>
+          </div>
+          <div className="flex items-center gap-1 bg-white/[0.02] border border-white/5 px-2 py-1 rounded text-[10px]">
+            <span className={`w-1.5 h-1.5 rounded-full ${m.seekerConfirmed ? "bg-emerald-500" : "bg-zinc-600"}`} />
+            <span className="text-zinc-400">Demandante: {m.seekerConfirmed ? "Confirmó" : "Pendiente"}</span>
+          </div>
+        </div>
+      )
+    },
+    {
+      title: "3. Conexión de Negocio",
+      desc: "El sistema genera y comparte el enlace de WhatsApp y teléfono directo.",
+      status: m.status === "interested" ? "done" : (m.status === "rejected" ? "error" : "waiting")
+    }
+  ];
+
+  return (
+    <div className="space-y-4">
+      <h5 className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2">Línea de Tiempo del Match</h5>
+      <div className="relative pl-6 border-l border-white/5 space-y-5">
+        {steps.map((s, idx) => (
+          <div key={idx} className="relative">
+            <span
+              className={`absolute -left-[30px] top-1.5 w-4 h-4 rounded-full border-2 flex items-center justify-center text-[8px] font-bold ${
+                s.status === "done"
+                  ? "bg-emerald-950 border-emerald-500 text-emerald-400"
+                  : s.status === "error"
+                  ? "bg-red-950 border-red-500 text-red-400"
+                  : s.status === "pending"
+                  ? "bg-amber-950 border-amber-500 text-amber-400 animate-pulse"
+                  : "bg-zinc-900 border-zinc-700 text-zinc-500"
+              }`}
+            >
+              {s.status === "done" ? <Check className="w-2.5 h-2.5" /> : idx + 1}
+            </span>
+
+            <div>
+              <div className="flex items-center justify-between gap-2">
+                <h6 className="text-xs font-bold text-zinc-200">{s.title}</h6>
+                {s.info && <span className="text-[9px] font-mono text-zinc-500">{s.info}</span>}
+              </div>
+              <p className="text-[11px] text-zinc-400 mt-0.5 leading-relaxed">{s.desc}</p>
+              {s.details}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function MatchCard({ m, idx }: { m: any; idx: number }) {
   const [expanded, setExpanded] = useState(false);
   const score = parseFloat(m.matchScore?.toString() || "0");
@@ -270,8 +519,10 @@ function MatchCard({ m, idx }: { m: any; idx: number }) {
   const exactCount = rows.filter(r => r.status === "exact" || r.status === "ok").length;
   const warnCount = rows.filter(r => r.status === "warn").length;
   const failCount = rows.filter(r => r.status === "missing").length;
-  const dotColor = score >= 95 ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" : score >= 80 ? "bg-[#bf953f] shadow-[0_0_8px_rgba(191,149,63,0.5)]" : "bg-cyan-500";
   const scoreColor = score >= 95 ? "text-emerald-400" : score >= 80 ? "text-[#bf953f]" : "text-cyan-400";
+  const iac = useMemo(() => calcularIAc(m), [m]);
+  const scores = useMemo(() => calcularScoresMatch(m), [m]);
+  const vigencia = useMemo(() => calcularVigencia(m), [m]);
 
   return (
     <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
@@ -280,11 +531,14 @@ function MatchCard({ m, idx }: { m: any; idx: number }) {
 
       {/* Header */}
       <div className="bg-white/[0.02] px-6 py-4 flex flex-wrap items-center justify-between gap-3 border-b border-white/5">
-        <div className="flex items-center gap-3">
-          <span className={`h-2.5 w-2.5 rounded-full ${dotColor}`} />
-          <span className={`text-xl font-extrabold tracking-tight ${scoreColor}`}>{score.toFixed(0)}%</span>
-          <span className="text-zinc-500 text-sm">Afinidad registrada por IA</span>
-          {score >= 95 && <span className="text-[10px] bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-2 py-0.5 rounded-full font-bold">⭐ MATCH PERFECTO</span>}
+        <div className="flex flex-wrap items-center gap-3">
+          <span className={`text-xl font-extrabold tracking-tight ${scoreColor}`}>{scores.final}%</span>
+          <VrifTrafficLight score={scores.final} />
+          {m.ipc && <TrustStars dataQuality={(m.ipc as any)?.factors?.dataQuality || 80} />}
+          {scores.final >= 95 && <span className="text-[10px] bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-2 py-0.5 rounded-full font-bold">⭐ MATCH PERFECTO</span>}
+          <span className={`inline-flex items-center px-2 py-0.5 rounded-full border text-[9px] font-bold ${vigencia.color}`}>
+            {vigencia.badge}
+          </span>
         </div>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1.5 text-zinc-500 text-xs font-mono"><Calendar className="w-3.5 h-3.5" />{date}</div>
@@ -292,13 +546,38 @@ function MatchCard({ m, idx }: { m: any; idx: number }) {
         </div>
       </div>
 
-      {/* Quick badges */}
-      <div className="px-6 py-2.5 flex items-center gap-3 border-b border-white/5 flex-wrap">
-        <span className="text-[10px] uppercase tracking-widest text-zinc-600 font-bold">Cotejo:</span>
-        <span className="flex items-center gap-1 text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full"><CheckCircle2 className="w-2.5 h-2.5" />{exactCount} coinciden</span>
-        {warnCount > 0 && <span className="flex items-center gap-1 text-[10px] text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full"><AlertTriangle className="w-2.5 h-2.5" />{warnCount} aproximados</span>}
-        {failCount > 0 && <span className="flex items-center gap-1 text-[10px] text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-full"><XCircle className="w-2.5 h-2.5" />{failCount} no cumplen</span>}
-        <span className="ml-auto text-[10px] text-zinc-600">Score recalculado: <strong className="text-zinc-400">{autoScore}%</strong></span>
+      {/* Quick stats & IAc Banner */}
+      <div className="px-6 py-2.5 flex items-center justify-between border-b border-white/5 flex-wrap gap-2">
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className="text-[10px] uppercase tracking-widest text-zinc-600 font-bold">Cotejo:</span>
+          <span className="flex items-center gap-1 text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full"><CheckCircle2 className="w-2.5 h-2.5" />{exactCount} coinciden</span>
+          {warnCount > 0 && <span className="flex items-center gap-1 text-[10px] text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full"><AlertTriangle className="w-2.5 h-2.5" />{warnCount} aproximados</span>}
+          {failCount > 0 && <span className="flex items-center gap-1 text-[10px] text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-full"><XCircle className="w-2.5 h-2.5" />{failCount} no cumplen</span>}
+        </div>
+        {/* IAc indicator */}
+        <div className={`flex items-center gap-2 px-3 py-1 rounded-full border text-[10px] font-bold ${iac.color}`}>
+          <span>{iac.badge} (IAc: {iac.score}%)</span>
+          <span className="opacity-90 font-light">— {iac.label}</span>
+        </div>
+      </div>
+
+      {/* Visual Scores Grid (Diferenciar Técnico y Comercial) */}
+      <div className="mx-6 my-4 grid grid-cols-3 gap-3 bg-white/[0.01] border border-white/5 rounded-2xl p-3 text-center">
+        <div className="space-y-1">
+          <p className="text-[8px] uppercase tracking-wider font-extrabold text-zinc-500">Match Técnico</p>
+          <div className="text-sm font-black text-cyan-400">{scores.tecnico}%</div>
+          <p className="text-[7px] text-zinc-500 font-medium">Cotejo parámetros</p>
+        </div>
+        <div className="space-y-1 border-l border-white/5">
+          <p className="text-[8px] uppercase tracking-wider font-extrabold text-zinc-500">Match Comercial</p>
+          <div className="text-sm font-black text-amber-400">{scores.comercial}%</div>
+          <p className="text-[7px] text-zinc-500 font-medium">Perfil, calidad y recencia</p>
+        </div>
+        <div className="space-y-1 border-l border-white/5 bg-[#bf953f]/5 rounded-xl py-1">
+          <p className="text-[8px] uppercase tracking-wider font-extrabold text-[#bf953f]">Match Final VRIF</p>
+          <div className="text-sm font-black text-white">{scores.final}%</div>
+          <p className="text-[7px] text-[#bf953f] font-bold">Promedio ponderado</p>
+        </div>
       </div>
 
       {/* Parties */}
@@ -363,40 +642,52 @@ function MatchCard({ m, idx }: { m: any; idx: number }) {
 
       </div>
 
-      {/* Expandable comparison table */}
+      {/* Expandable detailed analysis */}
       <div className="border-t border-white/5">
         <button onClick={() => setExpanded(!expanded)}
           className="w-full flex items-center justify-between px-6 py-3 text-xs font-bold uppercase tracking-widest text-zinc-400 hover:text-[#bf953f] hover:bg-white/[0.02] transition-all">
-          <span className="flex items-center gap-2"><BarChart3 className="w-3.5 h-3.5" />Ver cotejo detallado campo por campo</span>
+          <span className="flex items-center gap-2"><BarChart3 className="w-3.5 h-3.5" />Ver análisis completo y métricas VRIF</span>
           {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
         </button>
         <AnimatePresence>
           {expanded && (
             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-              <div className="px-4 pb-4 overflow-x-auto">
-                <table className="w-full text-xs border-collapse">
-                  <thead>
-                    <tr className="border-b border-white/10">
-                      <th className="text-left py-2 px-4 text-zinc-500 text-[10px] uppercase tracking-widest font-bold">Característica</th>
-                      <th className="text-left py-2 px-4 text-cyan-500 text-[10px] uppercase tracking-widest font-bold">🔍 Buscado</th>
-                      <th className="text-left py-2 px-4 text-[#bf953f] text-[10px] uppercase tracking-widest font-bold">🏢 Encontrado</th>
-                      <th className="text-left py-2 px-4 text-zinc-500 text-[10px] uppercase tracking-widest font-bold">Resultado</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows.map((row, i) => <ComparisonRow key={i} {...row} />)}
-                  </tbody>
-                </table>
-              </div>
-              {m.matchReason && (
-                <div className="mx-4 mb-5 bg-white/[0.02] border border-white/5 rounded-2xl p-4 flex gap-3">
-                  <div className="p-1.5 rounded-lg bg-[#bf953f]/10 text-[#bf953f] mt-0.5 shrink-0"><MessageSquare className="w-4 h-4" /></div>
-                  <div>
-                    <h5 className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1">Razón del Motor de IA</h5>
-                    <p className="text-sm text-zinc-300 font-light leading-relaxed">{m.matchReason}</p>
+              <div className="px-6 pb-6 pt-2 grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                <div className="lg:col-span-2 space-y-4">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs border-collapse">
+                      <thead>
+                        <tr className="border-b border-white/10">
+                          <th className="text-left py-2 px-4 text-zinc-500 text-[10px] uppercase tracking-widest font-bold">Característica</th>
+                          <th className="text-left py-2 px-4 text-cyan-500 text-[10px] uppercase tracking-widest font-bold">🔍 Buscado</th>
+                          <th className="text-left py-2 px-4 text-[#bf953f] text-[10px] uppercase tracking-widest font-bold">🏢 Encontrado</th>
+                          <th className="text-left py-2 px-4 text-zinc-500 text-[10px] uppercase tracking-widest font-bold">Resultado</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {rows.map((row, i) => <ComparisonRow key={i} {...row} />)}
+                      </tbody>
+                    </table>
                   </div>
+
+                  {m.matchReason && (
+                    <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 flex gap-3">
+                      <div className="p-1.5 rounded-lg bg-[#bf953f]/10 text-[#bf953f] mt-0.5 shrink-0"><MessageSquare className="w-4 h-4" /></div>
+                      <div>
+                        <h5 className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1">Razón del Motor de IA</h5>
+                        <p className="text-xs text-zinc-300 font-light leading-relaxed">{m.matchReason}</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
+
+                <div className="space-y-6">
+                  <IpcBreakdown ipc={m.ipc} />
+                  <VrifTimeline m={m} />
+                </div>
+
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -423,26 +714,105 @@ export default function MatchesReport() {
   };
 
   const { data: matches, isLoading, refetch, isFetching } = trpc.janIA.getAllMatches.useQuery(undefined, { enabled: isAuthenticated });
+  
+  // States
   const [searchTerm, setSearchTerm] = useState("");
   const [minScore, setMinScore] = useState(0);
   const [selectedCity, setSelectedCity] = useState("Todas");
   const [showFilters, setShowFilters] = useState(false);
+  const [viewMode, setViewMode] = useState<"table" | "cards">("table");
+  const [activePipelineFilter, setActivePipelineFilter] = useState<string | null>(null);
 
+  // Table expanded row state
+  const [expandedTableRows, setExpandedTableRows] = useState<Record<number, boolean>>({});
+
+  const toggleTableRow = (id: number) => {
+    setExpandedTableRows(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  };
+
+  // Unique cities list
   const cities = useMemo(() => ["Todas", ...Array.from(new Set((matches || []).map(m => m.property.city).filter(Boolean)))], [matches]);
+
+  // Nivel 1: Acciones urgentes del bróker (basado en el estado del Doble Opt-In)
+  const nivel1Stats = useMemo(() => {
+    const list = matches || [];
+    const now = Date.now();
+    
+    return {
+      atenderHoy: list.filter(m => m.status === "suggested" && (!m.ownerConfirmed || !m.seekerConfirmed)).length,
+      esperandoMiConfirmacion: list.filter(m => m.status === "suggested" && !m.ownerConfirmed && !m.seekerConfirmed).length,
+      esperandoBilateral: list.filter(m => m.status === "suggested" && (m.ownerConfirmed !== m.seekerConfirmed)).length,
+      expiraranHoy: list.filter(m => m.status === "suggested" && (now - new Date(m.createdAt).getTime()) / (1000 * 60 * 60 * 24) >= 7).length,
+    };
+  }, [matches]);
+
+  // Nivel 2: KPIs de Gestión Avanzados
+  const kpis = useMemo(() => {
+    const list = matches || [];
+    const total = list.length;
+    const totalSuggested = list.filter(m => m.status === "suggested").length;
+    const totalInterested = list.filter(m => m.status === "interested").length;
+    const totalRejected = list.filter(m => m.status === "rejected").length;
+    
+    // Tasas
+    const avgAfinidad = total > 0 ? (list.reduce((acc, m) => acc + parseFloat(m.matchScore?.toString() || "0"), 0) / total) : 0;
+    const avgIpc = total > 0 ? (list.reduce((acc, m) => acc + (m.ipc ? (m.ipc as any).score : 0), 0) / total) : 0;
+    const tasaAceptacion = (totalInterested + totalRejected) > 0 ? (totalInterested / (totalInterested + totalRejected)) * 100 : 0;
+    const tasaConversion = total > 0 ? (totalInterested / total) * 100 : 0;
+
+    return {
+      total,
+      avgAfinidad: avgAfinidad.toFixed(1),
+      avgIpc: avgIpc.toFixed(1),
+      tasaAceptacion: tasaAceptacion.toFixed(1),
+      tasaConversion: tasaConversion.toFixed(1),
+      totalInterested,
+      totalRejected
+    };
+  }, [matches]);
+
+  // Pipeline Comercial Extendido de 7 niveles (Funnel)
+  const pipelineStats = useMemo(() => {
+    const list = matches || [];
+    return {
+      analizado: list.length, // Todo lo ingresado es analizado
+      compatible: list.filter(m => parseFloat(m.matchScore?.toString() || "0") >= 70).length,
+      notificado: list.filter(m => m.status === "suggested" || m.status === "interested").length, // Que pasó por ingesta activa
+      aceptado: list.filter(m => m.ownerConfirmed || m.seekerConfirmed).length, // Al menos una confirmación
+      conectado: list.filter(m => m.status === "interested").length, // Double-opt in exitoso
+      negociacion: list.filter(m => m.status === "interested").length, // Enlace activo de WA
+      cerrado: 0 // Estado final comercial
+    };
+  }, [matches]);
+
+  // Filters logic
   const filteredMatches = useMemo(() => (matches || []).filter(m => {
     const score = parseFloat(m.matchScore?.toString() || "0");
     if (score < minScore) return false;
     if (selectedCity !== "Todas" && m.property.city !== selectedCity) return false;
+    
+    // Status Pipeline filter
+    if (activePipelineFilter && m.status !== activePipelineFilter) return false;
+
     if (searchTerm.trim()) {
-      const text = [m.property.name, m.property.zone, m.property.city, m.requirement.name, m.requirement.zonaDeseada, m.requirement.rawText, m.property.rawText].filter(Boolean).join(" ").toLowerCase();
+      const text = [
+        m.property.name,
+        m.property.zone,
+        m.property.city,
+        m.requirement.name,
+        m.requirement.zonaDeseada,
+        m.requirement.rawText,
+        m.property.rawText,
+        m.property.idUsuarioWhatsapp,
+        m.requirement.idUsuarioWhatsapp
+      ].filter(Boolean).join(" ").toLowerCase();
       if (!text.includes(searchTerm.toLowerCase())) return false;
     }
     return true;
-  }), [matches, minScore, selectedCity, searchTerm]);
-
-  const totalCount = matches?.length || 0;
-  const avgScore = totalCount > 0 ? ((matches!.reduce((a, m) => a + parseFloat(m.matchScore?.toString() || "0"), 0)) / totalCount).toFixed(1) : "0";
-  const perfectCount = (matches || []).filter(m => parseFloat(m.matchScore?.toString() || "0") >= 95).length;
+  }), [matches, minScore, selectedCity, searchTerm, activePipelineFilter]);
 
   if (!isAuthenticated) {
     return (
@@ -483,18 +853,20 @@ export default function MatchesReport() {
       <Navbar />
       <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-purple-900/8 rounded-full blur-[140px] pointer-events-none" />
       <div className="absolute top-1/3 right-1/4 w-[700px] h-[700px] bg-[#bf953f]/4 rounded-full blur-[160px] pointer-events-none" />
-      <main className="container pt-32 pb-24 relative z-10">
+      
+      <main className="container pt-32 pb-24 relative z-10 space-y-10">
 
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
+        {/* Title Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
             <div className="flex items-center gap-2 mb-2">
               <span className="p-1.5 rounded-lg bg-[#bf953f]/10 border border-[#bf953f]/20 text-[#bf953f]"><Sparkles className="w-4 h-4 animate-pulse" /></span>
-              <span className="text-xs font-bold tracking-widest uppercase text-[#bf953f]">Panel Privado · Admin</span>
+              <span className="text-xs font-bold tracking-widest uppercase text-[#bf953f]">Fase de Formalización · VRIF v2.0</span>
             </div>
             <h1 className="text-4xl md:text-5xl font-display font-extrabold tracking-tight bg-gradient-to-r from-white via-zinc-200 to-zinc-500 bg-clip-text text-transparent">
-              Matches de JanIA
+              Consola de Coincidencias
             </h1>
-            <p className="text-zinc-400 mt-2 font-light max-w-xl text-sm">Cotejo completo campo por campo entre Oferta (Inmuebles) y Demanda (Requerimientos).</p>
+            <p className="text-zinc-400 mt-2 font-light max-w-xl text-sm">Dashboard de gestión del VRIF Core. Filtra, audita el Doble Opt-In y monitorea el Índice de Probabilidad de Cierre.</p>
           </div>
           <div className="flex items-center gap-3 self-end md:self-auto">
             <Button onClick={() => refetch()} disabled={isFetching} variant="outline"
@@ -508,38 +880,164 @@ export default function MatchesReport() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          {[
-            { label: "Total Matches", value: totalCount, subtitle: "Histórico en BD", icon: ArrowRightLeft, color: "from-blue-500/10 to-cyan-500/10 border-blue-500/20 text-blue-400" },
-            { label: "Score Promedio", value: `${avgScore}%`, subtitle: "Afinidad media", icon: TrendingUp, color: "from-amber-500/10 to-[#bf953f]/10 border-[#bf953f]/20 text-[#bf953f]" },
-            { label: "Matches Perfectos", value: perfectCount, subtitle: "Score >= 95%", icon: Sparkles, color: "from-emerald-500/10 to-teal-500/10 border-emerald-500/20 text-emerald-400" },
-            { label: "Mostrando", value: `${filteredMatches.length}/${totalCount}`, subtitle: "Con filtros", icon: SlidersHorizontal, color: "from-purple-500/10 to-pink-500/10 border-purple-500/20 text-purple-400" },
-          ].map((s, i) => (
-            <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}
-              className={`bg-gradient-to-br ${s.color} border rounded-2xl p-5 relative overflow-hidden`}>
-              <div className="absolute right-4 top-4 opacity-10"><s.icon className="w-12 h-12" /></div>
-              <p className="text-xs text-zinc-400 font-medium uppercase tracking-wider">{s.label}</p>
-              <h3 className="text-3xl font-extrabold mt-1 tracking-tight">{s.value}</h3>
-              <p className="text-[10px] text-zinc-500 mt-1 uppercase tracking-widest">{s.subtitle}</p>
-            </motion.div>
-          ))}
+        {/* -------------------------------------------------------------
+            NIVEL 1: Acciones comerciales y tareas por atender
+           ------------------------------------------------------------- */}
+        <div className="space-y-4">
+          <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-500 flex items-center gap-2">
+            <Zap className="w-4 h-4 text-amber-400" /> Nivel 1: Acciones Comerciales Pendientes
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              {
+                label: "Negocios por atender hoy",
+                value: nivel1Stats.atenderHoy,
+                subtitle: "Matches esperando validación",
+                icon: Flame,
+                color: "border-red-500/20 hover:border-red-500/40 bg-red-500/5 text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.05)]"
+              },
+              {
+                label: "Esperando mi confirmación",
+                value: nivel1Stats.esperandoMiConfirmacion,
+                subtitle: "Pendiente respuesta local",
+                icon: Clock,
+                color: "border-amber-500/20 hover:border-amber-500/40 bg-amber-500/5 text-amber-400"
+              },
+              {
+                label: "Esperando respuesta aliada",
+                value: nivel1Stats.esperandoBilateral,
+                subtitle: "Esperando otra punta",
+                icon: HelpCircle,
+                color: "border-cyan-500/20 hover:border-cyan-500/40 bg-cyan-500/5 text-cyan-400"
+              },
+              {
+                label: "Cercanos a expirar hoy",
+                value: nivel1Stats.expiraranHoy,
+                subtitle: "Límite doctrinal 7 días",
+                icon: AlertTriangle,
+                color: "border-orange-500/20 hover:border-orange-500/40 bg-orange-500/5 text-orange-400"
+              }
+            ].map((item, idx) => (
+              <div key={idx} className={`border rounded-2xl p-5 transition-all duration-300 flex items-center justify-between ${item.color}`}>
+                <div>
+                  <p className="text-[10px] uppercase font-bold tracking-wider text-zinc-400">{item.label}</p>
+                  <h3 className="text-3xl font-black mt-1 leading-none">{item.value}</h3>
+                  <p className="text-[10px] text-zinc-500 mt-1">{item.subtitle}</p>
+                </div>
+                <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5">
+                  <item.icon className="w-6 h-6" />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
-        <div className="bg-[#0c0c0c] border border-white/5 rounded-2xl p-4 mb-8">
-          <div className="flex flex-col md:flex-row gap-3">
+        {/* -------------------------------------------------------------
+            NIVEL 2: KPIs de Gestión
+           ------------------------------------------------------------- */}
+        <div className="space-y-4">
+          <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-500 flex items-center gap-2">
+            <BarChart3 className="w-4 h-4 text-[#bf953f]" /> Nivel 2: KPIs de Gestión Comercial
+          </h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            {[
+              { label: "Precisión Media", value: `${kpis.avgAfinidad}%`, icon: Sparkles },
+              { label: "IPC Promedio", value: `${kpis.avgIpc}%`, icon: TrendingUp },
+              { label: "Doble Opt-In", value: kpis.totalInterested, icon: CheckCircle },
+              { label: "Tasa Aceptación", value: `${kpis.tasaAceptacion}%`, icon: CheckCircle2 },
+              { label: "Rechazos", value: kpis.totalRejected, icon: Ban },
+              { label: "Conversión", value: `${kpis.tasaConversion}%`, icon: Zap }
+            ].map((kpi, idx) => (
+              <div key={idx} className="bg-white/[0.01] border border-white/5 rounded-2xl p-4 flex flex-col justify-between">
+                <p className="text-[9px] uppercase font-bold tracking-widest text-zinc-500">{kpi.label}</p>
+                <div className="flex items-end justify-between mt-3">
+                  <span className="text-xl font-extrabold text-zinc-100">{kpi.value}</span>
+                  <kpi.icon className="w-4 h-4 text-[#bf953f]/40" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* -------------------------------------------------------------
+            NIVEL 3: Pipeline Comercial y Coincidencias
+           ------------------------------------------------------------- */}
+        <div className="space-y-6">
+          
+          {/* Extended Pipeline Funnel */}
+          <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl p-6 space-y-4">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-400 flex items-center gap-2">
+              <CircleDot className="w-4 h-4 text-[#bf953f]" /> Pipeline Comercial de Coincidencias
+            </h3>
+            
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+              {[
+                { label: "1. Analizado", count: pipelineStats.analizado, pct: "100%", desc: "Publicaciones procesadas" },
+                { label: "2. Compatible", count: pipelineStats.compatible, pct: "100%", desc: "Filtro Score >= 70%" },
+                { label: "3. Notificado", count: pipelineStats.notificado, pct: `${((pipelineStats.notificado / (pipelineStats.analizado || 1)) * 100).toFixed(0)}%`, desc: "Enviado o encolado" },
+                { label: "4. Aceptado", count: pipelineStats.aceptado, pct: `${((pipelineStats.aceptado / (pipelineStats.analizado || 1)) * 100).toFixed(0)}%`, desc: "Al menos 1 broker" },
+                { label: "5. Conectado", count: pipelineStats.conectado, pct: `${((pipelineStats.conectado / (pipelineStats.analizado || 1)) * 100).toFixed(0)}%`, desc: "Doble confirmación" },
+                { label: "6. Negociación", count: pipelineStats.negociacion, pct: `${((pipelineStats.negociacion / (pipelineStats.analizado || 1)) * 100).toFixed(0)}%`, desc: "WA Directo compartido" },
+                { label: "7. Cerrado", count: pipelineStats.cerrado, pct: "0%", desc: "Comisión consolidada" }
+              ].map((step, idx) => (
+                <div key={idx} className="bg-white/[0.01] border border-white/5 rounded-2xl p-3 flex flex-col justify-between hover:border-white/10 transition-colors">
+                  <div>
+                    <span className="text-[9px] uppercase font-bold tracking-wider text-zinc-400 block truncate">{step.label}</span>
+                    <span className="text-lg font-black block mt-1.5">{step.count}</span>
+                  </div>
+                  <div className="mt-3">
+                    <div className="flex justify-between text-[8px] text-zinc-500 mb-0.5">
+                      <span>Conversión</span>
+                      <span>{step.pct}</span>
+                    </div>
+                    <div className="w-full bg-white/5 h-1 rounded-full overflow-hidden">
+                      <div className="bg-[#bf953f] h-full" style={{ width: step.pct }} />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Filters and View Toggles */}
+          <div className="bg-[#0c0c0c] border border-white/5 rounded-2xl p-4 flex flex-col md:flex-row gap-3 items-center justify-between">
             <div className="relative w-full md:flex-1">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-              <input type="text" placeholder="Buscar por barrio, ciudad, inmueble, requerimiento..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+              <input type="text" placeholder="Buscar por barrio, ciudad, inmueble, requerimiento, teléfono..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
                 className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-sm focus:outline-none focus:border-[#bf953f] transition-all" />
             </div>
-            <Button onClick={() => setShowFilters(!showFilters)} variant="outline" className="border-white/10 bg-white/5 hover:bg-white/10 hover:text-white flex items-center gap-2 rounded-xl h-11">
-              <SlidersHorizontal className="w-4 h-4" />Filtros
-            </Button>
+            
+            <div className="flex items-center gap-3 w-full md:w-auto justify-end">
+              {/* Table/Card View Toggle */}
+              <div className="flex items-center bg-white/5 p-1 rounded-xl border border-white/10">
+                <button
+                  onClick={() => setViewMode("table")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    viewMode === "table" ? "bg-[#bf953f] text-black" : "text-zinc-400 hover:text-zinc-200"
+                  }`}
+                >
+                  Tabla
+                </button>
+                <button
+                  onClick={() => setViewMode("cards")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    viewMode === "cards" ? "bg-[#bf953f] text-black" : "text-zinc-400 hover:text-zinc-200"
+                  }`}
+                >
+                  Tarjetas
+                </button>
+              </div>
+
+              <Button onClick={() => setShowFilters(!showFilters)} variant="outline" className="border-white/10 bg-white/5 hover:bg-white/10 hover:text-white flex items-center gap-2 rounded-xl h-11">
+                <SlidersHorizontal className="w-4 h-4" />Filtros
+              </Button>
+            </div>
           </div>
+
           <AnimatePresence>
             {showFilters && (
               <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden mt-4 pt-4 border-t border-white/5 grid grid-cols-1 md:grid-cols-2 gap-4">
+                className="overflow-hidden bg-[#0c0c0c] border border-white/5 rounded-2xl p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <div className="flex justify-between text-xs text-zinc-400"><span>Afinidad mínima</span><span className="font-bold text-[#bf953f]">{minScore}%</span></div>
                   <input type="range" min="0" max="100" value={minScore} onChange={e => setMinScore(parseInt(e.target.value))} className="w-full accent-[#bf953f] h-1.5 rounded-lg appearance-none cursor-pointer" />
@@ -553,26 +1051,214 @@ export default function MatchesReport() {
               </motion.div>
             )}
           </AnimatePresence>
-        </div>
 
-        {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-4">
-            <RefreshCw className="w-10 h-10 text-[#bf953f] animate-spin" />
-            <p className="text-zinc-500 font-mono text-sm">Cargando matches de JanIA...</p>
-          </div>
-        ) : filteredMatches.length === 0 ? (
-          <div className="bg-[#0c0c0c] border border-white/5 rounded-2xl p-16 text-center">
-            <HomeIcon className="w-12 h-12 text-[#bf953f] mx-auto mb-4 opacity-60" />
-            <h3 className="text-lg font-bold">No hay coincidencias con los filtros actuales</h3>
-            <p className="text-zinc-500 text-sm mt-1">Reduce el filtro de afinidad o limpia la búsqueda.</p>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            <AnimatePresence>
-              {filteredMatches.map((m, idx) => <MatchCard key={m.id} m={m} idx={idx} />)}
-            </AnimatePresence>
-          </div>
-        )}
+          {/* Results Container */}
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-20 gap-4">
+              <RefreshCw className="w-10 h-10 text-[#bf953f] animate-spin" />
+              <p className="text-zinc-500 font-mono text-sm">Cargando matches de JanIA...</p>
+            </div>
+          ) : filteredMatches.length === 0 ? (
+            <div className="bg-[#0c0c0c] border border-white/5 rounded-2xl p-16 text-center">
+              <HomeIcon className="w-12 h-12 text-[#bf953f] mx-auto mb-4 opacity-60" />
+              <h3 className="text-lg font-bold">No hay coincidencias con los filtros actuales</h3>
+              <p className="text-zinc-500 text-sm mt-1">Reduce el filtro de afinidad o limpia la búsqueda.</p>
+            </div>
+          ) : viewMode === "cards" ? (
+            <div className="space-y-6">
+              <AnimatePresence>
+                {filteredMatches.map((m, idx) => <MatchCard key={m.id} m={m} idx={idx} />)}
+              </AnimatePresence>
+            </div>
+          ) : (
+            /* Smart Table View */
+            <div className="bg-[#0a0a0a] border border-white/5 rounded-3xl overflow-hidden shadow-2xl">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-white/[0.02] border-b border-white/5 text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+                      <th className="py-4 px-6">ID / Fecha</th>
+                      <th className="py-4 px-4">Ciudad / Barrio</th>
+                      <th className="py-4 px-4">Inmueble (Oferta)</th>
+                      <th className="py-4 px-4">Requerimiento (Demanda)</th>
+                      <th className="py-4 px-4 text-center">Match Técnico</th>
+                      <th className="py-4 px-4 text-center">Match Comercial</th>
+                      <th className="py-4 px-4 text-center">Match Final VRIF</th>
+                      <th className="py-4 px-4 text-center">Vigencia</th>
+                      <th className="py-4 px-4 text-center">Acción (IAc)</th>
+                      <th className="py-4 px-4">Estado</th>
+                      <th className="py-4 px-6 text-center">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredMatches.map((m) => {
+                      const scores = calcularScoresMatch(m);
+                      const vigencia = calcularVigencia(m);
+                      const isExpanded = !!expandedTableRows[m.id];
+                      const dateStr = new Date(m.createdAt || new Date()).toLocaleDateString("es-CO", { month: "short", day: "numeric" });
+                      const iac = calcularIAc(m);
+                      
+                      return (
+                        <React.Fragment key={m.id}>
+                          {/* Main Row */}
+                          <tr className={`border-b border-white/5 hover:bg-white/[0.01] transition-all cursor-pointer ${
+                            isExpanded ? "bg-white/[0.02]" : ""
+                          }`} onClick={() => toggleTableRow(m.id)}>
+                            
+                            <td className="py-4 px-6">
+                              <span className="font-mono text-zinc-600 text-[10px]">#M{m.id}</span>
+                              <p className="text-[10px] text-zinc-500 font-medium mt-0.5">{dateStr}</p>
+                            </td>
+
+                            <td className="py-4 px-4">
+                              <div className="flex items-center gap-1.5">
+                                <MapPin className="w-3.5 h-3.5 text-zinc-500" />
+                                <span className="text-xs font-bold text-zinc-300">{m.property.city}</span>
+                              </div>
+                              <p className="text-[10px] text-zinc-500 truncate max-w-[120px] mt-0.5">{m.property.zone || "N/E"}</p>
+                            </td>
+
+                            <td className="py-4 px-4">
+                              <h4 className="text-xs font-bold text-zinc-300 truncate max-w-[180px]">{m.property.name}</h4>
+                              <p className="text-[10px] text-[#bf953f] font-medium mt-0.5">{formatCOP(m.property.price)}</p>
+                            </td>
+
+                            <td className="py-4 px-4">
+                              <h4 className="text-xs font-bold text-zinc-300 truncate max-w-[180px]">{m.requirement.name || `Requerimiento #${m.requirement.id}`}</h4>
+                              <p className="text-[10px] text-cyan-400 font-medium mt-0.5">{formatCOP(m.requirement.presupuestoMax)}</p>
+                            </td>
+
+                            <td className="py-4 px-4 text-center font-bold text-xs text-cyan-400 font-mono">
+                              {scores.tecnico}%
+                            </td>
+
+                            <td className="py-4 px-4 text-center font-bold text-xs text-[#bf953f] font-mono">
+                              {scores.comercial}%
+                            </td>
+
+                            <td className="py-4 px-4 text-center font-black text-sm text-white font-mono">
+                              {scores.final}%
+                            </td>
+
+                            <td className="py-4 px-4 text-center">
+                              <span className={`inline-block px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider ${vigencia.color}`}>
+                                {vigencia.badge}
+                              </span>
+                            </td>
+
+                            <td className="py-4 px-4 text-center">
+                              <span className={`inline-block px-2 py-0.5 rounded text-[9px] font-bold ${iac.color}`}>
+                                {iac.badge} ({iac.score}%)
+                              </span>
+                            </td>
+
+                            <td className="py-4 px-4">
+                              <span className={`inline-block px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider ${
+                                m.status === "interested"
+                                  ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400"
+                                  : m.status === "rejected"
+                                  ? "bg-red-500/10 border border-red-500/20 text-red-400"
+                                  : "bg-blue-500/10 border border-blue-500/20 text-blue-400"
+                              }`}>
+                                {m.status === "interested" ? "Double Opt-In" : (m.status === "rejected" ? "Rechazado" : "Propuesto")}
+                              </span>
+                            </td>
+
+                            <td className="py-4 px-6 text-center" onClick={(e) => e.stopPropagation()}>
+                              <div className="flex items-center justify-center gap-2">
+                                {m.property.idUsuarioWhatsapp && (
+                                  <a href={getWhatsAppLink(m.property.idUsuarioWhatsapp)} target="_blank" rel="noopener noreferrer"
+                                    title="Contactar Oferente"
+                                    className="w-7 h-7 rounded-lg bg-[#25D366]/10 hover:bg-[#25D366]/20 text-[#25D366] flex items-center justify-center transition-colors">
+                                    <Phone className="w-3.5 h-3.5" />
+                                  </a>
+                                )}
+                                {m.requirement.idUsuarioWhatsapp && (
+                                  <a href={getWhatsAppLink(m.requirement.idUsuarioWhatsapp)} target="_blank" rel="noopener noreferrer"
+                                    title="Contactar Demandante"
+                                    className="w-7 h-7 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 flex items-center justify-center transition-colors">
+                                    <Search className="w-3.5 h-3.5" />
+                                  </a>
+                                )}
+                                <button onClick={() => toggleTableRow(m.id)}
+                                  className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-300 flex items-center justify-center transition-colors">
+                                  {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                </button>
+                              </div>
+                            </td>
+
+                          </tr>
+
+                          {/* Expanded Content Row */}
+                          <AnimatePresence>
+                            {isExpanded && (
+                              <tr>
+                                <td colSpan={9} className="bg-white/[0.01] border-b border-white/5 p-6">
+                                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+                                    
+                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                                      
+                                      {/* Cotejo columns */}
+                                      <div className="lg:col-span-2 space-y-4">
+                                        <div className="flex items-center justify-between">
+                                          <h5 className="text-[10px] font-bold uppercase tracking-widest text-[#bf953f]">Detalle de Cotejo Atributos</h5>
+                                          <div className={`flex items-center gap-2 px-3 py-1 rounded-full border text-[10px] font-bold ${iac.color}`}>
+                                            <Info className="w-3.5 h-3.5 shrink-0" />
+                                            <span>Índice de Acción: {iac.label}</span>
+                                          </div>
+                                        </div>
+
+                                        <div className="overflow-x-auto bg-black/25 rounded-2xl border border-white/5 p-3">
+                                          <table className="w-full text-xs border-collapse">
+                                            <thead>
+                                              <tr className="border-b border-white/10 text-[9px] uppercase tracking-wider text-zinc-500">
+                                                <th className="text-left py-1.5 px-3">Atributo</th>
+                                                <th className="text-left py-1.5 px-3">🔍 Requerimiento</th>
+                                                <th className="text-left py-1.5 px-3">🏢 Inmueble</th>
+                                                <th className="text-left py-1.5 px-3">Cotejo</th>
+                                              </tr>
+                                            </thead>
+                                            <tbody>
+                                              {scoreRows(m.requirement, m.property).rows.map((row, idx) => (
+                                                <ComparisonRow key={idx} {...row} />
+                                              ))}
+                                            </tbody>
+                                          </table>
+                                        </div>
+
+                                        {m.matchReason && (
+                                          <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 flex gap-3">
+                                            <div className="p-1.5 rounded-lg bg-[#bf953f]/10 text-[#bf953f] mt-0.5 shrink-0"><MessageSquare className="w-4 h-4" /></div>
+                                            <div>
+                                              <h5 className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1">Análisis Doctrinal</h5>
+                                              <p className="text-xs text-zinc-300 font-light leading-relaxed">{m.matchReason}</p>
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      {/* IPC Breakdown & Timeline */}
+                                      <div className="space-y-6">
+                                        <IpcBreakdown ipc={m.ipc} />
+                                        <VrifTimeline m={m} />
+                                      </div>
+
+                                    </div>
+
+                                  </motion.div>
+                                </td>
+                              </tr>
+                            )}
+                          </AnimatePresence>
+                        </React.Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
       </main>
     </div>
   );

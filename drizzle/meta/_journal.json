@@ -71,6 +71,20 @@
       "when": 1784248139982,
       "tag": "0009_sudden_morg",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1784355151555,
+      "tag": "0010_white_gorilla_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1784420084593,
+      "tag": "0011_fluffy_jack_murdock",
+      "breakpoints": true
     }
   ]
 }

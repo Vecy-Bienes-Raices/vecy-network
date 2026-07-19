@@ -78,7 +78,7 @@ export function initCronScheduler() {
   // ─────────────────────────────────────────────────────────────────────────────
   cron.schedule('0 19 * * 1,3,5,0', async () => {
     console.log('[CRON-SERVICE] Enviando video JanIAConsulta a CÍRCULO CERO...');
-    await sendVideoPromo(whatsappBot.circuloGroupId, 'Círculo CERO 👌');
+    await sendVideoPromo(whatsappBot.circuloGroupId, process.env.GROUP_ZERO_NAME || 'PROYECTO "Vecy Network"');
   }, { timezone: 'America/Bogota' });
 
   // ─────────────────────────────────────────────────────────────────────────────

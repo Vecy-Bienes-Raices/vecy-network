@@ -363,6 +363,8 @@ export const janIARouter = router({
             id: propertyMatches.id,
             matchScore: propertyMatches.matchScore,
             matchReason: propertyMatches.matchReason,
+            matchExplanation: propertyMatches.matchExplanation,
+            ipc: propertyMatches.ipc,
             status: propertyMatches.status,
             ownerConfirmed: propertyMatches.ownerConfirmed,
             seekerConfirmed: propertyMatches.seekerConfirmed,
@@ -589,8 +591,8 @@ export const janIARouter = router({
         requirements: { total: reqTotal.count, active: reqActive.count },
         matches: { total: matchTotal.count },
         conversations: { total: convTotal.count },
-        monthlyProps: monthlyProps.rows as { mes: string; total: number }[],
-        monthlyReqs: monthlyReqs.rows as { mes: string; total: number }[],
+        monthlyProps: monthlyProps as unknown as { mes: string; total: number }[],
+        monthlyReqs: monthlyReqs as unknown as { mes: string; total: number }[],
       };
     } catch (error) {
       console.error('Error getting report stats:', error);
