@@ -101,8 +101,41 @@ function scoreRows(req: any, prop: any) {
   // 1. Tipo de Inmueble
   const reqType = req.tipoInmuebleDeseado || req.propertyType;
   const propType = prop.propertyType;
-  const typeS: MatchStatus = !reqType || !propType || reqType.toLowerCase() === propType.toLowerCase() ? "exact" : "missing";
-  add("Tipo de Inmueble", getPropTypeLabel(reqType), getPropTypeLabel(propType), typeS, 20, <Building2 className="w-3.5 h-3.5" />);
+
+  // Regla estricta: Apartamento vs Apartaestudio vs Loft no coinciden
+  const reqRawText = cleanText(req.rawText || req.name || "");
+  const propRawText = cleanText(prop.rawText || prop.description || prop.name || "");
+  
+  const reqIsStudio = reqRawText.includes("apartaestudio") || reqRawText.includes("aparta estudio");
+  const propIsStudio = propRawText.includes("apartaestudio") || propRawText.includes("aparta estudio");
+  
+  const reqIsLoft = reqRawText.includes("loft") || reqType === "loft";
+  const propIsLoft = propRawText.includes("loft") || propType === "loft";
+
+  let reqSubtype = reqType;
+  if (reqType === "apartment" || reqType === "apartamento") {
+    if (reqIsStudio) reqSubtype = "apartaestudio";
+    else if (reqIsLoft) reqSubtype = "loft";
+    else reqSubtype = "apartamento_estandar";
+  }
+
+  let propSubtype = propType;
+  if (propType === "apartment" || propType === "apartamento") {
+    if (propIsStudio) propSubtype = "apartaestudio";
+    else if (propIsLoft) propSubtype = "loft";
+    else propSubtype = "apartamento_estandar";
+  }
+
+  let typeS: MatchStatus = "missing";
+  if (reqSubtype && propSubtype) {
+    const r = cleanText(reqSubtype);
+    const p = cleanText(propSubtype);
+    if (r === p || r.includes(p) || p.includes(r)) {
+      typeS = "exact";
+    }
+  }
+
+  add("Tipo de Inmueble", getPropTypeLabel(reqSubtype), getPropTypeLabel(propSubtype), typeS, 20, <Building2 className="w-3.5 h-3.5" />);
 
   // 2. Tipo de Negocio
   const reqBiz = req.tipoNegocioDeseado || req.transactionType;

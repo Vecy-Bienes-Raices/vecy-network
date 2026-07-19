@@ -351,16 +351,23 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   // ── FILTRO DURO 1: Tipo de inmueble ──
   if (reqType && propType) {
     const aliases: Record<string, string[]> = {
-      "apartamento": ["apto", "apartamento"],
-      "apto":        ["apto", "apartamento"],
-      "casa":        ["casa", "chalet", "casa campestre"],
-      "finca":       ["finca", "finca raiz", "finca raíz"],
-      "lote":        ["lote", "terreno", "predio"],
-      "terreno":     ["lote", "terreno", "predio"],
-      "predio":      ["lote", "terreno", "predio"],
-      "bodega":      ["bodega", "bodega industrial"],
-      "local":       ["local", "local comercial"],
-      "oficina":     ["oficina", "consultorio"],
+      "apartamento": ["apto", "apartamento", "apartment"],
+      "apto":        ["apto", "apartamento", "apartment"],
+      "apartment":   ["apto", "apartamento", "apartment"],
+      "casa":        ["casa", "chalet", "casa campestre", "house"],
+      "house":       ["casa", "chalet", "casa campestre", "house"],
+      "finca":       ["finca", "finca raiz", "finca raíz", "farm"],
+      "farm":        ["finca", "finca raiz", "finca raíz", "farm"],
+      "lote":        ["lote", "terreno", "predio", "land"],
+      "terreno":     ["lote", "terreno", "predio", "land"],
+      "predio":      ["lote", "terreno", "predio", "land"],
+      "land":        ["lote", "terreno", "predio", "land"],
+      "bodega":      ["bodega", "bodega industrial", "warehouse"],
+      "warehouse":   ["bodega", "bodega industrial", "warehouse"],
+      "local":       ["local", "local comercial", "commercial"],
+      "commercial":  ["local", "local comercial", "commercial"],
+      "oficina":     ["oficina", "consultorio", "office"],
+      "office":      ["oficina", "consultorio", "office"],
     };
     const reqAlias  = aliases[reqType]  || [reqType];
     const propAlias = aliases[propType] || [propType];
@@ -369,6 +376,37 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
       return buildExplanationResult(0, blockers, positives, negatives);
     }
   }
+
+  // Regla estricta: Apartamento vs Apartaestudio vs Loft no coinciden
+  const cleanText = (t: string) => (t || "").toLowerCase().trim().replace(/[\s\-_,.]+/g, " ");
+  const reqRawText = cleanText(requirement.rawText || requirement.name || "");
+  const propRawText = cleanText(property.rawText || property.name || "");
+  
+  const reqIsStudio = reqRawText.includes("apartaestudio") || reqRawText.includes("aparta estudio");
+  const propIsStudio = propRawText.includes("apartaestudio") || propRawText.includes("aparta estudio");
+  
+  const reqIsLoft = reqRawText.includes("loft") || reqType === "loft";
+  const propIsLoft = propRawText.includes("loft") || propType === "loft";
+
+  let reqSubtype = "apartamento_estandar";
+  if (reqType === "apartment" || reqType === "apartamento") {
+    if (reqIsStudio) reqSubtype = "apartaestudio";
+    else if (reqIsLoft) reqSubtype = "loft";
+  }
+
+  let propSubtype = "apartamento_estandar";
+  if (propType === "apartment" || propType === "apartamento") {
+    if (propIsStudio) propSubtype = "apartaestudio";
+    else if (propIsLoft) propSubtype = "loft";
+  }
+
+  if ((reqType === "apartment" || reqType === "apartamento") && (propType === "apartment" || propType === "apartamento")) {
+    if (reqSubtype !== propSubtype) {
+      blockers.push(`Subtipo de apartamento incompatible: deseado ${reqSubtype}, ofrecido ${propSubtype}`);
+      return buildExplanationResult(0, blockers, positives, negatives);
+    }
+  }
+
   positives.push(`Tipo de activo compatible: ${propType}`);
 
   // ── FILTRO DURO 3: Ubicación / Barrio ──

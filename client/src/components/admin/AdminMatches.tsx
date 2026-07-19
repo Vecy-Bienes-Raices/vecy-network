@@ -21,6 +21,49 @@ interface ScoreRow {
 }
 
 // Lógica de comparación de campos (Scoring) heredada del MatchesReport
+function getPropTypeLabel(type: string | null | undefined): string {
+  if (!type) return "N/E";
+  const clean = type.toLowerCase().trim();
+  const m: Record<string, string> = {
+    apartment: "Apartamento",
+    apartamento: "Apartamento",
+    apartamento_estandar: "Apartamento",
+    apartaestudio: "Apartaestudio",
+    house: "Casa",
+    casa: "Casa",
+    building: "Edificio",
+    edificio: "Edificio",
+    warehouse: "Bodega",
+    bodega: "Bodega",
+    farm: "Finca",
+    finca: "Finca",
+    hotel: "Hotel",
+    office: "Oficina",
+    oficina: "Oficina",
+    land: "Lote/Terreno",
+    lote: "Lote/Terreno",
+    terreno: "Lote/Terreno",
+    commercial: "Local Comercial",
+    local: "Local Comercial",
+    loft: "Loft",
+    consultorio: "Consultorio"
+  };
+  return m[clean] || type;
+}
+
+function getTransactionLabel(type: string | null | undefined): string {
+  if (!type) return "N/E";
+  const clean = type.toLowerCase().trim();
+  const m: Record<string, string> = {
+    venta: "Venta",
+    arriendo: "Arriendo",
+    arriendo_temporal: "Arriendo Temporal",
+    permuta: "Permuta",
+    aporte: "Aporte"
+  };
+  return m[clean] || type;
+}
+
 function scoreRows(req: any, prop: any) {
   const rows: ScoreRow[] = [];
   let pts = 0;
@@ -28,7 +71,6 @@ function scoreRows(req: any, prop: any) {
 
   const add = (label: string, reqVal: string, propVal: string, status: MatchStatus, weight: number, icon: React.ReactNode) => {
     rows.push({ label, reqVal, propVal, status, weight, icon });
-    // Para el cálculo de puntaje, los campos no restringidos (neutral) heredan puntaje completo para no penalizar la aptitud
     max += weight;
     if (status === "exact" || status === "ok" || status === "neutral") pts += weight;
     else if (status === "warn") pts += weight * 0.5;
@@ -39,14 +81,6 @@ function scoreRows(req: any, prop: any) {
   // 1. Tipo de Inmueble
   const reqType = req.tipoInmuebleDeseado || req.propertyType;
   const propType = prop.propertyType;
-  let typeS: MatchStatus = "missing";
-  if (reqType && propType) {
-    const r = cleanText(reqType);
-    const p = cleanText(propType);
-    if (r === p || r.includes(p) || p.includes(r)) {
-      typeS = "exact";
-    }
-  }
 
   // Regla estricta: Apartamento vs Apartaestudio vs Loft no coinciden
   const reqRawText = cleanText(req.rawText || req.name || "");
@@ -55,22 +89,40 @@ function scoreRows(req: any, prop: any) {
   const reqIsStudio = reqRawText.includes("apartaestudio") || reqRawText.includes("aparta estudio");
   const propIsStudio = propRawText.includes("apartaestudio") || propRawText.includes("aparta estudio");
   
-  const reqIsLoft = reqRawText.includes("loft");
-  const propIsLoft = propRawText.includes("loft");
+  const reqIsLoft = reqRawText.includes("loft") || reqType === "loft";
+  const propIsLoft = propRawText.includes("loft") || propType === "loft";
 
-  let reqSubtype = "apartamento_estandar";
-  if (reqIsStudio) reqSubtype = "apartaestudio";
-  else if (reqIsLoft) reqSubtype = "loft";
-
-  let propSubtype = "apartamento_estandar";
-  if (propIsStudio) propSubtype = "apartaestudio";
-  else if (propIsLoft) propSubtype = "loft";
-
-  if (reqSubtype !== propSubtype) {
-    typeS = "missing"; // Si difieren los subtipos (apartamento, apartaestudio o loft), no coinciden
+  let reqSubtype = reqType;
+  if (reqType === "apartment" || reqType === "apartamento") {
+    if (reqIsStudio) reqSubtype = "apartaestudio";
+    else if (reqIsLoft) reqSubtype = "loft";
+    else reqSubtype = "apartamento_estandar";
   }
 
-  add("Tipo de Inmueble", reqType || "N/E", propType || "N/E", typeS, 18, <Building2 className="w-3.5 h-3.5" />);
+  let propSubtype = propType;
+  if (propType === "apartment" || propType === "apartamento") {
+    if (propIsStudio) propSubtype = "apartaestudio";
+    else if (propIsLoft) propSubtype = "loft";
+    else propSubtype = "apartamento_estandar";
+  }
+
+  let typeS: MatchStatus = "missing";
+  if (reqSubtype && propSubtype) {
+    const r = cleanText(reqSubtype);
+    const p = cleanText(propSubtype);
+    if (r === p || r.includes(p) || p.includes(r)) {
+      typeS = "exact";
+    }
+  }
+
+  add(
+    "Tipo de Inmueble", 
+    getPropTypeLabel(reqSubtype), 
+    getPropTypeLabel(propSubtype), 
+    typeS, 
+    18, 
+    <Building2 className="w-3.5 h-3.5" />
+  );
 
   // 2. Tipo de Negocio
   const reqNeg = req.tipoNegocioDeseado || req.transactionType;
@@ -81,7 +133,14 @@ function scoreRows(req: any, prop: any) {
     const p = cleanText(propNeg);
     if (r === p || r.includes(p) || p.includes(r)) negS = "exact";
   }
-  add("Tipo de Negocio", reqNeg || "N/E", propNeg || "N/E", negS, 15, <SlidersHorizontal className="w-3.5 h-3.5" />);
+  add(
+    "Tipo de Negocio", 
+    getTransactionLabel(reqNeg), 
+    getTransactionLabel(propNeg), 
+    negS, 
+    15, 
+    <SlidersHorizontal className="w-3.5 h-3.5" />
+  );
 
   // 3. Ubicación / Barrio (Lógica de aproximación por palabras clave)
   const reqZone = req.zonaDeseada || req.zone || "";
