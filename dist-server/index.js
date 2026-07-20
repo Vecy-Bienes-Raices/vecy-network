@@ -642,7 +642,7 @@ async function invokeGemini(messages2, responseFormat, imageBuffer, pdfBuffer, p
           temperature: 0.7,
           topP: 0.95,
           topK: 40,
-          maxOutputTokens: 1024,
+          maxOutputTokens: 4096,
           responseMimeType: responseFormat?.type === "json_object" ? "application/json" : "text/plain",
           responseSchema: responseFormat?.schema || void 0
         }
@@ -4187,7 +4187,7 @@ Por lo tanto, DEBES hacer lo siguiente:
     }
     const isValuationQuery = textLower.includes("valuar") || textLower.includes("avaluo") || textLower.includes("aval\xFAo") || textLower.includes("cuanto vale") || textLower.includes("cu\xE1nto vale") || textLower.includes("valor metro cuadrado") || textLower.includes("valor m2") || textLower.includes("precio metro cuadrado") || textLower.includes("precio m2") || textLower.includes("cuanto puedo cobrar") || textLower.includes("cu\xE1nto puedo cobrar") || textLower.includes("en que valor") || textLower.includes("en qu\xE9 valor") || textLower.includes("estimar precio");
     const isLegalQuery = textLower.includes("sucesi\xF3n") || textLower.includes("sucesion") || textLower.includes("herencia") || textLower.includes("divorcio") || textLower.includes("embargo") || textLower.includes("saneamiento") || textLower.includes("compraventa") || textLower.includes("arrendamiento") || textLower.includes("ley 820") || textLower.includes("ley 675") || textLower.includes("corretaje") || textLower.includes("comision") || textLower.includes("comisi\xF3n") || textLower.includes("no me pago") || textLower.includes("no me pag\xF3") || textLower.includes("robo de comision") || textLower.includes("robo de comisi\xF3n") || textLower.includes("disputa") || textLower.includes("notar\xEDa") || textLower.includes("notaria");
-    const enableSearch = isValuationQuery || isLegalQuery;
+    const enableSearch = isWebUser || isValuationQuery || isLegalQuery || textLower.includes("tr\xE1mite") || textLower.includes("tramite") || textLower.includes("patrimonio") || textLower.includes("entidad");
     const history = await getRecentChatHistory(userId, 20);
     const liveStats = await getLiveStats();
     const systemContent = liveStats ? `${buildSystemPrompt(groupJid)}
@@ -4219,11 +4219,25 @@ ${liveStats}` : buildSystemPrompt(groupJid);
       result = parseSafeJSON(rawContent);
     } catch (parseErr) {
       console.error("[JanIA-Parser-Error] Error al deserializar JSON de JanIA:", parseErr.message);
-      console.error("[JanIA-Parser-Error] Contenido crudo que fall\xF3:", rawContent);
-      if (rawContent && rawContent.trim() !== "") {
+      const responseMatch = rawContent.match(/"response"\s*:\s*"([\s\S]*?)"(?:\s*,\s*"|\s*})/);
+      let fallbackText = responseMatch ? responseMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"') : null;
+      if (!fallbackText) {
+        const truncatedMatch = rawContent.match(/"response"\s*:\s*"([\s\S]*)/);
+        if (truncatedMatch) {
+          fallbackText = truncatedMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"').replace(/["\}]+$/, "");
+        }
+      }
+      if (fallbackText && fallbackText.trim() !== "") {
         result = {
           classification: "CONSULTA_GENERAL",
-          response: rawContent.replace(/[\{\}\[\]"]/g, "").trim() || "Lo siento, en este momento tengo un problema de formato interno.",
+          response: fallbackText.trim(),
+          mentions: []
+        };
+      } else if (rawContent && rawContent.trim() !== "") {
+        const cleanContent = rawContent.replace(/"classification"\s*:\s*"[^"]*"/gi, "").replace(/"response"\s*:\s*"/gi, "").replace(/[\{\}\[\]"]/g, "").replace(/classification:\s*\w+,?/gi, "").replace(/response:\s*/gi, "").trim();
+        result = {
+          classification: "CONSULTA_GENERAL",
+          response: cleanContent || "Hola, he procesado tu consulta inmobiliaria. \xBFEn qu\xE9 m\xE1s puedo asesorarte hoy?",
           mentions: []
         };
       } else {

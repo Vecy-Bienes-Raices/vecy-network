@@ -1547,7 +1547,7 @@ Por lo tanto, DEBES hacer lo siguiente:
       textLower.includes("robo de comision") || textLower.includes("robo de comisión") ||
       textLower.includes("disputa") || textLower.includes("notaría") || textLower.includes("notaria");
 
-    const enableSearch = isValuationQuery || isLegalQuery;
+    const enableSearch = isWebUser || isValuationQuery || isLegalQuery || textLower.includes("trámite") || textLower.includes("tramite") || textLower.includes("patrimonio") || textLower.includes("entidad");
 
     // Obtener historial de chat reciente (Supercerebro)
     const history = await getRecentChatHistory(userId, 20);
@@ -1590,12 +1590,36 @@ Por lo tanto, DEBES hacer lo siguiente:
       result = parseSafeJSON(rawContent) as JanIAResult;
     } catch (parseErr: any) {
       console.error("[JanIA-Parser-Error] Error al deserializar JSON de JanIA:", parseErr.message);
-      console.error("[JanIA-Parser-Error] Contenido crudo que falló:", rawContent);
       
-      if (rawContent && rawContent.trim() !== "") {
+      // Intentar extraer el campo "response" de forma limpia mediante expresión regular
+      const responseMatch = rawContent.match(/"response"\s*:\s*"([\s\S]*?)"(?:\s*,\s*"|\s*})/);
+      let fallbackText = responseMatch ? responseMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"') : null;
+
+      if (!fallbackText) {
+        // Buscar patrón alternativo si la comilla final fue truncada
+        const truncatedMatch = rawContent.match(/"response"\s*:\s*"([\s\S]*)/);
+        if (truncatedMatch) {
+          fallbackText = truncatedMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"').replace(/["\}]+$/, '');
+        }
+      }
+
+      if (fallbackText && fallbackText.trim() !== "") {
         result = {
           classification: "CONSULTA_GENERAL",
-          response: rawContent.replace(/[\{\}\[\]"]/g, "").trim() || "Lo siento, en este momento tengo un problema de formato interno.",
+          response: fallbackText.trim(),
+          mentions: []
+        };
+      } else if (rawContent && rawContent.trim() !== "") {
+        const cleanContent = rawContent
+          .replace(/"classification"\s*:\s*"[^"]*"/gi, "")
+          .replace(/"response"\s*:\s*"/gi, "")
+          .replace(/[\{\}\[\]"]/g, "")
+          .replace(/classification:\s*\w+,?/gi, "")
+          .replace(/response:\s*/gi, "")
+          .trim();
+        result = {
+          classification: "CONSULTA_GENERAL",
+          response: cleanContent || "Hola, he procesado tu consulta inmobiliaria. ¿En qué más puedo asesorarte hoy?",
           mentions: []
         };
       } else {
