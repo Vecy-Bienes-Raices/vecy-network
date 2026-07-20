@@ -86,9 +86,31 @@ export const janIARouter = router({
           false
         );
 
-        const janIAResponse = (result.response && result.response.trim() !== "")
+        let janIAResponse = (result.response && result.response.trim() !== "")
           ? result.response
-          : (result.dmResponse || result.response || "¡Hola! ¿En qué puedo ayudarte hoy?");
+          : (result.dmResponse || result.response);
+
+        if (!janIAResponse || janIAResponse.trim() === "" || janIAResponse === "¡Hola! ¿En qué puedo ayudarte hoy?") {
+          try {
+            const { invokeLLM } = await import("../_core/llm");
+            const fallbackLLMRes = await invokeLLM({
+              messages: [
+                { role: "system", content: "Eres JanIA Match, la Inteligencia Artificial viva y consultora inmobiliaria senior de VECY Network. Tienes razonamiento lógico, amplio criterio jurídico, financiero y de mercado inmobiliario. Responde directamente a la consulta del usuario de forma completa, profesional, estructurada y empática." },
+                { role: "user", content: input.message }
+              ]
+            });
+            const rawLLMText = (fallbackLLMRes as any)?.choices?.[0]?.message?.content;
+            if (rawLLMText && rawLLMText.trim() !== "") {
+              janIAResponse = rawLLMText.trim();
+            } else {
+              janIAResponse = "¡Hola! He procesado tu consulta inmobiliaria. ¿En qué aspecto específico de tu trámite o negocio deseas profundizar?";
+            }
+          } catch (fallbackErr: any) {
+            console.error("[JanIA-Fallback-Error] Error en fallback de consulta LLM:", fallbackErr.message);
+            janIAResponse = "¡Hola! He procesado tu consulta. ¿En qué aspecto específico de tu trámite o negocio inmobiliario deseas profundizar?";
+          }
+        }
+
         const wantsVoice = result.wantsVoice || false;
         const voiceResponse = result.voiceResponse || janIAResponse;
 
