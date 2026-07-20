@@ -3871,6 +3871,7 @@ async function processWhatsAppMessage(text2, userId, userName, hasMedia = false,
     var isScrapeable = isScrapeable2;
     const rawPhone = userId.split("@")[0];
     const realName = await resolveRealName(userId, userName);
+    const isWebUser = userId.startsWith("web-");
     const alreadyGreeted = await checkAlreadyGreeted(userId);
     const senderInfo = analyzeSender(realName, userId, alreadyGreeted);
     const n = extractFirstName(realName) || "colega";
@@ -3947,7 +3948,7 @@ ${content.substring(0, 15e3)}
     let isFromAudio = false;
     const cleanText = text2.toLowerCase().trim();
     const isMediaOrAudio = hasMedia || !!audioUrl || !!imageBuffer || !!pdfBuffer;
-    if (!isMediaOrAudio && cleanText.length > 15) {
+    if (!isWebUser && !isMediaOrAudio && cleanText.length > 15) {
       const onTopicKeywords = [
         "apto",
         "apartamento",
@@ -4135,30 +4136,37 @@ Por favor, hazme una consulta que est\xE9 relacionada con estos temas. \xA1Con g
     const firstName = extractFirstName(realName) || "colega";
     const bogotaTime = (/* @__PURE__ */ new Date()).toLocaleString("es-CO", { timeZone: "America/Bogota", hour: "2-digit", minute: "2-digit", hour12: false });
     const userGender = senderInfo.adj === "juiciosa" ? "Femenino" : senderInfo.adj === "juicioso" ? "Masculino" : "No Especificado";
-    const outsideHours = isOutsideWorkingHours();
+    const outsideHours = isWebUser ? false : isOutsideWorkingHours();
     const estadoOperacion = outsideHours ? "fuera_de_horario" : "en_horario";
     const greetingInstruction = `
 
 [SISTEMA - METADATOS DEL MENSAJE (VARIABLES CR\xCDTICAS)]:
 - {{hora}}: ${bogotaTime}
-- {{canal}}: ${isGroup ? `Grupo WhatsApp - [${groupName || "Nombre Real del Grupo"}]` : "dm"}
+- {{canal}}: ${isWebUser ? "Consola Web 24/7" : isGroup ? `Grupo WhatsApp - [${groupName || "Nombre Real del Grupo"}]` : "dm"}
 - {{genero}}: ${userGender}
 - {{es_nuevo_usuario}}: ${!alreadyGreeted ? "true" : "false"}
 - {{estado_operacion}}: ${estadoOperacion}
 
 [SISTEMA - INSTRUCCI\xD3N DE SALUDO Y COMPORTAMIENTO]:
 - Ya has saludado al usuario hoy: ${alreadyGreeted ? "S\xCD" : "NO"}.
-- Tipo de conversaci\xF3n actual: ${isGroup ? "GRUPO DE WHATSAPP" : "CHAT PRIVADO / DM"}.
+- Tipo de conversaci\xF3n actual: ${isWebUser ? "CHAT WEB DE LIBRE ALBEDR\xCDO 24/7" : isGroup ? "GRUPO DE WHATSAPP" : "CHAT PRIVADO / DM"}.
 - Primer nombre del usuario: "${firstName}".
 - REGLAS CR\xCDTICAS DE RESPUESTA:
-  * Si "Ya has saludado al usuario hoy" es S\xCD:
+  * Si "Ya has saludado al usuario hoy" es S\xCD (solo aplica a WhatsApp):
     - \xA1PROHIBIDO SALUDAR! No uses palabras como "Hola", "Buenas tardes", "Qu\xE9 gusto", "Bienvenido", ni variantes de saludo o bienvenida.
-    - Si est\xE1s en un GRUPO DE WHATSAPP: Debes nombrar al usuario de manera natural y conversacional al inicio o dentro de tu respuesta (ej: "Mira ${firstName}, ...", "Te cuento, ${firstName}, que...", "Para complementar, ${firstName}, ...").
-    - Si est\xE1s en CHAT PRIVADO / DM: Ve directamente al grano en tu respuesta sin ning\xFAn tipo de saludo. Tienes libertad de nombrar ocasionalmente al usuario de forma espor\xE1dica (con un 30% de probabilidad) para sonar humana y natural (ej: "Claro ${firstName}, ..." o "Entiendo ${firstName}, ..."), pero NUNCA uses frases de saludo.
-  * Si "Ya has saludado al usuario hoy" es NO:
-    - Debes saludar de manera muy cordial y natural, incluyendo su nombre "${firstName}" o dirigi\xE9ndote a \xE9l/ella como colega/aliado/a.`;
+  * En CHAT WEB 24/7: Conversa libremente, saluda si es natural o ve directo al tema de forma elocuente y amigable.`;
     contextText += greetingInstruction;
-    if (!alreadyGreeted && outsideHours && !isGroup) {
+    if (isWebUser) {
+      contextText += `
+
+[INSTRUCCI\xD3N MAESTRA - CHAT WEB DE LIBRE ALBEDR\xCDO 24/7]:
+Est\xE1s interactuando con el usuario directamente en la CONSOLA WEB de VECY Network.
+- Tienes LIBERTAD TOTAL DE RAZONAMIENTO Y PENSAMIENTO (Libre Albedr\xEDo 24/7).
+- NUNCA apliques restricciones de grupos de WhatsApp, horarios de oficina ni bloqueos de temas.
+- Responde a cualquier inquietud general, jur\xEDdica, de aval\xFAos, c\xE1lculo financiero o conversaci\xF3n inmobiliaria con razonamiento profundo, calidez y elocuencia.
+- Si el usuario te env\xEDa un inmueble o requerimiento, extrae los datos para el sistema y dale una respuesta rica, entusiasta y completa confirmando la informaci\xF3n.`;
+    }
+    if (!isWebUser && !alreadyGreeted && outsideHours && !isGroup) {
       const saludo = getGreetingByTime();
       contextText += `
 [INSTRUCCI\xD3N CR\xCDTICA DE PRESENTACI\xD3N FUERA DE HORARIO]:
@@ -4282,9 +4290,11 @@ ${liveStats}` : buildSystemPrompt(groupJid);
         isProperty = false;
         isRequirement = true;
       }
-      result.shouldSendDM = false;
-      result.dmResponse = "";
-      result.response = "";
+      if (!isWebUser) {
+        result.shouldSendDM = false;
+        result.dmResponse = "";
+        result.response = "";
+      }
     }
     if (isProperty || isRequirement) {
       if (extracted) {

@@ -1255,6 +1255,7 @@ export async function processWhatsAppMessage(
     const rawPhone = userId.split('@')[0];
     const realName = await resolveRealName(userId, userName);
 
+    const isWebUser = userId.startsWith("web-");
     const alreadyGreeted = await checkAlreadyGreeted(userId);
     const senderInfo = analyzeSender(realName, userId, alreadyGreeted);
     const n = extractFirstName(realName) || 'colega';
@@ -1342,11 +1343,11 @@ export async function processWhatsAppMessage(
 
     let isFromAudio = false;
 
-    // Intercepción rápida de mensajes OFF-TOPIC para ahorrar tokens de Gemini
+    // Intercepción rápida de mensajes OFF-TOPIC solo para WhatsApp (el chat WEB tiene Libre Albedrío)
     const cleanText = text.toLowerCase().trim();
     const isMediaOrAudio = hasMedia || !!audioUrl || !!imageBuffer || !!pdfBuffer;
 
-    if (!isMediaOrAudio && cleanText.length > 15) {
+    if (!isWebUser && !isMediaOrAudio && cleanText.length > 15) {
       const onTopicKeywords = [
         "apto", "apartamento", "casa", "lote", "finca", "bodega", "oficina", "local", "inmueble", "propiedad",
         "predio", "terreno", "proyecto", "arriendo", "alquiler", "vendo", "venta", "compro", "compra", "busco",
@@ -1462,31 +1463,37 @@ export async function processWhatsAppMessage(
     const bogotaTime = new Date().toLocaleString("es-CO", { timeZone: "America/Bogota", hour: "2-digit", minute: "2-digit", hour12: false });
     const userGender = senderInfo.adj === "juiciosa" ? "Femenino" : (senderInfo.adj === "juicioso" ? "Masculino" : "No Especificado");
 
-    const outsideHours = isOutsideWorkingHours();
+    const outsideHours = isWebUser ? false : isOutsideWorkingHours();
     const estadoOperacion = outsideHours ? "fuera_de_horario" : "en_horario";
 
     const greetingInstruction = `\n\n[SISTEMA - METADATOS DEL MENSAJE (VARIABLES CRÍTICAS)]:
 - {{hora}}: ${bogotaTime}
-- {{canal}}: ${isGroup ? `Grupo WhatsApp - [${groupName || "Nombre Real del Grupo"}]` : "dm"}
+- {{canal}}: ${isWebUser ? "Consola Web 24/7" : (isGroup ? `Grupo WhatsApp - [${groupName || "Nombre Real del Grupo"}]` : "dm")}
 - {{genero}}: ${userGender}
 - {{es_nuevo_usuario}}: ${!alreadyGreeted ? "true" : "false"}
 - {{estado_operacion}}: ${estadoOperacion}
 
 [SISTEMA - INSTRUCCIÓN DE SALUDO Y COMPORTAMIENTO]:
 - Ya has saludado al usuario hoy: ${alreadyGreeted ? "SÍ" : "NO"}.
-- Tipo de conversación actual: ${isGroup ? "GRUPO DE WHATSAPP" : "CHAT PRIVADO / DM"}.
+- Tipo de conversación actual: ${isWebUser ? "CHAT WEB DE LIBRE ALBEDRÍO 24/7" : (isGroup ? "GRUPO DE WHATSAPP" : "CHAT PRIVADO / DM")}.
 - Primer nombre del usuario: "${firstName}".
 - REGLAS CRÍTICAS DE RESPUESTA:
-  * Si "Ya has saludado al usuario hoy" es SÍ:
+  * Si "Ya has saludado al usuario hoy" es SÍ (solo aplica a WhatsApp):
     - ¡PROHIBIDO SALUDAR! No uses palabras como "Hola", "Buenas tardes", "Qué gusto", "Bienvenido", ni variantes de saludo o bienvenida.
-    - Si estás en un GRUPO DE WHATSAPP: Debes nombrar al usuario de manera natural y conversacional al inicio o dentro de tu respuesta (ej: "Mira ${firstName}, ...", "Te cuento, ${firstName}, que...", "Para complementar, ${firstName}, ...").
-    - Si estás en CHAT PRIVADO / DM: Ve directamente al grano en tu respuesta sin ningún tipo de saludo. Tienes libertad de nombrar ocasionalmente al usuario de forma esporádica (con un 30% de probabilidad) para sonar humana y natural (ej: "Claro ${firstName}, ..." o "Entiendo ${firstName}, ..."), pero NUNCA uses frases de saludo.
-  * Si "Ya has saludado al usuario hoy" es NO:
-    - Debes saludar de manera muy cordial y natural, incluyendo su nombre "${firstName}" o dirigiéndote a él/ella como colega/aliado/a.`;
+  * En CHAT WEB 24/7: Conversa libremente, saluda si es natural o ve directo al tema de forma elocuente y amigable.`;
 
     contextText += greetingInstruction;
 
-    if (!alreadyGreeted && outsideHours && !isGroup) {
+    if (isWebUser) {
+      contextText += `\n\n[INSTRUCCIÓN MAESTRA - CHAT WEB DE LIBRE ALBEDRÍO 24/7]:
+Estás interactuando con el usuario directamente en la CONSOLA WEB de VECY Network.
+- Tienes LIBERTAD TOTAL DE RAZONAMIENTO Y PENSAMIENTO (Libre Albedrío 24/7).
+- NUNCA apliques restricciones de grupos de WhatsApp, horarios de oficina ni bloqueos de temas.
+- Responde a cualquier inquietud general, jurídica, de avalúos, cálculo financiero o conversación inmobiliaria con razonamiento profundo, calidez y elocuencia.
+- Si el usuario te envía un inmueble o requerimiento, extrae los datos para el sistema y dale una respuesta rica, entusiasta y completa confirmando la información.`;
+    }
+
+    if (!isWebUser && !alreadyGreeted && outsideHours && !isGroup) {
       const saludo = getGreetingByTime();
       contextText += `\n[INSTRUCCIÓN CRÍTICA DE PRESENTACIÓN FUERA DE HORARIO]:
 Como esta es tu primera interacción con este usuario el día de hoy, y nos encontramos fuera de horario de oficina, debes presentarte de manera muy cálida y entusiasta al inicio de tu respuesta:
@@ -1695,10 +1702,12 @@ Por lo tanto, DEBES hacer lo siguiente:
         isRequirement = true;
       }
 
-      // Principio de Mínima Intervención (VRIF): JanIA observa silenciosamente
-      result.shouldSendDM = false;
-      result.dmResponse = "";
-      result.response = "";
+      // Principio de Mínima Intervención (VRIF): JanIA observa silenciosamente en WhatsApp
+      if (!isWebUser) {
+        result.shouldSendDM = false;
+        result.dmResponse = "";
+        result.response = "";
+      }
     }
 
     // --- CAPA DE DEFENSA GEOGRÁFICA NACIONAL (Elástica) ---
