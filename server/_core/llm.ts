@@ -45,7 +45,7 @@ async function invokeGemini(
   tools?: any[]
 ) {
   const API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || ENV.forgeApiKey;
-  const MODEL = "gemini-3.1-flash-lite";
+  const MODEL = "gemini-2.5-flash";
   const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${API_KEY}`;
 
   const MAX_RETRIES = 3;
@@ -90,7 +90,7 @@ async function invokeGemini(
           temperature: 0.7,
           topP: 0.95,
           topK: 40,
-          maxOutputTokens: 4096,
+          maxOutputTokens: 1024,
           responseMimeType: responseFormat?.type === "json_object" ? "application/json" : "text/plain",
           responseSchema: responseFormat?.schema || undefined,
         }
