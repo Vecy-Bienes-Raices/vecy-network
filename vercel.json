@@ -1,7 +1,7 @@
 {
   "rewrites": [
-    { "source": "/api/:path*", "destination": "https://ahyrc-161-18-118-67.free.pinggy.net/api/:path*" },
-    { "source": "/webhook", "destination": "https://ahyrc-161-18-118-67.free.pinggy.net/webhook" },
+    { "source": "/api/:path*", "destination": "https://cheese-shades-seemed-trader.trycloudflare.com/api/:path*" },
+    { "source": "/webhook", "destination": "https://cheese-shades-seemed-trader.trycloudflare.com/webhook" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
