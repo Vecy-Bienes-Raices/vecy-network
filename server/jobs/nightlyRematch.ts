@@ -135,7 +135,7 @@ export async function recalculateAndCleanupMatches() {
       }
 
       const newScore = calcularScoreMatch(req, prop);
-      if (newScore < 60) {
+      if (newScore < 35) {
         console.log(`[MATCH-CLEANUP] Eliminando Match #${m.id} por incompatibilidad (Nuevo Score: ${newScore}%, Score anterior: ${m.matchScore}%).`);
         await db.delete(propertyMatches).where(eq(propertyMatches.id, m.id));
         deletedCount++;

@@ -448,6 +448,17 @@ function capitalize(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
+function sanitizeGeoString(val: any): string {
+  if (!val || typeof val !== "string") return "";
+  let clean = val.trim();
+  clean = clean.split(/\(|\n|Nota:|estimado|según/i)[0].trim();
+  clean = clean.replace(/[\.\,\;\:]+$/, "").trim();
+  if (clean.length > 60) {
+    clean = clean.substring(0, 60).trim();
+  }
+  return clean;
+}
+
 function buildIncompleteDataMessage(
   text: string,
   hasMedia: boolean,
@@ -1692,6 +1703,13 @@ Por lo tanto, DEBES hacer lo siguiente:
 
     // --- CAPA DE DEFENSA GEOGRÁFICA NACIONAL (Elástica) ---
     if (isProperty || isRequirement) {
+      if (extracted) {
+        if (extracted.zone) extracted.zone = sanitizeGeoString(extracted.zone);
+        if (extracted.zonaDeseada) extracted.zonaDeseada = sanitizeGeoString(extracted.zonaDeseada);
+        if (extracted.city) extracted.city = sanitizeGeoString(extracted.city);
+        if (extracted.ciudadDeseada) extracted.ciudadDeseada = sanitizeGeoString(extracted.ciudadDeseada);
+      }
+
       const zoneToValidate = isProperty ? extracted?.zone : (extracted?.zonaDeseada || extracted?.zone);
       
       let isValidGeo = false;
