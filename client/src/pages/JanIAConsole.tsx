@@ -421,11 +421,12 @@ export default function JanIAConsole() {
         message: inputValue,
       });
 
+      const textContent = response?.content || (response as any)?.response || "¡Hola! ¿En qué puedo ayudarte hoy?";
       const janIAMsgId = `msg-${Date.now()}`;
       const janIAMessage: Message = {
         id: janIAMsgId,
         role: 'janIA',
-        content: response.content,
+        content: textContent,
         messageType: 'text',
         timestamp: new Date(),
       };
@@ -433,14 +434,22 @@ export default function JanIAConsole() {
       setMessages((prev: Message[]) => [...prev, janIAMessage]);
 
       // Auto-play JanIA voice when the LLM signals it wants audio
-      if ((response as any).wantsVoice) {
-        const textToSpeak = (response as any).voiceResponse || response.content;
-        playMessageVoice(janIAMsgId, textToSpeak);
+      if ((response as any)?.wantsVoice) {
+        try {
+          const textToSpeak = (response as any).voiceResponse || textContent;
+          playMessageVoice(janIAMsgId, textToSpeak);
+        } catch (vErr) {
+          console.warn("Voice playback notice:", vErr);
+        }
       }
 
       // Refresh sidebar list if user is logged in
-      if (isAuthenticated) {
-        refetchConversations();
+      if (isAuthenticated && refetchConversations) {
+        try {
+          refetchConversations();
+        } catch (rErr) {
+          console.warn("Refetch notice:", rErr);
+        }
       }
     } catch (error) {
       console.error('Error sending message:', error);
