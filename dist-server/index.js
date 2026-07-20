@@ -10737,7 +10737,7 @@ var janIARouter = router({
         void 0,
         false
       );
-      const janIAResponse = result.response && result.response.trim() !== "" ? (result.dmResponse ? result.dmResponse + "\n\n" : "") + result.response : result.dmResponse || result.response;
+      const janIAResponse = result.response && result.response.trim() !== "" ? result.response : result.dmResponse || result.response || "\xA1Hola! \xBFEn qu\xE9 puedo ayudarte hoy?";
       const wantsVoice = result.wantsVoice || false;
       const voiceResponse = result.voiceResponse || janIAResponse;
       await db.insert(messages).values({

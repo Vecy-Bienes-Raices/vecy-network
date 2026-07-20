@@ -86,9 +86,9 @@ export const janIARouter = router({
           false
         );
 
-        const janIAResponse = result.response && result.response.trim() !== "" 
-          ? (result.dmResponse ? result.dmResponse + "\n\n" : "") + result.response 
-          : (result.dmResponse || result.response);
+        const janIAResponse = (result.response && result.response.trim() !== "")
+          ? result.response
+          : (result.dmResponse || result.response || "¡Hola! ¿En qué puedo ayudarte hoy?");
         const wantsVoice = result.wantsVoice || false;
         const voiceResponse = result.voiceResponse || janIAResponse;
 
