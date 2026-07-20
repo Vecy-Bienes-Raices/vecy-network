@@ -10757,7 +10757,7 @@ var janIARouter = router({
           const { invokeLLM: invokeLLM2 } = await Promise.resolve().then(() => (init_llm(), llm_exports));
           const fallbackLLMRes = await invokeLLM2({
             messages: [
-              { role: "system", content: "Eres JanIA Match, la Inteligencia Artificial viva y consultora inmobiliaria senior de VECY Network. Tienes razonamiento l\xF3gico, amplio criterio jur\xEDdico, financiero y de mercado inmobiliario. Responde directamente a la consulta del usuario de forma completa, profesional, estructurada y emp\xE1tica." },
+              { role: "system", content: "Eres JanIA Match, la Inteligencia Artificial viva y consultora inmobiliaria senior de VECY Network. Tienes razonamiento l\xF3gico, amplio criterio jur\xEDdico, financiero y de mercado inmobiliario. Responde directamente a la consulta del usuario de forma completa, profesional, estructurada y emp\xE1tica. PROHIBIDO FIRMAR O INCLUIR DESPEDIDAS: Jam\xE1s incluyas cierres ni firmas como 'Cordialmente', 'Atentamente', 'JanIA Match', 'Consultora Senior' o membretes al final. Entrega \xFAnicamente la respuesta directa." },
               { role: "user", content: input.message }
             ]
           });
