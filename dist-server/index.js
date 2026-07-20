@@ -2698,6 +2698,12 @@ function explicarMatch(requirement, property) {
   const blockers = [];
   const positives = [];
   const negatives = [];
+  const propBroker = (property.idUsuarioWhatsapp || "").split("@")[0];
+  const reqBroker = (requirement.idUsuarioWhatsapp || "").split("@")[0];
+  if (propBroker && reqBroker && propBroker === reqBroker) {
+    blockers.push("Auto-match: el inmueble y el requerimiento pertenecen al mismo asesor.");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
   const reqBiz = (requirement.tipoNegocioDeseado || requirement.transactionType || "").toLowerCase();
   const propBiz = (property.transactionType || "").toLowerCase();
   if (!reqBiz || !propBiz || reqBiz !== propBiz) {
@@ -2735,8 +2741,42 @@ function explicarMatch(requirement, property) {
   const resolveCityField = (raw1, raw2) => {
     const n1 = normalizarTextoGeografico(raw1 || "");
     const n2 = normalizarTextoGeografico(raw2 || "");
+    const SECTORES_BOGOTA = [
+      "cedritos",
+      "usaquen",
+      "chico",
+      "chapinero",
+      "suba",
+      "engativa",
+      "teusaquillo",
+      "kennedy",
+      "fontibon",
+      "bosa",
+      "salitre",
+      "rosales",
+      "colina",
+      "niza",
+      "cabrera",
+      "nogal",
+      "recreo",
+      "castellana",
+      "patricio",
+      "barbara",
+      "belmira",
+      "suiza",
+      "navarra",
+      "floresta",
+      "granada",
+      "colsubsidio"
+    ];
+    const isBogotaSector = (val) => {
+      return SECTORES_BOGOTA.some((sector) => val.includes(sector));
+    };
     if (CIUDADES_CO.some((c) => n1.includes(c) || n1 === c)) return n1;
     if (CIUDADES_CO.some((c) => n2.includes(c) || n2 === c)) return n2;
+    if (isBogotaSector(n1) || isBogotaSector(n2)) {
+      return "bogota";
+    }
     return n1 || n2;
   };
   const reqCity = resolveCityField(requirement.ciudadDeseada || "", requirement.city || "");
@@ -3432,6 +3472,16 @@ function isOutsideWorkingHours() {
 function capitalize(text2) {
   if (!text2) return "";
   return text2.charAt(0).toUpperCase() + text2.slice(1);
+}
+function sanitizeGeoString(val) {
+  if (!val || typeof val !== "string") return "";
+  let clean = val.trim();
+  clean = clean.split(/\(|\n|Nota:|estimado|según/i)[0].trim();
+  clean = clean.replace(/[\.\,\;\:]+$/, "").trim();
+  if (clean.length > 60) {
+    clean = clean.substring(0, 60).trim();
+  }
+  return clean;
 }
 function analyzeSender(name, userId, alreadyGreeted) {
   const n = (name || "Colega").trim();
@@ -4237,6 +4287,12 @@ ${liveStats}` : buildSystemPrompt(groupJid);
       result.response = "";
     }
     if (isProperty || isRequirement) {
+      if (extracted) {
+        if (extracted.zone) extracted.zone = sanitizeGeoString(extracted.zone);
+        if (extracted.zonaDeseada) extracted.zonaDeseada = sanitizeGeoString(extracted.zonaDeseada);
+        if (extracted.city) extracted.city = sanitizeGeoString(extracted.city);
+        if (extracted.ciudadDeseada) extracted.ciudadDeseada = sanitizeGeoString(extracted.ciudadDeseada);
+      }
       const zoneToValidate = isProperty ? extracted?.zone : extracted?.zonaDeseada || extracted?.zone;
       let isValidGeo = false;
       let geoValidation = null;
@@ -4319,7 +4375,7 @@ ${liveStats}` : buildSystemPrompt(groupJid);
       }, userId, realName, imageBuffer);
       if (saved) {
         result.inserted = true;
-        if (!isLLMIncomplete) {
+        if (!isLLMIncomplete && !userId.startsWith("web-")) {
           result.shouldSendDM = false;
           result.dmResponse = "";
           result.response = "";
@@ -4329,7 +4385,9 @@ ${liveStats}` : buildSystemPrompt(groupJid);
         result.sendReputationHook = false;
         result.reactionEmoji = getEmojiForCalificacion(saved.calificacion || void 0);
         const { executeMatchEngine: executeMatchEngine2 } = await Promise.resolve().then(() => (init_matching(), matching_exports));
-        executeMatchEngine2(saved.id, null).catch((err) => console.error("Error executing match engine:", err));
+        setImmediate(() => {
+          executeMatchEngine2(saved.id, null).catch((err) => console.error("Error executing match engine:", err));
+        });
       }
     } else if (isRequirement) {
       const reqTitle = extracted.title || `Requerimiento de ${extracted.propertyType || "inmueble"} en ${extracted.zonaDeseada || extracted.zone || "Bogot\xE1"} para ${extracted.transactionType || "venta"}`;
@@ -4350,7 +4408,7 @@ ${liveStats}` : buildSystemPrompt(groupJid);
       }, userId, realName);
       if (saved) {
         result.inserted = true;
-        if (!isLLMIncomplete) {
+        if (!isLLMIncomplete && !userId.startsWith("web-")) {
           result.shouldSendDM = false;
           result.dmResponse = "";
           result.response = "";
@@ -4360,7 +4418,9 @@ ${liveStats}` : buildSystemPrompt(groupJid);
         result.sendReputationHook = false;
         result.reactionEmoji = getEmojiForCalificacion(saved.calificacion || void 0);
         const { executeMatchEngine: executeMatchEngine2 } = await Promise.resolve().then(() => (init_matching(), matching_exports));
-        executeMatchEngine2(null, saved.id).catch((err) => console.error("Error executing match engine:", err));
+        setImmediate(() => {
+          executeMatchEngine2(null, saved.id).catch((err) => console.error("Error executing match engine:", err));
+        });
       }
     }
     const isConsultation = result.classification === "CONSULTA_GENERAL" || result.classification === "RESPUESTA_A_PREGUNTA_IA" || result.classification === "ANALISIS_DE_MERCADO";
@@ -6115,7 +6175,8 @@ var init_whatsapp_match = __esm({
             const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
             const isRestart = statusCode === DisconnectReason.restartRequired;
             const isConnectionLost = statusCode === DisconnectReason.connectionLost;
-            const delayMs = isRestart || isConnectionLost ? 1e3 : 5e3;
+            const isConflict = statusCode === 440;
+            const delayMs = isRestart || isConnectionLost ? 1e3 : isConflict ? 12e4 : 5e3;
             console.warn(`[JANIA-MATCH] \u26A0\uFE0F Conexi\xF3n Baileys cerrada (c\xF3digo: ${statusCode}): ${error?.message || error}. Reconectando en ${delayMs}ms: ${shouldReconnect}`);
             this.isReady = false;
             this.updateStatusInDb().catch((err) => console.error("[JANIA-MATCH-DB] Error updating status on close:", err));
@@ -9983,7 +10044,7 @@ async function recalculateAndCleanupMatches() {
         continue;
       }
       const newScore = calcularScoreMatch(req, prop);
-      if (newScore < 60) {
+      if (newScore < 35) {
         console.log(`[MATCH-CLEANUP] Eliminando Match #${m.id} por incompatibilidad (Nuevo Score: ${newScore}%, Score anterior: ${m.matchScore}%).`);
         await db.delete(propertyMatches).where(eq13(propertyMatches.id, m.id));
         deletedCount++;
@@ -11023,8 +11084,9 @@ var janIARouter = router({
       }
       const today = /* @__PURE__ */ new Date();
       today.setHours(0, 0, 0, 0);
-      const [propTodayCount] = await db.select({ count: sql3`count(*)::int` }).from(properties).where(sql3`${properties.createdAt} >= ${today}`);
-      const [reqTodayCount] = await db.select({ count: sql3`count(*)::int` }).from(requirements).where(sql3`${requirements.createdAt} >= ${today}`);
+      const todayStr = today.toISOString();
+      const [propTodayCount] = await db.select({ count: sql3`count(*)::int` }).from(properties).where(sql3`${properties.createdAt} >= ${todayStr}`);
+      const [reqTodayCount] = await db.select({ count: sql3`count(*)::int` }).from(requirements).where(sql3`${requirements.createdAt} >= ${todayStr}`);
       return {
         isReady,
         phone,
@@ -12262,7 +12324,7 @@ init_nightlyRematch();
 import cron from "node-cron";
 import path6 from "path";
 import { fileURLToPath } from "url";
-import { gte as gte2, and as and8, eq as eq14, sql as sql7 } from "drizzle-orm";
+import { gte as gte3, and as and8, eq as eq14, sql as sql7 } from "drizzle-orm";
 var __filename = fileURLToPath(import.meta.url);
 var __dirname = path6.dirname(__filename);
 function initCronScheduler() {
@@ -12348,7 +12410,7 @@ async function sendWeeklyReport() {
     if (!db) return;
     const propertiesCountRes = await db.select({ count: sql7`count(*)` }).from(properties).execute();
     const requirementsCountRes = await db.select({ count: sql7`count(*)` }).from(requirements).execute();
-    const matchesCountRes = await db.select({ count: sql7`count(*)` }).from(propertyMatches).where(gte2(sql7`(${propertyMatches.matchScore})::numeric`, 60)).execute();
+    const matchesCountRes = await db.select({ count: sql7`count(*)` }).from(propertyMatches).where(gte3(sql7`(${propertyMatches.matchScore})::numeric`, 60)).execute();
     const totalProperties = propertiesCountRes[0]?.count || 0;
     const totalRequirements = requirementsCountRes[0]?.count || 0;
     const totalMatches = matchesCountRes[0]?.count || 0;
@@ -12359,8 +12421,8 @@ async function sendWeeklyReport() {
       buyerAdvisor: requirements.idUsuarioWhatsapp,
       sellerAdvisor: properties.idUsuarioWhatsapp
     }).from(propertyMatches).innerJoin(requirements, eq14(propertyMatches.requirementId, requirements.id)).innerJoin(properties, eq14(propertyMatches.propertyId, properties.id)).where(and8(
-      gte2(sql7`(${propertyMatches.matchScore})::numeric`, 60),
-      gte2(propertyMatches.createdAt, sevenDaysAgo)
+      gte3(sql7`(${propertyMatches.matchScore})::numeric`, 60),
+      gte3(propertyMatches.createdAt, sevenDaysAgo)
     )).execute();
     let report = `\u{1F4CA} *INFORME SEMANAL DE ACTIVIDAD - VECY NETWORK* \u{1F4CA}
 
@@ -12416,6 +12478,15 @@ process.on("unhandledRejection", (reason, promise) => {
 async function startServer() {
   const app = express2();
   const server = createServer(app);
+  app.use((req, res, next) => {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization, trpc-accept");
+    if (req.method === "OPTIONS") {
+      return res.sendStatus(200);
+    }
+    next();
+  });
   app.use(express2.json({ limit: "50mb" }));
   app.use(express2.urlencoded({ limit: "50mb", extended: true }));
   registerOAuthRoutes(app);
@@ -12860,13 +12931,13 @@ async function startServer() {
     try {
       const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
       const { propertyMatches: propertyMatches2, requirements: requirements2, properties: properties2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-      const { eq: eq15, gte: gte3 } = await import("drizzle-orm");
+      const { eq: eq15, gte: gte4 } = await import("drizzle-orm");
       const { handleDetectedMatches: handleDetectedMatches2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
       const db = await getDb2();
       if (!db) return res.status(500).send("No DB connection");
       const today = /* @__PURE__ */ new Date();
       today.setHours(0, 0, 0, 0);
-      const matches = await db.select().from(propertyMatches2).where(gte3(propertyMatches2.createdAt, today));
+      const matches = await db.select().from(propertyMatches2).where(gte4(propertyMatches2.createdAt, today));
       console.log(`[API] Encontrados ${matches.length} matches creados hoy en la BD.`);
       const seen = /* @__PURE__ */ new Set();
       const uniqueMatches = [];
