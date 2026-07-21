@@ -3,7 +3,7 @@ import { properties, requirements, propertyMatches } from "../../drizzle/schema"
 import { and, eq } from "drizzle-orm";
 import { calcularScoreMatch } from "../_core/matching";
 import { handleDetectedMatches } from "../_core/janIA";
-import { whatsappBot } from "../_core/whatsapp";
+import { janiaMatchBot as whatsappBot } from "../_core/whatsapp-match";
 
 /**
  * Recorre todos los requerimientos activos y los cruza contra todas las propiedades disponibles.

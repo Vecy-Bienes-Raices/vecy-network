@@ -16,7 +16,7 @@ import { conversations, messages as dbMessages, users, propertyMatches, properti
 import { eq, and } from 'drizzle-orm';
 import { esDominioPermitido, scrapePropertyLink } from './scraper';
 import QRCode from 'qrcode';
-import { extractFirstName, getGreetingByTime } from './whatsapp';
+import { extractFirstName, getGreetingByTime } from './whatsapp-utils';
 import { transcribeAudioBuffer } from './voiceTranscription';
 
 
@@ -732,7 +732,7 @@ export class JaniaMatchBot {
       const realName = msg.pushName || `Asesor +${resolvedSenderId.split('@')[0]}`;
       const textLower = bodyText.toLowerCase();
 
-      const { detectaVoz, textToSpeechMedia } = await import('./whatsapp');
+      const { detectaVoz, textToSpeechMedia } = await import('./whatsapp-utils');
       const { processWhatsAppMessage, processConsultingMessage, processCirculoMessage } = await import('./janIA');
 
       const wantsVoice = msg.message?.audioMessage || detectaVoz(textLower);
@@ -1027,7 +1027,7 @@ export class JaniaMatchBot {
       await this.logToDb(resolvedSenderId, 'user', fullText);
 
       const { processWhatsAppMessage, processConsultingMessage, processCirculoMessage } = await import('./janIA');
-      const { sendAdminNotification } = await import('./whatsapp');
+      const { sendAdminNotification } = await import('./whatsapp-utils');
 
       // Procesar mediante JanIA (guardará en DB de forma automática)
       let result;
@@ -1121,7 +1121,7 @@ export class JaniaMatchBot {
           // Si el bot es administrador y el usuario cometió una infracción de normas (publicación no permitida)
           if (result.classification === "VIOLACION_DE_NORMAS" && isBotAdmin && result.response && result.response.trim() !== "") {
             const textToDeliver = result.response;
-            const { textToSpeechMedia } = await import('./whatsapp');
+            const { textToSpeechMedia } = await import('./whatsapp-utils');
             const voiceToDeliver = result.voiceResponse || textToDeliver;
 
             // 1. Enviar el audio de amonestación si es viable
@@ -1250,11 +1250,16 @@ export class JaniaMatchBot {
 
       if (result) {
         let reaction = "";
-        if (result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO") {
-          reaction = '✅';
-        } else if (result.classification === "DATOS_INCOMPLETOS" || (result.missingFields && result.missingFields.length > 0)) {
-          reaction = '🤔';
+        if (result.classification === "INMUEBLE") {
+          reaction = '👍';
+        } else if (result.classification === "REQUERIMIENTO") {
+          reaction = '📝';
+        } else if (result.classification === "VIOLACION_DE_NORMAS") {
+          reaction = '🚫';
+        } else if (msgText.includes("http://") || msgText.includes("https://")) {
+          reaction = '👌';
         }
+
         if (reaction) {
           const sendReaction = async () => {
             try {
@@ -1262,7 +1267,7 @@ export class JaniaMatchBot {
             } catch (_) {}
           };
 
-          if (result.inserted && reaction === '✅') {
+          if (result.inserted && (reaction === '👍' || reaction === '📝')) {
             const delayMs = Math.floor(Math.random() * (12000 - 4000 + 1)) + 4000;
             console.log(`[JANIA-MATCH] Inserción confirmada en parseAndSaveSilently. Retrasando reacción ${reaction} por ${delayMs}ms (Protocolo Anti-Ban)...`);
             setTimeout(sendReaction, delayMs);
@@ -1277,7 +1282,7 @@ export class JaniaMatchBot {
                           result.response.includes("MATCH INTELIGENTE DETECTADO") ||
                           result.response.includes("COINCIDENCIA DE NEGOCIO DETECTADA");
           if (isMatch) {
-            const { sendAdminNotification } = await import('./whatsapp');
+            const { sendAdminNotification } = await import('./whatsapp-utils');
             await sendAdminNotification(`🎯 *[MATCH DETECTADO POR DM]*\n\n${result.response}`);
           }
         }
@@ -1299,7 +1304,7 @@ export class JaniaMatchBot {
       const outOfOfficeText = `¡${saludo}${greetingName}! 🙋🏻‍♀️ Qué bueno saludarte de nuevo. En este momento nuestros agentes humanos se encuentran descansando 🌙✨. Si gustas, puedes dejar tu mensaje aquí para que te respondamos mañana a primera hora, o si prefieres, puedes continuar la conversación conmigo y contarme en qué puedo ayudarte hoy. ¡Siempre es un gusto atenderte! 🤝🚀`;
 
       // Intentar generar y enviar el audio mediante TTS
-      const { textToSpeechMedia } = await import('./whatsapp');
+      const { textToSpeechMedia } = await import('./whatsapp-utils');
       let media = null;
       try {
         media = await textToSpeechMedia(outOfOfficeText);
@@ -1587,11 +1592,11 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         targetJid = targetJid.replace('@c.us', '@s.whatsapp.net');
       }
 
-      const { cleanVoiceText } = await import('./whatsapp');
+      const { cleanVoiceText } = await import('./whatsapp-utils');
       const cleaned = cleanVoiceText(text);
       console.log(`[JANIA-MATCH] Generando nota de voz para enviar al grupo ${targetJid}...`);
       
-      const { textToSpeechMedia } = await import('./whatsapp');
+      const { textToSpeechMedia } = await import('./whatsapp-utils');
       const voiceMedia = await textToSpeechMedia(cleaned);
 
       if (voiceMedia && voiceMedia.data) {

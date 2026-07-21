@@ -805,18 +805,18 @@ export function buildSystemPrompt(groupJid?: string): string {
     
     let specificPrompt = "";
     if (groupJid === '120363260108880069@g.us') {
-      specificPrompt = fs.readFileSync(path.join(baseDir, "grupos/inmuebles.md"), "utf-8");
+      specificPrompt = fs.readFileSync(path.join(baseDir, "grupos/VECY_INMUEBLES_NETWORK.md"), "utf-8");
     } else if (groupJid === '120363417740040773@g.us') {
-      const legalPrompt = fs.readFileSync(path.join(baseDir, "grupos/legal.md"), "utf-8");
-      const avaluosPrompt = fs.readFileSync(path.join(baseDir, "modulos/avaluos.md"), "utf-8");
+      const legalPrompt = fs.readFileSync(path.join(baseDir, "grupos/VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALÚOS.md"), "utf-8");
+      const avaluosPrompt = fs.existsSync(path.join(baseDir, "modulos/avaluos.md")) ? fs.readFileSync(path.join(baseDir, "modulos/avaluos.md"), "utf-8") : "";
       specificPrompt = `${legalPrompt}\n\n${avaluosPrompt}`;
     } else if (groupJid === '120363403507276533@g.us') {
-      specificPrompt = fs.readFileSync(path.join(baseDir, "grupos/circulo_cero.md"), "utf-8");
+      specificPrompt = fs.readFileSync(path.join(baseDir, "grupos/PROYECTO_Vecy Network.md"), "utf-8");
     } else if (groupJid && (groupJid.endsWith('@g.us') || groupJid.includes('@us'))) {
       // Cualquier otro grupo de WhatsApp procesa inmuebles/requerimientos
-      specificPrompt = fs.readFileSync(path.join(baseDir, "grupos/inmuebles.md"), "utf-8");
+      specificPrompt = fs.readFileSync(path.join(baseDir, "grupos/VECY_INMUEBLES_NETWORK.md"), "utf-8");
     } else {
-    specificPrompt = fs.readFileSync(path.join(baseDir, "web/web_console.md"), "utf-8");
+      specificPrompt = fs.readFileSync(path.join(baseDir, "web/web_console.md"), "utf-8");
     }
 
     const fullPrompt = `${basePrompt}\n\n${specificPrompt}`;

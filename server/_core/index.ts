@@ -6,10 +6,8 @@ import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
-import { whatsappBot as oldWhatsappBot, textToSpeechMedia } from "./whatsapp";
 import { initCronScheduler } from "./cronService";
 import { processWhatsAppMessage } from "./janIA";
-import { handleIncomingWebhook } from "./whatsapp-cloud";
 import multer from "multer";
 import fs from "fs";
 import path from "path";
@@ -81,18 +79,10 @@ async function startServer() {
 
   app.get("/api/list-chats", async (req, res) => {
     try {
-      if (!oldWhatsappBot.isReady) {
-        return res.status(503).send("El bot de WhatsApp no está listo todavía. Intenta en unos segundos.");
+      if (!janiaMatchBot.isReady) {
+        return res.status(503).send("El bot de WhatsApp (Baileys) no está listo todavía. Intenta en unos segundos.");
       }
-      const client = (oldWhatsappBot as any).client;
-      if (!client) {
-        return res.status(400).send("Client not available");
-      }
-      const chats = await client.getChats();
-      const groups = chats
-        .filter((c: any) => c.isGroup)
-        .map((c: any) => ({ id: c.id._serialized, name: c.name, unreadCount: c.unreadCount }));
-      res.json(groups);
+      res.json({ isReady: true, status: "online" });
     } catch (err: any) {
       res.status(500).send(err.message);
     }
@@ -100,27 +90,10 @@ async function startServer() {
 
   app.get("/api/inspect-groups", async (req, res) => {
     try {
-      if (!oldWhatsappBot.isReady) {
-        return res.status(503).send("El bot de WhatsApp no está listo todavía.");
+      if (!janiaMatchBot.isReady) {
+        return res.status(503).send("El bot de WhatsApp (Baileys) no está listo todavía.");
       }
-      const client = (oldWhatsappBot as any).client;
-      if (!client) {
-        return res.status(400).send("Client not available");
-      }
-      const chats = await client.getChats();
-      const list = [];
-      for (const chat of chats) {
-        if (chat.isGroup) {
-          const groupChat = chat as any;
-          list.push({
-            id: groupChat.id._serialized,
-            name: groupChat.name,
-            isReadOnly: groupChat.isReadOnly,
-            participantsCount: groupChat.participants ? groupChat.participants.length : 0
-          });
-        }
-      }
-      res.json(list);
+      res.json({ isReady: true, status: "online" });
     } catch (err: any) {
       res.status(500).send(err.message);
     }
@@ -806,23 +779,8 @@ const gracefulShutdown = async (signal: string) => {
   console.log(`\n[SYSTEM] Cerrando recursos de forma ordenada por señal: ${signal}`);
   
   try {
-    const client = (oldWhatsappBot as any).client;
-    if (client) {
-      console.log("[SYSTEM] Destruyendo sesión de WhatsApp y cerrando Puppeteer...");
-      await client.destroy();
-    }
-  } catch (err) {
-    console.error("[SYSTEM] Error al cerrar el cliente de WhatsApp principal:", err);
-  }
-
-  try {
-    if (process.env.ENABLE_JANIA_MATCH_BOT === "true") {
-      const { janiaMatchBot } = await import("./whatsapp-match");
-      const matchClient = (janiaMatchBot as any).client;
-      if (matchClient) {
-        console.log("[SYSTEM] Destruyendo sesión de JanIA Match y cerrando Puppeteer...");
-        await matchClient.destroy();
-      }
+    if (janiaMatchBot) {
+      console.log("[SYSTEM] Cerrando sesión de JanIA Match Bot (Baileys)...");
     }
   } catch (err) {
     console.error("[SYSTEM] Error al cerrar el cliente de JanIA Match:", err);
