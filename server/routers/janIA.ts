@@ -400,6 +400,9 @@ export const janIARouter = router({
               zone: properties.zone,
               addressNeighborhood: properties.addressNeighborhood,
               idUsuarioWhatsapp: properties.idUsuarioWhatsapp,
+              origenNombre: properties.origenNombre,
+              origenTipo: properties.origenTipo,
+              origenId: properties.origenId,
               propertyType: properties.propertyType,
               transactionType: properties.transactionType,
               bedrooms: properties.bedrooms,
@@ -420,7 +423,8 @@ export const janIARouter = router({
               republicacionesCount: properties.republicacionesCount,
               estadoComercial: properties.estadoComercial,
               ultimaActividad: properties.ultimaActividad,
-              vigenciaIa: properties.vigenciaIa
+              vigenciaIa: properties.vigenciaIa,
+              createdAt: properties.createdAt,
             },
             requirement: {
               id: requirements.id,
@@ -431,6 +435,9 @@ export const janIARouter = router({
               zonaDeseada: requirements.zonaDeseada,
               addressNeighborhood: requirements.addressNeighborhood,
               idUsuarioWhatsapp: requirements.idUsuarioWhatsapp,
+              origenNombre: requirements.origenNombre,
+              origenTipo: requirements.origenTipo,
+              origenId: requirements.origenId,
               tipoInmuebleDeseado: requirements.tipoInmuebleDeseado,
               tipoNegocioDeseado: requirements.tipoNegocioDeseado,
               habitacionesMin: requirements.habitacionesMin,
@@ -440,6 +447,7 @@ export const janIARouter = router({
               estratoDeseado: requirements.estratoDeseado,
               amobladoDeseado: requirements.amobladoDeseado,
               rawText: requirements.rawText,
+              createdAt: requirements.createdAt,
             }
           })
           .from(propertyMatches)

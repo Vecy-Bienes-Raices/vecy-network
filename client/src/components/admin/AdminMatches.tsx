@@ -524,9 +524,16 @@ export default function AdminMatches() {
                     
                     {/* Inmueble (Oferta) */}
                     <div className="space-y-3">
-                      <span className="text-[9px] uppercase font-bold tracking-widest text-[#bf953f] bg-[#bf953f]/5 px-2 py-0.5 rounded border border-[#bf953f]/15">
-                        🏢 Inmueble / Oferta
-                      </span>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[9px] uppercase font-bold tracking-widest text-[#bf953f] bg-[#bf953f]/5 px-2 py-0.5 rounded border border-[#bf953f]/15">
+                          🏢 Inmueble / Oferta
+                        </span>
+                        {m.property?.origenNombre && (
+                          <span className="text-[10px] text-zinc-400 bg-white/5 border border-white/10 px-2 py-0.5 rounded-md truncate max-w-[200px]" title={m.property.origenNombre}>
+                            📍 {m.property.origenNombre}
+                          </span>
+                        )}
+                      </div>
                       <h4 className="text-base font-bold text-white mt-1">{m.property?.name}</h4>
                       {(m.property?.rawText || m.property?.description) && (
                         <p className="text-xs text-zinc-300 bg-white/[0.02] border border-white/5 p-3 rounded-xl italic leading-relaxed whitespace-pre-wrap">
@@ -540,19 +547,19 @@ export default function AdminMatches() {
                             <Phone className="w-3.5 h-3.5" />
                           </div>
                           <div>
-                            <p className="text-[9px] text-zinc-500 uppercase tracking-wider font-semibold">Captador (Owner)</p>
+                            <p className="text-[9px] text-zinc-500 uppercase tracking-wider font-semibold">Captador / Vendedor</p>
                             <p className="text-xs font-bold text-zinc-200">{formatPhoneDisplay(m.property?.idUsuarioWhatsapp)}</p>
                             <p className="text-[10px] text-zinc-500 font-mono select-all">+{m.property?.idUsuarioWhatsapp?.split('@')[0]}</p>
                           </div>
                         </div>
                         {m.property?.idUsuarioWhatsapp && (
                           <a 
-                            href={`https://wa.me/${m.property.idUsuarioWhatsapp.split('@')[0]}`} 
+                            href={`https://wa.me/${m.property.idUsuarioWhatsapp.split('@')[0]}?text=${encodeURIComponent(`Hola! Te contacto por el inmueble "${m.property.name || 'de la red'}" publicado en ${m.property.origenNombre || 'VECY Network'}. Tienes un Match del ${score.toFixed(0)}% con un requerimiento activo.`)}`} 
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="bg-[#25D366] hover:bg-[#20ba5a] text-black text-[10px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors"
+                            className="bg-[#25D366] hover:bg-[#20ba5a] text-black text-[10px] font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition-all shadow-md hover:scale-105"
                           >
-                            WA <ExternalLink className="w-2.5 h-2.5" />
+                            Contactar WA <ExternalLink className="w-3 h-3" />
                           </a>
                         )}
                       </div>
@@ -560,9 +567,16 @@ export default function AdminMatches() {
 
                     {/* Requerimiento (Demanda) */}
                     <div className="space-y-3 md:pl-6 md:border-l border-white/5">
-                      <span className="text-[9px] uppercase font-bold tracking-widest text-cyan-400 bg-cyan-500/5 px-2 py-0.5 rounded border border-cyan-500/15">
-                        🔍 Requerimiento / Demanda
-                      </span>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[9px] uppercase font-bold tracking-widest text-cyan-400 bg-cyan-500/5 px-2 py-0.5 rounded border border-cyan-500/15">
+                          🔍 Requerimiento / Demanda
+                        </span>
+                        {m.requirement?.origenNombre && (
+                          <span className="text-[10px] text-zinc-400 bg-white/5 border border-white/10 px-2 py-0.5 rounded-md truncate max-w-[200px]" title={m.requirement.origenNombre}>
+                            📍 {m.requirement.origenNombre}
+                          </span>
+                        )}
+                      </div>
                       <h4 className="text-base font-bold text-white mt-1">
                         {m.requirement?.name || `Requerimiento #${m.requirement?.id}`}
                       </h4>
@@ -578,19 +592,19 @@ export default function AdminMatches() {
                             <Phone className="w-3.5 h-3.5" />
                           </div>
                           <div>
-                            <p className="text-[9px] text-zinc-500 uppercase tracking-wider font-semibold">Buscador (Seeker)</p>
+                            <p className="text-[9px] text-zinc-500 uppercase tracking-wider font-semibold">Requiriente / Comprador</p>
                             <p className="text-xs font-bold text-zinc-200">{formatPhoneDisplay(m.requirement?.idUsuarioWhatsapp)}</p>
                             <p className="text-[10px] text-zinc-500 font-mono select-all">+{m.requirement?.idUsuarioWhatsapp?.split('@')[0]}</p>
                           </div>
                         </div>
                         {m.requirement?.idUsuarioWhatsapp && (
                           <a 
-                            href={`https://wa.me/${m.requirement.idUsuarioWhatsapp.split('@')[0]}`} 
+                            href={`https://wa.me/${m.requirement.idUsuarioWhatsapp.split('@')[0]}?text=${encodeURIComponent(`Hola! Te contacto por tu requerimiento de inmueble en ${m.requirement.zonaDeseada || m.requirement.ciudadDeseada || 'VECY Network'}. Encontramos una propiedad con un Match del ${score.toFixed(0)}%.`)}`} 
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="bg-[#25D366] hover:bg-[#20ba5a] text-black text-[10px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors"
+                            className="bg-[#25D366] hover:bg-[#20ba5a] text-black text-[10px] font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition-all shadow-md hover:scale-105"
                           >
-                            WA <ExternalLink className="w-2.5 h-2.5" />
+                            Contactar WA <ExternalLink className="w-3 h-3" />
                           </a>
                         )}
                       </div>

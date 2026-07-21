@@ -15,6 +15,8 @@ async function rebuild() {
 
   // 1. Limpiar/Borrar todos los matches existentes para regenerarlos sin residuos
   console.log("🗑️ Borrando todos los matches de la base de datos...");
+  const { notificationLogs } = await import("../drizzle/schema");
+  await db.update(notificationLogs).set({ matchId: null });
   await db.delete(propertyMatches);
   console.log("✅ Base de datos de matches vaciada con éxito.");
 

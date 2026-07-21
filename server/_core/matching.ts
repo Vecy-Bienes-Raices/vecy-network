@@ -465,86 +465,102 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   let totalW = 0;
   let hardFail = false;
 
-  // 5. Precio
+  // ── FILTRO DURO Y DIRECCIONAL 5: Precio (Reglas Venta vs Arriendo) ──
   if (budgetMax > 0 && price > 0) {
-    const low  = budgetMax * 0.95;
-    const high = budgetMax * 1.05;
-    const budMinOk = budgetMin > 0 ? price >= budgetMin * 0.95 : true;
-    if (price >= low && price <= high && budMinOk) {
-      const diff = Math.abs(price - budgetMax) / budgetMax;
-      score += diff <= 0.01 ? 12 : 10;
-      positives.push(`Precio de $${price.toLocaleString()} dentro de la tolerancia del presupuesto máximo de $${budgetMax.toLocaleString()}`);
+    const isRent = reqBiz.includes("arriendo") || propBiz.includes("arriendo");
+    if (isRent) {
+      // En arriendo: El canon ofrecido NUNCA puede ser mayor al presupuesto máximo
+      if (price > budgetMax * 1.02) {
+        blockers.push(`Canon de arriendo $${price.toLocaleString()} supera el presupuesto máximo de $${budgetMax.toLocaleString()}`);
+        hardFail = true;
+      } else {
+        const ratio = price / budgetMax;
+        score += ratio <= 1.0 && ratio >= 0.85 ? 15 : 12;
+        positives.push(`Canon de $${price.toLocaleString()} cumple con el presupuesto de $${budgetMax.toLocaleString()}`);
+        if (ratio < 0.85) {
+          positives.push(`OPORTUNIDAD/GANGA EN ARRIENDO: Canon $${price.toLocaleString()} es significativamente menor al presupuesto`);
+        }
+      }
     } else {
-      blockers.push(`Precio $${price.toLocaleString()} fuera del rango de tolerancia para presupuesto $${budgetMax.toLocaleString()}`);
-      hardFail = true;
+      // En venta: Tolerancia máxima +5% si es negociable. Si es menor, se considera GANGA
+      if (price > budgetMax * 1.05) {
+        blockers.push(`Precio de venta $${price.toLocaleString()} supera el presupuesto máximo de $${budgetMax.toLocaleString()}`);
+        hardFail = true;
+      } else if (price < budgetMax * 0.65) {
+        // Demasiado bajo (posible error de captura o inconsistencia)
+        score += 8;
+        positives.push(`SUPER GANGA: Precio $${price.toLocaleString()} está muy por debajo del presupuesto $${budgetMax.toLocaleString()}`);
+      } else {
+        const diff = (price - budgetMax) / budgetMax;
+        if (diff <= 0) {
+          score += 15;
+          positives.push(`Precio de $${price.toLocaleString()} es ideal para el presupuesto de $${budgetMax.toLocaleString()}`);
+        } else {
+          score += 10;
+          positives.push(`Precio de $${price.toLocaleString()} está dentro del margen negociable (+5%)`);
+        }
+      }
     }
-    totalW += 12;
+    totalW += 15;
   }
 
-  // 6. Área
+  // ── FILTRO DURO 6: Área Mínima (m2) ──
   if (reqAreaMin > 0 && propArea > 0) {
-    if (propArea < reqAreaMin) {
+    if (propArea < reqAreaMin * 0.98) {
       blockers.push(`Área de ${propArea}m² es menor a la mínima requerida de ${reqAreaMin}m²`);
       hardFail = true;
     } else {
       const exceso = propArea - reqAreaMin;
-      score += exceso <= 20 ? 10 : exceso <= 50 ? 7 : 4;
-      positives.push(`Área de ${propArea}m² es compatible con el requerimiento de ${reqAreaMin}m²`);
-      if (exceso > 50) {
-        negatives.push(`Área excede el requerimiento por más de 50m² (${exceso}m² de exceso)`);
-      }
+      score += exceso <= 20 ? 12 : exceso <= 60 ? 9 : 5;
+      positives.push(`Área de ${propArea}m² es totalmente compatible con el requerimiento de ${reqAreaMin}m²`);
+    }
+    totalW += 12;
+  }
+
+  // ── FILTRO DURO 7: Habitaciones (Nunca Menor Que) ──
+  if (reqBedrooms > 0 && pBedrooms >= 0) {
+    if (pBedrooms < reqBedrooms) {
+      blockers.push(`Habitaciones ofrecidas (${pBedrooms}) son menores a las requeridas (${reqBedrooms})`);
+      hardFail = true;
+    } else {
+      score += pBedrooms === reqBedrooms ? 10 : pBedrooms === reqBedrooms + 1 ? 8 : 5;
+      positives.push(`Habitaciones ofrecidas (${pBedrooms}) satisfacen la solicitud de (${reqBedrooms})`);
     }
     totalW += 10;
   }
 
-  // 7. Habitaciones
-  if (reqBedrooms >= 0 && pBedrooms >= 0) {
-    if (pBedrooms < reqBedrooms) {
-      blockers.push(`Habitaciones ofrecidas (${pBedrooms}) menores a las requeridas (${reqBedrooms})`);
+  // ── FILTRO DURO 8: Baños (Nunca Menor Que) ──
+  if (reqBathrooms > 0 && pBathrooms >= 0) {
+    if (pBathrooms < reqBathrooms) {
+      blockers.push(`Baños ofrecidos (${pBathrooms}) son menores a los requeridos (${reqBathrooms})`);
       hardFail = true;
     } else {
-      score += pBedrooms === reqBedrooms ? 8 : pBedrooms === reqBedrooms + 1 ? 6 : 3;
-      positives.push(`Habitaciones ofrecidas (${pBedrooms}) son compatibles con las requeridas (${reqBedrooms})`);
-      if (pBedrooms > reqBedrooms + 1) {
-        negatives.push(`Habitaciones ofrecidas (${pBedrooms}) exceden las requeridas (${reqBedrooms}) por más de 1`);
-      }
+      score += pBathrooms === reqBathrooms ? 8 : 6;
+      positives.push(`Baños ofrecidos (${pBathrooms}) satisfacen la solicitud de (${reqBathrooms})`);
     }
     totalW += 8;
   }
 
-  // 8. Baños
-  if (reqBathrooms >= 0 && pBathrooms >= 0) {
-    if (pBathrooms < reqBathrooms) {
-      blockers.push(`Baños ofrecidos (${pBathrooms}) menores a los requeridos (${reqBathrooms})`);
-      hardFail = true;
-    } else {
-      score += pBathrooms === reqBathrooms ? 5 : 4;
-      positives.push(`Baños ofrecidos (${pBathrooms}) son compatibles con los requeridos (${reqBathrooms})`);
-    }
-    totalW += 5;
-  }
-
-  // 9. Parqueaderos
-  if (reqGarages >= 0 && pGarages >= 0) {
+  // ── FILTRO DURO 9: Parqueaderos (Nunca Menor Que) ──
+  if (reqGarages > 0 && pGarages >= 0) {
     if (pGarages < reqGarages) {
-      blockers.push(`Parqueaderos ofrecidos (${pGarages}) menores a los requeridos (${reqGarages})`);
+      blockers.push(`Parqueaderos ofrecidos (${pGarages}) son menores a los requeridos (${reqGarages})`);
       hardFail = true;
     } else {
-      score += pGarages === reqGarages ? 5 : 4;
-      positives.push(`Parqueaderos ofrecidos (${pGarages}) son compatibles con los requeridos (${reqGarages})`);
+      score += pGarages === reqGarages ? 8 : 6;
+      positives.push(`Parqueaderos ofrecidos (${pGarages}) satisfacen la solicitud de (${reqGarages})`);
     }
-    totalW += 5;
+    totalW += 8;
   }
 
-  // 10. Administración
-  if (reqAdminMax >= 0 && pAdminFee > 0) {
-    if (pAdminFee > reqAdminMax) {
+  // ── FILTRO DURO 10: Cuota de Administración (Nunca Mayor Que) ──
+  if (reqAdminMax > 0 && pAdminFee > 0) {
+    if (pAdminFee > reqAdminMax * 1.02) {
       blockers.push(`Cuota de administración ($${pAdminFee.toLocaleString()}) supera la máxima requerida ($${reqAdminMax.toLocaleString()})`);
       hardFail = true;
     } else {
-      const ratio = pAdminFee / reqAdminMax;
-      score += ratio <= 1.0 && ratio >= 0.85 ? 7 : 5;
-      positives.push(`Administración de $${pAdminFee.toLocaleString()} es compatible con el máximo de $${reqAdminMax.toLocaleString()}`);
+      score += 7;
+      positives.push(`Administración de $${pAdminFee.toLocaleString()} cumple con el máximo solicitado de $${reqAdminMax.toLocaleString()}`);
     }
     totalW += 7;
   }
