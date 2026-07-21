@@ -117,7 +117,7 @@ async function transcribeAudioWithGemini(audioBuffer: Buffer, mimeType: string):
   if (!apiKey) {
     throw new Error("No GEMINI_API_KEY or GOOGLE_API_KEY found for transcription fallback.");
   }
-  const model = "gemini-3.1-flash-lite";
+  const model = "gemini-2.5-flash";
   const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
   let cleanMime = mimeType.split(';')[0].trim().toLowerCase();
