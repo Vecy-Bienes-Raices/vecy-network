@@ -13,6 +13,7 @@ import fs from "fs";
 import path from "path";
 import { transcribeAudioBuffer } from "./voiceTranscription";
 import { invokeLLM } from "./llm";
+import { textToSpeechMedia } from "./whatsapp-utils";
 import { janiaMatchBot as whatsappBot, janiaMatchBot } from "./whatsapp-match";
 import "./notification";
 
@@ -63,9 +64,6 @@ async function startServer() {
   const webhookPostHandler = async (req: any, res: any) => {
     try {
       res.status(200).send("EVENT_RECEIVED");
-      handleIncomingWebhook(req.body).catch((err: any) => {
-        console.error("[WEBHOOK-ERROR] Error handling incoming webhook:", err);
-      });
     } catch (err: any) {
       console.error("[WEBHOOK-ERROR] Exception in webhook endpoint:", err);
     }
@@ -255,11 +253,6 @@ async function startServer() {
         const targetPhone = cleanPhone.endsWith("@s.whatsapp.net") ? cleanPhone : `${cleanPhone}@s.whatsapp.net`;
         console.log(`[NOTIFICACIÓN-API] Retransmitiendo mensaje a ${targetPhone} vía JanIA Match Bot (Baileys)...`);
         await matchBot.queuedSend(targetPhone, text);
-      } else {
-        const targetPhone = cleanPhone.endsWith("@c.us") ? cleanPhone : `${cleanPhone}@c.us`;
-        console.log(`[NOTIFICACIÓN-API] Retransmitiendo mensaje a ${targetPhone} por WhatsApp Cloud API...`);
-        const { sendCloudMessage } = await import("./whatsapp-cloud");
-        await sendCloudMessage(targetPhone, text);
       }
       
       res.json({ ok: true, message: "Notification sent successfully." });

@@ -2884,74 +2884,87 @@ function explicarMatch(requirement, property) {
   let totalW = 0;
   let hardFail = false;
   if (budgetMax > 0 && price > 0) {
-    const low = budgetMax * 0.95;
-    const high = budgetMax * 1.05;
-    const budMinOk = budgetMin > 0 ? price >= budgetMin * 0.95 : true;
-    if (price >= low && price <= high && budMinOk) {
-      const diff = Math.abs(price - budgetMax) / budgetMax;
-      score += diff <= 0.01 ? 12 : 10;
-      positives.push(`Precio de $${price.toLocaleString()} dentro de la tolerancia del presupuesto m\xE1ximo de $${budgetMax.toLocaleString()}`);
+    const isRent = reqBiz.includes("arriendo") || propBiz.includes("arriendo");
+    if (isRent) {
+      if (price > budgetMax * 1.02) {
+        blockers.push(`Canon de arriendo $${price.toLocaleString()} supera el presupuesto m\xE1ximo de $${budgetMax.toLocaleString()}`);
+        hardFail = true;
+      } else {
+        const ratio = price / budgetMax;
+        score += ratio <= 1 && ratio >= 0.85 ? 15 : 12;
+        positives.push(`Canon de $${price.toLocaleString()} cumple con el presupuesto de $${budgetMax.toLocaleString()}`);
+        if (ratio < 0.85) {
+          positives.push(`OPORTUNIDAD/GANGA EN ARRIENDO: Canon $${price.toLocaleString()} es significativamente menor al presupuesto`);
+        }
+      }
     } else {
-      blockers.push(`Precio $${price.toLocaleString()} fuera del rango de tolerancia para presupuesto $${budgetMax.toLocaleString()}`);
-      hardFail = true;
+      if (price > budgetMax * 1.05) {
+        blockers.push(`Precio de venta $${price.toLocaleString()} supera el presupuesto m\xE1ximo de $${budgetMax.toLocaleString()}`);
+        hardFail = true;
+      } else if (price < budgetMax * 0.65) {
+        score += 8;
+        positives.push(`SUPER GANGA: Precio $${price.toLocaleString()} est\xE1 muy por debajo del presupuesto $${budgetMax.toLocaleString()}`);
+      } else {
+        const diff = (price - budgetMax) / budgetMax;
+        if (diff <= 0) {
+          score += 15;
+          positives.push(`Precio de $${price.toLocaleString()} es ideal para el presupuesto de $${budgetMax.toLocaleString()}`);
+        } else {
+          score += 10;
+          positives.push(`Precio de $${price.toLocaleString()} est\xE1 dentro del margen negociable (+5%)`);
+        }
+      }
     }
-    totalW += 12;
+    totalW += 15;
   }
   if (reqAreaMin > 0 && propArea > 0) {
-    if (propArea < reqAreaMin) {
+    if (propArea < reqAreaMin * 0.98) {
       blockers.push(`\xC1rea de ${propArea}m\xB2 es menor a la m\xEDnima requerida de ${reqAreaMin}m\xB2`);
       hardFail = true;
     } else {
       const exceso = propArea - reqAreaMin;
-      score += exceso <= 20 ? 10 : exceso <= 50 ? 7 : 4;
-      positives.push(`\xC1rea de ${propArea}m\xB2 es compatible con el requerimiento de ${reqAreaMin}m\xB2`);
-      if (exceso > 50) {
-        negatives.push(`\xC1rea excede el requerimiento por m\xE1s de 50m\xB2 (${exceso}m\xB2 de exceso)`);
-      }
+      score += exceso <= 20 ? 12 : exceso <= 60 ? 9 : 5;
+      positives.push(`\xC1rea de ${propArea}m\xB2 es totalmente compatible con el requerimiento de ${reqAreaMin}m\xB2`);
+    }
+    totalW += 12;
+  }
+  if (reqBedrooms > 0 && pBedrooms >= 0) {
+    if (pBedrooms < reqBedrooms) {
+      blockers.push(`Habitaciones ofrecidas (${pBedrooms}) son menores a las requeridas (${reqBedrooms})`);
+      hardFail = true;
+    } else {
+      score += pBedrooms === reqBedrooms ? 10 : pBedrooms === reqBedrooms + 1 ? 8 : 5;
+      positives.push(`Habitaciones ofrecidas (${pBedrooms}) satisfacen la solicitud de (${reqBedrooms})`);
     }
     totalW += 10;
   }
-  if (reqBedrooms >= 0 && pBedrooms >= 0) {
-    if (pBedrooms < reqBedrooms) {
-      blockers.push(`Habitaciones ofrecidas (${pBedrooms}) menores a las requeridas (${reqBedrooms})`);
+  if (reqBathrooms > 0 && pBathrooms >= 0) {
+    if (pBathrooms < reqBathrooms) {
+      blockers.push(`Ba\xF1os ofrecidos (${pBathrooms}) son menores a los requeridos (${reqBathrooms})`);
       hardFail = true;
     } else {
-      score += pBedrooms === reqBedrooms ? 8 : pBedrooms === reqBedrooms + 1 ? 6 : 3;
-      positives.push(`Habitaciones ofrecidas (${pBedrooms}) son compatibles con las requeridas (${reqBedrooms})`);
-      if (pBedrooms > reqBedrooms + 1) {
-        negatives.push(`Habitaciones ofrecidas (${pBedrooms}) exceden las requeridas (${reqBedrooms}) por m\xE1s de 1`);
-      }
+      score += pBathrooms === reqBathrooms ? 8 : 6;
+      positives.push(`Ba\xF1os ofrecidos (${pBathrooms}) satisfacen la solicitud de (${reqBathrooms})`);
     }
     totalW += 8;
   }
-  if (reqBathrooms >= 0 && pBathrooms >= 0) {
-    if (pBathrooms < reqBathrooms) {
-      blockers.push(`Ba\xF1os ofrecidos (${pBathrooms}) menores a los requeridos (${reqBathrooms})`);
-      hardFail = true;
-    } else {
-      score += pBathrooms === reqBathrooms ? 5 : 4;
-      positives.push(`Ba\xF1os ofrecidos (${pBathrooms}) son compatibles con los requeridos (${reqBathrooms})`);
-    }
-    totalW += 5;
-  }
-  if (reqGarages >= 0 && pGarages >= 0) {
+  if (reqGarages > 0 && pGarages >= 0) {
     if (pGarages < reqGarages) {
-      blockers.push(`Parqueaderos ofrecidos (${pGarages}) menores a los requeridos (${reqGarages})`);
+      blockers.push(`Parqueaderos ofrecidos (${pGarages}) son menores a los requeridos (${reqGarages})`);
       hardFail = true;
     } else {
-      score += pGarages === reqGarages ? 5 : 4;
-      positives.push(`Parqueaderos ofrecidos (${pGarages}) son compatibles con los requeridos (${reqGarages})`);
+      score += pGarages === reqGarages ? 8 : 6;
+      positives.push(`Parqueaderos ofrecidos (${pGarages}) satisfacen la solicitud de (${reqGarages})`);
     }
-    totalW += 5;
+    totalW += 8;
   }
-  if (reqAdminMax >= 0 && pAdminFee > 0) {
-    if (pAdminFee > reqAdminMax) {
+  if (reqAdminMax > 0 && pAdminFee > 0) {
+    if (pAdminFee > reqAdminMax * 1.02) {
       blockers.push(`Cuota de administraci\xF3n ($${pAdminFee.toLocaleString()}) supera la m\xE1xima requerida ($${reqAdminMax.toLocaleString()})`);
       hardFail = true;
     } else {
-      const ratio = pAdminFee / reqAdminMax;
-      score += ratio <= 1 && ratio >= 0.85 ? 7 : 5;
-      positives.push(`Administraci\xF3n de $${pAdminFee.toLocaleString()} es compatible con el m\xE1ximo de $${reqAdminMax.toLocaleString()}`);
+      score += 7;
+      positives.push(`Administraci\xF3n de $${pAdminFee.toLocaleString()} cumple con el m\xE1ximo solicitado de $${reqAdminMax.toLocaleString()}`);
     }
     totalW += 7;
   }
@@ -3564,17 +3577,17 @@ function buildSystemPrompt(groupJid) {
     const basePrompt = fs.readFileSync(path.join(baseDir, "base.md"), "utf-8");
     let specificPrompt = "";
     if (groupJid === "120363260108880069@g.us") {
-      specificPrompt = fs.readFileSync(path.join(baseDir, "grupos/inmuebles.md"), "utf-8");
+      specificPrompt = fs.readFileSync(path.join(baseDir, "grupos/VECY_INMUEBLES_NETWORK.md"), "utf-8");
     } else if (groupJid === "120363417740040773@g.us") {
-      const legalPrompt = fs.readFileSync(path.join(baseDir, "grupos/legal.md"), "utf-8");
-      const avaluosPrompt = fs.readFileSync(path.join(baseDir, "modulos/avaluos.md"), "utf-8");
+      const legalPrompt = fs.readFileSync(path.join(baseDir, "grupos/VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVAL\xDAOS.md"), "utf-8");
+      const avaluosPrompt = fs.existsSync(path.join(baseDir, "modulos/avaluos.md")) ? fs.readFileSync(path.join(baseDir, "modulos/avaluos.md"), "utf-8") : "";
       specificPrompt = `${legalPrompt}
 
 ${avaluosPrompt}`;
     } else if (groupJid === "120363403507276533@g.us") {
-      specificPrompt = fs.readFileSync(path.join(baseDir, "grupos/circulo_cero.md"), "utf-8");
+      specificPrompt = fs.readFileSync(path.join(baseDir, "grupos/PROYECTO_Vecy Network.md"), "utf-8");
     } else if (groupJid && (groupJid.endsWith("@g.us") || groupJid.includes("@us"))) {
-      specificPrompt = fs.readFileSync(path.join(baseDir, "grupos/inmuebles.md"), "utf-8");
+      specificPrompt = fs.readFileSync(path.join(baseDir, "grupos/VECY_INMUEBLES_NETWORK.md"), "utf-8");
     } else {
       specificPrompt = fs.readFileSync(path.join(baseDir, "web/web_console.md"), "utf-8");
     }
@@ -5977,47 +5990,261 @@ JanIA ha dejado de ser un bot pasivo que solo publica alertas en el grupo. A par
   }
 });
 
-// server/_core/setup-stealth.ts
-import { createRequire } from "module";
-var require2;
-var init_setup_stealth = __esm({
-  "server/_core/setup-stealth.ts"() {
-    "use strict";
-    require2 = createRequire(import.meta.url);
-    try {
-      const puppeteerExtra = require2("puppeteer-extra");
-      const StealthPlugin = require2("puppeteer-extra-plugin-stealth");
-      puppeteerExtra.use(StealthPlugin());
-      try {
-        const puppeteerPath = require2.resolve("puppeteer");
-        require2.cache[puppeteerPath] = {
-          id: puppeteerPath,
-          filename: puppeteerPath,
-          loaded: true,
-          exports: puppeteerExtra,
-          parent: null,
-          children: []
-        };
-        console.log("\u{1F6E1}\uFE0F [Stealth] Intercepci\xF3n de Puppeteer (completo) exitosa.");
-      } catch (err) {
+// server/_core/whatsapp-utils.ts
+var whatsapp_utils_exports = {};
+__export(whatsapp_utils_exports, {
+  cleanVoiceText: () => cleanVoiceText,
+  detectaVoz: () => detectaVoz,
+  extractFirstName: () => extractFirstName2,
+  getGreetingByTime: () => getGreetingByTime2,
+  sendAdminNotification: () => sendAdminNotification,
+  textToSpeechMedia: () => textToSpeechMedia2
+});
+function extractFirstName2(fullName) {
+  if (!fullName) return "";
+  const clean = fullName.trim();
+  if (!clean) return "";
+  if (/^\+?[\d\s-]{6,}$/.test(clean)) return "";
+  const words = clean.split(/\s+/).map((w) => w.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, ""));
+  if (words.length === 0 || !words[0]) return "";
+  const w1 = words[0].toLowerCase();
+  const w2 = words[1] ? words[1].toLowerCase() : "";
+  if (w2 && COMMON_FIRST_NAMES2.has(w1) && COMMON_FIRST_NAMES2.has(w2)) {
+    const first = words[0].charAt(0).toUpperCase() + words[0].slice(1).toLowerCase();
+    const second = words[1].charAt(0).toUpperCase() + words[1].slice(1).toLowerCase();
+    return `${first} ${second}`;
+  }
+  return words[0].charAt(0).toUpperCase() + words[0].slice(1).toLowerCase();
+}
+function getGreetingByTime2() {
+  const hour = (/* @__PURE__ */ new Date()).getHours();
+  if (hour >= 5 && hour < 12) return "Buenos d\xEDas";
+  if (hour >= 12 && hour < 19) return "Buenas tardes";
+  return "Buenas noches";
+}
+function detectaVoz(text2) {
+  if (!text2) return false;
+  const t2 = text2.toLowerCase();
+  return t2.includes("nota de voz") || t2.includes("mensaje de voz") || t2.includes("env\xEDame un audio") || t2.includes("enviame un audio") || t2.includes("resp\xF3ndeme por audio") || t2.includes("respondeme por audio") || t2.includes("m\xE1ndame un audio") || t2.includes("mandame un audio") || t2.includes("por audio") || t2.includes("en audio") || t2.includes("con voz");
+}
+function cleanVoiceText(text2) {
+  if (!text2) return "";
+  let cleaned = text2.trim();
+  cleaned = cleaned.replace(/^\{\{[\s\S]*?\}\}/g, "").trim();
+  cleaned = cleaned.replace(/^\[[\s\S]*?\]/g, "").trim();
+  cleaned = cleaned.replace(/^\{\s*|\s*\}$/g, "").trim();
+  cleaned = cleaned.replace(/^"|"$/g, "").trim();
+  const preambulos = [
+    /^(aquí\s+tienes|aqui\s+tienes|aquí\s+está|aqui\s+esta|aquí\s+te\s+presento|esta\s+es|este\s+es)\s+(la\s+propuesta|el\s+guión|el\s+guion|la\s+nota\s+de\s+voz|el\s+mensaje|la\s+redacción|la\s+redaccion|el\s+texto)[^:]*:\s*/i,
+    /^claro\s*,\s*(aquí\s+tienes|aquí\s+está|te\s+comparto)[^:]*:\s*/i,
+    /^(propuesta\s+de\s+(guión|guion|nota|mensaje|audio|texto)[^:]*):\s*/i,
+    /^(guión\s+de\s+voz|guion\s+de\s+voz|nota\s+de\s+voz|mensaje\s+de\s+voz|guión\s+de\s+audio|guion\s+de\s+audio|guión|guion)\s*:\s*/i
+  ];
+  for (const regex of preambulos) {
+    cleaned = cleaned.replace(regex, "");
+  }
+  cleaned = cleaned.replace(/^:\s*/, "").trim();
+  cleaned = cleaned.replace(/^"|"$/g, "").trim();
+  return cleaned.trim();
+}
+async function textToSpeechMedia2(text2, format = "OGG_OPUS") {
+  const cleaned = cleanVoiceText(text2);
+  if (!cleaned) return null;
+  try {
+    const googleApiKey = process.env.GOOGLE_TTS_API_KEY || process.env.GEMINI_API_KEY;
+    if (googleApiKey) {
+      const response = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${googleApiKey}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          input: { text: cleaned },
+          voice: {
+            languageCode: "es-CO",
+            name: "es-CO-Neural2-[#1]",
+            // Voz femenina colombiana alta fidelidad (Laomedeia)
+            ssmlGender: "FEMALE"
+          },
+          audioConfig: {
+            audioEncoding: format === "OGG_OPUS" ? "OGG_OPUS" : "MP3",
+            speakingRate: 1.02,
+            pitch: 0
+          }
+        })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.audioContent) {
+          const buffer = Buffer.from(data.audioContent, "base64");
+          return {
+            mimetype: format === "OGG_OPUS" ? "audio/ogg; codecs=opus" : "audio/mp3",
+            data: buffer.toString("base64"),
+            buffer
+          };
+        }
       }
-      try {
-        const puppeteerCorePath = require2.resolve("puppeteer-core");
-        require2.cache[puppeteerCorePath] = {
-          id: puppeteerCorePath,
-          filename: puppeteerCorePath,
-          loaded: true,
-          exports: puppeteerExtra,
-          parent: null,
-          children: []
-        };
-        console.log("\u{1F6E1}\uFE0F [Stealth] Intercepci\xF3n de Puppeteer-Core exitosa.");
-      } catch (err) {
-      }
-      console.log("\u{1F6E1}\uFE0F [Stealth] Evasi\xF3n de firmas activada para WhatsApp de forma robusta.");
-    } catch (error) {
-      console.error("\u274C [Stealth-Error] No se pudo configurar Stealth Puppeteer:", error);
     }
+  } catch (err) {
+    console.error("[TTS-Media] Error sintetizando audio:", err.message || err);
+  }
+  return null;
+}
+async function sendAdminNotification(text2) {
+  const ADMIN_PHONE = process.env.ADMIN_PHONE || "573166569719";
+  const adminJid = `${ADMIN_PHONE}@s.whatsapp.net`;
+  try {
+    const matchBot = global.janiaMatchBotInstance;
+    if (matchBot && matchBot.queuedSend) {
+      console.log(`[WHATSAPP-UTILS] Enviando notificaci\xF3n de admin a ${adminJid} v\xEDa Baileys...`);
+      await matchBot.queuedSend(adminJid, text2);
+    } else {
+      console.log(`[WHATSAPP-UTILS] [Admin Log]: ${text2}`);
+    }
+  } catch (e) {
+    console.error("[WHATSAPP-UTILS] Error enviando notificaci\xF3n admin:", e.message || e);
+  }
+}
+var COMMON_FIRST_NAMES2;
+var init_whatsapp_utils = __esm({
+  "server/_core/whatsapp-utils.ts"() {
+    "use strict";
+    COMMON_FIRST_NAMES2 = /* @__PURE__ */ new Set([
+      "juan",
+      "maria",
+      "mar\xEDa",
+      "carlos",
+      "ana",
+      "luis",
+      "jorge",
+      "pedro",
+      "jose",
+      "jos\xE9",
+      "andres",
+      "andr\xE9s",
+      "camilo",
+      "diana",
+      "laura",
+      "paula",
+      "andrea",
+      "claudia",
+      "martha",
+      "marta",
+      "sandra",
+      "monica",
+      "m\xF3nica",
+      "patricia",
+      "gloria",
+      "esperanza",
+      "blanca",
+      "luz",
+      "mercedes",
+      "rosalba",
+      "carmen",
+      "rosa",
+      "diego",
+      "felipe",
+      "santiago",
+      "alejandro",
+      "nicolas",
+      "nicol\xE1s",
+      "david",
+      "daniel",
+      "sergio",
+      "mario",
+      "fernando",
+      "alberto",
+      "roberto",
+      "eduardo",
+      "ricardo",
+      "hugo",
+      "oscar",
+      "\xF3scar",
+      "edgar",
+      "edgardo",
+      "wilson",
+      "jhon",
+      "john",
+      "fredy",
+      "freddy",
+      "alexander",
+      "vladimir",
+      "alvaro",
+      "\xE1lvaro",
+      "harold",
+      "henry",
+      "walter",
+      "william",
+      "edison",
+      "yeison",
+      "jeison",
+      "brayan",
+      "bryan",
+      "kevin",
+      "steven",
+      "esteban",
+      "stiven",
+      "edwin",
+      "eddu",
+      "edward",
+      "edgar",
+      "angie",
+      "karen",
+      "jessica",
+      "yessica",
+      "katherine",
+      "catherine",
+      "vanessa",
+      "stefania",
+      "estefania",
+      "estefan\xEDa",
+      "daniela",
+      "valentina",
+      "sofia",
+      "sof\xEDa",
+      "isabella",
+      "gabriela",
+      "mariana",
+      "catalina",
+      "nicolle",
+      "nicole",
+      "juliana",
+      "alejandra",
+      "lisa",
+      "carolina",
+      "natalia",
+      "nathalia",
+      "veronica",
+      "ver\xF3nica",
+      "adriana",
+      "liliana",
+      "viviana",
+      "pilar",
+      "rocio",
+      "roc\xEDo",
+      "soraya",
+      "johanna",
+      "yudy",
+      "judy",
+      "tatiana",
+      "mateo",
+      "sebastian",
+      "sebasti\xE1n",
+      "cristian",
+      "gustavo",
+      "hernando",
+      "humberto",
+      "jaime",
+      "mauricio",
+      "cesar",
+      "c\xE9sar",
+      "nelson",
+      "ruben",
+      "rub\xE9n",
+      "ivan",
+      "iv\xE1n",
+      "olga",
+      "stella",
+      "estela"
+    ]);
   }
 });
 
@@ -6047,7 +6274,7 @@ var init_whatsapp_match = __esm({
     init_db();
     init_schema();
     init_scraper();
-    init_whatsapp();
+    init_whatsapp_utils();
     init_voiceTranscription();
     SERVER_BOOT_TIME = Math.floor(Date.now() / 1e3);
     outgoingQueue = Promise.resolve();
@@ -6521,7 +6748,7 @@ Para hablar en privado, buscar propiedades, hacer consultas o recibir soporte y 
           }
           const realName = msg.pushName || `Asesor +${resolvedSenderId.split("@")[0]}`;
           const textLower = bodyText.toLowerCase();
-          const { detectaVoz: detectaVoz2, textToSpeechMedia: textToSpeechMedia2 } = await Promise.resolve().then(() => (init_whatsapp(), whatsapp_exports));
+          const { detectaVoz: detectaVoz2, textToSpeechMedia: textToSpeechMedia3 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
           const { processWhatsAppMessage: processWhatsAppMessage2, processConsultingMessage: processConsultingMessage2, processCirculoMessage: processCirculoMessage2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
           const wantsVoice = msg.message?.audioMessage || detectaVoz2(textLower);
           if (wantsVoice) {
@@ -6603,7 +6830,7 @@ Tambi\xE9n puedes consultarme directamente en mi chat privado con mi otra yo *Ja
             const textToDeliver = result.response;
             const voiceToDeliver = result.voiceResponse || "";
             if (wantsVoice && voiceToDeliver.trim() !== "") {
-              const media = await textToSpeechMedia2(voiceToDeliver);
+              const media = await textToSpeechMedia3(voiceToDeliver);
               if (media) {
                 await this.queuedSend(chatId, media, { sendAudioAsVoice: true, quoted: msg });
               } else {
@@ -6760,7 +6987,7 @@ Tambi\xE9n puedes consultarme directamente en mi chat privado con mi otra yo *Ja
           }
           await this.logToDb(resolvedSenderId, "user", fullText);
           const { processWhatsAppMessage: processWhatsAppMessage2, processConsultingMessage: processConsultingMessage2, processCirculoMessage: processCirculoMessage2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
-          const { sendAdminNotification: sendAdminNotification2 } = await Promise.resolve().then(() => (init_whatsapp(), whatsapp_exports));
+          const { sendAdminNotification: sendAdminNotification2 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
           let result;
           if (chatId === "120363417740040773@g.us") {
             result = await processConsultingMessage2(
@@ -6845,11 +7072,11 @@ ${result.response}`);
               console.log(`[JANIA-MATCH] Publicaci\xF3n con advertencia/incompleta de ${senderId} en ${chatId} procesada.`);
               if (result.classification === "VIOLACION_DE_NORMAS" && isBotAdmin && result.response && result.response.trim() !== "") {
                 const textToDeliver = result.response;
-                const { textToSpeechMedia: textToSpeechMedia2 } = await Promise.resolve().then(() => (init_whatsapp(), whatsapp_exports));
+                const { textToSpeechMedia: textToSpeechMedia3 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
                 const voiceToDeliver = result.voiceResponse || textToDeliver;
                 let audioSent = false;
                 try {
-                  const media = await textToSpeechMedia2(voiceToDeliver);
+                  const media = await textToSpeechMedia3(voiceToDeliver);
                   if (media) {
                     const lastMsg = buffer.messages[buffer.messages.length - 1].originalMsg;
                     await this.queuedSend(chatId, media, { sendAudioAsVoice: true, quoted: lastMsg });
@@ -6957,10 +7184,14 @@ ${result.response}`);
           );
           if (result) {
             let reaction = "";
-            if (result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO") {
-              reaction = "\u2705";
-            } else if (result.classification === "DATOS_INCOMPLETOS" || result.missingFields && result.missingFields.length > 0) {
-              reaction = "\u{1F914}";
+            if (result.classification === "INMUEBLE") {
+              reaction = "\u{1F44D}";
+            } else if (result.classification === "REQUERIMIENTO") {
+              reaction = "\u{1F4DD}";
+            } else if (result.classification === "VIOLACION_DE_NORMAS") {
+              reaction = "\u{1F6AB}";
+            } else if (msgText.includes("http://") || msgText.includes("https://")) {
+              reaction = "\u{1F44C}";
             }
             if (reaction) {
               const sendReaction = async () => {
@@ -6969,7 +7200,7 @@ ${result.response}`);
                 } catch (_) {
                 }
               };
-              if (result.inserted && reaction === "\u2705") {
+              if (result.inserted && (reaction === "\u{1F44D}" || reaction === "\u{1F4DD}")) {
                 const delayMs = Math.floor(Math.random() * (12e3 - 4e3 + 1)) + 4e3;
                 console.log(`[JANIA-MATCH] Inserci\xF3n confirmada en parseAndSaveSilently. Retrasando reacci\xF3n ${reaction} por ${delayMs}ms (Protocolo Anti-Ban)...`);
                 setTimeout(sendReaction, delayMs);
@@ -6980,7 +7211,7 @@ ${result.response}`);
             if (result.response && result.response.trim() !== "" && result.classification !== "DATOS_INCOMPLETOS" && result.classification !== "VIOLACION_DE_NORMAS") {
               const isMatch = result.response.includes("MATCH COMERCIAL DETECTADO") || result.response.includes("MATCH DETECTADO") || result.response.includes("MATCH INTELIGENTE DETECTADO") || result.response.includes("COINCIDENCIA DE NEGOCIO DETECTADA");
               if (isMatch) {
-                const { sendAdminNotification: sendAdminNotification2 } = await Promise.resolve().then(() => (init_whatsapp(), whatsapp_exports));
+                const { sendAdminNotification: sendAdminNotification2 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
                 await sendAdminNotification2(`\u{1F3AF} *[MATCH DETECTADO POR DM]*
 
 ${result.response}`);
@@ -6999,10 +7230,10 @@ ${result.response}`);
           const firstName = extractFirstName2(realName);
           const greetingName = firstName ? ` ${firstName}` : "";
           const outOfOfficeText = `\xA1${saludo}${greetingName}! \u{1F64B}\u{1F3FB}\u200D\u2640\uFE0F Qu\xE9 bueno saludarte de nuevo. En este momento nuestros agentes humanos se encuentran descansando \u{1F319}\u2728. Si gustas, puedes dejar tu mensaje aqu\xED para que te respondamos ma\xF1ana a primera hora, o si prefieres, puedes continuar la conversaci\xF3n conmigo y contarme en qu\xE9 puedo ayudarte hoy. \xA1Siempre es un gusto atenderte! \u{1F91D}\u{1F680}`;
-          const { textToSpeechMedia: textToSpeechMedia2 } = await Promise.resolve().then(() => (init_whatsapp(), whatsapp_exports));
+          const { textToSpeechMedia: textToSpeechMedia3 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
           let media = null;
           try {
-            media = await textToSpeechMedia2(outOfOfficeText);
+            media = await textToSpeechMedia3(outOfOfficeText);
           } catch (ttsErr) {
             console.warn("[JANIA-MATCH] Error al generar TTS para fuera de horario:", ttsErr.message || ttsErr);
           }
@@ -7196,10 +7427,10 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
           }
           let messagePayload = {};
           if (mediaPath) {
-            const fs6 = await import("fs");
-            const buffer = fs6.readFileSync(mediaPath);
-            const path8 = await import("path");
-            const ext = path8.extname(mediaPath).toLowerCase();
+            const fs5 = await import("fs");
+            const buffer = fs5.readFileSync(mediaPath);
+            const path7 = await import("path");
+            const ext = path7.extname(mediaPath).toLowerCase();
             if (ext === ".mp4") {
               messagePayload = {
                 video: buffer,
@@ -7217,7 +7448,7 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
                 document: buffer,
                 caption: text2,
                 mimetype: "application/octet-stream",
-                fileName: path8.basename(mediaPath)
+                fileName: path7.basename(mediaPath)
               };
             }
           } else {
@@ -7239,11 +7470,11 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
           if (targetJid.endsWith("@c.us")) {
             targetJid = targetJid.replace("@c.us", "@s.whatsapp.net");
           }
-          const { cleanVoiceText: cleanVoiceText2 } = await Promise.resolve().then(() => (init_whatsapp(), whatsapp_exports));
+          const { cleanVoiceText: cleanVoiceText2 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
           const cleaned = cleanVoiceText2(text2);
           console.log(`[JANIA-MATCH] Generando nota de voz para enviar al grupo ${targetJid}...`);
-          const { textToSpeechMedia: textToSpeechMedia2 } = await Promise.resolve().then(() => (init_whatsapp(), whatsapp_exports));
-          const voiceMedia = await textToSpeechMedia2(cleaned);
+          const { textToSpeechMedia: textToSpeechMedia3 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
+          const voiceMedia = await textToSpeechMedia3(cleaned);
           if (voiceMedia && voiceMedia.data) {
             const buffer = Buffer.from(voiceMedia.data, "base64");
             await this.queuedSend(targetJid, {
@@ -7416,2565 +7647,13 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
   }
 });
 
-// server/_core/whatsapp-cloud.ts
-var whatsapp_cloud_exports = {};
-__export(whatsapp_cloud_exports, {
-  downloadMetaMedia: () => downloadMetaMedia,
-  handleIncomingWebhook: () => handleIncomingWebhook,
-  sendCloudMessage: () => sendCloudMessage,
-  sendCloudReaction: () => sendCloudReaction,
-  uploadMetaMedia: () => uploadMetaMedia
-});
-async function downloadMetaMedia(mediaId) {
-  const token = process.env.WHATSAPP_API_TOKEN;
-  if (!token) {
-    console.error("[WHATSAPP-CLOUD] Error: WHATSAPP_API_TOKEN not configured");
-    return null;
-  }
-  try {
-    console.log(`[WHATSAPP-CLOUD] Fetching metadata for media ID: ${mediaId}...`);
-    const urlRes = await fetch(`https://graph.facebook.com/v18.0/${mediaId}`, {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    });
-    if (!urlRes.ok) {
-      const errText = await urlRes.text();
-      console.error(`[WHATSAPP-CLOUD] Error fetching media metadata for ${mediaId}: ${urlRes.status} - ${errText}`);
-      return null;
-    }
-    const metadata = await urlRes.json();
-    if (!metadata.url) {
-      console.error(`[WHATSAPP-CLOUD] No URL found in media metadata for ${mediaId}`);
-      return null;
-    }
-    console.log(`[WHATSAPP-CLOUD] Downloading media binary from lookaside URL...`);
-    const binRes = await fetch(metadata.url, {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    });
-    if (!binRes.ok) {
-      const errText = await binRes.text();
-      console.error(`[WHATSAPP-CLOUD] Error downloading media binary from ${metadata.url}: ${binRes.status} - ${errText}`);
-      return null;
-    }
-    const buffer = await binRes.arrayBuffer();
-    const base64Data = Buffer.from(buffer).toString("base64");
-    return {
-      data: base64Data,
-      mimetype: metadata.mime_type || "application/octet-stream"
-    };
-  } catch (err) {
-    console.error(`[WHATSAPP-CLOUD] Exception in downloadMetaMedia for ${mediaId}:`, err);
-    return null;
-  }
-}
-async function uploadMetaMedia(fileBuffer, mimeType, filename) {
-  const token = process.env.WHATSAPP_API_TOKEN;
-  const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-  if (!token || !phoneId) {
-    console.error("[WHATSAPP-CLOUD] Error: WHATSAPP_API_TOKEN or WHATSAPP_PHONE_NUMBER_ID not configured");
-    return null;
-  }
-  try {
-    const formData = new globalThis.FormData();
-    const fileBlob = new globalThis.Blob([new Uint8Array(fileBuffer)], { type: mimeType });
-    formData.append("file", fileBlob, filename);
-    formData.append("type", mimeType);
-    formData.append("messaging_product", "whatsapp");
-    console.log(`[WHATSAPP-CLOUD] Post form-data to Meta Media API...`);
-    const response = await fetch(`https://graph.facebook.com/v18.0/${phoneId}/media`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`
-      },
-      body: formData
-    });
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error(`[WHATSAPP-CLOUD] Media upload failed: ${response.status} - ${errText}`);
-      return null;
-    }
-    const data = await response.json();
-    console.log(`[WHATSAPP-CLOUD] Media uploaded successfully. ID: ${data.id}`);
-    return data.id || null;
-  } catch (err) {
-    console.error("[WHATSAPP-CLOUD] Exception in uploadMetaMedia:", err);
-    return null;
-  }
-}
-async function sendCloudMessage(chatId, content, options = {}) {
-  const token = process.env.WHATSAPP_API_TOKEN;
-  const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-  if (!token || !phoneId) {
-    console.error("[WHATSAPP-CLOUD] Error: WHATSAPP_API_TOKEN or WHATSAPP_PHONE_NUMBER_ID not configured");
-    return;
-  }
-  const isGroup = chatId.includes("@g.us");
-  const to = isGroup ? chatId : chatId.split("@")[0];
-  const recipientType = isGroup ? "group" : "individual";
-  try {
-    if (typeof content === "string") {
-      const payload = {
-        messaging_product: "whatsapp",
-        recipient_type: recipientType,
-        to,
-        type: "text",
-        text: {
-          preview_url: false,
-          body: content
-        }
-      };
-      if (options.quotedMessageId) {
-        payload.context = {
-          message_id: options.quotedMessageId
-        };
-      }
-      console.log(`[WHATSAPP-CLOUD] Sending text message to ${to} (${recipientType})...`);
-      const res = await fetch(`https://graph.facebook.com/v18.0/${phoneId}/messages`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify(payload)
-      });
-      if (!res.ok) {
-        const errText = await res.text();
-        console.error(`[WHATSAPP-CLOUD] Text send failed to ${to}: ${res.status} - ${errText}`);
-      } else {
-        console.log(`[WHATSAPP-CLOUD] \u2705 Text message successfully sent to ${to} (${recipientType})`);
-      }
-      return;
-    }
-    if (content && typeof content === "object" && content.mimetype && content.data) {
-      const isAudio = content.mimetype.startsWith("audio/");
-      const isImage = content.mimetype.startsWith("image/");
-      const buffer = Buffer.from(content.data, "base64");
-      const filename = content.filename || (isAudio ? "voice-note.ogg" : isImage ? "image.jpg" : "file");
-      console.log(`[WHATSAPP-CLOUD] Uploading media (${content.mimetype}, ${buffer.byteLength} bytes) to Meta...`);
-      const mediaId = await uploadMetaMedia(buffer, content.mimetype, filename);
-      if (!mediaId) {
-        console.error("[WHATSAPP-CLOUD] Failed to upload media, cannot send message");
-        return;
-      }
-      const type = isAudio ? "audio" : isImage ? "image" : "document";
-      const payload = {
-        messaging_product: "whatsapp",
-        recipient_type: recipientType,
-        to,
-        type,
-        [type]: {
-          id: mediaId
-          // Nota: Meta Cloud API no acepta el campo "ptt" — el audio OGG/OPUS se trata automáticamente como nota de voz
-        }
-      };
-      if (options.quotedMessageId) {
-        payload.context = {
-          message_id: options.quotedMessageId
-        };
-      }
-      console.log(`[WHATSAPP-CLOUD] Sending media message of type '${type}' to ${to} (${recipientType})...`);
-      const res = await fetch(`https://graph.facebook.com/v18.0/${phoneId}/messages`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify(payload)
-      });
-      if (!res.ok) {
-        const errText = await res.text();
-        console.error(`[WHATSAPP-CLOUD] Media send failed (${type}) to ${to}: ${res.status} - ${errText}`);
-      } else {
-        console.log(`[WHATSAPP-CLOUD] \u2705 Media message (${type}) successfully sent to ${to} (${recipientType})`);
-      }
-      return;
-    }
-    console.warn("[WHATSAPP-CLOUD] Unknown content type passed to sendCloudMessage:", content);
-  } catch (err) {
-    console.error("[WHATSAPP-CLOUD] Exception in sendCloudMessage:", err);
-  }
-}
-async function sendCloudReaction(chatId, messageId, emoji) {
-  const token = process.env.WHATSAPP_API_TOKEN;
-  const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-  if (!token || !phoneId) return;
-  const phone = chatId.split("@")[0];
-  try {
-    const payload = {
-      messaging_product: "whatsapp",
-      recipient_type: "individual",
-      to: phone,
-      type: "reaction",
-      reaction: {
-        message_id: messageId,
-        emoji
-      }
-    };
-    console.log(`[WHATSAPP-CLOUD] Sending reaction '${emoji}' for message ${messageId} to ${phone}...`);
-    const res = await fetch(`https://graph.facebook.com/v18.0/${phoneId}/messages`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify(payload)
-    });
-    if (!res.ok) {
-      const errText = await res.text();
-      console.error(`[WHATSAPP-CLOUD] Reaction send failed: ${res.status} - ${errText}`);
-    }
-  } catch (err) {
-    console.error("[WHATSAPP-CLOUD] Error sending reaction:", err);
-  }
-}
-async function handleIncomingWebhook(payload) {
-  if (payload.object !== "whatsapp_business_account") {
-    return;
-  }
-  for (const entry of payload.entry || []) {
-    for (const change of entry.changes || []) {
-      if (change.field !== "messages") continue;
-      const value = change.value;
-      if (!value || !value.messages || value.messages.length === 0) continue;
-      const message = value.messages[0];
-      const fromPhone = message.from;
-      if (!fromPhone) continue;
-      const fromJid = `${fromPhone}@c.us`;
-      const msgId = message.id;
-      const timestamp2 = parseInt(message.timestamp, 10);
-      const type = message.type;
-      const contactInfo = value.contacts?.find((c) => c.wa_id === fromPhone);
-      const profileName = contactInfo?.profile?.name || `Asesor +${fromPhone}`;
-      let bodyText = "";
-      let hasMedia = false;
-      let mediaId = null;
-      if (type === "text") {
-        bodyText = message.text?.body || "";
-      } else if (type === "audio") {
-        hasMedia = true;
-        mediaId = message.audio?.id || null;
-      } else if (type === "image") {
-        hasMedia = true;
-        bodyText = message.image?.caption || "";
-        mediaId = message.image?.id || null;
-      } else if (type === "document") {
-        hasMedia = true;
-        bodyText = message.document?.caption || "";
-        mediaId = message.document?.id || null;
-      }
-      console.log(`[WHATSAPP-CLOUD] Webhook message received - Type: ${type}, From: ${fromPhone}, Body: ${bodyText}, Media ID: ${mediaId}`);
-      const mockMsg = {
-        id: {
-          _serialized: msgId,
-          fromMe: false
-        },
-        from: fromJid,
-        author: fromJid,
-        body: bodyText,
-        timestamp: timestamp2,
-        fromMe: false,
-        hasMedia,
-        type: type === "text" ? "chat" : type,
-        // Methods mapped to Cloud API
-        react: async (emoji) => {
-          await sendCloudReaction(fromJid, msgId, emoji);
-        },
-        getChat: async () => {
-          return {
-            id: {
-              _serialized: fromJid
-            },
-            isGroup: false,
-            sendStateRecording: async () => {
-            },
-            sendStateTyping: async () => {
-            },
-            clearState: async () => {
-            },
-            fetchMessages: async () => []
-          };
-        },
-        getContact: async () => {
-          return {
-            pushname: profileName,
-            name: profileName,
-            id: {
-              _serialized: fromJid
-            }
-          };
-        },
-        downloadMedia: async () => {
-          if (!hasMedia || !mediaId) return null;
-          const downloaded = await downloadMetaMedia(mediaId);
-          if (!downloaded) return null;
-          return {
-            mimetype: downloaded.mimetype,
-            data: downloaded.data,
-            filename: "media"
-          };
-        }
-      };
-      try {
-        console.log(`[WHATSAPP-CLOUD] Forwarding message ${msgId} to whatsappBot.handleIncomingMessage`);
-        await whatsappBot.handleIncomingMessage(mockMsg, fromJid);
-      } catch (err) {
-        console.error(`[WHATSAPP-CLOUD] Error processing webhook message:`, err);
-      }
-    }
-  }
-}
-var init_whatsapp_cloud = __esm({
-  "server/_core/whatsapp-cloud.ts"() {
-    "use strict";
-    init_whatsapp();
-  }
-});
-
-// server/_core/whatsapp.ts
-var whatsapp_exports = {};
-__export(whatsapp_exports, {
-  WhatsAppBot: () => WhatsAppBot,
-  cleanVoiceText: () => cleanVoiceText,
-  detectaVoz: () => detectaVoz,
-  extractFirstName: () => extractFirstName2,
-  getColombiaHour: () => getColombiaHour2,
-  getGreetingByTime: () => getGreetingByTime2,
-  matchBotInstance: () => matchBotInstance,
-  sendAdminNotification: () => sendAdminNotification,
-  sendUserDM: () => sendUserDM,
-  setBotPendingData: () => setBotPendingData,
-  setMatchBotInstance: () => setMatchBotInstance,
-  textToSpeechMedia: () => textToSpeechMedia,
-  whatsappBot: () => whatsappBot
-});
-import pkg from "whatsapp-web.js";
-import qrcode from "qrcode-terminal";
-import fs4 from "fs";
-import path5 from "path";
-import { spawn as spawn2 } from "child_process";
-import { eq as eq12, and as and6 } from "drizzle-orm";
-import axios8 from "axios";
-import * as jose from "jose";
-async function getLatestWAWebVersion() {
-  const fallback = "https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1042391138-alpha.html";
-  try {
-    const res = await axios8.get("https://api.github.com/repos/wppconnect-team/wa-version/contents/html", {
-      headers: { "User-Agent": "Mozilla/5.0" },
-      timeout: 5e3
-    });
-    if (Array.isArray(res.data) && res.data.length > 0) {
-      const files = res.data.map((f) => f.name).filter((name) => name.endsWith(".html"));
-      if (files.length > 0) {
-        files.sort();
-        const latestFile = files[files.length - 1];
-        return `https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/${latestFile}`;
-      }
-    }
-  } catch (err) {
-    console.warn("[WHATSAPP-BOT] Error fetching latest WA Web version from GitHub API, using fallback:", err.message);
-  }
-  return fallback;
-}
-function setMatchBotInstance(instance) {
-  matchBotInstance = instance;
-}
-async function transcodeToOggOpus(inputBuffer) {
-  return new Promise((resolve, reject) => {
-    const ffmpeg = spawn2("ffmpeg", [
-      "-i",
-      "pipe:0",
-      // Leer de stdin
-      "-c:a",
-      "libopus",
-      // Usar codec Opus
-      "-ac",
-      "1",
-      // Canal mono
-      "-ar",
-      "16000",
-      // Frecuencia 16kHz
-      "-b:a",
-      "16k",
-      // Bitrate de audio 16kbps (óptimo para voz)
-      "-f",
-      "ogg",
-      // Contenedor Ogg
-      "pipe:1"
-      // Escribir a stdout
-    ]);
-    const chunks = [];
-    ffmpeg.stdout.on("data", (chunk) => chunks.push(chunk));
-    let stderrData = "";
-    ffmpeg.stderr.on("data", (data) => {
-      stderrData += data.toString();
-    });
-    ffmpeg.on("close", (code) => {
-      if (code === 0) {
-        resolve(Buffer.concat(chunks));
-      } else {
-        reject(new Error(`ffmpeg fall\xF3 con c\xF3digo ${code}. Stderr: ${stderrData}`));
-      }
-    });
-    ffmpeg.on("error", (err) => {
-      reject(err);
-    });
-    ffmpeg.stdin.write(inputBuffer);
-    ffmpeg.stdin.end();
-  });
-}
-async function getGoogleAccessToken() {
-  try {
-    const keyPath = path5.resolve("./scratch/google-service-account.json");
-    if (!fs4.existsSync(keyPath)) {
-      console.warn("[TTS-Google] Archivo google-service-account.json no encontrado en scratch.");
-      return null;
-    }
-    const serviceAccountJson = JSON.parse(fs4.readFileSync(keyPath, "utf8"));
-    const privateKey = await jose.importPKCS8(serviceAccountJson.private_key, "RS256");
-    const jwt = await new jose.SignJWT({
-      scope: "https://www.googleapis.com/auth/cloud-platform"
-    }).setProtectedHeader({ alg: "RS256" }).setIssuer(serviceAccountJson.client_email).setAudience("https://oauth2.googleapis.com/token").setExpirationTime("1h").setIssuedAt().sign(privateKey);
-    const res = await fetch("https://oauth2.googleapis.com/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
-        assertion: jwt
-      })
-    });
-    if (!res.ok) {
-      const errText = await res.text().catch(() => "");
-      console.error(`[TTS-Google] Error obteniendo OAuth2 token: ${res.status} - ${errText}`);
-      return null;
-    }
-    const data = await res.json();
-    return data.access_token;
-  } catch (err) {
-    console.error("[TTS-Google] Error en getGoogleAccessToken:", err);
-    return null;
-  }
-}
-function prepareTtsText(rawText) {
-  let cleanText = rawText;
-  cleanText = cleanText.replace(/https:\/\/g\.page\/r\/[a-zA-Z0-9_-]+\/review/gi, "el enlace de Google que te comparto por escrito");
-  cleanText = cleanText.replace(/https:\/\/vecy-network\.vercel\.app\/jania/gi, "besi gui\xF3n al medio network punto vercel punto ap diagonal y\xE1nia");
-  cleanText = cleanText.replace(/https:\/\/vecy-network\.vercel\.app\/agent-dashboard/gi, "besi gui\xF3n al medio network punto vercel punto ap diagonal eiyent gui\xF3n dashbord");
-  cleanText = cleanText.replace(/https:\/\/vecy-network\.vercel\.app\/properties/gi, "besi gui\xF3n al medio network punto vercel punto ap diagonal properties");
-  cleanText = cleanText.replace(/https:\/\/vecy-network\.vercel\.app\/requerimientos/gi, "besi gui\xF3n al medio network punto vercel punto ap diagonal requerimientos");
-  cleanText = cleanText.replace(/https:\/\/vecy-network\.vercel\.app\/historia/gi, "besi gui\xF3n al medio network punto vercel punto ap diagonal historia");
-  cleanText = cleanText.replace(/https:\/\/vecy-network\.vercel\.app\/?/gi, "besi gui\xF3n al medio network punto vercel punto ap");
-  const urlRegex = /https?:\/\/(?:www\.)?([a-zA-Z0-9-]+\.[a-zA-Z0-9.-]+)([^\s]*)/gi;
-  cleanText = cleanText.replace(urlRegex, (match, domain, path8) => {
-    let cleanDomain = domain.toLowerCase();
-    cleanDomain = cleanDomain.replace(/\.com\.co/g, " punto com punto co").replace(/\.com/g, " punto com").replace(/\.co/g, " punto co").replace(/\.net/g, " punto net").replace(/\.org/g, " punto org").replace(/\.app/g, " punto ap");
-    if (path8 && path8.length > 3) {
-      return `${cleanDomain} (cuyo enlace completo te dej\xE9 aqu\xED por escrito)`;
-    }
-    return cleanDomain;
-  });
-  cleanText = cleanText.replace(/vecy\s+network|veci\s+network/gi, "besi network").replace(/vecy|veci/gi, "besi").replace(/jania/gi, "y\xE1nia").replace(/\bRLS\b/gi, "ere ele ese").replace(/\bSQL\b/gi, "ese cu ele").replace(/\bDM\b/gi, "di em").replace(/\bID\b/gi, "ai di");
-  const phoneRegex = /(?:\+?57\s*)?(3\d{2})[\s-]?(\d{3})[\s-]?(\d{2})[\s-]?(\d{2})\b/g;
-  cleanText = cleanText.replace(phoneRegex, (match, p1, p2, p3, p4) => {
-    const firstDigit = p1.charAt(0);
-    const nextTwoDigits = p1.substring(1);
-    const firstDigitP2 = p2.charAt(0);
-    const nextTwoDigitsP2 = p2.substring(1);
-    return `${firstDigit}... ${nextTwoDigits}... ${firstDigitP2}... ${nextTwoDigitsP2}... ${p3}... ${p4}`;
-  });
-  return cleanText.trim();
-}
-function escapeXml(unsafe) {
-  return unsafe.replace(/[<>&'"]/g, (c) => {
-    switch (c) {
-      case "<":
-        return "&lt;";
-      case ">":
-        return "&gt;";
-      case "&":
-        return "&amp;";
-      case "'":
-        return "&apos;";
-      case '"':
-        return "&quot;";
-      default:
-        return c;
-    }
-  });
-}
-async function textToSpeechMedia(text2, format = "OGG_OPUS") {
-  const cleanText = text2.replace(/[*#_`~\[\]]/g, "").replace(/\p{Extended_Pictographic}/gu, "").replace(/[\u2600-\u27BF]/g, "").replace(/[\uE000-\uF8FF]|\uD83C[\uDF00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|\uD83E[\uDD00-\uDFFF]/g, "").replace(/[\u200B-\u200D\uFE0F]/g, "").replace(/\s+/g, " ").replace(/\s\./g, ".").trim();
-  if (!cleanText) return null;
-  const ttsText = prepareTtsText(cleanText);
-  const escapedText = escapeXml(ttsText);
-  const ssmlText = `<speak>${escapedText.replace(/\.\.\./g, '<break time="500ms"/>').replace(/,/g, ',<break time="200ms"/>')}</speak>`;
-  const googleApiKey = [process.env.GEMINI_API_KEY, process.env.GOOGLE_API_KEY, ENV.forgeApiKey].find((k) => k && k.startsWith("AIzaSy")) || process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || ENV.forgeApiKey;
-  if (googleApiKey) {
-    const voiceCandidates = [
-      {
-        endpoint: "v1beta1",
-        name: "Laomedeia",
-        lang: "es-us",
-        usePitch: false,
-        modelName: "gemini-3.1-flash-tts-preview",
-        prompt: "Leer en voz alta con un tono maduro, serio, experto y autoritario pero emp\xE1tico."
-      },
-      { endpoint: "v1", name: "es-US-Journey-F", lang: "es-US", gender: "FEMALE", usePitch: false },
-      { endpoint: "v1", name: "es-419-Neural2-C", lang: "es-419", gender: "FEMALE", usePitch: false },
-      { endpoint: "v1", name: "es-CO-Neural2-A", lang: "es-CO", gender: "FEMALE", usePitch: false },
-      { endpoint: "v1", name: "es-CO-Wavenet-A", lang: "es-CO", gender: "FEMALE", usePitch: false }
-    ];
-    let cachedAccessToken = null;
-    for (const candidate of voiceCandidates) {
-      const { endpoint, name, lang, gender, usePitch, modelName, prompt } = candidate;
-      try {
-        let ttsUrl = `https://texttospeech.googleapis.com/${endpoint}/text:synthesize?key=${googleApiKey}`;
-        const headers = { "Content-Type": "application/json" };
-        if (modelName) {
-          if (!cachedAccessToken) {
-            cachedAccessToken = await getGoogleAccessToken();
-          }
-          if (cachedAccessToken) {
-            ttsUrl = `https://texttospeech.googleapis.com/${endpoint}/text:synthesize`;
-            headers["Authorization"] = `Bearer ${cachedAccessToken}`;
-          } else {
-            console.warn(`[TTS-Google] Omitiendo candidato "${name}" porque requiere OAuth2 y no se gener\xF3 el token.`);
-            continue;
-          }
-        }
-        const requestBody = {
-          audioConfig: modelName ? {
-            audioEncoding: format,
-            pitch: 0,
-            speakingRate: 1.1
-          } : {
-            audioEncoding: format,
-            speakingRate: 1,
-            ...usePitch ? { pitch: 0 } : {}
-          },
-          input: modelName ? { text: ttsText, prompt } : { ssml: ssmlText },
-          // Modelos estándar usan SSML
-          voice: modelName ? { languageCode: lang, modelName, name } : { languageCode: lang, name, ssmlGender: gender }
-        };
-        const response = await fetch(ttsUrl, {
-          method: "POST",
-          headers,
-          body: JSON.stringify(requestBody)
-        });
-        if (response.ok) {
-          const data = await response.json();
-          if (data.audioContent) {
-            console.log(`[TTS-Google] \u2713 Voz "${name}" ${format} generada (${ttsText.length} chars).`);
-            const mimeType = format === "MP3" ? "audio/mpeg" : "audio/ogg; codecs=opus";
-            const filename = format === "MP3" ? "voice-note.mp3" : "voice-note.ogg";
-            return new MessageMedia(mimeType, data.audioContent, filename);
-          }
-        } else {
-          const errBody = await response.text().catch(() => "");
-          console.warn(`[TTS-Google] "${name}" \u2192 ${response.status}: ${errBody.substring(0, 120)}`);
-        }
-      } catch (err) {
-        console.error(`[TTS-Google] Error con "${name}":`, err);
-      }
-    }
-  }
-  try {
-    if (ENV.forgeApiUrl && ENV.forgeApiKey) {
-      const baseUrl = ENV.forgeApiUrl.endsWith("/") ? ENV.forgeApiUrl : `${ENV.forgeApiUrl}/`;
-      const ttsUrl = new URL("v1/audio/speech", baseUrl).toString();
-      const response = await fetch(ttsUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${ENV.forgeApiKey}`
-        },
-        body: JSON.stringify({
-          model: "tts-1",
-          input: cleanText,
-          voice: "nova"
-        })
-      });
-      if (response.ok) {
-        const buffer = await response.arrayBuffer();
-        if (format === "MP3") {
-          const base64Data = Buffer.from(buffer).toString("base64");
-          return new MessageMedia("audio/mpeg", base64Data, "voice-note.mp3");
-        }
-        try {
-          const oggBuffer = await transcodeToOggOpus(Buffer.from(buffer));
-          const base64Ogg = oggBuffer.toString("base64");
-          console.log(`[TTS-Forge] Voz nova transcodificada a OGG_OPUS (${oggBuffer.byteLength} bytes).`);
-          return new MessageMedia("audio/ogg; codecs=opus", base64Ogg, "voice-note.ogg");
-        } catch (transcodeErr) {
-          console.error(`[TTS-Forge] Fall\xF3 transcodificaci\xF3n a Ogg, enviando MP3 de respaldo:`, transcodeErr);
-          const base64Data = Buffer.from(buffer).toString("base64");
-          return new MessageMedia("audio/mpeg", base64Data, "voice-note.mp3");
-        }
-      }
-    }
-  } catch (err) {
-    console.error("[TTS-Forge] Error:", err);
-  }
-  try {
-    const maxLen = 190;
-    const words = cleanText.split(/\s+/);
-    const chunks = [];
-    let currentChunk = "";
-    for (const word of words) {
-      if ((currentChunk + " " + word).trim().length > maxLen) {
-        if (currentChunk.trim()) chunks.push(currentChunk.trim());
-        currentChunk = word;
-      } else {
-        currentChunk += (currentChunk ? " " : "") + word;
-      }
-    }
-    if (currentChunk.trim()) chunks.push(currentChunk.trim());
-    const buffers = [];
-    for (const chunk of chunks) {
-      const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(chunk)}&tl=es&client=tw-ob`;
-      const response = await fetch(url, {
-        headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        }
-      });
-      if (response.ok) {
-        buffers.push(Buffer.from(await response.arrayBuffer()));
-      }
-      await delay2(250);
-    }
-    if (buffers.length > 0) {
-      const combined = Buffer.concat(buffers);
-      console.log(`[TTS-Translate] Voz Google Translate generada (fallback).`);
-      if (format === "MP3") {
-        return new MessageMedia("audio/mpeg", combined.toString("base64"), "voice-note.mp3");
-      }
-      try {
-        const oggBuffer = await transcodeToOggOpus(combined);
-        const base64Ogg = oggBuffer.toString("base64");
-        console.log(`[TTS-Translate] Voz Google Translate transcodificada a OGG_OPUS (${oggBuffer.byteLength} bytes).`);
-        return new MessageMedia("audio/ogg; codecs=opus", base64Ogg, "voice-note.ogg");
-      } catch (transcodeErr) {
-        console.error(`[TTS-Translate] Fall\xF3 transcodificaci\xF3n a Ogg, enviando MP3 de respaldo:`, transcodeErr);
-        return new MessageMedia("audio/mpeg", combined.toString("base64"), "voice-note.mp3");
-      }
-    }
-  } catch (err) {
-    console.error("[TTS-Translate] Fallback TTS failed:", err);
-  }
-  return null;
-}
-function getAudioExtension(mimeType) {
-  const mimeToExt = {
-    "audio/webm": "webm",
-    "audio/mp3": "mp3",
-    "audio/mpeg": "mp3",
-    "audio/wav": "wav",
-    "audio/wave": "wav",
-    "audio/ogg": "ogg",
-    "audio/m4a": "m4a",
-    "audio/mp4": "m4a"
-  };
-  return mimeToExt[mimeType] || "ogg";
-}
-function detectaVoz(text2) {
-  const t2 = text2.toLowerCase();
-  const keywords = [
-    "audio",
-    "adio",
-    "nota de voz",
-    "notas de voz",
-    "nota de vos",
-    "notas de vos",
-    "mandame un audio",
-    "mandame audio",
-    "m\xE1ndame un audio",
-    "m\xE1ndame audio",
-    "enviame un audio",
-    "enviame audio",
-    "env\xEDame un audio",
-    "env\xEDame audio",
-    "dime en voz",
-    "cu\xE9ntame",
-    "cu\xE9ntame por audio",
-    "leeme esto",
-    "l\xE9eme esto",
-    "hablame",
-    "h\xE1blame",
-    "voy conduciendo",
-    "estoy conduciendo",
-    "voy manejando",
-    "estoy manejando",
-    "sin manos",
-    "manos libres",
-    "no puedo leer",
-    "no puedo escribir",
-    "d\xEDmelo en audio",
-    "dimelo en audio",
-    "d\xEDmelo por audio",
-    "dimelo por audio",
-    "gr\xE1bame un audio",
-    "grabame un audio",
-    "gr\xE1bame audio",
-    "grabame audio",
-    "m\xE1ndame nota de voz",
-    "mandame nota de voz",
-    "env\xEDame nota de voz",
-    "enviame nota de voz",
-    "m\xE1ndame nota de vos",
-    "mandame nota de vos",
-    "env\xEDame nota de vos",
-    "enviame nota de vos"
-  ];
-  return keywords.some((kw) => t2.includes(kw));
-}
-function getColombiaHour2() {
-  const utc = Date.now() + (/* @__PURE__ */ new Date()).getTimezoneOffset() * 6e4;
-  const colTime = new Date(utc + 36e5 * -5);
-  return colTime.getHours();
-}
-function getGreetingByTime2() {
-  const hour = getColombiaHour2();
-  if (hour >= 6 && hour < 12) {
-    return "Buenos d\xEDas";
-  } else if (hour >= 12 && hour < 18) {
-    return "Buenas tardes";
-  } else {
-    return "Buenas noches";
-  }
-}
-function extractFirstName2(fullName) {
-  const clean = fullName.trim();
-  if (!clean) return "";
-  if (/^\+?[\d\s-]{6,}$/.test(clean)) return "";
-  const words = clean.split(/\s+/).map((w) => w.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, ""));
-  if (words.length === 0 || !words[0]) return "";
-  const w1 = words[0].toLowerCase();
-  const w2 = words[1] ? words[1].toLowerCase() : "";
-  if (w2 && COMMON_FIRST_NAMES2.has(w1) && COMMON_FIRST_NAMES2.has(w2)) {
-    const first = words[0].charAt(0).toUpperCase() + words[0].slice(1).toLowerCase();
-    const second = words[1].charAt(0).toUpperCase() + words[1].slice(1).toLowerCase();
-    return `${first} ${second}`;
-  }
-  return words[0].charAt(0).toUpperCase() + words[0].slice(1).toLowerCase();
-}
-async function sendAdminNotification(text2) {
-  const ADMIN_PHONE = process.env.ADMIN_PHONE || "573166569719";
-  const adminJid = `${ADMIN_PHONE}@c.us`;
-  try {
-    console.log("[DEBUG-DM] global.janiaMatchBotInstance exists:", !!global.janiaMatchBotInstance, "isReady:", global.janiaMatchBotInstance?.isReady);
-    const matchBot = global.janiaMatchBotInstance;
-    if (matchBot && matchBot.isReady) {
-      console.log(`[WHATSAPP-BOT] Enviando notificaci\xF3n de admin a ${adminJid} v\xEDa JanIA Match Bot (Puppeteer)...`);
-      await matchBot.queuedSend(adminJid, text2);
-    } else {
-      await whatsappBot.queuedSend(adminJid, text2);
-    }
-  } catch (e) {
-    await whatsappBot.queuedSend(adminJid, text2);
-  }
-}
-async function sendUserDM(jid, text2) {
-  const formattedJid = jid.includes("@") ? jid : `${jid}@c.us`;
-  try {
-    await whatsappBot.queuedSend(formattedJid, text2);
-  } catch (e) {
-    await whatsappBot.queuedSend(formattedJid, text2);
-  }
-}
-function setBotPendingData(senderId, originalText, extractedData, classification, missingFields) {
-  whatsappBot.setPendingDataForUser(senderId, originalText, extractedData, classification, missingFields);
-}
-function cleanVoiceText(text2) {
-  if (!text2) return "";
-  let cleaned = text2.trim();
-  cleaned = cleaned.replace(/^\{\{[\s\S]*?\}\}/g, "").trim();
-  cleaned = cleaned.replace(/^\[[\s\S]*?\]/g, "").trim();
-  cleaned = cleaned.replace(/^\{\s*|\s*\}$/g, "").trim();
-  cleaned = cleaned.replace(/^"|"$/g, "").trim();
-  const preambulos = [
-    /^(aquí\s+tienes|aqui\s+tienes|aquí\s+está|aqui\s+esta|aquí\s+te\s+presento|esta\s+es|este\s+es)\s+(la\s+propuesta|el\s+guión|el\s+guion|la\s+nota\s+de\s+voz|el\s+mensaje|la\s+redacción|la\s+redaccion|el\s+texto)[^:]*:\s*/i,
-    /^claro\s*,\s*(aquí\s+tienes|aquí\s+está|te\s+comparto)[^:]*:\s*/i,
-    /^(propuesta\s+de\s+(guión|guion|nota|mensaje|audio|texto)[^:]*):\s*/i,
-    /^(guión\s+de\s+voz|guion\s+de\s+voz|nota\s+de\s+voz|mensaje\s+de\s+voz|guión\s+de\s+audio|guion\s+de\s+audio|guión|guion)\s*:\s*/i
-  ];
-  for (const regex of preambulos) {
-    cleaned = cleaned.replace(regex, "");
-  }
-  cleaned = cleaned.replace(/^:\s*/, "").trim();
-  cleaned = cleaned.replace(/^"|"$/g, "").trim();
-  return cleaned.trim();
-}
-var Client, LocalAuth, MessageMedia, SERVER_BOOT_TIME2, delay2, outgoingQueue2, matchBotInstance, COMMON_FIRST_NAMES2, WhatsAppBot, whatsappBot;
-var init_whatsapp = __esm({
-  "server/_core/whatsapp.ts"() {
-    "use strict";
-    init_setup_stealth();
-    init_scraper();
-    init_voiceTranscription();
-    init_janIA();
-    init_db();
-    init_schema();
-    init_storage();
-    init_env();
-    init_llm();
-    ({ Client, LocalAuth, MessageMedia } = pkg);
-    SERVER_BOOT_TIME2 = Math.floor(Date.now() / 1e3);
-    delay2 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-    outgoingQueue2 = Promise.resolve();
-    matchBotInstance = null;
-    COMMON_FIRST_NAMES2 = /* @__PURE__ */ new Set([
-      "juan",
-      "ana",
-      "maria",
-      "mar\xEDa",
-      "jose",
-      "jos\xE9",
-      "luis",
-      "carlos",
-      "jorge",
-      "victor",
-      "v\xEDctor",
-      "sandra",
-      "diana",
-      "laura",
-      "gloria",
-      "eduardo",
-      "flor",
-      "esteban",
-      "pedro",
-      "julio",
-      "oscar",
-      "\xF3scar",
-      "angela",
-      "\xE1ngela",
-      "pablo",
-      "arturo",
-      "alba",
-      "fernanda",
-      "alberto",
-      "david",
-      "manuel",
-      "fernando",
-      "alejandro",
-      "andres",
-      "andr\xE9s",
-      "felipe",
-      "milena",
-      "patricia",
-      "cristina",
-      "beatriz",
-      "isabel",
-      "helena",
-      "elena",
-      "sofia",
-      "sof\xEDa",
-      "lucia",
-      "luc\xEDa",
-      "carolina",
-      "claudia",
-      "marta",
-      "martha",
-      "adriana",
-      "diego",
-      "javier",
-      "camilo",
-      "santiago",
-      "alejandra",
-      "paola",
-      "liliana",
-      "elizabeth",
-      "esperanza",
-      "yolanda",
-      "blanca",
-      "rosa",
-      "carmen",
-      "teresa",
-      "cecilia",
-      "ines",
-      "in\xE9s",
-      "amparo",
-      "pilar",
-      "rocio",
-      "roc\xEDo",
-      "soraya",
-      "johanna",
-      "yudy",
-      "judy",
-      "tatiana",
-      "mateo",
-      "sebastian",
-      "sebasti\xE1n",
-      "nicolas",
-      "nicol\xE1s",
-      "daniel",
-      "cristian",
-      "jhon",
-      "john",
-      "alexander",
-      "gustavo",
-      "hernando",
-      "alvaro",
-      "\xE1lvaro",
-      "humberto",
-      "jaime",
-      "ricardo",
-      "mauricio",
-      "cesar",
-      "c\xE9sar",
-      "nelson",
-      "ruben",
-      "rub\xE9n",
-      "ivan",
-      "iv\xE1n",
-      "wilson",
-      "olga",
-      "luz",
-      "stella",
-      "estela"
-    ]);
-    WhatsAppBot = class {
-      client;
-      targetGroupId = "120363260108880069@g.us";
-      buzonGroupId = "120363417740040773@g.us";
-      circuloGroupId = "120363403507276533@g.us";
-      isReady = false;
-      // Estructuras de control dinámicas
-      messageBuffers = /* @__PURE__ */ new Map();
-      cooldownMap = /* @__PURE__ */ new Map();
-      pendingData = /* @__PURE__ */ new Map();
-      recentGroupMessages = /* @__PURE__ */ new Map();
-      lastConversationWarningTime = /* @__PURE__ */ new Map();
-      // Mutex ligero por senderId para serializar mensajes concurrentes del mismo usuario (Fix: condición de carrera en álbumes)
-      processingLocks = /* @__PURE__ */ new Map();
-      pendingWelcomeCount = 0;
-      counterFile = path5.join(process.cwd(), ".pending_welcome_count");
-      pendingWelcomeJids = [];
-      pendingWelcomeBuzon = [];
-      pendingWelcomeCirculo = [];
-      mainWelcomeTimer = null;
-      buzonWelcomeTimer = null;
-      circuloWelcomeTimer = null;
-      jidsFile = path5.join(process.cwd(), ".pending_welcome_jids");
-      cooldownFile = path5.join(process.cwd(), ".cooldown_map.json");
-      pendingDataFile = path5.join(process.cwd(), ".pending_data.json");
-      // Control de límites y anti-flood (v12.0)
-      dailyMessageLimit = 250;
-      messagesSentToday = 0;
-      lastResetDate = (/* @__PURE__ */ new Date()).toDateString();
-      chatMessageTimes = /* @__PURE__ */ new Map();
-      blockedChats = /* @__PURE__ */ new Map();
-      redirectCooldowns = /* @__PURE__ */ new Map();
-      botSentMessageIds = /* @__PURE__ */ new Set();
-      blacklistedBots = process.env.BLACKLISTED_BOTS ? process.env.BLACKLISTED_BOTS.split(",") : [];
-      watchdogInterval = null;
-      // --- ANTI-BURST & ANTI-FLOOD QUEUED DISPATCH (v12.0) ---
-      async queuedSend(chatId, content, options = {}) {
-        if (typeof content === "string") {
-          content = content.replace(/\*\*/g, "*");
-        }
-        const today = (/* @__PURE__ */ new Date()).toDateString();
-        if (this.lastResetDate !== today) {
-          this.messagesSentToday = 0;
-          this.lastResetDate = today;
-        }
-        if (this.messagesSentToday >= this.dailyMessageLimit) {
-          console.warn(`[Kill-Switch] L\xEDmite diario de mensajes alcanzado (${this.dailyMessageLimit}). Cancelando env\xEDo a ${chatId}.`);
-          return;
-        }
-        const now = Date.now();
-        const unblockTime = this.blockedChats.get(chatId);
-        if (unblockTime && now < unblockTime) {
-          console.warn(`[Anti-Flood] Ignorando mensaje a ${chatId} (bloqueado temporalmente por flood).`);
-          return;
-        }
-        let timestamps = this.chatMessageTimes.get(chatId) || [];
-        timestamps = timestamps.filter((t2) => now - t2 < 6e4);
-        timestamps.push(now);
-        this.chatMessageTimes.set(chatId, timestamps);
-        if (timestamps.length > 5) {
-          console.warn(`[Anti-Flood] \xA1Alerta de Flood en ${chatId}! Bloqueando respuestas por 15 minutos.`);
-          this.blockedChats.set(chatId, now + 15 * 60 * 1e3);
-          return;
-        }
-        outgoingQueue2 = outgoingQueue2.then(async () => {
-          try {
-            if (this.messagesSentToday >= this.dailyMessageLimit) return;
-            const isGroup = chatId.includes("@g.us");
-            const shouldUseCloud = process.env.USE_WHATSAPP_CLOUD_API === "true" && (!isGroup || process.env.ENABLE_PUPPETEER_FOR_GROUPS !== "true");
-            let typingDelay = 200;
-            if (shouldUseCloud) {
-              const isAudio = content && content.mimetype && content.mimetype.startsWith("audio") || options && options.sendAudioAsVoice;
-              if (isAudio) {
-                typingDelay = isGroup ? Math.floor(Math.random() * 2e3) + 3e3 : 300;
-              } else {
-                if (typeof content === "string") {
-                  typingDelay = isGroup ? Math.min(content.length * 15, 4e3) : Math.min(content.length * 3, 400);
-                  typingDelay = Math.max(typingDelay, 200);
-                } else {
-                  typingDelay = isGroup ? 1500 : 200;
-                }
-              }
-            } else {
-              try {
-                const chat = await this.client.getChatById(chatId);
-                const isAudio = content instanceof MessageMedia || typeof content === "object" && content?.mimetype?.startsWith("audio") || options && options.sendAudioAsVoice;
-                if (isAudio) {
-                  await chat.sendStateRecording();
-                  typingDelay = isGroup ? Math.floor(Math.random() * 2e3) + 3e3 : 300;
-                } else {
-                  await chat.sendStateTyping();
-                  if (typeof content === "string") {
-                    typingDelay = isGroup ? Math.min(content.length * 15, 4e3) : Math.min(content.length * 3, 400);
-                    typingDelay = Math.max(typingDelay, 200);
-                  } else {
-                    typingDelay = isGroup ? 2e3 : 200;
-                  }
-                }
-              } catch (_) {
-              }
-            }
-            await delay2(typingDelay);
-            let sendPromise;
-            if (shouldUseCloud) {
-              if (isGroup) {
-                console.log(`[WHATSAPP-BOT] Delegando mensaje de grupo ${chatId} a JanIA Match Bot (Puppeteer)...`);
-                const { janiaMatchBot: janiaMatchBot2 } = await Promise.resolve().then(() => (init_whatsapp_match(), whatsapp_match_exports));
-                if (janiaMatchBot2 && janiaMatchBot2.isReady) {
-                  sendPromise = janiaMatchBot2.queuedSend(chatId, content, options);
-                } else {
-                  console.warn(`[WHATSAPP-BOT] JanIA Match Bot no est\xE1 listo. Intentando con Cloud API (fallar\xE1)...`);
-                  const { sendCloudMessage: sendCloudMessage2 } = await Promise.resolve().then(() => (init_whatsapp_cloud(), whatsapp_cloud_exports));
-                  sendPromise = sendCloudMessage2(chatId, content, options);
-                }
-              } else {
-                const matchBot = global.janiaMatchBotInstance;
-                if (matchBot && matchBot.isReady) {
-                  console.log(`[WHATSAPP-BOT] Delegando DM a ${chatId} a JanIA Match Bot (Puppeteer)...`);
-                  sendPromise = matchBot.queuedSend(chatId, content, options);
-                } else {
-                  const { sendCloudMessage: sendCloudMessage2 } = await Promise.resolve().then(() => (init_whatsapp_cloud(), whatsapp_cloud_exports));
-                  sendPromise = sendCloudMessage2(chatId, content, options);
-                }
-              }
-            } else {
-              sendPromise = this.client.sendMessage(chatId, content, options).then((sentMsg) => {
-                if (sentMsg && sentMsg.id && sentMsg.id.id) {
-                  this.botSentMessageIds.add(sentMsg.id.id);
-                }
-                return sentMsg;
-              });
-            }
-            const timeoutPromise = new Promise(
-              (_, reject) => setTimeout(() => reject(new Error(`Timeout al enviar mensaje de WhatsApp a ${chatId}`)), 15e3)
-            );
-            await Promise.race([sendPromise, timeoutPromise]);
-            if (!shouldUseCloud) {
-              try {
-                const chat = await this.client.getChatById(chatId);
-                await chat.clearState();
-              } catch (_) {
-              }
-            }
-            this.messagesSentToday++;
-            console.log(`[WhatsApp-Bot] Mensaje enviado a ${chatId}. Total hoy: ${this.messagesSentToday}/${this.dailyMessageLimit}`);
-            const cooldownDelay = isGroup ? Math.floor(Math.random() * 1500) + 2e3 : 200;
-            await delay2(cooldownDelay);
-          } catch (err) {
-            console.error("[Anti-Burst-Queue] Fallo en despacho secuencial:", err.message || err);
-          }
-        });
-        return outgoingQueue2;
-      }
-      constructor() {
-        console.log("[WHATSAPP-BOT] Inicializando JanIA v2.5 (CORE v10.5 - Multimodal & Anti-Spam)...");
-        this.loadCounter();
-        this.loadCooldowns();
-        this.loadPendingData();
-        this.createClientInstance();
-        this.setupGracefulShutdown();
-      }
-      // --- PERSISTENCIA Y CIERRE ---
-      loadCounter() {
-        try {
-          if (fs4.existsSync(this.counterFile)) {
-            this.pendingWelcomeCount = parseInt(fs4.readFileSync(this.counterFile, "utf8")) || 0;
-          }
-          if (fs4.existsSync(this.jidsFile)) {
-            this.pendingWelcomeJids = JSON.parse(fs4.readFileSync(this.jidsFile, "utf8")) || [];
-          }
-        } catch (e) {
-        }
-      }
-      saveCounter() {
-        try {
-          fs4.writeFileSync(this.counterFile, this.pendingWelcomeCount.toString(), "utf8");
-          fs4.writeFileSync(this.jidsFile, JSON.stringify(this.pendingWelcomeJids), "utf8");
-        } catch (e) {
-        }
-      }
-      loadCooldowns() {
-        try {
-          if (fs4.existsSync(this.cooldownFile)) {
-            const raw = JSON.parse(fs4.readFileSync(this.cooldownFile, "utf8"));
-            this.cooldownMap = new Map(Object.entries(raw));
-          }
-        } catch (e) {
-        }
-      }
-      saveCooldowns() {
-        try {
-          const obj = Object.fromEntries(this.cooldownMap.entries());
-          fs4.writeFileSync(this.cooldownFile, JSON.stringify(obj), "utf8");
-        } catch (e) {
-        }
-      }
-      loadPendingData() {
-        try {
-          if (fs4.existsSync(this.pendingDataFile)) {
-            const raw = JSON.parse(fs4.readFileSync(this.pendingDataFile, "utf8"));
-            this.pendingData = new Map(Object.entries(raw));
-          }
-        } catch (e) {
-        }
-      }
-      savePendingData() {
-        try {
-          const obj = Object.fromEntries(this.pendingData.entries());
-          fs4.writeFileSync(this.pendingDataFile, JSON.stringify(obj), "utf8");
-        } catch (e) {
-        }
-      }
-      setupGracefulShutdown() {
-        const shutdown = async () => {
-          console.log("\n\u{1F6D1} Cerrando WhatsApp Bot...");
-          this.saveCounter();
-          try {
-            await this.client.destroy();
-          } catch (e) {
-          }
-          process.exit(0);
-        };
-        process.on("SIGINT", shutdown);
-        process.on("SIGTERM", shutdown);
-      }
-      getInfractionsPath() {
-        return path5.join(process.cwd(), ".infractions.json");
-      }
-      loadInfractions() {
-        const filePath = this.getInfractionsPath();
-        if (fs4.existsSync(filePath)) {
-          try {
-            return JSON.parse(fs4.readFileSync(filePath, "utf8"));
-          } catch (e) {
-            console.error("[WHATSAPP-BOT] Error al leer .infractions.json:", e);
-          }
-        }
-        return {};
-      }
-      saveInfractions(infractions) {
-        const filePath = this.getInfractionsPath();
-        try {
-          fs4.writeFileSync(filePath, JSON.stringify(infractions, null, 2), "utf8");
-        } catch (e) {
-          console.error("[WHATSAPP-BOT] Error al escribir .infractions.json:", e);
-        }
-      }
-      incrementStrike(groupId, userId) {
-        const infractions = this.loadInfractions();
-        if (!infractions[groupId]) {
-          infractions[groupId] = {};
-        }
-        const current = infractions[groupId][userId] || 0;
-        const next = current + 1;
-        infractions[groupId][userId] = next;
-        this.saveInfractions(infractions);
-        return next;
-      }
-      resetStrikes(groupId, userId) {
-        const infractions = this.loadInfractions();
-        if (infractions[groupId] && infractions[groupId][userId]) {
-          delete infractions[groupId][userId];
-          if (Object.keys(infractions[groupId]).length === 0) {
-            delete infractions[groupId];
-          }
-          this.saveInfractions(infractions);
-        }
-      }
-      // --- MANEJO DE EVENTOS ---
-      setupEventListeners() {
-        this.client.on("qr", (qr) => {
-          console.log("[WHATSAPP-BOT] Escanea el QR para JanIA:");
-          qrcode.generate(qr, { small: true });
-        });
-        this.client.on("ready", () => {
-          console.log("\n\u{1F680} JANIA v2.5 CORE v10.5 \u2014 SISTEMA NACIONAL EL\xC1STICO ACTIVADO");
-          this.isReady = true;
-          this.startWatchdog();
-          this.exportRecentJoinsToFile().catch((err) => {
-            console.error("[WHATSAPP-BOT] Error al exportar uniones en ready:", err);
-          });
-          (async () => {
-            try {
-              const page = this.client.pupPage;
-              if (page) {
-                await page.setRequestInterception(true);
-                page.on("request", (req) => {
-                  const type = req.resourceType();
-                  if (type === "stylesheet" || type === "font") {
-                    req.abort().catch(() => {
-                    });
-                  } else {
-                    req.continue().catch(() => {
-                    });
-                  }
-                });
-                console.log("[WHATSAPP-BOT] Optimizaci\xF3n activa: Hojas de estilo y fuentes bloqueadas en el navegador invisible.");
-              }
-            } catch (e) {
-              console.warn("[WHATSAPP-BOT] No se pudo configurar la interceptaci\xF3n de solicitudes:", e.message || e);
-            }
-          })();
-        });
-        this.client.on("disconnected", async (reason) => {
-          console.warn("[WHATSAPP-BOT] \u26A0\uFE0F Cliente desconectado:", reason, "\u2014 iniciando reconexi\xF3n autom\xE1tica en 10s...");
-          this.isReady = false;
-          await new Promise((resolve) => setTimeout(resolve, 1e4));
-          await this.reconnectClient();
-        });
-        this.client.on("group_membership_request", async (notification) => {
-          try {
-            console.log(`[WHATSAPP-BOT] Recibida solicitud de uni\xF3n de ${notification.author} en el grupo ${notification.chatId}`);
-            let requesterId = notification.author;
-            let resolvedId = null;
-            if (requesterId && requesterId.endsWith("@lid")) {
-              try {
-                const contact = await this.client.getContactById(requesterId);
-                if (contact && contact.id && contact.id._serialized && contact.id._serialized.endsWith("@c.us")) {
-                  resolvedId = contact.id._serialized;
-                  console.log(`[WHATSAPP-BOT] Resolviendo requester ID de LID ${requesterId} a ${resolvedId}`);
-                }
-              } catch (e) {
-                console.error("[WHATSAPP-BOT] Error resolviendo requester ID de LID:", e.message || e);
-              }
-            }
-            const idsToApprove = [requesterId];
-            if (resolvedId) {
-              idsToApprove.push(resolvedId);
-            }
-            for (const jid of idsToApprove) {
-              try {
-                console.log(`[WHATSAPP-BOT] Intentando aprobar solicitud de uni\xF3n para JID: ${jid}`);
-                await this.client.approveGroupMembershipRequests(notification.chatId, {
-                  requesterIds: [jid],
-                  sleep: null
-                });
-                console.log(`[WHATSAPP-BOT] Solicitud de uni\xF3n de ${jid} aprobada con \xE9xito.`);
-              } catch (err) {
-                console.warn(`[WHATSAPP-BOT] Fall\xF3 aprobaci\xF3n directa para ${jid}: ${err.message || err}`);
-              }
-            }
-          } catch (err) {
-            console.error("[WHATSAPP-BOT] Error general al aprobar solicitud de uni\xF3n:", err.message || err);
-          }
-        });
-        this.client.on("group_join", async (notification) => {
-          return;
-        });
-        this.client.on("message_reaction", async (reaction) => {
-          return;
-        });
-        this.client.on("message_create", async (msg) => {
-          if (msg.author && msg.author.endsWith("@lid")) {
-            try {
-              const contact = await this.client.getContactById(msg.author);
-              if (contact && contact.id && contact.id._serialized && contact.id._serialized.endsWith("@c.us")) {
-                msg.author = contact.id._serialized;
-              }
-            } catch (e) {
-              console.error("[WHATSAPP-BOT] Error resolving msg.author LID:", e);
-            }
-          }
-          if (msg.from && msg.from.endsWith("@lid")) {
-            try {
-              const contact = await this.client.getContactById(msg.from);
-              if (contact && contact.id && contact.id._serialized && contact.id._serialized.endsWith("@c.us")) {
-                msg.from = contact.id._serialized;
-              }
-            } catch (e) {
-              console.error("[WHATSAPP-BOT] Error resolving msg.from LID:", e);
-            }
-          }
-          if (msg.from && msg.from.includes("status@broadcast") || msg.author && msg.author.includes("status@broadcast")) {
-            return;
-          }
-          if (msg.timestamp < SERVER_BOOT_TIME2) {
-            return;
-          }
-          const senderId = msg.author || msg.from;
-          const botJid = this.client.info?.wid?._serialized;
-          if (msg.fromMe) {
-            const msgId = msg.id?.id || "";
-            if (!this.botSentMessageIds.has(msgId)) {
-              const chatJid = msg.to;
-              console.log(`[WWEBJS] Intervenci\xF3n humana detectada en DM ${chatJid}. Silenciando bot.`);
-              const { muteSession: muteSession2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
-              await muteSession2(chatJid, true).catch((err) => console.error("Error muting session in database:", err));
-            }
-            return;
-          }
-          if (botJid && (senderId === botJid || msg.from === botJid || msg.author === botJid) || this.blacklistedBots.includes(senderId)) {
-            return;
-          }
-          await delay2(Math.floor(Math.random() * 2e3) + 2e3);
-          try {
-            const chat = await msg.getChat();
-            const msgText = (msg.body || "").toLowerCase();
-            const wantsVoice = msg.type === "audio" || msg.type === "ptt" || detectaVoz(msgText);
-            if (wantsVoice) {
-              await chat.sendStateRecording();
-            } else {
-              await chat.sendStateTyping();
-            }
-            const chatId = chat.id._serialized;
-            const isGroup = chat.isGroup;
-            const isTargetGroup = chatId === this.targetGroupId;
-            const isBuzonGroup = chatId === this.buzonGroupId;
-            const isCirculoGroup = chatId === this.circuloGroupId;
-            if (isGroup) {
-              const groupName = chat.name || "Nombre Real del Grupo";
-              const NEGOTIATION_GROUPS_BLACKLIST = [
-                "Venta Alameda",
-                "Negociaci\xF3n ARRECIFES"
-              ];
-              if (NEGOTIATION_GROUPS_BLACKLIST.some((name) => groupName.includes(name))) {
-                console.log(`[WHATSAPP-BOT] Mensaje omitido: el grupo "${groupName}" est\xE1 en la blacklist de negociaci\xF3n.`);
-                return;
-              }
-              const isOfficialGroup = isTargetGroup || isBuzonGroup || isCirculoGroup;
-              if (!isOfficialGroup) {
-                const words = msg.body.trim().split(/\s+/).filter((w) => w.length > 0);
-                const hasLinks = msg.body.toLowerCase().includes("http") || msg.body.toLowerCase().includes("www");
-                const hasAttachments = msg.hasMedia || msg.type === "image" || msg.type === "document" || msg.type === "video" || msg.type === "audio" || msg.type === "ptt";
-                if (words.length < 10 && !hasLinks && !hasAttachments) {
-                  console.log(`[WHATSAPP-BOT] Omitiendo mensaje corto de grupo externo "${groupName}" por Protocolo Anti-Ban (Palabras: ${words.length}).`);
-                  return;
-                }
-              }
-              const text2 = msg.body.toLowerCase();
-              if (isTargetGroup && text2.includes("jania")) {
-                if (text2.includes("normas") || text2.includes("pres\xE9ntate") || text2.includes("anuncia") || text2.includes("dipava") || text2.includes("retorno") || text2.includes("sincroniza") || text2.includes("catchup") || text2.includes("cierre") || text2.includes("audios")) {
-                  await this.handleAdminCommand(msg);
-                  return;
-                }
-              }
-              await this.handleIncomingMessage(msg, chatId);
-              return;
-            }
-            if (!isGroup) {
-              await this.handleIncomingMessage(msg, chatId);
-              return;
-            }
-          } catch (e) {
-            console.error("[WHATSAPP-BOT] Error cr\xEDtico en receptor principal:", e);
-          }
-        });
-      }
-      // --- 2. RAMA Conversacional PRIVADA (DM INBOUND LOOP) ---
-      // Historial de usuarios saludados fuera de horario
-      offHoursGreetedToday = /* @__PURE__ */ new Map();
-      async parseAndSaveSilently(msg, senderId, rawPhone) {
-        try {
-          let imageBuffer;
-          let pdfBuffer;
-          let pdfMimeType;
-          if (msg.hasMedia) {
-            if (msg.type === "image") {
-              try {
-                const media = await msg.downloadMedia();
-                if (media && media.mimetype.startsWith("image/")) {
-                  imageBuffer = media.data;
-                }
-              } catch (e) {
-                console.error("[JanIA-DM-Vision-Silent] Error descargando imagen:", e);
-              }
-            } else if (msg.type === "document") {
-              try {
-                const media = await msg.downloadMedia();
-                if (media && media.mimetype === "application/pdf") {
-                  pdfBuffer = media.data;
-                  pdfMimeType = media.mimetype;
-                }
-              } catch (e) {
-                console.error("[JanIA-DM-Document-Silent] Error descargando documento:", e);
-              }
-            }
-          }
-          let realName = `Asesor +${rawPhone}`;
-          try {
-            const contact = await msg.getContact();
-            if (contact) {
-              realName = contact.pushname || contact.name || realName;
-            }
-          } catch (_) {
-          }
-          const result = await processWhatsAppMessage(
-            msg.body,
-            senderId,
-            realName,
-            msg.hasMedia,
-            [],
-            void 0,
-            imageBuffer,
-            true,
-            // isGroup = true
-            pdfBuffer,
-            pdfMimeType,
-            senderId
-            // groupJid = senderId
-          );
-          if (result) {
-            let reaction = "";
-            if (result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO") {
-              reaction = "\u2705";
-            } else if (result.classification === "DATOS_INCOMPLETOS" || result.missingFields && result.missingFields.length > 0) {
-              reaction = "\u{1F914}";
-            }
-            if (reaction) {
-              const sendReaction = async () => {
-                try {
-                  await msg.react(reaction);
-                } catch (_) {
-                }
-              };
-              if (result.inserted && reaction === "\u2705") {
-                const delayMs = Math.floor(Math.random() * (12e3 - 4e3 + 1)) + 4e3;
-                console.log(`[WHATSAPP-BOT] Inserci\xF3n confirmada en parseAndSaveSilently. Retrasando reacci\xF3n ${reaction} por ${delayMs}ms (Protocolo Anti-Ban)...`);
-                setTimeout(sendReaction, delayMs);
-              } else {
-                await sendReaction();
-              }
-            }
-            if (result.response && result.response.trim() !== "" && result.classification !== "DATOS_INCOMPLETOS" && result.classification !== "VIOLACION_DE_NORMAS") {
-              const isMatch = result.response.includes("MATCH COMERCIAL DETECTADO") || result.response.includes("MATCH DETECTADO") || result.response.includes("MATCH INTELIGENTE DETECTADO") || result.response.includes("COINCIDENCIA DE NEGOCIO DETECTADA");
-              if (isMatch) {
-                await sendAdminNotification(`\u{1F3AF} *[MATCH DETECTADO POR DM]*
-
-${result.response}`);
-              }
-            }
-          }
-        } catch (err) {
-          console.error("[WHATSAPP-BOT] Fallo en parseAndSaveSilently:", err);
-        }
-      }
-      // --- 2. RAMA Conversacional PRIVADA (DM INBOUND LOOP) ---
-      async handlePrivateMessage(msg) {
-        try {
-          const senderId = msg.from;
-          const rawPhone = (msg.author || msg.from).split("@")[0];
-          await this.logToDb(senderId, "user", msg.body);
-          const ADMIN_PHONE = process.env.ADMIN_PHONE || "573166569719";
-          const isAdmin = rawPhone.includes(ADMIN_PHONE) || rawPhone === ADMIN_PHONE || rawPhone === "573166569719" || rawPhone.includes("573185462265") || rawPhone === "573192919978" || rawPhone === "573188096811";
-          if (isAdmin) {
-            const matchConfirmationRegex = /^\s*(sí|si|no)\s+#m(\d+)\s*$/i;
-            const matchConf = msg.body.match(matchConfirmationRegex);
-            if (matchConf) {
-              const decision = matchConf[1].toLowerCase();
-              const matchId = parseInt(matchConf[2], 10);
-              let realName = `Asesor +${rawPhone}`;
-              try {
-                const contact = await msg.getContact();
-                if (contact) realName = contact.pushname || contact.name || realName;
-              } catch (_) {
-              }
-              await this.processMatchConfirmation(senderId, realName, matchId, decision);
-              return;
-            }
-          }
-          await this.parseAndSaveSilently(msg, senderId, rawPhone);
-        } catch (error) {
-          console.error(`[JanIA-DM-Error] Fallo en atenci\xF3n privada para ${msg.from}:`, error);
-        }
-      }
-      async processMatchConfirmation(senderId, realName, matchId, decision) {
-        try {
-          const db = await getDb();
-          if (!db) {
-            await this.queuedSend(senderId, "\u26A0\uFE0F El sistema de base de datos no est\xE1 disponible en este momento. Int\xE9ntalo m\xE1s tarde.");
-            return;
-          }
-          const [match] = await db.select().from(propertyMatches).where(eq12(propertyMatches.id, matchId)).limit(1);
-          if (!match) {
-            await this.queuedSend(senderId, `\u26A0\uFE0F No encontr\xE9 ninguna coincidencia registrada con el c\xF3digo *#M${matchId}*. Por favor verifica el n\xFAmero.`);
-            return;
-          }
-          const [prop] = await db.select().from(properties).where(eq12(properties.id, match.propertyId)).limit(1);
-          const [req] = await db.select().from(requirements).where(eq12(requirements.id, match.requirementId)).limit(1);
-          if (!prop || !req) {
-            await this.queuedSend(senderId, "\u26A0\uFE0F Hubo un problema al recuperar los detalles de esta coincidencia.");
-            return;
-          }
-          const senderPhone = senderId.split("@")[0];
-          const ownerPhone = prop.idUsuarioWhatsapp || "";
-          const seekerPhone = req.idUsuarioWhatsapp || "";
-          const isOwner = senderPhone === ownerPhone.split("@")[0];
-          const isSeeker = senderPhone === seekerPhone.split("@")[0];
-          if (!isOwner && !isSeeker) {
-            await this.queuedSend(senderId, "\u26A0\uFE0F No est\xE1s autorizado para confirmar esta coincidencia.");
-            return;
-          }
-          if (decision === "no") {
-            await db.update(propertyMatches).set({ status: "rejected" }).where(eq12(propertyMatches.id, matchId));
-            await this.queuedSend(senderId, `Entendido. He marcado la coincidencia *#M${matchId}* como cancelada. No se compartir\xE1n tus datos de contacto.`);
-            await this.logToDb(senderId, "janIA", `[Match-Rejected] Match #M${matchId} rechazado por el usuario.`);
-            const otherJid = isOwner ? seekerPhone.includes("@") ? seekerPhone : `${seekerPhone}@c.us` : ownerPhone.includes("@") ? ownerPhone : `${ownerPhone}@c.us`;
-            await this.queuedSend(otherJid, `Aviso: La coincidencia *#M${matchId}* ha sido cancelada por la otra parte.`);
-            return;
-          }
-          let updateFields = {};
-          if (isOwner) {
-            updateFields.ownerConfirmed = true;
-          }
-          if (isSeeker) {
-            updateFields.seekerConfirmed = true;
-          }
-          await db.update(propertyMatches).set(updateFields).where(eq12(propertyMatches.id, matchId));
-          const [updatedMatch] = await db.select().from(propertyMatches).where(eq12(propertyMatches.id, matchId)).limit(1);
-          if (updatedMatch.ownerConfirmed && updatedMatch.seekerConfirmed) {
-            await db.update(propertyMatches).set({ status: "interested" }).where(eq12(propertyMatches.id, matchId));
-            let ownerName = "Oferente";
-            let seekerName = "Interesado";
-            try {
-              const [ownerUser] = await db.select().from(users).where(eq12(users.phone, ownerPhone)).limit(1);
-              if (ownerUser && ownerUser.name) ownerName = ownerUser.name;
-            } catch {
-            }
-            try {
-              const [seekerUser] = await db.select().from(users).where(eq12(users.phone, seekerPhone)).limit(1);
-              if (seekerUser && seekerUser.name) seekerName = seekerUser.name;
-            } catch {
-            }
-            const ownerJid = ownerPhone.includes("@") ? ownerPhone : `${ownerPhone}@c.us`;
-            const seekerJid = seekerPhone.includes("@") ? seekerPhone : `${seekerPhone}@c.us`;
-            const matchScoreFormatted = Number(updatedMatch.matchScore || 0).toFixed(0);
-            const msgToOwner = `\u{1F389}\u{1F388} *\xA1CONEXI\xD3N DE NEGOCIO EXITOSA!* \u{1F388}\u{1F389}
-Felicidades, ambas partes han confirmado inter\xE9s en la coincidencia *#M${matchId}* (Coincidencia: ${matchScoreFormatted}%).
-
-Aqu\xED tienes el contacto directo del aliado interesado en tu propiedad:
-\u{1F464} *Nombre:* ${seekerName}
-\u{1F4DE} *WhatsApp:* https://wa.me/${seekerPhone}
-\u{1F4AC} *Su requerimiento:* ${req.rawText || "Sin descripci\xF3n"}
-
-\xA1Les deseamos mucho \xE9xito en el cierre comercial! \u{1F91D}\u{1F680}`;
-            const msgToSeeker = `\u{1F389}\u{1F388} *\xA1CONEXI\xD3N DE NEGOCIO EXITOSA!* \u{1F388}\u{1F389}
-Felicidades, ambas partes han confirmado inter\xE9s en la coincidencia *#M${matchId}* (Coincidencia: ${matchScoreFormatted}%).
-
-Aqu\xED tienes el contacto directo del aliado que ofrece la propiedad:
-\u{1F464} *Nombre:* ${ownerName}
-\u{1F4DE} *WhatsApp:* https://wa.me/${ownerPhone}
-\u{1F4AC} *Su oferta:* ${prop.rawText || "Sin descripci\xF3n"}
-
-\xA1Les deseamos mucho \xE9xito en el cierre comercial! \u{1F91D}\u{1F680}`;
-            await this.queuedSend(ownerJid, msgToOwner);
-            await this.queuedSend(seekerJid, msgToSeeker);
-            await this.logToDb(ownerJid, "janIA", `[Match-Connected] Contact shared: Seeker is ${seekerPhone}`);
-            await this.logToDb(seekerJid, "janIA", `[Match-Connected] Contact shared: Owner is ${ownerPhone}`);
-          } else {
-            await this.queuedSend(senderId, `\xA1Gracias! He registrado tu confirmaci\xF3n de inter\xE9s para la coincidencia *#M${matchId}*.
-
-En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus datos de contacto para que puedan cerrar el negocio. \u{1F680}`);
-            await this.logToDb(senderId, "janIA", `[Match-Confirmed-Waiting] User confirmed match #M${matchId}, waiting for peer.`);
-          }
-        } catch (err) {
-          console.error(`[processMatchConfirmation-Error] Error procesando confirmaci\xF3n para coincidencia #${matchId}:`, err);
-          await this.queuedSend(senderId, "\u26A0\uFE0F Ocurri\xF3 un error interno al procesar tu confirmaci\xF3n.");
-        }
-      }
-      // --- 1. LOGÍSTICA DEL BUFFER DINÁMICO Y ANTI-SPAM (CORE v10.5) ---
-      // Wrapper que serializa entradas por senderId usando un mutex ligero.
-      // Esto evita la condición de carrera cuando WhatsApp envía un álbum de imágenes
-      // y todos los mensajes llegan casi simultáneamente antes de que el buffer exista.
-      async handleIncomingMessage(msg, chatId) {
-        const senderId = msg.author || msg.from;
-        const lockKey = `${chatId}_${senderId}`;
-        const previousLock = this.processingLocks.get(lockKey) || Promise.resolve();
-        let resolveLock;
-        const currentLock = new Promise((resolve) => {
-          resolveLock = resolve;
-        });
-        const chainedLock = previousLock.then(() => currentLock);
-        this.processingLocks.set(lockKey, chainedLock);
-        try {
-          await previousLock;
-          await this._processIncomingMessage(msg, chatId, senderId);
-        } finally {
-          resolveLock();
-          if (this.processingLocks.get(lockKey) === chainedLock) {
-            this.processingLocks.delete(lockKey);
-          }
-        }
-      }
-      async _processIncomingMessage(msg, chatId, senderId) {
-        const now = Date.now();
-        const COOLDOWN_PERIOD = 5 * 60 * 1e3;
-        const MAX_BLOCK_SIZE = 3;
-        const isGroupChat = chatId.includes("@g.us");
-        if (isGroupChat) {
-          this.detectGroupConversation(chatId, senderId, msg).catch((err) => {
-            console.error("[CONVERSATION-DETECTOR] Error:", err);
-          });
-        }
-        const isMainGroup = chatId === this.targetGroupId;
-        const textLower = (msg.body || "").toLowerCase();
-        const isPossibleListing = (msg.body || "").length > 150 || (msg.body || "").split("\n").length > 2 || msg.hasMedia || textLower.includes("ofrezco") || textLower.includes("busco") || textLower.includes("vendo") || textLower.includes("arriendo") || textLower.includes("compro") || textLower.includes("necesito") || textLower.includes("renta") || textLower.includes("alquilo") || textLower.includes("permuto") || textLower.includes("casa") || textLower.includes("apto") || textLower.includes("apartamento") || textLower.includes("bodega") || textLower.includes("oficina") || textLower.includes("lote") || textLower.includes("local");
-        let cooldown = this.cooldownMap.get(senderId);
-        const cooldownKey = `${chatId}_${senderId}`;
-        cooldown = this.cooldownMap.get(cooldownKey);
-        if (isMainGroup && isPossibleListing && cooldown && now - cooldown.lastBlockProcessedAt < COOLDOWN_PERIOD) {
-          if (isGroupChat) {
-            try {
-              await msg.react("\u26A0\uFE0F");
-            } catch (e) {
-            }
-          }
-          return;
-        }
-        const rawPhone = (msg.author || msg.from).split("@")[0];
-        let realName = `Asesor +${rawPhone}`;
-        try {
-          const contact = await msg.getContact();
-          if (contact) {
-            realName = contact.pushname || contact.name || realName;
-          }
-        } catch (e) {
-          console.warn(`[WHATSAPP-BOT] Fall\xF3 msg.getContact() en _processIncomingMessage para ${senderId}:`, e.message || e);
-        }
-        try {
-          const db = await getDb();
-          if (db) {
-            const [u] = await db.select().from(users).where(eq12(users.phone, rawPhone)).limit(1);
-            if (u && u.name && u.name.trim() !== "") {
-              realName = u.name;
-            }
-          }
-        } catch (dbErr) {
-          console.warn(`[WHATSAPP-BOT] Error al buscar nombre en BD para ${rawPhone}:`, dbErr);
-        }
-        const bufferKey = `${chatId}_${senderId}`;
-        let buffer = this.messageBuffers.get(bufferKey);
-        if (buffer) {
-          const limit = isMainGroup ? MAX_BLOCK_SIZE : 10;
-          if (isPossibleListing && buffer.messages.length >= limit) {
-            console.log(`[BUFFER] L\xEDmite de bloque (${limit}) alcanzado para ${senderId}. Mensaje #${buffer.messages.length + 1} descartado.`);
-            if (isGroupChat && isMainGroup) {
-              try {
-                await msg.react("\u26A0\uFE0F");
-              } catch (e) {
-              }
-            }
-            return;
-          }
-          clearTimeout(buffer.timer);
-          buffer.messages.push({
-            body: msg.body,
-            hasMedia: msg.hasMedia,
-            imageBuffer: void 0,
-            // Se descargará en processBuffer
-            originalMsg: msg
-          });
-          console.log(`[BUFFER] Mensaje #${buffer.messages.length} agregado al buffer de ${senderId}.`);
-          const bufferTimeout = isGroupChat ? 12e3 : 800;
-          buffer.timer = setTimeout(() => this.processBuffer(bufferKey), bufferTimeout);
-        } else {
-          console.log(`[BUFFER] Nuevo bloque iniciado para ${senderId}. Mensaje #1 registrado.`);
-          const bufferTimeout = isGroupChat ? 12e3 : 800;
-          this.messageBuffers.set(bufferKey, {
-            messages: [{
-              body: msg.body,
-              hasMedia: msg.hasMedia,
-              imageBuffer: void 0,
-              // Se descargará en processBuffer
-              originalMsg: msg
-            }],
-            userName: realName,
-            chatId,
-            timer: setTimeout(() => this.processBuffer(bufferKey), bufferTimeout)
-          });
-        }
-      }
-      async processBuffer(bufferKey) {
-        const buffer = this.messageBuffers.get(bufferKey);
-        if (!buffer) return;
-        const userName = buffer.userName;
-        const chatId = buffer.chatId;
-        const senderId = bufferKey.split("_")[1];
-        const isDM = !chatId.includes("@g.us");
-        if (isDM) {
-          const combinedText = buffer.messages.map((m) => m.body).join("\n\n");
-          const cleanStart = combinedText.trim().toLowerCase().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ");
-          const { isSessionMuted: isSessionMuted2, muteSession: muteSession2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
-          const isMuted = await isSessionMuted2(senderId);
-          if (isMuted && cleanStart.startsWith("agente jania")) {
-            await muteSession2(senderId, false).catch((err) => console.error("Error unmuting session:", err));
-            console.log(`[WWEBJS] Sesi\xF3n reactivada mediante comando del cliente para ${senderId}`);
-          }
-        }
-        let groupName = void 0;
-        if (chatId.includes("@g.us")) {
-          try {
-            const chat = await this.client.getChatById(chatId);
-            if (chat && chat.name) {
-              groupName = chat.name;
-            }
-          } catch (e) {
-            console.error("[processBuffer] Error fetching group name for WhatsApp-web:", e);
-          }
-        }
-        this.messageBuffers.delete(bufferKey);
-        console.log(`[processBuffer] Iniciando procesamiento de ${buffer.messages.length} mensajes en buffer de ${senderId}. GroupName: ${groupName || "none"}`);
-        for (const bufferedMsg of buffer.messages) {
-          if (bufferedMsg.hasMedia && bufferedMsg.originalMsg.type === "image" && !bufferedMsg.imageBuffer) {
-            try {
-              console.log(`[VISION] Descargando imagen para ${senderId}...`);
-              const media = await bufferedMsg.originalMsg.downloadMedia();
-              if (media && media.mimetype.startsWith("image/")) {
-                bufferedMsg.imageBuffer = media.data;
-              }
-            } catch (err) {
-              console.error("[VISION] Error descargando media diferida:", err);
-            }
-          }
-          if (bufferedMsg.hasMedia && bufferedMsg.originalMsg.type === "document" && !bufferedMsg.pdfBuffer) {
-            try {
-              console.log(`[DOCUMENT] Descargando PDF para ${senderId}...`);
-              const media = await bufferedMsg.originalMsg.downloadMedia();
-              if (media && media.mimetype === "application/pdf") {
-                bufferedMsg.pdfBuffer = media.data;
-                bufferedMsg.pdfMimeType = media.mimetype;
-              }
-            } catch (err) {
-              console.error("[DOCUMENT] Error descargando documento diferido:", err);
-            }
-          }
-          if (bufferedMsg.hasMedia && (bufferedMsg.originalMsg.type === "ptt" || bufferedMsg.originalMsg.type === "audio") && !bufferedMsg.audioUrl) {
-            try {
-              console.log(`[AUDIO] Descargando audio/ptt para ${senderId}...`);
-              const media = await bufferedMsg.originalMsg.downloadMedia();
-              if (media && media.data) {
-                const cleanMime = media.mimetype.split(";")[0].trim();
-                const bufferData = Buffer.from(media.data, "base64");
-                console.log(`[AUDIO] Transcribiendo audio directamente desde el buffer de memoria para ${senderId}...`);
-                try {
-                  const text2 = await transcribeAudioBuffer(bufferData, cleanMime);
-                  bufferedMsg.body = text2;
-                  console.log(`[AUDIO] Transcripci\xF3n directa exitosa para ${senderId}: "${text2}"`);
-                } catch (transcribeErr) {
-                  console.error("[AUDIO] Error al transcribir el buffer de audio:", transcribeErr.message || transcribeErr);
-                  bufferedMsg.body = "";
-                }
-                try {
-                  const fileKey = `voice-notes/${senderId}-${Date.now()}.${getAudioExtension(cleanMime)}`;
-                  const uploadResult = await storagePut(fileKey, bufferData, cleanMime);
-                  bufferedMsg.audioUrl = uploadResult.url;
-                  console.log(`[AUDIO] Audio subido exitosamente a storage para ${senderId}. URL: ${bufferedMsg.audioUrl}`);
-                } catch (storageErr) {
-                  console.warn("[AUDIO] Advertencia: No se pudo subir el audio a storage (puede deberse a falta de credenciales de Forge localmente):", storageErr.message || storageErr);
-                }
-              }
-            } catch (err) {
-              console.error("[AUDIO] Error procesando audio diferido:", err);
-            }
-          }
-        }
-        try {
-          const hasPermittedLink = (text2) => {
-            const urlMatch = text2.match(/https?:\/\/[^\s]+/g);
-            if (!urlMatch) return false;
-            return urlMatch.some((url) => esDominioPermitido(url));
-          };
-          const partitionTextByListings = (text2) => {
-            const lines = text2.split("\n");
-            const listings = [];
-            let currentListing = [];
-            let header = "";
-            const itemRegex = /^\s*(\d+)\s*[-.)]\s*(?:ofrezco|busco|vendo|arriendo|apto|casa|bodega|oficina|lote|requerimiento|compro|necesito|local)/i;
-            for (const line of lines) {
-              const match = line.match(itemRegex);
-              if (match) {
-                if (currentListing.length > 0) {
-                  listings.push(currentListing.join("\n"));
-                  currentListing = [];
-                }
-                currentListing.push(line);
-              } else {
-                if (listings.length === 0 && currentListing.length === 0) {
-                  header += line + "\n";
-                } else {
-                  currentListing.push(line);
-                }
-              }
-            }
-            if (currentListing.length > 0) {
-              listings.push(currentListing.join("\n"));
-            }
-            if (listings.length > 1) {
-              return listings.map((l) => header.trim() ? header + "\n" + l : l);
-            }
-            return [text2];
-          };
-          const linkGroups = [];
-          let currentLinkGroup = [];
-          for (const m of buffer.messages) {
-            currentLinkGroup.push(m);
-            if (hasPermittedLink(m.body)) {
-              linkGroups.push(currentLinkGroup);
-              currentLinkGroup = [];
-            }
-          }
-          if (currentLinkGroup.length > 0) {
-            linkGroups.push(currentLinkGroup);
-          }
-          const finalListingTexts = [];
-          for (const group of linkGroups) {
-            const groupText = group.map((m) => m.body).join("\n\n");
-            const groupHasMedia = group.some((m) => m.hasMedia);
-            const groupHasAudio = group.some((m) => m.originalMsg.type === "ptt" || m.originalMsg.type === "audio");
-            const groupImageBuffer = group.find((m) => m.imageBuffer)?.imageBuffer;
-            const groupAudioUrl = group.find((m) => m.audioUrl)?.audioUrl;
-            const groupPdfBuffer = group.find((m) => m.pdfBuffer)?.pdfBuffer;
-            const groupPdfMimeType = group.find((m) => m.pdfMimeType)?.pdfMimeType;
-            const originalMsg = group[group.length - 1].originalMsg;
-            const partitioned = partitionTextByListings(groupText);
-            for (const itemText of partitioned) {
-              finalListingTexts.push({
-                text: itemText,
-                hasMedia: groupHasMedia,
-                hasAudio: groupHasAudio,
-                imageBuffer: groupImageBuffer,
-                audioUrl: groupAudioUrl,
-                pdfBuffer: groupPdfBuffer,
-                pdfMimeType: groupPdfMimeType,
-                originalMsg
-              });
-            }
-          }
-          console.log(`[processBuffer] Procesando ${finalListingTexts.length} listings para ${senderId} de un total de ${buffer.messages.length} mensajes en buffer.`);
-          let processedListingsCount = 0;
-          let warningSent = buffer.warningSent || false;
-          const isMainGroup = chatId === this.targetGroupId;
-          const limit = isMainGroup ? 3 : 10;
-          for (const item of finalListingTexts) {
-            const isImageMessage = item.hasMedia && item.originalMsg.type === "image";
-            if (!item.text.trim() && !isImageMessage) {
-              console.log(`[processBuffer] Saltando mensaje vac\xEDo (sin texto ni imagen) para ${senderId}`);
-              continue;
-            }
-            processedListingsCount++;
-            if (processedListingsCount > limit) {
-              console.log(`[processBuffer] Listing #${processedListingsCount} excede el l\xEDmite de ${limit} para ${senderId}.`);
-              if (isMainGroup) {
-                try {
-                  await item.originalMsg.react("\u26A0\uFE0F");
-                } catch (e) {
-                }
-                if (!warningSent && chatId.includes("@g.us")) {
-                  warningSent = true;
-                  const rawPhone = senderId.split("@")[0];
-                  const warningText = `\u26A0\uFE0F *L\xCDMITE DE PUBLICACI\xD3N* \u26A0\uFE0F
-
-Hola @${rawPhone}, detect\xE9 que est\xE1s enviando muchas publicaciones seguidas en tu mensaje/bloque. Para cuidar la visibilidad de tus activos y no saturar el chat de los aliados, te pido que por favor me colabores con esta norma, ya que mis motores de extracci\xF3n de datos solo pueden procesar un m\xE1ximo de *3 publicaciones* por bloque a la vez.
-
-\xA1Tus primeras 3 publicaciones ya est\xE1n en proceso! Por favor espera unos *5 minutos* antes de enviar las siguientes. \u{1F680}\u{1F3AF}`;
-                  await this.queuedSend(chatId, warningText, {
-                    mentions: [senderId],
-                    quotedMessageId: item.originalMsg.id._serialized
-                  });
-                }
-              }
-              continue;
-            }
-            await this.logToDb(senderId, "user", item.text);
-            const urlMatch = item.text.match(/https?:\/\/[^\s]+/g);
-            const scrapedResults = [];
-            if (urlMatch) {
-              for (const url of urlMatch.slice(0, 3)) {
-                if (esDominioPermitido(url)) {
-                  try {
-                    const data = await scrapePropertyLink(url);
-                    if (data) scrapedResults.push(data);
-                  } catch (err) {
-                  }
-                }
-              }
-            }
-            const isDM2 = !chatId.includes("@g.us");
-            const pending = isDM2 ? this.pendingData.get(senderId) : null;
-            let result;
-            if (chatId === this.buzonGroupId) {
-              result = await processConsultingMessage(item.text, senderId, userName, item.imageBuffer, item.pdfBuffer, item.pdfMimeType, item.audioUrl);
-            } else if (chatId === this.circuloGroupId) {
-              result = await processCirculoMessage(item.text, senderId, userName);
-            } else {
-              if (pending && Date.now() < pending.expiresAt) {
-                const combinedText = `[CONTEXTO]: "${pending.originalText}"
-[RESPUESTA]: "${item.text}"`;
-                this.pendingData.delete(senderId);
-                this.savePendingData();
-                result = await processWhatsAppMessage(combinedText, senderId, userName, false, [], void 0, item.imageBuffer, !isDM2, item.pdfBuffer, item.pdfMimeType, isDM2 ? void 0 : chatId, groupName);
-              } else {
-                result = await processWhatsAppMessage(item.text, senderId, userName, item.hasMedia, scrapedResults, item.audioUrl, item.imageBuffer, !isDM2, item.pdfBuffer, item.pdfMimeType, isDM2 ? void 0 : chatId, groupName);
-              }
-            }
-            const textLower = item.text.toLowerCase();
-            const wantsVoice = item.hasAudio || !!item.audioUrl || detectaVoz(textLower);
-            await this.handleJanIAResponse(result, senderId, chatId, userName, item.text, item.originalMsg, wantsVoice);
-          }
-          if (isMainGroup) {
-            const cooldownKeyFinal = `${chatId}_${senderId}`;
-            this.cooldownMap.set(cooldownKeyFinal, {
-              lastBlockProcessedAt: Date.now(),
-              warningSent
-            });
-            this.saveCooldowns();
-          }
-        } catch (e) {
-          console.error("[WHATSAPP-BOT] Error cr\xEDtico en procesamiento de bloque:", e);
-        }
-      }
-      // --- DETECTOR DE CONVERSACIÓN ACTIVA ENTRE MIEMBROS ---
-      async detectGroupConversation(chatId, senderId, msg) {
-        return;
-        const isModeratedGroup = chatId === this.targetGroupId || chatId === this.buzonGroupId || chatId === this.circuloGroupId;
-        if (!isModeratedGroup) return;
-        const botJid = this.client.info?.wid?._serialized;
-        if (senderId === botJid || msg.fromMe) return;
-        const isPossibleListingMsg = (msg.body || "").length > 250 || (msg.body || "").split("\n").length > 3 || msg.hasMedia && msg.type !== "ptt" && msg.type !== "audio";
-        if (isPossibleListingMsg) return;
-        const now = Date.now();
-        let recent = this.recentGroupMessages.get(chatId) || [];
-        recent = recent.filter((m) => now - m.timestamp < 3 * 60 * 1e3);
-        recent.push({
-          senderId,
-          timestamp: now,
-          body: msg.body || ""
-        });
-        this.recentGroupMessages.set(chatId, recent);
-        const grouped = [];
-        for (const m of recent) {
-          if (grouped.length === 0 || grouped[grouped.length - 1].senderId !== m.senderId) {
-            grouped.push({ senderId: m.senderId, count: 1 });
-          } else {
-            grouped[grouped.length - 1].count++;
-          }
-        }
-        const len = grouped.length;
-        if (len >= 4) {
-          const s1 = grouped[len - 4].senderId;
-          const s2 = grouped[len - 3].senderId;
-          const s3 = grouped[len - 2].senderId;
-          const s4 = grouped[len - 1].senderId;
-          if (s1 === s3 && s2 === s4 && s1 !== s2) {
-            const lastWarning = this.lastConversationWarningTime.get(chatId) || 0;
-            if (now - lastWarning < 15 * 60 * 1e3) {
-              return;
-            }
-            this.lastConversationWarningTime.set(chatId, now);
-            console.log(`[CONVERSATION-DETECTOR] Conversaci\xF3n activa detectada en ${chatId} entre ${s3} y ${s4}.`);
-            try {
-              const chat = await msg.getChat();
-              await chat.sendStateRecording();
-            } catch (_) {
-            }
-            const voiceText = "Hola colegas... detect\xE9 que est\xE1n conversando activamente en el grupo... Para cuidar el espacio de todos los aliados y no saturar el canal, les sugiero amablemente que contin\xFAen su charla por mensaje privado... \xA1Muchas gracias, hagamos equipo y cerremos negocios!";
-            console.log(`[CONVERSATION-DETECTOR] Generando audio de advertencia...`);
-            const voiceMedia = await textToSpeechMedia(voiceText);
-            if (voiceMedia) {
-              await this.queuedSend(chatId, voiceMedia, { sendAudioAsVoice: true });
-              const rawPhoneA = s3.split("@")[0];
-              const rawPhoneB = s4.split("@")[0];
-              const tagText = `\u{1F449} @${rawPhoneA} @${rawPhoneB}, por favor contin\xFAen por mensaje privado (DM) para no saturar el grupo. \xA1Gracias! \u{1F91D}`;
-              await this.queuedSend(chatId, tagText, {
-                mentions: [s3, s4],
-                quotedMessageId: msg.id._serialized
-              });
-              console.log(`[CONVERSATION-DETECTOR] Advertencia enviada con \xE9xito a ${chatId}.`);
-            }
-          }
-        }
-      }
-      // --- ORQUESTACIÓN DE RESPUESTAS Y PERSONALIZACIÓN (JanIA v2.0) ---
-      async handleJanIAResponse(result, senderId, chatId, userName, fullText, originalMsg, wantsVoice = false) {
-        if (!result) return;
-        if (!result.inserted) {
-          console.log(`[WHATSAPP-BOT] Mensaje com\xFAn silenciado en ${chatId} (Silencio absoluto por defecto).`);
-          return;
-        }
-        const reaction = result.reactionEmoji || "\u{1F44D}";
-        if (originalMsg) {
-          const delayMs = Math.floor(Math.random() * (12e3 - 4e3 + 1)) + 4e3;
-          console.log(`[WHATSAPP-BOT] Inserci\xF3n exitosa en ${chatId}. Calificaci\xF3n emoji: ${reaction}. Retrasando reacci\xF3n por ${delayMs}ms...`);
-          setTimeout(async () => {
-            try {
-              await originalMsg.react(reaction);
-            } catch (e) {
-            }
-          }, delayMs);
-        }
-        if (result.extraDMs && result.extraDMs.length > 0) {
-          for (const dm of result.extraDMs) {
-            try {
-              if (!dm.jid || !dm.jid.includes("@") || dm.jid.split("@")[0].length < 5) {
-                console.warn(`[JanIA-MatchDM] Omitiendo JID inv\xE1lido para confirmaci\xF3n de match: ${dm.jid}`);
-                continue;
-              }
-              console.log(`[JanIA-MatchDM] Enviando confirmaci\xF3n de match a ${dm.jid}...`);
-              await this.queuedSend(dm.jid, dm.message);
-              await this.logToDb(dm.jid, "janIA", `[Match-DM-Request] ${dm.message}`);
-            } catch (err) {
-              console.error(`[JanIA-MatchDM-Error] Fallo al enviar DM a ${dm.jid}:`, err.message || err);
-            }
-          }
-        }
-        return;
-      }
-      // --- LOGÍSTICA DE BASE DE DATOS ---
-      async logToDb(senderId, role, content) {
-        try {
-          const db = await getDb();
-          if (!db) return;
-          let conv = await db.select().from(conversations).where(eq12(conversations.sessionId, senderId)).limit(1);
-          let conversationId;
-          if (conv.length === 0) {
-            const [newConv] = await db.insert(conversations).values({
-              sessionId: senderId,
-              status: "active",
-              lastMessage: content.substring(0, 200)
-            }).returning();
-            conversationId = newConv.id;
-          } else {
-            conversationId = conv[0].id;
-          }
-          await db.insert(messages).values({
-            conversationId,
-            role,
-            content,
-            messageType: "text"
-          });
-          await db.update(conversations).set({
-            lastMessage: content.substring(0, 200),
-            updatedAt: /* @__PURE__ */ new Date()
-          }).where(eq12(conversations.id, conversationId));
-        } catch (e) {
-        }
-      }
-      // --- COMANDOS ADMINISTRATIVOS ---
-      async handleAdminCommand(msg) {
-        const chat = await msg.getChat();
-        const senderId = msg.author || msg.from;
-        const participant = chat.participants?.find((p) => p.id._serialized === senderId);
-        const isAdmin = participant?.isAdmin || participant?.isSuperAdmin || msg.fromMe;
-        if (!isAdmin) return;
-        const text2 = msg.body.toLowerCase();
-        if (text2.includes("normas")) await this.sendNormas();
-        else if (text2.includes("pres\xE9ntate")) {
-          await this.sendPresentacion();
-          setTimeout(() => this.sendNormas(), 4e3);
-        } else if (text2.includes("anuncia match") || text2.includes("comunica match")) await this.sendComunicadoMatch();
-        else if (text2.includes("anuncia")) await this.sendAnuncioComision();
-        else if (text2.includes("dipava")) await this.sendApologyDeLaPava();
-        else if (text2.includes("retorno")) await this.sendAnuncioRetorno();
-        else if (text2.includes("sincroniza") || text2.includes("catchup")) await this.catchUpMissedMessages();
-        else if (text2.includes("cierre") || text2.includes("audios")) await this.sendManualCierreAudios();
-      }
-      // --- MÉTODOS DE BROADCAST ---
-      async sendBatchWelcome() {
-        const count = this.pendingWelcomeCount;
-        const jids = [...this.pendingWelcomeJids];
-        this.pendingWelcomeCount = 0;
-        this.pendingWelcomeJids = [];
-        this.saveCounter();
-        try {
-          const welcome = await generateWelcomeMessage(count, this.targetGroupId);
-          await this.queuedSend(this.targetGroupId, welcome, { mentions: jids });
-        } catch (e) {
-          console.error("[Whatsapp-Bot] Error in sendBatchWelcome:", e.message);
-        }
-      }
-      async sendBatchWelcomeForGroup(chatId, jids) {
-        const count = jids.length;
-        const listCopy = [...jids];
-        if (chatId === this.buzonGroupId) {
-          this.pendingWelcomeBuzon = [];
-        } else if (chatId === this.circuloGroupId) {
-          this.pendingWelcomeCirculo = [];
-        }
-        try {
-          const welcome = await generateWelcomeMessage(count, chatId);
-          await this.queuedSend(chatId, welcome, { mentions: listCopy });
-        } catch (e) {
-          console.error(`[Whatsapp-Bot] Error in sendBatchWelcomeForGroup for ${chatId}:`, e.message);
-        }
-      }
-      async sendPresentacion() {
-        await this.queuedSend(this.targetGroupId, MSG_PRESENTACION_INSTITUCIONAL);
-      }
-      async sendNormas() {
-        await this.queuedSend(this.targetGroupId, MSG_PAUTAS_FORMATOS);
-      }
-      async sendAnuncioComision() {
-        const msg = `\u{1F4E2} *ANUNCIO:* Seguimos en etapa de prueba gratuita. VECY no cobra comisiones por los matches generados en este grupo. \xA1A cerrar negocios! \u{1F3AF}\u{1F3C6}`;
-        await this.queuedSend(this.targetGroupId, msg);
-      }
-      async sendApologyDeLaPava() {
-        const deLaPavaId = "105188731928753@lid";
-        await this.queuedSend(this.targetGroupId, `\u{1F64F} Ajuste de sistema realizado. Cobertura nacional el\xE1stica activada para todos los aliados.`);
-        await this.queuedSend(deLaPavaId, `Su requerimiento nacional ha sido indexado con \xE9xito. \xA1JanIA sigue atenta!`);
-      }
-      async sendAnuncioRetorno() {
-        const baseMsg = `\u{1F680} *\xA1JANIA EST\xC1 DE VUELTA Y M\xC1S AFILADA QUE NUNCA!* \u{1F916}\u{1F3DB}\uFE0F
-
-\xA1Hola de nuevo, colegas y aliados! \u{1F44B} Tras un breve ajuste t\xE9cnico para fortalecer nuestra infraestructura y preparar el lanzamiento del nuevo portal web privado, estoy de vuelta en el canal para encontrar esos MATCH tan deseados.
-
-Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afilados que nunca para cuidar la calidad de la red y acelerar nuestros cierres:
-
-\u{1F9E0} *\xBFQu\xE9 puedo hacer por ti en esta v2.0?*
-\u25B8 *Ofertas Express (Links):* Comparte el enlace de tus inmuebles de cualquier portal o CRM, y extraer\xE9 la ficha t\xE9cnica en segundos.
-\u25B8 *Esc\xE1ner de Flyers (OCR):* \xBFTienes fotos de inmuebles o requerimientos con texto? S\xFAbelas al grupo y leer\xE9 la informaci\xF3n dentro de la imagen.
-\u25B8 *Permutas e Intercambios (Voz o Texto):* Escr\xEDbeme o env\xEDame un audio detallando permutas complejas como:
-  * \u{1F504} *Mano a mano / Pelo a pelo* (intercambio directo de inmuebles de valor similar).
-  * \u{1F3E0}\u2795\u{1F4B5} *Inmueble de menor valor* como parte de pago por uno de mayor valor.
-  * \u{1F697} *Veh\xEDculos* recibidos como parte de pago.
-  * \u{1F4C8} *CDTs, divisas o activos alternativos* como complemento de negocio.
-\u25B8 *Matching Inteligente:* Cruzo ofertas y demandas en tiempo real y les aviso en el acto cuando hay negocio viable.`;
-        const jidsToMention = [];
-        let welcomePart = "";
-        if (this.pendingWelcomeJids && this.pendingWelcomeJids.length > 0) {
-          welcomePart += `
-
-\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
-\u2728 *\xA1BIENVENIDOS A LA RED VECY NETWORK!* \u2728
-Damos una calurosa bienvenida a los nuevos aliados que se han unido a nuestro ecosistema colaborativo:
-`;
-          this.pendingWelcomeJids.forEach((jid) => {
-            const phone = jid.split("@")[0];
-            welcomePart += `\u25B8 @${phone}
-`;
-            jidsToMention.push(jid);
-          });
-          welcomePart += `
-Ya estoy 100% activa para escanear sus publicaciones y buscarles cierres sin cobro de comisiones. \xA1Muchos \xE9xitos en sus negocios! \u{1F680}\u{1F3AF}`;
-        }
-        const groups = [this.targetGroupId, this.buzonGroupId, this.circuloGroupId];
-        const imgPath = path5.resolve("./client/public/jania_perfil.png");
-        for (const group of groups) {
-          try {
-            const isMain = group === this.targetGroupId;
-            const msgToSend = isMain ? baseMsg + welcomePart : baseMsg;
-            const mentions = isMain ? jidsToMention : [];
-            if (fs4.existsSync(imgPath)) {
-              const media = MessageMedia.fromFilePath(imgPath);
-              await this.queuedSend(group, media, { caption: msgToSend, mentions });
-            } else {
-              await this.queuedSend(group, msgToSend, { mentions });
-            }
-          } catch (e) {
-            console.error(`Error enviando anuncio de retorno al grupo ${group}:`, e.message);
-          }
-        }
-        if (this.pendingWelcomeJids && this.pendingWelcomeJids.length > 0) {
-          this.pendingWelcomeJids = [];
-          this.pendingWelcomeCount = 0;
-          this.saveCounter();
-        }
-      }
-      async sendComunicadoMatch() {
-        try {
-          console.log(`[WHATSAPP-BOT] Enviando comunicado de notificaciones de match...`);
-          await this.queuedSend(this.targetGroupId, MSG_COMUNICADO_MATCH_NETWORK);
-          await delay2(3e3);
-          await this.queuedSend(this.circuloGroupId, MSG_COMUNICADO_MATCH_CIRCULO);
-          console.log("[WHATSAPP-BOT] Comunicado de match enviado con \xE9xito.");
-        } catch (err) {
-          console.error("[WHATSAPP-BOT] Error al enviar el comunicado de match:", err.message || err);
-        }
-      }
-      async sendToGroup(text2, mediaPath, mentions, groupId) {
-        try {
-          const options = { mentions: mentions || [] };
-          const target = groupId || this.targetGroupId;
-          if (mediaPath) {
-            const media = MessageMedia.fromFilePath(path5.resolve(mediaPath));
-            await this.queuedSend(target, media, { ...options, caption: text2 });
-          } else {
-            await this.queuedSend(target, text2, options);
-          }
-        } catch (e) {
-          console.error(`[WHATSAPP-BOT] Error enviando mensaje al grupo ${groupId || this.targetGroupId}:`, e);
-        }
-      }
-      async sendVoiceToGroup(text2, groupId) {
-        try {
-          const target = groupId || this.targetGroupId;
-          const cleaned = cleanVoiceText(text2);
-          console.log(`[WHATSAPP-BOT] Generando nota de voz para enviar al grupo ${target}...`);
-          const voiceMedia = await textToSpeechMedia(cleaned);
-          if (voiceMedia) {
-            try {
-              const chatInstance = await this.client.getChatById(target);
-              await chatInstance.sendStateRecording();
-            } catch (_) {
-            }
-            await this.queuedSend(target, voiceMedia, { sendAudioAsVoice: true });
-            console.log(`[WHATSAPP-BOT] \u2713 Nota de voz enviada al grupo ${target}.`);
-          } else {
-            console.warn(`[WHATSAPP-BOT] TTS fall\xF3 para el grupo ${target}, enviando texto.`);
-            await this.queuedSend(target, cleaned);
-          }
-        } catch (e) {
-          console.error("[WHATSAPP-BOT] Error enviando nota de voz al grupo:", e);
-        }
-      }
-      async broadcastToAllGroups(text2, mediaPath, mentions) {
-        const groups = [this.targetGroupId, this.buzonGroupId, this.circuloGroupId];
-        for (const group of groups) {
-          try {
-            const options = { mentions: mentions || [] };
-            if (mediaPath) {
-              const media = MessageMedia.fromFilePath(path5.resolve(mediaPath));
-              await this.queuedSend(group, media, { ...options, caption: text2 });
-            } else {
-              await this.queuedSend(group, text2, options);
-            }
-          } catch (err) {
-            console.error(`[WHATSAPP-BOT] Error al transmitir al grupo ${group}:`, err.message || err);
-          }
-        }
-      }
-      async broadcastGroupPromos(mediaPath) {
-        const promos = [
-          { id: this.targetGroupId, msg: MSG_PROMO_INMUEBLES },
-          { id: this.buzonGroupId, msg: MSG_PROMO_CONSULTAS },
-          { id: this.circuloGroupId, msg: MSG_PROMO_CIRCULO }
-        ];
-        for (const promo of promos) {
-          try {
-            if (mediaPath && fs4.existsSync(path5.resolve(mediaPath))) {
-              const media = MessageMedia.fromFilePath(path5.resolve(mediaPath));
-              await this.queuedSend(promo.id, media, { caption: promo.msg });
-            } else {
-              await this.queuedSend(promo.id, promo.msg);
-            }
-          } catch (err) {
-            console.error(`[WHATSAPP-BOT] Error al transmitir promo al grupo ${promo.id}:`, err.message || err);
-          }
-        }
-      }
-      async sendOtherPromosNow(mediaPath) {
-        const promos = [
-          { id: this.buzonGroupId, msg: MSG_PROMO_CONSULTAS },
-          { id: this.circuloGroupId, msg: MSG_PROMO_CIRCULO }
-        ];
-        for (const promo of promos) {
-          try {
-            if (mediaPath && fs4.existsSync(path5.resolve(mediaPath))) {
-              const media = MessageMedia.fromFilePath(path5.resolve(mediaPath));
-              await this.queuedSend(promo.id, media, { caption: promo.msg });
-            } else {
-              await this.queuedSend(promo.id, promo.msg);
-            }
-          } catch (err) {
-            console.error(`[WHATSAPP-BOT] Error al transmitir promo al grupo ${promo.id}:`, err.message || err);
-          }
-        }
-      }
-      async exportRecentJoinsToFile() {
-        try {
-          console.log("[WHATSAPP-BOT] Exportando lista de recientes uniones al grupo...");
-          const chat = await this.client.getChatById(this.targetGroupId);
-          if (!chat) {
-            console.error("[WHATSAPP-BOT] No se pudo obtener el chat del grupo.");
-            return;
-          }
-          const messages2 = await chat.fetchMessages({ limit: 50 });
-          console.log(`[WHATSAPP-BOT] Analizando ${messages2.length} mensajes en b\xFAsqueda de uniones...`);
-          const joinList = [];
-          for (const msg of messages2) {
-            const isSystemJoin = msg.type === "gp2" || msg.type === "notification" || msg.body && (msg.body.toLowerCase().includes("uni\xF3") || msg.body.toLowerCase().includes("unio") || msg.body.toLowerCase().includes("joined") || msg.body.toLowerCase().includes("a\xF1adi\xF3") || msg.body.toLowerCase().includes("a\xF1adio") || msg.body.toLowerCase().includes("added"));
-            if (isSystemJoin) {
-              const timestamp2 = msg.timestamp * 1e3;
-              const date = new Date(timestamp2).toLocaleString("es-CO", { timeZone: "America/Bogota" });
-              const author = msg.author || msg.from;
-              const phone = author ? author.split("@")[0] : "Desconocido";
-              let contactName = "Desconocido";
-              if (author) {
-                try {
-                  await new Promise((resolve) => setTimeout(resolve, 500));
-                  const contact = await this.client.getContactById(author);
-                  contactName = contact.name || contact.pushname || "";
-                } catch (e) {
-                }
-              }
-              joinList.push({
-                fecha: date,
-                timestamp: timestamp2,
-                telefono: phone,
-                nombre: contactName,
-                mensaje: msg.body || `Mensaje de sistema de tipo ${msg.type}`
-              });
-            }
-          }
-          joinList.sort((a, b) => b.timestamp - a.timestamp);
-          let fileContent = `=== LISTADO DE UNIONES RECIENTES EN EL GRUPO ===
-Generado el: ${(/* @__PURE__ */ new Date()).toLocaleString("es-CO", { timeZone: "America/Bogota" })}
-
-`;
-          for (const entry of joinList) {
-            fileContent += `\u{1F4C5} Fecha: ${entry.fecha}
-\u{1F4DE} Tel\xE9fono: +${entry.telefono}
-\u{1F464} Nombre: ${entry.nombre}
-\u{1F4AC} Evento: ${entry.mensaje}
--------------------------------------------
-`;
-          }
-          const outputPath = path5.join(process.cwd(), "recent_joins.txt");
-          fs4.writeFileSync(outputPath, fileContent, "utf8");
-          console.log(`[WHATSAPP-BOT] \xA1Listado exportado con \xE9xito a ${outputPath}!`);
-        } catch (err) {
-          console.error("[WHATSAPP-BOT] Error exportando uniones:", err.message || err);
-        }
-      }
-      createClientInstance(remotePath) {
-        this.client = new Client({
-          authStrategy: new LocalAuth({
-            clientId: "session-jania-main",
-            dataPath: "./.wwebjs_auth"
-          }),
-          webVersionCache: {
-            type: "remote",
-            remotePath: remotePath || "https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1042391138-alpha.html"
-          },
-          puppeteer: {
-            headless: true,
-            executablePath: process.env.CHROME_PATH || void 0,
-            args: [
-              "--no-sandbox",
-              "--disable-setuid-sandbox",
-              "--disable-dev-shm-usage",
-              "--disable-gpu",
-              "--disable-extensions",
-              "--disable-software-rasterizer",
-              "--disable-features=IsolateOrigins,site-per-process",
-              "--disable-site-isolation-trials",
-              "--no-zygote",
-              "--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-              // Optimizaciones de Rendimiento
-              "--disable-canvas-path-rendering",
-              "--disable-accelerated-2d-canvas",
-              "--disable-gl-drawing-for-tests",
-              "--mute-audio",
-              "--no-first-run",
-              "--no-default-browser-check",
-              "--disable-background-timer-throttling",
-              "--disable-backgrounding-occluded-windows",
-              "--disable-renderer-backgrounding",
-              "--js-flags=--max-old-space-size=512"
-            ],
-            protocolTimeout: 3e5
-          }
-        });
-        global.whatsappClient = this.client;
-        this.setupEventListeners();
-      }
-      startWatchdog() {
-        if (this.watchdogInterval) {
-          clearInterval(this.watchdogInterval);
-        }
-        console.log("[WHATSAPP-BOT] Iniciando Watchdog de Keep-Alive (5 min)...");
-        this.watchdogInterval = setInterval(async () => {
-          if (!this.isReady) return;
-          try {
-            const statePromise = this.client.getState();
-            const timeoutPromise = new Promise(
-              (_, reject) => setTimeout(() => reject(new Error("Timeout al obtener estado de WhatsApp")), 15e3)
-            );
-            const state = await Promise.race([statePromise, timeoutPromise]);
-            console.log(`[WHATSAPP-BOT] [Watchdog] Estado actual de conexi\xF3n: ${state}`);
-            if (state !== "CONNECTED") {
-              console.warn(`[WHATSAPP-BOT] [Watchdog] Estado anormal detectado: ${state}. Iniciando reconexi\xF3n...`);
-              await this.reconnectClient();
-            }
-          } catch (err) {
-            console.error(`[WHATSAPP-BOT] [Watchdog] Falla o bloqueo detectado: ${err.message || err}. Iniciando reconexi\xF3n...`);
-            await this.reconnectClient();
-          }
-        }, 5 * 60 * 1e3);
-      }
-      async reconnectClient() {
-        this.isReady = false;
-        try {
-          console.log("[WHATSAPP-BOT] Destruyendo cliente de WhatsApp actual...");
-          this.client.removeAllListeners();
-          await this.client.destroy();
-        } catch (destroyErr) {
-          console.error("[WHATSAPP-BOT] Error al destruir el cliente:", destroyErr.message || destroyErr);
-        }
-        console.log("[WHATSAPP-BOT] Re-inicializando cliente de WhatsApp...");
-        try {
-          const remotePath = await getLatestWAWebVersion();
-          console.log(`[WHATSAPP-BOT] [Reconexi\xF3n] Usando versi\xF3n de WhatsApp Web: ${remotePath}`);
-          this.createClientInstance(remotePath);
-          await this.client.initialize();
-          console.log("[WHATSAPP-BOT] Cliente de WhatsApp re-inicializado exitosamente.");
-        } catch (initErr) {
-          console.error("[WHATSAPP-BOT] Error al re-inicializar el cliente:", initErr.message || initErr);
-        }
-      }
-      async catchUpMissedMessages() {
-        try {
-          console.log("[WHATSAPP-BOT] [Catch-Up] Iniciando escaneo de mensajes perdidos en el grupo principal...");
-          const chat = await this.client.getChatById(this.targetGroupId);
-          const messages2 = await chat.fetchMessages({ limit: 50 });
-          const db = await getDb();
-          if (!db) {
-            console.error("[WHATSAPP-BOT] [Catch-Up] Base de datos no disponible.");
-            return;
-          }
-          await this.queuedSend(this.targetGroupId, `\u{1F504} *Iniciando sincronizaci\xF3n:* Analizando las \xFAltimas 50 publicaciones para detectar registros perdidos...`);
-          let count = 0;
-          for (const msg of messages2) {
-            if (msg.fromMe || !msg.body || msg.body.trim() === "") continue;
-            const senderId = msg.author || msg.from;
-            const botJid = this.client.info?.wid?._serialized;
-            if (senderId === botJid || this.blacklistedBots.includes(senderId)) continue;
-            let conv = await db.select().from(conversations).where(eq12(conversations.sessionId, senderId)).limit(1);
-            if (conv.length > 0) {
-              const existing = await db.select().from(messages).where(
-                and6(
-                  eq12(messages.conversationId, conv[0].id),
-                  eq12(messages.content, msg.body)
-                )
-              ).limit(1);
-              if (existing.length > 0) {
-                continue;
-              }
-            }
-            console.log(`[WHATSAPP-BOT] [Catch-Up] Detectado mensaje perdido de ${senderId}: "${msg.body.substring(0, 50)}..."`);
-            await this.handleIncomingMessage(msg, this.targetGroupId);
-            count++;
-            await delay2(5e3);
-          }
-          console.log(`[WHATSAPP-BOT] [Catch-Up] Escaneo finalizado. Inyectados ${count} mensajes perdidos.`);
-          await this.queuedSend(this.targetGroupId, `\u{1F504} *Sincronizaci\xF3n finalizada:* Se detectaron y procesaron exitosamente *${count}* publicaciones pendientes.`);
-        } catch (err) {
-          console.error("[WHATSAPP-BOT] [Catch-Up] Error durante el escaneo de mensajes:", err.message || err);
-        }
-      }
-      async sendManualCierreAudios() {
-        console.log("[WHATSAPP-BOT] Generando y enviando audios de cierre manuales (Solo por hoy)...");
-        const grupos = [
-          {
-            id: this.targetGroupId,
-            nombre: "VECY INMUEBLES NETWORK",
-            promptCierre: "Genera una nota de voz corta en espa\xF1ol de despedida y cierre de jornada para el grupo de WhatsApp VECY INMUEBLES NETWORK. Agradece la actividad de hoy y desp\xEDdete con calidez. Recuerda que no cobramos comisiones y que las ofertas y demandas cruzadas son el motor de la red."
-          },
-          {
-            id: this.buzonGroupId,
-            nombre: "BUZ\xD3N DE CONSULTOR\xCDA INMOBILIARIA 24/7",
-            promptCierre: "Genera una nota de voz corta en espa\xF1ol de despedida y cierre de jornada para el grupo de WhatsApp Buz\xF3n de Consultor\xEDa. Agradece la atenci\xF3n a los casos jur\xEDdicos y de comisiones compartidas resueltos hoy, deseando un feliz descanso."
-          },
-          {
-            id: this.circuloGroupId,
-            nombre: "C\xCDRCULO CERO",
-            promptCierre: "Genera una nota de voz corta en espa\xF1ol de despedida y cierre de jornada para el grupo de WhatsApp C\xEDrculo Cero. Agradece el debate y las sugerencias de hoy sobre el futuro del sector."
-          }
-        ];
-        for (const grupo of grupos) {
-          if (!grupo.id) continue;
-          try {
-            const response1 = await invokeLLM({
-              messages: [
-                { role: "system", content: "Eres JanIA, la asistente de voz e inteligencia artificial de la red inmobiliaria colaborativa VECY Network. Te expresas de manera natural, humana, c\xE1lida y profesional." },
-                { role: "user", content: `${grupo.promptCierre}
-- IMPORTANTE: Debe sonar como un mensaje de voz natural de WhatsApp grabado de forma espont\xE1nea por una colega real. Empieza con naturalidad como: "Hola colegas", "Buenas tardes", etc. sin formalismos rob\xF3ticos.
-- M\xE1ximo 350 caracteres.
-- CR\xCDTICO: Responde \xDANICAMENTE con las palabras habladas de la nota de voz. NO agregues pre\xE1mbulos, comentarios ni envuelvas el texto en comillas, llaves o corchetes.` }
-              ]
-            });
-            const content1 = response1.choices[0]?.message?.content;
-            if (content1 && content1.trim() !== "") {
-              await this.sendVoiceToGroup(content1, grupo.id);
-            }
-            await delay2(6e3);
-            const promptMotivacion = `Genera un segundo mensaje de voz corto y motivador en espa\xF1ol para el grupo "${grupo.nombre}".
-Direcci\xF3n obligatoria:
-- El objetivo es motivar a los miembros para que en la jornada de ma\xF1ana comiencen a confiar m\xE1s en JanIA y a probar el sistema sin miedo (ya sea escribiendo o enviando notas de voz sobre sus inmuebles o dudas).
-- Expl\xEDcales que no deben tener miedo de interactuar con la IA y que estamos en fase de pruebas gratuitas listos para ayudarlos a conectar negocios.
-- Debe sonar sumamente cercano, entusiasta and amigable, como una colega entusiasmada por los \xE9xitos del d\xEDa siguiente.
-- M\xE1ximo 350 caracteres.
-- CR\xCDTICO: Responde \xDANICAMENTE con el texto hablado de la nota de voz. NO agregues pre\xE1mbulos, comentarios ni envuelvas el texto en comillas, llaves o corchetes.`;
-            const response2 = await invokeLLM({
-              messages: [
-                { role: "system", content: "Eres JanIA, la asistente de voz e inteligencia artificial de la red inmobiliaria colaborativa VECY Network. Te expresas de manera natural, humana, c\xE1lida y profesional." },
-                { role: "user", content: promptMotivacion }
-              ]
-            });
-            const content2 = response2.choices[0]?.message?.content;
-            if (content2 && content2.trim() !== "") {
-              await this.sendVoiceToGroup(content2, grupo.id);
-            }
-            await delay2(8e3);
-          } catch (err) {
-            console.error(`\u274C Error en sendManualCierreAudios para el grupo ${grupo.nombre}:`, err.message || err);
-          }
-        }
-      }
-      async initialize() {
-        const useCloud = process.env.USE_WHATSAPP_CLOUD_API === "true";
-        const enablePupForGroups = process.env.ENABLE_PUPPETEER_FOR_GROUPS === "true";
-        if (useCloud && !enablePupForGroups) {
-          console.log("[WHATSAPP-BOT] Inicializando en modo WhatsApp Cloud API (Meta) puro - Puppeteer desactivado.");
-          this.isReady = true;
-          return;
-        }
-        if (useCloud && enablePupForGroups) {
-          console.log("[WHATSAPP-BOT] Inicializando en MODO H\xCDBRIDO: DMs por Cloud API (Meta) + Grupos por Puppeteer (inicializando cliente...).");
-        } else {
-          console.log("[WHATSAPP-BOT] Inicializando en modo Puppeteer puro (inicializando cliente...).");
-        }
-        try {
-          const remotePath = await getLatestWAWebVersion();
-          console.log(`[WHATSAPP-BOT] Usando versi\xF3n de WhatsApp Web: ${remotePath}`);
-          this.createClientInstance(remotePath);
-          await this.client.initialize();
-        } catch (err) {
-          console.error("[WHATSAPP-BOT] Error cr\xEDtico durante la inicializaci\xF3n de whatsapp-web.js:", err);
-        }
-      }
-      setPendingDataForUser(senderId, originalText, extractedData, classification, missingFields) {
-        this.pendingData.set(senderId, {
-          originalText,
-          extractedData: extractedData || {},
-          classification,
-          missingFields: missingFields || [],
-          expiresAt: Date.now() + 2 * 60 * 60 * 1e3
-        });
-        this.savePendingData();
-        console.log(`[WHATSAPP-BOT] Guardada sesi\xF3n de datos incompletos en memoria para ${senderId}`);
-      }
-    };
-    whatsappBot = new WhatsAppBot();
-  }
-});
-
 // server/jobs/nightlyRematch.ts
 var nightlyRematch_exports = {};
 __export(nightlyRematch_exports, {
   recalculateAndCleanupMatches: () => recalculateAndCleanupMatches,
   runNightlyRematch: () => runNightlyRematch
 });
-import { and as and7, eq as eq13 } from "drizzle-orm";
+import { and as and6, eq as eq12 } from "drizzle-orm";
 async function runNightlyRematch() {
   console.log("[NIGHTLY-REMATCH] Iniciando cruce masivo de base de datos...");
   const db = await getDb();
@@ -9983,8 +7662,8 @@ async function runNightlyRematch() {
     return;
   }
   try {
-    const activeReqs = await db.select().from(requirements).where(eq13(requirements.status, "active"));
-    const availProps = await db.select().from(properties).where(eq13(properties.available, true));
+    const activeReqs = await db.select().from(requirements).where(eq12(requirements.status, "active"));
+    const availProps = await db.select().from(properties).where(eq12(properties.available, true));
     console.log(`[NIGHTLY-REMATCH] Procesando ${activeReqs.length} requerimientos activos contra ${availProps.length} inmuebles disponibles...`);
     let newMatchesCount = 0;
     for (const req of activeReqs) {
@@ -9992,9 +7671,9 @@ async function runNightlyRematch() {
         const score = calcularScoreMatch(req, prop);
         if (score >= 60) {
           const existing = await db.select().from(propertyMatches).where(
-            and7(
-              eq13(propertyMatches.propertyId, prop.id),
-              eq13(propertyMatches.requirementId, req.id)
+            and6(
+              eq12(propertyMatches.propertyId, prop.id),
+              eq12(propertyMatches.requirementId, req.id)
             )
           ).limit(1);
           if (existing.length === 0) {
@@ -10009,7 +7688,7 @@ async function runNightlyRematch() {
               seekerConfirmed: false
             }).returning();
             newMatchesCount++;
-            if (whatsappBot && whatsappBot.isReady) {
+            if (janiaMatchBot && janiaMatchBot.isReady) {
               const matchedItem = {
                 ...prop,
                 score,
@@ -10023,12 +7702,12 @@ async function runNightlyRematch() {
                 req.idUsuarioWhatsapp || "",
                 "Aliado VECY"
               );
-              if (matchDetails.response && whatsappBot.targetGroupId) {
-                await whatsappBot.sendToGroup(matchDetails.response, void 0, matchDetails.mentions);
+              if (matchDetails.response && janiaMatchBot.targetGroupId) {
+                await janiaMatchBot.sendToGroup(matchDetails.response, void 0, matchDetails.mentions);
               }
               if (matchDetails.extraDMs && matchDetails.extraDMs.length > 0) {
                 for (const dm of matchDetails.extraDMs) {
-                  await whatsappBot.queuedSend(dm.jid, dm.message);
+                  await janiaMatchBot.queuedSend(dm.jid, dm.message);
                 }
               }
             }
@@ -10059,24 +7738,24 @@ async function recalculateAndCleanupMatches() {
     let deletedCount = 0;
     let updatedCount = 0;
     for (const m of allMatches) {
-      const [prop] = await db.select().from(properties).where(eq13(properties.id, m.propertyId)).limit(1);
-      const [req] = await db.select().from(requirements).where(eq13(requirements.id, m.requirementId)).limit(1);
+      const [prop] = await db.select().from(properties).where(eq12(properties.id, m.propertyId)).limit(1);
+      const [req] = await db.select().from(requirements).where(eq12(requirements.id, m.requirementId)).limit(1);
       if (!prop || !req) {
         console.log(`[MATCH-CLEANUP] Eliminando Match #${m.id} por propiedad o requerimiento inexistente.`);
-        await db.delete(propertyMatches).where(eq13(propertyMatches.id, m.id));
+        await db.delete(propertyMatches).where(eq12(propertyMatches.id, m.id));
         deletedCount++;
         continue;
       }
       const newScore = calcularScoreMatch(req, prop);
       if (newScore < 35) {
         console.log(`[MATCH-CLEANUP] Eliminando Match #${m.id} por incompatibilidad (Nuevo Score: ${newScore}%, Score anterior: ${m.matchScore}%).`);
-        await db.delete(propertyMatches).where(eq13(propertyMatches.id, m.id));
+        await db.delete(propertyMatches).where(eq12(propertyMatches.id, m.id));
         deletedCount++;
       } else {
         const storedScore = parseFloat(String(m.matchScore));
         if (Math.abs(storedScore - newScore) > 0.1) {
           console.log(`[MATCH-CLEANUP] Actualizando Score de Match #${m.id}: ${storedScore}% -> ${newScore}%`);
-          await db.update(propertyMatches).set({ matchScore: newScore.toFixed(2), matchReason: `Recalculado con VECY CORE v12.0` }).where(eq13(propertyMatches.id, m.id));
+          await db.update(propertyMatches).set({ matchScore: newScore.toFixed(2), matchReason: `Recalculado con VECY CORE v12.0` }).where(eq12(propertyMatches.id, m.id));
           updatedCount++;
         }
       }
@@ -10093,7 +7772,7 @@ var init_nightlyRematch = __esm({
     init_schema();
     init_matching();
     init_janIA();
-    init_whatsapp();
+    init_whatsapp_match();
   }
 });
 
@@ -10975,6 +8654,9 @@ var janIARouter = router({
           zone: properties.zone,
           addressNeighborhood: properties.addressNeighborhood,
           idUsuarioWhatsapp: properties.idUsuarioWhatsapp,
+          origenNombre: properties.origenNombre,
+          origenTipo: properties.origenTipo,
+          origenId: properties.origenId,
           propertyType: properties.propertyType,
           transactionType: properties.transactionType,
           bedrooms: properties.bedrooms,
@@ -10995,7 +8677,8 @@ var janIARouter = router({
           republicacionesCount: properties.republicacionesCount,
           estadoComercial: properties.estadoComercial,
           ultimaActividad: properties.ultimaActividad,
-          vigenciaIa: properties.vigenciaIa
+          vigenciaIa: properties.vigenciaIa,
+          createdAt: properties.createdAt
         },
         requirement: {
           id: requirements.id,
@@ -11006,6 +8689,9 @@ var janIARouter = router({
           zonaDeseada: requirements.zonaDeseada,
           addressNeighborhood: requirements.addressNeighborhood,
           idUsuarioWhatsapp: requirements.idUsuarioWhatsapp,
+          origenNombre: requirements.origenNombre,
+          origenTipo: requirements.origenTipo,
+          origenId: requirements.origenId,
           tipoInmuebleDeseado: requirements.tipoInmuebleDeseado,
           tipoNegocioDeseado: requirements.tipoNegocioDeseado,
           habitacionesMin: requirements.habitacionesMin,
@@ -11014,7 +8700,8 @@ var janIARouter = router({
           areaMin: requirements.areaMin,
           estratoDeseado: requirements.estratoDeseado,
           amobladoDeseado: requirements.amobladoDeseado,
-          rawText: requirements.rawText
+          rawText: requirements.rawText,
+          createdAt: requirements.createdAt
         }
       }).from(propertyMatches).innerJoin(properties, eq5(propertyMatches.propertyId, properties.id)).innerJoin(requirements, eq5(propertyMatches.requirementId, requirements.id)).orderBy(desc2(propertyMatches.createdAt));
       const propertyIds = matches.map((m) => m.property.id).filter(Boolean);
@@ -12217,10 +9904,10 @@ async function createContext(opts) {
         try {
           const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
           const { users: users2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-          const { eq: eq15 } = await import("drizzle-orm");
+          const { eq: eq14 } = await import("drizzle-orm");
           const db = await getDb2();
           if (db) {
-            await db.update(users2).set({ role: "admin" }).where(eq15(users2.id, user.id));
+            await db.update(users2).set({ role: "admin" }).where(eq14(users2.id, user.id));
             user = { ...user, role: "admin" };
             console.log(`[Auth] \u2705 Admin auto-promocionado: ${user.email}`);
           }
@@ -12234,10 +9921,10 @@ async function createContext(opts) {
       try {
         const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
         const { users: users2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-        const { eq: eq15 } = await import("drizzle-orm");
+        const { eq: eq14 } = await import("drizzle-orm");
         const db = await getDb2();
         if (db) {
-          const existingUser = await db.select().from(users2).where(eq15(users2.openId, "mock-local-user")).limit(1);
+          const existingUser = await db.select().from(users2).where(eq14(users2.openId, "mock-local-user")).limit(1);
           if (existingUser.length > 0) {
             user = existingUser[0];
           } else {
@@ -12357,20 +10044,17 @@ function serveStatic(app) {
   });
 }
 
-// server/_core/index.ts
-init_whatsapp();
-
 // server/_core/cronService.ts
 init_db();
 init_schema();
 init_whatsapp_match();
 init_nightlyRematch();
 import cron from "node-cron";
-import path6 from "path";
+import path5 from "path";
 import { fileURLToPath } from "url";
-import { gte as gte3, and as and8, eq as eq14, sql as sql7 } from "drizzle-orm";
+import { gte as gte3, and as and7, eq as eq13, sql as sql6 } from "drizzle-orm";
 var __filename = fileURLToPath(import.meta.url);
-var __dirname = path6.dirname(__filename);
+var __dirname = path5.dirname(__filename);
 function initCronScheduler() {
   console.log("[CRON-SERVICE] Inicializando orquestador de agendas automatizadas v3.0...");
   cron.schedule("0 11 * * 1,4", async () => {
@@ -12428,7 +10112,7 @@ function initCronScheduler() {
 async function sendVideoPromo(groupId, groupName) {
   try {
     if (!groupId) return;
-    const videoPath = path6.resolve(__dirname, "../../dist/JanIAConsulta.mp4");
+    const videoPath = path5.resolve(__dirname, "../../dist/JanIAConsulta.mp4");
     let mentions = [];
     try {
       mentions = await janiaMatchBot.getGroupParticipants(groupId);
@@ -12452,9 +10136,9 @@ async function sendWeeklyReport() {
   try {
     const db = await getDb();
     if (!db) return;
-    const propertiesCountRes = await db.select({ count: sql7`count(*)` }).from(properties).execute();
-    const requirementsCountRes = await db.select({ count: sql7`count(*)` }).from(requirements).execute();
-    const matchesCountRes = await db.select({ count: sql7`count(*)` }).from(propertyMatches).where(gte3(sql7`(${propertyMatches.matchScore})::numeric`, 60)).execute();
+    const propertiesCountRes = await db.select({ count: sql6`count(*)` }).from(properties).execute();
+    const requirementsCountRes = await db.select({ count: sql6`count(*)` }).from(requirements).execute();
+    const matchesCountRes = await db.select({ count: sql6`count(*)` }).from(propertyMatches).where(gte3(sql6`(${propertyMatches.matchScore})::numeric`, 60)).execute();
     const totalProperties = propertiesCountRes[0]?.count || 0;
     const totalRequirements = requirementsCountRes[0]?.count || 0;
     const totalMatches = matchesCountRes[0]?.count || 0;
@@ -12464,8 +10148,8 @@ async function sendWeeklyReport() {
       matchScore: propertyMatches.matchScore,
       buyerAdvisor: requirements.idUsuarioWhatsapp,
       sellerAdvisor: properties.idUsuarioWhatsapp
-    }).from(propertyMatches).innerJoin(requirements, eq14(propertyMatches.requirementId, requirements.id)).innerJoin(properties, eq14(propertyMatches.propertyId, properties.id)).where(and8(
-      gte3(sql7`(${propertyMatches.matchScore})::numeric`, 60),
+    }).from(propertyMatches).innerJoin(requirements, eq13(propertyMatches.requirementId, requirements.id)).innerJoin(properties, eq13(propertyMatches.propertyId, properties.id)).where(and7(
+      gte3(sql6`(${propertyMatches.matchScore})::numeric`, 60),
       gte3(propertyMatches.createdAt, sevenDaysAgo)
     )).execute();
     let report = `\u{1F4CA} *INFORME SEMANAL DE ACTIVIDAD - VECY NETWORK* \u{1F4CA}
@@ -12506,13 +10190,12 @@ Estimados aliados de la red, les comparto el balance oficial del estado de nuest
 
 // server/_core/index.ts
 init_janIA();
-init_whatsapp_cloud();
 init_voiceTranscription();
 init_llm();
 init_whatsapp_match();
 import multer from "multer";
-import fs5 from "fs";
-import path7 from "path";
+import fs4 from "fs";
+import path6 from "path";
 process.on("uncaughtException", (error) => {
   console.error("[SYSTEM-CRITICAL] Uncaught Exception detectada:", error);
 });
@@ -12564,54 +10247,31 @@ async function startServer() {
   app.post("/api/whatsapp/webhook", webhookPostHandler);
   app.get("/api/list-chats", async (req, res) => {
     try {
-      if (!whatsappBot.isReady) {
-        return res.status(503).send("El bot de WhatsApp no est\xE1 listo todav\xEDa. Intenta en unos segundos.");
+      if (!janiaMatchBot.isReady) {
+        return res.status(503).send("El bot de WhatsApp (Baileys) no est\xE1 listo todav\xEDa. Intenta en unos segundos.");
       }
-      const client = whatsappBot.client;
-      if (!client) {
-        return res.status(400).send("Client not available");
-      }
-      const chats = await client.getChats();
-      const groups = chats.filter((c) => c.isGroup).map((c) => ({ id: c.id._serialized, name: c.name, unreadCount: c.unreadCount }));
-      res.json(groups);
+      res.json({ isReady: true, status: "online" });
     } catch (err) {
       res.status(500).send(err.message);
     }
   });
   app.get("/api/inspect-groups", async (req, res) => {
     try {
-      if (!whatsappBot.isReady) {
-        return res.status(503).send("El bot de WhatsApp no est\xE1 listo todav\xEDa.");
+      if (!janiaMatchBot.isReady) {
+        return res.status(503).send("El bot de WhatsApp (Baileys) no est\xE1 listo todav\xEDa.");
       }
-      const client = whatsappBot.client;
-      if (!client) {
-        return res.status(400).send("Client not available");
-      }
-      const chats = await client.getChats();
-      const list = [];
-      for (const chat of chats) {
-        if (chat.isGroup) {
-          const groupChat = chat;
-          list.push({
-            id: groupChat.id._serialized,
-            name: groupChat.name,
-            isReadOnly: groupChat.isReadOnly,
-            participantsCount: groupChat.participants ? groupChat.participants.length : 0
-          });
-        }
-      }
-      res.json(list);
+      res.json({ isReady: true, status: "online" });
     } catch (err) {
       res.status(500).send(err.message);
     }
   });
   app.get("/api/screenshot-chat", async (req, res) => {
     try {
-      if (!whatsappBot.isReady) {
+      if (!oldWhatsappBot.isReady) {
         return res.status(503).send("El bot de WhatsApp no est\xE1 listo todav\xEDa. Intenta en unos segundos.");
       }
-      const client = whatsappBot.client;
-      const targetGroupId = whatsappBot.targetGroupId;
+      const client = oldWhatsappBot.client;
+      const targetGroupId = oldWhatsappBot.targetGroupId;
       if (!client || !client.pupPage) {
         return res.status(503).send("El navegador de WhatsApp a\xFAn no est\xE1 listo. Intenta en unos segundos.");
       }
@@ -12644,10 +10304,10 @@ async function startServer() {
   });
   app.get("/qr-match.png", (req, res) => {
     try {
-      const qrPath = path7.join(process.cwd(), "qr-match.png");
-      const distQrPath = path7.join(process.cwd(), "dist", "qr-match.png");
-      const activePath = fs5.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs5.existsSync(activePath)) {
+      const qrPath = path6.join(process.cwd(), "qr-match.png");
+      const distQrPath = path6.join(process.cwd(), "dist", "qr-match.png");
+      const activePath = fs4.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs4.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
         res.setHeader("Pragma", "no-cache");
@@ -12667,10 +10327,10 @@ async function startServer() {
         await janiaMatchBot2.initialize();
         await new Promise((resolve) => setTimeout(resolve, 3e3));
       }
-      const qrPath = path7.join(process.cwd(), "qr-match.png");
-      const distQrPath = path7.join(process.cwd(), "dist", "qr-match.png");
-      const activePath = fs5.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs5.existsSync(activePath)) {
+      const qrPath = path6.join(process.cwd(), "qr-match.png");
+      const distQrPath = path6.join(process.cwd(), "dist", "qr-match.png");
+      const activePath = fs4.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs4.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
         res.setHeader("Pragma", "no-cache");
@@ -12691,10 +10351,10 @@ async function startServer() {
       console.log("[ADMIN] Re-inicializando sesi\xF3n de Baileys para refrescar QR...");
       await janiaMatchBot2.initialize();
       await new Promise((resolve) => setTimeout(resolve, 4e3));
-      const qrPath = path7.join(process.cwd(), "qr-match.png");
-      const distQrPath = path7.join(process.cwd(), "dist", "qr-match.png");
-      const activePath = fs5.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs5.existsSync(activePath)) {
+      const qrPath = path6.join(process.cwd(), "qr-match.png");
+      const distQrPath = path6.join(process.cwd(), "dist", "qr-match.png");
+      const activePath = fs4.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs4.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         return res.sendFile(activePath);
       }
@@ -12740,8 +10400,8 @@ async function startServer() {
       } else {
         const targetPhone = cleanPhone.endsWith("@c.us") ? cleanPhone : `${cleanPhone}@c.us`;
         console.log(`[NOTIFICACI\xD3N-API] Retransmitiendo mensaje a ${targetPhone} por WhatsApp Cloud API...`);
-        const { sendCloudMessage: sendCloudMessage2 } = await Promise.resolve().then(() => (init_whatsapp_cloud(), whatsapp_cloud_exports));
-        await sendCloudMessage2(targetPhone, text2);
+        const { sendCloudMessage } = await import("./whatsapp-cloud");
+        await sendCloudMessage(targetPhone, text2);
       }
       res.json({ ok: true, message: "Notification sent successfully." });
     } catch (err) {
@@ -12829,9 +10489,9 @@ async function startServer() {
       res.status(500).json({ error: err.message || "Error al procesar la transcripci\xF3n" });
     }
   });
-  const uploadsDir = path7.resolve(process.cwd(), "public/uploads");
-  if (!fs5.existsSync(uploadsDir)) {
-    fs5.mkdirSync(uploadsDir, { recursive: true });
+  const uploadsDir = path6.resolve(process.cwd(), "public/uploads");
+  if (!fs4.existsSync(uploadsDir)) {
+    fs4.mkdirSync(uploadsDir, { recursive: true });
   }
   app.use("/uploads", express2.static(uploadsDir));
   const diskStorage = multer.diskStorage({
@@ -12840,7 +10500,7 @@ async function startServer() {
     },
     filename: (req, file, cb) => {
       const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-      cb(null, uniqueSuffix + path7.extname(file.originalname));
+      cb(null, uniqueSuffix + path6.extname(file.originalname));
     }
   });
   const uploadDisk = multer({
@@ -12977,7 +10637,7 @@ async function startServer() {
     try {
       const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
       const { propertyMatches: propertyMatches2, requirements: requirements2, properties: properties2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-      const { eq: eq15, gte: gte4 } = await import("drizzle-orm");
+      const { eq: eq14, gte: gte4 } = await import("drizzle-orm");
       const { handleDetectedMatches: handleDetectedMatches2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
       const db = await getDb2();
       if (!db) return res.status(500).send("No DB connection");
@@ -12999,8 +10659,8 @@ async function startServer() {
         let count = 0;
         for (const match of uniqueMatches) {
           try {
-            const [reqRec] = await db.select().from(requirements2).where(eq15(requirements2.id, match.requirementId)).limit(1);
-            const [propRec] = await db.select().from(properties2).where(eq15(properties2.id, match.propertyId)).limit(1);
+            const [reqRec] = await db.select().from(requirements2).where(eq14(requirements2.id, match.requirementId)).limit(1);
+            const [propRec] = await db.select().from(properties2).where(eq14(properties2.id, match.propertyId)).limit(1);
             if (reqRec && propRec) {
               const score = Number(match.matchScore);
               const matchedItem = {
@@ -13178,22 +10838,8 @@ var gracefulShutdown = async (signal) => {
   console.log(`
 [SYSTEM] Cerrando recursos de forma ordenada por se\xF1al: ${signal}`);
   try {
-    const client = whatsappBot.client;
-    if (client) {
-      console.log("[SYSTEM] Destruyendo sesi\xF3n de WhatsApp y cerrando Puppeteer...");
-      await client.destroy();
-    }
-  } catch (err) {
-    console.error("[SYSTEM] Error al cerrar el cliente de WhatsApp principal:", err);
-  }
-  try {
-    if (process.env.ENABLE_JANIA_MATCH_BOT === "true") {
-      const { janiaMatchBot: janiaMatchBot2 } = await Promise.resolve().then(() => (init_whatsapp_match(), whatsapp_match_exports));
-      const matchClient = janiaMatchBot2.client;
-      if (matchClient) {
-        console.log("[SYSTEM] Destruyendo sesi\xF3n de JanIA Match y cerrando Puppeteer...");
-        await matchClient.destroy();
-      }
+    if (janiaMatchBot) {
+      console.log("[SYSTEM] Cerrando sesi\xF3n de JanIA Match Bot (Baileys)...");
     }
   } catch (err) {
     console.error("[SYSTEM] Error al cerrar el cliente de JanIA Match:", err);

@@ -1256,7 +1256,7 @@ export class JaniaMatchBot {
           reaction = '📝';
         } else if (result.classification === "VIOLACION_DE_NORMAS") {
           reaction = '🚫';
-        } else if (msgText.includes("http://") || msgText.includes("https://")) {
+        } else if (bodyText.includes("http://") || bodyText.includes("https://")) {
           reaction = '👌';
         }
 
