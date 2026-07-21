@@ -675,7 +675,15 @@ export class JaniaMatchBot {
           if (emoji) {
             const sendReaction = async () => {
               try {
-                await this.sock.sendMessage(chatId, { react: { text: emoji, key: mainMsg.key } });
+                if (mainMsg && mainMsg.key) {
+                  const cleanKey = {
+                    remoteJid: mainMsg.key.remoteJid || chatId,
+                    id: mainMsg.key.id,
+                    fromMe: !!mainMsg.key.fromMe,
+                    participant: mainMsg.key.participant
+                  };
+                  await this.sock.sendMessage(chatId, { react: { text: emoji, key: cleanKey } });
+                }
               } catch (e) {}
             };
             const delayMs = Math.floor(Math.random() * (12000 - 4000 + 1)) + 4000;
@@ -1076,11 +1084,21 @@ export class JaniaMatchBot {
         if (emoji) {
           const sendReaction = async () => {
             try {
-              const lastMsg = buffer.messages[buffer.messages.length - 1].originalMsg;
-              console.log(`[JANIA-MATCH] Reaccionando con ${emoji} al mensaje de ${senderId}`);
-              await this.sock.sendMessage(chatId, { react: { text: emoji, key: lastMsg.key } });
+              const lastMsg = buffer.messages[buffer.messages.length - 1]?.originalMsg;
+              if (lastMsg && lastMsg.key) {
+                console.log(`[JANIA-MATCH] Reaccionando con ${emoji} al mensaje de ${senderId}`);
+                const cleanKey = {
+                  remoteJid: lastMsg.key.remoteJid || chatId,
+                  id: lastMsg.key.id,
+                  fromMe: !!lastMsg.key.fromMe,
+                  participant: lastMsg.key.participant
+                };
+                await this.sock.sendMessage(chatId, { react: { text: emoji, key: cleanKey } });
+              } else {
+                console.warn('[JANIA-MATCH] No se pudo reaccionar: lastMsg o lastMsg.key es nulo.');
+              }
             } catch (reactErr: any) {
-              console.error('[JANIA-MATCH] Error al reaccionar al mensaje:', reactErr.message || reactErr);
+              console.error('[JANIA-MATCH] Error al reaccionar al mensaje:', reactErr);
             }
           };
 
