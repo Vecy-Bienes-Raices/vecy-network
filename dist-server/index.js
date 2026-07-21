@@ -5998,7 +5998,7 @@ __export(whatsapp_utils_exports, {
   extractFirstName: () => extractFirstName2,
   getGreetingByTime: () => getGreetingByTime2,
   sendAdminNotification: () => sendAdminNotification,
-  textToSpeechMedia: () => textToSpeechMedia2
+  textToSpeechMedia: () => textToSpeechMedia
 });
 function extractFirstName2(fullName) {
   if (!fullName) return "";
@@ -6047,7 +6047,7 @@ function cleanVoiceText(text2) {
   cleaned = cleaned.replace(/^"|"$/g, "").trim();
   return cleaned.trim();
 }
-async function textToSpeechMedia2(text2, format = "OGG_OPUS") {
+async function textToSpeechMedia(text2, format = "OGG_OPUS") {
   const cleaned = cleanVoiceText(text2);
   if (!cleaned) return null;
   try {
@@ -6748,7 +6748,7 @@ Para hablar en privado, buscar propiedades, hacer consultas o recibir soporte y 
           }
           const realName = msg.pushName || `Asesor +${resolvedSenderId.split("@")[0]}`;
           const textLower = bodyText.toLowerCase();
-          const { detectaVoz: detectaVoz2, textToSpeechMedia: textToSpeechMedia3 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
+          const { detectaVoz: detectaVoz2, textToSpeechMedia: textToSpeechMedia2 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
           const { processWhatsAppMessage: processWhatsAppMessage2, processConsultingMessage: processConsultingMessage2, processCirculoMessage: processCirculoMessage2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
           const wantsVoice = msg.message?.audioMessage || detectaVoz2(textLower);
           if (wantsVoice) {
@@ -6830,7 +6830,7 @@ Tambi\xE9n puedes consultarme directamente en mi chat privado con mi otra yo *Ja
             const textToDeliver = result.response;
             const voiceToDeliver = result.voiceResponse || "";
             if (wantsVoice && voiceToDeliver.trim() !== "") {
-              const media = await textToSpeechMedia3(voiceToDeliver);
+              const media = await textToSpeechMedia2(voiceToDeliver);
               if (media) {
                 await this.queuedSend(chatId, media, { sendAudioAsVoice: true, quoted: msg });
               } else {
@@ -7072,11 +7072,11 @@ ${result.response}`);
               console.log(`[JANIA-MATCH] Publicaci\xF3n con advertencia/incompleta de ${senderId} en ${chatId} procesada.`);
               if (result.classification === "VIOLACION_DE_NORMAS" && isBotAdmin && result.response && result.response.trim() !== "") {
                 const textToDeliver = result.response;
-                const { textToSpeechMedia: textToSpeechMedia3 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
+                const { textToSpeechMedia: textToSpeechMedia2 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
                 const voiceToDeliver = result.voiceResponse || textToDeliver;
                 let audioSent = false;
                 try {
-                  const media = await textToSpeechMedia3(voiceToDeliver);
+                  const media = await textToSpeechMedia2(voiceToDeliver);
                   if (media) {
                     const lastMsg = buffer.messages[buffer.messages.length - 1].originalMsg;
                     await this.queuedSend(chatId, media, { sendAudioAsVoice: true, quoted: lastMsg });
@@ -7190,7 +7190,7 @@ ${result.response}`);
               reaction = "\u{1F4DD}";
             } else if (result.classification === "VIOLACION_DE_NORMAS") {
               reaction = "\u{1F6AB}";
-            } else if (msgText.includes("http://") || msgText.includes("https://")) {
+            } else if (bodyText.includes("http://") || bodyText.includes("https://")) {
               reaction = "\u{1F44C}";
             }
             if (reaction) {
@@ -7230,10 +7230,10 @@ ${result.response}`);
           const firstName = extractFirstName2(realName);
           const greetingName = firstName ? ` ${firstName}` : "";
           const outOfOfficeText = `\xA1${saludo}${greetingName}! \u{1F64B}\u{1F3FB}\u200D\u2640\uFE0F Qu\xE9 bueno saludarte de nuevo. En este momento nuestros agentes humanos se encuentran descansando \u{1F319}\u2728. Si gustas, puedes dejar tu mensaje aqu\xED para que te respondamos ma\xF1ana a primera hora, o si prefieres, puedes continuar la conversaci\xF3n conmigo y contarme en qu\xE9 puedo ayudarte hoy. \xA1Siempre es un gusto atenderte! \u{1F91D}\u{1F680}`;
-          const { textToSpeechMedia: textToSpeechMedia3 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
+          const { textToSpeechMedia: textToSpeechMedia2 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
           let media = null;
           try {
-            media = await textToSpeechMedia3(outOfOfficeText);
+            media = await textToSpeechMedia2(outOfOfficeText);
           } catch (ttsErr) {
             console.warn("[JANIA-MATCH] Error al generar TTS para fuera de horario:", ttsErr.message || ttsErr);
           }
@@ -7473,8 +7473,8 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
           const { cleanVoiceText: cleanVoiceText2 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
           const cleaned = cleanVoiceText2(text2);
           console.log(`[JANIA-MATCH] Generando nota de voz para enviar al grupo ${targetJid}...`);
-          const { textToSpeechMedia: textToSpeechMedia3 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
-          const voiceMedia = await textToSpeechMedia3(cleaned);
+          const { textToSpeechMedia: textToSpeechMedia2 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
+          const voiceMedia = await textToSpeechMedia2(cleaned);
           if (voiceMedia && voiceMedia.data) {
             const buffer = Buffer.from(voiceMedia.data, "base64");
             await this.queuedSend(targetJid, {
@@ -10192,6 +10192,7 @@ Estimados aliados de la red, les comparto el balance oficial del estado de nuest
 init_janIA();
 init_voiceTranscription();
 init_llm();
+init_whatsapp_utils();
 init_whatsapp_match();
 import multer from "multer";
 import fs4 from "fs";
@@ -10234,9 +10235,6 @@ async function startServer() {
   const webhookPostHandler = async (req, res) => {
     try {
       res.status(200).send("EVENT_RECEIVED");
-      handleIncomingWebhook(req.body).catch((err) => {
-        console.error("[WEBHOOK-ERROR] Error handling incoming webhook:", err);
-      });
     } catch (err) {
       console.error("[WEBHOOK-ERROR] Exception in webhook endpoint:", err);
     }
@@ -10397,11 +10395,6 @@ async function startServer() {
         const targetPhone = cleanPhone.endsWith("@s.whatsapp.net") ? cleanPhone : `${cleanPhone}@s.whatsapp.net`;
         console.log(`[NOTIFICACI\xD3N-API] Retransmitiendo mensaje a ${targetPhone} v\xEDa JanIA Match Bot (Baileys)...`);
         await matchBot.queuedSend(targetPhone, text2);
-      } else {
-        const targetPhone = cleanPhone.endsWith("@c.us") ? cleanPhone : `${cleanPhone}@c.us`;
-        console.log(`[NOTIFICACI\xD3N-API] Retransmitiendo mensaje a ${targetPhone} por WhatsApp Cloud API...`);
-        const { sendCloudMessage } = await import("./whatsapp-cloud");
-        await sendCloudMessage(targetPhone, text2);
       }
       res.json({ ok: true, message: "Notification sent successfully." });
     } catch (err) {

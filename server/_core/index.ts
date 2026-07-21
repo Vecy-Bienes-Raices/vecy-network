@@ -99,48 +99,10 @@ async function startServer() {
 
   app.get("/api/screenshot-chat", async (req, res) => {
     try {
-      if (!oldWhatsappBot.isReady) {
-        return res.status(503).send("El bot de WhatsApp no está listo todavía. Intenta en unos segundos.");
+      if (!janiaMatchBot.isReady) {
+        return res.status(503).send("El bot de WhatsApp (Baileys) no está listo todavía.");
       }
-      const client = (oldWhatsappBot as any).client;
-      const targetGroupId = (oldWhatsappBot as any).targetGroupId;
-
-      if (!client || !client.pupPage) {
-        return res.status(503).send("El navegador de WhatsApp aún no está listo. Intenta en unos segundos.");
-      }
-
-      const page = client.pupPage;
-
-      // Intentar obtener el nombre dinámico del grupo por su ID para evitar hardcoding
-      let chatTitle = "VECY INMUEBLES NETWORK";
-      try {
-        const chat = await client.getChatById(targetGroupId);
-        if (chat && chat.name) chatTitle = chat.name;
-      } catch (e) {}
-
-      // Seleccionar el chat correcto forzando el ID (más estable que selectores CSS)
-      await page.evaluate((id: any, title: any) => {
-        // Intentar encontrar el elemento por el atributo de ID de WhatsApp Web
-        const row = document.querySelector(`div[data-id*="${id}"]`) || 
-                    Array.from(document.querySelectorAll('div')).find(el => el.getAttribute('data-id')?.includes(id));
-        
-        if (row) {
-          (row as any).click();
-        } else {
-          // Fallback: Buscar por el título dinámico si el ID no está expuesto directamente
-          const span = Array.from(document.querySelectorAll('span')).find(el => el.textContent === title);
-          if (span) {
-            const parent = span.closest('div[role="row"]') || span.closest('div[data-testid="cell-frame-container"]') || span.closest('div');
-            if (parent) (parent as any).click();
-          }
-        }
-      }, targetGroupId, chatTitle);
-
-      // Esperar brevemente a que el chat se renderice
-      await new Promise(resolve => setTimeout(resolve, 2500));
-      const screenshot = await page.screenshot({ type: "png" });
-      res.setHeader("Content-Type", "image/png");
-      res.send(screenshot);
+      return res.json({ isReady: true, status: "Baileys WebSocket activo" });
     } catch (err: any) {
       res.status(500).send(err.message);
     }
