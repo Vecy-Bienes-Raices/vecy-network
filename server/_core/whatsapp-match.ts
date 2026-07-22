@@ -1475,11 +1475,17 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
 
 ¡Les deseamos mucho éxito en el cierre comercial! 🤝🚀`;
 
-        await this.queuedSend(ownerJid, msgToOwner);
-        await this.queuedSend(seekerJid, msgToSeeker);
+        // Redirigir notificaciones de match al administrador/Jani para que las gestione manualmente y evitar baneos de WhatsApp
+        const { sendAdminNotification } = await import('./whatsapp-utils');
+        const adminAlertText = `🎉🎈 *¡CONEXIÓN DE NEGOCIO EXITOSA (MATCH #${matchId})!* 🎈🎉\n\n` +
+                               `*MENSAJE PARA PROPIETARIO (${ownerPhone.split('@')[0]} - ${ownerName}):*\n` +
+                               `${msgToOwner}\n\n` +
+                               `*MENSAJE PARA BUSCADOR (${seekerPhone.split('@')[0]} - ${seekerName}):*\n` +
+                               `${msgToSeeker}`;
+        await sendAdminNotification(adminAlertText);
 
-        await this.logToDb(ownerJid, 'janIA', `[Match-Connected] Contact shared: Seeker is ${seekerPhone}`);
-        await this.logToDb(seekerJid, 'janIA', `[Match-Connected] Contact shared: Owner is ${ownerPhone}`);
+        await this.logToDb(ownerJid, 'janIA', `[Match-Connected] Contact redirected to admin: Seeker is ${seekerPhone}`);
+        await this.logToDb(seekerJid, 'janIA', `[Match-Connected] Contact redirected to admin: Owner is ${ownerPhone}`);
       } else {
         // Solo esta parte ha confirmado
         await this.queuedSend(senderId, `¡Gracias! He registrado tu confirmación de interés para la coincidencia *#M${matchId}*.\n\nEn cuanto la otra parte también confirme, les compartiré mutuamente sus datos de contacto para que puedan cerrar el negocio. 🚀`);
@@ -1509,6 +1515,20 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
                                targetJid === this.circuloGroupId;
           if (!isAuthorized) {
             console.log(`[JANIA-MATCH-SHIELD] Bloqueado envío de mensaje al grupo no autorizado: ${targetJid}`);
+            return;
+          }
+        }
+
+        // Failsafe de DM: Impedir el envío de cualquier mensaje directo a usuarios que no sean administradores
+        if (targetJid.endsWith('@s.whatsapp.net')) {
+          const rawPhone = targetJid.split('@')[0];
+          const ADMIN_PHONE = process.env.ADMIN_PHONE || "573166569719";
+          const isAdmin = rawPhone.includes(ADMIN_PHONE) || 
+                          rawPhone === ADMIN_PHONE || 
+                          rawPhone === "573166569719" || 
+                          rawPhone.includes("573185462265");
+          if (!isAdmin) {
+            console.log(`[JANIA-MATCH-SHIELD] Bloqueado envío de mensaje directo (DM) a usuario no administrador: ${targetJid}`);
             return;
           }
         }
