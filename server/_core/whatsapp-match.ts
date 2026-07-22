@@ -343,7 +343,13 @@ export class JaniaMatchBot {
             }
 
             const textLower = body.toLowerCase();
-            const hasDirectMention = textLower.includes("jania");
+            const botJid = this.sock?.user?.id ? cleanJid(this.sock.user.id) : '';
+            const botPhone = botJid ? botJid.split('@')[0] : '';
+            const mentionsBot = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.some((jid: string) => cleanJid(jid) === botJid);
+            const hasDirectMention = textLower.includes("jania") || 
+                                     (botPhone && textLower.includes(botPhone)) || 
+                                     textLower.includes("573166569719") ||
+                                     !!mentionsBot;
 
             // --- IDENTIFICACIÓN DE GRUPOS OFICIALES VECY ---
             const isMainGroup = chatId === this.targetGroupId;     // VECY INMUEBLES NETWORK
@@ -480,7 +486,7 @@ export class JaniaMatchBot {
               ((isBuzonGroup || isCirculoGroup || isMainGroup) && !isShortCourtesy)
             );
 
-            const shouldRespond = hasDirectMention || isHelpOrSystemQuery || isInteractiveGroupQuery;
+            const shouldRespond = isOfficialGroup && hasDirectMention;
 
             // IMPORTANTE: si el mensaje es a la vez una posible publicación Y tiene mención/consulta,
             // la publicación tiene prioridad — la capturamos primero y luego respondemos solo si aplica.
@@ -1136,8 +1142,9 @@ export class JaniaMatchBot {
           }
         } else {
           console.log(`[JANIA-MATCH] Publicación con advertencia/incompleta de ${senderId} en ${chatId} procesada.`);
-          // Si el bot es administrador y el usuario cometió una infracción de normas (publicación no permitida)
-          if (result.classification === "VIOLACION_DE_NORMAS" && isBotAdmin && result.response && result.response.trim() !== "") {
+          const isOfficial = chatId === this.targetGroupId || chatId === this.buzonGroupId || chatId === this.circuloGroupId;
+          // Si el bot es administrador y el usuario cometió una infracción de normas (publicación no permitida) en un grupo oficial
+          if (result.classification === "VIOLACION_DE_NORMAS" && isOfficial && isBotAdmin && result.response && result.response.trim() !== "") {
             const textToDeliver = result.response;
             const { textToSpeechMedia } = await import('./whatsapp-utils');
             const voiceToDeliver = result.voiceResponse || textToDeliver;
@@ -1494,6 +1501,16 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         let targetJid = chatId;
         if (targetJid.endsWith('@c.us')) {
           targetJid = targetJid.replace('@c.us', '@s.whatsapp.net');
+        }
+
+        if (targetJid.endsWith('@g.us')) {
+          const isAuthorized = targetJid === this.targetGroupId || 
+                               targetJid === this.buzonGroupId || 
+                               targetJid === this.circuloGroupId;
+          if (!isAuthorized) {
+            console.log(`[JANIA-MATCH-SHIELD] Bloqueado envío de mensaje al grupo no autorizado: ${targetJid}`);
+            return;
+          }
         }
 
         let messagePayload: any = {};

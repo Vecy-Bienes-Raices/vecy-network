@@ -1717,13 +1717,25 @@ Por lo tanto, DEBES hacer lo siguiente:
     }
 
     if (isLLMIncomplete) {
-      const inferredType = (messageToProcess.toLowerCase().includes("vendo") || messageToProcess.toLowerCase().includes("ofrezco") || messageToProcess.toLowerCase().includes("arriendo") || !!extracted?.propertyType) ? "PROPERTY" : "REQUIREMENT";
-      if (inferredType === "PROPERTY") {
-        isProperty = true;
-        isRequirement = false;
-      } else {
+      const isGroupUnauthorized = isGroup && groupJid && !(
+        groupJid.startsWith('120363260108880069') ||
+        groupJid.startsWith('120363417740040773') ||
+        groupJid.startsWith('120363403507276533')
+      );
+
+      if (isGroupUnauthorized) {
         isProperty = false;
-        isRequirement = true;
+        isRequirement = false;
+        console.log(`[JANIA-MATCH-FILTER] Publicación incompleta en grupo no autorizado ${groupJid} ignorada para extracción.`);
+      } else {
+        const inferredType = (messageToProcess.toLowerCase().includes("vendo") || messageToProcess.toLowerCase().includes("ofrezco") || messageToProcess.toLowerCase().includes("arriendo") || !!extracted?.propertyType) ? "PROPERTY" : "REQUIREMENT";
+        if (inferredType === "PROPERTY") {
+          isProperty = true;
+          isRequirement = false;
+        } else {
+          isProperty = false;
+          isRequirement = true;
+        }
       }
 
       // Principio de Mínima Intervención (VRIF): JanIA observa silenciosamente en WhatsApp
