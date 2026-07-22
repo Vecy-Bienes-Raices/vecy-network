@@ -103,30 +103,22 @@ export function initCronScheduler() {
 }
 
 /**
- * Envía el video JanIAConsulta.mp4 con texto de invitación y @todos al grupo indicado
+ * Envía el video JanIAConsulta.mp4 con texto de invitación al grupo indicado
  */
 async function sendVideoPromo(groupId: string, groupName: string) {
   try {
     if (!groupId) return;
     const videoPath = path.resolve(__dirname, '../../dist/JanIAConsulta.mp4');
 
-    // Obtener todos los participantes del grupo para el @todos
-    let mentions: string[] = [];
-    try {
-      mentions = await whatsappBot.getGroupParticipants(groupId);
-    } catch (mentionErr) {
-      console.warn(`[CRON-SERVICE] No se pudieron obtener participantes de ${groupName}:`, mentionErr);
-    }
-
     const texto =
-      `@todos 💬 ¿Prefieres una atención más directa y personalizada?\n\n` +
+      `💬 ¿Prefieres una atención más directa y personalizada?\n\n` +
       `Chatea directamente con *JanIA*, tu asistente de inteligencia artificial de VECY Network.\n\n` +
       `📲 *Escríbele ahora:* https://wa.me/573185462265\n\n` +
       `Puedes compartirle tus inmuebles, requerimientos o consultas por texto, audio o imagen. ` +
       `Ella los lee, extrae los datos, los sube a nuestra base de datos y busca posibles coincidencias ` +
       `para ayudarte a cerrar negocios más rápido. ¡Haz clic en el enlace y empieza hoy! 🏠🚀`;
 
-    await whatsappBot.sendToGroup(texto, videoPath, mentions, groupId);
+    await whatsappBot.sendToGroup(texto, videoPath, [], groupId);
     console.log(`[CRON-SERVICE] ✓ Video promo enviado a ${groupName}.`);
   } catch (e: any) {
     console.error(`[CRON-SERVICE] Error enviando video promo a ${groupName}:`, e.message || e);
