@@ -1475,17 +1475,9 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
 
 ¡Les deseamos mucho éxito en el cierre comercial! 🤝🚀`;
 
-        // Redirigir notificaciones de match al administrador/Jani para que las gestione manualmente y evitar baneos de WhatsApp
-        const { sendAdminNotification } = await import('./whatsapp-utils');
-        const adminAlertText = `🎉🎈 *¡CONEXIÓN DE NEGOCIO EXITOSA (MATCH #${matchId})!* 🎈🎉\n\n` +
-                               `*MENSAJE PARA PROPIETARIO (${ownerPhone.split('@')[0]} - ${ownerName}):*\n` +
-                               `${msgToOwner}\n\n` +
-                               `*MENSAJE PARA BUSCADOR (${seekerPhone.split('@')[0]} - ${seekerName}):*\n` +
-                               `${msgToSeeker}`;
-        await sendAdminNotification(adminAlertText);
-
-        await this.logToDb(ownerJid, 'janIA', `[Match-Connected] Contact redirected to admin: Seeker is ${seekerPhone}`);
-        await this.logToDb(seekerJid, 'janIA', `[Match-Connected] Contact redirected to admin: Owner is ${ownerPhone}`);
+        // No enviar notificaciones de match en WhatsApp a ningún humano (se gestiona 100% en la plataforma web)
+        await this.logToDb(ownerJid, 'janIA', `[Match-Connected] Match #M${matchId} connected in DB. Seeker is ${seekerPhone}`);
+        await this.logToDb(seekerJid, 'janIA', `[Match-Connected] Match #M${matchId} connected in DB. Owner is ${ownerPhone}`);
       } else {
         // Solo esta parte ha confirmado
         await this.queuedSend(senderId, `¡Gracias! He registrado tu confirmación de interés para la coincidencia *#M${matchId}*.\n\nEn cuanto la otra parte también confirme, les compartiré mutuamente sus datos de contacto para que puedan cerrar el negocio. 🚀`);

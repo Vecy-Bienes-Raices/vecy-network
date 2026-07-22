@@ -160,20 +160,8 @@ export async function textToSpeechMedia(text: string, format: "OGG_OPUS" | "MP3"
 }
 
 /**
- * Envía una notificación al administrador a través de la instancia activa de JanIA Match Bot (Baileys).
+ * Envía una notificación al administrador (Desactivado para WhatsApp, solo registra en consola/logs).
  */
 export async function sendAdminNotification(text: string): Promise<void> {
-  const ADMIN_PHONE = process.env.ADMIN_PHONE || "573166569719";
-  const adminJid = `${ADMIN_PHONE}@s.whatsapp.net`;
-  try {
-    const matchBot = (global as any).janiaMatchBotInstance;
-    if (matchBot && matchBot.queuedSend) {
-      console.log(`[WHATSAPP-UTILS] Enviando notificación de admin a ${adminJid} vía Baileys...`);
-      await matchBot.queuedSend(adminJid, text);
-    } else {
-      console.log(`[WHATSAPP-UTILS] [Admin Log]: ${text}`);
-    }
-  } catch (e: any) {
-    console.error("[WHATSAPP-UTILS] Error enviando notificación admin:", e.message || e);
-  }
+  console.log(`[WHATSAPP-UTILS] [Notificación Admin (WhatsApp Omitido)]: ${text}`);
 }
