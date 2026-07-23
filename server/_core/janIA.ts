@@ -1391,7 +1391,7 @@ export async function processWhatsAppMessage(
           classification: "VIOLACION_DE_NORMAS",
           response: staticText,
           dmResponse: staticText,
-          reactionEmoji: "❌"
+          reactionEmoji: "🚫"
         };
       }
     }
@@ -1849,7 +1849,7 @@ Por lo tanto, DEBES hacer lo siguiente:
         result.mentions = [];
         result.extraDMs = [];
         result.sendReputationHook = false;
-        result.reactionEmoji = getEmojiForCalificacion(saved.calificacion || undefined);
+        result.reactionEmoji = "👍";
 
         const { executeMatchEngine } = await import("./matching");
         setImmediate(() => {
@@ -1884,7 +1884,7 @@ Por lo tanto, DEBES hacer lo siguiente:
         result.mentions = [];
         result.extraDMs = [];
         result.sendReputationHook = false;
-        result.reactionEmoji = getEmojiForCalificacion(saved.calificacion || undefined);
+        result.reactionEmoji = "📝";
 
         const { executeMatchEngine } = await import("./matching");
         setImmediate(() => {
@@ -2792,7 +2792,7 @@ export async function processConsultingMessage(
           classification: "VIOLACION_DE_NORMAS",
           response: staticText,
           dmResponse: staticText,
-          reactionEmoji: "❌"
+          reactionEmoji: "🚫"
         };
       }
     }
@@ -2969,7 +2969,7 @@ export async function processConsultingMessage(
       return {
         classification: parsed.classification || "CONSULTA_GENERAL",
         response: sanitizeResponseMarkdown(parsed.response || ""),
-        reactionEmoji: parsed.reactionEmoji || (parsed.classification === "VIOLACION_DE_NORMAS" ? "❌" : "💡"),
+        reactionEmoji: parsed.reactionEmoji || (parsed.classification === "VIOLACION_DE_NORMAS" ? "🚫" : "👌"),
         wantsVoice: parsed.wantsVoice || false,
         voiceResponse: parsed.voiceResponse || ""
       };
@@ -2978,7 +2978,7 @@ export async function processConsultingMessage(
       return {
         classification: "CONSULTA_GENERAL",
         response: sanitizeResponseMarkdown(replyContent),
-        reactionEmoji: "💡",
+        reactionEmoji: "👌",
         wantsVoice: false,
         voiceResponse: ""
       };
@@ -3029,7 +3029,7 @@ export async function processCirculoMessage(
           classification: "VIOLACION_DE_NORMAS",
           response: staticText,
           dmResponse: staticText,
-          reactionEmoji: "❌"
+          reactionEmoji: "🚫"
         };
       }
     }

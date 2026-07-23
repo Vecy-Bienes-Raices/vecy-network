@@ -957,20 +957,28 @@ export class JaniaMatchBot {
   }
 
   private getReactionEmoji(result: any): string | null {
-    // Reaccionar si se insertó en DB, O si se clasificó exitosamente como inmueble/requerimiento
     if (!result) return null;
-    if (result.inserted) {
-      return result.reactionEmoji || '👍';
+
+    // Normalizar emoji sugerido por la IA para cumplir con la especificación de 4 emojis
+    let emoji = result.reactionEmoji;
+    if (emoji) {
+      if (emoji === '❌' || emoji === '⚠️') emoji = '🚫';
+      if (emoji === '💡' || emoji === '🔄') emoji = '👌';
+      if (emoji === '🤔' || emoji === '🟢') {
+        emoji = result.classification === 'REQUERIMIENTO' ? '📝' : '👍';
+      }
+      return emoji;
     }
-    // Si no se insertó pero sí se clasificó (inmueble o requerimiento detectado con info parcial)
+
     const classification = result.classification || '';
-    if (
-      classification.includes('INMUEBLE') ||
-      classification.includes('REQUERIMIENTO') ||
-      classification.includes('PROPIEDAD')
-    ) {
-      // Reaccionar con el emoji del resultado o con ✔️ (Mediocre) como mínimo
-      return result.reactionEmoji || '✔️';
+    if (classification.includes('INMUEBLE') || classification.includes('PROPIEDAD')) {
+      return '👍';
+    }
+    if (classification.includes('REQUERIMIENTO')) {
+      return '📝';
+    }
+    if (classification.includes('VIOLACION_DE_NORMAS') || classification.includes('INVALID_LEAD')) {
+      return '🚫';
     }
     return null;
   }

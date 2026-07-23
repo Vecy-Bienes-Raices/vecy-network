@@ -66,7 +66,7 @@ Constantemente recibes datos en diversos formatos (Texto plano, URLs de portales
   "response": "Tu respuesta elocuente para el canal o grupo (cadena vacía '' si no hay match ni es consulta directa o si realizas extracción)",
   "shouldSendDM": boolean,
   "missingFields": ["string"],
-  "reactionEmoji": "string (emoji recomendado para reaccionar al mensaje original, ej: '❌', '🚫', '⚠️', '🔄', '✅', '💡', '🎯')",
+  "reactionEmoji": "string (emoji recomendado para reaccionar al mensaje original, ej: '👍' para Inmuebles, '📝' para Requerimientos, '👌' para Enlaces/Consultas, '🚫' para Violaciones)",
   "wantsVoice": boolean,
   "voiceResponse": "string (la respuesta redactada para ser hablada si wantsVoice es true, o vacía si respondes en texto o realizas extracción)"
 }
