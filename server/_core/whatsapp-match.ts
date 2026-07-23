@@ -722,7 +722,7 @@ export class JaniaMatchBot {
     if (now - lastRedirect > ONCE_A_DAY) {
       this.redirectCooldowns.set(senderId, now);
       const redirectLink = "https://wa.me/573185462265";
-      const redirectText = `¡Hola! 🤖 Soy *JanIA Match* 🔌💘.\n\nEste número está destinado *únicamente a trabajar, escuchar y gestionar los grupos de la red*.\n\nPara hablar en privado, buscar propiedades, hacer consultas o recibir soporte y atención, por favor escribe directamente a mi versión principal, *JanIA v3.5*:\n\n👉 ${redirectLink}`;
+      const redirectText = `Hola 😊. Si tienes dudas, inquietudes o quieres consultarme algo (sea por escrito o por notas de voz), te invito a escribir directamente al canal oficial privado de soporte de *JanIA de Meta* haciendo clic aquí: ${redirectLink} para realizar tus consultas correspondientes. ¡Allí te atenderé con gusto! 🚀`;
       
       this.queuedSend(chatId, redirectText);
     }
@@ -836,7 +836,7 @@ export class JaniaMatchBot {
         );
 
       } else {
-        const redirectMsg = `¡Hola! 😊 Para resolver tus inquietudes inmobiliarias, dudas de corretaje, soporte técnico o de cuenta, te invito a consultarme en privado a mi otro yo: **JanIA de Soporte y Atención** 📲 en el número +57 3185462265 o haciendo clic aquí: https://wa.me/573185462265. ¡Allí con gusto te responderé a profundidad! 🚀`;
+        const redirectMsg = `Hola 😊. Si tienes dudas, inquietudes o quieres consultarme algo (sea por escrito o por notas de voz), te invito a escribir directamente al canal oficial privado de soporte de *JanIA de Meta* haciendo clic aquí: https://wa.me/573185462265 para realizar tus consultas correspondientes. ¡Allí te atenderé con gusto! 🚀`;
         await this.queuedSend(chatId, redirectMsg, {
           mentions: [resolvedSenderId],
           quoted: msg
