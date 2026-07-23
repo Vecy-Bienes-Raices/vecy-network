@@ -605,7 +605,7 @@ export async function findMatchesForProperty(propertyId: number) {
     for (const req of activeRequirements) {
       const explanation = explicarMatch(req, property);
       const score = explanation.score;
-      if (score >= 70) {
+      if (score >= 85) {
         let matchId: number;
         const existing = await db.select().from(propertyMatches).where(
           and(
@@ -679,7 +679,7 @@ export async function findMatchesForRequirement(requirementId: number) {
     for (const prop of availableProperties) {
       const explanation = explicarMatch(req, prop);
       const score = explanation.score;
-      if (score >= 70) {
+      if (score >= 85) {
         let matchId: number;
         const existing = await db.select().from(propertyMatches).where(
           and(
@@ -840,6 +840,7 @@ export async function executeMatchEngine(propertyId: number | null, requirementI
         // ── CÁLCULO DE SCORE & EXPLICACIÓN ─────────────────────────────────────
         const explanation = explicarMatch(req, prop);
         const score = explanation.score;
+        if (score < 85) continue;
 
         // ── REGISTRO EN BASE DE DATOS ─────────────────────────────────────────
         let matchId: number;

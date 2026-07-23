@@ -126,7 +126,7 @@ async function sendVideoPromo(groupId: string, groupName: string) {
 }
 
 /**
- * Consulta la base de datos y genera el boletín de matches calificados (Score >= 60)
+ * Consulta la base de datos y genera el boletín de matches calificados (Score >= 85)
  * Incluye acumulados históricos si el periodo es NOCTURNO.
  */
 async function sendMatchBulletin(periodName: string) {
@@ -147,7 +147,7 @@ async function sendMatchBulletin(periodName: string) {
     .innerJoin(requirements, eq(propertyMatches.requirementId, requirements.id))
     .innerJoin(properties, eq(propertyMatches.propertyId, properties.id))
     .where(and(
-      gte(sql<number>`(${propertyMatches.matchScore})::numeric`, 60),
+      gte(sql<number>`(${propertyMatches.matchScore})::numeric`, 85),
       gte(propertyMatches.createdAt, todayStart)
     ))
     .execute();
@@ -227,10 +227,10 @@ async function sendWeeklyReport() {
     const propertiesCountRes = await db.select({ count: sql<number>`count(*)` }).from(properties).execute();
     const requirementsCountRes = await db.select({ count: sql<number>`count(*)` }).from(requirements).execute();
     
-    // Contamos matches con score >= 60
+    // Contamos matches con score >= 85
     const matchesCountRes = await db.select({ count: sql<number>`count(*)` })
       .from(propertyMatches)
-      .where(gte(sql<number>`(${propertyMatches.matchScore})::numeric`, 60))
+      .where(gte(sql<number>`(${propertyMatches.matchScore})::numeric`, 85))
       .execute();
 
     const totalProperties = propertiesCountRes[0]?.count || 0;
@@ -250,7 +250,7 @@ async function sendWeeklyReport() {
     .innerJoin(requirements, eq(propertyMatches.requirementId, requirements.id))
     .innerJoin(properties, eq(propertyMatches.propertyId, properties.id))
     .where(and(
-      gte(sql<number>`(${propertyMatches.matchScore})::numeric`, 60),
+      gte(sql<number>`(${propertyMatches.matchScore})::numeric`, 85),
       gte(propertyMatches.createdAt, sevenDaysAgo)
     ))
     .execute();
