@@ -381,8 +381,8 @@ export default function AdminProperties() {
               )}
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
+            <div className="overflow-x-auto scrollbar-thin">
+              <table className="w-full min-w-[600px]">
                 <thead>
                   <tr className="border-b border-border">
                     {['Inmueble', 'Ubicación', 'Precio', 'Datos', 'Estado', 'Acciones'].map(h => (

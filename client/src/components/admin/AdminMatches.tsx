@@ -516,18 +516,18 @@ export default function AdminMatches() {
                   <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-gradient-to-b from-[#bf953f] to-[#a67d32] opacity-50 group-hover:opacity-100 transition-opacity" />
 
                   {/* Top Bar info */}
-                  <div className="bg-white/[0.01] px-6 py-4 flex flex-wrap items-center justify-between gap-3 border-b border-white/5">
-                    <div className="flex items-center gap-3">
+                  <div className="bg-white/[0.01] px-4 sm:px-6 py-3 sm:py-4 flex flex-wrap items-center justify-between gap-3 border-b border-white/5">
+                    <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
                       <span className={`h-2.5 w-2.5 rounded-full ${dotColor}`} />
-                      <span className={`text-xl font-extrabold tracking-tight ${scoreColor}`}>{score.toFixed(0)}% Match</span>
-                      <span className="text-zinc-500 text-xs">Afinidad registrada por IA</span>
+                      <span className={`text-lg sm:text-xl font-extrabold tracking-tight ${scoreColor}`}>{score.toFixed(0)}% Match</span>
+                      <span className="text-zinc-500 text-[11px] sm:text-xs">Afinidad registrada por IA</span>
                       {score >= 95 && (
                         <span className="text-[9px] bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-2 py-0.5 rounded-full font-bold">
                           ⭐ MATCH PERFECTO
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3 sm:gap-4">
                       <div className="flex items-center gap-1.5 text-zinc-500 text-xs font-mono">
                         <Calendar className="w-3.5 h-3.5" />
                         {date}
@@ -537,7 +537,7 @@ export default function AdminMatches() {
                   </div>
 
                   {/* Summary badges */}
-                  <div className="px-6 py-2.5 flex items-center gap-3 border-b border-white/5 flex-wrap bg-black/20">
+                  <div className="px-4 sm:px-6 py-2.5 flex items-center gap-2 sm:gap-3 border-b border-white/5 flex-wrap bg-black/20">
                     <span className="text-[10px] uppercase tracking-widest text-zinc-600 font-bold">Cotejo:</span>
                     <span className="flex items-center gap-1 text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full">
                       <CheckCircle2 className="w-2.5 h-2.5" /> {exactCount} coinciden
@@ -558,30 +558,30 @@ export default function AdminMatches() {
                   </div>
 
                   {/* Parties Split View */}
-                  <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 border-b border-white/5 bg-zinc-950/20">
+                  <div className="p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6 border-b border-white/5 bg-zinc-950/20">
                     
                     {/* Inmueble (Oferta) */}
                     <div className="space-y-3">
-                      <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
                         <span className="text-[9px] uppercase font-bold tracking-widest text-[#bf953f] bg-[#bf953f]/5 px-2 py-0.5 rounded border border-[#bf953f]/15">
                           🏢 Inmueble / Oferta
                         </span>
                         {m.property?.origenNombre && (
-                          <span className="text-[10px] text-zinc-400 bg-white/5 border border-white/10 px-2 py-0.5 rounded-md truncate max-w-[200px]" title={m.property.origenNombre}>
+                          <span className="text-[10px] text-zinc-400 bg-white/5 border border-white/10 px-2 py-0.5 rounded-md truncate max-w-[180px] sm:max-w-[200px]" title={m.property.origenNombre}>
                             📍 {m.property.origenNombre}
                           </span>
                         )}
                       </div>
-                      <h4 className="text-base font-bold text-white mt-1">{m.property?.name}</h4>
+                      <h4 className="text-sm sm:text-base font-bold text-white mt-1 break-words">{m.property?.name}</h4>
                       {(m.property?.rawText || m.property?.description) && (
-                        <p className="text-xs text-zinc-300 bg-white/[0.02] border border-white/5 p-3 rounded-xl italic leading-relaxed whitespace-pre-wrap">
+                        <p className="text-xs text-zinc-300 bg-white/[0.02] border border-white/5 p-3 rounded-xl italic leading-relaxed whitespace-pre-wrap break-words">
                           "{m.property?.rawText || m.property?.description}"
                         </p>
                       )}
                       
-                      <div className="bg-[#bf953f]/5 border border-[#bf953f]/10 rounded-2xl p-3 flex items-center justify-between gap-3">
+                      <div className="bg-[#bf953f]/5 border border-[#bf953f]/10 rounded-2xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full bg-[#bf953f]/10 border border-[#bf953f]/20 flex items-center justify-center text-[#bf953f]">
+                          <div className="w-8 h-8 rounded-full bg-[#bf953f]/10 border border-[#bf953f]/20 flex items-center justify-center text-[#bf953f] flex-shrink-0">
                             <Phone className="w-3.5 h-3.5" />
                           </div>
                           <div>
@@ -597,7 +597,7 @@ export default function AdminMatches() {
                             href={getValidWaLink(m.property.idUsuarioWhatsapp, `Hola! Te contacto por el inmueble "${m.property.name || 'de la red'}" publicado en ${m.property.origenNombre || 'VECY Network'}. Tienes un Match del ${score.toFixed(0)}% con un requerimiento activo.`)} 
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="bg-[#25D366] hover:bg-[#20ba5a] text-black text-[10px] font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition-all shadow-md hover:scale-105"
+                            className="bg-[#25D366] hover:bg-[#20ba5a] text-black text-[10px] font-bold px-3 py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md hover:scale-105 min-h-[38px] w-full sm:w-auto"
                           >
                             Contactar WA <ExternalLink className="w-3 h-3" />
                           </a>
@@ -606,29 +606,29 @@ export default function AdminMatches() {
                     </div>
 
                     {/* Requerimiento (Demanda) */}
-                    <div className="space-y-3 md:pl-6 md:border-l border-white/5">
-                      <div className="flex items-center justify-between gap-2">
+                    <div className="space-y-3 lg:pl-6 lg:border-l border-white/5 pt-4 lg:pt-0 border-t lg:border-t-0 border-white/5">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
                         <span className="text-[9px] uppercase font-bold tracking-widest text-cyan-400 bg-cyan-500/5 px-2 py-0.5 rounded border border-cyan-500/15">
                           🔍 Requerimiento / Demanda
                         </span>
                         {m.requirement?.origenNombre && (
-                          <span className="text-[10px] text-zinc-400 bg-white/5 border border-white/10 px-2 py-0.5 rounded-md truncate max-w-[200px]" title={m.requirement.origenNombre}>
+                          <span className="text-[10px] text-zinc-400 bg-white/5 border border-white/10 px-2 py-0.5 rounded-md truncate max-w-[180px] sm:max-w-[200px]" title={m.requirement.origenNombre}>
                             📍 {m.requirement.origenNombre}
                           </span>
                         )}
                       </div>
-                      <h4 className="text-base font-bold text-white mt-1">
+                      <h4 className="text-sm sm:text-base font-bold text-white mt-1 break-words">
                         {m.requirement?.name || `Requerimiento #${m.requirement?.id}`}
                       </h4>
                       {m.requirement?.rawText && (
-                        <p className="text-xs text-zinc-300 bg-white/[0.02] border border-white/5 p-3 rounded-xl italic leading-relaxed whitespace-pre-wrap">
+                        <p className="text-xs text-zinc-300 bg-white/[0.02] border border-white/5 p-3 rounded-xl italic leading-relaxed whitespace-pre-wrap break-words">
                           "{m.requirement?.rawText}"
                         </p>
                       )}
                       
-                      <div className="bg-cyan-500/5 border border-cyan-500/10 rounded-2xl p-3 flex items-center justify-between gap-3">
+                      <div className="bg-cyan-500/5 border border-cyan-500/10 rounded-2xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
+                          <div className="w-8 h-8 rounded-full bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 flex-shrink-0">
                             <Phone className="w-3.5 h-3.5" />
                           </div>
                           <div>
@@ -644,7 +644,7 @@ export default function AdminMatches() {
                             href={getValidWaLink(m.requirement.idUsuarioWhatsapp, `Hola! Te contacto por tu requerimiento de inmueble en ${m.requirement.zonaDeseada || m.requirement.ciudadDeseada || 'VECY Network'}. Encontramos una propiedad con un Match del ${score.toFixed(0)}%.`)} 
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="bg-[#25D366] hover:bg-[#20ba5a] text-black text-[10px] font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition-all shadow-md hover:scale-105"
+                            className="bg-[#25D366] hover:bg-[#20ba5a] text-black text-[10px] font-bold px-3 py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md hover:scale-105 min-h-[38px] w-full sm:w-auto"
                           >
                             Contactar WA <ExternalLink className="w-3 h-3" />
                           </a>
@@ -655,14 +655,14 @@ export default function AdminMatches() {
                   </div>
 
                   {/* COTEJO DETALLADO CAMPO POR CAMPO (SIEMPRE VISIBLE) */}
-                  <div className="bg-black/30 border-b border-white/5 p-6">
+                  <div className="bg-black/30 border-b border-white/5 p-4 sm:p-6">
                     <h5 className="text-xs font-bold uppercase tracking-widest text-[#bf953f] mb-3 flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4" />
                       Cotejo técnico de afinidad comercial
                     </h5>
                     
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-xs border-collapse">
+                    <div className="overflow-x-auto scrollbar-thin -mx-4 sm:mx-0 px-4 sm:px-0">
+                      <table className="w-full text-xs border-collapse min-w-[540px]">
                         <thead>
                           <tr className="border-b border-white/10 text-[10px] uppercase tracking-widest text-zinc-500">
                             <th className="text-left py-2 px-3">Característica</th>
@@ -710,7 +710,7 @@ export default function AdminMatches() {
 
                   {/* Justificación de la IA */}
                   {m.matchReason && (
-                    <div className="p-6 bg-white/[0.01] text-xs text-zinc-400 leading-relaxed">
+                    <div className="p-4 sm:p-6 bg-white/[0.01] text-xs text-zinc-400 leading-relaxed">
                       <span className="font-bold text-zinc-300 block mb-1">Razón de afinidad de la IA:</span>
                       "{m.matchReason}"
                     </div>

@@ -138,13 +138,21 @@ export default function Admin() {
 
 
   return (
-    <div className="min-h-screen bg-background flex text-foreground">
+    <div className="min-h-screen bg-background flex flex-col md:flex-row text-foreground relative overflow-x-hidden">
+
+      {/* ===== MOBILE BACKDROP OVERLAY ===== */}
+      {sidebarOpen && (
+        <div 
+          onClick={() => setSidebarOpen(false)} 
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 md:hidden animate-fade-in" 
+        />
+      )}
 
       {/* ===== SIDEBAR ===== */}
       <aside
-        className={`${sidebarOpen ? 'w-64' : 'w-20'} 
-          flex-shrink-0 bg-card border-r border-border flex flex-col z-20 
-          transition-all duration-300 ease-in-out`}
+        className={`fixed md:static inset-y-0 left-0 z-50 bg-card border-r border-border flex flex-col 
+          transition-all duration-300 ease-in-out shadow-2xl md:shadow-none
+          ${sidebarOpen ? 'w-64 translate-x-0' : '-translate-x-full md:translate-x-0 md:w-20'}`}
       >
         {/* Logo */}
         <div className="p-4 border-b border-border flex items-center justify-between min-h-[72px]">
@@ -168,20 +176,19 @@ export default function Admin() {
               />
             </div>
           )}
-          {sidebarOpen && (
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="text-muted-foreground hover:text-primary transition-colors p-1.5 rounded-lg hover:bg-secondary ml-2"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="text-muted-foreground hover:text-primary transition-colors p-1.5 rounded-lg hover:bg-secondary ml-2"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
-        {/* Botón de expandir cuando está colapsado */}
+
+        {/* Botón de expandir cuando está colapsado en desktop */}
         {!sidebarOpen && (
           <button
             onClick={() => setSidebarOpen(true)}
-            className="mx-auto mt-3 text-muted-foreground hover:text-primary transition-colors p-1.5 rounded-lg hover:bg-secondary block"
+            className="hidden md:block mx-auto mt-3 text-muted-foreground hover:text-primary transition-colors p-1.5 rounded-lg hover:bg-secondary"
           >
             <Menu className="w-4 h-4" />
           </button>
@@ -195,7 +202,10 @@ export default function Admin() {
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  if (window.innerWidth < 768) setSidebarOpen(false);
+                }}
                 className={`nav-item-vecy w-full ${isActive ? 'active' : ''} ${!sidebarOpen ? 'justify-center' : ''}`}
                 title={!sidebarOpen ? tab.label : undefined}
               >
@@ -233,33 +243,44 @@ export default function Admin() {
       </aside>
 
       {/* ===== MAIN CONTENT ===== */}
-      <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
+      <div className="flex-1 flex flex-col min-h-screen overflow-hidden w-full">
 
         {/* Top bar */}
-        <header className="bg-card/80 backdrop-blur-md border-b border-border px-8 py-5 flex items-center justify-between sticky top-0 z-10">
-          <div>
-            <h1 className="text-2xl font-black text-foreground tracking-tight flex items-center gap-2">
-              {tabs.find(t => t.id === activeTab)?.label ?? 'Panel'}
-            </h1>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-              <p className="text-muted-foreground text-xs uppercase tracking-widest font-semibold">
-                {user?.name ?? 'Administrador'}
-                <span className="text-border mx-2">|</span>
-                {(user?.role as string) === 'admin' ? (
-                  <span className="text-primary">Superadmin</span>
-                ) : (
-                  <span>Captador</span>
-                )}
-              </p>
+        <header className="bg-card/90 backdrop-blur-md border-b border-border px-4 sm:px-8 py-3.5 sm:py-5 flex flex-col sm:flex-row gap-3 sm:items-center justify-between sticky top-0 z-30">
+          <div className="flex items-center justify-between gap-3 w-full sm:w-auto">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="md:hidden p-2 text-zinc-300 bg-white/5 border border-white/10 hover:bg-white/10 rounded-xl"
+                title="Abrir menú"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
+              <div>
+                <h1 className="text-xl sm:text-2xl font-black text-foreground tracking-tight flex items-center gap-2">
+                  {tabs.find(t => t.id === activeTab)?.label ?? 'Panel'}
+                </h1>
+                <div className="flex items-center gap-2 mt-0.5 sm:mt-1">
+                  <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                  <p className="text-muted-foreground text-[10px] sm:text-xs uppercase tracking-widest font-semibold">
+                    {user?.name ?? 'Administrador'}
+                    <span className="text-border mx-1.5 sm:mx-2">|</span>
+                    {(user?.role as string) === 'admin' ? (
+                      <span className="text-primary">Superadmin</span>
+                    ) : (
+                      <span>Captador</span>
+                    )}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-6">
+          <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-6 w-full sm:w-auto">
             {/* BOT STATUS INDICATOR */}
             <BotStatusWidget />
             
-            <div className="hidden md:block text-right border-l border-border pl-6">
+            <div className="hidden lg:block text-right border-l border-border pl-6">
               <p className="text-xs font-bold uppercase tracking-widest text-primary">Sistema Activo</p>
               <p className="text-muted-foreground text-[11px] mt-0.5">
                 {new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
@@ -268,9 +289,30 @@ export default function Admin() {
           </div>
         </header>
 
+        {/* MOBILE SLIDING TABS BAR */}
+        <div className="flex md:hidden overflow-x-auto whitespace-nowrap gap-1.5 px-3 py-2 bg-black/40 border-b border-white/5 scrollbar-none z-20">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  isActive 
+                    ? 'bg-[#bf953f] text-black shadow-md' 
+                    : 'bg-white/5 text-zinc-400 border border-white/10 hover:text-white'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
 
         {/* Content */}
-        <main className="flex-1 overflow-y-auto p-8 bg-background animate-fade-in">
+        <main className="flex-1 overflow-y-auto p-3 sm:p-6 lg:p-8 bg-background animate-fade-in">
           {renderContent()}
         </main>
       </div>

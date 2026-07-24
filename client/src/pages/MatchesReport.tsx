@@ -1219,8 +1219,8 @@ export default function MatchesReport() {
           ) : (
             /* Smart Table View */
             <div className="bg-[#0a0a0a] border border-white/5 rounded-3xl overflow-hidden shadow-2xl">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
+              <div className="overflow-x-auto scrollbar-thin">
+                <table className="w-full text-left border-collapse min-w-[900px]">
                   <thead>
                     <tr className="bg-white/[0.02] border-b border-white/5 text-[10px] font-bold uppercase tracking-widest text-zinc-500">
                       <th className="py-4 px-6">ID / Fecha</th>

@@ -150,8 +150,8 @@ export default function AdminRequirements() {
         </div>
       ) : (
         <div className="bg-zinc-900/30 border border-white/5 rounded-2xl overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-left">
+          <div className="overflow-x-auto scrollbar-thin">
+            <table className="w-full border-collapse text-left min-w-[650px]">
               <thead>
                 <tr className="border-b border-white/10 bg-white/[0.02] text-[10px] uppercase tracking-widest text-zinc-500 font-bold">
                   <th className="py-3.5 px-4 w-12">ID</th>
