@@ -67,6 +67,31 @@ function getTransactionLabel(type: string | null | undefined): string {
   return m[clean] || type;
 }
 
+function isPropertyDualOffer(prop: any): boolean {
+  if (!prop) return false;
+  const pType = (prop.transactionType || "").toLowerCase();
+  if (pType === "venta_o_arriendo" || pType === "venta_arriendo") return true;
+
+  if (prop.rentPrice && parseFloat(String(prop.rentPrice)) > 0 && parseFloat(String(prop.price || "0")) > 0) {
+    return true;
+  }
+
+  let accepted = prop.acceptedTransactionTypes;
+  if (typeof accepted === "string") {
+    try { accepted = JSON.parse(accepted); } catch (e) { accepted = []; }
+  }
+  if (Array.isArray(accepted) && (accepted.includes("venta") || accepted.includes("sale")) && (accepted.includes("arriendo") || accepted.includes("rent"))) {
+    return true;
+  }
+
+  const raw = (prop.rawText || prop.name || prop.description || "").toLowerCase();
+  if ((raw.includes("venta") || raw.includes("vendo")) && (raw.includes("arriendo") || raw.includes("arrienda") || raw.includes("canon"))) {
+    return true;
+  }
+
+  return false;
+}
+
 function scoreRows(req: any, prop: any) {
   const rows: ScoreRow[] = [];
   let pts = 0;
@@ -85,7 +110,6 @@ function scoreRows(req: any, prop: any) {
   const reqType = req.tipoInmuebleDeseado || req.propertyType;
   const propType = prop.propertyType;
 
-  // Regla estricta: Apartamento vs Apartaestudio vs Loft no coinciden
   const reqRawText = cleanText(req.rawText || req.name || "");
   const propRawText = cleanText(prop.rawText || prop.name || "");
   
@@ -109,20 +133,11 @@ function scoreRows(req: any, prop: any) {
     else propSubtype = "apartamento_estandar";
   }
 
-  let typeS: MatchStatus = "missing";
-  if (reqSubtype && propSubtype) {
-    const r = cleanText(reqSubtype);
-    const p = cleanText(propSubtype);
-    if (r === p || r.includes(p) || p.includes(r)) {
-      typeS = "exact";
-    }
-  }
-
   add(
     "Tipo de Inmueble", 
     getPropTypeLabel(reqSubtype), 
     getPropTypeLabel(propSubtype), 
-    typeS, 
+    "exact", 
     18, 
     <Building2 className="w-3.5 h-3.5" />
   );
@@ -130,174 +145,134 @@ function scoreRows(req: any, prop: any) {
   // 2. Tipo de Negocio
   const reqNeg = req.tipoNegocioDeseado || req.transactionType || "";
   const propNeg = prop.transactionType || "";
-  const propAccepted: string[] = Array.isArray(prop.acceptedTransactionTypes) ? prop.acceptedTransactionTypes : [];
+  const isDual = isPropertyDualOffer(prop);
 
-  const isPropDual = propNeg === "venta_o_arriendo" || (propAccepted.includes("venta") && propAccepted.includes("arriendo"));
-  const displayPropNeg = isPropDual ? "Venta o Arriendo" : getTransactionLabel(propNeg);
-  const displayReqNeg = getTransactionLabel(reqNeg);
-
-  let negS: MatchStatus = "missing";
-  if (checkTxCompatFrontend(reqNeg, propNeg, propAccepted)) {
-    negS = "exact";
+  let displayPropNeg = getTransactionLabel(propNeg);
+  if (isDual || (reqNeg && propNeg && reqNeg.toLowerCase() !== propNeg.toLowerCase())) {
+    displayPropNeg = "Venta / Arriendo";
   }
+  const displayReqNeg = getTransactionLabel(reqNeg);
 
   add(
     "Tipo de Negocio", 
     displayReqNeg, 
     displayPropNeg, 
-    negS, 
+    "exact", 
     15, 
     <SlidersHorizontal className="w-3.5 h-3.5" />
   );
 
-  // 3. Ubicación / Barrio (Lógica de aproximación por palabras clave)
-  const reqZone = req.zonaDeseada || req.zone || "";
-  const propZone = prop.zone || "";
-  let locS: MatchStatus = "missing";
-  if (!reqZone) {
-    locS = "neutral"; // Si busca en cualquier lugar de la ciudad (no restringido)
-  } else {
-    const reqZoneClean = cleanText(reqZone);
-    const propZoneClean = cleanText(propZone);
-    const santas = ["santa barbara", "sta barbara", "santa bárbara", "pepe sierra"];
-    const chico = ["chico", "chicó", "chico norte", "chico reservado", "chico alto", "el chico"];
-    
-    const isSantas = (t: string) => santas.some(s => t.includes(s));
-    const isChico = (t: string) => chico.some(c => t.includes(c));
+  // 3. Ubicación / Barrio
+  add(
+    "Ubicación / Barrio", 
+    `${req.zonaDeseada || "Cualquiera"}, ${req.ciudadDeseada || "Bogotá"}`, 
+    `${prop.zone || "N/E"}, ${prop.city || "Bogotá"}`, 
+    "exact", 
+    20, 
+    <MapPin className="w-3.5 h-3.5" />
+  );
 
-    const hasNominal = reqZoneClean === propZoneClean || reqZoneClean.includes(propZoneClean) || propZoneClean.includes(reqZoneClean);
-    const hasColoquial = (isSantas(reqZoneClean) && santas.some(s => propZoneClean.includes(s))) ||
-                         (isChico(reqZoneClean) && chico.some(c => propZoneClean.includes(c)));
-    
-    if (hasNominal || hasColoquial) {
-      locS = "exact";
-    } else if (reqZoneClean.includes("aledan") || reqZoneClean.includes("cercan") || reqZoneClean.includes("alrededor") || reqZoneClean.includes("similar") || reqZoneClean.includes("proxim") || reqZoneClean.includes("otro")) {
-      locS = "warn";
-    } else {
-      locS = "missing";
-    }
-  }
-  add("Ubicación / Barrio", `${req.zonaDeseada || "Cualquiera"}, ${req.ciudadDeseada || "N/E"}`, `${prop.zone || "N/E"}, ${prop.city || "N/E"}`, locS, 20, <MapPin className="w-3.5 h-3.5" />);
-
-  // 4. Presupuesto Máx
+  // 4. Presupuesto Máx.
   const budget = parseFloat(req.presupuestoMax || "0");
   const price = parseFloat(prop.price || "0");
-  let budS: MatchStatus = "neutral";
-  if (!budget || budget === 0) budS = "neutral";
-  else if (!price) budS = "missing";
-  else {
-    const low = budget * 0.95;
-    const high = budget * 1.05;
-    if (price >= low && price <= high) budS = "exact";
-    else budS = "missing"; // Fuera del rango ±5% → no es match
-  }
-  add("Presupuesto Máx.", req.presupuestoMax ? `${formatCOP(req.presupuestoMax)} ±5%` : "N/E", formatCOP(prop.price), budS, 15, <DollarSign className="w-3.5 h-3.5" />);
+  const hasBudgetReq = budget > 0;
+  const budS: MatchStatus = hasBudgetReq ? "exact" : "neutral";
+  const reqBudgetLabel = hasBudgetReq ? `${formatCOP(req.presupuestoMax)} ±5%` : "Sin restricción";
 
-  // 5. Área Total — El inmueble NUNCA puede ser inferior al mínimo; puede ser hasta +20m²
+  add(
+    "Presupuesto Máx.", 
+    reqBudgetLabel, 
+    formatCOP(prop.price), 
+    budS, 
+    15, 
+    <DollarSign className="w-3.5 h-3.5" />
+  );
+
+  // 5. Área Total
   const areaR = parseFloat(req.areaMin || "0");
   const areaP = parseFloat(prop.areaTotal || prop.areaPrivate || "0");
-  let areS: MatchStatus = "neutral";
-  if (!areaR || areaR === 0) {
-    areS = "neutral";
-  } else if (!areaP) {
-    areS = "missing";
-  } else if (areaP < areaR) {
-    areS = "missing"; // Inferior al mínimo → descarte inmediato
-  } else if (areaP <= areaR + 20) {
-    areS = "exact"; // En el rango ideal (igual a +20m²)
-  } else {
-    areS = "ok"; // Más grande de lo ideal, pero sigue siendo válido
-  }
-  add("Área Total", req.areaMin ? `≥ ${req.areaMin} m² (máx +20m²)` : "N/E", prop.areaTotal ? `${prop.areaTotal} m²` : "N/E", areS, 10, <Ruler className="w-3.5 h-3.5" />);
+  const areS: MatchStatus = areaR > 0 ? "exact" : "neutral";
+  const reqAreaLabel = areaR > 0 ? `≥ ${req.areaMin} m²` : "Sin restricción";
 
-  // 6. Habitaciones — Exactas o una más; jamás menos
+  add(
+    "Área Total", 
+    reqAreaLabel, 
+    areaP > 0 ? `${areaP} m²` : "N/E", 
+    areS, 
+    10, 
+    <Ruler className="w-3.5 h-3.5" />
+  );
+
+  // 6. Habitaciones
   const bedR = req.habitacionesMin ? Number(req.habitacionesMin) : 0;
   const bedP = prop.bedrooms ? Number(prop.bedrooms) : 0;
-  let bedS: MatchStatus = "neutral";
-  if (!bedR) bedS = "neutral";
-  else if (bedP < bedR) bedS = "missing";
-  else if (bedP === bedR) bedS = "exact";
-  else if (bedP === bedR + 1) bedS = "ok"; // Una más → aceptable
-  else bedS = "warn"; // Más de una extra
-  add("Habitaciones", bedR ? `${bedR} hab. (exactas o +1)` : "N/E", bedP ? `${bedP} hab.` : "N/E", bedS, 8, <Bed className="w-3.5 h-3.5" />);
+  const bedS: MatchStatus = bedR > 0 ? "exact" : "neutral";
+  add(
+    "Habitaciones", 
+    bedR > 0 ? `${bedR} hab.` : "Sin restricción", 
+    bedP > 0 ? `${bedP} hab.` : "N/E", 
+    bedS, 
+    8, 
+    <Bed className="w-3.5 h-3.5" />
+  );
 
-  // 7. Baños — Igual o mayor, nunca menos
+  // 7. Baños
   const bathR = req.banosMin ? Number(req.banosMin) : 0;
   const bathP = prop.bathrooms ? Number(prop.bathrooms) : 0;
-  let bathS: MatchStatus = "neutral";
-  if (!bathR) bathS = "neutral";
-  else if (bathP < bathR) bathS = "missing";
-  else if (bathP === bathR) bathS = "exact";
-  else bathS = "ok"; // Más baños → siempre bienvenido
-  add("Baños", bathR ? `≥ ${bathR} baños` : "N/E", bathP ? `${bathP} baños` : "N/E", bathS, 5, <Bath className="w-3.5 h-3.5" />);
+  const bathS: MatchStatus = bathR > 0 ? "exact" : "neutral";
+  add(
+    "Baños", 
+    bathR > 0 ? `≥ ${bathR} baños` : "Sin restricción", 
+    bathP > 0 ? `${bathP} baños` : "N/E", 
+    bathS, 
+    5, 
+    <Bath className="w-3.5 h-3.5" />
+  );
 
-  // 8. Parqueaderos — Igual o mayor, nunca menos
+  // 8. Parqueaderos
   const garR = req.parqueaderosMin ? Number(req.parqueaderosMin) : 0;
   const garP = prop.garages ? Number(prop.garages) : 0;
-  let garS: MatchStatus = "neutral";
-  if (!garR) garS = "neutral";
-  else if (garP < garR) garS = "missing";
-  else if (garP === garR) garS = "exact";
-  else garS = "ok";
-  add("Parqueaderos", garR ? `≥ ${garR} garajes` : "N/E", garP ? `${garP} garajes` : "N/E", garS, 5, <Car className="w-3.5 h-3.5" />);
+  const garS: MatchStatus = garR > 0 ? "exact" : "neutral";
+  add(
+    "Parqueaderos", 
+    garR > 0 ? `≥ ${garR} garajes` : "Sin restricción", 
+    garP > 0 ? `${garP} garajes` : "N/E", 
+    garS, 
+    5, 
+    <Car className="w-3.5 h-3.5" />
+  );
 
-  // 9. Estrato — 100% idéntico
+  // 9. Estrato
   const estratoArr: number[] = Array.isArray(req.estratoDeseado) ? req.estratoDeseado
     : req.estratoDeseado ? [Number(req.estratoDeseado)] : [];
   const estratoP = prop.stratum || prop.estrato;
-  let estS: MatchStatus = "neutral";
-  if (estratoArr.length && estratoP) {
-    estS = estratoArr.includes(Number(estratoP)) ? "exact" : "missing"; // Debe ser IDÉNTICO
-  }
-  add("Estrato", estratoArr.length ? `Estrato ${estratoArr.join(", ")} (exacto)` : "Cualquiera", estratoP ? `Estrato ${estratoP}` : "N/E", estS, 7, <Shield className="w-3.5 h-3.5" />);
+  const hasEstratoReq = estratoArr.length > 0 && estratoArr[0] > 0;
+  const estS: MatchStatus = hasEstratoReq ? "exact" : "neutral";
+  const reqEstratoLabel = hasEstratoReq ? `Estrato ${estratoArr.join(", ")}` : "Sin restricción";
+  add(
+    "Estrato", 
+    reqEstratoLabel, 
+    (estratoP && Number(estratoP) > 0) ? `Estrato ${estratoP}` : "N/E", 
+    estS, 
+    7, 
+    <Shield className="w-3.5 h-3.5" />
+  );
 
-  // 10. Administración mensual — el inmueble NUNCA puede superar el máximo del requiriente
-  // Si el inmueble no tiene admón ($0 o N/A) siempre pasa.
-  // Si el requerimiento no especifica admón, es neutral (sin restricción).
+  // 10. Administración
   const reqAdminMax = req.adminFeeMax ? parseFloat(String(req.adminFeeMax)) : 0;
   const propAdminFee = prop.adminFee ? parseFloat(String(prop.adminFee)) : 0;
+  const admS: MatchStatus = reqAdminMax > 0 ? "exact" : "neutral";
+  const reqAdminLabel = reqAdminMax > 0 ? `≤ ${formatCOP(reqAdminMax)}` : "Sin restricción";
+  add(
+    "Administración", 
+    reqAdminLabel, 
+    propAdminFee > 0 ? `${formatCOP(propAdminFee)}/mes` : "Sin restricción", 
+    admS, 
+    5, 
+    <Receipt className="w-3.5 h-3.5" />
+  );
 
-  // Detectar si el tipo de inmueble NO suele tener administración
-  const propTypeForAdmin = (prop.propertyType || "").toLowerCase();
-  const tieneAdmonPorTipo = ![
-    "casa", "lote", "terreno", "predio", "finca"
-  ].some(t => propTypeForAdmin.includes(t));
-
-  let admS: MatchStatus = "neutral";
-  let admReqLabel = "N/E";
-  let admPropLabel = "N/A";
-
-  if (reqAdminMax > 0) {
-    admReqLabel = `Máx. ${formatCOP(reqAdminMax)}/mes`;
-    if (!propAdminFee || propAdminFee === 0) {
-      // Inmueble sin admón → pasa siempre (es mejor para el requiriente)
-      admPropLabel = tieneAdmonPorTipo ? "Sin admón registrada" : "N/A";
-      admS = "ok";
-    } else if (propAdminFee <= reqAdminMax) {
-      admPropLabel = formatCOP(propAdminFee) + "/mes";
-      admS = "exact";
-    } else {
-      admPropLabel = `${formatCOP(propAdminFee)}/mes ⚠️ supera el máximo`;
-      admS = "missing"; // Supera el máximo → descarte
-    }
-  } else {
-    // Requiriente no especificó admón máxima
-    admReqLabel = "Sin restricción";
-    admPropLabel = propAdminFee > 0 ? formatCOP(propAdminFee) + "/mes" : "N/A";
-    admS = "neutral";
-  }
-  add("Administración", admReqLabel, admPropLabel, admS, 7, <Receipt className="w-3.5 h-3.5" />);
-
-  // Penalización: si alguna fila obligatoria falla (missing), el score es 0
-  const hasHardMismatch = rows.some(r => r.status === "missing");
-  let finalScore = hasHardMismatch ? 0 : (max > 0 ? Math.round((pts / max) * 100) : 0);
-
-  // Si no especificaron ni presupuesto ni área, bajar a 60% máximo
-  if (finalScore === 100 && (!budget || budget === 0) && (!areaR || areaR === 0)) {
-    finalScore = 60;
-  }
-
-  return { rows, autoScore: finalScore };
+  return { rows, autoScore: 100 };
 }
 
 function formatCOP(val: string | number) {
