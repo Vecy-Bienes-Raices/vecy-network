@@ -68,6 +68,23 @@ export class JaniaMatchBot {
   private botSentMessageIds: Set<string> = new Set();
   private lastHumanIntervention: Map<string, number> = new Map();
   private dmMessageBuffers: Map<string, { messages: any[]; timer: NodeJS.Timeout | null }> = new Map();
+  private groupMetadataCache: Map<string, { data: any; time: number }> = new Map();
+
+  private async getCachedGroupMetadata(chatId: string) {
+    const cached = this.groupMetadataCache.get(chatId);
+    if (cached && Date.now() - cached.time < 10 * 60 * 1000) {
+      return cached.data;
+    }
+    try {
+      const data = await this.sock?.groupMetadata(chatId);
+      if (data) {
+        this.groupMetadataCache.set(chatId, { data, time: Date.now() });
+      }
+      return data;
+    } catch (_) {
+      return cached?.data || null;
+    }
+  }
 
   public targetGroupId: string = '120363260108880069@g.us';
   public buzonGroupId: string = '120363417740040773@g.us';
@@ -361,7 +378,7 @@ export class JaniaMatchBot {
             // --- OBTENCIÓN DEL NOMBRE DEL GRUPO Y BLACKLIST ---
             let groupName = "Nombre Real del Grupo";
             try {
-              const metadata = await this.sock.groupMetadata(chatId);
+              const metadata = await this.getCachedGroupMetadata(chatId);
               if (metadata && metadata.subject) {
                 groupName = metadata.subject;
               }
@@ -931,9 +948,9 @@ export class JaniaMatchBot {
 
       let isBotAdmin = false;
       try {
-        const metadata = await this.sock.groupMetadata(chatId);
+        const metadata = await this.getCachedGroupMetadata(chatId);
         const me = this.sock.user?.id ? this.sock.user.id.split(':')[0] : '';
-        const myParticipant = metadata.participants.find((p: any) => p.id.split('@')[0] === me);
+        const myParticipant = metadata?.participants?.find((p: any) => p.id.split('@')[0] === me);
         isBotAdmin = !!myParticipant && (myParticipant.admin === 'admin' || myParticipant.admin === 'superadmin');
       } catch (_) {}
 
@@ -1098,7 +1115,7 @@ export class JaniaMatchBot {
       } else {
         let groupName = "Nombre Real del Grupo";
         try {
-          const metadata = await this.sock.groupMetadata(chatId);
+          const metadata = await this.getCachedGroupMetadata(chatId);
           if (metadata && metadata.subject) {
             groupName = metadata.subject;
           }
@@ -1150,9 +1167,9 @@ export class JaniaMatchBot {
         
         let isBotAdmin = false;
         try {
-          const metadata = await this.sock.groupMetadata(chatId);
+          const metadata = await this.getCachedGroupMetadata(chatId);
           const me = this.sock.user?.id ? this.sock.user.id.split(':')[0] : '';
-          const myParticipant = metadata.participants.find((p: any) => p.id.split('@')[0] === me);
+          const myParticipant = metadata?.participants?.find((p: any) => p.id.split('@')[0] === me);
           isBotAdmin = !!myParticipant && (myParticipant.admin === 'admin' || myParticipant.admin === 'superadmin');
         } catch (_) {}
 
@@ -1698,8 +1715,8 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
   public async getGroupParticipants(groupId: string): Promise<string[]> {
     try {
       if (!this.sock) return [];
-      const metadata = await this.sock.groupMetadata(groupId);
-      return metadata.participants.map((p: any) => p.id);
+      const metadata = await this.getCachedGroupMetadata(groupId);
+      return metadata?.participants ? metadata.participants.map((p: any) => p.id) : [];
     } catch (err) {
       console.warn(`[JANIA-MATCH] Error al obtener participantes del grupo ${groupId}:`, err);
       return [];

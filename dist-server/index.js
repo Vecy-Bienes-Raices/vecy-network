@@ -6426,6 +6426,22 @@ var init_whatsapp_match = __esm({
       botSentMessageIds = /* @__PURE__ */ new Set();
       lastHumanIntervention = /* @__PURE__ */ new Map();
       dmMessageBuffers = /* @__PURE__ */ new Map();
+      groupMetadataCache = /* @__PURE__ */ new Map();
+      async getCachedGroupMetadata(chatId) {
+        const cached = this.groupMetadataCache.get(chatId);
+        if (cached && Date.now() - cached.time < 10 * 60 * 1e3) {
+          return cached.data;
+        }
+        try {
+          const data = await this.sock?.groupMetadata(chatId);
+          if (data) {
+            this.groupMetadataCache.set(chatId, { data, time: Date.now() });
+          }
+          return data;
+        } catch (_) {
+          return cached?.data || null;
+        }
+      }
       targetGroupId = "120363260108880069@g.us";
       buzonGroupId = "120363417740040773@g.us";
       circuloGroupId = "120363403507276533@g.us";
@@ -6663,7 +6679,7 @@ var init_whatsapp_match = __esm({
                 const isOfficialGroup = isMainGroup || isBuzonGroup || isCirculoGroup;
                 let groupName = "Nombre Real del Grupo";
                 try {
-                  const metadata = await this.sock.groupMetadata(chatId);
+                  const metadata = await this.getCachedGroupMetadata(chatId);
                   if (metadata && metadata.subject) {
                     groupName = metadata.subject;
                   }
@@ -7037,9 +7053,9 @@ Tambi\xE9n puedes consultarme directamente en mi chat privado con mi otra yo *Ja
           const COOLDOWN_PERIOD = 5 * 60 * 1e3;
           let isBotAdmin = false;
           try {
-            const metadata = await this.sock.groupMetadata(chatId);
+            const metadata = await this.getCachedGroupMetadata(chatId);
             const me = this.sock.user?.id ? this.sock.user.id.split(":")[0] : "";
-            const myParticipant = metadata.participants.find((p) => p.id.split("@")[0] === me);
+            const myParticipant = metadata?.participants?.find((p) => p.id.split("@")[0] === me);
             isBotAdmin = !!myParticipant && (myParticipant.admin === "admin" || myParticipant.admin === "superadmin");
           } catch (_) {
           }
@@ -7166,7 +7182,7 @@ Tambi\xE9n puedes consultarme directamente en mi chat privado con mi otra yo *Ja
           } else {
             let groupName = "Nombre Real del Grupo";
             try {
-              const metadata = await this.sock.groupMetadata(chatId);
+              const metadata = await this.getCachedGroupMetadata(chatId);
               if (metadata && metadata.subject) {
                 groupName = metadata.subject;
               }
@@ -7213,9 +7229,9 @@ Tambi\xE9n puedes consultarme directamente en mi chat privado con mi otra yo *Ja
             const isWarning = result.classification === "DATOS_INCOMPLETOS" || result.classification === "VIOLACION_DE_NORMAS";
             let isBotAdmin = false;
             try {
-              const metadata = await this.sock.groupMetadata(chatId);
+              const metadata = await this.getCachedGroupMetadata(chatId);
               const me = this.sock.user?.id ? this.sock.user.id.split(":")[0] : "";
-              const myParticipant = metadata.participants.find((p) => p.id.split("@")[0] === me);
+              const myParticipant = metadata?.participants?.find((p) => p.id.split("@")[0] === me);
               isBotAdmin = !!myParticipant && (myParticipant.admin === "admin" || myParticipant.admin === "superadmin");
             } catch (_) {
             }
@@ -7676,8 +7692,8 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
       async getGroupParticipants(groupId) {
         try {
           if (!this.sock) return [];
-          const metadata = await this.sock.groupMetadata(groupId);
-          return metadata.participants.map((p) => p.id);
+          const metadata = await this.getCachedGroupMetadata(groupId);
+          return metadata?.participants ? metadata.participants.map((p) => p.id) : [];
         } catch (err) {
           console.warn(`[JANIA-MATCH] Error al obtener participantes del grupo ${groupId}:`, err);
           return [];
