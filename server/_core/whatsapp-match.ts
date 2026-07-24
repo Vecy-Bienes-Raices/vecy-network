@@ -1376,14 +1376,17 @@ export class JaniaMatchBot {
   private async handleRedirectText(msg: proto.IWebMessageInfo, senderId: string, rawPhone: string) {
     try {
       const realName = msg.pushName || `Asesor +${rawPhone}`;
+      const firstName = extractFirstName(realName);
       await this.sock.sendPresenceUpdate('composing', senderId);
       await delay(2000);
 
       const redirectMsg = 
-        `Hola ${realName} 👋🏻. Si deseas que JanIA Match te responda de inmediato, por favor postea tu pregunta directamente en el chat del grupo oficial de VECY. 🏠\n\n` +
-        `Si deseas chatear en privado de forma interactiva, por favor escribe a mi otra yo, **JanIA v3.5** 📲, a su número oficial directo: +57 3185462265 o haz clic aquí: https://wa.me/573185462265.\n\n` +
-        `⚠️ **Nota importante**: Recuerda que somos inteligencias netamente conversacionales. Sí podemos resolver tus inquietudes, redactar descripciones comerciales, hacer análisis y estructurar textos directamente aquí en el chat. Sin embargo, **no tenemos la habilidad de crear imágenes, videos, informes con gráficas, ni de elaborar o enviar archivos PDF a través del chat**.\n\n` +
-        `Si requieres un análisis de mercado formal con gráficas y PDF detallado, o piezas visuales/videos profesionales, este servicio lo realiza nuestro personal humano experto. Comunícate llamando al **+57 3166569719** para solicitar la cotización e informe de nuestro equipo. 📈💼`;
+        `Hola ${firstName} 👋😊. Si tienes dudas, inquietudes o quieres consultarme algo (sea por escrito o por notas de voz), te invito a escribir directamente al canal oficial privado de soporte de JanIA de la Web haciendo clic aquí: https://vecy-network.vercel.app/jania para realizar tus consultas correspondientes o si estás en los grupos correspondientes según tu consulta puedes hacerlas allí de la siguiente manera:\n\n` +
+        `Mis grupos:\n\n` +
+        `Para publicar tus INMUEBLES y REQUERIMIENTOS tenemos el grupo de 𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗨𝗘𝗕𝗟𝗘𝗦 𝗡𝗘𝗧𝗪𝗢𝗥𝗞 : Si aún no eres miembro, puedes unirte desde este enlace: https://chat.whatsapp.com/K36KrHeB9nMEKJ56s8XFcM\n` +
+        `Para hacer tus consultas de casos inmobiliarios en temas jurídicos, tributarios, avalúos, ayuda en guía de procesos y redacción de contratos, tenemos el grupo de 𝗩𝗘𝗖𝗬: 𝗦𝗢𝗣𝗢𝗥𝗧𝗘 𝗟𝗘𝗚𝗔𝗟, 𝗧𝗥𝗜𝗕𝗨𝗧𝗔𝗥𝗜𝗢 𝗬 𝗔𝗩𝗔𝗟Ú𝗢𝗦 : Si aún no eres miembro, puedes unirte desde este enlace: https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6\n` +
+        `Para preguntar acerca de nuestro proyecto VECY Network y debatir acerca de nuestras funciones beneficios y competencias, tenemos el grupo de 𝗣𝗥𝗢𝗬𝗘𝗖𝗧𝗢 "𝗩𝗲𝗰𝘆 𝗡𝗲𝘁𝘄𝗼𝗿𝗸" : Si aún no eres miembro puedes unirte desde este enlace: https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU\n\n` +
+        `Te espero. ¡Allí te atenderé con gusto! 🚀`;
 
       await this.queuedSend(senderId, redirectMsg, { quoted: msg });
       await this.logToDb(senderId, 'janIA', redirectMsg);

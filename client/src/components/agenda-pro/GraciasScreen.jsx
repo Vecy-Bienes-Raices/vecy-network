@@ -74,7 +74,7 @@ export default function GraciasScreen({ formData, propertyName, onBackToCatalog 
             </Button>
             
             <a 
-              href="https://wa.me/573185462265" 
+              href="https://vecy-network.vercel.app/jania" 
               target="_blank" 
               rel="noopener noreferrer"
               className="flex-1"

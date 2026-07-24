@@ -113,7 +113,7 @@ async function sendVideoPromo(groupId: string, groupName: string) {
     const texto =
       `💬 ¿Prefieres una atención más directa y personalizada?\n\n` +
       `Chatea directamente con *JanIA*, tu asistente de inteligencia artificial de VECY Network.\n\n` +
-      `📲 *Escríbele ahora:* https://wa.me/573185462265\n\n` +
+      `📲 *Escríbele en nuestra Consola Web:* https://vecy-network.vercel.app/jania\n\n` +
       `Puedes compartirle tus inmuebles, requerimientos o consultas por texto, audio o imagen. ` +
       `Ella los lee, extrae los datos, los sube a nuestra base de datos y busca posibles coincidencias ` +
       `para ayudarte a cerrar negocios más rápido. ¡Haz clic en el enlace y empieza hoy! 🏠🚀`;

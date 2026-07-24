@@ -1,7 +1,7 @@
 {
   "rewrites": [
-    { "source": "/api/:path*", "destination": "https://retain-reserve-executed-statute.trycloudflare.com/api/:path*" },
-    { "source": "/webhook", "destination": "https://retain-reserve-executed-statute.trycloudflare.com/webhook" },
+    { "source": "/api/:path*", "destination": "https://included-javascript-full-pen.trycloudflare.com/api/:path*" },
+    { "source": "/webhook", "destination": "https://included-javascript-full-pen.trycloudflare.com/webhook" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

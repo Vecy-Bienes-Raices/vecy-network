@@ -734,7 +734,7 @@ function buildGroupIncompleteMessage(
     missingStr = `${missingList.join(", ")}, y ${last}`;
   }
 
-  return `🤔 *¡PUBLICACIÓN INCOMPLETA!* 🤔\n\nHola @${phone}, noto que estás publicando un(a) *${propertyName}*, pero a tu mensaje le faltan datos importantes: *${missingStr}*.\n\nPara registrar tu oferta/requerimiento y buscarte un MATCH de inmediato, haz clic en este enlace para enviarme los datos por privado: 👇\n👉 https://wa.me/573185462265?text=${encodeURIComponent('Hola JanIA, aquí están los datos de mi publicación')}`;
+  return `🤔 *¡PUBLICACIÓN INCOMPLETA!* 🤔\n\nHola @${phone}, noto que estás publicando un(a) *${propertyName}*, pero a tu mensaje le faltan datos importantes: *${missingStr}*.\n\nPara registrar tu oferta/requerimiento y buscarte un MATCH de inmediato, ingresa a nuestra Consola Web de JanIA: 👇\n👉 https://vecy-network.vercel.app/jania`;
 }
 
 // --- ANALIZADOR MORFOLÓGICO DE GÉNERO Y CORTESÍA (v11.70) ---
@@ -2026,7 +2026,7 @@ Por lo tanto, DEBES hacer lo siguiente:
           `1️⃣ Al publicar, mi sistema registrará la propiedad e iniciará una búsqueda de coincidencias (matches) automáticamente a nivel nacional.\n` +
           `2️⃣ Si encuentro un MATCH, te notificaré y te enviaré un mensaje por *chat privado (DM)* solicitando tu confirmación.\n` +
           `3️⃣ Si ambos aliados confirman interés en privado, les entregaré sus contactos directos para que cierren el negocio. 🤝🚀\n\n` +
-          `Si tienes dudas o prefieres usar mi menú de soporte y búsqueda de propiedades privado, escríbeme directamente al enlace:\n👉 https://wa.me/573185462265`;
+          `Si tienes dudas o prefieres usar mi menú de soporte y búsqueda de propiedades privado, escríbeme directamente en nuestra Consola Web:\n👉 https://vecy-network.vercel.app/jania`;
         result.classification = "CONSULTA_GENERAL";
       } else if (isAboutVecy) {
         const isCompetitorQuery = 
