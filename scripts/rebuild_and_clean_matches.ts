@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { getDb } from '../server/db';
-import { properties, requirements, propertyMatches } from '../drizzle/schema';
-import { eq, lt, sql } from 'drizzle-orm';
+import { properties, requirements, propertyMatches, notificationLogs } from '../drizzle/schema';
+import { eq, sql } from 'drizzle-orm';
 import { explicarMatch, calcularIPC } from '../server/_core/matching';
 
 async function main() {
@@ -11,23 +11,24 @@ async function main() {
     process.exit(1);
   }
 
-  console.log('=== REESTRUCTURACIÓN Y RECALCULO DE MATCHES VECY v17.2 ===\n');
+  console.log('=== PURGA Y DEPURACIÓN TOTAL DE MATCHES VECY v17.2 ===\n');
 
-  // 1. Eliminar matches existentes por debajo del 85%
-  console.log('1. Eliminando matches con score menor a 85% de la base de datos...');
-  const deleted = await db.delete(propertyMatches)
-    .where(lt(sql<number>`(${propertyMatches.matchScore})::numeric`, 85))
-    .returning();
-  console.log(`✅ Eliminados ${deleted.length} matches obsoletos (<85%).`);
+  // 0. Desvincular notificationLogs
+  console.log('0. Desvinculando logs de notificaciones antiguos...');
+  await db.update(notificationLogs).set({ matchId: null });
 
-  // 2. Cargar todas las propiedades y requerimientos
+  // 1. ELIMINAR TODOS LOS MATCHES EXISTENTES PARA RE-EVALUAR DESDE CERO
+  console.log('1. Limpiando tabla de matches por completo...');
+  const deleted = await db.delete(propertyMatches).returning();
+  console.log(`✅ Eliminados ${deleted.length} matches anteriores de la base de datos.`);
+
+  // 2. Cargar propiedades y requerimientos activos
   const allProps = await db.select().from(properties);
-  const allReqs = await db.select().from(requirements);
+  const allReqs = await db.select().from(requirements).where(eq(requirements.status, "active"));
 
-  console.log(`\n2. Evaluando ${allProps.length} inmuebles contra ${allReqs.length} requerimientos históricos...`);
+  console.log(`\n2. Evaluando ${allProps.length} inmuebles contra ${allReqs.length} requerimientos activos con reglas estrictas v17.2...`);
 
   let createdCount = 0;
-  let updatedCount = 0;
 
   for (const prop of allProps) {
     for (const req of allReqs) {
@@ -35,55 +36,44 @@ async function main() {
       const score = explanation.score;
 
       if (score >= 85) {
-        const existing = await db.select().from(propertyMatches).where(
-          sql`${propertyMatches.propertyId} = ${prop.id} AND ${propertyMatches.requirementId} = ${req.id}`
-        ).limit(1);
-
         const ipcObj = calcularIPC(req, prop, score);
         explanation.ipc = ipcObj;
 
-        if (existing.length > 0) {
-          await db.update(propertyMatches).set({
-            matchScore: score.toFixed(2),
-            matchExplanation: explanation,
-            ipc: ipcObj,
-            matchReason: `VECY Engine v17.2: Match de afinidad ${score}%`,
-            createdAt: new Date()
-          }).where(eq(propertyMatches.id, existing[0].id));
-          updatedCount++;
-        } else {
-          await db.insert(propertyMatches).values({
-            propertyId: prop.id,
-            requirementId: req.id,
-            matchScore: score.toFixed(2),
-            matchReason: `VECY Engine v17.2: Match de afinidad ${score}%`,
-            matchExplanation: explanation,
-            ipc: ipcObj,
-            status: "suggested",
-            ownerConfirmed: false,
-            seekerConfirmed: false,
-          });
-          createdCount++;
-        }
+        await db.insert(propertyMatches).values({
+          propertyId: prop.id,
+          requirementId: req.id,
+          matchScore: score.toFixed(2),
+          matchReason: `VECY Engine v17.2: Match legítimo de afinidad ${score}%`,
+          matchExplanation: explanation,
+          ipc: ipcObj,
+          status: "suggested",
+          ownerConfirmed: false,
+          seekerConfirmed: false,
+        });
+        createdCount++;
       }
     }
   }
 
   // 3. Conteo final
   const remainingMatches = await db.select().from(propertyMatches);
-  console.log(`\n=== RESULTADOS FINALES DE RECALCULO ===`);
-  console.log(`- Matches actualizados (>= 85%): ${updatedCount}`);
-  console.log(`- Nuevos matches creados (>= 85%): ${createdCount}`);
+  console.log(`\n=== RESULTADOS FINALES DE REEVALUACIÓN ESTRICTA ===`);
+  console.log(`- Nuevos matches legítimos generados (>= 85%): ${createdCount}`);
   console.log(`- Total matches vigentes en BD: ${remainingMatches.length}`);
 
   for (const m of remainingMatches) {
-    console.log(`  📍 Match #M${m.id} | Score: ${m.matchScore}% | Propiedad #${m.propertyId} ↔ Requerimiento #${m.requirementId}`);
+    const [p] = await db.select().from(properties).where(eq(properties.id, m.propertyId));
+    const [r] = await db.select().from(requirements).where(eq(requirements.id, m.requirementId));
+    console.log(`\n  📍 Match #M${m.id} | Score: ${m.matchScore}%`);
+    console.log(`     🏢 Inmueble #${p?.id}: ${p?.name || p?.propertyType} en ${p?.zone || p?.city} ($${parseFloat(String(p?.price || 0)).toLocaleString()})`);
+    console.log(`     🔍 Requerimiento #${r?.id}: ${r?.name || r?.tipoInmuebleDeseado} en ${r?.zonaDeseada || r?.ciudadDeseada} (Max $${parseFloat(String(r?.presupuestoMax || 0)).toLocaleString()})`);
+    console.log(`     💬 Razón: ${m.matchReason}`);
   }
 
   process.exit(0);
 }
 
 main().catch((err) => {
-  console.error('Error en reestructuración:', err);
+  console.error('Error en purga de matches:', err);
   process.exit(1);
 });

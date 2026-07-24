@@ -136,10 +136,16 @@ export function matchesGeography(
     norm = norm.replace(/\baledanos\b/gi, "");
     norm = norm.replace(/\bcercanos\b/gi, "");
     norm = norm.replace(/\balrededores\b/gi, "");
+
+    const stopGeoWords = new Set([
+      "bogota", "bogota d c", "bogota dc", "d c", "dc", "colombia",
+      "medellin", "cali", "barranquilla", "cartagena", "bucaramanga",
+      "pereira", "manizales", "cucuta", "ibague", "santa marta"
+    ]);
     
     return norm.split(/,|\/|\s+y\s+|\s+o\s+|\s+e\s+/)
       .map(p => p.trim())
-      .filter(p => p.length > 0);
+      .filter(p => p.length > 0 && !stopGeoWords.has(p));
   };
 
   const reqPhrases = splitPhrases(reqZoneRaw);
@@ -327,6 +333,26 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   const positives: string[] = [];
   const negatives: string[] = [];
 
+  // -1. Rechazar Requerimientos o Inmuebles vacíos o con datos basura ("NA")
+  const reqText = (requirement.rawText || requirement.name || "").trim().toUpperCase();
+  const propText = (property.rawText || property.name || "").trim().toUpperCase();
+  if (reqText === "NA" || reqText === "" || propText === "NA" || propText === "") {
+    blockers.push("Registro con información insuficiente ('NA' o campos sin especificar).");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+
+  // Rechazar requerimientos sin criterios específicos de búsqueda (zona, presupuesto, habitaciones o área)
+  const reqZoneRawClean = (requirement.zonaDeseada || requirement.addressNeighborhood || "").trim().toLowerCase();
+  const hasSpecificReqZone = reqZoneRawClean !== "" && reqZoneRawClean !== "na" && reqZoneRawClean !== "bogota" && reqZoneRawClean !== "bogotá";
+  const hasReqBudget = parseFloat(String(requirement.presupuestoMax || "0")) > 0 || parseFloat(String(requirement.presupuestoMin || "0")) > 0;
+  const hasReqBedrooms = requirement.habitacionesMin != null && Number(requirement.habitacionesMin) > 0;
+  const hasReqArea = parseFloat(String(requirement.areaMin || requirement.areaMinimaM2 || "0")) > 0;
+
+  if (!hasSpecificReqZone && !hasReqBudget && !hasReqBedrooms && !hasReqArea) {
+    blockers.push("El requerimiento carece de criterios específicos (zona, presupuesto, habs o área).");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+
   // 0. Evitar auto-match (mismo broker)
   const propBroker = (property.idUsuarioWhatsapp || "").split('@')[0];
   const reqBroker = (requirement.idUsuarioWhatsapp || "").split('@')[0];
@@ -444,7 +470,7 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
     const reqAlias  = aliases[reqType]  || [reqType];
     const propAlias = aliases[propType] || [propType];
     if (!reqAlias.some(a => propAlias.includes(a))) {
-      blockers.push(`Tipo de activo incompatible: deseado ${reqType}, ofrecido ${propType}`);
+      blockers.push(`Tipo de activo incompatible: deseado ${reqType}, offered ${propType}`);
       return buildExplanationResult(0, blockers, positives, negatives);
     }
   }
@@ -492,7 +518,7 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
       property.addressCity || property.city || ""
     );
     if (!geoResult.matches) {
-      blockers.push(`Ubicación incompatible: requerida zona ${requirement.zonaDeseada || ""}, ofrecida ${property.zone || ""}`);
+      blockers.push(`Ubicación incompatible: requerida zona '${requirement.zonaDeseada || ""}', ofrecida '${property.zone || ""}'`);
       return buildExplanationResult(0, blockers, positives, negatives);
     }
     positives.push(`Ubicación compatible en zona: ${property.zone || ""}`);
@@ -615,7 +641,8 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
-  const compScore = totalW > 0 ? Math.round((score / totalW) * 40) : 40;
+  // Si totalW < 15 (insuficiente información numérica comparada), compScore es 0 para evitar inflar scores ficticios.
+  const compScore = totalW >= 15 ? Math.round((score / totalW) * 40) : 0;
   const finalScore = Math.min(100, 60 + compScore);
 
   return buildExplanationResult(finalScore, blockers, positives, negatives);
