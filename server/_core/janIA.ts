@@ -788,26 +788,41 @@ function analyzeSender(name: string, userId: string, alreadyGreeted: boolean): {
   };
 }
 
-let promptCache: Record<string, string> = {};
+let cachedLiveStatsText = "";
+let cachedLiveStatsTime = 0;
 
-// Consulta los contadores reales de la base de datos en tiempo real
+// Consulta los contadores reales de la base de datos en tiempo real (con caché de 60s)
 export async function getLiveStats(): Promise<string> {
+  const nowMs = Date.now();
+  if (cachedLiveStatsText && nowMs - cachedLiveStatsTime < 60000) {
+    return cachedLiveStatsText;
+  }
+
   try {
     const db = await getDb();
     if (!db) return "";
 
-    const [propCount] = await db.select({ total: sql<number>`count(*)::int` }).from(properties);
-    const [reqCount]  = await db.select({ total: sql<number>`count(*)::int` }).from(requirements);
-    const [matchCount] = await db.select({ total: sql<number>`count(*)::int` }).from(propertyMatches);
-
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const [propHoy]  = await db.select({ total: sql<number>`count(*)::int` }).from(properties).where(gte(properties.createdAt, today));
-    const [reqHoy]   = await db.select({ total: sql<number>`count(*)::int` }).from(requirements).where(gte(requirements.createdAt, today));
-    const [matchHoy] = await db.select({ total: sql<number>`count(*)::int` }).from(propertyMatches).where(gte(propertyMatches.createdAt, today));
+
+    const [
+      [propCount],
+      [reqCount],
+      [matchCount],
+      [propHoy],
+      [reqHoy],
+      [matchHoy]
+    ] = await Promise.all([
+      db.select({ total: sql<number>`count(*)::int` }).from(properties),
+      db.select({ total: sql<number>`count(*)::int` }).from(requirements),
+      db.select({ total: sql<number>`count(*)::int` }).from(propertyMatches),
+      db.select({ total: sql<number>`count(*)::int` }).from(properties).where(gte(properties.createdAt, today)),
+      db.select({ total: sql<number>`count(*)::int` }).from(requirements).where(gte(requirements.createdAt, today)),
+      db.select({ total: sql<number>`count(*)::int` }).from(propertyMatches).where(gte(propertyMatches.createdAt, today))
+    ]);
 
     const now = new Date().toLocaleString('es-CO', { timeZone: 'America/Bogota', dateStyle: 'short', timeStyle: 'short' });
-    return `
+    cachedLiveStatsText = `
 ## 📊 ESTADÍSTICAS EN TIEMPO REAL DE VECY NETWORK (Actualizado: ${now} hora Colombia)
 Esta información es EXACTA y proviene directamente de la base de datos en este preciso instante. Úsala cuando alguien pregunte cuántos inmuebles, requerimientos o coincidencias tenemos:
 
@@ -818,9 +833,11 @@ Esta información es EXACTA y proviene directamente de la base de datos en este 
 | 🎯 Coincidencias (Matches) detectadas | **${matchCount?.total ?? 0}** | ${matchHoy?.total ?? 0} |
 
 Si alguien te pregunta por estos números, responde CON PRECISIÓN usando exactamente los datos de esta tabla. No inventes, no estimes. Estos son los datos reales del sistema VECY en este momento.`;
+    cachedLiveStatsTime = nowMs;
+    return cachedLiveStatsText;
   } catch (err) {
     console.warn("[JanIA-LiveStats] No se pudo obtener estadísticas en tiempo real:", err);
-    return "";
+    return cachedLiveStatsText || "";
   }
 }
 
@@ -1457,41 +1474,9 @@ export async function processWhatsAppMessage(
     if (imageBuffer) contextText += `\n[SISTEMA: IMAGEN DETECTADA. Analiza la imagen con visión OCR para extraer todos los datos del flyer o captura comercial.]`;
     if (pdfBuffer) contextText += `\n[SISTEMA: DOCUMENTO PDF DETECTADO. Analiza el documento PDF adjunto con tus capacidades nativas para extraer todos los datos relevantes del predial, certificado de tradición, o contrato.]`;
 
-    let statsSummary = "";
-    try {
-      const db = await getDb();
-      if (db) {
-        const startOfToday = new Date();
-        startOfToday.setHours(0, 0, 0, 0);
-
-        const isRealProperty = or(isNotNull(properties.idUsuarioWhatsapp), isNotNull(properties.agentId));
-        const [totalPropsResult] = await db.select({ count: sql<number>`count(*)` }).from(properties).where(isRealProperty);
-        const [totalReqsResult] = await db.select({ count: sql<number>`count(*)` }).from(requirements);
-        const [totalMatchesResult] = await db.select({ count: sql<number>`count(*)` }).from(propertyMatches);
-
-        const [todayPropsResult] = await db.select({ count: sql<number>`count(*)` }).from(properties).where(and(gte(properties.createdAt, startOfToday), isRealProperty));
-        const [todayReqsResult] = await db.select({ count: sql<number>`count(*)` }).from(requirements).where(gte(requirements.createdAt, startOfToday));
-        const [todayMatchesResult] = await db.select({ count: sql<number>`count(*)` }).from(propertyMatches).where(gte(propertyMatches.createdAt, startOfToday));
-
-        const totalProps = totalPropsResult?.count || 0;
-        const totalReqs = totalReqsResult?.count || 0;
-        const totalMatches = totalMatchesResult?.count || 0;
-        const todayProps = todayPropsResult?.count || 0;
-        const todayReqs = todayReqsResult?.count || 0;
-        const todayMatches = todayMatchesResult?.count || 0;
-
-        statsSummary = `\n[SISTEMA - ESTADÍSTICAS REALES EN TIEMPO REAL VECY NETWORK]:
-- Propiedades totales registradas en el sistema: ${totalProps} (Nuevas hoy: ${todayProps})
-- Requerimientos/Demandas totales registradas: ${totalReqs} (Nuevos hoy: ${todayReqs})
-- Matches/Coincidencias de negocio detectados totales: ${totalMatches} (Nuevos hoy: ${todayMatches})
-[REGLA DE USO CRÍTICA]: Únicamente menciona o utiliza estas estadísticas si el usuario te pregunta directamente por cifras del sistema, cantidades de propiedades o requerimientos, reportes de actividad, o cómo va el día. Queda terminantemente PROHIBIDO incluirlas de forma espontánea en saludos, bienvenidas o respuestas ordinarias.`;
-      }
-    } catch (err) {
-      console.error("[JanIA-Stats] Error consultando estadísticas en tiempo real:", err);
-    }
-
+    const statsSummary = await getLiveStats();
     if (statsSummary) {
-      contextText += statsSummary;
+      contextText += `\n${statsSummary}`;
     }
 
     const firstName = extractFirstName(realName) || 'colega';
@@ -1582,7 +1567,7 @@ Por lo tanto, DEBES hacer lo siguiente:
       textLower.includes("robo de comision") || textLower.includes("robo de comisión") ||
       textLower.includes("disputa") || textLower.includes("notaría") || textLower.includes("notaria");
 
-    const enableSearch = isWebUser || isValuationQuery || isLegalQuery || textLower.includes("trámite") || textLower.includes("tramite") || textLower.includes("patrimonio") || textLower.includes("entidad");
+    const enableSearch = isValuationQuery || isLegalQuery || textLower.includes("trámite") || textLower.includes("tramite") || textLower.includes("patrimonio") || textLower.includes("entidad") || textLower.includes("buscar en google");
 
     // Obtener historial de chat reciente (Supercerebro) - Omitir en grupos para evitar contaminación de contexto
     const history = (isGroup || groupJid) ? [] : await getRecentChatHistory(userId, 20);

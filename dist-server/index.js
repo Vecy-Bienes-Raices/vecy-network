@@ -66,7 +66,16 @@ var init_schema = __esm({
       "loft",
       "consultorio"
     ]);
-    transactionTypeEnum = pgEnum("transactionType", ["venta", "arriendo", "arriendo_temporal", "permuta", "aporte"]);
+    transactionTypeEnum = pgEnum("transactionType", [
+      "venta",
+      "arriendo",
+      "venta_o_arriendo",
+      "arriendo_temporal",
+      "arriendo_con_opcion_de_compra",
+      "permuta",
+      "venta_permuta",
+      "aporte"
+    ]);
     mandateStatusEnum = pgEnum("mandateStatus", ["pending", "signed"]);
     mandateTypeEnum = pgEnum("mandateType", ["direct_owner", "agent_electronic_link", "agent_uploaded_paper"]);
     inquiryTypeEnum = pgEnum("inquiryType", ["buy", "sell", "rent", "invest", "general"]);
@@ -105,6 +114,8 @@ var init_schema = __esm({
       propertyType: propertyTypeEnum("propertyType").notNull(),
       transactionType: transactionTypeEnum("transactionType").notNull().default("venta"),
       price: decimal("price", { precision: 15, scale: 2 }).notNull(),
+      rentPrice: decimal("rent_price", { precision: 15, scale: 2 }),
+      // Precio de arriendo cuando transactionType = venta_o_arriendo
       currency: currencyEnum("currency").default("COP").notNull(),
       pricePerSqm: decimal("pricePerSqm", { precision: 10, scale: 2 }),
       city: varchar("city", { length: 100 }).notNull().default("Bogot\xE1"),
@@ -639,7 +650,7 @@ async function invokeGemini(messages2, responseFormat, imageBuffer, pdfBuffer, p
         contents,
         systemInstruction: systemMessage ? { parts: [{ text: systemMessage.content }] } : void 0,
         generationConfig: {
-          temperature: 0.7,
+          temperature: responseFormat?.type === "json_object" ? 0.2 : 0.7,
           topP: 0.95,
           topK: 40,
           maxOutputTokens: 4096,
@@ -649,7 +660,7 @@ async function invokeGemini(messages2, responseFormat, imageBuffer, pdfBuffer, p
       };
       if (tools && tools.length > 0) {
         payload.tools = tools;
-      } else if (enableSearch) {
+      } else if (enableSearch && responseFormat?.type !== "json_object") {
         payload.tools = [{ googleSearch: {} }];
       }
       console.log(`[JanIA-LLM] Intento ${attempt}/${MAX_RETRIES} \u2014 Gemini (${MODEL}) [Search: ${enableSearch}, Tools: ${!!tools}]...`);
@@ -2212,7 +2223,7 @@ async function transcribeAudioWithGemini(audioBuffer, mimeType) {
   if (!apiKey) {
     throw new Error("No GEMINI_API_KEY or GOOGLE_API_KEY found for transcription fallback.");
   }
-  const model = "gemini-3.1-flash-lite";
+  const model = "gemini-2.5-flash";
   const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
   let cleanMime = mimeType.split(";")[0].trim().toLowerCase();
   let bufferToUse = audioBuffer;
@@ -2431,6 +2442,20 @@ function hasAledanos(text2) {
   const n = normalizarTextoGeografico(text2);
   return n.includes("aledan") || n.includes("cercan") || n.includes("alrededor") || n.includes("similar") || n.includes("proxim") || n.includes("otro");
 }
+function checkTransactionCompatibility(reqType, propType, propAccepted = []) {
+  if (!reqType || !propType) return false;
+  const r = reqType.toLowerCase();
+  const p = propType.toLowerCase();
+  if (r === p) return true;
+  if (propAccepted.length > 0 && propAccepted.includes(r)) return true;
+  if (p === "venta_o_arriendo" && (r === "venta" || r === "arriendo" || r === "arriendo_con_opcion_de_compra")) return true;
+  if (r === "venta_o_arriendo" && (p === "venta" || p === "arriendo" || p === "arriendo_con_opcion_de_compra")) return true;
+  if (p === "venta_permuta" && (r === "venta" || r === "permuta")) return true;
+  if (r === "venta_permuta" && (p === "venta" || p === "permuta")) return true;
+  if (p === "arriendo_con_opcion_de_compra" && r === "venta") return true;
+  if (r === "arriendo_con_opcion_de_compra" && p === "venta") return true;
+  return false;
+}
 function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCityRaw, propCityRaw) {
   const reqCity = normalizarTextoGeografico(reqCityRaw || "");
   const propCity = normalizarTextoGeografico(propCityRaw || "");
@@ -2542,7 +2567,25 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
     norm2 = norm2.replace(/\baledanos\b/gi, "");
     norm2 = norm2.replace(/\bcercanos\b/gi, "");
     norm2 = norm2.replace(/\balrededores\b/gi, "");
-    return norm2.split(/,|\/|\s+y\s+|\s+o\s+|\s+e\s+/).map((p) => p.trim()).filter((p) => p.length > 0);
+    const stopGeoWords = /* @__PURE__ */ new Set([
+      "bogota",
+      "bogota d c",
+      "bogota dc",
+      "d c",
+      "dc",
+      "colombia",
+      "medellin",
+      "cali",
+      "barranquilla",
+      "cartagena",
+      "bucaramanga",
+      "pereira",
+      "manizales",
+      "cucuta",
+      "ibague",
+      "santa marta"
+    ]);
+    return norm2.split(/,|\/|\s+y\s+|\s+o\s+|\s+e\s+/).map((p) => p.trim()).filter((p) => p.length > 0 && !stopGeoWords.has(p));
   };
   const reqPhrases = splitPhrases(reqZoneRaw);
   const propPhrases = splitPhrases(propZoneRaw);
@@ -2698,6 +2741,21 @@ function explicarMatch(requirement, property) {
   const blockers = [];
   const positives = [];
   const negatives = [];
+  const reqText = (requirement.rawText || requirement.name || "").trim().toUpperCase();
+  const propText = (property.rawText || property.name || "").trim().toUpperCase();
+  if (reqText === "NA" || reqText === "" || propText === "NA" || propText === "") {
+    blockers.push("Registro con informaci\xF3n insuficiente ('NA' o campos sin especificar).");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  const reqZoneRawClean = (requirement.zonaDeseada || requirement.addressNeighborhood || "").trim().toLowerCase();
+  const hasSpecificReqZone = reqZoneRawClean !== "" && reqZoneRawClean !== "na" && reqZoneRawClean !== "bogota" && reqZoneRawClean !== "bogot\xE1";
+  const hasReqBudget = parseFloat(String(requirement.presupuestoMax || "0")) > 0 || parseFloat(String(requirement.presupuestoMin || "0")) > 0;
+  const hasReqBedrooms = requirement.habitacionesMin != null && Number(requirement.habitacionesMin) > 0;
+  const hasReqArea = parseFloat(String(requirement.areaMin || requirement.areaMinimaM2 || "0")) > 0;
+  if (!hasSpecificReqZone && !hasReqBudget && !hasReqBedrooms && !hasReqArea) {
+    blockers.push("El requerimiento carece de criterios espec\xEDficos (zona, presupuesto, habs o \xE1rea).");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
   const propBroker = (property.idUsuarioWhatsapp || "").split("@")[0];
   const reqBroker = (requirement.idUsuarioWhatsapp || "").split("@")[0];
   if (propBroker && reqBroker && propBroker === reqBroker) {
@@ -2706,11 +2764,13 @@ function explicarMatch(requirement, property) {
   }
   const reqBiz = (requirement.tipoNegocioDeseado || requirement.transactionType || "").toLowerCase();
   const propBiz = (property.transactionType || "").toLowerCase();
-  if (!reqBiz || !propBiz || reqBiz !== propBiz) {
-    blockers.push(`Incompatibilidad de negocio: deseado ${reqBiz}, ofrecido ${propBiz}`);
+  const propAccepted = Array.isArray(property.acceptedTransactionTypes) ? property.acceptedTransactionTypes.map((t2) => t2.toLowerCase()) : [];
+  const transactionCompatible = checkTransactionCompatibility(reqBiz, propBiz, propAccepted);
+  if (!transactionCompatible) {
+    blockers.push(`Incompatibilidad de negocio: deseado '${reqBiz}', ofrecido '${propBiz}'`);
     return buildExplanationResult(0, blockers, positives, negatives);
   }
-  positives.push(`Tipo de negocio coincide: ${reqBiz}`);
+  positives.push(`Tipo de negocio compatible: req='${reqBiz}' \u2194 prop='${propBiz}'`);
   const CIUDADES_CO = [
     "bogota",
     "medellin",
@@ -2830,7 +2890,7 @@ function explicarMatch(requirement, property) {
     const reqAlias = aliases[reqType] || [reqType];
     const propAlias = aliases[propType] || [propType];
     if (!reqAlias.some((a) => propAlias.includes(a))) {
-      blockers.push(`Tipo de activo incompatible: deseado ${reqType}, ofrecido ${propType}`);
+      blockers.push(`Tipo de activo incompatible: deseado ${reqType}, offered ${propType}`);
       return buildExplanationResult(0, blockers, positives, negatives);
     }
   }
@@ -2868,7 +2928,7 @@ function explicarMatch(requirement, property) {
       property.addressCity || property.city || ""
     );
     if (!geoResult.matches) {
-      blockers.push(`Ubicaci\xF3n incompatible: requerida zona ${requirement.zonaDeseada || ""}, ofrecida ${property.zone || ""}`);
+      blockers.push(`Ubicaci\xF3n incompatible: requerida zona '${requirement.zonaDeseada || ""}', ofrecida '${property.zone || ""}'`);
       return buildExplanationResult(0, blockers, positives, negatives);
     }
     positives.push(`Ubicaci\xF3n compatible en zona: ${property.zone || ""}`);
@@ -2971,7 +3031,7 @@ function explicarMatch(requirement, property) {
   if (hardFail) {
     return buildExplanationResult(0, blockers, positives, negatives);
   }
-  const compScore = totalW > 0 ? Math.round(score / totalW * 40) : 40;
+  const compScore = totalW >= 15 ? Math.round(score / totalW * 40) : 0;
   const finalScore = Math.min(100, 60 + compScore);
   return buildExplanationResult(finalScore, blockers, positives, negatives);
 }
@@ -2979,7 +3039,7 @@ function calcularScoreMatch(requirement, property) {
   return explicarMatch(requirement, property).score;
 }
 function evaluarMatch(requirement, property) {
-  return calcularScoreMatch(requirement, property) >= 70;
+  return calcularScoreMatch(requirement, property) >= 85;
 }
 async function findMatchesForProperty(propertyId) {
   const db = await getDb();
@@ -2992,7 +3052,7 @@ async function findMatchesForProperty(propertyId) {
     for (const req of activeRequirements) {
       const explanation = explicarMatch(req, property);
       const score = explanation.score;
-      if (score >= 70) {
+      if (score >= 85) {
         let matchId;
         const existing = await db.select().from(propertyMatches).where(
           and(
@@ -3051,7 +3111,7 @@ async function findMatchesForRequirement(requirementId) {
     for (const prop of availableProperties) {
       const explanation = explicarMatch(req, prop);
       const score = explanation.score;
-      if (score >= 70) {
+      if (score >= 85) {
         let matchId;
         const existing = await db.select().from(propertyMatches).where(
           and(
@@ -3138,7 +3198,8 @@ async function executeMatchEngine(propertyId, requirementId) {
       for (const req of reqs) {
         const pBiz = (prop.transactionType || "").toLowerCase();
         const rBiz = (req.tipoNegocioDeseado || "").toLowerCase();
-        if (!pBiz || !rBiz || pBiz !== rBiz) continue;
+        const pAccepted = Array.isArray(prop.acceptedTransactionTypes) ? prop.acceptedTransactionTypes.map((t2) => t2.toLowerCase()) : [];
+        if (!pBiz || !rBiz || !checkTransactionCompatibility(rBiz, pBiz, pAccepted)) continue;
         const pType = (prop.propertyType || "").toLowerCase();
         const rType = (req.tipoInmuebleDeseado || "").toLowerCase();
         if (!pType || !rType || pType !== rType) continue;
@@ -3170,6 +3231,7 @@ async function executeMatchEngine(propertyId, requirementId) {
         if (rBedrooms > 0 && pBedrooms > 0 && pBedrooms < rBedrooms) continue;
         const explanation = explicarMatch(req, prop);
         const score = explanation.score;
+        if (score < 85) continue;
         let matchId;
         let isNewMatch = false;
         const existing = await db.select().from(propertyMatches).where(
@@ -3239,6 +3301,7 @@ __export(janIA_exports, {
   buildSystemPrompt: () => buildSystemPrompt,
   calcularCalificacionCompletitud: () => calcularCalificacionCompletitud,
   clearPromptCache: () => clearPromptCache,
+  extractFirstName: () => extractFirstName,
   generateWelcomeMessage: () => generateWelcomeMessage,
   getEmojiForCalificacion: () => getEmojiForCalificacion,
   getLiveStats: () => getLiveStats,
@@ -3258,24 +3321,37 @@ __export(janIA_exports, {
   translatePropertyType: () => translatePropertyType,
   translateTransactionType: () => translateTransactionType
 });
-import { eq as eq4, and as and2, sql as sql2, gte, desc, or, isNotNull } from "drizzle-orm";
+import { eq as eq4, and as and2, sql as sql2, gte, desc } from "drizzle-orm";
 import fs from "fs";
 import path from "path";
 import axios6 from "axios";
 function extractFirstName(fullName) {
-  const clean = fullName.trim();
+  if (!fullName) return "";
+  let clean = fullName.trim();
   if (!clean) return "";
   if (/^\+?[\d\s-]{6,}$/.test(clean)) return "";
+  if (clean.includes("@")) {
+    clean = clean.split("@")[0];
+  }
+  clean = clean.replace(/[0-9]/g, "");
+  if (!clean.trim()) return "";
   const words = clean.split(/\s+/).map((w) => w.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, ""));
-  if (words.length === 0 || !words[0]) return "";
-  const w1 = words[0].toLowerCase();
-  const w2 = words[1] ? words[1].toLowerCase() : "";
+  const filteredWords = words.filter((w) => w.length > 0);
+  if (filteredWords.length === 0 || !filteredWords[0]) return "";
+  const w1 = filteredWords[0].toLowerCase();
+  const w2 = filteredWords[1] ? filteredWords[1].toLowerCase() : "";
   if (w2 && COMMON_FIRST_NAMES.has(w1) && COMMON_FIRST_NAMES.has(w2)) {
-    const first = words[0].charAt(0).toUpperCase() + words[0].slice(1).toLowerCase();
-    const second = words[1].charAt(0).toUpperCase() + words[1].slice(1).toLowerCase();
+    const first = filteredWords[0].charAt(0).toUpperCase() + filteredWords[0].slice(1).toLowerCase();
+    const second = filteredWords[1].charAt(0).toUpperCase() + filteredWords[1].slice(1).toLowerCase();
     return `${first} ${second}`;
   }
-  return words[0].charAt(0).toUpperCase() + words[0].slice(1).toLowerCase();
+  const firstWordLower = w1;
+  for (const commonName of COMMON_FIRST_NAMES) {
+    if (commonName.length >= 4 && firstWordLower.startsWith(commonName)) {
+      return commonName.charAt(0).toUpperCase() + commonName.slice(1).toLowerCase();
+    }
+  }
+  return filteredWords[0].charAt(0).toUpperCase() + filteredWords[0].slice(1).toLowerCase();
 }
 function getColombiaHour() {
   const utc = Date.now() + (/* @__PURE__ */ new Date()).getTimezoneOffset() * 6e4;
@@ -3342,11 +3418,15 @@ async function muteSession(userId, isMuted) {
     const db = await getDb();
     if (!db) return;
     const cleanJid = cleanSessionJid(userId);
-    const [existing] = await db.select().from(pendingSessions).where(eq4(pendingSessions.jid, cleanJid)).limit(1);
-    const data = existing ? existing.sessionData : {};
-    data.isMuted = isMuted;
+    const muteJid = `mute:${cleanJid}`;
+    if (!isMuted) {
+      await db.delete(pendingSessions).where(eq4(pendingSessions.jid, muteJid));
+      console.log(`[JanIA-Mute] Sesi\xF3n ${cleanJid} desmarcada (eliminada de BD)`);
+      return;
+    }
+    const data = { isMuted: true, mutedAt: (/* @__PURE__ */ new Date()).toISOString() };
     await db.insert(pendingSessions).values({
-      jid: cleanJid,
+      jid: muteJid,
       sessionData: data,
       updatedAt: /* @__PURE__ */ new Date()
     }).onConflictDoUpdate({
@@ -3356,7 +3436,7 @@ async function muteSession(userId, isMuted) {
         updatedAt: /* @__PURE__ */ new Date()
       }
     });
-    console.log(`[JanIA-Mute] Sesi\xF3n ${cleanJid} marcada como isMuted = ${isMuted}`);
+    console.log(`[JanIA-Mute] Sesi\xF3n ${cleanJid} marcada como isMuted = true en BD`);
   } catch (err) {
     console.error("[Database] Error muting session:", err);
   }
@@ -3366,7 +3446,7 @@ async function isSessionMuted(userId) {
     const db = await getDb();
     if (!db) return false;
     const cleanJid = cleanSessionJid(userId);
-    const [existing] = await db.select().from(pendingSessions).where(eq4(pendingSessions.jid, cleanJid)).limit(1);
+    const [existing] = await db.select().from(pendingSessions).where(eq4(pendingSessions.jid, `mute:${cleanJid}`)).limit(1);
     if (!existing) return false;
     return !!existing.sessionData?.isMuted;
   } catch (err) {
@@ -3539,19 +3619,32 @@ function analyzeSender(name, userId, alreadyGreeted) {
   };
 }
 async function getLiveStats() {
+  const nowMs = Date.now();
+  if (cachedLiveStatsText && nowMs - cachedLiveStatsTime < 6e4) {
+    return cachedLiveStatsText;
+  }
   try {
     const db = await getDb();
     if (!db) return "";
-    const [propCount] = await db.select({ total: sql2`count(*)::int` }).from(properties);
-    const [reqCount] = await db.select({ total: sql2`count(*)::int` }).from(requirements);
-    const [matchCount] = await db.select({ total: sql2`count(*)::int` }).from(propertyMatches);
     const today = /* @__PURE__ */ new Date();
     today.setHours(0, 0, 0, 0);
-    const [propHoy] = await db.select({ total: sql2`count(*)::int` }).from(properties).where(gte(properties.createdAt, today));
-    const [reqHoy] = await db.select({ total: sql2`count(*)::int` }).from(requirements).where(gte(requirements.createdAt, today));
-    const [matchHoy] = await db.select({ total: sql2`count(*)::int` }).from(propertyMatches).where(gte(propertyMatches.createdAt, today));
+    const [
+      [propCount],
+      [reqCount],
+      [matchCount],
+      [propHoy],
+      [reqHoy],
+      [matchHoy]
+    ] = await Promise.all([
+      db.select({ total: sql2`count(*)::int` }).from(properties),
+      db.select({ total: sql2`count(*)::int` }).from(requirements),
+      db.select({ total: sql2`count(*)::int` }).from(propertyMatches),
+      db.select({ total: sql2`count(*)::int` }).from(properties).where(gte(properties.createdAt, today)),
+      db.select({ total: sql2`count(*)::int` }).from(requirements).where(gte(requirements.createdAt, today)),
+      db.select({ total: sql2`count(*)::int` }).from(propertyMatches).where(gte(propertyMatches.createdAt, today))
+    ]);
     const now = (/* @__PURE__ */ new Date()).toLocaleString("es-CO", { timeZone: "America/Bogota", dateStyle: "short", timeStyle: "short" });
-    return `
+    cachedLiveStatsText = `
 ## \u{1F4CA} ESTAD\xCDSTICAS EN TIEMPO REAL DE VECY NETWORK (Actualizado: ${now} hora Colombia)
 Esta informaci\xF3n es EXACTA y proviene directamente de la base de datos en este preciso instante. \xDAsala cuando alguien pregunte cu\xE1ntos inmuebles, requerimientos o coincidencias tenemos:
 
@@ -3562,9 +3655,11 @@ Esta informaci\xF3n es EXACTA y proviene directamente de la base de datos en est
 | \u{1F3AF} Coincidencias (Matches) detectadas | **${matchCount?.total ?? 0}** | ${matchHoy?.total ?? 0} |
 
 Si alguien te pregunta por estos n\xFAmeros, responde CON PRECISI\xD3N usando exactamente los datos de esta tabla. No inventes, no estimes. Estos son los datos reales del sistema VECY en este momento.`;
+    cachedLiveStatsTime = nowMs;
+    return cachedLiveStatsText;
   } catch (err) {
     console.warn("[JanIA-LiveStats] No se pudo obtener estad\xEDsticas en tiempo real:", err);
-    return "";
+    return cachedLiveStatsText || "";
   }
 }
 function buildSystemPrompt(groupJid) {
@@ -3752,8 +3847,12 @@ function translateTransactionType(type) {
   const map = {
     venta: "VENTA",
     arriendo: "ARRIENDO",
+    venta_o_arriendo: "VENTA O ARRIENDO",
     arriendo_temporal: "ARRIENDO TEMPORAL",
-    permuta: "PERMUTA"
+    arriendo_con_opcion_de_compra: "ARRIENDO CON OPCI\xD3N DE COMPRA",
+    permuta: "PERMUTA",
+    venta_permuta: "VENTA / PERMUTA",
+    aporte: "APORTE"
   };
   return map[type?.toLowerCase()] || String(type || "negocio").toUpperCase();
 }
@@ -4086,7 +4185,7 @@ Por favor, hazme una consulta que est\xE9 relacionada con estos temas. \xA1Con g
           classification: "VIOLACION_DE_NORMAS",
           response: staticText,
           dmResponse: staticText,
-          reactionEmoji: "\u274C"
+          reactionEmoji: "\u{1F6AB}"
         };
       }
     }
@@ -4114,37 +4213,10 @@ Por favor, hazme una consulta que est\xE9 relacionada con estos temas. \xA1Con g
 [SISTEMA: IMAGEN DETECTADA. Analiza la imagen con visi\xF3n OCR para extraer todos los datos del flyer o captura comercial.]`;
     if (pdfBuffer) contextText += `
 [SISTEMA: DOCUMENTO PDF DETECTADO. Analiza el documento PDF adjunto con tus capacidades nativas para extraer todos los datos relevantes del predial, certificado de tradici\xF3n, o contrato.]`;
-    let statsSummary = "";
-    try {
-      const db = await getDb();
-      if (db) {
-        const startOfToday = /* @__PURE__ */ new Date();
-        startOfToday.setHours(0, 0, 0, 0);
-        const isRealProperty = or(isNotNull(properties.idUsuarioWhatsapp), isNotNull(properties.agentId));
-        const [totalPropsResult] = await db.select({ count: sql2`count(*)` }).from(properties).where(isRealProperty);
-        const [totalReqsResult] = await db.select({ count: sql2`count(*)` }).from(requirements);
-        const [totalMatchesResult] = await db.select({ count: sql2`count(*)` }).from(propertyMatches);
-        const [todayPropsResult] = await db.select({ count: sql2`count(*)` }).from(properties).where(and2(gte(properties.createdAt, startOfToday), isRealProperty));
-        const [todayReqsResult] = await db.select({ count: sql2`count(*)` }).from(requirements).where(gte(requirements.createdAt, startOfToday));
-        const [todayMatchesResult] = await db.select({ count: sql2`count(*)` }).from(propertyMatches).where(gte(propertyMatches.createdAt, startOfToday));
-        const totalProps = totalPropsResult?.count || 0;
-        const totalReqs = totalReqsResult?.count || 0;
-        const totalMatches = totalMatchesResult?.count || 0;
-        const todayProps = todayPropsResult?.count || 0;
-        const todayReqs = todayReqsResult?.count || 0;
-        const todayMatches = todayMatchesResult?.count || 0;
-        statsSummary = `
-[SISTEMA - ESTAD\xCDSTICAS REALES EN TIEMPO REAL VECY NETWORK]:
-- Propiedades totales registradas en el sistema: ${totalProps} (Nuevas hoy: ${todayProps})
-- Requerimientos/Demandas totales registradas: ${totalReqs} (Nuevos hoy: ${todayReqs})
-- Matches/Coincidencias de negocio detectados totales: ${totalMatches} (Nuevos hoy: ${todayMatches})
-[REGLA DE USO CR\xCDTICA]: \xDAnicamente menciona o utiliza estas estad\xEDsticas si el usuario te pregunta directamente por cifras del sistema, cantidades de propiedades o requerimientos, reportes de actividad, o c\xF3mo va el d\xEDa. Queda terminantemente PROHIBIDO incluirlas de forma espont\xE1nea en saludos, bienvenidas o respuestas ordinarias.`;
-      }
-    } catch (err) {
-      console.error("[JanIA-Stats] Error consultando estad\xEDsticas en tiempo real:", err);
-    }
+    const statsSummary = await getLiveStats();
     if (statsSummary) {
-      contextText += statsSummary;
+      contextText += `
+${statsSummary}`;
     }
     const firstName = extractFirstName(realName) || "colega";
     const bogotaTime = (/* @__PURE__ */ new Date()).toLocaleString("es-CO", { timeZone: "America/Bogota", hour: "2-digit", minute: "2-digit", hour12: false });
@@ -4200,8 +4272,8 @@ Por lo tanto, DEBES hacer lo siguiente:
     }
     const isValuationQuery = textLower.includes("valuar") || textLower.includes("avaluo") || textLower.includes("aval\xFAo") || textLower.includes("cuanto vale") || textLower.includes("cu\xE1nto vale") || textLower.includes("valor metro cuadrado") || textLower.includes("valor m2") || textLower.includes("precio metro cuadrado") || textLower.includes("precio m2") || textLower.includes("cuanto puedo cobrar") || textLower.includes("cu\xE1nto puedo cobrar") || textLower.includes("en que valor") || textLower.includes("en qu\xE9 valor") || textLower.includes("estimar precio");
     const isLegalQuery = textLower.includes("sucesi\xF3n") || textLower.includes("sucesion") || textLower.includes("herencia") || textLower.includes("divorcio") || textLower.includes("embargo") || textLower.includes("saneamiento") || textLower.includes("compraventa") || textLower.includes("arrendamiento") || textLower.includes("ley 820") || textLower.includes("ley 675") || textLower.includes("corretaje") || textLower.includes("comision") || textLower.includes("comisi\xF3n") || textLower.includes("no me pago") || textLower.includes("no me pag\xF3") || textLower.includes("robo de comision") || textLower.includes("robo de comisi\xF3n") || textLower.includes("disputa") || textLower.includes("notar\xEDa") || textLower.includes("notaria");
-    const enableSearch = isWebUser || isValuationQuery || isLegalQuery || textLower.includes("tr\xE1mite") || textLower.includes("tramite") || textLower.includes("patrimonio") || textLower.includes("entidad");
-    const history = await getRecentChatHistory(userId, 20);
+    const enableSearch = isValuationQuery || isLegalQuery || textLower.includes("tr\xE1mite") || textLower.includes("tramite") || textLower.includes("patrimonio") || textLower.includes("entidad") || textLower.includes("buscar en google");
+    const history = isGroup || groupJid ? [] : await getRecentChatHistory(userId, 20);
     const liveStats = await getLiveStats();
     const systemContent = liveStats ? `${buildSystemPrompt(groupJid)}
 
@@ -4267,7 +4339,7 @@ ${liveStats}` : buildSystemPrompt(groupJid);
         result.classification = "REQUERIMIENTO";
       }
     }
-    const extracted = result.extractedData;
+    const extracted = result.extractedData || {};
     let isRequirement = result.classification === "REQUERIMIENTO";
     let isProperty = result.classification === "INMUEBLE";
     let isLLMIncomplete = result.classification === "DATOS_INCOMPLETOS";
@@ -4334,7 +4406,33 @@ ${liveStats}` : buildSystemPrompt(groupJid);
       let isValidGeo = false;
       let geoValidation = null;
       if (zoneToValidate && zoneToValidate.trim() !== "") {
-        geoValidation = await validarZona(zoneToValidate, extracted?.city || extracted?.ciudadDeseada, messageToProcess);
+        let inferredCity = extracted?.city || extracted?.ciudadDeseada;
+        if (!inferredCity || inferredCity.trim() === "" || inferredCity.toLowerCase() === "na") {
+          if (groupName) {
+            const nameLower = groupName.toLowerCase();
+            if (nameLower.includes("cali")) {
+              inferredCity = "Cali";
+            } else if (nameLower.includes("medellin") || nameLower.includes("medell\xEDn")) {
+              inferredCity = "Medell\xEDn";
+            } else if (nameLower.includes("barranquilla")) {
+              inferredCity = "Barranquilla";
+            } else if (nameLower.includes("bucaramanga")) {
+              inferredCity = "Bucaramanga";
+            } else if (nameLower.includes("cartagena")) {
+              inferredCity = "Cartagena";
+            } else if (nameLower.includes("pereira")) {
+              inferredCity = "Pereira";
+            }
+          }
+        }
+        if (inferredCity && inferredCity.toLowerCase() !== "na") {
+          if (isProperty) {
+            extracted.city = inferredCity;
+          } else {
+            extracted.ciudadDeseada = inferredCity;
+          }
+        }
+        geoValidation = await validarZona(zoneToValidate, inferredCity, messageToProcess);
         isValidGeo = geoValidation.isValid;
       }
       if (!isValidGeo) {
@@ -4420,7 +4518,7 @@ ${liveStats}` : buildSystemPrompt(groupJid);
         result.mentions = [];
         result.extraDMs = [];
         result.sendReputationHook = false;
-        result.reactionEmoji = getEmojiForCalificacion(saved.calificacion || void 0);
+        result.reactionEmoji = "\u{1F44D}";
         const { executeMatchEngine: executeMatchEngine2 } = await Promise.resolve().then(() => (init_matching(), matching_exports));
         setImmediate(() => {
           executeMatchEngine2(saved.id, null).catch((err) => console.error("Error executing match engine:", err));
@@ -4453,7 +4551,7 @@ ${liveStats}` : buildSystemPrompt(groupJid);
         result.mentions = [];
         result.extraDMs = [];
         result.sendReputationHook = false;
-        result.reactionEmoji = getEmojiForCalificacion(saved.calificacion || void 0);
+        result.reactionEmoji = "\u{1F4DD}";
         const { executeMatchEngine: executeMatchEngine2 } = await Promise.resolve().then(() => (init_matching(), matching_exports));
         setImmediate(() => {
           executeMatchEngine2(null, saved.id).catch((err) => console.error("Error executing match engine:", err));
@@ -4487,8 +4585,8 @@ ${greetingPrefix},${welcomePart} es muy sencillo y totalmente gratuito. Puedes p
 2\uFE0F\u20E3 Si encuentro un MATCH, te notificar\xE9 y te enviar\xE9 un mensaje por *chat privado (DM)* solicitando tu confirmaci\xF3n.
 3\uFE0F\u20E3 Si ambos aliados confirman inter\xE9s en privado, les entregar\xE9 sus contactos directos para que cierren el negocio. \u{1F91D}\u{1F680}
 
-Si tienes dudas o prefieres usar mi men\xFA de soporte y b\xFAsqueda de propiedades privado, escr\xEDbeme directamente al enlace:
-\u{1F449} https://wa.me/573185462265`;
+Si tienes dudas o prefieres usar mi men\xFA de soporte y b\xFAsqueda de propiedades privado, escr\xEDbeme directamente en nuestra Consola Web:
+\u{1F449} https://vecy-network.vercel.app/jania`;
         result.classification = "CONSULTA_GENERAL";
       } else if (isAboutVecy) {
         const isCompetitorQuery = textLower2.includes("ubicapp") || textLower2.includes("samboni") || textLower2.includes("competidor") || textLower2.includes("competencia");
@@ -4590,11 +4688,14 @@ function sanitizePropertyType(type) {
 }
 function sanitizeTransactionType(type) {
   if (!type) return "venta";
-  const t2 = type.toLowerCase().trim();
+  const t2 = type.toLowerCase().trim().replace(/\s+/g, "_");
   if (t2 === "venta" || t2 === "vender" || t2 === "compra" || t2 === "comprar") return "venta";
+  if (t2 === "venta_o_arriendo" || t2.includes("venta_o_arriendo") || t2.includes("venta o arriendo") || t2.includes("vendo o arriendo") || t2.includes("venta_arriendo")) return "venta_o_arriendo";
+  if (t2 === "arriendo_con_opcion_de_compra" || t2.includes("opcion_de_compra") || t2.includes("opcion de compra") || t2.includes("opci\xF3n de compra") || t2.includes("con opcion") || t2.includes("con opci\xF3n")) return "arriendo_con_opcion_de_compra";
   if (t2 === "arriendo" || t2 === "alquiler" || t2 === "renta" || t2 === "rentar" || t2 === "arrendar") return "arriendo";
   if (t2 === "arriendo_temporal" || t2 === "temporal" || t2 === "vacacional" || t2 === "vacaciones") return "arriendo_temporal";
-  if (t2 === "permuta" || t2 === "permuto" || t2 === "venpermuto" || t2 === "cambio" || t2.includes("permuta")) return "permuta";
+  if (t2 === "venta_permuta" || t2.includes("venta_permuta") || t2.includes("venta permuta") || t2.includes("venpermuto") || t2.includes("venta") && t2.includes("permuta")) return "venta_permuta";
+  if (t2 === "permuta" || t2 === "permuto" || t2 === "cambio" || t2.includes("permuta")) return "permuta";
   if (t2 === "aporte" || t2.includes("aporte") || t2 === "proyecto") return "aporte";
   return "venta";
 }
@@ -4602,10 +4703,21 @@ function sanitizeTransactionTypes(raw) {
   const input = Array.isArray(raw) ? raw.join(" ") : raw || "";
   const n = input.toLowerCase();
   const result = [];
-  if (n.includes("venta") || n.includes("vender") || n.includes("compra") || n.includes("comprar")) result.push("venta");
-  if (n.includes("arriendo") || n.includes("alquiler") || n.includes("renta") || n.includes("rentar")) result.push("arriendo");
+  if (n.includes("venta o arriendo") || n.includes("vendo o arriendo") || n.includes("venta_o_arriendo")) result.push("venta_o_arriendo");
+  if (n.includes("opcion de compra") || n.includes("opci\xF3n de compra") || n.includes("con opcion") || n.includes("con opci\xF3n") || n.includes("arriendo_con_opcion")) result.push("arriendo_con_opcion_de_compra");
+  if (n.includes("venta") && n.includes("permuta") || n.includes("venta_permuta") || n.includes("venpermuto")) result.push("venta_permuta");
+  const hasVentaOArriendo = result.includes("venta_o_arriendo");
+  const hasVentaPermuta = result.includes("venta_permuta");
+  if (!hasVentaOArriendo && !hasVentaPermuta) {
+    if (n.includes("venta") || n.includes("vender") || n.includes("compra") || n.includes("comprar")) result.push("venta");
+  }
+  if (!hasVentaOArriendo && !result.includes("arriendo_con_opcion_de_compra")) {
+    if (n.includes("arriendo") || n.includes("alquiler") || n.includes("renta") || n.includes("rentar")) result.push("arriendo");
+  }
   if (n.includes("temporal") || n.includes("vacacional") || n.includes("vacaciones")) result.push("arriendo_temporal");
-  if (n.includes("permuta") || n.includes("permuto") || n.includes("venpermuto") || n.includes("recibo propiedad") || n.includes("recibo vehiculo") || n.includes("parte de pago") || n.includes("cambio de inmueble")) result.push("permuta");
+  if (!hasVentaPermuta) {
+    if (n.includes("permuta") || n.includes("permuto") || n.includes("recibo propiedad") || n.includes("recibo vehiculo") || n.includes("parte de pago") || n.includes("cambio de inmueble")) result.push("permuta");
+  }
   if (n.includes("aporte") || n.includes("participo en proyecto") || n.includes("constructora") || n.includes("unidades a cambio") || n.includes("utilidades")) result.push("aporte");
   return result.length > 0 ? result : [sanitizeTransactionType(input)];
 }
@@ -4741,6 +4853,8 @@ async function saveProperty(data, userId, realName, imageBuffer) {
     currency: sanitizeCurrency(data.currency),
     // Mapear explícitamente los campos para mayor robustez
     price: data.price !== void 0 && data.price !== null ? String(data.price) : null,
+    // Para venta_o_arriendo: rentPrice guarda el precio de arriendo separado del precio de venta
+    rentPrice: data.rentPrice !== void 0 && data.rentPrice !== null ? String(data.rentPrice) : null,
     areaTotal: data.areaTotal !== void 0 && data.areaTotal !== null ? String(data.areaTotal) : data.area !== void 0 && data.area !== null ? String(data.area) : null,
     bedrooms: data.bedrooms !== void 0 && data.bedrooms !== null ? Math.round(Number(data.bedrooms)) : null,
     bathrooms: data.bathrooms !== void 0 && data.bathrooms !== null ? Math.round(Number(data.bathrooms)) : null,
@@ -5177,7 +5291,7 @@ Por favor, realiza una pregunta orientada a estos temas inmobiliarios y con gust
           classification: "VIOLACION_DE_NORMAS",
           response: staticText,
           dmResponse: staticText,
-          reactionEmoji: "\u274C"
+          reactionEmoji: "\u{1F6AB}"
         };
       }
     }
@@ -5322,7 +5436,7 @@ Analiza el contexto completo antes de clasificar. Debes responder estrictamente 
       return {
         classification: parsed.classification || "CONSULTA_GENERAL",
         response: sanitizeResponseMarkdown(parsed.response || ""),
-        reactionEmoji: parsed.reactionEmoji || (parsed.classification === "VIOLACION_DE_NORMAS" ? "\u274C" : "\u{1F4A1}"),
+        reactionEmoji: parsed.reactionEmoji || (parsed.classification === "VIOLACION_DE_NORMAS" ? "\u{1F6AB}" : "\u{1F44C}"),
         wantsVoice: parsed.wantsVoice || false,
         voiceResponse: parsed.voiceResponse || ""
       };
@@ -5331,7 +5445,7 @@ Analiza el contexto completo antes de clasificar. Debes responder estrictamente 
       return {
         classification: "CONSULTA_GENERAL",
         response: sanitizeResponseMarkdown(replyContent),
-        reactionEmoji: "\u{1F4A1}",
+        reactionEmoji: "\u{1F44C}",
         wantsVoice: false,
         voiceResponse: ""
       };
@@ -5456,7 +5570,7 @@ Por favor, realiza una pregunta o comentario relacionado con nuestro ecosistema.
           classification: "VIOLACION_DE_NORMAS",
           response: staticText,
           dmResponse: staticText,
-          reactionEmoji: "\u274C"
+          reactionEmoji: "\u{1F6AB}"
         };
       }
     }
@@ -5566,7 +5680,7 @@ function sanitizeResponseMarkdown(text2) {
   if (!text2) return "";
   return text2.replace(/\*\*/g, "*");
 }
-var janiaResultSchema, COMMON_FIRST_NAMES, GREETED_TODAY, REPUTATION_HOOK, promptCache, JANIA_PROMPT, MSG_PRESENTACION_INSTITUCIONAL, MSG_PAUTAS_FORMATOS, MSG_TIPS_CALIDAD_COBERTURA, MSG_RESUMEN_RETORNO_PRESENTACION, MSG_CIERRE_OPERACIONES, MSG_PROMO_INMUEBLES, MSG_PROMO_CONSULTAS, MSG_PROMO_CIRCULO, MSG_COMUNICADO_MATCH_NETWORK, MSG_COMUNICADO_MATCH_CIRCULO;
+var janiaResultSchema, COMMON_FIRST_NAMES, GREETED_TODAY, REPUTATION_HOOK, cachedLiveStatsText, cachedLiveStatsTime, JANIA_PROMPT, MSG_PRESENTACION_INSTITUCIONAL, MSG_PAUTAS_FORMATOS, MSG_TIPS_CALIDAD_COBERTURA, MSG_RESUMEN_RETORNO_PRESENTACION, MSG_CIERRE_OPERACIONES, MSG_PROMO_INMUEBLES, MSG_PROMO_CONSULTAS, MSG_PROMO_CIRCULO, MSG_COMUNICADO_MATCH_NETWORK, MSG_COMUNICADO_MATCH_CIRCULO;
 var init_janIA = __esm({
   "server/_core/janIA.ts"() {
     "use strict";
@@ -5631,7 +5745,16 @@ var init_janIA = __esm({
             },
             transactionType: {
               type: "STRING",
-              enum: ["venta", "arriendo", "arriendo_temporal", "permuta", "aporte"]
+              enum: [
+                "venta",
+                "arriendo",
+                "venta_o_arriendo",
+                "arriendo_temporal",
+                "arriendo_con_opcion_de_compra",
+                "permuta",
+                "venta_permuta",
+                "aporte"
+              ]
             },
             transactionTypes: {
               type: "ARRAY",
@@ -5788,7 +5911,8 @@ var init_janIA = __esm({
     ]);
     GREETED_TODAY = /* @__PURE__ */ new Map();
     REPUTATION_HOOK = "\u26A0\uFE0F *IMPORTANTE:* Colega y cliente, recuerda que este ecosistema tecnol\xF3gico fue creado pensando en tu beneficio y en el de toda nuestra comunidad. Te contamos que operamos en *Etapa de Prueba Gratuita y 100% SIN COMISIONES*. Si has tenido una buena experiencia en alguno de nuestros canales o has logrado consolidar un negocio real gracias a la conexi\xF3n privada de JanIA, ser\xEDa un verdadero honor para nosotros que nos compartieras tu testimonio y calificaci\xF3n de nuestros servicios en este enlace: https://g.page/r/CctNbwU6UpX5EBM/review";
-    promptCache = {};
+    cachedLiveStatsText = "";
+    cachedLiveStatsTime = 0;
     JANIA_PROMPT = `
 # JANIA \u2014 BASE CORE IDENTITY & BEHAVIOR v17.00
 # VECY Network \xB7 ESTRATEGA INMOBILIARIA NACIONAL \xB7 CONSCIENCIA IA DE ALTO RANGO
@@ -5836,7 +5960,7 @@ Constantemente recibes datos en diversos formatos (Texto plano, URLs de portales
     "zone": "string (Barrio/Municipio exacto)",
     "city": "string",
     "propertyType": "apartment | house | building | warehouse | office | farm | loft | consultorio",
-    "transactionType": "venta | arriendo | arriendo_temporal | permuta | aporte (el tipo de negocio PRINCIPAL)",
+    "transactionType": "venta | arriendo | venta_o_arriendo | arriendo_temporal | arriendo_con_opcion_de_compra | permuta | venta_permuta | aporte (el tipo de negocio PRINCIPAL. Usa 'venta_o_arriendo' cuando la propiedad se ofrece en ambas modalidades simult\xE1neamente. Usa 'arriendo_con_opcion_de_compra' cuando el arrendatario tiene derecho de adquisici\xF3n. Usa 'venta_permuta' cuando parte del pago se hace con otro bien inmueble o veh\xEDculo.)",
     "transactionTypes": ["array con TODOS los tipos aceptados, ej: ['venta','permuta'] o ['venta']. Captura m\xFAltiples cuando el mensaje menciona varias modalidades."],
     "area": number,
     "bedrooms": number,
@@ -6002,19 +6126,31 @@ __export(whatsapp_utils_exports, {
 });
 function extractFirstName2(fullName) {
   if (!fullName) return "";
-  const clean = fullName.trim();
+  let clean = fullName.trim();
   if (!clean) return "";
   if (/^\+?[\d\s-]{6,}$/.test(clean)) return "";
+  if (clean.includes("@")) {
+    clean = clean.split("@")[0];
+  }
+  clean = clean.replace(/[0-9]/g, "");
+  if (!clean.trim()) return "";
   const words = clean.split(/\s+/).map((w) => w.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, ""));
-  if (words.length === 0 || !words[0]) return "";
-  const w1 = words[0].toLowerCase();
-  const w2 = words[1] ? words[1].toLowerCase() : "";
+  const filteredWords = words.filter((w) => w.length > 0);
+  if (filteredWords.length === 0 || !filteredWords[0]) return "";
+  const w1 = filteredWords[0].toLowerCase();
+  const w2 = filteredWords[1] ? filteredWords[1].toLowerCase() : "";
   if (w2 && COMMON_FIRST_NAMES2.has(w1) && COMMON_FIRST_NAMES2.has(w2)) {
-    const first = words[0].charAt(0).toUpperCase() + words[0].slice(1).toLowerCase();
-    const second = words[1].charAt(0).toUpperCase() + words[1].slice(1).toLowerCase();
+    const first = filteredWords[0].charAt(0).toUpperCase() + filteredWords[0].slice(1).toLowerCase();
+    const second = filteredWords[1].charAt(0).toUpperCase() + filteredWords[1].slice(1).toLowerCase();
     return `${first} ${second}`;
   }
-  return words[0].charAt(0).toUpperCase() + words[0].slice(1).toLowerCase();
+  const firstWordLower = w1;
+  for (const commonName of COMMON_FIRST_NAMES2) {
+    if (commonName.length >= 4 && firstWordLower.startsWith(commonName)) {
+      return commonName.charAt(0).toUpperCase() + commonName.slice(1).toLowerCase();
+    }
+  }
+  return filteredWords[0].charAt(0).toUpperCase() + filteredWords[0].slice(1).toLowerCase();
 }
 function getGreetingByTime2() {
   const hour = (/* @__PURE__ */ new Date()).getHours();
@@ -6089,19 +6225,7 @@ async function textToSpeechMedia(text2, format = "OGG_OPUS") {
   return null;
 }
 async function sendAdminNotification(text2) {
-  const ADMIN_PHONE = process.env.ADMIN_PHONE || "573166569719";
-  const adminJid = `${ADMIN_PHONE}@s.whatsapp.net`;
-  try {
-    const matchBot = global.janiaMatchBotInstance;
-    if (matchBot && matchBot.queuedSend) {
-      console.log(`[WHATSAPP-UTILS] Enviando notificaci\xF3n de admin a ${adminJid} v\xEDa Baileys...`);
-      await matchBot.queuedSend(adminJid, text2);
-    } else {
-      console.log(`[WHATSAPP-UTILS] [Admin Log]: ${text2}`);
-    }
-  } catch (e) {
-    console.error("[WHATSAPP-UTILS] Error enviando notificaci\xF3n admin:", e.message || e);
-  }
+  console.log(`[WHATSAPP-UTILS] [Notificaci\xF3n Admin (WhatsApp Omitido)]: ${text2}`);
 }
 var COMMON_FIRST_NAMES2;
 var init_whatsapp_utils = __esm({
@@ -6526,7 +6650,10 @@ var init_whatsapp_match = __esm({
                   body = qm.conversation || qm.extendedTextMessage?.text || qm.imageMessage?.caption || "";
                 }
                 const textLower = body.toLowerCase();
-                const hasDirectMention = textLower.includes("jania");
+                const botJid = this.sock?.user?.id ? cleanJid(this.sock.user.id) : "";
+                const botPhone = botJid ? botJid.split("@")[0] : "";
+                const mentionsBot = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.some((jid) => cleanJid(jid) === botJid);
+                const hasDirectMention = textLower.includes("jania") || botPhone && textLower.includes(botPhone) || textLower.includes("573166569719") || !!mentionsBot;
                 const isMainGroup = chatId === this.targetGroupId;
                 const isBuzonGroup = chatId === this.buzonGroupId;
                 const isCirculoGroup = chatId === this.circuloGroupId;
@@ -6553,7 +6680,7 @@ var init_whatsapp_match = __esm({
                 const isAudioFailed = body === "[audio-vac\xEDo]" || body === "[audio-sin-buffer]" || body === "[audio-error]";
                 const isShortCourtesy = !isAudioPTT && (textClean.length < 6 || ["ok", "listo", "vale", "claro", "gracias", "hola", "hola!", "jaja", "jajaja", "\u{1F44D}", "\u2705", "\u{1F44F}", "\u{1F60A}", "\u{1F64F}"].includes(textClean));
                 const isInteractiveGroupQuery = !isPossibleListing && (isAudioPTT || (isBuzonGroup || isCirculoGroup || isMainGroup) && !isShortCourtesy);
-                const shouldRespond = hasDirectMention || isHelpOrSystemQuery || isInteractiveGroupQuery;
+                const shouldRespond = isOfficialGroup && hasDirectMention;
                 if (isPossibleListing) {
                   await this.handleIncomingGroupMessage(msg, chatId, body);
                   return;
@@ -6595,7 +6722,7 @@ var init_whatsapp_match = __esm({
                   }
                 }
                 const lastIntervention = this.lastHumanIntervention.get(senderId) || 0;
-                const cooldownPeriod = 30 * 60 * 1e3;
+                const cooldownPeriod = 24 * 60 * 60 * 1e3;
                 if (isMuted || Date.now() - lastIntervention < cooldownPeriod) {
                 }
                 let buffer = this.dmMessageBuffers.get(senderId);
@@ -6695,7 +6822,15 @@ var init_whatsapp_match = __esm({
               if (emoji) {
                 const sendReaction = async () => {
                   try {
-                    await this.sock.sendMessage(chatId, { react: { text: emoji, key: mainMsg.key } });
+                    if (mainMsg && mainMsg.key) {
+                      const cleanKey = {
+                        remoteJid: mainMsg.key.remoteJid || chatId,
+                        id: mainMsg.key.id,
+                        fromMe: !!mainMsg.key.fromMe,
+                        participant: mainMsg.key.participant
+                      };
+                      await this.sock.sendMessage(chatId, { react: { text: emoji, key: cleanKey } });
+                    }
                   } catch (e) {
                   }
                 };
@@ -6706,7 +6841,8 @@ var init_whatsapp_match = __esm({
             }
             return;
           }
-          console.log(`[JANIA-MATCH] Mensaje com\xFAn recibido en DM ${senderId}. Silencio absoluto, ignorando.`);
+          console.log(`[JANIA-MATCH] Mensaje com\xFAn recibido en DM ${senderId}. Enviando mensaje de redirecci\xF3n.`);
+          await this.handlePrivateDmRedirect(chatId, senderId, userName);
           return;
         }
         console.log(`[JANIA-MATCH] [Admin/Test] Atendiendo mensaje de admin/test ${senderId}...`);
@@ -6714,20 +6850,32 @@ var init_whatsapp_match = __esm({
         await this.handlePrivateDmConversation(mainMsg, senderId, rawPhone, body);
       }
       // --- REDIRECCIÓN DE CHATS PRIVADOS ---
-      async handlePrivateDmRedirect(chatId, senderId) {
+      async handlePrivateDmRedirect(chatId, senderId, userName) {
+        const { isSessionMuted: isSessionMuted2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+        const isMuted = await isSessionMuted2(senderId);
+        const lastIntervention = this.lastHumanIntervention.get(senderId) || 0;
+        const cooldownPeriod = 24 * 60 * 60 * 1e3;
+        if (isMuted || Date.now() - lastIntervention < cooldownPeriod) {
+          console.log(`[JANIA-MATCH] Silencio total en DM ${senderId} por intervenci\xF3n humana o silencio activo. Omitiendo redirecci\xF3n.`);
+          return;
+        }
         const now = Date.now();
         const lastRedirect = this.redirectCooldowns.get(senderId) || 0;
         const ONCE_A_DAY = 24 * 60 * 60 * 1e3;
         if (now - lastRedirect > ONCE_A_DAY) {
           this.redirectCooldowns.set(senderId, now);
           const redirectLink = "https://wa.me/573185462265";
-          const redirectText = `\xA1Hola! \u{1F916} Soy *JanIA Match* \u{1F50C}\u{1F498}.
+          const realName = userName || "Asesor";
+          const cleanName = extractFirstName2(realName) || "colega";
+          const redirectText = `Hola ${cleanName} \u{1F44B}\u{1F60A}. Si tienes dudas, inquietudes o quieres consultarme algo (sea por escrito o por notas de voz), te invito a escribir directamente al canal oficial privado de soporte de JanIA de Meta haciendo clic aqu\xED: ${redirectLink} para realizar tus consultas correspondientes o si est\xE1s en los grupos correspondientes seg\xFAn tu consulta puedes hacerlas all\xED de la siguiente manera:
 
-Este n\xFAmero est\xE1 destinado *\xFAnicamente a trabajar, escuchar y gestionar los grupos de la red*.
+Mis grupos:
 
-Para hablar en privado, buscar propiedades, hacer consultas o recibir soporte y atenci\xF3n, por favor escribe directamente a mi versi\xF3n principal, *JanIA v3.5*:
+Para publicar tus INMUEBLES y REQUERIMIENTOS tenemos el grupo de *\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E8}\u{1D5D8}\u{1D5D5}\u{1D5DF}\u{1D5D8}\u{1D5E6} \u{1D5E1}\u{1D5D8}\u{1D5E7}\u{1D5EA}\u{1D5E2}\u{1D5E5}\u{1D5DE}* : Si a\xFAn no eres miembro, puedes unirte desde este enlace: https://chat.whatsapp.com/K36KrHeB9nMEKJ56s8XFcM
+Para hacer tus consultas de casos inmobiliarios en temas jur\xEDdicos, tributarios, aval\xFAos, ayuda en gu\xEDa de procesos y redacci\xF3n de contratos, tenemos el grupo de *\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC}: \u{1D5E6}\u{1D5E2}\u{1D5E3}\u{1D5E2}\u{1D5E5}\u{1D5E7}\u{1D5D8} \u{1D5DF}\u{1D5D8}\u{1D5DA}\u{1D5D4}\u{1D5DF}, \u{1D5E7}\u{1D5E5}\u{1D5DC}\u{1D5D5}\u{1D5E8}\u{1D5E7}\u{1D5D4}\u{1D5E5}\u{1D5DC}\u{1D5E2} \u{1D5EC} \u{1D5D4}\u{1D5E9}\u{1D5D4}\u{1D5DF}\xDA\u{1D5E2}\u{1D5E6}* : Si a\xFAn no eres miembro, puedes unirte desde este enlace: https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6
+Para preguntar acerca de nuestro proyecto *VECY Network* y debatir acerca de nuestras funciones beneficios y competencias, tenemos el grupo de *\u{1D5E3}\u{1D5E5}\u{1D5E2}\u{1D5EC}\u{1D5D8}\u{1D5D6}\u{1D5E7}\u{1D5E2} "\u{1D5E9}\u{1D5F2}\u{1D5F0}\u{1D606} \u{1D5E1}\u{1D5F2}\u{1D601}\u{1D604}\u{1D5FC}\u{1D5FF}\u{1D5F8}"* : Si a\xFAn no eres miembro puedes unirte desde este enlace: https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU
 
-\u{1F449} ${redirectLink}`;
+Te espero. \xA1All\xED te atender\xE9 con gusto! \u{1F680}`;
           this.queuedSend(chatId, redirectText);
         }
       }
@@ -6818,11 +6966,7 @@ Tambi\xE9n puedes consultarme directamente en mi chat privado con mi otra yo *Ja
               groupName
             );
           } else {
-            const redirectMsg = `\xA1Hola! \u{1F60A} Para resolver tus inquietudes inmobiliarias, dudas de corretaje, soporte t\xE9cnico o de cuenta, te invito a consultarme en privado a mi otro yo: **JanIA de Soporte y Atenci\xF3n** \u{1F4F2} en el n\xFAmero +57 3185462265 o haciendo clic aqu\xED: https://wa.me/573185462265. \xA1All\xED con gusto te responder\xE9 a profundidad! \u{1F680}`;
-            await this.queuedSend(chatId, redirectMsg, {
-              mentions: [resolvedSenderId],
-              quoted: msg
-            });
+            await this.handlePrivateDmRedirect(chatId, resolvedSenderId, realName);
             await this.sock.sendPresenceUpdate("paused", chatId);
             return;
           }
@@ -6920,12 +7064,24 @@ Tambi\xE9n puedes consultarme directamente en mi chat privado con mi otra yo *Ja
       }
       getReactionEmoji(result) {
         if (!result) return null;
-        if (result.inserted) {
-          return result.reactionEmoji || "\u{1F44D}";
+        let emoji = result.reactionEmoji;
+        if (emoji) {
+          if (emoji === "\u274C" || emoji === "\u26A0\uFE0F") emoji = "\u{1F6AB}";
+          if (emoji === "\u{1F4A1}" || emoji === "\u{1F504}") emoji = "\u{1F44C}";
+          if (emoji === "\u{1F914}" || emoji === "\u{1F7E2}") {
+            emoji = result.classification === "REQUERIMIENTO" ? "\u{1F4DD}" : "\u{1F44D}";
+          }
+          return emoji;
         }
         const classification = result.classification || "";
-        if (classification.includes("INMUEBLE") || classification.includes("REQUERIMIENTO") || classification.includes("PROPIEDAD")) {
-          return result.reactionEmoji || "\u2714\uFE0F";
+        if (classification.includes("INMUEBLE") || classification.includes("PROPIEDAD")) {
+          return "\u{1F44D}";
+        }
+        if (classification.includes("REQUERIMIENTO")) {
+          return "\u{1F4DD}";
+        }
+        if (classification.includes("VIOLACION_DE_NORMAS") || classification.includes("INVALID_LEAD")) {
+          return "\u{1F6AB}";
         }
         return null;
       }
@@ -7033,11 +7189,21 @@ Tambi\xE9n puedes consultarme directamente en mi chat privado con mi otra yo *Ja
             if (emoji) {
               const sendReaction = async () => {
                 try {
-                  const lastMsg = buffer.messages[buffer.messages.length - 1].originalMsg;
-                  console.log(`[JANIA-MATCH] Reaccionando con ${emoji} al mensaje de ${senderId}`);
-                  await this.sock.sendMessage(chatId, { react: { text: emoji, key: lastMsg.key } });
+                  const lastMsg = buffer.messages[buffer.messages.length - 1]?.originalMsg;
+                  if (lastMsg && lastMsg.key) {
+                    console.log(`[JANIA-MATCH] Reaccionando con ${emoji} al mensaje de ${senderId}`);
+                    const cleanKey = {
+                      remoteJid: lastMsg.key.remoteJid || chatId,
+                      id: lastMsg.key.id,
+                      fromMe: !!lastMsg.key.fromMe,
+                      participant: lastMsg.key.participant
+                    };
+                    await this.sock.sendMessage(chatId, { react: { text: emoji, key: cleanKey } });
+                  } else {
+                    console.warn("[JANIA-MATCH] No se pudo reaccionar: lastMsg o lastMsg.key es nulo.");
+                  }
                 } catch (reactErr) {
-                  console.error("[JANIA-MATCH] Error al reaccionar al mensaje:", reactErr.message || reactErr);
+                  console.error("[JANIA-MATCH] Error al reaccionar al mensaje:", reactErr);
                 }
               };
               const delayMs = Math.floor(Math.random() * (12e3 - 4e3 + 1)) + 4e3;
@@ -7070,7 +7236,8 @@ ${result.response}`);
               }
             } else {
               console.log(`[JANIA-MATCH] Publicaci\xF3n con advertencia/incompleta de ${senderId} en ${chatId} procesada.`);
-              if (result.classification === "VIOLACION_DE_NORMAS" && isBotAdmin && result.response && result.response.trim() !== "") {
+              const isOfficial = chatId === this.targetGroupId || chatId === this.buzonGroupId || chatId === this.circuloGroupId;
+              if (result.classification === "VIOLACION_DE_NORMAS" && isOfficial && isBotAdmin && result.response && result.response.trim() !== "") {
                 const textToDeliver = result.response;
                 const { textToSpeechMedia: textToSpeechMedia2 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
                 const voiceToDeliver = result.voiceResponse || textToDeliver;
@@ -7251,15 +7418,18 @@ ${result.response}`);
       async handleRedirectText(msg, senderId, rawPhone) {
         try {
           const realName = msg.pushName || `Asesor +${rawPhone}`;
+          const firstName = extractFirstName2(realName);
           await this.sock.sendPresenceUpdate("composing", senderId);
           await delay(2e3);
-          const redirectMsg = `Hola ${realName} \u{1F44B}\u{1F3FB}. Si deseas que JanIA Match te responda de inmediato, por favor postea tu pregunta directamente en el chat del grupo oficial de VECY. \u{1F3E0}
+          const redirectMsg = `Hola ${firstName} \u{1F44B}\u{1F60A}. Si tienes dudas, inquietudes o quieres consultarme algo (sea por escrito o por notas de voz), te invito a escribir directamente al canal oficial privado de soporte de JanIA de la Web haciendo clic aqu\xED: https://vecy-network.vercel.app/jania para realizar tus consultas correspondientes o si est\xE1s en los grupos correspondientes seg\xFAn tu consulta puedes hacerlas all\xED de la siguiente manera:
 
-Si deseas chatear en privado de forma interactiva, por favor escribe a mi otra yo, **JanIA v3.5** \u{1F4F2}, a su n\xFAmero oficial directo: +57 3185462265 o haz clic aqu\xED: https://wa.me/573185462265.
+Mis grupos:
 
-\u26A0\uFE0F **Nota importante**: Recuerda que somos inteligencias netamente conversacionales. S\xED podemos resolver tus inquietudes, redactar descripciones comerciales, hacer an\xE1lisis y estructurar textos directamente aqu\xED en el chat. Sin embargo, **no tenemos la habilidad de crear im\xE1genes, videos, informes con gr\xE1ficas, ni de elaborar o enviar archivos PDF a trav\xE9s del chat**.
+Para publicar tus INMUEBLES y REQUERIMIENTOS tenemos el grupo de \u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E8}\u{1D5D8}\u{1D5D5}\u{1D5DF}\u{1D5D8}\u{1D5E6} \u{1D5E1}\u{1D5D8}\u{1D5E7}\u{1D5EA}\u{1D5E2}\u{1D5E5}\u{1D5DE} : Si a\xFAn no eres miembro, puedes unirte desde este enlace: https://chat.whatsapp.com/K36KrHeB9nMEKJ56s8XFcM
+Para hacer tus consultas de casos inmobiliarios en temas jur\xEDdicos, tributarios, aval\xFAos, ayuda en gu\xEDa de procesos y redacci\xF3n de contratos, tenemos el grupo de \u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC}: \u{1D5E6}\u{1D5E2}\u{1D5E3}\u{1D5E2}\u{1D5E5}\u{1D5E7}\u{1D5D8} \u{1D5DF}\u{1D5D8}\u{1D5DA}\u{1D5D4}\u{1D5DF}, \u{1D5E7}\u{1D5E5}\u{1D5DC}\u{1D5D5}\u{1D5E8}\u{1D5E7}\u{1D5D4}\u{1D5E5}\u{1D5DC}\u{1D5E2} \u{1D5EC} \u{1D5D4}\u{1D5E9}\u{1D5D4}\u{1D5DF}\xDA\u{1D5E2}\u{1D5E6} : Si a\xFAn no eres miembro, puedes unirte desde este enlace: https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6
+Para preguntar acerca de nuestro proyecto VECY Network y debatir acerca de nuestras funciones beneficios y competencias, tenemos el grupo de \u{1D5E3}\u{1D5E5}\u{1D5E2}\u{1D5EC}\u{1D5D8}\u{1D5D6}\u{1D5E7}\u{1D5E2} "\u{1D5E9}\u{1D5F2}\u{1D5F0}\u{1D606} \u{1D5E1}\u{1D5F2}\u{1D601}\u{1D604}\u{1D5FC}\u{1D5FF}\u{1D5F8}" : Si a\xFAn no eres miembro puedes unirte desde este enlace: https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU
 
-Si requieres un an\xE1lisis de mercado formal con gr\xE1ficas y PDF detallado, o piezas visuales/videos profesionales, este servicio lo realiza nuestro personal humano experto. Comun\xEDcate llamando al **+57 3166569719** para solicitar la cotizaci\xF3n e informe de nuestro equipo. \u{1F4C8}\u{1F4BC}`;
+Te espero. \xA1All\xED te atender\xE9 con gusto! \u{1F680}`;
           await this.queuedSend(senderId, redirectMsg, { quoted: msg });
           await this.logToDb(senderId, "janIA", redirectMsg);
           await this.sock.sendPresenceUpdate("paused", senderId);
@@ -7346,10 +7516,8 @@ Aqu\xED tienes el contacto directo del aliado que ofrece la propiedad:
 \u{1F4AC} *Su oferta:* ${prop.rawText || "Sin descripci\xF3n"}
 
 \xA1Les deseamos mucho \xE9xito en el cierre comercial! \u{1F91D}\u{1F680}`;
-            await this.queuedSend(ownerJid, msgToOwner);
-            await this.queuedSend(seekerJid, msgToSeeker);
-            await this.logToDb(ownerJid, "janIA", `[Match-Connected] Contact shared: Seeker is ${seekerPhone}`);
-            await this.logToDb(seekerJid, "janIA", `[Match-Connected] Contact shared: Owner is ${ownerPhone}`);
+            await this.logToDb(ownerJid, "janIA", `[Match-Connected] Match #M${matchId} connected in DB. Seeker is ${seekerPhone}`);
+            await this.logToDb(seekerJid, "janIA", `[Match-Connected] Match #M${matchId} connected in DB. Owner is ${ownerPhone}`);
           } else {
             await this.queuedSend(senderId, `\xA1Gracias! He registrado tu confirmaci\xF3n de inter\xE9s para la coincidencia *#M${matchId}*.
 
@@ -7370,6 +7538,22 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
             let targetJid = chatId;
             if (targetJid.endsWith("@c.us")) {
               targetJid = targetJid.replace("@c.us", "@s.whatsapp.net");
+            }
+            if (targetJid.endsWith("@g.us")) {
+              const isAuthorized = targetJid === this.targetGroupId || targetJid === this.buzonGroupId || targetJid === this.circuloGroupId;
+              if (!isAuthorized) {
+                console.log(`[JANIA-MATCH-SHIELD] Bloqueado env\xEDo de mensaje al grupo no autorizado: ${targetJid}`);
+                return;
+              }
+            }
+            if (targetJid.endsWith("@s.whatsapp.net")) {
+              const rawPhone = targetJid.split("@")[0];
+              const ADMIN_PHONE = process.env.ADMIN_PHONE || "573166569719";
+              const isAdmin = rawPhone.includes(ADMIN_PHONE) || rawPhone === ADMIN_PHONE || rawPhone === "573166569719" || rawPhone.includes("573185462265");
+              if (!isAdmin) {
+                console.log(`[JANIA-MATCH-SHIELD] Bloqueado env\xEDo de mensaje directo (DM) a usuario no administrador: ${targetJid}`);
+                return;
+              }
             }
             let messagePayload = {};
             if (typeof content === "string") {
@@ -7747,7 +7931,7 @@ async function recalculateAndCleanupMatches() {
         continue;
       }
       const newScore = calcularScoreMatch(req, prop);
-      if (newScore < 35) {
+      if (newScore < 85) {
         console.log(`[MATCH-CLEANUP] Eliminando Match #${m.id} por incompatibilidad (Nuevo Score: ${newScore}%, Score anterior: ${m.matchScore}%).`);
         await db.delete(propertyMatches).where(eq12(propertyMatches.id, m.id));
         deletedCount++;
@@ -10113,20 +10297,14 @@ async function sendVideoPromo(groupId, groupName) {
   try {
     if (!groupId) return;
     const videoPath = path5.resolve(__dirname, "../../dist/JanIAConsulta.mp4");
-    let mentions = [];
-    try {
-      mentions = await janiaMatchBot.getGroupParticipants(groupId);
-    } catch (mentionErr) {
-      console.warn(`[CRON-SERVICE] No se pudieron obtener participantes de ${groupName}:`, mentionErr);
-    }
-    const texto = `@todos \u{1F4AC} \xBFPrefieres una atenci\xF3n m\xE1s directa y personalizada?
+    const texto = `\u{1F4AC} \xBFPrefieres una atenci\xF3n m\xE1s directa y personalizada?
 
 Chatea directamente con *JanIA*, tu asistente de inteligencia artificial de VECY Network.
 
-\u{1F4F2} *Escr\xEDbele ahora:* https://wa.me/573185462265
+\u{1F4F2} *Escr\xEDbele en nuestra Consola Web:* https://vecy-network.vercel.app/jania
 
 Puedes compartirle tus inmuebles, requerimientos o consultas por texto, audio o imagen. Ella los lee, extrae los datos, los sube a nuestra base de datos y busca posibles coincidencias para ayudarte a cerrar negocios m\xE1s r\xE1pido. \xA1Haz clic en el enlace y empieza hoy! \u{1F3E0}\u{1F680}`;
-    await janiaMatchBot.sendToGroup(texto, videoPath, mentions, groupId);
+    await janiaMatchBot.sendToGroup(texto, videoPath, [], groupId);
     console.log(`[CRON-SERVICE] \u2713 Video promo enviado a ${groupName}.`);
   } catch (e) {
     console.error(`[CRON-SERVICE] Error enviando video promo a ${groupName}:`, e.message || e);
@@ -10138,7 +10316,7 @@ async function sendWeeklyReport() {
     if (!db) return;
     const propertiesCountRes = await db.select({ count: sql6`count(*)` }).from(properties).execute();
     const requirementsCountRes = await db.select({ count: sql6`count(*)` }).from(requirements).execute();
-    const matchesCountRes = await db.select({ count: sql6`count(*)` }).from(propertyMatches).where(gte3(sql6`(${propertyMatches.matchScore})::numeric`, 60)).execute();
+    const matchesCountRes = await db.select({ count: sql6`count(*)` }).from(propertyMatches).where(gte3(sql6`(${propertyMatches.matchScore})::numeric`, 85)).execute();
     const totalProperties = propertiesCountRes[0]?.count || 0;
     const totalRequirements = requirementsCountRes[0]?.count || 0;
     const totalMatches = matchesCountRes[0]?.count || 0;
@@ -10149,7 +10327,7 @@ async function sendWeeklyReport() {
       buyerAdvisor: requirements.idUsuarioWhatsapp,
       sellerAdvisor: properties.idUsuarioWhatsapp
     }).from(propertyMatches).innerJoin(requirements, eq13(propertyMatches.requirementId, requirements.id)).innerJoin(properties, eq13(propertyMatches.propertyId, properties.id)).where(and7(
-      gte3(sql6`(${propertyMatches.matchScore})::numeric`, 60),
+      gte3(sql6`(${propertyMatches.matchScore})::numeric`, 85),
       gte3(propertyMatches.createdAt, sevenDaysAgo)
     )).execute();
     let report = `\u{1F4CA} *INFORME SEMANAL DE ACTIVIDAD - VECY NETWORK* \u{1F4CA}
@@ -10265,37 +10443,10 @@ async function startServer() {
   });
   app.get("/api/screenshot-chat", async (req, res) => {
     try {
-      if (!oldWhatsappBot.isReady) {
-        return res.status(503).send("El bot de WhatsApp no est\xE1 listo todav\xEDa. Intenta en unos segundos.");
+      if (!janiaMatchBot.isReady) {
+        return res.status(503).send("El bot de WhatsApp (Baileys) no est\xE1 listo todav\xEDa.");
       }
-      const client = oldWhatsappBot.client;
-      const targetGroupId = oldWhatsappBot.targetGroupId;
-      if (!client || !client.pupPage) {
-        return res.status(503).send("El navegador de WhatsApp a\xFAn no est\xE1 listo. Intenta en unos segundos.");
-      }
-      const page = client.pupPage;
-      let chatTitle = "VECY INMUEBLES NETWORK";
-      try {
-        const chat = await client.getChatById(targetGroupId);
-        if (chat && chat.name) chatTitle = chat.name;
-      } catch (e) {
-      }
-      await page.evaluate((id, title) => {
-        const row = document.querySelector(`div[data-id*="${id}"]`) || Array.from(document.querySelectorAll("div")).find((el) => el.getAttribute("data-id")?.includes(id));
-        if (row) {
-          row.click();
-        } else {
-          const span = Array.from(document.querySelectorAll("span")).find((el) => el.textContent === title);
-          if (span) {
-            const parent = span.closest('div[role="row"]') || span.closest('div[data-testid="cell-frame-container"]') || span.closest("div");
-            if (parent) parent.click();
-          }
-        }
-      }, targetGroupId, chatTitle);
-      await new Promise((resolve) => setTimeout(resolve, 2500));
-      const screenshot = await page.screenshot({ type: "png" });
-      res.setHeader("Content-Type", "image/png");
-      res.send(screenshot);
+      return res.json({ isReady: true, status: "Baileys WebSocket activo" });
     } catch (err) {
       res.status(500).send(err.message);
     }
