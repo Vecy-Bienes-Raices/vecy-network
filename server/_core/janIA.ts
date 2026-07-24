@@ -87,7 +87,10 @@ export const janiaResultSchema = {
         },
         transactionType: {
           type: "STRING",
-          enum: ["venta", "arriendo", "arriendo_temporal", "permuta", "aporte"]
+          enum: [
+            "venta", "arriendo", "venta_o_arriendo", "arriendo_temporal",
+            "arriendo_con_opcion_de_compra", "permuta", "venta_permuta", "aporte"
+          ]
         },
         transactionTypes: {
           type: "ARRAY",
@@ -907,7 +910,7 @@ Constantemente recibes datos en diversos formatos (Texto plano, URLs de portales
     "zone": "string (Barrio/Municipio exacto)",
     "city": "string",
     "propertyType": "apartment | house | building | warehouse | office | farm | loft | consultorio",
-    "transactionType": "venta | arriendo | arriendo_temporal | permuta | aporte (el tipo de negocio PRINCIPAL)",
+    "transactionType": "venta | arriendo | venta_o_arriendo | arriendo_temporal | arriendo_con_opcion_de_compra | permuta | venta_permuta | aporte (el tipo de negocio PRINCIPAL. Usa 'venta_o_arriendo' cuando la propiedad se ofrece en ambas modalidades simultáneamente. Usa 'arriendo_con_opcion_de_compra' cuando el arrendatario tiene derecho de adquisición. Usa 'venta_permuta' cuando parte del pago se hace con otro bien inmueble o vehículo.)",
     "transactionTypes": ["array con TODOS los tipos aceptados, ej: ['venta','permuta'] o ['venta']. Captura múltiples cuando el mensaje menciona varias modalidades."],
     "area": number,
     "bedrooms": number,
@@ -1122,8 +1125,12 @@ export function translateTransactionType(type: string): string {
   const map: Record<string, string> = {
     venta: "VENTA",
     arriendo: "ARRIENDO",
+    venta_o_arriendo: "VENTA O ARRIENDO",
     arriendo_temporal: "ARRIENDO TEMPORAL",
-    permuta: "PERMUTA"
+    arriendo_con_opcion_de_compra: "ARRIENDO CON OPCIÓN DE COMPRA",
+    permuta: "PERMUTA",
+    venta_permuta: "VENTA / PERMUTA",
+    aporte: "APORTE"
   };
   return map[type?.toLowerCase()] || String(type || 'negocio').toUpperCase();
 }
@@ -2127,13 +2134,16 @@ function sanitizePropertyType(type: string): "apartment" | "house" | "building" 
   return "apartment";
 }
 
-function sanitizeTransactionType(type: string): "venta" | "arriendo" | "arriendo_temporal" | "permuta" | "aporte" {
+function sanitizeTransactionType(type: string): "venta" | "arriendo" | "venta_o_arriendo" | "arriendo_temporal" | "arriendo_con_opcion_de_compra" | "permuta" | "venta_permuta" | "aporte" {
   if (!type) return "venta";
-  const t = type.toLowerCase().trim();
+  const t = type.toLowerCase().trim().replace(/\s+/g, "_");
   if (t === "venta" || t === "vender" || t === "compra" || t === "comprar") return "venta";
+  if (t === "venta_o_arriendo" || t.includes("venta_o_arriendo") || t.includes("venta o arriendo") || t.includes("vendo o arriendo") || t.includes("venta_arriendo")) return "venta_o_arriendo";
+  if (t === "arriendo_con_opcion_de_compra" || t.includes("opcion_de_compra") || t.includes("opcion de compra") || t.includes("opción de compra") || t.includes("con opcion") || t.includes("con opción")) return "arriendo_con_opcion_de_compra";
   if (t === "arriendo" || t === "alquiler" || t === "renta" || t === "rentar" || t === "arrendar") return "arriendo";
   if (t === "arriendo_temporal" || t === "temporal" || t === "vacacional" || t === "vacaciones") return "arriendo_temporal";
-  if (t === "permuta" || t === "permuto" || t === "venpermuto" || t === "cambio" || t.includes("permuta")) return "permuta";
+  if (t === "venta_permuta" || t.includes("venta_permuta") || t.includes("venta permuta") || t.includes("venpermuto") || (t.includes("venta") && t.includes("permuta"))) return "venta_permuta";
+  if (t === "permuta" || t === "permuto" || t === "cambio" || t.includes("permuta")) return "permuta";
   if (t === "aporte" || t.includes("aporte") || t === "proyecto") return "aporte";
   return "venta";
 }
@@ -2143,12 +2153,25 @@ function sanitizeTransactionTypes(raw: string | string[] | undefined): string[] 
   const input = Array.isArray(raw) ? raw.join(" ") : (raw || "");
   const n = input.toLowerCase();
   const result: string[] = [];
-  if (n.includes("venta") || n.includes("vender") || n.includes("compra") || n.includes("comprar")) result.push("venta");
-  if (n.includes("arriendo") || n.includes("alquiler") || n.includes("renta") || n.includes("rentar")) result.push("arriendo");
+  // Detectar primero los tipos compuestos para evitar falsos positivos en los simples
+  if (n.includes("venta o arriendo") || n.includes("vendo o arriendo") || n.includes("venta_o_arriendo")) result.push("venta_o_arriendo");
+  if (n.includes("opcion de compra") || n.includes("opción de compra") || n.includes("con opcion") || n.includes("con opción") || n.includes("arriendo_con_opcion")) result.push("arriendo_con_opcion_de_compra");
+  if ((n.includes("venta") && n.includes("permuta")) || n.includes("venta_permuta") || n.includes("venpermuto")) result.push("venta_permuta");
+  // Luego los tipos simples (solo si no ya cubiertos por compuestos)
+  const hasVentaOArriendo = result.includes("venta_o_arriendo");
+  const hasVentaPermuta = result.includes("venta_permuta");
+  if (!hasVentaOArriendo && !hasVentaPermuta) {
+    if (n.includes("venta") || n.includes("vender") || n.includes("compra") || n.includes("comprar")) result.push("venta");
+  }
+  if (!hasVentaOArriendo && !result.includes("arriendo_con_opcion_de_compra")) {
+    if (n.includes("arriendo") || n.includes("alquiler") || n.includes("renta") || n.includes("rentar")) result.push("arriendo");
+  }
   if (n.includes("temporal") || n.includes("vacacional") || n.includes("vacaciones")) result.push("arriendo_temporal");
-  if (n.includes("permuta") || n.includes("permuto") || n.includes("venpermuto") ||
-      n.includes("recibo propiedad") || n.includes("recibo vehiculo") || n.includes("parte de pago") ||
-      n.includes("cambio de inmueble")) result.push("permuta");
+  if (!hasVentaPermuta) {
+    if (n.includes("permuta") || n.includes("permuto") ||
+        n.includes("recibo propiedad") || n.includes("recibo vehiculo") || n.includes("parte de pago") ||
+        n.includes("cambio de inmueble")) result.push("permuta");
+  }
   if (n.includes("aporte") || n.includes("participo en proyecto") || n.includes("constructora") ||
       n.includes("unidades a cambio") || n.includes("utilidades")) result.push("aporte");
   return result.length > 0 ? result : [sanitizeTransactionType(input)];
@@ -2314,6 +2337,8 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
     currency: sanitizeCurrency(data.currency),
     // Mapear explícitamente los campos para mayor robustez
     price: data.price !== undefined && data.price !== null ? String(data.price) : null,
+    // Para venta_o_arriendo: rentPrice guarda el precio de arriendo separado del precio de venta
+    rentPrice: data.rentPrice !== undefined && data.rentPrice !== null ? String(data.rentPrice) : null,
     areaTotal: data.areaTotal !== undefined && data.areaTotal !== null ? String(data.areaTotal) : (data.area !== undefined && data.area !== null ? String(data.area) : null),
     bedrooms: data.bedrooms !== undefined && data.bedrooms !== null ? Math.round(Number(data.bedrooms)) : null,
     bathrooms: data.bathrooms !== undefined && data.bathrooms !== null ? Math.round(Number(data.bathrooms)) : null,

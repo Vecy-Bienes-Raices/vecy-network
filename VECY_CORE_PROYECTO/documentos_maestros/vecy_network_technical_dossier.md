@@ -238,10 +238,129 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 5.  **Excepción: Carpeta `client/src/components/agenda-pro` (MANTENER y REFACTORIZAR)**:
     *   *Análisis*: Aunque los archivos dentro de esta carpeta están en formato JavaScript tradicional (`.jsx` / `.js`) y no TypeScript, **no debemos eliminar esta carpeta**. La página `client/src/pages/Agenda.tsx` utiliza activamente `AgendaForm` y `GraciasScreen` de este módulo para el agendamiento de visitas. Se debe mantener, sugiriendo su posterior refactorización a TypeScript (`.tsx`) para unificar la base de código.
 
-### 🟡 Qué Crear / Proponer (Estructura Óptima del Sistema)
-1.  **Cola de Ingesta Asíncrona (BullMQ + Redis)**: Desacoplar la escucha de Baileys para procesar mensajes de WhatsApp a través de workers en background, evitando bloqueos de socket.
-2.  **Social Media Engagement Tracker API**: Desarrollar el microservicio de rastreo de redes sociales para capturar clicks, shares y otorgar los puntos dinámicos a la red de agentes.
-3.  **Módulo de Contratos y Pagos en la Web**:
-    *   Integrar pasarela de pagos para el pago del anticipo de arras de los inmuebles.
-    *   Generación automática de contratos de corretaje y acuerdos de puntas que se envíen vía correo certificado con firma electrónica al confirmarse un match en la web.
-4.  **Shared Inbox (Buzón de Intervención Humana)**: Panel web administrativo para que el equipo humano (Jani Alves) responda chats privados de WhatsApp centralizadamente desde la plataforma.
+    4.  **Shared Inbox (Buzón de Intervención Humana)**: Panel web administrativo para que el equipo humano (Jani Alves) responda chats privados de WhatsApp centralizadamente desde la plataforma.
+
+---
+
+## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
+
+> Esta sección documenta de forma permanente los cambios de ingeniería, correcciones de errores críticos y decisiones de diseño tomadas durante el desarrollo del sistema. Sirve como referencia histórica y de contexto para cualquier desarrollador o agente de IA que retome el proyecto.
+
+---
+
+### 🔖 v17.1 — Julio 2026
+
+#### 📌 EXPANSIÓN DE TIPOS DE TRANSACCIÓN (Breaking Change de BD)
+
+**Problema identificado:** El enum `transactionType` de PostgreSQL solo contemplaba `venta | arriendo | arriendo_temporal | permuta | aporte`. Esto no representaba la realidad del mercado inmobiliario colombiano, donde es muy frecuente que una propiedad se ofrezca simultáneamente en venta y arriendo, o que se proponga una negociación con permuta parcial.
+
+**Solución aplicada:** Se ejecutó migración en Supabase con los siguientes nuevos valores:
+
+| Tipo (valor en BD) | Etiqueta | Descripción |
+|---|---|---|
+| `venta_o_arriendo` | VENTA O ARRIENDO | El propietario acepta cualquiera de las dos modalidades (lo que primero ocurra). MUY COMÚN en el mercado colombiano. |
+| `arriendo_con_opcion_de_compra` | ARRIENDO CON OPCIÓN DE COMPRA | El arrendatario tiene derecho de adquisición sobre el inmueble. |
+| `venta_permuta` | VENTA / PERMUTA | Parte del pago se realiza con otro bien (inmueble, vehículo, etc.). Los porcentajes son libres: 50/50, 70/30, 20/80, etc. La proporción se captura en el campo `description`. |
+
+**Archivos modificados:**
+- `drizzle/schema.ts` → Enum expandido, nuevo campo `rent_price DECIMAL(15,2)` en tabla `properties`
+- `server/_core/janIA.ts` → `translateTransactionType`, `sanitizeTransactionType`, `sanitizeTransactionTypes`, prompt de extracción
+- `server/_core/matching.ts` → Función `checkTransactionCompatibility` (ver abajo)
+- `server/routers/matching.ts` → Zod enum actualizado
+
+**Nuevo campo en base de datos:**
+- `rent_price NUMERIC(15,2)` en tabla `properties`: Almacena el precio de arriendo cuando `transactionType = venta_o_arriendo`. El campo `price` conserva el precio de venta. Esto permite mostrar ambos precios en la ficha web sin ambigüedad.
+
+---
+
+#### 📌 MOTOR DE MATCHING INTELIGENTE — COMPATIBILIDAD CRUZADA
+
+**Problema identificado:** La lógica de matching en `server/_core/matching.ts` solo hacía match cuando `requirement.tipoNegocioDeseado === property.transactionType` (igualdad exacta). Esto dejaba fuera matches válidos del mercado. Ejemplo: Una propiedad en `venta_o_arriendo` no era encontrada por un requerimiento de `arriendo`.
+
+**Solución aplicada:** Se creó la función `checkTransactionCompatibility(reqType, propType, propAccepted[])` con las siguientes reglas de compatibilidad cruzada del mercado colombiano:
+
+```
+propiedad venta_o_arriendo    ←→  requerimiento venta, arriendo, arriendo_con_opcion_de_compra
+propiedad venta_permuta       ←→  requerimiento venta, permuta
+propiedad arriendo_con_opcion ←→  requerimiento arriendo (el cliente puede estar interesado)
+array acceptedTransactionTypes←→  siempre se revisa como fuente adicional de compatibilidad
+```
+
+Esta función reemplaza los dos bloques de comparación exacta que existían (uno en la función de scoring, otro en el loop masivo de matching de grupo).
+
+---
+
+#### 📌 CORRECCIÓN CRÍTICA: API GEMINI 400 BAD REQUEST
+
+**Problema identificado:** Google Gemini 2.5 Flash **no permite combinar** la herramienta `googleSearch` con el modo de salida estructurada `responseMimeType: "application/json"` (JSON Schema). Esto causaba que ciertas publicaciones (especialmente las raspadas de portales externos con lenguaje técnico-legal) fallaran con error `400 Bad Request`, y JanIA caía al fallback `CONSULTA_GENERAL` sin insertar el registro ni reaccionar al mensaje.
+
+**Solución aplicada en `server/_core/llm.ts`:** La herramienta `googleSearch` solo se inyecta en el payload cuando `responseFormat?.type !== "json_object"`. Las llamadas de extracción (que usan JSON Schema) nunca incluyen `googleSearch`. Las llamadas de asesoría (que usan texto libre) sí pueden usar `googleSearch`.
+
+---
+
+#### 📌 EXTRACCIÓN UNIVERSAL — TODOS LOS GRUPOS, TODOS LOS FORMATOS
+
+**Problema identificado:** Existía un filtro en `whatsapp-match.ts` que bloqueaba silenciosamente la extracción de mensajes provenientes de grupos "no autorizados". Esto impedía que JanIA capturara inmuebles y requerimientos de grupos externos donde los asesores también publican.
+
+**Decisión de diseño:** Se eliminó el filtro de grupos restringidos para la extracción. JanIA ahora procesa y guarda en Supabase publicaciones de **cualquier grupo**, en **cualquier formato**:
+- Texto escrito (con o sin ciudad explícita)
+- Imagen con texto incrustado (OCR/Visión)
+- Flyer de propiedad
+- Audio (transcripción + extracción)
+- Enlace de portal externo: Wasi, Habi, FincaRaíz, Metrocuadrado, Ciencuadras, Qrador, Ubicapp, etc.
+- Página web propia del agente o catálogo personal
+
+**Comportamiento en grupos NO autorizados:** JanIA extrae y guarda silenciosamente (sin reaccionar con emoji ni enviar texto). El silencio de reacción se mantiene en grupos no oficiales.
+
+---
+
+#### 📌 INFERENCIA AUTOMÁTICA DE CIUDAD POR NOMBRE DE GRUPO
+
+**Problema identificado:** Muchas publicaciones en grupos regionales no mencionan explícitamente la ciudad porque el contexto es implícito para los miembros del grupo (ej: en un grupo llamado "INMUEBLES CALI 🏠" todos asumen que los inmuebles son en Cali).
+
+**Solución aplicada en `server/_core/janIA.ts`:** Si el campo `city` está vacío o es `"NA"` después de la extracción LLM, JanIA infiere la ciudad del nombre del grupo de WhatsApp, buscando coincidencias con las ciudades principales de Colombia:
+```
+Bogotá, Cali, Medellín, Barranquilla, Bucaramanga, Cartagena, Pereira,
+Manizales, Cúcuta, Ibagué, Santa Marta, Villavicencio, Pasto
+```
+Esto garantiza que publicaciones sin ciudad explícita se geocodifiquen correctamente y puedan cruzarse en el motor de matching.
+
+---
+
+#### 📌 COMPORTAMIENTO REQUERIMIENTO vs INMUEBLE — ACLARACIONES CONCEPTUALES
+
+Para evitar confusión futura en el desarrollo y en los prompts de JanIA:
+
+- **INMUEBLE** = Oferta. El agente TIENE una propiedad disponible y la publica para vender/arrendar. Se guarda en tabla `properties`.
+- **REQUERIMIENTO** = Demanda. El agente TIENE UN CLIENTE buscando una propiedad con características específicas y publica para ver si alguien de la red la tiene. Se guarda en tabla `requirements`.
+
+El campo `tipoNegocioDeseado` en un REQUERIMIENTO representa lo que el **cliente quiere hacer**: comprar, arrendar, arrendar con opción, etc. Este campo ahora acepta los mismos valores expandidos que `transactionType` en inmuebles.
+
+El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerimientos compatibles. Cuando entra un nuevo requerimiento, se buscan inmuebles compatibles.
+
+**Compatibilidad cruzada en matching de requerimientos:**
+- Requerimiento `arriendo` → puede hacer match con propiedad `venta_o_arriendo` ✅
+- Requerimiento `venta` → puede hacer match con propiedad `venta_o_arriendo` ✅
+- Requerimiento `venta` → puede hacer match con propiedad `venta_permuta` ✅
+- Requerimiento `arriendo` → puede hacer match con propiedad `arriendo_con_opcion_de_compra` ✅
+
+---
+
+#### 📌 SILENCIO FANTASMA EN GRUPOS — MODO INGESTA PURA
+
+**Comportamiento definido para grupos de WhatsApp:**
+1. JanIA lee TODO sin excepción.
+2. Si el grupo es oficial (VECY INMUEBLES NETWORK): extrae + reacciona con emoji (👍 inmueble / 📝 requerimiento).
+3. Si el grupo NO es oficial: extrae + guarda en Supabase silenciosamente. Sin emoji, sin texto, sin voz.
+4. Nunca envía texto escrito ni nota de voz en grupos de trabajo (solo en chats privados y en el grupo de Soporte Legal/Tributario y Proyecto Vecy Network).
+5. El contexto del historial de chat privado NO se carga para mensajes de grupo, evitando contaminación de contexto entre conversaciones.
+
+---
+
+#### 📌 RESTRICCIÓN HORARIA — SILENCIO NOCTURNO
+
+- **Ventana de silencio:** 10:30 PM — 5:00 AM (hora de Bogotá, UTC-5)
+- **Durante el silencio:** La ingesta y geocodificación siguen activas. Solo se bloquean los mensajes salientes (reacciones, textos, audios TTS).
+- **Verificación:** La hora se evalúa en zona horaria `America/Bogota` con `Date.toLocaleString()` para evitar errores por cambios de horario.
+
+

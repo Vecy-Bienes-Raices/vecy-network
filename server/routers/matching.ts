@@ -42,7 +42,10 @@ export const matchingRouter = router({
         "apartment", "house", "building", "warehouse", "farm", "hotel", 
         "office", "land", "commercial", "loft", "consultorio"
       ]),
-      tipoNegocioDeseado: z.enum(["venta", "arriendo", "arriendo_temporal"]),
+      tipoNegocioDeseado: z.enum([
+        "venta", "arriendo", "venta_o_arriendo", "arriendo_temporal",
+        "arriendo_con_opcion_de_compra", "permuta", "venta_permuta", "aporte"
+      ]),
       ciudadDeseada: z.string().default("Bogotá"),
       zonaDeseada: z.string().optional(),
       presupuestoMax: z.string(),

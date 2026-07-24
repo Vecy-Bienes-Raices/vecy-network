@@ -15,6 +15,46 @@ function hasAledanos(text: string): boolean {
   return n.includes("aledan") || n.includes("cercan") || n.includes("alrededor") || n.includes("similar") || n.includes("proxim") || n.includes("otro");
 }
 
+/**
+ * Compatibilidad inteligente de tipos de transacción.
+ * Implementa la lógica real del mercado inmobiliario colombiano:
+ * - Una propiedad en "venta_o_arriendo" es compatible con requerimientos de "venta" O "arriendo"
+ * - Un requerimiento de "arriendo" es compatible con propiedades "arriendo_con_opcion_de_compra"
+ * - Un requerimiento de "arriendo_con_opcion_de_compra" es compatible con "venta_o_arriendo"
+ * - Un requerimiento de "venta" es compatible con "venta_permuta"
+ * - La compatibilidad también revisa el array acceptedTransactionTypes de la propiedad
+ */
+function checkTransactionCompatibility(reqType: string, propType: string, propAccepted: string[] = []): boolean {
+  if (!reqType || !propType) return false;
+  const r = reqType.toLowerCase();
+  const p = propType.toLowerCase();
+
+  // Igualdad exacta siempre aplica
+  if (r === p) return true;
+
+  // Revisar acceptedTransactionTypes de la propiedad
+  if (propAccepted.length > 0 && propAccepted.includes(r)) return true;
+
+  // Reglas de compatibilidad cruzada del mercado colombiano:
+
+  // "venta_o_arriendo" es compatible con cualquier intención de venta o arriendo
+  if (p === "venta_o_arriendo" && (r === "venta" || r === "arriendo" || r === "arriendo_con_opcion_de_compra")) return true;
+
+  // Si el requerimiento es "venta_o_arriendo", la propiedad solo necesita ofrecer una de las dos
+  if (r === "venta_o_arriendo" && (p === "venta" || p === "arriendo" || p === "arriendo_con_opcion_de_compra")) return true;
+
+  // "venta_permuta" es compatible con requerimientos de "venta" o "permuta"
+  if (p === "venta_permuta" && (r === "venta" || r === "permuta")) return true;
+  if (r === "venta_permuta" && (p === "venta" || p === "permuta")) return true;
+
+  // "arriendo_con_opcion_de_compra" también es compatible con requerimientos de "arriendo" puro
+  // (el cliente que busca arrendar puede estar interesado en la opción de compra)
+  if (p === "arriendo_con_opcion_de_compra" && r === "arriendo") return true;
+
+  return false;
+}
+
+
 export function matchesGeography(
   reqZoneRaw: string,
   propZoneRaw: string,
@@ -294,14 +334,19 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
-  // A. transactionType (Venta o Arriendo)
+  // A. transactionType — Compatibilidad inteligente (no solo igualdad exacta)
   const reqBiz = (requirement.tipoNegocioDeseado || requirement.transactionType || "").toLowerCase();
   const propBiz = (property.transactionType || "").toLowerCase();
-  if (!reqBiz || !propBiz || reqBiz !== propBiz) {
-    blockers.push(`Incompatibilidad de negocio: deseado ${reqBiz}, ofrecido ${propBiz}`);
+  const propAccepted: string[] = Array.isArray(property.acceptedTransactionTypes)
+    ? (property.acceptedTransactionTypes as string[]).map((t: string) => t.toLowerCase())
+    : [];
+
+  const transactionCompatible = checkTransactionCompatibility(reqBiz, propBiz, propAccepted);
+  if (!transactionCompatible) {
+    blockers.push(`Incompatibilidad de negocio: deseado '${reqBiz}', ofrecido '${propBiz}'`);
     return buildExplanationResult(0, blockers, positives, negatives);
   }
-  positives.push(`Tipo de negocio coincide: ${reqBiz}`);
+  positives.push(`Tipo de negocio compatible: req='${reqBiz}' ↔ prop='${propBiz}'`);
 
   // B. city (Ciudad)
   const CIUDADES_CO = ["bogota", "medellin", "cali", "barranquilla", "cartagena",
@@ -788,10 +833,13 @@ export async function executeMatchEngine(propertyId: number | null, requirementI
     for (const prop of props) {
       for (const req of reqs) {
 
-        // ── FILTRO 1: Mismo tipo de negocio (Venta / Arriendo) ──────────────
+        // ── FILTRO 1: Compatibilidad inteligente de tipo de negocio ─────────
         const pBiz = (prop.transactionType || "").toLowerCase();
         const rBiz = (req.tipoNegocioDeseado || "").toLowerCase();
-        if (!pBiz || !rBiz || pBiz !== rBiz) continue;
+        const pAccepted: string[] = Array.isArray(prop.acceptedTransactionTypes)
+          ? (prop.acceptedTransactionTypes as string[]).map((t: string) => t.toLowerCase())
+          : [];
+        if (!pBiz || !rBiz || !checkTransactionCompatibility(rBiz, pBiz, pAccepted)) continue;
 
         // ── FILTRO 2: Mismo tipo de inmueble ─────────────────────────────────
         const pType = (prop.propertyType || "").toLowerCase();

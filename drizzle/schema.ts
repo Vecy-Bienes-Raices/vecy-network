@@ -6,7 +6,16 @@ export const propertyTypeEnum = pgEnum("propertyType", [
   "apartment", "house", "building", "warehouse", "farm", "hotel", 
   "office", "land", "commercial", "loft", "consultorio"
 ]);
-export const transactionTypeEnum = pgEnum("transactionType", ["venta", "arriendo", "arriendo_temporal", "permuta", "aporte"]);
+export const transactionTypeEnum = pgEnum("transactionType", [
+  "venta",
+  "arriendo",
+  "venta_o_arriendo",
+  "arriendo_temporal",
+  "arriendo_con_opcion_de_compra",
+  "permuta",
+  "venta_permuta",
+  "aporte"
+]);
 export const mandateStatusEnum = pgEnum("mandateStatus", ["pending", "signed"]);
 export const mandateTypeEnum = pgEnum("mandateType", ["direct_owner", "agent_electronic_link", "agent_uploaded_paper"]);
 export const inquiryTypeEnum = pgEnum("inquiryType", ["buy", "sell", "rent", "invest", "general"]);
@@ -56,6 +65,7 @@ export const properties = pgTable("properties", {
   propertyType: propertyTypeEnum("propertyType").notNull(),
   transactionType: transactionTypeEnum("transactionType").notNull().default("venta"),
   price: decimal("price", { precision: 15, scale: 2 }).notNull(),
+  rentPrice: decimal("rent_price", { precision: 15, scale: 2 }), // Precio de arriendo cuando transactionType = venta_o_arriendo
   currency: currencyEnum("currency").default("COP").notNull(),
   pricePerSqm: decimal("pricePerSqm", { precision: 10, scale: 2 }),
   city: varchar("city", { length: 100 }).notNull().default("Bogotá"),
