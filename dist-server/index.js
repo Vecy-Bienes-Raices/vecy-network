@@ -3417,11 +3417,11 @@ async function muteSession(userId, isMuted) {
   try {
     const db = await getDb();
     if (!db) return;
-    const cleanJid = cleanSessionJid(userId);
-    const muteJid = `mute:${cleanJid}`;
+    const cleanJid2 = cleanSessionJid(userId);
+    const muteJid = `mute:${cleanJid2}`;
     if (!isMuted) {
       await db.delete(pendingSessions).where(eq4(pendingSessions.jid, muteJid));
-      console.log(`[JanIA-Mute] Sesi\xF3n ${cleanJid} desmarcada (eliminada de BD)`);
+      console.log(`[JanIA-Mute] Sesi\xF3n ${cleanJid2} desmarcada (eliminada de BD)`);
       return;
     }
     const data = { isMuted: true, mutedAt: (/* @__PURE__ */ new Date()).toISOString() };
@@ -3436,7 +3436,7 @@ async function muteSession(userId, isMuted) {
         updatedAt: /* @__PURE__ */ new Date()
       }
     });
-    console.log(`[JanIA-Mute] Sesi\xF3n ${cleanJid} marcada como isMuted = true en BD`);
+    console.log(`[JanIA-Mute] Sesi\xF3n ${cleanJid2} marcada como isMuted = true en BD`);
   } catch (err) {
     console.error("[Database] Error muting session:", err);
   }
@@ -3445,8 +3445,8 @@ async function isSessionMuted(userId) {
   try {
     const db = await getDb();
     if (!db) return false;
-    const cleanJid = cleanSessionJid(userId);
-    const [existing] = await db.select().from(pendingSessions).where(eq4(pendingSessions.jid, `mute:${cleanJid}`)).limit(1);
+    const cleanJid2 = cleanSessionJid(userId);
+    const [existing] = await db.select().from(pendingSessions).where(eq4(pendingSessions.jid, `mute:${cleanJid2}`)).limit(1);
     if (!existing) return false;
     return !!existing.sessionData?.isMuted;
   } catch (err) {
@@ -3458,8 +3458,8 @@ async function getPendingSession(userId) {
   try {
     const db = await getDb();
     if (!db) return null;
-    const cleanJid = cleanSessionJid(userId);
-    const [session] = await db.select().from(pendingSessions).where(eq4(pendingSessions.jid, cleanJid)).limit(1);
+    const cleanJid2 = cleanSessionJid(userId);
+    const [session] = await db.select().from(pendingSessions).where(eq4(pendingSessions.jid, cleanJid2)).limit(1);
     if (!session) return null;
     return session.sessionData;
   } catch (err) {
@@ -3471,8 +3471,8 @@ async function deletePendingSession(userId) {
   try {
     const db = await getDb();
     if (!db) return;
-    const cleanJid = cleanSessionJid(userId);
-    await db.delete(pendingSessions).where(eq4(pendingSessions.jid, cleanJid));
+    const cleanJid2 = cleanSessionJid(userId);
+    await db.delete(pendingSessions).where(eq4(pendingSessions.jid, cleanJid2));
   } catch (err) {
     console.error("[Database] Error deleting pending session:", err);
   }
@@ -6578,7 +6578,7 @@ var init_whatsapp_match = __esm({
             const fromMe = msg.key.fromMe;
             const rawChatId = msg.key.remoteJid;
             if (!rawChatId) continue;
-            const cleanJid = (jid) => {
+            const cleanJid2 = (jid) => {
               if (!jid) return "";
               if (jid.includes("@")) {
                 const [userPart, domain] = jid.split("@");
@@ -6587,12 +6587,12 @@ var init_whatsapp_match = __esm({
               }
               return jid.split(":")[0];
             };
-            const chatId = cleanJid(rawChatId);
+            const chatId = cleanJid2(rawChatId);
             const isGroup = chatId.endsWith("@g.us");
             if (fromMe && isGroup) continue;
             const rawSenderId = isGroup ? msg.key.participant || msg.participant : rawChatId;
             if (!rawSenderId || isGroup && rawSenderId.endsWith("@g.us")) continue;
-            const senderId = cleanJid(rawSenderId);
+            const senderId = cleanJid2(rawSenderId);
             if (chatId.includes("status@broadcast") || senderId.includes("status@broadcast")) {
               continue;
             }
@@ -6650,9 +6650,9 @@ var init_whatsapp_match = __esm({
                   body = qm.conversation || qm.extendedTextMessage?.text || qm.imageMessage?.caption || "";
                 }
                 const textLower = body.toLowerCase();
-                const botJid = this.sock?.user?.id ? cleanJid(this.sock.user.id) : "";
+                const botJid = this.sock?.user?.id ? cleanJid2(this.sock.user.id) : "";
                 const botPhone = botJid ? botJid.split("@")[0] : "";
-                const mentionsBot = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.some((jid) => cleanJid(jid) === botJid);
+                const mentionsBot = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.some((jid) => cleanJid2(jid) === botJid);
                 const hasDirectMention = textLower.includes("jania") || botPhone && textLower.includes(botPhone) || textLower.includes("573166569719") || !!mentionsBot;
                 const isMainGroup = chatId === this.targetGroupId;
                 const isBuzonGroup = chatId === this.buzonGroupId;
@@ -7198,28 +7198,23 @@ Tambi\xE9n puedes consultarme directamente en mi chat privado con mi otra yo *Ja
           if (result) {
             const emoji = this.getReactionEmoji(result);
             if (emoji) {
-              const sendReaction = async () => {
-                try {
-                  const lastMsg = buffer.messages[buffer.messages.length - 1]?.originalMsg;
-                  if (lastMsg && lastMsg.key) {
-                    console.log(`[JANIA-MATCH] Reaccionando con ${emoji} al mensaje de ${senderId}`);
-                    const cleanKey = {
-                      remoteJid: lastMsg.key.remoteJid || chatId,
-                      id: lastMsg.key.id,
-                      fromMe: !!lastMsg.key.fromMe,
-                      participant: lastMsg.key.participant
-                    };
-                    await this.sock.sendMessage(chatId, { react: { text: emoji, key: cleanKey } });
-                  } else {
-                    console.warn("[JANIA-MATCH] No se pudo reaccionar: lastMsg o lastMsg.key es nulo.");
-                  }
-                } catch (reactErr) {
-                  console.error("[JANIA-MATCH] Error al reaccionar al mensaje:", reactErr);
+              try {
+                const lastMsg = buffer.messages[buffer.messages.length - 1]?.originalMsg;
+                if (lastMsg && lastMsg.key) {
+                  const targetKey = {
+                    remoteJid: lastMsg.key.remoteJid || chatId,
+                    id: lastMsg.key.id,
+                    fromMe: !!lastMsg.key.fromMe,
+                    participant: lastMsg.key.participant ? cleanJid(lastMsg.key.participant) : void 0
+                  };
+                  console.log(`[JANIA-MATCH] Reaccionando de inmediato con ${emoji} al mensaje de ${senderId} en ${chatId}`);
+                  await this.sock.sendMessage(chatId, { react: { text: emoji, key: targetKey } });
+                } else {
+                  console.warn("[JANIA-MATCH] No se pudo reaccionar: lastMsg o lastMsg.key es nulo.");
                 }
-              };
-              const delayMs = Math.floor(Math.random() * 2e3) + 1e3;
-              console.log(`[JANIA-MATCH] Inserci\xF3n confirmada en Grupo. Retrasando reacci\xF3n ${emoji} por ${delayMs}ms...`);
-              setTimeout(sendReaction, delayMs);
+              } catch (reactErr) {
+                console.error("[JANIA-MATCH] Error al reaccionar al mensaje:", reactErr);
+              }
             }
           }
           if (result) {
