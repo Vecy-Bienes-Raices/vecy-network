@@ -45,8 +45,12 @@ function checkTransactionCompatibility(reqType: string, propType: string, propAc
   if (p === "venta_permuta" && (r === "venta" || r === "permuta")) return true;
   if (r === "venta_permuta" && (p === "venta" || p === "permuta")) return true;
 
-  // NOTA DOCTRINAL VECY: "arriendo_con_opcion_de_compra" JAMÁS coincide con "arriendo" puro ni "venta" pura.
-  // Solo coincide con "arriendo_con_opcion_de_compra" (igualdad exacta arriba) o con "venta_o_arriendo".
+  // 3. "arriendo_con_opcion_de_compra": compatible con "venta" pura
+  if (p === "arriendo_con_opcion_de_compra" && r === "venta") return true;
+  if (r === "arriendo_con_opcion_de_compra" && p === "venta") return true;
+
+  // NOTA DOCTRINAL VECY (v17.2): "arriendo_con_opcion_de_compra" JAMÁS coincide con "arriendo" puro.
+  // Coincide con: arriendo_con_opcion_de_compra, venta_o_arriendo y venta.
 
   return false;
 }

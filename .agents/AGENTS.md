@@ -79,14 +79,14 @@ aporte                        → Aporte a proyecto de construcción
 Función `checkTransactionCompatibility()` en `server/_core/matching.ts`:
 
 ```
-venta                         ← compatible con → req: venta, venta_o_arriendo, venta_permuta
+venta                         ← compatible con → req: venta, venta_o_arriendo, venta_permuta, arriendo_con_opcion_de_compra
 arriendo                      ← compatible con → req: arriendo, venta_o_arriendo
-arriendo_con_opcion_de_compra ← compatible con → req: arriendo_con_opcion_de_compra, venta_o_arriendo
+arriendo_con_opcion_de_compra ← compatible con → req: arriendo_con_opcion_de_compra, venta_o_arriendo, venta
 permuta                       ← compatible con → req: permuta, venta_permuta
 ```
 
-> ⚠️ **REGLA CRÍTICA DOCTRINAL (v17.2)**: `arriendo_con_opcion_de_compra` **JAMÁS coincide con `arriendo` puro ni `venta` pura**.
-> Un propietario o cliente que busca opción de compra no acepta un arriendo simple. Únicamente coincide con `arriendo_con_opcion_de_compra` o con `venta_o_arriendo`.
+> ⚠️ **REGLA CRÍTICA DOCTRINAL (v17.2)**: `arriendo_con_opcion_de_compra` **JAMÁS coincide con `arriendo` puro**.
+> Únicamente coincide con `arriendo_con_opcion_de_compra`, `venta_o_arriendo` y `venta` pura (ya que quien busca o tiene opción de compra sí está dispuesto a vender o comprar directamente).
 
 ---
 
