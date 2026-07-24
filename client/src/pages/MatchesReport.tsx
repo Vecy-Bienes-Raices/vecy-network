@@ -108,16 +108,17 @@ function checkTxCompatFrontend(reqTypeRaw: string, propTypeRaw: string, propAcce
   return false;
 }
 
-type MatchStatus = "exact" | "ok" | "warn" | "missing";
+type MatchStatus = "exact" | "ok" | "warn" | "neutral" | "missing";
 
 function MatchBadge({ status }: { status: MatchStatus }) {
   const configs = {
-    exact: { bg: "bg-emerald-500/10 border-emerald-500/30 text-emerald-400", label: "✅ Exacto" },
+    exact: { bg: "bg-emerald-500/10 border-emerald-500/30 text-emerald-400", label: "✅ Coincide" },
     ok: { bg: "bg-emerald-500/10 border-emerald-500/30 text-emerald-400", label: "✅ Cumple" },
     warn: { bg: "bg-amber-500/10 border-amber-500/30 text-amber-400", label: "⚠️ Aprox." },
+    neutral: { bg: "bg-zinc-500/10 border-zinc-500/30 text-zinc-400", label: "⚪ No Restringido" },
     missing: { bg: "bg-red-500/10 border-red-500/30 text-red-400", label: "❌ No cumple" },
   };
-  const c = configs[status];
+  const c = configs[status] || configs.neutral;
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-full border text-[10px] font-bold ${c.bg}`}>
       {c.label}
