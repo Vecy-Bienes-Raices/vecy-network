@@ -98,7 +98,7 @@ async function invokeGemini(
 
       if (tools && tools.length > 0) {
         payload.tools = tools;
-      } else if (enableSearch) {
+      } else if (enableSearch && responseFormat?.type !== "json_object") {
         payload.tools = [{ googleSearch: {} }];
       }
 
