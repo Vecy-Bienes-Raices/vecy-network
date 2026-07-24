@@ -35,21 +35,18 @@ function checkTransactionCompatibility(reqType: string, propType: string, propAc
   // Revisar acceptedTransactionTypes de la propiedad
   if (propAccepted.length > 0 && propAccepted.includes(r)) return true;
 
-  // Reglas de compatibilidad cruzada del mercado colombiano:
+  // Reglas de compatibilidad cruzada del mercado colombiano (v17.2):
 
-  // "venta_o_arriendo" es compatible con cualquier intención de venta o arriendo
+  // 1. "venta_o_arriendo": compatible con venta, arriendo o arriendo con opción de compra
   if (p === "venta_o_arriendo" && (r === "venta" || r === "arriendo" || r === "arriendo_con_opcion_de_compra")) return true;
-
-  // Si el requerimiento es "venta_o_arriendo", la propiedad solo necesita ofrecer una de las dos
   if (r === "venta_o_arriendo" && (p === "venta" || p === "arriendo" || p === "arriendo_con_opcion_de_compra")) return true;
 
-  // "venta_permuta" es compatible con requerimientos de "venta" o "permuta"
+  // 2. "venta_permuta": compatible con venta o permuta
   if (p === "venta_permuta" && (r === "venta" || r === "permuta")) return true;
   if (r === "venta_permuta" && (p === "venta" || p === "permuta")) return true;
 
-  // "arriendo_con_opcion_de_compra" también es compatible con requerimientos de "arriendo" puro
-  // (el cliente que busca arrendar puede estar interesado en la opción de compra)
-  if (p === "arriendo_con_opcion_de_compra" && r === "arriendo") return true;
+  // NOTA DOCTRINAL VECY: "arriendo_con_opcion_de_compra" JAMÁS coincide con "arriendo" puro ni "venta" pura.
+  // Solo coincide con "arriendo_con_opcion_de_compra" (igualdad exacta arriba) o con "venta_o_arriendo".
 
   return false;
 }
@@ -625,7 +622,7 @@ export function calcularScoreMatch(requirement: any, property: any): number {
 }
 
 export function evaluarMatch(requirement: any, property: any): boolean {
-  return calcularScoreMatch(requirement, property) >= 70;
+  return calcularScoreMatch(requirement, property) >= 85;
 }
 
 /**

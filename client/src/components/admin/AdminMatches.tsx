@@ -622,8 +622,8 @@ export default function AdminMatches() {
                         <thead>
                           <tr className="border-b border-white/10 text-[10px] uppercase tracking-widest text-zinc-500">
                             <th className="text-left py-2 px-3">Característica</th>
-                            <th className="text-left py-2 px-3">Buscado (Demanda)</th>
-                            <th className="text-left py-2 px-3">Ofrecido (Oferta)</th>
+                            <th className="text-left py-2 px-3 text-[#bf953f]">Ofrecido (Oferta)</th>
+                            <th className="text-left py-2 px-3 text-cyan-400">Buscado (Demanda)</th>
                             <th className="text-center py-2 px-3 w-28">Cumplimiento</th>
                           </tr>
                         </thead>
@@ -643,15 +643,14 @@ export default function AdminMatches() {
                             
                             const badgeText = isExact ? "Coincide" : isWarn ? "Aproximado" : isNeutral ? "No Restringido" : "Diferente";
 
-
                             return (
                               <tr key={rIdx} className="border-b border-white/5 hover:bg-white/[0.01] transition-colors">
                                 <td className="py-2.5 px-3 flex items-center gap-2 font-medium text-zinc-300">
                                   {row.icon}
                                   <span>{row.label}</span>
                                 </td>
-                                <td className="py-2.5 px-3 text-zinc-400">{row.reqVal}</td>
-                                <td className="py-2.5 px-3 text-zinc-400">{row.propVal}</td>
+                                <td className="py-2.5 px-3 text-[#bf953f] font-medium">{row.propVal}</td>
+                                <td className="py-2.5 px-3 text-cyan-300">{row.reqVal}</td>
                                 <td className="py-2.5 px-3 text-center">
                                   <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${badgeBg}`}>
                                     {badgeText}

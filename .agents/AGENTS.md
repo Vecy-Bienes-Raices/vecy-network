@@ -35,7 +35,7 @@ Deploy:      PM2 en VPS Linux
 | Archivo | Función |
 |---|---|
 | `server/_core/janIA.ts` | Cerebro de JanIA: extracción, clasificación, inserción en BD |
-| `server/_core/matching.ts` | Motor de matching propiedades ↔ requerimientos |
+| `server/_core/matching.ts` | Motor de matching propiedades ↔ requerimientos (v17.2) |
 | `server/_core/llm.ts` | Cliente de Google Gemini (invocar LLM) |
 | `server/_core/whatsapp-match.ts` | Escucha de Baileys y despacho de mensajes |
 | `drizzle/schema.ts` | Esquema de BD (fuente de verdad de tipos) |
@@ -56,52 +56,51 @@ Deploy:      PM2 en VPS Linux
 
 **Silencio nocturno**: 10:30 PM — 5:00 AM hora Bogotá (UTC-5). Ingesta activa, mensajes salientes bloqueados.
 
-### Extracción universal (TODOS los grupos, TODOS los formatos)
-- ✅ Texto escrito (con o sin ciudad → infiere ciudad del nombre del grupo)
-- ✅ Imagen/flyer con texto (OCR vía visión de Gemini)
-- ✅ Audio/nota de voz (transcripción)
-- ✅ Enlace de portal externo: Wasi, Habi, FincaRaíz, Metrocuadrado, Ciencuadras, Qrador, Ubicapp, página propia del agente
-- ✅ Solo enlace sin descripción (raspa el contenido)
-- ✅ Requerimientos escritos (aunque no digan ciudad)
-
 ---
 
-## 🗄️ ESQUEMA BD — Estado actual v17.1
+## 🗄️ ESQUEMA BD — Estado actual v17.2
 
 ### Enum `transactionType` (COMPLETO)
 ```
 venta                         → Venta pura
 arriendo                      → Arriendo puro
-venta_o_arriendo              → NUEVO v17.1: Venta O arriendo (lo que primero ocurra)
+venta_o_arriendo              → Venta O arriendo (lo que primero ocurra)
 arriendo_temporal             → Arriendo por temporada/vacacional
-arriendo_con_opcion_de_compra → NUEVO v17.1: Arrendatario con derecho de compra
+arriendo_con_opcion_de_compra → Arrendatario con derecho de compra (REGLA DOCTRINAL v17.2)
 permuta                       → Intercambio puro de bienes
-venta_permuta                 → NUEVO v17.1: Venta + parte en bien (inmueble/vehículo)
+venta_permuta                 → Venta + parte en bien (inmueble/vehículo)
 aporte                        → Aporte a proyecto de construcción
 ```
 
-### Campos nuevos en tabla `properties` (v17.1)
-- `rent_price NUMERIC(15,2)` — precio de arriendo cuando `transactionType = venta_o_arriendo`
-  - `price` = precio de VENTA
-  - `rent_price` = precio de ARRIENDO mensual
-
-### Concepto clave: INMUEBLE vs REQUERIMIENTO
-- **INMUEBLE** = El agente TIENE la propiedad → tabla `properties`
-- **REQUERIMIENTO** = El agente TIENE UN CLIENTE buscando → tabla `requirements`
-
 ---
 
-## 🔀 MATCHING CRUZADO INTELIGENTE (v17.1)
+## 🔀 MATCHING CRUZADO INTELIGENTE (v17.2 — REGLAS DOCTRINALES)
 
 Función `checkTransactionCompatibility()` en `server/_core/matching.ts`:
 
 ```
-propiedad venta_o_arriendo    ← compatible con → req: venta, arriendo, arriendo_con_opcion
-propiedad venta_permuta       ← compatible con → req: venta, permuta
-propiedad arriendo_con_opcion ← compatible con → req: arriendo
+venta                         ← compatible con → req: venta, venta_o_arriendo, venta_permuta
+arriendo                      ← compatible con → req: arriendo, venta_o_arriendo
+arriendo_con_opcion_de_compra ← compatible con → req: arriendo_con_opcion_de_compra, venta_o_arriendo
+permuta                       ← compatible con → req: permuta, venta_permuta
 ```
 
-ANTES: solo match exacto. AHORA: compatibilidad inteligente del mercado colombiano.
+> ⚠️ **REGLA CRÍTICA DOCTRINAL (v17.2)**: `arriendo_con_opcion_de_compra` **JAMÁS coincide con `arriendo` puro ni `venta` pura**.
+> Un propietario o cliente que busca opción de compra no acepta un arriendo simple. Únicamente coincide con `arriendo_con_opcion_de_compra` o con `venta_o_arriendo`.
+
+---
+
+## 📐 VECY MATCHING THRESHOLD (85% - 100%)
+
+- **Filtro Mínimo de Almacenamiento y Muestreo**: Todo Match DEBE tener un score igual o superior a **85%**. Cualquier par con score inferior a 85% es ignorado y eliminado de la BD.
+- **Ventana de Opciones de Filtro UI**:
+  - `85% — Mínimo VECY (85%+)`
+  - `90% — Coincidencia Alta`
+  - `95% — Casi Perfecto`
+  - `100% — Match Perfecto`
+- **Alineación Visual de la Tabla de Cotejo**:
+  - Columna Izquierda: **Ofrecido (Oferta / Inmueble)**
+  - Columna Derecha: **Buscado (Demanda / Requerimiento)**
 
 ---
 
@@ -109,81 +108,13 @@ ANTES: solo match exacto. AHORA: compatibilidad inteligente del mercado colombia
 
 ### 1. Google Gemini 400 Bad Request — RESUELTO en llm.ts
 `googleSearch` NO puede combinarse con `responseMimeType: "application/json"`.
-Fix: `googleSearch` solo se inyecta cuando `responseFormat?.type !== "json_object"`.
 
 ### 2. Filtro de grupos externos — RESUELTO en whatsapp-match.ts
-El filtro de grupos "no autorizados" que bloqueaba la extracción fue eliminado.
-JanIA ahora extrae de TODOS los grupos.
+JanIA extrae de TODOS los grupos.
 
-### 3. Bucles en prompts — RESUELTO en base.md
-Regla VRIF explícita contra repeticiones en cualquier campo del JSON.
-
----
-
-## 🚫 REGLAS CRÍTICAS — NUNCA VIOLAR
-
-1. **NO enviar DMs no solicitados** desde JanIA → riesgo de ban de WhatsApp
-2. **NO hacer git push sin `pnpm check`** primero
-3. **NO modificar enum de BD sin migración SQL** en Supabase (`ALTER TYPE ... ADD VALUE IF NOT EXISTS`)
-4. **NO combinar `googleSearch` + `application/json`** en Gemini
-5. **NO cargar historial de chat privado** para mensajes de grupos
-6. **NO eliminar** `client/src/components/agenda-pro` — la usa `Agenda.tsx`
-7. **NO activar JanIA en local** si el VPS ya tiene la sesión activa (doble login → ban WhatsApp)
-8. **NO reiniciar Baileys** si hay sesión activa → escanear QR solo si session.json está corrupto
+### 3. Proxy Vercel a VPS — RESUELTO en vercel.json
+`vercel.json` apunta a `https://vecy-jania.serveousercontent.com` (Servidor VPS vivo).
 
 ---
 
-## 📐 MODELO DE NEGOCIO (Referencia rápida)
-
-```
-Comisión: 3% del valor de venta o 1 canon de arriendo
-
-  35% → Agente Captador (subió el inmueble)
-  35% → Agente Colocador (trajo al comprador)  [o descuento al comprador directo]
-  15% → Bolsa Colaborativa (max 7 promotores, proporcional a clicks únicos)
-  15% → VECY Network (plataforma)
-```
-
-- Puntos = clicks únicos al Dossier Web (NO likes/shares de redes sociales)
-- Los puntos NO son dinero hasta que el inmueble se vende
-- Máximo 7 cupos de promotores por inmueble
-
----
-
-## 🗺️ ROADMAP
-
-| Fase | Estado | Objetivo |
-|---|---|---|
-| **Fase 1** | 🔄 EN CURSO | JanIA en WhatsApp + Supabase + matching automático |
-| **Fase 2** | ⏳ Pendiente | Catálogo web público + links rastreables + engagement tracker |
-| **Fase 3** | ⏳ Pendiente | Pasarela de pagos (arras) + corretaje bancario + firma digital |
-| **Fase 4** | ⏳ Pendiente | Café Inmobiliario + Wallet de puntos + expansión LatAm |
-
----
-
-## 📁 DOCUMENTOS MAESTROS
-
-```
-VECY_CORE_PROYECTO/
-├── documentos_maestros/
-│   ├── vecy_network_technical_dossier.md  ← DOSSIER TÉCNICO + CHANGELOG §10
-│   ├── vecy_network_business_plan.md      ← Plan de negocio y comisiones
-│   ├── vecy_network_execution_plan.md     ← Hoja de ruta paso a paso
-│   └── strategic_discernment_report.md   ← Análisis de viabilidad Colombia
-└── historial_implementaciones/
-    └── YYYY-MM-DD_[version]_[descripcion].md  ← Un archivo por plan aprobado
-```
-
----
-
-## 📋 PROTOCOLO PARA NUEVAS IMPLEMENTACIONES
-
-1. Crear plan → aprobación de Eduardo → guardar en `historial_implementaciones/`
-2. Si hay cambios de BD → migración SQL en Supabase PRIMERO, luego `drizzle/schema.ts`
-3. `pnpm check` antes de cualquier `git push`
-4. Actualizar §10 del dossier técnico
-5. Actualizar este `AGENTS.md` si hay nuevos tipos, reglas o bugs
-
----
-
-## 🔖 VERSIÓN ACTUAL: v17.1 — Julio 2026
+## 🔖 VERSIÓN ACTUAL: v17.2 — Julio 2026

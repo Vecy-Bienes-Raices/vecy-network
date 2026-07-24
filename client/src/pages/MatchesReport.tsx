@@ -79,8 +79,8 @@ function ComparisonRow({ label, required, found, status, icon }: {
       <td className="py-2.5 px-4">
         <div className="flex items-center gap-2 text-zinc-400 text-xs font-medium">{icon}{label}</div>
       </td>
-      <td className="py-2.5 px-4 text-xs text-cyan-300 font-medium max-w-[200px] break-words">{required}</td>
       <td className="py-2.5 px-4 text-xs text-[#bf953f] font-medium max-w-[200px] break-words">{found}</td>
+      <td className="py-2.5 px-4 text-xs text-cyan-300 font-medium max-w-[200px] break-words">{required}</td>
       <td className="py-2.5 px-4"><MatchBadge status={status} /></td>
     </tr>
   );
