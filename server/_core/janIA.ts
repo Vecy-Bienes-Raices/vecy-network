@@ -130,7 +130,7 @@ export const janiaResultSchema = {
       }
     }
   },
-  required: ["classification", "response"]
+  required: ["classification", "response", "extractedData"]
 };
 
 const COMMON_FIRST_NAMES = new Set([
@@ -1658,7 +1658,7 @@ Por lo tanto, DEBES hacer lo siguiente:
       }
     }
 
-    const extracted = result.extractedData;
+    const extracted = result.extractedData || {};
     let isRequirement = result.classification === "REQUERIMIENTO";
     let isProperty = result.classification === "INMUEBLE";
 
