@@ -1777,7 +1777,36 @@ Por lo tanto, DEBES hacer lo siguiente:
       let geoValidation: any = null;
       
       if (zoneToValidate && zoneToValidate.trim() !== "") {
-        geoValidation = await validarZona(zoneToValidate, extracted?.city || extracted?.ciudadDeseada, messageToProcess);
+        let inferredCity = extracted?.city || extracted?.ciudadDeseada;
+        if (!inferredCity || inferredCity.trim() === "" || inferredCity.toLowerCase() === "na") {
+          if (groupName) {
+            const nameLower = groupName.toLowerCase();
+            if (nameLower.includes("cali")) {
+              inferredCity = "Cali";
+            } else if (nameLower.includes("medellin") || nameLower.includes("medellín")) {
+              inferredCity = "Medellín";
+            } else if (nameLower.includes("barranquilla")) {
+              inferredCity = "Barranquilla";
+            } else if (nameLower.includes("bucaramanga")) {
+              inferredCity = "Bucaramanga";
+            } else if (nameLower.includes("cartagena")) {
+              inferredCity = "Cartagena";
+            } else if (nameLower.includes("pereira")) {
+              inferredCity = "Pereira";
+            }
+          }
+        }
+
+        // Asignar de vuelta al objeto extraído
+        if (inferredCity && inferredCity.toLowerCase() !== "na") {
+          if (isProperty) {
+            extracted.city = inferredCity;
+          } else {
+            extracted.ciudadDeseada = inferredCity;
+          }
+        }
+
+        geoValidation = await validarZona(zoneToValidate, inferredCity, messageToProcess);
         isValidGeo = geoValidation.isValid;
       }
       
