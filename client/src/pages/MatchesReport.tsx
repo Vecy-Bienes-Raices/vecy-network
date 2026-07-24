@@ -54,6 +54,27 @@ function getTransactionLabel(type: string | null | undefined): string {
   return m[type || ""] || type || "N/E";
 }
 
+function checkTxCompatFrontend(reqTypeRaw: string, propTypeRaw: string, propAccepted: string[] = []): boolean {
+  if (!reqTypeRaw || !propTypeRaw) return false;
+  const r = reqTypeRaw.toLowerCase().trim();
+  const p = propTypeRaw.toLowerCase().trim();
+  const accepted = propAccepted.map(t => t.toLowerCase().trim());
+
+  if (r === p) return true;
+  if (accepted.length > 0 && accepted.includes(r)) return true;
+
+  if (p === "venta_o_arriendo" && (r === "venta" || r === "arriendo" || r === "arriendo_con_opcion_de_compra")) return true;
+  if (r === "venta_o_arriendo" && (p === "venta" || p === "arriendo" || p === "arriendo_con_opcion_de_compra")) return true;
+
+  if (p === "venta_permuta" && (r === "venta" || r === "permuta")) return true;
+  if (r === "venta_permuta" && (p === "venta" || p === "permuta")) return true;
+
+  if (p === "arriendo_con_opcion_de_compra" && r === "venta") return true;
+  if (r === "arriendo_con_opcion_de_compra" && p === "venta") return true;
+
+  return false;
+}
+
 type MatchStatus = "exact" | "ok" | "warn" | "missing";
 
 function MatchBadge({ status }: { status: MatchStatus }) {
@@ -138,26 +159,20 @@ function scoreRows(req: any, prop: any) {
   add("Tipo de Inmueble", getPropTypeLabel(reqSubtype), getPropTypeLabel(propSubtype), typeS, 20, <Building2 className="w-3.5 h-3.5" />);
 
   // 2. Tipo de Negocio
-  const reqBiz = req.tipoNegocioDeseado || req.transactionType;
-  const propBiz = prop.transactionType;
-  const reqTypes: string[] = Array.isArray(req.tiposNegocioAceptados) && req.tiposNegocioAceptados.length > 0
-    ? req.tiposNegocioAceptados
-    : (reqBiz ? [reqBiz] : ["venta"]);
-  const propTypes: string[] = Array.isArray(prop.acceptedTransactionTypes) && prop.acceptedTransactionTypes.length > 0
-    ? prop.acceptedTransactionTypes
-    : (propBiz ? [propBiz] : ["venta"]);
+  const reqBiz = req.tipoNegocioDeseado || req.transactionType || "";
+  const propBiz = prop.transactionType || "";
+  const propAccepted: string[] = Array.isArray(prop.acceptedTransactionTypes) ? prop.acceptedTransactionTypes : [];
 
-  const txCompatible = reqTypes.some(rt =>
-    propTypes.some(pt =>
-      pt === rt ||
-      (rt === "venta" && pt === "permuta") ||
-      (rt === "permuta" && pt === "venta") ||
-      (rt === "venta" && pt === "aporte") ||
-      (rt === "aporte" && pt === "venta")
-    )
-  );
-  const txS: MatchStatus = txCompatible ? "exact" : "missing";
-  add("Tipo de Negocio", getTransactionLabel(reqBiz), getTransactionLabel(propBiz), txS, 15, <ArrowRightLeft className="w-3.5 h-3.5" />);
+  const isPropDual = propBiz === "venta_o_arriendo" || (propAccepted.includes("venta") && propAccepted.includes("arriendo"));
+  const displayPropNeg = isPropDual ? "Venta o Arriendo" : getTransactionLabel(propBiz);
+  const displayReqNeg = getTransactionLabel(reqBiz);
+
+  let txS: MatchStatus = "missing";
+  if (checkTxCompatFrontend(reqBiz, propBiz, propAccepted)) {
+    txS = "exact";
+  }
+
+  add("Tipo de Negocio", displayReqNeg, displayPropNeg, txS, 15, <ArrowRightLeft className="w-3.5 h-3.5" />);
 
   // 3. Ubicación / Barrio
   const reqCity = req.ciudadDeseada || req.city || "";

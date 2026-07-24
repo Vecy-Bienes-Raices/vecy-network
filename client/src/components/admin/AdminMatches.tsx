@@ -125,18 +125,23 @@ function scoreRows(req: any, prop: any) {
   );
 
   // 2. Tipo de Negocio
-  const reqNeg = req.tipoNegocioDeseado || req.transactionType;
-  const propNeg = prop.transactionType;
+  const reqNeg = req.tipoNegocioDeseado || req.transactionType || "";
+  const propNeg = prop.transactionType || "";
+  const propAccepted: string[] = Array.isArray(prop.acceptedTransactionTypes) ? prop.acceptedTransactionTypes : [];
+
+  const isPropDual = propNeg === "venta_o_arriendo" || (propAccepted.includes("venta") && propAccepted.includes("arriendo"));
+  const displayPropNeg = isPropDual ? "Venta o Arriendo" : getTransactionLabel(propNeg);
+  const displayReqNeg = getTransactionLabel(reqNeg);
+
   let negS: MatchStatus = "missing";
-  if (reqNeg && propNeg) {
-    const r = cleanText(reqNeg);
-    const p = cleanText(propNeg);
-    if (r === p || r.includes(p) || p.includes(r)) negS = "exact";
+  if (checkTxCompatFrontend(reqNeg, propNeg, propAccepted)) {
+    negS = "exact";
   }
+
   add(
     "Tipo de Negocio", 
-    getTransactionLabel(reqNeg), 
-    getTransactionLabel(propNeg), 
+    displayReqNeg, 
+    displayPropNeg, 
     negS, 
     15, 
     <SlidersHorizontal className="w-3.5 h-3.5" />
@@ -299,12 +304,49 @@ function formatCOP(val: string | number) {
 }
 
 function formatPhoneDisplay(phone: string | null | undefined) {
-  if (!phone) return "Sin teléfono";
-  const clean = phone.split('@')[0];
-  if (clean.startsWith("57") && clean.length === 12) {
+  if (!phone) return "No Registrado";
+  const clean = phone.replace(/\D/g, "");
+  if (clean.length === 12 && clean.startsWith("573")) {
     return `+57 ${clean.substring(2, 5)} ${clean.substring(5, 8)} ${clean.substring(8)}`;
   }
-  return `+${clean}`;
+  if (clean.length === 10 && clean.startsWith("3")) {
+    return `+57 ${clean.substring(0, 3)} ${clean.substring(3, 6)} ${clean.substring(6)}`;
+  }
+  return "Contacto Red VECY";
+}
+
+function isPhoneValidForWA(phone: string | null | undefined): boolean {
+  if (!phone) return false;
+  const clean = phone.replace(/\D/g, "");
+  return (clean.length === 12 && clean.startsWith("573")) || (clean.length === 10 && clean.startsWith("3"));
+}
+
+function getValidWaLink(phone: string | null | undefined, text: string): string {
+  if (!phone) return '#';
+  const clean = phone.replace(/\D/g, "");
+  const num = clean.startsWith("57") ? clean : `57${clean}`;
+  return `https://wa.me/${num}?text=${encodeURIComponent(text)}`;
+}
+
+function checkTxCompatFrontend(reqTypeRaw: string, propTypeRaw: string, propAccepted: string[] = []): boolean {
+  if (!reqTypeRaw || !propTypeRaw) return false;
+  const r = reqTypeRaw.toLowerCase().trim();
+  const p = propTypeRaw.toLowerCase().trim();
+  const accepted = propAccepted.map(t => t.toLowerCase().trim());
+
+  if (r === p) return true;
+  if (accepted.length > 0 && accepted.includes(r)) return true;
+
+  if (p === "venta_o_arriendo" && (r === "venta" || r === "arriendo" || r === "arriendo_con_opcion_de_compra")) return true;
+  if (r === "venta_o_arriendo" && (p === "venta" || p === "arriendo" || p === "arriendo_con_opcion_de_compra")) return true;
+
+  if (p === "venta_permuta" && (r === "venta" || r === "permuta")) return true;
+  if (r === "venta_permuta" && (p === "venta" || p === "permuta")) return true;
+
+  if (p === "arriendo_con_opcion_de_compra" && r === "venta") return true;
+  if (r === "arriendo_con_opcion_de_compra" && p === "venta") return true;
+
+  return false;
 }
 
 export default function AdminMatches() {
@@ -547,12 +589,14 @@ export default function AdminMatches() {
                           <div>
                             <p className="text-[9px] text-zinc-500 uppercase tracking-wider font-semibold">Captador / Vendedor</p>
                             <p className="text-xs font-bold text-zinc-200">{formatPhoneDisplay(m.property?.idUsuarioWhatsapp)}</p>
-                            <p className="text-[10px] text-zinc-500 font-mono select-all">+{m.property?.idUsuarioWhatsapp?.split('@')[0]}</p>
+                            {isPhoneValidForWA(m.property?.idUsuarioWhatsapp) && (
+                              <p className="text-[10px] text-zinc-500 font-mono select-all">{formatPhoneDisplay(m.property?.idUsuarioWhatsapp)}</p>
+                            )}
                           </div>
                         </div>
-                        {m.property?.idUsuarioWhatsapp && (
+                        {isPhoneValidForWA(m.property?.idUsuarioWhatsapp) && (
                           <a 
-                            href={`https://wa.me/${m.property.idUsuarioWhatsapp.split('@')[0]}?text=${encodeURIComponent(`Hola! Te contacto por el inmueble "${m.property.name || 'de la red'}" publicado en ${m.property.origenNombre || 'VECY Network'}. Tienes un Match del ${score.toFixed(0)}% con un requerimiento activo.`)}`} 
+                            href={getValidWaLink(m.property.idUsuarioWhatsapp, `Hola! Te contacto por el inmueble "${m.property.name || 'de la red'}" publicado en ${m.property.origenNombre || 'VECY Network'}. Tienes un Match del ${score.toFixed(0)}% con un requerimiento activo.`)} 
                             target="_blank" 
                             rel="noopener noreferrer"
                             className="bg-[#25D366] hover:bg-[#20ba5a] text-black text-[10px] font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition-all shadow-md hover:scale-105"
@@ -592,12 +636,14 @@ export default function AdminMatches() {
                           <div>
                             <p className="text-[9px] text-zinc-500 uppercase tracking-wider font-semibold">Requiriente / Comprador</p>
                             <p className="text-xs font-bold text-zinc-200">{formatPhoneDisplay(m.requirement?.idUsuarioWhatsapp)}</p>
-                            <p className="text-[10px] text-zinc-500 font-mono select-all">+{m.requirement?.idUsuarioWhatsapp?.split('@')[0]}</p>
+                            {isPhoneValidForWA(m.requirement?.idUsuarioWhatsapp) && (
+                              <p className="text-[10px] text-zinc-500 font-mono select-all">{formatPhoneDisplay(m.requirement?.idUsuarioWhatsapp)}</p>
+                            )}
                           </div>
                         </div>
-                        {m.requirement?.idUsuarioWhatsapp && (
+                        {isPhoneValidForWA(m.requirement?.idUsuarioWhatsapp) && (
                           <a 
-                            href={`https://wa.me/${m.requirement.idUsuarioWhatsapp.split('@')[0]}?text=${encodeURIComponent(`Hola! Te contacto por tu requerimiento de inmueble en ${m.requirement.zonaDeseada || m.requirement.ciudadDeseada || 'VECY Network'}. Encontramos una propiedad con un Match del ${score.toFixed(0)}%.`)}`} 
+                            href={getValidWaLink(m.requirement.idUsuarioWhatsapp, `Hola! Te contacto por tu requerimiento de inmueble en ${m.requirement.zonaDeseada || m.requirement.ciudadDeseada || 'VECY Network'}. Encontramos una propiedad con un Match del ${score.toFixed(0)}%.`)} 
                             target="_blank" 
                             rel="noopener noreferrer"
                             className="bg-[#25D366] hover:bg-[#20ba5a] text-black text-[10px] font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition-all shadow-md hover:scale-105"
