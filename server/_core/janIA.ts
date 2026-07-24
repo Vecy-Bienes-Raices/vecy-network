@@ -1465,6 +1465,10 @@ export async function processWhatsAppMessage(
       }
     }
 
+    if ((!messageToProcess || messageToProcess.trim() === "") && imageBuffer) {
+      messageToProcess = "[Publicación de Imagen / Flyer Comercial Inmobiliario sin texto en pie de foto]";
+    }
+
     // 2. Preparación de Contexto LLM Multimodal
     let contextText = `Mensaje de ${userName || userId}: ${messageToProcess}`;
     if (isFromAudio) {

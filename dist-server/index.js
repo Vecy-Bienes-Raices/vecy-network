@@ -4202,6 +4202,9 @@ Por favor, hazme una consulta que est\xE9 relacionada con estos temas. \xA1Con g
         }
       }
     }
+    if ((!messageToProcess || messageToProcess.trim() === "") && imageBuffer) {
+      messageToProcess = "[Publicaci\xF3n de Imagen / Flyer Comercial Inmobiliario sin texto en pie de foto]";
+    }
     let contextText = `Mensaje de ${userName || userId}: ${messageToProcess}`;
     if (isFromAudio) {
       contextText += `
@@ -6391,7 +6394,7 @@ import fs3 from "fs";
 import path4 from "path";
 import { eq as eq11 } from "drizzle-orm";
 import QRCode from "qrcode";
-var SERVER_BOOT_TIME, outgoingQueue, JaniaMatchBot, janiaMatchBot;
+var SERVER_BOOT_TIME, cleanJid, outgoingQueue, JaniaMatchBot, janiaMatchBot;
 var init_whatsapp_match = __esm({
   "server/_core/whatsapp-match.ts"() {
     "use strict";
@@ -6401,6 +6404,15 @@ var init_whatsapp_match = __esm({
     init_whatsapp_utils();
     init_voiceTranscription();
     SERVER_BOOT_TIME = Math.floor(Date.now() / 1e3);
+    cleanJid = (jid) => {
+      if (!jid) return "";
+      if (jid.includes("@")) {
+        const [userPart, domain] = jid.split("@");
+        const cleanUser = userPart.split(":")[0];
+        return `${cleanUser}@${domain}`;
+      }
+      return jid.split(":")[0];
+    };
     outgoingQueue = Promise.resolve();
     JaniaMatchBot = class {
       sock = null;
@@ -6578,21 +6590,12 @@ var init_whatsapp_match = __esm({
             const fromMe = msg.key.fromMe;
             const rawChatId = msg.key.remoteJid;
             if (!rawChatId) continue;
-            const cleanJid2 = (jid) => {
-              if (!jid) return "";
-              if (jid.includes("@")) {
-                const [userPart, domain] = jid.split("@");
-                const cleanUser = userPart.split(":")[0];
-                return `${cleanUser}@${domain}`;
-              }
-              return jid.split(":")[0];
-            };
-            const chatId = cleanJid2(rawChatId);
+            const chatId = cleanJid(rawChatId);
             const isGroup = chatId.endsWith("@g.us");
             if (fromMe && isGroup) continue;
             const rawSenderId = isGroup ? msg.key.participant || msg.participant : rawChatId;
             if (!rawSenderId || isGroup && rawSenderId.endsWith("@g.us")) continue;
-            const senderId = cleanJid2(rawSenderId);
+            const senderId = cleanJid(rawSenderId);
             if (chatId.includes("status@broadcast") || senderId.includes("status@broadcast")) {
               continue;
             }
@@ -6650,9 +6653,9 @@ var init_whatsapp_match = __esm({
                   body = qm.conversation || qm.extendedTextMessage?.text || qm.imageMessage?.caption || "";
                 }
                 const textLower = body.toLowerCase();
-                const botJid = this.sock?.user?.id ? cleanJid2(this.sock.user.id) : "";
+                const botJid = this.sock?.user?.id ? cleanJid(this.sock.user.id) : "";
                 const botPhone = botJid ? botJid.split("@")[0] : "";
-                const mentionsBot = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.some((jid) => cleanJid2(jid) === botJid);
+                const mentionsBot = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.some((jid) => cleanJid(jid) === botJid);
                 const hasDirectMention = textLower.includes("jania") || botPhone && textLower.includes(botPhone) || textLower.includes("573166569719") || !!mentionsBot;
                 const isMainGroup = chatId === this.targetGroupId;
                 const isBuzonGroup = chatId === this.buzonGroupId;
@@ -7074,27 +7077,16 @@ Tambi\xE9n puedes consultarme directamente en mi chat privado con mi otra yo *Ja
         }
       }
       getReactionEmoji(result) {
-        if (!result) return null;
-        let emoji = result.reactionEmoji;
-        if (emoji) {
-          if (emoji === "\u274C" || emoji === "\u26A0\uFE0F") emoji = "\u{1F6AB}";
-          if (emoji === "\u{1F4A1}" || emoji === "\u{1F504}") emoji = "\u{1F44C}";
-          if (emoji === "\u{1F914}" || emoji === "\u{1F7E2}") {
-            emoji = result.classification === "REQUERIMIENTO" ? "\u{1F4DD}" : "\u{1F44D}";
-          }
-          return emoji;
-        }
-        const classification = result.classification || "";
-        if (classification.includes("INMUEBLE") || classification.includes("PROPIEDAD")) {
-          return "\u{1F44D}";
-        }
-        if (classification.includes("REQUERIMIENTO")) {
+        if (!result) return "\u{1F44D}";
+        const classification = (result.classification || "").toUpperCase();
+        const rawText = (result.rawText || result.response || "").toLowerCase();
+        if (classification === "REQUERIMIENTO" || classification.includes("REQUERIMIENTO") || classification.includes("DEMANDA") || classification.includes("BUSQUEDA") || rawText.includes("requiero") || rawText.includes("busco") || rawText.includes("necesito") || rawText.includes("para compra se busca") || rawText.includes("se busca")) {
           return "\u{1F4DD}";
         }
-        if (classification.includes("VIOLACION_DE_NORMAS") || classification.includes("INVALID_LEAD")) {
+        if (classification === "VIOLACION_DE_NORMAS" || classification === "INVALID_LEAD") {
           return "\u{1F6AB}";
         }
-        return null;
+        return "\u{1F44D}";
       }
       async processGroupBuffer(bufferKey) {
         const buffer = this.messageBuffers.get(bufferKey);

@@ -23,6 +23,17 @@ import { transcribeAudioBuffer } from './voiceTranscription';
 // Tiempo de arranque para omitir mensajes históricos
 const SERVER_BOOT_TIME = Math.floor(Date.now() / 1000);
 
+// Helper para limpiar JID removiendo sufijos de dispositivo (:42, :1, etc.)
+const cleanJid = (jid: string) => {
+  if (!jid) return "";
+  if (jid.includes('@')) {
+    const [userPart, domain] = jid.split('@');
+    const cleanUser = userPart.split(':')[0];
+    return `${cleanUser}@${domain}`;
+  }
+  return jid.split(':')[0];
+};
+
 // Cola de despacho secuencial para evitar bloqueos
 let outgoingQueue: Promise<any> = Promise.resolve();
 
@@ -244,16 +255,6 @@ export class JaniaMatchBot {
         const fromMe = msg.key.fromMe;
         const rawChatId = msg.key.remoteJid;
         if (!rawChatId) continue;
-
-        const cleanJid = (jid: string) => {
-          if (!jid) return "";
-          if (jid.includes('@')) {
-            const [userPart, domain] = jid.split('@');
-            const cleanUser = userPart.split(':')[0];
-            return `${cleanUser}@${domain}`;
-          }
-          return jid.split(':')[0];
-        };
 
         const chatId = cleanJid(rawChatId);
         const isGroup = chatId.endsWith('@g.us');
@@ -979,31 +980,34 @@ export class JaniaMatchBot {
     }
   }
 
-  private getReactionEmoji(result: any): string | null {
-    if (!result) return null;
+  private getReactionEmoji(result: any): string {
+    if (!result) return '👍';
 
-    // Normalizar emoji sugerido por la IA para cumplir con la especificación de 4 emojis
-    let emoji = result.reactionEmoji;
-    if (emoji) {
-      if (emoji === '❌' || emoji === '⚠️') emoji = '🚫';
-      if (emoji === '💡' || emoji === '🔄') emoji = '👌';
-      if (emoji === '🤔' || emoji === '🟢') {
-        emoji = result.classification === 'REQUERIMIENTO' ? '📝' : '👍';
-      }
-      return emoji;
-    }
+    const classification = (result.classification || '').toUpperCase();
+    const rawText = (result.rawText || result.response || '').toLowerCase();
 
-    const classification = result.classification || '';
-    if (classification.includes('INMUEBLE') || classification.includes('PROPIEDAD')) {
-      return '👍';
-    }
-    if (classification.includes('REQUERIMIENTO')) {
+    // Requerimientos (Demandas de búsqueda) -> SIEMPRE 📝
+    if (
+      classification === 'REQUERIMIENTO' || 
+      classification.includes('REQUERIMIENTO') || 
+      classification.includes('DEMANDA') || 
+      classification.includes('BUSQUEDA') ||
+      rawText.includes("requiero") ||
+      rawText.includes("busco") ||
+      rawText.includes("necesito") ||
+      rawText.includes("para compra se busca") ||
+      rawText.includes("se busca")
+    ) {
       return '📝';
     }
-    if (classification.includes('VIOLACION_DE_NORMAS') || classification.includes('INVALID_LEAD')) {
+
+    // Violaciones de normas o spam -> 🚫
+    if (classification === 'VIOLACION_DE_NORMAS' || classification === 'INVALID_LEAD') {
       return '🚫';
     }
-    return null;
+
+    // Inmuebles u Ofertas comerciales -> SIEMPRE 👍
+    return '👍';
   }
 
   private async processGroupBuffer(bufferKey: string) {
