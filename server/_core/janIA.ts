@@ -1577,8 +1577,8 @@ Por lo tanto, DEBES hacer lo siguiente:
 
     const enableSearch = isWebUser || isValuationQuery || isLegalQuery || textLower.includes("trámite") || textLower.includes("tramite") || textLower.includes("patrimonio") || textLower.includes("entidad");
 
-    // Obtener historial de chat reciente (Supercerebro)
-    const history = await getRecentChatHistory(userId, 20);
+    // Obtener historial de chat reciente (Supercerebro) - Omitir en grupos para evitar contaminación de contexto
+    const history = (isGroup || groupJid) ? [] : await getRecentChatHistory(userId, 20);
     // Obtener estadísticas en tiempo real para que JanIA pueda responder con datos exactos
     const liveStats = await getLiveStats();
     const systemContent = liveStats
