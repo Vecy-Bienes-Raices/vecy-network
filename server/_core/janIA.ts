@@ -130,7 +130,7 @@ export const janiaResultSchema = {
       }
     }
   },
-  required: ["classification", "response", "extractedData"]
+  required: ["classification", "response"]
 };
 
 const COMMON_FIRST_NAMES = new Set([

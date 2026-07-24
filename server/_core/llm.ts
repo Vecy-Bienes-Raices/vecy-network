@@ -87,7 +87,7 @@ async function invokeGemini(
         contents,
         systemInstruction: systemMessage ? { parts: [{ text: systemMessage.content }] } : undefined,
         generationConfig: {
-          temperature: 0.7,
+          temperature: responseFormat?.type === "json_object" ? 0.2 : 0.7,
           topP: 0.95,
           topK: 40,
           maxOutputTokens: 4096,
