@@ -27,25 +27,44 @@ const COMMON_FIRST_NAMES = new Set([
  */
 export function extractFirstName(fullName: string): string {
   if (!fullName) return "";
-  const clean = fullName.trim();
+  let clean = fullName.trim();
   if (!clean) return "";
   // Si es un número telefónico o contiene indicativos de número, retornar vacío
   if (/^\+?[\d\s-]{6,}$/.test(clean)) return "";
+
+  // Evasión y limpieza de emails
+  if (clean.includes("@")) {
+    clean = clean.split("@")[0];
+  }
+
+  // Quitar números
+  clean = clean.replace(/[0-9]/g, "");
+  if (!clean.trim()) return "";
   
   const words = clean.split(/\s+/).map(w => w.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, ""));
-  if (words.length === 0 || !words[0]) return "";
+  const filteredWords = words.filter(w => w.length > 0);
+  if (filteredWords.length === 0 || !filteredWords[0]) return "";
   
-  const w1 = words[0].toLowerCase();
-  const w2 = words[1] ? words[1].toLowerCase() : "";
+  const w1 = filteredWords[0].toLowerCase();
+  const w2 = filteredWords[1] ? filteredWords[1].toLowerCase() : "";
   
   // Si hay al menos dos palabras y ambas están en la lista de nombres comunes, es un nombre compuesto
   if (w2 && COMMON_FIRST_NAMES.has(w1) && COMMON_FIRST_NAMES.has(w2)) {
-    const first = words[0].charAt(0).toUpperCase() + words[0].slice(1).toLowerCase();
-    const second = words[1].charAt(0).toUpperCase() + words[1].slice(1).toLowerCase();
+    const first = filteredWords[0].charAt(0).toUpperCase() + filteredWords[0].slice(1).toLowerCase();
+    const second = filteredWords[1].charAt(0).toUpperCase() + filteredWords[1].slice(1).toLowerCase();
     return `${first} ${second}`;
   }
+
+  // Si el primer nombre es largo/compuesto por concatenación de email (ej: "dianapaolap"),
+  // ver si empieza con un nombre común de al menos 4 letras
+  const firstWordLower = w1;
+  for (const commonName of COMMON_FIRST_NAMES) {
+    if (commonName.length >= 4 && firstWordLower.startsWith(commonName)) {
+      return commonName.charAt(0).toUpperCase() + commonName.slice(1).toLowerCase();
+    }
+  }
   
-  return words[0].charAt(0).toUpperCase() + words[0].slice(1).toLowerCase();
+  return filteredWords[0].charAt(0).toUpperCase() + filteredWords[0].slice(1).toLowerCase();
 }
 
 /**

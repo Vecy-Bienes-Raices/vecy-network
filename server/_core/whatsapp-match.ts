@@ -543,9 +543,9 @@ export class JaniaMatchBot {
               }
             }
 
-            // 3. Verificar si hay una intervención humana activa (últimos 30 minutos)
+            // 3. Verificar si hay una intervención humana activa (últimos 24 horas)
             const lastIntervention = this.lastHumanIntervention.get(senderId) || 0;
-            const cooldownPeriod = 30 * 60 * 1000; // 30 minutos
+            const cooldownPeriod = 24 * 60 * 60 * 1000; // 24 horas
             if (isMuted || (Date.now() - lastIntervention < cooldownPeriod)) {
               // Módulo 7: chateo interactivo bloqueado. Si es posible listing se procesará silenciosamente más abajo.
             }
@@ -716,6 +716,16 @@ export class JaniaMatchBot {
 
   // --- REDIRECCIÓN DE CHATS PRIVADOS ---
   private async handlePrivateDmRedirect(chatId: string, senderId: string, userName: string) {
+    // CAPA DE SEGURIDAD MUTE / INTERVENCIÓN HUMANA
+    const { isSessionMuted } = await import('./janIA');
+    const isMuted = await isSessionMuted(senderId);
+    const lastIntervention = this.lastHumanIntervention.get(senderId) || 0;
+    const cooldownPeriod = 24 * 60 * 60 * 1000; // 24 horas
+    if (isMuted || (Date.now() - lastIntervention < cooldownPeriod)) {
+      console.log(`[JANIA-MATCH] Silencio total en DM ${senderId} por intervención humana o silencio activo. Omitiendo redirección.`);
+      return;
+    }
+
     const now = Date.now();
     const lastRedirect = this.redirectCooldowns.get(senderId) || 0;
     const ONCE_A_DAY = 24 * 60 * 60 * 1000;
@@ -725,7 +735,8 @@ export class JaniaMatchBot {
       const redirectLink = "https://wa.me/573185462265";
       
       const realName = userName || "Asesor";
-      const redirectText = `Hola ${realName} 👋😊. Si tienes dudas, inquietudes o quieres consultarme algo (sea por escrito o por notas de voz), te invito a escribir directamente al canal oficial privado de soporte de JanIA de Meta haciendo clic aquí: ${redirectLink} para realizar tus consultas correspondientes o si estás en los grupos correspondientes según tu consulta puedes hacerlas allí de la siguiente manera:\n\n` +
+      const cleanName = extractFirstName(realName) || "colega";
+      const redirectText = `Hola ${cleanName} 👋😊. Si tienes dudas, inquietudes o quieres consultarme algo (sea por escrito o por notas de voz), te invito a escribir directamente al canal oficial privado de soporte de JanIA de Meta haciendo clic aquí: ${redirectLink} para realizar tus consultas correspondientes o si estás en los grupos correspondientes según tu consulta puedes hacerlas allí de la siguiente manera:\n\n` +
         `Mis grupos:\n\n` +
         `Para publicar tus INMUEBLES y REQUERIMIENTOS tenemos el grupo de *𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗨𝗘𝗕𝗟𝗘𝗦 𝗡𝗘𝗧𝗪𝗢𝗥𝗞* : Si aún no eres miembro, puedes unirte desde este enlace: https://chat.whatsapp.com/K36KrHeB9nMEKJ56s8XFcM\n` +
         `Para hacer tus consultas de casos inmobiliarios en temas jurídicos, tributarios, avalúos, ayuda en guía de procesos y redacción de contratos, tenemos el grupo de *𝗩𝗘𝗖𝗬: 𝗦𝗢𝗣𝗢𝗥𝗧𝗘 𝗟𝗘𝗚𝗔𝗟, 𝗧𝗥𝗜𝗕𝗨𝗧𝗔𝗥𝗜𝗢 𝗬 𝗔𝗩𝗔𝗟Ú𝗢𝗦* : Si aún no eres miembro, puedes unirte desde este enlace: https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6\n` +
