@@ -6679,9 +6679,10 @@ var init_whatsapp_match = __esm({
                 const textClean = body.toLowerCase().trim();
                 const isAudioFailed = body === "[audio-vac\xEDo]" || body === "[audio-sin-buffer]" || body === "[audio-error]";
                 const isShortCourtesy = !isAudioPTT && (textClean.length < 6 || ["ok", "listo", "vale", "claro", "gracias", "hola", "hola!", "jaja", "jajaja", "\u{1F44D}", "\u2705", "\u{1F44F}", "\u{1F60A}", "\u{1F64F}"].includes(textClean));
-                const isInteractiveGroupQuery = !isPossibleListing && (isAudioPTT || (isBuzonGroup || isCirculoGroup || isMainGroup) && !isShortCourtesy);
-                const shouldRespond = isOfficialGroup && hasDirectMention;
-                if (isPossibleListing) {
+                const isListingGroup = isMainGroup || !isBuzonGroup && !isCirculoGroup;
+                const isListing = isListingGroup && isPossibleListing;
+                const shouldRespond = isBuzonGroup || isCirculoGroup ? !isShortCourtesy : isOfficialGroup && hasDirectMention;
+                if (isListing) {
                   await this.handleIncomingGroupMessage(msg, chatId, body);
                   return;
                 }

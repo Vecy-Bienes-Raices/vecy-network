@@ -480,23 +480,19 @@ export class JaniaMatchBot {
                 ["ok", "listo", "vale", "claro", "gracias", "hola", "hola!", "jaja", "jajaja", "👍", "✅", "👏", "😊", "🙏"].includes(textClean)
               );
 
-            // Los audios fallidos tienen su propio manejo en handleDirectGroupQuestion
-            const isInteractiveGroupQuery = !isPossibleListing && (
-              isAudioPTT ||
-              ((isBuzonGroup || isCirculoGroup || isMainGroup) && !isShortCourtesy)
-            );
+            // En Soporte Legal (Buzón) y Círculo Cero, los mensajes son consultas interactivas, NO publicaciones de ofertas.
+            // No permitimos que isPossibleListing secuestre preguntas legales en Grupo 2.
+            const isListingGroup = isMainGroup || (!isBuzonGroup && !isCirculoGroup);
+            const isListing = isListingGroup && isPossibleListing;
 
-            const shouldRespond = isOfficialGroup && hasDirectMention;
+            const shouldRespond = (isBuzonGroup || isCirculoGroup) ? !isShortCourtesy : (isOfficialGroup && hasDirectMention);
 
-            // IMPORTANTE: si el mensaje es a la vez una posible publicación Y tiene mención/consulta,
-            // la publicación tiene prioridad — la capturamos primero y luego respondemos solo si aplica.
-            if (isPossibleListing) {
+            if (isListing) {
               await this.handleIncomingGroupMessage(msg, chatId, body);
               return;
             }
 
             if (shouldRespond) {
-              // Solo respondemos texto si NO hay publicación que capturar
               await this.handleDirectGroupQuestion(msg, chatId, senderId, body);
             }
             return;
