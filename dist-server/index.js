@@ -6686,6 +6686,16 @@ var init_whatsapp_match = __esm({
                   await this.handleIncomingGroupMessage(msg, chatId, body);
                   return;
                 }
+                if (isOfficialGroup && isShortCourtesy) {
+                  const courtesyEmoji = textClean.includes("gracias") ? "\u{1F91D}" : "\u{1F44D}";
+                  try {
+                    await this.sock.sendMessage(chatId, {
+                      react: { text: courtesyEmoji, key: msg.key }
+                    });
+                  } catch (e) {
+                  }
+                  return;
+                }
                 if (shouldRespond) {
                   await this.handleDirectGroupQuestion(msg, chatId, senderId, body);
                 }

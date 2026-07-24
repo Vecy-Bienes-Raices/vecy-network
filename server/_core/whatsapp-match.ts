@@ -492,6 +492,16 @@ export class JaniaMatchBot {
               return;
             }
 
+            if (isOfficialGroup && isShortCourtesy) {
+              const courtesyEmoji = textClean.includes("gracias") ? "🤝" : "👍";
+              try {
+                await this.sock.sendMessage(chatId, {
+                  react: { text: courtesyEmoji, key: msg.key }
+                });
+              } catch (e) {}
+              return;
+            }
+
             if (shouldRespond) {
               await this.handleDirectGroupQuestion(msg, chatId, senderId, body);
             }
