@@ -7044,7 +7044,7 @@ Tambi\xE9n puedes consultarme directamente en mi chat privado con mi otra yo *Ja
             this.lastGroupMessageTime.set(`${chatId}_${senderId}`, now);
           }
           let buffer = this.messageBuffers.get(bufferKey);
-          const bufferTimeout = 12e3;
+          const bufferTimeout = 3e3;
           const MAX_BLOCK_SIZE = 3;
           if (buffer) {
             clearTimeout(buffer.timer);
@@ -7217,8 +7217,8 @@ Tambi\xE9n puedes consultarme directamente en mi chat privado con mi otra yo *Ja
                   console.error("[JANIA-MATCH] Error al reaccionar al mensaje:", reactErr);
                 }
               };
-              const delayMs = Math.floor(Math.random() * (12e3 - 4e3 + 1)) + 4e3;
-              console.log(`[JANIA-MATCH] Inserci\xF3n confirmada en Grupo. Retrasando reacci\xF3n ${emoji} por ${delayMs}ms (Protocolo Anti-Ban)...`);
+              const delayMs = Math.floor(Math.random() * 2e3) + 1e3;
+              console.log(`[JANIA-MATCH] Inserci\xF3n confirmada en Grupo. Retrasando reacci\xF3n ${emoji} por ${delayMs}ms...`);
               setTimeout(sendReaction, delayMs);
             }
           }

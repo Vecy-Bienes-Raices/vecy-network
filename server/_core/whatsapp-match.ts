@@ -945,7 +945,7 @@ export class JaniaMatchBot {
       // Cooldown silencioso: no se bloquea la captura, solo se registra el tiempo del último bloque.
 
       let buffer = this.messageBuffers.get(bufferKey);
-      const bufferTimeout = 12000; // 12 Segundos
+      const bufferTimeout = 3000; // 3 Segundos (Reacción rápida)
       const MAX_BLOCK_SIZE = 3;
 
       if (buffer) {
@@ -1139,8 +1139,8 @@ export class JaniaMatchBot {
             }
           };
 
-          const delayMs = Math.floor(Math.random() * (12000 - 4000 + 1)) + 4000;
-          console.log(`[JANIA-MATCH] Inserción confirmada en Grupo. Retrasando reacción ${emoji} por ${delayMs}ms (Protocolo Anti-Ban)...`);
+          const delayMs = Math.floor(Math.random() * 2000) + 1000; // 1 a 3 segundos
+          console.log(`[JANIA-MATCH] Inserción confirmada en Grupo. Retrasando reacción ${emoji} por ${delayMs}ms...`);
           setTimeout(sendReaction, delayMs);
         }
       }
