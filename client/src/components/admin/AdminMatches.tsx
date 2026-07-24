@@ -175,9 +175,11 @@ function scoreRows(req: any, prop: any) {
   // 4. Presupuesto Máx.
   const budget = parseFloat(req.presupuestoMax || "0");
   const price = parseFloat(prop.price || "0");
-  const hasBudgetReq = budget > 0;
-  const budS: MatchStatus = hasBudgetReq ? "exact" : "neutral";
-  const reqBudgetLabel = hasBudgetReq ? `${formatCOP(req.presupuestoMax)} ±5%` : "Sin restricción";
+  let budS: MatchStatus = "neutral";
+  if (budget > 0) {
+    budS = (price > 0 && price === budget) ? "exact" : "warn";
+  }
+  const reqBudgetLabel = budget > 0 ? `${formatCOP(req.presupuestoMax)} ±5%` : "Sin restricción";
 
   add(
     "Presupuesto Máx.", 
@@ -191,7 +193,10 @@ function scoreRows(req: any, prop: any) {
   // 5. Área Total
   const areaR = parseFloat(req.areaMin || "0");
   const areaP = parseFloat(prop.areaTotal || prop.areaPrivate || "0");
-  const areS: MatchStatus = areaR > 0 ? "exact" : "neutral";
+  let areS: MatchStatus = "neutral";
+  if (areaR > 0) {
+    areS = (areaP > 0 && areaP === areaR) ? "exact" : "warn";
+  }
   const reqAreaLabel = areaR > 0 ? `≥ ${req.areaMin} m²` : "Sin restricción";
 
   add(
@@ -206,7 +211,10 @@ function scoreRows(req: any, prop: any) {
   // 6. Habitaciones
   const bedR = req.habitacionesMin ? Number(req.habitacionesMin) : 0;
   const bedP = prop.bedrooms ? Number(prop.bedrooms) : 0;
-  const bedS: MatchStatus = bedR > 0 ? "exact" : "neutral";
+  let bedS: MatchStatus = "neutral";
+  if (bedR > 0) {
+    bedS = (bedP === bedR) ? "exact" : "warn";
+  }
   add(
     "Habitaciones", 
     bedR > 0 ? `${bedR} hab.` : "Sin restricción", 
@@ -219,7 +227,10 @@ function scoreRows(req: any, prop: any) {
   // 7. Baños
   const bathR = req.banosMin ? Number(req.banosMin) : 0;
   const bathP = prop.bathrooms ? Number(prop.bathrooms) : 0;
-  const bathS: MatchStatus = bathR > 0 ? "exact" : "neutral";
+  let bathS: MatchStatus = "neutral";
+  if (bathR > 0) {
+    bathS = (bathP === bathR) ? "exact" : "warn";
+  }
   add(
     "Baños", 
     bathR > 0 ? `≥ ${bathR} baños` : "Sin restricción", 
@@ -232,7 +243,10 @@ function scoreRows(req: any, prop: any) {
   // 8. Parqueaderos
   const garR = req.parqueaderosMin ? Number(req.parqueaderosMin) : 0;
   const garP = prop.garages ? Number(prop.garages) : 0;
-  const garS: MatchStatus = garR > 0 ? "exact" : "neutral";
+  let garS: MatchStatus = "neutral";
+  if (garR > 0) {
+    garS = (garP === garR) ? "exact" : "warn";
+  }
   add(
     "Parqueaderos", 
     garR > 0 ? `≥ ${garR} garajes` : "Sin restricción", 
@@ -247,7 +261,10 @@ function scoreRows(req: any, prop: any) {
     : req.estratoDeseado ? [Number(req.estratoDeseado)] : [];
   const estratoP = prop.stratum || prop.estrato;
   const hasEstratoReq = estratoArr.length > 0 && estratoArr[0] > 0;
-  const estS: MatchStatus = hasEstratoReq ? "exact" : "neutral";
+  let estS: MatchStatus = "neutral";
+  if (hasEstratoReq) {
+    estS = (estratoP && estratoArr.includes(Number(estratoP))) ? "exact" : "warn";
+  }
   const reqEstratoLabel = hasEstratoReq ? `Estrato ${estratoArr.join(", ")}` : "Sin restricción";
   add(
     "Estrato", 
@@ -261,7 +278,10 @@ function scoreRows(req: any, prop: any) {
   // 10. Administración
   const reqAdminMax = req.adminFeeMax ? parseFloat(String(req.adminFeeMax)) : 0;
   const propAdminFee = prop.adminFee ? parseFloat(String(prop.adminFee)) : 0;
-  const admS: MatchStatus = reqAdminMax > 0 ? "exact" : "neutral";
+  let admS: MatchStatus = "neutral";
+  if (reqAdminMax > 0) {
+    admS = (propAdminFee > 0 && propAdminFee === reqAdminMax) ? "exact" : "warn";
+  }
   const reqAdminLabel = reqAdminMax > 0 ? `≤ ${formatCOP(reqAdminMax)}` : "Sin restricción";
   add(
     "Administración", 

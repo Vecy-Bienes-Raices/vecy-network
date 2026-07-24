@@ -201,41 +201,59 @@ function scoreRows(req: any, prop: any) {
 
   // 4. Presupuesto Máx
   const budget = parseFloat(req.presupuestoMax || "0");
-  const hasBudgetReq = budget > 0;
-  const budS: MatchStatus = hasBudgetReq ? "exact" : "neutral";
-  const reqBudgetLabel = hasBudgetReq ? `Hasta ${formatCOP(req.presupuestoMax)}` : "Sin restricción";
+  const price = parseFloat(prop.price || "0");
+  let budS: MatchStatus = "neutral";
+  if (budget > 0) {
+    budS = (price > 0 && price === budget) ? "exact" : "warn";
+  }
+  const reqBudgetLabel = budget > 0 ? `Hasta ${formatCOP(req.presupuestoMax)}` : "Sin restricción";
   add("Presupuesto Máx.", reqBudgetLabel, formatCOP(prop.price), budS, 15, <DollarSign className="w-3.5 h-3.5" />);
 
   // 5. Área Total
   const areaR = parseFloat(req.areaMin || "0");
   const areaP = parseFloat(prop.areaTotal || prop.areaPrivate || "0");
-  const areS: MatchStatus = areaR > 0 ? "exact" : "neutral";
+  let areS: MatchStatus = "neutral";
+  if (areaR > 0) {
+    areS = (areaP > 0 && areaP === areaR) ? "exact" : "warn";
+  }
   const reqAreaLabel = areaR > 0 ? `>= ${req.areaMin} m²` : "Sin restricción";
   add("Área Total", reqAreaLabel, areaP > 0 ? `${areaP} m²` : "N/E", areS, 10, <Ruler className="w-3.5 h-3.5" />);
 
   // 6. Habitaciones
   const bedR = req.habitacionesMin ? Number(req.habitacionesMin) : 0;
   const bedP = prop.bedrooms ? Number(prop.bedrooms) : 0;
-  const bedS: MatchStatus = bedR > 0 ? "exact" : "neutral";
+  let bedS: MatchStatus = "neutral";
+  if (bedR > 0) {
+    bedS = (bedP === bedR) ? "exact" : "warn";
+  }
   add("Habitaciones", bedR > 0 ? `${bedR} hab.` : "Sin restricción", bedP > 0 ? `${bedP} hab.` : "N/E", bedS, 8, <Bed className="w-3.5 h-3.5" />);
 
   // 7. Baños
   const bathR = req.banosMin ? Number(req.banosMin) : 0;
   const bathP = prop.bathrooms ? Number(prop.bathrooms) : 0;
-  const bathS: MatchStatus = bathR > 0 ? "exact" : "neutral";
+  let bathS: MatchStatus = "neutral";
+  if (bathR > 0) {
+    bathS = (bathP === bathR) ? "exact" : "warn";
+  }
   add("Baños", bathR > 0 ? `${bathR} baños` : "Sin restricción", bathP > 0 ? `${bathP} baños` : "N/E", bathS, 5, <Bath className="w-3.5 h-3.5" />);
 
   // 8. Parqueaderos
   const garR = req.parqueaderosMin ? Number(req.parqueaderosMin) : 0;
   const garP = prop.garages ? Number(prop.garages) : 0;
-  const garS: MatchStatus = garR > 0 ? "exact" : "neutral";
+  let garS: MatchStatus = "neutral";
+  if (garR > 0) {
+    garS = (garP === garR) ? "exact" : "warn";
+  }
   add("Parqueaderos", garR > 0 ? `${garR} garajes` : "Sin restricción", garP > 0 ? `${garP} garajes` : "N/E", garS, 5, <Car className="w-3.5 h-3.5" />);
 
   // 9. Estrato
   const estratoArr: number[] = Array.isArray(req.estratoDeseado) ? req.estratoDeseado : [];
   const estratoP = prop.stratum;
   const hasEstratoReq = estratoArr.length > 0 && estratoArr[0] > 0;
-  const estS: MatchStatus = hasEstratoReq ? "exact" : "neutral";
+  let estS: MatchStatus = "neutral";
+  if (hasEstratoReq) {
+    estS = (estratoP && estratoArr.includes(Number(estratoP))) ? "exact" : "warn";
+  }
   const reqEstratoLabel = hasEstratoReq ? `Estrato ${estratoArr.join(", ")}` : "Sin restricción";
   add("Estrato", reqEstratoLabel, (estratoP && Number(estratoP) > 0) ? `Estrato ${estratoP}` : "N/E", estS, 7, <Shield className="w-3.5 h-3.5" />);
 
