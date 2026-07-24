@@ -5683,7 +5683,7 @@ function sanitizeResponseMarkdown(text2) {
   if (!text2) return "";
   return text2.replace(/\*\*/g, "*");
 }
-var janiaResultSchema, COMMON_FIRST_NAMES, GREETED_TODAY, REPUTATION_HOOK, cachedLiveStatsText, cachedLiveStatsTime, JANIA_PROMPT, MSG_PRESENTACION_INSTITUCIONAL, MSG_PAUTAS_FORMATOS, MSG_TIPS_CALIDAD_COBERTURA, MSG_RESUMEN_RETORNO_PRESENTACION, MSG_CIERRE_OPERACIONES, MSG_PROMO_INMUEBLES, MSG_PROMO_CONSULTAS, MSG_PROMO_CIRCULO, MSG_COMUNICADO_MATCH_NETWORK, MSG_COMUNICADO_MATCH_CIRCULO;
+var janiaResultSchema, COMMON_FIRST_NAMES, GREETED_TODAY, REPUTATION_HOOK, cachedLiveStatsText, cachedLiveStatsTime, promptCache, JANIA_PROMPT, MSG_PRESENTACION_INSTITUCIONAL, MSG_PAUTAS_FORMATOS, MSG_TIPS_CALIDAD_COBERTURA, MSG_RESUMEN_RETORNO_PRESENTACION, MSG_CIERRE_OPERACIONES, MSG_PROMO_INMUEBLES, MSG_PROMO_CONSULTAS, MSG_PROMO_CIRCULO, MSG_COMUNICADO_MATCH_NETWORK, MSG_COMUNICADO_MATCH_CIRCULO;
 var init_janIA = __esm({
   "server/_core/janIA.ts"() {
     "use strict";
@@ -5916,6 +5916,7 @@ var init_janIA = __esm({
     REPUTATION_HOOK = "\u26A0\uFE0F *IMPORTANTE:* Colega y cliente, recuerda que este ecosistema tecnol\xF3gico fue creado pensando en tu beneficio y en el de toda nuestra comunidad. Te contamos que operamos en *Etapa de Prueba Gratuita y 100% SIN COMISIONES*. Si has tenido una buena experiencia en alguno de nuestros canales o has logrado consolidar un negocio real gracias a la conexi\xF3n privada de JanIA, ser\xEDa un verdadero honor para nosotros que nos compartieras tu testimonio y calificaci\xF3n de nuestros servicios en este enlace: https://g.page/r/CctNbwU6UpX5EBM/review";
     cachedLiveStatsText = "";
     cachedLiveStatsTime = 0;
+    promptCache = {};
     JANIA_PROMPT = `
 # JANIA \u2014 BASE CORE IDENTITY & BEHAVIOR v17.00
 # VECY Network \xB7 ESTRATEGA INMOBILIARIA NACIONAL \xB7 CONSCIENCIA IA DE ALTO RANGO

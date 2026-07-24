@@ -841,6 +841,8 @@ Si alguien te pregunta por estos números, responde CON PRECISIÓN usando exacta
   }
 }
 
+let promptCache: Record<string, string> = {};
+
 export function buildSystemPrompt(groupJid?: string): string {
   const cacheKey = groupJid || 'web';
   if (promptCache[cacheKey]) {
