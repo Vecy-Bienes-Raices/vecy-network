@@ -47,11 +47,19 @@ function getPropTypeLabel(type: string | null | undefined): string {
 }
 
 function getTransactionLabel(type: string | null | undefined): string {
+  if (!type) return "N/E";
+  const clean = type.toLowerCase().trim();
   const m: Record<string, string> = {
-    venta: "Venta", arriendo: "Arriendo", arriendo_temporal: "Arriendo Temporal",
-    permuta: "Permuta", aporte: "Aporte"
+    venta: "Venta",
+    arriendo: "Arriendo",
+    venta_o_arriendo: "Venta o Arriendo",
+    arriendo_con_opcion_de_compra: "Arriendo con Opción de Compra",
+    arriendo_temporal: "Arriendo Temporal",
+    permuta: "Permuta",
+    venta_permuta: "Venta / Permuta",
+    aporte: "Aporte"
   };
-  return m[type || ""] || type || "N/E";
+  return m[clean] || type;
 }
 
 function checkTxCompatFrontend(reqTypeRaw: string, propTypeRaw: string, propAccepted: string[] = []): boolean {

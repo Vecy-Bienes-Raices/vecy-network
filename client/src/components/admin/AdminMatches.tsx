@@ -57,8 +57,11 @@ function getTransactionLabel(type: string | null | undefined): string {
   const m: Record<string, string> = {
     venta: "Venta",
     arriendo: "Arriendo",
+    venta_o_arriendo: "Venta o Arriendo",
+    arriendo_con_opcion_de_compra: "Arriendo con Opción de Compra",
     arriendo_temporal: "Arriendo Temporal",
     permuta: "Permuta",
+    venta_permuta: "Venta / Permuta",
     aporte: "Aporte"
   };
   return m[clean] || type;
