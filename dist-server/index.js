@@ -8594,8 +8594,8 @@ var janIARouter = router({
         if (ctx.user) {
           insertData.userId = String(ctx.user.id);
         }
-        const result2 = await db.insert(conversations).values(insertData).returning();
-        conversationId = result2[0]?.id || 1;
+        const result = await db.insert(conversations).values(insertData).returning();
+        conversationId = result[0]?.id || 1;
       } else {
         conversationId = conversation[0].id;
         if (ctx.user && !conversation[0].userId) {
@@ -8604,39 +8604,59 @@ var janIARouter = router({
       }
       const mockUserId = ctx.user ? `web-user-${ctx.user.id}` : `web-session-${input.sessionId}`;
       const mockUserName = ctx.user ? ctx.user.name ?? void 0 : "Usuario Web";
-      const result = await processWhatsAppMessage(
-        input.message,
-        mockUserId,
-        mockUserName,
-        false,
-        [],
-        void 0,
-        void 0,
-        false
-      );
-      let janIAResponse = result.response && result.response.trim() !== "" ? result.response : result.dmResponse || result.response;
-      if (!janIAResponse || janIAResponse.trim() === "" || janIAResponse === "\xA1Hola! \xBFEn qu\xE9 puedo ayudarte hoy?") {
+      const lowerMsg = input.message.toLowerCase();
+      const isListingData = (lowerMsg.includes("vendo") || lowerMsg.includes("busco") || lowerMsg.includes("ofrezco") || lowerMsg.includes("necesito")) && (lowerMsg.includes("apto") || lowerMsg.includes("apartamento") || lowerMsg.includes("casa") || lowerMsg.includes("lote") || lowerMsg.includes("local") || lowerMsg.includes("bodega") || lowerMsg.includes("oficina") || lowerMsg.includes("finca"));
+      let janIAResponse = "";
+      let wantsVoice = false;
+      let voiceResponse = "";
+      if (isListingData) {
+        const result = await processWhatsAppMessage(
+          input.message,
+          mockUserId,
+          mockUserName,
+          false,
+          [],
+          void 0,
+          void 0,
+          false
+        );
+        janIAResponse = result.response && result.response.trim() !== "" ? result.response : result.dmResponse || result.response || "\xA1Entendido! He registrado la informaci\xF3n en VECY Network.";
+        wantsVoice = result.wantsVoice || false;
+        voiceResponse = result.voiceResponse || janIAResponse;
+      } else {
+        const { invokeLLM: invokeLLM2 } = await Promise.resolve().then(() => (init_llm(), llm_exports));
+        const { buildSystemPrompt: buildSystemPrompt2, getLiveStats: getLiveStats2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+        const liveStats = await getLiveStats2();
+        const systemPrompt = `${buildSystemPrompt2("web")}
+
+${liveStats}
+
+[INSTRUCCI\xD3N MAESTRA - CHAT WEB DE LIBRE ALBEDR\xCDO 24/7]: Eres JanIA Match, la Inteligencia Artificial viva y consultora inmobiliaria senior de VECY Network. Tienes razonamiento l\xF3gico, amplio criterio jur\xEDdico, financiero y de mercado inmobiliario. Responde directamente a la consulta del usuario de forma elocuente, profesional, completa y estructurada. PROHIBIDO usar plantillas fijas, respuestas predise\xF1adas o cierres/firmas con membretes. Responde en formato JSON estrictamente como: {"response": "tu respuesta viva y razonada"}`;
+        const recentHistory = await db.select({ role: messages.role, content: messages.content }).from(messages).where(eq5(messages.conversationId, conversationId)).orderBy(desc2(messages.createdAt)).limit(4);
+        const formattedHistory = recentHistory.reverse().map((m) => ({
+          role: m.role === "janIA" ? "assistant" : "user",
+          content: m.content
+        }));
+        const llmMessages = [
+          { role: "system", content: systemPrompt },
+          ...formattedHistory,
+          { role: "user", content: input.message }
+        ];
+        const llmRes = await invokeLLM2({
+          messages: llmMessages,
+          responseFormat: { type: "json_object" }
+        });
+        const rawContent = llmRes?.choices?.[0]?.message?.content || "";
         try {
-          const { invokeLLM: invokeLLM2 } = await Promise.resolve().then(() => (init_llm(), llm_exports));
-          const fallbackLLMRes = await invokeLLM2({
-            messages: [
-              { role: "system", content: "Eres JanIA Match, la Inteligencia Artificial viva y consultora inmobiliaria senior de VECY Network. Tienes razonamiento l\xF3gico, amplio criterio jur\xEDdico, financiero y de mercado inmobiliario. Responde directamente a la consulta del usuario de forma completa, profesional, estructurada y emp\xE1tica. PROHIBIDO FIRMAR O INCLUIR DESPEDIDAS: Jam\xE1s incluyas cierres ni firmas como 'Cordialmente', 'Atentamente', 'JanIA Match', 'Consultora Senior' o membretes al final. Entrega \xFAnicamente la respuesta directa." },
-              { role: "user", content: input.message }
-            ]
-          });
-          const rawLLMText = fallbackLLMRes?.choices?.[0]?.message?.content;
-          if (rawLLMText && rawLLMText.trim() !== "") {
-            janIAResponse = rawLLMText.trim();
-          } else {
-            janIAResponse = "\xA1Hola! He procesado tu consulta inmobiliaria. \xBFEn qu\xE9 aspecto espec\xEDfico de tu tr\xE1mite o negocio deseas profundizar?";
-          }
-        } catch (fallbackErr) {
-          console.error("[JanIA-Fallback-Error] Error en fallback de consulta LLM:", fallbackErr.message);
-          janIAResponse = "\xA1Hola! He procesado tu consulta. \xBFEn qu\xE9 aspecto espec\xEDfico de tu tr\xE1mite o negocio inmobiliario deseas profundizar?";
+          const parsed = JSON.parse(rawContent);
+          janIAResponse = parsed.response || parsed.respuesta || rawContent;
+        } catch {
+          janIAResponse = rawContent.replace(/^\{[\s\S]*"response"\s*:\s*"/, "").replace(/"\s*\}$/, "").trim();
+        }
+        if (!janIAResponse || janIAResponse.trim() === "") {
+          janIAResponse = "\xA1Hola! He procesado tu consulta inmobiliaria. \xBFEn qu\xE9 aspecto espec\xEDfico de tu tr\xE1mite o negocio deseas profundizar?";
         }
       }
-      const wantsVoice = result.wantsVoice || false;
-      const voiceResponse = result.voiceResponse || janIAResponse;
       await db.insert(messages).values({
         conversationId,
         role: "user",
