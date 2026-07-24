@@ -6681,7 +6681,8 @@ var init_whatsapp_match = __esm({
                 const isShortCourtesy = !isAudioPTT && (textClean.length < 6 || ["ok", "listo", "vale", "claro", "gracias", "hola", "hola!", "jaja", "jajaja", "\u{1F44D}", "\u2705", "\u{1F44F}", "\u{1F60A}", "\u{1F64F}"].includes(textClean));
                 const isListingGroup = isMainGroup || !isBuzonGroup && !isCirculoGroup;
                 const isListing = isListingGroup && isPossibleListing;
-                const shouldRespond = isBuzonGroup || isCirculoGroup ? !isShortCourtesy : isOfficialGroup && hasDirectMention;
+                const isSingleCharacter = textClean.length < 3 && !["ok", "si", "s\xED"].includes(textClean);
+                const shouldRespond = isBuzonGroup || isCirculoGroup ? !isSingleCharacter : isOfficialGroup && hasDirectMention;
                 if (isListing) {
                   await this.handleIncomingGroupMessage(msg, chatId, body);
                   return;
@@ -6694,7 +6695,6 @@ var init_whatsapp_match = __esm({
                     });
                   } catch (e) {
                   }
-                  return;
                 }
                 if (shouldRespond) {
                   await this.handleDirectGroupQuestion(msg, chatId, senderId, body);

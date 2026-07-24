@@ -480,12 +480,15 @@ export class JaniaMatchBot {
                 ["ok", "listo", "vale", "claro", "gracias", "hola", "hola!", "jaja", "jajaja", "👍", "✅", "👏", "😊", "🙏"].includes(textClean)
               );
 
-            // En Soporte Legal (Buzón) y Círculo Cero, los mensajes son consultas interactivas, NO publicaciones de ofertas.
+            // En Soporte Legal (Buzón) y Círculo Cero, los mensajes son consultas e interacciones vivas, NO publicaciones estáticas.
             // No permitimos que isPossibleListing secuestre preguntas legales en Grupo 2.
             const isListingGroup = isMainGroup || (!isBuzonGroup && !isCirculoGroup);
             const isListing = isListingGroup && isPossibleListing;
 
-            const shouldRespond = (isBuzonGroup || isCirculoGroup) ? !isShortCourtesy : (isOfficialGroup && hasDirectMention);
+            // Ignorar únicamente monosílabos o caracteres sueltos inapropiados (< 3 caracteres sin significado)
+            const isSingleCharacter = textClean.length < 3 && !["ok", "si", "sí"].includes(textClean);
+
+            const shouldRespond = (isBuzonGroup || isCirculoGroup) ? !isSingleCharacter : (isOfficialGroup && hasDirectMention);
 
             if (isListing) {
               await this.handleIncomingGroupMessage(msg, chatId, body);
@@ -499,7 +502,6 @@ export class JaniaMatchBot {
                   react: { text: courtesyEmoji, key: msg.key }
                 });
               } catch (e) {}
-              return;
             }
 
             if (shouldRespond) {
