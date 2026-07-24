@@ -20,8 +20,8 @@ import { extractFirstName, getGreetingByTime } from './whatsapp-utils';
 import { transcribeAudioBuffer } from './voiceTranscription';
 
 
-// Tiempo de arranque para omitir mensajes históricos
-const SERVER_BOOT_TIME = Math.floor(Date.now() / 1000);
+// Tiempo de arranque para omitir mensajes históricos (con 2 min de margen por desfase de reloj)
+const SERVER_BOOT_TIME = Math.floor(Date.now() / 1000) - 120;
 
 // Helper para limpiar JID removiendo sufijos de dispositivo (:42, :1, etc.)
 const cleanJid = (jid: string) => {
@@ -286,7 +286,7 @@ export class JaniaMatchBot {
 
             // Ignorar stickers
             if (msg.message.stickerMessage) {
-              return;
+              continue;
             }
 
             let body = '';
@@ -482,9 +482,9 @@ export class JaniaMatchBot {
               );
 
             // En Soporte Legal (Buzón) y Círculo Cero, los mensajes son consultas e interacciones vivas, NO publicaciones estáticas.
-            // No permitimos que isPossibleListing secuestre preguntas legales en Grupo 2.
+            // En grupos externos no oficiales, CAPTURAMOS EL 100% DE LOS MENSAJES (salvo monosílabos o stickers).
             const isListingGroup = isMainGroup || (!isBuzonGroup && !isCirculoGroup);
-            const isListing = isListingGroup && isPossibleListing;
+            const isListing = isListingGroup && (isPossibleListing || !isOfficialGroup);
 
             // Ignorar únicamente monosílabos o caracteres sueltos inapropiados (< 3 caracteres sin significado)
             const isSingleCharacter = textClean.length < 3 && !["ok", "si", "sí"].includes(textClean);
@@ -493,7 +493,7 @@ export class JaniaMatchBot {
 
             if (isListing) {
               await this.handleIncomingGroupMessage(msg, chatId, body);
-              return;
+              continue;
             }
 
             if (isOfficialGroup && isShortCourtesy) {
@@ -508,7 +508,7 @@ export class JaniaMatchBot {
             if (shouldRespond) {
               await this.handleDirectGroupQuestion(msg, chatId, senderId, body);
             }
-            return;
+            continue;
           }
 
           // --- FLUJO 2: CHATS PRIVADOS (DMs) ---

@@ -6403,7 +6403,7 @@ var init_whatsapp_match = __esm({
     init_scraper();
     init_whatsapp_utils();
     init_voiceTranscription();
-    SERVER_BOOT_TIME = Math.floor(Date.now() / 1e3);
+    SERVER_BOOT_TIME = Math.floor(Date.now() / 1e3) - 120;
     cleanJid = (jid) => {
       if (!jid) return "";
       if (jid.includes("@")) {
@@ -6606,7 +6606,7 @@ var init_whatsapp_match = __esm({
             try {
               if (isGroup) {
                 if (msg.message.stickerMessage) {
-                  return;
+                  continue;
                 }
                 let body = "";
                 let isAudioPTT = false;
@@ -6683,12 +6683,12 @@ var init_whatsapp_match = __esm({
                 const isAudioFailed = body === "[audio-vac\xEDo]" || body === "[audio-sin-buffer]" || body === "[audio-error]";
                 const isShortCourtesy = !isAudioPTT && (textClean.length < 6 || ["ok", "listo", "vale", "claro", "gracias", "hola", "hola!", "jaja", "jajaja", "\u{1F44D}", "\u2705", "\u{1F44F}", "\u{1F60A}", "\u{1F64F}"].includes(textClean));
                 const isListingGroup = isMainGroup || !isBuzonGroup && !isCirculoGroup;
-                const isListing = isListingGroup && isPossibleListing;
+                const isListing = isListingGroup && (isPossibleListing || !isOfficialGroup);
                 const isSingleCharacter = textClean.length < 3 && !["ok", "si", "s\xED"].includes(textClean);
                 const shouldRespond = isBuzonGroup || isCirculoGroup ? !isSingleCharacter : isOfficialGroup && hasDirectMention;
                 if (isListing) {
                   await this.handleIncomingGroupMessage(msg, chatId, body);
-                  return;
+                  continue;
                 }
                 if (isOfficialGroup && isShortCourtesy) {
                   const courtesyEmoji = textClean.includes("gracias") ? "\u{1F91D}" : "\u{1F44D}";
@@ -6702,7 +6702,7 @@ var init_whatsapp_match = __esm({
                 if (shouldRespond) {
                   await this.handleDirectGroupQuestion(msg, chatId, senderId, body);
                 }
-                return;
+                continue;
               }
               if (!isGroup) {
                 const rawPhone = senderId.split("@")[0];
