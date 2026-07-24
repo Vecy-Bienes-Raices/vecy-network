@@ -309,7 +309,7 @@ function formatPhoneDisplay(phone: string | null | undefined) {
 
 export default function AdminMatches() {
   const [searchTerm, setSearchTerm] = React.useState('');
-  const [minScore, setMinScore] = React.useState('70'); // Mínimo 70% por las nuevas reglas VECY
+  const [minScore, setMinScore] = React.useState('85'); // Mínimo 85% por norma doctrinal VECY Network
 
   // Fetch matches directly from server API with auto-refresh every 10s
   const { data: matches = [], isLoading, refetch } = trpc.janIA.getAllMatches.useQuery(undefined, {
@@ -423,12 +423,10 @@ export default function AdminMatches() {
             onChange={(e) => setMinScore(e.target.value)}
             className="bg-transparent border-none text-white focus:ring-0 text-xs font-semibold cursor-pointer outline-none"
           >
-            <option className="bg-[#0c0c0c]" value="70">70% — Mínimo válido</option>
-            <option className="bg-[#0c0c0c]" value="75">75%</option>
-            <option className="bg-[#0c0c0c]" value="80">80%</option>
-            <option className="bg-[#0c0c0c]" value="90">90%</option>
-            <option className="bg-[#0c0c0c]" value="95">95%</option>
-            <option className="bg-[#0c0c0c]" value="100">100% — Perfecto</option>
+            <option className="bg-[#0c0c0c]" value="85">85% — Mínimo VECY (85%+)</option>
+            <option className="bg-[#0c0c0c]" value="90">90% — Coincidencia Alta</option>
+            <option className="bg-[#0c0c0c]" value="95">95% — Casi Perfecto</option>
+            <option className="bg-[#0c0c0c]" value="100">100% — Match Perfecto</option>
           </select>
         </div>
       </div>

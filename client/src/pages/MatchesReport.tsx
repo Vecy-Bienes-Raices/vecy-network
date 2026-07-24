@@ -849,7 +849,7 @@ export default function MatchesReport() {
   
   // States
   const [searchTerm, setSearchTerm] = useState("");
-  const [minScore, setMinScore] = useState(0);
+  const [minScore, setMinScore] = useState(85);
   const [selectedCity, setSelectedCity] = useState("Todas");
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState<"table" | "cards">("table");
@@ -1171,8 +1171,8 @@ export default function MatchesReport() {
               <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
                 className="overflow-hidden bg-[#0c0c0c] border border-white/5 rounded-2xl p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <div className="flex justify-between text-xs text-zinc-400"><span>Afinidad mínima</span><span className="font-bold text-[#bf953f]">{minScore}%</span></div>
-                  <input type="range" min="0" max="100" value={minScore} onChange={e => setMinScore(parseInt(e.target.value))} className="w-full accent-[#bf953f] h-1.5 rounded-lg appearance-none cursor-pointer" />
+                  <div className="flex justify-between text-xs text-zinc-400"><span>Afinidad mínima VECY</span><span className="font-bold text-[#bf953f]">{minScore}%</span></div>
+                  <input type="range" min="85" max="100" step="5" value={minScore} onChange={e => setMinScore(parseInt(e.target.value))} className="w-full accent-[#bf953f] h-1.5 rounded-lg appearance-none cursor-pointer" />
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs text-zinc-400">Ciudad</label>
