@@ -884,23 +884,24 @@ function analyzeSender(name: string, userId: string, alreadyGreeted: boolean): {
 let cachedLiveStatsText = "";
 let cachedLiveStatsTime = 0;
 
-// Consulta los contadores reales de la base de datos en tiempo real (con caché de 60s)
+// Consulta los contadores reales de la base de datos en tiempo real (con caché de 5 minutos)
 export async function getLiveStats(): Promise<string> {
   const nowMs = Date.now();
-  if (cachedLiveStatsText && nowMs - cachedLiveStatsTime < 60000) {
+  if (cachedLiveStatsText && nowMs - cachedLiveStatsTime < 300000) {
     return cachedLiveStatsText;
   }
 
   try {
     const db = await getDb();
-    if (!db) return "";
+    if (!db) return cachedLiveStatsText || "";
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error("LiveStats DB query timeout")), 2500)
-    );
+    let timer: any;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new Error("LiveStats DB query timeout")), 1500);
+    });
 
     const [
       [propCount],
@@ -920,6 +921,10 @@ export async function getLiveStats(): Promise<string> {
       ]),
       timeoutPromise
     ]);
+
+    if (timer) clearTimeout(timer);
+
+    cachedLiveStatsTime = nowMs;
 
     const now = new Date().toLocaleString('es-CO', { timeZone: 'America/Bogota', dateStyle: 'short', timeStyle: 'short' });
     cachedLiveStatsText = `
@@ -1663,17 +1668,19 @@ Por lo tanto, DEBES hacer lo siguiente:
       textLower.includes("estimar precio");
 
     const isLegalQuery =
-      textLower.includes("sucesión") || textLower.includes("sucesion") ||
+      (textLower.includes("sucesión") || textLower.includes("sucesion") ||
       textLower.includes("herencia") || textLower.includes("divorcio") ||
       textLower.includes("embargo") || textLower.includes("saneamiento") ||
       textLower.includes("compraventa") || textLower.includes("arrendamiento") ||
       textLower.includes("ley 820") || textLower.includes("ley 675") ||
-      textLower.includes("corretaje") || textLower.includes("comision") || textLower.includes("comisión") ||
       textLower.includes("no me pago") || textLower.includes("no me pagó") ||
       textLower.includes("robo de comision") || textLower.includes("robo de comisión") ||
-      textLower.includes("disputa") || textLower.includes("notaría") || textLower.includes("notaria");
+      textLower.includes("disputa") || textLower.includes("notaría") || textLower.includes("notaria")) &&
+      !textLower.includes("50/50") && !textLower.includes("50-50");
 
-    const enableSearch = isValuationQuery || isLegalQuery || textLower.includes("trámite") || textLower.includes("tramite") || textLower.includes("patrimonio") || textLower.includes("entidad") || textLower.includes("buscar en google");
+    const isListingOrReq = hasRealEstateKeyword(textLower);
+
+    const enableSearch = !isListingOrReq && (isValuationQuery || isLegalQuery || textLower.includes("buscar en google"));
 
     // Obtener historial de chat reciente (Supercerebro) - Omitir en grupos para evitar contaminación de contexto
     const history = (isGroup || groupJid) ? [] : await getRecentChatHistory(userId, 20);
