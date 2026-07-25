@@ -3318,13 +3318,13 @@ export async function processCirculoMessage(
     const greetingInstruction = `\n\n[SISTEMA - INSTRUCCIÓN DE SALUDO Y COMPORTAMIENTO]:
 - Ya has saludado al usuario hoy: ${alreadyGreeted ? "SÍ" : "NO"}.
 - Tipo de conversación actual: GRUPO DE WHATSAPP.
-- Primer nombre del usuario: "${n}".
+- Primer nombre del usuario: "${firstName || realName}".
 - REGLAS CRÍTICAS DE RESPUESTA:
   * Si "Ya has saludado al usuario hoy" es SÍ:
     - ¡PROHIBIDO SALUDAR! No uses palabras como "Hola", "Buenas tardes", "Qué gusto", "Bienvenido", ni variantes de saludo o bienvenida.
-    - Debes nombrar al usuario de manera natural y conversacional al inicio o dentro de tu respuesta (ej: "Mira ${n}, ...", "Te cuento, ${n}, que...", "Para complementar, ${n}, ...").
+    - Debes nombrar al usuario de manera natural y conversacional al inicio o dentro de tu respuesta (ej: "Mira ${firstName || realName}, ...", "Te cuento, ${firstName || realName}, que...", "Para complementar, ${firstName || realName}, ...").
   * Si "Ya has saludado al usuario hoy" es NO:
-    - Debes saludar de manera muy cordial y natural, incluyendo su nombre "${n}" o dirigiéndose a él/ella como colega/aliado/a.`;
+    - Debes saludar de manera muy cordial y natural, incluyendo su nombre "${firstName || realName}" o dirigiéndose a él/ella como colega/aliado/a.`;
 
     const messages = [
       { role: "system", content: systemPrompt },
