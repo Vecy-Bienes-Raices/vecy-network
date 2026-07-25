@@ -1624,21 +1624,26 @@ Por lo tanto, DEBES hacer lo siguiente:
     } catch (parseErr: any) {
       console.error("[JanIA-Parser-Error] Error al deserializar JSON de JanIA:", parseErr.message);
       
+      // Intentar extraer la clasificación real original mediante regex
+      const classMatch = rawContent.match(/"classification"\s*:\s*"([^"]+)"/i);
+      const extractedClass = classMatch ? classMatch[1].toUpperCase() : null;
+
       // Intentar extraer el campo "response" de forma limpia mediante expresión regular
       const responseMatch = rawContent.match(/"response"\s*:\s*"([\s\S]*?)"(?:\s*,\s*"|\s*})/);
       let fallbackText = responseMatch ? responseMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"') : null;
 
       if (!fallbackText) {
-        // Buscar patrón alternativo si la comilla final fue truncada
         const truncatedMatch = rawContent.match(/"response"\s*:\s*"([\s\S]*)/);
         if (truncatedMatch) {
           fallbackText = truncatedMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"').replace(/["\}]+$/, '');
         }
       }
 
+      const inferredClass = (extractedClass === "INMUEBLE" || extractedClass === "REQUERIMIENTO") ? extractedClass : "CONSULTA_GENERAL";
+
       if (fallbackText && fallbackText.trim() !== "") {
         result = {
-          classification: "CONSULTA_GENERAL",
+          classification: inferredClass as any,
           response: fallbackText.trim(),
           mentions: []
         };
@@ -1651,8 +1656,8 @@ Por lo tanto, DEBES hacer lo siguiente:
           .replace(/response:\s*/gi, "")
           .trim();
         result = {
-          classification: "CONSULTA_GENERAL",
-          response: cleanContent || "Hola, he procesado tu consulta inmobiliaria. ¿En qué más puedo asesorarte hoy?",
+          classification: inferredClass as any,
+          response: cleanContent || "Hola, he procesado tu consulta inmobiliaria.",
           mentions: []
         };
       } else {
@@ -1662,32 +1667,56 @@ Por lo tanto, DEBES hacer lo siguiente:
     
     result.mentions = result.mentions || [];
 
-    // --- HEURÍSTICA DE SEGURIDAD PARA CORREGIR CLASIFICACIÓN ---
-    if (result.classification === "INMUEBLE" && messageToProcess) {
+    // --- CAPA DE RESCATE HEURÍSTICO POR TEXTO PARA CLASIFICACIÓN ---
+    if (messageToProcess) {
       const cleanText = messageToProcess.toLowerCase();
-      const indicatesRequirement = cleanText.includes("busco") || 
-                                   cleanText.includes("necesito") || 
-                                   cleanText.includes("requiero") || 
-                                   cleanText.includes("buscamos") || 
-                                   cleanText.includes("compro") || 
-                                   cleanText.includes("compra") ||
-                                   cleanText.includes("para cliente") ||
-                                   cleanText.includes("para un cliente") ||
-                                   cleanText.includes("para una cliente");
-      
-      const indicatesProperty = cleanText.includes("vendo") || 
-                                cleanText.includes("ofrezco") || 
-                                cleanText.includes("tengo") || 
-                                cleanText.includes("rento") || 
-                                cleanText.includes("alquilo") || 
-                                cleanText.includes("alquiler") ||
-                                cleanText.includes("venta") ||
-                                cleanText.includes("arriendo apartamento") ||
-                                cleanText.includes("arriendo casa");
+      const isSearch = cleanText.includes("busco") || 
+                       cleanText.includes("necesito") || 
+                       cleanText.includes("requiero") || 
+                       cleanText.includes("buscamos") || 
+                       cleanText.includes("compro") || 
+                       cleanText.includes("compra") ||
+                       cleanText.includes("se busca") ||
+                       cleanText.includes("para cliente") ||
+                       cleanText.includes("para un cliente") ||
+                       cleanText.includes("para una cliente");
 
-      if (indicatesRequirement && !indicatesProperty) {
+      const isOffer = cleanText.includes("vendo") || 
+                      cleanText.includes("ofrezco") || 
+                      cleanText.includes("tengo") || 
+                      cleanText.includes("rento") || 
+                      cleanText.includes("alquilo") || 
+                      cleanText.includes("alquiler") ||
+                      cleanText.includes("venta") ||
+                      cleanText.includes("se vende") ||
+                      cleanText.includes("se arrienda") ||
+                      cleanText.includes("en venta") ||
+                      cleanText.includes("en arriendo") ||
+                      cleanText.includes("arriendo apartamento") ||
+                      cleanText.includes("arriendo casa");
+
+      const hasRealEstateKeyword = cleanText.includes("apto") || 
+                                   cleanText.includes("apartamento") || 
+                                   cleanText.includes("casa") || 
+                                   cleanText.includes("bodega") || 
+                                   cleanText.includes("oficina") || 
+                                   cleanText.includes("lote") || 
+                                   cleanText.includes("finca") || 
+                                   cleanText.includes("habs") || 
+                                   cleanText.includes("m2") || 
+                                   cleanText.includes("mts");
+
+      if (result.classification === "INMUEBLE" && isSearch && !isOffer) {
         console.log("[JANIA-CORRECTION] Cambiando clasificación de INMUEBLE a REQUERIMIENTO basado en heurística de texto.");
         result.classification = "REQUERIMIENTO";
+      } else if ((result.classification === "CONSULTA_GENERAL" || result.classification === "DATOS_INCOMPLETOS" || !result.classification) && (hasRealEstateKeyword || isSearch || isOffer)) {
+        if (isSearch && !isOffer) {
+          console.log("[JANIA-CORRECTION] Rescatando REQUERIMIENTO desde CONSULTA_GENERAL por heurística de texto.");
+          result.classification = "REQUERIMIENTO";
+        } else if (isOffer || hasRealEstateKeyword) {
+          console.log("[JANIA-CORRECTION] Rescatando INMUEBLE desde CONSULTA_GENERAL por heurística de texto.");
+          result.classification = "INMUEBLE";
+        }
       }
     }
 

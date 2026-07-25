@@ -3213,9 +3213,8 @@ async function executeMatchEngine(propertyId, requirementId) {
         const pArea = parseFloat(String(prop.areaTotal || prop.areaPrivate || "0"));
         const rAreaMin = parseFloat(String(req.areaMin || "0"));
         if (pArea > 0 && rAreaMin > 0) {
-          const areaMaxLimit = rAreaMin * 1.1;
           const areaMinLimit = rAreaMin * 0.9;
-          if (pArea < areaMinLimit || pArea > areaMaxLimit) continue;
+          if (pArea < areaMinLimit) continue;
         }
         const price = parseFloat(String(prop.price || "0"));
         const adminFee = parseFloat(String(prop.adminFee || "0"));
@@ -3230,6 +3229,18 @@ async function executeMatchEngine(propertyId, requirementId) {
         const explanation = explicarMatch(req, prop);
         const score = explanation.score;
         if (score < 85) continue;
+        const propPhone = cleanPhone(prop.idUsuarioWhatsapp || "");
+        const reqPhone = cleanPhone(req.idUsuarioWhatsapp || "");
+        const existingSamePhone = await db.select({ id: propertyMatches.id, reqRaw: requirements.rawText }).from(propertyMatches).innerJoin(requirements, eq3(propertyMatches.requirementId, requirements.id)).where(
+          and(
+            eq3(propertyMatches.propertyId, prop.id),
+            eq3(requirements.idUsuarioWhatsapp, req.idUsuarioWhatsapp)
+          )
+        );
+        const isDuplicateReqPost = existingSamePhone.some(
+          (m) => m.reqRaw && req.rawText && (m.reqRaw.trim() === req.rawText.trim() || m.reqRaw.includes(req.rawText.substring(0, 50)))
+        );
+        if (isDuplicateReqPost) continue;
         let matchId;
         let isNewMatch = false;
         const existing = await db.select().from(propertyMatches).where(
@@ -4311,6 +4322,8 @@ ${liveStats}` : buildSystemPrompt(groupJid);
       result = parseSafeJSON(rawContent);
     } catch (parseErr) {
       console.error("[JanIA-Parser-Error] Error al deserializar JSON de JanIA:", parseErr.message);
+      const classMatch = rawContent.match(/"classification"\s*:\s*"([^"]+)"/i);
+      const extractedClass = classMatch ? classMatch[1].toUpperCase() : null;
       const responseMatch = rawContent.match(/"response"\s*:\s*"([\s\S]*?)"(?:\s*,\s*"|\s*})/);
       let fallbackText = responseMatch ? responseMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"') : null;
       if (!fallbackText) {
@@ -4319,17 +4332,18 @@ ${liveStats}` : buildSystemPrompt(groupJid);
           fallbackText = truncatedMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"').replace(/["\}]+$/, "");
         }
       }
+      const inferredClass = extractedClass === "INMUEBLE" || extractedClass === "REQUERIMIENTO" ? extractedClass : "CONSULTA_GENERAL";
       if (fallbackText && fallbackText.trim() !== "") {
         result = {
-          classification: "CONSULTA_GENERAL",
+          classification: inferredClass,
           response: fallbackText.trim(),
           mentions: []
         };
       } else if (rawContent && rawContent.trim() !== "") {
         const cleanContent = rawContent.replace(/"classification"\s*:\s*"[^"]*"/gi, "").replace(/"response"\s*:\s*"/gi, "").replace(/[\{\}\[\]"]/g, "").replace(/classification:\s*\w+,?/gi, "").replace(/response:\s*/gi, "").trim();
         result = {
-          classification: "CONSULTA_GENERAL",
-          response: cleanContent || "Hola, he procesado tu consulta inmobiliaria. \xBFEn qu\xE9 m\xE1s puedo asesorarte hoy?",
+          classification: inferredClass,
+          response: cleanContent || "Hola, he procesado tu consulta inmobiliaria.",
           mentions: []
         };
       } else {
@@ -4337,13 +4351,22 @@ ${liveStats}` : buildSystemPrompt(groupJid);
       }
     }
     result.mentions = result.mentions || [];
-    if (result.classification === "INMUEBLE" && messageToProcess) {
+    if (messageToProcess) {
       const cleanText2 = messageToProcess.toLowerCase();
-      const indicatesRequirement = cleanText2.includes("busco") || cleanText2.includes("necesito") || cleanText2.includes("requiero") || cleanText2.includes("buscamos") || cleanText2.includes("compro") || cleanText2.includes("compra") || cleanText2.includes("para cliente") || cleanText2.includes("para un cliente") || cleanText2.includes("para una cliente");
-      const indicatesProperty = cleanText2.includes("vendo") || cleanText2.includes("ofrezco") || cleanText2.includes("tengo") || cleanText2.includes("rento") || cleanText2.includes("alquilo") || cleanText2.includes("alquiler") || cleanText2.includes("venta") || cleanText2.includes("arriendo apartamento") || cleanText2.includes("arriendo casa");
-      if (indicatesRequirement && !indicatesProperty) {
+      const isSearch = cleanText2.includes("busco") || cleanText2.includes("necesito") || cleanText2.includes("requiero") || cleanText2.includes("buscamos") || cleanText2.includes("compro") || cleanText2.includes("compra") || cleanText2.includes("se busca") || cleanText2.includes("para cliente") || cleanText2.includes("para un cliente") || cleanText2.includes("para una cliente");
+      const isOffer = cleanText2.includes("vendo") || cleanText2.includes("ofrezco") || cleanText2.includes("tengo") || cleanText2.includes("rento") || cleanText2.includes("alquilo") || cleanText2.includes("alquiler") || cleanText2.includes("venta") || cleanText2.includes("se vende") || cleanText2.includes("se arrienda") || cleanText2.includes("en venta") || cleanText2.includes("en arriendo") || cleanText2.includes("arriendo apartamento") || cleanText2.includes("arriendo casa");
+      const hasRealEstateKeyword = cleanText2.includes("apto") || cleanText2.includes("apartamento") || cleanText2.includes("casa") || cleanText2.includes("bodega") || cleanText2.includes("oficina") || cleanText2.includes("lote") || cleanText2.includes("finca") || cleanText2.includes("habs") || cleanText2.includes("m2") || cleanText2.includes("mts");
+      if (result.classification === "INMUEBLE" && isSearch && !isOffer) {
         console.log("[JANIA-CORRECTION] Cambiando clasificaci\xF3n de INMUEBLE a REQUERIMIENTO basado en heur\xEDstica de texto.");
         result.classification = "REQUERIMIENTO";
+      } else if ((result.classification === "CONSULTA_GENERAL" || result.classification === "DATOS_INCOMPLETOS" || !result.classification) && (hasRealEstateKeyword || isSearch || isOffer)) {
+        if (isSearch && !isOffer) {
+          console.log("[JANIA-CORRECTION] Rescatando REQUERIMIENTO desde CONSULTA_GENERAL por heur\xEDstica de texto.");
+          result.classification = "REQUERIMIENTO";
+        } else if (isOffer || hasRealEstateKeyword) {
+          console.log("[JANIA-CORRECTION] Rescatando INMUEBLE desde CONSULTA_GENERAL por heur\xEDstica de texto.");
+          result.classification = "INMUEBLE";
+        }
       }
     }
     const extracted = result.extractedData || {};
@@ -7091,7 +7114,7 @@ Tambi\xE9n puedes consultarme directamente en mi chat privado con mi otra yo *Ja
                     remoteJid: lastMsg.key.remoteJid || chatId,
                     id: lastMsg.key.id,
                     fromMe: !!lastMsg.key.fromMe,
-                    participant: lastMsg.key.participant ? cleanJid(lastMsg.key.participant) : void 0
+                    participant: lastMsg.key.participant ? cleanJid(lastMsg.key.participant) : senderId ? cleanJid(senderId) : void 0
                   };
                   console.log(`[JANIA-MATCH] Reaccionando de inmediato con ${emoji} al mensaje de ${senderId} en ${chatId}`);
                   await this.sock.sendMessage(chatId, { react: { text: emoji, key: targetKey } });

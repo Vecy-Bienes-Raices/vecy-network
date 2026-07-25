@@ -1167,7 +1167,7 @@ export class JaniaMatchBot {
                 remoteJid: lastMsg.key.remoteJid || chatId,
                 id: lastMsg.key.id,
                 fromMe: !!lastMsg.key.fromMe,
-                participant: lastMsg.key.participant ? cleanJid(lastMsg.key.participant) : undefined
+                participant: lastMsg.key.participant ? cleanJid(lastMsg.key.participant) : (senderId ? cleanJid(senderId) : undefined)
               };
               console.log(`[JANIA-MATCH] Reaccionando de inmediato con ${emoji} al mensaje de ${senderId} en ${chatId}`);
               await this.sock.sendMessage(chatId, { react: { text: emoji, key: targetKey } });
