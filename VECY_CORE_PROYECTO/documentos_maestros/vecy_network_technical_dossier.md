@@ -385,25 +385,48 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 
 ---
 
-### 🔖 v17.3 — JULIO 2026: MATRIZ DOCTRINARIA RIGUROSA DE COTEJO TÉCNICO
+### 🔖 v17.3 — JULIO 2026: ESPECIFICACIÓN MAESTRA DEL MOTOR DE MATCHING VECY CORE
 
-**Objetivo:** Eliminar de forma definitiva los falsos matches y restablecer la precisión absoluta del motor de afinidad comercial entre Inmuebles (Oferta) y Requerimientos (Demanda).
+**Objetivo:** Garantizar precisión absoluta y lógica impecable en el cotejo técnico de afinidad comercial entre Inmuebles (Oferta) y Requerimientos (Demanda), alineando el backend y la tabla visual de la web.
 
-#### 🛑 MATRIZ DE FILTROS DUROS INQUEBRANTABLES (Score 0% si falla)
+#### 1. REGLAS MAESTRAS DE LOS FILTROS DUROS (Score 0% si falla)
 
 | # | Característica | Regla Doctrinaria Estricta | Resultado si Falla |
 |:---|:---|:---|:---:|
-| **1** | **Tipo de Negocio** | • `Arriendo` vs `Venta` → ❌ **0% IMPOSIBLE (Bloqueo Absoluto)**<br>• `Arriendo` vs `Arriendo con opción de compra` → ❌ **0% IMPOSIBLE (Regla v17.2)**<br>• `Arriendo` vs `Venta/Arriendo` (o viceversa) → ✅ **100% POSIBLE / OK**<br>• `Venta` ↔ `Venta`, `Venta/Arriendo`, `Venta/Permuta`, `Opción Compra` → ✅ **100% POSIBLE / OK** | **0% Score** |
-| **2** | **Tipo de Inmueble y Subtipo** | • Apartamento ↔ Casa / Bodega / Lote → ❌ **0% IMPOSIBLE**<br>• Apartamento Estándar ↔ Apartaestudio ↔ Loft → ❌ **0% IMPOSIBLE** | **0% Score** |
-| **3** | **Ciudad** | • Bogotá ↔ Medellín / Chía / Cali → ❌ **0% IMPOSIBLE** | **0% Score** |
-| **4** | **Zona / Barrio** | • Si se busca `Cedritos`, una oferta en `El Refugio`, `Rosales` o `Chicó` → ❌ **0% IMPOSIBLE**.<br>• Solo se permite barrio aledaño si el requerimiento dice *"aledaños"* o *"cercanos"*. | **0% Score** |
-| **5** | **Área Mínima (Metraje en Duro)** | • Oferta 139 m² vs Demanda mínimo 200 m² → ❌ **0% IMPOSIBLE**.<br>• Oferta `N/E` (sin metraje) vs Demanda con metraje exigido → ❌ **0% IMPOSIBLE**. | **0% Score** |
-| **6** | **Presupuesto Máximo** | • Arriendo: Canon > Presupuesto + 2% → ❌ **0% IMPOSIBLE**.<br>• Venta: Precio > Presupuesto + 5% → ❌ **0% IMPOSIBLE**. | **0% Score** |
-| **7** | **Habitaciones Mínimas** | • Oferta 2 habs vs Demanda 3 habs → ❌ **0% IMPOSIBLE**.<br>• Oferta `N/E` (sin habs) vs Demanda con habs exigidas → ❌ **0% IMPOSIBLE**. | **0% Score** |
+| **1** | **Tipo de Negocio** | • `Arriendo` vs `Venta` → ❌ **0% IMPOSIBLE (Bloqueo Absoluto)**<br>• `Arriendo` vs `Arriendo opción compra` → ❌ **0% IMPOSIBLE (Regla v17.2)**<br>• `Arriendo` vs `Venta/Arriendo` (o viceversa) → ✅ **100% POSIBLE / OK**<br>• `Venta` ↔ `Venta`, `Venta/Arriendo`, `Venta/Permuta`, `Opción Compra` → ✅ **100% POSIBLE / OK** | **0% Score** |
+| **2** | **Tipo y Subtipo de Inmueble** | • Categoría: Apartamento ↔ Casa / Bodega / Lote / Oficina → ❌ **0% IMPOSIBLE**<br>• Subtipo: Apartamento Estándar ↔ Apartaestudio ↔ Loft → ❌ **0% IMPOSIBLE** | **0% Score** |
+| **3** | **Ciudad** | • Coincidencia geográfica obligatoria (ej: Bogotá ↔ Bogotá). Difiere → ❌ **0% IMPOSIBLE** | **0% Score** |
+| **4** | **Zona / Barrio** | • Si se solicita barrio específico (ej. `Cedritos`), una oferta en `El Refugio`, `Rosales` o `Chicó` → ❌ **0% IMPOSIBLE**.<br>• Solo se permite barrio aledaño si la demanda incluye *"aledaños"* o *"cercanos"*. | **0% Score** |
+| **5** | **Área Mínima (Metraje en Duro)** | • Metraje ofrecido no puede ser inferior al exigido (`propArea >= reqAreaMin * 0.90`).<br>• Oferta 139 m² vs Demanda mínimo 200 m² → ❌ **0% IMPOSIBLE**.<br>• Oferta `N/E` (sin metraje) vs Demanda con metraje exigido → ❌ **0% IMPOSIBLE**. | **0% Score** |
+| **6** | **Presupuesto Máximo** | • Arriendo: (Canon + Admin) > Presupuesto + 2% → ❌ **0% IMPOSIBLE**.<br>• Venta: Precio > Presupuesto + 5% → ❌ **0% IMPOSIBLE**. | **0% Score** |
+| **7** | **Habitaciones Mínimas** | • Habitaciones ofrecidas no pueden ser inferiores a las exigidas (`pBedrooms >= rBedrooms`).<br>• Oferta 2 habs vs Demanda 3 habs → ❌ **0% IMPOSIBLE**.<br>• Oferta `N/E` (sin habs) vs Demanda con habs exigidas → ❌ **0% IMPOSIBLE**. | **0% Score** |
 
-#### 🏆 REGLAS DEL "100% MATCH PERFECTO"
-1. **Cero Campos Faltantes (`N/E`)**: Todos los atributos solicitados deben existir y estar extraídos.
-2. **Capping Automático**: Cualquier campo relevante marcado como `N/E` limita automáticamente el puntaje máximo a **84%**, impidiendo falsos badges del 100% o superar el umbral mínimo VECY (85%).
+---
+
+#### 2. UMBRAL MÍNIMO Y REGLA DEL 100% MATCH PERFECTO
+
+- **Threshold Mínimo en Base de Datos (85%+)**: Todo Match DEBE registrar un puntaje **≥ 85%**. Cualquier par con score inferior a 85% es ignorado y no se almacena en BD.
+- **Regla del 100% Match Perfecto**: Un Match solo recibe **100%** si **CADA CAMPO SOLICITADO** existe, ha sido extraído y coincide al 100%.
+- **Capping por Datos IncompletOS (`N/E`)**: Si existe **cualquier atributo relevante en `N/E`** (no extraído / sin información), el puntaje máximo se **capa a 84%**, impidiendo la emisión de badges falsos de Match Perfecto o su registro en BD.
+
+---
+
+#### 3. ALINEACIÓN ESTRUCTURAL DE LA TABLA DE COTEJO FRONT-END
+
+Para evitar confusión visual en la consola web, las columnas del Cotejo Técnico en `AdminMatches.tsx` y `MatchesReport.tsx` quedan fijadas de izquierda a derecha así:
+
+```
+┌─────────────────┬─────────────────────────┬─────────────────────────┬──────────────┐
+│ Característica  │  Ofrecido (Oferta)      │  Buscado (Demanda)      │ Cumplimiento │
+│                 │  (Color Dorado #bf953f) │  (Color Cyan #22d3ee)   │              │
+├─────────────────┼─────────────────────────┼─────────────────────────┼──────────────┤
+│ Tipo Negocio    │ Arriendo                │ Arriendo                │ Coincide     │
+│ Ubicación       │ Cedritos, Bogotá        │ Cedritos, Bogotá        │ Coincide     │
+│ Área Total      │ 210 m²                  │ ≥ 200 m²                │ Coincide     │
+│ Presupuesto     │ $ 3.500.000             │ Hasta $ 3.800.000       │ Coincide     │
+└─────────────────┴─────────────────────────┴─────────────────────────┴──────────────┘
+```
+
 
 
 
