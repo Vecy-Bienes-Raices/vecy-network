@@ -44,6 +44,8 @@ export default function Navbar({ logoUrl, brandName, brandSubtitle }: NavbarProp
 
   if (user && ['admin', 'agent'].includes(user.role as string)) {
     navItems.push({ label: 'ADMINISTRACIÓN', href: '/admin' });
+  } else {
+    navItems.push({ label: 'ACCEDER', href: '/login' });
   }
 
   return (
@@ -75,12 +77,16 @@ export default function Navbar({ logoUrl, brandName, brandSubtitle }: NavbarProp
         </div>
 
         {/* Desktop Navigation */}
-        <div className="hidden md:flex items-center gap-8">
+        <div className="hidden md:flex items-center gap-6">
           {navItems.map((item) => (
             <button
               key={item.label}
               onClick={() => item.href.startsWith('/') ? navigate(item.href) : window.location.hash = item.href}
-              className="text-sm font-semibold uppercase tracking-wider text-foreground/80 hover:text-accent transition-colors duration-300 relative group"
+              className={`text-sm font-semibold uppercase tracking-wider transition-colors duration-300 relative group ${
+                item.label === 'ADMINISTRACIÓN' || item.label === 'ACCEDER'
+                  ? 'text-accent hover:text-white font-bold'
+                  : 'text-foreground/80 hover:text-accent'
+              }`}
             >
               {item.label}
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-accent group-hover:w-full transition-all duration-300"></span>
@@ -88,9 +94,18 @@ export default function Navbar({ logoUrl, brandName, brandSubtitle }: NavbarProp
           ))}
         </div>
 
-        {/* CTA Button */}
-        <div className="hidden md:flex items-center gap-4">
-          <button className="btn-gold text-sm">CONSULTAR</button>
+        {/* CTA Buttons */}
+        <div className="hidden md:flex items-center gap-3">
+          {user && ['admin', 'agent'].includes(user.role as string) ? (
+            <button onClick={() => navigate('/admin')} className="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition-all">
+              ADMIN
+            </button>
+          ) : (
+            <button onClick={() => navigate('/login')} className="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-lg bg-white/10 text-white border border-white/20 hover:bg-white/20 transition-all">
+              ACCEDER
+            </button>
+          )}
+          <button onClick={() => navigate('/jania')} className="btn-gold text-sm">CONSULTAR</button>
         </div>
 
         {/* Mobile Menu Button */}
