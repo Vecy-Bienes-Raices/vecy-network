@@ -889,14 +889,12 @@ export async function executeMatchEngine(propertyId: number | null, requirementI
           if (!zonaMatch) continue;
         }
 
-        // ── FILTRO 5: Área dentro de un rango pequeño (±10%) ─────────────────
+        // ── FILTRO 5: Área (Metraje en Duro) — Debe ser >= al mínimo exigido ───
         const pArea = parseFloat(String(prop.areaTotal || prop.areaPrivate || "0"));
         const rAreaMin = parseFloat(String(req.areaMin || "0"));
-        // Solo hay areaMin en requerimientos, usar ±10% como límite superior
         if (pArea > 0 && rAreaMin > 0) {
-          const areaMaxLimit = rAreaMin * 1.10;
           const areaMinLimit = rAreaMin * 0.90;
-          if (pArea < areaMinLimit || pArea > areaMaxLimit) continue;
+          if (pArea < areaMinLimit) continue;
         }
 
         // ── FILTRO 6: Precio dentro del presupuesto (incluida administración) ──
