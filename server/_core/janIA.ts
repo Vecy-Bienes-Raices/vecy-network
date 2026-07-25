@@ -805,6 +805,10 @@ export async function getLiveStats(): Promise<string> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("LiveStats DB query timeout")), 2500)
+    );
+
     const [
       [propCount],
       [reqCount],
@@ -812,13 +816,16 @@ export async function getLiveStats(): Promise<string> {
       [propHoy],
       [reqHoy],
       [matchHoy]
-    ] = await Promise.all([
-      db.select({ total: sql<number>`count(*)::int` }).from(properties),
-      db.select({ total: sql<number>`count(*)::int` }).from(requirements),
-      db.select({ total: sql<number>`count(*)::int` }).from(propertyMatches),
-      db.select({ total: sql<number>`count(*)::int` }).from(properties).where(gte(properties.createdAt, today)),
-      db.select({ total: sql<number>`count(*)::int` }).from(requirements).where(gte(requirements.createdAt, today)),
-      db.select({ total: sql<number>`count(*)::int` }).from(propertyMatches).where(gte(propertyMatches.createdAt, today))
+    ] = await Promise.race([
+      Promise.all([
+        db.select({ total: sql<number>`count(*)::int` }).from(properties),
+        db.select({ total: sql<number>`count(*)::int` }).from(requirements),
+        db.select({ total: sql<number>`count(*)::int` }).from(propertyMatches),
+        db.select({ total: sql<number>`count(*)::int` }).from(properties).where(gte(properties.createdAt, today)),
+        db.select({ total: sql<number>`count(*)::int` }).from(requirements).where(gte(requirements.createdAt, today)),
+        db.select({ total: sql<number>`count(*)::int` }).from(propertyMatches).where(gte(propertyMatches.createdAt, today))
+      ]),
+      timeoutPromise
     ]);
 
     const now = new Date().toLocaleString('es-CO', { timeZone: 'America/Bogota', dateStyle: 'short', timeStyle: 'short' });

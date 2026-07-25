@@ -3628,6 +3628,9 @@ async function getLiveStats() {
     if (!db) return "";
     const today = /* @__PURE__ */ new Date();
     today.setHours(0, 0, 0, 0);
+    const timeoutPromise = new Promise(
+      (_, reject) => setTimeout(() => reject(new Error("LiveStats DB query timeout")), 2500)
+    );
     const [
       [propCount],
       [reqCount],
@@ -3635,13 +3638,16 @@ async function getLiveStats() {
       [propHoy],
       [reqHoy],
       [matchHoy]
-    ] = await Promise.all([
-      db.select({ total: sql2`count(*)::int` }).from(properties),
-      db.select({ total: sql2`count(*)::int` }).from(requirements),
-      db.select({ total: sql2`count(*)::int` }).from(propertyMatches),
-      db.select({ total: sql2`count(*)::int` }).from(properties).where(gte(properties.createdAt, today)),
-      db.select({ total: sql2`count(*)::int` }).from(requirements).where(gte(requirements.createdAt, today)),
-      db.select({ total: sql2`count(*)::int` }).from(propertyMatches).where(gte(propertyMatches.createdAt, today))
+    ] = await Promise.race([
+      Promise.all([
+        db.select({ total: sql2`count(*)::int` }).from(properties),
+        db.select({ total: sql2`count(*)::int` }).from(requirements),
+        db.select({ total: sql2`count(*)::int` }).from(propertyMatches),
+        db.select({ total: sql2`count(*)::int` }).from(properties).where(gte(properties.createdAt, today)),
+        db.select({ total: sql2`count(*)::int` }).from(requirements).where(gte(requirements.createdAt, today)),
+        db.select({ total: sql2`count(*)::int` }).from(propertyMatches).where(gte(propertyMatches.createdAt, today))
+      ]),
+      timeoutPromise
     ]);
     const now = (/* @__PURE__ */ new Date()).toLocaleString("es-CO", { timeZone: "America/Bogota", dateStyle: "short", timeStyle: "short" });
     cachedLiveStatsText = `
