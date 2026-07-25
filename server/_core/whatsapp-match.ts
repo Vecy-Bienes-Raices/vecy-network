@@ -86,16 +86,40 @@ export class JaniaMatchBot {
     }
   }
 
+export interface JaniaBotOptions {
+  sessionFolderName?: string;
+  qrFileName?: string;
+  botName?: string;
+  isWorkerOnly?: boolean;
+}
+
+export class JaniaMatchBot {
+  public sock: any = null;
+  public isReady: boolean = false;
+  public authorizedGroups: string[] = [];
+  public sessionFolderName: string = '.baileys_auth';
+  public qrFileName: string = 'qr-match.png';
+  public botName: string = 'JANIA-MATCH';
+  public isWorkerOnly: boolean = false;
+
   public targetGroupId: string = '120363260108880069@g.us';
   public buzonGroupId: string = '120363417740040773@g.us';
   public circuloGroupId: string = '120363403507276533@g.us';
   private cooldownMap: Map<string, any> = new Map();
   private cooldownFile: string = path.join(process.cwd(), '.cooldown_map.json');
 
+  constructor(options?: JaniaBotOptions) {
+    if (options) {
+      if (options.sessionFolderName) this.sessionFolderName = options.sessionFolderName;
+      if (options.qrFileName) this.qrFileName = options.qrFileName;
+      if (options.botName) this.botName = options.botName;
+      if (options.isWorkerOnly !== undefined) this.isWorkerOnly = options.isWorkerOnly;
+    }
 
-  constructor() {
-    (global as any).janiaMatchBotInstance = this;
-    console.log('[JANIA-MATCH] Inicializando JanIA Match Bot (Ojos y Oídos) con Baileys...');
+    if (!this.isWorkerOnly) {
+      (global as any).janiaMatchBotInstance = this;
+    }
+    console.log(`[${this.botName}] Inicializando JanIA Bot con Baileys (Carpeta: ${this.sessionFolderName})...`);
     
     // Cargar grupos desde la configuración o usar defaults
     const groupsEnv = process.env.JANIA_MATCH_GROUPS;
@@ -116,11 +140,11 @@ export class JaniaMatchBot {
 
   private startDbHeartbeat() {
     // Initial status update
-    this.updateStatusInDb().catch(err => console.error("[JANIA-MATCH-DB] Error in initial status update:", err));
+    this.updateStatusInDb().catch(err => console.error(`[${this.botName}-DB] Error in initial status update:`, err));
 
     // Send heartbeat every 30 seconds
     setInterval(() => {
-      this.updateStatusInDb().catch(err => console.error("[JANIA-MATCH-DB] Error in heartbeat status update:", err));
+      this.updateStatusInDb().catch(err => console.error(`[${this.botName}-DB] Error in heartbeat status update:`, err));
     }, 30000);
   }
 
@@ -130,36 +154,37 @@ export class JaniaMatchBot {
       if (!db) return;
 
       const phone = this.sock?.user?.id ? this.sock.user.id.split('@')[0].split(':')[0] : null;
+      const jid = this.isWorkerOnly ? "system:bot_status_worker2" : "system:bot_status";
 
       await db
         .insert(pendingSessions)
         .values({
-          jid: "system:bot_status",
-          sessionData: { isReady: this.isReady, phone, updatedAt: new Date().toISOString() },
+          jid,
+          sessionData: { isReady: this.isReady, phone, botName: this.botName, updatedAt: new Date().toISOString() },
           createdAt: new Date(),
         })
         .onConflictDoUpdate({
           target: pendingSessions.jid,
           set: {
-            sessionData: { isReady: this.isReady, phone, updatedAt: new Date().toISOString() },
+            sessionData: { isReady: this.isReady, phone, botName: this.botName, updatedAt: new Date().toISOString() },
           },
         });
       
-      console.log(`[JANIA-MATCH-DB] Bot status heartbeat updated: isReady=${this.isReady}, phone=${phone}`);
+      console.log(`[${this.botName}-DB] Bot status heartbeat updated: isReady=${this.isReady}, phone=${phone}`);
     } catch (err: any) {
-      console.error("[JANIA-MATCH-DB] Failed to update bot status in DB:", err.message);
+      console.error(`[${this.botName}-DB] Failed to update bot status in DB:`, err.message);
     }
   }
 
   public async initialize() {
     try {
-      const sessionDir = path.join(process.cwd(), '.baileys_auth');
+      const sessionDir = path.join(process.cwd(), this.sessionFolderName);
       const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
       
       // Guardar las credenciales iniciales de inmediato en disco para evitar que se pierdan
       if (!fs.existsSync(path.join(sessionDir, 'creds.json'))) {
         await saveCreds();
-        console.log('[JANIA-MATCH] 💾 Guardadas credenciales iniciales de Baileys en el disco.');
+        console.log(`[${this.botName}] 💾 Guardadas credenciales iniciales de Baileys en ${this.sessionFolderName}.`);
       }
       
       // Obtener la versión de WhatsApp Web más reciente para evitar el error de stream 515
@@ -167,12 +192,12 @@ export class JaniaMatchBot {
       try {
         const { version: latestVersion } = await fetchLatestBaileysVersion();
         version = latestVersion;
-        console.log(`[JANIA-MATCH] Usando versión de WhatsApp Web: ${version.join('.')}`);
+        console.log(`[${this.botName}] Usando versión de WhatsApp Web: ${version.join('.')}`);
       } catch (e: any) {
-        console.warn('[JANIA-MATCH] No se pudo obtener la versión dinámica de WhatsApp Web, usando fallback:', e.message);
+        console.warn(`[${this.botName}] No se pudo obtener la versión dinámica de WhatsApp Web, usando fallback:`, e.message);
       }
 
-      console.log('[JANIA-MATCH] Estableciendo conexión por WebSocket...');
+      console.log(`[${this.botName}] Estableciendo conexión por WebSocket...`);
       const silentLogger = {
         level: 'silent',
         log: () => {},
@@ -190,7 +215,7 @@ export class JaniaMatchBot {
         version,
         logger: silentLogger as any,
         printQRInTerminal: false, // Lo manejamos nosotros de forma personalizada
-        browser: Browsers.macOS('Desktop'),
+        browser: Browsers.macOS(this.isWorkerOnly ? 'Captador Worker' : 'Desktop'),
         syncFullHistory: false,
         markOnlineOnConnect: false,
         connectTimeoutMs: 90000, // Aumentado a 90s para conexiones lentas
@@ -201,7 +226,7 @@ export class JaniaMatchBot {
 
       this.setupEventListeners(saveCreds);
     } catch (err: any) {
-      console.error('[JANIA-MATCH] Error crítico al inicializar el cliente Baileys:', err);
+      console.error(`[${this.botName}] Error crítico al inicializar el cliente Baileys:`, err);
     }
   }
 
@@ -210,7 +235,7 @@ export class JaniaMatchBot {
       try {
         await saveCreds();
       } catch (err: any) {
-        console.error('[JANIA-MATCH] ❌ Error al guardar credenciales:', err.message || err);
+        console.error(`[${this.botName}] ❌ Error al guardar credenciales:`, err.message || err);
       }
     });
 
@@ -218,18 +243,18 @@ export class JaniaMatchBot {
       const { connection, lastDisconnect, qr } = update;
 
       if (qr) {
-        console.log('\n[JANIA-MATCH] 🔌 ESCANEA ESTE CÓDIGO QR PARA INICIAR JANIA MATCH:');
+        console.log(`\n[${this.botName}] 🔌 ESCANEA ESTE CÓDIGO QR PARA VINCULAR ${this.botName}:`);
         qrcodeTerminal.generate(qr, { small: true });
 
         // Guardar el QR como imagen PNG accesible desde el navegador
         try {
-          const qrPath = path.join(process.cwd(), 'qr-match.png');
+          const qrPath = path.join(process.cwd(), this.qrFileName);
           QRCode.toFile(qrPath, qr, { width: 400, margin: 2 }, (err: any) => {
-            if (err) console.error('[JANIA-MATCH] Error guardando QR PNG:', err.message);
-            else console.log(`[JANIA-MATCH] 📸 QR guardado como imagen en la raíz del proyecto.`);
+            if (err) console.error(`[${this.botName}] Error guardando QR PNG:`, err.message);
+            else console.log(`[${this.botName}] 📸 QR guardado como ${this.qrFileName} en la raíz del proyecto.`);
           });
         } catch (e: any) {
-          console.warn('[JANIA-MATCH] qrcode no disponible para PNG.', e.message);
+          console.warn(`[${this.botName}] qrcode no disponible para PNG.`, e.message);
         }
       }
 
@@ -243,23 +268,23 @@ export class JaniaMatchBot {
         const isConflict = statusCode === 440;
         const delayMs = (isRestart || isConnectionLost) ? 1000 : (isConflict ? 120000 : 5000);
         
-        console.warn(`[JANIA-MATCH] ⚠️ Conexión Baileys cerrada (código: ${statusCode}): ${error?.message || error}. Reconectando en ${delayMs}ms: ${shouldReconnect}`);
+        console.warn(`[${this.botName}] ⚠️ Conexión Baileys cerrada (código: ${statusCode}): ${error?.message || error}. Reconectando en ${delayMs}ms: ${shouldReconnect}`);
         this.isReady = false;
-        this.updateStatusInDb().catch(err => console.error("[JANIA-MATCH-DB] Error updating status on close:", err));
+        this.updateStatusInDb().catch(err => console.error(`[${this.botName}-DB] Error updating status on close:`, err));
 
         if (shouldReconnect) {
           setTimeout(() => this.initialize(), delayMs);
         } else {
-          console.error('[JANIA-MATCH] Sesión de WhatsApp cerrada (Logged Out). Limpiando credenciales...');
+          console.error(`[${this.botName}] Sesión de WhatsApp cerrada (Logged Out). Limpiando credenciales...`);
           try {
-            fs.rmSync(path.join(process.cwd(), '.baileys_auth'), { recursive: true, force: true });
+            fs.rmSync(path.join(process.cwd(), this.sessionFolderName), { recursive: true, force: true });
           } catch (e: any) {}
           setTimeout(() => this.initialize(), 5000);
         }
       } else if (connection === 'open') {
-        console.log('\n🚀 JANIA MATCH🔌💘 — BOT DE ESCUCHA Y MATCHES ACTIVADO CORRECTAMENTE CON BAILEYS');
+        console.log(`\n🚀 ${this.botName} 🔌💘 — BOT ACTIVADO CORRECTAMENTE CON BAILEYS`);
         this.isReady = true;
-        this.updateStatusInDb().catch(err => console.error("[JANIA-MATCH-DB] Error updating status on open:", err));
+        this.updateStatusInDb().catch(err => console.error(`[${this.botName}-DB] Error updating status on open:`, err));
       }
     });
 
@@ -1875,3 +1900,9 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
 }
 
 export const janiaMatchBot = new JaniaMatchBot();
+export const janiaCaptadorBot = new JaniaMatchBot({
+  sessionFolderName: '.baileys_auth_worker2',
+  qrFileName: 'qr-captador.png',
+  botName: 'JANIA-CAPTADOR-WORKER2',
+  isWorkerOnly: true
+});

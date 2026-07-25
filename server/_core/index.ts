@@ -193,6 +193,40 @@ async function startServer() {
     }
   });
 
+  // --- BOT CAPTADOR WORKER 2 (+573192919978) ENDPOINTS ---
+  app.get("/qr-captador.png", (req, res) => {
+    try {
+      const qrPath = path.join(process.cwd(), 'qr-captador.png');
+      const distQrPath = path.join(process.cwd(), 'dist', 'qr-captador.png');
+      const activePath = fs.existsSync(qrPath) ? qrPath : distQrPath;
+      
+      if (fs.existsSync(activePath)) {
+        res.setHeader("Content-Type", "image/png");
+        res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+        res.setHeader("Pragma", "no-cache");
+        res.setHeader("Expires", "0");
+        return res.sendFile(activePath);
+      }
+      res.status(404).send("QR Captador no disponible todavía. Solicita el código de vinculación o refresca.");
+    } catch (err: any) {
+      res.status(500).send(err.message);
+    }
+  });
+
+  app.get("/api/captador-pairing-code", async (req, res) => {
+    try {
+      const targetPhone = (req.query.phone as string) || "573192919978";
+      const { janiaCaptadorBot } = await import("./whatsapp-match");
+      if (!janiaCaptadorBot) {
+        return res.status(503).send("El bot captador no está inicializado.");
+      }
+      const code = await janiaCaptadorBot.getPairingCode(targetPhone);
+      res.json({ ok: true, phone: targetPhone, code });
+    } catch (err: any) {
+      res.status(500).send(err.message || err);
+    }
+  });
+
   app.post("/api/send-whatsapp-notification", async (req, res) => {
     try {
       const { text, token, phone } = req.body;
@@ -712,11 +746,15 @@ Dirección obligatoria:
       console.error("[STARTUP-CLEANUP] Error importando función de limpieza:", err);
     });
 
-    // Inicializar el Bot de WhatsApp de Vecy Network (Baileys) de forma unificada para evitar conflictos de stream
+    // Inicializar los Bots de WhatsApp de Vecy Network (Baileys)
     const shouldStartBot = process.env.ENABLE_WHATSAPP_BOT !== "false" || process.env.ENABLE_JANIA_MATCH_BOT === "true";
     if (shouldStartBot) {
-      console.log("Iniciando WhatsApp Bot Unificado (Baileys)...");
+      console.log("Iniciando WhatsApp Bot Principal (+573166569719) Baileys...");
       janiaMatchBot.initialize();
+      console.log("Iniciando WhatsApp Bot Captador Worker (+573192919978) Baileys...");
+      import("./whatsapp-match").then(({ janiaCaptadorBot }) => {
+        janiaCaptadorBot.initialize();
+      }).catch(err => console.error("[WHATSAPP-CAPTADOR] Error al iniciar bot captador:", err));
     } else {
       console.log("[WHATSAPP-BOT] Deshabilitado temporalmente mediante variables de entorno.");
     }
