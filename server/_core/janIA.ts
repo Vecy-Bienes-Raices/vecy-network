@@ -1833,6 +1833,7 @@ Por lo tanto, DEBES hacer lo siguiente:
       if (!extracted.transactionType) extracted.transactionType = fallbackData.transactionType;
       if (!extracted.propertyType) extracted.propertyType = fallbackData.propertyType;
       if (!extracted.price || Number(extracted.price) === 0) extracted.price = fallbackData.price;
+      if (!extracted.presupuestoMax || Number(extracted.presupuestoMax) === 0) extracted.presupuestoMax = fallbackData.price;
       if (!extracted.area || Number(extracted.area) === 0) extracted.area = fallbackData.area;
       if (!extracted.bedrooms) extracted.bedrooms = fallbackData.bedrooms;
       if (!extracted.bathrooms) extracted.bathrooms = fallbackData.bathrooms;
