@@ -64,7 +64,8 @@ var init_schema = __esm({
       "land",
       "commercial",
       "loft",
-      "consultorio"
+      "consultorio",
+      "cabin"
     ]);
     transactionTypeEnum = pgEnum("transactionType", [
       "venta",
@@ -3428,6 +3429,10 @@ function extractFallbackDataFromText(text2) {
   let propertyType = "apartment";
   if (clean.includes("casa") || clean.includes("townhouse")) {
     propertyType = "house";
+  } else if (clean.includes("caba\xF1a") || clean.includes("cabana") || clean.includes("caba\xF1as") || clean.includes("cabanas") || clean.includes("cabin")) {
+    propertyType = "cabin";
+  } else if (clean.includes("local") || clean.includes("locales") || clean.includes("comercial")) {
+    propertyType = "commercial";
   } else if (clean.includes("bodega")) {
     propertyType = "warehouse";
   } else if (clean.includes("oficina")) {
@@ -4435,7 +4440,7 @@ ${liveStats}` : buildSystemPrompt(groupJid);
       const cleanText2 = messageToProcess.toLowerCase();
       const isSearch = cleanText2.includes("busco") || cleanText2.includes("necesito") || cleanText2.includes("requiero") || cleanText2.includes("requerimiento") || cleanText2.includes("buscamos") || cleanText2.includes("compro") || cleanText2.includes("compra") || cleanText2.includes("se busca") || cleanText2.includes("se requiere") || cleanText2.includes("para arriendo") || cleanText2.includes("para compra") || cleanText2.includes("solicito") || cleanText2.includes("solicitamos") || cleanText2.includes("cliente:") || cleanText2.includes("cliente :") || cleanText2.includes("presupuesto:") || cleanText2.includes("presupuesto :") || cleanText2.includes("acci\xF3n: compra") || cleanText2.includes("acci\xF3n : compra") || cleanText2.includes("para cliente") || cleanText2.includes("para un cliente") || cleanText2.includes("para una cliente");
       const isOffer = cleanText2.includes("vendo") || cleanText2.includes("ofrezco") || cleanText2.includes("tengo") || cleanText2.includes("rento") || cleanText2.includes("alquilo") || cleanText2.includes("alquiler") || cleanText2.includes("venta:") || cleanText2.includes("renta apartamento") || cleanText2.includes("se vende") || cleanText2.includes("se arrienda") || cleanText2.includes("en venta") || cleanText2.includes("en arriendo") || cleanText2.includes("arriendo apartamento") || cleanText2.includes("arriendo casa");
-      const hasRealEstateKeyword = cleanText2.includes("apto") || cleanText2.includes("apartamento") || cleanText2.includes("casa") || cleanText2.includes("bodega") || cleanText2.includes("oficina") || cleanText2.includes("lote") || cleanText2.includes("finca") || cleanText2.includes("habs") || cleanText2.includes("alcoba") || cleanText2.includes("m2") || cleanText2.includes("mts");
+      const hasRealEstateKeyword = cleanText2.includes("apto") || cleanText2.includes("apartamento") || cleanText2.includes("casa") || cleanText2.includes("bodega") || cleanText2.includes("oficina") || cleanText2.includes("local") || cleanText2.includes("locales") || cleanText2.includes("caba\xF1a") || cleanText2.includes("caba\xF1as") || cleanText2.includes("lote") || cleanText2.includes("finca") || cleanText2.includes("habs") || cleanText2.includes("alcoba") || cleanText2.includes("m2") || cleanText2.includes("mts");
       if (result.classification === "INMUEBLE" && isSearch && !isOffer) {
         console.log("[JANIA-CORRECTION] Cambiando clasificaci\xF3n de INMUEBLE a REQUERIMIENTO basado en heur\xEDstica de texto.");
         result.classification = "REQUERIMIENTO";
@@ -4798,15 +4803,16 @@ async function findOrCreateUserByPhone(phone, realName) {
 function sanitizePropertyType(type) {
   if (!type) return "apartment";
   const t2 = type.toLowerCase().trim();
-  if (t2 === "apartment" || t2 === "apartamento" || t2 === "apto" || t2.includes("apartaestudio") || t2.includes("penthouse") || t2 === "loft") return "apartment";
-  if (t2 === "house" || t2 === "casa" || t2.includes("chalet") || t2.includes("caba\xF1a") || t2.includes("cabana") || t2.includes("quinta") || t2.includes("campestre")) return "house";
+  if (t2 === "cabin" || t2.includes("caba\xF1a") || t2.includes("cabana") || t2.includes("caba\xF1as") || t2.includes("cabanas")) return "cabin";
+  if (t2 === "apartment" || t2 === "apartamento" || t2 === "apto" || t2.includes("apartaestudio") || t2.includes("penthouse")) return "apartment";
+  if (t2 === "house" || t2 === "casa" || t2.includes("chalet") || t2.includes("quinta") || t2.includes("campestre")) return "house";
   if (t2 === "building" || t2 === "edificio") return "building";
   if (t2 === "warehouse" || t2 === "bodega") return "warehouse";
   if (t2 === "farm" || t2 === "finca") return "farm";
   if (t2 === "hotel" || t2.includes("hostal") || t2.includes("hospedaje") || t2.includes("motel") || t2.includes("hostel")) return "hotel";
   if (t2 === "office" || t2 === "oficina") return "office";
   if (t2 === "land" || t2 === "lote" || t2 === "terreno") return "land";
-  if (t2 === "commercial" || t2 === "local" || t2 === "comercial") return "commercial";
+  if (t2 === "commercial" || t2 === "local" || t2 === "locales" || t2.includes("local comercial") || t2.includes("locales comerciales") || t2 === "comercial") return "commercial";
   if (t2 === "loft") return "loft";
   if (t2 === "consultorio" || t2 === "office_medical") return "consultorio";
   return "apartment";

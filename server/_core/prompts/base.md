@@ -86,7 +86,7 @@ DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
     "price": number,
     "zone": "string",
     "city": "string",
-    "propertyType": "apartment | house | building | warehouse | office | farm | loft | consultorio",
+    "propertyType": "apartment | house | building | warehouse | office | farm | commercial | cabin | loft | consultorio",
     "transactionType": "venta | arriendo | venta_o_arriendo | arriendo_temporal | arriendo_con_opcion_de_compra | permuta | venta_permuta | aporte",
     "transactionTypes": ["array con tipos de negocio válidos"],
     "price": number,

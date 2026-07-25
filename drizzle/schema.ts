@@ -4,7 +4,7 @@ import { serial, integer, pgEnum, pgTable, text, timestamp, varchar, decimal, bo
 export const roleEnum = pgEnum("role", ["user", "janIA", "system", "admin", "agent"]);
 export const propertyTypeEnum = pgEnum("propertyType", [
   "apartment", "house", "building", "warehouse", "farm", "hotel", 
-  "office", "land", "commercial", "loft", "consultorio"
+  "office", "land", "commercial", "loft", "consultorio", "cabin"
 ]);
 export const transactionTypeEnum = pgEnum("transactionType", [
   "venta",
