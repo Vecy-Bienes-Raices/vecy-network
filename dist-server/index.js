@@ -7708,8 +7708,8 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
           }
           let messagePayload = {};
           if (mediaPath) {
-            const fs5 = await import("fs");
-            const buffer = fs5.readFileSync(mediaPath);
+            const fs6 = await import("fs");
+            const buffer = fs6.readFileSync(mediaPath);
             const path7 = await import("path");
             const ext = path7.extname(mediaPath).toLowerCase();
             if (ext === ".mp4") {
@@ -10359,6 +10359,7 @@ init_nightlyRematch();
 init_llm();
 import cron from "node-cron";
 import path5 from "path";
+import fs4 from "fs";
 import { fileURLToPath } from "url";
 import { gte as gte3, and as and7, eq as eq13, sql as sql6 } from "drizzle-orm";
 var __filename = fileURLToPath(import.meta.url);
@@ -10443,8 +10444,9 @@ function initCronScheduler() {
 }
 async function sendVideoPromo(groupId, groupName) {
   try {
-    if (!groupId) return;
-    const videoPath = path5.resolve(__dirname, "../../dist/JanIAConsulta.mp4");
+    const primaryPath = path5.resolve(process.cwd(), "dist/JanIAConsulta.mp4");
+    const fallbackPath = path5.resolve(__dirname, "../../dist/JanIAConsulta.mp4");
+    const videoPath = fs4.existsSync(primaryPath) ? primaryPath : fallbackPath;
     const texto = `\u{1F4AC} \xBFPrefieres una atenci\xF3n m\xE1s directa y personalizada?
 
 Chatea directamente con *JanIA*, tu asistente de inteligencia artificial de VECY Network.
@@ -10565,7 +10567,7 @@ init_llm();
 init_whatsapp_utils();
 init_whatsapp_match();
 import multer from "multer";
-import fs4 from "fs";
+import fs5 from "fs";
 import path6 from "path";
 process.on("uncaughtException", (error) => {
   console.error("[SYSTEM-CRITICAL] Uncaught Exception detectada:", error);
@@ -10647,8 +10649,8 @@ async function startServer() {
     try {
       const qrPath = path6.join(process.cwd(), "qr-match.png");
       const distQrPath = path6.join(process.cwd(), "dist", "qr-match.png");
-      const activePath = fs4.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs4.existsSync(activePath)) {
+      const activePath = fs5.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs5.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
         res.setHeader("Pragma", "no-cache");
@@ -10670,8 +10672,8 @@ async function startServer() {
       }
       const qrPath = path6.join(process.cwd(), "qr-match.png");
       const distQrPath = path6.join(process.cwd(), "dist", "qr-match.png");
-      const activePath = fs4.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs4.existsSync(activePath)) {
+      const activePath = fs5.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs5.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
         res.setHeader("Pragma", "no-cache");
@@ -10694,8 +10696,8 @@ async function startServer() {
       await new Promise((resolve) => setTimeout(resolve, 4e3));
       const qrPath = path6.join(process.cwd(), "qr-match.png");
       const distQrPath = path6.join(process.cwd(), "dist", "qr-match.png");
-      const activePath = fs4.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs4.existsSync(activePath)) {
+      const activePath = fs5.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs5.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         return res.sendFile(activePath);
       }
@@ -10724,8 +10726,8 @@ async function startServer() {
     try {
       const qrPath = path6.join(process.cwd(), "qr-captador.png");
       const distQrPath = path6.join(process.cwd(), "dist", "qr-captador.png");
-      const activePath = fs4.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs4.existsSync(activePath)) {
+      const activePath = fs5.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs5.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
         res.setHeader("Pragma", "no-cache");
@@ -10856,8 +10858,8 @@ async function startServer() {
     }
   });
   const uploadsDir = path6.resolve(process.cwd(), "public/uploads");
-  if (!fs4.existsSync(uploadsDir)) {
-    fs4.mkdirSync(uploadsDir, { recursive: true });
+  if (!fs5.existsSync(uploadsDir)) {
+    fs5.mkdirSync(uploadsDir, { recursive: true });
   }
   app.use("/uploads", express2.static(uploadsDir));
   const diskStorage = multer.diskStorage({

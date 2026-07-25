@@ -1,5 +1,6 @@
 import cron from 'node-cron';
 import path from 'path';
+import fs from 'fs';
 import { getDb } from '../db';
 import { fileURLToPath } from 'url';
 
@@ -141,8 +142,9 @@ export function initCronScheduler() {
  */
 async function sendVideoPromo(groupId: string, groupName: string) {
   try {
-    if (!groupId) return;
-    const videoPath = path.resolve(__dirname, '../../dist/JanIAConsulta.mp4');
+    const primaryPath = path.resolve(process.cwd(), 'dist/JanIAConsulta.mp4');
+    const fallbackPath = path.resolve(__dirname, '../../dist/JanIAConsulta.mp4');
+    const videoPath = fs.existsSync(primaryPath) ? primaryPath : fallbackPath;
 
     const texto =
       `💬 ¿Prefieres una atención más directa y personalizada?\n\n` +
