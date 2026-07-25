@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { cleanVoiceText } from './_core/whatsapp';
+import { cleanVoiceText } from './_core/whatsapp-utils';
 
 describe('cleanVoiceText', () => {
   it('should pass normal clean text unchanged', () => {
