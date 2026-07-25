@@ -74,30 +74,34 @@ aporte                        → Aporte a proyecto de construcción
 
 ---
 
-## 🔀 MATCHING CRUZADO INTELIGENTE (v17.2 — REGLAS DOCTRINALES)
+## 🔀 MATCHING CRUZADO INTELIGENTE (v17.3 — REGLAS DOCTRINALES)
 
 Función `checkTransactionCompatibility()` en `server/_core/matching.ts`:
 
-```
-venta                         ← compatible con → req: venta, venta_o_arriendo, venta_permuta, arriendo_con_opcion_de_compra
-arriendo                      ← compatible con → req: arriendo, venta_o_arriendo
-arriendo_con_opcion_de_compra ← compatible con → req: arriendo_con_opcion_de_compra, venta_o_arriendo, venta
-permuta                       ← compatible con → req: permuta, venta_permuta
-```
+- **`Arriendo` vs `Venta`** → ❌ **0% IMPOSIBLE (Bloqueo Absoluto)**
+- **`Arriendo` vs `Venta o Arriendo`** (o viceversa) → ✅ **100% POSIBLE / OK**
+- **`Arriendo` vs `Arriendo con opción de compra`** → ❌ **0% IMPOSIBLE (Regla Doctrinal v17.2)**
+- **`Venta` ↔ `Venta`, `Venta o Arriendo`, `Venta/Permuta`, `Arriendo con opción de compra`** → ✅ **100% POSIBLE / OK**
 
-> ⚠️ **REGLA CRÍTICA DOCTRINAL (v17.2)**: `arriendo_con_opcion_de_compra` **JAMÁS coincide con `arriendo` puro**.
+> ⚠️ **REGLA CRÍTICA DOCTRINAL (v17.2/v17.3)**: `arriendo_con_opcion_de_compra` **JAMÁS coincide con `arriendo` puro**.
 > Únicamente coincide con `arriendo_con_opcion_de_compra`, `venta_o_arriendo` y `venta` pura (ya que quien busca o tiene opción de compra sí está dispuesto a vender o comprar directamente).
 
 ---
 
-## 📐 VECY MATCHING THRESHOLD (85% - 100%)
+---
 
+## 📐 VECY MATCHING THRESHOLD (85% - 100%) — v17.3 DOCTRINAL
+
+- **Filtros Duros Inquebrantables (Score 0% si falla)**:
+  - `transactionType`: `arriendo` vs `venta` → ❌ **BLOQUEADO (0%)**.
+  - `areaTotal`: Metraje ofrecido NUNCA puede ser menor al mínimo exigido (`propArea >= reqAreaMin * 0.98`). Si es menor o N/E cuando se exige → ❌ **BLOQUEADO (0%)**.
+  - `propertyType`: Incompatible o subtipos distintos (ej. Apartamento vs Apartaestudio vs Loft) → ❌ **BLOQUEADO (0%)**.
+  - `ubicación`: Barrio incompatible sin coletilla "aledaños" → ❌ **BLOQUEADO (0%)**.
+  - `presupuestoMax`: Canon/precio superior al máximo permitido (+2% arriendo, +5% venta) → ❌ **BLOQUEADO (0%)**.
+- **Regla del 100% Match Perfecto**:
+  - Exige que **TODOS** los campos solicitados por la demanda estén presentes, extraídos y coincidan al 100%.
+  - Cualquier campo en **`N/E` (información no especificada)** limita el puntaje máximo a **84%**, impidiendo la emisión de falsas insignias de Match Perfecto o superar el umbral mínimo VECY.
 - **Filtro Mínimo de Almacenamiento y Muestreo**: Todo Match DEBE tener un score igual o superior a **85%**. Cualquier par con score inferior a 85% es ignorado y eliminado de la BD.
-- **Ventana de Opciones de Filtro UI**:
-  - `85% — Mínimo VECY (85%+)`
-  - `90% — Coincidencia Alta`
-  - `95% — Casi Perfecto`
-  - `100% — Match Perfecto`
 - **Alineación Visual de la Tabla de Cotejo**:
   - Columna Izquierda: **Ofrecido (Oferta / Inmueble)**
   - Columna Derecha: **Buscado (Demanda / Requerimiento)**
@@ -112,9 +116,9 @@ permuta                       ← compatible con → req: permuta, venta_permuta
 ### 2. Filtro de grupos externos — RESUELTO en whatsapp-match.ts
 JanIA extrae de TODOS los grupos.
 
-### 3. Proxy Vercel a VPS — RESUELTO en vercel.json
-`vercel.json` apunta a `https://vecy-jania.serveousercontent.com` (Servidor VPS vivo).
+### 3. Nginx Connection Upgrade Proxy Bug — RESUELTO en Nginx VPS
+Nginx forzaba `Connection: upgrade` en peticiones HTTP normales produciendo congelamientos de 110s en `/login` y `/admin`. Resuelto mediante `map $http_upgrade $connection_upgrade`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v17.2 — Julio 2026
+## 🔖 VERSIÓN ACTUAL: v17.3 — Julio 2026

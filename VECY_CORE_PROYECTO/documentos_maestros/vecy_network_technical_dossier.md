@@ -383,4 +383,27 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 - **Durante el silencio:** La ingesta y geocodificación siguen activas. Solo se bloquean los mensajes salientes (reacciones, textos, audios TTS).
 - **Verificación:** La hora se evalúa en zona horaria `America/Bogota` con `Date.toLocaleString()` para evitar errores por cambios de horario.
 
+---
+
+### 🔖 v17.3 — JULIO 2026: MATRIZ DOCTRINARIA RIGUROSA DE COTEJO TÉCNICO
+
+**Objetivo:** Eliminar de forma definitiva los falsos matches y restablecer la precisión absoluta del motor de afinidad comercial entre Inmuebles (Oferta) y Requerimientos (Demanda).
+
+#### 🛑 MATRIZ DE FILTROS DUROS INQUEBRANTABLES (Score 0% si falla)
+
+| # | Característica | Regla Doctrinaria Estricta | Resultado si Falla |
+|:---|:---|:---|:---:|
+| **1** | **Tipo de Negocio** | • `Arriendo` vs `Venta` → ❌ **0% IMPOSIBLE (Bloqueo Absoluto)**<br>• `Arriendo` vs `Arriendo con opción de compra` → ❌ **0% IMPOSIBLE (Regla v17.2)**<br>• `Arriendo` vs `Venta/Arriendo` (o viceversa) → ✅ **100% POSIBLE / OK**<br>• `Venta` ↔ `Venta`, `Venta/Arriendo`, `Venta/Permuta`, `Opción Compra` → ✅ **100% POSIBLE / OK** | **0% Score** |
+| **2** | **Tipo de Inmueble y Subtipo** | • Apartamento ↔ Casa / Bodega / Lote → ❌ **0% IMPOSIBLE**<br>• Apartamento Estándar ↔ Apartaestudio ↔ Loft → ❌ **0% IMPOSIBLE** | **0% Score** |
+| **3** | **Ciudad** | • Bogotá ↔ Medellín / Chía / Cali → ❌ **0% IMPOSIBLE** | **0% Score** |
+| **4** | **Zona / Barrio** | • Si se busca `Cedritos`, una oferta en `El Refugio`, `Rosales` o `Chicó` → ❌ **0% IMPOSIBLE**.<br>• Solo se permite barrio aledaño si el requerimiento dice *"aledaños"* o *"cercanos"*. | **0% Score** |
+| **5** | **Área Mínima (Metraje en Duro)** | • Oferta 139 m² vs Demanda mínimo 200 m² → ❌ **0% IMPOSIBLE**.<br>• Oferta `N/E` (sin metraje) vs Demanda con metraje exigido → ❌ **0% IMPOSIBLE**. | **0% Score** |
+| **6** | **Presupuesto Máximo** | • Arriendo: Canon > Presupuesto + 2% → ❌ **0% IMPOSIBLE**.<br>• Venta: Precio > Presupuesto + 5% → ❌ **0% IMPOSIBLE**. | **0% Score** |
+| **7** | **Habitaciones Mínimas** | • Oferta 2 habs vs Demanda 3 habs → ❌ **0% IMPOSIBLE**.<br>• Oferta `N/E` (sin habs) vs Demanda con habs exigidas → ❌ **0% IMPOSIBLE**. | **0% Score** |
+
+#### 🏆 REGLAS DEL "100% MATCH PERFECTO"
+1. **Cero Campos Faltantes (`N/E`)**: Todos los atributos solicitados deben existir y estar extraídos.
+2. **Capping Automático**: Cualquier campo relevante marcado como `N/E` limita automáticamente el puntaje máximo a **84%**, impidiendo falsos badges del 100% o superar el umbral mínimo VECY (85%).
+
+
 
