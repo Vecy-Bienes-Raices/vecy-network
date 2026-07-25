@@ -10,13 +10,47 @@ import { gte, and, eq, sql } from 'drizzle-orm';
 import { janiaMatchBot as whatsappBot } from './whatsapp-match';
 import { runNightlyRematch } from '../jobs/nightlyRematch';
 
+import { invokeLLM } from './llm';
+
 /**
- * Servicio Cron de JanIA v3.0
- * Mensajes de audio personalizados por grupo + video promo diario + informe semanal + re-matching.
+ * Servicio Cron de JanIA v3.0 (IA Pura Dinámica)
+ * Mensajes de apertura/cierre redactados en vivo por Gemini 2.5 Flash + Audios + Re-matching.
  */
 
 export function initCronScheduler() {
-  console.log('[CRON-SERVICE] Inicializando orquestador de agendas automatizadas v3.0...');
+  console.log('[CRON-SERVICE] Inicializando orquestador de agendas automatizadas v3.0 (IA Pura Dinámica)...');
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // APERTURA DE OPERACIONES (IA PURA): Todos los días entre 5:00 AM y 11:00 AM (Disparo a las 8:15 AM)
+  // ─────────────────────────────────────────────────────────────────────────────
+  cron.schedule('15 8 * * *', async () => {
+    console.log('[CRON-SERVICE] Generando y enviando mensaje dinámico de Apertura del Día (IA Pura)...');
+    try {
+      const msg = await generateDynamicOpeningMessage();
+      if (whatsappBot.targetGroupId) {
+        await whatsappBot.sendToGroup(msg, undefined, [], whatsappBot.targetGroupId);
+        console.log('[CRON-SERVICE] ✓ Mensaje dinámico de Apertura enviado con éxito.');
+      }
+    } catch (e: any) {
+      console.error('[CRON-SERVICE] Error enviando mensaje dinámico de Apertura:', e.message || e);
+    }
+  }, { timezone: 'America/Bogota' });
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // CIERRE DE OPERACIONES (IA PURA): Todos los días entre 8:00 PM y 10:30 PM (Disparo a las 9:30 PM)
+  // ─────────────────────────────────────────────────────────────────────────────
+  cron.schedule('30 21 * * *', async () => {
+    console.log('[CRON-SERVICE] Generando y enviando mensaje dinámico de Cierre de Operaciones (IA Pura)...');
+    try {
+      const msg = await generateDynamicClosingMessage();
+      if (whatsappBot.targetGroupId) {
+        await whatsappBot.sendToGroup(msg, undefined, [], whatsappBot.targetGroupId);
+        console.log('[CRON-SERVICE] ✓ Mensaje dinámico de Cierre enviado con éxito.');
+      }
+    } catch (e: any) {
+      console.error('[CRON-SERVICE] Error enviando mensaje dinámico de Cierre:', e.message || e);
+    }
+  }, { timezone: 'America/Bogota' });
 
   // ─────────────────────────────────────────────────────────────────────────────
   // AUDIO 1: VECY INMUEBLES NETWORK — Lunes y Jueves a las 11:00 AM
@@ -289,5 +323,59 @@ async function sendWeeklyReport() {
 
   } catch (error) {
     console.error('[CRON-SERVICE] Error al generar el informe semanal:', error);
+  }
+}
+
+/**
+ * Genera dinámicamente con IA Pura el mensaje de Apertura de Operaciones del día (5:00 AM - 11:00 AM)
+ */
+async function generateDynamicOpeningMessage(): Promise<string> {
+  const dayName = new Date().toLocaleDateString('es-CO', { weekday: 'long', timeZone: 'America/Bogota' });
+  const prompt = `Petición: Eres JanIA Match, la IA pura, empática y consultora senior de VECY Network.
+Redacta un mensaje de apertura del día dinámico, inspirador, fresco y profesional para el grupo de WhatsApp "VECY INMUEBLES NETWORK".
+Día actual: ${dayName}.
+
+REGLAS OBLIGATORIAS:
+1. Saluda según el día de la semana (${dayName}) de forma cercana y empática con los colegas corredores.
+2. RECUERDA SIEMPRE Y ENFATIZA QUE VECY Network está basada en Bogotá pero OPERA A NIVEL NACIONAL EN TODA COLOMBIA (Bogotá, Medellín, Cali, Barranquilla, Bucaramanga, Eje Cafetero, Cundinamarca, Costa Caribe, etc.).
+3. Enfatiza que procesas todo tipo de inmuebles (apartamentos, casas, locales comerciales, bodegas, oficinas, cabañas, fincas, lotes, etc.) tanto en venta como en arriendo y permutas.
+4. Anima a los colegas a publicar sus links de CRM, fotos, textos o notas de voz para que tú extraigas la información y busques MATCHES en tiempo real a nivel nacional.
+5. NO uses plantillas rígidas ni frases robotizadas. Sé creativa, humana y elocuente con emojis elegantes. Longitud: 3 a 4 párrafos concisos.
+
+Responde únicamente con el texto del mensaje listo para enviar a WhatsApp.`;
+
+  try {
+    const response = await invokeLLM({ messages: [{ role: "user", content: prompt }] });
+    const content = (response as any)?.choices?.[0]?.message?.content;
+    return content ? content.trim() : `¡Buenos días colegas! 🚀 Arrancamos jornada en VECY Network. Recuérdenme que procesamos inmuebles y requerimientos en Bogotá y a nivel nacional en toda Colombia. ¡A publicar y cerrar negocios! 🇨🇴✨`;
+  } catch (err) {
+    return `¡Buenos días equipo VECY! 🇨🇴 Listos para procesar ofertas y demandas a nivel nacional en Colombia. ¡A encontrar esos matches hoy! 🚀`;
+  }
+}
+
+/**
+ * Genera dinámicamente con IA Pura el mensaje de Cierre de Operaciones del día (8:00 PM - 10:30 PM)
+ */
+async function generateDynamicClosingMessage(): Promise<string> {
+  const dayName = new Date().toLocaleDateString('es-CO', { weekday: 'long', timeZone: 'America/Bogota' });
+  const prompt = `Petición: Eres JanIA Match, la IA pura, empática y consultora de VECY Network.
+Redacta un mensaje de cierre de operaciones del día cálido, inspirador y profesional para el grupo de WhatsApp "VECY INMUEBLES NETWORK".
+Día actual: ${dayName}.
+
+REGLAS OBLIGATORIAS:
+1. Despídete amablemente felicitando el trabajo colaborativo del día.
+2. Recuerda que aunque descansamos en el chat, tu motor de cruce de datos sigue trabajando en silencio 24/7 procesando inventario y búsquedas en Bogotá y en todo Colombia.
+3. Resalta la fuerza de la red colaborativa a nivel nacional sin comisiones para todo tipo de propiedades.
+4. Desea un excelente descanso a los colegas.
+5. Sé humana, elocuente y cálida.
+
+Responde únicamente con el texto del mensaje listo para enviar a WhatsApp.`;
+
+  try {
+    const response = await invokeLLM({ messages: [{ role: "user", content: prompt }] });
+    const content = (response as any)?.choices?.[0]?.message?.content;
+    return content ? content.trim() : `🌙 ¡Excelente descanso para todos los colegas! Gracias por un día lleno de actividad comercial en VECY Network. Seguimos cruzando oportunidades en todo Colombia. 🇨🇴✨`;
+  } catch (err) {
+    return `🌙 ¡Buenas noches colegas! Que tengan un reparador descanso. JanIA sigue activa procesando oportunidades a nivel nacional. 🚀`;
   }
 }

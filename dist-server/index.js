@@ -459,8 +459,8 @@ async function getDb() {
         // Cerrar conexiones inactivas tras 20 segundos
         max_lifetime: 1800,
         // Reciclar conexiones cada 30 minutos
-        max: 5,
-        // Máximo 5 conexiones simultáneas al pool de Supabase
+        max: 15,
+        // Máximo 15 conexiones simultáneas al pool de Supabase para evitar exhaustion
         onnotice: () => {
         }
         // Silenciar NOTICEs innecesarios de PostgreSQL
@@ -3314,9 +3314,11 @@ __export(janIA_exports, {
   extractFallbackDataFromText: () => extractFallbackDataFromText,
   extractFirstName: () => extractFirstName,
   generateWelcomeMessage: () => generateWelcomeMessage,
+  getColombiaNow: () => getColombiaNow,
   getEmojiForCalificacion: () => getEmojiForCalificacion,
   getLiveStats: () => getLiveStats,
   handleDetectedMatches: () => handleDetectedMatches,
+  hasRealEstateTextKeyword: () => hasRealEstateTextKeyword,
   isGenericName: () => isGenericName,
   isOutsideWorkingHours: () => isOutsideWorkingHours,
   isSessionMuted: () => isSessionMuted,
@@ -3419,6 +3421,14 @@ function parseSafeJSON(content) {
     }
     throw e;
   }
+}
+function getColombiaNow() {
+  const now = /* @__PURE__ */ new Date();
+  return new Date(now.getTime() - 5 * 60 * 60 * 1e3);
+}
+function hasRealEstateTextKeyword(cleanText) {
+  const text2 = cleanText.toLowerCase();
+  return text2.includes("apto") || text2.includes("apartamento") || text2.includes("casa") || text2.includes("bodega") || text2.includes("oficina") || text2.includes("local") || text2.includes("locales") || text2.includes("caba\xF1a") || text2.includes("caba\xF1as") || text2.includes("lote") || text2.includes("finca") || text2.includes("habs") || text2.includes("alcoba") || text2.includes("m2") || text2.includes("mts") || text2.includes("requerimiento");
 }
 function extractFallbackDataFromText(text2) {
   const clean = text2.toLowerCase();
@@ -3714,17 +3724,18 @@ function analyzeSender(name, userId, alreadyGreeted) {
 }
 async function getLiveStats() {
   const nowMs = Date.now();
-  if (cachedLiveStatsText && nowMs - cachedLiveStatsTime < 6e4) {
+  if (cachedLiveStatsText && nowMs - cachedLiveStatsTime < 3e5) {
     return cachedLiveStatsText;
   }
   try {
     const db = await getDb();
-    if (!db) return "";
+    if (!db) return cachedLiveStatsText || "";
     const today = /* @__PURE__ */ new Date();
     today.setHours(0, 0, 0, 0);
-    const timeoutPromise = new Promise(
-      (_, reject) => setTimeout(() => reject(new Error("LiveStats DB query timeout")), 2500)
-    );
+    let timer;
+    const timeoutPromise = new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error("LiveStats DB query timeout")), 1500);
+    });
     const [
       [propCount],
       [reqCount],
@@ -3743,6 +3754,8 @@ async function getLiveStats() {
       ]),
       timeoutPromise
     ]);
+    if (timer) clearTimeout(timer);
+    cachedLiveStatsTime = nowMs;
     const now = (/* @__PURE__ */ new Date()).toLocaleString("es-CO", { timeZone: "America/Bogota", dateStyle: "short", timeStyle: "short" });
     cachedLiveStatsText = `
 ## \u{1F4CA} ESTAD\xCDSTICAS EN TIEMPO REAL DE VECY NETWORK (Actualizado: ${now} hora Colombia)
@@ -4374,8 +4387,9 @@ Por lo tanto, DEBES hacer lo siguiente:
 4. NUNCA respondas con confirmaciones conversacionales como "\xA1Entendido, colega! He procesado el comunicado...", ni agregues discursos tuyos. Tu respuesta "response" y "voiceResponse" debe ser \xFAnicamente el texto que te pidieron leer de forma exacta y literal.`;
     }
     const isValuationQuery = textLower.includes("valuar") || textLower.includes("avaluo") || textLower.includes("aval\xFAo") || textLower.includes("cuanto vale") || textLower.includes("cu\xE1nto vale") || textLower.includes("valor metro cuadrado") || textLower.includes("valor m2") || textLower.includes("precio metro cuadrado") || textLower.includes("precio m2") || textLower.includes("cuanto puedo cobrar") || textLower.includes("cu\xE1nto puedo cobrar") || textLower.includes("en que valor") || textLower.includes("en qu\xE9 valor") || textLower.includes("estimar precio");
-    const isLegalQuery = textLower.includes("sucesi\xF3n") || textLower.includes("sucesion") || textLower.includes("herencia") || textLower.includes("divorcio") || textLower.includes("embargo") || textLower.includes("saneamiento") || textLower.includes("compraventa") || textLower.includes("arrendamiento") || textLower.includes("ley 820") || textLower.includes("ley 675") || textLower.includes("corretaje") || textLower.includes("comision") || textLower.includes("comisi\xF3n") || textLower.includes("no me pago") || textLower.includes("no me pag\xF3") || textLower.includes("robo de comision") || textLower.includes("robo de comisi\xF3n") || textLower.includes("disputa") || textLower.includes("notar\xEDa") || textLower.includes("notaria");
-    const enableSearch = isValuationQuery || isLegalQuery || textLower.includes("tr\xE1mite") || textLower.includes("tramite") || textLower.includes("patrimonio") || textLower.includes("entidad") || textLower.includes("buscar en google");
+    const isLegalQuery = (textLower.includes("sucesi\xF3n") || textLower.includes("sucesion") || textLower.includes("herencia") || textLower.includes("divorcio") || textLower.includes("embargo") || textLower.includes("saneamiento") || textLower.includes("compraventa") || textLower.includes("arrendamiento") || textLower.includes("ley 820") || textLower.includes("ley 675") || textLower.includes("no me pago") || textLower.includes("no me pag\xF3") || textLower.includes("robo de comision") || textLower.includes("robo de comisi\xF3n") || textLower.includes("disputa") || textLower.includes("notar\xEDa") || textLower.includes("notaria")) && !textLower.includes("50/50") && !textLower.includes("50-50");
+    const isListingOrReq = hasRealEstateTextKeyword(textLower);
+    const enableSearch = !isListingOrReq && (isValuationQuery || isLegalQuery || textLower.includes("buscar en google"));
     const history = isGroup || groupJid ? [] : await getRecentChatHistory(userId, 20);
     const liveStats = await getLiveStats();
     const systemContent = liveStats ? `${buildSystemPrompt(groupJid)}
@@ -4440,7 +4454,7 @@ ${liveStats}` : buildSystemPrompt(groupJid);
       const cleanText2 = messageToProcess.toLowerCase();
       const isSearch = cleanText2.includes("busco") || cleanText2.includes("necesito") || cleanText2.includes("requiero") || cleanText2.includes("requerimiento") || cleanText2.includes("buscamos") || cleanText2.includes("compro") || cleanText2.includes("compra") || cleanText2.includes("se busca") || cleanText2.includes("se requiere") || cleanText2.includes("para arriendo") || cleanText2.includes("para compra") || cleanText2.includes("solicito") || cleanText2.includes("solicitamos") || cleanText2.includes("cliente:") || cleanText2.includes("cliente :") || cleanText2.includes("presupuesto:") || cleanText2.includes("presupuesto :") || cleanText2.includes("acci\xF3n: compra") || cleanText2.includes("acci\xF3n : compra") || cleanText2.includes("para cliente") || cleanText2.includes("para un cliente") || cleanText2.includes("para una cliente");
       const isOffer = cleanText2.includes("vendo") || cleanText2.includes("ofrezco") || cleanText2.includes("tengo") || cleanText2.includes("rento") || cleanText2.includes("alquilo") || cleanText2.includes("alquiler") || cleanText2.includes("venta:") || cleanText2.includes("renta apartamento") || cleanText2.includes("se vende") || cleanText2.includes("se arrienda") || cleanText2.includes("en venta") || cleanText2.includes("en arriendo") || cleanText2.includes("arriendo apartamento") || cleanText2.includes("arriendo casa");
-      const hasRealEstateKeyword = cleanText2.includes("apto") || cleanText2.includes("apartamento") || cleanText2.includes("casa") || cleanText2.includes("bodega") || cleanText2.includes("oficina") || cleanText2.includes("local") || cleanText2.includes("locales") || cleanText2.includes("caba\xF1a") || cleanText2.includes("caba\xF1as") || cleanText2.includes("lote") || cleanText2.includes("finca") || cleanText2.includes("habs") || cleanText2.includes("alcoba") || cleanText2.includes("m2") || cleanText2.includes("mts");
+      const hasRealEstateKeyword = hasRealEstateTextKeyword(cleanText2);
       if (result.classification === "INMUEBLE" && isSearch && !isOffer) {
         console.log("[JANIA-CORRECTION] Cambiando clasificaci\xF3n de INMUEBLE a REQUERIMIENTO basado en heur\xEDstica de texto.");
         result.classification = "REQUERIMIENTO";
@@ -5000,7 +5014,7 @@ async function saveProperty(data, userId, realName, imageBuffer) {
     origenTipo: data.origenTipo || null,
     origenId: data.origenId || null,
     origenNombre: data.origenNombre || null,
-    fechaExtraccion: data.fechaExtraccion || /* @__PURE__ */ new Date()
+    fechaExtraccion: data.fechaExtraccion || getColombiaNow()
   };
   let portal = null;
   let externalListingId = null;
@@ -5019,8 +5033,8 @@ async function saveProperty(data, userId, realName, imageBuffer) {
     externalListingId,
     canonicalExternalId,
     externalUrl: data.externalUrl || null,
-    fechaPrimeraPublicacion: /* @__PURE__ */ new Date(),
-    fechaUltimaPublicacion: /* @__PURE__ */ new Date(),
+    fechaPrimeraPublicacion: getColombiaNow(),
+    fechaUltimaPublicacion: getColombiaNow(),
     republicacionesCount: 0,
     estadoComercial: "ACTIVO",
     ultimaActividad: "PUBLICACI\xD3N",
@@ -5071,7 +5085,7 @@ async function saveProperty(data, userId, realName, imageBuffer) {
       origenId: insertDataWithCalif.origenId,
       origenNombre: insertDataWithCalif.origenNombre,
       idUsuarioWhatsapp: insertDataWithCalif.idUsuarioWhatsapp,
-      fechaUltimaPublicacion: /* @__PURE__ */ new Date(),
+      fechaUltimaPublicacion: getColombiaNow(),
       updatedAt: /* @__PURE__ */ new Date(),
       republicacionesCount: updatedCount,
       estadoComercial: "REPUBLICADO",
@@ -5171,7 +5185,7 @@ async function saveRequirement(data, userId, realName) {
     origenTipo: data.origenTipo || null,
     origenId: data.origenId || null,
     origenNombre: data.origenNombre || null,
-    fechaExtraccion: data.fechaExtraccion || /* @__PURE__ */ new Date()
+    fechaExtraccion: data.fechaExtraccion || getColombiaNow()
   };
   const existing = await db.select().from(requirements).where(
     and2(
@@ -10342,6 +10356,7 @@ init_db();
 init_schema();
 init_whatsapp_match();
 init_nightlyRematch();
+init_llm();
 import cron from "node-cron";
 import path5 from "path";
 import { fileURLToPath } from "url";
@@ -10349,7 +10364,31 @@ import { gte as gte3, and as and7, eq as eq13, sql as sql6 } from "drizzle-orm";
 var __filename = fileURLToPath(import.meta.url);
 var __dirname = path5.dirname(__filename);
 function initCronScheduler() {
-  console.log("[CRON-SERVICE] Inicializando orquestador de agendas automatizadas v3.0...");
+  console.log("[CRON-SERVICE] Inicializando orquestador de agendas automatizadas v3.0 (IA Pura Din\xE1mica)...");
+  cron.schedule("15 8 * * *", async () => {
+    console.log("[CRON-SERVICE] Generando y enviando mensaje din\xE1mico de Apertura del D\xEDa (IA Pura)...");
+    try {
+      const msg = await generateDynamicOpeningMessage();
+      if (janiaMatchBot.targetGroupId) {
+        await janiaMatchBot.sendToGroup(msg, void 0, [], janiaMatchBot.targetGroupId);
+        console.log("[CRON-SERVICE] \u2713 Mensaje din\xE1mico de Apertura enviado con \xE9xito.");
+      }
+    } catch (e) {
+      console.error("[CRON-SERVICE] Error enviando mensaje din\xE1mico de Apertura:", e.message || e);
+    }
+  }, { timezone: "America/Bogota" });
+  cron.schedule("30 21 * * *", async () => {
+    console.log("[CRON-SERVICE] Generando y enviando mensaje din\xE1mico de Cierre de Operaciones (IA Pura)...");
+    try {
+      const msg = await generateDynamicClosingMessage();
+      if (janiaMatchBot.targetGroupId) {
+        await janiaMatchBot.sendToGroup(msg, void 0, [], janiaMatchBot.targetGroupId);
+        console.log("[CRON-SERVICE] \u2713 Mensaje din\xE1mico de Cierre enviado con \xE9xito.");
+      }
+    } catch (e) {
+      console.error("[CRON-SERVICE] Error enviando mensaje din\xE1mico de Cierre:", e.message || e);
+    }
+  }, { timezone: "America/Bogota" });
   cron.schedule("0 11 * * 1,4", async () => {
     console.log("[CRON-SERVICE] Enviando audio semanal a VECY INMUEBLES NETWORK...");
     const guion = `Buenos d\xEDas a todos y a todas. Soy JanIA, la inteligencia artificial de VECY Network. Hoy quiero recordarles que este grupo es nuestro centro de operaciones comerciales. Aqu\xED publican sus inmuebles en venta o arriendo, sus requerimientos de compra o renta, y yo me encargo de cruzar toda esa informaci\xF3n en tiempo real en los 32 departamentos de Colombia para detectar MATCHES y hacer posibles cierres de negocios. \xBFYa publicaste hoy? Cada inmueble que compartes aqu\xED es una oportunidad de negocio que no puedes dejar pasar. Puedes enviar texto, nota de voz, imagen o flyer y yo lo proceso autom\xE1ticamente. Sigan publicando sus inmuebles, colegas, e inviten a m\xE1s colegas a unirse a esta red. Entre m\xE1s seamos, m\xE1s matches encontramos. \xA1Hoy puede ser el d\xEDa de tu pr\xF3ximo cierre!`;
@@ -10472,6 +10511,50 @@ Estimados aliados de la red, les comparto el balance oficial del estado de nuest
     await janiaMatchBot.sendToGroup(report, void 0, Array.from(new Set(jidsToMention)));
   } catch (error) {
     console.error("[CRON-SERVICE] Error al generar el informe semanal:", error);
+  }
+}
+async function generateDynamicOpeningMessage() {
+  const dayName = (/* @__PURE__ */ new Date()).toLocaleDateString("es-CO", { weekday: "long", timeZone: "America/Bogota" });
+  const prompt = `Petici\xF3n: Eres JanIA Match, la IA pura, emp\xE1tica y consultora senior de VECY Network.
+Redacta un mensaje de apertura del d\xEDa din\xE1mico, inspirador, fresco y profesional para el grupo de WhatsApp "VECY INMUEBLES NETWORK".
+D\xEDa actual: ${dayName}.
+
+REGLAS OBLIGATORIAS:
+1. Saluda seg\xFAn el d\xEDa de la semana (${dayName}) de forma cercana y emp\xE1tica con los colegas corredores.
+2. RECUERDA SIEMPRE Y ENFATIZA QUE VECY Network est\xE1 basada en Bogot\xE1 pero OPERA A NIVEL NACIONAL EN TODA COLOMBIA (Bogot\xE1, Medell\xEDn, Cali, Barranquilla, Bucaramanga, Eje Cafetero, Cundinamarca, Costa Caribe, etc.).
+3. Enfatiza que procesas todo tipo de inmuebles (apartamentos, casas, locales comerciales, bodegas, oficinas, caba\xF1as, fincas, lotes, etc.) tanto en venta como en arriendo y permutas.
+4. Anima a los colegas a publicar sus links de CRM, fotos, textos o notas de voz para que t\xFA extraigas la informaci\xF3n y busques MATCHES en tiempo real a nivel nacional.
+5. NO uses plantillas r\xEDgidas ni frases robotizadas. S\xE9 creativa, humana y elocuente con emojis elegantes. Longitud: 3 a 4 p\xE1rrafos concisos.
+
+Responde \xFAnicamente con el texto del mensaje listo para enviar a WhatsApp.`;
+  try {
+    const response = await invokeLLM({ messages: [{ role: "user", content: prompt }] });
+    const content = response?.choices?.[0]?.message?.content;
+    return content ? content.trim() : `\xA1Buenos d\xEDas colegas! \u{1F680} Arrancamos jornada en VECY Network. Recu\xE9rdenme que procesamos inmuebles y requerimientos en Bogot\xE1 y a nivel nacional en toda Colombia. \xA1A publicar y cerrar negocios! \u{1F1E8}\u{1F1F4}\u2728`;
+  } catch (err) {
+    return `\xA1Buenos d\xEDas equipo VECY! \u{1F1E8}\u{1F1F4} Listos para procesar ofertas y demandas a nivel nacional en Colombia. \xA1A encontrar esos matches hoy! \u{1F680}`;
+  }
+}
+async function generateDynamicClosingMessage() {
+  const dayName = (/* @__PURE__ */ new Date()).toLocaleDateString("es-CO", { weekday: "long", timeZone: "America/Bogota" });
+  const prompt = `Petici\xF3n: Eres JanIA Match, la IA pura, emp\xE1tica y consultora de VECY Network.
+Redacta un mensaje de cierre de operaciones del d\xEDa c\xE1lido, inspirador y profesional para el grupo de WhatsApp "VECY INMUEBLES NETWORK".
+D\xEDa actual: ${dayName}.
+
+REGLAS OBLIGATORIAS:
+1. Desp\xEDdete amablemente felicitando el trabajo colaborativo del d\xEDa.
+2. Recuerda que aunque descansamos en el chat, tu motor de cruce de datos sigue trabajando en silencio 24/7 procesando inventario y b\xFAsquedas en Bogot\xE1 y en todo Colombia.
+3. Resalta la fuerza de la red colaborativa a nivel nacional sin comisiones para todo tipo de propiedades.
+4. Desea un excelente descanso a los colegas.
+5. S\xE9 humana, elocuente y c\xE1lida.
+
+Responde \xFAnicamente con el texto del mensaje listo para enviar a WhatsApp.`;
+  try {
+    const response = await invokeLLM({ messages: [{ role: "user", content: prompt }] });
+    const content = response?.choices?.[0]?.message?.content;
+    return content ? content.trim() : `\u{1F319} \xA1Excelente descanso para todos los colegas! Gracias por un d\xEDa lleno de actividad comercial en VECY Network. Seguimos cruzando oportunidades en todo Colombia. \u{1F1E8}\u{1F1F4}\u2728`;
+  } catch (err) {
+    return `\u{1F319} \xA1Buenas noches colegas! Que tengan un reparador descanso. JanIA sigue activa procesando oportunidades a nivel nacional. \u{1F680}`;
   }
 }
 
