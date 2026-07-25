@@ -3337,15 +3337,15 @@ import path from "path";
 import axios6 from "axios";
 function extractFirstName(fullName) {
   if (!fullName) return "";
-  let clean2 = fullName.trim();
-  if (!clean2) return "";
-  if (/^\+?[\d\s-]{6,}$/.test(clean2)) return "";
-  if (clean2.includes("@")) {
-    clean2 = clean2.split("@")[0];
+  let clean = fullName.trim();
+  if (!clean) return "";
+  if (/^\+?[\d\s-]{6,}$/.test(clean)) return "";
+  if (clean.includes("@")) {
+    clean = clean.split("@")[0];
   }
-  clean2 = clean2.replace(/[0-9]/g, "");
-  if (!clean2.trim()) return "";
-  const words = clean2.split(/\s+/).map((w) => w.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, ""));
+  clean = clean.replace(/[0-9]/g, "");
+  if (!clean.trim()) return "";
+  const words = clean.split(/\s+/).map((w) => w.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, ""));
   const filteredWords = words.filter((w) => w.length > 0);
   if (filteredWords.length === 0 || !filteredWords[0]) return "";
   const w1 = filteredWords[0].toLowerCase();
@@ -3420,23 +3420,23 @@ function parseSafeJSON(content) {
   }
 }
 function extractFallbackDataFromText(text2) {
-  const clean2 = text2.toLowerCase();
+  const clean = text2.toLowerCase();
   let transactionType = "venta";
-  if (clean2.includes("arriendo") || clean2.includes("alquiler") || clean2.includes("renta") || clean2.includes("alquilo")) {
+  if (clean.includes("arriendo") || clean.includes("alquiler") || clean.includes("renta") || clean.includes("alquilo")) {
     transactionType = "arriendo";
   }
   let propertyType = "apartment";
-  if (clean2.includes("casa") || clean2.includes("townhouse")) {
+  if (clean.includes("casa") || clean.includes("townhouse")) {
     propertyType = "house";
-  } else if (clean2.includes("bodega")) {
+  } else if (clean.includes("bodega")) {
     propertyType = "warehouse";
-  } else if (clean2.includes("oficina")) {
+  } else if (clean.includes("oficina")) {
     propertyType = "office";
-  } else if (clean2.includes("lote") || clean2.includes("terreno")) {
+  } else if (clean.includes("lote") || clean.includes("terreno")) {
     propertyType = "land";
-  } else if (clean2.includes("finca")) {
+  } else if (clean.includes("finca")) {
     propertyType = "farm";
-  } else if (clean2.includes("apartaestudio") || clean2.includes("loft")) {
+  } else if (clean.includes("apartaestudio") || clean.includes("loft")) {
     propertyType = "loft";
   }
   let price = 0;
@@ -3466,22 +3466,22 @@ function extractFallbackDataFromText(text2) {
     bathrooms = parseInt(bathMatch[1], 10);
   }
   let city = "Bogot\xE1";
-  if (clean2.includes("cali") || clean2.includes("melendez") || clean2.includes("jardin") || clean2.includes("pacifica")) {
+  if (clean.includes("cali") || clean.includes("melendez") || clean.includes("jardin") || clean.includes("pacifica")) {
     city = "Cali";
-  } else if (clean2.includes("medellin") || clean2.includes("poblado") || clean2.includes("laureles")) {
+  } else if (clean.includes("medellin") || clean.includes("poblado") || clean.includes("laureles")) {
     city = "Medell\xEDn";
   }
   let zone = "Bogot\xE1";
-  if (clean2.includes("chico reservado")) zone = "Chic\xF3 Reservado";
-  else if (clean2.includes("chico")) zone = "Chic\xF3";
-  else if (clean2.includes("santa barbara")) zone = "Santa B\xE1rbara";
-  else if (clean2.includes("la cabrera")) zone = "La Cabrera";
-  else if (clean2.includes("rosales")) zone = "Rosales";
-  else if (clean2.includes("emaus")) zone = "Ema\xFAs";
-  else if (clean2.includes("colina")) zone = "Colina Campestre";
-  else if (clean2.includes("ciudad melendez")) zone = "Ciudad Mel\xE9ndez";
-  else if (clean2.includes("ciudad jardin")) zone = "Ciudad Jard\xEDn";
-  else if (clean2.includes("norte")) zone = "Norte";
+  if (clean.includes("chico reservado")) zone = "Chic\xF3 Reservado";
+  else if (clean.includes("chico")) zone = "Chic\xF3";
+  else if (clean.includes("santa barbara")) zone = "Santa B\xE1rbara";
+  else if (clean.includes("la cabrera")) zone = "La Cabrera";
+  else if (clean.includes("rosales")) zone = "Rosales";
+  else if (clean.includes("emaus")) zone = "Ema\xFAs";
+  else if (clean.includes("colina")) zone = "Colina Campestre";
+  else if (clean.includes("ciudad melendez")) zone = "Ciudad Mel\xE9ndez";
+  else if (clean.includes("ciudad jardin")) zone = "Ciudad Jard\xEDn";
+  else if (clean.includes("norte")) zone = "Norte";
   return {
     propertyType,
     transactionType,
@@ -3657,13 +3657,13 @@ function capitalize(text2) {
 }
 function sanitizeGeoString(val) {
   if (!val || typeof val !== "string") return "";
-  let clean2 = val.trim();
-  clean2 = clean2.split(/\(|\n|Nota:|estimado|según/i)[0].trim();
-  clean2 = clean2.replace(/[\.\,\;\:]+$/, "").trim();
-  if (clean2.length > 60) {
-    clean2 = clean2.substring(0, 60).trim();
+  let clean = val.trim();
+  clean = clean.split(/\(|\n|Nota:|estimado|según/i)[0].trim();
+  clean = clean.replace(/[\.\,\;\:]+$/, "").trim();
+  if (clean.length > 60) {
+    clean = clean.substring(0, 60).trim();
   }
-  return clean2;
+  return clean;
 }
 function analyzeSender(name, userId, alreadyGreeted) {
   const n2 = (name || "Colega").trim();
@@ -4434,7 +4434,7 @@ ${liveStats}` : buildSystemPrompt(groupJid);
     if (messageToProcess) {
       const cleanText2 = messageToProcess.toLowerCase();
       const isSearch = cleanText2.includes("busco") || cleanText2.includes("necesito") || cleanText2.includes("requiero") || cleanText2.includes("requerimiento") || cleanText2.includes("buscamos") || cleanText2.includes("compro") || cleanText2.includes("compra") || cleanText2.includes("se busca") || cleanText2.includes("se requiere") || cleanText2.includes("para arriendo") || cleanText2.includes("para compra") || cleanText2.includes("solicito") || cleanText2.includes("solicitamos") || cleanText2.includes("cliente:") || cleanText2.includes("cliente :") || cleanText2.includes("presupuesto:") || cleanText2.includes("presupuesto :") || cleanText2.includes("acci\xF3n: compra") || cleanText2.includes("acci\xF3n : compra") || cleanText2.includes("para cliente") || cleanText2.includes("para un cliente") || cleanText2.includes("para una cliente");
-      const isOffer = cleanText2.includes("vendo") || cleanText2.includes("ofrezco") || cleanText2.includes("tengo") || cleanText2.includes("rento") || cleanText2.includes("alquilo") || cleanText2.includes("alquiler") || cleanText2.includes("venta:") || clean.includes("renta apartamento") || cleanText2.includes("se vende") || cleanText2.includes("se arrienda") || cleanText2.includes("en venta") || cleanText2.includes("en arriendo") || cleanText2.includes("arriendo apartamento") || cleanText2.includes("arriendo casa");
+      const isOffer = cleanText2.includes("vendo") || cleanText2.includes("ofrezco") || cleanText2.includes("tengo") || cleanText2.includes("rento") || cleanText2.includes("alquilo") || cleanText2.includes("alquiler") || cleanText2.includes("venta:") || cleanText2.includes("renta apartamento") || cleanText2.includes("se vende") || cleanText2.includes("se arrienda") || cleanText2.includes("en venta") || cleanText2.includes("en arriendo") || cleanText2.includes("arriendo apartamento") || cleanText2.includes("arriendo casa");
       const hasRealEstateKeyword = cleanText2.includes("apto") || cleanText2.includes("apartamento") || cleanText2.includes("casa") || cleanText2.includes("bodega") || cleanText2.includes("oficina") || cleanText2.includes("lote") || cleanText2.includes("finca") || cleanText2.includes("habs") || cleanText2.includes("alcoba") || cleanText2.includes("m2") || cleanText2.includes("mts");
       if (result.classification === "INMUEBLE" && isSearch && !isOffer) {
         console.log("[JANIA-CORRECTION] Cambiando clasificaci\xF3n de INMUEBLE a REQUERIMIENTO basado en heur\xEDstica de texto.");
@@ -6253,15 +6253,15 @@ __export(whatsapp_utils_exports, {
 });
 function extractFirstName2(fullName) {
   if (!fullName) return "";
-  let clean2 = fullName.trim();
-  if (!clean2) return "";
-  if (/^\+?[\d\s-]{6,}$/.test(clean2) || /^[\d\s\+\-\(\)]+$/.test(clean2)) return "";
-  if (clean2.includes("@")) {
-    clean2 = clean2.split("@")[0];
+  let clean = fullName.trim();
+  if (!clean) return "";
+  if (/^\+?[\d\s-]{6,}$/.test(clean) || /^[\d\s\+\-\(\)]+$/.test(clean)) return "";
+  if (clean.includes("@")) {
+    clean = clean.split("@")[0];
   }
-  clean2 = clean2.replace(/[0-9]/g, "");
-  if (!clean2.trim()) return "";
-  const words = clean2.split(/\s+/).map((w) => w.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, ""));
+  clean = clean.replace(/[0-9]/g, "");
+  if (!clean.trim()) return "";
+  const words = clean.split(/\s+/).map((w) => w.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, ""));
   const filteredWords = words.filter((w) => w.length > 0);
   if (filteredWords.length === 0 || !filteredWords[0]) return "";
   const cap = (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();

@@ -1789,7 +1789,7 @@ Por lo tanto, DEBES hacer lo siguiente:
                       cleanText.includes("alquilo") || 
                       cleanText.includes("alquiler") ||
                       cleanText.includes("venta:") ||
-                      clean.includes("renta apartamento") ||
+                      cleanText.includes("renta apartamento") ||
                       cleanText.includes("se vende") ||
                       cleanText.includes("se arrienda") ||
                       cleanText.includes("en venta") ||
