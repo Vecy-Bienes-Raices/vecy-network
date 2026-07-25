@@ -255,6 +255,11 @@ export function parseSafeJSON(content: string): any {
   }
 }
 
+export function getColombiaNow(): Date {
+  const now = new Date();
+  return new Date(now.getTime() - (5 * 60 * 60 * 1000));
+}
+
 export function hasRealEstateTextKeyword(cleanText: string): boolean {
   const text = cleanText.toLowerCase();
   return text.includes("apto") || 
@@ -2522,7 +2527,7 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
     origenTipo: data.origenTipo || null,
     origenId: data.origenId || null,
     origenNombre: data.origenNombre || null,
-    fechaExtraccion: data.fechaExtraccion || new Date()
+    fechaExtraccion: data.fechaExtraccion || getColombiaNow()
   };
 
   // Calcular portal, listingId y canonicalExternalId a partir de externalUrl
@@ -2545,8 +2550,8 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
     externalListingId,
     canonicalExternalId,
     externalUrl: data.externalUrl || null,
-    fechaPrimeraPublicacion: new Date(),
-    fechaUltimaPublicacion: new Date(),
+    fechaPrimeraPublicacion: getColombiaNow(),
+    fechaUltimaPublicacion: getColombiaNow(),
     republicacionesCount: 0,
     estadoComercial: "ACTIVO",
     ultimaActividad: "PUBLICACIÓN",
@@ -2622,7 +2627,7 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
         origenId: insertDataWithCalif.origenId,
         origenNombre: insertDataWithCalif.origenNombre,
         idUsuarioWhatsapp: insertDataWithCalif.idUsuarioWhatsapp,
-        fechaUltimaPublicacion: new Date(),
+        fechaUltimaPublicacion: getColombiaNow(),
         updatedAt: new Date(),
         republicacionesCount: updatedCount,
         estadoComercial: "REPUBLICADO",
@@ -2739,7 +2744,7 @@ async function saveRequirement(data: any, userId: string, realName: string) {
     origenTipo: data.origenTipo || null,
     origenId: data.origenId || null,
     origenNombre: data.origenNombre || null,
-    fechaExtraccion: data.fechaExtraccion || new Date()
+    fechaExtraccion: data.fechaExtraccion || getColombiaNow()
   };
 
   // Buscar duplicado activo del mismo usuario (mismo tipo, negocio, ciudad y barrio deseados)

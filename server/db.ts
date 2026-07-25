@@ -16,7 +16,7 @@ export async function getDb() {
         connect_timeout: 10,     // 10 segundos máximo para conectar
         idle_timeout: 20,        // Cerrar conexiones inactivas tras 20 segundos
         max_lifetime: 1800,      // Reciclar conexiones cada 30 minutos
-        max: 5,                  // Máximo 5 conexiones simultáneas al pool de Supabase
+        max: 15,                 // Máximo 15 conexiones simultáneas al pool de Supabase para evitar exhaustion
         onnotice: () => {},      // Silenciar NOTICEs innecesarios de PostgreSQL
       });
       _db = drizzle(_client);
