@@ -23,48 +23,44 @@ const COMMON_FIRST_NAMES = new Set([
 ]);
 
 /**
- * Extrae el primer nombre (o nombre compuesto común) de una cadena completa.
+ * Extrae el primer nombre (o nombre compuesto común como Lia Janeth, Ana María, Juan Pablo) de una cadena completa.
  */
 export function extractFirstName(fullName: string): string {
   if (!fullName) return "";
   let clean = fullName.trim();
   if (!clean) return "";
-  // Si es un número telefónico o contiene indicativos de número, retornar vacío
-  if (/^\+?[\d\s-]{6,}$/.test(clean)) return "";
+
+  // Si es un número telefónico o contiene indicativos numéricos sin letras, retornar vacío
+  if (/^\+?[\d\s-]{6,}$/.test(clean) || /^[\d\s\+\-\(\)]+$/.test(clean)) return "";
 
   // Evasión y limpieza de emails
   if (clean.includes("@")) {
     clean = clean.split("@")[0];
   }
 
-  // Quitar números
+  // Quitar números aislados
   clean = clean.replace(/[0-9]/g, "");
   if (!clean.trim()) return "";
   
   const words = clean.split(/\s+/).map(w => w.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, ""));
   const filteredWords = words.filter(w => w.length > 0);
   if (filteredWords.length === 0 || !filteredWords[0]) return "";
-  
+
+  const cap = (w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+
   const w1 = filteredWords[0].toLowerCase();
   const w2 = filteredWords[1] ? filteredWords[1].toLowerCase() : "";
-  
-  // Si hay al menos dos palabras y ambas están en la lista de nombres comunes, es un nombre compuesto
-  if (w2 && COMMON_FIRST_NAMES.has(w1) && COMMON_FIRST_NAMES.has(w2)) {
-    const first = filteredWords[0].charAt(0).toUpperCase() + filteredWords[0].slice(1).toLowerCase();
-    const second = filteredWords[1].charAt(0).toUpperCase() + filteredWords[1].slice(1).toLowerCase();
-    return `${first} ${second}`;
+
+  // Conectores que NO forman parte del nombre de pila
+  const stopWords = new Set(["de", "del", "la", "las", "los", "el", "van", "von", "y", "di"]);
+
+  // Si hay al menos 2 palabras válidas y la segunda no es conector ni inicial simple (ej: "Lia Janeth", "Juan Pablo")
+  if (w2 && !stopWords.has(w2) && filteredWords[1].length >= 2 && filteredWords[0].length >= 2) {
+    // Retornar nombre compuesto (ej: "Lia Janeth", "Ana María", "Juan Pablo", "Daniel Eduardo")
+    return `${cap(filteredWords[0])} ${cap(filteredWords[1])}`;
   }
 
-  // Si el primer nombre es largo/compuesto por concatenación de email (ej: "dianapaolap"),
-  // ver si empieza con un nombre común de al menos 4 letras
-  const firstWordLower = w1;
-  for (const commonName of COMMON_FIRST_NAMES) {
-    if (commonName.length >= 4 && firstWordLower.startsWith(commonName)) {
-      return commonName.charAt(0).toUpperCase() + commonName.slice(1).toLowerCase();
-    }
-  }
-  
-  return filteredWords[0].charAt(0).toUpperCase() + filteredWords[0].slice(1).toLowerCase();
+  return cap(filteredWords[0]);
 }
 
 /**

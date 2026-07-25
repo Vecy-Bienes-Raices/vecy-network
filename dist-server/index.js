@@ -901,14 +901,14 @@ function norm(txt) {
   return txt.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
 }
 function buscarLugarColombia(texto) {
-  const n = norm(texto);
-  if (MAPA_COLOMBIA[n]) return MAPA_COLOMBIA[n];
+  const n2 = norm(texto);
+  if (MAPA_COLOMBIA[n2]) return MAPA_COLOMBIA[n2];
   let bestMatch = null;
   let bestKeyLength = 0;
   for (const [key, lugar] of Object.entries(MAPA_COLOMBIA)) {
     if (key.length >= 4 && key.length > bestKeyLength) {
       const regex = new RegExp(`(^|\\s)${key}(\\s|$)`);
-      if (regex.test(n)) {
+      if (regex.test(n2)) {
         bestMatch = lugar;
         bestKeyLength = key.length;
       }
@@ -1695,22 +1695,22 @@ var init_geocoding = __esm({
 import { sql } from "drizzle-orm";
 function normalizarTextoGeografico(texto) {
   if (!texto) return "";
-  let n = texto.toLowerCase();
-  n = n.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  n = n.replace(/ñ/g, "n");
-  n = n.replace(/[\r\n\t]/g, " ");
-  n = n.replace(/[^a-z0-9]/g, " ");
-  n = n.replace(/\s+/g, " ").trim();
-  n = n.replace(/\bsta\b/g, "santa");
-  n = n.replace(/\bsto\b/g, "santo");
-  n = n.replace(/\bapto\b/g, "apartamento");
-  n = n.replace(/\bhab\b/g, "habitacion");
-  n = n.replace(/\bhabs\b/g, "habitaciones");
-  n = n.replace(/\bfusa\b/g, "fusagasuga");
-  n = n.replace(/\bfaca\b/g, "facatativa");
-  n = n.replace(/\bzipa\b/g, "zipaquira");
-  n = n.replace(/\bgirardor\b/g, "girardot");
-  return n;
+  let n2 = texto.toLowerCase();
+  n2 = n2.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  n2 = n2.replace(/ñ/g, "n");
+  n2 = n2.replace(/[\r\n\t]/g, " ");
+  n2 = n2.replace(/[^a-z0-9]/g, " ");
+  n2 = n2.replace(/\s+/g, " ").trim();
+  n2 = n2.replace(/\bsta\b/g, "santa");
+  n2 = n2.replace(/\bsto\b/g, "santo");
+  n2 = n2.replace(/\bapto\b/g, "apartamento");
+  n2 = n2.replace(/\bhab\b/g, "habitacion");
+  n2 = n2.replace(/\bhabs\b/g, "habitaciones");
+  n2 = n2.replace(/\bfusa\b/g, "fusagasuga");
+  n2 = n2.replace(/\bfaca\b/g, "facatativa");
+  n2 = n2.replace(/\bzipa\b/g, "zipaquira");
+  n2 = n2.replace(/\bgirardor\b/g, "girardot");
+  return n2;
 }
 async function validarZona(zona, ciudad, textoCompleto, isRequirement = false) {
   const normZone = normalizarTextoGeografico(zona);
@@ -2439,8 +2439,8 @@ __export(matching_exports, {
 import { and, eq as eq3 } from "drizzle-orm";
 function hasAledanos(text2) {
   if (!text2) return false;
-  const n = normalizarTextoGeografico(text2);
-  return n.includes("aledan") || n.includes("cercan") || n.includes("alrededor") || n.includes("similar") || n.includes("proxim") || n.includes("otro");
+  const n2 = normalizarTextoGeografico(text2);
+  return n2.includes("aledan") || n2.includes("cercan") || n2.includes("alrededor") || n2.includes("similar") || n2.includes("proxim") || n2.includes("otro");
 }
 function checkTransactionCompatibility(reqType, propType, propAccepted = []) {
   if (!reqType || !propType) return false;
@@ -3577,37 +3577,37 @@ function sanitizeGeoString(val) {
   return clean;
 }
 function analyzeSender(name, userId, alreadyGreeted) {
-  const n = (name || "Colega").trim();
-  const normalizedFull = n.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
-  const firstWord = n.split(/\s+/)[0].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+  const n2 = (name || "Colega").trim();
+  const normalizedFull = n2.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+  const firstWord = n2.split(/\s+/)[0].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
   const todayStr = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
   if (!alreadyGreeted) GREETED_TODAY.set(userId, todayStr);
   const femaleNames = ["maria", "ana", "claudia", "martha", "adriana", "sandra", "jani", "natalia", "paola", "diana", "laura", "sofia", "valentina", "andrea", "milena", "patricia", "marcela", "liliana", "elena", "monica", "beatriz", "gloria", "carmen", "lucia", "angela", "isabel", "clara", "rosa", "teresa", "yolanda", "esperanza", "blanca", "pilar", "carolina", "juliana", "catalina", "viviana", "lizeth", "daniela", "camila"];
   const maleNames = ["juan", "carlos", "jose", "luis", "jorge", "andres", "felipe", "david", "mateo", "santiago", "daniel", "alejandro", "ricardo", "fernando", "eduardo", "pablo", "sergio", "javier", "alberto", "rafael", "mauricio", "german", "gustavo", "ramiro", "gabriel", "julio", "oscar", "ivan", "hugo", "diego", "wilson", "edgar", "mario", "hector", "victor"];
   const corporateKeywords = ["inmo", "bienes", "raices", "propiedades", "network", "group", "asesores", "servicios", "soluciones", "comercial", "ventas", "vecy", "sas", "ltda", "vende", "arrienda", "inmobiliaria", "finca", "raiz", "realestate"];
-  let baseGreeting = `\xA1Hola, qu\xE9 gusto tenerte aqu\xED, ${n}!`;
+  let baseGreeting = `\xA1Hola, qu\xE9 gusto tenerte aqu\xED, ${n2}!`;
   let adj = "profesional";
   let courtesy = "gracias por tu rigor profesional";
   const isCorporate = corporateKeywords.some((kw) => normalizedFull.includes(kw));
   if (isCorporate) {
-    baseGreeting = `\xA1Hola, qu\xE9 gusto saludarte, colega de ${n}!`;
+    baseGreeting = `\xA1Hola, qu\xE9 gusto saludarte, colega de ${n2}!`;
   } else {
     const isMale = maleNames.includes(firstWord) || maleNames.some((m) => firstWord.startsWith(m));
     const isFemale = femaleNames.includes(firstWord) || femaleNames.some((f) => firstWord.startsWith(f));
     if (isMale) {
-      baseGreeting = `\xA1Hola ${n}!`;
+      baseGreeting = `\xA1Hola ${n2}!`;
       adj = "juicioso";
       courtesy = "excelente labor, sigue as\xED de juicioso";
     } else if (isFemale) {
-      baseGreeting = `\xA1Hola ${n}!`;
+      baseGreeting = `\xA1Hola ${n2}!`;
       adj = "juiciosa";
       courtesy = "excelente labor, sigue as\xED de juiciosa";
     } else if (firstWord.endsWith("a") || firstWord.endsWith("ia") || firstWord.endsWith("th")) {
-      baseGreeting = `\xA1Hola ${n}!`;
+      baseGreeting = `\xA1Hola ${n2}!`;
       adj = "juiciosa";
       courtesy = "excelente labor, sigue as\xED de juiciosa";
     } else if (firstWord.endsWith("o") || firstWord.endsWith("s") || firstWord.endsWith("r") || firstWord.endsWith("l") || firstWord.endsWith("n") || firstWord.endsWith("z")) {
-      baseGreeting = `\xA1Hola ${n}!`;
+      baseGreeting = `\xA1Hola ${n2}!`;
       adj = "juicioso";
       courtesy = "excelente labor, sigue as\xED de juicioso";
     }
@@ -3887,11 +3887,11 @@ async function getTimeOfDayGreetingForUser(phone, realName, alreadyGreeted, isGr
   } catch (e) {
     console.warn("[JanIA-Greeting] Error buscando nombre de usuario para saludo:", e);
   }
-  const firstName = extractFirstName(nameToUse) || "colega";
+  const firstName = extractFirstName(nameToUse);
   if (alreadyGreeted) {
-    return isGroup ? `Mira @${phone}` : `Mira ${firstName}`;
+    return firstName ? `Mira ${firstName}` : `Mira`;
   } else {
-    return isGroup ? `${salutation} @${phone}` : `${salutation} ${firstName}`;
+    return firstName ? `${salutation} ${firstName}` : `${salutation}`;
   }
 }
 async function scrapeUrlWithBypass(url) {
@@ -3992,7 +3992,7 @@ async function processWhatsAppMessage(text2, userId, userName, hasMedia = false,
     const isWebUser = userId.startsWith("web-");
     const alreadyGreeted = await checkAlreadyGreeted(userId);
     const senderInfo = analyzeSender(realName, userId, alreadyGreeted);
-    const n = extractFirstName(realName) || "colega";
+    const n2 = extractFirstName(realName) || "colega";
     const session = await getPendingSession(userId);
     if (session) {
       const combinedText = session.messageToProcess + " \n[COMPLEMENTO]: " + text2;
@@ -4265,7 +4265,7 @@ Est\xE1s interactuando con el usuario directamente en la CONSOLA WEB de VECY Net
       contextText += `
 [INSTRUCCI\xD3N CR\xCDTICA DE PRESENTACI\xD3N FUERA DE HORARIO]:
 Como esta es tu primera interacci\xF3n con este usuario el d\xEDa de hoy, y nos encontramos fuera de horario de oficina, debes presentarte de manera muy c\xE1lida y entusiasta al inicio de tu respuesta:
-"\xA1${saludo}, *${n}*! \u{1F60A} Soy JanIA, la asistente virtual de Inteligencia Artificial de VECY, creada y entrenada por el equipo de desarrollo de VECY Bienes Ra\xEDces. Estoy aqu\xED para atenderte de forma personalizada, resolver tus inquietudes y ayudarte a registrar tus inmuebles o requerimientos de forma \xE1gil mientras nuestros asesores humanos regresan a su horario habitual de 8:00 am a 8:00 pm. \u{1F680}\u{1F91D} \xBFCu\xE9ntame en qu\xE9 puedo ayudarte en este momento?"
+"\xA1${saludo}, *${n2}*! \u{1F60A} Soy JanIA, la asistente virtual de Inteligencia Artificial de VECY, creada y entrenada por el equipo de desarrollo de VECY Bienes Ra\xEDces. Estoy aqu\xED para atenderte de forma personalizada, resolver tus inquietudes y ayudarte a registrar tus inmuebles o requerimientos de forma \xE1gil mientras nuestros asesores humanos regresan a su horario habitual de 8:00 am a 8:00 pm. \u{1F680}\u{1F91D} \xBFCu\xE9ntame en qu\xE9 puedo ayudarte en este momento?"
 Redacta esta bienvenida integrada con tu respuesta a su pregunta, usando emojis alusivos de manera elocuente. Adem\xE1s, si la respuesta a su consulta es corta, establece "wantsVoice": true y coloca una versi\xF3n hablada muy amigable de esta bienvenida y su respuesta en "voiceResponse" (sin vi\xF1etas o asteriscos de negrita) para que el usuario reciba un audio de tu voz present\xE1ndote de forma humana.`;
     }
     const textLower = messageToProcess.toLowerCase();
@@ -4637,9 +4637,9 @@ ${greetingPrefix}, veo que tienes una consulta jur\xEDdica, procedimental o de a
     return { classification: "CONSULTA_GENERAL", response: "", mentions: [] };
   }
 }
-function isGenericName(n) {
-  if (!n) return true;
-  const lower = n.toLowerCase().trim();
+function isGenericName(n2) {
+  if (!n2) return true;
+  const lower = n2.toLowerCase().trim();
   return lower.startsWith("asesor +") || lower === "asesor" || lower === "nuevo asesor" || lower === "colega" || lower === "";
 }
 async function findOrCreateUserByPhone(phone, realName) {
@@ -4710,24 +4710,24 @@ function sanitizeTransactionType(type) {
 }
 function sanitizeTransactionTypes(raw) {
   const input = Array.isArray(raw) ? raw.join(" ") : raw || "";
-  const n = input.toLowerCase();
+  const n2 = input.toLowerCase();
   const result = [];
-  if (n.includes("venta o arriendo") || n.includes("vendo o arriendo") || n.includes("venta_o_arriendo")) result.push("venta_o_arriendo");
-  if (n.includes("opcion de compra") || n.includes("opci\xF3n de compra") || n.includes("con opcion") || n.includes("con opci\xF3n") || n.includes("arriendo_con_opcion")) result.push("arriendo_con_opcion_de_compra");
-  if (n.includes("venta") && n.includes("permuta") || n.includes("venta_permuta") || n.includes("venpermuto")) result.push("venta_permuta");
+  if (n2.includes("venta o arriendo") || n2.includes("vendo o arriendo") || n2.includes("venta_o_arriendo")) result.push("venta_o_arriendo");
+  if (n2.includes("opcion de compra") || n2.includes("opci\xF3n de compra") || n2.includes("con opcion") || n2.includes("con opci\xF3n") || n2.includes("arriendo_con_opcion")) result.push("arriendo_con_opcion_de_compra");
+  if (n2.includes("venta") && n2.includes("permuta") || n2.includes("venta_permuta") || n2.includes("venpermuto")) result.push("venta_permuta");
   const hasVentaOArriendo = result.includes("venta_o_arriendo");
   const hasVentaPermuta = result.includes("venta_permuta");
   if (!hasVentaOArriendo && !hasVentaPermuta) {
-    if (n.includes("venta") || n.includes("vender") || n.includes("compra") || n.includes("comprar")) result.push("venta");
+    if (n2.includes("venta") || n2.includes("vender") || n2.includes("compra") || n2.includes("comprar")) result.push("venta");
   }
   if (!hasVentaOArriendo && !result.includes("arriendo_con_opcion_de_compra")) {
-    if (n.includes("arriendo") || n.includes("alquiler") || n.includes("renta") || n.includes("rentar")) result.push("arriendo");
+    if (n2.includes("arriendo") || n2.includes("alquiler") || n2.includes("renta") || n2.includes("rentar")) result.push("arriendo");
   }
-  if (n.includes("temporal") || n.includes("vacacional") || n.includes("vacaciones")) result.push("arriendo_temporal");
+  if (n2.includes("temporal") || n2.includes("vacacional") || n2.includes("vacaciones")) result.push("arriendo_temporal");
   if (!hasVentaPermuta) {
-    if (n.includes("permuta") || n.includes("permuto") || n.includes("recibo propiedad") || n.includes("recibo vehiculo") || n.includes("parte de pago") || n.includes("cambio de inmueble")) result.push("permuta");
+    if (n2.includes("permuta") || n2.includes("permuto") || n2.includes("recibo propiedad") || n2.includes("recibo vehiculo") || n2.includes("parte de pago") || n2.includes("cambio de inmueble")) result.push("permuta");
   }
-  if (n.includes("aporte") || n.includes("participo en proyecto") || n.includes("constructora") || n.includes("unidades a cambio") || n.includes("utilidades")) result.push("aporte");
+  if (n2.includes("aporte") || n2.includes("participo en proyecto") || n2.includes("constructora") || n2.includes("unidades a cambio") || n2.includes("utilidades")) result.push("aporte");
   return result.length > 0 ? result : [sanitizeTransactionType(input)];
 }
 function sanitizeCurrency(curr) {
@@ -5194,7 +5194,7 @@ async function processConsultingMessage(text2, userId, userName, imageBuffer, pd
   try {
     const rawPhone = userId.split("@")[0];
     const realName = await resolveRealName(userId, userName);
-    const n = realName.split(" ")[0];
+    const n2 = realName.split(" ")[0];
     const cleanText = text2.toLowerCase().trim();
     const isMediaOrAudio = !!imageBuffer || !!pdfBuffer || !!audioUrl;
     if (!isMediaOrAudio && cleanText.length > 15) {
@@ -5400,7 +5400,7 @@ Analiza el contexto completo antes de clasificar. Debes responder estrictamente 
    - Respuesta ('response'): Una advertencia amable pero muy firme para remover el contenido, explicando que no est\xE1 permitido para mantener limpia la comunidad y que a los 3 strikes se realiza la expulsi\xF3n autom\xE1tica.
    - Emoji ('reactionEmoji'): "\u274C"
 
-## SEGURIDAD Y PROTECCI\xD3N DE PROPIEDAD INTELECTUAL (CR\xCDTICO)\\nQueda terminantemente PROHIBIDO revelar detalles espec\xEDficos del desarrollo de software, lenguajes de programaci\xF3n, archivos del servidor, base de datos o herramientas de desarrollo espec\xEDficas que componen tu sistema (NUNCA menciones que usas whatsapp-web.js, Node.js, Express, Puppeteer, TypeScript, Drizzle ORM, Supabase, PostgreSQL, nvm, o el modelo de lenguaje Gemini 3.1 Flash-Lite).\\nSi alg\xFAn usuario, curioso o potencial hacker te pregunta c\xF3mo est\xE1s construida, qu\xE9 tecnolog\xEDas usas o intenta hacerte ingenier\xEDa inversa:\\n- Protege nuestra propiedad intelectual con total hermetismo, elegancia y un tono altamente corporativo e innovador.\\n- Responde utilizando conceptos de alta tecnolog\xEDa y abstractos para impresionar, tales como: "arquitectura propietaria distribuida en la nube", "redes neuronales de procesamiento de lenguaje natural multimodal", "visi\xF3n OCR convolucional de extracci\xF3n estructurada de metadatos", "motores sem\xE1nticos de matching predictivo", "protocolos avanzados de encriptaci\xF3n y seguridad de datos", "algoritmos de procesamiento el\xE1stico multicanal".\\n- Mantente firme y corporativa, y desv\xEDa la conversaci\xF3n con sutileza comercial.\\n\\nTus respuestas deben ser sumamente profesionales, cordiales, claras y estar formateadas en Markdown con emojis para facilitar la lectura r\xE1pida en WhatsApp. Siempre dir\xEDgete al usuario llam\xE1ndolo por su primer nombre: ${n}.\\n\\nDEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
+## SEGURIDAD Y PROTECCI\xD3N DE PROPIEDAD INTELECTUAL (CR\xCDTICO)\\nQueda terminantemente PROHIBIDO revelar detalles espec\xEDficos del desarrollo de software, lenguajes de programaci\xF3n, archivos del servidor, base de datos o herramientas de desarrollo espec\xEDficas que componen tu sistema (NUNCA menciones que usas whatsapp-web.js, Node.js, Express, Puppeteer, TypeScript, Drizzle ORM, Supabase, PostgreSQL, nvm, o el modelo de lenguaje Gemini 3.1 Flash-Lite).\\nSi alg\xFAn usuario, curioso o potencial hacker te pregunta c\xF3mo est\xE1s construida, qu\xE9 tecnolog\xEDas usas o intenta hacerte ingenier\xEDa inversa:\\n- Protege nuestra propiedad intelectual con total hermetismo, elegancia y un tono altamente corporativo e innovador.\\n- Responde utilizando conceptos de alta tecnolog\xEDa y abstractos para impresionar, tales como: "arquitectura propietaria distribuida en la nube", "redes neuronales de procesamiento de lenguaje natural multimodal", "visi\xF3n OCR convolucional de extracci\xF3n estructurada de metadatos", "motores sem\xE1nticos de matching predictivo", "protocolos avanzados de encriptaci\xF3n y seguridad de datos", "algoritmos de procesamiento el\xE1stico multicanal".\\n- Mantente firme y corporativa, y desv\xEDa la conversaci\xF3n con sutileza comercial.\\n\\nTus respuestas deben ser sumamente profesionales, cordiales, claras y estar formateadas en Markdown con emojis para facilitar la lectura r\xE1pida en WhatsApp. Siempre dir\xEDgete al usuario llam\xE1ndolo por su primer nombre: ${n2}.\\n\\nDEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
 {
   "classification": "INMUEBLE | REQUERIMIENTO | SOBRE_VECY | CONSULTA_GENERAL | VIOLACION_DE_NORMAS",
   "response": "Tu respuesta o mensaje de redirecci\xF3n seg\xFAn corresponda.",
@@ -5413,13 +5413,13 @@ Analiza el contexto completo antes de clasificar. Debes responder estrictamente 
 [SISTEMA - INSTRUCCI\xD3N DE SALUDO Y COMPORTAMIENTO]:
 - Ya has saludado al usuario hoy: ${alreadyGreeted ? "S\xCD" : "NO"}.
 - Tipo de conversaci\xF3n actual: GRUPO DE WHATSAPP.
-- Primer nombre del usuario: "${n}".
+- Primer nombre del usuario: "${n2}".
 - REGLAS CR\xCDTICAS DE RESPUESTA:
   * Si "Ya has saludado al usuario hoy" es S\xCD:
     - \xA1PROHIBIDO SALUDAR! No uses palabras como "Hola", "Buenas tardes", "Qu\xE9 gusto", "Bienvenido", ni variantes de saludo o bienvenida.
-    - Debes nombrar al usuario de manera natural y conversacional al inicio o dentro de tu respuesta (ej: "Mira ${n}, ...", "Te cuento, ${n}, que...", "Para complementar, ${n}, ...").
+    - Debes nombrar al usuario de manera natural y conversacional al inicio o dentro de tu respuesta (ej: "Mira ${n2}, ...", "Te cuento, ${n2}, que...", "Para complementar, ${n2}, ...").
   * Si "Ya has saludado al usuario hoy" es NO:
-    - Debes saludar de manera muy cordial y natural, incluyendo su nombre "${n}" o dirigi\xE9ndose a \xE9l/ella como colega/aliado/a.`;
+    - Debes saludar de manera muy cordial y natural, incluyendo su nombre "${n2}" o dirigi\xE9ndose a \xE9l/ella como colega/aliado/a.`;
     if (pdfBuffer) {
       messageToProcess += `
 [SISTEMA: DOCUMENTO PDF DETECTADO. Analiza el documento PDF adjunto con tus capacidades nativas para extraer todos los datos relevantes del predial, certificado de tradici\xF3n, o contrato.]`;
@@ -5430,7 +5430,8 @@ Analiza el contexto completo antes de clasificar. Debes responder estrictamente 
     }
     const messages2 = [
       { role: "system", content: systemPrompt },
-      { role: "user", content: `Usuario: @${rawPhone} (${realName})\\nConsulta: ${messageToProcess}${greetingInstruction}` }
+      { role: "user", content: `Usuario: @${rawPhone} (${realName})
+Consulta: ${messageToProcess}${greetingInstruction}` }
     ];
     const llmRes = await invokeLLM({
       messages: messages2,
@@ -5471,7 +5472,8 @@ async function processCirculoMessage(text2, userId, userName) {
   try {
     const rawPhone = userId.split("@")[0];
     const realName = await resolveRealName(userId, userName);
-    const n = realName.split(" ")[0];
+    const firstName = extractFirstName(realName);
+    const userGreetingName = firstName ? ` ${firstName}` : "";
     const cleanText = text2.toLowerCase().trim();
     if (cleanText.length > 15) {
       const onTopicKeywords = [
@@ -5572,7 +5574,7 @@ async function processCirculoMessage(text2, userId, userName) {
       const hasOnTopicKeyword = onTopicKeywords.some((keyword) => cleanText.includes(keyword));
       if (!hasOnTopicKeyword) {
         console.log(`[JanIA-Circulo-OffTopic] Mensaje fuera de tema en C\xEDrculo Cero para ${userId}: "${text2.substring(0, 50)}...". Retornando est\xE1tico.`);
-        const staticText = `Hola @${rawPhone} \u{1F44B}\u{1F3FB}. Este grupo est\xE1 reservado exclusivamente para temas, debates, testimonios y soporte relacionados con la red de VECY Network e Inteligencia Artificial. \u{1F4A1}\u2728
+        const staticText = `Hola${userGreetingName} \u{1F44B}\u{1F3FB}. Este grupo est\xE1 reservado exclusivamente para temas, debates, testimonios y soporte relacionados con la red de VECY Network e Inteligencia Artificial. \u{1F4A1}\u2728
 
 Por favor, realiza una pregunta o comentario relacionado con nuestro ecosistema. \u{1F60A}`;
         return {
@@ -5593,7 +5595,7 @@ Explica claramente y con la verdad absoluta el estado del proyecto y sus caracte
 - **Lo que en verdad funciona hoy**: Los asesores publican sus ofertas (Inmuebles) y demandas (Requerimientos) en el grupo especializado VECY INMUEBLES NETWORK. JanIA transcribe notas de voz en tiempo real, realiza OCR (lectura de texto) en flyers/im\xE1genes, extrae la informaci\xF3n de las fichas t\xE9cnicas autom\xE1ticamente a partir de enlaces/URLs compartidos de portales permitidos, ejecuta el matching de coincidencias comerciales de forma instant\xE1nea a nivel nacional (32 departamentos), y gestiona el flujo de confirmaci\xF3n de contacto bilateral privada (Double Opt-In) por mensaje privado (DM) mediante respuestas r\xE1pidas (S\xCD #M[c\xF3digo] o NO #M[c\xF3digo]).
 - **Lo que est\xE1 en desarrollo y planeado a futuro**: El portal web oficial privado (https://vecy-network.vercel.app/) se encuentra en fases de desarrollo e integraci\xF3n. M\xF3dulos como el CRM para centralizar leads de agentes, la digitalizaci\xF3n de contratos formalizados y el motor de identidades din\xE1micas (subdominios personalizados para cada agente como agente.vecy.network) ser\xE1n lanzados oficialmente en el futuro y a\xFAn no est\xE1n operativos para los usuarios.
 - **Urgencia Comercial y Tarifas**: Enfatiza que toda la plataforma, incluyendo el matching de JanIA en WhatsApp y la carga de inmuebles, es 100% gratuita por lanzamiento. Sin embargo, advierte con astucia que esta gratuidad ilimitada est\xE1 programada temporalmente y que, posiblemente, a partir del *01 de Julio de 2026* se implementar\xE1 un modelo de membres\xEDas/pago para accesos ilimitados. \xA1Debe servir de urgencia para registrarse y publicar hoy mismo!
-- **Tecnolog\xEDa del Ecosistema**: Explica de forma sencilla que hemos creado un Asistente de IA basado en c\xF3digo propietario y base de datos SQL en la nube, el cual est\xE1 siendo entrenado a diario para encontrar MATCH en los grupos. NUNCA utilices tecnicismos complejos ni reveles nombres internos espec\xEDficos de nuestra infraestructura. Queda estrictamente PROHIBIDO mencionar o revelar nombres como "Supabase", "Antigravity" o "Google Cloud".
+- **Tecnolog\xEDa del Ecosistema**: Explica de forma sencilla que hemos creado un Asistente de IA basado en c\xF3digo propietario y base de datos SQL en la nube, el cual est\xE1 siendo entrenado a diario para encontrar MATCH en los grupos. NUNCA utilices tecnicismos complejos ni reveles nombres internos espec\xEDficos de nuestra infraestructura. Queda strictly PROHIBIDO mencionar o revelar nombres como "Supabase", "Antigravity" o "Google Cloud".
 - **Recomendaci\xF3n de Im\xE1genes y OCR**: Explica a los usuarios por qu\xE9 es preferible enviar capturas de pantalla o im\xE1genes con texto comercial de sus propiedades en lugar de enlaces de redes sociales (Instagram, Facebook, etc.). La raz\xF3n t\xE9cnica es que las redes sociales restringen el acceso mediante bloqueos y filtros de verificaci\xF3n humana, haciendo imposible que la IA extraiga los datos. Al enviarle una captura de pantalla al grupo VECY INMUEBLES NETWORK, JanIA puede leer e indexar la informaci\xF3n con su visi\xF3n OCR al instante.
 - **VECY INMUEBLES NETWORK es el \xFAnico centro de Match**: Recuerda y recalca que el grupo especializado VECY INMUEBLES NETWORK es el \xDANICO canal donde JanIA busca los MATCH y gestiona los datos de inmuebles y requerimientos. En C\xEDrculo Cero o VECY: Soporte Legal, Contratos y Aval\xFAos no se procesan listados de propiedades ni se buscan coincidencias.
 - **Invitaci\xF3n y Expansi\xF3n**: Anima a los aliados a invitar a m\xE1s br\xF3kers y a proponer a los administradores de otros grupos inmobiliarios que incluyan a JanIA como miembro y la nombren administradora. De esta forma, ella podr\xE1 captar datos de las publicaciones de sus miembros en otros chats, unirlos a VECY INMUEBLES NETWORK, y obtener resultados de match mucho m\xE1s r\xE1pidos y eficaces para todos.
@@ -5605,7 +5607,7 @@ Analiza el contexto completo antes de clasificar. Debes responder estrictamente 
 1. **Clasificaci\xF3n "DEBATE_COMPETIDOR" (FLUJO ESPECIAL - DEBATE CON CRISTIAN SAMBONI / UBICAPP)**:
    - Si el mensaje menciona a **Ubicapp**, o proviene del usuario **Cristian Samboni** (tel\xE9fono +57 311 2469375 o similar), o contiene publicidad de Ubicapp.
    - **Directriz de comportamiento**: No debes aplicar strikes ni eliminar el mensaje. Act\xFAa con extrema cordura, caballerosidad comercial y amabilidad.
-   - Genera una respuesta dirigida a \xE9l (utilizando @${rawPhone} si es el autor, o mencionando a Cristian Samboni y su equipo). Inv\xEDtalo de manera muy educada y profesional a un debate abierto en el grupo. Plantea preguntas t\xE9cnicas y objetivas para comparar ambos modelos:
+   - Genera una respuesta dirigida a \xE9l (utilizando ${firstName ? firstName : "Cristian"} si es el autor, o mencionando a Cristian Samboni y su equipo). Inv\xEDtalo de manera muy educada y profesional a un debate abierto en el grupo. Plantea preguntas t\xE9cnicas y objetivas para comparar ambos modelos:
      * Gratuidad absoluta de VECY vs. Costo mensual de Ubicapp ($100.000 COP/mes).
      * Operaci\xF3n nativa en WhatsApp con IA multimodal vs. Obligaci\xF3n de descargar una app y rellenar formularios manuales.
      * Comisiones 100% para el asesor en VECY vs. Esquema de reparto forzado 50/50 de Ubicapp.
@@ -5614,12 +5616,12 @@ Analiza el contexto completo antes de clasificar. Debes responder estrictamente 
 
 2. **Clasificaci\xF3n "INMUEBLE" o "REQUERIMIENTO"**:
    - Si el usuario est\xE1 publicando un listado de inmuebles (oferta comercial de venta, arriendo o permuta) o un requerimiento comercial para comprar o rentar un inmueble espec\xEDfico.
-   - Respuesta ('response'): "\u{1F4E2} *VECY INMUEBLES NETWORK* \u{1F4E2}\\n\\nHola @${rawPhone}, detect\xE9 que est\xE1s publicando una oferta o requerimiento inmobiliario. Para poder procesar tu publicaci\xF3n con mis motores autom\xE1ticos, registrar tus datos y buscarte un MATCH de inmediato con otros aliados, por favor realiza tu publicaci\xF3n en nuestro grupo especializado **VECY INMUEBLES NETWORK**:\\n\u{1F449} https://chat.whatsapp.com/K36KrHeB9nMEKJ56s8XFcM\\n\\n\xA1Hagamos equipo y cerremos negocios! \u{1F680}\u{1F3AF}"
+   - Respuesta ('response'): "\u{1F4E2} *VECY INMUEBLES NETWORK* \u{1F4E2}\\n\\nHola${userGreetingName}, detect\xE9 que est\xE1s publicando una oferta o requerimiento inmobiliario. Para poder procesar tu publicaci\xF3n con mis motores autom\xE1ticos, registrar tus datos y buscarte un MATCH de inmediato con otros aliados, por favor realiza tu publicaci\xF3n en nuestro grupo especializado **VECY INMUEBLES NETWORK**:\\n\u{1F449} https://chat.whatsapp.com/K36KrHeB9nMEKJ56s8XFcM\\n\\n\xA1Hagamos equipo y cerremos negocios! \u{1F680}\u{1F3AF}"
    - Emoji ('reactionEmoji'): "\u{1F504}"
 
 3. **Clasificaci\xF3n "AVALUO_O_LEGAL"**:
    - Si el usuario realiza una consulta jur\xEDdica (sobre contratos, leyes de arrendamiento, escrituraci\xF3n, etc.) o solicita un aval\xFAo r\xE1pido/precio estimado de metro cuadrado.
-   - Respuesta ('response'): "\u{1F4A1} *VECY: SOPORTE LEGAL, CONTRATOS Y AVAL\xDAOS* \u{1F4A1}\\n\\nHola @${rawPhone}, veo que tienes una consulta jur\xEDdica, procedimental o de aval\xFAo. Para darte una respuesta detallada con mis motores legales y de mercado, por favor realiza tu pregunta en nuestro grupo especializado **VECY: SOPORTE LEGAL, CONTRATOS Y AVAL\xDAOS**:\\n\u{1F449} https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6\\n\\n\xA1All\xED te responder\xE9 al instante con toda la informaci\xF3n! \u{1F680}\u{1F3AF}"
+   - Respuesta ('response'): "\u{1F4A1} *VECY: SOPORTE LEGAL, CONTRATOS Y AVAL\xDAOS* \u{1F4A1}\\n\\nHola${userGreetingName}, veo que tienes una consulta jur\xEDdica, procedimental o de aval\xFAo. Para darte una respuesta detallada con mis motores legales y de mercado, por favor realiza tu pregunta en nuestro grupo especializado **VECY: SOPORTE LEGAL, CONTRATOS Y AVAL\xDAOS**:\\n\u{1F449} https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6\\n\\n\xA1All\xED te responder\xE9 al instante con toda la informaci\xF3n! \u{1F680}\u{1F3AF}"
    - Emoji ('reactionEmoji'): "\u{1F504}"
 
 4. **Clasificaci\xF3n "CONSULTA_GENERAL"**:
@@ -5632,7 +5634,7 @@ Analiza el contexto completo antes de clasificar. Debes responder estrictamente 
    - Respuesta ('response'): Una advertencia amable pero muy firme para remover el contenido de inmediato, detallando las pautas y advirtiendo de la expulsi\xF3n al 3er strike.
    - Emoji ('reactionEmoji'): "\u274C"
 
-Tus respuestas en el debate deben ser cortas, cordiales, directas, pero sumamente sofisticadas, con datos y argumentos de alto nivel. Debes usar siempre emojis relacionados y muy expresivos de forma estrat\xE9gica para que el texto sea visualmente din\xE1mico y amigable para leer en WhatsApp. Siempre dir\xEDgete al interlocutor de forma personalizada: ${n}.
+Tus respuestas en el debate deben ser cortas, cordiales, directas, pero sumamente sofisticadas, con datos y argumentos de alto nivel. Debes usar siempre emojis relacionados y muy expresivos de forma estrat\xE9gica para que el texto sea visualmente din\xE1mico y amigable para leer en WhatsApp. Siempre dir\xEDgete al interlocutor de forma personalizada: ${firstName || realName}.
 
 DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
 {
@@ -6138,7 +6140,7 @@ function extractFirstName2(fullName) {
   if (!fullName) return "";
   let clean = fullName.trim();
   if (!clean) return "";
-  if (/^\+?[\d\s-]{6,}$/.test(clean)) return "";
+  if (/^\+?[\d\s-]{6,}$/.test(clean) || /^[\d\s\+\-\(\)]+$/.test(clean)) return "";
   if (clean.includes("@")) {
     clean = clean.split("@")[0];
   }
@@ -6147,20 +6149,14 @@ function extractFirstName2(fullName) {
   const words = clean.split(/\s+/).map((w) => w.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, ""));
   const filteredWords = words.filter((w) => w.length > 0);
   if (filteredWords.length === 0 || !filteredWords[0]) return "";
+  const cap = (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
   const w1 = filteredWords[0].toLowerCase();
   const w2 = filteredWords[1] ? filteredWords[1].toLowerCase() : "";
-  if (w2 && COMMON_FIRST_NAMES2.has(w1) && COMMON_FIRST_NAMES2.has(w2)) {
-    const first = filteredWords[0].charAt(0).toUpperCase() + filteredWords[0].slice(1).toLowerCase();
-    const second = filteredWords[1].charAt(0).toUpperCase() + filteredWords[1].slice(1).toLowerCase();
-    return `${first} ${second}`;
+  const stopWords = /* @__PURE__ */ new Set(["de", "del", "la", "las", "los", "el", "van", "von", "y", "di"]);
+  if (w2 && !stopWords.has(w2) && filteredWords[1].length >= 2 && filteredWords[0].length >= 2) {
+    return `${cap(filteredWords[0])} ${cap(filteredWords[1])}`;
   }
-  const firstWordLower = w1;
-  for (const commonName of COMMON_FIRST_NAMES2) {
-    if (commonName.length >= 4 && firstWordLower.startsWith(commonName)) {
-      return commonName.charAt(0).toUpperCase() + commonName.slice(1).toLowerCase();
-    }
-  }
-  return filteredWords[0].charAt(0).toUpperCase() + filteredWords[0].slice(1).toLowerCase();
+  return cap(filteredWords[0]);
 }
 function getGreetingByTime2() {
   const hour = (/* @__PURE__ */ new Date()).getHours();
@@ -6237,148 +6233,9 @@ async function textToSpeechMedia(text2, format = "OGG_OPUS") {
 async function sendAdminNotification(text2) {
   console.log(`[WHATSAPP-UTILS] [Notificaci\xF3n Admin (WhatsApp Omitido)]: ${text2}`);
 }
-var COMMON_FIRST_NAMES2;
 var init_whatsapp_utils = __esm({
   "server/_core/whatsapp-utils.ts"() {
     "use strict";
-    COMMON_FIRST_NAMES2 = /* @__PURE__ */ new Set([
-      "juan",
-      "maria",
-      "mar\xEDa",
-      "carlos",
-      "ana",
-      "luis",
-      "jorge",
-      "pedro",
-      "jose",
-      "jos\xE9",
-      "andres",
-      "andr\xE9s",
-      "camilo",
-      "diana",
-      "laura",
-      "paula",
-      "andrea",
-      "claudia",
-      "martha",
-      "marta",
-      "sandra",
-      "monica",
-      "m\xF3nica",
-      "patricia",
-      "gloria",
-      "esperanza",
-      "blanca",
-      "luz",
-      "mercedes",
-      "rosalba",
-      "carmen",
-      "rosa",
-      "diego",
-      "felipe",
-      "santiago",
-      "alejandro",
-      "nicolas",
-      "nicol\xE1s",
-      "david",
-      "daniel",
-      "sergio",
-      "mario",
-      "fernando",
-      "alberto",
-      "roberto",
-      "eduardo",
-      "ricardo",
-      "hugo",
-      "oscar",
-      "\xF3scar",
-      "edgar",
-      "edgardo",
-      "wilson",
-      "jhon",
-      "john",
-      "fredy",
-      "freddy",
-      "alexander",
-      "vladimir",
-      "alvaro",
-      "\xE1lvaro",
-      "harold",
-      "henry",
-      "walter",
-      "william",
-      "edison",
-      "yeison",
-      "jeison",
-      "brayan",
-      "bryan",
-      "kevin",
-      "steven",
-      "esteban",
-      "stiven",
-      "edwin",
-      "eddu",
-      "edward",
-      "edgar",
-      "angie",
-      "karen",
-      "jessica",
-      "yessica",
-      "katherine",
-      "catherine",
-      "vanessa",
-      "stefania",
-      "estefania",
-      "estefan\xEDa",
-      "daniela",
-      "valentina",
-      "sofia",
-      "sof\xEDa",
-      "isabella",
-      "gabriela",
-      "mariana",
-      "catalina",
-      "nicolle",
-      "nicole",
-      "juliana",
-      "alejandra",
-      "lisa",
-      "carolina",
-      "natalia",
-      "nathalia",
-      "veronica",
-      "ver\xF3nica",
-      "adriana",
-      "liliana",
-      "viviana",
-      "pilar",
-      "rocio",
-      "roc\xEDo",
-      "soraya",
-      "johanna",
-      "yudy",
-      "judy",
-      "tatiana",
-      "mateo",
-      "sebastian",
-      "sebasti\xE1n",
-      "cristian",
-      "gustavo",
-      "hernando",
-      "humberto",
-      "jaime",
-      "mauricio",
-      "cesar",
-      "c\xE9sar",
-      "nelson",
-      "ruben",
-      "rub\xE9n",
-      "ivan",
-      "iv\xE1n",
-      "olga",
-      "stella",
-      "estela"
-    ]);
   }
 });
 
@@ -8485,7 +8342,7 @@ async function dispatchNotificationsForMatch(matchId) {
 
 *Puntos compatibles:*
 ` + (matchExplanation?.positives?.map((p) => `\u2022 ${p}`).join("\n") || "\u2022 Compatibilidad general") + "\n\n" + (matchExplanation?.negatives?.length > 0 ? `*Advertencias menores:*
-` + matchExplanation.negatives.map((n) => `\u2022 ${n}`).join("\n") + "\n\n" : "") + `\xBFTe interesa ponerte en contacto con el colega br\xF3ker (+${cleanOtherPhone}) para coordinar la negociaci\xF3n?
+` + matchExplanation.negatives.map((n2) => `\u2022 ${n2}`).join("\n") + "\n\n" : "") + `\xBFTe interesa ponerte en contacto con el colega br\xF3ker (+${cleanOtherPhone}) para coordinar la negociaci\xF3n?
 
 Responde a este mensaje privado con:
 \u{1F449} *S\xCD #M${matchId}* - Para autorizar compartir tus datos de contacto.

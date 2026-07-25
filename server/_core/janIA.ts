@@ -1189,12 +1189,12 @@ async function getTimeOfDayGreetingForUser(phone: string, realName: string, alre
     console.warn("[JanIA-Greeting] Error buscando nombre de usuario para saludo:", e);
   }
 
-  const firstName = extractFirstName(nameToUse) || 'colega';
+  const firstName = extractFirstName(nameToUse);
 
   if (alreadyGreeted) {
-    return isGroup ? `Mira @${phone}` : `Mira ${firstName}`;
+    return firstName ? `Mira ${firstName}` : `Mira`;
   } else {
-    return isGroup ? `${salutation} @${phone}` : `${salutation} ${firstName}`;
+    return firstName ? `${salutation} ${firstName}` : `${salutation}`;
   }
 }
 
@@ -3031,10 +3031,9 @@ export async function processConsultingMessage(
 
     const messages = [
       { role: "system", content: systemPrompt },
-      { role: "user", content: `Usuario: @${rawPhone} (${realName})\\nConsulta: ${messageToProcess}${greetingInstruction}` }
+      { role: "user", content: `Usuario: @${rawPhone} (${realName})\nConsulta: ${messageToProcess}${greetingInstruction}` }
     ];
 
-    // Si es una solicitud de avalúo o contiene palabras clave de valor, activamos enableSearch para que Gemini busque en internet
     const llmRes = await invokeLLM({
       messages,
       responseFormat: { type: "json_object" },
@@ -3073,7 +3072,6 @@ export async function processConsultingMessage(
   }
 }
 
-
 export async function processCirculoMessage(
   text: string, 
   userId: string, 
@@ -3082,7 +3080,8 @@ export async function processCirculoMessage(
   try {
     const rawPhone = userId.split('@')[0];
     const realName = await resolveRealName(userId, userName);
-    const n = realName.split(' ')[0];
+    const firstName = extractFirstName(realName);
+    const userGreetingName = firstName ? ` ${firstName}` : "";
 
     // Intercepción rápida de mensajes OFF-TOPIC para ahorrar tokens de Gemini
     const cleanText = text.toLowerCase().trim();
@@ -3104,7 +3103,7 @@ export async function processCirculoMessage(
       const hasOnTopicKeyword = onTopicKeywords.some(keyword => cleanText.includes(keyword));
       if (!hasOnTopicKeyword) {
         console.log(`[JanIA-Circulo-OffTopic] Mensaje fuera de tema en Círculo Cero para ${userId}: "${text.substring(0, 50)}...". Retornando estático.`);
-        const staticText = `Hola @${rawPhone} 👋🏻. Este grupo está reservado exclusivamente para temas, debates, testimonios y soporte relacionados con la red de VECY Network e Inteligencia Artificial. 💡✨\n\nPor favor, realiza una pregunta o comentario relacionado con nuestro ecosistema. 😊`;
+        const staticText = `Hola${userGreetingName} 👋🏻. Este grupo está reservado exclusivamente para temas, debates, testimonios y soporte relacionados con la red de VECY Network e Inteligencia Artificial. 💡✨\n\nPor favor, realiza una pregunta o comentario relacionado con nuestro ecosistema. 😊`;
         return {
           classification: "VIOLACION_DE_NORMAS",
           response: staticText,
@@ -3115,7 +3114,6 @@ export async function processCirculoMessage(
     }
 
     const textLower = text.toLowerCase();
-
 
     const alreadyGreeted = await checkAlreadyGreeted(userId);
 
@@ -3128,7 +3126,7 @@ export async function processCirculoMessage(
       `- **Lo que en verdad funciona hoy**: Los asesores publican sus ofertas (Inmuebles) y demandas (Requerimientos) en el grupo especializado VECY INMUEBLES NETWORK. JanIA transcribe notas de voz en tiempo real, realiza OCR (lectura de texto) en flyers/imágenes, extrae la información de las fichas técnicas automáticamente a partir de enlaces/URLs compartidos de portales permitidos, ejecuta el matching de coincidencias comerciales de forma instantánea a nivel nacional (32 departamentos), y gestiona el flujo de confirmación de contacto bilateral privada (Double Opt-In) por mensaje privado (DM) mediante respuestas rápidas (SÍ #M[código] o NO #M[código]).\n` +
       `- **Lo que está en desarrollo y planeado a futuro**: El portal web oficial privado (https://vecy-network.vercel.app/) se encuentra en fases de desarrollo e integración. Módulos como el CRM para centralizar leads de agentes, la digitalización de contratos formalizados y el motor de identidades dinámicas (subdominios personalizados para cada agente como agente.vecy.network) serán lanzados oficialmente en el futuro y aún no están operativos para los usuarios.\n` +
       `- **Urgencia Comercial y Tarifas**: Enfatiza que toda la plataforma, incluyendo el matching de JanIA en WhatsApp y la carga de inmuebles, es 100% gratuita por lanzamiento. Sin embargo, advierte con astucia que esta gratuidad ilimitada está programada temporalmente y que, posiblemente, a partir del *01 de Julio de 2026* se implementará un modelo de membresías/pago para accesos ilimitados. ¡Debe servir de urgencia para registrarse y publicar hoy mismo!\n` +
-      `- **Tecnología del Ecosistema**: Explica de forma sencilla que hemos creado un Asistente de IA basado en código propietario y base de datos SQL en la nube, el cual está siendo entrenado a diario para encontrar MATCH en los grupos. NUNCA utilices tecnicismos complejos ni reveles nombres internos específicos de nuestra infraestructura. Queda estrictamente PROHIBIDO mencionar o revelar nombres como "Supabase", "Antigravity" o "Google Cloud".\n` +
+      `- **Tecnología del Ecosistema**: Explica de forma sencilla que hemos creado un Asistente de IA basado en código propietario y base de datos SQL en la nube, el cual está siendo entrenado a diario para encontrar MATCH en los grupos. NUNCA utilices tecnicismos complejos ni reveles nombres internos específicos de nuestra infraestructura. Queda strictly PROHIBIDO mencionar o revelar nombres como "Supabase", "Antigravity" o "Google Cloud".\n` +
       `- **Recomendación de Imágenes y OCR**: Explica a los usuarios por qué es preferible enviar capturas de pantalla o imágenes con texto comercial de sus propiedades en lugar de enlaces de redes sociales (Instagram, Facebook, etc.). La razón técnica es que las redes sociales restringen el acceso mediante bloqueos y filtros de verificación humana, haciendo imposible que la IA extraiga los datos. Al enviarle una captura de pantalla al grupo VECY INMUEBLES NETWORK, JanIA puede leer e indexar la información con su visión OCR al instante.\n` +
       `- **VECY INMUEBLES NETWORK es el único centro de Match**: Recuerda y recalca que el grupo especializado VECY INMUEBLES NETWORK es el ÚNICO canal donde JanIA busca los MATCH y gestiona los datos de inmuebles y requerimientos. En Círculo Cero o VECY: Soporte Legal, Contratos y Avalúos no se procesan listados de propiedades ni se buscan coincidencias.\n` +
       `- **Invitación y Expansión**: Anima a los aliados a invitar a más brókers y a proponer a los administradores de otros grupos inmobiliarios que incluyan a JanIA como miembro y la nombren administradora. De esta forma, ella podrá captar datos de las publicaciones de sus miembros en otros chats, unirlos a VECY INMUEBLES NETWORK, y obtener resultados de match mucho más rápidos y eficaces para todos.\n` +
@@ -3138,7 +3136,7 @@ export async function processCirculoMessage(
       `1. **Clasificación "DEBATE_COMPETIDOR" (FLUJO ESPECIAL - DEBATE CON CRISTIAN SAMBONI / UBICAPP)**:\n` +
       `   - Si el mensaje menciona a **Ubicapp**, o proviene del usuario **Cristian Samboni** (teléfono +57 311 2469375 o similar), o contiene publicidad de Ubicapp.\n` +
       `   - **Directriz de comportamiento**: No debes aplicar strikes ni eliminar el mensaje. Actúa con extrema cordura, caballerosidad comercial y amabilidad.\n` +
-      `   - Genera una respuesta dirigida a él (utilizando @${rawPhone} si es el autor, o mencionando a Cristian Samboni y su equipo). Invítalo de manera muy educada y profesional a un debate abierto en el grupo. Plantea preguntas técnicas y objetivas para comparar ambos modelos:\n` +
+      `   - Genera una respuesta dirigida a él (utilizando ${firstName ? firstName : 'Cristian'} si es el autor, o mencionando a Cristian Samboni y su equipo). Invítalo de manera muy educada y profesional a un debate abierto en el grupo. Plantea preguntas técnicas y objetivas para comparar ambos modelos:\n` +
       `     * Gratuidad absoluta de VECY vs. Costo mensual de Ubicapp ($100.000 COP/mes).\n` +
       `     * Operación nativa en WhatsApp con IA multimodal vs. Obligación de descargar una app y rellenar formularios manuales.\n` +
       `     * Comisiones 100% para el asesor en VECY vs. Esquema de reparto forzado 50/50 de Ubicapp.\n` +
@@ -3146,11 +3144,11 @@ export async function processCirculoMessage(
       `   - Emoji ('reactionEmoji'): "💡"\n\n` +
       `2. **Clasificación "INMUEBLE" o "REQUERIMIENTO"**:\n` +
       `   - Si el usuario está publicando un listado de inmuebles (oferta comercial de venta, arriendo o permuta) o un requerimiento comercial para comprar o rentar un inmueble específico.\n` +
-      `   - Respuesta ('response'): "📢 *VECY INMUEBLES NETWORK* 📢\\n\\nHola @${rawPhone}, detecté que estás publicando una oferta o requerimiento inmobiliario. Para poder procesar tu publicación con mis motores automáticos, registrar tus datos y buscarte un MATCH de inmediato con otros aliados, por favor realiza tu publicación en nuestro grupo especializado **VECY INMUEBLES NETWORK**:\\n👉 https://chat.whatsapp.com/K36KrHeB9nMEKJ56s8XFcM\\n\\n¡Hagamos equipo y cerremos negocios! 🚀🎯"\n` +
+      `   - Respuesta ('response'): "📢 *VECY INMUEBLES NETWORK* 📢\\n\\nHola${userGreetingName}, detecté que estás publicando una oferta o requerimiento inmobiliario. Para poder procesar tu publicación con mis motores automáticos, registrar tus datos y buscarte un MATCH de inmediato con otros aliados, por favor realiza tu publicación en nuestro grupo especializado **VECY INMUEBLES NETWORK**:\\n👉 https://chat.whatsapp.com/K36KrHeB9nMEKJ56s8XFcM\\n\\n¡Hagamos equipo y cerremos negocios! 🚀🎯"\n` +
       `   - Emoji ('reactionEmoji'): "🔄"\n\n` +
       `3. **Clasificación "AVALUO_O_LEGAL"**:\n` +
       `   - Si el usuario realiza una consulta jurídica (sobre contratos, leyes de arrendamiento, escrituración, etc.) o solicita un avalúo rápido/precio estimado de metro cuadrado.\n` +
-      `   - Respuesta ('response'): "💡 *VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS* 💡\\n\\nHola @${rawPhone}, veo que tienes una consulta jurídica, procedimental o de avalúo. Para darte una respuesta detallada con mis motores legales y de mercado, por favor realiza tu pregunta en nuestro grupo especializado **VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS**:\\n👉 https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6\\n\\n¡Allí te responderé al instante con toda la información! 🚀🎯"\n` +
+      `   - Respuesta ('response'): "💡 *VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS* 💡\\n\\nHola${userGreetingName}, veo que tienes una consulta jurídica, procedimental o de avalúo. Para darte una respuesta detallada con mis motores legales y de mercado, por favor realiza tu pregunta en nuestro grupo especializado **VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS**:\\n👉 https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6\\n\\n¡Allí te responderé al instante con toda la información! 🚀🎯"\n` +
       `   - Emoji ('reactionEmoji'): "🔄"\n\n` +
       `4. **Clasificación "CONSULTA_GENERAL"**:\n` +
       `   - Preguntas o comentarios legítimos sobre el proyecto VECY Network, beneficios, sugerencias, testimonios de éxito o comentarios hacia la IA.\n` +
@@ -3160,7 +3158,7 @@ export async function processCirculoMessage(
       `   - Si el mensaje contiene temas políticos, religiosos, spam general, estafas o publicidad de terceros (que NO sea debate de Ubicapp).\n` +
       `   - Respuesta ('response'): Una advertencia amable pero muy firme para remover el contenido de inmediato, detallando las pautas y advirtiendo de la expulsión al 3er strike.\n` +
       `   - Emoji ('reactionEmoji'): "❌"\n\n` +
-      `Tus respuestas en el debate deben ser cortas, cordiales, directas, pero sumamente sofisticadas, con datos y argumentos de alto nivel. Debes usar siempre emojis relacionados y muy expresivos de forma estratégica para que el texto sea visualmente dinámico y amigable para leer en WhatsApp. Siempre dirígete al interlocutor de forma personalizada: ${n}.\n\n` +
+      `Tus respuestas en el debate deben ser cortas, cordiales, directas, pero sumamente sofisticadas, con datos y argumentos de alto nivel. Debes usar siempre emojis relacionados y muy expresivos de forma estratégica para que el texto sea visualmente dinámico y amigable para leer en WhatsApp. Siempre dirígete al interlocutor de forma personalizada: ${firstName || realName}.\n\n` +
       `DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:\n` +
       `{\n` +
       `  "classification": "DEBATE_COMPETIDOR | INMUEBLE | REQUERIMIENTO | AVALUO_O_LEGAL | CONSULTA_GENERAL | VIOLACION_DE_NORMAS",\n` +
