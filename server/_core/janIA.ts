@@ -253,6 +253,24 @@ export function parseSafeJSON(content: string): any {
     }
     throw e;
   }
+export function hasRealEstateTextKeyword(cleanText: string): boolean {
+  const text = cleanText.toLowerCase();
+  return text.includes("apto") || 
+         text.includes("apartamento") || 
+         text.includes("casa") || 
+         text.includes("bodega") || 
+         text.includes("oficina") || 
+         text.includes("local") ||
+         text.includes("locales") ||
+         text.includes("cabaña") ||
+         text.includes("cabañas") ||
+         text.includes("lote") || 
+         text.includes("finca") || 
+         text.includes("habs") || 
+         text.includes("alcoba") ||
+         text.includes("m2") || 
+         text.includes("mts") ||
+         text.includes("requerimiento");
 }
 
 export function extractFallbackDataFromText(text: string): any {
@@ -1678,7 +1696,7 @@ Por lo tanto, DEBES hacer lo siguiente:
       textLower.includes("disputa") || textLower.includes("notaría") || textLower.includes("notaria")) &&
       !textLower.includes("50/50") && !textLower.includes("50-50");
 
-    const isListingOrReq = hasRealEstateKeyword(textLower);
+    const isListingOrReq = hasRealEstateTextKeyword(textLower);
 
     const enableSearch = !isListingOrReq && (isValuationQuery || isLegalQuery || textLower.includes("buscar en google"));
 
@@ -1808,21 +1826,7 @@ Por lo tanto, DEBES hacer lo siguiente:
                       cleanText.includes("arriendo apartamento") ||
                       cleanText.includes("arriendo casa");
 
-      const hasRealEstateKeyword = cleanText.includes("apto") || 
-                                   cleanText.includes("apartamento") || 
-                                   cleanText.includes("casa") || 
-                                   cleanText.includes("bodega") || 
-                                   cleanText.includes("oficina") || 
-                                   cleanText.includes("local") ||
-                                   cleanText.includes("locales") ||
-                                   cleanText.includes("cabaña") ||
-                                   cleanText.includes("cabañas") ||
-                                   cleanText.includes("lote") || 
-                                   cleanText.includes("finca") || 
-                                   cleanText.includes("habs") || 
-                                   cleanText.includes("alcoba") ||
-                                   cleanText.includes("m2") || 
-                                   cleanText.includes("mts");
+      const hasRealEstateKeyword = hasRealEstateTextKeyword(cleanText);
 
       if (result.classification === "INMUEBLE" && isSearch && !isOffer) {
         console.log("[JANIA-CORRECTION] Cambiando clasificación de INMUEBLE a REQUERIMIENTO basado en heurística de texto.");
