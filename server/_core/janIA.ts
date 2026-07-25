@@ -255,6 +255,95 @@ export function parseSafeJSON(content: string): any {
   }
 }
 
+export function extractFallbackDataFromText(text: string): any {
+  const clean = text.toLowerCase();
+  
+  let transactionType = "venta";
+  if (clean.includes("arriendo") || clean.includes("alquiler") || clean.includes("renta") || clean.includes("alquilo")) {
+    transactionType = "arriendo";
+  }
+
+  let propertyType = "apartment";
+  if (clean.includes("casa") || clean.includes("townhouse")) {
+    propertyType = "house";
+  } else if (clean.includes("bodega")) {
+    propertyType = "warehouse";
+  } else if (clean.includes("oficina")) {
+    propertyType = "office";
+  } else if (clean.includes("lote") || clean.includes("terreno")) {
+    propertyType = "land";
+  } else if (clean.includes("finca")) {
+    propertyType = "farm";
+  } else if (clean.includes("apartaestudio") || clean.includes("loft")) {
+    propertyType = "loft";
+  }
+
+  let price = 0;
+  const millonMatch = text.match(/(\d+(?:[\.,]\d+)?)\s*(?:millon|millones|mm|m)/i);
+  if (millonMatch) {
+    const val = parseFloat(millonMatch[1].replace(',', '.'));
+    price = val * 1000000;
+  } else {
+    const rawPriceMatch = text.match(/\$?\s*(\d{1,3}(?:[\.,]\d{3}){2,3})/);
+    if (rawPriceMatch) {
+      price = parseFloat(rawPriceMatch[1].replace(/[\.,]/g, ''));
+    }
+  }
+
+  let area = 0;
+  const areaMatch = text.match(/(\d+(?:[\.,]\d+)?)\s*(?:m2|mts2|metros|m²)/i);
+  if (areaMatch) {
+    area = parseFloat(areaMatch[1].replace(',', '.'));
+  }
+
+  let bedrooms = 0;
+  const bedMatch = text.match(/(\d+)\s*(?:alcoba|alcobas|hab|habs|habitacion|habitaciones|dormitorio|dormitorios)/i);
+  if (bedMatch) {
+    bedrooms = parseInt(bedMatch[1], 10);
+  }
+
+  let bathrooms = 0;
+  const bathMatch = text.match(/(\d+)\s*(?:baño|baños|bano|banos)/i);
+  if (bathMatch) {
+    bathrooms = parseInt(bathMatch[1], 10);
+  }
+
+  let city = "Bogotá";
+  if (clean.includes("cali") || clean.includes("melendez") || clean.includes("jardin") || clean.includes("pacifica")) {
+    city = "Cali";
+  } else if (clean.includes("medellin") || clean.includes("poblado") || clean.includes("laureles")) {
+    city = "Medellín";
+  }
+
+  let zone = "Bogotá";
+  if (clean.includes("chico reservado")) zone = "Chicó Reservado";
+  else if (clean.includes("chico")) zone = "Chicó";
+  else if (clean.includes("santa barbara")) zone = "Santa Bárbara";
+  else if (clean.includes("la cabrera")) zone = "La Cabrera";
+  else if (clean.includes("rosales")) zone = "Rosales";
+  else if (clean.includes("emaus")) zone = "Emaús";
+  else if (clean.includes("colina")) zone = "Colina Campestre";
+  else if (clean.includes("ciudad melendez")) zone = "Ciudad Meléndez";
+  else if (clean.includes("ciudad jardin")) zone = "Ciudad Jardín";
+  else if (clean.includes("norte")) zone = "Norte";
+
+  return {
+    propertyType,
+    transactionType,
+    tipoInmuebleDeseado: propertyType,
+    tipoNegocioDeseado: transactionType,
+    price,
+    presupuestoMax: price,
+    area,
+    bedrooms,
+    bathrooms,
+    city,
+    ciudadDeseada: city,
+    zone,
+    zonaDeseada: zone
+  };
+}
+
 // --- 1. ALMACENES DE MEMORIA (v12.0) ---
 function cleanSessionJid(jid: string): string {
   if (!jid) return "";
@@ -1673,10 +1762,22 @@ Por lo tanto, DEBES hacer lo siguiente:
       const isSearch = cleanText.includes("busco") || 
                        cleanText.includes("necesito") || 
                        cleanText.includes("requiero") || 
+                       cleanText.includes("requerimiento") ||
                        cleanText.includes("buscamos") || 
                        cleanText.includes("compro") || 
                        cleanText.includes("compra") ||
                        cleanText.includes("se busca") ||
+                       cleanText.includes("se requiere") ||
+                       cleanText.includes("para arriendo") ||
+                       cleanText.includes("para compra") ||
+                       cleanText.includes("solicito") ||
+                       cleanText.includes("solicitamos") ||
+                       cleanText.includes("cliente:") ||
+                       cleanText.includes("cliente :") ||
+                       cleanText.includes("presupuesto:") ||
+                       cleanText.includes("presupuesto :") ||
+                       cleanText.includes("acción: compra") ||
+                       cleanText.includes("acción : compra") ||
                        cleanText.includes("para cliente") ||
                        cleanText.includes("para un cliente") ||
                        cleanText.includes("para una cliente");
@@ -1687,7 +1788,8 @@ Por lo tanto, DEBES hacer lo siguiente:
                       cleanText.includes("rento") || 
                       cleanText.includes("alquilo") || 
                       cleanText.includes("alquiler") ||
-                      cleanText.includes("venta") ||
+                      cleanText.includes("venta:") ||
+                      clean.includes("renta apartamento") ||
                       cleanText.includes("se vende") ||
                       cleanText.includes("se arrienda") ||
                       cleanText.includes("en venta") ||
@@ -1703,6 +1805,7 @@ Por lo tanto, DEBES hacer lo siguiente:
                                    cleanText.includes("lote") || 
                                    cleanText.includes("finca") || 
                                    cleanText.includes("habs") || 
+                                   cleanText.includes("alcoba") ||
                                    cleanText.includes("m2") || 
                                    cleanText.includes("mts");
 
@@ -1723,6 +1826,22 @@ Por lo tanto, DEBES hacer lo siguiente:
     const extracted = result.extractedData || {};
     let isRequirement = result.classification === "REQUERIMIENTO";
     let isProperty = result.classification === "INMUEBLE";
+
+    // Rellenar datos extraídos faltantes mediante extractor heurístico si es necesario
+    if ((isProperty || isRequirement) && messageToProcess) {
+      const fallbackData = extractFallbackDataFromText(messageToProcess);
+      if (!extracted.transactionType) extracted.transactionType = fallbackData.transactionType;
+      if (!extracted.propertyType) extracted.propertyType = fallbackData.propertyType;
+      if (!extracted.price || Number(extracted.price) === 0) extracted.price = fallbackData.price;
+      if (!extracted.area || Number(extracted.area) === 0) extracted.area = fallbackData.area;
+      if (!extracted.bedrooms) extracted.bedrooms = fallbackData.bedrooms;
+      if (!extracted.bathrooms) extracted.bathrooms = fallbackData.bathrooms;
+      if (!extracted.city && fallbackData.city) extracted.city = fallbackData.city;
+      if (!extracted.ciudadDeseada && fallbackData.ciudadDeseada) extracted.ciudadDeseada = fallbackData.ciudadDeseada;
+      if (!extracted.zone && fallbackData.zone) extracted.zone = fallbackData.zone;
+      if (!extracted.zonaDeseada && fallbackData.zonaDeseada) extracted.zonaDeseada = fallbackData.zonaDeseada;
+      result.extractedData = extracted;
+    }
 
     // El procesamiento de ofertas y requerimientos se permite ahora tanto en grupos como en chat privado (DM)
     // para que JanIA pueda registrar los inmuebles/búsquedas y buscar matches en la base de datos directamente desde el chat privado.
