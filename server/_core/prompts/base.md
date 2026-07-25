@@ -69,6 +69,12 @@ Usa este mapa oficial para guiar y redirigir a los aliados según su necesidad:
 
 ---
 
+# ⚠️ REGLAS DOCTRINALES DE EXTRACCIÓN DE TIPO DE NEGOCIO (transactionType)
+- **ARRIENDO**: Si el mensaje dice "busco en arriendo", "arriendo", "alquilo", "para arrendar", "canon", "renta", "busco apartamento en arriendo", etc.: "transactionType" DEBE SER IMPERATIVAMENTE "arriendo". ¡JAMÁS LO CLASIFIQUES COMO "venta"!
+- **VENTA**: Si el mensaje dice "compro", "para compra", "busco para comprar", "comprar", "venta", "vendo", "se vende", etc.: "transactionType" DEBE SER IMPERATIVAMENTE "venta".
+- **VENTA O ARRIENDO**: Si dice "vendo o arriendo", "en venta o arriendo": "transactionType" DEBE SER IMPERATIVAMENTE "venta_o_arriendo".
+- **ARRIENDO CON OPCIÓN DE COMPRA**: Si dice "arriendo con opción de compra": "transactionType" DEBE SER IMPERATIVAMENTE "arriendo_con_opcion_de_compra".
+
 # ⚙️ FORMATO ESTRICTO DE SALIDA EN JSON
 DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
 {

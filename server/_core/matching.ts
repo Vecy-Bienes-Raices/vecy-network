@@ -361,7 +361,7 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
-  // A. transactionType — Compatibilidad inteligente (no solo igualdad exacta)
+  // ── FILTRO DURO 1: Tipo de Negocio (arriendo vs venta NUNCA coinciden) ──
   const reqBiz = (requirement.tipoNegocioDeseado || requirement.transactionType || "").toLowerCase();
   const propBiz = (property.transactionType || "").toLowerCase();
   const propAccepted: string[] = Array.isArray(property.acceptedTransactionTypes)
@@ -370,12 +370,12 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
 
   const transactionCompatible = checkTransactionCompatibility(reqBiz, propBiz, propAccepted);
   if (!transactionCompatible) {
-    blockers.push(`Incompatibilidad de negocio: deseado '${reqBiz}', ofrecido '${propBiz}'`);
+    blockers.push(`Incompatibilidad de negocio: buscado '${reqBiz}', ofrecido '${propBiz}'`);
     return buildExplanationResult(0, blockers, positives, negatives);
   }
   positives.push(`Tipo de negocio compatible: req='${reqBiz}' ↔ prop='${propBiz}'`);
 
-  // B. city (Ciudad)
+  // ── FILTRO DURO 2: Ciudad ──
   const CIUDADES_CO = ["bogota", "medellin", "cali", "barranquilla", "cartagena",
     "bucaramanga", "pereira", "manizales", "cucuta", "ibague", "santa marta",
     "villavicencio", "pasto", "monteria", "valledupar", "sincelejo", "chia",
@@ -443,10 +443,8 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
 
   const reqZone  = normalizarTextoGeografico(requirement.zonaDeseada || requirement.addressNeighborhood || "");
   const propZone = normalizarTextoGeografico(property.zone || property.addressNeighborhood || "");
-  const reqLoc   = normalizarTextoGeografico(requirement.addressLocality || "");
-  const propLoc  = normalizarTextoGeografico(property.addressLocality || "");
 
-  // ── FILTRO DURO 1: Tipo de inmueble ──
+  // ── FILTRO DURO 3: Tipo de inmueble ──
   if (reqType && propType) {
     const aliases: Record<string, string[]> = {
       "apartamento": ["apto", "apartamento", "apartment"],
@@ -470,7 +468,7 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
     const reqAlias  = aliases[reqType]  || [reqType];
     const propAlias = aliases[propType] || [propType];
     if (!reqAlias.some(a => propAlias.includes(a))) {
-      blockers.push(`Tipo de activo incompatible: deseado ${reqType}, offered ${propType}`);
+      blockers.push(`Tipo de activo incompatible: deseado ${reqType}, ofrecido ${propType}`);
       return buildExplanationResult(0, blockers, positives, negatives);
     }
   }
@@ -507,145 +505,147 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
 
   positives.push(`Tipo de activo compatible: ${propType}`);
 
-  // ── FILTRO DURO 3: Ubicación / Barrio ──
-  if (reqZone && propZone) {
-    const geoResult = matchesGeography(
-      requirement.zonaDeseada || requirement.addressNeighborhood || "",
-      property.zone || property.addressNeighborhood || "",
-      requirement.addressLocality || "",
-      property.addressLocality || "",
-      requirement.ciudadDeseada || requirement.city || "",
-      property.addressCity || property.city || ""
-    );
-    if (!geoResult.matches) {
-      blockers.push(`Ubicación incompatible: requerida zona '${requirement.zonaDeseada || ""}', ofrecida '${property.zone || ""}'`);
-      return buildExplanationResult(0, blockers, positives, negatives);
-    }
-    positives.push(`Ubicación compatible en zona: ${property.zone || ""}`);
-  }
+  // ── FILTRO DURO 4: Ubicación / Barrio Estricto ──
+  const geoResult = matchesGeography(
+    requirement.zonaDeseada || requirement.addressNeighborhood || "",
+    property.zone || property.addressNeighborhood || "",
+    requirement.addressLocality || "",
+    property.addressLocality || "",
+    requirement.ciudadDeseada || requirement.city || "",
+    property.addressCity || property.city || ""
+  );
 
-  // ── FILTRO DURO 4: Estrato ──
+  if (!geoResult.matches) {
+    blockers.push(`Ubicación incompatible: requerida zona '${requirement.zonaDeseada || ""}', ofrecida '${property.zone || ""}'`);
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  positives.push(`Ubicación compatible en zona: ${property.zone || ""}`);
+
+  // ── FILTRO DURO 5: Estrato ──
   if (reqEstrato >= 1 && pEstrato >= 1 && reqEstrato !== pEstrato) {
     blockers.push(`Estrato incompatible: deseado ${reqEstrato}, ofrecido ${pEstrato}`);
     return buildExplanationResult(0, blockers, positives, negatives);
   }
-  if (reqEstrato >= 1) {
-    positives.push(`Estrato compatible: ${pEstrato}`);
+
+  // ── FILTRO DURO 6: Área Mínima (Metraje en Duro - NUNCA MENOR QUE) ──
+  if (reqAreaMin > 0) {
+    if (propArea > 0) {
+      if (propArea < reqAreaMin * 0.98) {
+        blockers.push(`Área ofrecida (${propArea} m²) es INFERIOR al mínimo exigido (${reqAreaMin} m²)`);
+        return buildExplanationResult(0, blockers, positives, negatives);
+      } else {
+        positives.push(`Área de ${propArea} m² cumple con el mínimo exigido de ${reqAreaMin} m²`);
+      }
+    } else {
+      blockers.push(`No se puede verificar el área mínima requerida de ${reqAreaMin} m² (información no especificada en la oferta).`);
+      return buildExplanationResult(0, blockers, positives, negatives);
+    }
   }
 
-  let score = 0;
-  let totalW = 0;
-  let hardFail = false;
-
-  // ── FILTRO DURO Y DIRECCIONAL 5: Precio (Reglas Venta vs Arriendo) ──
-  if (budgetMax > 0 && price > 0) {
-    const isRent = reqBiz.includes("arriendo") || propBiz.includes("arriendo");
-    if (isRent) {
-      // En arriendo: El canon ofrecido NUNCA puede ser mayor al presupuesto máximo
-      if (price > budgetMax * 1.02) {
+  // ── FILTRO DURO 7: Presupuesto Máximo (NUNCA MAYOR QUE) ──
+  if (budgetMax > 0) {
+    if (price > 0) {
+      const isRent = reqBiz.includes("arriendo") || propBiz.includes("arriendo");
+      if (isRent && price > budgetMax * 1.02) {
         blockers.push(`Canon de arriendo $${price.toLocaleString()} supera el presupuesto máximo de $${budgetMax.toLocaleString()}`);
-        hardFail = true;
-      } else {
-        const ratio = price / budgetMax;
-        score += ratio <= 1.0 && ratio >= 0.85 ? 15 : 12;
-        positives.push(`Canon de $${price.toLocaleString()} cumple con el presupuesto de $${budgetMax.toLocaleString()}`);
-        if (ratio < 0.85) {
-          positives.push(`OPORTUNIDAD/GANGA EN ARRIENDO: Canon $${price.toLocaleString()} es significativamente menor al presupuesto`);
-        }
+        return buildExplanationResult(0, blockers, positives, negatives);
       }
-    } else {
-      // En venta: Tolerancia máxima +5% si es negociable. Si es menor, se considera GANGA
-      if (price > budgetMax * 1.05) {
+      if (!isRent && price > budgetMax * 1.05) {
         blockers.push(`Precio de venta $${price.toLocaleString()} supera el presupuesto máximo de $${budgetMax.toLocaleString()}`);
-        hardFail = true;
-      } else if (price < budgetMax * 0.65) {
-        // Demasiado bajo (posible error de captura o inconsistencia)
-        score += 8;
-        positives.push(`SUPER GANGA: Precio $${price.toLocaleString()} está muy por debajo del presupuesto $${budgetMax.toLocaleString()}`);
-      } else {
-        const diff = (price - budgetMax) / budgetMax;
-        if (diff <= 0) {
-          score += 15;
-          positives.push(`Precio de $${price.toLocaleString()} es ideal para el presupuesto de $${budgetMax.toLocaleString()}`);
-        } else {
-          score += 10;
-          positives.push(`Precio de $${price.toLocaleString()} está dentro del margen negociable (+5%)`);
-        }
+        return buildExplanationResult(0, blockers, positives, negatives);
       }
     }
-    totalW += 15;
   }
 
-  // ── FILTRO DURO 6: Área Mínima (m2) ──
-  if (reqAreaMin > 0 && propArea > 0) {
-    if (propArea < reqAreaMin * 0.98) {
-      blockers.push(`Área de ${propArea}m² es menor a la mínima requerida de ${reqAreaMin}m²`);
-      hardFail = true;
+  // ── FILTRO DURO 8: Habitaciones Mínimas (NUNCA MENOR QUE) ──
+  if (reqBedrooms > 0) {
+    if (pBedrooms >= 0) {
+      if (pBedrooms < reqBedrooms) {
+        blockers.push(`Habitaciones ofrecidas (${pBedrooms}) son inferiores a las exigidas (${reqBedrooms})`);
+        return buildExplanationResult(0, blockers, positives, negatives);
+      } else {
+        positives.push(`Habitaciones ofrecidas (${pBedrooms}) satisfacen la solicitud de (${reqBedrooms})`);
+      }
     } else {
-      const exceso = propArea - reqAreaMin;
-      score += exceso <= 20 ? 12 : exceso <= 60 ? 9 : 5;
-      positives.push(`Área de ${propArea}m² es totalmente compatible con el requerimiento de ${reqAreaMin}m²`);
+      blockers.push(`No se pueden verificar las habitaciones requeridas (${reqBedrooms}) por falta de información en la oferta.`);
+      return buildExplanationResult(0, blockers, positives, negatives);
     }
-    totalW += 12;
   }
 
-  // ── FILTRO DURO 7: Habitaciones (Nunca Menor Que) ──
-  if (reqBedrooms > 0 && pBedrooms >= 0) {
-    if (pBedrooms < reqBedrooms) {
-      blockers.push(`Habitaciones ofrecidas (${pBedrooms}) son menores a las requeridas (${reqBedrooms})`);
-      hardFail = true;
-    } else {
-      score += pBedrooms === reqBedrooms ? 10 : pBedrooms === reqBedrooms + 1 ? 8 : 5;
-      positives.push(`Habitaciones ofrecidas (${pBedrooms}) satisfacen la solicitud de (${reqBedrooms})`);
-    }
-    totalW += 10;
-  }
-
-  // ── FILTRO DURO 8: Baños (Nunca Menor Que) ──
-  if (reqBathrooms > 0 && pBathrooms >= 0) {
-    if (pBathrooms < reqBathrooms) {
-      blockers.push(`Baños ofrecidos (${pBathrooms}) son menores a los requeridos (${reqBathrooms})`);
-      hardFail = true;
-    } else {
-      score += pBathrooms === reqBathrooms ? 8 : 6;
-      positives.push(`Baños ofrecidos (${pBathrooms}) satisfacen la solicitud de (${reqBathrooms})`);
-    }
-    totalW += 8;
-  }
-
-  // ── FILTRO DURO 9: Parqueaderos (Nunca Menor Que) ──
-  if (reqGarages > 0 && pGarages >= 0) {
-    if (pGarages < reqGarages) {
-      blockers.push(`Parqueaderos ofrecidos (${pGarages}) son menores a los requeridos (${reqGarages})`);
-      hardFail = true;
-    } else {
-      score += pGarages === reqGarages ? 8 : 6;
-      positives.push(`Parqueaderos ofrecidos (${pGarages}) satisfacen la solicitud de (${reqGarages})`);
-    }
-    totalW += 8;
-  }
-
-  // ── FILTRO DURO 10: Cuota de Administración (Nunca Mayor Que) ──
-  if (reqAdminMax > 0 && pAdminFee > 0) {
-    if (pAdminFee > reqAdminMax * 1.02) {
-      blockers.push(`Cuota de administración ($${pAdminFee.toLocaleString()}) supera la máxima requerida ($${reqAdminMax.toLocaleString()})`);
-      hardFail = true;
-    } else {
-      score += 7;
-      positives.push(`Administración de $${pAdminFee.toLocaleString()} cumple con el máximo solicitado de $${reqAdminMax.toLocaleString()}`);
-    }
-    totalW += 7;
-  }
-
-  if (hardFail) {
+  // ── FILTRO DURO 9: Baños Mínimos ──
+  if (reqBathrooms > 0 && pBathrooms >= 0 && pBathrooms < reqBathrooms) {
+    blockers.push(`Baños ofrecidos (${pBathrooms}) son inferiores a los requeridos (${reqBathrooms})`);
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
-  // Si totalW < 15 (insuficiente información numérica comparada), compScore es 0 para evitar inflar scores ficticios.
-  const compScore = totalW >= 15 ? Math.round((score / totalW) * 40) : 0;
-  const finalScore = Math.min(100, 60 + compScore);
+  // ── FILTRO DURO 10: Parqueaderos Mínimos ──
+  if (reqGarages > 0 && pGarages >= 0 && pGarages < reqGarages) {
+    blockers.push(`Parqueaderos ofrecidos (${pGarages}) son inferiores a los requeridos (${reqGarages})`);
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
 
-  return buildExplanationResult(finalScore, blockers, positives, negatives);
+  // ── PONDERACIÓN MATEMÁTICA REAL Y RIGUROSA (0% a 100%) ──
+  let earnedPoints = 0;
+  let totalPossible = 0;
+
+  // 1. Tipo Inmueble (15 pts)
+  earnedPoints += 15;
+  totalPossible += 15;
+
+  // 2. Tipo Negocio (20 pts)
+  earnedPoints += 20;
+  totalPossible += 20;
+
+  // 3. Ubicación (25 pts)
+  earnedPoints += geoResult.score;
+  totalPossible += 25;
+
+  // 4. Presupuesto (15 pts)
+  if (budgetMax > 0 && price > 0) {
+    totalPossible += 15;
+    if (price <= budgetMax) earnedPoints += 15;
+    else if (price <= budgetMax * 1.05) earnedPoints += 10;
+  }
+
+  // 5. Área (10 pts)
+  if (reqAreaMin > 0 && propArea > 0) {
+    totalPossible += 10;
+    if (propArea >= reqAreaMin) earnedPoints += 10;
+  }
+
+  // 6. Habitaciones (8 pts)
+  if (reqBedrooms > 0 && pBedrooms >= 0) {
+    totalPossible += 8;
+    if (pBedrooms >= reqBedrooms) earnedPoints += 8;
+  }
+
+  // 7. Baños (4 pts)
+  if (reqBathrooms > 0 && pBathrooms >= 0) {
+    totalPossible += 4;
+    if (pBathrooms >= reqBathrooms) earnedPoints += 4;
+  }
+
+  // 8. Parqueaderos (3 pts)
+  if (reqGarages > 0 && pGarages >= 0) {
+    totalPossible += 3;
+    if (pGarages >= reqGarages) earnedPoints += 3;
+  }
+
+  let finalPercentage = Math.round((earnedPoints / totalPossible) * 100);
+
+  // REGLA CRÍTICA DOCTRINAL VECY:
+  // Un MATCH del 100% solo se otorga si TODOS los campos requeridos están presentes y son exactos.
+  // Si hay cualquier campo en N/E (no extraído / sin información), se limita el máximo a 84%.
+  const hasMissingSpecifiedFields = (reqAreaMin > 0 && propArea <= 0) ||
+                                    (reqBedrooms > 0 && pBedrooms < 0) ||
+                                    (budgetMax > 0 && price <= 0) ||
+                                    (reqZone && (!propZone || propZone === "bogota"));
+
+  if (hasMissingSpecifiedFields) {
+    finalPercentage = Math.min(84, finalPercentage);
+  }
+
+  return buildExplanationResult(finalPercentage, blockers, positives, negatives);
 }
 
 export function calcularScoreMatch(requirement: any, property: any): number {

@@ -2776,7 +2776,7 @@ function explicarMatch(requirement, property) {
   const propAccepted = Array.isArray(property.acceptedTransactionTypes) ? property.acceptedTransactionTypes.map((t2) => t2.toLowerCase()) : [];
   const transactionCompatible = checkTransactionCompatibility(reqBiz, propBiz, propAccepted);
   if (!transactionCompatible) {
-    blockers.push(`Incompatibilidad de negocio: deseado '${reqBiz}', ofrecido '${propBiz}'`);
+    blockers.push(`Incompatibilidad de negocio: buscado '${reqBiz}', ofrecido '${propBiz}'`);
     return buildExplanationResult(0, blockers, positives, negatives);
   }
   positives.push(`Tipo de negocio compatible: req='${reqBiz}' \u2194 prop='${propBiz}'`);
@@ -2874,8 +2874,6 @@ function explicarMatch(requirement, property) {
   const propType = (property.propertyType || "").toLowerCase().trim();
   const reqZone = normalizarTextoGeografico(requirement.zonaDeseada || requirement.addressNeighborhood || "");
   const propZone = normalizarTextoGeografico(property.zone || property.addressNeighborhood || "");
-  const reqLoc = normalizarTextoGeografico(requirement.addressLocality || "");
-  const propLoc = normalizarTextoGeografico(property.addressLocality || "");
   if (reqType && propType) {
     const aliases = {
       "apartamento": ["apto", "apartamento", "apartment"],
@@ -2899,7 +2897,7 @@ function explicarMatch(requirement, property) {
     const reqAlias = aliases[reqType] || [reqType];
     const propAlias = aliases[propType] || [propType];
     if (!reqAlias.some((a) => propAlias.includes(a))) {
-      blockers.push(`Tipo de activo incompatible: deseado ${reqType}, offered ${propType}`);
+      blockers.push(`Tipo de activo incompatible: deseado ${reqType}, ofrecido ${propType}`);
       return buildExplanationResult(0, blockers, positives, negatives);
     }
   }
@@ -2927,122 +2925,105 @@ function explicarMatch(requirement, property) {
     }
   }
   positives.push(`Tipo de activo compatible: ${propType}`);
-  if (reqZone && propZone) {
-    const geoResult = matchesGeography(
-      requirement.zonaDeseada || requirement.addressNeighborhood || "",
-      property.zone || property.addressNeighborhood || "",
-      requirement.addressLocality || "",
-      property.addressLocality || "",
-      requirement.ciudadDeseada || requirement.city || "",
-      property.addressCity || property.city || ""
-    );
-    if (!geoResult.matches) {
-      blockers.push(`Ubicaci\xF3n incompatible: requerida zona '${requirement.zonaDeseada || ""}', ofrecida '${property.zone || ""}'`);
-      return buildExplanationResult(0, blockers, positives, negatives);
-    }
-    positives.push(`Ubicaci\xF3n compatible en zona: ${property.zone || ""}`);
+  const geoResult = matchesGeography(
+    requirement.zonaDeseada || requirement.addressNeighborhood || "",
+    property.zone || property.addressNeighborhood || "",
+    requirement.addressLocality || "",
+    property.addressLocality || "",
+    requirement.ciudadDeseada || requirement.city || "",
+    property.addressCity || property.city || ""
+  );
+  if (!geoResult.matches) {
+    blockers.push(`Ubicaci\xF3n incompatible: requerida zona '${requirement.zonaDeseada || ""}', ofrecida '${property.zone || ""}'`);
+    return buildExplanationResult(0, blockers, positives, negatives);
   }
+  positives.push(`Ubicaci\xF3n compatible en zona: ${property.zone || ""}`);
   if (reqEstrato >= 1 && pEstrato >= 1 && reqEstrato !== pEstrato) {
     blockers.push(`Estrato incompatible: deseado ${reqEstrato}, ofrecido ${pEstrato}`);
     return buildExplanationResult(0, blockers, positives, negatives);
   }
-  if (reqEstrato >= 1) {
-    positives.push(`Estrato compatible: ${pEstrato}`);
+  if (reqAreaMin > 0) {
+    if (propArea > 0) {
+      if (propArea < reqAreaMin * 0.98) {
+        blockers.push(`\xC1rea ofrecida (${propArea} m\xB2) es INFERIOR al m\xEDnimo exigido (${reqAreaMin} m\xB2)`);
+        return buildExplanationResult(0, blockers, positives, negatives);
+      } else {
+        positives.push(`\xC1rea de ${propArea} m\xB2 cumple con el m\xEDnimo exigido de ${reqAreaMin} m\xB2`);
+      }
+    } else {
+      blockers.push(`No se puede verificar el \xE1rea m\xEDnima requerida de ${reqAreaMin} m\xB2 (informaci\xF3n no especificada en la oferta).`);
+      return buildExplanationResult(0, blockers, positives, negatives);
+    }
   }
-  let score = 0;
-  let totalW = 0;
-  let hardFail = false;
-  if (budgetMax > 0 && price > 0) {
-    const isRent = reqBiz.includes("arriendo") || propBiz.includes("arriendo");
-    if (isRent) {
-      if (price > budgetMax * 1.02) {
+  if (budgetMax > 0) {
+    if (price > 0) {
+      const isRent = reqBiz.includes("arriendo") || propBiz.includes("arriendo");
+      if (isRent && price > budgetMax * 1.02) {
         blockers.push(`Canon de arriendo $${price.toLocaleString()} supera el presupuesto m\xE1ximo de $${budgetMax.toLocaleString()}`);
-        hardFail = true;
-      } else {
-        const ratio = price / budgetMax;
-        score += ratio <= 1 && ratio >= 0.85 ? 15 : 12;
-        positives.push(`Canon de $${price.toLocaleString()} cumple con el presupuesto de $${budgetMax.toLocaleString()}`);
-        if (ratio < 0.85) {
-          positives.push(`OPORTUNIDAD/GANGA EN ARRIENDO: Canon $${price.toLocaleString()} es significativamente menor al presupuesto`);
-        }
+        return buildExplanationResult(0, blockers, positives, negatives);
       }
-    } else {
-      if (price > budgetMax * 1.05) {
+      if (!isRent && price > budgetMax * 1.05) {
         blockers.push(`Precio de venta $${price.toLocaleString()} supera el presupuesto m\xE1ximo de $${budgetMax.toLocaleString()}`);
-        hardFail = true;
-      } else if (price < budgetMax * 0.65) {
-        score += 8;
-        positives.push(`SUPER GANGA: Precio $${price.toLocaleString()} est\xE1 muy por debajo del presupuesto $${budgetMax.toLocaleString()}`);
-      } else {
-        const diff = (price - budgetMax) / budgetMax;
-        if (diff <= 0) {
-          score += 15;
-          positives.push(`Precio de $${price.toLocaleString()} es ideal para el presupuesto de $${budgetMax.toLocaleString()}`);
-        } else {
-          score += 10;
-          positives.push(`Precio de $${price.toLocaleString()} est\xE1 dentro del margen negociable (+5%)`);
-        }
+        return buildExplanationResult(0, blockers, positives, negatives);
       }
     }
-    totalW += 15;
   }
-  if (reqAreaMin > 0 && propArea > 0) {
-    if (propArea < reqAreaMin * 0.98) {
-      blockers.push(`\xC1rea de ${propArea}m\xB2 es menor a la m\xEDnima requerida de ${reqAreaMin}m\xB2`);
-      hardFail = true;
+  if (reqBedrooms > 0) {
+    if (pBedrooms >= 0) {
+      if (pBedrooms < reqBedrooms) {
+        blockers.push(`Habitaciones ofrecidas (${pBedrooms}) son inferiores a las exigidas (${reqBedrooms})`);
+        return buildExplanationResult(0, blockers, positives, negatives);
+      } else {
+        positives.push(`Habitaciones ofrecidas (${pBedrooms}) satisfacen la solicitud de (${reqBedrooms})`);
+      }
     } else {
-      const exceso = propArea - reqAreaMin;
-      score += exceso <= 20 ? 12 : exceso <= 60 ? 9 : 5;
-      positives.push(`\xC1rea de ${propArea}m\xB2 es totalmente compatible con el requerimiento de ${reqAreaMin}m\xB2`);
+      blockers.push(`No se pueden verificar las habitaciones requeridas (${reqBedrooms}) por falta de informaci\xF3n en la oferta.`);
+      return buildExplanationResult(0, blockers, positives, negatives);
     }
-    totalW += 12;
   }
-  if (reqBedrooms > 0 && pBedrooms >= 0) {
-    if (pBedrooms < reqBedrooms) {
-      blockers.push(`Habitaciones ofrecidas (${pBedrooms}) son menores a las requeridas (${reqBedrooms})`);
-      hardFail = true;
-    } else {
-      score += pBedrooms === reqBedrooms ? 10 : pBedrooms === reqBedrooms + 1 ? 8 : 5;
-      positives.push(`Habitaciones ofrecidas (${pBedrooms}) satisfacen la solicitud de (${reqBedrooms})`);
-    }
-    totalW += 10;
-  }
-  if (reqBathrooms > 0 && pBathrooms >= 0) {
-    if (pBathrooms < reqBathrooms) {
-      blockers.push(`Ba\xF1os ofrecidos (${pBathrooms}) son menores a los requeridos (${reqBathrooms})`);
-      hardFail = true;
-    } else {
-      score += pBathrooms === reqBathrooms ? 8 : 6;
-      positives.push(`Ba\xF1os ofrecidos (${pBathrooms}) satisfacen la solicitud de (${reqBathrooms})`);
-    }
-    totalW += 8;
-  }
-  if (reqGarages > 0 && pGarages >= 0) {
-    if (pGarages < reqGarages) {
-      blockers.push(`Parqueaderos ofrecidos (${pGarages}) son menores a los requeridos (${reqGarages})`);
-      hardFail = true;
-    } else {
-      score += pGarages === reqGarages ? 8 : 6;
-      positives.push(`Parqueaderos ofrecidos (${pGarages}) satisfacen la solicitud de (${reqGarages})`);
-    }
-    totalW += 8;
-  }
-  if (reqAdminMax > 0 && pAdminFee > 0) {
-    if (pAdminFee > reqAdminMax * 1.02) {
-      blockers.push(`Cuota de administraci\xF3n ($${pAdminFee.toLocaleString()}) supera la m\xE1xima requerida ($${reqAdminMax.toLocaleString()})`);
-      hardFail = true;
-    } else {
-      score += 7;
-      positives.push(`Administraci\xF3n de $${pAdminFee.toLocaleString()} cumple con el m\xE1ximo solicitado de $${reqAdminMax.toLocaleString()}`);
-    }
-    totalW += 7;
-  }
-  if (hardFail) {
+  if (reqBathrooms > 0 && pBathrooms >= 0 && pBathrooms < reqBathrooms) {
+    blockers.push(`Ba\xF1os ofrecidos (${pBathrooms}) son inferiores a los requeridos (${reqBathrooms})`);
     return buildExplanationResult(0, blockers, positives, negatives);
   }
-  const compScore = totalW >= 15 ? Math.round(score / totalW * 40) : 0;
-  const finalScore = Math.min(100, 60 + compScore);
-  return buildExplanationResult(finalScore, blockers, positives, negatives);
+  if (reqGarages > 0 && pGarages >= 0 && pGarages < reqGarages) {
+    blockers.push(`Parqueaderos ofrecidos (${pGarages}) son inferiores a los requeridos (${reqGarages})`);
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  let earnedPoints = 0;
+  let totalPossible = 0;
+  earnedPoints += 15;
+  totalPossible += 15;
+  earnedPoints += 20;
+  totalPossible += 20;
+  earnedPoints += geoResult.score;
+  totalPossible += 25;
+  if (budgetMax > 0 && price > 0) {
+    totalPossible += 15;
+    if (price <= budgetMax) earnedPoints += 15;
+    else if (price <= budgetMax * 1.05) earnedPoints += 10;
+  }
+  if (reqAreaMin > 0 && propArea > 0) {
+    totalPossible += 10;
+    if (propArea >= reqAreaMin) earnedPoints += 10;
+  }
+  if (reqBedrooms > 0 && pBedrooms >= 0) {
+    totalPossible += 8;
+    if (pBedrooms >= reqBedrooms) earnedPoints += 8;
+  }
+  if (reqBathrooms > 0 && pBathrooms >= 0) {
+    totalPossible += 4;
+    if (pBathrooms >= reqBathrooms) earnedPoints += 4;
+  }
+  if (reqGarages > 0 && pGarages >= 0) {
+    totalPossible += 3;
+    if (pGarages >= reqGarages) earnedPoints += 3;
+  }
+  let finalPercentage = Math.round(earnedPoints / totalPossible * 100);
+  const hasMissingSpecifiedFields = reqAreaMin > 0 && propArea <= 0 || reqBedrooms > 0 && pBedrooms < 0 || budgetMax > 0 && price <= 0 || reqZone && (!propZone || propZone === "bogota");
+  if (hasMissingSpecifiedFields) {
+    finalPercentage = Math.min(84, finalPercentage);
+  }
+  return buildExplanationResult(finalPercentage, blockers, positives, negatives);
 }
 function calcularScoreMatch(requirement, property) {
   return explicarMatch(requirement, property).score;
