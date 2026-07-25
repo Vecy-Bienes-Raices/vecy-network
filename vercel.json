@@ -1,7 +1,7 @@
 {
   "rewrites": [
-    { "source": "/api/:path*", "destination": "https://vecy-jania.serveousercontent.com/api/:path*" },
-    { "source": "/webhook", "destination": "https://vecy-jania.serveousercontent.com/webhook" },
+    { "source": "/api/:path*", "destination": "http://13.140.149.144/api/:path*" },
+    { "source": "/webhook", "destination": "http://13.140.149.144/webhook" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
