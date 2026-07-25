@@ -253,6 +253,8 @@ export function parseSafeJSON(content: string): any {
     }
     throw e;
   }
+}
+
 export function hasRealEstateTextKeyword(cleanText: string): boolean {
   const text = cleanText.toLowerCase();
   return text.includes("apto") || 
