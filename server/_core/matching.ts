@@ -917,7 +917,26 @@ export async function executeMatchEngine(propertyId: number | null, requirementI
         const score = explanation.score;
         if (score < 85) continue;
 
-        // ── REGISTRO EN BASE DE DATOS ─────────────────────────────────────────
+        // ── FILTRO ANTI-DUPLICADOS POR TELÉFONO Y TEXTO ─────────────────────
+        const propPhone = cleanPhone(prop.idUsuarioWhatsapp || "");
+        const reqPhone = cleanPhone(req.idUsuarioWhatsapp || "");
+        
+        // Evitar múltiples matches si el mismo solicitante publicó el mismo requerimiento varias veces
+        const existingSamePhone = await db.select({ id: propertyMatches.id, reqRaw: requirements.rawText }).from(propertyMatches)
+          .innerJoin(requirements, eq(propertyMatches.requirementId, requirements.id))
+          .where(
+            and(
+              eq(propertyMatches.propertyId, prop.id),
+              eq(requirements.idUsuarioWhatsapp, req.idUsuarioWhatsapp)
+            )
+          );
+
+        const isDuplicateReqPost = existingSamePhone.some(m => 
+          m.reqRaw && req.rawText && (m.reqRaw.trim() === req.rawText.trim() || m.reqRaw.includes(req.rawText.substring(0, 50)))
+        );
+
+        if (isDuplicateReqPost) continue;
+
         let matchId: number;
         let isNewMatch = false;
 
