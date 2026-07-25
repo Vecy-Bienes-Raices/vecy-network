@@ -1090,6 +1090,80 @@ export class JaniaMatchBot {
     }
 
     try {
+      const distinctListings = buffer.messages.filter(m => {
+        if (!m.body) return false;
+        const clean = m.body.toLowerCase();
+        const hasType = clean.includes("apto") || clean.includes("apartamento") || clean.includes("casa") || clean.includes("bodega") || clean.includes("oficina") || clean.includes("lote") || clean.includes("finca") || clean.includes("inmueble") || clean.includes("propiedad");
+        const hasDetails = clean.includes("venta") || clean.includes("arriendo") || clean.includes("precio") || clean.includes("presupuesto") || clean.includes("millones") || clean.includes("$") || clean.includes("busco") || clean.includes("requerimiento") || clean.includes("área") || clean.includes("area") || clean.includes("m2") || clean.includes("mts");
+        return hasType && hasDetails;
+      });
+
+      const { processWhatsAppMessage, processConsultingMessage, processCirculoMessage } = await import('./janIA');
+
+      if (distinctListings.length > 1 && chatId !== '120363417740040773@g.us' && chatId !== '120363403507276533@g.us') {
+        console.log(`[JANIA-MATCH] Detectadas ${distinctListings.length} publicaciones independientes en el mismo minuto para ${resolvedSenderId}. Procesando cada una por separado...`);
+        let groupName = "Nombre Real del Grupo";
+        try {
+          const metadata = await this.getCachedGroupMetadata(chatId);
+          if (metadata && metadata.subject) {
+            groupName = metadata.subject;
+          }
+        } catch (e) {}
+
+        for (const bufferedMsg of buffer.messages) {
+          if (!bufferedMsg.body || bufferedMsg.body.trim() === '') continue;
+
+          const urlMatch = bufferedMsg.body.match(/https?:\/\/[^\s]+/g);
+          const scrapedResults: any[] = [];
+          if (urlMatch) {
+            for (const url of urlMatch.slice(0, 3)) {
+              if (esDominioPermitido(url)) {
+                try {
+                  const data = await scrapePropertyLink(url);
+                  if (data) scrapedResults.push(data);
+                } catch (err) {}
+              }
+            }
+          }
+
+          await this.logToDb(resolvedSenderId, 'user', bufferedMsg.body);
+
+          const result = await processWhatsAppMessage(
+            bufferedMsg.body,
+            resolvedSenderId,
+            userName,
+            bufferedMsg.hasMedia,
+            scrapedResults,
+            undefined,
+            bufferedMsg.imageBuffer,
+            true,
+            bufferedMsg.pdfBuffer,
+            bufferedMsg.pdfMimeType,
+            chatId,
+            groupName
+          );
+
+          if (result) {
+            const emoji = this.getReactionEmoji(result);
+            if (emoji && bufferedMsg.originalMsg?.key) {
+              try {
+                const targetKey = {
+                  remoteJid: bufferedMsg.originalMsg.key.remoteJid || chatId,
+                  id: bufferedMsg.originalMsg.key.id,
+                  fromMe: !!bufferedMsg.originalMsg.key.fromMe,
+                  participant: bufferedMsg.originalMsg.key.participant ? cleanJid(bufferedMsg.originalMsg.key.participant) : (senderId ? cleanJid(senderId) : undefined)
+                };
+                console.log(`[JANIA-MATCH] Reaccionando individualmente con ${emoji} a publicación de ${senderId} en ${chatId}`);
+                await this.sock.sendMessage(chatId, { react: { text: emoji, key: targetKey } });
+              } catch (reactErr: any) {
+                console.error('[JANIA-MATCH] Error al reaccionar a mensaje individual:', reactErr);
+              }
+            }
+          }
+        }
+        return;
+      }
+
       const fullText = buffer.messages.map(m => m.body).join('\n\n');
       const hasMedia = buffer.messages.some(m => m.hasMedia);
       const imageMsg = buffer.messages.find(m => m.imageBuffer);
@@ -1112,7 +1186,6 @@ export class JaniaMatchBot {
       // Guardar logs en BD
       await this.logToDb(resolvedSenderId, 'user', fullText);
 
-      const { processWhatsAppMessage, processConsultingMessage, processCirculoMessage } = await import('./janIA');
       const { sendAdminNotification } = await import('./whatsapp-utils');
 
       // Procesar mediante JanIA (guardará en DB de forma automática)

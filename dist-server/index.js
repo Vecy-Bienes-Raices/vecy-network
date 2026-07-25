@@ -7139,6 +7139,74 @@ Tambi\xE9n puedes consultarme directamente en mi chat privado con mi otra yo *Ja
           }
         }
         try {
+          const distinctListings = buffer.messages.filter((m) => {
+            if (!m.body) return false;
+            const clean = m.body.toLowerCase();
+            const hasType = clean.includes("apto") || clean.includes("apartamento") || clean.includes("casa") || clean.includes("bodega") || clean.includes("oficina") || clean.includes("lote") || clean.includes("finca") || clean.includes("inmueble") || clean.includes("propiedad");
+            const hasDetails = clean.includes("venta") || clean.includes("arriendo") || clean.includes("precio") || clean.includes("presupuesto") || clean.includes("millones") || clean.includes("$") || clean.includes("busco") || clean.includes("requerimiento") || clean.includes("\xE1rea") || clean.includes("area") || clean.includes("m2") || clean.includes("mts");
+            return hasType && hasDetails;
+          });
+          const { processWhatsAppMessage: processWhatsAppMessage2, processConsultingMessage: processConsultingMessage2, processCirculoMessage: processCirculoMessage2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+          if (distinctListings.length > 1 && chatId !== "120363417740040773@g.us" && chatId !== "120363403507276533@g.us") {
+            console.log(`[JANIA-MATCH] Detectadas ${distinctListings.length} publicaciones independientes en el mismo minuto para ${resolvedSenderId}. Procesando cada una por separado...`);
+            let groupName = "Nombre Real del Grupo";
+            try {
+              const metadata = await this.getCachedGroupMetadata(chatId);
+              if (metadata && metadata.subject) {
+                groupName = metadata.subject;
+              }
+            } catch (e) {
+            }
+            for (const bufferedMsg of buffer.messages) {
+              if (!bufferedMsg.body || bufferedMsg.body.trim() === "") continue;
+              const urlMatch2 = bufferedMsg.body.match(/https?:\/\/[^\s]+/g);
+              const scrapedResults2 = [];
+              if (urlMatch2) {
+                for (const url of urlMatch2.slice(0, 3)) {
+                  if (esDominioPermitido(url)) {
+                    try {
+                      const data = await scrapePropertyLink(url);
+                      if (data) scrapedResults2.push(data);
+                    } catch (err) {
+                    }
+                  }
+                }
+              }
+              await this.logToDb(resolvedSenderId, "user", bufferedMsg.body);
+              const result2 = await processWhatsAppMessage2(
+                bufferedMsg.body,
+                resolvedSenderId,
+                userName,
+                bufferedMsg.hasMedia,
+                scrapedResults2,
+                void 0,
+                bufferedMsg.imageBuffer,
+                true,
+                bufferedMsg.pdfBuffer,
+                bufferedMsg.pdfMimeType,
+                chatId,
+                groupName
+              );
+              if (result2) {
+                const emoji = this.getReactionEmoji(result2);
+                if (emoji && bufferedMsg.originalMsg?.key) {
+                  try {
+                    const targetKey = {
+                      remoteJid: bufferedMsg.originalMsg.key.remoteJid || chatId,
+                      id: bufferedMsg.originalMsg.key.id,
+                      fromMe: !!bufferedMsg.originalMsg.key.fromMe,
+                      participant: bufferedMsg.originalMsg.key.participant ? cleanJid(bufferedMsg.originalMsg.key.participant) : senderId ? cleanJid(senderId) : void 0
+                    };
+                    console.log(`[JANIA-MATCH] Reaccionando individualmente con ${emoji} a publicaci\xF3n de ${senderId} en ${chatId}`);
+                    await this.sock.sendMessage(chatId, { react: { text: emoji, key: targetKey } });
+                  } catch (reactErr) {
+                    console.error("[JANIA-MATCH] Error al reaccionar a mensaje individual:", reactErr);
+                  }
+                }
+              }
+            }
+            return;
+          }
           const fullText = buffer.messages.map((m) => m.body).join("\n\n");
           const hasMedia = buffer.messages.some((m) => m.hasMedia);
           const imageMsg = buffer.messages.find((m) => m.imageBuffer);
@@ -7157,7 +7225,6 @@ Tambi\xE9n puedes consultarme directamente en mi chat privado con mi otra yo *Ja
             }
           }
           await this.logToDb(resolvedSenderId, "user", fullText);
-          const { processWhatsAppMessage: processWhatsAppMessage2, processConsultingMessage: processConsultingMessage2, processCirculoMessage: processCirculoMessage2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
           const { sendAdminNotification: sendAdminNotification2 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
           let result;
           if (chatId === "120363417740040773@g.us") {
