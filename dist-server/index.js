@@ -4455,16 +4455,26 @@ ${liveStats}` : buildSystemPrompt(groupJid);
       const isSearch = cleanText2.includes("busco") || cleanText2.includes("necesito") || cleanText2.includes("requiero") || cleanText2.includes("requerimiento") || cleanText2.includes("buscamos") || cleanText2.includes("compro") || cleanText2.includes("compra") || cleanText2.includes("se busca") || cleanText2.includes("se requiere") || cleanText2.includes("para arriendo") || cleanText2.includes("para compra") || cleanText2.includes("solicito") || cleanText2.includes("solicitamos") || cleanText2.includes("cliente:") || cleanText2.includes("cliente :") || cleanText2.includes("presupuesto:") || cleanText2.includes("presupuesto :") || cleanText2.includes("acci\xF3n: compra") || cleanText2.includes("acci\xF3n : compra") || cleanText2.includes("para cliente") || cleanText2.includes("para un cliente") || cleanText2.includes("para una cliente");
       const isOffer = cleanText2.includes("vendo") || cleanText2.includes("ofrezco") || cleanText2.includes("tengo") || cleanText2.includes("rento") || cleanText2.includes("alquilo") || cleanText2.includes("alquiler") || cleanText2.includes("venta:") || cleanText2.includes("renta apartamento") || cleanText2.includes("se vende") || cleanText2.includes("se arrienda") || cleanText2.includes("en venta") || cleanText2.includes("en arriendo") || cleanText2.includes("arriendo apartamento") || cleanText2.includes("arriendo casa");
       const hasRealEstateKeyword = hasRealEstateTextKeyword(cleanText2);
-      if (result.classification === "INMUEBLE" && isSearch && !isOffer) {
+      const isShortComment = cleanText2.length < 120 && (cleanText2.includes("bajo de precio") || cleanText2.includes("sigue este enlace") || cleanText2.includes("ver el art\xEDculo en whatsapp") || cleanText2.includes("foto por interno") || cleanText2.includes("fotos por interno") || cleanText2.includes("info por interno") || cleanText2.includes("informaci\xF3n por interno") || cleanText2.includes("escribir al interno") || cleanText2.includes("disponible?") || cleanText2.includes("a\xFAn disponible"));
+      if (isShortComment) {
+        console.log("[JANIA-FILTER] Mensaje identificado como comentario de seguimiento/enlace sin ficha. No se procesar\xE1 como propiedad/requerimiento.");
+        result.classification = "CONSULTA_GENERAL";
+      } else if (result.classification === "INMUEBLE" && isSearch && !isOffer) {
         console.log("[JANIA-CORRECTION] Cambiando clasificaci\xF3n de INMUEBLE a REQUERIMIENTO basado en heur\xEDstica de texto.");
         result.classification = "REQUERIMIENTO";
       } else if ((result.classification === "CONSULTA_GENERAL" || result.classification === "DATOS_INCOMPLETOS" || !result.classification) && (hasRealEstateKeyword || isSearch || isOffer)) {
-        if (isSearch && !isOffer) {
-          console.log("[JANIA-CORRECTION] Rescatando REQUERIMIENTO desde CONSULTA_GENERAL por heur\xEDstica de texto.");
-          result.classification = "REQUERIMIENTO";
-        } else if (isOffer || hasRealEstateKeyword) {
-          console.log("[JANIA-CORRECTION] Rescatando INMUEBLE desde CONSULTA_GENERAL por heur\xEDstica de texto.");
-          result.classification = "INMUEBLE";
+        const rawWordsCount = cleanText2.split(/\s+/).length;
+        const hasTechnicalSpecs = extracted.price && Number(extracted.price) > 0 || extracted.presupuestoMax && Number(extracted.presupuestoMax) > 0 || extracted.area && Number(extracted.area) > 0 || rawWordsCount >= 10 && (cleanText2.includes("apto") || cleanText2.includes("apartamento") || cleanText2.includes("casa") || cleanText2.includes("local") || cleanText2.includes("bodega") || cleanText2.includes("lote") || cleanText2.includes("finca"));
+        if (hasTechnicalSpecs) {
+          if (isSearch && !isOffer) {
+            console.log("[JANIA-CORRECTION] Rescatando REQUERIMIENTO desde CONSULTA_GENERAL con datos t\xE9cnicos verificados.");
+            result.classification = "REQUERIMIENTO";
+          } else if (isOffer || hasRealEstateKeyword) {
+            console.log("[JANIA-CORRECTION] Rescatando INMUEBLE desde CONSULTA_GENERAL con datos t\xE9cnicos verificados.");
+            result.classification = "INMUEBLE";
+          }
+        } else {
+          console.log("[JANIA-FILTER] No se rescata como Inmueble/Requerimiento por falta de especificaciones prediales suficientes.");
         }
       }
     }
@@ -4628,6 +4638,15 @@ ${liveStats}` : buildSystemPrompt(groupJid);
     const origenNombre = isGroup || groupJid ? groupName || "Grupo WhatsApp" : userName || realName || "Contacto Directo";
     if (isProperty) {
       const propertyTitle = extracted.title || `${capitalize(extracted.propertyType || "inmueble")} en ${extracted.zone || "Bogot\xE1"} para ${extracted.transactionType || "venta"}`;
+      const cleanCheckText = (rawUserText || text2 || "").toLowerCase();
+      const isShortCommentText = cleanCheckText.length < 100 && (cleanCheckText.includes("sigue este enlace para ver el art\xEDculo en whatsapp") || cleanCheckText.includes("sigue este enlace") || cleanCheckText.includes("bajo de precio") || cleanCheckText.includes("foto por interno") || cleanCheckText.includes("info por interno") || cleanCheckText.includes("escribir al interno") || cleanCheckText.includes("a\xFAn disponible"));
+      const hasZeroSpecs = (!extracted.price || Number(extracted.price) <= 0) && (!extracted.area || Number(extracted.area) <= 0) && cleanCheckText.split(/\s+/).length < 8;
+      if (isShortCommentText && hasZeroSpecs) {
+        console.log(`[JANIA-FILTER] \u26D4 Omitiendo guardado en BD: "${cleanCheckText.substring(0, 50)}..." es un comentario/seguimiento sin ficha t\xE9cnica.`);
+        result.inserted = false;
+        result.classification = "CONSULTA_GENERAL";
+        return result;
+      }
       let externalUrl = void 0;
       if (urls && urls.length > 0) {
         const permitted = urls.find((url) => esDominioPermitido(url));
@@ -4669,6 +4688,15 @@ ${liveStats}` : buildSystemPrompt(groupJid);
         });
       }
     } else if (isRequirement) {
+      const cleanCheckReqText = (rawUserText || text2 || "").toLowerCase();
+      const isShortCommentReqText = cleanCheckReqText.length < 100 && (cleanCheckReqText.includes("sigue este enlace para ver el art\xEDculo en whatsapp") || cleanCheckReqText.includes("sigue este enlace") || cleanCheckReqText.includes("bajo de precio") || cleanCheckReqText.includes("foto por interno") || cleanCheckReqText.includes("info por interno") || cleanCheckReqText.includes("escribir al interno") || cleanCheckReqText.includes("a\xFAn disponible"));
+      const hasZeroReqSpecs = (!extracted.presupuestoMax || Number(extracted.presupuestoMax) <= 0) && (!extracted.price || Number(extracted.price) <= 0) && cleanCheckReqText.split(/\s+/).length < 8;
+      if (isShortCommentReqText && hasZeroReqSpecs) {
+        console.log(`[JANIA-FILTER] \u26D4 Omitiendo guardado de requerimiento en BD: "${cleanCheckReqText.substring(0, 50)}..." es un comentario sin criterios de b\xFAsqueda.`);
+        result.inserted = false;
+        result.classification = "CONSULTA_GENERAL";
+        return result;
+      }
       const reqTitle = extracted.title || `Requerimiento de ${extracted.propertyType || "inmueble"} en ${extracted.zonaDeseada || extracted.zone || "Bogot\xE1"} para ${extracted.transactionType || "venta"}`;
       const saved = await saveRequirement({
         ...extracted,

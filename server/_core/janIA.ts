@@ -1835,16 +1835,44 @@ Por lo tanto, DEBES hacer lo siguiente:
 
       const hasRealEstateKeyword = hasRealEstateTextKeyword(cleanText);
 
-      if (result.classification === "INMUEBLE" && isSearch && !isOffer) {
+      // Detectar comentarios cortos de seguimiento (ej: "Bajo de precio", "Sigue este enlace...", "Disponible")
+      const isShortComment = cleanText.length < 120 && (
+        cleanText.includes("bajo de precio") ||
+        cleanText.includes("sigue este enlace") ||
+        cleanText.includes("ver el artículo en whatsapp") ||
+        cleanText.includes("foto por interno") ||
+        cleanText.includes("fotos por interno") ||
+        cleanText.includes("info por interno") ||
+        cleanText.includes("información por interno") ||
+        cleanText.includes("escribir al interno") ||
+        cleanText.includes("disponible?") ||
+        cleanText.includes("aún disponible")
+      );
+
+      if (isShortComment) {
+        console.log("[JANIA-FILTER] Mensaje identificado como comentario de seguimiento/enlace sin ficha. No se procesará como propiedad/requerimiento.");
+        result.classification = "CONSULTA_GENERAL";
+      } else if (result.classification === "INMUEBLE" && isSearch && !isOffer) {
         console.log("[JANIA-CORRECTION] Cambiando clasificación de INMUEBLE a REQUERIMIENTO basado en heurística de texto.");
         result.classification = "REQUERIMIENTO";
       } else if ((result.classification === "CONSULTA_GENERAL" || result.classification === "DATOS_INCOMPLETOS" || !result.classification) && (hasRealEstateKeyword || isSearch || isOffer)) {
-        if (isSearch && !isOffer) {
-          console.log("[JANIA-CORRECTION] Rescatando REQUERIMIENTO desde CONSULTA_GENERAL por heurística de texto.");
-          result.classification = "REQUERIMIENTO";
-        } else if (isOffer || hasRealEstateKeyword) {
-          console.log("[JANIA-CORRECTION] Rescatando INMUEBLE desde CONSULTA_GENERAL por heurística de texto.");
-          result.classification = "INMUEBLE";
+        // Exigir al menos un dato técnico real (precio, área, o contexto comercial amplio) para rescatar como INMUEBLE o REQUERIMIENTO
+        const rawWordsCount = cleanText.split(/\s+/).length;
+        const hasTechnicalSpecs = (extracted.price && Number(extracted.price) > 0) ||
+                                  (extracted.presupuestoMax && Number(extracted.presupuestoMax) > 0) ||
+                                  (extracted.area && Number(extracted.area) > 0) ||
+                                  (rawWordsCount >= 10 && (cleanText.includes("apto") || cleanText.includes("apartamento") || cleanText.includes("casa") || cleanText.includes("local") || cleanText.includes("bodega") || cleanText.includes("lote") || cleanText.includes("finca")));
+
+        if (hasTechnicalSpecs) {
+          if (isSearch && !isOffer) {
+            console.log("[JANIA-CORRECTION] Rescatando REQUERIMIENTO desde CONSULTA_GENERAL con datos técnicos verificados.");
+            result.classification = "REQUERIMIENTO";
+          } else if (isOffer || hasRealEstateKeyword) {
+            console.log("[JANIA-CORRECTION] Rescatando INMUEBLE desde CONSULTA_GENERAL con datos técnicos verificados.");
+            result.classification = "INMUEBLE";
+          }
+        } else {
+          console.log("[JANIA-FILTER] No se rescata como Inmueble/Requerimiento por falta de especificaciones prediales suficientes.");
         }
       }
     }
@@ -2050,6 +2078,26 @@ Por lo tanto, DEBES hacer lo siguiente:
     if (isProperty) {
       const propertyTitle = extracted.title || `${capitalize(extracted.propertyType || 'inmueble')} en ${extracted.zone || 'Bogotá'} para ${extracted.transactionType || 'venta'}`;
       
+      // Filtro de Seguridad Final de Calidad Comercial: Rechazar comentarios o enlaces de WhatsApp sin ficha técnica
+      const cleanCheckText = (rawUserText || text || '').toLowerCase();
+      const isShortCommentText = cleanCheckText.length < 100 && (
+        cleanCheckText.includes("sigue este enlace para ver el artículo en whatsapp") ||
+        cleanCheckText.includes("sigue este enlace") ||
+        cleanCheckText.includes("bajo de precio") ||
+        cleanCheckText.includes("foto por interno") ||
+        cleanCheckText.includes("info por interno") ||
+        cleanCheckText.includes("escribir al interno") ||
+        cleanCheckText.includes("aún disponible")
+      );
+      const hasZeroSpecs = (!extracted.price || Number(extracted.price) <= 0) && (!extracted.area || Number(extracted.area) <= 0) && cleanCheckText.split(/\s+/).length < 8;
+
+      if (isShortCommentText && hasZeroSpecs) {
+        console.log(`[JANIA-FILTER] ⛔ Omitiendo guardado en BD: "${cleanCheckText.substring(0, 50)}..." es un comentario/seguimiento sin ficha técnica.`);
+        result.inserted = false;
+        result.classification = "CONSULTA_GENERAL";
+        return result;
+      }
+
       let externalUrl: string | undefined = undefined;
       if (urls && urls.length > 0) {
         const permitted = urls.find(url => esDominioPermitido(url));
@@ -2094,6 +2142,25 @@ Por lo tanto, DEBES hacer lo siguiente:
         });
       }
     } else if (isRequirement) {
+      const cleanCheckReqText = (rawUserText || text || '').toLowerCase();
+      const isShortCommentReqText = cleanCheckReqText.length < 100 && (
+        cleanCheckReqText.includes("sigue este enlace para ver el artículo en whatsapp") ||
+        cleanCheckReqText.includes("sigue este enlace") ||
+        cleanCheckReqText.includes("bajo de precio") ||
+        cleanCheckReqText.includes("foto por interno") ||
+        cleanCheckReqText.includes("info por interno") ||
+        cleanCheckReqText.includes("escribir al interno") ||
+        cleanCheckReqText.includes("aún disponible")
+      );
+      const hasZeroReqSpecs = (!extracted.presupuestoMax || Number(extracted.presupuestoMax) <= 0) && (!extracted.price || Number(extracted.price) <= 0) && cleanCheckReqText.split(/\s+/).length < 8;
+
+      if (isShortCommentReqText && hasZeroReqSpecs) {
+        console.log(`[JANIA-FILTER] ⛔ Omitiendo guardado de requerimiento en BD: "${cleanCheckReqText.substring(0, 50)}..." es un comentario sin criterios de búsqueda.`);
+        result.inserted = false;
+        result.classification = "CONSULTA_GENERAL";
+        return result;
+      }
+
       const reqTitle = extracted.title || `Requerimiento de ${extracted.propertyType || 'inmueble'} en ${extracted.zonaDeseada || extracted.zone || 'Bogotá'} para ${extracted.transactionType || 'venta'}`;
       const saved = await saveRequirement({
         ...extracted,
