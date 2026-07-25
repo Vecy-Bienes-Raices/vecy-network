@@ -2601,6 +2601,14 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
   const reqExpanded = reqPhrases.flatMap(expandirZona);
   const propExpanded = propPhrases.flatMap(expandirZona);
   const palabrasGenericas = /* @__PURE__ */ new Set([
+    "bogota",
+    "bogot\xE1",
+    "colombia",
+    "medellin",
+    "medell\xEDn",
+    "cali",
+    "barranquilla",
+    "bucaramanga",
     "santa",
     "santo",
     "san",

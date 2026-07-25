@@ -154,8 +154,9 @@ export function matchesGeography(
   const reqExpanded = reqPhrases.flatMap(expandirZona);
   const propExpanded = propPhrases.flatMap(expandirZona);
 
-  // Palabras genéricas geográficas que no deben ser usadas para coincidencia parcial
+  // Palabras genéricas geográficas que no deben ser usadas para coincidencia parcial de barrio
   const palabrasGenericas = new Set([
+    "bogota", "bogotá", "colombia", "medellin", "medellín", "cali", "barranquilla", "bucaramanga",
     "santa", "santo", "san", "del", "los", "las", "la", "el", "villa", "vista",
     "alto", "altos", "bajo", "bajos", "nueva", "nuevo", "valle", "valles",
     "portal", "portales", "rincon", "brisas", "colina", "colinas", "bosque",
