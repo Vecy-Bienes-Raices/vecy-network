@@ -55,9 +55,20 @@ interface MessageBuffer {
   warningSent?: boolean;
 }
 
+export interface JaniaBotOptions {
+  sessionFolderName?: string;
+  qrFileName?: string;
+  botName?: string;
+  isWorkerOnly?: boolean;
+}
+
 export class JaniaMatchBot {
   public sock: any = null;
   public isReady: boolean = false;
+  public sessionFolderName: string = '.baileys_auth';
+  public qrFileName: string = 'qr-match.png';
+  public botName: string = 'JANIA-MATCH';
+  public isWorkerOnly: boolean = false;
   
   // Grupos autorizados y configuraciones
   private authorizedGroups: string[] = [];
@@ -85,22 +96,6 @@ export class JaniaMatchBot {
       return cached?.data || null;
     }
   }
-
-export interface JaniaBotOptions {
-  sessionFolderName?: string;
-  qrFileName?: string;
-  botName?: string;
-  isWorkerOnly?: boolean;
-}
-
-export class JaniaMatchBot {
-  public sock: any = null;
-  public isReady: boolean = false;
-  public authorizedGroups: string[] = [];
-  public sessionFolderName: string = '.baileys_auth';
-  public qrFileName: string = 'qr-match.png';
-  public botName: string = 'JANIA-MATCH';
-  public isWorkerOnly: boolean = false;
 
   public targetGroupId: string = '120363260108880069@g.us';
   public buzonGroupId: string = '120363417740040773@g.us';

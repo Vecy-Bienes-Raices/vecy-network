@@ -6243,6 +6243,7 @@ var init_whatsapp_utils = __esm({
 var whatsapp_match_exports = {};
 __export(whatsapp_match_exports, {
   JaniaMatchBot: () => JaniaMatchBot,
+  janiaCaptadorBot: () => janiaCaptadorBot,
   janiaMatchBot: () => janiaMatchBot
 });
 import makeWASocket, {
@@ -6258,7 +6259,7 @@ import fs3 from "fs";
 import path4 from "path";
 import { eq as eq11 } from "drizzle-orm";
 import QRCode from "qrcode";
-var SERVER_BOOT_TIME, cleanJid, outgoingQueue, JaniaMatchBot, janiaMatchBot;
+var SERVER_BOOT_TIME, cleanJid, outgoingQueue, JaniaMatchBot, janiaMatchBot, janiaCaptadorBot;
 var init_whatsapp_match = __esm({
   "server/_core/whatsapp-match.ts"() {
     "use strict";
@@ -6281,6 +6282,10 @@ var init_whatsapp_match = __esm({
     JaniaMatchBot = class {
       sock = null;
       isReady = false;
+      sessionFolderName = ".baileys_auth";
+      qrFileName = "qr-match.png";
+      botName = "JANIA-MATCH";
+      isWorkerOnly = false;
       // Grupos autorizados y configuraciones
       authorizedGroups = [];
       messageBuffers = /* @__PURE__ */ new Map();
@@ -6311,9 +6316,17 @@ var init_whatsapp_match = __esm({
       circuloGroupId = "120363403507276533@g.us";
       cooldownMap = /* @__PURE__ */ new Map();
       cooldownFile = path4.join(process.cwd(), ".cooldown_map.json");
-      constructor() {
-        global.janiaMatchBotInstance = this;
-        console.log("[JANIA-MATCH] Inicializando JanIA Match Bot (Ojos y O\xEDdos) con Baileys...");
+      constructor(options) {
+        if (options) {
+          if (options.sessionFolderName) this.sessionFolderName = options.sessionFolderName;
+          if (options.qrFileName) this.qrFileName = options.qrFileName;
+          if (options.botName) this.botName = options.botName;
+          if (options.isWorkerOnly !== void 0) this.isWorkerOnly = options.isWorkerOnly;
+        }
+        if (!this.isWorkerOnly) {
+          global.janiaMatchBotInstance = this;
+        }
+        console.log(`[${this.botName}] Inicializando JanIA Bot con Baileys (Carpeta: ${this.sessionFolderName})...`);
         const groupsEnv = process.env.JANIA_MATCH_GROUPS;
         if (groupsEnv) {
           this.authorizedGroups = groupsEnv.split(",").map((g) => g.trim());
@@ -6332,9 +6345,9 @@ var init_whatsapp_match = __esm({
         this.startDbHeartbeat();
       }
       startDbHeartbeat() {
-        this.updateStatusInDb().catch((err) => console.error("[JANIA-MATCH-DB] Error in initial status update:", err));
+        this.updateStatusInDb().catch((err) => console.error(`[${this.botName}-DB] Error in initial status update:`, err));
         setInterval(() => {
-          this.updateStatusInDb().catch((err) => console.error("[JANIA-MATCH-DB] Error in heartbeat status update:", err));
+          this.updateStatusInDb().catch((err) => console.error(`[${this.botName}-DB] Error in heartbeat status update:`, err));
         }, 3e4);
       }
       async updateStatusInDb() {
@@ -6342,38 +6355,39 @@ var init_whatsapp_match = __esm({
           const db = await getDb();
           if (!db) return;
           const phone = this.sock?.user?.id ? this.sock.user.id.split("@")[0].split(":")[0] : null;
+          const jid = this.isWorkerOnly ? "system:bot_status_worker2" : "system:bot_status";
           await db.insert(pendingSessions).values({
-            jid: "system:bot_status",
-            sessionData: { isReady: this.isReady, phone, updatedAt: (/* @__PURE__ */ new Date()).toISOString() },
+            jid,
+            sessionData: { isReady: this.isReady, phone, botName: this.botName, updatedAt: (/* @__PURE__ */ new Date()).toISOString() },
             createdAt: /* @__PURE__ */ new Date()
           }).onConflictDoUpdate({
             target: pendingSessions.jid,
             set: {
-              sessionData: { isReady: this.isReady, phone, updatedAt: (/* @__PURE__ */ new Date()).toISOString() }
+              sessionData: { isReady: this.isReady, phone, botName: this.botName, updatedAt: (/* @__PURE__ */ new Date()).toISOString() }
             }
           });
-          console.log(`[JANIA-MATCH-DB] Bot status heartbeat updated: isReady=${this.isReady}, phone=${phone}`);
+          console.log(`[${this.botName}-DB] Bot status heartbeat updated: isReady=${this.isReady}, phone=${phone}`);
         } catch (err) {
-          console.error("[JANIA-MATCH-DB] Failed to update bot status in DB:", err.message);
+          console.error(`[${this.botName}-DB] Failed to update bot status in DB:`, err.message);
         }
       }
       async initialize() {
         try {
-          const sessionDir = path4.join(process.cwd(), ".baileys_auth");
+          const sessionDir = path4.join(process.cwd(), this.sessionFolderName);
           const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
           if (!fs3.existsSync(path4.join(sessionDir, "creds.json"))) {
             await saveCreds();
-            console.log("[JANIA-MATCH] \u{1F4BE} Guardadas credenciales iniciales de Baileys en el disco.");
+            console.log(`[${this.botName}] \u{1F4BE} Guardadas credenciales iniciales de Baileys en ${this.sessionFolderName}.`);
           }
           let version = [2, 3e3, 1017531287];
           try {
             const { version: latestVersion } = await fetchLatestBaileysVersion();
             version = latestVersion;
-            console.log(`[JANIA-MATCH] Usando versi\xF3n de WhatsApp Web: ${version.join(".")}`);
+            console.log(`[${this.botName}] Usando versi\xF3n de WhatsApp Web: ${version.join(".")}`);
           } catch (e) {
-            console.warn("[JANIA-MATCH] No se pudo obtener la versi\xF3n din\xE1mica de WhatsApp Web, usando fallback:", e.message);
+            console.warn(`[${this.botName}] No se pudo obtener la versi\xF3n din\xE1mica de WhatsApp Web, usando fallback:`, e.message);
           }
-          console.log("[JANIA-MATCH] Estableciendo conexi\xF3n por WebSocket...");
+          console.log(`[${this.botName}] Estableciendo conexi\xF3n por WebSocket...`);
           const silentLogger = {
             level: "silent",
             log: () => {
@@ -6398,7 +6412,7 @@ var init_whatsapp_match = __esm({
             logger: silentLogger,
             printQRInTerminal: false,
             // Lo manejamos nosotros de forma personalizada
-            browser: Browsers.macOS("Desktop"),
+            browser: Browsers.macOS(this.isWorkerOnly ? "Captador Worker" : "Desktop"),
             syncFullHistory: false,
             markOnlineOnConnect: false,
             connectTimeoutMs: 9e4,
@@ -6410,7 +6424,7 @@ var init_whatsapp_match = __esm({
           });
           this.setupEventListeners(saveCreds);
         } catch (err) {
-          console.error("[JANIA-MATCH] Error cr\xEDtico al inicializar el cliente Baileys:", err);
+          console.error(`[${this.botName}] Error cr\xEDtico al inicializar el cliente Baileys:`, err);
         }
       }
       setupEventListeners(saveCreds) {
@@ -6418,22 +6432,23 @@ var init_whatsapp_match = __esm({
           try {
             await saveCreds();
           } catch (err) {
-            console.error("[JANIA-MATCH] \u274C Error al guardar credenciales:", err.message || err);
+            console.error(`[${this.botName}] \u274C Error al guardar credenciales:`, err.message || err);
           }
         });
         this.sock.ev.on("connection.update", async (update) => {
           const { connection, lastDisconnect, qr } = update;
           if (qr) {
-            console.log("\n[JANIA-MATCH] \u{1F50C} ESCANEA ESTE C\xD3DIGO QR PARA INICIAR JANIA MATCH:");
+            console.log(`
+[${this.botName}] \u{1F50C} ESCANEA ESTE C\xD3DIGO QR PARA VINCULAR ${this.botName}:`);
             qrcodeTerminal.generate(qr, { small: true });
             try {
-              const qrPath = path4.join(process.cwd(), "qr-match.png");
+              const qrPath = path4.join(process.cwd(), this.qrFileName);
               QRCode.toFile(qrPath, qr, { width: 400, margin: 2 }, (err) => {
-                if (err) console.error("[JANIA-MATCH] Error guardando QR PNG:", err.message);
-                else console.log(`[JANIA-MATCH] \u{1F4F8} QR guardado como imagen en la ra\xEDz del proyecto.`);
+                if (err) console.error(`[${this.botName}] Error guardando QR PNG:`, err.message);
+                else console.log(`[${this.botName}] \u{1F4F8} QR guardado como ${this.qrFileName} en la ra\xEDz del proyecto.`);
               });
             } catch (e) {
-              console.warn("[JANIA-MATCH] qrcode no disponible para PNG.", e.message);
+              console.warn(`[${this.botName}] qrcode no disponible para PNG.`, e.message);
             }
           }
           if (connection === "close") {
@@ -6444,23 +6459,24 @@ var init_whatsapp_match = __esm({
             const isConnectionLost = statusCode === DisconnectReason.connectionLost;
             const isConflict = statusCode === 440;
             const delayMs = isRestart || isConnectionLost ? 1e3 : isConflict ? 12e4 : 5e3;
-            console.warn(`[JANIA-MATCH] \u26A0\uFE0F Conexi\xF3n Baileys cerrada (c\xF3digo: ${statusCode}): ${error?.message || error}. Reconectando en ${delayMs}ms: ${shouldReconnect}`);
+            console.warn(`[${this.botName}] \u26A0\uFE0F Conexi\xF3n Baileys cerrada (c\xF3digo: ${statusCode}): ${error?.message || error}. Reconectando en ${delayMs}ms: ${shouldReconnect}`);
             this.isReady = false;
-            this.updateStatusInDb().catch((err) => console.error("[JANIA-MATCH-DB] Error updating status on close:", err));
+            this.updateStatusInDb().catch((err) => console.error(`[${this.botName}-DB] Error updating status on close:`, err));
             if (shouldReconnect) {
               setTimeout(() => this.initialize(), delayMs);
             } else {
-              console.error("[JANIA-MATCH] Sesi\xF3n de WhatsApp cerrada (Logged Out). Limpiando credenciales...");
+              console.error(`[${this.botName}] Sesi\xF3n de WhatsApp cerrada (Logged Out). Limpiando credenciales...`);
               try {
-                fs3.rmSync(path4.join(process.cwd(), ".baileys_auth"), { recursive: true, force: true });
+                fs3.rmSync(path4.join(process.cwd(), this.sessionFolderName), { recursive: true, force: true });
               } catch (e) {
               }
               setTimeout(() => this.initialize(), 5e3);
             }
           } else if (connection === "open") {
-            console.log("\n\u{1F680} JANIA MATCH\u{1F50C}\u{1F498} \u2014 BOT DE ESCUCHA Y MATCHES ACTIVADO CORRECTAMENTE CON BAILEYS");
+            console.log(`
+\u{1F680} ${this.botName} \u{1F50C}\u{1F498} \u2014 BOT ACTIVADO CORRECTAMENTE CON BAILEYS`);
             this.isReady = true;
-            this.updateStatusInDb().catch((err) => console.error("[JANIA-MATCH-DB] Error updating status on open:", err));
+            this.updateStatusInDb().catch((err) => console.error(`[${this.botName}-DB] Error updating status on open:`, err));
           }
         });
         this.sock.ev.on("messages.upsert", async (m) => {
@@ -7706,6 +7722,12 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
       }
     };
     janiaMatchBot = new JaniaMatchBot();
+    janiaCaptadorBot = new JaniaMatchBot({
+      sessionFolderName: ".baileys_auth_worker2",
+      qrFileName: "qr-captador.png",
+      botName: "JANIA-CAPTADOR-WORKER2",
+      isWorkerOnly: true
+    });
   }
 });
 
@@ -10426,6 +10448,36 @@ async function startServer() {
       res.status(500).send(err.message || err);
     }
   });
+  app.get("/qr-captador.png", (req, res) => {
+    try {
+      const qrPath = path6.join(process.cwd(), "qr-captador.png");
+      const distQrPath = path6.join(process.cwd(), "dist", "qr-captador.png");
+      const activePath = fs4.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs4.existsSync(activePath)) {
+        res.setHeader("Content-Type", "image/png");
+        res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+        res.setHeader("Pragma", "no-cache");
+        res.setHeader("Expires", "0");
+        return res.sendFile(activePath);
+      }
+      res.status(404).send("QR Captador no disponible todav\xEDa. Solicita el c\xF3digo de vinculaci\xF3n o refresca.");
+    } catch (err) {
+      res.status(500).send(err.message);
+    }
+  });
+  app.get("/api/captador-pairing-code", async (req, res) => {
+    try {
+      const targetPhone = req.query.phone || "573192919978";
+      const { janiaCaptadorBot: janiaCaptadorBot2 } = await Promise.resolve().then(() => (init_whatsapp_match(), whatsapp_match_exports));
+      if (!janiaCaptadorBot2) {
+        return res.status(503).send("El bot captador no est\xE1 inicializado.");
+      }
+      const code = await janiaCaptadorBot2.getPairingCode(targetPhone);
+      res.json({ ok: true, phone: targetPhone, code });
+    } catch (err) {
+      res.status(500).send(err.message || err);
+    }
+  });
   app.post("/api/send-whatsapp-notification", async (req, res) => {
     try {
       const { text: text2, token, phone } = req.body;
@@ -10868,8 +10920,12 @@ Direcci\xF3n obligatoria:
     });
     const shouldStartBot = process.env.ENABLE_WHATSAPP_BOT !== "false" || process.env.ENABLE_JANIA_MATCH_BOT === "true";
     if (shouldStartBot) {
-      console.log("Iniciando WhatsApp Bot Unificado (Baileys)...");
+      console.log("Iniciando WhatsApp Bot Principal (+573166569719) Baileys...");
       janiaMatchBot.initialize();
+      console.log("Iniciando WhatsApp Bot Captador Worker (+573192919978) Baileys...");
+      Promise.resolve().then(() => (init_whatsapp_match(), whatsapp_match_exports)).then(({ janiaCaptadorBot: janiaCaptadorBot2 }) => {
+        janiaCaptadorBot2.initialize();
+      }).catch((err) => console.error("[WHATSAPP-CAPTADOR] Error al iniciar bot captador:", err));
     } else {
       console.log("[WHATSAPP-BOT] Deshabilitado temporalmente mediante variables de entorno.");
     }
