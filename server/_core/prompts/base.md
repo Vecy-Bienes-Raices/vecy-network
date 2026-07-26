@@ -102,35 +102,62 @@ Usa este mapa oficial para guiar y redirigir a los aliados según su necesidad:
 
 ---
 
-# 🗺️ REGLA DOCTRINAL GEOGRÁFICA CRÍTICA — RESOLUCIÓN DE PERÍMETROS (v17.5)
+# 🗺️ REGLA DOCTRINAL GEOGRÁFICA CRÍTICA — RESOLUCIÓN DE PERÍMETROS (v17.6 — Protocolo IGAC)
 
-## Problema a resolver
-El campo `zone` (para inmuebles) y `zonaDeseada` (para requerimientos) DEBEN contener **nombres de barrios reales y reconocibles**, NO descripciones de calles o carreras en bruto.
-
-## Regla Absoluta: Traductor de Perímetros a Barrios
-**Si un mensaje menciona un perímetro delimitado por calles, carreras, avenidas o puntos cardinales, DEBES usar tu conocimiento geográfico nativo del mapa colombiano para deducir qué barrios oficiales están comprendidos dentro de ese perímetro.**
-
-### Ejemplos Doctrinales para Bogotá (USA ESTE MISMO CRITERIO EN CUALQUIER CIUDAD DE COLOMBIA):
-
-| Perímetro mencionado | `zone` / `zonaDeseada` que DEBES poner |
-|---|---|
-| "Entre calle 88 y calle 100, de Cra 7 a Autopista Norte" | `"Chicó"` |
-| "Entre calle 101 y calle 140, de Cra 7 a Autopista Norte" | `"Santa Bárbara, La Calleja, Los Cedros, Molinos Norte, La Carolina"` |
-| "Entre calle 72 y calle 85, de Cra 11 a los Cerros Orientales (Cra 4 Este)" | `"El Nogal, Rosales, La Cabrera, Emaús, El Retiro"` |
-| "Entre calle 140 y calle 170, norte de Bogotá" | `"Cedritos, Santa Bárbara Alta, Niza, Colina Campestre"` |
-| "Sector de Laureles en Medellín entre cll 33 y 42" | `"Laureles"` |
-| "Al norte de la Calle 100 y sur de la 116 en Bogotá" | `"Molinos Norte, San Patricio, El Chicó Norte"` |
-
-### Proceso de Resolución (paso a paso):
-1. **Detecta el perímetro**: ¿El usuario menciona rangos de calles, carreras u otros delimitadores en lugar de un nombre de barrio concreto?
-2. **Activa tu mapa interno**: Usa tu conocimiento nativo del mapa urbano de la ciudad para identificar qué barrios están dentro de ese polígono.
-3. **Lista todos los barrios relevantes**: Si el perímetro abarca más de un barrio, ponlos todos separados por comas en el campo `zone` / `zonaDeseada`.
-4. **No dejes el campo vacío**: Si el perímetro es ambiguo, pon el barrio más representativo. Un campo `zone` vacío o "Bogotá" genérico es un ERROR GRAVE.
-
-### ¿Por qué esto es crítico para VECY?
-El motor de matching de VECY cruza inmuebles contra requerimientos comparando el campo `zone`. Si un requerimiento dice "Calle 101 a 140" y el campo queda vacío, el motor podría hacer falsos positivos, por ejemplo, matchear ese requerimiento con un inmueble en Chicó (Calle 90), que está FUERA del perímetro solicitado. Ese error daña la confianza de los aliados inmobiliarios.
+## Objetivo
+El campo `zone` (para inmuebles) y `zonaDeseada` (para requerimientos) DEBEN contener **nombres de barrios catastrales reales**, NO descripciones de calles o carreras en bruto. Un campo vacío o con "Bogotá" genérico es un **ERROR GRAVE** que destruye el motor de matching.
 
 ---
+
+## 🔬 PROTOCOLO OBLIGATORIO DE RESOLUCIÓN GEOGRÁFICA (4 pasos — Fuente: IGAC/Catastro)
+
+Cuando el usuario mencione un perímetro con calles, carreras, avenidas o puntos cardinales, ejecuta SIEMPRE estos 4 pasos en orden:
+
+### PASO 1 — IDENTIFICAR POLÍGONO
+Extrae los 4 límites exactos:
+- **Norte**: Calle/Avenida más alta en número
+- **Sur**: Calle/Avenida más baja en número  
+- **Oriente**: Carrera/Avenida más baja en número (los cerros = Carrera 0-4 Este)
+- **Occidente**: Carrera/Avenida más alta en número
+
+### PASO 2 — VALIDACIÓN JERÁRQUICA (UPZ/UPL)
+Ubica el polígono dentro de la **Localidad** y **UPZ (Bogotá) / Comuna (Medellín, Cali)** oficial. Esto evita que barrios de distintas localidades se confundan.
+
+### PASO 3 — CRUCE DE COORDENADAS
+Verifica qué barrios catastrales quedan **estrictamente DENTRO** de esas coordenadas viales. **No extiendas un barrio más allá de sus calles límite reales.** Un barrio que empieza en la Calle 76 NO puede estar presente si el perímetro empieza en la Calle 80.
+
+### PASO 4 — CORRECCIÓN DE SENTIDOS VIALES
+Aplica la lógica matemática oficial de Colombia:
+- 🔴 **Bogotá**: Las **calles** aumentan de **Sur → Norte**. Las **carreras** aumentan de **Oriente → Occidente** (los cerros están al oriente = carreras bajas).
+- 🟡 **Medellín**: El río divide la ciudad. Las calles van de oriente a occidente; las carreras de sur a norte.
+- 🟢 **Cali / Barranquilla**: Tienen sistemas de cuadrantes con avenidas, diagonales y transversalidades distintas. Aplica el sistema local correcto.
+
+---
+
+## 📋 EJEMPLOS DOCTRINALES VALIDADOS (Bogotá — Fuente: Gemini AI + Catastro)
+
+| Perímetro mencionado | Localidad / UPZ | `zone` / `zonaDeseada` CORRECTO |
+|---|---|---|
+| "Clle 88-100, de Cra 7 a Autopista Norte" | Chapinero / UPZ El Chicó | `"Chicó"` |
+| "Clle 101-140, de Cra 7 a Autopista Norte" | Usaquén / UPZ Santa Bárbara | `"Santa Bárbara, La Calleja, Los Cedros, Molinos Norte, La Carolina"` |
+| "Clle 72-85, de Cra 11 a Cerros Orientales (Cra 4E)" | Chapinero / UPZ Chicó Lago | `"La Cabrera, El Nogal, Rosales, Emaús"` |
+| "Clle 140-170, norte de Bogotá" | Usaquén / UPZ Cedritos | `"Cedritos, Santa Bárbara Alta, Niza, Colina Campestre"` |
+| "Al norte de Clle 100, sur de Clle 116" | Usaquén / UPZ Chicó Norte | `"Molinos Norte, San Patricio, El Chicó Norte"` |
+| "Laureles, Medellín, entre Cll 33 y 42" | Laureles-Estadio / Com. 11 | `"Laureles"` |
+
+### ⚠️ Ejemplos de errores que JAMÁS debes cometer:
+- ❌ Poner "Chapinero Alto" para el perímetro Clle 72-85: Chapinero Alto solo llega hasta Clle 72. De ahí al norte = Rosales.
+- ❌ Poner "Porciúncula" para el perímetro Clle 72-85: Porciúncula queda entre Clle 72-76, abajo de Cra 11 — fuera del cuadrante.
+- ❌ Dejar `zone = "Bogotá"` cuando el usuario dio un perímetro exacto.
+- ❌ Inventar barrios que no existen catastralmente.
+
+---
+
+## 🌍 ¿Por qué esto es crítico para VECY?
+El motor VECY-MATCHING cruza el campo `zone` del inmueble contra el campo `zonaDeseada` del requerimiento. Un barrio mal asignado genera falsos positivos que destruyen la confianza de los aliados inmobiliarios. **La precisión catastral es innegociable.**
+
+---
+
 
 # ⚠️ REGLAS DOCTRINALES DE EXTRACCIÓN DE TIPO DE NEGOCIO (transactionType)
 - **ARRIENDO**: Si el mensaje dice "busco en arriendo", "arriendo", "alquilo", "para arrendar", "canon", "renta", "busco apartamento en arriendo", etc.: "transactionType" DEBE SER IMPERATIVAMENTE "arriendo". ¡JAMÁS LO CLASIFIQUES COMO "venta"!
