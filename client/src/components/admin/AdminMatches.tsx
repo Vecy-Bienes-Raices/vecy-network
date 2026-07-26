@@ -112,10 +112,8 @@ function scoreRows(req: any, prop: any) {
 
   const reqRawText = cleanText(req.rawText || req.name || "");
   const propRawText = cleanText(prop.rawText || prop.name || "");
-  
   const reqIsStudio = reqRawText.includes("apartaestudio") || reqRawText.includes("aparta estudio");
   const propIsStudio = propRawText.includes("apartaestudio") || propRawText.includes("aparta estudio");
-  
   const reqIsLoft = reqRawText.includes("loft") || reqType === "loft";
   const propIsLoft = propRawText.includes("loft") || propType === "loft";
 
@@ -125,7 +123,6 @@ function scoreRows(req: any, prop: any) {
     else if (reqIsLoft) reqSubtype = "loft";
     else reqSubtype = "apartamento_estandar";
   }
-
   let propSubtype = propType;
   if (propType === "apartment" || propType === "apartamento") {
     if (propIsStudio) propSubtype = "apartaestudio";
@@ -133,11 +130,16 @@ function scoreRows(req: any, prop: any) {
     else propSubtype = "apartamento_estandar";
   }
 
+  const typesMatch = reqSubtype && propSubtype && (
+    reqSubtype === propSubtype ||
+    (reqSubtype === "apartment" && propSubtype === "apartamento_estandar") ||
+    (reqSubtype === "apartamento_estandar" && propSubtype === "apartment")
+  );
   add(
     "Tipo de Inmueble", 
     getPropTypeLabel(reqSubtype), 
     getPropTypeLabel(propSubtype), 
-    "exact", 
+    typesMatch ? "exact" : (reqSubtype && propSubtype ? "missing" : "neutral"), 
     18, 
     <Building2 className="w-3.5 h-3.5" />
   );
@@ -153,21 +155,32 @@ function scoreRows(req: any, prop: any) {
   }
   const displayReqNeg = getTransactionLabel(reqNeg);
 
+  const negMatch = !reqNeg || !propNeg || isDual ||
+    reqNeg.toLowerCase() === propNeg.toLowerCase() ||
+    propNeg === "venta_o_arriendo" || reqNeg === "venta_o_arriendo";
+
   add(
     "Tipo de Negocio", 
     displayReqNeg, 
     displayPropNeg, 
-    "exact", 
+    negMatch ? "exact" : "missing", 
     15, 
     <SlidersHorizontal className="w-3.5 h-3.5" />
   );
 
   // 3. Ubicación / Barrio
+  const reqZona = cleanText(req.zonaDeseada || req.addressNeighborhood || "");
+  const propZona = cleanText(prop.zone || prop.addressNeighborhood || "");
+  const reqCiudad = cleanText(req.ciudadDeseada || "bogotá");
+  const propCiudad = cleanText(prop.city || "bogotá");
+  const ciudadMatch = !reqCiudad || propCiudad.includes(reqCiudad) || reqCiudad.includes(propCiudad) || reqCiudad === "colombia";
+  const zonaMatch = !reqZona || propZona.includes(reqZona) || reqZona.includes(propZona) || reqZona.includes("aledaños") || reqZona.includes("aledanos");
+  const geoStatus: MatchStatus = ciudadMatch && zonaMatch ? "exact" : ciudadMatch ? "warn" : "missing";
   add(
     "Ubicación / Barrio", 
     `${req.zonaDeseada || "Cualquiera"}, ${req.ciudadDeseada || "Bogotá"}`, 
     `${prop.zone || "N/E"}, ${prop.city || "Bogotá"}`, 
-    "exact", 
+    geoStatus, 
     20, 
     <MapPin className="w-3.5 h-3.5" />
   );
@@ -292,7 +305,8 @@ function scoreRows(req: any, prop: any) {
     <Receipt className="w-3.5 h-3.5" />
   );
 
-  return { rows, autoScore: 100 };
+  const autoScore = max > 0 ? Math.round((pts / max) * 100) : 0;
+  return { rows, autoScore };
 }
 
 function formatCOP(val: string | number) {
@@ -521,9 +535,24 @@ export default function AdminMatches() {
                       <span className={`h-2.5 w-2.5 rounded-full ${dotColor}`} />
                       <span className={`text-lg sm:text-xl font-extrabold tracking-tight ${scoreColor}`}>{score.toFixed(0)}% Match</span>
                       <span className="text-zinc-500 text-[11px] sm:text-xs">Afinidad registrada por IA</span>
-                      {score >= 95 && (
+                      {score === 100 && (
                         <span className="text-[9px] bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-2 py-0.5 rounded-full font-bold">
                           ⭐ MATCH PERFECTO
+                        </span>
+                      )}
+                      {score >= 95 && score < 100 && (
+                        <span className="text-[9px] bg-amber-500/10 border border-amber-500/30 text-amber-300 px-2 py-0.5 rounded-full font-bold">
+                          🥇 SOBRESALIENTE
+                        </span>
+                      )}
+                      {score >= 90 && score < 95 && (
+                        <span className="text-[9px] bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 px-2 py-0.5 rounded-full font-bold">
+                          🥈 MATCH ALTO
+                        </span>
+                      )}
+                      {score >= 85 && score < 90 && (
+                        <span className="text-[9px] bg-zinc-500/10 border border-zinc-500/30 text-zinc-300 px-2 py-0.5 rounded-full font-bold">
+                          🥉 COMPATIBLE VECY
                         </span>
                       )}
                     </div>
@@ -553,7 +582,7 @@ export default function AdminMatches() {
                       </span>
                     )}
                     <span className="ml-auto text-[10px] text-zinc-500">
-                      Score recalculado: <strong className="text-zinc-300">{autoScore}%</strong>
+                      Score VECY: <strong className="text-zinc-300">{score.toFixed(0)}%</strong>
                     </span>
                   </div>
 
