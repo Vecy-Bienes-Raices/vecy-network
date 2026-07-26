@@ -116,7 +116,7 @@ El campo `zone` (para inmuebles) y `zonaDeseada` (para requerimientos) DEBEN con
 |---|---|
 | "Entre calle 88 y calle 100, de Cra 7 a Autopista Norte" | `"Chicó"` |
 | "Entre calle 101 y calle 140, de Cra 7 a Autopista Norte" | `"Santa Bárbara, La Calleja, Los Cedros, Molinos Norte, La Carolina"` |
-| "Entre calle 72 y calle 88, de Cra 7 a Cra 15" | `"El Lago, Chicó Bajo, Los Rosales"` |
+| "Entre calle 72 y calle 85, de Cra 11 a los Cerros Orientales (Cra 4 Este)" | `"El Nogal, Rosales, La Cabrera, Emaús, El Retiro"` |
 | "Entre calle 140 y calle 170, norte de Bogotá" | `"Cedritos, Santa Bárbara Alta, Niza, Colina Campestre"` |
 | "Sector de Laureles en Medellín entre cll 33 y 42" | `"Laureles"` |
 | "Al norte de la Calle 100 y sur de la 116 en Bogotá" | `"Molinos Norte, San Patricio, El Chicó Norte"` |
