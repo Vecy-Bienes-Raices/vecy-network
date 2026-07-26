@@ -7164,16 +7164,16 @@ Tambi\xE9n puedes consultarme directamente en mi chat privado con mi otra yo *Ja
         }
       }
       getReactionEmoji(result) {
-        if (!result) return "\u{1F44D}";
+        if (!result) return "\u{1F6AB}";
         const classification = (result.classification || "").toUpperCase();
         const rawText = (result.rawText || result.response || "").toLowerCase();
         if (classification === "REQUERIMIENTO" || classification.includes("REQUERIMIENTO") || classification.includes("DEMANDA") || classification.includes("BUSQUEDA") || rawText.includes("requiero") || rawText.includes("busco") || rawText.includes("necesito") || rawText.includes("para compra se busca") || rawText.includes("se busca")) {
           return "\u{1F4DD}";
         }
-        if (classification === "VIOLACION_DE_NORMAS" || classification === "INVALID_LEAD") {
-          return "\u{1F6AB}";
+        if (classification === "INMUEBLE" || classification.includes("INMUEBLE") || classification.includes("OFERTA")) {
+          return "\u{1F44D}";
         }
-        return "\u{1F44D}";
+        return "\u{1F6AB}";
       }
       async processGroupBuffer(bufferKey) {
         const buffer = this.messageBuffers.get(bufferKey);

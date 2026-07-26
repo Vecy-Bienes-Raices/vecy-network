@@ -1018,7 +1018,7 @@ export class JaniaMatchBot {
   }
 
   private getReactionEmoji(result: any): string {
-    if (!result) return '👍';
+    if (!result) return '🚫';
 
     const classification = (result.classification || '').toUpperCase();
     const rawText = (result.rawText || result.response || '').toLowerCase();
@@ -1038,14 +1038,17 @@ export class JaniaMatchBot {
       return '📝';
     }
 
-    // Violaciones de normas o spam -> 🚫
-    if (classification === 'VIOLACION_DE_NORMAS' || classification === 'INVALID_LEAD') {
-      return '🚫';
+    // Inmuebles / Ofertas comerciales confirmadas por JanIA -> SIEMPRE 👍
+    if (classification === 'INMUEBLE' || classification.includes('INMUEBLE') || classification.includes('OFERTA')) {
+      return '👍';
     }
 
-    // Inmuebles u Ofertas comerciales -> SIEMPRE 👍
-    return '👍';
+    // TODO lo demás: CONSULTA_GENERAL, DATOS_INCOMPLETOS, SPAM, VIOLACION_DE_NORMAS,
+    // ANALISIS_DE_MERCADO, RESPUESTA_A_PREGUNTA_IA, INVALID_LEAD, audios de publicidad, etc.
+    // -> 🚫 (No es un inmueble ni un requerimiento válido)
+    return '🚫';
   }
+
 
   private async processGroupBuffer(bufferKey: string) {
     const buffer = this.messageBuffers.get(bufferKey);
