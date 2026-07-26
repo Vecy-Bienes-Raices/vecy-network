@@ -586,83 +586,111 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   }
 
   // ── PONDERACIÓN MATEMÁTICA REAL Y RIGUROSA (0% a 100%) ──
+  // REGLA DOCTRINAL v17.4: El denominador SIEMPRE incluye TODOS los campos.
+  // Campos N/E en la demanda → crédito parcial (campo "no restringido").
+  // Campos N/E en la oferta cuando la demanda sí exige → 0 puntos.
   let earnedPoints = 0;
-  let totalPossible = 0;
+  const totalPossible = 100; // Denominador fijo = 100 puntos siempre
 
-  // 1. Tipo Inmueble (15 pts)
+  // 1. Tipo Inmueble (15 pts) — Ya pasó el filtro duro, siempre coincide
   earnedPoints += 15;
-  totalPossible += 15;
 
-  // 2. Tipo Negocio (20 pts)
-  earnedPoints += 20;
-  totalPossible += 20;
+  // 2. Tipo Negocio (15 pts) — Ya pasó el filtro duro, siempre coincide
+  earnedPoints += 15;
 
-  // 3. Ubicación (25 pts)
-  earnedPoints += geoResult.score;
-  totalPossible += 25;
+  // 3. Ubicación (20 pts)
+  earnedPoints += Math.round((geoResult.score / 25) * 20);
 
   // 4. Presupuesto (15 pts)
   if (budgetMax > 0) {
-    totalPossible += 15;
+    // El requerimiento SÍ especifica presupuesto máximo
     if (price > 0) {
-      if (price <= budgetMax) earnedPoints += 15;
-      else if (price <= budgetMax * 1.01) earnedPoints += 14;
-      else if (price <= budgetMax * 1.05) earnedPoints += 10;
+      if (price <= budgetMax)            earnedPoints += 15;          // Dentro del rango → 15 pts
+      else if (price <= budgetMax * 1.01) earnedPoints += 13;        // Marginal 1% → 13 pts
+      else if (price <= budgetMax * 1.05) earnedPoints += 9;         // Marginal 5% → 9 pts
       else negatives.push(`Precio $${price.toLocaleString()} supera presupuesto $${budgetMax.toLocaleString()}`);
     } else {
       negatives.push("Presupuesto no especificado en la oferta (N/E)");
+      // 0 pts: la oferta no informó precio y la demanda sí lo exige
     }
+  } else {
+    // La demanda NO especifica presupuesto → crédito neutral parcial (10/15)
+    earnedPoints += 10;
   }
 
   // 5. Área (10 pts)
   if (reqAreaMin > 0) {
-    totalPossible += 10;
     if (propArea > 0) {
-      if (propArea >= reqAreaMin) earnedPoints += 10;
+      if (propArea >= reqAreaMin)       earnedPoints += 10;
+      else if (propArea >= reqAreaMin * 0.98) earnedPoints += 7;  // Margen 2%
       else negatives.push(`Área ${propArea} m² es inferior a la requerida ${reqAreaMin} m²`);
     } else {
       negatives.push("Área no especificada en la oferta (N/E)");
+      // 0 pts
     }
+  } else {
+    // La demanda NO especifica área mínima → crédito neutral parcial (7/10)
+    earnedPoints += 7;
   }
 
-  // 6. Habitaciones (8 pts)
+  // 6. Habitaciones (10 pts)
   if (reqBedrooms > 0) {
-    totalPossible += 8;
     if (pBedrooms >= 0) {
-      if (pBedrooms >= reqBedrooms) earnedPoints += 8;
+      if (pBedrooms >= reqBedrooms)     earnedPoints += 10;
       else negatives.push(`Habitaciones (${pBedrooms}) inferiores a las requeridas (${reqBedrooms})`);
     } else {
       negatives.push("Habitaciones no especificadas en la oferta (N/E)");
+      // 0 pts
     }
+  } else {
+    // La demanda NO especifica habitaciones → crédito neutral parcial (7/10)
+    earnedPoints += 7;
   }
 
-  // 7. Baños (4 pts)
+  // 7. Baños (5 pts)
   if (reqBathrooms > 0) {
-    totalPossible += 4;
     if (pBathrooms >= 0) {
-      if (pBathrooms >= reqBathrooms) earnedPoints += 4;
+      if (pBathrooms >= reqBathrooms)   earnedPoints += 5;
       else negatives.push(`Baños (${pBathrooms}) inferiores a los requeridos (${reqBathrooms})`);
     } else {
       negatives.push("Baños no especificados en la oferta (N/E)");
+      // 0 pts
     }
+  } else {
+    // No restringido → crédito neutral (4/5)
+    earnedPoints += 4;
   }
 
-  // 8. Parqueaderos (3 pts)
+  // 8. Parqueaderos (5 pts)
   if (reqGarages > 0) {
-    totalPossible += 3;
     if (pGarages >= 0) {
-      if (pGarages >= reqGarages) earnedPoints += 3;
+      if (pGarages >= reqGarages)       earnedPoints += 5;
       else negatives.push(`Parqueaderos (${pGarages}) inferiores a los requeridos (${reqGarages})`);
     } else {
       negatives.push("Parqueaderos no especificados en la oferta (N/E)");
+      // 0 pts
     }
+  } else {
+    // No restringido → crédito neutral (4/5)
+    earnedPoints += 4;
   }
 
-  let finalPercentage = Math.round((earnedPoints / totalPossible) * 100);
+  // 9. Estrato (5 pts — bonus si coincide)
+  if (reqEstrato >= 1 && pEstrato >= 1) {
+    if (reqEstrato === pEstrato) earnedPoints += 5;
+    // Si no coincide ya lo bloqueó el filtro duro anterior
+  } else {
+    // No restringido → crédito neutral (3/5)
+    earnedPoints += 3;
+  }
+
+  // Total: max 100 pts (15+15+20+15+10+10+5+5+5 = 100)
+  let finalPercentage = Math.min(100, Math.round((earnedPoints / totalPossible) * 100));
 
   // REGLA CRÍTICA DOCTRINAL VECY (v17.4):
-  // Un MATCH del 100% se otorga EXCLUSIVAMENTE si TODOS los campos solicitados por la demanda están presentes en la oferta y coinciden.
-  // Cualquier campo en N/E (sin información) en la oferta limita el puntaje máximo a 84%, impidiendo falsos Matches Perfectos.
+  // Un MATCH del 100% se otorga EXCLUSIVAMENTE si TODOS los campos solicitados
+  // por la demanda están presentes en la oferta y coinciden plenamente.
+  // Cualquier campo N/E cuando el requerimiento SÍ lo especifica → máximo 84%.
   const hasMissingSpecifiedFields = (reqAreaMin > 0 && propArea <= 0) ||
                                     (reqBedrooms > 0 && pBedrooms < 0) ||
                                     (reqBathrooms > 0 && pBathrooms < 0) ||
@@ -675,6 +703,7 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   }
 
   return buildExplanationResult(finalPercentage, blockers, positives, negatives);
+
 }
 
 export function calcularScoreMatch(requirement: any, property: any): number {

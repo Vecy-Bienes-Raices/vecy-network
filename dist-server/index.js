@@ -2999,61 +2999,69 @@ function explicarMatch(requirement, property) {
     return buildExplanationResult(0, blockers, positives, negatives);
   }
   let earnedPoints = 0;
-  let totalPossible = 0;
+  const totalPossible = 100;
   earnedPoints += 15;
-  totalPossible += 15;
-  earnedPoints += 20;
-  totalPossible += 20;
-  earnedPoints += geoResult.score;
-  totalPossible += 25;
+  earnedPoints += 15;
+  earnedPoints += Math.round(geoResult.score / 25 * 20);
   if (budgetMax > 0) {
-    totalPossible += 15;
     if (price > 0) {
       if (price <= budgetMax) earnedPoints += 15;
-      else if (price <= budgetMax * 1.01) earnedPoints += 14;
-      else if (price <= budgetMax * 1.05) earnedPoints += 10;
+      else if (price <= budgetMax * 1.01) earnedPoints += 13;
+      else if (price <= budgetMax * 1.05) earnedPoints += 9;
       else negatives.push(`Precio $${price.toLocaleString()} supera presupuesto $${budgetMax.toLocaleString()}`);
     } else {
       negatives.push("Presupuesto no especificado en la oferta (N/E)");
     }
+  } else {
+    earnedPoints += 10;
   }
   if (reqAreaMin > 0) {
-    totalPossible += 10;
     if (propArea > 0) {
       if (propArea >= reqAreaMin) earnedPoints += 10;
+      else if (propArea >= reqAreaMin * 0.98) earnedPoints += 7;
       else negatives.push(`\xC1rea ${propArea} m\xB2 es inferior a la requerida ${reqAreaMin} m\xB2`);
     } else {
       negatives.push("\xC1rea no especificada en la oferta (N/E)");
     }
+  } else {
+    earnedPoints += 7;
   }
   if (reqBedrooms > 0) {
-    totalPossible += 8;
     if (pBedrooms >= 0) {
-      if (pBedrooms >= reqBedrooms) earnedPoints += 8;
+      if (pBedrooms >= reqBedrooms) earnedPoints += 10;
       else negatives.push(`Habitaciones (${pBedrooms}) inferiores a las requeridas (${reqBedrooms})`);
     } else {
       negatives.push("Habitaciones no especificadas en la oferta (N/E)");
     }
+  } else {
+    earnedPoints += 7;
   }
   if (reqBathrooms > 0) {
-    totalPossible += 4;
     if (pBathrooms >= 0) {
-      if (pBathrooms >= reqBathrooms) earnedPoints += 4;
+      if (pBathrooms >= reqBathrooms) earnedPoints += 5;
       else negatives.push(`Ba\xF1os (${pBathrooms}) inferiores a los requeridos (${reqBathrooms})`);
     } else {
       negatives.push("Ba\xF1os no especificados en la oferta (N/E)");
     }
+  } else {
+    earnedPoints += 4;
   }
   if (reqGarages > 0) {
-    totalPossible += 3;
     if (pGarages >= 0) {
-      if (pGarages >= reqGarages) earnedPoints += 3;
+      if (pGarages >= reqGarages) earnedPoints += 5;
       else negatives.push(`Parqueaderos (${pGarages}) inferiores a los requeridos (${reqGarages})`);
     } else {
       negatives.push("Parqueaderos no especificados en la oferta (N/E)");
     }
+  } else {
+    earnedPoints += 4;
   }
-  let finalPercentage = Math.round(earnedPoints / totalPossible * 100);
+  if (reqEstrato >= 1 && pEstrato >= 1) {
+    if (reqEstrato === pEstrato) earnedPoints += 5;
+  } else {
+    earnedPoints += 3;
+  }
+  let finalPercentage = Math.min(100, Math.round(earnedPoints / totalPossible * 100));
   const hasMissingSpecifiedFields = reqAreaMin > 0 && propArea <= 0 || reqBedrooms > 0 && pBedrooms < 0 || reqBathrooms > 0 && pBathrooms < 0 || reqGarages > 0 && pGarages < 0 || budgetMax > 0 && price <= 0 || reqZone && (!propZone || propZone === "bogota");
   if (hasMissingSpecifiedFields) {
     finalPercentage = Math.min(84, finalPercentage);
