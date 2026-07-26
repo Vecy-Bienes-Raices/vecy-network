@@ -7,6 +7,7 @@ import { getDb } from "../db";
 import { properties, requirements, users, propertyImages, InsertProperty, InsertRequirement, pendingSessions, propertyMatches, messages as dbMessages, conversations as dbConversations, propertyPublicationHistory } from "../../drizzle/schema";
 import { findMatchesForProperty, findMatchesForRequirement } from "./matching";
 import { validarZona, normalizarTextoGeografico } from "./geography";
+import { validateCity } from "./divipola";
 import { transcribeAudio } from "./voiceTranscription";
 import { eq, and, sql, gte, desc, or, isNotNull } from "drizzle-orm";
 import { storagePut } from "../storage";
@@ -2008,6 +2009,10 @@ Por lo tanto, DEBES hacer lo siguiente:
 
         // Asignar de vuelta al objeto extraído
         if (inferredCity && inferredCity.toLowerCase() !== "na") {
+          const divipolaCity = validateCity(inferredCity);
+          if (divipolaCity) {
+            inferredCity = divipolaCity; // Sobreescribimos con el nombre canónico (ej. Bogotá, D.C.)
+          }
           if (isProperty) {
             extracted.city = inferredCity;
           } else {

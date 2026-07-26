@@ -102,6 +102,36 @@ Usa este mapa oficial para guiar y redirigir a los aliados según su necesidad:
 
 ---
 
+# 🗺️ REGLA DOCTRINAL GEOGRÁFICA CRÍTICA — RESOLUCIÓN DE PERÍMETROS (v17.5)
+
+## Problema a resolver
+El campo `zone` (para inmuebles) y `zonaDeseada` (para requerimientos) DEBEN contener **nombres de barrios reales y reconocibles**, NO descripciones de calles o carreras en bruto.
+
+## Regla Absoluta: Traductor de Perímetros a Barrios
+**Si un mensaje menciona un perímetro delimitado por calles, carreras, avenidas o puntos cardinales, DEBES usar tu conocimiento geográfico nativo del mapa colombiano para deducir qué barrios oficiales están comprendidos dentro de ese perímetro.**
+
+### Ejemplos Doctrinales para Bogotá (USA ESTE MISMO CRITERIO EN CUALQUIER CIUDAD DE COLOMBIA):
+
+| Perímetro mencionado | `zone` / `zonaDeseada` que DEBES poner |
+|---|---|
+| "Entre calle 88 y calle 100, de Cra 7 a Autopista Norte" | `"Chicó"` |
+| "Entre calle 101 y calle 140, de Cra 7 a Autopista Norte" | `"Santa Bárbara, La Calleja, Los Cedros, Molinos Norte, La Carolina"` |
+| "Entre calle 72 y calle 88, de Cra 7 a Cra 15" | `"El Lago, Chicó Bajo, Los Rosales"` |
+| "Entre calle 140 y calle 170, norte de Bogotá" | `"Cedritos, Santa Bárbara Alta, Niza, Colina Campestre"` |
+| "Sector de Laureles en Medellín entre cll 33 y 42" | `"Laureles"` |
+| "Al norte de la Calle 100 y sur de la 116 en Bogotá" | `"Molinos Norte, San Patricio, El Chicó Norte"` |
+
+### Proceso de Resolución (paso a paso):
+1. **Detecta el perímetro**: ¿El usuario menciona rangos de calles, carreras u otros delimitadores en lugar de un nombre de barrio concreto?
+2. **Activa tu mapa interno**: Usa tu conocimiento nativo del mapa urbano de la ciudad para identificar qué barrios están dentro de ese polígono.
+3. **Lista todos los barrios relevantes**: Si el perímetro abarca más de un barrio, ponlos todos separados por comas en el campo `zone` / `zonaDeseada`.
+4. **No dejes el campo vacío**: Si el perímetro es ambiguo, pon el barrio más representativo. Un campo `zone` vacío o "Bogotá" genérico es un ERROR GRAVE.
+
+### ¿Por qué esto es crítico para VECY?
+El motor de matching de VECY cruza inmuebles contra requerimientos comparando el campo `zone`. Si un requerimiento dice "Calle 101 a 140" y el campo queda vacío, el motor podría hacer falsos positivos, por ejemplo, matchear ese requerimiento con un inmueble en Chicó (Calle 90), que está FUERA del perímetro solicitado. Ese error daña la confianza de los aliados inmobiliarios.
+
+---
+
 # ⚠️ REGLAS DOCTRINALES DE EXTRACCIÓN DE TIPO DE NEGOCIO (transactionType)
 - **ARRIENDO**: Si el mensaje dice "busco en arriendo", "arriendo", "alquilo", "para arrendar", "canon", "renta", "busco apartamento en arriendo", etc.: "transactionType" DEBE SER IMPERATIVAMENTE "arriendo". ¡JAMÁS LO CLASIFIQUES COMO "venta"!
 - **VENTA**: Si el mensaje dice "compro", "para compra", "busco para comprar", "comprar", "venta", "vendo", "se vende", etc.: "transactionType" DEBE SER IMPERATIVAMENTE "venta".
