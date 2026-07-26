@@ -545,13 +545,21 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
 
   // ── FILTRO DURO 7: Presupuesto Máximo (NUNCA MAYOR QUE) ──
   if (budgetMax > 0) {
-    if (price > 0) {
-      const isRent = reqBiz.includes("arriendo") || propBiz.includes("arriendo");
-      if (isRent && price > budgetMax * 1.02) {
-        blockers.push(`Canon de arriendo $${price.toLocaleString()} supera el presupuesto máximo de $${budgetMax.toLocaleString()}`);
+    const propRent = property.priceRent ? parseFloat(String(property.priceRent)) : 0;
+    const isReqRent = reqBiz.includes("arriendo");
+    const isReqSale = reqBiz.includes("venta") || reqBiz.includes("permuta");
+    
+    // Si la demanda es de arriendo y la propiedad se arrienda
+    if (isReqRent && propBiz.includes("arriendo") && propRent > 0) {
+      if (propRent > budgetMax * 1.02) {
+        blockers.push(`Canon de arriendo $${propRent.toLocaleString()} supera el presupuesto máximo de $${budgetMax.toLocaleString()}`);
         return buildExplanationResult(0, blockers, positives, negatives);
       }
-      if (!isRent && price > budgetMax * 1.05) {
+    }
+    
+    // Si la demanda es de venta y la propiedad se vende
+    if (isReqSale && propBiz.includes("venta") && price > 0) {
+      if (price > budgetMax * 1.05) {
         blockers.push(`Precio de venta $${price.toLocaleString()} supera el presupuesto máximo de $${budgetMax.toLocaleString()}`);
         return buildExplanationResult(0, blockers, positives, negatives);
       }
