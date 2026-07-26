@@ -602,43 +602,71 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   totalPossible += 25;
 
   // 4. Presupuesto (15 pts)
-  if (budgetMax > 0 && price > 0) {
+  if (budgetMax > 0) {
     totalPossible += 15;
-    if (price <= budgetMax) earnedPoints += 15;
-    else if (price <= budgetMax * 1.05) earnedPoints += 10;
+    if (price > 0) {
+      if (price <= budgetMax) earnedPoints += 15;
+      else if (price <= budgetMax * 1.01) earnedPoints += 14;
+      else if (price <= budgetMax * 1.05) earnedPoints += 10;
+      else negatives.push(`Precio $${price.toLocaleString()} supera presupuesto $${budgetMax.toLocaleString()}`);
+    } else {
+      negatives.push("Presupuesto no especificado en la oferta (N/E)");
+    }
   }
 
   // 5. Área (10 pts)
-  if (reqAreaMin > 0 && propArea > 0) {
+  if (reqAreaMin > 0) {
     totalPossible += 10;
-    if (propArea >= reqAreaMin) earnedPoints += 10;
+    if (propArea > 0) {
+      if (propArea >= reqAreaMin) earnedPoints += 10;
+      else negatives.push(`Área ${propArea} m² es inferior a la requerida ${reqAreaMin} m²`);
+    } else {
+      negatives.push("Área no especificada en la oferta (N/E)");
+    }
   }
 
   // 6. Habitaciones (8 pts)
-  if (reqBedrooms > 0 && pBedrooms >= 0) {
+  if (reqBedrooms > 0) {
     totalPossible += 8;
-    if (pBedrooms >= reqBedrooms) earnedPoints += 8;
+    if (pBedrooms >= 0) {
+      if (pBedrooms >= reqBedrooms) earnedPoints += 8;
+      else negatives.push(`Habitaciones (${pBedrooms}) inferiores a las requeridas (${reqBedrooms})`);
+    } else {
+      negatives.push("Habitaciones no especificadas en la oferta (N/E)");
+    }
   }
 
   // 7. Baños (4 pts)
-  if (reqBathrooms > 0 && pBathrooms >= 0) {
+  if (reqBathrooms > 0) {
     totalPossible += 4;
-    if (pBathrooms >= reqBathrooms) earnedPoints += 4;
+    if (pBathrooms >= 0) {
+      if (pBathrooms >= reqBathrooms) earnedPoints += 4;
+      else negatives.push(`Baños (${pBathrooms}) inferiores a los requeridos (${reqBathrooms})`);
+    } else {
+      negatives.push("Baños no especificados en la oferta (N/E)");
+    }
   }
 
   // 8. Parqueaderos (3 pts)
-  if (reqGarages > 0 && pGarages >= 0) {
+  if (reqGarages > 0) {
     totalPossible += 3;
-    if (pGarages >= reqGarages) earnedPoints += 3;
+    if (pGarages >= 0) {
+      if (pGarages >= reqGarages) earnedPoints += 3;
+      else negatives.push(`Parqueaderos (${pGarages}) inferiores a los requeridos (${reqGarages})`);
+    } else {
+      negatives.push("Parqueaderos no especificados en la oferta (N/E)");
+    }
   }
 
   let finalPercentage = Math.round((earnedPoints / totalPossible) * 100);
 
-  // REGLA CRÍTICA DOCTRINAL VECY:
-  // Un MATCH del 100% solo se otorga si TODOS los campos requeridos están presentes y son exactos.
-  // Si hay cualquier campo en N/E (no extraído / sin información), se limita el máximo a 84%.
+  // REGLA CRÍTICA DOCTRINAL VECY (v17.4):
+  // Un MATCH del 100% se otorga EXCLUSIVAMENTE si TODOS los campos solicitados por la demanda están presentes en la oferta y coinciden.
+  // Cualquier campo en N/E (sin información) en la oferta limita el puntaje máximo a 84%, impidiendo falsos Matches Perfectos.
   const hasMissingSpecifiedFields = (reqAreaMin > 0 && propArea <= 0) ||
                                     (reqBedrooms > 0 && pBedrooms < 0) ||
+                                    (reqBathrooms > 0 && pBathrooms < 0) ||
+                                    (reqGarages > 0 && pGarages < 0) ||
                                     (budgetMax > 0 && price <= 0) ||
                                     (reqZone && (!propZone || propZone === "bogota"));
 
