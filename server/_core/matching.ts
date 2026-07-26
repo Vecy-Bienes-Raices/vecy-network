@@ -1,5 +1,5 @@
 import { getDb } from "../db";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { propertyMatches, properties, requirements } from "../../drizzle/schema";
 import { normalizarTextoGeografico } from "./geography";
 
@@ -955,7 +955,7 @@ export async function executeMatchEngine(propertyId: number | null, requirementI
           .where(
             and(
               eq(propertyMatches.propertyId, prop.id),
-              eq(requirements.idUsuarioWhatsapp, req.idUsuarioWhatsapp)
+              sql`${requirements.idUsuarioWhatsapp} = ${req.idUsuarioWhatsapp ?? ""}`
             )
           );
 

@@ -1858,9 +1858,10 @@ Por lo tanto, DEBES hacer lo siguiente:
       } else if ((result.classification === "CONSULTA_GENERAL" || result.classification === "DATOS_INCOMPLETOS" || !result.classification) && (hasRealEstateKeyword || isSearch || isOffer)) {
         // Exigir al menos un dato técnico real (precio, área, o contexto comercial amplio) para rescatar como INMUEBLE o REQUERIMIENTO
         const rawWordsCount = cleanText.split(/\s+/).length;
-        const hasTechnicalSpecs = (extracted.price && Number(extracted.price) > 0) ||
-                                  (extracted.presupuestoMax && Number(extracted.presupuestoMax) > 0) ||
-                                  (extracted.area && Number(extracted.area) > 0) ||
+        const _extTmp = result.extractedData || {};
+        const hasTechnicalSpecs = (_extTmp.price && Number(_extTmp.price) > 0) ||
+                                  (_extTmp.presupuestoMax && Number(_extTmp.presupuestoMax) > 0) ||
+                                  (_extTmp.area && Number(_extTmp.area) > 0) ||
                                   (rawWordsCount >= 10 && (cleanText.includes("apto") || cleanText.includes("apartamento") || cleanText.includes("casa") || cleanText.includes("local") || cleanText.includes("bodega") || cleanText.includes("lote") || cleanText.includes("finca")));
 
         if (hasTechnicalSpecs) {

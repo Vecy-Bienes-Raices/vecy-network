@@ -2446,7 +2446,7 @@ __export(matching_exports, {
   findMatchesForRequirement: () => findMatchesForRequirement,
   matchesGeography: () => matchesGeography
 });
-import { and, eq as eq3 } from "drizzle-orm";
+import { and, eq as eq3, sql as sql2 } from "drizzle-orm";
 function hasAledanos(text2) {
   if (!text2) return false;
   const n = normalizarTextoGeografico(text2);
@@ -3261,7 +3261,7 @@ async function executeMatchEngine(propertyId, requirementId) {
         const existingSamePhone = await db.select({ id: propertyMatches.id, reqRaw: requirements.rawText }).from(propertyMatches).innerJoin(requirements, eq3(propertyMatches.requirementId, requirements.id)).where(
           and(
             eq3(propertyMatches.propertyId, prop.id),
-            eq3(requirements.idUsuarioWhatsapp, req.idUsuarioWhatsapp)
+            sql2`${requirements.idUsuarioWhatsapp} = ${req.idUsuarioWhatsapp ?? ""}`
           )
         );
         const isDuplicateReqPost = existingSamePhone.some(
@@ -3360,7 +3360,7 @@ __export(janIA_exports, {
   translatePropertyType: () => translatePropertyType,
   translateTransactionType: () => translateTransactionType
 });
-import { eq as eq4, and as and2, sql as sql2, gte, desc } from "drizzle-orm";
+import { eq as eq4, and as and2, sql as sql3, gte, desc } from "drizzle-orm";
 import fs from "fs";
 import path from "path";
 import axios6 from "axios";
@@ -3771,12 +3771,12 @@ async function getLiveStats() {
       [matchHoy]
     ] = await Promise.race([
       Promise.all([
-        db.select({ total: sql2`count(*)::int` }).from(properties),
-        db.select({ total: sql2`count(*)::int` }).from(requirements),
-        db.select({ total: sql2`count(*)::int` }).from(propertyMatches),
-        db.select({ total: sql2`count(*)::int` }).from(properties).where(gte(properties.createdAt, today)),
-        db.select({ total: sql2`count(*)::int` }).from(requirements).where(gte(requirements.createdAt, today)),
-        db.select({ total: sql2`count(*)::int` }).from(propertyMatches).where(gte(propertyMatches.createdAt, today))
+        db.select({ total: sql3`count(*)::int` }).from(properties),
+        db.select({ total: sql3`count(*)::int` }).from(requirements),
+        db.select({ total: sql3`count(*)::int` }).from(propertyMatches),
+        db.select({ total: sql3`count(*)::int` }).from(properties).where(gte(properties.createdAt, today)),
+        db.select({ total: sql3`count(*)::int` }).from(requirements).where(gte(requirements.createdAt, today)),
+        db.select({ total: sql3`count(*)::int` }).from(propertyMatches).where(gte(propertyMatches.createdAt, today))
       ]),
       timeoutPromise
     ]);
@@ -4490,7 +4490,8 @@ ${liveStats}` : buildSystemPrompt(groupJid);
         result.classification = "REQUERIMIENTO";
       } else if ((result.classification === "CONSULTA_GENERAL" || result.classification === "DATOS_INCOMPLETOS" || !result.classification) && (hasRealEstateKeyword || isSearch || isOffer)) {
         const rawWordsCount = cleanText2.split(/\s+/).length;
-        const hasTechnicalSpecs = extracted.price && Number(extracted.price) > 0 || extracted.presupuestoMax && Number(extracted.presupuestoMax) > 0 || extracted.area && Number(extracted.area) > 0 || rawWordsCount >= 10 && (cleanText2.includes("apto") || cleanText2.includes("apartamento") || cleanText2.includes("casa") || cleanText2.includes("local") || cleanText2.includes("bodega") || cleanText2.includes("lote") || cleanText2.includes("finca"));
+        const _extTmp = result.extractedData || {};
+        const hasTechnicalSpecs = _extTmp.price && Number(_extTmp.price) > 0 || _extTmp.presupuestoMax && Number(_extTmp.presupuestoMax) > 0 || _extTmp.area && Number(_extTmp.area) > 0 || rawWordsCount >= 10 && (cleanText2.includes("apto") || cleanText2.includes("apartamento") || cleanText2.includes("casa") || cleanText2.includes("local") || cleanText2.includes("bodega") || cleanText2.includes("lote") || cleanText2.includes("finca"));
         if (hasTechnicalSpecs) {
           if (isSearch && !isOffer) {
             console.log("[JANIA-CORRECTION] Rescatando REQUERIMIENTO desde CONSULTA_GENERAL con datos t\xE9cnicos verificados.");
@@ -8713,7 +8714,7 @@ init_db();
 init_schema();
 init_scraper();
 init_janIA();
-import { eq as eq5, desc as desc2, sql as sql3, inArray } from "drizzle-orm";
+import { eq as eq5, desc as desc2, sql as sql4, inArray } from "drizzle-orm";
 import axios7 from "axios";
 var janIARouter = router({
   // New: Extract property data from link
@@ -9177,8 +9178,8 @@ ${liveStats}
       const today = /* @__PURE__ */ new Date();
       today.setHours(0, 0, 0, 0);
       const todayStr = today.toISOString();
-      const [propTodayCount] = await db.select({ count: sql3`count(*)::int` }).from(properties).where(sql3`${properties.createdAt} >= ${todayStr}`);
-      const [reqTodayCount] = await db.select({ count: sql3`count(*)::int` }).from(requirements).where(sql3`${requirements.createdAt} >= ${todayStr}`);
+      const [propTodayCount] = await db.select({ count: sql4`count(*)::int` }).from(properties).where(sql4`${properties.createdAt} >= ${todayStr}`);
+      const [reqTodayCount] = await db.select({ count: sql4`count(*)::int` }).from(requirements).where(sql4`${requirements.createdAt} >= ${todayStr}`);
       return {
         isReady,
         phone,
@@ -9206,20 +9207,20 @@ ${liveStats}
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     try {
-      const [propTotal] = await db.select({ count: sql3`count(*)::int` }).from(properties);
-      const [propActive] = await db.select({ count: sql3`count(*)::int` }).from(properties).where(sql3`${properties.available} = true`);
-      const [reqTotal] = await db.select({ count: sql3`count(*)::int` }).from(requirements);
-      const [reqActive] = await db.select({ count: sql3`count(*)::int` }).from(requirements).where(eq5(requirements.status, "active"));
-      const [matchTotal] = await db.select({ count: sql3`count(*)::int` }).from(propertyMatches);
-      const [convTotal] = await db.select({ count: sql3`count(*)::int` }).from(conversations);
-      const monthlyProps = await db.execute(sql3`
+      const [propTotal] = await db.select({ count: sql4`count(*)::int` }).from(properties);
+      const [propActive] = await db.select({ count: sql4`count(*)::int` }).from(properties).where(sql4`${properties.available} = true`);
+      const [reqTotal] = await db.select({ count: sql4`count(*)::int` }).from(requirements);
+      const [reqActive] = await db.select({ count: sql4`count(*)::int` }).from(requirements).where(eq5(requirements.status, "active"));
+      const [matchTotal] = await db.select({ count: sql4`count(*)::int` }).from(propertyMatches);
+      const [convTotal] = await db.select({ count: sql4`count(*)::int` }).from(conversations);
+      const monthlyProps = await db.execute(sql4`
         SELECT to_char(date_trunc('month', "createdAt"), 'Mon YYYY') as mes,
                count(*)::int as total
         FROM properties
         WHERE "createdAt" >= now() - interval '6 months'
         GROUP BY 1 ORDER BY 1
       `);
-      const monthlyReqs = await db.execute(sql3`
+      const monthlyReqs = await db.execute(sql4`
         SELECT to_char(date_trunc('month', "createdAt"), 'Mon YYYY') as mes,
                count(*)::int as total
         FROM requirements
@@ -9942,7 +9943,7 @@ var agentRouter = router({
 import { z as z6 } from "zod";
 init_db();
 init_schema();
-import { eq as eq9, sql as sql4 } from "drizzle-orm";
+import { eq as eq9, sql as sql5 } from "drizzle-orm";
 import { TRPCError as TRPCError4 } from "@trpc/server";
 var leadsRouter = router({
   resolveStealthLink: publicProcedure.input(z6.object({ token: z6.string() })).query(async ({ input }) => {
@@ -9953,7 +9954,7 @@ var leadsRouter = router({
       throw new TRPCError4({ code: "NOT_FOUND", message: "Stealth Link invalido o expirado." });
     }
     const link = linkRecord[0];
-    await db.update(referralLinks).set({ clicks: sql4`${referralLinks.clicks} + 1` }).where(eq9(referralLinks.id, link.id));
+    await db.update(referralLinks).set({ clicks: sql5`${referralLinks.clicks} + 1` }).where(eq9(referralLinks.id, link.id));
     const prop = await db.select({
       id: properties.id,
       name: properties.name,
@@ -10415,7 +10416,7 @@ import cron from "node-cron";
 import path5 from "path";
 import fs4 from "fs";
 import { fileURLToPath } from "url";
-import { gte as gte3, and as and7, eq as eq13, sql as sql6 } from "drizzle-orm";
+import { gte as gte3, and as and7, eq as eq13, sql as sql7 } from "drizzle-orm";
 var __filename = fileURLToPath(import.meta.url);
 var __dirname = path5.dirname(__filename);
 function initCronScheduler() {
@@ -10518,9 +10519,9 @@ async function sendWeeklyReport() {
   try {
     const db = await getDb();
     if (!db) return;
-    const propertiesCountRes = await db.select({ count: sql6`count(*)` }).from(properties).execute();
-    const requirementsCountRes = await db.select({ count: sql6`count(*)` }).from(requirements).execute();
-    const matchesCountRes = await db.select({ count: sql6`count(*)` }).from(propertyMatches).where(gte3(sql6`(${propertyMatches.matchScore})::numeric`, 85)).execute();
+    const propertiesCountRes = await db.select({ count: sql7`count(*)` }).from(properties).execute();
+    const requirementsCountRes = await db.select({ count: sql7`count(*)` }).from(requirements).execute();
+    const matchesCountRes = await db.select({ count: sql7`count(*)` }).from(propertyMatches).where(gte3(sql7`(${propertyMatches.matchScore})::numeric`, 85)).execute();
     const totalProperties = propertiesCountRes[0]?.count || 0;
     const totalRequirements = requirementsCountRes[0]?.count || 0;
     const totalMatches = matchesCountRes[0]?.count || 0;
@@ -10531,7 +10532,7 @@ async function sendWeeklyReport() {
       buyerAdvisor: requirements.idUsuarioWhatsapp,
       sellerAdvisor: properties.idUsuarioWhatsapp
     }).from(propertyMatches).innerJoin(requirements, eq13(propertyMatches.requirementId, requirements.id)).innerJoin(properties, eq13(propertyMatches.propertyId, properties.id)).where(and7(
-      gte3(sql6`(${propertyMatches.matchScore})::numeric`, 85),
+      gte3(sql7`(${propertyMatches.matchScore})::numeric`, 85),
       gte3(propertyMatches.createdAt, sevenDaysAgo)
     )).execute();
     let report = `\u{1F4CA} *INFORME SEMANAL DE ACTIVIDAD - VECY NETWORK* \u{1F4CA}
