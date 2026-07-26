@@ -359,15 +359,19 @@ function calcularIAc(m: any): { score: number; label: string; color: string; bad
 }
 
 function calcularScoresMatch(m: any): { tecnico: number; comercial: number; final: number } {
+  // tecnico = score real del motor VECY almacenado en BD (fuente de verdad)
   const tecnico = Math.round(parseFloat(m.matchScore?.toString() || "0"));
-  let comercial = 70; // fallback base
-  if (m.ipc && (m.ipc as any).factors) {
+  // comercial = IPC si existe, sino == tecnico (no inflar con fallback arbitrario)
+  let comercial = tecnico;
+  if (m.ipc && (m.ipc as any).score) {
+    comercial = Math.round((m.ipc as any).score);
+  } else if (m.ipc && (m.ipc as any).factors) {
     const f = (m.ipc as any).factors;
-    comercial = Math.round(
-      ((f.freshness || 0) + (f.brokerTrust || 0) + (f.dataQuality || 0) + (f.marketDemand || 0)) / 4
-    );
+    const avg = ((f.freshness || 0) + (f.brokerTrust || 0) + (f.dataQuality || 0) + (f.marketDemand || 0)) / 4;
+    comercial = Math.round(avg);
   }
-  const final = Math.round((tecnico * 0.6) + (comercial * 0.4));
+  // final = el score técnico es el número canon; comercial es informativo
+  const final = tecnico;
   return { tecnico, comercial, final };
 }
 
@@ -656,7 +660,7 @@ function MatchCard({ m, idx }: { m: any; idx: number }) {
   const exactCount = rows.filter(r => r.status === "exact" || r.status === "ok").length;
   const warnCount = rows.filter(r => r.status === "warn").length;
   const failCount = rows.filter(r => r.status === "missing").length;
-  const scoreColor = score >= 95 ? "text-emerald-400" : score >= 80 ? "text-[#bf953f]" : "text-cyan-400";
+  const scoreColor = score === 100 ? "text-emerald-400" : score >= 95 ? "text-emerald-300" : score >= 90 ? "text-[#bf953f]" : "text-cyan-400";
   const iac = useMemo(() => calcularIAc(m), [m]);
   const scores = useMemo(() => calcularScoresMatch(m), [m]);
   const vigencia = useMemo(() => calcularVigencia(m), [m]);
@@ -669,10 +673,13 @@ function MatchCard({ m, idx }: { m: any; idx: number }) {
       {/* Header */}
       <div className="bg-white/[0.02] px-6 py-4 flex flex-wrap items-center justify-between gap-3 border-b border-white/5">
         <div className="flex flex-wrap items-center gap-3">
-          <span className={`text-xl font-extrabold tracking-tight ${scoreColor}`}>{scores.final}%</span>
-          <VrifTrafficLight score={scores.final} />
+          <span className={`text-xl font-extrabold tracking-tight ${scoreColor}`}>{score}%</span>
+          <VrifTrafficLight score={score} />
           {m.ipc && <TrustStars dataQuality={(m.ipc as any)?.factors?.dataQuality || 80} />}
-          {scores.final >= 95 && <span className="text-[10px] bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-2 py-0.5 rounded-full font-bold">⭐ MATCH PERFECTO</span>}
+          {score === 100 && <span className="text-[10px] bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-2 py-0.5 rounded-full font-bold">⭐ MATCH PERFECTO</span>}
+          {score >= 95 && score < 100 && <span className="text-[10px] bg-amber-500/10 border border-amber-500/30 text-amber-300 px-2 py-0.5 rounded-full font-bold">🥇 SOBRESALIENTE</span>}
+          {score >= 90 && score < 95 && <span className="text-[10px] bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 px-2 py-0.5 rounded-full font-bold">🥈 MATCH ALTO</span>}
+          {score >= 85 && score < 90 && <span className="text-[10px] bg-zinc-500/10 border border-zinc-500/30 text-zinc-300 px-2 py-0.5 rounded-full font-bold">🥉 COMPATIBLE VECY</span>}
           <span className={`inline-flex items-center px-2 py-0.5 rounded-full border text-[9px] font-bold ${vigencia.color}`}>
             {vigencia.badge}
           </span>
@@ -701,19 +708,21 @@ function MatchCard({ m, idx }: { m: any; idx: number }) {
       {/* Visual Scores Grid (Diferenciar Técnico y Comercial) */}
       <div className="mx-6 my-4 grid grid-cols-3 gap-3 bg-white/[0.01] border border-white/5 rounded-2xl p-3 text-center">
         <div className="space-y-1">
-          <p className="text-[8px] uppercase tracking-wider font-extrabold text-zinc-500">Match Técnico</p>
-          <div className="text-sm font-black text-cyan-400">{scores.tecnico}%</div>
-          <p className="text-[7px] text-zinc-500 font-medium">Cotejo parámetros</p>
+          <p className="text-[8px] uppercase tracking-wider font-extrabold text-zinc-500">Score VECY</p>
+          <div className="text-sm font-black text-cyan-400">{score}%</div>
+          <p className="text-[7px] text-zinc-500 font-medium">Motor de matching</p>
         </div>
         <div className="space-y-1 border-l border-white/5">
-          <p className="text-[8px] uppercase tracking-wider font-extrabold text-zinc-500">Match Comercial</p>
+          <p className="text-[8px] uppercase tracking-wider font-extrabold text-zinc-500">Score IAc</p>
           <div className="text-sm font-black text-amber-400">{scores.comercial}%</div>
-          <p className="text-[7px] text-zinc-500 font-medium">Perfil, calidad y recencia</p>
+          <p className="text-[7px] text-zinc-500 font-medium">Índice de calidad IPC</p>
         </div>
         <div className="space-y-1 border-l border-white/5 bg-[#bf953f]/5 rounded-xl py-1">
-          <p className="text-[8px] uppercase tracking-wider font-extrabold text-[#bf953f]">Match Final VRIF</p>
-          <div className="text-sm font-black text-white">{scores.final}%</div>
-          <p className="text-[7px] text-[#bf953f] font-bold">Promedio ponderado</p>
+          <p className="text-[8px] uppercase tracking-wider font-extrabold text-[#bf953f]">Categoría</p>
+          <div className="text-sm font-black text-white">
+            {score === 100 ? "Perfecto" : score >= 95 ? "Sobresaliente" : score >= 90 ? "Alto" : "Compatible"}
+          </div>
+          <p className="text-[7px] text-[#bf953f] font-bold">Nivel VECY v17.4</p>
         </div>
       </div>
 
@@ -1227,9 +1236,9 @@ export default function MatchesReport() {
                       <th className="py-4 px-4">Ciudad / Barrio</th>
                       <th className="py-4 px-4">Inmueble (Oferta)</th>
                       <th className="py-4 px-4">Requerimiento (Demanda)</th>
-                      <th className="py-4 px-4 text-center">Match Técnico</th>
-                      <th className="py-4 px-4 text-center">Match Comercial</th>
-                      <th className="py-4 px-4 text-center">Match Final VRIF</th>
+                      <th className="py-4 px-4 text-center">Score VECY</th>
+                      <th className="py-4 px-4 text-center">Score IAc</th>
+                      <th className="py-4 px-4 text-center">Categoría</th>
                       <th className="py-4 px-4 text-center">Vigencia</th>
                       <th className="py-4 px-4 text-center">Acción (IAc)</th>
                       <th className="py-4 px-4">Estado</th>
@@ -1282,8 +1291,8 @@ export default function MatchesReport() {
                               {scores.comercial}%
                             </td>
 
-                            <td className="py-4 px-4 text-center font-black text-sm text-white font-mono">
-                              {scores.final}%
+                            <td className="py-4 px-4 text-center font-black text-xs text-white font-mono">
+                              {scores.final === 100 ? "⭐ 100%" : scores.final >= 95 ? "🥇 " + scores.final + "%" : scores.final >= 90 ? "🥈 " + scores.final + "%" : "🥉 " + scores.final + "%"}
                             </td>
 
                             <td className="py-4 px-4 text-center">
