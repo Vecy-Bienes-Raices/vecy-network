@@ -1289,15 +1289,7 @@ export async function handleDetectedMatches(
     extraDMs.push({ jid: adminJid, message: adminMessage, viaMainBot: true });
   }
 
-  // Generic and anonymous notification for the WhatsApp group to prevent direct contact
-  const responseText = `📢 *¡ATENCIÓN!* Hemos detectado un posible Match 🎯, Por favor @todos pendientes. En breve uno de nuestros agentes 🙋🏻‍♀️🙋🏻‍♂️ contactará a los beneficiarios para compartirles los datos de las coincidencias encontradas 🔍. Saludos 👋`;
 
-  return {
-    response: responseText,
-    mentions: [],
-    extraDMs: extraDMs,
-    sendReputationHook: false
-  };
 }
 
 export function translatePropertyType(type: string): string {
