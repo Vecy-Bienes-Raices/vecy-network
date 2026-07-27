@@ -215,45 +215,89 @@ function getGreetingByTime(): string {
 
 export function parseSafeJSON(content: string): any {
   let text = content.trim();
-  if (text.startsWith("```json")) {
-    text = text.substring(7);
-  } else if (text.startsWith("```")) {
-    text = text.substring(3);
-  }
-  if (text.endsWith("```")) {
-    text = text.substring(0, text.length - 3);
-  }
+  // Strip markdown code fences
+  if (text.startsWith("```json")) text = text.substring(7);
+  else if (text.startsWith("```")) text = text.substring(3);
+  if (text.endsWith("```")) text = text.substring(0, text.length - 3);
   text = text.trim();
 
-  try {
-    return JSON.parse(text);
-  } catch (e) {
-    const start = text.indexOf("{");
-    const end = text.lastIndexOf("}");
-    if (start !== -1 && end !== -1 && end > start) {
-      const extracted = text.substring(start, end + 1);
-      try {
-        return JSON.parse(extracted);
-      } catch (e2) {
-        try {
-          let insideString = false;
-          const chars = [...extracted];
-          for (let i = 0; i < chars.length; i++) {
-            if (chars[i] === '"' && (i === 0 || chars[i - 1] !== '\\')) {
-              insideString = !insideString;
-            }
-            if (insideString && chars[i] === '\n') {
-              chars[i] = '\\n';
-            }
-          }
-          return JSON.parse(chars.join(''));
-        } catch (e3) {
-          throw e;
-        }
-      }
-    }
-    throw e;
+  // 1. Intentar parseo directo
+  const start = text.indexOf("{");
+  if (start === -1) throw new Error("No JSON object found in content");
+  
+  const lastClose = text.lastIndexOf("}");
+  
+  // 2. Si hay llaves de cierre, intentar parseo normal
+  if (lastClose > start) {
+    const extracted = text.substring(start, lastClose + 1);
+    try { return JSON.parse(extracted); } catch (_) {}
   }
+  
+  // 3. JSON truncado — reparar usando máquina de estados
+  const partial = text.substring(start);
+  const repaired = repairJSON(partial);
+  try { return JSON.parse(repaired); } catch (_) {}
+
+  throw new Error("Could not parse or repair JSON from LLM output");
+}
+
+/**
+ * Repara JSON truncado (típico cuando Gemini alcanza el límite de tokens).
+ * Usa máquina de estados para rastrear strings, objetos y arrays abiertos.
+ */
+export function repairJSON(partial: string): string {
+  let inString = false;
+  let escape = false;
+  const stack: string[] = [];
+  let i = 0;
+  let lastValidNonStringPos = 0; // Última posición fuera de un string
+
+  for (; i < partial.length; i++) {
+    const ch = partial[i];
+
+    if (escape) { escape = false; continue; }
+    if (ch === '\\' && inString) { escape = true; continue; }
+
+    if (ch === '"') {
+      inString = !inString;
+      if (!inString) lastValidNonStringPos = i;
+      continue;
+    }
+
+    if (inString) continue;
+
+    lastValidNonStringPos = i;
+
+    if (ch === '{' || ch === '[') stack.push(ch);
+    else if (ch === '}' || ch === ']') {
+      if (stack.length > 0) stack.pop();
+    }
+  }
+
+  // Si terminamos dentro de un string (truncado a mitad de valor), truncar el campo
+  let result = partial;
+  if (inString) {
+    // Cortar desde el inicio del string truncado
+    const lastQuote = partial.lastIndexOf('"', i - 1);
+    // Buscar hacia atrás la clave (para eliminar el campo incompleto)
+    let cutPoint = lastQuote;
+    // Buscar la coma anterior para eliminar el campo completo si existe
+    const prevComma = partial.lastIndexOf(',', lastQuote - 1);
+    if (prevComma !== -1) {
+      cutPoint = prevComma;
+    }
+    result = partial.substring(0, cutPoint);
+  }
+
+  // Eliminar trailing commas y espacios
+  result = result.trimEnd().replace(/,\s*$/, '');
+
+  // Cerrar stack pendiente (de adentro hacia afuera)
+  for (let j = stack.length - 1; j >= 0; j--) {
+    result += stack[j] === '{' ? '}' : ']';
+  }
+
+  return result;
 }
 
 export function getColombiaNow(): Date {
@@ -926,7 +970,7 @@ export async function getLiveStats(): Promise<string> {
 
     let timer: any;
     const timeoutPromise = new Promise<never>((_, reject) => {
-      timer = setTimeout(() => reject(new Error("LiveStats DB query timeout")), 1500);
+      timer = setTimeout(() => reject(new Error("LiveStats DB query timeout")), 5000);
     });
 
     const [

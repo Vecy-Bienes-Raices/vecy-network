@@ -565,8 +565,14 @@ export class JaniaMatchBot {
             // 1. Detectar si el mensaje es del bot o de un humano (fromMe)
             if (msg.key.fromMe) {
               const msgId = msg.key.id || "";
-              if (!this.botSentMessageIds.has(msgId)) {
-                // Intervención humana detectada
+              // CRÍTICO: Solo considerar intervención humana si el mensaje es RECIENTE (<2 min)
+              // Los mensajes fromMe históricos (al reconectar) NO son intervenciones humanas.
+              // botSentMessageIds es un Set en memoria que se resetea al reconectar, por lo que
+              // sin esta salvaguarda se dispararía un loop de mute para todos los mensajes previos.
+              const msgTimestampMs = Number(msg.messageTimestamp || 0) * 1000;
+              const isRecentMessage = (Date.now() - msgTimestampMs) < 2 * 60 * 1000; // 2 minutos
+              if (!this.botSentMessageIds.has(msgId) && isRecentMessage) {
+                // Intervención humana detectada (mensaje reciente no enviado por el bot)
                 console.log(`[JANIA-MATCH] Intervención humana detectada en DM ${senderId}. Silenciando bot.`);
                 this.lastHumanIntervention.set(senderId, Date.now());
                 const { muteSession } = await import('./janIA');
