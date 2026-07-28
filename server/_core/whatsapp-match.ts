@@ -254,6 +254,7 @@ export class JaniaMatchBot {
         const isRestart = statusCode === DisconnectReason.restartRequired;
         const isConnectionLost = statusCode === DisconnectReason.connectionLost;
         const isConflict = statusCode === 440;
+        const isConnectionFailure = statusCode === 405 || statusCode === 401;
         const jitter = Math.floor(Math.random() * 4000);
         const delayMs = (isRestart || isConnectionLost) ? (1000 + jitter) : (isConflict ? 120000 : (5000 + jitter));
         
@@ -261,7 +262,13 @@ export class JaniaMatchBot {
         this.isReady = false;
         this.updateStatusInDb().catch(err => console.error(`[${this.botName}-DB] Error updating status on close:`, err));
 
-        if (shouldReconnect) {
+        if (isConnectionFailure) {
+          console.error(`[${this.botName}] Credenciales inválidas/incompatibles (error ${statusCode}). Limpiando sesión y regenerando QR...`);
+          try {
+            fs.rmSync(path.join(process.cwd(), this.sessionFolderName), { recursive: true, force: true });
+          } catch (e: any) {}
+          setTimeout(() => this.initialize(), 3000);
+        } else if (shouldReconnect) {
           setTimeout(() => this.initialize(), delayMs);
         } else {
           console.error(`[${this.botName}] Sesión de WhatsApp cerrada (Logged Out). Limpiando credenciales...`);
