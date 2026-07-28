@@ -182,15 +182,9 @@ export class JaniaMatchBot {
         console.log(`[${this.botName}] 💾 Guardadas credenciales iniciales de Baileys en ${this.sessionFolderName}.`);
       }
       
-      // Obtener la versión de WhatsApp Web más reciente para evitar el error de stream 515
-      let version: any = [2, 3000, 1017531287];
-      try {
-        const { version: latestVersion } = await fetchLatestBaileysVersion();
-        version = latestVersion;
-        console.log(`[${this.botName}] Usando versión de WhatsApp Web: ${version.join('.')}`);
-      } catch (e: any) {
-        console.warn(`[${this.botName}] No se pudo obtener la versión dinámica de WhatsApp Web, usando fallback:`, e.message);
-      }
+      // Usar versión estable fijada de WhatsApp Web para evitar error 405 Connection Failure
+      const version: any = [2, 3000, 1017531287];
+      console.log(`[${this.botName}] Usando versión estable de WhatsApp Web: ${version.join('.')}`);
 
       console.log(`[${this.botName}] Estableciendo conexión por WebSocket...`);
       const silentLogger = {
