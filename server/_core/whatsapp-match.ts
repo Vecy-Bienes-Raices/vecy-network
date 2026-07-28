@@ -182,14 +182,8 @@ export class JaniaMatchBot {
         console.log(`[${this.botName}] 💾 Guardadas credenciales iniciales de Baileys en ${this.sessionFolderName}.`);
       }
       
-      let version: any = [2, 3000, 1017531287];
-      try {
-        const { version: latestVersion } = await fetchLatestBaileysVersion();
-        version = latestVersion;
-        console.log(`[${this.botName}] Usando versión de WhatsApp Web: ${version.join('.')}`);
-      } catch (e: any) {
-        console.warn(`[${this.botName}] Usando versión fallback de WhatsApp Web.`);
-      }
+      const version: any = [2, 3000, 1015901307];
+      console.log(`[${this.botName}] Usando versión estable de WhatsApp Web: ${version.join('.')}`);
 
       console.log(`[${this.botName}] Estableciendo conexión por WebSocket...`);
       const silentLogger = {
