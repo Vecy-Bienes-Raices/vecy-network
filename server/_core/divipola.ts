@@ -5,7 +5,7 @@ let municipalitiesMap: Map<string, string> = new Map();
 
 export const initDivipola = () => {
   try {
-    const filePath = path.join(__dirname, '..', 'data', 'divipola.csv');
+    const filePath = path.join(process.cwd(), 'server', 'data', 'divipola.csv');
     if (!fs.existsSync(filePath)) {
       console.warn("Divipola CSV not found at", filePath);
       return;
