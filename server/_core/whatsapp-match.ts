@@ -208,7 +208,12 @@ export class JaniaMatchBot {
         version,
         logger: silentLogger as any,
         printQRInTerminal: false, // Lo manejamos nosotros de forma personalizada
-        browser: Browsers.ubuntu('Chrome'),
+        browser: ['Ubuntu', 'Chrome', '122.0.6261.111'],
+        options: {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+          }
+        },
         syncFullHistory: false,
         markOnlineOnConnect: false,
         connectTimeoutMs: 90000, // Aumentado a 90s para conexiones lentas
