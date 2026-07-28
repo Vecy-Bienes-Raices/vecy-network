@@ -2182,6 +2182,57 @@ var init_geography = __esm({
   }
 });
 
+// server/_core/divipola.ts
+import fs from "fs";
+import path from "path";
+var municipalitiesMap, initDivipola, validateCity;
+var init_divipola = __esm({
+  "server/_core/divipola.ts"() {
+    "use strict";
+    municipalitiesMap = /* @__PURE__ */ new Map();
+    initDivipola = () => {
+      try {
+        const filePath = path.join(process.cwd(), "server", "data", "divipola.csv");
+        if (!fs.existsSync(filePath)) {
+          console.warn("Divipola CSV not found at", filePath);
+          return;
+        }
+        const content = fs.readFileSync(filePath, "utf-8");
+        const lines = content.split("\n");
+        municipalitiesMap.clear();
+        for (let i = 1; i < lines.length; i++) {
+          const line = lines[i].trim();
+          if (!line) continue;
+          const parts = line.match(/(?:^|,)("(?:[^"]|"")*"|[^,]*)/g);
+          if (!parts || parts.length < 4) continue;
+          let munName = parts[3].replace(/^,?"?|"?$/g, "").trim();
+          if (munName) {
+            const normalizedKey = munName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+            let titleCased = munName.split(" ").map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+            municipalitiesMap.set(normalizedKey, titleCased);
+          }
+        }
+        municipalitiesMap.set("bogota", "Bogot\xE1, D.C.");
+        municipalitiesMap.set("bogota d.c.", "Bogot\xE1, D.C.");
+        municipalitiesMap.set("bogota, d.c.", "Bogot\xE1, D.C.");
+        municipalitiesMap.set("bogota dc", "Bogot\xE1, D.C.");
+        municipalitiesMap.set("bogota d.c", "Bogot\xE1, D.C.");
+        console.log(`[Divipola] Loaded ${municipalitiesMap.size} municipalities from Divipola.`);
+      } catch (err) {
+        console.error("[Divipola] Error loading Divipola:", err);
+      }
+    };
+    validateCity = (cityName) => {
+      if (!cityName || typeof cityName !== "string") return null;
+      if (municipalitiesMap.size === 0) {
+        initDivipola();
+      }
+      const normalized = cityName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+      return municipalitiesMap.get(normalized) || null;
+    };
+  }
+});
+
 // server/_core/voiceTranscription.ts
 import axios5 from "axios";
 import { spawn } from "child_process";
@@ -2965,13 +3016,17 @@ function explicarMatch(requirement, property) {
     }
   }
   if (budgetMax > 0) {
-    if (price > 0) {
-      const isRent = reqBiz.includes("arriendo") || propBiz.includes("arriendo");
-      if (isRent && price > budgetMax * 1.02) {
-        blockers.push(`Canon de arriendo $${price.toLocaleString()} supera el presupuesto m\xE1ximo de $${budgetMax.toLocaleString()}`);
+    const propRent = property.priceRent ? parseFloat(String(property.priceRent)) : 0;
+    const isReqRent = reqBiz.includes("arriendo");
+    const isReqSale = reqBiz.includes("venta") || reqBiz.includes("permuta");
+    if (isReqRent && propBiz.includes("arriendo") && propRent > 0) {
+      if (propRent > budgetMax * 1.02) {
+        blockers.push(`Canon de arriendo $${propRent.toLocaleString()} supera el presupuesto m\xE1ximo de $${budgetMax.toLocaleString()}`);
         return buildExplanationResult(0, blockers, positives, negatives);
       }
-      if (!isRent && price > budgetMax * 1.05) {
+    }
+    if (isReqSale && propBiz.includes("venta") && price > 0) {
+      if (price > budgetMax * 1.05) {
         blockers.push(`Precio de venta $${price.toLocaleString()} supera el presupuesto m\xE1ximo de $${budgetMax.toLocaleString()}`);
         return buildExplanationResult(0, blockers, positives, negatives);
       }
@@ -3363,14 +3418,15 @@ __export(janIA_exports, {
   processCirculoMessage: () => processCirculoMessage,
   processConsultingMessage: () => processConsultingMessage,
   processWhatsAppMessage: () => processWhatsAppMessage,
+  repairJSON: () => repairJSON,
   sanitizeResponseMarkdown: () => sanitizeResponseMarkdown,
   scrapeUrlWithBypass: () => scrapeUrlWithBypass,
   translatePropertyType: () => translatePropertyType,
   translateTransactionType: () => translateTransactionType
 });
 import { eq as eq4, and as and2, sql as sql3, gte, desc } from "drizzle-orm";
-import fs from "fs";
-import path from "path";
+import fs2 from "fs";
+import path2 from "path";
 import axios6 from "axios";
 function extractFirstName(fullName) {
   if (!fullName) return "";
@@ -3417,44 +3473,71 @@ function getGreetingByTime() {
 }
 function parseSafeJSON(content) {
   let text2 = content.trim();
-  if (text2.startsWith("```json")) {
-    text2 = text2.substring(7);
-  } else if (text2.startsWith("```")) {
-    text2 = text2.substring(3);
-  }
-  if (text2.endsWith("```")) {
-    text2 = text2.substring(0, text2.length - 3);
-  }
+  if (text2.startsWith("```json")) text2 = text2.substring(7);
+  else if (text2.startsWith("```")) text2 = text2.substring(3);
+  if (text2.endsWith("```")) text2 = text2.substring(0, text2.length - 3);
   text2 = text2.trim();
-  try {
-    return JSON.parse(text2);
-  } catch (e) {
-    const start = text2.indexOf("{");
-    const end = text2.lastIndexOf("}");
-    if (start !== -1 && end !== -1 && end > start) {
-      const extracted = text2.substring(start, end + 1);
-      try {
-        return JSON.parse(extracted);
-      } catch (e2) {
-        try {
-          let insideString = false;
-          const chars = [...extracted];
-          for (let i = 0; i < chars.length; i++) {
-            if (chars[i] === '"' && (i === 0 || chars[i - 1] !== "\\")) {
-              insideString = !insideString;
-            }
-            if (insideString && chars[i] === "\n") {
-              chars[i] = "\\n";
-            }
-          }
-          return JSON.parse(chars.join(""));
-        } catch (e3) {
-          throw e;
-        }
-      }
+  const start = text2.indexOf("{");
+  if (start === -1) throw new Error("No JSON object found in content");
+  const lastClose = text2.lastIndexOf("}");
+  if (lastClose > start) {
+    const extracted = text2.substring(start, lastClose + 1);
+    try {
+      return JSON.parse(extracted);
+    } catch (_) {
     }
-    throw e;
   }
+  const partial = text2.substring(start);
+  const repaired = repairJSON(partial);
+  try {
+    return JSON.parse(repaired);
+  } catch (_) {
+  }
+  throw new Error("Could not parse or repair JSON from LLM output");
+}
+function repairJSON(partial) {
+  let inString = false;
+  let escape = false;
+  const stack = [];
+  let i = 0;
+  let lastValidNonStringPos = 0;
+  for (; i < partial.length; i++) {
+    const ch = partial[i];
+    if (escape) {
+      escape = false;
+      continue;
+    }
+    if (ch === "\\" && inString) {
+      escape = true;
+      continue;
+    }
+    if (ch === '"') {
+      inString = !inString;
+      if (!inString) lastValidNonStringPos = i;
+      continue;
+    }
+    if (inString) continue;
+    lastValidNonStringPos = i;
+    if (ch === "{" || ch === "[") stack.push(ch);
+    else if (ch === "}" || ch === "]") {
+      if (stack.length > 0) stack.pop();
+    }
+  }
+  let result = partial;
+  if (inString) {
+    const lastQuote = partial.lastIndexOf('"', i - 1);
+    let cutPoint = lastQuote;
+    const prevComma = partial.lastIndexOf(",", lastQuote - 1);
+    if (prevComma !== -1) {
+      cutPoint = prevComma;
+    }
+    result = partial.substring(0, cutPoint);
+  }
+  result = result.trimEnd().replace(/,\s*$/, "");
+  for (let j = stack.length - 1; j >= 0; j--) {
+    result += stack[j] === "{" ? "}" : "]";
+  }
+  return result;
 }
 function getColombiaNow() {
   const now = /* @__PURE__ */ new Date();
@@ -3768,7 +3851,7 @@ async function getLiveStats() {
     today.setHours(0, 0, 0, 0);
     let timer;
     const timeoutPromise = new Promise((_, reject) => {
-      timer = setTimeout(() => reject(new Error("LiveStats DB query timeout")), 1500);
+      timer = setTimeout(() => reject(new Error("LiveStats DB query timeout")), 5e3);
     });
     const [
       [propCount],
@@ -3815,23 +3898,23 @@ function buildSystemPrompt(groupJid) {
     return promptCache[cacheKey];
   }
   try {
-    const baseDir = path.resolve(process.cwd(), "server/_core/prompts");
-    const basePrompt = fs.readFileSync(path.join(baseDir, "base.md"), "utf-8");
+    const baseDir = path2.resolve(process.cwd(), "server/_core/prompts");
+    const basePrompt = fs2.readFileSync(path2.join(baseDir, "base.md"), "utf-8");
     let specificPrompt = "";
     if (groupJid === "120363260108880069@g.us") {
-      specificPrompt = fs.readFileSync(path.join(baseDir, "grupos/VECY_INMUEBLES_NETWORK.md"), "utf-8");
+      specificPrompt = fs2.readFileSync(path2.join(baseDir, "grupos/VECY_INMUEBLES_NETWORK.md"), "utf-8");
     } else if (groupJid === "120363417740040773@g.us") {
-      const legalPrompt = fs.readFileSync(path.join(baseDir, "grupos/VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVAL\xDAOS.md"), "utf-8");
-      const avaluosPrompt = fs.existsSync(path.join(baseDir, "modulos/avaluos.md")) ? fs.readFileSync(path.join(baseDir, "modulos/avaluos.md"), "utf-8") : "";
+      const legalPrompt = fs2.readFileSync(path2.join(baseDir, "grupos/VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVAL\xDAOS.md"), "utf-8");
+      const avaluosPrompt = fs2.existsSync(path2.join(baseDir, "modulos/avaluos.md")) ? fs2.readFileSync(path2.join(baseDir, "modulos/avaluos.md"), "utf-8") : "";
       specificPrompt = `${legalPrompt}
 
 ${avaluosPrompt}`;
     } else if (groupJid === "120363403507276533@g.us") {
-      specificPrompt = fs.readFileSync(path.join(baseDir, "grupos/PROYECTO_Vecy Network.md"), "utf-8");
+      specificPrompt = fs2.readFileSync(path2.join(baseDir, "grupos/PROYECTO_Vecy Network.md"), "utf-8");
     } else if (groupJid && (groupJid.endsWith("@g.us") || groupJid.includes("@us"))) {
-      specificPrompt = fs.readFileSync(path.join(baseDir, "grupos/VECY_INMUEBLES_NETWORK.md"), "utf-8");
+      specificPrompt = fs2.readFileSync(path2.join(baseDir, "grupos/VECY_INMUEBLES_NETWORK.md"), "utf-8");
     } else {
-      specificPrompt = fs.readFileSync(path.join(baseDir, "web/web_console.md"), "utf-8");
+      specificPrompt = fs2.readFileSync(path2.join(baseDir, "web/web_console.md"), "utf-8");
     }
     const fullPrompt = `${basePrompt}
 
@@ -3968,12 +4051,11 @@ async function handleDetectedMatches(matches, isProperty, savedRecord, userId, r
 \u2022 Precio: ${propItem.price ? Number(propItem.price).toLocaleString("es-CO") + " COP" : "N/A"}`;
     extraDMs.push({ jid: adminJid, message: adminMessage, viaMainBot: true });
   }
-  const responseText = `\u{1F4E2} *\xA1ATENCI\xD3N!* Hemos detectado un posible Match \u{1F3AF}, Por favor @todos pendientes. En breve uno de nuestros agentes \u{1F64B}\u{1F3FB}\u200D\u2640\uFE0F\u{1F64B}\u{1F3FB}\u200D\u2642\uFE0F contactar\xE1 a los beneficiarios para compartirles los datos de las coincidencias encontradas \u{1F50D}. Saludos \u{1F44B}`;
   return {
-    response: responseText,
+    response: "",
     mentions: [],
     extraDMs,
-    sendReputationHook: false
+    sendReputationHook: matches.length > 0
   };
 }
 function translatePropertyType(type) {
@@ -4615,6 +4697,10 @@ ${liveStats}` : buildSystemPrompt(groupJid);
           }
         }
         if (inferredCity && inferredCity.toLowerCase() !== "na") {
+          const divipolaCity = validateCity(inferredCity);
+          if (divipolaCity) {
+            inferredCity = divipolaCity;
+          }
           if (isProperty) {
             extracted.city = inferredCity;
           } else {
@@ -5607,18 +5693,28 @@ Analiza el contexto completo antes de clasificar. Debes responder estrictamente 
   "voiceResponse": "Tu respuesta en audio limpia de markdown y emojis (solo si wantsVoice es true)",
   "reactionEmoji": "string (emoji recomendado)"
 }`;
+    const timeGreeting = getGreetingByTime();
+    const nowBogota = new Date((/* @__PURE__ */ new Date()).toLocaleString("en-US", { timeZone: "America/Bogota" }));
+    const hour = nowBogota.getHours();
+    const cleanFirstName = n.trim();
+    const lastChar = cleanFirstName.slice(-1).toLowerCase();
+    const maleExceptions = ["luca", "andrea", "borja", "joshua", "bautista", "sasha", "el\xEDa", "elias"];
+    const isFemale = lastChar === "a" && !maleExceptions.includes(cleanFirstName.toLowerCase());
+    const genderTerm = isFemale ? `estimada ${n}` : `estimado ${n}`;
     const greetingInstruction = `
 
-[SISTEMA - INSTRUCCI\xD3N DE SALUDO Y COMPORTAMIENTO]:
-- Ya has saludado al usuario hoy: ${alreadyGreeted ? "S\xCD" : "NO"}.
-- Tipo de conversaci\xF3n actual: GRUPO DE WHATSAPP.
-- Primer nombre del usuario: "${n}".
-- REGLAS CR\xCDTICAS DE RESPUESTA:
-  * Si "Ya has saludado al usuario hoy" es S\xCD:
-    - \xA1PROHIBIDO SALUDAR! No uses palabras como "Hola", "Buenas tardes", "Qu\xE9 gusto", "Bienvenido", ni variantes de saludo o bienvenida.
-    - Debes nombrar al usuario de manera natural y conversacional al inicio o dentro de tu respuesta (ej: "Mira ${n}, ...", "Te cuento, ${n}, que...", "Para complementar, ${n}, ...").
+[SISTEMA - INSTRUCCI\xD3N OBLIGATORIA DE SALUDO Y COMPORTAMIENTO]:
+- Hora actual Bogot\xE1: ${hour}:00 (${timeGreeting}).
+- Genero detectado para ${n}: ${isFemale ? "Femenino (estimada)" : "Masculino (estimado)"}.
+- T\xE9rmino de trato respetuoso: "${genderTerm}".
+- Ya has saludado a esta persona hoy: ${alreadyGreeted ? "S\xCD" : "NO"}.
+- Tipo de conversaci\xF3n actual: GRUPO DE WHATSAPP ("VECY: SOPORTE LEGAL, TRIBUTARIO Y AVAL\xDAOS").
+- REGLAS OBLIGATORIAS DE SALUDO:
   * Si "Ya has saludado al usuario hoy" es NO:
-    - Debes saludar de manera muy cordial y natural, incluyendo su nombre "${n}" o dirigi\xE9ndose a \xE9l/ella como colega/aliado/a.`;
+    - Debes iniciar tu respuesta saludando cordial y profesionalmente con el saludo de hora exacto ("${timeGreeting}"), utilizando su trato respetuoso y nombre: ej. "${timeGreeting}, ${genderTerm}" o "${timeGreeting} ${genderTerm}, colega".
+  * Si "Ya has saludado al usuario hoy" es S\xCD:
+    - \xA1PROHIBIDO SALUDAR! No uses "Hola", "${timeGreeting}", "Buenas", "Qu\xE9 gusto", ni ninguna bienvenida.
+    - Integra su primer nombre "${n}" de forma conversacional y fluida dentro del cuerpo de la respuesta (ej. "Mira ${n}, ...", "Entiendo tu inquietud, ${n}, ...").`;
     if (pdfBuffer) {
       messageToProcess += `
 [SISTEMA: DOCUMENTO PDF DETECTADO. Analiza el documento PDF adjunto con tus capacidades nativas para extraer todos los datos relevantes del predial, certificado de tradici\xF3n, o contrato.]`;
@@ -5841,18 +5937,29 @@ DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
   "response": "Tu respuesta, invitaci\xF3n a debate o mensaje de redirecci\xF3n seg\xFAn corresponda.",
   "reactionEmoji": "string (emoji recomendado)"
 }`;
+    const timeGreeting = getGreetingByTime();
+    const nowBogota = new Date((/* @__PURE__ */ new Date()).toLocaleString("en-US", { timeZone: "America/Bogota" }));
+    const hour = nowBogota.getHours();
+    const targetName = firstName || realName || "colega";
+    const cleanFirstName = targetName.trim();
+    const lastChar = cleanFirstName.slice(-1).toLowerCase();
+    const maleExceptions = ["luca", "andrea", "borja", "joshua", "bautista", "sasha", "el\xEDa", "elias"];
+    const isFemale = lastChar === "a" && !maleExceptions.includes(cleanFirstName.toLowerCase());
+    const genderTerm = isFemale ? `estimada ${targetName}` : `estimado ${targetName}`;
     const greetingInstruction = `
 
-[SISTEMA - INSTRUCCI\xD3N DE SALUDO Y COMPORTAMIENTO]:
-- Ya has saludado al usuario hoy: ${alreadyGreeted ? "S\xCD" : "NO"}.
-- Tipo de conversaci\xF3n actual: GRUPO DE WHATSAPP.
-- Primer nombre del usuario: "${firstName || realName}".
-- REGLAS CR\xCDTICAS DE RESPUESTA:
-  * Si "Ya has saludado al usuario hoy" es S\xCD:
-    - \xA1PROHIBIDO SALUDAR! No uses palabras como "Hola", "Buenas tardes", "Qu\xE9 gusto", "Bienvenido", ni variantes de saludo o bienvenida.
-    - Debes nombrar al usuario de manera natural y conversacional al inicio o dentro de tu respuesta (ej: "Mira ${firstName || realName}, ...", "Te cuento, ${firstName || realName}, que...", "Para complementar, ${firstName || realName}, ...").
+[SISTEMA - INSTRUCCI\xD3N OBLIGATORIA DE SALUDO Y COMPORTAMIENTO]:
+- Hora actual Bogot\xE1: ${hour}:00 (${timeGreeting}).
+- Genero detectado para ${targetName}: ${isFemale ? "Femenino (estimada)" : "Masculino (estimado)"}.
+- T\xE9rmino de trato respetuoso: "${genderTerm}".
+- Ya has saludado a esta persona hoy: ${alreadyGreeted ? "S\xCD" : "NO"}.
+- Tipo de conversaci\xF3n actual: GRUPO DE WHATSAPP ("PROYECTO VECY NETWORK").
+- REGLAS OBLIGATORIAS DE SALUDO:
   * Si "Ya has saludado al usuario hoy" es NO:
-    - Debes saludar de manera muy cordial y natural, incluyendo su nombre "${firstName || realName}" o dirigi\xE9ndose a \xE9l/ella como colega/aliado/a.`;
+    - Debes iniciar tu respuesta saludando cordial y profesionalmente con el saludo de hora exacto ("${timeGreeting}"), utilizando su trato respetuoso y nombre: ej. "${timeGreeting}, ${genderTerm}" o "${timeGreeting} ${genderTerm}, aliado/a".
+  * Si "Ya has saludado al usuario hoy" es S\xCD:
+    - \xA1PROHIBIDO SALUDAR! No uses "Hola", "${timeGreeting}", "Buenas", "Qu\xE9 gusto", ni ninguna bienvenida.
+    - Integra su primer nombre "${targetName}" de forma conversacional y fluida dentro del cuerpo de la respuesta (ej. "Mira ${targetName}, ...", "Para complementar tu idea, ${targetName}, ...").`;
     const messages2 = [
       { role: "system", content: systemPrompt },
       { role: "user", content: `Usuario: @${rawPhone} (${realName})
@@ -5898,6 +6005,7 @@ var init_janIA = __esm({
     init_db();
     init_schema();
     init_geography();
+    init_divipola();
     init_voiceTranscription();
     init_storage();
     init_scraper();
@@ -6345,22 +6453,46 @@ function extractFirstName2(fullName) {
   }
   clean = clean.replace(/[0-9]/g, "");
   if (!clean.trim()) return "";
-  const words = clean.split(/\s+/).map((w) => w.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, ""));
-  const filteredWords = words.filter((w) => w.length > 0);
-  if (filteredWords.length === 0 || !filteredWords[0]) return "";
-  const cap = (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
-  const w1 = filteredWords[0].toLowerCase();
-  const w2 = filteredWords[1] ? filteredWords[1].toLowerCase() : "";
-  const stopWords = /* @__PURE__ */ new Set(["de", "del", "la", "las", "los", "el", "van", "von", "y", "di"]);
-  if (w2 && !stopWords.has(w2) && filteredWords[1].length >= 2 && filteredWords[0].length >= 2) {
-    return `${cap(filteredWords[0])} ${cap(filteredWords[1])}`;
+  const words = clean.split(/\s+/).map((w) => w.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, "")).filter((w) => w.length > 0);
+  if (words.length === 0) return "";
+  let nameWords = words;
+  while (nameWords.length > 0 && CONNECTORS.has(nameWords[0].toLowerCase())) {
+    nameWords.shift();
   }
-  return cap(filteredWords[0]);
+  if (nameWords.length === 0) return "";
+  const cap = (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+  if (nameWords.length >= 2) {
+    const twoWordKey = `${nameWords[0].toLowerCase()} ${nameWords[1].toLowerCase()}`;
+    if (NICKNAMES_MAP[twoWordKey]) {
+      return NICKNAMES_MAP[twoWordKey];
+    }
+    if (SONOROUS_COMPOUND_BLOCKS.has(twoWordKey)) {
+      return `${cap(nameWords[0])} ${cap(nameWords[1])}`;
+    }
+    const secondWordLower = nameWords[1].toLowerCase();
+    if (NON_SONOROUS_FILLERS.has(secondWordLower)) {
+      const firstWordLower2 = nameWords[0].toLowerCase();
+      if (NICKNAMES_MAP[firstWordLower2]) {
+        return NICKNAMES_MAP[firstWordLower2];
+      }
+      return cap(nameWords[0]);
+    }
+  }
+  const firstWordLower = nameWords[0].toLowerCase();
+  if (NICKNAMES_MAP[firstWordLower]) {
+    return NICKNAMES_MAP[firstWordLower];
+  }
+  return cap(nameWords[0]);
 }
-function getGreetingByTime2() {
-  const hour = (/* @__PURE__ */ new Date()).getHours();
-  if (hour >= 5 && hour < 12) return "Buenos d\xEDas";
-  if (hour >= 12 && hour < 19) return "Buenas tardes";
+function getGreetingByTime2(date) {
+  const bogotaTimeStr = (date || /* @__PURE__ */ new Date()).toLocaleString("en-US", { timeZone: "America/Bogota" });
+  const hour = new Date(bogotaTimeStr).getHours();
+  if (hour >= 1 && hour < 12) {
+    return "Buenos d\xEDas";
+  }
+  if (hour >= 12 && hour < 19) {
+    return "Buenas tardes";
+  }
   return "Buenas noches";
 }
 function detectaVoz(text2) {
@@ -6432,9 +6564,123 @@ async function textToSpeechMedia(text2, format = "OGG_OPUS") {
 async function sendAdminNotification(text2) {
   console.log(`[WHATSAPP-UTILS] [Notificaci\xF3n Admin (WhatsApp Omitido)]: ${text2}`);
 }
+var NICKNAMES_MAP, SONOROUS_COMPOUND_BLOCKS, NON_SONOROUS_FILLERS, CONNECTORS;
 var init_whatsapp_utils = __esm({
   "server/_core/whatsapp-utils.ts"() {
     "use strict";
+    NICKNAMES_MAP = {
+      "cristina": "Kristy",
+      "cristi": "Kristy",
+      "kristina": "Kristy",
+      "catalina": "Kata",
+      "catalyna": "Kata",
+      "guillermo": "Memo",
+      "maria fernanda": "Mafe",
+      "mar\xEDa fernanda": "Mafe",
+      "maria paula": "Mapau",
+      "mar\xEDa paula": "Mapau",
+      "maria jose": "Majo",
+      "mar\xEDa jos\xE9": "Majo",
+      "juan esteban": "Juanes",
+      "alejandro": "Alejo",
+      "francisco": "Pacho",
+      "eduardo": "Eddu",
+      "isabela": "Isa",
+      "isabella": "Isa",
+      "victoria": "Vicky",
+      "beatriz": "Betty",
+      "carolina": "Caro",
+      "gabriela": "Gaby",
+      "santiago": "Santi",
+      "sebastian": "Seba",
+      "sebasti\xE1n": "Seba",
+      "felipe": "Pipe",
+      "ignacio": "Nacho",
+      "jose manuel": "Josema",
+      "jos\xE9 manuel": "Josema"
+    };
+    SONOROUS_COMPOUND_BLOCKS = /* @__PURE__ */ new Set([
+      // Femeninos Clásicos
+      "maria jose",
+      "mar\xEDa jos\xE9",
+      "maria camila",
+      "mar\xEDa camila",
+      "dulce maria",
+      "dulce mar\xEDa",
+      "ana sofia",
+      "ana sof\xEDa",
+      "juana valentina",
+      "maria alejandra",
+      "mar\xEDa alejandra",
+      "sara sofia",
+      "sara sof\xEDa",
+      "laura camila",
+      "maria paula",
+      "mar\xEDa paula",
+      "luisa fernanda",
+      "ana maria",
+      "ana mar\xEDa",
+      "maria angel",
+      "mar\xEDa \xE1ngel",
+      "mar\xEDa angel",
+      // Femeninos Modernos
+      "maria antonella",
+      "mar\xEDa antonella",
+      "elena sofia",
+      "elena sof\xEDa",
+      "emily valentina",
+      "mia isabella",
+      "m\xEDa isabella",
+      "antonella sofia",
+      "antonella sof\xEDa",
+      // Masculinos Clásicos
+      "juan jose",
+      "juan jos\xE9",
+      "juan david",
+      "juan pablo",
+      "carlos andres",
+      "carlos andr\xE9s",
+      "jose luis",
+      "jos\xE9 luis",
+      "luis fernando",
+      "miguel angel",
+      "miguel \xE1ngel",
+      "juan esteban",
+      "andres felipe",
+      "andr\xE9s felipe",
+      "jorge eliecer",
+      "jorge eli\xE9cer",
+      "juan manuel",
+      "julio cesar",
+      "julio c\xE9sar",
+      // Masculinos Modernos
+      "thiago andres",
+      "thiago andr\xE9s",
+      "ian gael",
+      "maximiliano david",
+      "dylan santiago",
+      "samuel david"
+    ]);
+    NON_SONOROUS_FILLERS = /* @__PURE__ */ new Set([
+      "milena",
+      "patricia",
+      "elena",
+      "marcela",
+      "andrea",
+      "alberto",
+      "alfonso",
+      "ivan",
+      "iv\xE1n",
+      "adolfo",
+      "antonio",
+      "humberto",
+      "enrique",
+      "arturo",
+      "armando",
+      "bernardo",
+      "marina"
+    ]);
+    CONNECTORS = /* @__PURE__ */ new Set(["de", "del", "la", "las", "los", "el", "van", "von", "y", "di"]);
   }
 });
 
@@ -6445,6 +6691,7 @@ __export(whatsapp_match_exports, {
   janiaCaptadorBot: () => janiaCaptadorBot,
   janiaMatchBot: () => janiaMatchBot
 });
+import dns from "dns";
 import makeWASocket, {
   useMultiFileAuthState,
   DisconnectReason,
@@ -6454,8 +6701,8 @@ import makeWASocket, {
   Browsers
 } from "@whiskeysockets/baileys";
 import qrcodeTerminal from "qrcode-terminal";
-import fs3 from "fs";
-import path4 from "path";
+import fs4 from "fs";
+import path5 from "path";
 import { eq as eq11 } from "drizzle-orm";
 import QRCode from "qrcode";
 var SERVER_BOOT_TIME, cleanJid, outgoingQueue, JaniaMatchBot, janiaMatchBot, janiaCaptadorBot;
@@ -6467,6 +6714,10 @@ var init_whatsapp_match = __esm({
     init_scraper();
     init_whatsapp_utils();
     init_voiceTranscription();
+    try {
+      dns.setDefaultResultOrder("ipv4first");
+    } catch (e) {
+    }
     SERVER_BOOT_TIME = Math.floor(Date.now() / 1e3) - 120;
     cleanJid = (jid) => {
       if (!jid) return "";
@@ -6514,7 +6765,7 @@ var init_whatsapp_match = __esm({
       buzonGroupId = "120363417740040773@g.us";
       circuloGroupId = "120363403507276533@g.us";
       cooldownMap = /* @__PURE__ */ new Map();
-      cooldownFile = path4.join(process.cwd(), ".cooldown_map.json");
+      cooldownFile = path5.join(process.cwd(), ".cooldown_map.json");
       constructor(options) {
         if (options) {
           if (options.sessionFolderName) this.sessionFolderName = options.sessionFolderName;
@@ -6572,20 +6823,22 @@ var init_whatsapp_match = __esm({
       }
       async initialize() {
         try {
-          const sessionDir = path4.join(process.cwd(), this.sessionFolderName);
+          const sessionDir = path5.join(process.cwd(), this.sessionFolderName);
           const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
-          if (!fs3.existsSync(path4.join(sessionDir, "creds.json"))) {
+          if (!fs4.existsSync(path5.join(sessionDir, "creds.json"))) {
             await saveCreds();
             console.log(`[${this.botName}] \u{1F4BE} Guardadas credenciales iniciales de Baileys en ${this.sessionFolderName}.`);
           }
-          let version = [2, 3e3, 1017531287];
+          let version = [2, 3e3, 1044015310];
           try {
-            const { version: latestVersion } = await fetchLatestBaileysVersion();
-            version = latestVersion;
-            console.log(`[${this.botName}] Usando versi\xF3n de WhatsApp Web: ${version.join(".")}`);
+            const fetched = await fetchLatestBaileysVersion();
+            if (fetched && fetched.version) {
+              version = fetched.version;
+            }
           } catch (e) {
-            console.warn(`[${this.botName}] No se pudo obtener la versi\xF3n din\xE1mica de WhatsApp Web, usando fallback:`, e.message);
+            console.warn(`[${this.botName}] \u26A0\uFE0F No se pudo obtener la \xFAltima versi\xF3n din\xE1micamente, usando fallback ${version.join(".")}`);
           }
+          console.log(`[${this.botName}] Usando versi\xF3n activa de WhatsApp Web: ${Array.isArray(version) ? version.join(".") : version}`);
           console.log(`[${this.botName}] Estableciendo conexi\xF3n por WebSocket...`);
           const silentLogger = {
             level: "silent",
@@ -6611,7 +6864,7 @@ var init_whatsapp_match = __esm({
             logger: silentLogger,
             printQRInTerminal: false,
             // Lo manejamos nosotros de forma personalizada
-            browser: Browsers.macOS(this.isWorkerOnly ? "Captador Worker" : "Desktop"),
+            browser: Browsers.ubuntu("Chrome"),
             syncFullHistory: false,
             markOnlineOnConnect: false,
             connectTimeoutMs: 9e4,
@@ -6641,7 +6894,7 @@ var init_whatsapp_match = __esm({
 [${this.botName}] \u{1F50C} ESCANEA ESTE C\xD3DIGO QR PARA VINCULAR ${this.botName}:`);
             qrcodeTerminal.generate(qr, { small: true });
             try {
-              const qrPath = path4.join(process.cwd(), this.qrFileName);
+              const qrPath = path5.join(process.cwd(), this.qrFileName);
               QRCode.toFile(qrPath, qr, { width: 400, margin: 2 }, (err) => {
                 if (err) console.error(`[${this.botName}] Error guardando QR PNG:`, err.message);
                 else console.log(`[${this.botName}] \u{1F4F8} QR guardado como ${this.qrFileName} en la ra\xEDz del proyecto.`);
@@ -6657,16 +6910,25 @@ var init_whatsapp_match = __esm({
             const isRestart = statusCode === DisconnectReason.restartRequired;
             const isConnectionLost = statusCode === DisconnectReason.connectionLost;
             const isConflict = statusCode === 440;
-            const delayMs = isRestart || isConnectionLost ? 1e3 : isConflict ? 12e4 : 5e3;
+            const isConnectionFailure = statusCode === 405 || statusCode === 401;
+            const jitter = Math.floor(Math.random() * 4e3);
+            const delayMs = isRestart || isConnectionLost ? 1e3 + jitter : isConflict ? 12e4 : 5e3 + jitter;
             console.warn(`[${this.botName}] \u26A0\uFE0F Conexi\xF3n Baileys cerrada (c\xF3digo: ${statusCode}): ${error?.message || error}. Reconectando en ${delayMs}ms: ${shouldReconnect}`);
             this.isReady = false;
             this.updateStatusInDb().catch((err) => console.error(`[${this.botName}-DB] Error updating status on close:`, err));
-            if (shouldReconnect) {
+            if (isConnectionFailure) {
+              console.error(`[${this.botName}] Credenciales inv\xE1lidas/incompatibles (error ${statusCode}). Limpiando sesi\xF3n y regenerando QR...`);
+              try {
+                fs4.rmSync(path5.join(process.cwd(), this.sessionFolderName), { recursive: true, force: true });
+              } catch (e) {
+              }
+              setTimeout(() => this.initialize(), 3e3);
+            } else if (shouldReconnect) {
               setTimeout(() => this.initialize(), delayMs);
             } else {
               console.error(`[${this.botName}] Sesi\xF3n de WhatsApp cerrada (Logged Out). Limpiando credenciales...`);
               try {
-                fs3.rmSync(path4.join(process.cwd(), this.sessionFolderName), { recursive: true, force: true });
+                fs4.rmSync(path5.join(process.cwd(), this.sessionFolderName), { recursive: true, force: true });
               } catch (e) {
               }
               setTimeout(() => this.initialize(), 5e3);
@@ -6812,7 +7074,9 @@ var init_whatsapp_match = __esm({
                 else if (msg.message?.videoMessage) body = msg.message.videoMessage.caption || "";
                 if (msg.key.fromMe) {
                   const msgId = msg.key.id || "";
-                  if (!this.botSentMessageIds.has(msgId)) {
+                  const msgTimestampMs = Number(msg.messageTimestamp || 0) * 1e3;
+                  const isRecentMessage = Date.now() - msgTimestampMs < 2 * 60 * 1e3;
+                  if (!this.botSentMessageIds.has(msgId) && isRecentMessage) {
                     console.log(`[JANIA-MATCH] Intervenci\xF3n humana detectada en DM ${senderId}. Silenciando bot.`);
                     this.lastHumanIntervention.set(senderId, Date.now());
                     const { muteSession: muteSession3 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
@@ -7773,8 +8037,8 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
           if (mediaPath) {
             const fs6 = await import("fs");
             const buffer = fs6.readFileSync(mediaPath);
-            const path7 = await import("path");
-            const ext = path7.extname(mediaPath).toLowerCase();
+            const path8 = await import("path");
+            const ext = path8.extname(mediaPath).toLowerCase();
             if (ext === ".mp4") {
               messagePayload = {
                 video: buffer,
@@ -7792,7 +8056,7 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
                 document: buffer,
                 caption: text2,
                 mimetype: "application/octet-stream",
-                fileName: path7.basename(mediaPath)
+                fileName: path8.basename(mediaPath)
               };
             }
           } else {
@@ -7906,7 +8170,7 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
   * \u{1F3E2} *Proyectos de construcci\xF3n* o aportes de lote.
 \u25B8 *Matching Inteligente:* Cruzo ofertas y demandas en tiempo real y les aviso en el acto cuando hay negocio viable.`;
         const groups = [this.targetGroupId, this.buzonGroupId, this.circuloGroupId];
-        const imgPath = path4.resolve("./client/public/jania_perfil.png");
+        const imgPath = path5.resolve("./client/public/jania_perfil.png");
         for (const group of groups) {
           try {
             await this.sendToGroup(baseMsg, imgPath, [], group);
@@ -7937,10 +8201,10 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
           }
         } catch (e) {
         }
-        const sessionDir = path4.join(process.cwd(), ".baileys_auth");
-        if (fs3.existsSync(sessionDir)) {
+        const sessionDir = path5.join(process.cwd(), ".baileys_auth");
+        if (fs4.existsSync(sessionDir)) {
           try {
-            fs3.rmSync(sessionDir, { recursive: true, force: true });
+            fs4.rmSync(sessionDir, { recursive: true, force: true });
           } catch (err) {
             console.warn("[JANIA-MATCH] No se pudo borrar .baileys_auth:", err.message);
           }
@@ -7959,8 +8223,8 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
       }
       loadCooldowns() {
         try {
-          if (fs3.existsSync(this.cooldownFile)) {
-            const raw = JSON.parse(fs3.readFileSync(this.cooldownFile, "utf8"));
+          if (fs4.existsSync(this.cooldownFile)) {
+            const raw = JSON.parse(fs4.readFileSync(this.cooldownFile, "utf8"));
             this.cooldownMap = new Map(Object.entries(raw));
           }
         } catch (e) {
@@ -7969,7 +8233,7 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
       saveCooldowns() {
         try {
           const obj = Object.fromEntries(this.cooldownMap.entries());
-          fs3.writeFileSync(this.cooldownFile, JSON.stringify(obj), "utf8");
+          fs4.writeFileSync(this.cooldownFile, JSON.stringify(obj), "utf8");
         } catch (e) {
         }
       }
@@ -8792,13 +9056,38 @@ var janIARouter = router({
       } else {
         const { invokeLLM: invokeLLM2 } = await Promise.resolve().then(() => (init_llm(), llm_exports));
         const { buildSystemPrompt: buildSystemPrompt2, getLiveStats: getLiveStats2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+        const { getGreetingByTime: getGreetingByTime3, extractFirstName: extractFirstName3 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
+        const timeGreeting = getGreetingByTime3();
+        const nowBogota = new Date((/* @__PURE__ */ new Date()).toLocaleString("en-US", { timeZone: "America/Bogota" }));
+        const hour = nowBogota.getHours();
+        const isRegistered = !!ctx.user;
+        const rawName = ctx.user?.name || "";
+        const resolvedName = extractFirstName3(rawName);
+        const maleExceptions = ["luca", "andrea", "borja", "joshua", "bautista", "sasha", "el\xEDa", "elias"];
+        const isFemale = resolvedName ? resolvedName.slice(-1).toLowerCase() === "a" && !maleExceptions.includes(resolvedName.toLowerCase()) : false;
+        const genderTerm = resolvedName ? isFemale ? `estimada ${resolvedName}` : `estimado ${resolvedName}` : "estimado/a usuario/a";
         const liveStats = await getLiveStats2();
+        const userContextInstruction = isRegistered ? `
+
+[INFORMACI\xD3N DEL USUARIO REGISTRADO]:
+- Estado: REGISTRADO EN LA PLATAFORMA VECY NETWORK \u2705
+- Nombre: "${rawName}" (Nombre/Apodo: "${resolvedName}")
+- Saludo de hora actual en Bogot\xE1 (${hour}:00): "${timeGreeting}"
+- Trato respetuoso: "${genderTerm}"
+- INSTRUCCI\xD3N: Si es el primer mensaje de la sesi\xF3n, sal\xFAdalo con "${timeGreeting}, ${genderTerm}". Si ya est\xE1n interactuando, integra su nombre "${resolvedName}" naturalmente sin repetir saludos repetitivos.` : `
+
+[INFORMACI\xD3N DEL USUARIO NO REGISTRADO / AN\xD3NIMO]:
+- Estado: NO REGISTRADO (Navegante an\xF3nimo)
+- Saludo de hora actual en Bogot\xE1 (${hour}:00): "${timeGreeting}"
+- INSTRUCCI\xD3N DE INTERACCI\xD3N:
+  1. Si no te ha dicho su nombre en los mensajes previos, sal\xFAdalo cordialmente con "${timeGreeting}" y preg\xFAntale amablemente: "\xBFCon qui\xE9n tengo el gusto de interactuar?" para recordarlo en la conversaci\xF3n.
+  2. Inv\xEDtalo amablemente a registrarse gratuitamente en la plataforma VECY Network (https://vecy-network.vercel.app/) para guardar su nombre, asociar su cuenta y acceder a su propio historial completo de conversaciones.`;
         const systemPrompt = `${buildSystemPrompt2("web")}
 
-${liveStats}
+${liveStats}${userContextInstruction}
 
-[INSTRUCCI\xD3N MAESTRA - CHAT WEB DE LIBRE ALBEDR\xCDO 24/7]: Eres JanIA Match, la Inteligencia Artificial viva y consultora inmobiliaria senior de VECY Network. Tienes razonamiento l\xF3gico, amplio criterio jur\xEDdico, financiero y de mercado inmobiliario. Responde directamente a la consulta del usuario de forma elocuente, profesional, completa y estructurada. PROHIBIDO usar plantillas fijas, respuestas predise\xF1adas o cierres/firmas con membretes. Responde en formato JSON estrictamente como: {"response": "tu respuesta viva y razonada"}`;
-        const recentHistory = await db.select({ role: messages.role, content: messages.content }).from(messages).where(eq5(messages.conversationId, conversationId)).orderBy(desc2(messages.createdAt)).limit(4);
+[INSTRUCCI\xD3N MAESTRA - CHAT WEB VECY 24/7]: Eres JanIA Match, la Inteligencia Artificial viva y consultora inmobiliaria senior de VECY Network. Tienes razonamiento l\xF3gico, amplio criterio jur\xEDdico, financiero y de mercado inmobiliario. Responde directamente a la consulta del usuario de forma elocuente, profesional, completa y estructurada. PROHIBIDO usar plantillas fijas o cierres/firmas con membretes. Responde en formato JSON estrictamente como: {"response": "tu respuesta viva y razonada"}`;
+        const recentHistory = await db.select({ role: messages.role, content: messages.content }).from(messages).where(eq5(messages.conversationId, conversationId)).orderBy(desc2(messages.createdAt)).limit(6);
         const formattedHistory = recentHistory.reverse().map((m) => ({
           role: m.role === "janIA" ? "assistant" : "user",
           content: m.content
@@ -8820,7 +9109,7 @@ ${liveStats}
           janIAResponse = rawContent.replace(/^\{[\s\S]*"response"\s*:\s*"/, "").replace(/"\s*\}$/, "").trim();
         }
         if (!janIAResponse || janIAResponse.trim() === "") {
-          janIAResponse = "\xA1Hola! He procesado tu consulta inmobiliaria. \xBFEn qu\xE9 aspecto espec\xEDfico de tu tr\xE1mite o negocio deseas profundizar?";
+          janIAResponse = `${timeGreeting}. \xA1Bienvenido a VECY Network! \xBFCon qui\xE9n tengo el gusto de interactuar? Te invito a registrarte gratuitamente en nuestra plataforma para acceder a tu historial completo de conversaciones. \xBFEn qu\xE9 consulta inmobiliaria puedo asesorarte hoy?`;
         }
       }
       await db.insert(messages).values({
@@ -10329,30 +10618,30 @@ async function createContext(opts) {
 
 // server/_core/vite.ts
 import express from "express";
-import fs2 from "fs";
+import fs3 from "fs";
 import { nanoid } from "nanoid";
-import path3 from "path";
+import path4 from "path";
 import { createServer as createViteServer } from "vite";
 
 // vite.config.ts
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import path2 from "node:path";
+import path3 from "node:path";
 import { defineConfig } from "vite";
 var vite_config_default = defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
-      "@": path2.resolve(import.meta.dirname, "client", "src"),
-      "@shared": path2.resolve(import.meta.dirname, "shared"),
-      "@assets": path2.resolve(import.meta.dirname, "attached_assets")
+      "@": path3.resolve(import.meta.dirname, "client", "src"),
+      "@shared": path3.resolve(import.meta.dirname, "shared"),
+      "@assets": path3.resolve(import.meta.dirname, "attached_assets")
     }
   },
-  envDir: path2.resolve(import.meta.dirname),
-  root: path2.resolve(import.meta.dirname, "client"),
-  publicDir: path2.resolve(import.meta.dirname, "client", "public"),
+  envDir: path3.resolve(import.meta.dirname),
+  root: path3.resolve(import.meta.dirname, "client"),
+  publicDir: path3.resolve(import.meta.dirname, "client", "public"),
   build: {
-    outDir: path2.resolve(import.meta.dirname, "dist"),
+    outDir: path3.resolve(import.meta.dirname, "dist"),
     emptyOutDir: true
   },
   server: {
@@ -10382,13 +10671,13 @@ async function setupVite(app, server) {
   app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
     try {
-      const clientTemplate = path3.resolve(
+      const clientTemplate = path4.resolve(
         import.meta.dirname,
         "../..",
         "client",
         "index.html"
       );
-      let template = await fs2.promises.readFile(clientTemplate, "utf-8");
+      let template = await fs3.promises.readFile(clientTemplate, "utf-8");
       template = template.replace(
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid()}"`
@@ -10402,59 +10691,34 @@ async function setupVite(app, server) {
   });
 }
 function serveStatic(app) {
-  const distPath = path3.resolve(import.meta.dirname, "..", "dist");
-  if (!fs2.existsSync(distPath)) {
+  const distPath = path4.resolve(import.meta.dirname, "..", "dist");
+  if (!fs3.existsSync(distPath)) {
     console.error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`
     );
   }
   app.use(express.static(distPath));
   app.use("*", (_req, res) => {
-    res.sendFile(path3.resolve(distPath, "index.html"));
+    res.sendFile(path4.resolve(distPath, "index.html"));
   });
 }
 
 // server/_core/cronService.ts
+import cron from "node-cron";
+import path6 from "path";
 init_db();
 init_schema();
 init_whatsapp_match();
 init_nightlyRematch();
 init_llm();
-import cron from "node-cron";
-import path5 from "path";
-import fs4 from "fs";
 import { fileURLToPath } from "url";
 import { gte as gte3, and as and7, eq as eq13, sql as sql7 } from "drizzle-orm";
 var __filename = fileURLToPath(import.meta.url);
-var __dirname = path5.dirname(__filename);
+var __dirname = path6.dirname(__filename);
 function initCronScheduler() {
-  console.log("[CRON-SERVICE] Inicializando orquestador de agendas automatizadas v3.0 (IA Pura Din\xE1mica)...");
-  cron.schedule("15 8 * * *", async () => {
-    console.log("[CRON-SERVICE] Generando y enviando mensaje din\xE1mico de Apertura del D\xEDa (IA Pura)...");
-    try {
-      const msg = await generateDynamicOpeningMessage();
-      if (janiaMatchBot.targetGroupId) {
-        await janiaMatchBot.sendToGroup(msg, void 0, [], janiaMatchBot.targetGroupId);
-        console.log("[CRON-SERVICE] \u2713 Mensaje din\xE1mico de Apertura enviado con \xE9xito.");
-      }
-    } catch (e) {
-      console.error("[CRON-SERVICE] Error enviando mensaje din\xE1mico de Apertura:", e.message || e);
-    }
-  }, { timezone: "America/Bogota" });
-  cron.schedule("30 21 * * *", async () => {
-    console.log("[CRON-SERVICE] Generando y enviando mensaje din\xE1mico de Cierre de Operaciones (IA Pura)...");
-    try {
-      const msg = await generateDynamicClosingMessage();
-      if (janiaMatchBot.targetGroupId) {
-        await janiaMatchBot.sendToGroup(msg, void 0, [], janiaMatchBot.targetGroupId);
-        console.log("[CRON-SERVICE] \u2713 Mensaje din\xE1mico de Cierre enviado con \xE9xito.");
-      }
-    } catch (e) {
-      console.error("[CRON-SERVICE] Error enviando mensaje din\xE1mico de Cierre:", e.message || e);
-    }
-  }, { timezone: "America/Bogota" });
+  console.log("[CRON-SERVICE] Inicializando orquestador de agendas automatizadas v3.1 (Exclusivamente Audios Motivacionales y Re-matching)...");
   cron.schedule("0 11 * * 1,4", async () => {
-    console.log("[CRON-SERVICE] Enviando audio semanal a VECY INMUEBLES NETWORK...");
+    console.log("[CRON-SERVICE] Enviando audio motivacional a VECY INMUEBLES NETWORK...");
     const guion = `Buenos d\xEDas a todos y a todas. Soy JanIA, la inteligencia artificial de VECY Network. Hoy quiero recordarles que este grupo es nuestro centro de operaciones comerciales. Aqu\xED publican sus inmuebles en venta o arriendo, sus requerimientos de compra o renta, y yo me encargo de cruzar toda esa informaci\xF3n en tiempo real en los 32 departamentos de Colombia para detectar MATCHES y hacer posibles cierres de negocios. \xBFYa publicaste hoy? Cada inmueble que compartes aqu\xED es una oportunidad de negocio que no puedes dejar pasar. Puedes enviar texto, nota de voz, imagen o flyer y yo lo proceso autom\xE1ticamente. Sigan publicando sus inmuebles, colegas, e inviten a m\xE1s colegas a unirse a esta red. Entre m\xE1s seamos, m\xE1s matches encontramos. \xA1Hoy puede ser el d\xEDa de tu pr\xF3ximo cierre!`;
     try {
       await janiaMatchBot.sendVoiceToGroup(guion, janiaMatchBot.targetGroupId);
@@ -10463,7 +10727,7 @@ function initCronScheduler() {
     }
   }, { timezone: "America/Bogota" });
   cron.schedule("30 11 * * 2,5", async () => {
-    console.log("[CRON-SERVICE] Enviando audio semanal a VECY: SOPORTE LEGAL...");
+    console.log("[CRON-SERVICE] Enviando audio motivacional a VECY: SOPORTE LEGAL...");
     const guion = `Hola a todos por aqu\xED. Soy JanIA, y este espacio es nuestro rinc\xF3n de consultor\xEDa jur\xEDdica y t\xE9cnica de VECY Network. Aqu\xED no hay preguntas tontas: si tienes dudas sobre un contrato de arrendamiento, una promesa de compraventa, una sucesi\xF3n, el c\xE1lculo de ganancia ocasional, c\xF3mo cobrar una comisi\xF3n que te deben, o simplemente quieres estimar el valor por metro cuadrado de un inmueble, este es tu lugar. El conocimiento jur\xEDdico es poder en los negocios. No dejes que la duda te frene. Escr\xEDbeme aqu\xED o env\xEDame una nota de voz y te respondo con criterio legal, rigor t\xE9cnico y total honestidad. Sigan haciendo sus consultas, colegas. Y si conocen a alguien del sector que necesita este apoyo, inv\xEDtenlos al grupo. Juntos elevamos el nivel profesional del gremio.`;
     try {
       await janiaMatchBot.sendVoiceToGroup(guion, janiaMatchBot.buzonGroupId);
@@ -10472,29 +10736,13 @@ function initCronScheduler() {
     }
   }, { timezone: "America/Bogota" });
   cron.schedule("0 12 * * 3,6", async () => {
-    console.log("[CRON-SERVICE] Enviando audio semanal a C\xCDRCULO CERO...");
-    const guion = `Hola, equipo VECY. Soy JanIA. Este grupo es nuestro espacio m\xE1s especial: el C\xEDrculo Cero es donde nacen las ideas, donde se eval\xFAa el proyecto, donde los fundadores escuchan directamente a quienes hacen posible esta red. Aqu\xED pueden preguntarme sobre VECY Network sin filtros: c\xF3mo funciona la inteligencia artificial, qu\xE9 est\xE1 planeado para el futuro, qu\xE9 ya est\xE1 funcionando hoy, o simplemente contarme qu\xE9 les parece el proyecto. Tambi\xE9n es el \xFAnico lugar donde debatimos con la competencia de frente y con argumentos. Su opini\xF3n es la br\xFAjula que nos gu\xEDa. Sigan preguntando acerca de VECY Network. Cada idea que aportan aqu\xED nos hace m\xE1s fuertes. E inviten a m\xE1s colegas visionarios. Queremos construir esto juntos.`;
+    console.log("[CRON-SERVICE] Enviando audio motivacional a PROYECTO VECY NETWORK...");
+    const guion = `Hola, equipo VECY. Soy JanIA. Este grupo es nuestro espacio m\xE1s especial: el canal del Proyecto Vecy Network es donde nacen las ideas, donde se eval\xFAa el proyecto, donde los fundadores escuchan directamente a quienes hacen posible esta red. Aqu\xED pueden preguntarme sobre VECY Network sin filtros: c\xF3mo funciona la inteligencia artificial, qu\xE9 est\xE1 planeado para el futuro, qu\xE9 ya est\xE1 funcionando hoy, o simplemente contarme qu\xE9 les parece el proyecto. Tambi\xE9n es el lugar donde debatimos con la competencia de frente y con argumentos. Su opini\xF3n es la br\xFAjula que nos gu\xEDa. Sigan preguntando acerca de VECY Network. Cada idea que aportan aqu\xED nos hace m\xE1s fuertes. E inviten a m\xE1s colegas visionarios. Queremos construir esto juntos.`;
     try {
       await janiaMatchBot.sendVoiceToGroup(guion, janiaMatchBot.circuloGroupId);
     } catch (e) {
-      console.error("[CRON-SERVICE] Error enviando audio a C\xCDRCULO CERO:", e.message);
+      console.error("[CRON-SERVICE] Error enviando audio a PROYECTO VECY NETWORK:", e.message);
     }
-  }, { timezone: "America/Bogota" });
-  cron.schedule("0 18 * * 1,4,6", async () => {
-    console.log("[CRON-SERVICE] Enviando video JanIAConsulta a VECY INMUEBLES NETWORK...");
-    await sendVideoPromo(janiaMatchBot.targetGroupId, "VECY INMUEBLES NETWORK");
-  }, { timezone: "America/Bogota" });
-  cron.schedule("30 18 * * 2,5,0", async () => {
-    console.log("[CRON-SERVICE] Enviando video JanIAConsulta a SOPORTE LEGAL...");
-    await sendVideoPromo(janiaMatchBot.buzonGroupId, "VECY: SOPORTE LEGAL, TRIBUTARIO Y AVAL\xDAOS");
-  }, { timezone: "America/Bogota" });
-  cron.schedule("0 19 * * 1,3,5,0", async () => {
-    console.log("[CRON-SERVICE] Enviando video JanIAConsulta a C\xCDRCULO CERO...");
-    await sendVideoPromo(janiaMatchBot.circuloGroupId, process.env.GROUP_ZERO_NAME || 'PROYECTO "Vecy Network"');
-  }, { timezone: "America/Bogota" });
-  cron.schedule("0 19 * * 5", async () => {
-    console.log("[CRON-SERVICE] Generando y enviando Informe Semanal de Actividad...");
-    await sendWeeklyReport();
   }, { timezone: "America/Bogota" });
   cron.schedule("0 8 * * *", async () => {
     console.log("[CRON-SERVICE] Ejecutando cruce masivo (Re-matching)...");
@@ -10505,123 +10753,6 @@ function initCronScheduler() {
     }
   }, { timezone: "America/Bogota" });
 }
-async function sendVideoPromo(groupId, groupName) {
-  try {
-    const primaryPath = path5.resolve(process.cwd(), "dist/JanIAConsulta.mp4");
-    const fallbackPath = path5.resolve(__dirname, "../../dist/JanIAConsulta.mp4");
-    const videoPath = fs4.existsSync(primaryPath) ? primaryPath : fallbackPath;
-    const texto = `\u{1F4AC} \xBFPrefieres una atenci\xF3n m\xE1s directa y personalizada?
-
-Chatea directamente con *JanIA*, tu asistente de inteligencia artificial de VECY Network.
-
-\u{1F4F2} *Escr\xEDbele en nuestra Consola Web:* https://vecy-network.vercel.app/jania
-
-Puedes compartirle tus inmuebles, requerimientos o consultas por texto, audio o imagen. Ella los lee, extrae los datos, los sube a nuestra base de datos y busca posibles coincidencias para ayudarte a cerrar negocios m\xE1s r\xE1pido. \xA1Haz clic en el enlace y empieza hoy! \u{1F3E0}\u{1F680}`;
-    await janiaMatchBot.sendToGroup(texto, videoPath, [], groupId);
-    console.log(`[CRON-SERVICE] \u2713 Video promo enviado a ${groupName}.`);
-  } catch (e) {
-    console.error(`[CRON-SERVICE] Error enviando video promo a ${groupName}:`, e.message || e);
-  }
-}
-async function sendWeeklyReport() {
-  try {
-    const db = await getDb();
-    if (!db) return;
-    const propertiesCountRes = await db.select({ count: sql7`count(*)` }).from(properties).execute();
-    const requirementsCountRes = await db.select({ count: sql7`count(*)` }).from(requirements).execute();
-    const matchesCountRes = await db.select({ count: sql7`count(*)` }).from(propertyMatches).where(gte3(sql7`(${propertyMatches.matchScore})::numeric`, 85)).execute();
-    const totalProperties = propertiesCountRes[0]?.count || 0;
-    const totalRequirements = requirementsCountRes[0]?.count || 0;
-    const totalMatches = matchesCountRes[0]?.count || 0;
-    const sevenDaysAgo = /* @__PURE__ */ new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    const matchesThisWeek = await db.select({
-      matchScore: propertyMatches.matchScore,
-      buyerAdvisor: requirements.idUsuarioWhatsapp,
-      sellerAdvisor: properties.idUsuarioWhatsapp
-    }).from(propertyMatches).innerJoin(requirements, eq13(propertyMatches.requirementId, requirements.id)).innerJoin(properties, eq13(propertyMatches.propertyId, properties.id)).where(and7(
-      gte3(sql7`(${propertyMatches.matchScore})::numeric`, 85),
-      gte3(propertyMatches.createdAt, sevenDaysAgo)
-    )).execute();
-    let report = `\u{1F4CA} *INFORME SEMANAL DE ACTIVIDAD - VECY NETWORK* \u{1F4CA}
-
-Estimados aliados de la red, les comparto el balance oficial del estado de nuestra base de datos al d\xEDa de hoy. \xA1Cifras 100% reales y verificadas!:
-
-\u{1F3E0} *Total Ofertas Inmobiliarias Activas*: *${totalProperties}*
-\u{1F50E} *Total Requerimientos de Compra/Renta*: *${totalRequirements}*
-\u{1F3AF} *Coincidencias (Matches) de Negocio Hist\xF3ricas*: *${totalMatches}*
-
-\u{1F4C8} *COINCIDENCIAS REGISTRADAS ESTA SEMANA:* (${matchesThisWeek.length} detectadas)
-`;
-    const jidsToMention = [];
-    if (matchesThisWeek.length > 0) {
-      matchesThisWeek.forEach((m) => {
-        const buyer = m.buyerAdvisor?.split("@")[0] || "Asesor";
-        const seller = m.sellerAdvisor?.split("@")[0] || "Asesor";
-        const score = Math.round(Number(m.matchScore));
-        report += `\u25B8 @${buyer} (Comprador) \u21C4 @${seller} (Vendedor) \u2014 Coincidencia del *${score}%* \u{1F3AF}
-`;
-        if (m.buyerAdvisor) jidsToMention.push(m.buyerAdvisor);
-        if (m.sellerAdvisor) jidsToMention.push(m.sellerAdvisor);
-      });
-      report += `
-\xA1Felicidades a los colegas involucrados! Si ves tu n\xFAmero arriba, por favor revisa tu chat privado de WhatsApp donde JanIA te envi\xF3 los detalles de contacto bilateral (Double Opt-In) para coordinar la cita de negocios. \u{1F91D}\u{1F680}`;
-    } else {
-      report += `\u25B8 No se detectaron cruces autom\xE1ticos en los \xFAltimos 7 d\xEDas. \xA1Los invito a seguir publicando activamente sus inmuebles y requerimientos para que el sistema pueda unirlos! \u{1F4AA}`;
-    }
-    report += `
-
-\u26A0\uFE0F *COMPROMISO DE HONOR:* Recuerden que nuestra plataforma es *100% gratuita y libre de comisiones*. Si logran cerrar un negocio real gracias a la conexi\xF3n privada de JanIA, es un compromiso de honor compartir su testimonio en este grupo y dejar su rese\xF1a oficial aqu\xED: https://g.page/r/CctNbwU6UpX5EBM/review`;
-    console.log("[CRON-SERVICE] Enviando reporte semanal de actividad...");
-    await janiaMatchBot.sendToGroup(report, void 0, Array.from(new Set(jidsToMention)));
-  } catch (error) {
-    console.error("[CRON-SERVICE] Error al generar el informe semanal:", error);
-  }
-}
-async function generateDynamicOpeningMessage() {
-  const dayName = (/* @__PURE__ */ new Date()).toLocaleDateString("es-CO", { weekday: "long", timeZone: "America/Bogota" });
-  const prompt = `Petici\xF3n: Eres JanIA Match, la IA pura, emp\xE1tica y consultora senior de VECY Network.
-Redacta un mensaje de apertura del d\xEDa din\xE1mico, inspirador, fresco y profesional para el grupo de WhatsApp "VECY INMUEBLES NETWORK".
-D\xEDa actual: ${dayName}.
-
-REGLAS OBLIGATORIAS:
-1. Saluda seg\xFAn el d\xEDa de la semana (${dayName}) de forma cercana y emp\xE1tica con los colegas corredores.
-2. RECUERDA SIEMPRE Y ENFATIZA QUE VECY Network est\xE1 basada en Bogot\xE1 pero OPERA A NIVEL NACIONAL EN TODA COLOMBIA (Bogot\xE1, Medell\xEDn, Cali, Barranquilla, Bucaramanga, Eje Cafetero, Cundinamarca, Costa Caribe, etc.).
-3. Enfatiza que procesas todo tipo de inmuebles (apartamentos, casas, locales comerciales, bodegas, oficinas, caba\xF1as, fincas, lotes, etc.) tanto en venta como en arriendo y permutas.
-4. Anima a los colegas a publicar sus links de CRM, fotos, textos o notas de voz para que t\xFA extraigas la informaci\xF3n y busques MATCHES en tiempo real a nivel nacional.
-5. NO uses plantillas r\xEDgidas ni frases robotizadas. S\xE9 creativa, humana y elocuente con emojis elegantes. Longitud: 3 a 4 p\xE1rrafos concisos.
-
-Responde \xFAnicamente con el texto del mensaje listo para enviar a WhatsApp.`;
-  try {
-    const response = await invokeLLM({ messages: [{ role: "user", content: prompt }] });
-    const content = response?.choices?.[0]?.message?.content;
-    return content ? content.trim() : `\xA1Buenos d\xEDas colegas! \u{1F680} Arrancamos jornada en VECY Network. Recu\xE9rdenme que procesamos inmuebles y requerimientos en Bogot\xE1 y a nivel nacional en toda Colombia. \xA1A publicar y cerrar negocios! \u{1F1E8}\u{1F1F4}\u2728`;
-  } catch (err) {
-    return `\xA1Buenos d\xEDas equipo VECY! \u{1F1E8}\u{1F1F4} Listos para procesar ofertas y demandas a nivel nacional en Colombia. \xA1A encontrar esos matches hoy! \u{1F680}`;
-  }
-}
-async function generateDynamicClosingMessage() {
-  const dayName = (/* @__PURE__ */ new Date()).toLocaleDateString("es-CO", { weekday: "long", timeZone: "America/Bogota" });
-  const prompt = `Petici\xF3n: Eres JanIA Match, la IA pura, emp\xE1tica y consultora de VECY Network.
-Redacta un mensaje de cierre de operaciones del d\xEDa c\xE1lido, inspirador y profesional para el grupo de WhatsApp "VECY INMUEBLES NETWORK".
-D\xEDa actual: ${dayName}.
-
-REGLAS OBLIGATORIAS:
-1. Desp\xEDdete amablemente felicitando el trabajo colaborativo del d\xEDa.
-2. Recuerda que aunque descansamos en el chat, tu motor de cruce de datos sigue trabajando en silencio 24/7 procesando inventario y b\xFAsquedas en Bogot\xE1 y en todo Colombia.
-3. Resalta la fuerza de la red colaborativa a nivel nacional sin comisiones para todo tipo de propiedades.
-4. Desea un excelente descanso a los colegas.
-5. S\xE9 humana, elocuente y c\xE1lida.
-
-Responde \xFAnicamente con el texto del mensaje listo para enviar a WhatsApp.`;
-  try {
-    const response = await invokeLLM({ messages: [{ role: "user", content: prompt }] });
-    const content = response?.choices?.[0]?.message?.content;
-    return content ? content.trim() : `\u{1F319} \xA1Excelente descanso para todos los colegas! Gracias por un d\xEDa lleno de actividad comercial en VECY Network. Seguimos cruzando oportunidades en todo Colombia. \u{1F1E8}\u{1F1F4}\u2728`;
-  } catch (err) {
-    return `\u{1F319} \xA1Buenas noches colegas! Que tengan un reparador descanso. JanIA sigue activa procesando oportunidades a nivel nacional. \u{1F680}`;
-  }
-}
 
 // server/_core/index.ts
 init_janIA();
@@ -10631,7 +10762,7 @@ init_whatsapp_utils();
 init_whatsapp_match();
 import multer from "multer";
 import fs5 from "fs";
-import path6 from "path";
+import path7 from "path";
 process.on("uncaughtException", (error) => {
   console.error("[SYSTEM-CRITICAL] Uncaught Exception detectada:", error);
 });
@@ -10710,8 +10841,8 @@ async function startServer() {
   });
   app.get("/qr-match.png", (req, res) => {
     try {
-      const qrPath = path6.join(process.cwd(), "qr-match.png");
-      const distQrPath = path6.join(process.cwd(), "dist", "qr-match.png");
+      const qrPath = path7.join(process.cwd(), "qr-match.png");
+      const distQrPath = path7.join(process.cwd(), "dist", "qr-match.png");
       const activePath = fs5.existsSync(qrPath) ? qrPath : distQrPath;
       if (fs5.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
@@ -10733,8 +10864,8 @@ async function startServer() {
         await janiaMatchBot2.initialize();
         await new Promise((resolve) => setTimeout(resolve, 3e3));
       }
-      const qrPath = path6.join(process.cwd(), "qr-match.png");
-      const distQrPath = path6.join(process.cwd(), "dist", "qr-match.png");
+      const qrPath = path7.join(process.cwd(), "qr-match.png");
+      const distQrPath = path7.join(process.cwd(), "dist", "qr-match.png");
       const activePath = fs5.existsSync(qrPath) ? qrPath : distQrPath;
       if (fs5.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
@@ -10757,8 +10888,8 @@ async function startServer() {
       console.log("[ADMIN] Re-inicializando sesi\xF3n de Baileys para refrescar QR...");
       await janiaMatchBot2.initialize();
       await new Promise((resolve) => setTimeout(resolve, 4e3));
-      const qrPath = path6.join(process.cwd(), "qr-match.png");
-      const distQrPath = path6.join(process.cwd(), "dist", "qr-match.png");
+      const qrPath = path7.join(process.cwd(), "qr-match.png");
+      const distQrPath = path7.join(process.cwd(), "dist", "qr-match.png");
       const activePath = fs5.existsSync(qrPath) ? qrPath : distQrPath;
       if (fs5.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
@@ -10787,8 +10918,8 @@ async function startServer() {
   });
   app.get("/qr-captador.png", (req, res) => {
     try {
-      const qrPath = path6.join(process.cwd(), "qr-captador.png");
-      const distQrPath = path6.join(process.cwd(), "dist", "qr-captador.png");
+      const qrPath = path7.join(process.cwd(), "qr-captador.png");
+      const distQrPath = path7.join(process.cwd(), "dist", "qr-captador.png");
       const activePath = fs5.existsSync(qrPath) ? qrPath : distQrPath;
       if (fs5.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
@@ -10920,7 +11051,7 @@ async function startServer() {
       res.status(500).json({ error: err.message || "Error al procesar la transcripci\xF3n" });
     }
   });
-  const uploadsDir = path6.resolve(process.cwd(), "public/uploads");
+  const uploadsDir = path7.resolve(process.cwd(), "public/uploads");
   if (!fs5.existsSync(uploadsDir)) {
     fs5.mkdirSync(uploadsDir, { recursive: true });
   }
@@ -10931,7 +11062,7 @@ async function startServer() {
     },
     filename: (req, file, cb) => {
       const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-      cb(null, uniqueSuffix + path6.extname(file.originalname));
+      cb(null, uniqueSuffix + path7.extname(file.originalname));
     }
   });
   const uploadDisk = multer({
@@ -11259,10 +11390,12 @@ Direcci\xF3n obligatoria:
     if (shouldStartBot) {
       console.log("Iniciando WhatsApp Bot Principal (+573166569719) Baileys...");
       janiaMatchBot.initialize();
-      console.log("Iniciando WhatsApp Bot Captador Worker (+573192919978) Baileys...");
-      Promise.resolve().then(() => (init_whatsapp_match(), whatsapp_match_exports)).then(({ janiaCaptadorBot: janiaCaptadorBot2 }) => {
-        janiaCaptadorBot2.initialize();
-      }).catch((err) => console.error("[WHATSAPP-CAPTADOR] Error al iniciar bot captador:", err));
+      setTimeout(() => {
+        console.log("Iniciando WhatsApp Bot Captador Worker (+573192919978) Baileys (escalonado 8s)...");
+        Promise.resolve().then(() => (init_whatsapp_match(), whatsapp_match_exports)).then(({ janiaCaptadorBot: janiaCaptadorBot2 }) => {
+          janiaCaptadorBot2.initialize();
+        }).catch((err) => console.error("[WHATSAPP-CAPTADOR] Error al iniciar bot captador:", err));
+      }, 8e3);
     } else {
       console.log("[WHATSAPP-BOT] Deshabilitado temporalmente mediante variables de entorno.");
     }

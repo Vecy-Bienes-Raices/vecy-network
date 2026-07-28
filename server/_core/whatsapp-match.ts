@@ -187,8 +187,16 @@ export class JaniaMatchBot {
         console.log(`[${this.botName}] 💾 Guardadas credenciales iniciales de Baileys en ${this.sessionFolderName}.`);
       }
       
-      const version: any = [2, 3000, 1015901307];
-      console.log(`[${this.botName}] Usando versión estable de WhatsApp Web: ${version.join('.')}`);
+      let version: any = [2, 3000, 1044015310];
+      try {
+        const fetched = await fetchLatestBaileysVersion();
+        if (fetched && fetched.version) {
+          version = fetched.version;
+        }
+      } catch (e) {
+        console.warn(`[${this.botName}] ⚠️ No se pudo obtener la última versión dinámicamente, usando fallback ${version.join('.')}`);
+      }
+      console.log(`[${this.botName}] Usando versión activa de WhatsApp Web: ${Array.isArray(version) ? version.join('.') : version}`);
 
       console.log(`[${this.botName}] Estableciendo conexión por WebSocket...`);
       const silentLogger = {
@@ -208,12 +216,7 @@ export class JaniaMatchBot {
         version,
         logger: silentLogger as any,
         printQRInTerminal: false, // Lo manejamos nosotros de forma personalizada
-        browser: ['Ubuntu', 'Chrome', '122.0.6261.111'],
-        options: {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-          }
-        },
+        browser: Browsers.ubuntu('Chrome'),
         syncFullHistory: false,
         markOnlineOnConnect: false,
         connectTimeoutMs: 90000, // Aumentado a 90s para conexiones lentas
