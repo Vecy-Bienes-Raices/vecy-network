@@ -6697,6 +6697,7 @@ import _baileys, {
   DisconnectReason,
   delay,
   downloadMediaMessage,
+  fetchLatestWaWebVersion,
   Browsers
 } from "@whiskeysockets/baileys";
 import qrcodeTerminal from "qrcode-terminal";
@@ -6829,6 +6830,14 @@ var init_whatsapp_match = __esm({
             await saveCreds();
             console.log(`[${this.botName}] \u{1F4BE} Guardadas credenciales iniciales de Baileys en ${this.sessionFolderName}.`);
           }
+          let version = [2, 3e3, 1044015310];
+          try {
+            const fetched = await fetchLatestWaWebVersion();
+            if (fetched && fetched.version) {
+              version = fetched.version;
+            }
+          } catch (e) {
+          }
           console.log(`[${this.botName}] Estableciendo conexi\xF3n por WebSocket...`);
           const silentLogger = {
             level: "silent",
@@ -6850,10 +6859,11 @@ var init_whatsapp_match = __esm({
           };
           this.sock = makeWASocket({
             auth: state,
+            version,
             logger: silentLogger,
             printQRInTerminal: false,
             // Lo manejamos nosotros de forma personalizada
-            browser: Browsers.macOS("Desktop"),
+            browser: Browsers.ubuntu("Chrome"),
             syncFullHistory: false,
             markOnlineOnConnect: false,
             connectTimeoutMs: 9e4,

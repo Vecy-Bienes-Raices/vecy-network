@@ -9,6 +9,7 @@ import _baileys, {
   delay,
   downloadMediaMessage,
   proto,
+  fetchLatestWaWebVersion,
   fetchLatestBaileysVersion,
   Browsers
 } from '@whiskeysockets/baileys';
@@ -189,6 +190,14 @@ export class JaniaMatchBot {
         console.log(`[${this.botName}] 💾 Guardadas credenciales iniciales de Baileys en ${this.sessionFolderName}.`);
       }
       
+      let version: any = [2, 3000, 1044015310];
+      try {
+        const fetched = await fetchLatestWaWebVersion();
+        if (fetched && fetched.version) {
+          version = fetched.version;
+        }
+      } catch (e) {}
+
       console.log(`[${this.botName}] Estableciendo conexión por WebSocket...`);
       const silentLogger = {
         level: 'silent',
@@ -204,9 +213,10 @@ export class JaniaMatchBot {
 
       this.sock = makeWASocket({
         auth: state,
+        version,
         logger: silentLogger as any,
         printQRInTerminal: false, // Lo manejamos nosotros de forma personalizada
-        browser: Browsers.macOS('Desktop'),
+        browser: Browsers.ubuntu('Chrome'),
         syncFullHistory: false,
         markOnlineOnConnect: false,
         connectTimeoutMs: 90000, // Aumentado a 90s para conexiones lentas
