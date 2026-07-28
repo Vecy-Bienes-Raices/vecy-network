@@ -182,9 +182,14 @@ export class JaniaMatchBot {
         console.log(`[${this.botName}] 💾 Guardadas credenciales iniciales de Baileys en ${this.sessionFolderName}.`);
       }
       
-      // Pinned stable WA Web version [2, 2413, 51] to prevent 405 WebSocket connection failure
-      const version: any = [2, 2413, 51];
-      console.log(`[${this.botName}] Usando versión estable fija de WhatsApp Web: ${version.join('.')}`);
+      let version: any = [2, 3000, 1017531287];
+      try {
+        const { version: latestVersion } = await fetchLatestBaileysVersion();
+        version = latestVersion;
+        console.log(`[${this.botName}] Usando versión de WhatsApp Web: ${version.join('.')}`);
+      } catch (e: any) {
+        console.warn(`[${this.botName}] Usando versión fallback de WhatsApp Web.`);
+      }
 
       console.log(`[${this.botName}] Estableciendo conexión por WebSocket...`);
       const silentLogger = {
@@ -204,7 +209,7 @@ export class JaniaMatchBot {
         version,
         logger: silentLogger as any,
         printQRInTerminal: false, // Lo manejamos nosotros de forma personalizada
-        browser: Browsers.macOS(this.isWorkerOnly ? 'Captador Worker' : 'Desktop'),
+        browser: Browsers.ubuntu('Chrome'),
         syncFullHistory: false,
         markOnlineOnConnect: false,
         connectTimeoutMs: 90000, // Aumentado a 90s para conexiones lentas
