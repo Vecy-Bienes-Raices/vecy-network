@@ -6692,7 +6692,7 @@ __export(whatsapp_match_exports, {
   janiaMatchBot: () => janiaMatchBot
 });
 import dns from "dns";
-import makeWASocket, {
+import _baileys, {
   useMultiFileAuthState,
   DisconnectReason,
   delay,
@@ -6705,7 +6705,7 @@ import fs4 from "fs";
 import path5 from "path";
 import { eq as eq11 } from "drizzle-orm";
 import QRCode from "qrcode";
-var SERVER_BOOT_TIME, cleanJid, outgoingQueue, JaniaMatchBot, janiaMatchBot, janiaCaptadorBot;
+var makeWASocket, SERVER_BOOT_TIME, cleanJid, outgoingQueue, JaniaMatchBot, janiaMatchBot, janiaCaptadorBot;
 var init_whatsapp_match = __esm({
   "server/_core/whatsapp-match.ts"() {
     "use strict";
@@ -6718,6 +6718,7 @@ var init_whatsapp_match = __esm({
       dns.setDefaultResultOrder("ipv4first");
     } catch (e) {
     }
+    makeWASocket = typeof _baileys === "function" ? _baileys : _baileys?.default || _baileys;
     SERVER_BOOT_TIME = Math.floor(Date.now() / 1e3) - 120;
     cleanJid = (jid) => {
       if (!jid) return "";

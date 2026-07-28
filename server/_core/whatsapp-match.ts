@@ -3,7 +3,7 @@ try {
   dns.setDefaultResultOrder('ipv4first');
 } catch (e) {}
 
-import makeWASocket, { 
+import _baileys, { 
   useMultiFileAuthState, 
   DisconnectReason, 
   delay,
@@ -12,6 +12,8 @@ import makeWASocket, {
   fetchLatestBaileysVersion,
   Browsers
 } from '@whiskeysockets/baileys';
+
+const makeWASocket = typeof _baileys === 'function' ? _baileys : ((_baileys as any)?.default || _baileys);
 import { Boom } from '@hapi/boom';
 import qrcodeTerminal from 'qrcode-terminal';
 import fs from 'fs';
