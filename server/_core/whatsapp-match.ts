@@ -14,6 +14,7 @@ import _baileys, {
 } from '@whiskeysockets/baileys';
 
 const makeWASocket = typeof _baileys === 'function' ? _baileys : ((_baileys as any)?.default || _baileys);
+import pino from 'pino';
 import { Boom } from '@hapi/boom';
 import qrcodeTerminal from 'qrcode-terminal';
 import fs from 'fs';
@@ -204,7 +205,7 @@ export class JaniaMatchBot {
 
       this.sock = makeWASocket({
         auth: state,
-        logger: silentLogger as any,
+        logger: pino({ level: 'info' }) as any,
         printQRInTerminal: false, // Lo manejamos nosotros de forma personalizada
         browser: Browsers.macOS('Desktop'),
         syncFullHistory: false,
