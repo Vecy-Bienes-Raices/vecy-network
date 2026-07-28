@@ -240,12 +240,10 @@ export class JaniaMatchBot {
         // Guardar el QR como imagen PNG accesible desde el navegador
         try {
           const qrPath = path.join(process.cwd(), this.qrFileName);
-          QRCode.toFile(qrPath, qr, { width: 400, margin: 2 }, (err: any) => {
-            if (err) console.error(`[${this.botName}] Error guardando QR PNG:`, err.message);
-            else console.log(`[${this.botName}] 📸 QR guardado como ${this.qrFileName} en la raíz del proyecto.`);
-          });
+          await QRCode.toFile(qrPath, qr, { width: 400, margin: 2 });
+          console.log(`[${this.botName}] 📸 QR guardado como ${this.qrFileName} en la raíz del proyecto.`);
         } catch (e: any) {
-          console.warn(`[${this.botName}] qrcode no disponible para PNG.`, e.message);
+          console.warn(`[${this.botName}] Error guardando QR PNG:`, e.message);
         }
       }
 

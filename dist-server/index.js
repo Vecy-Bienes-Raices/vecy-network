@@ -6697,7 +6697,6 @@ import _baileys, {
   DisconnectReason,
   delay,
   downloadMediaMessage,
-  fetchLatestBaileysVersion,
   Browsers
 } from "@whiskeysockets/baileys";
 import qrcodeTerminal from "qrcode-terminal";
@@ -6830,16 +6829,6 @@ var init_whatsapp_match = __esm({
             await saveCreds();
             console.log(`[${this.botName}] \u{1F4BE} Guardadas credenciales iniciales de Baileys en ${this.sessionFolderName}.`);
           }
-          let version = [2, 3e3, 1044015310];
-          try {
-            const fetched = await fetchLatestBaileysVersion();
-            if (fetched && fetched.version) {
-              version = fetched.version;
-            }
-          } catch (e) {
-            console.warn(`[${this.botName}] \u26A0\uFE0F No se pudo obtener la \xFAltima versi\xF3n din\xE1micamente, usando fallback ${version.join(".")}`);
-          }
-          console.log(`[${this.botName}] Usando versi\xF3n activa de WhatsApp Web: ${Array.isArray(version) ? version.join(".") : version}`);
           console.log(`[${this.botName}] Estableciendo conexi\xF3n por WebSocket...`);
           const silentLogger = {
             level: "silent",
@@ -6861,7 +6850,6 @@ var init_whatsapp_match = __esm({
           };
           this.sock = makeWASocket({
             auth: state,
-            version,
             logger: silentLogger,
             printQRInTerminal: false,
             // Lo manejamos nosotros de forma personalizada
@@ -6896,12 +6884,10 @@ var init_whatsapp_match = __esm({
             qrcodeTerminal.generate(qr, { small: true });
             try {
               const qrPath = path5.join(process.cwd(), this.qrFileName);
-              QRCode.toFile(qrPath, qr, { width: 400, margin: 2 }, (err) => {
-                if (err) console.error(`[${this.botName}] Error guardando QR PNG:`, err.message);
-                else console.log(`[${this.botName}] \u{1F4F8} QR guardado como ${this.qrFileName} en la ra\xEDz del proyecto.`);
-              });
+              await QRCode.toFile(qrPath, qr, { width: 400, margin: 2 });
+              console.log(`[${this.botName}] \u{1F4F8} QR guardado como ${this.qrFileName} en la ra\xEDz del proyecto.`);
             } catch (e) {
-              console.warn(`[${this.botName}] qrcode no disponible para PNG.`, e.message);
+              console.warn(`[${this.botName}] Error guardando QR PNG:`, e.message);
             }
           }
           if (connection === "close") {
