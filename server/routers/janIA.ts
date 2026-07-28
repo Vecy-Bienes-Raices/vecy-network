@@ -105,24 +105,20 @@ export const janIARouter = router({
           // Direct ultra-fast LLM reasoning for web consultation questions & natural chat with JanIA
           const { invokeLLM } = await import("../_core/llm");
           const { buildSystemPrompt, getLiveStats } = await import("../_core/janIA");
+          const { getGreetingByTime, extractFirstName } = await import("../_core/whatsapp-utils");
 
-          // Bogotá time calculation
+          // Bogotá time calculation (Horario Oficial Bogotá: 01:00-11:59 Buenos días, 12:00-18:59 Buenas tardes, 19:00-00:59 Buenas noches)
+          const timeGreeting = getGreetingByTime();
           const nowBogota = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Bogota" }));
           const hour = nowBogota.getHours();
-          let timeGreeting = "Buenos días";
-          if (hour >= 12 && hour < 19) {
-            timeGreeting = "Buenas tardes";
-          } else if (hour >= 19 || hour < 5) {
-            timeGreeting = "Buenas noches";
-          }
 
           const isRegistered = !!ctx.user;
           const rawName = ctx.user?.name || "";
-          const firstName = rawName.split(" ")[0].trim();
+          const resolvedName = extractFirstName(rawName);
 
           const maleExceptions = ['luca', 'andrea', 'borja', 'joshua', 'bautista', 'sasha', 'elía', 'elias'];
-          const isFemale = firstName ? (firstName.slice(-1).toLowerCase() === 'a' && !maleExceptions.includes(firstName.toLowerCase())) : false;
-          const genderTerm = firstName ? (isFemale ? `estimada ${firstName}` : `estimado ${firstName}`) : "estimado/a usuario/a";
+          const isFemale = resolvedName ? (resolvedName.slice(-1).toLowerCase() === 'a' && !maleExceptions.includes(resolvedName.toLowerCase())) : false;
+          const genderTerm = resolvedName ? (isFemale ? `estimada ${resolvedName}` : `estimado ${resolvedName}`) : "estimado/a usuario/a";
 
           const liveStats = await getLiveStats();
           const userContextInstruction = isRegistered

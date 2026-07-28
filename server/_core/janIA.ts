@@ -3301,15 +3301,11 @@ export async function processConsultingMessage(
       `  "reactionEmoji": "string (emoji recomendado)"\n` +
       `}`;
 
-    // Cálculo de saludo según hora en Colombia (UTC-5 / America/Bogota)
+    // Cálculo de saludo según hora oficial Bogotá (UTC-5):
+    // 01:00 AM - 11:59 AM: Buenos días | 12:00 PM - 06:59 PM: Buenas tardes | 07:00 PM - 12:59 AM: Buenas noches
+    const timeGreeting = getGreetingByTime();
     const nowBogota = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Bogota" }));
     const hour = nowBogota.getHours();
-    let timeGreeting = "Buenos días";
-    if (hour >= 12 && hour < 19) {
-      timeGreeting = "Buenas tardes";
-    } else if (hour >= 19 || hour < 5) {
-      timeGreeting = "Buenas noches";
-    }
 
     // Detección heurística de género según primer nombre
     const cleanFirstName = n.trim();
@@ -3476,15 +3472,11 @@ export async function processCirculoMessage(
       `  "reactionEmoji": "string (emoji recomendado)"\n` +
       `}`;
 
-    // Cálculo de saludo según hora en Colombia (UTC-5 / America/Bogota)
+    // Cálculo de saludo según hora oficial Bogotá (UTC-5):
+    // 01:00 AM - 11:59 AM: Buenos días | 12:00 PM - 06:59 PM: Buenas tardes | 07:00 PM - 12:59 AM: Buenas noches
+    const timeGreeting = getGreetingByTime();
     const nowBogota = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Bogota" }));
     const hour = nowBogota.getHours();
-    let timeGreeting = "Buenos días";
-    if (hour >= 12 && hour < 19) {
-      timeGreeting = "Buenas tardes";
-    } else if (hour >= 19 || hour < 5) {
-      timeGreeting = "Buenas noches";
-    }
 
     // Detección heurística de género según primer nombre
     const targetName = firstName || realName || "colega";

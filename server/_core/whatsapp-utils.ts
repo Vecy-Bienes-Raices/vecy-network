@@ -22,8 +22,91 @@ const COMMON_FIRST_NAMES = new Set([
   "ruben", "rubén", "ivan", "iván", "olga", "stella", "estela"
 ]);
 
+// Mapas y conjuntos para el Motor Inteligente de Nombres y Apodos Colombianos
+const NICKNAMES_MAP: Record<string, string> = {
+  "cristina": "Kristy",
+  "cristi": "Kristy",
+  "kristina": "Kristy",
+  "catalina": "Kata",
+  "catalyna": "Kata",
+  "guillermo": "Memo",
+  "maria fernanda": "Mafe",
+  "maría fernanda": "Mafe",
+  "maria paula": "Mapau",
+  "maría paula": "Mapau",
+  "maria jose": "Majo",
+  "maría josé": "Majo",
+  "juan esteban": "Juanes",
+  "alejandro": "Alejo",
+  "francisco": "Pacho",
+  "eduardo": "Eddu",
+  "isabela": "Isa",
+  "isabella": "Isa",
+  "victoria": "Vicky",
+  "beatriz": "Betty",
+  "carolina": "Caro",
+  "gabriela": "Gaby",
+  "santiago": "Santi",
+  "sebastian": "Seba",
+  "sebastián": "Seba",
+  "felipe": "Pipe",
+  "ignacio": "Nacho",
+  "jose manuel": "Josema",
+  "josé manuel": "Josema"
+};
+
+const SONOROUS_COMPOUND_BLOCKS = new Set([
+  // Femeninos Clásicos
+  "maria jose", "maría josé",
+  "maria camila", "maría camila",
+  "dulce maria", "dulce maría",
+  "ana sofia", "ana sofía",
+  "juana valentina",
+  "maria alejandra", "maría alejandra",
+  "sara sofia", "sara sofía",
+  "laura camila",
+  "maria paula", "maría paula",
+  "luisa fernanda",
+  "ana maria", "ana maría",
+  "maria angel", "maría ángel", "maría angel",
+  // Femeninos Modernos
+  "maria antonella", "maría antonella",
+  "elena sofia", "elena sofía",
+  "emily valentina",
+  "mia isabella", "mía isabella",
+  "antonella sofia", "antonella sofía",
+  // Masculinos Clásicos
+  "juan jose", "juan josé",
+  "juan david",
+  "juan pablo",
+  "carlos andres", "carlos andrés",
+  "jose luis", "josé luis",
+  "luis fernando",
+  "miguel angel", "miguel ángel",
+  "juan esteban",
+  "andres felipe", "andrés felipe",
+  "jorge eliecer", "jorge eliécer",
+  "juan manuel",
+  "julio cesar", "julio césar",
+  // Masculinos Modernos
+  "thiago andres", "thiago andrés",
+  "ian gael",
+  "maximiliano david",
+  "dylan santiago",
+  "samuel david"
+]);
+
+const NON_SONOROUS_FILLERS = new Set([
+  "milena", "patricia", "elena", "marcela", "andrea", "alberto", "alfonso",
+  "ivan", "iván", "adolfo", "antonio", "humberto", "enrique", "arturo", "armando",
+  "bernardo", "marina"
+]);
+
+const CONNECTORS = new Set(["de", "del", "la", "las", "los", "el", "van", "von", "y", "di"]);
+
 /**
- * Extrae el primer nombre (o nombre compuesto común como Lia Janeth, Ana María, Juan Pablo) de una cadena completa.
+ * Motor de Inteligencia PLN para Nombres y Apodos Colombianos.
+ * Clasifica entre apodos del argot popular, nombres compuestos sonoros y truncamiento de rellenos no sonoros.
  */
 export function extractFirstName(fullName: string): string {
   if (!fullName) return "";
@@ -41,35 +124,70 @@ export function extractFirstName(fullName: string): string {
   // Quitar números aislados
   clean = clean.replace(/[0-9]/g, "");
   if (!clean.trim()) return "";
-  
-  const words = clean.split(/\s+/).map(w => w.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, ""));
-  const filteredWords = words.filter(w => w.length > 0);
-  if (filteredWords.length === 0 || !filteredWords[0]) return "";
+
+  const words = clean.split(/\s+/).map(w => w.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, "")).filter(w => w.length > 0);
+  if (words.length === 0) return "";
+
+  // Filtrar conectores iniciales (ej. "De la Rosa")
+  let nameWords = words;
+  while (nameWords.length > 0 && CONNECTORS.has(nameWords[0].toLowerCase())) {
+    nameWords.shift();
+  }
+  if (nameWords.length === 0) return "";
 
   const cap = (w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
 
-  const w1 = filteredWords[0].toLowerCase();
-  const w2 = filteredWords[1] ? filteredWords[1].toLowerCase() : "";
+  // Caso 1: Verificar combinación de 2 palabras contra Apodos o Bloques Sonoros
+  if (nameWords.length >= 2) {
+    const twoWordKey = `${nameWords[0].toLowerCase()} ${nameWords[1].toLowerCase()}`;
 
-  // Conectores que NO forman parte del nombre de pila
-  const stopWords = new Set(["de", "del", "la", "las", "los", "el", "van", "von", "y", "di"]);
+    // Ver si la combinación completa de 2 palabras tiene apodo (ej. "Juan Esteban" -> "Juanes", "María Fernanda" -> "Mafe")
+    if (NICKNAMES_MAP[twoWordKey]) {
+      return NICKNAMES_MAP[twoWordKey];
+    }
 
-  // Si hay al menos 2 palabras válidas y la segunda no es conector ni inicial simple (ej: "Lia Janeth", "Juan Pablo")
-  if (w2 && !stopWords.has(w2) && filteredWords[1].length >= 2 && filteredWords[0].length >= 2) {
-    // Retornar nombre compuesto (ej: "Lia Janeth", "Ana María", "Juan Pablo", "Daniel Eduardo")
-    return `${cap(filteredWords[0])} ${cap(filteredWords[1])}`;
+    // Ver si es un bloque compuesto sonoro oficial (ej. "Juan Pablo", "Ana María", "María Camila")
+    if (SONOROUS_COMPOUND_BLOCKS.has(twoWordKey)) {
+      return `${cap(nameWords[0])} ${cap(nameWords[1])}`;
+    }
+
+    // Ver si el segundo nombre es un relleno NO sonoro (ej. "Luz Marina" -> "Luz", "Claudia Patricia" -> "Claudia")
+    const secondWordLower = nameWords[1].toLowerCase();
+    if (NON_SONOROUS_FILLERS.has(secondWordLower)) {
+      const firstWordLower = nameWords[0].toLowerCase();
+      if (NICKNAMES_MAP[firstWordLower]) {
+        return NICKNAMES_MAP[firstWordLower];
+      }
+      return cap(nameWords[0]);
+    }
   }
 
-  return cap(filteredWords[0]);
+  // Caso 2: Verificar palabra única (o primera palabra limpia) contra mapa de apodos
+  const firstWordLower = nameWords[0].toLowerCase();
+  if (NICKNAMES_MAP[firstWordLower]) {
+    return NICKNAMES_MAP[firstWordLower];
+  }
+
+  return cap(nameWords[0]);
 }
 
 /**
- * Devuelve un saludo contextual según la hora del día en Colombia.
+ * Devuelve un saludo contextual según la hora del día en Colombia (UTC-5 Bogotá).
+ * Horario Oficial Bogotá:
+ * - Buenos días: 01:00 AM - 11:59 AM (1 a 11)
+ * - Buenas tardes: 12:00 PM - 06:59 PM (12 a 18)
+ * - Buenas noches: 07:00 PM - 12:59 AM (19 a 0)
  */
-export function getGreetingByTime(): string {
-  const hour = new Date().getHours();
-  if (hour >= 5 && hour < 12) return "Buenos días";
-  if (hour >= 12 && hour < 19) return "Buenas tardes";
+export function getGreetingByTime(date?: Date): string {
+  const bogotaTimeStr = (date || new Date()).toLocaleString("en-US", { timeZone: "America/Bogota" });
+  const hour = new Date(bogotaTimeStr).getHours();
+
+  if (hour >= 1 && hour < 12) {
+    return "Buenos días";
+  }
+  if (hour >= 12 && hour < 19) {
+    return "Buenas tardes";
+  }
   return "Buenas noches";
 }
 
