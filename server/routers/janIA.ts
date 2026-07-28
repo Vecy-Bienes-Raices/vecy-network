@@ -102,20 +102,42 @@ export const janIARouter = router({
           wantsVoice = result.wantsVoice || false;
           voiceResponse = result.voiceResponse || janIAResponse;
         } else {
-          // Direct ultra-fast LLM reasoning for web consultation questions & natural chat with JanIA (Gemini 2.5 Flash)
+          // Direct ultra-fast LLM reasoning for web consultation questions & natural chat with JanIA
           const { invokeLLM } = await import("../_core/llm");
           const { buildSystemPrompt, getLiveStats } = await import("../_core/janIA");
 
-          const liveStats = await getLiveStats();
-          const systemPrompt = `${buildSystemPrompt('web')}\n\n${liveStats}\n\n[INSTRUCCIÓN MAESTRA - CHAT WEB DE LIBRE ALBEDRÍO 24/7]: Eres JanIA Match, la Inteligencia Artificial viva y consultora inmobiliaria senior de VECY Network. Tienes razonamiento lógico, amplio criterio jurídico, financiero y de mercado inmobiliario. Responde directamente a la consulta del usuario de forma elocuente, profesional, completa y estructurada. PROHIBIDO usar plantillas fijas, respuestas prediseñadas o cierres/firmas con membretes. Responde en formato JSON estrictamente como: {"response": "tu respuesta viva y razonada"}`;
+          // Bogotá time calculation
+          const nowBogota = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Bogota" }));
+          const hour = nowBogota.getHours();
+          let timeGreeting = "Buenos días";
+          if (hour >= 12 && hour < 19) {
+            timeGreeting = "Buenas tardes";
+          } else if (hour >= 19 || hour < 5) {
+            timeGreeting = "Buenas noches";
+          }
 
-          // Fetch recent 4 messages for conversation context without token bloat
+          const isRegistered = !!ctx.user;
+          const rawName = ctx.user?.name || "";
+          const firstName = rawName.split(" ")[0].trim();
+
+          const maleExceptions = ['luca', 'andrea', 'borja', 'joshua', 'bautista', 'sasha', 'elía', 'elias'];
+          const isFemale = firstName ? (firstName.slice(-1).toLowerCase() === 'a' && !maleExceptions.includes(firstName.toLowerCase())) : false;
+          const genderTerm = firstName ? (isFemale ? `estimada ${firstName}` : `estimado ${firstName}`) : "estimado/a usuario/a";
+
+          const liveStats = await getLiveStats();
+          const userContextInstruction = isRegistered
+            ? `\n\n[INFORMACIÓN DEL USUARIO REGISTRADO]:\n- Estado: REGISTRADO EN LA PLATAFORMA VECY NETWORK ✅\n- Nombre: "${rawName}" (Primer nombre: "${firstName}")\n- Saludo de hora actual en Bogotá (${hour}:00): "${timeGreeting}"\n- Trato respetuoso: "${genderTerm}"\n- INSTRUCCIÓN: Si es el primer mensaje de la sesión, salúdalo con "${timeGreeting}, ${genderTerm}". Si ya están interactuando, integra su nombre "${firstName}" naturalmente sin repetir saludos repetitivos.`
+            : `\n\n[INFORMACIÓN DEL USUARIO NO REGISTRADO / ANÓNIMO]:\n- Estado: NO REGISTRADO (Navegante anónimo)\n- Saludo de hora actual en Bogotá (${hour}:00): "${timeGreeting}"\n- INSTRUCCIÓN DE INTERACCIÓN:\n  1. Si no te ha dicho su nombre en los mensajes previos, salúdalo cordialmente con "${timeGreeting}" y pregúntale amablemente: "¿Con quién tengo el gusto de interactuar?" para recordarlo en la conversación.\n  2. Invítalo amablemente a registrarse gratuitamente en la plataforma VECY Network (https://vecy-network.vercel.app/) para guardar su nombre, asociar su cuenta y acceder a su propio historial completo de conversaciones.`;
+
+          const systemPrompt = `${buildSystemPrompt('web')}\n\n${liveStats}${userContextInstruction}\n\n[INSTRUCCIÓN MAESTRA - CHAT WEB VECY 24/7]: Eres JanIA Match, la Inteligencia Artificial viva y consultora inmobiliaria senior de VECY Network. Tienes razonamiento lógico, amplio criterio jurídico, financiero y de mercado inmobiliario. Responde directamente a la consulta del usuario de forma elocuente, profesional, completa y estructurada. PROHIBIDO usar plantillas fijas o cierres/firmas con membretes. Responde en formato JSON estrictamente como: {"response": "tu respuesta viva y razonada"}`;
+
+          // Fetch recent 6 messages for conversation context
           const recentHistory = await db
             .select({ role: messages.role, content: messages.content })
             .from(messages)
             .where(eq(messages.conversationId, conversationId))
             .orderBy(desc(messages.createdAt))
-            .limit(4);
+            .limit(6);
 
           const formattedHistory = recentHistory.reverse().map(m => ({
             role: m.role === "janIA" ? "assistant" : "user",
@@ -142,7 +164,7 @@ export const janIARouter = router({
           }
 
           if (!janIAResponse || janIAResponse.trim() === "") {
-            janIAResponse = "¡Hola! He procesado tu consulta inmobiliaria. ¿En qué aspecto específico de tu trámite o negocio deseas profundizar?";
+            janIAResponse = `${timeGreeting}. ¡Bienvenido a VECY Network! ¿Con quién tengo el gusto de interactuar? Te invito a registrarte gratuitamente en nuestra plataforma para acceder a tu historial completo de conversaciones. ¿En qué consulta inmobiliaria puedo asesorarte hoy?`;
           }
         }
 
