@@ -6699,7 +6699,6 @@ import _baileys, {
   downloadMediaMessage,
   Browsers
 } from "@whiskeysockets/baileys";
-import pino from "pino";
 import qrcodeTerminal from "qrcode-terminal";
 import fs4 from "fs";
 import path5 from "path";
@@ -6851,7 +6850,7 @@ var init_whatsapp_match = __esm({
           };
           this.sock = makeWASocket({
             auth: state,
-            logger: pino({ level: "info" }),
+            logger: silentLogger,
             printQRInTerminal: false,
             // Lo manejamos nosotros de forma personalizada
             browser: Browsers.macOS("Desktop"),
