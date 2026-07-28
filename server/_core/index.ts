@@ -751,10 +751,12 @@ Dirección obligatoria:
     if (shouldStartBot) {
       console.log("Iniciando WhatsApp Bot Principal (+573166569719) Baileys...");
       janiaMatchBot.initialize();
-      console.log("Iniciando WhatsApp Bot Captador Worker (+573192919978) Baileys...");
-      import("./whatsapp-match").then(({ janiaCaptadorBot }) => {
-        janiaCaptadorBot.initialize();
-      }).catch(err => console.error("[WHATSAPP-CAPTADOR] Error al iniciar bot captador:", err));
+      setTimeout(() => {
+        console.log("Iniciando WhatsApp Bot Captador Worker (+573192919978) Baileys (escalonado 8s)...");
+        import("./whatsapp-match").then(({ janiaCaptadorBot }) => {
+          janiaCaptadorBot.initialize();
+        }).catch(err => console.error("[WHATSAPP-CAPTADOR] Error al iniciar bot captador:", err));
+      }, 8000);
     } else {
       console.log("[WHATSAPP-BOT] Deshabilitado temporalmente mediante variables de entorno.");
     }

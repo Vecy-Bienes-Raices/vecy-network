@@ -261,7 +261,8 @@ export class JaniaMatchBot {
         const isRestart = statusCode === DisconnectReason.restartRequired;
         const isConnectionLost = statusCode === DisconnectReason.connectionLost;
         const isConflict = statusCode === 440;
-        const delayMs = (isRestart || isConnectionLost) ? 1000 : (isConflict ? 120000 : 5000);
+        const jitter = Math.floor(Math.random() * 4000);
+        const delayMs = (isRestart || isConnectionLost) ? (1000 + jitter) : (isConflict ? 120000 : (5000 + jitter));
         
         console.warn(`[${this.botName}] ⚠️ Conexión Baileys cerrada (código: ${statusCode}): ${error?.message || error}. Reconectando en ${delayMs}ms: ${shouldReconnect}`);
         this.isReady = false;
