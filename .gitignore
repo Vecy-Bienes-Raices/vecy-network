@@ -133,3 +133,6 @@ scratch/
 # Supabase temporary files
 supabase/.temp/
 supabase/temp/
+
+# Heavy data zip files
+*.zip
