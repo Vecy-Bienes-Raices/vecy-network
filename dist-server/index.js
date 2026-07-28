@@ -6697,7 +6697,6 @@ import makeWASocket, {
   DisconnectReason,
   delay,
   downloadMediaMessage,
-  fetchLatestBaileysVersion,
   Browsers
 } from "@whiskeysockets/baileys";
 import qrcodeTerminal from "qrcode-terminal";
@@ -6831,7 +6830,7 @@ var init_whatsapp_match = __esm({
           }
           let version = [2, 3e3, 1044015310];
           try {
-            const fetched = await fetchLatestBaileysVersion();
+            const fetched = await fetchLatestWaWebVersion();
             if (fetched && fetched.version) {
               version = fetched.version;
             }
@@ -6864,7 +6863,7 @@ var init_whatsapp_match = __esm({
             logger: silentLogger,
             printQRInTerminal: false,
             // Lo manejamos nosotros de forma personalizada
-            browser: Browsers.ubuntu("Chrome"),
+            browser: Browsers.macOS("Desktop"),
             syncFullHistory: false,
             markOnlineOnConnect: false,
             connectTimeoutMs: 9e4,
@@ -11391,11 +11390,11 @@ Direcci\xF3n obligatoria:
       console.log("Iniciando WhatsApp Bot Principal (+573166569719) Baileys...");
       janiaMatchBot.initialize();
       setTimeout(() => {
-        console.log("Iniciando WhatsApp Bot Captador Worker (+573192919978) Baileys (escalonado 8s)...");
+        console.log("Iniciando WhatsApp Bot Captador Worker (+573192919978) Baileys (escalonado 25s)...");
         Promise.resolve().then(() => (init_whatsapp_match(), whatsapp_match_exports)).then(({ janiaCaptadorBot: janiaCaptadorBot2 }) => {
           janiaCaptadorBot2.initialize();
         }).catch((err) => console.error("[WHATSAPP-CAPTADOR] Error al iniciar bot captador:", err));
-      }, 8e3);
+      }, 25e3);
     } else {
       console.log("[WHATSAPP-BOT] Deshabilitado temporalmente mediante variables de entorno.");
     }

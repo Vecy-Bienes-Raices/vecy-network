@@ -189,7 +189,7 @@ export class JaniaMatchBot {
       
       let version: any = [2, 3000, 1044015310];
       try {
-        const fetched = await fetchLatestBaileysVersion();
+        const fetched = await fetchLatestWaWebVersion();
         if (fetched && fetched.version) {
           version = fetched.version;
         }
@@ -216,7 +216,7 @@ export class JaniaMatchBot {
         version,
         logger: silentLogger as any,
         printQRInTerminal: false, // Lo manejamos nosotros de forma personalizada
-        browser: Browsers.ubuntu('Chrome'),
+        browser: Browsers.macOS('Desktop'),
         syncFullHistory: false,
         markOnlineOnConnect: false,
         connectTimeoutMs: 90000, // Aumentado a 90s para conexiones lentas
