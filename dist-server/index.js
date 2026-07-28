@@ -6697,6 +6697,7 @@ import makeWASocket, {
   DisconnectReason,
   delay,
   downloadMediaMessage,
+  fetchLatestBaileysVersion,
   Browsers
 } from "@whiskeysockets/baileys";
 import qrcodeTerminal from "qrcode-terminal";
@@ -6830,7 +6831,7 @@ var init_whatsapp_match = __esm({
           }
           let version = [2, 3e3, 1044015310];
           try {
-            const fetched = await fetchLatestWaWebVersion();
+            const fetched = await fetchLatestBaileysVersion();
             if (fetched && fetched.version) {
               version = fetched.version;
             }

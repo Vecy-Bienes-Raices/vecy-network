@@ -189,7 +189,7 @@ export class JaniaMatchBot {
       
       let version: any = [2, 3000, 1044015310];
       try {
-        const fetched = await fetchLatestWaWebVersion();
+        const fetched = await fetchLatestBaileysVersion();
         if (fetched && fetched.version) {
           version = fetched.version;
         }
