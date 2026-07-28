@@ -1289,7 +1289,13 @@ export async function handleDetectedMatches(
     extraDMs.push({ jid: adminJid, message: adminMessage, viaMainBot: true });
   }
 
-
+  // Notificaciones masivas de match en WhatsApp están DESACTIVADAS (solo se consultan en la web vecy.co)
+  return {
+    response: "",
+    mentions: [],
+    extraDMs,
+    sendReputationHook: matches.length > 0
+  };
 }
 
 export function translatePropertyType(type: string): string {

@@ -49,7 +49,7 @@ interface SectorEntry {
 function loadSectors(city: string = 'bogota'): SectorEntry[] {
   if (sectorData) return sectorData.sectors;
 
-  const filePath = path.join(__dirname, '..', 'data', `${city}_sectores.json`);
+  const filePath = path.resolve(process.cwd(), 'server', 'data', `${city}_sectores.json`);
   if (!fs.existsSync(filePath)) {
     console.warn(`[GeoLookup] Archivo no encontrado: ${filePath}`);
     return [];
@@ -60,6 +60,8 @@ function loadSectors(city: string = 'bogota'): SectorEntry[] {
   console.log(`[GeoLookup] Cargados ${sectorData!.sectors.length} sectores catastrales de ${city}`);
   return sectorData!.sectors;
 }
+
+
 
 // ─── Conversión Calle/Carrera → Lat/Lng (Bogotá) ────────────────────────────
 //
