@@ -189,17 +189,6 @@ export class JaniaMatchBot {
         console.log(`[${this.botName}] 💾 Guardadas credenciales iniciales de Baileys en ${this.sessionFolderName}.`);
       }
       
-      let version: any = [2, 3000, 1044015310];
-      try {
-        const fetched = await fetchLatestBaileysVersion();
-        if (fetched && fetched.version) {
-          version = fetched.version;
-        }
-      } catch (e) {
-        console.warn(`[${this.botName}] ⚠️ No se pudo obtener la última versión dinámicamente, usando fallback ${version.join('.')}`);
-      }
-      console.log(`[${this.botName}] Usando versión activa de WhatsApp Web: ${Array.isArray(version) ? version.join('.') : version}`);
-
       console.log(`[${this.botName}] Estableciendo conexión por WebSocket...`);
       const silentLogger = {
         level: 'silent',
@@ -215,7 +204,6 @@ export class JaniaMatchBot {
 
       this.sock = makeWASocket({
         auth: state,
-        version,
         logger: silentLogger as any,
         printQRInTerminal: false, // Lo manejamos nosotros de forma personalizada
         browser: Browsers.macOS('Desktop'),
