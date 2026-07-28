@@ -19,45 +19,14 @@ import { invokeLLM } from './llm';
  */
 
 export function initCronScheduler() {
-  console.log('[CRON-SERVICE] Inicializando orquestador de agendas automatizadas v3.0 (IA Pura Dinámica)...');
+  console.log('[CRON-SERVICE] Inicializando orquestador de agendas automatizadas v3.1 (Exclusivamente Audios Motivacionales y Re-matching)...');
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // APERTURA DE OPERACIONES (IA PURA): Todos los días entre 5:00 AM y 11:00 AM (Disparo a las 8:15 AM)
-  // ─────────────────────────────────────────────────────────────────────────────
-  cron.schedule('15 8 * * *', async () => {
-    console.log('[CRON-SERVICE] Generando y enviando mensaje dinámico de Apertura del Día (IA Pura)...');
-    try {
-      const msg = await generateDynamicOpeningMessage();
-      if (whatsappBot.targetGroupId) {
-        await whatsappBot.sendToGroup(msg, undefined, [], whatsappBot.targetGroupId);
-        console.log('[CRON-SERVICE] ✓ Mensaje dinámico de Apertura enviado con éxito.');
-      }
-    } catch (e: any) {
-      console.error('[CRON-SERVICE] Error enviando mensaje dinámico de Apertura:', e.message || e);
-    }
-  }, { timezone: 'America/Bogota' });
-
-  // ─────────────────────────────────────────────────────────────────────────────
-  // CIERRE DE OPERACIONES (IA PURA): Todos los días entre 8:00 PM y 10:30 PM (Disparo a las 9:30 PM)
-  // ─────────────────────────────────────────────────────────────────────────────
-  cron.schedule('30 21 * * *', async () => {
-    console.log('[CRON-SERVICE] Generando y enviando mensaje dinámico de Cierre de Operaciones (IA Pura)...');
-    try {
-      const msg = await generateDynamicClosingMessage();
-      if (whatsappBot.targetGroupId) {
-        await whatsappBot.sendToGroup(msg, undefined, [], whatsappBot.targetGroupId);
-        console.log('[CRON-SERVICE] ✓ Mensaje dinámico de Cierre enviado con éxito.');
-      }
-    } catch (e: any) {
-      console.error('[CRON-SERVICE] Error enviando mensaje dinámico de Cierre:', e.message || e);
-    }
-  }, { timezone: 'America/Bogota' });
-
-  // ─────────────────────────────────────────────────────────────────────────────
-  // AUDIO 1: VECY INMUEBLES NETWORK — Lunes y Jueves a las 11:00 AM
+  // AUDIO MOTIVACIONAL 1: VECY INMUEBLES NETWORK — Lunes y Jueves a las 11:00 AM
+  // Tema: Operaciones comerciales, publicación de inmuebles/requerimientos y matching
   // ─────────────────────────────────────────────────────────────────────────────
   cron.schedule('0 11 * * 1,4', async () => {
-    console.log('[CRON-SERVICE] Enviando audio semanal a VECY INMUEBLES NETWORK...');
+    console.log('[CRON-SERVICE] Enviando audio motivacional a VECY INMUEBLES NETWORK...');
     const guion = `Buenos días a todos y a todas. Soy JanIA, la inteligencia artificial de VECY Network. Hoy quiero recordarles que este grupo es nuestro centro de operaciones comerciales. Aquí publican sus inmuebles en venta o arriendo, sus requerimientos de compra o renta, y yo me encargo de cruzar toda esa información en tiempo real en los 32 departamentos de Colombia para detectar MATCHES y hacer posibles cierres de negocios. ¿Ya publicaste hoy? Cada inmueble que compartes aquí es una oportunidad de negocio que no puedes dejar pasar. Puedes enviar texto, nota de voz, imagen o flyer y yo lo proceso automáticamente. Sigan publicando sus inmuebles, colegas, e inviten a más colegas a unirse a esta red. Entre más seamos, más matches encontramos. ¡Hoy puede ser el día de tu próximo cierre!`;
     try {
       await whatsappBot.sendVoiceToGroup(guion, whatsappBot.targetGroupId);
@@ -67,10 +36,11 @@ export function initCronScheduler() {
   }, { timezone: 'America/Bogota' });
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // AUDIO 2: VECY: SOPORTE LEGAL, TRIBUTARIO Y AVALÚOS — Martes y Viernes a las 11:30 AM
+  // AUDIO MOTIVACIONAL 2: VECY: SOPORTE LEGAL, TRIBUTARIO Y AVALÚOS — Martes y Viernes a las 11:30 AM
+  // Tema: Consultoría jurídica, avalúos, trámites, impuestos y asesoría especializada
   // ─────────────────────────────────────────────────────────────────────────────
   cron.schedule('30 11 * * 2,5', async () => {
-    console.log('[CRON-SERVICE] Enviando audio semanal a VECY: SOPORTE LEGAL...');
+    console.log('[CRON-SERVICE] Enviando audio motivacional a VECY: SOPORTE LEGAL...');
     const guion = `Hola a todos por aquí. Soy JanIA, y este espacio es nuestro rincón de consultoría jurídica y técnica de VECY Network. Aquí no hay preguntas tontas: si tienes dudas sobre un contrato de arrendamiento, una promesa de compraventa, una sucesión, el cálculo de ganancia ocasional, cómo cobrar una comisión que te deben, o simplemente quieres estimar el valor por metro cuadrado de un inmueble, este es tu lugar. El conocimiento jurídico es poder en los negocios. No dejes que la duda te frene. Escríbeme aquí o envíame una nota de voz y te respondo con criterio legal, rigor técnico y total honestidad. Sigan haciendo sus consultas, colegas. Y si conocen a alguien del sector que necesita este apoyo, invítenlos al grupo. Juntos elevamos el nivel profesional del gremio.`;
     try {
       await whatsappBot.sendVoiceToGroup(guion, whatsappBot.buzonGroupId);
@@ -80,52 +50,21 @@ export function initCronScheduler() {
   }, { timezone: 'America/Bogota' });
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // AUDIO 3: CÍRCULO CERO 👌 — Miércoles y Sábados a las 12:00 PM
+  // AUDIO MOTIVACIONAL 3: PROYECTO VECY NETWORK — Miércoles y Sábados a las 12:00 PM
+  // Tema: Filosofía, tecnología, misión, visión y debate del proyecto Vecy Network
   // ─────────────────────────────────────────────────────────────────────────────
   cron.schedule('0 12 * * 3,6', async () => {
-    console.log('[CRON-SERVICE] Enviando audio semanal a CÍRCULO CERO...');
-    const guion = `Hola, equipo VECY. Soy JanIA. Este grupo es nuestro espacio más especial: el Círculo Cero es donde nacen las ideas, donde se evalúa el proyecto, donde los fundadores escuchan directamente a quienes hacen posible esta red. Aquí pueden preguntarme sobre VECY Network sin filtros: cómo funciona la inteligencia artificial, qué está planeado para el futuro, qué ya está funcionando hoy, o simplemente contarme qué les parece el proyecto. También es el único lugar donde debatimos con la competencia de frente y con argumentos. Su opinión es la brújula que nos guía. Sigan preguntando acerca de VECY Network. Cada idea que aportan aquí nos hace más fuertes. E inviten a más colegas visionarios. Queremos construir esto juntos.`;
+    console.log('[CRON-SERVICE] Enviando audio motivacional a PROYECTO VECY NETWORK...');
+    const guion = `Hola, equipo VECY. Soy JanIA. Este grupo es nuestro espacio más especial: el canal del Proyecto Vecy Network es donde nacen las ideas, donde se evalúa el proyecto, donde los fundadores escuchan directamente a quienes hacen posible esta red. Aquí pueden preguntarme sobre VECY Network sin filtros: cómo funciona la inteligencia artificial, qué está planeado para el futuro, qué ya está funcionando hoy, o simplemente contarme qué les parece el proyecto. También es el lugar donde debatimos con la competencia de frente y con argumentos. Su opinión es la brújula que nos guía. Sigan preguntando acerca de VECY Network. Cada idea que aportan aquí nos hace más fuertes. E inviten a más colegas visionarios. Queremos construir esto juntos.`;
     try {
       await whatsappBot.sendVoiceToGroup(guion, whatsappBot.circuloGroupId);
     } catch (e: any) {
-      console.error('[CRON-SERVICE] Error enviando audio a CÍRCULO CERO:', e.message);
+      console.error('[CRON-SERVICE] Error enviando audio a PROYECTO VECY NETWORK:', e.message);
     }
   }, { timezone: 'America/Bogota' });
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // VIDEO + TEXTO CON @TODOS: VECY INMUEBLES NETWORK — Lunes, Jueves y Sábados a las 6:00 PM
-  // ─────────────────────────────────────────────────────────────────────────────
-  cron.schedule('0 18 * * 1,4,6', async () => {
-    console.log('[CRON-SERVICE] Enviando video JanIAConsulta a VECY INMUEBLES NETWORK...');
-    await sendVideoPromo(whatsappBot.targetGroupId, 'VECY INMUEBLES NETWORK');
-  }, { timezone: 'America/Bogota' });
-
-  // ─────────────────────────────────────────────────────────────────────────────
-  // VIDEO + TEXTO CON @TODOS: SOPORTE LEGAL — Martes, Viernes y Domingos a las 6:30 PM
-  // ─────────────────────────────────────────────────────────────────────────────
-  cron.schedule('30 18 * * 2,5,0', async () => {
-    console.log('[CRON-SERVICE] Enviando video JanIAConsulta a SOPORTE LEGAL...');
-    await sendVideoPromo(whatsappBot.buzonGroupId, 'VECY: SOPORTE LEGAL, TRIBUTARIO Y AVALÚOS');
-  }, { timezone: 'America/Bogota' });
-
-  // ─────────────────────────────────────────────────────────────────────────────
-  // VIDEO + TEXTO CON @TODOS: CÍRCULO CERO — Lunes, Miércoles, Viernes y Domingos a las 7:00 PM
-  // ─────────────────────────────────────────────────────────────────────────────
-  cron.schedule('0 19 * * 1,3,5,0', async () => {
-    console.log('[CRON-SERVICE] Enviando video JanIAConsulta a CÍRCULO CERO...');
-    await sendVideoPromo(whatsappBot.circuloGroupId, process.env.GROUP_ZERO_NAME || 'PROYECTO "Vecy Network"');
-  }, { timezone: 'America/Bogota' });
-
-  // ─────────────────────────────────────────────────────────────────────────────
-  // INFORME SEMANAL: Viernes 07:00 PM — con datos 100% reales de BD
-  // ─────────────────────────────────────────────────────────────────────────────
-  cron.schedule('0 19 * * 5', async () => {
-    console.log('[CRON-SERVICE] Generando y enviando Informe Semanal de Actividad...');
-    await sendWeeklyReport();
-  }, { timezone: 'America/Bogota' });
-
-  // ─────────────────────────────────────────────────────────────────────────────
-  // RE-MATCHING MASIVO: Todos los días a las 08:00 AM
+  // RE-MATCHING MASIVO SILENCIOSO (Base de Datos): Todos los días a las 08:00 AM
   // ─────────────────────────────────────────────────────────────────────────────
   cron.schedule('0 8 * * *', async () => {
     console.log('[CRON-SERVICE] Ejecutando cruce masivo (Re-matching)...');

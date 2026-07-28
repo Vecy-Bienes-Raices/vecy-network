@@ -3301,16 +3301,35 @@ export async function processConsultingMessage(
       `  "reactionEmoji": "string (emoji recomendado)"\n` +
       `}`;
 
-    const greetingInstruction = `\n\n[SISTEMA - INSTRUCCIÓN DE SALUDO Y COMPORTAMIENTO]:
-- Ya has saludado al usuario hoy: ${alreadyGreeted ? "SÍ" : "NO"}.
-- Tipo de conversación actual: GRUPO DE WHATSAPP.
-- Primer nombre del usuario: "${n}".
-- REGLAS CRÍTICAS DE RESPUESTA:
-  * Si "Ya has saludado al usuario hoy" es SÍ:
-    - ¡PROHIBIDO SALUDAR! No uses palabras como "Hola", "Buenas tardes", "Qué gusto", "Bienvenido", ni variantes de saludo o bienvenida.
-    - Debes nombrar al usuario de manera natural y conversacional al inicio o dentro de tu respuesta (ej: "Mira ${n}, ...", "Te cuento, ${n}, que...", "Para complementar, ${n}, ...").
+    // Cálculo de saludo según hora en Colombia (UTC-5 / America/Bogota)
+    const nowBogota = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Bogota" }));
+    const hour = nowBogota.getHours();
+    let timeGreeting = "Buenos días";
+    if (hour >= 12 && hour < 19) {
+      timeGreeting = "Buenas tardes";
+    } else if (hour >= 19 || hour < 5) {
+      timeGreeting = "Buenas noches";
+    }
+
+    // Detección heurística de género según primer nombre
+    const cleanFirstName = n.trim();
+    const lastChar = cleanFirstName.slice(-1).toLowerCase();
+    const maleExceptions = ['luca', 'andrea', 'borja', 'joshua', 'bautista', 'sasha', 'elía', 'elias'];
+    const isFemale = lastChar === 'a' && !maleExceptions.includes(cleanFirstName.toLowerCase());
+    const genderTerm = isFemale ? `estimada ${n}` : `estimado ${n}`;
+
+    const greetingInstruction = `\n\n[SISTEMA - INSTRUCCIÓN OBLIGATORIA DE SALUDO Y COMPORTAMIENTO]:
+- Hora actual Bogotá: ${hour}:00 (${timeGreeting}).
+- Genero detectado para ${n}: ${isFemale ? "Femenino (estimada)" : "Masculino (estimado)"}.
+- Término de trato respetuoso: "${genderTerm}".
+- Ya has saludado a esta persona hoy: ${alreadyGreeted ? "SÍ" : "NO"}.
+- Tipo de conversación actual: GRUPO DE WHATSAPP ("VECY: SOPORTE LEGAL, TRIBUTARIO Y AVALÚOS").
+- REGLAS OBLIGATORIAS DE SALUDO:
   * Si "Ya has saludado al usuario hoy" es NO:
-    - Debes saludar de manera muy cordial y natural, incluyendo su nombre "${n}" o dirigiéndose a él/ella como colega/aliado/a.`;
+    - Debes iniciar tu respuesta saludando cordial y profesionalmente con el saludo de hora exacto ("${timeGreeting}"), utilizando su trato respetuoso y nombre: ej. "${timeGreeting}, ${genderTerm}" o "${timeGreeting} ${genderTerm}, colega".
+  * Si "Ya has saludado al usuario hoy" es SÍ:
+    - ¡PROHIBIDO SALUDAR! No uses "Hola", "${timeGreeting}", "Buenas", "Qué gusto", ni ninguna bienvenida.
+    - Integra su primer nombre "${n}" de forma conversacional y fluida dentro del cuerpo de la respuesta (ej. "Mira ${n}, ...", "Entiendo tu inquietud, ${n}, ...").`;
 
     if (pdfBuffer) {
       messageToProcess += `\n[SISTEMA: DOCUMENTO PDF DETECTADO. Analiza el documento PDF adjunto con tus capacidades nativas para extraer todos los datos relevantes del predial, certificado de tradición, o contrato.]`;
