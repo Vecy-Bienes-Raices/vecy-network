@@ -1364,6 +1364,61 @@ async function getTimeOfDayGreetingForUser(phone: string, realName: string, alre
   }
 }
 
+export function esMensajeSpamOBasura(text: string): { isSpam: boolean; reason: string } {
+  if (!text || text.trim() === "") return { isSpam: false, reason: "" };
+  const n = text.toLowerCase();
+
+  // 1. Enlaces / Invitaciones a Zoom, Google Meet, Teams, Webinars, Masterclasses, Cursos
+  if (
+    n.includes("zoom.us") ||
+    n.includes("meet.google.com") ||
+    n.includes("teams.microsoft.com") ||
+    n.includes("webinar") ||
+    n.includes("masterclass") ||
+    n.includes("capacitacion") ||
+    n.includes("capacitación") ||
+    n.includes("seminario") ||
+    n.includes("taller de ventas") ||
+    n.includes("curso de") ||
+    n.includes("congreso de") ||
+    n.includes("evento inmobiliario") ||
+    n.includes("inmoverso")
+  ) {
+    return { isSpam: true, reason: "Invitación a evento, Zoom, Meet, webinar o masterclass externa." };
+  }
+
+  // 2. Publicidad de Terceros / Marketing No Predial / Software / Coaching
+  if (
+    n.includes("coaching") ||
+    n.includes("red de mercadeo") ||
+    n.includes("multinivel") ||
+    n.includes("gana dinero desde casa") ||
+    n.includes("servicio de marketing") ||
+    n.includes("agencia de publicidad") ||
+    n.includes("software inmobiliario") ||
+    n.includes("te regalo una guia") ||
+    n.includes("te regalo un ebook")
+  ) {
+    return { isSpam: true, reason: "Publicidad de terceros, marketing no predial o coaching." };
+  }
+
+  // 3. Política, Religión o Spam Ideológico
+  if (
+    n.includes("vota por") ||
+    n.includes("partido politico") ||
+    n.includes("partido político") ||
+    n.includes("candidato") ||
+    n.includes("elecciones") ||
+    n.includes("cadena de oracion") ||
+    n.includes("cadena de oración") ||
+    n.includes("comparte esta cadena")
+  ) {
+    return { isSpam: true, reason: "Contenido político, ideológico o cadenas de spam." };
+  }
+
+  return { isSpam: false, reason: "" };
+}
+
 /**
  * Scrapea una URL utilizando APIs especializadas en evasión de bloqueos (Bypass) como ZenRows, ScrapingBee o Firecrawl.
  * Si no hay keys configuradas o fallan, hace fallback al pre-procesador de Jina Reader.
@@ -2126,8 +2181,19 @@ Por lo tanto, DEBES hacer lo siguiente:
     if (isProperty) {
       const propertyTitle = extracted.title || `${capitalize(extracted.propertyType || 'inmueble')} en ${extracted.zone || 'Bogotá'} para ${extracted.transactionType || 'venta'}`;
       
-      // Filtro de Seguridad Final de Calidad Comercial: Rechazar comentarios o enlaces de WhatsApp sin ficha técnica
       const cleanCheckText = (rawUserText || text || '').toLowerCase();
+
+      // Filtro Temprano de Clasificación Inmobiliaria Estricta (Tolerancia Cero al Spam, Zoom, Meet, marketing y política)
+      const spamCheckProp = esMensajeSpamOBasura(cleanCheckText);
+      if (spamCheckProp.isSpam) {
+        console.log(`[JANIA-SPAM-FILTER] ⛔ Omitiendo guardado de propiedad en BD (${spamCheckProp.reason}): "${cleanCheckText.substring(0, 50)}..."`);
+        result.inserted = false;
+        result.classification = "VIOLACION_DE_NORMAS";
+        result.reactionEmoji = "🚫";
+        return result;
+      }
+
+      // Filtro de Seguridad Final de Calidad Comercial: Rechazar comentarios o enlaces de WhatsApp sin ficha técnica
       const isShortCommentText = cleanCheckText.length < 100 && (
         cleanCheckText.includes("sigue este enlace para ver el artículo en whatsapp") ||
         cleanCheckText.includes("sigue este enlace") ||
@@ -2191,6 +2257,17 @@ Por lo tanto, DEBES hacer lo siguiente:
       }
     } else if (isRequirement) {
       const cleanCheckReqText = (rawUserText || text || '').toLowerCase();
+
+      // Filtro Temprano de Clasificación Inmobiliaria Estricta (Tolerancia Cero al Spam, Zoom, Meet, marketing y política)
+      const spamCheckReq = esMensajeSpamOBasura(cleanCheckReqText);
+      if (spamCheckReq.isSpam) {
+        console.log(`[JANIA-SPAM-FILTER] ⛔ Omitiendo guardado de requerimiento en BD (${spamCheckReq.reason}): "${cleanCheckReqText.substring(0, 50)}..."`);
+        result.inserted = false;
+        result.classification = "VIOLACION_DE_NORMAS";
+        result.reactionEmoji = "🚫";
+        return result;
+      }
+
       const isShortCommentReqText = cleanCheckReqText.length < 100 && (
         cleanCheckReqText.includes("sigue este enlace para ver el artículo en whatsapp") ||
         cleanCheckReqText.includes("sigue este enlace") ||

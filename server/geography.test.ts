@@ -174,24 +174,28 @@ describe('calcularScoreMatch Exact Parameters and Tolerances', () => {
     expect(calcularScoreMatch(baseReq, propMoreGarages)).toBeGreaterThanOrEqual(70);
   });
 
-  it('should allow price up to 5% above budget but fail if higher', () => {
-    // 5% above (1050 Million) -> matches
-    const prop1050M = { ...baseProp, price: "1050000000" };
-    expect(calcularScoreMatch(baseReq, prop1050M)).toBeGreaterThanOrEqual(70);
+  it('should enforce zero tolerance for price above budget and fail immediately', () => {
+    // Exact budget (1000 Million) -> matches
+    const prop1000M = { ...baseProp, price: "1000000000" };
+    expect(calcularScoreMatch(baseReq, prop1000M)).toBeGreaterThanOrEqual(70);
 
-    // 6% above (1060 Million) -> hard mismatch (0)
-    const prop1060M = { ...baseProp, price: "1060000000" };
-    expect(calcularScoreMatch(baseReq, prop1060M)).toBe(0);
+    // Any price above budget (e.g. 1010 Million) -> hard mismatch (0)
+    const prop1010M = { ...baseProp, price: "1010000000" };
+    expect(calcularScoreMatch(baseReq, prop1010M)).toBe(0);
   });
 
-  it('should allow excess area but fail if below required', () => {
+  it('should allow excess area but fail if below 98% of required', () => {
     // 84% of areaMin (84 sqm) -> hard mismatch (0)
     const prop84Sqm = { ...baseProp, areaTotal: "84" };
     expect(calcularScoreMatch(baseReq, prop84Sqm)).toBe(0);
 
-    // 99% of areaMin (99 sqm) -> hard mismatch (0)
+    // 97% of areaMin (97 sqm) -> hard mismatch (0)
+    const prop97Sqm = { ...baseProp, areaTotal: "97" };
+    expect(calcularScoreMatch(baseReq, prop97Sqm)).toBe(0);
+
+    // 99% of areaMin (99 sqm) -> matches within 98% margin
     const prop99Sqm = { ...baseProp, areaTotal: "99" };
-    expect(calcularScoreMatch(baseReq, prop99Sqm)).toBe(0);
+    expect(calcularScoreMatch(baseReq, prop99Sqm)).toBeGreaterThanOrEqual(70);
 
     // 131% of areaMin (131 sqm) -> compatible excess
     const prop131Sqm = { ...baseProp, areaTotal: "131" };

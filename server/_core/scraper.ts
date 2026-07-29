@@ -2,33 +2,36 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 import { invokeLLM } from './llm';
 
-// Portales inmobiliarios colombianos con HTML público que podemos leer
+// Portales inmobiliarios colombianos, CRMs y sitios web independientes autorizados para Scraping
 const DOMINIOS_PERMITIDOS = [
   'wasi.co',
-  'fincaraiz.com.co',
+  'qrador.com',
+  'habi.co',
   'metrocuadrado.com',
+  'fincaraiz.com.co',
   'ciencuadras.com',
-  'proppit.com',    // El nuevo Properati
-  'mercadolibre.com.co', // Muy usado en Colombia
+  'proppit.com',          // El nuevo Properati
+  'mercadolibre.com.co',   // MercadoLibre Colombia
   'mitula.com.co',
   'lamudi.com.co',
   'nuroa.com.co',
   'vivareal.co',
   'casacol.co',
-  'habi.co',
-  'netlify.app', // Tus sitios de Netlify
-  'vecy.co',      // Tus sitios de Vecy
-  'github.io'    // Otros sitios estáticos
+  'lambienesraices.com',  // Inmobiliarias independientes
+  'drive.google.com',     // Google Drive (fichas compartidas)
+  'netlify.app',          // Sitios web inmobiliarios en Netlify
+  'vecy.co',              // Portales VECY Network
+  'github.io'            // Páginas web estáticas
 ];
 
-// Redes sociales y sitios que requieren autenticación - los ignoramos
+// Lista Negra: Redes sociales, plataformas de video y catálogos directos de WhatsApp (Ignorados)
 const DOMINIOS_BLOQUEADOS = [
   'facebook.com', 'fb.com', 'fb.watch',
   'instagram.com',
   'youtube.com', 'youtu.be',
   'tiktok.com',
   'twitter.com', 'x.com',
-  'wa.me', 'whatsapp.com',
+  'wa.me', 'whatsapp.com/catalog', 'whatsapp.com',
   'linkedin.com',
 ];
 
@@ -37,7 +40,7 @@ export function esDominioPermitido(url: string): boolean {
     const hostname = new URL(url).hostname.replace('www.', '').toLowerCase();
     if (DOMINIOS_BLOQUEADOS.some(d => hostname.includes(d))) return false;
     if (DOMINIOS_PERMITIDOS.some(d => hostname.includes(d))) return true;
-    return true; 
+    return true; // Permitir sitios web independientes de inmobiliarias no listados en la lista negra
   } catch {
     return false;
   }

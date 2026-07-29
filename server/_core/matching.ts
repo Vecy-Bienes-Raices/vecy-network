@@ -543,23 +543,27 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
     }
   }
 
-  // ── FILTRO DURO 7: Presupuesto Máximo (NUNCA MAYOR QUE) ──
+  // ── FILTRO DURO 7: Presupuesto Máximo (TOLERANCIA CERO 0%) ──
   if (budgetMax > 0) {
-    const propRent = property.priceRent ? parseFloat(String(property.priceRent)) : 0;
     const isReqRent = reqBiz.includes("arriendo");
     const isReqSale = reqBiz.includes("venta") || reqBiz.includes("permuta");
-    
-    // Si la demanda es de arriendo y la propiedad se arrienda
-    if (isReqRent && propBiz.includes("arriendo") && propRent > 0) {
-      if (propRent > budgetMax * 1.02) {
-        blockers.push(`Canon de arriendo $${propRent.toLocaleString()} supera el presupuesto máximo de $${budgetMax.toLocaleString()}`);
-        return buildExplanationResult(0, blockers, positives, negatives);
+
+    // Para Arriendos: Si (Canon + Administración de la oferta) > Canon Máximo de la demanda → 0%
+    if (isReqRent && propBiz.includes("arriendo")) {
+      const propRent = property.priceRent ? parseFloat(String(property.priceRent)) : price;
+      if (propRent > 0) {
+        const adminVal = pAdminFee > 0 ? pAdminFee : 0;
+        const totalRent = propRent + adminVal;
+        if (totalRent > budgetMax) {
+          blockers.push(`Canon de arriendo total ($${totalRent.toLocaleString()}) supera el presupuesto máximo de $${budgetMax.toLocaleString()}`);
+          return buildExplanationResult(0, blockers, positives, negatives);
+        }
       }
     }
-    
-    // Si la demanda es de venta y la propiedad se vende
+
+    // Para Ventas: Si el Precio de Venta de la oferta > Presupuesto Máximo de Venta de la demanda → 0%
     if (isReqSale && propBiz.includes("venta") && price > 0) {
-      if (price > budgetMax * 1.05) {
+      if (price > budgetMax) {
         blockers.push(`Precio de venta $${price.toLocaleString()} supera el presupuesto máximo de $${budgetMax.toLocaleString()}`);
         return buildExplanationResult(0, blockers, positives, negatives);
       }

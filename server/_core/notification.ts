@@ -260,22 +260,17 @@ export async function dispatchNotificationsForMatch(matchId: number): Promise<vo
 
       const fullMessage = greeting + justification;
 
-      // Enviar por WhatsApp
-      const matchBot = (global as any).janiaMatchBotInstance;
-      const jid = log.brokerPhone.includes("@") ? log.brokerPhone : `${log.brokerPhone}@s.whatsapp.net`;
-      
-      if (matchBot && matchBot.isReady) {
-        await matchBot.sock.sendMessage(jid, { text: fullMessage });
-        await db.update(notificationLogs).set({
-          status: "sent",
-          sentAt: new Date(),
-        }).where(eq(notificationLogs.id, log.id));
-        console.log(`[NotificationService] Mensaje enviado a +${log.brokerPhone} para Match #${matchId}`);
-      } else {
-        throw new Error("Cliente de WhatsApp (janiaMatchBotInstance) no inicializado en global");
-      }
+      // ⛔ DESACTIVACIÓN DE ALERTAS SALIENTES DE WHATSAPP (POLÍTICA ANTI-BANEO DE META)
+      // Las alertas de coincidencia se procesan y almacenan en Supabase (property_matches)
+      // y se notifican de forma 100% segura en la Plataforma Web de VECY Network.
+      console.log(`[NotificationService] 🔒 Notificación por WhatsApp deshabilitada para Match #${matchId} (+${log.brokerPhone}). Alerta enrutada exclusivamente a Notificaciones Web In-App.`);
+
+      await db.update(notificationLogs).set({
+        status: "web_only",
+        sentAt: new Date(),
+      }).where(eq(notificationLogs.id, log.id));
     } catch (e: any) {
-      console.error(`[NotificationService] Error enviando a +${log.brokerPhone}:`, e.message);
+      console.error(`[NotificationService] Error procesando notificación web para Match #${matchId}:`, e.message);
       await db.update(notificationLogs).set({
         status: "failed",
         error: e.message || String(e),
