@@ -315,27 +315,72 @@ function formatCOP(val: string | number) {
   return num.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
 }
 
+function extractPhoneFromItem(item: any): { display: string; cleanNumber: string | null } {
+  if (!item) return { display: "No Registrado", cleanNumber: null };
+
+  const textToSearch = `${item.rawText || ""} ${item.description || ""}`;
+
+  // 1. Buscar en el texto del mensaje por cualquier número celular colombiano de 10 dígitos
+  const phoneMatches = textToSearch.match(/(?:\+?57\s*)?3\d{2}[\s.-]?\d{3}[\s.-]?\d{4}\b/g);
+  if (phoneMatches && phoneMatches.length > 0) {
+    const rawMatch = phoneMatches[0].replace(/\D/g, "");
+    const clean10 = rawMatch.startsWith("57") && rawMatch.length === 12 ? rawMatch.substring(2) : rawMatch;
+    if (clean10.length === 10 && clean10.startsWith("3")) {
+      return {
+        display: `+57 ${clean10.substring(0, 3)} ${clean10.substring(3, 6)} ${clean10.substring(6)}`,
+        cleanNumber: `57${clean10}`
+      };
+    }
+  }
+
+  // 2. Si no está en el texto, revisar idUsuarioWhatsapp o phone del objeto
+  const rawPhone = item.idUsuarioWhatsapp || item.phone || (item.user && item.user.phone);
+  if (rawPhone) {
+    const clean = String(rawPhone).split("@")[0].replace(/\D/g, "");
+    if (clean.length === 12 && clean.startsWith("573")) {
+      return {
+        display: `+57 ${clean.substring(2, 5)} ${clean.substring(5, 8)} ${clean.substring(8)}`,
+        cleanNumber: clean
+      };
+    }
+    if (clean.length === 10 && clean.startsWith("3")) {
+      return {
+        display: `+57 ${clean.substring(0, 3)} ${clean.substring(3, 6)} ${clean.substring(6)}`,
+        cleanNumber: `57${clean}`
+      };
+    }
+    if (clean.length > 5) {
+      return {
+        display: `+${clean}`,
+        cleanNumber: clean
+      };
+    }
+  }
+
+  return { display: "No Registrado", cleanNumber: null };
+}
+
 function formatPhoneDisplay(phone: string | null | undefined) {
   if (!phone) return "No Registrado";
-  const clean = phone.replace(/\D/g, "");
+  const clean = String(phone).split("@")[0].replace(/\D/g, "");
   if (clean.length === 12 && clean.startsWith("573")) {
     return `+57 ${clean.substring(2, 5)} ${clean.substring(5, 8)} ${clean.substring(8)}`;
   }
   if (clean.length === 10 && clean.startsWith("3")) {
     return `+57 ${clean.substring(0, 3)} ${clean.substring(3, 6)} ${clean.substring(6)}`;
   }
-  return "Contacto Red VECY";
+  return clean.length > 5 ? `+${clean}` : "No Registrado";
 }
 
 function isPhoneValidForWA(phone: string | null | undefined): boolean {
   if (!phone) return false;
-  const clean = phone.replace(/\D/g, "");
-  return (clean.length === 12 && clean.startsWith("573")) || (clean.length === 10 && clean.startsWith("3"));
+  const clean = String(phone).split("@")[0].replace(/\D/g, "");
+  return clean.length > 5;
 }
 
 function getValidWaLink(phone: string | null | undefined, text: string): string {
   if (!phone) return '#';
-  const clean = phone.replace(/\D/g, "");
+  const clean = String(phone).split("@")[0].replace(/\D/g, "");
   const num = clean.startsWith("57") ? clean : `57${clean}`;
   return `https://wa.me/${num}?text=${encodeURIComponent(text)}`;
 }
@@ -632,30 +677,32 @@ export default function AdminMatches() {
                         </div>
                       )}
                       
-                      <div className="bg-[#bf953f]/5 border border-[#bf953f]/10 rounded-2xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full bg-[#bf953f]/10 border border-[#bf953f]/20 flex items-center justify-center text-[#bf953f] flex-shrink-0">
-                            <Phone className="w-3.5 h-3.5" />
-                          </div>
-                          <div>
-                            <p className="text-[9px] text-zinc-500 uppercase tracking-wider font-semibold">Captador / Vendedor</p>
-                            <p className="text-xs font-bold text-zinc-200">{formatPhoneDisplay(m.property?.idUsuarioWhatsapp)}</p>
-                            {isPhoneValidForWA(m.property?.idUsuarioWhatsapp) && (
-                              <p className="text-[10px] text-zinc-500 font-mono select-all">{formatPhoneDisplay(m.property?.idUsuarioWhatsapp)}</p>
+                      {(() => {
+                        const propContact = extractPhoneFromItem(m.property);
+                        return (
+                          <div className="bg-[#bf953f]/5 border border-[#bf953f]/10 rounded-2xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 rounded-full bg-[#bf953f]/10 border border-[#bf953f]/20 flex items-center justify-center text-[#bf953f] flex-shrink-0">
+                                <Phone className="w-3.5 h-3.5" />
+                              </div>
+                              <div>
+                                <p className="text-[9px] text-zinc-500 uppercase tracking-wider font-semibold">Captador / Vendedor</p>
+                                <p className="text-xs font-bold text-zinc-200 select-all">{propContact.display}</p>
+                              </div>
+                            </div>
+                            {propContact.cleanNumber && (
+                              <a 
+                                href={`https://wa.me/${propContact.cleanNumber}?text=${encodeURIComponent(`Hola! Te contacto por el inmueble "${m.property?.name || 'de la red'}" publicado en ${m.property?.origenNombre || 'VECY Network'}. Tienes un Match del ${score.toFixed(0)}% con un requerimiento activo.`)}`} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="bg-[#25D366] hover:bg-[#20ba5a] text-black text-[10px] font-bold px-3 py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md hover:scale-105 min-h-[38px] w-full sm:w-auto"
+                              >
+                                Contactar WA <ExternalLink className="w-3 h-3" />
+                              </a>
                             )}
                           </div>
-                        </div>
-                        {isPhoneValidForWA(m.property?.idUsuarioWhatsapp) && (
-                          <a 
-                            href={getValidWaLink(m.property.idUsuarioWhatsapp, `Hola! Te contacto por el inmueble "${m.property.name || 'de la red'}" publicado en ${m.property.origenNombre || 'VECY Network'}. Tienes un Match del ${score.toFixed(0)}% con un requerimiento activo.`)} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="bg-[#25D366] hover:bg-[#20ba5a] text-black text-[10px] font-bold px-3 py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md hover:scale-105 min-h-[38px] w-full sm:w-auto"
-                          >
-                            Contactar WA <ExternalLink className="w-3 h-3" />
-                          </a>
-                        )}
-                      </div>
+                        );
+                      })()}
                     </div>
 
                     {/* Requerimiento (Demanda) */}
@@ -679,30 +726,32 @@ export default function AdminMatches() {
                         </div>
                       )}
                       
-                      <div className="bg-cyan-500/5 border border-cyan-500/10 rounded-2xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 flex-shrink-0">
-                            <Phone className="w-3.5 h-3.5" />
-                          </div>
-                          <div>
-                            <p className="text-[9px] text-zinc-500 uppercase tracking-wider font-semibold">Requiriente / Comprador</p>
-                            <p className="text-xs font-bold text-zinc-200">{formatPhoneDisplay(m.requirement?.idUsuarioWhatsapp)}</p>
-                            {isPhoneValidForWA(m.requirement?.idUsuarioWhatsapp) && (
-                              <p className="text-[10px] text-zinc-500 font-mono select-all">{formatPhoneDisplay(m.requirement?.idUsuarioWhatsapp)}</p>
+                      {(() => {
+                        const reqContact = extractPhoneFromItem(m.requirement);
+                        return (
+                          <div className="bg-cyan-500/5 border border-cyan-500/10 rounded-2xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 rounded-full bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 flex-shrink-0">
+                                <Phone className="w-3.5 h-3.5" />
+                              </div>
+                              <div>
+                                <p className="text-[9px] text-zinc-500 uppercase tracking-wider font-semibold">Requiriente / Comprador</p>
+                                <p className="text-xs font-bold text-zinc-200 select-all">{reqContact.display}</p>
+                              </div>
+                            </div>
+                            {reqContact.cleanNumber && (
+                              <a 
+                                href={`https://wa.me/${reqContact.cleanNumber}?text=${encodeURIComponent(`Hola! Te contacto por tu requerimiento de inmueble en ${m.requirement?.zonaDeseada || m.requirement?.ciudadDeseada || 'VECY Network'}. Encontramos una propiedad con un Match del ${score.toFixed(0)}%.`)}`} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="bg-[#25D366] hover:bg-[#20ba5a] text-black text-[10px] font-bold px-3 py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md hover:scale-105 min-h-[38px] w-full sm:w-auto"
+                              >
+                                Contactar WA <ExternalLink className="w-3 h-3" />
+                              </a>
                             )}
                           </div>
-                        </div>
-                        {isPhoneValidForWA(m.requirement?.idUsuarioWhatsapp) && (
-                          <a 
-                            href={getValidWaLink(m.requirement.idUsuarioWhatsapp, `Hola! Te contacto por tu requerimiento de inmueble en ${m.requirement.zonaDeseada || m.requirement.ciudadDeseada || 'VECY Network'}. Encontramos una propiedad con un Match del ${score.toFixed(0)}%.`)} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="bg-[#25D366] hover:bg-[#20ba5a] text-black text-[10px] font-bold px-3 py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md hover:scale-105 min-h-[38px] w-full sm:w-auto"
-                          >
-                            Contactar WA <ExternalLink className="w-3 h-3" />
-                          </a>
-                        )}
-                      </div>
+                        );
+                      })()}
                     </div>
 
                   </div>
