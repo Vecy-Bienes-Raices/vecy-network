@@ -340,6 +340,30 @@ function getValidWaLink(phone: string | null | undefined, text: string): string 
   return `https://wa.me/${num}?text=${encodeURIComponent(text)}`;
 }
 
+function renderTextWithClickableLinks(text: string | null | undefined) {
+  if (!text) return null;
+  const urlRegex = /(https?:\/\/[^\s]+|wa\.me\/[^\s]+|whatsapp\.com\/[^\s]+)/g;
+  const parts = text.split(urlRegex);
+
+  return parts.map((part, i) => {
+    if (urlRegex.test(part)) {
+      const href = part.startsWith("http") ? part : `https://${part}`;
+      return (
+        <a
+          key={i}
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-cyan-400 hover:text-cyan-300 underline font-semibold break-all inline-flex items-center gap-1 my-0.5"
+        >
+          {part} <ExternalLink className="w-3 h-3 inline" />
+        </a>
+      );
+    }
+    return part;
+  });
+}
+
 function checkTxCompatFrontend(reqTypeRaw: string, propTypeRaw: string, propAccepted: string[] = []): boolean {
   if (!reqTypeRaw || !propTypeRaw) return false;
   const r = reqTypeRaw.toLowerCase().trim();
@@ -603,9 +627,9 @@ export default function AdminMatches() {
                       </div>
                       <h4 className="text-sm sm:text-base font-bold text-white mt-1 break-words">{m.property?.name}</h4>
                       {(m.property?.rawText || m.property?.description) && (
-                        <p className="text-xs text-zinc-300 bg-white/[0.02] border border-white/5 p-3 rounded-xl italic leading-relaxed whitespace-pre-wrap break-words">
-                          "{m.property?.rawText || m.property?.description}"
-                        </p>
+                        <div className="text-xs text-zinc-300 bg-white/[0.02] border border-white/5 p-3 rounded-xl italic leading-relaxed whitespace-pre-wrap break-words">
+                          "{renderTextWithClickableLinks(m.property?.rawText || m.property?.description)}"
+                        </div>
                       )}
                       
                       <div className="bg-[#bf953f]/5 border border-[#bf953f]/10 rounded-2xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -650,9 +674,9 @@ export default function AdminMatches() {
                         {m.requirement?.name || `Requerimiento #${m.requirement?.id}`}
                       </h4>
                       {m.requirement?.rawText && (
-                        <p className="text-xs text-zinc-300 bg-white/[0.02] border border-white/5 p-3 rounded-xl italic leading-relaxed whitespace-pre-wrap break-words">
-                          "{m.requirement?.rawText}"
-                        </p>
+                        <div className="text-xs text-zinc-300 bg-white/[0.02] border border-white/5 p-3 rounded-xl italic leading-relaxed whitespace-pre-wrap break-words">
+                          "{renderTextWithClickableLinks(m.requirement?.rawText)}"
+                        </div>
                       )}
                       
                       <div className="bg-cyan-500/5 border border-cyan-500/10 rounded-2xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">

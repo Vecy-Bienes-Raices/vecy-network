@@ -445,6 +445,13 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   const reqZone  = normalizarTextoGeografico(requirement.zonaDeseada || requirement.addressNeighborhood || "");
   const propZone = normalizarTextoGeografico(property.zone || property.addressNeighborhood || "");
 
+  // ── FILTRO DURO 0: Inmueble Vacío o Incompleto sin Datos Prediales Mínimos (Tolerancia Cero) ──
+  const hasZeroSpecs = price <= 0 && propArea <= 0 && pBedrooms <= 0 && pBathrooms <= 0;
+  if (hasZeroSpecs) {
+    blockers.push("Inmueble incompleto sin datos prediales mínimos (Precio, Área, Habitaciones y Baños en N/E).");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+
   // ── FILTRO DURO 3: Tipo de inmueble ──
   if (reqType && propType) {
     const aliases: Record<string, string[]> = {
