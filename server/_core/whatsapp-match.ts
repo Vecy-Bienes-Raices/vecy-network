@@ -93,6 +93,8 @@ export class JaniaMatchBot {
   private lastHumanIntervention: Map<string, number> = new Map();
   private dmMessageBuffers: Map<string, { messages: any[]; timer: NodeJS.Timeout | null }> = new Map();
   private groupMetadataCache: Map<string, { data: any; time: number }> = new Map();
+  private reconnectAttempts: number = 0;
+  private maxReconnectAttempts: number = 5;
 
   private async getCachedGroupMetadata(chatId: string) {
     const cached = this.groupMetadataCache.get(chatId);
@@ -185,6 +187,10 @@ export class JaniaMatchBot {
   }
 
   public async initialize() {
+    if (!this.isWorkerOnly && this.sessionFolderName === '.baileys_auth') {
+      console.log(`[${this.botName}] ⛔ Bot deshabilitado permanentemente por protección del número principal. No se ejecutará sesión en .baileys_auth.`);
+      return;
+    }
     try {
       const sessionDir = path.join(process.cwd(), this.sessionFolderName);
       const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
@@ -268,35 +274,33 @@ export class JaniaMatchBot {
         const statusCode = error?.output?.statusCode;
         const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
         
+        this.isReady = false;
+        this.updateStatusInDb().catch(err => console.error(`[${this.botName}-DB] Error updating status on close:`, err));
+
+        this.reconnectAttempts++;
+        if (this.reconnectAttempts > 3) {
+          console.error(`[${this.botName}] 🛡️ [ESCUDO ANTI-BAN] Límite máximo de 3 reintentos alcanzado. Se DETIENE la reconexión automática para proteger la cuenta de WhatsApp.`);
+          return;
+        }
+
         const isRestart = statusCode === DisconnectReason.restartRequired;
         const isConnectionLost = statusCode === DisconnectReason.connectionLost;
         const isConflict = statusCode === 440;
         const isConnectionFailure = statusCode === 405 || statusCode === 401;
         const jitter = Math.floor(Math.random() * 4000);
-        const delayMs = (isRestart || isConnectionLost) ? (1000 + jitter) : (isConflict ? 120000 : (5000 + jitter));
+        const delayMs = (isRestart || isConnectionLost) ? (2000 + jitter) : (isConflict ? 120000 : (10000 + jitter));
         
-        console.warn(`[${this.botName}] ⚠️ Conexión Baileys cerrada (código: ${statusCode}): ${error?.message || error}. Reconectando en ${delayMs}ms: ${shouldReconnect}`);
-        this.isReady = false;
-        this.updateStatusInDb().catch(err => console.error(`[${this.botName}-DB] Error updating status on close:`, err));
+        console.warn(`[${this.botName}] ⚠️ Conexión Baileys cerrada (código: ${statusCode}) [Intento ${this.reconnectAttempts}/3]. Reconectando en ${delayMs}ms...`);
 
-        if (isConnectionFailure) {
-          console.error(`[${this.botName}] Credenciales inválidas/incompatibles (error ${statusCode}). Limpiando sesión y regenerando QR...`);
-          try {
-            fs.rmSync(path.join(process.cwd(), this.sessionFolderName), { recursive: true, force: true });
-          } catch (e: any) {}
-          setTimeout(() => this.initialize(), 3000);
+        if (isConnectionFailure || statusCode === DisconnectReason.loggedOut) {
+          console.error(`[${this.botName}] Sesión inválida o cerrada (error ${statusCode}). Deteniendo bot por seguridad.`);
         } else if (shouldReconnect) {
           setTimeout(() => this.initialize(), delayMs);
-        } else {
-          console.error(`[${this.botName}] Sesión de WhatsApp cerrada (Logged Out). Limpiando credenciales...`);
-          try {
-            fs.rmSync(path.join(process.cwd(), this.sessionFolderName), { recursive: true, force: true });
-          } catch (e: any) {}
-          setTimeout(() => this.initialize(), 5000);
         }
       } else if (connection === 'open') {
         console.log(`\n🚀 ${this.botName} 🔌💘 — BOT ACTIVADO CORRECTAMENTE CON BAILEYS`);
         this.isReady = true;
+        this.reconnectAttempts = 0; // Resetear intentos al conectar exitosamente
         this.updateStatusInDb().catch(err => console.error(`[${this.botName}-DB] Error updating status on open:`, err));
       }
     });
