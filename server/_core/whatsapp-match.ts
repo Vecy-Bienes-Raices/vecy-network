@@ -14,7 +14,12 @@ import _baileys, {
   Browsers
 } from '@whiskeysockets/baileys';
 
-const makeWASocket = typeof _baileys === 'function' ? _baileys : ((_baileys as any)?.default || _baileys);
+function getWASocket(): any {
+  if (typeof _baileys === 'function') return _baileys;
+  if ((_baileys as any)?.default && typeof (_baileys as any).default === 'function') return (_baileys as any).default;
+  if ((_baileys as any)?.makeWASocket && typeof (_baileys as any).makeWASocket === 'function') return (_baileys as any).makeWASocket;
+  return _baileys;
+}
 import { Boom } from '@hapi/boom';
 import qrcodeTerminal from 'qrcode-terminal';
 import fs from 'fs';
@@ -199,7 +204,11 @@ export class JaniaMatchBot {
       } catch (e) {}
 
       console.log(`[${this.botName}] Estableciendo conexión por WebSocket...`);
-      const silentLogger = {
+      const makeWASocket = getWASocket();
+      this.sock = makeWASocket({
+        auth: state,
+        version,
+        logger: {
         level: 'silent',
         log: () => {},
         trace: () => {},
