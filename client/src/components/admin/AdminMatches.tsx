@@ -707,21 +707,22 @@ export default function AdminMatches() {
 
                   </div>
 
-                  {/* COTEJO DETALLADO CAMPO POR CAMPO (SIEMPRE VISIBLE) */}
-                  <div className="bg-black/30 border-b border-white/5 p-4 sm:p-6">
+                  {/* COTEJO DETALLADO CAMPO POR CAMPO (RESPONSIVE: TABLA EN DESKTOP, TARJETAS EN MÓVIL) */}
+                  <div className="bg-black/30 border-b border-white/5 p-3 sm:p-4 md:p-6 overflow-x-hidden">
                     <h5 className="text-xs font-bold uppercase tracking-widest text-[#bf953f] mb-3 flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4" />
                       Cotejo técnico de afinidad comercial
                     </h5>
                     
-                    <div className="overflow-x-auto scrollbar-thin -mx-4 sm:mx-0 px-4 sm:px-0">
-                      <table className="w-full text-xs border-collapse min-w-[540px]">
+                    {/* VISTA ESCRITORIO (md:table - 4 columnas) */}
+                    <div className="hidden md:block overflow-x-auto scrollbar-thin">
+                      <table className="w-full text-xs border-collapse">
                         <thead>
                           <tr className="border-b border-white/10 text-[10px] uppercase tracking-widest text-zinc-500">
-                            <th className="text-left py-2 px-3">Característica</th>
-                            <th className="text-left py-2 px-3 text-[#bf953f]">Ofrecido (Oferta)</th>
-                            <th className="text-left py-2 px-3 text-cyan-400">Buscado (Demanda)</th>
-                            <th className="text-center py-2 px-3 w-28">Cumplimiento</th>
+                            <th className="text-left py-2.5 px-3">Característica</th>
+                            <th className="text-left py-2.5 px-3 text-[#bf953f]">Ofrecido (Oferta)</th>
+                            <th className="text-left py-2.5 px-3 text-cyan-400">Buscado (Demanda)</th>
+                            <th className="text-center py-2.5 px-3 w-28">Cumplimiento</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -759,6 +760,62 @@ export default function AdminMatches() {
                         </tbody>
                       </table>
                     </div>
+
+                    {/* VISTA MÓVIL (md:hidden - Minitarjetas Apiladas) */}
+                    <div className="grid grid-cols-1 gap-2.5 md:hidden">
+                      {rows.map((row, rIdx) => {
+                        const isExact = row.status === "exact" || row.status === "ok";
+                        const isWarn = row.status === "warn";
+                        const isNeutral = row.status === "neutral";
+                        
+                        const badgeBg = isExact 
+                          ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" 
+                          : isWarn 
+                            ? "bg-amber-500/10 text-amber-400 border border-amber-500/20" 
+                            : isNeutral
+                              ? "bg-zinc-800 text-zinc-400 border border-zinc-700/50"
+                              : "bg-red-500/10 text-red-400 border border-red-500/20";
+                        
+                        const badgeText = isExact ? "Coincide" : isWarn ? "Aproximado" : isNeutral ? "No Restringido" : "Diferente";
+
+                        return (
+                          <div key={rIdx} className="bg-zinc-900/70 border border-white/5 rounded-2xl p-3 space-y-2">
+                            {/* Cabecera con Nombre de Atributo y Badge de Cumplimiento a la derecha */}
+                            <div className="flex items-center justify-between gap-2 border-b border-white/5 pb-1.5">
+                              <div className="flex items-center gap-1.5 font-bold text-xs text-zinc-200">
+                                {row.icon}
+                                <span>{row.label}</span>
+                              </div>
+                              <span className={`px-2 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-wider shrink-0 ${badgeBg}`}>
+                                {badgeText}
+                              </span>
+                            </div>
+
+                            {/* Subfilas Verticales: OFRECIDO (Dorada) vs BUSCADO (Cyan) */}
+                            <div className="grid grid-cols-1 gap-1.5 text-xs pt-0.5">
+                              <div className="bg-[#bf953f]/5 border border-[#bf953f]/10 p-2 rounded-xl">
+                                <span className="text-[9px] uppercase tracking-wider font-extrabold text-[#bf953f]/80 block">
+                                  🏢 Ofrecido (Oferta)
+                                </span>
+                                <span className="font-bold text-[#bf953f] break-words mt-0.5 block">
+                                  {row.propVal}
+                                </span>
+                              </div>
+
+                              <div className="bg-cyan-500/5 border border-cyan-500/10 p-2 rounded-xl">
+                                <span className="text-[9px] uppercase tracking-wider font-extrabold text-cyan-400/80 block">
+                                  🔍 Buscado (Demanda)
+                                </span>
+                                <span className="font-bold text-cyan-300 break-words mt-0.5 block">
+                                  {row.reqVal}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
                   </div>
 
                   {/* Justificación de la IA */}
