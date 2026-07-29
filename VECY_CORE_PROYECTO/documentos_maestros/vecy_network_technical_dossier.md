@@ -387,7 +387,7 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 
 ### 🔖 v17.3 — JULIO 2026: ESPECIFICACIÓN MAESTRA DEL MOTOR DE MATCHING VECY CORE
 
-**Objetivo:** Garantizar precisión absoluta y lógica impecable en el cotejo técnico de afinidad comercial entre Inmuebles (Oferta) y Requerimientos (Demanda), alineando el backend y la tabla visual de la web.
+**Objetivo:** Garantizar precisión absoluta y lógica impecable en el cotejo técnico de afinidad comercial entre Inmuebles (Oferta) y Requerimientos (Demanda), alineando el backend, las notificaciones web y la tabla visual de la consola.
 
 #### 1. REGLAS MAESTRAS DE LOS FILTROS DUROS (Score 0% si falla)
 
@@ -398,22 +398,38 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 | **3** | **Ciudad** | • Coincidencia geográfica obligatoria (ej: Bogotá ↔ Bogotá). Difiere → ❌ **0% IMPOSIBLE** | **0% Score** |
 | **4** | **Zona / Barrio** | • Si se solicita barrio específico (ej. `Cedritos`), una oferta en `El Refugio`, `Rosales` o `Chicó` → ❌ **0% IMPOSIBLE**.<br>• Solo se permite barrio aledaño si la demanda incluye *"aledaños"* o *"cercanos"*. | **0% Score** |
 | **5** | **Área Mínima (Metraje en Duro)** | • Metraje ofrecido no puede ser inferior al exigido (`propArea >= reqAreaMin * 0.90`).<br>• Oferta 139 m² vs Demanda mínimo 200 m² → ❌ **0% IMPOSIBLE**.<br>• Oferta `N/E` (sin metraje) vs Demanda con metraje exigido → ❌ **0% IMPOSIBLE**. | **0% Score** |
-| **6** | **Presupuesto Máximo** | • Arriendo: (Canon + Admin) > Presupuesto + 2% → ❌ **0% IMPOSIBLE**.<br>• Venta: Precio > Presupuesto + 5% → ❌ **0% IMPOSIBLE**. | **0% Score** |
+| **6** | **Tolerancia Cero en Presupuesto** | • Arriendos: (Canon + Admin) > Canon Máximo Demanda → ❌ **0% IMPOSIBLE (Bloqueo Inmediato)**.<br>• Ventas: Precio Oferta > Presupuesto Máximo Demanda → ❌ **0% IMPOSIBLE (Bloqueo Inmediato)**. | **0% Score** |
 | **7** | **Habitaciones Mínimas** | • Habitaciones ofrecidas no pueden ser inferiores a las exigidas (`pBedrooms >= rBedrooms`).<br>• Oferta 2 habs vs Demanda 3 habs → ❌ **0% IMPOSIBLE**.<br>• Oferta `N/E` (sin habs) vs Demanda con habs exigidas → ❌ **0% IMPOSIBLE**. | **0% Score** |
 
 ---
 
 #### 2. UMBRAL MÍNIMO Y REGLA DEL 100% MATCH PERFECTO
-
-- **Threshold Mínimo en Base de Datos (85%+)**: Todo Match DEBE registrar un puntaje **≥ 85%**. Cualquier par con score inferior a 85% es ignorado y no se almacena en BD.
+- **Threshold Mínimo en Base de Datos (85%+)**: Todo Match DEBE registrar un puntaje **≥ 85%**. Cualquier par con score inferior a 85% es ignorado y eliminado de BD.
 - **Regla del 100% Match Perfecto**: Un Match solo recibe **100%** si **CADA CAMPO SOLICITADO** existe, ha sido extraído y coincide al 100%.
-- **Capping por Datos IncompletOS (`N/E`)**: Si existe **cualquier atributo relevante en `N/E`** (no extraído / sin información), el puntaje máximo se **capa a 84%**, impidiendo la emisión de badges falsos de Match Perfecto o su registro en BD.
+- **Capping por Datos Incompletos (`N/E`)**: Si existe **cualquier atributo relevante en `N/E`** (no extraído / sin información), el puntaje máximo se **capa a 84%**, impidiendo la emisión de badges falsos de Match Perfecto.
+- **Naturaleza N ↔ M (Multi-Match)**: Un Requerimiento puede coincidir con múltiples Inmuebles válidos (Score ≥ 85%), y un Inmueble con múltiples Requerimientos compatibles.
 
 ---
 
-#### 3. ALINEACIÓN ESTRUCTURAL DE LA TABLA DE COTEJO FRONT-END
+#### 3. FILTRO TEMPRANO ANTI-SPAM Y MATRIZ DE EXTRACCIÓN SELECTIVA
+- **Clasificación Estricta Anti-Spam (`esMensajeSpamOBasura()`)**:
+  - Enlaces de Zoom, Google Meet, Teams, Webinars, Masterclasses, Cursos, Coaching, Servicios de Software/Marketing no predial y Política son descartados de inmediato (Reacción: `🚫`). Cero inserción en Supabase.
+- **Enrutador de URLs (Web Scraping)**:
+  - **Permitidos**: Wasi, Qrador, Habi, Metrocuadrado, FincaRaíz, Ciencuadras, Properati, MercadoLibre, Google Drive, Netlify, Vecy e Inmobiliarias independientes (`lambienesraices.com`).
+  - **Bloqueados (Ignorados)**: YouTube, TikTok, Facebook, Instagram, Twitter/X, catálogos directos de WhatsApp (`wa.me`, `whatsapp.com/catalog`).
+- **Validador Multimedia OCR**:
+  - **Habilitado**: Documentos PDF y flyers/banners promocionales con texto informativo legible.
+  - **Deshabilitado**: Fotografías ambientales (cocinas, baños, alcobas, fachadas) sin texto informativo. Se guardan en la galería pero no gastan tokens en análisis OCR.
 
-Para evitar confusión visual en la consola web, las columnas del Cotejo Técnico en `AdminMatches.tsx` y `MatchesReport.tsx` quedan fijadas de izquierda a derecha así:
+---
+
+#### 4. DESACTIVACIÓN DE ALERTAS SALIENTES DE WHATSAPP Y NOTIFICACIONES WEB IN-APP
+- **Protección Anti-Baneo de Meta**: Se elimina el envío automático de notificaciones salientes de texto/DMs por WhatsApp para evitar bloqueos de números telefónicos.
+- **Canal Exclusivo Web In-App**: Todos los matches con Score ≥ 85% se registran con `status = "web_only"` en Supabase y son consultados por el bróker al ingresar a **vecy.co**.
+
+---
+
+#### 5. ALINEACIÓN ESTRUCTURAL DE LA TABLA DE COTEJO FRONT-END
 
 ```
 ┌─────────────────┬─────────────────────────┬─────────────────────────┬──────────────┐
