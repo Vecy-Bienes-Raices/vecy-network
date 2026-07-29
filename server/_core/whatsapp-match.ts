@@ -204,11 +204,7 @@ export class JaniaMatchBot {
       } catch (e) {}
 
       console.log(`[${this.botName}] Estableciendo conexión por WebSocket...`);
-      const makeWASocket = getWASocket();
-      this.sock = makeWASocket({
-        auth: state,
-        version,
-        logger: {
+      const silentLogger = {
         level: 'silent',
         log: () => {},
         trace: () => {},
@@ -220,6 +216,7 @@ export class JaniaMatchBot {
         child: () => silentLogger
       };
 
+      const makeWASocket = getWASocket();
       this.sock = makeWASocket({
         auth: state,
         version,
