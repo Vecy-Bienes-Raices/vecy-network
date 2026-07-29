@@ -712,67 +712,7 @@ export class JaniaMatchBot {
     }
 
     if (!isAdmin) {
-      const textLower = body.toLowerCase();
-      const isPossibleListing = 
-        body.length > 120 || 
-        body.split('\n').length > 2 || 
-        !!imageBuffer ||
-        !!pdfBuffer ||
-        textLower.includes("http") ||
-        textLower.includes("www") ||
-        textLower.includes("ofrezco") ||
-        textLower.includes("busco") ||
-        textLower.includes("vendo") ||
-        textLower.includes("arriendo") ||
-        textLower.includes("compro") ||
-        textLower.includes("necesito");
-
-      if (isPossibleListing) {
-        console.log(`[JANIA-MATCH] Detectada publicación comercial agrupada en DM privado de ${senderId}. Procesando...`);
-        
-        await this.logToDb(senderId, 'user', body);
-
-        const { processWhatsAppMessage } = await import('./janIA');
-        const result = await processWhatsAppMessage(
-          body,
-          senderId,
-          userName,
-          !!imageBuffer || !!pdfBuffer,
-          [],
-          undefined,
-          imageBuffer,
-          false, // isGroup = false
-          pdfBuffer,
-          pdfMimeType
-        );
-
-        if (result) {
-          const emoji = this.getReactionEmoji(result);
-          if (emoji) {
-            const sendReaction = async () => {
-              try {
-                if (mainMsg && mainMsg.key) {
-                  const cleanKey = {
-                    remoteJid: mainMsg.key.remoteJid || chatId,
-                    id: mainMsg.key.id,
-                    fromMe: !!mainMsg.key.fromMe,
-                    participant: mainMsg.key.participant
-                  };
-                  await this.sock.sendMessage(chatId, { react: { text: emoji, key: cleanKey } });
-                }
-              } catch (e) {}
-            };
-            const delayMs = Math.floor(Math.random() * (12000 - 4000 + 1)) + 4000;
-            console.log(`[JANIA-MATCH] Inserción confirmada en DM. Retrasando reacción ${emoji} por ${delayMs}ms (Protocolo Anti-Ban)...`);
-            setTimeout(sendReaction, delayMs);
-          }
-        }
-        return;
-      }
-
-      // Módulo 2 & 7: Redirección a soporte en DMs si no es listing o si no hay inserción exitosa.
-      console.log(`[JANIA-MATCH] Mensaje común recibido en DM ${senderId}. Enviando mensaje de redirección.`);
-      await this.handlePrivateDmRedirect(chatId, senderId, userName);
+      // DMs privados de contactos personales o terceros no se procesan para captación ni se reacciona con emojis
       return;
     }
 
