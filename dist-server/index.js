@@ -6705,7 +6705,13 @@ import fs4 from "fs";
 import path5 from "path";
 import { eq as eq11 } from "drizzle-orm";
 import QRCode from "qrcode";
-var makeWASocket, SERVER_BOOT_TIME, cleanJid, outgoingQueue, JaniaMatchBot, janiaMatchBot, janiaCaptadorBot;
+function getWASocket() {
+  if (typeof _baileys === "function") return _baileys;
+  if (_baileys?.default && typeof _baileys.default === "function") return _baileys.default;
+  if (_baileys?.makeWASocket && typeof _baileys.makeWASocket === "function") return _baileys.makeWASocket;
+  return _baileys;
+}
+var SERVER_BOOT_TIME, cleanJid, outgoingQueue, JaniaMatchBot, janiaMatchBot, janiaCaptadorBot;
 var init_whatsapp_match = __esm({
   "server/_core/whatsapp-match.ts"() {
     "use strict";
@@ -6718,7 +6724,6 @@ var init_whatsapp_match = __esm({
       dns.setDefaultResultOrder("ipv4first");
     } catch (e) {
     }
-    makeWASocket = typeof _baileys === "function" ? _baileys : _baileys?.default || _baileys;
     SERVER_BOOT_TIME = Math.floor(Date.now() / 1e3) - 120;
     cleanJid = (jid) => {
       if (!jid) return "";
@@ -6857,6 +6862,7 @@ var init_whatsapp_match = __esm({
             },
             child: () => silentLogger
           };
+          const makeWASocket = getWASocket();
           this.sock = makeWASocket({
             auth: state,
             version,

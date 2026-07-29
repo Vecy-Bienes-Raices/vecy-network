@@ -5,18 +5,22 @@ import { explicarMatch } from "./_core/matching";
 
 async function run() {
   const db = await getDb();
+  if (!db) {
+    console.error("DB connection unavailable");
+    return;
+  }
   
-  const req = await db.query.requirements.findFirst({
+  const req = await (db.query as any).requirements.findFirst({
     where: eq(requirements.id, 252)
   });
   
-  const prop = await db.query.properties.findFirst({
+  const prop = await (db.query as any).properties.findFirst({
     where: eq(properties.id, 216)
   });
   
   if (req && prop) {
     console.log("Req Budget:", req.presupuestoMax, req.transactionType);
-    console.log("Prop Price:", prop.price, "Rent:", prop.priceRent, prop.transactionType);
+    console.log("Prop Price:", prop.price, "Rent:", prop.rentPrice, prop.transactionType);
     
     const explanation = explicarMatch(req as any, prop as any);
     console.log(JSON.stringify(explanation, null, 2));

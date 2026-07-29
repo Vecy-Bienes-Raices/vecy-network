@@ -117,7 +117,7 @@ export async function calculateCommercialAppraisal(input: AppraisalInput): Promi
       .from(properties)
       .where(
         and(
-          eq(properties.active, true),
+          eq(properties.available, true),
           sql`LOWER(translate(${properties.city}, 'áéíóúÁÉÍÓÚñÑ', 'aeiouAEIOUnn')) ILIKE ${'%' + cleanCity + '%'}`
         )
       );
@@ -127,7 +127,7 @@ export async function calculateCommercialAppraisal(input: AppraisalInput): Promi
       const list: ComparableItem[] = [];
       for (const prop of rawProperties) {
         const pPrice = Number(prop.price || 0);
-        const pArea = Number(prop.area || 0);
+        const pArea = Number(prop.areaTotal || 0);
         
         // Exigir precio y área válidos
         if (pPrice <= 0 || pArea <= 0) continue;
