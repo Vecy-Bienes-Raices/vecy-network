@@ -471,6 +471,30 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 #### 5. ENLACES CLICABLES INTERACTIVOS (`renderTextWithClickableLinks`)
 - Todas las URLs e hipervínculos presentes en el texto del mensaje (`https://...`, `wa.me/...`) se convierten en enlaces interactivos con `<ExternalLink />` para navegar a portales o catálogos externos en pestañas nuevas.
 
+---
+
+### 🔖 v17.6 — JULIO 2026: ALGORITMO DE HOMOLOGACIÓN DE PRECIOS (ACM) Y REPORTE VISUAL DE AVALÚOS WEB
+
+**Objetivo:** Consolidar el cálculo científico de tasaciones prediales y la presentación visual de los dictámenes de Avalúo Comercial en el Grupo 2 y la Consola Web.
+
+#### 1. FÓRMULA MATEMÁTICA Y MATRICES DE COEFICIENTES (`server/_core/valuation.ts`)
+- **Fórmula de Homologación Base**:
+  $$\text{Precio Base Homologado} = \text{Promedio Zona } (\$/m^2) \times C_{\text{antigüedad}} \times C_{\text{piso}} \times C_{\text{garajes}} \times C_{\text{amenidades}}$$
+- **Matriz de Coeficientes Prediales**:
+  - **$C_{\text{antigüedad}}$ (Depreciación)**: Nuevo 0-5 años (`1.0`), Intermedio 6-15 años (`0.92`), Usado >15 años (`0.85`).
+  - **$C_{\text{piso}}$ (Confort/Vista)**: 
+    - Con Ascensor: Piso 1-2 (`0.95`), Piso 3+ (`1.02`).
+    - Sin Ascensor: Piso 1-2 (`1.0`), Piso 3 (`0.93`), Piso 4+ (`0.85` castigo duro).
+  - **$C_{\text{garajes}}$ (Movilidad)**: $\ge 2$ garajes (`1.05` premio 5%), 1 garaje (`1.0`), Sin garaje (`0.88` castigo 12%).
+  - **$C_{\text{amenidades}}$ (Club House)**: Piscina + Gym + 24/7 (`1.07` premio 7%), Tradicional (`1.0`).
+
+#### 2. DISEÑO VISUAL DEL REPORTE WEB (`client/src/components/valuation/ReportView.tsx`)
+- **Bloque 1 (Hero Predial - Dorado #bf953f / Slate)**: Muestra en gran formato el Valor Comercial Sugerido, el Precio Mínimo de Cierre (-5%) y el valor homologado por $m^2$.
+- **Bloque 2 (Métricas Cyan #22d3ee)**: Cap Rate Estimado (%) y Canon de Arriendo mensual estimado.
+- **Bloque 3 (Cotejo Responsivo de Coeficientes)**: Tabla en escritorio y Responsive Stack de minitarjetas en móviles con badges de Premio (`+`) y Castigo (`-`).
+- **Bloque 4 (Muestreo e Inmuebles Gemelos)**: Enlaces clicables e investigados en vivo (Wasi, FincaRaíz, Metrocuadrado) para respaldo científico ante el cliente.
+
+
 
 
 
