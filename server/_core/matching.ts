@@ -15,6 +15,57 @@ function hasAledanos(text: string): boolean {
   return n.includes("aledan") || n.includes("cercan") || n.includes("alrededor") || n.includes("similar") || n.includes("proxim") || n.includes("otro");
 }
 
+export function extractRealPhone(item: any): string | null {
+  if (!item) return null;
+
+  const textToSearch = `${item.rawText || ""} ${item.description || ""}`;
+
+  // 1. Buscar en el texto del mensaje por cualquier celular colombiano de 10 dígitos (ej: 3124431225)
+  const phoneMatches = textToSearch.match(/(?:\+?57\s*)?3\d{2}[\s.-]?\d{3}[\s.-]?\d{4}\b/g);
+  if (phoneMatches && phoneMatches.length > 0) {
+    const rawMatch = phoneMatches[0].replace(/\D/g, "");
+    const clean10 = rawMatch.startsWith("57") && rawMatch.length === 12 ? rawMatch.substring(2) : rawMatch;
+    if (clean10.length === 10 && clean10.startsWith("3")) {
+      return `57${clean10}`;
+    }
+  }
+
+  // 2. Revisar idUsuarioWhatsapp o phone del objeto
+  const candidates = [
+    item.idUsuarioWhatsapp,
+    item.phone
+  ];
+
+  for (const cand of candidates) {
+    if (!cand) continue;
+    const clean = String(cand).split("@")[0].replace(/\D/g, "");
+    // Rechazar identificadores numéricos de grupos de WhatsApp o hilos de Baileys
+    if (clean.startsWith("11") || clean.startsWith("12036") || clean.startsWith("1203") || clean.length > 13) {
+      continue;
+    }
+    // Celular Colombia: 10 dígitos (3XXXXXXXXX) o 12 dígitos (573XXXXXXXXX)
+    if (clean.length === 12 && clean.startsWith("573")) {
+      return clean;
+    }
+    if (clean.length === 10 && clean.startsWith("3")) {
+      return `57${clean}`;
+    }
+    // Fijo Colombia: 10 dígitos (60XXXXXXXX) o 12 dígitos (5760XXXXXXXX)
+    if (clean.length === 12 && clean.startsWith("5760")) {
+      return clean;
+    }
+    if (clean.length === 10 && clean.startsWith("60")) {
+      return `57${clean}`;
+    }
+    // Internacionales válidos (entre 10 y 12 dígitos)
+    if (clean.length >= 10 && clean.length <= 12) {
+      return clean;
+    }
+  }
+
+  return null;
+}
+
 /**
  * Compatibilidad inteligente de tipos de transacción.
  * Implementa la lógica real del mercado inmobiliario colombiano:
@@ -449,6 +500,15 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   const hasZeroSpecs = price <= 0 && propArea <= 0 && pBedrooms <= 0 && pBathrooms <= 0;
   if (hasZeroSpecs) {
     blockers.push("Inmueble incompleto sin datos prediales mínimos (Precio, Área, Habitaciones y Baños en N/E).");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+
+  // ── FILTRO DURO 0B: Teléfono de Contacto Obligatorio (Tolerancia Cero) ──
+  const propRealPhone = extractRealPhone(property);
+  const reqRealPhone = extractRealPhone(requirement);
+
+  if (!propRealPhone || !reqRealPhone) {
+    blockers.push("Match no comercializable: Falta número de teléfono de contacto real en una de las partes.");
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
