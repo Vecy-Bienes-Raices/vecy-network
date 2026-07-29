@@ -747,16 +747,13 @@ Dirección obligatoria:
     });
 
     // Inicializar los Bots de WhatsApp de Vecy Network (Baileys)
+    // NOTA DE SEGURIDAD: La línea +573166569719 ha sido deshabilitada 100%. Solo opera el Bot Captador Oficial (+573192919978).
     const shouldStartBot = process.env.ENABLE_WHATSAPP_BOT !== "false" || process.env.ENABLE_JANIA_MATCH_BOT === "true";
     if (shouldStartBot) {
-      console.log("Iniciando WhatsApp Bot Principal (+573166569719) Baileys...");
-      janiaMatchBot.initialize();
-      setTimeout(() => {
-        console.log("Iniciando WhatsApp Bot Captador Worker (+573192919978) Baileys (escalonado 25s)...");
-        import("./whatsapp-match").then(({ janiaCaptadorBot }) => {
-          janiaCaptadorBot.initialize();
-        }).catch(err => console.error("[WHATSAPP-CAPTADOR] Error al iniciar bot captador:", err));
-      }, 25000);
+      console.log("Iniciando Bot Oficial JanIA (+573192919978) Baileys...");
+      import("./whatsapp-match").then(({ janiaCaptadorBot }) => {
+        janiaCaptadorBot.initialize();
+      }).catch(err => console.error("[WHATSAPP-CAPTADOR] Error al iniciar bot captador:", err));
     } else {
       console.log("[WHATSAPP-BOT] Deshabilitado temporalmente mediante variables de entorno.");
     }
