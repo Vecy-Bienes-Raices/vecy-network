@@ -451,20 +451,24 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 
 #### 1. FILTRO DURO 0 — INMUEBLES INCOMPLETOS / STUBS (Tolerancia Cero)
 - **Bloqueo Inmediato (Score 0%)**: Si una oferta no cuenta con al menos precio (`>0`), área (`>0`) o habitaciones (`>0`), o si es una publicación corta de solo enlace (*"Sigue este enlace..."*), el motor le asigna **Score 0%** en el Filtro Duro 0.
-- **Purga de Supabase**: Se re-evalúan periódicamente las coincidencias en BD y se purga de forma física cualquier Match cuyo score sea inferior al 85% (ej. Coincidencia #299 purgada).
 
-#### 2. RESOLUCIÓN DE CONTACTO Y EXTRACCIÓN TELEFÓNICA (`extractPhoneFromItem`)
+#### 2. FILTRO DURO 0B — TELÉFONO DE CONTACTO OBLIGATORIO (Tolerancia Cero)
+- **Bloqueo Inmediato (Score 0%)**: Si la Oferta o la Demanda no poseen un teléfono celular real verificado (`extractRealPhone() == null`), el motor le asigna **Score 0%** en el Filtro Duro 0B.
+- **Principio Doctrinal**: Un Match existe exclusivamente para conectar comercialmente a dos personas. Un Match sin número de contacto directo es un registro inútil, por lo que queda bloqueado automáticamente antes de llegar a la base de datos o a la pantalla.
+- **Purga de Supabase**: Se purging 8 coincidencias históricas en Supabase que carecían de teléfono directo (ej. Coincidencias #287 y #300 purgadas de la base de datos).
+
+#### 3. RESOLUCIÓN DE CONTACTO Y EXTRACCIÓN TELEFÓNICA (`extractPhoneFromItem`)
 - **Eliminación de la Máscara "Contacto Red VECY"**: Se eliminó la leyenda estática de reemplazo. La interfaz **siempre muestra el número de teléfono real** del captador o requiriente (`+57 3XX XXX XXXX` o `+ID`).
 - **Escaneo Regex en Mensaje (`rawText`)**: Si el objeto de la propiedad no incluye el teléfono en su metadato inicial pero el texto contiene un número celular colombiano de 10 dígitos (iniciando por 3), el sistema lo extrae e integra automáticamente.
 - **Botón `Contactar WA` Permanente**: Se garantiza la presencia activa del botón de WhatsApp en el 100% de las tarjetas de Oferta y Demanda para iniciar la conversación directamente vía `wa.me/573XXXXXXXXX`.
 
-#### 3. DISEÑO RESPONSIVO MOBILE-FIRST (Responsive Stack)
+#### 4. DISEÑO RESPONSIVO MOBILE-FIRST (Responsive Stack)
 - **Modo Escritorio (`md:block`)**: Mantiene la estructura de tabla tradicional de 4 columnas (Característica, Ofrecido, Buscado, Cumplimiento).
 - **Modo Móvil (`md:hidden`)**: Transforma el cotejo en una lista de minitarjetas verticales independientes (`bg-zinc-900/70 border border-white/5 rounded-2xl p-3`):
   - **Cabecera**: Atributo e icono a la izquierda + Badge de Cumplimiento compacta en la esquina superior derecha (`Coincide`, `Aproximado`, etc.).
   - **Cuerpo Vertical**: Subfila Dorada (`#bf953f`) para **OFRECIDO (OFERTA)** y Subfila Cyan (`cyan-300`) para **BUSCADO (DEMANDA)**.
 
-#### 4. ENLACES CLICABLES INTERACTIVOS (`renderTextWithClickableLinks`)
+#### 5. ENLACES CLICABLES INTERACTIVOS (`renderTextWithClickableLinks`)
 - Todas las URLs e hipervínculos presentes en el texto del mensaje (`https://...`, `wa.me/...`) se convierten en enlaces interactivos con `<ExternalLink />` para navegar a portales o catálogos externos en pestañas nuevas.
 
 
