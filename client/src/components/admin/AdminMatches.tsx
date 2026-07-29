@@ -315,12 +315,33 @@ function formatCOP(val: string | number) {
   return num.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
 }
 
+function isValidRealPhoneNumber(clean: string): boolean {
+  if (!clean) return false;
+  // Rechazar identificadores de grupo de WhatsApp o hilos de Baileys (empiezan por 11, 12036, 1203, o tienen > 13 dígitos)
+  if (clean.startsWith("11") || clean.startsWith("12036") || clean.startsWith("1203") || clean.length > 13) {
+    return false;
+  }
+  // Celular Colombia: 10 dígitos (3XXXXXXXXX) o 12 dígitos (573XXXXXXXXX)
+  if ((clean.length === 10 && clean.startsWith("3")) || (clean.length === 12 && clean.startsWith("573"))) {
+    return true;
+  }
+  // Fijo Colombia: 10 dígitos (60XXXXXXXX) o 12 dígitos (5760XXXXXXXX)
+  if ((clean.length === 10 && clean.startsWith("60")) || (clean.length === 12 && clean.startsWith("5760"))) {
+    return true;
+  }
+  // Números internacionales válidos (entre 10 y 12 dígitos sin prefijos sospechosos)
+  if (clean.length >= 10 && clean.length <= 12) {
+    return true;
+  }
+  return false;
+}
+
 function extractPhoneFromItem(item: any): { display: string; cleanNumber: string | null } {
-  if (!item) return { display: "No Registrado", cleanNumber: null };
+  if (!item) return { display: "Número no disponible", cleanNumber: null };
 
   const textToSearch = `${item.rawText || ""} ${item.description || ""}`;
 
-  // 1. Buscar en el texto del mensaje por cualquier número celular colombiano de 10 dígitos
+  // 1. Buscar en el texto del mensaje por cualquier celular colombiano de 10 dígitos (ej: 312 443 1225)
   const phoneMatches = textToSearch.match(/(?:\+?57\s*)?3\d{2}[\s.-]?\d{3}[\s.-]?\d{4}\b/g);
   if (phoneMatches && phoneMatches.length > 0) {
     const rawMatch = phoneMatches[0].replace(/\D/g, "");
@@ -333,23 +354,29 @@ function extractPhoneFromItem(item: any): { display: string; cleanNumber: string
     }
   }
 
-  // 2. Si no está en el texto, revisar idUsuarioWhatsapp o phone del objeto
-  const rawPhone = item.idUsuarioWhatsapp || item.phone || (item.user && item.user.phone);
-  if (rawPhone) {
-    const clean = String(rawPhone).split("@")[0].replace(/\D/g, "");
-    if (clean.length === 12 && clean.startsWith("573")) {
-      return {
-        display: `+57 ${clean.substring(2, 5)} ${clean.substring(5, 8)} ${clean.substring(8)}`,
-        cleanNumber: clean
-      };
-    }
-    if (clean.length === 10 && clean.startsWith("3")) {
-      return {
-        display: `+57 ${clean.substring(0, 3)} ${clean.substring(3, 6)} ${clean.substring(6)}`,
-        cleanNumber: `57${clean}`
-      };
-    }
-    if (clean.length > 5) {
+  // 2. Revisar si idUsuarioWhatsapp, phone o user.phone contienen un número telefónico real válido
+  const candidates = [
+    item.idUsuarioWhatsapp,
+    item.phone,
+    item.user?.phone
+  ];
+
+  for (const cand of candidates) {
+    if (!cand) continue;
+    const clean = String(cand).split("@")[0].replace(/\D/g, "");
+    if (isValidRealPhoneNumber(clean)) {
+      if (clean.length === 12 && clean.startsWith("573")) {
+        return {
+          display: `+57 ${clean.substring(2, 5)} ${clean.substring(5, 8)} ${clean.substring(8)}`,
+          cleanNumber: clean
+        };
+      }
+      if (clean.length === 10 && clean.startsWith("3")) {
+        return {
+          display: `+57 ${clean.substring(0, 3)} ${clean.substring(3, 6)} ${clean.substring(6)}`,
+          cleanNumber: `57${clean}`
+        };
+      }
       return {
         display: `+${clean}`,
         cleanNumber: clean
@@ -357,30 +384,33 @@ function extractPhoneFromItem(item: any): { display: string; cleanNumber: string
     }
   }
 
-  return { display: "No Registrado", cleanNumber: null };
+  return { display: "Número no disponible", cleanNumber: null };
 }
 
 function formatPhoneDisplay(phone: string | null | undefined) {
-  if (!phone) return "No Registrado";
+  if (!phone) return "Número no disponible";
   const clean = String(phone).split("@")[0].replace(/\D/g, "");
+  if (!isValidRealPhoneNumber(clean)) return "Número no disponible";
+
   if (clean.length === 12 && clean.startsWith("573")) {
     return `+57 ${clean.substring(2, 5)} ${clean.substring(5, 8)} ${clean.substring(8)}`;
   }
   if (clean.length === 10 && clean.startsWith("3")) {
     return `+57 ${clean.substring(0, 3)} ${clean.substring(3, 6)} ${clean.substring(6)}`;
   }
-  return clean.length > 5 ? `+${clean}` : "No Registrado";
+  return `+${clean}`;
 }
 
 function isPhoneValidForWA(phone: string | null | undefined): boolean {
   if (!phone) return false;
   const clean = String(phone).split("@")[0].replace(/\D/g, "");
-  return clean.length > 5;
+  return isValidRealPhoneNumber(clean);
 }
 
 function getValidWaLink(phone: string | null | undefined, text: string): string {
   if (!phone) return '#';
   const clean = String(phone).split("@")[0].replace(/\D/g, "");
+  if (!isValidRealPhoneNumber(clean)) return '#';
   const num = clean.startsWith("57") ? clean : `57${clean}`;
   return `https://wa.me/${num}?text=${encodeURIComponent(text)}`;
 }
