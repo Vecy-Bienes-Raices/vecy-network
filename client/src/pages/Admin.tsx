@@ -13,6 +13,7 @@ import AdminReports from '@/components/admin/AdminReports';
 import AdminGitHubSync from '@/components/admin/AdminGitHubSync';
 import AdminMatches from '@/components/admin/AdminMatches';
 import AdminRequirements from '@/components/admin/AdminRequirements';
+import { getColombiaCurrentDateString } from '@/lib/dateUtils';
 
 const tabs = [
   { id: 'properties', label: 'Inmuebles', icon: Building2 },
@@ -283,7 +284,7 @@ export default function Admin() {
             <div className="hidden lg:block text-right border-l border-border pl-6">
               <p className="text-xs font-bold uppercase tracking-widest text-primary">Sistema Activo</p>
               <p className="text-muted-foreground text-[11px] mt-0.5">
-                {new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                {getColombiaCurrentDateString()}
               </p>
             </div>
           </div>

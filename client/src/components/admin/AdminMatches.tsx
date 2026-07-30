@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { trpc } from '@/lib/trpc';
 import { motion, AnimatePresence } from 'framer-motion';
+import { formatColombiaDate } from '@/lib/dateUtils';
 
 type MatchStatus = "exact" | "warn" | "missing" | "ok" | "neutral";
 
@@ -648,9 +649,7 @@ export default function AdminMatches() {
             {filteredMatches.map((m, idx) => {
               const score = parseFloat(m.matchScore?.toString() || "0");
               const { rows, autoScore } = scoreRows(m.requirement, m.property);
-              const date = new Date(m.createdAt || new Date()).toLocaleString("es-CO", { 
-                year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" 
-              });
+              const date = formatColombiaDate(m.createdAt);
 
               const exactCount = rows.filter(r => r.status === "exact" || r.status === "ok").length;
               const warnCount = rows.filter(r => r.status === "warn").length;

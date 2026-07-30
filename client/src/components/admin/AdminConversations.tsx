@@ -3,6 +3,7 @@ import { MessageSquare, Clock, User, TrendingUp, Search, Eye, Loader2, RefreshCw
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { trpc } from '@/lib/trpc';
+import { formatColombiaDate } from '@/lib/dateUtils';
 
 export default function AdminConversations() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -25,18 +26,7 @@ export default function AdminConversations() {
   const selectedData = conversations.find(c => c.sessionId === selectedSessionId);
 
   // Helper to format timestamps nicely
-  const formatDate = (dateStr: any) => {
-    if (!dateStr) return '—';
-    const date = new Date(dateStr);
-    return date.toLocaleString('es-CO', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
-  };
+  const formatDate = (dateStr: any) => formatColombiaDate(dateStr);
 
   // Detect conversation source (WhatsApp vs Web)
   const getSourceBadge = (sessionId: string) => {

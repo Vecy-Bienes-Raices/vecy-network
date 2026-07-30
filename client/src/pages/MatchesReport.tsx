@@ -11,6 +11,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
+import { formatColombiaDate } from "@/lib/dateUtils";
 
 const ADMIN_PASSWORD = "vecy2026admin";
 
@@ -456,7 +457,7 @@ function PropertyTraceability({ property }: { property: any }) {
           </div>
           <div className="max-h-[140px] overflow-y-auto border border-white/5 rounded-xl divide-y divide-white/5 bg-black/20">
             {visibleHistory.map((item: any, idx: number) => {
-              const itemDate = new Date(item.fecha).toLocaleString("es-CO", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+              const itemDate = formatColombiaDate(item.fecha);
               return (
                 <div key={idx} className="p-2 text-[10px] flex items-center justify-between gap-2 hover:bg-white/[0.01] transition-all">
                   <div className="flex items-center gap-2">
@@ -656,7 +657,7 @@ function MatchCard({ m, idx }: { m: any; idx: number }) {
   const [expanded, setExpanded] = useState(false);
   const score = parseFloat(m.matchScore?.toString() || "0");
   const { rows, autoScore } = useMemo(() => scoreRows(m.requirement, m.property), [m]);
-  const date = new Date(m.createdAt || new Date()).toLocaleString("es-CO", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  const date = formatColombiaDate(m.createdAt);
   const exactCount = rows.filter(r => r.status === "exact" || r.status === "ok").length;
   const warnCount = rows.filter(r => r.status === "warn").length;
   const failCount = rows.filter(r => r.status === "missing").length;
