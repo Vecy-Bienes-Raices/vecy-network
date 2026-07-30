@@ -1985,10 +1985,9 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
   }
 }
 
-export const janiaMatchBot = new JaniaMatchBot();
-export const janiaCaptadorBot = new JaniaMatchBot({
-  sessionFolderName: '.baileys_auth_worker2',
-  qrFileName: 'qr-captador.png',
-  botName: 'JANIA-CAPTADOR-WORKER2',
-  isWorkerOnly: true
+export const janiaMatchBot = new JaniaMatchBot({
+  sessionFolderName: '.baileys_auth',
+  qrFileName: 'qr-match.png',
+  botName: 'JANIA-MATCH-OFICIAL'
 });
+export const janiaCaptadorBot = janiaMatchBot;
