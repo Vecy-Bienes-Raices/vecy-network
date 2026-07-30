@@ -7,6 +7,7 @@ import { eq, desc, sql, inArray, gte } from 'drizzle-orm';
 
 import { scrapePropertyLink } from '../_core/scraper';
 import { JANIA_PROMPT, processWhatsAppMessage } from '../_core/janIA';
+import { liquidarImpuestosVenta } from '../_core/taxEngine';
 import axios from 'axios';
 
 export const janIARouter = router({
@@ -739,6 +740,25 @@ export const janIARouter = router({
       throw error;
     }
   }),
+
+  // Liquidación tributaria de Retención en la Fuente y Ganancia Ocasional (DIAN v17.6)
+  calcularImpuestos: publicProcedure
+    .input(
+      z.object({
+        precioVenta: z.number().min(0),
+        costoFiscal: z.number().min(0),
+        anosPosesion: z.number().min(0),
+        esViviendaHabitacion: z.boolean().default(false),
+      })
+    )
+    .mutation(({ input }) => {
+      return liquidarImpuestosVenta({
+        precioVenta: input.precioVenta,
+        costoFiscal: input.costoFiscal,
+        anosPosesion: input.anosPosesion,
+        esViviendaHabitacion: input.esViviendaHabitacion,
+      });
+    }),
 });
 
 export type JanIARouter = typeof janIARouter;

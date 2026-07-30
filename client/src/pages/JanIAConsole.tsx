@@ -28,7 +28,8 @@ import {
   Users,
   LogOut,
   Sliders,
-  HelpCircle
+  HelpCircle,
+  Calculator
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { trpc } from '@/lib/trpc';
@@ -36,6 +37,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation } from 'wouter';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/_core/hooks/useAuth';
+import { TaxCalculatorModal } from '../components/tax/TaxCalculatorModal';
 
 interface Message {
   id: string;
@@ -187,6 +189,7 @@ export default function JanIAConsole() {
   const [sessionId, setSessionId] = useState(() => `session-${Date.now()}-${Math.random()}`);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [isVoiceRecording, setIsVoiceRecording] = useState(false);
+  const [isTaxModalOpen, setIsTaxModalOpen] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -668,6 +671,16 @@ export default function JanIAConsole() {
                 className="hidden" 
                 onChange={handleFileUpload}
               />
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-[#bf953f] bg-[#bf953f]/10 border border-[#bf953f]/20 hover:bg-[#bf953f]/20 rounded-xl px-2.5 py-1 text-xs font-bold flex items-center gap-1.5 ml-1"
+                onClick={() => setIsTaxModalOpen(true)}
+                title="Calculadora Tributaria DIAN v17.6"
+              >
+                <Calculator className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Calculadora DIAN</span>
+              </Button>
             </div>
             
             {/* Right Tools */}
@@ -1019,6 +1032,13 @@ export default function JanIAConsole() {
           </div>
         )}
       </main>
+
+      {/* Tax Calculator Modal (DIAN v17.6) */}
+      <TaxCalculatorModal
+        isOpen={isTaxModalOpen}
+        onClose={() => setIsTaxModalOpen(false)}
+        onSendToChat={(summary) => setInputValue(summary)}
+      />
     </div>
   );
 }

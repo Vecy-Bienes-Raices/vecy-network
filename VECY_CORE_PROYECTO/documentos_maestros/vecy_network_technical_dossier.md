@@ -494,6 +494,30 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 - **Bloque 3 (Cotejo Responsivo de Coeficientes)**: Tabla en escritorio y Responsive Stack de minitarjetas en móviles con badges de Premio (`+`) y Castigo (`-`).
 - **Bloque 4 (Muestreo e Inmuebles Gemelos)**: Enlaces clicables e investigados en vivo (Wasi, FincaRaíz, Metrocuadrado) para respaldo científico ante el cliente.
 
+---
+
+### 🔖 v17.6B — JULIO 2026: MOTOR TRIBUTARIO EN DURO (RETENCIÓN EN LA FUENTE Y GANANCIA OCASIONAL — DIAN)
+
+**Objetivo:** Automatizar la liquidación tributaria determinista predial en Colombia para el Grupo 2 de WhatsApp y la Consola Web de Soporte.
+
+#### 1. MOTOR TRIBUTARIO DETERMINISTA (`server/_core/taxEngine.ts`)
+- **Constante UVT 2026**: `VALOR_UVT_2026 = 50318` COP.
+- **Retención en la Fuente por Venta**:
+  - Límite 20.000 UVT ($1.006.360.000 COP).
+  - Venta $\le 20.000$ UVT $\rightarrow$ **1.0%** sobre valor total de la escritura.
+  - Venta $> 20.000$ UVT $\rightarrow$ **2.5%** sobre valor total de la escritura (Ley de Inversión Social).
+- **Ganancia Ocasional (Art. 300 y ss. E.T.)**:
+  - Posesión $< 2$ años $\rightarrow$ **Renta Líquida Ordinaria** (Tarifa progresiva DIAN 0%-39%).
+  - Posesión $\ge 2$ años $\rightarrow$ Tarifa única del **15%** por Ganancia Ocasional.
+  - Exención Vivienda de Habitación (Art. 311-1 E.T.) $\rightarrow$ Primeras **5.000 UVT ($251.590.000 COP)** de utilidad 100% exentas.
+
+#### 2. ENDPOINT TRPC GLOBAL (`server/routers/janIA.ts`)
+- Procedimiento mutation `janIA.calcularImpuestos` disponible para la web y la consola de soporte.
+
+#### 3. COMPONENTE INTERFAZ WEB (`client/src/components/tax/TaxCalculatorModal.tsx`)
+- Modal interactivo con acentos Dorados (`#bf953f`) y Cyan (`#22d3ee`) integrado en la Consola Web de JanIA (`JanIAConsole.tsx`) con opción de insertar dictámenes tributarios directamente en el chat.
+
+
 
 
 

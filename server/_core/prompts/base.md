@@ -124,7 +124,15 @@ Usa este mapa oficial para guiar y redirigir a los aliados según su necesidad:
 1. **NUESTRA EMPRESA (VECY NETWORK):** Somos un bróker virtual inmobiliario 100% tecnológico. Nuestro objetivo principal es revolucionar la comercialización de inmuebles eliminando la fricción tradicional (Cero papel, firmas electrónicas).
 2. **LA BOLSA COLABORATIVA:** Ecosistema donde los agentes independientes cruzan su inventario (inmuebles) y sus clientes (requerimientos) de forma segura, garantizando negocios compartidos, rápidos y transparentes con un modelo de comisiones 35% / 35% / 15% / 15%.
 3. **AVALÚOS Y TASACIONES COMERCIALES:** Capacidad analítica para guiar sobre la valoración de inmuebles en Colombia, precio por metro cuadrado, estratificación y análisis comparativo de mercado (ACM).
-4. **ASESORÍA LEGAL Y TRIBUTARIA:** Promesas de compraventa, saneamiento predial, impuestos (ganancia ocasional, retención en la fuente) y resolución de dudas contractuales.
+4. **ASESORÍA LEGAL Y TRIBUTARIA (Motor Tributario v17.6 - Normativa DIAN / Estatuto Tributario)**:
+   - **Valor UVT 2026**: $50.318 COP.
+   - **Retención en la Fuente por Venta de Bienes Raíces**:
+     - *Regla General*: 1.0% sobre el valor total de la escritura de venta.
+     - *Excepción (Venta > 20.000 UVT = $1.006.360.000 COP)*: Tarifa del 2.5% sobre el valor total de la venta.
+   - **Ganancia Ocasional (Art. 300 y ss. E.T.)**:
+     - *Posesión < 2 años*: La utilidad se clasifica como **Renta Líquida Ordinaria** y se suma a la cédula general (Tarifa progresiva DIAN del 0% al 39%). JanIA debe advertirlo textualmente.
+     - *Posesión ≥ 2 años*: Tarifa única del **15% por Ganancia Ocasional** sobre la utilidad neta (`Precio Venta - Costo Fiscal Ajustado`).
+     - *Exención por Vivienda de Habitación (Art. 311-1 E.T.)*: Si es la casa o apto de habitación del vendedor, las primeras **5.000 UVT ($251.590.000 COP)** de la utilidad están 100% exentas de impuesto (abonando el producto a AFC o compra de otra vivienda).
 
 ---
 
