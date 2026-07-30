@@ -1200,8 +1200,9 @@ export class JaniaMatchBot {
         );
       }
 
-      // --- REACCIONAR A LA PUBLICACIÓN ---
-      if (result) {
+      // --- REACCIONAR A LA PUBLICACIÓN (Solo en Grupo 1: VECY INMUEBLES NETWORK) ---
+      const isGrupo1 = chatId === this.targetGroupId;
+      if (result && isGrupo1) {
         const emoji = this.getReactionEmoji(result);
         if (emoji) {
           try {
@@ -1213,10 +1214,8 @@ export class JaniaMatchBot {
                 fromMe: !!lastMsg.key.fromMe,
                 participant: lastMsg.key.participant ? cleanJid(lastMsg.key.participant) : (senderId ? cleanJid(senderId) : undefined)
               };
-              console.log(`[JANIA-MATCH] Reaccionando de inmediato con ${emoji} al mensaje de ${senderId} en ${chatId}`);
+              console.log(`[JANIA-MATCH] Reaccionando en Grupo 1 con ${emoji} al mensaje de ${senderId}`);
               await this.sock.sendMessage(chatId, { react: { text: emoji, key: targetKey } });
-            } else {
-              console.warn('[JANIA-MATCH] No se pudo reaccionar: lastMsg o lastMsg.key es nulo.');
             }
           } catch (reactErr: any) {
             console.error('[JANIA-MATCH] Error al reaccionar al mensaje:', reactErr);
@@ -1619,7 +1618,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
                                targetJid === this.buzonGroupId || 
                                targetJid === this.circuloGroupId;
           if (!isAuthorized) {
-            console.log(`[JANIA-MATCH-SHIELD] Bloqueado envío de mensaje al grupo no autorizado: ${targetJid}`);
+            console.log(`[JANIA-MATCH-SHIELD] Bloqueado envío de mensaje a grupo no autorizado (Modo Ingesta Fantasma): ${targetJid}`);
             return;
           }
         }
@@ -1627,9 +1626,10 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         // Failsafe de DM: Impedir el envío de cualquier mensaje directo a usuarios que no sean administradores
         if (targetJid.endsWith('@s.whatsapp.net')) {
           const rawPhone = targetJid.split('@')[0];
-          const ADMIN_PHONE = process.env.ADMIN_PHONE || "573166569719";
+          const ADMIN_PHONE = process.env.ADMIN_PHONE || "573192919978";
           const isAdmin = rawPhone.includes(ADMIN_PHONE) || 
                           rawPhone === ADMIN_PHONE || 
+                          rawPhone === "573192919978" || 
                           rawPhone === "573166569719" || 
                           rawPhone.includes("573185462265");
           if (!isAdmin) {
@@ -1680,6 +1680,21 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         const sendOptions: any = {};
         if (options.quoted) {
           sendOptions.quoted = options.quoted;
+        }
+
+        // ── ESCUDO DE SIMULACIÓN HUMANA (Human-Like Delay & Presence Updates) ──
+        if (messagePayload.text && typeof messagePayload.text === 'string') {
+          try {
+            await this.sock.sendPresenceUpdate('composing', targetJid);
+            const typingDelay = Math.min(5000, Math.max(2000, messagePayload.text.length * 40));
+            await delay(typingDelay);
+          } catch (_) {}
+        } else if (messagePayload.audio) {
+          try {
+            await this.sock.sendPresenceUpdate('recording', targetJid);
+            const recordingDelay = options.durationMs || Math.min(10000, Math.max(3000, (options.voiceLength || 4) * 1000));
+            await delay(recordingDelay);
+          } catch (_) {}
         }
 
         const sent = await this.sock.sendMessage(targetJid, messagePayload, sendOptions);

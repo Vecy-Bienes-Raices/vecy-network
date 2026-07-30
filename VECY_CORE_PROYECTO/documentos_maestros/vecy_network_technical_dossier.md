@@ -652,6 +652,26 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 #### 3. REGISTRO ÁGIL KYC ULTRA-LIGHT
 - Proceso de onboarding en `https://vecy-network.vercel.app` simplificado a 3 campos: **Nombre, WhatsApp verificado con OTP y Cédula/RUT básico** para habilitar la operación inmediata de asesores.
 
+---
+
+### 🔖 v17.9B — JULIO 2026: PROTOCOLO ANTI-BANEO DE META Y CONEXIÓN DE LÍNEA OFICIAL +573192919978
+
+**Objetivo:** Proteger el número oficial +573192919978 frente a bloqueos de spam de Meta mediante segmentación estricta de respuestas y simulación humana de presencia.
+
+#### 1. SEGMENTACIÓN ESTRICTA DE GRUPOS (`server/_core/whatsapp-match.ts`)
+- **Grupos Externos (No Oficiales)**: Modo Ingesta Fantasma. Cero textos, cero audios, cero reacciones con emojis. Lectura e ingesta invisible a Supabase.
+- **Grupo 1 (`VECY INMUEBLES NETWORK`)**: Ingesta predial. Prohibido mensajes de texto o audios. Reacciones exclusivas con emojis (`👍` oferta / `📝` demanda / `🚫` infracción).
+- **Grupos 2 y 3 (`Soporte` & `Proyecto`)**: Conversación activa multimodal (texto + voz TTS) ante consultas directas.
+
+#### 2. ESCUDO DE SIMULACIÓN HUMANA (Human-Like Delay & Presence)
+- **Simulación de Escritura (`presence: typing`)**: Envío de evento `composing` con retardos dinámicos entre 2s y 5s según longitud del texto.
+- **Simulación de Grabación (`presence: recording`)**: Envío de evento `recording` con retardo real igual a la duración del audio.
+- **Jitter Aleatorio ($\pm 10$ min)**: Variación aleatoria en envíos de mensajes motivacionales y boletines programados.
+
+#### 3. ESTADO VISUAL EN FRONTEND (`Admin.tsx`)
+- Sincronización del widget `BotStatusWidget` a **JanIA Match: Activo** con luz verde parpadeante de neón y reporte del número oficial `+573192919978`.
+
+
 
 
 
