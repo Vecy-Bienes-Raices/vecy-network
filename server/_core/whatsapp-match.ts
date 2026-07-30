@@ -201,16 +201,16 @@ export class JaniaMatchBot {
         console.log(`[${this.botName}] 💾 Guardadas credenciales iniciales de Baileys en ${this.sessionFolderName}.`);
       }
       
-      let version: any = [2, 3000, 1044015310];
+      let version: any = [2, 3000, 1043857760];
       try {
-        const fetched = await (fetchLatestWaWebVersion as any)({});
+        const fetched = await fetchLatestBaileysVersion();
         if (fetched && fetched.version) {
           version = fetched.version;
         }
       } catch (e) {}
 
       console.log(`[${this.botName}] Estableciendo conexión por WebSocket...`);
-      const silentLogger = {
+      const silentLogger: any = {
         level: 'silent',
         log: () => {},
         trace: () => {},

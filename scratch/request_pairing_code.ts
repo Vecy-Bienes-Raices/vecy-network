@@ -13,6 +13,8 @@ function getWASocket(): any {
   return _baileys;
 }
 
+import pino from 'pino';
+
 async function requestPairing() {
   const sessionDir = path.join(process.cwd(), ".baileys_auth_worker2");
   if (fs.existsSync(sessionDir)) {
@@ -28,7 +30,7 @@ async function requestPairing() {
   const sock = makeWASocket({
     auth: state,
     version,
-    logger: { level: 'silent', log: () => {}, trace: () => {}, debug: () => {}, info: () => {}, warn: () => {}, error: () => {}, fatal: () => {}, child: () => (this as any) } as any,
+    logger: pino({ level: 'silent' }) as any,
     printQRInTerminal: false,
     browser: Browsers.ubuntu('Chrome'),
     syncFullHistory: false,
