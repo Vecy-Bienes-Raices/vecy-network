@@ -29,17 +29,23 @@ JanIA debe aprender a explicar el proyecto VECY Network de forma cautivadora, de
   ¡Ahí radica la magia! Si otro colega consigue el comprador final, una parte de la comisión se distribuye proporcionalmente entre **TODOS** los agentes que participaron compartiendo y promocionando el inmueble en la red colaborativa según su puntuación.
 - Esto le permite al asesor generar **ingresos pasivos y regalías recurrentes** por el simple hecho de colaborar y dinamizar el mercado, ¡incluso sin haber traído al comprador directo!
 
-### 3. La Repartición Transparente de Comisiones (35% / 35% / 15% / 15%)
+### 3. La Repartición Transparente de Comisiones (35% / 35% / 15% / 15%) e Incentivos Acumulables
 En VECY Network la comisión (mínimo del 3% sobre el valor de venta) se reparte de forma justa, equitativa y motivadora:
 
 ┌───────────────────────────────────────────────────────────────────────────┐
 │ 💼 35% ─── Para el Agente Captador (Parte Venta que subió el inmueble)     │
 │ 🤝 35% ─── Para el Agente Comercial (Parte Compra que trajo al comprador)  │
-│ 🚀 15% ─── Para la Bolsa Colaborativa (Repartido por puntos entre difusión) │
+│ 🚀 15% ─── Para la Bolsa Colaborativa (Repartido por puntos de difusión)   │
 │ 🌐 15% ─── Para el Mantenimiento Tecnológico y Evolución de VECY Network │
 └───────────────────────────────────────────────────────────────────────────┘
 
-> *Ejemplo Didáctico de JanIA:* "Si eres el captador te llevas tu 35%. Si traes al comprador directo te llevas tu 35%. Pero si además ayudaste a difundir otros inmuebles en tus redes, ¡te llegan cheques de regalías del 15% de la Bolsa por cada venta cerrada en la comunidad!"
+- **Incentivos Acumulables (Stackable Rewards):**
+  - **Agente Vendedor:** Se lleva su 35% base por derecho + lo que acumule en la Bolsa por viralizar (ej: 35% + 2% bolsa = 37% total).
+  - **Agente Comprador:** Se lleva su 35% base por derecho + lo que acumule en la Bolsa por viralizar (ej: 35% + 5% bolsa = 40% total).
+- **🎁 Regla del Comprador Directo (Bono de Gastos Notariales):**
+  - Si ningún agente trae al comprador y este llega por sí solo a través del portal público `vecy.co`, el 35% de la Punta Demanda **NO se reparte entre asesores ni lo retiene VECY**.
+  - **¡Se convierte automáticamente en un Bono de Descuento en Gastos Notariales y Escrituración para el Comprador!**
+  - *Ejemplo Didáctico de JanIA:* "En una venta de $1.000 millones (comisión 3% = $30.000.000), si el comprador llega directo desde la web sin asesor comercial, ¡se gana un espectacular **Bono Regalo Notarial de $10.500.000 COP** para pagar su escrituración!"
 
 ### 4. Captación Ultrasencilla por WhatsApp con IA Multimodal
 - **Sin Barreras de Adopción:** El asesor no necesita descargar nuevas apps pesadas ni diligenciar formularios tediosos. Opera 100% nativo desde WhatsApp donde ya vive su trabajo diario.

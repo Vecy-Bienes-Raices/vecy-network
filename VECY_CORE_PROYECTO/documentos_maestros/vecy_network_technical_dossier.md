@@ -517,6 +517,19 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 #### 3. COMPONENTE INTERFAZ WEB (`client/src/components/tax/TaxCalculatorModal.tsx`)
 - Modal interactivo con acentos Dorados (`#bf953f`) y Cyan (`#22d3ee`) integrado en la Consola Web de JanIA (`JanIAConsole.tsx`) con opción de insertar dictámenes tributarios directamente en el chat.
 
+---
+
+### 🔖 v17.7 — JULIO 2026: MOTOR DE ASPERSIÓN FINANCIERA Y MONEDERO VECY (`walletEngine.ts`)
+
+**Objetivo:** Automatizar la distribución exacta del 3% de comisión (35% Captación / 35% Demanda / 15% Bolsa / 15% Plataforma) integrando Incentivos Acumulables y la regla del Bono Notarial para Comprador Directo.
+
+#### 1. LÓGICA DE ASPERSIÓN FINANCIERA (`server/_core/walletEngine.ts`)
+- **`ejecutarLiquidacionMaestraVecy(params: LiquidacionMatrizVecyParams)`**:
+  - **Incentivos Acumulables (Stackable Rewards)**: El Agente Vendedor (35%) y el Agente Comprador (35%) reciben su pago base por derecho Y ADEMÁS acumulan su participación fraccionada de los puntos ganados en la Bolsa Colaborativa (15%).
+  - **Bono Sorpresa Comprador Directo**: Si `brokerCompradorId === null` (comprador sin asesor que llega directo por la web `vecy.co`), el 35% de la Punta Demanda se transforma automáticamente en un **Bono de Descuento en Gastos Notariales y Escrituración** para el Comprador.
+  - *Ejemplo de Cierre ($1.000M COP)*: Comisión 3% ($30.000.000 COP). Si el comprador llega directo, recibe un Bono Notarial de regalo de **$10.500.000 COP**.
+
+
 
 
 
