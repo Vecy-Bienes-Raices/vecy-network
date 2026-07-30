@@ -18,25 +18,19 @@ function hasAledanos(text: string): boolean {
 export function extractRealPhone(item: any): string | null {
   if (!item) return null;
 
-  const textToSearch = `${item.rawText || ""} ${item.description || ""}`;
-
-  // 1. Buscar en el texto del mensaje por cualquier celular colombiano de 10 dígitos (ej: 3124431225)
-  const phoneMatches = textToSearch.match(/(?:\+?57\s*)?3\d{2}[\s.-]?\d{3}[\s.-]?\d{4}\b/g);
-  if (phoneMatches && phoneMatches.length > 0) {
-    const rawMatch = phoneMatches[0].replace(/\D/g, "");
-    const clean10 = rawMatch.startsWith("57") && rawMatch.length === 12 ? rawMatch.substring(2) : rawMatch;
-    if (clean10.length === 10 && clean10.startsWith("3")) {
-      return `57${clean10}`;
-    }
-  }
-
-  // 2. Revisar idUsuarioWhatsapp, contactPhone, brokerPhone, etc.
+  // 1. Revisar campos directos de teléfono y usuario
   const candidates = [
     item.idUsuarioWhatsapp,
     item.contactPhone,
     item.brokerPhone,
     item.phone,
-    item.usuarioWhatsapp
+    item.usuarioWhatsapp,
+    item.contactNumber,
+    item.sellerPhone,
+    item.captadorPhone,
+    item.user?.phone,
+    item.user?.idUsuarioWhatsapp,
+    item.user?.contactPhone
   ];
 
   for (const cand of candidates) {
@@ -46,23 +40,39 @@ export function extractRealPhone(item: any): string | null {
     if (clean.startsWith("11") || clean.startsWith("12036") || clean.startsWith("1203") || clean.length > 13) {
       continue;
     }
-    // Celular Colombia: 10 dígitos (3XXXXXXXXX) o 12 dígitos (573XXXXXXXXX)
-    if (clean.length === 12 && clean.startsWith("573")) {
-      return clean;
-    }
-    if (clean.length === 10 && clean.startsWith("3")) {
-      return `57${clean}`;
-    }
-    // Fijo Colombia: 10 dígitos (60XXXXXXXX) o 12 dígitos (5760XXXXXXXX)
-    if (clean.length === 12 && clean.startsWith("5760")) {
-      return clean;
-    }
-    if (clean.length === 10 && clean.startsWith("60")) {
-      return `57${clean}`;
-    }
+    // Celular Colombia: 12 dígitos (573XXXXXXXXX) o 10 dígitos (3XXXXXXXXX)
+    if (clean.length === 12 && clean.startsWith("573")) return clean;
+    if (clean.length === 10 && clean.startsWith("3")) return `57${clean}`;
+    // Fijo Colombia: 12 dígitos (5760XXXXXXXX) o 10 dígitos (60XXXXXXXX)
+    if (clean.length === 12 && clean.startsWith("5760")) return clean;
+    if (clean.length === 10 && clean.startsWith("60")) return `57${clean}`;
     // Internacionales válidos (entre 10 y 12 dígitos)
-    if (clean.length >= 10 && clean.length <= 12) {
-      return clean;
+    if (clean.length >= 10 && clean.length <= 12) return clean;
+  }
+
+  // 2. Buscar en el contenido textual completo (rawText, description, name, etc.)
+  const textToSearch = `${item.rawText || ""} ${item.description || ""} ${item.name || ""} ${item.rawMessage || ""}`;
+  const phoneMatches = textToSearch.match(/(?:\+?57\s*)?3\d{2}[\s.-]?\d{3}[\s.-]?\d{4}\b/g);
+  if (phoneMatches && phoneMatches.length > 0) {
+    const rawMatch = phoneMatches[0].replace(/\D/g, "");
+    const clean10 = rawMatch.startsWith("57") && rawMatch.length === 12 ? rawMatch.substring(2) : rawMatch;
+    if (clean10.length === 10 && clean10.startsWith("3")) {
+      return `57${clean10}`;
+    }
+  }
+
+  // 3. Barrido de contingencia en metadatos JSONB (metadata, rawJson, extraData)
+  const jsonSources = [item.metadata, item.rawJson, item.extraData];
+  for (const jsonSrc of jsonSources) {
+    if (!jsonSrc) continue;
+    const str = typeof jsonSrc === "string" ? jsonSrc : JSON.stringify(jsonSrc);
+    const jsonMatches = str.match(/(?:\+?57\s*)?3\d{2}[\s.-]?\d{3}[\s.-]?\d{4}\b/g);
+    if (jsonMatches && jsonMatches.length > 0) {
+      const rawMatch = jsonMatches[0].replace(/\D/g, "");
+      const clean10 = rawMatch.startsWith("57") && rawMatch.length === 12 ? rawMatch.substring(2) : rawMatch;
+      if (clean10.length === 10 && clean10.startsWith("3")) {
+        return `57${clean10}`;
+      }
     }
   }
 

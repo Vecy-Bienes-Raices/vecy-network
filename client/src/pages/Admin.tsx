@@ -42,12 +42,12 @@ function BotStatusWidget() {
     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
       {/* Indicador de conexión */}
       <div className="flex items-center gap-2 bg-zinc-900/50 border border-white/5 px-3 py-1.5 rounded-xl text-xs">
-        <span className={`w-2 h-2 rounded-full ${status.isReady ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
-        <span className="font-semibold text-zinc-300">
-          JanIA Match: {status.isReady ? 'Conectado' : 'Desconectado'}
+        <span className={`w-2.5 h-2.5 rounded-full ${status.isReady ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)] animate-pulse' : 'bg-red-500'}`} />
+        <span className="font-semibold text-zinc-200">
+          JanIA Match: {status.isReady ? 'Activo' : 'Desconectado'}
         </span>
-        {status.isReady && status.phone && (
-          <span className="text-[10px] text-zinc-500 font-mono font-light border-l border-zinc-800 pl-2">
+        {status.phone && (
+          <span className="text-[10px] text-zinc-400 font-mono font-light border-l border-zinc-800 pl-2">
             +{status.phone}
           </span>
         )}

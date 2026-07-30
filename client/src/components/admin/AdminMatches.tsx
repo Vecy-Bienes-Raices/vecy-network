@@ -360,26 +360,19 @@ function isValidRealPhoneNumber(clean: string): boolean {
 function extractPhoneFromItem(item: any): { display: string; cleanNumber: string | null } {
   if (!item) return { display: "Número no disponible", cleanNumber: null };
 
-  const textToSearch = `${item.rawText || ""} ${item.description || ""}`;
-
-  // 1. Buscar en el texto del mensaje por cualquier celular colombiano de 10 dígitos (ej: 312 443 1225)
-  const phoneMatches = textToSearch.match(/(?:\+?57\s*)?3\d{2}[\s.-]?\d{3}[\s.-]?\d{4}\b/g);
-  if (phoneMatches && phoneMatches.length > 0) {
-    const rawMatch = phoneMatches[0].replace(/\D/g, "");
-    const clean10 = rawMatch.startsWith("57") && rawMatch.length === 12 ? rawMatch.substring(2) : rawMatch;
-    if (clean10.length === 10 && clean10.startsWith("3")) {
-      return {
-        display: `+57 ${clean10.substring(0, 3)} ${clean10.substring(3, 6)} ${clean10.substring(6)}`,
-        cleanNumber: `57${clean10}`
-      };
-    }
-  }
-
-  // 2. Revisar si idUsuarioWhatsapp, phone o user.phone contienen un número telefónico real válido
+  // 1. Revisar candidatos directos
   const candidates = [
     item.idUsuarioWhatsapp,
+    item.contactPhone,
+    item.brokerPhone,
     item.phone,
-    item.user?.phone
+    item.usuarioWhatsapp,
+    item.contactNumber,
+    item.sellerPhone,
+    item.captadorPhone,
+    item.user?.phone,
+    item.user?.idUsuarioWhatsapp,
+    item.user?.contactPhone
   ];
 
   for (const cand of candidates) {
@@ -402,6 +395,38 @@ function extractPhoneFromItem(item: any): { display: string; cleanNumber: string
         display: `+${clean}`,
         cleanNumber: clean
       };
+    }
+  }
+
+  // 2. Buscar en el texto del mensaje por cualquier celular colombiano de 10 dígitos (ej: 312 443 1225)
+  const textToSearch = `${item.rawText || ""} ${item.description || ""} ${item.name || ""} ${item.rawMessage || ""}`;
+  const phoneMatches = textToSearch.match(/(?:\+?57\s*)?3\d{2}[\s.-]?\d{3}[\s.-]?\d{4}\b/g);
+  if (phoneMatches && phoneMatches.length > 0) {
+    const rawMatch = phoneMatches[0].replace(/\D/g, "");
+    const clean10 = rawMatch.startsWith("57") && rawMatch.length === 12 ? rawMatch.substring(2) : rawMatch;
+    if (clean10.length === 10 && clean10.startsWith("3")) {
+      return {
+        display: `+57 ${clean10.substring(0, 3)} ${clean10.substring(3, 6)} ${clean10.substring(6)}`,
+        cleanNumber: `57${clean10}`
+      };
+    }
+  }
+
+  // 3. Barrido de contingencia en metadatos JSONB
+  const jsonSources = [item.metadata, item.rawJson, item.extraData];
+  for (const jsonSrc of jsonSources) {
+    if (!jsonSrc) continue;
+    const str = typeof jsonSrc === "string" ? jsonSrc : JSON.stringify(jsonSrc);
+    const jsonMatches = str.match(/(?:\+?57\s*)?3\d{2}[\s.-]?\d{3}[\s.-]?\d{4}\b/g);
+    if (jsonMatches && jsonMatches.length > 0) {
+      const rawMatch = jsonMatches[0].replace(/\D/g, "");
+      const clean10 = rawMatch.startsWith("57") && rawMatch.length === 12 ? rawMatch.substring(2) : rawMatch;
+      if (clean10.length === 10 && clean10.startsWith("3")) {
+        return {
+          display: `+57 ${clean10.substring(0, 3)} ${clean10.substring(3, 6)} ${clean10.substring(6)}`,
+          cleanNumber: `57${clean10}`
+        };
+      }
     }
   }
 
