@@ -1222,7 +1222,7 @@ export class JaniaMatchBot {
                 fromMe: !!lastMsg.key.fromMe,
                 participant: lastMsg.key.participant ? cleanJid(lastMsg.key.participant) : (senderId ? cleanJid(senderId) : undefined)
               };
-              console.log(`[JANIA-MATCH] Reaccionando con ${emoji} al mensaje de ${senderId} en grupo predial (${groupName} / ${chatId})`);
+              console.log(`[JANIA-MATCH] Reaccionando con ${emoji} al mensaje de ${senderId} en grupo predial (${chatId})`);
               await this.sock.sendMessage(chatId, { react: { text: emoji, key: targetKey } });
             }
           } catch (reactErr: any) {
