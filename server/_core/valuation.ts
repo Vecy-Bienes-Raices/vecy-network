@@ -3,18 +3,27 @@
  * Algoritmo matemático de castigos/premios por coeficientes prediales.
  */
 
+export interface HomologationParams {
+  basePricePerM2: number;
+  antiguedadAnos: number;
+  tieneAscensor: boolean;
+  piso: number;
+  garajes: number;
+  esClubHouse: boolean;
+}
+
 export interface ValuationInput {
   propertyTitle?: string;
   zone: string;
   city: string;
   areaM2: number;
-  baseZonePricePerM2: number; // Promedio Zona ($/m²)
-  ageYears: number; // Antigüedad en años
-  floorNumber?: number; // Número de piso
-  hasElevator?: boolean; // Edificio con ascensor
-  garages?: number; // Número de garajes
-  hasClubHouse?: boolean; // Piscina, Gimnasio y Vigilancia 24/7
-  comparableSources?: Array<{ name: string; url: string; price: number; area: number }>;
+  baseZonePricePerM2: number;
+  ageYears: number;
+  floorNumber?: number;
+  hasElevator?: boolean;
+  garages?: number;
+  hasClubHouse?: boolean;
+  comparableSources?: Array<{ name?: string; url: string; price?: number; area?: number }>;
 }
 
 export interface FactorBreakdown {
@@ -28,179 +37,80 @@ export interface FactorBreakdown {
 export interface ValuationResult {
   baseZonePricePerM2: number;
   homologatedPricePerM2: number;
-  suggestedCommercialValue: number; // Valor Comercial Sugerido
-  minClosingPrice: number; // Precio Mínimo de Cierre (Rango de negociación -5%)
-  estimatedMonthlyRent: number; // Canon de arriendo estimado
-  estimatedCapRate: number; // Cap Rate (%)
+  suggestedCommercialValue: number;
+  minClosingPrice: number;
+  estimatedMonthlyRent: number;
+  estimatedCapRate: number;
   totalAreaM2: number;
   coefficients: {
+    cAntiguedad: number;
+    cPiso: number;
+    cGarajes: number;
+    cAmenidades: number;
+  };
+  factorBreakdown: {
     ageFactor: FactorBreakdown;
     floorFactor: FactorBreakdown;
     garageFactor: FactorBreakdown;
     amenitiesFactor: FactorBreakdown;
   };
   totalHomologationFactor: number;
-  comparableSources: Array<{ name: string; url: string; price: number; area: number }>;
+  comparableSources: Array<{ name?: string; url: string; price?: number; area?: number }>;
   generatedAt: string;
 }
 
 /**
-  * Factor C_antigüedad (Factor de depreciación predial)
-  * - Nuevo (0-5 años): 1.0 (Sin castigo)
-  * - Intermedio (6-15 años): 0.92 (Castigo del 8%)
-  * - Usado (>15 años): 0.85 (Castigo del 15%)
-  */
-export function calculateAgeFactor(ageYears: number): FactorBreakdown {
-  if (ageYears <= 5) {
-    return {
-      name: "Antigüedad (Nuevo 0-5 años)",
-      coefficient: 1.0,
-      effect: "NEUTRO",
-      percentageChange: "0%",
-      description: "Sin depreciación predial por antigüedad (0-5 años)"
-    };
-  } else if (ageYears <= 15) {
-    return {
-      name: "Antigüedad (Intermedio 6-15 años)",
-      coefficient: 0.92,
-      effect: "CASTIGO",
-      percentageChange: "-8%",
-      description: "Castigo del 8% por desgaste predial intermedio"
-    };
+ * Función doctrinal de homologación de precios por metro cuadrado
+ */
+export function calcularPrecioHomologado(params: HomologationParams): {
+  precioM2Homologado: number;
+  coeficientes: {
+    cAntiguedad: number;
+    cPiso: number;
+    cGarajes: number;
+    cAmenidades: number;
+  };
+} {
+  let cAntiguedad = 1.0;
+  if (params.antiguedadAnos >= 6 && params.antiguedadAnos <= 15) cAntiguedad = 0.92;
+  else if (params.antiguedadAnos > 15) cAntiguedad = 0.85;
+
+  let cPiso = 1.0;
+  if (params.tieneAscensor) {
+    cPiso = params.piso <= 2 ? 0.95 : 1.02;
   } else {
-    return {
-      name: "Antigüedad (Usado >15 años)",
-      coefficient: 0.85,
-      effect: "CASTIGO",
-      percentageChange: "-15%",
-      description: "Castigo del 15% por antigüedad superior a 15 años"
-    };
+    if (params.piso <= 2) cPiso = 1.0;
+    else if (params.piso === 3) cPiso = 0.93;
+    else if (params.piso >= 4) cPiso = 0.85;
   }
+
+  const cGarajes = params.garajes >= 2 ? 1.05 : params.garajes === 1 ? 1.0 : 0.88;
+  const cAmenidades = params.esClubHouse ? 1.07 : 1.0;
+
+  const precioM2Homologado = params.basePricePerM2 * cAntiguedad * cPiso * cGarajes * cAmenidades;
+
+  return {
+    precioM2Homologado,
+    coeficientes: { cAntiguedad, cPiso, cGarajes, cAmenidades }
+  };
 }
 
 /**
-  * Factor C_piso (Factor de altura y confort)
-  * - Con ascensor: Piso 1-2 (0.95 por ruido); Piso 3 en adelante (1.02 por vista/luz).
-  * - Sin ascensor: Piso 1-2 (1.0); Piso 3 (0.93); Piso 4 o superior (0.85 castigo duro).
-  */
-export function calculateFloorFactor(floorNumber: number = 3, hasElevator: boolean = true): FactorBreakdown {
-  if (hasElevator) {
-    if (floorNumber <= 2) {
-      return {
-        name: "Piso (Piso 1-2 Con Ascensor)",
-        coefficient: 0.95,
-        effect: "CASTIGO",
-        percentageChange: "-5%",
-        description: "Castigo del 5% por mayor ruido e impacto en pisos bajos"
-      };
-    } else {
-      return {
-        name: "Piso (Piso 3+ Con Ascensor)",
-        coefficient: 1.02,
-        effect: "PREMIO",
-        percentageChange: "+2%",
-        description: "Premio del 2% por excelente vista, luz natural e iluminación"
-      };
-    }
-  } else {
-    if (floorNumber <= 2) {
-      return {
-        name: "Piso (Piso 1-2 Sin Ascensor)",
-        coefficient: 1.0,
-        effect: "NEUTRO",
-        percentageChange: "0%",
-        description: "Acceso cómodo por escaleras (Piso 1-2 sin ascensor)"
-      };
-    } else if (floorNumber === 3) {
-      return {
-        name: "Piso (Piso 3 Sin Ascensor)",
-        coefficient: 0.93,
-        effect: "CASTIGO",
-        percentageChange: "-7%",
-        description: "Castigo del 7% por esfuerzo de acceso a piso 3 sin ascensor"
-      };
-    } else {
-      return {
-        name: "Piso (Piso 4+ Sin Ascensor)",
-        coefficient: 0.85,
-        effect: "CASTIGO",
-        percentageChange: "-15%",
-        description: "Castigo duro del 15% por acceso superior a piso 4 sin ascensor"
-      };
-    }
-  }
-}
-
-/**
-  * Factor C_garajes (Factor de movilidad)
-  * - Cumple o supera el estándar (2 o más): 1.05 (Premio del 5%)
-  * - 1 parqueadero: 1.0 (Estándar)
-  * - No tiene parqueadero (0): 0.88 (Castigo del 12%)
-  */
-export function calculateGarageFactor(garages: number = 0): FactorBreakdown {
-  if (garages >= 2) {
-    return {
-      name: "Parqueaderos (2 o más garajes)",
-      coefficient: 1.05,
-      effect: "PREMIO",
-      percentageChange: "+5%",
-      description: "Premio del 5% por cumplir o superar el estándar de movilidad"
-    };
-  } else if (garages === 1) {
-    return {
-      name: "Parqueaderos (1 garaje)",
-      coefficient: 1.0,
-      effect: "NEUTRO",
-      percentageChange: "0%",
-      description: "Estándar residencial de 1 parqueadero privado"
-    };
-  } else {
-    return {
-      name: "Parqueaderos (Sin parqueadero)",
-      coefficient: 0.88,
-      effect: "CASTIGO",
-      percentageChange: "-12%",
-      description: "Castigo del 12% por falta de parqueadero privado"
-    };
-  }
-}
-
-/**
-  * Factor C_amenidades (Club House / Conjunto)
-  * - Conjunto con Piscina, Gimnasio y Vigilancia 24/7: 1.07 (Premio del 7%)
-  * - Edificio residencial tradicional/independiente: 1.0 (Sin premio)
-  */
-export function calculateAmenitiesFactor(hasClubHouse: boolean = false): FactorBreakdown {
-  if (hasClubHouse) {
-    return {
-      name: "Amenidades (Club House / Piscina + Gym + 24/7)",
-      coefficient: 1.07,
-      effect: "PREMIO",
-      percentageChange: "+7%",
-      description: "Premio del 7% por conjunto cerrado con amenidades completas"
-    };
-  } else {
-    return {
-      name: "Amenidades (Edificio Tradicional)",
-      coefficient: 1.0,
-      effect: "NEUTRO",
-      percentageChange: "0%",
-      description: "Edificio tradicional sin amenidades tipo club house"
-    };
-  }
-}
-
-/**
-  * Ejecuta la homologación predial completa
-  */
+ * Calculador extendido de avalúo predial para informes completos
+ */
 export function calculatePropertyValuation(input: ValuationInput): ValuationResult {
-  const ageFactor = calculateAgeFactor(input.ageYears);
-  const floorFactor = calculateFloorFactor(input.floorNumber, input.hasElevator);
-  const garageFactor = calculateGarageFactor(input.garages);
-  const amenitiesFactor = calculateAmenitiesFactor(input.hasClubHouse);
+  const result = calcularPrecioHomologado({
+    basePricePerM2: input.baseZonePricePerM2,
+    antiguedadAnos: input.ageYears,
+    tieneAscensor: input.hasElevator ?? true,
+    piso: input.floorNumber ?? 3,
+    garajes: input.garages ?? 0,
+    esClubHouse: input.hasClubHouse ?? false
+  });
 
-  const totalFactor = ageFactor.coefficient * floorFactor.coefficient * garageFactor.coefficient * amenitiesFactor.coefficient;
-  const homologatedPricePerM2 = Math.round(input.baseZonePricePerM2 * totalFactor);
+  const { cAntiguedad, cPiso, cGarajes, cAmenidades } = result.coeficientes;
+  const homologatedPricePerM2 = Math.round(result.precioM2Homologado);
+  const totalFactor = cAntiguedad * cPiso * cGarajes * cAmenidades;
 
   const suggestedCommercialValue = Math.round(homologatedPricePerM2 * input.areaM2);
   const minClosingPrice = Math.round(suggestedCommercialValue * 0.95);
@@ -216,10 +126,40 @@ export function calculatePropertyValuation(input: ValuationInput): ValuationResu
     estimatedCapRate,
     totalAreaM2: input.areaM2,
     coefficients: {
-      ageFactor,
-      floorFactor,
-      garageFactor,
-      amenitiesFactor
+      cAntiguedad,
+      cPiso,
+      cGarajes,
+      cAmenidades
+    },
+    factorBreakdown: {
+      ageFactor: {
+        name: "Antigüedad",
+        coefficient: cAntiguedad,
+        effect: cAntiguedad > 1 ? 'PREMIO' : cAntiguedad < 1 ? 'CASTIGO' : 'NEUTRO',
+        percentageChange: cAntiguedad >= 1 ? `+${Math.round((cAntiguedad - 1) * 100)}%` : `-${Math.round((1 - cAntiguedad) * 100)}%`,
+        description: `Factor por antigüedad de ${input.ageYears} años`
+      },
+      floorFactor: {
+        name: "Piso / Altura",
+        coefficient: cPiso,
+        effect: cPiso > 1 ? 'PREMIO' : cPiso < 1 ? 'CASTIGO' : 'NEUTRO',
+        percentageChange: cPiso >= 1 ? `+${Math.round((cPiso - 1) * 100)}%` : `-${Math.round((1 - cPiso) * 100)}%`,
+        description: `Piso ${input.floorNumber ?? 3} (${input.hasElevator ?? true ? 'Con Ascensor' : 'Sin Ascensor'})`
+      },
+      garageFactor: {
+        name: "Garajes",
+        coefficient: cGarajes,
+        effect: cGarajes > 1 ? 'PREMIO' : cGarajes < 1 ? 'CASTIGO' : 'NEUTRO',
+        percentageChange: cGarajes >= 1 ? `+${Math.round((cGarajes - 1) * 100)}%` : `-${Math.round((1 - cGarajes) * 100)}%`,
+        description: `${input.garages ?? 0} parqueaderos privados`
+      },
+      amenitiesFactor: {
+        name: "Amenidades",
+        coefficient: cAmenidades,
+        effect: cAmenidades > 1 ? 'PREMIO' : cAmenidades < 1 ? 'CASTIGO' : 'NEUTRO',
+        percentageChange: cAmenidades >= 1 ? `+${Math.round((cAmenidades - 1) * 100)}%` : `-${Math.round((1 - cAmenidades) * 100)}%`,
+        description: input.hasClubHouse ? "Club House con piscina, gimnasio y 24/7" : "Edificio tradicional"
+      }
     },
     totalHomologationFactor: Number(totalFactor.toFixed(4)),
     comparableSources: input.comparableSources || [],
