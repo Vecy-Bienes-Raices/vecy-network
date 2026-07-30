@@ -30,10 +30,13 @@ export function extractRealPhone(item: any): string | null {
     }
   }
 
-  // 2. Revisar idUsuarioWhatsapp o phone del objeto
+  // 2. Revisar idUsuarioWhatsapp, contactPhone, brokerPhone, etc.
   const candidates = [
     item.idUsuarioWhatsapp,
-    item.phone
+    item.contactPhone,
+    item.brokerPhone,
+    item.phone,
+    item.usuarioWhatsapp
   ];
 
   for (const cand of candidates) {

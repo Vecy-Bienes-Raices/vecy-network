@@ -637,6 +637,22 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 #### 2. VALIDACIÓN NUMÉRICA EN TIEMPO REAL
 - Entradas estrictas `type="number"` y validación `min="0"` en Precio, Metraje, Habitaciones y Parqueaderos para garantizar que no ingresen strings corruptos que fuercen un estado `N/E` innecesario en el motor de matching.
 
+---
+
+### 🔖 v17.9 — JULIO 2026: INCLUSIÓN DE ANTIGÜEDAD EN COTEJO, ELIMINACIÓN DE MATCHES FANTASMA Y KYC ULTRA-LIGHT
+
+**Objetivo:** Garantizar que no existan datos de contacto faltantes en producción, enriquecer la tabla de cotejo con la Antigüedad predial y habilitar el registro ágil sin fricción para asesores independientes.
+
+#### 1. BLOQUEO ABSOLUTO DE MATCHES FANTASMA (`server/_core/matching.ts`)
+- **Filtro Duro 0B Estricto**: Se valida `extractRealPhone(property)` y `extractRealPhone(requirement)` extrayendo celulares reales colombianos (10 dígitos `3XXXXXXXXX` o `573XXXXXXXXX`). Si falta teléfono en alguna de las partes, el match se fuerza a **0%** y se purga de la BD en Supabase.
+
+#### 2. INCLUSIÓN DE ANTIGÜEDAD EN TABLA Y STACK CARDS (`client/src/components/admin/AdminMatches.tsx`)
+- Fila #11 **Antigüedad / Año de Construcción** que compara `prop.antiguedadAnos` / `yearBuilt` (Color Dorado `#bf953f`) vs `req.antiguedadMax` / `preferredAge` (Color Cyan `#22d3ee`).
+
+#### 3. REGISTRO ÁGIL KYC ULTRA-LIGHT
+- Proceso de onboarding en `https://vecy-network.vercel.app` simplificado a 3 campos: **Nombre, WhatsApp verificado con OTP y Cédula/RUT básico** para habilitar la operación inmediata de asesores.
+
+
 
 
 

@@ -305,6 +305,27 @@ function scoreRows(req: any, prop: any) {
     <Receipt className="w-3.5 h-3.5" />
   );
 
+  // 11. Antigüedad / Año de Construcción
+  const ageR = req.antiguedadMax ? Number(req.antiguedadMax) : (req.preferredAge ? Number(req.preferredAge) : 0);
+  const ageP = prop.antiguedadAnos != null ? Number(prop.antiguedadAnos) : (prop.yearBuilt ? (new Date().getFullYear() - Number(prop.yearBuilt)) : (prop.constructionYear ? (new Date().getFullYear() - Number(prop.constructionYear)) : -1));
+
+  let ageS: MatchStatus = "neutral";
+  if (ageR > 0 && ageP >= 0) {
+    ageS = (ageP <= ageR) ? "exact" : "warn";
+  }
+
+  const reqAgeLabel = ageR > 0 ? `≤ ${ageR} años` : "Sin restricción";
+  const propAgeLabel = ageP >= 0 ? (ageP === 0 ? "Nuevo (0 años)" : `${ageP} años (${new Date().getFullYear() - ageP})`) : "N/E";
+
+  add(
+    "Antigüedad / Año", 
+    reqAgeLabel, 
+    propAgeLabel, 
+    ageS, 
+    5, 
+    <Calendar className="w-3.5 h-3.5" />
+  );
+
   const autoScore = max > 0 ? Math.round((pts / max) * 100) : 0;
   return { rows, autoScore };
 }
