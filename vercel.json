@@ -1,7 +1,0 @@
-{
-  "rewrites": [
-    { "source": "/api/:path*", "destination": "http://13.140.149.144/api/:path*" },
-    { "source": "/webhook", "destination": "http://13.140.149.144/webhook" },
-    { "source": "/(.*)", "destination": "/index.html" }
-  ]
-}
