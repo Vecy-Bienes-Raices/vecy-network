@@ -420,7 +420,7 @@ export class JaniaMatchBot {
             const mentionsBot = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.some((jid: string) => cleanJid(jid) === botJid);
             const hasDirectMention = textLower.includes("jania") || 
                                      (botPhone && textLower.includes(botPhone)) || 
-                                     textLower.includes("573166569719") ||
+                                     textLower.includes("573192919978") ||
                                      !!mentionsBot;
 
             // --- IDENTIFICACIÓN DE GRUPOS OFICIALES VECY ---
@@ -585,8 +585,8 @@ export class JaniaMatchBot {
           // --- FLUJO 2: CHATS PRIVADOS (DMs) ---
           if (!isGroup) {
             const rawPhone = senderId.split('@')[0];
-            const ADMIN_PHONE = process.env.ADMIN_PHONE || "573166569719";
-            const isAdmin = rawPhone.includes(ADMIN_PHONE) || rawPhone === ADMIN_PHONE || rawPhone === "573166569719" || rawPhone.includes("573185462265");
+            const ADMIN_PHONE = process.env.ADMIN_PHONE || "573192919978";
+            const isAdmin = rawPhone.includes(ADMIN_PHONE) || rawPhone === ADMIN_PHONE || rawPhone === "573192919978" || rawPhone.includes("573185462265");
             const userName = msg.pushName || `Asesor +${rawPhone}`;
 
             let body = '';
@@ -806,7 +806,7 @@ export class JaniaMatchBot {
       // Si la transcripción del audio falló, respondemos con un mensaje específico
       const isAudioFailed = bodyText === '[audio-vacío]' || bodyText === '[audio-sin-buffer]' || bodyText === '[audio-error]';
       if (isAudioFailed) {
-        const failMsg = `Hola ${realName} 👋🏻, escuché que enviaste una nota de voz. Lamentablemente tuve un inconveniente técnico al procesarla en este momento. 🙏\n\nTe pido que:\n✏️ Escribas tu consulta por texto aquí en el grupo, o\n📲 Me la envíes directamente en mi chat privado: https://wa.me/573166569719\n\n¡En el chat privado puedo escuchar y procesar tus audios sin problemas! 😊`;
+        const failMsg = `Hola ${realName} 👋🏻, escuché que enviaste una nota de voz. Lamentablemente tuve un inconveniente técnico al procesarla en este momento. 🙏\n\nTe pido que:\n✏️ Escribas tu consulta por texto aquí en el grupo, o\n📲 Me la envíes directamente en mi chat privado: https://wa.me/573192919978\n\n¡En el chat privado puedo escuchar y procesar tus audios sin problemas! 😊`;
         await this.queuedSend(chatId, failMsg, { mentions: [senderId], quoted: msg });
         await this.sock.sendPresenceUpdate('paused', chatId);
         return;
@@ -844,7 +844,7 @@ export class JaniaMatchBot {
           const redirectMsg =
             `Hola ${realName} 👋🏻, veo que tu consulta es sobre ${isOffTopicLegal ? 'temas jurídicos, tributarios o de avalúos' : 'el funcionamiento de VECY Network y JanIA'}. ¡Perfecto! 🎯\n\n` +
             `Ese tipo de preguntas las atiendo con más profundidad en el grupo *${groupName}* de nuestra comunidad de WhatsApp. 🏠\n\n` +
-            `También puedes consultarme directamente en mi chat privado con mi otra yo *JanIA v3.5* 📲: https://wa.me/573166569719\n\n` +
+            `También puedes consultarme directamente en mi chat privado con mi otra yo *JanIA v3.5* 📲: https://wa.me/573192919978\n\n` +
             `¡Allí te atiendo con todo el detalle que mereces! 😊`;
           await this.queuedSend(chatId, redirectMsg, { mentions: [senderId], quoted: msg });
           await this.sock.sendPresenceUpdate('paused', chatId);
@@ -1662,7 +1662,6 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
           const isAdmin = rawPhone.includes(ADMIN_PHONE) || 
                           rawPhone === ADMIN_PHONE || 
                           rawPhone === "573192919978" || 
-                          rawPhone === "573166569719" || 
                           rawPhone.includes("573185462265");
           if (!isAdmin) {
             console.log(`[JANIA-MATCH-SHIELD] Bloqueado envío de mensaje directo (DM) a usuario no administrador: ${targetJid}`);

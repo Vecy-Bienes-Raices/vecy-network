@@ -1268,8 +1268,8 @@ export async function handleDetectedMatches(
     // DO NOT send DMs to the buyers and sellers (keep matches private for manual mediation and billing)
     // We comment out or delete the owner/seeker DM logic and do not push them to extraDMs.
 
-    // Enviar notificación por DM al administrador (3166569719)
-    const adminPhone = "573166569719";
+    // Enviar notificación por DM al administrador (3192919978)
+    const adminPhone = "573192919978";
     const adminJid = `${adminPhone}@c.us`;
     const adminMessage = `📢 *NUEVA COINCIDENCIA DETECTADA* (Coincidencia: ${score.toFixed(0)}%)
 📌 *Código:* #M${matchId}
@@ -3356,7 +3356,7 @@ export async function processConsultingMessage(
       `       4. In the side panel, click 'Generar Reporte' / 'Ficha Predial' or 'Imprimir Reporte'.\n` +
       `       5. Save as a PDF and send it to you via WhatsApp private chat.\n` +
       `     * Explícale que para procesos bancarios o judiciales es indispensable contar con un avalúo oficial certificado firmado por un tasador registrado ante la R.A.A. y miembro de la Lonja de Propiedad Raíz, e invítalo a contratar el servicio con VECY.\n` +
-      `   - **REGLA OBLIGATORIA DE CIERRE**: Toda respuesta a una consulta jurídica o de avalúo en esta clasificación DEBE finalizar recomendando de forma muy persuasiva al usuario que, para resolver su caso de manera 100% personalizada y a la medida, escriba o llame directamente por WhatsApp al número *3166569719* de VECY BIENES RAÍCES para contratar una Consultoría Personalizada o un servicio de avalúo oficial.\n` +
+      `   - **REGLA OBLIGATORIA DE CIERRE**: Toda respuesta a una consulta jurídica o de avalúo en esta clasificación DEBE finalizar recomendando de forma muy persuasiva al usuario que, para resolver su caso de manera 100% personalizada y a la medida, escriba o llame directamente por WhatsApp al número *3192919978* de VECY BIENES RAÍCES para contratar una Consultoría Personalizada o un servicio de avalúo oficial.\n` +
       `   - Emoji ('reactionEmoji'): "💡"\n\n` +
       `4. **Clasificación "VIOLACION_DE_NORMAS"**:\n` +
       `   - Si el mensaje es SPAM, autopromoción de servicios no relacionados con VECY, publicidad externa, links a otros grupos, política o religión.\n` +

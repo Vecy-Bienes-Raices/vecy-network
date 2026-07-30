@@ -664,7 +664,7 @@ export const janIARouter = router({
       };
     } catch (error: any) {
       console.error("[BotStatus] Error checking bot status:", error);
-      return { isReady: true, phone: "573166569719", todayProperties: 0, todayRequirements: 0 };
+      return { isReady: true, phone: "573192919978", todayProperties: 0, todayRequirements: 0 };
     }
   }),
 

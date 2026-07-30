@@ -414,7 +414,7 @@ export const PropertyCaptureForm: React.FC<PropertyCaptureFormProps> = ({
                     type="text"
                     value={formData.contactPhone}
                     onChange={(e) => handleChange('contactPhone', e.target.value)}
-                    placeholder="Ej: +573166569719"
+                    placeholder="Ej: +573192919978"
                     className="w-full bg-zinc-900 border border-[#22d3ee]/30 rounded-xl pl-10 pr-3.5 py-2.5 text-xs font-bold text-white focus:border-[#22d3ee] outline-none"
                   />
                 </div>

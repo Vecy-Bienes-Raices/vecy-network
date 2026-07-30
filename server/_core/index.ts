@@ -180,7 +180,7 @@ async function startServer() {
     try {
       const { phone } = req.query;
       if (!phone || typeof phone !== "string") {
-        return res.status(400).send("Debe proporcionar un parámetro de teléfono válido. Ejemplo: ?phone=573166569719");
+        return res.status(400).send("Debe proporcionar un parámetro de teléfono válido. Ejemplo: ?phone=573192919978");
       }
       const { janiaMatchBot } = await import("./whatsapp-match");
       if (!janiaMatchBot) {
@@ -240,7 +240,7 @@ async function startServer() {
         return res.status(400).json({ error: "Falta el parámetro 'text' o no es válido." });
       }
 
-      const defaultAdminPhone = "573166569719";
+      const defaultAdminPhone = "573192919978";
       const rawPhone = phone || defaultAdminPhone;
       const cleanPhone = typeof rawPhone === "string" ? rawPhone.replace(/\D/g, "") : String(rawPhone).replace(/\D/g, "");
 
@@ -747,7 +747,7 @@ Dirección obligatoria:
     });
 
     // Inicializar los Bots de WhatsApp de Vecy Network (Baileys)
-    // NOTA DE SEGURIDAD: La línea +573166569719 ha sido deshabilitada 100%. Solo opera el Bot Captador Oficial (+573192919978).
+    // Operación exclusiva del Bot Oficial JanIA (+573192919978).
     const shouldStartBot = process.env.ENABLE_WHATSAPP_BOT !== "false" || process.env.ENABLE_JANIA_MATCH_BOT === "true";
     if (shouldStartBot) {
       console.log("Iniciando Bot Oficial JanIA (+573192919978) Baileys (.baileys_auth)...");

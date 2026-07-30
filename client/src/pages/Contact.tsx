@@ -40,7 +40,7 @@ export default function Contact() {
                 </div>
 
                 <a 
-                  href="https://wa.me/573166569719?text=%C2%A1Hola%20Vecy!%20%F0%9F%91%8B%20Estoy%20interesado%20en%20conocer%20m%C3%A1s%20sobre%20las%20oportunidades%20de%20inversi%C3%B3n%20inmobiliaria%20inteligente.%20%F0%9F%8F%A2%20%C2%BFPodr%C3%ADan%20asesorarme?"
+                  href="https://wa.me/573192919978?text=%C2%A1Hola%20Vecy!%20%F0%9F%91%8B%20Estoy%20interesado%20en%20conocer%20m%C3%A1s%20sobre%20las%20oportunidades%20de%20inversi%C3%B3n%20inmobiliaria%20inteligente.%20%F0%9F%8F%A2%20%C2%BFPodr%C3%ADan%20asesorarme?"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-6 p-6 glass rounded-2xl border-white/10 hover:glow-gold-sm transition-all group"
@@ -119,7 +119,7 @@ export default function Contact() {
                 <div className="mt-8 text-center">
                   <p className="text-gray-400 text-sm mb-4">¿Buscas agilidad 100% digital?</p>
                   <a 
-                    href="https://wa.me/573166569719"
+                    href="https://wa.me/573192919978"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-2 text-accent font-bold mx-auto hover:glow-gold-sm transition-all w-fit px-4 py-2 rounded-lg"
