@@ -766,6 +766,12 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
     earnedPoints += 3;
   }
 
+  // 10. Intersección Semántica de Comodidades (Vestier 100%, Balcón/Terraza 70%, Entorno 100%/80%)
+  const semRes = evaluarInterseccionComodidadesSemanticas(requirement, property);
+  if (semRes.positives.length > 0) {
+    positives.push(...semRes.positives);
+  }
+
   // Total: max 100 pts (15+15+20+15+10+10+5+5+5 = 100)
   let finalPercentage = Math.min(100, Math.round((earnedPoints / totalPossible) * 100));
 
@@ -785,7 +791,68 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   }
 
   return buildExplanationResult(finalPercentage, blockers, positives, negatives);
+}
 
+export interface SemanticAmenitiesResult {
+  vestierScore: number;       // 0 a 1.0 (100% coincidencia exacta, ej. Vestier vs Walk-in-closet)
+  balconTerrasaScore: number; // 0 a 1.0 (1.0 exacta, 0.70 parcial por analogía espacio abierto)
+  entornoScore: number;       // 0 a 1.0 (1.0 exterior frente a parque / vista verde, 0.80 interior silencioso)
+  positives: string[];
+}
+
+/**
+ * Matriz de Intersección Semántica de Comodidades (v17.9)
+ * Evalúa la equivalencia entre Vestier ↔ Walk-in-closet, Balcón ↔ Terraza y Entorno.
+ */
+export function evaluarInterseccionComodidadesSemanticas(req: any, prop: any): SemanticAmenitiesResult {
+  const reqText = `${req.rawText || ""} ${req.description || ""}`.toLowerCase();
+  const propText = `${prop.rawText || ""} ${prop.description || ""}`.toLowerCase();
+
+  const positives: string[] = [];
+
+  // 1. CRUCE VESTIER / WALK-IN CLOSET (100% Coincidencia Exacta)
+  const reqHasVestier = req.hasWalkInCloset || reqText.includes("vestier") || reqText.includes("walk") || reqText.includes("closet");
+  const propHasVestier = prop.hasWalkInCloset || propText.includes("vestier") || propText.includes("walk") || propText.includes("closet");
+  
+  let vestierScore = 0;
+  if (reqHasVestier && propHasVestier) {
+    vestierScore = 1.0; // 100% de puntos
+    positives.push("Homologación Semántica: Coincidencia Exacta entre Vestier y Walk-in Closet (100%)");
+  }
+
+  // 2. CRUCE BALCÓN / TERRAZA (100% Exacto si coinciden, 70% Parcial por analogía espacio abierto)
+  const reqHasBalcony = req.hasBalcony || reqText.includes("balcon") || reqText.includes("balcón");
+  const reqHasTerrace = req.hasTerrace || reqText.includes("terraza") || reqText.includes("patio");
+  const propHasBalcony = prop.hasBalcony || propText.includes("balcon") || propText.includes("balcón");
+  const propHasTerrace = prop.hasTerrace || propText.includes("terraza") || propText.includes("patio");
+
+  let balconTerrasaScore = 0;
+  if (reqHasBalcony && propHasBalcony) {
+    balconTerrasaScore = 1.0; // Exacta 100%
+    positives.push("Coincidencia Exacta de Balcón (100%)");
+  } else if (reqHasTerrace && propHasTerrace) {
+    balconTerrasaScore = 1.0; // Exacta 100%
+    positives.push("Coincidencia Exacta de Terraza (100%)");
+  } else if ((reqHasBalcony && propHasTerrace) || (reqHasTerrace && propHasBalcony)) {
+    balconTerrasaScore = 0.70; // Analogía 70%
+    positives.push("Homologación Semántica: Coincidencia Parcial por Analogía de Espacio Abierto (Balcón ↔ Terraza 70%)");
+  }
+
+  // 3. CRUCE DE ENTORNO Y ESTILO DE VIDA (Vista verde / Silencioso / Exterior / Interior)
+  const reqWantsGreen = reqText.includes("vista verde") || reqText.includes("parque") || reqText.includes("cerros") || reqText.includes("tranquilo");
+  const propIsParkFront = propText.includes("vista verde") || propText.includes("frente a parque") || propText.includes("exterior");
+  const propIsSilentInterior = propText.includes("interior") || propText.includes("silencioso");
+
+  let entornoScore = 0;
+  if (reqWantsGreen && propIsParkFront) {
+    entornoScore = 1.0; // 100%
+    positives.push("Entorno: Coincidencia Exacta Vista Verde / Exterior frente a Parque (100%)");
+  } else if (reqWantsGreen && propIsSilentInterior) {
+    entornoScore = 0.80; // 80%
+    positives.push("Entorno: Coincidencia Parcial Vista Verde ↔ Interior Silencioso (80%)");
+  }
+
+  return { vestierScore, balconTerrasaScore, entornoScore, positives };
 }
 
 export function calcularScoreMatch(requirement: any, property: any): number {

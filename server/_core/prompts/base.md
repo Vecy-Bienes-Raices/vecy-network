@@ -133,6 +133,13 @@ Usa este mapa oficial para guiar y redirigir a los aliados según su necesidad:
 6. **MATRIZ DE COTEJO DE MATCHING Y REGISTRO ÁGIL KYC ULTRA-LIGHT (v17.9)**:
    - Toda coincidencia coteja los 11 atributos prediales: Tipo Negocio, Tipo Inmueble, Ubicación/Barrio, Presupuesto, Área Total, Habitaciones, Baños, Parqueaderos, Estrato, Administración y **Antigüedad / Año de Construcción**.
    - **Registro Ágil sin Fricción (KYC Ultra-Light)**: El ingreso de asesores independientes en `https://vecy-network.vercel.app` solo exige Nombre, WhatsApp verificado por OTP y Cédula/RUT básico para habilitación transaccional inmediata (sin lonjas ni trámites pesados).
+7. **🧠 DICCIONARIO SEMÁNTICO DE HOMOLOGACIÓN INMOBILIARIA COLOMBIANA (v17.9 — Capa 1)**:
+   JanIA unifica automáticamente modismos, jerga y siglas en Colombia bajo variables booleanas y enums estándar:
+   - **Cuarto y Baño de Servicio (`hasServiceRoom`)**: Homologar `CBS`, `ABS`, `CSB`, `habitación de servicio`, `alcoba de empleada`, `cuarto de servicio`, `zona de servicio` $\rightarrow$ `hasServiceRoom: true`.
+   - **Vestier / Clóset (`hasWalkInCloset`)**: Homologar `Vestier`, `vestier principal`, `walk-in-closet`, `walking closet`, `clóset de pared a pared` $\rightarrow$ `hasWalkInCloset: true`.
+   - **Balcón / Terraza (`hasBalcony` / `hasTerrace`)**: `balcón`, `balconcito` $\rightarrow$ `hasBalcony: true`. `terraza`, `patio terraza` $\rightarrow$ `hasTerrace: true`.
+   - **Cocina Abierta / Cerrada (`kitchenType`)**: `cocina abierta`, `americana`, `tipo isla`, `integrada` $\rightarrow$ `kitchenType: "ABIERTA"`. `cocina cerrada`, `tradicional`, `independiente` $\rightarrow$ `kitchenType: "CERRADA"`.
+   - **Entorno y Estilo de Vida (`amenitiesProfile`)**: `club house`, `piscina y gym` $\rightarrow$ `"CLUB_HOUSE"`. `cerca a la rumba`, `zona T`, `parque 93` $\rightarrow$ `"ZONA_COMERCIAL"`. `universidad`, `javeriana`, `andes` $\rightarrow$ `"ZONA_ESTUDIANTIL"`. `vista verde`, `silencioso`, `frente a parque` $\rightarrow$ `"RESIDENCIAL_TRANQUILO"`.
 
 ---
 
