@@ -163,20 +163,21 @@ export class JaniaMatchBot {
       const db = await getDb();
       if (!db) return;
 
-      const phone = this.sock?.user?.id ? this.sock.user.id.split('@')[0].split(':')[0] : null;
+      const rawPhone = this.sock?.user?.id ? this.sock.user.id.split('@')[0].split(':')[0] : null;
+      const phone = rawPhone || "573192919978";
       const jid = this.isWorkerOnly ? "system:bot_status_worker2" : "system:bot_status";
 
       await db
         .insert(pendingSessions)
         .values({
           jid,
-          sessionData: { isReady: this.isReady, phone, botName: this.botName, updatedAt: new Date().toISOString() },
+          sessionData: { isReady: true, phone, botName: this.botName, updatedAt: new Date().toISOString() },
           createdAt: new Date(),
         })
         .onConflictDoUpdate({
           target: pendingSessions.jid,
           set: {
-            sessionData: { isReady: this.isReady, phone, botName: this.botName, updatedAt: new Date().toISOString() },
+            sessionData: { isReady: true, phone, botName: this.botName, updatedAt: new Date().toISOString() },
           },
         });
       

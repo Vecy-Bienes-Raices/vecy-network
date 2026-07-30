@@ -638,17 +638,9 @@ export const janIARouter = router({
 
       if (statusRow) {
         const data = statusRow.sessionData as { isReady: boolean; phone: string | null; updatedAt: string };
-        if (data) {
-          if (typeof data.isReady === 'boolean') isReady = data.isReady;
-          if (data.phone) phone = data.phone;
+        if (data && data.phone) {
+          phone = data.phone;
         }
-      }
-
-      // 2. Fallback a instancia activa si la DB no reporta aún
-      const bot = (global as any).janiaMatchBotInstance;
-      if (bot) {
-        if (typeof bot.isReady === 'boolean') isReady = bot.isReady;
-        if (bot.sock?.user?.id) phone = bot.sock.user.id.split('@')[0].split(':')[0];
       }
       
       // Contadores del día según hora local de Bogotá (UTC-5)
