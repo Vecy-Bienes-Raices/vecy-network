@@ -13,7 +13,17 @@ function getWASocket(): any {
   return _baileys;
 }
 
-import pino from 'pino';
+const silentLogger: any = {
+  level: 'silent',
+  log: () => {},
+  trace: () => {},
+  debug: () => {},
+  info: () => {},
+  warn: () => {},
+  error: () => {},
+  fatal: () => {},
+  child: () => silentLogger
+};
 
 async function requestPairing() {
   const sessionDir = path.join(process.cwd(), ".baileys_auth_worker2");
@@ -30,7 +40,7 @@ async function requestPairing() {
   const sock = makeWASocket({
     auth: state,
     version,
-    logger: pino({ level: 'silent' }) as any,
+    logger: silentLogger,
     printQRInTerminal: false,
     browser: Browsers.ubuntu('Chrome'),
     syncFullHistory: false,
