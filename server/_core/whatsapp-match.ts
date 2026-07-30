@@ -1149,14 +1149,8 @@ export class JaniaMatchBot {
             const emoji = this.getReactionEmoji(result, isOfficialGroupSingle);
             if (emoji && bufferedMsg.originalMsg?.key) {
               try {
-                const targetKey = {
-                  remoteJid: bufferedMsg.originalMsg.key.remoteJid || chatId,
-                  id: bufferedMsg.originalMsg.key.id,
-                  fromMe: !!bufferedMsg.originalMsg.key.fromMe,
-                  participant: bufferedMsg.originalMsg.key.participant ? cleanJid(bufferedMsg.originalMsg.key.participant) : (senderId ? cleanJid(senderId) : undefined)
-                };
                 console.log(`[JANIA-MATCH] Reaccionando individualmente con ${emoji} a publicación de ${senderId} en grupo predial (${chatId})`);
-                await this.sock.sendMessage(chatId, { react: { text: emoji, key: targetKey } });
+                await this.sock.sendMessage(chatId, { react: { text: emoji, key: bufferedMsg.originalMsg.key } });
               } catch (reactErr: any) {
                 console.error('[JANIA-MATCH] Error al reaccionar a mensaje individual:', reactErr);
               }
@@ -1240,14 +1234,8 @@ export class JaniaMatchBot {
           try {
             const lastMsg = buffer.messages[buffer.messages.length - 1]?.originalMsg;
             if (lastMsg && lastMsg.key) {
-              const targetKey = {
-                remoteJid: lastMsg.key.remoteJid || chatId,
-                id: lastMsg.key.id,
-                fromMe: !!lastMsg.key.fromMe,
-                participant: lastMsg.key.participant ? cleanJid(lastMsg.key.participant) : (senderId ? cleanJid(senderId) : undefined)
-              };
               console.log(`[JANIA-MATCH] Reaccionando con ${emoji} al mensaje de ${senderId} en grupo predial (${chatId})`);
-              await this.sock.sendMessage(chatId, { react: { text: emoji, key: targetKey } });
+              await this.sock.sendMessage(chatId, { react: { text: emoji, key: lastMsg.key } });
             }
           } catch (reactErr: any) {
             console.error('[JANIA-MATCH] Error al reaccionar al mensaje predial:', reactErr);
