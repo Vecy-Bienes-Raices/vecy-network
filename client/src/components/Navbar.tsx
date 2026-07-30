@@ -44,8 +44,6 @@ export default function Navbar({ logoUrl, brandName, brandSubtitle }: NavbarProp
 
   if (user && ['admin', 'agent'].includes(user.role as string)) {
     navItems.push({ label: 'ADMINISTRACIÓN', href: '/admin' });
-  } else {
-    navItems.push({ label: 'ACCEDER', href: '/login' });
   }
 
   return (
