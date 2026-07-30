@@ -480,9 +480,22 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   }
   positives.push(`Ciudad coincide: ${reqCity}`);
 
-  const price       = parseFloat(String(property.price || "0"));
-  const budgetMax   = parseFloat(String(requirement.presupuestoMax || "0"));
-  const budgetMin   = parseFloat(String(requirement.presupuestoMin || "0"));
+  let price       = parseFloat(String(property.price || "0"));
+  let budgetMax   = parseFloat(String(requirement.presupuestoMax || "0"));
+  const budgetMin = parseFloat(String(requirement.presupuestoMin || "0"));
+
+  // Extraer presupuesto del rawText si la columna está en 0.00
+  if (budgetMax <= 0 && requirement.rawText) {
+    const rawR = requirement.rawText.toLowerCase();
+    const matchPresu = rawR.match(/presupuesto\s*:?\s*\$?([\d.]+)\s*(millones|millón|m|M)?/i);
+    if (matchPresu) {
+      let valR = parseFloat(matchPresu[1].replace(/\./g, ""));
+      if (!isNaN(valR)) {
+        if (valR < 1000) valR *= 1000000;
+        budgetMax = valR;
+      }
+    }
+  }
 
   const propArea    = parseFloat(String(property.areaTotal || property.area || "0"));
   const reqAreaMin  = parseFloat(String(requirement.areaMin || requirement.areaMinimaM2 || "0"));
@@ -522,6 +535,39 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
 
   if (!propRealPhone || !reqRealPhone) {
     blockers.push("Match no comercializable: Falta número de teléfono de contacto real en una de las partes.");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+
+  // ── FILTRO DURO 0C: Oferta sin precio vs Demanda con Presupuesto Especificado (Tolerancia Cero 0%) ──
+  if (budgetMax > 0 && price <= 0 && (!property.priceRent || parseFloat(String(property.priceRent)) <= 0)) {
+    blockers.push("Match inviable: La oferta NO especifica precio (N/E) y el requerimiento exige presupuesto.");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+
+  // ── FILTRO DURO 0D: Múltiples Campos Técnicos Esenciales en N/E (Tolerancia Cero 0%) ──
+  let missingTechCount = 0;
+  if (price <= 0) missingTechCount++;
+  if (propArea <= 0) missingTechCount++;
+  if (pBedrooms <= 0) missingTechCount++;
+  if (pBathrooms <= 0) missingTechCount++;
+  if (pGarages <= 0) missingTechCount++;
+
+  if (missingTechCount >= 2) {
+    blockers.push(`Oferta con información insuficiente (${missingTechCount} campos técnicos clave en N/E).`);
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+
+  // ── FILTRO DURO 0E: Incompatibilidad Geográfica Estricta de Ciudad (Ej: Cali vs Bogotá) ──
+  const reqCityNorm = (requirement.ciudadDeseada || requirement.city || requirement.rawText || "").toLowerCase();
+  const propCityNorm = (property.addressCity || property.city || property.zone || property.rawText || "").toLowerCase();
+
+  const isReqCali = reqCityNorm.includes("cali");
+  const isPropCali = propCityNorm.includes("cali");
+  const isReqBogota = reqCityNorm.includes("bogota") || reqCityNorm.includes("bogotá");
+  const isPropBogota = propCityNorm.includes("bogota") || propCityNorm.includes("bogotá");
+
+  if ((isReqCali && isPropBogota && !isPropCali) || (isReqBogota && isPropCali && !isPropBogota)) {
+    blockers.push(`Incompatibilidad geográfica de ciudad: Requerimiento en ${isReqCali ? "Cali" : "Bogotá"} vs Oferta en ${isPropCali ? "Cali" : "Bogotá"}.`);
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
@@ -629,8 +675,22 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
     const isReqSale = reqBiz.includes("venta") || reqBiz.includes("permuta");
 
     // Para Arriendos: Si (Canon + Administración de la oferta) > Canon Máximo de la demanda → 0%
-    if (isReqRent && propBiz.includes("arriendo")) {
-      const propRent = property.priceRent ? parseFloat(String(property.priceRent)) : price;
+    if (isReqRent) {
+      let propRent = property.priceRent ? parseFloat(String(property.priceRent)) : 0;
+      if (propRent <= 0 && property.rawText) {
+        const rawP = property.rawText.toLowerCase();
+        const matchRentP = rawP.match(/arriendo\s*:?\s*\$?([\d.]+)\s*(millones|millón|m|M)?/i);
+        if (matchRentP) {
+          let valP = parseFloat(matchRentP[1].replace(/\./g, ""));
+          if (!isNaN(valP)) {
+            if (valP < 1000) valP *= 1000000;
+            propRent = valP;
+          }
+        }
+      }
+      if (propRent <= 0 && price > 0 && price < 100000000) {
+        propRent = price;
+      }
       if (propRent > 0) {
         const adminVal = pAdminFee > 0 ? pAdminFee : 0;
         const totalRent = propRent + adminVal;
