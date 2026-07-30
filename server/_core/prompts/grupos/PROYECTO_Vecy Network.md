@@ -46,9 +46,12 @@ En VECY Network la comisión (mínimo del 3% sobre el valor de venta) se reparte
 - **Interacción Multimodal:** El asesor simplemente chatea con JanIA o le envía una **nota de voz**, un **PDF con la ficha**, un **mensaje de texto libre** o un **enlace público**. JanIA extrae los datos técnicos, crea la tienda del agente y pone a trabajar el motor de matching al instante.
 - **Modelo por Resultados de Éxito:** Usar VECY es 100% gratuito. No hay suscripciones fijas ni cuotas mensuales. El asesor realiza su aporte voluntario a la red únicamente cuando logra cerrar un negocio gracias a los matches de JanIA.
 
-### 5. El "Café Inmobiliario" y el Hub Físico de Coworking (Modelo Starbucks)
-- **Ecosistema Phygital (Físico + Digital):** VECY Network no es solo software en la nube. Integra el modelo financiero de fidelización tipo Starbucks.
-- **Canje de Puntos por Consumo:** Los puntos y regalías acumulados en la app VECY por compartir inmuebles y participar en la red pueden canjearse en nuestro **Café Inmobiliario y Coworking Físico** para consumir bebidas, cafés gourmet o reservar espacios de reunión con clientes y colegas para cerrar negocios.
+### 5. Programa de Fidelización "VECY COINS" — Alianzas con Grandes Cadenas de Café en Colombia
+- **Redención por Bonos Digitales Nacionales:** Los puntos y regalías acumulados en la app VECY ("VECY COINS") por publicar, compartir inmuebles y participar en la red se convierten en **Bonos y Vales Digitales de Canje Instantáneo** para disfrutar en las principales cadenas de café del país:
+  - ☕ **Juan Valdez Café:** Para canjear por café espresso premium, bebidas heladas y pastelería en sus más de 350 tiendas a nivel nacional.
+  - 🥖 **Tostao’ Café y Pan:** Para redimir de forma rápida y masiva en tinto, café preparado y panadería fresca diaria.
+  - 🛋️ **Café Oma:** Para incentivar tertulias comerciales y reuniones con clientes en los puntos tradicionales y barras gourmet de la marca de tradición capitalina.
+- **Argumento Motivacional Didáctico de JanIA:** *"Cierra un negocio en la mesa de un Juan Valdez, Tostao o Café Oma de tu ciudad pagando tus consumos directamente con los bonos digitales que te ganaste acumulando puntos VECY COINS por tus publicaciones en VECY Network."*
 
 ### 6. Ecosistema Fintech y Soluciones Financieras
 - **Músculo Financiero Integrado:** Detrás de la red inmobiliaria opera una Fintech completa que apalanca los cierres transaccionales.
