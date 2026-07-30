@@ -666,6 +666,23 @@ export const janIARouter = router({
     }
   }),
 
+  getQrCode: publicProcedure.query(async () => {
+    try {
+      const qrPath = path.join(process.cwd(), "qr-captador.png");
+      const qrMatchPath = path.join(process.cwd(), "qr-match.png");
+      
+      let targetPath = fs.existsSync(qrPath) ? qrPath : (fs.existsSync(qrMatchPath) ? qrMatchPath : null);
+      
+      if (targetPath) {
+        const fileData = fs.readFileSync(targetPath);
+        return { hasQr: true, qrData: `data:image/png;base64,${fileData.toString("base64")}` };
+      }
+      return { hasQr: false, qrData: null };
+    } catch (e) {
+      return { hasQr: false, qrData: null };
+    }
+  }),
+
   // Get all requirements registered in the database
   getAllRequirements: publicProcedure.query(async () => {
     const db = await getDb();

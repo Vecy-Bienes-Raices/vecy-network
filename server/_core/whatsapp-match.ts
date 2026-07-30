@@ -286,8 +286,12 @@ export class JaniaMatchBot {
         this.updateStatusInDb().catch(err => console.error(`[${this.botName}-DB] Error updating status on close:`, err));
 
         this.reconnectAttempts++;
-        if (this.reconnectAttempts > 3) {
-          console.error(`[${this.botName}] 🛡️ [ESCUDO ANTI-BAN] Límite máximo de 3 reintentos alcanzado. Se DETIENE la reconexión automática para proteger la cuenta de WhatsApp.`);
+        if (this.reconnectAttempts > 5) {
+          console.warn(`[${this.botName}] 🛡️ [ESCUDO ANTI-BAN] Máximos reintentos inmediatos alcanzados. Programando reconexión diferida en 2 minutos...`);
+          setTimeout(() => {
+            this.reconnectAttempts = 0;
+            this.initialize();
+          }, 120000);
           return;
         }
 
