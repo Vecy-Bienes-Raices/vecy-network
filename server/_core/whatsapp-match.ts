@@ -187,12 +187,11 @@ export class JaniaMatchBot {
   }
 
   public async initialize() {
-    if (!this.isWorkerOnly && this.sessionFolderName === '.baileys_auth') {
-      console.log(`[${this.botName}] ⛔ Bot deshabilitado permanentemente por protección del número principal. No se ejecutará sesión en .baileys_auth.`);
-      return;
-    }
     try {
       const sessionDir = path.join(process.cwd(), this.sessionFolderName);
+      if (!fs.existsSync(sessionDir)) {
+        fs.mkdirSync(sessionDir, { recursive: true });
+      }
       const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
       
       // Guardar las credenciales iniciales de inmediato en disco para evitar que se pierdan
@@ -256,14 +255,22 @@ export class JaniaMatchBot {
       const { connection, lastDisconnect, qr } = update;
 
       if (qr) {
-        console.log(`\n[${this.botName}] 🔌 ESCANEA ESTE CÓDIGO QR PARA VINCULAR ${this.botName}:`);
+        console.log(`\n[${this.botName}] 🔌 ESCANEA ESTE CÓDIGO QR PARA VINCULAR ${this.botName} (+573192919978):`);
         qrcodeTerminal.generate(qr, { small: true });
+
+        (global as any).janiaBotQr = qr;
 
         // Guardar el QR como imagen PNG accesible desde el navegador
         try {
           const qrPath = path.join(process.cwd(), this.qrFileName);
+          const publicQrDir = path.join(process.cwd(), "client", "public");
+          if (!fs.existsSync(publicQrDir)) {
+            fs.mkdirSync(publicQrDir, { recursive: true });
+          }
+          const publicQrPath = path.join(publicQrDir, "qr-match.png");
           await QRCode.toFile(qrPath, qr, { width: 400, margin: 2 });
-          console.log(`[${this.botName}] 📸 QR guardado como ${this.qrFileName} en la raíz del proyecto.`);
+          await QRCode.toFile(publicQrPath, qr, { width: 400, margin: 2 });
+          console.log(`[${this.botName}] 📸 QR guardado exitosamente en ${qrPath} y ${publicQrPath}`);
         } catch (e: any) {
           console.warn(`[${this.botName}] Error guardando QR PNG:`, e.message);
         }
@@ -1114,7 +1121,8 @@ export class JaniaMatchBot {
             groupName
           );
 
-          if (result) {
+          const isSupportGroupSingle = chatId === this.buzonGroupId || chatId === this.circuloGroupId;
+          if (result && !isSupportGroupSingle) {
             const emoji = this.getReactionEmoji(result);
             if (emoji && bufferedMsg.originalMsg?.key) {
               try {
@@ -1124,7 +1132,7 @@ export class JaniaMatchBot {
                   fromMe: !!bufferedMsg.originalMsg.key.fromMe,
                   participant: bufferedMsg.originalMsg.key.participant ? cleanJid(bufferedMsg.originalMsg.key.participant) : (senderId ? cleanJid(senderId) : undefined)
                 };
-                console.log(`[JANIA-MATCH] Reaccionando individualmente con ${emoji} a publicación de ${senderId} en ${chatId}`);
+                console.log(`[JANIA-MATCH] Reaccionando individualmente con ${emoji} a publicación de ${senderId} en grupo predial (${chatId})`);
                 await this.sock.sendMessage(chatId, { react: { text: emoji, key: targetKey } });
               } catch (reactErr: any) {
                 console.error('[JANIA-MATCH] Error al reaccionar a mensaje individual:', reactErr);
@@ -1200,9 +1208,9 @@ export class JaniaMatchBot {
         );
       }
 
-      // --- REACCIONAR A LA PUBLICACIÓN (Solo en Grupo 1: VECY INMUEBLES NETWORK) ---
-      const isGrupo1 = chatId === this.targetGroupId;
-      if (result && isGrupo1) {
+      // --- REACCIONAR A LA PUBLICACIÓN EN TODOS LOS GRUPOS PREDIALES ---
+      const isSupportGroup = chatId === this.buzonGroupId || chatId === this.circuloGroupId;
+      if (result && !isSupportGroup) {
         const emoji = this.getReactionEmoji(result);
         if (emoji) {
           try {
@@ -1214,11 +1222,11 @@ export class JaniaMatchBot {
                 fromMe: !!lastMsg.key.fromMe,
                 participant: lastMsg.key.participant ? cleanJid(lastMsg.key.participant) : (senderId ? cleanJid(senderId) : undefined)
               };
-              console.log(`[JANIA-MATCH] Reaccionando en Grupo 1 con ${emoji} al mensaje de ${senderId}`);
+              console.log(`[JANIA-MATCH] Reaccionando con ${emoji} al mensaje de ${senderId} en grupo predial (${groupName} / ${chatId})`);
               await this.sock.sendMessage(chatId, { react: { text: emoji, key: targetKey } });
             }
           } catch (reactErr: any) {
-            console.error('[JANIA-MATCH] Error al reaccionar al mensaje:', reactErr);
+            console.error('[JANIA-MATCH] Error al reaccionar al mensaje predial:', reactErr);
           }
         }
       }
