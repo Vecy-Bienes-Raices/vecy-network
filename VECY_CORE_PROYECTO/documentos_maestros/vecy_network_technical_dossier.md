@@ -37,13 +37,13 @@ _Manual maestro de visión de producto, lógica de negocio, arquitectura de soft
 ### 📊 Diagrama 1: Arquitectura General del Ecosistema VECY Network
 ```mermaid
 graph TD
-    A["📱 WhatsApp (Baileys WebSocket)"] -->|Texto / Voz / PDF / Link| B["🧠 JanIA Brain (Gemini 2.5 Flash)"]
-    W["🌐 Consola Web (React + Vite)"] -->|tRPC Router| B
-    B -->|Extracción & Clasificación| C[("🗄️ Supabase PostgreSQL (Drizzle ORM)")]
-    C -->|Filtros Duros & Scoring (85%+)| D["⚙️ Motor de Matching (matching.ts)"]
-    D -->|Match Perfecto (100%) / VECY Match| E["📊 Admin / Consola de Coincidencias Web"]
-    B -->|Calculadora Tax & Valuation| F["⚖️ Motor Tributario & ACM (taxEngine / valuation)"]
-    D -->|Aspersión 35/35/15/15| G["💰 Wallet Engine (walletEngine.ts)"]
+    A["📱 WhatsApp (Baileys WebSocket)"] -->|"Texto / Voz / PDF / Link"| B["🧠 JanIA Brain (Gemini 2.5 Flash)"]
+    W["🌐 Consola Web (React + Vite)"] -->|"tRPC Router"| B
+    B -->|"Extracción & Clasificación"| C[("🗄️ Supabase PostgreSQL (Drizzle ORM)")]
+    C -->|"Filtros Duros & Scoring (85%+)"| D["⚙️ Motor de Matching (matching.ts)"]
+    D -->|"Match Perfecto (100%) / VECY Match"| E["📊 Admin / Consola de Coincidencias Web"]
+    B -->|"Calculadora Tax & Valuation"| F["⚖️ Motor Tributario & ACM (taxEngine / valuation)"]
+    D -->|"Aspersión 35/35/15/15"| G["💰 Wallet Engine (walletEngine.ts)"]
 ```
 
 ---
@@ -621,6 +621,22 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
   - Dudas legales, escrituras, linderos o avalúos en Grupo 1 o 3 $\rightarrow$ Redirigir a **Grupo 2: SOPORTE LEGAL, TRIBUTARIO Y AVALÚOS**.
   - Debates de comisiones 35/35/15/15, VECY COINS o Fintech en Grupo 1 o 2 $\rightarrow$ Redirigir a **Grupo 3: PROYECTO VECY NETWORK**.
 - **Humanización y Control Anti-Spam DM**: Saludos nominales únicos por sesión (Hora Colombia UTC-5) y prohibición estricta de iniciar DMs no solicitados.
+
+---
+
+### 🔖 v17.8B — JULIO 2026: FORMULARIO DE CAPTACIÓN PROGRESIVA INMOBILIARIA Y VALIDACIÓN DE FILTROS DUROS (`PropertyCaptureForm.tsx`)
+
+**Objetivo:** Proporcionar una interfaz web Mobile-First en 4 pasos dinámicos para la ingesta directa de inmuebles en Supabase sin estados `N/E` indeseados.
+
+#### 1. ESTRUCTURA EN 4 PASOS DINÁMICOS (`client/src/components/capture/PropertyCaptureForm.tsx`)
+- **Paso 1 (Datos Catastrales y Legales)**: Tipo de Inmueble, Tipo de Negocio (Venta/Arriendo/Permuta), Ciudad, Barrio/Sector, Dirección y Teléfono de contacto WhatsApp (Filtro 0B).
+- **Paso 2 (Estructura Física e Infraestructura)**: Área Total ($m^2$), Área Construida ($m^2$), Habitaciones, Baños, Garajes, Piso, Antigüedad, Toggles de Ascensor y Club House.
+- **Paso 3 (Esquema Económico y Administración)**: Precio de Venta ($), Canon de Arriendo ($), Valor Administración ($) y Precio Mínimo de Cierre.
+- **Paso 4 (Multimedia y Carga de PDFs)**: Galería de imágenes, Ficha Técnica PDF / Certificado de Tradición y observaciones prediales.
+
+#### 2. VALIDACIÓN NUMÉRICA EN TIEMPO REAL
+- Entradas estrictas `type="number"` y validación `min="0"` en Precio, Metraje, Habitaciones y Parqueaderos para garantizar que no ingresen strings corruptos que fuercen un estado `N/E` innecesario en el motor de matching.
+
 
 
 

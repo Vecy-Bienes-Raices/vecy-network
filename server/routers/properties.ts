@@ -13,7 +13,10 @@ const propertyInputSchema = z.object({
     "apartment", "house", "building", "warehouse", "farm", "hotel", 
     "office", "land", "commercial", "loft", "consultorio"
   ]),
-  transactionType: z.enum(["venta", "arriendo", "arriendo_temporal"]).default("venta"),
+  transactionType: z.enum([
+    "venta", "arriendo", "venta_o_arriendo", "arriendo_temporal", 
+    "arriendo_con_opcion_de_compra", "permuta", "venta_permuta", "aporte"
+  ]).default("venta"),
   price: z.string().min(1),
   currency: z.enum(["COP", "USD"]).default("COP"),
   city: z.string().default("Bogotá"),
