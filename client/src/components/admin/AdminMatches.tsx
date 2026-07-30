@@ -586,8 +586,11 @@ export default function AdminMatches() {
             <Sparkles className="w-6 h-6 text-[#bf953f] animate-pulse" />
             Reporte de Coincidencias (Matches de JanIA)
           </h2>
-          <p className="text-zinc-500 text-sm mt-1">
-            {isLoading ? 'Cargando coincidencias...' : `Total: ${matches.length} matches | Filtrados: ${filteredMatches.length}`}
+          <p className="text-zinc-500 text-sm mt-1 flex items-center gap-2">
+            <span>{isLoading ? 'Cargando coincidencias...' : `Total: ${matches.length} matches | Filtrados: ${filteredMatches.length}`}</span>
+            <span className="text-[10px] bg-[#bf953f]/20 text-[#bf953f] border border-[#bf953f]/30 px-2 py-0.5 rounded-full font-mono font-extrabold ml-2">
+              VECY CORE v17.9H TS Scoring
+            </span>
           </p>
         </div>
         <div className="flex gap-2">
@@ -956,6 +959,12 @@ export default function AdminMatches() {
           </AnimatePresence>
         </div>
       )}
+
+      {/* Footer Version Stamp */}
+      <div className="pt-6 border-t border-white/5 flex items-center justify-between text-[11px] text-zinc-500 font-mono">
+        <div>VECY Network Colombia &copy; 2026</div>
+        <div className="text-[#bf953f] font-bold">VECY CORE v17.9H TS Scoring</div>
+      </div>
     </div>
   );
 }
