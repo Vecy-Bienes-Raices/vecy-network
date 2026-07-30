@@ -40,14 +40,14 @@ function BotStatusWidget() {
 
   return (
     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-      {/* Indicador de conexión */}
-      <div className="flex items-center gap-2 bg-zinc-900/50 border border-white/5 px-3 py-1.5 rounded-xl text-xs">
-        <span className={`w-2.5 h-2.5 rounded-full ${status.isReady ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)] animate-pulse' : 'bg-red-500'}`} />
-        <span className="font-semibold text-zinc-200">
+      {/* Indicador de conexión con verde eléctrico fluorescente incandescente */}
+      <div className="flex items-center gap-2 bg-zinc-900/80 border border-[#00ff66]/20 px-3.5 py-1.5 rounded-xl text-xs backdrop-blur-md shadow-[0_0_10px_rgba(0,255,102,0.1)]">
+        <span className={`w-3 h-3 rounded-full ${status.isReady ? 'bg-[#00ff66] shadow-[0_0_14px_#00ff66] animate-pulse' : 'bg-red-500 shadow-[0_0_10px_#ef4444]'}`} />
+        <span className={`font-bold ${status.isReady ? 'text-[#00ff66] drop-shadow-[0_0_6px_rgba(0,255,102,0.6)]' : 'text-zinc-300'}`}>
           JanIA Match: {status.isReady ? 'Activo' : 'Desconectado'}
         </span>
         {status.phone && (
-          <span className="text-[10px] text-zinc-400 font-mono font-light border-l border-zinc-800 pl-2">
+          <span className="text-[10px] text-emerald-300/80 font-mono font-medium border-l border-white/10 pl-2">
             +{status.phone}
           </span>
         )}

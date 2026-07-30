@@ -623,11 +623,11 @@ export const janIARouter = router({
   // Get current WhatsApp bot connection status and ingestion stats
   getBotStatus: publicProcedure.query(async () => {
     const db = await getDb();
-    if (!db) return { isReady: true, phone: "573166569719", todayProperties: 0, todayRequirements: 0 };
+    if (!db) return { isReady: true, phone: "573192919978", todayProperties: 0, todayRequirements: 0 };
     
     try {
-      let isReady = false;
-      let phone: string | null = "573166569719";
+      let isReady = true;
+      let phone: string | null = "573192919978";
 
       // 1. Query the database-persisted bot status heartbeat (written by the VPS bot)
       const [statusRow] = await db
@@ -638,22 +638,17 @@ export const janIARouter = router({
 
       if (statusRow) {
         const data = statusRow.sessionData as { isReady: boolean; phone: string | null; updatedAt: string };
-        if (data && data.isReady) {
-          isReady = true;
+        if (data) {
+          if (typeof data.isReady === 'boolean') isReady = data.isReady;
           if (data.phone) phone = data.phone;
         }
       }
 
-      // 2. Fallback to global singleton instance or default active state for system API
-      if (!isReady) {
-        const bot = (global as any).janiaMatchBotInstance;
-        if (bot && bot.isReady) {
-          isReady = true;
-          phone = bot.sock?.user?.id ? bot.sock.user.id.split('@')[0].split(':')[0] : "573166569719";
-        } else {
-          // El backend de JanIA está activo y respondiendo consultas en tiempo real
-          isReady = true;
-        }
+      // 2. Fallback a instancia activa si la DB no reporta aún
+      const bot = (global as any).janiaMatchBotInstance;
+      if (bot) {
+        if (typeof bot.isReady === 'boolean') isReady = bot.isReady;
+        if (bot.sock?.user?.id) phone = bot.sock.user.id.split('@')[0].split(':')[0];
       }
       
       // Contadores del día según hora local de Bogotá (UTC-5)
