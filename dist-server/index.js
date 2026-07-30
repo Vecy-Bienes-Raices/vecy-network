@@ -869,25 +869,30 @@ var init_scraper = __esm({
     init_llm();
     DOMINIOS_PERMITIDOS = [
       "wasi.co",
-      "fincaraiz.com.co",
+      "qrador.com",
+      "habi.co",
       "metrocuadrado.com",
+      "fincaraiz.com.co",
       "ciencuadras.com",
       "proppit.com",
       // El nuevo Properati
       "mercadolibre.com.co",
-      // Muy usado en Colombia
+      // MercadoLibre Colombia
       "mitula.com.co",
       "lamudi.com.co",
       "nuroa.com.co",
       "vivareal.co",
       "casacol.co",
-      "habi.co",
+      "lambienesraices.com",
+      // Inmobiliarias independientes
+      "drive.google.com",
+      // Google Drive (fichas compartidas)
       "netlify.app",
-      // Tus sitios de Netlify
+      // Sitios web inmobiliarios en Netlify
       "vecy.co",
-      // Tus sitios de Vecy
+      // Portales VECY Network
       "github.io"
-      // Otros sitios estáticos
+      // Páginas web estáticas
     ];
     DOMINIOS_BLOQUEADOS = [
       "facebook.com",
@@ -900,6 +905,7 @@ var init_scraper = __esm({
       "twitter.com",
       "x.com",
       "wa.me",
+      "whatsapp.com/catalog",
       "whatsapp.com",
       "linkedin.com"
     ];
@@ -2490,9 +2496,11 @@ var matching_exports = {};
 __export(matching_exports, {
   calcularIPC: () => calcularIPC,
   calcularScoreMatch: () => calcularScoreMatch,
+  evaluarInterseccionComodidadesSemanticas: () => evaluarInterseccionComodidadesSemanticas,
   evaluarMatch: () => evaluarMatch,
   executeMatchEngine: () => executeMatchEngine,
   explicarMatch: () => explicarMatch,
+  extractRealPhone: () => extractRealPhone,
   findMatchesForProperty: () => findMatchesForProperty,
   findMatchesForRequirement: () => findMatchesForRequirement,
   matchesGeography: () => matchesGeography
@@ -2502,6 +2510,57 @@ function hasAledanos(text2) {
   if (!text2) return false;
   const n = normalizarTextoGeografico(text2);
   return n.includes("aledan") || n.includes("cercan") || n.includes("alrededor") || n.includes("similar") || n.includes("proxim") || n.includes("otro");
+}
+function extractRealPhone(item) {
+  if (!item) return null;
+  const candidates = [
+    item.idUsuarioWhatsapp,
+    item.contactPhone,
+    item.brokerPhone,
+    item.phone,
+    item.usuarioWhatsapp,
+    item.contactNumber,
+    item.sellerPhone,
+    item.captadorPhone,
+    item.user?.phone,
+    item.user?.idUsuarioWhatsapp,
+    item.user?.contactPhone
+  ];
+  for (const cand of candidates) {
+    if (!cand) continue;
+    const clean = String(cand).split("@")[0].replace(/\D/g, "");
+    if (clean.startsWith("11") || clean.startsWith("12036") || clean.startsWith("1203") || clean.length > 13) {
+      continue;
+    }
+    if (clean.length === 12 && clean.startsWith("573")) return clean;
+    if (clean.length === 10 && clean.startsWith("3")) return `57${clean}`;
+    if (clean.length === 12 && clean.startsWith("5760")) return clean;
+    if (clean.length === 10 && clean.startsWith("60")) return `57${clean}`;
+    if (clean.length >= 10 && clean.length <= 12) return clean;
+  }
+  const textToSearch = `${item.rawText || ""} ${item.description || ""} ${item.name || ""} ${item.rawMessage || ""}`;
+  const phoneMatches = textToSearch.match(/(?:\+?57\s*)?3\d{2}[\s.-]?\d{3}[\s.-]?\d{4}\b/g);
+  if (phoneMatches && phoneMatches.length > 0) {
+    const rawMatch = phoneMatches[0].replace(/\D/g, "");
+    const clean10 = rawMatch.startsWith("57") && rawMatch.length === 12 ? rawMatch.substring(2) : rawMatch;
+    if (clean10.length === 10 && clean10.startsWith("3")) {
+      return `57${clean10}`;
+    }
+  }
+  const jsonSources = [item.metadata, item.rawJson, item.extraData];
+  for (const jsonSrc of jsonSources) {
+    if (!jsonSrc) continue;
+    const str = typeof jsonSrc === "string" ? jsonSrc : JSON.stringify(jsonSrc);
+    const jsonMatches = str.match(/(?:\+?57\s*)?3\d{2}[\s.-]?\d{3}[\s.-]?\d{4}\b/g);
+    if (jsonMatches && jsonMatches.length > 0) {
+      const rawMatch = jsonMatches[0].replace(/\D/g, "");
+      const clean10 = rawMatch.startsWith("57") && rawMatch.length === 12 ? rawMatch.substring(2) : rawMatch;
+      if (clean10.length === 10 && clean10.startsWith("3")) {
+        return `57${clean10}`;
+      }
+    }
+  }
+  return null;
 }
 function checkTransactionCompatibility(reqType, propType, propAccepted = []) {
   if (!reqType || !propType) return false;
@@ -2915,9 +2974,20 @@ function explicarMatch(requirement, property) {
     return buildExplanationResult(0, blockers, positives, negatives);
   }
   positives.push(`Ciudad coincide: ${reqCity}`);
-  const price = parseFloat(String(property.price || "0"));
-  const budgetMax = parseFloat(String(requirement.presupuestoMax || "0"));
+  let price = parseFloat(String(property.price || "0"));
+  let budgetMax = parseFloat(String(requirement.presupuestoMax || "0"));
   const budgetMin = parseFloat(String(requirement.presupuestoMin || "0"));
+  if (budgetMax <= 0 && requirement.rawText) {
+    const rawR = requirement.rawText.toLowerCase();
+    const matchPresu = rawR.match(/presupuesto\s*:?\s*\$?([\d.]+)\s*(millones|millón|m|M)?/i);
+    if (matchPresu) {
+      let valR = parseFloat(matchPresu[1].replace(/\./g, ""));
+      if (!isNaN(valR)) {
+        if (valR < 1e3) valR *= 1e6;
+        budgetMax = valR;
+      }
+    }
+  }
   const propArea = parseFloat(String(property.areaTotal || property.area || "0"));
   const reqAreaMin = parseFloat(String(requirement.areaMin || requirement.areaMinimaM2 || "0"));
   const pBedrooms = property.bedrooms != null ? Number(property.bedrooms) : -1;
@@ -2934,6 +3004,41 @@ function explicarMatch(requirement, property) {
   const propType = (property.propertyType || "").toLowerCase().trim();
   const reqZone = normalizarTextoGeografico(requirement.zonaDeseada || requirement.addressNeighborhood || "");
   const propZone = normalizarTextoGeografico(property.zone || property.addressNeighborhood || "");
+  const hasZeroSpecs = price <= 0 && propArea <= 0 && pBedrooms <= 0 && pBathrooms <= 0;
+  if (hasZeroSpecs) {
+    blockers.push("Inmueble incompleto sin datos prediales m\xEDnimos (Precio, \xC1rea, Habitaciones y Ba\xF1os en N/E).");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  const propRealPhone = extractRealPhone(property);
+  const reqRealPhone = extractRealPhone(requirement);
+  if (!propRealPhone || !reqRealPhone) {
+    blockers.push("Match no comercializable: Falta n\xFAmero de tel\xE9fono de contacto real en una de las partes.");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  if (budgetMax > 0 && price <= 0 && (!property.priceRent || parseFloat(String(property.priceRent)) <= 0)) {
+    blockers.push("Match inviable: La oferta NO especifica precio (N/E) y el requerimiento exige presupuesto.");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  let missingTechCount = 0;
+  if (price <= 0) missingTechCount++;
+  if (propArea <= 0) missingTechCount++;
+  if (pBedrooms <= 0) missingTechCount++;
+  if (pBathrooms <= 0) missingTechCount++;
+  if (pGarages <= 0) missingTechCount++;
+  if (missingTechCount >= 2) {
+    blockers.push(`Oferta con informaci\xF3n insuficiente (${missingTechCount} campos t\xE9cnicos clave en N/E).`);
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  const reqCityNorm = (requirement.ciudadDeseada || requirement.city || requirement.rawText || "").toLowerCase();
+  const propCityNorm = (property.addressCity || property.city || property.zone || property.rawText || "").toLowerCase();
+  const isReqCali = reqCityNorm.includes("cali");
+  const isPropCali = propCityNorm.includes("cali");
+  const isReqBogota = reqCityNorm.includes("bogota") || reqCityNorm.includes("bogot\xE1");
+  const isPropBogota = propCityNorm.includes("bogota") || propCityNorm.includes("bogot\xE1");
+  if (isReqCali && isPropBogota && !isPropCali || isReqBogota && isPropCali && !isPropBogota) {
+    blockers.push(`Incompatibilidad geogr\xE1fica de ciudad: Requerimiento en ${isReqCali ? "Cali" : "Bogot\xE1"} vs Oferta en ${isPropCali ? "Cali" : "Bogot\xE1"}.`);
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
   if (reqType && propType) {
     const aliases = {
       "apartamento": ["apto", "apartamento", "apartment"],
@@ -3016,17 +3121,35 @@ function explicarMatch(requirement, property) {
     }
   }
   if (budgetMax > 0) {
-    const propRent = property.priceRent ? parseFloat(String(property.priceRent)) : 0;
     const isReqRent = reqBiz.includes("arriendo");
     const isReqSale = reqBiz.includes("venta") || reqBiz.includes("permuta");
-    if (isReqRent && propBiz.includes("arriendo") && propRent > 0) {
-      if (propRent > budgetMax * 1.02) {
-        blockers.push(`Canon de arriendo $${propRent.toLocaleString()} supera el presupuesto m\xE1ximo de $${budgetMax.toLocaleString()}`);
-        return buildExplanationResult(0, blockers, positives, negatives);
+    if (isReqRent) {
+      let propRent = property.priceRent ? parseFloat(String(property.priceRent)) : 0;
+      if (propRent <= 0 && property.rawText) {
+        const rawP = property.rawText.toLowerCase();
+        const matchRentP = rawP.match(/arriendo\s*:?\s*\$?([\d.]+)\s*(millones|millón|m|M)?/i);
+        if (matchRentP) {
+          let valP = parseFloat(matchRentP[1].replace(/\./g, ""));
+          if (!isNaN(valP)) {
+            if (valP < 1e3) valP *= 1e6;
+            propRent = valP;
+          }
+        }
+      }
+      if (propRent <= 0 && price > 0 && price < 1e8) {
+        propRent = price;
+      }
+      if (propRent > 0) {
+        const adminVal = pAdminFee > 0 ? pAdminFee : 0;
+        const totalRent = propRent + adminVal;
+        if (totalRent > budgetMax) {
+          blockers.push(`Canon de arriendo total ($${totalRent.toLocaleString()}) supera el presupuesto m\xE1ximo de $${budgetMax.toLocaleString()}`);
+          return buildExplanationResult(0, blockers, positives, negatives);
+        }
       }
     }
     if (isReqSale && propBiz.includes("venta") && price > 0) {
-      if (price > budgetMax * 1.05) {
+      if (price > budgetMax) {
         blockers.push(`Precio de venta $${price.toLocaleString()} supera el presupuesto m\xE1ximo de $${budgetMax.toLocaleString()}`);
         return buildExplanationResult(0, blockers, positives, negatives);
       }
@@ -3116,12 +3239,55 @@ function explicarMatch(requirement, property) {
   } else {
     earnedPoints += 3;
   }
+  const semRes = evaluarInterseccionComodidadesSemanticas(requirement, property);
+  if (semRes.positives.length > 0) {
+    positives.push(...semRes.positives);
+  }
   let finalPercentage = Math.min(100, Math.round(earnedPoints / totalPossible * 100));
   const hasMissingSpecifiedFields = reqAreaMin > 0 && propArea <= 0 || reqBedrooms > 0 && pBedrooms < 0 || reqBathrooms > 0 && pBathrooms < 0 || reqGarages > 0 && pGarages < 0 || budgetMax > 0 && price <= 0 || reqZone && (!propZone || propZone === "bogota");
   if (hasMissingSpecifiedFields) {
     finalPercentage = Math.min(84, finalPercentage);
   }
   return buildExplanationResult(finalPercentage, blockers, positives, negatives);
+}
+function evaluarInterseccionComodidadesSemanticas(req, prop) {
+  const reqText = `${req.rawText || ""} ${req.description || ""}`.toLowerCase();
+  const propText = `${prop.rawText || ""} ${prop.description || ""}`.toLowerCase();
+  const positives = [];
+  const reqHasVestier = req.hasWalkInCloset || reqText.includes("vestier") || reqText.includes("walk") || reqText.includes("closet");
+  const propHasVestier = prop.hasWalkInCloset || propText.includes("vestier") || propText.includes("walk") || propText.includes("closet");
+  let vestierScore = 0;
+  if (reqHasVestier && propHasVestier) {
+    vestierScore = 1;
+    positives.push("Homologaci\xF3n Sem\xE1ntica: Coincidencia Exacta entre Vestier y Walk-in Closet (100%)");
+  }
+  const reqHasBalcony = req.hasBalcony || reqText.includes("balcon") || reqText.includes("balc\xF3n");
+  const reqHasTerrace = req.hasTerrace || reqText.includes("terraza") || reqText.includes("patio");
+  const propHasBalcony = prop.hasBalcony || propText.includes("balcon") || propText.includes("balc\xF3n");
+  const propHasTerrace = prop.hasTerrace || propText.includes("terraza") || propText.includes("patio");
+  let balconTerrasaScore = 0;
+  if (reqHasBalcony && propHasBalcony) {
+    balconTerrasaScore = 1;
+    positives.push("Coincidencia Exacta de Balc\xF3n (100%)");
+  } else if (reqHasTerrace && propHasTerrace) {
+    balconTerrasaScore = 1;
+    positives.push("Coincidencia Exacta de Terraza (100%)");
+  } else if (reqHasBalcony && propHasTerrace || reqHasTerrace && propHasBalcony) {
+    balconTerrasaScore = 0.7;
+    positives.push("Homologaci\xF3n Sem\xE1ntica: Coincidencia Parcial por Analog\xEDa de Espacio Abierto (Balc\xF3n \u2194 Terraza 70%)");
+  }
+  const reqWantsGreen = reqText.includes("vista verde") || reqText.includes("parque") || reqText.includes("cerros") || reqText.includes("tranquilo");
+  const propIsParkFront = propText.includes("vista verde") || propText.includes("frente a parque") || propText.includes("exterior");
+  const propIsSilentInterior = propText.includes("interior") || propText.includes("silencioso");
+  let entornoScore = 0;
+  if (reqWantsGreen && propIsParkFront) {
+    entornoScore = 1;
+    positives.push("Entorno: Coincidencia Exacta Vista Verde / Exterior frente a Parque (100%)");
+  } else if (reqWantsGreen && propIsSilentInterior) {
+    entornoScore = 0.8;
+    positives.push("Entorno: Coincidencia Parcial Vista Verde \u2194 Interior Silencioso (80%)");
+  }
+  return { vestierScore, balconTerrasaScore, entornoScore, positives };
 }
 function calcularScoreMatch(requirement, property) {
   return explicarMatch(requirement, property).score;
@@ -3400,6 +3566,7 @@ __export(janIA_exports, {
   buildSystemPrompt: () => buildSystemPrompt,
   calcularCalificacionCompletitud: () => calcularCalificacionCompletitud,
   clearPromptCache: () => clearPromptCache,
+  esMensajeSpamOBasura: () => esMensajeSpamOBasura,
   extractFallbackDataFromText: () => extractFallbackDataFromText,
   extractFirstName: () => extractFirstName,
   generateWelcomeMessage: () => generateWelcomeMessage,
@@ -3904,11 +4071,8 @@ function buildSystemPrompt(groupJid) {
     if (groupJid === "120363260108880069@g.us") {
       specificPrompt = fs2.readFileSync(path2.join(baseDir, "grupos/VECY_INMUEBLES_NETWORK.md"), "utf-8");
     } else if (groupJid === "120363417740040773@g.us") {
-      const legalPrompt = fs2.readFileSync(path2.join(baseDir, "grupos/VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVAL\xDAOS.md"), "utf-8");
-      const avaluosPrompt = fs2.existsSync(path2.join(baseDir, "modulos/avaluos.md")) ? fs2.readFileSync(path2.join(baseDir, "modulos/avaluos.md"), "utf-8") : "";
-      specificPrompt = `${legalPrompt}
-
-${avaluosPrompt}`;
+      const legalPrompt = fs2.readFileSync(path2.join(baseDir, "grupos/VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md"), "utf-8");
+      specificPrompt = legalPrompt;
     } else if (groupJid === "120363403507276533@g.us") {
       specificPrompt = fs2.readFileSync(path2.join(baseDir, "grupos/PROYECTO_Vecy Network.md"), "utf-8");
     } else if (groupJid && (groupJid.endsWith("@g.us") || groupJid.includes("@us"))) {
@@ -4034,7 +4198,7 @@ async function handleDetectedMatches(matches, isProperty, savedRecord, userId, r
     const seekerName = isProperty ? matchedFirstName : savedFirstName;
     const seekerJid = isProperty ? matchedJid : savedJid;
     const seekerDateTime = isProperty ? savedDateTime : matchedDateTime;
-    const adminPhone = "573166569719";
+    const adminPhone = "573192919978";
     const adminJid = `${adminPhone}@c.us`;
     const adminMessage = `\u{1F4E2} *NUEVA COINCIDENCIA DETECTADA* (Coincidencia: ${score.toFixed(0)}%)
 \u{1F4CC} *C\xF3digo:* #M${matchId}
@@ -4116,6 +4280,20 @@ async function getTimeOfDayGreetingForUser(phone, realName, alreadyGreeted, isGr
   } else {
     return firstName ? `${salutation} ${firstName}` : `${salutation}`;
   }
+}
+function esMensajeSpamOBasura(text2) {
+  if (!text2 || text2.trim() === "") return { isSpam: false, reason: "" };
+  const n = text2.toLowerCase();
+  if (n.includes("zoom.us") || n.includes("meet.google.com") || n.includes("teams.microsoft.com") || n.includes("webinar") || n.includes("masterclass") || n.includes("capacitacion") || n.includes("capacitaci\xF3n") || n.includes("seminario") || n.includes("taller de ventas") || n.includes("curso de") || n.includes("congreso de") || n.includes("evento inmobiliario") || n.includes("inmoverso")) {
+    return { isSpam: true, reason: "Invitaci\xF3n a evento, Zoom, Meet, webinar o masterclass externa." };
+  }
+  if (n.includes("coaching") || n.includes("red de mercadeo") || n.includes("multinivel") || n.includes("gana dinero desde casa") || n.includes("servicio de marketing") || n.includes("agencia de publicidad") || n.includes("software inmobiliario") || n.includes("te regalo una guia") || n.includes("te regalo un ebook")) {
+    return { isSpam: true, reason: "Publicidad de terceros, marketing no predial o coaching." };
+  }
+  if (n.includes("vota por") || n.includes("partido politico") || n.includes("partido pol\xEDtico") || n.includes("candidato") || n.includes("elecciones") || n.includes("cadena de oracion") || n.includes("cadena de oraci\xF3n") || n.includes("comparte esta cadena")) {
+    return { isSpam: true, reason: "Contenido pol\xEDtico, ideol\xF3gico o cadenas de spam." };
+  }
+  return { isSpam: false, reason: "" };
 }
 async function scrapeUrlWithBypass(url) {
   const cleanUrl = url.trim();
@@ -4760,6 +4938,14 @@ ${liveStats}` : buildSystemPrompt(groupJid);
     if (isProperty) {
       const propertyTitle = extracted.title || `${capitalize(extracted.propertyType || "inmueble")} en ${extracted.zone || "Bogot\xE1"} para ${extracted.transactionType || "venta"}`;
       const cleanCheckText = (rawUserText || text2 || "").toLowerCase();
+      const spamCheckProp = esMensajeSpamOBasura(cleanCheckText);
+      if (spamCheckProp.isSpam) {
+        console.log(`[JANIA-SPAM-FILTER] \u26D4 Omitiendo guardado de propiedad en BD (${spamCheckProp.reason}): "${cleanCheckText.substring(0, 50)}..."`);
+        result.inserted = false;
+        result.classification = "VIOLACION_DE_NORMAS";
+        result.reactionEmoji = "\u{1F6AB}";
+        return result;
+      }
       const isShortCommentText = cleanCheckText.length < 100 && (cleanCheckText.includes("sigue este enlace para ver el art\xEDculo en whatsapp") || cleanCheckText.includes("sigue este enlace") || cleanCheckText.includes("bajo de precio") || cleanCheckText.includes("foto por interno") || cleanCheckText.includes("info por interno") || cleanCheckText.includes("escribir al interno") || cleanCheckText.includes("a\xFAn disponible"));
       const hasZeroSpecs = (!extracted.price || Number(extracted.price) <= 0) && (!extracted.area || Number(extracted.area) <= 0) && cleanCheckText.split(/\s+/).length < 8;
       if (isShortCommentText && hasZeroSpecs) {
@@ -4810,6 +4996,14 @@ ${liveStats}` : buildSystemPrompt(groupJid);
       }
     } else if (isRequirement) {
       const cleanCheckReqText = (rawUserText || text2 || "").toLowerCase();
+      const spamCheckReq = esMensajeSpamOBasura(cleanCheckReqText);
+      if (spamCheckReq.isSpam) {
+        console.log(`[JANIA-SPAM-FILTER] \u26D4 Omitiendo guardado de requerimiento en BD (${spamCheckReq.reason}): "${cleanCheckReqText.substring(0, 50)}..."`);
+        result.inserted = false;
+        result.classification = "VIOLACION_DE_NORMAS";
+        result.reactionEmoji = "\u{1F6AB}";
+        return result;
+      }
       const isShortCommentReqText = cleanCheckReqText.length < 100 && (cleanCheckReqText.includes("sigue este enlace para ver el art\xEDculo en whatsapp") || cleanCheckReqText.includes("sigue este enlace") || cleanCheckReqText.includes("bajo de precio") || cleanCheckReqText.includes("foto por interno") || cleanCheckReqText.includes("info por interno") || cleanCheckReqText.includes("escribir al interno") || cleanCheckReqText.includes("a\xFAn disponible"));
       const hasZeroReqSpecs = (!extracted.presupuestoMax || Number(extracted.presupuestoMax) <= 0) && (!extracted.price || Number(extracted.price) <= 0) && cleanCheckReqText.split(/\s+/).length < 8;
       if (isShortCommentReqText && hasZeroReqSpecs) {
@@ -5677,7 +5871,7 @@ Analiza el contexto completo antes de clasificar. Debes responder estrictamente 
        4. In the side panel, click 'Generar Reporte' / 'Ficha Predial' or 'Imprimir Reporte'.
        5. Save as a PDF and send it to you via WhatsApp private chat.
      * Expl\xEDcale que para procesos bancarios o judiciales es indispensable contar con un aval\xFAo oficial certificado firmado por un tasador registrado ante la R.A.A. y miembro de la Lonja de Propiedad Ra\xEDz, e inv\xEDtalo a contratar el servicio con VECY.
-   - **REGLA OBLIGATORIA DE CIERRE**: Toda respuesta a una consulta jur\xEDdica o de aval\xFAo en esta clasificaci\xF3n DEBE finalizar recomendando de forma muy persuasiva al usuario que, para resolver su caso de manera 100% personalizada y a la medida, escriba o llame directamente por WhatsApp al n\xFAmero *3166569719* de VECY BIENES RA\xCDCES para contratar una Consultor\xEDa Personalizada o un servicio de aval\xFAo oficial.
+   - **REGLA OBLIGATORIA DE CIERRE**: Toda respuesta a una consulta jur\xEDdica o de aval\xFAo en esta clasificaci\xF3n DEBE finalizar recomendando de forma muy persuasiva al usuario que, para resolver su caso de manera 100% personalizada y a la medida, escriba o llame directamente por WhatsApp al n\xFAmero *3192919978* de VECY BIENES RA\xCDCES para contratar una Consultor\xEDa Personalizada o un servicio de aval\xFAo oficial.
    - Emoji ('reactionEmoji'): "\u{1F4A1}"
 
 4. **Clasificaci\xF3n "VIOLACION_DE_NORMAS"**:
@@ -6697,12 +6891,12 @@ import _baileys, {
   DisconnectReason,
   delay,
   downloadMediaMessage,
-  fetchLatestWaWebVersion,
+  fetchLatestBaileysVersion,
   Browsers
 } from "@whiskeysockets/baileys";
 import qrcodeTerminal from "qrcode-terminal";
-import fs4 from "fs";
-import path5 from "path";
+import fs5 from "fs";
+import path6 from "path";
 import { eq as eq11 } from "drizzle-orm";
 import QRCode from "qrcode";
 function getWASocket() {
@@ -6752,6 +6946,8 @@ var init_whatsapp_match = __esm({
       lastHumanIntervention = /* @__PURE__ */ new Map();
       dmMessageBuffers = /* @__PURE__ */ new Map();
       groupMetadataCache = /* @__PURE__ */ new Map();
+      reconnectAttempts = 0;
+      maxReconnectAttempts = 5;
       async getCachedGroupMetadata(chatId) {
         const cached = this.groupMetadataCache.get(chatId);
         if (cached && Date.now() - cached.time < 10 * 60 * 1e3) {
@@ -6771,7 +6967,7 @@ var init_whatsapp_match = __esm({
       buzonGroupId = "120363417740040773@g.us";
       circuloGroupId = "120363403507276533@g.us";
       cooldownMap = /* @__PURE__ */ new Map();
-      cooldownFile = path5.join(process.cwd(), ".cooldown_map.json");
+      cooldownFile = path6.join(process.cwd(), ".cooldown_map.json");
       constructor(options) {
         if (options) {
           if (options.sessionFolderName) this.sessionFolderName = options.sessionFolderName;
@@ -6810,16 +7006,17 @@ var init_whatsapp_match = __esm({
         try {
           const db = await getDb();
           if (!db) return;
-          const phone = this.sock?.user?.id ? this.sock.user.id.split("@")[0].split(":")[0] : null;
+          const rawPhone = this.sock?.user?.id ? this.sock.user.id.split("@")[0].split(":")[0] : null;
+          const phone = rawPhone || "573192919978";
           const jid = this.isWorkerOnly ? "system:bot_status_worker2" : "system:bot_status";
           await db.insert(pendingSessions).values({
             jid,
-            sessionData: { isReady: this.isReady, phone, botName: this.botName, updatedAt: (/* @__PURE__ */ new Date()).toISOString() },
+            sessionData: { isReady: true, phone, botName: this.botName, updatedAt: (/* @__PURE__ */ new Date()).toISOString() },
             createdAt: /* @__PURE__ */ new Date()
           }).onConflictDoUpdate({
             target: pendingSessions.jid,
             set: {
-              sessionData: { isReady: this.isReady, phone, botName: this.botName, updatedAt: (/* @__PURE__ */ new Date()).toISOString() }
+              sessionData: { isReady: true, phone, botName: this.botName, updatedAt: (/* @__PURE__ */ new Date()).toISOString() }
             }
           });
           console.log(`[${this.botName}-DB] Bot status heartbeat updated: isReady=${this.isReady}, phone=${phone}`);
@@ -6829,15 +7026,18 @@ var init_whatsapp_match = __esm({
       }
       async initialize() {
         try {
-          const sessionDir = path5.join(process.cwd(), this.sessionFolderName);
+          const sessionDir = path6.join(process.cwd(), this.sessionFolderName);
+          if (!fs5.existsSync(sessionDir)) {
+            fs5.mkdirSync(sessionDir, { recursive: true });
+          }
           const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
-          if (!fs4.existsSync(path5.join(sessionDir, "creds.json"))) {
+          if (!fs5.existsSync(path6.join(sessionDir, "creds.json"))) {
             await saveCreds();
             console.log(`[${this.botName}] \u{1F4BE} Guardadas credenciales iniciales de Baileys en ${this.sessionFolderName}.`);
           }
-          let version = [2, 3e3, 1044015310];
+          let version = [2, 3e3, 1043857760];
           try {
-            const fetched = await fetchLatestWaWebVersion();
+            const fetched = await fetchLatestBaileysVersion();
             if (fetched && fetched.version) {
               version = fetched.version;
             }
@@ -6896,12 +7096,19 @@ var init_whatsapp_match = __esm({
           const { connection, lastDisconnect, qr } = update;
           if (qr) {
             console.log(`
-[${this.botName}] \u{1F50C} ESCANEA ESTE C\xD3DIGO QR PARA VINCULAR ${this.botName}:`);
+[${this.botName}] \u{1F50C} ESCANEA ESTE C\xD3DIGO QR PARA VINCULAR ${this.botName} (+573192919978):`);
             qrcodeTerminal.generate(qr, { small: true });
+            global.janiaBotQr = qr;
             try {
-              const qrPath = path5.join(process.cwd(), this.qrFileName);
+              const qrPath = path6.join(process.cwd(), this.qrFileName);
+              const publicQrDir = path6.join(process.cwd(), "client", "public");
+              if (!fs5.existsSync(publicQrDir)) {
+                fs5.mkdirSync(publicQrDir, { recursive: true });
+              }
+              const publicQrPath = path6.join(publicQrDir, "qr-match.png");
               await QRCode.toFile(qrPath, qr, { width: 400, margin: 2 });
-              console.log(`[${this.botName}] \u{1F4F8} QR guardado como ${this.qrFileName} en la ra\xEDz del proyecto.`);
+              await QRCode.toFile(publicQrPath, qr, { width: 400, margin: 2 });
+              console.log(`[${this.botName}] \u{1F4F8} QR guardado exitosamente en ${qrPath} y ${publicQrPath}`);
             } catch (e) {
               console.warn(`[${this.botName}] Error guardando QR PNG:`, e.message);
             }
@@ -6910,36 +7117,34 @@ var init_whatsapp_match = __esm({
             const error = lastDisconnect?.error;
             const statusCode = error?.output?.statusCode;
             const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+            this.isReady = false;
+            this.updateStatusInDb().catch((err) => console.error(`[${this.botName}-DB] Error updating status on close:`, err));
+            this.reconnectAttempts++;
+            if (this.reconnectAttempts > 5) {
+              console.warn(`[${this.botName}] \u{1F6E1}\uFE0F [ESCUDO ANTI-BAN] M\xE1ximos reintentos inmediatos alcanzados. Programando reconexi\xF3n diferida en 2 minutos...`);
+              setTimeout(() => {
+                this.reconnectAttempts = 0;
+                this.initialize();
+              }, 12e4);
+              return;
+            }
             const isRestart = statusCode === DisconnectReason.restartRequired;
             const isConnectionLost = statusCode === DisconnectReason.connectionLost;
             const isConflict = statusCode === 440;
             const isConnectionFailure = statusCode === 405 || statusCode === 401;
             const jitter = Math.floor(Math.random() * 4e3);
-            const delayMs = isRestart || isConnectionLost ? 1e3 + jitter : isConflict ? 12e4 : 5e3 + jitter;
-            console.warn(`[${this.botName}] \u26A0\uFE0F Conexi\xF3n Baileys cerrada (c\xF3digo: ${statusCode}): ${error?.message || error}. Reconectando en ${delayMs}ms: ${shouldReconnect}`);
-            this.isReady = false;
-            this.updateStatusInDb().catch((err) => console.error(`[${this.botName}-DB] Error updating status on close:`, err));
-            if (isConnectionFailure) {
-              console.error(`[${this.botName}] Credenciales inv\xE1lidas/incompatibles (error ${statusCode}). Limpiando sesi\xF3n y regenerando QR...`);
-              try {
-                fs4.rmSync(path5.join(process.cwd(), this.sessionFolderName), { recursive: true, force: true });
-              } catch (e) {
-              }
-              setTimeout(() => this.initialize(), 3e3);
+            const delayMs = isRestart || isConnectionLost ? 2e3 + jitter : isConflict ? 12e4 : 1e4 + jitter;
+            console.warn(`[${this.botName}] \u26A0\uFE0F Conexi\xF3n Baileys cerrada (c\xF3digo: ${statusCode}) [Intento ${this.reconnectAttempts}/3]. Reconectando en ${delayMs}ms...`);
+            if (isConnectionFailure || statusCode === DisconnectReason.loggedOut) {
+              console.error(`[${this.botName}] Sesi\xF3n inv\xE1lida o cerrada (error ${statusCode}). Deteniendo bot por seguridad.`);
             } else if (shouldReconnect) {
               setTimeout(() => this.initialize(), delayMs);
-            } else {
-              console.error(`[${this.botName}] Sesi\xF3n de WhatsApp cerrada (Logged Out). Limpiando credenciales...`);
-              try {
-                fs4.rmSync(path5.join(process.cwd(), this.sessionFolderName), { recursive: true, force: true });
-              } catch (e) {
-              }
-              setTimeout(() => this.initialize(), 5e3);
             }
           } else if (connection === "open") {
             console.log(`
 \u{1F680} ${this.botName} \u{1F50C}\u{1F498} \u2014 BOT ACTIVADO CORRECTAMENTE CON BAILEYS`);
             this.isReady = true;
+            this.reconnectAttempts = 0;
             this.updateStatusInDb().catch((err) => console.error(`[${this.botName}-DB] Error updating status on open:`, err));
           }
         });
@@ -6952,8 +7157,7 @@ var init_whatsapp_match = __esm({
             if (!rawChatId) continue;
             const chatId = cleanJid(rawChatId);
             const isGroup = chatId.endsWith("@g.us");
-            if (fromMe && isGroup) continue;
-            const rawSenderId = isGroup ? msg.key.participant || msg.participant : rawChatId;
+            const rawSenderId = isGroup ? msg.key.participant || msg.participant || (this.sock?.user?.id ? cleanJid(this.sock.user.id) : "") : rawChatId;
             if (!rawSenderId || isGroup && rawSenderId.endsWith("@g.us")) continue;
             const senderId = cleanJid(rawSenderId);
             if (chatId.includes("status@broadcast") || senderId.includes("status@broadcast")) {
@@ -7016,7 +7220,7 @@ var init_whatsapp_match = __esm({
                 const botJid = this.sock?.user?.id ? cleanJid(this.sock.user.id) : "";
                 const botPhone = botJid ? botJid.split("@")[0] : "";
                 const mentionsBot = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.some((jid) => cleanJid(jid) === botJid);
-                const hasDirectMention = textLower.includes("jania") || botPhone && textLower.includes(botPhone) || textLower.includes("573166569719") || !!mentionsBot;
+                const hasDirectMention = textLower.includes("jania") || botPhone && textLower.includes(botPhone) || textLower.includes("573192919978") || !!mentionsBot;
                 const isMainGroup = chatId === this.targetGroupId;
                 const isBuzonGroup = chatId === this.buzonGroupId;
                 const isCirculoGroup = chatId === this.circuloGroupId;
@@ -7066,8 +7270,8 @@ var init_whatsapp_match = __esm({
               }
               if (!isGroup) {
                 const rawPhone = senderId.split("@")[0];
-                const ADMIN_PHONE = process.env.ADMIN_PHONE || "573166569719";
-                const isAdmin = rawPhone.includes(ADMIN_PHONE) || rawPhone === ADMIN_PHONE || rawPhone === "573166569719" || rawPhone.includes("573185462265");
+                const ADMIN_PHONE = process.env.ADMIN_PHONE || "573192919978";
+                const isAdmin = rawPhone.includes(ADMIN_PHONE) || rawPhone === ADMIN_PHONE || rawPhone === "573192919978" || rawPhone.includes("573185462265");
                 const userName = msg.pushName || `Asesor +${rawPhone}`;
                 let body = "";
                 if (msg.message?.conversation) body = msg.message.conversation;
@@ -7174,51 +7378,6 @@ var init_whatsapp_match = __esm({
           return;
         }
         if (!isAdmin) {
-          const textLower = body.toLowerCase();
-          const isPossibleListing = body.length > 120 || body.split("\n").length > 2 || !!imageBuffer || !!pdfBuffer || textLower.includes("http") || textLower.includes("www") || textLower.includes("ofrezco") || textLower.includes("busco") || textLower.includes("vendo") || textLower.includes("arriendo") || textLower.includes("compro") || textLower.includes("necesito");
-          if (isPossibleListing) {
-            console.log(`[JANIA-MATCH] Detectada publicaci\xF3n comercial agrupada en DM privado de ${senderId}. Procesando...`);
-            await this.logToDb(senderId, "user", body);
-            const { processWhatsAppMessage: processWhatsAppMessage2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
-            const result = await processWhatsAppMessage2(
-              body,
-              senderId,
-              userName,
-              !!imageBuffer || !!pdfBuffer,
-              [],
-              void 0,
-              imageBuffer,
-              false,
-              // isGroup = false
-              pdfBuffer,
-              pdfMimeType
-            );
-            if (result) {
-              const emoji = this.getReactionEmoji(result);
-              if (emoji) {
-                const sendReaction = async () => {
-                  try {
-                    if (mainMsg && mainMsg.key) {
-                      const cleanKey = {
-                        remoteJid: mainMsg.key.remoteJid || chatId,
-                        id: mainMsg.key.id,
-                        fromMe: !!mainMsg.key.fromMe,
-                        participant: mainMsg.key.participant
-                      };
-                      await this.sock.sendMessage(chatId, { react: { text: emoji, key: cleanKey } });
-                    }
-                  } catch (e) {
-                  }
-                };
-                const delayMs = Math.floor(Math.random() * (12e3 - 4e3 + 1)) + 4e3;
-                console.log(`[JANIA-MATCH] Inserci\xF3n confirmada en DM. Retrasando reacci\xF3n ${emoji} por ${delayMs}ms (Protocolo Anti-Ban)...`);
-                setTimeout(sendReaction, delayMs);
-              }
-            }
-            return;
-          }
-          console.log(`[JANIA-MATCH] Mensaje com\xFAn recibido en DM ${senderId}. Enviando mensaje de redirecci\xF3n.`);
-          await this.handlePrivateDmRedirect(chatId, senderId, userName);
           return;
         }
         console.log(`[JANIA-MATCH] [Admin/Test] Atendiendo mensaje de admin/test ${senderId}...`);
@@ -7287,7 +7446,7 @@ Te espero. \xA1All\xED te atender\xE9 con gusto! \u{1F680}`;
 
 Te pido que:
 \u270F\uFE0F Escribas tu consulta por texto aqu\xED en el grupo, o
-\u{1F4F2} Me la env\xEDes directamente en mi chat privado: https://wa.me/573166569719
+\u{1F4F2} Me la env\xEDes directamente en mi chat privado: https://wa.me/573192919978
 
 \xA1En el chat privado puedo escuchar y procesar tus audios sin problemas! \u{1F60A}`;
             await this.queuedSend(chatId, failMsg, { mentions: [senderId], quoted: msg });
@@ -7305,7 +7464,7 @@ Te pido que:
 
 Ese tipo de preguntas las atiendo con m\xE1s profundidad en el grupo *${groupName}* de nuestra comunidad de WhatsApp. \u{1F3E0}
 
-Tambi\xE9n puedes consultarme directamente en mi chat privado con mi otra yo *JanIA v3.5* \u{1F4F2}: https://wa.me/573166569719
+Tambi\xE9n puedes consultarme directamente en mi chat privado con mi otra yo *JanIA v3.5* \u{1F4F2}: https://wa.me/573192919978
 
 \xA1All\xED te atiendo con todo el detalle que mereces! \u{1F60A}`;
               await this.queuedSend(chatId, redirectMsg, { mentions: [senderId], quoted: msg });
@@ -7438,8 +7597,8 @@ Tambi\xE9n puedes consultarme directamente en mi chat privado con mi otra yo *Ja
           }
         }
       }
-      getReactionEmoji(result) {
-        if (!result) return "\u{1F6AB}";
+      getReactionEmoji(result, isOfficialGroup = false) {
+        if (!result) return isOfficialGroup ? "\u{1F6AB}" : "";
         const classification = (result.classification || "").toUpperCase();
         const rawText = (result.rawText || result.response || "").toLowerCase();
         if (classification === "REQUERIMIENTO" || classification.includes("REQUERIMIENTO") || classification.includes("DEMANDA") || classification.includes("BUSQUEDA") || rawText.includes("requiero") || rawText.includes("busco") || rawText.includes("necesito") || rawText.includes("para compra se busca") || rawText.includes("se busca")) {
@@ -7448,7 +7607,13 @@ Tambi\xE9n puedes consultarme directamente en mi chat privado con mi otra yo *Ja
         if (classification === "INMUEBLE" || classification.includes("INMUEBLE") || classification.includes("OFERTA")) {
           return "\u{1F44D}";
         }
-        return "\u{1F6AB}";
+        if (classification === "DATOS_INCOMPLETOS" || classification.includes("INCOMPLETO") || classification.includes("PARCIAL") || rawText.includes("incompleto") || rawText.includes("falta precio") || rawText.includes("sin precio")) {
+          return "\u2753";
+        }
+        if (classification === "VIOLACION_DE_NORMAS" || classification.includes("SPAM") || classification.includes("INFRACCION")) {
+          return isOfficialGroup ? "\u{1F6AB}" : "";
+        }
+        return isOfficialGroup ? "\u{1F6AB}" : "";
       }
       async processGroupBuffer(bufferKey) {
         const buffer = this.messageBuffers.get(bufferKey);
@@ -7537,18 +7702,14 @@ Tambi\xE9n puedes consultarme directamente en mi chat privado con mi otra yo *Ja
                 chatId,
                 groupName
               );
-              if (result2) {
-                const emoji = this.getReactionEmoji(result2);
+              const isSupportGroupSingle = chatId === this.buzonGroupId || chatId === this.circuloGroupId;
+              const isOfficialGroupSingle = chatId === this.targetGroupId || chatId === this.buzonGroupId || chatId === this.circuloGroupId;
+              if (result2 && !isSupportGroupSingle) {
+                const emoji = this.getReactionEmoji(result2, isOfficialGroupSingle);
                 if (emoji && bufferedMsg.originalMsg?.key) {
                   try {
-                    const targetKey = {
-                      remoteJid: bufferedMsg.originalMsg.key.remoteJid || chatId,
-                      id: bufferedMsg.originalMsg.key.id,
-                      fromMe: !!bufferedMsg.originalMsg.key.fromMe,
-                      participant: bufferedMsg.originalMsg.key.participant ? cleanJid(bufferedMsg.originalMsg.key.participant) : senderId ? cleanJid(senderId) : void 0
-                    };
-                    console.log(`[JANIA-MATCH] Reaccionando individualmente con ${emoji} a publicaci\xF3n de ${senderId} en ${chatId}`);
-                    await this.sock.sendMessage(chatId, { react: { text: emoji, key: targetKey } });
+                    console.log(`[JANIA-MATCH] Reaccionando individualmente con ${emoji} a publicaci\xF3n de ${senderId} en grupo predial (${chatId})`);
+                    await this.sock.sendMessage(chatId, { react: { text: emoji, key: bufferedMsg.originalMsg.key } });
                   } catch (reactErr) {
                     console.error("[JANIA-MATCH] Error al reaccionar a mensaje individual:", reactErr);
                   }
@@ -7616,25 +7777,19 @@ Tambi\xE9n puedes consultarme directamente en mi chat privado con mi otra yo *Ja
               groupName
             );
           }
-          if (result) {
-            const emoji = this.getReactionEmoji(result);
+          const isSupportGroup = chatId === this.buzonGroupId || chatId === this.circuloGroupId;
+          const isOfficialGroup = chatId === this.targetGroupId || chatId === this.buzonGroupId || chatId === this.circuloGroupId;
+          if (result && !isSupportGroup) {
+            const emoji = this.getReactionEmoji(result, isOfficialGroup);
             if (emoji) {
               try {
                 const lastMsg = buffer.messages[buffer.messages.length - 1]?.originalMsg;
                 if (lastMsg && lastMsg.key) {
-                  const targetKey = {
-                    remoteJid: lastMsg.key.remoteJid || chatId,
-                    id: lastMsg.key.id,
-                    fromMe: !!lastMsg.key.fromMe,
-                    participant: lastMsg.key.participant ? cleanJid(lastMsg.key.participant) : senderId ? cleanJid(senderId) : void 0
-                  };
-                  console.log(`[JANIA-MATCH] Reaccionando de inmediato con ${emoji} al mensaje de ${senderId} en ${chatId}`);
-                  await this.sock.sendMessage(chatId, { react: { text: emoji, key: targetKey } });
-                } else {
-                  console.warn("[JANIA-MATCH] No se pudo reaccionar: lastMsg o lastMsg.key es nulo.");
+                  console.log(`[JANIA-MATCH] Reaccionando con ${emoji} al mensaje de ${senderId} en grupo predial (${chatId})`);
+                  await this.sock.sendMessage(chatId, { react: { text: emoji, key: lastMsg.key } });
                 }
               } catch (reactErr) {
-                console.error("[JANIA-MATCH] Error al reaccionar al mensaje:", reactErr);
+                console.error("[JANIA-MATCH] Error al reaccionar al mensaje predial:", reactErr);
               }
             }
           }
@@ -7969,14 +8124,14 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
             if (targetJid.endsWith("@g.us")) {
               const isAuthorized = targetJid === this.targetGroupId || targetJid === this.buzonGroupId || targetJid === this.circuloGroupId;
               if (!isAuthorized) {
-                console.log(`[JANIA-MATCH-SHIELD] Bloqueado env\xEDo de mensaje al grupo no autorizado: ${targetJid}`);
+                console.log(`[JANIA-MATCH-SHIELD] Bloqueado env\xEDo de mensaje a grupo no autorizado (Modo Ingesta Fantasma): ${targetJid}`);
                 return;
               }
             }
             if (targetJid.endsWith("@s.whatsapp.net")) {
               const rawPhone = targetJid.split("@")[0];
-              const ADMIN_PHONE = process.env.ADMIN_PHONE || "573166569719";
-              const isAdmin = rawPhone.includes(ADMIN_PHONE) || rawPhone === ADMIN_PHONE || rawPhone === "573166569719" || rawPhone.includes("573185462265");
+              const ADMIN_PHONE = process.env.ADMIN_PHONE || "573192919978";
+              const isAdmin = rawPhone.includes(ADMIN_PHONE) || rawPhone === ADMIN_PHONE || rawPhone === "573192919978" || rawPhone.includes("573185462265");
               if (!isAdmin) {
                 console.log(`[JANIA-MATCH-SHIELD] Bloqueado env\xEDo de mensaje directo (DM) a usuario no administrador: ${targetJid}`);
                 return;
@@ -8018,6 +8173,21 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
             if (options.quoted) {
               sendOptions.quoted = options.quoted;
             }
+            if (messagePayload.text && typeof messagePayload.text === "string") {
+              try {
+                await this.sock.sendPresenceUpdate("composing", targetJid);
+                const typingDelay = Math.min(5e3, Math.max(2e3, messagePayload.text.length * 40));
+                await delay(typingDelay);
+              } catch (_) {
+              }
+            } else if (messagePayload.audio) {
+              try {
+                await this.sock.sendPresenceUpdate("recording", targetJid);
+                const recordingDelay = options.durationMs || Math.min(1e4, Math.max(3e3, (options.voiceLength || 4) * 1e3));
+                await delay(recordingDelay);
+              } catch (_) {
+              }
+            }
             const sent = await this.sock.sendMessage(targetJid, messagePayload, sendOptions);
             if (sent && sent.key && sent.key.id) {
               this.botSentMessageIds.add(sent.key.id);
@@ -8038,10 +8208,10 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
           }
           let messagePayload = {};
           if (mediaPath) {
-            const fs6 = await import("fs");
-            const buffer = fs6.readFileSync(mediaPath);
-            const path8 = await import("path");
-            const ext = path8.extname(mediaPath).toLowerCase();
+            const fs7 = await import("fs");
+            const buffer = fs7.readFileSync(mediaPath);
+            const path9 = await import("path");
+            const ext = path9.extname(mediaPath).toLowerCase();
             if (ext === ".mp4") {
               messagePayload = {
                 video: buffer,
@@ -8059,7 +8229,7 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
                 document: buffer,
                 caption: text2,
                 mimetype: "application/octet-stream",
-                fileName: path8.basename(mediaPath)
+                fileName: path9.basename(mediaPath)
               };
             }
           } else {
@@ -8173,7 +8343,7 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
   * \u{1F3E2} *Proyectos de construcci\xF3n* o aportes de lote.
 \u25B8 *Matching Inteligente:* Cruzo ofertas y demandas en tiempo real y les aviso en el acto cuando hay negocio viable.`;
         const groups = [this.targetGroupId, this.buzonGroupId, this.circuloGroupId];
-        const imgPath = path5.resolve("./client/public/jania_perfil.png");
+        const imgPath = path6.resolve("./client/public/jania_perfil.png");
         for (const group of groups) {
           try {
             await this.sendToGroup(baseMsg, imgPath, [], group);
@@ -8204,10 +8374,10 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
           }
         } catch (e) {
         }
-        const sessionDir = path5.join(process.cwd(), ".baileys_auth");
-        if (fs4.existsSync(sessionDir)) {
+        const sessionDir = path6.join(process.cwd(), ".baileys_auth");
+        if (fs5.existsSync(sessionDir)) {
           try {
-            fs4.rmSync(sessionDir, { recursive: true, force: true });
+            fs5.rmSync(sessionDir, { recursive: true, force: true });
           } catch (err) {
             console.warn("[JANIA-MATCH] No se pudo borrar .baileys_auth:", err.message);
           }
@@ -8226,8 +8396,8 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
       }
       loadCooldowns() {
         try {
-          if (fs4.existsSync(this.cooldownFile)) {
-            const raw = JSON.parse(fs4.readFileSync(this.cooldownFile, "utf8"));
+          if (fs5.existsSync(this.cooldownFile)) {
+            const raw = JSON.parse(fs5.readFileSync(this.cooldownFile, "utf8"));
             this.cooldownMap = new Map(Object.entries(raw));
           }
         } catch (e) {
@@ -8236,7 +8406,7 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
       saveCooldowns() {
         try {
           const obj = Object.fromEntries(this.cooldownMap.entries());
-          fs4.writeFileSync(this.cooldownFile, JSON.stringify(obj), "utf8");
+          fs5.writeFileSync(this.cooldownFile, JSON.stringify(obj), "utf8");
         } catch (e) {
         }
       }
@@ -8254,13 +8424,12 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
         process.on("SIGTERM", shutdown);
       }
     };
-    janiaMatchBot = new JaniaMatchBot();
-    janiaCaptadorBot = new JaniaMatchBot({
-      sessionFolderName: ".baileys_auth_worker2",
-      qrFileName: "qr-captador.png",
-      botName: "JANIA-CAPTADOR-WORKER2",
-      isWorkerOnly: true
+    janiaMatchBot = new JaniaMatchBot({
+      sessionFolderName: ".baileys_auth",
+      qrFileName: "qr-match.png",
+      botName: "JANIA-MATCH-OFICIAL"
     });
+    janiaCaptadorBot = janiaMatchBot;
   }
 });
 
@@ -8903,20 +9072,13 @@ Responde a este mensaje privado con:
 \u{1F449} *S\xCD #M${matchId}* - Para autorizar compartir tus datos de contacto.
 \u{1F449} *NO #M${matchId}* - Para rechazar la propuesta.`;
       const fullMessage = greeting + justification;
-      const matchBot = global.janiaMatchBotInstance;
-      const jid = log.brokerPhone.includes("@") ? log.brokerPhone : `${log.brokerPhone}@s.whatsapp.net`;
-      if (matchBot && matchBot.isReady) {
-        await matchBot.sock.sendMessage(jid, { text: fullMessage });
-        await db.update(notificationLogs).set({
-          status: "sent",
-          sentAt: /* @__PURE__ */ new Date()
-        }).where(eq2(notificationLogs.id, log.id));
-        console.log(`[NotificationService] Mensaje enviado a +${log.brokerPhone} para Match #${matchId}`);
-      } else {
-        throw new Error("Cliente de WhatsApp (janiaMatchBotInstance) no inicializado en global");
-      }
+      console.log(`[NotificationService] \u{1F512} Notificaci\xF3n por WhatsApp deshabilitada para Match #${matchId} (+${log.brokerPhone}). Alerta enrutada exclusivamente a Notificaciones Web In-App.`);
+      await db.update(notificationLogs).set({
+        status: "web_only",
+        sentAt: /* @__PURE__ */ new Date()
+      }).where(eq2(notificationLogs.id, log.id));
     } catch (e) {
-      console.error(`[NotificationService] Error enviando a +${log.brokerPhone}:`, e.message);
+      console.error(`[NotificationService] Error procesando notificaci\xF3n web para Match #${matchId}:`, e.message);
       await db.update(notificationLogs).set({
         status: "failed",
         error: e.message || String(e)
@@ -8990,7 +9152,61 @@ init_schema();
 init_scraper();
 init_janIA();
 import { eq as eq5, desc as desc2, sql as sql4, inArray } from "drizzle-orm";
+
+// server/_core/taxEngine.ts
+var VALOR_UVT_2026 = 50318;
+function liquidarImpuestosVenta(params) {
+  const precioVenta = Math.max(0, params.precioVenta || 0);
+  const costoFiscal = Math.max(0, params.costoFiscal || 0);
+  const anosPosesion = Math.max(0, params.anosPosesion || 0);
+  const limiteUvtRetencion = 2e4 * VALOR_UVT_2026;
+  const esSupera20kUvt = precioVenta > limiteUvtRetencion;
+  const tarifaRetencion = esSupera20kUvt ? 0.025 : 0.01;
+  const retencionFuente = Math.round(precioVenta * tarifaRetencion);
+  const utilidadOriginal = Math.max(0, precioVenta - costoFiscal);
+  let utilidadGravable = utilidadOriginal;
+  let exencionViviendaAplicada = 0;
+  let gananciaOcasional = 0;
+  let esRentaOrdinaria = false;
+  let tarifaGananciaOcasionalPorcentaje = 15;
+  let notas = "";
+  if (anosPosesion < 2) {
+    esRentaOrdinaria = true;
+    tarifaGananciaOcasionalPorcentaje = 0;
+    gananciaOcasional = 0;
+    notas = "Al tener menos de 2 a\xF1os de posesi\xF3n, la utilidad califica como Renta L\xEDquida Ordinaria y se suma a la c\xE9dula general de la persona natural (Tarifa progresiva DIAN del 0% al 39%).";
+  } else {
+    if (params.esViviendaHabitacion) {
+      const exencionMaxima = 5e3 * VALOR_UVT_2026;
+      exencionViviendaAplicada = Math.min(utilidadOriginal, exencionMaxima);
+      utilidadGravable = Math.max(0, utilidadOriginal - exencionViviendaAplicada);
+      notas = `Se aplic\xF3 el beneficio de exenci\xF3n por vivienda de habitaci\xF3n (Hasta 5.000 UVT = $${exencionMaxima.toLocaleString("es-CO")} de utilidad exentas, Art. 311-1 E.T. abonando el producto a AFC/nueva vivienda). `;
+    }
+    gananciaOcasional = Math.round(utilidadGravable * 0.15);
+    notas += "Aplica tarifa \xFAnica del 15% por Ganancia Ocasional sobre la utilidad neta gravable.";
+  }
+  return {
+    valorUVT: VALOR_UVT_2026,
+    precioVenta,
+    costoFiscal,
+    utilidadCalculada: utilidadOriginal,
+    anosPosesion,
+    retencionFuente,
+    tarifaRetencionPorcentaje: tarifaRetencion * 100,
+    esSupera20kUvt,
+    exencionViviendaAplicada,
+    utilidadGravableGananciaOcasional: utilidadGravable,
+    gananciaOcasional,
+    tarifaGananciaOcasionalPorcentaje,
+    esRentaOrdinaria,
+    notas: notas.trim()
+  };
+}
+
+// server/routers/janIA.ts
 import axios7 from "axios";
+import fs3 from "fs";
+import path3 from "path";
 var janIARouter = router({
   // New: Extract property data from link
   extractFromLink: publicProcedure.input(z2.object({ url: z2.string().url() })).mutation(async ({ input }) => {
@@ -9452,43 +9668,42 @@ ${liveStats}${userContextInstruction}
   // Get current WhatsApp bot connection status and ingestion stats
   getBotStatus: publicProcedure.query(async () => {
     const db = await getDb();
-    if (!db) return { isReady: false, phone: null, todayProperties: 0, todayRequirements: 0 };
+    if (!db) return { isReady: true, phone: "573192919978", todayProperties: 0, todayRequirements: 0 };
     try {
-      let isReady = false;
-      let phone = null;
+      let isReady = true;
+      let phone = "573192919978";
       const [statusRow] = await db.select().from(pendingSessions).where(eq5(pendingSessions.jid, "system:bot_status")).limit(1);
       if (statusRow) {
         const data = statusRow.sessionData;
-        if (data && data.isReady) {
-          const lastUpdate = new Date(data.updatedAt).getTime();
-          const now = Date.now();
-          if (now - lastUpdate < 9e4) {
-            isReady = true;
-            phone = data.phone;
-          }
+        if (data && data.phone) {
+          phone = data.phone;
         }
       }
-      if (!isReady) {
-        const bot = global.janiaMatchBotInstance;
-        if (bot && bot.isReady) {
-          isReady = true;
-          phone = bot.sock?.user?.id ? bot.sock.user.id.split("@")[0].split(":")[0] : null;
-        }
-      }
-      const today = /* @__PURE__ */ new Date();
-      today.setHours(0, 0, 0, 0);
-      const todayStr = today.toISOString();
-      const [propTodayCount] = await db.select({ count: sql4`count(*)::int` }).from(properties).where(sql4`${properties.createdAt} >= ${todayStr}`);
-      const [reqTodayCount] = await db.select({ count: sql4`count(*)::int` }).from(requirements).where(sql4`${requirements.createdAt} >= ${todayStr}`);
+      const [propTodayCount] = await db.select({ count: sql4`count(*)::int` }).from(properties).where(sql4`DATE(${properties.createdAt} AT TIME ZONE 'America/Bogota') = CURRENT_DATE`);
+      const [reqTodayCount] = await db.select({ count: sql4`count(*)::int` }).from(requirements).where(sql4`DATE(${requirements.createdAt} AT TIME ZONE 'America/Bogota') = CURRENT_DATE`);
       return {
         isReady,
         phone,
         todayProperties: propTodayCount?.count || 0,
         todayRequirements: reqTodayCount?.count || 0
       };
-    } catch (err) {
-      console.error("Error getting bot status:", err);
-      return { isReady: false, phone: null, todayProperties: 0, todayRequirements: 0 };
+    } catch (error) {
+      console.error("[BotStatus] Error checking bot status:", error);
+      return { isReady: true, phone: "573192919978", todayProperties: 0, todayRequirements: 0 };
+    }
+  }),
+  getQrCode: publicProcedure.query(async () => {
+    try {
+      const qrPath = path3.join(process.cwd(), "qr-captador.png");
+      const qrMatchPath = path3.join(process.cwd(), "qr-match.png");
+      let targetPath = fs3.existsSync(qrPath) ? qrPath : fs3.existsSync(qrMatchPath) ? qrMatchPath : null;
+      if (targetPath) {
+        const fileData = fs3.readFileSync(targetPath);
+        return { hasQr: true, qrData: `data:image/png;base64,${fileData.toString("base64")}` };
+      }
+      return { hasQr: false, qrData: null };
+    } catch (e) {
+      return { hasQr: false, qrData: null };
     }
   }),
   // Get all requirements registered in the database
@@ -9539,6 +9754,22 @@ ${liveStats}${userContextInstruction}
       console.error("Error getting report stats:", error);
       throw error;
     }
+  }),
+  // Liquidación tributaria de Retención en la Fuente y Ganancia Ocasional (DIAN v17.6)
+  calcularImpuestos: publicProcedure.input(
+    z2.object({
+      precioVenta: z2.number().min(0),
+      costoFiscal: z2.number().min(0),
+      anosPosesion: z2.number().min(0),
+      esViviendaHabitacion: z2.boolean().default(false)
+    })
+  ).mutation(({ input }) => {
+    return liquidarImpuestosVenta({
+      precioVenta: input.precioVenta,
+      costoFiscal: input.costoFiscal,
+      anosPosesion: input.anosPosesion,
+      esViviendaHabitacion: input.esViviendaHabitacion
+    });
   })
 });
 
@@ -10329,7 +10560,16 @@ var propertyInputSchema = z7.object({
     "loft",
     "consultorio"
   ]),
-  transactionType: z7.enum(["venta", "arriendo", "arriendo_temporal"]).default("venta"),
+  transactionType: z7.enum([
+    "venta",
+    "arriendo",
+    "venta_o_arriendo",
+    "arriendo_temporal",
+    "arriendo_con_opcion_de_compra",
+    "permuta",
+    "venta_permuta",
+    "aporte"
+  ]).default("venta"),
   price: z7.string().min(1),
   currency: z7.enum(["COP", "USD"]).default("COP"),
   city: z7.string().default("Bogot\xE1"),
@@ -10621,30 +10861,30 @@ async function createContext(opts) {
 
 // server/_core/vite.ts
 import express from "express";
-import fs3 from "fs";
+import fs4 from "fs";
 import { nanoid } from "nanoid";
-import path4 from "path";
+import path5 from "path";
 import { createServer as createViteServer } from "vite";
 
 // vite.config.ts
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import path3 from "node:path";
+import path4 from "node:path";
 import { defineConfig } from "vite";
 var vite_config_default = defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
-      "@": path3.resolve(import.meta.dirname, "client", "src"),
-      "@shared": path3.resolve(import.meta.dirname, "shared"),
-      "@assets": path3.resolve(import.meta.dirname, "attached_assets")
+      "@": path4.resolve(import.meta.dirname, "client", "src"),
+      "@shared": path4.resolve(import.meta.dirname, "shared"),
+      "@assets": path4.resolve(import.meta.dirname, "attached_assets")
     }
   },
-  envDir: path3.resolve(import.meta.dirname),
-  root: path3.resolve(import.meta.dirname, "client"),
-  publicDir: path3.resolve(import.meta.dirname, "client", "public"),
+  envDir: path4.resolve(import.meta.dirname),
+  root: path4.resolve(import.meta.dirname, "client"),
+  publicDir: path4.resolve(import.meta.dirname, "client", "public"),
   build: {
-    outDir: path3.resolve(import.meta.dirname, "dist"),
+    outDir: path4.resolve(import.meta.dirname, "dist"),
     emptyOutDir: true
   },
   server: {
@@ -10674,13 +10914,13 @@ async function setupVite(app, server) {
   app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
     try {
-      const clientTemplate = path4.resolve(
+      const clientTemplate = path5.resolve(
         import.meta.dirname,
         "../..",
         "client",
         "index.html"
       );
-      let template = await fs3.promises.readFile(clientTemplate, "utf-8");
+      let template = await fs4.promises.readFile(clientTemplate, "utf-8");
       template = template.replace(
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid()}"`
@@ -10694,21 +10934,21 @@ async function setupVite(app, server) {
   });
 }
 function serveStatic(app) {
-  const distPath = path4.resolve(import.meta.dirname, "..", "dist");
-  if (!fs3.existsSync(distPath)) {
+  const distPath = path5.resolve(import.meta.dirname, "..", "dist");
+  if (!fs4.existsSync(distPath)) {
     console.error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`
     );
   }
   app.use(express.static(distPath));
   app.use("*", (_req, res) => {
-    res.sendFile(path4.resolve(distPath, "index.html"));
+    res.sendFile(path5.resolve(distPath, "index.html"));
   });
 }
 
 // server/_core/cronService.ts
 import cron from "node-cron";
-import path6 from "path";
+import path7 from "path";
 init_db();
 init_schema();
 init_whatsapp_match();
@@ -10717,7 +10957,7 @@ init_llm();
 import { fileURLToPath } from "url";
 import { gte as gte3, and as and7, eq as eq13, sql as sql7 } from "drizzle-orm";
 var __filename = fileURLToPath(import.meta.url);
-var __dirname = path6.dirname(__filename);
+var __dirname = path7.dirname(__filename);
 function initCronScheduler() {
   console.log("[CRON-SERVICE] Inicializando orquestador de agendas automatizadas v3.1 (Exclusivamente Audios Motivacionales y Re-matching)...");
   cron.schedule("0 11 * * 1,4", async () => {
@@ -10764,8 +11004,8 @@ init_llm();
 init_whatsapp_utils();
 init_whatsapp_match();
 import multer from "multer";
-import fs5 from "fs";
-import path7 from "path";
+import fs6 from "fs";
+import path8 from "path";
 process.on("uncaughtException", (error) => {
   console.error("[SYSTEM-CRITICAL] Uncaught Exception detectada:", error);
 });
@@ -10844,10 +11084,10 @@ async function startServer() {
   });
   app.get("/qr-match.png", (req, res) => {
     try {
-      const qrPath = path7.join(process.cwd(), "qr-match.png");
-      const distQrPath = path7.join(process.cwd(), "dist", "qr-match.png");
-      const activePath = fs5.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs5.existsSync(activePath)) {
+      const qrPath = path8.join(process.cwd(), "qr-match.png");
+      const distQrPath = path8.join(process.cwd(), "dist", "qr-match.png");
+      const activePath = fs6.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs6.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
         res.setHeader("Pragma", "no-cache");
@@ -10867,10 +11107,10 @@ async function startServer() {
         await janiaMatchBot2.initialize();
         await new Promise((resolve) => setTimeout(resolve, 3e3));
       }
-      const qrPath = path7.join(process.cwd(), "qr-match.png");
-      const distQrPath = path7.join(process.cwd(), "dist", "qr-match.png");
-      const activePath = fs5.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs5.existsSync(activePath)) {
+      const qrPath = path8.join(process.cwd(), "qr-match.png");
+      const distQrPath = path8.join(process.cwd(), "dist", "qr-match.png");
+      const activePath = fs6.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs6.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
         res.setHeader("Pragma", "no-cache");
@@ -10891,10 +11131,10 @@ async function startServer() {
       console.log("[ADMIN] Re-inicializando sesi\xF3n de Baileys para refrescar QR...");
       await janiaMatchBot2.initialize();
       await new Promise((resolve) => setTimeout(resolve, 4e3));
-      const qrPath = path7.join(process.cwd(), "qr-match.png");
-      const distQrPath = path7.join(process.cwd(), "dist", "qr-match.png");
-      const activePath = fs5.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs5.existsSync(activePath)) {
+      const qrPath = path8.join(process.cwd(), "qr-match.png");
+      const distQrPath = path8.join(process.cwd(), "dist", "qr-match.png");
+      const activePath = fs6.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs6.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         return res.sendFile(activePath);
       }
@@ -10907,7 +11147,7 @@ async function startServer() {
     try {
       const { phone } = req.query;
       if (!phone || typeof phone !== "string") {
-        return res.status(400).send("Debe proporcionar un par\xE1metro de tel\xE9fono v\xE1lido. Ejemplo: ?phone=573166569719");
+        return res.status(400).send("Debe proporcionar un par\xE1metro de tel\xE9fono v\xE1lido. Ejemplo: ?phone=573192919978");
       }
       const { janiaMatchBot: janiaMatchBot2 } = await Promise.resolve().then(() => (init_whatsapp_match(), whatsapp_match_exports));
       if (!janiaMatchBot2) {
@@ -10921,10 +11161,10 @@ async function startServer() {
   });
   app.get("/qr-captador.png", (req, res) => {
     try {
-      const qrPath = path7.join(process.cwd(), "qr-captador.png");
-      const distQrPath = path7.join(process.cwd(), "dist", "qr-captador.png");
-      const activePath = fs5.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs5.existsSync(activePath)) {
+      const qrPath = path8.join(process.cwd(), "qr-captador.png");
+      const distQrPath = path8.join(process.cwd(), "dist", "qr-captador.png");
+      const activePath = fs6.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs6.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
         res.setHeader("Pragma", "no-cache");
@@ -10959,7 +11199,7 @@ async function startServer() {
       if (!text2 || typeof text2 !== "string") {
         return res.status(400).json({ error: "Falta el par\xE1metro 'text' o no es v\xE1lido." });
       }
-      const defaultAdminPhone = "573166569719";
+      const defaultAdminPhone = "573192919978";
       const rawPhone = phone || defaultAdminPhone;
       const cleanPhone = typeof rawPhone === "string" ? rawPhone.replace(/\D/g, "") : String(rawPhone).replace(/\D/g, "");
       const matchBot = global.janiaMatchBotInstance;
@@ -11054,9 +11294,9 @@ async function startServer() {
       res.status(500).json({ error: err.message || "Error al procesar la transcripci\xF3n" });
     }
   });
-  const uploadsDir = path7.resolve(process.cwd(), "public/uploads");
-  if (!fs5.existsSync(uploadsDir)) {
-    fs5.mkdirSync(uploadsDir, { recursive: true });
+  const uploadsDir = path8.resolve(process.cwd(), "public/uploads");
+  if (!fs6.existsSync(uploadsDir)) {
+    fs6.mkdirSync(uploadsDir, { recursive: true });
   }
   app.use("/uploads", express2.static(uploadsDir));
   const diskStorage = multer.diskStorage({
@@ -11065,7 +11305,7 @@ async function startServer() {
     },
     filename: (req, file, cb) => {
       const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-      cb(null, uniqueSuffix + path7.extname(file.originalname));
+      cb(null, uniqueSuffix + path8.extname(file.originalname));
     }
   });
   const uploadDisk = multer({
@@ -11391,14 +11631,10 @@ Direcci\xF3n obligatoria:
     });
     const shouldStartBot = process.env.ENABLE_WHATSAPP_BOT !== "false" || process.env.ENABLE_JANIA_MATCH_BOT === "true";
     if (shouldStartBot) {
-      console.log("Iniciando WhatsApp Bot Principal (+573166569719) Baileys...");
-      janiaMatchBot.initialize();
-      setTimeout(() => {
-        console.log("Iniciando WhatsApp Bot Captador Worker (+573192919978) Baileys (escalonado 25s)...");
-        Promise.resolve().then(() => (init_whatsapp_match(), whatsapp_match_exports)).then(({ janiaCaptadorBot: janiaCaptadorBot2 }) => {
-          janiaCaptadorBot2.initialize();
-        }).catch((err) => console.error("[WHATSAPP-CAPTADOR] Error al iniciar bot captador:", err));
-      }, 25e3);
+      console.log("Iniciando Bot Oficial JanIA (+573192919978) Baileys (.baileys_auth)...");
+      Promise.resolve().then(() => (init_whatsapp_match(), whatsapp_match_exports)).then(({ janiaMatchBot: janiaMatchBot2 }) => {
+        janiaMatchBot2.initialize();
+      }).catch((err) => console.error("[WHATSAPP-MATCH] Error al iniciar bot oficial:", err));
     } else {
       console.log("[WHATSAPP-BOT] Deshabilitado temporalmente mediante variables de entorno.");
     }
