@@ -28,7 +28,85 @@ _Manual maestro de visión de producto, lógica de negocio, arquitectura de soft
 7.  **[El Rol de JanIA y el Canal de WhatsApp](#7-el-rol-de-jania-y-el-canal-de-whatsapp)**
     *   *Extracción pasiva sin discriminación y políticas anti-ban*
 8.  **[Mapa Interactivo de Colombia y Coincidencias al 100%](#8-mapa-interactivo-de-colombia-y-coincidencias-al-100%)**
-9.  **[Propuesta Evolutiva del Sistema (Dejar, Eliminar, Crear)](#9-propuesta-evolutiva-del-sistema-dejar-eliminar-crear)**
+
+
+---
+
+## 🎨 DIAGRAMAS VISUALES DE ARQUITECTURA Y ÁRBOLES DE DECISIÓN DE VECY NETWORK
+
+### 📊 Diagrama 1: Arquitectura General del Ecosistema VECY Network
+```mermaid
+graph TD
+    A["📱 WhatsApp (Baileys WebSocket)"] -->|Texto / Voz / PDF / Link| B["🧠 JanIA Brain (Gemini 2.5 Flash)"]
+    W["🌐 Consola Web (React + Vite)"] -->|tRPC Router| B
+    B -->|Extracción & Clasificación| C[("🗄️ Supabase PostgreSQL (Drizzle ORM)")]
+    C -->|Filtros Duros & Scoring (85%+)| D["⚙️ Motor de Matching (matching.ts)"]
+    D -->|Match Perfecto (100%) / VECY Match| E["📊 Admin / Consola de Coincidencias Web"]
+    B -->|Calculadora Tax & Valuation| F["⚖️ Motor Tributario & ACM (taxEngine / valuation)"]
+    D -->|Aspersión 35/35/15/15| G["💰 Wallet Engine (walletEngine.ts)"]
+```
+
+---
+
+### 🌲 Diagrama 2: Árbol de Decisión del Motor de Matching (Filtros Duros & Threshold 85%-100%)
+```mermaid
+flowchart TD
+    Start["📥 Entrada: Inmueble (Oferta) vs Requerimiento (Demanda)"] --> F0A{"¿Tiene Teléfono Válido en Ambos? (Filtro 0B)"}
+    F0A -- "No" --> Reject0["❌ SCORE 0% (Teléfono Faltante - Descartado)"]
+    F0A -- "Sí" --> F1{"¿Tipo de Negocio Compatible? (Arriendo vs Venta)"}
+    F1 -- "Incompatible" --> Reject1["❌ SCORE 0% (Bloqueo Absoluto)"]
+    F1 -- "Compatible" --> F2{"¿Tipo/Subtipo Inmueble Coincide?"}
+    F2 -- "Incompatible" --> Reject2["❌ SCORE 0% (Apto vs Casa/Loft)"]
+    F2 -- "Compatible" --> F3{"¿Ubicación / Barrio Válido?"}
+    F3 -- "Fuera de Zona" --> Reject3["❌ SCORE 0% (Barrio no aledaño)"]
+    F3 -- "Coincide" --> F4{"¿Área Total >= AreaMin * 0.98?"}
+    F4 -- "Menor al Mínimo" --> Reject4["❌ SCORE 0% (Metraje Insuficiente)"]
+    F4 -- "Cumple" --> F5{"¿Precio <= Presupuesto Max?"}
+    F5 -- "Excede Presupuesto" --> Reject5["❌ SCORE 0% (Precio no apto)"]
+    F5 -- "Cumple" --> CalcScore["📐 Cálculo de Puntuación (Habitaciones, Baños, Parqueaderos)"]
+    CalcScore --> Check100{"¿Todos los Campos Presentes sin N/E?"}
+    Check100 -- "Sí" --> Perfect["🌟 MATCH PERFECTO (100%)"]
+    Check100 -- "Hay N/E (Incompleto)" --> Check85{"¿Score >= 85%?"}
+    Check85 -- "Sí" --> ValidMatch["✅ VECY MATCH (85% - 84%)"]
+    Check85 -- "No (< 85%)" --> RejectScore["❌ SCORE < 85% (Ignorado)"]
+```
+
+---
+
+### 💰 Diagrama 3: Esquema de Aspersión Financiera (Wallet Engine 35% / 35% / 15% / 15%)
+```mermaid
+graph LR
+    Comm["💰 Comisión Total (3% Venta)"] --> A["💼 35% Agente Vendedor (Captador)"]
+    Comm --> B["🤝 35% Punta Demanda"]
+    Comm --> C["🚀 15% Bolsa Colaborativa (Difusión)"]
+    Comm --> D["🌐 15% Plataforma VECY Network"]
+
+    B -->|¿Viene por Agente Comprador?| B1["👤 35% Agente Comprador (+ % Bolsa)"]
+    B -->|¿Comprador Directo por vecy.co?| B2["🎁 35% Bono Notarial & Escrituración para Comprador"]
+
+    C -->|Acumulación por Puntos VECY COINS| C1["☕ Bonos Digitales (Juan Valdez / Tostao / Oma)"]
+```
+
+---
+
+### 🔀 Diagrama 4: Diagrama de Enrutamiento y Moderación Inter-Grupos
+```mermaid
+stateDiagram-v2
+    [*] --> Ingestion: Mensaje Entrante en WhatsApp
+    Ingestion --> CheckGroup: Auditar Grupo de Origen
+
+    state CheckGroup {
+        Grupo1: Grupo 1 - VECY INMUEBLES NETWORK
+        Grupo2: Grupo 2 - SOPORTE LEGAL, TRIBUTARIO Y AVALÚOS
+        Grupo3: Grupo 3 - PROYECTO VECY NETWORK
+    }
+
+    Grupo1 --> Evaluacion1: Si publica Dudas Legales/Avalúos -> Redirigir a Grupo 2
+    Grupo1 --> Evaluacion1B: Si debate Comisiones/Proyecto -> Redirigir a Grupo 3
+
+    Grupo2 --> Evaluacion2: Si publica Oferta/Demanda Predial -> Redirigir a Grupo 1
+    Grupo3 --> Evaluacion3: Si publica Oferta/Demanda Predial -> Redirigir a Grupo 1
+```
 
 ---
 
