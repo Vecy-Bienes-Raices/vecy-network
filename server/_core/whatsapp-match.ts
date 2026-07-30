@@ -992,8 +992,8 @@ export class JaniaMatchBot {
     }
   }
 
-  private getReactionEmoji(result: any): string {
-    if (!result) return '🚫';
+  private getReactionEmoji(result: any, isOfficialGroup: boolean = false): string {
+    if (!result) return isOfficialGroup ? '🚫' : '';
 
     const classification = (result.classification || '').toUpperCase();
     const rawText = (result.rawText || result.response || '').toLowerCase();
@@ -1018,10 +1018,9 @@ export class JaniaMatchBot {
       return '👍';
     }
 
-    // TODO lo demás: CONSULTA_GENERAL, DATOS_INCOMPLETOS, SPAM, VIOLACION_DE_NORMAS,
-    // ANALISIS_DE_MERCADO, RESPUESTA_A_PREGUNTA_IA, INVALID_LEAD, audios de publicidad, etc.
-    // -> 🚫 (No es un inmueble ni un requerimiento válido)
-    return '🚫';
+    // En Grupos Oficiales VECY: 🚫 para publicaciones incompletas o fuera de norma.
+    // En Grupos Externos: NO USAR 🚫 (retornar "" para evitar denuncias / proteger la cuenta de Meta)
+    return isOfficialGroup ? '🚫' : '';
   }
 
 
@@ -1122,8 +1121,9 @@ export class JaniaMatchBot {
           );
 
           const isSupportGroupSingle = chatId === this.buzonGroupId || chatId === this.circuloGroupId;
+          const isOfficialGroupSingle = chatId === this.targetGroupId || chatId === this.buzonGroupId || chatId === this.circuloGroupId;
           if (result && !isSupportGroupSingle) {
-            const emoji = this.getReactionEmoji(result);
+            const emoji = this.getReactionEmoji(result, isOfficialGroupSingle);
             if (emoji && bufferedMsg.originalMsg?.key) {
               try {
                 const targetKey = {
@@ -1210,8 +1210,9 @@ export class JaniaMatchBot {
 
       // --- REACCIONAR A LA PUBLICACIÓN EN TODOS LOS GRUPOS PREDIALES ---
       const isSupportGroup = chatId === this.buzonGroupId || chatId === this.circuloGroupId;
+      const isOfficialGroup = chatId === this.targetGroupId || chatId === this.buzonGroupId || chatId === this.circuloGroupId;
       if (result && !isSupportGroup) {
-        const emoji = this.getReactionEmoji(result);
+        const emoji = this.getReactionEmoji(result, isOfficialGroup);
         if (emoji) {
           try {
             const lastMsg = buffer.messages[buffer.messages.length - 1]?.originalMsg;
