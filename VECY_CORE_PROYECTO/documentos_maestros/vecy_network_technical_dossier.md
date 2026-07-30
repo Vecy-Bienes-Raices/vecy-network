@@ -671,6 +671,28 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 #### 3. ESTADO VISUAL EN FRONTEND (`Admin.tsx`)
 - Sincronización del widget `BotStatusWidget` a **JanIA Match: Activo** con luz verde parpadeante de neón y reporte del número oficial `+573192919978`.
 
+---
+
+### 🔖 v17.9G / v17.9H — JULIO 2026: LÍNEA OFICIAL EXCLUSIVA +573192919978, PURGA DE LÍNEA OBSOLETA Y MOTOR DE REACCIONES EMOJI EN GRUPOS
+
+**Objetivo:** Establecer la línea +573192919978 como el único canal oficial unificado de JanIA, purgar todas las referencias legacy a la línea 316 y perfeccionar el protocolo de reacciones con emojis en todos los grupos prediales.
+
+#### 1. UNIFICACIÓN DE INSTANCIA Y PURGA DE LÍNEA OBSOLETA
+- **Eliminación Total de Referencias Legacy**: Purga completa de la línea `+573166569719` en todos los controladores, routers tRPC, esquemas, prompts de avalúos y componentes frontend (`Contact.tsx`, `PropertyCaptureForm.tsx`, `index.html`).
+- **Instancia Única Unificada (`JANIA-MATCH-OFICIAL`)**: Unificación del bot en la carpeta de autenticación `.baileys_auth` bajo la sesión autorizada en la línea oficial `+573192919978`.
+
+#### 2. POLÍTICA Y MATRIZ DE REACCIONES CON EMOJIS
+- **Matriz de Calificación y Emojis**:
+  - `👍` **Oferta Inmobiliaria Confirmada**: Aplicado automáticamente tras la ingesta exitosa de un bien ofertado en venta o arriendo.
+  - `📝` **Requerimiento / Demanda Confirmada**: Aplicado automáticamente tras la ingesta de una búsqueda específica de cliente.
+  - `❓` **Publicación Incompleta**: Aplicado si faltan datos clave (precio, zona, tipo de negocio, etc.).
+  - `🚫` **Infracción de Normas**: Exclusivo de los 3 Grupos Oficiales VECY. Desactivado (`""`) en grupos de terceros para evitar bloqueos y reportes.
+
+#### 3. RESTRICCIÓN DE PROCESADO DE HISTORIAL Y LECTURA DE MENSAJES LARGOS
+- **Filtro `SERVER_BOOT_TIME`**: Los mensajes publicados con fecha/hora previa al reinicio del servidor son ignorados de forma intencional para evitar reprocesados retroactivos de historial.
+- **Protocolo de Lectura Total de Mensajes**: JanIA recibe el 100% del texto plano vía WebSocket de Baileys sin importar el botón visual "Leer más" de la interfaz gráfica de WhatsApp.
+
+
 
 
 

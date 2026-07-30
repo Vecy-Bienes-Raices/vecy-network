@@ -330,10 +330,7 @@ export class JaniaMatchBot {
         const chatId = cleanJid(rawChatId);
         const isGroup = chatId.endsWith('@g.us');
 
-        // Para DMs privados, permitimos pasar los mensajes propios (fromMe) para poder detectar la intervención humana
-        if (fromMe && isGroup) continue;
-
-        const rawSenderId = isGroup ? (msg.key.participant || msg.participant) : rawChatId;
+        const rawSenderId = isGroup ? (msg.key.participant || msg.participant || (this.sock?.user?.id ? cleanJid(this.sock.user.id) : '')) : rawChatId;
         if (!rawSenderId || (isGroup && rawSenderId.endsWith('@g.us'))) continue;
         const senderId = cleanJid(rawSenderId);
 
