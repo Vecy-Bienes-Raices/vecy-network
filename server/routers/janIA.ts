@@ -9,6 +9,8 @@ import { scrapePropertyLink } from '../_core/scraper';
 import { JANIA_PROMPT, processWhatsAppMessage } from '../_core/janIA';
 import { liquidarImpuestosVenta } from '../_core/taxEngine';
 import axios from 'axios';
+import fs from 'fs';
+import path from 'path';
 
 export const janIARouter = router({
   // New: Extract property data from link
