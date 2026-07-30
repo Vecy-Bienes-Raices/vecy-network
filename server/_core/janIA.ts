@@ -1032,9 +1032,8 @@ export function buildSystemPrompt(groupJid?: string): string {
     if (groupJid === '120363260108880069@g.us') {
       specificPrompt = fs.readFileSync(path.join(baseDir, "grupos/VECY_INMUEBLES_NETWORK.md"), "utf-8");
     } else if (groupJid === '120363417740040773@g.us') {
-      const legalPrompt = fs.readFileSync(path.join(baseDir, "grupos/VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALÚOS.md"), "utf-8");
-      const avaluosPrompt = fs.existsSync(path.join(baseDir, "modulos/avaluos.md")) ? fs.readFileSync(path.join(baseDir, "modulos/avaluos.md"), "utf-8") : "";
-      specificPrompt = `${legalPrompt}\n\n${avaluosPrompt}`;
+      const legalPrompt = fs.readFileSync(path.join(baseDir, "grupos/VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md"), "utf-8");
+      specificPrompt = legalPrompt;
     } else if (groupJid === '120363403507276533@g.us') {
       specificPrompt = fs.readFileSync(path.join(baseDir, "grupos/PROYECTO_Vecy Network.md"), "utf-8");
     } else if (groupJid && (groupJid.endsWith('@g.us') || groupJid.includes('@us'))) {
