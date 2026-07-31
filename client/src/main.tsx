@@ -37,20 +37,10 @@ queryClient.getMutationCache().subscribe(event => {
   }
 });
 
-function getApiUrl(): string {
-  const envUrl = (import.meta as any).env?.VITE_API_URL || (import.meta as any).env?.VITE_SERVER_URL;
-  if (envUrl) return `${envUrl.replace(/\/$/, '')}/api/trpc`;
-
-  if (typeof window !== "undefined" && window.location.hostname.includes("vercel.app")) {
-    return "https://vecy.co/api/trpc";
-  }
-  return "/api/trpc";
-}
-
 const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
-      url: getApiUrl(),
+      url: "/api/trpc",
       transformer: superjson,
       fetch(input, init) {
         const token = localStorage.getItem("jania-session-token");

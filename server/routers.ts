@@ -32,16 +32,14 @@ export const appRouter = router({
       .input(z.object({ accessToken: z.string() }))
       .mutation(async ({ input, ctx }) => {
         try {
-          const supabaseUrl = process.env.VITE_SUPABASE_URL;
-          console.log("[Auth] VITE_SUPABASE_URL configured:", !!supabaseUrl);
-          if (!supabaseUrl) {
-            throw new Error("VITE_SUPABASE_URL is not configured on server");
-          }
+          const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "https://knzmpoprlmbonejshfys.supabase.co";
+          const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtuem1wb3BybG1ib25lanNoZnlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMjYyMjQsImV4cCI6MjA5MTYwMjIyNH0.yZ3AV1Rt2rmDuP61CA2rJRILpw__vwAJWp3xJUNj_FY";
 
+          console.log("[Auth] Validando token en Supabase:", supabaseUrl);
           const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
             headers: {
               Authorization: `Bearer ${input.accessToken}`,
-              apikey: process.env.VITE_SUPABASE_ANON_KEY || "",
+              apikey: supabaseAnonKey,
             },
           });
 

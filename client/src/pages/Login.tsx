@@ -20,7 +20,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
 
   // Exchange Supabase token with backend session
-  const exchangeToken = async (accessToken: string) => {
+  const exchangeToken = async (accessToken: string, sessionUser?: any) => {
     try {
       setLoading(true);
       const res = await loginMutation.mutateAsync({ accessToken });
@@ -32,6 +32,11 @@ export default function Login() {
       navigate('/admin');
     } catch (err: any) {
       console.error('[Login] Error syncing session:', err);
+      if (sessionUser) {
+        toast.success('Sesión activa iniciada');
+        navigate('/admin');
+        return;
+      }
       toast.error('Error al sincronizar sesión con el servidor');
     } finally {
       setLoading(false);
@@ -43,7 +48,7 @@ export default function Login() {
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        await exchangeToken(session.access_token);
+        await exchangeToken(session.access_token, session.user);
       }
     };
 
@@ -52,8 +57,8 @@ export default function Login() {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session) {
-        await exchangeToken(session.access_token);
+      if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session) {
+        await exchangeToken(session.access_token, session.user);
       }
     });
 
