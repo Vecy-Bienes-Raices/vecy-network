@@ -450,8 +450,8 @@ export class JaniaMatchBot {
 
             // Si es una publicación comercial, procesar con el buffer extractor (Modo Silencioso)
             const isPossibleListing = 
-              body.length > 120 || 
-              body.split('\n').length > 2 || 
+              body.length > 70 || 
+              body.split('\n').length >= 2 || 
               !!msg.message.imageMessage ||
               !!msg.message.documentMessage ||
               textLower.includes("http") ||
@@ -475,6 +475,7 @@ export class JaniaMatchBot {
               textLower.includes("apartamento") ||
               textLower.includes("bodega") ||
               textLower.includes("oficina") ||
+              textLower.includes("edificio") ||
               textLower.includes("lote") ||
               textLower.includes("local") ||
               textLower.includes("finca") ||
@@ -506,6 +507,8 @@ export class JaniaMatchBot {
               textLower.includes("millones") ||
               textLower.includes("millon") ||
               textLower.includes("canon") ||
+              textLower.includes("comisión") ||
+              textLower.includes("comision") ||
               textLower.includes("valor");
 
 
