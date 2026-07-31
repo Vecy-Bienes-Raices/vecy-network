@@ -998,7 +998,7 @@ export class JaniaMatchBot {
     if (!result) return isOfficialGroup ? '🚫' : '';
 
     const classification = (result.classification || '').toUpperCase();
-    const rawText = (result.rawText || result.response || '').toLowerCase();
+    const rawText = (result.rawText || result.response || result.extractedData?.rawText || '').toLowerCase();
 
     // 1. Requerimientos (Demandas de búsqueda) -> SIEMPRE 📝
     if (
@@ -1016,11 +1016,17 @@ export class JaniaMatchBot {
     }
 
     // 2. Inmuebles / Ofertas comerciales confirmadas por JanIA -> SIEMPRE 👍
-    if (classification === 'INMUEBLE' || classification.includes('INMUEBLE') || classification.includes('OFERTA')) {
+    if (
+      classification === 'INMUEBLE' || 
+      classification.includes('INMUEBLE') || 
+      classification.includes('OFERTA') ||
+      result.inmuebleId || 
+      result.propertyId
+    ) {
       return '👍';
     }
 
-    // 3. Publicaciones Incompletas / Faltan datos clave (precio, metraje, zona, etc.) -> ❓
+    // 3. Publicaciones Incompletas / Faltan datos clave -> ❓
     if (
       classification === 'DATOS_INCOMPLETOS' || 
       classification.includes('INCOMPLETO') || 
@@ -1032,9 +1038,7 @@ export class JaniaMatchBot {
       return '❓';
     }
 
-    // 4. Infracciones / Violaciones de Norma (Spam, servicios externos, etc.)
-    // - En Grupos Oficiales VECY -> 🚫
-    // - En Grupos Externos -> NINGUNO (String vacío "") para evitar susceptibilidades y denuncias
+    // 4. Infracciones / Violaciones de Norma
     if (classification === 'VIOLACION_DE_NORMAS' || classification.includes('SPAM') || classification.includes('INFRACCION')) {
       return isOfficialGroup ? '🚫' : '';
     }
