@@ -1120,7 +1120,8 @@ Constantemente recibes datos en diversos formatos (Texto plano, URLs de portales
     "depositos": number,
     "comisiones": "string | number | null",
     "antiguedad": "nuevo | 1-5 | 5-10 | 10+ | NA",
-    "floorDetail": "string (ej: 'piso 5', '3 pisos', '8 metros de altura', 'NA')"
+    "floorDetail": "string (ej: 'piso 5', '3 pisos', '8 metros de altura', 'NA')",
+    "evaluationSummary": "string (un resumen técnico de 1 a 2 frases con tu criterio bróker sobre la viabilidad del precio/área, atractivo comercial o nivel de exigencia de la demanda en el sector)"
   },
   "response": "Tu respuesta elocuente para el grupo (cadena vacía '' si no hay match ni es consulta)",
   "shouldSendDM": boolean,
