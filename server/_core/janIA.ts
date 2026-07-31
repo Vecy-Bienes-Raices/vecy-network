@@ -2846,11 +2846,23 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
       console.error("[JanIA-History] Error al registrar historial de republicación:", histErr);
     }
 
+    // Disparar motor de matching instantáneo para propiedad actualizada
+    try {
+      const { findMatchesForProperty } = await import('./matching');
+      findMatchesForProperty(updated.id).catch(mErr => console.error("[JanIA-MatchingTrigger] Error recalculando matches para propiedad:", mErr));
+    } catch (_) {}
+
     return updated;
   }
 
   // Creación de propiedad nueva
   const [result] = await db.insert(properties).values(insertDataWithCalif).returning();
+
+  // Disparar motor de matching instantáneo para propiedad nueva
+  try {
+    const { findMatchesForProperty } = await import('./matching');
+    findMatchesForProperty(result.id).catch(mErr => console.error("[JanIA-MatchingTrigger] Error calculando matches para propiedad:", mErr));
+  } catch (_) {}
 
   // Insertar auditoría histórica inicial
   try {
@@ -2971,10 +2983,18 @@ async function saveRequirement(data: any, userId: string, realName: string) {
       .where(eq(requirements.id, existing[0].id))
       .returning();
     console.log(`[Deduplication] Requerimiento existente detectado. Actualizando datos (ID: ${updated.id})`);
+    try {
+      const { findMatchesForRequirement } = await import('./matching');
+      findMatchesForRequirement(updated.id).catch(mErr => console.error("[JanIA-MatchingTrigger] Error recalculando matches para requerimiento:", mErr));
+    } catch (_) {}
     return updated;
   }
 
   const [result] = await db.insert(requirements).values(insertDataWithCalif).returning();
+  try {
+    const { findMatchesForRequirement } = await import('./matching');
+    findMatchesForRequirement(result.id).catch(mErr => console.error("[JanIA-MatchingTrigger] Error calculando matches para requerimiento:", mErr));
+  } catch (_) {}
   return result;
 }
 
