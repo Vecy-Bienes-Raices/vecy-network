@@ -1003,6 +1003,11 @@ export class JaniaMatchBot {
     const classification = (result.classification || '').toUpperCase();
     const rawText = (result.rawText || result.response || result.extractedData?.rawText || '').toLowerCase();
 
+    // 0. Match Perfecto / Coincidencia Estelar (Score >= 95% o Match Confirmado) -> ⭐
+    if (result.hasMatch || (result.matchScore && result.matchScore >= 95) || result.isPerfectMatch) {
+      return '⭐';
+    }
+
     // 1. Requerimientos (Demandas de búsqueda) -> SIEMPRE 📝
     if (
       classification === 'REQUERIMIENTO' || 
