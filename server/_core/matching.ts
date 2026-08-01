@@ -539,7 +539,7 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   }
 
   // ── FILTRO DURO 0C: Oferta sin precio vs Demanda con Presupuesto Especificado (Tolerancia Cero 0%) ──
-  if (budgetMax > 0 && price <= 0 && (!property.priceRent || parseFloat(String(property.priceRent)) <= 0)) {
+  if (budgetMax > 0 && price <= 0 && (!property.rentPrice || parseFloat(String(property.rentPrice)) <= 0)) {
     blockers.push("Match inviable: La oferta NO especifica precio (N/E) y el requerimiento exige presupuesto.");
     return buildExplanationResult(0, blockers, positives, negatives);
   }
@@ -676,7 +676,8 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
 
     // Para Arriendos: Si (Canon + Administración de la oferta) > Canon Máximo de la demanda → 0%
     if (isReqRent) {
-      let propRent = property.priceRent ? parseFloat(String(property.priceRent)) : 0;
+      // Usar el campo rentPrice (columna rent_price en Supabase) — corregido de priceRent
+      let propRent = property.rentPrice ? parseFloat(String(property.rentPrice)) : 0;
       if (propRent <= 0 && property.rawText) {
         const rawP = property.rawText.toLowerCase();
         const matchRentP = rawP.match(/arriendo\s*:?\s*\$?([\d.]+)\s*(millones|millón|m|M)?/i);
@@ -688,6 +689,7 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
           }
         }
       }
+      // Fallback: si price es un valor de arriendo realista (<100M) y no hay rentPrice
       if (propRent <= 0 && price > 0 && price < 100000000) {
         propRent = price;
       }
@@ -702,9 +704,31 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
     }
 
     // Para Ventas: Si el Precio de Venta de la oferta > Presupuesto Máximo de Venta de la demanda → 0%
-    if (isReqSale && propBiz.includes("venta") && price > 0) {
-      if (price > budgetMax) {
-        blockers.push(`Precio de venta $${price.toLocaleString()} supera el presupuesto máximo de $${budgetMax.toLocaleString()}`);
+    if (isReqSale && propBiz.includes("venta")) {
+      // Para fichas duales (venta_o_arriendo): el precio de venta siempre debe estar en `price`.
+      // Si `price` tiene un valor de arriendo (<100M) y la oferta es dual, intentar extraer
+      // el precio de venta real desde rawText.
+      let salePrice = price;
+      if (
+        (propBiz === "venta_o_arriendo") &&
+        price > 0 && price < 100_000_000
+      ) {
+        // price parece un canon de arriendo, buscar precio de venta real en rawText
+        const rawPT = (property.rawText || "").toLowerCase();
+        const salePriceMatch = rawPT.match(/(?:precio\s*(?:de\s*)?venta|venta)\s*:?\s*\$?([\d.,]+(?:\s*(?:millones|millón|m|M|mil millones|billones))?)/i);
+        if (salePriceMatch) {
+          let rawVal = salePriceMatch[1].replace(/\./g, "").replace(/,/g, "");
+          const factor = salePriceMatch[0].toLowerCase().includes("mil millon") || salePriceMatch[0].toLowerCase().includes("billn") ? 1_000_000_000
+            : salePriceMatch[1].toLowerCase().includes("millon") || salePriceMatch[1].toLowerCase().includes("millón") ? 1_000_000
+            : 1;
+          const numVal = parseFloat(rawVal.replace(/[^\d]/g, ""));
+          if (!isNaN(numVal) && numVal > 0) {
+            salePrice = numVal < 1000 ? numVal * factor : numVal;
+          }
+        }
+      }
+      if (salePrice > 0 && salePrice > budgetMax) {
+        blockers.push(`Precio de venta $${salePrice.toLocaleString()} supera el presupuesto máximo de $${budgetMax.toLocaleString()}`);
         return buildExplanationResult(0, blockers, positives, negatives);
       }
     }
@@ -754,20 +778,33 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   earnedPoints += Math.round((geoResult.score / 25) * 20);
 
   // 4. Presupuesto (15 pts)
+  // Para fichas duales, usar el precio correcto según el tipo de negocio del requerimiento
+  const reqBizForScore = reqBiz.toLowerCase();
+  const isReqRentForScore = reqBizForScore.includes("arriendo");
+  const isReqSaleForScore = reqBizForScore.includes("venta") || reqBizForScore.includes("permuta");
+
+  // Precio efectivo de la oferta según lo que busca la demanda
+  let effectivePrice = price;
+  if (isReqRentForScore) {
+    const rp = property.rentPrice ? parseFloat(String(property.rentPrice)) : 0;
+    if (rp > 0) effectivePrice = rp;
+    else if (price > 0 && price < 100_000_000) effectivePrice = price; // price es un arriendo
+  } else if (isReqSaleForScore && propBiz === "venta_o_arriendo" && price > 0 && price < 100_000_000) {
+    // price tiene un valor de arriendo — la ponderación no puede otorgar puntos de venta
+    effectivePrice = 0; // sin precio de venta confirmado → 0 pts
+  }
+
   if (budgetMax > 0) {
-    // El requerimiento SÍ especifica presupuesto máximo
-    if (price > 0) {
-      if (price <= budgetMax)            earnedPoints += 15;          // Dentro del rango → 15 pts
-      else if (price <= budgetMax * 1.01) earnedPoints += 13;        // Marginal 1% → 13 pts
-      else if (price <= budgetMax * 1.05) earnedPoints += 9;         // Marginal 5% → 9 pts
-      else negatives.push(`Precio $${price.toLocaleString()} supera presupuesto $${budgetMax.toLocaleString()}`);
+    if (effectivePrice > 0) {
+      if (effectivePrice <= budgetMax)             earnedPoints += 15; // Dentro del rango → 15 pts
+      else if (effectivePrice <= budgetMax * 1.01) earnedPoints += 13; // Marginal 1%
+      else if (effectivePrice <= budgetMax * 1.05) earnedPoints += 9;  // Marginal 5%
+      else negatives.push(`Precio $${effectivePrice.toLocaleString()} supera presupuesto $${budgetMax.toLocaleString()}`);
     } else {
       negatives.push("Presupuesto no especificado en la oferta (N/E)");
-      // 0 pts: la oferta no informó precio y la demanda sí lo exige
     }
   } else {
-    // La demanda NO especifica presupuesto → crédito neutral parcial (10/15)
-    earnedPoints += 10;
+    earnedPoints += 10; // La demanda NO especifica presupuesto → crédito neutral
   }
 
   // 5. Área (10 pts)

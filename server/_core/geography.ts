@@ -24,7 +24,9 @@ export const DICCIONARIO_BOGOTA: Record<string, { localidad: string, barrios: st
     barrios: [
       "El Lago", "El Retiro", "Rosales", "Los Rosales", "La Cabrera",
       "Chicó Reservado Norte", "Chapinero Central", "Chapinero Alto",
-      "Pardo Rubio", "Quinta Camacho", "El Castillo", "San Luis", "Juan XXIII"
+      "Pardo Rubio", "Quinta Camacho", "El Castillo", "San Luis", "Juan XXIII",
+      // Barrio El Refugio — franja norte de Chapinero, Calle 85-90 entre Cr 5 y 11
+      "El Refugio"
     ]
   },
   "suba": {
@@ -66,7 +68,7 @@ export const DICCIONARIO_BOGOTA: Record<string, { localidad: string, barrios: st
     localidad: "Fontibón",
     barrios: [
       "Fontibón", "Modelia", "Capellanía", "Hayuelos", "Ciudad Salitre Oriental",
-      "Tintal Norte", "Zona Franca", "San Pablo", "El Refugio"
+      "Tintal Norte", "Zona Franca", "San Pablo"
     ]
   },
   "kennedy": {
@@ -458,4 +460,72 @@ export async function validarZona(zona: string, ciudad?: string, textoCompleto?:
     errorType: "DATOS_INCOMPLETOS",
     message: "No logré identificar la ubicación. Por favor dime la ciudad, municipio o barrio exacto."
   };
+}
+
+/**
+ * Desambiguador de Barrios Compuestos / Inventados (v18.0)
+ *
+ * Cuando los asesores escriben dos barrios colindantes como si fueran uno solo
+ * (ej: "Chicó Refugio", "Rosales Cabrera", "Cedritos Country"),
+ * esta función los separa en un array independiente para que el motor de matching
+ * pueda cruzar ambas zonas de forma correcta.
+ *
+ * @param zona  String de zona tal como lo escribió el asesor.
+ * @returns     Array de barrios canónicos. Si no hay ambigüedad → [zona].
+ */
+export function desambiguarBarriosCompuestos(zona: string): string[] {
+  if (!zona || zona.trim().length === 0) return [zona];
+
+  // Mapa de pares de barrios colindantes conocidos del norte de Bogotá.
+  const PARES_CONOCIDOS: Record<string, string[]> = {
+    // Chicó + Refugio (Usaquén ↔ Chapinero)
+    "chico refugio":       ["El Chicó", "El Refugio"],
+    "el chico refugio":    ["El Chicó", "El Refugio"],
+    "chico el refugio":    ["El Chicó", "El Refugio"],
+    "chico-refugio":       ["El Chicó", "El Refugio"],
+    // Rosales + Cabrera (Chapinero)
+    "rosales cabrera":     ["Rosales", "La Cabrera"],
+    "la cabrera rosales":  ["Rosales", "La Cabrera"],
+    "cabrera rosales":     ["Rosales", "La Cabrera"],
+    // Rosales + Virrey
+    "rosales virrey":      ["Rosales", "El Virrey"],
+    "virrey rosales":      ["Rosales", "El Virrey"],
+    // Cedritos + Country
+    "cedritos country":    ["Cedritos", "Country Club"],
+    "country cedritos":    ["Cedritos", "Country Club"],
+    // Santa Bárbara + Chicó
+    "santa barbara chico": ["Santa Bárbara", "El Chicó"],
+    // Niza + Alhambra
+    "niza alhambra":       ["Niza", "Alhambra"],
+    // Lago + Retiro
+    "lago retiro":         ["El Lago", "El Retiro"],
+    "retiro lago":         ["El Lago", "El Retiro"],
+    // Salitre + Modelia
+    "salitre modelia":     ["Ciudad Salitre Oriental", "Modelia"],
+  };
+
+  const normInput = normalizarTextoGeografico(zona);
+  if (PARES_CONOCIDOS[normInput]) {
+    console.log(`[Geography-Disambiguate] "${zona}" → ${JSON.stringify(PARES_CONOCIDOS[normInput])}`);
+    return PARES_CONOCIDOS[normInput];
+  }
+
+  // Detección dinámica: verificar si el string contiene DOS barrios del diccionario de localidades distintas
+  const normWords = normInput.split(" ").filter((w: string) => w.length >= 3);
+  if (normWords.length >= 2) {
+    for (let splitAt = 1; splitAt < normWords.length; splitAt++) {
+      const part1 = normWords.slice(0, splitAt).join(" ");
+      const part2 = normWords.slice(splitAt).join(" ");
+      const barrio1 = MAPA_BARRIOS[part1];
+      const barrio2 = MAPA_BARRIOS[part2];
+      if (barrio1 && barrio2 && barrio1.localidad !== barrio2.localidad) {
+        const result = [barrio1.barrioCanonico, barrio2.barrioCanonico];
+        console.log(`[Geography-Disambiguate-Dynamic] "${zona}" → ${JSON.stringify(result)}`);
+        return result;
+      }
+    }
+  }
+
+  // Sin ambigüedad → devolver zona original como array unitario
+  return [zona.trim()];
 }

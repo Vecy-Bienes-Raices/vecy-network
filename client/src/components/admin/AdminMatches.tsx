@@ -188,19 +188,42 @@ function scoreRows(req: any, prop: any) {
 
   // 4. Presupuesto Máx.
   const budget = parseFloat(req.presupuestoMax || "0");
-  const price = parseFloat(prop.price || "0");
+  const propPrice = parseFloat(prop.price || "0");
+  const propRentPrice = parseFloat(prop.rentPrice || prop.priceRent || "0");
+  const isDualOffer = isPropertyDualOffer(prop);
+
+  // Bifurcar el precio efectivo según lo que busca el requerimiento
+  const isReqRentMatch = reqNeg.toLowerCase().includes("arriendo");
+  let effectivePropPrice: number;
+  let propPriceLabel: string;
+
+  if (isDualOffer) {
+    // Ficha dual: mostrar ambos precios
+    const saleLabel = propPrice > 0 ? formatCOP(prop.price) : "N/E";
+    const rentLabel = propRentPrice > 0 ? formatCOP(String(propRentPrice)) : "N/E";
+    propPriceLabel = `Venta: ${saleLabel} / Canon: ${rentLabel}`;
+    effectivePropPrice = isReqRentMatch
+      ? (propRentPrice > 0 ? propRentPrice : propPrice)
+      : propPrice;
+  } else {
+    effectivePropPrice = propPrice;
+    propPriceLabel = formatCOP(prop.price);
+  }
+
   let budS: MatchStatus = "neutral";
-  if (budget > 0) {
-    budS = (price > 0 && price === budget) ? "exact" : "warn";
+  if (budget > 0 && effectivePropPrice > 0) {
+    if (effectivePropPrice <= budget) budS = "exact";
+    else if (effectivePropPrice <= budget * 1.05) budS = "warn";
+    else budS = "missing";
   }
   const reqBudgetLabel = budget > 0 ? `${formatCOP(req.presupuestoMax)} ±5%` : "Sin restricción";
 
   add(
-    "Presupuesto Máx.", 
-    reqBudgetLabel, 
-    formatCOP(prop.price), 
-    budS, 
-    15, 
+    "Presupuesto Máx.",
+    reqBudgetLabel,
+    propPriceLabel,
+    budS,
+    15,
     <DollarSign className="w-3.5 h-3.5" />
   );
 

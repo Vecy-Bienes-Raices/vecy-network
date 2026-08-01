@@ -6,7 +6,7 @@ import { invokeLLM } from "./llm";
 import { getDb } from "../db";
 import { properties, requirements, users, propertyImages, InsertProperty, InsertRequirement, pendingSessions, propertyMatches, messages as dbMessages, conversations as dbConversations, propertyPublicationHistory } from "../../drizzle/schema";
 import { findMatchesForProperty, findMatchesForRequirement } from "./matching";
-import { validarZona, normalizarTextoGeografico } from "./geography";
+import { validarZona, normalizarTextoGeografico, desambiguarBarriosCompuestos } from "./geography";
 import { validateCity } from "./divipola";
 import { transcribeAudio } from "./voiceTranscription";
 import { eq, and, sql, gte, desc, or, isNotNull } from "drizzle-orm";
@@ -2685,6 +2685,66 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
     comisiones: data.comisiones || data.amenities?.comisiones,
     antiguedad: data.antiguedad || data.amenities?.antiguedad
   };
+
+  // ── DESAMBIGUACIÓN GEOGRÁFICA v18.0 ──────────────────────────────────────────
+  // Detectar barrios compuestos/inventados (ej. "Chicó Refugio") y separar en zonas múltiples.
+  if (data.zone && typeof data.zone === "string") {
+    const barriosDesambiguados = desambiguarBarriosCompuestos(data.zone);
+    if (barriosDesambiguados.length > 1) {
+      data.zone = barriosDesambiguados.join(", ");
+      data.addressNeighborhood = barriosDesambiguados[0]; // Barrio principal canónico
+      console.log(`[JanIA-GeoDisambiguate] Barrio compuesto: "${data.zone}"`);
+    }
+  }
+
+  // ── BIFURCACIÓN DE PRECIO PARA FICHAS DUALES (venta_o_arriendo) v18.0 ────────
+  // price = precio de VENTA · rentPrice = canon NETO de arriendo (sin administración)
+  const txTypeForSplit = (data.transactionType || "").toLowerCase();
+  if (txTypeForSplit === "venta_o_arriendo" || txTypeForSplit === "arriendo_con_opcion_de_compra") {
+    const currentPrice   = data.price     ? parseFloat(String(data.price))     : 0;
+    const currentRentP   = data.rentPrice ? parseFloat(String(data.rentPrice)) : 0;
+    const priceSaleField = data.priceSale ? parseFloat(String(data.priceSale)) : 0;
+    const priceRentField = data.priceRent ? parseFloat(String(data.priceRent)) : 0;
+    const priceSeemRent  = currentPrice > 0 && currentPrice < 100_000_000;
+
+    let finalSalePrice = currentPrice;
+    let finalRentPrice = currentRentP > 0 ? currentRentP : priceRentField;
+
+    if (priceSaleField > 0) {
+      finalSalePrice = priceSaleField;
+      if (finalRentPrice <= 0 && priceSeemRent) finalRentPrice = currentPrice;
+    }
+
+    if (priceSeemRent && finalSalePrice < 100_000_000) {
+      const rawLower = (data.rawText || "").toLowerCase();
+      const salePriceMatch = rawLower.match(
+        /(?:precio\s*(?:de\s*)?venta|venta)\s*:?\s*\$?([\d.,]+)\s*(mil\s*millones?|millones?)?/i
+      );
+      if (salePriceMatch) {
+        const rawNum = parseFloat(salePriceMatch[1].replace(/[.,]/g, ""));
+        const unitStr = (salePriceMatch[2] || "").toLowerCase();
+        const mult = unitStr.includes("mil millon") ? 1_000_000_000
+          : unitStr.includes("millon") ? 1_000_000
+          : rawNum < 10_000 ? 1_000_000 : 1;
+        const computedSale = rawNum * mult;
+        if (computedSale > 100_000_000) {
+          finalSalePrice = computedSale;
+          if (finalRentPrice <= 0) finalRentPrice = currentPrice;
+        }
+      }
+    }
+
+    if (finalSalePrice > 0) data.price = finalSalePrice;
+    if (finalRentPrice > 0) {
+      const adminFeeVal = data.adminFee ? parseFloat(String(data.adminFee)) : 0;
+      if (adminFeeVal > 0 && finalRentPrice >= adminFeeVal && finalRentPrice < 100_000_000) {
+        data.rentPrice = finalRentPrice - adminFeeVal; // Canon neto
+      } else {
+        data.rentPrice = finalRentPrice;
+      }
+    }
+    console.log(`[JanIA-PriceSplit] ${txTypeForSplit} → price(venta)=${data.price} | rentPrice(canon neto)=${data.rentPrice}`);
+  }
 
   const insertData = {
     ...data,
