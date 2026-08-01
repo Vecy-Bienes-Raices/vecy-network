@@ -654,14 +654,21 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
-  // ── FILTRO DURO 6: Área Mínima (Metraje en Duro - NUNCA MENOR QUE) ──
+  // ── FILTRO DURO 6 v20.0: Campana de Tolerancia de Área ──────────────────────
+  // Zona Roja   (-5%):  propArea < reqMin * 0.95 → Bloqueo absoluto (0%)
+  // Zona Confort (0–15%): reqMin * 0.95 ≤ propArea ≤ reqMin * 1.15 → Puntaje completo
+  // Zona Grande (+15%): propArea > reqMin * 1.15 → Pasa con advertencia informativa
+  let areaOversize = false;
   if (reqAreaMin > 0) {
     if (propArea > 0) {
-      if (propArea < reqAreaMin * 0.98) {
-        blockers.push(`Área ofrecida (${propArea} m²) es INFERIOR al mínimo exigido (${reqAreaMin} m²)`);
+      if (propArea < reqAreaMin * 0.95) {
+        blockers.push(`Área ofrecida (${propArea} m²) es INFERIOR al piso mínimo exigido (${reqAreaMin} m² - tolerancia -5%)`);
         return buildExplanationResult(0, blockers, positives, negatives);
+      } else if (propArea > reqAreaMin * 1.15) {
+        areaOversize = true;
+        positives.push(`✅ Área de ${propArea} m² cumple lo exigido (${reqAreaMin} m²). ⚠️ Inmueble significativamente más grande (+${Math.round((propArea / reqAreaMin - 1) * 100)}%)`);
       } else {
-        positives.push(`Área de ${propArea} m² cumple con el mínimo exigido de ${reqAreaMin} m²`);
+        positives.push(`✅ Área de ${propArea} m² dentro de la campana de confort (${reqAreaMin} m² ±15%)`);
       }
     } else {
       blockers.push(`No se puede verificar el área mínima requerida de ${reqAreaMin} m² (información no especificada en la oferta).`);
@@ -755,71 +762,88 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
-  // ── FILTRO DURO 10: Parqueaderos Mínimos ──
+  // ── FILTRO DURO 10 v20.0: Parqueaderos — Cantidad + Auditoría de Confort ────
   if (reqGarages > 0 && pGarages >= 0 && pGarages < reqGarages) {
     blockers.push(`Parqueaderos ofrecidos (${pGarages}) son inferiores a los requeridos (${reqGarages})`);
     return buildExplanationResult(0, blockers, positives, negatives);
   }
+  // Auditoría de tipo de garaje (independiente vs lineal)
+  const propGarageType = (property.garageType || "").toLowerCase();
+  const reqGarageTypeRaw = (requirement.rawText || "").toLowerCase();
+  const reqWantsIndependent = reqGarageTypeRaw.includes("independiente") || reqGarageTypeRaw.includes("libre") || reqGarageTypeRaw.includes("no lineal");
+  // garageComfortPenalty: 0=sin penalización, 1=40%(lineal), 2=excedente independiente(bono)
+  let garageComfortPenalty = 0;
+  if (reqGarages > 0 && pGarages >= reqGarages) {
+    if (reqWantsIndependent && propGarageType === "lineal") {
+      garageComfortPenalty = 1; // 40% del atributo
+      negatives.push(`⚠️ Parqueadero(s) ofrecidos son LINEALES (requiere mover vehículos). El demandante exige independiente.`);
+    } else if (propGarageType === "independiente" && pGarages > reqGarages) {
+      garageComfortPenalty = 2; // bono de excedente independiente
+      positives.push(`✅ Excedente de parqueaderos independientes (${pGarages} ofrecidos vs ${reqGarages} requeridos) — Bono de confort`);
+    } else if (propGarageType === "lineal" && pGarages >= reqGarages) {
+      negatives.push(`ℹ️ Parqueadero(s) lineales/servidumbre — requiere mover vehículos para acceder.`);
+    }
+  }
 
-  // ── PONDERACIÓN MATEMÁTICA REAL Y RIGUROSA (0% a 100%) ──
-  // REGLA DOCTRINAL v17.4: El denominador SIEMPRE incluye TODOS los campos.
-  // Campos N/E en la demanda → crédito parcial (campo "no restringido").
-  // Campos N/E en la oferta cuando la demanda sí exige → 0 puntos.
+  // ── PONDERACIÓN v20.0: Compatibilidad Humana de Alta Inferencia ──────────────
+  // Distribución de 100 pts:
+  //   Tipo Inmueble  15 | Tipo Negocio 15 | Ubicación 20 | Presupuesto 15
+  //   Área           10 | Habitaciones 10 | Baños      4  | Parqueaderos 4
+  //   Estrato         3 | Antigüedad   4  = 100 ✅
   let earnedPoints = 0;
-  const totalPossible = 100; // Denominador fijo = 100 puntos siempre
+  const totalPossible = 100;
 
-  // 1. Tipo Inmueble (15 pts) — Ya pasó el filtro duro, siempre coincide
+  // 1. Tipo Inmueble (15 pts) — pasó filtro duro
   earnedPoints += 15;
 
-  // 2. Tipo Negocio (15 pts) — Ya pasó el filtro duro, siempre coincide
+  // 2. Tipo Negocio (15 pts) — pasó filtro duro
   earnedPoints += 15;
 
   // 3. Ubicación (20 pts)
   earnedPoints += Math.round((geoResult.score / 25) * 20);
 
-  // 4. Presupuesto (15 pts)
-  // Para fichas duales, usar el precio correcto según el tipo de negocio del requerimiento
+  // 4. Presupuesto (15 pts) — bifurcado por tipo de negocio
   const reqBizForScore = reqBiz.toLowerCase();
   const isReqRentForScore = reqBizForScore.includes("arriendo");
   const isReqSaleForScore = reqBizForScore.includes("venta") || reqBizForScore.includes("permuta");
 
-  // Precio efectivo de la oferta según lo que busca la demanda
   let effectivePrice = price;
   if (isReqRentForScore) {
     const rp = property.rentPrice ? parseFloat(String(property.rentPrice)) : 0;
     if (rp > 0) effectivePrice = rp;
-    else if (price > 0 && price < 100_000_000) effectivePrice = price; // price es un arriendo
+    else if (price > 0 && price < 100_000_000) effectivePrice = price;
   } else if (isReqSaleForScore && propBiz === "venta_o_arriendo" && price > 0 && price < 100_000_000) {
-    // price tiene un valor de arriendo — la ponderación no puede otorgar puntos de venta
-    effectivePrice = 0; // sin precio de venta confirmado → 0 pts
+    effectivePrice = 0; // price tiene valor de arriendo, no de venta → 0 pts
   }
 
   if (budgetMax > 0) {
     if (effectivePrice > 0) {
-      if (effectivePrice <= budgetMax)             earnedPoints += 15; // Dentro del rango → 15 pts
-      else if (effectivePrice <= budgetMax * 1.01) earnedPoints += 13; // Marginal 1%
-      else if (effectivePrice <= budgetMax * 1.05) earnedPoints += 9;  // Marginal 5%
+      if (effectivePrice < budgetMax) {
+        earnedPoints += 15;
+        positives.push(`💰 Oportunidad: precio $${effectivePrice.toLocaleString()} por debajo del presupuesto $${budgetMax.toLocaleString()}`);
+      } else if (effectivePrice === budgetMax)             earnedPoints += 15;
+      else if (effectivePrice <= budgetMax * 1.01) earnedPoints += 13;
+      else if (effectivePrice <= budgetMax * 1.05) earnedPoints += 9;
       else negatives.push(`Precio $${effectivePrice.toLocaleString()} supera presupuesto $${budgetMax.toLocaleString()}`);
     } else {
       negatives.push("Presupuesto no especificado en la oferta (N/E)");
     }
   } else {
-    earnedPoints += 10; // La demanda NO especifica presupuesto → crédito neutral
+    earnedPoints += 10; // sin restricción de presupuesto → crédito neutral
   }
 
-  // 5. Área (10 pts)
+  // 5. Área v20.0 — Campana de Tolerancia (10 pts)
   if (reqAreaMin > 0) {
     if (propArea > 0) {
-      if (propArea >= reqAreaMin)       earnedPoints += 10;
-      else if (propArea >= reqAreaMin * 0.98) earnedPoints += 7;  // Margen 2%
-      else negatives.push(`Área ${propArea} m² es inferior a la requerida ${reqAreaMin} m²`);
+      if (propArea >= reqAreaMin && !areaOversize)       earnedPoints += 10; // Zona confort exacta
+      else if (areaOversize)                             earnedPoints += 10; // Más grande: pasa completo + advertencia ya registrada
+      else if (propArea >= reqAreaMin * 0.95)            earnedPoints += 6;  // Zona gris [-5%, 0%)
+      // Si < 0.95 ya fue bloqueado arriba
     } else {
       negatives.push("Área no especificada en la oferta (N/E)");
-      // 0 pts
     }
   } else {
-    // La demanda NO especifica área mínima → crédito neutral parcial (7/10)
-    earnedPoints += 7;
+    earnedPoints += 7; // demanda sin restricción de área → crédito neutral
   }
 
   // 6. Habitaciones (10 pts)
@@ -829,48 +853,83 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
       else negatives.push(`Habitaciones (${pBedrooms}) inferiores a las requeridas (${reqBedrooms})`);
     } else {
       negatives.push("Habitaciones no especificadas en la oferta (N/E)");
-      // 0 pts
     }
   } else {
-    // La demanda NO especifica habitaciones → crédito neutral parcial (7/10)
-    earnedPoints += 7;
+    earnedPoints += 7; // sin restricción → crédito neutral
   }
 
-  // 7. Baños (5 pts)
+  // 7. Baños (4 pts — redistribuido desde 5)
   if (reqBathrooms > 0) {
     if (pBathrooms >= 0) {
-      if (pBathrooms >= reqBathrooms)   earnedPoints += 5;
+      if (pBathrooms >= reqBathrooms)   earnedPoints += 4;
       else negatives.push(`Baños (${pBathrooms}) inferiores a los requeridos (${reqBathrooms})`);
     } else {
       negatives.push("Baños no especificados en la oferta (N/E)");
-      // 0 pts
     }
   } else {
-    // No restringido → crédito neutral (4/5)
-    earnedPoints += 4;
+    earnedPoints += 3; // crédito neutral
   }
 
-  // 8. Parqueaderos (5 pts)
+  // 8. Parqueaderos v20.0 — Auditoría de Confort (4 pts — redistribuido desde 5)
   if (reqGarages > 0) {
     if (pGarages >= 0) {
-      if (pGarages >= reqGarages)       earnedPoints += 5;
-      else negatives.push(`Parqueaderos (${pGarages}) inferiores a los requeridos (${reqGarages})`);
+      if (pGarages >= reqGarages) {
+        if (garageComfortPenalty === 1) {
+          // Parqueaderos lineales cuando se piden independientes → 40% del atributo
+          earnedPoints += Math.round(4 * 0.40);
+        } else if (garageComfortPenalty === 2) {
+          // Excedente de independientes → 4 pts + bono de confort (ya contabilizado en positives)
+          earnedPoints += 4;
+        } else {
+          earnedPoints += 4;
+        }
+      } else {
+        negatives.push(`Parqueaderos (${pGarages}) inferiores a los requeridos (${reqGarages})`);
+      }
     } else {
       negatives.push("Parqueaderos no especificados en la oferta (N/E)");
-      // 0 pts
     }
   } else {
-    // No restringido → crédito neutral (4/5)
-    earnedPoints += 4;
+    earnedPoints += 3; // crédito neutral
   }
 
-  // 9. Estrato (5 pts — bonus si coincide)
+  // 9. Estrato (3 pts — redistribuido para dar espacio a antigüedad)
   if (reqEstrato >= 1 && pEstrato >= 1) {
-    if (reqEstrato === pEstrato) earnedPoints += 5;
+    if (reqEstrato === pEstrato) earnedPoints += 3;
     // Si no coincide ya lo bloqueó el filtro duro anterior
   } else {
-    // No restringido → crédito neutral (3/5)
+    earnedPoints += 2; // crédito neutral
+  }
+
+  // 10. Antigüedad / Año de Construcción (4 pts — NUEVO v20.0) ─────────────────
+  // Fuentes: property.antiguedadAnos (años) o property.yearBuilt (año absoluto)
+  const reqAntiguedadMax = requirement.antiguedadMax != null ? Number(requirement.antiguedadMax) : -1;
+  const propAntiguedadAnos = property.antiguedadAnos != null ? Number(property.antiguedadAnos) : -1;
+  const propYearBuilt = property.yearBuilt != null ? Number(property.yearBuilt) : -1;
+
+  // Calcular antigüedad efectiva de la propiedad
+  let propAge = propAntiguedadAnos;
+  if (propAge < 0 && propYearBuilt > 0) {
+    propAge = new Date().getFullYear() - propYearBuilt;
+  }
+
+  if (reqAntiguedadMax >= 0 && propAge >= 0) {
+    if (propAge <= reqAntiguedadMax) {
+      earnedPoints += 4;
+      positives.push(`✅ Antigüedad: ${propAge} años (máximo pedido: ${reqAntiguedadMax} años)`);
+    } else if (propAge <= reqAntiguedadMax * 1.20) {
+      earnedPoints += 2; // Tolerancia 20%
+      negatives.push(`⚠️ Antigüedad ${propAge} años excede ligeramente el máximo pedido (${reqAntiguedadMax} años)`);
+    } else {
+      negatives.push(`Antigüedad ${propAge} años supera el máximo exigido de ${reqAntiguedadMax} años`);
+    }
+  } else if (reqAntiguedadMax < 0 && propAge >= 0) {
+    // La demanda no especifica antigüedad → crédito neutral
     earnedPoints += 3;
+    if (propAge > 0) positives.push(`ℹ️ Antigüedad de la oferta: ${propAge} años (sin restricción por la demanda)`);
+  } else {
+    // Sin datos de antigüedad en ambas partes → crédito neutral mínimo
+    earnedPoints += 2;
   }
 
   // 10. Intersección Semántica de Comodidades (Vestier 100%, Balcón/Terraza 70%, Entorno 100%/80%)

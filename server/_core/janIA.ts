@@ -2769,8 +2769,11 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
     bedrooms: data.bedrooms !== undefined && data.bedrooms !== null ? Math.round(Number(data.bedrooms)) : null,
     bathrooms: data.bathrooms !== undefined && data.bathrooms !== null ? Math.round(Number(data.bathrooms)) : null,
     garages: data.garages !== undefined && data.garages !== null ? Math.round(Number(data.garages)) : null,
+    garageType: data.garageType || null, // "independiente" | "lineal" | "mixto" | null (v20.0)
     stratum: data.stratum !== undefined && data.stratum !== null ? Math.round(Number(data.stratum)) : null,
     adminFee: data.adminFee !== undefined && data.adminFee !== null ? String(data.adminFee) : null,
+    yearBuilt: data.yearBuilt !== undefined && data.yearBuilt !== null ? Math.round(Number(data.yearBuilt)) : null,
+    antiguedadAnos: data.antiguedadAnos !== undefined && data.antiguedadAnos !== null ? Math.round(Number(data.antiguedadAnos)) : null,
     agentId: user ? user.id : null,
     latitude: data.latitude !== undefined && data.latitude !== null ? String(data.latitude) : null,
     longitude: data.longitude !== undefined && data.longitude !== null ? String(data.longitude) : null,

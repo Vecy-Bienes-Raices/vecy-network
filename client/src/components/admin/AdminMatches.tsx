@@ -227,23 +227,29 @@ function scoreRows(req: any, prop: any) {
     <DollarSign className="w-3.5 h-3.5" />
   );
 
-  // 5. Área Total
+  // 5. Área Total — Campana de Tolerancia v20.0 (-5% bloqueo, 0-15% confort, +15% advertencia)
   const areaR = parseFloat(req.areaMin || "0");
   const areaP = parseFloat(prop.areaTotal || prop.areaPrivate || "0");
   let areS: MatchStatus = "neutral";
-  if (areaR > 0) {
-    areS = (areaP > 0 && areaP === areaR) ? "exact" : "warn";
+  let areaPropLabel = areaP > 0 ? `${areaP} m²` : "N/E";
+  if (areaR > 0 && areaP > 0) {
+    if (areaP < areaR * 0.95)        areS = "missing"; // Zona Roja: bloqueado por motor
+    else if (areaP > areaR * 1.15)   { areS = "warn"; areaPropLabel = `${areaP} m² ⚠️ (+${Math.round((areaP/areaR-1)*100)}% más grande)`; }
+    else                              areS = "exact";  // Zona Confort
+  } else if (areaR === 0) {
+    areS = "neutral";
   }
-  const reqAreaLabel = areaR > 0 ? `≥ ${req.areaMin} m²` : "Sin restricción";
+  const reqAreaLabel = areaR > 0 ? `≥ ${req.areaMin} m² (±15%)` : "Sin restricción";
 
   add(
-    "Área Total", 
-    reqAreaLabel, 
-    areaP > 0 ? `${areaP} m²` : "N/E", 
-    areS, 
-    10, 
+    "Área Total",
+    reqAreaLabel,
+    areaPropLabel,
+    areS,
+    10,
     <Ruler className="w-3.5 h-3.5" />
   );
+
 
   // 6. Habitaciones
   const bedR = req.habitacionesMin ? Number(req.habitacionesMin) : 0;
@@ -277,21 +283,42 @@ function scoreRows(req: any, prop: any) {
     <Bath className="w-3.5 h-3.5" />
   );
 
-  // 8. Parqueaderos
+  // 8. Parqueaderos v20.0 — Cantidad + Tipo de Garaje (independiente / lineal)
   const garR = req.parqueaderosMin ? Number(req.parqueaderosMin) : 0;
   const garP = prop.garages ? Number(prop.garages) : 0;
+  const garType = (prop.garageType || "").toLowerCase();
+  const reqRawTextLower = (req.rawText || "").toLowerCase();
+  const reqWantsIndep = reqRawTextLower.includes("independiente") || reqRawTextLower.includes("libre") || reqRawTextLower.includes("no lineal");
+
   let garS: MatchStatus = "neutral";
+  let garPropLabel = garP > 0 ? `${garP} garaje${garP > 1 ? "s" : ""}` : "N/E";
+
+  if (garType === "independiente")  garPropLabel += " (✅ Independiente)";
+  else if (garType === "lineal")    garPropLabel += " (⚠️ Lineal)";
+  else if (garType === "mixto")     garPropLabel += " (🔄 Mixto)";
+
   if (garR > 0) {
-    garS = (garP === garR) ? "exact" : "warn";
+    if (garP < garR) {
+      garS = "missing";
+    } else if (reqWantsIndep && garType === "lineal") {
+      garS = "warn"; // Tiene parqueadero pero es lineal cuando pide independiente
+    } else {
+      garS = "exact";
+    }
   }
+  const garReqLabel = garR > 0
+    ? `≥ ${garR} ${reqWantsIndep ? "(Independiente)" : "garaje"}${garR > 1 ? "s" : ""}`
+    : "Sin restricción";
+
   add(
-    "Parqueaderos", 
-    garR > 0 ? `≥ ${garR} garajes` : "Sin restricción", 
-    garP > 0 ? `${garP} garajes` : "N/E", 
-    garS, 
-    5, 
+    "Parqueaderos",
+    garReqLabel,
+    garPropLabel,
+    garS,
+    5,
     <Car className="w-3.5 h-3.5" />
   );
+
 
   // 9. Estrato
   const estratoArr: number[] = Array.isArray(req.estratoDeseado) ? req.estratoDeseado
@@ -329,26 +356,33 @@ function scoreRows(req: any, prop: any) {
     <Receipt className="w-3.5 h-3.5" />
   );
 
-  // 11. Antigüedad / Año de Construcción
+  // 11. Antigüedad / Año de Construcción — v20.0 con tolerancia 20%
   const ageR = req.antiguedadMax ? Number(req.antiguedadMax) : (req.preferredAge ? Number(req.preferredAge) : 0);
-  const ageP = prop.antiguedadAnos != null ? Number(prop.antiguedadAnos) : (prop.yearBuilt ? (new Date().getFullYear() - Number(prop.yearBuilt)) : (prop.constructionYear ? (new Date().getFullYear() - Number(prop.constructionYear)) : -1));
+  const ageP = prop.antiguedadAnos != null ? Number(prop.antiguedadAnos)
+    : (prop.yearBuilt ? (new Date().getFullYear() - Number(prop.yearBuilt))
+    : (prop.constructionYear ? (new Date().getFullYear() - Number(prop.constructionYear)) : -1));
 
   let ageS: MatchStatus = "neutral";
   if (ageR > 0 && ageP >= 0) {
-    ageS = (ageP <= ageR) ? "exact" : "warn";
+    if (ageP <= ageR)              ageS = "exact";
+    else if (ageP <= ageR * 1.20) ageS = "warn";    // Tolerancia 20%
+    else                           ageS = "missing"; // Supera max con margen
   }
 
-  const reqAgeLabel = ageR > 0 ? `≤ ${ageR} años` : "Sin restricción";
-  const propAgeLabel = ageP >= 0 ? (ageP === 0 ? "Nuevo (0 años)" : `${ageP} años (${new Date().getFullYear() - ageP})`) : "N/E";
+  const reqAgeLabel = ageR > 0 ? `≤ ${ageR} años de construcción` : "Sin restricción";
+  const propAgeLabel = ageP >= 0
+    ? (ageP === 0 ? "🏗️ Obra nueva" : `${ageP} años${prop.yearBuilt ? ` (${prop.yearBuilt})` : ""}`)
+    : "N/E";
 
   add(
-    "Antigüedad / Año", 
-    reqAgeLabel, 
-    propAgeLabel, 
-    ageS, 
-    5, 
+    "Antigüedad / Año",
+    reqAgeLabel,
+    propAgeLabel,
+    ageS,
+    5,
     <Calendar className="w-3.5 h-3.5" />
   );
+
 
   const autoScore = max > 0 ? Math.round((pts / max) * 100) : 0;
   return { rows, autoScore };
