@@ -180,13 +180,36 @@ function scoreRows(req: any, prop: any) {
     (reqZona.includes(o) && !propZona.includes(o)) || (!reqZona.includes(o) && propZona.includes(o))
   );
 
+  // Detección de perímetro numérico (Calles / Carreras)
+  const reqFullText = `${req.zonaDeseada || ''} ${req.rawText || ''}`.toLowerCase();
+  const propFullText = `${prop.zone || ''} ${prop.rawText || ''}`.toLowerCase();
+  
+  const reqStreetMatch = reqFullText.match(/(?:entre|de|cll|calle|calles)\s*:?\s*(\d{1,3})\s*(?:a|y|-|hasta)\s*(\d{1,3})/i);
+  const propStreetMatch = propFullText.match(/(?:calle|cll|cll\.)\s*(\d{1,3})/i);
+
+  let isOutStreetBounds = false;
+  let boundaryLabel = '';
+
+  if (reqStreetMatch && propStreetMatch) {
+    const minS = Math.min(parseInt(reqStreetMatch[1]), parseInt(reqStreetMatch[2]));
+    const maxS = Math.max(parseInt(reqStreetMatch[1]), parseInt(reqStreetMatch[2]));
+    const pS = parseInt(propStreetMatch[1]);
+    if (pS < minS || pS > maxS) {
+      isOutStreetBounds = true;
+      boundaryLabel = `Calle ${minS}-${maxS}`;
+    }
+  }
+
   const ciudadMatch = !reqCiudad || propCiudad.includes(reqCiudad) || reqCiudad.includes(propCiudad) || reqCiudad === "colombia";
   const zonaMatch = !reqZona || propZona.includes(reqZona) || reqZona.includes(propZona) || reqZona.includes("aledaños") || reqZona.includes("aledanos");
   
-  let geoStatus: MatchStatus = ciudadMatch && zonaMatch ? "exact" : ciudadMatch ? "warn" : "missing";
+  let geoStatus: MatchStatus = (ciudadMatch && zonaMatch && !isOutStreetBounds) ? "exact" : ciudadMatch ? "warn" : "missing";
   let propZoneLabel = `${prop.zone || "N/E"}, ${prop.city || "Bogotá"}`;
   
-  if (isDiffSubBarrio && !reqZona.includes("aledanos") && !reqZona.includes("aledaños")) {
+  if (isOutStreetBounds) {
+    geoStatus = "missing";
+    propZoneLabel += ` ❌ (Fuera de Perímetro: ${boundaryLabel})`;
+  } else if (isDiffSubBarrio && !reqZona.includes("aledanos") && !reqZona.includes("aledaños")) {
     geoStatus = "missing";
     propZoneLabel += " ❌ (Diferente Sub-barrio)";
   }

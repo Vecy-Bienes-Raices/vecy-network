@@ -228,6 +228,11 @@ El motor VECY-MATCHING cruza el campo `zone` del inmueble contra el campo `zonaD
 - Si el mensaje o PDF menciona especificaciones exactas de micro-barrio o sector (ej. "Santa Bárbara Oriental", "Santa Bárbara Occidental", "Chicó Norte III", "Chicó Reservado", "El Tesoro", "Provenza"), DEBES extraer la cadena COMPLETA Y EXACTA.
 - JAMÁS simplifiques "Santa Bárbara Oriental" a sólo "Santa Bárbara", ni "Chicó Norte III" a sólo "Chicó". Conserva la denominación exacta en `zone`, `zonaDeseada` y `addressNeighborhood`.
 
+# 🛣️ DELIMITACIÓN DE PERÍMETRO VIAL (CALLES Y CARRERAS)
+- Si el mensaje especifica 'entre calle X e Y' o 'calle X-Y' (ej. "entre calle 69 a 92", "cll 72 a 85"), extrae explícitamente `minStreet: X` y `maxStreet: Y` en la estructura de zona.
+- Si especifica 'entre circunvalar/cra A y B' (ej. "de circunvalar a cra 15"), extrae `minCarrera: A` y `maxCarrera: B` (nota: 'circunvalar' o 'los cerros' equivale a Carrera 1).
+- Si la oferta da la dirección exacta ('Calle 95 # 20' o 'cll 95 n. 20-30'), extrae `streetNumber: 95` y `carreraNumber: 20` para que el motor valide el perímetro numérico estricto.
+
 ---
 
 

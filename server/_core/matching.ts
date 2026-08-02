@@ -120,6 +120,73 @@ function checkTransactionCompatibility(reqType: string, propType: string, propAc
 }
 
 
+export interface StreetCarreraBoundaries {
+  minStreet?: number;
+  maxStreet?: number;
+  minCarrera?: number;
+  maxCarrera?: number;
+}
+
+export interface PropertyAddressNumbers {
+  street?: number;
+  carrera?: number;
+}
+
+export function parseStreetCarreraBoundaries(text: string): StreetCarreraBoundaries {
+  const norm = (text || "").toLowerCase();
+  const res: StreetCarreraBoundaries = {};
+
+  const streetRangeMatch = norm.match(/(?:entre|de|cll|calle|calles)\s*:?\s*(\d{1,3})\s*(?:a|y|-|hasta)\s*(\d{1,3})/i);
+  if (streetRangeMatch) {
+    const n1 = parseInt(streetRangeMatch[1], 10);
+    const n2 = parseInt(streetRangeMatch[2], 10);
+    if (!isNaN(n1) && !isNaN(n2)) {
+      res.minStreet = Math.min(n1, n2);
+      res.maxStreet = Math.max(n1, n2);
+    }
+  }
+
+  const carreraRangeMatch = norm.match(/(?:entre|de|cra|carrera|carreras)\s*:?\s*(circunvalar|cerros|\d{1,3})\s*(?:a|y|-|hasta)\s*(\d{1,3})/i);
+  if (carreraRangeMatch) {
+    const rawN1 = carreraRangeMatch[1];
+    const n1 = (rawN1 === "circunvalar" || rawN1 === "cerros") ? 1 : parseInt(rawN1, 10);
+    const n2 = parseInt(carreraRangeMatch[2], 10);
+    if (!isNaN(n1) && !isNaN(n2)) {
+      res.minCarrera = Math.min(n1, n2);
+      res.maxCarrera = Math.max(n1, n2);
+    }
+  }
+
+  return res;
+}
+
+export function parsePropertyAddressNumbers(text: string): PropertyAddressNumbers {
+  const norm = (text || "").toLowerCase();
+  const res: PropertyAddressNumbers = {};
+
+  const streetMatch = norm.match(/(?:calle|cll|cll\.)\s*(\d{1,3})/i);
+  if (streetMatch) {
+    const sNum = parseInt(streetMatch[1], 10);
+    if (!isNaN(sNum)) res.street = sNum;
+  }
+
+  const carreraMatch = norm.match(/(?:carrera|cra|cra\.)\s*(\d{1,3})/i);
+  if (carreraMatch) {
+    const cNum = parseInt(carreraMatch[1], 10);
+    if (!isNaN(cNum)) res.carrera = cNum;
+  }
+
+  if (streetMatch && !res.carrera) {
+    const afterNumMatch = norm.match(/#\s*(\d{1,3})/);
+    if (afterNumMatch) {
+      const cNum = parseInt(afterNumMatch[1], 10);
+      if (!isNaN(cNum)) res.carrera = cNum;
+    }
+  }
+
+  return res;
+}
+
 export function matchesGeography(
   reqZoneRaw: string,
   propZoneRaw: string,
@@ -138,6 +205,22 @@ export function matchesGeography(
   // 1. SIEMPRE: Municipio / Ciudad exacto es obligatorio (Filtro duro)
   if (reqCity && propCity && reqCity !== propCity) {
     return { matches: false, score: 0 };
+  }
+
+  // 1.3 Delimitación de Perímetro Vial (Calles y Carreras - Bounding Box Guard)
+  const reqBoundaries = parseStreetCarreraBoundaries(`${reqZoneRaw} ${reqLocRaw}`);
+  const propNumbers = parsePropertyAddressNumbers(propZoneRaw);
+
+  if (propNumbers.street && reqBoundaries.minStreet && reqBoundaries.maxStreet) {
+    if (propNumbers.street < reqBoundaries.minStreet || propNumbers.street > reqBoundaries.maxStreet) {
+      return { matches: false, score: 0 };
+    }
+  }
+
+  if (propNumbers.carrera && reqBoundaries.minCarrera && reqBoundaries.maxCarrera) {
+    if (propNumbers.carrera < reqBoundaries.minCarrera || propNumbers.carrera > reqBoundaries.maxCarrera) {
+      return { matches: false, score: 0 };
+    }
   }
 
   // Si no se especifica barrio/zona ni localidad en el requerimiento, pasa
