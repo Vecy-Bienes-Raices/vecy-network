@@ -239,7 +239,7 @@ function scoreRows(req: any, prop: any) {
   } else if (areaR === 0) {
     areS = "neutral";
   }
-  const reqAreaLabel = areaR > 0 ? `≥ ${req.areaMin} m² (±15%)` : "Sin restricción";
+  const reqAreaLabel = areaR > 0 ? `≥ ${req.areaMin} m² (±15%)` : "Pendiente de Inducción 🔍";
 
   add(
     "Área Total",
@@ -250,45 +250,71 @@ function scoreRows(req: any, prop: any) {
     <Ruler className="w-3.5 h-3.5" />
   );
 
-
-  // 6. Habitaciones
-  const bedR = req.habitacionesMin ? Number(req.habitacionesMin) : 0;
+  // Inferencia inteligente de restricciones faltantes en el requerimiento
+  const reqTextLower = (req.rawText || "").toLowerCase();
+  
+  // 6. Habitaciones (con inferencia por regex)
+  let bedR = req.habitacionesMin ? Number(req.habitacionesMin) : 0;
+  let bedInferred = false;
+  if (bedR <= 0 && reqTextLower) {
+    const m = reqTextLower.match(/(\d+(?:\s*-\s*\d+)?)\s*(?:hab|habitaciones|alcoba|alcobas|alc|dormitorio)/i);
+    if (m) { bedR = parseInt(m[1].split("-")[0].trim(), 10); bedInferred = true; }
+  }
   const bedP = prop.bedrooms ? Number(prop.bedrooms) : 0;
   let bedS: MatchStatus = "neutral";
   if (bedR > 0) {
-    bedS = (bedP === bedR) ? "exact" : "warn";
+    bedS = (bedP >= bedR) ? "exact" : "warn";
   }
+  const reqBedLabel = bedR > 0 
+    ? `${bedR} hab.${bedInferred ? " (Inferido 🔍)" : ""}` 
+    : "Pendiente de Inducción 🔍";
+
   add(
     "Habitaciones", 
-    bedR > 0 ? `${bedR} hab.` : "Sin restricción", 
+    reqBedLabel, 
     bedP > 0 ? `${bedP} hab.` : "N/E", 
     bedS, 
     8, 
     <Bed className="w-3.5 h-3.5" />
   );
 
-  // 7. Baños
-  const bathR = req.banosMin ? Number(req.banosMin) : 0;
+  // 7. Baños (con soporte decimal 1.5 e inferencia por regex)
+  let bathR = req.banosMin ? Number(req.banosMin) : 0;
+  let bathInferred = false;
+  if (bathR <= 0 && reqTextLower) {
+    const m = reqTextLower.match(/(\d+(?:\.\d+)?)\s*(?:o\s*más\s*)?(?:wc|baño|baños|bñ)/i)
+           || reqTextLower.match(/(\d+)\s*hab\s*con\s*baño/i);
+    if (m) { bathR = parseFloat(m[1]); bathInferred = true; }
+  }
   const bathP = prop.bathrooms ? Number(prop.bathrooms) : 0;
   let bathS: MatchStatus = "neutral";
   if (bathR > 0) {
-    bathS = (bathP === bathR) ? "exact" : "warn";
+    bathS = (bathP >= bathR) ? "exact" : "warn";
   }
+  const reqBathLabel = bathR > 0 
+    ? `≥ ${bathR} baño${bathR > 1 ? "s" : ""}${bathInferred ? " (Inferido 🔍)" : ""}` 
+    : "Pendiente de Inducción 🔍";
+
   add(
     "Baños", 
-    bathR > 0 ? `≥ ${bathR} baños` : "Sin restricción", 
-    bathP > 0 ? `${bathP} baños` : "N/E", 
+    reqBathLabel, 
+    bathP > 0 ? `${bathP} baño${bathP > 1 ? "s" : ""}` : "N/E", 
     bathS, 
     5, 
     <Bath className="w-3.5 h-3.5" />
   );
 
-  // 8. Parqueaderos v20.0 — Cantidad + Tipo de Garaje (independiente / lineal)
-  const garR = req.parqueaderosMin ? Number(req.parqueaderosMin) : 0;
+  // 8. Parqueaderos (con inferencia por regex + tipo de garaje)
+  let garR = req.parqueaderosMin ? Number(req.parqueaderosMin) : 0;
+  let garInferred = false;
+  if (garR <= 0 && reqTextLower) {
+    const m = reqTextLower.match(/(?:parqueadero|parqueaderos|garaje|garajes|ptero|g\.)\s*\.?\s*(\d+)/i)
+           || reqTextLower.match(/(\d+)\s*(?:parqueadero|parqueaderos|garaje|garajes|ptero|g\.|individuales)/i);
+    if (m) { garR = parseInt(m[1], 10); garInferred = true; }
+  }
   const garP = prop.garages ? Number(prop.garages) : 0;
   const garType = (prop.garageType || "").toLowerCase();
-  const reqRawTextLower = (req.rawText || "").toLowerCase();
-  const reqWantsIndep = reqRawTextLower.includes("independiente") || reqRawTextLower.includes("libre") || reqRawTextLower.includes("no lineal");
+  const reqWantsIndep = reqTextLower.includes("independiente") || reqTextLower.includes("libre") || reqTextLower.includes("no lineal");
 
   let garS: MatchStatus = "neutral";
   let garPropLabel = garP > 0 ? `${garP} garaje${garP > 1 ? "s" : ""}` : "N/E";
@@ -301,14 +327,14 @@ function scoreRows(req: any, prop: any) {
     if (garP < garR) {
       garS = "missing";
     } else if (reqWantsIndep && garType === "lineal") {
-      garS = "warn"; // Tiene parqueadero pero es lineal cuando pide independiente
+      garS = "warn";
     } else {
       garS = "exact";
     }
   }
   const garReqLabel = garR > 0
-    ? `≥ ${garR} ${reqWantsIndep ? "(Independiente)" : "garaje"}${garR > 1 ? "s" : ""}`
-    : "Sin restricción";
+    ? `≥ ${garR} ${reqWantsIndep ? "(Indep.)" : "garaje"}${garR > 1 ? "s" : ""}${garInferred ? " (Inferido 🔍)" : ""}`
+    : "Pendiente de Inducción 🔍";
 
   add(
     "Parqueaderos",
@@ -318,6 +344,7 @@ function scoreRows(req: any, prop: any) {
     5,
     <Car className="w-3.5 h-3.5" />
   );
+
 
 
   // 9. Estrato
@@ -339,18 +366,31 @@ function scoreRows(req: any, prop: any) {
     <Shield className="w-3.5 h-3.5" />
   );
 
-  // 10. Administración
-  const reqAdminMax = req.adminFeeMax ? parseFloat(String(req.adminFeeMax)) : 0;
+  // 10. Administración (con inferencia por regex)
+  let reqAdminMax = req.adminFeeMax ? parseFloat(String(req.adminFeeMax)) : 0;
+  let adminInferred = false;
+  if (reqAdminMax <= 0 && reqTextLower) {
+    const m = reqTextLower.match(/administració?n\s*(?:alrededor\s*de|máxima?|max)?\s*\$?([\d.,]+)\s*(mil|millones|m)?/i);
+    if (m) {
+      let val = parseFloat(m[1].replace(/\./g, "").replace(/,/g, ""));
+      if (m[2] && m[2].includes("mil") && val < 10000) val *= 1000;
+      reqAdminMax = val;
+      adminInferred = true;
+    }
+  }
   const propAdminFee = prop.adminFee ? parseFloat(String(prop.adminFee)) : 0;
   let admS: MatchStatus = "neutral";
   if (reqAdminMax > 0) {
-    admS = (propAdminFee > 0 && propAdminFee === reqAdminMax) ? "exact" : "warn";
+    admS = (propAdminFee > 0 && propAdminFee <= reqAdminMax) ? "exact" : "warn";
   }
-  const reqAdminLabel = reqAdminMax > 0 ? `≤ ${formatCOP(reqAdminMax)}` : "Sin restricción";
+  const reqAdminLabel = reqAdminMax > 0 
+    ? `≤ ${formatCOP(reqAdminMax)}${adminInferred ? " (Inferido 🔍)" : ""}` 
+    : "Pendiente de Inducción 🔍";
+
   add(
     "Administración", 
     reqAdminLabel, 
-    propAdminFee > 0 ? `${formatCOP(propAdminFee)}/mes` : "Sin restricción", 
+    propAdminFee > 0 ? `${formatCOP(propAdminFee)}/mes` : "N/E", 
     admS, 
     5, 
     <Receipt className="w-3.5 h-3.5" />

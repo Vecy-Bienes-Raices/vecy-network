@@ -1651,12 +1651,11 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         if (targetJid.endsWith('@s.whatsapp.net')) {
           const rawPhone = targetJid.split('@')[0];
           const ADMIN_PHONE = process.env.ADMIN_PHONE || "573192919978";
-          const isAdmin = rawPhone.includes(ADMIN_PHONE) || 
-                          rawPhone === ADMIN_PHONE || 
-                          rawPhone === "573192919978" || 
-                          rawPhone.includes("573185462265");
+          const isAdmin = rawPhone === "573192919978" || 
+                          rawPhone === "573188096811" ||
+                          rawPhone.includes(ADMIN_PHONE);
           if (!isAdmin) {
-            console.log(`[JANIA-MATCH-SHIELD] Bloqueado envío de mensaje directo (DM) a usuario no administrador: ${targetJid}`);
+            console.log(`[JANIA-ANTI-BAN-SHIELD] 🛡️ Bloqueado envío de mensaje directo (DM) a usuario no administrador (${targetJid}). Prohibición absoluta de DMs a terceros.`);
             return;
           }
         }

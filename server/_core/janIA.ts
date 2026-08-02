@@ -2991,14 +2991,33 @@ async function saveRequirement(data: any, userId: string, realName: string) {
     tipoNegocioDeseado: sanitizeTransactionType(data.tipoNegocioDeseado || data.transactionType),
     tiposNegocioAceptados: sanitizeTransactionTypes(data.transactionTypes || data.tipoNegocioDeseado || data.transactionType),
     monedaPresupuesto: sanitizeCurrency(data.monedaPresupuesto || data.currency),
-    // Mapear campos desde el formato LLM/WhatsApp (data) a las columnas de la base de datos
+    // Mapear campos desde el formato LLM/WhatsApp (data) a las columnas de la base de datos con Fallbacks de Regex
     presupuestoMin: data.presupuestoMin !== undefined && data.presupuestoMin !== null ? String(data.presupuestoMin) : null,
     presupuestoMax: data.presupuestoMax !== undefined && data.presupuestoMax !== null ? String(data.presupuestoMax) : (data.price !== undefined && data.price !== null ? String(data.price) : null),
     areaMin: data.areaMin !== undefined && data.areaMin !== null ? String(data.areaMin) : (data.area !== undefined && data.area !== null ? String(data.area) : null),
     adminFeeMax: data.adminFeeMax !== undefined && data.adminFeeMax !== null ? String(data.adminFeeMax) : (data.adminFee !== undefined && data.adminFee !== null ? String(data.adminFee) : null),
-    habitacionesMin: data.habitacionesMin !== undefined && data.habitacionesMin !== null ? Math.round(Number(data.habitacionesMin)) : (data.bedrooms !== undefined && data.bedrooms !== null ? Math.round(Number(data.bedrooms)) : null),
-    banosMin: data.banosMin !== undefined && data.banosMin !== null ? Math.round(Number(data.banosMin)) : (data.bathrooms !== undefined && data.bathrooms !== null ? Math.round(Number(data.bathrooms)) : null),
-    parqueaderosMin: data.parqueaderosMin !== undefined && data.parqueaderosMin !== null ? Math.round(Number(data.parqueaderosMin)) : (data.garages !== undefined && data.garages !== null ? Math.round(Number(data.garages)) : null),
+    habitacionesMin: (() => {
+      const v = data.habitacionesMin !== undefined && data.habitacionesMin !== null ? Math.round(Number(data.habitacionesMin)) : (data.bedrooms !== undefined && data.bedrooms !== null ? Math.round(Number(data.bedrooms)) : null);
+      if (v !== null && !isNaN(v) && v > 0) return v;
+      const rawL = (data.rawText || "").toLowerCase();
+      const m = rawL.match(/(\d+)\s*(?:hab|habitaciones|alcoba|alcobas|alc|dormitorio)/i);
+      return m ? parseInt(m[1], 10) : null;
+    })(),
+    banosMin: (() => {
+      const v = data.banosMin !== undefined && data.banosMin !== null ? Number(data.banosMin) : (data.bathrooms !== undefined && data.bathrooms !== null ? Number(data.bathrooms) : null);
+      if (v !== null && !isNaN(v) && v > 0) return Math.round(v);
+      const rawL = (data.rawText || "").toLowerCase();
+      const m = rawL.match(/(\d+(?:\.\d+)?)\s*(?:o\s*más\s*)?(?:wc|baño|baños|bñ)/i) || rawL.match(/(\d+)\s*hab\s*con\s*baño/i);
+      return m ? Math.round(parseFloat(m[1])) : null;
+    })(),
+    parqueaderosMin: (() => {
+      const v = data.parqueaderosMin !== undefined && data.parqueaderosMin !== null ? Math.round(Number(data.parqueaderosMin)) : (data.garages !== undefined && data.garages !== null ? Math.round(Number(data.garages)) : null);
+      if (v !== null && !isNaN(v) && v > 0) return v;
+      const rawL = (data.rawText || "").toLowerCase();
+      const m = rawL.match(/(?:parqueadero|parqueaderos|garaje|garajes|ptero|g\.)\s*\.?\s*(\d+)/i)
+             || rawL.match(/(\d+)\s*(?:parqueadero|parqueaderos|garaje|garajes|ptero|g\.|individuales)/i);
+      return m ? parseInt(m[1], 10) : null;
+    })(),
     estratoDeseado: data.estratoDeseado || (data.stratum !== undefined && data.stratum !== null ? [Math.round(Number(data.stratum))] : null),
     userId: user ? user.id : null,
     caracteristicasDeseadas: characteristicsObj,
