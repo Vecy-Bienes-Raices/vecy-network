@@ -32,6 +32,7 @@ const FILTER_LABELS: Record<FilterType, string> = {
 export default function Properties() {
   const [, navigate] = useLocation();
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'default' | 'price-asc' | 'price-desc'>('default');
   const { user } = useAuth();
 
@@ -40,15 +41,29 @@ export default function Properties() {
   const displayProperties = useMemo(() => {
     if (!propertiesData) return [];
 
-    let list = activeFilter === 'all'
-      ? propertiesData
-      : propertiesData.filter((p) => p.propertyType === activeFilter);
+    let list = propertiesData;
+
+    if (activeFilter !== 'all') {
+      list = list.filter((p) => p.propertyType === activeFilter);
+    }
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      list = list.filter((p) => {
+        const zone = (p.zone || '').toLowerCase();
+        const city = (p.city || p.addressCity || '').toLowerCase();
+        const neigh = (p.addressNeighborhood || '').toLowerCase();
+        const name = (p.name || '').toLowerCase();
+        const raw = (p.rawText || '').toLowerCase();
+        return zone.includes(q) || city.includes(q) || neigh.includes(q) || name.includes(q) || raw.includes(q);
+      });
+    }
 
     if (sortBy === 'price-asc') list = [...list].sort((a, b) => Number(a.price) - Number(b.price));
     if (sortBy === 'price-desc') list = [...list].sort((a, b) => Number(b.price) - Number(a.price));
 
     return list;
-  }, [activeFilter, sortBy, propertiesData]);
+  }, [activeFilter, searchQuery, sortBy, propertiesData]);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -58,15 +73,31 @@ export default function Properties() {
       <section className="pt-40 pb-16 bg-gradient-to-b from-black to-background overflow-hidden border-b border-white/5">
         <div className="container relative z-10 text-center">
           <ScrollReveal delay={0.2}>
-            <p className="vecy-accent-tag">Catálogo Exclusivo</p>
+            <p className="vecy-accent-tag">Catálogo Inteligente Gold Edition</p>
             <h1 className="vecy-title-hero uppercase">
-              PORTAFOLIO DE <span className="text-gradient-gold">ACTIVOS</span>
+              MERCADO DE <span className="text-gradient-gold">OFERTAS & DEMANDAS</span>
             </h1>
             <p className="vecy-subtitle max-w-2xl mx-auto">
-              Descubre propiedades premium auditadas y sincronizadas bajo el estándar Gold Edition de VECY Network.
+              Descubre inventario inmobiliario auditado y requerimientos activos filtrados por micro-barrio en tiempo real.
             </p>
+            
+            {/* Dual Catalog Selector Header */}
+            <div className="mt-8 flex justify-center gap-4">
+              <button
+                className="px-6 py-3 rounded-full text-xs font-black uppercase tracking-widest bg-accent text-black shadow-[0_0_25px_rgba(255,215,0,0.4)]"
+              >
+                🏠 TIENDA DE INMUEBLES (OFERTA)
+              </button>
+              <button
+                onClick={() => navigate('/requisitos')}
+                className="px-6 py-3 rounded-full text-xs font-black uppercase tracking-widest bg-white/10 text-white hover:bg-white/20 border border-white/20 transition-all"
+              >
+                📋 TIENDA DE DEMANDAS (REQUERIMIENTOS)
+              </button>
+            </div>
+
             {user && ['admin', 'agent'].includes(user.role as string) && (
-              <div className="mt-8">
+              <div className="mt-6">
                 <button
                   onClick={() => navigate('/admin')}
                   className="btn-gold px-8 py-3 text-xs tracking-widest uppercase gap-2 inline-flex items-center"
@@ -79,7 +110,7 @@ export default function Properties() {
         </div>
       </section>
 
-      {/* Filtros y ordenamiento */}
+      {/* Filtros, Búsqueda de Micro-barrio y Ordenamiento */}
       <section className="py-8 bg-background/80 backdrop-blur-xl border-b border-white/10 sticky top-20 z-30">
         <div className="container flex flex-col lg:flex-row items-center justify-between gap-6">
           <ScrollReveal direction="none" delay={0.1}>
@@ -100,20 +131,41 @@ export default function Properties() {
             </div>
           </ScrollReveal>
 
-          <ScrollReveal direction="none" delay={0.2}>
-            <div className="flex items-center gap-4 bg-white/5 px-4 py-2 rounded-xl border border-white/10">
-              <span className="text-[10px] text-gray-500 uppercase tracking-widest font-black">Ordenar:</span>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-                className="bg-transparent text-gray-300 text-xs font-bold focus:outline-none cursor-pointer"
-              >
-                <option value="default" className="bg-card">Destacados</option>
-                <option value="price-asc" className="bg-card">Menor precio</option>
-                <option value="price-desc" className="bg-card">Mayor precio</option>
-              </select>
+          <div className="flex flex-col sm:flex-row items-center gap-4 w-full lg:w-auto">
+            {/* Buscador de Micro-barrio */}
+            <div className="relative w-full sm:w-72">
+              <input
+                type="text"
+                placeholder="Buscar micro-barrio (ej. Chicó Norte III, Rosales)..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-amber-400/50 transition-colors"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-2.5 text-gray-500 hover:text-white text-xs"
+                >
+                  ✕
+                </button>
+              )}
             </div>
-          </ScrollReveal>
+
+            <ScrollReveal direction="none" delay={0.2}>
+              <div className="flex items-center gap-4 bg-white/5 px-4 py-2 rounded-xl border border-white/10">
+                <span className="text-[10px] text-gray-500 uppercase tracking-widest font-black">Ordenar:</span>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                  className="bg-transparent text-gray-300 text-xs font-bold focus:outline-none cursor-pointer"
+                >
+                  <option value="default" className="bg-card">Destacados</option>
+                  <option value="price-asc" className="bg-card">Menor precio</option>
+                  <option value="price-desc" className="bg-card">Mayor precio</option>
+                </select>
+              </div>
+            </ScrollReveal>
+          </div>
         </div>
       </section>
 
