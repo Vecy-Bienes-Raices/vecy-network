@@ -703,8 +703,14 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
       if (propRent > 0) {
         const adminVal = pAdminFee > 0 ? pAdminFee : 0;
         const totalRent = propRent + adminVal;
-        if (totalRent > budgetMax) {
+        if (totalRent > budgetMax * 1.02) {
           blockers.push(`Canon de arriendo total ($${totalRent.toLocaleString()}) supera el presupuesto máximo de $${budgetMax.toLocaleString()}`);
+          return buildExplanationResult(0, blockers, positives, negatives);
+        }
+        const reqRentMin = requirement.presupuestoMin ? parseFloat(String(requirement.presupuestoMin)) : 0;
+        const minRentAllowed = reqRentMin > 0 ? reqRentMin * 0.85 : budgetMax * 0.60;
+        if (minRentAllowed > 0 && totalRent < minRentAllowed) {
+          blockers.push(`Incompatibilidad de canon: $${totalRent.toLocaleString()} es inferior al piso buscado ($${minRentAllowed.toLocaleString()})`);
           return buildExplanationResult(0, blockers, positives, negatives);
         }
       }
@@ -734,9 +740,28 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
           }
         }
       }
-      if (salePrice > 0 && salePrice > budgetMax) {
-        blockers.push(`Precio de venta $${salePrice.toLocaleString()} supera el presupuesto máximo de $${budgetMax.toLocaleString()}`);
-        return buildExplanationResult(0, blockers, positives, negatives);
+      // ── Para Ventas: Filtro Duro de Rango Financiero (Piso y Techo) ──────────
+      if (salePrice > 0) {
+        // Techo: Si supera el presupuesto máximo (+5% tolerancia) → 0% Bloqueo
+        if (salePrice > budgetMax * 1.05) {
+          blockers.push(`Precio de venta $${salePrice.toLocaleString()} supera el presupuesto máximo de $${budgetMax.toLocaleString()}`);
+          return buildExplanationResult(0, blockers, positives, negatives);
+        }
+
+        // Piso Financiero: Determinar el límite inferior para evitar choque de gama
+        const reqBudgetMin = requirement.presupuestoMin ? parseFloat(String(requirement.presupuestoMin)) : 0;
+        let minAllowedPrice = 0;
+
+        if (reqBudgetMin > 0) {
+          minAllowedPrice = reqBudgetMin * 0.85; // Si exige mínimo, tolerancia -15%
+        } else if (budgetMax > 0) {
+          minAllowedPrice = budgetMax * 0.65; // Piso por defecto: 65% del presupuesto máximo
+        }
+
+        if (minAllowedPrice > 0 && salePrice < minAllowedPrice) {
+          blockers.push(`Incompatibilidad de gama financiera: Precio $${salePrice.toLocaleString()} es significativamente inferior al rango buscado (piso: $${minAllowedPrice.toLocaleString()})`);
+          return buildExplanationResult(0, blockers, positives, negatives);
+        }
       }
     }
   }
