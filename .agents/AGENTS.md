@@ -11,9 +11,13 @@
 - **Fundadores**: Eduardo A. Rivera (Director Tecnología) + Jani Alves (Directora Operaciones)
 - **Repositorio**: `Vecy-Bienes-Raices/vecy-network` en GitHub
 - **Workspace local**: `/home/eddu/Proyectos/vecy-network`
-- **Servidor**: VPS con PM2 (número WhatsApp JanIA: +573166569719)
+- **Servidor**: VPS con PM2
+- **Número WhatsApp JanIA ACTIVO**: **+573192919978** (número de Eduardo)
 - **Base de datos**: Supabase (PostgreSQL)
 - **Web pública**: vecy.co
+- **Admin panel**: https://vecy-network.vercel.app/admin
+
+> ⛔ **NÚMERO BANEADO — JAMÁS MENCIONAR**: +573166569719 fue baneado permanentemente por WhatsApp. NO usar este número en ningún contexto, código, comentario ni conversación. El sistema opera EXCLUSIVAMENTE con +573192919978.
 
 ---
 
@@ -25,9 +29,9 @@ Framework:   tRPC (routers en server/routers/)
 ORM:         Drizzle ORM → drizzle/schema.ts
 Base datos:  Supabase (PostgreSQL)
 IA:          Google Gemini 2.5 Flash (via @google/generative-ai)
-WhatsApp:    Baileys (WebSocket nativo — NO Puppeteer)
-Frontend:    React + Vite (client/)
-Deploy:      PM2 en VPS Linux
+WhatsApp:    Baileys (WebSocket nativo — NO Puppeteer) — VPS vía PM2
+Frontend:    React + Vite (client/) — Deploy en Vercel
+Deploy:      PM2 en VPS Linux (backend) + Vercel (frontend)
 ```
 
 **Archivos críticos:**
@@ -35,7 +39,7 @@ Deploy:      PM2 en VPS Linux
 | Archivo | Función |
 |---|---|
 | `server/_core/janIA.ts` | Cerebro de JanIA: extracción, clasificación, inserción en BD |
-| `server/_core/matching.ts` | Motor de matching propiedades ↔ requerimientos (v17.2) |
+| `server/_core/matching.ts` | Motor de matching propiedades ↔ requerimientos (v20.0) |
 | `server/_core/llm.ts` | Cliente de Google Gemini (invocar LLM) |
 | `server/_core/whatsapp-match.ts` | Escucha de Baileys y despacho de mensajes |
 | `drizzle/schema.ts` | Esquema de BD (fuente de verdad de tipos) |
@@ -58,7 +62,7 @@ Deploy:      PM2 en VPS Linux
 
 ---
 
-## 🗄️ ESQUEMA BD — Estado actual v17.2
+## 🗄️ ESQUEMA BD — Estado actual v20.0
 
 ### Enum `transactionType` (COMPLETO)
 ```
@@ -70,6 +74,14 @@ arriendo_con_opcion_de_compra → Arrendatario con derecho de compra (REGLA DOCT
 permuta                       → Intercambio puro de bienes
 venta_permuta                 → Venta + parte en bien (inmueble/vehículo)
 aporte                        → Aporte a proyecto de construcción
+```
+
+### Columnas clave en tabla `properties` (v20.0)
+```
+garageType     TEXT nullable  → "independiente" | "lineal" | "mixto" | null  ← NUEVA v20.0
+yearBuilt      INTEGER        → Año de construcción
+antiguedadAnos INTEGER        → Años de antigüedad
+rentPrice      DECIMAL        → Canon de arriendo (distinto de price = precio venta)
 ```
 
 ---
@@ -84,27 +96,44 @@ Función `checkTransactionCompatibility()` en `server/_core/matching.ts`:
 - **`Venta` ↔ `Venta`, `Venta o Arriendo`, `Venta/Permuta`, `Arriendo con opción de compra`** → ✅ **100% POSIBLE / OK**
 
 > ⚠️ **REGLA CRÍTICA DOCTRINAL (v17.2/v17.3)**: `arriendo_con_opcion_de_compra` **JAMÁS coincide con `arriendo` puro**.
-> Únicamente coincide con `arriendo_con_opcion_de_compra`, `venta_o_arriendo` y `venta` pura (ya que quien busca o tiene opción de compra sí está dispuesto a vender o comprar directamente).
 
 ---
 
----
+## 📐 VECY MATCHING THRESHOLD (85% - 100%) — v20.0 DOCTRINAL
 
-## 📐 VECY MATCHING THRESHOLD (85% - 100%) — v17.3 DOCTRINAL
+### Distribución de pesos (total = 100 pts siempre)
+```
+Tipo Inmueble  → 15 pts
+Tipo Negocio   → 15 pts
+Ubicación      → 20 pts
+Presupuesto    → 15 pts
+Área Total     → 10 pts
+Habitaciones   → 10 pts
+Baños          →  4 pts  (redistribuido en v20.0)
+Parqueaderos   →  4 pts  (redistribuido en v20.0)
+Estrato        →  3 pts  (redistribuido en v20.0)
+Antigüedad     →  4 pts  (NUEVO en v20.0)
+TOTAL          → 100 pts ✅
+```
 
-- **Filtros Duros Inquebrantables (Score 0% si falla)**:
-  - `transactionType`: `arriendo` vs `venta` → ❌ **BLOQUEADO (0%)**.
-  - `areaTotal`: Metraje ofrecido NUNCA puede ser menor al mínimo exigido (`propArea >= reqAreaMin * 0.98`). Si es menor o N/E cuando se exige → ❌ **BLOQUEADO (0%)**.
-  - `propertyType`: Incompatible o subtipos distintos (ej. Apartamento vs Apartaestudio vs Loft) → ❌ **BLOQUEADO (0%)**.
-  - `ubicación`: Barrio incompatible sin coletilla "aledaños" → ❌ **BLOQUEADO (0%)**.
-  - `presupuestoMax`: Canon/precio superior al máximo permitido (+2% arriendo, +5% venta) → ❌ **BLOQUEADO (0%)**.
-- **Regla del 100% Match Perfecto**:
-  - Exige que **TODOS** los campos solicitados por la demanda estén presentes, extraídos y coincidan al 100%.
-  - Cualquier campo en **`N/E` (información no especificada)** limita el puntaje máximo a **84%**, impidiendo la emisión de falsas insignias de Match Perfecto o superar el umbral mínimo VECY.
-- **Filtro Mínimo de Almacenamiento y Muestreo**: Todo Match DEBE tener un score igual o superior a **85%**. Cualquier par con score inferior a 85% es ignorado y eliminado de la BD.
-- **Alineación Visual de la Tabla de Cotejo**:
-  - Columna Izquierda: **Ofrecido (Oferta / Inmueble)**
-  - Columna Derecha: **Buscado (Demanda / Requerimiento)**
+### Filtros Duros Inquebrantables
+- `transactionType` incompatible → ❌ 0%
+- `propArea < reqAreaMin * 0.95` → ❌ 0% (piso -5%, NUEVO v20.0 — antes -2%)
+- `propertyType` incompatible → ❌ 0%
+- Barrio incompatible → ❌ 0%
+- Precio supera presupuesto máximo → ❌ 0%
+
+### Campana de Tolerancia de Área (v20.0)
+- `< reqMin * 0.95`              → Bloqueo 0%
+- `0.95 ≤ propArea ≤ 1.15`       → Zona confort — puntaje completo (10 pts)
+- `> reqMin * 1.15`              → Pasa con advertencia "Inmueble significativamente más grande (+X%)"
+
+### Auditoría de Confort de Parqueaderos (v20.0)
+- Garaje lineal cuando se pide independiente → 40% del atributo + negativa informativa
+- Garaje independiente excedente → 4 pts + positivo de bono de confort
+
+### Umbral mínimo VECY
+- Score ≥ 85% para almacenar. Por debajo → descartado.
 
 ---
 
@@ -117,8 +146,14 @@ Función `checkTransactionCompatibility()` en `server/_core/matching.ts`:
 JanIA extrae de TODOS los grupos.
 
 ### 3. Nginx Connection Upgrade Proxy Bug — RESUELTO en Nginx VPS
-Nginx forzaba `Connection: upgrade` en peticiones HTTP normales produciendo congelamientos de 110s en `/login` y `/admin`. Resuelto mediante `map $http_upgrade $connection_upgrade`.
+Nginx forzaba `Connection: upgrade` en peticiones HTTP normales → congelamiento 110s. Resuelto con `map $http_upgrade $connection_upgrade`.
+
+### 4. Alias priceRent → rentPrice — RESUELTO en matching.ts (v18.0)
+Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
+
+### 5. Número WhatsApp baneado — HISTÓRICO
+El número +573166569719 fue baneado permanentemente. Solo aparece en docs históricos como registro. El sistema opera con **+573192919978** exclusivamente.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v17.3 — Julio 2026
+## 🔖 VERSIÓN ACTUAL: v20.0 — Agosto 2026
