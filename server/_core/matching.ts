@@ -145,6 +145,26 @@ export function matchesGeography(
     return { matches: true, score: 25 }; // Todo el municipio pasa
   }
 
+  // 1.5 Guard de Sub-barrios y Micro-sectores Estrictos (v20.0 Precisión Catastral)
+  const tieneAledanosInicial = hasAledanos(reqZoneRaw);
+  if (reqZone && propZone && !tieneAledanosInicial) {
+    const s1 = reqZone.toLowerCase();
+    const s2 = propZone.toLowerCase();
+    
+    const orientaciones = ["oriental", "occidental", "norte", "sur", "alta", "alto", "baja", "bajo", "reservado", " central"];
+    const tieneDiffOrientacion = orientaciones.some(o => 
+      (s1.includes(o) && !s2.includes(o)) || (!s1.includes(o) && s2.includes(o))
+    );
+
+    const tieneNum1 = s1.match(/\b(i|ii|iii|iv|v|1|2|3|4)\b/);
+    const tieneNum2 = s2.match(/\b(i|ii|iii|iv|v|1|2|3|4)\b/);
+    const diffNum = tieneNum1 && tieneNum2 && tieneNum1[0] !== tieneNum2[0];
+
+    if (tieneDiffOrientacion || diffNum) {
+      return { matches: false, score: 0 };
+    }
+  }
+
   // 2. Definimos las equivalencias de zonas coloquiales (F4)
   const equivalenciasZonas: Record<string, string[]> = {
     "las santas": [

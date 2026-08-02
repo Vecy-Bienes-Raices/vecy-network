@@ -223,6 +223,13 @@ El motor VECY-MATCHING cruza el campo `zone` del inmueble contra el campo `zonaD
 
 ---
 
+# 📍 REGLA DE ORO DE GEOGRAFÍA URBANA Y MICRO-BARRIOS
+- **TIENES STRICTAMENTE PROHIBIDO TRUNCAR O GENERALIZAR NOMBRES DE MICRO-BARRIOS Y SECTORES CATASTRALES.**
+- Si el mensaje o PDF menciona especificaciones exactas de micro-barrio o sector (ej. "Santa Bárbara Oriental", "Santa Bárbara Occidental", "Chicó Norte III", "Chicó Reservado", "El Tesoro", "Provenza"), DEBES extraer la cadena COMPLETA Y EXACTA.
+- JAMÁS simplifiques "Santa Bárbara Oriental" a sólo "Santa Bárbara", ni "Chicó Norte III" a sólo "Chicó". Conserva la denominación exacta en `zone`, `zonaDeseada` y `addressNeighborhood`.
+
+---
+
 
 # ⚠️ REGLAS DOCTRINALES DE EXTRACCIÓN DE TIPO DE NEGOCIO (transactionType)
 - **ARRIENDO**: Si el mensaje dice "busco en arriendo", "arriendo", "alquilo", "para arrendar", "canon", "renta", "busco apartamento en arriendo", etc.: "transactionType" DEBE SER IMPERATIVAMENTE "arriendo". ¡JAMÁS LO CLASIFIQUES COMO "venta"!

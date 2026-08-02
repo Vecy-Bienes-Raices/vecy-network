@@ -174,13 +174,27 @@ function scoreRows(req: any, prop: any) {
   const propZona = cleanText(prop.zone || prop.addressNeighborhood || "");
   const reqCiudad = cleanText(req.ciudadDeseada || "bogotá");
   const propCiudad = cleanText(prop.city || "bogotá");
+
+  const subSectores = ["oriental", "occidental", "norte", "sur", "alta", "alto", "baja", "bajo", "reservado", "iii", "ii", "i"];
+  const isDiffSubBarrio = reqZona && propZona && subSectores.some(o => 
+    (reqZona.includes(o) && !propZona.includes(o)) || (!reqZona.includes(o) && propZona.includes(o))
+  );
+
   const ciudadMatch = !reqCiudad || propCiudad.includes(reqCiudad) || reqCiudad.includes(propCiudad) || reqCiudad === "colombia";
   const zonaMatch = !reqZona || propZona.includes(reqZona) || reqZona.includes(propZona) || reqZona.includes("aledaños") || reqZona.includes("aledanos");
-  const geoStatus: MatchStatus = ciudadMatch && zonaMatch ? "exact" : ciudadMatch ? "warn" : "missing";
+  
+  let geoStatus: MatchStatus = ciudadMatch && zonaMatch ? "exact" : ciudadMatch ? "warn" : "missing";
+  let propZoneLabel = `${prop.zone || "N/E"}, ${prop.city || "Bogotá"}`;
+  
+  if (isDiffSubBarrio && !reqZona.includes("aledanos") && !reqZona.includes("aledaños")) {
+    geoStatus = "missing";
+    propZoneLabel += " ❌ (Diferente Sub-barrio)";
+  }
+
   add(
     "Ubicación / Barrio", 
     `${req.zonaDeseada || "Cualquiera"}, ${req.ciudadDeseada || "Bogotá"}`, 
-    `${prop.zone || "N/E"}, ${prop.city || "Bogotá"}`, 
+    propZoneLabel, 
     geoStatus, 
     20, 
     <MapPin className="w-3.5 h-3.5" />
