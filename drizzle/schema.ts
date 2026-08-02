@@ -428,3 +428,18 @@ export const userBehavioralFingerprints = pgTable("user_behavioral_fingerprints"
 
 export type UserBehavioralFingerprint = typeof userBehavioralFingerprints.$inferSelect;
 export type InsertUserBehavioralFingerprint = typeof userBehavioralFingerprints.$inferInsert;
+
+/**
+ * Patrones y Preferencias de Cierre de Agentes (userPatterns) - v20.0 Big Tech Memory
+ */
+export const userPatterns = pgTable("user_patterns", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").references(() => users.id),
+  favoriteZones: jsonb("favorite_zones"),
+  avgClosingUrgency: integer("avg_urgency").default(50),
+  preferredAssetClass: varchar("preferred_class", { length: 50 }), // 'apartment' | 'house' | 'warehouse' | 'commercial'
+  updatedAt: timestamp("updatedAt").defaultNow()
+});
+
+export type UserPattern = typeof userPatterns.$inferSelect;
+export type InsertUserPattern = typeof userPatterns.$inferInsert;

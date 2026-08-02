@@ -272,6 +272,12 @@ DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
       "vistaVerde": boolean
     },
     "humanSentiment": "urgente | exploratorio | desesperado | informativo",
+    "humanInference": {
+      "perfilCliente": "Inversionista | Familia | Comprador Final",
+      "noNegociables": ["Silencio", "Luz Natural", "Ventilacion Natural", "Piso Alto", "Depósito"],
+      "tipoPermutaDetalle": "Librarse de vehiculo | Cambio equitativo pelo a pelo | Liquidez parcial | null",
+      "nivelSofisticacionBroker": "Senior | Intermedio | Novato"
+    },
     "adminStrategy": "Memo técnico de inteligencia de negocio redactado exclusivamente para la gerencia (Eduardo y Jani) analizando la viabilidad del cierre y el perfil psicográfico del cliente"
   },
   "response": "Tu respuesta dinámica, natural, viva y elocuente (cadena vacía '' si realizas extracción en Grupo 1)",

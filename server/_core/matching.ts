@@ -834,22 +834,40 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
     blockers.push("Choque de Calidad de Vida: El comprador exige inmueble silencioso sin vías principales y la oferta está situada sobre vía principal o zona ruidosa.");
     return buildExplanationResult(0, blockers, positives, negatives);
   }
-  // Auditoría de tipo de garaje (independiente vs lineal)
+  // Auditoría de tipo de garaje (independiente vs lineal) v20.0
   const propGarageType = (property.garageType || "").toLowerCase();
   const reqGarageTypeRaw = (requirement.rawText || "").toLowerCase();
   const reqWantsIndependent = reqGarageTypeRaw.includes("independiente") || reqGarageTypeRaw.includes("libre") || reqGarageTypeRaw.includes("no lineal");
-  // garageComfortPenalty: 0=sin penalización, 1=40%(lineal), 2=excedente independiente(bono)
+  
   let garageComfortPenalty = 0;
   if (reqGarages > 0 && pGarages >= reqGarages) {
     if (reqWantsIndependent && propGarageType === "lineal") {
-      garageComfortPenalty = 1; // 40% del atributo
-      negatives.push(`⚠️ Parqueadero(s) ofrecidos son LINEALES (requiere mover vehículos). El demandante exige independiente.`);
+      garageComfortPenalty = 1; // Castigo duro: -25 pts
+      negatives.push(`⚠️ Parqueadero(s) ofrecidos son LINEALES (servidumbre). El demandante exige ESTRICTAMENTE independientes (-25 pts).`);
     } else if (propGarageType === "independiente" && pGarages > reqGarages) {
       garageComfortPenalty = 2; // bono de excedente independiente
       positives.push(`✅ Excedente de parqueaderos independientes (${pGarages} ofrecidos vs ${reqGarages} requeridos) — Bono de confort`);
     } else if (propGarageType === "lineal" && pGarages >= reqGarages) {
       negatives.push(`ℹ️ Parqueadero(s) lineales/servidumbre — requiere mover vehículos para acceder.`);
     }
+  }
+
+  // Auditoría de Confort Técnico (Luz y Ventilación Natural)
+  const reqWantsLightAir = reqGarageTypeRaw.includes("luz natural") || 
+                            reqGarageTypeRaw.includes("ventilacion natural") || 
+                            reqGarageTypeRaw.includes("vista panoramica") || 
+                            reqGarageTypeRaw.includes("iluminacion");
+
+  const propHasLightAir = propRawTextLower.includes("luz natural") || 
+                          propRawTextLower.includes("ventilacion natural") || 
+                          propRawTextLower.includes("vista panoramica") || 
+                          propRawTextLower.includes("iluminado") || 
+                          propRawTextLower.includes("exterior");
+
+  let lightAirBonus = false;
+  if (reqWantsLightAir && propHasLightAir) {
+    lightAirBonus = true;
+    positives.push(`✨ Confort Técnico Coincidente: Inmueble con luz/ventilación natural y vista privilegiada (+10 pts)`);
   }
 
   // ── PONDERACIÓN v20.0: Compatibilidad Humana de Alta Inferencia ──────────────
@@ -1005,8 +1023,16 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
     positives.push(...semRes.positives);
   }
 
-  // Total: max 100 pts (15+15+20+15+10+10+5+5+5 = 100)
-  let finalPercentage = Math.min(100, Math.round((earnedPoints / totalPossible) * 100));
+  // Aplicación de Pesos de Afinidad Profunda (v20.0 Big Tech Weights)
+  if (garageComfortPenalty === 1) {
+    earnedPoints -= 25; // Castigo duro por servidumbre (-25 pts)
+  }
+  if (lightAirBonus) {
+    earnedPoints += 10; // Bono de confort por luz/ventilación (+10 pts)
+  }
+
+  // Total: max 100 pts
+  let finalPercentage = Math.max(0, Math.min(100, Math.round((earnedPoints / totalPossible) * 100)));
 
   // REGLA CRÍTICA DOCTRINAL VECY (v17.4):
   // Un MATCH del 100% se otorga EXCLUSIVAMENTE si TODOS los campos solicitados
@@ -1456,22 +1482,24 @@ export function buildBigTechAdminReport(prop: any, req: any, score: number): str
   const propPriceStr = prop.price ? formatCOP(prop.price) : "N/E";
   const reqBudgetStr = req.presupuestoMax ? formatCOP(req.presupuestoMax) : "N/E";
 
-  return `💰 *[VECY INTEL] ALTA COINCIDENCIA DE NEGOCIO (${score}%)* 💰
+  const propBroker = (prop.idUsuarioWhatsapp || 'Captador').replace(/\D/g, "");
+  const reqBroker = (req.idUsuarioWhatsapp || 'Requiriente').replace(/\D/g, "");
 
-🏠 *OFERTA #${prop.id}:* ${prop.name || prop.title || 'Inmueble'}
-📍 *Ubicación:* ${prop.zone || prop.addressNeighborhood || 'N/E'}, ${prop.city || 'Bogotá'}
-💵 *Precio:* ${propPriceStr} | *Admin:* ${prop.adminFee ? formatCOP(prop.adminFee) : 'N/E'}
-👤 *Contacto Oferta:* ${prop.idUsuarioWhatsapp || 'N/E'}
+  let porqueCierra = `Coincidencia técnica del ${score}% en ${prop.zone || prop.city || 'Bogotá'}. `;
+  if (prop.bedrooms && req.habitacionesMin) porqueCierra += `${prop.bedrooms} habs ofrecidas (pide ${req.habitacionesMin}). `;
+  if (prop.bathrooms) porqueCierra += `Cuenta con ${prop.bathrooms} baños. `;
+  if (prop.garageType) porqueCierra += `Garajes de tipo ${prop.garageType}. `;
+  if (req.rawText && req.rawText.toLowerCase().includes("urgente")) porqueCierra += `El asesor emisor indica ALTA URGENCIA. `;
 
-📋 *DEMANDA #${req.id}:* ${req.name || 'Requerimiento'}
-📍 *Zona Deseada:* ${req.zonaDeseada || 'N/E'}
-💵 *Presupuesto Máx:* ${reqBudgetStr}
-👤 *Contacto Demanda:* ${req.idUsuarioWhatsapp || 'N/E'}
+  return `🚀 *INTELIGENCIA VECY (${score}% MATCH):*
+Match detectado entre +${propBroker} y +${reqBroker}.
 
-🧠 *ANÁLISIS VECY INTELLIGENCE:*
-- *Negocio:* ${prop.transactionType} ↔ ${req.tipoNegocioDeseado}
-- *Metraje:* ${prop.areaTotal || 'N/E'} m² (Req: ≥ ${req.areaMin || '0'} m²)
-- *Distribución:* ${prop.bedrooms || 'N/E'} habs / ${prop.bathrooms || 'N/E'} baños / ${prop.garages || 'N/E'} garajes (${prop.garageType || 'N/E'})
+🏠 *OFERTA #${prop.id}:* ${prop.name || prop.title || 'Inmueble'} (${propPriceStr})
+📋 *DEMANDA #${req.id}:* ${req.name || 'Requerimiento'} (${reqBudgetStr})
 
-👉 *Gerencia (Eduardo & Jani):* Revisar coincidencia en el panel https://vecy-network.vercel.app/admin`;
+*POR QUÉ CIERRA:*
+${porqueCierra.trim()}
+
+¡Vayan por esa comisión! 🚀
+👉 Ver detalles en el panel: https://vecy-network.vercel.app/admin`;
 }
