@@ -255,7 +255,24 @@ DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
     "adminFee": number,
     "yearBuilt": number,
     "antiguedadAnos": number,
-    "isCollaborativePool": true
+    "isCollaborativePool": true,
+    "permuteType": "pelo_a_pelo | parte_de_pago | cash_only | null",
+    "isFullPermuta": boolean,
+    "isPartialTradeIn": boolean,
+    "tradeInAssets": ["vehiculo | inmueble_menor | finca | cripto | local_comercial"],
+    "confortTecnico": {
+      "iluminacion": "excelente | media | oscura",
+      "ventilacion": "natural | mecanica",
+      "remodelado": boolean
+    },
+    "entorno": {
+      "silencioso": boolean,
+      "ruidoso": boolean,
+      "viaPrincipal": boolean,
+      "vistaVerde": boolean
+    },
+    "humanSentiment": "urgente | exploratorio | desesperado | informativo",
+    "adminStrategy": "Memo técnico de inteligencia de negocio redactado exclusivamente para la gerencia (Eduardo y Jani) analizando la viabilidad del cierre y el perfil psicográfico del cliente"
   },
   "response": "Tu respuesta dinámica, natural, viva y elocuente (cadena vacía '' si realizas extracción en Grupo 1)",
   "shouldSendDM": boolean,

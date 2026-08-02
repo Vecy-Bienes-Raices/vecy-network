@@ -792,6 +792,48 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
     blockers.push(`Parqueaderos ofrecidos (${pGarages}) son inferiores a los requeridos (${reqGarages})`);
     return buildExplanationResult(0, blockers, positives, negatives);
   }
+
+  // ── FILTRO DURO 11 v20.0: Matriz de Intencionalidad Humana (Bloqueos por Choque de Intención) ──
+  const propRawTextLower = (property.rawText || property.description || "").toLowerCase();
+  const reqRawTextLower = (requirement.rawText || "").toLowerCase();
+
+  // A. Choque de Permuta ("NO PERMUTA" vs "ENTREGO CARRO / PARTE DE PAGO")
+  const propRejectsPermute = propRawTextLower.includes("no permuta") || 
+                             propRawTextLower.includes("sin permuta") || 
+                             propRawTextLower.includes("solo efectivo") || 
+                             propRawTextLower.includes("no se acepta permuta") ||
+                             propRawTextLower.includes("no se reciben vehiculos");
+
+  const reqOffersTradeIn = requirement.tipoNegocioDeseado === "permuta" || 
+                           reqRawTextLower.includes("entrego carro") || 
+                           reqRawTextLower.includes("doy carro") || 
+                           reqRawTextLower.includes("recibo vehiculo") || 
+                           reqRawTextLower.includes("parte de pago") || 
+                           reqRawTextLower.includes("pelo a pelo");
+
+  if (propRejectsPermute && reqOffersTradeIn) {
+    blockers.push("Choque de Intención Negocial: La oferta especifica 'NO PERMUTA / Solo Efectivo' y la demanda busca entregar vehículo u otro bien en parte de pago.");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+
+  // B. Choque de Calidad de Vida (Exige "Silencioso / Sin Vías Principales" vs "Sobre Vía Principal / Ruidoso")
+  const reqDemandsQuiet = reqRawTextLower.includes("silencioso") || 
+                          reqRawTextLower.includes("tranquilo") || 
+                          reqRawTextLower.includes("nada sobre vias principales") || 
+                          reqRawTextLower.includes("sin vias principales") || 
+                          reqRawTextLower.includes("no vias principales") || 
+                          reqRawTextLower.includes("sin ruido");
+
+  const propIsMainRoadNoise = propRawTextLower.includes("sobre avenida") || 
+                              propRawTextLower.includes("via principal") || 
+                              propRawTextLower.includes("frente a avenida") || 
+                              propRawTextLower.includes("zona de alto trafico") || 
+                              propRawTextLower.includes("zona ruidosa");
+
+  if (reqDemandsQuiet && propIsMainRoadNoise) {
+    blockers.push("Choque de Calidad de Vida: El comprador exige inmueble silencioso sin vías principales y la oferta está situada sobre vía principal o zona ruidosa.");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
   // Auditoría de tipo de garaje (independiente vs lineal)
   const propGarageType = (property.garageType || "").toLowerCase();
   const reqGarageTypeRaw = (requirement.rawText || "").toLowerCase();
@@ -1398,4 +1440,38 @@ async function sendDirectAlertToAdmins(message: string): Promise<void> {
   }
 
   console.warn("[Matching-Notification] Ningún cliente de WhatsApp disponible en global para enviar la alerta.");
+}
+
+/**
+ * Genera el Reporte de Inteligencia de Negocio Big Tech (v20.0 Concierge)
+ * Se envía exclusivamente a Eduardo y Jani (+573192919978 / +573188096811).
+ */
+export function buildBigTechAdminReport(prop: any, req: any, score: number): string {
+  const formatCOP = (val: any) => {
+    const num = parseFloat(String(val));
+    if (isNaN(num) || num === 0) return "N/E";
+    return `$${num.toLocaleString('es-CO')}`;
+  };
+
+  const propPriceStr = prop.price ? formatCOP(prop.price) : "N/E";
+  const reqBudgetStr = req.presupuestoMax ? formatCOP(req.presupuestoMax) : "N/E";
+
+  return `💰 *[VECY INTEL] ALTA COINCIDENCIA DE NEGOCIO (${score}%)* 💰
+
+🏠 *OFERTA #${prop.id}:* ${prop.name || prop.title || 'Inmueble'}
+📍 *Ubicación:* ${prop.zone || prop.addressNeighborhood || 'N/E'}, ${prop.city || 'Bogotá'}
+💵 *Precio:* ${propPriceStr} | *Admin:* ${prop.adminFee ? formatCOP(prop.adminFee) : 'N/E'}
+👤 *Contacto Oferta:* ${prop.idUsuarioWhatsapp || 'N/E'}
+
+📋 *DEMANDA #${req.id}:* ${req.name || 'Requerimiento'}
+📍 *Zona Deseada:* ${req.zonaDeseada || 'N/E'}
+💵 *Presupuesto Máx:* ${reqBudgetStr}
+👤 *Contacto Demanda:* ${req.idUsuarioWhatsapp || 'N/E'}
+
+🧠 *ANÁLISIS VECY INTELLIGENCE:*
+- *Negocio:* ${prop.transactionType} ↔ ${req.tipoNegocioDeseado}
+- *Metraje:* ${prop.areaTotal || 'N/E'} m² (Req: ≥ ${req.areaMin || '0'} m²)
+- *Distribución:* ${prop.bedrooms || 'N/E'} habs / ${prop.bathrooms || 'N/E'} baños / ${prop.garages || 'N/E'} garajes (${prop.garageType || 'N/E'})
+
+👉 *Gerencia (Eduardo & Jani):* Revisar coincidencia en el panel https://vecy-network.vercel.app/admin`;
 }

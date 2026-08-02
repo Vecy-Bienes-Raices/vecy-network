@@ -410,3 +410,21 @@ export const propertyPublicationHistory = pgTable("property_publication_history"
 
 export type PropertyPublicationHistory = typeof propertyPublicationHistory.$inferSelect;
 export type InsertPropertyPublicationHistory = typeof propertyPublicationHistory.$inferInsert;
+
+/**
+ * ADN del Comportamiento del Agente (userBehavioralFingerprints) - v20.0 Big Tech Intel
+ */
+export const userBehavioralFingerprints = pgTable("user_behavioral_fingerprints", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").references(() => users.id),
+  idUsuarioWhatsapp: varchar("idUsuarioWhatsapp", { length: 100 }),
+  permuteProfile: varchar("permute_profile", { length: 50 }), // 'cash_only' | 'permuta_fan' | 'pelo_a_pelo_expert' | 'parte_de_pago'
+  urgencyIndex: integer("urgency_index").default(0),
+  avgPriceRange: jsonb("avg_price_range"),
+  topZones: jsonb("top_zones"),
+  technicalRigidity: integer("technical_rigidity").default(50), // Exigencia en detalles (1.5 baños, vistas, etc.)
+  updatedAt: timestamp("updatedAt").defaultNow()
+});
+
+export type UserBehavioralFingerprint = typeof userBehavioralFingerprints.$inferSelect;
+export type InsertUserBehavioralFingerprint = typeof userBehavioralFingerprints.$inferInsert;
