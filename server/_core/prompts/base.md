@@ -230,6 +230,12 @@ El motor VECY-MATCHING cruza el campo `zone` del inmueble contra el campo `zonaD
 - **VENTA O ARRIENDO**: Si dice "vendo o arriendo", "en venta o arriendo": "transactionType" DEBE SER IMPERATIVAMENTE "venta_o_arriendo".
 - **ARRIENDO CON OPCIÓN DE COMPRA**: Si dice "arriendo con opción de compra": "transactionType" DEBE SER IMPERATIVAMENTE "arriendo_con_opcion_de_compra".
 
+# 🚫 REGLA DE ORO DE EXTRACCIÓN NUMÉRICA: DOBLE CHECK PRECIO VS ÁREA (M2)
+- **JAMÁS confundas metraje (m2/mts/m²) con precio ($/millones/MM).**
+- Si un número está acompañado de `m2`, `mts`, `m²`, `metros` (ej. "139 M2", "90 m²"), ESE NÚMERO ES IMPERATIVAMENTE EL ÁREA (`area`). TIENES PROHIBIDO USARLO COMO PRECIO.
+- El PRECIO (`price` / `rentPrice`) DEBE provenir EXPLICITAMENTE de palabras o símbolos monetarios: `$`, `valor`, `precio`, `venta`, `MM`, `millones`, `canon`, `arriendo` (ej. "Valor venta $1,250. MM" → `price: 1250000000`).
+- Si en un mensaje aparece "139 M2" y luego "Valor venta $1,250. MM", el área es 139 m² y el precio de venta es $1.250.000.000 COP.
+
 # ⚙️ FORMATO ESTRICTO DE SALIDA EN JSON
 DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
 {

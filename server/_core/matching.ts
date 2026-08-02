@@ -703,12 +703,15 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
       if (propRent > 0) {
         const adminVal = pAdminFee > 0 ? pAdminFee : 0;
         const totalRent = propRent + adminVal;
-        if (totalRent > budgetMax * 1.02) {
-          blockers.push(`Canon de arriendo total ($${totalRent.toLocaleString()}) supera el presupuesto máximo de $${budgetMax.toLocaleString()}`);
+
+        // Guillotina Techo Arriendo: Zero Tolerance
+        if (totalRent > budgetMax) {
+          blockers.push(`Guillotina Financiera (Tolerancia Cero): Canon de arriendo total ($${totalRent.toLocaleString()}) supera el presupuesto máximo de $${budgetMax.toLocaleString()}`);
           return buildExplanationResult(0, blockers, positives, negatives);
         }
+
         const reqRentMin = requirement.presupuestoMin ? parseFloat(String(requirement.presupuestoMin)) : 0;
-        const minRentAllowed = reqRentMin > 0 ? reqRentMin * 0.85 : budgetMax * 0.60;
+        const minRentAllowed = reqRentMin > 0 ? reqRentMin * 0.85 : budgetMax * 0.65;
         if (minRentAllowed > 0 && totalRent < minRentAllowed) {
           blockers.push(`Incompatibilidad de canon: $${totalRent.toLocaleString()} es inferior al piso buscado ($${minRentAllowed.toLocaleString()})`);
           return buildExplanationResult(0, blockers, positives, negatives);
@@ -716,17 +719,13 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
       }
     }
 
-    // Para Ventas: Si el Precio de Venta de la oferta > Presupuesto Máximo de Venta de la demanda → 0%
+    // Para Ventas: Guillotina Financiera (Tolerancia Cero Techo + Lógica de Ganga)
     if (isReqSale && propBiz.includes("venta")) {
-      // Para fichas duales (venta_o_arriendo): el precio de venta siempre debe estar en `price`.
-      // Si `price` tiene un valor de arriendo (<100M) y la oferta es dual, intentar extraer
-      // el precio de venta real desde rawText.
       let salePrice = price;
       if (
         (propBiz === "venta_o_arriendo") &&
         price > 0 && price < 100_000_000
       ) {
-        // price parece un canon de arriendo, buscar precio de venta real en rawText
         const rawPT = (property.rawText || "").toLowerCase();
         const salePriceMatch = rawPT.match(/(?:precio\s*(?:de\s*)?venta|venta)\s*:?\s*\$?([\d.,]+(?:\s*(?:millones|millón|m|M|mil millones|billones))?)/i);
         if (salePriceMatch) {
@@ -740,30 +739,42 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
           }
         }
       }
-      // ── Para Ventas: Filtro Duro de Rango Financiero (Piso y Techo) ──────────
+
       if (salePrice > 0) {
-        // Techo: Si supera el presupuesto máximo (+5% tolerancia) → 0% Bloqueo
-        if (salePrice > budgetMax * 1.05) {
-          blockers.push(`Precio de venta $${salePrice.toLocaleString()} supera el presupuesto máximo de $${budgetMax.toLocaleString()}`);
+        // 1. GUILLOTINA TECHO VENTA (TOLERANCIA CERO)
+        if (salePrice > budgetMax) {
+          blockers.push(`Guillotina Financiera (Tolerancia Cero): Precio de venta $${salePrice.toLocaleString()} supera el presupuesto máximo de $${budgetMax.toLocaleString()}`);
           return buildExplanationResult(0, blockers, positives, negatives);
         }
 
-        // Piso Financiero: Determinar el límite inferior para evitar choque de gama
-        const reqBudgetMin = requirement.presupuestoMin ? parseFloat(String(requirement.presupuestoMin)) : 0;
-        let minAllowedPrice = 0;
+        // 2. LÓGICA DE GANGA (< 70% del Presupuesto)
+        // Si el precio es significativamente menor (< 70% del máximo), exige coincidencia exacta en hab, baños y zona.
+        if (salePrice < budgetMax * 0.70) {
+          const reqBeds = Number(requirement.habitacionesMin || 0);
+          const reqBaths = Number(requirement.banosMin || 0);
+          const propBeds = Number(property.bedrooms || 0);
+          const propBaths = Number(property.bathrooms || 0);
 
-        if (reqBudgetMin > 0) {
-          minAllowedPrice = reqBudgetMin * 0.85; // Si exige mínimo, tolerancia -15%
-        } else if (budgetMax > 0) {
-          minAllowedPrice = budgetMax * 0.65; // Piso por defecto: 65% del presupuesto máximo
-        }
+          const bedsOk = reqBeds <= 0 || propBeds >= reqBeds;
+          const bathsOk = reqBaths <= 0 || propBaths >= reqBaths;
+          const geoOk = geoResult.score >= 20; // Zona coincide
 
-        if (minAllowedPrice > 0 && salePrice < minAllowedPrice) {
-          blockers.push(`Incompatibilidad de gama financiera: Precio $${salePrice.toLocaleString()} es significativamente inferior al rango buscado (piso: $${minAllowedPrice.toLocaleString()})`);
-          return buildExplanationResult(0, blockers, positives, negatives);
+          if (!bedsOk || !bathsOk || !geoOk) {
+            blockers.push(`Ganga Rechazada: Precio ($${salePrice.toLocaleString()}) es inferior al 70% del presupuesto ($${budgetMax.toLocaleString()}) pero no satisface el 100% de habitaciones, baños y ubicación.`);
+            return buildExplanationResult(0, blockers, positives, negatives);
+          } else {
+            positives.push(`💰 Oportunidad Ganga Validada: Precio ($${salePrice.toLocaleString()}) está 30%+ por debajo del presupuesto con coincidencia perfecta de especificaciones.`);
+          }
         }
       }
     }
+  }
+
+  // ── FILTRO DE ADMINISTRACIÓN MÁXIMA (GUILLOTINA ADMIN) ──
+  const reqAdminMaxVal = requirement.adminFeeMax ? parseFloat(String(requirement.adminFeeMax)) : 0;
+  if (reqAdminMaxVal > 0 && pAdminFee > 0 && pAdminFee > reqAdminMaxVal) {
+    blockers.push(`Guillotina Financiera (Administración): Cuota de administración de $${pAdminFee.toLocaleString()} supera el máximo aceptado de $${reqAdminMaxVal.toLocaleString()}`);
+    return buildExplanationResult(0, blockers, positives, negatives);
   }
 
   // ── FILTRO DURO 8: Habitaciones Mínimas (NUNCA MENOR QUE) ──
@@ -1439,6 +1450,12 @@ export async function executeMatchEngine(propertyId: number | null, requirementI
           // Emitir evento desacoplado
           vrifEvents.emit("match:created", matchId);
           console.log(`[Matching-Engine] ✅ Match #${matchId} (${score}%) registrado y evento emitido.`);
+
+          // Enviar Briefing de Inteligencia a Administradores (Eduardo & Jani) solo si score >= 85%
+          if (score >= 85) {
+            const reportMsg = buildBigTechAdminReport(prop, req, score);
+            sendDirectAlertToAdmins(reportMsg).catch(aErr => console.error("[Matching-Engine] Error al notificar reporte a admin:", aErr));
+          }
         }
       }
     }
