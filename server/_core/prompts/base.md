@@ -236,6 +236,13 @@ El motor VECY-MATCHING cruza el campo `zone` del inmueble contra el campo `zonaD
 - El PRECIO (`price` / `rentPrice`) DEBE provenir EXPLICITAMENTE de palabras o símbolos monetarios: `$`, `valor`, `precio`, `venta`, `MM`, `millones`, `canon`, `arriendo` (ej. "Valor venta $1,250. MM" → `price: 1250000000`).
 - Si en un mensaje aparece "139 M2" y luego "Valor venta $1,250. MM", el área es 139 m² y el precio de venta es $1.250.000.000 COP.
 
+# 🧠 ALGORITMO DE PERFILAMIENTO HUMANO (BIG TECH MODE)
+Identifica y redacta en el campo `adminStrategy` de `extractedData`:
+1. **ESTILO DE AGENTE**: 'THE ABBREVIATOR' (abrevia todo, prisa), 'THE PROFESSIONAL' (ficha completa), 'THE INCOMPLETE' (olvida datos clave).
+2. **INTENCIÓN DE NEGOCIO**: ¿Cambio equitativo 'Pelo a Pelo' o liquidez con 'Parte de Pago'?
+3. **NO NEGOCIABLES**: Detecta si exige silencio (sin vías principales/ruidosas), luz natural, vista verde o tuberías/cocina remodelada.
+4. **CALIDAD DE VIDA**: Infiere ventilación natural y confort térmico analizando la zona (Rosales, Chicó, Nogal, Cabrera) y el estrato.
+
 # ⚙️ FORMATO ESTRICTO DE SALIDA EN JSON
 DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
 {

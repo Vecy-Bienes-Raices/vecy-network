@@ -853,8 +853,8 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   let garageComfortPenalty = 0;
   if (reqGarages > 0 && pGarages >= reqGarages) {
     if (reqWantsIndependent && propGarageType === "lineal") {
-      garageComfortPenalty = 1; // Castigo duro: -25 pts
-      negatives.push(`⚠️ Parqueadero(s) ofrecidos son LINEALES (servidumbre). El demandante exige ESTRICTAMENTE independientes (-25 pts).`);
+      garageComfortPenalty = 1; // Castigo duro: -30 pts
+      negatives.push(`⚠️ Parqueadero(s) ofrecidos son LINEALES (servidumbre). El demandante exige ESTRICTAMENTE independientes (-30 pts).`);
     } else if (propGarageType === "independiente" && pGarages > reqGarages) {
       garageComfortPenalty = 2; // bono de excedente independiente
       positives.push(`✅ Excedente de parqueaderos independientes (${pGarages} ofrecidos vs ${reqGarages} requeridos) — Bono de confort`);
@@ -878,7 +878,7 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   let lightAirBonus = false;
   if (reqWantsLightAir && propHasLightAir) {
     lightAirBonus = true;
-    positives.push(`✨ Confort Técnico Coincidente: Inmueble con luz/ventilación natural y vista privilegiada (+10 pts)`);
+    positives.push(`✨ Confort Técnico Coincidente: Inmueble con luz/ventilación natural y vista privilegiada (+15 pts)`);
   }
 
   // ── PONDERACIÓN v20.0: Compatibilidad Humana de Alta Inferencia ──────────────
@@ -1036,10 +1036,10 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
 
   // Aplicación de Pesos de Afinidad Profunda (v20.0 Big Tech Weights)
   if (garageComfortPenalty === 1) {
-    earnedPoints -= 25; // Castigo duro por servidumbre (-25 pts)
+    earnedPoints -= 30; // Castigo duro por servidumbre (-30 pts)
   }
   if (lightAirBonus) {
-    earnedPoints += 10; // Bono de confort por luz/ventilación (+10 pts)
+    earnedPoints += 15; // Bono de confort por luz/ventilación (+15 pts)
   }
 
   // Total: max 100 pts
@@ -1502,21 +1502,29 @@ export function buildBigTechAdminReport(prop: any, req: any, score: number): str
   const propBroker = (prop.idUsuarioWhatsapp || 'Captador').replace(/\D/g, "");
   const reqBroker = (req.idUsuarioWhatsapp || 'Requiriente').replace(/\D/g, "");
 
-  let porqueCierra = `Coincidencia técnica del ${score}% en ${prop.zone || prop.city || 'Bogotá'}. `;
-  if (prop.bedrooms && req.habitacionesMin) porqueCierra += `${prop.bedrooms} habs ofrecidas (pide ${req.habitacionesMin}). `;
-  if (prop.bathrooms) porqueCierra += `Cuenta con ${prop.bathrooms} baños. `;
-  if (prop.garageType) porqueCierra += `Garajes de tipo ${prop.garageType}. `;
-  if (req.rawText && req.rawText.toLowerCase().includes("urgente")) porqueCierra += `El asesor emisor indica ALTA URGENCIA. `;
+  let intentReason = `El cliente busca inmueble en ${req.zonaDeseada || prop.zone || 'Bogotá'}`;
+  if (req.rawText && req.rawText.toLowerCase().includes("silencioso")) {
+    intentReason += " y exige huir del ruido de las vías principales. Este inmueble cumple el criterio de tranquilidad.";
+  } else if (req.rawText && req.rawText.toLowerCase().includes("luz natural")) {
+    intentReason += " y prioriza iluminación y ventilación natural.";
+  } else {
+    intentReason += ". Coincidencia de alta intencionalidad comercial.";
+  }
 
-  return `🚀 *INTELIGENCIA VECY (${score}% MATCH):*
-Match detectado entre +${propBroker} y +${reqBroker}.
+  let techDetails = `Coincide en distribución (${prop.bedrooms || 'N/E'} habs, ${prop.bathrooms || 'N/E'} baños)`;
+  if (prop.garageType === 'independiente') {
+    techDetails += " y tiene garajes independientes ✅";
+  } else if (prop.garageType === 'lineal') {
+    techDetails += " (⚠️ garajes en servidumbre)";
+  }
 
+  return `🚀 *VECY INTEL: Oportunidad de Cierre Detectada (${score}% MATCH)*
+👤 *ASESORES:* +${propBroker} ↔ +${reqBroker}
 🏠 *OFERTA #${prop.id}:* ${prop.name || prop.title || 'Inmueble'} (${propPriceStr})
 📋 *DEMANDA #${req.id}:* ${req.name || 'Requerimiento'} (${reqBudgetStr})
+🧠 *INTENCIÓN:* ${intentReason}
+⚖️ *TÉCNICO:* ${techDetails}.
+💰 *ESTRATEGIA:* Eduardo / Jani, coincidencia de alta probabilidad validada. ¡Vayan por esa comisión! 🚀
 
-*POR QUÉ CIERRA:*
-${porqueCierra.trim()}
-
-¡Vayan por esa comisión! 🚀
-👉 Ver detalles en el panel: https://vecy-network.vercel.app/admin`;
+👉 Ver en el panel web: https://vecy-network.vercel.app/admin`;
 }
