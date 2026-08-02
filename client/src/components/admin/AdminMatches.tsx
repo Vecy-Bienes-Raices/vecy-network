@@ -226,34 +226,51 @@ function scoreRows(req: any, prop: any) {
   // 4. Presupuesto Máx.
   const budget = parseFloat(req.presupuestoMax || "0");
   const propPrice = parseFloat(prop.price || "0");
-  const propRentPrice = parseFloat(prop.rentPrice || prop.priceRent || "0");
+  let propRentPrice = parseFloat(prop.rentPrice || prop.priceRent || "0");
   const isDualOffer = isPropertyDualOffer(prop);
-
-  // Bifurcar el precio efectivo según lo que busca el requerimiento
   const isReqRentMatch = reqNeg.toLowerCase().includes("arriendo");
+
+  // Fallback de extracción de canon de arriendo si rentPrice = 0
+  if (propRentPrice <= 0 && prop.rawText) {
+    const rawP = prop.rawText.toLowerCase();
+    const matchRentP = rawP.match(/(?:arriendo|canon|renta)\s*:?\s*\$?([\d.,]+)\s*(millones|millón|m|M)?/i);
+    if (matchRentP) {
+      let valP = parseFloat(matchRentP[1].replace(/\./g, "").replace(/,/g, ""));
+      if (!isNaN(valP)) {
+        if (valP < 1000) valP *= 1000000;
+        propRentPrice = valP;
+      }
+    }
+  }
+
   let effectivePropPrice: number;
   let propPriceLabel: string;
 
-  if (isDualOffer) {
-    // Ficha dual: mostrar ambos precios
-    const saleLabel = propPrice > 0 ? formatCOP(prop.price) : "N/E";
-    const rentLabel = propRentPrice > 0 ? formatCOP(String(propRentPrice)) : "N/E";
-    propPriceLabel = `Venta: ${saleLabel} / Canon: ${rentLabel}`;
-    effectivePropPrice = isReqRentMatch
-      ? (propRentPrice > 0 ? propRentPrice : propPrice)
-      : propPrice;
+  if (isReqRentMatch) {
+    // Si la demanda es de arriendo:
+    effectivePropPrice = propRentPrice > 0 ? propRentPrice : (propPrice > 0 && propPrice < 100_000_000 ? propPrice : 0);
+    if (effectivePropPrice > 0) {
+      propPriceLabel = `Canon: ${formatCOP(String(effectivePropPrice))} / mes`;
+      if (isDualOffer && propPrice > 0 && propPrice >= 100_000_000) {
+        propPriceLabel += ` (Venta: ${formatCOP(prop.price)})`;
+      }
+    } else {
+      propPriceLabel = isDualOffer ? `Venta: ${formatCOP(prop.price)} / Canon: N/E` : formatCOP(prop.price);
+    }
   } else {
+    // Si la demanda es de venta:
     effectivePropPrice = propPrice;
-    propPriceLabel = formatCOP(prop.price);
+    const saleLabel = propPrice > 0 ? formatCOP(prop.price) : "N/E";
+    const rentLabel = propRentPrice > 0 ? `${formatCOP(String(propRentPrice))}/mes` : "N/E";
+    propPriceLabel = isDualOffer ? `Venta: ${saleLabel} / Canon: ${rentLabel}` : saleLabel;
   }
 
   let budS: MatchStatus = "neutral";
   if (budget > 0 && effectivePropPrice > 0) {
     if (effectivePropPrice <= budget) budS = "exact";
-    else if (effectivePropPrice <= budget * 1.05) budS = "warn";
-    else budS = "missing";
+    else budS = "missing"; // Guillotina Financiera Tolerancia Cero en visual
   }
-  const reqBudgetLabel = budget > 0 ? `${formatCOP(req.presupuestoMax)} ±5%` : "Sin restricción";
+  const reqBudgetLabel = budget > 0 ? `${formatCOP(req.presupuestoMax)}` : "Sin restricción";
 
   add(
     "Presupuesto Máx.",
@@ -702,9 +719,14 @@ export default function AdminMatches() {
       const scoreVal = parseFloat(String(match.matchScore || '0'));
       const matchesScore = scoreVal >= parseFloat(minScore);
 
-      // Re-verificación de bloqueo por perímetro/precio/tipo
+      // Re-verificación estricta de filtros duros (Ubicación, Presupuesto, Tipo o Parqueaderos no satisfechos -> OMITIR)
       const { rows } = scoreRows(requirement, property);
-      const hasBlocker = rows.some(r => r.status === "missing" && (r.label === "Ubicación / Barrio" || r.label === "Presupuesto Máx." || r.label === "Tipo de Inmueble"));
+      const hasBlocker = rows.some(r => r.status === "missing" && (
+        r.label === "Ubicación / Barrio" || 
+        r.label === "Presupuesto Máx." || 
+        r.label === "Tipo de Inmueble" ||
+        r.label === "Parqueaderos"
+      ));
 
       return matchesSearch && matchesScore && !hasBlocker;
     });

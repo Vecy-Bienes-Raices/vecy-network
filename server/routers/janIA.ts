@@ -8,6 +8,7 @@ import { eq, desc, sql, inArray, gte } from 'drizzle-orm';
 import { scrapePropertyLink } from '../_core/scraper';
 import { JANIA_PROMPT, processWhatsAppMessage } from '../_core/janIA';
 import { liquidarImpuestosVenta } from '../_core/taxEngine';
+import { explicarMatch } from '../_core/matching';
 import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
@@ -508,16 +509,32 @@ export const janIARouter = router({
           .innerJoin(requirements, eq(propertyMatches.requirementId, requirements.id))
           .orderBy(desc(propertyMatches.createdAt));
 
-        // Deduplicación en backend por par (propertyId, requirementId)
+        // Re-evaluación en tiempo real con Motor v20.0 y Deduplicación en Servidor
         const seenPairs = new Set<string>();
-        const deduplicated = matches.filter(m => {
-          const key = `${m.property.id}-${m.requirement.id}`;
-          if (seenPairs.has(key)) return false;
-          seenPairs.add(key);
-          return true;
-        });
+        const validEvaluatedMatches: typeof matches = [];
 
-        const propertyIds = deduplicated.map(m => m.property.id).filter(Boolean);
+        for (const m of matches) {
+          const key = `${m.property.id}-${m.requirement.id}`;
+          if (seenPairs.has(key)) continue; // Eliminar duplicados
+
+          // Re-evaluar con el motor v20.0 (explicarMatch)
+          const evaluation = explicarMatch(m.requirement, m.property);
+
+          // Si hay algún blocker (fuera de perímetro, choque financiero, etc.) o score < 85%, descartar
+          if (evaluation.score < 85 || evaluation.blockers.length > 0) {
+            console.log(`[tRPC-getAllMatches] ❌ Match #${m.id} descartado en tiempo real (Score: ${evaluation.score}%, Blockers: ${evaluation.blockers.join(' | ')})`);
+            continue;
+          }
+
+          seenPairs.add(key);
+          validEvaluatedMatches.push({
+            ...m,
+            matchScore: evaluation.score.toFixed(2),
+            matchExplanation: evaluation as any
+          });
+        }
+
+        const propertyIds = validEvaluatedMatches.map(m => m.property.id).filter(Boolean);
         if (propertyIds.length > 0) {
           const histories = await db
             .select()
@@ -525,7 +542,7 @@ export const janIARouter = router({
             .where(inArray(propertyPublicationHistory.propertyId, propertyIds))
             .orderBy(desc(propertyPublicationHistory.fecha));
 
-          return deduplicated.map(m => {
+          return validEvaluatedMatches.map(m => {
             const propertyHistory = histories.filter(h => h.propertyId === m.property.id);
             return {
               ...m,
@@ -537,7 +554,7 @@ export const janIARouter = router({
           });
         }
 
-        return deduplicated;
+        return validEvaluatedMatches;
       } catch (error) {
         console.error('Error getting all matches:', error);
         throw error;
