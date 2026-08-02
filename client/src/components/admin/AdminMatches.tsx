@@ -670,7 +670,26 @@ export default function AdminMatches() {
   };
 
   const filteredMatches = useMemo(() => {
+    const seenMatchIds = new Set<number>();
+    const seenPairs = new Set<string>();
+
     return matches.filter(match => {
+      if (!match || !match.id) return false;
+
+      // Deduplicación estricta por ID de match
+      if (seenMatchIds.has(match.id)) return false;
+      
+      // Deduplicación por par (propertyId, requirementId)
+      const pId = match.property?.id;
+      const rId = match.requirement?.id;
+      if (pId && rId) {
+        const pairKey = `${pId}-${rId}`;
+        if (seenPairs.has(pairKey)) return false;
+        seenPairs.add(pairKey);
+      }
+
+      seenMatchIds.add(match.id);
+
       const property = match.property || {};
       const requirement = match.requirement || {};
       
@@ -682,8 +701,12 @@ export default function AdminMatches() {
                             
       const scoreVal = parseFloat(String(match.matchScore || '0'));
       const matchesScore = scoreVal >= parseFloat(minScore);
-      
-      return matchesSearch && matchesScore;
+
+      // Re-verificación de bloqueo por perímetro/precio/tipo
+      const { rows } = scoreRows(requirement, property);
+      const hasBlocker = rows.some(r => r.status === "missing" && (r.label === "Ubicación / Barrio" || r.label === "Presupuesto Máx." || r.label === "Tipo de Inmueble"));
+
+      return matchesSearch && matchesScore && !hasBlocker;
     });
   }, [matches, searchTerm, minScore]);
 

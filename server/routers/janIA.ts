@@ -508,7 +508,16 @@ export const janIARouter = router({
           .innerJoin(requirements, eq(propertyMatches.requirementId, requirements.id))
           .orderBy(desc(propertyMatches.createdAt));
 
-        const propertyIds = matches.map(m => m.property.id).filter(Boolean);
+        // Deduplicación en backend por par (propertyId, requirementId)
+        const seenPairs = new Set<string>();
+        const deduplicated = matches.filter(m => {
+          const key = `${m.property.id}-${m.requirement.id}`;
+          if (seenPairs.has(key)) return false;
+          seenPairs.add(key);
+          return true;
+        });
+
+        const propertyIds = deduplicated.map(m => m.property.id).filter(Boolean);
         if (propertyIds.length > 0) {
           const histories = await db
             .select()
@@ -516,7 +525,7 @@ export const janIARouter = router({
             .where(inArray(propertyPublicationHistory.propertyId, propertyIds))
             .orderBy(desc(propertyPublicationHistory.fecha));
 
-          return matches.map(m => {
+          return deduplicated.map(m => {
             const propertyHistory = histories.filter(h => h.propertyId === m.property.id);
             return {
               ...m,
@@ -528,7 +537,7 @@ export const janIARouter = router({
           });
         }
 
-        return matches;
+        return deduplicated;
       } catch (error) {
         console.error('Error getting all matches:', error);
         throw error;
