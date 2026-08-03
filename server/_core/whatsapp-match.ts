@@ -917,9 +917,30 @@ export class JaniaMatchBot {
     }
   }
 
-  // --- LOGÍSTICA DE BUFFER GRUPAL ---
+  // --- LOGÍSTICA DE BUFFER GRUPAL Y REACCIÓN INSTANTÁNEA ---
   private async handleIncomingGroupMessage(msg: proto.IWebMessageInfo, chatId: string, bodyText: string) {
     if (!msg.key || !msg.message) return;
+
+    // --- REACCIÓN INSTANTÁNEA (< 200ms) CON CONFIRMACIÓN VISUAL EN CELULAR ---
+    if (!msg.key.fromMe) {
+      const cleanLower = (bodyText || '').toLowerCase();
+      const hasMediaOrUrl = !!msg.message.imageMessage || !!msg.message.documentMessage || cleanLower.includes('http');
+      const isSearch = cleanLower.includes('busco') || cleanLower.includes('necesito') || cleanLower.includes('requiero') || cleanLower.includes('requerimiento') || cleanLower.includes('se busca');
+      const isOffer = cleanLower.includes('vendo') || cleanLower.includes('arriendo') || cleanLower.includes('en venta') || cleanLower.includes('en arriendo') || cleanLower.includes('apto') || cleanLower.includes('apartamento') || cleanLower.includes('casa') || cleanLower.includes('bodega') || cleanLower.includes('oficina') || cleanLower.includes('lote') || cleanLower.includes('finca') || cleanLower.includes('precio') || cleanLower.includes('$') || cleanLower.includes('m2') || cleanLower.includes('mts') || hasMediaOrUrl;
+
+      const fastEmoji = isSearch ? '📝' : (isOffer ? '👍' : '❓');
+      try {
+        console.log(`[JANIA-FAST-REACT] 🎯 Enviando reacción instantánea ${fastEmoji} a ${chatId} (Msg ID: ${msg.key.id})`);
+        this.sock.sendMessage(chatId, { react: { text: fastEmoji, key: msg.key } }).then(() => {
+          console.log(`[JANIA-FAST-REACT] ✅ Reacción ${fastEmoji} ENTREGADA NATIVAMENTE en WhatsApp`);
+        }).catch((err: any) => {
+          console.error(`[JANIA-FAST-REACT] ❌ Error en envío de reacción:`, err?.message || err);
+        });
+      } catch (err: any) {
+        console.error(`[JANIA-FAST-REACT] Exception al reaccionar:`, err?.message || err);
+      }
+    }
+
     const rawSender = msg.key.participant || msg.participant || '';
     if (!rawSender || rawSender.endsWith('@g.us')) {
       console.warn(`[JANIA-MATCH] Omitiendo mensaje de grupo: sender individual inválido (${rawSender})`);
@@ -927,7 +948,6 @@ export class JaniaMatchBot {
     }
     const senderId = rawSender.includes('@') ? `${rawSender.split('@')[0].split(':')[0]}@${rawSender.split('@')[1]}` : rawSender.split(':')[0];
     const lockKey = `${chatId}_${senderId}`;
-
 
     const previousLock = this.processingLocks.get(lockKey) || Promise.resolve();
     let resolveLock!: () => void;
@@ -960,16 +980,10 @@ export class JaniaMatchBot {
         this.lastGroupMessageTime.set(`${chatId}_${senderId}`, now);
       }
 
-      // Cooldown silencioso: no se bloquea la captura, solo se registra el tiempo del último bloque.
-
       let buffer = this.messageBuffers.get(bufferKey);
       const bufferTimeout = 3000; // 3 Segundos (Reacción rápida)
-      const MAX_BLOCK_SIZE = 3;
 
       if (buffer) {
-        // Modo Fantasma: sin límite de propiedades por bloque, sin ⚠️.
-        // Se agrega el mensaje al buffer existente siempre que sea posible.
-
         clearTimeout(buffer.timer);
         buffer.messages.push({
           body: bodyText,
