@@ -767,7 +767,7 @@ export default function AdminMatches() {
             Reporte de Coincidencias (Matches de JanIA)
           </h2>
           <p className="text-zinc-500 text-sm mt-1 flex items-center gap-2">
-            <span>{isLoading ? 'Cargando coincidencias...' : `Total: ${matches.length} matches | Filtrados: ${filteredMatches.length}`}</span>
+            <span>{isLoading ? 'Cargando coincidencias...' : `Coincidencias Verificadas: ${filteredMatches.length} matches legítimos (Score ≥ 85%)`}</span>
             <span className="text-[10px] bg-[#bf953f]/20 text-[#bf953f] border border-[#bf953f]/30 px-2 py-0.5 rounded-full font-mono font-extrabold ml-2">
               {VECY_VERSION_LABEL}
             </span>
