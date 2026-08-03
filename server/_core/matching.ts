@@ -2,6 +2,7 @@ import { getDb } from "../db";
 import { and, eq, sql } from "drizzle-orm";
 import { propertyMatches, properties, requirements } from "../../drizzle/schema";
 import { normalizarTextoGeografico } from "./geography";
+import { VECY_VERSION_LABEL } from "../../shared/const";
 
 /**
  * Motor de Matching VECY CORE v12.00 (TypeScript)

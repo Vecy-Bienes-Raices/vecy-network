@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { trpc } from '@/lib/trpc';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatColombiaDate } from '@/lib/dateUtils';
+import { VECY_VERSION_LABEL } from '@/const';
 
 type MatchStatus = "exact" | "warn" | "missing" | "ok" | "neutral";
 
@@ -768,7 +769,7 @@ export default function AdminMatches() {
           <p className="text-zinc-500 text-sm mt-1 flex items-center gap-2">
             <span>{isLoading ? 'Cargando coincidencias...' : `Total: ${matches.length} matches | Filtrados: ${filteredMatches.length}`}</span>
             <span className="text-[10px] bg-[#bf953f]/20 text-[#bf953f] border border-[#bf953f]/30 px-2 py-0.5 rounded-full font-mono font-extrabold ml-2">
-              VERSIÓN v20.0H TS Scoring
+              {VECY_VERSION_LABEL}
             </span>
           </p>
         </div>
@@ -1142,7 +1143,7 @@ export default function AdminMatches() {
       {/* Footer Version Stamp */}
       <div className="pt-6 border-t border-white/5 flex items-center justify-between text-[11px] text-zinc-500 font-mono">
         <div>VECY Network Colombia &copy; 2026</div>
-        <div className="text-[#bf953f] font-bold">VERSIÓN v20.0H TS Scoring</div>
+        <div className="text-[#bf953f] font-bold">{VECY_VERSION_LABEL}</div>
       </div>
     </div>
   );
