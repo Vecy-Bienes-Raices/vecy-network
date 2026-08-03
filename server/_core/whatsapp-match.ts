@@ -921,23 +921,38 @@ export class JaniaMatchBot {
   private async handleIncomingGroupMessage(msg: proto.IWebMessageInfo, chatId: string, bodyText: string) {
     if (!msg.key || !msg.message) return;
 
-    // --- REACCIÓN INSTANTÁNEA (< 200ms) CON CONFIRMACIÓN VISUAL EN CELULAR ---
+    // --- REACCIÓN INSTANTÁNEA (< 200ms) SEGÚN AUTORIDAD DEL GRUPO (OFICIAL VS EXTERNO) ---
     if (!msg.key.fromMe) {
       const cleanLower = (bodyText || '').toLowerCase();
       const hasMediaOrUrl = !!msg.message.imageMessage || !!msg.message.documentMessage || cleanLower.includes('http');
       const isSearch = cleanLower.includes('busco') || cleanLower.includes('necesito') || cleanLower.includes('requiero') || cleanLower.includes('requerimiento') || cleanLower.includes('se busca');
       const isOffer = cleanLower.includes('vendo') || cleanLower.includes('arriendo') || cleanLower.includes('en venta') || cleanLower.includes('en arriendo') || cleanLower.includes('apto') || cleanLower.includes('apartamento') || cleanLower.includes('casa') || cleanLower.includes('bodega') || cleanLower.includes('oficina') || cleanLower.includes('lote') || cleanLower.includes('finca') || cleanLower.includes('precio') || cleanLower.includes('$') || cleanLower.includes('m2') || cleanLower.includes('mts') || hasMediaOrUrl;
 
-      const fastEmoji = isSearch ? '📝' : (isOffer ? '👍' : '❓');
-      try {
-        console.log(`[JANIA-FAST-REACT] 🎯 Enviando reacción instantánea ${fastEmoji} a ${chatId} (Msg ID: ${msg.key.id})`);
-        this.sock.sendMessage(chatId, { react: { text: fastEmoji, key: msg.key } }).then(() => {
-          console.log(`[JANIA-FAST-REACT] ✅ Reacción ${fastEmoji} ENTREGADA NATIVAMENTE en WhatsApp`);
-        }).catch((err: any) => {
-          console.error(`[JANIA-FAST-REACT] ❌ Error en envío de reacción:`, err?.message || err);
-        });
-      } catch (err: any) {
-        console.error(`[JANIA-FAST-REACT] Exception al reaccionar:`, err?.message || err);
+      const isOfficialGroup = chatId === this.targetGroupId || chatId === this.buzonGroupId || chatId === this.circuloGroupId;
+
+      // REGLA DOCTRINAL DE EDUARDO:
+      // En grupos externos: SOLO reaccionar con 📝 (Requerimientos) o 👍 (Inmuebles). Jamás 🚫 ni ❓.
+      // En grupos oficiales VECY: Permite 👍, 📝, ❓ y 🚫.
+      let fastEmoji: string | null = null;
+      if (isSearch) {
+        fastEmoji = '📝';
+      } else if (isOffer) {
+        fastEmoji = '👍';
+      } else if (isOfficialGroup) {
+        fastEmoji = '❓';
+      }
+
+      if (fastEmoji) {
+        try {
+          console.log(`[JANIA-FAST-REACT] 🎯 Enviando reacción instantánea ${fastEmoji} a ${chatId} (Msg ID: ${msg.key.id})`);
+          this.sock.sendMessage(chatId, { react: { text: fastEmoji, key: msg.key } }).then(() => {
+            console.log(`[JANIA-FAST-REACT] ✅ Reacción ${fastEmoji} ENTREGADA NATIVAMENTE en WhatsApp`);
+          }).catch((err: any) => {
+            console.error(`[JANIA-FAST-REACT] ❌ Error en envío de reacción:`, err?.message || err);
+          });
+        } catch (err: any) {
+          console.error(`[JANIA-FAST-REACT] Exception al reaccionar:`, err?.message || err);
+        }
       }
     }
 
@@ -1011,10 +1026,12 @@ export class JaniaMatchBot {
     }
   }
 
-  private getReactionEmoji(result: any, isOfficialGroup: boolean = false): string {
-    if (!result) return '❓';
+  private getReactionEmoji(result: any, isOfficialGroup: boolean = false): string | null {
+    if (!result) return isOfficialGroup ? '❓' : null;
 
-    if (result.reactionEmoji) return result.reactionEmoji;
+    if (result.reactionEmoji && (isOfficialGroup || result.reactionEmoji === '👍' || result.reactionEmoji === '📝')) {
+      return result.reactionEmoji;
+    }
 
     const classification = (result.classification || '').toUpperCase();
     const rawText = (result.rawText || result.response || result.extractedData?.rawText || '').toLowerCase();
@@ -1046,25 +1063,23 @@ export class JaniaMatchBot {
       return '👍';
     }
 
-    // 3. Publicaciones Incompletas / Consultas -> ❓
-    if (
-      classification === 'DATOS_INCOMPLETOS' || 
-      classification.includes('INCOMPLETO') || 
-      classification.includes('PARCIAL') ||
-      classification === 'CONSULTA_GENERAL' ||
-      rawText.includes("incompleto") ||
-      rawText.includes("falta precio") ||
-      rawText.includes("sin precio")
-    ) {
-      return '❓';
-    }
-
-    // 4. Infracciones / Violaciones de Norma
-    if (classification === 'VIOLACION_DE_NORMAS' || classification.includes('SPAM') || classification.includes('INFRACCION')) {
+    // 3. Infracciones / Violaciones de Norma -> 🚫 EXCLUSIVAMENTE EN GRUPOS OFICIALES VECY
+    if (isOfficialGroup && (classification === 'VIOLACION_DE_NORMAS' || classification.includes('SPAM') || classification.includes('INFRACCION'))) {
       return '🚫';
     }
 
-    return '❓';
+    // 4. Publicaciones Incompletas / Consultas -> ❓ EXCLUSIVAMENTE EN GRUPOS OFICIALES VECY
+    if (isOfficialGroup && (
+      classification === 'DATOS_INCOMPLETOS' || 
+      classification.includes('INCOMPLETO') || 
+      classification.includes('PARCIAL') ||
+      classification === 'CONSULTA_GENERAL'
+    )) {
+      return '❓';
+    }
+
+    // EN GRUPOS EXTERNOS: Si no es Inmueble (👍) ni Requerimiento (📝), SILENCIO ABSOLUTO (Cero emoji)
+    return null;
   }
 
 
