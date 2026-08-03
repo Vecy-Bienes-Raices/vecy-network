@@ -1153,19 +1153,14 @@ export class JaniaMatchBot {
           const isOfficialGroupSingle = chatId === this.targetGroupId || chatId === this.buzonGroupId || chatId === this.circuloGroupId;
           if (result) {
             const emoji = this.getReactionEmoji(result, isOfficialGroupSingle);
-            if (emoji && bufferedMsg.originalMsg?.key && bufferedMsg.originalMsg.key.id) {
-              try {
-                const reactionKey = {
-                  remoteJid: bufferedMsg.originalMsg.key.remoteJid || chatId,
-                  fromMe: bufferedMsg.originalMsg.key.fromMe || false,
-                  id: bufferedMsg.originalMsg.key.id,
-                  participant: bufferedMsg.originalMsg.key.participant
-                };
-                console.log(`[JANIA-MATCH] 🎯 REACCIÓN NATIVA ENVIADA: ${emoji} a msg ID ${bufferedMsg.originalMsg.key.id} en grupo (${chatId})`);
-                await this.sock.sendMessage(chatId, { react: { text: emoji, key: reactionKey } });
-              } catch (reactErr: any) {
-                console.error('[JANIA-MATCH] ❌ Error al reaccionar a mensaje individual:', reactErr?.message || reactErr);
-              }
+            if (emoji && bufferedMsg.originalMsg?.key && bufferedMsg.originalMsg.key.id && !bufferedMsg.originalMsg.key.fromMe) {
+              const reactionKey = {
+                remoteJid: bufferedMsg.originalMsg.key.remoteJid || chatId,
+                fromMe: false,
+                id: bufferedMsg.originalMsg.key.id,
+                participant: bufferedMsg.originalMsg.key.participant
+              };
+              this.sock.sendMessage(chatId, { react: { text: emoji, key: reactionKey } }).catch(() => {});
             }
           }
         }
@@ -1239,25 +1234,22 @@ export class JaniaMatchBot {
         );
       }
 
-      // --- REACCIONAR A LA PUBLICACIÓN EN TODOS LOS GRUPOS PREDIALES Y OFICIALES ---
+      // --- REACCIONAR A LA PUBLICACIÓN EN GRUPOS (ASÍNCRONO Y SEGURO) ---
       const isOfficialGroup = chatId === this.targetGroupId || chatId === this.buzonGroupId || chatId === this.circuloGroupId;
       if (result) {
         const emoji = this.getReactionEmoji(result, isOfficialGroup);
         if (emoji) {
-          try {
-            const lastMsg = buffer.messages[buffer.messages.length - 1]?.originalMsg;
-            if (lastMsg && lastMsg.key && lastMsg.key.id) {
-              const reactionKey = {
-                remoteJid: lastMsg.key.remoteJid || chatId,
-                fromMe: lastMsg.key.fromMe || false,
-                id: lastMsg.key.id,
-                participant: lastMsg.key.participant
-              };
-              console.log(`[JANIA-MATCH] 🎯 REACCIÓN NATIVA ENVIADA: ${emoji} al mensaje ID ${lastMsg.key.id} de ${resolvedSenderId} en grupo (${chatId})`);
-              await this.sock.sendMessage(chatId, { react: { text: emoji, key: reactionKey } });
-            }
-          } catch (reactErr: any) {
-            console.error('[JANIA-MATCH] ❌ Error al reaccionar al mensaje predial:', reactErr?.message || reactErr);
+          const lastMsg = buffer.messages[buffer.messages.length - 1]?.originalMsg;
+          if (lastMsg && lastMsg.key && lastMsg.key.id && !lastMsg.key.fromMe) {
+            const reactionKey = {
+              remoteJid: lastMsg.key.remoteJid || chatId,
+              fromMe: false,
+              id: lastMsg.key.id,
+              participant: lastMsg.key.participant
+            };
+            this.sock.sendMessage(chatId, { react: { text: emoji, key: reactionKey } }).catch((reactErr: any) => {
+              // Silencioso: no interrumpe la ingesta ni desestabiliza Baileys
+            });
           }
         }
       }
