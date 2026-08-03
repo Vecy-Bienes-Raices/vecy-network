@@ -921,20 +921,27 @@ export class JaniaMatchBot {
   private async handleIncomingGroupMessage(msg: proto.IWebMessageInfo, chatId: string, bodyText: string) {
     if (!msg.key || !msg.message) return;
 
-    // --- REACCIÓN INSTANTÁNEA (< 200ms) SEGÚN AUTORIDAD DEL GRUPO (OFICIAL VS EXTERNO) ---
+    // --- REACCIÓN INSTANTÁNEA (< 200ms) SEGÚN REGLAS DE EMOJIS DE EDUARDO ---
     if (!msg.key.fromMe) {
       const cleanLower = (bodyText || '').toLowerCase();
       const hasMediaOrUrl = !!msg.message.imageMessage || !!msg.message.documentMessage || cleanLower.includes('http');
       const isSearch = cleanLower.includes('busco') || cleanLower.includes('necesito') || cleanLower.includes('requiero') || cleanLower.includes('requerimiento') || cleanLower.includes('se busca');
       const isOffer = cleanLower.includes('vendo') || cleanLower.includes('arriendo') || cleanLower.includes('en venta') || cleanLower.includes('en arriendo') || cleanLower.includes('apto') || cleanLower.includes('apartamento') || cleanLower.includes('casa') || cleanLower.includes('bodega') || cleanLower.includes('oficina') || cleanLower.includes('lote') || cleanLower.includes('finca') || cleanLower.includes('precio') || cleanLower.includes('$') || cleanLower.includes('m2') || cleanLower.includes('mts') || hasMediaOrUrl;
 
+      const hasSpecs = cleanLower.includes('alcobas') || cleanLower.includes('habitacion') || cleanLower.includes('baño') || cleanLower.includes('m2') || cleanLower.includes('parqueadero') || cleanLower.includes('garaje') || hasMediaOrUrl || cleanLower.length > 130;
+
       const isOfficialGroup = chatId === this.targetGroupId || chatId === this.buzonGroupId || chatId === this.circuloGroupId;
 
       // REGLA DOCTRINAL DE EDUARDO:
-      // En grupos externos: SOLO reaccionar con 📝 (Requerimientos) o 👍 (Inmuebles). Jamás 🚫 ni ❓.
-      // En grupos oficiales VECY: Permite 👍, 📝, ❓ y 🚫.
+      // 1. 👍 -> Oferta con datos prediales claros / completos.
+      // 2. 📝 -> Requerimiento con datos prediales claros / completos.
+      // 3. ❓ -> Publicaciones mínimas / incompletas sin datos técnicos (PERMITIDO EN TODOS LOS GRUPOS).
+      // 4. 🚫 -> Violación de normas / Spam (EXCLUSIVO EN GRUPOS OFICIALES VECY).
       let fastEmoji: string | null = null;
-      if (isSearch) {
+
+      if (!hasSpecs && (isSearch || isOffer)) {
+        fastEmoji = '❓'; // Publicación mediocre / incompleta sin datos prediales suficientes
+      } else if (isSearch) {
         fastEmoji = '📝';
       } else if (isOffer) {
         fastEmoji = '👍';
@@ -1029,14 +1036,30 @@ export class JaniaMatchBot {
   private getReactionEmoji(result: any, isOfficialGroup: boolean = false): string | null {
     if (!result) return isOfficialGroup ? '❓' : null;
 
-    if (result.reactionEmoji && (isOfficialGroup || result.reactionEmoji === '👍' || result.reactionEmoji === '📝')) {
+    if (result.reactionEmoji && (isOfficialGroup || result.reactionEmoji === '👍' || result.reactionEmoji === '📝' || result.reactionEmoji === '❓')) {
       return result.reactionEmoji;
     }
 
     const classification = (result.classification || '').toUpperCase();
     const rawText = (result.rawText || result.response || result.extractedData?.rawText || '').toLowerCase();
 
-    // 1. Requerimientos (Demandas de búsqueda) -> SIEMPRE 📝
+    // 1. Infracciones / Violaciones de Norma -> 🚫 EXCLUSIVAMENTE EN GRUPOS OFICIALES VECY
+    if (isOfficialGroup && (classification === 'VIOLACION_DE_NORMAS' || classification.includes('SPAM') || classification.includes('INFRACCION'))) {
+      return '🚫';
+    }
+
+    // 2. Publicaciones Incompletas / Mediocres sin datos prediales suficientes -> ❓ PERMITIDO EN TODOS LOS GRUPOS
+    if (
+      classification === 'DATOS_INCOMPLETOS' || 
+      classification.includes('INCOMPLETO') || 
+      classification.includes('PARCIAL') ||
+      classification === 'CONSULTA_GENERAL' ||
+      (rawText.length < 130 && !rawText.includes("hab") && !rawText.includes("alcoba") && !rawText.includes("baño") && !rawText.includes("m2"))
+    ) {
+      return '❓';
+    }
+
+    // 3. Requerimientos (Demandas de búsqueda con datos técnicos) -> 📝
     if (
       classification === 'REQUERIMIENTO' || 
       classification.includes('REQUERIMIENTO') || 
@@ -1044,14 +1067,12 @@ export class JaniaMatchBot {
       classification.includes('BUSQUEDA') ||
       rawText.includes("requiero") ||
       rawText.includes("busco") ||
-      rawText.includes("necesito") ||
-      rawText.includes("para compra se busca") ||
-      rawText.includes("se busca")
+      rawText.includes("necesito")
     ) {
       return '📝';
     }
 
-    // 2. Inmuebles / Ofertas comerciales confirmadas por JanIA -> SIEMPRE 👍
+    // 4. Inmuebles / Ofertas comerciales con datos técnicos -> 👍
     if (
       classification === 'INMUEBLE' || 
       classification.includes('INMUEBLE') || 
@@ -1063,23 +1084,7 @@ export class JaniaMatchBot {
       return '👍';
     }
 
-    // 3. Infracciones / Violaciones de Norma -> 🚫 EXCLUSIVAMENTE EN GRUPOS OFICIALES VECY
-    if (isOfficialGroup && (classification === 'VIOLACION_DE_NORMAS' || classification.includes('SPAM') || classification.includes('INFRACCION'))) {
-      return '🚫';
-    }
-
-    // 4. Publicaciones Incompletas / Consultas -> ❓ EXCLUSIVAMENTE EN GRUPOS OFICIALES VECY
-    if (isOfficialGroup && (
-      classification === 'DATOS_INCOMPLETOS' || 
-      classification.includes('INCOMPLETO') || 
-      classification.includes('PARCIAL') ||
-      classification === 'CONSULTA_GENERAL'
-    )) {
-      return '❓';
-    }
-
-    // EN GRUPOS EXTERNOS: Si no es Inmueble (👍) ni Requerimiento (📝), SILENCIO ABSOLUTO (Cero emoji)
-    return null;
+    return isOfficialGroup ? '❓' : null;
   }
 
 
