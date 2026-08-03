@@ -924,7 +924,8 @@ export class JaniaMatchBot {
     // --- REACCIÓN INSTANTÁNEA (< 200ms) SEGÚN REGLAS DE EMOJIS DE EDUARDO ---
     if (!msg.key.fromMe) {
       const cleanLower = (bodyText || '').toLowerCase();
-      const hasMediaOrUrl = !!msg.message.imageMessage || !!msg.message.documentMessage || cleanLower.includes('http');
+      const hasMediaOrUrl = !!msg.message.imageMessage || !!msg.message.documentMessage || cleanLower.includes('http://') || cleanLower.includes('https://') || cleanLower.includes('www.') || cleanLower.includes('.co') || cleanLower.includes('.com');
+
       const isSearch = cleanLower.includes('busco') || cleanLower.includes('necesito') || cleanLower.includes('requiero') || cleanLower.includes('requerimiento') || cleanLower.includes('se busca');
       const isOffer = cleanLower.includes('vendo') || cleanLower.includes('arriendo') || cleanLower.includes('en venta') || cleanLower.includes('en arriendo') || cleanLower.includes('apto') || cleanLower.includes('apartamento') || cleanLower.includes('casa') || cleanLower.includes('bodega') || cleanLower.includes('oficina') || cleanLower.includes('lote') || cleanLower.includes('finca') || cleanLower.includes('precio') || cleanLower.includes('$') || cleanLower.includes('m2') || cleanLower.includes('mts') || hasMediaOrUrl;
 
@@ -934,13 +935,14 @@ export class JaniaMatchBot {
       // 2. Datos prediales específicos (Habitaciones, Baños, Parqueaderos, Metraje y Sector)
       const hasTechSpecs = (cleanLower.includes('hab') || cleanLower.includes('alcoba') || cleanLower.includes('baño') || cleanLower.includes('m2') || cleanLower.includes('mts') || cleanLower.includes('parq') || cleanLower.includes('garaje')) && (cleanLower.includes('barrio') || cleanLower.includes('sector') || cleanLower.includes('calle') || cleanLower.includes('cra') || cleanLower.includes('carrera') || cleanLower.includes('zona') || cleanLower.includes('chico') || cleanLower.includes('chicó') || cleanLower.includes('rosales') || cleanLower.includes('cedritos') || cleanLower.includes('colina') || cleanLower.includes('santa') || cleanLower.includes('calleja') || cleanLower.includes('nogal') || cleanLower.includes('cabrera') || cleanLower.includes('virrey') || cleanLower.includes('pasadena') || cleanLower.includes('teusaquillo') || cleanLower.includes('chia') || cleanLower.includes('chía') || cleanLower.includes('cajica') || cleanLower.includes('cajicá'));
 
-      const isCompletePublication = hasBudget && (hasTechSpecs || hasMediaOrUrl || cleanLower.length > 180);
+      // DOCTRINA VECY: Si el mensaje trae un enlace web (URL), imagen o PDF, CONTIENE LA FICHA TÉCNICA COMPLETA. NUNCA ES INCOMPLETO.
+      const isCompletePublication = hasMediaOrUrl || (hasBudget && (hasTechSpecs || cleanLower.length > 180));
       const isOfficialGroup = chatId === this.targetGroupId || chatId === this.buzonGroupId || chatId === this.circuloGroupId;
 
       // REGLA DOCTRINAL DE EDUARDO:
-      // 1. 👍 -> Oferta COMPLETA con presupuesto + datos prediales claros.
-      // 2. 📝 -> Requerimiento COMPLETO con presupuesto + datos prediales claros.
-      // 3. ❓ -> Publicaciones incompletas (FALTA PRESUPUESTO o datos técnicos esenciales) -> EN TODOS LOS GRUPOS.
+      // 1. 👍 -> Oferta COMPLETA (o con enlace URL/imagen/PDF).
+      // 2. 📝 -> Requerimiento COMPLETO (o con enlace URL/imagen/PDF).
+      // 3. ❓ -> Texto plano mediocre / incompleto al que REALMENTE le faltan datos fundamentalísimos (ej: Sandra Vargas sin presupuesto ni datos).
       // 4. 🚫 -> Violación de normas / Spam -> EXCLUSIVO EN GRUPOS OFICIALES VECY.
       let fastEmoji: string | null = null;
 
@@ -948,7 +950,7 @@ export class JaniaMatchBot {
         if (isCompletePublication) {
           fastEmoji = isSearch ? '📝' : '👍';
         } else {
-          fastEmoji = '❓'; // Publicación mediocre / incompleta (ej: falta presupuesto o datos prediales mínimos)
+          fastEmoji = '❓'; // Texto plano mediocre / incompleto sin datos prediales ni presupuesto
         }
       } else if (isOfficialGroup) {
         fastEmoji = '❓';
