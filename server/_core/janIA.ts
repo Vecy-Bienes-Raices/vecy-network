@@ -2418,6 +2418,12 @@ Por lo tanto, DEBES hacer lo siguiente:
     if (result && result.dmResponse) {
       result.dmResponse = sanitizeResponseMarkdown(result.dmResponse);
     }
+    if (!result.reactionEmoji) {
+      if (result.classification === "INMUEBLE") result.reactionEmoji = "👍";
+      else if (result.classification === "REQUERIMIENTO") result.reactionEmoji = "📝";
+      else if (result.classification === "DATOS_INCOMPLETOS" || result.classification === "CONSULTA_GENERAL") result.reactionEmoji = "❓";
+      else if (result.classification === "VIOLACION_DE_NORMAS") result.reactionEmoji = "🚫";
+    }
     return result;
   } catch (error) {
     console.error("Error en JanIA v11.70:", error);

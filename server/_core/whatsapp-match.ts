@@ -998,7 +998,9 @@ export class JaniaMatchBot {
   }
 
   private getReactionEmoji(result: any, isOfficialGroup: boolean = false): string {
-    if (!result) return isOfficialGroup ? '🚫' : '';
+    if (!result) return '❓';
+
+    if (result.reactionEmoji) return result.reactionEmoji;
 
     const classification = (result.classification || '').toUpperCase();
     const rawText = (result.rawText || result.response || result.extractedData?.rawText || '').toLowerCase();
@@ -1024,16 +1026,18 @@ export class JaniaMatchBot {
       classification.includes('INMUEBLE') || 
       classification.includes('OFERTA') ||
       result.inmuebleId || 
-      result.propertyId
+      result.propertyId ||
+      result.inserted === true
     ) {
       return '👍';
     }
 
-    // 3. Publicaciones Incompletas / Faltan datos clave -> ❓
+    // 3. Publicaciones Incompletas / Consultas -> ❓
     if (
       classification === 'DATOS_INCOMPLETOS' || 
       classification.includes('INCOMPLETO') || 
       classification.includes('PARCIAL') ||
+      classification === 'CONSULTA_GENERAL' ||
       rawText.includes("incompleto") ||
       rawText.includes("falta precio") ||
       rawText.includes("sin precio")
@@ -1043,11 +1047,10 @@ export class JaniaMatchBot {
 
     // 4. Infracciones / Violaciones de Norma
     if (classification === 'VIOLACION_DE_NORMAS' || classification.includes('SPAM') || classification.includes('INFRACCION')) {
-      return isOfficialGroup ? '🚫' : '';
+      return '🚫';
     }
 
-    // Fallback por defecto si no es inmueble ni requerimiento:
-    return isOfficialGroup ? '🚫' : '';
+    return '❓';
   }
 
 
@@ -1147,13 +1150,12 @@ export class JaniaMatchBot {
             groupName
           );
 
-          const isSupportGroupSingle = chatId === this.buzonGroupId || chatId === this.circuloGroupId;
           const isOfficialGroupSingle = chatId === this.targetGroupId || chatId === this.buzonGroupId || chatId === this.circuloGroupId;
-          if (result && !isSupportGroupSingle) {
+          if (result) {
             const emoji = this.getReactionEmoji(result, isOfficialGroupSingle);
             if (emoji && bufferedMsg.originalMsg?.key) {
               try {
-                console.log(`[JANIA-MATCH] Reaccionando individualmente con ${emoji} a publicación de ${senderId} en grupo predial (${chatId})`);
+                console.log(`[JANIA-MATCH] Reaccionando NATIVAMENTE con ${emoji} a publicación de ${senderId} en grupo (${chatId})`);
                 await this.sock.sendMessage(chatId, { react: { text: emoji, key: bufferedMsg.originalMsg.key } });
               } catch (reactErr: any) {
                 console.error('[JANIA-MATCH] Error al reaccionar a mensaje individual:', reactErr);
@@ -1178,7 +1180,9 @@ export class JaniaMatchBot {
             try {
               const data = await scrapePropertyLink(url);
               if (data) scrapedResults.push(data);
-            } catch (err) {}
+            } catch (err: any) {
+              console.error(`[SCRAPING-BUFFER] Error al raspar URL ${url}:`, err?.message || err);
+            }
           }
         }
       }
@@ -1229,16 +1233,15 @@ export class JaniaMatchBot {
         );
       }
 
-      // --- REACCIONAR A LA PUBLICACIÓN EN TODOS LOS GRUPOS PREDIALES ---
-      const isSupportGroup = chatId === this.buzonGroupId || chatId === this.circuloGroupId;
+      // --- REACCIONAR A LA PUBLICACIÓN EN TODOS LOS GRUPOS PREDIALES Y OFICIALES ---
       const isOfficialGroup = chatId === this.targetGroupId || chatId === this.buzonGroupId || chatId === this.circuloGroupId;
-      if (result && !isSupportGroup) {
+      if (result) {
         const emoji = this.getReactionEmoji(result, isOfficialGroup);
         if (emoji) {
           try {
             const lastMsg = buffer.messages[buffer.messages.length - 1]?.originalMsg;
             if (lastMsg && lastMsg.key) {
-              console.log(`[JANIA-MATCH] Reaccionando con ${emoji} al mensaje de ${senderId} en grupo predial (${chatId})`);
+              console.log(`[JANIA-MATCH] Reaccionando NATIVAMENTE con ${emoji} al mensaje de ${senderId} en grupo (${chatId})`);
               await this.sock.sendMessage(chatId, { react: { text: emoji, key: lastMsg.key } });
             }
           } catch (reactErr: any) {
