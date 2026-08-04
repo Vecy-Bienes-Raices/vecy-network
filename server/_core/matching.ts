@@ -790,18 +790,15 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
     }
   }
 
-  // ── FILTRO DURO 7: Presupuesto Máximo (TOLERANCIA CERO 0%) ──
+  // ── FILTRO DURO 7: Presupuesto Máximo (TOLERANCIA CERO ABSOLUTA EN TECHO FINANCIERO) ──
   if (budgetMax > 0) {
     const isReqRent = reqBiz.includes("arriendo");
-    const isReqSale = reqBiz.includes("venta") || reqBiz.includes("permuta");
-
-    // Para Arriendos: Si (Canon + Administración de la oferta) > Canon Máximo de la demanda → 0%
+    
     if (isReqRent) {
-      // Usar el campo rentPrice (columna rent_price en Supabase) — corregido de priceRent
       let propRent = property.rentPrice ? parseFloat(String(property.rentPrice)) : 0;
       if (propRent <= 0 && property.rawText) {
         const rawP = property.rawText.toLowerCase();
-        const matchRentP = rawP.match(/arriendo\s*:?\s*\$?([\d.]+)\s*(millones|millón|m|M)?/i);
+        const matchRentP = rawP.match(/(?:arriendo|canon|renta)\s*:?\s*\$?([\d.]+)\s*(millones|millón|m|M)?/i);
         if (matchRentP) {
           let valP = parseFloat(matchRentP[1].replace(/\./g, ""));
           if (!isNaN(valP)) {
@@ -810,75 +807,52 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
           }
         }
       }
-      // Fallback: si price es un valor de arriendo realista (<100M) y no hay rentPrice
       if (propRent <= 0 && price > 0 && price < 100000000) {
         propRent = price;
       }
-      if (propRent > 0) {
-        const adminVal = pAdminFee > 0 ? pAdminFee : 0;
-        const totalRent = propRent + adminVal;
+      
+      const adminVal = pAdminFee > 0 ? pAdminFee : 0;
+      const totalRent = propRent + adminVal;
 
-        // Guillotina Techo Arriendo: Zero Tolerance
-        if (totalRent > budgetMax) {
-          blockers.push(`Guillotina Financiera (Tolerancia Cero): Canon de arriendo total ($${totalRent.toLocaleString()}) supera el presupuesto máximo de $${budgetMax.toLocaleString()}`);
-          return buildExplanationResult(0, blockers, positives, negatives);
-        }
-
-        const reqRentMin = requirement.presupuestoMin ? parseFloat(String(requirement.presupuestoMin)) : 0;
-        if (reqRentMin > 0 && totalRent < reqRentMin * 0.85) {
-          positives.push(`🔥 Oportunidad Financiera (Ganga): Canon total ($${totalRent.toLocaleString()}) está por debajo del rango mínimo presupuestado ($${reqRentMin.toLocaleString()}).`);
-        } else {
-          positives.push(`✅ Presupuesto de arriendo cumple: Total $${totalRent.toLocaleString()} (Canon + Admón) <= Máximo $${budgetMax.toLocaleString()}`);
-        }
+      if (propRent <= 0 && price > 100000000) {
+        blockers.push(`Guillotina Financiera (Tolerancia Cero): La oferta no especifica canon de arriendo y su precio de venta ($${price.toLocaleString()}) no aplica para una búsqueda de arriendo de $${budgetMax.toLocaleString()}`);
+        return buildExplanationResult(0, blockers, positives, negatives);
       }
-    }
 
-    // Para Ventas: Guillotina Financiera (Tolerancia Cero Techo + Lógica de Ganga)
-    if (isReqSale && propBiz.includes("venta")) {
+      if (totalRent > budgetMax) {
+        blockers.push(`Guillotina Financiera (Tolerancia Cero): Canon de arriendo total ($${totalRent.toLocaleString()}) supera el presupuesto máximo de $${budgetMax.toLocaleString()}`);
+        return buildExplanationResult(0, blockers, positives, negatives);
+      }
+
+      const reqRentMin = requirement.presupuestoMin ? parseFloat(String(requirement.presupuestoMin)) : 0;
+      if (reqRentMin > 0 && totalRent < reqRentMin * 0.85) {
+        positives.push(`🔥 Oportunidad Financiera (Ganga): Canon total ($${totalRent.toLocaleString()}) está por debajo del rango mínimo presupuestado ($${reqRentMin.toLocaleString()}).`);
+      } else {
+        positives.push(`✅ Presupuesto de arriendo cumple: Total $${totalRent.toLocaleString()} (Canon + Admón) <= Máximo $${budgetMax.toLocaleString()}`);
+      }
+    } else {
+      // Para Compras / Ventas:
       let salePrice = price;
-      if (
-        (propBiz === "venta_o_arriendo") &&
-        price > 0 && price < 100_000_000
-      ) {
-        const rawPT = (property.rawText || "").toLowerCase();
-        const salePriceMatch = rawPT.match(/(?:precio\s*(?:de\s*)?venta|venta)\s*:?\s*\$?([\d.,]+(?:\s*(?:millones|millón|m|M|mil millones|billones))?)/i);
-        if (salePriceMatch) {
-          let rawVal = salePriceMatch[1].replace(/\./g, "").replace(/,/g, "");
-          const factor = salePriceMatch[0].toLowerCase().includes("mil millon") || salePriceMatch[0].toLowerCase().includes("billn") ? 1_000_000_000
-            : salePriceMatch[1].toLowerCase().includes("millon") || salePriceMatch[1].toLowerCase().includes("millón") ? 1_000_000
-            : 1;
-          const numVal = parseFloat(rawVal.replace(/[^\d]/g, ""));
-          if (!isNaN(numVal) && numVal > 0) {
-            salePrice = numVal < 1000 ? numVal * factor : numVal;
-          }
-        }
+      if (salePrice > budgetMax) {
+        blockers.push(`Guillotina Financiera (Tolerancia Cero): El precio de la propiedad ($${salePrice.toLocaleString()}) supera el presupuesto máximo del comprador ($${budgetMax.toLocaleString()}). Match inviable (0%).`);
+        return buildExplanationResult(0, blockers, positives, negatives);
       }
 
-      if (salePrice > 0) {
-        // 1. GUILLOTINA TECHO VENTA (TOLERANCIA CERO)
-        if (salePrice > budgetMax) {
-          blockers.push(`Guillotina Financiera (Tolerancia Cero): Precio de venta $${salePrice.toLocaleString()} supera el presupuesto máximo de $${budgetMax.toLocaleString()}`);
+      if (salePrice < budgetMax * 0.70) {
+        const reqBeds = Number(requirement.habitacionesMin || 0);
+        const reqBaths = Number(requirement.banosMin || 0);
+        const propBeds = Number(property.bedrooms || 0);
+        const propBaths = Number(property.bathrooms || 0);
+
+        const bedsOk = reqBeds <= 0 || propBeds >= reqBeds;
+        const bathsOk = reqBaths <= 0 || propBaths >= reqBaths;
+        const geoOk = geoResult.score >= 20; // Zona coincide
+
+        if (!bedsOk || !bathsOk || !geoOk) {
+          blockers.push(`Ganga Rechazada: Precio ($${salePrice.toLocaleString()}) es inferior al 70% del presupuesto ($${budgetMax.toLocaleString()}) pero no satisface el 100% de habitaciones, baños y ubicación.`);
           return buildExplanationResult(0, blockers, positives, negatives);
-        }
-
-        // 2. LÓGICA DE GANGA (< 70% del Presupuesto)
-        // Si el precio es significativamente menor (< 70% del máximo), exige coincidencia exacta en hab, baños y zona.
-        if (salePrice < budgetMax * 0.70) {
-          const reqBeds = Number(requirement.habitacionesMin || 0);
-          const reqBaths = Number(requirement.banosMin || 0);
-          const propBeds = Number(property.bedrooms || 0);
-          const propBaths = Number(property.bathrooms || 0);
-
-          const bedsOk = reqBeds <= 0 || propBeds >= reqBeds;
-          const bathsOk = reqBaths <= 0 || propBaths >= reqBaths;
-          const geoOk = geoResult.score >= 20; // Zona coincide
-
-          if (!bedsOk || !bathsOk || !geoOk) {
-            blockers.push(`Ganga Rechazada: Precio ($${salePrice.toLocaleString()}) es inferior al 70% del presupuesto ($${budgetMax.toLocaleString()}) pero no satisface el 100% de habitaciones, baños y ubicación.`);
-            return buildExplanationResult(0, blockers, positives, negatives);
-          } else {
-            positives.push(`💰 Oportunidad Ganga Validada: Precio ($${salePrice.toLocaleString()}) está 30%+ por debajo del presupuesto con coincidencia perfecta de especificaciones.`);
-          }
+        } else {
+          positives.push(`💰 Oportunidad Ganga Validada: Precio ($${salePrice.toLocaleString()}) está 30%+ por debajo del presupuesto con coincidencia perfecta de especificaciones.`);
         }
       }
     }
