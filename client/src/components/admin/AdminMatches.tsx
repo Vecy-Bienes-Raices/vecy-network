@@ -478,6 +478,72 @@ function scoreRows(req: any, prop: any) {
     <Calendar className="w-3.5 h-3.5" />
   );
 
+  // 12. Permuta & Modalidad de Pago
+  const reqPermuta = reqTextLower.includes("permuta") || (req.tipoNegocioDeseado || "").toLowerCase().includes("permuta");
+  const propPermuta = propRawText.includes("permuta") || (prop.transactionType || "").toLowerCase().includes("permuta");
+  let permutaS: MatchStatus = "neutral";
+  if (reqPermuta || propPermuta) {
+    permutaS = (reqPermuta && propPermuta) ? "exact" : "warn";
+  }
+  add(
+    "Permuta / Pago",
+    reqPermuta ? "Acepta Permuta / Parte de pago" : "Efectivo / Tradicional",
+    propPermuta ? "Acepta Permuta / Recibe menor valor" : "Venta Directa / Tradicional",
+    permutaS,
+    5,
+    <SlidersHorizontal className="w-3.5 h-3.5" />
+  );
+
+  // 13. Cocina & Acabados
+  const propCocina = prop.kitchenType || (propRawText.includes("isla") ? "Abierta tipo Isla" : propRawText.includes("integral") ? "Integral" : propRawText.includes("abierta") ? "Abierta" : "N/E");
+  const reqCocina = reqTextLower.includes("isla") ? "Abierta tipo Isla" : reqTextLower.includes("abierta") ? "Abierta" : "Cualquiera";
+  let cocinaS: MatchStatus = "neutral";
+  if (reqCocina !== "Cualquiera") {
+    cocinaS = propCocina.toLowerCase().includes(reqCocina.toLowerCase()) ? "exact" : "warn";
+  }
+  add(
+    "Cocina & Acabados",
+    reqCocina,
+    propCocina,
+    cocinaS,
+    4,
+    <Sparkles className="w-3.5 h-3.5" />
+  );
+
+  // 14. Balcón, Terraza & Vista
+  const propBalcon = propRawText.includes("balcon") || propRawText.includes("balcón") || prop.hasBalcony;
+  const propTerraza = propRawText.includes("terraza") || prop.hasTerrace;
+  const reqBalcon = reqTextLower.includes("balcon") || reqTextLower.includes("balcón") || reqTextLower.includes("terraza");
+  let extSpaceS: MatchStatus = "neutral";
+  if (reqBalcon) {
+    extSpaceS = (propBalcon || propTerraza) ? "exact" : "warn";
+  }
+  add(
+    "Balcón / Terraza",
+    reqBalcon ? "Exige Balcón o Terraza" : "Deseable",
+    propTerraza ? "Sí (Con Terraza)" : propBalcon ? "Sí (Con Balcón)" : "Sin balcón especificado",
+    extSpaceS,
+    5,
+    <Ruler className="w-3.5 h-3.5" />
+  );
+
+  // 15. Equipamiento & Seguridad (25 Internas / 45 Externas)
+  const propAscensor = propRawText.includes("ascensor") || prop.hasElevator;
+  const propConjunto = propRawText.includes("club house") || propRawText.includes("gimnasio") || propRawText.includes("piscina") || propRawText.includes("conjunto");
+  const reqAscensor = reqTextLower.includes("ascensor");
+  let equipS: MatchStatus = "neutral";
+  if (reqAscensor) {
+    equipS = propAscensor ? "exact" : "warn";
+  }
+  add(
+    "Equipamiento Edificio",
+    reqAscensor ? "Con Ascensor obligatorio" : "Estándar residencial",
+    propAscensor && propConjunto ? "Ascensor + Club House / Zonas Comunes" : propAscensor ? "Con Ascensor" : "Edificio convencional / Sin ascensor",
+    equipS,
+    6,
+    <Building2 className="w-3.5 h-3.5" />
+  );
+
 
   const autoScore = max > 0 ? Math.round((pts / max) * 100) : 0;
   return { rows, autoScore };
@@ -661,7 +727,7 @@ function checkTxCompatFrontend(reqTypeRaw: string, propTypeRaw: string, propAcce
 
 export default function AdminMatches() {
   const [searchTerm, setSearchTerm] = React.useState('');
-  const [minScore, setMinScore] = React.useState('85'); // Mínimo 85% por norma doctrinal VECY Network
+  const [minScore, setMinScore] = React.useState('80'); // Mínimo 80% por norma doctrinal VECY Network
 
   // Fetch matches directly from server API with auto-refresh every 10s
   const { data: matches = [], isLoading, refetch } = trpc.janIA.getAllMatches.useQuery(undefined, {
@@ -720,13 +786,12 @@ export default function AdminMatches() {
       const scoreVal = parseFloat(String(match.matchScore || '0'));
       const matchesScore = scoreVal >= parseFloat(minScore);
 
-      // Re-verificación estricta de filtros duros (Ubicación, Presupuesto, Tipo o Parqueaderos no satisfechos -> OMITIR)
+      // Re-verificación de filtros duros clave (Ubicación, Presupuesto Máx o Tipo de Inmueble)
       const { rows } = scoreRows(requirement, property);
       const hasBlocker = rows.some(r => r.status === "missing" && (
         r.label === "Ubicación / Barrio" || 
         r.label === "Presupuesto Máx." || 
-        r.label === "Tipo de Inmueble" ||
-        r.label === "Parqueaderos"
+        r.label === "Tipo de Inmueble"
       ));
 
       return matchesSearch && matchesScore && !hasBlocker;

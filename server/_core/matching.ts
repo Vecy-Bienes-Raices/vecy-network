@@ -510,15 +510,24 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
-  // Rechazar requerimientos sin criterios específicos de búsqueda (zona, presupuesto, habitaciones o área)
+  // Rechazar requerimientos incompletos, vagos o muy cortos sin criterios lógicos de búsqueda
+  const reqRawString = (requirement.rawText || requirement.name || "").trim();
   const reqZoneRawClean = (requirement.zonaDeseada || requirement.addressNeighborhood || "").trim().toLowerCase();
   const hasSpecificReqZone = reqZoneRawClean !== "" && reqZoneRawClean !== "na" && reqZoneRawClean !== "bogota" && reqZoneRawClean !== "bogotá";
   const hasReqBudget = parseFloat(String(requirement.presupuestoMax || "0")) > 0 || parseFloat(String(requirement.presupuestoMin || "0")) > 0;
   const hasReqBedrooms = requirement.habitacionesMin != null && Number(requirement.habitacionesMin) > 0;
   const hasReqArea = parseFloat(String(requirement.areaMin || requirement.areaMinimaM2 || "0")) > 0;
+  const hasReqType = !!(requirement.tipoInmuebleDeseado || requirement.propertyType);
 
-  if (!hasSpecificReqZone && !hasReqBudget && !hasReqBedrooms && !hasReqArea) {
-    blockers.push("El requerimiento carece de criterios específicos (zona, presupuesto, habs o área).");
+  let validCriteriaCount = 0;
+  if (hasSpecificReqZone) validCriteriaCount++;
+  if (hasReqBudget) validCriteriaCount++;
+  if (hasReqBedrooms) validCriteriaCount++;
+  if (hasReqArea) validCriteriaCount++;
+  if (hasReqType) validCriteriaCount++;
+
+  if (reqRawString.length < 12 || validCriteriaCount < 2) {
+    blockers.push("Requerimiento incompleto o sin información suficiente para efectuar un cotejamiento lógico.");
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
@@ -559,26 +568,27 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
       "teusaquillo", "kennedy", "fontibon", "bosa", "salitre", "rosales", 
       "colina", "niza", "cabrera", "nogal", "recreo", "castellana", 
       "patricio", "barbara", "belmira", "suiza", "navarra", "floresta",
-      "granada", "colsubsidio"
+      "granada", "colsubsidio", "santa barbara", "santa bárbara", "chico reservado",
+      "chico norte", "rincon del chico", "rincón del chicó", "norte"
     ];
     
     const isBogotaSector = (val: string) => {
-      return SECTORES_BOGOTA.some(sector => val.includes(sector));
+      return val === "" || val === "bogota" || val === "bogotá" || SECTORES_BOGOTA.some(sector => val.includes(sector));
     };
 
-    if (CIUDADES_CO.some(c => n1.includes(c) || n1 === c)) return n1;
-    if (CIUDADES_CO.some(c => n2.includes(c) || n2 === c)) return n2;
-    
     if (isBogotaSector(n1) || isBogotaSector(n2)) {
       return "bogota";
     }
 
-    return n1 || n2;
+    if (CIUDADES_CO.some(c => n1.includes(c) || n1 === c)) return n1;
+    if (CIUDADES_CO.some(c => n2.includes(c) || n2 === c)) return n2;
+
+    return n1 || n2 || "bogota";
   };
 
   const reqCity = resolveCityField(requirement.ciudadDeseada || "", requirement.city || "");
   const propCity = resolveCityField(property.addressCity || "", property.city || "");
-  if (!reqCity || !propCity || reqCity !== propCity) {
+  if (reqCity && propCity && reqCity !== propCity && reqCity !== "bogota" && propCity !== "bogota") {
     blockers.push(`Incompatibilidad de ciudad: deseada ${reqCity}, ofrecida ${propCity}`);
     return buildExplanationResult(0, blockers, positives, negatives);
   }
@@ -648,7 +658,7 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
-  // ── FILTRO DURO 0D: Múltiples Campos Técnicos Esenciales en N/E (Tolerancia Cero 0%) ──
+  // ── FILTRO DURO 0D: Múltiples Campos Técnicos Esenciales en N/E ──
   let missingTechCount = 0;
   if (price <= 0) missingTechCount++;
   if (propArea <= 0) missingTechCount++;
@@ -656,7 +666,8 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   if (pBathrooms <= 0) missingTechCount++;
   if (pGarages <= 0) missingTechCount++;
 
-  if (missingTechCount >= 2) {
+  // Bloquear solo si faltan 4 o más campos técnicos o si no hay precio
+  if (price <= 0 || missingTechCount >= 4) {
     blockers.push(`Oferta con información insuficiente (${missingTechCount} campos técnicos clave en N/E).`);
     return buildExplanationResult(0, blockers, positives, negatives);
   }
@@ -775,8 +786,7 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
         positives.push(`✅ Área de ${propArea} m² dentro de la campana de confort (${reqAreaMin} m² ±15%)`);
       }
     } else {
-      blockers.push(`No se puede verificar el área mínima requerida de ${reqAreaMin} m² (información no especificada en la oferta).`);
-      return buildExplanationResult(0, blockers, positives, negatives);
+      negatives.push(`Área del inmueble no especificada expresamente (requerimiento pide mínimo ${reqAreaMin} m²). Pendiente confirmar con captador.`);
     }
   }
 
@@ -815,10 +825,10 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
         }
 
         const reqRentMin = requirement.presupuestoMin ? parseFloat(String(requirement.presupuestoMin)) : 0;
-        const minRentAllowed = reqRentMin > 0 ? reqRentMin * 0.85 : budgetMax * 0.65;
-        if (minRentAllowed > 0 && totalRent < minRentAllowed) {
-          blockers.push(`Incompatibilidad de canon: $${totalRent.toLocaleString()} es inferior al piso buscado ($${minRentAllowed.toLocaleString()})`);
-          return buildExplanationResult(0, blockers, positives, negatives);
+        if (reqRentMin > 0 && totalRent < reqRentMin * 0.85) {
+          positives.push(`🔥 Oportunidad Financiera (Ganga): Canon total ($${totalRent.toLocaleString()}) está por debajo del rango mínimo presupuestado ($${reqRentMin.toLocaleString()}).`);
+        } else {
+          positives.push(`✅ Presupuesto de arriendo cumple: Total $${totalRent.toLocaleString()} (Canon + Admón) <= Máximo $${budgetMax.toLocaleString()}`);
         }
       }
     }
@@ -1400,13 +1410,13 @@ export async function executeMatchEngine(propertyId: number | null, requirementI
     if (propertyId) {
       props = await db.select().from(properties).where(eq(properties.id, propertyId));
     } else {
-      props = await db.select().from(properties).where(eq(properties.available, true));
+      props = await db.select().from(properties);
     }
 
     if (requirementId) {
       reqs = await db.select().from(requirements).where(eq(requirements.id, requirementId));
     } else {
-      reqs = await db.select().from(requirements).where(eq(requirements.status, "active"));
+      reqs = await db.select().from(requirements);
     }
 
     const { users } = await import("../../drizzle/schema");
@@ -1569,20 +1579,19 @@ export async function executeMatchEngine(propertyId: number | null, requirementI
 }
 
 async function sendDirectAlertToAdmins(message: string): Promise<void> {
+  const adminPhone = process.env.ADMIN_PHONE || "573192919978";
 
   const matchBot = (global as any).janiaMatchBotInstance;
   if (matchBot && matchBot.isReady) {
-    console.log("[Matching-Notification] Enviando alerta de Match a administradores vía Baileys...");
-    await matchBot.queuedSend("573192919978@s.whatsapp.net", message).catch((e: any) => console.error("Error al notificar a Eduardo por Baileys:", e));
-    await matchBot.queuedSend("573188096811@s.whatsapp.net", message).catch((e: any) => console.error("Error al notificar a Jani por Baileys:", e));
+    console.log(`[Matching-Notification] Enviando alerta de Match al administrador (${adminPhone}) vía Baileys...`);
+    await matchBot.queuedSend(`${adminPhone}@s.whatsapp.net`, message).catch((e: any) => console.error("Error al notificar a administrador por Baileys:", e));
     return;
   }
 
   const wwebClient = (global as any).whatsappClient;
   if (wwebClient) {
-    console.log("[Matching-Notification] Enviando alerta de Match a administradores vía WWEBJS...");
-    await wwebClient.sendMessage("573192919978@c.us", message).catch((e: any) => console.error("Error al notificar a Eduardo por WWEBJS:", e));
-    await wwebClient.sendMessage("573188096811@c.us", message).catch((e: any) => console.error("Error al notificar a Jani por WWEBJS:", e));
+    console.log(`[Matching-Notification] Enviando alerta de Match al administrador (${adminPhone}) vía WWEBJS...`);
+    await wwebClient.sendMessage(`${adminPhone}@c.us`, message).catch((e: any) => console.error("Error al notificar a administrador por WWEBJS:", e));
     return;
   }
 

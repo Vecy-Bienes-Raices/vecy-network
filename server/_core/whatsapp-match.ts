@@ -586,7 +586,7 @@ export class JaniaMatchBot {
           if (!isGroup) {
             const rawPhone = senderId.split('@')[0];
             const ADMIN_PHONE = process.env.ADMIN_PHONE || "573192919978";
-            const isAdmin = rawPhone.includes(ADMIN_PHONE) || rawPhone === ADMIN_PHONE || rawPhone === "573192919978" || rawPhone.includes("573185462265");
+            const isAdmin = rawPhone.includes(ADMIN_PHONE) || rawPhone === ADMIN_PHONE || rawPhone === "573192919978";
             const userName = msg.pushName || `Asesor +${rawPhone}`;
 
             let body = '';
@@ -758,7 +758,7 @@ export class JaniaMatchBot {
 
     if (now - lastRedirect > ONCE_A_DAY) {
       this.redirectCooldowns.set(senderId, now);
-      const redirectLink = "https://wa.me/573185462265";
+      const redirectLink = "https://wa.me/573192919978";
       
       const realName = userName || "Asesor";
       const cleanName = extractFirstName(realName) || "colega";
@@ -1700,7 +1700,6 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
           const rawPhone = targetJid.split('@')[0];
           const ADMIN_PHONE = process.env.ADMIN_PHONE || "573192919978";
           const isAdmin = rawPhone === "573192919978" || 
-                          rawPhone === "573188096811" ||
                           rawPhone.includes(ADMIN_PHONE);
           if (!isAdmin) {
             console.log(`[JANIA-ANTI-BAN-SHIELD] 🛡️ Bloqueado envío de mensaje directo (DM) a usuario no administrador (${targetJid}). Prohibición absoluta de DMs a terceros.`);
