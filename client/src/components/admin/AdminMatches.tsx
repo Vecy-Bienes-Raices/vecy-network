@@ -231,7 +231,6 @@ function scoreRows(req: any, prop: any) {
   );
 
   // 4. Presupuesto Máx.
-  const budget = parseFloat(req.presupuestoMax || "0");
   const propPrice = parseFloat(prop.price || "0");
   let propRentPrice = parseFloat(prop.rentPrice || prop.priceRent || "0");
   const isDualOffer = isPropertyDualOffer(prop);
@@ -250,11 +249,29 @@ function scoreRows(req: any, prop: any) {
     }
   }
 
+  // 4. Presupuesto Máximo (con inferencia por regex de Ppto hasta $950 -> $950.000.000)
+  const reqTextLower = (req.rawText || "").toLowerCase();
+  const propTextLower = (prop.rawText || prop.description || "").toLowerCase();
+
+  let budget = req.presupuestoMax ? parseFloat(String(req.presupuestoMax)) : 0;
+  let budgetInferred = false;
+  if (budget <= 0 && reqTextLower) {
+    const mP = reqTextLower.match(/(?:ppto|presupuesto|busco|máximo|max|hasta|canon|valor)\s*:?\s*\$?([\d.]+)\s*(millones|millón|mll|mlls|mm|m|M)?/i)
+            || reqTextLower.match(/\$?\s*([\d.]+)\s*(millones|millón|mll|mlls|mm|m|M)\b/i);
+    if (mP) {
+      let valR = parseFloat(mP[1].replace(/\./g, ""));
+      if (!isNaN(valR)) {
+        if (valR < 1000) valR *= 1_000_000;
+        budget = valR;
+        budgetInferred = true;
+      }
+    }
+  }
+
   let effectivePropPrice: number;
   let propPriceLabel: string;
 
   if (isReqRentMatch) {
-    // Si la demanda es de arriendo:
     effectivePropPrice = propRentPrice > 0 ? propRentPrice : (propPrice > 0 && propPrice < 100_000_000 ? propPrice : 0);
     if (effectivePropPrice > 0) {
       propPriceLabel = `Canon: ${formatCOP(String(effectivePropPrice))} / mes`;
@@ -265,7 +282,6 @@ function scoreRows(req: any, prop: any) {
       propPriceLabel = isDualOffer ? `Venta: ${formatCOP(prop.price)} / Canon: N/E` : formatCOP(prop.price);
     }
   } else {
-    // Si la demanda es de venta:
     effectivePropPrice = propPrice;
     const saleLabel = propPrice > 0 ? formatCOP(prop.price) : "N/E";
     const rentLabel = propRentPrice > 0 ? `${formatCOP(String(propRentPrice))}/mes` : "N/E";
@@ -275,9 +291,9 @@ function scoreRows(req: any, prop: any) {
   let budS: MatchStatus = "neutral";
   if (budget > 0 && effectivePropPrice > 0) {
     if (effectivePropPrice <= budget) budS = "exact";
-    else budS = "missing"; // Guillotina Financiera Tolerancia Cero en visual
+    else budS = "missing";
   }
-  const reqBudgetLabel = budget > 0 ? `${formatCOP(req.presupuestoMax)}` : "N/E";
+  const reqBudgetLabel = budget > 0 ? `${formatCOP(budget)}${budgetInferred ? " (Inferido 🔍)" : ""}` : "N/E";
 
   add(
     "Presupuesto Máx.",
@@ -288,19 +304,40 @@ function scoreRows(req: any, prop: any) {
     <DollarSign className="w-3.5 h-3.5" />
   );
 
-  // 5. Área Total — Campana de Tolerancia v20.0 (-5% bloqueo, 0-15% confort, +15% advertencia)
-  const areaR = parseFloat(req.areaMin || "0");
-  const areaP = parseFloat(prop.areaTotal || prop.areaPrivate || "0");
+  // 5. Área Total (con inferencia desde rawText si la columna está en 0)
+  let areaR = parseFloat(req.areaMin || req.areaMinimaM2 || "0");
+  if (areaR <= 0 && reqTextLower) {
+    const mRA = reqTextLower.match(/(?:mínimo|min|de|área)?\s*([\d.,]+)\s*(?:m2|mts|m²|metros)/i);
+    if (mRA) {
+      let valRA = parseFloat(mRA[1].replace(/\./g, "").replace(",", "."));
+      if (!isNaN(valRA) && valRA > 10 && valRA < 10000) areaR = valRA;
+    }
+  }
+
+  let areaP = parseFloat(prop.areaTotal || prop.areaPrivate || "0");
+  let areaPInferred = false;
+  if (areaP <= 0 && propTextLower) {
+    const mA = propTextLower.match(/área\s*:?\s*([\d.,]+)/i)
+            || propTextLower.match(/([\d.,]+)\s*(?:m2|mts|m²|metros)/i);
+    if (mA) {
+      let valA = parseFloat(mA[1].replace(/\./g, "").replace(",", "."));
+      if (!isNaN(valA) && valA > 10 && valA < 10000) {
+        areaP = valA;
+        areaPInferred = true;
+      }
+    }
+  }
+
   let areS: MatchStatus = "neutral";
-  let areaPropLabel = areaP > 0 ? `${areaP} m²` : "N/E";
+  let areaPropLabel = areaP > 0 ? `${areaP} m²${areaPInferred ? " (Inferido 🔍)" : ""}` : "N/E";
   if (areaR > 0 && areaP > 0) {
-    if (areaP < areaR * 0.95)        areS = "missing"; // Zona Roja: bloqueado por motor
+    if (areaP < areaR * 0.95)        areS = "missing";
     else if (areaP > areaR * 1.15)   { areS = "warn"; areaPropLabel = `${areaP} m² ⚠️ (+${Math.round((areaP/areaR-1)*100)}% más grande)`; }
-    else                              areS = "exact";  // Zona Confort
+    else                              areS = "exact";
   } else if (areaR === 0) {
     areS = "neutral";
   }
-  const reqAreaLabel = areaR > 0 ? `≥ ${req.areaMin} m² (±15%)` : "N/E";
+  const reqAreaLabel = areaR > 0 ? `≥ ${areaR} m² (±15%)` : "N/E";
 
   add(
     "Área Total",
@@ -311,23 +348,25 @@ function scoreRows(req: any, prop: any) {
     <Ruler className="w-3.5 h-3.5" />
   );
 
-  // Inferencia inteligente de restricciones faltantes en el requerimiento
-  const reqTextLower = (req.rawText || "").toLowerCase();
-  
-  // 6. Habitaciones (REGLA DOCTRINAL: Si bedP < bedR -> NO COINCIDE / missing)
+  // 6. Habitaciones
   let bedR = req.habitacionesMin ? Number(req.habitacionesMin) : 0;
   let bedInferred = false;
   if (bedR <= 0 && reqTextLower) {
     const m = reqTextLower.match(/(\d+(?:\s*-\s*\d+)?)\s*(?:hab|habitaciones|alcoba|alcobas|alc|dormitorio)/i);
     if (m) { bedR = parseInt(m[1].split("-")[0].trim(), 10); bedInferred = true; }
   }
-  const bedP = prop.bedrooms ? Number(prop.bedrooms) : 0;
+  let bedP = prop.bedrooms ? Number(prop.bedrooms) : 0;
+  if (bedP <= 0 && propTextLower) {
+    const mP = propTextLower.match(/(\d+)\s*(?:hab|habitaciones|alcoba|alcobas|alc|dormitorio)/i);
+    if (mP) bedP = parseInt(mP[1], 10);
+  }
+
   let bedS: MatchStatus = "neutral";
   if (bedR > 0) {
     if (bedP < bedR) {
-      bedS = "missing"; // REGLA DOCTRINAL: Menos de lo requerido -> Diferente / Fallido
+      bedS = "missing";
     } else if (bedP > bedR) {
-      bedS = "warn"; // Coincidencia aprox por exceso de confort
+      bedS = "warn";
     } else {
       bedS = "exact";
     }
@@ -345,7 +384,7 @@ function scoreRows(req: any, prop: any) {
     <Bed className="w-3.5 h-3.5" />
   );
 
-  // 7. Baños (REGLA DOCTRINAL: Si bathP < bathR -> NO COINCIDE / missing)
+  // 7. Baños
   let bathR = req.banosMin ? Number(req.banosMin) : 0;
   let bathInferred = false;
   if (bathR <= 0 && reqTextLower) {
@@ -353,13 +392,18 @@ function scoreRows(req: any, prop: any) {
            || reqTextLower.match(/(\d+)\s*hab\s*con\s*baño/i);
     if (m) { bathR = parseFloat(m[1]); bathInferred = true; }
   }
-  const bathP = prop.bathrooms ? Number(prop.bathrooms) : 0;
+  let bathP = prop.bathrooms ? Number(prop.bathrooms) : 0;
+  if (bathP <= 0 && propTextLower) {
+    const mBP = propTextLower.match(/(\d+)\s*(?:wc|baño|baños|bñ)/i);
+    if (mBP) bathP = parseInt(mBP[1], 10);
+  }
+
   let bathS: MatchStatus = "neutral";
   if (bathR > 0) {
     if (bathP < bathR) {
-      bathS = "missing"; // REGLA DOCTRINAL: Menos de lo requerido -> Diferente / Fallido
+      bathS = "missing";
     } else if (bathP > bathR) {
-      bathS = "warn"; // Coincidencia aprox por exceso
+      bathS = "warn";
     } else {
       bathS = "exact";
     }
@@ -377,20 +421,30 @@ function scoreRows(req: any, prop: any) {
     <Bath className="w-3.5 h-3.5" />
   );
 
-  // 8. Parqueaderos (REGLA DOCTRINAL: Si garP < garR -> NO COINCIDE / missing)
+  // 8. Parqueaderos (con inferencia desde rawText para oferta y demanda)
   let garR = req.parqueaderosMin ? Number(req.parqueaderosMin) : 0;
   let garInferred = false;
   if (garR <= 0 && reqTextLower) {
     const m = reqTextLower.match(/(?:parqueadero|parqueaderos|garaje|garajes|ptero|g\.)\s*\.?\s*(\d+)/i)
-           || reqTextLower.match(/(\d+)\s*(?:parqueadero|parqueaderos|garaje|garajes|ptero|g\.|individuales)/i);
-    if (m) { garR = parseInt(m[1], 10); garInferred = true; }
+           || reqTextLower.match(/(\d+)\s*(?:parqueadero|parqueaderos|garaje|garajes|ptero|g\.|individuales)/i)
+           || /garajes|parqueaderos/i.test(reqTextLower);
+    if (m && m[1]) { garR = parseInt(m[1], 10); garInferred = true; }
+    else if (/garajes|parqueaderos/i.test(reqTextLower)) { garR = 1; garInferred = true; }
   }
-  const garP = prop.garages ? Number(prop.garages) : 0;
+
+  let garP = prop.garages ? Number(prop.garages) : 0;
+  let garPInferred = false;
+  if (garP <= 0 && propTextLower) {
+    const mGP = propTextLower.match(/(\d+)\s*(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero)/i)
+             || propTextLower.match(/(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero)\s*:?\s*(\d+)/i);
+    if (mGP) { garP = parseInt(mGP[1], 10); garPInferred = true; }
+  }
+
   const garType = (prop.garageType || "").toLowerCase();
   const reqWantsIndep = reqTextLower.includes("independiente") || reqTextLower.includes("libre") || reqTextLower.includes("no lineal");
 
   let garS: MatchStatus = "neutral";
-  let garPropLabel = garP > 0 ? `${garP} garaje${garP > 1 ? "s" : ""}` : "N/E";
+  let garPropLabel = garP > 0 ? `${garP} garaje${garP > 1 ? "s" : ""}${garPInferred ? " (Inferido 🔍)" : ""}` : "N/E";
 
   if (garType === "independiente")  garPropLabel += " (✅ Independiente)";
   else if (garType === "lineal")    garPropLabel += " (⚠️ Lineal)";
@@ -398,7 +452,7 @@ function scoreRows(req: any, prop: any) {
 
   if (garR > 0) {
     if (garP < garR) {
-      garS = "missing"; // REGLA DOCTRINAL: Si garP < garR -> Diferente / Fallido
+      garS = "missing";
     } else if (reqWantsIndep && garType === "lineal") {
       garS = "warn";
     } else {
