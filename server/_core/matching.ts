@@ -616,11 +616,15 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
-  // ── REGLA DOCTRINAL DE REQUERIMIENTO MÍNIMO OBLIGATORIO COMPLETO ──
-  // La demanda DEBE especificar obligatoriamente: Presupuesto, Barrio/Zona Específico, Tipo de Inmueble, Tipo de Negocio y Habitaciones.
-  // Estrato es opcional ("obvia el estrato"). Si falta alguno de los 5 pilares clave, el requerimiento se descarta al 0%.
+  // ── REGLA DOCTRINAL DE COTEJO COMPLETO 100% VERDE/AMARILLO (CERO GRISES, CERO ROJOS) ──
+  // Para que un match sea elegible, la demanda Y la oferta DEBEN tener especificadas las 8 características clave:
+  // [Tipo de inmueble, Tipo de negocio, Ubicación/Barrio, Presupuesto, Área total, Habitaciones, Baños, Parqueaderos].
+  // Si cualquiera de estos datos queda en Gris (Dato Pendiente / N/E) o Rojo (Fallido), el match se DESCALIFICA al 0%.
+
   const reqRawString = (requirement.rawText || requirement.name || "").trim();
   const reqTextLow = reqRawString.toLowerCase();
+  const propRawString = (property.rawText || property.description || property.name || "").trim();
+  const propTextLow = propRawString.toLowerCase();
   
   const SECTORES_BOGOTA_SABANA = [
     "cedritos", "usaquen", "usaquén", "chico", "chicó", "chapinero", "suba", "engativa", "engativá",
@@ -631,19 +635,19 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
     "virrey", "el retiro", "antiguo country", "los rosales", "chia", "chía", "cajica", "cajicá", "cota", "sopó"
   ];
 
+  // 1. Ubicación / Barrio
   const reqZoneRawClean = (requirement.zonaDeseada || requirement.addressNeighborhood || "").trim().toLowerCase();
   const hasColZone = reqZoneRawClean !== "" && reqZoneRawClean !== "na" && reqZoneRawClean !== "bogota" && reqZoneRawClean !== "bogotá";
   const hasTextZone = SECTORES_BOGOTA_SABANA.some(sector => reqTextLow.includes(sector)) || /zona|sector|barrio|calle|cra|carrera/i.test(reqTextLow);
   const hasSpecificReqZone = hasColZone || hasTextZone;
 
-  // Presupuesto explícito en columna o en rawText (ej: 600-700mll, 400millones, $350.Mm)
+  // 2. Presupuesto Máximo Demanda (extracción desde columna o rawText)
   let budgetMaxCheck = parseFloat(String(requirement.presupuestoMax || "0"));
   if (budgetMaxCheck <= 0) {
-    const mP = reqTextLow.match(/([\d.]+)\s*(?:-|a)?\s*([\d.]+)?\s*(millones|millón|mll|mlls|mm|m|M)\b/i)
-            || reqTextLow.match(/(?:presupuesto|busco|hasta|canon|valor)\s*:?\s*\$?([\d.]+)\s*(millones|millón|mll|mlls|mm|m|M)?/i);
+    const mP = reqTextLow.match(/(?:ppto|presupuesto|busco|hasta|canon|valor)\s*:?\s*\$?([\d.]+)\s*(millones|millón|mll|mlls|mm|m|M)?/i)
+            || reqTextLow.match(/\$?\s*([\d.]+)\s*(millones|millón|mll|mlls|mm|m|M)\b/i);
     if (mP) {
-      let rawVal = mP[2] ? mP[2] : mP[1];
-      let valR = parseFloat(rawVal.replace(/\./g, ""));
+      let valR = parseFloat(mP[1].replace(/\./g, ""));
       if (!isNaN(valR)) {
         if (valR < 1000) valR *= 1000000;
         budgetMaxCheck = valR;
@@ -652,23 +656,108 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   }
   const hasReqBudget = budgetMaxCheck > 0;
 
-  const hasReqBedrooms = (requirement.habitacionesMin != null && Number(requirement.habitacionesMin) > 0) || /(\d+)\s*(?:hab|habitaciones|alcoba|alcobas|alc|dormitorio|cuarto|cuartos|hb)/i.test(reqTextLow);
-  const hasReqBathrooms = (requirement.banosMin != null && Number(requirement.banosMin) > 0) || /(\d+(?:\.\d+)?)\s*(?:baño|baños|wc|bñ)/i.test(reqTextLow);
-  const hasReqArea = (parseFloat(String(requirement.areaMin || requirement.areaMinimaM2 || "0")) > 0) || /(\d+)\s*(?:m2|mts|metros)/i.test(reqTextLow);
-  const hasReqType = !!(requirement.tipoInmuebleDeseado || requirement.propertyType) || /apto|apartamento|casa|oficina|lote|bodega|local|finca|apartaestudio|loft/i.test(reqTextLow);
-  const hasReqBizType = !!(requirement.tipoNegocioDeseado || requirement.transactionType) || /venta|vendo|compro|compra|arriendo|alquilo|renta/i.test(reqTextLow);
-  const hasReqGarages = (requirement.parqueaderosMin != null && Number(requirement.parqueaderosMin) > 0) || /garaje|parqueadero|ptero/i.test(reqTextLow);
+  // 3. Área Total Demanda
+  let reqAreaCheck = parseFloat(String(requirement.areaMin || requirement.areaMinimaM2 || "0"));
+  if (reqAreaCheck <= 0) {
+    const mRA = reqTextLow.match(/(?:mínimo|min|de|área)?\s*([\d.,]+)\s*(?:m2|mts|m²|metros)/i);
+    if (mRA) {
+      let valRA = parseFloat(mRA[1].replace(/\./g, "").replace(",", "."));
+      if (!isNaN(valRA) && valRA > 10 && valRA < 10000) reqAreaCheck = valRA;
+    }
+  }
+  const hasReqArea = reqAreaCheck > 0;
+
+  // 4. Habitaciones Demanda
+  let reqBedsCheck = requirement.habitacionesMin ? Number(requirement.habitacionesMin) : 0;
+  if (reqBedsCheck <= 0) {
+    const mB = reqTextLow.match(/(\d+(?:\s*-\s*\d+)?)\s*(?:hab|habitaciones|alcoba|alcobas|alc|dormitorio|cuarto|cuartos|hb)/i);
+    if (mB) reqBedsCheck = parseInt(mB[1].split("-")[0].trim(), 10);
+  }
+  const hasReqBedrooms = reqBedsCheck > 0;
+
+  // 5. Baños Demanda
+  let reqBathsCheck = requirement.banosMin ? Number(requirement.banosMin) : 0;
+  if (reqBathsCheck <= 0) {
+    const mW = reqTextLow.match(/(\d+(?:\.\d+)?)\s*(?:o\s*más\s*)?(?:wc|baño|baños|bñ)/i) || reqTextLow.match(/(\d+)\s*hab\s*con\s*baño/i);
+    if (mW) reqBathsCheck = parseFloat(mW[1]);
+  }
+  const hasReqBathrooms = reqBathsCheck > 0;
+
+  // 6. Parqueaderos Demanda
+  let reqGaragesCheck = requirement.parqueaderosMin ? Number(requirement.parqueaderosMin) : 0;
+  if (reqGaragesCheck <= 0) {
+    const mG = reqTextLow.match(/(?:parqueadero|parqueaderos|garaje|garajes|ptero|g\.)\s*\.?\s*(\d+)/i)
+            || reqTextLow.match(/(\d+)\s*(?:parqueadero|parqueaderos|garaje|garajes|ptero|g\.|individuales)/i)
+            || /garajes|parqueaderos/i.test(reqTextLow);
+    if (mG && mG[1]) reqGaragesCheck = parseInt(mG[1], 10);
+    else if (/garajes|parqueaderos/i.test(reqTextLow)) reqGaragesCheck = 1;
+  }
+  const hasReqGarages = reqGaragesCheck > 0;
   const hasReqAdmin = (requirement.adminFeeMax != null && Number(requirement.adminFeeMax) > 0) || /admon|administracion|administración/i.test(reqTextLow);
 
-  const missingMandatoryFields: string[] = [];
-  if (!hasSpecificReqZone) missingMandatoryFields.push("Ubicación / Barrio Específico");
-  if (!hasReqBudget) missingMandatoryFields.push("Presupuesto Máximo");
-  if (!hasReqBedrooms) missingMandatoryFields.push("Habitaciones");
-  if (!hasReqType) missingMandatoryFields.push("Tipo de Inmueble");
-  if (!hasReqBizType) missingMandatoryFields.push("Tipo de Negocio");
+  // 7 & 8. Tipo de Inmueble y Negocio Demanda
+  const hasReqType = !!(requirement.tipoInmuebleDeseado || requirement.propertyType) || /apto|apartamento|casa|oficina|lote|bodega|local|finca|apartaestudio|loft/i.test(reqTextLow);
+  const hasReqBizType = !!(requirement.tipoNegocioDeseado || requirement.transactionType) || /venta|vendo|compro|compra|arriendo|alquilo|renta/i.test(reqTextLow);
 
-  if (reqRawString.length < 25 || missingMandatoryFields.length > 0) {
-    blockers.push(`Requerimiento incompleto: Falta especificación obligatoria de [${missingMandatoryFields.join(", ")}] en la demanda. Descartado por Doctrina de Requerimiento Mínimo Completo.`);
+  // VERIFICACIÓN DATOS OBLIGATORIOS OFERTA
+  let propPriceCheck = parseFloat(String(property.price || "0"));
+  if (propPriceCheck <= 0 && property.rentPrice) propPriceCheck = parseFloat(String(property.rentPrice));
+  if (propPriceCheck <= 0) {
+    const mPP = propTextLow.match(/(?:venta|precio|valor|canon|arriendo)\s*:?\s*\$?([\d.,]+)\s*(millones|millón|m|M)?/i);
+    if (mPP) {
+      let valP = parseFloat(mPP[1].replace(/\./g, "").replace(/,/g, ""));
+      if (!isNaN(valP) && valP > 1000) propPriceCheck = valP;
+    }
+  }
+
+  let propAreaCheck = parseFloat(String(property.areaTotal || property.areaPrivate || "0"));
+  if (propAreaCheck <= 0) {
+    const mPA = propTextLow.match(/área\s*:?\s*([\d.,]+)/i) || propTextLow.match(/([\d.,]+)\s*(?:m2|mts|m²|metros)/i);
+    if (mPA) {
+      let valA = parseFloat(mPA[1].replace(/\./g, "").replace(",", "."));
+      if (!isNaN(valA) && valA > 10 && valA < 10000) propAreaCheck = valA;
+    }
+  }
+
+  let propBedsCheck = property.bedrooms ? Number(property.bedrooms) : 0;
+  if (propBedsCheck <= 0) {
+    const mPB = propTextLow.match(/(\d+)\s*(?:hab|habitaciones|alcoba|alcobas|alc|dormitorio)/i);
+    if (mPB) propBedsCheck = parseInt(mPB[1], 10);
+  }
+
+  let propBathsCheck = property.bathrooms ? Number(property.bathrooms) : 0;
+  if (propBathsCheck <= 0) {
+    const mPBa = propTextLow.match(/(\d+)\s*(?:wc|baño|baños|bñ)/i);
+    if (mPBa) propBathsCheck = parseInt(mPBa[1], 10);
+  }
+
+  let propGaragesCheck = property.garages ? Number(property.garages) : 0;
+  if (propGaragesCheck <= 0) {
+    const mPG = propTextLow.match(/(\d+)\s*(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero)/i)
+             || propTextLow.match(/(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero)\s*:?\s*(\d+)/i);
+    if (mPG) propGaragesCheck = parseInt(mPG[1], 10);
+  }
+
+  const missingReqFields: string[] = [];
+  if (!hasSpecificReqZone) missingReqFields.push("Ubicación / Barrio");
+  if (!hasReqBudget) missingReqFields.push("Presupuesto Máx.");
+  if (!hasReqArea) missingReqFields.push("Área Total");
+  if (!hasReqBedrooms) missingReqFields.push("Habitaciones");
+  if (!hasReqBathrooms) missingReqFields.push("Baños");
+  if (!hasReqGarages) missingReqFields.push("Parqueaderos");
+  if (!hasReqType) missingReqFields.push("Tipo de Inmueble");
+  if (!hasReqBizType) missingReqFields.push("Tipo de Negocio");
+
+  const missingPropFields: string[] = [];
+  if (propPriceCheck <= 0) missingPropFields.push("Precio Oferta");
+  if (propAreaCheck <= 0) missingPropFields.push("Área Oferta");
+  if (propBedsCheck <= 0) missingPropFields.push("Habitaciones Oferta");
+  if (propBathsCheck <= 0) missingPropFields.push("Baños Oferta");
+  if (propGaragesCheck <= 0) missingPropFields.push("Parqueaderos Oferta");
+
+  if (missingReqFields.length > 0 || missingPropFields.length > 0) {
+    const detail = [...missingReqFields.map(f => `${f} (Demanda)`), ...missingPropFields.map(f => `${f} (Oferta)`)].join(", ");
+    blockers.push(`Cotejo Incompleto (Dato Pendiente en Gris): Faltan datos esenciales [${detail}]. Descartado por Doctrina de Cotejo Completo Verde/Amarillo.`);
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 

@@ -211,7 +211,19 @@ function scoreRows(req: any, prop: any) {
   const zonaMatch = !reqZona || propZona.includes(reqZona) || reqZona.includes(propZona) || reqZona.includes("aledaños") || reqZona.includes("aledanos");
   
   let geoStatus: MatchStatus = (ciudadMatch && zonaMatch && !isOutStreetBounds) ? "exact" : ciudadMatch ? "warn" : "missing";
-  let propZoneLabel = `${prop.zone || "N/E"}, ${prop.city || "Bogotá"}`;
+  
+  const formatZoneLabel = (z: string, c: string): string => {
+    const zClean = (z || "").trim();
+    const cClean = (c || "").trim();
+    if (!zClean && !cClean) return "N/E";
+    if (!zClean) return cClean;
+    if (!cClean || zClean.toLowerCase() === cClean.toLowerCase() || zClean.toLowerCase().includes(cClean.toLowerCase())) {
+      return zClean;
+    }
+    return `${zClean}, ${cClean}`;
+  };
+
+  let propZoneLabel = formatZoneLabel(prop.zone || "", prop.city || "Bogotá");
   
   if (isOutStreetBounds) {
     geoStatus = "missing";
@@ -221,9 +233,11 @@ function scoreRows(req: any, prop: any) {
     propZoneLabel += " ❌ (Diferente Sub-barrio)";
   }
 
+  const reqZoneLabel = formatZoneLabel(req.zonaDeseada || "", req.ciudadDeseada || "Bogotá");
+
   add(
     "Ubicación / Barrio", 
-    req.zonaDeseada ? `${req.zonaDeseada}, ${req.ciudadDeseada || "Bogotá"}` : "N/E", 
+    reqZoneLabel, 
     propZoneLabel, 
     geoStatus, 
     20, 
@@ -876,11 +890,23 @@ export default function AdminMatches() {
       const scoreVal = parseFloat(String(match.matchScore || '0'));
       const matchesScore = scoreVal >= parseFloat(minScore);
 
-      // Re-verificación de regla doctrinal: Si CUALQUIER atributo arroja 'Fallido' (missing), SE DESCALIFICA Y DESCARTA DEL GRID (0%)
+      // Re-verificación de regla doctrinal: Si CUALQUIER atributo fundamental arroja 'Fallido' (missing) o 'Dato Pendiente' (neutral), SE DESCALIFICA (0%)
       const { rows } = scoreRows(requirement, property);
-      const hasAnyFailure = rows.some(r => r.status === "missing");
+      const mandatoryLabels = [
+        "Tipo de Inmueble",
+        "Tipo de Negocio",
+        "Ubicación / Barrio",
+        "Presupuesto Máx.",
+        "Área Total",
+        "Habitaciones",
+        "Baños",
+        "Parqueaderos"
+      ];
+      const hasIncompleteOrFailure = rows.some(r => 
+        mandatoryLabels.includes(r.label) && (r.status === "neutral" || r.status === "missing")
+      );
 
-      return matchesSearch && matchesScore && !hasAnyFailure;
+      return matchesSearch && matchesScore && !hasIncompleteOrFailure;
     });
   }, [matches, searchTerm, minScore]);
 
