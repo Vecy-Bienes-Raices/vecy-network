@@ -89,9 +89,15 @@ function extractPublicLink(item: any): string | null {
   if (item.externalUrl && (item.externalUrl.startsWith("http://") || item.externalUrl.startsWith("https://"))) {
     return item.externalUrl;
   }
-  const text = `${item.rawText || ''} ${item.description || ''}`;
+  const text = `${item.rawText || ''} ${item.description || ''} ${item.externalUrl || ''}`;
   const match = text.match(/https?:\/\/[^\s<"']+/i);
-  return match ? match[0] : null;
+  if (match) return match[0];
+  
+  // Expresión para enlaces inmobiliarios comunes sin protocolo http/https
+  const domainMatch = text.match(/(?:[a-zA-Z0-9-]+\.)+(?:com|co|net|org|app|io|tools|store)\/[^\s<"']+/i);
+  if (domainMatch) return `https://${domainMatch[0]}`;
+
+  return null;
 }
 
 function scoreRows(req: any, prop: any) {
@@ -1182,7 +1188,7 @@ export default function AdminMatches() {
                                   ? "bg-zinc-800 text-zinc-400 border border-zinc-700/50"
                                   : "bg-red-500/10 text-red-400 border border-red-500/20";
                             
-                            const badgeText = isExact ? "Coincide" : isWarn ? "Aproximado" : isNeutral ? "Dato Pendiente" : "Diferente";
+                            const badgeText = isExact ? "Coincide" : isWarn ? "Aproximado" : isNeutral ? "Dato Pendiente" : "Fallido";
 
                             return (
                               <tr key={rIdx} className="border-b border-white/5 hover:bg-white/[0.01] transition-colors">
@@ -1219,7 +1225,7 @@ export default function AdminMatches() {
                               ? "bg-zinc-800 text-zinc-400 border border-zinc-700/50"
                               : "bg-red-500/10 text-red-400 border border-red-500/20";
                         
-                        const badgeText = isExact ? "Coincide" : isWarn ? "Aproximado" : isNeutral ? "Dato Pendiente" : "Diferente";
+                        const badgeText = isExact ? "Coincide" : isWarn ? "Aproximado" : isNeutral ? "Dato Pendiente" : "Fallido";
 
                         return (
                           <div key={rIdx} className="bg-zinc-900/70 border border-white/5 rounded-2xl p-3 space-y-2">
