@@ -520,9 +520,9 @@ export const janIARouter = router({
           // Re-evaluar con el motor v20.0 (explicarMatch)
           const evaluation = explicarMatch(m.requirement, m.property);
 
-          // Si hay algún blocker (fuera de perímetro, choque financiero, etc.) o score < 80%, descartar
-          if (evaluation.score < 80 || evaluation.blockers.length > 0) {
-            console.log(`[tRPC-getAllMatches] ❌ Match #${m.id} descartado en tiempo real (Score: ${evaluation.score}%, Blockers: ${evaluation.blockers.join(' | ')})`);
+          // Si hay algún blocker duro (fuera de perímetro ciudad, choque financiero, permuta incompatible, etc.) descartar
+          if (evaluation.blockers.length > 0) {
+            console.log(`[tRPC-getAllMatches] ❌ Match #${m.id} descartado en tiempo real por Blocker Duro (Blockers: ${evaluation.blockers.join(' | ')})`);
             continue;
           }
 

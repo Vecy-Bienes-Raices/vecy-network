@@ -97,31 +97,52 @@ async function fixCorruptedPricesAndRebuildMatches() {
   const currentProps = await db.select().from(properties);
   const currentReqs = await db.select().from(requirements);
 
-  let insertedCount = 0;
+  let insertedStrictCount = 0;
+  let insertedEnrichCount = 0;
   let rejectedCount = 0;
 
   for (const p of currentProps) {
     for (const r of currentReqs) {
       const exp = explicarMatch(r, p);
 
-      if (exp.score >= 80 && exp.blockers.length === 0) {
-        await db.insert(propertyMatches).values({
-          propertyId: p.id,
-          requirementId: r.id,
-          matchScore: String(exp.score),
-          matchReason: exp.positives.join(" | "),
-          matchExplanation: exp,
-          status: "suggested",
-          createdAt: new Date()
-        });
-        insertedCount++;
+      if (exp.blockers.length === 0) {
+        if (exp.isStrictCompliant && exp.score >= 80) {
+          // Match 100% Calificado (Cero Grises, Cero Rojos)
+          await db.insert(propertyMatches).values({
+            propertyId: p.id,
+            requirementId: r.id,
+            matchScore: String(exp.score),
+            matchReason: exp.positives.join(" | "),
+            matchExplanation: exp,
+            status: "suggested",
+            createdAt: new Date()
+          });
+          insertedStrictCount++;
+        } else if (!exp.isStrictCompliant && exp.score >= 70) {
+          // Oportunidad Incompleta a Enriquecer (Preservado en Supabase para Contactar Requiriente)
+          await db.insert(propertyMatches).values({
+            propertyId: p.id,
+            requirementId: r.id,
+            matchScore: String(exp.score),
+            matchReason: `[Faltan Datos por Enriquecer: ${(exp.missingFields || []).join(", ")}] | ` + exp.positives.join(" | "),
+            matchExplanation: exp,
+            status: "interested", // Marca de Oportunidad por Enriquecer
+            createdAt: new Date()
+          });
+          insertedEnrichCount++;
+        } else {
+          rejectedCount++;
+        }
       } else {
         rejectedCount++;
       }
     }
   }
 
-  console.log(`🎉 RECONSTRUCCIÓN COMPLETADA EXITOSAMENTE: ${insertedCount} matches legítimos insertados en Supabase. ${rejectedCount} combinaciones descartadas por no cumplir doctrina.`);
+  console.log(`🎉 RECONSTRUCCIÓN COMPLETADA EXITOSAMENTE:`);
+  console.log(`   🟢 ${insertedStrictCount} Matches 100% Calificados insertados (Doctrina Verde/Amarillo).`);
+  console.log(`   📋 ${insertedEnrichCount} Oportunidades Incompletas por Enriquecer preservadas en Supabase.`);
+  console.log(`   ❌ ${rejectedCount} combinaciones inviables descartadas por choque duro (ej: Cali vs Bogotá).`);
   process.exit(0);
 }
 

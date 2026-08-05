@@ -502,6 +502,8 @@ export interface MatchExplanation {
   generatedAt: string;
   engineVersion: string; // VRIF Engine Version (e.g. VRIF-2.0)
   ipc?: MatchIpc;
+  isStrictCompliant?: boolean;
+  missingFields?: string[];
 }
 
 export interface MatchIpc {
@@ -591,7 +593,14 @@ export function calcularIPC(requirement: any, property: any, matchScore: number)
   };
 }
 
-function buildExplanationResult(score: number, blockers: string[], positives: string[], negatives: string[]): MatchExplanation {
+function buildExplanationResult(
+  score: number, 
+  blockers: string[], 
+  positives: string[], 
+  negatives: string[],
+  isStrictCompliant: boolean = true,
+  missingFields: string[] = []
+): MatchExplanation {
   return {
     score,
     blockers,
@@ -599,7 +608,9 @@ function buildExplanationResult(score: number, blockers: string[], positives: st
     negatives,
     confidence: 1.0,
     generatedAt: new Date().toISOString(),
-    engineVersion: "VRIF-2.0"
+    engineVersion: "VRIF-2.0",
+    isStrictCompliant,
+    missingFields
   };
 }
 
@@ -755,10 +766,11 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   if (propBathsCheck <= 0) missingPropFields.push("Baños Oferta");
   if (propGaragesCheck <= 0) missingPropFields.push("Parqueaderos Oferta");
 
-  if (missingReqFields.length > 0 || missingPropFields.length > 0) {
-    const detail = [...missingReqFields.map(f => `${f} (Demanda)`), ...missingPropFields.map(f => `${f} (Oferta)`)].join(", ");
-    blockers.push(`Cotejo Incompleto (Dato Pendiente en Gris): Faltan datos esenciales [${detail}]. Descartado por Doctrina de Cotejo Completo Verde/Amarillo.`);
-    return buildExplanationResult(0, blockers, positives, negatives);
+  const isStrictCompliant = missingReqFields.length === 0 && missingPropFields.length === 0;
+  const missingFieldsList = [...missingReqFields.map(f => `${f} (Demanda)`), ...missingPropFields.map(f => `${f} (Oferta)`)];
+
+  if (!isStrictCompliant) {
+    negatives.push(`Dato Pendiente por Enriquecer: Faltan especificaciones [${missingFieldsList.join(", ")}].`);
   }
 
   // Puntuación por Completitud de la Ficha de Demanda (Entre más completa, mayor prioridad VECY)
@@ -1398,7 +1410,7 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
     finalPercentage = Math.min(84, finalPercentage);
   }
 
-  return buildExplanationResult(finalPercentage, blockers, positives, negatives);
+  return buildExplanationResult(finalPercentage, blockers, positives, negatives, isStrictCompliant, missingFieldsList);
 }
 
 export interface SemanticAmenitiesResult {

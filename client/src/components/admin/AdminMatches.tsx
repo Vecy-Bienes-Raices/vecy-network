@@ -831,27 +831,27 @@ function checkTxCompatFrontend(reqTypeRaw: string, propTypeRaw: string, propAcce
 
 export default function AdminMatches() {
   const [searchTerm, setSearchTerm] = React.useState('');
-  const [minScore, setMinScore] = React.useState('80'); // Mínimo 80% por norma doctrinal VECY Network
+  const [minScore, setMinScore] = React.useState('70');
+  const [activeTab, setActiveTab] = React.useState<'calificados' | 'incompletos'>('calificados');
 
   // Fetch matches directly from server API with auto-refresh every 10s
   const { data: matches = [], isLoading, refetch } = trpc.janIA.getAllMatches.useQuery(undefined, {
     refetchInterval: 10000,
   });
 
-
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'suggested': return 'bg-blue-500/10 text-blue-400 border border-blue-500/20';
+      case 'suggested': return 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
       case 'interested': return 'bg-amber-500/10 text-amber-400 border border-amber-500/20';
-      case 'converted': return 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+      case 'converted': return 'bg-blue-500/10 text-blue-400 border border-blue-500/20';
       default: return 'bg-zinc-800 text-zinc-400 border border-zinc-700';
     }
   };
 
   const getStatusLabel = (status: string) => {
     const labels: Record<string, string> = {
-      suggested: 'Sugerido',
-      interested: 'Interesado',
+      suggested: '🟢 Match 100% Calificado',
+      interested: '📋 Pendiente Enriquecer Ficha',
       converted: 'Cerrado/Negocio',
     };
     return labels[status] || status;
@@ -864,10 +864,8 @@ export default function AdminMatches() {
     return matches.filter(match => {
       if (!match || !match.id) return false;
 
-      // Deduplicación estricta por ID de match
       if (seenMatchIds.has(match.id)) return false;
       
-      // Deduplicación por par (propertyId, requirementId)
       const pId = match.property?.id;
       const rId = match.requirement?.id;
       if (pId && rId) {
@@ -886,11 +884,7 @@ export default function AdminMatches() {
       
       const matchesSearch = propSearchStr.includes(searchTerm.toLowerCase()) || 
                             reqSearchStr.includes(searchTerm.toLowerCase());
-                            
-      const scoreVal = parseFloat(String(match.matchScore || '0'));
-      const matchesScore = scoreVal >= parseFloat(minScore);
 
-      // Re-verificación de regla doctrinal: Si CUALQUIER atributo fundamental arroja 'Fallido' (missing) o 'Dato Pendiente' (neutral), SE DESCALIFICA (0%)
       const { rows } = scoreRows(requirement, property);
       const mandatoryLabels = [
         "Tipo de Inmueble",
@@ -902,13 +896,19 @@ export default function AdminMatches() {
         "Baños",
         "Parqueaderos"
       ];
-      const hasIncompleteOrFailure = rows.some(r => 
-        mandatoryLabels.includes(r.label) && (r.status === "neutral" || r.status === "missing")
-      );
+      
+      const hasAnyHardFailure = rows.some(r => r.status === "missing");
+      const hasPendingGrey = rows.some(r => mandatoryLabels.includes(r.label) && r.status === "neutral");
 
-      return matchesSearch && matchesScore && !hasIncompleteOrFailure;
+      if (!matchesSearch || hasAnyHardFailure) return false;
+
+      if (activeTab === 'calificados') {
+        return !hasPendingGrey;
+      } else {
+        return hasPendingGrey;
+      }
     });
-  }, [matches, searchTerm, minScore]);
+  }, [matches, searchTerm, minScore, activeTab]);
 
   const exportData = () => {
     const headers = ['ID Coincidencia', 'Porcentaje Match', 'Propiedad', 'Propietario Telefono', 'Requerimiento', 'Interesado Telefono', 'Estado', 'Fecha'];
