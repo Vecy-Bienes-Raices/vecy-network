@@ -611,30 +611,42 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
-  // Rechazar requerimientos incompletos, vagos o muy cortos sin suficientes criterios lógicos de búsqueda (Doctrina de Alta Fidelidad)
+  // ── REGLA DOCTRINAL DE REQUERIMIENTO MÍNIMO OBLIGATORIO COMPLETO ──
+  // La demanda DEBE especificar obligatoriamente: Presupuesto, Barrio/Zona Específico, Tipo de Inmueble, Tipo de Negocio y Habitaciones.
+  // Estrato es opcional ("obvia el estrato"). Si falta alguno de los 5 pilares clave, el requerimiento se descarta al 0%.
   const reqRawString = (requirement.rawText || requirement.name || "").trim();
+  const reqTextLow = reqRawString.toLowerCase();
+  
   const reqZoneRawClean = (requirement.zonaDeseada || requirement.addressNeighborhood || "").trim().toLowerCase();
   const hasSpecificReqZone = reqZoneRawClean !== "" && reqZoneRawClean !== "na" && reqZoneRawClean !== "bogota" && reqZoneRawClean !== "bogotá";
-  const hasReqBudget = parseFloat(String(requirement.presupuestoMax || "0")) > 0 || parseFloat(String(requirement.presupuestoMin || "0")) > 0;
   
-  const reqTextLow = reqRawString.toLowerCase();
-  const hasReqBedrooms = (requirement.habitacionesMin != null && Number(requirement.habitacionesMin) > 0) || /hab|habitaciones|alcoba/i.test(reqTextLow);
-  const hasReqBathrooms = (requirement.banosMin != null && Number(requirement.banosMin) > 0) || /baño|baños|wc/i.test(reqTextLow);
-  const hasReqArea = parseFloat(String(requirement.areaMin || requirement.areaMinimaM2 || "0")) > 0 || /m2|mts/i.test(reqTextLow);
-  const hasReqType = !!(requirement.tipoInmuebleDeseado || requirement.propertyType);
-  const hasReqGarages = (requirement.parqueaderosMin != null && Number(requirement.parqueaderosMin) > 0) || /garaje|parqueadero/i.test(reqTextLow);
+  // Presupuesto explícito en columna o en rawText
+  let budgetMaxCheck = parseFloat(String(requirement.presupuestoMax || "0"));
+  if (budgetMaxCheck <= 0) {
+    const mP = reqTextLow.match(/(?:presupuesto|busco|máximo|max|hasta|canon|valor)\s*:?\s*\$?([\d.]+)\s*(millones|millón|m|M)?/i);
+    if (mP) {
+      let valR = parseFloat(mP[1].replace(/\./g, ""));
+      if (!isNaN(valR)) {
+        if (valR < 1000) valR *= 1000000;
+        budgetMaxCheck = valR;
+      }
+    }
+  }
+  const hasReqBudget = budgetMaxCheck > 0;
 
-  let validCriteriaCount = 0;
-  if (hasSpecificReqZone) validCriteriaCount++;
-  if (hasReqBudget) validCriteriaCount++;
-  if (hasReqBedrooms) validCriteriaCount++;
-  if (hasReqBathrooms) validCriteriaCount++;
-  if (hasReqArea) validCriteriaCount++;
-  if (hasReqType) validCriteriaCount++;
-  if (hasReqGarages) validCriteriaCount++;
+  const hasReqBedrooms = (requirement.habitacionesMin != null && Number(requirement.habitacionesMin) > 0) || /(\d+)\s*(?:hab|habitaciones|alcoba|alcobas|alc|dormitorio)/i.test(reqTextLow);
+  const hasReqType = !!(requirement.tipoInmuebleDeseado || requirement.propertyType) || /apto|apartamento|casa|oficina|lote|bodega|local|finca/i.test(reqTextLow);
+  const hasReqBizType = !!(requirement.tipoNegocioDeseado || requirement.transactionType) || /venta|vendo|compro|arriendo|alquilo|renta/i.test(reqTextLow);
 
-  if (reqRawString.length < 35 || validCriteriaCount < 3) {
-    blockers.push("Requerimiento vago, muy corto o incompleto (menos de 35 caracteres o menos de 3 criterios lógicos). Descartado por doctrina para asegurar la máxima fidelidad en el cotejamiento.");
+  const missingMandatoryFields: string[] = [];
+  if (!hasSpecificReqZone) missingMandatoryFields.push("Ubicación / Barrio Específico");
+  if (!hasReqBudget) missingMandatoryFields.push("Presupuesto Máximo");
+  if (!hasReqBedrooms) missingMandatoryFields.push("Habitaciones");
+  if (!hasReqType) missingMandatoryFields.push("Tipo de Inmueble");
+  if (!hasReqBizType) missingMandatoryFields.push("Tipo de Negocio");
+
+  if (reqRawString.length < 30 || missingMandatoryFields.length > 0) {
+    blockers.push(`Requerimiento incompleto: Falta especificación obligatoria de [${missingMandatoryFields.join(", ")}] en la demanda. Descartado por Doctrina de Requerimiento Mínimo Completo.`);
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
