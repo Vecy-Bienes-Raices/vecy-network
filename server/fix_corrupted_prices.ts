@@ -19,28 +19,34 @@ async function fixCorruptedPricesAndMatches() {
     const priceVal = parseFloat(String(prop.price || "0"));
     const transType = String(prop.transactionType || "").toLowerCase();
     const isSale = transType.includes("venta") || transType === "venta" || transType === "venta_o_arriendo";
+    const isDual = transType === "venta_o_arriendo" || (rawText.toLowerCase().includes("venta") && rawText.toLowerCase().includes("arriendo"));
 
-    if (isSale && priceVal > 0 && priceVal < 30_000_000) {
-      // Buscar el verdadero precio de venta en el texto (ej: "V/VENTA/ $950.000.000" o "950 millones" o "950'000.000")
-      const saleMatches = rawText.match(/(?:v\/venta\/|precio\s*de\s*venta|venta\s*en|valor\s*venta|venta)\s*:?\s*\$?([\d.,]+)\s*(mil\s*millones?|millones?|m|M)?/i)
-                       || rawText.match(/\$\s*([\d]{2,3}(?:[.,]\d{3}){2})/);
+    // Sanidad Predial: si es venta o dual y el precio guardado es < 100M pero en el texto hay un precio de venta de miles de millones (ej: 2.000.000.000)
+    if (isSale && priceVal > 0 && priceVal < 100_000_000) {
+      // Buscar venta explícita de miles de millones o cientos de millones
+      const bigSaleMatches = rawText.match(/(?:venta|precio\s*de\s*venta|vendo|valor)\s*:?\s*\$?([\d.,]+)\s*(mil\s*millones?|millones?|m|M)?/i)
+                          || rawText.match(/(\d{1,3}(?:\.\d{3}){3})/); // Regex para 2.000.000.000
 
       let realPrice = 0;
-      if (saleMatches) {
-        let rawNumStr = saleMatches[1].replace(/\./g, "").replace(/,/g, "");
-        realPrice = parseFloat(rawNumStr);
-        if (saleMatches[2] && (saleMatches[2].toLowerCase().includes("mill") || saleMatches[2].toLowerCase() === "m") && realPrice < 10000) {
-          realPrice *= 1_000_000;
+      let rentCanon = 0;
+
+      if (bigSaleMatches) {
+        let rawNumStr = bigSaleMatches[1].replace(/\./g, "").replace(/,/g, "");
+        let parsed = parseFloat(rawNumStr);
+        if (bigSaleMatches[2] && bigSaleMatches[2].toLowerCase().includes("mill") && parsed < 10000) {
+          parsed *= 1_000_000;
+        }
+        if (parsed >= 100_000_000) {
+          realPrice = parsed;
         }
       }
 
-      // Si no se extrajo con el regex específico, buscar cualquier cifra mayor a 30M en el texto
-      if (realPrice < 30_000_000) {
-        const bigNumbers = rawText.match(/\b\d{8,11}\b/g) || rawText.match(/\b\d{2,3}[.,]\d{3}[.,]\d{3}\b/g);
-        if (bigNumbers && bigNumbers.length > 0) {
-          for (const bn of bigNumbers) {
-            const parsed = parseFloat(bn.replace(/\D/g, ""));
-            if (parsed >= 30_000_000) {
+      if (realPrice < 100_000_000) {
+        const matchesAllBig = rawText.match(/\$\s*([\d]{1,3}(?:[.,]\d{3}){3})/g) || rawText.match(/\b\d{9,11}\b/g);
+        if (matchesAllBig && matchesAllBig.length > 0) {
+          for (const m of matchesAllBig) {
+            const parsed = parseFloat(m.replace(/\D/g, ""));
+            if (parsed >= 100_000_000) {
               realPrice = parsed;
               break;
             }
@@ -48,18 +54,35 @@ async function fixCorruptedPricesAndMatches() {
         }
       }
 
-      if (realPrice >= 30_000_000) {
-        const newAdminFee = priceVal < 10_000_000 ? priceVal : parseFloat(String(prop.adminFee || "0"));
-        console.log(`🔧 Corrigiendo Inmueble ID #${prop.id} ("${prop.name}"): Precio anterior $${priceVal.toLocaleString()} -> Precio Venta Real $${realPrice.toLocaleString()} | Admin Fee: $${newAdminFee.toLocaleString()}`);
+      if (realPrice >= 100_000_000) {
+        rentCanon = priceVal < 100_000_000 ? priceVal : 0;
+        console.log(`🔧 Corrigiendo Inmueble Dual ID #${prop.id} ("${prop.name}"): Precio Venta Real $${realPrice.toLocaleString()} | Canon Arriendo: $${rentCanon.toLocaleString()}`);
 
         await db.update(properties)
           .set({
             price: String(realPrice),
-            adminFee: String(newAdminFee),
+            rentPrice: rentCanon > 0 ? String(rentCanon) : prop.rentPrice,
+            transactionType: "venta_o_arriendo",
             updatedAt: new Date()
           })
           .where(eq(properties.id, prop.id));
         updatedProps++;
+      } else if (priceVal < 30_000_000) {
+        const saleMatches = rawText.match(/(?:v\/venta\/|precio\s*de\s*venta|venta)\s*:?\s*\$?([\d.,]+)/i);
+        if (saleMatches) {
+          const val = parseFloat(saleMatches[1].replace(/\./g, "").replace(/,/g, ""));
+          if (val >= 30_000_000) {
+            console.log(`🔧 Corrigiendo Inmueble Venta ID #${prop.id} ("${prop.name}"): Precio $${val.toLocaleString()}`);
+            await db.update(properties)
+              .set({
+                price: String(val),
+                adminFee: String(priceVal),
+                updatedAt: new Date()
+              })
+              .where(eq(properties.id, prop.id));
+            updatedProps++;
+          }
+        }
       }
     }
   }
