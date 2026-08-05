@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { 
   Phone, MapPin, Search, Download, Building2, Calendar, 
   Sparkles, CheckCircle2, AlertTriangle, XCircle, SlidersHorizontal, 
-  DollarSign, Ruler, Bed, Bath, Car, Shield, ExternalLink, Receipt
+  DollarSign, Ruler, Bed, Bath, Car, Shield, ExternalLink, Receipt, Box
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,27 +28,17 @@ function getPropTypeLabel(type: string | null | undefined): string {
   const clean = type.toLowerCase().trim();
   const m: Record<string, string> = {
     apartment: "Apartamento",
-    apartamento: "Apartamento",
-    apartamento_estandar: "Apartamento",
-    apartaestudio: "Apartaestudio",
     house: "Casa",
-    casa: "Casa",
     building: "Edificio",
-    edificio: "Edificio",
     warehouse: "Bodega",
-    bodega: "Bodega",
-    farm: "Finca",
-    finca: "Finca",
-    hotel: "Hotel",
     office: "Oficina",
-    oficina: "Oficina",
-    land: "Lote/Terreno",
-    lote: "Lote/Terreno",
-    terreno: "Lote/Terreno",
-    commercial: "Local Comercial",
-    local: "Local Comercial",
+    farm: "Finca / Lote Campestre",
     loft: "Loft",
-    consultorio: "Consultorio"
+    consultorio: "Consultorio",
+    cabin: "Cabaña",
+    commercial: "Local Comercial",
+    land: "Lote / Terreno",
+    hotel: "Hotel"
   };
   return m[clean] || type;
 }
@@ -92,6 +82,16 @@ function isPropertyDualOffer(prop: any): boolean {
   }
 
   return false;
+}
+
+function extractPublicLink(item: any): string | null {
+  if (!item) return null;
+  if (item.externalUrl && (item.externalUrl.startsWith("http://") || item.externalUrl.startsWith("https://"))) {
+    return item.externalUrl;
+  }
+  const text = `${item.rawText || ''} ${item.description || ''}`;
+  const match = text.match(/https?:\/\/[^\s<"']+/i);
+  return match ? match[0] : null;
 }
 
 function scoreRows(req: any, prop: any) {
@@ -217,7 +217,7 @@ function scoreRows(req: any, prop: any) {
 
   add(
     "Ubicación / Barrio", 
-    `${req.zonaDeseada || "Cualquiera"}, ${req.ciudadDeseada || "Bogotá"}`, 
+    req.zonaDeseada ? `${req.zonaDeseada}, ${req.ciudadDeseada || "Bogotá"}` : "N/E", 
     propZoneLabel, 
     geoStatus, 
     20, 
@@ -271,7 +271,7 @@ function scoreRows(req: any, prop: any) {
     if (effectivePropPrice <= budget) budS = "exact";
     else budS = "missing"; // Guillotina Financiera Tolerancia Cero en visual
   }
-  const reqBudgetLabel = budget > 0 ? `${formatCOP(req.presupuestoMax)}` : "Sin restricción";
+  const reqBudgetLabel = budget > 0 ? `${formatCOP(req.presupuestoMax)}` : "N/E";
 
   add(
     "Presupuesto Máx.",
@@ -294,7 +294,7 @@ function scoreRows(req: any, prop: any) {
   } else if (areaR === 0) {
     areS = "neutral";
   }
-  const reqAreaLabel = areaR > 0 ? `≥ ${req.areaMin} m² (±15%)` : "Pendiente de Inducción 🔍";
+  const reqAreaLabel = areaR > 0 ? `≥ ${req.areaMin} m² (±15%)` : "N/E";
 
   add(
     "Área Total",
@@ -308,7 +308,7 @@ function scoreRows(req: any, prop: any) {
   // Inferencia inteligente de restricciones faltantes en el requerimiento
   const reqTextLower = (req.rawText || "").toLowerCase();
   
-  // 6. Habitaciones (con inferencia por regex)
+  // 6. Habitaciones (REGLA DOCTRINAL: Si bedP < bedR -> NO COINCIDE / missing)
   let bedR = req.habitacionesMin ? Number(req.habitacionesMin) : 0;
   let bedInferred = false;
   if (bedR <= 0 && reqTextLower) {
@@ -318,11 +318,17 @@ function scoreRows(req: any, prop: any) {
   const bedP = prop.bedrooms ? Number(prop.bedrooms) : 0;
   let bedS: MatchStatus = "neutral";
   if (bedR > 0) {
-    bedS = (bedP >= bedR) ? "exact" : "warn";
+    if (bedP < bedR) {
+      bedS = "missing"; // REGLA DOCTRINAL: Menos de lo requerido -> Diferente / Fallido
+    } else if (bedP > bedR) {
+      bedS = "warn"; // Coincidencia aprox por exceso de confort
+    } else {
+      bedS = "exact";
+    }
   }
   const reqBedLabel = bedR > 0 
     ? `${bedR} hab.${bedInferred ? " (Inferido 🔍)" : ""}` 
-    : "Pendiente de Inducción 🔍";
+    : "N/E";
 
   add(
     "Habitaciones", 
@@ -333,7 +339,7 @@ function scoreRows(req: any, prop: any) {
     <Bed className="w-3.5 h-3.5" />
   );
 
-  // 7. Baños (con soporte decimal 1.5 e inferencia por regex)
+  // 7. Baños (REGLA DOCTRINAL: Si bathP < bathR -> NO COINCIDE / missing)
   let bathR = req.banosMin ? Number(req.banosMin) : 0;
   let bathInferred = false;
   if (bathR <= 0 && reqTextLower) {
@@ -344,11 +350,17 @@ function scoreRows(req: any, prop: any) {
   const bathP = prop.bathrooms ? Number(prop.bathrooms) : 0;
   let bathS: MatchStatus = "neutral";
   if (bathR > 0) {
-    bathS = (bathP >= bathR) ? "exact" : "warn";
+    if (bathP < bathR) {
+      bathS = "missing"; // REGLA DOCTRINAL: Menos de lo requerido -> Diferente / Fallido
+    } else if (bathP > bathR) {
+      bathS = "warn"; // Coincidencia aprox por exceso
+    } else {
+      bathS = "exact";
+    }
   }
   const reqBathLabel = bathR > 0 
     ? `≥ ${bathR} baño${bathR > 1 ? "s" : ""}${bathInferred ? " (Inferido 🔍)" : ""}` 
-    : "Pendiente de Inducción 🔍";
+    : "N/E";
 
   add(
     "Baños", 
@@ -359,7 +371,7 @@ function scoreRows(req: any, prop: any) {
     <Bath className="w-3.5 h-3.5" />
   );
 
-  // 8. Parqueaderos (con inferencia por regex + tipo de garaje)
+  // 8. Parqueaderos (REGLA DOCTRINAL: Si garP < garR -> NO COINCIDE / missing)
   let garR = req.parqueaderosMin ? Number(req.parqueaderosMin) : 0;
   let garInferred = false;
   if (garR <= 0 && reqTextLower) {
@@ -380,7 +392,7 @@ function scoreRows(req: any, prop: any) {
 
   if (garR > 0) {
     if (garP < garR) {
-      garS = "missing";
+      garS = "missing"; // REGLA DOCTRINAL: Si garP < garR -> Diferente / Fallido
     } else if (reqWantsIndep && garType === "lineal") {
       garS = "warn";
     } else {
@@ -389,7 +401,7 @@ function scoreRows(req: any, prop: any) {
   }
   const garReqLabel = garR > 0
     ? `≥ ${garR} ${reqWantsIndep ? "(Indep.)" : "garaje"}${garR > 1 ? "s" : ""}${garInferred ? " (Inferido 🔍)" : ""}`
-    : "Pendiente de Inducción 🔍";
+    : "N/E";
 
   add(
     "Parqueaderos",
@@ -411,7 +423,7 @@ function scoreRows(req: any, prop: any) {
   if (hasEstratoReq) {
     estS = (estratoP && estratoArr.includes(Number(estratoP))) ? "exact" : "warn";
   }
-  const reqEstratoLabel = hasEstratoReq ? `Estrato ${estratoArr.join(", ")}` : "Sin restricción";
+  const reqEstratoLabel = hasEstratoReq ? `Estrato ${estratoArr.join(", ")}` : "N/E";
   add(
     "Estrato", 
     reqEstratoLabel, 
@@ -440,7 +452,7 @@ function scoreRows(req: any, prop: any) {
   }
   const reqAdminLabel = reqAdminMax > 0 
     ? `≤ ${formatCOP(reqAdminMax)}${adminInferred ? " (Inferido 🔍)" : ""}` 
-    : "Pendiente de Inducción 🔍";
+    : "N/E";
 
   add(
     "Administración", 
@@ -464,7 +476,7 @@ function scoreRows(req: any, prop: any) {
     else                           ageS = "missing"; // Supera max con margen
   }
 
-  const reqAgeLabel = ageR > 0 ? `≤ ${ageR} años de construcción` : "Sin restricción";
+  const reqAgeLabel = ageR > 0 ? `≤ ${ageR} años de construcción` : "N/E";
   const propAgeLabel = ageP >= 0
     ? (ageP === 0 ? "🏗️ Obra nueva" : `${ageP} años${prop.yearBuilt ? ` (${prop.yearBuilt})` : ""}`)
     : "N/E";
@@ -487,7 +499,7 @@ function scoreRows(req: any, prop: any) {
   }
   add(
     "Permuta / Pago",
-    reqPermuta ? "Acepta Permuta / Parte de pago" : "Efectivo / Tradicional",
+    reqPermuta ? "Acepta Permuta / Parte de pago" : "N/E",
     propPermuta ? "Acepta Permuta / Recibe menor valor" : "Venta Directa / Tradicional",
     permutaS,
     5,
@@ -503,7 +515,7 @@ function scoreRows(req: any, prop: any) {
   }
   add(
     "Cocina & Acabados",
-    reqCocina,
+    reqCocina !== "Cualquiera" ? reqCocina : "N/E",
     propCocina,
     cocinaS,
     4,
@@ -520,27 +532,35 @@ function scoreRows(req: any, prop: any) {
   }
   add(
     "Balcón / Terraza",
-    reqBalcon ? "Exige Balcón o Terraza" : "Deseable",
+    reqBalcon ? "Exige Balcón o Terraza" : "N/E",
     propTerraza ? "Sí (Con Terraza)" : propBalcon ? "Sí (Con Balcón)" : "Sin balcón especificado",
     extSpaceS,
     5,
     <Ruler className="w-3.5 h-3.5" />
   );
 
-  // 15. Equipamiento & Seguridad (25 Internas / 45 Externas)
-  const propAscensor = propRawText.includes("ascensor") || prop.hasElevator;
-  const propConjunto = propRawText.includes("club house") || propRawText.includes("gimnasio") || propRawText.includes("piscina") || propRawText.includes("conjunto");
-  const reqAscensor = reqTextLower.includes("ascensor");
-  let equipS: MatchStatus = "neutral";
-  if (reqAscensor) {
-    equipS = propAscensor ? "exact" : "warn";
-  }
   add(
     "Equipamiento Edificio",
-    reqAscensor ? "Con Ascensor obligatorio" : "Estándar residencial",
+    reqAscensor ? "Con Ascensor obligatorio" : "N/E",
     propAscensor && propConjunto ? "Ascensor + Club House / Zonas Comunes" : propAscensor ? "Con Ascensor" : "Edificio convencional / Sin ascensor",
     equipS,
     6,
+    <Building2 className="w-3.5 h-3.5" />
+  );
+
+  // 16. Depósito / Bodega Interna
+  const reqStorage = reqTextLower.includes("deposito") || reqTextLower.includes("depósito") || reqTextLower.includes("bodega interna") || reqTextLower.includes("cuarto util") || reqTextLower.includes("cuarto útil");
+  const propStorage = propRawText.includes("deposito") || propRawText.includes("depósito") || propRawText.includes("bodega") || propRawText.includes("cuarto util") || propRawText.includes("cuarto útil") || prop.hasStorage;
+  let storageS: MatchStatus = "neutral";
+  if (reqStorage) {
+    storageS = propStorage ? "exact" : "missing"; // Si exige depósito y la oferta no lo tiene -> missing (Diferente)
+  }
+  add(
+    "Depósito / Cuarto Útil",
+    reqStorage ? "Exige Depósito / Cuarto Útil" : "N/E",
+    propStorage ? "Sí (Con Depósito)" : "Sin depósito especificado",
+    storageS,
+    4,
     <Building2 className="w-3.5 h-3.5" />
   );
 
@@ -987,18 +1007,44 @@ export default function AdminMatches() {
                         <span className="text-[9px] uppercase font-bold tracking-widest text-[#bf953f] bg-[#bf953f]/5 px-2 py-0.5 rounded border border-[#bf953f]/15">
                           🏢 Inmueble / Oferta
                         </span>
-                        {m.property?.origenNombre && (
-                          <span className="text-[10px] text-zinc-400 bg-white/5 border border-white/10 px-2 py-0.5 rounded-md truncate max-w-[180px] sm:max-w-[200px]" title={m.property.origenNombre}>
-                            📍 {m.property.origenNombre}
-                          </span>
-                        )}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {(() => {
+                            const publicUrl = extractPublicLink(m.property);
+                            return publicUrl ? (
+                              <a
+                                href={publicUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[10px] text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 px-2.5 py-0.5 rounded-md flex items-center gap-1 font-bold transition-all shadow-sm"
+                                title="Ver enlace público original / ficha del inmueble"
+                              >
+                                🔗 Ficha / Enlace Público <ExternalLink className="w-2.5 h-2.5" />
+                              </a>
+                            ) : null;
+                          })()}
+                          {m.property?.origenNombre && (
+                            <span className="text-[10px] text-zinc-400 bg-white/5 border border-white/10 px-2 py-0.5 rounded-md truncate max-w-[180px] sm:max-w-[200px]" title={m.property.origenNombre}>
+                              📍 {m.property.origenNombre}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <h4 className="text-sm sm:text-base font-bold text-white mt-1 break-words">{m.property?.name}</h4>
-                      {(m.property?.rawText || m.property?.description) && (
-                        <div className="text-xs text-zinc-300 bg-white/[0.02] border border-white/5 p-3 rounded-xl italic leading-relaxed whitespace-pre-wrap break-words">
-                          "{renderTextWithClickableLinks(m.property?.rawText || m.property?.description)}"
-                        </div>
-                      )}
+                      
+                      {/* Texto Completo Extraído o Resumen Estructurado de Atributos */}
+                      <div className="text-xs text-zinc-300 bg-white/[0.02] border border-white/5 p-3 rounded-xl leading-relaxed whitespace-pre-wrap break-words">
+                        {(m.property?.rawText || m.property?.description) ? (
+                          <span className="italic">"{renderTextWithClickableLinks(m.property?.rawText || m.property?.description)}"</span>
+                        ) : (
+                          <div className="not-italic text-zinc-400 space-y-1">
+                            <p className="font-semibold text-[#bf953f]">Detalles del Inmueble Oferta:</p>
+                            <p>• Tipo: <span className="text-white font-medium">{getPropTypeLabel(m.property?.propertyType)}</span> | Negocio: <span className="text-white font-medium">{getTransactionLabel(m.property?.transactionType)}</span></p>
+                            <p>• Precio: <span className="text-white font-medium">{formatCOP(m.property?.price)}</span> | Área: <span className="text-white font-medium">{m.property?.areaTotal || 'N/E'} m²</span></p>
+                            <p>• Especificaciones: <span className="text-white font-medium">{m.property?.bedrooms || 'N/E'} hab | {m.property?.bathrooms || 'N/E'} baños | {m.property?.garages || 'N/E'} garajes</span></p>
+                            <p>• Ubicación: <span className="text-white font-medium">{m.property?.zone || 'N/E'}, {m.property?.city || 'Bogotá'}</span></p>
+                          </div>
+                        )}
+                      </div>
                       
                       {(() => {
                         const propContact = extractPhoneFromItem(m.property);
@@ -1034,11 +1080,27 @@ export default function AdminMatches() {
                         <span className="text-[9px] uppercase font-bold tracking-widest text-cyan-400 bg-cyan-500/5 px-2 py-0.5 rounded border border-cyan-500/15">
                           🔍 Requerimiento / Demanda
                         </span>
-                        {m.requirement?.origenNombre && (
-                          <span className="text-[10px] text-zinc-400 bg-white/5 border border-white/10 px-2 py-0.5 rounded-md truncate max-w-[180px] sm:max-w-[200px]" title={m.requirement.origenNombre}>
-                            📍 {m.requirement.origenNombre}
-                          </span>
-                        )}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {(() => {
+                            const reqPublicUrl = extractPublicLink(m.requirement);
+                            return reqPublicUrl ? (
+                              <a
+                                href={reqPublicUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[10px] text-cyan-300 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 px-2.5 py-0.5 rounded-md flex items-center gap-1 font-bold transition-all shadow-sm"
+                                title="Ver enlace público original del requerimiento"
+                              >
+                                🔗 Enlace Público <ExternalLink className="w-2.5 h-2.5" />
+                              </a>
+                            ) : null;
+                          })()}
+                          {m.requirement?.origenNombre && (
+                            <span className="text-[10px] text-zinc-400 bg-white/5 border border-white/10 px-2 py-0.5 rounded-md truncate max-w-[180px] sm:max-w-[200px]" title={m.requirement.origenNombre}>
+                              📍 {m.requirement.origenNombre}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <h4 className="text-sm sm:text-base font-bold text-white mt-1 break-words">
                         {m.requirement?.name || `Requerimiento #${m.requirement?.id}`}
@@ -1111,7 +1173,7 @@ export default function AdminMatches() {
                                   ? "bg-zinc-800 text-zinc-400 border border-zinc-700/50"
                                   : "bg-red-500/10 text-red-400 border border-red-500/20";
                             
-                            const badgeText = isExact ? "Coincide" : isWarn ? "Aproximado" : isNeutral ? "No Restringido" : "Diferente";
+                            const badgeText = isExact ? "Coincide" : isWarn ? "Aproximado" : isNeutral ? "Dato Pendiente" : "Diferente";
 
                             return (
                               <tr key={rIdx} className="border-b border-white/5 hover:bg-white/[0.01] transition-colors">
@@ -1148,7 +1210,7 @@ export default function AdminMatches() {
                               ? "bg-zinc-800 text-zinc-400 border border-zinc-700/50"
                               : "bg-red-500/10 text-red-400 border border-red-500/20";
                         
-                        const badgeText = isExact ? "Coincide" : isWarn ? "Aproximado" : isNeutral ? "No Restringido" : "Diferente";
+                        const badgeText = isExact ? "Coincide" : isWarn ? "Aproximado" : isNeutral ? "Dato Pendiente" : "Diferente";
 
                         return (
                           <div key={rIdx} className="bg-zinc-900/70 border border-white/5 rounded-2xl p-3 space-y-2">
