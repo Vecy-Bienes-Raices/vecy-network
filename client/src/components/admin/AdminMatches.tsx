@@ -539,6 +539,15 @@ function scoreRows(req: any, prop: any) {
     <Ruler className="w-3.5 h-3.5" />
   );
 
+  // 15. Equipamiento & Seguridad
+  const propAscensor = propRawText.includes("ascensor") || prop.hasElevator;
+  const propConjunto = propRawText.includes("club house") || propRawText.includes("gimnasio") || propRawText.includes("piscina") || propRawText.includes("conjunto");
+  const reqAscensor = reqTextLower.includes("ascensor");
+  let equipS: MatchStatus = "neutral";
+  if (reqAscensor) {
+    equipS = propAscensor ? "exact" : "warn";
+  }
+
   add(
     "Equipamiento Edificio",
     reqAscensor ? "Con Ascensor obligatorio" : "N/E",
