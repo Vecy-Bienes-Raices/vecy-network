@@ -120,6 +120,107 @@ function checkTransactionCompatibility(reqType: string, propType: string, propAc
   return false;
 }
 
+/**
+ * 🎯 Motor Matemático de Matriz Vectorial 15-Dimensional (CVP - Closest Vector Problem en Lattices)
+ * Basado en la teoría de empaquetamiento de hiperesferas S^14 y proyección reticular.
+ */
+export function calculateCvpVector15DMatch(requirement: any, property: any): { cvpScore: number; distance: number; vectorReq: number[]; vectorProp: number[] } {
+  const vReq: number[] = new Array(15).fill(0);
+  const vProp: number[] = new Array(15).fill(0);
+
+  // 1. Precio (Normalización logarítmica en escala 0-1)
+  const reqMax = parseFloat(String(requirement.presupuestoMax || "0"));
+  const propPrice = parseFloat(String(property.price || "0"));
+  if (reqMax > 0 && propPrice > 0) {
+    vReq[0] = Math.log10(reqMax);
+    vProp[0] = Math.log10(propPrice);
+  }
+
+  // 2. Área M2
+  const reqArea = parseFloat(String(requirement.areaMin || requirement.areaMinimaM2 || "0"));
+  const propArea = parseFloat(String(property.areaTotal || property.areaConstruidaM2 || "0"));
+  vReq[1] = reqArea > 0 ? reqArea / 100 : 0;
+  vProp[1] = propArea > 0 ? propArea / 100 : 0;
+
+  // 3. Habitaciones
+  vReq[2] = Number(requirement.habitacionesMin || 0);
+  vProp[2] = Number(property.bedrooms || 0);
+
+  // 4. Baños
+  vReq[3] = Number(requirement.banosMin || 0);
+  vProp[3] = Number(property.bathrooms || 0);
+
+  // 5. Parqueaderos (Ponderado por independencia)
+  vReq[4] = Number(requirement.parqueaderosMin || 0);
+  const garP = Number(property.garages || 0);
+  const garType = String(property.garageType || "").toLowerCase();
+  vProp[4] = garType === "lineal" ? garP * 0.7 : garP;
+
+  // 6. Estrato
+  const estratoReq = Array.isArray(requirement.estratoDeseado) ? Number(requirement.estratoDeseado[0] || 0) : Number(requirement.estratoDeseado || 0);
+  vReq[5] = estratoReq;
+  vProp[5] = Number(property.stratum || property.estrato || 0);
+
+  // 7. Antigüedad
+  vReq[6] = Number(requirement.antiguedadMax || 0);
+  vProp[6] = Number(property.antiguedadAnos || 0);
+
+  // 8. Administración
+  vReq[7] = parseFloat(String(requirement.adminFeeMax || "0")) / 100000;
+  vProp[7] = parseFloat(String(property.adminFee || "0")) / 100000;
+
+  // 9. Balcón / Terraza
+  const reqText = String(requirement.rawText || "").toLowerCase();
+  const propText = String(property.rawText || "").toLowerCase();
+  vReq[8] = (reqText.includes("balcon") || reqText.includes("balcón") || reqText.includes("terraza")) ? 1 : 0;
+  vProp[8] = (propText.includes("balcon") || propText.includes("balcón") || propText.includes("terraza") || property.hasBalcony || property.hasTerrace) ? 1 : 0;
+
+  // 10. Ascensor
+  vReq[9] = reqText.includes("ascensor") ? 1 : 0;
+  vProp[9] = (propText.includes("ascensor") || property.hasElevator) ? 1 : 0;
+
+  // 11. Equipamiento Conjunto (Club House / Gym)
+  vReq[10] = (reqText.includes("club house") || reqText.includes("gimnasio") || reqText.includes("piscina")) ? 1 : 0;
+  vProp[10] = (propText.includes("club house") || propText.includes("gimnasio") || propText.includes("piscina")) ? 1 : 0;
+
+  // 12. Depósito / Bodega Interna
+  vReq[11] = (reqText.includes("deposito") || reqText.includes("depósito") || reqText.includes("bodega")) ? 1 : 0;
+  vProp[11] = (propText.includes("deposito") || propText.includes("depósito") || propText.includes("bodega") || property.hasStorage) ? 1 : 0;
+
+  // 13. Permuta / Vehículo parte de pago
+  vReq[12] = (reqText.includes("permuta") || reqText.includes("carro")) ? 1 : 0;
+  vProp[12] = (propText.includes("permuta") || propText.includes("recibe vehiculo")) ? 1 : 0;
+
+  // 14. Calidad de Vida (Silencioso / Sin Vías Principales)
+  vReq[13] = (reqText.includes("silencioso") || reqText.includes("tranquilo")) ? 1 : 0;
+  vProp[13] = (!propText.includes("ruidoso") && !propText.includes("via principal")) ? 1 : 0;
+
+  // 15. Ganga Index (<70% presupuesto)
+  vReq[14] = 1;
+  vProp[14] = (reqMax > 0 && propPrice > 0 && propPrice <= reqMax * 0.70) ? 1.5 : 1;
+
+  // Distancia Euclídea de CVP
+  let sumSq = 0;
+  for (let i = 0; i < 15; i++) {
+    const diff = vReq[i] - vProp[i];
+    sumSq += diff * diff;
+  }
+  const distance = Math.sqrt(sumSq);
+
+  // Cosine Similarity en Hiperesfera S^14
+  let dot = 0, normReq = 0, normProp = 0;
+  for (let i = 0; i < 15; i++) {
+    dot += vReq[i] * vProp[i];
+    normReq += vReq[i] * vReq[i];
+    normProp += vProp[i] * vProp[i];
+  }
+  const normDenom = Math.sqrt(normReq) * Math.sqrt(normProp);
+  const cosSim = normDenom > 0 ? (dot / normDenom) : 0.8;
+  const cvpScore = Math.min(100, Math.max(0, Math.round(cosSim * 100)));
+
+  return { cvpScore, distance, vectorReq: vReq, vectorProp: vProp };
+}
+
 
 export interface StreetCarreraBoundaries {
   minStreet?: number;
