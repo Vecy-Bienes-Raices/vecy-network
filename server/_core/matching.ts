@@ -77,6 +77,11 @@ export function extractRealPhone(item: any): string | null {
     }
   }
 
+  // 4. Fallback de Asesor / Sistema registrado en la BD de VECY Network
+  if (item.id != null) {
+    return "573192919978"; // Teléfono Oficial Canal VECY Network
+  }
+
   return null;
 }
 
