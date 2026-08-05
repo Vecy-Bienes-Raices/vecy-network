@@ -289,55 +289,6 @@ export function parsePropertyAddressNumbers(text: string): PropertyAddressNumber
   return res;
 }
 
-const GEO_FAMILIES = [
-  {
-    name: "Sabana Norte (Chía / Cajicá / Cota / Sopó)",
-    keywords: ["san jacinto", "sanjasito", "san simon", "san simón", "sindamanoy", "hacienda fontanar", "fagua", "potosi", "potosí", "guaymaral", "chia", "chía", "cajica", "cajicá", "cota", "sopo", "sopó", "la calera"]
-  },
-  {
-    name: "Bogotá Chicó / Cabrera / Rosales / Nogal / Virrey",
-    keywords: ["chico", "chicó", "rosales", "cabrera", "nogal", "virrey", "chapinero", "antiguo country", "retiro"]
-  },
-  {
-    name: "Bogotá Santa Bárbara / Unicentro / Usaquén / San Patricio",
-    keywords: ["santa barbara", "santa bárbara", "unicentro", "usaquen", "usaquén", "san patricio", "santa ana", "santa paula", "navarra", "molinos norte"]
-  },
-  {
-    name: "Bogotá Cedritos / Colina / Mazurén / Pasadena",
-    keywords: ["cedritos", "colina", "mazuren", "mazurén", "calleja", "tamesis", "támesis", "pasadena", "alambra"]
-  },
-  {
-    name: "Bogotá Salitre / Teusaquillo / Modelia",
-    keywords: ["salitre", "teusaquillo", "quinta paredes", "modelia", "fontibon", "hayuelos"]
-  }
-];
-
-export function checkDisjointGeoFamilies(reqText: string, propText: string): boolean {
-  const r = (reqText || "").toLowerCase();
-  const p = (propText || "").toLowerCase();
-
-  let reqFamilies: number[] = [];
-  for (let i = 0; i < GEO_FAMILIES.length; i++) {
-    if (GEO_FAMILIES[i].keywords.some(k => r.includes(k))) {
-      reqFamilies.push(i);
-    }
-  }
-
-  if (reqFamilies.length === 0) return true;
-
-  let propFamilies: number[] = [];
-  for (let i = 0; i < GEO_FAMILIES.length; i++) {
-    if (GEO_FAMILIES[i].keywords.some(k => p.includes(k))) {
-      propFamilies.push(i);
-    }
-  }
-
-  if (propFamilies.length === 0) return true;
-
-  const hasIntersection = reqFamilies.some(f => propFamilies.includes(f));
-  return hasIntersection;
-}
-
 export function matchesGeography(
   reqZoneRaw: string,
   propZoneRaw: string,
@@ -355,11 +306,6 @@ export function matchesGeography(
 
   // 1. SIEMPRE: Municipio / Ciudad exacto es obligatorio (Filtro duro)
   if (reqCity && propCity && reqCity !== propCity) {
-    return { matches: false, score: 0 };
-  }
-
-  // Guard de Familias Geográficas Disyuntas (ej: San Jacinto / Chía vs Chicó Norte / Bogotá)
-  if (!checkDisjointGeoFamilies(`${reqZoneRaw} ${reqLocRaw}`, `${propZoneRaw} ${propLocRaw}`)) {
     return { matches: false, score: 0 };
   }
 
@@ -902,10 +848,10 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
 
   positives.push(`Tipo de activo compatible: ${propType}`);
 
-  // ── FILTRO DURO 4: Ubicación / Barrio Estricto con Inspección Sub-barrial ──
+  // ── FILTRO DURO 4: Ubicación / Barrio Estricto ──
   const geoResult = matchesGeography(
-    `${requirement.zonaDeseada || ""} ${requirement.rawText || ""}`,
-    `${property.zone || ""} ${property.rawText || ""}`,
+    requirement.zonaDeseada || requirement.addressNeighborhood || "",
+    property.zone || property.addressNeighborhood || "",
     requirement.addressLocality || "",
     property.addressLocality || "",
     requirement.ciudadDeseada || requirement.city || "",
@@ -913,7 +859,7 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   );
 
   if (!geoResult.matches) {
-    blockers.push(`Choque Ubicación Micro-sectorial: Requerido '${requirement.zonaDeseada || requirement.rawText || ""}', ofrecido '${property.zone || property.rawText || ""}'`);
+    blockers.push(`Ubicación incompatible: requerida zona '${requirement.zonaDeseada || ""}', ofrecida '${property.zone || ""}'`);
     return buildExplanationResult(0, blockers, positives, negatives);
   }
   positives.push(`Ubicación compatible en zona: ${property.zone || ""}`);
