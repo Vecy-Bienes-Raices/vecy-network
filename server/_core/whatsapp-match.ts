@@ -933,24 +933,37 @@ export class JaniaMatchBot {
       const hasBudget = cleanLower.includes('$') || cleanLower.includes('millon') || cleanLower.includes('millón') || cleanLower.includes('ppto') || cleanLower.includes('presupuesto') || cleanLower.includes('valor') || cleanLower.includes('canon') || cleanLower.includes('precio') || /\d+\s*(m|mm|k)/i.test(cleanLower);
 
       // 2. Datos prediales específicos (Habitaciones, Baños, Parqueaderos, Metraje y Sector)
-      const hasTechSpecs = (cleanLower.includes('hab') || cleanLower.includes('alcoba') || cleanLower.includes('baño') || cleanLower.includes('m2') || cleanLower.includes('mts') || cleanLower.includes('parq') || cleanLower.includes('garaje')) && (cleanLower.includes('barrio') || cleanLower.includes('sector') || cleanLower.includes('calle') || cleanLower.includes('cra') || cleanLower.includes('carrera') || cleanLower.includes('zona') || cleanLower.includes('chico') || cleanLower.includes('chicó') || cleanLower.includes('rosales') || cleanLower.includes('cedritos') || cleanLower.includes('colina') || cleanLower.includes('santa') || cleanLower.includes('calleja') || cleanLower.includes('nogal') || cleanLower.includes('cabrera') || cleanLower.includes('virrey') || cleanLower.includes('pasadena') || cleanLower.includes('teusaquillo') || cleanLower.includes('chia') || cleanLower.includes('chía') || cleanLower.includes('cajica') || cleanLower.includes('cajicá'));
+      const hasZone = cleanLower.includes('barrio') || cleanLower.includes('sector') || cleanLower.includes('calle') || cleanLower.includes('cra') || cleanLower.includes('carrera') || cleanLower.includes('zona') || cleanLower.includes('chico') || cleanLower.includes('chicó') || cleanLower.includes('rosales') || cleanLower.includes('cedritos') || cleanLower.includes('colina') || cleanLower.includes('santa') || cleanLower.includes('calleja') || cleanLower.includes('nogal') || cleanLower.includes('cabrera') || cleanLower.includes('virrey') || cleanLower.includes('pasadena') || cleanLower.includes('teusaquillo') || cleanLower.includes('chia') || cleanLower.includes('chía') || cleanLower.includes('cajica') || cleanLower.includes('cajicá');
+      const hasBeds = cleanLower.includes('hab') || cleanLower.includes('alcoba') || cleanLower.includes('dormitorio');
+      const hasBaths = cleanLower.includes('baño') || cleanLower.includes('wc') || cleanLower.includes('bñ');
+      const hasGarages = cleanLower.includes('parq') || cleanLower.includes('garaje') || cleanLower.includes('ptero');
+      const hasType = cleanLower.includes('apto') || cleanLower.includes('apartamento') || cleanLower.includes('casa') || cleanLower.includes('bodega') || cleanLower.includes('oficina') || cleanLower.includes('lote') || cleanLower.includes('finca') || cleanLower.includes('local');
+      const hasBiz = cleanLower.includes('vendo') || cleanLower.includes('arriendo') || cleanLower.includes('venta') || cleanLower.includes('compro') || cleanLower.includes('busco') || cleanLower.includes('necesito') || cleanLower.includes('requiero');
 
-      // DOCTRINA VECY: Si el mensaje trae un enlace web (URL), imagen o PDF, CONTIENE LA FICHA TÉCNICA COMPLETA. NUNCA ES INCOMPLETO.
-      const isCompletePublication = hasMediaOrUrl || (hasBudget && (hasTechSpecs || cleanLower.length > 180));
+      // Requerimiento completo: Tiene enlace/media O especifica negocio, tipo, barrio, presupuesto, habitaciones, baños y parqueaderos
+      const isCompleteRequirement = hasMediaOrUrl || (hasBiz && hasType && hasZone && hasBudget && hasBeds && (hasBaths || hasGarages || cleanLower.length > 150));
+      const isCompleteOffer = hasMediaOrUrl || (hasBudget && (hasZone || cleanLower.length > 150));
+      
       const isOfficialGroup = chatId === this.targetGroupId || chatId === this.buzonGroupId || chatId === this.circuloGroupId;
 
       // REGLA DOCTRINAL DE EDUARDO:
       // 1. 👍 -> Oferta COMPLETA (o con enlace URL/imagen/PDF).
-      // 2. 📝 -> Requerimiento COMPLETO (o con enlace URL/imagen/PDF).
-      // 3. ❓ -> Texto plano mediocre / incompleto al que REALMENTE le faltan datos fundamentalísimos (ej: Sandra Vargas sin presupuesto ni datos).
+      // 2. 📝 -> Requerimiento COMPLETO (o con enlace URL/imagen/PDF con todas las especificaciones).
+      // 3. ❓ -> Requerimiento o texto plano INCOMPLETO que carece de características clave (presupuesto, barrio, hab, baños, garajes).
       // 4. 🚫 -> Violación de normas / Spam -> EXCLUSIVO EN GRUPOS OFICIALES VECY.
       let fastEmoji: string | null = null;
 
-      if (isSearch || isOffer) {
-        if (isCompletePublication) {
-          fastEmoji = isSearch ? '📝' : '👍';
+      if (isSearch) {
+        if (isCompleteRequirement) {
+          fastEmoji = '📝'; // Requerimiento Completo
         } else {
-          fastEmoji = '❓'; // Texto plano mediocre / incompleto sin datos prediales ni presupuesto
+          fastEmoji = '❓'; // Requerimiento Incompleto o Corto -> Reaccionar con ❓
+        }
+      } else if (isOffer) {
+        if (isCompleteOffer) {
+          fastEmoji = '👍'; // Oferta Completa
+        } else {
+          fastEmoji = '❓'; // Oferta Incompleta
         }
       } else if (isOfficialGroup) {
         fastEmoji = '❓';
