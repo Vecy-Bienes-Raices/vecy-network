@@ -3,14 +3,15 @@ import { properties, requirements, propertyMatches } from "../drizzle/schema";
 import { eq, sql } from "drizzle-orm";
 import { explicarMatch } from "./_core/matching";
 
-async function fixCorruptedPricesAndMatches() {
-  console.log("🚀 INICIANDO SCRIPT DE SANIDAD PREDIAL DE PRECIOS Y PURGA DE MATCHES INVIABLES EN SUPABASE...");
+async function fixCorruptedPricesAndRebuildMatches() {
+  console.log("🚀 INICIANDO SANIDAD PREDIAL Y RECONSTRUCCIÓN TOTAL DE MATCHES EN SUPABASE...");
   const db = await getDb();
   if (!db) {
     console.error("❌ No se pudo conectar a la base de datos Supabase.");
     process.exit(1);
   }
 
+  // 1. Sanidad predial de precios en inmuebles duales o de venta
   const allProps = await db.select().from(properties);
   let updatedProps = 0;
 
@@ -19,13 +20,10 @@ async function fixCorruptedPricesAndMatches() {
     const priceVal = parseFloat(String(prop.price || "0"));
     const transType = String(prop.transactionType || "").toLowerCase();
     const isSale = transType.includes("venta") || transType === "venta" || transType === "venta_o_arriendo";
-    const isDual = transType === "venta_o_arriendo" || (rawText.toLowerCase().includes("venta") && rawText.toLowerCase().includes("arriendo"));
 
-    // Sanidad Predial: si es venta o dual y el precio guardado es < 100M pero en el texto hay un precio de venta de miles de millones (ej: 2.000.000.000)
     if (isSale && priceVal > 0 && priceVal < 100_000_000) {
-      // Buscar venta explícita de miles de millones o cientos de millones
       const bigSaleMatches = rawText.match(/(?:venta|precio\s*de\s*venta|vendo|valor)\s*:?\s*\$?([\d.,]+)\s*(mil\s*millones?|millones?|m|M)?/i)
-                          || rawText.match(/(\d{1,3}(?:\.\d{3}){3})/); // Regex para 2.000.000.000
+                          || rawText.match(/(\d{1,3}(?:\.\d{3}){3})/);
 
       let realPrice = 0;
       let rentCanon = 0;
@@ -89,54 +87,45 @@ async function fixCorruptedPricesAndMatches() {
 
   console.log(`✅ Sanidad Predial Completada: ${updatedProps} inmuebles corregidos.`);
 
-  // ── PURGA DE MATCHES INVIABLES EN TABLA propertyMatches DE SUPABASE ──
-  console.log("🧹 Iniciando purga y recalculo de matches en Supabase...");
+  // 2. PURGA TOTAL Y RECONSTRUCCIÓN DESDE CERO EN TABLA propertyMatches DE SUPABASE
+  console.log("🧹 VACIANDO NORMAS DE NOTIFICACIÓN Y TABLA DE MATCHES EN SUPABASE...");
+  await db.execute(sql`DELETE FROM "notificationLogs"`);
+  await db.execute(sql`DELETE FROM "propertyMatches"`);
+  console.log("✅ Tablas notificationLogs y propertyMatches vaciadas exitosamente.");
+
+  console.log("🔍 Recalculando e insertando únicamente matches 100% legítimos (Score ≥ 80%, Cero Fallidos, Requerimientos Ricos ≥ 35 chars)...");
   const currentProps = await db.select().from(properties);
   const currentReqs = await db.select().from(requirements);
 
-  let deletedCount = 0;
-  let validCount = 0;
+  let insertedCount = 0;
+  let rejectedCount = 0;
 
   for (const p of currentProps) {
     for (const r of currentReqs) {
       const exp = explicarMatch(r, p);
-      const [existingMatch] = await db.select()
-        .from(propertyMatches)
-        .where(sql`${propertyMatches.propertyId} = ${p.id} AND ${propertyMatches.requirementId} = ${r.id}`)
-        .limit(1);
 
-      if (exp.score < 80 || exp.blockers.length > 0) {
-        if (existingMatch) {
-          await db.delete(propertyMatches).where(eq(propertyMatches.id, existingMatch.id));
-          deletedCount++;
-        }
+      if (exp.score >= 80 && exp.blockers.length === 0) {
+        await db.insert(propertyMatches).values({
+          propertyId: p.id,
+          requirementId: r.id,
+          matchScore: String(exp.score),
+          matchReason: exp.positives.join(" | "),
+          matchExplanation: exp,
+          status: "suggested",
+          createdAt: new Date()
+        });
+        insertedCount++;
       } else {
-        validCount++;
-        if (existingMatch) {
-          await db.update(propertyMatches)
-            .set({
-              matchScore: String(exp.score),
-              status: "suggested"
-            })
-            .where(eq(propertyMatches.id, existingMatch.id));
-        } else {
-          await db.insert(propertyMatches).values({
-            propertyId: p.id,
-            requirementId: r.id,
-            matchScore: String(exp.score),
-            status: "suggested",
-            createdAt: new Date()
-          });
-        }
+        rejectedCount++;
       }
     }
   }
 
-  console.log(`🎉 PROCESO COMPLETADO: ${deletedCount} matches inviables eliminados. Total Matches Válidos en BD: ${validCount}`);
+  console.log(`🎉 RECONSTRUCCIÓN COMPLETADA EXITOSAMENTE: ${insertedCount} matches legítimos insertados en Supabase. ${rejectedCount} combinaciones descartadas por no cumplir doctrina.`);
   process.exit(0);
 }
 
-fixCorruptedPricesAndMatches().catch(err => {
+fixCorruptedPricesAndRebuildMatches().catch(err => {
   console.error("❌ Error en script de sanidad predial:", err);
   process.exit(1);
 });
