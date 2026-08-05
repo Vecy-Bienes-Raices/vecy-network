@@ -611,24 +611,30 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
-  // Rechazar requerimientos incompletos, vagos o muy cortos sin criterios lógicos de búsqueda
+  // Rechazar requerimientos incompletos, vagos o muy cortos sin suficientes criterios lógicos de búsqueda (Doctrina de Alta Fidelidad)
   const reqRawString = (requirement.rawText || requirement.name || "").trim();
   const reqZoneRawClean = (requirement.zonaDeseada || requirement.addressNeighborhood || "").trim().toLowerCase();
   const hasSpecificReqZone = reqZoneRawClean !== "" && reqZoneRawClean !== "na" && reqZoneRawClean !== "bogota" && reqZoneRawClean !== "bogotá";
   const hasReqBudget = parseFloat(String(requirement.presupuestoMax || "0")) > 0 || parseFloat(String(requirement.presupuestoMin || "0")) > 0;
-  const hasReqBedrooms = requirement.habitacionesMin != null && Number(requirement.habitacionesMin) > 0;
-  const hasReqArea = parseFloat(String(requirement.areaMin || requirement.areaMinimaM2 || "0")) > 0;
+  
+  const reqTextLow = reqRawString.toLowerCase();
+  const hasReqBedrooms = (requirement.habitacionesMin != null && Number(requirement.habitacionesMin) > 0) || /hab|habitaciones|alcoba/i.test(reqTextLow);
+  const hasReqBathrooms = (requirement.banosMin != null && Number(requirement.banosMin) > 0) || /baño|baños|wc/i.test(reqTextLow);
+  const hasReqArea = parseFloat(String(requirement.areaMin || requirement.areaMinimaM2 || "0")) > 0 || /m2|mts/i.test(reqTextLow);
   const hasReqType = !!(requirement.tipoInmuebleDeseado || requirement.propertyType);
+  const hasReqGarages = (requirement.parqueaderosMin != null && Number(requirement.parqueaderosMin) > 0) || /garaje|parqueadero/i.test(reqTextLow);
 
   let validCriteriaCount = 0;
   if (hasSpecificReqZone) validCriteriaCount++;
   if (hasReqBudget) validCriteriaCount++;
   if (hasReqBedrooms) validCriteriaCount++;
+  if (hasReqBathrooms) validCriteriaCount++;
   if (hasReqArea) validCriteriaCount++;
   if (hasReqType) validCriteriaCount++;
+  if (hasReqGarages) validCriteriaCount++;
 
-  if (reqRawString.length < 12 || validCriteriaCount < 2) {
-    blockers.push("Requerimiento incompleto o sin información suficiente para efectuar un cotejamiento lógico.");
+  if (reqRawString.length < 35 || validCriteriaCount < 3) {
+    blockers.push("Requerimiento vago, muy corto o incompleto (menos de 35 caracteres o menos de 3 criterios lógicos). Descartado por doctrina para asegurar la máxima fidelidad en el cotejamiento.");
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
@@ -947,7 +953,6 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   }
 
   // ── INFERENCIA DE ESPECIFICACIONES MÍNIMAS EN LA DEMANDA DESDE RAWTEXT ──
-  const reqTextLow = (requirement.rawText || "").toLowerCase();
   let effectiveReqBeds = reqBedrooms;
   if (effectiveReqBeds <= 0) {
     const mB = reqTextLow.match(/(\d+(?:\s*-\s*\d+)?)\s*(?:hab|habitaciones|alcoba|alcobas|alc|dormitorio)/i);
