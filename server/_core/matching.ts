@@ -940,23 +940,32 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
       }
 
       if (salePrice < budgetMax * 0.70) {
-        const reqBeds = Number(requirement.habitacionesMin || 0);
-        const reqBaths = Number(requirement.banosMin || 0);
-        const propBeds = Number(property.bedrooms || 0);
-        const propBaths = Number(property.bathrooms || 0);
-
-        const bedsOk = reqBeds <= 0 || propBeds >= reqBeds;
-        const bathsOk = reqBaths <= 0 || propBaths >= reqBaths;
-        const geoOk = geoResult.score >= 20; // Zona coincide
-
-        if (!bedsOk || !bathsOk || !geoOk) {
-          blockers.push(`Ganga Rechazada: Precio ($${salePrice.toLocaleString()}) es inferior al 70% del presupuesto ($${budgetMax.toLocaleString()}) pero no satisface el 100% de habitaciones, baños y ubicación.`);
-          return buildExplanationResult(0, blockers, positives, negatives);
-        } else {
-          positives.push(`💰 Oportunidad Ganga Validada: Precio ($${salePrice.toLocaleString()}) está 30%+ por debajo del presupuesto con coincidencia perfecta de especificaciones.`);
-        }
+        blockers.push(`Incompatibilidad de Segmento Comercial: El precio del inmueble ($${salePrice.toLocaleString()}) está más de un 30% por debajo del presupuesto del comprador ($${budgetMax.toLocaleString()}). Inmueble de categoría o segmento inferior no apto para la demanda.`);
+        return buildExplanationResult(0, blockers, positives, negatives);
       }
     }
+  }
+
+  // ── INFERENCIA DE ESPECIFICACIONES MÍNIMAS EN LA DEMANDA DESDE RAWTEXT ──
+  const reqTextLow = (requirement.rawText || "").toLowerCase();
+  let effectiveReqBeds = reqBedrooms;
+  if (effectiveReqBeds <= 0) {
+    const mB = reqTextLow.match(/(\d+(?:\s*-\s*\d+)?)\s*(?:hab|habitaciones|alcoba|alcobas|alc|dormitorio)/i);
+    if (mB) effectiveReqBeds = parseInt(mB[1].split("-")[0].trim(), 10);
+  }
+
+  let effectiveReqBaths = reqBathrooms;
+  if (effectiveReqBaths <= 0) {
+    const mW = reqTextLow.match(/(\d+(?:\.\d+)?)\s*(?:o\s*más\s*)?(?:wc|baño|baños|bñ)/i)
+            || reqTextLow.match(/(\d+)\s*hab\s*con\s*baño/i);
+    if (mW) effectiveReqBaths = parseFloat(mW[1]);
+  }
+
+  let effectiveReqGarages = reqGarages;
+  if (effectiveReqGarages <= 0) {
+    const mG = reqTextLow.match(/(?:parqueadero|parqueaderos|garaje|garajes|ptero|g\.)\s*\.?\s*(\d+)/i)
+            || reqTextLow.match(/(\d+)\s*(?:parqueadero|parqueaderos|garaje|garajes|ptero|g\.|individuales)/i);
+    if (mG) effectiveReqGarages = parseInt(mG[1], 10);
   }
 
   // ── FILTRO DE ADMINISTRACIÓN MÁXIMA (GUILLOTINA ADMIN) ──
@@ -966,30 +975,30 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
-  // ── FILTRO DURO 8: Habitaciones Mínimas (NUNCA MENOR QUE) ──
-  if (reqBedrooms > 0) {
+  // ── FILTRO DURO 8: Habitaciones Mínimas (NUNCA MENOR QUE - REGLA CERO FALLIDOS) ──
+  if (effectiveReqBeds > 0) {
     if (pBedrooms >= 0) {
-      if (pBedrooms < reqBedrooms) {
-        blockers.push(`Habitaciones ofrecidas (${pBedrooms}) son inferiores a las exigidas (${reqBedrooms})`);
+      if (pBedrooms < effectiveReqBeds) {
+        blockers.push(`Atributo Fallido (Habitaciones): Ofrecidas (${pBedrooms}) son inferiores a las exigidas (${effectiveReqBeds}). Match Inviable (0%).`);
         return buildExplanationResult(0, blockers, positives, negatives);
       } else {
-        positives.push(`Habitaciones ofrecidas (${pBedrooms}) satisfacen la solicitud de (${reqBedrooms})`);
+        positives.push(`Habitaciones ofrecidas (${pBedrooms}) satisfacen la solicitud de (${effectiveReqBeds})`);
       }
     } else {
-      blockers.push(`No se pueden verificar las habitaciones requeridas (${reqBedrooms}) por falta de información en la oferta.`);
+      blockers.push(`No se pueden verificar las habitaciones requeridas (${effectiveReqBeds}) por falta de información en la oferta.`);
       return buildExplanationResult(0, blockers, positives, negatives);
     }
   }
 
-  // ── FILTRO DURO 9: Baños Mínimos ──
-  if (reqBathrooms > 0 && pBathrooms >= 0 && pBathrooms < reqBathrooms) {
-    blockers.push(`Baños ofrecidos (${pBathrooms}) son inferiores a los requeridos (${reqBathrooms})`);
+  // ── FILTRO DURO 9: Baños Mínimos (REGLA CERO FALLIDOS) ──
+  if (effectiveReqBaths > 0 && pBathrooms >= 0 && pBathrooms < effectiveReqBaths) {
+    blockers.push(`Atributo Fallido (Baños): Ofrecidos (${pBathrooms}) son inferiores a los requeridos (${effectiveReqBaths}). Match Inviable (0%).`);
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
-  // ── FILTRO DURO 10 v20.0: Parqueaderos — Cantidad + Auditoría de Confort ────
-  if (reqGarages > 0 && pGarages >= 0 && pGarages < reqGarages) {
-    blockers.push(`Parqueaderos ofrecidos (${pGarages}) son inferiores a los requeridos (${reqGarages})`);
+  // ── FILTRO DURO 10: Parqueaderos (REGLA CERO FALLIDOS) ────
+  if (effectiveReqGarages > 0 && pGarages >= 0 && pGarages < effectiveReqGarages) {
+    blockers.push(`Atributo Fallido (Parqueaderos): Ofrecidos (${pGarages}) son inferiores a los requeridos (${effectiveReqGarages}). Match Inviable (0%).`);
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 

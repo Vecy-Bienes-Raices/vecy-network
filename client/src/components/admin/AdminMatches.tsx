@@ -580,7 +580,8 @@ function scoreRows(req: any, prop: any) {
   );
 
 
-  const autoScore = max > 0 ? Math.round((pts / max) * 100) : 0;
+  const hasAnyFailure = rows.some(r => r.status === "missing");
+  const autoScore = hasAnyFailure ? 0 : (max > 0 ? Math.round((pts / max) * 100) : 0);
   return { rows, autoScore };
 }
 
