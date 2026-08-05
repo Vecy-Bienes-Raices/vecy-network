@@ -822,15 +822,11 @@ export default function AdminMatches() {
       const scoreVal = parseFloat(String(match.matchScore || '0'));
       const matchesScore = scoreVal >= parseFloat(minScore);
 
-      // Re-verificación de filtros duros clave (Ubicación, Presupuesto Máx o Tipo de Inmueble)
+      // Re-verificación de regla doctrinal: Si CUALQUIER atributo arroja 'Fallido' (missing), SE DESCALIFICA Y DESCARTA DEL GRID (0%)
       const { rows } = scoreRows(requirement, property);
-      const hasBlocker = rows.some(r => r.status === "missing" && (
-        r.label === "Ubicación / Barrio" || 
-        r.label === "Presupuesto Máx." || 
-        r.label === "Tipo de Inmueble"
-      ));
+      const hasAnyFailure = rows.some(r => r.status === "missing");
 
-      return matchesSearch && matchesScore && !hasBlocker;
+      return matchesSearch && matchesScore && !hasAnyFailure;
     });
   }, [matches, searchTerm, minScore]);
 
