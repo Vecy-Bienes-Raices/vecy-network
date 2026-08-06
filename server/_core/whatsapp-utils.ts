@@ -246,12 +246,72 @@ export function cleanVoiceText(text: string): string {
 }
 
 /**
- * Genera un buffer de audio sintetizado utilizando la API de Google Cloud Text-to-Speech o fallback OpenAI.
+ * Divide un texto en bloques razonables para síntesis de voz en Google Translate TTS.
+ */
+function splitTextIntoVoiceChunks(text: string, maxLen = 180): string[] {
+  const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+  const chunks: string[] = [];
+  let currentChunk = '';
+
+  for (const sentence of sentences) {
+    if ((currentChunk + ' ' + sentence).trim().length <= maxLen) {
+      currentChunk = (currentChunk + ' ' + sentence).trim();
+    } else {
+      if (currentChunk) chunks.push(currentChunk);
+      if (sentence.length > maxLen) {
+        const words = sentence.split(' ');
+        let sub = '';
+        for (const w of words) {
+          if ((sub + ' ' + w).trim().length <= maxLen) {
+            sub = (sub + ' ' + w).trim();
+          } else {
+            chunks.push(sub);
+            sub = w;
+          }
+        }
+        if (sub) currentChunk = sub;
+        else currentChunk = '';
+      } else {
+        currentChunk = sentence.trim();
+      }
+    }
+  }
+  if (currentChunk) chunks.push(currentChunk);
+  return chunks;
+}
+
+/**
+ * Fallback a la API libre de Google Translate TTS para generar audio en MP3.
+ */
+async function fetchGttsAudioBuffer(text: string): Promise<Buffer | null> {
+  try {
+    const chunks = splitTextIntoVoiceChunks(text);
+    const audioBuffers: Buffer[] = [];
+    for (const chunk of chunks) {
+      const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(chunk)}&tl=es-CO&client=tw-ob`;
+      const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+      if (res.ok) {
+        const arr = await res.arrayBuffer();
+        audioBuffers.push(Buffer.from(arr));
+      }
+    }
+    if (audioBuffers.length > 0) {
+      return Buffer.concat(audioBuffers);
+    }
+  } catch (err: any) {
+    console.error("[TTS-Fallback-GTTS] Error sintetizando audio libre:", err.message || err);
+  }
+  return null;
+}
+
+/**
+ * Genera un buffer de audio sintetizado utilizando la API de Google Cloud Text-to-Speech con fallback a Google Translate TTS.
  */
 export async function textToSpeechMedia(text: string, format: "OGG_OPUS" | "MP3" = "OGG_OPUS"): Promise<any> {
   const cleaned = cleanVoiceText(text);
   if (!cleaned) return null;
 
+  // 1. Intentar con Google Cloud Text-to-Speech si la API key es válida
   try {
     const googleApiKey = process.env.GOOGLE_TTS_API_KEY || process.env.GEMINI_API_KEY;
     if (googleApiKey) {
@@ -262,7 +322,7 @@ export async function textToSpeechMedia(text: string, format: "OGG_OPUS" | "MP3"
           input: { text: cleaned },
           voice: {
             languageCode: "es-CO",
-            name: "es-CO-Neural2-[#1]", // Voz femenina colombiana alta fidelidad (Laomedeia)
+            name: "es-CO-Neural2-A", // Voz femenina colombiana válida en GCP
             ssmlGender: "FEMALE"
           },
           audioConfig: {
@@ -286,7 +346,18 @@ export async function textToSpeechMedia(text: string, format: "OGG_OPUS" | "MP3"
       }
     }
   } catch (err: any) {
-    console.error("[TTS-Media] Error sintetizando audio:", err.message || err);
+    console.warn("[TTS-Media] Google Cloud TTS no disponible, usando fallback GTTS:", err.message || err);
+  }
+
+  // 2. Fallback garantizado: Google Translate TTS libre
+  console.log("[TTS-Media] Sintetizando audio usando fallback Google Translate TTS (es-CO)...");
+  const gttsBuffer = await fetchGttsAudioBuffer(cleaned);
+  if (gttsBuffer && gttsBuffer.length > 0) {
+    return {
+      mimetype: "audio/mp3",
+      data: gttsBuffer.toString("base64"),
+      buffer: gttsBuffer
+    };
   }
 
   return null;

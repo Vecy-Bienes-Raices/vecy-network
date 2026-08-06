@@ -794,7 +794,8 @@ export class JaniaMatchBot {
       const { detectaVoz, textToSpeechMedia } = await import('./whatsapp-utils');
       const { processWhatsAppMessage, processConsultingMessage, processCirculoMessage } = await import('./janIA');
 
-      const wantsVoice = msg.message?.audioMessage || detectaVoz(textLower);
+      const isAudioPTT = !!msg.message?.audioMessage;
+      const wantsVoice = isAudioPTT || detectaVoz(textLower);
       if (wantsVoice) {
         await this.sock.sendPresenceUpdate('recording', chatId);
       } else {
@@ -854,7 +855,15 @@ export class JaniaMatchBot {
 
       let result;
       if (chatId === this.buzonGroupId) { // Soporte Legal, Tributario y Avalúos
-        result = await processConsultingMessage(bodyText, resolvedSenderId, realName);
+        result = await processConsultingMessage(
+          bodyText,
+          resolvedSenderId,
+          realName,
+          undefined,
+          undefined,
+          undefined,
+          isAudioPTT ? ('mock-audio:' + bodyText) : undefined
+        );
       } else if (chatId === this.circuloGroupId) { // Círculo Cero
         result = await processCirculoMessage(bodyText, resolvedSenderId, realName);
       } else if (isMainGroupChat) { // VECY INMUEBLES NETWORK — preguntas sobre el grupo/sistema
@@ -888,9 +897,11 @@ export class JaniaMatchBot {
 
       if (result && result.response && result.response.trim() !== '') {
         const textToDeliver = result.response;
-        const voiceToDeliver = result.voiceResponse || "";
+        const voiceToDeliver = (result.voiceResponse && result.voiceResponse.trim() !== "")
+          ? result.voiceResponse
+          : textToDeliver;
 
-        if (wantsVoice && voiceToDeliver.trim() !== "") {
+        if (wantsVoice || isAudioPTT) {
           const media = await textToSpeechMedia(voiceToDeliver);
           if (media) {
             await this.queuedSend(chatId, media, { sendAudioAsVoice: true, quoted: msg });
@@ -917,11 +928,90 @@ export class JaniaMatchBot {
     }
   }
 
+  private isPromotionalAd(bodyText: string, senderId: string): boolean {
+    const cleanLower = (bodyText || '').toLowerCase();
+    const rawPhone = (senderId || '').split('@')[0].replace(/[^0-9]/g, '');
+
+    // Contacto específico de publicidad / cursos: Carolina Rodríguez (+573212857044)
+    const isCarolina = rawPhone.includes("573212857044") || rawPhone.includes("3212857044");
+
+    // Frases y patrones de publicidad de capacitaciones, cursos, libros, entrenamientos o servicios no inmobiliarios
+    const promoPhrases = [
+      "captar no es improvisar",
+      "especialización dentro de la labor inmobiliaria",
+      "adquiere tu entrenamiento",
+      "espiral del éxito",
+      "conocimiento llena tus bolsillos",
+      "adquiérelo precio",
+      "precio de oferta",
+      "no más captaciones mediocres",
+      "no más procesos informales",
+      "no más inmuebles sin legalizar",
+      "no más trabajar sin asegurar el pago de tu comisión",
+      "proteger tus honorarios",
+      "método probado para captar",
+      "curso inmobiliario",
+      "taller inmobiliario",
+      "seminario inmobiliario",
+      "capacitación inmobiliaria",
+      "masterclass inmobiliaria",
+      "webinar inmobiliario",
+      "coaching inmobiliario",
+      "mentoría inmobiliaria",
+      "invierte en tu negocio",
+      "invierte en conocimiento"
+    ];
+
+    const hasPromoKeywords = promoPhrases.some(phrase => cleanLower.includes(phrase));
+    if (hasPromoKeywords) return true;
+
+    // Si es un mensaje de Carolina ofreciendo entrenamientos o capacitaciones que no sean ofertas/demandas directas de inmuebles
+    if (isCarolina) {
+      const isRealEstateListing = (cleanLower.includes("vendo") || cleanLower.includes("arriendo") || cleanLower.includes("busco") || cleanLower.includes("necesito")) && (cleanLower.includes("apto") || cleanLower.includes("apartamento") || cleanLower.includes("casa") || cleanLower.includes("bodega") || cleanLower.includes("lote") || cleanLower.includes("finca"));
+      if (!isRealEstateListing) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   // --- LOGÍSTICA DE BUFFER GRUPAL Y REACCIÓN INSTANTÁNEA ---
   private async handleIncomingGroupMessage(msg: proto.IWebMessageInfo, chatId: string, bodyText: string) {
     if (!msg.key || !msg.message) return;
 
-    // --- REACCIÓN INSTANTÁNEA (< 200ms) SEGÚN REGLAS DE EMOJIS DE EDUARDO ---
+    const rawSender = msg.key.participant || msg.participant || '';
+    if (!rawSender || rawSender.endsWith('@g.us')) {
+      console.warn(`[JANIA-MATCH] Omitiendo mensaje de grupo: sender individual inválido (${rawSender})`);
+      return;
+    }
+    const senderId = rawSender.includes('@') ? `${rawSender.split('@')[0].split(':')[0]}@${rawSender.split('@')[1]}` : rawSender.split(':')[0];
+
+    const isOfficialGroup = chatId === this.targetGroupId || chatId === this.buzonGroupId || chatId === this.circuloGroupId;
+
+    // --- PROTECCIÓN Y FILTRADO DE PUBLICIDAD NO INMOBILIARIA (CURSOS, ENTRENAMIENTOS, CAROLINA RODRÍGUEZ, ETC.) ---
+    if (this.isPromotionalAd(bodyText, senderId)) {
+      if (!msg.key.fromMe) {
+        if (isOfficialGroup) {
+          // 🚫 EN GRUPOS OFICIALES VECY: Reaccionar con 🚫 y enviar advertencia formal de sanción
+          console.log(`[JANIA-PROMO-RULE] 🚫 Publicidad no autorizada detectada en grupo oficial de +${senderId.split('@')[0]}. Reaccionando con 🚫 y advirtiendo...`);
+          
+          this.sock.sendMessage(chatId, { react: { text: '🚫', key: msg.key } }).catch(() => {});
+
+          const rawPhone = senderId.split('@')[0];
+          const mentionJid = `${rawPhone}@s.whatsapp.net`;
+          const warningText = `🚫 @${rawPhone}: Esta clase de publicaciones (publicidad de cursos, entrenamientos, capacitaciones o servicios ajenos a la oferta y demanda directa de inmuebles) VIOLAN las normas de nuestros grupos oficiales VECY Network.\n\nPor favor elimina esta publicación. Te advertimos que la reincidencia dará lugar a la expulsión inmediata del grupo.`;
+
+          this.queuedSend(chatId, warningText, { mentions: [mentionJid], quoted: msg }).catch(() => {});
+        } else {
+          // 🛡️ EN GRUPOS EXTERNOS: CERO REACCIONES, CERO INGESTA, CERO SUPABASE / BD (IGNORAR 100% SILENCIOSO)
+          console.log(`[JANIA-PROMO-SHIELD] 🛡️ Publicidad no inmobiliaria ignorada en grupo externo de +${senderId.split('@')[0]} (Cero reacción, cero ingesta, cero Supabase).`);
+        }
+      }
+      return; // Salir inmediatamente sin capturar, ni extraer datos, ni subir a Supabase
+    }
+
+    // --- REACCIÓN INSTANTÁNEA (< 200ms) CON CONFIRMACIÓN VISUAL EN CELULAR ---
     if (!msg.key.fromMe) {
       const cleanLower = (bodyText || '').toLowerCase();
       const hasMediaOrUrl = !!msg.message.imageMessage || !!msg.message.documentMessage || cleanLower.includes('http://') || cleanLower.includes('https://') || cleanLower.includes('www.') || cleanLower.includes('.co') || cleanLower.includes('.com');
@@ -982,13 +1072,6 @@ export class JaniaMatchBot {
         }
       }
     }
-
-    const rawSender = msg.key.participant || msg.participant || '';
-    if (!rawSender || rawSender.endsWith('@g.us')) {
-      console.warn(`[JANIA-MATCH] Omitiendo mensaje de grupo: sender individual inválido (${rawSender})`);
-      return;
-    }
-    const senderId = rawSender.includes('@') ? `${rawSender.split('@')[0].split(':')[0]}@${rawSender.split('@')[1]}` : rawSender.split(':')[0];
     const lockKey = `${chatId}_${senderId}`;
 
     const previousLock = this.processingLocks.get(lockKey) || Promise.resolve();
@@ -1225,6 +1308,7 @@ export class JaniaMatchBot {
       const hasMedia = buffer.messages.some(m => m.hasMedia);
       const imageMsg = buffer.messages.find(m => m.imageBuffer);
       const pdfMsg = buffer.messages.find(m => m.pdfBuffer);
+      const isAudioPTT = buffer.messages.some(m => !!m.originalMsg?.message?.audioMessage);
 
       // Scraping de enlaces si existen
       const urlMatch = fullText.match(/https?:\/\/[^\s]+/g);
@@ -1256,7 +1340,8 @@ export class JaniaMatchBot {
           userName,
           imageMsg?.imageBuffer,
           pdfMsg?.pdfBuffer,
-          pdfMsg?.pdfMimeType
+          pdfMsg?.pdfMimeType,
+          isAudioPTT ? ('mock-audio:' + fullText) : undefined
         );
       } else if (chatId === '120363403507276533@g.us') {
         result = await processCirculoMessage(
