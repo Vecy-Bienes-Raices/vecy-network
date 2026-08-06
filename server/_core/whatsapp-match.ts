@@ -405,27 +405,6 @@ export class JaniaMatchBot {
               const prod = (msg.message as any).productMessage?.product;
               body = [prod?.title, prod?.description, prod?.priceAmount1000 ? `$${Math.round(prod.priceAmount1000/1000).toLocaleString('es-CO')}` : ''].filter(Boolean).join(' - ');
             }
-            // Detectar si el mensaje cita una nota de voz previa (quotedMessage.audioMessage)
-            const quotedAudioMsg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage?.audioMessage;
-            if (quotedAudioMsg) {
-              isAudioPTT = true;
-              try {
-                console.log(`[JANIA-MATCH] Transcribiendo audio CITADO en grupo ${chatId}...`);
-                const quotedMsgObj = { message: { audioMessage: quotedAudioMsg } };
-                const audioBuffer = await downloadMediaMessage(quotedMsgObj as any, 'buffer', {}) as Buffer;
-                if (audioBuffer && audioBuffer.length > 0) {
-                  const mimeType = quotedAudioMsg.mimetype || 'audio/ogg; codecs=opus';
-                  const transcription = await transcribeAudioBuffer(audioBuffer, mimeType);
-                  if (transcription && transcription.trim() !== '') {
-                    console.log(`[JANIA-MATCH] Transcripción de audio citado exitosa: "${transcription.substring(0, 80)}..."`);
-                    body = body ? `${body}\n\n[Nota de voz citada transcrita]: "${transcription.trim()}"` : `[Nota de voz citada transcrita]: "${transcription.trim()}"`;
-                  }
-                }
-              } catch (quotedAudioErr: any) {
-                console.error('[JANIA-MATCH] Error al transcribir audio citado:', quotedAudioErr?.message || quotedAudioErr);
-              }
-            }
-
             // Si NINGÚN campo tiene texto pero hay una imagen o mensaje citado con contexto, extraer texto del contexto
             if (!body && msg.message.extendedTextMessage?.contextInfo?.quotedMessage) {
               const qm = msg.message.extendedTextMessage.contextInfo.quotedMessage;

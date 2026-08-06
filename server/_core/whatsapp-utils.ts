@@ -208,14 +208,7 @@ export function detectaVoz(text: string): boolean {
     t.includes("mandame un audio") ||
     t.includes("por audio") ||
     t.includes("en audio") ||
-    t.includes("con voz") ||
-    t.includes("audio") ||
-    t.includes("escucha") ||
-    t.includes("escúchame") ||
-    t.includes("escuchame") ||
-    t.includes("escúchalo") ||
-    t.includes("escuchalo") ||
-    t.includes("voz")
+    t.includes("con voz")
   );
 }
 
