@@ -1078,17 +1078,15 @@ export class JaniaMatchBot {
         fastEmoji = '❓';
       }
 
-      if (fastEmoji) {
+      if (fastEmoji && chatId !== this.buzonGroupId) {
         try {
           console.log(`[JANIA-FAST-REACT] 🎯 Enviando reacción instantánea ${fastEmoji} a ${chatId} (Msg ID: ${msg.key.id})`);
           this.sock.sendMessage(chatId, { react: { text: fastEmoji, key: msg.key } }).then(() => {
             console.log(`[JANIA-FAST-REACT] ✅ Reacción ${fastEmoji} ENTREGADA NATIVAMENTE en WhatsApp`);
           }).catch((err: any) => {
-            console.error(`[JANIA-FAST-REACT] ❌ Error en envío de reacción:`, err?.message || err);
+            // Silenciosamente capturar cualquier error de mapeo LID/reacción
           });
-        } catch (err: any) {
-          console.error(`[JANIA-FAST-REACT] Exception al reaccionar:`, err?.message || err);
-        }
+        } catch (err: any) {}
       }
     }
     const lockKey = `${chatId}_${senderId}`;
