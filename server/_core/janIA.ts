@@ -3505,7 +3505,7 @@ export async function processConsultingMessage(
     }
 
     if (isFromAudio) {
-      messageToProcess += `\n[SISTEMA - NOTA DE VOZ REQUERIDA]: El usuario te envió esta consulta mediante una NOTA DE VOZ (audio). Como JanIA, debes responder en nota de voz de viva voz. DEBES obligatoriamente marcar "wantsVoice": true y redactar en "voiceResponse" una versión hablada muy fluida, profesional, cálida y natural de tu respuesta, sin asteriscos, viñetas ni sintaxis Markdown, perfecta para ser leída por síntesis de voz (TTS). En "response" coloca la versión completa formateada en texto.`;
+      messageToProcess += `\n[SISTEMA - NOTA DE VOZ REQUERIDA Y LÍMITE DE DURACIÓN ÁGIL]: El usuario te envió esta consulta mediante una NOTA DE VOZ (audio). Como JanIA, debes responder en nota de voz de viva voz. DEBES obligatoriamente marcar "wantsVoice": true y redactar en "voiceResponse" una versión hablada resumida, directa, muy fluida, profesional, cálida y natural de tu respuesta (máximo 450 caracteres / ~30 a 40 segundos de voz hablada), sin asteriscos, viñetas ni sintaxis Markdown, perfecta para ser sintetizada e impactar de forma ágil e instantánea sin saturar la conexión. En "response" coloca la versión completa formateada en texto.`;
     }
 
     const messages = [

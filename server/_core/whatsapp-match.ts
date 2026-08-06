@@ -802,8 +802,6 @@ export class JaniaMatchBot {
         await this.sock.sendPresenceUpdate('composing', chatId);
       }
 
-      await delay(2000);
-
       // Si la transcripción del audio falló, respondemos con un mensaje específico
       const isAudioFailed = bodyText === '[audio-vacío]' || bodyText === '[audio-sin-buffer]' || bodyText === '[audio-error]';
       if (isAudioFailed) {
@@ -1859,7 +1857,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         } else if (messagePayload.audio) {
           try {
             await this.sock.sendPresenceUpdate('recording', targetJid);
-            const recordingDelay = options.durationMs || Math.min(10000, Math.max(3000, (options.voiceLength || 4) * 1000));
+            const recordingDelay = Math.min(1500, Math.max(300, (options.voiceLength || 2) * 200));
             await delay(recordingDelay);
           } catch (_) {}
         }
