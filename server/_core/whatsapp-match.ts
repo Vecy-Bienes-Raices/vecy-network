@@ -340,9 +340,9 @@ export class JaniaMatchBot {
           continue;
         }
 
-        // Omitir mensajes previos a la inicialización del servidor
+        // Omitir mensajes antiguos previos a la inicialización (más de 60s atrás)
         const timestamp = msg.messageTimestamp;
-        if (timestamp && Number(timestamp) < SERVER_BOOT_TIME) {
+        if (timestamp && Number(timestamp) < (SERVER_BOOT_TIME - 60)) {
           continue;
         }
 
