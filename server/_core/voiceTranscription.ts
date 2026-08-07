@@ -159,10 +159,11 @@ async function transcribeAudioWithGemini(audioBuffer: Buffer, mimeType: string):
   };
 
   const response = await axios.post(apiUrl, payload, { timeout: 15000 });
-  if (response.data.candidates && response.data.candidates[0]) {
-    return response.data.candidates[0].content.parts[0].text.trim();
+  const textCandidate = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (textCandidate && typeof textCandidate === 'string') {
+    return textCandidate.trim();
   }
-  throw new Error("Empty candidate response from Gemini API");
+  return "";
 }
 
 export async function transcribeAudioBuffer(
