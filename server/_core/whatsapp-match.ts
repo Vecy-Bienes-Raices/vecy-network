@@ -8,6 +8,7 @@ import _baileys, {
   DisconnectReason, 
   delay,
   downloadMediaMessage,
+  downloadContentFromMessage,
   proto,
   fetchLatestWaWebVersion,
   fetchLatestBaileysVersion,
@@ -369,10 +370,19 @@ export class JaniaMatchBot {
             else if (msg.message.videoMessage) body = msg.message.videoMessage.caption || '';
             else if (msg.message.audioMessage) {
               isAudioPTT = true;
-              // Transcribir el audio real usando Gemini vía Baileys downloadMediaMessage
+              // Transcribir el audio real usando Gemini vía Baileys downloadMediaMessage / downloadContentFromMessage
               try {
                 console.log(`[JANIA-MATCH] Transcribiendo audio PTT de ${senderId} en grupo ${chatId}...`);
-                const audioBuffer = await downloadMediaMessage(msg as any, 'buffer', {}) as Buffer;
+                let audioBuffer: Buffer | null = null;
+                try {
+                  audioBuffer = await downloadMediaMessage(msg as any, 'buffer', {}) as Buffer;
+                } catch (dlErr) {
+                  const stream = await downloadContentFromMessage(msg.message.audioMessage, 'audio');
+                  let chunks: Buffer[] = [];
+                  for await (const chunk of stream) chunks.push(chunk);
+                  audioBuffer = Buffer.concat(chunks);
+                }
+
                 if (audioBuffer && audioBuffer.length > 0) {
                   const mimeType = msg.message.audioMessage.mimetype || 'audio/ogg; codecs=opus';
                   const transcription = await transcribeAudioBuffer(audioBuffer, mimeType);
@@ -414,18 +424,28 @@ export class JaniaMatchBot {
                 const quotedParticipant = contextInfo?.participant || chatId;
                 const quotedPhone = quotedParticipant.split('@')[0];
                 console.log(`[JANIA-MATCH] Transcribiendo audio CITADO de +${quotedPhone} en grupo ${chatId}...`);
-                const fakeMsg: proto.IWebMessageInfo = {
-                  key: {
-                    remoteJid: chatId,
-                    id: contextInfo?.stanzaId || 'quoted-audio',
-                    fromMe: false,
-                    participant: quotedParticipant
-                  },
-                  message: {
-                    audioMessage: quotedAudioMsg
-                  }
-                };
-                const audioBuffer = await downloadMediaMessage(fakeMsg as any, 'buffer', {}) as Buffer;
+                
+                let audioBuffer: Buffer | null = null;
+                try {
+                  const stream = await downloadContentFromMessage(quotedAudioMsg, 'audio');
+                  let chunks: Buffer[] = [];
+                  for await (const chunk of stream) chunks.push(chunk);
+                  audioBuffer = Buffer.concat(chunks);
+                } catch (e) {
+                  const fakeMsg: proto.IWebMessageInfo = {
+                    key: {
+                      remoteJid: chatId,
+                      id: contextInfo?.stanzaId || 'quoted-audio',
+                      fromMe: false,
+                      participant: quotedParticipant
+                    },
+                    message: {
+                      audioMessage: quotedAudioMsg
+                    }
+                  };
+                  audioBuffer = await downloadMediaMessage(fakeMsg as any, 'buffer', {}) as Buffer;
+                }
+
                 if (audioBuffer && audioBuffer.length > 0) {
                   const mimeType = quotedAudioMsg.mimetype || 'audio/ogg; codecs=opus';
                   const transcription = await transcribeAudioBuffer(audioBuffer, mimeType);
@@ -932,10 +952,18 @@ export class JaniaMatchBot {
           : textToDeliver;
 
         if (wantsVoice || isAudioPTT) {
-          const media = await textToSpeechMedia(voiceToDeliver);
-          if (media) {
-            await this.queuedSend(chatId, media, { sendAudioAsVoice: true, quoted: msg });
-          } else {
+          try {
+            const media = await textToSpeechMedia(voiceToDeliver);
+            if (media) {
+              await this.queuedSend(chatId, media, { sendAudioAsVoice: true, quoted: msg });
+            } else {
+              await this.queuedSend(chatId, textToDeliver, {
+                mentions: [senderId],
+                quoted: msg
+              });
+            }
+          } catch (audioSendErr: any) {
+            console.error('[JANIA-MATCH] Error enviando nota de voz. Activando fallback a texto:', audioSendErr?.message || audioSendErr);
             await this.queuedSend(chatId, textToDeliver, {
               mentions: [senderId],
               quoted: msg
