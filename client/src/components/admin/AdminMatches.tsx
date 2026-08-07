@@ -245,10 +245,28 @@ function scoreRows(req: any, prop: any) {
   );
 
   // 4. Presupuesto Máx.
-  const propPrice = parseFloat(prop.price || "0");
+  let propPrice = parseFloat(prop.price || "0");
   let propRentPrice = parseFloat(prop.rentPrice || prop.priceRent || "0");
   const isDualOffer = isPropertyDualOffer(prop);
   const isReqRentMatch = reqNeg.toLowerCase().includes("arriendo");
+
+  // Sanidad Predial de Precios: Para venta, si propPrice < 30.000.000 (ej. $1.200.000), extraer el precio de venta real del rawText (ej. $950.000.000)
+  if (!isReqRentMatch && propPrice > 0 && propPrice < 30_000_000 && prop.rawText) {
+    const rawP = prop.rawText.toLowerCase();
+    const saleMatch = rawP.match(/(?:v\/venta\/|precio\s*(?:de\s*)?venta|venta)\s*:?\s*\$?([\d.,]+)\s*(mil\s*millones?|millones?|m|M)?/i)
+                   || rawP.match(/venta\/.*?\$?\s*([\d.]{7,12})/i);
+    if (saleMatch) {
+      let rawNum = parseFloat(saleMatch[1].replace(/\./g, "").replace(/,/g, ""));
+      const unitStr = (saleMatch[2] || "").toLowerCase();
+      const mult = unitStr.includes("mil millon") ? 1_000_000_000
+        : unitStr.includes("millon") || unitStr === "m" ? 1_000_000
+        : rawNum < 10_000 ? 1_000_000 : 1;
+      let valP = rawNum * mult;
+      if (!isNaN(valP) && valP >= 30_000_000) {
+        propPrice = valP; // Corregir propPrice a $950.000.000
+      }
+    }
+  }
 
   // Fallback de extracción de canon de arriendo si rentPrice = 0
   if (propRentPrice <= 0 && prop.rawText) {

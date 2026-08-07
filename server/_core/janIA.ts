@@ -2752,6 +2752,35 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
     console.log(`[JanIA-PriceSplit] ${txTypeForSplit} → price(venta)=${data.price} | rentPrice(canon neto)=${data.rentPrice}`);
   }
 
+  // ── SANIDAD PREDIAL DE PRECIOS v20.0 (Desambiguación Administración vs Precio Venta) ──
+  // Si la propiedad es de VENTA y price < 30.000.000 (ej. $1.200.000 cuota de administración),
+  // ese valor NO es el precio de venta. Escanear el rawText para encontrar el verdadero precio de venta (ej. $950.000.000).
+  const isVentaType = txTypeForSplit.includes("venta") || !txTypeForSplit.includes("arriendo");
+  const currentPriceVal = data.price ? parseFloat(String(data.price)) : 0;
+
+  if (isVentaType && currentPriceVal > 0 && currentPriceVal < 30_000_000 && data.rawText) {
+    const rawLower = (data.rawText || "").toLowerCase();
+    const saleMatch = rawLower.match(/(?:v\/venta\/|precio\s*(?:de\s*)?venta|venta)\s*:?\s*\$?([\d.,]+)\s*(mil\s*millones?|millones?|m|M)?/i)
+                   || rawLower.match(/venta\/.*?\$?\s*([\d.]{7,12})/i);
+
+    if (saleMatch) {
+      const rawNum = parseFloat(saleMatch[1].replace(/\./g, "").replace(/,/g, ""));
+      const unitStr = (saleMatch[2] || "").toLowerCase();
+      const mult = unitStr.includes("mil millon") ? 1_000_000_000
+        : unitStr.includes("millon") || unitStr === "m" ? 1_000_000
+        : rawNum < 10_000 ? 1_000_000 : 1;
+      const realSalePrice = rawNum * mult;
+
+      if (realSalePrice >= 30_000_000) {
+        if (!data.adminFee || parseFloat(String(data.adminFee)) <= 0) {
+          data.adminFee = currentPriceVal; // $1.200.000 era la administración
+        }
+        data.price = realSalePrice; // $950.000.000 es el precio real de venta
+        console.log(`[JanIA-SanidadPredial] Corregido precio de venta corrupto $${currentPriceVal} → Real: $${realSalePrice} | AdminFee: $${data.adminFee}`);
+      }
+    }
+  }
+
   const insertData = {
     ...data,
     name: safeSlice(data.name || `Propiedad en ${data.city || "Bogotá"}`, 255) || "Propiedad",

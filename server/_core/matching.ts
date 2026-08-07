@@ -852,6 +852,27 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   let budgetMax   = parseFloat(String(requirement.presupuestoMax || "0"));
   const budgetMin = parseFloat(String(requirement.presupuestoMin || "0"));
 
+  // ── SANIDAD PREDIAL DE PRECIOS EN EL MOTOR v20.0 ──────────────────────────────
+  // Para Venta, si price < 30.000.000 (ej. $1.200.000 cuota de administración),
+  // ese valor NO es el precio de venta. Re-parsear el rawText para encontrar el valor real (ej. $950.000.000).
+  const isSaleMatch = (property.transactionType || "").toLowerCase().includes("venta") || !(property.transactionType || "").toLowerCase().includes("arriendo");
+  if (isSaleMatch && price > 0 && price < 30_000_000 && property.rawText) {
+    const rawP = property.rawText.toLowerCase();
+    const saleMatch = rawP.match(/(?:v\/venta\/|precio\s*(?:de\s*)?venta|venta)\s*:?\s*\$?([\d.,]+)\s*(mil\s*millones?|millones?|m|M)?/i)
+                   || rawP.match(/venta\/.*?\$?\s*([\d.]{7,12})/i);
+    if (saleMatch) {
+      let rawNum = parseFloat(saleMatch[1].replace(/\./g, "").replace(/,/g, ""));
+      const unitStr = (saleMatch[2] || "").toLowerCase();
+      const mult = unitStr.includes("mil millon") ? 1_000_000_000
+        : unitStr.includes("millon") || unitStr === "m" ? 1_000_000
+        : rawNum < 10_000 ? 1_000_000 : 1;
+      let valP = rawNum * mult;
+      if (!isNaN(valP) && valP >= 30_000_000) {
+        price = valP; // Corregir price a $950.000.000
+      }
+    }
+  }
+
   // Extraer presupuesto del rawText si la columna está en 0.00
   if (budgetMax <= 0 && requirement.rawText) {
     const rawR = requirement.rawText.toLowerCase();
