@@ -1046,14 +1046,14 @@ export class JaniaMatchBot {
       const cleanLower = (bodyText || '').toLowerCase();
       const hasMediaOrUrl = !!msg.message.imageMessage || !!msg.message.documentMessage || cleanLower.includes('http://') || cleanLower.includes('https://') || cleanLower.includes('www.') || cleanLower.includes('.co') || cleanLower.includes('.com');
 
-      const isSearch = cleanLower.includes('busco') || cleanLower.includes('necesito') || cleanLower.includes('requiero') || cleanLower.includes('requerimiento') || cleanLower.includes('se busca');
-      const isOffer = cleanLower.includes('vendo') || cleanLower.includes('arriendo') || cleanLower.includes('en venta') || cleanLower.includes('en arriendo') || cleanLower.includes('apto') || cleanLower.includes('apartamento') || cleanLower.includes('casa') || cleanLower.includes('bodega') || cleanLower.includes('oficina') || cleanLower.includes('lote') || cleanLower.includes('finca') || cleanLower.includes('precio') || cleanLower.includes('$') || cleanLower.includes('m2') || cleanLower.includes('mts') || hasMediaOrUrl;
+      const isSearch = cleanLower.includes('busco') || cleanLower.includes('necesito') || cleanLower.includes('requiero') || cleanLower.includes('requerimiento') || cleanLower.includes('se busca') || cleanLower.includes('compro') || cleanLower.includes('compra');
+      const isOffer = cleanLower.includes('vendo') || cleanLower.includes('arriendo') || cleanLower.includes('en venta') || cleanLower.includes('en arriendo') || cleanLower.includes('apto') || cleanLower.includes('apartamento') || cleanLower.includes('casa') || cleanLower.includes('bodega') || cleanLower.includes('oficina') || cleanLower.includes('lote') || cleanLower.includes('finca') || cleanLower.includes('precio') || cleanLower.includes('$') || cleanLower.includes('m2') || cleanLower.includes('mts') || cleanLower.includes('pto') || hasMediaOrUrl;
 
       // 1. Presupuesto / Precio explícito
-      const hasBudget = cleanLower.includes('$') || cleanLower.includes('millon') || cleanLower.includes('millón') || cleanLower.includes('ppto') || cleanLower.includes('presupuesto') || cleanLower.includes('valor') || cleanLower.includes('canon') || cleanLower.includes('precio') || /\d+\s*(m|mm|k)/i.test(cleanLower);
+      const hasBudget = cleanLower.includes('$') || cleanLower.includes('millon') || cleanLower.includes('millón') || cleanLower.includes('ppto') || cleanLower.includes('pto') || cleanLower.includes('presupuesto') || cleanLower.includes('valor') || cleanLower.includes('canon') || cleanLower.includes('precio') || /\d+\s*(m|mm|k)/i.test(cleanLower);
 
       // 2. Datos prediales específicos (Habitaciones, Baños, Parqueaderos, Metraje y Sector)
-      const hasZone = cleanLower.includes('barrio') || cleanLower.includes('sector') || cleanLower.includes('calle') || cleanLower.includes('cra') || cleanLower.includes('carrera') || cleanLower.includes('zona') || cleanLower.includes('chico') || cleanLower.includes('chicó') || cleanLower.includes('rosales') || cleanLower.includes('cedritos') || cleanLower.includes('colina') || cleanLower.includes('santa') || cleanLower.includes('calleja') || cleanLower.includes('nogal') || cleanLower.includes('cabrera') || cleanLower.includes('virrey') || cleanLower.includes('pasadena') || cleanLower.includes('teusaquillo') || cleanLower.includes('chia') || cleanLower.includes('chía') || cleanLower.includes('cajica') || cleanLower.includes('cajicá');
+      const hasZone = cleanLower.includes('barrio') || cleanLower.includes('sector') || cleanLower.includes('calle') || cleanLower.includes('cra') || cleanLower.includes('carrera') || cleanLower.includes('zona') || cleanLower.includes('chico') || cleanLower.includes('chicó') || cleanLower.includes('rosales') || cleanLower.includes('cedritos') || cleanLower.includes('colina') || cleanLower.includes('santa') || cleanLower.includes('calleja') || cleanLower.includes('nogal') || cleanLower.includes('cabrera') || cleanLower.includes('virrey') || cleanLower.includes('pasadena') || cleanLower.includes('teusaquillo') || cleanLower.includes('chia') || cleanLower.includes('chía') || cleanLower.includes('cajica') || cleanLower.includes('cajicá') || cleanLower.includes('gratamira') || cleanLower.includes('bavaria');
       const hasBeds = cleanLower.includes('hab') || cleanLower.includes('alcoba') || cleanLower.includes('dormitorio');
       const hasBaths = cleanLower.includes('baño') || cleanLower.includes('wc') || cleanLower.includes('bñ');
       const hasGarages = cleanLower.includes('parq') || cleanLower.includes('garaje') || cleanLower.includes('ptero');
@@ -1092,7 +1092,13 @@ export class JaniaMatchBot {
       if (fastEmoji && chatId !== this.buzonGroupId) {
         try {
           console.log(`[JANIA-FAST-REACT] 🎯 Enviando reacción instantánea ${fastEmoji} a ${chatId} (Msg ID: ${msg.key.id})`);
-          this.sock.sendMessage(chatId, { react: { text: fastEmoji, key: msg.key } }).then(() => {
+          const reactionKey = {
+            remoteJid: chatId,
+            id: msg.key.id,
+            fromMe: false,
+            participant: msg.key.participant || undefined
+          };
+          this.sock.sendMessage(chatId, { react: { text: fastEmoji, key: reactionKey } }).then(() => {
             console.log(`[JANIA-FAST-REACT] ✅ Reacción ${fastEmoji} ENTREGADA NATIVAMENTE en WhatsApp`);
           }).catch((err: any) => {
             // Silenciosamente capturar cualquier error de mapeo LID/reacción
