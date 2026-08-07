@@ -288,11 +288,11 @@ export class JaniaMatchBot {
 
         this.reconnectAttempts++;
         if (this.reconnectAttempts > 5) {
-          console.warn(`[${this.botName}] 🛡️ [ESCUDO ANTI-BAN] Máximos reintentos inmediatos alcanzados. Programando reconexión diferida en 2 minutos...`);
+          console.warn(`[${this.botName}] 🛡️ [ESCUDO ANTI-BAN] Máximos reintentos inmediatos alcanzados. Programando reconexión en 5 segundos...`);
           setTimeout(() => {
             this.reconnectAttempts = 0;
             this.initialize();
-          }, 120000);
+          }, 5000);
           return;
         }
 
@@ -300,10 +300,10 @@ export class JaniaMatchBot {
         const isConnectionLost = statusCode === DisconnectReason.connectionLost;
         const isConflict = statusCode === 440;
         const isConnectionFailure = statusCode === 405 || statusCode === 401;
-        const jitter = Math.floor(Math.random() * 4000);
-        const delayMs = (isRestart || isConnectionLost) ? (2000 + jitter) : (isConflict ? 120000 : (10000 + jitter));
+        const jitter = Math.floor(Math.random() * 2000);
+        const delayMs = (isRestart || isConnectionLost || isConflict) ? (2000 + jitter) : (3000 + jitter);
         
-        console.warn(`[${this.botName}] ⚠️ Conexión Baileys cerrada (código: ${statusCode}) [Intento ${this.reconnectAttempts}/3]. Reconectando en ${delayMs}ms...`);
+        console.warn(`[${this.botName}] ⚠️ Conexión Baileys cerrada (código: ${statusCode}) [Intento ${this.reconnectAttempts}/5]. Reconectando en ${delayMs}ms...`);
 
         if (isConnectionFailure || statusCode === DisconnectReason.loggedOut) {
           console.error(`[${this.botName}] Sesión inválida o cerrada (error ${statusCode}). Deteniendo bot por seguridad.`);
