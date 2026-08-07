@@ -281,33 +281,37 @@ export class JaniaMatchBot {
       if (connection === 'close') {
         const error = lastDisconnect?.error as Boom;
         const statusCode = error?.output?.statusCode;
-        const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+        const shouldReconnect = statusCode !== DisconnectReason.loggedOut && statusCode !== 401 && statusCode !== 403;
         
         this.isReady = false;
         this.updateStatusInDb().catch(err => console.error(`[${this.botName}-DB] Error updating status on close:`, err));
 
+        if (statusCode === DisconnectReason.loggedOut || statusCode === 401 || statusCode === 403) {
+          console.error(`[${this.botName}] 🛡️ [ESCUDO ANTI-BAN] Sesión cerrada o desvinculada por WhatsApp (error ${statusCode}). Deteniendo reconexión automática por seguridad.`);
+          return;
+        }
+
         this.reconnectAttempts++;
-        if (this.reconnectAttempts > 5) {
-          console.warn(`[${this.botName}] 🛡️ [ESCUDO ANTI-BAN] Máximos reintentos inmediatos alcanzados. Programando reconexión en 5 segundos...`);
+        if (this.reconnectAttempts > 3) {
+          console.warn(`[${this.botName}] 🛡️ [ESCUDO ANTI-BAN] 3 reintentos seguidos alcanzados. Pausando reconexión por 45 segundos para proteger el número +573192919978...`);
           setTimeout(() => {
             this.reconnectAttempts = 0;
             this.initialize();
-          }, 5000);
+          }, 45000);
           return;
         }
 
         const isRestart = statusCode === DisconnectReason.restartRequired;
         const isConnectionLost = statusCode === DisconnectReason.connectionLost;
         const isConflict = statusCode === 440;
-        const isConnectionFailure = statusCode === 405 || statusCode === 401;
-        const jitter = Math.floor(Math.random() * 2000);
-        const delayMs = (isRestart || isConnectionLost || isConflict) ? (2000 + jitter) : (3000 + jitter);
         
-        console.warn(`[${this.botName}] ⚠️ Conexión Baileys cerrada (código: ${statusCode}) [Intento ${this.reconnectAttempts}/5]. Reconectando en ${delayMs}ms...`);
+        // Si hay conflicto (código 440), esperar 20 segundos para dar tiempo a que se libere la otra conexión sin hacer ping-pong
+        const jitter = Math.floor(Math.random() * 3000);
+        const delayMs = isConflict ? (20000 + jitter) : ((this.reconnectAttempts * 4000) + jitter);
+        
+        console.warn(`[${this.botName}] 🛡️ [ANTI-BAN] Conexión Baileys pausada (código: ${statusCode}) [Intento ${this.reconnectAttempts}/3]. Reconectando de forma segura en ${Math.round(delayMs/1000)}s...`);
 
-        if (isConnectionFailure || statusCode === DisconnectReason.loggedOut) {
-          console.error(`[${this.botName}] Sesión inválida o cerrada (error ${statusCode}). Deteniendo bot por seguridad.`);
-        } else if (shouldReconnect) {
+        if (shouldReconnect) {
           setTimeout(() => this.initialize(), delayMs);
         }
       } else if (connection === 'open') {
