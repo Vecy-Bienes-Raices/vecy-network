@@ -405,8 +405,40 @@ export class JaniaMatchBot {
               const prod = (msg.message as any).productMessage?.product;
               body = [prod?.title, prod?.description, prod?.priceAmount1000 ? `$${Math.round(prod.priceAmount1000/1000).toLocaleString('es-CO')}` : ''].filter(Boolean).join(' - ');
             }
-            // Si NINGÚN campo tiene texto pero hay una imagen o mensaje citado con contexto, extraer texto del contexto
-            if (!body && msg.message.extendedTextMessage?.contextInfo?.quotedMessage) {
+            // Detectar si el mensaje cita una nota de voz previa (contextInfo.quotedMessage.audioMessage)
+            const quotedAudioMsg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage?.audioMessage;
+            if (quotedAudioMsg) {
+              isAudioPTT = true;
+              try {
+                const contextInfo = msg.message?.extendedTextMessage?.contextInfo;
+                const quotedParticipant = contextInfo?.participant || chatId;
+                const quotedPhone = quotedParticipant.split('@')[0];
+                console.log(`[JANIA-MATCH] Transcribiendo audio CITADO de +${quotedPhone} en grupo ${chatId}...`);
+                const fakeMsg: proto.IWebMessageInfo = {
+                  key: {
+                    remoteJid: chatId,
+                    id: contextInfo?.stanzaId || 'quoted-audio',
+                    fromMe: false,
+                    participant: quotedParticipant
+                  },
+                  message: {
+                    audioMessage: quotedAudioMsg
+                  }
+                };
+                const audioBuffer = await downloadMediaMessage(fakeMsg as any, 'buffer', {}) as Buffer;
+                if (audioBuffer && audioBuffer.length > 0) {
+                  const mimeType = quotedAudioMsg.mimetype || 'audio/ogg; codecs=opus';
+                  const transcription = await transcribeAudioBuffer(audioBuffer, mimeType);
+                  if (transcription && transcription.trim() !== '') {
+                    console.log(`[JANIA-MATCH] Transcripción de audio citado exitosa: "${transcription.substring(0, 80)}..."`);
+                    const quotedNote = `[Consulta en audio citada de +${quotedPhone}]: "${transcription.trim()}"`;
+                    body = body ? `${body}\n\n${quotedNote}` : quotedNote;
+                  }
+                }
+              } catch (quotedAudioErr: any) {
+                console.error('[JANIA-MATCH] Error al transcribir audio citado:', quotedAudioErr?.message || quotedAudioErr);
+              }
+            } else if (!body && msg.message.extendedTextMessage?.contextInfo?.quotedMessage) {
               const qm = msg.message.extendedTextMessage.contextInfo.quotedMessage;
               body = qm.conversation || qm.extendedTextMessage?.text || qm.imageMessage?.caption || '';
             }
