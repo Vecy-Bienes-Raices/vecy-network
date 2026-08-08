@@ -1605,7 +1605,17 @@ export class JaniaMatchBot {
       let pdfMimeType: string | undefined;
 
       // Extraer el número INDIVIDUAL del remitente real en el grupo (msg.key.participant)
-      const participantJid = msg.key.participant || (msg as any).participant || "";
+      let participantJid = msg.key.participant || (msg as any).participant || senderId || "";
+      if (participantJid.endsWith('@lid') && this.sock?.signalRepository?.lidMapping?.getPNForLID) {
+        try {
+          const mappedPn = await this.sock.signalRepository.lidMapping.getPNForLID(participantJid);
+          if (mappedPn) {
+            participantJid = mappedPn;
+            console.log(`[JanIA-LID] Resuelto LID ${msg.key.participant} -> PN Real ${participantJid}`);
+          }
+        } catch (err) {}
+      }
+
       const individualPhone = participantJid ? participantJid.split('@')[0].split(':')[0].replace(/\D/g, '') : rawPhone;
       const effectiveSenderPhone = (individualPhone && !individualPhone.startsWith("1203")) ? individualPhone : rawPhone;
 
