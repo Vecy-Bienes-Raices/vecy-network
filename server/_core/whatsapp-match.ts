@@ -482,7 +482,7 @@ export class JaniaMatchBot {
             const isCirculoGroup = chatId === this.circuloGroupId; // Círculo CERO 👌
             const isOfficialGroup = isMainGroup || isBuzonGroup || isCirculoGroup;
 
-            // --- OBTENCIÓN DEL NOMBRE DEL GRUPO Y BLACKLIST ---
+            // --- OBTENCIÓN DEL NOMBRE DEL GRUPO Y FILTRADO INMOBILIARIO ESTRICTO ---
             let groupName = "Nombre Real del Grupo";
             try {
               const metadata = await this.getCachedGroupMetadata(chatId);
@@ -491,13 +491,33 @@ export class JaniaMatchBot {
               }
             } catch (e) {}
 
-            const NEGOTIATION_GROUPS_BLACKLIST = [
-              "Venta Alameda", 
-              "Negociación ARRECIFES"
-            ];
-            if (NEGOTIATION_GROUPS_BLACKLIST.some(name => groupName.includes(name))) {
-              console.log(`[JANIA-MATCH] Mensaje omitido: el grupo "${groupName}" está en la blacklist de negociación.`);
-              return;
+            // Si no es grupo oficial VECY, verificar que sea estrictamente un grupo INMOBILIARIO
+            if (!isOfficialGroup) {
+              const gNameLower = groupName.toLowerCase();
+
+              const NON_REAL_ESTATE_KEYWORDS = [
+                "seguridad", "policía", "policia", "patrulla", "amigos", "curso", 
+                "talento tech", "familia", "convivencia", "anécdotas", "anecdotas", 
+                "negociación arrecifes", "venta alameda", "proceso cristo rey"
+              ];
+
+              const isNonRealEstateGroup = NON_REAL_ESTATE_KEYWORDS.some(kw => gNameLower.includes(kw));
+
+              const REAL_ESTATE_KEYWORDS = [
+                "inmobiliari", "inmueble", "venta", "arriendo", "oferta", "requerimiento", 
+                "lote", "bodega", "apartaestudio", "agente", "casa", "apto", "chicó", 
+                "cedritos", "suba", "bogotá", "bogota", "sabana", "rosales", "batan", 
+                "alhambra", "pasadena", "colina", "salitre", "propiedad", "bienes", 
+                "raices", "raíces", "vecy", "amoblado", "oficina", "red", "comunidad",
+                "apartamento", "finca", "terreno", "local", "edificio", "match"
+              ];
+
+              const isRealEstateGroup = REAL_ESTATE_KEYWORDS.some(kw => gNameLower.includes(kw));
+
+              if (isNonRealEstateGroup || !isRealEstateGroup) {
+                // Omitir completamente de forma silenciosa sin procesar ni enviar emojis
+                return;
+              }
             }
 
             // Grupos externos: JanIA capta todo sin discriminar por longitud.

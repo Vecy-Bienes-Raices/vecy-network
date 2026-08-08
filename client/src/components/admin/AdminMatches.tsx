@@ -849,7 +849,7 @@ function checkTxCompatFrontend(reqTypeRaw: string, propTypeRaw: string, propAcce
 
 export default function AdminMatches() {
   const [searchTerm, setSearchTerm] = React.useState('');
-  const [minScore, setMinScore] = React.useState('70');
+  const [minScore, setMinScore] = React.useState('80');
   const [activeTab, setActiveTab] = React.useState<'calificados' | 'incompletos'>('calificados');
 
   // Fetch matches directly from server API with auto-refresh every 10s
@@ -868,7 +868,7 @@ export default function AdminMatches() {
 
   const getStatusLabel = (status: string) => {
     const labels: Record<string, string> = {
-      suggested: '🟢 Match 100% Calificado',
+      suggested: '🟢 Match Calificado',
       interested: '📋 Pendiente Enriquecer Ficha',
       converted: 'Cerrado/Negocio',
     };
@@ -878,9 +878,13 @@ export default function AdminMatches() {
   const filteredMatches = useMemo(() => {
     const seenMatchIds = new Set<number>();
     const seenPairs = new Set<string>();
+    const minVal = parseFloat(minScore);
 
     return matches.filter(match => {
       if (!match || !match.id) return false;
+
+      const scoreNum = parseFloat(String(match.matchScore || "0"));
+      if (scoreNum < minVal) return false;
 
       if (seenMatchIds.has(match.id)) return false;
       
@@ -953,16 +957,16 @@ export default function AdminMatches() {
   };
 
   return (
-    <div className="space-y-6 text-white">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-zinc-950 p-6 border border-white/10 rounded-3xl">
         <div>
           <h2 className="text-2xl font-bold text-white flex items-center gap-2">
             <Sparkles className="w-6 h-6 text-[#bf953f] animate-pulse" />
             Reporte de Coincidencias (Matches de JanIA)
           </h2>
           <p className="text-zinc-500 text-sm mt-1 flex items-center gap-2">
-            <span>{isLoading ? 'Cargando coincidencias...' : `Coincidencias Verificadas: ${filteredMatches.length} matches legítimos (Score ≥ 85%)`}</span>
+            <span>{isLoading ? 'Cargando coincidencias...' : `Coincidencias Verificadas: ${filteredMatches.length} matches (80% - 100%)`}</span>
             <span className="text-[10px] bg-[#bf953f]/20 text-[#bf953f] border border-[#bf953f]/30 px-2 py-0.5 rounded-full font-mono font-extrabold ml-2">
               {VECY_VERSION_LABEL}
             </span>
@@ -1001,10 +1005,9 @@ export default function AdminMatches() {
             onChange={(e) => setMinScore(e.target.value)}
             className="bg-transparent border-none text-white focus:ring-0 text-xs font-semibold cursor-pointer outline-none"
           >
-            <option className="bg-[#0c0c0c]" value="85">85% — Mínimo VECY (85%+)</option>
-            <option className="bg-[#0c0c0c]" value="90">90% — Coincidencia Alta</option>
-            <option className="bg-[#0c0c0c]" value="95">95% — Casi Perfecto</option>
-            <option className="bg-[#0c0c0c]" value="100">100% — Match Perfecto</option>
+            <option className="bg-[#0c0c0c]" value="80">⚡ 80% — Coincidencias Aproximadas (80%+)</option>
+            <option className="bg-[#0c0c0c]" value="90">✨ 90% — Coincidencias Más Precisas (90%+)</option>
+            <option className="bg-[#0c0c0c]" value="100">🎯 100% — Match Perfecto (100%)</option>
           </select>
         </div>
       </div>

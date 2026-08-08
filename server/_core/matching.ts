@@ -1501,7 +1501,7 @@ export function calcularScoreMatch(requirement: any, property: any): number {
 }
 
 export function evaluarMatch(requirement: any, property: any): boolean {
-  return calcularScoreMatch(requirement, property) >= 85;
+  return calcularScoreMatch(requirement, property) >= 80;
 }
 
 /**
@@ -1526,7 +1526,7 @@ export async function findMatchesForProperty(propertyId: number) {
     for (const req of activeRequirements) {
       const explanation = explicarMatch(req, property);
       const score = explanation.score;
-      if (score >= 85) {
+      if (score >= 80) {
         let matchId: number;
         const existing = await db.select().from(propertyMatches).where(
           and(
@@ -1600,7 +1600,7 @@ export async function findMatchesForRequirement(requirementId: number) {
     for (const prop of availableProperties) {
       const explanation = explicarMatch(req, prop);
       const score = explanation.score;
-      if (score >= 85) {
+      if (score >= 80) {
         let matchId: number;
         const existing = await db.select().from(propertyMatches).where(
           and(
@@ -1762,7 +1762,7 @@ export async function executeMatchEngine(propertyId: number | null, requirementI
         // ── CÁLCULO DE SCORE & EXPLICACIÓN ─────────────────────────────────────
         const explanation = explicarMatch(req, prop);
         const score = explanation.score;
-        if (score < 85) continue;
+        if (score < 80) continue;
 
         // ── FILTRO ANTI-DUPLICADOS POR TELÉFONO Y TEXTO ─────────────────────
         const propPhone = cleanPhone(prop.idUsuarioWhatsapp || "");
