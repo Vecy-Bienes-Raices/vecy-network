@@ -442,8 +442,45 @@ export function matchesGeography(
       .filter(p => p.length > 0 && !stopGeoWords.has(p));
   };
 
-  const reqPhrases = splitPhrases(reqZoneRaw);
-  const propPhrases = splitPhrases(propZoneRaw);
+  const extractNeighborhoodTokens = (text: string): string[] => {
+    if (!text) return [];
+    const norm = normalizarTextoGeografico(text);
+    const found: string[] = [];
+
+    const knownNeighborhoods = [
+      "cedritos", "santa paula", "santa barbara", "santa barbara central", "santa barbara occidental",
+      "santa barbara oriental", "santa ana", "santa ana alta", "santa ana oriental", "santa ana occidental",
+      "chico", "chico norte", "chico reservado", "chico navarra", "rosales", "los rosales", "el virrey",
+      "la cabrera", "nogal", "el nogal", "antiguo country", "country club", "la calleja", "bella suiza",
+      "el contador", "san patricio", "molinos norte", "batán", "el batan", "pasadena", "alhambra",
+      "colina", "colina campestre", "suba", "niza", "pontevedra", "morato", "salitre", "ciudad salitre",
+      "hayuelos", "modelia", "fontibon", "teusaquillo", "la soledad", "palermo", "chapinero",
+      "chapinero alto", "quinta camacho", "marly", "bosque izquierdo", "macarena", "la macarena",
+      "centro internacional", "usaquen", "multicentro", "el poblado", "poblado", "laureles",
+      "envigado", "sabaneta", "belen", "estadio", "conquistadores", "granada", "el peñon",
+      "juanambú", "ciudad jardin", "san fernando", "valle del lili", "el prado", "alto prado",
+      "riomar", "villa santos", "buenavista", "cabecera", "cañaveral", "ruitoque", "sotomayor"
+    ];
+
+    for (const n of knownNeighborhoods) {
+      if (norm.includes(n)) {
+        found.push(n);
+      }
+    }
+    return found;
+  };
+
+  let reqPhrases = splitPhrases(reqZoneRaw);
+  let propPhrases = splitPhrases(propZoneRaw);
+
+  const reqExtracted = extractNeighborhoodTokens(reqZoneRaw);
+  const propExtracted = extractNeighborhoodTokens(propZoneRaw);
+
+  if (reqPhrases.length === 0 && reqExtracted.length > 0) reqPhrases = reqExtracted;
+  else if (reqExtracted.length > 0) reqPhrases = Array.from(new Set([...reqPhrases, ...reqExtracted]));
+
+  if (propPhrases.length === 0 && propExtracted.length > 0) propPhrases = propExtracted;
+  else if (propExtracted.length > 0) propPhrases = Array.from(new Set([...propPhrases, ...propExtracted]));
 
   const reqExpanded = reqPhrases.flatMap(expandirZona);
   const propExpanded = propPhrases.flatMap(expandirZona);

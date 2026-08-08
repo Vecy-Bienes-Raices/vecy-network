@@ -102,6 +102,7 @@ export const properties = pgTable("properties", {
   featured: boolean("featured").default(false),
   available: boolean("available").default(true),
   idUsuarioWhatsapp: varchar("idUsuarioWhatsapp", { length: 100 }),
+  nombreUsuarioWhatsapp: varchar("nombre_usuario_whatsapp", { length: 255 }),
   sourceRepository: varchar("sourceRepository", { length: 255 }),
   lastSyncedAt: timestamp("lastSyncedAt"),
   // Array of all accepted transaction types (e.g. ["venta","permuta"] or ["venta","aporte"])
@@ -156,6 +157,7 @@ export const requirements = pgTable("requirements", {
   caracteristicasDeseadas: jsonb("caracteristicasDeseadas"),
   status: statusEnum("status").default("active"),
   idUsuarioWhatsapp: varchar("idUsuarioWhatsapp", { length: 100 }),
+  nombreUsuarioWhatsapp: varchar("nombre_usuario_whatsapp", { length: 255 }),
   rawText: text("rawText"),
   calificacion: varchar("calificacion", { length: 50 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

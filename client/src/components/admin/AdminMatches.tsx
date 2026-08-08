@@ -207,10 +207,43 @@ function scoreRows(req: any, prop: any) {
     }
   }
 
+  const extractBarrioFromText = (text: string): string | null => {
+    if (!text) return null;
+    const lower = text.toLowerCase();
+    const knowns = [
+      "cedritos", "santa paula", "santa barbara", "chico norte", "chico reservado", "chico",
+      "rosales", "virrey", "la cabrera", "nogal", "country club", "la calleja", "bella suiza",
+      "el contador", "san patricio", "pasadena", "alhambra", "colina", "suba", "salitre",
+      "modelia", "fontibon", "teusaquillo", "chapinero", "laureles", "poblado", "granada",
+      "el peñon", "ciudad jardin", "cabecera", "cañaveral"
+    ];
+    for (const k of knowns) {
+      if (lower.includes(k)) return k.charAt(0).toUpperCase() + k.slice(1);
+    }
+    return null;
+  };
+
+  let reqBarrioInferred = extractBarrioFromText(req.rawText || "");
+  let propBarrioInferred = extractBarrioFromText(prop.rawText || prop.description || "");
+
+  const reqEffectiveZone = (req.zonaDeseada && req.zonaDeseada.toLowerCase() !== "bogotá" && req.zonaDeseada.toLowerCase() !== "bogota") 
+    ? req.zonaDeseada 
+    : (reqBarrioInferred || req.zonaDeseada || "");
+
+  const propEffectiveZone = (prop.zone && prop.zone.toLowerCase() !== "bogotá" && prop.zone.toLowerCase() !== "bogota")
+    ? prop.zone
+    : (propBarrioInferred || prop.zone || "");
+
   const ciudadMatch = !reqCiudad || propCiudad.includes(reqCiudad) || reqCiudad.includes(propCiudad) || reqCiudad === "colombia";
-  const zonaMatch = !reqZona || propZona.includes(reqZona) || reqZona.includes(propZona) || reqZona.includes("aledaños") || reqZona.includes("aledanos");
+  const normReqZone = (reqEffectiveZone || "").toLowerCase();
+  const normPropZone = (propEffectiveZone || "").toLowerCase();
   
-  let geoStatus: MatchStatus = (ciudadMatch && zonaMatch && !isOutStreetBounds) ? "exact" : ciudadMatch ? "warn" : "missing";
+  const isExactOrAliasMatch = normReqZone && normPropZone && (normReqZone.includes(normPropZone) || normPropZone.includes(normReqZone));
+  const hasAledanosWord = normReqZone.includes("aledaños") || normReqZone.includes("aledanos") || normReqZone.includes("cercanos");
+  
+  const isNeighborhoodMismatch = normReqZone && normPropZone && !isExactOrAliasMatch && !hasAledanosWord;
+
+  let geoStatus: MatchStatus = (ciudadMatch && isExactOrAliasMatch && !isOutStreetBounds) ? "exact" : (ciudadMatch && !isNeighborhoodMismatch) ? "warn" : "missing";
   
   const formatZoneLabel = (z: string, c: string): string => {
     const zClean = (z || "").trim();
@@ -223,17 +256,20 @@ function scoreRows(req: any, prop: any) {
     return `${zClean}, ${cClean}`;
   };
 
-  let propZoneLabel = formatZoneLabel(prop.zone || "", prop.city || "Bogotá");
+  let propZoneLabel = formatZoneLabel(propEffectiveZone, prop.city || "Bogotá");
   
   if (isOutStreetBounds) {
     geoStatus = "missing";
     propZoneLabel += ` ❌ (Fuera de Perímetro: ${boundaryLabel})`;
-  } else if (isDiffSubBarrio && !reqZona.includes("aledanos") && !reqZona.includes("aledaños")) {
+  } else if (isNeighborhoodMismatch) {
+    geoStatus = "missing";
+    propZoneLabel += " ❌ (Barrio Incompatible)";
+  } else if (isDiffSubBarrio && !hasAledanosWord) {
     geoStatus = "missing";
     propZoneLabel += " ❌ (Diferente Sub-barrio)";
   }
 
-  const reqZoneLabel = formatZoneLabel(req.zonaDeseada || "", req.ciudadDeseada || "Bogotá");
+  const reqZoneLabel = formatZoneLabel(reqEffectiveZone, req.ciudadDeseada || "Bogotá");
 
   add(
     "Ubicación / Barrio", 
@@ -731,8 +767,10 @@ function isValidRealPhoneNumber(clean: string): boolean {
   return false;
 }
 
-function extractPhoneFromItem(item: any): { display: string; cleanNumber: string | null } {
-  if (!item) return { display: "Número no disponible", cleanNumber: null };
+function extractPhoneFromItem(item: any): { display: string; cleanNumber: string | null; name: string | null } {
+  if (!item) return { display: "Número no disponible", cleanNumber: null, name: null };
+
+  const senderName = item.nombreUsuarioWhatsapp || item.pushName || item.user?.name || null;
 
   // 1. Revisar candidatos directos
   const candidates = [
@@ -753,21 +791,16 @@ function extractPhoneFromItem(item: any): { display: string; cleanNumber: string
     if (!cand) continue;
     const clean = String(cand).split("@")[0].replace(/\D/g, "");
     if (isValidRealPhoneNumber(clean)) {
-      if (clean.length === 12 && clean.startsWith("573")) {
-        return {
-          display: `+57 ${clean.substring(2, 5)} ${clean.substring(5, 8)} ${clean.substring(8)}`,
-          cleanNumber: clean
-        };
-      }
-      if (clean.length === 10 && clean.startsWith("3")) {
-        return {
-          display: `+57 ${clean.substring(0, 3)} ${clean.substring(3, 6)} ${clean.substring(6)}`,
-          cleanNumber: `57${clean}`
-        };
-      }
+      const formatted = (clean.length === 12 && clean.startsWith("573"))
+        ? `+57 ${clean.substring(2, 5)} ${clean.substring(5, 8)} ${clean.substring(8)}`
+        : (clean.length === 10 && clean.startsWith("3"))
+        ? `+57 ${clean.substring(0, 3)} ${clean.substring(3, 6)} ${clean.substring(6)}`
+        : `+${clean}`;
+      const cleanNum = clean.length === 10 ? `57${clean}` : clean;
       return {
-        display: `+${clean}`,
-        cleanNumber: clean
+        display: senderName ? `${senderName} (${formatted})` : formatted,
+        cleanNumber: cleanNum,
+        name: senderName
       };
     }
   }
@@ -779,35 +812,29 @@ function extractPhoneFromItem(item: any): { display: string; cleanNumber: string
     const rawMatch = phoneMatches[0].replace(/\D/g, "");
     const clean10 = rawMatch.startsWith("57") && rawMatch.length === 12 ? rawMatch.substring(2) : rawMatch;
     if (clean10.length === 10 && clean10.startsWith("3")) {
+      const formatted = `+57 ${clean10.substring(0, 3)} ${clean10.substring(3, 6)} ${clean10.substring(6)}`;
       return {
-        display: `+57 ${clean10.substring(0, 3)} ${clean10.substring(3, 6)} ${clean10.substring(6)}`,
-        cleanNumber: `57${clean10}`
+        display: senderName ? `${senderName} (${formatted})` : formatted,
+        cleanNumber: `57${clean10}`,
+        name: senderName
       };
     }
   }
 
-  // 3. Barrido de contingencia en metadatos JSONB
-  const jsonSources = [item.metadata, item.rawJson, item.extraData];
-  for (const jsonSrc of jsonSources) {
-    if (!jsonSrc) continue;
-    const str = typeof jsonSrc === "string" ? jsonSrc : JSON.stringify(jsonSrc);
-    const jsonMatches = str.match(/(?:\+?57\s*)?3\d{2}[\s.-]?\d{3}[\s.-]?\d{4}\b/g);
-    if (jsonMatches && jsonMatches.length > 0) {
-      const rawMatch = jsonMatches[0].replace(/\D/g, "");
-      const clean10 = rawMatch.startsWith("57") && rawMatch.length === 12 ? rawMatch.substring(2) : rawMatch;
-      if (clean10.length === 10 && clean10.startsWith("3")) {
-        return {
-          display: `+57 ${clean10.substring(0, 3)} ${clean10.substring(3, 6)} ${clean10.substring(6)}`,
-          cleanNumber: `57${clean10}`
-        };
-      }
-    }
+  // 3. Fallback de trazabilidad de origen
+  if (item.origenNombre) {
+    return {
+      display: senderName ? `${senderName} (vía grupo "${item.origenNombre}")` : `Publicado en grupo "${item.origenNombre}"`,
+      cleanNumber: null,
+      name: senderName
+    };
   }
 
-  if (item.origenNombre) {
-    return { display: `Publicado en grupo "${item.origenNombre}"`, cleanNumber: null };
-  }
-  return { display: "Número no especificado en la publicación", cleanNumber: null };
+  return {
+    display: senderName ? `${senderName} (Sin teléfono)` : "Número no especificado en la publicación",
+    cleanNumber: null,
+    name: senderName
+  };
 }
 
 function formatPhoneDisplay(phone: string | null | undefined) {
