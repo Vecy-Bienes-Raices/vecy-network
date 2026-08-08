@@ -873,15 +873,24 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
     }
   }
 
-  // Extraer presupuesto del rawText si la columna está en 0.00
-  if (budgetMax <= 0 && requirement.rawText) {
+  // Sanidad Predial de Precios y Presupuestos:
+  let isReqRent = (requirement.tipoNegocioDeseado || requirement.transactionType || "").toLowerCase().includes("arriendo");
+  
+  // Re-extraer presupuesto si el valor de presupuestoMax en BD es espurio (ej. > 50.000.000 para arriendo o 0)
+  if (requirement.rawText && (budgetMax <= 0 || (isReqRent && budgetMax > 50_000_000))) {
     const rawR = requirement.rawText.toLowerCase();
-    const matchPresu = rawR.match(/presupuesto\s*:?\s*\$?([\d.]+)\s*(millones|millón|m|M)?/i);
+    const matchPresu = rawR.match(/(?:presupuesto|ppto|canon|valor|hasta|máximo|max)\s*(?:máximo|max)?\s*:?\s*\$?([\d.,]+)\s*(millones|millón|mll|mlls|mm)?/i);
     if (matchPresu) {
-      let valR = parseFloat(matchPresu[1].replace(/\./g, ""));
+      let valStr = matchPresu[1].replace(/\./g, "").replace(/,/g, ".");
+      let valR = parseFloat(valStr);
       if (!isNaN(valR)) {
-        if (valR < 1000) valR *= 1000000;
-        budgetMax = valR;
+        const unit = (matchPresu[2] || "").toLowerCase();
+        if (unit.includes("millon") || unit.includes("mll") || unit.includes("mm")) {
+          valR *= 1_000_000;
+        } else if (valR < 1000) {
+          valR *= 1_000_000;
+        }
+        if (valR > 0) budgetMax = valR;
       }
     }
   }
@@ -1378,16 +1387,29 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
     earnedPoints += 2; // crédito neutral
   }
 
-  // 10. Antigüedad / Año de Construcción (4 pts — NUEVO v20.0) ─────────────────
-  // Fuentes: property.antiguedadAnos (años) o property.yearBuilt (año absoluto)
-  const reqAntiguedadMax = requirement.antiguedadMax != null ? Number(requirement.antiguedadMax) : -1;
+  // 10. Antigüedad / Año de Construcción (4 pts) ─────────────────
+  let reqAntiguedadMax = requirement.antiguedadMax != null ? Number(requirement.antiguedadMax) : -1;
+  if (reqAntiguedadMax < 0 && requirement.rawText) {
+    const mAntig = requirement.rawText.toLowerCase().match(/(?:máximo|max|hasta)\s*(\d{1,2})\s*años?\s*(?:de\s*)?(?:construido|construccion|construcción|antigüedad|antiguedad)?/i)
+                || requirement.rawText.toLowerCase().match(/(\d{1,2})\s*años?\s*(?:de\s*)?(?:construido|antigüedad)/i);
+    if (mAntig) {
+      reqAntiguedadMax = parseInt(mAntig[1], 10);
+    }
+  }
+
   const propAntiguedadAnos = property.antiguedadAnos != null ? Number(property.antiguedadAnos) : -1;
   const propYearBuilt = property.yearBuilt != null ? Number(property.yearBuilt) : -1;
 
-  // Calcular antigüedad efectiva de la propiedad
   let propAge = propAntiguedadAnos;
   if (propAge < 0 && propYearBuilt > 0) {
     propAge = new Date().getFullYear() - propYearBuilt;
+  }
+  if (propAge < 0 && property.rawText) {
+    const mPropAge = property.rawText.toLowerCase().match(/(?:edificio\s*de|antigüedad|antiguedad|tiene)\s*(\d{1,2})\s*años/i)
+                  || property.rawText.toLowerCase().match(/(\d{1,2})\s*años\s*(?:de\s*)?(?:antigüedad|construido)/i);
+    if (mPropAge) {
+      propAge = parseInt(mPropAge[1], 10);
+    }
   }
 
   if (reqAntiguedadMax >= 0 && propAge >= 0) {
@@ -1399,11 +1421,9 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
       return buildExplanationResult(0, blockers, positives, negatives);
     }
   } else if (reqAntiguedadMax < 0 && propAge >= 0) {
-    // La demanda no especifica antigüedad → crédito neutral
     earnedPoints += 3;
     if (propAge > 0) positives.push(`ℹ️ Antigüedad de la oferta: ${propAge} años (sin restricción por la demanda)`);
   } else {
-    // Sin datos de antigüedad en ambas partes → crédito neutral mínimo
     earnedPoints += 2;
   }
 

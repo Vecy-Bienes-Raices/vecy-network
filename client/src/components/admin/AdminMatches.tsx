@@ -281,21 +281,34 @@ function scoreRows(req: any, prop: any) {
     }
   }
 
-  // 4. Presupuesto Máximo (con inferencia por regex de Ppto hasta $950 -> $950.000.000)
+  // 4. Presupuesto Máximo
   const reqTextLower = (req.rawText || "").toLowerCase();
   const propTextLower = (prop.rawText || prop.description || "").toLowerCase();
 
   let budget = req.presupuestoMax ? parseFloat(String(req.presupuestoMax)) : 0;
   let budgetInferred = false;
+
+  // Corregir presupuestos espurios de arriendo (> 50M para arriendo o extraídos erróneamente de metros)
+  if (isReqRentMatch && budget > 50_000_000) {
+    budget = 0;
+  }
+
   if (budget <= 0 && reqTextLower) {
-    const mP = reqTextLower.match(/(?:ppto|presupuesto|busco|máximo|max|hasta|canon|valor)\s*:?\s*\$?([\d.]+)\s*(millones|millón|mll|mlls|mm|m|M)?/i)
-            || reqTextLower.match(/\$?\s*([\d.]+)\s*(millones|millón|mll|mlls|mm|m|M)\b/i);
+    const mP = reqTextLower.match(/(?:presupuesto|ppto|canon|valor|hasta|máximo|max)\s*(?:máximo|max)?\s*:?\s*\$?([\d.,]+)\s*(millones|millón|mll|mlls|mm)?/i);
     if (mP) {
-      let valR = parseFloat(mP[1].replace(/\./g, ""));
+      let valStr = mP[1].replace(/\./g, "").replace(/,/g, ".");
+      let valR = parseFloat(valStr);
       if (!isNaN(valR)) {
-        if (valR < 1000) valR *= 1_000_000;
-        budget = valR;
-        budgetInferred = true;
+        const unit = (mP[2] || "").toLowerCase();
+        if (unit.includes("millon") || unit.includes("mll") || unit.includes("mm")) {
+          valR *= 1_000_000;
+        } else if (valR < 1000) {
+          valR *= 1_000_000;
+        }
+        if (valR > 0) {
+          budget = valR;
+          budgetInferred = true;
+        }
       }
     }
   }
@@ -564,17 +577,28 @@ function scoreRows(req: any, prop: any) {
     <Receipt className="w-3.5 h-3.5" />
   );
 
-  // 11. Antigüedad / Año de Construcción — v20.0 con tolerancia 20%
-  const ageR = req.antiguedadMax ? Number(req.antiguedadMax) : (req.preferredAge ? Number(req.preferredAge) : 0);
-  const ageP = prop.antiguedadAnos != null ? Number(prop.antiguedadAnos)
+  // 11. Antigüedad / Año de Construcción
+  let ageR = req.antiguedadMax ? Number(req.antiguedadMax) : (req.preferredAge ? Number(req.preferredAge) : 0);
+  if (ageR <= 0 && reqTextLower) {
+    const mAntig = reqTextLower.match(/(?:máximo|max|hasta)\s*(\d{1,2})\s*años?\s*(?:de\s*)?(?:construido|construccion|construcción|antigüedad|antiguedad)?/i)
+                || reqTextLower.match(/(\d{1,2})\s*años?\s*(?:de\s*)?(?:construido|antigüedad)/i);
+    if (mAntig) ageR = parseInt(mAntig[1], 10);
+  }
+
+  let ageP = prop.antiguedadAnos != null ? Number(prop.antiguedadAnos)
     : (prop.yearBuilt ? (new Date().getFullYear() - Number(prop.yearBuilt))
     : (prop.constructionYear ? (new Date().getFullYear() - Number(prop.constructionYear)) : -1));
 
+  if (ageP < 0 && propTextLower) {
+    const mPropAge = propTextLower.match(/(?:edificio\s*de|antigüedad|antiguedad|tiene)\s*(\d{1,2})\s*años/i)
+                  || propTextLower.match(/(\d{1,2})\s*años\s*(?:de\s*)?(?:antigüedad|construido)/i);
+    if (mPropAge) ageP = parseInt(mPropAge[1], 10);
+  }
+
   let ageS: MatchStatus = "neutral";
   if (ageR > 0 && ageP >= 0) {
-    if (ageP <= ageR)              ageS = "exact";
-    else if (ageP <= ageR * 1.20) ageS = "warn";    // Tolerancia 20%
-    else                           ageS = "missing"; // Supera max con margen
+    if (ageP <= ageR) ageS = "exact";
+    else ageS = "missing"; // Supera máximo exigido
   }
 
   const reqAgeLabel = ageR > 0 ? `≤ ${ageR} años de construcción` : "N/E";
@@ -780,7 +804,7 @@ function extractPhoneFromItem(item: any): { display: string; cleanNumber: string
     }
   }
 
-  return { display: "Número no disponible", cleanNumber: null };
+  return { display: "+57 319 291 9978 (VECY Oficial)", cleanNumber: "573192919978" };
 }
 
 function formatPhoneDisplay(phone: string | null | undefined) {
