@@ -315,19 +315,22 @@ export async function textToSpeechMedia(text: string, format: "OGG_OPUS" | "MP3"
   try {
     const googleApiKey = process.env.GOOGLE_TTS_API_KEY || process.env.GEMINI_API_KEY;
     if (googleApiKey) {
-      const response = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${googleApiKey}`, {
+      const response = await fetch(`https://texttospeech.googleapis.com/v1beta1/text:synthesize?key=${googleApiKey}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          input: { text: cleaned },
+          input: { 
+            prompt: "Read aloud in a warm, welcoming tone.",
+            text: cleaned 
+          },
           voice: {
-            languageCode: "es-CO",
-            name: "es-CO-Neural2-A", // Voz femenina colombiana válida en GCP
-            ssmlGender: "FEMALE"
+            languageCode: "es-419",
+            modelName: "gemini-3.1-flash-tts-preview",
+            name: "Laomedeia"
           },
           audioConfig: {
             audioEncoding: format === "OGG_OPUS" ? "OGG_OPUS" : "MP3",
-            speakingRate: 1.02,
+            speakingRate: 1.0,
             pitch: 0.0
           }
         })
