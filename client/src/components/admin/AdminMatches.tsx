@@ -804,7 +804,10 @@ function extractPhoneFromItem(item: any): { display: string; cleanNumber: string
     }
   }
 
-  return { display: "+57 319 291 9978 (VECY Oficial)", cleanNumber: "573192919978" };
+  if (item.origenNombre) {
+    return { display: `Publicado en grupo "${item.origenNombre}"`, cleanNumber: null };
+  }
+  return { display: "Número no especificado en la publicación", cleanNumber: null };
 }
 
 function formatPhoneDisplay(phone: string | null | undefined) {

@@ -243,17 +243,20 @@ export function parseStreetCarreraBoundaries(text: string): StreetCarreraBoundar
   const norm = (text || "").toLowerCase();
   const res: StreetCarreraBoundaries = {};
 
-  const streetRangeMatch = norm.match(/(?:entre|de|cll|calle|calles)\s*:?\s*(\d{1,3})\s*(?:a|y|-|hasta)\s*(\d{1,3})/i);
+  // 1. Rango de Calles: "entre la 106 y la 127", "entre 106 y 127", "calle 100 a 127", "cll 100 a 127", "106 a 127"
+  const streetRangeMatch = norm.match(/(?:entre|de|cll|calle|calles)?\s*(?:la|las)?\s*(\d{1,3})\s*(?:a|y|-|hasta)\s*(?:la|las)?\s*(\d{1,3})/i);
   if (streetRangeMatch) {
     const n1 = parseInt(streetRangeMatch[1], 10);
     const n2 = parseInt(streetRangeMatch[2], 10);
-    if (!isNaN(n1) && !isNaN(n2)) {
+    // Filtrar falsos positivos de rangos pequeños o de horas/habitaciones
+    if (!isNaN(n1) && !isNaN(n2) && (n1 > 20 || n2 > 20)) {
       res.minStreet = Math.min(n1, n2);
       res.maxStreet = Math.max(n1, n2);
     }
   }
 
-  const carreraRangeMatch = norm.match(/(?:entre|de|cra|carrera|carreras)\s*:?\s*(circunvalar|cerros|\d{1,3})\s*(?:a|y|-|hasta)\s*(\d{1,3})/i);
+  // 2. Rango de Carreras: "entre cra 7 y 15", "entre la 7 y la 15"
+  const carreraRangeMatch = norm.match(/(?:cra|carrera|carreras)\s*(?:la|las)?\s*(circunvalar|cerros|\d{1,3})\s*(?:a|y|-|hasta)\s*(?:la|las)?\s*(\d{1,3})/i);
   if (carreraRangeMatch) {
     const rawN1 = carreraRangeMatch[1];
     const n1 = (rawN1 === "circunvalar" || rawN1 === "cerros") ? 1 : parseInt(rawN1, 10);
@@ -264,6 +267,21 @@ export function parseStreetCarreraBoundaries(text: string): StreetCarreraBoundar
     }
   }
 
+  // 3. Orientación en cuadrante arterial (Autopista Norte = Cra 45, Séptima = Cra 7)
+  if (norm.includes("arriba de la autopista") || norm.includes("oriente de la autopista")) {
+    res.maxCarrera = 45;
+    res.minCarrera = 1;
+  } else if (norm.includes("abajo de la autopista") || norm.includes("occidente de la autopista")) {
+    res.minCarrera = 45;
+  }
+
+  if (norm.includes("arriba de la septima") || norm.includes("arriba de la séptima") || norm.includes("arriba de la 7")) {
+    res.maxCarrera = 7;
+    res.minCarrera = 1;
+  } else if (norm.includes("abajo de la septima") || norm.includes("abajo de la séptima") || norm.includes("abajo de la 7")) {
+    res.minCarrera = 7;
+  }
+
   return res;
 }
 
@@ -271,23 +289,25 @@ export function parsePropertyAddressNumbers(text: string): PropertyAddressNumber
   const norm = (text || "").toLowerCase();
   const res: PropertyAddressNumbers = {};
 
-  const streetMatch = norm.match(/(?:calle|cll|cll\.)\s*(\d{1,3})/i);
+  const streetMatch = norm.match(/(?:calle|cll|cll\.|clle)\s*(\d{1,3})/i);
   if (streetMatch) {
     const sNum = parseInt(streetMatch[1], 10);
     if (!isNaN(sNum)) res.street = sNum;
   }
 
-  const carreraMatch = norm.match(/(?:carrera|cra|cra\.)\s*(\d{1,3})/i);
+  const carreraMatch = norm.match(/(?:carrera|cra|cra\.|kr|kra)\s*(\d{1,3})/i);
   if (carreraMatch) {
     const cNum = parseInt(carreraMatch[1], 10);
     if (!isNaN(cNum)) res.carrera = cNum;
   }
 
-  if (streetMatch && !res.carrera) {
-    const afterNumMatch = norm.match(/#\s*(\d{1,3})/);
-    if (afterNumMatch) {
-      const cNum = parseInt(afterNumMatch[1], 10);
-      if (!isNaN(cNum)) res.carrera = cNum;
+  if (!res.street || !res.carrera) {
+    const combinedMatch = norm.match(/(?:cll|calle|cra|carrera|kr)?\s*(\d{1,3})\s*(?:#|con|n°|no\.?)\s*(\d{1,3})/i);
+    if (combinedMatch) {
+      const numA = parseInt(combinedMatch[1], 10);
+      const numB = parseInt(combinedMatch[2], 10);
+      if (!res.street && !isNaN(numA)) res.street = numA;
+      if (!res.carrera && !isNaN(numB)) res.carrera = numB;
     }
   }
 
@@ -1043,10 +1063,10 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
 
   positives.push(`Tipo de activo compatible: ${propType}`);
 
-  // ── FILTRO DURO 4: Ubicación / Barrio Estricto ──
+  // ── FILTRO DURO 4: Ubicación / Barrio Estricto (Incluye cuadrante perimetral) ──
   const geoResult = matchesGeography(
-    requirement.zonaDeseada || requirement.addressNeighborhood || "",
-    property.zone || property.addressNeighborhood || "",
+    `${requirement.zonaDeseada || ""} ${requirement.addressNeighborhood || ""} ${requirement.rawText || ""}`,
+    `${property.zone || ""} ${property.addressNeighborhood || ""} ${property.rawText || ""}`,
     requirement.addressLocality || "",
     property.addressLocality || "",
     requirement.ciudadDeseada || requirement.city || "",
