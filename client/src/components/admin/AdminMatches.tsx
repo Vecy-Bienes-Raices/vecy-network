@@ -904,33 +904,25 @@ export default function AdminMatches() {
       const propSearchStr = `${property.name} ${property.city} ${property.zone} ${property.idUsuarioWhatsapp}`.toLowerCase();
       const reqSearchStr = `${requirement.name} ${requirement.ciudadDeseada} ${requirement.zonaDeseada} ${requirement.idUsuarioWhatsapp}`.toLowerCase();
       
-      const matchesSearch = propSearchStr.includes(searchTerm.toLowerCase()) || 
+      const matchesSearch = !searchTerm || propSearchStr.includes(searchTerm.toLowerCase()) || 
                             reqSearchStr.includes(searchTerm.toLowerCase());
 
+      if (!matchesSearch) return false;
+
+      // Verificar que los filtros duros obligatorios (Negocio, Tipo Inmueble, Ubicación, Presupuesto) no hayan fallado
       const { rows } = scoreRows(requirement, property);
-      const mandatoryLabels = [
-        "Tipo de Inmueble",
-        "Tipo de Negocio",
-        "Ubicación / Barrio",
-        "Presupuesto Máx.",
-        "Área Total",
-        "Habitaciones",
-        "Baños",
-        "Parqueaderos"
-      ];
-      
-      const hasAnyHardFailure = rows.some(r => r.status === "missing");
-      const hasPendingGrey = rows.some(r => mandatoryLabels.includes(r.label) && r.status === "neutral");
+      const hardRows = rows.filter(r => 
+        r.label === "Tipo de Inmueble" || 
+        r.label === "Tipo de Negocio" || 
+        r.label === "Ubicación / Barrio" ||
+        r.label === "Presupuesto Máx."
+      );
+      const hardFailed = hardRows.some(r => r.status === "missing");
+      if (hardFailed) return false;
 
-      if (!matchesSearch || hasAnyHardFailure) return false;
-
-      if (activeTab === 'calificados') {
-        return !hasPendingGrey;
-      } else {
-        return hasPendingGrey;
-      }
+      return true;
     });
-  }, [matches, searchTerm, minScore, activeTab]);
+  }, [matches, searchTerm, minScore]);
 
   const exportData = () => {
     const headers = ['ID Coincidencia', 'Porcentaje Match', 'Propiedad', 'Propietario Telefono', 'Requerimiento', 'Interesado Telefono', 'Estado', 'Fecha'];
