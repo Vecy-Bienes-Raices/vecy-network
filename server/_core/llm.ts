@@ -11,6 +11,7 @@ export async function invokeLLM({
   messages, 
   responseFormat, 
   provider = "google",
+  model,
   imageBuffer,
   pdfBuffer,
   pdfMimeType,
@@ -20,6 +21,7 @@ export async function invokeLLM({
   messages: any[], 
   responseFormat?: any,
   provider?: LLMProvider,
+  model?: string,
   imageBuffer?: string,
   pdfBuffer?: string,
   pdfMimeType?: string,
@@ -29,7 +31,7 @@ export async function invokeLLM({
   if (provider === "anthropic") {
     return await invokeClaude(messages, responseFormat) as any;
   }
-  return await invokeGemini(messages, responseFormat, imageBuffer, pdfBuffer, pdfMimeType, enableSearch, tools);
+  return await invokeGemini(messages, responseFormat, model, imageBuffer, pdfBuffer, pdfMimeType, enableSearch, tools);
 }
 
 /**
@@ -38,6 +40,7 @@ export async function invokeLLM({
 async function invokeGemini(
   messages: any[], 
   responseFormat?: any, 
+  customModel?: string,
   imageBuffer?: string, 
   pdfBuffer?: string, 
   pdfMimeType?: string, 
@@ -45,7 +48,11 @@ async function invokeGemini(
   tools?: any[]
 ) {
   const API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || ENV.forgeApiKey;
-  const MODEL = "gemini-2.5-flash";
+  
+  // Ruteo Optimizado por Costos (v21.10):
+  // - Extracción de Inmuebles/Requerimientos (JSON): gemini-2.5-flash-lite (75% más económico)
+  // - Asesoría Legal / Conversación Activa (Texto/Tools): gemini-2.5-flash
+  const MODEL = customModel || (responseFormat?.type === "json_object" ? "gemini-2.5-flash-lite" : "gemini-2.5-flash");
   const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${API_KEY}`;
 
   const MAX_RETRIES = 3;
