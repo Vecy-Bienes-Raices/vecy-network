@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { getDb } from "./db";
 import { propertyMatches, properties, requirements } from "../drizzle/schema";
 import { explicarMatch } from "./_core/matching";
