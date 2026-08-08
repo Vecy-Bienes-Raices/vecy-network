@@ -440,6 +440,10 @@ function scoreRows(req: any, prop: any) {
       bathS = "exact";
     }
   }
+  const reqBathLabel = bathR > 0 
+    ? `≥ ${bathR} baño${bathR > 1 ? "s" : ""}${bathInferred ? " (Inferido 🔍)" : ""}` 
+    : "N/E";
+
   const formatBathValue = (val: number) => {
     if (val <= 0) return "N/E";
     if (val % 1 !== 0) {
