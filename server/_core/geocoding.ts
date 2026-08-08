@@ -15,10 +15,30 @@ export interface GeocodedAddress {
  * Geocodifica una dirección o ubicación usando Google Maps Geocoding API.
  * Restringe la búsqueda estrictamente a Colombia para evitar coincidencias internacionales.
  */
+const geocodeCache = new Map<string, GeocodedAddress | null>();
+let isMapsApiDenied = false;
+
 export async function geocodeAddress(address: string): Promise<GeocodedAddress | null> {
+  const normAddress = address.trim().toLowerCase();
+  if (geocodeCache.has(normAddress)) {
+    return geocodeCache.get(normAddress) || null;
+  }
+
+  if (isMapsApiDenied) {
+    return {
+      isValid: false,
+      city: "Bogotá",
+      zone: address,
+      locality: "",
+      latitude: "",
+      longitude: "",
+      formattedAddress: address,
+      isApiError: true
+    };
+  }
+
   const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.GOOGLE_API_KEY;
   if (!apiKey || apiKey.trim() === "") {
-    console.warn("[Geocoding] GOOGLE_MAPS_API_KEY nor GOOGLE_API_KEY is configured.");
     return {
       isValid: false,
       city: "",
@@ -43,11 +63,12 @@ export async function geocodeAddress(address: string): Promise<GeocodedAddress |
 
     const data = response.data;
     if (data.status !== "OK") {
-      console.log(`[Geocoding] No se encontraron resultados en Google Maps para: "${address}" (Status: ${data.status})`);
-      
+      if (data.status === "REQUEST_DENIED" || data.status === "OVER_QUERY_LIMIT") {
+        isMapsApiDenied = true;
+        console.warn(`[Geocoding] API de Google Maps inactiva o denegada (Status: ${data.status}). Desactivando peticiones salientes a Google Maps API para no generar costos.`);
+      }
       const isApiError = data.status === "REQUEST_DENIED" || data.status === "OVER_QUERY_LIMIT" || data.status === "UNKNOWN_ERROR" || data.status === "INVALID_REQUEST";
-      
-      return {
+      const errRes: GeocodedAddress = {
         isValid: false,
         city: "",
         zone: "",
@@ -57,6 +78,8 @@ export async function geocodeAddress(address: string): Promise<GeocodedAddress |
         formattedAddress: "",
         isApiError
       };
+      geocodeCache.set(normAddress, errRes);
+      return errRes;
     }
 
     if (!data.results || data.results.length === 0) {
