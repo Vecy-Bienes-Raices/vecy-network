@@ -98,8 +98,9 @@ async function invokeGemini(
 
       if (tools && tools.length > 0) {
         payload.tools = tools;
+      } else if (enableSearch && responseFormat?.type !== "json_object") {
+        payload.tools = [{ googleSearch: {} }];
       }
-      // NOTA COSTOS: Desactivado googleSearch para evitar cobros de $35 USD/1k búsquedas durante etapa de pruebas.
 
       console.log(`[JanIA-LLM] Intento ${attempt}/${MAX_RETRIES} — Gemini (${MODEL}) [Search: ${enableSearch}, Tools: ${!!tools}]...`);
       const response = await axios.post(API_URL, payload);
