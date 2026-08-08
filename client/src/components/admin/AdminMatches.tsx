@@ -1235,26 +1235,22 @@ export default function AdminMatches() {
                                 <p className="text-xs font-bold text-zinc-200 select-all">{propContact.display}</p>
                               </div>
                             </div>
-                             {propContact.cleanNumber ? (
-                              <a 
-                                href={`https://wa.me/${propContact.cleanNumber}?text=${encodeURIComponent(`Hola! Te contacto por el inmueble "${m.property?.name || 'de la red'}" publicado en ${m.property?.origenNombre || 'VECY Network'}. Tienes un Match del ${score.toFixed(0)}% con un requerimiento activo.`)}`} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="bg-[#25D366] hover:bg-[#20ba5a] text-black text-[10px] font-bold px-3 py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md hover:scale-105 min-h-[38px] w-full sm:w-auto"
-                              >
-                                Contactar WA <ExternalLink className="w-3 h-3" />
-                              </a>
-                            ) : (
-                              <a 
-                                href={`https://web.whatsapp.com/`} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="bg-emerald-900/60 hover:bg-emerald-800/80 text-emerald-200 text-[10px] font-bold px-3 py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all border border-emerald-500/30 min-h-[38px] w-full sm:w-auto"
-                                title="Abrir WhatsApp para contactar en grupo"
-                              >
-                                Ir a WhatsApp <ExternalLink className="w-3 h-3" />
-                              </a>
-                            )}
+                             {(() => {
+                              const waTarget = propContact.cleanNumber || "573192919978";
+                              const defaultText = propContact.cleanNumber
+                                ? `Hola! Te contacto por el inmueble "${m.property?.name || 'de la red'}" publicado en ${m.property?.origenNombre || 'VECY Network'}. Tienes un Match del ${score.toFixed(0)}% con un requerimiento activo.`
+                                : `Hola JanIA! Necesito contactar al vendedor/broker del inmueble "${m.property?.name || 'de la red'}" publicado en el grupo "${m.property?.origenNombre || 'VECY Network'}".`;
+                              return (
+                                <a 
+                                  href={`https://wa.me/${waTarget}?text=${encodeURIComponent(defaultText)}`} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="bg-[#25D366] hover:bg-[#20ba5a] text-black text-[10px] font-bold px-3.5 py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md hover:scale-105 min-h-[38px] w-full sm:w-auto"
+                                >
+                                  Contactar WA <ExternalLink className="w-3 h-3" />
+                                </a>
+                              );
+                            })()}
                           </div>
                         );
                       })()}
@@ -1310,26 +1306,22 @@ export default function AdminMatches() {
                                 <p className="text-xs font-bold text-zinc-200 select-all">{reqContact.display}</p>
                               </div>
                             </div>
-                            {reqContact.cleanNumber ? (
-                              <a 
-                                href={`https://wa.me/${reqContact.cleanNumber}?text=${encodeURIComponent(`Hola! Te contacto por tu requerimiento de inmueble en ${m.requirement?.zonaDeseada || m.requirement?.ciudadDeseada || 'VECY Network'}. Encontramos una propiedad con un Match del ${score.toFixed(0)}%.`)}`} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="bg-[#25D366] hover:bg-[#20ba5a] text-black text-[10px] font-bold px-3 py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md hover:scale-105 min-h-[38px] w-full sm:w-auto"
-                              >
-                                Contactar WA <ExternalLink className="w-3 h-3" />
-                              </a>
-                            ) : (
-                              <a 
-                                href={`https://web.whatsapp.com/`} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="bg-cyan-900/60 hover:bg-cyan-800/80 text-cyan-200 text-[10px] font-bold px-3 py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all border border-cyan-500/30 min-h-[38px] w-full sm:w-auto"
-                                title="Abrir WhatsApp para contactar en grupo"
-                              >
-                                Ir a WhatsApp <ExternalLink className="w-3 h-3" />
-                              </a>
-                            )}
+                            {(() => {
+                              const waTarget = reqContact.cleanNumber || "573192919978";
+                              const defaultText = reqContact.cleanNumber
+                                ? `Hola! Te contacto por tu requerimiento de inmueble en ${m.requirement?.zonaDeseada || m.requirement?.ciudadDeseada || 'VECY Network'}. Encontramos una propiedad con un Match del ${score.toFixed(0)}%.`
+                                : `Hola JanIA! Necesito contactar al requiriente del inmueble en el grupo "${m.requirement?.origenNombre || 'VECY Network'}".`;
+                              return (
+                                <a 
+                                  href={`https://wa.me/${waTarget}?text=${encodeURIComponent(defaultText)}`} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="bg-[#25D366] hover:bg-[#20ba5a] text-black text-[10px] font-bold px-3.5 py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md hover:scale-105 min-h-[38px] w-full sm:w-auto"
+                                >
+                                  Contactar WA <ExternalLink className="w-3 h-3" />
+                                </a>
+                              );
+                            })()}
                           </div>
                         );
                       })()}
