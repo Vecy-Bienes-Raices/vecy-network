@@ -933,17 +933,29 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
-  // ── FILTRO DURO 0D: Múltiples Campos Técnicos Esenciales en N/E ──
-  let missingTechCount = 0;
-  if (price <= 0) missingTechCount++;
-  if (propArea <= 0) missingTechCount++;
-  if (pBedrooms <= 0) missingTechCount++;
-  if (pBathrooms <= 0) missingTechCount++;
-  if (pGarages <= 0) missingTechCount++;
+  // ── FILTRO DURO 0D: Completitud de Ficha (Exigir publicaciones con especificaciones ricas) ──
+  let reqFilledCount = 0;
+  if (reqType) reqFilledCount++;
+  if (reqBiz) reqFilledCount++;
+  if (reqZone || requirement.ciudadDeseada) reqFilledCount++;
+  if (budgetMax > 0) reqFilledCount++;
+  if (reqAreaMin > 0) reqFilledCount++;
+  if (reqBedrooms > 0) reqFilledCount++;
+  if (reqBathrooms > 0) reqFilledCount++;
+  if (reqGarages > 0) reqFilledCount++;
 
-  // Bloquear solo si faltan 4 o más campos técnicos o si no hay precio
-  if (price <= 0 || missingTechCount >= 4) {
-    blockers.push(`Oferta con información insuficiente (${missingTechCount} campos técnicos clave en N/E).`);
+  let propFilledCount = 0;
+  if (propType) propFilledCount++;
+  if (propBiz) propFilledCount++;
+  if (propZone || property.addressCity) propFilledCount++;
+  if (price > 0 || (property.rentPrice && parseFloat(String(property.rentPrice)) > 0)) propFilledCount++;
+  if (propArea > 0) propFilledCount++;
+  if (pBedrooms > 0) propFilledCount++;
+  if (pBathrooms > 0) propFilledCount++;
+  if (pGarages > 0) propFilledCount++;
+
+  if (reqFilledCount < 4 || propFilledCount < 4) {
+    blockers.push(`Ficha incompleta (Demanda: ${reqFilledCount}/8 especificaciones, Oferta: ${propFilledCount}/8 especificaciones). Se requieren publicaciones con datos detallados.`);
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
@@ -1044,15 +1056,12 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
-  // ── FILTRO DURO 6 v20.0: Campana de Tolerancia de Área ──────────────────────
-  // Zona Roja   (-5%):  propArea < reqMin * 0.95 → Bloqueo absoluto (0%)
-  // Zona Confort (0–15%): reqMin * 0.95 ≤ propArea ≤ reqMin * 1.15 → Puntaje completo
-  // Zona Grande (+15%): propArea > reqMin * 1.15 → Pasa con advertencia informativa
+  // ── FILTRO DURO 6: Área Mínima (NUNCA MENOR QUE EL SOLICITADO - REGLA CERO MENOR ÁREA) ──────────────────────
   let areaOversize = false;
   if (reqAreaMin > 0) {
     if (propArea > 0) {
-      if (propArea < reqAreaMin * 0.95) {
-        blockers.push(`Área ofrecida (${propArea} m²) es INFERIOR al piso mínimo exigido (${reqAreaMin} m² - tolerancia -5%)`);
+      if (propArea < reqAreaMin) {
+        blockers.push(`Área ofrecida (${propArea} m²) es INFERIOR al mínimo exigido (${reqAreaMin} m²). Match inviable (0%).`);
         return buildExplanationResult(0, blockers, positives, negatives);
       } else if (propArea > reqAreaMin * 1.15) {
         areaOversize = true;
@@ -1061,7 +1070,8 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
         positives.push(`✅ Área de ${propArea} m² dentro de la campana de confort (${reqAreaMin} m² ±15%)`);
       }
     } else {
-      negatives.push(`Área del inmueble no especificada expresamente (requerimiento pide mínimo ${reqAreaMin} m²). Pendiente confirmar con captador.`);
+      blockers.push(`No se puede verificar el área requerida (${reqAreaMin} m²) por falta de información en la oferta.`);
+      return buildExplanationResult(0, blockers, positives, negatives);
     }
   }
 
@@ -1384,11 +1394,9 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
     if (propAge <= reqAntiguedadMax) {
       earnedPoints += 4;
       positives.push(`✅ Antigüedad: ${propAge} años (máximo pedido: ${reqAntiguedadMax} años)`);
-    } else if (propAge <= reqAntiguedadMax * 1.20) {
-      earnedPoints += 2; // Tolerancia 20%
-      negatives.push(`⚠️ Antigüedad ${propAge} años excede ligeramente el máximo pedido (${reqAntiguedadMax} años)`);
     } else {
-      negatives.push(`Antigüedad ${propAge} años supera el máximo exigido de ${reqAntiguedadMax} años`);
+      blockers.push(`Antigüedad del inmueble (${propAge} años) SUPERA el máximo exigido de (${reqAntiguedadMax} años). Match inviable (0%).`);
+      return buildExplanationResult(0, blockers, positives, negatives);
     }
   } else if (reqAntiguedadMax < 0 && propAge >= 0) {
     // La demanda no especifica antigüedad → crédito neutral
