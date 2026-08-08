@@ -790,6 +790,12 @@ function extractPhoneFromItem(item: any): { display: string; cleanNumber: string
   for (const cand of candidates) {
     if (!cand) continue;
     const clean = String(cand).split("@")[0].replace(/\D/g, "");
+
+    // ⛔ EXCLUSIÓN ABSOLUTA: El número de JanIA / VECY Oficial (573192919978) JAMÁS debe mostrarse como teléfono del captador o requiriente
+    if (clean === "573192919978" || clean === "3192919978") {
+      continue;
+    }
+
     if (isValidRealPhoneNumber(clean)) {
       const formatted = (clean.length === 12 && clean.startsWith("573"))
         ? `+57 ${clean.substring(2, 5)} ${clean.substring(5, 8)} ${clean.substring(8)}`
@@ -805,33 +811,35 @@ function extractPhoneFromItem(item: any): { display: string; cleanNumber: string
     }
   }
 
-  // 2. Buscar en el texto del mensaje por cualquier celular colombiano de 10 dígitos (ej: 312 443 1225)
+  // 2. Buscar en el texto del mensaje por cualquier celular colombiano de 10 dígitos que NO sea el del sistema
   const textToSearch = `${item.rawText || ""} ${item.description || ""} ${item.name || ""} ${item.rawMessage || ""}`;
   const phoneMatches = textToSearch.match(/(?:\+?57\s*)?3\d{2}[\s.-]?\d{3}[\s.-]?\d{4}\b/g);
   if (phoneMatches && phoneMatches.length > 0) {
-    const rawMatch = phoneMatches[0].replace(/\D/g, "");
-    const clean10 = rawMatch.startsWith("57") && rawMatch.length === 12 ? rawMatch.substring(2) : rawMatch;
-    if (clean10.length === 10 && clean10.startsWith("3")) {
-      const formatted = `+57 ${clean10.substring(0, 3)} ${clean10.substring(3, 6)} ${clean10.substring(6)}`;
-      return {
-        display: senderName ? `${senderName} (${formatted})` : formatted,
-        cleanNumber: `57${clean10}`,
-        name: senderName
-      };
+    for (const pMatch of phoneMatches) {
+      const rawMatch = pMatch.replace(/\D/g, "");
+      const clean10 = rawMatch.startsWith("57") && rawMatch.length === 12 ? rawMatch.substring(2) : rawMatch;
+      if (clean10.length === 10 && clean10.startsWith("3") && clean10 !== "3192919978") {
+        const formatted = `+57 ${clean10.substring(0, 3)} ${clean10.substring(3, 6)} ${clean10.substring(6)}`;
+        return {
+          display: senderName ? `${senderName} (${formatted})` : formatted,
+          cleanNumber: `57${clean10}`,
+          name: senderName
+        };
+      }
     }
   }
 
   // 3. Fallback de trazabilidad de origen
   if (item.origenNombre) {
     return {
-      display: senderName ? `${senderName} (vía grupo "${item.origenNombre}")` : `Publicado en grupo "${item.origenNombre}"`,
+      display: senderName ? `${senderName} (vía grupo "${item.origenNombre}")` : `Contacto vía grupo "${item.origenNombre}"`,
       cleanNumber: null,
       name: senderName
     };
   }
 
   return {
-    display: senderName ? `${senderName} (Sin teléfono)` : "Número no especificado en la publicación",
+    display: senderName ? `${senderName} (Contacto directo)` : "Contacto en publicación",
     cleanNumber: null,
     name: senderName
   };
