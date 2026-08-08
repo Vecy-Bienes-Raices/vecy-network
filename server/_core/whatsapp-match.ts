@@ -1126,19 +1126,9 @@ export class JaniaMatchBot {
       let fastEmoji: string | null = null;
 
       if (isSearch) {
-        if (isCompleteRequirement) {
-          fastEmoji = '📝'; // Requerimiento Completo
-        } else {
-          fastEmoji = '❓'; // Requerimiento Incompleto o Corto -> Reaccionar con ❓
-        }
+        fastEmoji = '📝'; // Requerimiento / Búsqueda -> 📝
       } else if (isOffer) {
-        if (isCompleteOffer) {
-          fastEmoji = '👍'; // Oferta Completa
-        } else {
-          fastEmoji = '❓'; // Oferta Incompleta
-        }
-      } else if (isOfficialGroup) {
-        fastEmoji = '❓';
+        fastEmoji = '👍'; // Oferta / Inmueble -> 👍
       }
 
       if (fastEmoji && chatId !== this.buzonGroupId) {
@@ -1237,18 +1227,7 @@ export class JaniaMatchBot {
       return '🚫';
     }
 
-    // 2. Publicaciones Incompletas / Mediocres sin datos prediales suficientes -> ❓ PERMITIDO EN TODOS LOS GRUPOS
-    if (
-      classification === 'DATOS_INCOMPLETOS' || 
-      classification.includes('INCOMPLETO') || 
-      classification.includes('PARCIAL') ||
-      classification === 'CONSULTA_GENERAL' ||
-      (rawText.length < 130 && !rawText.includes("hab") && !rawText.includes("alcoba") && !rawText.includes("baño") && !rawText.includes("m2"))
-    ) {
-      return '❓';
-    }
-
-    // 3. Requerimientos (Demandas de búsqueda con datos técnicos) -> 📝
+    // 2. Requerimientos (Demandas de búsqueda) -> 📝
     if (
       classification === 'REQUERIMIENTO' || 
       classification.includes('REQUERIMIENTO') || 
@@ -1261,19 +1240,23 @@ export class JaniaMatchBot {
       return '📝';
     }
 
-    // 4. Inmuebles / Ofertas comerciales con datos técnicos -> 👍
+    // 3. Inmuebles / Ofertas comerciales -> 👍
     if (
       classification === 'INMUEBLE' || 
       classification.includes('INMUEBLE') || 
       classification.includes('OFERTA') ||
       result.inmuebleId || 
       result.propertyId ||
-      result.inserted === true
+      result.inserted === true ||
+      rawText.includes("vendo") ||
+      rawText.includes("arriendo") ||
+      rawText.includes("apto") ||
+      rawText.includes("casa")
     ) {
       return '👍';
     }
 
-    return isOfficialGroup ? '❓' : null;
+    return null;
   }
 
 
