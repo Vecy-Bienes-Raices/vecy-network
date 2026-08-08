@@ -2783,9 +2783,9 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
 
   const insertData = {
     ...data,
-    name: safeSlice(data.name || `Propiedad en ${data.city || "Bogotá"}`, 255) || "Propiedad",
-    city: safeSlice(data.city || data.ciudadDeseada || "Bogotá", 100) || "Bogotá",
-    zone: safeSlice(data.zone || "Bogotá", 100) || "Bogotá",
+    name: safeSlice(data.name || `Propiedad en ${data.city || data.zone || "Colombia"}`, 255) || "Propiedad",
+    city: safeSlice(data.city || data.ciudadDeseada, 100) || null,
+    zone: safeSlice(data.zone, 100) || null,
     addressCity: safeSlice(data.addressCity || data.address_city, 100) || null,
     addressLocality: safeSlice(data.addressLocality || data.address_locality, 100) || null,
     addressNeighborhood: safeSlice(data.addressNeighborhood || data.address_neighborhood, 150) || null,
@@ -2797,11 +2797,26 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
     transactionType: sanitizeTransactionType(data.transactionType),
     acceptedTransactionTypes: sanitizeTransactionTypes(data.transactionTypes || data.transactionType),
     currency: sanitizeCurrency(data.currency),
-    // Mapear explícitamente los campos para mayor robustez
-    price: data.price !== undefined && data.price !== null ? String(data.price) : null,
-    // Para venta_o_arriendo: rentPrice guarda el precio de arriendo separado del precio de venta
-    rentPrice: data.rentPrice !== undefined && data.rentPrice !== null ? String(data.rentPrice) : null,
-    areaTotal: data.areaTotal !== undefined && data.areaTotal !== null ? String(data.areaTotal) : (data.area !== undefined && data.area !== null ? String(data.area) : null),
+    // Mapear explícitamente los campos con Sanidad Numérica Post-Extracción (Bug #6 Fix)
+    price: (() => {
+      if (data.price === undefined || data.price === null) return null;
+      const v = parseFloat(String(data.price));
+      if (isNaN(v) || v < 10_000_000 || v > 50_000_000_000) return null;
+      return String(v);
+    })(),
+    rentPrice: (() => {
+      if (data.rentPrice === undefined || data.rentPrice === null) return null;
+      const v = parseFloat(String(data.rentPrice));
+      if (isNaN(v) || v < 300_000 || v > 200_000_000) return null;
+      return String(v);
+    })(),
+    areaTotal: (() => {
+      const raw = data.areaTotal !== undefined && data.areaTotal !== null ? data.areaTotal : data.area;
+      if (raw === undefined || raw === null) return null;
+      const v = parseFloat(String(raw));
+      if (isNaN(v) || v < 10 || v > 5000) return null;
+      return String(v);
+    })(),
     bedrooms: data.bedrooms !== undefined && data.bedrooms !== null ? Math.round(Number(data.bedrooms)) : null,
     bathrooms: data.bathrooms !== undefined && data.bathrooms !== null ? Math.round(Number(data.bathrooms)) : null,
     garages: data.garages !== undefined && data.garages !== null ? Math.round(Number(data.garages)) : null,
@@ -3017,7 +3032,7 @@ async function saveRequirement(data: any, userId: string, realName: string) {
   const insertData = {
     ...data,
     name: safeSlice(data.name, 255) || null,
-    ciudadDeseada: safeSlice(data.ciudadDeseada || data.city || "Bogotá", 100) || "Bogotá",
+    ciudadDeseada: safeSlice(data.ciudadDeseada || data.city, 100) || null,
     zonaDeseada: safeSlice(data.zonaDeseada || data.zone, 100) || null,
     addressCity: safeSlice(data.addressCity || data.address_city, 100) || null,
     addressLocality: safeSlice(data.addressLocality || data.address_locality, 100) || null,
@@ -3028,10 +3043,22 @@ async function saveRequirement(data: any, userId: string, realName: string) {
     tipoNegocioDeseado: sanitizeTransactionType(data.tipoNegocioDeseado || data.transactionType),
     tiposNegocioAceptados: sanitizeTransactionTypes(data.transactionTypes || data.tipoNegocioDeseado || data.transactionType),
     monedaPresupuesto: sanitizeCurrency(data.monedaPresupuesto || data.currency),
-    // Mapear campos desde el formato LLM/WhatsApp (data) a las columnas de la base de datos con Fallbacks de Regex
+    // Mapear campos con Sanidad Numérica Post-Extracción (Bug #6 Fix)
     presupuestoMin: data.presupuestoMin !== undefined && data.presupuestoMin !== null ? String(data.presupuestoMin) : null,
-    presupuestoMax: data.presupuestoMax !== undefined && data.presupuestoMax !== null ? String(data.presupuestoMax) : (data.price !== undefined && data.price !== null ? String(data.price) : null),
-    areaMin: data.areaMin !== undefined && data.areaMin !== null ? String(data.areaMin) : (data.area !== undefined && data.area !== null ? String(data.area) : null),
+    presupuestoMax: (() => {
+      const raw = data.presupuestoMax !== undefined && data.presupuestoMax !== null ? data.presupuestoMax : data.price;
+      if (raw === undefined || raw === null) return null;
+      const v = parseFloat(String(raw));
+      if (isNaN(v) || v < 300_000 || v > 50_000_000_000) return null;
+      return String(v);
+    })(),
+    areaMin: (() => {
+      const raw = data.areaMin !== undefined && data.areaMin !== null ? data.areaMin : data.area;
+      if (raw === undefined || raw === null) return null;
+      const v = parseFloat(String(raw));
+      if (isNaN(v) || v < 10 || v > 5000) return null;
+      return String(v);
+    })(),
     adminFeeMax: data.adminFeeMax !== undefined && data.adminFeeMax !== null ? String(data.adminFeeMax) : (data.adminFee !== undefined && data.adminFee !== null ? String(data.adminFee) : null),
     habitacionesMin: (() => {
       const v = data.habitacionesMin !== undefined && data.habitacionesMin !== null ? Math.round(Number(data.habitacionesMin)) : (data.bedrooms !== undefined && data.bedrooms !== null ? Math.round(Number(data.bedrooms)) : null);

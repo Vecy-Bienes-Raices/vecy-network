@@ -248,6 +248,19 @@ El motor VECY-MATCHING cruza el campo `zone` del inmueble contra el campo `zonaD
 - El PRECIO (`price` / `rentPrice`) DEBE provenir EXPLICITAMENTE de palabras o símbolos monetarios: `$`, `valor`, `precio`, `venta`, `MM`, `millones`, `canon`, `arriendo` (ej. "Valor venta $1,250. MM" → `price: 1250000000`).
 - Si en un mensaje aparece "139 M2" y luego "Valor venta $1,250. MM", el área es 139 m² y el precio de venta es $1.250.000.000 COP.
 
+# 🔢 REGLAS DE SANIDAD NUMÉRICA (OBLIGATORIAS)
+- `area` SOLO se puebla si el texto trae explícitamente un sufijo de superficie
+  (m2, m², mts, mts2, metros, metros cuadrados) asociado directamente a esa cifra.
+  Si no hay sufijo explícito, `area: null` — NUNCA se infiere desde el precio.
+- `price` / `rentPrice` SOLO se pueblan si el texto trae signo $, la palabra
+  "millones", "COP", o formato de miles típico colombiano (950.000.000).
+- Si el texto menciona "precio por metro cuadrado" sin dar la cifra de área,
+  agregar "area" a `missingFields` y dejar `area: null`.
+- Rangos de sanidad post-extracción (rechazar y poner null si están fuera de rango):
+  - area: entre 10 y 5000 m²
+  - price (venta): entre $10.000.000 y $50.000.000.000
+  - rentPrice (arriendo): entre $300.000 y $200.000.000
+
 # 🧠 ALGORITMO DE PERFILAMIENTO HUMANO (BIG TECH MODE)
 Identifica y redacta en el campo `adminStrategy` de `extractedData`:
 1. **ESTILO DE AGENTE**: 'THE ABBREVIATOR' (abrevia todo, prisa), 'THE PROFESSIONAL' (ficha completa), 'THE INCOMPLETE' (olvida datos clave).

@@ -94,35 +94,28 @@ export function extractRealPhone(item: any): string | null {
  * - Un requerimiento de "venta" es compatible con "venta_permuta"
  * - La compatibilidad también revisa el array acceptedTransactionTypes de la propiedad
  */
-function checkTransactionCompatibility(reqType: string, propType: string, propAccepted: string[] = []): boolean {
+const TRANSACTION_COMPATIBILITY_MATRIX: Record<string, Set<string>> = {
+  venta: new Set(["venta", "venta_o_arriendo", "venta_permuta", "arriendo_con_opcion_de_compra"]),
+  arriendo: new Set(["arriendo", "venta_o_arriendo", "arriendo_temporal"]),
+  venta_o_arriendo: new Set(["venta", "arriendo", "venta_o_arriendo", "venta_permuta", "arriendo_temporal", "arriendo_con_opcion_de_compra"]),
+  arriendo_temporal: new Set(["arriendo_temporal", "arriendo", "venta_o_arriendo"]),
+  arriendo_con_opcion_de_compra: new Set(["arriendo_con_opcion_de_compra", "venta", "venta_o_arriendo"]),
+  permuta: new Set(["permuta", "venta_permuta"]),
+  venta_permuta: new Set(["venta_permuta", "venta", "permuta", "venta_o_arriendo"]),
+  aporte: new Set(["aporte"]),
+};
+
+export function checkTransactionCompatibility(reqType: string | null | undefined, propType: string | null | undefined, propAccepted: string[] = []): boolean {
   if (!reqType || !propType) return false;
-  const r = reqType.toLowerCase();
-  const p = propType.toLowerCase();
+  const r = reqType.toLowerCase().trim();
+  const p = propType.toLowerCase().trim();
 
-  // Igualdad exacta siempre aplica
-  if (r === p) return true;
-
-  // Revisar acceptedTransactionTypes de la propiedad
   if (propAccepted.length > 0 && propAccepted.includes(r)) return true;
 
-  // Reglas de compatibilidad cruzada del mercado colombiano (v17.2):
+  const compatibleSet = TRANSACTION_COMPATIBILITY_MATRIX[r];
+  if (!compatibleSet) return false;
 
-  // 1. "venta_o_arriendo": compatible con venta, arriendo o arriendo con opción de compra
-  if (p === "venta_o_arriendo" && (r === "venta" || r === "arriendo" || r === "arriendo_con_opcion_de_compra")) return true;
-  if (r === "venta_o_arriendo" && (p === "venta" || p === "arriendo" || p === "arriendo_con_opcion_de_compra")) return true;
-
-  // 2. "venta_permuta": compatible con venta o permuta
-  if (p === "venta_permuta" && (r === "venta" || r === "permuta")) return true;
-  if (r === "venta_permuta" && (p === "venta" || p === "permuta")) return true;
-
-  // 3. "arriendo_con_opcion_de_compra": compatible con "venta" pura
-  if (p === "arriendo_con_opcion_de_compra" && r === "venta") return true;
-  if (r === "arriendo_con_opcion_de_compra" && p === "venta") return true;
-
-  // NOTA DOCTRINAL VECY (v17.2): "arriendo_con_opcion_de_compra" JAMÁS coincide con "arriendo" puro.
-  // Coincide con: arriendo_con_opcion_de_compra, venta_o_arriendo y venta.
-
-  return false;
+  return compatibleSet.has(p);
 }
 
 /**
@@ -239,12 +232,23 @@ export interface PropertyAddressNumbers {
   carrera?: number;
 }
 
+export function esFormatoCuadrante(texto: string): boolean {
+  if (!texto) return false;
+  const norm = (texto || "").toLowerCase();
+  return (
+    /(?:entre|calle|clle|cll|carrera|cra|autopista|circunvalar|septima)/i.test(norm) &&
+    /\d/.test(norm)
+  );
+}
+
 export function parseStreetCarreraBoundaries(text: string): StreetCarreraBoundaries {
   const norm = (text || "").toLowerCase();
   const res: StreetCarreraBoundaries = {};
 
-  // 1. Rango de Calles: "entre la 106 y la 127", "entre 106 y 127", "calle 100 a 127", "cll 100 a 127", "106 a 127"
-  const streetRangeMatch = norm.match(/(?:entre|de|cll|calle|calles)?\s*(?:la|las)?\s*(\d{1,3})\s*(?:a|y|-|hasta)\s*(?:la|las)?\s*(\d{1,3})/i);
+  // 1. Rango de Calles: "entre la 106 y la 127", "entre 106 y 127", "calle 100 a 127", "cll 100 a 127", "de la 80 a la 94"
+  const streetRangeMatch = norm.match(
+    /(?:entre|de|cll|calle|calles)?\s*(?:la|las)?\s*(?:calle|clle|cll|cna|cera)?\s*(\d{1,3})\s*(?:a|y|-|hasta)\s*(?:la|las)?\s*(?:calle|clle|cll|cna|cera)?\s*(\d{1,3})/i
+  );
   if (streetRangeMatch) {
     const n1 = parseInt(streetRangeMatch[1], 10);
     const n2 = parseInt(streetRangeMatch[2], 10);
@@ -348,6 +352,11 @@ export function matchesGeography(
     if (propNumbers.carrera < reqBoundaries.minCarrera || propNumbers.carrera > reqBoundaries.maxCarrera) {
       return { matches: false, score: 0 };
     }
+  }
+
+  // 1.4 Guard de Cuadrante No Resuelto (Bug #3 Fix)
+  if (esFormatoCuadrante(reqZoneRaw) && !reqBoundaries.minStreet && !reqBoundaries.minCarrera) {
+    return { matches: false, score: 0 };
   }
 
   // Si no se especifica barrio/zona ni localidad en el requerimiento, pasa

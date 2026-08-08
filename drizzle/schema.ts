@@ -68,7 +68,7 @@ export const properties = pgTable("properties", {
   rentPrice: decimal("rent_price", { precision: 15, scale: 2 }), // Precio de arriendo cuando transactionType = venta_o_arriendo
   currency: currencyEnum("currency").default("COP").notNull(),
   pricePerSqm: decimal("pricePerSqm", { precision: 10, scale: 2 }),
-  city: varchar("city", { length: 100 }).notNull().default("Bogotá"),
+  city: varchar("city", { length: 100 }),
   zone: varchar("zone", { length: 100 }).notNull(), // Barrio/Sector (Candidate for refactor to addressNeighborhood)
   addressCity: varchar("address_city", { length: 100 }),
   addressLocality: varchar("address_locality", { length: 100 }), // ej. Usaquén, Suba
@@ -139,7 +139,7 @@ export const requirements = pgTable("requirements", {
   tipoNegocioDeseado: transactionTypeEnum("tipoNegocioDeseado").notNull(),
   // Array of all accepted transaction types for matching flexibility (e.g. ["venta","permuta"])
   tiposNegocioAceptados: text("tipos_negocio_aceptados").array(),
-  ciudadDeseada: varchar("ciudadDeseada", { length: 100 }).notNull().default("Bogotá"),
+  ciudadDeseada: varchar("ciudadDeseada", { length: 100 }),
   zonaDeseada: varchar("zonaDeseada", { length: 100 }), // Candidate for refactor to addressNeighborhood
   addressCity: varchar("address_city", { length: 100 }),
   addressLocality: varchar("address_locality", { length: 100 }),
