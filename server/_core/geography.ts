@@ -288,20 +288,14 @@ export async function validarZona(zona: string, ciudad?: string, textoCompleto?:
     };
   }
 
-  // --- CAPA 0.5: Detección y Resolución de Cuadrantes Viales (ej: "entre la 100 y la 75") v21.15 ---
-  const calleMatch = normZoneLower.match(/entre\s+(?:la\s*)?(\d+)\s+y\s+(?:la\s*)?(\d+)/i);
-  if (calleMatch) {
-    const minSt = Math.min(parseInt(calleMatch[1]), parseInt(calleMatch[2]));
-    const maxSt = Math.max(parseInt(calleMatch[1]), parseInt(calleMatch[2]));
-    console.log(`[Geocoding-Cuadrante] Cuadrante vial detectado: Calles ${minSt} a ${maxSt}`);
-    let resuelto = "Bogotá";
-    if (minSt >= 70 && maxSt <= 106) resuelto = "Chicó, El Virrey, Chicó Norte, Santa Bárbara";
-    else if (minSt >= 127 && maxSt <= 170) resuelto = "Cedritos, Contador, Belmira, Lisboa";
-    else if (minSt >= 100 && maxSt <= 127) resuelto = "Santa Bárbara, La Calleja, Unicentro";
-
+  // --- CAPA 0.5: Resolución Generalizable de Cuadrantes Viales (v21.16 - Addendum v6) ---
+  const cuadranteRes = resolverCuadranteVial(normZoneLower);
+  if (cuadranteRes.resuelto && cuadranteRes.barrios.length > 0) {
+    const resueltoStr = cuadranteRes.barrios.join(", ");
+    console.log(`[Geocoding-Cuadrante] ${cuadranteRes.descripcion} resuelto dinámicamente ➔ "${resueltoStr}"`);
     return {
       isValid: true,
-      barrioCanonico: resuelto,
+      barrioCanonico: resueltoStr,
       localidad: "Bogotá",
       city: "Bogotá",
       isMunicipio: false
@@ -572,4 +566,73 @@ export function desambiguarBarriosCompuestos(zona: string): string[] {
 
   // Sin ambigüedad → devolver zona original como array unitario
   return [zona.trim()];
+}
+
+/**
+ * Resoluidor General de Cuadrantes Viales en Bogotá (v21.16 - Addendum v6)
+ * Parsea rangos de Calles y Carreras dinámicamente y calcula los barrios canónicos incluidos en la retícula vial.
+ */
+export function resolverCuadranteVial(texto: string): { resuelto: boolean; barrios: string[]; descripcion: string } {
+  const norm = texto.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+
+  // 1. Extraer Calles (minStreet y maxStreet)
+  const calleMatch = norm.match(/(?:calle|cll|cl|c|entre\s+la)\s*(\d+)\s*(?:y|a|-|hasta|\s+y\s+la)\s*(\d+)/i) 
+    || norm.match(/entre\s+(?:la\s*)?(\d+)\s+y\s+(?:la\s*)?(\d+)/i);
+
+  if (!calleMatch) {
+    return { resuelto: false, barrios: [], descripcion: "No es un cuadrante vial resoluble por rango de calles" };
+  }
+
+  const minSt = Math.min(parseInt(calleMatch[1]), parseInt(calleMatch[2]));
+  const maxSt = Math.max(parseInt(calleMatch[1]), parseInt(calleMatch[2]));
+
+  // 2. Extraer Carreras / Avenidas si están presentes en la frase
+  const hasAuto = norm.includes("autopista") || norm.includes("auto");
+  const hasCra15 = norm.includes("15") || norm.includes("quince");
+  const hasCra7 = norm.includes("7") || norm.includes("septima") || norm.includes("séptima");
+  const hasCircunvalar = norm.includes("circunvalar");
+
+  // 3. Matriz Urbana Dinámica por Rangos de Calles en Bogotá
+  let candidateBarrios: string[] = [];
+
+  if (minSt >= 1 && maxSt <= 34) {
+    candidateBarrios = ["La Candelaria", "Centro", "Las Nieves", "La Macarena", "Teusaquillo"];
+  } else if (minSt >= 34 && maxSt <= 63) {
+    candidateBarrios = ["Chapinero Central", "Marly", "Palermo", "Teusaquillo", "Galerías"];
+  } else if (minSt >= 63 && maxSt <= 85) {
+    candidateBarrios = ["Chapinero Alto", "Rosales", "El Nogal", "La Cabrera", "Quinta Camacho", "El Lago"];
+  } else if (minSt >= 85 && maxSt <= 106) {
+    candidateBarrios = ["Chicó", "El Virrey", "Chicó Norte", "Chicó Reservado", "La Cabrera"];
+  } else if (minSt >= 106 && maxSt <= 127) {
+    candidateBarrios = ["Santa Bárbara", "La Calleja", "Unicentro", "San Patricio", "El Country"];
+  } else if (minSt >= 127 && maxSt <= 153) {
+    candidateBarrios = ["Cedritos", "Contador", "Belmira", "Lisboa", "Nueva Autopista"];
+  } else if (minSt >= 153 && maxSt <= 175) {
+    candidateBarrios = ["Toberín", "Mazurén", "Gilmar", "Colina Campestre", "Orquídeas"];
+  } else if (minSt >= 175) {
+    candidateBarrios = ["San José de Banderas", "Guaymaral", "San Antonio", "Torca"];
+  } else {
+    // Rango amplio que traslapa sectores (ej. 100 a 140)
+    candidateBarrios = ["Santa Bárbara", "Cedritos", "Unicentro", "Chicó"];
+  }
+
+  // 4. Refinar barrios candidatos según carreras/avenidas si fueron especificadas
+  let finalBarrios = [...candidateBarrios];
+  if (hasAuto && hasCra15) {
+    finalBarrios = candidateBarrios.filter(b => ["Cedritos", "Nueva Autopista", "Contador", "Lisboa", "Chicó Norte", "San Patricio", "Santa Bárbara", "Unicentro"].includes(b));
+  } else if (hasCra15 && hasCra7) {
+    finalBarrios = candidateBarrios.filter(b => ["Cedritos", "Belmira", "Santa Ana", "Chicó", "Rosales", "La Cabrera", "El Country"].includes(b));
+  } else if (hasCircunvalar) {
+    finalBarrios = candidateBarrios.filter(b => ["Rosales", "Chicó Alto", "Santa Ana Alta"].includes(b));
+  }
+
+  if (finalBarrios.length === 0) {
+    finalBarrios = candidateBarrios;
+  }
+
+  return {
+    resuelto: true,
+    barrios: finalBarrios,
+    descripcion: `Cuadrante Calles ${minSt}-${maxSt}`
+  };
 }
