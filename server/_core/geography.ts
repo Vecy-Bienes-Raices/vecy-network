@@ -264,6 +264,50 @@ export async function validarZona(zona: string, ciudad?: string, textoCompleto?:
     };
   }
 
+  // --- CAPA 0: Tabla de Equivalencias Aprendidas de Zona (zone_aliases) v21.15 ---
+  const knownAliasMap: Record<string, string> = {
+    "nueva autopista": "Cedritos",
+    "marlboro": "Chicó Norte",
+    "zona marlboro": "Chicó Norte",
+    "buganvilia": "Bella Suiza",
+    "recodo del country": "El Country",
+    "multicentro": "Santa Bárbara",
+    "bosques del marques": "Bosques de Bella Suiza",
+    "santas": "Santa Bárbara"
+  };
+  const normZoneLower = normZone.toLowerCase().trim();
+  if (knownAliasMap[normZoneLower]) {
+    const resuelto = knownAliasMap[normZoneLower];
+    console.log(`[Geocoding-Alias] Alias de zona resuelto "${zona}" ➔ "${resuelto}" (vía zone_aliases, sin gastar Maps API)`);
+    return {
+      isValid: true,
+      barrioCanonico: resuelto,
+      localidad: "Bogotá",
+      city: "Bogotá",
+      isMunicipio: false
+    };
+  }
+
+  // --- CAPA 0.5: Detección y Resolución de Cuadrantes Viales (ej: "entre la 100 y la 75") v21.15 ---
+  const calleMatch = normZoneLower.match(/entre\s+(?:la\s*)?(\d+)\s+y\s+(?:la\s*)?(\d+)/i);
+  if (calleMatch) {
+    const minSt = Math.min(parseInt(calleMatch[1]), parseInt(calleMatch[2]));
+    const maxSt = Math.max(parseInt(calleMatch[1]), parseInt(calleMatch[2]));
+    console.log(`[Geocoding-Cuadrante] Cuadrante vial detectado: Calles ${minSt} a ${maxSt}`);
+    let resuelto = "Bogotá";
+    if (minSt >= 70 && maxSt <= 106) resuelto = "Chicó, El Virrey, Chicó Norte, Santa Bárbara";
+    else if (minSt >= 127 && maxSt <= 170) resuelto = "Cedritos, Contador, Belmira, Lisboa";
+    else if (minSt >= 100 && maxSt <= 127) resuelto = "Santa Bárbara, La Calleja, Unicentro";
+
+    return {
+      isValid: true,
+      barrioCanonico: resuelto,
+      localidad: "Bogotá",
+      city: "Bogotá",
+      isMunicipio: false
+    };
+  }
+
   // --- CAPA DE GEOLOCALIZACIÓN 1: Google Maps Geocoding API ---
   const queryAddress = ciudad && normalizarTextoGeografico(ciudad) !== "bogota"
     ? `${zona}, ${ciudad}, Colombia`

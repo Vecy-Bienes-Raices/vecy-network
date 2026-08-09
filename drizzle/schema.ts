@@ -445,3 +445,19 @@ export const userPatterns = pgTable("user_patterns", {
 
 export type UserPattern = typeof userPatterns.$inferSelect;
 export type InsertUserPattern = typeof userPatterns.$inferInsert;
+
+/**
+ * Tabla de Equivalencias Aprendidas de Zona (zoneAliases) - v21.15 Addendum v6
+ */
+export const zoneAliases = pgTable("zone_aliases", {
+  id: serial("id").primaryKey(),
+  aliasTexto: varchar("alias_texto", { length: 150 }).notNull(),
+  ciudad: varchar("ciudad", { length: 100 }).notNull().default("Bogotá"),
+  barrioResuelto: varchar("barrio_resuelto", { length: 150 }).notNull(),
+  confianza: varchar("confianza", { length: 20 }).default("alta"), // 'alta' | 'media' | 'baja'
+  fuente: varchar("fuente", { length: 50 }).default("manual"), // 'manual' | 'geocoding_confirmado' | 'ia_inferido'
+  createdAt: timestamp("created_at").defaultNow()
+});
+
+export type ZoneAlias = typeof zoneAliases.$inferSelect;
+export type InsertZoneAlias = typeof zoneAliases.$inferInsert;
