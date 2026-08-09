@@ -359,9 +359,10 @@ export function matchesGeography(
     return { matches: false, score: 0 };
   }
 
-  // Si no se especifica barrio/zona ni localidad en el requerimiento, pasa
-  if (!reqZone && !reqLoc) {
-    return { matches: true, score: 25 }; // Todo el municipio pasa
+  // Si la zona/localidad requerida es genérica (ej. "bogota", "medellin", "cali" o vacía), cualquier propiedad en esa ciudad es 100% compatible
+  const stopCities = new Set(["bogota", "bogotá", "medellin", "medellín", "cali", "barranquilla", "cartagena", "bucaramanga", "colombia"]);
+  if (!reqZone || stopCities.has(reqZone.toLowerCase().trim())) {
+    return { matches: true, score: 20 };
   }
 
   // 1.5 Guard de Sub-barrios y Micro-sectores Estrictos (v20.0 Precisión Catastral)
@@ -1111,8 +1112,8 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
 
   // ── FILTRO DURO 4: Ubicación / Barrio Estricto (Incluye cuadrante perimetral) ──
   const geoResult = matchesGeography(
-    `${requirement.zonaDeseada || ""} ${requirement.addressNeighborhood || ""} ${requirement.rawText || ""}`,
-    `${property.zone || ""} ${property.addressNeighborhood || ""} ${property.rawText || ""}`,
+    requirement.zonaDeseada || requirement.addressNeighborhood || "",
+    property.zone || property.addressNeighborhood || "",
     requirement.addressLocality || "",
     property.addressLocality || "",
     requirement.ciudadDeseada || requirement.city || "",

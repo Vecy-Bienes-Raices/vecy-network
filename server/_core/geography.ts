@@ -288,11 +288,11 @@ export async function validarZona(zona: string, ciudad?: string, textoCompleto?:
     };
   }
 
-  // --- CAPA 0.5: Resolución Generalizable de Cuadrantes Viales (v21.16 - Addendum v6) ---
-  const cuadranteRes = resolverCuadranteVial(normZoneLower);
+  // --- CAPA 0.5: Resolución Generalizable de Cuadrantes Viales (v21.16 - Addendum v6 / IDECA Spatial) ---
+  const cuadranteRes = await resolverCuadranteVial(normZoneLower);
   if (cuadranteRes.resuelto && cuadranteRes.barrios.length > 0) {
     const resueltoStr = cuadranteRes.barrios.join(", ");
-    console.log(`[Geocoding-Cuadrante] ${cuadranteRes.descripcion} resuelto dinámicamente ➔ "${resueltoStr}"`);
+    console.log(`[Geocoding-Cuadrante] ${cuadranteRes.descripcion} resuelto [${cuadranteRes.confianza}] ➔ "${resueltoStr}"`);
     return {
       isValid: true,
       barrioCanonico: resueltoStr,
@@ -569,10 +569,11 @@ export function desambiguarBarriosCompuestos(zona: string): string[] {
 }
 
 /**
- * Resoluidor General de Cuadrantes Viales en Bogotá (v21.16 - Addendum v6)
- * Parsea rangos de Calles y Carreras dinámicamente y calcula los barrios canónicos incluidos en la retícula vial.
+ * Resoluidor General de Cuadrantes Viales en Bogotá (v21.18 - IDECA Spatial + Fallback)
+ * Realiza intersección geométrica espacial ST_Intersects / ST_MakeEnvelope sobre barrios_bogota_geojson en Supabase.
+ * Mantiene la tabla fija únicamente como fallback de respaldo con confianza 'aproximada'.
  */
-export function resolverCuadranteVial(texto: string): { resuelto: boolean; barrios: string[]; descripcion: string } {
+export async function resolverCuadranteVial(texto: string): Promise<{ resuelto: boolean; barrios: string[]; descripcion: string; confianza: string }> {
   const norm = texto.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
 
   // 1. Extraer Calles (minStreet y maxStreet)
@@ -580,19 +581,61 @@ export function resolverCuadranteVial(texto: string): { resuelto: boolean; barri
     || norm.match(/entre\s+(?:la\s*)?(\d+)\s+y\s+(?:la\s*)?(\d+)/i);
 
   if (!calleMatch) {
-    return { resuelto: false, barrios: [], descripcion: "No es un cuadrante vial resoluble por rango de calles" };
+    return { resuelto: false, barrios: [], descripcion: "No es un cuadrante vial resoluble por rango de calles", confianza: "ninguna" };
   }
 
   const minSt = Math.min(parseInt(calleMatch[1]), parseInt(calleMatch[2]));
   const maxSt = Math.max(parseInt(calleMatch[1]), parseInt(calleMatch[2]));
 
   // 2. Extraer Carreras / Avenidas si están presentes en la frase
-  const hasAuto = norm.includes("autopista") || norm.includes("auto");
-  const hasCra15 = norm.includes("15") || norm.includes("quince");
-  const hasCra7 = norm.includes("7") || norm.includes("septima") || norm.includes("séptima");
-  const hasCircunvalar = norm.includes("circunvalar");
+  const craMatch = norm.match(/(?:carrera|cra|cr|kr|cpr|entre\s+la\s+carrera)\s*(\d+)\s*(?:y|a|-|hasta|\s+y\s+la)\s*(\d+)/i);
+  let minCra: number | undefined;
+  let maxCra: number | undefined;
+  if (craMatch) {
+    minCra = Math.min(parseInt(craMatch[1]), parseInt(craMatch[2]));
+    maxCra = Math.max(parseInt(craMatch[1]), parseInt(craMatch[2]));
+  } else if (norm.includes("autopista") || norm.includes("auto")) {
+    minCra = 15;
+    maxCra = 45;
+  } else if (norm.includes("7") || norm.includes("septima") || norm.includes("séptima")) {
+    minCra = 1;
+    maxCra = 15;
+  }
 
-  // 3. Matriz Urbana Dinámica por Rangos de Calles en Bogotá
+  // 3. Consulta de Intersección Geométrica Espacial PostGIS sobre barrios_bogota_geojson en Supabase
+  try {
+    const db = await getDb();
+    if (db) {
+      const minLat = 4.597 + (minSt * 0.00094);
+      const maxLat = 4.597 + (maxSt * 0.00094);
+      const minLon = maxCra ? (-74.045 - (maxCra * 0.00095)) : -74.080;
+      const maxLon = minCra ? (-74.045 - (minCra * 0.00095)) : -74.025;
+
+      const rows: any = await db.execute(sql`
+        SELECT DISTINCT scanombre
+        FROM barrios_bogota_geojson
+        WHERE ST_Intersects(
+          geometry,
+          ST_MakeEnvelope(${minLon}, ${minLat}, ${maxLon}, ${maxLat}, 4326)
+        )
+        ORDER BY scanombre;
+      `);
+
+      if (rows && rows.length > 0) {
+        const barrios = rows.map((r: any) => String(r.scanombre).trim());
+        return {
+          resuelto: true,
+          barrios,
+          descripcion: `Intersección espacial IDECA (${barrios.length} sectores catastrales)`,
+          confianza: "alta_geometria_ideca"
+        };
+      }
+    }
+  } catch (err) {
+    console.error("[Geocoding-Cuadrante-Spatial] Error consultando barrios_bogota_geojson:", err);
+  }
+
+  // 4. FALLBACK DE RESPALDO CON TABLA FIJA (Confianza Aproximada)
   let candidateBarrios: string[] = [];
 
   if (minSt >= 1 && maxSt <= 34) {
@@ -604,7 +647,7 @@ export function resolverCuadranteVial(texto: string): { resuelto: boolean; barri
   } else if (minSt >= 85 && maxSt <= 106) {
     candidateBarrios = ["Chicó", "El Virrey", "Chicó Norte", "Chicó Reservado", "La Cabrera"];
   } else if (minSt >= 106 && maxSt <= 127) {
-    candidateBarrios = ["Santa Bárbara", "La Calleja", "Unicentro", "San Patricio", "El Country"];
+    candidateBarrios = ["Santa Bárbara Occidental", "Santa Bárbara Central", "Santa Bárbara Oriental", "La Calleja", "Unicentro", "San Patricio", "El Country"];
   } else if (minSt >= 127 && maxSt <= 153) {
     candidateBarrios = ["Cedritos", "Contador", "Belmira", "Lisboa", "Nueva Autopista"];
   } else if (minSt >= 153 && maxSt <= 175) {
@@ -612,27 +655,13 @@ export function resolverCuadranteVial(texto: string): { resuelto: boolean; barri
   } else if (minSt >= 175) {
     candidateBarrios = ["San José de Banderas", "Guaymaral", "San Antonio", "Torca"];
   } else {
-    // Rango amplio que traslapa sectores (ej. 100 a 140)
     candidateBarrios = ["Santa Bárbara", "Cedritos", "Unicentro", "Chicó"];
-  }
-
-  // 4. Refinar barrios candidatos según carreras/avenidas si fueron especificadas
-  let finalBarrios = [...candidateBarrios];
-  if (hasAuto && hasCra15) {
-    finalBarrios = candidateBarrios.filter(b => ["Cedritos", "Nueva Autopista", "Contador", "Lisboa", "Chicó Norte", "San Patricio", "Santa Bárbara", "Unicentro"].includes(b));
-  } else if (hasCra15 && hasCra7) {
-    finalBarrios = candidateBarrios.filter(b => ["Cedritos", "Belmira", "Santa Ana", "Chicó", "Rosales", "La Cabrera", "El Country"].includes(b));
-  } else if (hasCircunvalar) {
-    finalBarrios = candidateBarrios.filter(b => ["Rosales", "Chicó Alto", "Santa Ana Alta"].includes(b));
-  }
-
-  if (finalBarrios.length === 0) {
-    finalBarrios = candidateBarrios;
   }
 
   return {
     resuelto: true,
-    barrios: finalBarrios,
-    descripcion: `Cuadrante Calles ${minSt}-${maxSt}`
+    barrios: candidateBarrios,
+    descripcion: `Cuadrante Calles ${minSt}-${maxSt} (Fallback Respaldo Matriz)`,
+    confianza: "aproximada"
   };
 }

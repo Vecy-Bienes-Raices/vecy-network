@@ -363,7 +363,7 @@ export function extractFallbackDataFromText(text: string): any {
   }
 
   let price = 0;
-  const millonMatch = text.match(/(\d+(?:[\.,]\d+)?)\s*(?:millon|millones|mm|m)/i);
+  const millonMatch = text.match(/(\d+(?:[\.,]\d+)?)\s*(?:millon|millones|millón|mill|mm)\b/i);
   if (millonMatch) {
     const val = parseFloat(millonMatch[1].replace(',', '.'));
     price = val * 1000000;
@@ -1995,8 +1995,12 @@ Por lo tanto, DEBES hacer lo siguiente:
       const fallbackData = extractFallbackDataFromText(messageToProcess);
       if (!extracted.transactionType) extracted.transactionType = fallbackData.transactionType;
       if (!extracted.propertyType) extracted.propertyType = fallbackData.propertyType;
-      if (!extracted.price || Number(extracted.price) === 0) extracted.price = fallbackData.price;
-      if (!extracted.presupuestoMax || Number(extracted.presupuestoMax) === 0) extracted.presupuestoMax = fallbackData.price;
+      if (!extracted.price || Number(extracted.price) === 0 || fallbackData.price > 0) {
+        extracted.price = fallbackData.price;
+      }
+      if (!extracted.presupuestoMax || Number(extracted.presupuestoMax) === 0 || fallbackData.price > 0) {
+        extracted.presupuestoMax = fallbackData.price;
+      }
       if (!extracted.area || Number(extracted.area) === 0) extracted.area = fallbackData.area;
       if (!extracted.bedrooms) extracted.bedrooms = fallbackData.bedrooms;
       if (!extracted.bathrooms) extracted.bathrooms = fallbackData.bathrooms;
@@ -2303,7 +2307,7 @@ Por lo tanto, DEBES hacer lo siguiente:
         tipoInmuebleDeseado: extracted.propertyType,
         tipoNegocioDeseado: extracted.transactionType,
         zonaDeseada: extracted.zonaDeseada || extracted.zone,
-        presupuestoMax: String(extracted.price || 0),
+        presupuestoMax: String(extracted.presupuestoMax || extracted.price || 0),
         idUsuarioWhatsapp: rawPhone,
         rawText: messageToProcess,
         caracteristicasDeseadas: { gives: extracted.gives, wants: extracted.wants },

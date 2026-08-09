@@ -50,9 +50,7 @@ async function invokeGemini(
   const API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || ENV.forgeApiKey;
   
   // Ruteo Optimizado por Costos (v21.10):
-  // - Extracción de Inmuebles/Requerimientos (JSON): gemini-2.5-flash-lite (75% más económico)
-  // - Asesoría Legal / Conversación Activa (Texto/Tools): gemini-2.5-flash
-  const MODEL = customModel || (responseFormat?.type === "json_object" ? "gemini-2.5-flash-lite" : "gemini-2.5-flash");
+  const MODEL = customModel || "gemini-2.5-flash";
   const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${API_KEY}`;
 
   const MAX_RETRIES = 3;
