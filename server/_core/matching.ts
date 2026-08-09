@@ -1609,11 +1609,16 @@ export async function findMatchesForProperty(propertyId: number) {
     const [property] = await db.select().from(properties).where(eq(properties.id, propertyId));
     if (!property) return [];
 
-    // Carga TODOS los requerimientos activos — el score se encarga de filtrar compatibilidad
+    // Carga requerimientos activos en la misma ciudad para pre-filtrado rápido (Guillotina Capa 2 - Addendum v7)
     const activeRequirements = await db
       .select()
       .from(requirements)
-      .where(eq(requirements.status, "active"));
+      .where(
+        and(
+          eq(requirements.status, "active"),
+          sql`LOWER(${requirements.ciudadDeseada}) = LOWER(${property.city || 'Bogotá'})`
+        )
+      );
 
     const validMatches = [];
 
@@ -1683,11 +1688,16 @@ export async function findMatchesForRequirement(requirementId: number) {
     const [req] = await db.select().from(requirements).where(eq(requirements.id, requirementId));
     if (!req) return [];
 
-    // Carga TODOS los inmuebles disponibles — el score se encarga de filtrar compatibilidad
+    // Carga inmuebles disponibles en la misma ciudad para pre-filtrado rápido (Guillotina Capa 2 - Addendum v7)
     const availableProperties = await db
       .select()
       .from(properties)
-      .where(eq(properties.available, true));
+      .where(
+        and(
+          eq(properties.available, true),
+          sql`LOWER(${properties.city}) = LOWER(${req.ciudadDeseada || 'Bogotá'})`
+        )
+      );
 
     const validMatches = [];
 

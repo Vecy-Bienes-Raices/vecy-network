@@ -15,6 +15,16 @@ import { esDominioPermitido, extractPortalAndListingId } from "./scraper";
 import fs from "fs";
 import path from "path";
 import axios from "axios";
+import crypto from "crypto";
+
+export function generarHashMensaje(rawText: string, remitente: string): string {
+  const normalizado = (rawText || "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .replace(/[^\w\s]/g, "")
+    .trim();
+  return crypto.createHash("sha256").update(`${remitente}:${normalizado}`).digest("hex");
+}
 
 
 export type JanIAResult = {
