@@ -2788,6 +2788,47 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
     console.log(`[Matching-Guard] Bloqueo 0%: Requerimiento busca Sabana Norte (${reqZoneRaw}) pero inmueble est\xE1 en Bogot\xE1 Urbano (${propZoneRaw})`);
     return { matches: false, score: 0 };
   }
+  const GENERIC_CARDINAL_TERMS = /* @__PURE__ */ new Set([
+    "norte",
+    "sur",
+    "oriente",
+    "occidente",
+    "centro",
+    "sabana",
+    "sabana norte",
+    "sabana occidente",
+    "zona norte",
+    "zona sur",
+    "zona oriente",
+    "zona occidente",
+    "zona centro",
+    "bogota norte",
+    "bogot\xE1 norte",
+    "bogota sur",
+    "bogot\xE1 sur",
+    "bogota centro",
+    "bogot\xE1 centro",
+    "bogota occidente",
+    "bogot\xE1 occidente",
+    "cualquiera",
+    "varias zonas",
+    "varios barrios",
+    "toda la ciudad",
+    "sin especificar",
+    "n/e",
+    "na",
+    "n/a",
+    "por definir"
+  ]);
+  const isReqGeneric = !reqZone || GENERIC_CARDINAL_TERMS.has(reqZone.toLowerCase().trim());
+  const isPropGeneric = !propZone || GENERIC_CARDINAL_TERMS.has(propZone.toLowerCase().trim());
+  if (isReqGeneric || isPropGeneric) {
+    const hasStreetBoundaryMatch = propNumbers.street && reqBoundaries.minStreet && propNumbers.street >= reqBoundaries.minStreet && propNumbers.street <= reqBoundaries.maxStreet || propNumbers.carrera && reqBoundaries.minCarrera && propNumbers.carrera >= reqBoundaries.minCarrera && propNumbers.carrera <= reqBoundaries.maxCarrera;
+    if (!hasStreetBoundaryMatch) {
+      console.log(`[Matching-Guard] Bloqueo 0%: Ubicaci\xF3n gen\xE9rica o no especificada en barrio/vereda real ('${reqZoneRaw}' \u2194 '${propZoneRaw}').`);
+      return { matches: false, score: 0 };
+    }
+  }
   const stopCities = /* @__PURE__ */ new Set(["bogota", "bogot\xE1", "medellin", "medell\xEDn", "cali", "barranquilla", "cartagena", "bucaramanga", "colombia"]);
   if (!reqZone || stopCities.has(reqZone.toLowerCase().trim())) {
     return { matches: true, score: 20 };
@@ -4729,17 +4770,25 @@ function extractFallbackDataFromText(text2) {
   } else if (clean.includes("medellin") || clean.includes("poblado") || clean.includes("laureles")) {
     city = "Medell\xEDn";
   }
-  let zone = "Bogot\xE1";
-  if (clean.includes("chico reservado")) zone = "Chic\xF3 Reservado";
+  let zone = "";
+  if (clean.includes("villa magdala")) zone = "Villa Magdala";
+  else if (clean.includes("chico reservado")) zone = "Chic\xF3 Reservado";
   else if (clean.includes("chico")) zone = "Chic\xF3";
-  else if (clean.includes("santa barbara")) zone = "Santa B\xE1rbara";
+  else if (clean.includes("santa barbara") || clean.includes("santa b\xE1rbara")) zone = "Santa B\xE1rbara";
   else if (clean.includes("la cabrera")) zone = "La Cabrera";
   else if (clean.includes("rosales")) zone = "Rosales";
-  else if (clean.includes("emaus")) zone = "Ema\xFAs";
+  else if (clean.includes("emaus") || clean.includes("ema\xFAs")) zone = "Ema\xFAs";
   else if (clean.includes("colina")) zone = "Colina Campestre";
-  else if (clean.includes("ciudad melendez")) zone = "Ciudad Mel\xE9ndez";
-  else if (clean.includes("ciudad jardin")) zone = "Ciudad Jard\xEDn";
-  else if (clean.includes("norte")) zone = "Norte";
+  else if (clean.includes("ciudad melendez") || clean.includes("ciudad mel\xE9ndez")) zone = "Ciudad Mel\xE9ndez";
+  else if (clean.includes("ciudad jardin") || clean.includes("ciudad jard\xEDn")) zone = "Ciudad Jard\xEDn";
+  else if (clean.includes("cedritos")) zone = "Cedritos";
+  else if (clean.includes("bella suiza")) zone = "Bella Suiza";
+  else if (clean.includes("usaquen") || clean.includes("usaqu\xE9n")) zone = "Usaqu\xE9n";
+  else if (clean.includes("niza")) zone = "Niza";
+  else if (clean.includes("pasadena")) zone = "Pasadena";
+  else if (clean.includes("batan") || clean.includes("bat\xE1n")) zone = "Bat\xE1n";
+  else if (clean.includes("alhambra")) zone = "Alhambra";
+  else if (clean.includes("pontevedra")) zone = "Pontevedra";
   return {
     propertyType,
     transactionType,

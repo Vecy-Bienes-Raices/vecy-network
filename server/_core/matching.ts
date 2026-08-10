@@ -374,7 +374,30 @@ export function matchesGeography(
     return { matches: false, score: 0 };
   }
 
-  // Si la zona/localidad requerida es genérica (ej. "bogota", "medellin", "cali" o vacía), cualquier propiedad en esa ciudad es compatible
+  // 1.45 Guard Doctrinal v21.21: Cardinales y Zonas Genéricas ("Norte", "Sur", "Oriente", "Occidente", "Centro", "Sabana")
+  // "Norte" NO es un barrio ni vereda. No puede coincidir como nombre de barrio ni dar 20 puntos por coincidir la palabra "Norte".
+  const GENERIC_CARDINAL_TERMS = new Set([
+    "norte", "sur", "oriente", "occidente", "centro", "sabana", "sabana norte", "sabana occidente",
+    "zona norte", "zona sur", "zona oriente", "zona occidente", "zona centro",
+    "bogota norte", "bogotá norte", "bogota sur", "bogotá sur", "bogota centro", "bogotá centro",
+    "bogota occidente", "bogotá occidente", "cualquiera", "varias zonas", "varios barrios",
+    "toda la ciudad", "sin especificar", "n/e", "na", "n/a", "por definir"
+  ]);
+
+  const isReqGeneric = !reqZone || GENERIC_CARDINAL_TERMS.has(reqZone.toLowerCase().trim());
+  const isPropGeneric = !propZone || GENERIC_CARDINAL_TERMS.has(propZone.toLowerCase().trim());
+
+  // Si la zona es genérica (ej: "Norte") y NO hay delimitación vial de calles/carreras coincidentes ni barrio específico, BLOQUEAR (0%)
+  if (isReqGeneric || isPropGeneric) {
+    const hasStreetBoundaryMatch = (propNumbers.street && reqBoundaries.minStreet && propNumbers.street >= reqBoundaries.minStreet && propNumbers.street <= reqBoundaries.maxStreet)
+                                || (propNumbers.carrera && reqBoundaries.minCarrera && propNumbers.carrera >= reqBoundaries.minCarrera && propNumbers.carrera <= reqBoundaries.maxCarrera);
+    if (!hasStreetBoundaryMatch) {
+      console.log(`[Matching-Guard] Bloqueo 0%: Ubicación genérica o no especificada en barrio/vereda real ('${reqZoneRaw}' ↔ '${propZoneRaw}').`);
+      return { matches: false, score: 0 };
+    }
+  }
+
+  // Si la zona/localidad requerida es genérica de ciudad (ej. "bogota", "medellin", "cali"), y hay barrio en la propiedad
   const stopCities = new Set(["bogota", "bogotá", "medellin", "medellín", "cali", "barranquilla", "cartagena", "bucaramanga", "colombia"]);
   if (!reqZone || stopCities.has(reqZone.toLowerCase().trim())) {
     return { matches: true, score: 20 };

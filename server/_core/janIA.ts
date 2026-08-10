@@ -399,17 +399,26 @@ export function extractFallbackDataFromText(text: string): any {
     city = "Medellín";
   }
 
-  let zone = "Bogotá";
-  if (clean.includes("chico reservado")) zone = "Chicó Reservado";
+  let zone = "";
+  if (clean.includes("villa magdala")) zone = "Villa Magdala";
+  else if (clean.includes("chico reservado")) zone = "Chicó Reservado";
   else if (clean.includes("chico")) zone = "Chicó";
-  else if (clean.includes("santa barbara")) zone = "Santa Bárbara";
+  else if (clean.includes("santa barbara") || clean.includes("santa bárbara")) zone = "Santa Bárbara";
   else if (clean.includes("la cabrera")) zone = "La Cabrera";
   else if (clean.includes("rosales")) zone = "Rosales";
-  else if (clean.includes("emaus")) zone = "Emaús";
+  else if (clean.includes("emaus") || clean.includes("emaús")) zone = "Emaús";
   else if (clean.includes("colina")) zone = "Colina Campestre";
-  else if (clean.includes("ciudad melendez")) zone = "Ciudad Meléndez";
-  else if (clean.includes("ciudad jardin")) zone = "Ciudad Jardín";
-  else if (clean.includes("norte")) zone = "Norte";
+  else if (clean.includes("ciudad melendez") || clean.includes("ciudad meléndez")) zone = "Ciudad Meléndez";
+  else if (clean.includes("ciudad jardin") || clean.includes("ciudad jardín")) zone = "Ciudad Jardín";
+  else if (clean.includes("cedritos")) zone = "Cedritos";
+  else if (clean.includes("bella suiza")) zone = "Bella Suiza";
+  else if (clean.includes("usaquen") || clean.includes("usaquén")) zone = "Usaquén";
+  else if (clean.includes("niza")) zone = "Niza";
+  else if (clean.includes("pasadena")) zone = "Pasadena";
+  else if (clean.includes("batan") || clean.includes("batán")) zone = "Batán";
+  else if (clean.includes("alhambra")) zone = "Alhambra";
+  else if (clean.includes("pontevedra")) zone = "Pontevedra";
+  // Cardinales genericos ("Norte", "Sur", etc.) NO son barrios y quedan vacios (zone = "")
 
   return {
     propertyType,

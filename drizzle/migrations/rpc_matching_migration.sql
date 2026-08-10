@@ -85,8 +85,20 @@ BEGIN
 
         -- A. Discrepancia Municipal (Guaduas vs Bogotá, Medellín vs Cali)
         IF v_req_city <> '' AND v_prop_city <> '' AND v_req_city <> v_prop_city 
-           AND v_req_city NOT IN ('bogota', 'norte') AND v_prop_city NOT IN ('bogota', 'norte') THEN
+           AND v_req_city NOT IN ('bogota') AND v_prop_city NOT IN ('bogota') THEN
             CONTINUE;
+        END IF;
+
+        -- A2. Guard Cardinales y Zonas Genéricas ("Norte", "Sur", "Oriente", "Occidente", "Centro", "Sabana", "NA", "N/E")
+        -- "Norte" NO es un barrio ni vereda. Si no hay barrio/vereda específico ni cuadrante vial, DESCARTAR (0%).
+        IF v_req_zone IN ('norte', 'sur', 'oriente', 'occidente', 'centro', 'sabana', 'sabana norte', 'na', 'n/e', 'por definir', '')
+           OR v_prop_zone IN ('norte', 'sur', 'oriente', 'occidente', 'centro', 'sabana', 'sabana norte', 'na', 'n/e', 'por definir', '') THEN
+            IF NOT (
+                (v_req_zone LIKE '%cll%' OR v_req_zone LIKE '%calle%' OR v_req_zone LIKE '%cra%' OR v_req_zone LIKE '%carrera%')
+                AND (v_prop_zone LIKE '%cll%' OR v_prop_zone LIKE '%calle%' OR v_prop_zone LIKE '%cra%' OR v_prop_zone LIKE '%carrera%')
+            ) THEN
+                CONTINUE;
+            END IF;
         END IF;
 
         -- B. Guard Sabana Norte Campestre vs Bogotá Urbano Denso
@@ -123,9 +135,12 @@ BEGIN
         v_trans_score := CASE WHEN v_req_trans = v_prop_trans THEN 15.0 ELSE 10.0 END;
         
         -- Ubicación (20 pts)
-        IF v_req_zone <> '' AND v_prop_zone <> '' AND (v_req_zone LIKE '%' || v_prop_zone || '%' OR v_prop_zone LIKE '%' || v_req_zone || '%') THEN
+        IF v_req_zone <> '' AND v_prop_zone <> '' 
+           AND v_req_zone NOT IN ('norte', 'sur', 'oriente', 'occidente', 'centro', 'sabana', 'na', 'n/e')
+           AND v_prop_zone NOT IN ('norte', 'sur', 'oriente', 'occidente', 'centro', 'sabana', 'na', 'n/e')
+           AND (v_req_zone LIKE '%' || v_prop_zone || '%' OR v_prop_zone LIKE '%' || v_req_zone || '%') THEN
             v_zone_score := 20.0;
-        ELSIF v_req_city = v_prop_city THEN
+        ELSIF v_req_city <> '' AND v_prop_city <> '' AND v_req_city = v_prop_city THEN
             v_zone_score := 15.0;
         ELSE
             v_zone_score := 10.0;
@@ -289,8 +304,19 @@ BEGIN
 
         -- A. Discrepancia Municipal
         IF v_req_city <> '' AND v_prop_city <> '' AND v_req_city <> v_prop_city 
-           AND v_req_city NOT IN ('bogota', 'norte') AND v_prop_city NOT IN ('bogota', 'norte') THEN
+           AND v_req_city NOT IN ('bogota') AND v_prop_city NOT IN ('bogota') THEN
             CONTINUE;
+        END IF;
+
+        -- A2. Guard Cardinales y Zonas Genéricas ("Norte", "Sur", "Oriente", "Occidente", "Centro", "Sabana", "NA", "N/E")
+        IF v_req_zone IN ('norte', 'sur', 'oriente', 'occidente', 'centro', 'sabana', 'sabana norte', 'na', 'n/e', 'por definir', '')
+           OR v_prop_zone IN ('norte', 'sur', 'oriente', 'occidente', 'centro', 'sabana', 'sabana norte', 'na', 'n/e', 'por definir', '') THEN
+            IF NOT (
+                (v_req_zone LIKE '%cll%' OR v_req_zone LIKE '%calle%' OR v_req_zone LIKE '%cra%' OR v_req_zone LIKE '%carrera%')
+                AND (v_prop_zone LIKE '%cll%' OR v_prop_zone LIKE '%calle%' OR v_prop_zone LIKE '%cra%' OR v_prop_zone LIKE '%carrera%')
+            ) THEN
+                CONTINUE;
+            END IF;
         END IF;
 
         -- B. Guard Sabana Norte vs Bogotá Urbano
@@ -327,9 +353,12 @@ BEGIN
         v_trans_score := CASE WHEN v_req_trans = v_prop_trans THEN 15.0 ELSE 10.0 END;
         
         -- Ubicación (20 pts)
-        IF v_req_zone <> '' AND v_prop_zone <> '' AND (v_req_zone LIKE '%' || v_prop_zone || '%' OR v_prop_zone LIKE '%' || v_req_zone || '%') THEN
+        IF v_req_zone <> '' AND v_prop_zone <> '' 
+           AND v_req_zone NOT IN ('norte', 'sur', 'oriente', 'occidente', 'centro', 'sabana', 'na', 'n/e')
+           AND v_prop_zone NOT IN ('norte', 'sur', 'oriente', 'occidente', 'centro', 'sabana', 'na', 'n/e')
+           AND (v_req_zone LIKE '%' || v_prop_zone || '%' OR v_prop_zone LIKE '%' || v_req_zone || '%') THEN
             v_zone_score := 20.0;
-        ELSIF v_req_city = v_prop_city THEN
+        ELSIF v_req_city <> '' AND v_prop_city <> '' AND v_req_city = v_prop_city THEN
             v_zone_score := 15.0;
         ELSE
             v_zone_score := 10.0;
