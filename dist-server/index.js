@@ -45,10 +45,13 @@ __export(schema_exports, {
   statusEnum: () => statusEnum,
   supplyLevelEnum: () => supplyLevelEnum,
   transactionTypeEnum: () => transactionTypeEnum,
-  users: () => users
+  userBehavioralFingerprints: () => userBehavioralFingerprints,
+  userPatterns: () => userPatterns,
+  users: () => users,
+  zoneAliases: () => zoneAliases
 });
 import { serial, integer, pgEnum, pgTable, text, timestamp, varchar, decimal, boolean, jsonb, bigint, uuid } from "drizzle-orm/pg-core";
-var roleEnum, propertyTypeEnum, transactionTypeEnum, mandateStatusEnum, mandateTypeEnum, inquiryTypeEnum, leadStatusEnum, conversationStatusEnum, matchStatusEnum, statusEnum, messageTypeEnum, demandLevelEnum, supplyLevelEnum, marketTrendEnum, currencyEnum, users, properties, requirements, leads, conversations, messages, propertyMatches, notificationLogs, pendingSessions, referralLinks, shares, clientLedger, propertyImages, marketAnalysis, favorites, colombiaGeography, profiles, counters, solicitudes, propertyPublicationHistory;
+var roleEnum, propertyTypeEnum, transactionTypeEnum, mandateStatusEnum, mandateTypeEnum, inquiryTypeEnum, leadStatusEnum, conversationStatusEnum, matchStatusEnum, statusEnum, messageTypeEnum, demandLevelEnum, supplyLevelEnum, marketTrendEnum, currencyEnum, users, properties, requirements, leads, conversations, messages, propertyMatches, notificationLogs, pendingSessions, referralLinks, shares, clientLedger, propertyImages, marketAnalysis, favorites, colombiaGeography, profiles, counters, solicitudes, propertyPublicationHistory, userBehavioralFingerprints, userPatterns, zoneAliases;
 var init_schema = __esm({
   "drizzle/schema.ts"() {
     "use strict";
@@ -119,7 +122,7 @@ var init_schema = __esm({
       // Precio de arriendo cuando transactionType = venta_o_arriendo
       currency: currencyEnum("currency").default("COP").notNull(),
       pricePerSqm: decimal("pricePerSqm", { precision: 10, scale: 2 }),
-      city: varchar("city", { length: 100 }).notNull().default("Bogot\xE1"),
+      city: varchar("city", { length: 100 }),
       zone: varchar("zone", { length: 100 }).notNull(),
       // Barrio/Sector (Candidate for refactor to addressNeighborhood)
       addressCity: varchar("address_city", { length: 100 }),
@@ -138,6 +141,8 @@ var init_schema = __esm({
       bedrooms: integer("bedrooms"),
       bathrooms: integer("bathrooms"),
       garages: integer("garages"),
+      garageType: text("garageType"),
+      // "independiente" | "lineal" | "mixto" | null
       stratum: integer("stratum"),
       floorDetail: text("floor_detail"),
       areaTotal: decimal("areaTotal", { precision: 10, scale: 2 }),
@@ -162,6 +167,7 @@ var init_schema = __esm({
       featured: boolean("featured").default(false),
       available: boolean("available").default(true),
       idUsuarioWhatsapp: varchar("idUsuarioWhatsapp", { length: 100 }),
+      nombreUsuarioWhatsapp: varchar("nombre_usuario_whatsapp", { length: 255 }),
       sourceRepository: varchar("sourceRepository", { length: 255 }),
       lastSyncedAt: timestamp("lastSyncedAt"),
       // Array of all accepted transaction types (e.g. ["venta","permuta"] or ["venta","aporte"])
@@ -176,6 +182,7 @@ var init_schema = __esm({
       portal: varchar("portal", { length: 50 }),
       externalListingId: varchar("external_listing_id", { length: 100 }),
       canonicalExternalId: varchar("canonical_external_id", { length: 150 }).unique(),
+      enlaceOrigen: text("enlace_origen"),
       fechaPrimeraPublicacion: timestamp("fecha_primera_publicacion").defaultNow(),
       fechaUltimaPublicacion: timestamp("fecha_ultima_publicacion").defaultNow(),
       republicacionesCount: integer("republicaciones_count").default(0).notNull(),
@@ -191,7 +198,7 @@ var init_schema = __esm({
       tipoNegocioDeseado: transactionTypeEnum("tipoNegocioDeseado").notNull(),
       // Array of all accepted transaction types for matching flexibility (e.g. ["venta","permuta"])
       tiposNegocioAceptados: text("tipos_negocio_aceptados").array(),
-      ciudadDeseada: varchar("ciudadDeseada", { length: 100 }).notNull().default("Bogot\xE1"),
+      ciudadDeseada: varchar("ciudadDeseada", { length: 100 }),
       zonaDeseada: varchar("zonaDeseada", { length: 100 }),
       // Candidate for refactor to addressNeighborhood
       addressCity: varchar("address_city", { length: 100 }),
@@ -212,7 +219,9 @@ var init_schema = __esm({
       caracteristicasDeseadas: jsonb("caracteristicasDeseadas"),
       status: statusEnum("status").default("active"),
       idUsuarioWhatsapp: varchar("idUsuarioWhatsapp", { length: 100 }),
+      nombreUsuarioWhatsapp: varchar("nombre_usuario_whatsapp", { length: 255 }),
       rawText: text("rawText"),
+      enlaceOrigen: text("enlace_origen"),
       calificacion: varchar("calificacion", { length: 50 }),
       createdAt: timestamp("createdAt").defaultNow().notNull(),
       updatedAt: timestamp("updatedAt").defaultNow().notNull(),
@@ -410,6 +419,39 @@ var init_schema = __esm({
       externalListingId: varchar("external_listing_id", { length: 100 }),
       mensajeWhatsappId: varchar("mensaje_whatsapp_id", { length: 255 }),
       detalles: text("detalles")
+    });
+    userBehavioralFingerprints = pgTable("user_behavioral_fingerprints", {
+      id: serial("id").primaryKey(),
+      userId: integer("userId").references(() => users.id),
+      idUsuarioWhatsapp: varchar("idUsuarioWhatsapp", { length: 100 }),
+      permuteProfile: varchar("permute_profile", { length: 50 }),
+      // 'cash_only' | 'permuta_fan' | 'pelo_a_pelo_expert' | 'parte_de_pago'
+      urgencyIndex: integer("urgency_index").default(0),
+      avgPriceRange: jsonb("avg_price_range"),
+      topZones: jsonb("top_zones"),
+      technicalRigidity: integer("technical_rigidity").default(50),
+      // Exigencia en detalles (1.5 baños, vistas, etc.)
+      updatedAt: timestamp("updatedAt").defaultNow()
+    });
+    userPatterns = pgTable("user_patterns", {
+      id: serial("id").primaryKey(),
+      userId: integer("userId").references(() => users.id),
+      favoriteZones: jsonb("favorite_zones"),
+      avgClosingUrgency: integer("avg_urgency").default(50),
+      preferredAssetClass: varchar("preferred_class", { length: 50 }),
+      // 'apartment' | 'house' | 'warehouse' | 'commercial'
+      updatedAt: timestamp("updatedAt").defaultNow()
+    });
+    zoneAliases = pgTable("zone_aliases", {
+      id: serial("id").primaryKey(),
+      aliasTexto: varchar("alias_texto", { length: 150 }).notNull(),
+      ciudad: varchar("ciudad", { length: 100 }).notNull().default("Bogot\xE1"),
+      barrioResuelto: varchar("barrio_resuelto", { length: 150 }).notNull(),
+      confianza: varchar("confianza", { length: 20 }).default("alta"),
+      // 'alta' | 'media' | 'baja'
+      fuente: varchar("fuente", { length: 50 }).default("manual"),
+      // 'manual' | 'geocoding_confirmado' | 'ia_inferido'
+      createdAt: timestamp("created_at").defaultNow()
     });
   }
 });
@@ -611,6 +653,7 @@ async function invokeLLM({
   messages: messages2,
   responseFormat,
   provider = "google",
+  model,
   imageBuffer,
   pdfBuffer,
   pdfMimeType,
@@ -620,11 +663,11 @@ async function invokeLLM({
   if (provider === "anthropic") {
     return await invokeClaude(messages2, responseFormat);
   }
-  return await invokeGemini(messages2, responseFormat, imageBuffer, pdfBuffer, pdfMimeType, enableSearch, tools);
+  return await invokeGemini(messages2, responseFormat, model, imageBuffer, pdfBuffer, pdfMimeType, enableSearch, tools);
 }
-async function invokeGemini(messages2, responseFormat, imageBuffer, pdfBuffer, pdfMimeType, enableSearch, tools) {
+async function invokeGemini(messages2, responseFormat, customModel, imageBuffer, pdfBuffer, pdfMimeType, enableSearch, tools) {
   const API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || ENV.forgeApiKey;
-  const MODEL = "gemini-2.5-flash";
+  const MODEL = customModel || "gemini-2.5-flash";
   const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${API_KEY}`;
   const MAX_RETRIES = 3;
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
@@ -1594,9 +1637,24 @@ var init_colombia_geography = __esm({
 // server/_core/geocoding.ts
 import axios4 from "axios";
 async function geocodeAddress(address) {
+  const normAddress = address.trim().toLowerCase();
+  if (geocodeCache.has(normAddress)) {
+    return geocodeCache.get(normAddress) || null;
+  }
+  if (isMapsApiDenied) {
+    return {
+      isValid: false,
+      city: "Bogot\xE1",
+      zone: address,
+      locality: "",
+      latitude: "",
+      longitude: "",
+      formattedAddress: address,
+      isApiError: true
+    };
+  }
   const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.GOOGLE_API_KEY;
   if (!apiKey || apiKey.trim() === "") {
-    console.warn("[Geocoding] GOOGLE_MAPS_API_KEY nor GOOGLE_API_KEY is configured.");
     return {
       isValid: false,
       city: "",
@@ -1619,9 +1677,12 @@ async function geocodeAddress(address) {
     });
     const data = response.data;
     if (data.status !== "OK") {
-      console.log(`[Geocoding] No se encontraron resultados en Google Maps para: "${address}" (Status: ${data.status})`);
+      if (data.status === "REQUEST_DENIED" || data.status === "OVER_QUERY_LIMIT") {
+        isMapsApiDenied = true;
+        console.warn(`[Geocoding] API de Google Maps inactiva o denegada (Status: ${data.status}). Desactivando peticiones salientes a Google Maps API para no generar costos.`);
+      }
       const isApiError = data.status === "REQUEST_DENIED" || data.status === "OVER_QUERY_LIMIT" || data.status === "UNKNOWN_ERROR" || data.status === "INVALID_REQUEST";
-      return {
+      const errRes = {
         isValid: false,
         city: "",
         zone: "",
@@ -1631,6 +1692,8 @@ async function geocodeAddress(address) {
         formattedAddress: "",
         isApiError
       };
+      geocodeCache.set(normAddress, errRes);
+      return errRes;
     }
     if (!data.results || data.results.length === 0) {
       return null;
@@ -1701,9 +1764,12 @@ async function geocodeAddress(address) {
     };
   }
 }
+var geocodeCache, isMapsApiDenied;
 var init_geocoding = __esm({
   "server/_core/geocoding.ts"() {
     "use strict";
+    geocodeCache = /* @__PURE__ */ new Map();
+    isMapsApiDenied = false;
   }
 });
 
@@ -1754,6 +1820,61 @@ async function validarZona(zona, ciudad, textoCompleto, isRequirement = false) {
       isValid: false,
       errorType: "AMBIGUO",
       message: "Usaqu\xE9n es una localidad muy grande. \xBFQu\xE9 barrio espec\xEDfico dentro de Usaqu\xE9n buscas o vendes?"
+    };
+  }
+  const knownAliasMap = {
+    // Sabana Norte / Cundinamarca Suburbs (DIVIPOLA DANE)
+    "san simon": { barrioCanonico: "San Sim\xF3n", city: "Bogot\xE1", localidad: "Guaymaral / Suba", isMunicipio: false },
+    "guaymaral": { barrioCanonico: "Guaymaral", city: "Bogot\xE1", localidad: "Guaymaral / Suba", isMunicipio: false },
+    "hacienda fontanar": { barrioCanonico: "Hacienda Fontanar", city: "Ch\xEDa", localidad: "Ch\xEDa", isMunicipio: true },
+    "hacienda forntanar": { barrioCanonico: "Hacienda Fontanar", city: "Ch\xEDa", localidad: "Ch\xEDa", isMunicipio: true },
+    "fontanar": { barrioCanonico: "Hacienda Fontanar", city: "Ch\xEDa", localidad: "Ch\xEDa", isMunicipio: true },
+    "fagua": { barrioCanonico: "Fagua", city: "Ch\xEDa", localidad: "Ch\xEDa", isMunicipio: true },
+    "potosi": { barrioCanonico: "Potos\xED", city: "Sop\xF3", localidad: "Sop\xF3", isMunicipio: true },
+    "sindamanoy": { barrioCanonico: "Sindamanoy", city: "Ch\xEDa", localidad: "Ch\xEDa", isMunicipio: true },
+    "yerbabuena": { barrioCanonico: "Yerbabuena", city: "Ch\xEDa", localidad: "Ch\xEDa", isMunicipio: true },
+    "yerbabona": { barrioCanonico: "Yerbabuena", city: "Ch\xEDa", localidad: "Ch\xEDa", isMunicipio: true },
+    "briceno": { barrioCanonico: "Brice\xF1o", city: "Sop\xF3", localidad: "Sop\xF3", isMunicipio: true },
+    "hatogrande": { barrioCanonico: "Hatogrande", city: "Sop\xF3", localidad: "Sop\xF3", isMunicipio: true },
+    "chia": { barrioCanonico: "Ch\xEDa", city: "Ch\xEDa", localidad: "Ch\xEDa", isMunicipio: true },
+    "sopo": { barrioCanonico: "Sop\xF3", city: "Sop\xF3", localidad: "Sop\xF3", isMunicipio: true },
+    "cajica": { barrioCanonico: "Cajic\xE1", city: "Cajic\xE1", localidad: "Cajic\xE1", isMunicipio: true },
+    "cota": { barrioCanonico: "Cota", city: "Cota", localidad: "Cota", isMunicipio: true },
+    "la calera": { barrioCanonico: "La Calera", city: "La Calera", localidad: "La Calera", isMunicipio: true },
+    "zipaquira": { barrioCanonico: "Zipaquir\xE1", city: "Zipaquir\xE1", localidad: "Zipaquir\xE1", isMunicipio: true },
+    // Bogotá Urban Sectors
+    "nueva autopista": { barrioCanonico: "Cedritos", city: "Bogot\xE1", localidad: "Usaqu\xE9n", isMunicipio: false },
+    "marlboro": { barrioCanonico: "Chic\xF3 Norte", city: "Bogot\xE1", localidad: "Usaqu\xE9n", isMunicipio: false },
+    "zona marlboro": { barrioCanonico: "Chic\xF3 Norte", city: "Bogot\xE1", localidad: "Usaqu\xE9n", isMunicipio: false },
+    "buganvilia": { barrioCanonico: "Bella Suiza", city: "Bogot\xE1", localidad: "Usaqu\xE9n", isMunicipio: false },
+    "recodo del country": { barrioCanonico: "El Country", city: "Bogot\xE1", localidad: "Usaqu\xE9n", isMunicipio: false },
+    "multicentro": { barrioCanonico: "Santa B\xE1rbara", city: "Bogot\xE1", localidad: "Usaqu\xE9n", isMunicipio: false },
+    "bosques del marques": { barrioCanonico: "Bosques de Bella Suiza", city: "Bogot\xE1", localidad: "Usaqu\xE9n", isMunicipio: false },
+    "santas": { barrioCanonico: "Santa B\xE1rbara", city: "Bogot\xE1", localidad: "Usaqu\xE9n", isMunicipio: false },
+    "prado veraniego": { barrioCanonico: "Prado Veraniego", city: "Bogot\xE1", localidad: "Suba", isMunicipio: false }
+  };
+  const normZoneLower = normZone.toLowerCase().trim();
+  if (knownAliasMap[normZoneLower]) {
+    const alias = knownAliasMap[normZoneLower];
+    console.log(`[Geocoding-Alias] DIVIPOLA Alias resuelto "${zona}" \u2794 "${alias.barrioCanonico}" (${alias.city})`);
+    return {
+      isValid: true,
+      barrioCanonico: alias.barrioCanonico,
+      localidad: alias.localidad || alias.city,
+      city: alias.city,
+      isMunicipio: alias.isMunicipio
+    };
+  }
+  const cuadranteRes = await resolverCuadranteVial(normZoneLower);
+  if (cuadranteRes.resuelto && cuadranteRes.barrios.length > 0) {
+    const resueltoStr = cuadranteRes.barrios.join(", ");
+    console.log(`[Geocoding-Cuadrante] ${cuadranteRes.descripcion} resuelto [${cuadranteRes.confianza}] \u2794 "${resueltoStr}"`);
+    return {
+      isValid: true,
+      barrioCanonico: resueltoStr,
+      localidad: "Bogot\xE1",
+      city: "Bogot\xE1",
+      isMunicipio: false
     };
   }
   const queryAddress = ciudad && normalizarTextoGeografico(ciudad) !== "bogota" ? `${zona}, ${ciudad}, Colombia` : `${zona}, Bogot\xE1, Colombia`;
@@ -1907,6 +2028,207 @@ async function validarZona(zona, ciudad, textoCompleto, isRequirement = false) {
     message: "No logr\xE9 identificar la ubicaci\xF3n. Por favor dime la ciudad, municipio o barrio exacto."
   };
 }
+function desambiguarBarriosCompuestos(zona) {
+  if (!zona || zona.trim().length === 0) return [zona];
+  const PARES_CONOCIDOS = {
+    // Chicó + Refugio (Usaquén ↔ Chapinero)
+    "chico refugio": ["El Chic\xF3", "El Refugio"],
+    "el chico refugio": ["El Chic\xF3", "El Refugio"],
+    "chico el refugio": ["El Chic\xF3", "El Refugio"],
+    "chico-refugio": ["El Chic\xF3", "El Refugio"],
+    // Rosales + Cabrera (Chapinero)
+    "rosales cabrera": ["Rosales", "La Cabrera"],
+    "la cabrera rosales": ["Rosales", "La Cabrera"],
+    "cabrera rosales": ["Rosales", "La Cabrera"],
+    // Rosales + Virrey
+    "rosales virrey": ["Rosales", "El Virrey"],
+    "virrey rosales": ["Rosales", "El Virrey"],
+    // Cedritos + Country
+    "cedritos country": ["Cedritos", "Country Club"],
+    "country cedritos": ["Cedritos", "Country Club"],
+    // Santa Bárbara + Chicó
+    "santa barbara chico": ["Santa B\xE1rbara", "El Chic\xF3"],
+    // Niza + Alhambra
+    "niza alhambra": ["Niza", "Alhambra"],
+    // Lago + Retiro
+    "lago retiro": ["El Lago", "El Retiro"],
+    "retiro lago": ["El Lago", "El Retiro"],
+    // Salitre + Modelia
+    "salitre modelia": ["Ciudad Salitre Oriental", "Modelia"]
+  };
+  const normInput = normalizarTextoGeografico(zona);
+  if (PARES_CONOCIDOS[normInput]) {
+    console.log(`[Geography-Disambiguate] "${zona}" \u2192 ${JSON.stringify(PARES_CONOCIDOS[normInput])}`);
+    return PARES_CONOCIDOS[normInput];
+  }
+  const normWords = normInput.split(" ").filter((w) => w.length >= 3);
+  if (normWords.length >= 2) {
+    for (let splitAt = 1; splitAt < normWords.length; splitAt++) {
+      const part1 = normWords.slice(0, splitAt).join(" ");
+      const part2 = normWords.slice(splitAt).join(" ");
+      const barrio1 = MAPA_BARRIOS[part1];
+      const barrio2 = MAPA_BARRIOS[part2];
+      if (barrio1 && barrio2 && barrio1.localidad !== barrio2.localidad) {
+        const result = [barrio1.barrioCanonico, barrio2.barrioCanonico];
+        console.log(`[Geography-Disambiguate-Dynamic] "${zona}" \u2192 ${JSON.stringify(result)}`);
+        return result;
+      }
+    }
+  }
+  return [zona.trim()];
+}
+async function resolverCuadranteVial(texto) {
+  const norm2 = texto.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  const isSur = norm2.includes("sur");
+  let minSt;
+  let maxSt;
+  if (norm2.includes("avenida el dorado") || norm2.includes("av el dorado") || norm2.includes("av. el dorado")) {
+    minSt = 26;
+  }
+  if (norm2.includes("primero de mayo") || norm2.includes("1 de mayo")) {
+    minSt = 22;
+  }
+  let calleMatch = norm2.match(/(?:calle|cll|cl|c|entre\s+la|de\s+la|desde\s+la)?\s*(\d+)\s*(?:sur)?\s*(?:y|a|a\s+la|-|hasta|\s+y\s+la|\s+a\s+la|\s+a\s+|\s+y\s+)\s*(?:la\s*)?(?:calle|cll|cl|c)?\s*(\d+)\s*(?:sur)?/i) || norm2.match(/entre\s+(?:la\s*)?(\d+)\s+(?:y|a|hasta)\s+(?:la\s*)?(\d+)/i);
+  const singleCalleMatch = norm2.match(/(?:calle|cll|cl|c)\s*(\d+)/i);
+  const relativeNorthMatch = norm2.match(/(?:calle|cll|cl|c)\s*(\d+)\s*(?:hacia\s+arriba|para\s+arriba|al\s+norte|hacia\s+el\s+norte)/i);
+  if (calleMatch) {
+    const c1 = parseInt(calleMatch[1]);
+    const c2 = parseInt(calleMatch[2]);
+    minSt = minSt !== void 0 ? Math.min(minSt, c1, c2) : Math.min(c1, c2);
+    maxSt = maxSt !== void 0 ? Math.max(maxSt, c1, c2) : Math.max(c1, c2);
+  } else if (relativeNorthMatch) {
+    minSt = parseInt(relativeNorthMatch[1]);
+    maxSt = Math.min(minSt + 50, 240);
+  } else if (singleCalleMatch && minSt !== void 0) {
+    const c1 = parseInt(singleCalleMatch[1]);
+    maxSt = Math.max(minSt, c1);
+    minSt = Math.min(minSt, c1);
+  } else {
+    return { resuelto: false, barrios: [], descripcion: "No es un cuadrante vial resoluble por rango de calles", confianza: "ninguna" };
+  }
+  const LON_CERROS = -74.015;
+  const LON_OCCIDENTE = -74.19;
+  const LON_AUTOPISTA = -74.0535;
+  const LON_SEPTIMA = -74.035;
+  const LON_CARACAS = -74.08;
+  const LON_CRA10 = -74.074;
+  const LON_AV68 = -74.11;
+  const LON_BOYACA = -74.125;
+  const LON_CALI = -74.145;
+  const getLonFromCra = (craNum) => {
+    if (craNum <= 7) return LON_SEPTIMA;
+    if (craNum >= 45 && !isSur) return LON_AUTOPISTA;
+    return -74.065 - craNum * 85e-5;
+  };
+  let minLon = LON_OCCIDENTE;
+  let maxLon = LON_CERROS;
+  const isArribaAuto = norm2.includes("arriba de la autopista") || norm2.includes("arriba de la auto") || norm2.includes("oriente de la autopista");
+  const isAbajoAuto = norm2.includes("abajo de la autopista") || norm2.includes("abajo de la auto") || norm2.includes("occidente de la autopista");
+  const isArriba7 = norm2.includes("arriba de la 7") || norm2.includes("arriba de la septima") || norm2.includes("arriba de la s\xE9ptima");
+  const isArribaBoyaca = norm2.includes("arriba de la boyaca") || norm2.includes("arriba de la boyac\xE1");
+  const isAbajoBoyaca = norm2.includes("abajo de la boyaca") || norm2.includes("abajo de la boyac\xE1") || norm2.includes("boyaca hacia abajo") || norm2.includes("boyaca al occidente");
+  let landmarkLons = [];
+  if (norm2.includes("avenida caracas") || norm2.includes("av caracas") || norm2.includes("caracas")) landmarkLons.push(LON_CARACAS);
+  if (norm2.includes("carrera 10") || norm2.includes("cra 10") || norm2.includes("cr 10") || norm2.includes("carreras 10")) landmarkLons.push(LON_CRA10);
+  if (norm2.includes("avenida 68") || norm2.includes("av 68")) landmarkLons.push(LON_AV68);
+  if (norm2.includes("boyaca") || norm2.includes("boyac\xE1")) landmarkLons.push(LON_BOYACA);
+  if (norm2.includes("ciudad de cali") || norm2.includes("av cali")) landmarkLons.push(LON_CALI);
+  const craMatch = norm2.match(/(?:carrera|cra|cr|k|kr|carreras|cras|krs)\s*(\d+)\s*(?:y|a|a\s+la|-|hasta|\s+y\s+la|\s+a\s+|\s+y\s+)\s*(?:carrera|cra|cr|k|kr|carreras|cras|krs)?\s*(\d+)/i) || norm2.match(/(?:con\s+)?carreras?\s*(\d+)\s*(?:a|y|-)\s*(\d+)/i) || norm2.match(/entre\s+(?:la\s*)?(?:autopista|auto)\s+y\s+(?:la\s*)?(?:carrera|cra|cr|k|kr)?\s*(\d+)/i) || norm2.match(/entre\s+(?:la\s*)?(?:carrera|cra|cr|k|kr)?\s*(\d+)\s+y\s+(?:la\s*)?(?:autopista|auto)/i);
+  if (craMatch) {
+    let cra1, cra2;
+    if (norm2.includes("autopista") || norm2.includes("auto")) {
+      cra1 = 45;
+      cra2 = parseInt(craMatch[1]);
+    } else {
+      cra1 = parseInt(craMatch[1]);
+      cra2 = parseInt(craMatch[2]);
+    }
+    landmarkLons.push(getLonFromCra(cra1), getLonFromCra(cra2));
+  }
+  if (landmarkLons.length >= 2) {
+    minLon = Math.min(...landmarkLons) - 3e-3;
+    maxLon = Math.max(...landmarkLons) + 3e-3;
+  } else if (landmarkLons.length === 1 && isAbajoBoyaca) {
+    minLon = LON_OCCIDENTE;
+    maxLon = landmarkLons[0] + 2e-3;
+  } else if (landmarkLons.length === 1 && isArribaBoyaca) {
+    minLon = landmarkLons[0] - 2e-3;
+    maxLon = LON_CERROS;
+  } else if (isArribaAuto) {
+    minLon = LON_AUTOPISTA;
+    maxLon = LON_CERROS;
+  } else if (isAbajoAuto) {
+    minLon = LON_OCCIDENTE;
+    maxLon = LON_AUTOPISTA;
+  } else if (isArriba7) {
+    minLon = LON_SEPTIMA;
+    maxLon = LON_CERROS;
+  } else if (isArribaBoyaca) {
+    minLon = LON_BOYACA;
+    maxLon = LON_CERROS;
+  } else if (isAbajoBoyaca) {
+    minLon = LON_OCCIDENTE;
+    maxLon = LON_BOYACA;
+  }
+  try {
+    const db = await getDb();
+    if (db) {
+      let minLat, maxLat;
+      if (isSur) {
+        minLat = 4.597 - maxSt * 94e-5;
+        maxLat = 4.597 - minSt * 94e-5;
+      } else {
+        minLat = 4.597 + minSt * 94e-5;
+        maxLat = 4.597 + maxSt * 94e-5;
+      }
+      const spatialQuery = sql`
+        SELECT DISTINCT scanombre
+        FROM barrios_bogota_geojson
+        WHERE ST_Intersects(geometry, ST_MakeEnvelope(${minLon}, ${minLat}, ${maxLon}, ${maxLat}, 4326))
+        ORDER BY scanombre;
+      `;
+      const rows = await db.execute(spatialQuery);
+      if (rows && rows.length > 0) {
+        const barrios = rows.map((r) => String(r.scanombre).trim());
+        console.log(`[Geocoding-Cuadrante] Intersecci\xF3n espacial IDECA (${barrios.length} sectores catastrales) resuelto [alta_geometria_ideca] \u2794 "${barrios.slice(0, 10).join(", ")}${barrios.length > 10 ? "..." : ""}"`);
+        return {
+          resuelto: true,
+          barrios,
+          descripcion: `Intersecci\xF3n espacial IDECA (${barrios.length} sectores catastrales)`,
+          confianza: "alta_geometria_ideca"
+        };
+      }
+    }
+  } catch (err) {
+    console.error("[Geocoding-Cuadrante-Spatial] Error consultando barrios_bogota_geojson:", err);
+  }
+  let candidateBarrios = [];
+  if (minSt >= 1 && maxSt <= 34) {
+    candidateBarrios = ["La Candelaria", "Centro", "Las Nieves", "La Macarena", "Teusaquillo"];
+  } else if (minSt >= 34 && maxSt <= 63) {
+    candidateBarrios = ["Chapinero Central", "Marly", "Palermo", "Teusaquillo", "Galer\xEDas"];
+  } else if (minSt >= 63 && maxSt <= 85) {
+    candidateBarrios = ["Chapinero Alto", "Rosales", "El Nogal", "La Cabrera", "Quinta Camacho", "El Lago"];
+  } else if (minSt >= 85 && maxSt <= 106) {
+    candidateBarrios = ["Chic\xF3", "El Virrey", "Chic\xF3 Norte", "Chic\xF3 Reservado", "La Cabrera"];
+  } else if (minSt >= 106 && maxSt <= 127) {
+    candidateBarrios = ["Santa B\xE1rbara Occidental", "Santa B\xE1rbara Central", "Santa B\xE1rbara Oriental", "La Calleja", "Unicentro", "San Patricio", "El Country"];
+  } else if (minSt >= 127 && maxSt <= 153) {
+    candidateBarrios = ["Cedritos", "Contador", "Belmira", "Lisboa", "Nueva Autopista"];
+  } else if (minSt >= 153 && maxSt <= 175) {
+    candidateBarrios = ["Tober\xEDn", "Mazur\xE9n", "Gilmar", "Colina Campestre", "Orqu\xEDdeas"];
+  } else if (minSt >= 175) {
+    candidateBarrios = ["San Jos\xE9 de Banderas", "Guaymaral", "San Antonio", "Torca"];
+  } else {
+    candidateBarrios = ["Santa B\xE1rbara", "Cedritos", "Unicentro", "Chic\xF3"];
+  }
+  return {
+    resuelto: true,
+    barrios: candidateBarrios,
+    descripcion: `Cuadrante Calles ${minSt}-${maxSt} (Fallback Respaldo Matriz)`,
+    confianza: "aproximada"
+  };
+}
 var DICCIONARIO_BOGOTA, MUNICIPIOS_CERCANOS, MAPA_BARRIOS, MAPA_LOCALIDADES;
 var init_geography = __esm({
   "server/_core/geography.ts"() {
@@ -1958,7 +2280,9 @@ var init_geography = __esm({
           "Quinta Camacho",
           "El Castillo",
           "San Luis",
-          "Juan XXIII"
+          "Juan XXIII",
+          // Barrio El Refugio — franja norte de Chapinero, Calle 85-90 entre Cr 5 y 11
+          "El Refugio"
         ]
       },
       "suba": {
@@ -2050,8 +2374,7 @@ var init_geography = __esm({
           "Ciudad Salitre Oriental",
           "Tintal Norte",
           "Zona Franca",
-          "San Pablo",
-          "El Refugio"
+          "San Pablo"
         ]
       },
       "kennedy": {
@@ -2185,6 +2508,1735 @@ var init_geography = __esm({
         isMunicipio: true
       };
     }
+  }
+});
+
+// server/_core/matching.ts
+var matching_exports = {};
+__export(matching_exports, {
+  buildBigTechAdminReport: () => buildBigTechAdminReport,
+  calcularIPC: () => calcularIPC,
+  calcularScoreMatch: () => calcularScoreMatch,
+  calculateCvpVector15DMatch: () => calculateCvpVector15DMatch,
+  checkTransactionCompatibility: () => checkTransactionCompatibility,
+  esFormatoCuadrante: () => esFormatoCuadrante,
+  evaluarInterseccionComodidadesSemanticas: () => evaluarInterseccionComodidadesSemanticas,
+  evaluarMatch: () => evaluarMatch,
+  executeMatchEngine: () => executeMatchEngine,
+  explicarMatch: () => explicarMatch,
+  extractRealPhone: () => extractRealPhone,
+  findMatchesForProperty: () => findMatchesForProperty,
+  findMatchesForRequirement: () => findMatchesForRequirement,
+  matchesGeography: () => matchesGeography,
+  parsePropertyAddressNumbers: () => parsePropertyAddressNumbers,
+  parseStreetCarreraBoundaries: () => parseStreetCarreraBoundaries
+});
+import { and, eq as eq3, sql as sql2 } from "drizzle-orm";
+function hasAledanos(text2) {
+  if (!text2) return false;
+  const n = normalizarTextoGeografico(text2);
+  return n.includes("aledan") || n.includes("cercan") || n.includes("alrededor") || n.includes("similar") || n.includes("proxim") || n.includes("otro");
+}
+function extractRealPhone(item) {
+  if (!item) return null;
+  const candidates = [
+    item.idUsuarioWhatsapp,
+    item.origenId,
+    item.contactPhone,
+    item.brokerPhone,
+    item.phone,
+    item.usuarioWhatsapp,
+    item.contactNumber,
+    item.sellerPhone,
+    item.captadorPhone,
+    item.user?.phone,
+    item.user?.idUsuarioWhatsapp,
+    item.user?.contactPhone
+  ];
+  for (const cand of candidates) {
+    if (!cand) continue;
+    const clean = String(cand).split("@")[0].replace(/\D/g, "");
+    if (clean.startsWith("11") || clean.startsWith("12036") || clean.startsWith("1203") || clean.length > 13) {
+      continue;
+    }
+    if (clean.length === 12 && clean.startsWith("573")) return clean;
+    if (clean.length === 10 && clean.startsWith("3")) return `57${clean}`;
+    if (clean.length === 12 && clean.startsWith("5760")) return clean;
+    if (clean.length === 10 && clean.startsWith("60")) return `57${clean}`;
+    if (clean.length >= 10 && clean.length <= 12) return clean;
+  }
+  const textToSearch = `${item.rawText || ""} ${item.description || ""} ${item.name || ""} ${item.rawMessage || ""}`;
+  const phoneMatches = textToSearch.match(/(?:\+?57\s*)?3\d{2}[\s.-]?\d{3}[\s.-]?\d{4}\b/g);
+  if (phoneMatches && phoneMatches.length > 0) {
+    const rawMatch = phoneMatches[0].replace(/\D/g, "");
+    const clean10 = rawMatch.startsWith("57") && rawMatch.length === 12 ? rawMatch.substring(2) : rawMatch;
+    if (clean10.length === 10 && clean10.startsWith("3")) {
+      return `57${clean10}`;
+    }
+  }
+  const jsonSources = [item.metadata, item.rawJson, item.extraData];
+  for (const jsonSrc of jsonSources) {
+    if (!jsonSrc) continue;
+    const str = typeof jsonSrc === "string" ? jsonSrc : JSON.stringify(jsonSrc);
+    const jsonMatches = str.match(/(?:\+?57\s*)?3\d{2}[\s.-]?\d{3}[\s.-]?\d{4}\b/g);
+    if (jsonMatches && jsonMatches.length > 0) {
+      const rawMatch = jsonMatches[0].replace(/\D/g, "");
+      const clean10 = rawMatch.startsWith("57") && rawMatch.length === 12 ? rawMatch.substring(2) : rawMatch;
+      if (clean10.length === 10 && clean10.startsWith("3")) {
+        return `57${clean10}`;
+      }
+    }
+  }
+  return null;
+}
+function checkTransactionCompatibility(reqType, propType, propAccepted = []) {
+  if (!reqType || !propType) return false;
+  const r = reqType.toLowerCase().trim();
+  const p = propType.toLowerCase().trim();
+  if (propAccepted.length > 0 && propAccepted.includes(r)) return true;
+  const compatibleSet = TRANSACTION_COMPATIBILITY_MATRIX[r];
+  if (!compatibleSet) return false;
+  return compatibleSet.has(p);
+}
+function calculateCvpVector15DMatch(requirement, property) {
+  const vReq = new Array(15).fill(0);
+  const vProp = new Array(15).fill(0);
+  const reqMax = parseFloat(String(requirement.presupuestoMax || "0"));
+  const propPrice = parseFloat(String(property.price || "0"));
+  if (reqMax > 0 && propPrice > 0) {
+    vReq[0] = Math.log10(reqMax);
+    vProp[0] = Math.log10(propPrice);
+  }
+  const reqArea = parseFloat(String(requirement.areaMin || requirement.areaMinimaM2 || "0"));
+  const propArea = parseFloat(String(property.areaTotal || property.areaConstruidaM2 || "0"));
+  vReq[1] = reqArea > 0 ? reqArea / 100 : 0;
+  vProp[1] = propArea > 0 ? propArea / 100 : 0;
+  vReq[2] = Number(requirement.habitacionesMin || 0);
+  vProp[2] = Number(property.bedrooms || 0);
+  vReq[3] = Number(requirement.banosMin || 0);
+  vProp[3] = Number(property.bathrooms || 0);
+  vReq[4] = Number(requirement.parqueaderosMin || 0);
+  const garP = Number(property.garages || 0);
+  const garType = String(property.garageType || "").toLowerCase();
+  vProp[4] = garType === "lineal" ? garP * 0.7 : garP;
+  const estratoReq = Array.isArray(requirement.estratoDeseado) ? Number(requirement.estratoDeseado[0] || 0) : Number(requirement.estratoDeseado || 0);
+  vReq[5] = estratoReq;
+  vProp[5] = Number(property.stratum || property.estrato || 0);
+  vReq[6] = Number(requirement.antiguedadMax || 0);
+  vProp[6] = Number(property.antiguedadAnos || 0);
+  vReq[7] = parseFloat(String(requirement.adminFeeMax || "0")) / 1e5;
+  vProp[7] = parseFloat(String(property.adminFee || "0")) / 1e5;
+  const reqText = String(requirement.rawText || "").toLowerCase();
+  const propText = String(property.rawText || "").toLowerCase();
+  vReq[8] = reqText.includes("balcon") || reqText.includes("balc\xF3n") || reqText.includes("terraza") ? 1 : 0;
+  vProp[8] = propText.includes("balcon") || propText.includes("balc\xF3n") || propText.includes("terraza") || property.hasBalcony || property.hasTerrace ? 1 : 0;
+  vReq[9] = reqText.includes("ascensor") ? 1 : 0;
+  vProp[9] = propText.includes("ascensor") || property.hasElevator ? 1 : 0;
+  vReq[10] = reqText.includes("club house") || reqText.includes("gimnasio") || reqText.includes("piscina") ? 1 : 0;
+  vProp[10] = propText.includes("club house") || propText.includes("gimnasio") || propText.includes("piscina") ? 1 : 0;
+  vReq[11] = reqText.includes("deposito") || reqText.includes("dep\xF3sito") || reqText.includes("bodega") ? 1 : 0;
+  vProp[11] = propText.includes("deposito") || propText.includes("dep\xF3sito") || propText.includes("bodega") || property.hasStorage ? 1 : 0;
+  vReq[12] = reqText.includes("permuta") || reqText.includes("carro") ? 1 : 0;
+  vProp[12] = propText.includes("permuta") || propText.includes("recibe vehiculo") ? 1 : 0;
+  vReq[13] = reqText.includes("silencioso") || reqText.includes("tranquilo") ? 1 : 0;
+  vProp[13] = !propText.includes("ruidoso") && !propText.includes("via principal") ? 1 : 0;
+  vReq[14] = 1;
+  vProp[14] = reqMax > 0 && propPrice > 0 && propPrice <= reqMax * 0.7 ? 1.5 : 1;
+  let sumSq = 0;
+  for (let i = 0; i < 15; i++) {
+    const diff = vReq[i] - vProp[i];
+    sumSq += diff * diff;
+  }
+  const distance = Math.sqrt(sumSq);
+  let dot = 0, normReq = 0, normProp = 0;
+  for (let i = 0; i < 15; i++) {
+    dot += vReq[i] * vProp[i];
+    normReq += vReq[i] * vReq[i];
+    normProp += vProp[i] * vProp[i];
+  }
+  const normDenom = Math.sqrt(normReq) * Math.sqrt(normProp);
+  const cosSim = normDenom > 0 ? dot / normDenom : 0.8;
+  const cvpScore = Math.min(100, Math.max(0, Math.round(cosSim * 100)));
+  return { cvpScore, distance, vectorReq: vReq, vectorProp: vProp };
+}
+function esFormatoCuadrante(texto) {
+  if (!texto) return false;
+  const norm2 = (texto || "").toLowerCase();
+  return /(?:entre|calle|clle|cll|carrera|cra|autopista|circunvalar|septima)/i.test(norm2) && /\d/.test(norm2);
+}
+function parseStreetCarreraBoundaries(text2) {
+  const norm2 = (text2 || "").toLowerCase();
+  const res = {};
+  const streetRangeMatch = norm2.match(
+    /(?:entre|de|cll|calle|calles)?\s*(?:la|las)?\s*(?:calle|clle|cll|cna|cera)?\s*(\d{1,3})\s*(?:a|y|-|hasta)\s*(?:la|las)?\s*(?:calle|clle|cll|cna|cera)?\s*(\d{1,3})/i
+  );
+  if (streetRangeMatch) {
+    const n1 = parseInt(streetRangeMatch[1], 10);
+    const n2 = parseInt(streetRangeMatch[2], 10);
+    if (!isNaN(n1) && !isNaN(n2) && (n1 > 20 || n2 > 20)) {
+      res.minStreet = Math.min(n1, n2);
+      res.maxStreet = Math.max(n1, n2);
+    }
+  }
+  const carreraRangeMatch = norm2.match(/(?:cra|carrera|carreras)\s*(?:la|las)?\s*(circunvalar|cerros|\d{1,3})\s*(?:a|y|-|hasta)\s*(?:la|las)?\s*(\d{1,3})/i);
+  if (carreraRangeMatch) {
+    const rawN1 = carreraRangeMatch[1];
+    const n1 = rawN1 === "circunvalar" || rawN1 === "cerros" ? 1 : parseInt(rawN1, 10);
+    const n2 = parseInt(carreraRangeMatch[2], 10);
+    if (!isNaN(n1) && !isNaN(n2)) {
+      res.minCarrera = Math.min(n1, n2);
+      res.maxCarrera = Math.max(n1, n2);
+    }
+  }
+  if (norm2.includes("arriba de la autopista") || norm2.includes("oriente de la autopista")) {
+    res.maxCarrera = 45;
+    res.minCarrera = 1;
+  } else if (norm2.includes("abajo de la autopista") || norm2.includes("occidente de la autopista")) {
+    res.minCarrera = 45;
+  }
+  if (norm2.includes("arriba de la septima") || norm2.includes("arriba de la s\xE9ptima") || norm2.includes("arriba de la 7")) {
+    res.maxCarrera = 7;
+    res.minCarrera = 1;
+  } else if (norm2.includes("abajo de la septima") || norm2.includes("abajo de la s\xE9ptima") || norm2.includes("abajo de la 7")) {
+    res.minCarrera = 7;
+  }
+  return res;
+}
+function parsePropertyAddressNumbers(text2) {
+  const norm2 = (text2 || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const res = {};
+  const streetMatch = norm2.match(/(?:calle|cll|cl|c\/)\s*#?\s*(\d{1,3})\b/i);
+  if (streetMatch) {
+    const sNum = parseInt(streetMatch[1], 10);
+    if (!isNaN(sNum) && sNum > 0 && sNum <= 260) res.street = sNum;
+  }
+  const carreraMatch = norm2.match(/(?:carrera|cra|cr|kra|kr|k\/|\bk\b)\s*#?\s*(\d{1,3})\b/i);
+  if (carreraMatch) {
+    const cNum = parseInt(carreraMatch[1], 10);
+    if (!isNaN(cNum) && cNum > 0 && cNum <= 160) res.carrera = cNum;
+  }
+  if (norm2.includes("autonorte") || norm2.includes("autopista norte")) {
+    res.isAutoNorte = true;
+  }
+  return res;
+}
+function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCityRaw, propCityRaw) {
+  const reqCity = normalizarTextoGeografico(reqCityRaw || "");
+  const propCity = normalizarTextoGeografico(propCityRaw || "");
+  const reqZone = normalizarTextoGeografico(reqZoneRaw || "");
+  const propZone = normalizarTextoGeografico(propZoneRaw || "");
+  const reqLoc = normalizarTextoGeografico(reqLocRaw || "");
+  const propLoc = normalizarTextoGeografico(propLocRaw || "");
+  if (reqCity && propCity && reqCity !== propCity) {
+    return { matches: false, score: 0 };
+  }
+  const reqBoundaries = parseStreetCarreraBoundaries(`${reqZoneRaw} ${reqLocRaw}`);
+  const propNumbers = parsePropertyAddressNumbers(propZoneRaw);
+  if (propNumbers.street && reqBoundaries.minStreet && reqBoundaries.maxStreet) {
+    if (propNumbers.street < reqBoundaries.minStreet || propNumbers.street > reqBoundaries.maxStreet) {
+      return { matches: false, score: 0 };
+    }
+  }
+  if (propNumbers.carrera && reqBoundaries.minCarrera && reqBoundaries.maxCarrera) {
+    if (propNumbers.carrera < reqBoundaries.minCarrera || propNumbers.carrera > reqBoundaries.maxCarrera) {
+      return { matches: false, score: 0 };
+    }
+  }
+  if (esFormatoCuadrante(reqZoneRaw) && !reqBoundaries.minStreet && !reqBoundaries.minCarrera) {
+    return { matches: false, score: 0 };
+  }
+  const reqFullNorm = normalizarTextoGeografico(`${reqZoneRaw} ${reqLocRaw} ${reqCityRaw}`);
+  const propFullNorm = normalizarTextoGeografico(`${propZoneRaw} ${propLocRaw} ${propCityRaw}`);
+  const sabanaSuburbanSectors = [
+    "san simon",
+    "guaymaral",
+    "hacienda fontanar",
+    "fontanar",
+    "fagua",
+    "potosi",
+    "sindamanoy",
+    "yerbabuena",
+    "yerbabona",
+    "briceno",
+    "hatogrande",
+    "chia",
+    "sopo",
+    "cajica",
+    "cota",
+    "la calera"
+  ];
+  const reqAskaSabana = sabanaSuburbanSectors.some((sec) => reqFullNorm.includes(sec));
+  const bogotaUrbanSectors = [
+    "prado veraniego",
+    "cedritos",
+    "chico",
+    "chico norte",
+    "chico reservado",
+    "chapinero",
+    "santa barbara",
+    "pasadena",
+    "alhambra",
+    "bat\xE1n",
+    "el batan",
+    "niza",
+    "metropolis",
+    "polo club",
+    "castellana"
+  ];
+  const propIsUrbanBogota = bogotaUrbanSectors.some((sec) => propFullNorm.includes(sec));
+  if (reqAskaSabana && propIsUrbanBogota) {
+    console.log(`[Matching-Guard] Bloqueo 0%: Requerimiento busca Sabana Norte (${reqZoneRaw}) pero inmueble est\xE1 en Bogot\xE1 Urbano (${propZoneRaw})`);
+    return { matches: false, score: 0 };
+  }
+  const stopCities = /* @__PURE__ */ new Set(["bogota", "bogot\xE1", "medellin", "medell\xEDn", "cali", "barranquilla", "cartagena", "bucaramanga", "colombia"]);
+  if (!reqZone || stopCities.has(reqZone.toLowerCase().trim())) {
+    return { matches: true, score: 20 };
+  }
+  const tieneAledanosInicial = hasAledanos(reqZoneRaw);
+  if (reqZone && propZone && !tieneAledanosInicial) {
+    const s1 = reqZone.toLowerCase();
+    const s2 = propZone.toLowerCase();
+    const orientaciones = ["oriental", "occidental", "norte", "sur", "alta", "alto", "baja", "bajo", "reservado", " central"];
+    const tieneDiffOrientacion = orientaciones.some(
+      (o) => s1.includes(o) && !s2.includes(o) || !s1.includes(o) && s2.includes(o)
+    );
+    const tieneNum1 = s1.match(/\b(i|ii|iii|iv|v|1|2|3|4)\b/);
+    const tieneNum2 = s2.match(/\b(i|ii|iii|iv|v|1|2|3|4)\b/);
+    const diffNum = tieneNum1 && tieneNum2 && tieneNum1[0] !== tieneNum2[0];
+    if (tieneDiffOrientacion || diffNum) {
+      return { matches: false, score: 0 };
+    }
+  }
+  const equivalenciasZonas = {
+    "las santas": [
+      "santa barbara oriental",
+      "santa barbara central",
+      "santa barbara occidental",
+      "santa ana oriental",
+      "santa ana occidental",
+      "santa paula",
+      "santa bibiana",
+      "san patricio",
+      "navarra",
+      "chico navarra",
+      "molinos norte",
+      "usaquen",
+      "multicentro"
+    ],
+    "zona santas": [
+      "santa barbara oriental",
+      "santa barbara central",
+      "santa barbara occidental",
+      "santa ana oriental",
+      "santa ana occidental",
+      "santa paula",
+      "santa bibiana",
+      "san patricio",
+      "navarra",
+      "chico navarra",
+      "molinos norte",
+      "usaquen",
+      "multicentro"
+    ],
+    "santas de usaquen": [
+      "santa barbara oriental",
+      "santa barbara central",
+      "santa barbara occidental",
+      "santa ana oriental",
+      "santa ana occidental",
+      "santa paula",
+      "santa bibiana",
+      "san patricio",
+      "navarra",
+      "chico navarra",
+      "molinos norte",
+      "usaquen",
+      "multicentro"
+    ],
+    "sector santas": [
+      "santa barbara oriental",
+      "santa barbara central",
+      "santa barbara occidental",
+      "santa ana oriental",
+      "santa ana occidental",
+      "santa paula",
+      "santa bibiana",
+      "san patricio",
+      "navarra",
+      "chico navarra",
+      "molinos norte",
+      "usaquen",
+      "multicentro"
+    ],
+    "barrios santa norte": [
+      "santa barbara oriental",
+      "santa barbara central",
+      "santa barbara occidental",
+      "santa ana oriental",
+      "santa ana occidental",
+      "santa paula",
+      "santa bibiana",
+      "san patricio",
+      "navarra",
+      "chico navarra",
+      "molinos norte",
+      "usaquen",
+      "multicentro"
+    ],
+    "el chico": ["chico norte", "chico reservado", "chico reservado norte", "chico", "chico navarra", "chico sur"],
+    "chico": ["chico norte", "chico reservado", "chico reservado norte", "chico", "chico navarra", "chico sur"],
+    "lagos": ["lagos de torca", "club los lagartos", "el lago"],
+    "las lomas": ["lomas de niza", "lomas"]
+  };
+  const expandirZona = (phrase) => {
+    if (equivalenciasZonas[phrase]) {
+      return equivalenciasZonas[phrase];
+    }
+    return [phrase];
+  };
+  const splitPhrases = (text2) => {
+    if (!text2) return [];
+    let norm2 = normalizarTextoGeografico(text2);
+    norm2 = norm2.replace(/\b(u\s+)?otros\s+barrios\s+aledanos\b/gi, "");
+    norm2 = norm2.replace(/\b(y|o|u)\s+aledanos\b/gi, "");
+    norm2 = norm2.replace(/\b(y|o|u)\s+sectores\s+cercanos\b/gi, "");
+    norm2 = norm2.replace(/\b(y|o|u)\s+alrededores\b/gi, "");
+    norm2 = norm2.replace(/\b(y|o)\s+similares\b/gi, "");
+    norm2 = norm2.replace(/\baledanos\b/gi, "");
+    norm2 = norm2.replace(/\bcercanos\b/gi, "");
+    norm2 = norm2.replace(/\balrededores\b/gi, "");
+    const stopGeoWords = /* @__PURE__ */ new Set([
+      "bogota",
+      "bogota d c",
+      "bogota dc",
+      "d c",
+      "dc",
+      "colombia",
+      "medellin",
+      "cali",
+      "barranquilla",
+      "cartagena",
+      "bucaramanga",
+      "pereira",
+      "manizales",
+      "cucuta",
+      "ibague",
+      "santa marta"
+    ]);
+    return norm2.split(/,|\/|\s+y\s+|\s+o\s+|\s+e\s+/).map((p) => p.trim()).filter((p) => p.length > 0 && !stopGeoWords.has(p));
+  };
+  const extractNeighborhoodTokens = (text2) => {
+    if (!text2) return [];
+    const norm2 = normalizarTextoGeografico(text2);
+    const found = [];
+    const knownNeighborhoods = [
+      "cedritos",
+      "santa paula",
+      "santa barbara",
+      "santa barbara central",
+      "santa barbara occidental",
+      "santa barbara oriental",
+      "santa ana",
+      "santa ana alta",
+      "santa ana oriental",
+      "santa ana occidental",
+      "chico",
+      "chico norte",
+      "chico reservado",
+      "chico navarra",
+      "rosales",
+      "los rosales",
+      "el virrey",
+      "la cabrera",
+      "nogal",
+      "el nogal",
+      "antiguo country",
+      "country club",
+      "la calleja",
+      "bella suiza",
+      "el contador",
+      "san patricio",
+      "molinos norte",
+      "bat\xE1n",
+      "el batan",
+      "pasadena",
+      "alhambra",
+      "colina",
+      "colina campestre",
+      "suba",
+      "niza",
+      "pontevedra",
+      "morato",
+      "salitre",
+      "ciudad salitre",
+      "hayuelos",
+      "modelia",
+      "fontibon",
+      "teusaquillo",
+      "la soledad",
+      "palermo",
+      "chapinero",
+      "chapinero alto",
+      "quinta camacho",
+      "marly",
+      "bosque izquierdo",
+      "macarena",
+      "la macarena",
+      "centro internacional",
+      "usaquen",
+      "multicentro",
+      "el poblado",
+      "poblado",
+      "laureles",
+      "envigado",
+      "sabaneta",
+      "belen",
+      "estadio",
+      "conquistadores",
+      "granada",
+      "el pe\xF1on",
+      "juanamb\xFA",
+      "ciudad jardin",
+      "san fernando",
+      "valle del lili",
+      "el prado",
+      "alto prado",
+      "riomar",
+      "villa santos",
+      "buenavista",
+      "cabecera",
+      "ca\xF1averal",
+      "ruitoque",
+      "sotomayor"
+    ];
+    for (const n of knownNeighborhoods) {
+      if (norm2.includes(n)) {
+        found.push(n);
+      }
+    }
+    return found;
+  };
+  let reqPhrases = splitPhrases(reqZoneRaw);
+  let propPhrases = splitPhrases(propZoneRaw);
+  const reqExtracted = extractNeighborhoodTokens(reqZoneRaw);
+  const propExtracted = extractNeighborhoodTokens(propZoneRaw);
+  if (reqPhrases.length === 0 && reqExtracted.length > 0) reqPhrases = reqExtracted;
+  else if (reqExtracted.length > 0) reqPhrases = Array.from(/* @__PURE__ */ new Set([...reqPhrases, ...reqExtracted]));
+  if (propPhrases.length === 0 && propExtracted.length > 0) propPhrases = propExtracted;
+  else if (propExtracted.length > 0) propPhrases = Array.from(/* @__PURE__ */ new Set([...propPhrases, ...propExtracted]));
+  const reqExpanded = reqPhrases.flatMap(expandirZona);
+  const propExpanded = propPhrases.flatMap(expandirZona);
+  const palabrasGenericas = /* @__PURE__ */ new Set([
+    "bogota",
+    "bogot\xE1",
+    "colombia",
+    "medellin",
+    "medell\xEDn",
+    "cali",
+    "barranquilla",
+    "bucaramanga",
+    "santa",
+    "santo",
+    "san",
+    "del",
+    "los",
+    "las",
+    "la",
+    "el",
+    "villa",
+    "vista",
+    "alto",
+    "altos",
+    "bajo",
+    "bajos",
+    "nueva",
+    "nuevo",
+    "valle",
+    "valles",
+    "portal",
+    "portales",
+    "rincon",
+    "brisas",
+    "colina",
+    "colinas",
+    "bosque",
+    "bosques",
+    "prado",
+    "prados",
+    "real",
+    "lago",
+    "lagos",
+    "norte",
+    "sur",
+    "occidente",
+    "oriente",
+    "centro",
+    "sector",
+    "zona",
+    "barrio",
+    "vereda"
+  ]);
+  const esCoincidenciaAproximada = (p1, p2) => {
+    if (p1 === p2) return true;
+    if (palabrasGenericas.has(p1) || palabrasGenericas.has(p2)) {
+      return false;
+    }
+    return p1.includes(p2) || p2.includes(p1);
+  };
+  if (reqExpanded.length > 0 && propExpanded.length > 0) {
+    for (const rp of reqExpanded) {
+      for (const pp of propExpanded) {
+        if (esCoincidenciaAproximada(rp, pp)) {
+          return { matches: true, score: 25 };
+        }
+      }
+    }
+  }
+  const tieneAledanos = hasAledanos(reqZoneRaw);
+  if (!tieneAledanos) {
+    if (reqExpanded.length > 0) {
+      return { matches: false, score: 0 };
+    }
+  }
+  if (tieneAledanos && reqLoc && propLoc && reqLoc !== "bogota" && propLoc !== "bogota" && reqLoc === propLoc) {
+    return { matches: true, score: 15 };
+  }
+  const isReqLocSpec = reqLoc && reqLoc !== "bogota";
+  const isPropLocSpec = propLoc && propLoc !== "bogota";
+  const isReqZoneSpec = reqZone && reqZone !== "bogota" && reqExpanded.length > 0;
+  const isPropZoneSpec = propZone && propZone !== "bogota" && propExpanded.length > 0;
+  if ((isReqLocSpec || isReqZoneSpec) && (isPropLocSpec || isPropZoneSpec)) {
+    return { matches: false, score: 0 };
+  }
+  if (reqCity && propCity && reqCity === propCity) {
+    return { matches: true, score: 10 };
+  }
+  return { matches: false, score: 0 };
+}
+function calcularIPC(requirement, property, matchScore) {
+  const matching = Math.round(matchScore);
+  const propAgeDays = Math.max(0, (Date.now() - new Date(property.createdAt || /* @__PURE__ */ new Date()).getTime()) / (1e3 * 60 * 60 * 24));
+  const reqAgeDays = Math.max(0, (Date.now() - new Date(requirement.createdAt || /* @__PURE__ */ new Date()).getTime()) / (1e3 * 60 * 60 * 24));
+  const getAgeFactor = (days) => {
+    if (days <= 3) return 100;
+    if (days <= 7) return 90;
+    if (days <= 15) return 75;
+    if (days <= 30) return 55;
+    return 30;
+  };
+  const freshness = Math.round((getAgeFactor(propAgeDays) + getAgeFactor(reqAgeDays)) / 2);
+  const propBrokerHasInfo = property.idUsuarioWhatsapp ? 90 : 70;
+  const reqBrokerHasInfo = requirement.idUsuarioWhatsapp ? 90 : 70;
+  const brokerTrust = Math.round((propBrokerHasInfo + reqBrokerHasInfo) / 2);
+  const getCompletitud = (item, isProp) => {
+    let fields = 6;
+    let present = 0;
+    const priceVal = isProp ? item.price : item.presupuestoMax || item.presupuestoMin;
+    if (priceVal && parseFloat(String(priceVal)) > 0) present++;
+    const areaVal = isProp ? item.areaTotal : item.areaMin;
+    if (areaVal && parseFloat(String(areaVal)) > 0) present++;
+    const bedVal = isProp ? item.bedrooms : item.habitacionesMin;
+    if (bedVal && Number(bedVal) > 0) present++;
+    const bathVal = isProp ? item.bathrooms : item.banosMin;
+    if (bathVal && Number(bathVal) > 0) present++;
+    const zoneVal = isProp ? item.zone : item.zonaDeseada;
+    if (zoneVal && zoneVal.trim() !== "" && zoneVal !== "NA") present++;
+    if (item.idUsuarioWhatsapp) present++;
+    return Math.round(present / fields * 100);
+  };
+  const dataQuality = Math.round((getCompletitud(property, true) + getCompletitud(requirement, false)) / 2);
+  const priceNum = parseFloat(String(property.price || "0"));
+  let marketDemand = 70;
+  if (priceNum > 0) {
+    if (priceNum <= 3e8) marketDemand = 95;
+    else if (priceNum <= 6e8) marketDemand = 85;
+    else if (priceNum <= 12e8) marketDemand = 75;
+    else marketDemand = 60;
+  }
+  const finalScore = Math.round(
+    matching * 0.4 + freshness * 0.2 + brokerTrust * 0.1 + dataQuality * 0.2 + marketDemand * 0.1
+  );
+  return {
+    score: finalScore,
+    factors: {
+      matching,
+      freshness,
+      brokerTrust,
+      dataQuality,
+      marketDemand
+    },
+    generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+    version: "VRIF-2.0"
+  };
+}
+function buildExplanationResult(score, blockers, positives, negatives, isStrictCompliant = true, missingFields = []) {
+  return {
+    score,
+    blockers,
+    positives,
+    negatives,
+    confidence: 1,
+    generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+    engineVersion: "VRIF-2.0",
+    isStrictCompliant,
+    missingFields
+  };
+}
+function explicarMatch(requirement, property) {
+  const blockers = [];
+  const positives = [];
+  const negatives = [];
+  const reqText = (requirement.rawText || requirement.name || "").trim().toUpperCase();
+  const propText = (property.rawText || property.name || "").trim().toUpperCase();
+  if (reqText === "NA" || reqText === "" || propText === "NA" || propText === "") {
+    blockers.push("Registro con informaci\xF3n insuficiente ('NA' o campos sin especificar).");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  const reqRawString = (requirement.rawText || requirement.name || "").trim();
+  const reqTextLow = reqRawString.toLowerCase();
+  const propRawString = (property.rawText || property.description || property.name || "").trim();
+  const propTextLow = propRawString.toLowerCase();
+  const SECTORES_BOGOTA_SABANA = [
+    "cedritos",
+    "usaquen",
+    "usaqu\xE9n",
+    "chico",
+    "chic\xF3",
+    "chapinero",
+    "suba",
+    "engativa",
+    "engativ\xE1",
+    "teusaquillo",
+    "kennedy",
+    "fontibon",
+    "fontib\xF3n",
+    "salitre",
+    "rosales",
+    "colina",
+    "niza",
+    "cabrera",
+    "nogal",
+    "recreo",
+    "castellana",
+    "patricio",
+    "barbara",
+    "b\xE1rbara",
+    "belmira",
+    "suiza",
+    "navarra",
+    "floresta",
+    "granada",
+    "santa barbara",
+    "santa b\xE1rbara",
+    "chico reservado",
+    "chico norte",
+    "rincon del chico",
+    "rinc\xF3n del chic\xF3",
+    "pasadena",
+    "batan",
+    "bat\xE1n",
+    "la carolina",
+    "alambra",
+    "mazuren",
+    "mazur\xE9n",
+    "calleja",
+    "virrey",
+    "el retiro",
+    "antiguo country",
+    "los rosales",
+    "chia",
+    "ch\xEDa",
+    "cajica",
+    "cajic\xE1",
+    "cota",
+    "sop\xF3"
+  ];
+  const reqZoneRawClean = (requirement.zonaDeseada || requirement.addressNeighborhood || "").trim().toLowerCase();
+  const hasColZone = reqZoneRawClean !== "" && reqZoneRawClean !== "na" && reqZoneRawClean !== "bogota" && reqZoneRawClean !== "bogot\xE1";
+  const hasTextZone = SECTORES_BOGOTA_SABANA.some((sector) => reqTextLow.includes(sector)) || /zona|sector|barrio|calle|cra|carrera/i.test(reqTextLow);
+  const hasSpecificReqZone = hasColZone || hasTextZone;
+  let budgetMaxCheck = parseFloat(String(requirement.presupuestoMax || "0"));
+  if (budgetMaxCheck <= 0) {
+    const mP = reqTextLow.match(/(?:ppto|presupuesto|busco|hasta|canon|valor)\s*:?\s*\$?([\d.]+)\s*(millones|millón|mll|mlls|mm|m|M)?/i) || reqTextLow.match(/\$?\s*([\d.]+)\s*(millones|millón|mll|mlls|mm|m|M)\b/i);
+    if (mP) {
+      let valR = parseFloat(mP[1].replace(/\./g, ""));
+      if (!isNaN(valR)) {
+        if (valR < 1e3) valR *= 1e6;
+        budgetMaxCheck = valR;
+      }
+    }
+  }
+  const hasReqBudget = budgetMaxCheck > 0;
+  let reqAreaCheck = parseFloat(String(requirement.areaMin || requirement.areaMinimaM2 || "0"));
+  if (reqAreaCheck <= 0) {
+    const mRA = reqTextLow.match(/(?:mínimo|min|de|área)?\s*([\d.,]+)\s*(?:m2|mts|m²|metros)/i);
+    if (mRA) {
+      let valRA = parseFloat(mRA[1].replace(/\./g, "").replace(",", "."));
+      if (!isNaN(valRA) && valRA > 10 && valRA < 1e4) reqAreaCheck = valRA;
+    }
+  }
+  const hasReqArea = reqAreaCheck > 0;
+  let reqBedsCheck = requirement.habitacionesMin ? Number(requirement.habitacionesMin) : 0;
+  if (reqBedsCheck <= 0) {
+    const mB = reqTextLow.match(/(\d+(?:\s*-\s*\d+)?)\s*(?:hab|habitaciones|alcoba|alcobas|alc|dormitorio|cuarto|cuartos|hb)/i);
+    if (mB) reqBedsCheck = parseInt(mB[1].split("-")[0].trim(), 10);
+  }
+  const hasReqBedrooms = reqBedsCheck > 0;
+  let reqBathsCheck = requirement.banosMin ? Number(requirement.banosMin) : 0;
+  if (reqBathsCheck <= 0) {
+    const mW = reqTextLow.match(/(\d+(?:\.\d+)?)\s*(?:o\s*más\s*)?(?:wc|baño|baños|bñ)/i) || reqTextLow.match(/(\d+)\s*hab\s*con\s*baño/i);
+    if (mW) reqBathsCheck = parseFloat(mW[1]);
+  }
+  const hasReqBathrooms = reqBathsCheck > 0;
+  let reqGaragesCheck = requirement.parqueaderosMin ? Number(requirement.parqueaderosMin) : 0;
+  if (reqGaragesCheck <= 0) {
+    const mG = reqTextLow.match(/(?:parqueadero|parqueaderos|garaje|garajes|ptero|g\.)\s*\.?\s*(\d+)/i) || reqTextLow.match(/(\d+)\s*(?:parqueadero|parqueaderos|garaje|garajes|ptero|g\.|individuales)/i) || /garajes|parqueaderos/i.test(reqTextLow);
+    if (mG && mG[1]) reqGaragesCheck = parseInt(mG[1], 10);
+    else if (/garajes|parqueaderos/i.test(reqTextLow)) reqGaragesCheck = 1;
+  }
+  const hasReqGarages = reqGaragesCheck > 0;
+  const hasReqAdmin = requirement.adminFeeMax != null && Number(requirement.adminFeeMax) > 0 || /admon|administracion|administración/i.test(reqTextLow);
+  const hasReqType = !!(requirement.tipoInmuebleDeseado || requirement.propertyType) || /apto|apartamento|casa|oficina|lote|bodega|local|finca|apartaestudio|loft/i.test(reqTextLow);
+  const hasReqBizType = !!(requirement.tipoNegocioDeseado || requirement.transactionType) || /venta|vendo|compro|compra|arriendo|alquilo|renta/i.test(reqTextLow);
+  let propPriceCheck = parseFloat(String(property.price || "0"));
+  if (propPriceCheck <= 0 && property.rentPrice) propPriceCheck = parseFloat(String(property.rentPrice));
+  if (propPriceCheck <= 0) {
+    const mPP = propTextLow.match(/(?:venta|precio|valor|canon|arriendo)\s*:?\s*\$?([\d.,]+)\s*(millones|millón|m|M)?/i);
+    if (mPP) {
+      let valP = parseFloat(mPP[1].replace(/\./g, "").replace(/,/g, ""));
+      if (!isNaN(valP) && valP > 1e3) propPriceCheck = valP;
+    }
+  }
+  let propAreaCheck = parseFloat(String(property.areaTotal || property.areaPrivate || "0"));
+  if (propAreaCheck <= 0) {
+    const mPA = propTextLow.match(/área\s*:?\s*([\d.,]+)/i) || propTextLow.match(/([\d.,]+)\s*(?:m2|mts|m²|metros)/i);
+    if (mPA) {
+      let valA = parseFloat(mPA[1].replace(/\./g, "").replace(",", "."));
+      if (!isNaN(valA) && valA > 10 && valA < 1e4) propAreaCheck = valA;
+    }
+  }
+  let propBedsCheck = property.bedrooms ? Number(property.bedrooms) : 0;
+  if (propBedsCheck <= 0) {
+    const mPB = propTextLow.match(/(\d+)\s*(?:hab|habitaciones|alcoba|alcobas|alc|dormitorio)/i);
+    if (mPB) propBedsCheck = parseInt(mPB[1], 10);
+  }
+  let propBathsCheck = property.bathrooms ? Number(property.bathrooms) : 0;
+  if (propBathsCheck <= 0) {
+    const mPBa = propTextLow.match(/(\d+)\s*(?:wc|baño|baños|bñ)/i);
+    if (mPBa) propBathsCheck = parseInt(mPBa[1], 10);
+  }
+  let propGaragesCheck = property.garages ? Number(property.garages) : 0;
+  if (propGaragesCheck <= 0) {
+    const mPG = propTextLow.match(/(\d+)\s*(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero)/i) || propTextLow.match(/(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero)\s*:?\s*(\d+)/i);
+    if (mPG) propGaragesCheck = parseInt(mPG[1], 10);
+  }
+  const missingReqFields = [];
+  if (!hasSpecificReqZone) missingReqFields.push("Ubicaci\xF3n / Barrio");
+  if (!hasReqBudget) missingReqFields.push("Presupuesto M\xE1x.");
+  if (!hasReqArea) missingReqFields.push("\xC1rea Total");
+  if (!hasReqBedrooms) missingReqFields.push("Habitaciones");
+  if (!hasReqBathrooms) missingReqFields.push("Ba\xF1os");
+  if (!hasReqGarages) missingReqFields.push("Parqueaderos");
+  if (!hasReqType) missingReqFields.push("Tipo de Inmueble");
+  if (!hasReqBizType) missingReqFields.push("Tipo de Negocio");
+  const missingPropFields = [];
+  if (propPriceCheck <= 0) missingPropFields.push("Precio Oferta");
+  if (propAreaCheck <= 0) missingPropFields.push("\xC1rea Oferta");
+  if (propBedsCheck <= 0) missingPropFields.push("Habitaciones Oferta");
+  if (propBathsCheck <= 0) missingPropFields.push("Ba\xF1os Oferta");
+  if (propGaragesCheck <= 0) missingPropFields.push("Parqueaderos Oferta");
+  const isStrictCompliant = missingReqFields.length === 0 && missingPropFields.length === 0;
+  const missingFieldsList = [...missingReqFields.map((f) => `${f} (Demanda)`), ...missingPropFields.map((f) => `${f} (Oferta)`)];
+  if (!isStrictCompliant) {
+    negatives.push(`Dato Pendiente por Enriquecer: Faltan especificaciones [${missingFieldsList.join(", ")}].`);
+  }
+  let completenessBonus = 0;
+  if (hasReqArea) completenessBonus += 2;
+  if (hasReqBathrooms) completenessBonus += 2;
+  if (hasReqGarages) completenessBonus += 2;
+  if (hasReqAdmin) completenessBonus += 2;
+  if (reqRawString.length > 120) completenessBonus += 2;
+  if (completenessBonus >= 6) {
+    positives.push(`\u2728 Requerimiento de Alta Fidelidad: Ficha de demanda ultra-completa con ${8 + Math.round(completenessBonus / 2)} especificaciones detalladas (+${completenessBonus}% Bono Prioridad).`);
+  }
+  const propBroker = (property.idUsuarioWhatsapp || "").split("@")[0];
+  const reqBroker = (requirement.idUsuarioWhatsapp || "").split("@")[0];
+  if (propBroker && reqBroker && propBroker === reqBroker) {
+    blockers.push("Auto-match: el inmueble y el requerimiento pertenecen al mismo asesor.");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  const reqBiz = (requirement.tipoNegocioDeseado || requirement.transactionType || "").toLowerCase();
+  const propBiz = (property.transactionType || "").toLowerCase();
+  const propAccepted = Array.isArray(property.acceptedTransactionTypes) ? property.acceptedTransactionTypes.map((t2) => t2.toLowerCase()) : [];
+  const transactionCompatible = checkTransactionCompatibility(reqBiz, propBiz, propAccepted);
+  if (!transactionCompatible) {
+    blockers.push(`Incompatibilidad de negocio: buscado '${reqBiz}', ofrecido '${propBiz}'`);
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  positives.push(`Tipo de negocio compatible: req='${reqBiz}' \u2194 prop='${propBiz}'`);
+  const CIUDADES_CO = [
+    "bogota",
+    "medellin",
+    "cali",
+    "barranquilla",
+    "cartagena",
+    "bucaramanga",
+    "pereira",
+    "manizales",
+    "cucuta",
+    "ibague",
+    "santa marta",
+    "villavicencio",
+    "pasto",
+    "monteria",
+    "valledupar",
+    "sincelejo",
+    "chia",
+    "zipaquira",
+    "cajica",
+    "envigado",
+    "bello",
+    "sabaneta",
+    "itagui",
+    "tenjo",
+    "mosquera"
+  ];
+  const resolveCityField = (raw1, raw2) => {
+    const n1 = normalizarTextoGeografico(raw1 || "");
+    const n2 = normalizarTextoGeografico(raw2 || "");
+    const SECTORES_BOGOTA = [
+      "cedritos",
+      "usaquen",
+      "chico",
+      "chapinero",
+      "suba",
+      "engativa",
+      "teusaquillo",
+      "kennedy",
+      "fontibon",
+      "bosa",
+      "salitre",
+      "rosales",
+      "colina",
+      "niza",
+      "cabrera",
+      "nogal",
+      "recreo",
+      "castellana",
+      "patricio",
+      "barbara",
+      "belmira",
+      "suiza",
+      "navarra",
+      "floresta",
+      "granada",
+      "colsubsidio",
+      "santa barbara",
+      "santa b\xE1rbara",
+      "chico reservado",
+      "chico norte",
+      "rincon del chico",
+      "rinc\xF3n del chic\xF3",
+      "norte"
+    ];
+    const isBogotaSector = (val) => {
+      return val === "" || val === "bogota" || val === "bogot\xE1" || SECTORES_BOGOTA.some((sector) => val.includes(sector));
+    };
+    if (isBogotaSector(n1) || isBogotaSector(n2)) {
+      return "bogota";
+    }
+    if (CIUDADES_CO.some((c) => n1.includes(c) || n1 === c)) return n1;
+    if (CIUDADES_CO.some((c) => n2.includes(c) || n2 === c)) return n2;
+    return n1 || n2 || "bogota";
+  };
+  const reqCity = resolveCityField(requirement.ciudadDeseada || "", requirement.city || "");
+  const propCity = resolveCityField(property.addressCity || "", property.city || "");
+  if (reqCity && propCity && reqCity !== propCity && reqCity !== "bogota" && propCity !== "bogota") {
+    blockers.push(`Incompatibilidad de ciudad: deseada ${reqCity}, ofrecida ${propCity}`);
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  positives.push(`Ciudad coincide: ${reqCity}`);
+  let price = parseFloat(String(property.price || "0"));
+  let budgetMax = parseFloat(String(requirement.presupuestoMax || "0"));
+  const budgetMin = parseFloat(String(requirement.presupuestoMin || "0"));
+  const isSaleMatch = (property.transactionType || "").toLowerCase().includes("venta") || !(property.transactionType || "").toLowerCase().includes("arriendo");
+  if (isSaleMatch && price > 0 && price < 3e7 && property.rawText) {
+    const rawP = property.rawText.toLowerCase();
+    const saleMatch = rawP.match(/(?:v\/venta\/|precio\s*(?:de\s*)?venta|venta)\s*:?\s*\$?([\d.,]+)\s*(mil\s*millones?|millones?|m|M)?/i) || rawP.match(/venta\/.*?\$?\s*([\d.]{7,12})/i);
+    if (saleMatch) {
+      let rawNum = parseFloat(saleMatch[1].replace(/\./g, "").replace(/,/g, ""));
+      const unitStr = (saleMatch[2] || "").toLowerCase();
+      const mult = unitStr.includes("mil millon") ? 1e9 : unitStr.includes("millon") || unitStr === "m" ? 1e6 : rawNum < 1e4 ? 1e6 : 1;
+      let valP = rawNum * mult;
+      if (!isNaN(valP) && valP >= 3e7) {
+        price = valP;
+      }
+    }
+  }
+  let isReqRent = (requirement.tipoNegocioDeseado || requirement.transactionType || "").toLowerCase().includes("arriendo");
+  if (requirement.rawText && (budgetMax <= 0 || isReqRent && budgetMax > 5e7)) {
+    const rawR = requirement.rawText.toLowerCase();
+    const matchPresu = rawR.match(/(?:presupuesto|ppto|canon|valor|hasta|máximo|max)\s*(?:máximo|max)?\s*:?\s*\$?([\d.,]+)\s*(millones|millón|mll|mlls|mm)?/i);
+    if (matchPresu) {
+      let valStr = matchPresu[1].replace(/\./g, "").replace(/,/g, ".");
+      let valR = parseFloat(valStr);
+      if (!isNaN(valR)) {
+        const unit = (matchPresu[2] || "").toLowerCase();
+        if (unit.includes("millon") || unit.includes("mll") || unit.includes("mm")) {
+          valR *= 1e6;
+        } else if (valR < 1e3) {
+          valR *= 1e6;
+        }
+        if (valR > 0) budgetMax = valR;
+      }
+    }
+  }
+  const propArea = parseFloat(String(property.areaTotal || property.area || "0"));
+  const reqAreaMin = parseFloat(String(requirement.areaMin || requirement.areaMinimaM2 || "0"));
+  const pBedrooms = property.bedrooms != null ? Number(property.bedrooms) : -1;
+  const reqBedrooms = requirement.habitacionesMin != null ? Number(requirement.habitacionesMin) : -1;
+  const pBathrooms = property.bathrooms != null ? Number(property.bathrooms) : -1;
+  const reqBathrooms = requirement.banosMin != null ? Number(requirement.banosMin) : -1;
+  const pGarages = property.garages != null ? Number(property.garages) : -1;
+  const reqGarages = requirement.parqueaderosMin != null ? Number(requirement.parqueaderosMin) : -1;
+  const pAdminFee = property.adminFee != null ? parseFloat(String(property.adminFee)) : -1;
+  const reqAdminMax = requirement.adminFeeMax != null ? parseFloat(String(requirement.adminFeeMax)) : -1;
+  const pEstrato = property.stratum != null ? Number(property.stratum) : property.estrato != null ? Number(property.estrato) : -1;
+  const reqEstrato = requirement.estratoDeseado != null ? Number(requirement.estratoDeseado) : -1;
+  const reqType = (requirement.tipoInmuebleDeseado || requirement.propertyType || "").toLowerCase().trim();
+  const propType = (property.propertyType || "").toLowerCase().trim();
+  const reqZone = normalizarTextoGeografico(requirement.zonaDeseada || requirement.addressNeighborhood || "");
+  const propZone = normalizarTextoGeografico(property.zone || property.addressNeighborhood || "");
+  const hasZeroSpecs = price <= 0 && propArea <= 0 && pBedrooms <= 0 && pBathrooms <= 0;
+  if (hasZeroSpecs) {
+    blockers.push("Inmueble incompleto sin datos prediales m\xEDnimos (Precio, \xC1rea, Habitaciones y Ba\xF1os en N/E).");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  const propRealPhone = extractRealPhone(property);
+  const reqRealPhone = extractRealPhone(requirement);
+  if (!propRealPhone || !reqRealPhone) {
+    blockers.push("Match no comercializable: Falta n\xFAmero de tel\xE9fono de contacto real en una de las partes.");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  if (budgetMax > 0 && price <= 0 && (!property.rentPrice || parseFloat(String(property.rentPrice)) <= 0)) {
+    blockers.push("Match inviable: La oferta NO especifica precio (N/E) y el requerimiento exige presupuesto.");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  let reqFilledCount = 0;
+  if (reqType) reqFilledCount++;
+  if (reqBiz) reqFilledCount++;
+  if (reqZone || requirement.ciudadDeseada) reqFilledCount++;
+  if (budgetMax > 0) reqFilledCount++;
+  if (reqAreaMin > 0) reqFilledCount++;
+  if (reqBedrooms > 0) reqFilledCount++;
+  if (reqBathrooms > 0) reqFilledCount++;
+  if (reqGarages > 0) reqFilledCount++;
+  let propFilledCount = 0;
+  if (propType) propFilledCount++;
+  if (propBiz) propFilledCount++;
+  if (propZone || property.addressCity) propFilledCount++;
+  if (price > 0 || property.rentPrice && parseFloat(String(property.rentPrice)) > 0) propFilledCount++;
+  if (propArea > 0) propFilledCount++;
+  if (pBedrooms > 0) propFilledCount++;
+  if (pBathrooms > 0) propFilledCount++;
+  if (pGarages > 0) propFilledCount++;
+  if (reqFilledCount < 4 || propFilledCount < 4) {
+    blockers.push(`Ficha incompleta (Demanda: ${reqFilledCount}/8 especificaciones, Oferta: ${propFilledCount}/8 especificaciones). Se requieren publicaciones con datos detallados.`);
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  const reqCityNorm = (requirement.ciudadDeseada || requirement.city || requirement.rawText || "").toLowerCase();
+  const propCityNorm = (property.addressCity || property.city || property.zone || property.rawText || "").toLowerCase();
+  const isReqCali = reqCityNorm.includes("cali");
+  const isPropCali = propCityNorm.includes("cali");
+  const isReqBogota = reqCityNorm.includes("bogota") || reqCityNorm.includes("bogot\xE1");
+  const isPropBogota = propCityNorm.includes("bogota") || propCityNorm.includes("bogot\xE1");
+  if (isReqCali && isPropBogota && !isPropCali || isReqBogota && isPropCali && !isPropBogota) {
+    blockers.push(`Incompatibilidad geogr\xE1fica de ciudad: Requerimiento en ${isReqCali ? "Cali" : "Bogot\xE1"} vs Oferta en ${isPropCali ? "Cali" : "Bogot\xE1"}.`);
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  if (reqType && propType) {
+    const aliases = {
+      "apartamento": ["apto", "apartamento", "apartment"],
+      "apto": ["apto", "apartamento", "apartment"],
+      "apartment": ["apto", "apartamento", "apartment"],
+      "casa": ["casa", "chalet", "casa campestre", "house"],
+      "house": ["casa", "chalet", "casa campestre", "house"],
+      "finca": ["finca", "finca raiz", "finca ra\xEDz", "farm"],
+      "farm": ["finca", "finca raiz", "finca ra\xEDz", "farm"],
+      "lote": ["lote", "terreno", "predio", "land"],
+      "terreno": ["lote", "terreno", "predio", "land"],
+      "predio": ["lote", "terreno", "predio", "land"],
+      "land": ["lote", "terreno", "predio", "land"],
+      "bodega": ["bodega", "bodega industrial", "warehouse"],
+      "warehouse": ["bodega", "bodega industrial", "warehouse"],
+      "local": ["local", "local comercial", "commercial"],
+      "commercial": ["local", "local comercial", "commercial"],
+      "oficina": ["oficina", "consultorio", "office"],
+      "office": ["oficina", "consultorio", "office"]
+    };
+    const reqAlias = aliases[reqType] || [reqType];
+    const propAlias = aliases[propType] || [propType];
+    if (!reqAlias.some((a) => propAlias.includes(a))) {
+      blockers.push(`Tipo de activo incompatible: deseado ${reqType}, ofrecido ${propType}`);
+      return buildExplanationResult(0, blockers, positives, negatives);
+    }
+  }
+  const cleanText = (t2) => (t2 || "").toLowerCase().trim().replace(/[\s\-_,.]+/g, " ");
+  const reqRawText = cleanText(requirement.rawText || requirement.name || "");
+  const propRawText = cleanText(property.rawText || property.name || "");
+  const reqIsStudio = reqRawText.includes("apartaestudio") || reqRawText.includes("aparta estudio");
+  const propIsStudio = propRawText.includes("apartaestudio") || propRawText.includes("aparta estudio");
+  const reqIsLoft = reqRawText.includes("loft") || reqType === "loft";
+  const propIsLoft = propRawText.includes("loft") || propType === "loft";
+  let reqSubtype = "apartamento_estandar";
+  if (reqType === "apartment" || reqType === "apartamento") {
+    if (reqIsStudio) reqSubtype = "apartaestudio";
+    else if (reqIsLoft) reqSubtype = "loft";
+  }
+  let propSubtype = "apartamento_estandar";
+  if (propType === "apartment" || propType === "apartamento") {
+    if (propIsStudio) propSubtype = "apartaestudio";
+    else if (propIsLoft) propSubtype = "loft";
+  }
+  if ((reqType === "apartment" || reqType === "apartamento") && (propType === "apartment" || propType === "apartamento")) {
+    if (reqSubtype !== propSubtype) {
+      blockers.push(`Subtipo de apartamento incompatible: deseado ${reqSubtype}, ofrecido ${propSubtype}`);
+      return buildExplanationResult(0, blockers, positives, negatives);
+    }
+  }
+  positives.push(`Tipo de activo compatible: ${propType}`);
+  const geoResult = matchesGeography(
+    requirement.zonaDeseada || requirement.addressNeighborhood || "",
+    property.zone || property.addressNeighborhood || "",
+    requirement.addressLocality || "",
+    property.addressLocality || "",
+    requirement.ciudadDeseada || requirement.city || "",
+    property.addressCity || property.city || ""
+  );
+  if (!geoResult.matches) {
+    blockers.push(`Ubicaci\xF3n incompatible: requerida zona '${requirement.zonaDeseada || ""}', ofrecida '${property.zone || ""}'`);
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  positives.push(`Ubicaci\xF3n compatible en zona: ${property.zone || ""}`);
+  if (reqEstrato >= 1 && pEstrato >= 1 && reqEstrato !== pEstrato) {
+    blockers.push(`Estrato incompatible: deseado ${reqEstrato}, ofrecido ${pEstrato}`);
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  let areaOversize = false;
+  if (reqAreaMin > 0) {
+    if (propArea > 0) {
+      if (propArea < reqAreaMin) {
+        blockers.push(`\xC1rea ofrecida (${propArea} m\xB2) es INFERIOR al m\xEDnimo exigido (${reqAreaMin} m\xB2). Match inviable (0%).`);
+        return buildExplanationResult(0, blockers, positives, negatives);
+      } else if (propArea > reqAreaMin * 1.15) {
+        areaOversize = true;
+        positives.push(`\u2705 \xC1rea de ${propArea} m\xB2 cumple lo exigido (${reqAreaMin} m\xB2). \u26A0\uFE0F Inmueble significativamente m\xE1s grande (+${Math.round((propArea / reqAreaMin - 1) * 100)}%)`);
+      } else {
+        positives.push(`\u2705 \xC1rea de ${propArea} m\xB2 dentro de la campana de confort (${reqAreaMin} m\xB2 \xB115%)`);
+      }
+    } else {
+      blockers.push(`No se puede verificar el \xE1rea requerida (${reqAreaMin} m\xB2) por falta de informaci\xF3n en la oferta.`);
+      return buildExplanationResult(0, blockers, positives, negatives);
+    }
+  }
+  if (budgetMax > 0) {
+    const isReqRent2 = reqBiz.includes("arriendo");
+    if (isReqRent2) {
+      let propRent = property.rentPrice ? parseFloat(String(property.rentPrice)) : 0;
+      if (propRent <= 0 && property.rawText) {
+        const rawP = property.rawText.toLowerCase();
+        const matchRentP = rawP.match(/(?:arriendo|canon|renta)\s*:?\s*\$?([\d.]+)\s*(millones|millón|m|M)?/i);
+        if (matchRentP) {
+          let valP = parseFloat(matchRentP[1].replace(/\./g, ""));
+          if (!isNaN(valP)) {
+            if (valP < 1e3) valP *= 1e6;
+            propRent = valP;
+          }
+        }
+      }
+      if (propRent <= 0 && price > 0 && price < 1e8) {
+        propRent = price;
+      }
+      const adminVal = pAdminFee > 0 ? pAdminFee : 0;
+      const totalRent = propRent + adminVal;
+      if (propRent <= 0 && price > 1e8) {
+        blockers.push(`Guillotina Financiera (Tolerancia Cero): La oferta no especifica canon de arriendo y su precio de venta ($${price.toLocaleString()}) no aplica para una b\xFAsqueda de arriendo de $${budgetMax.toLocaleString()}`);
+        return buildExplanationResult(0, blockers, positives, negatives);
+      }
+      if (totalRent > budgetMax) {
+        blockers.push(`Guillotina Financiera (Tolerancia Cero): Canon de arriendo total ($${totalRent.toLocaleString()}) supera el presupuesto m\xE1ximo de $${budgetMax.toLocaleString()}`);
+        return buildExplanationResult(0, blockers, positives, negatives);
+      }
+      const reqRentMin = requirement.presupuestoMin ? parseFloat(String(requirement.presupuestoMin)) : 0;
+      if (reqRentMin > 0 && totalRent < reqRentMin * 0.85) {
+        positives.push(`\u{1F525} Oportunidad Financiera (Ganga): Canon total ($${totalRent.toLocaleString()}) est\xE1 por debajo del rango m\xEDnimo presupuestado ($${reqRentMin.toLocaleString()}).`);
+      } else {
+        positives.push(`\u2705 Presupuesto de arriendo cumple: Total $${totalRent.toLocaleString()} (Canon + Adm\xF3n) <= M\xE1ximo $${budgetMax.toLocaleString()}`);
+      }
+    } else {
+      let salePrice = price;
+      if (salePrice > budgetMax) {
+        blockers.push(`Guillotina Financiera (Tolerancia Cero): El precio de la propiedad ($${salePrice.toLocaleString()}) supera el presupuesto m\xE1ximo del comprador ($${budgetMax.toLocaleString()}). Match inviable (0%).`);
+        return buildExplanationResult(0, blockers, positives, negatives);
+      }
+      if (salePrice < budgetMax * 0.7) {
+        blockers.push(`Incompatibilidad de Segmento Comercial: El precio del inmueble ($${salePrice.toLocaleString()}) est\xE1 m\xE1s de un 30% por debajo del presupuesto del comprador ($${budgetMax.toLocaleString()}). Inmueble de categor\xEDa o segmento inferior no apto para la demanda.`);
+        return buildExplanationResult(0, blockers, positives, negatives);
+      }
+    }
+  }
+  let effectiveReqBeds = reqBedrooms;
+  if (effectiveReqBeds <= 0) {
+    const mB = reqTextLow.match(/(\d+(?:\s*-\s*\d+)?)\s*(?:hab|habitaciones|alcoba|alcobas|alc|dormitorio)/i);
+    if (mB) effectiveReqBeds = parseInt(mB[1].split("-")[0].trim(), 10);
+  }
+  let effectiveReqBaths = reqBathrooms;
+  if (effectiveReqBaths <= 0) {
+    const mW = reqTextLow.match(/(\d+(?:\.\d+)?)\s*(?:o\s*más\s*)?(?:wc|baño|baños|bñ)/i) || reqTextLow.match(/(\d+)\s*hab\s*con\s*baño/i);
+    if (mW) effectiveReqBaths = parseFloat(mW[1]);
+  }
+  let effectiveReqGarages = reqGarages;
+  if (effectiveReqGarages <= 0) {
+    const mG = reqTextLow.match(/(?:parqueadero|parqueaderos|garaje|garajes|ptero|g\.)\s*\.?\s*(\d+)/i) || reqTextLow.match(/(\d+)\s*(?:parqueadero|parqueaderos|garaje|garajes|ptero|g\.|individuales)/i);
+    if (mG) effectiveReqGarages = parseInt(mG[1], 10);
+  }
+  const reqAdminMaxVal = requirement.adminFeeMax ? parseFloat(String(requirement.adminFeeMax)) : 0;
+  if (reqAdminMaxVal > 0 && pAdminFee > 0 && pAdminFee > reqAdminMaxVal) {
+    blockers.push(`Guillotina Financiera (Administraci\xF3n): Cuota de administraci\xF3n de $${pAdminFee.toLocaleString()} supera el m\xE1ximo aceptado de $${reqAdminMaxVal.toLocaleString()}`);
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  if (effectiveReqBeds > 0) {
+    if (pBedrooms >= 0) {
+      if (pBedrooms < effectiveReqBeds) {
+        blockers.push(`Atributo Fallido (Habitaciones): Ofrecidas (${pBedrooms}) son inferiores a las exigidas (${effectiveReqBeds}). Match Inviable (0%).`);
+        return buildExplanationResult(0, blockers, positives, negatives);
+      } else {
+        positives.push(`Habitaciones ofrecidas (${pBedrooms}) satisfacen la solicitud de (${effectiveReqBeds})`);
+      }
+    } else {
+      blockers.push(`No se pueden verificar las habitaciones requeridas (${effectiveReqBeds}) por falta de informaci\xF3n en la oferta.`);
+      return buildExplanationResult(0, blockers, positives, negatives);
+    }
+  }
+  if (effectiveReqBaths > 0 && pBathrooms >= 0 && pBathrooms < effectiveReqBaths) {
+    blockers.push(`Atributo Fallido (Ba\xF1os): Ofrecidos (${pBathrooms}) son inferiores a los requeridos (${effectiveReqBaths}). Match Inviable (0%).`);
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  if (effectiveReqGarages > 0 && pGarages >= 0 && pGarages < effectiveReqGarages) {
+    blockers.push(`Atributo Fallido (Parqueaderos): Ofrecidos (${pGarages}) son inferiores a los requeridos (${effectiveReqGarages}). Match Inviable (0%).`);
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  const propRawTextLower = (property.rawText || property.description || "").toLowerCase();
+  const reqRawTextLower = (requirement.rawText || "").toLowerCase();
+  const propRejectsPermute = propRawTextLower.includes("no permuta") || propRawTextLower.includes("sin permuta") || propRawTextLower.includes("solo efectivo") || propRawTextLower.includes("no se acepta permuta") || propRawTextLower.includes("no se reciben vehiculos");
+  const reqOffersTradeIn = requirement.tipoNegocioDeseado === "permuta" || reqRawTextLower.includes("entrego carro") || reqRawTextLower.includes("doy carro") || reqRawTextLower.includes("recibo vehiculo") || reqRawTextLower.includes("parte de pago") || reqRawTextLower.includes("pelo a pelo");
+  if (propRejectsPermute && reqOffersTradeIn) {
+    blockers.push("Choque de Intenci\xF3n Negocial: La oferta especifica 'NO PERMUTA / Solo Efectivo' y la demanda busca entregar veh\xEDculo u otro bien en parte de pago.");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  const reqDemandsQuiet = reqRawTextLower.includes("silencioso") || reqRawTextLower.includes("tranquilo") || reqRawTextLower.includes("nada sobre vias principales") || reqRawTextLower.includes("sin vias principales") || reqRawTextLower.includes("no vias principales") || reqRawTextLower.includes("sin ruido");
+  const propIsMainRoadNoise = propRawTextLower.includes("sobre avenida") || propRawTextLower.includes("via principal") || propRawTextLower.includes("frente a avenida") || propRawTextLower.includes("zona de alto trafico") || propRawTextLower.includes("zona ruidosa");
+  if (reqDemandsQuiet && propIsMainRoadNoise) {
+    blockers.push("Choque de Calidad de Vida: El comprador exige inmueble silencioso sin v\xEDas principales y la oferta est\xE1 situada sobre v\xEDa principal o zona ruidosa.");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  const propGarageType = (property.garageType || "").toLowerCase();
+  const reqGarageTypeRaw = (requirement.rawText || "").toLowerCase();
+  const reqWantsIndependent = reqGarageTypeRaw.includes("independiente") || reqGarageTypeRaw.includes("libre") || reqGarageTypeRaw.includes("no lineal");
+  let garageComfortPenalty = 0;
+  if (reqGarages > 0 && pGarages >= reqGarages) {
+    if (reqWantsIndependent && propGarageType === "lineal") {
+      garageComfortPenalty = 1;
+      negatives.push(`\u26A0\uFE0F Parqueadero(s) ofrecidos son LINEALES (servidumbre). El demandante exige ESTRICTAMENTE independientes (-30 pts).`);
+    } else if (propGarageType === "independiente" && pGarages > reqGarages) {
+      garageComfortPenalty = 2;
+      positives.push(`\u2705 Excedente de parqueaderos independientes (${pGarages} ofrecidos vs ${reqGarages} requeridos) \u2014 Bono de confort`);
+    } else if (propGarageType === "lineal" && pGarages >= reqGarages) {
+      negatives.push(`\u2139\uFE0F Parqueadero(s) lineales/servidumbre \u2014 requiere mover veh\xEDculos para acceder.`);
+    }
+  }
+  const reqWantsLightAir = reqGarageTypeRaw.includes("luz natural") || reqGarageTypeRaw.includes("ventilacion natural") || reqGarageTypeRaw.includes("vista panoramica") || reqGarageTypeRaw.includes("iluminacion");
+  const propHasLightAir = propRawTextLower.includes("luz natural") || propRawTextLower.includes("ventilacion natural") || propRawTextLower.includes("vista panoramica") || propRawTextLower.includes("iluminado") || propRawTextLower.includes("exterior");
+  let lightAirBonus = false;
+  if (reqWantsLightAir && propHasLightAir) {
+    lightAirBonus = true;
+    positives.push(`\u2728 Confort T\xE9cnico Coincidente: Inmueble con luz/ventilaci\xF3n natural y vista privilegiada (+15 pts)`);
+  }
+  let earnedPoints = 0;
+  const totalPossible = 100;
+  earnedPoints += 15;
+  earnedPoints += 15;
+  earnedPoints += Math.round(geoResult.score / 25 * 20);
+  const reqBizForScore = reqBiz.toLowerCase();
+  const isReqRentForScore = reqBizForScore.includes("arriendo");
+  const isReqSaleForScore = reqBizForScore.includes("venta") || reqBizForScore.includes("permuta");
+  let effectivePrice = price;
+  if (isReqRentForScore) {
+    const rp = property.rentPrice ? parseFloat(String(property.rentPrice)) : 0;
+    if (rp > 0) effectivePrice = rp;
+    else if (price > 0 && price < 1e8) effectivePrice = price;
+  } else if (isReqSaleForScore && propBiz === "venta_o_arriendo" && price > 0 && price < 1e8) {
+    effectivePrice = 0;
+  }
+  if (budgetMax > 0) {
+    if (effectivePrice > 0) {
+      if (effectivePrice < budgetMax) {
+        earnedPoints += 15;
+        positives.push(`\u{1F4B0} Oportunidad: precio $${effectivePrice.toLocaleString()} por debajo del presupuesto $${budgetMax.toLocaleString()}`);
+      } else if (effectivePrice === budgetMax) earnedPoints += 15;
+      else if (effectivePrice <= budgetMax * 1.01) earnedPoints += 13;
+      else if (effectivePrice <= budgetMax * 1.05) earnedPoints += 9;
+      else negatives.push(`Precio $${effectivePrice.toLocaleString()} supera presupuesto $${budgetMax.toLocaleString()}`);
+    } else {
+      negatives.push("Presupuesto no especificado en la oferta (N/E)");
+    }
+  } else {
+    earnedPoints += 10;
+  }
+  if (reqAreaMin > 0) {
+    if (propArea > 0) {
+      if (propArea >= reqAreaMin && !areaOversize) earnedPoints += 10;
+      else if (areaOversize) earnedPoints += 10;
+      else if (propArea >= reqAreaMin * 0.95) earnedPoints += 6;
+    } else {
+      negatives.push("\xC1rea no especificada en la oferta (N/E)");
+    }
+  } else {
+    earnedPoints += 7;
+  }
+  if (reqBedrooms > 0) {
+    if (pBedrooms >= 0) {
+      if (pBedrooms >= reqBedrooms) earnedPoints += 10;
+      else negatives.push(`Habitaciones (${pBedrooms}) inferiores a las requeridas (${reqBedrooms})`);
+    } else {
+      negatives.push("Habitaciones no especificadas en la oferta (N/E)");
+    }
+  } else {
+    earnedPoints += 7;
+  }
+  if (reqBathrooms > 0) {
+    if (pBathrooms >= 0) {
+      if (pBathrooms >= reqBathrooms) earnedPoints += 4;
+      else negatives.push(`Ba\xF1os (${pBathrooms}) inferiores a los requeridos (${reqBathrooms})`);
+    } else {
+      negatives.push("Ba\xF1os no especificados en la oferta (N/E)");
+    }
+  } else {
+    earnedPoints += 3;
+  }
+  if (reqGarages > 0) {
+    if (pGarages >= 0) {
+      if (pGarages >= reqGarages) {
+        if (garageComfortPenalty === 1) {
+          earnedPoints += Math.round(4 * 0.4);
+        } else if (garageComfortPenalty === 2) {
+          earnedPoints += 4;
+        } else {
+          earnedPoints += 4;
+        }
+      } else {
+        negatives.push(`Parqueaderos (${pGarages}) inferiores a los requeridos (${reqGarages})`);
+      }
+    } else {
+      negatives.push("Parqueaderos no especificados en la oferta (N/E)");
+    }
+  } else {
+    earnedPoints += 3;
+  }
+  if (reqEstrato >= 1 && pEstrato >= 1) {
+    if (reqEstrato === pEstrato) earnedPoints += 3;
+  } else {
+    earnedPoints += 2;
+  }
+  let reqAntiguedadMax = requirement.antiguedadMax != null ? Number(requirement.antiguedadMax) : -1;
+  if (reqAntiguedadMax < 0 && requirement.rawText) {
+    const mAntig = requirement.rawText.toLowerCase().match(/(?:máximo|max|hasta)\s*(\d{1,2})\s*años?\s*(?:de\s*)?(?:construido|construccion|construcción|antigüedad|antiguedad)?/i) || requirement.rawText.toLowerCase().match(/(\d{1,2})\s*años?\s*(?:de\s*)?(?:construido|antigüedad)/i);
+    if (mAntig) {
+      reqAntiguedadMax = parseInt(mAntig[1], 10);
+    }
+  }
+  const propAntiguedadAnos = property.antiguedadAnos != null ? Number(property.antiguedadAnos) : -1;
+  const propYearBuilt = property.yearBuilt != null ? Number(property.yearBuilt) : -1;
+  let propAge = propAntiguedadAnos;
+  if (propAge < 0 && propYearBuilt > 0) {
+    propAge = (/* @__PURE__ */ new Date()).getFullYear() - propYearBuilt;
+  }
+  if (propAge < 0 && property.rawText) {
+    const mPropAge = property.rawText.toLowerCase().match(/(?:edificio\s*de|antigüedad|antiguedad|tiene)\s*(\d{1,2})\s*años/i) || property.rawText.toLowerCase().match(/(\d{1,2})\s*años\s*(?:de\s*)?(?:antigüedad|construido)/i);
+    if (mPropAge) {
+      propAge = parseInt(mPropAge[1], 10);
+    }
+  }
+  if (reqAntiguedadMax >= 0 && propAge >= 0) {
+    if (propAge <= reqAntiguedadMax) {
+      earnedPoints += 4;
+      positives.push(`\u2705 Antig\xFCedad: ${propAge} a\xF1os (m\xE1ximo pedido: ${reqAntiguedadMax} a\xF1os)`);
+    } else {
+      blockers.push(`Antig\xFCedad del inmueble (${propAge} a\xF1os) SUPERA el m\xE1ximo exigido de (${reqAntiguedadMax} a\xF1os). Match inviable (0%).`);
+      return buildExplanationResult(0, blockers, positives, negatives);
+    }
+  } else if (reqAntiguedadMax < 0 && propAge >= 0) {
+    earnedPoints += 3;
+    if (propAge > 0) positives.push(`\u2139\uFE0F Antig\xFCedad de la oferta: ${propAge} a\xF1os (sin restricci\xF3n por la demanda)`);
+  } else {
+    earnedPoints += 2;
+  }
+  const semRes = evaluarInterseccionComodidadesSemanticas(requirement, property);
+  if (semRes.positives.length > 0) {
+    positives.push(...semRes.positives);
+  }
+  if (garageComfortPenalty === 1) {
+    earnedPoints -= 30;
+  }
+  if (lightAirBonus) {
+    earnedPoints += 15;
+  }
+  let finalPercentage = Math.max(0, Math.min(100, Math.round(earnedPoints / totalPossible * 100)));
+  const hasMissingSpecifiedFields = reqAreaMin > 0 && propArea <= 0 || reqBedrooms > 0 && pBedrooms < 0 || reqBathrooms > 0 && pBathrooms < 0 || reqGarages > 0 && pGarages < 0 || budgetMax > 0 && price <= 0 || reqZone && (!propZone || propZone === "bogota");
+  if (hasMissingSpecifiedFields) {
+    finalPercentage = Math.min(84, finalPercentage);
+  }
+  return buildExplanationResult(finalPercentage, blockers, positives, negatives, isStrictCompliant, missingFieldsList);
+}
+function evaluarInterseccionComodidadesSemanticas(req, prop2) {
+  const reqText = `${req.rawText || ""} ${req.description || ""}`.toLowerCase();
+  const propText = `${prop2.rawText || ""} ${prop2.description || ""}`.toLowerCase();
+  const positives = [];
+  const reqHasVestier = req.hasWalkInCloset || reqText.includes("vestier") || reqText.includes("walk") || reqText.includes("closet");
+  const propHasVestier = prop2.hasWalkInCloset || propText.includes("vestier") || propText.includes("walk") || propText.includes("closet");
+  let vestierScore = 0;
+  if (reqHasVestier && propHasVestier) {
+    vestierScore = 1;
+    positives.push("Homologaci\xF3n Sem\xE1ntica: Coincidencia Exacta entre Vestier y Walk-in Closet (100%)");
+  }
+  const reqHasBalcony = req.hasBalcony || reqText.includes("balcon") || reqText.includes("balc\xF3n");
+  const reqHasTerrace = req.hasTerrace || reqText.includes("terraza") || reqText.includes("patio");
+  const propHasBalcony = prop2.hasBalcony || propText.includes("balcon") || propText.includes("balc\xF3n");
+  const propHasTerrace = prop2.hasTerrace || propText.includes("terraza") || propText.includes("patio");
+  let balconTerrasaScore = 0;
+  if (reqHasBalcony && propHasBalcony) {
+    balconTerrasaScore = 1;
+    positives.push("Coincidencia Exacta de Balc\xF3n (100%)");
+  } else if (reqHasTerrace && propHasTerrace) {
+    balconTerrasaScore = 1;
+    positives.push("Coincidencia Exacta de Terraza (100%)");
+  } else if (reqHasBalcony && propHasTerrace || reqHasTerrace && propHasBalcony) {
+    balconTerrasaScore = 0.7;
+    positives.push("Homologaci\xF3n Sem\xE1ntica: Coincidencia Parcial por Analog\xEDa de Espacio Abierto (Balc\xF3n \u2194 Terraza 70%)");
+  }
+  const reqWantsGreen = reqText.includes("vista verde") || reqText.includes("parque") || reqText.includes("cerros") || reqText.includes("tranquilo");
+  const propIsParkFront = propText.includes("vista verde") || propText.includes("frente a parque") || propText.includes("exterior");
+  const propIsSilentInterior = propText.includes("interior") || propText.includes("silencioso");
+  let entornoScore = 0;
+  if (reqWantsGreen && propIsParkFront) {
+    entornoScore = 1;
+    positives.push("Entorno: Coincidencia Exacta Vista Verde / Exterior frente a Parque (100%)");
+  } else if (reqWantsGreen && propIsSilentInterior) {
+    entornoScore = 0.8;
+    positives.push("Entorno: Coincidencia Parcial Vista Verde \u2194 Interior Silencioso (80%)");
+  }
+  return { vestierScore, balconTerrasaScore, entornoScore, positives };
+}
+function calcularScoreMatch(requirement, property) {
+  return explicarMatch(requirement, property).score;
+}
+function evaluarMatch(requirement, property) {
+  return calcularScoreMatch(requirement, property) >= 80;
+}
+async function findMatchesForProperty(propertyId) {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    const [property] = await db.select().from(properties).where(eq3(properties.id, propertyId));
+    if (!property) return [];
+    const activeRequirements = await db.select().from(requirements).where(
+      and(
+        eq3(requirements.status, "active"),
+        sql2`LOWER(${requirements.ciudadDeseada}) = LOWER(${property.city || "Bogot\xE1"})`
+      )
+    );
+    const validMatches = [];
+    for (const req of activeRequirements) {
+      const explanation = explicarMatch(req, property);
+      const score = explanation.score;
+      if (score >= 80) {
+        let matchId;
+        const existing = await db.select().from(propertyMatches).where(
+          and(
+            eq3(propertyMatches.propertyId, propertyId),
+            eq3(propertyMatches.requirementId, req.id)
+          )
+        ).limit(1);
+        const ipcObj = calcularIPC(req, property, score);
+        explanation.ipc = ipcObj;
+        if (existing.length > 0) {
+          matchId = existing[0].id;
+          await db.update(propertyMatches).set({
+            matchScore: score.toFixed(2),
+            matchExplanation: explanation,
+            ipc: ipcObj,
+            createdAt: /* @__PURE__ */ new Date()
+          }).where(eq3(propertyMatches.id, matchId));
+        } else {
+          const [newMatch] = await db.insert(propertyMatches).values({
+            propertyId,
+            requirementId: req.id,
+            matchScore: score.toFixed(2),
+            matchReason: `VECY CORE TS Scoring: ${score.toFixed(2)}/100`,
+            matchExplanation: explanation,
+            ipc: ipcObj,
+            status: "suggested",
+            ownerConfirmed: false,
+            seekerConfirmed: false
+          }).returning();
+          matchId = newMatch.id;
+          vrifEvents.emit("match:created", matchId);
+        }
+        validMatches.push({
+          ...req,
+          score,
+          matchId,
+          idUsuarioWhatsapp: req.idUsuarioWhatsapp
+        });
+      }
+    }
+    console.log(`[Matching] Inmueble #${propertyId}: ${validMatches.length} matches detectados.`);
+    return validMatches;
+  } catch (e) {
+    console.error("[Matching] Error en findMatchesForProperty:", e.message);
+    return [];
+  }
+}
+async function findMatchesForRequirement(requirementId) {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    const [req] = await db.select().from(requirements).where(eq3(requirements.id, requirementId));
+    if (!req) return [];
+    const availableProperties = await db.select().from(properties).where(
+      and(
+        eq3(properties.available, true),
+        sql2`LOWER(${properties.city}) = LOWER(${req.ciudadDeseada || "Bogot\xE1"})`
+      )
+    );
+    const validMatches = [];
+    for (const prop2 of availableProperties) {
+      const explanation = explicarMatch(req, prop2);
+      const score = explanation.score;
+      if (score >= 80) {
+        let matchId;
+        const existing = await db.select().from(propertyMatches).where(
+          and(
+            eq3(propertyMatches.propertyId, prop2.id),
+            eq3(propertyMatches.requirementId, requirementId)
+          )
+        ).limit(1);
+        const ipcObj = calcularIPC(req, prop2, score);
+        explanation.ipc = ipcObj;
+        if (existing.length > 0) {
+          matchId = existing[0].id;
+          await db.update(propertyMatches).set({
+            matchScore: score.toFixed(2),
+            matchExplanation: explanation,
+            ipc: ipcObj,
+            createdAt: /* @__PURE__ */ new Date()
+          }).where(eq3(propertyMatches.id, matchId));
+        } else {
+          const [newMatch] = await db.insert(propertyMatches).values({
+            propertyId: prop2.id,
+            requirementId,
+            matchScore: score.toFixed(2),
+            matchReason: `VECY CORE TS Scoring: ${score.toFixed(2)}/100`,
+            matchExplanation: explanation,
+            ipc: ipcObj,
+            status: "suggested",
+            ownerConfirmed: false,
+            seekerConfirmed: false
+          }).returning();
+          matchId = newMatch.id;
+          vrifEvents.emit("match:created", matchId);
+        }
+        validMatches.push({
+          ...prop2,
+          score,
+          matchId,
+          idUsuarioWhatsapp: prop2.idUsuarioWhatsapp
+        });
+      }
+    }
+    console.log(`[Matching] Requerimiento #${requirementId}: ${validMatches.length} matches detectados.`);
+    return validMatches;
+  } catch (e) {
+    console.error("[Matching] Error en findMatchesForRequirement:", e.message);
+    return [];
+  }
+}
+async function executeMatchEngine(propertyId, requirementId) {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    if (requirementId) {
+      for (const req of reqs) {
+        const pBiz = (prop.transactionType || "").toLowerCase();
+        const rBiz = (req.tipoNegocioDeseado || "").toLowerCase();
+        const pAccepted = Array.isArray(prop.acceptedTransactionTypes) ? prop.acceptedTransactionTypes.map((t2) => t2.toLowerCase()) : [];
+        if (!pBiz || !rBiz || !checkTransactionCompatibility(rBiz, pBiz, pAccepted)) continue;
+        const pType = (prop.propertyType || "").toLowerCase();
+        const rType = (req.tipoInmuebleDeseado || "").toLowerCase();
+        if (!pType || !rType || pType !== rType) continue;
+        const pCity = normalizarTextoGeografico(prop.city || prop.addressCity || "");
+        const rCity = normalizarTextoGeografico(req.ciudadDeseada || "");
+        if (!pCity || !rCity || pCity !== rCity) continue;
+        const pZone = normalizarTextoGeografico(prop.zone || prop.addressNeighborhood || "");
+        const rZone = normalizarTextoGeografico(req.zonaDeseada || req.addressNeighborhood || "");
+        if (rZone && pZone) {
+          const zonaMatch = rZone === pZone || rZone.includes(pZone) || pZone.includes(rZone);
+          if (!zonaMatch) continue;
+        }
+        const pArea = parseFloat(String(prop.areaTotal || prop.areaPrivate || "0"));
+        const rAreaMin = parseFloat(String(req.areaMin || "0"));
+        if (pArea > 0 && rAreaMin > 0) {
+          const areaMinLimit = rAreaMin * 0.9;
+          if (pArea < areaMinLimit) continue;
+        }
+        const price = parseFloat(String(prop.price || "0"));
+        const adminFee = parseFloat(String(prop.adminFee || "0"));
+        const totalCost = price + adminFee;
+        const budgetMax = parseFloat(String(req.presupuestoMax || "0"));
+        const budgetMin = parseFloat(String(req.presupuestoMin || "0"));
+        if (budgetMax > 0 && totalCost > budgetMax * 1.05) continue;
+        if (budgetMin > 0 && price < budgetMin * 0.9) continue;
+        const pBedrooms = Number(prop.bedrooms || 0);
+        const rBedrooms = Number(req.habitacionesMin || 0);
+        if (rBedrooms > 0 && pBedrooms > 0 && pBedrooms < rBedrooms) continue;
+        const explanation = explicarMatch(req, prop);
+        const score = explanation.score;
+        if (score < 80) continue;
+        const propPhone = cleanPhone(prop.idUsuarioWhatsapp || "");
+        const reqPhone = cleanPhone(req.idUsuarioWhatsapp || "");
+        const existingSamePhone = await db.select({ id: propertyMatches.id, reqRaw: requirements.rawText }).from(propertyMatches).innerJoin(requirements, eq3(propertyMatches.requirementId, requirements.id)).where(
+          and(
+            eq3(propertyMatches.propertyId, prop.id),
+            sql2`${requirements.idUsuarioWhatsapp} = ${req.idUsuarioWhatsapp ?? ""}`
+          )
+        );
+        const isDuplicateReqPost = existingSamePhone.some(
+          (m) => m.reqRaw && req.rawText && (m.reqRaw.trim() === req.rawText.trim() || m.reqRaw.includes(req.rawText.substring(0, 50)))
+        );
+        if (isDuplicateReqPost) continue;
+        let matchId;
+        let isNewMatch = false;
+        const existing = await db.select().from(propertyMatches).where(
+          and(
+            eq3(propertyMatches.propertyId, prop.id),
+            eq3(propertyMatches.requirementId, req.id)
+          )
+        ).limit(1);
+        const ipcObj = calcularIPC(req, prop, score);
+        explanation.ipc = ipcObj;
+        if (existing.length > 0) {
+          matchId = existing[0].id;
+          await db.update(propertyMatches).set({
+            matchScore: score.toFixed(2),
+            matchExplanation: explanation,
+            ipc: ipcObj,
+            createdAt: /* @__PURE__ */ new Date()
+          }).where(eq3(propertyMatches.id, matchId));
+        } else {
+          isNewMatch = true;
+          const [newMatch] = await db.insert(propertyMatches).values({
+            propertyId: prop.id,
+            requirementId: req.id,
+            matchScore: score.toFixed(2),
+            matchReason: `VECY Core Engine: Match estricto ${score}%`,
+            matchExplanation: explanation,
+            ipc: ipcObj,
+            status: "suggested",
+            ownerConfirmed: false,
+            seekerConfirmed: false
+          }).returning();
+          matchId = newMatch.id;
+          vrifEvents.emit("match:created", matchId);
+          console.log(`[Matching-Engine] \u2705 Match #${matchId} (${score}%) registrado y evento emitido.`);
+          if (score >= 85) {
+            const reportMsg = buildBigTechAdminReport(prop, req, score);
+            sendDirectAlertToAdmins(reportMsg).catch((aErr) => console.error("[Matching-Engine] Error al notificar reporte a admin:", aErr));
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error("[Matching-Engine] Error running match engine:", err.message || err);
+  }
+}
+async function sendDirectAlertToAdmins(message) {
+  const adminPhone = process.env.ADMIN_PHONE || "573192919978";
+  const matchBot = global.janiaMatchBotInstance;
+  if (matchBot && matchBot.isReady) {
+    console.log(`[Matching-Notification] Enviando alerta de Match al administrador (${adminPhone}) v\xEDa Baileys...`);
+    await matchBot.queuedSend(`${adminPhone}@s.whatsapp.net`, message).catch((e) => console.error("Error al notificar a administrador por Baileys:", e));
+    return;
+  }
+  const wwebClient = global.whatsappClient;
+  if (wwebClient) {
+    console.log(`[Matching-Notification] Enviando alerta de Match al administrador (${adminPhone}) v\xEDa WWEBJS...`);
+    await wwebClient.sendMessage(`${adminPhone}@c.us`, message).catch((e) => console.error("Error al notificar a administrador por WWEBJS:", e));
+    return;
+  }
+  console.warn("[Matching-Notification] Ning\xFAn cliente de WhatsApp disponible en global para enviar la alerta.");
+}
+function buildBigTechAdminReport(prop2, req, score) {
+  const formatCOP = (val) => {
+    const num = parseFloat(String(val));
+    if (isNaN(num) || num === 0) return "N/E";
+    return `$${num.toLocaleString("es-CO")}`;
+  };
+  const propPriceStr = prop2.price ? formatCOP(prop2.price) : "N/E";
+  const reqBudgetStr = req.presupuestoMax ? formatCOP(req.presupuestoMax) : "N/E";
+  const propBroker = (prop2.idUsuarioWhatsapp || "Captador").replace(/\D/g, "");
+  const reqBroker = (req.idUsuarioWhatsapp || "Requiriente").replace(/\D/g, "");
+  let intentReason = `El cliente busca inmueble en ${req.zonaDeseada || prop2.zone || "Bogot\xE1"}`;
+  if (req.rawText && req.rawText.toLowerCase().includes("silencioso")) {
+    intentReason += " y exige huir del ruido de las v\xEDas principales. Este inmueble cumple el criterio de tranquilidad.";
+  } else if (req.rawText && req.rawText.toLowerCase().includes("luz natural")) {
+    intentReason += " y prioriza iluminaci\xF3n y ventilaci\xF3n natural.";
+  } else {
+    intentReason += ". Coincidencia de alta intencionalidad comercial.";
+  }
+  let techDetails = `Coincide en distribuci\xF3n (${prop2.bedrooms || "N/E"} habs, ${prop2.bathrooms || "N/E"} ba\xF1os)`;
+  if (prop2.garageType === "independiente") {
+    techDetails += " y tiene garajes independientes \u2705";
+  } else if (prop2.garageType === "lineal") {
+    techDetails += " (\u26A0\uFE0F garajes en servidumbre)";
+  }
+  return `\u{1F680} *VECY INTEL: Oportunidad de Cierre Detectada (${score}% MATCH)*
+\u{1F464} *ASESORES:* +${propBroker} \u2194 +${reqBroker}
+\u{1F3E0} *OFERTA #${prop2.id}:* ${prop2.name || prop2.title || "Inmueble"} (${propPriceStr})
+\u{1F4CB} *DEMANDA #${req.id}:* ${req.name || "Requerimiento"} (${reqBudgetStr})
+\u{1F9E0} *INTENCI\xD3N:* ${intentReason}
+\u2696\uFE0F *T\xC9CNICO:* ${techDetails}.
+\u{1F4B0} *ESTRATEGIA:* Eduardo / Jani, coincidencia de alta probabilidad validada. \xA1Vayan por esa comisi\xF3n! \u{1F680}
+
+\u{1F449} Ver en el panel web: https://vecy-network.vercel.app/admin`;
+}
+var TRANSACTION_COMPATIBILITY_MATRIX;
+var init_matching = __esm({
+  "server/_core/matching.ts"() {
+    "use strict";
+    init_db();
+    init_schema();
+    init_geography();
+    init_events();
+    TRANSACTION_COMPATIBILITY_MATRIX = {
+      venta: /* @__PURE__ */ new Set(["venta", "venta_o_arriendo", "venta_permuta", "arriendo_con_opcion_de_compra"]),
+      arriendo: /* @__PURE__ */ new Set(["arriendo", "venta_o_arriendo", "arriendo_temporal"]),
+      venta_o_arriendo: /* @__PURE__ */ new Set(["venta", "arriendo", "venta_o_arriendo", "venta_permuta", "arriendo_temporal", "arriendo_con_opcion_de_compra"]),
+      arriendo_temporal: /* @__PURE__ */ new Set(["arriendo_temporal", "arriendo", "venta_o_arriendo"]),
+      arriendo_con_opcion_de_compra: /* @__PURE__ */ new Set(["arriendo_con_opcion_de_compra", "venta", "venta_o_arriendo"]),
+      permuta: /* @__PURE__ */ new Set(["permuta", "venta_permuta"]),
+      venta_permuta: /* @__PURE__ */ new Set(["venta_permuta", "venta", "permuta", "venta_o_arriendo"]),
+      aporte: /* @__PURE__ */ new Set(["aporte"])
+    };
   }
 });
 
@@ -2326,10 +4378,11 @@ async function transcribeAudioWithGemini(audioBuffer, mimeType) {
     }
   };
   const response = await axios5.post(apiUrl, payload, { timeout: 15e3 });
-  if (response.data.candidates && response.data.candidates[0]) {
-    return response.data.candidates[0].content.parts[0].text.trim();
+  const textCandidate = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (textCandidate && typeof textCandidate === "string") {
+    return textCandidate.trim();
   }
-  throw new Error("Empty candidate response from Gemini API");
+  return "";
 }
 async function transcribeAudioBuffer(audioBuffer, mimeType, prompt) {
   const sizeMB = audioBuffer.length / (1024 * 1024);
@@ -2491,1063 +4544,6 @@ var init_storage = __esm({
   }
 });
 
-// server/_core/matching.ts
-var matching_exports = {};
-__export(matching_exports, {
-  calcularIPC: () => calcularIPC,
-  calcularScoreMatch: () => calcularScoreMatch,
-  evaluarInterseccionComodidadesSemanticas: () => evaluarInterseccionComodidadesSemanticas,
-  evaluarMatch: () => evaluarMatch,
-  executeMatchEngine: () => executeMatchEngine,
-  explicarMatch: () => explicarMatch,
-  extractRealPhone: () => extractRealPhone,
-  findMatchesForProperty: () => findMatchesForProperty,
-  findMatchesForRequirement: () => findMatchesForRequirement,
-  matchesGeography: () => matchesGeography
-});
-import { and, eq as eq3, sql as sql2 } from "drizzle-orm";
-function hasAledanos(text2) {
-  if (!text2) return false;
-  const n = normalizarTextoGeografico(text2);
-  return n.includes("aledan") || n.includes("cercan") || n.includes("alrededor") || n.includes("similar") || n.includes("proxim") || n.includes("otro");
-}
-function extractRealPhone(item) {
-  if (!item) return null;
-  const candidates = [
-    item.idUsuarioWhatsapp,
-    item.contactPhone,
-    item.brokerPhone,
-    item.phone,
-    item.usuarioWhatsapp,
-    item.contactNumber,
-    item.sellerPhone,
-    item.captadorPhone,
-    item.user?.phone,
-    item.user?.idUsuarioWhatsapp,
-    item.user?.contactPhone
-  ];
-  for (const cand of candidates) {
-    if (!cand) continue;
-    const clean = String(cand).split("@")[0].replace(/\D/g, "");
-    if (clean.startsWith("11") || clean.startsWith("12036") || clean.startsWith("1203") || clean.length > 13) {
-      continue;
-    }
-    if (clean.length === 12 && clean.startsWith("573")) return clean;
-    if (clean.length === 10 && clean.startsWith("3")) return `57${clean}`;
-    if (clean.length === 12 && clean.startsWith("5760")) return clean;
-    if (clean.length === 10 && clean.startsWith("60")) return `57${clean}`;
-    if (clean.length >= 10 && clean.length <= 12) return clean;
-  }
-  const textToSearch = `${item.rawText || ""} ${item.description || ""} ${item.name || ""} ${item.rawMessage || ""}`;
-  const phoneMatches = textToSearch.match(/(?:\+?57\s*)?3\d{2}[\s.-]?\d{3}[\s.-]?\d{4}\b/g);
-  if (phoneMatches && phoneMatches.length > 0) {
-    const rawMatch = phoneMatches[0].replace(/\D/g, "");
-    const clean10 = rawMatch.startsWith("57") && rawMatch.length === 12 ? rawMatch.substring(2) : rawMatch;
-    if (clean10.length === 10 && clean10.startsWith("3")) {
-      return `57${clean10}`;
-    }
-  }
-  const jsonSources = [item.metadata, item.rawJson, item.extraData];
-  for (const jsonSrc of jsonSources) {
-    if (!jsonSrc) continue;
-    const str = typeof jsonSrc === "string" ? jsonSrc : JSON.stringify(jsonSrc);
-    const jsonMatches = str.match(/(?:\+?57\s*)?3\d{2}[\s.-]?\d{3}[\s.-]?\d{4}\b/g);
-    if (jsonMatches && jsonMatches.length > 0) {
-      const rawMatch = jsonMatches[0].replace(/\D/g, "");
-      const clean10 = rawMatch.startsWith("57") && rawMatch.length === 12 ? rawMatch.substring(2) : rawMatch;
-      if (clean10.length === 10 && clean10.startsWith("3")) {
-        return `57${clean10}`;
-      }
-    }
-  }
-  return null;
-}
-function checkTransactionCompatibility(reqType, propType, propAccepted = []) {
-  if (!reqType || !propType) return false;
-  const r = reqType.toLowerCase();
-  const p = propType.toLowerCase();
-  if (r === p) return true;
-  if (propAccepted.length > 0 && propAccepted.includes(r)) return true;
-  if (p === "venta_o_arriendo" && (r === "venta" || r === "arriendo" || r === "arriendo_con_opcion_de_compra")) return true;
-  if (r === "venta_o_arriendo" && (p === "venta" || p === "arriendo" || p === "arriendo_con_opcion_de_compra")) return true;
-  if (p === "venta_permuta" && (r === "venta" || r === "permuta")) return true;
-  if (r === "venta_permuta" && (p === "venta" || p === "permuta")) return true;
-  if (p === "arriendo_con_opcion_de_compra" && r === "venta") return true;
-  if (r === "arriendo_con_opcion_de_compra" && p === "venta") return true;
-  return false;
-}
-function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCityRaw, propCityRaw) {
-  const reqCity = normalizarTextoGeografico(reqCityRaw || "");
-  const propCity = normalizarTextoGeografico(propCityRaw || "");
-  const reqZone = normalizarTextoGeografico(reqZoneRaw || "");
-  const propZone = normalizarTextoGeografico(propZoneRaw || "");
-  const reqLoc = normalizarTextoGeografico(reqLocRaw || "");
-  const propLoc = normalizarTextoGeografico(propLocRaw || "");
-  if (reqCity && propCity && reqCity !== propCity) {
-    return { matches: false, score: 0 };
-  }
-  if (!reqZone && !reqLoc) {
-    return { matches: true, score: 25 };
-  }
-  const equivalenciasZonas = {
-    "las santas": [
-      "santa barbara oriental",
-      "santa barbara central",
-      "santa barbara occidental",
-      "santa ana oriental",
-      "santa ana occidental",
-      "santa paula",
-      "santa bibiana",
-      "san patricio",
-      "navarra",
-      "chico navarra",
-      "molinos norte",
-      "usaquen",
-      "multicentro"
-    ],
-    "zona santas": [
-      "santa barbara oriental",
-      "santa barbara central",
-      "santa barbara occidental",
-      "santa ana oriental",
-      "santa ana occidental",
-      "santa paula",
-      "santa bibiana",
-      "san patricio",
-      "navarra",
-      "chico navarra",
-      "molinos norte",
-      "usaquen",
-      "multicentro"
-    ],
-    "santas de usaquen": [
-      "santa barbara oriental",
-      "santa barbara central",
-      "santa barbara occidental",
-      "santa ana oriental",
-      "santa ana occidental",
-      "santa paula",
-      "santa bibiana",
-      "san patricio",
-      "navarra",
-      "chico navarra",
-      "molinos norte",
-      "usaquen",
-      "multicentro"
-    ],
-    "sector santas": [
-      "santa barbara oriental",
-      "santa barbara central",
-      "santa barbara occidental",
-      "santa ana oriental",
-      "santa ana occidental",
-      "santa paula",
-      "santa bibiana",
-      "san patricio",
-      "navarra",
-      "chico navarra",
-      "molinos norte",
-      "usaquen",
-      "multicentro"
-    ],
-    "barrios santa norte": [
-      "santa barbara oriental",
-      "santa barbara central",
-      "santa barbara occidental",
-      "santa ana oriental",
-      "santa ana occidental",
-      "santa paula",
-      "santa bibiana",
-      "san patricio",
-      "navarra",
-      "chico navarra",
-      "molinos norte",
-      "usaquen",
-      "multicentro"
-    ],
-    "el chico": ["chico norte", "chico reservado", "chico reservado norte", "chico", "chico navarra", "chico sur"],
-    "chico": ["chico norte", "chico reservado", "chico reservado norte", "chico", "chico navarra", "chico sur"],
-    "lagos": ["lagos de torca", "club los lagartos", "el lago"],
-    "las lomas": ["lomas de niza", "lomas"]
-  };
-  const expandirZona = (phrase) => {
-    if (equivalenciasZonas[phrase]) {
-      return equivalenciasZonas[phrase];
-    }
-    return [phrase];
-  };
-  const splitPhrases = (text2) => {
-    if (!text2) return [];
-    let norm2 = normalizarTextoGeografico(text2);
-    norm2 = norm2.replace(/\b(u\s+)?otros\s+barrios\s+aledanos\b/gi, "");
-    norm2 = norm2.replace(/\b(y|o|u)\s+aledanos\b/gi, "");
-    norm2 = norm2.replace(/\b(y|o|u)\s+sectores\s+cercanos\b/gi, "");
-    norm2 = norm2.replace(/\b(y|o|u)\s+alrededores\b/gi, "");
-    norm2 = norm2.replace(/\b(y|o)\s+similares\b/gi, "");
-    norm2 = norm2.replace(/\baledanos\b/gi, "");
-    norm2 = norm2.replace(/\bcercanos\b/gi, "");
-    norm2 = norm2.replace(/\balrededores\b/gi, "");
-    const stopGeoWords = /* @__PURE__ */ new Set([
-      "bogota",
-      "bogota d c",
-      "bogota dc",
-      "d c",
-      "dc",
-      "colombia",
-      "medellin",
-      "cali",
-      "barranquilla",
-      "cartagena",
-      "bucaramanga",
-      "pereira",
-      "manizales",
-      "cucuta",
-      "ibague",
-      "santa marta"
-    ]);
-    return norm2.split(/,|\/|\s+y\s+|\s+o\s+|\s+e\s+/).map((p) => p.trim()).filter((p) => p.length > 0 && !stopGeoWords.has(p));
-  };
-  const reqPhrases = splitPhrases(reqZoneRaw);
-  const propPhrases = splitPhrases(propZoneRaw);
-  const reqExpanded = reqPhrases.flatMap(expandirZona);
-  const propExpanded = propPhrases.flatMap(expandirZona);
-  const palabrasGenericas = /* @__PURE__ */ new Set([
-    "bogota",
-    "bogot\xE1",
-    "colombia",
-    "medellin",
-    "medell\xEDn",
-    "cali",
-    "barranquilla",
-    "bucaramanga",
-    "santa",
-    "santo",
-    "san",
-    "del",
-    "los",
-    "las",
-    "la",
-    "el",
-    "villa",
-    "vista",
-    "alto",
-    "altos",
-    "bajo",
-    "bajos",
-    "nueva",
-    "nuevo",
-    "valle",
-    "valles",
-    "portal",
-    "portales",
-    "rincon",
-    "brisas",
-    "colina",
-    "colinas",
-    "bosque",
-    "bosques",
-    "prado",
-    "prados",
-    "real",
-    "lago",
-    "lagos",
-    "norte",
-    "sur",
-    "occidente",
-    "oriente",
-    "centro",
-    "sector",
-    "zona",
-    "barrio",
-    "vereda"
-  ]);
-  const esCoincidenciaAproximada = (p1, p2) => {
-    if (p1 === p2) return true;
-    if (palabrasGenericas.has(p1) || palabrasGenericas.has(p2)) {
-      return false;
-    }
-    return p1.includes(p2) || p2.includes(p1);
-  };
-  if (reqExpanded.length > 0 && propExpanded.length > 0) {
-    for (const rp of reqExpanded) {
-      for (const pp of propExpanded) {
-        if (esCoincidenciaAproximada(rp, pp)) {
-          return { matches: true, score: 25 };
-        }
-      }
-    }
-  }
-  const tieneAledanos = hasAledanos(reqZoneRaw);
-  if (!tieneAledanos) {
-    if (reqExpanded.length > 0) {
-      return { matches: false, score: 0 };
-    }
-  }
-  if (tieneAledanos && reqLoc && propLoc && reqLoc !== "bogota" && propLoc !== "bogota" && reqLoc === propLoc) {
-    return { matches: true, score: 15 };
-  }
-  const isReqLocSpec = reqLoc && reqLoc !== "bogota";
-  const isPropLocSpec = propLoc && propLoc !== "bogota";
-  const isReqZoneSpec = reqZone && reqZone !== "bogota" && reqExpanded.length > 0;
-  const isPropZoneSpec = propZone && propZone !== "bogota" && propExpanded.length > 0;
-  if ((isReqLocSpec || isReqZoneSpec) && (isPropLocSpec || isPropZoneSpec)) {
-    return { matches: false, score: 0 };
-  }
-  if (reqCity && propCity && reqCity === propCity) {
-    return { matches: true, score: 10 };
-  }
-  return { matches: false, score: 0 };
-}
-function calcularIPC(requirement, property, matchScore) {
-  const matching = Math.round(matchScore);
-  const propAgeDays = Math.max(0, (Date.now() - new Date(property.createdAt || /* @__PURE__ */ new Date()).getTime()) / (1e3 * 60 * 60 * 24));
-  const reqAgeDays = Math.max(0, (Date.now() - new Date(requirement.createdAt || /* @__PURE__ */ new Date()).getTime()) / (1e3 * 60 * 60 * 24));
-  const getAgeFactor = (days) => {
-    if (days <= 3) return 100;
-    if (days <= 7) return 90;
-    if (days <= 15) return 75;
-    if (days <= 30) return 55;
-    return 30;
-  };
-  const freshness = Math.round((getAgeFactor(propAgeDays) + getAgeFactor(reqAgeDays)) / 2);
-  const propBrokerHasInfo = property.idUsuarioWhatsapp ? 90 : 70;
-  const reqBrokerHasInfo = requirement.idUsuarioWhatsapp ? 90 : 70;
-  const brokerTrust = Math.round((propBrokerHasInfo + reqBrokerHasInfo) / 2);
-  const getCompletitud = (item, isProp) => {
-    let fields = 6;
-    let present = 0;
-    const priceVal = isProp ? item.price : item.presupuestoMax || item.presupuestoMin;
-    if (priceVal && parseFloat(String(priceVal)) > 0) present++;
-    const areaVal = isProp ? item.areaTotal : item.areaMin;
-    if (areaVal && parseFloat(String(areaVal)) > 0) present++;
-    const bedVal = isProp ? item.bedrooms : item.habitacionesMin;
-    if (bedVal && Number(bedVal) > 0) present++;
-    const bathVal = isProp ? item.bathrooms : item.banosMin;
-    if (bathVal && Number(bathVal) > 0) present++;
-    const zoneVal = isProp ? item.zone : item.zonaDeseada;
-    if (zoneVal && zoneVal.trim() !== "" && zoneVal !== "NA") present++;
-    if (item.idUsuarioWhatsapp) present++;
-    return Math.round(present / fields * 100);
-  };
-  const dataQuality = Math.round((getCompletitud(property, true) + getCompletitud(requirement, false)) / 2);
-  const priceNum = parseFloat(String(property.price || "0"));
-  let marketDemand = 70;
-  if (priceNum > 0) {
-    if (priceNum <= 3e8) marketDemand = 95;
-    else if (priceNum <= 6e8) marketDemand = 85;
-    else if (priceNum <= 12e8) marketDemand = 75;
-    else marketDemand = 60;
-  }
-  const finalScore = Math.round(
-    matching * 0.4 + freshness * 0.2 + brokerTrust * 0.1 + dataQuality * 0.2 + marketDemand * 0.1
-  );
-  return {
-    score: finalScore,
-    factors: {
-      matching,
-      freshness,
-      brokerTrust,
-      dataQuality,
-      marketDemand
-    },
-    generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-    version: "VRIF-2.0"
-  };
-}
-function buildExplanationResult(score, blockers, positives, negatives) {
-  return {
-    score,
-    blockers,
-    positives,
-    negatives,
-    confidence: 1,
-    generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-    engineVersion: "VRIF-2.0"
-  };
-}
-function explicarMatch(requirement, property) {
-  const blockers = [];
-  const positives = [];
-  const negatives = [];
-  const reqText = (requirement.rawText || requirement.name || "").trim().toUpperCase();
-  const propText = (property.rawText || property.name || "").trim().toUpperCase();
-  if (reqText === "NA" || reqText === "" || propText === "NA" || propText === "") {
-    blockers.push("Registro con informaci\xF3n insuficiente ('NA' o campos sin especificar).");
-    return buildExplanationResult(0, blockers, positives, negatives);
-  }
-  const reqZoneRawClean = (requirement.zonaDeseada || requirement.addressNeighborhood || "").trim().toLowerCase();
-  const hasSpecificReqZone = reqZoneRawClean !== "" && reqZoneRawClean !== "na" && reqZoneRawClean !== "bogota" && reqZoneRawClean !== "bogot\xE1";
-  const hasReqBudget = parseFloat(String(requirement.presupuestoMax || "0")) > 0 || parseFloat(String(requirement.presupuestoMin || "0")) > 0;
-  const hasReqBedrooms = requirement.habitacionesMin != null && Number(requirement.habitacionesMin) > 0;
-  const hasReqArea = parseFloat(String(requirement.areaMin || requirement.areaMinimaM2 || "0")) > 0;
-  if (!hasSpecificReqZone && !hasReqBudget && !hasReqBedrooms && !hasReqArea) {
-    blockers.push("El requerimiento carece de criterios espec\xEDficos (zona, presupuesto, habs o \xE1rea).");
-    return buildExplanationResult(0, blockers, positives, negatives);
-  }
-  const propBroker = (property.idUsuarioWhatsapp || "").split("@")[0];
-  const reqBroker = (requirement.idUsuarioWhatsapp || "").split("@")[0];
-  if (propBroker && reqBroker && propBroker === reqBroker) {
-    blockers.push("Auto-match: el inmueble y el requerimiento pertenecen al mismo asesor.");
-    return buildExplanationResult(0, blockers, positives, negatives);
-  }
-  const reqBiz = (requirement.tipoNegocioDeseado || requirement.transactionType || "").toLowerCase();
-  const propBiz = (property.transactionType || "").toLowerCase();
-  const propAccepted = Array.isArray(property.acceptedTransactionTypes) ? property.acceptedTransactionTypes.map((t2) => t2.toLowerCase()) : [];
-  const transactionCompatible = checkTransactionCompatibility(reqBiz, propBiz, propAccepted);
-  if (!transactionCompatible) {
-    blockers.push(`Incompatibilidad de negocio: buscado '${reqBiz}', ofrecido '${propBiz}'`);
-    return buildExplanationResult(0, blockers, positives, negatives);
-  }
-  positives.push(`Tipo de negocio compatible: req='${reqBiz}' \u2194 prop='${propBiz}'`);
-  const CIUDADES_CO = [
-    "bogota",
-    "medellin",
-    "cali",
-    "barranquilla",
-    "cartagena",
-    "bucaramanga",
-    "pereira",
-    "manizales",
-    "cucuta",
-    "ibague",
-    "santa marta",
-    "villavicencio",
-    "pasto",
-    "monteria",
-    "valledupar",
-    "sincelejo",
-    "chia",
-    "zipaquira",
-    "cajica",
-    "envigado",
-    "bello",
-    "sabaneta",
-    "itagui",
-    "tenjo",
-    "mosquera"
-  ];
-  const resolveCityField = (raw1, raw2) => {
-    const n1 = normalizarTextoGeografico(raw1 || "");
-    const n2 = normalizarTextoGeografico(raw2 || "");
-    const SECTORES_BOGOTA = [
-      "cedritos",
-      "usaquen",
-      "chico",
-      "chapinero",
-      "suba",
-      "engativa",
-      "teusaquillo",
-      "kennedy",
-      "fontibon",
-      "bosa",
-      "salitre",
-      "rosales",
-      "colina",
-      "niza",
-      "cabrera",
-      "nogal",
-      "recreo",
-      "castellana",
-      "patricio",
-      "barbara",
-      "belmira",
-      "suiza",
-      "navarra",
-      "floresta",
-      "granada",
-      "colsubsidio"
-    ];
-    const isBogotaSector = (val) => {
-      return SECTORES_BOGOTA.some((sector) => val.includes(sector));
-    };
-    if (CIUDADES_CO.some((c) => n1.includes(c) || n1 === c)) return n1;
-    if (CIUDADES_CO.some((c) => n2.includes(c) || n2 === c)) return n2;
-    if (isBogotaSector(n1) || isBogotaSector(n2)) {
-      return "bogota";
-    }
-    return n1 || n2;
-  };
-  const reqCity = resolveCityField(requirement.ciudadDeseada || "", requirement.city || "");
-  const propCity = resolveCityField(property.addressCity || "", property.city || "");
-  if (!reqCity || !propCity || reqCity !== propCity) {
-    blockers.push(`Incompatibilidad de ciudad: deseada ${reqCity}, ofrecida ${propCity}`);
-    return buildExplanationResult(0, blockers, positives, negatives);
-  }
-  positives.push(`Ciudad coincide: ${reqCity}`);
-  let price = parseFloat(String(property.price || "0"));
-  let budgetMax = parseFloat(String(requirement.presupuestoMax || "0"));
-  const budgetMin = parseFloat(String(requirement.presupuestoMin || "0"));
-  if (budgetMax <= 0 && requirement.rawText) {
-    const rawR = requirement.rawText.toLowerCase();
-    const matchPresu = rawR.match(/presupuesto\s*:?\s*\$?([\d.]+)\s*(millones|millón|m|M)?/i);
-    if (matchPresu) {
-      let valR = parseFloat(matchPresu[1].replace(/\./g, ""));
-      if (!isNaN(valR)) {
-        if (valR < 1e3) valR *= 1e6;
-        budgetMax = valR;
-      }
-    }
-  }
-  const propArea = parseFloat(String(property.areaTotal || property.area || "0"));
-  const reqAreaMin = parseFloat(String(requirement.areaMin || requirement.areaMinimaM2 || "0"));
-  const pBedrooms = property.bedrooms != null ? Number(property.bedrooms) : -1;
-  const reqBedrooms = requirement.habitacionesMin != null ? Number(requirement.habitacionesMin) : -1;
-  const pBathrooms = property.bathrooms != null ? Number(property.bathrooms) : -1;
-  const reqBathrooms = requirement.banosMin != null ? Number(requirement.banosMin) : -1;
-  const pGarages = property.garages != null ? Number(property.garages) : -1;
-  const reqGarages = requirement.parqueaderosMin != null ? Number(requirement.parqueaderosMin) : -1;
-  const pAdminFee = property.adminFee != null ? parseFloat(String(property.adminFee)) : -1;
-  const reqAdminMax = requirement.adminFeeMax != null ? parseFloat(String(requirement.adminFeeMax)) : -1;
-  const pEstrato = property.stratum != null ? Number(property.stratum) : property.estrato != null ? Number(property.estrato) : -1;
-  const reqEstrato = requirement.estratoDeseado != null ? Number(requirement.estratoDeseado) : -1;
-  const reqType = (requirement.tipoInmuebleDeseado || requirement.propertyType || "").toLowerCase().trim();
-  const propType = (property.propertyType || "").toLowerCase().trim();
-  const reqZone = normalizarTextoGeografico(requirement.zonaDeseada || requirement.addressNeighborhood || "");
-  const propZone = normalizarTextoGeografico(property.zone || property.addressNeighborhood || "");
-  const hasZeroSpecs = price <= 0 && propArea <= 0 && pBedrooms <= 0 && pBathrooms <= 0;
-  if (hasZeroSpecs) {
-    blockers.push("Inmueble incompleto sin datos prediales m\xEDnimos (Precio, \xC1rea, Habitaciones y Ba\xF1os en N/E).");
-    return buildExplanationResult(0, blockers, positives, negatives);
-  }
-  const propRealPhone = extractRealPhone(property);
-  const reqRealPhone = extractRealPhone(requirement);
-  if (!propRealPhone || !reqRealPhone) {
-    blockers.push("Match no comercializable: Falta n\xFAmero de tel\xE9fono de contacto real en una de las partes.");
-    return buildExplanationResult(0, blockers, positives, negatives);
-  }
-  if (budgetMax > 0 && price <= 0 && (!property.priceRent || parseFloat(String(property.priceRent)) <= 0)) {
-    blockers.push("Match inviable: La oferta NO especifica precio (N/E) y el requerimiento exige presupuesto.");
-    return buildExplanationResult(0, blockers, positives, negatives);
-  }
-  let missingTechCount = 0;
-  if (price <= 0) missingTechCount++;
-  if (propArea <= 0) missingTechCount++;
-  if (pBedrooms <= 0) missingTechCount++;
-  if (pBathrooms <= 0) missingTechCount++;
-  if (pGarages <= 0) missingTechCount++;
-  if (missingTechCount >= 2) {
-    blockers.push(`Oferta con informaci\xF3n insuficiente (${missingTechCount} campos t\xE9cnicos clave en N/E).`);
-    return buildExplanationResult(0, blockers, positives, negatives);
-  }
-  const reqCityNorm = (requirement.ciudadDeseada || requirement.city || requirement.rawText || "").toLowerCase();
-  const propCityNorm = (property.addressCity || property.city || property.zone || property.rawText || "").toLowerCase();
-  const isReqCali = reqCityNorm.includes("cali");
-  const isPropCali = propCityNorm.includes("cali");
-  const isReqBogota = reqCityNorm.includes("bogota") || reqCityNorm.includes("bogot\xE1");
-  const isPropBogota = propCityNorm.includes("bogota") || propCityNorm.includes("bogot\xE1");
-  if (isReqCali && isPropBogota && !isPropCali || isReqBogota && isPropCali && !isPropBogota) {
-    blockers.push(`Incompatibilidad geogr\xE1fica de ciudad: Requerimiento en ${isReqCali ? "Cali" : "Bogot\xE1"} vs Oferta en ${isPropCali ? "Cali" : "Bogot\xE1"}.`);
-    return buildExplanationResult(0, blockers, positives, negatives);
-  }
-  if (reqType && propType) {
-    const aliases = {
-      "apartamento": ["apto", "apartamento", "apartment"],
-      "apto": ["apto", "apartamento", "apartment"],
-      "apartment": ["apto", "apartamento", "apartment"],
-      "casa": ["casa", "chalet", "casa campestre", "house"],
-      "house": ["casa", "chalet", "casa campestre", "house"],
-      "finca": ["finca", "finca raiz", "finca ra\xEDz", "farm"],
-      "farm": ["finca", "finca raiz", "finca ra\xEDz", "farm"],
-      "lote": ["lote", "terreno", "predio", "land"],
-      "terreno": ["lote", "terreno", "predio", "land"],
-      "predio": ["lote", "terreno", "predio", "land"],
-      "land": ["lote", "terreno", "predio", "land"],
-      "bodega": ["bodega", "bodega industrial", "warehouse"],
-      "warehouse": ["bodega", "bodega industrial", "warehouse"],
-      "local": ["local", "local comercial", "commercial"],
-      "commercial": ["local", "local comercial", "commercial"],
-      "oficina": ["oficina", "consultorio", "office"],
-      "office": ["oficina", "consultorio", "office"]
-    };
-    const reqAlias = aliases[reqType] || [reqType];
-    const propAlias = aliases[propType] || [propType];
-    if (!reqAlias.some((a) => propAlias.includes(a))) {
-      blockers.push(`Tipo de activo incompatible: deseado ${reqType}, ofrecido ${propType}`);
-      return buildExplanationResult(0, blockers, positives, negatives);
-    }
-  }
-  const cleanText = (t2) => (t2 || "").toLowerCase().trim().replace(/[\s\-_,.]+/g, " ");
-  const reqRawText = cleanText(requirement.rawText || requirement.name || "");
-  const propRawText = cleanText(property.rawText || property.name || "");
-  const reqIsStudio = reqRawText.includes("apartaestudio") || reqRawText.includes("aparta estudio");
-  const propIsStudio = propRawText.includes("apartaestudio") || propRawText.includes("aparta estudio");
-  const reqIsLoft = reqRawText.includes("loft") || reqType === "loft";
-  const propIsLoft = propRawText.includes("loft") || propType === "loft";
-  let reqSubtype = "apartamento_estandar";
-  if (reqType === "apartment" || reqType === "apartamento") {
-    if (reqIsStudio) reqSubtype = "apartaestudio";
-    else if (reqIsLoft) reqSubtype = "loft";
-  }
-  let propSubtype = "apartamento_estandar";
-  if (propType === "apartment" || propType === "apartamento") {
-    if (propIsStudio) propSubtype = "apartaestudio";
-    else if (propIsLoft) propSubtype = "loft";
-  }
-  if ((reqType === "apartment" || reqType === "apartamento") && (propType === "apartment" || propType === "apartamento")) {
-    if (reqSubtype !== propSubtype) {
-      blockers.push(`Subtipo de apartamento incompatible: deseado ${reqSubtype}, ofrecido ${propSubtype}`);
-      return buildExplanationResult(0, blockers, positives, negatives);
-    }
-  }
-  positives.push(`Tipo de activo compatible: ${propType}`);
-  const geoResult = matchesGeography(
-    requirement.zonaDeseada || requirement.addressNeighborhood || "",
-    property.zone || property.addressNeighborhood || "",
-    requirement.addressLocality || "",
-    property.addressLocality || "",
-    requirement.ciudadDeseada || requirement.city || "",
-    property.addressCity || property.city || ""
-  );
-  if (!geoResult.matches) {
-    blockers.push(`Ubicaci\xF3n incompatible: requerida zona '${requirement.zonaDeseada || ""}', ofrecida '${property.zone || ""}'`);
-    return buildExplanationResult(0, blockers, positives, negatives);
-  }
-  positives.push(`Ubicaci\xF3n compatible en zona: ${property.zone || ""}`);
-  if (reqEstrato >= 1 && pEstrato >= 1 && reqEstrato !== pEstrato) {
-    blockers.push(`Estrato incompatible: deseado ${reqEstrato}, ofrecido ${pEstrato}`);
-    return buildExplanationResult(0, blockers, positives, negatives);
-  }
-  if (reqAreaMin > 0) {
-    if (propArea > 0) {
-      if (propArea < reqAreaMin * 0.98) {
-        blockers.push(`\xC1rea ofrecida (${propArea} m\xB2) es INFERIOR al m\xEDnimo exigido (${reqAreaMin} m\xB2)`);
-        return buildExplanationResult(0, blockers, positives, negatives);
-      } else {
-        positives.push(`\xC1rea de ${propArea} m\xB2 cumple con el m\xEDnimo exigido de ${reqAreaMin} m\xB2`);
-      }
-    } else {
-      blockers.push(`No se puede verificar el \xE1rea m\xEDnima requerida de ${reqAreaMin} m\xB2 (informaci\xF3n no especificada en la oferta).`);
-      return buildExplanationResult(0, blockers, positives, negatives);
-    }
-  }
-  if (budgetMax > 0) {
-    const isReqRent = reqBiz.includes("arriendo");
-    const isReqSale = reqBiz.includes("venta") || reqBiz.includes("permuta");
-    if (isReqRent) {
-      let propRent = property.priceRent ? parseFloat(String(property.priceRent)) : 0;
-      if (propRent <= 0 && property.rawText) {
-        const rawP = property.rawText.toLowerCase();
-        const matchRentP = rawP.match(/arriendo\s*:?\s*\$?([\d.]+)\s*(millones|millón|m|M)?/i);
-        if (matchRentP) {
-          let valP = parseFloat(matchRentP[1].replace(/\./g, ""));
-          if (!isNaN(valP)) {
-            if (valP < 1e3) valP *= 1e6;
-            propRent = valP;
-          }
-        }
-      }
-      if (propRent <= 0 && price > 0 && price < 1e8) {
-        propRent = price;
-      }
-      if (propRent > 0) {
-        const adminVal = pAdminFee > 0 ? pAdminFee : 0;
-        const totalRent = propRent + adminVal;
-        if (totalRent > budgetMax) {
-          blockers.push(`Canon de arriendo total ($${totalRent.toLocaleString()}) supera el presupuesto m\xE1ximo de $${budgetMax.toLocaleString()}`);
-          return buildExplanationResult(0, blockers, positives, negatives);
-        }
-      }
-    }
-    if (isReqSale && propBiz.includes("venta") && price > 0) {
-      if (price > budgetMax) {
-        blockers.push(`Precio de venta $${price.toLocaleString()} supera el presupuesto m\xE1ximo de $${budgetMax.toLocaleString()}`);
-        return buildExplanationResult(0, blockers, positives, negatives);
-      }
-    }
-  }
-  if (reqBedrooms > 0) {
-    if (pBedrooms >= 0) {
-      if (pBedrooms < reqBedrooms) {
-        blockers.push(`Habitaciones ofrecidas (${pBedrooms}) son inferiores a las exigidas (${reqBedrooms})`);
-        return buildExplanationResult(0, blockers, positives, negatives);
-      } else {
-        positives.push(`Habitaciones ofrecidas (${pBedrooms}) satisfacen la solicitud de (${reqBedrooms})`);
-      }
-    } else {
-      blockers.push(`No se pueden verificar las habitaciones requeridas (${reqBedrooms}) por falta de informaci\xF3n en la oferta.`);
-      return buildExplanationResult(0, blockers, positives, negatives);
-    }
-  }
-  if (reqBathrooms > 0 && pBathrooms >= 0 && pBathrooms < reqBathrooms) {
-    blockers.push(`Ba\xF1os ofrecidos (${pBathrooms}) son inferiores a los requeridos (${reqBathrooms})`);
-    return buildExplanationResult(0, blockers, positives, negatives);
-  }
-  if (reqGarages > 0 && pGarages >= 0 && pGarages < reqGarages) {
-    blockers.push(`Parqueaderos ofrecidos (${pGarages}) son inferiores a los requeridos (${reqGarages})`);
-    return buildExplanationResult(0, blockers, positives, negatives);
-  }
-  let earnedPoints = 0;
-  const totalPossible = 100;
-  earnedPoints += 15;
-  earnedPoints += 15;
-  earnedPoints += Math.round(geoResult.score / 25 * 20);
-  if (budgetMax > 0) {
-    if (price > 0) {
-      if (price <= budgetMax) earnedPoints += 15;
-      else if (price <= budgetMax * 1.01) earnedPoints += 13;
-      else if (price <= budgetMax * 1.05) earnedPoints += 9;
-      else negatives.push(`Precio $${price.toLocaleString()} supera presupuesto $${budgetMax.toLocaleString()}`);
-    } else {
-      negatives.push("Presupuesto no especificado en la oferta (N/E)");
-    }
-  } else {
-    earnedPoints += 10;
-  }
-  if (reqAreaMin > 0) {
-    if (propArea > 0) {
-      if (propArea >= reqAreaMin) earnedPoints += 10;
-      else if (propArea >= reqAreaMin * 0.98) earnedPoints += 7;
-      else negatives.push(`\xC1rea ${propArea} m\xB2 es inferior a la requerida ${reqAreaMin} m\xB2`);
-    } else {
-      negatives.push("\xC1rea no especificada en la oferta (N/E)");
-    }
-  } else {
-    earnedPoints += 7;
-  }
-  if (reqBedrooms > 0) {
-    if (pBedrooms >= 0) {
-      if (pBedrooms >= reqBedrooms) earnedPoints += 10;
-      else negatives.push(`Habitaciones (${pBedrooms}) inferiores a las requeridas (${reqBedrooms})`);
-    } else {
-      negatives.push("Habitaciones no especificadas en la oferta (N/E)");
-    }
-  } else {
-    earnedPoints += 7;
-  }
-  if (reqBathrooms > 0) {
-    if (pBathrooms >= 0) {
-      if (pBathrooms >= reqBathrooms) earnedPoints += 5;
-      else negatives.push(`Ba\xF1os (${pBathrooms}) inferiores a los requeridos (${reqBathrooms})`);
-    } else {
-      negatives.push("Ba\xF1os no especificados en la oferta (N/E)");
-    }
-  } else {
-    earnedPoints += 4;
-  }
-  if (reqGarages > 0) {
-    if (pGarages >= 0) {
-      if (pGarages >= reqGarages) earnedPoints += 5;
-      else negatives.push(`Parqueaderos (${pGarages}) inferiores a los requeridos (${reqGarages})`);
-    } else {
-      negatives.push("Parqueaderos no especificados en la oferta (N/E)");
-    }
-  } else {
-    earnedPoints += 4;
-  }
-  if (reqEstrato >= 1 && pEstrato >= 1) {
-    if (reqEstrato === pEstrato) earnedPoints += 5;
-  } else {
-    earnedPoints += 3;
-  }
-  const semRes = evaluarInterseccionComodidadesSemanticas(requirement, property);
-  if (semRes.positives.length > 0) {
-    positives.push(...semRes.positives);
-  }
-  let finalPercentage = Math.min(100, Math.round(earnedPoints / totalPossible * 100));
-  const hasMissingSpecifiedFields = reqAreaMin > 0 && propArea <= 0 || reqBedrooms > 0 && pBedrooms < 0 || reqBathrooms > 0 && pBathrooms < 0 || reqGarages > 0 && pGarages < 0 || budgetMax > 0 && price <= 0 || reqZone && (!propZone || propZone === "bogota");
-  if (hasMissingSpecifiedFields) {
-    finalPercentage = Math.min(84, finalPercentage);
-  }
-  return buildExplanationResult(finalPercentage, blockers, positives, negatives);
-}
-function evaluarInterseccionComodidadesSemanticas(req, prop) {
-  const reqText = `${req.rawText || ""} ${req.description || ""}`.toLowerCase();
-  const propText = `${prop.rawText || ""} ${prop.description || ""}`.toLowerCase();
-  const positives = [];
-  const reqHasVestier = req.hasWalkInCloset || reqText.includes("vestier") || reqText.includes("walk") || reqText.includes("closet");
-  const propHasVestier = prop.hasWalkInCloset || propText.includes("vestier") || propText.includes("walk") || propText.includes("closet");
-  let vestierScore = 0;
-  if (reqHasVestier && propHasVestier) {
-    vestierScore = 1;
-    positives.push("Homologaci\xF3n Sem\xE1ntica: Coincidencia Exacta entre Vestier y Walk-in Closet (100%)");
-  }
-  const reqHasBalcony = req.hasBalcony || reqText.includes("balcon") || reqText.includes("balc\xF3n");
-  const reqHasTerrace = req.hasTerrace || reqText.includes("terraza") || reqText.includes("patio");
-  const propHasBalcony = prop.hasBalcony || propText.includes("balcon") || propText.includes("balc\xF3n");
-  const propHasTerrace = prop.hasTerrace || propText.includes("terraza") || propText.includes("patio");
-  let balconTerrasaScore = 0;
-  if (reqHasBalcony && propHasBalcony) {
-    balconTerrasaScore = 1;
-    positives.push("Coincidencia Exacta de Balc\xF3n (100%)");
-  } else if (reqHasTerrace && propHasTerrace) {
-    balconTerrasaScore = 1;
-    positives.push("Coincidencia Exacta de Terraza (100%)");
-  } else if (reqHasBalcony && propHasTerrace || reqHasTerrace && propHasBalcony) {
-    balconTerrasaScore = 0.7;
-    positives.push("Homologaci\xF3n Sem\xE1ntica: Coincidencia Parcial por Analog\xEDa de Espacio Abierto (Balc\xF3n \u2194 Terraza 70%)");
-  }
-  const reqWantsGreen = reqText.includes("vista verde") || reqText.includes("parque") || reqText.includes("cerros") || reqText.includes("tranquilo");
-  const propIsParkFront = propText.includes("vista verde") || propText.includes("frente a parque") || propText.includes("exterior");
-  const propIsSilentInterior = propText.includes("interior") || propText.includes("silencioso");
-  let entornoScore = 0;
-  if (reqWantsGreen && propIsParkFront) {
-    entornoScore = 1;
-    positives.push("Entorno: Coincidencia Exacta Vista Verde / Exterior frente a Parque (100%)");
-  } else if (reqWantsGreen && propIsSilentInterior) {
-    entornoScore = 0.8;
-    positives.push("Entorno: Coincidencia Parcial Vista Verde \u2194 Interior Silencioso (80%)");
-  }
-  return { vestierScore, balconTerrasaScore, entornoScore, positives };
-}
-function calcularScoreMatch(requirement, property) {
-  return explicarMatch(requirement, property).score;
-}
-function evaluarMatch(requirement, property) {
-  return calcularScoreMatch(requirement, property) >= 85;
-}
-async function findMatchesForProperty(propertyId) {
-  const db = await getDb();
-  if (!db) return [];
-  try {
-    const [property] = await db.select().from(properties).where(eq3(properties.id, propertyId));
-    if (!property) return [];
-    const activeRequirements = await db.select().from(requirements).where(eq3(requirements.status, "active"));
-    const validMatches = [];
-    for (const req of activeRequirements) {
-      const explanation = explicarMatch(req, property);
-      const score = explanation.score;
-      if (score >= 85) {
-        let matchId;
-        const existing = await db.select().from(propertyMatches).where(
-          and(
-            eq3(propertyMatches.propertyId, propertyId),
-            eq3(propertyMatches.requirementId, req.id)
-          )
-        ).limit(1);
-        const ipcObj = calcularIPC(req, property, score);
-        explanation.ipc = ipcObj;
-        if (existing.length > 0) {
-          matchId = existing[0].id;
-          await db.update(propertyMatches).set({
-            matchScore: score.toFixed(2),
-            matchExplanation: explanation,
-            ipc: ipcObj,
-            createdAt: /* @__PURE__ */ new Date()
-          }).where(eq3(propertyMatches.id, matchId));
-        } else {
-          const [newMatch] = await db.insert(propertyMatches).values({
-            propertyId,
-            requirementId: req.id,
-            matchScore: score.toFixed(2),
-            matchReason: `VECY CORE TS Scoring: ${score.toFixed(2)}/100`,
-            matchExplanation: explanation,
-            ipc: ipcObj,
-            status: "suggested",
-            ownerConfirmed: false,
-            seekerConfirmed: false
-          }).returning();
-          matchId = newMatch.id;
-          vrifEvents.emit("match:created", matchId);
-        }
-        validMatches.push({
-          ...req,
-          score,
-          matchId,
-          idUsuarioWhatsapp: req.idUsuarioWhatsapp
-        });
-      }
-    }
-    console.log(`[Matching] Inmueble #${propertyId}: ${validMatches.length} matches detectados.`);
-    return validMatches;
-  } catch (e) {
-    console.error("[Matching] Error en findMatchesForProperty:", e.message);
-    return [];
-  }
-}
-async function findMatchesForRequirement(requirementId) {
-  const db = await getDb();
-  if (!db) return [];
-  try {
-    const [req] = await db.select().from(requirements).where(eq3(requirements.id, requirementId));
-    if (!req) return [];
-    const availableProperties = await db.select().from(properties).where(eq3(properties.available, true));
-    const validMatches = [];
-    for (const prop of availableProperties) {
-      const explanation = explicarMatch(req, prop);
-      const score = explanation.score;
-      if (score >= 85) {
-        let matchId;
-        const existing = await db.select().from(propertyMatches).where(
-          and(
-            eq3(propertyMatches.propertyId, prop.id),
-            eq3(propertyMatches.requirementId, requirementId)
-          )
-        ).limit(1);
-        const ipcObj = calcularIPC(req, prop, score);
-        explanation.ipc = ipcObj;
-        if (existing.length > 0) {
-          matchId = existing[0].id;
-          await db.update(propertyMatches).set({
-            matchScore: score.toFixed(2),
-            matchExplanation: explanation,
-            ipc: ipcObj,
-            createdAt: /* @__PURE__ */ new Date()
-          }).where(eq3(propertyMatches.id, matchId));
-        } else {
-          const [newMatch] = await db.insert(propertyMatches).values({
-            propertyId: prop.id,
-            requirementId,
-            matchScore: score.toFixed(2),
-            matchReason: `VECY CORE TS Scoring: ${score.toFixed(2)}/100`,
-            matchExplanation: explanation,
-            ipc: ipcObj,
-            status: "suggested",
-            ownerConfirmed: false,
-            seekerConfirmed: false
-          }).returning();
-          matchId = newMatch.id;
-          vrifEvents.emit("match:created", matchId);
-        }
-        validMatches.push({
-          ...prop,
-          score,
-          matchId,
-          idUsuarioWhatsapp: prop.idUsuarioWhatsapp
-        });
-      }
-    }
-    console.log(`[Matching] Requerimiento #${requirementId}: ${validMatches.length} matches detectados.`);
-    return validMatches;
-  } catch (e) {
-    console.error("[Matching] Error en findMatchesForRequirement:", e.message);
-    return [];
-  }
-}
-async function executeMatchEngine(propertyId, requirementId) {
-  const db = await getDb();
-  if (!db) return;
-  try {
-    let props = [];
-    let reqs = [];
-    if (propertyId) {
-      props = await db.select().from(properties).where(eq3(properties.id, propertyId));
-    } else {
-      props = await db.select().from(properties).where(eq3(properties.available, true));
-    }
-    if (requirementId) {
-      reqs = await db.select().from(requirements).where(eq3(requirements.id, requirementId));
-    } else {
-      reqs = await db.select().from(requirements).where(eq3(requirements.status, "active"));
-    }
-    const { users: users2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-    const formatCurrency = (val) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(val);
-    const cleanPhone = (raw) => {
-      if (!raw) return "";
-      let digits = raw.replace(/[^0-9]/g, "");
-      if (digits.startsWith("57") && digits.length > 11) {
-        digits = digits.slice(2);
-      }
-      if (digits.startsWith("0") && digits.length === 10) {
-        digits = digits.slice(1);
-      }
-      if (digits.length === 10 && digits.startsWith("3")) {
-        return `57${digits}`;
-      }
-      if (digits.length === 12 && digits.startsWith("57")) {
-        return digits;
-      }
-      return "";
-    };
-    for (const prop of props) {
-      for (const req of reqs) {
-        const pBiz = (prop.transactionType || "").toLowerCase();
-        const rBiz = (req.tipoNegocioDeseado || "").toLowerCase();
-        const pAccepted = Array.isArray(prop.acceptedTransactionTypes) ? prop.acceptedTransactionTypes.map((t2) => t2.toLowerCase()) : [];
-        if (!pBiz || !rBiz || !checkTransactionCompatibility(rBiz, pBiz, pAccepted)) continue;
-        const pType = (prop.propertyType || "").toLowerCase();
-        const rType = (req.tipoInmuebleDeseado || "").toLowerCase();
-        if (!pType || !rType || pType !== rType) continue;
-        const pCity = normalizarTextoGeografico(prop.city || prop.addressCity || "");
-        const rCity = normalizarTextoGeografico(req.ciudadDeseada || "");
-        if (!pCity || !rCity || pCity !== rCity) continue;
-        const pZone = normalizarTextoGeografico(prop.zone || prop.addressNeighborhood || "");
-        const rZone = normalizarTextoGeografico(req.zonaDeseada || req.addressNeighborhood || "");
-        if (rZone && pZone) {
-          const zonaMatch = rZone === pZone || rZone.includes(pZone) || pZone.includes(rZone);
-          if (!zonaMatch) continue;
-        }
-        const pArea = parseFloat(String(prop.areaTotal || prop.areaPrivate || "0"));
-        const rAreaMin = parseFloat(String(req.areaMin || "0"));
-        if (pArea > 0 && rAreaMin > 0) {
-          const areaMinLimit = rAreaMin * 0.9;
-          if (pArea < areaMinLimit) continue;
-        }
-        const price = parseFloat(String(prop.price || "0"));
-        const adminFee = parseFloat(String(prop.adminFee || "0"));
-        const totalCost = price + adminFee;
-        const budgetMax = parseFloat(String(req.presupuestoMax || "0"));
-        const budgetMin = parseFloat(String(req.presupuestoMin || "0"));
-        if (budgetMax > 0 && totalCost > budgetMax * 1.05) continue;
-        if (budgetMin > 0 && price < budgetMin * 0.9) continue;
-        const pBedrooms = Number(prop.bedrooms || 0);
-        const rBedrooms = Number(req.habitacionesMin || 0);
-        if (rBedrooms > 0 && pBedrooms > 0 && pBedrooms < rBedrooms) continue;
-        const explanation = explicarMatch(req, prop);
-        const score = explanation.score;
-        if (score < 85) continue;
-        const propPhone = cleanPhone(prop.idUsuarioWhatsapp || "");
-        const reqPhone = cleanPhone(req.idUsuarioWhatsapp || "");
-        const existingSamePhone = await db.select({ id: propertyMatches.id, reqRaw: requirements.rawText }).from(propertyMatches).innerJoin(requirements, eq3(propertyMatches.requirementId, requirements.id)).where(
-          and(
-            eq3(propertyMatches.propertyId, prop.id),
-            sql2`${requirements.idUsuarioWhatsapp} = ${req.idUsuarioWhatsapp ?? ""}`
-          )
-        );
-        const isDuplicateReqPost = existingSamePhone.some(
-          (m) => m.reqRaw && req.rawText && (m.reqRaw.trim() === req.rawText.trim() || m.reqRaw.includes(req.rawText.substring(0, 50)))
-        );
-        if (isDuplicateReqPost) continue;
-        let matchId;
-        let isNewMatch = false;
-        const existing = await db.select().from(propertyMatches).where(
-          and(
-            eq3(propertyMatches.propertyId, prop.id),
-            eq3(propertyMatches.requirementId, req.id)
-          )
-        ).limit(1);
-        const ipcObj = calcularIPC(req, prop, score);
-        explanation.ipc = ipcObj;
-        if (existing.length > 0) {
-          matchId = existing[0].id;
-          await db.update(propertyMatches).set({
-            matchScore: score.toFixed(2),
-            matchExplanation: explanation,
-            ipc: ipcObj,
-            createdAt: /* @__PURE__ */ new Date()
-          }).where(eq3(propertyMatches.id, matchId));
-        } else {
-          isNewMatch = true;
-          const [newMatch] = await db.insert(propertyMatches).values({
-            propertyId: prop.id,
-            requirementId: req.id,
-            matchScore: score.toFixed(2),
-            matchReason: `VECY Core Engine: Match estricto ${score}%`,
-            matchExplanation: explanation,
-            ipc: ipcObj,
-            status: "suggested",
-            ownerConfirmed: false,
-            seekerConfirmed: false
-          }).returning();
-          matchId = newMatch.id;
-          vrifEvents.emit("match:created", matchId);
-          console.log(`[Matching-Engine] \u2705 Match #${matchId} (${score}%) registrado y evento emitido.`);
-        }
-      }
-    }
-  } catch (err) {
-    console.error("[Matching-Engine] Error running match engine:", err.message || err);
-  }
-}
-var init_matching = __esm({
-  "server/_core/matching.ts"() {
-    "use strict";
-    init_db();
-    init_schema();
-    init_geography();
-    init_events();
-  }
-});
-
 // server/_core/janIA.ts
 var janIA_exports = {};
 __export(janIA_exports, {
@@ -3569,10 +4565,12 @@ __export(janIA_exports, {
   esMensajeSpamOBasura: () => esMensajeSpamOBasura,
   extractFallbackDataFromText: () => extractFallbackDataFromText,
   extractFirstName: () => extractFirstName,
+  generarHashMensaje: () => generarHashMensaje,
   generateWelcomeMessage: () => generateWelcomeMessage,
   getColombiaNow: () => getColombiaNow,
   getEmojiForCalificacion: () => getEmojiForCalificacion,
   getLiveStats: () => getLiveStats,
+  handleAmendmentUpdate: () => handleAmendmentUpdate,
   handleDetectedMatches: () => handleDetectedMatches,
   hasRealEstateTextKeyword: () => hasRealEstateTextKeyword,
   isGenericName: () => isGenericName,
@@ -3580,6 +4578,7 @@ __export(janIA_exports, {
   isSessionMuted: () => isSessionMuted,
   janiaResultSchema: () => janiaResultSchema,
   muteSession: () => muteSession,
+  normalizePhoneNumber: () => normalizePhoneNumber,
   obtenerCamposRequeridosYPreguntas: () => obtenerCamposRequeridosYPreguntas,
   parseSafeJSON: () => parseSafeJSON,
   processCirculoMessage: () => processCirculoMessage,
@@ -3595,6 +4594,11 @@ import { eq as eq4, and as and2, sql as sql3, gte, desc } from "drizzle-orm";
 import fs2 from "fs";
 import path2 from "path";
 import axios6 from "axios";
+import crypto from "crypto";
+function generarHashMensaje(rawText, remitente) {
+  const normalizado = (rawText || "").toLowerCase().replace(/\s+/g, " ").replace(/[^\w\s]/g, "").trim();
+  return crypto.createHash("sha256").update(`${remitente}:${normalizado}`).digest("hex");
+}
 function extractFirstName(fullName) {
   if (!fullName) return "";
   let clean = fullName.trim();
@@ -3739,7 +4743,7 @@ function extractFallbackDataFromText(text2) {
     propertyType = "loft";
   }
   let price = 0;
-  const millonMatch = text2.match(/(\d+(?:[\.,]\d+)?)\s*(?:millon|millones|mm|m)/i);
+  const millonMatch = text2.match(/(\d+(?:[\.,]\d+)?)\s*(?:millon|millones|millón|mill|mm)\b/i);
   if (millonMatch) {
     const val = parseFloat(millonMatch[1].replace(",", "."));
     price = val * 1e6;
@@ -4745,13 +5749,26 @@ ${liveStats}` : buildSystemPrompt(groupJid);
     }
     result.mentions = result.mentions || [];
     if (messageToProcess) {
+      const isAmendmentHandled = await handleAmendmentUpdate(userId, messageToProcess);
+      if (isAmendmentHandled) {
+        console.log(`[JANIA-AMENDMENT] Mensaje procesado como enmienda de 2h para ${userId}. Operando en Modo Fantasma 100% silencioso.`);
+        result.inserted = false;
+        result.classification = "CONSULTA_GENERAL";
+        result.response = "";
+        result.dmResponse = "";
+        result.shouldSendDM = false;
+        result.reactionEmoji = void 0;
+        return result;
+      }
+    }
+    if (messageToProcess) {
       const cleanText2 = messageToProcess.toLowerCase();
       const isSearch = cleanText2.includes("busco") || cleanText2.includes("necesito") || cleanText2.includes("requiero") || cleanText2.includes("requerimiento") || cleanText2.includes("buscamos") || cleanText2.includes("compro") || cleanText2.includes("compra") || cleanText2.includes("se busca") || cleanText2.includes("se requiere") || cleanText2.includes("para arriendo") || cleanText2.includes("para compra") || cleanText2.includes("solicito") || cleanText2.includes("solicitamos") || cleanText2.includes("cliente:") || cleanText2.includes("cliente :") || cleanText2.includes("presupuesto:") || cleanText2.includes("presupuesto :") || cleanText2.includes("acci\xF3n: compra") || cleanText2.includes("acci\xF3n : compra") || cleanText2.includes("para cliente") || cleanText2.includes("para un cliente") || cleanText2.includes("para una cliente");
       const isOffer = cleanText2.includes("vendo") || cleanText2.includes("ofrezco") || cleanText2.includes("tengo") || cleanText2.includes("rento") || cleanText2.includes("alquilo") || cleanText2.includes("alquiler") || cleanText2.includes("venta:") || cleanText2.includes("renta apartamento") || cleanText2.includes("se vende") || cleanText2.includes("se arrienda") || cleanText2.includes("en venta") || cleanText2.includes("en arriendo") || cleanText2.includes("arriendo apartamento") || cleanText2.includes("arriendo casa");
       const hasRealEstateKeyword = hasRealEstateTextKeyword(cleanText2);
-      const isShortComment = cleanText2.length < 120 && (cleanText2.includes("bajo de precio") || cleanText2.includes("sigue este enlace") || cleanText2.includes("ver el art\xEDculo en whatsapp") || cleanText2.includes("foto por interno") || cleanText2.includes("fotos por interno") || cleanText2.includes("info por interno") || cleanText2.includes("informaci\xF3n por interno") || cleanText2.includes("escribir al interno") || cleanText2.includes("disponible?") || cleanText2.includes("a\xFAn disponible"));
+      const isShortComment = cleanText2.length < 50 || cleanText2.split(/\s+/).length < 6 || (cleanText2.includes("correccion:") || cleanText2.includes("correcci\xF3n:") || cleanText2.includes("fe de erratas") || cleanText2.includes("rectificacion:") || cleanText2.includes("rectificaci\xF3n:") || cleanText2.includes("bajo de precio") || cleanText2.includes("sigue este enlace") || cleanText2.includes("ver el art\xEDculo en whatsapp") || cleanText2.includes("foto por interno") || cleanText2.includes("fotos por interno") || cleanText2.includes("info por interno") || cleanText2.includes("informaci\xF3n por interno") || cleanText2.includes("escribir al interno") || cleanText2.includes("disponible?") || cleanText2.includes("a\xFAn disponible"));
       if (isShortComment) {
-        console.log("[JANIA-FILTER] Mensaje identificado como comentario de seguimiento/enlace sin ficha. No se procesar\xE1 como propiedad/requerimiento.");
+        console.log(`[JANIA-FILTER] \u26D4 Mensaje corto o correcci\xF3n de chat omitido (${cleanText2.substring(0, 40)}...). No se procesar\xE1 como propiedad/requerimiento.`);
         result.classification = "CONSULTA_GENERAL";
       } else if (result.classification === "INMUEBLE" && isSearch && !isOffer) {
         console.log("[JANIA-CORRECTION] Cambiando clasificaci\xF3n de INMUEBLE a REQUERIMIENTO basado en heur\xEDstica de texto.");
@@ -4780,8 +5797,12 @@ ${liveStats}` : buildSystemPrompt(groupJid);
       const fallbackData = extractFallbackDataFromText(messageToProcess);
       if (!extracted.transactionType) extracted.transactionType = fallbackData.transactionType;
       if (!extracted.propertyType) extracted.propertyType = fallbackData.propertyType;
-      if (!extracted.price || Number(extracted.price) === 0) extracted.price = fallbackData.price;
-      if (!extracted.presupuestoMax || Number(extracted.presupuestoMax) === 0) extracted.presupuestoMax = fallbackData.price;
+      if (!extracted.price || Number(extracted.price) === 0 || fallbackData.price > 0) {
+        extracted.price = fallbackData.price;
+      }
+      if (!extracted.presupuestoMax || Number(extracted.presupuestoMax) === 0 || fallbackData.price > 0) {
+        extracted.presupuestoMax = fallbackData.price;
+      }
       if (!extracted.area || Number(extracted.area) === 0) extracted.area = fallbackData.area;
       if (!extracted.bedrooms) extracted.bedrooms = fallbackData.bedrooms;
       if (!extracted.bathrooms) extracted.bathrooms = fallbackData.bathrooms;
@@ -4961,30 +5982,27 @@ ${liveStats}` : buildSystemPrompt(groupJid);
           externalUrl = permitted;
         }
       }
+      const sourceUrl = externalUrl || (urls && urls.length > 0 ? urls[0] : null);
       const saved = await saveProperty({
         ...extracted,
         name: propertyTitle,
         price: String(extracted.price || 0),
         areaTotal: String(extracted.area || 0),
         idUsuarioWhatsapp: rawPhone,
-        // rawText guarda el mensaje original del usuario — sin el volcado del scraper.
-        // El LLM ya procesó el contenido del portal; lo que le mostramos al bróker en el
-        // panel es solo lo que él escribió en WhatsApp.
         rawText: rawUserText || text2,
         amenities: { gives: extracted.gives, wants: extracted.wants, isCollaborativePool: extracted.isCollaborativePool },
         origenTipo,
         origenId,
         origenNombre,
         externalUrl,
+        enlaceOrigen: sourceUrl,
         fechaExtraccion: /* @__PURE__ */ new Date()
       }, userId, realName, imageBuffer);
       if (saved) {
         result.inserted = true;
-        if (!isLLMIncomplete && !userId.startsWith("web-")) {
-          result.shouldSendDM = false;
-          result.dmResponse = "";
-          result.response = "";
-        }
+        result.shouldSendDM = false;
+        result.dmResponse = "";
+        result.response = "";
         result.mentions = [];
         result.extraDMs = [];
         result.sendReputationHook = false;
@@ -5013,28 +6031,28 @@ ${liveStats}` : buildSystemPrompt(groupJid);
         return result;
       }
       const reqTitle = extracted.title || `Requerimiento de ${extracted.propertyType || "inmueble"} en ${extracted.zonaDeseada || extracted.zone || "Bogot\xE1"} para ${extracted.transactionType || "venta"}`;
+      const sourceUrlReq = urls && urls.length > 0 ? urls[0] : null;
       const saved = await saveRequirement({
         ...extracted,
         name: reqTitle,
         tipoInmuebleDeseado: extracted.propertyType,
         tipoNegocioDeseado: extracted.transactionType,
         zonaDeseada: extracted.zonaDeseada || extracted.zone,
-        presupuestoMax: String(extracted.price || 0),
+        presupuestoMax: String(extracted.presupuestoMax || extracted.price || 0),
         idUsuarioWhatsapp: rawPhone,
         rawText: messageToProcess,
         caracteristicasDeseadas: { gives: extracted.gives, wants: extracted.wants },
         origenTipo,
         origenId,
         origenNombre,
+        enlaceOrigen: sourceUrlReq,
         fechaExtraccion: /* @__PURE__ */ new Date()
       }, userId, realName);
       if (saved) {
         result.inserted = true;
-        if (!isLLMIncomplete && !userId.startsWith("web-")) {
-          result.shouldSendDM = false;
-          result.dmResponse = "";
-          result.response = "";
-        }
+        result.shouldSendDM = false;
+        result.dmResponse = "";
+        result.response = "";
         result.mentions = [];
         result.extraDMs = [];
         result.sendReputationHook = false;
@@ -5109,6 +6127,12 @@ ${greetingPrefix}, veo que tienes una consulta jur\xEDdica, procedimental o de a
     if (result && result.dmResponse) {
       result.dmResponse = sanitizeResponseMarkdown(result.dmResponse);
     }
+    if (!result.reactionEmoji) {
+      if (result.classification === "INMUEBLE") result.reactionEmoji = "\u{1F44D}";
+      else if (result.classification === "REQUERIMIENTO") result.reactionEmoji = "\u{1F4DD}";
+      else if (result.classification === "DATOS_INCOMPLETOS" || result.classification === "CONSULTA_GENERAL") result.reactionEmoji = "\u2753";
+      else if (result.classification === "VIOLACION_DE_NORMAS") result.reactionEmoji = "\u{1F6AB}";
+    }
     return result;
   } catch (error) {
     console.error("Error en JanIA v11.70:", error);
@@ -5123,26 +6147,26 @@ function isGenericName(n) {
 async function findOrCreateUserByPhone(phone, realName) {
   const db = await getDb();
   if (!db) return null;
-  const cleanPhone = phone.split(":")[0];
-  let user = await db.select().from(users).where(eq4(users.phone, cleanPhone)).limit(1).then((r) => r[0]);
+  const cleanPhone2 = phone.split(":")[0];
+  let user = await db.select().from(users).where(eq4(users.phone, cleanPhone2)).limit(1).then((r) => r[0]);
   if (!user) {
-    user = await db.select().from(users).where(eq4(users.openId, `wa-${cleanPhone}`)).limit(1).then((r) => r[0]);
+    user = await db.select().from(users).where(eq4(users.openId, `wa-${cleanPhone2}`)).limit(1).then((r) => r[0]);
   }
   if (!user) {
-    const openId = `wa-${cleanPhone}`;
-    console.log(`[JanIA-findOrCreateUserByPhone] Creando nuevo usuario para WhatsApp: ${realName} (+${cleanPhone})`);
+    const openId = `wa-${cleanPhone2}`;
+    console.log(`[JanIA-findOrCreateUserByPhone] Creando nuevo usuario para WhatsApp: ${realName} (+${cleanPhone2})`);
     try {
       const [newUser] = await db.insert(users).values({
         openId,
         name: realName,
-        phone: cleanPhone,
+        phone: cleanPhone2,
         role: "agent",
         loginMethod: "whatsapp"
       }).returning();
       user = newUser;
     } catch (insertErr) {
       if (insertErr.code === "23505" || String(insertErr).includes("unique constraint")) {
-        console.log(`[JanIA-findOrCreateUserByPhone] Colisi\xF3n concurrente detectada para ${cleanPhone}. Re-buscando usuario...`);
+        console.log(`[JanIA-findOrCreateUserByPhone] Colisi\xF3n concurrente detectada para ${cleanPhone2}. Re-buscando usuario...`);
         user = await db.select().from(users).where(eq4(users.openId, openId)).limit(1).then((r) => r[0]);
       } else {
         throw insertErr;
@@ -5289,6 +6313,112 @@ function getEmojiForCalificacion(calificacion) {
       return "\u{1F7E2}";
   }
 }
+function normalizePhoneNumber(rawUserJid, textContent) {
+  if (textContent) {
+    const match = textContent.match(/(?:\+?57\s*)?3\d{2}[\s.-]?\d{3}[\s.-]?\d{4}\b/);
+    if (match) {
+      const cleanDigits = match[0].replace(/\D/g, "");
+      if (cleanDigits.length === 10 && cleanDigits.startsWith("3")) {
+        return cleanDigits;
+      }
+      if (cleanDigits.length === 12 && cleanDigits.startsWith("573")) {
+        return `+${cleanDigits}`;
+      }
+    }
+  }
+  if (rawUserJid) {
+    const clean = String(rawUserJid).split("@")[0].split(":")[0].replace(/\D/g, "");
+    if (!clean.startsWith("11") && !clean.startsWith("1203") && clean.length <= 13) {
+      if (clean.length === 10 && clean.startsWith("3")) {
+        return clean;
+      }
+      if (clean.length === 12 && clean.startsWith("573")) {
+        return `+${clean}`;
+      }
+      if (clean.length >= 10 && clean.length <= 12) {
+        return clean;
+      }
+    }
+  }
+  return "";
+}
+async function handleAmendmentUpdate(userId, text2) {
+  const db = await getDb();
+  if (!db) return false;
+  const rawPhone = userId.split("@")[0].split(":")[0].replace(/\D/g, "");
+  const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1e3);
+  const cleanTextLower = text2.toLowerCase().trim();
+  const isAmendmentTrigger = cleanTextLower.startsWith("correccion") || cleanTextLower.startsWith("correcci\xF3n") || cleanTextLower.startsWith("fe de erratas") || cleanTextLower.startsWith("fe de errata") || cleanTextLower.startsWith("rectificacion") || cleanTextLower.startsWith("rectificaci\xF3n") || cleanTextLower.startsWith("ajuste:") || cleanTextLower.startsWith("ajuste ") || cleanTextLower.startsWith("disculpen");
+  if (!isAmendmentTrigger) return false;
+  const fallbackData = extractFallbackDataFromText(text2);
+  const lastReqs = await db.select().from(requirements).where(and2(
+    eq4(requirements.idUsuarioWhatsapp, rawPhone),
+    gte(requirements.createdAt, twoHoursAgo)
+  )).orderBy(desc(requirements.createdAt)).limit(1);
+  if (lastReqs.length > 0) {
+    const req = lastReqs[0];
+    const updates = {};
+    if (cleanTextLower.includes("parqueadero") && fallbackData.garages > 0) {
+      updates.parqueaderosMin = fallbackData.garages;
+    }
+    if ((cleanTextLower.includes("habitaci\xF3n") || cleanTextLower.includes("habitacion") || cleanTextLower.includes("alcoba")) && fallbackData.bedrooms > 0) {
+      updates.habitacionesMin = fallbackData.bedrooms;
+    }
+    if (cleanTextLower.includes("ba\xF1o") && fallbackData.bathrooms > 0) {
+      updates.banosMin = fallbackData.bathrooms;
+    }
+    if ((cleanTextLower.includes("precio") || cleanTextLower.includes("presupuesto")) && fallbackData.price > 0) {
+      updates.presupuestoMax = String(fallbackData.price);
+    }
+    if ((cleanTextLower.includes("\xE1rea") || cleanTextLower.includes("area")) && fallbackData.area > 0) {
+      updates.areaMin = String(fallbackData.area);
+    }
+    if (Object.keys(updates).length > 0) {
+      updates.updatedAt = /* @__PURE__ */ new Date();
+      await db.update(requirements).set(updates).where(eq4(requirements.id, req.id));
+      console.log(`[JANIA-AMENDMENT] \u2705 Requerimiento #${req.id} actualizado silenciosamente en BD (Ventana 2h):`, updates);
+      const { executeMatchEngine: executeMatchEngine2 } = await Promise.resolve().then(() => (init_matching(), matching_exports));
+      setImmediate(() => {
+        executeMatchEngine2(null, req.id).catch((err) => console.error("Error executing match engine on amendment:", err));
+      });
+      return true;
+    }
+  }
+  const lastProps = await db.select().from(properties).where(and2(
+    eq4(properties.idUsuarioWhatsapp, rawPhone),
+    gte(properties.createdAt, twoHoursAgo)
+  )).orderBy(desc(properties.createdAt)).limit(1);
+  if (lastProps.length > 0) {
+    const prop2 = lastProps[0];
+    const updates = {};
+    if (cleanTextLower.includes("parqueadero") && fallbackData.garages > 0) {
+      updates.garages = fallbackData.garages;
+    }
+    if ((cleanTextLower.includes("habitaci\xF3n") || cleanTextLower.includes("habitacion") || cleanTextLower.includes("alcoba")) && fallbackData.bedrooms > 0) {
+      updates.bedrooms = fallbackData.bedrooms;
+    }
+    if (cleanTextLower.includes("ba\xF1o") && fallbackData.bathrooms > 0) {
+      updates.bathrooms = fallbackData.bathrooms;
+    }
+    if ((cleanTextLower.includes("precio") || cleanTextLower.includes("valor")) && fallbackData.price > 0) {
+      updates.price = String(fallbackData.price);
+    }
+    if ((cleanTextLower.includes("\xE1rea") || cleanTextLower.includes("area")) && fallbackData.area > 0) {
+      updates.areaTotal = String(fallbackData.area);
+    }
+    if (Object.keys(updates).length > 0) {
+      updates.updatedAt = /* @__PURE__ */ new Date();
+      await db.update(properties).set(updates).where(eq4(properties.id, prop2.id));
+      console.log(`[JANIA-AMENDMENT] \u2705 Propiedad #${prop2.id} actualizada silenciosamente en BD (Ventana 2h):`, updates);
+      const { executeMatchEngine: executeMatchEngine2 } = await Promise.resolve().then(() => (init_matching(), matching_exports));
+      setImmediate(() => {
+        executeMatchEngine2(prop2.id, null).catch((err) => console.error("Error executing match engine on amendment:", err));
+      });
+      return true;
+    }
+  }
+  return false;
+}
 async function saveProperty(data, userId, realName, imageBuffer) {
   const db = await getDb();
   if (!db) return null;
@@ -5324,31 +6454,119 @@ async function saveProperty(data, userId, realName, imageBuffer) {
     comisiones: data.comisiones || data.amenities?.comisiones,
     antiguedad: data.antiguedad || data.amenities?.antiguedad
   };
+  if (data.zone && typeof data.zone === "string") {
+    const barriosDesambiguados = desambiguarBarriosCompuestos(data.zone);
+    if (barriosDesambiguados.length > 1) {
+      data.zone = barriosDesambiguados.join(", ");
+      data.addressNeighborhood = barriosDesambiguados[0];
+      console.log(`[JanIA-GeoDisambiguate] Barrio compuesto: "${data.zone}"`);
+    }
+  }
+  const txTypeForSplit = (data.transactionType || "").toLowerCase();
+  if (txTypeForSplit === "venta_o_arriendo" || txTypeForSplit === "arriendo_con_opcion_de_compra") {
+    const currentPrice = data.price ? parseFloat(String(data.price)) : 0;
+    const currentRentP = data.rentPrice ? parseFloat(String(data.rentPrice)) : 0;
+    const priceSaleField = data.priceSale ? parseFloat(String(data.priceSale)) : 0;
+    const priceRentField = data.priceRent ? parseFloat(String(data.priceRent)) : 0;
+    const priceSeemRent = currentPrice > 0 && currentPrice < 1e8;
+    let finalSalePrice = currentPrice;
+    let finalRentPrice = currentRentP > 0 ? currentRentP : priceRentField;
+    if (priceSaleField > 0) {
+      finalSalePrice = priceSaleField;
+      if (finalRentPrice <= 0 && priceSeemRent) finalRentPrice = currentPrice;
+    }
+    if (priceSeemRent && finalSalePrice < 1e8) {
+      const rawLower = (data.rawText || "").toLowerCase();
+      const salePriceMatch = rawLower.match(
+        /(?:precio\s*(?:de\s*)?venta|venta)\s*:?\s*\$?([\d.,]+)\s*(mil\s*millones?|millones?)?/i
+      );
+      if (salePriceMatch) {
+        const rawNum = parseFloat(salePriceMatch[1].replace(/[.,]/g, ""));
+        const unitStr = (salePriceMatch[2] || "").toLowerCase();
+        const mult = unitStr.includes("mil millon") ? 1e9 : unitStr.includes("millon") ? 1e6 : rawNum < 1e4 ? 1e6 : 1;
+        const computedSale = rawNum * mult;
+        if (computedSale > 1e8) {
+          finalSalePrice = computedSale;
+          if (finalRentPrice <= 0) finalRentPrice = currentPrice;
+        }
+      }
+    }
+    if (finalSalePrice > 0) data.price = finalSalePrice;
+    if (finalRentPrice > 0) {
+      const adminFeeVal = data.adminFee ? parseFloat(String(data.adminFee)) : 0;
+      if (adminFeeVal > 0 && finalRentPrice >= adminFeeVal && finalRentPrice < 1e8) {
+        data.rentPrice = finalRentPrice - adminFeeVal;
+      } else {
+        data.rentPrice = finalRentPrice;
+      }
+    }
+    console.log(`[JanIA-PriceSplit] ${txTypeForSplit} \u2192 price(venta)=${data.price} | rentPrice(canon neto)=${data.rentPrice}`);
+  }
+  const isVentaType = txTypeForSplit.includes("venta") || !txTypeForSplit.includes("arriendo");
+  const currentPriceVal = data.price ? parseFloat(String(data.price)) : 0;
+  if (isVentaType && currentPriceVal > 0 && currentPriceVal < 3e7 && data.rawText) {
+    const rawLower = (data.rawText || "").toLowerCase();
+    const saleMatch = rawLower.match(/(?:v\/venta\/|precio\s*(?:de\s*)?venta|venta)\s*:?\s*\$?([\d.,]+)\s*(mil\s*millones?|millones?|m|M)?/i) || rawLower.match(/venta\/.*?\$?\s*([\d.]{7,12})/i);
+    if (saleMatch) {
+      const rawNum = parseFloat(saleMatch[1].replace(/\./g, "").replace(/,/g, ""));
+      const unitStr = (saleMatch[2] || "").toLowerCase();
+      const mult = unitStr.includes("mil millon") ? 1e9 : unitStr.includes("millon") || unitStr === "m" ? 1e6 : rawNum < 1e4 ? 1e6 : 1;
+      const realSalePrice = rawNum * mult;
+      if (realSalePrice >= 3e7) {
+        if (!data.adminFee || parseFloat(String(data.adminFee)) <= 0) {
+          data.adminFee = currentPriceVal;
+        }
+        data.price = realSalePrice;
+        console.log(`[JanIA-SanidadPredial] Corregido precio de venta corrupto $${currentPriceVal} \u2192 Real: $${realSalePrice} | AdminFee: $${data.adminFee}`);
+      }
+    }
+  }
   const insertData = {
     ...data,
-    name: safeSlice(data.name || `Propiedad en ${data.city || "Bogot\xE1"}`, 255) || "Propiedad",
-    city: safeSlice(data.city || data.ciudadDeseada || "Bogot\xE1", 100) || "Bogot\xE1",
-    zone: safeSlice(data.zone || "Bogot\xE1", 100) || "Bogot\xE1",
+    name: safeSlice(data.name || `Propiedad en ${data.city || data.zone || "Colombia"}`, 255) || "Propiedad",
+    city: safeSlice(data.city || data.ciudadDeseada, 100) || null,
+    zone: safeSlice(data.zone, 100) || null,
     addressCity: safeSlice(data.addressCity || data.address_city, 100) || null,
     addressLocality: safeSlice(data.addressLocality || data.address_locality, 100) || null,
     addressNeighborhood: safeSlice(data.addressNeighborhood || data.address_neighborhood, 150) || null,
     location: safeSlice(data.location, 255) || null,
     matriculaInmobiliaria: safeSlice(data.matriculaInmobiliaria, 100) || null,
+    enlaceOrigen: safeSlice(data.enlaceOrigen, 1e3) || null,
     idUsuarioWhatsapp: safeSlice(data.idUsuarioWhatsapp || rawPhone, 100) || null,
+    nombreUsuarioWhatsapp: safeSlice(realName && realName.trim() !== "" && !realName.startsWith("Asesor +") ? realName : data.nombreUsuarioWhatsapp || realName, 255) || null,
     propertyType: sanitizePropertyType(data.propertyType),
     transactionType: sanitizeTransactionType(data.transactionType),
     acceptedTransactionTypes: sanitizeTransactionTypes(data.transactionTypes || data.transactionType),
     currency: sanitizeCurrency(data.currency),
-    // Mapear explícitamente los campos para mayor robustez
-    price: data.price !== void 0 && data.price !== null ? String(data.price) : null,
-    // Para venta_o_arriendo: rentPrice guarda el precio de arriendo separado del precio de venta
-    rentPrice: data.rentPrice !== void 0 && data.rentPrice !== null ? String(data.rentPrice) : null,
-    areaTotal: data.areaTotal !== void 0 && data.areaTotal !== null ? String(data.areaTotal) : data.area !== void 0 && data.area !== null ? String(data.area) : null,
+    // Mapear explícitamente los campos con Sanidad Numérica Post-Extracción (Bug #6 Fix)
+    price: (() => {
+      if (data.price === void 0 || data.price === null) return null;
+      const v = parseFloat(String(data.price));
+      if (isNaN(v) || v < 1e7 || v > 5e10) return null;
+      return String(v);
+    })(),
+    rentPrice: (() => {
+      if (data.rentPrice === void 0 || data.rentPrice === null) return null;
+      const v = parseFloat(String(data.rentPrice));
+      if (isNaN(v) || v < 3e5 || v > 2e8) return null;
+      return String(v);
+    })(),
+    areaTotal: (() => {
+      const raw = data.areaTotal !== void 0 && data.areaTotal !== null ? data.areaTotal : data.area;
+      if (raw === void 0 || raw === null) return null;
+      const v = parseFloat(String(raw));
+      if (isNaN(v) || v < 10 || v > 5e3) return null;
+      return String(v);
+    })(),
     bedrooms: data.bedrooms !== void 0 && data.bedrooms !== null ? Math.round(Number(data.bedrooms)) : null,
     bathrooms: data.bathrooms !== void 0 && data.bathrooms !== null ? Math.round(Number(data.bathrooms)) : null,
     garages: data.garages !== void 0 && data.garages !== null ? Math.round(Number(data.garages)) : null,
+    garageType: data.garageType || null,
+    // "independiente" | "lineal" | "mixto" | null (v20.0)
     stratum: data.stratum !== void 0 && data.stratum !== null ? Math.round(Number(data.stratum)) : null,
     adminFee: data.adminFee !== void 0 && data.adminFee !== null ? String(data.adminFee) : null,
+    yearBuilt: data.yearBuilt !== void 0 && data.yearBuilt !== null ? Math.round(Number(data.yearBuilt)) : null,
+    antiguedadAnos: data.antiguedadAnos !== void 0 && data.antiguedadAnos !== null ? Math.round(Number(data.antiguedadAnos)) : null,
     agentId: user ? user.id : null,
     latitude: data.latitude !== void 0 && data.latitude !== null ? String(data.latitude) : null,
     longitude: data.longitude !== void 0 && data.longitude !== null ? String(data.longitude) : null,
@@ -5450,9 +6668,11 @@ async function saveProperty(data, userId, realName, imageBuffer) {
     } catch (histErr) {
       console.error("[JanIA-History] Error al registrar historial de republicaci\xF3n:", histErr);
     }
+    findMatchesForProperty(updated.id).catch((mErr) => console.error("[JanIA-MatchingTrigger] Error recalculando matches para propiedad:", mErr));
     return updated;
   }
   const [result] = await db.insert(properties).values(insertDataWithCalif).returning();
+  findMatchesForProperty(result.id).catch((mErr) => console.error("[JanIA-MatchingTrigger] Error calculando matches para propiedad:", mErr));
   try {
     await db.insert(propertyPublicationHistory).values({
       propertyId: result.id,
@@ -5504,24 +6724,56 @@ async function saveRequirement(data, userId, realName) {
   const insertData = {
     ...data,
     name: safeSlice(data.name, 255) || null,
-    ciudadDeseada: safeSlice(data.ciudadDeseada || data.city || "Bogot\xE1", 100) || "Bogot\xE1",
+    ciudadDeseada: safeSlice(data.ciudadDeseada || data.city, 100) || null,
     zonaDeseada: safeSlice(data.zonaDeseada || data.zone, 100) || null,
     addressCity: safeSlice(data.addressCity || data.address_city, 100) || null,
     addressLocality: safeSlice(data.addressLocality || data.address_locality, 100) || null,
     addressNeighborhood: safeSlice(data.addressNeighborhood || data.address_neighborhood, 150) || null,
+    enlaceOrigen: safeSlice(data.enlaceOrigen, 1e3) || null,
     idUsuarioWhatsapp: safeSlice(data.idUsuarioWhatsapp || rawPhone, 100) || null,
+    nombreUsuarioWhatsapp: safeSlice(realName && realName.trim() !== "" && !realName.startsWith("Asesor +") ? realName : data.nombreUsuarioWhatsapp || realName, 255) || null,
     tipoInmuebleDeseado: sanitizePropertyType(data.tipoInmuebleDeseado || data.propertyType),
     tipoNegocioDeseado: sanitizeTransactionType(data.tipoNegocioDeseado || data.transactionType),
     tiposNegocioAceptados: sanitizeTransactionTypes(data.transactionTypes || data.tipoNegocioDeseado || data.transactionType),
     monedaPresupuesto: sanitizeCurrency(data.monedaPresupuesto || data.currency),
-    // Mapear campos desde el formato LLM/WhatsApp (data) a las columnas de la base de datos
+    // Mapear campos con Sanidad Numérica Post-Extracción (Bug #6 Fix)
     presupuestoMin: data.presupuestoMin !== void 0 && data.presupuestoMin !== null ? String(data.presupuestoMin) : null,
-    presupuestoMax: data.presupuestoMax !== void 0 && data.presupuestoMax !== null ? String(data.presupuestoMax) : data.price !== void 0 && data.price !== null ? String(data.price) : null,
-    areaMin: data.areaMin !== void 0 && data.areaMin !== null ? String(data.areaMin) : data.area !== void 0 && data.area !== null ? String(data.area) : null,
+    presupuestoMax: (() => {
+      const raw = data.presupuestoMax !== void 0 && data.presupuestoMax !== null ? data.presupuestoMax : data.price;
+      if (raw === void 0 || raw === null) return null;
+      const v = parseFloat(String(raw));
+      if (isNaN(v) || v < 3e5 || v > 5e10) return null;
+      return String(v);
+    })(),
+    areaMin: (() => {
+      const raw = data.areaMin !== void 0 && data.areaMin !== null ? data.areaMin : data.area;
+      if (raw === void 0 || raw === null) return null;
+      const v = parseFloat(String(raw));
+      if (isNaN(v) || v < 10 || v > 5e3) return null;
+      return String(v);
+    })(),
     adminFeeMax: data.adminFeeMax !== void 0 && data.adminFeeMax !== null ? String(data.adminFeeMax) : data.adminFee !== void 0 && data.adminFee !== null ? String(data.adminFee) : null,
-    habitacionesMin: data.habitacionesMin !== void 0 && data.habitacionesMin !== null ? Math.round(Number(data.habitacionesMin)) : data.bedrooms !== void 0 && data.bedrooms !== null ? Math.round(Number(data.bedrooms)) : null,
-    banosMin: data.banosMin !== void 0 && data.banosMin !== null ? Math.round(Number(data.banosMin)) : data.bathrooms !== void 0 && data.bathrooms !== null ? Math.round(Number(data.bathrooms)) : null,
-    parqueaderosMin: data.parqueaderosMin !== void 0 && data.parqueaderosMin !== null ? Math.round(Number(data.parqueaderosMin)) : data.garages !== void 0 && data.garages !== null ? Math.round(Number(data.garages)) : null,
+    habitacionesMin: (() => {
+      const v = data.habitacionesMin !== void 0 && data.habitacionesMin !== null ? Math.round(Number(data.habitacionesMin)) : data.bedrooms !== void 0 && data.bedrooms !== null ? Math.round(Number(data.bedrooms)) : null;
+      if (v !== null && !isNaN(v) && v > 0) return v;
+      const rawL = (data.rawText || "").toLowerCase();
+      const m = rawL.match(/(\d+)\s*(?:hab|habitaciones|alcoba|alcobas|alc|dormitorio)/i);
+      return m ? parseInt(m[1], 10) : null;
+    })(),
+    banosMin: (() => {
+      const v = data.banosMin !== void 0 && data.banosMin !== null ? Number(data.banosMin) : data.bathrooms !== void 0 && data.bathrooms !== null ? Number(data.bathrooms) : null;
+      if (v !== null && !isNaN(v) && v > 0) return Math.round(v);
+      const rawL = (data.rawText || "").toLowerCase();
+      const m = rawL.match(/(\d+(?:\.\d+)?)\s*(?:o\s*más\s*)?(?:wc|baño|baños|bñ)/i) || rawL.match(/(\d+)\s*hab\s*con\s*baño/i);
+      return m ? Math.round(parseFloat(m[1])) : null;
+    })(),
+    parqueaderosMin: (() => {
+      const v = data.parqueaderosMin !== void 0 && data.parqueaderosMin !== null ? Math.round(Number(data.parqueaderosMin)) : data.garages !== void 0 && data.garages !== null ? Math.round(Number(data.garages)) : null;
+      if (v !== null && !isNaN(v) && v > 0) return v;
+      const rawL = (data.rawText || "").toLowerCase();
+      const m = rawL.match(/(?:parqueadero|parqueaderos|garaje|garajes|ptero|g\.)\s*\.?\s*(\d+)/i) || rawL.match(/(\d+)\s*(?:parqueadero|parqueaderos|garaje|garajes|ptero|g\.|individuales)/i);
+      return m ? parseInt(m[1], 10) : null;
+    })(),
     estratoDeseado: data.estratoDeseado || (data.stratum !== void 0 && data.stratum !== null ? [Math.round(Number(data.stratum))] : null),
     userId: user ? user.id : null,
     caracteristicasDeseadas: characteristicsObj,
@@ -5551,9 +6803,11 @@ async function saveRequirement(data, userId, realName) {
       updatedAt: /* @__PURE__ */ new Date()
     }).where(eq4(requirements.id, existing[0].id)).returning();
     console.log(`[Deduplication] Requerimiento existente detectado. Actualizando datos (ID: ${updated.id})`);
+    findMatchesForRequirement(updated.id).catch((mErr) => console.error("[JanIA-MatchingTrigger] Error recalculando matches para requerimiento:", mErr));
     return updated;
   }
   const [result] = await db.insert(requirements).values(insertDataWithCalif).returning();
+  findMatchesForRequirement(result.id).catch((mErr) => console.error("[JanIA-MatchingTrigger] Error calculando matches para requerimiento:", mErr));
   return result;
 }
 async function generateWelcomeMessage(count, chatId) {
@@ -5915,7 +7169,7 @@ Analiza el contexto completo antes de clasificar. Debes responder estrictamente 
     }
     if (isFromAudio) {
       messageToProcess += `
-[SISTEMA - NOTA DE VOZ]: El usuario te envi\xF3 este mensaje como nota de voz (audio). Dado que te enviaron audio, es preferible y de alta importancia que respondas en audio ("wantsVoice": true) si tu respuesta es corta (saludos, confirmaciones, consultas breves, o respuestas de menos de 250 caracteres). **EXCEPCI\xD3N CR\xCDTICA**: Si el usuario te pide expl\xEDcitamente que le respondas por audio, nota de voz o de viva voz por cualquier raz\xF3n, debes omitir el l\xEDmite de longitud y responder obligatoriamente por audio ("wantsVoice": true y colocar toda tu respuesta en "voiceResponse" de forma limpia), a menos que sea un contrato extenso o tabla de datos que no se pueda leer de manera natural. Si la respuesta requiere explicaciones largas, tablas o minutas/contratos y el usuario NO pidi\xF3 expresamente que fuera audio, responde obligatoriamente por escrito ("wantsVoice": false).`;
+[SISTEMA - NOTA DE VOZ REQUERIDA Y L\xCDMITE DE DURACI\xD3N \xC1GIL]: El usuario te envi\xF3 esta consulta mediante una NOTA DE VOZ (audio). Como JanIA, debes responder en nota de voz de viva voz. DEBES obligatoriamente marcar "wantsVoice": true y redactar en "voiceResponse" una versi\xF3n hablada resumida, directa, muy fluida, profesional, c\xE1lida y natural de tu respuesta (m\xE1ximo 450 caracteres / ~30 a 40 segundos de voz hablada), sin asteriscos, vi\xF1etas ni sintaxis Markdown, perfecta para ser sintetizada e impactar de forma \xE1gil e instant\xE1nea sin saturar la conexi\xF3n. En "response" coloca la versi\xF3n completa formateada en texto.`;
     }
     const messages2 = [
       { role: "system", content: systemPrompt },
@@ -6198,6 +7452,7 @@ var init_janIA = __esm({
     init_llm();
     init_db();
     init_schema();
+    init_matching();
     init_geography();
     init_divipola();
     init_voiceTranscription();
@@ -6490,7 +7745,8 @@ Constantemente recibes datos en diversos formatos (Texto plano, URLs de portales
     "depositos": number,
     "comisiones": "string | number | null",
     "antiguedad": "nuevo | 1-5 | 5-10 | 10+ | NA",
-    "floorDetail": "string (ej: 'piso 5', '3 pisos', '8 metros de altura', 'NA')"
+    "floorDetail": "string (ej: 'piso 5', '3 pisos', '8 metros de altura', 'NA')",
+    "evaluationSummary": "string (un resumen t\xE9cnico de 1 a 2 frases con tu criterio br\xF3ker sobre la viabilidad del precio/\xE1rea, atractivo comercial o nivel de exigencia de la demanda en el sector)"
   },
   "response": "Tu respuesta elocuente para el grupo (cadena vac\xEDa '' si no hay match ni es consulta)",
   "shouldSendDM": boolean,
@@ -6714,26 +7970,78 @@ function cleanVoiceText(text2) {
   cleaned = cleaned.replace(/^"|"$/g, "").trim();
   return cleaned.trim();
 }
+function splitTextIntoVoiceChunks(text2, maxLen = 180) {
+  const sentences = text2.match(/[^.!?]+[.!?]+/g) || [text2];
+  const chunks = [];
+  let currentChunk = "";
+  for (const sentence of sentences) {
+    if ((currentChunk + " " + sentence).trim().length <= maxLen) {
+      currentChunk = (currentChunk + " " + sentence).trim();
+    } else {
+      if (currentChunk) chunks.push(currentChunk);
+      if (sentence.length > maxLen) {
+        const words = sentence.split(" ");
+        let sub = "";
+        for (const w of words) {
+          if ((sub + " " + w).trim().length <= maxLen) {
+            sub = (sub + " " + w).trim();
+          } else {
+            chunks.push(sub);
+            sub = w;
+          }
+        }
+        if (sub) currentChunk = sub;
+        else currentChunk = "";
+      } else {
+        currentChunk = sentence.trim();
+      }
+    }
+  }
+  if (currentChunk) chunks.push(currentChunk);
+  return chunks;
+}
+async function fetchGttsAudioBuffer(text2) {
+  try {
+    const chunks = splitTextIntoVoiceChunks(text2);
+    const audioBuffers = [];
+    for (const chunk of chunks) {
+      const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(chunk)}&tl=es-CO&client=tw-ob`;
+      const res = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
+      if (res.ok) {
+        const arr = await res.arrayBuffer();
+        audioBuffers.push(Buffer.from(arr));
+      }
+    }
+    if (audioBuffers.length > 0) {
+      return Buffer.concat(audioBuffers);
+    }
+  } catch (err) {
+    console.error("[TTS-Fallback-GTTS] Error sintetizando audio libre:", err.message || err);
+  }
+  return null;
+}
 async function textToSpeechMedia(text2, format = "OGG_OPUS") {
   const cleaned = cleanVoiceText(text2);
   if (!cleaned) return null;
   try {
     const googleApiKey = process.env.GOOGLE_TTS_API_KEY || process.env.GEMINI_API_KEY;
     if (googleApiKey) {
-      const response = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${googleApiKey}`, {
+      const response = await fetch(`https://texttospeech.googleapis.com/v1beta1/text:synthesize?key=${googleApiKey}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          input: { text: cleaned },
+          input: {
+            prompt: "Read aloud in a warm, welcoming tone.",
+            text: cleaned
+          },
           voice: {
-            languageCode: "es-CO",
-            name: "es-CO-Neural2-[#1]",
-            // Voz femenina colombiana alta fidelidad (Laomedeia)
-            ssmlGender: "FEMALE"
+            languageCode: "es-419",
+            modelName: "gemini-3.1-flash-tts-preview",
+            name: "Laomedeia"
           },
           audioConfig: {
             audioEncoding: format === "OGG_OPUS" ? "OGG_OPUS" : "MP3",
-            speakingRate: 1.02,
+            speakingRate: 1,
             pitch: 0
           }
         })
@@ -6751,7 +8059,16 @@ async function textToSpeechMedia(text2, format = "OGG_OPUS") {
       }
     }
   } catch (err) {
-    console.error("[TTS-Media] Error sintetizando audio:", err.message || err);
+    console.warn("[TTS-Media] Google Cloud TTS no disponible, usando fallback GTTS:", err.message || err);
+  }
+  console.log("[TTS-Media] Sintetizando audio usando fallback Google Translate TTS (es-CO)...");
+  const gttsBuffer = await fetchGttsAudioBuffer(cleaned);
+  if (gttsBuffer && gttsBuffer.length > 0) {
+    return {
+      mimetype: "audio/mp3",
+      data: gttsBuffer.toString("base64"),
+      buffer: gttsBuffer
+    };
   }
   return null;
 }
@@ -6891,6 +8208,7 @@ import _baileys, {
   DisconnectReason,
   delay,
   downloadMediaMessage,
+  downloadContentFromMessage,
   fetchLatestBaileysVersion,
   Browsers
 } from "@whiskeysockets/baileys";
@@ -7116,28 +8434,29 @@ var init_whatsapp_match = __esm({
           if (connection === "close") {
             const error = lastDisconnect?.error;
             const statusCode = error?.output?.statusCode;
-            const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+            const shouldReconnect = statusCode !== DisconnectReason.loggedOut && statusCode !== 401 && statusCode !== 403;
             this.isReady = false;
             this.updateStatusInDb().catch((err) => console.error(`[${this.botName}-DB] Error updating status on close:`, err));
+            if (statusCode === DisconnectReason.loggedOut || statusCode === 401 || statusCode === 403) {
+              console.error(`[${this.botName}] \u{1F6E1}\uFE0F [ESCUDO ANTI-BAN] Sesi\xF3n cerrada o desvinculada por WhatsApp (error ${statusCode}). Deteniendo reconexi\xF3n autom\xE1tica por seguridad.`);
+              return;
+            }
             this.reconnectAttempts++;
-            if (this.reconnectAttempts > 5) {
-              console.warn(`[${this.botName}] \u{1F6E1}\uFE0F [ESCUDO ANTI-BAN] M\xE1ximos reintentos inmediatos alcanzados. Programando reconexi\xF3n diferida en 2 minutos...`);
+            if (this.reconnectAttempts > 3) {
+              console.warn(`[${this.botName}] \u{1F6E1}\uFE0F [ESCUDO ANTI-BAN] 3 reintentos seguidos alcanzados. Pausando reconexi\xF3n por 45 segundos para proteger el n\xFAmero +573192919978...`);
               setTimeout(() => {
                 this.reconnectAttempts = 0;
                 this.initialize();
-              }, 12e4);
+              }, 45e3);
               return;
             }
             const isRestart = statusCode === DisconnectReason.restartRequired;
             const isConnectionLost = statusCode === DisconnectReason.connectionLost;
             const isConflict = statusCode === 440;
-            const isConnectionFailure = statusCode === 405 || statusCode === 401;
-            const jitter = Math.floor(Math.random() * 4e3);
-            const delayMs = isRestart || isConnectionLost ? 2e3 + jitter : isConflict ? 12e4 : 1e4 + jitter;
-            console.warn(`[${this.botName}] \u26A0\uFE0F Conexi\xF3n Baileys cerrada (c\xF3digo: ${statusCode}) [Intento ${this.reconnectAttempts}/3]. Reconectando en ${delayMs}ms...`);
-            if (isConnectionFailure || statusCode === DisconnectReason.loggedOut) {
-              console.error(`[${this.botName}] Sesi\xF3n inv\xE1lida o cerrada (error ${statusCode}). Deteniendo bot por seguridad.`);
-            } else if (shouldReconnect) {
+            const jitter = Math.floor(Math.random() * 3e3);
+            const delayMs = isConflict ? 2e4 + jitter : this.reconnectAttempts * 4e3 + jitter;
+            console.warn(`[${this.botName}] \u{1F6E1}\uFE0F [ANTI-BAN] Conexi\xF3n Baileys pausada (c\xF3digo: ${statusCode}) [Intento ${this.reconnectAttempts}/3]. Reconectando de forma segura en ${Math.round(delayMs / 1e3)}s...`);
+            if (shouldReconnect) {
               setTimeout(() => this.initialize(), delayMs);
             }
           } else if (connection === "open") {
@@ -7164,7 +8483,7 @@ var init_whatsapp_match = __esm({
               continue;
             }
             const timestamp2 = msg.messageTimestamp;
-            if (timestamp2 && Number(timestamp2) < SERVER_BOOT_TIME) {
+            if (timestamp2 && Number(timestamp2) < SERVER_BOOT_TIME - 60) {
               continue;
             }
             try {
@@ -7184,7 +8503,15 @@ var init_whatsapp_match = __esm({
                   isAudioPTT = true;
                   try {
                     console.log(`[JANIA-MATCH] Transcribiendo audio PTT de ${senderId} en grupo ${chatId}...`);
-                    const audioBuffer = await downloadMediaMessage(msg, "buffer", {});
+                    let audioBuffer = null;
+                    try {
+                      audioBuffer = await downloadMediaMessage(msg, "buffer", {});
+                    } catch (dlErr) {
+                      const stream = await downloadContentFromMessage(msg.message.audioMessage, "audio");
+                      let chunks = [];
+                      for await (const chunk of stream) chunks.push(chunk);
+                      audioBuffer = Buffer.concat(chunks);
+                    }
                     if (audioBuffer && audioBuffer.length > 0) {
                       const mimeType = msg.message.audioMessage.mimetype || "audio/ogg; codecs=opus";
                       const transcription = await transcribeAudioBuffer(audioBuffer, mimeType);
@@ -7212,7 +8539,49 @@ var init_whatsapp_match = __esm({
                   const prod = msg.message.productMessage?.product;
                   body = [prod?.title, prod?.description, prod?.priceAmount1000 ? `$${Math.round(prod.priceAmount1000 / 1e3).toLocaleString("es-CO")}` : ""].filter(Boolean).join(" - ");
                 }
-                if (!body && msg.message.extendedTextMessage?.contextInfo?.quotedMessage) {
+                const quotedAudioMsg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage?.audioMessage;
+                if (quotedAudioMsg) {
+                  isAudioPTT = true;
+                  try {
+                    const contextInfo = msg.message?.extendedTextMessage?.contextInfo;
+                    const quotedParticipant = contextInfo?.participant || chatId;
+                    const quotedPhone = quotedParticipant.split("@")[0];
+                    console.log(`[JANIA-MATCH] Transcribiendo audio CITADO de +${quotedPhone} en grupo ${chatId}...`);
+                    let audioBuffer = null;
+                    try {
+                      const stream = await downloadContentFromMessage(quotedAudioMsg, "audio");
+                      let chunks = [];
+                      for await (const chunk of stream) chunks.push(chunk);
+                      audioBuffer = Buffer.concat(chunks);
+                    } catch (e) {
+                      const fakeMsg = {
+                        key: {
+                          remoteJid: chatId,
+                          id: contextInfo?.stanzaId || "quoted-audio",
+                          fromMe: false,
+                          participant: quotedParticipant
+                        },
+                        message: {
+                          audioMessage: quotedAudioMsg
+                        }
+                      };
+                      audioBuffer = await downloadMediaMessage(fakeMsg, "buffer", {});
+                    }
+                    if (audioBuffer && audioBuffer.length > 0) {
+                      const mimeType = quotedAudioMsg.mimetype || "audio/ogg; codecs=opus";
+                      const transcription = await transcribeAudioBuffer(audioBuffer, mimeType);
+                      if (transcription && transcription.trim() !== "") {
+                        console.log(`[JANIA-MATCH] Transcripci\xF3n de audio citado exitosa: "${transcription.substring(0, 80)}..."`);
+                        const quotedNote = `[Consulta en audio citada de +${quotedPhone}]: "${transcription.trim()}"`;
+                        body = body ? `${body}
+
+${quotedNote}` : quotedNote;
+                      }
+                    }
+                  } catch (quotedAudioErr) {
+                    console.error("[JANIA-MATCH] Error al transcribir audio citado:", quotedAudioErr?.message || quotedAudioErr);
+                  }
+                } else if (!body && msg.message.extendedTextMessage?.contextInfo?.quotedMessage) {
                   const qm = msg.message.extendedTextMessage.contextInfo.quotedMessage;
                   body = qm.conversation || qm.extendedTextMessage?.text || qm.imageMessage?.caption || "";
                 }
@@ -7233,15 +8602,72 @@ var init_whatsapp_match = __esm({
                   }
                 } catch (e) {
                 }
-                const NEGOTIATION_GROUPS_BLACKLIST = [
-                  "Venta Alameda",
-                  "Negociaci\xF3n ARRECIFES"
-                ];
-                if (NEGOTIATION_GROUPS_BLACKLIST.some((name) => groupName.includes(name))) {
-                  console.log(`[JANIA-MATCH] Mensaje omitido: el grupo "${groupName}" est\xE1 en la blacklist de negociaci\xF3n.`);
-                  return;
+                if (!isOfficialGroup) {
+                  const gNameLower = groupName.toLowerCase();
+                  const NON_REAL_ESTATE_KEYWORDS = [
+                    "seguridad",
+                    "polic\xEDa",
+                    "policia",
+                    "patrulla",
+                    "amigos",
+                    "curso",
+                    "talento tech",
+                    "familia",
+                    "convivencia",
+                    "an\xE9cdotas",
+                    "anecdotas",
+                    "negociaci\xF3n arrecifes",
+                    "venta alameda",
+                    "proceso cristo rey"
+                  ];
+                  const isNonRealEstateGroup = NON_REAL_ESTATE_KEYWORDS.some((kw) => gNameLower.includes(kw));
+                  const REAL_ESTATE_KEYWORDS = [
+                    "inmobiliari",
+                    "inmueble",
+                    "venta",
+                    "arriendo",
+                    "oferta",
+                    "requerimiento",
+                    "lote",
+                    "bodega",
+                    "apartaestudio",
+                    "agente",
+                    "casa",
+                    "apto",
+                    "chic\xF3",
+                    "cedritos",
+                    "suba",
+                    "bogot\xE1",
+                    "bogota",
+                    "sabana",
+                    "rosales",
+                    "batan",
+                    "alhambra",
+                    "pasadena",
+                    "colina",
+                    "salitre",
+                    "propiedad",
+                    "bienes",
+                    "raices",
+                    "ra\xEDces",
+                    "vecy",
+                    "amoblado",
+                    "oficina",
+                    "red",
+                    "comunidad",
+                    "apartamento",
+                    "finca",
+                    "terreno",
+                    "local",
+                    "edificio",
+                    "match"
+                  ];
+                  const isRealEstateGroup = REAL_ESTATE_KEYWORDS.some((kw) => gNameLower.includes(kw));
+                  if (isNonRealEstateGroup || !isRealEstateGroup) {
+                    return;
+                  }
                 }
-                const isPossibleListing = body.length > 120 || body.split("\n").length > 2 || !!msg.message.imageMessage || !!msg.message.documentMessage || textLower.includes("http") || textLower.includes("www") || textLower.includes("ofrezco") || textLower.includes("busco") || textLower.includes("vendo") || textLower.includes("venta") || textLower.includes("arriendo") || textLower.includes("ariendo") || textLower.includes("compro") || textLower.includes("necesito") || textLower.includes("renta") || textLower.includes("alquilo") || textLower.includes("permuto") || textLower.includes("permuta") || textLower.includes("requiero") || textLower.includes("requerimiento") || textLower.includes("casa") || textLower.includes("apto") || textLower.includes("apartamento") || textLower.includes("bodega") || textLower.includes("oficina") || textLower.includes("lote") || textLower.includes("local") || textLower.includes("finca") || textLower.includes("terreno") || textLower.includes("predio") || textLower.includes("campestre") || textLower.includes("fanegada") || textLower.includes("fanegadas") || textLower.includes("hectarea") || textLower.includes("hect\xE1rea") || textLower.includes("hect") || textLower.includes("parque") || textLower.includes("inversion") || textLower.includes("inversi\xF3n") || textLower.includes("penthouse") || textLower.includes("apartaestudio") || textLower.includes("duplex") || textLower.includes("d\xFAplex") || textLower.includes("parqueadero") || textLower.includes("alcoba") || textLower.includes("habitacion") || textLower.includes("habitaci\xF3n") || textLower.includes("metro") || textLower.includes("mts") || textLower.includes("mts2") || textLower.includes("m2") || textLower.includes("precio") || textLower.includes("presupuesto") || textLower.includes("millones") || textLower.includes("millon") || textLower.includes("canon") || textLower.includes("valor");
+                const isPossibleListing = body.length > 70 || body.split("\n").length >= 2 || !!msg.message.imageMessage || !!msg.message.documentMessage || textLower.includes("http") || textLower.includes("www") || textLower.includes("ofrezco") || textLower.includes("busco") || textLower.includes("vendo") || textLower.includes("venta") || textLower.includes("arriendo") || textLower.includes("ariendo") || textLower.includes("compro") || textLower.includes("necesito") || textLower.includes("renta") || textLower.includes("alquilo") || textLower.includes("permuto") || textLower.includes("permuta") || textLower.includes("requiero") || textLower.includes("requerimiento") || textLower.includes("casa") || textLower.includes("apto") || textLower.includes("apartamento") || textLower.includes("bodega") || textLower.includes("oficina") || textLower.includes("edificio") || textLower.includes("lote") || textLower.includes("local") || textLower.includes("finca") || textLower.includes("terreno") || textLower.includes("predio") || textLower.includes("campestre") || textLower.includes("fanegada") || textLower.includes("fanegadas") || textLower.includes("hectarea") || textLower.includes("hect\xE1rea") || textLower.includes("hect") || textLower.includes("parque") || textLower.includes("inversion") || textLower.includes("inversi\xF3n") || textLower.includes("penthouse") || textLower.includes("apartaestudio") || textLower.includes("duplex") || textLower.includes("d\xFAplex") || textLower.includes("parqueadero") || textLower.includes("alcoba") || textLower.includes("habitacion") || textLower.includes("habitaci\xF3n") || textLower.includes("metro") || textLower.includes("mts") || textLower.includes("mts2") || textLower.includes("m2") || textLower.includes("precio") || textLower.includes("presupuesto") || textLower.includes("millones") || textLower.includes("millon") || textLower.includes("canon") || textLower.includes("comisi\xF3n") || textLower.includes("comision") || textLower.includes("valor");
                 const isHelpOrSystemQuery = !isPossibleListing && (textLower.includes("c\xF3mo subo") || textLower.includes("como subo") || textLower.includes("c\xF3mo publico") || textLower.includes("como publico") || textLower.includes("c\xF3mo se publica") || textLower.includes("como se publica") || textLower.includes("c\xF3mo registrar") || textLower.includes("como registrar") || textLower.includes("c\xF3mo funciona") || textLower.includes("como funciona") || textLower.includes("de qu\xE9 consiste") || textLower.includes("de que consiste") || textLower.includes("en qu\xE9 consiste") || textLower.includes("en que consiste") || textLower.includes("c\xF3mo hago para") || textLower.includes("como hago para") || textLower.includes("c\xF3mo buscar") || textLower.includes("como buscar") || textLower.includes("c\xF3mo encontrar") || textLower.includes("como encontrar") || textLower.includes("mec\xE1nica del grupo") || textLower.includes("mecanica del grupo") || textLower.includes("qued\xF3 guardado") || textLower.includes("quedo guardado") || textLower.includes("se guard\xF3") || textLower.includes("se guardo") || textLower.includes("fue guardado") || textLower.includes("falt\xF3 alg\xFAn dato") || textLower.includes("falto algun dato") || textLower.includes("falt\xF3 un dato") || textLower.includes("falto un dato") || textLower.includes("datos faltantes") || textLower.includes("subi\xF3 correctamente") || textLower.includes("subio correctamente") || textLower.includes("fue subido") || textLower.includes("mejor forma de publicar") || textLower.includes("c\xF3mo es mejor") || textLower.includes("como es mejor") || textLower.includes("para obtener resultados") || textLower.includes("ayuda") && textLower.includes("inmueble") || textLower.includes("explicar") && textLower.includes("grupo") || textLower.includes("c\xF3mo") && textLower.includes("grupo"));
                 const textClean = body.toLowerCase().trim();
                 const isAudioFailed = body === "[audio-vac\xEDo]" || body === "[audio-sin-buffer]" || body === "[audio-error]";
@@ -7271,7 +8697,7 @@ var init_whatsapp_match = __esm({
               if (!isGroup) {
                 const rawPhone = senderId.split("@")[0];
                 const ADMIN_PHONE = process.env.ADMIN_PHONE || "573192919978";
-                const isAdmin = rawPhone.includes(ADMIN_PHONE) || rawPhone === ADMIN_PHONE || rawPhone === "573192919978" || rawPhone.includes("573185462265");
+                const isAdmin = rawPhone.includes(ADMIN_PHONE) || rawPhone === ADMIN_PHONE || rawPhone === "573192919978";
                 const userName = msg.pushName || `Asesor +${rawPhone}`;
                 let body = "";
                 if (msg.message?.conversation) body = msg.message.conversation;
@@ -7399,7 +8825,7 @@ var init_whatsapp_match = __esm({
         const ONCE_A_DAY = 24 * 60 * 60 * 1e3;
         if (now - lastRedirect > ONCE_A_DAY) {
           this.redirectCooldowns.set(senderId, now);
-          const redirectLink = "https://wa.me/573185462265";
+          const redirectLink = "https://wa.me/573192919978";
           const realName = userName || "Asesor";
           const cleanName = extractFirstName2(realName) || "colega";
           const redirectText = `Hola ${cleanName} \u{1F44B}\u{1F60A}. Si tienes dudas, inquietudes o quieres consultarme algo (sea por escrito o por notas de voz), te invito a escribir directamente al canal oficial privado de soporte de JanIA de Meta haciendo clic aqu\xED: ${redirectLink} para realizar tus consultas correspondientes o si est\xE1s en los grupos correspondientes seg\xFAn tu consulta puedes hacerlas all\xED de la siguiente manera:
@@ -7433,13 +8859,13 @@ Te espero. \xA1All\xED te atender\xE9 con gusto! \u{1F680}`;
           const textLower = bodyText.toLowerCase();
           const { detectaVoz: detectaVoz2, textToSpeechMedia: textToSpeechMedia2 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
           const { processWhatsAppMessage: processWhatsAppMessage2, processConsultingMessage: processConsultingMessage2, processCirculoMessage: processCirculoMessage2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
-          const wantsVoice = msg.message?.audioMessage || detectaVoz2(textLower);
+          const isAudioPTT = !!msg.message?.audioMessage;
+          const wantsVoice = isAudioPTT || detectaVoz2(textLower);
           if (wantsVoice) {
             await this.sock.sendPresenceUpdate("recording", chatId);
           } else {
             await this.sock.sendPresenceUpdate("composing", chatId);
           }
-          await delay(2e3);
           const isAudioFailed = bodyText === "[audio-vac\xEDo]" || bodyText === "[audio-sin-buffer]" || bodyText === "[audio-error]";
           if (isAudioFailed) {
             const failMsg = `Hola ${realName} \u{1F44B}\u{1F3FB}, escuch\xE9 que enviaste una nota de voz. Lamentablemente tuve un inconveniente t\xE9cnico al procesarla en este momento. \u{1F64F}
@@ -7474,7 +8900,15 @@ Tambi\xE9n puedes consultarme directamente en mi chat privado con mi otra yo *Ja
           }
           let result;
           if (chatId === this.buzonGroupId) {
-            result = await processConsultingMessage2(bodyText, resolvedSenderId, realName);
+            result = await processConsultingMessage2(
+              bodyText,
+              resolvedSenderId,
+              realName,
+              void 0,
+              void 0,
+              void 0,
+              isAudioPTT ? "mock-audio:" + bodyText : void 0
+            );
           } else if (chatId === this.circuloGroupId) {
             result = await processCirculoMessage2(bodyText, resolvedSenderId, realName);
           } else if (isMainGroupChat) {
@@ -7507,12 +8941,20 @@ Tambi\xE9n puedes consultarme directamente en mi chat privado con mi otra yo *Ja
           }
           if (result && result.response && result.response.trim() !== "") {
             const textToDeliver = result.response;
-            const voiceToDeliver = result.voiceResponse || "";
-            if (wantsVoice && voiceToDeliver.trim() !== "") {
-              const media = await textToSpeechMedia2(voiceToDeliver);
-              if (media) {
-                await this.queuedSend(chatId, media, { sendAudioAsVoice: true, quoted: msg });
-              } else {
+            const voiceToDeliver = result.voiceResponse && result.voiceResponse.trim() !== "" ? result.voiceResponse : textToDeliver;
+            if (wantsVoice || isAudioPTT) {
+              try {
+                const media = await textToSpeechMedia2(voiceToDeliver);
+                if (media) {
+                  await this.queuedSend(chatId, media, { sendAudioAsVoice: true, quoted: msg });
+                } else {
+                  await this.queuedSend(chatId, textToDeliver, {
+                    mentions: [senderId],
+                    quoted: msg
+                  });
+                }
+              } catch (audioSendErr) {
+                console.error("[JANIA-MATCH] Error enviando nota de voz. Activando fallback a texto:", audioSendErr?.message || audioSendErr);
                 await this.queuedSend(chatId, textToDeliver, {
                   mentions: [senderId],
                   quoted: msg
@@ -7531,7 +8973,46 @@ Tambi\xE9n puedes consultarme directamente en mi chat privado con mi otra yo *Ja
           console.error("[JANIA-MATCH] Error al responder pregunta directa en grupo:", err);
         }
       }
-      // --- LOGÍSTICA DE BUFFER GRUPAL ---
+      isPromotionalAd(bodyText, senderId) {
+        const cleanLower = (bodyText || "").toLowerCase();
+        const rawPhone = (senderId || "").split("@")[0].replace(/[^0-9]/g, "");
+        const isCarolina = rawPhone.includes("573212857044") || rawPhone.includes("3212857044");
+        const promoPhrases = [
+          "captar no es improvisar",
+          "especializaci\xF3n dentro de la labor inmobiliaria",
+          "adquiere tu entrenamiento",
+          "espiral del \xE9xito",
+          "conocimiento llena tus bolsillos",
+          "adqui\xE9relo precio",
+          "precio de oferta",
+          "no m\xE1s captaciones mediocres",
+          "no m\xE1s procesos informales",
+          "no m\xE1s inmuebles sin legalizar",
+          "no m\xE1s trabajar sin asegurar el pago de tu comisi\xF3n",
+          "proteger tus honorarios",
+          "m\xE9todo probado para captar",
+          "curso inmobiliario",
+          "taller inmobiliario",
+          "seminario inmobiliario",
+          "capacitaci\xF3n inmobiliaria",
+          "masterclass inmobiliaria",
+          "webinar inmobiliario",
+          "coaching inmobiliario",
+          "mentor\xEDa inmobiliaria",
+          "invierte en tu negocio",
+          "invierte en conocimiento"
+        ];
+        const hasPromoKeywords = promoPhrases.some((phrase) => cleanLower.includes(phrase));
+        if (hasPromoKeywords) return true;
+        if (isCarolina) {
+          const isRealEstateListing = (cleanLower.includes("vendo") || cleanLower.includes("arriendo") || cleanLower.includes("busco") || cleanLower.includes("necesito")) && (cleanLower.includes("apto") || cleanLower.includes("apartamento") || cleanLower.includes("casa") || cleanLower.includes("bodega") || cleanLower.includes("lote") || cleanLower.includes("finca"));
+          if (!isRealEstateListing) {
+            return true;
+          }
+        }
+        return false;
+      }
+      // --- LOGÍSTICA DE BUFFER GRUPAL Y REACCIÓN INSTANTÁNEA ---
       async handleIncomingGroupMessage(msg, chatId, bodyText) {
         if (!msg.key || !msg.message) return;
         const rawSender = msg.key.participant || msg.participant || "";
@@ -7540,6 +9021,48 @@ Tambi\xE9n puedes consultarme directamente en mi chat privado con mi otra yo *Ja
           return;
         }
         const senderId = rawSender.includes("@") ? `${rawSender.split("@")[0].split(":")[0]}@${rawSender.split("@")[1]}` : rawSender.split(":")[0];
+        const isOfficialGroup = chatId === this.targetGroupId || chatId === this.buzonGroupId || chatId === this.circuloGroupId;
+        if (this.isPromotionalAd(bodyText, senderId)) {
+          if (!msg.key.fromMe) {
+            if (isOfficialGroup) {
+              console.log(`[JANIA-PROMO-RULE] \u{1F6AB} Publicidad no autorizada detectada en grupo oficial de +${senderId.split("@")[0]}. Reaccionando con \u{1F6AB} y advirtiendo...`);
+              this.sock.sendMessage(chatId, { react: { text: "\u{1F6AB}", key: msg.key } }).catch(() => {
+              });
+              const rawPhone = senderId.split("@")[0];
+              const mentionJid = `${rawPhone}@s.whatsapp.net`;
+              const warningText = `\u{1F6AB} @${rawPhone}: Esta clase de publicaciones (publicidad de cursos, entrenamientos, capacitaciones o servicios ajenos a la oferta y demanda directa de inmuebles) VIOLAN las normas de nuestros grupos oficiales VECY Network.
+
+Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1 lugar a la expulsi\xF3n inmediata del grupo.`;
+              this.queuedSend(chatId, warningText, { mentions: [mentionJid], quoted: msg }).catch(() => {
+              });
+            } else {
+              console.log(`[JANIA-PROMO-SHIELD] \u{1F6E1}\uFE0F Publicidad no inmobiliaria ignorada en grupo externo de +${senderId.split("@")[0]} (Cero reacci\xF3n, cero ingesta, cero Supabase).`);
+            }
+          }
+          return;
+        }
+        if (!msg.key.fromMe) {
+          const cleanLower = (bodyText || "").toLowerCase();
+          const hasMediaOrUrl = !!msg.message.imageMessage || !!msg.message.documentMessage || cleanLower.includes("http://") || cleanLower.includes("https://") || cleanLower.includes("www.") || cleanLower.includes(".co") || cleanLower.includes(".com");
+          const isSearch = cleanLower.includes("busco") || cleanLower.includes("necesito") || cleanLower.includes("requiero") || cleanLower.includes("requerimiento") || cleanLower.includes("se busca") || cleanLower.includes("compro") || cleanLower.includes("compra") || cleanLower.includes("cliente");
+          const isOffer = cleanLower.includes("vendo") || cleanLower.includes("arriendo") || cleanLower.includes("en venta") || cleanLower.includes("en arriendo") || cleanLower.includes("apto") || cleanLower.includes("apartamento") || cleanLower.includes("casa") || cleanLower.includes("bodega") || cleanLower.includes("oficina") || cleanLower.includes("lote") || cleanLower.includes("finca") || cleanLower.includes("precio") || cleanLower.includes("$") || cleanLower.includes("m2") || cleanLower.includes("mts") || cleanLower.includes("pto") || cleanLower.includes("ph") || cleanLower.includes("piso") || cleanLower.includes("alcoba") || cleanLower.includes("garaje") || cleanLower.includes("oportunidad") || cleanLower.includes("\xE1rea") || cleanLower.includes("area") || hasMediaOrUrl;
+          let fastEmoji = null;
+          if (isSearch) {
+            fastEmoji = "\u{1F4DD}";
+          } else if (isOffer) {
+            fastEmoji = "\u{1F44D}";
+          }
+          if (fastEmoji && chatId !== this.buzonGroupId) {
+            try {
+              console.log(`[JANIA-FAST-REACT] \u{1F3AF} Enviando reacci\xF3n instant\xE1nea ${fastEmoji} a ${chatId} (Msg ID: ${msg.key.id})`);
+              this.sock.sendMessage(chatId, { react: { text: fastEmoji, key: msg.key } }).then(() => {
+                console.log(`[JANIA-FAST-REACT] \u2705 Reacci\xF3n ${fastEmoji} ENTREGADA NATIVAMENTE en WhatsApp`);
+              }).catch((err) => {
+              });
+            } catch (err) {
+            }
+          }
+        }
         const lockKey = `${chatId}_${senderId}`;
         const previousLock = this.processingLocks.get(lockKey) || Promise.resolve();
         let resolveLock;
@@ -7569,7 +9092,6 @@ Tambi\xE9n puedes consultarme directamente en mi chat privado con mi otra yo *Ja
           }
           let buffer = this.messageBuffers.get(bufferKey);
           const bufferTimeout = 3e3;
-          const MAX_BLOCK_SIZE = 3;
           if (buffer) {
             clearTimeout(buffer.timer);
             buffer.messages.push({
@@ -7598,22 +9120,22 @@ Tambi\xE9n puedes consultarme directamente en mi chat privado con mi otra yo *Ja
         }
       }
       getReactionEmoji(result, isOfficialGroup = false) {
-        if (!result) return isOfficialGroup ? "\u{1F6AB}" : "";
+        if (!result) return isOfficialGroup ? "\u2753" : null;
+        if (result.reactionEmoji && (isOfficialGroup || result.reactionEmoji === "\u{1F44D}" || result.reactionEmoji === "\u{1F4DD}" || result.reactionEmoji === "\u2753")) {
+          return result.reactionEmoji;
+        }
         const classification = (result.classification || "").toUpperCase();
-        const rawText = (result.rawText || result.response || "").toLowerCase();
-        if (classification === "REQUERIMIENTO" || classification.includes("REQUERIMIENTO") || classification.includes("DEMANDA") || classification.includes("BUSQUEDA") || rawText.includes("requiero") || rawText.includes("busco") || rawText.includes("necesito") || rawText.includes("para compra se busca") || rawText.includes("se busca")) {
+        const rawText = (result.rawText || result.response || result.extractedData?.rawText || "").toLowerCase();
+        if (isOfficialGroup && (classification === "VIOLACION_DE_NORMAS" || classification.includes("SPAM") || classification.includes("INFRACCION"))) {
+          return "\u{1F6AB}";
+        }
+        if (classification === "REQUERIMIENTO" || classification.includes("REQUERIMIENTO") || classification.includes("DEMANDA") || classification.includes("BUSQUEDA") || rawText.includes("requiero") || rawText.includes("busco") || rawText.includes("necesito")) {
           return "\u{1F4DD}";
         }
-        if (classification === "INMUEBLE" || classification.includes("INMUEBLE") || classification.includes("OFERTA")) {
+        if (classification === "INMUEBLE" || classification.includes("INMUEBLE") || classification.includes("OFERTA") || result.inmuebleId || result.propertyId || result.inserted === true || rawText.includes("vendo") || rawText.includes("arriendo") || rawText.includes("apto") || rawText.includes("casa")) {
           return "\u{1F44D}";
         }
-        if (classification === "DATOS_INCOMPLETOS" || classification.includes("INCOMPLETO") || classification.includes("PARCIAL") || rawText.includes("incompleto") || rawText.includes("falta precio") || rawText.includes("sin precio")) {
-          return "\u2753";
-        }
-        if (classification === "VIOLACION_DE_NORMAS" || classification.includes("SPAM") || classification.includes("INFRACCION")) {
-          return isOfficialGroup ? "\u{1F6AB}" : "";
-        }
-        return isOfficialGroup ? "\u{1F6AB}" : "";
+        return null;
       }
       async processGroupBuffer(bufferKey) {
         const buffer = this.messageBuffers.get(bufferKey);
@@ -7702,17 +9224,18 @@ Tambi\xE9n puedes consultarme directamente en mi chat privado con mi otra yo *Ja
                 chatId,
                 groupName
               );
-              const isSupportGroupSingle = chatId === this.buzonGroupId || chatId === this.circuloGroupId;
               const isOfficialGroupSingle = chatId === this.targetGroupId || chatId === this.buzonGroupId || chatId === this.circuloGroupId;
-              if (result2 && !isSupportGroupSingle) {
+              if (result2) {
                 const emoji = this.getReactionEmoji(result2, isOfficialGroupSingle);
-                if (emoji && bufferedMsg.originalMsg?.key) {
-                  try {
-                    console.log(`[JANIA-MATCH] Reaccionando individualmente con ${emoji} a publicaci\xF3n de ${senderId} en grupo predial (${chatId})`);
-                    await this.sock.sendMessage(chatId, { react: { text: emoji, key: bufferedMsg.originalMsg.key } });
-                  } catch (reactErr) {
-                    console.error("[JANIA-MATCH] Error al reaccionar a mensaje individual:", reactErr);
-                  }
+                if (emoji && bufferedMsg.originalMsg?.key && bufferedMsg.originalMsg.key.id && !bufferedMsg.originalMsg.key.fromMe) {
+                  const reactionKey = {
+                    remoteJid: bufferedMsg.originalMsg.key.remoteJid || chatId,
+                    fromMe: false,
+                    id: bufferedMsg.originalMsg.key.id,
+                    participant: bufferedMsg.originalMsg.key.participant
+                  };
+                  this.sock.sendMessage(chatId, { react: { text: emoji, key: reactionKey } }).catch(() => {
+                  });
                 }
               }
             }
@@ -7722,6 +9245,7 @@ Tambi\xE9n puedes consultarme directamente en mi chat privado con mi otra yo *Ja
           const hasMedia = buffer.messages.some((m) => m.hasMedia);
           const imageMsg = buffer.messages.find((m) => m.imageBuffer);
           const pdfMsg = buffer.messages.find((m) => m.pdfBuffer);
+          const isAudioPTT = buffer.messages.some((m) => !!m.originalMsg?.message?.audioMessage);
           const urlMatch = fullText.match(/https?:\/\/[^\s]+/g);
           const scrapedResults = [];
           if (urlMatch) {
@@ -7731,6 +9255,7 @@ Tambi\xE9n puedes consultarme directamente en mi chat privado con mi otra yo *Ja
                   const data = await scrapePropertyLink(url);
                   if (data) scrapedResults.push(data);
                 } catch (err) {
+                  console.error(`[SCRAPING-BUFFER] Error al raspar URL ${url}:`, err?.message || err);
                 }
               }
             }
@@ -7745,7 +9270,8 @@ Tambi\xE9n puedes consultarme directamente en mi chat privado con mi otra yo *Ja
               userName,
               imageMsg?.imageBuffer,
               pdfMsg?.pdfBuffer,
-              pdfMsg?.pdfMimeType
+              pdfMsg?.pdfMimeType,
+              isAudioPTT ? "mock-audio:" + fullText : void 0
             );
           } else if (chatId === "120363403507276533@g.us") {
             result = await processCirculoMessage2(
@@ -7777,19 +9303,20 @@ Tambi\xE9n puedes consultarme directamente en mi chat privado con mi otra yo *Ja
               groupName
             );
           }
-          const isSupportGroup = chatId === this.buzonGroupId || chatId === this.circuloGroupId;
           const isOfficialGroup = chatId === this.targetGroupId || chatId === this.buzonGroupId || chatId === this.circuloGroupId;
-          if (result && !isSupportGroup) {
+          if (result) {
             const emoji = this.getReactionEmoji(result, isOfficialGroup);
             if (emoji) {
-              try {
-                const lastMsg = buffer.messages[buffer.messages.length - 1]?.originalMsg;
-                if (lastMsg && lastMsg.key) {
-                  console.log(`[JANIA-MATCH] Reaccionando con ${emoji} al mensaje de ${senderId} en grupo predial (${chatId})`);
-                  await this.sock.sendMessage(chatId, { react: { text: emoji, key: lastMsg.key } });
-                }
-              } catch (reactErr) {
-                console.error("[JANIA-MATCH] Error al reaccionar al mensaje predial:", reactErr);
+              const lastMsg = buffer.messages[buffer.messages.length - 1]?.originalMsg;
+              if (lastMsg && lastMsg.key && lastMsg.key.id && !lastMsg.key.fromMe) {
+                const reactionKey = {
+                  remoteJid: lastMsg.key.remoteJid || chatId,
+                  fromMe: false,
+                  id: lastMsg.key.id,
+                  participant: lastMsg.key.participant
+                };
+                this.sock.sendMessage(chatId, { react: { text: emoji, key: reactionKey } }).catch((reactErr) => {
+                });
               }
             }
           }
@@ -7899,6 +9426,19 @@ ${result.response}`);
           let imageBuffer;
           let pdfBuffer;
           let pdfMimeType;
+          let participantJid = msg.key.participant || msg.participant || senderId || "";
+          if (participantJid.endsWith("@lid") && this.sock?.signalRepository?.lidMapping?.getPNForLID) {
+            try {
+              const mappedPn = await this.sock.signalRepository.lidMapping.getPNForLID(participantJid);
+              if (mappedPn) {
+                participantJid = mappedPn;
+                console.log(`[JanIA-LID] Resuelto LID ${msg.key.participant} -> PN Real ${participantJid}`);
+              }
+            } catch (err) {
+            }
+          }
+          const individualPhone = participantJid ? participantJid.split("@")[0].split(":")[0].replace(/\D/g, "") : rawPhone;
+          const effectiveSenderPhone = individualPhone && !individualPhone.startsWith("1203") ? individualPhone : rawPhone;
           if (msg.message?.imageMessage) {
             try {
               const mediaBuffer = await downloadMediaMessage(msg, "buffer", {});
@@ -7915,11 +9455,11 @@ ${result.response}`);
               console.error("[JanIA-DM-Document-Silent] Error descargando documento:", e);
             }
           }
-          const realName = msg.pushName || `Asesor +${rawPhone}`;
+          const realName = msg.pushName || `Asesor +${effectiveSenderPhone}`;
           const { processWhatsAppMessage: processWhatsAppMessage2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
           const result = await processWhatsAppMessage2(
             bodyText,
-            senderId,
+            effectiveSenderPhone,
             realName,
             !!imageBuffer || !!pdfBuffer,
             [],
@@ -8031,14 +9571,14 @@ Te espero. \xA1All\xED te atender\xE9 con gusto! \u{1F680}`;
             await this.queuedSend(senderId, `\u26A0\uFE0F No encontr\xE9 ninguna coincidencia registrada con el c\xF3digo *#M${matchId}*. Por favor verifica el n\xFAmero.`);
             return;
           }
-          const [prop] = await db.select().from(properties).where(eq11(properties.id, match.propertyId)).limit(1);
+          const [prop2] = await db.select().from(properties).where(eq11(properties.id, match.propertyId)).limit(1);
           const [req] = await db.select().from(requirements).where(eq11(requirements.id, match.requirementId)).limit(1);
-          if (!prop || !req) {
+          if (!prop2 || !req) {
             await this.queuedSend(senderId, "\u26A0\uFE0F Hubo un problema al recuperar los detalles de esta coincidencia.");
             return;
           }
           const senderPhone = senderId.split("@")[0];
-          const ownerPhone = prop.idUsuarioWhatsapp || "";
+          const ownerPhone = prop2.idUsuarioWhatsapp || "";
           const seekerPhone = req.idUsuarioWhatsapp || "";
           const isOwner = senderPhone === ownerPhone.split("@")[0];
           const isSeeker = senderPhone === seekerPhone.split("@")[0];
@@ -8095,7 +9635,7 @@ Felicidades, ambas partes han confirmado inter\xE9s en la coincidencia *#M${matc
 Aqu\xED tienes el contacto directo del aliado que ofrece la propiedad:
 \u{1F464} *Nombre:* ${ownerName}
 \u{1F4DE} *WhatsApp:* https://wa.me/${ownerPhone.split("@")[0]}
-\u{1F4AC} *Su oferta:* ${prop.rawText || "Sin descripci\xF3n"}
+\u{1F4AC} *Su oferta:* ${prop2.rawText || "Sin descripci\xF3n"}
 
 \xA1Les deseamos mucho \xE9xito en el cierre comercial! \u{1F91D}\u{1F680}`;
             await this.logToDb(ownerJid, "janIA", `[Match-Connected] Match #M${matchId} connected in DB. Seeker is ${seekerPhone}`);
@@ -8131,9 +9671,9 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
             if (targetJid.endsWith("@s.whatsapp.net")) {
               const rawPhone = targetJid.split("@")[0];
               const ADMIN_PHONE = process.env.ADMIN_PHONE || "573192919978";
-              const isAdmin = rawPhone.includes(ADMIN_PHONE) || rawPhone === ADMIN_PHONE || rawPhone === "573192919978" || rawPhone.includes("573185462265");
+              const isAdmin = rawPhone === "573192919978" || rawPhone.includes(ADMIN_PHONE);
               if (!isAdmin) {
-                console.log(`[JANIA-MATCH-SHIELD] Bloqueado env\xEDo de mensaje directo (DM) a usuario no administrador: ${targetJid}`);
+                console.log(`[JANIA-ANTI-BAN-SHIELD] \u{1F6E1}\uFE0F Bloqueado env\xEDo de mensaje directo (DM) a usuario no administrador (${targetJid}). Prohibici\xF3n absoluta de DMs a terceros.`);
                 return;
               }
             }
@@ -8183,7 +9723,7 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
             } else if (messagePayload.audio) {
               try {
                 await this.sock.sendPresenceUpdate("recording", targetJid);
-                const recordingDelay = options.durationMs || Math.min(1e4, Math.max(3e3, (options.voiceLength || 4) * 1e3));
+                const recordingDelay = Math.min(1500, Math.max(300, (options.voiceLength || 2) * 200));
                 await delay(recordingDelay);
               } catch (_) {
               }
@@ -8365,8 +9905,8 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
         }
       }
       async getPairingCode(phone) {
-        const cleanPhone = phone.replace(/\D/g, "");
-        console.log(`[JANIA-MATCH] Solicitando c\xF3digo de vinculaci\xF3n por n\xFAmero para: ${cleanPhone}`);
+        const cleanPhone2 = phone.replace(/\D/g, "");
+        console.log(`[JANIA-MATCH] Solicitando c\xF3digo de vinculaci\xF3n por n\xFAmero para: ${cleanPhone2}`);
         console.log("[JANIA-MATCH] Limpiando sesi\xF3n previa para solicitar nuevo c\xF3digo...");
         try {
           if (this.sock) {
@@ -8386,7 +9926,7 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
         await this.initialize();
         await delay(3e3);
         try {
-          const code = await this.sock.requestPairingCode(cleanPhone);
+          const code = await this.sock.requestPairingCode(cleanPhone2);
           console.log(`[JANIA-MATCH] C\xF3digo de vinculaci\xF3n generado: ${code}`);
           return code;
         } catch (err) {
@@ -8453,19 +9993,19 @@ async function runNightlyRematch() {
     console.log(`[NIGHTLY-REMATCH] Procesando ${activeReqs.length} requerimientos activos contra ${availProps.length} inmuebles disponibles...`);
     let newMatchesCount = 0;
     for (const req of activeReqs) {
-      for (const prop of availProps) {
-        const score = calcularScoreMatch(req, prop);
+      for (const prop2 of availProps) {
+        const score = calcularScoreMatch(req, prop2);
         if (score >= 60) {
           const existing = await db.select().from(propertyMatches).where(
             and6(
-              eq12(propertyMatches.propertyId, prop.id),
+              eq12(propertyMatches.propertyId, prop2.id),
               eq12(propertyMatches.requirementId, req.id)
             )
           ).limit(1);
           if (existing.length === 0) {
-            console.log(`[NIGHTLY-REMATCH] \xA1Match nuevo detectado! Req #${req.id} <-> Prop #${prop.id} (Score: ${score.toFixed(0)}%)`);
+            console.log(`[NIGHTLY-REMATCH] \xA1Match nuevo detectado! Req #${req.id} <-> Prop #${prop2.id} (Score: ${score.toFixed(0)}%)`);
             const [newMatch] = await db.insert(propertyMatches).values({
-              propertyId: prop.id,
+              propertyId: prop2.id,
               requirementId: req.id,
               matchScore: score.toFixed(2),
               matchReason: `VECY CORE TS Scoring (Nightly): ${score.toFixed(2)}/100`,
@@ -8476,10 +10016,10 @@ async function runNightlyRematch() {
             newMatchesCount++;
             if (janiaMatchBot && janiaMatchBot.isReady) {
               const matchedItem = {
-                ...prop,
+                ...prop2,
                 score,
                 matchId: newMatch.id,
-                idUsuarioWhatsapp: prop.idUsuarioWhatsapp
+                idUsuarioWhatsapp: prop2.idUsuarioWhatsapp
               };
               const matchDetails = await handleDetectedMatches(
                 [matchedItem],
@@ -8524,15 +10064,15 @@ async function recalculateAndCleanupMatches() {
     let deletedCount = 0;
     let updatedCount = 0;
     for (const m of allMatches) {
-      const [prop] = await db.select().from(properties).where(eq12(properties.id, m.propertyId)).limit(1);
+      const [prop2] = await db.select().from(properties).where(eq12(properties.id, m.propertyId)).limit(1);
       const [req] = await db.select().from(requirements).where(eq12(requirements.id, m.requirementId)).limit(1);
-      if (!prop || !req) {
+      if (!prop2 || !req) {
         console.log(`[MATCH-CLEANUP] Eliminando Match #${m.id} por propiedad o requerimiento inexistente.`);
         await db.delete(propertyMatches).where(eq12(propertyMatches.id, m.id));
         deletedCount++;
         continue;
       }
-      const newScore = calcularScoreMatch(req, prop);
+      const newScore = calcularScoreMatch(req, prop2);
       if (newScore < 85) {
         console.log(`[MATCH-CLEANUP] Eliminando Match #${m.id} por incompatibilidad (Nuevo Score: ${newScore}%, Score anterior: ${m.matchScore}%).`);
         await db.delete(propertyMatches).where(eq12(propertyMatches.id, m.id));
@@ -8574,6 +10114,9 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
+var VECY_VERSION = "v20.0H";
+var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION} TS Scoring`;
+var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION} TS Scoring`;
 
 // server/_core/oauth.ts
 init_db();
@@ -9204,6 +10747,7 @@ function liquidarImpuestosVenta(params) {
 }
 
 // server/routers/janIA.ts
+init_matching();
 import axios7 from "axios";
 import fs3 from "fs";
 import path3 from "path";
@@ -9532,6 +11076,7 @@ ${liveStats}${userContextInstruction}
           zone: properties.zone,
           addressNeighborhood: properties.addressNeighborhood,
           idUsuarioWhatsapp: properties.idUsuarioWhatsapp,
+          nombreUsuarioWhatsapp: properties.nombreUsuarioWhatsapp,
           origenNombre: properties.origenNombre,
           origenTipo: properties.origenTipo,
           origenId: properties.origenId,
@@ -9567,6 +11112,7 @@ ${liveStats}${userContextInstruction}
           zonaDeseada: requirements.zonaDeseada,
           addressNeighborhood: requirements.addressNeighborhood,
           idUsuarioWhatsapp: requirements.idUsuarioWhatsapp,
+          nombreUsuarioWhatsapp: requirements.nombreUsuarioWhatsapp,
           origenNombre: requirements.origenNombre,
           origenTipo: requirements.origenTipo,
           origenId: requirements.origenId,
@@ -9582,10 +11128,27 @@ ${liveStats}${userContextInstruction}
           createdAt: requirements.createdAt
         }
       }).from(propertyMatches).innerJoin(properties, eq5(propertyMatches.propertyId, properties.id)).innerJoin(requirements, eq5(propertyMatches.requirementId, requirements.id)).orderBy(desc2(propertyMatches.createdAt));
-      const propertyIds = matches.map((m) => m.property.id).filter(Boolean);
+      const seenPairs = /* @__PURE__ */ new Set();
+      const validEvaluatedMatches = [];
+      for (const m of matches) {
+        const key = `${m.property.id}-${m.requirement.id}`;
+        if (seenPairs.has(key)) continue;
+        const evaluation = explicarMatch(m.requirement, m.property);
+        if (evaluation.blockers.length > 0) {
+          console.log(`[tRPC-getAllMatches] \u274C Match #${m.id} descartado en tiempo real por Blocker Duro (Blockers: ${evaluation.blockers.join(" | ")})`);
+          continue;
+        }
+        seenPairs.add(key);
+        validEvaluatedMatches.push({
+          ...m,
+          matchScore: evaluation.score.toFixed(2),
+          matchExplanation: evaluation
+        });
+      }
+      const propertyIds = validEvaluatedMatches.map((m) => m.property.id).filter(Boolean);
       if (propertyIds.length > 0) {
         const histories = await db.select().from(propertyPublicationHistory).where(inArray(propertyPublicationHistory.propertyId, propertyIds)).orderBy(desc2(propertyPublicationHistory.fecha));
-        return matches.map((m) => {
+        return validEvaluatedMatches.map((m) => {
           const propertyHistory = histories.filter((h) => h.propertyId === m.property.id);
           return {
             ...m,
@@ -9596,7 +11159,7 @@ ${liveStats}${userContextInstruction}
           };
         });
       }
-      return matches;
+      return validEvaluatedMatches;
     } catch (error) {
       console.error("Error getting all matches:", error);
       throw error;
@@ -10486,7 +12049,7 @@ var leadsRouter = router({
     }
     const link = linkRecord[0];
     await db.update(referralLinks).set({ clicks: sql5`${referralLinks.clicks} + 1` }).where(eq9(referralLinks.id, link.id));
-    const prop = await db.select({
+    const prop2 = await db.select({
       id: properties.id,
       name: properties.name,
       price: properties.price,
@@ -10497,11 +12060,11 @@ var leadsRouter = router({
       // specifically NOT returning full location/latitude/longitude/matricula
       images: properties.images
     }).from(properties).where(eq9(properties.id, link.propertyId)).limit(1);
-    if (prop.length === 0) {
+    if (prop2.length === 0) {
       throw new TRPCError4({ code: "NOT_FOUND", message: "Inmueble no disponible." });
     }
     return {
-      property: prop[0]
+      property: prop2[0]
     };
   }),
   submitStealthLead: publicProcedure.input(z6.object({
@@ -10735,15 +12298,13 @@ var appRouter = router({
     }),
     loginWithSupabaseToken: publicProcedure.input(z8.object({ accessToken: z8.string() })).mutation(async ({ input, ctx }) => {
       try {
-        const supabaseUrl = process.env.VITE_SUPABASE_URL;
-        console.log("[Auth] VITE_SUPABASE_URL configured:", !!supabaseUrl);
-        if (!supabaseUrl) {
-          throw new Error("VITE_SUPABASE_URL is not configured on server");
-        }
+        const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "https://knzmpoprlmbonejshfys.supabase.co";
+        const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtuem1wb3BybG1ib25lanNoZnlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMjYyMjQsImV4cCI6MjA5MTYwMjIyNH0.yZ3AV1Rt2rmDuP61CA2rJRILpw__vwAJWp3xJUNj_FY";
+        console.log("[Auth] Validando token en Supabase:", supabaseUrl);
         const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
           headers: {
             Authorization: `Bearer ${input.accessToken}`,
-            apikey: process.env.VITE_SUPABASE_ANON_KEY || ""
+            apikey: supabaseAnonKey
           }
         });
         if (!response.ok) {
@@ -10885,7 +12446,8 @@ var vite_config_default = defineConfig({
   publicDir: path4.resolve(import.meta.dirname, "client", "public"),
   build: {
     outDir: path4.resolve(import.meta.dirname, "dist"),
-    emptyOutDir: true
+    emptyOutDir: true,
+    chunkSizeWarningLimit: 1e3
   },
   server: {
     host: true,
@@ -11201,10 +12763,10 @@ async function startServer() {
       }
       const defaultAdminPhone = "573192919978";
       const rawPhone = phone || defaultAdminPhone;
-      const cleanPhone = typeof rawPhone === "string" ? rawPhone.replace(/\D/g, "") : String(rawPhone).replace(/\D/g, "");
+      const cleanPhone2 = typeof rawPhone === "string" ? rawPhone.replace(/\D/g, "") : String(rawPhone).replace(/\D/g, "");
       const matchBot = global.janiaMatchBotInstance;
       if (matchBot && matchBot.isReady) {
-        const targetPhone = cleanPhone.endsWith("@s.whatsapp.net") ? cleanPhone : `${cleanPhone}@s.whatsapp.net`;
+        const targetPhone = cleanPhone2.endsWith("@s.whatsapp.net") ? cleanPhone2 : `${cleanPhone2}@s.whatsapp.net`;
         console.log(`[NOTIFICACI\xD3N-API] Retransmitiendo mensaje a ${targetPhone} v\xEDa JanIA Match Bot (Baileys)...`);
         await matchBot.queuedSend(targetPhone, text2);
       }

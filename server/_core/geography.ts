@@ -264,27 +264,50 @@ export async function validarZona(zona: string, ciudad?: string, textoCompleto?:
     };
   }
 
-  // --- CAPA 0: Tabla de Equivalencias Aprendidas de Zona (zone_aliases) v21.15 ---
-  const knownAliasMap: Record<string, string> = {
-    "nueva autopista": "Cedritos",
-    "marlboro": "Chicó Norte",
-    "zona marlboro": "Chicó Norte",
-    "buganvilia": "Bella Suiza",
-    "recodo del country": "El Country",
-    "multicentro": "Santa Bárbara",
-    "bosques del marques": "Bosques de Bella Suiza",
-    "santas": "Santa Bárbara"
+  // --- CAPA 0: Tabla de Equivalencias Aprendidas de Zona y DIVIPOLA Nacional (zone_aliases) v21.20 ---
+  const knownAliasMap: Record<string, { barrioCanonico: string; city: string; localidad?: string; isMunicipio: boolean }> = {
+    // Sabana Norte / Cundinamarca Suburbs (DIVIPOLA DANE)
+    "san simon": { barrioCanonico: "San Simón", city: "Bogotá", localidad: "Guaymaral / Suba", isMunicipio: false },
+    "guaymaral": { barrioCanonico: "Guaymaral", city: "Bogotá", localidad: "Guaymaral / Suba", isMunicipio: false },
+    "hacienda fontanar": { barrioCanonico: "Hacienda Fontanar", city: "Chía", localidad: "Chía", isMunicipio: true },
+    "hacienda forntanar": { barrioCanonico: "Hacienda Fontanar", city: "Chía", localidad: "Chía", isMunicipio: true },
+    "fontanar": { barrioCanonico: "Hacienda Fontanar", city: "Chía", localidad: "Chía", isMunicipio: true },
+    "fagua": { barrioCanonico: "Fagua", city: "Chía", localidad: "Chía", isMunicipio: true },
+    "potosi": { barrioCanonico: "Potosí", city: "Sopó", localidad: "Sopó", isMunicipio: true },
+    "sindamanoy": { barrioCanonico: "Sindamanoy", city: "Chía", localidad: "Chía", isMunicipio: true },
+    "yerbabuena": { barrioCanonico: "Yerbabuena", city: "Chía", localidad: "Chía", isMunicipio: true },
+    "yerbabona": { barrioCanonico: "Yerbabuena", city: "Chía", localidad: "Chía", isMunicipio: true },
+    "briceno": { barrioCanonico: "Briceño", city: "Sopó", localidad: "Sopó", isMunicipio: true },
+    "hatogrande": { barrioCanonico: "Hatogrande", city: "Sopó", localidad: "Sopó", isMunicipio: true },
+    "chia": { barrioCanonico: "Chía", city: "Chía", localidad: "Chía", isMunicipio: true },
+    "sopo": { barrioCanonico: "Sopó", city: "Sopó", localidad: "Sopó", isMunicipio: true },
+    "cajica": { barrioCanonico: "Cajicá", city: "Cajicá", localidad: "Cajicá", isMunicipio: true },
+    "cota": { barrioCanonico: "Cota", city: "Cota", localidad: "Cota", isMunicipio: true },
+    "la calera": { barrioCanonico: "La Calera", city: "La Calera", localidad: "La Calera", isMunicipio: true },
+    "zipaquira": { barrioCanonico: "Zipaquirá", city: "Zipaquirá", localidad: "Zipaquirá", isMunicipio: true },
+
+    // Bogotá Urban Sectors
+    "nueva autopista": { barrioCanonico: "Cedritos", city: "Bogotá", localidad: "Usaquén", isMunicipio: false },
+    "marlboro": { barrioCanonico: "Chicó Norte", city: "Bogotá", localidad: "Usaquén", isMunicipio: false },
+    "zona marlboro": { barrioCanonico: "Chicó Norte", city: "Bogotá", localidad: "Usaquén", isMunicipio: false },
+    "buganvilia": { barrioCanonico: "Bella Suiza", city: "Bogotá", localidad: "Usaquén", isMunicipio: false },
+    "recodo del country": { barrioCanonico: "El Country", city: "Bogotá", localidad: "Usaquén", isMunicipio: false },
+    "multicentro": { barrioCanonico: "Santa Bárbara", city: "Bogotá", localidad: "Usaquén", isMunicipio: false },
+    "bosques del marques": { barrioCanonico: "Bosques de Bella Suiza", city: "Bogotá", localidad: "Usaquén", isMunicipio: false },
+    "santas": { barrioCanonico: "Santa Bárbara", city: "Bogotá", localidad: "Usaquén", isMunicipio: false },
+    "prado veraniego": { barrioCanonico: "Prado Veraniego", city: "Bogotá", localidad: "Suba", isMunicipio: false }
   };
+
   const normZoneLower = normZone.toLowerCase().trim();
   if (knownAliasMap[normZoneLower]) {
-    const resuelto = knownAliasMap[normZoneLower];
-    console.log(`[Geocoding-Alias] Alias de zona resuelto "${zona}" ➔ "${resuelto}" (vía zone_aliases, sin gastar Maps API)`);
+    const alias = knownAliasMap[normZoneLower];
+    console.log(`[Geocoding-Alias] DIVIPOLA Alias resuelto "${zona}" ➔ "${alias.barrioCanonico}" (${alias.city})`);
     return {
       isValid: true,
-      barrioCanonico: resuelto,
-      localidad: "Bogotá",
-      city: "Bogotá",
-      isMunicipio: false
+      barrioCanonico: alias.barrioCanonico,
+      localidad: alias.localidad || alias.city,
+      city: alias.city,
+      isMunicipio: alias.isMunicipio
     };
   }
 
@@ -576,34 +599,103 @@ export function desambiguarBarriosCompuestos(zona: string): string[] {
 export async function resolverCuadranteVial(texto: string): Promise<{ resuelto: boolean; barrios: string[]; descripcion: string; confianza: string }> {
   const norm = texto.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
 
-  // 1. Extraer Calles (minStreet y maxStreet)
-  const calleMatch = norm.match(/(?:calle|cll|cl|c|entre\s+la)\s*(\d+)\s*(?:y|a|-|hasta|\s+y\s+la)\s*(\d+)/i) 
-    || norm.match(/entre\s+(?:la\s*)?(\d+)\s+y\s+(?:la\s*)?(\d+)/i);
+  // 1. Detección de "Sur" y Extracción de Calles (minSt, maxSt, isSur)
+  const isSur = norm.includes("sur");
+  
+  let minSt: number | undefined;
+  let maxSt: number | undefined;
 
-  if (!calleMatch) {
+  // Reconocimiento de Avenidas Hito para Calles
+  if (norm.includes("avenida el dorado") || norm.includes("av el dorado") || norm.includes("av. el dorado")) {
+    minSt = 26;
+  }
+  if (norm.includes("primero de mayo") || norm.includes("1 de mayo")) {
+    minSt = 22; // Calle 22 Sur
+  }
+
+  let calleMatch = norm.match(/(?:calle|cll|cl|c|entre\s+la|de\s+la|desde\s+la)?\s*(\d+)\s*(?:sur)?\s*(?:y|a|a\s+la|-|hasta|\s+y\s+la|\s+a\s+la|\s+a\s+|\s+y\s+)\s*(?:la\s*)?(?:calle|cll|cl|c)?\s*(\d+)\s*(?:sur)?/i)
+    || norm.match(/entre\s+(?:la\s*)?(\d+)\s+(?:y|a|hasta)\s+(?:la\s*)?(\d+)/i);
+
+  const singleCalleMatch = norm.match(/(?:calle|cll|cl|c)\s*(\d+)/i);
+  const relativeNorthMatch = norm.match(/(?:calle|cll|cl|c)\s*(\d+)\s*(?:hacia\s+arriba|para\s+arriba|al\s+norte|hacia\s+el\s+norte)/i);
+
+  if (calleMatch) {
+    const c1 = parseInt(calleMatch[1]);
+    const c2 = parseInt(calleMatch[2]);
+    minSt = minSt !== undefined ? Math.min(minSt, c1, c2) : Math.min(c1, c2);
+    maxSt = maxSt !== undefined ? Math.max(maxSt, c1, c2) : Math.max(c1, c2);
+  } else if (relativeNorthMatch) {
+    minSt = parseInt(relativeNorthMatch[1]);
+    maxSt = Math.min(minSt + 50, 240);
+  } else if (singleCalleMatch && minSt !== undefined) {
+    const c1 = parseInt(singleCalleMatch[1]);
+    maxSt = Math.max(minSt, c1);
+    minSt = Math.min(minSt, c1);
+  } else {
     return { resuelto: false, barrios: [], descripcion: "No es un cuadrante vial resoluble por rango de calles", confianza: "ninguna" };
   }
 
-  const minSt = Math.min(parseInt(calleMatch[1]), parseInt(calleMatch[2]));
-  const maxSt = Math.max(parseInt(calleMatch[1]), parseInt(calleMatch[2]));
-
-  // 2. Extraer Carreras / Avenidas y Filtros Direccionales (Arriba/Abajo de ejes viales)
-  const isArribaAuto = norm.includes("arriba de la autopista") || norm.includes("arriba de la auto") || norm.includes("oriente de la autopista") || norm.includes("este de la autopista");
-  const isAbajoAuto = norm.includes("abajo de la autopista") || norm.includes("abajo de la auto") || norm.includes("occidente de la autopista") || norm.includes("oeste de la autopista");
-  const isArriba7 = norm.includes("arriba de la 7") || norm.includes("arriba de la septima") || norm.includes("arriba de la séptima");
-  const isArribaBoyaca = norm.includes("arriba de la boyaca") || norm.includes("arriba de la boyacá");
-  const isAbajoBoyaca = norm.includes("abajo de la boyaca") || norm.includes("abajo de la boyacá");
-
-  const LON_AUTOPISTA = -74.0535;
-  const LON_SEPTIMA   = -74.0290;
-  const LON_BOYACA    = -74.0950;
+  // 2. Extraer Carreras / Avenidas / Longitudes (minLon, maxLon)
   const LON_CERROS    = -74.0150;
-  const LON_OCCIDENTE = -74.1200;
+  const LON_OCCIDENTE = -74.1900;
+  const LON_AUTOPISTA = -74.0535;
+  const LON_SEPTIMA   = -74.0350;
+  const LON_CARACAS   = -74.0800;
+  const LON_CRA10     = -74.0740;
+  const LON_AV68      = -74.1100;
+  const LON_BOYACA    = -74.1250;
+  const LON_CALI      = -74.1450;
+
+  const getLonFromCra = (craNum: number): number => {
+    if (craNum <= 7) return LON_SEPTIMA;
+    if (craNum >= 45 && !isSur) return LON_AUTOPISTA;
+    return -74.0650 - (craNum * 0.00085);
+  };
 
   let minLon = LON_OCCIDENTE;
   let maxLon = LON_CERROS;
 
-  if (isArribaAuto) {
+  const isArribaAuto = norm.includes("arriba de la autopista") || norm.includes("arriba de la auto") || norm.includes("oriente de la autopista");
+  const isAbajoAuto = norm.includes("abajo de la autopista") || norm.includes("abajo de la auto") || norm.includes("occidente de la autopista");
+  const isArriba7 = norm.includes("arriba de la 7") || norm.includes("arriba de la septima") || norm.includes("arriba de la séptima");
+  const isArribaBoyaca = norm.includes("arriba de la boyaca") || norm.includes("arriba de la boyacá");
+  const isAbajoBoyaca = norm.includes("abajo de la boyaca") || norm.includes("abajo de la boyacá") || norm.includes("boyaca hacia abajo") || norm.includes("boyaca al occidente");
+
+  // Detección de Hitos de Carreras/Avenidas
+  let landmarkLons: number[] = [];
+  if (norm.includes("avenida caracas") || norm.includes("av caracas") || norm.includes("caracas")) landmarkLons.push(LON_CARACAS);
+  if (norm.includes("carrera 10") || norm.includes("cra 10") || norm.includes("cr 10") || norm.includes("carreras 10")) landmarkLons.push(LON_CRA10);
+  if (norm.includes("avenida 68") || norm.includes("av 68")) landmarkLons.push(LON_AV68);
+  if (norm.includes("boyaca") || norm.includes("boyacá")) landmarkLons.push(LON_BOYACA);
+  if (norm.includes("ciudad de cali") || norm.includes("av cali")) landmarkLons.push(LON_CALI);
+
+  const craMatch = norm.match(/(?:carrera|cra|cr|k|kr|carreras|cras|krs)\s*(\d+)\s*(?:y|a|a\s+la|-|hasta|\s+y\s+la|\s+a\s+|\s+y\s+)\s*(?:carrera|cra|cr|k|kr|carreras|cras|krs)?\s*(\d+)/i)
+    || norm.match(/(?:con\s+)?carreras?\s*(\d+)\s*(?:a|y|-)\s*(\d+)/i)
+    || norm.match(/entre\s+(?:la\s*)?(?:autopista|auto)\s+y\s+(?:la\s*)?(?:carrera|cra|cr|k|kr)?\s*(\d+)/i)
+    || norm.match(/entre\s+(?:la\s*)?(?:carrera|cra|cr|k|kr)?\s*(\d+)\s+y\s+(?:la\s*)?(?:autopista|auto)/i);
+
+  if (craMatch) {
+    let cra1: number, cra2: number;
+    if (norm.includes("autopista") || norm.includes("auto")) {
+      cra1 = 45;
+      cra2 = parseInt(craMatch[1]);
+    } else {
+      cra1 = parseInt(craMatch[1]);
+      cra2 = parseInt(craMatch[2]);
+    }
+    landmarkLons.push(getLonFromCra(cra1), getLonFromCra(cra2));
+  }
+
+  if (landmarkLons.length >= 2) {
+    minLon = Math.min(...landmarkLons) - 0.003;
+    maxLon = Math.max(...landmarkLons) + 0.003;
+  } else if (landmarkLons.length === 1 && isAbajoBoyaca) {
+    minLon = LON_OCCIDENTE;
+    maxLon = landmarkLons[0] + 0.002;
+  } else if (landmarkLons.length === 1 && isArribaBoyaca) {
+    minLon = landmarkLons[0] - 0.002;
+    maxLon = LON_CERROS;
+  } else if (isArribaAuto) {
     minLon = LON_AUTOPISTA;
     maxLon = LON_CERROS;
   } else if (isAbajoAuto) {
@@ -624,47 +716,27 @@ export async function resolverCuadranteVial(texto: string): Promise<{ resuelto: 
   try {
     const db = await getDb();
     if (db) {
-      const minLat = 4.597 + (minSt * 0.00094);
-      const maxLat = 4.597 + (maxSt * 0.00094);
-
-      let spatialQuery;
-      if (isArribaAuto) {
-        spatialQuery = sql`
-          SELECT DISTINCT scanombre
-          FROM barrios_bogota_geojson
-          WHERE ST_Intersects(geometry, ST_MakeEnvelope(${minLon}, ${minLat}, ${maxLon}, ${maxLat}, 4326))
-            AND ST_X(ST_Centroid(geometry)) >= ${LON_AUTOPISTA}
-          ORDER BY scanombre;
-        `;
-      } else if (isAbajoAuto) {
-        spatialQuery = sql`
-          SELECT DISTINCT scanombre
-          FROM barrios_bogota_geojson
-          WHERE ST_Intersects(geometry, ST_MakeEnvelope(${minLon}, ${minLat}, ${maxLon}, ${maxLat}, 4326))
-            AND ST_X(ST_Centroid(geometry)) < ${LON_AUTOPISTA}
-          ORDER BY scanombre;
-        `;
-      } else if (isArriba7) {
-        spatialQuery = sql`
-          SELECT DISTINCT scanombre
-          FROM barrios_bogota_geojson
-          WHERE ST_Intersects(geometry, ST_MakeEnvelope(${minLon}, ${minLat}, ${maxLon}, ${maxLat}, 4326))
-            AND ST_X(ST_Centroid(geometry)) >= ${LON_SEPTIMA}
-          ORDER BY scanombre;
-        `;
+      let minLat: number, maxLat: number;
+      if (isSur) {
+        minLat = 4.597 - (maxSt * 0.00094);
+        maxLat = 4.597 - (minSt * 0.00094);
       } else {
-        spatialQuery = sql`
-          SELECT DISTINCT scanombre
-          FROM barrios_bogota_geojson
-          WHERE ST_Intersects(geometry, ST_MakeEnvelope(${minLon}, ${minLat}, ${maxLon}, ${maxLat}, 4326))
-          ORDER BY scanombre;
-        `;
+        minLat = 4.597 + (minSt * 0.00094);
+        maxLat = 4.597 + (maxSt * 0.00094);
       }
+
+      const spatialQuery = sql`
+        SELECT DISTINCT scanombre
+        FROM barrios_bogota_geojson
+        WHERE ST_Intersects(geometry, ST_MakeEnvelope(${minLon}, ${minLat}, ${maxLon}, ${maxLat}, 4326))
+        ORDER BY scanombre;
+      `;
 
       const rows: any = await db.execute(spatialQuery);
 
       if (rows && rows.length > 0) {
         const barrios = rows.map((r: any) => String(r.scanombre).trim());
+        console.log(`[Geocoding-Cuadrante] Intersección espacial IDECA (${barrios.length} sectores catastrales) resuelto [alta_geometria_ideca] ➔ "${barrios.slice(0, 10).join(', ')}${barrios.length > 10 ? '...' : ''}"`);
         return {
           resuelto: true,
           barrios,

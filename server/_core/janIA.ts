@@ -1900,6 +1900,21 @@ Por lo tanto, DEBES hacer lo siguiente:
     
     result.mentions = result.mentions || [];
 
+    // --- EVALUACIÓN DE ENMIENDAS Y CORRECCIONES EN VENTANA DE 2 HORAS ---
+    if (messageToProcess) {
+      const isAmendmentHandled = await handleAmendmentUpdate(userId, messageToProcess);
+      if (isAmendmentHandled) {
+        console.log(`[JANIA-AMENDMENT] Mensaje procesado como enmienda de 2h para ${userId}. Operando en Modo Fantasma 100% silencioso.`);
+        result.inserted = false;
+        result.classification = "CONSULTA_GENERAL";
+        result.response = "";
+        result.dmResponse = "";
+        result.shouldSendDM = false;
+        result.reactionEmoji = undefined;
+        return result;
+      }
+    }
+
     // --- CAPA DE RESCATE HEURÍSTICO POR TEXTO PARA CLASIFICACIÓN ---
     if (messageToProcess) {
       const cleanText = messageToProcess.toLowerCase();
@@ -1943,8 +1958,13 @@ Por lo tanto, DEBES hacer lo siguiente:
 
       const hasRealEstateKeyword = hasRealEstateTextKeyword(cleanText);
 
-      // Detectar comentarios cortos de seguimiento (ej: "Bajo de precio", "Sigue este enlace...", "Disponible")
-      const isShortComment = cleanText.length < 120 && (
+      // Detectar comentarios cortos de seguimiento, correcciones o ruido de chat (ej: "Corrección: 3 parqueaderos", "Bajo de precio", "Disponible?")
+      const isShortComment = cleanText.length < 50 || cleanText.split(/\s+/).length < 6 || (
+        cleanText.includes("correccion:") ||
+        cleanText.includes("corrección:") ||
+        cleanText.includes("fe de erratas") ||
+        cleanText.includes("rectificacion:") ||
+        cleanText.includes("rectificación:") ||
         cleanText.includes("bajo de precio") ||
         cleanText.includes("sigue este enlace") ||
         cleanText.includes("ver el artículo en whatsapp") ||
@@ -1958,7 +1978,7 @@ Por lo tanto, DEBES hacer lo siguiente:
       );
 
       if (isShortComment) {
-        console.log("[JANIA-FILTER] Mensaje identificado como comentario de seguimiento/enlace sin ficha. No se procesará como propiedad/requerimiento.");
+        console.log(`[JANIA-FILTER] ⛔ Mensaje corto o corrección de chat omitido (${cleanText.substring(0, 40)}...). No se procesará como propiedad/requerimiento.`);
         result.classification = "CONSULTA_GENERAL";
       } else if (result.classification === "INMUEBLE" && isSearch && !isOffer) {
         console.log("[JANIA-CORRECTION] Cambiando clasificación de INMUEBLE a REQUERIMIENTO basado en heurística de texto.");
@@ -2234,31 +2254,29 @@ Por lo tanto, DEBES hacer lo siguiente:
         }
       }
 
+      const sourceUrl = externalUrl || (urls && urls.length > 0 ? urls[0] : null);
+
       const saved = await saveProperty({
         ...extracted,
         name: propertyTitle,
         price: String(extracted.price || 0),
         areaTotal: String(extracted.area || 0),
         idUsuarioWhatsapp: rawPhone,
-        // rawText guarda el mensaje original del usuario — sin el volcado del scraper.
-        // El LLM ya procesó el contenido del portal; lo que le mostramos al bróker en el
-        // panel es solo lo que él escribió en WhatsApp.
         rawText: rawUserText || text,
         amenities: { gives: extracted.gives, wants: extracted.wants, isCollaborativePool: extracted.isCollaborativePool },
         origenTipo,
         origenId,
         origenNombre,
         externalUrl,
+        enlaceOrigen: sourceUrl,
         fechaExtraccion: new Date()
       }, userId, realName, imageBuffer);
       
       if (saved) {
         result.inserted = true;
-        if (!isLLMIncomplete && !userId.startsWith("web-")) {
-          result.shouldSendDM = false;
-          result.dmResponse = "";
-          result.response = "";
-        }
+        result.shouldSendDM = false;
+        result.dmResponse = "";
+        result.response = "";
         result.mentions = [];
         result.extraDMs = [];
         result.sendReputationHook = false;
@@ -2301,6 +2319,8 @@ Por lo tanto, DEBES hacer lo siguiente:
       }
 
       const reqTitle = extracted.title || `Requerimiento de ${extracted.propertyType || 'inmueble'} en ${extracted.zonaDeseada || extracted.zone || 'Bogotá'} para ${extracted.transactionType || 'venta'}`;
+      const sourceUrlReq = (urls && urls.length > 0 ? urls[0] : null);
+
       const saved = await saveRequirement({
         ...extracted,
         name: reqTitle,
@@ -2314,16 +2334,15 @@ Por lo tanto, DEBES hacer lo siguiente:
         origenTipo,
         origenId,
         origenNombre,
+        enlaceOrigen: sourceUrlReq,
         fechaExtraccion: new Date()
       }, userId, realName);
 
       if (saved) {
         result.inserted = true;
-        if (!isLLMIncomplete && !userId.startsWith("web-")) {
-          result.shouldSendDM = false;
-          result.dmResponse = "";
-          result.response = "";
-        }
+        result.shouldSendDM = false;
+        result.dmResponse = "";
+        result.response = "";
         result.mentions = [];
         result.extraDMs = [];
         result.sendReputationHook = false;
@@ -2665,6 +2684,149 @@ export function getEmojiForCalificacion(calificacion?: string): string {
   }
 }
 
+export function normalizePhoneNumber(rawUserJid: string, textContent?: string): string {
+  if (textContent) {
+    const match = textContent.match(/(?:\+?57\s*)?3\d{2}[\s.-]?\d{3}[\s.-]?\d{4}\b/);
+    if (match) {
+      const cleanDigits = match[0].replace(/\D/g, "");
+      if (cleanDigits.length === 10 && cleanDigits.startsWith("3")) {
+        return cleanDigits;
+      }
+      if (cleanDigits.length === 12 && cleanDigits.startsWith("573")) {
+        return `+${cleanDigits}`;
+      }
+    }
+  }
+
+  if (rawUserJid) {
+    const clean = String(rawUserJid).split('@')[0].split(':')[0].replace(/\D/g, "");
+    if (!clean.startsWith("11") && !clean.startsWith("1203") && clean.length <= 13) {
+      if (clean.length === 10 && clean.startsWith("3")) {
+        return clean;
+      }
+      if (clean.length === 12 && clean.startsWith("573")) {
+        return `+${clean}`;
+      }
+      if (clean.length >= 10 && clean.length <= 12) {
+        return clean;
+      }
+    }
+  }
+
+  return "";
+}
+
+export async function handleAmendmentUpdate(userId: string, text: string): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  const rawPhone = userId.split('@')[0].split(':')[0].replace(/\D/g, "");
+  const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+
+  const cleanTextLower = text.toLowerCase().trim();
+  const isAmendmentTrigger = (
+    cleanTextLower.startsWith("correccion") ||
+    cleanTextLower.startsWith("corrección") ||
+    cleanTextLower.startsWith("fe de erratas") ||
+    cleanTextLower.startsWith("fe de errata") ||
+    cleanTextLower.startsWith("rectificacion") ||
+    cleanTextLower.startsWith("rectificación") ||
+    cleanTextLower.startsWith("ajuste:") ||
+    cleanTextLower.startsWith("ajuste ") ||
+    cleanTextLower.startsWith("disculpen")
+  );
+
+  if (!isAmendmentTrigger) return false;
+
+  const fallbackData = extractFallbackDataFromText(text);
+
+  // 1. Buscar requerimiento del usuario en las últimas 2 horas
+  const lastReqs = await db.select().from(requirements)
+    .where(and(
+      eq(requirements.idUsuarioWhatsapp, rawPhone),
+      gte(requirements.createdAt, twoHoursAgo)
+    ))
+    .orderBy(desc(requirements.createdAt))
+    .limit(1);
+
+  if (lastReqs.length > 0) {
+    const req = lastReqs[0];
+    const updates: any = {};
+
+    if (cleanTextLower.includes("parqueadero") && fallbackData.garages > 0) {
+      updates.parqueaderosMin = fallbackData.garages;
+    }
+    if ((cleanTextLower.includes("habitación") || cleanTextLower.includes("habitacion") || cleanTextLower.includes("alcoba")) && fallbackData.bedrooms > 0) {
+      updates.habitacionesMin = fallbackData.bedrooms;
+    }
+    if (cleanTextLower.includes("baño") && fallbackData.bathrooms > 0) {
+      updates.banosMin = fallbackData.bathrooms;
+    }
+    if ((cleanTextLower.includes("precio") || cleanTextLower.includes("presupuesto")) && fallbackData.price > 0) {
+      updates.presupuestoMax = String(fallbackData.price);
+    }
+    if ((cleanTextLower.includes("área") || cleanTextLower.includes("area")) && fallbackData.area > 0) {
+      updates.areaMin = String(fallbackData.area);
+    }
+
+    if (Object.keys(updates).length > 0) {
+      updates.updatedAt = new Date();
+      await db.update(requirements).set(updates).where(eq(requirements.id, req.id));
+      console.log(`[JANIA-AMENDMENT] ✅ Requerimiento #${req.id} actualizado silenciosamente en BD (Ventana 2h):`, updates);
+      
+      const { executeMatchEngine } = await import("./matching");
+      setImmediate(() => {
+        executeMatchEngine(null, req.id).catch(err => console.error("Error executing match engine on amendment:", err));
+      });
+      return true;
+    }
+  }
+
+  // 2. Buscar propiedad del usuario en las últimas 2 horas
+  const lastProps = await db.select().from(properties)
+    .where(and(
+      eq(properties.idUsuarioWhatsapp, rawPhone),
+      gte(properties.createdAt, twoHoursAgo)
+    ))
+    .orderBy(desc(properties.createdAt))
+    .limit(1);
+
+  if (lastProps.length > 0) {
+    const prop = lastProps[0];
+    const updates: any = {};
+
+    if (cleanTextLower.includes("parqueadero") && fallbackData.garages > 0) {
+      updates.garages = fallbackData.garages;
+    }
+    if ((cleanTextLower.includes("habitación") || cleanTextLower.includes("habitacion") || cleanTextLower.includes("alcoba")) && fallbackData.bedrooms > 0) {
+      updates.bedrooms = fallbackData.bedrooms;
+    }
+    if (cleanTextLower.includes("baño") && fallbackData.bathrooms > 0) {
+      updates.bathrooms = fallbackData.bathrooms;
+    }
+    if ((cleanTextLower.includes("precio") || cleanTextLower.includes("valor")) && fallbackData.price > 0) {
+      updates.price = String(fallbackData.price);
+    }
+    if ((cleanTextLower.includes("área") || cleanTextLower.includes("area")) && fallbackData.area > 0) {
+      updates.areaTotal = String(fallbackData.area);
+    }
+
+    if (Object.keys(updates).length > 0) {
+      updates.updatedAt = new Date();
+      await db.update(properties).set(updates).where(eq(properties.id, prop.id));
+      console.log(`[JANIA-AMENDMENT] ✅ Propiedad #${prop.id} actualizada silenciosamente en BD (Ventana 2h):`, updates);
+
+      const { executeMatchEngine } = await import("./matching");
+      setImmediate(() => {
+        executeMatchEngine(prop.id, null).catch(err => console.error("Error executing match engine on amendment:", err));
+      });
+      return true;
+    }
+  }
+
+  return false;
+}
+
 async function saveProperty(data: any, userId: string, realName: string, imageBuffer?: string) {
   const db = await getDb();
   if (!db) return null;
@@ -2805,6 +2967,7 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
     addressNeighborhood: safeSlice(data.addressNeighborhood || data.address_neighborhood, 150) || null,
     location: safeSlice(data.location, 255) || null,
     matriculaInmobiliaria: safeSlice(data.matriculaInmobiliaria, 100) || null,
+    enlaceOrigen: safeSlice(data.enlaceOrigen, 1000) || null,
     idUsuarioWhatsapp: safeSlice(data.idUsuarioWhatsapp || rawPhone, 100) || null,
     nombreUsuarioWhatsapp: safeSlice((realName && realName.trim() !== "" && !realName.startsWith("Asesor +")) ? realName : (data.nombreUsuarioWhatsapp || realName), 255) || null,
     propertyType: sanitizePropertyType(data.propertyType),
@@ -3051,6 +3214,7 @@ async function saveRequirement(data: any, userId: string, realName: string) {
     addressCity: safeSlice(data.addressCity || data.address_city, 100) || null,
     addressLocality: safeSlice(data.addressLocality || data.address_locality, 100) || null,
     addressNeighborhood: safeSlice(data.addressNeighborhood || data.address_neighborhood, 150) || null,
+    enlaceOrigen: safeSlice(data.enlaceOrigen, 1000) || null,
     idUsuarioWhatsapp: safeSlice(data.idUsuarioWhatsapp || rawPhone, 100) || null,
     nombreUsuarioWhatsapp: safeSlice((realName && realName.trim() !== "" && !realName.startsWith("Asesor +")) ? realName : (data.nombreUsuarioWhatsapp || realName), 255) || null,
     tipoInmuebleDeseado: sanitizePropertyType(data.tipoInmuebleDeseado || data.propertyType),

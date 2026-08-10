@@ -22,6 +22,7 @@ export function extractRealPhone(item: any): string | null {
   // 1. Revisar campos directos de teléfono y usuario
   const candidates = [
     item.idUsuarioWhatsapp,
+    item.origenId,
     item.contactPhone,
     item.brokerPhone,
     item.phone,
@@ -75,11 +76,6 @@ export function extractRealPhone(item: any): string | null {
         return `57${clean10}`;
       }
     }
-  }
-
-  // 4. Fallback de Asesor / Sistema registrado en la BD de VECY Network
-  if (item.id != null) {
-    return "573192919978"; // Teléfono Oficial Canal VECY Network
   }
 
   return null;
@@ -290,29 +286,26 @@ export function parseStreetCarreraBoundaries(text: string): StreetCarreraBoundar
 }
 
 export function parsePropertyAddressNumbers(text: string): PropertyAddressNumbers {
-  const norm = (text || "").toLowerCase();
+  const norm = (text || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   const res: PropertyAddressNumbers = {};
 
-  const streetMatch = norm.match(/(?:calle|cll|cll\.|clle)\s*(\d{1,3})/i);
+  // 1. Detección estricta de CALLE (Calle, Cll, Cl, C/)
+  const streetMatch = norm.match(/(?:calle|cll|cl|c\/)\s*#?\s*(\d{1,3})\b/i);
   if (streetMatch) {
     const sNum = parseInt(streetMatch[1], 10);
-    if (!isNaN(sNum)) res.street = sNum;
+    if (!isNaN(sNum) && sNum > 0 && sNum <= 260) res.street = sNum;
   }
 
-  const carreraMatch = norm.match(/(?:carrera|cra|cra\.|kr|kra)\s*(\d{1,3})/i);
+  // 2. Detección estricta de CARRERA (Carrera, Cra, Cr, Kra, Kr, K/)
+  const carreraMatch = norm.match(/(?:carrera|cra|cr|kra|kr|k\/|\bk\b)\s*#?\s*(\d{1,3})\b/i);
   if (carreraMatch) {
     const cNum = parseInt(carreraMatch[1], 10);
-    if (!isNaN(cNum)) res.carrera = cNum;
+    if (!isNaN(cNum) && cNum > 0 && cNum <= 160) res.carrera = cNum;
   }
 
-  if (!res.street || !res.carrera) {
-    const combinedMatch = norm.match(/(?:cll|calle|cra|carrera|kr)?\s*(\d{1,3})\s*(?:#|con|n°|no\.?)\s*(\d{1,3})/i);
-    if (combinedMatch) {
-      const numA = parseInt(combinedMatch[1], 10);
-      const numB = parseInt(combinedMatch[2], 10);
-      if (!res.street && !isNaN(numA)) res.street = numA;
-      if (!res.carrera && !isNaN(numB)) res.carrera = numB;
-    }
+  // 3. Ejes Arteriales Clave (Autopista Norte)
+  if (norm.includes("autonorte") || norm.includes("autopista norte")) {
+    res.isAutoNorte = true;
   }
 
   return res;
@@ -359,7 +352,28 @@ export function matchesGeography(
     return { matches: false, score: 0 };
   }
 
-  // Si la zona/localidad requerida es genérica (ej. "bogota", "medellin", "cali" o vacía), cualquier propiedad en esa ciudad es 100% compatible
+  // 1.4 Guard de Sabana Norte Campestre vs Bogotá Urbano DENSIDAD (Regla Doctrinal v21.20)
+  const reqFullNorm = normalizarTextoGeografico(`${reqZoneRaw} ${reqLocRaw} ${reqCityRaw}`);
+  const propFullNorm = normalizarTextoGeografico(`${propZoneRaw} ${propLocRaw} ${propCityRaw}`);
+
+  const sabanaSuburbanSectors = [
+    "san simon", "guaymaral", "hacienda fontanar", "fontanar", "fagua", "potosi",
+    "sindamanoy", "yerbabuena", "yerbabona", "briceno", "hatogrande", "chia", "sopo", "cajica", "cota", "la calera"
+  ];
+  
+  const reqAskaSabana = sabanaSuburbanSectors.some(sec => reqFullNorm.includes(sec));
+  const bogotaUrbanSectors = [
+    "prado veraniego", "cedritos", "chico", "chico norte", "chico reservado", "chapinero",
+    "santa barbara", "pasadena", "alhambra", "batán", "el batan", "niza", "metropolis", "polo club", "castellana"
+  ];
+  const propIsUrbanBogota = bogotaUrbanSectors.some(sec => propFullNorm.includes(sec));
+
+  if (reqAskaSabana && propIsUrbanBogota) {
+    console.log(`[Matching-Guard] Bloqueo 0%: Requerimiento busca Sabana Norte (${reqZoneRaw}) pero inmueble está en Bogotá Urbano (${propZoneRaw})`);
+    return { matches: false, score: 0 };
+  }
+
+  // Si la zona/localidad requerida es genérica (ej. "bogota", "medellin", "cali" o vacía), cualquier propiedad en esa ciudad es compatible
   const stopCities = new Set(["bogota", "bogotá", "medellin", "medellín", "cali", "barranquilla", "cartagena", "bucaramanga", "colombia"]);
   if (!reqZone || stopCities.has(reqZone.toLowerCase().trim())) {
     return { matches: true, score: 20 };
@@ -1766,52 +1780,7 @@ export async function executeMatchEngine(propertyId: number | null, requirementI
   if (!db) return;
 
   try {
-    let props: typeof properties.$inferSelect[] = [];
-    let reqs: typeof requirements.$inferSelect[] = [];
-
-    if (propertyId) {
-      props = await db.select().from(properties).where(eq(properties.id, propertyId));
-    } else {
-      props = await db.select().from(properties);
-    }
-
     if (requirementId) {
-      reqs = await db.select().from(requirements).where(eq(requirements.id, requirementId));
-    } else {
-      reqs = await db.select().from(requirements);
-    }
-
-    const { users } = await import("../../drizzle/schema");
-
-    const formatCurrency = (val: number) =>
-      new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(val);
-
-    // Limpia el JID/teléfono a un número colombiano real (57XXXXXXXXXX)
-    const cleanPhone = (raw: string): string => {
-      if (!raw) return "";
-      // Extraer solo dígitos
-      let digits = raw.replace(/[^0-9]/g, "");
-      // Quitar el código 57 si ya está incluido al inicio para reconstruirlo limpio
-      if (digits.startsWith("57") && digits.length > 11) {
-        digits = digits.slice(2);
-      }
-      // Si empieza con 0 (celular colombiano local), quitar el 0
-      if (digits.startsWith("0") && digits.length === 10) {
-        digits = digits.slice(1);
-      }
-      // Solo aceptar números de Colombia: 10 dígitos empezando por 3
-      if (digits.length === 10 && digits.startsWith("3")) {
-        return `57${digits}`;
-      }
-      // Si ya tiene 12 dígitos y empieza con 57, es válido
-      if (digits.length === 12 && digits.startsWith("57")) {
-        return digits;
-      }
-      // Retornar vacío si no es un número colombiano real
-      return "";
-    };
-
-    for (const prop of props) {
       for (const req of reqs) {
 
         // ── FILTRO 1: Compatibilidad inteligente de tipo de negocio ─────────

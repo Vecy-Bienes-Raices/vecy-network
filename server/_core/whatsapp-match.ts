@@ -1428,7 +1428,7 @@ export class JaniaMatchBot {
               participant: lastMsg.key.participant
             };
             this.sock.sendMessage(chatId, { react: { text: emoji, key: reactionKey } }).catch((reactErr: any) => {
-              // Silencioso: no interrumpe la ingesta ni desestabiliza Baileys
+              // Silencioso: no interrumpe la ingesta
             });
           }
         }
