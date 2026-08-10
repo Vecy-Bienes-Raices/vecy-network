@@ -1633,6 +1633,77 @@ export async function processWhatsAppMessage(
       messageToProcess += jinaExtractedText;
     }
 
+    // ══════════════════════════════════════════════════════════════════════════
+    // CHUNKER SPLITTER v21.21 — Sub-Agente Fragmentador de Mensajes Masivos
+    // Si el mensaje tiene >150 palabras y múltiples patrones de inicio de oferta
+    // (emojis repetidos, títulos en mayúsculas, separadores ——), lo divide
+    // en publicaciones independientes, heredando teléfono y enlace_origen.
+    // ══════════════════════════════════════════════════════════════════════════
+    if (!isWebUser && !pdfBuffer) {
+      const wordCount = (text.match(/\S+/g) || []).length;
+      const emojiPropertyStarters = (text.match(/(?:🏡|🏠|🏢|🔑|💥|🌷|🌺|🌸|⭐|✨|🔥|🎯|📍)/g) || []).length;
+      const hasMultipleStarters = emojiPropertyStarters >= 2 || wordCount > 200;
+
+      if (wordCount > 150 && hasMultipleStarters) {
+        console.log(`[CHUNKER] 📦 Mensaje largo (${wordCount} palabras, ${emojiPropertyStarters} emojis-inicio). Fragmentando...`);
+
+        const parentUrl = urls && urls.length > 0 ? urls[0] : null;
+        const parentPhone = normalizePhoneNumber(userId, text);
+
+        // Dividir por emoji de inicio de publicación al comienzo de línea
+        const emojiSplitPattern = /(?=\n\s*(?:🏡|🏠|🏢|🏗|🏘|🔑|💥|🌷|🌸|🌺|🌻|🌹|⭐|✨|🔥|💫|🎯|📍))/g;
+        let rawChunks = text.split(emojiSplitPattern).map((c: string) => c.trim()).filter((c: string) => c.length > 80);
+
+        if (rawChunks.length < 2) {
+          // Fallback: saltos de línea triples
+          rawChunks = text.split(/\n{3,}/).map((c: string) => c.trim()).filter((c: string) => c.length > 80);
+        }
+
+        if (rawChunks.length >= 2) {
+          console.log(`[CHUNKER] ✂️ Fragmentado en ${rawChunks.length} publicaciones independientes.`);
+          let firstResult: JanIAResult | null = null;
+
+          for (let idx = 0; idx < rawChunks.length; idx++) {
+            const chunk = rawChunks[idx];
+            const chunkWords = (chunk.match(/\S+/g) || []).length;
+            if (chunkWords < 15) {
+              console.log(`[CHUNKER] ⏭️ Fragmento ${idx + 1} ignorado (muy corto: ${chunkWords} palabras).`);
+              continue;
+            }
+
+            // Heredar teléfono y enlace_origen en cada fragmento
+            let enriched = chunk;
+            if (parentPhone && !enriched.includes(parentPhone.replace('+', ''))) {
+              enriched += `\n📞 ${parentPhone}`;
+            }
+            if (parentUrl && !enriched.includes(parentUrl)) {
+              enriched += `\n🔗 ${parentUrl}`;
+            }
+
+            console.log(`[CHUNKER] 🔄 Procesando fragmento ${idx + 1}/${rawChunks.length}: "${chunk.substring(0, 60)}..."`);
+            try {
+              const chunkResult = await processWhatsAppMessage(
+                enriched, userId, userName, false, [], undefined,
+                imageBuffer, isGroup, undefined, undefined, groupJid, groupName
+              );
+              if (chunkResult.inserted) {
+                console.log(`[CHUNKER] ✅ Fragmento ${idx + 1} insertado como ${chunkResult.classification}.`);
+              }
+              if (!firstResult && chunkResult.classification !== "CONSULTA_GENERAL") {
+                firstResult = chunkResult;
+              }
+            } catch (ce: any) {
+              console.error(`[CHUNKER] ❌ Error fragmento ${idx + 1}:`, ce?.message || ce);
+            }
+          }
+
+          if (firstResult) return firstResult;
+          console.log(`[CHUNKER] ⚠️ Ningún fragmento válido. Procesando como mensaje único.`);
+        }
+      }
+    }
+    // ══════════════════════════════════════════════════════════════════════════
+
     let isFromAudio = false;
 
     // Intercepción rápida de mensajes OFF-TOPIC solo para WhatsApp (el chat WEB tiene Libre Albedrío)

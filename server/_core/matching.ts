@@ -1793,11 +1793,10 @@ export async function executeMatchEngine(propertyId: number | null, requirementI
           requirementId: requirementId,
           matchScore: String(m.match_score),
           matchReason: m.match_reason || `RPC v21.21 score=${m.match_score}`,
-          status: "active",
+          status: "suggested",
           ownerConfirmed: false,
           seekerConfirmed: false,
           createdAt: new Date(),
-          updatedAt: new Date()
         }).onConflictDoNothing();
         insertedCount++;
         if (Number(m.match_score) >= 85) {
@@ -1819,11 +1818,10 @@ export async function executeMatchEngine(propertyId: number | null, requirementI
           requirementId: m.requirement_id,
           matchScore: String(m.match_score),
           matchReason: m.match_reason || `RPC v21.21 score=${m.match_score}`,
-          status: "active",
+          status: "suggested",
           ownerConfirmed: false,
           seekerConfirmed: false,
           createdAt: new Date(),
-          updatedAt: new Date()
         }).onConflictDoNothing();
         insertedCount++;
         if (Number(m.match_score) >= 85) {

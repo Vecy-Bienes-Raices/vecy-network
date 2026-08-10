@@ -4087,11 +4087,10 @@ async function executeMatchEngine(propertyId, requirementId) {
           requirementId,
           matchScore: String(m.match_score),
           matchReason: m.match_reason || `RPC v21.21 score=${m.match_score}`,
-          status: "active",
+          status: "suggested",
           ownerConfirmed: false,
           seekerConfirmed: false,
-          createdAt: /* @__PURE__ */ new Date(),
-          updatedAt: /* @__PURE__ */ new Date()
+          createdAt: /* @__PURE__ */ new Date()
         }).onConflictDoNothing();
         insertedCount++;
         if (Number(m.match_score) >= 85) {
@@ -4117,11 +4116,10 @@ async function executeMatchEngine(propertyId, requirementId) {
           requirementId: m.requirement_id,
           matchScore: String(m.match_score),
           matchReason: m.match_reason || `RPC v21.21 score=${m.match_score}`,
-          status: "active",
+          status: "suggested",
           ownerConfirmed: false,
           seekerConfirmed: false,
-          createdAt: /* @__PURE__ */ new Date(),
-          updatedAt: /* @__PURE__ */ new Date()
+          createdAt: /* @__PURE__ */ new Date()
         }).onConflictDoNothing();
         insertedCount++;
         if (Number(m.match_score) >= 85) {
@@ -5436,6 +5434,69 @@ ${content.substring(0, 15e3)}
     }
     if (jinaExtractedText) {
       messageToProcess += jinaExtractedText;
+    }
+    if (!isWebUser && !pdfBuffer) {
+      const wordCount = (text2.match(/\S+/g) || []).length;
+      const emojiPropertyStarters = (text2.match(/(?:🏡|🏠|🏢|🔑|💥|🌷|🌺|🌸|⭐|✨|🔥|🎯|📍)/g) || []).length;
+      const hasMultipleStarters = emojiPropertyStarters >= 2 || wordCount > 200;
+      if (wordCount > 150 && hasMultipleStarters) {
+        console.log(`[CHUNKER] \u{1F4E6} Mensaje largo (${wordCount} palabras, ${emojiPropertyStarters} emojis-inicio). Fragmentando...`);
+        const parentUrl = urls && urls.length > 0 ? urls[0] : null;
+        const parentPhone = normalizePhoneNumber(userId, text2);
+        const emojiSplitPattern = /(?=\n\s*(?:🏡|🏠|🏢|🏗|🏘|🔑|💥|🌷|🌸|🌺|🌻|🌹|⭐|✨|🔥|💫|🎯|📍))/g;
+        let rawChunks = text2.split(emojiSplitPattern).map((c) => c.trim()).filter((c) => c.length > 80);
+        if (rawChunks.length < 2) {
+          rawChunks = text2.split(/\n{3,}/).map((c) => c.trim()).filter((c) => c.length > 80);
+        }
+        if (rawChunks.length >= 2) {
+          console.log(`[CHUNKER] \u2702\uFE0F Fragmentado en ${rawChunks.length} publicaciones independientes.`);
+          let firstResult = null;
+          for (let idx = 0; idx < rawChunks.length; idx++) {
+            const chunk = rawChunks[idx];
+            const chunkWords = (chunk.match(/\S+/g) || []).length;
+            if (chunkWords < 15) {
+              console.log(`[CHUNKER] \u23ED\uFE0F Fragmento ${idx + 1} ignorado (muy corto: ${chunkWords} palabras).`);
+              continue;
+            }
+            let enriched = chunk;
+            if (parentPhone && !enriched.includes(parentPhone.replace("+", ""))) {
+              enriched += `
+\u{1F4DE} ${parentPhone}`;
+            }
+            if (parentUrl && !enriched.includes(parentUrl)) {
+              enriched += `
+\u{1F517} ${parentUrl}`;
+            }
+            console.log(`[CHUNKER] \u{1F504} Procesando fragmento ${idx + 1}/${rawChunks.length}: "${chunk.substring(0, 60)}..."`);
+            try {
+              const chunkResult = await processWhatsAppMessage(
+                enriched,
+                userId,
+                userName,
+                false,
+                [],
+                void 0,
+                imageBuffer,
+                isGroup,
+                void 0,
+                void 0,
+                groupJid,
+                groupName
+              );
+              if (chunkResult.inserted) {
+                console.log(`[CHUNKER] \u2705 Fragmento ${idx + 1} insertado como ${chunkResult.classification}.`);
+              }
+              if (!firstResult && chunkResult.classification !== "CONSULTA_GENERAL") {
+                firstResult = chunkResult;
+              }
+            } catch (ce) {
+              console.error(`[CHUNKER] \u274C Error fragmento ${idx + 1}:`, ce?.message || ce);
+            }
+          }
+          if (firstResult) return firstResult;
+          console.log(`[CHUNKER] \u26A0\uFE0F Ning\xFAn fragmento v\xE1lido. Procesando como mensaje \xFAnico.`);
+        }
+      }
     }
     let isFromAudio = false;
     const cleanText = text2.toLowerCase().trim();
