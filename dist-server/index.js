@@ -8639,49 +8639,7 @@ ${quotedNote}` : quotedNote;
                     "proceso cristo rey"
                   ];
                   const isNonRealEstateGroup = NON_REAL_ESTATE_KEYWORDS.some((kw) => gNameLower.includes(kw));
-                  const REAL_ESTATE_KEYWORDS = [
-                    "inmobiliari",
-                    "inmueble",
-                    "venta",
-                    "arriendo",
-                    "oferta",
-                    "requerimiento",
-                    "lote",
-                    "bodega",
-                    "apartaestudio",
-                    "agente",
-                    "casa",
-                    "apto",
-                    "chic\xF3",
-                    "cedritos",
-                    "suba",
-                    "bogot\xE1",
-                    "bogota",
-                    "sabana",
-                    "rosales",
-                    "batan",
-                    "alhambra",
-                    "pasadena",
-                    "colina",
-                    "salitre",
-                    "propiedad",
-                    "bienes",
-                    "raices",
-                    "ra\xEDces",
-                    "vecy",
-                    "amoblado",
-                    "oficina",
-                    "red",
-                    "comunidad",
-                    "apartamento",
-                    "finca",
-                    "terreno",
-                    "local",
-                    "edificio",
-                    "match"
-                  ];
-                  const isRealEstateGroup = REAL_ESTATE_KEYWORDS.some((kw) => gNameLower.includes(kw));
-                  if (isNonRealEstateGroup || !isRealEstateGroup) {
+                  if (isNonRealEstateGroup) {
                     return;
                   }
                 }

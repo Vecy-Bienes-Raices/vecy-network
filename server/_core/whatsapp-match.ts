@@ -491,7 +491,7 @@ export class JaniaMatchBot {
               }
             } catch (e) {}
 
-            // Si no es grupo oficial VECY, verificar que sea estrictamente un grupo INMOBILIARIO
+            // Si no es grupo oficial VECY, omitir únicamente si es un chat explícito ajeno (familia, seguridad, etc.)
             if (!isOfficialGroup) {
               const gNameLower = groupName.toLowerCase();
 
@@ -503,19 +503,8 @@ export class JaniaMatchBot {
 
               const isNonRealEstateGroup = NON_REAL_ESTATE_KEYWORDS.some(kw => gNameLower.includes(kw));
 
-              const REAL_ESTATE_KEYWORDS = [
-                "inmobiliari", "inmueble", "venta", "arriendo", "oferta", "requerimiento", 
-                "lote", "bodega", "apartaestudio", "agente", "casa", "apto", "chicó", 
-                "cedritos", "suba", "bogotá", "bogota", "sabana", "rosales", "batan", 
-                "alhambra", "pasadena", "colina", "salitre", "propiedad", "bienes", 
-                "raices", "raíces", "vecy", "amoblado", "oficina", "red", "comunidad",
-                "apartamento", "finca", "terreno", "local", "edificio", "match"
-              ];
-
-              const isRealEstateGroup = REAL_ESTATE_KEYWORDS.some(kw => gNameLower.includes(kw));
-
-              if (isNonRealEstateGroup || !isRealEstateGroup) {
-                // Omitir completamente de forma silenciosa sin procesar ni enviar emojis
+              if (isNonRealEstateGroup) {
+                // Omitir chats ajenos (familia, seguridad, etc.)
                 return;
               }
             }
