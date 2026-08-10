@@ -587,19 +587,37 @@ export async function resolverCuadranteVial(texto: string): Promise<{ resuelto: 
   const minSt = Math.min(parseInt(calleMatch[1]), parseInt(calleMatch[2]));
   const maxSt = Math.max(parseInt(calleMatch[1]), parseInt(calleMatch[2]));
 
-  // 2. Extraer Carreras / Avenidas si están presentes en la frase
-  const craMatch = norm.match(/(?:carrera|cra|cr|kr|cpr|entre\s+la\s+carrera)\s*(\d+)\s*(?:y|a|-|hasta|\s+y\s+la)\s*(\d+)/i);
-  let minCra: number | undefined;
-  let maxCra: number | undefined;
-  if (craMatch) {
-    minCra = Math.min(parseInt(craMatch[1]), parseInt(craMatch[2]));
-    maxCra = Math.max(parseInt(craMatch[1]), parseInt(craMatch[2]));
-  } else if (norm.includes("autopista") || norm.includes("auto")) {
-    minCra = 15;
-    maxCra = 45;
-  } else if (norm.includes("7") || norm.includes("septima") || norm.includes("séptima")) {
-    minCra = 1;
-    maxCra = 15;
+  // 2. Extraer Carreras / Avenidas y Filtros Direccionales (Arriba/Abajo de ejes viales)
+  const isArribaAuto = norm.includes("arriba de la autopista") || norm.includes("arriba de la auto") || norm.includes("oriente de la autopista") || norm.includes("este de la autopista");
+  const isAbajoAuto = norm.includes("abajo de la autopista") || norm.includes("abajo de la auto") || norm.includes("occidente de la autopista") || norm.includes("oeste de la autopista");
+  const isArriba7 = norm.includes("arriba de la 7") || norm.includes("arriba de la septima") || norm.includes("arriba de la séptima");
+  const isArribaBoyaca = norm.includes("arriba de la boyaca") || norm.includes("arriba de la boyacá");
+  const isAbajoBoyaca = norm.includes("abajo de la boyaca") || norm.includes("abajo de la boyacá");
+
+  const LON_AUTOPISTA = -74.0535;
+  const LON_SEPTIMA   = -74.0290;
+  const LON_BOYACA    = -74.0950;
+  const LON_CERROS    = -74.0150;
+  const LON_OCCIDENTE = -74.1200;
+
+  let minLon = LON_OCCIDENTE;
+  let maxLon = LON_CERROS;
+
+  if (isArribaAuto) {
+    minLon = LON_AUTOPISTA;
+    maxLon = LON_CERROS;
+  } else if (isAbajoAuto) {
+    minLon = LON_OCCIDENTE;
+    maxLon = LON_AUTOPISTA;
+  } else if (isArriba7) {
+    minLon = LON_SEPTIMA;
+    maxLon = LON_CERROS;
+  } else if (isArribaBoyaca) {
+    minLon = LON_BOYACA;
+    maxLon = LON_CERROS;
+  } else if (isAbajoBoyaca) {
+    minLon = LON_OCCIDENTE;
+    maxLon = LON_BOYACA;
   }
 
   // 3. Consulta de Intersección Geométrica Espacial PostGIS sobre barrios_bogota_geojson en Supabase
@@ -608,18 +626,42 @@ export async function resolverCuadranteVial(texto: string): Promise<{ resuelto: 
     if (db) {
       const minLat = 4.597 + (minSt * 0.00094);
       const maxLat = 4.597 + (maxSt * 0.00094);
-      const minLon = maxCra ? (-74.045 - (maxCra * 0.00095)) : -74.080;
-      const maxLon = minCra ? (-74.045 - (minCra * 0.00095)) : -74.025;
 
-      const rows: any = await db.execute(sql`
-        SELECT DISTINCT scanombre
-        FROM barrios_bogota_geojson
-        WHERE ST_Intersects(
-          geometry,
-          ST_MakeEnvelope(${minLon}, ${minLat}, ${maxLon}, ${maxLat}, 4326)
-        )
-        ORDER BY scanombre;
-      `);
+      let spatialQuery;
+      if (isArribaAuto) {
+        spatialQuery = sql`
+          SELECT DISTINCT scanombre
+          FROM barrios_bogota_geojson
+          WHERE ST_Intersects(geometry, ST_MakeEnvelope(${minLon}, ${minLat}, ${maxLon}, ${maxLat}, 4326))
+            AND ST_X(ST_Centroid(geometry)) >= ${LON_AUTOPISTA}
+          ORDER BY scanombre;
+        `;
+      } else if (isAbajoAuto) {
+        spatialQuery = sql`
+          SELECT DISTINCT scanombre
+          FROM barrios_bogota_geojson
+          WHERE ST_Intersects(geometry, ST_MakeEnvelope(${minLon}, ${minLat}, ${maxLon}, ${maxLat}, 4326))
+            AND ST_X(ST_Centroid(geometry)) < ${LON_AUTOPISTA}
+          ORDER BY scanombre;
+        `;
+      } else if (isArriba7) {
+        spatialQuery = sql`
+          SELECT DISTINCT scanombre
+          FROM barrios_bogota_geojson
+          WHERE ST_Intersects(geometry, ST_MakeEnvelope(${minLon}, ${minLat}, ${maxLon}, ${maxLat}, 4326))
+            AND ST_X(ST_Centroid(geometry)) >= ${LON_SEPTIMA}
+          ORDER BY scanombre;
+        `;
+      } else {
+        spatialQuery = sql`
+          SELECT DISTINCT scanombre
+          FROM barrios_bogota_geojson
+          WHERE ST_Intersects(geometry, ST_MakeEnvelope(${minLon}, ${minLat}, ${maxLon}, ${maxLat}, 4326))
+          ORDER BY scanombre;
+        `;
+      }
+
+      const rows: any = await db.execute(spatialQuery);
 
       if (rows && rows.length > 0) {
         const barrios = rows.map((r: any) => String(r.scanombre).trim());
