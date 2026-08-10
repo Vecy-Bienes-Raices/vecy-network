@@ -9150,19 +9150,27 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
         }
       }
       getReactionEmoji(result, isOfficialGroup = false) {
-        if (!result) return isOfficialGroup ? "\u2753" : null;
-        if (result.reactionEmoji && (isOfficialGroup || result.reactionEmoji === "\u{1F44D}" || result.reactionEmoji === "\u{1F4DD}" || result.reactionEmoji === "\u2753")) {
-          return result.reactionEmoji;
-        }
+        if (!result) return null;
         const classification = (result.classification || "").toUpperCase();
-        const rawText = (result.rawText || result.response || result.extractedData?.rawText || "").toLowerCase();
-        if (isOfficialGroup && (classification === "VIOLACION_DE_NORMAS" || classification.includes("SPAM") || classification.includes("INFRACCION"))) {
-          return "\u{1F6AB}";
+        if (result.inserted === true) {
+          if (classification === "INMUEBLE" || classification.includes("INMUEBLE") || classification.includes("OFERTA")) {
+            return "\u{1F44D}";
+          }
+          if (classification === "REQUERIMIENTO" || classification.includes("REQUERIMIENTO") || classification.includes("DEMANDA") || classification.includes("BUSQUEDA")) {
+            return "\u{1F4DD}";
+          }
         }
-        if (classification === "REQUERIMIENTO" || classification.includes("REQUERIMIENTO") || classification.includes("DEMANDA") || classification.includes("BUSQUEDA") || rawText.includes("requiero") || rawText.includes("busco") || rawText.includes("necesito")) {
+        if (isOfficialGroup) {
+          if (classification === "VIOLACION_DE_NORMAS" || classification.includes("SPAM") || classification.includes("INFRACCION")) {
+            return "\u{1F6AB}";
+          }
+          if (classification === "DATOS_INCOMPLETOS") return "\u2753";
+          if (classification === "CONSULTA_GENERAL" || classification === "RESPUESTA_A_PREGUNTA_IA") return null;
+        }
+        if (classification === "REQUERIMIENTO" || classification.includes("REQUERIMIENTO") || classification.includes("DEMANDA") || classification.includes("BUSQUEDA")) {
           return "\u{1F4DD}";
         }
-        if (classification === "INMUEBLE" || classification.includes("INMUEBLE") || classification.includes("OFERTA") || result.inmuebleId || result.propertyId || result.inserted === true || rawText.includes("vendo") || rawText.includes("arriendo") || rawText.includes("apto") || rawText.includes("casa")) {
+        if (classification === "INMUEBLE" || classification.includes("INMUEBLE") || classification.includes("OFERTA") || result.inserted === true) {
           return "\u{1F44D}";
         }
         return null;

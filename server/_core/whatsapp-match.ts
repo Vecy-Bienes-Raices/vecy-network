@@ -1185,46 +1185,36 @@ export class JaniaMatchBot {
   }
 
   private getReactionEmoji(result: any, isOfficialGroup: boolean = false): string | null {
-    if (!result) return isOfficialGroup ? '❓' : null;
-
-    if (result.reactionEmoji && (isOfficialGroup || result.reactionEmoji === '👍' || result.reactionEmoji === '📝' || result.reactionEmoji === '❓')) {
-      return result.reactionEmoji;
-    }
+    if (!result) return null;
 
     const classification = (result.classification || '').toUpperCase();
-    const rawText = (result.rawText || result.response || result.extractedData?.rawText || '').toLowerCase();
 
-    // 1. Infracciones / Violaciones de Norma -> 🚫 EXCLUSIVAMENTE EN GRUPOS OFICIALES VECY
-    if (isOfficialGroup && (classification === 'VIOLACION_DE_NORMAS' || classification.includes('SPAM') || classification.includes('INFRACCION'))) {
-      return '🚫';
+    // ── REGLA PRINCIPAL DOCTRINAL: Si el registro fue insertado exitosamente en BD ──
+    // INMUEBLE insertado → 👍 SIEMPRE (grupos oficiales y externos)
+    // REQUERIMIENTO insertado → 📝 SIEMPRE (grupos oficiales y externos)
+    if (result.inserted === true) {
+      if (classification === 'INMUEBLE' || classification.includes('INMUEBLE') || classification.includes('OFERTA')) {
+        return '👍';
+      }
+      if (classification === 'REQUERIMIENTO' || classification.includes('REQUERIMIENTO') || classification.includes('DEMANDA') || classification.includes('BUSQUEDA')) {
+        return '📝';
+      }
     }
 
-    // 2. Requerimientos (Demandas de búsqueda) -> 📝
-    if (
-      classification === 'REQUERIMIENTO' || 
-      classification.includes('REQUERIMIENTO') || 
-      classification.includes('DEMANDA') || 
-      classification.includes('BUSQUEDA') ||
-      rawText.includes("requiero") ||
-      rawText.includes("busco") ||
-      rawText.includes("necesito")
-    ) {
+    // ── SOLO EN GRUPOS OFICIALES: Reacciones de moderación ──
+    if (isOfficialGroup) {
+      if (classification === 'VIOLACION_DE_NORMAS' || classification.includes('SPAM') || classification.includes('INFRACCION')) {
+        return '🚫';
+      }
+      if (classification === 'DATOS_INCOMPLETOS') return '❓';
+      if (classification === 'CONSULTA_GENERAL' || classification === 'RESPUESTA_A_PREGUNTA_IA') return null;
+    }
+
+    // ── FALLBACK por clasificación para casos sin inserted===true ──
+    if (classification === 'REQUERIMIENTO' || classification.includes('REQUERIMIENTO') || classification.includes('DEMANDA') || classification.includes('BUSQUEDA')) {
       return '📝';
     }
-
-    // 3. Inmuebles / Ofertas comerciales -> 👍
-    if (
-      classification === 'INMUEBLE' || 
-      classification.includes('INMUEBLE') || 
-      classification.includes('OFERTA') ||
-      result.inmuebleId || 
-      result.propertyId ||
-      result.inserted === true ||
-      rawText.includes("vendo") ||
-      rawText.includes("arriendo") ||
-      rawText.includes("apto") ||
-      rawText.includes("casa")
-    ) {
+    if (classification === 'INMUEBLE' || classification.includes('INMUEBLE') || classification.includes('OFERTA') || result.inserted === true) {
       return '👍';
     }
 
