@@ -1838,23 +1838,10 @@ export async function executeMatchEngine(propertyId: number | null, requirementI
 }
 
 async function sendDirectAlertToAdmins(message: string): Promise<void> {
-  const adminPhone = process.env.ADMIN_PHONE || "573192919978";
-
-  const matchBot = (global as any).janiaMatchBotInstance;
-  if (matchBot && matchBot.isReady) {
-    console.log(`[Matching-Notification] Enviando alerta de Match al administrador (${adminPhone}) vía Baileys...`);
-    await matchBot.queuedSend(`${adminPhone}@s.whatsapp.net`, message).catch((e: any) => console.error("Error al notificar a administrador por Baileys:", e));
-    return;
-  }
-
-  const wwebClient = (global as any).whatsappClient;
-  if (wwebClient) {
-    console.log(`[Matching-Notification] Enviando alerta de Match al administrador (${adminPhone}) vía WWEBJS...`);
-    await wwebClient.sendMessage(`${adminPhone}@c.us`, message).catch((e: any) => console.error("Error al notificar a administrador por WWEBJS:", e));
-    return;
-  }
-
-  console.warn("[Matching-Notification] Ningún cliente de WhatsApp disponible en global para enviar la alerta.");
+  // Notificaciones de Match a WhatsApp desactivadas por preferencia del usuario.
+  // Los matches se registran exclusivamente en Supabase y se visualizan en el Panel Web Admin.
+  console.log(`[Matching-Notification-Disabled] Match registrado en DB (alerta WhatsApp desactivada por usuario).`);
+  return;
 }
 
 /**

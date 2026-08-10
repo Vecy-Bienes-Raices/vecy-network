@@ -4137,20 +4137,8 @@ async function executeMatchEngine(propertyId, requirementId) {
   }
 }
 async function sendDirectAlertToAdmins(message) {
-  const adminPhone = process.env.ADMIN_PHONE || "573192919978";
-  const matchBot = global.janiaMatchBotInstance;
-  if (matchBot && matchBot.isReady) {
-    console.log(`[Matching-Notification] Enviando alerta de Match al administrador (${adminPhone}) v\xEDa Baileys...`);
-    await matchBot.queuedSend(`${adminPhone}@s.whatsapp.net`, message).catch((e) => console.error("Error al notificar a administrador por Baileys:", e));
-    return;
-  }
-  const wwebClient = global.whatsappClient;
-  if (wwebClient) {
-    console.log(`[Matching-Notification] Enviando alerta de Match al administrador (${adminPhone}) v\xEDa WWEBJS...`);
-    await wwebClient.sendMessage(`${adminPhone}@c.us`, message).catch((e) => console.error("Error al notificar a administrador por WWEBJS:", e));
-    return;
-  }
-  console.warn("[Matching-Notification] Ning\xFAn cliente de WhatsApp disponible en global para enviar la alerta.");
+  console.log(`[Matching-Notification-Disabled] Match registrado en DB (alerta WhatsApp desactivada por usuario).`);
+  return;
 }
 function buildBigTechAdminReport(prop, req, score) {
   const formatCOP = (val) => {
@@ -11181,14 +11169,15 @@ ${liveStats}${userContextInstruction}
         const key = `${m.property.id}-${m.requirement.id}`;
         if (seenPairs.has(key)) continue;
         const evaluation = explicarMatch(m.requirement, m.property);
-        if (evaluation.blockers.length > 0) {
-          console.log(`[tRPC-getAllMatches] \u274C Match #${m.id} descartado en tiempo real por Blocker Duro (Blockers: ${evaluation.blockers.join(" | ")})`);
+        const storedScore = parseFloat(String(m.matchScore || "0"));
+        const finalScore = evaluation.score >= 75 ? evaluation.score : storedScore;
+        if (finalScore < 75) {
           continue;
         }
         seenPairs.add(key);
         validEvaluatedMatches.push({
           ...m,
-          matchScore: evaluation.score.toFixed(2),
+          matchScore: finalScore.toFixed(2),
           matchExplanation: evaluation
         });
       }

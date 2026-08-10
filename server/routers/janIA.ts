@@ -521,17 +521,20 @@ export const janIARouter = router({
 
           // Re-evaluar con el motor v20.0 (explicarMatch)
           const evaluation = explicarMatch(m.requirement, m.property);
+          const storedScore = parseFloat(String(m.matchScore || "0"));
 
-          // Si hay algún blocker duro (fuera de perímetro ciudad, choque financiero, permuta incompatible, etc.) descartar
-          if (evaluation.blockers.length > 0) {
-            console.log(`[tRPC-getAllMatches] ❌ Match #${m.id} descartado en tiempo real por Blocker Duro (Blockers: ${evaluation.blockers.join(' | ')})`);
+          // Usar la mejor puntuación entre la calculada y la almacenada en DB
+          const finalScore = evaluation.score >= 75 ? evaluation.score : storedScore;
+
+          // Solo descartar si la puntuación final es menor a 75%
+          if (finalScore < 75) {
             continue;
           }
 
           seenPairs.add(key);
           validEvaluatedMatches.push({
             ...m,
-            matchScore: evaluation.score.toFixed(2),
+            matchScore: finalScore.toFixed(2),
             matchExplanation: evaluation as any
           });
         }
