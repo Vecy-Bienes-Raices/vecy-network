@@ -3898,12 +3898,12 @@ function explicarMatch(requirement, property) {
   }
   return buildExplanationResult(finalPercentage, blockers, positives, negatives, isStrictCompliant, missingFieldsList);
 }
-function evaluarInterseccionComodidadesSemanticas(req, prop2) {
+function evaluarInterseccionComodidadesSemanticas(req, prop) {
   const reqText = `${req.rawText || ""} ${req.description || ""}`.toLowerCase();
-  const propText = `${prop2.rawText || ""} ${prop2.description || ""}`.toLowerCase();
+  const propText = `${prop.rawText || ""} ${prop.description || ""}`.toLowerCase();
   const positives = [];
   const reqHasVestier = req.hasWalkInCloset || reqText.includes("vestier") || reqText.includes("walk") || reqText.includes("closet");
-  const propHasVestier = prop2.hasWalkInCloset || propText.includes("vestier") || propText.includes("walk") || propText.includes("closet");
+  const propHasVestier = prop.hasWalkInCloset || propText.includes("vestier") || propText.includes("walk") || propText.includes("closet");
   let vestierScore = 0;
   if (reqHasVestier && propHasVestier) {
     vestierScore = 1;
@@ -3911,8 +3911,8 @@ function evaluarInterseccionComodidadesSemanticas(req, prop2) {
   }
   const reqHasBalcony = req.hasBalcony || reqText.includes("balcon") || reqText.includes("balc\xF3n");
   const reqHasTerrace = req.hasTerrace || reqText.includes("terraza") || reqText.includes("patio");
-  const propHasBalcony = prop2.hasBalcony || propText.includes("balcon") || propText.includes("balc\xF3n");
-  const propHasTerrace = prop2.hasTerrace || propText.includes("terraza") || propText.includes("patio");
+  const propHasBalcony = prop.hasBalcony || propText.includes("balcon") || propText.includes("balc\xF3n");
+  const propHasTerrace = prop.hasTerrace || propText.includes("terraza") || propText.includes("patio");
   let balconTerrasaScore = 0;
   if (reqHasBalcony && propHasBalcony) {
     balconTerrasaScore = 1;
@@ -4020,18 +4020,18 @@ async function findMatchesForRequirement(requirementId) {
       )
     );
     const validMatches = [];
-    for (const prop2 of availableProperties) {
-      const explanation = explicarMatch(req, prop2);
+    for (const prop of availableProperties) {
+      const explanation = explicarMatch(req, prop);
       const score = explanation.score;
       if (score >= 80) {
         let matchId;
         const existing = await db.select().from(propertyMatches).where(
           and(
-            eq3(propertyMatches.propertyId, prop2.id),
+            eq3(propertyMatches.propertyId, prop.id),
             eq3(propertyMatches.requirementId, requirementId)
           )
         ).limit(1);
-        const ipcObj = calcularIPC(req, prop2, score);
+        const ipcObj = calcularIPC(req, prop, score);
         explanation.ipc = ipcObj;
         if (existing.length > 0) {
           matchId = existing[0].id;
@@ -4043,7 +4043,7 @@ async function findMatchesForRequirement(requirementId) {
           }).where(eq3(propertyMatches.id, matchId));
         } else {
           const [newMatch] = await db.insert(propertyMatches).values({
-            propertyId: prop2.id,
+            propertyId: prop.id,
             requirementId,
             matchScore: score.toFixed(2),
             matchReason: `VECY CORE TS Scoring: ${score.toFixed(2)}/100`,
@@ -4057,10 +4057,10 @@ async function findMatchesForRequirement(requirementId) {
           vrifEvents.emit("match:created", matchId);
         }
         validMatches.push({
-          ...prop2,
+          ...prop,
           score,
           matchId,
-          idUsuarioWhatsapp: prop2.idUsuarioWhatsapp
+          idUsuarioWhatsapp: prop.idUsuarioWhatsapp
         });
       }
     }
@@ -4076,97 +4076,66 @@ async function executeMatchEngine(propertyId, requirementId) {
   if (!db) return;
   try {
     if (requirementId) {
-      for (const req of reqs) {
-        const pBiz = (prop.transactionType || "").toLowerCase();
-        const rBiz = (req.tipoNegocioDeseado || "").toLowerCase();
-        const pAccepted = Array.isArray(prop.acceptedTransactionTypes) ? prop.acceptedTransactionTypes.map((t2) => t2.toLowerCase()) : [];
-        if (!pBiz || !rBiz || !checkTransactionCompatibility(rBiz, pBiz, pAccepted)) continue;
-        const pType = (prop.propertyType || "").toLowerCase();
-        const rType = (req.tipoInmuebleDeseado || "").toLowerCase();
-        if (!pType || !rType || pType !== rType) continue;
-        const pCity = normalizarTextoGeografico(prop.city || prop.addressCity || "");
-        const rCity = normalizarTextoGeografico(req.ciudadDeseada || "");
-        if (!pCity || !rCity || pCity !== rCity) continue;
-        const pZone = normalizarTextoGeografico(prop.zone || prop.addressNeighborhood || "");
-        const rZone = normalizarTextoGeografico(req.zonaDeseada || req.addressNeighborhood || "");
-        if (rZone && pZone) {
-          const zonaMatch = rZone === pZone || rZone.includes(pZone) || pZone.includes(rZone);
-          if (!zonaMatch) continue;
-        }
-        const pArea = parseFloat(String(prop.areaTotal || prop.areaPrivate || "0"));
-        const rAreaMin = parseFloat(String(req.areaMin || "0"));
-        if (pArea > 0 && rAreaMin > 0) {
-          const areaMinLimit = rAreaMin * 0.9;
-          if (pArea < areaMinLimit) continue;
-        }
-        const price = parseFloat(String(prop.price || "0"));
-        const adminFee = parseFloat(String(prop.adminFee || "0"));
-        const totalCost = price + adminFee;
-        const budgetMax = parseFloat(String(req.presupuestoMax || "0"));
-        const budgetMin = parseFloat(String(req.presupuestoMin || "0"));
-        if (budgetMax > 0 && totalCost > budgetMax * 1.05) continue;
-        if (budgetMin > 0 && price < budgetMin * 0.9) continue;
-        const pBedrooms = Number(prop.bedrooms || 0);
-        const rBedrooms = Number(req.habitacionesMin || 0);
-        if (rBedrooms > 0 && pBedrooms > 0 && pBedrooms < rBedrooms) continue;
-        const explanation = explicarMatch(req, prop);
-        const score = explanation.score;
-        if (score < 80) continue;
-        const propPhone = cleanPhone(prop.idUsuarioWhatsapp || "");
-        const reqPhone = cleanPhone(req.idUsuarioWhatsapp || "");
-        const existingSamePhone = await db.select({ id: propertyMatches.id, reqRaw: requirements.rawText }).from(propertyMatches).innerJoin(requirements, eq3(propertyMatches.requirementId, requirements.id)).where(
-          and(
-            eq3(propertyMatches.propertyId, prop.id),
-            sql2`${requirements.idUsuarioWhatsapp} = ${req.idUsuarioWhatsapp ?? ""}`
-          )
-        );
-        const isDuplicateReqPost = existingSamePhone.some(
-          (m) => m.reqRaw && req.rawText && (m.reqRaw.trim() === req.rawText.trim() || m.reqRaw.includes(req.rawText.substring(0, 50)))
-        );
-        if (isDuplicateReqPost) continue;
-        let matchId;
-        let isNewMatch = false;
-        const existing = await db.select().from(propertyMatches).where(
-          and(
-            eq3(propertyMatches.propertyId, prop.id),
-            eq3(propertyMatches.requirementId, req.id)
-          )
-        ).limit(1);
-        const ipcObj = calcularIPC(req, prop, score);
-        explanation.ipc = ipcObj;
-        if (existing.length > 0) {
-          matchId = existing[0].id;
-          await db.update(propertyMatches).set({
-            matchScore: score.toFixed(2),
-            matchExplanation: explanation,
-            ipc: ipcObj,
-            createdAt: /* @__PURE__ */ new Date()
-          }).where(eq3(propertyMatches.id, matchId));
-        } else {
-          isNewMatch = true;
-          const [newMatch] = await db.insert(propertyMatches).values({
-            propertyId: prop.id,
-            requirementId: req.id,
-            matchScore: score.toFixed(2),
-            matchReason: `VECY Core Engine: Match estricto ${score}%`,
-            matchExplanation: explanation,
-            ipc: ipcObj,
-            status: "suggested",
-            ownerConfirmed: false,
-            seekerConfirmed: false
-          }).returning();
-          matchId = newMatch.id;
-          vrifEvents.emit("match:created", matchId);
-          console.log(`[Matching-Engine] \u2705 Match #${matchId} (${score}%) registrado y evento emitido.`);
-          if (score >= 85) {
-            const reportMsg = buildBigTechAdminReport(prop, req, score);
-            sendDirectAlertToAdmins(reportMsg).catch((aErr) => console.error("[Matching-Engine] Error al notificar reporte a admin:", aErr));
-          }
+      console.log(`[MATCHING-RPC] \u26A1 Ejecutando RPC Supabase para Requerimiento #${requirementId}...`);
+      const matchRows = await db.execute(
+        sql2`SELECT * FROM match_properties_for_requirement(${requirementId}, 80.0)`
+      );
+      let insertedCount = 0;
+      for (const m of matchRows) {
+        await db.insert(propertyMatches).values({
+          propertyId: m.property_id,
+          requirementId,
+          matchScore: String(m.match_score),
+          matchReason: m.match_reason || `RPC v21.21 score=${m.match_score}`,
+          status: "active",
+          ownerConfirmed: false,
+          seekerConfirmed: false,
+          createdAt: /* @__PURE__ */ new Date(),
+          updatedAt: /* @__PURE__ */ new Date()
+        }).onConflictDoNothing();
+        insertedCount++;
+        if (Number(m.match_score) >= 85) {
+          sendDirectAlertToAdmins(
+            `\u{1F680} *VECY INTEL: Match #${m.property_id}\u2194${requirementId} (${m.match_score}%)*
+\u{1F3E0} Propiedad: ${m.property_name || m.property_id} (${m.property_city || ""})
+\u{1F4B0} Precio: $${Number(m.property_price || 0).toLocaleString("es-CO")}
+\u{1F449} Ver en panel: https://vecy-network.vercel.app/admin`
+          ).catch(() => {
+          });
         }
       }
+      console.log(`[MATCHING-RPC] \u2705 ${insertedCount} matches registrados en Supabase para Requerimiento #${requirementId}.`);
+    } else if (propertyId) {
+      console.log(`[MATCHING-RPC] \u26A1 Ejecutando RPC Supabase para Propiedad #${propertyId}...`);
+      const matchRows = await db.execute(
+        sql2`SELECT * FROM match_requirements_for_property(${propertyId}, 80.0)`
+      );
+      let insertedCount = 0;
+      for (const m of matchRows) {
+        await db.insert(propertyMatches).values({
+          propertyId,
+          requirementId: m.requirement_id,
+          matchScore: String(m.match_score),
+          matchReason: m.match_reason || `RPC v21.21 score=${m.match_score}`,
+          status: "active",
+          ownerConfirmed: false,
+          seekerConfirmed: false,
+          createdAt: /* @__PURE__ */ new Date(),
+          updatedAt: /* @__PURE__ */ new Date()
+        }).onConflictDoNothing();
+        insertedCount++;
+        if (Number(m.match_score) >= 85) {
+          sendDirectAlertToAdmins(
+            `\u{1F680} *VECY INTEL: Match #${propertyId}\u2194${m.requirement_id} (${m.match_score}%)*
+\u{1F449} Ver en panel: https://vecy-network.vercel.app/admin`
+          ).catch(() => {
+          });
+        }
+      }
+      console.log(`[MATCHING-RPC] \u2705 ${insertedCount} matches registrados en Supabase para Propiedad #${propertyId}.`);
     }
   } catch (err) {
-    console.error("[Matching-Engine] Error running match engine:", err.message || err);
+    console.error(`[MATCHING-RPC-ERROR] Error ejecutando RPC:`, err?.message || err);
   }
 }
 async function sendDirectAlertToAdmins(message) {
@@ -4185,17 +4154,17 @@ async function sendDirectAlertToAdmins(message) {
   }
   console.warn("[Matching-Notification] Ning\xFAn cliente de WhatsApp disponible en global para enviar la alerta.");
 }
-function buildBigTechAdminReport(prop2, req, score) {
+function buildBigTechAdminReport(prop, req, score) {
   const formatCOP = (val) => {
     const num = parseFloat(String(val));
     if (isNaN(num) || num === 0) return "N/E";
     return `$${num.toLocaleString("es-CO")}`;
   };
-  const propPriceStr = prop2.price ? formatCOP(prop2.price) : "N/E";
+  const propPriceStr = prop.price ? formatCOP(prop.price) : "N/E";
   const reqBudgetStr = req.presupuestoMax ? formatCOP(req.presupuestoMax) : "N/E";
-  const propBroker = (prop2.idUsuarioWhatsapp || "Captador").replace(/\D/g, "");
+  const propBroker = (prop.idUsuarioWhatsapp || "Captador").replace(/\D/g, "");
   const reqBroker = (req.idUsuarioWhatsapp || "Requiriente").replace(/\D/g, "");
-  let intentReason = `El cliente busca inmueble en ${req.zonaDeseada || prop2.zone || "Bogot\xE1"}`;
+  let intentReason = `El cliente busca inmueble en ${req.zonaDeseada || prop.zone || "Bogot\xE1"}`;
   if (req.rawText && req.rawText.toLowerCase().includes("silencioso")) {
     intentReason += " y exige huir del ruido de las v\xEDas principales. Este inmueble cumple el criterio de tranquilidad.";
   } else if (req.rawText && req.rawText.toLowerCase().includes("luz natural")) {
@@ -4203,15 +4172,15 @@ function buildBigTechAdminReport(prop2, req, score) {
   } else {
     intentReason += ". Coincidencia de alta intencionalidad comercial.";
   }
-  let techDetails = `Coincide en distribuci\xF3n (${prop2.bedrooms || "N/E"} habs, ${prop2.bathrooms || "N/E"} ba\xF1os)`;
-  if (prop2.garageType === "independiente") {
+  let techDetails = `Coincide en distribuci\xF3n (${prop.bedrooms || "N/E"} habs, ${prop.bathrooms || "N/E"} ba\xF1os)`;
+  if (prop.garageType === "independiente") {
     techDetails += " y tiene garajes independientes \u2705";
-  } else if (prop2.garageType === "lineal") {
+  } else if (prop.garageType === "lineal") {
     techDetails += " (\u26A0\uFE0F garajes en servidumbre)";
   }
   return `\u{1F680} *VECY INTEL: Oportunidad de Cierre Detectada (${score}% MATCH)*
 \u{1F464} *ASESORES:* +${propBroker} \u2194 +${reqBroker}
-\u{1F3E0} *OFERTA #${prop2.id}:* ${prop2.name || prop2.title || "Inmueble"} (${propPriceStr})
+\u{1F3E0} *OFERTA #${prop.id}:* ${prop.name || prop.title || "Inmueble"} (${propPriceStr})
 \u{1F4CB} *DEMANDA #${req.id}:* ${req.name || "Requerimiento"} (${reqBudgetStr})
 \u{1F9E0} *INTENCI\xD3N:* ${intentReason}
 \u2696\uFE0F *T\xC9CNICO:* ${techDetails}.
@@ -6147,26 +6116,26 @@ function isGenericName(n) {
 async function findOrCreateUserByPhone(phone, realName) {
   const db = await getDb();
   if (!db) return null;
-  const cleanPhone2 = phone.split(":")[0];
-  let user = await db.select().from(users).where(eq4(users.phone, cleanPhone2)).limit(1).then((r) => r[0]);
+  const cleanPhone = phone.split(":")[0];
+  let user = await db.select().from(users).where(eq4(users.phone, cleanPhone)).limit(1).then((r) => r[0]);
   if (!user) {
-    user = await db.select().from(users).where(eq4(users.openId, `wa-${cleanPhone2}`)).limit(1).then((r) => r[0]);
+    user = await db.select().from(users).where(eq4(users.openId, `wa-${cleanPhone}`)).limit(1).then((r) => r[0]);
   }
   if (!user) {
-    const openId = `wa-${cleanPhone2}`;
-    console.log(`[JanIA-findOrCreateUserByPhone] Creando nuevo usuario para WhatsApp: ${realName} (+${cleanPhone2})`);
+    const openId = `wa-${cleanPhone}`;
+    console.log(`[JanIA-findOrCreateUserByPhone] Creando nuevo usuario para WhatsApp: ${realName} (+${cleanPhone})`);
     try {
       const [newUser] = await db.insert(users).values({
         openId,
         name: realName,
-        phone: cleanPhone2,
+        phone: cleanPhone,
         role: "agent",
         loginMethod: "whatsapp"
       }).returning();
       user = newUser;
     } catch (insertErr) {
       if (insertErr.code === "23505" || String(insertErr).includes("unique constraint")) {
-        console.log(`[JanIA-findOrCreateUserByPhone] Colisi\xF3n concurrente detectada para ${cleanPhone2}. Re-buscando usuario...`);
+        console.log(`[JanIA-findOrCreateUserByPhone] Colisi\xF3n concurrente detectada para ${cleanPhone}. Re-buscando usuario...`);
         user = await db.select().from(users).where(eq4(users.openId, openId)).limit(1).then((r) => r[0]);
       } else {
         throw insertErr;
@@ -6389,7 +6358,7 @@ async function handleAmendmentUpdate(userId, text2) {
     gte(properties.createdAt, twoHoursAgo)
   )).orderBy(desc(properties.createdAt)).limit(1);
   if (lastProps.length > 0) {
-    const prop2 = lastProps[0];
+    const prop = lastProps[0];
     const updates = {};
     if (cleanTextLower.includes("parqueadero") && fallbackData.garages > 0) {
       updates.garages = fallbackData.garages;
@@ -6408,11 +6377,11 @@ async function handleAmendmentUpdate(userId, text2) {
     }
     if (Object.keys(updates).length > 0) {
       updates.updatedAt = /* @__PURE__ */ new Date();
-      await db.update(properties).set(updates).where(eq4(properties.id, prop2.id));
-      console.log(`[JANIA-AMENDMENT] \u2705 Propiedad #${prop2.id} actualizada silenciosamente en BD (Ventana 2h):`, updates);
+      await db.update(properties).set(updates).where(eq4(properties.id, prop.id));
+      console.log(`[JANIA-AMENDMENT] \u2705 Propiedad #${prop.id} actualizada silenciosamente en BD (Ventana 2h):`, updates);
       const { executeMatchEngine: executeMatchEngine2 } = await Promise.resolve().then(() => (init_matching(), matching_exports));
       setImmediate(() => {
-        executeMatchEngine2(prop2.id, null).catch((err) => console.error("Error executing match engine on amendment:", err));
+        executeMatchEngine2(prop.id, null).catch((err) => console.error("Error executing match engine on amendment:", err));
       });
       return true;
     }
@@ -9571,14 +9540,14 @@ Te espero. \xA1All\xED te atender\xE9 con gusto! \u{1F680}`;
             await this.queuedSend(senderId, `\u26A0\uFE0F No encontr\xE9 ninguna coincidencia registrada con el c\xF3digo *#M${matchId}*. Por favor verifica el n\xFAmero.`);
             return;
           }
-          const [prop2] = await db.select().from(properties).where(eq11(properties.id, match.propertyId)).limit(1);
+          const [prop] = await db.select().from(properties).where(eq11(properties.id, match.propertyId)).limit(1);
           const [req] = await db.select().from(requirements).where(eq11(requirements.id, match.requirementId)).limit(1);
-          if (!prop2 || !req) {
+          if (!prop || !req) {
             await this.queuedSend(senderId, "\u26A0\uFE0F Hubo un problema al recuperar los detalles de esta coincidencia.");
             return;
           }
           const senderPhone = senderId.split("@")[0];
-          const ownerPhone = prop2.idUsuarioWhatsapp || "";
+          const ownerPhone = prop.idUsuarioWhatsapp || "";
           const seekerPhone = req.idUsuarioWhatsapp || "";
           const isOwner = senderPhone === ownerPhone.split("@")[0];
           const isSeeker = senderPhone === seekerPhone.split("@")[0];
@@ -9635,7 +9604,7 @@ Felicidades, ambas partes han confirmado inter\xE9s en la coincidencia *#M${matc
 Aqu\xED tienes el contacto directo del aliado que ofrece la propiedad:
 \u{1F464} *Nombre:* ${ownerName}
 \u{1F4DE} *WhatsApp:* https://wa.me/${ownerPhone.split("@")[0]}
-\u{1F4AC} *Su oferta:* ${prop2.rawText || "Sin descripci\xF3n"}
+\u{1F4AC} *Su oferta:* ${prop.rawText || "Sin descripci\xF3n"}
 
 \xA1Les deseamos mucho \xE9xito en el cierre comercial! \u{1F91D}\u{1F680}`;
             await this.logToDb(ownerJid, "janIA", `[Match-Connected] Match #M${matchId} connected in DB. Seeker is ${seekerPhone}`);
@@ -9905,8 +9874,8 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
         }
       }
       async getPairingCode(phone) {
-        const cleanPhone2 = phone.replace(/\D/g, "");
-        console.log(`[JANIA-MATCH] Solicitando c\xF3digo de vinculaci\xF3n por n\xFAmero para: ${cleanPhone2}`);
+        const cleanPhone = phone.replace(/\D/g, "");
+        console.log(`[JANIA-MATCH] Solicitando c\xF3digo de vinculaci\xF3n por n\xFAmero para: ${cleanPhone}`);
         console.log("[JANIA-MATCH] Limpiando sesi\xF3n previa para solicitar nuevo c\xF3digo...");
         try {
           if (this.sock) {
@@ -9926,7 +9895,7 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
         await this.initialize();
         await delay(3e3);
         try {
-          const code = await this.sock.requestPairingCode(cleanPhone2);
+          const code = await this.sock.requestPairingCode(cleanPhone);
           console.log(`[JANIA-MATCH] C\xF3digo de vinculaci\xF3n generado: ${code}`);
           return code;
         } catch (err) {
@@ -9993,19 +9962,19 @@ async function runNightlyRematch() {
     console.log(`[NIGHTLY-REMATCH] Procesando ${activeReqs.length} requerimientos activos contra ${availProps.length} inmuebles disponibles...`);
     let newMatchesCount = 0;
     for (const req of activeReqs) {
-      for (const prop2 of availProps) {
-        const score = calcularScoreMatch(req, prop2);
+      for (const prop of availProps) {
+        const score = calcularScoreMatch(req, prop);
         if (score >= 60) {
           const existing = await db.select().from(propertyMatches).where(
             and6(
-              eq12(propertyMatches.propertyId, prop2.id),
+              eq12(propertyMatches.propertyId, prop.id),
               eq12(propertyMatches.requirementId, req.id)
             )
           ).limit(1);
           if (existing.length === 0) {
-            console.log(`[NIGHTLY-REMATCH] \xA1Match nuevo detectado! Req #${req.id} <-> Prop #${prop2.id} (Score: ${score.toFixed(0)}%)`);
+            console.log(`[NIGHTLY-REMATCH] \xA1Match nuevo detectado! Req #${req.id} <-> Prop #${prop.id} (Score: ${score.toFixed(0)}%)`);
             const [newMatch] = await db.insert(propertyMatches).values({
-              propertyId: prop2.id,
+              propertyId: prop.id,
               requirementId: req.id,
               matchScore: score.toFixed(2),
               matchReason: `VECY CORE TS Scoring (Nightly): ${score.toFixed(2)}/100`,
@@ -10016,10 +9985,10 @@ async function runNightlyRematch() {
             newMatchesCount++;
             if (janiaMatchBot && janiaMatchBot.isReady) {
               const matchedItem = {
-                ...prop2,
+                ...prop,
                 score,
                 matchId: newMatch.id,
-                idUsuarioWhatsapp: prop2.idUsuarioWhatsapp
+                idUsuarioWhatsapp: prop.idUsuarioWhatsapp
               };
               const matchDetails = await handleDetectedMatches(
                 [matchedItem],
@@ -10064,15 +10033,15 @@ async function recalculateAndCleanupMatches() {
     let deletedCount = 0;
     let updatedCount = 0;
     for (const m of allMatches) {
-      const [prop2] = await db.select().from(properties).where(eq12(properties.id, m.propertyId)).limit(1);
+      const [prop] = await db.select().from(properties).where(eq12(properties.id, m.propertyId)).limit(1);
       const [req] = await db.select().from(requirements).where(eq12(requirements.id, m.requirementId)).limit(1);
-      if (!prop2 || !req) {
+      if (!prop || !req) {
         console.log(`[MATCH-CLEANUP] Eliminando Match #${m.id} por propiedad o requerimiento inexistente.`);
         await db.delete(propertyMatches).where(eq12(propertyMatches.id, m.id));
         deletedCount++;
         continue;
       }
-      const newScore = calcularScoreMatch(req, prop2);
+      const newScore = calcularScoreMatch(req, prop);
       if (newScore < 85) {
         console.log(`[MATCH-CLEANUP] Eliminando Match #${m.id} por incompatibilidad (Nuevo Score: ${newScore}%, Score anterior: ${m.matchScore}%).`);
         await db.delete(propertyMatches).where(eq12(propertyMatches.id, m.id));
@@ -12049,7 +12018,7 @@ var leadsRouter = router({
     }
     const link = linkRecord[0];
     await db.update(referralLinks).set({ clicks: sql5`${referralLinks.clicks} + 1` }).where(eq9(referralLinks.id, link.id));
-    const prop2 = await db.select({
+    const prop = await db.select({
       id: properties.id,
       name: properties.name,
       price: properties.price,
@@ -12060,11 +12029,11 @@ var leadsRouter = router({
       // specifically NOT returning full location/latitude/longitude/matricula
       images: properties.images
     }).from(properties).where(eq9(properties.id, link.propertyId)).limit(1);
-    if (prop2.length === 0) {
+    if (prop.length === 0) {
       throw new TRPCError4({ code: "NOT_FOUND", message: "Inmueble no disponible." });
     }
     return {
-      property: prop2[0]
+      property: prop[0]
     };
   }),
   submitStealthLead: publicProcedure.input(z6.object({
@@ -12763,10 +12732,10 @@ async function startServer() {
       }
       const defaultAdminPhone = "573192919978";
       const rawPhone = phone || defaultAdminPhone;
-      const cleanPhone2 = typeof rawPhone === "string" ? rawPhone.replace(/\D/g, "") : String(rawPhone).replace(/\D/g, "");
+      const cleanPhone = typeof rawPhone === "string" ? rawPhone.replace(/\D/g, "") : String(rawPhone).replace(/\D/g, "");
       const matchBot = global.janiaMatchBotInstance;
       if (matchBot && matchBot.isReady) {
-        const targetPhone = cleanPhone2.endsWith("@s.whatsapp.net") ? cleanPhone2 : `${cleanPhone2}@s.whatsapp.net`;
+        const targetPhone = cleanPhone.endsWith("@s.whatsapp.net") ? cleanPhone : `${cleanPhone}@s.whatsapp.net`;
         console.log(`[NOTIFICACI\xD3N-API] Retransmitiendo mensaje a ${targetPhone} v\xEDa JanIA Match Bot (Baileys)...`);
         await matchBot.queuedSend(targetPhone, text2);
       }

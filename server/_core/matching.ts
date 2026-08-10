@@ -226,6 +226,7 @@ export interface StreetCarreraBoundaries {
 export interface PropertyAddressNumbers {
   street?: number;
   carrera?: number;
+  isAutoNorte?: boolean;
 }
 
 export function esFormatoCuadrante(texto: string): boolean {
@@ -1781,131 +1782,60 @@ export async function executeMatchEngine(propertyId: number | null, requirementI
 
   try {
     if (requirementId) {
-      for (const req of reqs) {
-
-        // ── FILTRO 1: Compatibilidad inteligente de tipo de negocio ─────────
-        const pBiz = (prop.transactionType || "").toLowerCase();
-        const rBiz = (req.tipoNegocioDeseado || "").toLowerCase();
-        const pAccepted: string[] = Array.isArray(prop.acceptedTransactionTypes)
-          ? (prop.acceptedTransactionTypes as string[]).map((t: string) => t.toLowerCase())
-          : [];
-        if (!pBiz || !rBiz || !checkTransactionCompatibility(rBiz, pBiz, pAccepted)) continue;
-
-        // ── FILTRO 2: Mismo tipo de inmueble ─────────────────────────────────
-        const pType = (prop.propertyType || "").toLowerCase();
-        const rType = (req.tipoInmuebleDeseado || "").toLowerCase();
-        if (!pType || !rType || pType !== rType) continue;
-
-        // ── FILTRO 3: Misma ciudad ────────────────────────────────────────────
-        const pCity = normalizarTextoGeografico(prop.city || prop.addressCity || "");
-        const rCity = normalizarTextoGeografico(req.ciudadDeseada || "");
-        if (!pCity || !rCity || pCity !== rCity) continue;
-
-        // ── FILTRO 4: Mismo barrio (zona) — coincidencia estricta ─────────────
-        const pZone = normalizarTextoGeografico(prop.zone || prop.addressNeighborhood || "");
-        const rZone = normalizarTextoGeografico(req.zonaDeseada || req.addressNeighborhood || "");
-        // Si el requerimiento especifica zona, DEBE coincidir exactamente o por inclusión
-        if (rZone && pZone) {
-          const zonaMatch = rZone === pZone || rZone.includes(pZone) || pZone.includes(rZone);
-          if (!zonaMatch) continue;
-        }
-
-        // ── FILTRO 5: Área (Metraje en Duro) — Debe ser >= al mínimo exigido ───
-        const pArea = parseFloat(String(prop.areaTotal || prop.areaPrivate || "0"));
-        const rAreaMin = parseFloat(String(req.areaMin || "0"));
-        if (pArea > 0 && rAreaMin > 0) {
-          const areaMinLimit = rAreaMin * 0.90;
-          if (pArea < areaMinLimit) continue;
-        }
-
-        // ── FILTRO 6: Precio dentro del presupuesto (incluida administración) ──
-        const price = parseFloat(String(prop.price || "0"));
-        const adminFee = parseFloat(String(prop.adminFee || "0"));
-        const totalCost = price + adminFee; // Para arriendo la admin suma al costo real
-        const budgetMax = parseFloat(String(req.presupuestoMax || "0"));
-        const budgetMin = parseFloat(String(req.presupuestoMin || "0"));
-        if (budgetMax > 0 && totalCost > budgetMax * 1.05) continue; // Tolerancia del 5%
-        if (budgetMin > 0 && price < budgetMin * 0.90) continue;
-
-        // ── FILTRO 7: Habitaciones ────────────────────────────────────────────
-        const pBedrooms = Number(prop.bedrooms || 0);
-        const rBedrooms = Number(req.habitacionesMin || 0);
-        // Si el requerimiento especifica habitaciones, el inmueble debe tenerlas
-        if (rBedrooms > 0 && pBedrooms > 0 && pBedrooms < rBedrooms) continue;
-
-        // ── CÁLCULO DE SCORE & EXPLICACIÓN ─────────────────────────────────────
-        const explanation = explicarMatch(req, prop);
-        const score = explanation.score;
-        if (score < 80) continue;
-
-        // ── FILTRO ANTI-DUPLICADOS POR TELÉFONO Y TEXTO ─────────────────────
-        const propPhone = cleanPhone(prop.idUsuarioWhatsapp || "");
-        const reqPhone = cleanPhone(req.idUsuarioWhatsapp || "");
-        
-        // Evitar múltiples matches si el mismo solicitante publicó el mismo requerimiento varias veces
-        const existingSamePhone = await db.select({ id: propertyMatches.id, reqRaw: requirements.rawText }).from(propertyMatches)
-          .innerJoin(requirements, eq(propertyMatches.requirementId, requirements.id))
-          .where(
-            and(
-              eq(propertyMatches.propertyId, prop.id),
-              sql`${requirements.idUsuarioWhatsapp} = ${req.idUsuarioWhatsapp ?? ""}`
-            )
-          );
-
-        const isDuplicateReqPost = existingSamePhone.some(m => 
-          m.reqRaw && req.rawText && (m.reqRaw.trim() === req.rawText.trim() || m.reqRaw.includes(req.rawText.substring(0, 50)))
-        );
-
-        if (isDuplicateReqPost) continue;
-
-        let matchId: number;
-        let isNewMatch = false;
-
-        const existing = await db.select().from(propertyMatches).where(
-          and(
-            eq(propertyMatches.propertyId, prop.id),
-            eq(propertyMatches.requirementId, req.id)
-          )
-        ).limit(1);
-
-        const ipcObj = calcularIPC(req, prop, score);
-        explanation.ipc = ipcObj;
-        if (existing.length > 0) {
-          matchId = existing[0].id;
-          await db.update(propertyMatches).set({
-            matchScore: score.toFixed(2),
-            matchExplanation: explanation,
-            ipc: ipcObj,
-            createdAt: new Date()
-          }).where(eq(propertyMatches.id, matchId));
-        } else {
-          isNewMatch = true;
-          const [newMatch] = await db.insert(propertyMatches).values({
-            propertyId: prop.id,
-            requirementId: req.id,
-            matchScore: score.toFixed(2),
-            matchReason: `VECY Core Engine: Match estricto ${score}%`,
-            matchExplanation: explanation,
-            ipc: ipcObj,
-            status: "suggested",
-            ownerConfirmed: false,
-            seekerConfirmed: false,
-          }).returning();
-          matchId = newMatch.id;
-          // Emitir evento desacoplado
-          vrifEvents.emit("match:created", matchId);
-          console.log(`[Matching-Engine] ✅ Match #${matchId} (${score}%) registrado y evento emitido.`);
-
-          // Enviar Briefing de Inteligencia a Administradores (Eduardo & Jani) solo si score >= 85%
-          if (score >= 85) {
-            const reportMsg = buildBigTechAdminReport(prop, req, score);
-            sendDirectAlertToAdmins(reportMsg).catch(aErr => console.error("[Matching-Engine] Error al notificar reporte a admin:", aErr));
-          }
+      console.log(`[MATCHING-RPC] ⚡ Ejecutando RPC Supabase para Requerimiento #${requirementId}...`);
+      const matchRows: any[] = await db.execute(
+        sql`SELECT * FROM match_properties_for_requirement(${requirementId}, 80.0)`
+      ) as any[];
+      let insertedCount = 0;
+      for (const m of matchRows) {
+        await db.insert(propertyMatches).values({
+          propertyId: m.property_id,
+          requirementId: requirementId,
+          matchScore: String(m.match_score),
+          matchReason: m.match_reason || `RPC v21.21 score=${m.match_score}`,
+          status: "active",
+          ownerConfirmed: false,
+          seekerConfirmed: false,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }).onConflictDoNothing();
+        insertedCount++;
+        if (Number(m.match_score) >= 85) {
+          sendDirectAlertToAdmins(
+            `🚀 *VECY INTEL: Match #${m.property_id}↔${requirementId} (${m.match_score}%)*\n🏠 Propiedad: ${m.property_name || m.property_id} (${m.property_city || ''})\n💰 Precio: $${Number(m.property_price || 0).toLocaleString('es-CO')}\n👉 Ver en panel: https://vecy-network.vercel.app/admin`
+          ).catch(() => {});
         }
       }
+      console.log(`[MATCHING-RPC] ✅ ${insertedCount} matches registrados en Supabase para Requerimiento #${requirementId}.`);
+    } else if (propertyId) {
+      console.log(`[MATCHING-RPC] ⚡ Ejecutando RPC Supabase para Propiedad #${propertyId}...`);
+      const matchRows: any[] = await db.execute(
+        sql`SELECT * FROM match_requirements_for_property(${propertyId}, 80.0)`
+      ) as any[];
+      let insertedCount = 0;
+      for (const m of matchRows) {
+        await db.insert(propertyMatches).values({
+          propertyId: propertyId,
+          requirementId: m.requirement_id,
+          matchScore: String(m.match_score),
+          matchReason: m.match_reason || `RPC v21.21 score=${m.match_score}`,
+          status: "active",
+          ownerConfirmed: false,
+          seekerConfirmed: false,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }).onConflictDoNothing();
+        insertedCount++;
+        if (Number(m.match_score) >= 85) {
+          sendDirectAlertToAdmins(
+            `🚀 *VECY INTEL: Match #${propertyId}↔${m.requirement_id} (${m.match_score}%)*\n👉 Ver en panel: https://vecy-network.vercel.app/admin`
+          ).catch(() => {});
+        }
+      }
+      console.log(`[MATCHING-RPC] ✅ ${insertedCount} matches registrados en Supabase para Propiedad #${propertyId}.`);
     }
   } catch (err: any) {
-    console.error("[Matching-Engine] Error running match engine:", err.message || err);
+    console.error(`[MATCHING-RPC-ERROR] Error ejecutando RPC:`, err?.message || err);
   }
 }
 
