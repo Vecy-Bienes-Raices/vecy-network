@@ -32,7 +32,7 @@ async function seed() {
     for (let i = 0; i < features.length; i += batchSize) {
       const batch = features.slice(i, i + batchSize);
 
-      const valueClauses = batch.map(feature => {
+      const valueClauses = batch.map((feature: any) => {
         const props = feature.properties || {};
         const scacodigo = props.SCACODIGO ? `'${props.SCACODIGO.replace(/'/g, "''")}'` : 'NULL';
         const scanombre = props.SCANOMBRE ? `'${props.SCANOMBRE.replace(/'/g, "''")}'` : "'SIN NOMBRE'";
