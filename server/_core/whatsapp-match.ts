@@ -1266,6 +1266,9 @@ export class JaniaMatchBot {
 
     try {
       const distinctListings = buffer.messages.filter(m => {
+        // ✅ FIX v21.21: Mensajes solo-imagen (sin caption/body) siempre pasan
+        // — JanIA los procesa visualmente con el modelo multimodal
+        if (m.imageBuffer && (!m.body || m.body.trim() === '')) return true;
         if (!m.body) return false;
         const clean = m.body.toLowerCase();
         const hasType = clean.includes("apto") || clean.includes("apartamento") || clean.includes("casa") || clean.includes("bodega") || clean.includes("oficina") || clean.includes("lote") || clean.includes("finca") || clean.includes("inmueble") || clean.includes("propiedad");
@@ -1286,9 +1289,14 @@ export class JaniaMatchBot {
         } catch (e) {}
 
         for (const bufferedMsg of buffer.messages) {
-          if (!bufferedMsg.body || bufferedMsg.body.trim() === '') continue;
+          // ✅ FIX: Permitir mensajes imagen-sola (body vacío pero imageBuffer presente)
+          const hasImageOnly = !!bufferedMsg.imageBuffer && (!bufferedMsg.body || bufferedMsg.body.trim() === '');
+          if (!bufferedMsg.body || bufferedMsg.body.trim() === '') {
+            if (!hasImageOnly) continue; // Solo omitir si NO tiene imagen
+          }
 
-          const urlMatch = bufferedMsg.body.match(/https?:\/\/[^\s]+/g);
+          const bodyText = bufferedMsg.body || '';
+          const urlMatch = bodyText.match(/https?:\/\/[^\s]+/g);
           const scrapedResults: any[] = [];
           if (urlMatch) {
             for (const url of urlMatch.slice(0, 3)) {
@@ -1301,10 +1309,10 @@ export class JaniaMatchBot {
             }
           }
 
-          await this.logToDb(resolvedSenderId, 'user', bufferedMsg.body);
+          await this.logToDb(resolvedSenderId, 'user', bodyText || '[imagen]');
 
           const result = await processWhatsAppMessage(
-            bufferedMsg.body,
+            bodyText,
             resolvedSenderId,
             userName,
             bufferedMsg.hasMedia,
@@ -1335,11 +1343,18 @@ export class JaniaMatchBot {
         return;
       }
 
-      const fullText = buffer.messages.map(m => m.body).join('\n\n');
+      const fullText = buffer.messages.map(m => m.body).filter(Boolean).join('\n\n');
       const hasMedia = buffer.messages.some(m => m.hasMedia);
       const imageMsg = buffer.messages.find(m => m.imageBuffer);
       const pdfMsg = buffer.messages.find(m => m.pdfBuffer);
       const isAudioPTT = buffer.messages.some(m => !!m.originalMsg?.message?.audioMessage);
+
+      // ✅ FIX v21.21: Si el mensaje es solo imagen (sin texto), igual debe procesarse
+      // imageMsg?.imageBuffer presente es suficiente para continuar aunque fullText esté vacío
+      if (!fullText.trim() && !imageMsg?.imageBuffer && !pdfMsg?.pdfBuffer && !isAudioPTT) {
+        console.log(`[JANIA-MATCH] Buffer vacío sin imagen/PDF/audio para ${resolvedSenderId}. Omitiendo.`);
+        return;
+      }
 
       // Scraping de enlaces si existen
       const urlMatch = fullText.match(/https?:\/\/[^\s]+/g);

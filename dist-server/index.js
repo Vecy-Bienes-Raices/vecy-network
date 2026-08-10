@@ -9215,6 +9215,7 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
         }
         try {
           const distinctListings = buffer.messages.filter((m) => {
+            if (m.imageBuffer && (!m.body || m.body.trim() === "")) return true;
             if (!m.body) return false;
             const clean = m.body.toLowerCase();
             const hasType = clean.includes("apto") || clean.includes("apartamento") || clean.includes("casa") || clean.includes("bodega") || clean.includes("oficina") || clean.includes("lote") || clean.includes("finca") || clean.includes("inmueble") || clean.includes("propiedad");
@@ -9233,8 +9234,12 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
             } catch (e) {
             }
             for (const bufferedMsg of buffer.messages) {
-              if (!bufferedMsg.body || bufferedMsg.body.trim() === "") continue;
-              const urlMatch2 = bufferedMsg.body.match(/https?:\/\/[^\s]+/g);
+              const hasImageOnly = !!bufferedMsg.imageBuffer && (!bufferedMsg.body || bufferedMsg.body.trim() === "");
+              if (!bufferedMsg.body || bufferedMsg.body.trim() === "") {
+                if (!hasImageOnly) continue;
+              }
+              const bodyText = bufferedMsg.body || "";
+              const urlMatch2 = bodyText.match(/https?:\/\/[^\s]+/g);
               const scrapedResults2 = [];
               if (urlMatch2) {
                 for (const url of urlMatch2.slice(0, 3)) {
@@ -9247,9 +9252,9 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
                   }
                 }
               }
-              await this.logToDb(resolvedSenderId, "user", bufferedMsg.body);
+              await this.logToDb(resolvedSenderId, "user", bodyText || "[imagen]");
               const result2 = await processWhatsAppMessage2(
-                bufferedMsg.body,
+                bodyText,
                 resolvedSenderId,
                 userName,
                 bufferedMsg.hasMedia,
@@ -9279,11 +9284,15 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
             }
             return;
           }
-          const fullText = buffer.messages.map((m) => m.body).join("\n\n");
+          const fullText = buffer.messages.map((m) => m.body).filter(Boolean).join("\n\n");
           const hasMedia = buffer.messages.some((m) => m.hasMedia);
           const imageMsg = buffer.messages.find((m) => m.imageBuffer);
           const pdfMsg = buffer.messages.find((m) => m.pdfBuffer);
           const isAudioPTT = buffer.messages.some((m) => !!m.originalMsg?.message?.audioMessage);
+          if (!fullText.trim() && !imageMsg?.imageBuffer && !pdfMsg?.pdfBuffer && !isAudioPTT) {
+            console.log(`[JANIA-MATCH] Buffer vac\xEDo sin imagen/PDF/audio para ${resolvedSenderId}. Omitiendo.`);
+            return;
+          }
           const urlMatch = fullText.match(/https?:\/\/[^\s]+/g);
           const scrapedResults = [];
           if (urlMatch) {
