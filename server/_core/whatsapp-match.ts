@@ -967,8 +967,14 @@ export class JaniaMatchBot {
         if (wantsVoice || isAudioPTT) {
           try {
             const media = await textToSpeechMedia(voiceToDeliver);
-            if (media) {
-              await this.queuedSend(chatId, media, { sendAudioAsVoice: true, quoted: msg });
+            if (media && media.data) {
+              const audioBuffer = Buffer.from(media.data, 'base64');
+              await this.queuedSend(chatId, {
+                audio: audioBuffer,
+                mimetype: media.mimetype || 'audio/ogg; codecs=opus',
+                ptt: true
+              }, { mentions: [senderId], quoted: msg });
+              console.log(`[JANIA-MATCH] ✓ Nota de voz enviada exitosamente como respuesta en grupo ${chatId}.`);
             } else {
               await this.queuedSend(chatId, textToDeliver, {
                 mentions: [senderId],
