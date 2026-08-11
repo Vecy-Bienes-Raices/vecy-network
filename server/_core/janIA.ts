@@ -3619,7 +3619,8 @@ export async function processConsultingMessage(
   imageBuffer?: string,
   pdfBuffer?: string,
   pdfMimeType?: string,
-  audioUrl?: string
+  audioUrl?: string,
+  msgTimestamp?: number
 ): Promise<JanIAResult> {
   try {
     const rawPhone = userId.split('@')[0];
@@ -3803,18 +3804,30 @@ export async function processConsultingMessage(
     const isFemale = lastChar === 'a' && !maleExceptions.includes(cleanFirstName.toLowerCase());
     const genderTerm = isFemale ? `estimada ${n}` : `estimado ${n}`;
 
+    // Detectar si la respuesta es tardía (más de 6 horas desde el mensaje original)
+    const nowMs = Date.now();
+    const msgMs = msgTimestamp ? (msgTimestamp * 1000) : nowMs;
+    const hoursLate = Math.floor((nowMs - msgMs) / 3600000);
+    const isLateReply = hoursLate >= 6;
+    const lateReplyNote = isLateReply
+      ? `\n- RESPUESTA TARDÍA DETECTADA: El mensaje del usuario fue enviado hace ${hoursLate} horas. DEBES obligatoriamente incluir una disculpa humana, cálida y espontánea al inicio o final de tu respuesta (elige una de forma natural, no mecánica). Ejemplos válidos: "Disculpa la demora, estuve en ajustes de mis motores. ¡Aquí estoy!", "Perdona la tardanza, estuve en mantenimiento técnico.", "Lamento que haya tardado tanto en responderte.". La disculpa debe sonar viva y genuina, nunca como una frase programada.`
+      : ``;
+
     const greetingInstruction = `\n\n[SISTEMA - INSTRUCCIÓN OBLIGATORIA DE SALUDO Y COMPORTAMIENTO]:
 - Hora actual Bogotá: ${hour}:00 (${timeGreeting}).
-- Genero detectado para ${n}: ${isFemale ? "Femenino (estimada)" : "Masculino (estimado)"}.
+- Género detectado para ${n}: ${isFemale ? "Femenino (estimada)" : "Masculino (estimado)"}.
 - Término de trato respetuoso: "${genderTerm}".
 - Ya has saludado a esta persona hoy: ${alreadyGreeted ? "SÍ" : "NO"}.
 - Tipo de conversación actual: GRUPO DE WHATSAPP ("VECY: SOPORTE LEGAL, TRIBUTARIO Y AVALÚOS").
 - REGLAS OBLIGATORIAS DE SALUDO:
+  * Rangos horarios exactos para el saludo: 00:00-11:59 = "Buenos días", 12:00-17:59 = "Buenas tardes", 18:00-23:59 = "Buenas noches".
   * Si "Ya has saludado al usuario hoy" es NO:
-    - Debes iniciar tu respuesta saludando cordial y profesionalmente con el saludo de hora exacto ("${timeGreeting}"), utilizando su trato respetuoso y nombre: ej. "${timeGreeting}, ${genderTerm}" o "${timeGreeting} ${genderTerm}, colega".
+    - Inicia con: "${timeGreeting}, ${genderTerm} 👋🏻" o "${timeGreeting}, ${n} 👋🏻".
   * Si "Ya has saludado al usuario hoy" es SÍ:
     - ¡PROHIBIDO SALUDAR! No uses "Hola", "${timeGreeting}", "Buenas", "Qué gusto", ni ninguna bienvenida.
-    - Integra su primer nombre "${n}" de forma conversacional y fluida dentro del cuerpo de la respuesta (ej. "Mira ${n}, ...", "Entiendo tu inquietud, ${n}, ...").`;
+    - Integra su nombre "${n}" de forma conversacional (ej. "Mira ${n}, ...", "Entiendo tu inquietud, ${n}, ...").
+- REGLA ESPEJO MODAL: ${isFromAudio ? 'El usuario envió AUDIO. DEBES responder en nota de voz (wantsVoice: true). Redacta voiceResponse limpio sin markdown/emojis, máx 450 caracteres.' : 'El usuario envió TEXTO. DEBES responder en texto (wantsVoice: false).'}
+${lateReplyNote}`;
 
     if (pdfBuffer) {
       messageToProcess += `\n[SISTEMA: DOCUMENTO PDF DETECTADO. Analiza el documento PDF adjunto con tus capacidades nativas para extraer todos los datos relevantes del predial, certificado de tradición, o contrato.]`;

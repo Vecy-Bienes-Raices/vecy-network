@@ -918,6 +918,7 @@ export class JaniaMatchBot {
 
       let result;
       if (chatId === this.buzonGroupId) { // Soporte Legal, Tributario y Avalúos
+        const msgTs = msg.messageTimestamp ? Number(msg.messageTimestamp) : undefined;
         result = await processConsultingMessage(
           bodyText,
           resolvedSenderId,
@@ -925,7 +926,8 @@ export class JaniaMatchBot {
           undefined,
           undefined,
           undefined,
-          isAudioPTT ? ('mock-audio:' + bodyText) : undefined
+          isAudioPTT ? ('mock-audio:' + bodyText) : undefined,
+          msgTs
         );
       } else if (chatId === this.circuloGroupId) { // Círculo Cero
         result = await processCirculoMessage(bodyText, resolvedSenderId, realName);

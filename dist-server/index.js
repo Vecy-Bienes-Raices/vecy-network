@@ -6990,7 +6990,7 @@ function obtenerCamposRequeridosYPreguntas(propertyType, isRequirement) {
   }
   return { requiredFields, fieldQuestions };
 }
-async function processConsultingMessage(text2, userId, userName, imageBuffer, pdfBuffer, pdfMimeType, audioUrl) {
+async function processConsultingMessage(text2, userId, userName, imageBuffer, pdfBuffer, pdfMimeType, audioUrl, msgTimestamp) {
   try {
     const rawPhone = userId.split("@")[0];
     const realName = await resolveRealName(userId, userName);
@@ -7216,20 +7216,29 @@ Analiza el contexto completo antes de clasificar. Debes responder estrictamente 
     const maleExceptions = ["luca", "andrea", "borja", "joshua", "bautista", "sasha", "el\xEDa", "elias"];
     const isFemale = lastChar === "a" && !maleExceptions.includes(cleanFirstName.toLowerCase());
     const genderTerm = isFemale ? `estimada ${n}` : `estimado ${n}`;
+    const nowMs = Date.now();
+    const msgMs = msgTimestamp ? msgTimestamp * 1e3 : nowMs;
+    const hoursLate = Math.floor((nowMs - msgMs) / 36e5);
+    const isLateReply = hoursLate >= 6;
+    const lateReplyNote = isLateReply ? `
+- RESPUESTA TARD\xCDA DETECTADA: El mensaje del usuario fue enviado hace ${hoursLate} horas. DEBES obligatoriamente incluir una disculpa humana, c\xE1lida y espont\xE1nea al inicio o final de tu respuesta (elige una de forma natural, no mec\xE1nica). Ejemplos v\xE1lidos: "Disculpa la demora, estuve en ajustes de mis motores. \xA1Aqu\xED estoy!", "Perdona la tardanza, estuve en mantenimiento t\xE9cnico.", "Lamento que haya tardado tanto en responderte.". La disculpa debe sonar viva y genuina, nunca como una frase programada.` : ``;
     const greetingInstruction = `
 
 [SISTEMA - INSTRUCCI\xD3N OBLIGATORIA DE SALUDO Y COMPORTAMIENTO]:
 - Hora actual Bogot\xE1: ${hour}:00 (${timeGreeting}).
-- Genero detectado para ${n}: ${isFemale ? "Femenino (estimada)" : "Masculino (estimado)"}.
+- G\xE9nero detectado para ${n}: ${isFemale ? "Femenino (estimada)" : "Masculino (estimado)"}.
 - T\xE9rmino de trato respetuoso: "${genderTerm}".
 - Ya has saludado a esta persona hoy: ${alreadyGreeted ? "S\xCD" : "NO"}.
 - Tipo de conversaci\xF3n actual: GRUPO DE WHATSAPP ("VECY: SOPORTE LEGAL, TRIBUTARIO Y AVAL\xDAOS").
 - REGLAS OBLIGATORIAS DE SALUDO:
+  * Rangos horarios exactos para el saludo: 00:00-11:59 = "Buenos d\xEDas", 12:00-17:59 = "Buenas tardes", 18:00-23:59 = "Buenas noches".
   * Si "Ya has saludado al usuario hoy" es NO:
-    - Debes iniciar tu respuesta saludando cordial y profesionalmente con el saludo de hora exacto ("${timeGreeting}"), utilizando su trato respetuoso y nombre: ej. "${timeGreeting}, ${genderTerm}" o "${timeGreeting} ${genderTerm}, colega".
+    - Inicia con: "${timeGreeting}, ${genderTerm} \u{1F44B}\u{1F3FB}" o "${timeGreeting}, ${n} \u{1F44B}\u{1F3FB}".
   * Si "Ya has saludado al usuario hoy" es S\xCD:
     - \xA1PROHIBIDO SALUDAR! No uses "Hola", "${timeGreeting}", "Buenas", "Qu\xE9 gusto", ni ninguna bienvenida.
-    - Integra su primer nombre "${n}" de forma conversacional y fluida dentro del cuerpo de la respuesta (ej. "Mira ${n}, ...", "Entiendo tu inquietud, ${n}, ...").`;
+    - Integra su nombre "${n}" de forma conversacional (ej. "Mira ${n}, ...", "Entiendo tu inquietud, ${n}, ...").
+- REGLA ESPEJO MODAL: ${isFromAudio ? "El usuario envi\xF3 AUDIO. DEBES responder en nota de voz (wantsVoice: true). Redacta voiceResponse limpio sin markdown/emojis, m\xE1x 450 caracteres." : "El usuario envi\xF3 TEXTO. DEBES responder en texto (wantsVoice: false)."}
+${lateReplyNote}`;
     if (pdfBuffer) {
       messageToProcess += `
 [SISTEMA: DOCUMENTO PDF DETECTADO. Analiza el documento PDF adjunto con tus capacidades nativas para extraer todos los datos relevantes del predial, certificado de tradici\xF3n, o contrato.]`;
@@ -8925,6 +8934,7 @@ Tambi\xE9n puedes consultarme directamente en mi chat privado con mi otra yo *Ja
           }
           let result;
           if (chatId === this.buzonGroupId) {
+            const msgTs = msg.messageTimestamp ? Number(msg.messageTimestamp) : void 0;
             result = await processConsultingMessage2(
               bodyText,
               resolvedSenderId,
@@ -8932,7 +8942,8 @@ Tambi\xE9n puedes consultarme directamente en mi chat privado con mi otra yo *Ja
               void 0,
               void 0,
               void 0,
-              isAudioPTT ? "mock-audio:" + bodyText : void 0
+              isAudioPTT ? "mock-audio:" + bodyText : void 0,
+              msgTs
             );
           } else if (chatId === this.circuloGroupId) {
             result = await processCirculoMessage2(bodyText, resolvedSenderId, realName);
