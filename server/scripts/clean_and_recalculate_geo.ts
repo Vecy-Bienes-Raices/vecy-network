@@ -30,7 +30,7 @@ async function cleanAndRecalculateGeo() {
   for (const p of allProps) {
     const tri = deducirGeografiaTripartita(p.zone || p.addressNeighborhood || undefined, p.city || p.addressCity || undefined, p.origenNombre || undefined, p.rawText || p.description || undefined);
     
-    let sanitizedPrice: string | null = p.price;
+    let sanitizedPrice: string = p.price || "0";
     if (p.price && isPhoneNum(p.price, p.rawText || undefined)) {
       // Re-extraer precio de venta de rawText si existía (ej. 49millones -> 490.000.000)
       const rawTextLower = (p.rawText || "").toLowerCase();
@@ -40,7 +40,7 @@ async function cleanAndRecalculateGeo() {
         const computed = rawNum < 100 ? rawNum * 10_000_000 : rawNum * 1_000_000;
         sanitizedPrice = String(computed);
       } else {
-        sanitizedPrice = null;
+        sanitizedPrice = "0";
       }
       console.log(`[Clean] Corregido precio-teléfono en Inmueble #${p.id}: ${p.price} -> ${sanitizedPrice}`);
     }
@@ -54,7 +54,7 @@ async function cleanAndRecalculateGeo() {
         addressLocality: tri.locality,
         addressNeighborhood: tri.neighborhood,
         zone: tri.neighborhood,
-        price: sanitizedPrice as any
+        price: sanitizedPrice
       }).where(eq(properties.id, p.id));
       updatedPropsCount++;
     }
@@ -69,10 +69,10 @@ async function cleanAndRecalculateGeo() {
   for (const r of allReqs) {
     const tri = deducirGeografiaTripartita(r.zonaDeseada || r.addressNeighborhood || undefined, r.ciudadDeseada || r.addressCity || undefined, undefined, r.rawText || undefined);
     
-    let sanitizedPresu: string | null = r.presupuestoMax;
+    let sanitizedPresu: string = r.presupuestoMax || "0";
     if (r.presupuestoMax && isPhoneNum(r.presupuestoMax, r.rawText || undefined)) {
-      sanitizedPresu = null;
-      console.log(`[Clean] Corregido presupuesto-teléfono en Requerimiento #${r.id}: ${r.presupuestoMax} -> null`);
+      sanitizedPresu = "0";
+      console.log(`[Clean] Corregido presupuesto-teléfono en Requerimiento #${r.id}: ${r.presupuestoMax} -> 0`);
     }
 
     const needsUpdate = r.addressCity !== tri.city || r.addressLocality !== tri.locality || r.addressNeighborhood !== tri.neighborhood || r.ciudadDeseada !== tri.city || r.presupuestoMax !== sanitizedPresu;
@@ -83,7 +83,7 @@ async function cleanAndRecalculateGeo() {
         addressLocality: tri.locality,
         addressNeighborhood: tri.neighborhood,
         zonaDeseada: tri.neighborhood,
-        presupuestoMax: sanitizedPresu as any
+        presupuestoMax: sanitizedPresu
       }).where(eq(requirements.id, r.id));
       updatedReqsCount++;
     }
