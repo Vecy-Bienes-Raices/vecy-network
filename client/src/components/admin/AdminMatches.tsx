@@ -1038,7 +1038,12 @@ export default function AdminMatches() {
       if (!match || !match.id) return false;
 
       const scoreNum = parseFloat(String(match.matchScore || "0"));
-      if (scoreNum < minVal) return false;
+      if (minScore === "80_94") {
+        if (scoreNum < 80 || scoreNum >= 95) return false;
+      } else {
+        const minVal = parseFloat(minScore);
+        if (scoreNum < minVal) return false;
+      }
 
       if (seenMatchIds.has(match.id)) return false;
       
@@ -1151,9 +1156,9 @@ export default function AdminMatches() {
             onChange={(e) => setMinScore(e.target.value)}
             className="bg-transparent border-none text-white focus:ring-0 text-xs font-semibold cursor-pointer outline-none"
           >
-            <option className="bg-[#0c0c0c]" value="80">⚡ 80% — Coincidencias Aproximadas (80%+)</option>
-            <option className="bg-[#0c0c0c]" value="90">✨ 90% — Coincidencias Más Precisas (90%+)</option>
-            <option className="bg-[#0c0c0c]" value="100">🎯 100% — Match Perfecto (100%)</option>
+            <option className="bg-[#0c0c0c]" value="80">⚡ Todos los Matches Validados (80% - 100%)</option>
+            <option className="bg-[#0c0c0c]" value="80_94">⚡ MATCH Aproximado (80% - 94%)</option>
+            <option className="bg-[#0c0c0c]" value="95">🎯 MATCH Perfecto (95% - 100%)</option>
           </select>
         </div>
       </div>
@@ -1184,10 +1189,8 @@ export default function AdminMatches() {
 
               const dotColor = score >= 95 
                 ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" 
-                : score >= 80 
-                  ? "bg-[#bf953f] shadow-[0_0_8px_rgba(191,149,63,0.5)]" 
-                  : "bg-cyan-500";
-              const scoreColor = score >= 95 ? "text-emerald-400" : score >= 80 ? "text-[#bf953f]" : "text-cyan-400";
+                : "bg-[#bf953f] shadow-[0_0_8px_rgba(191,149,63,0.5)]";
+              const scoreColor = score >= 95 ? "text-emerald-400" : "text-[#bf953f]";
 
               return (
                 <motion.div 
@@ -1206,24 +1209,13 @@ export default function AdminMatches() {
                       <span className={`h-2.5 w-2.5 rounded-full ${dotColor}`} />
                       <span className={`text-lg sm:text-xl font-extrabold tracking-tight ${scoreColor}`}>{score.toFixed(0)}% Match</span>
                       <span className="text-zinc-500 text-[11px] sm:text-xs">Afinidad registrada por IA</span>
-                      {score === 100 && (
-                        <span className="text-[9px] bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-2 py-0.5 rounded-full font-bold">
-                          ⭐ MATCH PERFECTO
+                      {score >= 95 ? (
+                        <span className="text-[9px] bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1">
+                          🎯 MATCH PERFECTO (95% - 100%)
                         </span>
-                      )}
-                      {score >= 95 && score < 100 && (
-                        <span className="text-[9px] bg-amber-500/10 border border-amber-500/30 text-amber-300 px-2 py-0.5 rounded-full font-bold">
-                          🥇 SOBRESALIENTE
-                        </span>
-                      )}
-                      {score >= 90 && score < 95 && (
-                        <span className="text-[9px] bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 px-2 py-0.5 rounded-full font-bold">
-                          🥈 MATCH ALTO
-                        </span>
-                      )}
-                      {score >= 85 && score < 90 && (
-                        <span className="text-[9px] bg-zinc-500/10 border border-zinc-500/30 text-zinc-300 px-2 py-0.5 rounded-full font-bold">
-                          🥉 COMPATIBLE VECY
+                      ) : (
+                        <span className="text-[9px] bg-[#bf953f]/10 border border-[#bf953f]/30 text-[#bf953f] px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1">
+                          ⚡ MATCH APROXIMADO (80% - 94%)
                         </span>
                       )}
                     </div>
