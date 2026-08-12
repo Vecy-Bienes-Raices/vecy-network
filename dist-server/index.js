@@ -1773,6 +1773,166 @@ var init_geocoding = __esm({
   }
 });
 
+// server/_core/geo-lookup.ts
+import fs from "fs";
+import path from "path";
+function loadSectors(city = "bogota") {
+  if (sectorData) return sectorData.sectors;
+  const filePath = path.resolve(process.cwd(), "server", "data", `${city}_sectores.json`);
+  if (!fs.existsSync(filePath)) {
+    console.warn(`[GeoLookup] Archivo no encontrado: ${filePath}`);
+    return [];
+  }
+  const raw = fs.readFileSync(filePath, "utf-8");
+  sectorData = JSON.parse(raw);
+  console.log(`[GeoLookup] Cargados ${sectorData.sectors.length} sectores catastrales de ${city}`);
+  return sectorData.sectors;
+}
+function interpolateCra7(calle) {
+  const anchors = CRA7_ANCHORS;
+  for (let i = 0; i < anchors.length - 1; i++) {
+    const a = anchors[i];
+    const b = anchors[i + 1];
+    if (calle >= a.calle && calle <= b.calle) {
+      const t2 = (calle - a.calle) / (b.calle - a.calle);
+      return {
+        lat: a.lat + t2 * (b.lat - a.lat),
+        lng: a.lng + t2 * (b.lng - a.lng)
+      };
+    }
+  }
+  if (calle < anchors[0].calle) return { lat: anchors[0].lat, lng: anchors[0].lng };
+  const last = anchors[anchors.length - 1];
+  const prev = anchors[anchors.length - 2];
+  const slope_lat = (last.lat - prev.lat) / (last.calle - prev.calle);
+  const slope_lng = (last.lng - prev.lng) / (last.calle - prev.calle);
+  return {
+    lat: last.lat + slope_lat * (calle - last.calle),
+    lng: last.lng + slope_lng * (calle - last.calle)
+  };
+}
+function calleCarreraToLatLng(calle, carrera) {
+  const base = interpolateCra7(calle);
+  const deltaCra = carrera - 7;
+  const deltaLng = -deltaCra * LNG_PER_CRA;
+  const deltaLat = -deltaCra * LAT_PER_CRA;
+  return {
+    lat: base.lat + deltaLat,
+    lng: base.lng + deltaLng
+  };
+}
+function buildPerimeterPolygon(p) {
+  const sw = calleCarreraToLatLng(p.calleSur, p.craOccidente);
+  const nw = calleCarreraToLatLng(p.calleNorte, p.craOccidente);
+  const ne = calleCarreraToLatLng(p.calleNorte, p.craOriente);
+  const se = calleCarreraToLatLng(p.calleSur, p.craOriente);
+  return [sw, nw, ne, se];
+}
+function pointInPolygon(point, ring) {
+  const { lat, lng } = point;
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const xi = ring[i][0], yi = ring[i][1];
+    const xj = ring[j][0], yj = ring[j][1];
+    const intersect = yi > lat !== yj > lat && lng < (xj - xi) * (lat - yi) / (yj - yi) + xi;
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+function sectorIntersectsPerimeter(sector, perimeterPoly, bbox) {
+  const [sMinLng, sMinLat, sMaxLng, sMaxLat] = sector.bbox;
+  if (sMaxLng < bbox.minLng || sMinLng > bbox.maxLng) return false;
+  if (sMaxLat < bbox.minLat || sMinLat > bbox.maxLat) return false;
+  const centroidLat = (sMinLat + sMaxLat) / 2;
+  const centroidLng = (sMinLng + sMaxLng) / 2;
+  if (pointInPolygon({ lat: centroidLat, lng: centroidLng }, perimeterPoly.map((p) => [p.lng, p.lat]))) {
+    return true;
+  }
+  for (const ring of sector.rings) {
+    const step = Math.max(1, Math.floor(ring.length / 8));
+    for (let i = 0; i < ring.length; i += step) {
+      const [lng, lat] = ring[i];
+      if (pointInPolygon({ lat, lng }, perimeterPoly.map((p) => [p.lng, p.lat]))) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+function toTitleCase(name) {
+  if (TILDE_CORRECTIONS[name]) return TILDE_CORRECTIONS[name];
+  const minorWords = /* @__PURE__ */ new Set(["de", "del", "la", "el", "los", "las", "y", "en", "a", "al"]);
+  return name.toLowerCase().split(" ").map((word, i) => i === 0 || !minorWords.has(word) ? word.charAt(0).toUpperCase() + word.slice(1) : word).join(" ");
+}
+function lookupBarriosByPerimeter(perimeter) {
+  const ciudad = perimeter.ciudad?.toLowerCase() || "bogota";
+  const sectors = loadSectors(ciudad);
+  if (sectors.length === 0) {
+    return { barrios: [], sectoresCatastrales: [], totalSectores: 0, ciudad, fuente: "N/A" };
+  }
+  const perimeterPoly = buildPerimeterPolygon(perimeter);
+  const lats = perimeterPoly.map((p) => p.lat);
+  const lngs = perimeterPoly.map((p) => p.lng);
+  const bbox = {
+    minLat: Math.min(...lats),
+    maxLat: Math.max(...lats),
+    minLng: Math.min(...lngs),
+    maxLng: Math.max(...lngs)
+  };
+  const matched = sectors.filter((s) => sectorIntersectsPerimeter(s, perimeterPoly, bbox));
+  const uniqueNames = /* @__PURE__ */ new Map();
+  for (const s of matched) {
+    if (!uniqueNames.has(s.nombre)) {
+      uniqueNames.set(s.nombre, toTitleCase(s.nombre));
+    }
+  }
+  const sectoresCatastrales = [...uniqueNames.keys()].sort();
+  const barrios = [...uniqueNames.values()].sort();
+  return {
+    barrios,
+    sectoresCatastrales,
+    totalSectores: matched.length,
+    ciudad,
+    fuente: "IDECA-CadastroBogota-2026-06"
+  };
+}
+var sectorData, CRA7_ANCHORS, LNG_PER_CRA, LAT_PER_CRA, TILDE_CORRECTIONS;
+var init_geo_lookup = __esm({
+  "server/_core/geo-lookup.ts"() {
+    "use strict";
+    sectorData = null;
+    CRA7_ANCHORS = [
+      { calle: 6, lat: 4.5974, lng: -74.0762 },
+      { calle: 26, lat: 4.6156, lng: -74.0665 },
+      { calle: 45, lat: 4.6326, lng: -74.0631 },
+      { calle: 57, lat: 4.6432, lng: -74.0606 },
+      { calle: 63, lat: 4.6487, lng: -74.0592 },
+      { calle: 72, lat: 4.6567, lng: -74.0559 },
+      { calle: 85, lat: 4.6688, lng: -74.0524 },
+      { calle: 100, lat: 4.6843, lng: -74.0495 },
+      { calle: 116, lat: 4.6986, lng: -74.0461 },
+      { calle: 127, lat: 4.7085, lng: -74.0438 },
+      { calle: 140, lat: 4.72, lng: -74.0409 },
+      { calle: 170, lat: 4.7466, lng: -74.0344 }
+    ];
+    LNG_PER_CRA = 895e-6;
+    LAT_PER_CRA = 5e-5;
+    TILDE_CORRECTIONS = {
+      "EMAUS": "Ema\xFAs",
+      "SANTA BARBARA": "Santa B\xE1rbara",
+      "RINCON DEL CHICO": "Rinc\xF3n del Chic\xF3",
+      "CEDRITOS DEL SUR": "Cedritos del Sur",
+      "CHICO NORTE": "Chic\xF3 Norte",
+      "CHICO NORTE II SECTOR": "Chic\xF3 Norte II Sector",
+      "CHICO NORTE III SECTOR": "Chic\xF3 Norte III Sector",
+      "CHICO SUR": "Chic\xF3 Sur",
+      "EL CHICO": "El Chic\xF3",
+      "CHICO LAGO": "Chic\xF3 Lago",
+      "LOS ROSALES": "Los Rosales"
+    };
+  }
+});
+
 // server/_core/geography.ts
 import { sql } from "drizzle-orm";
 function normalizarTextoGeografico(texto) {
@@ -2202,6 +2362,45 @@ async function resolverCuadranteVial(texto) {
   } catch (err) {
     console.error("[Geocoding-Cuadrante-Spatial] Error consultando barrios_bogota_geojson:", err);
   }
+  try {
+    let craMinNum = 1;
+    let craMaxNum = 30;
+    if (craMatch) {
+      const k1 = parseInt(craMatch[1]);
+      const k2 = parseInt(craMatch[2]);
+      if (!isNaN(k1) && !isNaN(k2)) {
+        craMinNum = Math.min(k1, k2);
+        craMaxNum = Math.max(k1, k2);
+      }
+    } else if (isArribaAuto) {
+      craMinNum = 1;
+      craMaxNum = 45;
+    } else if (isAbajoAuto) {
+      craMinNum = 45;
+      craMaxNum = 120;
+    } else if (isArriba7) {
+      craMinNum = 1;
+      craMaxNum = 7;
+    }
+    const idecaResult = lookupBarriosByPerimeter({
+      calleNorte: maxSt,
+      calleSur: minSt,
+      craOriente: craMinNum,
+      craOccidente: craMaxNum,
+      ciudad: "bogota"
+    });
+    if (idecaResult.barrios && idecaResult.barrios.length > 0) {
+      console.log(`[Geocoding-Cuadrante] Intersecci\xF3n local IDECA (${idecaResult.barrios.length} sectores catastrales) resuelto \u2794 "${idecaResult.barrios.slice(0, 10).join(", ")}"`);
+      return {
+        resuelto: true,
+        barrios: idecaResult.barrios,
+        descripcion: `Intersecci\xF3n local IDECA (${idecaResult.barrios.length} sectores catastrales)`,
+        confianza: "alta_geometria_ideca_local"
+      };
+    }
+  } catch (idecaErr) {
+    console.warn("[Geocoding-Cuadrante-IDECA] Error en motor local IDECA:", idecaErr?.message || idecaErr);
+  }
   let candidateBarrios = [];
   if (minSt >= 1 && maxSt <= 34) {
     candidateBarrios = ["La Candelaria", "Centro", "Las Nieves", "La Macarena", "Teusaquillo"];
@@ -2229,6 +2428,216 @@ async function resolverCuadranteVial(texto) {
     confianza: "aproximada"
   };
 }
+function deducirGeografiaTripartita(inputZone, inputCity, groupName, rawText) {
+  const normZone = inputZone ? normalizarTextoGeografico(inputZone) : "";
+  const normCity = inputCity ? normalizarTextoGeografico(inputCity) : "";
+  const normGroup = groupName ? normalizarTextoGeografico(groupName) : "";
+  const normText = rawText ? normalizarTextoGeografico(rawText) : "";
+  const combined = `${normZone} ${normCity} ${normGroup} ${normText}`;
+  const caliSectors = [
+    "alamos",
+    "brisas de los alamos",
+    "menga",
+    "chipichape",
+    "la flora",
+    "santa monica",
+    "ciudad jardin",
+    "valle del lili",
+    "san fernando",
+    "granada",
+    "el penon",
+    "juanambu",
+    "pance",
+    "bochalema",
+    "caney",
+    "el caney",
+    "tequendama",
+    "normandie",
+    "imbanaco",
+    "cali"
+  ];
+  const isCali = normCity === "cali" || normGroup.includes("cali") || caliSectors.some((s) => combined.includes(s));
+  if (isCali) {
+    let neighborhood2 = "Cali";
+    let locality2 = "Cali Urbano";
+    if (combined.includes("alamos") || combined.includes("brisas de los alamos")) {
+      neighborhood2 = "Brisas de los \xC1lamos";
+      locality2 = "Comuna 2 (Norte)";
+    } else if (combined.includes("menga") || combined.includes("chipichape") || combined.includes("la flora")) {
+      neighborhood2 = combined.includes("menga") ? "Menga" : combined.includes("chipichape") ? "Chipichape" : "La Flora";
+      locality2 = "Comuna 2 (Norte)";
+    } else if (combined.includes("ciudad jardin")) {
+      neighborhood2 = "Ciudad Jard\xEDn";
+      locality2 = "Comuna 22 (Sur)";
+    } else if (combined.includes("valle del lili") || combined.includes("lili")) {
+      neighborhood2 = "Valle del Lili";
+      locality2 = "Comuna 17 (Sur)";
+    } else if (combined.includes("san fernando") || combined.includes("tequendama") || combined.includes("imbanaco")) {
+      neighborhood2 = "San Fernando";
+      locality2 = "Comuna 19";
+    } else if (combined.includes("granada") || combined.includes("penon") || combined.includes("juanambu")) {
+      neighborhood2 = combined.includes("granada") ? "Granada" : combined.includes("juanambu") ? "Juanamb\xFA" : "El Pe\xF1\xF3n";
+      locality2 = "Comuna 3 (Oeste)";
+    } else if (inputZone && inputZone.trim() !== "" && inputZone.toLowerCase() !== "na") {
+      neighborhood2 = inputZone.trim();
+    }
+    return {
+      neighborhood: neighborhood2,
+      locality: locality2,
+      city: "Cali",
+      department: "Valle del Cauca",
+      confidence: "alta_deduccion_cali"
+    };
+  }
+  const medellinSectors = [
+    "poblado",
+    "el poblado",
+    "laureles",
+    "estadio",
+    "belen",
+    "envigado",
+    "sabaneta",
+    "itagui",
+    "rionegro",
+    "la estrella",
+    "copacabana",
+    "girardota",
+    "medellin"
+  ];
+  const isMedellin = normCity === "medellin" || normGroup.includes("medellin") || medellinSectors.some((s) => combined.includes(s));
+  if (isMedellin) {
+    let neighborhood2 = "Medell\xEDn";
+    let locality2 = "Valle de Aburr\xE1";
+    let city = "Medell\xEDn";
+    if (combined.includes("poblado")) {
+      neighborhood2 = "El Poblado";
+      locality2 = "Comuna 14 (El Poblado)";
+    } else if (combined.includes("laureles") || combined.includes("estadio")) {
+      neighborhood2 = "Laureles";
+      locality2 = "Comuna 11 (Laureles-Estadio)";
+    } else if (combined.includes("belen")) {
+      neighborhood2 = "Bel\xE9n";
+      locality2 = "Comuna 16 (Bel\xE9n)";
+    } else if (combined.includes("envigado")) {
+      neighborhood2 = "Envigado";
+      locality2 = "Envigado";
+      city = "Envigado";
+    } else if (combined.includes("sabaneta")) {
+      neighborhood2 = "Sabaneta";
+      locality2 = "Sabaneta";
+      city = "Sabaneta";
+    } else if (combined.includes("rionegro")) {
+      neighborhood2 = "Rionegro";
+      locality2 = "Rionegro";
+      city = "Rionegro";
+    } else if (inputZone && inputZone.trim() !== "" && inputZone.toLowerCase() !== "na") {
+      neighborhood2 = inputZone.trim();
+    }
+    return {
+      neighborhood: neighborhood2,
+      locality: locality2,
+      city,
+      department: "Antioquia",
+      confidence: "alta_deduccion_medellin"
+    };
+  }
+  const barranquillaSectors = [
+    "alto prado",
+    "el prado",
+    "riomar",
+    "villa santos",
+    "buenavista",
+    "puerto colombia",
+    "barranquilla"
+  ];
+  const isBarranquilla = normCity === "barranquilla" || normGroup.includes("barranquilla") || barranquillaSectors.some((s) => combined.includes(s));
+  if (isBarranquilla) {
+    let neighborhood2 = "Barranquilla";
+    let locality2 = "Norte-Centro Hist\xF3rico / Riomar";
+    let city = "Barranquilla";
+    if (combined.includes("alto prado") || combined.includes("el prado")) {
+      neighborhood2 = "Alto Prado";
+    } else if (combined.includes("riomar") || combined.includes("villa santos") || combined.includes("buenavista")) {
+      neighborhood2 = combined.includes("villa santos") ? "Villa Santos" : combined.includes("buenavista") ? "Buenavista" : "Riomar";
+    } else if (combined.includes("puerto colombia")) {
+      neighborhood2 = "Puerto Colombia";
+      city = "Puerto Colombia";
+    } else if (inputZone && inputZone.trim() !== "" && inputZone.toLowerCase() !== "na") {
+      neighborhood2 = inputZone.trim();
+    }
+    return {
+      neighborhood: neighborhood2,
+      locality: locality2,
+      city,
+      department: "Atl\xE1ntico",
+      confidence: "alta_deduccion_barranquilla"
+    };
+  }
+  const sabanaSectors = {
+    "chia": "Ch\xEDa",
+    "cajica": "Cajic\xE1",
+    "sopo": "Sop\xF3",
+    "cota": "Cota",
+    "la calera": "La Calera",
+    "zipaquira": "Zipaquir\xE1",
+    "funza": "Funza",
+    "mosquera": "Mosquera",
+    "madrid": "Madrid",
+    "facatativa": "Facatativ\xE1",
+    "fusagasuga": "Fusagasug\xE1",
+    "girardot": "Girardot"
+  };
+  for (const [sKey, sName] of Object.entries(sabanaSectors)) {
+    if (combined.includes(sKey)) {
+      return {
+        neighborhood: sName,
+        locality: sName,
+        city: sName,
+        department: "Cundinamarca",
+        confidence: "alta_deduccion_sabana"
+      };
+    }
+  }
+  const isGenericZone = !inputZone || inputZone.trim() === "" || normalizarTextoGeografico(inputZone).trim() === "na" || normalizarTextoGeografico(inputZone).includes("bogota") || normalizarTextoGeografico(inputZone).includes("bogot\xE1");
+  let neighborhood = isGenericZone ? "" : inputZone?.trim() || "";
+  let locality = "";
+  let foundBarrio = false;
+  for (const [, info] of Object.entries(DICCIONARIO_BOGOTA)) {
+    for (const b of info.barrios) {
+      const normB = normalizarTextoGeografico(b);
+      if (!isGenericZone && normB === normZone) {
+        neighborhood = b;
+        locality = info.localidad;
+        foundBarrio = true;
+        break;
+      }
+      if (!isGenericZone && normZone.includes(normB) && normB.length > 4) {
+        neighborhood = b;
+        locality = info.localidad;
+        foundBarrio = true;
+        break;
+      }
+      if (combined.includes(normB) && normB.length > 4) {
+        neighborhood = b;
+        locality = info.localidad;
+        foundBarrio = true;
+        break;
+      }
+    }
+    if (foundBarrio) break;
+  }
+  if (!foundBarrio) {
+    neighborhood = isGenericZone ? "Bogot\xE1" : inputZone?.trim() || "Bogot\xE1";
+    locality = "Bogot\xE1 Urbano";
+  }
+  return {
+    neighborhood,
+    locality: locality || "Bogot\xE1 Urbano",
+    city: "Bogot\xE1, D.C.",
+    department: "Cundinamarca / D.C.",
+    confidence: foundBarrio ? "alta_deduccion_bogota" : "deduccion_generica_bogota"
+  };
+}
 var DICCIONARIO_BOGOTA, MUNICIPIOS_CERCANOS, MAPA_BARRIOS, MAPA_LOCALIDADES;
 var init_geography = __esm({
   "server/_core/geography.ts"() {
@@ -2237,6 +2646,7 @@ var init_geography = __esm({
     init_geocoding();
     init_db();
     init_schema();
+    init_geo_lookup();
     DICCIONARIO_BOGOTA = {
       "usaquen": {
         localidad: "Usaqu\xE9n",
@@ -2262,7 +2672,28 @@ var init_geography = __esm({
           "La Cer\xE1mica",
           "La Uni\xF3n",
           "Los Arrayanes",
-          "Bosque Medina"
+          "Bosque Medina",
+          // Usaquén estrato alto norte
+          "La Calleja",
+          "Calleja Baja",
+          "Calleja Alta",
+          "Bosque De Pinos",
+          "Los Andes",
+          "Bosque Medina",
+          "Santa Ana Occidental",
+          "Santa Ana Oriental",
+          "El Polo",
+          "Club El Nogal",
+          "Antiguo Country",
+          "Bella Suiza",
+          "Colina Campestre",
+          "Los Alcaparros",
+          "La Carolina",
+          "Mazur\xE9n",
+          "San Antonio Norte",
+          "Rincon Del Chico",
+          "Virrey",
+          "Gratamira M\xF3nica"
         ]
       },
       "chapinero": {
@@ -2281,8 +2712,15 @@ var init_geography = __esm({
           "El Castillo",
           "San Luis",
           "Juan XXIII",
-          // Barrio El Refugio — franja norte de Chapinero, Calle 85-90 entre Cr 5 y 11
-          "El Refugio"
+          "El Refugio",
+          "El Nogal",
+          "El Bosque",
+          "Granada",
+          "Porci\xFAncula",
+          "Lago Gait\xE1n",
+          "Espartillal",
+          "La Salle",
+          "Marly"
         ]
       },
       "suba": {
@@ -2318,7 +2756,16 @@ var init_geography = __esm({
           "Mirandela",
           "San Jos\xE9 del Prado",
           "El Cerezo",
-          "La Isabela"
+          "La Isabela",
+          // Suba estrato alto - Niza / Gratamira
+          "Gratamira",
+          "Gratamira M\xF3nica",
+          "Bella Suiza",
+          "Cerros de Suba",
+          "Niza Suba",
+          "Reservado de Niza",
+          "El Country",
+          "Pasadena"
         ]
       },
       "barrios unidos": {
@@ -2823,7 +3270,7 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
   const isReqGeneric = !reqZone || GENERIC_CARDINAL_TERMS.has(reqZone.toLowerCase().trim());
   const isPropGeneric = !propZone || GENERIC_CARDINAL_TERMS.has(propZone.toLowerCase().trim());
   if (isReqGeneric || isPropGeneric) {
-    const hasStreetBoundaryMatch = propNumbers.street && reqBoundaries.minStreet && propNumbers.street >= reqBoundaries.minStreet && propNumbers.street <= reqBoundaries.maxStreet || propNumbers.carrera && reqBoundaries.minCarrera && propNumbers.carrera >= reqBoundaries.minCarrera && propNumbers.carrera <= reqBoundaries.maxCarrera;
+    const hasStreetBoundaryMatch = propNumbers.street && reqBoundaries.minStreet !== void 0 && reqBoundaries.maxStreet !== void 0 && propNumbers.street >= reqBoundaries.minStreet && propNumbers.street <= reqBoundaries.maxStreet || propNumbers.carrera && reqBoundaries.minCarrera !== void 0 && reqBoundaries.maxCarrera !== void 0 && propNumbers.carrera >= reqBoundaries.minCarrera && propNumbers.carrera <= reqBoundaries.maxCarrera;
     if (!hasStreetBoundaryMatch) {
       console.log(`[Matching-Guard] Bloqueo 0%: Ubicaci\xF3n gen\xE9rica o no especificada en barrio/vereda real ('${reqZoneRaw}' \u2194 '${propZoneRaw}').`);
       return { matches: false, score: 0 };
@@ -3065,6 +3512,23 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
   else if (reqExtracted.length > 0) reqPhrases = Array.from(/* @__PURE__ */ new Set([...reqPhrases, ...reqExtracted]));
   if (propPhrases.length === 0 && propExtracted.length > 0) propPhrases = propExtracted;
   else if (propExtracted.length > 0) propPhrases = Array.from(/* @__PURE__ */ new Set([...propPhrases, ...propExtracted]));
+  if (reqBoundaries.minStreet && reqBoundaries.maxStreet) {
+    try {
+      const idecaRes = lookupBarriosByPerimeter({
+        calleNorte: reqBoundaries.maxStreet,
+        calleSur: reqBoundaries.minStreet,
+        craOriente: reqBoundaries.minCarrera || 1,
+        craOccidente: reqBoundaries.maxCarrera || 30,
+        ciudad: "bogota"
+      });
+      if (idecaRes.barrios && idecaRes.barrios.length > 0) {
+        const idecaNorm = idecaRes.barrios.map((b) => normalizarTextoGeografico(b));
+        reqPhrases = Array.from(/* @__PURE__ */ new Set([...reqPhrases, ...idecaNorm]));
+      }
+    } catch (idecaErr) {
+      console.warn("[Matching-IDECA] Error resolviendo per\xEDmetro en matching:", idecaErr);
+    }
+  }
   const reqExpanded = reqPhrases.flatMap(expandirZona);
   const propExpanded = propPhrases.flatMap(expandirZona);
   const palabrasGenericas = /* @__PURE__ */ new Set([
@@ -3227,11 +3691,57 @@ function explicarMatch(requirement, property) {
   const blockers = [];
   const positives = [];
   const negatives = [];
-  const reqText = (requirement.rawText || requirement.name || "").trim().toUpperCase();
-  const propText = (property.rawText || property.name || "").trim().toUpperCase();
-  if (reqText === "NA" || reqText === "" || propText === "NA" || propText === "") {
-    blockers.push("Registro con informaci\xF3n insuficiente ('NA' o campos sin especificar).");
+  const isNA = (v) => !v || v.trim() === "" || v.trim().toUpperCase() === "NA" || v.trim().toUpperCase() === "N/E" || v.trim().toUpperCase() === "N/A" || v.trim() === "-";
+  const propTypeHard = property.propertyType || property.tipoInmueble || "";
+  const reqTypeHard = requirement.tipoInmuebleDeseado || requirement.propertyType || "";
+  if (isNA(propTypeHard)) {
+    blockers.push("\u26D4 Inmueble Incompleto: Tipo de Inmueble no especificado (N/E). No puede participar en Matches.");
     return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  if (isNA(reqTypeHard)) {
+    blockers.push("\u26D4 Requerimiento Incompleto: Tipo de Inmueble deseado no especificado (N/E). No puede participar en Matches.");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  const propBizHard = property.transactionType || "";
+  const reqBizHard = requirement.tipoNegocioDeseado || requirement.transactionType || "";
+  if (isNA(propBizHard)) {
+    blockers.push("\u26D4 Inmueble Incompleto: Tipo de Negocio no especificado (N/E). No puede participar en Matches.");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  if (isNA(reqBizHard)) {
+    blockers.push("\u26D4 Requerimiento Incompleto: Tipo de Negocio deseado no especificado (N/E). No puede participar en Matches.");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  const propCityHard = property.addressCity || property.city || "";
+  const reqCityHard = requirement.addressCity || requirement.ciudadDeseada || "";
+  if (isNA(propCityHard)) {
+    blockers.push("\u26D4 Inmueble Incompleto: Ciudad/Municipio no especificado (N/E). No puede participar en Matches.");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  if (isNA(reqCityHard)) {
+    blockers.push("\u26D4 Requerimiento Incompleto: Ciudad/Municipio deseado no especificado (N/E). No puede participar en Matches.");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  const propBarrioHard = property.zone || property.addressNeighborhood || "";
+  const reqBarrioHard = requirement.zonaDeseada || requirement.addressNeighborhood || "";
+  if (isNA(propBarrioHard)) {
+    blockers.push("\u26D4 Inmueble Incompleto: Barrio/Vereda no especificado (N/E). No puede participar en Matches.");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  if (isNA(reqBarrioHard)) {
+    blockers.push("\u26D4 Requerimiento Incompleto: Barrio/Vereda deseado no especificado (N/E). No puede participar en Matches.");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  const propLocalidadHard = property.addressLocality || "";
+  const reqLocalidadHard = requirement.addressLocality || "";
+  const bothLocalidadKnown = !isNA(propLocalidadHard) && !isNA(reqLocalidadHard);
+  if (bothLocalidadKnown) {
+    const normPropLoc = normalizarTextoGeografico(propLocalidadHard);
+    const normReqLoc = normalizarTextoGeografico(reqLocalidadHard);
+    if (normPropLoc !== normReqLoc && !normPropLoc.includes(normReqLoc) && !normReqLoc.includes(normPropLoc)) {
+      blockers.push(`\u26D4 Localidad/Comuna Incompatible: buscada "${reqLocalidadHard}", ofrecida "${propLocalidadHard}". MATCH IMPOSIBLE.`);
+      return buildExplanationResult(0, blockers, positives, negatives);
+    }
   }
   const reqRawString = (requirement.rawText || requirement.name || "").trim();
   const reqTextLow = reqRawString.toLowerCase();
@@ -3490,13 +4000,36 @@ function explicarMatch(requirement, property) {
     if (CIUDADES_CO.some((c) => n2.includes(c) || n2 === c)) return n2;
     return n1 || n2 || "bogota";
   };
-  const reqCity = resolveCityField(requirement.ciudadDeseada || "", requirement.city || "");
+  const reqCity = resolveCityField(requirement.ciudadDeseada || requirement.addressCity || "", requirement.city || "");
   const propCity = resolveCityField(property.addressCity || "", property.city || "");
-  if (reqCity && propCity && reqCity !== propCity && reqCity !== "bogota" && propCity !== "bogota") {
-    blockers.push(`Incompatibilidad de ciudad: deseada ${reqCity}, ofrecida ${propCity}`);
-    return buildExplanationResult(0, blockers, positives, negatives);
+  const reqCityNorm = normalizarTextoGeografico(reqCity);
+  const propCityNorm = normalizarTextoGeografico(propCity);
+  const bothCitiesKnown = reqCityNorm && propCityNorm && reqCityNorm !== "colombia";
+  if (bothCitiesKnown && reqCityNorm !== propCityNorm) {
+    const sameCity = reqCityNorm.includes(propCityNorm) || propCityNorm.includes(reqCityNorm);
+    if (!sameCity) {
+      blockers.push(`\u26D4 Ciudad Incompatible: buscada "${reqCity}", ofrecida "${propCity}". MATCH IMPOSIBLE.`);
+      return buildExplanationResult(0, blockers, positives, negatives);
+    }
   }
   positives.push(`Ciudad coincide: ${reqCity}`);
+  const SUB_QUALS_MATCHING = ["alta", "alto", "baja", "bajo", "norte", "sur", "oriental", "occidental", "reservado"];
+  const reqBarrioNorm = normalizarTextoGeografico(requirement.zonaDeseada || requirement.addressNeighborhood || "");
+  const propBarrioNorm = normalizarTextoGeografico(property.zone || property.addressNeighborhood || "");
+  const GENERIC_ZONES_SET = /* @__PURE__ */ new Set(["bogota", "bogota d c", "medellin", "cali", "barranquilla", "colombia", "norte", "sur", "centro", "n/e", "na", ""]);
+  const reqBarrioIsSpecific = reqBarrioNorm && !GENERIC_ZONES_SET.has(reqBarrioNorm);
+  const propBarrioIsSpecific = propBarrioNorm && !GENERIC_ZONES_SET.has(propBarrioNorm);
+  if (reqBarrioIsSpecific && propBarrioIsSpecific) {
+    const reqHasQual = SUB_QUALS_MATCHING.some((q) => reqBarrioNorm.includes(q));
+    const propHasQual = SUB_QUALS_MATCHING.some((q) => propBarrioNorm.includes(q));
+    if (reqHasQual && propHasQual && reqBarrioNorm !== propBarrioNorm) {
+      const conflictingQuals = SUB_QUALS_MATCHING.filter((q) => reqBarrioNorm.includes(q) !== propBarrioNorm.includes(q));
+      if (conflictingQuals.length > 0) {
+        blockers.push(`\u26D4 Sub-barrio Incompatible: "${requirement.zonaDeseada}" \u2260 "${property.zone}". MATCH IMPOSIBLE.`);
+        return buildExplanationResult(0, blockers, positives, negatives);
+      }
+    }
+  }
   let price = parseFloat(String(property.price || "0"));
   let budgetMax = parseFloat(String(requirement.presupuestoMax || "0"));
   const budgetMin = parseFloat(String(requirement.presupuestoMin || "0"));
@@ -3585,12 +4118,12 @@ function explicarMatch(requirement, property) {
     blockers.push(`Ficha incompleta (Demanda: ${reqFilledCount}/8 especificaciones, Oferta: ${propFilledCount}/8 especificaciones). Se requieren publicaciones con datos detallados.`);
     return buildExplanationResult(0, blockers, positives, negatives);
   }
-  const reqCityNorm = (requirement.ciudadDeseada || requirement.city || requirement.rawText || "").toLowerCase();
-  const propCityNorm = (property.addressCity || property.city || property.zone || property.rawText || "").toLowerCase();
-  const isReqCali = reqCityNorm.includes("cali");
-  const isPropCali = propCityNorm.includes("cali");
-  const isReqBogota = reqCityNorm.includes("bogota") || reqCityNorm.includes("bogot\xE1");
-  const isPropBogota = propCityNorm.includes("bogota") || propCityNorm.includes("bogot\xE1");
+  const reqCityNorm2 = (requirement.ciudadDeseada || requirement.addressCity || requirement.city || requirement.rawText || "").toLowerCase();
+  const propCityNorm2 = (property.addressCity || property.city || property.zone || property.rawText || "").toLowerCase();
+  const isReqCali = reqCityNorm2.includes("cali");
+  const isPropCali = propCityNorm2.includes("cali");
+  const isReqBogota = reqCityNorm2.includes("bogota") || reqCityNorm2.includes("bogot\xE1");
+  const isPropBogota = propCityNorm2.includes("bogota") || propCityNorm2.includes("bogot\xE1");
   if (isReqCali && isPropBogota && !isPropCali || isReqBogota && isPropCali && !isPropBogota) {
     blockers.push(`Incompatibilidad geogr\xE1fica de ciudad: Requerimiento en ${isReqCali ? "Cali" : "Bogot\xE1"} vs Oferta en ${isPropCali ? "Cali" : "Bogot\xE1"}.`);
     return buildExplanationResult(0, blockers, positives, negatives);
@@ -4116,6 +4649,17 @@ async function executeMatchEngine(propertyId, requirementId) {
   const db = await getDb();
   if (!db) return;
   try {
+    if (!propertyId && !requirementId) {
+      console.log(`[MATCHING-FULL] \u{1F680} Recalculando matches para TODAS las propiedades activas en DB...`);
+      const activeProps = await db.select({ id: properties.id }).from(properties).where(eq3(properties.available, true));
+      let totalMatches = 0;
+      for (const p of activeProps) {
+        const matches = await findMatchesForProperty(p.id);
+        totalMatches += matches.length;
+      }
+      console.log(`[MATCHING-FULL] \u2705 Rec\xE1lculo completo finalizado. ${activeProps.length} propiedades evaluadas, ${totalMatches} matches registrados/actualizados.`);
+      return;
+    }
     if (requirementId) {
       console.log(`[MATCHING-RPC] \u26A1 Ejecutando RPC Supabase para Requerimiento #${requirementId}...`);
       const matchRows = await db.execute(
@@ -4222,6 +4766,7 @@ var init_matching = __esm({
     init_db();
     init_schema();
     init_geography();
+    init_geo_lookup();
     init_events();
     TRANSACTION_COMPATIBILITY_MATRIX = {
       venta: /* @__PURE__ */ new Set(["venta", "venta_o_arriendo", "venta_permuta", "arriendo_con_opcion_de_compra"]),
@@ -4237,8 +4782,8 @@ var init_matching = __esm({
 });
 
 // server/_core/divipola.ts
-import fs from "fs";
-import path from "path";
+import fs2 from "fs";
+import path2 from "path";
 var municipalitiesMap, initDivipola, validateCity;
 var init_divipola = __esm({
   "server/_core/divipola.ts"() {
@@ -4246,12 +4791,12 @@ var init_divipola = __esm({
     municipalitiesMap = /* @__PURE__ */ new Map();
     initDivipola = () => {
       try {
-        const filePath = path.join(process.cwd(), "server", "data", "divipola.csv");
-        if (!fs.existsSync(filePath)) {
+        const filePath = path2.join(process.cwd(), "server", "data", "divipola.csv");
+        if (!fs2.existsSync(filePath)) {
           console.warn("Divipola CSV not found at", filePath);
           return;
         }
-        const content = fs.readFileSync(filePath, "utf-8");
+        const content = fs2.readFileSync(filePath, "utf-8");
         const lines = content.split("\n");
         municipalitiesMap.clear();
         for (let i = 1; i < lines.length; i++) {
@@ -4587,8 +5132,8 @@ __export(janIA_exports, {
   translateTransactionType: () => translateTransactionType
 });
 import { eq as eq4, and as and2, sql as sql3, gte, desc } from "drizzle-orm";
-import fs2 from "fs";
-import path2 from "path";
+import fs3 from "fs";
+import path3 from "path";
 import axios6 from "axios";
 import crypto from "crypto";
 function generarHashMensaje(rawText, remitente) {
@@ -5073,20 +5618,20 @@ function buildSystemPrompt(groupJid) {
     return promptCache[cacheKey];
   }
   try {
-    const baseDir = path2.resolve(process.cwd(), "server/_core/prompts");
-    const basePrompt = fs2.readFileSync(path2.join(baseDir, "base.md"), "utf-8");
+    const baseDir = path3.resolve(process.cwd(), "server/_core/prompts");
+    const basePrompt = fs3.readFileSync(path3.join(baseDir, "base.md"), "utf-8");
     let specificPrompt = "";
     if (groupJid === "120363260108880069@g.us") {
-      specificPrompt = fs2.readFileSync(path2.join(baseDir, "grupos/VECY_INMUEBLES_NETWORK.md"), "utf-8");
+      specificPrompt = fs3.readFileSync(path3.join(baseDir, "grupos/VECY_INMUEBLES_NETWORK.md"), "utf-8");
     } else if (groupJid === "120363417740040773@g.us") {
-      const legalPrompt = fs2.readFileSync(path2.join(baseDir, "grupos/VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md"), "utf-8");
+      const legalPrompt = fs3.readFileSync(path3.join(baseDir, "grupos/VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md"), "utf-8");
       specificPrompt = legalPrompt;
     } else if (groupJid === "120363403507276533@g.us") {
-      specificPrompt = fs2.readFileSync(path2.join(baseDir, "grupos/PROYECTO_Vecy Network.md"), "utf-8");
+      specificPrompt = fs3.readFileSync(path3.join(baseDir, "grupos/PROYECTO_Vecy Network.md"), "utf-8");
     } else if (groupJid && (groupJid.endsWith("@g.us") || groupJid.includes("@us"))) {
-      specificPrompt = fs2.readFileSync(path2.join(baseDir, "grupos/VECY_INMUEBLES_NETWORK.md"), "utf-8");
+      specificPrompt = fs3.readFileSync(path3.join(baseDir, "grupos/VECY_INMUEBLES_NETWORK.md"), "utf-8");
     } else {
-      specificPrompt = fs2.readFileSync(path2.join(baseDir, "web/web_console.md"), "utf-8");
+      specificPrompt = fs3.readFileSync(path3.join(baseDir, "web/web_console.md"), "utf-8");
     }
     const fullPrompt = `${basePrompt}
 
@@ -5981,43 +6526,28 @@ ${liveStats}` : buildSystemPrompt(groupJid);
         if (!result.missingFields) result.missingFields = [];
         if (!result.missingFields.includes("zone")) result.missingFields.push("zone");
       }
-      const validation = geoValidation;
-      if (validation) {
-        if (isProperty && validation.isValid) {
-          extracted.latitude = validation.latitude || null;
-          extracted.longitude = validation.longitude || null;
+      const triGeo = deducirGeografiaTripartita(
+        isProperty ? extracted?.zone : extracted?.zonaDeseada || extracted?.zone,
+        isProperty ? extracted?.city : extracted?.ciudadDeseada || extracted?.city,
+        groupName,
+        messageToProcess
+      );
+      if (isProperty) {
+        extracted.zone = triGeo.neighborhood;
+        extracted.addressNeighborhood = triGeo.neighborhood;
+        extracted.addressLocality = triGeo.locality;
+        extracted.addressCity = triGeo.city;
+        extracted.city = triGeo.city;
+        if (geoValidation && geoValidation.isValid) {
+          extracted.latitude = geoValidation.latitude || null;
+          extracted.longitude = geoValidation.longitude || null;
         }
-        if (validation.isMunicipio) {
-          if (isProperty) {
-            extracted.city = validation.barrioCanonico;
-            extracted.addressCity = validation.barrioCanonico;
-            extracted.addressLocality = validation.localidad;
-            if (extracted.zone && normalizarTextoGeografico(extracted.zone) !== normalizarTextoGeografico(validation.barrioCanonico || "")) {
-            } else {
-              extracted.zone = validation.barrioCanonico;
-            }
-          } else {
-            extracted.ciudadDeseada = validation.barrioCanonico;
-            extracted.addressCity = validation.barrioCanonico;
-            extracted.addressLocality = validation.localidad;
-            if (extracted.zonaDeseada && normalizarTextoGeografico(extracted.zonaDeseada) !== normalizarTextoGeografico(validation.barrioCanonico || "")) {
-            } else {
-              extracted.zonaDeseada = validation.barrioCanonico;
-            }
-          }
-        } else {
-          if (isProperty) {
-            extracted.city = "Bogot\xE1";
-            extracted.addressCity = "Bogot\xE1";
-            extracted.zone = validation.barrioCanonico;
-            extracted.addressLocality = validation.localidad;
-          } else {
-            extracted.ciudadDeseada = "Bogot\xE1";
-            extracted.addressCity = "Bogot\xE1";
-            extracted.zonaDeseada = validation.barrioCanonico;
-            extracted.addressLocality = validation.localidad;
-          }
-        }
+      } else {
+        extracted.zonaDeseada = triGeo.neighborhood;
+        extracted.addressNeighborhood = triGeo.neighborhood;
+        extracted.addressLocality = triGeo.locality;
+        extracted.addressCity = triGeo.city;
+        extracted.ciudadDeseada = triGeo.city;
       }
     }
     const origenTipo = isGroup || groupJid ? "grupo" : "contacto_directo";
@@ -8100,14 +8630,14 @@ async function textToSpeechMedia(text2, format = "OGG_OPUS") {
   const cleaned = cleanVoiceText(text2);
   if (!cleaned) return null;
   try {
-    const googleApiKey = process.env.GOOGLE_TTS_API_KEY || process.env.GEMINI_API_KEY;
-    if (googleApiKey) {
+    const googleApiKey = process.env.GOOGLE_TTS_API_KEY;
+    if (googleApiKey && googleApiKey.startsWith("AIzaSy")) {
       const response = await fetch(`https://texttospeech.googleapis.com/v1beta1/text:synthesize?key=${googleApiKey}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           input: {
-            prompt: "Read aloud in a warm, welcoming tone.",
+            prompt: "Habla en un tono c\xE1lido, profesional y humano, como una consultora inmobiliaria experta colombiana.",
             text: cleaned
           },
           voice: {
@@ -8125,6 +8655,7 @@ async function textToSpeechMedia(text2, format = "OGG_OPUS") {
       if (response.ok) {
         const data = await response.json();
         if (data.audioContent) {
+          console.log(`[TTS-Media] \u2713 Laomedeia (Gemini 3.1 Flash TTS) \u2014 ${cleaned.length} chars \u2192 audio generado.`);
           const buffer = Buffer.from(data.audioContent, "base64");
           return {
             mimetype: format === "OGG_OPUS" ? "audio/ogg; codecs=opus" : "audio/mp3",
@@ -8132,10 +8663,13 @@ async function textToSpeechMedia(text2, format = "OGG_OPUS") {
             buffer
           };
         }
+      } else {
+        const errText = await response.text();
+        console.warn(`[TTS-Media] Laomedeia TTS respondi\xF3 con error ${response.status}: ${errText.substring(0, 300)}`);
       }
     }
   } catch (err) {
-    console.warn("[TTS-Media] Google Cloud TTS no disponible, usando fallback GTTS:", err.message || err);
+    console.warn("[TTS-Media] Laomedeia TTS no disponible, activando fallback GTTS:", err.message || err);
   }
   console.log("[TTS-Media] Sintetizando audio usando fallback Google Translate TTS (es-CO)...");
   const gttsBuffer = await fetchGttsAudioBuffer(cleaned);
@@ -8289,8 +8823,8 @@ import _baileys, {
   Browsers
 } from "@whiskeysockets/baileys";
 import qrcodeTerminal from "qrcode-terminal";
-import fs5 from "fs";
-import path6 from "path";
+import fs6 from "fs";
+import path7 from "path";
 import { eq as eq11 } from "drizzle-orm";
 import QRCode from "qrcode";
 function getWASocket() {
@@ -8361,7 +8895,7 @@ var init_whatsapp_match = __esm({
       buzonGroupId = "120363417740040773@g.us";
       circuloGroupId = "120363403507276533@g.us";
       cooldownMap = /* @__PURE__ */ new Map();
-      cooldownFile = path6.join(process.cwd(), ".cooldown_map.json");
+      cooldownFile = path7.join(process.cwd(), ".cooldown_map.json");
       constructor(options) {
         if (options) {
           if (options.sessionFolderName) this.sessionFolderName = options.sessionFolderName;
@@ -8420,12 +8954,12 @@ var init_whatsapp_match = __esm({
       }
       async initialize() {
         try {
-          const sessionDir = path6.join(process.cwd(), this.sessionFolderName);
-          if (!fs5.existsSync(sessionDir)) {
-            fs5.mkdirSync(sessionDir, { recursive: true });
+          const sessionDir = path7.join(process.cwd(), this.sessionFolderName);
+          if (!fs6.existsSync(sessionDir)) {
+            fs6.mkdirSync(sessionDir, { recursive: true });
           }
           const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
-          if (!fs5.existsSync(path6.join(sessionDir, "creds.json"))) {
+          if (!fs6.existsSync(path7.join(sessionDir, "creds.json"))) {
             await saveCreds();
             console.log(`[${this.botName}] \u{1F4BE} Guardadas credenciales iniciales de Baileys en ${this.sessionFolderName}.`);
           }
@@ -8494,12 +9028,12 @@ var init_whatsapp_match = __esm({
             qrcodeTerminal.generate(qr, { small: true });
             global.janiaBotQr = qr;
             try {
-              const qrPath = path6.join(process.cwd(), this.qrFileName);
-              const publicQrDir = path6.join(process.cwd(), "client", "public");
-              if (!fs5.existsSync(publicQrDir)) {
-                fs5.mkdirSync(publicQrDir, { recursive: true });
+              const qrPath = path7.join(process.cwd(), this.qrFileName);
+              const publicQrDir = path7.join(process.cwd(), "client", "public");
+              if (!fs6.existsSync(publicQrDir)) {
+                fs6.mkdirSync(publicQrDir, { recursive: true });
               }
-              const publicQrPath = path6.join(publicQrDir, "qr-match.png");
+              const publicQrPath = path7.join(publicQrDir, "qr-match.png");
               await QRCode.toFile(qrPath, qr, { width: 400, margin: 2 });
               await QRCode.toFile(publicQrPath, qr, { width: 400, margin: 2 });
               console.log(`[${this.botName}] \u{1F4F8} QR guardado exitosamente en ${qrPath} y ${publicQrPath}`);
@@ -9807,10 +10341,10 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
           }
           let messagePayload = {};
           if (mediaPath) {
-            const fs7 = await import("fs");
-            const buffer = fs7.readFileSync(mediaPath);
-            const path9 = await import("path");
-            const ext = path9.extname(mediaPath).toLowerCase();
+            const fs8 = await import("fs");
+            const buffer = fs8.readFileSync(mediaPath);
+            const path10 = await import("path");
+            const ext = path10.extname(mediaPath).toLowerCase();
             if (ext === ".mp4") {
               messagePayload = {
                 video: buffer,
@@ -9828,7 +10362,7 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
                 document: buffer,
                 caption: text2,
                 mimetype: "application/octet-stream",
-                fileName: path9.basename(mediaPath)
+                fileName: path10.basename(mediaPath)
               };
             }
           } else {
@@ -9942,7 +10476,7 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
   * \u{1F3E2} *Proyectos de construcci\xF3n* o aportes de lote.
 \u25B8 *Matching Inteligente:* Cruzo ofertas y demandas en tiempo real y les aviso en el acto cuando hay negocio viable.`;
         const groups = [this.targetGroupId, this.buzonGroupId, this.circuloGroupId];
-        const imgPath = path6.resolve("./client/public/jania_perfil.png");
+        const imgPath = path7.resolve("./client/public/jania_perfil.png");
         for (const group of groups) {
           try {
             await this.sendToGroup(baseMsg, imgPath, [], group);
@@ -9973,10 +10507,10 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
           }
         } catch (e) {
         }
-        const sessionDir = path6.join(process.cwd(), ".baileys_auth");
-        if (fs5.existsSync(sessionDir)) {
+        const sessionDir = path7.join(process.cwd(), ".baileys_auth");
+        if (fs6.existsSync(sessionDir)) {
           try {
-            fs5.rmSync(sessionDir, { recursive: true, force: true });
+            fs6.rmSync(sessionDir, { recursive: true, force: true });
           } catch (err) {
             console.warn("[JANIA-MATCH] No se pudo borrar .baileys_auth:", err.message);
           }
@@ -9995,8 +10529,8 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
       }
       loadCooldowns() {
         try {
-          if (fs5.existsSync(this.cooldownFile)) {
-            const raw = JSON.parse(fs5.readFileSync(this.cooldownFile, "utf8"));
+          if (fs6.existsSync(this.cooldownFile)) {
+            const raw = JSON.parse(fs6.readFileSync(this.cooldownFile, "utf8"));
             this.cooldownMap = new Map(Object.entries(raw));
           }
         } catch (e) {
@@ -10005,7 +10539,7 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
       saveCooldowns() {
         try {
           const obj = Object.fromEntries(this.cooldownMap.entries());
-          fs5.writeFileSync(this.cooldownFile, JSON.stringify(obj), "utf8");
+          fs6.writeFileSync(this.cooldownFile, JSON.stringify(obj), "utf8");
         } catch (e) {
         }
       }
@@ -10808,8 +11342,8 @@ function liquidarImpuestosVenta(params) {
 // server/routers/janIA.ts
 init_matching();
 import axios7 from "axios";
-import fs3 from "fs";
-import path3 from "path";
+import fs4 from "fs";
+import path4 from "path";
 var janIARouter = router({
   // New: Extract property data from link
   extractFromLink: publicProcedure.input(z2.object({ url: z2.string().url() })).mutation(async ({ input }) => {
@@ -11317,11 +11851,11 @@ ${liveStats}${userContextInstruction}
   }),
   getQrCode: publicProcedure.query(async () => {
     try {
-      const qrPath = path3.join(process.cwd(), "qr-captador.png");
-      const qrMatchPath = path3.join(process.cwd(), "qr-match.png");
-      let targetPath = fs3.existsSync(qrPath) ? qrPath : fs3.existsSync(qrMatchPath) ? qrMatchPath : null;
+      const qrPath = path4.join(process.cwd(), "qr-captador.png");
+      const qrMatchPath = path4.join(process.cwd(), "qr-match.png");
+      let targetPath = fs4.existsSync(qrPath) ? qrPath : fs4.existsSync(qrMatchPath) ? qrMatchPath : null;
       if (targetPath) {
-        const fileData = fs3.readFileSync(targetPath);
+        const fileData = fs4.readFileSync(targetPath);
         return { hasQr: true, qrData: `data:image/png;base64,${fileData.toString("base64")}` };
       }
       return { hasQr: false, qrData: null };
@@ -12482,30 +13016,30 @@ async function createContext(opts) {
 
 // server/_core/vite.ts
 import express from "express";
-import fs4 from "fs";
+import fs5 from "fs";
 import { nanoid } from "nanoid";
-import path5 from "path";
+import path6 from "path";
 import { createServer as createViteServer } from "vite";
 
 // vite.config.ts
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import path4 from "node:path";
+import path5 from "node:path";
 import { defineConfig } from "vite";
 var vite_config_default = defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
-      "@": path4.resolve(import.meta.dirname, "client", "src"),
-      "@shared": path4.resolve(import.meta.dirname, "shared"),
-      "@assets": path4.resolve(import.meta.dirname, "attached_assets")
+      "@": path5.resolve(import.meta.dirname, "client", "src"),
+      "@shared": path5.resolve(import.meta.dirname, "shared"),
+      "@assets": path5.resolve(import.meta.dirname, "attached_assets")
     }
   },
-  envDir: path4.resolve(import.meta.dirname),
-  root: path4.resolve(import.meta.dirname, "client"),
-  publicDir: path4.resolve(import.meta.dirname, "client", "public"),
+  envDir: path5.resolve(import.meta.dirname),
+  root: path5.resolve(import.meta.dirname, "client"),
+  publicDir: path5.resolve(import.meta.dirname, "client", "public"),
   build: {
-    outDir: path4.resolve(import.meta.dirname, "dist"),
+    outDir: path5.resolve(import.meta.dirname, "dist"),
     emptyOutDir: true,
     chunkSizeWarningLimit: 1e3
   },
@@ -12536,13 +13070,13 @@ async function setupVite(app, server) {
   app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
     try {
-      const clientTemplate = path5.resolve(
+      const clientTemplate = path6.resolve(
         import.meta.dirname,
         "../..",
         "client",
         "index.html"
       );
-      let template = await fs4.promises.readFile(clientTemplate, "utf-8");
+      let template = await fs5.promises.readFile(clientTemplate, "utf-8");
       template = template.replace(
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid()}"`
@@ -12556,21 +13090,21 @@ async function setupVite(app, server) {
   });
 }
 function serveStatic(app) {
-  const distPath = path5.resolve(import.meta.dirname, "..", "dist");
-  if (!fs4.existsSync(distPath)) {
+  const distPath = path6.resolve(import.meta.dirname, "..", "dist");
+  if (!fs5.existsSync(distPath)) {
     console.error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`
     );
   }
   app.use(express.static(distPath));
   app.use("*", (_req, res) => {
-    res.sendFile(path5.resolve(distPath, "index.html"));
+    res.sendFile(path6.resolve(distPath, "index.html"));
   });
 }
 
 // server/_core/cronService.ts
 import cron from "node-cron";
-import path7 from "path";
+import path8 from "path";
 init_db();
 init_schema();
 init_whatsapp_match();
@@ -12579,7 +13113,7 @@ init_llm();
 import { fileURLToPath } from "url";
 import { gte as gte3, and as and7, eq as eq13, sql as sql7 } from "drizzle-orm";
 var __filename = fileURLToPath(import.meta.url);
-var __dirname = path7.dirname(__filename);
+var __dirname = path8.dirname(__filename);
 function initCronScheduler() {
   console.log("[CRON-SERVICE] Inicializando orquestador de agendas automatizadas v3.1 (Exclusivamente Audios Motivacionales y Re-matching)...");
   cron.schedule("0 11 * * 1,4", async () => {
@@ -12626,8 +13160,8 @@ init_llm();
 init_whatsapp_utils();
 init_whatsapp_match();
 import multer from "multer";
-import fs6 from "fs";
-import path8 from "path";
+import fs7 from "fs";
+import path9 from "path";
 process.on("uncaughtException", (error) => {
   console.error("[SYSTEM-CRITICAL] Uncaught Exception detectada:", error);
 });
@@ -12706,10 +13240,10 @@ async function startServer() {
   });
   app.get("/qr-match.png", (req, res) => {
     try {
-      const qrPath = path8.join(process.cwd(), "qr-match.png");
-      const distQrPath = path8.join(process.cwd(), "dist", "qr-match.png");
-      const activePath = fs6.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs6.existsSync(activePath)) {
+      const qrPath = path9.join(process.cwd(), "qr-match.png");
+      const distQrPath = path9.join(process.cwd(), "dist", "qr-match.png");
+      const activePath = fs7.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs7.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
         res.setHeader("Pragma", "no-cache");
@@ -12729,10 +13263,10 @@ async function startServer() {
         await janiaMatchBot2.initialize();
         await new Promise((resolve) => setTimeout(resolve, 3e3));
       }
-      const qrPath = path8.join(process.cwd(), "qr-match.png");
-      const distQrPath = path8.join(process.cwd(), "dist", "qr-match.png");
-      const activePath = fs6.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs6.existsSync(activePath)) {
+      const qrPath = path9.join(process.cwd(), "qr-match.png");
+      const distQrPath = path9.join(process.cwd(), "dist", "qr-match.png");
+      const activePath = fs7.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs7.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
         res.setHeader("Pragma", "no-cache");
@@ -12753,10 +13287,10 @@ async function startServer() {
       console.log("[ADMIN] Re-inicializando sesi\xF3n de Baileys para refrescar QR...");
       await janiaMatchBot2.initialize();
       await new Promise((resolve) => setTimeout(resolve, 4e3));
-      const qrPath = path8.join(process.cwd(), "qr-match.png");
-      const distQrPath = path8.join(process.cwd(), "dist", "qr-match.png");
-      const activePath = fs6.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs6.existsSync(activePath)) {
+      const qrPath = path9.join(process.cwd(), "qr-match.png");
+      const distQrPath = path9.join(process.cwd(), "dist", "qr-match.png");
+      const activePath = fs7.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs7.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         return res.sendFile(activePath);
       }
@@ -12783,10 +13317,10 @@ async function startServer() {
   });
   app.get("/qr-captador.png", (req, res) => {
     try {
-      const qrPath = path8.join(process.cwd(), "qr-captador.png");
-      const distQrPath = path8.join(process.cwd(), "dist", "qr-captador.png");
-      const activePath = fs6.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs6.existsSync(activePath)) {
+      const qrPath = path9.join(process.cwd(), "qr-captador.png");
+      const distQrPath = path9.join(process.cwd(), "dist", "qr-captador.png");
+      const activePath = fs7.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs7.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
         res.setHeader("Pragma", "no-cache");
@@ -12916,9 +13450,9 @@ async function startServer() {
       res.status(500).json({ error: err.message || "Error al procesar la transcripci\xF3n" });
     }
   });
-  const uploadsDir = path8.resolve(process.cwd(), "public/uploads");
-  if (!fs6.existsSync(uploadsDir)) {
-    fs6.mkdirSync(uploadsDir, { recursive: true });
+  const uploadsDir = path9.resolve(process.cwd(), "public/uploads");
+  if (!fs7.existsSync(uploadsDir)) {
+    fs7.mkdirSync(uploadsDir, { recursive: true });
   }
   app.use("/uploads", express2.static(uploadsDir));
   const diskStorage = multer.diskStorage({
@@ -12927,7 +13461,7 @@ async function startServer() {
     },
     filename: (req, file, cb) => {
       const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-      cb(null, uniqueSuffix + path8.extname(file.originalname));
+      cb(null, uniqueSuffix + path9.extname(file.originalname));
     }
   });
   const uploadDisk = multer({

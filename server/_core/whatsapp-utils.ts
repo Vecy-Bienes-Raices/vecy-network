@@ -311,17 +311,17 @@ export async function textToSpeechMedia(text: string, format: "OGG_OPUS" | "MP3"
   const cleaned = cleanVoiceText(text);
   if (!cleaned) return null;
 
-  // 1. Intentar con Google Cloud Text-to-Speech si la API key es válida
+  // 1. Google Cloud TTS — Gemini 3.1 Flash TTS (Preview) — Voz Laomedeia (Latino cálida y profesional)
   try {
-    const googleApiKey = process.env.GOOGLE_TTS_API_KEY || process.env.GEMINI_API_KEY;
-    if (googleApiKey) {
+    const googleApiKey = process.env.GOOGLE_TTS_API_KEY;
+    if (googleApiKey && googleApiKey.startsWith('AIzaSy')) {
       const response = await fetch(`https://texttospeech.googleapis.com/v1beta1/text:synthesize?key=${googleApiKey}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          input: { 
-            prompt: "Read aloud in a warm, welcoming tone.",
-            text: cleaned 
+          input: {
+            prompt: "Habla en un tono cálido, profesional y humano, como una consultora inmobiliaria experta colombiana.",
+            text: cleaned
           },
           voice: {
             languageCode: "es-419",
@@ -339,6 +339,7 @@ export async function textToSpeechMedia(text: string, format: "OGG_OPUS" | "MP3"
       if (response.ok) {
         const data = await response.json();
         if (data.audioContent) {
+          console.log(`[TTS-Media] ✓ Laomedeia (Gemini 3.1 Flash TTS) — ${cleaned.length} chars → audio generado.`);
           const buffer = Buffer.from(data.audioContent, "base64");
           return {
             mimetype: format === "OGG_OPUS" ? "audio/ogg; codecs=opus" : "audio/mp3",
@@ -346,10 +347,13 @@ export async function textToSpeechMedia(text: string, format: "OGG_OPUS" | "MP3"
             buffer
           };
         }
+      } else {
+        const errText = await response.text();
+        console.warn(`[TTS-Media] Laomedeia TTS respondió con error ${response.status}: ${errText.substring(0, 300)}`);
       }
     }
   } catch (err: any) {
-    console.warn("[TTS-Media] Google Cloud TTS no disponible, usando fallback GTTS:", err.message || err);
+    console.warn("[TTS-Media] Laomedeia TTS no disponible, activando fallback GTTS:", err.message || err);
   }
 
   // 2. Fallback garantizado: Google Translate TTS libre
