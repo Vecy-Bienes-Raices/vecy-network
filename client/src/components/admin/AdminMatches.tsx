@@ -453,7 +453,7 @@ function scoreRows(req: any, prop: any) {
   let budS: MatchStatus = "neutral";
   if (budget > 0 && effectivePropPrice > 0) {
     if (effectivePropPrice <= budget) budS = "exact";
-    else budS = "missing";
+    else budS = "warn"; // Precio supera presupuesto → Aproximado (el broker puede negociar)
   }
   const reqBudgetLabel = budget > 0 ? `${formatCOP(budget)}${budgetInferred ? " (Inferido 🔍)" : ""}` : "N/E";
 
@@ -493,7 +493,7 @@ function scoreRows(req: any, prop: any) {
   let areS: MatchStatus = "neutral";
   let areaPropLabel = areaP > 0 ? `${areaP} m²${areaPInferred ? " (Inferido 🔍)" : ""}` : "N/E";
   if (areaR > 0 && areaP > 0) {
-    if (areaP < areaR * 0.95)        areS = "missing";
+    if (areaP < areaR * 0.95)        areS = "warn"; // Área por debajo del mínimo → Aproximado
     else if (areaP > areaR * 1.15)   { areS = "warn"; areaPropLabel = `${areaP} m² ⚠️ (+${Math.round((areaP/areaR-1)*100)}% más grande)`; }
     else                              areS = "exact";
   } else if (areaR === 0) {
@@ -526,9 +526,9 @@ function scoreRows(req: any, prop: any) {
   let bedS: MatchStatus = "neutral";
   if (bedR > 0) {
     if (bedP < bedR) {
-      bedS = "missing";
+      bedS = "warn"; // Menos habitaciones → Aproximado
     } else if (bedP > bedR) {
-      bedS = "warn";
+      bedS = "warn"; // Más habitaciones → Aproximado
     } else {
       bedS = "exact";
     }
@@ -563,9 +563,9 @@ function scoreRows(req: any, prop: any) {
   let bathS: MatchStatus = "neutral";
   if (bathR > 0) {
     if (bathP < bathR) {
-      bathS = "missing";
+      bathS = "warn"; // Menos baños → Aproximado
     } else if (bathP > bathR) {
-      bathS = "warn";
+      bathS = "warn"; // Más baños → Aproximado
     } else {
       bathS = "exact";
     }
@@ -623,7 +623,7 @@ function scoreRows(req: any, prop: any) {
 
   if (garR > 0) {
     if (garP < garR) {
-      garS = "missing";
+      garS = "warn"; // Menos garajes → Aproximado
     } else if (reqWantsIndep && garType === "lineal") {
       garS = "warn";
     } else {
@@ -715,7 +715,7 @@ function scoreRows(req: any, prop: any) {
   let ageS: MatchStatus = "neutral";
   if (ageR > 0 && ageP >= 0) {
     if (ageP <= ageR) ageS = "exact";
-    else ageS = "missing"; // Supera máximo exigido
+    else ageS = "warn"; // Antigüedad supera máximo → Aproximado (no es bloqueante)
   }
 
   const reqAgeLabel = ageR > 0 ? `≤ ${ageR} años de construcción` : "N/E";
@@ -804,7 +804,7 @@ function scoreRows(req: any, prop: any) {
   const propStorage = propRawText.includes("deposito") || propRawText.includes("depósito") || propRawText.includes("bodega") || propRawText.includes("cuarto util") || propRawText.includes("cuarto útil") || prop.hasStorage;
   let storageS: MatchStatus = "neutral";
   if (reqStorage) {
-    storageS = propStorage ? "exact" : "missing"; // Si exige depósito y la oferta no lo tiene -> missing (Diferente)
+    storageS = propStorage ? "exact" : "warn"; // No tiene depósito → Aproximado (puede negociarse)
   }
   add(
     "Depósito / Cuarto Útil",
@@ -816,8 +816,10 @@ function scoreRows(req: any, prop: any) {
   );
 
 
-  const hasAnyFailure = rows.some(r => r.status === "missing");
-  const autoScore = hasAnyFailure ? 0 : (max > 0 ? Math.round((pts / max) * 100) : 0);
+  // REGLA DOCTRINAL v22.1: Los campos blandos nunca producen "Falla".
+  // Solo los 5 campos duros pueden bloquear un match (lo hacen en el backend).
+  // Si el match aparece en pantalla, el score VECY es la fuente de verdad.
+  const autoScore = max > 0 ? Math.round((pts / max) * 100) : 0;
   return { rows, autoScore };
 }
 
