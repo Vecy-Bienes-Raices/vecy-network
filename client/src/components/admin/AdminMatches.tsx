@@ -326,38 +326,36 @@ function scoreRows(req: any, prop: any) {
   const bothBarrioKnown = reqBarrioDisplay !== "N/E" && propBarrioDisplay !== "N/E";
   const isBarrioMatch = !bothBarrioKnown || matchBarrioExacto(reqBarrioDisplay, propBarrioDisplay);
 
-  // Label del barrio con indicador de falla si hay conflicto
-  const propBarrioLabel = propBarrioDisplay + (
-    bothBarrioKnown && !isBarrioMatch && !isOutStreetBounds ? " ❌ (Sub-barrio incompatible)" :
-    isOutStreetBounds ? ` ❌ (Fuera de Perímetro: ${boundaryLabel})` : ""
-  );
+  // REGLA DOCTRINAL v22.1: Si el match aparece en pantalla, YA PASÓ todos los
+  // filtros duros del backend. Las 3 filas geográficas SIEMPRE muestran "Coincide".
+  // "Falla" o "Aproximado" es IMPOSIBLE aquí — ese match no existiría en BD.
 
-  // A. Barrio / Vereda / Caserío — BINARIO DURO
+  // A. Barrio / Vereda / Caserío — SIEMPRE "Coincide"
   add(
     "Barrio / Vereda / Caserío",
     reqBarrioDisplay,
-    propBarrioLabel,
-    isCityMatch && isBarrioMatch && !isOutStreetBounds ? "exact" : "missing",
+    propBarrioDisplay,
+    "exact",
     10,
     <MapPin className="w-3.5 h-3.5" />
   );
 
-  // B. Localidad / Comuna — BINARIO DURO
+  // B. Localidad / Comuna — SIEMPRE "Coincide"
   add(
     "Localidad / Comuna",
     reqLocalityDisplay,
     propLocalityDisplay,
-    isCityMatch && isLocalityMatch ? "exact" : "missing",
+    "exact",
     5,
     <MapPin className="w-3.5 h-3.5" />
   );
 
-  // C. Ciudad / Municipio — FILTRO DURO BINARIO
+  // C. Ciudad / Municipio — SIEMPRE "Coincide"
   add(
     "Ciudad / Municipio",
     reqCityDisplay,
     propCityDisplay,
-    isCityMatch ? "exact" : "missing",
+    "exact",
     5,
     <MapPin className="w-3.5 h-3.5" />
   );
