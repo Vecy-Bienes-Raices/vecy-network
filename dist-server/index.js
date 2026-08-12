@@ -4096,9 +4096,15 @@ function explicarMatch(requirement, property) {
   const propType = (property.propertyType || "").toLowerCase().trim();
   const reqZone = normalizarTextoGeografico(requirement.zonaDeseada || requirement.addressNeighborhood || "");
   const propZone = normalizarTextoGeografico(property.zone || property.addressNeighborhood || "");
-  const hasZeroSpecs = price <= 0 && propArea <= 0 && pBedrooms <= 0 && pBathrooms <= 0;
-  if (hasZeroSpecs) {
-    blockers.push("Inmueble incompleto sin datos prediales m\xEDnimos (Precio, \xC1rea, Habitaciones y Ba\xF1os en N/E).");
+  const propTextClean = (property.rawText || property.description || property.name || "").trim();
+  const reqTextClean = (requirement.rawText || requirement.name || "").trim();
+  if (propTextClean.length < 8 || reqTextClean.length < 8) {
+    blockers.push("Publicaci\xF3n vac\xEDa o sin contenido textual legible en una de las partes. Match Inviable (0%).");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  const validPropSpecsCount = (price > 0 || property.rentPrice && parseFloat(String(property.rentPrice)) > 0 ? 1 : 0) + (propArea > 0 ? 1 : 0) + (pBedrooms > 0 ? 1 : 0) + (pBathrooms > 0 ? 1 : 0) + (pGarages > 0 ? 1 : 0);
+  if (validPropSpecsCount < 2) {
+    blockers.push("Inmueble incompleto sin datos prediales m\xEDnimos en la oferta (menos de 2 atributos especificados). Match Inviable (0%).");
     return buildExplanationResult(0, blockers, positives, negatives);
   }
   const propRealPhone = extractRealPhone(property);

@@ -1302,19 +1302,36 @@ export default function AdminMatches() {
                       </div>
                       <h4 className="text-sm sm:text-base font-bold text-white mt-1 break-words">{m.property?.name}</h4>
                       
-                      {/* Texto Completo Extraído o Resumen Estructurado de Atributos */}
-                      <div className="text-xs text-zinc-300 bg-white/[0.02] border border-white/5 p-3 rounded-xl leading-relaxed whitespace-pre-wrap break-words space-y-2">
-                        {(m.property?.rawText || m.property?.description) ? (
-                          <span className="italic">"{renderTextWithClickableLinks(m.property?.rawText || m.property?.description)}"</span>
-                        ) : (
-                          <div className="not-italic text-zinc-400 space-y-1">
-                            <p className="font-semibold text-[#bf953f]">Detalles del Inmueble Oferta:</p>
-                            <p>• Tipo: <span className="text-white font-medium">{getPropTypeLabel(m.property?.propertyType)}</span> | Negocio: <span className="text-white font-medium">{getTransactionLabel(m.property?.transactionType)}</span></p>
-                            <p>• Precio: <span className="text-white font-medium">{formatCOP(m.property?.price)}</span> | Área: <span className="text-white font-medium">{m.property?.areaTotal || 'N/E'} m²</span></p>
-                            <p>• Especificaciones: <span className="text-white font-medium">{m.property?.bedrooms || 'N/E'} hab | {m.property?.bathrooms || 'N/E'} baños | {m.property?.garages || 'N/E'} garajes</span></p>
-                            <p>• Ubicación: <span className="text-white font-medium">{m.property?.zone || 'N/E'}, {m.property?.city || 'Bogotá'}</span></p>
+                      {/* Texto Completo Extraído + Resumen Estructurado Obligatorio */}
+                      <div className="text-xs text-zinc-300 bg-white/[0.02] border border-white/5 p-3 rounded-xl leading-relaxed whitespace-pre-wrap break-words space-y-3">
+                        {(() => {
+                          const pText = (m.property?.rawText || m.property?.description || "").trim();
+                          return pText ? (
+                            <div className="space-y-1">
+                              <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold not-italic">💬 Publicación Original:</p>
+                              <p className="italic text-zinc-200">"{renderTextWithClickableLinks(pText)}"</p>
+                            </div>
+                          ) : null;
+                        })()}
+
+                        {/* Ficha Estructurada Predial (Atributos Extraídos) */}
+                        <div className="not-italic text-zinc-300 bg-black/40 border border-[#bf953f]/20 p-2.5 rounded-lg space-y-1 text-xs">
+                          <p className="font-bold text-[#bf953f] text-[11px] uppercase tracking-wider">🏢 Ficha del Inmueble (Oferta):</p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-[11px]">
+                            <p>• Tipo: <span className="text-white font-semibold">{getPropTypeLabel(m.property?.propertyType)}</span></p>
+                            <p>• Negocio: <span className="text-white font-semibold">{getTransactionLabel(m.property?.transactionType)}</span></p>
+                            <p>• Precio Venta: <span className="text-amber-400 font-bold">{formatCOP(m.property?.price)}</span></p>
+                            {m.property?.rentPrice && parseFloat(String(m.property?.rentPrice)) > 0 && (
+                              <p>• Canon Arriendo: <span className="text-emerald-400 font-bold">{formatCOP(m.property?.rentPrice)}</span></p>
+                            )}
+                            <p>• Área Total: <span className="text-white font-semibold">{m.property?.areaTotal || m.property?.areaPrivate || 'N/E'} m²</span></p>
+                            <p>• Estrato: <span className="text-white font-semibold">{m.property?.stratum || 'N/E'}</span></p>
+                            <p>• Habitaciones: <span className="text-white font-semibold">{m.property?.bedrooms ?? 'N/E'}</span></p>
+                            <p>• Baños: <span className="text-white font-semibold">{m.property?.bathrooms ?? 'N/E'}</span></p>
+                            <p>• Garajes: <span className="text-white font-semibold">{m.property?.garages ?? 'N/E'}</span></p>
+                            <p>• Ubicación: <span className="text-white font-semibold">{m.property?.zone || 'N/E'}, {m.property?.city || 'Bogotá'}</span></p>
                           </div>
-                        )}
+                        </div>
 
                         {/* Banner de Enlace Público Original al Final de la Publicación del Inmueble */}
                         {(() => {
@@ -1453,82 +1470,105 @@ export default function AdminMatches() {
                       <h4 className="text-sm sm:text-base font-bold text-white mt-1 break-words">
                         {m.requirement?.name || `Requerimiento #${m.requirement?.id}`}
                       </h4>
-                      {m.requirement?.rawText && (
-                        <div className="text-xs text-zinc-300 bg-white/[0.02] border border-white/5 p-3 rounded-xl italic leading-relaxed whitespace-pre-wrap break-words space-y-2">
-                          "{renderTextWithClickableLinks(m.requirement?.rawText)}"
+                      
+                      {/* Texto Completo Extraído + Resumen Estructurado del Requerimiento */}
+                      <div className="text-xs text-zinc-300 bg-white/[0.02] border border-white/5 p-3 rounded-xl leading-relaxed whitespace-pre-wrap break-words space-y-3">
+                        {(() => {
+                          const rText = (m.requirement?.rawText || "").trim();
+                          return rText ? (
+                            <div className="space-y-1">
+                              <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold not-italic">💬 Solicita:</p>
+                              <p className="italic text-zinc-200">"{renderTextWithClickableLinks(rText)}"</p>
+                            </div>
+                          ) : null;
+                        })()}
 
-                          {/* Banner de Enlace Público Original al Final de la Publicación del Requerimiento */}
-                          {(() => {
-                            const origReqUrl = extractPublicLink(m.requirement);
-                            if (!origReqUrl) return null;
-                            return (
-                              <div className="mt-2.5 pt-2.5 border-t border-cyan-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-cyan-500/10 p-2.5 rounded-xl border border-cyan-500/30 not-italic">
-                                <div className="flex items-center gap-2 min-w-0">
-                                  <Globe className="w-4 h-4 text-cyan-400 flex-shrink-0" />
-                                  <div className="min-w-0">
-                                    <p className="text-[10px] text-cyan-300 font-bold uppercase tracking-wider">🌐 Enlace Público Original / Portal Web:</p>
-                                    <a 
-                                      href={origReqUrl} 
-                                      target="_blank" 
-                                      rel="noopener noreferrer" 
-                                      className="text-xs text-cyan-300 hover:text-cyan-100 font-semibold underline truncate block max-w-[280px] sm:max-w-[420px]"
-                                      title={origReqUrl}
-                                    >
-                                      {origReqUrl}
-                                    </a>
-                                  </div>
-                                </div>
-                                <a
-                                  href={origReqUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-[10px] text-black font-bold bg-cyan-400 hover:bg-cyan-300 px-3 py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition-all shadow-md shrink-0"
-                                >
-                                  Abrir Enlace <ExternalLink className="w-3 h-3" />
-                                </a>
-                              </div>
-                            );
-                          })()}
-
-                          {/* Visualizador de Flyer / Imagen Publicada en el Anuncio del Requerimiento */}
-                          {(() => {
-                            const reqImgs = extractItemImages(m.requirement);
-                            if (reqImgs.length === 0) return null;
-                            return (
-                              <div className="mt-2.5 pt-2.5 border-t border-cyan-500/20 space-y-2 not-italic">
-                                <p className="text-[10px] text-cyan-300 font-bold uppercase tracking-wider flex items-center gap-1.5">
-                                  🖼️ Imagen / Flyer del Requerimiento Original ({reqImgs.length}):
-                                </p>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                  {reqImgs.slice(0, 4).map((imgUrl, imgIdx) => (
-                                    <div key={imgIdx} className="relative group rounded-xl overflow-hidden border border-cyan-500/30 bg-black/50">
-                                      <img 
-                                        src={imgUrl} 
-                                        alt={`Flyer Requerimiento ${imgIdx + 1}`} 
-                                        className="w-full h-44 object-contain bg-zinc-950 group-hover:scale-105 transition-transform duration-300 cursor-pointer"
-                                        onClick={() => window.open(imgUrl, '_blank')}
-                                      />
-                                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/80 to-transparent p-2 flex items-center justify-between gap-1">
-                                        <span className="text-[9px] text-cyan-200 font-semibold truncate">Flyer #{imgIdx + 1}</span>
-                                        <a
-                                          href={imgUrl}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          download
-                                          className="text-[9px] bg-cyan-400 hover:bg-cyan-300 text-black font-bold px-2 py-0.5 rounded shadow transition-colors flex items-center gap-1 shrink-0"
-                                          title="Ver / Descargar imagen del flyer"
-                                        >
-                                          <Download className="w-2.5 h-2.5" /> Abrir / Descargar
-                                        </a>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            );
-                          })()}
+                        {/* Ficha Estructurada de la Demanda */}
+                        <div className="not-italic text-zinc-300 bg-black/40 border border-cyan-500/20 p-2.5 rounded-lg space-y-1 text-xs">
+                          <p className="font-bold text-cyan-400 text-[11px] uppercase tracking-wider">🔍 Ficha de la Demanda (Requerimiento):</p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-[11px]">
+                            <p>• Buscado: <span className="text-white font-semibold">{getPropTypeLabel(m.requirement?.tipoInmuebleDeseado)}</span></p>
+                            <p>• Negocio: <span className="text-white font-semibold">{getTransactionLabel(m.requirement?.tipoNegocioDeseado)}</span></p>
+                            <p>• Presupuesto Máx: <span className="text-cyan-300 font-bold">{formatCOP(m.requirement?.presupuestoMax)}</span></p>
+                            <p>• Área Mín: <span className="text-white font-semibold">{m.requirement?.areaMin || 'N/E'} m²</span></p>
+                            <p>• Habitaciones Mín: <span className="text-white font-semibold">{m.requirement?.habitacionesMin ?? 'N/E'}</span></p>
+                            <p>• Baños Mín: <span className="text-white font-semibold">{m.requirement?.banosMin ?? 'N/E'}</span></p>
+                            <p>• Garajes Mín: <span className="text-white font-semibold">{m.requirement?.parqueaderosMin ?? 'N/E'}</span></p>
+                            <p>• Ubicación Deseada: <span className="text-white font-semibold">{m.requirement?.zonaDeseada || 'N/E'}, {m.requirement?.ciudadDeseada || 'Bogotá'}</span></p>
+                          </div>
                         </div>
-                      )}
+
+                        {/* Banner de Enlace Público Original al Final de la Publicación del Requerimiento */}
+                        {(() => {
+                          const origReqUrl = extractPublicLink(m.requirement);
+                          if (!origReqUrl) return null;
+                          return (
+                            <div className="mt-2.5 pt-2.5 border-t border-cyan-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-cyan-500/10 p-2.5 rounded-xl border border-cyan-500/30 not-italic">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <Globe className="w-4 h-4 text-cyan-400 flex-shrink-0" />
+                                <div className="min-w-0">
+                                  <p className="text-[10px] text-cyan-300 font-bold uppercase tracking-wider">🌐 Enlace Público Original / Portal Web:</p>
+                                  <a 
+                                    href={origReqUrl} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    className="text-xs text-cyan-300 hover:text-cyan-100 font-semibold underline truncate block max-w-[280px] sm:max-w-[420px]"
+                                    title={origReqUrl}
+                                  >
+                                    {origReqUrl}
+                                  </a>
+                                </div>
+                              </div>
+                              <a
+                                href={origReqUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[10px] text-black font-bold bg-cyan-400 hover:bg-cyan-300 px-3 py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition-all shadow-md shrink-0"
+                              >
+                                Abrir Enlace <ExternalLink className="w-3 h-3" />
+                              </a>
+                            </div>
+                          );
+                        })()}
+
+                        {/* Visualizador de Flyer / Imagen Publicada en el Anuncio del Requerimiento */}
+                        {(() => {
+                          const reqImgs = extractItemImages(m.requirement);
+                          if (reqImgs.length === 0) return null;
+                          return (
+                            <div className="mt-2.5 pt-2.5 border-t border-cyan-500/20 space-y-2 not-italic">
+                              <p className="text-[10px] text-cyan-300 font-bold uppercase tracking-wider flex items-center gap-1.5">
+                                🖼️ Imagen / Flyer del Requerimiento Original ({reqImgs.length}):
+                              </p>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                {reqImgs.slice(0, 4).map((imgUrl, imgIdx) => (
+                                  <div key={imgIdx} className="relative group rounded-xl overflow-hidden border border-cyan-500/30 bg-black/50">
+                                    <img 
+                                      src={imgUrl} 
+                                      alt={`Flyer Requerimiento ${imgIdx + 1}`} 
+                                      className="w-full h-44 object-contain bg-zinc-950 group-hover:scale-105 transition-transform duration-300 cursor-pointer"
+                                      onClick={() => window.open(imgUrl, '_blank')}
+                                    />
+                                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/80 to-transparent p-2 flex items-center justify-between gap-1">
+                                      <span className="text-[9px] text-cyan-200 font-semibold truncate">Flyer #{imgIdx + 1}</span>
+                                      <a
+                                        href={imgUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        download
+                                        className="text-[9px] bg-cyan-400 hover:bg-cyan-300 text-black font-bold px-2 py-0.5 rounded shadow transition-colors flex items-center gap-1 shrink-0"
+                                        title="Ver / Descargar imagen del flyer"
+                                      >
+                                        <Download className="w-2.5 h-2.5" /> Abrir / Descargar
+                                      </a>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </div>
 
 
                       
