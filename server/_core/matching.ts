@@ -2,6 +2,7 @@ import { getDb } from "../db";
 import { and, eq, sql } from "drizzle-orm";
 import { propertyMatches, properties, requirements } from "../../drizzle/schema";
 import { normalizarTextoGeografico } from "./geography";
+import { lookupBarriosByPerimeter } from "./geo-lookup";
 import { VECY_VERSION_LABEL } from "../../shared/const";
 
 /**
@@ -389,8 +390,8 @@ export function matchesGeography(
 
   // Si la zona es genérica (ej: "Norte") y NO hay delimitación vial de calles/carreras coincidentes ni barrio específico, BLOQUEAR (0%)
   if (isReqGeneric || isPropGeneric) {
-    const hasStreetBoundaryMatch = (propNumbers.street && reqBoundaries.minStreet && propNumbers.street >= reqBoundaries.minStreet && propNumbers.street <= reqBoundaries.maxStreet)
-                                || (propNumbers.carrera && reqBoundaries.minCarrera && propNumbers.carrera >= reqBoundaries.minCarrera && propNumbers.carrera <= reqBoundaries.maxCarrera);
+    const hasStreetBoundaryMatch = (propNumbers.street && reqBoundaries.minStreet !== undefined && reqBoundaries.maxStreet !== undefined && propNumbers.street >= reqBoundaries.minStreet && propNumbers.street <= reqBoundaries.maxStreet)
+                                || (propNumbers.carrera && reqBoundaries.minCarrera !== undefined && reqBoundaries.maxCarrera !== undefined && propNumbers.carrera >= reqBoundaries.minCarrera && propNumbers.carrera <= reqBoundaries.maxCarrera);
     if (!hasStreetBoundaryMatch) {
       console.log(`[Matching-Guard] Bloqueo 0%: Ubicación genérica o no especificada en barrio/vereda real ('${reqZoneRaw}' ↔ '${propZoneRaw}').`);
       return { matches: false, score: 0 };
@@ -529,6 +530,25 @@ export function matchesGeography(
 
   if (propPhrases.length === 0 && propExtracted.length > 0) propPhrases = propExtracted;
   else if (propExtracted.length > 0) propPhrases = Array.from(new Set([...propPhrases, ...propExtracted]));
+
+  // Inserción IDECA Catastral (1,230 sectores Bogotá): resolver perímetros viales en barrios reales
+  if (reqBoundaries.minStreet && reqBoundaries.maxStreet) {
+    try {
+      const idecaRes = lookupBarriosByPerimeter({
+        calleNorte: reqBoundaries.maxStreet,
+        calleSur: reqBoundaries.minStreet,
+        craOriente: reqBoundaries.minCarrera || 1,
+        craOccidente: reqBoundaries.maxCarrera || 30,
+        ciudad: "bogota"
+      });
+      if (idecaRes.barrios && idecaRes.barrios.length > 0) {
+        const idecaNorm = idecaRes.barrios.map(b => normalizarTextoGeografico(b));
+        reqPhrases = Array.from(new Set([...reqPhrases, ...idecaNorm]));
+      }
+    } catch (idecaErr) {
+      console.warn("[Matching-IDECA] Error resolviendo perímetro en matching:", idecaErr);
+    }
+  }
 
   const reqExpanded = reqPhrases.flatMap(expandirZona);
   const propExpanded = propPhrases.flatMap(expandirZona);
@@ -1804,6 +1824,18 @@ export async function executeMatchEngine(propertyId: number | null, requirementI
   if (!db) return;
 
   try {
+    if (!propertyId && !requirementId) {
+      console.log(`[MATCHING-FULL] 🚀 Recalculando matches para TODAS las propiedades activas en DB...`);
+      const activeProps = await db.select({ id: properties.id }).from(properties).where(eq(properties.available, true));
+      let totalMatches = 0;
+      for (const p of activeProps) {
+        const matches = await findMatchesForProperty(p.id);
+        totalMatches += matches.length;
+      }
+      console.log(`[MATCHING-FULL] ✅ Recálculo completo finalizado. ${activeProps.length} propiedades evaluadas, ${totalMatches} matches registrados/actualizados.`);
+      return;
+    }
+
     if (requirementId) {
       console.log(`[MATCHING-RPC] ⚡ Ejecutando RPC Supabase para Requerimiento #${requirementId}...`);
       const matchRows: any[] = await db.execute(

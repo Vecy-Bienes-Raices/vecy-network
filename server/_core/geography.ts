@@ -7,6 +7,7 @@ import { geocodeAddress } from './geocoding';
 import { getDb } from '../db';
 import { colombiaGeography } from '../../drizzle/schema';
 import { sql } from 'drizzle-orm';
+import { lookupBarriosByPerimeter } from './geo-lookup';
 
 export const DICCIONARIO_BOGOTA: Record<string, { localidad: string, barrios: string[] }> = {
   "usaquen": {
@@ -749,6 +750,49 @@ export async function resolverCuadranteVial(texto: string): Promise<{ resuelto: 
     console.error("[Geocoding-Cuadrante-Spatial] Error consultando barrios_bogota_geojson:", err);
   }
 
+  // 3.5 RESOLUCIÓN DETERMINÍSTICA LOCAL IDECA (1,230 Sectores Catastrales Oficiales Bogotá)
+  try {
+    let craMinNum = 1;
+    let craMaxNum = 30;
+    if (craMatch) {
+      const k1 = parseInt(craMatch[1]);
+      const k2 = parseInt(craMatch[2]);
+      if (!isNaN(k1) && !isNaN(k2)) {
+        craMinNum = Math.min(k1, k2);
+        craMaxNum = Math.max(k1, k2);
+      }
+    } else if (isArribaAuto) {
+      craMinNum = 1;
+      craMaxNum = 45;
+    } else if (isAbajoAuto) {
+      craMinNum = 45;
+      craMaxNum = 120;
+    } else if (isArriba7) {
+      craMinNum = 1;
+      craMaxNum = 7;
+    }
+
+    const idecaResult = lookupBarriosByPerimeter({
+      calleNorte: maxSt,
+      calleSur: minSt,
+      craOriente: craMinNum,
+      craOccidente: craMaxNum,
+      ciudad: "bogota"
+    });
+
+    if (idecaResult.barrios && idecaResult.barrios.length > 0) {
+      console.log(`[Geocoding-Cuadrante] Intersección local IDECA (${idecaResult.barrios.length} sectores catastrales) resuelto ➔ "${idecaResult.barrios.slice(0, 10).join(', ')}"`);
+      return {
+        resuelto: true,
+        barrios: idecaResult.barrios,
+        descripcion: `Intersección local IDECA (${idecaResult.barrios.length} sectores catastrales)`,
+        confianza: "alta_geometria_ideca_local"
+      };
+    }
+  } catch (idecaErr: any) {
+    console.warn("[Geocoding-Cuadrante-IDECA] Error en motor local IDECA:", idecaErr?.message || idecaErr);
+  }
+
   // 4. FALLBACK DE RESPALDO CON TABLA FIJA (Confianza Aproximada)
   let candidateBarrios: string[] = [];
 
@@ -777,5 +821,185 @@ export async function resolverCuadranteVial(texto: string): Promise<{ resuelto: 
     barrios: candidateBarrios,
     descripcion: `Cuadrante Calles ${minSt}-${maxSt} (Fallback Respaldo Matriz)`,
     confianza: "aproximada"
+  };
+}
+
+export interface DeduccionGeograficaResult {
+  neighborhood: string;   // Barrio / Vereda / Caserío
+  locality: string;       // Localidad / Comuna
+  city: string;           // Ciudad / Municipio
+  department: string;     // Departamento
+  confidence: string;
+}
+
+/**
+ * Deduce la geografía tripartita (Barrio/Vereda, Localidad/Comuna, Ciudad/Municipio)
+ * utilizando reglas contextuales del texto, nombre del grupo de WhatsApp y diccionarios DANE/IDECA.
+ */
+export function deducirGeografiaTripartita(
+  inputZone: string | null | undefined,
+  inputCity: string | null | undefined,
+  groupName: string | null | undefined,
+  rawText: string | null | undefined
+): DeduccionGeograficaResult {
+  const normZone = inputZone ? normalizarTextoGeografico(inputZone) : "";
+  const normCity = inputCity ? normalizarTextoGeografico(inputCity) : "";
+  const normGroup = groupName ? normalizarTextoGeografico(groupName) : "";
+  const normText = rawText ? normalizarTextoGeografico(rawText) : "";
+  const combined = `${normZone} ${normCity} ${normGroup} ${normText}`;
+
+  // 1. REGLA CALI
+  const caliSectors = [
+    "alamos", "brisas de los alamos", "menga", "chipichape", "la flora", "santa monica",
+    "ciudad jardin", "valle del lili", "san fernando", "granada", "el penon", "juanambu",
+    "pance", "bochalema", "caney", "el caney", "tequendama", "normandie", "imbanaco", "cali"
+  ];
+  const isCali = normCity === "cali" || normGroup.includes("cali") || caliSectors.some(s => combined.includes(s));
+
+  if (isCali) {
+    let neighborhood = "Cali";
+    let locality = "Cali Urbano";
+    if (combined.includes("alamos") || combined.includes("brisas de los alamos")) {
+      neighborhood = "Brisas de los Álamos";
+      locality = "Comuna 2 (Norte)";
+    } else if (combined.includes("menga") || combined.includes("chipichape") || combined.includes("la flora")) {
+      neighborhood = combined.includes("menga") ? "Menga" : combined.includes("chipichape") ? "Chipichape" : "La Flora";
+      locality = "Comuna 2 (Norte)";
+    } else if (combined.includes("ciudad jardin")) {
+      neighborhood = "Ciudad Jardín";
+      locality = "Comuna 22 (Sur)";
+    } else if (combined.includes("valle del lili") || combined.includes("lili")) {
+      neighborhood = "Valle del Lili";
+      locality = "Comuna 17 (Sur)";
+    } else if (combined.includes("san fernando") || combined.includes("tequendama") || combined.includes("imbanaco")) {
+      neighborhood = "San Fernando";
+      locality = "Comuna 19";
+    } else if (combined.includes("granada") || combined.includes("penon") || combined.includes("juanambu")) {
+      neighborhood = combined.includes("granada") ? "Granada" : combined.includes("juanambu") ? "Juanambú" : "El Peñón";
+      locality = "Comuna 3 (Oeste)";
+    } else if (inputZone && inputZone.trim() !== "" && inputZone.toLowerCase() !== "na") {
+      neighborhood = inputZone.trim();
+    }
+    return {
+      neighborhood,
+      locality,
+      city: "Cali",
+      department: "Valle del Cauca",
+      confidence: "alta_deduccion_cali"
+    };
+  }
+
+  // 2. REGLA MEDELLÍN Y ÁREA METROPOLITANA
+  const medellinSectors = [
+    "poblado", "el poblado", "laureles", "estadio", "belen", "envigado", "sabaneta", "itagui",
+    "rionegro", "la estrella", "copacabana", "girardota", "medellin"
+  ];
+  const isMedellin = normCity === "medellin" || normGroup.includes("medellin") || medellinSectors.some(s => combined.includes(s));
+
+  if (isMedellin) {
+    let neighborhood = "Medellín";
+    let locality = "Valle de Aburrá";
+    let city = "Medellín";
+    if (combined.includes("poblado")) {
+      neighborhood = "El Poblado";
+      locality = "Comuna 14 (El Poblado)";
+    } else if (combined.includes("laureles") || combined.includes("estadio")) {
+      neighborhood = "Laureles";
+      locality = "Comuna 11 (Laureles-Estadio)";
+    } else if (combined.includes("belen")) {
+      neighborhood = "Belén";
+      locality = "Comuna 16 (Belén)";
+    } else if (combined.includes("envigado")) {
+      neighborhood = "Envigado";
+      locality = "Envigado";
+      city = "Envigado";
+    } else if (combined.includes("sabaneta")) {
+      neighborhood = "Sabaneta";
+      locality = "Sabaneta";
+      city = "Sabaneta";
+    } else if (combined.includes("rionegro")) {
+      neighborhood = "Rionegro";
+      locality = "Rionegro";
+      city = "Rionegro";
+    } else if (inputZone && inputZone.trim() !== "" && inputZone.toLowerCase() !== "na") {
+      neighborhood = inputZone.trim();
+    }
+    return {
+      neighborhood,
+      locality,
+      city,
+      department: "Antioquia",
+      confidence: "alta_deduccion_medellin"
+    };
+  }
+
+  // 3. REGLA BARRANQUILLA
+  const barranquillaSectors = [
+    "alto prado", "el prado", "riomar", "villa santos", "buenavista", "puerto colombia", "barranquilla"
+  ];
+  const isBarranquilla = normCity === "barranquilla" || normGroup.includes("barranquilla") || barranquillaSectors.some(s => combined.includes(s));
+
+  if (isBarranquilla) {
+    let neighborhood = "Barranquilla";
+    let locality = "Norte-Centro Histórico / Riomar";
+    let city = "Barranquilla";
+    if (combined.includes("alto prado") || combined.includes("el prado")) {
+      neighborhood = "Alto Prado";
+    } else if (combined.includes("riomar") || combined.includes("villa santos") || combined.includes("buenavista")) {
+      neighborhood = combined.includes("villa santos") ? "Villa Santos" : combined.includes("buenavista") ? "Buenavista" : "Riomar";
+    } else if (combined.includes("puerto colombia")) {
+      neighborhood = "Puerto Colombia";
+      city = "Puerto Colombia";
+    } else if (inputZone && inputZone.trim() !== "" && inputZone.toLowerCase() !== "na") {
+      neighborhood = inputZone.trim();
+    }
+    return {
+      neighborhood,
+      locality,
+      city,
+      department: "Atlántico",
+      confidence: "alta_deduccion_barranquilla"
+    };
+  }
+
+  // 4. REGLA BOGOTÁ Y SABANA
+  const sabanaSectors: Record<string, string> = {
+    "chia": "Chía", "cajica": "Cajicá", "sopo": "Sopó", "cota": "Cota",
+    "la calera": "La Calera", "zipaquira": "Zipaquirá", "funza": "Funza",
+    "mosquera": "Mosquera", "madrid": "Madrid", "facatativa": "Facatativá",
+    "fusagasuga": "Fusagasugá", "girardot": "Girardot"
+  };
+  for (const [sKey, sName] of Object.entries(sabanaSectors)) {
+    if (combined.includes(sKey)) {
+      return {
+        neighborhood: sName,
+        locality: sName,
+        city: sName,
+        department: "Cundinamarca",
+        confidence: "alta_deduccion_sabana"
+      };
+    }
+  }
+
+  // Bogotá por barrios conocidos o fallback seguro
+  let neighborhood = inputZone && inputZone.trim() !== "" && inputZone.toLowerCase() !== "na" ? inputZone.trim() : "Bogotá";
+  let locality = "Bogotá Urbano";
+
+  for (const [key, info] of Object.entries(DICCIONARIO_BOGOTA)) {
+    for (const b of info.barrios) {
+      if (normalizarTextoGeografico(b) === normZone || combined.includes(normalizarTextoGeografico(b))) {
+        neighborhood = b;
+        locality = info.localidad;
+        break;
+      }
+    }
+  }
+
+  return {
+    neighborhood,
+    locality,
+    city: "Bogotá, D.C.",
+    department: "Cundinamarca / D.C.",
+    confidence: "deduccion_bogota"
   };
 }

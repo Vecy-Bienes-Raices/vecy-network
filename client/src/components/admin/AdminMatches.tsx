@@ -269,14 +269,50 @@ function scoreRows(req: any, prop: any) {
     propZoneLabel += " ❌ (Diferente Sub-barrio)";
   }
 
-  const reqZoneLabel = formatZoneLabel(reqEffectiveZone, req.ciudadDeseada || "Bogotá");
+  // 3. Ubicación Desagregada (Barrio/Vereda, Localidad/Comuna, Ciudad/Municipio)
+  const reqBarrioDisplay = req.addressNeighborhood || reqEffectiveZone || "N/E";
+  const propBarrioDisplay = prop.addressNeighborhood || propEffectiveZone || "N/E";
 
+  const reqLocalityDisplay = req.addressLocality || "N/E";
+  const propLocalityDisplay = prop.addressLocality || "N/E";
+
+  const reqCityDisplay = req.addressCity || req.ciudadDeseada || "Bogotá";
+  const propCityDisplay = prop.addressCity || prop.city || "Bogotá";
+
+  const isCityMatch = cleanText(reqCityDisplay) === cleanText(propCityDisplay) || 
+                      cleanText(reqCityDisplay).includes(cleanText(propCityDisplay)) || 
+                      cleanText(propCityDisplay).includes(cleanText(reqCityDisplay));
+
+  const isLocalityMatch = cleanText(reqLocalityDisplay) === cleanText(propLocalityDisplay) ||
+                          reqLocalityDisplay === "N/E" || propLocalityDisplay === "N/E";
+
+  // A. Barrio / Vereda / Caserío (10 pts)
   add(
-    "Ubicación / Barrio", 
-    reqZoneLabel, 
-    propZoneLabel, 
-    geoStatus, 
-    20, 
+    "Barrio / Vereda / Caserío",
+    reqBarrioDisplay,
+    propBarrioDisplay,
+    isCityMatch && isExactOrAliasMatch && !isOutStreetBounds ? "exact" : (isCityMatch && !isNeighborhoodMismatch ? "warn" : "missing"),
+    10,
+    <MapPin className="w-3.5 h-3.5" />
+  );
+
+  // B. Localidad / Comuna (5 pts)
+  add(
+    "Localidad / Comuna",
+    reqLocalityDisplay,
+    propLocalityDisplay,
+    isCityMatch && isLocalityMatch ? "exact" : "warn",
+    5,
+    <MapPin className="w-3.5 h-3.5" />
+  );
+
+  // C. Ciudad / Municipio (5 pts - Filtro Duro)
+  add(
+    "Ciudad / Municipio",
+    reqCityDisplay,
+    propCityDisplay,
+    isCityMatch ? "exact" : "missing",
+    5,
     <MapPin className="w-3.5 h-3.5" />
   );
 

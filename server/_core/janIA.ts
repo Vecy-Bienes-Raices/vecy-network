@@ -6,7 +6,7 @@ import { invokeLLM } from "./llm";
 import { getDb } from "../db";
 import { properties, requirements, users, propertyImages, InsertProperty, InsertRequirement, pendingSessions, propertyMatches, messages as dbMessages, conversations as dbConversations, propertyPublicationHistory } from "../../drizzle/schema";
 import { findMatchesForProperty, findMatchesForRequirement } from "./matching";
-import { validarZona, normalizarTextoGeografico, desambiguarBarriosCompuestos } from "./geography";
+import { validarZona, normalizarTextoGeografico, desambiguarBarriosCompuestos, deducirGeografiaTripartita } from "./geography";
 import { validateCity } from "./divipola";
 import { transcribeAudio } from "./voiceTranscription";
 import { eq, and, sql, gte, desc, or, isNotNull } from "drizzle-orm";
@@ -2242,48 +2242,30 @@ Por lo tanto, DEBES hacer lo siguiente:
         if (!result.missingFields.includes("zone")) result.missingFields.push("zone");
       }
 
-      const validation = geoValidation;
-      if (validation) {
-        if (isProperty && validation.isValid) {
-          extracted.latitude = validation.latitude || null;
-          extracted.longitude = validation.longitude || null;
+      // ── DEDUCCIÓN GEOGRÁFICA TRIPARTITA INTELIGENTE (v22.0) ──
+      const triGeo = deducirGeografiaTripartita(
+        isProperty ? extracted?.zone : (extracted?.zonaDeseada || extracted?.zone),
+        isProperty ? extracted?.city : (extracted?.ciudadDeseada || extracted?.city),
+        groupName,
+        messageToProcess
+      );
+
+      if (isProperty) {
+        extracted.zone = triGeo.neighborhood;
+        extracted.addressNeighborhood = triGeo.neighborhood;
+        extracted.addressLocality = triGeo.locality;
+        extracted.addressCity = triGeo.city;
+        extracted.city = triGeo.city;
+        if (geoValidation && geoValidation.isValid) {
+          extracted.latitude = geoValidation.latitude || null;
+          extracted.longitude = geoValidation.longitude || null;
         }
-        // Normalización Geográfica Nacional (v12.5)
-        if (validation.isMunicipio) {
-          // Fuera de Bogotá (Cali, Medellín, Tame, Tadó, etc.)
-          if (isProperty) {
-            extracted.city = validation.barrioCanonico;
-            extracted.addressCity = validation.barrioCanonico;
-            extracted.addressLocality = validation.localidad;
-            if (extracted.zone && normalizarTextoGeografico(extracted.zone) !== normalizarTextoGeografico(validation.barrioCanonico || "")) {
-              // Conservar barrio si el LLM extrajo algo más específico
-            } else {
-              extracted.zone = validation.barrioCanonico;
-            }
-          } else {
-            extracted.ciudadDeseada = validation.barrioCanonico;
-            extracted.addressCity = validation.barrioCanonico;
-            extracted.addressLocality = validation.localidad;
-            if (extracted.zonaDeseada && normalizarTextoGeografico(extracted.zonaDeseada) !== normalizarTextoGeografico(validation.barrioCanonico || "")) {
-              // Conservar
-            } else {
-              extracted.zonaDeseada = validation.barrioCanonico;
-            }
-          }
-        } else {
-          // Dentro de Bogotá
-          if (isProperty) {
-            extracted.city = "Bogotá";
-            extracted.addressCity = "Bogotá";
-            extracted.zone = validation.barrioCanonico;
-            extracted.addressLocality = validation.localidad;
-          } else {
-            extracted.ciudadDeseada = "Bogotá";
-            extracted.addressCity = "Bogotá";
-            extracted.zonaDeseada = validation.barrioCanonico;
-            extracted.addressLocality = validation.localidad;
-          }
-        }
+      } else {
+        extracted.zonaDeseada = triGeo.neighborhood;
+        extracted.addressNeighborhood = triGeo.neighborhood;
+        extracted.addressLocality = triGeo.locality;
+        extracted.addressCity = triGeo.city;
+        extracted.ciudadDeseada = triGeo.city;
       }
     }
 
