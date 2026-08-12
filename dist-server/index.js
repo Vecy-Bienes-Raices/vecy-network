@@ -4030,9 +4030,24 @@ function explicarMatch(requirement, property) {
       }
     }
   }
+  function isPhoneNumberNotPrice2(val, rawText) {
+    if (val === void 0 || val === null || val === "" || val === 0 || val === "0") return false;
+    const numStr = String(val).replace(/\D/g, "");
+    if (numStr.length === 10 && numStr.startsWith("3")) return true;
+    if (numStr.length === 12 && numStr.startsWith("573")) return true;
+    if (rawText) {
+      const rawLower = rawText.toLowerCase();
+      if (rawLower.includes(numStr) && numStr.length >= 8) {
+        if (/wa|whatsapp|cel|celular|tel|telefono|teléfono|contacto|llamar/i.test(rawLower)) return true;
+      }
+    }
+    return false;
+  }
   let price = parseFloat(String(property.price || "0"));
   let budgetMax = parseFloat(String(requirement.presupuestoMax || "0"));
   const budgetMin = parseFloat(String(requirement.presupuestoMin || "0"));
+  if (isPhoneNumberNotPrice2(price, property.rawText)) price = 0;
+  if (isPhoneNumberNotPrice2(budgetMax, requirement.rawText)) budgetMax = 0;
   const isSaleMatch = (property.transactionType || "").toLowerCase().includes("venta") || !(property.transactionType || "").toLowerCase().includes("arriendo");
   if (isSaleMatch && price > 0 && price < 3e7 && property.rawText) {
     const rawP = property.rawText.toLowerCase();
@@ -5116,6 +5131,7 @@ __export(janIA_exports, {
   hasRealEstateTextKeyword: () => hasRealEstateTextKeyword,
   isGenericName: () => isGenericName,
   isOutsideWorkingHours: () => isOutsideWorkingHours,
+  isPhoneNumberNotPrice: () => isPhoneNumberNotPrice,
   isSessionMuted: () => isSessionMuted,
   janiaResultSchema: () => janiaResultSchema,
   muteSession: () => muteSession,
@@ -5139,6 +5155,25 @@ import crypto from "crypto";
 function generarHashMensaje(rawText, remitente) {
   const normalizado = (rawText || "").toLowerCase().replace(/\s+/g, " ").replace(/[^\w\s]/g, "").trim();
   return crypto.createHash("sha256").update(`${remitente}:${normalizado}`).digest("hex");
+}
+function isPhoneNumberNotPrice(val, rawText) {
+  if (val === void 0 || val === null || val === "" || val === 0 || val === "0") return false;
+  const numStr = String(val).replace(/\D/g, "");
+  if (numStr.length === 10 && numStr.startsWith("3")) {
+    return true;
+  }
+  if (numStr.length === 12 && numStr.startsWith("573")) {
+    return true;
+  }
+  if (rawText) {
+    const rawLower = rawText.toLowerCase();
+    if (rawLower.includes(numStr) && numStr.length >= 8) {
+      if (/wa|whatsapp|cel|celular|tel|telefono|teléfono|contacto|llamar/i.test(rawLower)) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 function extractFirstName(fullName) {
   if (!fullName) return "";
@@ -5287,11 +5322,18 @@ function extractFallbackDataFromText(text2) {
   const millonMatch = text2.match(/(\d+(?:[\.,]\d+)?)\s*(?:millon|millones|millón|mill|mm)\b/i);
   if (millonMatch) {
     const val = parseFloat(millonMatch[1].replace(",", "."));
-    price = val * 1e6;
+    const mult = val < 100 ? 1e7 : 1e6;
+    const computed = val * mult;
+    if (!isPhoneNumberNotPrice(computed, text2)) {
+      price = computed;
+    }
   } else {
     const rawPriceMatch = text2.match(/\$?\s*(\d{1,3}(?:[\.,]\d{3}){2,3})/);
     if (rawPriceMatch) {
-      price = parseFloat(rawPriceMatch[1].replace(/[\.,]/g, ""));
+      const parsed = parseFloat(rawPriceMatch[1].replace(/[\.,]/g, ""));
+      if (!isPhoneNumberNotPrice(parsed, text2)) {
+        price = parsed;
+      }
     }
   }
   let area = 0;
@@ -7139,13 +7181,13 @@ async function saveProperty(data, userId, realName, imageBuffer) {
     price: (() => {
       if (data.price === void 0 || data.price === null) return null;
       const v = parseFloat(String(data.price));
-      if (isNaN(v) || v < 1e7 || v > 5e10) return null;
+      if (isNaN(v) || v < 1e7 || v > 5e10 || isPhoneNumberNotPrice(v, data.rawText)) return null;
       return String(v);
     })(),
     rentPrice: (() => {
       if (data.rentPrice === void 0 || data.rentPrice === null) return null;
       const v = parseFloat(String(data.rentPrice));
-      if (isNaN(v) || v < 3e5 || v > 2e8) return null;
+      if (isNaN(v) || v < 3e5 || v > 2e8 || isPhoneNumberNotPrice(v, data.rawText)) return null;
       return String(v);
     })(),
     areaTotal: (() => {
@@ -7339,7 +7381,7 @@ async function saveRequirement(data, userId, realName) {
       const raw = data.presupuestoMax !== void 0 && data.presupuestoMax !== null ? data.presupuestoMax : data.price;
       if (raw === void 0 || raw === null) return null;
       const v = parseFloat(String(raw));
-      if (isNaN(v) || v < 3e5 || v > 5e10) return null;
+      if (isNaN(v) || v < 3e5 || v > 5e10 || isPhoneNumberNotPrice(v, data.rawText)) return null;
       return String(v);
     })(),
     areaMin: (() => {

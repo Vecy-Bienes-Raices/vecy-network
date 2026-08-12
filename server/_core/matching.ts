@@ -1077,9 +1077,26 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   }
 
 
+function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?: string): boolean {
+  if (val === undefined || val === null || val === "" || val === 0 || val === "0") return false;
+  const numStr = String(val).replace(/\D/g, "");
+  if (numStr.length === 10 && numStr.startsWith("3")) return true;
+  if (numStr.length === 12 && numStr.startsWith("573")) return true;
+  if (rawText) {
+    const rawLower = rawText.toLowerCase();
+    if (rawLower.includes(numStr) && numStr.length >= 8) {
+      if (/wa|whatsapp|cel|celular|tel|telefono|teléfono|contacto|llamar/i.test(rawLower)) return true;
+    }
+  }
+  return false;
+}
+
   let price       = parseFloat(String(property.price || "0"));
   let budgetMax   = parseFloat(String(requirement.presupuestoMax || "0"));
   const budgetMin = parseFloat(String(requirement.presupuestoMin || "0"));
+
+  if (isPhoneNumberNotPrice(price, property.rawText)) price = 0;
+  if (isPhoneNumberNotPrice(budgetMax, requirement.rawText)) budgetMax = 0;
 
   // ── SANIDAD PREDIAL DE PRECIOS EN EL MOTOR v20.0 ──────────────────────────────
   // Para Venta, si price < 30.000.000 (ej. $1.200.000 cuota de administración),
