@@ -1973,8 +1973,8 @@ export default function AdminMatches() {
                         <thead>
                           <tr className="border-b border-white/10 text-[10px] uppercase tracking-widest text-zinc-500">
                             <th className="text-left py-2.5 px-3">Característica</th>
-                            <th className="text-left py-2.5 px-3 text-[#bf953f]">Ofrecido (Oferta)</th>
-                            <th className="text-left py-2.5 px-3 text-cyan-400">Buscado (Demanda)</th>
+                            <th className="text-left py-2.5 px-3 text-[#bf953f]">Ofrecido (Oferta) {isEditingThisCard && <span className="text-[9px] text-amber-400 font-normal">(Modo Edición)</span>}</th>
+                            <th className="text-left py-2.5 px-3 text-cyan-400">Buscado (Demanda) {isEditingThisCard && <span className="text-[9px] text-cyan-300 font-normal">(Modo Edición)</span>}</th>
                             <th className="text-center py-2.5 px-3 w-28">Cumplimiento</th>
                           </tr>
                         </thead>
@@ -1994,14 +1994,236 @@ export default function AdminMatches() {
                             
                             const badgeText = isExact ? "Coincide" : isWarn ? "Aproximado" : isNeutral ? "Dato Pendiente" : "Fallido";
 
+                            const renderRowInput = (label: string, isOffer: boolean, defaultVal: string) => {
+                              if (!isEditingThisCard) {
+                                return (
+                                  <span 
+                                    onClick={() => handleStartEdit(m)} 
+                                    className="cursor-pointer hover:underline hover:text-white transition-colors"
+                                    title="Haz clic aquí para editar esta casilla N/E"
+                                  >
+                                    {defaultVal}
+                                  </span>
+                                );
+                              }
+
+                              const cleanLbl = label.toLowerCase();
+                              
+                              if (cleanLbl.includes('precio de venta')) {
+                                return isOffer ? (
+                                  <input
+                                    type="text"
+                                    placeholder="Ej: 700000000"
+                                    value={editForm.propPrice || ''}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, propPrice: e.target.value }))}
+                                    className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#bf953f]"
+                                  />
+                                ) : (
+                                  <input
+                                    type="text"
+                                    placeholder="Ej: 700000000"
+                                    value={editForm.reqBudget || ''}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, reqBudget: e.target.value }))}
+                                    className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                                  />
+                                );
+                              }
+
+                              if (cleanLbl.includes('precio de arriendo') || cleanLbl.includes('canon')) {
+                                return isOffer ? (
+                                  <input
+                                    type="text"
+                                    placeholder="Ej: 2500000"
+                                    value={editForm.propRentPrice || ''}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, propRentPrice: e.target.value }))}
+                                    className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#bf953f]"
+                                  />
+                                ) : (
+                                  <input
+                                    type="text"
+                                    placeholder="Ej: 2500000"
+                                    value={editForm.reqBudget || ''}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, reqBudget: e.target.value }))}
+                                    className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                                  />
+                                );
+                              }
+
+                              if (cleanLbl.includes('cuota de administración') || cleanLbl.includes('administración')) {
+                                return isOffer ? (
+                                  <input
+                                    type="text"
+                                    placeholder="Ej: 500000"
+                                    value={editForm.propAdminFee || ''}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, propAdminFee: e.target.value }))}
+                                    className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#bf953f]"
+                                  />
+                                ) : (
+                                  <input
+                                    type="text"
+                                    placeholder="Ej: 600000"
+                                    value={editForm.reqAdminMax || ''}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, reqAdminMax: e.target.value }))}
+                                    className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                                  />
+                                );
+                              }
+
+                              if (cleanLbl.includes('área total') || cleanLbl.includes('área')) {
+                                return isOffer ? (
+                                  <input
+                                    type="text"
+                                    placeholder="Ej: 87"
+                                    value={editForm.propArea || ''}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, propArea: e.target.value }))}
+                                    className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#bf953f]"
+                                  />
+                                ) : (
+                                  <input
+                                    type="text"
+                                    placeholder="Ej: 80"
+                                    value={editForm.reqArea || ''}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, reqArea: e.target.value }))}
+                                    className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                                  />
+                                );
+                              }
+
+                              if (cleanLbl.includes('habitaciones')) {
+                                return isOffer ? (
+                                  <input
+                                    type="number"
+                                    placeholder="Ej: 3"
+                                    value={editForm.propBedrooms ?? ''}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, propBedrooms: e.target.value }))}
+                                    className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#bf953f]"
+                                  />
+                                ) : (
+                                  <input
+                                    type="number"
+                                    placeholder="Ej: 3"
+                                    value={editForm.reqBedrooms ?? ''}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, reqBedrooms: e.target.value }))}
+                                    className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                                  />
+                                );
+                              }
+
+                              if (cleanLbl.includes('baños')) {
+                                return isOffer ? (
+                                  <input
+                                    type="number"
+                                    placeholder="Ej: 3"
+                                    value={editForm.propBathrooms ?? ''}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, propBathrooms: e.target.value }))}
+                                    className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#bf953f]"
+                                  />
+                                ) : (
+                                  <input
+                                    type="number"
+                                    placeholder="Ej: 2"
+                                    value={editForm.reqBathrooms ?? ''}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, reqBathrooms: e.target.value }))}
+                                    className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                                  />
+                                );
+                              }
+
+                              if (cleanLbl.includes('parqueaderos') || cleanLbl.includes('garajes')) {
+                                return isOffer ? (
+                                  <input
+                                    type="number"
+                                    placeholder="Ej: 2"
+                                    value={editForm.propGarages ?? ''}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, propGarages: e.target.value }))}
+                                    className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#bf953f]"
+                                  />
+                                ) : (
+                                  <input
+                                    type="number"
+                                    placeholder="Ej: 2"
+                                    value={editForm.reqGarages ?? ''}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, reqGarages: e.target.value }))}
+                                    className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                                  />
+                                );
+                              }
+
+                              if (cleanLbl.includes('estrato')) {
+                                return isOffer ? (
+                                  <input
+                                    type="number"
+                                    placeholder="Ej: 4"
+                                    value={editForm.propStratum ?? ''}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, propStratum: e.target.value }))}
+                                    className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#bf953f]"
+                                  />
+                                ) : (
+                                  <input
+                                    type="number"
+                                    placeholder="Ej: 4"
+                                    value={editForm.reqStratum ?? ''}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, reqStratum: e.target.value }))}
+                                    className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                                  />
+                                );
+                              }
+
+                              if (cleanLbl.includes('barrio')) {
+                                return isOffer ? (
+                                  <input
+                                    type="text"
+                                    placeholder="Ej: Cedritos"
+                                    value={editForm.propZone || ''}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, propZone: e.target.value }))}
+                                    className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#bf953f]"
+                                  />
+                                ) : (
+                                  <input
+                                    type="text"
+                                    placeholder="Ej: Rosales"
+                                    value={editForm.reqZone || ''}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, reqZone: e.target.value }))}
+                                    className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                                  />
+                                );
+                              }
+
+                              if (cleanLbl.includes('ciudad')) {
+                                return isOffer ? (
+                                  <input
+                                    type="text"
+                                    placeholder="Ej: Bogotá"
+                                    value={editForm.propCity || ''}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, propCity: e.target.value }))}
+                                    className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#bf953f]"
+                                  />
+                                ) : (
+                                  <input
+                                    type="text"
+                                    placeholder="Ej: Bogotá"
+                                    value={editForm.reqCity || ''}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, reqCity: e.target.value }))}
+                                    className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                                  />
+                                );
+                              }
+
+                              return defaultVal;
+                            };
+
                             return (
-                              <tr key={rIdx} className="border-b border-white/5 hover:bg-white/[0.01] transition-colors">
-                                <td className="py-2.5 px-3 flex items-center gap-2 font-medium text-zinc-300">
+                              <tr key={rIdx} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
+                                <td className="py-2.5 px-3 flex items-center gap-2 font-medium text-zinc-300 min-w-[160px]">
                                   {row.icon}
                                   <span>{row.label}</span>
                                 </td>
-                                <td className="py-2.5 px-3 text-[#bf953f] font-medium">{row.propVal}</td>
-                                <td className="py-2.5 px-3 text-cyan-300">{row.reqVal}</td>
+                                <td className="py-2 px-3 text-[#bf953f] font-medium min-w-[180px]">
+                                  {renderRowInput(row.label, true, row.propVal)}
+                                </td>
+                                <td className="py-2 px-3 text-cyan-300 min-w-[180px]">
+                                  {renderRowInput(row.label, false, row.reqVal)}
+                                </td>
                                 <td className="py-2.5 px-3 text-center">
                                   <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${badgeBg}`}>
                                     {badgeText}
@@ -2031,6 +2253,91 @@ export default function AdminMatches() {
                         
                         const badgeText = isExact ? "Coincide" : isWarn ? "Aproximado" : isNeutral ? "Dato Pendiente" : "Fallido";
 
+                        const renderMobileInput = (label: string, isOffer: boolean, defaultVal: string) => {
+                          if (!isEditingThisCard) {
+                            return (
+                              <span 
+                                onClick={() => handleStartEdit(m)} 
+                                className="cursor-pointer hover:underline hover:text-white transition-colors"
+                              >
+                                {defaultVal}
+                              </span>
+                            );
+                          }
+                          const cleanLbl = label.toLowerCase();
+                          if (cleanLbl.includes('precio de venta')) {
+                            return isOffer ? (
+                              <input type="text" placeholder="Ej: 700000000" value={editForm.propPrice || ''} onChange={(e) => setEditForm(prev => ({ ...prev, propPrice: e.target.value }))} className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg" />
+                            ) : (
+                              <input type="text" placeholder="Ej: 700000000" value={editForm.reqBudget || ''} onChange={(e) => setEditForm(prev => ({ ...prev, reqBudget: e.target.value }))} className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg" />
+                            );
+                          }
+                          if (cleanLbl.includes('precio de arriendo') || cleanLbl.includes('canon')) {
+                            return isOffer ? (
+                              <input type="text" placeholder="Ej: 2500000" value={editForm.propRentPrice || ''} onChange={(e) => setEditForm(prev => ({ ...prev, propRentPrice: e.target.value }))} className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg" />
+                            ) : (
+                              <input type="text" placeholder="Ej: 2500000" value={editForm.reqBudget || ''} onChange={(e) => setEditForm(prev => ({ ...prev, reqBudget: e.target.value }))} className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg" />
+                            );
+                          }
+                          if (cleanLbl.includes('cuota de administración') || cleanLbl.includes('administración')) {
+                            return isOffer ? (
+                              <input type="text" placeholder="Ej: 500000" value={editForm.propAdminFee || ''} onChange={(e) => setEditForm(prev => ({ ...prev, propAdminFee: e.target.value }))} className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg" />
+                            ) : (
+                              <input type="text" placeholder="Ej: 600000" value={editForm.reqAdminMax || ''} onChange={(e) => setEditForm(prev => ({ ...prev, reqAdminMax: e.target.value }))} className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg" />
+                            );
+                          }
+                          if (cleanLbl.includes('área total') || cleanLbl.includes('área')) {
+                            return isOffer ? (
+                              <input type="text" placeholder="Ej: 87" value={editForm.propArea || ''} onChange={(e) => setEditForm(prev => ({ ...prev, propArea: e.target.value }))} className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg" />
+                            ) : (
+                              <input type="text" placeholder="Ej: 80" value={editForm.reqArea || ''} onChange={(e) => setEditForm(prev => ({ ...prev, reqArea: e.target.value }))} className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg" />
+                            );
+                          }
+                          if (cleanLbl.includes('habitaciones')) {
+                            return isOffer ? (
+                              <input type="number" placeholder="Ej: 3" value={editForm.propBedrooms ?? ''} onChange={(e) => setEditForm(prev => ({ ...prev, propBedrooms: e.target.value }))} className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg" />
+                            ) : (
+                              <input type="number" placeholder="Ej: 3" value={editForm.reqBedrooms ?? ''} onChange={(e) => setEditForm(prev => ({ ...prev, reqBedrooms: e.target.value }))} className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg" />
+                            );
+                          }
+                          if (cleanLbl.includes('baños')) {
+                            return isOffer ? (
+                              <input type="number" placeholder="Ej: 3" value={editForm.propBathrooms ?? ''} onChange={(e) => setEditForm(prev => ({ ...prev, propBathrooms: e.target.value }))} className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg" />
+                            ) : (
+                              <input type="number" placeholder="Ej: 2" value={editForm.reqBathrooms ?? ''} onChange={(e) => setEditForm(prev => ({ ...prev, reqBathrooms: e.target.value }))} className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg" />
+                            );
+                          }
+                          if (cleanLbl.includes('parqueaderos') || cleanLbl.includes('garajes')) {
+                            return isOffer ? (
+                              <input type="number" placeholder="Ej: 2" value={editForm.propGarages ?? ''} onChange={(e) => setEditForm(prev => ({ ...prev, propGarages: e.target.value }))} className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg" />
+                            ) : (
+                              <input type="number" placeholder="Ej: 2" value={editForm.reqGarages ?? ''} onChange={(e) => setEditForm(prev => ({ ...prev, reqGarages: e.target.value }))} className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg" />
+                            );
+                          }
+                          if (cleanLbl.includes('estrato')) {
+                            return isOffer ? (
+                              <input type="number" placeholder="Ej: 4" value={editForm.propStratum ?? ''} onChange={(e) => setEditForm(prev => ({ ...prev, propStratum: e.target.value }))} className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg" />
+                            ) : (
+                              <input type="number" placeholder="Ej: 4" value={editForm.reqStratum ?? ''} onChange={(e) => setEditForm(prev => ({ ...prev, reqStratum: e.target.value }))} className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg" />
+                            );
+                          }
+                          if (cleanLbl.includes('barrio')) {
+                            return isOffer ? (
+                              <input type="text" placeholder="Ej: Cedritos" value={editForm.propZone || ''} onChange={(e) => setEditForm(prev => ({ ...prev, propZone: e.target.value }))} className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg" />
+                            ) : (
+                              <input type="text" placeholder="Ej: Rosales" value={editForm.reqZone || ''} onChange={(e) => setEditForm(prev => ({ ...prev, reqZone: e.target.value }))} className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg" />
+                            );
+                          }
+                          if (cleanLbl.includes('ciudad')) {
+                            return isOffer ? (
+                              <input type="text" placeholder="Ej: Bogotá" value={editForm.propCity || ''} onChange={(e) => setEditForm(prev => ({ ...prev, propCity: e.target.value }))} className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg" />
+                            ) : (
+                              <input type="text" placeholder="Ej: Bogotá" value={editForm.reqCity || ''} onChange={(e) => setEditForm(prev => ({ ...prev, reqCity: e.target.value }))} className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg" />
+                            );
+                          }
+                          return defaultVal;
+                        };
+
                         return (
                           <div key={rIdx} className="bg-zinc-900/70 border border-white/5 rounded-2xl p-3 space-y-2">
                             {/* Cabecera con Nombre de Atributo y Badge de Cumplimiento a la derecha */}
@@ -2051,7 +2358,7 @@ export default function AdminMatches() {
                                   🏢 Ofrecido (Oferta)
                                 </span>
                                 <span className="font-bold text-[#bf953f] break-words mt-0.5 block">
-                                  {row.propVal}
+                                  {renderMobileInput(row.label, true, row.propVal)}
                                 </span>
                               </div>
 
@@ -2060,7 +2367,7 @@ export default function AdminMatches() {
                                   🔍 Buscado (Demanda)
                                 </span>
                                 <span className="font-bold text-cyan-300 break-words mt-0.5 block">
-                                  {row.reqVal}
+                                  {renderMobileInput(row.label, false, row.reqVal)}
                                 </span>
                               </div>
                             </div>
@@ -2068,6 +2375,7 @@ export default function AdminMatches() {
                         );
                       })}
                     </div>
+
 
                   </div>
 
