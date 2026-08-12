@@ -11926,6 +11926,66 @@ ${liveStats}${userContextInstruction}
       throw error;
     }
   }),
+  // Actualizar datos prediales de un inmueble oferta directamente desde la Mesa de Cotejo
+  updatePropertyDetails: publicProcedure.input(z2.object({
+    propertyId: z2.number(),
+    name: z2.string().optional(),
+    price: z2.string().optional(),
+    rentPrice: z2.string().optional().nullable(),
+    adminFee: z2.string().optional().nullable(),
+    bedrooms: z2.number().optional().nullable(),
+    bathrooms: z2.number().optional().nullable(),
+    garages: z2.number().optional().nullable(),
+    areaTotal: z2.string().optional().nullable(),
+    stratum: z2.number().optional().nullable(),
+    zone: z2.string().optional().nullable(),
+    addressNeighborhood: z2.string().optional().nullable(),
+    addressLocality: z2.string().optional().nullable(),
+    city: z2.string().optional().nullable(),
+    propertyType: z2.string().optional().nullable(),
+    transactionType: z2.string().optional().nullable()
+  })).mutation(async ({ input }) => {
+    const db = await getDb();
+    if (!db) throw new Error("Database not available");
+    const { propertyId, ...updateFields } = input;
+    const updateData = {};
+    for (const [key, value] of Object.entries(updateFields)) {
+      if (value !== void 0) updateData[key] = value;
+    }
+    updateData.updatedAt = /* @__PURE__ */ new Date();
+    await db.update(properties).set(updateData).where(eq5(properties.id, propertyId));
+    console.log(`[JanIA-UpdateProperty] Propiedad #${propertyId} actualizada directamente desde Mesa de Cotejo`);
+    return { success: true, message: "Propiedad actualizada con \xE9xito" };
+  }),
+  // Actualizar datos prediales de un requerimiento demanda directamente desde la Mesa de Cotejo
+  updateRequirementDetails: publicProcedure.input(z2.object({
+    requirementId: z2.number(),
+    name: z2.string().optional(),
+    presupuestoMax: z2.string().optional(),
+    presupuestoMin: z2.string().optional().nullable(),
+    adminFeeMax: z2.string().optional().nullable(),
+    habitacionesMin: z2.number().optional().nullable(),
+    banosMin: z2.number().optional().nullable(),
+    parqueaderosMin: z2.number().optional().nullable(),
+    areaMin: z2.string().optional().nullable(),
+    estratoDeseado: z2.number().optional().nullable(),
+    zonaDeseada: z2.string().optional().nullable(),
+    addressNeighborhood: z2.string().optional().nullable(),
+    ciudadDeseada: z2.string().optional().nullable(),
+    tipoInmuebleDeseado: z2.string().optional().nullable(),
+    tipoNegocioDeseado: z2.string().optional().nullable()
+  })).mutation(async ({ input }) => {
+    const db = await getDb();
+    if (!db) throw new Error("Database not available");
+    const { requirementId, ...updateFields } = input;
+    const updateData = {};
+    for (const [key, value] of Object.entries(updateFields)) {
+      if (value !== void 0) updateData[key] = value;
+    }
+    await db.update(requirements).set(updateData).where(eq5(requirements.id, requirementId));
+    console.log(`[JanIA-UpdateRequirement] Requerimiento #${requirementId} actualizado directamente desde Mesa de Cotejo`);
+    return { success: true, message: "Requerimiento actualizado con \xE9xito" };
+  }),
   // Create lead from conversation
   createLead: publicProcedure.input(
     z2.object({

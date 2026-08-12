@@ -2,8 +2,10 @@ import React, { useMemo } from 'react';
 import { 
   Phone, MapPin, Search, Download, Building2, Calendar, 
   Sparkles, CheckCircle2, AlertTriangle, XCircle, SlidersHorizontal, 
-  DollarSign, Ruler, Bed, Bath, Car, Shield, ExternalLink, Receipt, Box, Globe
+  DollarSign, Ruler, Bed, Bath, Car, Shield, ExternalLink, Receipt, Box, Globe,
+  Edit3, Save, Loader2, RotateCcw
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { trpc } from '@/lib/trpc';
@@ -1016,6 +1018,106 @@ export default function AdminMatches() {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [minScore, setMinScore] = React.useState('80');
   const [activeTab, setActiveTab] = React.useState<'calificados' | 'incompletos'>('calificados');
+  
+  // Estados para Edición Interactiva de Fichas Prediales directamente desde el Cotejo
+  const [editingMatchId, setEditingMatchId] = React.useState<number | null>(null);
+  const [isSaving, setIsSaving] = React.useState(false);
+  const [editForm, setEditForm] = React.useState<Record<string, any>>({});
+
+  const updatePropMut = trpc.janIA.updatePropertyDetails.useMutation();
+  const updateReqMut = trpc.janIA.updateRequirementDetails.useMutation();
+
+  const handleStartEdit = (m: any) => {
+    if (editingMatchId === m.id) {
+      setEditingMatchId(null);
+      setEditForm({});
+      return;
+    }
+
+    setEditingMatchId(m.id);
+    setEditForm({
+      // Oferta (Inmueble)
+      propPrice: m.property?.price || '',
+      propRentPrice: m.property?.rentPrice || '',
+      propAdminFee: m.property?.adminFee || '',
+      propArea: m.property?.areaTotal || m.property?.areaPrivate || '',
+      propBedrooms: m.property?.bedrooms ?? '',
+      propBathrooms: m.property?.bathrooms ?? '',
+      propGarages: m.property?.garages ?? '',
+      propStratum: m.property?.stratum ?? '',
+      propZone: m.property?.zone || m.property?.addressNeighborhood || '',
+      propCity: m.property?.city || 'Bogotá',
+
+      // Demanda (Requerimiento)
+      reqBudget: m.requirement?.presupuestoMax || '',
+      reqAdminMax: m.requirement?.adminFeeMax || '',
+      reqArea: m.requirement?.areaMin || '',
+      reqBedrooms: m.requirement?.habitacionesMin ?? '',
+      reqBathrooms: m.requirement?.banosMin ?? '',
+      reqGarages: m.requirement?.parqueaderosMin ?? '',
+      reqStratum: m.requirement?.estratoDeseado ?? '',
+      reqZone: m.requirement?.zonaDeseada || m.requirement?.addressNeighborhood || '',
+      reqCity: m.requirement?.ciudadDeseada || 'Bogotá',
+    });
+  };
+
+  const handleOnlySave = async (m: any) => {
+    setIsSaving(true);
+    try {
+      if (m.property?.id) {
+        await updatePropMut.mutateAsync({
+          propertyId: m.property.id,
+          price: editForm.propPrice !== undefined && editForm.propPrice !== '' ? String(editForm.propPrice) : undefined,
+          rentPrice: editForm.propRentPrice !== undefined && editForm.propRentPrice !== '' ? String(editForm.propRentPrice) : undefined,
+          adminFee: editForm.propAdminFee !== undefined && editForm.propAdminFee !== '' ? String(editForm.propAdminFee) : undefined,
+          areaTotal: editForm.propArea !== undefined && editForm.propArea !== '' ? String(editForm.propArea) : undefined,
+          bedrooms: editForm.propBedrooms !== undefined && editForm.propBedrooms !== '' ? Number(editForm.propBedrooms) : undefined,
+          bathrooms: editForm.propBathrooms !== undefined && editForm.propBathrooms !== '' ? Number(editForm.propBathrooms) : undefined,
+          garages: editForm.propGarages !== undefined && editForm.propGarages !== '' ? Number(editForm.propGarages) : undefined,
+          stratum: editForm.propStratum !== undefined && editForm.propStratum !== '' ? Number(editForm.propStratum) : undefined,
+          zone: editForm.propZone ? String(editForm.propZone) : undefined,
+          addressNeighborhood: editForm.propZone ? String(editForm.propZone) : undefined,
+          city: editForm.propCity ? String(editForm.propCity) : undefined,
+        });
+      }
+
+      if (m.requirement?.id) {
+        await updateReqMut.mutateAsync({
+          requirementId: m.requirement.id,
+          presupuestoMax: editForm.reqBudget !== undefined && editForm.reqBudget !== '' ? String(editForm.reqBudget) : undefined,
+          adminFeeMax: editForm.reqAdminMax !== undefined && editForm.reqAdminMax !== '' ? String(editForm.reqAdminMax) : undefined,
+          areaMin: editForm.reqArea !== undefined && editForm.reqArea !== '' ? String(editForm.reqArea) : undefined,
+          habitacionesMin: editForm.reqBedrooms !== undefined && editForm.reqBedrooms !== '' ? Number(editForm.reqBedrooms) : undefined,
+          banosMin: editForm.reqBathrooms !== undefined && editForm.reqBathrooms !== '' ? Number(editForm.reqBathrooms) : undefined,
+          parqueaderosMin: editForm.reqGarages !== undefined && editForm.reqGarages !== '' ? Number(editForm.reqGarages) : undefined,
+          estratoDeseado: editForm.reqStratum !== undefined && editForm.reqStratum !== '' ? Number(editForm.reqStratum) : undefined,
+          zonaDeseada: editForm.reqZone ? String(editForm.reqZone) : undefined,
+          addressNeighborhood: editForm.reqZone ? String(editForm.reqZone) : undefined,
+          ciudadDeseada: editForm.reqCity ? String(editForm.reqCity) : undefined,
+        });
+      }
+
+      toast.success("💾 Cambios guardados en Supabase", {
+        description: "Los datos prediales actualizados han sido almacenados con éxito."
+      });
+    } catch (err: any) {
+      toast.error("Error al guardar en Supabase", {
+        description: err.message || "No se pudieron actualizar los datos."
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleRecalculateMatch = async (m: any) => {
+    await handleOnlySave(m);
+    toast.success("⚡ Match recalculado en vivo", {
+      description: "Re-evaluando afinidad comercial con la base de datos completa..."
+    });
+    setEditingMatchId(null);
+    setEditForm({});
+    refetch();
+  };
 
   // Fetch matches directly from server API with auto-refresh every 10s
   const { data: matches = [], isLoading, refetch } = trpc.janIA.getAllMatches.useQuery(undefined, {
@@ -1190,8 +1292,37 @@ export default function AdminMatches() {
         <div className="grid grid-cols-1 gap-6">
           <AnimatePresence>
             {filteredMatches.map((m, idx) => {
-              const score = parseFloat(m.matchScore?.toString() || "0");
-              const { rows, autoScore } = scoreRows(m.requirement, m.property);
+              const isEditingThisCard = editingMatchId === m.id;
+
+              const effectiveProp = isEditingThisCard ? {
+                ...m.property,
+                price: editForm.propPrice !== undefined && editForm.propPrice !== '' ? editForm.propPrice : m.property.price,
+                rentPrice: editForm.propRentPrice !== undefined && editForm.propRentPrice !== '' ? editForm.propRentPrice : m.property.rentPrice,
+                adminFee: editForm.propAdminFee !== undefined && editForm.propAdminFee !== '' ? editForm.propAdminFee : m.property.adminFee,
+                areaTotal: editForm.propArea !== undefined && editForm.propArea !== '' ? editForm.propArea : m.property.areaTotal,
+                bedrooms: editForm.propBedrooms !== undefined && editForm.propBedrooms !== '' ? editForm.propBedrooms : m.property.bedrooms,
+                bathrooms: editForm.propBathrooms !== undefined && editForm.propBathrooms !== '' ? editForm.propBathrooms : m.property.bathrooms,
+                garages: editForm.propGarages !== undefined && editForm.propGarages !== '' ? editForm.propGarages : m.property.garages,
+                stratum: editForm.propStratum !== undefined && editForm.propStratum !== '' ? editForm.propStratum : m.property.stratum,
+                zone: editForm.propZone !== undefined && editForm.propZone !== '' ? editForm.propZone : m.property.zone,
+                city: editForm.propCity !== undefined && editForm.propCity !== '' ? editForm.propCity : m.property.city,
+              } : m.property;
+
+              const effectiveReq = isEditingThisCard ? {
+                ...m.requirement,
+                presupuestoMax: editForm.reqBudget !== undefined && editForm.reqBudget !== '' ? editForm.reqBudget : m.requirement.presupuestoMax,
+                adminFeeMax: editForm.reqAdminMax !== undefined && editForm.reqAdminMax !== '' ? editForm.reqAdminMax : m.requirement.adminFeeMax,
+                areaMin: editForm.reqArea !== undefined && editForm.reqArea !== '' ? editForm.reqArea : m.requirement.areaMin,
+                habitacionesMin: editForm.reqBedrooms !== undefined && editForm.reqBedrooms !== '' ? editForm.reqBedrooms : m.requirement.habitacionesMin,
+                banosMin: editForm.reqBathrooms !== undefined && editForm.reqBathrooms !== '' ? editForm.reqBathrooms : m.requirement.banosMin,
+                parqueaderosMin: editForm.reqGarages !== undefined && editForm.reqGarages !== '' ? editForm.reqGarages : m.requirement.parqueaderosMin,
+                estratoDeseado: editForm.reqStratum !== undefined && editForm.reqStratum !== '' ? editForm.reqStratum : m.requirement.estratoDeseado,
+                zonaDeseada: editForm.reqZone !== undefined && editForm.reqZone !== '' ? editForm.reqZone : m.requirement.zonaDeseada,
+                ciudadDeseada: editForm.reqCity !== undefined && editForm.reqCity !== '' ? editForm.reqCity : m.requirement.ciudadDeseada,
+              } : m.requirement;
+
+              const { rows, autoScore } = scoreRows(effectiveReq, effectiveProp);
+              const score = isEditingThisCard ? autoScore : parseFloat(m.matchScore?.toString() || "0");
               const date = formatColombiaDate(m.createdAt);
 
               const exactCount = rows.filter(r => r.status === "exact" || r.status === "ok").length;
@@ -1210,7 +1341,9 @@ export default function AdminMatches() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.3, delay: Math.min(idx * 0.03, 0.3) }}
-                  className="bg-[#0b0b0b] border border-white/5 hover:border-[#bf953f]/25 rounded-3xl overflow-hidden shadow-xl transition-all duration-300 relative group"
+                  className={`bg-[#0b0b0b] border rounded-3xl overflow-hidden shadow-xl transition-all duration-300 relative group ${
+                    isEditingThisCard ? 'border-emerald-500/50 ring-2 ring-emerald-500/20' : 'border-white/5 hover:border-[#bf953f]/25'
+                  }`}
                 >
                   <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-gradient-to-b from-[#bf953f] to-[#a67d32] opacity-50 group-hover:opacity-100 transition-opacity" />
 
@@ -1230,7 +1363,19 @@ export default function AdminMatches() {
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-3 sm:gap-4">
+                    <div className="flex items-center gap-2 sm:gap-4 flex-wrap w-full sm:w-auto justify-between sm:justify-end">
+                      <button
+                        onClick={() => handleStartEdit(m)}
+                        className={`text-xs px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 ${
+                          isEditingThisCard 
+                            ? 'bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/40' 
+                            : 'bg-[#bf953f]/15 hover:bg-[#bf953f]/25 text-[#bf953f] border border-[#bf953f]/30'
+                        }`}
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                        {isEditingThisCard ? 'Cancelar Edición' : '✏️ Editar Fichas (Completar N/E)'}
+                      </button>
+
                       <div className="flex items-center gap-1.5 text-zinc-500 text-xs font-mono">
                         <Calendar className="w-3.5 h-3.5" />
                         {date}
@@ -1305,24 +1450,134 @@ export default function AdminMatches() {
                           ) : null;
                         })()}
 
-                        {/* Ficha Estructurada Predial (Atributos Extraídos) */}
-                        <div className="not-italic text-zinc-300 bg-black/40 border border-[#bf953f]/20 p-2.5 rounded-lg space-y-1 text-xs">
-                          <p className="font-bold text-[#bf953f] text-[11px] uppercase tracking-wider">🏢 Ficha del Inmueble (Oferta):</p>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-[11px]">
-                            <p>• Tipo: <span className="text-white font-semibold">{getPropTypeLabel(m.property?.propertyType)}</span></p>
-                            <p>• Negocio: <span className="text-white font-semibold">{getTransactionLabel(m.property?.transactionType)}</span></p>
-                            <p>• Precio Venta: <span className="text-amber-400 font-bold">{formatCOP(m.property?.price)}</span></p>
-                            {m.property?.rentPrice && parseFloat(String(m.property?.rentPrice)) > 0 && (
-                              <p>• Canon Arriendo: <span className="text-emerald-400 font-bold">{formatCOP(m.property?.rentPrice)}</span></p>
-                            )}
-                            <p>• Área Total: <span className="text-white font-semibold">{m.property?.areaTotal || m.property?.areaPrivate || 'N/E'} m²</span></p>
-                            <p>• Estrato: <span className="text-white font-semibold">{m.property?.stratum || 'N/E'}</span></p>
-                            <p>• Habitaciones: <span className="text-white font-semibold">{m.property?.bedrooms ?? 'N/E'}</span></p>
-                            <p>• Baños: <span className="text-white font-semibold">{m.property?.bathrooms ?? 'N/E'}</span></p>
-                            <p>• Garajes: <span className="text-white font-semibold">{m.property?.garages ?? 'N/E'}</span></p>
-                            <p>• Ubicación: <span className="text-white font-semibold">{m.property?.zone || 'N/E'}, {m.property?.city || 'Bogotá'}</span></p>
+                        {/* Ficha Estructurada Predial (Atributos Extraídos / Editables en vivo) */}
+                        {isEditingThisCard ? (
+                          <div className="not-italic text-zinc-300 bg-black/60 border border-[#bf953f]/40 p-3 rounded-xl space-y-2 text-xs">
+                            <p className="font-bold text-[#bf953f] text-[11px] uppercase tracking-wider flex items-center gap-1.5">
+                              ✏️ Editar Ficha Inmueble (Oferta):
+                            </p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                              <div>
+                                <label className="text-[10px] text-zinc-400 block mb-0.5 font-bold">Precio Venta (COP)</label>
+                                <input
+                                  type="text"
+                                  placeholder="Ej: 450000000"
+                                  value={editForm.propPrice || ''}
+                                  onChange={(e) => setEditForm(prev => ({ ...prev, propPrice: e.target.value }))}
+                                  className="w-full bg-zinc-900 border border-[#bf953f]/40 text-white font-bold text-xs p-2 rounded-lg focus:outline-none focus:border-[#bf953f]"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[10px] text-zinc-400 block mb-0.5 font-bold">Canon Arriendo (COP)</label>
+                                <input
+                                  type="text"
+                                  placeholder="Ej: 3500000"
+                                  value={editForm.propRentPrice || ''}
+                                  onChange={(e) => setEditForm(prev => ({ ...prev, propRentPrice: e.target.value }))}
+                                  className="w-full bg-zinc-900 border border-[#bf953f]/40 text-white font-bold text-xs p-2 rounded-lg focus:outline-none focus:border-[#bf953f]"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[10px] text-zinc-400 block mb-0.5 font-bold">Cuota Administración (COP)</label>
+                                <input
+                                  type="text"
+                                  placeholder="Ej: 450000"
+                                  value={editForm.propAdminFee || ''}
+                                  onChange={(e) => setEditForm(prev => ({ ...prev, propAdminFee: e.target.value }))}
+                                  className="w-full bg-zinc-900 border border-[#bf953f]/40 text-white font-bold text-xs p-2 rounded-lg focus:outline-none focus:border-[#bf953f]"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[10px] text-zinc-400 block mb-0.5 font-bold">Área Total (m²)</label>
+                                <input
+                                  type="text"
+                                  placeholder="Ej: 95"
+                                  value={editForm.propArea || ''}
+                                  onChange={(e) => setEditForm(prev => ({ ...prev, propArea: e.target.value }))}
+                                  className="w-full bg-zinc-900 border border-[#bf953f]/40 text-white font-bold text-xs p-2 rounded-lg focus:outline-none focus:border-[#bf953f]"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[10px] text-zinc-400 block mb-0.5 font-bold">Habitaciones</label>
+                                <input
+                                  type="number"
+                                  placeholder="Ej: 3"
+                                  value={editForm.propBedrooms ?? ''}
+                                  onChange={(e) => setEditForm(prev => ({ ...prev, propBedrooms: e.target.value }))}
+                                  className="w-full bg-zinc-900 border border-[#bf953f]/40 text-white font-bold text-xs p-2 rounded-lg focus:outline-none focus:border-[#bf953f]"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[10px] text-zinc-400 block mb-0.5 font-bold">Baños</label>
+                                <input
+                                  type="number"
+                                  placeholder="Ej: 2"
+                                  value={editForm.propBathrooms ?? ''}
+                                  onChange={(e) => setEditForm(prev => ({ ...prev, propBathrooms: e.target.value }))}
+                                  className="w-full bg-zinc-900 border border-[#bf953f]/40 text-white font-bold text-xs p-2 rounded-lg focus:outline-none focus:border-[#bf953f]"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[10px] text-zinc-400 block mb-0.5 font-bold">Garajes</label>
+                                <input
+                                  type="number"
+                                  placeholder="Ej: 1"
+                                  value={editForm.propGarages ?? ''}
+                                  onChange={(e) => setEditForm(prev => ({ ...prev, propGarages: e.target.value }))}
+                                  className="w-full bg-zinc-900 border border-[#bf953f]/40 text-white font-bold text-xs p-2 rounded-lg focus:outline-none focus:border-[#bf953f]"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[10px] text-zinc-400 block mb-0.5 font-bold">Estrato</label>
+                                <input
+                                  type="number"
+                                  placeholder="Ej: 4"
+                                  value={editForm.propStratum ?? ''}
+                                  onChange={(e) => setEditForm(prev => ({ ...prev, propStratum: e.target.value }))}
+                                  className="w-full bg-zinc-900 border border-[#bf953f]/40 text-white font-bold text-xs p-2 rounded-lg focus:outline-none focus:border-[#bf953f]"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[10px] text-zinc-400 block mb-0.5 font-bold">Barrio / Zona</label>
+                                <input
+                                  type="text"
+                                  placeholder="Ej: Santa Bárbara"
+                                  value={editForm.propZone || ''}
+                                  onChange={(e) => setEditForm(prev => ({ ...prev, propZone: e.target.value }))}
+                                  className="w-full bg-zinc-900 border border-[#bf953f]/40 text-white font-bold text-xs p-2 rounded-lg focus:outline-none focus:border-[#bf953f]"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[10px] text-zinc-400 block mb-0.5 font-bold">Ciudad</label>
+                                <input
+                                  type="text"
+                                  placeholder="Ej: Bogotá"
+                                  value={editForm.propCity || ''}
+                                  onChange={(e) => setEditForm(prev => ({ ...prev, propCity: e.target.value }))}
+                                  className="w-full bg-zinc-900 border border-[#bf953f]/40 text-white font-bold text-xs p-2 rounded-lg focus:outline-none focus:border-[#bf953f]"
+                                />
+                              </div>
+                            </div>
                           </div>
-                        </div>
+                        ) : (
+                          <div className="not-italic text-zinc-300 bg-black/40 border border-[#bf953f]/20 p-2.5 rounded-lg space-y-1 text-xs">
+                            <p className="font-bold text-[#bf953f] text-[11px] uppercase tracking-wider">🏢 Ficha del Inmueble (Oferta):</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-[11px]">
+                              <p>• Tipo: <span className="text-white font-semibold">{getPropTypeLabel(effectiveProp?.propertyType)}</span></p>
+                              <p>• Negocio: <span className="text-white font-semibold">{getTransactionLabel(effectiveProp?.transactionType)}</span></p>
+                              <p>• Precio Venta: <span className="text-amber-400 font-bold">{formatCOP(effectiveProp?.price)}</span></p>
+                              {effectiveProp?.rentPrice && parseFloat(String(effectiveProp?.rentPrice)) > 0 && (
+                                <p>• Canon Arriendo: <span className="text-emerald-400 font-bold">{formatCOP(effectiveProp?.rentPrice)}</span></p>
+                              )}
+                              <p>• Área Total: <span className="text-white font-semibold">{effectiveProp?.areaTotal || effectiveProp?.areaPrivate || 'N/E'} m²</span></p>
+                              <p>• Estrato: <span className="text-white font-semibold">{effectiveProp?.stratum || 'N/E'}</span></p>
+                              <p>• Habitaciones: <span className="text-white font-semibold">{effectiveProp?.bedrooms ?? 'N/E'}</span></p>
+                              <p>• Baños: <span className="text-white font-semibold">{effectiveProp?.bathrooms ?? 'N/E'}</span></p>
+                              <p>• Garajes: <span className="text-white font-semibold">{effectiveProp?.garages ?? 'N/E'}</span></p>
+                              <p>• Ubicación: <span className="text-white font-semibold">{effectiveProp?.zone || 'N/E'}, {effectiveProp?.city || 'Bogotá'}</span></p>
+                            </div>
+                          </div>
+                        )}
 
                         {/* Banner de Enlace Público Original al Final de la Publicación del Inmueble */}
                         {(() => {
@@ -1409,7 +1664,7 @@ export default function AdminMatches() {
                                 <p className="text-xs font-bold text-zinc-200 select-all">{propContact.display}</p>
                               </div>
                             </div>
-                             {(() => {
+                            {(() => {
                               const waTarget = propContact.cleanNumber || "573192919978";
                               const defaultText = propContact.cleanNumber
                                 ? `Hola! Te contacto por el inmueble "${m.property?.name || 'de la red'}" publicado en ${m.property?.origenNombre || 'VECY Network'}. Tienes un Match del ${score.toFixed(0)}% con un requerimiento activo.`
@@ -1474,20 +1729,120 @@ export default function AdminMatches() {
                           ) : null;
                         })()}
 
-                        {/* Ficha Estructurada de la Demanda */}
-                        <div className="not-italic text-zinc-300 bg-black/40 border border-cyan-500/20 p-2.5 rounded-lg space-y-1 text-xs">
-                          <p className="font-bold text-cyan-400 text-[11px] uppercase tracking-wider">🔍 Ficha de la Demanda (Requerimiento):</p>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-[11px]">
-                            <p>• Buscado: <span className="text-white font-semibold">{getPropTypeLabel(m.requirement?.tipoInmuebleDeseado)}</span></p>
-                            <p>• Negocio: <span className="text-white font-semibold">{getTransactionLabel(m.requirement?.tipoNegocioDeseado)}</span></p>
-                            <p>• Presupuesto Máx: <span className="text-cyan-300 font-bold">{formatCOP(m.requirement?.presupuestoMax)}</span></p>
-                            <p>• Área Mín: <span className="text-white font-semibold">{m.requirement?.areaMin || 'N/E'} m²</span></p>
-                            <p>• Habitaciones Mín: <span className="text-white font-semibold">{m.requirement?.habitacionesMin ?? 'N/E'}</span></p>
-                            <p>• Baños Mín: <span className="text-white font-semibold">{m.requirement?.banosMin ?? 'N/E'}</span></p>
-                            <p>• Garajes Mín: <span className="text-white font-semibold">{m.requirement?.parqueaderosMin ?? 'N/E'}</span></p>
-                            <p>• Ubicación Deseada: <span className="text-white font-semibold">{m.requirement?.zonaDeseada || 'N/E'}, {m.requirement?.ciudadDeseada || 'Bogotá'}</span></p>
+                        {/* Ficha Estructurada de la Demanda (Atributos Extraídos / Editables en vivo) */}
+                        {isEditingThisCard ? (
+                          <div className="not-italic text-zinc-300 bg-black/60 border border-cyan-500/40 p-3 rounded-xl space-y-2 text-xs">
+                            <p className="font-bold text-cyan-400 text-[11px] uppercase tracking-wider flex items-center gap-1.5">
+                              ✏️ Editar Ficha Requerimiento (Demanda):
+                            </p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                              <div>
+                                <label className="text-[10px] text-zinc-400 block mb-0.5 font-bold">Presupuesto Máx (COP)</label>
+                                <input
+                                  type="text"
+                                  placeholder="Ej: 500000000"
+                                  value={editForm.reqBudget || ''}
+                                  onChange={(e) => setEditForm(prev => ({ ...prev, reqBudget: e.target.value }))}
+                                  className="w-full bg-zinc-900 border border-cyan-500/40 text-white font-bold text-xs p-2 rounded-lg focus:outline-none focus:border-cyan-400"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[10px] text-zinc-400 block mb-0.5 font-bold">Cuota Admón Máx (COP)</label>
+                                <input
+                                  type="text"
+                                  placeholder="Ej: 500000"
+                                  value={editForm.reqAdminMax || ''}
+                                  onChange={(e) => setEditForm(prev => ({ ...prev, reqAdminMax: e.target.value }))}
+                                  className="w-full bg-zinc-900 border border-cyan-500/40 text-white font-bold text-xs p-2 rounded-lg focus:outline-none focus:border-cyan-400"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[10px] text-zinc-400 block mb-0.5 font-bold">Área Mín (m²)</label>
+                                <input
+                                  type="text"
+                                  placeholder="Ej: 80"
+                                  value={editForm.reqArea || ''}
+                                  onChange={(e) => setEditForm(prev => ({ ...prev, reqArea: e.target.value }))}
+                                  className="w-full bg-zinc-900 border border-cyan-500/40 text-white font-bold text-xs p-2 rounded-lg focus:outline-none focus:border-cyan-400"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[10px] text-zinc-400 block mb-0.5 font-bold">Habitaciones Mín</label>
+                                <input
+                                  type="number"
+                                  placeholder="Ej: 2"
+                                  value={editForm.reqBedrooms ?? ''}
+                                  onChange={(e) => setEditForm(prev => ({ ...prev, reqBedrooms: e.target.value }))}
+                                  className="w-full bg-zinc-900 border border-cyan-500/40 text-white font-bold text-xs p-2 rounded-lg focus:outline-none focus:border-cyan-400"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[10px] text-zinc-400 block mb-0.5 font-bold">Baños Mín</label>
+                                <input
+                                  type="number"
+                                  placeholder="Ej: 2"
+                                  value={editForm.reqBathrooms ?? ''}
+                                  onChange={(e) => setEditForm(prev => ({ ...prev, reqBathrooms: e.target.value }))}
+                                  className="w-full bg-zinc-900 border border-cyan-500/40 text-white font-bold text-xs p-2 rounded-lg focus:outline-none focus:border-cyan-400"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[10px] text-zinc-400 block mb-0.5 font-bold">Garajes Mín</label>
+                                <input
+                                  type="number"
+                                  placeholder="Ej: 1"
+                                  value={editForm.reqGarages ?? ''}
+                                  onChange={(e) => setEditForm(prev => ({ ...prev, reqGarages: e.target.value }))}
+                                  className="w-full bg-zinc-900 border border-cyan-500/40 text-white font-bold text-xs p-2 rounded-lg focus:outline-none focus:border-cyan-400"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[10px] text-zinc-400 block mb-0.5 font-bold">Estrato Deseado</label>
+                                <input
+                                  type="number"
+                                  placeholder="Ej: 4"
+                                  value={editForm.reqStratum ?? ''}
+                                  onChange={(e) => setEditForm(prev => ({ ...prev, reqStratum: e.target.value }))}
+                                  className="w-full bg-zinc-900 border border-cyan-500/40 text-white font-bold text-xs p-2 rounded-lg focus:outline-none focus:border-cyan-400"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[10px] text-zinc-400 block mb-0.5 font-bold">Barrio Deseado</label>
+                                <input
+                                  type="text"
+                                  placeholder="Ej: Rosales"
+                                  value={editForm.reqZone || ''}
+                                  onChange={(e) => setEditForm(prev => ({ ...prev, reqZone: e.target.value }))}
+                                  className="w-full bg-zinc-900 border border-cyan-500/40 text-white font-bold text-xs p-2 rounded-lg focus:outline-none focus:border-cyan-400"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[10px] text-zinc-400 block mb-0.5 font-bold">Ciudad Deseada</label>
+                                <input
+                                  type="text"
+                                  placeholder="Ej: Bogotá"
+                                  value={editForm.reqCity || ''}
+                                  onChange={(e) => setEditForm(prev => ({ ...prev, reqCity: e.target.value }))}
+                                  className="w-full bg-zinc-900 border border-cyan-500/40 text-white font-bold text-xs p-2 rounded-lg focus:outline-none focus:border-cyan-400"
+                                />
+                              </div>
+                            </div>
                           </div>
-                        </div>
+                        ) : (
+                          <div className="not-italic text-zinc-300 bg-black/40 border border-cyan-500/20 p-2.5 rounded-lg space-y-1 text-xs">
+                            <p className="font-bold text-cyan-400 text-[11px] uppercase tracking-wider">🔍 Ficha de la Demanda (Requerimiento):</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-[11px]">
+                              <p>• Buscado: <span className="text-white font-semibold">{getPropTypeLabel(effectiveReq?.tipoInmuebleDeseado)}</span></p>
+                              <p>• Negocio: <span className="text-white font-semibold">{getTransactionLabel(effectiveReq?.tipoNegocioDeseado)}</span></p>
+                              <p>• Presupuesto Máx: <span className="text-cyan-300 font-bold">{formatCOP(effectiveReq?.presupuestoMax)}</span></p>
+                              <p>• Área Mín: <span className="text-white font-semibold">{effectiveReq?.areaMin || 'N/E'} m²</span></p>
+                              <p>• Habitaciones Mín: <span className="text-white font-semibold">{effectiveReq?.habitacionesMin ?? 'N/E'}</span></p>
+                              <p>• Baños Mín: <span className="text-white font-semibold">{effectiveReq?.banosMin ?? 'N/E'}</span></p>
+                              <p>• Garajes Mín: <span className="text-white font-semibold">{effectiveReq?.parqueaderosMin ?? 'N/E'}</span></p>
+                              <p>• Ubicación Deseada: <span className="text-white font-semibold">{effectiveReq?.zonaDeseada || 'N/E'}, {effectiveReq?.ciudadDeseada || 'Bogotá'}</span></p>
+                            </div>
+                          </div>
+                        )}
 
                         {/* Banner de Enlace Público Original al Final de la Publicación del Requerimiento */}
                         {(() => {
@@ -1561,7 +1916,6 @@ export default function AdminMatches() {
                         })()}
                       </div>
 
-
                       
                       {(() => {
                         const reqContact = extractPhoneFromItem(m.requirement);
@@ -1601,9 +1955,16 @@ export default function AdminMatches() {
 
                   {/* COTEJO DETALLADO CAMPO POR CAMPO (RESPONSIVE: TABLA EN DESKTOP, TARJETAS EN MÓVIL) */}
                   <div className="bg-black/30 border-b border-white/5 p-3 sm:p-4 md:p-6 overflow-x-hidden">
-                    <h5 className="text-xs font-bold uppercase tracking-widest text-[#bf953f] mb-3 flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4" />
-                      Cotejo técnico de afinidad comercial
+                    <h5 className="text-xs font-bold uppercase tracking-widest text-[#bf953f] mb-3 flex items-center justify-between gap-2 flex-wrap">
+                      <span className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4" />
+                        Cotejo técnico de afinidad comercial
+                      </span>
+                      {isEditingThisCard && (
+                        <span className="text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded font-bold animate-pulse">
+                          ⚡ Recálculo en tiempo real activo
+                        </span>
+                      )}
                     </h5>
                     
                     {/* VISTA ESCRITORIO (md:table - 4 columnas) */}
@@ -1715,6 +2076,43 @@ export default function AdminMatches() {
                     <div className="p-4 sm:p-6 bg-white/[0.01] text-xs text-zinc-400 leading-relaxed">
                       <span className="font-bold text-zinc-300 block mb-1">Razón de afinidad de la IA:</span>
                       "{m.matchReason}"
+                    </div>
+                  )}
+
+                  {/* BARRA DE EDICIÓN FLOTANTE / STICKY EN EL FOOTER DE LA TARJETA */}
+                  {isEditingThisCard && (
+                    <div className="sticky bottom-0 z-30 bg-gradient-to-r from-emerald-950 via-zinc-900 to-emerald-950 border-t border-emerald-500/40 p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-2xl rounded-b-3xl">
+                      <div className="flex items-center gap-2.5 text-emerald-400 text-xs font-semibold">
+                        <Sparkles className="w-4 h-4 text-emerald-400 animate-pulse shrink-0" />
+                        <span>
+                          Modo Edición Activo: Puedes usar <strong>Guardar Cambios</strong> para almacenar en Supabase, o <strong>Recalcular Match</strong> para buscar de inmediato una nueva pareja.
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto shrink-0 justify-end">
+                        <Button
+                          onClick={() => { setEditingMatchId(null); setEditForm({}); }}
+                          variant="outline"
+                          className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 text-xs h-10 px-3 min-h-[44px]"
+                        >
+                          Cancelar
+                        </Button>
+                        <Button
+                          onClick={() => handleOnlySave(m)}
+                          disabled={isSaving}
+                          className="bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs h-10 px-3.5 shadow-md min-h-[44px] flex items-center justify-center gap-1.5"
+                        >
+                          {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                          💾 Guardar Cambios
+                        </Button>
+                        <Button
+                          onClick={() => handleRecalculateMatch(m)}
+                          disabled={isSaving}
+                          className="bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs h-10 px-4 shadow-lg shadow-emerald-500/20 min-h-[44px] flex items-center justify-center gap-1.5"
+                        >
+                          {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                          ⚡ Recalcular Match (Buscar Nueva Pareja)
+                        </Button>
+                      </div>
                     </div>
                   )}
 
