@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { publicProcedure, router } from '../_core/trpc';
 import { invokeLLM } from '../_core/llm';
 import { getDb } from '../db';
-import { conversations, messages, leads, propertyMatches, properties, requirements, propertyPublicationHistory, pendingSessions } from '../../drizzle/schema';
+import { conversations, messages, leads, propertyMatches, properties, requirements, propertyImages, propertyPublicationHistory, pendingSessions } from '../../drizzle/schema';
 import { eq, desc, sql, inArray, gte } from 'drizzle-orm';
 
 import { scrapePropertyLink } from '../_core/scraper';
@@ -470,6 +470,7 @@ export const janIARouter = router({
               isAmoblado: properties.isAmoblado,
               rawText: properties.rawText,
               externalUrl: properties.externalUrl,
+              enlaceOrigen: properties.enlaceOrigen,
               portal: properties.portal,
               externalListingId: properties.externalListingId,
               canonicalExternalId: properties.canonicalExternalId,
@@ -503,6 +504,7 @@ export const janIARouter = router({
               estratoDeseado: requirements.estratoDeseado,
               amobladoDeseado: requirements.amobladoDeseado,
               rawText: requirements.rawText,
+              enlaceOrigen: requirements.enlaceOrigen,
               createdAt: requirements.createdAt,
             }
           })
@@ -511,9 +513,23 @@ export const janIARouter = router({
           .innerJoin(requirements, eq(propertyMatches.requirementId, requirements.id))
           .orderBy(desc(propertyMatches.createdAt));
 
+        // Obtener imágenes registradas para todas las propiedades resultantes
+        const propIds = Array.from(new Set(matches.map(m => m.property.id)));
+        const imagesMap: Record<number, string[]> = {};
+        if (propIds.length > 0) {
+          const imgs = await db.select({
+            propertyId: propertyImages.propertyId,
+            imageUrl: propertyImages.imageUrl
+          }).from(propertyImages).where(inArray(propertyImages.propertyId, propIds));
+          for (const img of imgs) {
+            if (!imagesMap[img.propertyId]) imagesMap[img.propertyId] = [];
+            imagesMap[img.propertyId].push(img.imageUrl);
+          }
+        }
+
         // Re-evaluación en tiempo real con Motor v20.0 y Deduplicación en Servidor
         const seenPairs = new Set<string>();
-        const validEvaluatedMatches: typeof matches = [];
+        const validEvaluatedMatches: any[] = [];
 
         for (const m of matches) {
           const key = `${m.property.id}-${m.requirement.id}`;
@@ -534,6 +550,10 @@ export const janIARouter = router({
           seenPairs.add(key);
           validEvaluatedMatches.push({
             ...m,
+            property: {
+              ...m.property,
+              images: imagesMap[m.property.id] || []
+            },
             matchScore: finalScore.toFixed(2),
             matchExplanation: evaluation as any
           });

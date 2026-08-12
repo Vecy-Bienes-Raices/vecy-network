@@ -11727,6 +11727,7 @@ ${liveStats}${userContextInstruction}
           isAmoblado: properties.isAmoblado,
           rawText: properties.rawText,
           externalUrl: properties.externalUrl,
+          enlaceOrigen: properties.enlaceOrigen,
           portal: properties.portal,
           externalListingId: properties.externalListingId,
           canonicalExternalId: properties.canonicalExternalId,
@@ -11760,9 +11761,22 @@ ${liveStats}${userContextInstruction}
           estratoDeseado: requirements.estratoDeseado,
           amobladoDeseado: requirements.amobladoDeseado,
           rawText: requirements.rawText,
+          enlaceOrigen: requirements.enlaceOrigen,
           createdAt: requirements.createdAt
         }
       }).from(propertyMatches).innerJoin(properties, eq5(propertyMatches.propertyId, properties.id)).innerJoin(requirements, eq5(propertyMatches.requirementId, requirements.id)).orderBy(desc2(propertyMatches.createdAt));
+      const propIds = Array.from(new Set(matches.map((m) => m.property.id)));
+      const imagesMap = {};
+      if (propIds.length > 0) {
+        const imgs = await db.select({
+          propertyId: propertyImages.propertyId,
+          imageUrl: propertyImages.imageUrl
+        }).from(propertyImages).where(inArray(propertyImages.propertyId, propIds));
+        for (const img of imgs) {
+          if (!imagesMap[img.propertyId]) imagesMap[img.propertyId] = [];
+          imagesMap[img.propertyId].push(img.imageUrl);
+        }
+      }
       const seenPairs = /* @__PURE__ */ new Set();
       const validEvaluatedMatches = [];
       for (const m of matches) {
@@ -11777,6 +11791,10 @@ ${liveStats}${userContextInstruction}
         seenPairs.add(key);
         validEvaluatedMatches.push({
           ...m,
+          property: {
+            ...m.property,
+            images: imagesMap[m.property.id] || []
+          },
           matchScore: finalScore.toFixed(2),
           matchExplanation: evaluation
         });

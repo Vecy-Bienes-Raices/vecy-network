@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { 
   Phone, MapPin, Search, Download, Building2, Calendar, 
   Sparkles, CheckCircle2, AlertTriangle, XCircle, SlidersHorizontal, 
-  DollarSign, Ruler, Bed, Bath, Car, Shield, ExternalLink, Receipt, Box
+  DollarSign, Ruler, Bed, Bath, Car, Shield, ExternalLink, Receipt, Box, Globe
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -86,18 +86,42 @@ function isPropertyDualOffer(prop: any): boolean {
 
 function extractPublicLink(item: any): string | null {
   if (!item) return null;
+  if (item.enlaceOrigen && (item.enlaceOrigen.startsWith("http://") || item.enlaceOrigen.startsWith("https://"))) {
+    return item.enlaceOrigen;
+  }
   if (item.externalUrl && (item.externalUrl.startsWith("http://") || item.externalUrl.startsWith("https://"))) {
     return item.externalUrl;
   }
-  const text = `${item.rawText || ''} ${item.description || ''} ${item.externalUrl || ''}`;
+  const text = `${item.enlaceOrigen || ''} ${item.rawText || ''} ${item.description || ''} ${item.externalUrl || ''}`;
   const match = text.match(/https?:\/\/[^\s<"']+/i);
   if (match) return match[0];
   
-  // Expresión para enlaces inmobiliarios comunes sin protocolo http/https
+  // Expresión para enlaces inmobiliarios comunes de portales públicos (wasi.co, fincaraiz.com.co, etc.)
   const domainMatch = text.match(/(?:[a-zA-Z0-9-]+\.)+(?:com|co|net|org|app|io|tools|store)\/[^\s<"']+/i);
   if (domainMatch) return `https://${domainMatch[0]}`;
 
   return null;
+}
+
+function extractItemImages(item: any): string[] {
+  if (!item) return [];
+  const urls: string[] = [];
+  if (Array.isArray(item.images)) {
+    for (const img of item.images) {
+      if (typeof img === 'string' && (img.startsWith('http') || img.startsWith('/'))) urls.push(img);
+    }
+  }
+  if (item.imageUrl && typeof item.imageUrl === 'string' && (item.imageUrl.startsWith('http') || item.imageUrl.startsWith('/'))) {
+    if (!urls.includes(item.imageUrl)) urls.push(item.imageUrl);
+  }
+  const text = `${item.rawText || ''} ${item.description || ''}`;
+  const imgMatches = text.match(/https?:\/\/[^\s<"']+\.(?:jpg|jpeg|png|webp|gif)/gi);
+  if (imgMatches) {
+    for (const m of imgMatches) {
+      if (!urls.includes(m)) urls.push(m);
+    }
+  }
+  return urls;
 }
 
 function scoreRows(req: any, prop: any) {
@@ -1279,7 +1303,7 @@ export default function AdminMatches() {
                       <h4 className="text-sm sm:text-base font-bold text-white mt-1 break-words">{m.property?.name}</h4>
                       
                       {/* Texto Completo Extraído o Resumen Estructurado de Atributos */}
-                      <div className="text-xs text-zinc-300 bg-white/[0.02] border border-white/5 p-3 rounded-xl leading-relaxed whitespace-pre-wrap break-words">
+                      <div className="text-xs text-zinc-300 bg-white/[0.02] border border-white/5 p-3 rounded-xl leading-relaxed whitespace-pre-wrap break-words space-y-2">
                         {(m.property?.rawText || m.property?.description) ? (
                           <span className="italic">"{renderTextWithClickableLinks(m.property?.rawText || m.property?.description)}"</span>
                         ) : (
@@ -1291,6 +1315,77 @@ export default function AdminMatches() {
                             <p>• Ubicación: <span className="text-white font-medium">{m.property?.zone || 'N/E'}, {m.property?.city || 'Bogotá'}</span></p>
                           </div>
                         )}
+
+                        {/* Banner de Enlace Público Original al Final de la Publicación del Inmueble */}
+                        {(() => {
+                          const origUrl = extractPublicLink(m.property);
+                          if (!origUrl) return null;
+                          return (
+                            <div className="mt-2.5 pt-2.5 border-t border-amber-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-amber-500/10 p-2.5 rounded-xl border border-amber-500/30 not-italic">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <Globe className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                                <div className="min-w-0">
+                                  <p className="text-[10px] text-amber-300 font-bold uppercase tracking-wider">🌐 Enlace Público Original / Portal Web:</p>
+                                  <a 
+                                    href={origUrl} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    className="text-xs text-amber-400 hover:text-amber-200 font-semibold underline truncate block max-w-[280px] sm:max-w-[420px]"
+                                    title={origUrl}
+                                  >
+                                    {origUrl}
+                                  </a>
+                                </div>
+                              </div>
+                              <a
+                                href={origUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[10px] text-black font-bold bg-amber-400 hover:bg-amber-300 px-3 py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition-all shadow-md shrink-0"
+                              >
+                                Abrir Enlace <ExternalLink className="w-3 h-3" />
+                              </a>
+                            </div>
+                          );
+                        })()}
+
+                        {/* Visualizador de Flyer / Imagen Publicada en el Anuncio */}
+                        {(() => {
+                          const propImgs = extractItemImages(m.property);
+                          if (propImgs.length === 0) return null;
+                          return (
+                            <div className="mt-2.5 pt-2.5 border-t border-amber-500/20 space-y-2 not-italic">
+                              <p className="text-[10px] text-amber-300 font-bold uppercase tracking-wider flex items-center gap-1.5">
+                                🖼️ Imagen / Flyer del Anuncio Original ({propImgs.length}):
+                              </p>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                {propImgs.slice(0, 4).map((imgUrl, imgIdx) => (
+                                  <div key={imgIdx} className="relative group rounded-xl overflow-hidden border border-amber-500/30 bg-black/50">
+                                    <img 
+                                      src={imgUrl} 
+                                      alt={`Flyer Inmueble ${imgIdx + 1}`} 
+                                      className="w-full h-44 object-contain bg-zinc-950 group-hover:scale-105 transition-transform duration-300 cursor-pointer"
+                                      onClick={() => window.open(imgUrl, '_blank')}
+                                    />
+                                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/80 to-transparent p-2 flex items-center justify-between gap-1">
+                                      <span className="text-[9px] text-amber-200 font-semibold truncate">Flyer #{imgIdx + 1}</span>
+                                      <a
+                                        href={imgUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        download
+                                        className="text-[9px] bg-amber-400 hover:bg-amber-300 text-black font-bold px-2 py-0.5 rounded shadow transition-colors flex items-center gap-1 shrink-0"
+                                        title="Ver / Descargar imagen del flyer"
+                                      >
+                                        <Download className="w-2.5 h-2.5" /> Abrir / Descargar
+                                      </a>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </div>
                       
                       {(() => {
@@ -1359,10 +1454,83 @@ export default function AdminMatches() {
                         {m.requirement?.name || `Requerimiento #${m.requirement?.id}`}
                       </h4>
                       {m.requirement?.rawText && (
-                        <div className="text-xs text-zinc-300 bg-white/[0.02] border border-white/5 p-3 rounded-xl italic leading-relaxed whitespace-pre-wrap break-words">
+                        <div className="text-xs text-zinc-300 bg-white/[0.02] border border-white/5 p-3 rounded-xl italic leading-relaxed whitespace-pre-wrap break-words space-y-2">
                           "{renderTextWithClickableLinks(m.requirement?.rawText)}"
+
+                          {/* Banner de Enlace Público Original al Final de la Publicación del Requerimiento */}
+                          {(() => {
+                            const origReqUrl = extractPublicLink(m.requirement);
+                            if (!origReqUrl) return null;
+                            return (
+                              <div className="mt-2.5 pt-2.5 border-t border-cyan-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-cyan-500/10 p-2.5 rounded-xl border border-cyan-500/30 not-italic">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <Globe className="w-4 h-4 text-cyan-400 flex-shrink-0" />
+                                  <div className="min-w-0">
+                                    <p className="text-[10px] text-cyan-300 font-bold uppercase tracking-wider">🌐 Enlace Público Original / Portal Web:</p>
+                                    <a 
+                                      href={origReqUrl} 
+                                      target="_blank" 
+                                      rel="noopener noreferrer" 
+                                      className="text-xs text-cyan-300 hover:text-cyan-100 font-semibold underline truncate block max-w-[280px] sm:max-w-[420px]"
+                                      title={origReqUrl}
+                                    >
+                                      {origReqUrl}
+                                    </a>
+                                  </div>
+                                </div>
+                                <a
+                                  href={origReqUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-[10px] text-black font-bold bg-cyan-400 hover:bg-cyan-300 px-3 py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition-all shadow-md shrink-0"
+                                >
+                                  Abrir Enlace <ExternalLink className="w-3 h-3" />
+                                </a>
+                              </div>
+                            );
+                          })()}
+
+                          {/* Visualizador de Flyer / Imagen Publicada en el Anuncio del Requerimiento */}
+                          {(() => {
+                            const reqImgs = extractItemImages(m.requirement);
+                            if (reqImgs.length === 0) return null;
+                            return (
+                              <div className="mt-2.5 pt-2.5 border-t border-cyan-500/20 space-y-2 not-italic">
+                                <p className="text-[10px] text-cyan-300 font-bold uppercase tracking-wider flex items-center gap-1.5">
+                                  🖼️ Imagen / Flyer del Requerimiento Original ({reqImgs.length}):
+                                </p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                  {reqImgs.slice(0, 4).map((imgUrl, imgIdx) => (
+                                    <div key={imgIdx} className="relative group rounded-xl overflow-hidden border border-cyan-500/30 bg-black/50">
+                                      <img 
+                                        src={imgUrl} 
+                                        alt={`Flyer Requerimiento ${imgIdx + 1}`} 
+                                        className="w-full h-44 object-contain bg-zinc-950 group-hover:scale-105 transition-transform duration-300 cursor-pointer"
+                                        onClick={() => window.open(imgUrl, '_blank')}
+                                      />
+                                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/80 to-transparent p-2 flex items-center justify-between gap-1">
+                                        <span className="text-[9px] text-cyan-200 font-semibold truncate">Flyer #{imgIdx + 1}</span>
+                                        <a
+                                          href={imgUrl}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          download
+                                          className="text-[9px] bg-cyan-400 hover:bg-cyan-300 text-black font-bold px-2 py-0.5 rounded shadow transition-colors flex items-center gap-1 shrink-0"
+                                          title="Ver / Descargar imagen del flyer"
+                                        >
+                                          <Download className="w-2.5 h-2.5" /> Abrir / Descargar
+                                        </a>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          })()}
                         </div>
                       )}
+
+
                       
                       {(() => {
                         const reqContact = extractPhoneFromItem(m.requirement);
