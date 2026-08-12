@@ -4294,28 +4294,109 @@ function explicarMatch(requirement, property) {
     blockers.push(`Guillotina Financiera (Administraci\xF3n): Cuota de administraci\xF3n de $${pAdminFee.toLocaleString()} supera el m\xE1ximo aceptado de $${reqAdminMaxVal.toLocaleString()}`);
     return buildExplanationResult(0, blockers, positives, negatives);
   }
+  const propRawTextLower = (property.rawText || property.description || "").toLowerCase();
   if (effectiveReqBeds > 0) {
     if (pBedrooms >= 0) {
       if (pBedrooms < effectiveReqBeds) {
         blockers.push(`Atributo Fallido (Habitaciones): Ofrecidas (${pBedrooms}) son inferiores a las exigidas (${effectiveReqBeds}). Match Inviable (0%).`);
         return buildExplanationResult(0, blockers, positives, negatives);
       } else {
-        positives.push(`Habitaciones ofrecidas (${pBedrooms}) satisfacen la solicitud de (${effectiveReqBeds})`);
+        positives.push(`Habitaciones ofrecidas (${pBedrooms}) iguales o superiores a las exigidas (${effectiveReqBeds}) \u2014 Cumplimiento Confort`);
       }
     } else {
       blockers.push(`No se pueden verificar las habitaciones requeridas (${effectiveReqBeds}) por falta de informaci\xF3n en la oferta.`);
       return buildExplanationResult(0, blockers, positives, negatives);
     }
   }
-  if (effectiveReqBaths > 0 && pBathrooms >= 0 && pBathrooms < effectiveReqBaths) {
-    blockers.push(`Atributo Fallido (Ba\xF1os): Ofrecidos (${pBathrooms}) son inferiores a los requeridos (${effectiveReqBaths}). Match Inviable (0%).`);
-    return buildExplanationResult(0, blockers, positives, negatives);
+  if (effectiveReqBaths > 0) {
+    if (pBathrooms >= 0) {
+      if (pBathrooms < effectiveReqBaths) {
+        blockers.push(`Atributo Fallido (Ba\xF1os): Ofrecidos (${pBathrooms}) son inferiores a los requeridos (${effectiveReqBaths}). Match Inviable (0%).`);
+        return buildExplanationResult(0, blockers, positives, negatives);
+      } else {
+        positives.push(`Ba\xF1os ofrecidos (${pBathrooms}) iguales o superiores a los requeridos (${effectiveReqBaths}) \u2014 Cumplimiento Confort`);
+      }
+    } else {
+      blockers.push(`No se pueden verificar los ba\xF1os requeridos (${effectiveReqBaths}) por falta de informaci\xF3n en la oferta.`);
+      return buildExplanationResult(0, blockers, positives, negatives);
+    }
   }
-  if (effectiveReqGarages > 0 && pGarages >= 0 && pGarages < effectiveReqGarages) {
-    blockers.push(`Atributo Fallido (Parqueaderos): Ofrecidos (${pGarages}) son inferiores a los requeridos (${effectiveReqGarages}). Match Inviable (0%).`);
-    return buildExplanationResult(0, blockers, positives, negatives);
+  if (effectiveReqGarages > 0) {
+    if (pGarages >= 0) {
+      if (pGarages < effectiveReqGarages) {
+        blockers.push(`Atributo Fallido (Parqueaderos): Ofrecidos (${pGarages}) son inferiores a los requeridos (${effectiveReqGarages}). Match Inviable (0%).`);
+        return buildExplanationResult(0, blockers, positives, negatives);
+      } else {
+        positives.push(`Parqueaderos ofrecidos (${pGarages}) iguales o superiores a los requeridos (${effectiveReqGarages}) \u2014 Cumplimiento Confort`);
+      }
+    } else {
+      blockers.push(`No se pueden verificar los parqueaderos requeridos (${effectiveReqGarages}) por falta de informaci\xF3n en la oferta.`);
+      return buildExplanationResult(0, blockers, positives, negatives);
+    }
   }
-  const propRawTextLower = (property.rawText || property.description || "").toLowerCase();
+  let effectiveReqDeposits = 0;
+  if (requirement.hasStorage || reqTextLow.includes("con deposito") || reqTextLow.includes("con dep\xF3sito") || reqTextLow.includes("exige deposito") || reqTextLow.includes("exige dep\xF3sito") || reqTextLow.includes("bodega")) {
+    const mDep = reqTextLow.match(/(\d+)\s*(?:depósito|depósitos|deposito|depositos|bodega|bodegas)/i);
+    effectiveReqDeposits = mDep ? parseInt(mDep[1], 10) : 1;
+  }
+  let propDeposits = 0;
+  if (property.hasStorage || propRawTextLower.includes("deposito") || propRawTextLower.includes("dep\xF3sito") || propRawTextLower.includes("bodega")) {
+    const mPropDep = propRawTextLower.match(/(\d+)\s*(?:depósito|depósitos|deposito|depositos|bodega|bodegas)/i);
+    propDeposits = mPropDep ? parseInt(mPropDep[1], 10) : property.storageUnits ? Number(property.storageUnits) : 1;
+  }
+  if (propRawTextLower.includes("sin deposito") || propRawTextLower.includes("sin dep\xF3sito") || propRawTextLower.includes("no tiene deposito") || propRawTextLower.includes("no tiene dep\xF3sito")) {
+    propDeposits = 0;
+  }
+  if (effectiveReqDeposits > 0) {
+    if (propDeposits < effectiveReqDeposits) {
+      blockers.push(`Atributo Fallido (Dep\xF3sitos): Dep\xF3sitos/bodegas ofrecidos (${propDeposits}) son inferiores a los exigidos (${effectiveReqDeposits}). Match Inviable (0%).`);
+      return buildExplanationResult(0, blockers, positives, negatives);
+    } else {
+      positives.push(`Dep\xF3sitos ofrecidos (${propDeposits}) iguales o superiores a los exigidos (${effectiveReqDeposits}) \u2014 Cumplimiento Confort`);
+    }
+  }
+  let effectiveReqBalconies = 0;
+  if (requirement.hasBalcony || reqTextLow.includes("con balcon") || reqTextLow.includes("con balc\xF3n") || reqTextLow.includes("exige balcon") || reqTextLow.includes("exige balc\xF3n") || reqTextLow.includes("balcones")) {
+    const mBal = reqTextLow.match(/(\d+)\s*(?:balcón|balcones|balcon)/i);
+    effectiveReqBalconies = mBal ? parseInt(mBal[1], 10) : 1;
+  }
+  let propBalconies = 0;
+  if (property.hasBalcony || propRawTextLower.includes("balcon") || propRawTextLower.includes("balc\xF3n") || propRawTextLower.includes("balcones")) {
+    const mPropBal = propRawTextLower.match(/(\d+)\s*(?:balcón|balcones|balcon)/i);
+    propBalconies = mPropBal ? parseInt(mPropBal[1], 10) : property.balconies ? Number(property.balconies) : 1;
+  }
+  if (propRawTextLower.includes("sin balcon") || propRawTextLower.includes("sin balc\xF3n") || propRawTextLower.includes("no tiene balcon") || propRawTextLower.includes("no tiene balc\xF3n")) {
+    propBalconies = 0;
+  }
+  if (effectiveReqBalconies > 0) {
+    if (propBalconies < effectiveReqBalconies) {
+      blockers.push(`Atributo Fallido (Balcones): Balcones ofrecidos (${propBalconies}) son inferiores a los exigidos (${effectiveReqBalconies}). Match Inviable (0%).`);
+      return buildExplanationResult(0, blockers, positives, negatives);
+    } else {
+      positives.push(`Balcones ofrecidos (${propBalconies}) iguales o superiores a los exigidos (${effectiveReqBalconies}) \u2014 Cumplimiento Confort`);
+    }
+  }
+  let effectiveReqTerraces = 0;
+  if (requirement.hasTerrace || reqTextLow.includes("con terraza") || reqTextLow.includes("exige terraza") || reqTextLow.includes("terrazas")) {
+    const mTer = reqTextLow.match(/(\d+)\s*(?:terraza|terrazas)/i);
+    effectiveReqTerraces = mTer ? parseInt(mTer[1], 10) : 1;
+  }
+  let propTerraces = 0;
+  if (property.hasTerrace || propRawTextLower.includes("terraza") || propRawTextLower.includes("terrazas")) {
+    const mPropTer = propRawTextLower.match(/(\d+)\s*(?:terraza|terrazas)/i);
+    propTerraces = mPropTer ? parseInt(mPropTer[1], 10) : property.terraces ? Number(property.terraces) : 1;
+  }
+  if (propRawTextLower.includes("sin terraza") || propRawTextLower.includes("no tiene terraza")) {
+    propTerraces = 0;
+  }
+  if (effectiveReqTerraces > 0) {
+    if (propTerraces < effectiveReqTerraces) {
+      blockers.push(`Atributo Fallido (Terrazas): Terrazas ofrecidas (${propTerraces}) son inferiores a las exigidas (${effectiveReqTerraces}). Match Inviable (0%).`);
+      return buildExplanationResult(0, blockers, positives, negatives);
+    } else {
+      positives.push(`Terrazas ofrecidas (${propTerraces}) iguales o superiores a las exigidas (${effectiveReqTerraces}) \u2014 Cumplimiento Confort`);
+    }
+  }
   const reqRawTextLower = (requirement.rawText || "").toLowerCase();
   const propRejectsPermute = propRawTextLower.includes("no permuta") || propRawTextLower.includes("sin permuta") || propRawTextLower.includes("solo efectivo") || propRawTextLower.includes("no se acepta permuta") || propRawTextLower.includes("no se reciben vehiculos");
   const reqOffersTradeIn = requirement.tipoNegocioDeseado === "permuta" || reqRawTextLower.includes("entrego carro") || reqRawTextLower.includes("doy carro") || reqRawTextLower.includes("recibo vehiculo") || reqRawTextLower.includes("parte de pago") || reqRawTextLower.includes("pelo a pelo");

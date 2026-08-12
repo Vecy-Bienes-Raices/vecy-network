@@ -1414,14 +1414,16 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
-  // ── FILTRO DURO 8: Habitaciones Mínimas (NUNCA MENOR QUE - REGLA CERO FALLIDOS) ──
+  const propRawTextLower = (property.rawText || property.description || "").toLowerCase();
+
+  // ── FILTRO DURO 8: Habitaciones Mínimas (REGLA DOCTRINAL v22.4: Oferta < Demanda = BLOQUEO 0%) ──
   if (effectiveReqBeds > 0) {
     if (pBedrooms >= 0) {
       if (pBedrooms < effectiveReqBeds) {
         blockers.push(`Atributo Fallido (Habitaciones): Ofrecidas (${pBedrooms}) son inferiores a las exigidas (${effectiveReqBeds}). Match Inviable (0%).`);
         return buildExplanationResult(0, blockers, positives, negatives);
       } else {
-        positives.push(`Habitaciones ofrecidas (${pBedrooms}) satisfacen la solicitud de (${effectiveReqBeds})`);
+        positives.push(`Habitaciones ofrecidas (${pBedrooms}) iguales o superiores a las exigidas (${effectiveReqBeds}) — Cumplimiento Confort`);
       }
     } else {
       blockers.push(`No se pueden verificar las habitaciones requeridas (${effectiveReqBeds}) por falta de información en la oferta.`);
@@ -1429,20 +1431,112 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
     }
   }
 
-  // ── FILTRO DURO 9: Baños Mínimos (REGLA CERO FALLIDOS) ──
-  if (effectiveReqBaths > 0 && pBathrooms >= 0 && pBathrooms < effectiveReqBaths) {
-    blockers.push(`Atributo Fallido (Baños): Ofrecidos (${pBathrooms}) son inferiores a los requeridos (${effectiveReqBaths}). Match Inviable (0%).`);
-    return buildExplanationResult(0, blockers, positives, negatives);
+  // ── FILTRO DURO 9: Baños Mínimos (REGLA DOCTRINAL v22.4: Oferta < Demanda = BLOQUEO 0%) ──
+  if (effectiveReqBaths > 0) {
+    if (pBathrooms >= 0) {
+      if (pBathrooms < effectiveReqBaths) {
+        blockers.push(`Atributo Fallido (Baños): Ofrecidos (${pBathrooms}) son inferiores a los requeridos (${effectiveReqBaths}). Match Inviable (0%).`);
+        return buildExplanationResult(0, blockers, positives, negatives);
+      } else {
+        positives.push(`Baños ofrecidos (${pBathrooms}) iguales o superiores a los requeridos (${effectiveReqBaths}) — Cumplimiento Confort`);
+      }
+    } else {
+      blockers.push(`No se pueden verificar los baños requeridos (${effectiveReqBaths}) por falta de información en la oferta.`);
+      return buildExplanationResult(0, blockers, positives, negatives);
+    }
   }
 
-  // ── FILTRO DURO 10: Parqueaderos (REGLA CERO FALLIDOS) ────
-  if (effectiveReqGarages > 0 && pGarages >= 0 && pGarages < effectiveReqGarages) {
-    blockers.push(`Atributo Fallido (Parqueaderos): Ofrecidos (${pGarages}) son inferiores a los requeridos (${effectiveReqGarages}). Match Inviable (0%).`);
-    return buildExplanationResult(0, blockers, positives, negatives);
+  // ── FILTRO DURO 10: Parqueaderos Mínimos (REGLA DOCTRINAL v22.4: Oferta < Demanda = BLOQUEO 0%) ──
+  if (effectiveReqGarages > 0) {
+    if (pGarages >= 0) {
+      if (pGarages < effectiveReqGarages) {
+        blockers.push(`Atributo Fallido (Parqueaderos): Ofrecidos (${pGarages}) son inferiores a los requeridos (${effectiveReqGarages}). Match Inviable (0%).`);
+        return buildExplanationResult(0, blockers, positives, negatives);
+      } else {
+        positives.push(`Parqueaderos ofrecidos (${pGarages}) iguales o superiores a los requeridos (${effectiveReqGarages}) — Cumplimiento Confort`);
+      }
+    } else {
+      blockers.push(`No se pueden verificar los parqueaderos requeridos (${effectiveReqGarages}) por falta de información en la oferta.`);
+      return buildExplanationResult(0, blockers, positives, negatives);
+    }
+  }
+
+  // ── FILTRO DURO 10B: Depósitos Mínimos (REGLA DOCTRINAL v22.4: Oferta < Demanda = BLOQUEO 0%) ──
+  let effectiveReqDeposits = 0;
+  if (requirement.hasStorage || reqTextLow.includes("con deposito") || reqTextLow.includes("con depósito") || reqTextLow.includes("exige deposito") || reqTextLow.includes("exige depósito") || reqTextLow.includes("bodega")) {
+    const mDep = reqTextLow.match(/(\d+)\s*(?:depósito|depósitos|deposito|depositos|bodega|bodegas)/i);
+    effectiveReqDeposits = mDep ? parseInt(mDep[1], 10) : 1;
+  }
+
+  let propDeposits = 0;
+  if (property.hasStorage || propRawTextLower.includes("deposito") || propRawTextLower.includes("depósito") || propRawTextLower.includes("bodega")) {
+    const mPropDep = propRawTextLower.match(/(\d+)\s*(?:depósito|depósitos|deposito|depositos|bodega|bodegas)/i);
+    propDeposits = mPropDep ? parseInt(mPropDep[1], 10) : (property.storageUnits ? Number(property.storageUnits) : 1);
+  }
+  if (propRawTextLower.includes("sin deposito") || propRawTextLower.includes("sin depósito") || propRawTextLower.includes("no tiene deposito") || propRawTextLower.includes("no tiene depósito")) {
+    propDeposits = 0;
+  }
+
+  if (effectiveReqDeposits > 0) {
+    if (propDeposits < effectiveReqDeposits) {
+      blockers.push(`Atributo Fallido (Depósitos): Depósitos/bodegas ofrecidos (${propDeposits}) son inferiores a los exigidos (${effectiveReqDeposits}). Match Inviable (0%).`);
+      return buildExplanationResult(0, blockers, positives, negatives);
+    } else {
+      positives.push(`Depósitos ofrecidos (${propDeposits}) iguales o superiores a los exigidos (${effectiveReqDeposits}) — Cumplimiento Confort`);
+    }
+  }
+
+  // ── FILTRO DURO 10C: Balcones Mínimos (REGLA DOCTRINAL v22.4: Oferta < Demanda = BLOQUEO 0%) ──
+  let effectiveReqBalconies = 0;
+  if (requirement.hasBalcony || reqTextLow.includes("con balcon") || reqTextLow.includes("con balcón") || reqTextLow.includes("exige balcon") || reqTextLow.includes("exige balcón") || reqTextLow.includes("balcones")) {
+    const mBal = reqTextLow.match(/(\d+)\s*(?:balcón|balcones|balcon)/i);
+    effectiveReqBalconies = mBal ? parseInt(mBal[1], 10) : 1;
+  }
+
+  let propBalconies = 0;
+  if (property.hasBalcony || propRawTextLower.includes("balcon") || propRawTextLower.includes("balcón") || propRawTextLower.includes("balcones")) {
+    const mPropBal = propRawTextLower.match(/(\d+)\s*(?:balcón|balcones|balcon)/i);
+    propBalconies = mPropBal ? parseInt(mPropBal[1], 10) : (property.balconies ? Number(property.balconies) : 1);
+  }
+  if (propRawTextLower.includes("sin balcon") || propRawTextLower.includes("sin balcón") || propRawTextLower.includes("no tiene balcon") || propRawTextLower.includes("no tiene balcón")) {
+    propBalconies = 0;
+  }
+
+  if (effectiveReqBalconies > 0) {
+    if (propBalconies < effectiveReqBalconies) {
+      blockers.push(`Atributo Fallido (Balcones): Balcones ofrecidos (${propBalconies}) son inferiores a los exigidos (${effectiveReqBalconies}). Match Inviable (0%).`);
+      return buildExplanationResult(0, blockers, positives, negatives);
+    } else {
+      positives.push(`Balcones ofrecidos (${propBalconies}) iguales o superiores a los exigidos (${effectiveReqBalconies}) — Cumplimiento Confort`);
+    }
+  }
+
+  // ── FILTRO DURO 10D: Terrazas Mínimas (REGLA DOCTRINAL v22.4: Oferta < Demanda = BLOQUEO 0%) ──
+  let effectiveReqTerraces = 0;
+  if (requirement.hasTerrace || reqTextLow.includes("con terraza") || reqTextLow.includes("exige terraza") || reqTextLow.includes("terrazas")) {
+    const mTer = reqTextLow.match(/(\d+)\s*(?:terraza|terrazas)/i);
+    effectiveReqTerraces = mTer ? parseInt(mTer[1], 10) : 1;
+  }
+
+  let propTerraces = 0;
+  if (property.hasTerrace || propRawTextLower.includes("terraza") || propRawTextLower.includes("terrazas")) {
+    const mPropTer = propRawTextLower.match(/(\d+)\s*(?:terraza|terrazas)/i);
+    propTerraces = mPropTer ? parseInt(mPropTer[1], 10) : (property.terraces ? Number(property.terraces) : 1);
+  }
+  if (propRawTextLower.includes("sin terraza") || propRawTextLower.includes("no tiene terraza")) {
+    propTerraces = 0;
+  }
+
+  if (effectiveReqTerraces > 0) {
+    if (propTerraces < effectiveReqTerraces) {
+      blockers.push(`Atributo Fallido (Terrazas): Terrazas ofrecidas (${propTerraces}) son inferiores a las exigidas (${effectiveReqTerraces}). Match Inviable (0%).`);
+      return buildExplanationResult(0, blockers, positives, negatives);
+    } else {
+      positives.push(`Terrazas ofrecidas (${propTerraces}) iguales o superiores a las exigidas (${effectiveReqTerraces}) — Cumplimiento Confort`);
+    }
   }
 
   // ── FILTRO DURO 11 v20.0: Matriz de Intencionalidad Humana (Bloqueos por Choque de Intención) ──
-  const propRawTextLower = (property.rawText || property.description || "").toLowerCase();
   const reqRawTextLower = (requirement.rawText || "").toLowerCase();
 
   // A. Choque de Permuta ("NO PERMUTA" vs "ENTREGO CARRO / PARTE DE PAGO")

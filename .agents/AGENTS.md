@@ -122,6 +122,8 @@ TOTAL          → 100 pts ✅
 - `propertyType` incompatible → ❌ 0%
 - Barrio incompatible → ❌ 0%
 - Precio supera presupuesto máximo → ❌ 0%
+- **Especificaciones Físicas Mínimas (REGLA DOCTRINAL v22.4)**:
+  `Habitaciones`, `Baños`, `Parqueaderos`, `Depósitos`, `Balcones` y `Terrazas` **JAMÁS pueden ser menores en la Oferta que en lo Demandado (`prop < req` → ❌ 0% Match Inviable / Bloqueo Absoluto)**. Sin embargo, **SIEMPRE se aceptan cuando en la Oferta son IGUALES O MAYORES que en la Demanda (`prop >= req` → ✅ 100% Cumplimiento / Confort)**.
 
 ### Campana de Tolerancia de Área (v20.0)
 - `< reqMin * 0.95`              → Bloqueo 0%
