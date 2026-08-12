@@ -801,6 +801,29 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
+  // ── CAMPO 4: Localidad / Comuna — BLOQUEADOR DURO (Doctrinal v22.1) ──
+  // Si AMBOS tienen Localidad/Comuna y son distintas → 0% ABSOLUTO. No se almacena ni muestra.
+  // Nota: La localidad se deduce del barrio via deducirGeografiaTripartita en janIA.ts.
+  // Si el barrio coincide, la localidad siempre coincide. Este filtro atrapa inconsistencias.
+  const propLocalidadHard = property.addressLocality || "";
+  const reqLocalidadHard  = requirement.addressLocality || "";
+  const bothLocalidadKnown = !isNA(propLocalidadHard) && !isNA(reqLocalidadHard);
+  if (bothLocalidadKnown) {
+    const normPropLoc = normalizarTextoGeografico(propLocalidadHard);
+    const normReqLoc  = normalizarTextoGeografico(reqLocalidadHard);
+    if (normPropLoc !== normReqLoc && !normPropLoc.includes(normReqLoc) && !normReqLoc.includes(normPropLoc)) {
+      blockers.push(`⛔ Localidad/Comuna Incompatible: buscada "${reqLocalidadHard}", ofrecida "${propLocalidadHard}". MATCH IMPOSIBLE.`);
+      return buildExplanationResult(0, blockers, positives, negatives);
+    }
+  }
+
+  // ── RESUMEN: 5 DATOS EN DURO VALIDADOS (v22.1) ──
+  // ✅ 1. Tipo de Inmueble — obligatorio y compatible
+  // ✅ 2. Tipo de Negocio  — obligatorio y compatible
+  // ✅ 3. Barrio/Vereda    — obligatorio, exacto, sin sub-calificadores conflictivos
+  // ✅ 4. Localidad/Comuna — obligatorio cuando disponible, exacta
+  // ✅ 5. Ciudad/Municipio — obligatorio y compatible (se valida abajo)
+
 
   // ── REGLA DOCTRINAL DE COTEJO COMPLETO 100% VERDE/AMARILLO (CERO GRISES, CERO ROJOS) ──
   // Para que un match sea elegible, la demanda Y la oferta DEBEN tener especificadas las 8 características clave:
