@@ -7228,6 +7228,26 @@ async function saveProperty(data, userId, realName, imageBuffer) {
     }
     console.log(`[JanIA-PriceSplit] ${txTypeForSplit} \u2192 price(venta)=${data.price} | rentPrice(canon neto)=${data.rentPrice}`);
   }
+  if (txTypeForSplit === "arriendo" || txTypeForSplit === "arriendo_temporal") {
+    const curP = data.price ? parseFloat(String(data.price)) : 0;
+    const curR = data.rentPrice ? parseFloat(String(data.rentPrice)) : 0;
+    if (curR <= 0 && curP > 0 && curP < 1e8) {
+      data.rentPrice = curP;
+    }
+    data.price = "0";
+  }
+  if (txTypeForSplit === "venta") {
+    data.rentPrice = null;
+  }
+  const curRentVal = data.rentPrice ? parseFloat(String(data.rentPrice)) : 0;
+  const curSaleVal = data.price ? parseFloat(String(data.price)) : 0;
+  const curAdminVal = data.adminFee ? parseFloat(String(data.adminFee)) : 0;
+  if (curAdminVal > 0) {
+    if (curRentVal > 0 && (curAdminVal === curRentVal || curAdminVal >= curRentVal * 0.45) || curSaleVal > 0 && (curAdminVal === curSaleVal || curAdminVal >= curSaleVal * 0.2)) {
+      data.adminFee = 0;
+      console.log(`[JanIA-SanidadPredial] Corregida cuota de administraci\xF3n absurda/duplicada $${curAdminVal} \u2192 N/E (0)`);
+    }
+  }
   const isVentaType = txTypeForSplit.includes("venta") || !txTypeForSplit.includes("arriendo");
   const currentPriceVal = data.price ? parseFloat(String(data.price)) : 0;
   if (isVentaType && currentPriceVal > 0 && currentPriceVal < 3e7 && data.rawText) {

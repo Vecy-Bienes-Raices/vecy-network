@@ -3022,6 +3022,42 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
     console.log(`[JanIA-PriceSplit] ${txTypeForSplit} → price(venta)=${data.price} | rentPrice(canon neto)=${data.rentPrice}`);
   }
 
+  // ── SANIDAD FINANCIERA ESTRICTA DOCTRINAL v22.4 ─────────────
+  // 1. Para inmuebles en arriendo puro (arriendo / arriendo_temporal):
+  //    data.price (Precio de Venta) NUNCA debe contener el valor del canon (ej. $9.900.000).
+  //    data.price debe ser "0". El canon debe ir exclusivamente en data.rentPrice.
+  if (txTypeForSplit === "arriendo" || txTypeForSplit === "arriendo_temporal") {
+    const curP = data.price ? parseFloat(String(data.price)) : 0;
+    const curR = data.rentPrice ? parseFloat(String(data.rentPrice)) : 0;
+    if (curR <= 0 && curP > 0 && curP < 100_000_000) {
+      data.rentPrice = curP;
+    }
+    data.price = "0"; // Cero absoluto de venta para inmuebles de arriendo puro
+  }
+
+  // 2. Para inmuebles en venta pura (venta):
+  //    data.rentPrice NUNCA debe ser poblado. Debe ser null/0.
+  if (txTypeForSplit === "venta") {
+    data.rentPrice = null;
+  }
+
+  // 3. Cuota de Administración (data.adminFee):
+  //    La cuota de administración JAMÁS puede ser igual al canon de arriendo ni al precio de venta.
+  //    Si data.adminFee === data.rentPrice o data.adminFee >= data.rentPrice * 0.45 -> reset a 0 (N/E).
+  const curRentVal = data.rentPrice ? parseFloat(String(data.rentPrice)) : 0;
+  const curSaleVal = data.price ? parseFloat(String(data.price)) : 0;
+  const curAdminVal = data.adminFee ? parseFloat(String(data.adminFee)) : 0;
+
+  if (curAdminVal > 0) {
+    if (
+      (curRentVal > 0 && (curAdminVal === curRentVal || curAdminVal >= curRentVal * 0.45)) ||
+      (curSaleVal > 0 && (curAdminVal === curSaleVal || curAdminVal >= curSaleVal * 0.20))
+    ) {
+      data.adminFee = 0; // Reset por error de duplicación o paridad ilógica
+      console.log(`[JanIA-SanidadPredial] Corregida cuota de administración absurda/duplicada $${curAdminVal} → N/E (0)`);
+    }
+  }
+
   // ── SANIDAD PREDIAL DE PRECIOS v20.0 (Desambiguación Administración vs Precio Venta) ──
   // Si la propiedad es de VENTA y price < 30.000.000 (ej. $1.200.000 cuota de administración),
   // ese valor NO es el precio de venta. Escanear el rawText para encontrar el verdadero precio de venta (ej. $950.000.000).

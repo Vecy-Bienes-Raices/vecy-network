@@ -385,11 +385,11 @@ function scoreRows(req: any, prop: any) {
   );
 
 
-  // ── DESAMBIGUACIÓN FINANCIERA TRIPARTITA (Doctrinal v22.2) ──
+  // ── DESAMBIGUACIÓN FINANCIERA TRIPARTITA (Doctrinal v22.4) ──
   // Reemplaza Presupuesto Máx. genérico con 3 filas financieras independientes:
-  // 1. Precio de Venta
-  // 2. Precio de Arriendo / Canon
-  // 3. Cuota de Administración
+  // 1. Precio de Venta (N/E para arriendos puros)
+  // 2. Precio de Arriendo / Canon (N/E para ventas puras)
+  // 3. Cuota de Administración (N/E si no aplica o si es duplicado absurdo del canon)
 
   const isPhoneNumberNotPrice = (val: number | string | null | undefined, rawText?: string): boolean => {
     if (val === undefined || val === null || val === "" || val === 0 || val === "0") return false;
@@ -417,31 +417,20 @@ function scoreRows(req: any, prop: any) {
   const propTextLower = (prop.rawText || prop.description || "").toLowerCase();
 
   const isReqRentMatch = reqNeg.toLowerCase().includes("arriendo");
+  const isPropPureRent = (prop.transactionType || "").toLowerCase() === "arriendo" || (prop.transactionType || "").toLowerCase() === "arriendo_temporal";
+  const isPropPureVenta = (prop.transactionType || "").toLowerCase() === "venta";
 
   // A. PRECIO DE VENTA
-  let propSalePrice = parseSafePrice(prop.price, prop.rawText);
-  let reqSaleBudget = !isReqRentMatch ? parseSafePrice(req.presupuestoMax, req.rawText) : 0;
+  let propSalePrice = !isPropPureRent ? parseSafePrice(prop.price, prop.rawText) : 0;
+  let reqSaleBudget = (!isReqRentMatch && !isPropPureRent) ? parseSafePrice(req.presupuestoMax, req.rawText) : 0;
 
-  // Sanidad Predial: si propSalePrice < 30.000.000 (ej. $1.200.000 cuota de administración),
-  // re-parsear el rawText para encontrar el verdadero precio de venta (ej. $490.000.000)
-  if (!isReqRentMatch && (propSalePrice <= 0 || propSalePrice < 30_000_000) && propTextLower) {
-    const saleMatch = propTextLower.match(/(?:v\/venta\/|precio\s*(?:de\s*)?venta|venta)\s*:?\s*\$?([\d.,]+)\s*(mil\s*millones?|millones?|m|M)?/i)
-                   || propTextLower.match(/(\d{2,4})\s*(?:millones|mll|mlls|mm|m)\b/i);
-    if (saleMatch) {
-      let rawNum = parseFloat(saleMatch[1].replace(/\./g, "").replace(/,/g, ""));
-      const unitStr = (saleMatch[2] || "").toLowerCase();
-      const mult = unitStr.includes("mil millon") ? 1_000_000_000
-        : unitStr.includes("millon") || unitStr === "m" || unitStr === "mll" || unitStr === "mlls" || unitStr === "mm" ? (rawNum < 100 ? 10_000_000 : 1_000_000)
-        : rawNum < 1000 ? 1_000_000 : 1;
-      let valP = rawNum * mult;
-      if (!isNaN(valP) && valP >= 30_000_000 && !isPhoneNumberNotPrice(valP, prop.rawText)) {
-        propSalePrice = valP;
-      }
-    }
+  // Si propSalePrice < 30.000.000 (ej. $9.900.000 canon de arriendo en Nogal), NO ES PRECIO DE VENTA.
+  if (propSalePrice < 30_000_000) {
+    propSalePrice = 0; // Cero absoluto de venta
   }
 
   const reqSaleLabel = reqSaleBudget > 0 ? formatCOP(reqSaleBudget) : "N/E";
-  const propSaleLabel = propSalePrice > 0 ? formatCOP(propSalePrice) : "N/E";
+  const propSaleLabel = propSalePrice >= 30_000_000 ? formatCOP(propSalePrice) : "N/E";
 
   let saleS: MatchStatus = "neutral";
   if (reqSaleBudget > 0 && propSalePrice > 0) {
@@ -458,11 +447,12 @@ function scoreRows(req: any, prop: any) {
   );
 
   // B. PRECIO DE ARRIENDO / CANON
-  let propRentPrice = parseSafePrice(prop.rentPrice || prop.priceRent, prop.rawText);
+  let propRentPrice = !isPropPureVenta ? parseSafePrice(prop.rentPrice || prop.priceRent, prop.rawText) : 0;
   let reqRentBudget = isReqRentMatch ? parseSafePrice(req.presupuestoMax, req.rawText) : 0;
 
-  if (propRentPrice <= 0 && isReqRentMatch && propSalePrice > 0 && propSalePrice < 100_000_000) {
-    propRentPrice = propSalePrice; // $5.000.000 era el canon, no el precio de venta
+  // Si la propiedad es de arriendo y rentPrice estaba en 0, pero prop.price tenía el canon (ej. $9.900.000)
+  if (propRentPrice <= 0 && parseSafePrice(prop.price, prop.rawText) > 0 && parseSafePrice(prop.price, prop.rawText) < 100_000_000) {
+    propRentPrice = parseSafePrice(prop.price, prop.rawText);
   }
 
   const reqRentLabel = reqRentBudget > 0 ? `${formatCOP(reqRentBudget)} / mes` : "N/E";
@@ -486,14 +476,15 @@ function scoreRows(req: any, prop: any) {
   let reqAdminMax = parseSafePrice(req.adminFeeMax, req.rawText);
   let propAdminFee = parseSafePrice(prop.adminFee, prop.rawText);
 
-  if (propAdminFee <= 0 && propTextLower) {
-    const mAdmin = propTextLower.match(/(?:administración|admin|admón|admon)\s*:?\s*\$?([\d.,]+)\s*(mil|k)?/i);
-    if (mAdmin) {
-      let vAdmin = parseFloat(mAdmin[1].replace(/\./g, "").replace(/,/g, ""));
-      if (!isNaN(vAdmin) && vAdmin > 0) {
-        if (vAdmin < 1000) vAdmin *= 1000;
-        if (!isPhoneNumberNotPrice(vAdmin, prop.rawText)) propAdminFee = vAdmin;
-      }
+  // SANIDAD FINANCIERA DOCTRINAL:
+  // La cuota de administración JAMÁS puede ser igual al canon de arriendo ni al precio de venta.
+  // Si propAdminFee === propRentPrice o propAdminFee >= propRentPrice * 0.45 -> Queda N/E (0)
+  if (propAdminFee > 0) {
+    if (
+      (propRentPrice > 0 && (propAdminFee === propRentPrice || propAdminFee >= propRentPrice * 0.45)) ||
+      (propSalePrice > 0 && (propAdminFee === propSalePrice || propAdminFee >= propSalePrice * 0.20))
+    ) {
+      propAdminFee = 0; // Rechazar paridad o duplicación absurda -> Queda N/E
     }
   }
 
