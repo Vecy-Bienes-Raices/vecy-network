@@ -269,44 +269,90 @@ function scoreRows(req: any, prop: any) {
     propZoneLabel += " ❌ (Diferente Sub-barrio)";
   }
 
-  // 3. Ubicación Desagregada (Barrio/Vereda, Localidad/Comuna, Ciudad/Municipio)
+
+  // ── EMPAREJAMIENTO GEOGRÁFICO TRIPARTITO (Doctrinal v22.1) ──
+  // REGLA: Los campos geográficos son DUROS. Solo "Coincide" o "Falla". JAMÁS "Aproximado".
+  // REGLA: Sub-barrio exacto — "Calleja Alta" ≠ "Calleja Baja" = FALLA absoluta.
+
+  // Calificadores de sub-barrio que hacen los nombres INCOMPATIBLES si difieren
+  const SUB_CALIFICADORES = ["alta", "alto", "baja", "bajo", "norte", "sur", "oriental", "occidental", "reservado", "i ", "ii ", "iii "];
+
+  const normalizeBarrio = (s: string) =>
+    (s || "").toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ");
+
+  // Emparejamiento exacto de barrio con detección de sub-calificadores
+  const matchBarrioExacto = (req: string, prop: string): boolean => {
+    const rn = normalizeBarrio(req);
+    const pn = normalizeBarrio(prop);
+    if (!rn || !prop) return false;
+    // Coincidencia exacta
+    if (rn === pn) return true;
+    // Uno contiene al otro (ej: "La Calleja" ↔ "La Calleja Baja") → solo si NO hay calificador conflictivo
+    const reqHasQual = SUB_CALIFICADORES.some(q => rn.includes(q));
+    const propHasQual = SUB_CALIFICADORES.some(q => pn.includes(q));
+    // Si ambos tienen calificadores distintos → FALLA
+    if (reqHasQual && propHasQual && rn !== pn) return false;
+    // Si solo uno tiene calificador y el otro es el nombre base → puede coincidir (ej: "Calleja" ↔ "La Calleja Baja")
+    // Solo si el nombre base está completamente contenido y el calificador no crea conflicto
+    return (rn.includes(pn) || pn.includes(rn)) && !SUB_CALIFICADORES.some(q => {
+      const reqHas = rn.includes(q);
+      const propHas = pn.includes(q);
+      return reqHas !== propHas; // Uno tiene y el otro no → conflicto
+    });
+  };
+
+  // Valores de display priorizando los campos tripartitos ya deducidos por janIA
   const reqBarrioDisplay = req.addressNeighborhood || reqEffectiveZone || "N/E";
   const propBarrioDisplay = prop.addressNeighborhood || propEffectiveZone || "N/E";
-
   const reqLocalityDisplay = req.addressLocality || "N/E";
   const propLocalityDisplay = prop.addressLocality || "N/E";
-
   const reqCityDisplay = req.addressCity || req.ciudadDeseada || "Bogotá";
   const propCityDisplay = prop.addressCity || prop.city || "Bogotá";
 
-  const isCityMatch = cleanText(reqCityDisplay) === cleanText(propCityDisplay) || 
-                      cleanText(reqCityDisplay).includes(cleanText(propCityDisplay)) || 
-                      cleanText(propCityDisplay).includes(cleanText(reqCityDisplay));
+  // A. Ciudad / Municipio — FILTRO DURO BINARIO
+  const isCityMatch =
+    normalizeBarrio(reqCityDisplay) === normalizeBarrio(propCityDisplay) ||
+    normalizeBarrio(reqCityDisplay).includes(normalizeBarrio(propCityDisplay)) ||
+    normalizeBarrio(propCityDisplay).includes(normalizeBarrio(reqCityDisplay));
 
-  const isLocalityMatch = cleanText(reqLocalityDisplay) === cleanText(propLocalityDisplay) ||
-                          reqLocalityDisplay === "N/E" || propLocalityDisplay === "N/E";
+  // B. Localidad / Comuna — BINARIO (solo coincide si ambos tienen valor y son iguales)
+  const bothLocalityKnown = reqLocalityDisplay !== "N/E" && propLocalityDisplay !== "N/E";
+  const isLocalityMatch = !bothLocalityKnown ||
+    normalizeBarrio(reqLocalityDisplay) === normalizeBarrio(propLocalityDisplay) ||
+    normalizeBarrio(reqLocalityDisplay).includes(normalizeBarrio(propLocalityDisplay)) ||
+    normalizeBarrio(propLocalityDisplay).includes(normalizeBarrio(reqLocalityDisplay));
 
-  // A. Barrio / Vereda / Caserío (10 pts)
+  // C. Barrio / Vereda — EXACTO + SUB-CALIFICADOR (Calleja Alta ≠ Calleja Baja)
+  const bothBarrioKnown = reqBarrioDisplay !== "N/E" && propBarrioDisplay !== "N/E";
+  const isBarrioMatch = !bothBarrioKnown || matchBarrioExacto(reqBarrioDisplay, propBarrioDisplay);
+
+  // Label del barrio con indicador de falla si hay conflicto
+  const propBarrioLabel = propBarrioDisplay + (
+    bothBarrioKnown && !isBarrioMatch && !isOutStreetBounds ? " ❌ (Sub-barrio incompatible)" :
+    isOutStreetBounds ? ` ❌ (Fuera de Perímetro: ${boundaryLabel})` : ""
+  );
+
+  // A. Barrio / Vereda / Caserío — BINARIO DURO
   add(
     "Barrio / Vereda / Caserío",
     reqBarrioDisplay,
-    propBarrioDisplay,
-    isCityMatch && isExactOrAliasMatch && !isOutStreetBounds ? "exact" : (isCityMatch && !isNeighborhoodMismatch ? "warn" : "missing"),
+    propBarrioLabel,
+    isCityMatch && isBarrioMatch && !isOutStreetBounds ? "exact" : "missing",
     10,
     <MapPin className="w-3.5 h-3.5" />
   );
 
-  // B. Localidad / Comuna (5 pts)
+  // B. Localidad / Comuna — BINARIO DURO
   add(
     "Localidad / Comuna",
     reqLocalityDisplay,
     propLocalityDisplay,
-    isCityMatch && isLocalityMatch ? "exact" : "warn",
+    isCityMatch && isLocalityMatch ? "exact" : "missing",
     5,
     <MapPin className="w-3.5 h-3.5" />
   );
 
-  // C. Ciudad / Municipio (5 pts - Filtro Duro)
+  // C. Ciudad / Municipio — FILTRO DURO BINARIO
   add(
     "Ciudad / Municipio",
     reqCityDisplay,
@@ -315,6 +361,7 @@ function scoreRows(req: any, prop: any) {
     5,
     <MapPin className="w-3.5 h-3.5" />
   );
+
 
   // 4. Presupuesto Máx.
   let propPrice = parseFloat(prop.price || "0");

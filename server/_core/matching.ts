@@ -744,13 +744,63 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   const positives: string[] = [];
   const negatives: string[] = [];
 
-  // -1. Rechazar Requerimientos o Inmuebles vacíos o con datos basura ("NA")
-  const reqText = (requirement.rawText || requirement.name || "").trim().toUpperCase();
-  const propText = (property.rawText || property.name || "").trim().toUpperCase();
-  if (reqText === "NA" || reqText === "" || propText === "NA" || propText === "") {
-    blockers.push("Registro con información insuficiente ('NA' o campos sin especificar).");
+  // ── FILTRO DURO 0A: DATOS EN DURO OBLIGATORIOS (Doctrinal v22.1) ──────────────────────────────
+  // REGLA: Si CUALQUIERA de los datos en duro es N/E (no especificado) en el INMUEBLE o en el
+  // REQUERIMIENTO, ese registro NO PUEDE participar en ningún MATCH. Score 0%. No se muestra.
+  // Datos en duro: Tipo de Inmueble, Tipo de Negocio, Ciudad/Municipio, Barrio/Vereda.
+
+  const isNA = (v: string | null | undefined) =>
+    !v || v.trim() === "" || v.trim().toUpperCase() === "NA" || v.trim().toUpperCase() === "N/E"
+    || v.trim().toUpperCase() === "N/A" || v.trim() === "-";
+
+  // Tipo de Inmueble obligatorio en ambos
+  const propTypeHard = property.propertyType || property.tipoInmueble || "";
+  const reqTypeHard  = requirement.tipoInmuebleDeseado || requirement.propertyType || "";
+  if (isNA(propTypeHard)) {
+    blockers.push("⛔ Inmueble Incompleto: Tipo de Inmueble no especificado (N/E). No puede participar en Matches.");
     return buildExplanationResult(0, blockers, positives, negatives);
   }
+  if (isNA(reqTypeHard)) {
+    blockers.push("⛔ Requerimiento Incompleto: Tipo de Inmueble deseado no especificado (N/E). No puede participar en Matches.");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+
+  // Tipo de Negocio obligatorio en ambos
+  const propBizHard = property.transactionType || "";
+  const reqBizHard  = requirement.tipoNegocioDeseado || requirement.transactionType || "";
+  if (isNA(propBizHard)) {
+    blockers.push("⛔ Inmueble Incompleto: Tipo de Negocio no especificado (N/E). No puede participar en Matches.");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  if (isNA(reqBizHard)) {
+    blockers.push("⛔ Requerimiento Incompleto: Tipo de Negocio deseado no especificado (N/E). No puede participar en Matches.");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+
+  // Ciudad/Municipio obligatorio en ambos
+  const propCityHard = property.addressCity || property.city || "";
+  const reqCityHard  = requirement.addressCity || requirement.ciudadDeseada || "";
+  if (isNA(propCityHard)) {
+    blockers.push("⛔ Inmueble Incompleto: Ciudad/Municipio no especificado (N/E). No puede participar en Matches.");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  if (isNA(reqCityHard)) {
+    blockers.push("⛔ Requerimiento Incompleto: Ciudad/Municipio deseado no especificado (N/E). No puede participar en Matches.");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+
+  // Barrio/Vereda/Caserío obligatorio en ambos
+  const propBarrioHard = property.zone || property.addressNeighborhood || "";
+  const reqBarrioHard  = requirement.zonaDeseada || requirement.addressNeighborhood || "";
+  if (isNA(propBarrioHard)) {
+    blockers.push("⛔ Inmueble Incompleto: Barrio/Vereda no especificado (N/E). No puede participar en Matches.");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  if (isNA(reqBarrioHard)) {
+    blockers.push("⛔ Requerimiento Incompleto: Barrio/Vereda deseado no especificado (N/E). No puede participar en Matches.");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+
 
   // ── REGLA DOCTRINAL DE COTEJO COMPLETO 100% VERDE/AMARILLO (CERO GRISES, CERO ROJOS) ──
   // Para que un match sea elegible, la demanda Y la oferta DEBEN tener especificadas las 8 características clave:
@@ -965,13 +1015,44 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
     return n1 || n2 || "bogota";
   };
 
-  const reqCity = resolveCityField(requirement.ciudadDeseada || "", requirement.city || "");
+  const reqCity = resolveCityField(requirement.ciudadDeseada || requirement.addressCity || "", requirement.city || "");
   const propCity = resolveCityField(property.addressCity || "", property.city || "");
-  if (reqCity && propCity && reqCity !== propCity && reqCity !== "bogota" && propCity !== "bogota") {
-    blockers.push(`Incompatibilidad de ciudad: deseada ${reqCity}, ofrecida ${propCity}`);
-    return buildExplanationResult(0, blockers, positives, negatives);
+
+  // ── FILTRO DURO CIUDAD (Doctrinal v22.1) ──
+  // Si ambas ciudades están definidas y NO coinciden → 0% ABSOLUTO. NO se almacena ni muestra.
+  const reqCityNorm = normalizarTextoGeografico(reqCity);
+  const propCityNorm = normalizarTextoGeografico(propCity);
+  const bothCitiesKnown = reqCityNorm && propCityNorm && reqCityNorm !== "colombia";
+  if (bothCitiesKnown && reqCityNorm !== propCityNorm) {
+    const sameCity = reqCityNorm.includes(propCityNorm) || propCityNorm.includes(reqCityNorm);
+    if (!sameCity) {
+      blockers.push(`⛔ Ciudad Incompatible: buscada "${reqCity}", ofrecida "${propCity}". MATCH IMPOSIBLE.`);
+      return buildExplanationResult(0, blockers, positives, negatives);
+    }
   }
   positives.push(`Ciudad coincide: ${reqCity}`);
+
+  // ── FILTRO DURO BARRIO/VEREDA (Doctrinal v22.1) ──
+  // Sub-barrio exacto: "Calleja Alta" ≠ "Calleja Baja". Si calificadores difieren → 0% ABSOLUTO.
+  const SUB_QUALS_MATCHING = ["alta", "alto", "baja", "bajo", "norte", "sur", "oriental", "occidental", "reservado"];
+  const reqBarrioNorm = normalizarTextoGeografico(requirement.zonaDeseada || requirement.addressNeighborhood || "");
+  const propBarrioNorm = normalizarTextoGeografico(property.zone || property.addressNeighborhood || "");
+  const GENERIC_ZONES_SET = new Set(["bogota", "bogota d c", "medellin", "cali", "barranquilla", "colombia", "norte", "sur", "centro", "n/e", "na", ""]);
+  const reqBarrioIsSpecific = reqBarrioNorm && !GENERIC_ZONES_SET.has(reqBarrioNorm);
+  const propBarrioIsSpecific = propBarrioNorm && !GENERIC_ZONES_SET.has(propBarrioNorm);
+
+  if (reqBarrioIsSpecific && propBarrioIsSpecific) {
+    const reqHasQual = SUB_QUALS_MATCHING.some(q => reqBarrioNorm.includes(q));
+    const propHasQual = SUB_QUALS_MATCHING.some(q => propBarrioNorm.includes(q));
+    if (reqHasQual && propHasQual && reqBarrioNorm !== propBarrioNorm) {
+      const conflictingQuals = SUB_QUALS_MATCHING.filter(q => reqBarrioNorm.includes(q) !== propBarrioNorm.includes(q));
+      if (conflictingQuals.length > 0) {
+        blockers.push(`⛔ Sub-barrio Incompatible: "${requirement.zonaDeseada}" ≠ "${property.zone}". MATCH IMPOSIBLE.`);
+        return buildExplanationResult(0, blockers, positives, negatives);
+      }
+    }
+  }
+
 
   let price       = parseFloat(String(property.price || "0"));
   let budgetMax   = parseFloat(String(requirement.presupuestoMax || "0"));
@@ -1093,14 +1174,15 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
-  // ── FILTRO DURO 0E: Incompatibilidad Geográfica Estricta de Ciudad (Ej: Cali vs Bogotá) ──
-  const reqCityNorm = (requirement.ciudadDeseada || requirement.city || requirement.rawText || "").toLowerCase();
-  const propCityNorm = (property.addressCity || property.city || property.zone || property.rawText || "").toLowerCase();
+  // ── FILTRO DURO 0E: Incompatibilidad Geográfica Estricta de Ciudad (ya manejado arriba en v22.1) ──
+  // (bloque legado reemplazado por reqCityNorm2 para evitar conflicto de variables)
+  const reqCityNorm2 = (requirement.ciudadDeseada || requirement.addressCity || requirement.city || requirement.rawText || "").toLowerCase();
+  const propCityNorm2 = (property.addressCity || property.city || property.zone || property.rawText || "").toLowerCase();
 
-  const isReqCali = reqCityNorm.includes("cali");
-  const isPropCali = propCityNorm.includes("cali");
-  const isReqBogota = reqCityNorm.includes("bogota") || reqCityNorm.includes("bogotá");
-  const isPropBogota = propCityNorm.includes("bogota") || propCityNorm.includes("bogotá");
+  const isReqCali = reqCityNorm2.includes("cali");
+  const isPropCali = propCityNorm2.includes("cali");
+  const isReqBogota = reqCityNorm2.includes("bogota") || reqCityNorm2.includes("bogotá");
+  const isPropBogota = propCityNorm2.includes("bogota") || propCityNorm2.includes("bogotá");
 
   if ((isReqCali && isPropBogota && !isPropCali) || (isReqBogota && isPropCali && !isPropBogota)) {
     blockers.push(`Incompatibilidad geográfica de ciudad: Requerimiento en ${isReqCali ? "Cali" : "Bogotá"} vs Oferta en ${isPropCali ? "Cali" : "Bogotá"}.`);

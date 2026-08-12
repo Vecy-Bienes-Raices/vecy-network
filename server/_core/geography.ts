@@ -17,7 +17,13 @@ export const DICCIONARIO_BOGOTA: Record<string, { localidad: string, barrios: st
       "Santa Bárbara Norte", "El Chicó", "Chicó Norte", "Chicó Reservado",
       "Usaquén", "Toberín", "Country Club", "San Patricio", "La Uribe",
       "Verbenal", "Barrancas", "Horizontes", "La Cita", "Tibabita",
-      "La Cerámica", "La Unión", "Los Arrayanes", "Bosque Medina"
+      "La Cerámica", "La Unión", "Los Arrayanes", "Bosque Medina",
+      // Usaquén estrato alto norte
+      "La Calleja", "Calleja Baja", "Calleja Alta", "Bosque De Pinos",
+      "Los Andes", "Bosque Medina", "Santa Ana Occidental", "Santa Ana Oriental",
+      "El Polo", "Club El Nogal", "Antiguo Country", "Bella Suiza",
+      "Colina Campestre", "Los Alcaparros", "La Carolina", "Mazurén",
+      "San Antonio Norte", "Rincon Del Chico", "Virrey", "Gratamira Mónica"
     ]
   },
   "chapinero": {
@@ -26,8 +32,8 @@ export const DICCIONARIO_BOGOTA: Record<string, { localidad: string, barrios: st
       "El Lago", "El Retiro", "Rosales", "Los Rosales", "La Cabrera",
       "Chicó Reservado Norte", "Chapinero Central", "Chapinero Alto",
       "Pardo Rubio", "Quinta Camacho", "El Castillo", "San Luis", "Juan XXIII",
-      // Barrio El Refugio — franja norte de Chapinero, Calle 85-90 entre Cr 5 y 11
-      "El Refugio"
+      "El Refugio", "El Nogal", "El Bosque", "Granada", "Porciúncula",
+      "Lago Gaitán", "Espartillal", "La Salle", "Marly"
     ]
   },
   "suba": {
@@ -41,7 +47,10 @@ export const DICCIONARIO_BOGOTA: Record<string, { localidad: string, barrios: st
       "Guaymaral", "Lagos de Torca", "La Conejera", "Torca",
       "San Pedro de Torca", "El Pradío", "Suba Rural", "Hacienda San Simón",
       "Hacienda San Sebastián", "Club Los Lagartos", "Mirandela",
-      "San José del Prado", "El Cerezo", "La Isabela"
+      "San José del Prado", "El Cerezo", "La Isabela",
+      // Suba estrato alto - Niza / Gratamira
+      "Gratamira", "Gratamira Mónica", "Bella Suiza", "Cerros de Suba",
+      "Niza Suba", "Reservado de Niza", "El Country", "Pasadena"
     ]
   },
   "barrios unidos": {
@@ -981,25 +990,60 @@ export function deducirGeografiaTripartita(
     }
   }
 
-  // Bogotá por barrios conocidos o fallback seguro
-  let neighborhood = inputZone && inputZone.trim() !== "" && inputZone.toLowerCase() !== "na" ? inputZone.trim() : "Bogotá";
-  let locality = "Bogotá Urbano";
+  // ── EMPAREJAMIENTO JERÁRQUICO BOGOTÁ ──
+  // Si inputZone es genérico ("Bogotá", "N/A", vacío), escanear el rawText
+  // en busca del barrio real para auto-rellenar la jerarquía completa.
+  const isGenericZone = !inputZone ||
+    inputZone.trim() === "" ||
+    normalizarTextoGeografico(inputZone).trim() === "na" ||
+    normalizarTextoGeografico(inputZone).includes("bogota") ||
+    normalizarTextoGeografico(inputZone).includes("bogotá");
 
-  for (const [key, info] of Object.entries(DICCIONARIO_BOGOTA)) {
+  let neighborhood = isGenericZone ? "" : (inputZone?.trim() || "");
+  let locality = "";
+  let foundBarrio = false;
+
+  // Buscar en el diccionario usando zona + rawText completo
+  // Orden de prioridad: coincidencia exacta de zona → coincidencia en rawText
+  for (const [, info] of Object.entries(DICCIONARIO_BOGOTA)) {
     for (const b of info.barrios) {
-      if (normalizarTextoGeografico(b) === normZone || combined.includes(normalizarTextoGeografico(b))) {
+      const normB = normalizarTextoGeografico(b);
+      // 1. Coincidencia exacta con la zona ingresada
+      if (!isGenericZone && normB === normZone) {
         neighborhood = b;
         locality = info.localidad;
+        foundBarrio = true;
+        break;
+      }
+      // 2. La zona contiene el nombre del barrio
+      if (!isGenericZone && normZone.includes(normB) && normB.length > 4) {
+        neighborhood = b;
+        locality = info.localidad;
+        foundBarrio = true;
+        break;
+      }
+      // 3. El rawText / rawGroup contiene el nombre del barrio
+      if (combined.includes(normB) && normB.length > 4) {
+        neighborhood = b;
+        locality = info.localidad;
+        foundBarrio = true;
         break;
       }
     }
+    if (foundBarrio) break;
+  }
+
+  // Si no se encontró barrio específico, usar la zona original o "Bogotá" como fallback
+  if (!foundBarrio) {
+    neighborhood = isGenericZone ? "Bogotá" : (inputZone?.trim() || "Bogotá");
+    locality = "Bogotá Urbano";
   }
 
   return {
     neighborhood,
-    locality,
+    locality: locality || "Bogotá Urbano",
     city: "Bogotá, D.C.",
     department: "Cundinamarca / D.C.",
-    confidence: "deduccion_bogota"
+    confidence: foundBarrio ? "alta_deduccion_bogota" : "deduccion_generica_bogota"
   };
 }
