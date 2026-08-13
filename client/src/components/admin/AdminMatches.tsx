@@ -871,11 +871,35 @@ function scoreRows(req: any, prop: any) {
   );
 
 
-  // REGLA DOCTRINAL v22.1: Los campos blandos nunca producen "Falla".
-  // Solo los 5 campos duros pueden bloquear un match (lo hacen en el backend).
-  // Si el match aparece en pantalla, el score VECY es la fuente de verdad.
-  const autoScore = max > 0 ? Math.round((pts / max) * 100) : 0;
+  // ── ESTADÍSTICA Y TABULACIÓN DOCTRINAL DE MATCH VECY (REGULARES 80%, 85%, 90%, 100%) ──
+  // 1. Si cualquiera de los 5 primeros campos en duro NO COINCIDE 100% (no está en verde) -> autoScore = 0 (SACADO DE ALLÍ)
+  const top5Rows = rows.slice(0, 5);
+  const hasHardMismatch = top5Rows.some(r => r.status === "missing");
+
+  let autoScore = 0;
+  if (hasHardMismatch) {
+    autoScore = 0; // SACADO DE ALLÍ DE INMEDIATO
+  } else {
+    // 2. Con los 5 campos en duro 100% en VERDE, calculamos la completitud de los campos de ahí hacia abajo:
+    const downstreamRows = rows.slice(5, -1); // Excluyendo teléfono
+    const filledCount = downstreamRows.filter(r => r.reqVal !== "N/E" && r.propVal !== "N/E" && r.status !== "missing").length;
+    const ratio = downstreamRows.length > 0 ? filledCount / downstreamRows.length : 0;
+
+    if (ratio < 0.50) {
+      autoScore = 0; // Menos del 50% de ahí hacia abajo -> Sacado de allí
+    } else if (ratio < 0.70) {
+      autoScore = 80;
+    } else if (ratio < 0.80) {
+      autoScore = 85;
+    } else if (ratio < 1.00) {
+      autoScore = 90;
+    } else {
+      autoScore = 100; // 100% Llenos y todas las casillas de abajo en verde
+    }
+  }
+
   return { rows, autoScore };
+
 }
 
 function formatCOP(val: string | number) {

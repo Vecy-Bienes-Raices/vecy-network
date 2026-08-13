@@ -1805,19 +1805,50 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
     earnedPoints += 15; // Bono de confort por luz/ventilación (+15 pts)
   }
 
-  // Total: max 100 pts
-  let finalPercentage = Math.max(0, Math.min(100, Math.round((earnedPoints / totalPossible) * 100)));
-
-  // REGLA CRÍTICA DOCTRINAL VECY (v22.5):
-  // Un MATCH del 100% exige que TODOS los campos prediales (barrio, área, precio, admón, habs, baños, garajes, estrato)
-  // estén completamente llenados (sin N/E) y sean 100% compatibles (excepto teléfono de contacto).
-  // Si existe cualquier campo N/E en la oferta o la demanda -> máximo 84%.
-  if (missingFieldsList.length > 0) {
-    finalPercentage = Math.min(84, finalPercentage);
+  // ── ESTADÍSTICA Y TABULACIÓN DOCTRINAL DE MATCH VECY ──
+  // 1. Si cualquiera de los 5 primeros campos en duro NO COINCIDE 100% (no está en verde) -> 0% (SACADO DE ALLÍ)
+  if (blockers.length > 0) {
+    return buildExplanationResult(0, blockers, positives, negatives, false, missingFieldsList);
   }
 
+  // 2. Con los 5 campos en duro 100% en VERDE, calculamos la completitud de los campos de ahí hacia abajo:
+  // 10 especificaciones de abajo: Precio, Admin, Área, Habs, Baños, Garajes, Estrato, Antigüedad, Balcón/Terraza, Depósito
+  let totalDownstreamSpecs = 10;
+  let filledDownstreamSpecs = 0;
+
+  if (price > 0 || (property.rentPrice && parseFloat(String(property.rentPrice)) > 0)) filledDownstreamSpecs++;
+  if (pAdminFee > 0) filledDownstreamSpecs++;
+  if (propArea > 0) filledDownstreamSpecs++;
+  if (pBedrooms > 0) filledDownstreamSpecs++;
+  if (pBathrooms > 0) filledDownstreamSpecs++;
+  if (pGarages > 0) filledDownstreamSpecs++;
+  if (pEstrato > 0) filledDownstreamSpecs++;
+  if (propAge >= 0) filledDownstreamSpecs++;
+  if (property.hasBalcony || property.hasTerrace || /balcón|balcon|terraza/i.test(property.rawText || "")) filledDownstreamSpecs++;
+  if (property.hasStorageRoom || /depósito|deposito|cuarto útil|cuarto util/i.test(property.rawText || "")) filledDownstreamSpecs++;
+
+  const completionRatio = filledDownstreamSpecs / totalDownstreamSpecs;
+
+  let finalPercentage = 0;
+  if (completionRatio < 0.50) {
+    blockers.push(`Ficha incompleta: los campos de abajo están llenados a menos del 50% (${Math.round(completionRatio * 100)}%). Match no considerado (0%).`);
+    return buildExplanationResult(0, blockers, positives, negatives, false, missingFieldsList);
+  } else if (completionRatio < 0.70) {
+    finalPercentage = 80;
+    positives.push(`✅ Match 80%: 5 campos en duro 100% en verde + campos de abajo llenos al ${Math.round(completionRatio * 100)}% (mín. 50%)`);
+  } else if (completionRatio < 0.80) {
+    finalPercentage = 85;
+    positives.push(`✅ Match 85%: 5 campos en duro 100% en verde + campos de abajo llenos al ${Math.round(completionRatio * 100)}% (mín. 70%)`);
+  } else if (completionRatio < 1.00) {
+    finalPercentage = 90;
+    positives.push(`✅ Match 90%: 5 campos en duro 100% en verde + campos de abajo llenos al ${Math.round(completionRatio * 100)}% (mín. 80%)`);
+  } else {
+    finalPercentage = 100;
+    positives.push(`🌟 MATCH PERFECTO 100%: 5 campos en duro 100% en verde + TODAS las líneas de abajo 100% llenas y compatibles!`);
+  }
 
   return buildExplanationResult(finalPercentage, blockers, positives, negatives, isStrictCompliant, missingFieldsList);
+
 }
 
 export interface SemanticAmenitiesResult {

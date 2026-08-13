@@ -4579,9 +4579,38 @@ function explicarMatch(requirement, property) {
   if (lightAirBonus) {
     earnedPoints += 15;
   }
-  let finalPercentage = Math.max(0, Math.min(100, Math.round(earnedPoints / totalPossible * 100)));
-  if (missingFieldsList.length > 0) {
-    finalPercentage = Math.min(84, finalPercentage);
+  if (blockers.length > 0) {
+    return buildExplanationResult(0, blockers, positives, negatives, false, missingFieldsList);
+  }
+  let totalDownstreamSpecs = 10;
+  let filledDownstreamSpecs = 0;
+  if (price > 0 || property.rentPrice && parseFloat(String(property.rentPrice)) > 0) filledDownstreamSpecs++;
+  if (pAdminFee > 0) filledDownstreamSpecs++;
+  if (propArea > 0) filledDownstreamSpecs++;
+  if (pBedrooms > 0) filledDownstreamSpecs++;
+  if (pBathrooms > 0) filledDownstreamSpecs++;
+  if (pGarages > 0) filledDownstreamSpecs++;
+  if (pEstrato > 0) filledDownstreamSpecs++;
+  if (propAge >= 0) filledDownstreamSpecs++;
+  if (property.hasBalcony || property.hasTerrace || /balcón|balcon|terraza/i.test(property.rawText || "")) filledDownstreamSpecs++;
+  if (property.hasStorageRoom || /depósito|deposito|cuarto útil|cuarto util/i.test(property.rawText || "")) filledDownstreamSpecs++;
+  const completionRatio = filledDownstreamSpecs / totalDownstreamSpecs;
+  let finalPercentage = 0;
+  if (completionRatio < 0.5) {
+    blockers.push(`Ficha incompleta: los campos de abajo est\xE1n llenados a menos del 50% (${Math.round(completionRatio * 100)}%). Match no considerado (0%).`);
+    return buildExplanationResult(0, blockers, positives, negatives, false, missingFieldsList);
+  } else if (completionRatio < 0.7) {
+    finalPercentage = 80;
+    positives.push(`\u2705 Match 80%: 5 campos en duro 100% en verde + campos de abajo llenos al ${Math.round(completionRatio * 100)}% (m\xEDn. 50%)`);
+  } else if (completionRatio < 0.8) {
+    finalPercentage = 85;
+    positives.push(`\u2705 Match 85%: 5 campos en duro 100% en verde + campos de abajo llenos al ${Math.round(completionRatio * 100)}% (m\xEDn. 70%)`);
+  } else if (completionRatio < 1) {
+    finalPercentage = 90;
+    positives.push(`\u2705 Match 90%: 5 campos en duro 100% en verde + campos de abajo llenos al ${Math.round(completionRatio * 100)}% (m\xEDn. 80%)`);
+  } else {
+    finalPercentage = 100;
+    positives.push(`\u{1F31F} MATCH PERFECTO 100%: 5 campos en duro 100% en verde + TODAS las l\xEDneas de abajo 100% llenas y compatibles!`);
   }
   return buildExplanationResult(finalPercentage, blockers, positives, negatives, isStrictCompliant, missingFieldsList);
 }
