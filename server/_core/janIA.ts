@@ -2195,7 +2195,7 @@ Por lo tanto, DEBES hacer lo siguiente:
         cleanText.includes("aún disponible")
       );
 
-      // Detectar preguntas de recomendación, servicios generales o consultas no prediales (ej: "Senior Living", "¿Alguien maneja o recomienda...?")
+      // Detectar preguntas de recomendación, solicitudes de abogados/servicios legales, comprobantes o consultas no prediales
       const isGeneralInquiryOrRecommendation = (
         cleanText.includes("alguien maneja") ||
         cleanText.includes("alguien recomienda") ||
@@ -2207,6 +2207,15 @@ Por lo tanto, DEBES hacer lo siguiente:
         cleanText.includes("quien recomienda") ||
         cleanText.includes("recomiendan plomero") ||
         cleanText.includes("recomiendan abogado") ||
+        cleanText.includes("buscando un abogado") ||
+        cleanText.includes("buscando abogado") ||
+        cleanText.includes("algun abogado") ||
+        cleanText.includes("algún abogado") ||
+        cleanText.includes("restitucion de inmueble") ||
+        cleanText.includes("restitución de inmueble") ||
+        cleanText.includes("daviplata") ||
+        cleanText.includes("nequi") ||
+        cleanText.includes("comprobante de pago") ||
         cleanText.includes("recomiendan avaluador") ||
         cleanText.includes("alguien que haga") ||
         cleanText.includes("contacto de")
@@ -3534,7 +3543,7 @@ async function saveRequirement(data: any, userId: string, realName: string) {
   const isAmbiguousZoneName = (zn: string) => {
     if (!zn || zn === "n/e" || zn === "na" || zn === "bogota" || zn === "bogota, d.c." || zn === "colombia") return true;
     const ambiguousPhrases = [
-      "todas las santas", "todas las zonas", "cualquier zona", "cualquier lado",
+      "todas las zonas", "cualquier zona", "cualquier lado",
       "donde sea", "varias zonas", "por ahi", "por ahí", "buena zona", "sector residencial",
       "sector comercial", "norte o sur", "donde haya", "cualquiera"
     ];

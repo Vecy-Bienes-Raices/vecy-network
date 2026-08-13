@@ -14,7 +14,8 @@ export const DICCIONARIO_BOGOTA: Record<string, { localidad: string, barrios: st
     localidad: "Usaquén",
     barrios: [
       "Cedritos", "Los Cedros", "Santa Bárbara", "Santa Bárbara Central",
-      "Santa Bárbara Norte", "El Chicó", "Chicó Norte", "Chicó Reservado",
+      "Santa Bárbara Norte", "Las Santas", "Todas las Santas", "Santa Ana", "Santa Paula", "Santa Teresa",
+      "El Chicó", "Chicó Norte", "Chicó Reservado",
       "Usaquén", "Toberín", "Country Club", "San Patricio", "La Uribe",
       "Verbenal", "Barrancas", "Horizontes", "La Cita", "Tibabita",
       "La Cerámica", "La Unión", "Los Arrayanes", "Bosque Medina",
