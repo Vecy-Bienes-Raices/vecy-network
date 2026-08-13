@@ -2655,14 +2655,25 @@ var init_geography = __esm({
           "Los Cedros",
           "Santa B\xE1rbara",
           "Santa B\xE1rbara Central",
+          "Santa B\xE1rbara Occidental",
+          "Santa B\xE1rbara Oriental",
           "Santa B\xE1rbara Norte",
+          "Las Santas",
+          "Todas las Santas",
+          "Santa Ana",
+          "Santa Ana Central",
+          "Santa Ana Oriental",
+          "Santa Ana Occidental",
+          "Santa Paula",
+          "Santa Bibiana",
+          "San Patricio",
+          "Santa Teresa",
           "El Chic\xF3",
           "Chic\xF3 Norte",
           "Chic\xF3 Reservado",
           "Usaqu\xE9n",
           "Tober\xEDn",
           "Country Club",
-          "San Patricio",
           "La Uribe",
           "Verbenal",
           "Barrancas",
@@ -2680,8 +2691,6 @@ var init_geography = __esm({
           "Bosque De Pinos",
           "Los Andes",
           "Bosque Medina",
-          "Santa Ana Occidental",
-          "Santa Ana Oriental",
           "El Polo",
           "Club El Nogal",
           "Antiguo Country",
@@ -2691,8 +2700,6 @@ var init_geography = __esm({
           "La Carolina",
           "Mazur\xE9n",
           "San Antonio Norte",
-          "Rincon Del Chico",
-          "Virrey",
           "Gratamira M\xF3nica"
         ]
       },
@@ -2720,7 +2727,10 @@ var init_geography = __esm({
           "Lago Gait\xE1n",
           "Espartillal",
           "La Salle",
-          "Marly"
+          "Marly",
+          "Virrey",
+          "El Virrey",
+          "Rincon Del Chico"
         ]
       },
       "suba": {
@@ -3234,6 +3244,16 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
   if (reqAskaSabana && propIsUrbanBogota) {
     console.log(`[Matching-Guard] Bloqueo 0%: Requerimiento busca Sabana Norte (${reqZoneRaw}) pero inmueble est\xE1 en Bogot\xE1 Urbano (${propZoneRaw})`);
     return { matches: false, score: 0 };
+  }
+  const isSantaBarbaraProp = propFullNorm.includes("santa barbara");
+  const isVirreyReq = reqFullNorm.includes("virrey") || reqFullNorm.includes("rincon del chico");
+  const isSantaBarbaraReq = reqFullNorm.includes("santa barbara");
+  const isVirreyProp = propFullNorm.includes("virrey") || propFullNorm.includes("rincon del chico");
+  if (isSantaBarbaraProp && isVirreyReq || isSantaBarbaraReq && isVirreyProp) {
+    if (!hasAledanos(reqZoneRaw) && !hasAledanos(propZoneRaw)) {
+      console.log(`[Matching-Guard] Bloqueo 0%: Incompatibilidad geogr\xE1fica entre Santa B\xE1rbara y Virrey / Rinc\xF3n del Chic\xF3 ('${reqZoneRaw}' \u2194 '${propZoneRaw}')`);
+      return { matches: false, score: 0 };
+    }
   }
   const GENERIC_CARDINAL_TERMS = /* @__PURE__ */ new Set([
     "norte",
@@ -4217,18 +4237,17 @@ function explicarMatch(requirement, property) {
     blockers.push(`Estrato incompatible: deseado ${reqEstrato}, ofrecido ${pEstrato}`);
     return buildExplanationResult(0, blockers, positives, negatives);
   }
-  let areaOversize = false;
   if (reqAreaMin > 0) {
     if (propArea > 0) {
       if (propArea < reqAreaMin) {
-        blockers.push(`\xC1rea ofrecida (${propArea} m\xB2) es INFERIOR al m\xEDnimo exigido (${reqAreaMin} m\xB2). Match inviable (0%).`);
+        blockers.push(`Guillotina de \xC1rea Estricta: \xC1rea ofrecida (${propArea} m\xB2) es INFERIOR a la exigida (${reqAreaMin} m\xB2). Match inviable (0%).`);
         return buildExplanationResult(0, blockers, positives, negatives);
-      } else if (propArea > reqAreaMin * 1.15) {
-        areaOversize = true;
-        positives.push(`\u2705 \xC1rea de ${propArea} m\xB2 cumple lo exigido (${reqAreaMin} m\xB2). \u26A0\uFE0F Inmueble significativamente m\xE1s grande (+${Math.round((propArea / reqAreaMin - 1) * 100)}%)`);
-      } else {
-        positives.push(`\u2705 \xC1rea de ${propArea} m\xB2 dentro de la campana de confort (${reqAreaMin} m\xB2 \xB115%)`);
       }
+      if (propArea > reqAreaMin * 1.03) {
+        blockers.push(`Guillotina de \xC1rea Estricta: \xC1rea ofrecida (${propArea} m\xB2) supera el 3% m\xE1ximo por encima del \xE1rea exigida (${reqAreaMin} m\xB2 -> m\xE1x ${(reqAreaMin * 1.03).toFixed(1)} m\xB2). Match inviable (0%).`);
+        return buildExplanationResult(0, blockers, positives, negatives);
+      }
+      positives.push(`\u2705 \xC1rea de ${propArea} m\xB2 dentro del rango exacto autorizado (${reqAreaMin} m\xB2 a ${(reqAreaMin * 1.03).toFixed(1)} m\xB2)`);
     } else {
       blockers.push(`No se puede verificar el \xE1rea requerida (${reqAreaMin} m\xB2) por falta de informaci\xF3n en la oferta.`);
       return buildExplanationResult(0, blockers, positives, negatives);
@@ -4262,20 +4281,19 @@ function explicarMatch(requirement, property) {
         blockers.push(`Guillotina Financiera (Tolerancia Cero): Canon de arriendo total ($${totalRent.toLocaleString()}) supera el presupuesto m\xE1ximo de $${budgetMax.toLocaleString()}`);
         return buildExplanationResult(0, blockers, positives, negatives);
       }
-      const reqRentMin = requirement.presupuestoMin ? parseFloat(String(requirement.presupuestoMin)) : 0;
-      if (reqRentMin > 0 && totalRent < reqRentMin * 0.85) {
-        positives.push(`\u{1F525} Oportunidad Financiera (Ganga): Canon total ($${totalRent.toLocaleString()}) est\xE1 por debajo del rango m\xEDnimo presupuestado ($${reqRentMin.toLocaleString()}).`);
-      } else {
-        positives.push(`\u2705 Presupuesto de arriendo cumple: Total $${totalRent.toLocaleString()} (Canon + Adm\xF3n) <= M\xE1ximo $${budgetMax.toLocaleString()}`);
+      if (totalRent < budgetMax * 0.99) {
+        blockers.push(`Guillotina Financiera Estricta: Canon de arriendo total ($${totalRent.toLocaleString()}) est\xE1 a m\xE1s del 1% por debajo del presupuesto solicitado ($${budgetMax.toLocaleString()}). Segmento incompatible.`);
+        return buildExplanationResult(0, blockers, positives, negatives);
       }
+      positives.push(`\u2705 Presupuesto de arriendo cumple: Total $${totalRent.toLocaleString()} dentro del rango (>= 99% y <= 100% de $${budgetMax.toLocaleString()})`);
     } else {
       let salePrice = price;
       if (salePrice > budgetMax) {
         blockers.push(`Guillotina Financiera (Tolerancia Cero): El precio de la propiedad ($${salePrice.toLocaleString()}) supera el presupuesto m\xE1ximo del comprador ($${budgetMax.toLocaleString()}). Match inviable (0%).`);
         return buildExplanationResult(0, blockers, positives, negatives);
       }
-      if (salePrice < budgetMax * 0.7) {
-        blockers.push(`Incompatibilidad de Segmento Comercial: El precio del inmueble ($${salePrice.toLocaleString()}) est\xE1 m\xE1s de un 30% por debajo del presupuesto del comprador ($${budgetMax.toLocaleString()}). Inmueble de categor\xEDa o segmento inferior no apto para la demanda.`);
+      if (salePrice < budgetMax * 0.99) {
+        blockers.push(`Guillotina Financiera Estricta: El precio del inmueble ($${salePrice.toLocaleString()}) est\xE1 a m\xE1s del 1% por debajo del presupuesto solicitado ($${budgetMax.toLocaleString()}). Segmento incompatible (0%).`);
         return buildExplanationResult(0, blockers, positives, negatives);
       }
     }
@@ -4296,9 +4314,15 @@ function explicarMatch(requirement, property) {
     if (mG) effectiveReqGarages = parseInt(mG[1], 10);
   }
   const reqAdminMaxVal = requirement.adminFeeMax ? parseFloat(String(requirement.adminFeeMax)) : 0;
-  if (reqAdminMaxVal > 0 && pAdminFee > 0 && pAdminFee > reqAdminMaxVal) {
-    blockers.push(`Guillotina Financiera (Administraci\xF3n): Cuota de administraci\xF3n de $${pAdminFee.toLocaleString()} supera el m\xE1ximo aceptado de $${reqAdminMaxVal.toLocaleString()}`);
-    return buildExplanationResult(0, blockers, positives, negatives);
+  if (reqAdminMaxVal > 0 && pAdminFee > 0) {
+    if (pAdminFee > reqAdminMaxVal) {
+      blockers.push(`Guillotina Financiera (Administraci\xF3n): Cuota de administraci\xF3n de $${pAdminFee.toLocaleString()} supera el m\xE1ximo aceptado de $${reqAdminMaxVal.toLocaleString()}`);
+      return buildExplanationResult(0, blockers, positives, negatives);
+    }
+    if (pAdminFee < reqAdminMaxVal * 0.99) {
+      blockers.push(`Guillotina Financiera (Administraci\xF3n Estricta): Cuota de administraci\xF3n de $${pAdminFee.toLocaleString()} est\xE1 a m\xE1s del 1% por debajo del m\xE1ximo exigido ($${reqAdminMaxVal.toLocaleString()}). Match inviable (0%).`);
+      return buildExplanationResult(0, blockers, positives, negatives);
+    }
   }
   const propRawTextLower = (property.rawText || property.description || "").toLowerCase();
   if (effectiveReqBeds > 0) {
@@ -4471,9 +4495,7 @@ function explicarMatch(requirement, property) {
   }
   if (reqAreaMin > 0) {
     if (propArea > 0) {
-      if (propArea >= reqAreaMin && !areaOversize) earnedPoints += 10;
-      else if (areaOversize) earnedPoints += 10;
-      else if (propArea >= reqAreaMin * 0.95) earnedPoints += 6;
+      if (propArea >= reqAreaMin && propArea <= reqAreaMin * 1.03) earnedPoints += 10;
     } else {
       negatives.push("\xC1rea no especificada en la oferta (N/E)");
     }
@@ -4568,8 +4590,7 @@ function explicarMatch(requirement, property) {
     earnedPoints += 15;
   }
   let finalPercentage = Math.max(0, Math.min(100, Math.round(earnedPoints / totalPossible * 100)));
-  const hasMissingSpecifiedFields = reqAreaMin > 0 && propArea <= 0 || reqBedrooms > 0 && pBedrooms < 0 || reqBathrooms > 0 && pBathrooms < 0 || reqGarages > 0 && pGarages < 0 || budgetMax > 0 && price <= 0 || reqZone && (!propZone || propZone === "bogota");
-  if (hasMissingSpecifiedFields) {
+  if (missingFieldsList.length > 0) {
     finalPercentage = Math.min(84, finalPercentage);
   }
   return buildExplanationResult(finalPercentage, blockers, positives, negatives, isStrictCompliant, missingFieldsList);
@@ -5231,6 +5252,7 @@ __export(janIA_exports, {
   repairJSON: () => repairJSON,
   sanitizeResponseMarkdown: () => sanitizeResponseMarkdown,
   scrapeUrlWithBypass: () => scrapeUrlWithBypass,
+  splitMultiPropertyMessage: () => splitMultiPropertyMessage,
   translatePropertyType: () => translatePropertyType,
   translateTransactionType: () => translateTransactionType
 });
@@ -6059,6 +6081,50 @@ async function scrapeUrlWithBypass(url) {
   }
   return "";
 }
+function splitMultiPropertyMessage(text2) {
+  if (!text2 || text2.length < 120) return [text2];
+  const headerRegex = /(?:^|\n|\r\n)(?=\*?\s*(?:SE VENDE|VENDO|SE ARRIENDA|ARRIENDO|APARTAMENTO|CASA|BODEGA|OFICINA|LOTE|PENTHOUSE|DÚPLEX|DUPLEX|LOCAL)\b)/gi;
+  const matches = Array.from(text2.matchAll(headerRegex));
+  if (matches.length >= 2) {
+    const blocks = [];
+    for (let i = 0; i < matches.length; i++) {
+      const startIdx = matches[i].index || 0;
+      const endIdx = i + 1 < matches.length ? matches[i + 1].index || text2.length : text2.length;
+      const blockText = text2.substring(startIdx, endIdx).trim();
+      if (blockText.length >= 40 && /\$|\b\d{3}\b|\bm2\b|\balcobas\b|\bhab\b|\bprecio\b/i.test(blockText)) {
+        blocks.push(blockText);
+      }
+    }
+    if (blocks.length >= 2) {
+      console.log(`[JanIA-MultiPropertySplitter] \u2702\uFE0F Detectados ${blocks.length} inmuebles independientes en 1 solo mensaje. Separando para ingesta independiente...`);
+      return blocks;
+    }
+  }
+  const paragraphs = text2.split(/(?:\r?\n){2,}/);
+  if (paragraphs.length >= 3) {
+    const blocks = [];
+    let currentBlock = "";
+    for (const p of paragraphs) {
+      const cleanP = p.trim();
+      if (!cleanP) continue;
+      const isNewProp = /(?:SE VENDE|VENDO|SE ARRIENDA|ARRIENDO|APARTAMENTO|CASA|CHICÓ|EL NOGAL|EL REFUGIO)\b/i.test(cleanP) && /\$|\b\d{3,}\b|\bm2\b/i.test(cleanP);
+      if (currentBlock && isNewProp) {
+        blocks.push(currentBlock.trim());
+        currentBlock = cleanP;
+      } else {
+        currentBlock = currentBlock ? `${currentBlock}
+
+${cleanP}` : cleanP;
+      }
+    }
+    if (currentBlock) blocks.push(currentBlock.trim());
+    if (blocks.length >= 2) {
+      console.log(`[JanIA-MultiPropertySplitter] \u2702\uFE0F P\xE1rrafos divididos en ${blocks.length} inmuebles separados.`);
+      return blocks;
+    }
+  }
+  return [text2];
+}
 async function processWhatsAppMessage(text2, userId, userName, hasMedia = false, scrapedData = [], audioUrl, imageBuffer, isGroup = false, pdfBuffer, pdfMimeType, groupJid, groupName) {
   try {
     let isScrapeable2 = function(url) {
@@ -6070,9 +6136,49 @@ async function processWhatsAppMessage(text2, userId, userName, hasMedia = false,
       }
     };
     var isScrapeable = isScrapeable2;
+    const isWebUser = userId.startsWith("web-");
+    if (text2 && !text2.includes("__is_sub_message__")) {
+      const subBlocks = splitMultiPropertyMessage(text2);
+      if (subBlocks.length >= 2) {
+        console.log(`[JanIA-MultiPropertySplitter] \u{1F680} Ingestando ${subBlocks.length} inmuebles individuales de manera independiente...`);
+        let finalResult = { classification: "INMUEBLE", response: "", inserted: true };
+        for (const subText of subBlocks) {
+          finalResult = await processWhatsAppMessage(
+            `${subText}
+__is_sub_message__`,
+            userId,
+            userName,
+            hasMedia,
+            scrapedData,
+            audioUrl,
+            imageBuffer,
+            isGroup,
+            pdfBuffer,
+            pdfMimeType,
+            groupJid,
+            groupName
+          );
+        }
+        return finalResult;
+      }
+    }
+    if (!isWebUser && text2) {
+      const checkText = text2.toLowerCase();
+      const isSpamOrWebinar = checkText.includes("zoom.us") || checkText.includes("us06web.zoom.us") || checkText.includes("chat.whatsapp.com") || checkText.includes("\xFAnase a nuestra reuni\xF3n") || checkText.includes("unase a nuestra reunion") || checkText.includes("entrenamiento 100% gratuito") || checkText.includes("estrategias en redes sociales") || checkText.includes("como funcionan las ventas") || checkText.includes("invitaci\xF3n al chat en grupo") || checkText.includes("invitacion al chat en grupo") || checkText.includes("unirme al grupo") || checkText.includes("m\xE1ster class") || checkText.includes("masterclass") || checkText.includes("taller gratuito") || checkText.includes("capacitaci\xF3n gratuita") || checkText.includes("capacitacion gratuita");
+      if (isSpamOrWebinar && !checkText.includes("vendo") && !checkText.includes("busco") && !checkText.includes("se vende") && !checkText.includes("se arrienda")) {
+        console.log(`[JANIA-SPAM-GUARD] \u26D4 Mensaje detectado como SPAM/Webinar/Curso (${checkText.substring(0, 60)}...). Operaci\xF3n silenciosa total, sin guardar en BD ni emoji.`);
+        return {
+          classification: "VIOLACION_DE_NORMAS",
+          response: "",
+          dmResponse: "",
+          shouldSendDM: false,
+          reactionEmoji: void 0,
+          inserted: false
+        };
+      }
+    }
     const rawPhone = userId.split("@")[0];
     const realName = await resolveRealName(userId, userName);
-    const isWebUser = userId.startsWith("web-");
     const alreadyGreeted = await checkAlreadyGreeted(userId);
     const senderInfo = analyzeSender(realName, userId, alreadyGreeted);
     const n = extractFirstName(realName) || "colega";
@@ -6145,6 +6251,21 @@ ${content.substring(0, 15e3)}
     }
     if (jinaExtractedText) {
       messageToProcess += jinaExtractedText;
+    }
+    if (!isWebUser && messageToProcess) {
+      const checkText = messageToProcess.toLowerCase();
+      const isSpamOrWebinar = checkText.includes("zoom.us") || checkText.includes("us06web.zoom.us") || checkText.includes("chat.whatsapp.com") || checkText.includes("\xFAnase a nuestra reuni\xF3n") || checkText.includes("unase a nuestra reunion") || checkText.includes("entrenamiento 100% gratuito") || checkText.includes("estrategias en redes sociales") || checkText.includes("como funcionan las ventas") || checkText.includes("invitaci\xF3n al chat en grupo") || checkText.includes("invitacion al chat en grupo") || checkText.includes("unirme al grupo") || checkText.includes("m\xE1ster class") || checkText.includes("masterclass") || checkText.includes("taller gratuito") || checkText.includes("capacitaci\xF3n gratuita") || checkText.includes("capacitacion gratuita");
+      if (isSpamOrWebinar && !checkText.includes("vendo") && !checkText.includes("busco") && !checkText.includes("se vende") && !checkText.includes("se arrienda")) {
+        console.log(`[JANIA-SPAM-GUARD] \u26D4 Mensaje detectado como SPAM/Webinar/Curso (${checkText.substring(0, 60)}...). Operaci\xF3n silenciosa total, sin guardar en BD ni emoji.`);
+        return {
+          classification: "VIOLACION_DE_NORMAS",
+          response: "",
+          dmResponse: "",
+          shouldSendDM: false,
+          reactionEmoji: void 0,
+          inserted: false
+        };
+      }
     }
     if (!isWebUser && !pdfBuffer) {
       const wordCount = (text2.match(/\S+/g) || []).length;
@@ -6504,11 +6625,26 @@ ${liveStats}` : buildSystemPrompt(groupJid);
     }
     if (messageToProcess) {
       const cleanText2 = messageToProcess.toLowerCase();
+      const isSpamOrWebinar = cleanText2.includes("zoom.us") || cleanText2.includes("us06web.zoom.us") || cleanText2.includes("chat.whatsapp.com") || cleanText2.includes("\xFAnase a nuestra reuni\xF3n") || cleanText2.includes("unase a nuestra reunion") || cleanText2.includes("entrenamiento 100% gratuito") || cleanText2.includes("estrategias en redes sociales") || cleanText2.includes("como funcionan las ventas") || cleanText2.includes("invitaci\xF3n al chat en grupo") || cleanText2.includes("invitacion al chat en grupo") || cleanText2.includes("unirme al grupo") || cleanText2.includes("m\xE1ster class") || cleanText2.includes("masterclass") || cleanText2.includes("taller gratuito") || cleanText2.includes("capacitaci\xF3n gratuita") || cleanText2.includes("capacitacion gratuita");
+      if (isSpamOrWebinar && !cleanText2.includes("vendo") && !cleanText2.includes("busco") && !cleanText2.includes("se vende") && !cleanText2.includes("se arrienda")) {
+        console.log(`[JANIA-SPAM-GUARD] \u26D4 Mensaje detectado como SPAM/Webinar/Curso (${cleanText2.substring(0, 50)}...). Operaci\xF3n silenciosa total, sin guardar en BD ni emoji.`);
+        result.classification = "VIOLACION_DE_NORMAS";
+        result.inserted = false;
+        result.response = "";
+        result.dmResponse = "";
+        result.shouldSendDM = false;
+        result.reactionEmoji = void 0;
+        return result;
+      }
       const isSearch = cleanText2.includes("busco") || cleanText2.includes("necesito") || cleanText2.includes("requiero") || cleanText2.includes("requerimiento") || cleanText2.includes("buscamos") || cleanText2.includes("compro") || cleanText2.includes("compra") || cleanText2.includes("se busca") || cleanText2.includes("se requiere") || cleanText2.includes("para arriendo") || cleanText2.includes("para compra") || cleanText2.includes("solicito") || cleanText2.includes("solicitamos") || cleanText2.includes("cliente:") || cleanText2.includes("cliente :") || cleanText2.includes("presupuesto:") || cleanText2.includes("presupuesto :") || cleanText2.includes("acci\xF3n: compra") || cleanText2.includes("acci\xF3n : compra") || cleanText2.includes("para cliente") || cleanText2.includes("para un cliente") || cleanText2.includes("para una cliente");
       const isOffer = cleanText2.includes("vendo") || cleanText2.includes("ofrezco") || cleanText2.includes("tengo") || cleanText2.includes("rento") || cleanText2.includes("alquilo") || cleanText2.includes("alquiler") || cleanText2.includes("venta:") || cleanText2.includes("renta apartamento") || cleanText2.includes("se vende") || cleanText2.includes("se arrienda") || cleanText2.includes("en venta") || cleanText2.includes("en arriendo") || cleanText2.includes("arriendo apartamento") || cleanText2.includes("arriendo casa");
       const hasRealEstateKeyword = hasRealEstateTextKeyword(cleanText2);
       const isShortComment = cleanText2.length < 50 || cleanText2.split(/\s+/).length < 6 || (cleanText2.includes("correccion:") || cleanText2.includes("correcci\xF3n:") || cleanText2.includes("fe de erratas") || cleanText2.includes("rectificacion:") || cleanText2.includes("rectificaci\xF3n:") || cleanText2.includes("bajo de precio") || cleanText2.includes("sigue este enlace") || cleanText2.includes("ver el art\xEDculo en whatsapp") || cleanText2.includes("foto por interno") || cleanText2.includes("fotos por interno") || cleanText2.includes("info por interno") || cleanText2.includes("informaci\xF3n por interno") || cleanText2.includes("escribir al interno") || cleanText2.includes("disponible?") || cleanText2.includes("a\xFAn disponible"));
-      if (isShortComment) {
+      const isGeneralInquiryOrRecommendation = (cleanText2.includes("alguien maneja") || cleanText2.includes("alguien recomienda") || cleanText2.includes("alguien conoce") || cleanText2.includes("senior living") || cleanText2.includes("alguien tiene contacto") || cleanText2.includes("quien maneja") || cleanText2.includes("qui\xE9n maneja") || cleanText2.includes("quien recomienda") || cleanText2.includes("recomiendan plomero") || cleanText2.includes("recomiendan abogado") || cleanText2.includes("buscando un abogado") || cleanText2.includes("buscando abogado") || cleanText2.includes("algun abogado") || cleanText2.includes("alg\xFAn abogado") || cleanText2.includes("restitucion de inmueble") || cleanText2.includes("restituci\xF3n de inmueble") || cleanText2.includes("daviplata") || cleanText2.includes("nequi") || cleanText2.includes("comprobante de pago") || cleanText2.includes("recomiendan avaluador") || cleanText2.includes("alguien que haga") || cleanText2.includes("contacto de")) && !cleanText2.includes("busco apto") && !cleanText2.includes("busco casa") && !cleanText2.includes("busco bodega") && !cleanText2.includes("presupuesto");
+      if (isGeneralInquiryOrRecommendation) {
+        console.log(`[JANIA-FILTER] \u26D4 Pregunta de recomendaci\xF3n o servicio general ignorada como Requerimiento/Inmueble: "${cleanText2.substring(0, 50)}..."`);
+        result.classification = "CONSULTA_GENERAL";
+      } else if (isShortComment) {
         console.log(`[JANIA-FILTER] \u26D4 Mensaje corto o correcci\xF3n de chat omitido (${cleanText2.substring(0, 40)}...). No se procesar\xE1 como propiedad/requerimiento.`);
         result.classification = "CONSULTA_GENERAL";
       } else if (result.classification === "INMUEBLE" && isSearch && !isOffer) {
@@ -7528,6 +7664,33 @@ async function saveRequirement(data, userId, realName) {
     origenNombre: data.origenNombre || null,
     fechaExtraccion: data.fechaExtraccion || getColombiaNow()
   };
+  const rawZoneStr = (insertData.zonaDeseada || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  const rawTextStr = (insertData.rawText || "").toLowerCase();
+  const isAmbiguousZoneName = (zn) => {
+    if (!zn || zn === "n/e" || zn === "na" || zn === "bogota" || zn === "bogota, d.c." || zn === "colombia") return true;
+    const ambiguousPhrases = [
+      "todas las zonas",
+      "cualquier zona",
+      "cualquier lado",
+      "donde sea",
+      "varias zonas",
+      "por ahi",
+      "por ah\xED",
+      "buena zona",
+      "sector residencial",
+      "sector comercial",
+      "norte o sur",
+      "donde haya",
+      "cualquiera"
+    ];
+    return ambiguousPhrases.some((a) => zn.includes(a));
+  };
+  const hasPerimeterOrStreet = /calle\s*\d+|carrera\s*\d+|cra\s*\d+|cll\s*\d+|cl\s*\d+|diagonal\s*\d+|transversal\s*\d+|entre\s*calle|perimetro|perímetro/i.test(rawTextStr);
+  const isZoneAmbiguous = isAmbiguousZoneName(rawZoneStr);
+  if (isZoneAmbiguous && !hasPerimeterOrStreet && !insertData.presupuestoMax && !insertData.areaMin && !insertData.habitacionesMin) {
+    console.log(`[JANIA-INGESTION-GUARD] \u26D4 Requerimiento omitido por falta de ubicaci\xF3n expl\xEDcita o especificaciones prediales completas ("${insertData.rawText?.substring(0, 60)}...")`);
+    return null;
+  }
   const existing = await db.select().from(requirements).where(
     and2(
       eq4(requirements.idUsuarioWhatsapp, rawPhone),
@@ -11985,6 +12148,37 @@ ${liveStats}${userContextInstruction}
     await db.update(requirements).set(updateData).where(eq5(requirements.id, requirementId));
     console.log(`[JanIA-UpdateRequirement] Requerimiento #${requirementId} actualizado directamente desde Mesa de Cotejo`);
     return { success: true, message: "Requerimiento actualizado con \xE9xito" };
+  }),
+  // Recalcular cruces y afinidad predial para Oferta y/o Demanda tras edición en Mesa de Cotejo
+  recalculateMatchForPair: publicProcedure.input(z2.object({
+    propertyId: z2.number().optional().nullable(),
+    requirementId: z2.number().optional().nullable()
+  })).mutation(async ({ input }) => {
+    let propMatchesCount = 0;
+    let reqMatchesCount = 0;
+    if (input.propertyId) {
+      try {
+        const resProp = await findMatchesForProperty(input.propertyId);
+        propMatchesCount = Array.isArray(resProp) ? resProp.length : 0;
+      } catch (e) {
+        console.error(`[RecalculateMatch] Error reculculando propiedad #${input.propertyId}:`, e?.message);
+      }
+    }
+    if (input.requirementId) {
+      try {
+        const resReq = await findMatchesForRequirement(input.requirementId);
+        reqMatchesCount = Array.isArray(resReq) ? resReq.length : 0;
+      } catch (e) {
+        console.error(`[RecalculateMatch] Error recalculando requerimiento #${input.requirementId}:`, e?.message);
+      }
+    }
+    console.log(`[JanIA-RecalculateMatch] Rec\xE1lculo completado -> Propiedad #${input.propertyId}: ${propMatchesCount} matches | Requerimiento #${input.requirementId}: ${reqMatchesCount} matches`);
+    return {
+      success: true,
+      message: "Match recalculado exitosamente con datos actualizados.",
+      propMatchesCount,
+      reqMatchesCount
+    };
   }),
   // Create lead from conversation
   createLead: publicProcedure.input(

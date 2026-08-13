@@ -1567,6 +1567,53 @@ export async function scrapeUrlWithBypass(url: string): Promise<string> {
   return "";
 }
 
+export function splitMultiPropertyMessage(text: string): string[] {
+  if (!text || text.length < 120) return [text];
+
+  const headerRegex = /(?:^|\n|\r\n)(?=\*?\s*(?:SE VENDE|VENDO|SE ARRIENDA|ARRIENDO|APARTAMENTO|CASA|BODEGA|OFICINA|LOTE|PENTHOUSE|DÚPLEX|DUPLEX|LOCAL)\b)/gi;
+
+  const matches = Array.from(text.matchAll(headerRegex));
+  if (matches.length >= 2) {
+    const blocks: string[] = [];
+    for (let i = 0; i < matches.length; i++) {
+      const startIdx = matches[i].index || 0;
+      const endIdx = (i + 1 < matches.length) ? (matches[i + 1].index || text.length) : text.length;
+      const blockText = text.substring(startIdx, endIdx).trim();
+      if (blockText.length >= 40 && (/\$|\b\d{3}\b|\bm2\b|\balcobas\b|\bhab\b|\bprecio\b/i.test(blockText))) {
+        blocks.push(blockText);
+      }
+    }
+    if (blocks.length >= 2) {
+      console.log(`[JanIA-MultiPropertySplitter] ✂️ Detectados ${blocks.length} inmuebles independientes en 1 solo mensaje. Separando para ingesta independiente...`);
+      return blocks;
+    }
+  }
+
+  const paragraphs = text.split(/(?:\r?\n){2,}/);
+  if (paragraphs.length >= 3) {
+    const blocks: string[] = [];
+    let currentBlock = "";
+    for (const p of paragraphs) {
+      const cleanP = p.trim();
+      if (!cleanP) continue;
+      const isNewProp = /(?:SE VENDE|VENDO|SE ARRIENDA|ARRIENDO|APARTAMENTO|CASA|CHICÓ|EL NOGAL|EL REFUGIO)\b/i.test(cleanP) && /\$|\b\d{3,}\b|\bm2\b/i.test(cleanP);
+      if (currentBlock && isNewProp) {
+        blocks.push(currentBlock.trim());
+        currentBlock = cleanP;
+      } else {
+        currentBlock = currentBlock ? `${currentBlock}\n\n${cleanP}` : cleanP;
+      }
+    }
+    if (currentBlock) blocks.push(currentBlock.trim());
+    if (blocks.length >= 2) {
+      console.log(`[JanIA-MultiPropertySplitter] ✂️ Párrafos divididos en ${blocks.length} inmuebles separados.`);
+      return blocks;
+    }
+  }
+
+  return [text];
+}
+
 /**
  * Procesa un mensaje de WhatsApp con inteligencia multimodal y humanización avanzada.
  */
@@ -1586,6 +1633,34 @@ export async function processWhatsAppMessage(
 ): Promise<JanIAResult> {
   try {
     const isWebUser = userId.startsWith("web-");
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // INGESTA MULTI-INMUEBLE: SI UN MENSAJE CONTIENE VARIAS PROPIEDADES, SEPARARLAS
+    // ══════════════════════════════════════════════════════════════════════════
+    if (text && !text.includes("__is_sub_message__")) {
+      const subBlocks = splitMultiPropertyMessage(text);
+      if (subBlocks.length >= 2) {
+        console.log(`[JanIA-MultiPropertySplitter] 🚀 Ingestando ${subBlocks.length} inmuebles individuales de manera independiente...`);
+        let finalResult: JanIAResult = { classification: "INMUEBLE", response: "", inserted: true };
+        for (const subText of subBlocks) {
+          finalResult = await processWhatsAppMessage(
+            `${subText}\n__is_sub_message__`,
+            userId,
+            userName,
+            hasMedia,
+            scrapedData,
+            audioUrl,
+            imageBuffer,
+            isGroup,
+            pdfBuffer,
+            pdfMimeType,
+            groupJid,
+            groupName
+          );
+        }
+        return finalResult;
+      }
+    }
 
     // ══════════════════════════════════════════════════════════════════════════
     // FILTRO ABSOLUTO IMPERMEABLE DE SPAM, WEBINARS, CURSOS Y PUBLICIDAD

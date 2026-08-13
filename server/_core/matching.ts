@@ -1234,10 +1234,11 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
   if (pBathrooms > 0) propFilledCount++;
   if (pGarages > 0) propFilledCount++;
 
-  if (reqFilledCount < 4 || propFilledCount < 4) {
-    blockers.push(`Ficha incompleta (Demanda: ${reqFilledCount}/8 especificaciones, Oferta: ${propFilledCount}/8 especificaciones). Se requieren publicaciones con datos detallados.`);
+  if (reqFilledCount < 5 || propFilledCount < 5) {
+    blockers.push(`Ficha poco robusta (Demanda: ${reqFilledCount}/8 especificaciones, Oferta: ${propFilledCount}/8 especificaciones). Se requieren publicaciones con datos detallados y puntuales en al menos 5 especificaciones.`);
     return buildExplanationResult(0, blockers, positives, negatives);
   }
+
 
   // ── FILTRO DURO 0E: Incompatibilidad Geográfica Estricta de Ciudad (ya manejado arriba en v22.1) ──
   // (bloque legado reemplazado por reqCityNorm2 para evitar conflicto de variables)
@@ -1337,26 +1338,26 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
-  // ── FILTRO DURO 6: Área Mínima (NUNCA MENOR QUE EL SOLICITADO - REGLA CERO MENOR ÁREA) ──────────────────────
-  let areaOversize = false;
+  // ── FILTRO DURO 6: Área (REGLA DOCTRINAL: Nunca menor que la exigida, máximo 3% por encima [100% - 103%]) ──
   if (reqAreaMin > 0) {
     if (propArea > 0) {
       if (propArea < reqAreaMin) {
-        blockers.push(`Área ofrecida (${propArea} m²) es INFERIOR al mínimo exigido (${reqAreaMin} m²). Match inviable (0%).`);
+        blockers.push(`Guillotina de Área Estricta: Área ofrecida (${propArea} m²) es INFERIOR a la exigida (${reqAreaMin} m²). Match inviable (0%).`);
         return buildExplanationResult(0, blockers, positives, negatives);
-      } else if (propArea > reqAreaMin * 1.15) {
-        areaOversize = true;
-        positives.push(`✅ Área de ${propArea} m² cumple lo exigido (${reqAreaMin} m²). ⚠️ Inmueble significativamente más grande (+${Math.round((propArea / reqAreaMin - 1) * 100)}%)`);
-      } else {
-        positives.push(`✅ Área de ${propArea} m² dentro de la campana de confort (${reqAreaMin} m² ±15%)`);
       }
+      if (propArea > reqAreaMin * 1.03) {
+        blockers.push(`Guillotina de Área Estricta: Área ofrecida (${propArea} m²) supera el 3% máximo por encima del área exigida (${reqAreaMin} m² -> máx ${(reqAreaMin * 1.03).toFixed(1)} m²). Match inviable (0%).`);
+        return buildExplanationResult(0, blockers, positives, negatives);
+      }
+      positives.push(`✅ Área de ${propArea} m² dentro del rango exacto autorizado (${reqAreaMin} m² a ${(reqAreaMin * 1.03).toFixed(1)} m²)`);
     } else {
       blockers.push(`No se puede verificar el área requerida (${reqAreaMin} m²) por falta de información en la oferta.`);
       return buildExplanationResult(0, blockers, positives, negatives);
     }
   }
 
-  // ── FILTRO DURO 7: Presupuesto Máximo (TOLERANCIA CERO ABSOLUTA EN TECHO FINANCIERO) ──
+
+  // ── FILTRO DURO 7: Presupuesto (REGLA DOCTRINAL: Máximo 1% por debajo o igual, si sobrepasa = 0%) ──
   if (budgetMax > 0) {
     const isReqRent = reqBiz.includes("arriendo");
     
@@ -1390,12 +1391,12 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
         return buildExplanationResult(0, blockers, positives, negatives);
       }
 
-      const reqRentMin = requirement.presupuestoMin ? parseFloat(String(requirement.presupuestoMin)) : 0;
-      if (reqRentMin > 0 && totalRent < reqRentMin * 0.85) {
-        positives.push(`🔥 Oportunidad Financiera (Ganga): Canon total ($${totalRent.toLocaleString()}) está por debajo del rango mínimo presupuestado ($${reqRentMin.toLocaleString()}).`);
-      } else {
-        positives.push(`✅ Presupuesto de arriendo cumple: Total $${totalRent.toLocaleString()} (Canon + Admón) <= Máximo $${budgetMax.toLocaleString()}`);
+      if (totalRent < budgetMax * 0.99) {
+        blockers.push(`Guillotina Financiera Estricta: Canon de arriendo total ($${totalRent.toLocaleString()}) está a más del 1% por debajo del presupuesto solicitado ($${budgetMax.toLocaleString()}). Segmento incompatible.`);
+        return buildExplanationResult(0, blockers, positives, negatives);
       }
+
+      positives.push(`✅ Presupuesto de arriendo cumple: Total $${totalRent.toLocaleString()} dentro del rango (>= 99% y <= 100% de $${budgetMax.toLocaleString()})`);
     } else {
       // Para Compras / Ventas:
       let salePrice = price;
@@ -1404,12 +1405,13 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
         return buildExplanationResult(0, blockers, positives, negatives);
       }
 
-      if (salePrice < budgetMax * 0.70) {
-        blockers.push(`Incompatibilidad de Segmento Comercial: El precio del inmueble ($${salePrice.toLocaleString()}) está más de un 30% por debajo del presupuesto del comprador ($${budgetMax.toLocaleString()}). Inmueble de categoría o segmento inferior no apto para la demanda.`);
+      if (salePrice < budgetMax * 0.99) {
+        blockers.push(`Guillotina Financiera Estricta: El precio del inmueble ($${salePrice.toLocaleString()}) está a más del 1% por debajo del presupuesto solicitado ($${budgetMax.toLocaleString()}). Segmento incompatible (0%).`);
         return buildExplanationResult(0, blockers, positives, negatives);
       }
     }
   }
+
 
   // ── INFERENCIA DE ESPECIFICACIONES MÍNIMAS EN LA DEMANDA DESDE RAWTEXT ──
   let effectiveReqBeds = reqBedrooms;
@@ -1432,12 +1434,19 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
     if (mG) effectiveReqGarages = parseInt(mG[1], 10);
   }
 
-  // ── FILTRO DE ADMINISTRACIÓN MÁXIMA (GUILLOTINA ADMIN) ──
+  // ── FILTRO DE ADMINISTRACIÓN MÁXIMA (GUILLOTINA ADMIN ESTRICTA: Máximo 1% por debajo o igual) ──
   const reqAdminMaxVal = requirement.adminFeeMax ? parseFloat(String(requirement.adminFeeMax)) : 0;
-  if (reqAdminMaxVal > 0 && pAdminFee > 0 && pAdminFee > reqAdminMaxVal) {
-    blockers.push(`Guillotina Financiera (Administración): Cuota de administración de $${pAdminFee.toLocaleString()} supera el máximo aceptado de $${reqAdminMaxVal.toLocaleString()}`);
-    return buildExplanationResult(0, blockers, positives, negatives);
+  if (reqAdminMaxVal > 0 && pAdminFee > 0) {
+    if (pAdminFee > reqAdminMaxVal) {
+      blockers.push(`Guillotina Financiera (Administración): Cuota de administración de $${pAdminFee.toLocaleString()} supera el máximo aceptado de $${reqAdminMaxVal.toLocaleString()}`);
+      return buildExplanationResult(0, blockers, positives, negatives);
+    }
+    if (pAdminFee < reqAdminMaxVal * 0.99) {
+      blockers.push(`Guillotina Financiera (Administración Estricta): Cuota de administración de $${pAdminFee.toLocaleString()} está a más del 1% por debajo del máximo exigido ($${reqAdminMaxVal.toLocaleString()}). Match inviable (0%).`);
+      return buildExplanationResult(0, blockers, positives, negatives);
+    }
   }
+
 
   const propRawTextLower = (property.rawText || property.description || "").toLowerCase();
 
@@ -1684,19 +1693,17 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
     earnedPoints += 10; // sin restricción de presupuesto → crédito neutral
   }
 
-  // 5. Área v20.0 — Campana de Tolerancia (10 pts)
+  // 5. Área v20.0 — Rango Exacto [100% - 103%] (10 pts)
   if (reqAreaMin > 0) {
     if (propArea > 0) {
-      if (propArea >= reqAreaMin && !areaOversize)       earnedPoints += 10; // Zona confort exacta
-      else if (areaOversize)                             earnedPoints += 10; // Más grande: pasa completo + advertencia ya registrada
-      else if (propArea >= reqAreaMin * 0.95)            earnedPoints += 6;  // Zona gris [-5%, 0%)
-      // Si < 0.95 ya fue bloqueado arriba
+      if (propArea >= reqAreaMin && propArea <= reqAreaMin * 1.03) earnedPoints += 10;
     } else {
       negatives.push("Área no especificada en la oferta (N/E)");
     }
   } else {
     earnedPoints += 7; // demanda sin restricción de área → crédito neutral
   }
+
 
   // 6. Habitaciones (10 pts)
   if (reqBedrooms > 0) {
@@ -1810,20 +1817,14 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
   // Total: max 100 pts
   let finalPercentage = Math.max(0, Math.min(100, Math.round((earnedPoints / totalPossible) * 100)));
 
-  // REGLA CRÍTICA DOCTRINAL VECY (v17.4):
-  // Un MATCH del 100% se otorga EXCLUSIVAMENTE si TODOS los campos solicitados
-  // por la demanda están presentes en la oferta y coinciden plenamente.
-  // Cualquier campo N/E cuando el requerimiento SÍ lo especifica → máximo 84%.
-  const hasMissingSpecifiedFields = (reqAreaMin > 0 && propArea <= 0) ||
-                                    (reqBedrooms > 0 && pBedrooms < 0) ||
-                                    (reqBathrooms > 0 && pBathrooms < 0) ||
-                                    (reqGarages > 0 && pGarages < 0) ||
-                                    (budgetMax > 0 && price <= 0) ||
-                                    (reqZone && (!propZone || propZone === "bogota"));
-
-  if (hasMissingSpecifiedFields) {
+  // REGLA CRÍTICA DOCTRINAL VECY (v22.5):
+  // Un MATCH del 100% exige que TODOS los campos prediales (barrio, área, precio, admón, habs, baños, garajes, estrato)
+  // estén completamente llenados (sin N/E) y sean 100% compatibles (excepto teléfono de contacto).
+  // Si existe cualquier campo N/E en la oferta o la demanda -> máximo 84%.
+  if (missingFieldsList.length > 0) {
     finalPercentage = Math.min(84, finalPercentage);
   }
+
 
   return buildExplanationResult(finalPercentage, blockers, positives, negatives, isStrictCompliant, missingFieldsList);
 }

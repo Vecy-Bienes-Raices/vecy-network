@@ -377,15 +377,11 @@ function scoreRows(req: any, prop: any) {
 
   // B. Localidad / Comuna — BINARIO (solo coincide si ambos tienen valor y son iguales)
   const bothLocalityKnown = reqLocalityDisplay !== "N/E" && propLocalityDisplay !== "N/E";
-  const isLocalityMatch = !bothLocalityKnown ||
-    normalizeBarrio(reqLocalityDisplay) === normalizeBarrio(propLocalityDisplay) ||
-    normalizeBarrio(reqLocalityDisplay).includes(normalizeBarrio(propLocalityDisplay)) ||
-    normalizeBarrio(propLocalityDisplay).includes(normalizeBarrio(reqLocalityDisplay));
-
   const normReqB = normalizeBarrio(reqBarrioDisplay);
   const normPropB = normalizeBarrio(propBarrioDisplay);
 
-  let barrioMatchStatus: "exact" | "warn" | "neutral" = "exact";
+
+  let barrioMatchStatus: MatchStatus = "exact";
   if (reqBarrioDisplay === "N/E" || propBarrioDisplay === "N/E") {
     barrioMatchStatus = "neutral";
   } else if (
@@ -397,7 +393,7 @@ function scoreRows(req: any, prop: any) {
   ) {
     barrioMatchStatus = "exact";
   } else {
-    barrioMatchStatus = "warn";
+    barrioMatchStatus = "missing"; // CERO APROXIMADOS EN BARRIO -> FALLIDO
   }
 
   // A. Barrio / Vereda / Caserío
@@ -430,13 +426,6 @@ function scoreRows(req: any, prop: any) {
     <MapPin className="w-3.5 h-3.5" />
   );
 
-
-  // ── DESAMBIGUACIÓN FINANCIERA TRIPARTITA (Doctrinal v22.4) ──
-  // Reemplaza Presupuesto Máx. genérico con 3 filas financieras independientes:
-  // 1. Precio de Venta (N/E para arriendos puros)
-  // 2. Precio de Arriendo / Canon (N/E para ventas puras)
-  // 3. Cuota de Administración (N/E si no aplica o si es duplicado absurdo del canon)
-
   const isPhoneNumberNotPrice = (val: number | string | null | undefined, rawText?: string): boolean => {
     if (val === undefined || val === null || val === "" || val === 0 || val === "0") return false;
     const numStr = String(val).replace(/\D/g, "");
@@ -455,7 +444,7 @@ function scoreRows(req: any, prop: any) {
     if (val === undefined || val === null || val === "") return 0;
     const num = parseFloat(String(val));
     if (isNaN(num) || num <= 0) return 0;
-    if (isPhoneNumberNotPrice(num, rawText)) return 0; // Rechazo absoluto de números telefónicos
+    if (isPhoneNumberNotPrice(num, rawText)) return 0;
     return num;
   };
 
@@ -466,13 +455,12 @@ function scoreRows(req: any, prop: any) {
   const isPropPureRent = (prop.transactionType || "").toLowerCase() === "arriendo" || (prop.transactionType || "").toLowerCase() === "arriendo_temporal";
   const isPropPureVenta = (prop.transactionType || "").toLowerCase() === "venta";
 
-  // A. PRECIO DE VENTA
+  // A. PRECIO DE VENTA (Tolerancia máx -1%, cero si sobrepasa)
   let propSalePrice = !isPropPureRent ? parseSafePrice(prop.price, prop.rawText) : 0;
   let reqSaleBudget = (!isReqRentMatch && !isPropPureRent) ? parseSafePrice(req.presupuestoMax, req.rawText) : 0;
 
-  // Si propSalePrice < 30.000.000 (ej. $9.900.000 canon de arriendo en Nogal), NO ES PRECIO DE VENTA.
   if (propSalePrice < 30_000_000) {
-    propSalePrice = 0; // Cero absoluto de venta
+    propSalePrice = 0;
   }
 
   const reqSaleLabel = reqSaleBudget > 0 ? formatCOP(reqSaleBudget) : "N/E";
@@ -480,7 +468,11 @@ function scoreRows(req: any, prop: any) {
 
   let saleS: MatchStatus = "neutral";
   if (reqSaleBudget > 0 && propSalePrice > 0) {
-    saleS = propSalePrice <= reqSaleBudget ? "exact" : "warn";
+    if (propSalePrice > reqSaleBudget || propSalePrice < reqSaleBudget * 0.99) {
+      saleS = "missing";
+    } else {
+      saleS = "exact";
+    }
   }
 
   add(
@@ -492,11 +484,10 @@ function scoreRows(req: any, prop: any) {
     <DollarSign className="w-3.5 h-3.5" />
   );
 
-  // B. PRECIO DE ARRIENDO / CANON
+  // B. PRECIO DE ARRIENDO / CANON (Tolerancia máx -1%, cero si sobrepasa)
   let propRentPrice = !isPropPureVenta ? parseSafePrice(prop.rentPrice || prop.priceRent, prop.rawText) : 0;
   let reqRentBudget = isReqRentMatch ? parseSafePrice(req.presupuestoMax, req.rawText) : 0;
 
-  // Si la propiedad es de arriendo y rentPrice estaba en 0, pero prop.price tenía el canon (ej. $9.900.000)
   if (propRentPrice <= 0 && parseSafePrice(prop.price, prop.rawText) > 0 && parseSafePrice(prop.price, prop.rawText) < 100_000_000) {
     propRentPrice = parseSafePrice(prop.price, prop.rawText);
   }
@@ -506,7 +497,11 @@ function scoreRows(req: any, prop: any) {
 
   let rentS: MatchStatus = "neutral";
   if (reqRentBudget > 0 && propRentPrice > 0) {
-    rentS = propRentPrice <= reqRentBudget ? "exact" : "warn";
+    if (propRentPrice > reqRentBudget || propRentPrice < reqRentBudget * 0.99) {
+      rentS = "missing";
+    } else {
+      rentS = "exact";
+    }
   }
 
   add(
@@ -518,19 +513,16 @@ function scoreRows(req: any, prop: any) {
     <Receipt className="w-3.5 h-3.5" />
   );
 
-  // C. CUOTA DE ADMINISTRACIÓN
+  // C. CUOTA DE ADMINISTRACIÓN (Tolerancia máx -1%, cero si sobrepasa)
   let reqAdminMax = parseSafePrice(req.adminFeeMax, req.rawText);
   let propAdminFee = parseSafePrice(prop.adminFee, prop.rawText);
 
-  // SANIDAD FINANCIERA DOCTRINAL:
-  // La cuota de administración JAMÁS puede ser igual al canon de arriendo ni al precio de venta.
-  // Si propAdminFee === propRentPrice o propAdminFee >= propRentPrice * 0.45 -> Queda N/E (0)
   if (propAdminFee > 0) {
     if (
       (propRentPrice > 0 && (propAdminFee === propRentPrice || propAdminFee >= propRentPrice * 0.45)) ||
       (propSalePrice > 0 && (propAdminFee === propSalePrice || propAdminFee >= propSalePrice * 0.20))
     ) {
-      propAdminFee = 0; // Rechazar paridad o duplicación absurda -> Queda N/E
+      propAdminFee = 0;
     }
   }
 
@@ -539,7 +531,11 @@ function scoreRows(req: any, prop: any) {
 
   let adminS: MatchStatus = "neutral";
   if (reqAdminMax > 0 && propAdminFee > 0) {
-    adminS = propAdminFee <= reqAdminMax ? "exact" : "warn";
+    if (propAdminFee > reqAdminMax || propAdminFee < reqAdminMax * 0.99) {
+      adminS = "missing";
+    } else {
+      adminS = "exact";
+    }
   }
 
   add(
@@ -551,8 +547,7 @@ function scoreRows(req: any, prop: any) {
     <Receipt className="w-3.5 h-3.5" />
   );
 
-
-  // 5. Área Total (con inferencia desde rawText si la columna está en 0)
+  // 5. Área Total (Nunca menor que la solicitada, máximo 3% por encima [100% - 103%])
   let areaR = parseFloat(req.areaMin || req.areaMinimaM2 || "0");
   if (areaR <= 0 && reqTextLower) {
     const mRA = reqTextLower.match(/(?:mínimo|min|de|área)?\s*([\d.,]+)\s*(?:m2|mts|m²|metros)/i);
@@ -579,13 +574,15 @@ function scoreRows(req: any, prop: any) {
   let areS: MatchStatus = "neutral";
   let areaPropLabel = areaP > 0 ? `${areaP} m²${areaPInferred ? " (Inferido 🔍)" : ""}` : "N/E";
   if (areaR > 0 && areaP > 0) {
-    if (areaP < areaR * 0.95)        areS = "warn"; // Área por debajo del mínimo → Aproximado
-    else if (areaP > areaR * 1.15)   { areS = "warn"; areaPropLabel = `${areaP} m² ⚠️ (+${Math.round((areaP/areaR-1)*100)}% más grande)`; }
-    else                              areS = "exact";
+    if (areaP < areaR || areaP > areaR * 1.03) {
+      areS = "missing";
+    } else {
+      areS = "exact";
+    }
   } else if (areaR === 0) {
     areS = "neutral";
   }
-  const reqAreaLabel = areaR > 0 ? `≥ ${areaR} m² (±15%)` : "N/E";
+  const reqAreaLabel = areaR > 0 ? `≥ ${areaR} m² (máx +3%)` : "N/E";
 
   add(
     "Área Total",
@@ -596,7 +593,7 @@ function scoreRows(req: any, prop: any) {
     <Ruler className="w-3.5 h-3.5" />
   );
 
-  // 6. Habitaciones
+  // 6. Habitaciones (Nunca menor que las solicitadas)
   let bedR = req.habitacionesMin ? Number(req.habitacionesMin) : 0;
   let bedInferred = false;
   if (bedR <= 0 && reqTextLower) {
@@ -612,9 +609,7 @@ function scoreRows(req: any, prop: any) {
   let bedS: MatchStatus = "neutral";
   if (bedR > 0) {
     if (bedP < bedR) {
-      bedS = "warn"; // Menos habitaciones → Aproximado
-    } else if (bedP > bedR) {
-      bedS = "warn"; // Más habitaciones → Aproximado
+      bedS = "missing";
     } else {
       bedS = "exact";
     }
@@ -632,7 +627,7 @@ function scoreRows(req: any, prop: any) {
     <Bed className="w-3.5 h-3.5" />
   );
 
-  // 7. Baños
+  // 7. Baños (Nunca menor que los solicitados)
   let bathR = req.banosMin ? Number(req.banosMin) : 0;
   let bathInferred = false;
   if (bathR <= 0 && reqTextLower) {
@@ -649,9 +644,7 @@ function scoreRows(req: any, prop: any) {
   let bathS: MatchStatus = "neutral";
   if (bathR > 0) {
     if (bathP < bathR) {
-      bathS = "warn"; // Menos baños → Aproximado
-    } else if (bathP > bathR) {
-      bathS = "warn"; // Más baños → Aproximado
+      bathS = "missing";
     } else {
       bathS = "exact";
     }
@@ -678,7 +671,7 @@ function scoreRows(req: any, prop: any) {
     <Bath className="w-3.5 h-3.5" />
   );
 
-  // 8. Parqueaderos (con inferencia desde rawText para oferta y demanda)
+  // 8. Parqueaderos (Nunca menor que los solicitados)
   let garR = req.parqueaderosMin ? Number(req.parqueaderosMin) : 0;
   let garInferred = false;
   if (garR <= 0 && reqTextLower) {
@@ -709,9 +702,9 @@ function scoreRows(req: any, prop: any) {
 
   if (garR > 0) {
     if (garP < garR) {
-      garS = "warn"; // Menos garajes → Aproximado
+      garS = "missing";
     } else if (reqWantsIndep && garType === "lineal") {
-      garS = "warn";
+      garS = "missing";
     } else {
       garS = "exact";
     }
@@ -728,6 +721,7 @@ function scoreRows(req: any, prop: any) {
     5,
     <Car className="w-3.5 h-3.5" />
   );
+
 
 
 

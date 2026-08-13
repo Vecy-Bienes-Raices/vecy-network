@@ -4,64 +4,54 @@ import { propertyMatches, properties, requirements, notificationLogs } from "../
 import { explicarMatch } from "../_core/matching";
 import { eq } from "drizzle-orm";
 
-async function main() {
+async function runPurge() {
+  console.log("🧹 Iniciando purga profunda de coincidencias obsoletas/inválidas en Supabase...");
   const db = await getDb();
   if (!db) {
-    console.error("No se pudo conectar a Supabase");
+    console.error("❌ No se pudo conectar a la base de datos Supabase.");
     process.exit(1);
   }
 
-  console.log("🧹 Iniciando depuración y recalculación masiva de matches en Supabase...");
-
   const allMatches = await db.select().from(propertyMatches);
-  console.log(`Total de coincidencia(s) en BD a evaluar: ${allMatches.length}`);
+  console.log(`📦 Encontradas ${allMatches.length} coincidencias históricas en BD.`);
 
-  let deletedCount = 0;
-  let updatedCount = 0;
-  let keptCount = 0;
+  let purgedCount = 0;
+  let validCount = 0;
 
   for (const m of allMatches) {
-    const [prop] = await db.select().from(properties).where(eq(properties.id, m.propertyId)).limit(1);
-    const [req] = await db.select().from(requirements).where(eq(requirements.id, m.requirementId)).limit(1);
+    const propRows = await db.select().from(properties).where(eq(properties.id, m.propertyId));
+    const reqRows = await db.select().from(requirements).where(eq(requirements.id, m.requirementId));
 
-    if (!prop || !req) {
-      console.log(`❌ Inmueble o Requerimiento huérfano detectado (Match ID #${m.id}). Eliminando...`);
+    if (!propRows[0] || !reqRows[0]) {
+      console.log(`🗑️ Eliminando Match #${m.id}: Inmueble o Requerimiento eliminado.`);
       await db.delete(notificationLogs).where(eq(notificationLogs.matchId, m.id));
       await db.delete(propertyMatches).where(eq(propertyMatches.id, m.id));
-      deletedCount++;
+      purgedCount++;
       continue;
     }
 
-    const exp = explicarMatch(req, prop);
+    const prop = propRows[0];
+    const req = reqRows[0];
 
-    // Si la afinidad dio 0% o el score total es menor a 85%, ELIMINAR el match de la BD
-    if (exp.score < 85 || exp.score === 0) {
-      console.log(`🗑️ ELIMINANDO MATCH INVÁLIDO #${m.id} (Score: ${exp.score}% | Oferta: ${prop.zone || prop.addressNeighborhood} ↔ Demanda: ${req.zonaDeseada || req.addressNeighborhood})`);
+    const result = explicarMatch(req as any, prop as any);
+
+    if (result.score < 85) {
+      console.log(`🚫 Purgando Match #${m.id} (${prop.zone || prop.addressNeighborhood || "Sin Zona"} ↔ ${req.zonaDeseada || "Sin Zona"}): Score recalculado ${result.score}% < 85% Mínimo Doctrinal VECY.`);
       await db.delete(notificationLogs).where(eq(notificationLogs.matchId, m.id));
       await db.delete(propertyMatches).where(eq(propertyMatches.id, m.id));
-      deletedCount++;
+      purgedCount++;
     } else {
-      const newScoreStr = exp.score.toFixed(2);
-      if (m.matchScore !== newScoreStr) {
-        await db
-          .update(propertyMatches)
-          .set({ matchScore: newScoreStr })
-          .where(eq(propertyMatches.id, m.id));
-        updatedCount++;
-      }
-      keptCount++;
+      validCount++;
     }
   }
 
-  console.log(`\n✅ DEPURACIÓN COMPLETADA EN SUPABASE:`);
-  console.log(`   - Coincidencias eliminadas (inválidas / score < 85%): ${deletedCount}`);
-  console.log(`   - Coincidencias actualizadas: ${updatedCount}`);
-  console.log(`   - Coincidencias vigentes de alta afinidad (≥ 85%): ${keptCount}`);
-
+  console.log(`\n✅ PROCESO DE PURGA DE SUPABASE FINALIZADO EXITOSAMENTE.`);
+  console.log(`   - Coincidencias Validadas (>= 85%): ${validCount}`);
+  console.log(`   - Coincidencias Obsoletas Eliminadas: ${purgedCount}`);
   process.exit(0);
 }
 
-main().catch(err => {
-  console.error("Error ejecutando la depuración:", err);
+runPurge().catch((err) => {
+  console.error("❌ Error durante la purga:", err);
   process.exit(1);
 });
