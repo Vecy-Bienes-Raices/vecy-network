@@ -382,16 +382,30 @@ function scoreRows(req: any, prop: any) {
     normalizeBarrio(reqLocalityDisplay).includes(normalizeBarrio(propLocalityDisplay)) ||
     normalizeBarrio(propLocalityDisplay).includes(normalizeBarrio(reqLocalityDisplay));
 
-  // REGLA DOCTRINAL v22.1: Si el match aparece en pantalla, YA PASÓ todos los
-  // filtros duros del backend. Las 3 filas geográficas SIEMPRE muestran "Coincide".
-  // "Fallido" o "No Cumple" es IMPOSIBLE aquí — ese match no existiría en BD.
+  const normReqB = normalizeBarrio(reqBarrioDisplay);
+  const normPropB = normalizeBarrio(propBarrioDisplay);
+
+  let barrioMatchStatus: "exact" | "warn" | "neutral" = "exact";
+  if (reqBarrioDisplay === "N/E" || propBarrioDisplay === "N/E") {
+    barrioMatchStatus = "neutral";
+  } else if (
+    normReqB === normPropB ||
+    normReqB.includes(normPropB) ||
+    normPropB.includes(normReqB) ||
+    (normReqB.includes("las santas") && (normPropB.includes("santa barbara") || normPropB.includes("santa ana") || normPropB.includes("santa paula") || normPropB.includes("san patricio"))) ||
+    (normPropB.includes("las santas") && (normReqB.includes("santa barbara") || normReqB.includes("santa ana") || normReqB.includes("santa paula") || normReqB.includes("san patricio")))
+  ) {
+    barrioMatchStatus = "exact";
+  } else {
+    barrioMatchStatus = "warn";
+  }
 
   // A. Barrio / Vereda / Caserío
   add(
     "Barrio / Vereda / Caserío",
     reqBarrioDisplay,
     propBarrioDisplay,
-    "exact",
+    barrioMatchStatus,
     10,
     <MapPin className="w-3.5 h-3.5" />
   );
