@@ -1219,23 +1219,33 @@ export default function AdminMatches() {
   const filteredMatches = useMemo(() => {
     const seenMatchIds = new Set<number>();
     const seenPairs = new Set<string>();
-    const minVal = parseFloat(minScore);
 
     return matches.filter(match => {
-      if (!match || !match.id) return false;
+      if (!match || !match.id || !match.property || !match.requirement) return false;
 
-      const scoreNum = parseFloat(String(match.matchScore || "0"));
+      const property = match.property;
+      const requirement = match.requirement;
+
+      // Evaluar la afinidad comercial y la regla doctrinal de los 5 campos en duro + completitud
+      const { rows, autoScore } = scoreRows(requirement, property);
+
+      // Si autoScore === 0 (cualquiera de los 5 campos en duro no coincide o completitud < 50%) -> SACADO DE ALLÍ DE INMEDIATO
+      if (autoScore === 0 || autoScore < 80) {
+        return false;
+      }
+
+      // Aplicar filtro de puntuación de la interfaz (ej. "80_94" o minScore)
       if (minScore === "80_94") {
-        if (scoreNum < 80 || scoreNum >= 95) return false;
+        if (autoScore < 80 || autoScore >= 95) return false;
       } else {
         const minVal = parseFloat(minScore);
-        if (scoreNum < minVal) return false;
+        if (autoScore < minVal) return false;
       }
 
       if (seenMatchIds.has(match.id)) return false;
       
-      const pId = match.property?.id;
-      const rId = match.requirement?.id;
+      const pId = property.id;
+      const rId = requirement.id;
       if (pId && rId) {
         const pairKey = `${pId}-${rId}`;
         if (seenPairs.has(pairKey)) return false;
@@ -1244,31 +1254,19 @@ export default function AdminMatches() {
 
       seenMatchIds.add(match.id);
 
-      const property = match.property || {};
-      const requirement = match.requirement || {};
-      
-      const propSearchStr = `${property.name} ${property.city} ${property.zone} ${property.idUsuarioWhatsapp}`.toLowerCase();
-      const reqSearchStr = `${requirement.name} ${requirement.ciudadDeseada} ${requirement.zonaDeseada} ${requirement.idUsuarioWhatsapp}`.toLowerCase();
+      const propSearchStr = `${property.name || ""} ${property.city || ""} ${property.zone || ""} ${property.addressNeighborhood || ""} ${property.idUsuarioWhatsapp || ""}`.toLowerCase();
+      const reqSearchStr = `${requirement.name || ""} ${requirement.ciudadDeseada || ""} ${requirement.zonaDeseada || ""} ${requirement.addressNeighborhood || ""} ${requirement.idUsuarioWhatsapp || ""}`.toLowerCase();
       
       const matchesSearch = !searchTerm || propSearchStr.includes(searchTerm.toLowerCase()) || 
                             reqSearchStr.includes(searchTerm.toLowerCase());
 
       if (!matchesSearch) return false;
 
-      // Verificar que los filtros duros obligatorios (Negocio, Tipo Inmueble, Ubicación, Presupuesto) no hayan fallado
-      const { rows } = scoreRows(requirement, property);
-      const hardRows = rows.filter(r => 
-        r.label === "Tipo de Inmueble" || 
-        r.label === "Tipo de Negocio" || 
-        r.label === "Ubicación / Barrio" ||
-        r.label === "Presupuesto Máx."
-      );
-      const hardFailed = hardRows.some(r => r.status === "missing");
-      if (hardFailed) return false;
-
       return true;
     });
-  }, [matches, searchTerm, minScore]);
+  }, [matches, minScore, searchTerm]);
+
+
 
   const exportData = () => {
     const headers = ['ID Coincidencia', 'Porcentaje Match', 'Propiedad', 'Propietario Telefono', 'Requerimiento', 'Interesado Telefono', 'Estado', 'Fecha'];
