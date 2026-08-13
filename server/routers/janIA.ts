@@ -535,17 +535,16 @@ export const janIARouter = router({
           const key = `${m.property.id}-${m.requirement.id}`;
           if (seenPairs.has(key)) continue; // Eliminar duplicados
 
-          // Re-evaluar con el motor v20.0 (explicarMatch)
+          // Re-evaluar en tiempo real con el motor de guillotinas estrictas (explicarMatch)
           const evaluation = explicarMatch(m.requirement, m.property);
-          const storedScore = parseFloat(String(m.matchScore || "0"));
 
-          // Usar la mejor puntuación entre la calculada y la almacenada en DB
-          const finalScore = evaluation.score >= 75 ? evaluation.score : storedScore;
-
-          // Solo descartar si la puntuación final es menor a 75%
-          if (finalScore < 75) {
+          // Si el score recalculado en tiempo real es menor a 85% o falla cualquier filtro duro -> Descartar
+          if (evaluation.score < 85) {
             continue;
           }
+
+          const finalScore = evaluation.score;
+
 
           seenPairs.add(key);
           validEvaluatedMatches.push({

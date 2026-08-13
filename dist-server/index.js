@@ -3602,11 +3602,7 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
     "vereda"
   ]);
   const esCoincidenciaAproximada = (p1, p2) => {
-    if (p1 === p2) return true;
-    if (palabrasGenericas.has(p1) || palabrasGenericas.has(p2)) {
-      return false;
-    }
-    return p1.includes(p2) || p2.includes(p1);
+    return p1.trim() === p2.trim();
   };
   if (reqExpanded.length > 0 && propExpanded.length > 0) {
     for (const rp of reqExpanded) {
@@ -4033,21 +4029,15 @@ function explicarMatch(requirement, property) {
     }
   }
   positives.push(`Ciudad coincide: ${reqCity}`);
-  const SUB_QUALS_MATCHING = ["alta", "alto", "baja", "bajo", "norte", "sur", "oriental", "occidental", "reservado"];
   const reqBarrioNorm = normalizarTextoGeografico(requirement.zonaDeseada || requirement.addressNeighborhood || "");
   const propBarrioNorm = normalizarTextoGeografico(property.zone || property.addressNeighborhood || "");
   const GENERIC_ZONES_SET = /* @__PURE__ */ new Set(["bogota", "bogota d c", "medellin", "cali", "barranquilla", "colombia", "norte", "sur", "centro", "n/e", "na", ""]);
   const reqBarrioIsSpecific = reqBarrioNorm && !GENERIC_ZONES_SET.has(reqBarrioNorm);
   const propBarrioIsSpecific = propBarrioNorm && !GENERIC_ZONES_SET.has(propBarrioNorm);
   if (reqBarrioIsSpecific && propBarrioIsSpecific) {
-    const reqHasQual = SUB_QUALS_MATCHING.some((q) => reqBarrioNorm.includes(q));
-    const propHasQual = SUB_QUALS_MATCHING.some((q) => propBarrioNorm.includes(q));
-    if (reqHasQual && propHasQual && reqBarrioNorm !== propBarrioNorm) {
-      const conflictingQuals = SUB_QUALS_MATCHING.filter((q) => reqBarrioNorm.includes(q) !== propBarrioNorm.includes(q));
-      if (conflictingQuals.length > 0) {
-        blockers.push(`\u26D4 Sub-barrio Incompatible: "${requirement.zonaDeseada}" \u2260 "${property.zone}". MATCH IMPOSIBLE.`);
-        return buildExplanationResult(0, blockers, positives, negatives);
-      }
+    if (reqBarrioNorm !== propBarrioNorm) {
+      blockers.push(`\u26D4 Barrio Incompatible: "${requirement.zonaDeseada || reqBarrioNorm}" \u2260 "${property.zone || propBarrioNorm}". LOS BARRIOS DEBEN SER 100% ID\xC9NTICOS (0%).`);
+      return buildExplanationResult(0, blockers, positives, negatives);
     }
   }
   function isPhoneNumberNotPrice2(val, rawText) {
@@ -4155,8 +4145,8 @@ function explicarMatch(requirement, property) {
   if (pBedrooms > 0) propFilledCount++;
   if (pBathrooms > 0) propFilledCount++;
   if (pGarages > 0) propFilledCount++;
-  if (reqFilledCount < 4 || propFilledCount < 4) {
-    blockers.push(`Ficha incompleta (Demanda: ${reqFilledCount}/8 especificaciones, Oferta: ${propFilledCount}/8 especificaciones). Se requieren publicaciones con datos detallados.`);
+  if (reqFilledCount < 5 || propFilledCount < 5) {
+    blockers.push(`Ficha poco robusta (Demanda: ${reqFilledCount}/8 especificaciones, Oferta: ${propFilledCount}/8 especificaciones). Se requieren publicaciones con datos detallados y puntuales en al menos 5 especificaciones.`);
     return buildExplanationResult(0, blockers, positives, negatives);
   }
   const reqCityNorm2 = (requirement.ciudadDeseada || requirement.addressCity || requirement.city || requirement.rawText || "").toLowerCase();
@@ -12053,11 +12043,10 @@ ${liveStats}${userContextInstruction}
         const key = `${m.property.id}-${m.requirement.id}`;
         if (seenPairs.has(key)) continue;
         const evaluation = explicarMatch(m.requirement, m.property);
-        const storedScore = parseFloat(String(m.matchScore || "0"));
-        const finalScore = evaluation.score >= 75 ? evaluation.score : storedScore;
-        if (finalScore < 75) {
+        if (evaluation.score < 85) {
           continue;
         }
+        const finalScore = evaluation.score;
         seenPairs.add(key);
         validEvaluatedMatches.push({
           ...m,

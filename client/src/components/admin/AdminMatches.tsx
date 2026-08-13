@@ -375,25 +375,17 @@ function scoreRows(req: any, prop: any) {
     normalizeBarrio(reqCityDisplay).includes(normalizeBarrio(propCityDisplay)) ||
     normalizeBarrio(propCityDisplay).includes(normalizeBarrio(reqCityDisplay));
 
-  // B. Localidad / Comuna — BINARIO (solo coincide si ambos tienen valor y son iguales)
   const bothLocalityKnown = reqLocalityDisplay !== "N/E" && propLocalityDisplay !== "N/E";
   const normReqB = normalizeBarrio(reqBarrioDisplay);
   const normPropB = normalizeBarrio(propBarrioDisplay);
 
-
   let barrioMatchStatus: MatchStatus = "exact";
   if (reqBarrioDisplay === "N/E" || propBarrioDisplay === "N/E") {
     barrioMatchStatus = "neutral";
-  } else if (
-    normReqB === normPropB ||
-    normReqB.includes(normPropB) ||
-    normPropB.includes(normReqB) ||
-    (normReqB.includes("las santas") && (normPropB.includes("santa barbara") || normPropB.includes("santa ana") || normPropB.includes("santa paula") || normPropB.includes("san patricio"))) ||
-    (normPropB.includes("las santas") && (normReqB.includes("santa barbara") || normReqB.includes("santa ana") || normReqB.includes("santa paula") || normReqB.includes("san patricio")))
-  ) {
-    barrioMatchStatus = "exact";
+  } else if (normReqB === normPropB) {
+    barrioMatchStatus = "exact"; // LOS BARRIOS DEBEN SER 100% IDÉNTICOS
   } else {
-    barrioMatchStatus = "missing"; // CERO APROXIMADOS EN BARRIO -> FALLIDO
+    barrioMatchStatus = "missing"; // SI NO SON 100% IDÉNTICOS -> FALLIDO (0%)
   }
 
   // A. Barrio / Vereda / Caserío

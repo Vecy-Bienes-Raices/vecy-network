@@ -576,12 +576,9 @@ export function matchesGeography(
   ]);
 
   const esCoincidenciaAproximada = (p1: string, p2: string): boolean => {
-    if (p1 === p2) return true;
-    if (palabrasGenericas.has(p1) || palabrasGenericas.has(p2)) {
-      return false;
-    }
-    return p1.includes(p2) || p2.includes(p1);
+    return p1.trim() === p2.trim(); // LOS BARRIOS DEBEN SER 100% IDÉNTICOS
   };
+
 
   // 3. Evaluar coincidencia nominal en barrios (con expansión de zonas coloquiales)
   if (reqExpanded.length > 0 && propExpanded.length > 0) {
@@ -1067,9 +1064,7 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   }
   positives.push(`Ciudad coincide: ${reqCity}`);
 
-  // ── FILTRO DURO BARRIO/VEREDA (Doctrinal v22.1) ──
-  // Sub-barrio exacto: "Calleja Alta" ≠ "Calleja Baja". Si calificadores difieren → 0% ABSOLUTO.
-  const SUB_QUALS_MATCHING = ["alta", "alto", "baja", "bajo", "norte", "sur", "oriental", "occidental", "reservado"];
+  // ── FILTRO DURO BARRIO/VEREDA (LOS BARRIOS DEBEN SER 100% IDÉNTICOS - DOCTRINAL) ──
   const reqBarrioNorm = normalizarTextoGeografico(requirement.zonaDeseada || requirement.addressNeighborhood || "");
   const propBarrioNorm = normalizarTextoGeografico(property.zone || property.addressNeighborhood || "");
   const GENERIC_ZONES_SET = new Set(["bogota", "bogota d c", "medellin", "cali", "barranquilla", "colombia", "norte", "sur", "centro", "n/e", "na", ""]);
@@ -1077,16 +1072,12 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   const propBarrioIsSpecific = propBarrioNorm && !GENERIC_ZONES_SET.has(propBarrioNorm);
 
   if (reqBarrioIsSpecific && propBarrioIsSpecific) {
-    const reqHasQual = SUB_QUALS_MATCHING.some(q => reqBarrioNorm.includes(q));
-    const propHasQual = SUB_QUALS_MATCHING.some(q => propBarrioNorm.includes(q));
-    if (reqHasQual && propHasQual && reqBarrioNorm !== propBarrioNorm) {
-      const conflictingQuals = SUB_QUALS_MATCHING.filter(q => reqBarrioNorm.includes(q) !== propBarrioNorm.includes(q));
-      if (conflictingQuals.length > 0) {
-        blockers.push(`⛔ Sub-barrio Incompatible: "${requirement.zonaDeseada}" ≠ "${property.zone}". MATCH IMPOSIBLE.`);
-        return buildExplanationResult(0, blockers, positives, negatives);
-      }
+    if (reqBarrioNorm !== propBarrioNorm) {
+      blockers.push(`⛔ Barrio Incompatible: "${requirement.zonaDeseada || reqBarrioNorm}" ≠ "${property.zone || propBarrioNorm}". LOS BARRIOS DEBEN SER 100% IDÉNTICOS (0%).`);
+      return buildExplanationResult(0, blockers, positives, negatives);
     }
   }
+
 
 
 function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?: string): boolean {
