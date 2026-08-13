@@ -23,7 +23,7 @@ export const DICCIONARIO_BOGOTA: Record<string, { localidad: string, barrios: st
       "Los Andes", "Bosque Medina", "Santa Ana Occidental", "Santa Ana Oriental",
       "El Polo", "Club El Nogal", "Antiguo Country", "Bella Suiza",
       "Colina Campestre", "Los Alcaparros", "La Carolina", "Mazurén",
-      "San Antonio Norte", "Rincon Del Chico", "Virrey", "Gratamira Mónica"
+      "San Antonio Norte", "Gratamira Mónica"
     ]
   },
   "chapinero": {
@@ -33,7 +33,7 @@ export const DICCIONARIO_BOGOTA: Record<string, { localidad: string, barrios: st
       "Chicó Reservado Norte", "Chapinero Central", "Chapinero Alto",
       "Pardo Rubio", "Quinta Camacho", "El Castillo", "San Luis", "Juan XXIII",
       "El Refugio", "El Nogal", "El Bosque", "Granada", "Porciúncula",
-      "Lago Gaitán", "Espartillal", "La Salle", "Marly"
+      "Lago Gaitán", "Espartillal", "La Salle", "Marly", "Virrey", "El Virrey", "Rincon Del Chico"
     ]
   },
   "suba": {

@@ -350,38 +350,35 @@ function scoreRows(req: any, prop: any) {
 
   // C. Barrio / Vereda — EXACTO + SUB-CALIFICADOR (Calleja Alta ≠ Calleja Baja)
   const bothBarrioKnown = reqBarrioDisplay !== "N/E" && propBarrioDisplay !== "N/E";
-  const isBarrioMatch = !bothBarrioKnown || matchBarrioExacto(reqBarrioDisplay, propBarrioDisplay);
+  const isBarrioMatch = bothBarrioKnown && matchBarrioExacto(reqBarrioDisplay, propBarrioDisplay);
+  const barrioStatus: MatchStatus = isBarrioMatch ? "exact" : (!bothBarrioKnown ? "neutral" : "missing");
 
-  // REGLA DOCTRINAL v22.1: Si el match aparece en pantalla, YA PASÓ todos los
-  // filtros duros del backend. Las 3 filas geográficas SIEMPRE muestran "Coincide".
-  // "Falla" o "Aproximado" es IMPOSIBLE aquí — ese match no existiría en BD.
-
-  // A. Barrio / Vereda / Caserío — SIEMPRE "Coincide"
   add(
     "Barrio / Vereda / Caserío",
     reqBarrioDisplay,
     propBarrioDisplay,
-    "exact",
+    barrioStatus,
     10,
     <MapPin className="w-3.5 h-3.5" />
   );
 
-  // B. Localidad / Comuna — SIEMPRE "Coincide"
+  // B. Localidad / Comuna
+  const localityStatus: MatchStatus = isLocalityMatch ? "exact" : (!bothLocalityKnown ? "neutral" : "missing");
   add(
     "Localidad / Comuna",
     reqLocalityDisplay,
     propLocalityDisplay,
-    "exact",
+    localityStatus,
     5,
     <MapPin className="w-3.5 h-3.5" />
   );
 
-  // C. Ciudad / Municipio — SIEMPRE "Coincide"
+  // C. Ciudad / Municipio
   add(
     "Ciudad / Municipio",
     reqCityDisplay,
     propCityDisplay,
-    "exact",
+    isCityMatch ? "exact" : "missing",
     5,
     <MapPin className="w-3.5 h-3.5" />
   );
@@ -828,6 +825,18 @@ function scoreRows(req: any, prop: any) {
     <Building2 className="w-3.5 h-3.5" />
   );
 
+  // 17. Teléfono / Contacto WhatsApp
+  const reqContactPhone = extractPhoneFromItem(req);
+  const propContactPhone = extractPhoneFromItem(prop);
+  add(
+    "Teléfono / Contacto WhatsApp",
+    reqContactPhone.display || "N/E",
+    propContactPhone.display || "N/E",
+    (reqContactPhone.cleanNumber && propContactPhone.cleanNumber) ? "exact" : "neutral",
+    0,
+    <Phone className="w-3.5 h-3.5" />
+  );
+
 
   // REGLA DOCTRINAL v22.1: Los campos blandos nunca producen "Falla".
   // Solo los 5 campos duros pueden bloquear un match (lo hacen en el backend).
@@ -1026,6 +1035,7 @@ export default function AdminMatches() {
 
   const updatePropMut = trpc.janIA.updatePropertyDetails.useMutation();
   const updateReqMut = trpc.janIA.updateRequirementDetails.useMutation();
+  const recalculateMatchMut = trpc.janIA.recalculateMatchForPair.useMutation();
 
   const handleStartEdit = (m: any) => {
     if (editingMatchId === m.id) {
@@ -1047,6 +1057,7 @@ export default function AdminMatches() {
       propStratum: m.property?.stratum ?? '',
       propZone: m.property?.zone || m.property?.addressNeighborhood || '',
       propCity: m.property?.city || 'Bogotá',
+      propPhone: m.property?.idUsuarioWhatsapp || m.property?.phone || m.property?.contactPhone || '',
 
       // Demanda (Requerimiento)
       reqBudget: m.requirement?.presupuestoMax || '',
@@ -1058,6 +1069,7 @@ export default function AdminMatches() {
       reqStratum: m.requirement?.estratoDeseado ?? '',
       reqZone: m.requirement?.zonaDeseada || m.requirement?.addressNeighborhood || '',
       reqCity: m.requirement?.ciudadDeseada || 'Bogotá',
+      reqPhone: m.requirement?.idUsuarioWhatsapp || m.requirement?.phone || m.requirement?.contactPhone || '',
     });
   };
 
@@ -1110,13 +1122,27 @@ export default function AdminMatches() {
   };
 
   const handleRecalculateMatch = async (m: any) => {
-    await handleOnlySave(m);
-    toast.success("⚡ Match recalculado en vivo", {
-      description: "Re-evaluando afinidad comercial con la base de datos completa..."
-    });
-    setEditingMatchId(null);
-    setEditForm({});
-    refetch();
+    setIsSaving(true);
+    try {
+      await handleOnlySave(m);
+      if (m.property?.id || m.requirement?.id) {
+        await recalculateMatchMut.mutateAsync({
+          propertyId: m.property?.id || undefined,
+          requirementId: m.requirement?.id || undefined,
+        });
+      }
+      toast.success("⚡ Match recalculado en vivo", {
+        description: "Re-evaluando afinidad comercial con la base de datos completa..."
+      });
+      setEditingMatchId(null);
+      setEditForm({});
+      refetch();
+    } catch (err: any) {
+      console.error("[RecalculateMatch] Error:", err);
+      toast.error("Error recalculando match", { description: err.message || "Intenta nuevamente." });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // Fetch matches directly from server API with auto-refresh every 10s
@@ -1415,20 +1441,6 @@ export default function AdminMatches() {
                           🏢 Inmueble / Oferta
                         </span>
                         <div className="flex items-center gap-2 flex-wrap">
-                          {(() => {
-                            const publicUrl = extractPublicLink(m.property);
-                            return publicUrl ? (
-                              <a
-                                href={publicUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-[10px] text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 px-2.5 py-0.5 rounded-md flex items-center gap-1 font-bold transition-all shadow-sm"
-                                title="Ver enlace público original / ficha del inmueble"
-                              >
-                                🔗 Ficha / Enlace Público <ExternalLink className="w-2.5 h-2.5" />
-                              </a>
-                            ) : null;
-                          })()}
                           {m.property?.origenNombre && (
                             <span className="text-[10px] text-zinc-400 bg-white/5 border border-white/10 px-2 py-0.5 rounded-md truncate max-w-[180px] sm:max-w-[200px]" title={m.property.origenNombre}>
                               📍 {m.property.origenNombre}
@@ -1450,163 +1462,40 @@ export default function AdminMatches() {
                           ) : null;
                         })()}
 
-                        {/* Ficha Estructurada Predial (Atributos Extraídos / Editables en vivo) */}
-                        {isEditingThisCard ? (
-                          <div className="not-italic text-zinc-300 bg-black/60 border border-[#bf953f]/40 p-3 rounded-xl space-y-2 text-xs">
-                            <p className="font-bold text-[#bf953f] text-[11px] uppercase tracking-wider flex items-center gap-1.5">
-                              ✏️ Editar Ficha Inmueble (Oferta):
-                            </p>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                              <div>
-                                <label className="text-[10px] text-zinc-400 block mb-0.5 font-bold">Precio Venta (COP)</label>
-                                <input
-                                  type="text"
-                                  placeholder="Ej: 450000000"
-                                  value={editForm.propPrice || ''}
-                                  onChange={(e) => setEditForm(prev => ({ ...prev, propPrice: e.target.value }))}
-                                  className="w-full bg-zinc-900 border border-[#bf953f]/40 text-white font-bold text-xs p-2 rounded-lg focus:outline-none focus:border-[#bf953f]"
-                                />
-                              </div>
-                              <div>
-                                <label className="text-[10px] text-zinc-400 block mb-0.5 font-bold">Canon Arriendo (COP)</label>
-                                <input
-                                  type="text"
-                                  placeholder="Ej: 3500000"
-                                  value={editForm.propRentPrice || ''}
-                                  onChange={(e) => setEditForm(prev => ({ ...prev, propRentPrice: e.target.value }))}
-                                  className="w-full bg-zinc-900 border border-[#bf953f]/40 text-white font-bold text-xs p-2 rounded-lg focus:outline-none focus:border-[#bf953f]"
-                                />
-                              </div>
-                              <div>
-                                <label className="text-[10px] text-zinc-400 block mb-0.5 font-bold">Cuota Administración (COP)</label>
-                                <input
-                                  type="text"
-                                  placeholder="Ej: 450000"
-                                  value={editForm.propAdminFee || ''}
-                                  onChange={(e) => setEditForm(prev => ({ ...prev, propAdminFee: e.target.value }))}
-                                  className="w-full bg-zinc-900 border border-[#bf953f]/40 text-white font-bold text-xs p-2 rounded-lg focus:outline-none focus:border-[#bf953f]"
-                                />
-                              </div>
-                              <div>
-                                <label className="text-[10px] text-zinc-400 block mb-0.5 font-bold">Área Total (m²)</label>
-                                <input
-                                  type="text"
-                                  placeholder="Ej: 95"
-                                  value={editForm.propArea || ''}
-                                  onChange={(e) => setEditForm(prev => ({ ...prev, propArea: e.target.value }))}
-                                  className="w-full bg-zinc-900 border border-[#bf953f]/40 text-white font-bold text-xs p-2 rounded-lg focus:outline-none focus:border-[#bf953f]"
-                                />
-                              </div>
-                              <div>
-                                <label className="text-[10px] text-zinc-400 block mb-0.5 font-bold">Habitaciones</label>
-                                <input
-                                  type="number"
-                                  placeholder="Ej: 3"
-                                  value={editForm.propBedrooms ?? ''}
-                                  onChange={(e) => setEditForm(prev => ({ ...prev, propBedrooms: e.target.value }))}
-                                  className="w-full bg-zinc-900 border border-[#bf953f]/40 text-white font-bold text-xs p-2 rounded-lg focus:outline-none focus:border-[#bf953f]"
-                                />
-                              </div>
-                              <div>
-                                <label className="text-[10px] text-zinc-400 block mb-0.5 font-bold">Baños</label>
-                                <input
-                                  type="number"
-                                  placeholder="Ej: 2"
-                                  value={editForm.propBathrooms ?? ''}
-                                  onChange={(e) => setEditForm(prev => ({ ...prev, propBathrooms: e.target.value }))}
-                                  className="w-full bg-zinc-900 border border-[#bf953f]/40 text-white font-bold text-xs p-2 rounded-lg focus:outline-none focus:border-[#bf953f]"
-                                />
-                              </div>
-                              <div>
-                                <label className="text-[10px] text-zinc-400 block mb-0.5 font-bold">Garajes</label>
-                                <input
-                                  type="number"
-                                  placeholder="Ej: 1"
-                                  value={editForm.propGarages ?? ''}
-                                  onChange={(e) => setEditForm(prev => ({ ...prev, propGarages: e.target.value }))}
-                                  className="w-full bg-zinc-900 border border-[#bf953f]/40 text-white font-bold text-xs p-2 rounded-lg focus:outline-none focus:border-[#bf953f]"
-                                />
-                              </div>
-                              <div>
-                                <label className="text-[10px] text-zinc-400 block mb-0.5 font-bold">Estrato</label>
-                                <input
-                                  type="number"
-                                  placeholder="Ej: 4"
-                                  value={editForm.propStratum ?? ''}
-                                  onChange={(e) => setEditForm(prev => ({ ...prev, propStratum: e.target.value }))}
-                                  className="w-full bg-zinc-900 border border-[#bf953f]/40 text-white font-bold text-xs p-2 rounded-lg focus:outline-none focus:border-[#bf953f]"
-                                />
-                              </div>
-                              <div>
-                                <label className="text-[10px] text-zinc-400 block mb-0.5 font-bold">Barrio / Zona</label>
-                                <input
-                                  type="text"
-                                  placeholder="Ej: Santa Bárbara"
-                                  value={editForm.propZone || ''}
-                                  onChange={(e) => setEditForm(prev => ({ ...prev, propZone: e.target.value }))}
-                                  className="w-full bg-zinc-900 border border-[#bf953f]/40 text-white font-bold text-xs p-2 rounded-lg focus:outline-none focus:border-[#bf953f]"
-                                />
-                              </div>
-                              <div>
-                                <label className="text-[10px] text-zinc-400 block mb-0.5 font-bold">Ciudad</label>
-                                <input
-                                  type="text"
-                                  placeholder="Ej: Bogotá"
-                                  value={editForm.propCity || ''}
-                                  onChange={(e) => setEditForm(prev => ({ ...prev, propCity: e.target.value }))}
-                                  className="w-full bg-zinc-900 border border-[#bf953f]/40 text-white font-bold text-xs p-2 rounded-lg focus:outline-none focus:border-[#bf953f]"
-                                />
-                              </div>
-                            </div>
+                        {/* Ficha Estructurada Predial (Resumen Visual Limpio) */}
+                        <div className="not-italic text-zinc-300 bg-black/40 border border-[#bf953f]/20 p-2.5 rounded-lg space-y-1 text-xs">
+                          <p className="font-bold text-[#bf953f] text-[11px] uppercase tracking-wider">🏢 Ficha del Inmueble (Oferta):</p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-[11px]">
+                            <p>• Tipo: <span className="text-white font-semibold">{getPropTypeLabel(effectiveProp?.propertyType)}</span></p>
+                            <p>• Negocio: <span className="text-white font-semibold">{getTransactionLabel(effectiveProp?.transactionType)}</span></p>
+                            <p>• Precio Venta: <span className="text-amber-400 font-bold">{formatCOP(effectiveProp?.price)}</span></p>
+                            {effectiveProp?.rentPrice && parseFloat(String(effectiveProp?.rentPrice)) > 0 && (
+                              <p>• Canon Arriendo: <span className="text-emerald-400 font-bold">{formatCOP(effectiveProp?.rentPrice)}</span></p>
+                            )}
+                            <p>• Área Total: <span className="text-white font-semibold">{effectiveProp?.areaTotal || effectiveProp?.areaPrivate || 'N/E'} m²</span></p>
+                            <p>• Estrato: <span className="text-white font-semibold">{effectiveProp?.stratum || 'N/E'}</span></p>
+                            <p>• Habitaciones: <span className="text-white font-semibold">{effectiveProp?.bedrooms ?? 'N/E'}</span></p>
+                            <p>• Baños: <span className="text-white font-semibold">{effectiveProp?.bathrooms ?? 'N/E'}</span></p>
+                            <p>• Garajes: <span className="text-white font-semibold">{effectiveProp?.garages ?? 'N/E'}</span></p>
+                            <p>• Ubicación: <span className="text-white font-semibold">{effectiveProp?.zone || 'N/E'}, {effectiveProp?.city || 'Bogotá'}</span></p>
                           </div>
-                        ) : (
-                          <div className="not-italic text-zinc-300 bg-black/40 border border-[#bf953f]/20 p-2.5 rounded-lg space-y-1 text-xs">
-                            <p className="font-bold text-[#bf953f] text-[11px] uppercase tracking-wider">🏢 Ficha del Inmueble (Oferta):</p>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-[11px]">
-                              <p>• Tipo: <span className="text-white font-semibold">{getPropTypeLabel(effectiveProp?.propertyType)}</span></p>
-                              <p>• Negocio: <span className="text-white font-semibold">{getTransactionLabel(effectiveProp?.transactionType)}</span></p>
-                              <p>• Precio Venta: <span className="text-amber-400 font-bold">{formatCOP(effectiveProp?.price)}</span></p>
-                              {effectiveProp?.rentPrice && parseFloat(String(effectiveProp?.rentPrice)) > 0 && (
-                                <p>• Canon Arriendo: <span className="text-emerald-400 font-bold">{formatCOP(effectiveProp?.rentPrice)}</span></p>
-                              )}
-                              <p>• Área Total: <span className="text-white font-semibold">{effectiveProp?.areaTotal || effectiveProp?.areaPrivate || 'N/E'} m²</span></p>
-                              <p>• Estrato: <span className="text-white font-semibold">{effectiveProp?.stratum || 'N/E'}</span></p>
-                              <p>• Habitaciones: <span className="text-white font-semibold">{effectiveProp?.bedrooms ?? 'N/E'}</span></p>
-                              <p>• Baños: <span className="text-white font-semibold">{effectiveProp?.bathrooms ?? 'N/E'}</span></p>
-                              <p>• Garajes: <span className="text-white font-semibold">{effectiveProp?.garages ?? 'N/E'}</span></p>
-                              <p>• Ubicación: <span className="text-white font-semibold">{effectiveProp?.zone || 'N/E'}, {effectiveProp?.city || 'Bogotá'}</span></p>
-                            </div>
-                          </div>
-                        )}
+                        </div>
 
-                        {/* Banner de Enlace Público Original al Final de la Publicación del Inmueble */}
+                        {/* Enlace Público Original Simple en Azul */}
                         {(() => {
                           const origUrl = extractPublicLink(m.property);
                           if (!origUrl) return null;
                           return (
-                            <div className="mt-2.5 pt-2.5 border-t border-amber-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-amber-500/10 p-2.5 rounded-xl border border-amber-500/30 not-italic">
-                              <div className="flex items-center gap-2 min-w-0">
-                                <Globe className="w-4 h-4 text-amber-400 flex-shrink-0" />
-                                <div className="min-w-0">
-                                  <p className="text-[10px] text-amber-300 font-bold uppercase tracking-wider">🌐 Enlace Público Original / Portal Web:</p>
-                                  <a 
-                                    href={origUrl} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer" 
-                                    className="text-xs text-amber-400 hover:text-amber-200 font-semibold underline truncate block max-w-[280px] sm:max-w-[420px]"
-                                    title={origUrl}
-                                  >
-                                    {origUrl}
-                                  </a>
-                                </div>
-                              </div>
-                              <a
-                                href={origUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-[10px] text-black font-bold bg-amber-400 hover:bg-amber-300 px-3 py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition-all shadow-md shrink-0"
+                            <div className="mt-2 pt-2 border-t border-white/5 text-xs not-italic flex items-center gap-1.5 flex-wrap">
+                              <span className="text-zinc-400 font-semibold">🌐 Enlace original:</span>
+                              <a 
+                                href={origUrl} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="text-blue-400 hover:text-blue-300 font-medium underline break-all"
+                                title={origUrl}
                               >
-                                Abrir Enlace <ExternalLink className="w-3 h-3" />
+                                {origUrl}
                               </a>
                             </div>
                           );
@@ -1729,149 +1618,36 @@ export default function AdminMatches() {
                           ) : null;
                         })()}
 
-                        {/* Ficha Estructurada de la Demanda (Atributos Extraídos / Editables en vivo) */}
-                        {isEditingThisCard ? (
-                          <div className="not-italic text-zinc-300 bg-black/60 border border-cyan-500/40 p-3 rounded-xl space-y-2 text-xs">
-                            <p className="font-bold text-cyan-400 text-[11px] uppercase tracking-wider flex items-center gap-1.5">
-                              ✏️ Editar Ficha Requerimiento (Demanda):
-                            </p>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                              <div>
-                                <label className="text-[10px] text-zinc-400 block mb-0.5 font-bold">Presupuesto Máx (COP)</label>
-                                <input
-                                  type="text"
-                                  placeholder="Ej: 500000000"
-                                  value={editForm.reqBudget || ''}
-                                  onChange={(e) => setEditForm(prev => ({ ...prev, reqBudget: e.target.value }))}
-                                  className="w-full bg-zinc-900 border border-cyan-500/40 text-white font-bold text-xs p-2 rounded-lg focus:outline-none focus:border-cyan-400"
-                                />
-                              </div>
-                              <div>
-                                <label className="text-[10px] text-zinc-400 block mb-0.5 font-bold">Cuota Admón Máx (COP)</label>
-                                <input
-                                  type="text"
-                                  placeholder="Ej: 500000"
-                                  value={editForm.reqAdminMax || ''}
-                                  onChange={(e) => setEditForm(prev => ({ ...prev, reqAdminMax: e.target.value }))}
-                                  className="w-full bg-zinc-900 border border-cyan-500/40 text-white font-bold text-xs p-2 rounded-lg focus:outline-none focus:border-cyan-400"
-                                />
-                              </div>
-                              <div>
-                                <label className="text-[10px] text-zinc-400 block mb-0.5 font-bold">Área Mín (m²)</label>
-                                <input
-                                  type="text"
-                                  placeholder="Ej: 80"
-                                  value={editForm.reqArea || ''}
-                                  onChange={(e) => setEditForm(prev => ({ ...prev, reqArea: e.target.value }))}
-                                  className="w-full bg-zinc-900 border border-cyan-500/40 text-white font-bold text-xs p-2 rounded-lg focus:outline-none focus:border-cyan-400"
-                                />
-                              </div>
-                              <div>
-                                <label className="text-[10px] text-zinc-400 block mb-0.5 font-bold">Habitaciones Mín</label>
-                                <input
-                                  type="number"
-                                  placeholder="Ej: 2"
-                                  value={editForm.reqBedrooms ?? ''}
-                                  onChange={(e) => setEditForm(prev => ({ ...prev, reqBedrooms: e.target.value }))}
-                                  className="w-full bg-zinc-900 border border-cyan-500/40 text-white font-bold text-xs p-2 rounded-lg focus:outline-none focus:border-cyan-400"
-                                />
-                              </div>
-                              <div>
-                                <label className="text-[10px] text-zinc-400 block mb-0.5 font-bold">Baños Mín</label>
-                                <input
-                                  type="number"
-                                  placeholder="Ej: 2"
-                                  value={editForm.reqBathrooms ?? ''}
-                                  onChange={(e) => setEditForm(prev => ({ ...prev, reqBathrooms: e.target.value }))}
-                                  className="w-full bg-zinc-900 border border-cyan-500/40 text-white font-bold text-xs p-2 rounded-lg focus:outline-none focus:border-cyan-400"
-                                />
-                              </div>
-                              <div>
-                                <label className="text-[10px] text-zinc-400 block mb-0.5 font-bold">Garajes Mín</label>
-                                <input
-                                  type="number"
-                                  placeholder="Ej: 1"
-                                  value={editForm.reqGarages ?? ''}
-                                  onChange={(e) => setEditForm(prev => ({ ...prev, reqGarages: e.target.value }))}
-                                  className="w-full bg-zinc-900 border border-cyan-500/40 text-white font-bold text-xs p-2 rounded-lg focus:outline-none focus:border-cyan-400"
-                                />
-                              </div>
-                              <div>
-                                <label className="text-[10px] text-zinc-400 block mb-0.5 font-bold">Estrato Deseado</label>
-                                <input
-                                  type="number"
-                                  placeholder="Ej: 4"
-                                  value={editForm.reqStratum ?? ''}
-                                  onChange={(e) => setEditForm(prev => ({ ...prev, reqStratum: e.target.value }))}
-                                  className="w-full bg-zinc-900 border border-cyan-500/40 text-white font-bold text-xs p-2 rounded-lg focus:outline-none focus:border-cyan-400"
-                                />
-                              </div>
-                              <div>
-                                <label className="text-[10px] text-zinc-400 block mb-0.5 font-bold">Barrio Deseado</label>
-                                <input
-                                  type="text"
-                                  placeholder="Ej: Rosales"
-                                  value={editForm.reqZone || ''}
-                                  onChange={(e) => setEditForm(prev => ({ ...prev, reqZone: e.target.value }))}
-                                  className="w-full bg-zinc-900 border border-cyan-500/40 text-white font-bold text-xs p-2 rounded-lg focus:outline-none focus:border-cyan-400"
-                                />
-                              </div>
-                              <div>
-                                <label className="text-[10px] text-zinc-400 block mb-0.5 font-bold">Ciudad Deseada</label>
-                                <input
-                                  type="text"
-                                  placeholder="Ej: Bogotá"
-                                  value={editForm.reqCity || ''}
-                                  onChange={(e) => setEditForm(prev => ({ ...prev, reqCity: e.target.value }))}
-                                  className="w-full bg-zinc-900 border border-cyan-500/40 text-white font-bold text-xs p-2 rounded-lg focus:outline-none focus:border-cyan-400"
-                                />
-                              </div>
-                            </div>
+                        {/* Ficha Estructurada de la Demanda (Resumen Visual Limpio) */}
+                        <div className="not-italic text-zinc-300 bg-black/40 border border-cyan-500/20 p-2.5 rounded-lg space-y-1 text-xs">
+                          <p className="font-bold text-cyan-400 text-[11px] uppercase tracking-wider">🔍 Ficha de la Demanda (Requerimiento):</p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-[11px]">
+                            <p>• Buscado: <span className="text-white font-semibold">{getPropTypeLabel(effectiveReq?.tipoInmuebleDeseado)}</span></p>
+                            <p>• Negocio: <span className="text-white font-semibold">{getTransactionLabel(effectiveReq?.tipoNegocioDeseado)}</span></p>
+                            <p>• Presupuesto Máx: <span className="text-cyan-300 font-bold">{formatCOP(effectiveReq?.presupuestoMax)}</span></p>
+                            <p>• Área Mín: <span className="text-white font-semibold">{effectiveReq?.areaMin || 'N/E'} m²</span></p>
+                            <p>• Habitaciones Mín: <span className="text-white font-semibold">{effectiveReq?.habitacionesMin ?? 'N/E'}</span></p>
+                            <p>• Baños Mín: <span className="text-white font-semibold">{effectiveReq?.banosMin ?? 'N/E'}</span></p>
+                            <p>• Garajes Mín: <span className="text-white font-semibold">{effectiveReq?.parqueaderosMin ?? 'N/E'}</span></p>
+                            <p>• Ubicación Deseada: <span className="text-white font-semibold">{effectiveReq?.zonaDeseada || 'N/E'}, {effectiveReq?.ciudadDeseada || 'Bogotá'}</span></p>
                           </div>
-                        ) : (
-                          <div className="not-italic text-zinc-300 bg-black/40 border border-cyan-500/20 p-2.5 rounded-lg space-y-1 text-xs">
-                            <p className="font-bold text-cyan-400 text-[11px] uppercase tracking-wider">🔍 Ficha de la Demanda (Requerimiento):</p>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-[11px]">
-                              <p>• Buscado: <span className="text-white font-semibold">{getPropTypeLabel(effectiveReq?.tipoInmuebleDeseado)}</span></p>
-                              <p>• Negocio: <span className="text-white font-semibold">{getTransactionLabel(effectiveReq?.tipoNegocioDeseado)}</span></p>
-                              <p>• Presupuesto Máx: <span className="text-cyan-300 font-bold">{formatCOP(effectiveReq?.presupuestoMax)}</span></p>
-                              <p>• Área Mín: <span className="text-white font-semibold">{effectiveReq?.areaMin || 'N/E'} m²</span></p>
-                              <p>• Habitaciones Mín: <span className="text-white font-semibold">{effectiveReq?.habitacionesMin ?? 'N/E'}</span></p>
-                              <p>• Baños Mín: <span className="text-white font-semibold">{effectiveReq?.banosMin ?? 'N/E'}</span></p>
-                              <p>• Garajes Mín: <span className="text-white font-semibold">{effectiveReq?.parqueaderosMin ?? 'N/E'}</span></p>
-                              <p>• Ubicación Deseada: <span className="text-white font-semibold">{effectiveReq?.zonaDeseada || 'N/E'}, {effectiveReq?.ciudadDeseada || 'Bogotá'}</span></p>
-                            </div>
-                          </div>
-                        )}
+                        </div>
 
-                        {/* Banner de Enlace Público Original al Final de la Publicación del Requerimiento */}
+                        {/* Enlace Público Original Simple en Azul */}
                         {(() => {
                           const origReqUrl = extractPublicLink(m.requirement);
                           if (!origReqUrl) return null;
                           return (
-                            <div className="mt-2.5 pt-2.5 border-t border-cyan-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-cyan-500/10 p-2.5 rounded-xl border border-cyan-500/30 not-italic">
-                              <div className="flex items-center gap-2 min-w-0">
-                                <Globe className="w-4 h-4 text-cyan-400 flex-shrink-0" />
-                                <div className="min-w-0">
-                                  <p className="text-[10px] text-cyan-300 font-bold uppercase tracking-wider">🌐 Enlace Público Original / Portal Web:</p>
-                                  <a 
-                                    href={origReqUrl} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer" 
-                                    className="text-xs text-cyan-300 hover:text-cyan-100 font-semibold underline truncate block max-w-[280px] sm:max-w-[420px]"
-                                    title={origReqUrl}
-                                  >
-                                    {origReqUrl}
-                                  </a>
-                                </div>
-                              </div>
-                              <a
-                                href={origReqUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-[10px] text-black font-bold bg-cyan-400 hover:bg-cyan-300 px-3 py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition-all shadow-md shrink-0"
+                            <div className="mt-2 pt-2 border-t border-white/5 text-xs not-italic flex items-center gap-1.5 flex-wrap">
+                              <span className="text-zinc-400 font-semibold">🌐 Enlace original:</span>
+                              <a 
+                                href={origReqUrl} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="text-blue-400 hover:text-blue-300 font-medium underline break-all"
+                                title={origReqUrl}
                               >
-                                Abrir Enlace <ExternalLink className="w-3 h-3" />
+                                {origReqUrl}
                               </a>
                             </div>
                           );
@@ -2189,27 +1965,122 @@ export default function AdminMatches() {
                                 );
                               }
 
-                              if (cleanLbl.includes('ciudad')) {
+                              if (cleanLbl.includes('tipo de inmueble')) {
                                 return isOffer ? (
                                   <input
                                     type="text"
-                                    placeholder="Ej: Bogotá"
-                                    value={editForm.propCity || ''}
-                                    onChange={(e) => setEditForm(prev => ({ ...prev, propCity: e.target.value }))}
+                                    placeholder="Ej: Apartamento, Casa"
+                                    value={editForm.propPropertyType || ''}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, propPropertyType: e.target.value }))}
                                     className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#bf953f]"
                                   />
                                 ) : (
                                   <input
                                     type="text"
-                                    placeholder="Ej: Bogotá"
-                                    value={editForm.reqCity || ''}
-                                    onChange={(e) => setEditForm(prev => ({ ...prev, reqCity: e.target.value }))}
+                                    placeholder="Ej: Apartamento, Casa"
+                                    value={editForm.reqPropertyType || ''}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, reqPropertyType: e.target.value }))}
                                     className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400"
                                   />
                                 );
                               }
 
-                              return defaultVal;
+                              if (cleanLbl.includes('tipo de negocio')) {
+                                return isOffer ? (
+                                  <select
+                                    value={editForm.propTransactionType || ''}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, propTransactionType: e.target.value }))}
+                                    className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#bf953f]"
+                                  >
+                                    <option value="">Seleccionar...</option>
+                                    <option value="venta">Venta</option>
+                                    <option value="arriendo">Arriendo</option>
+                                    <option value="venta_o_arriendo">Venta o Arriendo</option>
+                                    <option value="arriendo_con_opcion_de_compra">Arriendo con opción de compra</option>
+                                    <option value="arriendo_temporal">Arriendo temporal</option>
+                                    <option value="permuta">Permuta</option>
+                                    <option value="venta_permuta">Venta / Permuta</option>
+                                    <option value="aporte">Aporte</option>
+                                  </select>
+                                ) : (
+                                  <select
+                                    value={editForm.reqTransactionType || ''}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, reqTransactionType: e.target.value }))}
+                                    className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                                  >
+                                    <option value="">Seleccionar...</option>
+                                    <option value="venta">Venta</option>
+                                    <option value="arriendo">Arriendo</option>
+                                    <option value="venta_o_arriendo">Venta o Arriendo</option>
+                                    <option value="arriendo_con_opcion_de_compra">Arriendo con opción de compra</option>
+                                    <option value="arriendo_temporal">Arriendo temporal</option>
+                                    <option value="permuta">Permuta</option>
+                                    <option value="venta_permuta">Venta / Permuta</option>
+                                    <option value="aporte">Aporte</option>
+                                  </select>
+                                );
+                              }
+
+                              if (cleanLbl.includes('localidad')) {
+                                return isOffer ? (
+                                  <input
+                                    type="text"
+                                    placeholder="Ej: Usaquén, Chapinero"
+                                    value={editForm.propLocality || ''}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, propLocality: e.target.value }))}
+                                    className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#bf953f]"
+                                  />
+                                ) : (
+                                  <input
+                                    type="text"
+                                    placeholder="Ej: Usaquén, Chapinero"
+                                    value={editForm.reqLocality || ''}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, reqLocality: e.target.value }))}
+                                    className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                                  />
+                                );
+                              }
+
+                              if (cleanLbl.includes('teléfono') || cleanLbl.includes('contacto')) {
+                                return isOffer ? (
+                                  <input
+                                    type="text"
+                                    placeholder="Ej: +57 310 123 4567"
+                                    value={editForm.propPhone || ''}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, propPhone: e.target.value }))}
+                                    className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#bf953f]"
+                                  />
+                                ) : (
+                                  <input
+                                    type="text"
+                                    placeholder="Ej: +57 310 123 4567"
+                                    value={editForm.reqPhone || ''}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, reqPhone: e.target.value }))}
+                                    className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                                  />
+                                );
+                              }
+
+                              // Fallback general para cualquier otra casilla (Antigüedad, Permuta, Cocina, Balcón, Equipamiento, Depósito)
+                              const propKey = `prop_custom_${cleanLbl.replace(/[^a-z0-9]/g, '')}`;
+                              const reqKey = `req_custom_${cleanLbl.replace(/[^a-z0-9]/g, '')}`;
+                              return isOffer ? (
+                                <input
+                                  type="text"
+                                  placeholder={`Editar ${label}`}
+                                  value={editForm[propKey] !== undefined ? editForm[propKey] : (defaultVal !== 'N/E' ? defaultVal : '')}
+                                  onChange={(e) => setEditForm(prev => ({ ...prev, [propKey]: e.target.value }))}
+                                  className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#bf953f]"
+                                />
+                              ) : (
+                                <input
+                                  type="text"
+                                  placeholder={`Editar ${label}`}
+                                  value={editForm[reqKey] !== undefined ? editForm[reqKey] : (defaultVal !== 'N/E' ? defaultVal : '')}
+                                  onChange={(e) => setEditForm(prev => ({ ...prev, [reqKey]: e.target.value }))}
+                                  className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                                />
+                              );
                             };
 
                             return (
@@ -2328,14 +2199,61 @@ export default function AdminMatches() {
                               <input type="text" placeholder="Ej: Rosales" value={editForm.reqZone || ''} onChange={(e) => setEditForm(prev => ({ ...prev, reqZone: e.target.value }))} className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg" />
                             );
                           }
-                          if (cleanLbl.includes('ciudad')) {
+                          if (cleanLbl.includes('tipo de inmueble')) {
                             return isOffer ? (
-                              <input type="text" placeholder="Ej: Bogotá" value={editForm.propCity || ''} onChange={(e) => setEditForm(prev => ({ ...prev, propCity: e.target.value }))} className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg" />
+                              <input type="text" placeholder="Ej: Apartamento" value={editForm.propPropertyType || ''} onChange={(e) => setEditForm(prev => ({ ...prev, propPropertyType: e.target.value }))} className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg" />
                             ) : (
-                              <input type="text" placeholder="Ej: Bogotá" value={editForm.reqCity || ''} onChange={(e) => setEditForm(prev => ({ ...prev, reqCity: e.target.value }))} className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg" />
+                              <input type="text" placeholder="Ej: Apartamento" value={editForm.reqPropertyType || ''} onChange={(e) => setEditForm(prev => ({ ...prev, reqPropertyType: e.target.value }))} className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg" />
                             );
                           }
-                          return defaultVal;
+                          if (cleanLbl.includes('tipo de negocio')) {
+                            return isOffer ? (
+                              <select value={editForm.propTransactionType || ''} onChange={(e) => setEditForm(prev => ({ ...prev, propTransactionType: e.target.value }))} className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg">
+                                <option value="">Seleccionar...</option>
+                                <option value="venta">Venta</option>
+                                <option value="arriendo">Arriendo</option>
+                                <option value="venta_o_arriendo">Venta o Arriendo</option>
+                                <option value="arriendo_con_opcion_de_compra">Arriendo con opción de compra</option>
+                                <option value="arriendo_temporal">Arriendo temporal</option>
+                                <option value="permuta">Permuta</option>
+                                <option value="venta_permuta">Venta / Permuta</option>
+                                <option value="aporte">Aporte</option>
+                              </select>
+                            ) : (
+                              <select value={editForm.reqTransactionType || ''} onChange={(e) => setEditForm(prev => ({ ...prev, reqTransactionType: e.target.value }))} className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg">
+                                <option value="">Seleccionar...</option>
+                                <option value="venta">Venta</option>
+                                <option value="arriendo">Arriendo</option>
+                                <option value="venta_o_arriendo">Venta o Arriendo</option>
+                                <option value="arriendo_con_opcion_de_compra">Arriendo con opción de compra</option>
+                                <option value="arriendo_temporal">Arriendo temporal</option>
+                                <option value="permuta">Permuta</option>
+                                <option value="venta_permuta">Venta / Permuta</option>
+                                <option value="aporte">Aporte</option>
+                              </select>
+                            );
+                          }
+                          if (cleanLbl.includes('localidad')) {
+                            return isOffer ? (
+                              <input type="text" placeholder="Ej: Usaquén" value={editForm.propLocality || ''} onChange={(e) => setEditForm(prev => ({ ...prev, propLocality: e.target.value }))} className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg" />
+                            ) : (
+                              <input type="text" placeholder="Ej: Usaquén" value={editForm.reqLocality || ''} onChange={(e) => setEditForm(prev => ({ ...prev, reqLocality: e.target.value }))} className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg" />
+                            );
+                          }
+                          if (cleanLbl.includes('teléfono') || cleanLbl.includes('contacto')) {
+                            return isOffer ? (
+                              <input type="text" placeholder="Ej: +57 310 123 4567" value={editForm.propPhone || ''} onChange={(e) => setEditForm(prev => ({ ...prev, propPhone: e.target.value }))} className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg" />
+                            ) : (
+                              <input type="text" placeholder="Ej: +57 310 123 4567" value={editForm.reqPhone || ''} onChange={(e) => setEditForm(prev => ({ ...prev, reqPhone: e.target.value }))} className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg" />
+                            );
+                          }
+                          const propKey = `prop_custom_${cleanLbl.replace(/[^a-z0-9]/g, '')}`;
+                          const reqKey = `req_custom_${cleanLbl.replace(/[^a-z0-9]/g, '')}`;
+                          return isOffer ? (
+                            <input type="text" placeholder={`Editar ${label}`} value={editForm[propKey] !== undefined ? editForm[propKey] : (defaultVal !== 'N/E' ? defaultVal : '')} onChange={(e) => setEditForm(prev => ({ ...prev, [propKey]: e.target.value }))} className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg" />
+                          ) : (
+                            <input type="text" placeholder={`Editar ${label}`} value={editForm[reqKey] !== undefined ? editForm[reqKey] : (defaultVal !== 'N/E' ? defaultVal : '')} onChange={(e) => setEditForm(prev => ({ ...prev, [reqKey]: e.target.value }))} className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg" />
+                          );
                         };
 
                         return (

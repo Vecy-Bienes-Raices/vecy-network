@@ -1585,10 +1585,48 @@ export async function processWhatsAppMessage(
   groupName?: string
 ): Promise<JanIAResult> {
   try {
+    const isWebUser = userId.startsWith("web-");
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // FILTRO ABSOLUTO IMPERMEABLE DE SPAM, WEBINARS, CURSOS Y PUBLICIDAD
+    // ══════════════════════════════════════════════════════════════════════════
+    if (!isWebUser && text) {
+      const checkText = text.toLowerCase();
+      const isSpamOrWebinar = (
+        checkText.includes("zoom.us") ||
+        checkText.includes("us06web.zoom.us") ||
+        checkText.includes("chat.whatsapp.com") ||
+        checkText.includes("únase a nuestra reunión") ||
+        checkText.includes("unase a nuestra reunion") ||
+        checkText.includes("entrenamiento 100% gratuito") ||
+        checkText.includes("estrategias en redes sociales") ||
+        checkText.includes("como funcionan las ventas") ||
+        checkText.includes("invitación al chat en grupo") ||
+        checkText.includes("invitacion al chat en grupo") ||
+        checkText.includes("unirme al grupo") ||
+        checkText.includes("máster class") ||
+        checkText.includes("masterclass") ||
+        checkText.includes("taller gratuito") ||
+        checkText.includes("capacitación gratuita") ||
+        checkText.includes("capacitacion gratuita")
+      );
+
+      if (isSpamOrWebinar && !checkText.includes("vendo") && !checkText.includes("busco") && !checkText.includes("se vende") && !checkText.includes("se arrienda")) {
+        console.log(`[JANIA-SPAM-GUARD] ⛔ Mensaje detectado como SPAM/Webinar/Curso (${checkText.substring(0, 60)}...). Operación silenciosa total, sin guardar en BD ni emoji.`);
+        return {
+          classification: "VIOLACION_DE_NORMAS",
+          response: "",
+          dmResponse: "",
+          shouldSendDM: false,
+          reactionEmoji: undefined,
+          inserted: false
+        };
+      }
+    }
+
     const rawPhone = userId.split('@')[0];
     const realName = await resolveRealName(userId, userName);
 
-    const isWebUser = userId.startsWith("web-");
     const alreadyGreeted = await checkAlreadyGreeted(userId);
     const senderInfo = analyzeSender(realName, userId, alreadyGreeted);
     const n = extractFirstName(realName) || 'colega';
@@ -1672,6 +1710,43 @@ export async function processWhatsAppMessage(
     // messageToProcess lleva el contexto completo para el LLM (con el texto del portal)
     if (jinaExtractedText) {
       messageToProcess += jinaExtractedText;
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // FILTRO ABSOLUTO IMPERMEABLE DE SPAM, WEBINARS, CURSOS Y PUBLICIDAD
+    // ══════════════════════════════════════════════════════════════════════════
+    if (!isWebUser && messageToProcess) {
+      const checkText = messageToProcess.toLowerCase();
+      const isSpamOrWebinar = (
+        checkText.includes("zoom.us") ||
+        checkText.includes("us06web.zoom.us") ||
+        checkText.includes("chat.whatsapp.com") ||
+        checkText.includes("únase a nuestra reunión") ||
+        checkText.includes("unase a nuestra reunion") ||
+        checkText.includes("entrenamiento 100% gratuito") ||
+        checkText.includes("estrategias en redes sociales") ||
+        checkText.includes("como funcionan las ventas") ||
+        checkText.includes("invitación al chat en grupo") ||
+        checkText.includes("invitacion al chat en grupo") ||
+        checkText.includes("unirme al grupo") ||
+        checkText.includes("máster class") ||
+        checkText.includes("masterclass") ||
+        checkText.includes("taller gratuito") ||
+        checkText.includes("capacitación gratuita") ||
+        checkText.includes("capacitacion gratuita")
+      );
+
+      if (isSpamOrWebinar && !checkText.includes("vendo") && !checkText.includes("busco") && !checkText.includes("se vende") && !checkText.includes("se arrienda")) {
+        console.log(`[JANIA-SPAM-GUARD] ⛔ Mensaje detectado como SPAM/Webinar/Curso (${checkText.substring(0, 60)}...). Operación silenciosa total, sin guardar en BD ni emoji.`);
+        return {
+          classification: "VIOLACION_DE_NORMAS",
+          response: "",
+          dmResponse: "",
+          shouldSendDM: false,
+          reactionEmoji: undefined,
+          inserted: false
+        };
+      }
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -2027,9 +2102,40 @@ Por lo tanto, DEBES hacer lo siguiente:
       }
     }
 
-    // --- CAPA DE RESCATE HEURÍSTICO POR TEXTO PARA CLASIFICACIÓN ---
+    // --- CAPA DE FILTRO ABSOLUTO DE SPAM, WEBINARS, CURSOS Y PUBLICIDAD ---
     if (messageToProcess) {
       const cleanText = messageToProcess.toLowerCase();
+
+      const isSpamOrWebinar = (
+        cleanText.includes("zoom.us") ||
+        cleanText.includes("us06web.zoom.us") ||
+        cleanText.includes("chat.whatsapp.com") ||
+        cleanText.includes("únase a nuestra reunión") ||
+        cleanText.includes("unase a nuestra reunion") ||
+        cleanText.includes("entrenamiento 100% gratuito") ||
+        cleanText.includes("estrategias en redes sociales") ||
+        cleanText.includes("como funcionan las ventas") ||
+        cleanText.includes("invitación al chat en grupo") ||
+        cleanText.includes("invitacion al chat en grupo") ||
+        cleanText.includes("unirme al grupo") ||
+        cleanText.includes("máster class") ||
+        cleanText.includes("masterclass") ||
+        cleanText.includes("taller gratuito") ||
+        cleanText.includes("capacitación gratuita") ||
+        cleanText.includes("capacitacion gratuita")
+      );
+
+      if (isSpamOrWebinar && !cleanText.includes("vendo") && !cleanText.includes("busco") && !cleanText.includes("se vende") && !cleanText.includes("se arrienda")) {
+        console.log(`[JANIA-SPAM-GUARD] ⛔ Mensaje detectado como SPAM/Webinar/Curso (${cleanText.substring(0, 50)}...). Operación silenciosa total, sin guardar en BD ni emoji.`);
+        result.classification = "VIOLACION_DE_NORMAS";
+        result.inserted = false;
+        result.response = "";
+        result.dmResponse = "";
+        result.shouldSendDM = false;
+        result.reactionEmoji = undefined;
+        return result;
+      }
+
       const isSearch = cleanText.includes("busco") || 
                        cleanText.includes("necesito") || 
                        cleanText.includes("requiero") || 

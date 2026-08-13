@@ -375,6 +375,18 @@ export function matchesGeography(
     return { matches: false, score: 0 };
   }
 
+  // 1.44 Guard Doctrinal v22.5: Incompatibilidad entre Santa Bárbara (Usaquén) y Virrey / Rincón del Chicó (Chapinero)
+  const isSantaBarbaraProp = propFullNorm.includes("santa barbara");
+  const isVirreyReq = reqFullNorm.includes("virrey") || reqFullNorm.includes("rincon del chico");
+  const isSantaBarbaraReq = reqFullNorm.includes("santa barbara");
+  const isVirreyProp = propFullNorm.includes("virrey") || propFullNorm.includes("rincon del chico");
+  if ((isSantaBarbaraProp && isVirreyReq) || (isSantaBarbaraReq && isVirreyProp)) {
+    if (!hasAledanos(reqZoneRaw) && !hasAledanos(propZoneRaw)) {
+      console.log(`[Matching-Guard] Bloqueo 0%: Incompatibilidad geográfica entre Santa Bárbara y Virrey / Rincón del Chicó ('${reqZoneRaw}' ↔ '${propZoneRaw}')`);
+      return { matches: false, score: 0 };
+    }
+  }
+
   // 1.45 Guard Doctrinal v21.21: Cardinales y Zonas Genéricas ("Norte", "Sur", "Oriente", "Occidente", "Centro", "Sabana")
   // "Norte" NO es un barrio ni vereda. No puede coincidir como nombre de barrio ni dar 20 puntos por coincidir la palabra "Norte".
   const GENERIC_CARDINAL_TERMS = new Set([

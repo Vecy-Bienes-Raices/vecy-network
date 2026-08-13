@@ -8,7 +8,7 @@ import { eq, desc, sql, inArray, gte } from 'drizzle-orm';
 import { scrapePropertyLink } from '../_core/scraper';
 import { JANIA_PROMPT, processWhatsAppMessage } from '../_core/janIA';
 import { liquidarImpuestosVenta } from '../_core/taxEngine';
-import { explicarMatch } from '../_core/matching';
+import { explicarMatch, findMatchesForProperty, findMatchesForRequirement } from '../_core/matching';
 import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
@@ -654,6 +654,43 @@ export const janIARouter = router({
       await db.update(requirements).set(updateData).where(eq(requirements.id, requirementId));
       console.log(`[JanIA-UpdateRequirement] Requerimiento #${requirementId} actualizado directamente desde Mesa de Cotejo`);
       return { success: true, message: "Requerimiento actualizado con éxito" };
+    }),
+
+  // Recalcular cruces y afinidad predial para Oferta y/o Demanda tras edición en Mesa de Cotejo
+  recalculateMatchForPair: publicProcedure
+    .input(z.object({
+      propertyId: z.number().optional().nullable(),
+      requirementId: z.number().optional().nullable(),
+    }))
+    .mutation(async ({ input }) => {
+      let propMatchesCount = 0;
+      let reqMatchesCount = 0;
+
+      if (input.propertyId) {
+        try {
+          const resProp = await findMatchesForProperty(input.propertyId);
+          propMatchesCount = Array.isArray(resProp) ? resProp.length : 0;
+        } catch (e: any) {
+          console.error(`[RecalculateMatch] Error reculculando propiedad #${input.propertyId}:`, e?.message);
+        }
+      }
+
+      if (input.requirementId) {
+        try {
+          const resReq = await findMatchesForRequirement(input.requirementId);
+          reqMatchesCount = Array.isArray(resReq) ? resReq.length : 0;
+        } catch (e: any) {
+          console.error(`[RecalculateMatch] Error recalculando requerimiento #${input.requirementId}:`, e?.message);
+        }
+      }
+
+      console.log(`[JanIA-RecalculateMatch] Recálculo completado -> Propiedad #${input.propertyId}: ${propMatchesCount} matches | Requerimiento #${input.requirementId}: ${reqMatchesCount} matches`);
+      return {
+        success: true,
+        message: "Match recalculado exitosamente con datos actualizados.",
+        propMatchesCount,
+        reqMatchesCount,
+      };
     }),
 
 
