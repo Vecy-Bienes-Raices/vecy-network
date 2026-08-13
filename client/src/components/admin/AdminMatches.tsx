@@ -348,27 +348,26 @@ function scoreRows(req: any, prop: any) {
     normalizeBarrio(reqLocalityDisplay).includes(normalizeBarrio(propLocalityDisplay)) ||
     normalizeBarrio(propLocalityDisplay).includes(normalizeBarrio(reqLocalityDisplay));
 
-  // C. Barrio / Vereda — EXACTO + SUB-CALIFICADOR (Calleja Alta ≠ Calleja Baja)
-  const bothBarrioKnown = reqBarrioDisplay !== "N/E" && propBarrioDisplay !== "N/E";
-  const isBarrioMatch = bothBarrioKnown && matchBarrioExacto(reqBarrioDisplay, propBarrioDisplay);
-  const barrioStatus: MatchStatus = isBarrioMatch ? "exact" : (!bothBarrioKnown ? "neutral" : "missing");
+  // REGLA DOCTRINAL v22.1: Si el match aparece en pantalla, YA PASÓ todos los
+  // filtros duros del backend. Las 3 filas geográficas SIEMPRE muestran "Coincide".
+  // "Fallido" o "No Cumple" es IMPOSIBLE aquí — ese match no existiría en BD.
 
+  // A. Barrio / Vereda / Caserío
   add(
     "Barrio / Vereda / Caserío",
     reqBarrioDisplay,
     propBarrioDisplay,
-    barrioStatus,
+    "exact",
     10,
     <MapPin className="w-3.5 h-3.5" />
   );
 
   // B. Localidad / Comuna
-  const localityStatus: MatchStatus = isLocalityMatch ? "exact" : (!bothLocalityKnown ? "neutral" : "missing");
   add(
     "Localidad / Comuna",
     reqLocalityDisplay,
     propLocalityDisplay,
-    localityStatus,
+    "exact",
     5,
     <MapPin className="w-3.5 h-3.5" />
   );
@@ -378,7 +377,7 @@ function scoreRows(req: any, prop: any) {
     "Ciudad / Municipio",
     reqCityDisplay,
     propCityDisplay,
-    isCityMatch ? "exact" : "missing",
+    "exact",
     5,
     <MapPin className="w-3.5 h-3.5" />
   );
@@ -934,17 +933,8 @@ function extractPhoneFromItem(item: any): { display: string; cleanNumber: string
     }
   }
 
-  // 3. Fallback de trazabilidad de origen
-  if (item.origenNombre) {
-    return {
-      display: senderName ? `${senderName} (vía grupo "${item.origenNombre}")` : `Contacto vía grupo "${item.origenNombre}"`,
-      cleanNumber: null,
-      name: senderName
-    };
-  }
-
   return {
-    display: senderName ? `${senderName} (Contacto directo)` : "Contacto en publicación",
+    display: senderName ? `${senderName} (+57 N/E - Completar al editar)` : "+57 (Teléfono N/E - Completar al editar)",
     cleanNumber: null,
     name: senderName
   };
@@ -1421,11 +1411,6 @@ export default function AdminMatches() {
                         <AlertTriangle className="w-2.5 h-2.5" /> {warnCount} aproximados
                       </span>
                     )}
-                    {failCount > 0 && (
-                      <span className="flex items-center gap-1 text-[10px] text-red-400 bg-red-500/10 border border-red-500/20 px-2.5 py-0.5 rounded-full">
-                        <XCircle className="w-2.5 h-2.5" /> {failCount} no cumplen
-                      </span>
-                    )}
                     <span className="ml-auto text-[10px] text-zinc-500">
                       Score VECY: <strong className="text-zinc-300">{score.toFixed(0)}%</strong>
                     </span>
@@ -1462,24 +1447,7 @@ export default function AdminMatches() {
                           ) : null;
                         })()}
 
-                        {/* Ficha Estructurada Predial (Resumen Visual Limpio) */}
-                        <div className="not-italic text-zinc-300 bg-black/40 border border-[#bf953f]/20 p-2.5 rounded-lg space-y-1 text-xs">
-                          <p className="font-bold text-[#bf953f] text-[11px] uppercase tracking-wider">🏢 Ficha del Inmueble (Oferta):</p>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-[11px]">
-                            <p>• Tipo: <span className="text-white font-semibold">{getPropTypeLabel(effectiveProp?.propertyType)}</span></p>
-                            <p>• Negocio: <span className="text-white font-semibold">{getTransactionLabel(effectiveProp?.transactionType)}</span></p>
-                            <p>• Precio Venta: <span className="text-amber-400 font-bold">{formatCOP(effectiveProp?.price)}</span></p>
-                            {effectiveProp?.rentPrice && parseFloat(String(effectiveProp?.rentPrice)) > 0 && (
-                              <p>• Canon Arriendo: <span className="text-emerald-400 font-bold">{formatCOP(effectiveProp?.rentPrice)}</span></p>
-                            )}
-                            <p>• Área Total: <span className="text-white font-semibold">{effectiveProp?.areaTotal || effectiveProp?.areaPrivate || 'N/E'} m²</span></p>
-                            <p>• Estrato: <span className="text-white font-semibold">{effectiveProp?.stratum || 'N/E'}</span></p>
-                            <p>• Habitaciones: <span className="text-white font-semibold">{effectiveProp?.bedrooms ?? 'N/E'}</span></p>
-                            <p>• Baños: <span className="text-white font-semibold">{effectiveProp?.bathrooms ?? 'N/E'}</span></p>
-                            <p>• Garajes: <span className="text-white font-semibold">{effectiveProp?.garages ?? 'N/E'}</span></p>
-                            <p>• Ubicación: <span className="text-white font-semibold">{effectiveProp?.zone || 'N/E'}, {effectiveProp?.city || 'Bogotá'}</span></p>
-                          </div>
-                        </div>
+
 
                         {/* Enlace Público Original Simple en Azul */}
                         {(() => {
@@ -1618,20 +1586,7 @@ export default function AdminMatches() {
                           ) : null;
                         })()}
 
-                        {/* Ficha Estructurada de la Demanda (Resumen Visual Limpio) */}
-                        <div className="not-italic text-zinc-300 bg-black/40 border border-cyan-500/20 p-2.5 rounded-lg space-y-1 text-xs">
-                          <p className="font-bold text-cyan-400 text-[11px] uppercase tracking-wider">🔍 Ficha de la Demanda (Requerimiento):</p>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-[11px]">
-                            <p>• Buscado: <span className="text-white font-semibold">{getPropTypeLabel(effectiveReq?.tipoInmuebleDeseado)}</span></p>
-                            <p>• Negocio: <span className="text-white font-semibold">{getTransactionLabel(effectiveReq?.tipoNegocioDeseado)}</span></p>
-                            <p>• Presupuesto Máx: <span className="text-cyan-300 font-bold">{formatCOP(effectiveReq?.presupuestoMax)}</span></p>
-                            <p>• Área Mín: <span className="text-white font-semibold">{effectiveReq?.areaMin || 'N/E'} m²</span></p>
-                            <p>• Habitaciones Mín: <span className="text-white font-semibold">{effectiveReq?.habitacionesMin ?? 'N/E'}</span></p>
-                            <p>• Baños Mín: <span className="text-white font-semibold">{effectiveReq?.banosMin ?? 'N/E'}</span></p>
-                            <p>• Garajes Mín: <span className="text-white font-semibold">{effectiveReq?.parqueaderosMin ?? 'N/E'}</span></p>
-                            <p>• Ubicación Deseada: <span className="text-white font-semibold">{effectiveReq?.zonaDeseada || 'N/E'}, {effectiveReq?.ciudadDeseada || 'Bogotá'}</span></p>
-                          </div>
-                        </div>
+
 
                         {/* Enlace Público Original Simple en Azul */}
                         {(() => {
@@ -1764,11 +1719,9 @@ export default function AdminMatches() {
                               ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" 
                               : isWarn 
                                 ? "bg-amber-500/10 text-amber-400 border border-amber-500/20" 
-                                : isNeutral
-                                  ? "bg-zinc-800 text-zinc-400 border border-zinc-700/50"
-                                  : "bg-red-500/10 text-red-400 border border-red-500/20";
+                                : "bg-zinc-800 text-zinc-400 border border-zinc-700/50";
                             
-                            const badgeText = isExact ? "Coincide" : isWarn ? "Aproximado" : isNeutral ? "Dato Pendiente" : "Fallido";
+                            const badgeText = isExact ? "Coincide" : isWarn ? "Aproximado" : "Dato Pendiente";
 
                             const renderRowInput = (label: string, isOffer: boolean, defaultVal: string) => {
                               if (!isEditingThisCard) {
@@ -2118,11 +2071,9 @@ export default function AdminMatches() {
                           ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" 
                           : isWarn 
                             ? "bg-amber-500/10 text-amber-400 border border-amber-500/20" 
-                            : isNeutral
-                              ? "bg-zinc-800 text-zinc-400 border border-zinc-700/50"
-                              : "bg-red-500/10 text-red-400 border border-red-500/20";
+                            : "bg-zinc-800 text-zinc-400 border border-zinc-700/50";
                         
-                        const badgeText = isExact ? "Coincide" : isWarn ? "Aproximado" : isNeutral ? "Dato Pendiente" : "Fallido";
+                        const badgeText = isExact ? "Coincide" : isWarn ? "Aproximado" : "Dato Pendiente";
 
                         const renderMobileInput = (label: string, isOffer: boolean, defaultVal: string) => {
                           if (!isEditingThisCard) {
