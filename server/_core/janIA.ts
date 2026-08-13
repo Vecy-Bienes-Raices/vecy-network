@@ -3525,6 +3525,30 @@ async function saveRequirement(data: any, userId: string, realName: string) {
     fechaExtraccion: data.fechaExtraccion || getColombiaNow()
   };
 
+  // 🛡️ REGLA DOCTRINAL v22.10: Filtro de Calidad Estricto de Ingesta para Requerimientos.
+  // Un requerimiento NO se inserta en BD si su ubicación es vaga/coloquial ("todas las santas", "en cualquier zona")
+  // y carece de perímetro o especificaciones técnicas mínimas (presupuesto, área, habitaciones).
+  const rawZoneStr = (insertData.zonaDeseada || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  const rawTextStr = (insertData.rawText || "").toLowerCase();
+
+  const isAmbiguousZoneName = (zn: string) => {
+    if (!zn || zn === "n/e" || zn === "na" || zn === "bogota" || zn === "bogota, d.c." || zn === "colombia") return true;
+    const ambiguousPhrases = [
+      "todas las santas", "todas las zonas", "cualquier zona", "cualquier lado",
+      "donde sea", "varias zonas", "por ahi", "por ahí", "buena zona", "sector residencial",
+      "sector comercial", "norte o sur", "donde haya", "cualquiera"
+    ];
+    return ambiguousPhrases.some(a => zn.includes(a));
+  };
+
+  const hasPerimeterOrStreet = /calle\s*\d+|carrera\s*\d+|cra\s*\d+|cll\s*\d+|cl\s*\d+|diagonal\s*\d+|transversal\s*\d+|entre\s*calle|perimetro|perímetro/i.test(rawTextStr);
+  const isZoneAmbiguous = isAmbiguousZoneName(rawZoneStr);
+
+  if (isZoneAmbiguous && !hasPerimeterOrStreet && !insertData.presupuestoMax && !insertData.areaMin && !insertData.habitacionesMin) {
+    console.log(`[JANIA-INGESTION-GUARD] ⛔ Requerimiento omitido por falta de ubicación explícita o especificaciones prediales completas ("${insertData.rawText?.substring(0, 60)}...")`);
+    return null;
+  }
+
   // Buscar duplicado activo del mismo usuario (mismo tipo, negocio, ciudad y barrio deseados)
   const existing = await db
     .select()
