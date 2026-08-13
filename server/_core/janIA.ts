@@ -2195,7 +2195,27 @@ Por lo tanto, DEBES hacer lo siguiente:
         cleanText.includes("aún disponible")
       );
 
-      if (isShortComment) {
+      // Detectar preguntas de recomendación, servicios generales o consultas no prediales (ej: "Senior Living", "¿Alguien maneja o recomienda...?")
+      const isGeneralInquiryOrRecommendation = (
+        cleanText.includes("alguien maneja") ||
+        cleanText.includes("alguien recomienda") ||
+        cleanText.includes("alguien conoce") ||
+        cleanText.includes("senior living") ||
+        cleanText.includes("alguien tiene contacto") ||
+        cleanText.includes("quien maneja") ||
+        cleanText.includes("quién maneja") ||
+        cleanText.includes("quien recomienda") ||
+        cleanText.includes("recomiendan plomero") ||
+        cleanText.includes("recomiendan abogado") ||
+        cleanText.includes("recomiendan avaluador") ||
+        cleanText.includes("alguien que haga") ||
+        cleanText.includes("contacto de")
+      ) && !cleanText.includes("busco apto") && !cleanText.includes("busco casa") && !cleanText.includes("busco bodega") && !cleanText.includes("presupuesto");
+
+      if (isGeneralInquiryOrRecommendation) {
+        console.log(`[JANIA-FILTER] ⛔ Pregunta de recomendación o servicio general ignorada como Requerimiento/Inmueble: "${cleanText.substring(0, 50)}..."`);
+        result.classification = "CONSULTA_GENERAL";
+      } else if (isShortComment) {
         console.log(`[JANIA-FILTER] ⛔ Mensaje corto o corrección de chat omitido (${cleanText.substring(0, 40)}...). No se procesará como propiedad/requerimiento.`);
         result.classification = "CONSULTA_GENERAL";
       } else if (result.classification === "INMUEBLE" && isSearch && !isOffer) {
