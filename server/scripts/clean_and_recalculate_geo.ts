@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { getDb } from "../db";
-import { propertyMatches, properties, requirements } from "../../drizzle/schema";
+import { propertyMatches, properties, requirements, notificationLogs } from "../../drizzle/schema";
 import { explicarMatch } from "../_core/matching";
 import { eq } from "drizzle-orm";
 
@@ -26,6 +26,7 @@ async function main() {
 
     if (!prop || !req) {
       console.log(`❌ Inmueble o Requerimiento huérfano detectado (Match ID #${m.id}). Eliminando...`);
+      await db.delete(notificationLogs).where(eq(notificationLogs.matchId, m.id));
       await db.delete(propertyMatches).where(eq(propertyMatches.id, m.id));
       deletedCount++;
       continue;
@@ -33,10 +34,10 @@ async function main() {
 
     const exp = explicarMatch(req, prop);
 
-    // Si la afinidad geográfica dio 0% o el score total es menor a 85%, ELIMINAR el match de la BD
-    const geoScore = exp.breakdown?.barrio?.score || 0;
+    // Si la afinidad dio 0% o el score total es menor a 85%, ELIMINAR el match de la BD
     if (exp.score < 85 || exp.score === 0) {
       console.log(`🗑️ ELIMINANDO MATCH INVÁLIDO #${m.id} (Score: ${exp.score}% | Oferta: ${prop.zone || prop.addressNeighborhood} ↔ Demanda: ${req.zonaDeseada || req.addressNeighborhood})`);
+      await db.delete(notificationLogs).where(eq(notificationLogs.matchId, m.id));
       await db.delete(propertyMatches).where(eq(propertyMatches.id, m.id));
       deletedCount++;
     } else {
