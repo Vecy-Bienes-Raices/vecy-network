@@ -1050,33 +1050,68 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   const reqCity = resolveCityField(requirement.ciudadDeseada || requirement.addressCity || "", requirement.city || "");
   const propCity = resolveCityField(property.addressCity || "", property.city || "");
 
-  // ── FILTRO DURO CIUDAD (Doctrinal v22.1) ──
-  // Si ambas ciudades están definidas y NO coinciden → 0% ABSOLUTO. NO se almacena ni muestra.
   const reqCityNorm = normalizarTextoGeografico(reqCity);
   const propCityNorm = normalizarTextoGeografico(propCity);
-  const bothCitiesKnown = reqCityNorm && propCityNorm && reqCityNorm !== "colombia";
-  if (bothCitiesKnown && reqCityNorm !== propCityNorm) {
-    const sameCity = reqCityNorm.includes(propCityNorm) || propCityNorm.includes(reqCityNorm);
-    if (!sameCity) {
-      blockers.push(`⛔ Ciudad Incompatible: buscada "${reqCity}", ofrecida "${propCity}". MATCH IMPOSIBLE.`);
-      return buildExplanationResult(0, blockers, positives, negatives);
-    }
+
+  // NIVEL 1: Ciudad / Municipio — Obligatorio y exacto
+  if (!reqCityNorm || !propCityNorm) {
+    blockers.push(`⛔ Ciudad no resuelta: buscada "${reqCity || 'N/E'}", ofrecida "${propCity || 'N/E'}". MATCH IMPOSIBLE (0%).`);
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  if (reqCityNorm !== propCityNorm && !reqCityNorm.includes(propCityNorm) && !propCityNorm.includes(reqCityNorm)) {
+    blockers.push(`⛔ Ciudad Incompatible: buscada "${reqCity}", ofrecida "${propCity}". MATCH IMPOSIBLE (0%).`);
+    return buildExplanationResult(0, blockers, positives, negatives);
   }
   positives.push(`Ciudad coincide: ${reqCity}`);
 
-  // ── FILTRO DURO BARRIO/VEREDA (LOS BARRIOS DEBEN SER 100% IDÉNTICOS - DOCTRINAL) ──
-  const reqBarrioNorm = normalizarTextoGeografico(requirement.zonaDeseada || requirement.addressNeighborhood || "");
-  const propBarrioNorm = normalizarTextoGeografico(property.zone || property.addressNeighborhood || "");
-  const GENERIC_ZONES_SET = new Set(["bogota", "bogota d c", "medellin", "cali", "barranquilla", "colombia", "norte", "sur", "centro", "n/e", "na", ""]);
-  const reqBarrioIsSpecific = reqBarrioNorm && !GENERIC_ZONES_SET.has(reqBarrioNorm);
-  const propBarrioIsSpecific = propBarrioNorm && !GENERIC_ZONES_SET.has(propBarrioNorm);
-
-  if (reqBarrioIsSpecific && propBarrioIsSpecific) {
-    if (reqBarrioNorm !== propBarrioNorm) {
-      blockers.push(`⛔ Barrio Incompatible: "${requirement.zonaDeseada || reqBarrioNorm}" ≠ "${property.zone || propBarrioNorm}". LOS BARRIOS DEBEN SER 100% IDÉNTICOS (0%).`);
+  // NIVEL 2: Localidad / Comuna — Obligatorio si ambos la tienen resuelta
+  const reqLocalityNorm = normalizarTextoGeografico(requirement.addressLocality || requirement.localidadDeseada || "");
+  const propLocalityNorm = normalizarTextoGeografico(property.addressLocality || property.locality || "");
+  if (reqLocalityNorm && propLocalityNorm && reqLocalityNorm !== "n/e" && propLocalityNorm !== "n/e") {
+    if (reqLocalityNorm !== propLocalityNorm && !reqLocalityNorm.includes(propLocalityNorm) && !propLocalityNorm.includes(reqLocalityNorm)) {
+      blockers.push(`⛔ Localidad Incompatible: buscada "${requirement.addressLocality || requirement.localidadDeseada}", ofrecida "${property.addressLocality || property.locality}". MATCH IMPOSIBLE (0%).`);
       return buildExplanationResult(0, blockers, positives, negatives);
     }
   }
+
+  // NIVEL 3: Barrio / Vereda / Caserío — OBLIGATORIO Y EXACTO (Addendum v8)
+  // Sin fallback, sin aproximado. Si no está resuelto (null / N/E / genérico "Bogotá") -> BLOQUEO ABSOLUTO.
+  const GENERIC_ZONES_SET = new Set(["bogota", "bogota d c", "medellin", "cali", "barranquilla", "colombia", "norte", "sur", "centro", "n/e", "na", "null", "undefined", ""]);
+
+  const rawReqBarrio = requirement.zonaDeseada || requirement.addressNeighborhood || "";
+  const rawPropBarrio = property.zone || property.addressNeighborhood || "";
+
+  const reqBarrioNorm = normalizarTextoGeografico(rawReqBarrio);
+  const propBarrioNorm = normalizarTextoGeografico(rawPropBarrio);
+
+  const reqBarrioIsSpecific = reqBarrioNorm && !GENERIC_ZONES_SET.has(reqBarrioNorm);
+  const propBarrioIsSpecific = propBarrioNorm && !GENERIC_ZONES_SET.has(propBarrioNorm);
+
+  if (!reqBarrioIsSpecific || !propBarrioIsSpecific) {
+    blockers.push(`⛔ Barrio no resuelto: Requerimiento="${rawReqBarrio || 'N/E'}", Oferta="${rawPropBarrio || 'N/E'}". Se exige barrio específico verificado. MATCH IMPOSIBLE (0%).`);
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+
+  // Manejo de arrays resueltos (ej. lista de barrios de un cuadrante vial o desambiguación)
+  let reqBarriosArray: string[] = [reqBarrioNorm];
+  if (rawReqBarrio.startsWith("[") && rawReqBarrio.endsWith("]")) {
+    try {
+      const parsed = JSON.parse(rawReqBarrio);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        reqBarriosArray = parsed.map((b: string) => normalizarTextoGeografico(b)).filter(Boolean);
+      }
+    } catch (e) {}
+  }
+
+  const isBarrioMatched = reqBarriosArray.some(b => b === propBarrioNorm || (b.length > 5 && propBarrioNorm.length > 5 && (b.includes(propBarrioNorm) || propBarrioNorm.includes(b))));
+
+  if (!isBarrioMatched) {
+    blockers.push(`⛔ Barrio Incompatible: Requerimiento="${rawReqBarrio}" ≠ Oferta="${rawPropBarrio}". LOS BARRIOS DEBEN COINCIDIR EXACTAMENTE (0%).`);
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+
+  positives.push(`Barrio coincide: ${rawPropBarrio}`);
+
 
 
 

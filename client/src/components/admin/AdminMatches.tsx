@@ -379,14 +379,17 @@ function scoreRows(req: any, prop: any) {
   const normReqB = normalizeBarrio(reqBarrioDisplay);
   const normPropB = normalizeBarrio(propBarrioDisplay);
 
-  let barrioMatchStatus: MatchStatus = "exact";
-  if (reqBarrioDisplay === "N/E" || propBarrioDisplay === "N/E") {
-    barrioMatchStatus = "neutral";
+  let barrioMatchStatus: MatchStatus = "missing";
+  const isGenericZone = (zn: string) => !zn || zn === "N/E" || zn === "na" || zn === "bogota" || zn === "bogotá" || zn === "bogota, d.c.";
+
+  if (isGenericZone(reqBarrioDisplay) || isGenericZone(propBarrioDisplay)) {
+    barrioMatchStatus = "missing"; // BARRIO NO RESUELTO (N/E O BOGOTÁ) -> FALLIDO / SACADO DE ALLÍ (0%)
   } else if (normReqB === normPropB) {
-    barrioMatchStatus = "exact"; // LOS BARRIOS DEBEN SER 100% IDÉNTICOS
+    barrioMatchStatus = "exact"; // 100% BARRIO IDÉNTICO VERIFICADO
   } else {
-    barrioMatchStatus = "missing"; // SI NO SON 100% IDÉNTICOS -> FALLIDO (0%)
+    barrioMatchStatus = "missing"; // BARRIOS DISTINTOS -> FALLIDO (0%)
   }
+
 
   // A. Barrio / Vereda / Caserío
   add(

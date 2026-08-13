@@ -21,8 +21,13 @@ export const BARRIOS_LAS_SANTAS = [
   "Santa Ana Occidental",
   "Santa Paula",
   "Santa Bibiana",
-  "San Patricio"
-];
+  ];
+
+export const GENERIC_ZONES_SET = new Set([
+  "bogota", "bogota d c", "bogota dc", "medellin", "cali", "barranquilla", 
+  "colombia", "norte", "sur", "centro", "n/e", "na", "null", "undefined", ""
+]);
+
 
 export function isLasSantasZone(zoneStr: string | null | undefined): boolean {
   if (!zoneStr) return false;
@@ -863,12 +868,13 @@ export async function resolverCuadranteVial(texto: string): Promise<{ resuelto: 
 }
 
 export interface DeduccionGeograficaResult {
-  neighborhood: string;   // Barrio / Vereda / Caserío
-  locality: string;       // Localidad / Comuna
-  city: string;           // Ciudad / Municipio
-  department: string;     // Departamento
+  neighborhood: string | null;   // Barrio / Vereda / Caserío (null si no se resolvió)
+  locality: string | null;       // Localidad / Comuna (null si no se resolvió)
+  city: string;                  // Ciudad / Municipio
+  department: string;            // Departamento
   confidence: string;
 }
+
 
 /**
  * Deduce la geografía tripartita (Barrio/Vereda, Localidad/Comuna, Ciudad/Municipio)
@@ -1028,8 +1034,9 @@ export function deducirGeografiaTripartita(
     normalizarTextoGeografico(inputZone).includes("bogota") ||
     normalizarTextoGeografico(inputZone).includes("bogotá");
 
-  let neighborhood = isGenericZone ? "" : (inputZone?.trim() || "");
-  let locality = "";
+  let neighborhood: string | null = isGenericZone ? null : (inputZone?.trim() || null);
+  let locality: string | null = null;
+
   let foundBarrio = false;
 
   // Buscar en el diccionario usando zona + rawText completo
@@ -1062,17 +1069,19 @@ export function deducirGeografiaTripartita(
     if (foundBarrio) break;
   }
 
-  // Si no se encontró barrio específico, usar la zona original o "Bogotá" como fallback
+  // Si no se encontró barrio específico, NUNCA rellenar con el nombre de la ciudad ("Bogotá").
+  // Retornar neighborhood: null y locality: null para que el filtro tri-nivel o la cola de revisión actúe.
   if (!foundBarrio) {
-    neighborhood = isGenericZone ? "Bogotá" : (inputZone?.trim() || "Bogotá");
-    locality = "Bogotá Urbano";
+    neighborhood = isGenericZone ? null : (inputZone && !GENERIC_ZONES_SET.has(normalizarTextoGeografico(inputZone)) ? inputZone.trim() : null);
+    locality = null;
   }
 
   return {
     neighborhood,
-    locality: locality || "Bogotá Urbano",
+    locality,
     city: "Bogotá, D.C.",
     department: "Cundinamarca / D.C.",
-    confidence: foundBarrio ? "alta_deduccion_bogota" : "deduccion_generica_bogota"
+    confidence: foundBarrio ? "alta_deduccion_bogota" : "pendiente_revision_ubicacion"
   };
 }
+

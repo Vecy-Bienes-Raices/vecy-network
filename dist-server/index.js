@@ -2599,8 +2599,8 @@ function deducirGeografiaTripartita(inputZone, inputCity, groupName, rawText) {
     }
   }
   const isGenericZone = !inputZone || inputZone.trim() === "" || normalizarTextoGeografico(inputZone).trim() === "na" || normalizarTextoGeografico(inputZone).includes("bogota") || normalizarTextoGeografico(inputZone).includes("bogot\xE1");
-  let neighborhood = isGenericZone ? "" : inputZone?.trim() || "";
-  let locality = "";
+  let neighborhood = isGenericZone ? null : inputZone?.trim() || null;
+  let locality = null;
   let foundBarrio = false;
   for (const [, info] of Object.entries(DICCIONARIO_BOGOTA)) {
     for (const b of info.barrios) {
@@ -2627,18 +2627,18 @@ function deducirGeografiaTripartita(inputZone, inputCity, groupName, rawText) {
     if (foundBarrio) break;
   }
   if (!foundBarrio) {
-    neighborhood = isGenericZone ? "Bogot\xE1" : inputZone?.trim() || "Bogot\xE1";
-    locality = "Bogot\xE1 Urbano";
+    neighborhood = isGenericZone ? null : inputZone && !GENERIC_ZONES_SET.has(normalizarTextoGeografico(inputZone)) ? inputZone.trim() : null;
+    locality = null;
   }
   return {
     neighborhood,
-    locality: locality || "Bogot\xE1 Urbano",
+    locality,
     city: "Bogot\xE1, D.C.",
     department: "Cundinamarca / D.C.",
-    confidence: foundBarrio ? "alta_deduccion_bogota" : "deduccion_generica_bogota"
+    confidence: foundBarrio ? "alta_deduccion_bogota" : "pendiente_revision_ubicacion"
   };
 }
-var DICCIONARIO_BOGOTA, MUNICIPIOS_CERCANOS, MAPA_BARRIOS, MAPA_LOCALIDADES;
+var GENERIC_ZONES_SET, DICCIONARIO_BOGOTA, MUNICIPIOS_CERCANOS, MAPA_BARRIOS, MAPA_LOCALIDADES;
 var init_geography = __esm({
   "server/_core/geography.ts"() {
     "use strict";
@@ -2647,6 +2647,23 @@ var init_geography = __esm({
     init_db();
     init_schema();
     init_geo_lookup();
+    GENERIC_ZONES_SET = /* @__PURE__ */ new Set([
+      "bogota",
+      "bogota d c",
+      "bogota dc",
+      "medellin",
+      "cali",
+      "barranquilla",
+      "colombia",
+      "norte",
+      "sur",
+      "centro",
+      "n/e",
+      "na",
+      "null",
+      "undefined",
+      ""
+    ]);
     DICCIONARIO_BOGOTA = {
       "usaquen": {
         localidad: "Usaqu\xE9n",
@@ -4020,26 +4037,50 @@ function explicarMatch(requirement, property) {
   const propCity = resolveCityField(property.addressCity || "", property.city || "");
   const reqCityNorm = normalizarTextoGeografico(reqCity);
   const propCityNorm = normalizarTextoGeografico(propCity);
-  const bothCitiesKnown = reqCityNorm && propCityNorm && reqCityNorm !== "colombia";
-  if (bothCitiesKnown && reqCityNorm !== propCityNorm) {
-    const sameCity = reqCityNorm.includes(propCityNorm) || propCityNorm.includes(reqCityNorm);
-    if (!sameCity) {
-      blockers.push(`\u26D4 Ciudad Incompatible: buscada "${reqCity}", ofrecida "${propCity}". MATCH IMPOSIBLE.`);
-      return buildExplanationResult(0, blockers, positives, negatives);
-    }
+  if (!reqCityNorm || !propCityNorm) {
+    blockers.push(`\u26D4 Ciudad no resuelta: buscada "${reqCity || "N/E"}", ofrecida "${propCity || "N/E"}". MATCH IMPOSIBLE (0%).`);
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  if (reqCityNorm !== propCityNorm && !reqCityNorm.includes(propCityNorm) && !propCityNorm.includes(reqCityNorm)) {
+    blockers.push(`\u26D4 Ciudad Incompatible: buscada "${reqCity}", ofrecida "${propCity}". MATCH IMPOSIBLE (0%).`);
+    return buildExplanationResult(0, blockers, positives, negatives);
   }
   positives.push(`Ciudad coincide: ${reqCity}`);
-  const reqBarrioNorm = normalizarTextoGeografico(requirement.zonaDeseada || requirement.addressNeighborhood || "");
-  const propBarrioNorm = normalizarTextoGeografico(property.zone || property.addressNeighborhood || "");
-  const GENERIC_ZONES_SET = /* @__PURE__ */ new Set(["bogota", "bogota d c", "medellin", "cali", "barranquilla", "colombia", "norte", "sur", "centro", "n/e", "na", ""]);
-  const reqBarrioIsSpecific = reqBarrioNorm && !GENERIC_ZONES_SET.has(reqBarrioNorm);
-  const propBarrioIsSpecific = propBarrioNorm && !GENERIC_ZONES_SET.has(propBarrioNorm);
-  if (reqBarrioIsSpecific && propBarrioIsSpecific) {
-    if (reqBarrioNorm !== propBarrioNorm) {
-      blockers.push(`\u26D4 Barrio Incompatible: "${requirement.zonaDeseada || reqBarrioNorm}" \u2260 "${property.zone || propBarrioNorm}". LOS BARRIOS DEBEN SER 100% ID\xC9NTICOS (0%).`);
+  const reqLocalityNorm = normalizarTextoGeografico(requirement.addressLocality || requirement.localidadDeseada || "");
+  const propLocalityNorm = normalizarTextoGeografico(property.addressLocality || property.locality || "");
+  if (reqLocalityNorm && propLocalityNorm && reqLocalityNorm !== "n/e" && propLocalityNorm !== "n/e") {
+    if (reqLocalityNorm !== propLocalityNorm && !reqLocalityNorm.includes(propLocalityNorm) && !propLocalityNorm.includes(reqLocalityNorm)) {
+      blockers.push(`\u26D4 Localidad Incompatible: buscada "${requirement.addressLocality || requirement.localidadDeseada}", ofrecida "${property.addressLocality || property.locality}". MATCH IMPOSIBLE (0%).`);
       return buildExplanationResult(0, blockers, positives, negatives);
     }
   }
+  const GENERIC_ZONES_SET2 = /* @__PURE__ */ new Set(["bogota", "bogota d c", "medellin", "cali", "barranquilla", "colombia", "norte", "sur", "centro", "n/e", "na", "null", "undefined", ""]);
+  const rawReqBarrio = requirement.zonaDeseada || requirement.addressNeighborhood || "";
+  const rawPropBarrio = property.zone || property.addressNeighborhood || "";
+  const reqBarrioNorm = normalizarTextoGeografico(rawReqBarrio);
+  const propBarrioNorm = normalizarTextoGeografico(rawPropBarrio);
+  const reqBarrioIsSpecific = reqBarrioNorm && !GENERIC_ZONES_SET2.has(reqBarrioNorm);
+  const propBarrioIsSpecific = propBarrioNorm && !GENERIC_ZONES_SET2.has(propBarrioNorm);
+  if (!reqBarrioIsSpecific || !propBarrioIsSpecific) {
+    blockers.push(`\u26D4 Barrio no resuelto: Requerimiento="${rawReqBarrio || "N/E"}", Oferta="${rawPropBarrio || "N/E"}". Se exige barrio espec\xEDfico verificado. MATCH IMPOSIBLE (0%).`);
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  let reqBarriosArray = [reqBarrioNorm];
+  if (rawReqBarrio.startsWith("[") && rawReqBarrio.endsWith("]")) {
+    try {
+      const parsed = JSON.parse(rawReqBarrio);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        reqBarriosArray = parsed.map((b) => normalizarTextoGeografico(b)).filter(Boolean);
+      }
+    } catch (e) {
+    }
+  }
+  const isBarrioMatched = reqBarriosArray.some((b) => b === propBarrioNorm || b.length > 5 && propBarrioNorm.length > 5 && (b.includes(propBarrioNorm) || propBarrioNorm.includes(b)));
+  if (!isBarrioMatched) {
+    blockers.push(`\u26D4 Barrio Incompatible: Requerimiento="${rawReqBarrio}" \u2260 Oferta="${rawPropBarrio}". LOS BARRIOS DEBEN COINCIDIR EXACTAMENTE (0%).`);
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  positives.push(`Barrio coincide: ${rawPropBarrio}`);
   function isPhoneNumberNotPrice2(val, rawText) {
     if (val === void 0 || val === null || val === "" || val === 0 || val === "0") return false;
     const numStr = String(val).replace(/\D/g, "");
