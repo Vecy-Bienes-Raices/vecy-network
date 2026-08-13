@@ -327,9 +327,43 @@ function scoreRows(req: any, prop: any) {
     });
   };
 
+  // Limpiador estricto para evitar que nombres de ciudades o países aparezcan como barrio
+  const cleanBarrioValue = (bVal: string | null | undefined, cVal: string | null | undefined): string => {
+    if (!bVal || bVal === "N/E") return "N/E";
+    const b = bVal.trim();
+    if (!b) return "N/E";
+
+    const bNorm = b.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+    const cNorm = (cVal || "bogota").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+
+    // Si el valor asignado al barrio es el nombre de la ciudad o país, NO es un barrio -> Retornar N/E
+    if (
+      bNorm === cNorm ||
+      bNorm === "bogota" ||
+      bNorm === "bogota d.c." ||
+      bNorm === "bogota d.c" ||
+      bNorm === "bogota, d.c." ||
+      bNorm === "medellin" ||
+      bNorm === "cali" ||
+      bNorm === "barranquilla" ||
+      bNorm === "bucaramanga" ||
+      bNorm === "cartagena" ||
+      bNorm === "chia" ||
+      bNorm === "cajica" ||
+      bNorm === "soacha" ||
+      bNorm === "colombia"
+    ) {
+      return "N/E";
+    }
+    return b;
+  };
+
   // Valores de display priorizando los campos tripartitos ya deducidos por janIA
-  const reqBarrioDisplay = req.addressNeighborhood || reqEffectiveZone || "N/E";
-  const propBarrioDisplay = prop.addressNeighborhood || propEffectiveZone || "N/E";
+  const reqBarrioRaw = req.addressNeighborhood || reqEffectiveZone;
+  const propBarrioRaw = prop.addressNeighborhood || propEffectiveZone;
+
+  const reqBarrioDisplay = cleanBarrioValue(reqBarrioRaw, req.addressCity || req.ciudadDeseada);
+  const propBarrioDisplay = cleanBarrioValue(propBarrioRaw, prop.addressCity || prop.city);
   const reqLocalityDisplay = req.addressLocality || "N/E";
   const propLocalityDisplay = prop.addressLocality || "N/E";
   const reqCityDisplay = req.addressCity || req.ciudadDeseada || "Bogotá";
