@@ -9,19 +9,47 @@ import { colombiaGeography } from '../../drizzle/schema';
 import { sql } from 'drizzle-orm';
 import { lookupBarriosByPerimeter } from './geo-lookup';
 
+export const BARRIOS_LAS_SANTAS = [
+  "Santa Bárbara",
+  "Santa Bárbara Central",
+  "Santa Bárbara Norte",
+  "Santa Bárbara Oriental",
+  "Santa Bárbara Occidental",
+  "Santa Ana",
+  "Santa Ana Central",
+  "Santa Ana Oriental",
+  "Santa Ana Occidental",
+  "Santa Paula",
+  "Santa Bibiana",
+  "San Patricio"
+];
+
+export function isLasSantasZone(zoneStr: string | null | undefined): boolean {
+  if (!zoneStr) return false;
+  const zn = zoneStr.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  return zn.includes("las santas") || zn.includes("todas las santas") || zn === "santas";
+}
+
+export function isBarrioInLasSantas(barrioStr: string | null | undefined): boolean {
+  if (!barrioStr) return false;
+  const bn = barrioStr.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  return BARRIOS_LAS_SANTAS.some(b => bn.includes(b.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")));
+}
+
 export const DICCIONARIO_BOGOTA: Record<string, { localidad: string, barrios: string[] }> = {
   "usaquen": {
     localidad: "Usaquén",
     barrios: [
-      "Cedritos", "Los Cedros", "Santa Bárbara", "Santa Bárbara Central",
-      "Santa Bárbara Norte", "Las Santas", "Todas las Santas", "Santa Ana", "Santa Paula", "Santa Teresa",
+      "Cedritos", "Los Cedros", "Santa Bárbara", "Santa Bárbara Central", "Santa Bárbara Occidental", "Santa Bárbara Oriental",
+      "Santa Bárbara Norte", "Las Santas", "Todas las Santas", "Santa Ana", "Santa Ana Central", "Santa Ana Oriental", "Santa Ana Occidental",
+      "Santa Paula", "Santa Bibiana", "San Patricio", "Santa Teresa",
       "El Chicó", "Chicó Norte", "Chicó Reservado",
-      "Usaquén", "Toberín", "Country Club", "San Patricio", "La Uribe",
+      "Usaquén", "Toberín", "Country Club", "La Uribe",
       "Verbenal", "Barrancas", "Horizontes", "La Cita", "Tibabita",
       "La Cerámica", "La Unión", "Los Arrayanes", "Bosque Medina",
       // Usaquén estrato alto norte
       "La Calleja", "Calleja Baja", "Calleja Alta", "Bosque De Pinos",
-      "Los Andes", "Bosque Medina", "Santa Ana Occidental", "Santa Ana Oriental",
+      "Los Andes", "Bosque Medina",
       "El Polo", "Club El Nogal", "Antiguo Country", "Bella Suiza",
       "Colina Campestre", "Los Alcaparros", "La Carolina", "Mazurén",
       "San Antonio Norte", "Gratamira Mónica"

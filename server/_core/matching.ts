@@ -1,7 +1,7 @@
 import { getDb } from "../db";
 import { and, eq, sql } from "drizzle-orm";
 import { propertyMatches, properties, requirements } from "../../drizzle/schema";
-import { normalizarTextoGeografico } from "./geography";
+import { normalizarTextoGeografico, isLasSantasZone, isBarrioInLasSantas, BARRIOS_LAS_SANTAS } from "./geography";
 import { lookupBarriosByPerimeter } from "./geo-lookup";
 import { VECY_VERSION_LABEL } from "../../shared/const";
 
