@@ -362,12 +362,30 @@ function scoreRows(req: any, prop: any) {
   const reqBarrioRaw = req.addressNeighborhood || reqEffectiveZone;
   const propBarrioRaw = prop.addressNeighborhood || propEffectiveZone;
 
+  const inferLocalityFromBarrio = (bName: string | null | undefined): string => {
+    if (!bName || bName === "N/E") return "N/E";
+    const norm = bName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+    if (norm.includes("rosales") || norm.includes("chico") || norm.includes("nogal") || norm.includes("cabrera") || norm.includes("virrey") || norm.includes("quinta camacho") || norm.includes("chapinero")) return "Chapinero";
+    if (norm.includes("cedritos") || norm.includes("santa barbara") || norm.includes("santa paula") || norm.includes("bella suiza") || norm.includes("contador") || norm.includes("san patricio") || norm.includes("toberin") || norm.includes("usaquen")) return "Usaquén";
+    if (norm.includes("niza") || norm.includes("pasadena") || norm.includes("colina") || norm.includes("suba")) return "Suba";
+    if (norm.includes("modelia") || norm.includes("fontibon")) return "Fontibón";
+    if (norm.includes("teusaquillo")) return "Teusaquillo";
+    if (norm.includes("restrepo")) return "Antonio Nariño";
+    if (norm.includes("candelaria")) return "La Candelaria";
+    if (norm.includes("kennedy")) return "Kennedy";
+    if (norm.includes("normandia")) return "Engativá";
+    return "N/E";
+  };
+
   const reqBarrioDisplay = cleanBarrioValue(reqBarrioRaw, req.addressCity || req.ciudadDeseada);
   const propBarrioDisplay = cleanBarrioValue(propBarrioRaw, prop.addressCity || prop.city);
-  const reqLocalityDisplay = req.addressLocality || "N/E";
-  const propLocalityDisplay = prop.addressLocality || "N/E";
-  const reqCityDisplay = req.addressCity || req.ciudadDeseada || "Bogotá";
-  const propCityDisplay = prop.addressCity || prop.city || "Bogotá";
+
+  const reqLocalityDisplay = (req.addressLocality && req.addressLocality !== "N/E") ? req.addressLocality : inferLocalityFromBarrio(reqBarrioDisplay);
+  const propLocalityDisplay = (prop.addressLocality && prop.addressLocality !== "N/E") ? prop.addressLocality : inferLocalityFromBarrio(propBarrioDisplay);
+
+  const reqCityDisplay = req.addressCity || req.ciudadDeseada || "Bogotá, D.C.";
+  const propCityDisplay = prop.addressCity || prop.city || "Bogotá, D.C.";
+
 
   // A. Ciudad / Municipio — FILTRO DURO BINARIO
   const isCityMatch =
@@ -909,7 +927,7 @@ function scoreRows(req: any, prop: any) {
 function formatCOP(val: string | number) {
   const num = parseFloat(String(val));
   if (isNaN(num) || num === 0) return "N/E";
-  return num.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
+  return "$" + Math.round(num).toLocaleString('es-CO');
 }
 
 function isValidRealPhoneNumber(clean: string): boolean {
