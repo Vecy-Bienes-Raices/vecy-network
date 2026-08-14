@@ -384,9 +384,10 @@ function scoreRows(req: any, prop: any) {
 
   if (isGenericZone(reqBarrioDisplay) || isGenericZone(propBarrioDisplay)) {
     barrioMatchStatus = "missing"; // BARRIO NO RESUELTO (N/E O BOGOTÁ) -> FALLIDO / SACADO DE ALLÍ (0%)
-  } else if (normReqB === normPropB) {
-    barrioMatchStatus = "exact"; // 100% BARRIO IDÉNTICO VERIFICADO
+  } else if (matchBarrioExacto(reqBarrioDisplay, propBarrioDisplay) || normReqB === normPropB || normReqB.includes(normPropB) || normPropB.includes(normReqB)) {
+    barrioMatchStatus = "exact"; // 100% BARRIO IDÉNTICO O SECTOR COINCIDENTE VERIFICADO
   } else {
+
     barrioMatchStatus = "missing"; // BARRIOS DISTINTOS -> FALLIDO (0%)
   }
 
@@ -1233,19 +1234,22 @@ export default function AdminMatches() {
 
       // Evaluar la afinidad comercial y la regla doctrinal de los 5 campos en duro + completitud
       const { rows, autoScore } = scoreRows(requirement, property);
+      const dbScore = parseFloat(match.matchScore || "0");
+      const displayScore = autoScore > 0 ? autoScore : dbScore;
 
-      // Si autoScore === 0 (cualquiera de los 5 campos en duro no coincide o completitud < 50%) -> SACADO DE ALLÍ DE INMEDIATO
-      if (autoScore === 0 || autoScore < 80) {
+      // Si la puntuación del cotejo es menor a 80 -> No mostrar en el reporte principal
+      if (displayScore < 80) {
         return false;
       }
 
       // Aplicar filtro de puntuación de la interfaz (ej. "80_94" o minScore)
       if (minScore === "80_94") {
-        if (autoScore < 80 || autoScore >= 95) return false;
+        if (displayScore < 80 || displayScore >= 95) return false;
       } else {
         const minVal = parseFloat(minScore);
-        if (autoScore < minVal) return false;
+        if (displayScore < minVal) return false;
       }
+
 
       if (seenMatchIds.has(match.id)) return false;
       
