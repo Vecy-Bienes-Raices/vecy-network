@@ -1198,8 +1198,10 @@ export default function AdminMatches() {
 
   // Fetch matches directly from server API with auto-refresh every 10s
   const { data: matches = [], isLoading, refetch } = trpc.janIA.getAllMatches.useQuery(undefined, {
-    refetchInterval: 10000,
+    refetchInterval: 60000,
+    staleTime: 30000,
   });
+
 
   const getStatusColor = (status: string) => {
     switch (status) {
