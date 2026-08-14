@@ -48,28 +48,24 @@ export const DICCIONARIO_BOGOTA: Record<string, { localidad: string, barrios: st
       "Cedritos", "Los Cedros", "Santa Bárbara", "Santa Bárbara Central", "Santa Bárbara Occidental", "Santa Bárbara Oriental",
       "Santa Bárbara Norte", "Las Santas", "Todas las Santas", "Santa Ana", "Santa Ana Central", "Santa Ana Oriental", "Santa Ana Occidental",
       "Santa Paula", "Santa Bibiana", "San Patricio", "Santa Teresa",
-      "El Chicó", "Chicó Norte", "Chicó Reservado",
       "Usaquén", "Toberín", "Country Club", "La Uribe",
       "Verbenal", "Barrancas", "Horizontes", "La Cita", "Tibabita",
       "La Cerámica", "La Unión", "Los Arrayanes", "Bosque Medina",
-      // Usaquén estrato alto norte
       "La Calleja", "Calleja Baja", "Calleja Alta", "Bosque De Pinos",
-      "Los Andes", "Bosque Medina",
-      "El Polo", "Club El Nogal", "Antiguo Country", "Bella Suiza",
-      "Colina Campestre", "Los Alcaparros", "La Carolina", "Mazurén",
+      "Bella Suiza", "Colina Campestre", "Los Alcaparros", "La Carolina", "Mazurén",
       "San Antonio Norte", "Gratamira Mónica"
     ]
   },
   "chapinero": {
     localidad: "Chapinero",
     barrios: [
-      "El Lago", "El Retiro", "Rosales", "Los Rosales", "La Cabrera",
-      "Chicó Reservado Norte", "Chapinero Central", "Chapinero Alto",
-      "Pardo Rubio", "Quinta Camacho", "El Castillo", "San Luis", "Juan XXIII",
-      "El Refugio", "El Nogal", "El Bosque", "Granada", "Porciúncula",
-      "Lago Gaitán", "Espartillal", "La Salle", "Marly", "Virrey", "El Virrey", "Rincon Del Chico"
+      "El Chicó", "Chicó Norte", "Chicó Norte II", "Chicó Norte III", "Chicó Reservado", "Chicó Navarra", "Chicó Reservado Norte",
+      "El Nogal", "Club El Nogal", "El Lago", "El Retiro", "Rosales", "Los Rosales", "La Cabrera",
+      "Chapinero Central", "Chapinero Alto", "Pardo Rubio", "Quinta Camacho", "El Castillo", "San Luis", "Juan XXIII",
+      "El Refugio", "El Bosque", "Granada", "Porciúncula", "Lago Gaitán", "Espartillal", "La Salle", "Marly", "Virrey", "El Virrey", "Rincón del Chicó"
     ]
   },
+
   "suba": {
     localidad: "Suba",
     barrios: [

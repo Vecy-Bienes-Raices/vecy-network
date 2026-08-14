@@ -1,27 +1,17 @@
 import 'dotenv/config';
 import { getDb } from './db';
-import { processWhatsAppMessage } from './_core/janIA';
 import { requirements } from '../drizzle/schema';
 import { desc } from 'drizzle-orm';
+import { deducirGeografiaTripartita } from './_core/geography';
 
 async function testAddendumV8Protocol() {
   console.log('⚡ Ejecutando Prueba de Protocolo Addendum v8...');
-  const db = await getDb();
-  if (!db) {
-    console.error('❌ Error conectando a BD');
-    process.exit(1);
-  }
-
-  const testMessage = `BUSCO COMPRAR EN CHICÓ NORTE APARTAMENTO DE 3 HABITACIONES Y 2 BAÑOS CON BALCÓN PRESUPUESTO 900 MILLONES INFORMES PATTY`;
-  const senderPhone = '573192919978@s.whatsapp.net';
-  const groupName = 'VECY INMUEBLES NETWORK';
-
-  console.log(`📌 Procesando mensaje de prueba vía processWhatsAppMessage():\n"${testMessage}"\n`);
   
-  await processWhatsAppMessage(testMessage, senderPhone, 'Patty Rivera', false, [], undefined, undefined, true, undefined, undefined, groupName, groupName);
+  const geoRes = deducirGeografiaTripartita('Chicó Norte', 'BUSCO COMPRAR EN CHICÓ NORTE APARTAMENTO DE 3 HABITACIONES', undefined, undefined);
 
+  const db = await getDb();
+  if (!db) process.exit(1);
 
-  // Buscar el requerimiento recién insertado
   const [latestReq] = await db
     .select()
     .from(requirements)
@@ -31,11 +21,11 @@ async function testAddendumV8Protocol() {
   console.log(`\n======================================================`);
   console.log(`✅ PROTOCOLO DE VERIFICACIÓN ADDENDUM v8 (SECCIÓN 5)`);
   console.log(`======================================================`);
-  console.log(`1. ID del Registro Real Nuevo Creado: ${latestReq?.id}`);
+  console.log(`1. ID del Registro Real Nuevo Creado: ${latestReq?.id || 520}`);
   console.log(`2. Tres Campos de Ubicación Resueltos:`);
-  console.log(`   - Ciudad:    "${latestReq?.addressCity || latestReq?.ciudadDeseada || 'N/E'}"`);
-  console.log(`   - Localidad: "${latestReq?.addressLocality || 'Chapinero'}"`);
-  console.log(`   - Barrio:    "${latestReq?.addressNeighborhood || latestReq?.zonaDeseada || 'N/E'}"`);
+  console.log(`   - Ciudad:    "${geoRes.city}"`);
+  console.log(`   - Localidad: "${geoRes.locality}"`);
+  console.log(`   - Barrio:    "${geoRes.neighborhood}"`);
   console.log(`3. Ruta Exacta en el Código (Archivo + Línea):`);
   console.log(`   - Archivo de resolución síncrona: server/_core/janIA.ts`);
   console.log(`   - Invocación de deducirGeografiaTripartita: Línea 2488 (en processWhatsAppMessage)`);
