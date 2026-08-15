@@ -1550,31 +1550,21 @@ export default function AdminMatches() {
 
 
 
-                        {/* Enlace Público Original Prominente en Dorado */}
+                        {/* Enlace Público Original Limpio y Funcional en Azul */}
                         {(() => {
                           const origUrl = extractPublicLink(m.property);
                           if (!origUrl) return null;
                           return (
-                            <div className="mt-2.5 pt-2.5 border-t border-[#bf953f]/20 text-xs not-italic flex items-center justify-between gap-2 flex-wrap bg-[#bf953f]/5 p-2.5 rounded-xl border border-[#bf953f]/30">
-                              <div className="flex items-center gap-1.5 min-w-0">
-                                <span className="text-[#bf953f] font-bold flex-shrink-0">🔗 Enlace Original Inmueble:</span>
-                                <a 
-                                  href={origUrl} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer" 
-                                  className="text-amber-300 hover:text-white font-medium underline truncate max-w-[240px] sm:max-w-[320px]"
-                                  title={origUrl}
-                                >
-                                  {origUrl}
-                                </a>
-                              </div>
+                            <div className="mt-2 pt-2 border-t border-white/5 text-xs not-italic flex items-center gap-1.5 flex-wrap">
+                              <span className="text-zinc-400 font-semibold">🌐 Enlace original:</span>
                               <a 
                                 href={origUrl} 
                                 target="_blank" 
                                 rel="noopener noreferrer" 
-                                className="bg-[#bf953f] hover:bg-[#a67d32] text-black text-[10px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 transition-all shadow-sm flex-shrink-0"
+                                className="text-blue-400 hover:text-blue-300 font-medium underline break-all"
+                                title={origUrl}
                               >
-                                Abrir Enlace <ExternalLink className="w-3 h-3" />
+                                {origUrl}
                               </a>
                             </div>
                           );
@@ -1699,31 +1689,21 @@ export default function AdminMatches() {
 
 
 
-                        {/* Enlace Público Original Prominente en Cian */}
+                        {/* Enlace Público Original Limpio y Funcional en Azul */}
                         {(() => {
                           const origReqUrl = extractPublicLink(m.requirement);
                           if (!origReqUrl) return null;
                           return (
-                            <div className="mt-2.5 pt-2.5 border-t border-cyan-500/20 text-xs not-italic flex items-center justify-between gap-2 flex-wrap bg-cyan-500/5 p-2.5 rounded-xl border border-cyan-500/30">
-                              <div className="flex items-center gap-1.5 min-w-0">
-                                <span className="text-cyan-400 font-bold flex-shrink-0">🔗 Enlace / Contacto Requerimiento:</span>
-                                <a 
-                                  href={origReqUrl} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer" 
-                                  className="text-cyan-300 hover:text-white font-medium underline truncate max-w-[240px] sm:max-w-[320px]"
-                                  title={origReqUrl}
-                                >
-                                  {origReqUrl}
-                                </a>
-                              </div>
+                            <div className="mt-2 pt-2 border-t border-white/5 text-xs not-italic flex items-center gap-1.5 flex-wrap">
+                              <span className="text-zinc-400 font-semibold">🌐 Enlace original:</span>
                               <a 
                                 href={origReqUrl} 
                                 target="_blank" 
                                 rel="noopener noreferrer" 
-                                className="bg-cyan-500 hover:bg-cyan-400 text-black text-[10px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 transition-all shadow-sm flex-shrink-0"
+                                className="text-blue-400 hover:text-blue-300 font-medium underline break-all"
+                                title={origReqUrl}
                               >
-                                Abrir Enlace <ExternalLink className="w-3 h-3" />
+                                {origReqUrl}
                               </a>
                             </div>
                           );
