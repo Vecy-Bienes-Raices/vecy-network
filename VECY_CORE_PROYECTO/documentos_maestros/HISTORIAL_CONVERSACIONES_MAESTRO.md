@@ -114,7 +114,8 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
   - Propiedad #409 vs Req #44 $\rightarrow$ **0% Match / Bloqueo Absoluto**.
   - Propiedad #1138 vs Req #377 $\rightarrow$ **0% Match / Bloqueo Financiero Total (Canon $13.78M > Ppto $5M)**.
   - Propiedad #217 vs Req #55 $\rightarrow$ **0% Match / Bloqueo Total (Tipo Casa vs Apartamento y Precio $849.5M > $300M)**.
-- **Codificación y Documentación de las 8 Reglas de Transacción**: Actualizado `TRANSACTION_COMPATIBILITY_MATRIX` y los comentarios rectores en `server/_core/matching.ts`.
+- **Resolución de Error en Pantalla de Admin (`ReferenceError: isEditingThisCard is not defined`)**:
+  - En `AdminMatches.tsx` (`filteredMatches`), se corrigió el alcance de la variable `isEditingThisCard = editingMatchId === match.id` y se incorporó en las dependencias de `useMemo`, eliminando el crash y restableciendo la carga instantánea de la vista de matches.
 
 #### 💬 Respuestas y Confirmaciones Entregadas a Eduardo:
 - Diagnóstico completo presentado explicando por qué la frase publicitaria "A minutos de Hacienda Santa Bárbara" causó la confusión en la ingesta anterior.
@@ -126,6 +127,7 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - Aplicación estricta de la regla doctrinal de "Coincide" (solo para valores 100% idénticos) y "Aproximado" (para diferencias que satisfacen la demanda) en todas las filas a partir de la fila 6, manteniendo las 5 primeras filas como filtros binarios puros.
 - Aplicación de la política de Cero Matches Fallidos: si hay un solo dato fallido, el score es 0% y se excluye de la web/admin.
 - Definición y activación del Match Perfecto 100% cuando todas las filas dicen "Coincide".
+- Corrección del ReferenceError en React y restablecimiento de la interfaz en producción.
 - Confirmación y alineación total con la doctrina del 100% al 80% para el cotejo técnico.
 - Confirmación y registro de las 8 reglas explícitas de compatibilidad transaccional y los límites de techo y segmento de precio.
 
