@@ -692,6 +692,22 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 - **Filtro `SERVER_BOOT_TIME`**: Los mensajes publicados con fecha/hora previa al reinicio del servidor son ignorados de forma intencional para evitar reprocesados retroactivos de historial.
 - **Protocolo de Lectura Total de Mensajes**: JanIA recibe el 100% del texto plano vía WebSocket de Baileys sin importar el botón visual "Leer más" de la interfaz gráfica de WhatsApp.
 
+---
+
+### Versión v22.0 — Agosto 2026: Fidelidad Verbatim 100%, Reparación Propiedad #225, Metadata de Origen y Mutación Directa Supabase
+
+#### 1. CONSERVACIÓN VERBATIM 100% DE TEXTO Y ENLACES (`rawText`)
+- **Preservación Total de URLs, Montos y Emojis**: Eliminación del filtro regex que suprimía enlaces `https://...`, emojis y caracteres de montos `$`. El mensaje de WhatsApp se almacena e ilustra de forma 100% literal e idéntica en la web.
+- **Reparación de la Propiedad #225 (Venta Virrey)**: Corrección de precio a $749 Millones, Administración $680 Mil, 1 Hab, 1 Baño, 1 Garaje y enlace directo de Wasi.
+- **Visualización Activa de Enlaces Originales**: Renderizado cliqueable de URLs de portales inmobiliarios (Wasi, FincaRaíz, etc.).
+
+#### 2. TRANSMISIÓN DE METADATA DE GRUPO ORIGEN (`groupName`)
+- **Trazabilidad Garantizada**: Consulta síncrona de metadata de chat (`getCachedGroupMetadata`) para asegurar que `origenNombre` registre el nombre oficial del grupo de WhatsApp emisor.
+
+#### 3. DESVÍO DE IDENTIDAD Y MUTACIÓN DIRECTA EN PANEL ADMIN
+- **Desvinculación del Admin en Contactos de Terceros**: Eliminación del fallback automático que asignaba la identidad del administrador (`Eduardo A. Rivera`) a publicaciones ajenas. Extracción de nombres en texto (ej. `INFORMES PATTY` → `Patty`).
+- **Mutación Directa Supabase Client SDK**: Reemplazo de endpoints tRPC por actualización directa en Supabase (`supabase.from('properties').update()`), logrando guardado instantáneo sin excepciones de procedimiento.
+
 
 
 

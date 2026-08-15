@@ -1728,10 +1728,8 @@ export async function processWhatsAppMessage(
 
     let messageToProcess = text;
 
-    // Texto limpio del usuario — lo que realmente escribió en WhatsApp, sin el volcado del scraper.
-    // Es lo que se guarda en rawText (para el panel) y lo que ve el bróker.
-    // NUNCA debe contener el bloque [CONTENIDO DE ENLACE WEB...] del scraper.
-    const rawUserText = text.replace(/(https?:\/\/[^\s]+)/g, '').trim();
+    // Texto del usuario — preserva 100% el texto exacto recibido desde WhatsApp incluyendo URLs, emojis y montos.
+    const rawUserText = text;
 
     // Dominios que nunca deben raparse — redes sociales, links de WhatsApp, etc.
     // Scraping these returns marketing pages, login walls, or contact info — not property data.

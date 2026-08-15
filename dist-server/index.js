@@ -6260,7 +6260,7 @@ __is_sub_message__`,
       );
     }
     let messageToProcess = text2;
-    const rawUserText = text2.replace(/(https?:\/\/[^\s]+)/g, "").trim();
+    const rawUserText = text2;
     const SCRAPE_BLOCKLIST = [
       "wa.me",
       "whatsapp.com",
