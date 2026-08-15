@@ -3,8 +3,9 @@
 > **INSTRUCCIÓN MANDATORIA PARA LA IA (ANTIGRAVITY / CLAUDE / GEMINI)**:
 > 1. Este archivo es la **MEMORIA MAESTRA Y CONTEXTO ESTRATÉGICO PERSISTENTE** del proyecto VECY Network. 
 > 2. Léelo COMPLETAMENTE al inicio de CADA nueva conversación antes de proponer o ejecutar cualquier acción.
-> 3. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
-> 4. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
+> 3. **REGISTRO DUAL EN CADA SESIÓN**: Registra siempre la solicitud de Eduardo, el diagnóstico técnico, las acciones ejecutadas en el código/DB y el resumen explícito de las respuestas y confirmaciones entregadas a Eduardo.
+> 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
+> 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
 ---
 
@@ -27,7 +28,7 @@ Su objetivo es revolucionar el mercado inmobiliario mediante una "Red de Mercade
 - **En Grupo 2 (Soporte Legal/Avalúos)**: Responde preguntas jurídicas, contratos, arrendamientos y consultas de avalúos en texto y notas de voz (TTS).
 - **En la Web (Consola JanIA)**: Ofrece un chat de Libre Albedrío 24/7 para consultas profundas y análisis prediales.
 
-### 4. Motor de Matching Inteligente VECY (Algoritmo v22.0)
+### 4. Motor de Matching Inteligente VECY (Algoritmo v23.0)
 Evalúa la compatibilidad entre una Oferta y una Demanda asignando un score de 0% a 100% basado en 100 puntos de ponderación:
 ```
 - Ubicación / Barrio        → 20 pts
@@ -57,17 +58,26 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ## 📜 REGISTRO DETALLADO DE CONVERSACIONES (ORDEN CRONOLÓGICO INVERSO CON FECHA Y HORA)
 
-### 🗓️ Sesión: Viernes 14 de Agosto de 2026 — 10:50 PM a 11:00 PM (Hora Colombia UTC-5) / 15 de Agosto 03:50 AM UTC
+### 🗓️ Sesión: Viernes 14 de Agosto de 2026 — 10:50 PM a 11:02 PM (Hora Colombia UTC-5) / 15 de Agosto 03:50 AM UTC
 **Versión del Sistema**: `v23.0 — Agosto 2026`  
+**Commit GitHub Main**: [`a2497e6`](https://github.com/Vecy-Bienes-Raices/vecy-network/commit/a2497e6)
 
 #### 📋 Requerimientos Específicos del Usuario (Eduardo A. Rivera):
 1. **Visualización Destacada y Recuperación de Enlaces de Ofertas y Demandas**: Garantizar que TODOS los enlaces en publicaciones (Wasi, LobbieApp, FincaRaíz, Metrocuadrado, wa.me, Instagram, etc.) aparezcan de forma clara y cliqueable en la web de coincidencias para verificar los datos de origen.
 2. **Incremento de Versión v23.0**: Registrar esta actualización de forma oficial como versión v23.0 en la memoria persistente.
+3. **Inclusión de Respuestas y Confirmación en el Historial**: Que la bitácora registre tanto el trabajo técnico realizado como las respuestas y explicaciones entregadas al usuario.
 
 #### 🛠️ Soluciones e Implementaciones Técnicas:
 - **Botones Prominentes de Enlaces (`extractPublicLink`)**: Renderizado de contenedores destacados en dorado para Ofertas (`🔗 Enlace Original Inmueble`) y cianes para Demandas (`🔗 Enlace / Contacto Requerimiento`), permitiendo abrir la URL original con un solo clic.
 - **Recuperación Masiva de Enlaces en Supabase DB**: Ejecución de script de escaneo masivo que recuperó e insertó **17 enlaces de Inmuebles** y **9 enlaces de Requerimientos** directamente en Supabase DB.
 - **Badge Web v23.0**: Actualización de la fuente única de verdad en `shared/const.ts` (`VERSIÓN v23.0 Verbatim Links & Recovery`).
+
+#### 💬 Respuestas y Confirmaciones Entregadas a Eduardo:
+- Se le notificó la activación de los botones dorados y cianes en la web para ingresar a verificar los enlaces de origen de portales y WhatsApp.
+- Se le confirmó el rescate masivo de 26 enlaces en Supabase DB.
+- Se le entregó el commit oficial `a2497e6` y se le desplegó el nuevo badge `VERSIÓN v23.0 Verbatim Links & Recovery`.
+
+---
 
 ### 🗓️ Sesión: Viernes 14 de Agosto de 2026 — 10:20 PM a 10:45 PM (Hora Colombia UTC-5) / 15 de Agosto 03:20 AM UTC
 **Versión del Sistema**: `v22.0 — Agosto 2026`  
@@ -89,6 +99,11 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Actualización del Badge Web**: Fuente única de verdad actualizada en `shared/const.ts` (`VECY_VERSION = "v22.0"`, `VECY_VERSION_LABEL = "VERSIÓN v22.0 Verbatim & Realtime"`).
 - **Limpieza de Workspace**: Purga de 26 archivos script temporales de depuración en la carpeta `server/`, dejando la estructura 100% limpia.
 
+#### 💬 Respuestas y Confirmaciones Entregadas a Eduardo:
+- Se le explicó la causa técnica del fallo de nombre (el fallback a `item.user?.name`) y se le confirmó su eliminación definitiva.
+- Se le mostró la restauración exacta del Inmueble #225 con su precio de $749 Millones y su enlace de Wasi.
+- Se le entregó el compromiso inquebrantable de adición pura de código y de actuación como guardián técnico antes de ejecutar cambios destructivos.
+
 ---
 
 ### 🗓️ Sesión: Viernes 14 de Agosto de 2026 — 07:15 PM a 10:15 PM (Hora Colombia UTC-5)
@@ -104,6 +119,10 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Mutación Directa Supabase Client SDK**: Se reemplazó la llamada tRPC por actualización síncrona en Supabase (`supabase.from('properties').update()` y `supabase.from('requirements').update()`) en `AdminMatches.tsx`. Guardado instantáneo sin depender de endpoints.
 - **Independización de Inputs de Precio**: Separación de las variables en `editForm` de modo que las transacciones de venta pura no contaminen la fila de arriendo.
 - **Purga de 7 Matches Incompatibles en Barrio**: Purga automatizada en Supabase de cruces con barrios distintos (Virrey vs Rosales, Chicó vs Rosales). La base de datos quedó con **36 matches 100% compatibles en Barrio y Precio**.
+
+#### 💬 Respuestas y Confirmaciones Entregadas a Eduardo:
+- Se le confirmó la solución síncrona al botón de guardado directamente en Supabase.
+- Se le notificó la purga de los 7 matches erróneos de barrios distintos (cumpliendo Addendum v8).
 
 ---
 
