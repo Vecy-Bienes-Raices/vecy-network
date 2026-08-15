@@ -75,10 +75,11 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
    - 5. Venta ↔ Venta/Permuta (100% Compatible)
    - 6. Venta ↔ Arriendo Puro $\rightarrow$ **0% BLOQUEO ABSOLUTO**
    - 7. Arriendo Puro ↔ Arriendo con Opción de Compra $\rightarrow$ **0% BLOQUEO ABSOLUTO (Doctrina v17.2)**
-   - 5. **Identificación de Falso Match entre La Cabrera (#1138) y Requerimiento (#377) / Corrección de "El Virrey"**:
-   - **Realidad Catastral IDECA de "El Virrey"**: El barrio "El Virrey" no existe en el norte de Bogotá (el parque metropolitano El Virrey está ubicado en los límites de El Chicó / La Cabrera / Antiguo Country). El único barrio oficial "El Virrey" en IDECA está en el sur de Bogotá (Usme). Se eliminó "Virrey" como barrio de Chapinero en `geography.ts`.
-   - **Guillotina Financiera de Arriendo**: El Inmueble #1138 se ofrece en arriendo por $12.000.000 + $1.780.000 de administración ($13.780.000 COP) y venta por $3.000M. El Requerimiento #377 tiene un presupuesto máximo de $5.000.000 COP. Al superar el canon ofrecido el presupuesto del solicitante, el cotejo técnico arrojó **0% Match / Bloqueo Total por Guillotina Financiera**.
-   - **Auto-Detección de Fichas Duales (`venta_o_arriendo`)**: En `janIA.ts`, se incorporó la detección automática para extraer simultáneamente el canon neto de arriendo ($12M), la cuota de administración ($1.78M) y el precio de venta ($3.000M) cuando un mensaje contiene ambas modalidades.
+   - 6. **Identificación de Falso Match en Cali: Casa en San Fernando (#217) vs Requerimiento de Apartamento (#55) (Coincidencia #10631)**:
+     - **Error de Extracción de Presupuesto**: Por el espacio tras el signo pesos (`$ 300.000.000`) y caracteres invisibles Word Joiner (`\u2060`), en la BD se guardó `presupuestoMax = '0.00' (N/E)`.
+     - **Error de Tipo de Inmueble**: En la Propiedad #217 (`Venta Casa 2 pisos...`), se guardó erróneamente `propertyType = 'apartment'`.
+     - **Desfase Financiero**: Inmueble de $849.500.000 COP frente a presupuesto de $300.000.000 COP (casi el triple).
+     - **Solución y Verificación**: Saneamiento de BD, limpieza de unicode en regex de presupuesto, deducción de `effectivePropType = 'house'` desde `rawText` y purga de Match #10631. Prueba TypeScript arrojó **0% Match / Bloqueo Total**.
 
 #### 🛠️ Soluciones e Implementaciones Técnicas:
 - **Blindaje Geográfico Antirreferencias Comerciales (`server/_core/geography.ts`)**: En `deducirGeografiaTripartita`, se incorporó un filtro de limpieza que suprime frases de proximidad comercial (*"A minutos de Hacienda Santa Bárbara"*, *"Parque del Virrey"*, *"Cerca a"*, *"Próximo a"*, etc.) evitando que referencias comerciales o parques se extraigan como el barrio predial del inmueble.
@@ -88,9 +89,18 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
   - Propiedad #1138: `zone = 'La Cabrera'`, `address_neighborhood = 'La Cabrera'`, `rent_price = 12000000`, `adminFee = 1780000`, `price = 3000000000`, `transactionType = 'venta_o_arriendo'`.
   - Requerimiento #377: `zonaDeseada = 'La Cabrera, El Nogal, El Chicó'`, `address_neighborhood = 'La Cabrera'`, `presupuestoMax = 5000000`.
   - Purga de Match #10709.
+- **Corrección de Registros de Cali (#217, #55, #56) en DB**:
+  - Propiedad #217: `propertyType = 'house'`, `name = 'Casa en Venta en San Fernando, Oeste, Cali'`, `price = 849500000.00`.
+  - Requerimiento #55: `presupuestoMax = 300000000.00`, `tipoInmuebleDeseado = 'apartment'`.
+  - Requerimiento #56: `presupuestoMax = 250000000.00`, `tipoInmuebleDeseado = 'apartment'`.
+  - Purga de Match #10631.
+- **Extractor Robusto de Presupuesto y Sanidad de Tipo de Activo (`matching.ts`)**:
+  - Limpieza de caracteres invisibles (`[\u2060\u200B\u200C\u200D\uFEFF\u00A0]`) y soporte para espacios tras `$`.
+  - Detección de sanidad predial en `matching.ts` para deducir `effectivePropType = 'house'` cuando el texto declara venta de casa.
 - **Verificación Empírica TypeScript**:
   - Propiedad #409 vs Req #44 $\rightarrow$ **0% Match / Bloqueo Absoluto**.
   - Propiedad #1138 vs Req #377 $\rightarrow$ **0% Match / Bloqueo Financiero Total (Canon $13.78M > Ppto $5M)**.
+  - Propiedad #217 vs Req #55 $\rightarrow$ **0% Match / Bloqueo Total (Tipo Casa vs Apartamento y Precio $849.5M > $300M)**.
 - **Codificación y Documentación de las 8 Reglas de Transacción**: Actualizado `TRANSACTION_COMPATIBILITY_MATRIX` y los comentarios rectores en `server/_core/matching.ts`.
 
 #### 💬 Respuestas y Confirmaciones Entregadas a Eduardo:
@@ -98,6 +108,7 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - Implementación del blindaje contra referencias comerciales en `geography.ts`.
 - Corrección del registro en DB y verificación empírica con resultado de 0% Match entre Bosque Medina y Santa Bárbara.
 - Corrección del caso La Cabrera vs Requerimiento de $5M: demostración del bloqueo financiero y eliminación de "Virrey" como falso barrio del norte.
+- Corrección del caso Cali Casa $849.5M vs Apto $300M: demostración del bloqueo total por tipo de activo y presupuesto.
 - Confirmación y alineación total con la doctrina del 100% al 80% para el cotejo técnico.
 - Confirmación y registro de las 8 reglas explícitas de compatibilidad transaccional y los límites de techo y segmento de precio.
 

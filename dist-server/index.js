@@ -4146,14 +4146,16 @@ function explicarMatch(requirement, property) {
   }
   let isReqRent = (requirement.tipoNegocioDeseado || requirement.transactionType || "").toLowerCase().includes("arriendo");
   if (requirement.rawText && (budgetMax <= 0 || isReqRent && budgetMax > 5e7)) {
-    const rawR = requirement.rawText.toLowerCase();
-    const matchPresu = rawR.match(/(?:presupuesto|ppto|canon|valor|hasta|máximo|max)\s*(?:máximo|max)?\s*:?\s*\$?([\d.,]+)\s*(millones|millón|mll|mlls|mm)?/i);
+    const rawR = requirement.rawText.toLowerCase().replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0]/g, " ");
+    const matchPresu = rawR.match(/(?:presupuesto|ppto|canon|valor|hasta|máximo|max)\s*(?:máximo|max)?\s*:?\s*\$?\s*([\d.,\s]+?)\s*(mil\s*millones?|millones|millón|mll|mlls|mm|m)?(?:\s|$|\n)/i) || rawR.match(/(?:presupuesto|ppto|canon|valor|hasta|máximo|max)\s*:?\s*\$?\s*([\d.]+)/i);
     if (matchPresu) {
-      let valStr = matchPresu[1].replace(/\./g, "").replace(/,/g, ".");
+      let valStr = matchPresu[1].replace(/[.,\s]/g, "");
       let valR = parseFloat(valStr);
       if (!isNaN(valR)) {
         const unit = (matchPresu[2] || "").toLowerCase();
-        if (unit.includes("millon") || unit.includes("mll") || unit.includes("mm")) {
+        if (unit.includes("mil millon")) {
+          valR *= 1e9;
+        } else if (unit.includes("millon") || unit.includes("mll") || unit.includes("mm") || unit === "m") {
           valR *= 1e6;
         } else if (valR < 1e3) {
           valR *= 1e6;
@@ -4231,7 +4233,25 @@ function explicarMatch(requirement, property) {
     blockers.push(`Incompatibilidad geogr\xE1fica de ciudad: Requerimiento en ${isReqCali ? "Cali" : "Bogot\xE1"} vs Oferta en ${isPropCali ? "Cali" : "Bogot\xE1"}.`);
     return buildExplanationResult(0, blockers, positives, negatives);
   }
-  if (reqType && propType) {
+  let effectivePropType = propType;
+  const pTextForType = (property.rawText || property.name || "").toLowerCase();
+  if (effectivePropType === "apartment" || !effectivePropType) {
+    if (pTextForType.includes("venta casa") || pTextForType.includes("casa 2 pisos") || pTextForType.includes("casa campestre") || /\bcasa\b/i.test(pTextForType)) {
+      if (!pTextForType.includes("apartamento") && !pTextForType.includes("apto")) {
+        effectivePropType = "house";
+      }
+    }
+  }
+  let effectiveReqType = reqType;
+  const rTextForType = (requirement.rawText || requirement.name || "").toLowerCase();
+  if (!effectiveReqType || effectiveReqType === "apartment") {
+    if (rTextForType.includes("inmueble: casa") || rTextForType.includes("busco casa") || rTextForType.includes("requiero casa")) {
+      if (!rTextForType.includes("apartamento") && !rTextForType.includes("apto")) {
+        effectiveReqType = "house";
+      }
+    }
+  }
+  if (effectiveReqType && effectivePropType) {
     const aliases = {
       "apartamento": ["apto", "apartamento", "apartment"],
       "apto": ["apto", "apartamento", "apartment"],
@@ -4251,10 +4271,10 @@ function explicarMatch(requirement, property) {
       "oficina": ["oficina", "consultorio", "office"],
       "office": ["oficina", "consultorio", "office"]
     };
-    const reqAlias = aliases[reqType] || [reqType];
-    const propAlias = aliases[propType] || [propType];
+    const reqAlias = aliases[effectiveReqType] || [effectiveReqType];
+    const propAlias = aliases[effectivePropType] || [effectivePropType];
     if (!reqAlias.some((a) => propAlias.includes(a))) {
-      blockers.push(`Tipo de activo incompatible: deseado ${reqType}, ofrecido ${propType}`);
+      blockers.push(`Tipo de activo incompatible: deseado ${effectiveReqType}, ofrecido ${effectivePropType}`);
       return buildExplanationResult(0, blockers, positives, negatives);
     }
   }
