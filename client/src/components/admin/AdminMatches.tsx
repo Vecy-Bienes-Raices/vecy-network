@@ -3,7 +3,8 @@ import {
   Phone, MapPin, Search, Download, Building2, Calendar, 
   Sparkles, CheckCircle2, AlertTriangle, XCircle, SlidersHorizontal, 
   DollarSign, Ruler, Bed, Bath, Car, Shield, ExternalLink, Receipt, Box, Globe,
-  Edit3, Save, Loader2, RotateCcw, Sun, Zap, Utensils, Home, Flame, ThumbsUp, ThumbsDown
+  Edit3, Save, Loader2, RotateCcw, Sun, Zap, Utensils, Home, Flame, ThumbsUp, ThumbsDown,
+  Trees, ShieldCheck
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -939,40 +940,100 @@ function scoreRows(req: any, prop: any) {
     <Sparkles className="w-3.5 h-3.5" />
   );
 
-  // 14. Balcón, Terraza & Vista
-  const propBalcon = propRawText.includes("balcon") || propRawText.includes("balcón") || prop.hasBalcony;
-  const propTerraza = propRawText.includes("terraza") || prop.hasTerrace;
-  const reqBalcon = reqTextLower.includes("balcon") || reqTextLower.includes("balcón") || reqTextLower.includes("terraza");
-  let extSpaceS: MatchStatus = "neutral";
-  if (reqBalcon) {
-    extSpaceS = (propBalcon || propTerraza) ? "exact" : "warn";
-  }
-  add(
-    "Balcón / Terraza",
-    reqBalcon ? "Exige Balcón o Terraza" : "N/E",
-    propTerraza ? "Sí (Con Terraza)" : propBalcon ? "Sí (Con Balcón)" : "Sin balcón especificado",
-    extSpaceS,
-    5,
-    <Ruler className="w-3.5 h-3.5" />
-  );
+  // 14. Espacio Exterior Condicional (Patio / Jardín si es Casa vs Balcón / Terraza si es Apartamento)
+  const isHouse = (prop.propertyType || "").toLowerCase().includes("casa") || 
+                  (prop.propertyType || "").toLowerCase() === "house" || 
+                  propRawText.toLowerCase().startsWith("ofrezco casa") ||
+                  propRawText.toLowerCase().includes("casa en venta") ||
+                  propRawText.toLowerCase().includes("casa en arriendo") ||
+                  (prop.name || "").toLowerCase().includes("casa");
 
-  // 15. Equipamiento & Seguridad
-  const propAscensor = propRawText.includes("ascensor") || prop.hasElevator;
-  const propConjunto = propRawText.includes("club house") || propRawText.includes("gimnasio") || propRawText.includes("piscina") || propRawText.includes("conjunto");
-  const reqAscensor = reqTextLower.includes("ascensor");
-  let equipS: MatchStatus = "neutral";
-  if (reqAscensor) {
-    equipS = propAscensor ? "exact" : "warn";
-  }
+  if (isHouse) {
+    const propPatio = propRawText.includes("patio") || propRawText.includes("jardin") || propRawText.includes("jardín") || propRawText.includes("solar") || propRawText.includes("zona verde");
+    const reqPatio = reqTextLower.includes("patio") || reqTextLower.includes("jardin") || reqTextLower.includes("jardín") || reqTextLower.includes("importante patio");
+    let patioStatus: MatchStatus = "neutral";
+    if (reqPatio) {
+      patioStatus = propPatio ? "exact" : "warn";
+    }
+    add(
+      reqTextLower.includes("importante patio") ? "Importante Patio (Casa)" : "Patio / Jardín Privado",
+      reqPatio ? (reqTextLower.includes("importante patio") ? "Importante Patio (Condición Si es Casa)" : "Exige Patio / Zona Verde") : "N/E",
+      propPatio ? "Sí (Incluye Patio / Jardín)" : "Sin patio especificado (Consultar al Asesor)",
+      patioStatus,
+      5,
+      <Trees className="w-3.5 h-3.5" />
+    );
 
-  add(
-    "Equipamiento Edificio",
-    reqAscensor ? "Con Ascensor obligatorio" : "N/E",
-    propAscensor && propConjunto ? "Ascensor + Club House / Zonas Comunes" : propAscensor ? "Con Ascensor" : "Edificio convencional / Sin ascensor",
-    equipS,
-    6,
-    <Building2 className="w-3.5 h-3.5" />
-  );
+    // Conjunto Cerrado & Vigilancia para Casa
+    const propConjunto = propRawText.includes("conjunto cerrado") || propRawText.includes("conjunto") || propRawText.includes("club house");
+    const propVigilancia = propRawText.includes("vigilancia") || propRawText.includes("porteria") || propRawText.includes("portería") || propRawText.includes("24 horas");
+    const reqConjunto = reqTextLower.includes("conjunto cerrado") || reqTextLower.includes("vigilancia");
+    let conjStatus: MatchStatus = "neutral";
+    if (reqConjunto) {
+      conjStatus = (propConjunto || propVigilancia) ? "exact" : "warn";
+    }
+    add(
+      "Conjunto Cerrado & Vigilancia",
+      reqConjunto ? "Conjunto Cerrado con Vigilancia" : "N/E",
+      propConjunto && propVigilancia ? "Sí (Conjunto Cerrado + Vigilancia 24h)" : propConjunto ? "Sí (En Conjunto Cerrado)" : propVigilancia ? "Sí (Con Vigilancia 24h)" : "Casa tradicional exterior",
+      conjStatus,
+      6,
+      <ShieldCheck className="w-3.5 h-3.5" />
+    );
+
+    // Acceso Garaje para Casa
+    const reqStreetGarage = reqTextLower.includes("nivel de la calle") || reqTextLower.includes("a nivel") || reqTextLower.includes("garaje a nivel");
+    const propStreetGarage = propRawText.includes("nivel") || propRawText.includes("cubierto") || propRawText.includes("parqueadero") || (prop.garages && prop.garages > 0);
+    if (reqStreetGarage || propStreetGarage) {
+      let garAccStatus: MatchStatus = "neutral";
+      if (reqStreetGarage) {
+        garAccStatus = propStreetGarage ? "exact" : "warn";
+      }
+      add(
+        "Acceso Garaje (Casa)",
+        reqStreetGarage ? "Garaje a Nivel de la Calle" : "N/E",
+        propStreetGarage ? "Sí (Garaje Cubierto a Nivel)" : "Sin garaje a nivel especificado",
+        garAccStatus,
+        4,
+        <Car className="w-3.5 h-3.5" />
+      );
+    }
+  } else {
+    // Para Apartamentos: Balcón / Terraza
+    const propBalcon = propRawText.includes("balcon") || propRawText.includes("balcón") || prop.hasBalcony;
+    const propTerraza = propRawText.includes("terraza") || prop.hasTerrace;
+    const reqBalcon = reqTextLower.includes("balcon") || reqTextLower.includes("balcón") || reqTextLower.includes("terraza");
+    let extSpaceS: MatchStatus = "neutral";
+    if (reqBalcon) {
+      extSpaceS = (propBalcon || propTerraza) ? "exact" : "warn";
+    }
+    add(
+      "Balcón / Terraza",
+      reqBalcon ? (reqTextLower.includes("terraza amplia") ? "Exige Terraza Amplia Exclusiva" : "Exige Balcón o Terraza") : "N/E",
+      propTerraza ? "Sí (Con Terraza)" : propBalcon ? "Sí (Con Balcón)" : "Sin balcón especificado",
+      extSpaceS,
+      5,
+      <Ruler className="w-3.5 h-3.5" />
+    );
+
+    // Equipamiento Edificio
+    const propAscensor = propRawText.includes("ascensor") || prop.hasElevator;
+    const propConjunto = propRawText.includes("club house") || propRawText.includes("gimnasio") || propRawText.includes("piscina") || propRawText.includes("conjunto");
+    const reqAscensor = reqTextLower.includes("ascensor");
+    let equipS: MatchStatus = "neutral";
+    if (reqAscensor) {
+      equipS = propAscensor ? "exact" : "warn";
+    }
+
+    add(
+      "Equipamiento Edificio",
+      reqAscensor ? "Con Ascensor obligatorio" : "N/E",
+      propAscensor && propConjunto ? "Ascensor + Club House / Zonas Comunes" : propAscensor ? "Con Ascensor" : "Edificio convencional / Sin ascensor",
+      equipS,
+      6,
+      <Building2 className="w-3.5 h-3.5" />
+    );
+  }
 
   // 16. Depósito / Bodega Interna
   const reqStorage = reqTextLower.includes("deposito") || reqTextLower.includes("depósito") || reqTextLower.includes("bodega interna") || reqTextLower.includes("cuarto util") || reqTextLower.includes("cuarto útil");
