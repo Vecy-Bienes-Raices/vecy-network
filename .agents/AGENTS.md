@@ -162,12 +162,10 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v22.0 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL: v23.0 — Agosto 2026
 
-### Novedades v22.0:
-- **Fidelidad 100% Verbatim (`rawText`)**: Eliminación total del filtro regex que suprimía URLs (`https://...`), emojis, `$`, y caracteres especiales. El mensaje de WhatsApp se conserva e ilustra de forma 100% literal e idéntica en la web.
-- **Visualización Activa de Enlaces Originales**: Garantía de enlaces cliqueables para portales inmobiliarios (Wasi, FincaRaíz, etc.).
-- **Reparación de la Propiedad #225 (Venta Virrey)**: Corrección de precio a $749 Millones, Administración $680 Mil, 1 Hab, 1 Baño, 1 Garaje y enlace original de Wasi.
-- **Trazabilidad de Grupo Origen (`groupName`)**: Transmisión obligatoria del nombre oficial del grupo de WhatsApp emisor a Supabase DB (`origenNombre`).
-- **Desvío de Nombres Falsos**: Eliminación del fallback de admin (`Eduardo A. Rivera`) en contactos ajenos; extracción de nombres en texto (ej. `INFORMES PATTY` → `Patty`).
-- **Guardado Directo Supabase Client SDK**: Reemplazo de mutaciones tRPC por actualización directa en Supabase en el panel admin.
+### Novedades v23.0:
+- **Botón Prominente de Enlaces (`extractPublicLink`)**: Renderizado de botones dorados para Ofertas y cianes para Demandas que contienen enlaces (Wasi, LobbieApp, FincaRaíz, Metrocuadrado, wa.me, Instagram).
+- **Recuperación Masiva de Enlaces en Supabase DB**: Rastreo y rescate masivo de 17 enlaces de Inmuebles y 9 enlaces de Requerimientos en la base de datos Supabase.
+- **Fidelidad 100% Verbatim (`rawText`)**: Eliminación del filtro regex que suprimía URLs (`https://...`), emojis, `$`, y caracteres especiales.
+- **Historial Completo con Contexto Maestro**: Integración de la bitácora cronológica maestro en `HISTORIAL_CONVERSACIONES_MAESTRO.md`.

@@ -51,11 +51,23 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v22.0 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v23.0 — Agosto 2026
 
 ---
 
 ## 📜 REGISTRO DETALLADO DE CONVERSACIONES (ORDEN CRONOLÓGICO INVERSO CON FECHA Y HORA)
+
+### 🗓️ Sesión: Viernes 14 de Agosto de 2026 — 10:50 PM a 11:00 PM (Hora Colombia UTC-5) / 15 de Agosto 03:50 AM UTC
+**Versión del Sistema**: `v23.0 — Agosto 2026`  
+
+#### 📋 Requerimientos Específicos del Usuario (Eduardo A. Rivera):
+1. **Visualización Destacada y Recuperación de Enlaces de Ofertas y Demandas**: Garantizar que TODOS los enlaces en publicaciones (Wasi, LobbieApp, FincaRaíz, Metrocuadrado, wa.me, Instagram, etc.) aparezcan de forma clara y cliqueable en la web de coincidencias para verificar los datos de origen.
+2. **Incremento de Versión v23.0**: Registrar esta actualización de forma oficial como versión v23.0 en la memoria persistente.
+
+#### 🛠️ Soluciones e Implementaciones Técnicas:
+- **Botones Prominentes de Enlaces (`extractPublicLink`)**: Renderizado de contenedores destacados en dorado para Ofertas (`🔗 Enlace Original Inmueble`) y cianes para Demandas (`🔗 Enlace / Contacto Requerimiento`), permitiendo abrir la URL original con un solo clic.
+- **Recuperación Masiva de Enlaces en Supabase DB**: Ejecución de script de escaneo masivo que recuperó e insertó **17 enlaces de Inmuebles** y **9 enlaces de Requerimientos** directamente en Supabase DB.
+- **Badge Web v23.0**: Actualización de la fuente única de verdad en `shared/const.ts` (`VERSIÓN v23.0 Verbatim Links & Recovery`).
 
 ### 🗓️ Sesión: Viernes 14 de Agosto de 2026 — 10:20 PM a 10:45 PM (Hora Colombia UTC-5) / 15 de Agosto 03:20 AM UTC
 **Versión del Sistema**: `v22.0 — Agosto 2026`  
