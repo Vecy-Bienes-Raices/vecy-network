@@ -99,6 +99,13 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
   - Detección de sanidad predial en `matching.ts` para deducir `effectivePropType = 'house'` cuando el texto declara venta de casa.
 - **Blindaje Total contra Casillas N/E en Tabla de Cotejo Técnico (`AdminMatches.tsx`)**:
   - Implementación de inferencia en caliente para extraer presupuestos de venta, cánones de arriendo, cuotas de administración, estratos, baños y parqueaderos directamente del texto original de la publicación si la columna en DB está vacía o en 0, garantizando que **NUNCA** aparezca `N/E` cuando el dato existe en el texto de WhatsApp.
+- **Doctrina Estricta de Cotejo 'Coincide' vs 'Aproximado' (`AdminMatches.tsx`)**:
+  - **Primeras 5 Filas (Filtros Duros Binarios)**: Tipo de Inmueble, Tipo de Negocio, Barrio, Localidad y Ciudad. **Solo pueden ser "Coincide" (100% verde) o "Falla" / "Bloqueo" (rojo)**. **JAMÁS** dicen "Aproximado".
+  - **Filas 6 en Adelante (Especificaciones Físicas y Financieras)**:
+    - **"Coincide"** (en verde): Únicamente cuando los valores de Oferta y Demanda son **100% EXACTOS E IDÉNTICOS** (ej: `3 hab. = 3 hab.`, `75 m² = 75 m²`, `$800M = $800M`).
+    - **"Aproximado"** (en ámbar): Cuando la Oferta satisface la Demanda pero difiere numéricamente (ej: `3 hab.` vs `2 hab.`, `77.5 m²` vs `75 m²`, `$783M` vs `$800M`, `10 años` vs `≤ 18 años`).
+    - **"Falla" / "Bloqueo"** (en rojo): Cuando `Oferta < Demanda` o el precio supera el presupuesto.
+    - **"Dato Pendiente"** (en gris): Cuando falta el dato en uno o ambos lados (`N/E`).
 - **Verificación Empírica TypeScript**:
   - Propiedad #409 vs Req #44 $\rightarrow$ **0% Match / Bloqueo Absoluto**.
   - Propiedad #1138 vs Req #377 $\rightarrow$ **0% Match / Bloqueo Financiero Total (Canon $13.78M > Ppto $5M)**.
@@ -112,6 +119,7 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - Corrección del caso La Cabrera vs Requerimiento de $5M: demostración del bloqueo financiero y eliminación de "Virrey" como falso barrio del norte.
 - Corrección del caso Cali Casa $849.5M vs Apto $300M: demostración del bloqueo total por tipo de activo y presupuesto.
 - Implementación de la inferencia en caliente en `AdminMatches.tsx` para erradicar las casillas `N/E` cuando la información está en la publicación.
+- Aplicación estricta de la regla doctrinal de "Coincide" (solo para valores 100% idénticos) y "Aproximado" (para diferencias que satisfacen la demanda) en todas las filas a partir de la fila 6, manteniendo las 5 primeras filas como filtros binarios puros.
 - Confirmación y alineación total con la doctrina del 100% al 80% para el cotejo técnico.
 - Confirmación y registro de las 8 reglas explícitas de compatibilidad transaccional y los límites de techo y segmento de precio.
 
