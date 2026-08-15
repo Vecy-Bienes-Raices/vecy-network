@@ -106,6 +106,10 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
     - **"Aproximado"** (en ámbar): Cuando la Oferta satisface la Demanda pero difiere numéricamente (ej: `3 hab.` vs `2 hab.`, `77.5 m²` vs `75 m²`, `$783M` vs `$800M`, `10 años` vs `≤ 18 años`).
     - **"Falla" / "Bloqueo"** (en rojo): Cuando `Oferta < Demanda` o el precio supera el presupuesto.
     - **"Dato Pendiente"** (en gris): Cuando falta el dato en uno o ambos lados (`N/E`).
+- **Política de Cero Matches Fallidos en la Web / Admin (`AdminMatches.tsx`)**:
+  - Si un par tiene aunque sea **UN SOLO DATO FALLIDO** (`status === 'missing'`), el score automático es **0%** y queda **completamente oculto / purgado** de la interfaz web para no desgastar ni mostrar datos inválidos.
+  - Únicamente se exhiben matches legítimos del **80% al 100%**.
+  - **Match Perfecto 100%**: Cuando **TODAS las filas de la tabla de cotejo técnico dicen "Coincide"** (en verde), el sistema otorga la calificación máxima de **100% Match Perfecto**.
 - **Verificación Empírica TypeScript**:
   - Propiedad #409 vs Req #44 $\rightarrow$ **0% Match / Bloqueo Absoluto**.
   - Propiedad #1138 vs Req #377 $\rightarrow$ **0% Match / Bloqueo Financiero Total (Canon $13.78M > Ppto $5M)**.
@@ -120,6 +124,8 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - Corrección del caso Cali Casa $849.5M vs Apto $300M: demostración del bloqueo total por tipo de activo y presupuesto.
 - Implementación de la inferencia en caliente en `AdminMatches.tsx` para erradicar las casillas `N/E` cuando la información está en la publicación.
 - Aplicación estricta de la regla doctrinal de "Coincide" (solo para valores 100% idénticos) y "Aproximado" (para diferencias que satisfacen la demanda) en todas las filas a partir de la fila 6, manteniendo las 5 primeras filas como filtros binarios puros.
+- Aplicación de la política de Cero Matches Fallidos: si hay un solo dato fallido, el score es 0% y se excluye de la web/admin.
+- Definición y activación del Match Perfecto 100% cuando todas las filas dicen "Coincide".
 - Confirmación y alineación total con la doctrina del 100% al 80% para el cotejo técnico.
 - Confirmación y registro de las 8 reglas explícitas de compatibilidad transaccional y los límites de techo y segmento de precio.
 
