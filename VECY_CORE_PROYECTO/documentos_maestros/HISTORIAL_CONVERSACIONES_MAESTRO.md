@@ -63,19 +63,19 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 **Commit GitHub Main**: [`a2497e6`](https://github.com/Vecy-Bienes-Raices/vecy-network/commit/a2497e6)
 
 #### 📋 Requerimientos Específicos del Usuario (Eduardo A. Rivera):
-1. **Visualización Destacada y Recuperación de Enlaces de Ofertas y Demandas**: Garantizar que TODOS los enlaces en publicaciones (Wasi, LobbieApp, FincaRaíz, Metrocuadrado, wa.me, Instagram, etc.) aparezcan de forma clara y cliqueable en la web de coincidencias para verificar los datos de origen.
-2. **Incremento de Versión v23.0**: Registrar esta actualización de forma oficial como versión v23.0 en la memoria persistente.
-3. **Inclusión de Respuestas y Confirmación en el Historial**: Que la bitácora registre tanto el trabajo técnico realizado como las respuestas y explicaciones entregadas al usuario.
+1. **Visualización Limpia y Funcional de Enlaces en Azul**: Eduardo indicó expresamente prescindir de cajas/botones dorados o cianes y presentar los enlaces en formato estándar de hipervínculo azul limpio, sobrio y cliqueable (`🌐 Enlace original: https://...`).
+2. **Recuperación de Enlaces de Ofertas y Demandas**: Garantizar que TODOS los enlaces en publicaciones (Wasi, LobbieApp, FincaRaíz, Metrocuadrado, wa.me, Instagram, etc.) aparezcan de forma funcional en la web de coincidencias para verificar datos de origen.
+3. **Incremento de Versión v23.0 y Registro Dual**: Registrar esta actualización oficialmente en la memoria persistente e incluir solicitudes y respuestas entregadas al usuario.
 
 #### 🛠️ Soluciones e Implementaciones Técnicas:
-- **Botones Prominentes de Enlaces (`extractPublicLink`)**: Renderizado de contenedores destacados en dorado para Ofertas (`🔗 Enlace Original Inmueble`) y cianes para Demandas (`🔗 Enlace / Contacto Requerimiento`), permitiendo abrir la URL original con un solo clic.
+- **Hipervínculos Azules Limpios y Funcionales (`extractPublicLink`)**: Renderizado directo de enlaces azules subrayados (`text-blue-400 hover:text-blue-300 font-medium underline break-all`) tanto para Ofertas como para Demandas, eliminando las cajas doradas/cianes.
 - **Recuperación Masiva de Enlaces en Supabase DB**: Ejecución de script de escaneo masivo que recuperó e insertó **17 enlaces de Inmuebles** y **9 enlaces de Requerimientos** directamente en Supabase DB.
-- **Badge Web v23.0**: Actualización de la fuente única de verdad en `shared/const.ts` (`VERSIÓN v23.0 Verbatim Links & Recovery`).
+- **Badge Web v23.0**: Fuente única de verdad actualizada en `shared/const.ts` (`VERSIÓN v23.0 Verbatim Links & Recovery`).
 
 #### 💬 Respuestas y Confirmaciones Entregadas a Eduardo:
-- Se le notificó la activación de los botones dorados y cianes en la web para ingresar a verificar los enlaces de origen de portales y WhatsApp.
-- Se le confirmó el rescate masivo de 26 enlaces en Supabase DB.
-- Se le entregó el commit oficial `a2497e6` y se le desplegó el nuevo badge `VERSIÓN v23.0 Verbatim Links & Recovery`.
+- Se eliminaron de inmediato los contenedores con botones dorados/cianes atendiendo tu directriz visual exacta.
+- Se implementó el enlace azul funcional e interactivo estándar (`🌐 Enlace original:`).
+- Se desplegaron los cambios a GitHub main en el commit [`d99be02`](https://github.com/Vecy-Bienes-Raices/vecy-network/commit/d99be02).
 
 ---
 
