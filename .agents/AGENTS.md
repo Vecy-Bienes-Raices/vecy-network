@@ -1,7 +1,11 @@
 # VECY NETWORK — CONTEXTO MAESTRO DEL PROYECTO
 # Leído automáticamente por Antigravity al inicio de cada nueva conversación
 
-> **INSTRUCCIÓN PARA LA IA**: Este archivo es tu MEMORIA PERSISTENTE del proyecto VECY Network. Léelo COMPLETO antes de hacer cualquier cosa. Contiene el estado actual, las reglas críticas, la arquitectura técnica y el historial de decisiones tomadas. Nunca rompas las reglas aquí documentadas.
+> **INSTRUCCIÓN MANDATORIA PARA LA IA (ANTIGRAVITY / CLAUDE / GEMINI)**:
+> 1. Este archivo y el documento maestro de bitácora [`VECY_CORE_PROYECTO/documentos_maestros/HISTORIAL_CONVERSACIONES_MAESTRO.md`](file:///home/eddu/Proyectos/vecy-network/VECY_CORE_PROYECTO/documentos_maestros/HISTORIAL_CONVERSACIONES_MAESTRO.md) son tu **MEMORIA PERSISTENTE Y BITÁCORA MAESTRA** del proyecto VECY Network. 
+> 2. Léelos COMPLETOS al inicio de CADA nueva conversación antes de proponer o ejecutar cualquier acción.
+> 3. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
+> 4. **INCREMENTO OBLIGATORIO DE VERSIÓN**: Cada sesión finalizada debe incrementar la versión oficial e inscribirse en el historial.
 
 ---
 
