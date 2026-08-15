@@ -512,10 +512,12 @@ function scoreRows(req: any, prop: any) {
 
   let saleS: MatchStatus = "neutral";
   if (reqSaleBudget > 0 && propSalePrice > 0) {
-    if (propSalePrice > reqSaleBudget || propSalePrice < reqSaleBudget * 0.99) {
+    if (propSalePrice > reqSaleBudget) {
       saleS = "missing";
-    } else {
+    } else if (propSalePrice === reqSaleBudget) {
       saleS = "exact";
+    } else {
+      saleS = "warn";
     }
   }
 
@@ -568,10 +570,12 @@ function scoreRows(req: any, prop: any) {
 
   let rentS: MatchStatus = "neutral";
   if (reqRentBudget > 0 && propRentPrice > 0) {
-    if (propRentPrice > reqRentBudget || propRentPrice < reqRentBudget * 0.99) {
+    if (propRentPrice > reqRentBudget) {
       rentS = "missing";
-    } else {
+    } else if (propRentPrice === reqRentBudget) {
       rentS = "exact";
+    } else {
+      rentS = "warn";
     }
   }
 
@@ -613,10 +617,12 @@ function scoreRows(req: any, prop: any) {
 
   let adminS: MatchStatus = "neutral";
   if (reqAdminMax > 0 && propAdminFee > 0) {
-    if (propAdminFee > reqAdminMax || propAdminFee < reqAdminMax * 0.99) {
+    if (propAdminFee > reqAdminMax) {
       adminS = "missing";
-    } else {
+    } else if (propAdminFee === reqAdminMax) {
       adminS = "exact";
+    } else {
+      adminS = "warn";
     }
   }
 
@@ -629,7 +635,7 @@ function scoreRows(req: any, prop: any) {
     <Receipt className="w-3.5 h-3.5" />
   );
 
-  // 5. Área Total (Nunca menor que la solicitada, máximo 3% por encima [100% - 103%])
+  // 5. Área Total (Nunca menor que la solicitada)
   let areaR = parseFloat(req.areaMin || req.areaMinimaM2 || "0");
   if (areaR <= 0 && reqTextLower) {
     const mRA = reqTextLower.match(/(?:mínimo|min|de|área)?\s*([\d.,]+)\s*(?:m2|mts|m²|metros)/i);
@@ -656,15 +662,17 @@ function scoreRows(req: any, prop: any) {
   let areS: MatchStatus = "neutral";
   let areaPropLabel = areaP > 0 ? `${areaP} m²${areaPInferred ? " (Inferido 🔍)" : ""}` : "N/E";
   if (areaR > 0 && areaP > 0) {
-    if (areaP < areaR || areaP > areaR * 1.03) {
+    if (areaP < areaR * 0.95) {
       areS = "missing";
-    } else {
+    } else if (areaP === areaR) {
       areS = "exact";
+    } else {
+      areS = "warn";
     }
-  } else if (areaR === 0) {
+  } else if (areaR === 0 && areaP > 0) {
     areS = "neutral";
   }
-  const reqAreaLabel = areaR > 0 ? `≥ ${areaR} m² (máx +3%)` : "N/E";
+  const reqAreaLabel = areaR > 0 ? `≥ ${areaR} m²` : "N/E";
 
   add(
     "Área Total",
@@ -689,11 +697,13 @@ function scoreRows(req: any, prop: any) {
   }
 
   let bedS: MatchStatus = "neutral";
-  if (bedR > 0) {
+  if (bedR > 0 && bedP > 0) {
     if (bedP < bedR) {
       bedS = "missing";
-    } else {
+    } else if (bedP === bedR) {
       bedS = "exact";
+    } else {
+      bedS = "warn";
     }
   }
   const reqBedLabel = bedR > 0 
@@ -724,11 +734,13 @@ function scoreRows(req: any, prop: any) {
   }
 
   let bathS: MatchStatus = "neutral";
-  if (bathR > 0) {
+  if (bathR > 0 && bathP > 0) {
     if (bathP < bathR) {
       bathS = "missing";
-    } else {
+    } else if (bathP === bathR) {
       bathS = "exact";
+    } else {
+      bathS = "warn";
     }
   }
   const reqBathLabel = bathR > 0 
@@ -782,13 +794,13 @@ function scoreRows(req: any, prop: any) {
   else if (garType === "lineal")    garPropLabel += " (⚠️ Lineal)";
   else if (garType === "mixto")     garPropLabel += " (🔄 Mixto)";
 
-  if (garR > 0) {
-    if (garP < garR) {
+  if (garR > 0 && garP > 0) {
+    if (garP < garR || (reqWantsIndep && garType === "lineal")) {
       garS = "missing";
-    } else if (reqWantsIndep && garType === "lineal") {
-      garS = "missing";
-    } else {
+    } else if (garP === garR) {
       garS = "exact";
+    } else {
+      garS = "warn";
     }
   }
   const garReqLabel = garR > 0
@@ -821,8 +833,14 @@ function scoreRows(req: any, prop: any) {
   }
   const hasEstratoReq = estratoArr.length > 0 && estratoArr[0] > 0;
   let estS: MatchStatus = "neutral";
-  if (hasEstratoReq) {
-    estS = (estratoP && estratoArr.includes(Number(estratoP))) ? "exact" : "warn";
+  if (hasEstratoReq && estratoP && Number(estratoP) > 0) {
+    if (estratoArr.length === 1 && estratoArr[0] === Number(estratoP)) {
+      estS = "exact";
+    } else if (estratoArr.includes(Number(estratoP))) {
+      estS = "warn";
+    } else {
+      estS = "missing";
+    }
   }
   const reqEstratoLabel = hasEstratoReq ? `Estrato ${estratoArr.join(", ")}` : "N/E";
   add(
@@ -855,8 +873,8 @@ function scoreRows(req: any, prop: any) {
 
   let ageS: MatchStatus = "neutral";
   if (ageR > 0 && ageP >= 0) {
-    if (ageP <= ageR) ageS = "exact";
-    else ageS = "warn"; // Antigüedad supera máximo → Aproximado (no es bloqueante)
+    if (ageP === ageR) ageS = "exact";
+    else ageS = "warn";
   }
 
   const reqAgeLabel = ageR > 0 ? `≤ ${ageR} años de construcción` : "N/E";
