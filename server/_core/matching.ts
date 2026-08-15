@@ -83,13 +83,14 @@ export function extractRealPhone(item: any): string | null {
 }
 
 /**
- * Compatibilidad inteligente de tipos de transacción.
- * Implementa la lógica real del mercado inmobiliario colombiano:
- * - Una propiedad en "venta_o_arriendo" es compatible con requerimientos de "venta" O "arriendo"
- * - Un requerimiento de "arriendo" es compatible con propiedades "arriendo_con_opcion_de_compra"
- * - Un requerimiento de "arriendo_con_opcion_de_compra" es compatible con "venta_o_arriendo"
- * - Un requerimiento de "venta" es compatible con "venta_permuta"
- * - La compatibilidad también revisa el array acceptedTransactionTypes de la propiedad
+ * Compatibilidad inteligente de tipos de transacción (Doctrina VECY Network):
+ * - Venta ↔ Venta (100% Compatible)
+ * - Arriendo ↔ Arriendo (100% Compatible)
+ * - Arriendo Puro ↔ Venta o Arriendo / Vendo o Arriendo (100% Compatible)
+ * - Venta Pura ↔ Venta o Arriendo / Vendo o Arriendo (100% Compatible)
+ * - Venta ↔ Venta/Permuta (100% Compatible)
+ * - Venta ↔ Arriendo → 0% BLOQUEO ABSOLUTO
+ * - Arriendo Puro ↔ Arriendo con Opción de Compra → 0% BLOQUEO ABSOLUTO (Regla Doctrinal v17.2)
  */
 const TRANSACTION_COMPATIBILITY_MATRIX: Record<string, Set<string>> = {
   venta: new Set(["venta", "venta_o_arriendo", "venta_permuta", "arriendo_con_opcion_de_compra"]),
