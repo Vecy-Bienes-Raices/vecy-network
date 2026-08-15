@@ -117,6 +117,19 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Resolución de Error en Pantalla de Admin (`ReferenceError: isEditingThisCard is not defined`)**:
   - En `AdminMatches.tsx` (`filteredMatches`), se corrigió el alcance de la variable `isEditingThisCard = editingMatchId === match.id` y se incorporó en las dependencias de `useMemo`, eliminando el crash y restableciendo la carga instantánea de la vista de matches.
 
+- **Visión de Águila: Extracción Forense de Cánones, Presupuestos y Características (`janIA.ts` / `AdminMatches.tsx`)**:
+  - Detección de rangos de canon/presupuesto: *"8.500 a 11 millones"* $\rightarrow$ `presupuestoMin = 8.5M`, `presupuestoMax = 11M`.
+  - Detección de cánones con administración incluida y puntuación compuesta: *"Canon más administración incluida total mes $8,500,000-"* $\rightarrow$ `rentPrice = 8.5M`.
+  - Extracción precisa de antigüedad: *"Edificio más de 25 años"* $\rightarrow$ `antiguedadAnos = 25`.
+  - Extracción de garajes lineales vs independientes: *"2 parqueaderos en línea"* $\rightarrow$ `garages = 2`, `garageType = 'lineal'`.
+- **Compuertas de Negativas y Exclusiones Humanas (`matching.ts`)**:
+  - **Choque de Tipología Expresa**: Si la demanda exige `"NO DUPLEX"` / `"SIN ESCALERAS"` y la oferta es dúplex/2 niveles $\rightarrow$ ❌ **0% MATCH / BLOQUEO TOTAL**.
+  - **Choque de Nivel Vertical**: `"NO PRIMER PISO"` vs Piso 1 $\rightarrow$ ❌ **0% BLOQUEO TOTAL**.
+  - **Choque de Orientación**: `"NO INTERIOR"` vs Inmueble Interior $\rightarrow$ ❌ **0% BLOQUEO TOTAL**.
+- **Auditoría y Purga de la Base de Datos**:
+  - Propiedad #183 y Requerimiento #443 corregidos con sus valores reales de canon ($8.5M y $8.5M-$11M).
+  - Purgados todos los matches inválidos residuales en la BD (incluyendo Match #10710 por bloqueo de Dúplex).
+
 #### 💬 Respuestas y Confirmaciones Entregadas a Eduardo:
 - Diagnóstico completo presentado explicando por qué la frase publicitaria "A minutos de Hacienda Santa Bárbara" causó la confusión en la ingesta anterior.
 - Implementación del blindaje contra referencias comerciales en `geography.ts`.
@@ -128,6 +141,7 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - Aplicación de la política de Cero Matches Fallidos: si hay un solo dato fallido, el score es 0% y se excluye de la web/admin.
 - Definición y activación del Match Perfecto 100% cuando todas las filas dicen "Coincide".
 - Corrección del ReferenceError en React y restablecimiento de la interfaz en producción.
+- Implementación de la Visión de Águila: extracción forense de rangos de canon, presupuestos compuestos, antigüedad y exclusiones expresas (`NO DUPLEX`).
 - Confirmación y alineación total con la doctrina del 100% al 80% para el cotejo técnico.
 - Confirmación y registro de las 8 reglas explícitas de compatibilidad transaccional y los límites de techo y segmento de precio.
 
