@@ -2602,7 +2602,7 @@ function deducirGeografiaTripartita(inputZone, inputCity, groupName, rawText) {
   let neighborhood = isGenericZone ? null : inputZone?.trim() || null;
   let locality = null;
   let foundBarrio = false;
-  const cleanSearchText = normText.replace(/\b(?:a\s+minutos\s+de|a\s+pocos\s+minutos\s+de|cerca\s+de|cerca\s+a|proximo\s+a|frente\s+a|diagonal\s+a|al\s+lado\s+de|hacia)\s+[^,\.\n]+/gi, " ").replace(/\bhacienda\s+santa\s+barbara\b/gi, "centro_comercial").replace(/\bcentro\s+andino\b/gi, "centro_comercial").replace(/\bunilago\b/gi, "centro_comercial").replace(/\bunicentro\b/gi, "centro_comercial").replace(/\bparque\s+93\b/gi, "parque").replace(/\bparque\s+de\s+la\s+93\b/gi, "parque");
+  const cleanSearchText = normText.replace(/\b(?:a\s+minutos\s+de|a\s+pocos\s+minutos\s+de|cerca\s+de|cerca\s+a|proximo\s+a|frente\s+a|diagonal\s+a|al\s+lado\s+de|hacia)\s+[^,\.\n]+/gi, " ").replace(/\bhacienda\s+santa\s+barbara\b/gi, "centro_comercial").replace(/\bcentro\s+andino\b/gi, "centro_comercial").replace(/\bunilago\b/gi, "centro_comercial").replace(/\bunicentro\b/gi, "centro_comercial").replace(/\bparque\s+(?:del\s+|el\s+)?virrey\b/gi, "parque").replace(/\bparque\s+93\b/gi, "parque").replace(/\bparque\s+de\s+la\s+93\b/gi, "parque");
   const cleanCombined = `${normZone} ${normCity} ${normGroup} ${cleanSearchText}`;
   const COMPLEX_ALIASES = {
     "balcones de medina": { neighborhood: "Bosque Medina", locality: "Usaqu\xE9n" },
@@ -2610,8 +2610,10 @@ function deducirGeografiaTripartita(inputZone, inputCity, groupName, rawText) {
     "chico navarra": { neighborhood: "Chic\xF3 Navarra", locality: "Chapinero" },
     "chico norte": { neighborhood: "Chic\xF3 Norte", locality: "Chapinero" },
     "chico reservado": { neighborhood: "Chic\xF3 Reservado", locality: "Chapinero" },
+    "rincon del chico": { neighborhood: "Rinc\xF3n del Chic\xF3", locality: "Chapinero" },
     "los rosales": { neighborhood: "Rosales", locality: "Chapinero" },
     "la cabrera": { neighborhood: "La Cabrera", locality: "Chapinero" },
+    "el nogal": { neighborhood: "El Nogal", locality: "Chapinero" },
     "santa ana oriental": { neighborhood: "Santa Ana Oriental", locality: "Usaqu\xE9n" },
     "santa barbara central": { neighborhood: "Santa B\xE1rbara Central", locality: "Usaqu\xE9n" },
     "santa barbara occidental": { neighborhood: "Santa B\xE1rbara Occidental", locality: "Usaqu\xE9n" },
@@ -2775,9 +2777,8 @@ var init_geography = __esm({
           "Espartillal",
           "La Salle",
           "Marly",
-          "Virrey",
-          "El Virrey",
-          "Rinc\xF3n del Chic\xF3"
+          "Rinc\xF3n del Chic\xF3",
+          "Antiguo Country"
         ]
       },
       "suba": {
@@ -7404,33 +7405,43 @@ async function saveProperty(data, userId, realName, imageBuffer) {
       console.log(`[JanIA-GeoDisambiguate] Barrio compuesto: "${data.zone}"`);
     }
   }
-  const txTypeForSplit = (data.transactionType || "").toLowerCase();
+  const rawLowerTx = (data.rawText || "").toLowerCase();
+  let txTypeForSplit = (data.transactionType || "").toLowerCase();
+  const hasExplicitRent = rawLowerTx.includes("arriendo") || rawLowerTx.includes("canon") || rawLowerTx.includes("renta");
+  const hasExplicitSale = rawLowerTx.includes("venta") || rawLowerTx.includes("precio de venta");
+  if (hasExplicitRent && hasExplicitSale && (txTypeForSplit === "venta" || txTypeForSplit === "arriendo")) {
+    const rentMatchTest = rawLowerTx.match(/(?:valor\s*arriendo|arriendo|canon|renta)\s*:?\s*\$?([\d.,]+)\s*(mil\s*millones?|millones?|m|M)?/i);
+    const saleMatchTest = rawLowerTx.match(/(?:precio\s*(?:de\s*)?venta|venta)\s*:?\s*\$?([\d.,]+)\s*(mil\s*millones?|millones?|mm|mlls|m|M)?/i);
+    if (rentMatchTest && saleMatchTest) {
+      txTypeForSplit = "venta_o_arriendo";
+      data.transactionType = "venta_o_arriendo";
+      console.log(`[JanIA-DualDetector] Promovido a 'venta_o_arriendo' por presencia dual de arriendo y venta en rawText.`);
+    }
+  }
   if (txTypeForSplit === "venta_o_arriendo" || txTypeForSplit === "arriendo_con_opcion_de_compra") {
     const currentPrice = data.price ? parseFloat(String(data.price)) : 0;
     const currentRentP = data.rentPrice ? parseFloat(String(data.rentPrice)) : 0;
     const priceSaleField = data.priceSale ? parseFloat(String(data.priceSale)) : 0;
     const priceRentField = data.priceRent ? parseFloat(String(data.priceRent)) : 0;
-    const priceSeemRent = currentPrice > 0 && currentPrice < 1e8;
-    let finalSalePrice = currentPrice;
+    let finalSalePrice = currentPrice > 1e8 ? currentPrice : priceSaleField;
     let finalRentPrice = currentRentP > 0 ? currentRentP : priceRentField;
-    if (priceSaleField > 0) {
-      finalSalePrice = priceSaleField;
-      if (finalRentPrice <= 0 && priceSeemRent) finalRentPrice = currentPrice;
+    if (finalRentPrice <= 0) {
+      const rentMatch = rawLowerTx.match(/(?:valor\s*arriendo|arriendo|canon|renta)\s*:?\s*\$?([\d.,]+)\s*(mil\s*millones?|millones?|m|M)?/i);
+      if (rentMatch) {
+        let rawRNum = parseFloat(rentMatch[1].replace(/[.,]/g, ""));
+        const unitR = (rentMatch[2] || "").toLowerCase();
+        const multR = unitR.includes("mil millon") ? 1e9 : unitR.includes("millon") || unitR === "m" ? 1e6 : rawRNum < 1e4 ? 1e6 : 1;
+        finalRentPrice = rawRNum * multR;
+      }
     }
-    if (priceSeemRent && finalSalePrice < 1e8) {
-      const rawLower = (data.rawText || "").toLowerCase();
-      const salePriceMatch = rawLower.match(
-        /(?:precio\s*(?:de\s*)?venta|venta)\s*:?\s*\$?([\d.,]+)\s*(mil\s*millones?|millones?)?/i
-      );
-      if (salePriceMatch) {
-        const rawNum = parseFloat(salePriceMatch[1].replace(/[.,]/g, ""));
-        const unitStr = (salePriceMatch[2] || "").toLowerCase();
-        const mult = unitStr.includes("mil millon") ? 1e9 : unitStr.includes("millon") ? 1e6 : rawNum < 1e4 ? 1e6 : 1;
-        const computedSale = rawNum * mult;
-        if (computedSale > 1e8) {
-          finalSalePrice = computedSale;
-          if (finalRentPrice <= 0) finalRentPrice = currentPrice;
-        }
+    if (finalSalePrice < 1e8) {
+      const saleMatch = rawLowerTx.match(/(?:precio\s*(?:de\s*)?venta|venta)\s*:?\s*\$?([\d.,]+)\s*(mil\s*millones?|millones?|mm|mlls)?/i);
+      if (saleMatch) {
+        let rawSNum = parseFloat(saleMatch[1].replace(/[.,]/g, ""));
+        const unitS = (saleMatch[2] || "").toLowerCase();
+        const multS = unitS.includes("mil millon") ? 1e9 : unitS.includes("millon") || unitS.includes("mm") || unitS.includes("mlls") ? 1e6 : rawSNum < 1e4 ? 1e6 : 1;
+        const computedS = rawSNum * multS;
+        if (computedS >= 1e8) finalSalePrice = computedS;
       }
     }
     if (finalSalePrice > 0) data.price = finalSalePrice;
@@ -11108,7 +11119,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v22.3";
+var VECY_VERSION = "v22.4";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 

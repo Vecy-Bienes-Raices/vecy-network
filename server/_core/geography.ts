@@ -62,7 +62,7 @@ export const DICCIONARIO_BOGOTA: Record<string, { localidad: string, barrios: st
       "El Chicó", "Chicó Norte", "Chicó Norte II", "Chicó Norte III", "Chicó Reservado", "Chicó Navarra", "Chicó Reservado Norte",
       "El Nogal", "Club El Nogal", "El Lago", "El Retiro", "Rosales", "Los Rosales", "La Cabrera",
       "Chapinero Central", "Chapinero Alto", "Pardo Rubio", "Quinta Camacho", "El Castillo", "San Luis", "Juan XXIII",
-      "El Refugio", "El Bosque", "Granada", "Porciúncula", "Lago Gaitán", "Espartillal", "La Salle", "Marly", "Virrey", "El Virrey", "Rincón del Chicó"
+      "El Refugio", "El Bosque", "Granada", "Porciúncula", "Lago Gaitán", "Espartillal", "La Salle", "Marly", "Rincón del Chicó", "Antiguo Country"
     ]
   },
 
@@ -1039,6 +1039,7 @@ export function deducirGeografiaTripartita(
     .replace(/\bcentro\s+andino\b/gi, "centro_comercial")
     .replace(/\bunilago\b/gi, "centro_comercial")
     .replace(/\bunicentro\b/gi, "centro_comercial")
+    .replace(/\bparque\s+(?:del\s+|el\s+)?virrey\b/gi, "parque")
     .replace(/\bparque\s+93\b/gi, "parque")
     .replace(/\bparque\s+de\s+la\s+93\b/gi, "parque");
 
@@ -1051,8 +1052,10 @@ export function deducirGeografiaTripartita(
     "chico navarra": { neighborhood: "Chicó Navarra", locality: "Chapinero" },
     "chico norte": { neighborhood: "Chicó Norte", locality: "Chapinero" },
     "chico reservado": { neighborhood: "Chicó Reservado", locality: "Chapinero" },
+    "rincon del chico": { neighborhood: "Rincón del Chicó", locality: "Chapinero" },
     "los rosales": { neighborhood: "Rosales", locality: "Chapinero" },
     "la cabrera": { neighborhood: "La Cabrera", locality: "Chapinero" },
+    "el nogal": { neighborhood: "El Nogal", locality: "Chapinero" },
     "santa ana oriental": { neighborhood: "Santa Ana Oriental", locality: "Usaquén" },
     "santa barbara central": { neighborhood: "Santa Bárbara Central", locality: "Usaquén" },
     "santa barbara occidental": { neighborhood: "Santa Bárbara Occidental", locality: "Usaquén" },

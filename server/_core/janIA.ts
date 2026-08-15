@@ -3249,40 +3249,53 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
     }
   }
 
-  // ── BIFURCACIÓN DE PRECIO PARA FICHAS DUALES (venta_o_arriendo) v18.0 ────────
+  // ── AUTO-DETECCIÓN Y BIFURCACIÓN DE PRECIO PARA FICHAS DUALES (venta_o_arriendo) v22.4 ────────
   // price = precio de VENTA · rentPrice = canon NETO de arriendo (sin administración)
-  const txTypeForSplit = (data.transactionType || "").toLowerCase();
+  const rawLowerTx = (data.rawText || "").toLowerCase();
+  let txTypeForSplit = (data.transactionType || "").toLowerCase();
+
+  const hasExplicitRent = rawLowerTx.includes("arriendo") || rawLowerTx.includes("canon") || rawLowerTx.includes("renta");
+  const hasExplicitSale = rawLowerTx.includes("venta") || rawLowerTx.includes("precio de venta");
+
+  if (hasExplicitRent && hasExplicitSale && (txTypeForSplit === "venta" || txTypeForSplit === "arriendo")) {
+    const rentMatchTest = rawLowerTx.match(/(?:valor\s*arriendo|arriendo|canon|renta)\s*:?\s*\$?([\d.,]+)\s*(mil\s*millones?|millones?|m|M)?/i);
+    const saleMatchTest = rawLowerTx.match(/(?:precio\s*(?:de\s*)?venta|venta)\s*:?\s*\$?([\d.,]+)\s*(mil\s*millones?|millones?|mm|mlls|m|M)?/i);
+    if (rentMatchTest && saleMatchTest) {
+      txTypeForSplit = "venta_o_arriendo";
+      data.transactionType = "venta_o_arriendo";
+      console.log(`[JanIA-DualDetector] Promovido a 'venta_o_arriendo' por presencia dual de arriendo y venta en rawText.`);
+    }
+  }
+
   if (txTypeForSplit === "venta_o_arriendo" || txTypeForSplit === "arriendo_con_opcion_de_compra") {
     const currentPrice   = data.price     ? parseFloat(String(data.price))     : 0;
     const currentRentP   = data.rentPrice ? parseFloat(String(data.rentPrice)) : 0;
     const priceSaleField = data.priceSale ? parseFloat(String(data.priceSale)) : 0;
     const priceRentField = data.priceRent ? parseFloat(String(data.priceRent)) : 0;
-    const priceSeemRent  = currentPrice > 0 && currentPrice < 100_000_000;
 
-    let finalSalePrice = currentPrice;
+    let finalSalePrice = currentPrice > 100_000_000 ? currentPrice : priceSaleField;
     let finalRentPrice = currentRentP > 0 ? currentRentP : priceRentField;
 
-    if (priceSaleField > 0) {
-      finalSalePrice = priceSaleField;
-      if (finalRentPrice <= 0 && priceSeemRent) finalRentPrice = currentPrice;
+    // Buscar canon explícito en rawText si no está poblado
+    if (finalRentPrice <= 0) {
+      const rentMatch = rawLowerTx.match(/(?:valor\s*arriendo|arriendo|canon|renta)\s*:?\s*\$?([\d.,]+)\s*(mil\s*millones?|millones?|m|M)?/i);
+      if (rentMatch) {
+        let rawRNum = parseFloat(rentMatch[1].replace(/[.,]/g, ""));
+        const unitR = (rentMatch[2] || "").toLowerCase();
+        const multR = unitR.includes("mil millon") ? 1_000_000_000 : (unitR.includes("millon") || unitR === "m") ? 1_000_000 : rawRNum < 10_000 ? 1_000_000 : 1;
+        finalRentPrice = rawRNum * multR;
+      }
     }
 
-    if (priceSeemRent && finalSalePrice < 100_000_000) {
-      const rawLower = (data.rawText || "").toLowerCase();
-      const salePriceMatch = rawLower.match(
-        /(?:precio\s*(?:de\s*)?venta|venta)\s*:?\s*\$?([\d.,]+)\s*(mil\s*millones?|millones?)?/i
-      );
-      if (salePriceMatch) {
-        const rawNum = parseFloat(salePriceMatch[1].replace(/[.,]/g, ""));
-        const unitStr = (salePriceMatch[2] || "").toLowerCase();
-        const mult = unitStr.includes("mil millon") ? 1_000_000_000
-          : unitStr.includes("millon") ? 1_000_000
-          : rawNum < 10_000 ? 1_000_000 : 1;
-        const computedSale = rawNum * mult;
-        if (computedSale > 100_000_000) {
-          finalSalePrice = computedSale;
-          if (finalRentPrice <= 0) finalRentPrice = currentPrice;
-        }
+    // Buscar precio de venta explícito en rawText si no está poblado o si era menor a 100M
+    if (finalSalePrice < 100_000_000) {
+      const saleMatch = rawLowerTx.match(/(?:precio\s*(?:de\s*)?venta|venta)\s*:?\s*\$?([\d.,]+)\s*(mil\s*millones?|millones?|mm|mlls)?/i);
+      if (saleMatch) {
+        let rawSNum = parseFloat(saleMatch[1].replace(/[.,]/g, ""));
+        const unitS = (saleMatch[2] || "").toLowerCase();
+        const multS = unitS.includes("mil millon") ? 1_000_000_000 : (unitS.includes("millon") || unitS.includes("mm") || unitS.includes("mlls")) ? 1_000_000 : rawSNum < 10_000 ? 1_000_000 : 1;
+        const computedS = rawSNum * multS;
+        if (computedS >= 100_000_000) finalSalePrice = computedS;
       }
     }
 

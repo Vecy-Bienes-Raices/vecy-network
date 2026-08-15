@@ -75,19 +75,29 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
    - 5. Venta ↔ Venta/Permuta (100% Compatible)
    - 6. Venta ↔ Arriendo Puro $\rightarrow$ **0% BLOQUEO ABSOLUTO**
    - 7. Arriendo Puro ↔ Arriendo con Opción de Compra $\rightarrow$ **0% BLOQUEO ABSOLUTO (Doctrina v17.2)**
-   - 8. Requerimiento en "Arriendo con Opción de Compra" ↔ "Arriendo con Opción de Compra", "Venta o Arriendo" o "Venta" $\rightarrow$ **100% Compatible**
+   - 5. **Identificación de Falso Match entre La Cabrera (#1138) y Requerimiento (#377) / Corrección de "El Virrey"**:
+   - **Realidad Catastral IDECA de "El Virrey"**: El barrio "El Virrey" no existe en el norte de Bogotá (el parque metropolitano El Virrey está ubicado en los límites de El Chicó / La Cabrera / Antiguo Country). El único barrio oficial "El Virrey" en IDECA está en el sur de Bogotá (Usme). Se eliminó "Virrey" como barrio de Chapinero en `geography.ts`.
+   - **Guillotina Financiera de Arriendo**: El Inmueble #1138 se ofrece en arriendo por $12.000.000 + $1.780.000 de administración ($13.780.000 COP) y venta por $3.000M. El Requerimiento #377 tiene un presupuesto máximo de $5.000.000 COP. Al superar el canon ofrecido el presupuesto del solicitante, el cotejo técnico arrojó **0% Match / Bloqueo Total por Guillotina Financiera**.
+   - **Auto-Detección de Fichas Duales (`venta_o_arriendo`)**: En `janIA.ts`, se incorporó la detección automática para extraer simultáneamente el canon neto de arriendo ($12M), la cuota de administración ($1.78M) y el precio de venta ($3.000M) cuando un mensaje contiene ambas modalidades.
 
 #### 🛠️ Soluciones e Implementaciones Técnicas:
-- **Blindaje Geográfico Antirreferencias Comerciales (`server/_core/geography.ts`)**: En `deducirGeografiaTripartita`, se incorporó un filtro de limpieza que suprime frases de proximidad comercial (*"A minutos de Hacienda Santa Bárbara"*, *"Cerca a"*, *"Próximo a"*, etc.) evitando que referencias comerciales o centros comerciales se extraigan como el barrio predial del inmueble.
+- **Blindaje Geográfico Antirreferencias Comerciales (`server/_core/geography.ts`)**: En `deducirGeografiaTripartita`, se incorporó un filtro de limpieza que suprime frases de proximidad comercial (*"A minutos de Hacienda Santa Bárbara"*, *"Parque del Virrey"*, *"Cerca a"*, *"Próximo a"*, etc.) evitando que referencias comerciales o parques se extraigan como el barrio predial del inmueble.
 - **Reconocimiento Directo de Complejos Residenciales y Ordenamiento por Longitud**: Mapeo directo de *"Balcones de Medina"* a *"Bosque Medina"* (Usaquén) y ordenamiento de búsqueda en diccionarios por longitud descendente para priorizar nombres compuestos y específicos sobre palabras genéricas.
 - **Corrección de Datos Prediales Propiedad #409 en DB**: Actualización en Supabase de `zone = 'Bosque Medina'` y `address_neighborhood = 'Bosque Medina'`. Purga de matches espurios.
-- **Verificación Empírica TypeScript**: Al evaluar Propiedad #409 (Bosque Medina) vs Requerimiento #44 (Santa Bárbara), el motor TypeScript arrojó **0% Match / Bloqueo Absoluto**, confirmando el cumplimiento del 100% de la doctrina geográfica.
+- **Corrección de Datos Prediales Propiedad #1138 y Requerimiento #377 en DB**:
+  - Propiedad #1138: `zone = 'La Cabrera'`, `address_neighborhood = 'La Cabrera'`, `rent_price = 12000000`, `adminFee = 1780000`, `price = 3000000000`, `transactionType = 'venta_o_arriendo'`.
+  - Requerimiento #377: `zonaDeseada = 'La Cabrera, El Nogal, El Chicó'`, `address_neighborhood = 'La Cabrera'`, `presupuestoMax = 5000000`.
+  - Purga de Match #10709.
+- **Verificación Empírica TypeScript**:
+  - Propiedad #409 vs Req #44 $\rightarrow$ **0% Match / Bloqueo Absoluto**.
+  - Propiedad #1138 vs Req #377 $\rightarrow$ **0% Match / Bloqueo Financiero Total (Canon $13.78M > Ppto $5M)**.
 - **Codificación y Documentación de las 8 Reglas de Transacción**: Actualizado `TRANSACTION_COMPATIBILITY_MATRIX` y los comentarios rectores en `server/_core/matching.ts`.
 
 #### 💬 Respuestas y Confirmaciones Entregadas a Eduardo:
 - Diagnóstico completo presentado explicando por qué la frase publicitaria "A minutos de Hacienda Santa Bárbara" causó la confusión en la ingesta anterior.
 - Implementación del blindaje contra referencias comerciales en `geography.ts`.
 - Corrección del registro en DB y verificación empírica con resultado de 0% Match entre Bosque Medina y Santa Bárbara.
+- Corrección del caso La Cabrera vs Requerimiento de $5M: demostración del bloqueo financiero y eliminación de "Virrey" como falso barrio del norte.
 - Confirmación y alineación total con la doctrina del 100% al 80% para el cotejo técnico.
 - Confirmación y registro de las 8 reglas explícitas de compatibilidad transaccional y los límites de techo y segmento de precio.
 
