@@ -1596,6 +1596,14 @@ export class JaniaMatchBot {
       const realName = msg.pushName || `Asesor +${effectiveSenderPhone}`;
       const { processWhatsAppMessage } = await import('./janIA');
 
+      let groupName = "VECY INMUEBLES NETWORK";
+      try {
+        const metadata = await this.getCachedGroupMetadata(senderId);
+        if (metadata && metadata.subject) {
+          groupName = metadata.subject;
+        }
+      } catch (e) {}
+
       const result = await processWhatsAppMessage(
         bodyText,
         effectiveSenderPhone,
@@ -1607,7 +1615,8 @@ export class JaniaMatchBot {
         true, // isGroup = true (forces parsing)
         pdfBuffer,
         pdfMimeType,
-        senderId
+        senderId,
+        groupName
       );
 
       if (result) {

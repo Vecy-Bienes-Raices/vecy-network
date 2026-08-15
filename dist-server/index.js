@@ -10420,6 +10420,14 @@ ${result.response}`);
           }
           const realName = msg.pushName || `Asesor +${effectiveSenderPhone}`;
           const { processWhatsAppMessage: processWhatsAppMessage2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+          let groupName = "VECY INMUEBLES NETWORK";
+          try {
+            const metadata = await this.getCachedGroupMetadata(senderId);
+            if (metadata && metadata.subject) {
+              groupName = metadata.subject;
+            }
+          } catch (e) {
+          }
           const result = await processWhatsAppMessage2(
             bodyText,
             effectiveSenderPhone,
@@ -10432,7 +10440,8 @@ ${result.response}`);
             // isGroup = true (forces parsing)
             pdfBuffer,
             pdfMimeType,
-            senderId
+            senderId,
+            groupName
           );
           if (result) {
             let reaction = "";
