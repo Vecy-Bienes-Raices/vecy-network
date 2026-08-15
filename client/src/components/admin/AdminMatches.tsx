@@ -988,37 +988,43 @@ function scoreRows(req: any, prop: any) {
 
 
   // ── ESTADÍSTICA Y TABULACIÓN DOCTRINAL DE MATCH VECY (REGULARES 80%, 85%, 90%, 97%, 100%) ──
-  // 1. Si cualquiera de los 5 primeros campos en duro NO COINCIDE 100% (no está en verde) -> autoScore = 0 (SACADO DE ALLÍ)
+  // 1. Si cualquiera de los 5 primeros campos en duro NO COINCIDE 100% (no está en verde) -> autoScore = 0
   const top5Rows = rows.slice(0, 5);
   const hasHardMismatch = top5Rows.some(r => r.status === "missing");
 
-  // 2. Si cualquier campo tiene status === "missing" (Dato Fallido: ej. precio supera presupuesto o física menor Oferta < Demanda) -> autoScore = 0 (SACADO DE ALLÍ)
-  const hasAnyMissing = rows.some(r => r.status === "missing");
+  // 2. Filtros duros físicos y financieros: Precio supera presupuesto o física menor (Oferta < Demanda)
+  const hardPhysicalMismatch = 
+    (saleS === "missing") || 
+    (rentS === "missing") || 
+    (areS === "missing") || 
+    (bedS === "missing") || 
+    (bathS === "missing") || 
+    (garS === "missing");
 
   let autoScore = 0;
-  if (hasHardMismatch || hasAnyMissing) {
-    autoScore = 0; // SACADO DE ALLÍ DE INMEDIATO (CERO MATCHES FALLIDOS EN LA WEB)
+  if (hasHardMismatch || hardPhysicalMismatch) {
+    autoScore = 0;
   } else {
-    // 3. Con cero fallas, evaluamos el nivel de coincidencia:
-    const downstreamRows = rows.slice(5, -1); // Excluyendo teléfono
+    // 3. Con cero fallas duras, evaluamos la afinidad:
     const allExact = rows.every(r => r.label.includes("Teléfono") || r.status === "exact");
 
     if (allExact) {
       autoScore = 100; // 🎯 100% MATCH PERFECTO (TODAS LAS FILAS EN "COINCIDE")
     } else {
+      const downstreamRows = rows.slice(5, -1); // Excluyendo teléfono
       const filledCount = downstreamRows.filter(r => r.reqVal !== "N/E" && r.propVal !== "N/E" && r.status !== "missing").length;
       const ratio = downstreamRows.length > 0 ? filledCount / downstreamRows.length : 0;
 
       if (ratio < 0.50) {
-        autoScore = 0; // Menos del 50% de completitud -> Sacado de allí
-      } else if (ratio < 0.70) {
         autoScore = 80;
-      } else if (ratio < 0.85) {
+      } else if (ratio < 0.70) {
         autoScore = 85;
-      } else if (ratio < 0.95) {
+      } else if (ratio < 0.85) {
         autoScore = 90;
+      } else if (ratio < 0.95) {
+        autoScore = 95;
       } else {
-        autoScore = 97; // Alta afinidad con aproximaciones válidas en confort
+        autoScore = 97;
       }
     }
   }
@@ -1373,10 +1379,10 @@ export default function AdminMatches() {
       // Evaluar la afinidad comercial y la regla doctrinal de los 5 campos en duro + completitud
       const { rows, autoScore } = scoreRows(requirement, property);
       const dbScore = parseFloat(match.matchScore || "0");
-      const displayScore = autoScore > 0 ? autoScore : dbScore;
+      const displayScore = (isEditingThisCard && autoScore > 0) ? autoScore : dbScore;
 
-      // Si la puntuación del cotejo es menor a 80 o contiene algún dato fallido (autoScore === 0) -> No mostrar en el reporte
-      if (autoScore === 0 || displayScore < 80) {
+      // Mostrar todos los matches calificados (80% a 100%)
+      if (displayScore < 80) {
         return false;
       }
 
