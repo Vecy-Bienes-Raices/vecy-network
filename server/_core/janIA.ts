@@ -4,7 +4,7 @@
  */
 import { invokeLLM } from "./llm";
 import { getDb } from "../db";
-import { properties, requirements, users, propertyImages, InsertProperty, InsertRequirement, pendingSessions, propertyMatches, messages as dbMessages, conversations as dbConversations, propertyPublicationHistory } from "../../drizzle/schema";
+import { properties, requirements, users, propertyImages, InsertProperty, InsertRequirement, pendingSessions, propertyMatches, messages as dbMessages, conversations as dbConversations, propertyPublicationHistory, inmobiliarioLexicon, matchFeedback } from "../../drizzle/schema";
 import { findMatchesForProperty, findMatchesForRequirement } from "./matching";
 import { validarZona, normalizarTextoGeografico, desambiguarBarriosCompuestos, deducirGeografiaTripartita } from "./geography";
 import { validateCity } from "./divipola";

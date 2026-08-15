@@ -19,7 +19,7 @@ __export(schema_exports, {
   currencyEnum: () => currencyEnum,
   demandLevelEnum: () => demandLevelEnum,
   favorites: () => favorites,
-  inmobiliarioLexicon: () => inmobiliarioLexicon2,
+  inmobiliarioLexicon: () => inmobiliarioLexicon,
   inquiryTypeEnum: () => inquiryTypeEnum,
   leadStatusEnum: () => leadStatusEnum,
   leads: () => leads,
@@ -53,7 +53,7 @@ __export(schema_exports, {
   zoneAliases: () => zoneAliases
 });
 import { serial, integer, pgEnum, pgTable, text, timestamp, varchar, decimal, boolean, jsonb, bigint, uuid } from "drizzle-orm/pg-core";
-var roleEnum, propertyTypeEnum, transactionTypeEnum, mandateStatusEnum, mandateTypeEnum, inquiryTypeEnum, leadStatusEnum, conversationStatusEnum, matchStatusEnum, statusEnum, messageTypeEnum, demandLevelEnum, supplyLevelEnum, marketTrendEnum, currencyEnum, users, properties, requirements, leads, conversations, messages, propertyMatches, notificationLogs, pendingSessions, referralLinks, shares, clientLedger, propertyImages, marketAnalysis, favorites, colombiaGeography, profiles, counters, solicitudes, propertyPublicationHistory, userBehavioralFingerprints, userPatterns, zoneAliases, inmobiliarioLexicon2, matchFeedback;
+var roleEnum, propertyTypeEnum, transactionTypeEnum, mandateStatusEnum, mandateTypeEnum, inquiryTypeEnum, leadStatusEnum, conversationStatusEnum, matchStatusEnum, statusEnum, messageTypeEnum, demandLevelEnum, supplyLevelEnum, marketTrendEnum, currencyEnum, users, properties, requirements, leads, conversations, messages, propertyMatches, notificationLogs, pendingSessions, referralLinks, shares, clientLedger, propertyImages, marketAnalysis, favorites, colombiaGeography, profiles, counters, solicitudes, propertyPublicationHistory, userBehavioralFingerprints, userPatterns, zoneAliases, inmobiliarioLexicon, matchFeedback;
 var init_schema = __esm({
   "drizzle/schema.ts"() {
     "use strict";
@@ -455,7 +455,7 @@ var init_schema = __esm({
       // 'manual' | 'geocoding_confirmado' | 'ia_inferido'
       createdAt: timestamp("created_at").defaultNow()
     });
-    inmobiliarioLexicon2 = pgTable("inmobiliario_lexicon", {
+    inmobiliarioLexicon = pgTable("inmobiliario_lexicon", {
       id: serial("id").primaryKey(),
       terminoColoquial: varchar("termino_coloquial", { length: 255 }).notNull().unique(),
       categoria: varchar("categoria", { length: 100 }).notNull(),
@@ -11337,7 +11337,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v22.4";
+var VECY_VERSION = "v22.5";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 
@@ -12534,7 +12534,7 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) return [];
     try {
-      const terms = await db.select().from(inmobiliarioLexicon2).orderBy(desc2(inmobiliarioLexicon2.frecuenciaUso)).limit(100);
+      const terms = await db.select().from(inmobiliarioLexicon).orderBy(desc2(inmobiliarioLexicon.frecuenciaUso)).limit(100);
       return terms;
     } catch (e) {
       console.error("[JanIA-Lexicon] Error obteniendo l\xE9xico:", e.message);
@@ -12552,16 +12552,16 @@ ${liveStats}${userContextInstruction}
     if (!db) throw new Error("Base de datos no disponible");
     try {
       const cleanTerm = input.terminoColoquial.toLowerCase().trim();
-      const [term] = await db.insert(inmobiliarioLexicon2).values({
+      const [term] = await db.insert(inmobiliarioLexicon).values({
         terminoColoquial: cleanTerm,
         categoria: input.categoria,
         conceptoCanonico: input.conceptoCanonico,
         frecuenciaUso: 1,
         origen: input.origen
       }).onConflictDoUpdate({
-        target: inmobiliarioLexicon2.terminoColoquial,
+        target: inmobiliarioLexicon.terminoColoquial,
         set: {
-          frecuenciaUso: sql4`${inmobiliarioLexicon2.frecuenciaUso} + 1`,
+          frecuenciaUso: sql4`${inmobiliarioLexicon.frecuenciaUso} + 1`,
           updatedAt: /* @__PURE__ */ new Date()
         }
       }).returning();
