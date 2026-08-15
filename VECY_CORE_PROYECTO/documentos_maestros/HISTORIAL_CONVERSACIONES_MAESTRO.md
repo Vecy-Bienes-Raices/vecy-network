@@ -97,6 +97,8 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Extractor Robusto de Presupuesto y Sanidad de Tipo de Activo (`matching.ts`)**:
   - Limpieza de caracteres invisibles (`[\u2060\u200B\u200C\u200D\uFEFF\u00A0]`) y soporte para espacios tras `$`.
   - Detección de sanidad predial en `matching.ts` para deducir `effectivePropType = 'house'` cuando el texto declara venta de casa.
+- **Blindaje Total contra Casillas N/E en Tabla de Cotejo Técnico (`AdminMatches.tsx`)**:
+  - Implementación de inferencia en caliente para extraer presupuestos de venta, cánones de arriendo, cuotas de administración, estratos, baños y parqueaderos directamente del texto original de la publicación si la columna en DB está vacía o en 0, garantizando que **NUNCA** aparezca `N/E` cuando el dato existe en el texto de WhatsApp.
 - **Verificación Empírica TypeScript**:
   - Propiedad #409 vs Req #44 $\rightarrow$ **0% Match / Bloqueo Absoluto**.
   - Propiedad #1138 vs Req #377 $\rightarrow$ **0% Match / Bloqueo Financiero Total (Canon $13.78M > Ppto $5M)**.
@@ -109,6 +111,7 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - Corrección del registro en DB y verificación empírica con resultado de 0% Match entre Bosque Medina y Santa Bárbara.
 - Corrección del caso La Cabrera vs Requerimiento de $5M: demostración del bloqueo financiero y eliminación de "Virrey" como falso barrio del norte.
 - Corrección del caso Cali Casa $849.5M vs Apto $300M: demostración del bloqueo total por tipo de activo y presupuesto.
+- Implementación de la inferencia en caliente en `AdminMatches.tsx` para erradicar las casillas `N/E` cuando la información está en la publicación.
 - Confirmación y alineación total con la doctrina del 100% al 80% para el cotejo técnico.
 - Confirmación y registro de las 8 reglas explícitas de compatibilidad transaccional y los límites de techo y segmento de precio.
 
