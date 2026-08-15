@@ -1379,6 +1379,7 @@ export default function AdminMatches() {
       // Evaluar la afinidad comercial y la regla doctrinal de los 5 campos en duro + completitud
       const { rows, autoScore } = scoreRows(requirement, property);
       const dbScore = parseFloat(match.matchScore || "0");
+      const isEditingThisCard = editingMatchId === match.id;
       const displayScore = (isEditingThisCard && autoScore > 0) ? autoScore : dbScore;
 
       // Mostrar todos los matches calificados (80% a 100%)
@@ -1417,7 +1418,7 @@ export default function AdminMatches() {
 
       return true;
     });
-  }, [matches, minScore, searchTerm]);
+  }, [matches, minScore, searchTerm, editingMatchId]);
 
 
 
