@@ -162,10 +162,9 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v22.1 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL: v22.2 — Agosto 2026
 
-### Novedades v22.1:
-- **Visualización Limpia de Enlaces (`extractPublicLink`)**: Renderizado de hipervínculos azules limpios y sobrios (`text-blue-400 hover:text-blue-300 font-medium underline break-all`) tanto en Ofertas como en Demandas.
-- **Badge Web Sobrio (`shared/const.ts`)**: Muestra únicamente `VERSIÓN v22.1` en el encabezado del panel admin sin títulos ni subtítulos adicionales.
-- **Recuperación Masiva de Enlaces en Supabase DB**: Rastreo y rescate masivo de 17 enlaces de Inmuebles y 9 enlaces de Requerimientos en la base de datos Supabase.
-- **Historial Completo con Contexto Maestro**: Integración de la bitácora cronológica maestro en `HISTORIAL_CONVERSACIONES_MAESTRO.md`.
+### Novedades v22.2:
+- **JanIA — Addendum v9 (Detector Multi-Item de 5 Heurísticas)**: Implementación de la función `evaluateMultiItemHeuristics` en `server/_core/janIA.ts` (líneas 1570-1625). Ante mensajes de WhatsApp con 2+ publicaciones mezcladas, JanIA particiona e ingesta N registros independientes en Supabase DB.
+- **Supresión de Enlaces Duplicados (`AdminMatches.tsx`)**: Eliminación del renglón duplicado `🌐 Enlace original:` cuando la URL ya se encuentra renderizada dentro de la tarjeta de la publicación original.
+- **Auditoría Retroactiva y Segregación de Propiedad #150**: Auditoría sobre 755 inmuebles y 331 requerimientos. Propiedad #150 fue segregada en 3 inmuebles independientes (#150 Chicó Navarra, #1181 Colina Duplex y #1182 Bosque Medina) con sus propios precios y enlaces de Wasi.

@@ -52,11 +52,31 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v22.1 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v22.2 — Agosto 2026
 
 ---
 
 ## 📜 REGISTRO DETALLADO DE CONVERSACIONES (ORDEN CRONOLÓGICO INVERSO CON FECHA Y HORA)
+
+### 🗓️ Sesión: Sábado 15 de Agosto de 2026 — 12:00 AM a 12:10 AM (Hora Colombia UTC-5) / 15 de Agosto 05:10 AM UTC
+**Versión del Sistema**: `v22.2 — Agosto 2026`  
+
+#### 📋 Requerimientos Específicos del Usuario (Eduardo A. Rivera):
+1. **JanIA — Addendum v9: Segmentación Obligatoria de Publicaciones Múltiples**: Cuando un mensaje de WhatsApp contenga 2 o más inmuebles o requerimientos (ej. publicaciones enviadas en bloque por agencias como "ATL"), JanIA DEBE dividirlos en N registros independientes ANTES de Gemini y guardarlos como unidades separadas en Supabase DB.
+2. **Supresión de Enlaces Duplicados**: Si una URL ya está presente y renderizada dentro del texto original (`rawText`), NO volver a mostrar la línea duplicada `🌐 Enlace original:` debajo de la tarjeta.
+3. **Auditoría Retroactiva y Protocolo de Verificación**: Correr las 5 heurísticas combinadas de Addendum v9 sobre la base de datos de Supabase, reportar sospechosos y demostrar la segregación del Inmueble #150 con la ubicación exacta en el código.
+
+#### 🛠️ Soluciones e Implementaciones Técnicas:
+- **Detector de 5 Heurísticas (`evaluateMultiItemHeuristics`)**: Implementado en `server/_core/janIA.ts` (líneas 1570-1625). Evalúa H1 (encabezados/emojis repetidos), H2 (reinicio de numeración 1.), H3 (múltiples URLs), H4 (repetición de negocio+inmueble) y H5 (delimitadores `---`/`___`). Ante score $\ge 2$, divide el mensaje en N partes e ingesta individualmente con `__is_sub_message__`.
+- **Eliminación de Enlaces Duplicados**: Actualizado `client/src/components/admin/AdminMatches.tsx` (líneas 1555-1560 y 1695-1700) para verificar `pFullText.includes(origUrl)`. Si el enlace ya está en el texto, se oculta la línea redundante inferior.
+- **Auditoría DB & Segregación de Inmueble #150**: Auditoría sobre 755 inmuebles y 331 requerimientos. Propiedad #150 (que agrupaba 3 apartamentos) fue dividida en 3 registros independientes: Propiedad #150 (Chicó Navarra - $1.150M), Propiedad #1181 (Colina Duplex - $1.250M) y Propiedad #1182 (Bosque Medina - $1.600M).
+
+#### 💬 Respuestas y Confirmaciones Entregadas a Eduardo:
+- Se implementó la partición de 5 heurísticas previa a Gemini en `server/_core/janIA.ts`.
+- Se eliminó la duplicidad visual de enlaces en el panel admin.
+- Se segregó exitosamente la Propiedad #150 en 3 inmuebles individuales en Supabase DB.
+
+---
 
 ### 🗓️ Sesión: Viernes 14 de Agosto de 2026 — 11:20 PM a 11:25 PM (Hora Colombia UTC-5) / 15 de Agosto 04:25 AM UTC
 **Versión del Sistema**: `v22.1 — Agosto 2026`  

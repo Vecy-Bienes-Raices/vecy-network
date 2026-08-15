@@ -1567,28 +1567,97 @@ export async function scrapeUrlWithBypass(url: string): Promise<string> {
   return "";
 }
 
+/**
+ * ═════════════════════════════════════════════════════════════════════════════
+ * JANIA — ADDENDUM v9: DETECTOR DE SEGMENTOS MULTI-PUBLICACIÓN DE 5 HEURÍSTICAS
+ * ═════════════════════════════════════════════════════════════════════════════
+ * Evalúa si un solo mensaje de WhatsApp contiene múltiples publicaciones de inmuebles
+ * o múltiples requerimientos para dividirlos en N registros independientes en Supabase.
+ */
+export function evaluateMultiItemHeuristics(text: string): { isMultiItem: boolean; score: number; signals: string[] } {
+  if (!text || text.length < 100) return { isMultiItem: false, score: 0, signals: [] };
+
+  const signals: string[] = [];
+
+  // H1: Encabezados repetidos de bloque (ej. "⬆️🏬ATL", "(🙏🏻)", "🚨VENTA", "🚨ARRIENDO", "🚨BUSCO")
+  const h1HeaderMatches = text.match(/(?:[⬆️🏬🚨📌✨⭐👉1️⃣2️⃣3️⃣•]+|(?:\(🙏🏻\))|(?:ATL)|(?:\b(?:VENTA|ARRIENDO|BUSCO|SE VENDE|SE ARRIENDA|COMPRO)\b))/gi) || [];
+  const h1RepeatedHeaders = h1HeaderMatches.length >= 3;
+  if (h1RepeatedHeaders) signals.push("H1: Encabezados o emojis repetidos (3+)");
+
+  // H2: Reinicio de numeración (ej. aparece "1." o "1️⃣" o "1)" después de un número mayor como 10., 15., 17.)
+  let h2NumberReset = false;
+  const numMatches = Array.from(text.matchAll(/(?:^|\n)\s*(\d{1,2})[\.\)\️⃣]/g));
+  if (numMatches.length >= 2) {
+    let maxSeen = 0;
+    for (const m of numMatches) {
+      const val = parseInt(m[1], 10);
+      if (maxSeen >= 5 && val === 1) {
+        h2NumberReset = true;
+        break;
+      }
+      if (val > maxSeen) maxSeen = val;
+    }
+  }
+  if (h2NumberReset) signals.push("H2: Reinicio de numeración (1. reaparece tras número > 5)");
+
+  // H3: Múltiples enlaces públicos (2+ https://)
+  const urlMatches = text.match(/https?:\/\/[^\s<"']+/gi) || [];
+  if (urlMatches.length >= 2) signals.push(`H3: Múltiples URLs públicas (${urlMatches.length} enlaces)`);
+
+  // H4: Repetición del patrón "VENTA/ARRIENDO/BUSCO [TIPO DE INMUEBLE]"
+  const h4PatternMatches = text.match(/(?:\b(?:VENTA|SE VENDE|VENDO|ARRIENDO|SE ARRIENDA|BUSCO|COMPRO)\b\s+(?:APARTAMENTO|APTO|CASA|BODEGA|OFICINA|LOTE|PENTHOUSE|DÚPLEX|LOCAL))/gi) || [];
+  if (h4PatternMatches.length >= 2) signals.push(`H4: Repetición de patrón de negocio+inmueble (${h4PatternMatches.length} veces)`);
+
+  // H5: Separadores explícitos (---, ___, ===, ***) o reinicio de bloque en mayúsculas
+  const h5Separators = /(?:\r?\n){1,}\s*(?:_{3,}|-{3,}|={3,}|\*{3,})\s*(?:\r?\n){1,}/.test(text);
+  if (h5Separators) signals.push("H5: Separadores explícitos (---/___)");
+
+  const score = signals.length;
+  // Umbral Addendum v9: Se considera multi-item si al menos 2 heurísticas coinciden
+  return {
+    isMultiItem: score >= 2,
+    score,
+    signals
+  };
+}
+
 export function splitMultiPropertyMessage(text: string): string[] {
-  if (!text || text.length < 120) return [text];
+  if (!text || text.length < 100) return [text];
 
-  const headerRegex = /(?:^|\n|\r\n)(?=\*?\s*(?:SE VENDE|VENDO|SE ARRIENDA|ARRIENDO|APARTAMENTO|CASA|BODEGA|OFICINA|LOTE|PENTHOUSE|DÚPLEX|DUPLEX|LOCAL)\b)/gi;
+  const evalResult = evaluateMultiItemHeuristics(text);
+  if (!evalResult.isMultiItem) return [text];
 
+  console.log(`[JanIA-MultiItemDetector] ✂️ Evaluación Addendum v9 activa (Score ${evalResult.score}/5): ${evalResult.signals.join(" | ")}`);
+
+  // 1. Intentar separar por delimitadores explícitos (H5)
+  const delimiterSplit = text.split(/(?:\r?\n){1,}\s*(?:_{3,}|-{3,}|={3,}|\*{3,})\s*(?:\r?\n){1,}/);
+  if (delimiterSplit.length >= 2) {
+    const validBlocks = delimiterSplit.map(b => b.trim()).filter(b => b.length >= 30);
+    if (validBlocks.length >= 2) {
+      return validBlocks;
+    }
+  }
+
+  // 2. Intentar separar por reinicio de numeración o encabezados de bloque (H1, H2, H4)
+  const headerRegex = /(?:^|\r?\n)(?=(?:[^\n]*?\b(?:ATL|VENTA|SE VENDE|VENDO|SE ARRIENDA|ARRIENDO|BUSCO|REQUERIMIENTO|SOLICITO|CLIENTE DIRECTO)\b)|(?:^\s*1[\.\)\️⃣]\s*))/gi;
   const matches = Array.from(text.matchAll(headerRegex));
+
   if (matches.length >= 2) {
     const blocks: string[] = [];
     for (let i = 0; i < matches.length; i++) {
       const startIdx = matches[i].index || 0;
       const endIdx = (i + 1 < matches.length) ? (matches[i + 1].index || text.length) : text.length;
       const blockText = text.substring(startIdx, endIdx).trim();
-      if (blockText.length >= 40 && (/\$|\b\d{3}\b|\bm2\b|\balcobas\b|\bhab\b|\bprecio\b/i.test(blockText))) {
+      if (blockText.length >= 35) {
         blocks.push(blockText);
       }
     }
     if (blocks.length >= 2) {
-      console.log(`[JanIA-MultiPropertySplitter] ✂️ Detectados ${blocks.length} inmuebles independientes en 1 solo mensaje. Separando para ingesta independiente...`);
       return blocks;
     }
   }
 
+  // 3. Fallback por párrafos cuando hay múltiples declaraciones
   const paragraphs = text.split(/(?:\r?\n){2,}/);
   if (paragraphs.length >= 3) {
     const blocks: string[] = [];
@@ -1596,7 +1665,7 @@ export function splitMultiPropertyMessage(text: string): string[] {
     for (const p of paragraphs) {
       const cleanP = p.trim();
       if (!cleanP) continue;
-      const isNewProp = /(?:SE VENDE|VENDO|SE ARRIENDA|ARRIENDO|APARTAMENTO|CASA|CHICÓ|EL NOGAL|EL REFUGIO)\b/i.test(cleanP) && /\$|\b\d{3,}\b|\bm2\b/i.test(cleanP);
+      const isNewProp = /(?:SE VENDE|VENDO|SE ARRIENDA|ARRIENDO|APARTAMENTO|CASA|BUSCO|SOLICITO|ATL)\b/i.test(cleanP) && (/\$|\b\d{3,}\b|\bm2\b|\bhab\b|\bbaños\b/i.test(cleanP));
       if (currentBlock && isNewProp) {
         blocks.push(currentBlock.trim());
         currentBlock = cleanP;
@@ -1606,7 +1675,6 @@ export function splitMultiPropertyMessage(text: string): string[] {
     }
     if (currentBlock) blocks.push(currentBlock.trim());
     if (blocks.length >= 2) {
-      console.log(`[JanIA-MultiPropertySplitter] ✂️ Párrafos divididos en ${blocks.length} inmuebles separados.`);
       return blocks;
     }
   }

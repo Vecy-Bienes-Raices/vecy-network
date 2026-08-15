@@ -1550,10 +1550,13 @@ export default function AdminMatches() {
 
 
 
-                        {/* Enlace Público Original Limpio y Funcional en Azul */}
+                        {/* Enlace Público Original Limpio y Funcional en Azul (Solo si no está dentro del texto) */}
                         {(() => {
                           const origUrl = extractPublicLink(m.property);
                           if (!origUrl) return null;
+                          const pFullText = (m.property?.rawText || m.property?.description || "");
+                          if (pFullText.includes(origUrl)) return null;
+
                           return (
                             <div className="mt-2 pt-2 border-t border-white/5 text-xs not-italic flex items-center gap-1.5 flex-wrap">
                               <span className="text-zinc-400 font-semibold">🌐 Enlace original:</span>
@@ -1689,10 +1692,13 @@ export default function AdminMatches() {
 
 
 
-                        {/* Enlace Público Original Limpio y Funcional en Azul */}
+                        {/* Enlace Público Original Limpio y Funcional en Azul (Solo si no está dentro del texto) */}
                         {(() => {
                           const origReqUrl = extractPublicLink(m.requirement);
                           if (!origReqUrl) return null;
+                          const rFullText = (m.requirement?.rawText || "");
+                          if (rFullText.includes(origReqUrl)) return null;
+
                           return (
                             <div className="mt-2 pt-2 border-t border-white/5 text-xs not-italic flex items-center gap-1.5 flex-wrap">
                               <span className="text-zinc-400 font-semibold">🌐 Enlace original:</span>

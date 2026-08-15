@@ -5285,6 +5285,7 @@ __export(janIA_exports, {
   calcularCalificacionCompletitud: () => calcularCalificacionCompletitud,
   clearPromptCache: () => clearPromptCache,
   esMensajeSpamOBasura: () => esMensajeSpamOBasura,
+  evaluateMultiItemHeuristics: () => evaluateMultiItemHeuristics,
   extractFallbackDataFromText: () => extractFallbackDataFromText,
   extractFirstName: () => extractFirstName,
   generarHashMensaje: () => generarHashMensaje,
@@ -6139,9 +6140,52 @@ async function scrapeUrlWithBypass(url) {
   }
   return "";
 }
+function evaluateMultiItemHeuristics(text2) {
+  if (!text2 || text2.length < 100) return { isMultiItem: false, score: 0, signals: [] };
+  const signals = [];
+  const h1HeaderMatches = text2.match(/(?:[⬆️🏬🚨📌✨⭐👉1️⃣2️⃣3️⃣•]+|(?:\(🙏🏻\))|(?:ATL)|(?:\b(?:VENTA|ARRIENDO|BUSCO|SE VENDE|SE ARRIENDA|COMPRO)\b))/gi) || [];
+  const h1RepeatedHeaders = h1HeaderMatches.length >= 3;
+  if (h1RepeatedHeaders) signals.push("H1: Encabezados o emojis repetidos (3+)");
+  let h2NumberReset = false;
+  const numMatches = Array.from(text2.matchAll(/(?:^|\n)\s*(\d{1,2})[\.\)\️⃣]/g));
+  if (numMatches.length >= 2) {
+    let maxSeen = 0;
+    for (const m of numMatches) {
+      const val = parseInt(m[1], 10);
+      if (maxSeen >= 5 && val === 1) {
+        h2NumberReset = true;
+        break;
+      }
+      if (val > maxSeen) maxSeen = val;
+    }
+  }
+  if (h2NumberReset) signals.push("H2: Reinicio de numeraci\xF3n (1. reaparece tras n\xFAmero > 5)");
+  const urlMatches = text2.match(/https?:\/\/[^\s<"']+/gi) || [];
+  if (urlMatches.length >= 2) signals.push(`H3: M\xFAltiples URLs p\xFAblicas (${urlMatches.length} enlaces)`);
+  const h4PatternMatches = text2.match(/(?:\b(?:VENTA|SE VENDE|VENDO|ARRIENDO|SE ARRIENDA|BUSCO|COMPRO)\b\s+(?:APARTAMENTO|APTO|CASA|BODEGA|OFICINA|LOTE|PENTHOUSE|DÚPLEX|LOCAL))/gi) || [];
+  if (h4PatternMatches.length >= 2) signals.push(`H4: Repetici\xF3n de patr\xF3n de negocio+inmueble (${h4PatternMatches.length} veces)`);
+  const h5Separators = /(?:\r?\n){1,}\s*(?:_{3,}|-{3,}|={3,}|\*{3,})\s*(?:\r?\n){1,}/.test(text2);
+  if (h5Separators) signals.push("H5: Separadores expl\xEDcitos (---/___)");
+  const score = signals.length;
+  return {
+    isMultiItem: score >= 2,
+    score,
+    signals
+  };
+}
 function splitMultiPropertyMessage(text2) {
-  if (!text2 || text2.length < 120) return [text2];
-  const headerRegex = /(?:^|\n|\r\n)(?=\*?\s*(?:SE VENDE|VENDO|SE ARRIENDA|ARRIENDO|APARTAMENTO|CASA|BODEGA|OFICINA|LOTE|PENTHOUSE|DÚPLEX|DUPLEX|LOCAL)\b)/gi;
+  if (!text2 || text2.length < 100) return [text2];
+  const evalResult = evaluateMultiItemHeuristics(text2);
+  if (!evalResult.isMultiItem) return [text2];
+  console.log(`[JanIA-MultiItemDetector] \u2702\uFE0F Evaluaci\xF3n Addendum v9 activa (Score ${evalResult.score}/5): ${evalResult.signals.join(" | ")}`);
+  const delimiterSplit = text2.split(/(?:\r?\n){1,}\s*(?:_{3,}|-{3,}|={3,}|\*{3,})\s*(?:\r?\n){1,}/);
+  if (delimiterSplit.length >= 2) {
+    const validBlocks = delimiterSplit.map((b) => b.trim()).filter((b) => b.length >= 30);
+    if (validBlocks.length >= 2) {
+      return validBlocks;
+    }
+  }
+  const headerRegex = /(?:^|\r?\n)(?=(?:[^\n]*?\b(?:ATL|VENTA|SE VENDE|VENDO|SE ARRIENDA|ARRIENDO|BUSCO|REQUERIMIENTO|SOLICITO|CLIENTE DIRECTO)\b)|(?:^\s*1[\.\)\️⃣]\s*))/gi;
   const matches = Array.from(text2.matchAll(headerRegex));
   if (matches.length >= 2) {
     const blocks = [];
@@ -6149,12 +6193,11 @@ function splitMultiPropertyMessage(text2) {
       const startIdx = matches[i].index || 0;
       const endIdx = i + 1 < matches.length ? matches[i + 1].index || text2.length : text2.length;
       const blockText = text2.substring(startIdx, endIdx).trim();
-      if (blockText.length >= 40 && /\$|\b\d{3}\b|\bm2\b|\balcobas\b|\bhab\b|\bprecio\b/i.test(blockText)) {
+      if (blockText.length >= 35) {
         blocks.push(blockText);
       }
     }
     if (blocks.length >= 2) {
-      console.log(`[JanIA-MultiPropertySplitter] \u2702\uFE0F Detectados ${blocks.length} inmuebles independientes en 1 solo mensaje. Separando para ingesta independiente...`);
       return blocks;
     }
   }
@@ -6165,7 +6208,7 @@ function splitMultiPropertyMessage(text2) {
     for (const p of paragraphs) {
       const cleanP = p.trim();
       if (!cleanP) continue;
-      const isNewProp = /(?:SE VENDE|VENDO|SE ARRIENDA|ARRIENDO|APARTAMENTO|CASA|CHICÓ|EL NOGAL|EL REFUGIO)\b/i.test(cleanP) && /\$|\b\d{3,}\b|\bm2\b/i.test(cleanP);
+      const isNewProp = /(?:SE VENDE|VENDO|SE ARRIENDA|ARRIENDO|APARTAMENTO|CASA|BUSCO|SOLICITO|ATL)\b/i.test(cleanP) && /\$|\b\d{3,}\b|\bm2\b|\bhab\b|\bbaños\b/i.test(cleanP);
       if (currentBlock && isNewProp) {
         blocks.push(currentBlock.trim());
         currentBlock = cleanP;
@@ -6177,7 +6220,6 @@ ${cleanP}` : cleanP;
     }
     if (currentBlock) blocks.push(currentBlock.trim());
     if (blocks.length >= 2) {
-      console.log(`[JanIA-MultiPropertySplitter] \u2702\uFE0F P\xE1rrafos divididos en ${blocks.length} inmuebles separados.`);
       return blocks;
     }
   }
@@ -11086,7 +11128,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v22.1";
+var VECY_VERSION = "v22.2";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 
