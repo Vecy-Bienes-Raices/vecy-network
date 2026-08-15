@@ -1,9 +1,53 @@
 # VECY NETWORK — BITÁCORA MAESTRA DE HISTORIAL Y EVOLUCIÓN DE CONVERSACIONES 📜🚀
 
 > **INSTRUCCIÓN MANDATORIA PARA LA IA (ANTIGRAVITY / CLAUDE / GEMINI)**:
-> Este archivo es el **HISTORIAL CRONOLÓGICO Y MEMORIA PERSISTENTE DE CONVERSACIONES** de VECY Network. 
-> Cada vez que inicie una nueva sesión de desarrollo con Eduardo A. Rivera, DEBES leer este archivo primero para saber exactamente en qué punto del historial nos quedamos, cuáles fueron las últimas decisiones tomadas y qué versión está desplegada en producción. 
-> Al finalizar cada sesión, debes apendar un nuevo bloque de bitácora con los avances realizados, la versión actualizada y los compromisos adquiridos.
+> 1. Este archivo es la **MEMORIA MAESTRA Y CONTEXTO ESTRATÉGICO PERSISTENTE** del proyecto VECY Network. 
+> 2. Léelo COMPLETAMENTE al inicio de CADA nueva conversación antes de proponer o ejecutar cualquier acción.
+> 3. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
+> 4. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
+
+---
+
+## 🏛️ RESUMEN EJECUTIVO Y CONTEXTO MAESTRO DEL PROYECTO VECY NETWORK
+
+### 1. Visión y Propósito
+**VECY Network** es el primer ecosistema colaborativo y transaccional de corretaje inmobiliario para Colombia, concebido por **Eduardo A. Rivera** (Director de Tecnología) y **Jani Alves** (Directora de Operaciones). 
+Su objetivo es revolucionar el mercado inmobiliario mediante una "Red de Mercadeo Inmobiliario" (Bolsa Colaborativa) que conecta a agentes e inmobiliarias, permitiendo el reparto justo de comisiones y el cruce automatizado de inmuebles y solicitudes.
+
+### 2. Stack Tecnológico de Alto Rendimiento
+- **Backend**: Node.js + TypeScript + Express + tRPC (Routers).
+- **ORM / Base de Datos**: Drizzle ORM + Supabase (PostgreSQL en la nube con PostGIS).
+- **Inteligencia Artificial (JanIA)**: Google Gemini 2.5 Flash (`@google/generative-ai`) para extracción multimodal (texto, imágenes OCR, documentos PDF y scraping web).
+- **Canal de Ingesta**: Baileys (WebSocket nativo de WhatsApp, corriendo en VPS Linux con PM2 bajo el número oficial activo **+573192919978**).
+- **Frontend / Admin Panel**: React + Vite + Tailwind CSS desplegado en Vercel (`https://vecy-network.vercel.app/admin`).
+
+### 3. El Cerebro del Sistema: JanIA
+**JanIA** es la asistente virtual de Inteligencia Artificial que opera 24/7:
+- **En WhatsApp**: Escucha activamente grupos de WhatsApp (oficiales y de terceros) e interacciones privadas. Extrae datos estructurados de ofertas (inmuebles) y demandas (requerimientos), reaccionando con emojis (`👍` Inmueble / `📝` Requerimiento) sin contaminar los grupos con texto.
+- **En Grupo 2 (Soporte Legal/Avalúos)**: Responde preguntas jurídicas, contratos, arrendamientos y consultas de avalúos en texto y notas de voz (TTS).
+- **En la Web (Consola JanIA)**: Ofrece un chat de Libre Albedrío 24/7 para consultas profundas y análisis prediales.
+
+### 4. Motor de Matching Inteligente VECY (Algoritmo v22.0)
+Evalúa la compatibilidad entre una Oferta y una Demanda asignando un score de 0% a 100% basado en 100 puntos de ponderación:
+```
+- Ubicación / Barrio        → 20 pts
+- Tipo de Inmueble         → 15 pts
+- Tipo de Negocio          → 15 pts
+- Presupuesto / Canon      → 15 pts
+- Área Total / Construida  → 10 pts
+- Habitaciones             → 10 pts
+- Baños                    →  4 pts
+- Parqueaderos             →  4 pts
+- Estrato                  →  3 pts
+- Antigüedad               →  4 pts
+TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
+```
+
+### 5. Reglas Doctrinales Inquebrantables de Negocio
+- **Incompatibilidad de Negocio**: `Arriendo` ↔ `Venta` = **0% Match / Bloqueo Absoluto**. `Arriendo` ↔ `Arriendo con Opción de Compra` = **0% Match** (v17.2).
+- **Filtro Duro de Confort (v22.4)**: Si en la Oferta las especificaciones físicas son menores a lo demandado (`Oferta < Demanda` en Habitaciones, Baños, Garajes, Depósitos o Terrazas) → **0% Match / Bloqueo Absoluto**. Si `Oferta >= Demanda` → **100% Cumplimiento**.
+- **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
+- **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
 ---
 
@@ -15,7 +59,7 @@
 
 ### 🗓️ Sesión: Viernes 14 de Agosto de 2026 — 10:20 PM a 10:45 PM (Hora Colombia UTC-5) / 15 de Agosto 03:20 AM UTC
 **Versión del Sistema**: `v22.0 — Agosto 2026`  
-**Commit GitHub Main**: [`e781649`](https://github.com/Vecy-Bienes-Raices/vecy-network/commit/e781649) / [`2aac1f6`](https://github.com/Vecy-Bienes-Raices/vecy-network/commit/2aac1f6)
+**Commit GitHub Main**: [`e781649`](https://github.com/Vecy-Bienes-Raices/vecy-network/commit/e781649) / [`2aac1f6`](https://github.com/Vecy-Bienes-Raices/vecy-network/commit/2aac1f6) / [`2f8410c`](https://github.com/Vecy-Bienes-Raices/vecy-network/commit/2f8410c)
 
 #### 📋 Requerimientos Específicos del Usuario (Eduardo A. Rivera):
 1. **Falsas Asignaciones de Nombre de Contacto**: Eduardo reportó que en un requerimiento captado por Patty en el grupo de WhatsApp ("*BUSCO COMPRAR EN CHICÓ NORTE APARTAMENTO... INFORMES PATTY*"), la web mostraba su nombre: `Eduardo A. Rivera (+57 N/E - Completar al editar)`.
@@ -86,3 +130,4 @@
 1. **Adición Pura de Código**: NUNCA borrar, modificar ni romper funcionalidades o reglas previas ya validadas al agregar nuevo código.
 2. **Revisión del Historial al Iniciar**: Consultar esta bitácora y `.agents/AGENTS.md` al comienzo de cada conversación.
 3. **Limpieza Continua**: Mantener el directorio `server/` libre de archivos script residuales o duplicados.
+4. **Rol de Co-Piloto Guardián**: La IA debe evaluar las consecuencias secundarias de cualquier instrucción y frenar a tiempo si un cambio propuesto arriesga la integridad de la base de datos o rompe reglas del negocio.
