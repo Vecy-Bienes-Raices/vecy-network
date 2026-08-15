@@ -58,24 +58,38 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ## 📜 REGISTRO DETALLADO DE CONVERSACIONES (ORDEN CRONOLÓGICO INVERSO CON FECHA Y HORA)
 
-### 🗓️ Sesión: Sábado 15 de Agosto de 2026 — 12:45 AM a 12:55 AM (Hora Colombia UTC-5) / 15 de Agosto 05:55 AM UTC
+### 🗓️ Sesión: Sábado 15 de Agosto de 2026 — 12:45 AM a 01:10 AM (Hora Colombia UTC-5) / 15 de Agosto 05:45 AM a 06:10 AM UTC
 **Versión del Sistema**: `v22.4 — Agosto 2026`  
 
 #### 📋 Requerimientos Específicos del Usuario (Eduardo A. Rivera):
 1. **Identificación de Falso Match entre Balcones de Medina / Bosque Medina (#409) y Santa Bárbara (#44)**: Eduardo reportó con captura de pantalla y búsqueda en Google Maps/IDECA que el sistema emparejó Balcones de Medina (Usaquén, Cll 134 con Cra 7) con un Requerimiento en Santa Bárbara (Usaquén, Cll 116-127) con un 89% Match.
-2. **Regla Doctrinal de Concordancia Exacta y Escala 100% a 80%**: Explicación y aplicación de la escala técnica de afinidad comercial: Cuando todos los datos están presentes de lado y lado y coinciden exactamente en verde, el Match es del 100%; de ahí hacia abajo disminuye porcentualmente a medida que se diferencien atributos no críticos hasta el límite del 80%. Si los barrios son diferentes y no compatibles, el resultado es 0% Match / Bloqueo Absoluto.
+2. **Regla Doctrinal de Concordancia Exacta y Escala 100% a 80%**: Cuando todos los datos están presentes de lado y lado y coinciden exactamente en verde, el Match es del 100%; de ahí hacia abajo disminuye porcentualmente a medida que se diferencien atributos no críticos hasta el límite del 80%. Si los barrios son diferentes y no compatibles, el resultado es 0% Match / Bloqueo Absoluto.
+3. **Doctrina Financiera de Precio y Presupuesto**:
+   - **Techo Infranqueable**: El precio del inmueble ofrecido JAMÁS puede superar el presupuesto máximo de la demanda (`Precio Oferta > Presupuesto Máximo` $\rightarrow$ **0% Bloqueo Absoluto**).
+   - **Piso de Segmento**: El precio puede ser menor pero dentro del segmento socioeconómico y tipológico real del cliente (un requerimiento de $3.500M en Rosales no es compatible con un inmueble de $1.150M en Chicó Navarra).
+4. **Las 8 Reglas Inquebrantables de Transacción (Doctrina Vecy Network)**:
+   - 1. Venta ↔ Venta (100% Compatible)
+   - 2. Arriendo ↔ Arriendo (100% Compatible)
+   - 3. Arriendo Puro ↔ Venta o Arriendo / Vendo o Arriendo (100% Compatible)
+   - 4. Venta Pura ↔ Venta o Arriendo / Vendo o Arriendo (100% Compatible)
+   - 5. Venta ↔ Venta/Permuta (100% Compatible)
+   - 6. Venta ↔ Arriendo Puro $\rightarrow$ **0% BLOQUEO ABSOLUTO**
+   - 7. Arriendo Puro ↔ Arriendo con Opción de Compra $\rightarrow$ **0% BLOQUEO ABSOLUTO (Doctrina v17.2)**
+   - 8. Requerimiento en "Arriendo con Opción de Compra" ↔ "Arriendo con Opción de Compra", "Venta o Arriendo" o "Venta" $\rightarrow$ **100% Compatible**
 
 #### 🛠️ Soluciones e Implementaciones Técnicas:
 - **Blindaje Geográfico Antirreferencias Comerciales (`server/_core/geography.ts`)**: En `deducirGeografiaTripartita`, se incorporó un filtro de limpieza que suprime frases de proximidad comercial (*"A minutos de Hacienda Santa Bárbara"*, *"Cerca a"*, *"Próximo a"*, etc.) evitando que referencias comerciales o centros comerciales se extraigan como el barrio predial del inmueble.
 - **Reconocimiento Directo de Complejos Residenciales y Ordenamiento por Longitud**: Mapeo directo de *"Balcones de Medina"* a *"Bosque Medina"* (Usaquén) y ordenamiento de búsqueda en diccionarios por longitud descendente para priorizar nombres compuestos y específicos sobre palabras genéricas.
 - **Corrección de Datos Prediales Propiedad #409 en DB**: Actualización en Supabase de `zone = 'Bosque Medina'` y `address_neighborhood = 'Bosque Medina'`. Purga de matches espurios.
 - **Verificación Empírica TypeScript**: Al evaluar Propiedad #409 (Bosque Medina) vs Requerimiento #44 (Santa Bárbara), el motor TypeScript arrojó **0% Match / Bloqueo Absoluto**, confirmando el cumplimiento del 100% de la doctrina geográfica.
+- **Codificación y Documentación de las 8 Reglas de Transacción**: Actualizado `TRANSACTION_COMPATIBILITY_MATRIX` y los comentarios rectores en `server/_core/matching.ts`.
 
 #### 💬 Respuestas y Confirmaciones Entregadas a Eduardo:
 - Diagnóstico completo presentado explicando por qué la frase publicitaria "A minutos de Hacienda Santa Bárbara" causó la confusión en la ingesta anterior.
 - Implementación del blindaje contra referencias comerciales en `geography.ts`.
 - Corrección del registro en DB y verificación empírica con resultado de 0% Match entre Bosque Medina y Santa Bárbara.
-- Confirmación de la regla del 100% al 80% para la tabla de afinidad comercial.
+- Confirmación y alineación total con la doctrina del 100% al 80% para el cotejo técnico.
+- Confirmación y registro de las 8 reglas explícitas de compatibilidad transaccional y los límites de techo y segmento de precio.
 
 ---
 
