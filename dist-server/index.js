@@ -2602,29 +2602,61 @@ function deducirGeografiaTripartita(inputZone, inputCity, groupName, rawText) {
   let neighborhood = isGenericZone ? null : inputZone?.trim() || null;
   let locality = null;
   let foundBarrio = false;
-  for (const [, info] of Object.entries(DICCIONARIO_BOGOTA)) {
-    for (const b of info.barrios) {
-      const normB = normalizarTextoGeografico(b);
-      if (!isGenericZone && normB === normZone) {
-        neighborhood = b;
-        locality = info.localidad;
-        foundBarrio = true;
-        break;
-      }
-      if (!isGenericZone && normZone.includes(normB) && normB.length > 4) {
-        neighborhood = b;
-        locality = info.localidad;
-        foundBarrio = true;
-        break;
-      }
-      if (combined.includes(normB) && normB.length > 4) {
-        neighborhood = b;
-        locality = info.localidad;
-        foundBarrio = true;
-        break;
+  const cleanSearchText = normText.replace(/\b(?:a\s+minutos\s+de|a\s+pocos\s+minutos\s+de|cerca\s+de|cerca\s+a|proximo\s+a|frente\s+a|diagonal\s+a|al\s+lado\s+de|hacia)\s+[^,\.\n]+/gi, " ").replace(/\bhacienda\s+santa\s+barbara\b/gi, "centro_comercial").replace(/\bcentro\s+andino\b/gi, "centro_comercial").replace(/\bunilago\b/gi, "centro_comercial").replace(/\bunicentro\b/gi, "centro_comercial").replace(/\bparque\s+93\b/gi, "parque").replace(/\bparque\s+de\s+la\s+93\b/gi, "parque");
+  const cleanCombined = `${normZone} ${normCity} ${normGroup} ${cleanSearchText}`;
+  const COMPLEX_ALIASES = {
+    "balcones de medina": { neighborhood: "Bosque Medina", locality: "Usaqu\xE9n" },
+    "bosque medina": { neighborhood: "Bosque Medina", locality: "Usaqu\xE9n" },
+    "chico navarra": { neighborhood: "Chic\xF3 Navarra", locality: "Chapinero" },
+    "chico norte": { neighborhood: "Chic\xF3 Norte", locality: "Chapinero" },
+    "chico reservado": { neighborhood: "Chic\xF3 Reservado", locality: "Chapinero" },
+    "los rosales": { neighborhood: "Rosales", locality: "Chapinero" },
+    "la cabrera": { neighborhood: "La Cabrera", locality: "Chapinero" },
+    "santa ana oriental": { neighborhood: "Santa Ana Oriental", locality: "Usaqu\xE9n" },
+    "santa barbara central": { neighborhood: "Santa B\xE1rbara Central", locality: "Usaqu\xE9n" },
+    "santa barbara occidental": { neighborhood: "Santa B\xE1rbara Occidental", locality: "Usaqu\xE9n" },
+    "santa barbara oriental": { neighborhood: "Santa B\xE1rbara Oriental", locality: "Usaqu\xE9n" }
+  };
+  for (const [alias, data] of Object.entries(COMPLEX_ALIASES)) {
+    if (cleanCombined.includes(alias)) {
+      neighborhood = data.neighborhood;
+      locality = data.locality;
+      foundBarrio = true;
+      break;
+    }
+  }
+  if (!foundBarrio) {
+    const allBarriosWithLoc = [];
+    for (const [, info] of Object.entries(DICCIONARIO_BOGOTA)) {
+      for (const b of info.barrios) {
+        allBarriosWithLoc.push({
+          name: b,
+          locality: info.localidad,
+          norm: normalizarTextoGeografico(b)
+        });
       }
     }
-    if (foundBarrio) break;
+    allBarriosWithLoc.sort((a, b) => b.norm.length - a.norm.length);
+    if (!isGenericZone) {
+      for (const item of allBarriosWithLoc) {
+        if (item.norm === normZone || normZone.includes(item.norm) && item.norm.length > 4) {
+          neighborhood = item.name;
+          locality = item.locality;
+          foundBarrio = true;
+          break;
+        }
+      }
+    }
+    if (!foundBarrio) {
+      for (const item of allBarriosWithLoc) {
+        if (cleanCombined.includes(item.norm) && item.norm.length > 4) {
+          neighborhood = item.name;
+          locality = item.locality;
+          foundBarrio = true;
+          break;
+        }
+      }
+    }
   }
   if (!foundBarrio) {
     neighborhood = isGenericZone ? null : inputZone && !GENERIC_ZONES_SET.has(normalizarTextoGeografico(inputZone)) ? inputZone.trim() : null;
@@ -11076,7 +11108,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v22.2";
+var VECY_VERSION = "v22.3";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 

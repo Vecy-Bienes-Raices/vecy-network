@@ -1022,8 +1022,6 @@ export function deducirGeografiaTripartita(
   }
 
   // ── EMPAREJAMIENTO JERÁRQUICO BOGOTÁ ──
-  // Si inputZone es genérico ("Bogotá", "N/A", vacío), escanear el rawText
-  // en busca del barrio real para auto-rellenar la jerarquía completa.
   const isGenericZone = !inputZone ||
     inputZone.trim() === "" ||
     normalizarTextoGeografico(inputZone).trim() === "na" ||
@@ -1032,41 +1030,85 @@ export function deducirGeografiaTripartita(
 
   let neighborhood: string | null = isGenericZone ? null : (inputZone?.trim() || null);
   let locality: string | null = null;
-
   let foundBarrio = false;
 
-  // Buscar en el diccionario usando zona + rawText completo
-  // Orden de prioridad: coincidencia exacta de zona → coincidencia en rawText
-  for (const [, info] of Object.entries(DICCIONARIO_BOGOTA)) {
-    for (const b of info.barrios) {
-      const normB = normalizarTextoGeografico(b);
-      // 1. Coincidencia exacta con la zona ingresada
-      if (!isGenericZone && normB === normZone) {
-        neighborhood = b;
-        locality = info.localidad;
-        foundBarrio = true;
-        break;
-      }
-      // 2. La zona contiene el nombre del barrio
-      if (!isGenericZone && normZone.includes(normB) && normB.length > 4) {
-        neighborhood = b;
-        locality = info.localidad;
-        foundBarrio = true;
-        break;
-      }
-      // 3. El rawText / rawGroup contiene el nombre del barrio
-      if (combined.includes(normB) && normB.length > 4) {
-        neighborhood = b;
-        locality = info.localidad;
-        foundBarrio = true;
-        break;
+  // 1. Limpieza de frases de proximidad publicitaria para no confundir puntos de referencia con el barrio predial
+  const cleanSearchText = normText
+    .replace(/\b(?:a\s+minutos\s+de|a\s+pocos\s+minutos\s+de|cerca\s+de|cerca\s+a|proximo\s+a|frente\s+a|diagonal\s+a|al\s+lado\s+de|hacia)\s+[^,\.\n]+/gi, " ")
+    .replace(/\bhacienda\s+santa\s+barbara\b/gi, "centro_comercial")
+    .replace(/\bcentro\s+andino\b/gi, "centro_comercial")
+    .replace(/\bunilago\b/gi, "centro_comercial")
+    .replace(/\bunicentro\b/gi, "centro_comercial")
+    .replace(/\bparque\s+93\b/gi, "parque")
+    .replace(/\bparque\s+de\s+la\s+93\b/gi, "parque");
+
+  const cleanCombined = `${normZone} ${normCity} ${normGroup} ${cleanSearchText}`;
+
+  // Alias y complejos residenciales conocidos
+  const COMPLEX_ALIASES: Record<string, { neighborhood: string; locality: string }> = {
+    "balcones de medina": { neighborhood: "Bosque Medina", locality: "Usaquén" },
+    "bosque medina": { neighborhood: "Bosque Medina", locality: "Usaquén" },
+    "chico navarra": { neighborhood: "Chicó Navarra", locality: "Chapinero" },
+    "chico norte": { neighborhood: "Chicó Norte", locality: "Chapinero" },
+    "chico reservado": { neighborhood: "Chicó Reservado", locality: "Chapinero" },
+    "los rosales": { neighborhood: "Rosales", locality: "Chapinero" },
+    "la cabrera": { neighborhood: "La Cabrera", locality: "Chapinero" },
+    "santa ana oriental": { neighborhood: "Santa Ana Oriental", locality: "Usaquén" },
+    "santa barbara central": { neighborhood: "Santa Bárbara Central", locality: "Usaquén" },
+    "santa barbara occidental": { neighborhood: "Santa Bárbara Occidental", locality: "Usaquén" },
+    "santa barbara oriental": { neighborhood: "Santa Bárbara Oriental", locality: "Usaquén" },
+  };
+
+  for (const [alias, data] of Object.entries(COMPLEX_ALIASES)) {
+    if (cleanCombined.includes(alias)) {
+      neighborhood = data.neighborhood;
+      locality = data.locality;
+      foundBarrio = true;
+      break;
+    }
+  }
+
+  // 2. Si no es alias directo, buscar en el diccionario ordenando por longitud descendente
+  if (!foundBarrio) {
+    const allBarriosWithLoc: Array<{ name: string; locality: string; norm: string }> = [];
+    for (const [, info] of Object.entries(DICCIONARIO_BOGOTA)) {
+      for (const b of info.barrios) {
+        allBarriosWithLoc.push({
+          name: b,
+          locality: info.localidad,
+          norm: normalizarTextoGeografico(b)
+        });
       }
     }
-    if (foundBarrio) break;
+    // Ordenar por longitud de nombre descendente para que "Bosque Medina" o "Santa Bárbara Central" coincida antes que "Santa Bárbara"
+    allBarriosWithLoc.sort((a, b) => b.norm.length - a.norm.length);
+
+    // Prioridad 1: Coincidencia con inputZone
+    if (!isGenericZone) {
+      for (const item of allBarriosWithLoc) {
+        if (item.norm === normZone || (normZone.includes(item.norm) && item.norm.length > 4)) {
+          neighborhood = item.name;
+          locality = item.locality;
+          foundBarrio = true;
+          break;
+        }
+      }
+    }
+
+    // Prioridad 2: Coincidencia en cleanCombined
+    if (!foundBarrio) {
+      for (const item of allBarriosWithLoc) {
+        if (cleanCombined.includes(item.norm) && item.norm.length > 4) {
+          neighborhood = item.name;
+          locality = item.locality;
+          foundBarrio = true;
+          break;
+        }
+      }
+    }
   }
 
   // Si no se encontró barrio específico, NUNCA rellenar con el nombre de la ciudad ("Bogotá").
-  // Retornar neighborhood: null y locality: null para que el filtro tri-nivel o la cola de revisión actúe.
   if (!foundBarrio) {
     neighborhood = isGenericZone ? null : (inputZone && !GENERIC_ZONES_SET.has(normalizarTextoGeografico(inputZone)) ? inputZone.trim() : null);
     locality = null;

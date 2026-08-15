@@ -52,11 +52,32 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v22.3 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v22.4 — Agosto 2026
 
 ---
 
 ## 📜 REGISTRO DETALLADO DE CONVERSACIONES (ORDEN CRONOLÓGICO INVERSO CON FECHA Y HORA)
+
+### 🗓️ Sesión: Sábado 15 de Agosto de 2026 — 12:45 AM a 12:55 AM (Hora Colombia UTC-5) / 15 de Agosto 05:55 AM UTC
+**Versión del Sistema**: `v22.4 — Agosto 2026`  
+
+#### 📋 Requerimientos Específicos del Usuario (Eduardo A. Rivera):
+1. **Identificación de Falso Match entre Balcones de Medina / Bosque Medina (#409) y Santa Bárbara (#44)**: Eduardo reportó con captura de pantalla y búsqueda en Google Maps/IDECA que el sistema emparejó Balcones de Medina (Usaquén, Cll 134 con Cra 7) con un Requerimiento en Santa Bárbara (Usaquén, Cll 116-127) con un 89% Match.
+2. **Regla Doctrinal de Concordancia Exacta y Escala 100% a 80%**: Explicación y aplicación de la escala técnica de afinidad comercial: Cuando todos los datos están presentes de lado y lado y coinciden exactamente en verde, el Match es del 100%; de ahí hacia abajo disminuye porcentualmente a medida que se diferencien atributos no críticos hasta el límite del 80%. Si los barrios son diferentes y no compatibles, el resultado es 0% Match / Bloqueo Absoluto.
+
+#### 🛠️ Soluciones e Implementaciones Técnicas:
+- **Blindaje Geográfico Antirreferencias Comerciales (`server/_core/geography.ts`)**: En `deducirGeografiaTripartita`, se incorporó un filtro de limpieza que suprime frases de proximidad comercial (*"A minutos de Hacienda Santa Bárbara"*, *"Cerca a"*, *"Próximo a"*, etc.) evitando que referencias comerciales o centros comerciales se extraigan como el barrio predial del inmueble.
+- **Reconocimiento Directo de Complejos Residenciales y Ordenamiento por Longitud**: Mapeo directo de *"Balcones de Medina"* a *"Bosque Medina"* (Usaquén) y ordenamiento de búsqueda en diccionarios por longitud descendente para priorizar nombres compuestos y específicos sobre palabras genéricas.
+- **Corrección de Datos Prediales Propiedad #409 en DB**: Actualización en Supabase de `zone = 'Bosque Medina'` y `address_neighborhood = 'Bosque Medina'`. Purga de matches espurios.
+- **Verificación Empírica TypeScript**: Al evaluar Propiedad #409 (Bosque Medina) vs Requerimiento #44 (Santa Bárbara), el motor TypeScript arrojó **0% Match / Bloqueo Absoluto**, confirmando el cumplimiento del 100% de la doctrina geográfica.
+
+#### 💬 Respuestas y Confirmaciones Entregadas a Eduardo:
+- Diagnóstico completo presentado explicando por qué la frase publicitaria "A minutos de Hacienda Santa Bárbara" causó la confusión en la ingesta anterior.
+- Implementación del blindaje contra referencias comerciales en `geography.ts`.
+- Corrección del registro en DB y verificación empírica con resultado de 0% Match entre Bosque Medina y Santa Bárbara.
+- Confirmación de la regla del 100% al 80% para la tabla de afinidad comercial.
+
+---
 
 ### 🗓️ Sesión: Sábado 15 de Agosto de 2026 — 12:25 AM a 12:35 AM (Hora Colombia UTC-5) / 15 de Agosto 05:35 AM UTC
 **Versión del Sistema**: `v22.3 — Agosto 2026`  

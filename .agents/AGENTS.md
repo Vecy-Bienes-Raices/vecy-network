@@ -162,10 +162,10 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v22.3 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL: v22.4 — Agosto 2026
 
-### Novedades v22.3:
-- **Erradicación de Bypass RPC SQL en Matching (`executeMatchEngine`)**: Reemplazo de la llamada a la función SQL obsoleta `match_requirements_for_property` en PostgreSQL Supabase por la ejecución obligatoria del motor autoritativo TypeScript `findMatchesForProperty` y `findMatchesForRequirement` en `server/_core/matching.ts`.
-- **Corrección de Datos Prediales Propiedad #150**: Actualización de `zone = 'Chicó Navarra'` y `address_neighborhood = 'Chicó Navarra'` en Supabase DB. Eliminación de los 40 matches espurios producidos por la RPC SQL.
-- **Validación Doctrinal Estricta**: Confirmado con pruebas empíricas que Chicó Navarra vs Rosales/Cabrera produce **0% Match / Bloqueo Absoluto**.
-- **Fix Supabase Client Import (`AdminMatches.tsx`)**: Importación de `supabase` client desde `@/lib/supabase` resolviendo errores de compilación TS.
+### Novedades v22.4:
+- **Blindaje Geográfico Antirreferencias Comerciales (`geography.ts`)**: Modificación de `deducirGeografiaTripartita` para ignorar y limpiar frases de proximidad comercial (*"A minutos de Hacienda Santa Bárbara"*, *"Cerca de"*, etc.) evitando que referencias publicitarias contaminen el barrio predial real.
+- **Priorización de Complejos Residenciales y Longitud Descendente**: Reconocimiento directo de complejos (*"Balcones de Medina"* $\rightarrow$ *Bosque Medina, Usaquén*) y ordenamiento de búsqueda por longitud descendente de barrio.
+- **Corrección de Datos Prediales Propiedad #409**: Actualización en Supabase de `zone = 'Bosque Medina'` y `address_neighborhood = 'Bosque Medina'`. Eliminación de falso match contra Santa Bárbara.
+- **Doctrina del 100% al 80% en Cotejo Técnico**: Todos los campos coincidentes en verde producen 100% Match Perfecto; las diferencias graduales en atributos no críticos reducen proporcionalmente hasta el límite del 80%. Las incompatibilidades de barrio, negocio o física menor (`Oferta < Demanda`) producen 0% Match / Bloqueo Absoluto.
