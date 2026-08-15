@@ -463,8 +463,8 @@ function scoreRows(req: any, prop: any) {
     return num;
   };
 
-  const reqTextLower = (req.rawText || "").toLowerCase();
-  const propTextLower = (prop.rawText || prop.description || "").toLowerCase();
+  const reqTextLower = (req.rawText || "").toLowerCase().replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0]/g, " ");
+  const propTextLower = (prop.rawText || prop.description || "").toLowerCase().replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0]/g, " ");
 
   const isReqRentMatch = reqNeg.toLowerCase().includes("arriendo");
   const isPropPureRent = (prop.transactionType || "").toLowerCase() === "arriendo" || (prop.transactionType || "").toLowerCase() === "arriendo_temporal";
@@ -473,6 +473,35 @@ function scoreRows(req: any, prop: any) {
   // A. PRECIO DE VENTA (Tolerancia máx -1%, cero si sobrepasa)
   let propSalePrice = !isPropPureRent ? parseSafePrice(prop.price, prop.rawText) : 0;
   let reqSaleBudget = (!isReqRentMatch && !isPropPureRent) ? parseSafePrice(req.presupuestoMax, req.rawText) : 0;
+
+  // Inferencia inteligente desde rawText si en BD viene 0 o N/E
+  if (reqSaleBudget <= 0 && reqTextLower && !isReqRentMatch && !isPropPureRent) {
+    const matchPresu = reqTextLower.match(/(?:presupuesto|ppto|valor|hasta|máximo|max)\s*(?:máximo|max)?\s*:?\s*\$?\s*([\d.,\s]+?)\s*(mil\s*millones?|millones|millón|mll|mlls|mm|m)?(?:\s|$|\n)/i)
+                    || reqTextLower.match(/(?:presupuesto|ppto|valor|hasta|máximo|max)\s*:?\s*\$?\s*([\d.]+)/i);
+    if (matchPresu) {
+      let valStr = matchPresu[1].replace(/[.,\s]/g, "");
+      let valR = parseFloat(valStr);
+      if (!isNaN(valR)) {
+        const unit = (matchPresu[2] || "").toLowerCase();
+        if (unit.includes("mil millon")) valR *= 1_000_000_000;
+        else if (unit.includes("millon") || unit.includes("mll") || unit.includes("mm") || unit === "m") valR *= 1_000_000;
+        else if (valR < 1000) valR *= 1_000_000;
+        if (valR >= 10_000_000) reqSaleBudget = valR;
+      }
+    }
+  }
+
+  if (propSalePrice < 30_000_000 && propTextLower && !isPropPureRent) {
+    const saleMatch = propTextLower.match(/(?:precio\s*(?:de\s*)?venta|venta|valor)\s*:?\s*\$?\s*([\d.,\s]+?)\s*(mil\s*millones?|millones?|mm|mlls|m)?(?:\s|$|\n)/i)
+                   || propTextLower.match(/(?:precio\s*(?:de\s*)?venta|venta|valor)\s*:?\s*\$?\s*([\d.]+)/i);
+    if (saleMatch) {
+      let rawSNum = parseFloat(saleMatch[1].replace(/[.,\s]/g, ""));
+      const unitS = (saleMatch[2] || "").toLowerCase();
+      const multS = unitS.includes("mil millon") ? 1_000_000_000 : (unitS.includes("millon") || unitS.includes("mm") || unitS.includes("mlls") || unitS === "m") ? 1_000_000 : rawSNum < 10_000 ? 1_000_000 : 1;
+      const computedS = rawSNum * multS;
+      if (computedS >= 30_000_000) propSalePrice = computedS;
+    }
+  }
 
   if (propSalePrice < 30_000_000) {
     propSalePrice = 0;
@@ -503,6 +532,33 @@ function scoreRows(req: any, prop: any) {
   let propRentPrice = !isPropPureVenta ? parseSafePrice(prop.rentPrice || prop.priceRent, prop.rawText) : 0;
   let reqRentBudget = isReqRentMatch ? parseSafePrice(req.presupuestoMax, req.rawText) : 0;
 
+  if (reqRentBudget <= 0 && reqTextLower && isReqRentMatch) {
+    const matchPresu = reqTextLower.match(/(?:presupuesto|ppto|canon|valor|hasta|máximo|max)\s*(?:máximo|max)?\s*:?\s*\$?\s*([\d.,\s]+?)\s*(mil\s*millones?|millones|millón|mll|mlls|mm|m)?(?:\s|$|\n)/i)
+                    || reqTextLower.match(/(?:presupuesto|ppto|canon|valor|hasta|máximo|max)\s*:?\s*\$?\s*([\d.]+)/i);
+    if (matchPresu) {
+      let valStr = matchPresu[1].replace(/[.,\s]/g, "");
+      let valR = parseFloat(valStr);
+      if (!isNaN(valR)) {
+        const unit = (matchPresu[2] || "").toLowerCase();
+        if (unit.includes("millon") || unit.includes("mll") || unit.includes("mm") || unit === "m") valR *= 1_000_000;
+        else if (valR < 1000) valR *= 1_000_000;
+        if (valR >= 300_000 && valR <= 100_000_000) reqRentBudget = valR;
+      }
+    }
+  }
+
+  if (propRentPrice <= 0 && propTextLower && !isPropPureVenta) {
+    const rentMatch = propTextLower.match(/(?:valor\s*arriendo|arriendo|canon|renta)\s*:?\s*\$?\s*([\d.,\s]+?)\s*(mil\s*millones?|millones?|m|M)?(?:\s|$|\n)/i)
+                   || propTextLower.match(/(?:valor\s*arriendo|arriendo|canon|renta)\s*:?\s*\$?\s*([\d.]+)/i);
+    if (rentMatch) {
+      let rawRNum = parseFloat(rentMatch[1].replace(/[.,\s]/g, ""));
+      const unitR = (rentMatch[2] || "").toLowerCase();
+      const multR = unitR.includes("mil millon") ? 1_000_000_000 : (unitR.includes("millon") || unitR === "m") ? 1_000_000 : rawRNum < 10_000 ? 1_000_000 : 1;
+      const computedR = rawRNum * multR;
+      if (computedR >= 300_000 && computedR <= 100_000_000) propRentPrice = computedR;
+    }
+  }
+
   if (propRentPrice <= 0 && parseSafePrice(prop.price, prop.rawText) > 0 && parseSafePrice(prop.price, prop.rawText) < 100_000_000) {
     propRentPrice = parseSafePrice(prop.price, prop.rawText);
   }
@@ -531,6 +587,17 @@ function scoreRows(req: any, prop: any) {
   // C. CUOTA DE ADMINISTRACIÓN (Tolerancia máx -1%, cero si sobrepasa)
   let reqAdminMax = parseSafePrice(req.adminFeeMax, req.rawText);
   let propAdminFee = parseSafePrice(prop.adminFee, prop.rawText);
+
+  if (propAdminFee <= 0 && propTextLower) {
+    const mAdmin = propTextLower.match(/(?:administración|administracion|admin|admon)\s*:?\s*(?:aprox\.?)?\s*\$?\s*([\d.,\s]+?)\s*(mil|millones?|m)?(?:\s|$|\n)/i);
+    if (mAdmin) {
+      let rawANum = parseFloat(mAdmin[1].replace(/[.,\s]/g, ""));
+      const unitA = (mAdmin[2] || "").toLowerCase();
+      const multA = unitA.includes("millon") ? 1_000_000 : unitA === "mil" ? 1_000 : rawANum < 10_000 ? 1_000 : 1;
+      const computedA = rawANum * multA;
+      if (computedA >= 10_000 && computedA <= 30_000_000) propAdminFee = computedA;
+    }
+  }
 
   if (propAdminFee > 0) {
     if (
@@ -743,7 +810,15 @@ function scoreRows(req: any, prop: any) {
   // 9. Estrato
   const estratoArr: number[] = Array.isArray(req.estratoDeseado) ? req.estratoDeseado
     : req.estratoDeseado ? [Number(req.estratoDeseado)] : [];
-  const estratoP = prop.stratum || prop.estrato;
+  if (estratoArr.length === 0 && reqTextLower) {
+    const mEstR = reqTextLower.match(/estrato\s*:?\s*(\d)/i);
+    if (mEstR) estratoArr.push(parseInt(mEstR[1], 10));
+  }
+  let estratoP = prop.stratum || prop.estrato;
+  if ((!estratoP || Number(estratoP) <= 0) && propTextLower) {
+    const mEstP = propTextLower.match(/estrato\s*:?\s*(\d)/i);
+    if (mEstP) estratoP = parseInt(mEstP[1], 10);
+  }
   const hasEstratoReq = estratoArr.length > 0 && estratoArr[0] > 0;
   let estS: MatchStatus = "neutral";
   if (hasEstratoReq) {
