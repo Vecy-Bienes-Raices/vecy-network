@@ -73,15 +73,20 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 #### 🛠️ Soluciones e Implementaciones Técnicas:
 - **Independencia de Botones en `AdminMatches.tsx`**:
-  - `handleOnlySave`: Guarda en `properties` y `requirements` en Supabase, actualiza la tarjeta en caliente y el score local sin disparar el motor global.
+  - `handleOnlySave`: Guarda en `properties` y `requirements` en Supabase usando las columnas exactas de PostgreSQL (`address_neighborhood`, `rent_price`, `price`, `adminFee`, `areaTotal`, `bedrooms`, etc.), actualiza la tarjeta en caliente y el score local sin disparar el motor global ni arrojar error de esquema.
   - `handleRecalculateMatch`: Guarda en BD y ejecuta `recalculateMatchForPair` para re-emparejar en toda la red.
+- **Corrección de `isPhoneNumberNotPrice` en `janIA.ts` y `matching.ts`**:
+  - Se añadió la regla que excluye de ser tratados como números de teléfono a aquellos valores numéricos que terminan en 5 o más ceros (`00000`/`000000`, ej: $3.500.000.000, $3.000.000.000), permitiendo que la Guillotina Financiera evalúe con rigor milimétrico los presupuestos en miles de millones.
+- **Saneamiento Masivo de Inventario (476 Propiedades)**:
+  - Ejecutado script de saneamiento predial en Supabase corrigiendo precios de venta y arriendo corruptos o hardcodeados contra sus textos originales (`rawText`).
+  - Depuración y purgado automático de matches inviables en `propertyMatches`, dejando únicamente coincidencias verídicas y de alta afinidad (≥80%).
 - **Matriz de Cotejo Adaptativa (`AdminMatches.tsx`)**: Inserción dinámica de filas para Cocina, CBS, Pisos, Asoleación, Planta y Visitantes con sus iconos correspondientes.
 - **Creación de Tablas de Aprendizaje en Supabase**:
   - `inmobiliario_lexicon`: Glosario vivo con tracking de frecuencia de modismos colombianos.
   - `match_feedback`: Registro de motivos de descarte y acuerdos comerciales.
 - **Routers tRPC en `janIA.ts`**: Procedimientos `recordMatchFeedback`, `getInmobiliarioLexicon` y `learnNewLexiconTerm`.
 - **Extractor Multidimensional en `server/_core/janIA.ts`**: Extracción robusta de `kitchenType`, `hasServiceRoom` (CBS), `floorType`, `sunlightOrientation`, `hasPowerPlant`, `hasVisitorParking` y función no bloqueante `enrichLexiconFromText`.
-- **Validación**: Compilación de producción con `npm run build` ejecutada exitosamente con 0 errores.
+- **Validación y Despliegue**: Compilación con `npm run build` exitosa y commit enviado a GitHub main (`b030cf1`) para despliegue automático en Vercel.
 
 ---
 
