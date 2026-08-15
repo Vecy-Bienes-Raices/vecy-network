@@ -951,10 +951,23 @@ function isValidRealPhoneNumber(clean: string): boolean {
   return false;
 }
 
+function extractContactNameFromText(rawText: string | null | undefined): string | null {
+  if (!rawText) return null;
+  const match = rawText.match(/(?:informes|contacto|info|atención|atencion|agente|broker)\s*:?\s*([A-Za-zÁÉÍÓÚáéíóúñÑ]{3,20})/i);
+  if (match) {
+    const foundName = match[1].trim();
+    if (foundName.toLowerCase() !== 'para' && foundName.toLowerCase() !== 'con' && foundName.toLowerCase() !== 'por') {
+      return foundName.charAt(0).toUpperCase() + foundName.slice(1).toLowerCase();
+    }
+  }
+  return null;
+}
+
 function extractPhoneFromItem(item: any): { display: string; cleanNumber: string | null; name: string | null } {
   if (!item) return { display: "Número no disponible", cleanNumber: null, name: null };
 
-  const senderName = item.nombreUsuarioWhatsapp || item.pushName || item.user?.name || null;
+  const textName = extractContactNameFromText(item.rawText || item.description);
+  const senderName = item.nombreUsuarioWhatsapp || item.pushName || textName || null;
 
   // 1. Revisar candidatos directos
   const candidates = [
@@ -965,10 +978,7 @@ function extractPhoneFromItem(item: any): { display: string; cleanNumber: string
     item.usuarioWhatsapp,
     item.contactNumber,
     item.sellerPhone,
-    item.captadorPhone,
-    item.user?.phone,
-    item.user?.idUsuarioWhatsapp,
-    item.user?.contactPhone
+    item.captadorPhone
   ];
 
   for (const cand of candidates) {
@@ -1529,12 +1539,13 @@ export default function AdminMatches() {
                       <div className="text-xs text-zinc-300 bg-white/[0.02] border border-white/5 p-3 rounded-xl leading-relaxed whitespace-pre-wrap break-words space-y-3">
                         {(() => {
                           const pText = (m.property?.rawText || m.property?.description || "").trim();
-                          return pText ? (
+                          const fallbackText = m.property?.name ? `${m.property.name}. Ciudad: ${m.property.city || 'Bogotá, D.C.'}. ${m.property.price ? 'Precio: ' + formatCOP(m.property.price) : ''}` : "Publicación sin texto descriptivo registrado";
+                          return (
                             <div className="space-y-1">
                               <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold not-italic">💬 Publicación Original:</p>
-                              <p className="italic text-zinc-200">"{renderTextWithClickableLinks(pText)}"</p>
+                              <p className="italic text-zinc-200">"{renderTextWithClickableLinks(pText || fallbackText)}"</p>
                             </div>
-                          ) : null;
+                          );
                         })()}
 
 
