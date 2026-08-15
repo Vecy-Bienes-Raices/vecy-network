@@ -86,7 +86,15 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
   - `match_feedback`: Registro de motivos de descarte y acuerdos comerciales.
 - **Routers tRPC en `janIA.ts`**: Procedimientos `recordMatchFeedback`, `getInmobiliarioLexicon` y `learnNewLexiconTerm`.
 - **Extractor Multidimensional en `server/_core/janIA.ts`**: Extracción robusta de `kitchenType`, `hasServiceRoom` (CBS), `floorType`, `sunlightOrientation`, `hasPowerPlant`, `hasVisitorParking` y función no bloqueante `enrichLexiconFromText`.
-- **Validación y Despliegue**: Compilación con `npm run build` exitosa y commit enviado a GitHub main (`b030cf1`) para despliegue automático en Vercel.
+- **Inteligencia Pura Contextual y Condicional (Casas vs Apartamentos en `AdminMatches.tsx`)**:
+  - Cuando un requerimiento busca *"Casa o Apartamento"* y se cruza contra una **Casa**:
+    1. La fila de espacio exterior se adapta automáticamente a **`🪴 Importante Patio (Casa)`** evaluando si exige patio en la rama de Casa.
+    2. La fila de acceso vehicular se adapta a **`🚗 Acceso Garaje (Casa)`** evaluando garaje a nivel de calle o cubierto.
+    3. La fila de seguridad se adapta a **`🛡️ Conjunto Cerrado & Vigilancia`** evaluando vigilancia 24h y conjunto residencial cerrado en lugar de requerir ascensor como en un edificio.
+  - Cuando se cruza contra un **Apartamento**:
+    1. Se activa la rama de **`🌆 Balcón / Terraza (Apartamento)`** exigiendo terraza amplia de uso exclusivo o balcón.
+    2. Se activa la fila de **`🏢 Equipamiento Edificio`** evaluando ascensor y amenidades.
+- **Validación y Despliegue**: Compilación con `npm run build` exitosa y commits enviados a GitHub main (`fc12a96`) para despliegue automático en Vercel.
 
 ---
 
