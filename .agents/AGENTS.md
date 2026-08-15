@@ -162,10 +162,10 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v23.0 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL: v22.1 — Agosto 2026
 
-### Novedades v23.0:
-- **Botón Prominente de Enlaces (`extractPublicLink`)**: Renderizado de botones dorados para Ofertas y cianes para Demandas que contienen enlaces (Wasi, LobbieApp, FincaRaíz, Metrocuadrado, wa.me, Instagram).
+### Novedades v22.1:
+- **Visualización Limpia de Enlaces (`extractPublicLink`)**: Renderizado de hipervínculos azules limpios y sobrios (`text-blue-400 hover:text-blue-300 font-medium underline break-all`) tanto en Ofertas como en Demandas.
+- **Badge Web Sobrio (`shared/const.ts`)**: Muestra únicamente `VERSIÓN v22.1` en el encabezado del panel admin sin títulos ni subtítulos adicionales.
 - **Recuperación Masiva de Enlaces en Supabase DB**: Rastreo y rescate masivo de 17 enlaces de Inmuebles y 9 enlaces de Requerimientos en la base de datos Supabase.
-- **Fidelidad 100% Verbatim (`rawText`)**: Eliminación del filtro regex que suprimía URLs (`https://...`), emojis, `$`, y caracteres especiales.
 - **Historial Completo con Contexto Maestro**: Integración de la bitácora cronológica maestro en `HISTORIAL_CONVERSACIONES_MAESTRO.md`.

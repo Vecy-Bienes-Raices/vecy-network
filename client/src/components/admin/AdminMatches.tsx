@@ -1060,11 +1060,11 @@ function getValidWaLink(phone: string | null | undefined, text: string): string 
 
 function renderTextWithClickableLinks(text: string | null | undefined) {
   if (!text) return null;
-  const urlRegex = /(https?:\/\/[^\s]+|wa\.me\/[^\s]+|whatsapp\.com\/[^\s]+)/g;
-  const parts = text.split(urlRegex);
+  const urlPattern = /(https?:\/\/[^\s<"']+|wa\.me\/[^\s<"']+|whatsapp\.com\/[^\s<"']+)/gi;
+  const parts = text.split(urlPattern);
 
   return parts.map((part, i) => {
-    if (urlRegex.test(part)) {
+    if (/^(https?:\/\/|wa\.me\/|whatsapp\.com\/)/i.test(part)) {
       const href = part.startsWith("http") ? part : `https://${part}`;
       return (
         <a
@@ -1072,7 +1072,7 @@ function renderTextWithClickableLinks(text: string | null | undefined) {
           href={href}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-cyan-400 hover:text-cyan-300 underline font-semibold break-all inline-flex items-center gap-1 my-0.5"
+          className="text-blue-400 hover:text-blue-300 underline font-semibold break-all inline-flex items-center gap-1 my-0.5"
         >
           {part} <ExternalLink className="w-3 h-3 inline" />
         </a>
