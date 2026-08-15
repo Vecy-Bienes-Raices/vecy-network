@@ -162,7 +162,21 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v22.5 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL: v22.6 — Agosto 2026
+
+### Novedades v22.6:
+- **Tratamiento Universal de Presupuesto Abierto**:
+  - Detección inteligente en backend (`matching.ts`) y frontend (`AdminMatches.tsx`) de expresiones como *"Ppto $ Abierto"*, *"sin límite"*, *"ilimitado"*, asignando 100% de cumplimiento financiero (Filtro Duro 7 superado con éxito).
+- **Prioridad Financiera de Negocio (Canon de Arriendo)**:
+  - En búsquedas de arrendamiento cruzadas contra inmuebles en `venta_o_arriendo`, la comparación activa y prioritaria se ejecuta sobre el canon de arriendo mensual (`rent_price`) y la administración, evitando que la fila de venta penalice o bloquee el match.
+- **Regla Doctrinal de Confort Físico**:
+  - `prop >= req` en Área, Habitaciones, Baños y Parqueaderos califica como `exact` (100% Verde Confort).
+- **Filas Adaptativas Dinámicas Adicionales**:
+  - `👮 Vigilancia 24/7 Presencial (No Automatizada)`: Detección y cotejo de portería física permanente.
+  - `📚 Estudio / Star de TV`: Reconocimiento de estudio independiente como sustitución o confort de habitaciones.
+  - `✨ Zonas Sociales & Chimenea`: Bono de confort en sala doble y chimenea.
+- **Validación Empírica 100% Match Perfecto**:
+  - Match #10788 (Requerimiento #44 ↔ Inmueble #149) probado, recalculado y validado en Supabase con score 100%.
 
 ### Novedades v22.5:
 - **Independencia Total de Botones en Modo Edición (`AdminMatches.tsx`)**:
@@ -171,3 +185,4 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 - **Capa A: Matriz de Cotejo Dinámica y Elástica**: Inserción adaptativa en vivo de filas para Cocina *(Cerrada/Abierta/Isla)*, Cuarto y Baño de Servicio *(CBS)*, Acabado de Pisos *(Madera/Laminado/Mármol)*, Asoleación *(Sol de mañana/tarde/exterior)*, Planta Eléctrica *(Total/Parcial)* y Parqueadero de Visitantes.
 - **Capa B: Memoria y Diccionario Semántico Evolutivo (`inmobiliario_lexicon`)**: JanIA auto-aprende a diario la jerga y modismos inmobiliarios colombianos (*"cbs"*, *"pelo a pelo"*, *"star de tv"*, *"cuarto de empleada"*), normalizándolos a conceptos canónicos en Supabase.
 - **Capa C: Bucle de Retroalimentación de Brokers (`match_feedback`)**: Botones 👍 *"🤝 Trato en Curso"* y 👎 *"⛔ Descartar Match"* con modal de motivos para entrenar y calibrar continuamente las decisiones de la IA.
+

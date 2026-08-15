@@ -701,7 +701,7 @@ export const janIARouter = router({
       action: z.enum(['exitoso', 'rechazado', 'en_negociacion']),
       motivoRechazo: z.string().optional().nullable(),
       notasBroker: z.string().optional().nullable(),
-      ajustesGuardados: z.record(z.any()).optional().nullable(),
+      ajustesGuardados: z.record(z.string(), z.any()).optional().nullable(),
     }))
     .mutation(async ({ input }) => {
       const db = await getDb();

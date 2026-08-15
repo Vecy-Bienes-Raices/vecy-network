@@ -52,11 +52,48 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v22.5 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v22.6 — Agosto 2026
 
 ---
 
 ## 📜 REGISTRO DETALLADO DE CONVERSACIONES (ORDEN CRONOLÓGICO INVERSO CON FECHA Y HORA)
+
+### 🗓️ Sesión: Sábado 15 de Agosto de 2026 — 04:15 AM a 04:40 AM (Hora Colombia UTC-5) / 15 de Agosto 09:15 AM a 09:40 AM UTC
+**Versión del Sistema**: `v22.6 — Agosto 2026`  
+
+#### 📋 Requerimientos Específicos del Usuario (Eduardo A. Rivera):
+1. **Perfeccionamiento de la Inteligencia y Astucia Semántica de JanIA**:
+   - JanIA debe intuir de forma sabia y lógica lo que es importante en cada requerimiento para agregar, quitar o adaptar características dinámicas en la matriz de cotejo sin fricciones.
+2. **Tratamiento del Presupuesto Abierto**:
+   - Requerimientos con presupuesto abierto (`"Ppto $ Abierto"`, `"sin límite"`, `"ilimitado"`) deben reflejarse de inmediato en la tabla como *"Presupuesto Abierto"* (status verde / compatible al 100%) en lugar de figurar como `N/E` o con advertencias de faltante.
+3. **Prioridad Financiera de Transacción (Canon vs Venta)**:
+   - En una búsqueda de **Arriendo** cruzada contra un inmueble de oferta mixta (`venta_o_arriendo`), el valor relevante para el negocio es el **Canon de Arriendo mensual** y la administración. La fila de venta es informativa y no debe bloquear ni penalizar el match.
+4. **Vigilancia 24/7 Presencial y Humana**:
+   - Cotejo de requerimientos que exigen explícitamente *"Vigilancia 24/7 si o si, No automatizados"* contra ofertas que cuentan con portería física permanente y vigilancia 24 horas.
+5. **Estudio / Star de TV y Espacios Sociales**:
+   - Cotejo adaptativo para demandas que solicitan *"2 habitaciones o estudio"* reconociendo la presencia de estudio independiente o star de TV como bono de confort (`status: "exact"`).
+6. **Regla Doctrinal de Especificaciones Físicas (`prop >= req` es 100% Confort)**:
+   - En Área Total, Habitaciones, Baños y Parqueaderos: cuando la oferta es igual o mayor a la demanda (`prop >= req`), el status califica al 100% como `"exact"` (Verde). Si la demanda es flexible o sin mínimo (`areaMin = 0`, `estrato = 0`, `antigüedad = 0`), califica como `"exact"`.
+
+#### 🛠️ Soluciones e Implementaciones Técnicas:
+- **Motor de Matching Backend (`server/_core/matching.ts`)**:
+  - Detección de `isReqOpenBudget` para requerimientos con presupuestos abiertos, garantizando 100% de cumplimiento financiero en el Filtro Duro 7 y omitiéndolo de `missingFields`.
+  - Inclusión de amenidades ricas (estudio, chimenea, depósitos independientes, cocina con isla y CBS) en el cálculo de `completionRatio` y `filledDownstreamSpecs`, habilitando el **100% MATCH PERFECTO**.
+- **Saneamiento Predial en Supabase**:
+  - Corregida la Propiedad #149 en Supabase (`transactionType = 'venta_o_arriendo'`, `price = $1.200M`, `rentPrice = $8.5M`, `bedrooms = 3`, `bathrooms = 5`, `garages = 4`, `garageType = 'independiente'`).
+- **Frontend y Matriz de Cotejo (`client/src/components/admin/AdminMatches.tsx`)**:
+  - Detección de `isReqOpenBudget` tanto para Arriendo como para Venta.
+  - Generación de fila adaptativa **`👮 Vigilancia 24/7 Presencial (No Automatizada)`** con icono `ShieldCheck`.
+  - Generación de fila adaptativa **`📚 Estudio / Star de TV`** con icono `BookOpen`.
+  - Generación de fila adaptativa **`✨ Zonas Sociales & Chimenea`** con icono `Sparkles`.
+  - Calificación de `storageS = "exact"` y `cbsStatus = "exact"` como bonos de confort cuando la oferta los tiene.
+  - Corrección de `hardPhysicalMismatch` para respetar `isReqRentMatch` y cálculo de `autoScore = 100` cuando todas las filas coinciden.
+- **Validación Empírica**:
+  - Match #10788 (Requerimiento #44 ↔ Propiedad #149) recalculado y validado en vivo en Supabase con `score: 100` y `"🌟 MATCH PERFECTO 100%: 5 campos en duro 100% en verde + TODAS las líneas de abajo 100% llenas y compatibles!"`.
+- **Compilación Limpia**:
+  - `pnpm run build` y `pnpm exec tsc --noEmit` completados con 0 errores (Vite frontend y backend bundle listos para producción).
+
+---
 
 ### 🗓️ Sesión: Sábado 15 de Agosto de 2026 — 02:45 AM a 03:00 AM (Hora Colombia UTC-5) / 15 de Agosto 07:45 AM a 08:00 AM UTC
 **Versión del Sistema**: `v22.5 — Agosto 2026`  

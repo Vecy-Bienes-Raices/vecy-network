@@ -874,7 +874,12 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
       }
     }
   }
-  const hasReqBudget = budgetMaxCheck > 0;
+  const isReqOpenBudget = /(?:ppto|presupuesto|canon|valor)?\s*\$?\s*(?:abierto|sin\s*l[ií]mite|ilimitado|negociable\s*sin\s*tope)\b/i.test(reqTextLow);
+  const hasReqBudget = budgetMaxCheck > 0 || isReqOpenBudget;
+
+  if (isReqOpenBudget) {
+    positives.push("💰 Presupuesto Abierto en la Demanda: 100% de Cumplimiento Financiero / Sin Restricción de Presupuesto.");
+  }
 
   // 3. Área Total Demanda
   let reqAreaCheck = parseFloat(String(requirement.areaMin || requirement.areaMinimaM2 || "0"));
@@ -1420,7 +1425,9 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
 
 
   // ── FILTRO DURO 7: Presupuesto (REGLA DOCTRINAL: Máximo 1% por debajo o igual, si sobrepasa = 0%) ──
-  if (budgetMax > 0) {
+  if (isReqOpenBudget) {
+    positives.push(`✅ Presupuesto Abierto en la Demanda: 100% de Cumplimiento Financiero con el valor comercial ofertado.`);
+  } else if (budgetMax > 0) {
     const isReqRent = reqBiz.includes("arriendo");
     
     if (isReqRent) {
@@ -1930,22 +1937,24 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
   }
 
   // 2. Con los 5 campos en duro 100% en VERDE, calculamos la completitud de los campos de ahí hacia abajo:
-  // 10 especificaciones de abajo: Precio, Admin, Área, Habs, Baños, Garajes, Estrato, Antigüedad, Balcón/Terraza, Depósito
+  // Específicos evaluados: Precio/Canon, Admin, Área, Habs, Baños, Garajes, Estrato, Antigüedad, Balcón/Terraza/Patio, Depósito, Estudio/StarTV, CBS
   let totalDownstreamSpecs = 10;
   let filledDownstreamSpecs = 0;
 
-  if (price > 0 || (property.rentPrice && parseFloat(String(property.rentPrice)) > 0)) filledDownstreamSpecs++;
-  if (pAdminFee > 0) filledDownstreamSpecs++;
+  if (price > 0 || (property.rentPrice && parseFloat(String(property.rentPrice)) > 0) || isReqOpenBudget) filledDownstreamSpecs++;
+  if (pAdminFee > 0 || /administraci[oó]n|admon|admin/i.test(property.rawText || "")) filledDownstreamSpecs++;
   if (propArea > 0) filledDownstreamSpecs++;
   if (pBedrooms > 0) filledDownstreamSpecs++;
   if (pBathrooms > 0) filledDownstreamSpecs++;
   if (pGarages > 0) filledDownstreamSpecs++;
-  if (pEstrato > 0) filledDownstreamSpecs++;
-  if (propAge >= 0) filledDownstreamSpecs++;
-  if (property.hasBalcony || property.hasTerrace || /balcón|balcon|terraza/i.test(property.rawText || "")) filledDownstreamSpecs++;
-  if (property.hasStorageRoom || /depósito|deposito|cuarto útil|cuarto util/i.test(property.rawText || "")) filledDownstreamSpecs++;
+  if (pEstrato > 0 || (property.zone && /(?:santa b[aá]rbara|chic[oó]|rosales|cedritos|nogal|cabrera)/i.test(property.zone))) filledDownstreamSpecs++;
+  if (propAge >= 0 || /construido|a[nñ]os|estrenar|nueva/i.test(property.rawText || "")) filledDownstreamSpecs++;
+  if (property.hasBalcony || property.hasTerrace || /balc[oó]n|terraza|patio/i.test(property.rawText || "")) filledDownstreamSpecs++;
+  if (property.hasStorageRoom || /dep[oó]sito|bodega|cuarto [uú]til/i.test(property.rawText || "")) filledDownstreamSpecs++;
+  if (/estudio|star|estar de tv/i.test(property.rawText || "")) filledDownstreamSpecs++;
+  if (/cuarto de servicio|cbs|alcoba de servicio/i.test(property.rawText || "")) filledDownstreamSpecs++;
 
-  const completionRatio = filledDownstreamSpecs / totalDownstreamSpecs;
+  const completionRatio = Math.min(1.0, filledDownstreamSpecs / totalDownstreamSpecs);
 
   let finalPercentage = 0;
   if (completionRatio < 0.50) {
@@ -1954,12 +1963,12 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
   } else if (completionRatio < 0.70) {
     finalPercentage = 80;
     positives.push(`✅ Match 80%: 5 campos en duro 100% en verde + campos de abajo llenos al ${Math.round(completionRatio * 100)}% (mín. 50%)`);
-  } else if (completionRatio < 0.80) {
+  } else if (completionRatio < 0.85) {
     finalPercentage = 85;
     positives.push(`✅ Match 85%: 5 campos en duro 100% en verde + campos de abajo llenos al ${Math.round(completionRatio * 100)}% (mín. 70%)`);
-  } else if (completionRatio < 1.00) {
-    finalPercentage = 90;
-    positives.push(`✅ Match 90%: 5 campos en duro 100% en verde + campos de abajo llenos al ${Math.round(completionRatio * 100)}% (mín. 80%)`);
+  } else if (completionRatio < 0.95) {
+    finalPercentage = 95;
+    positives.push(`✅ Match 95%: 5 campos en duro 100% en verde + campos de abajo llenos al ${Math.round(completionRatio * 100)}% (mín. 85%)`);
   } else {
     finalPercentage = 100;
     positives.push(`🌟 MATCH PERFECTO 100%: 5 campos en duro 100% en verde + TODAS las líneas de abajo 100% llenas y compatibles!`);

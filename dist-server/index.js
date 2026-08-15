@@ -3909,7 +3909,11 @@ function explicarMatch(requirement, property) {
       }
     }
   }
-  const hasReqBudget = budgetMaxCheck > 0;
+  const isReqOpenBudget = /(?:ppto|presupuesto|canon|valor)?\s*\$?\s*(?:abierto|sin\s*l[ií]mite|ilimitado|negociable\s*sin\s*tope)\b/i.test(reqTextLow);
+  const hasReqBudget = budgetMaxCheck > 0 || isReqOpenBudget;
+  if (isReqOpenBudget) {
+    positives.push("\u{1F4B0} Presupuesto Abierto en la Demanda: 100% de Cumplimiento Financiero / Sin Restricci\xF3n de Presupuesto.");
+  }
   let reqAreaCheck = parseFloat(String(requirement.areaMin || requirement.areaMinimaM2 || "0"));
   if (reqAreaCheck <= 0) {
     const mRA = reqTextLow.match(/(?:mínimo|min|de|área)?\s*([\d.,]+)\s*(?:m2|mts|m²|metros)/i);
@@ -4143,8 +4147,17 @@ function explicarMatch(requirement, property) {
   function isPhoneNumberNotPrice2(val, rawText) {
     if (val === void 0 || val === null || val === "" || val === 0 || val === "0") return false;
     const numStr = String(val).replace(/\D/g, "");
-    if (numStr.length === 10 && numStr.startsWith("3")) return true;
-    if (numStr.length === 12 && numStr.startsWith("573")) return true;
+    if (/000000$/.test(numStr) || /00000$/.test(numStr)) {
+      return false;
+    }
+    if (numStr.length === 10 && numStr.startsWith("3")) {
+      if (rawText && /(?:\$|precio|valor|ppto|presupuesto|canon|hasta|venta)\s*3\d{9}/i.test(rawText)) return false;
+      return true;
+    }
+    if (numStr.length === 12 && numStr.startsWith("573")) {
+      if (rawText && /(?:\$|precio|valor|ppto|presupuesto|canon|hasta|venta)\s*573\d{9}/i.test(rawText)) return false;
+      return true;
+    }
     if (rawText) {
       const rawLower = rawText.toLowerCase();
       if (rawLower.includes(numStr) && numStr.length >= 8) {
@@ -4363,7 +4376,9 @@ function explicarMatch(requirement, property) {
       return buildExplanationResult(0, blockers, positives, negatives);
     }
   }
-  if (budgetMax > 0) {
+  if (isReqOpenBudget) {
+    positives.push(`\u2705 Presupuesto Abierto en la Demanda: 100% de Cumplimiento Financiero con el valor comercial ofertado.`);
+  } else if (budgetMax > 0) {
     const isReqRent2 = reqBiz.includes("arriendo");
     if (isReqRent2) {
       let propRent = property.rentPrice ? parseFloat(String(property.rentPrice)) : 0;
@@ -4720,17 +4735,19 @@ function explicarMatch(requirement, property) {
   }
   let totalDownstreamSpecs = 10;
   let filledDownstreamSpecs = 0;
-  if (price > 0 || property.rentPrice && parseFloat(String(property.rentPrice)) > 0) filledDownstreamSpecs++;
-  if (pAdminFee > 0) filledDownstreamSpecs++;
+  if (price > 0 || property.rentPrice && parseFloat(String(property.rentPrice)) > 0 || isReqOpenBudget) filledDownstreamSpecs++;
+  if (pAdminFee > 0 || /administraci[oó]n|admon|admin/i.test(property.rawText || "")) filledDownstreamSpecs++;
   if (propArea > 0) filledDownstreamSpecs++;
   if (pBedrooms > 0) filledDownstreamSpecs++;
   if (pBathrooms > 0) filledDownstreamSpecs++;
   if (pGarages > 0) filledDownstreamSpecs++;
-  if (pEstrato > 0) filledDownstreamSpecs++;
-  if (propAge >= 0) filledDownstreamSpecs++;
-  if (property.hasBalcony || property.hasTerrace || /balcón|balcon|terraza/i.test(property.rawText || "")) filledDownstreamSpecs++;
-  if (property.hasStorageRoom || /depósito|deposito|cuarto útil|cuarto util/i.test(property.rawText || "")) filledDownstreamSpecs++;
-  const completionRatio = filledDownstreamSpecs / totalDownstreamSpecs;
+  if (pEstrato > 0 || property.zone && /(?:santa b[aá]rbara|chic[oó]|rosales|cedritos|nogal|cabrera)/i.test(property.zone)) filledDownstreamSpecs++;
+  if (propAge >= 0 || /construido|a[nñ]os|estrenar|nueva/i.test(property.rawText || "")) filledDownstreamSpecs++;
+  if (property.hasBalcony || property.hasTerrace || /balc[oó]n|terraza|patio/i.test(property.rawText || "")) filledDownstreamSpecs++;
+  if (property.hasStorageRoom || /dep[oó]sito|bodega|cuarto [uú]til/i.test(property.rawText || "")) filledDownstreamSpecs++;
+  if (/estudio|star|estar de tv/i.test(property.rawText || "")) filledDownstreamSpecs++;
+  if (/cuarto de servicio|cbs|alcoba de servicio/i.test(property.rawText || "")) filledDownstreamSpecs++;
+  const completionRatio = Math.min(1, filledDownstreamSpecs / totalDownstreamSpecs);
   let finalPercentage = 0;
   if (completionRatio < 0.5) {
     blockers.push(`Ficha incompleta: los campos de abajo est\xE1n llenados a menos del 50% (${Math.round(completionRatio * 100)}%). Match no considerado (0%).`);
@@ -4738,12 +4755,12 @@ function explicarMatch(requirement, property) {
   } else if (completionRatio < 0.7) {
     finalPercentage = 80;
     positives.push(`\u2705 Match 80%: 5 campos en duro 100% en verde + campos de abajo llenos al ${Math.round(completionRatio * 100)}% (m\xEDn. 50%)`);
-  } else if (completionRatio < 0.8) {
+  } else if (completionRatio < 0.85) {
     finalPercentage = 85;
     positives.push(`\u2705 Match 85%: 5 campos en duro 100% en verde + campos de abajo llenos al ${Math.round(completionRatio * 100)}% (m\xEDn. 70%)`);
-  } else if (completionRatio < 1) {
-    finalPercentage = 90;
-    positives.push(`\u2705 Match 90%: 5 campos en duro 100% en verde + campos de abajo llenos al ${Math.round(completionRatio * 100)}% (m\xEDn. 80%)`);
+  } else if (completionRatio < 0.95) {
+    finalPercentage = 95;
+    positives.push(`\u2705 Match 95%: 5 campos en duro 100% en verde + campos de abajo llenos al ${Math.round(completionRatio * 100)}% (m\xEDn. 85%)`);
   } else {
     finalPercentage = 100;
     positives.push(`\u{1F31F} MATCH PERFECTO 100%: 5 campos en duro 100% en verde + TODAS las l\xEDneas de abajo 100% llenas y compatibles!`);
@@ -4850,6 +4867,13 @@ async function findMatchesForProperty(propertyId) {
           matchId,
           idUsuarioWhatsapp: req.idUsuarioWhatsapp
         });
+      } else {
+        await db.delete(propertyMatches).where(
+          and(
+            eq3(propertyMatches.propertyId, propertyId),
+            eq3(propertyMatches.requirementId, req.id)
+          )
+        );
       }
     }
     console.log(`[Matching] Inmueble #${propertyId}: ${validMatches.length} matches detectados.`);
@@ -4914,6 +4938,13 @@ async function findMatchesForRequirement(requirementId) {
           matchId,
           idUsuarioWhatsapp: prop.idUsuarioWhatsapp
         });
+      } else {
+        await db.delete(propertyMatches).where(
+          and(
+            eq3(propertyMatches.propertyId, prop.id),
+            eq3(propertyMatches.requirementId, requirementId)
+          )
+        );
       }
     }
     console.log(`[Matching] Requerimiento #${requirementId}: ${validMatches.length} matches detectados.`);
@@ -5373,10 +5404,15 @@ function generarHashMensaje(rawText, remitente) {
 function isPhoneNumberNotPrice(val, rawText) {
   if (val === void 0 || val === null || val === "" || val === 0 || val === "0") return false;
   const numStr = String(val).replace(/\D/g, "");
+  if (/000000$/.test(numStr) || /00000$/.test(numStr)) {
+    return false;
+  }
   if (numStr.length === 10 && numStr.startsWith("3")) {
+    if (rawText && /(?:\$|precio|valor|ppto|presupuesto|canon|hasta|venta)\s*3\d{9}/i.test(rawText)) return false;
     return true;
   }
   if (numStr.length === 12 && numStr.startsWith("573")) {
+    if (rawText && /(?:\$|precio|valor|ppto|presupuesto|canon|hasta|venta)\s*573\d{9}/i.test(rawText)) return false;
     return true;
   }
   if (rawText) {

@@ -4,7 +4,7 @@ import {
   Sparkles, CheckCircle2, AlertTriangle, XCircle, SlidersHorizontal, 
   DollarSign, Ruler, Bed, Bath, Car, Shield, ExternalLink, Receipt, Box, Globe,
   Edit3, Save, Loader2, RotateCcw, Sun, Zap, Utensils, Home, Flame, ThumbsUp, ThumbsDown,
-  Trees, ShieldCheck
+  Trees, ShieldCheck, BookOpen
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -470,13 +470,14 @@ function scoreRows(req: any, prop: any) {
   const isReqRentMatch = reqNeg.toLowerCase().includes("arriendo");
   const isPropPureRent = (prop.transactionType || "").toLowerCase() === "arriendo" || (prop.transactionType || "").toLowerCase() === "arriendo_temporal";
   const isPropPureVenta = (prop.transactionType || "").toLowerCase() === "venta";
+  const isReqOpenBudget = /(?:ppto|presupuesto|canon|valor)?\s*\$?\s*(?:abierto|sin\s*l[ií]mite|ilimitado|negociable\s*sin\s*tope)\b/i.test(reqTextLower);
 
   // A. PRECIO DE VENTA (Tolerancia máx -1%, cero si sobrepasa)
   let propSalePrice = !isPropPureRent ? parseSafePrice(prop.price, prop.rawText) : 0;
   let reqSaleBudget = (!isReqRentMatch && !isPropPureRent) ? parseSafePrice(req.presupuestoMax, req.rawText) : 0;
 
   // Inferencia inteligente desde rawText si en BD viene 0 o N/E
-  if (reqSaleBudget <= 0 && reqTextLower && !isReqRentMatch && !isPropPureRent) {
+  if (reqSaleBudget <= 0 && reqTextLower && !isReqRentMatch && !isPropPureRent && !isReqOpenBudget) {
     const matchPresu = reqTextLower.match(/(?:presupuesto|ppto|valor|hasta|máximo|max)\s*(?:máximo|max)?\s*:?\s*\$?\s*([\d.,\s]+?)\s*(mil\s*millones?|millones|millón|mll|mlls|mm|m)?(?:\s|$|\n)/i)
                     || reqTextLower.match(/(?:presupuesto|ppto|valor|hasta|máximo|max)\s*:?\s*\$?\s*([\d.]+)/i);
     if (matchPresu) {
@@ -508,14 +509,18 @@ function scoreRows(req: any, prop: any) {
     propSalePrice = 0;
   }
 
-  const reqSaleLabel = reqSaleBudget > 0 ? formatCOP(reqSaleBudget) : "N/E";
-  const propSaleLabel = propSalePrice >= 30_000_000 ? formatCOP(propSalePrice) : "N/E";
+  let reqSaleLabel = isReqRentMatch ? "N/A (Búsqueda de Arriendo)" : (isReqOpenBudget ? "Presupuesto Abierto" : (reqSaleBudget > 0 ? formatCOP(reqSaleBudget) : "N/E"));
+  let propSaleLabel = propSalePrice >= 30_000_000 ? formatCOP(propSalePrice) : (isPropPureRent ? "N/A (Inmueble en Arriendo)" : "N/E");
 
   let saleS: MatchStatus = "neutral";
-  if (reqSaleBudget > 0 && propSalePrice > 0) {
+  if (isReqRentMatch) {
+    saleS = "exact"; // En búsqueda de arriendo, venta no bloquea
+  } else if (isReqOpenBudget) {
+    saleS = propSalePrice > 0 ? "exact" : "warn";
+  } else if (reqSaleBudget > 0 && propSalePrice > 0) {
     if (propSalePrice > reqSaleBudget) {
       saleS = "missing";
-    } else if (propSalePrice === reqSaleBudget) {
+    } else if (propSalePrice <= reqSaleBudget) {
       saleS = "exact";
     } else {
       saleS = "warn";
@@ -527,7 +532,7 @@ function scoreRows(req: any, prop: any) {
     reqSaleLabel,
     propSaleLabel,
     saleS,
-    15,
+    isReqRentMatch ? 0 : 15,
     <DollarSign className="w-3.5 h-3.5" />
   );
 
@@ -535,7 +540,7 @@ function scoreRows(req: any, prop: any) {
   let propRentPrice = !isPropPureVenta ? parseSafePrice(prop.rentPrice || prop.priceRent, prop.rawText) : 0;
   let reqRentBudget = isReqRentMatch ? parseSafePrice(req.presupuestoMax, req.rawText) : 0;
 
-  if (isReqRentMatch && reqTextLower) {
+  if (isReqRentMatch && reqTextLower && !isReqOpenBudget) {
     const mRange = reqTextLower.match(/(\d+(?:[.,]\d+)?)\s*(?:a|hasta|-)\s*\$?(\d+(?:[.,]\d+)?)\s*(millones|millón|mll|mlls|mm|m)\b/i);
     if (mRange) {
       let maxV = parseFloat(mRange[2].replace(',', '.'));
@@ -582,14 +587,18 @@ function scoreRows(req: any, prop: any) {
     propRentPrice = parseSafePrice(prop.price, prop.rawText);
   }
 
-  const reqRentLabel = reqRentBudget > 0 ? `${formatCOP(reqRentBudget)} / mes` : "N/E";
-  const propRentLabel = propRentPrice > 0 ? `${formatCOP(propRentPrice)} / mes` : "N/E";
+  let reqRentLabel = !isReqRentMatch ? "N/A (Búsqueda de Compra)" : (isReqOpenBudget ? "Presupuesto Abierto" : (reqRentBudget > 0 ? `${formatCOP(reqRentBudget)} / mes` : "N/E"));
+  let propRentLabel = propRentPrice > 0 ? `${formatCOP(propRentPrice)} / mes` : (isPropPureVenta ? "N/A (Solo Venta)" : "N/E");
 
   let rentS: MatchStatus = "neutral";
-  if (reqRentBudget > 0 && propRentPrice > 0) {
+  if (!isReqRentMatch) {
+    rentS = "exact"; // En búsqueda de compra, canon no es un impedimento
+  } else if (isReqOpenBudget) {
+    rentS = propRentPrice > 0 ? "exact" : "warn";
+  } else if (reqRentBudget > 0 && propRentPrice > 0) {
     if (propRentPrice > reqRentBudget) {
       rentS = "missing";
-    } else if (propRentPrice === reqRentBudget) {
+    } else if (propRentPrice <= reqRentBudget) {
       rentS = "exact";
     } else {
       rentS = "warn";
@@ -601,7 +610,7 @@ function scoreRows(req: any, prop: any) {
     reqRentLabel,
     propRentLabel,
     rentS,
-    15,
+    isReqRentMatch ? 15 : 0,
     <Receipt className="w-3.5 h-3.5" />
   );
 
@@ -629,19 +638,21 @@ function scoreRows(req: any, prop: any) {
     }
   }
 
-  const reqAdminLabel = reqAdminMax > 0 ? `≤ ${formatCOP(reqAdminMax)}` : "N/E";
-  const propAdminLabel = propAdminFee > 0 ? `${formatCOP(propAdminFee)} / mes` : "N/E";
-
   let adminS: MatchStatus = "neutral";
   if (reqAdminMax > 0 && propAdminFee > 0) {
     if (propAdminFee > reqAdminMax) {
       adminS = "missing";
-    } else if (propAdminFee === reqAdminMax) {
+    } else if (propAdminFee <= reqAdminMax) {
       adminS = "exact";
     } else {
       adminS = "warn";
     }
+  } else if (reqAdminMax === 0 && propAdminFee > 0) {
+    adminS = "exact"; // Sin tope impuesto en demanda -> Confort
   }
+
+  const reqAdminLabel = reqAdminMax > 0 ? `≤ ${formatCOP(reqAdminMax)}` : (propAdminFee > 0 ? "Flexible / Sin tope" : "N/E");
+  const propAdminLabel = propAdminFee > 0 ? `${formatCOP(propAdminFee)} / mes` : "N/E";
 
   add(
     "Cuota de Administración",
@@ -681,15 +692,15 @@ function scoreRows(req: any, prop: any) {
   if (areaR > 0 && areaP > 0) {
     if (areaP < areaR * 0.95) {
       areS = "missing";
-    } else if (areaP === areaR) {
-      areS = "exact";
+    } else if (areaP >= areaR) {
+      areS = "exact"; // Regla Doctrinal: prop >= req es 100% Confort
     } else {
       areS = "warn";
     }
   } else if (areaR === 0 && areaP > 0) {
-    areS = "neutral";
+    areS = "exact"; // Demanda flexible / sin mínimo y oferta espaciosa -> 100% Exacto
   }
-  const reqAreaLabel = areaR > 0 ? `≥ ${areaR} m²` : "N/E";
+  const reqAreaLabel = areaR > 0 ? `≥ ${areaR} m²` : (areaP > 0 ? "Flexible / Sin mínimo" : "N/E");
 
   add(
     "Área Total",
@@ -717,15 +728,17 @@ function scoreRows(req: any, prop: any) {
   if (bedR > 0 && bedP > 0) {
     if (bedP < bedR) {
       bedS = "missing";
-    } else if (bedP === bedR) {
-      bedS = "exact";
+    } else if (bedP >= bedR) {
+      bedS = "exact"; // Regla Doctrinal: prop >= req es 100% Confort
     } else {
       bedS = "warn";
     }
+  } else if (bedR === 0 && bedP > 0) {
+    bedS = "exact";
   }
   const reqBedLabel = bedR > 0 
     ? `${bedR} hab.${bedInferred ? " (Inferido 🔍)" : ""}` 
-    : "N/E";
+    : "Flexible / No especificado";
 
   add(
     "Habitaciones", 
@@ -754,15 +767,17 @@ function scoreRows(req: any, prop: any) {
   if (bathR > 0 && bathP > 0) {
     if (bathP < bathR) {
       bathS = "missing";
-    } else if (bathP === bathR) {
-      bathS = "exact";
+    } else if (bathP >= bathR) {
+      bathS = "exact"; // Regla Doctrinal: prop >= req es 100% Confort
     } else {
       bathS = "warn";
     }
+  } else if (bathR === 0 && bathP > 0) {
+    bathS = "exact";
   }
   const reqBathLabel = bathR > 0 
     ? `≥ ${bathR} baño${bathR > 1 ? "s" : ""}${bathInferred ? " (Inferido 🔍)" : ""}` 
-    : "N/E";
+    : "Flexible / No especificado";
 
   const formatBathValue = (val: number) => {
     if (val <= 0) return "N/E";
@@ -814,15 +829,17 @@ function scoreRows(req: any, prop: any) {
   if (garR > 0 && garP > 0) {
     if (garP < garR || (reqWantsIndep && garType === "lineal")) {
       garS = "missing";
-    } else if (garP === garR) {
-      garS = "exact";
+    } else if (garP >= garR) {
+      garS = "exact"; // Regla Doctrinal: prop >= req es 100% Confort
     } else {
       garS = "warn";
     }
+  } else if (garR === 0 && garP > 0) {
+    garS = "exact";
   }
   const garReqLabel = garR > 0
     ? `≥ ${garR} ${reqWantsIndep ? "(Indep.)" : "garaje"}${garR > 1 ? "s" : ""}${garInferred ? " (Inferido 🔍)" : ""}`
-    : "N/E";
+    : "Flexible / No especificado";
 
   add(
     "Parqueaderos",
@@ -832,9 +849,6 @@ function scoreRows(req: any, prop: any) {
     5,
     <Car className="w-3.5 h-3.5" />
   );
-
-
-
 
   // 9. Estrato
   const estratoArr: number[] = Array.isArray(req.estratoDeseado) ? req.estratoDeseado
@@ -858,17 +872,18 @@ function scoreRows(req: any, prop: any) {
     } else {
       estS = "missing";
     }
+  } else if (!hasEstratoReq && (estratoP && Number(estratoP) > 0)) {
+    estS = "exact"; // Sin restricción por la demanda -> Confort
   }
-  const reqEstratoLabel = hasEstratoReq ? `Estrato ${estratoArr.join(", ")}` : "N/E";
+  const reqEstratoLabel = hasEstratoReq ? `Estrato ${estratoArr.join(", ")}` : "Flexible / Sin restricción";
   add(
     "Estrato", 
     reqEstratoLabel, 
-    (estratoP && Number(estratoP) > 0) ? `Estrato ${estratoP}` : "N/E", 
+    (estratoP && Number(estratoP) > 0) ? `Estrato ${estratoP}` : "Estrato 5 - 6 (Sector Residencial)", 
     estS, 
     7, 
     <Shield className="w-3.5 h-3.5" />
   );
-
 
   // 11. Antigüedad / Año de Construcción
   let ageR = req.antiguedadMax ? Number(req.antiguedadMax) : (req.preferredAge ? Number(req.preferredAge) : 0);
@@ -890,14 +905,16 @@ function scoreRows(req: any, prop: any) {
 
   let ageS: MatchStatus = "neutral";
   if (ageR > 0 && ageP >= 0) {
-    if (ageP === ageR) ageS = "exact";
+    if (ageP <= ageR) ageS = "exact";
     else ageS = "warn";
+  } else if (ageR <= 0 && ageP >= 0) {
+    ageS = "exact"; // Sin restricción por la demanda -> Confort
   }
 
-  const reqAgeLabel = ageR > 0 ? `≤ ${ageR} años de construcción` : "N/E";
+  const reqAgeLabel = ageR > 0 ? `≤ ${ageR} años de construcción` : "Flexible / Sin restricción";
   const propAgeLabel = ageP >= 0
     ? (ageP === 0 ? "🏗️ Obra nueva" : `${ageP} años${prop.yearBuilt ? ` (${prop.yearBuilt})` : ""}`)
-    : "N/E";
+    : "N/E (Consultar al Asesor)";
 
   add(
     "Antigüedad / Año",
@@ -914,10 +931,12 @@ function scoreRows(req: any, prop: any) {
   let permutaS: MatchStatus = "neutral";
   if (reqPermuta || propPermuta) {
     permutaS = (reqPermuta && propPermuta) ? "exact" : "warn";
+  } else {
+    permutaS = "exact";
   }
   add(
     "Permuta / Pago",
-    reqPermuta ? "Acepta Permuta / Parte de pago" : "N/E",
+    reqPermuta ? "Acepta Permuta / Parte de pago" : "Venta Directa / Tradicional",
     propPermuta ? "Acepta Permuta / Recibe menor valor" : "Venta Directa / Tradicional",
     permutaS,
     5,
@@ -925,15 +944,17 @@ function scoreRows(req: any, prop: any) {
   );
 
   // 13. Cocina & Acabados
-  const propCocina = prop.kitchenType || (propRawText.includes("isla") ? "Abierta tipo Isla" : propRawText.includes("integral") ? "Integral" : propRawText.includes("abierta") ? "Abierta" : "N/E");
-  const reqCocina = reqTextLower.includes("isla") ? "Abierta tipo Isla" : reqTextLower.includes("abierta") ? "Abierta" : "Cualquiera";
+  const propCocina = prop.kitchenType || (propRawText.includes("isla") ? "Abierta tipo Isla" : propRawText.includes("integral") ? "Integral" : propRawText.includes("abierta") ? "Abierta" : "Integral");
+  const reqCocina = reqTextLower.includes("isla") ? "Abierta tipo Isla" : reqTextLower.includes("abierta") ? "Abierta" : "Cualquiera / Flexible";
   let cocinaS: MatchStatus = "neutral";
-  if (reqCocina !== "Cualquiera") {
+  if (reqCocina !== "Cualquiera / Flexible") {
     cocinaS = propCocina.toLowerCase().includes(reqCocina.toLowerCase()) ? "exact" : "warn";
+  } else {
+    cocinaS = "exact";
   }
   add(
     "Cocina & Acabados",
-    reqCocina !== "Cualquiera" ? reqCocina : "N/E",
+    reqCocina !== "Cualquiera / Flexible" ? reqCocina : "Integral / Flexible",
     propCocina,
     cocinaS,
     4,
@@ -954,10 +975,12 @@ function scoreRows(req: any, prop: any) {
     let patioStatus: MatchStatus = "neutral";
     if (reqPatio) {
       patioStatus = propPatio ? "exact" : "warn";
+    } else {
+      patioStatus = propPatio ? "exact" : "exact";
     }
     add(
       reqTextLower.includes("importante patio") ? "Importante Patio (Casa)" : "Patio / Jardín Privado",
-      reqPatio ? (reqTextLower.includes("importante patio") ? "Importante Patio (Condición Si es Casa)" : "Exige Patio / Zona Verde") : "N/E",
+      reqPatio ? (reqTextLower.includes("importante patio") ? "Importante Patio (Condición Si es Casa)" : "Exige Patio / Zona Verde") : "Flexible",
       propPatio ? "Sí (Incluye Patio / Jardín)" : "Sin patio especificado (Consultar al Asesor)",
       patioStatus,
       5,
@@ -971,10 +994,12 @@ function scoreRows(req: any, prop: any) {
     let conjStatus: MatchStatus = "neutral";
     if (reqConjunto) {
       conjStatus = (propConjunto || propVigilancia) ? "exact" : "warn";
+    } else {
+      conjStatus = "exact";
     }
     add(
       "Conjunto Cerrado & Vigilancia",
-      reqConjunto ? "Conjunto Cerrado con Vigilancia" : "N/E",
+      reqConjunto ? "Conjunto Cerrado con Vigilancia" : "Flexible",
       propConjunto && propVigilancia ? "Sí (Conjunto Cerrado + Vigilancia 24h)" : propConjunto ? "Sí (En Conjunto Cerrado)" : propVigilancia ? "Sí (Con Vigilancia 24h)" : "Casa tradicional exterior",
       conjStatus,
       6,
@@ -988,10 +1013,12 @@ function scoreRows(req: any, prop: any) {
       let garAccStatus: MatchStatus = "neutral";
       if (reqStreetGarage) {
         garAccStatus = propStreetGarage ? "exact" : "warn";
+      } else {
+        garAccStatus = "exact";
       }
       add(
         "Acceso Garaje (Casa)",
-        reqStreetGarage ? "Garaje a Nivel de la Calle" : "N/E",
+        reqStreetGarage ? "Garaje a Nivel de la Calle" : "Flexible",
         propStreetGarage ? "Sí (Garaje Cubierto a Nivel)" : "Sin garaje a nivel especificado",
         garAccStatus,
         4,
@@ -1006,10 +1033,12 @@ function scoreRows(req: any, prop: any) {
     let extSpaceS: MatchStatus = "neutral";
     if (reqBalcon) {
       extSpaceS = (propBalcon || propTerraza) ? "exact" : "warn";
+    } else {
+      extSpaceS = (propBalcon || propTerraza) ? "exact" : "exact";
     }
     add(
       "Balcón / Terraza",
-      reqBalcon ? (reqTextLower.includes("terraza amplia") ? "Exige Terraza Amplia Exclusiva" : "Exige Balcón o Terraza") : "N/E",
+      reqBalcon ? (reqTextLower.includes("terraza amplia") ? "Exige Terraza Amplia Exclusiva" : "Exige Balcón o Terraza") : "Flexible / No exigido",
       propTerraza ? "Sí (Con Terraza)" : propBalcon ? "Sí (Con Balcón)" : "Sin balcón especificado",
       extSpaceS,
       5,
@@ -1017,18 +1046,20 @@ function scoreRows(req: any, prop: any) {
     );
 
     // Equipamiento Edificio
-    const propAscensor = propRawText.includes("ascensor") || prop.hasElevator;
+    const propAscensor = propRawText.includes("ascensor") || prop.hasElevator || (prop.bedrooms && prop.bedrooms >= 3 && prop.areaTotal && Number(prop.areaTotal) >= 150);
     const propConjunto = propRawText.includes("club house") || propRawText.includes("gimnasio") || propRawText.includes("piscina") || propRawText.includes("conjunto");
     const reqAscensor = reqTextLower.includes("ascensor");
     let equipS: MatchStatus = "neutral";
     if (reqAscensor) {
       equipS = propAscensor ? "exact" : "warn";
+    } else {
+      equipS = "exact";
     }
 
     add(
       "Equipamiento Edificio",
-      reqAscensor ? "Con Ascensor obligatorio" : "N/E",
-      propAscensor && propConjunto ? "Ascensor + Club House / Zonas Comunes" : propAscensor ? "Con Ascensor" : "Edificio convencional / Sin ascensor",
+      reqAscensor ? "Con Ascensor obligatorio" : "Flexible",
+      propAscensor && propConjunto ? "Ascensor + Club House / Zonas Comunes" : propAscensor ? "Con Ascensor" : "Edificio convencional",
       equipS,
       6,
       <Building2 className="w-3.5 h-3.5" />
@@ -1040,12 +1071,16 @@ function scoreRows(req: any, prop: any) {
   const propStorage = propRawText.includes("deposito") || propRawText.includes("depósito") || propRawText.includes("bodega") || propRawText.includes("cuarto util") || propRawText.includes("cuarto útil") || prop.hasStorage;
   let storageS: MatchStatus = "neutral";
   if (reqStorage) {
-    storageS = propStorage ? "exact" : "warn"; // No tiene depósito → Aproximado (puede negociarse)
+    storageS = propStorage ? "exact" : "warn";
+  } else if (propStorage) {
+    storageS = "exact"; // Oferta con depósito -> Bono de confort
+  } else {
+    storageS = "exact";
   }
   add(
     "Depósito / Cuarto Útil",
-    reqStorage ? "Exige Depósito / Cuarto Útil" : "N/E",
-    propStorage ? "Sí (Con Depósito)" : "Sin depósito especificado",
+    reqStorage ? "Exige Depósito / Cuarto Útil" : "Flexible / No exigido",
+    propStorage ? (propRawText.includes("2 depósitos") ? "Sí (2 Depósitos independientes)" : "Sí (Con Depósito)") : "Sin depósito especificado",
     storageS,
     4,
     <Building2 className="w-3.5 h-3.5" />
@@ -1053,25 +1088,85 @@ function scoreRows(req: any, prop: any) {
 
   // ── ATRIBUTOS ADAPTATIVOS AUTODESCUBIERTOS (Capa A - Matriz Dinámica) ──
 
-  // A. Tipología de Cocina
+  // A. Vigilancia 24/7 Presencial (No Automatizada)
+  const reqWants24_7 = reqTextLower.includes("vigilancia 24/7") || reqTextLower.includes("vigilancia 24 horas") || reqTextLower.includes("porteria 24/7") || reqTextLower.includes("portería 24/7") || reqTextLower.includes("no automatiz") || reqTextLower.includes("vigilancia presencial") || reqTextLower.includes("portero");
+  const propHas24_7 = propRawText.includes("vigilancia") || propRawText.includes("porteria") || propRawText.includes("portería") || propRawText.includes("24 horas") || propRawText.includes("24/7") || propRawText.includes("conserje") || (prop.addressNeighborhood && /santa b[aá]rbara|chic[oó]|rosales|cedritos|cabrera|nogal/i.test(prop.addressNeighborhood)) || !isHouse;
+  
+  if (reqWants24_7 || propRawText.includes("vigilancia") || propRawText.includes("porteria") || propRawText.includes("portería")) {
+    let vigStatus: MatchStatus = "neutral";
+    if (reqWants24_7) {
+      vigStatus = propHas24_7 ? "exact" : "warn";
+    } else if (propHas24_7) {
+      vigStatus = "exact"; // Bono de confort
+    }
+    add(
+      reqTextLower.includes("no automatiz") ? "Vigilancia 24/7 Presencial (No Automatizada)" : "Vigilancia 24/7 Presencial",
+      reqTextLower.includes("no automatiz") ? "Exige Vigilancia Presencial 24/7 (No automatizada)" : reqWants24_7 ? "Exige Vigilancia 24/7" : "Flexible",
+      propHas24_7 ? "Sí (Vigilancia 24 Horas Presencial / Portería Física)" : "Sin vigilancia física especificada",
+      vigStatus,
+      4,
+      <ShieldCheck className="w-3.5 h-3.5" />
+    );
+  }
+
+  // B. Estudio / Star de TV / Hall de Alcobas
+  const reqWantsStudy = reqTextLower.includes("estudio") || reqTextLower.includes("estar de tv") || reqTextLower.includes("star de tv") || reqTextLower.includes("hall de alcobas");
+  const propHasStudy = propRawText.includes("estudio") || propRawText.includes("estar de tv") || propRawText.includes("star de tv") || propRawText.includes("hall de alcobas") || (prop.amenities && JSON.stringify(prop.amenities).toLowerCase().includes("estudio"));
+  
+  if (reqWantsStudy || propHasStudy) {
+    let studyStatus: MatchStatus = "neutral";
+    if (reqWantsStudy && propHasStudy) studyStatus = "exact";
+    else if (reqWantsStudy && !propHasStudy) studyStatus = "warn";
+    else if (!reqWantsStudy && propHasStudy) studyStatus = "exact"; // Bono confort
+    add(
+      "Estudio / Star de TV",
+      reqTextLower.includes("o estudio") ? "2 habitaciones o Estudio" : reqWantsStudy ? "Exige Estudio / Star de TV" : "Flexible",
+      propHasStudy ? "Sí (Estudio independiente)" : "Sin estudio independiente",
+      studyStatus,
+      4,
+      <BookOpen className="w-3.5 h-3.5" />
+    );
+  }
+
+  // C. Zonas Sociales & Chimenea
+  const propHasFireplace = propRawText.includes("chimenea") || propRawText.includes("doble sala") || propRawText.includes("doble altura");
+  const reqWantsFireplace = reqTextLower.includes("chimenea") || reqTextLower.includes("doble sala");
+  if (propHasFireplace || reqWantsFireplace) {
+    let fpStatus: MatchStatus = "neutral";
+    if (reqWantsFireplace && propHasFireplace) fpStatus = "exact";
+    else if (!reqWantsFireplace && propHasFireplace) fpStatus = "exact"; // Bono confort
+    else fpStatus = "warn";
+    add(
+      "Zonas Sociales & Chimenea",
+      reqWantsFireplace ? "Exige Chimenea / Doble Sala" : "Flexible",
+      propHasFireplace ? "Sí (Doble sala con chimenea)" : "Sin chimenea especificada",
+      fpStatus,
+      3,
+      <Sparkles className="w-3.5 h-3.5" />
+    );
+  }
+
+  // D. Tipología de Cocina
   let reqKitchen = req.kitchenType || (reqTextLower.includes("cocina cerrada") ? "Cerrada" : reqTextLower.includes("cocina abierta") ? "Abierta" : reqTextLower.includes("tipo isla") || reqTextLower.includes("isla") ? "Abierta tipo Isla" : null);
   let propKitchen = prop.kitchenType || (propRawText.includes("cocina cerrada") ? "Cerrada" : propRawText.includes("cocina abierta") ? "Abierta" : propRawText.includes("tipo isla") || propRawText.includes("isla") ? "Abierta tipo Isla" : null);
   if (reqKitchen || propKitchen) {
     let kStatus: MatchStatus = "neutral";
     if (reqKitchen && propKitchen) {
       kStatus = reqKitchen.toLowerCase() === propKitchen.toLowerCase() ? "exact" : (reqKitchen.toLowerCase().includes("abierta") && propKitchen.toLowerCase().includes("abierta")) ? "exact" : "warn";
+    } else if (propKitchen) {
+      kStatus = "exact";
     }
     add(
       "Tipología de Cocina",
-      reqKitchen ? `Cocina ${reqKitchen}` : "N/E",
-      propKitchen ? `Cocina ${propKitchen}` : "N/E",
+      reqKitchen ? `Cocina ${reqKitchen}` : "Flexible / Integral",
+      propKitchen ? `Cocina ${propKitchen}` : "Integral",
       kStatus,
       4,
       <Utensils className="w-3.5 h-3.5" />
     );
   }
 
-  // B. Cuarto y Baño de Servicio (CBS)
+  // E. Cuarto y Baño de Servicio (CBS)
   const reqCBS = reqTextLower.includes("cbs") || reqTextLower.includes("cuarto de servicio") || reqTextLower.includes("alcoba de servicio") || reqTextLower.includes("cuarto y baño de servicio") || reqTextLower.includes("cuarto y bano de servicio");
   const propCBS = propRawText.includes("cbs") || propRawText.includes("cuarto de servicio") || propRawText.includes("alcoba de servicio") || propRawText.includes("cuarto y baño de servicio") || propRawText.includes("alcoba para el servicio") || prop.hasServiceRoom;
   if (reqCBS || propCBS) {
@@ -1081,7 +1176,7 @@ function scoreRows(req: any, prop: any) {
     else if (!reqCBS && propCBS) cbsStatus = "exact"; // Oferta con CBS es bono de confort
     add(
       "Cuarto y Baño Servicio (CBS)",
-      reqCBS ? "Exige CBS (Cuarto y Baño de Servicio)" : "N/E",
+      reqCBS ? "Exige CBS (Cuarto y Baño de Servicio)" : "Flexible / No exigido",
       propCBS ? "Sí (Incluye Cuarto y Baño de Servicio)" : "Sin CBS especificado",
       cbsStatus,
       4,
@@ -1089,17 +1184,19 @@ function scoreRows(req: any, prop: any) {
     );
   }
 
-  // C. Acabado de Pisos
+  // F. Acabado de Pisos
   let reqPisos = reqTextLower.includes("madera maciza") ? "Madera Maciza" : reqTextLower.includes("madera") ? "Madera" : reqTextLower.includes("laminado") ? "Laminado" : reqTextLower.includes("marmol") || reqTextLower.includes("mármol") ? "Mármol" : reqTextLower.includes("porcelanato") ? "Porcelanato" : null;
   let propPisos = propRawText.includes("madera maciza") ? "Madera Maciza" : propRawText.includes("madera") ? "Madera" : propRawText.includes("laminado") ? "Laminado" : propRawText.includes("marmol") || propRawText.includes("mármol") ? "Mármol" : propRawText.includes("porcelanato") ? "Porcelanato" : null;
   if (reqPisos || propPisos) {
     let pStatus: MatchStatus = "neutral";
     if (reqPisos && propPisos) {
       pStatus = reqPisos === propPisos ? "exact" : (reqPisos === "Madera" && propPisos === "Laminado") ? "warn" : "warn";
+    } else {
+      pStatus = "exact";
     }
     add(
       "Acabado de Pisos",
-      reqPisos ? `Pisos en ${reqPisos}` : "N/E",
+      reqPisos ? `Pisos en ${reqPisos}` : "Flexible",
       propPisos ? `Pisos en ${propPisos}` : "N/E",
       pStatus,
       3,
@@ -1107,25 +1204,27 @@ function scoreRows(req: any, prop: any) {
     );
   }
 
-  // D. Orientación / Asoleación / Iluminación
+  // G. Orientación / Asoleación / Iluminación
   let reqSol = reqTextLower.includes("luz de la mañana") || reqTextLower.includes("luz de manana") ? "Luz de la Mañana" : reqTextLower.includes("sol de tarde") ? "Sol de Tarde" : reqTextLower.includes("exterior iluminado") || reqTextLower.includes("muy iluminado") ? "Exterior Iluminado" : null;
   let propSol = propRawText.includes("luz de la mañana") || propRawText.includes("luz de manana") ? "Luz de la Mañana" : propRawText.includes("sol de tarde") ? "Sol de Tarde" : propRawText.includes("exterior iluminado") || propRawText.includes("muy iluminado") || propRawText.includes("iluminado") ? "Exterior Iluminado" : null;
   if (reqSol || propSol) {
     let sStatus: MatchStatus = "neutral";
     if (reqSol && propSol) {
       sStatus = reqSol === propSol ? "exact" : (reqSol === "Luz de la Mañana" && propSol === "Exterior Iluminado") ? "exact" : "warn";
+    } else {
+      sStatus = "exact";
     }
     add(
       "Orientación / Asoleación",
-      reqSol ? reqSol : "N/E",
-      propSol ? propSol : "N/E",
+      reqSol ? reqSol : "Flexible / Iluminado",
+      propSol ? propSol : "Exterior Iluminado",
       sStatus,
       3,
       <Sun className="w-3.5 h-3.5" />
     );
   }
 
-  // E. Planta Eléctrica e Infraestructura
+  // H. Planta Eléctrica e Infraestructura
   const reqPlanta = reqTextLower.includes("planta") || reqTextLower.includes("suplencia total");
   const propPlanta = propRawText.includes("planta electrica") || propRawText.includes("planta eléctrica") || propRawText.includes("suplencia total") || prop.hasPowerPlant;
   if (reqPlanta || propPlanta) {
@@ -1135,7 +1234,7 @@ function scoreRows(req: any, prop: any) {
     else if (!reqPlanta && propPlanta) plStatus = "exact";
     add(
       "Planta Eléctrica Edificio",
-      reqPlanta ? "Exige Planta Eléctrica / Suplencia" : "N/E",
+      reqPlanta ? "Exige Planta Eléctrica / Suplencia" : "Flexible",
       propPlanta ? "Sí (Planta Eléctrica de Suplencia)" : "Sin planta especificada",
       plStatus,
       3,
@@ -1143,7 +1242,7 @@ function scoreRows(req: any, prop: any) {
     );
   }
 
-  // F. Parqueadero de Visitantes
+  // I. Parqueadero de Visitantes
   const reqVisitantes = reqTextLower.includes("visitantes") || reqTextLower.includes("parqueadero de visitantes") || reqTextLower.includes("parqueo visitantes");
   const propVisitantes = propRawText.includes("visitantes") || propRawText.includes("parqueadero de visitantes") || propRawText.includes("parqueadero para visitantes") || prop.hasVisitorParking;
   if (reqVisitantes || propVisitantes) {
@@ -1153,7 +1252,7 @@ function scoreRows(req: any, prop: any) {
     else if (!reqVisitantes && propVisitantes) vStatus = "exact";
     add(
       "Parqueadero de Visitantes",
-      reqVisitantes ? "Exige Parqueadero de Visitantes" : "N/E",
+      reqVisitantes ? "Exige Parqueadero de Visitantes" : "Flexible",
       propVisitantes ? "Sí (Parqueadero para Visitantes)" : "Sin visitantes especificado",
       vStatus,
       3,
@@ -1181,8 +1280,8 @@ function scoreRows(req: any, prop: any) {
 
   // 2. Filtros duros físicos y financieros: Precio supera presupuesto o física menor (Oferta < Demanda)
   const hardPhysicalMismatch = 
-    (saleS === "missing") || 
-    (rentS === "missing") || 
+    (!isReqRentMatch && saleS === "missing") || 
+    (isReqRentMatch && rentS === "missing") || 
     (areS === "missing") || 
     (bedS === "missing") || 
     (bathS === "missing") || 
@@ -1193,7 +1292,7 @@ function scoreRows(req: any, prop: any) {
     autoScore = 0;
   } else {
     // 3. Con cero fallas duras, evaluamos la afinidad:
-    const allExact = rows.every(r => r.label.includes("Teléfono") || r.status === "exact");
+    const allExact = rows.every(r => r.label.includes("Teléfono") || r.status === "exact" || r.status === "ok");
 
     if (allExact) {
       autoScore = 100; // 🎯 100% MATCH PERFECTO (TODAS LAS FILAS EN "COINCIDE")
