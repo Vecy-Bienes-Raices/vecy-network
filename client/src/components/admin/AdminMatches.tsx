@@ -987,30 +987,39 @@ function scoreRows(req: any, prop: any) {
   );
 
 
-  // ── ESTADÍSTICA Y TABULACIÓN DOCTRINAL DE MATCH VECY (REGULARES 80%, 85%, 90%, 100%) ──
+  // ── ESTADÍSTICA Y TABULACIÓN DOCTRINAL DE MATCH VECY (REGULARES 80%, 85%, 90%, 97%, 100%) ──
   // 1. Si cualquiera de los 5 primeros campos en duro NO COINCIDE 100% (no está en verde) -> autoScore = 0 (SACADO DE ALLÍ)
   const top5Rows = rows.slice(0, 5);
   const hasHardMismatch = top5Rows.some(r => r.status === "missing");
 
-  let autoScore = 0;
-  if (hasHardMismatch) {
-    autoScore = 0; // SACADO DE ALLÍ DE INMEDIATO
-  } else {
-    // 2. Con los 5 campos en duro 100% en VERDE, calculamos la completitud de los campos de ahí hacia abajo:
-    const downstreamRows = rows.slice(5, -1); // Excluyendo teléfono
-    const filledCount = downstreamRows.filter(r => r.reqVal !== "N/E" && r.propVal !== "N/E" && r.status !== "missing").length;
-    const ratio = downstreamRows.length > 0 ? filledCount / downstreamRows.length : 0;
+  // 2. Si cualquier campo tiene status === "missing" (Dato Fallido: ej. precio supera presupuesto o física menor Oferta < Demanda) -> autoScore = 0 (SACADO DE ALLÍ)
+  const hasAnyMissing = rows.some(r => r.status === "missing");
 
-    if (ratio < 0.50) {
-      autoScore = 0; // Menos del 50% de ahí hacia abajo -> Sacado de allí
-    } else if (ratio < 0.70) {
-      autoScore = 80;
-    } else if (ratio < 0.80) {
-      autoScore = 85;
-    } else if (ratio < 1.00) {
-      autoScore = 90;
+  let autoScore = 0;
+  if (hasHardMismatch || hasAnyMissing) {
+    autoScore = 0; // SACADO DE ALLÍ DE INMEDIATO (CERO MATCHES FALLIDOS EN LA WEB)
+  } else {
+    // 3. Con cero fallas, evaluamos el nivel de coincidencia:
+    const downstreamRows = rows.slice(5, -1); // Excluyendo teléfono
+    const allExact = rows.every(r => r.label.includes("Teléfono") || r.status === "exact");
+
+    if (allExact) {
+      autoScore = 100; // 🎯 100% MATCH PERFECTO (TODAS LAS FILAS EN "COINCIDE")
     } else {
-      autoScore = 100; // 100% Llenos y todas las casillas de abajo en verde
+      const filledCount = downstreamRows.filter(r => r.reqVal !== "N/E" && r.propVal !== "N/E" && r.status !== "missing").length;
+      const ratio = downstreamRows.length > 0 ? filledCount / downstreamRows.length : 0;
+
+      if (ratio < 0.50) {
+        autoScore = 0; // Menos del 50% de completitud -> Sacado de allí
+      } else if (ratio < 0.70) {
+        autoScore = 80;
+      } else if (ratio < 0.85) {
+        autoScore = 85;
+      } else if (ratio < 0.95) {
+        autoScore = 90;
+      } else {
+        autoScore = 97; // Alta afinidad con aproximaciones válidas en confort
+      }
     }
   }
 
@@ -1366,8 +1375,8 @@ export default function AdminMatches() {
       const dbScore = parseFloat(match.matchScore || "0");
       const displayScore = autoScore > 0 ? autoScore : dbScore;
 
-      // Si la puntuación del cotejo es menor a 80 -> No mostrar en el reporte principal
-      if (displayScore < 80) {
+      // Si la puntuación del cotejo es menor a 80 o contiene algún dato fallido (autoScore === 0) -> No mostrar en el reporte
+      if (autoScore === 0 || displayScore < 80) {
         return false;
       }
 
