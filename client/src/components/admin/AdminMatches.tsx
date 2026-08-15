@@ -1426,7 +1426,7 @@ export default function AdminMatches() {
       if (m.property?.id) {
         const propUpdates: Record<string, any> = { updatedAt: new Date() };
         if (editForm.propPrice !== undefined && editForm.propPrice !== '') propUpdates.price = String(editForm.propPrice);
-        if (editForm.propRentPrice !== undefined && editForm.propRentPrice !== '') propUpdates.rentPrice = String(editForm.propRentPrice);
+        if (editForm.propRentPrice !== undefined && editForm.propRentPrice !== '') propUpdates.rent_price = String(editForm.propRentPrice);
         if (editForm.propAdminFee !== undefined && editForm.propAdminFee !== '') propUpdates.adminFee = String(editForm.propAdminFee);
         if (editForm.propArea !== undefined && editForm.propArea !== '') propUpdates.areaTotal = String(editForm.propArea);
         if (editForm.propBedrooms !== undefined && editForm.propBedrooms !== '') propUpdates.bedrooms = Number(editForm.propBedrooms);
@@ -1435,7 +1435,7 @@ export default function AdminMatches() {
         if (editForm.propStratum !== undefined && editForm.propStratum !== '') propUpdates.stratum = Number(editForm.propStratum);
         if (editForm.propZone) {
           propUpdates.zone = String(editForm.propZone);
-          propUpdates.addressNeighborhood = String(editForm.propZone);
+          propUpdates.address_neighborhood = String(editForm.propZone);
         }
         if (editForm.propCity) propUpdates.city = String(editForm.propCity);
 
@@ -1454,7 +1454,7 @@ export default function AdminMatches() {
         if (editForm.reqStratum !== undefined && editForm.reqStratum !== '') reqUpdates.estratoDeseado = Number(editForm.reqStratum);
         if (editForm.reqZone) {
           reqUpdates.zonaDeseada = String(editForm.reqZone);
-          reqUpdates.addressNeighborhood = String(editForm.reqZone);
+          reqUpdates.address_neighborhood = String(editForm.reqZone);
         }
         if (editForm.reqCity) reqUpdates.ciudadDeseada = String(editForm.reqCity);
 

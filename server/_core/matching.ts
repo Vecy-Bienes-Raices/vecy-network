@@ -2095,6 +2095,14 @@ export async function findMatchesForProperty(propertyId: number) {
           matchId: matchId,
           idUsuarioWhatsapp: req.idUsuarioWhatsapp,
         });
+      } else {
+        // Si el score bajó de 80 o es inviable, purgar de la base de datos
+        await db.delete(propertyMatches).where(
+          and(
+            eq(propertyMatches.propertyId, propertyId),
+            eq(propertyMatches.requirementId, req.id)
+          )
+        );
       }
     }
 
@@ -2174,6 +2182,14 @@ export async function findMatchesForRequirement(requirementId: number) {
           matchId: matchId,
           idUsuarioWhatsapp: prop.idUsuarioWhatsapp,
         });
+      } else {
+        // Si el score bajó de 80 o es inviable, purgar de la base de datos
+        await db.delete(propertyMatches).where(
+          and(
+            eq(propertyMatches.propertyId, prop.id),
+            eq(propertyMatches.requirementId, requirementId)
+          )
+        );
       }
     }
 
