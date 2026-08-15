@@ -29,12 +29,20 @@ export function generarHashMensaje(rawText: string, remitente: string): string {
 export function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?: string): boolean {
   if (val === undefined || val === null || val === "" || val === 0 || val === "0") return false;
   const numStr = String(val).replace(/\D/g, "");
+
+  // Si termina en 5 o más ceros (ej: 3.500.000.000, 3.000.000.000, 3.200.000.000), es un PRECIO o PRESUPUESTO en miles de millones, NUNCA un teléfono
+  if (/000000$/.test(numStr) || /00000$/.test(numStr)) {
+    return false;
+  }
+
   // 1. Teléfono celular colombiano de 10 dígitos iniciando en 3 (ej. 3177657365, 3102338172)
   if (numStr.length === 10 && numStr.startsWith("3")) {
+    if (rawText && /(?:\$|precio|valor|ppto|presupuesto|canon|hasta|venta)\s*3\d{9}/i.test(rawText)) return false;
     return true;
   }
   // 2. Teléfono internacional 573XXXXXXXXX (12 dígitos)
   if (numStr.length === 12 && numStr.startsWith("573")) {
+    if (rawText && /(?:\$|precio|valor|ppto|presupuesto|canon|hasta|venta)\s*573\d{9}/i.test(rawText)) return false;
     return true;
   }
   // 3. Coincidencia con número en texto

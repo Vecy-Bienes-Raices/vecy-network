@@ -1120,8 +1120,20 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
 function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?: string): boolean {
   if (val === undefined || val === null || val === "" || val === 0 || val === "0") return false;
   const numStr = String(val).replace(/\D/g, "");
-  if (numStr.length === 10 && numStr.startsWith("3")) return true;
-  if (numStr.length === 12 && numStr.startsWith("573")) return true;
+
+  // Si termina en 5 o más ceros (ej: 3.500.000.000, 3.000.000.000, 3.200.000.000), es un PRECIO o PRESUPUESTO en miles de millones, NUNCA un teléfono
+  if (/000000$/.test(numStr) || /00000$/.test(numStr)) {
+    return false;
+  }
+
+  if (numStr.length === 10 && numStr.startsWith("3")) {
+    if (rawText && /(?:\$|precio|valor|ppto|presupuesto|canon|hasta|venta)\s*3\d{9}/i.test(rawText)) return false;
+    return true;
+  }
+  if (numStr.length === 12 && numStr.startsWith("573")) {
+    if (rawText && /(?:\$|precio|valor|ppto|presupuesto|canon|hasta|venta)\s*573\d{9}/i.test(rawText)) return false;
+    return true;
+  }
   if (rawText) {
     const rawLower = rawText.toLowerCase();
     if (rawLower.includes(numStr) && numStr.length >= 8) {
