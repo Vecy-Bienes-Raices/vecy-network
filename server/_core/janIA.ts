@@ -359,10 +359,10 @@ export function hasRealEstateTextKeyword(cleanText: string): boolean {
 }
 
 export function extractFallbackDataFromText(text: string): any {
-  const clean = text.toLowerCase();
+  const clean = text.toLowerCase().replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0]/g, " ");
   
   let transactionType = "venta";
-  if (clean.includes("arriendo") || clean.includes("alquiler") || clean.includes("renta") || clean.includes("alquilo")) {
+  if (clean.includes("arriendo") || clean.includes("alquiler") || clean.includes("renta") || clean.includes("alquilo") || clean.includes("arrendar")) {
     transactionType = "arriendo";
   }
 
@@ -385,44 +385,143 @@ export function extractFallbackDataFromText(text: string): any {
     propertyType = "loft";
   }
 
-
   let price = 0;
-  const millonMatch = text.match(/(\d+(?:[\.,]\d+)?)\s*(?:millon|millones|millón|mill|mm)\b/i);
-  if (millonMatch) {
-    const val = parseFloat(millonMatch[1].replace(',', '.'));
-    // Si val < 100 (ej. 49millones para un apto en Virrey), es taquigrafía de 490 millones (49 * 10M)
-    const mult = val < 100 ? 10_000_000 : 1_000_000;
-    const computed = val * mult;
-    if (!isPhoneNumberNotPrice(computed, text)) {
-      price = computed;
+  let presupuestoMin = 0;
+  let presupuestoMax = 0;
+  let rentPrice = 0;
+  let adminFee = 0;
+
+  // A. Detección de Rango de Canon / Presupuesto (ej: "8.500 a 11 millones", "8.5 a 11 millones", "8 a 10 mm")
+  const rangeMatch = clean.match(/(\d+(?:[.,]\d+)?)\s*(?:a|hasta|-)\s*\$?(\d+(?:[.,]\d+)?)\s*(millones|millón|mll|mlls|mm|m)\b/i);
+  if (rangeMatch) {
+    let minVal = parseFloat(rangeMatch[1].replace(',', '.'));
+    let maxVal = parseFloat(rangeMatch[2].replace(',', '.'));
+    if (minVal > 1000) minVal /= 1000;
+    if (maxVal > 1000) maxVal /= 1000;
+    
+    presupuestoMin = Math.round(minVal * 1_000_000);
+    presupuestoMax = Math.round(maxVal * 1_000_000);
+    price = presupuestoMax;
+    if (transactionType === "arriendo") {
+      rentPrice = presupuestoMax;
     }
-  } else {
-    const rawPriceMatch = text.match(/\$?\s*(\d{1,3}(?:[\.,]\d{3}){2,3})/);
-    if (rawPriceMatch) {
-      const parsed = parseFloat(rawPriceMatch[1].replace(/[\.,]/g, ''));
-      if (!isPhoneNumberNotPrice(parsed, text)) {
-        price = parsed;
+  }
+
+  // B. Detección de Canon Compuesto (ej: "Canon más administración incluida total mes $8,500,000-")
+  if (price === 0) {
+    const canonMatch = clean.match(/(?:canon|arriendo|renta|alquiler)(?:\s*(?:más|\+|con)?\s*administraci[oó]n\s*incluida)?(?:\s*total\s*mes)?\s*:?\s*\$?\s*([\d.,\s]+?)(?:-|\s|$|\n)/i);
+    if (canonMatch) {
+      let rawCNum = parseFloat(canonMatch[1].replace(/[.,\s]/g, ''));
+      if (!isNaN(rawCNum) && rawCNum > 300_000 && !isPhoneNumberNotPrice(rawCNum, text)) {
+        rentPrice = rawCNum;
+        price = rawCNum;
+        presupuestoMax = rawCNum;
       }
     }
   }
 
+  // C. Detección de Precio/Presupuesto de Millones
+  if (price === 0) {
+    const millonMatch = clean.match(/(\d+(?:[.,]\d+)?)\s*(mil\s*millones?|millon|millones|millón|mill|mm|m)\b/i);
+    if (millonMatch) {
+      let val = parseFloat(millonMatch[1].replace(',', '.'));
+      const unit = millonMatch[2].toLowerCase();
+      let mult = 1_000_000;
+      if (unit.includes("mil millon")) mult = 1_000_000_000;
+      else if (val < 100 && transactionType !== "arriendo" && val > 15) mult = 10_000_000; // taquigrafía ej: 49 mm -> 490M
+      else mult = 1_000_000;
+      
+      const computed = Math.round(val * mult);
+      if (!isPhoneNumberNotPrice(computed, text)) {
+        price = computed;
+        presupuestoMax = computed;
+        if (transactionType === "arriendo") rentPrice = computed;
+      }
+    }
+  }
+
+  // D. Detección de Precio Estándar Formateado
+  if (price === 0) {
+    const rawPriceMatch = text.match(/\$?\s*(\d{1,3}(?:[\.,]\d{3}){1,3})/);
+    if (rawPriceMatch) {
+      const parsed = parseFloat(rawPriceMatch[1].replace(/[\.,]/g, ''));
+      if (!isPhoneNumberNotPrice(parsed, text) && parsed >= 300_000) {
+        price = parsed;
+        presupuestoMax = parsed;
+        if (transactionType === "arriendo") rentPrice = parsed;
+      }
+    }
+  }
+
+  // E. Cuota de Administración
+  const adminMatch = clean.match(/(?:administración|administracion|admin|admon)\s*:?\s*(?:aprox\.?)?\s*\$?\s*([\d.,\s]+?)(?:-|\s|\(|$|\n)/i);
+  if (adminMatch) {
+    const rawANum = parseFloat(adminMatch[1].replace(/[.,\s]/g, ''));
+    if (!isNaN(rawANum) && rawANum >= 10_000 && rawANum <= 30_000_000 && !isPhoneNumberNotPrice(rawANum, text)) {
+      adminFee = rawANum;
+    }
+  }
+
   let area = 0;
-  const areaMatch = text.match(/(\d+(?:[\.,]\d+)?)\s*(?:m2|mts2|metros|m²)/i);
+  const areaMatch = clean.match(/(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|metros|m²)/i);
   if (areaMatch) {
     area = parseFloat(areaMatch[1].replace(',', '.'));
   }
 
   let bedrooms = 0;
-  const bedMatch = text.match(/(\d+)\s*(?:alcoba|alcobas|hab|habs|habitacion|habitaciones|dormitorio|dormitorios)/i);
+  const bedMatch = clean.match(/(\d+)\s*(?:alcoba|alcobas|hab|habs|habitacion|habitaciones|dormitorio|dormitorios)/i)
+                || clean.match(/(\d+)\s*-\s*(\d+)\s*(?:alcoba|alcobas|hab|habs)/i);
   if (bedMatch) {
     bedrooms = parseInt(bedMatch[1], 10);
   }
 
   let bathrooms = 0;
-  const bathMatch = text.match(/(\d+)\s*(?:baño|baños|bano|banos)/i);
+  const bathMatch = clean.match(/(\d+)\s*(?:baño|baños|bano|banos|wc)/i);
   if (bathMatch) {
     bathrooms = parseInt(bathMatch[1], 10);
   }
+
+  let garages = 0;
+  let garageType = null;
+  const garMatch = clean.match(/(\d+)\s*(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero)/i)
+                || clean.match(/(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero)\s*:?\s*(\d+)/i);
+  if (garMatch) {
+    garages = parseInt(garMatch[1], 10);
+  }
+  if (clean.includes("en linea") || clean.includes("en línea") || clean.includes("lineal")) {
+    garageType = "lineal";
+  } else if (clean.includes("independiente") || clean.includes("independientes")) {
+    garageType = "independiente";
+  }
+
+  let antiguedadAnos: number | null = null;
+  const ageMatch = clean.match(/(?:edificio\s*(?:de|más\s*de|mas\s*de)?|antigüedad|antiguedad|tiene)\s*(\d{1,2})\s*años/i)
+                || clean.match(/(\d{1,2})\s*años\s*(?:de\s*)?(?:construido|antigüedad)/i);
+  if (ageMatch) {
+    antiguedadAnos = parseInt(ageMatch[1], 10);
+  }
+
+  let hasBalcony = null;
+  let hasTerrace = null;
+  if (clean.includes("no tiene balcón") || clean.includes("no tiene balcon") || clean.includes("sin balcón") || clean.includes("sin balcon")) {
+    hasBalcony = false;
+  } else if (clean.includes("balcón") || clean.includes("balcon")) {
+    hasBalcony = true;
+  }
+
+  if (clean.includes("no tiene terraza") || clean.includes("sin terraza")) {
+    hasTerrace = false;
+  } else if (clean.includes("terraza") || clean.includes("terrazas")) {
+    hasTerrace = true;
+  }
+
+  const hasStorage = clean.includes("depósito") || clean.includes("deposito") || clean.includes("cuarto util") || clean.includes("bodega");
+  const hasElevator = clean.includes("ascensor");
+
+  let kitchenType = null;
+  if (clean.includes("cocina cerrada")) kitchenType = "Cerrada";
+  else if (clean.includes("cocina abierta")) kitchenType = "Abierta";
+  else if (clean.includes("cocina tipo isla") || clean.includes("isla")) kitchenType = "Abierta tipo Isla";
 
   let city = "Bogotá";
   if (clean.includes("cali") || clean.includes("melendez") || clean.includes("jardin") || clean.includes("pacifica")) {
@@ -435,6 +534,8 @@ export function extractFallbackDataFromText(text: string): any {
   if (clean.includes("villa magdala")) zone = "Villa Magdala";
   else if (clean.includes("chico reservado")) zone = "Chicó Reservado";
   else if (clean.includes("chico")) zone = "Chicó";
+  else if (clean.includes("santa barbara central") || clean.includes("santa bárbara central")) zone = "Santa Bárbara Central";
+  else if (clean.includes("santa barbara oriental") || clean.includes("santa bárbara oriental")) zone = "Santa Bárbara Oriental";
   else if (clean.includes("santa barbara") || clean.includes("santa bárbara")) zone = "Santa Bárbara";
   else if (clean.includes("la cabrera")) zone = "La Cabrera";
   else if (clean.includes("rosales")) zone = "Rosales";
@@ -450,7 +551,6 @@ export function extractFallbackDataFromText(text: string): any {
   else if (clean.includes("batan") || clean.includes("batán")) zone = "Batán";
   else if (clean.includes("alhambra")) zone = "Alhambra";
   else if (clean.includes("pontevedra")) zone = "Pontevedra";
-  // Cardinales genericos ("Norte", "Sur", etc.) NO son barrios y quedan vacios (zone = "")
 
   return {
     propertyType,
@@ -458,10 +558,21 @@ export function extractFallbackDataFromText(text: string): any {
     tipoInmuebleDeseado: propertyType,
     tipoNegocioDeseado: transactionType,
     price,
-    presupuestoMax: price,
+    presupuestoMin: presupuestoMin > 0 ? presupuestoMin : null,
+    presupuestoMax: presupuestoMax > 0 ? presupuestoMax : price,
+    rentPrice: rentPrice > 0 ? rentPrice : null,
+    adminFee: adminFee > 0 ? adminFee : null,
     area,
     bedrooms,
     bathrooms,
+    garages,
+    garageType,
+    antiguedadAnos,
+    hasBalcony,
+    hasTerrace,
+    hasStorage,
+    hasElevator,
+    kitchenType,
     city,
     ciudadDeseada: city,
     zone,

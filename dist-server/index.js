@@ -4219,8 +4219,8 @@ function explicarMatch(requirement, property) {
   if (pBedrooms > 0) propFilledCount++;
   if (pBathrooms > 0) propFilledCount++;
   if (pGarages > 0) propFilledCount++;
-  if (reqFilledCount < 5 || propFilledCount < 5) {
-    blockers.push(`Ficha poco robusta (Demanda: ${reqFilledCount}/8 especificaciones, Oferta: ${propFilledCount}/8 especificaciones). Se requieren publicaciones con datos detallados y puntuales en al menos 5 especificaciones.`);
+  if (reqFilledCount < 3 || propFilledCount < 3) {
+    blockers.push(`Ficha poco robusta (Demanda: ${reqFilledCount}/8 especificaciones, Oferta: ${propFilledCount}/8 especificaciones). Se requieren publicaciones con datos b\xE1sicos m\xEDnimos (al menos 3 especificaciones).`);
     return buildExplanationResult(0, blockers, positives, negatives);
   }
   const reqCityNorm2 = (requirement.ciudadDeseada || requirement.addressCity || requirement.city || requirement.rawText || "").toLowerCase();
@@ -4359,23 +4359,27 @@ function explicarMatch(requirement, property) {
         blockers.push(`Guillotina Financiera (Tolerancia Cero): La oferta no especifica canon de arriendo y su precio de venta ($${price.toLocaleString()}) no aplica para una b\xFAsqueda de arriendo de $${budgetMax.toLocaleString()}`);
         return buildExplanationResult(0, blockers, positives, negatives);
       }
+      const budgetMin2 = requirement.presupuestoMin ? parseFloat(String(requirement.presupuestoMin)) : 0;
+      const lowerRentLimit = budgetMin2 > 0 ? budgetMin2 * 0.95 : budgetMax * 0.8;
       if (totalRent > budgetMax) {
         blockers.push(`Guillotina Financiera (Tolerancia Cero): Canon de arriendo total ($${totalRent.toLocaleString()}) supera el presupuesto m\xE1ximo de $${budgetMax.toLocaleString()}`);
         return buildExplanationResult(0, blockers, positives, negatives);
       }
-      if (totalRent < budgetMax * 0.99) {
-        blockers.push(`Guillotina Financiera Estricta: Canon de arriendo total ($${totalRent.toLocaleString()}) est\xE1 a m\xE1s del 1% por debajo del presupuesto solicitado ($${budgetMax.toLocaleString()}). Segmento incompatible.`);
+      if (totalRent < lowerRentLimit) {
+        blockers.push(`Guillotina Financiera: Canon de arriendo total ($${totalRent.toLocaleString()}) est\xE1 por debajo del segmento solicitado (m\xEDnimo $${lowerRentLimit.toLocaleString()}).`);
         return buildExplanationResult(0, blockers, positives, negatives);
       }
-      positives.push(`\u2705 Presupuesto de arriendo cumple: Total $${totalRent.toLocaleString()} dentro del rango (>= 99% y <= 100% de $${budgetMax.toLocaleString()})`);
+      positives.push(`\u2705 Presupuesto de arriendo cumple: Total $${totalRent.toLocaleString()} dentro del rango (m\xEDn $${lowerRentLimit.toLocaleString()} a m\xE1x $${budgetMax.toLocaleString()})`);
     } else {
+      const budgetMin2 = requirement.presupuestoMin ? parseFloat(String(requirement.presupuestoMin)) : 0;
+      const lowerSaleLimit = budgetMin2 > 0 ? budgetMin2 * 0.95 : budgetMax * 0.8;
       let salePrice = price;
       if (salePrice > budgetMax) {
         blockers.push(`Guillotina Financiera (Tolerancia Cero): El precio de la propiedad ($${salePrice.toLocaleString()}) supera el presupuesto m\xE1ximo del comprador ($${budgetMax.toLocaleString()}). Match inviable (0%).`);
         return buildExplanationResult(0, blockers, positives, negatives);
       }
-      if (salePrice < budgetMax * 0.99) {
-        blockers.push(`Guillotina Financiera Estricta: El precio del inmueble ($${salePrice.toLocaleString()}) est\xE1 a m\xE1s del 1% por debajo del presupuesto solicitado ($${budgetMax.toLocaleString()}). Segmento incompatible (0%).`);
+      if (salePrice < lowerSaleLimit) {
+        blockers.push(`Guillotina Financiera: El precio del inmueble ($${salePrice.toLocaleString()}) est\xE1 por debajo del segmento solicitado (m\xEDnimo $${lowerSaleLimit.toLocaleString()}).`);
         return buildExplanationResult(0, blockers, positives, negatives);
       }
     }
@@ -4520,6 +4524,18 @@ function explicarMatch(requirement, property) {
   const propIsMainRoadNoise = propRawTextLower.includes("sobre avenida") || propRawTextLower.includes("via principal") || propRawTextLower.includes("frente a avenida") || propRawTextLower.includes("zona de alto trafico") || propRawTextLower.includes("zona ruidosa");
   if (reqDemandsQuiet && propIsMainRoadNoise) {
     blockers.push("Choque de Calidad de Vida: El comprador exige inmueble silencioso sin v\xEDas principales y la oferta est\xE1 situada sobre v\xEDa principal o zona ruidosa.");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  const reqRejectsDuplex = reqRawTextLower.includes("no duplex") || reqRawTextLower.includes("no d\xFAplex") || reqRawTextLower.includes("cero duplex") || reqRawTextLower.includes("sin duplex") || reqRawTextLower.includes("nada de duplex") || reqRawTextLower.includes("sin escaleras") || reqRawTextLower.includes("un solo nivel") || reqRawTextLower.includes("un solo piso");
+  const propIsDuplex = propRawTextLower.includes("duplex") || propRawTextLower.includes("d\xFAplex") || propRawTextLower.includes("dos niveles") || propRawTextLower.includes("2 niveles") || propRawTextLower.includes("dos pisos") || propRawTextLower.includes("2 pisos") || (property.name || "").toLowerCase().includes("duplex") || (property.name || "").toLowerCase().includes("d\xFAplex");
+  if (reqRejectsDuplex && propIsDuplex) {
+    blockers.push("Choque de Tipolog\xEDa Expresa: El cliente exige expresamente 'NO DUPLEX' y el inmueble ofrecido es D\xDAPLEX / Dos Niveles. Match Inviable (0%).");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  const reqRejectsFirstFloor = reqRawTextLower.includes("no primer piso") || reqRawTextLower.includes("no 1er piso") || reqRawTextLower.includes("no piso 1") || reqRawTextLower.includes("piso alto");
+  const propIsFirstFloor = propRawTextLower.includes("primer piso") || propRawTextLower.includes("piso 1") || propRawTextLower.includes("piso primero") || propRawTextLower.includes("1er piso");
+  if (reqRejectsFirstFloor && propIsFirstFloor && !reqRawTextLower.includes("primer piso")) {
+    blockers.push("Choque de Nivel Expreso: El cliente exige expresamente 'NO PRIMER PISO' y la oferta est\xE1 en Piso 1. Match Inviable (0%).");
     return buildExplanationResult(0, blockers, positives, negatives);
   }
   const propGarageType = (property.garageType || "").toLowerCase();
@@ -5464,9 +5480,9 @@ function hasRealEstateTextKeyword(cleanText) {
   return text2.includes("apto") || text2.includes("apartamento") || text2.includes("casa") || text2.includes("bodega") || text2.includes("oficina") || text2.includes("local") || text2.includes("locales") || text2.includes("caba\xF1a") || text2.includes("caba\xF1as") || text2.includes("lote") || text2.includes("finca") || text2.includes("habs") || text2.includes("alcoba") || text2.includes("m2") || text2.includes("mts") || text2.includes("requerimiento");
 }
 function extractFallbackDataFromText(text2) {
-  const clean = text2.toLowerCase();
+  const clean = text2.toLowerCase().replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0]/g, " ");
   let transactionType = "venta";
-  if (clean.includes("arriendo") || clean.includes("alquiler") || clean.includes("renta") || clean.includes("alquilo")) {
+  if (clean.includes("arriendo") || clean.includes("alquiler") || clean.includes("renta") || clean.includes("alquilo") || clean.includes("arrendar")) {
     transactionType = "arriendo";
   }
   let propertyType = "apartment";
@@ -5488,38 +5504,118 @@ function extractFallbackDataFromText(text2) {
     propertyType = "loft";
   }
   let price = 0;
-  const millonMatch = text2.match(/(\d+(?:[\.,]\d+)?)\s*(?:millon|millones|millón|mill|mm)\b/i);
-  if (millonMatch) {
-    const val = parseFloat(millonMatch[1].replace(",", "."));
-    const mult = val < 100 ? 1e7 : 1e6;
-    const computed = val * mult;
-    if (!isPhoneNumberNotPrice(computed, text2)) {
-      price = computed;
+  let presupuestoMin = 0;
+  let presupuestoMax = 0;
+  let rentPrice = 0;
+  let adminFee = 0;
+  const rangeMatch = clean.match(/(\d+(?:[.,]\d+)?)\s*(?:a|hasta|-)\s*\$?(\d+(?:[.,]\d+)?)\s*(millones|millón|mll|mlls|mm|m)\b/i);
+  if (rangeMatch) {
+    let minVal = parseFloat(rangeMatch[1].replace(",", "."));
+    let maxVal = parseFloat(rangeMatch[2].replace(",", "."));
+    if (minVal > 1e3) minVal /= 1e3;
+    if (maxVal > 1e3) maxVal /= 1e3;
+    presupuestoMin = Math.round(minVal * 1e6);
+    presupuestoMax = Math.round(maxVal * 1e6);
+    price = presupuestoMax;
+    if (transactionType === "arriendo") {
+      rentPrice = presupuestoMax;
     }
-  } else {
-    const rawPriceMatch = text2.match(/\$?\s*(\d{1,3}(?:[\.,]\d{3}){2,3})/);
-    if (rawPriceMatch) {
-      const parsed = parseFloat(rawPriceMatch[1].replace(/[\.,]/g, ""));
-      if (!isPhoneNumberNotPrice(parsed, text2)) {
-        price = parsed;
+  }
+  if (price === 0) {
+    const canonMatch = clean.match(/(?:canon|arriendo|renta|alquiler)(?:\s*(?:más|\+|con)?\s*administraci[oó]n\s*incluida)?(?:\s*total\s*mes)?\s*:?\s*\$?\s*([\d.,\s]+?)(?:-|\s|$|\n)/i);
+    if (canonMatch) {
+      let rawCNum = parseFloat(canonMatch[1].replace(/[.,\s]/g, ""));
+      if (!isNaN(rawCNum) && rawCNum > 3e5 && !isPhoneNumberNotPrice(rawCNum, text2)) {
+        rentPrice = rawCNum;
+        price = rawCNum;
+        presupuestoMax = rawCNum;
       }
     }
   }
+  if (price === 0) {
+    const millonMatch = clean.match(/(\d+(?:[.,]\d+)?)\s*(mil\s*millones?|millon|millones|millón|mill|mm|m)\b/i);
+    if (millonMatch) {
+      let val = parseFloat(millonMatch[1].replace(",", "."));
+      const unit = millonMatch[2].toLowerCase();
+      let mult = 1e6;
+      if (unit.includes("mil millon")) mult = 1e9;
+      else if (val < 100 && transactionType !== "arriendo" && val > 15) mult = 1e7;
+      else mult = 1e6;
+      const computed = Math.round(val * mult);
+      if (!isPhoneNumberNotPrice(computed, text2)) {
+        price = computed;
+        presupuestoMax = computed;
+        if (transactionType === "arriendo") rentPrice = computed;
+      }
+    }
+  }
+  if (price === 0) {
+    const rawPriceMatch = text2.match(/\$?\s*(\d{1,3}(?:[\.,]\d{3}){1,3})/);
+    if (rawPriceMatch) {
+      const parsed = parseFloat(rawPriceMatch[1].replace(/[\.,]/g, ""));
+      if (!isPhoneNumberNotPrice(parsed, text2) && parsed >= 3e5) {
+        price = parsed;
+        presupuestoMax = parsed;
+        if (transactionType === "arriendo") rentPrice = parsed;
+      }
+    }
+  }
+  const adminMatch = clean.match(/(?:administración|administracion|admin|admon)\s*:?\s*(?:aprox\.?)?\s*\$?\s*([\d.,\s]+?)(?:-|\s|\(|$|\n)/i);
+  if (adminMatch) {
+    const rawANum = parseFloat(adminMatch[1].replace(/[.,\s]/g, ""));
+    if (!isNaN(rawANum) && rawANum >= 1e4 && rawANum <= 3e7 && !isPhoneNumberNotPrice(rawANum, text2)) {
+      adminFee = rawANum;
+    }
+  }
   let area = 0;
-  const areaMatch = text2.match(/(\d+(?:[\.,]\d+)?)\s*(?:m2|mts2|metros|m²)/i);
+  const areaMatch = clean.match(/(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|metros|m²)/i);
   if (areaMatch) {
     area = parseFloat(areaMatch[1].replace(",", "."));
   }
   let bedrooms = 0;
-  const bedMatch = text2.match(/(\d+)\s*(?:alcoba|alcobas|hab|habs|habitacion|habitaciones|dormitorio|dormitorios)/i);
+  const bedMatch = clean.match(/(\d+)\s*(?:alcoba|alcobas|hab|habs|habitacion|habitaciones|dormitorio|dormitorios)/i) || clean.match(/(\d+)\s*-\s*(\d+)\s*(?:alcoba|alcobas|hab|habs)/i);
   if (bedMatch) {
     bedrooms = parseInt(bedMatch[1], 10);
   }
   let bathrooms = 0;
-  const bathMatch = text2.match(/(\d+)\s*(?:baño|baños|bano|banos)/i);
+  const bathMatch = clean.match(/(\d+)\s*(?:baño|baños|bano|banos|wc)/i);
   if (bathMatch) {
     bathrooms = parseInt(bathMatch[1], 10);
   }
+  let garages = 0;
+  let garageType = null;
+  const garMatch = clean.match(/(\d+)\s*(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero)/i) || clean.match(/(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero)\s*:?\s*(\d+)/i);
+  if (garMatch) {
+    garages = parseInt(garMatch[1], 10);
+  }
+  if (clean.includes("en linea") || clean.includes("en l\xEDnea") || clean.includes("lineal")) {
+    garageType = "lineal";
+  } else if (clean.includes("independiente") || clean.includes("independientes")) {
+    garageType = "independiente";
+  }
+  let antiguedadAnos = null;
+  const ageMatch = clean.match(/(?:edificio\s*(?:de|más\s*de|mas\s*de)?|antigüedad|antiguedad|tiene)\s*(\d{1,2})\s*años/i) || clean.match(/(\d{1,2})\s*años\s*(?:de\s*)?(?:construido|antigüedad)/i);
+  if (ageMatch) {
+    antiguedadAnos = parseInt(ageMatch[1], 10);
+  }
+  let hasBalcony = null;
+  let hasTerrace = null;
+  if (clean.includes("no tiene balc\xF3n") || clean.includes("no tiene balcon") || clean.includes("sin balc\xF3n") || clean.includes("sin balcon")) {
+    hasBalcony = false;
+  } else if (clean.includes("balc\xF3n") || clean.includes("balcon")) {
+    hasBalcony = true;
+  }
+  if (clean.includes("no tiene terraza") || clean.includes("sin terraza")) {
+    hasTerrace = false;
+  } else if (clean.includes("terraza") || clean.includes("terrazas")) {
+    hasTerrace = true;
+  }
+  const hasStorage = clean.includes("dep\xF3sito") || clean.includes("deposito") || clean.includes("cuarto util") || clean.includes("bodega");
+  const hasElevator = clean.includes("ascensor");
+  let kitchenType = null;
+  if (clean.includes("cocina cerrada")) kitchenType = "Cerrada";
+  else if (clean.includes("cocina abierta")) kitchenType = "Abierta";
+  else if (clean.includes("cocina tipo isla") || clean.includes("isla")) kitchenType = "Abierta tipo Isla";
   let city = "Bogot\xE1";
   if (clean.includes("cali") || clean.includes("melendez") || clean.includes("jardin") || clean.includes("pacifica")) {
     city = "Cali";
@@ -5530,6 +5626,8 @@ function extractFallbackDataFromText(text2) {
   if (clean.includes("villa magdala")) zone = "Villa Magdala";
   else if (clean.includes("chico reservado")) zone = "Chic\xF3 Reservado";
   else if (clean.includes("chico")) zone = "Chic\xF3";
+  else if (clean.includes("santa barbara central") || clean.includes("santa b\xE1rbara central")) zone = "Santa B\xE1rbara Central";
+  else if (clean.includes("santa barbara oriental") || clean.includes("santa b\xE1rbara oriental")) zone = "Santa B\xE1rbara Oriental";
   else if (clean.includes("santa barbara") || clean.includes("santa b\xE1rbara")) zone = "Santa B\xE1rbara";
   else if (clean.includes("la cabrera")) zone = "La Cabrera";
   else if (clean.includes("rosales")) zone = "Rosales";
@@ -5551,10 +5649,21 @@ function extractFallbackDataFromText(text2) {
     tipoInmuebleDeseado: propertyType,
     tipoNegocioDeseado: transactionType,
     price,
-    presupuestoMax: price,
+    presupuestoMin: presupuestoMin > 0 ? presupuestoMin : null,
+    presupuestoMax: presupuestoMax > 0 ? presupuestoMax : price,
+    rentPrice: rentPrice > 0 ? rentPrice : null,
+    adminFee: adminFee > 0 ? adminFee : null,
     area,
     bedrooms,
     bathrooms,
+    garages,
+    garageType,
+    antiguedadAnos,
+    hasBalcony,
+    hasTerrace,
+    hasStorage,
+    hasElevator,
+    kitchenType,
     city,
     ciudadDeseada: city,
     zone,

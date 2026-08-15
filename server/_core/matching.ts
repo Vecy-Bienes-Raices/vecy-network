@@ -1265,8 +1265,8 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
   if (pBathrooms > 0) propFilledCount++;
   if (pGarages > 0) propFilledCount++;
 
-  if (reqFilledCount < 5 || propFilledCount < 5) {
-    blockers.push(`Ficha poco robusta (Demanda: ${reqFilledCount}/8 especificaciones, Oferta: ${propFilledCount}/8 especificaciones). Se requieren publicaciones con datos detallados y puntuales en al menos 5 especificaciones.`);
+  if (reqFilledCount < 3 || propFilledCount < 3) {
+    blockers.push(`Ficha poco robusta (Demanda: ${reqFilledCount}/8 especificaciones, Oferta: ${propFilledCount}/8 especificaciones). Se requieren publicaciones con datos básicos mínimos (al menos 3 especificaciones).`);
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
@@ -1436,27 +1436,33 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
         return buildExplanationResult(0, blockers, positives, negatives);
       }
 
+      const budgetMin = requirement.presupuestoMin ? parseFloat(String(requirement.presupuestoMin)) : 0;
+      const lowerRentLimit = budgetMin > 0 ? budgetMin * 0.95 : budgetMax * 0.80;
+
       if (totalRent > budgetMax) {
         blockers.push(`Guillotina Financiera (Tolerancia Cero): Canon de arriendo total ($${totalRent.toLocaleString()}) supera el presupuesto máximo de $${budgetMax.toLocaleString()}`);
         return buildExplanationResult(0, blockers, positives, negatives);
       }
 
-      if (totalRent < budgetMax * 0.99) {
-        blockers.push(`Guillotina Financiera Estricta: Canon de arriendo total ($${totalRent.toLocaleString()}) está a más del 1% por debajo del presupuesto solicitado ($${budgetMax.toLocaleString()}). Segmento incompatible.`);
+      if (totalRent < lowerRentLimit) {
+        blockers.push(`Guillotina Financiera: Canon de arriendo total ($${totalRent.toLocaleString()}) está por debajo del segmento solicitado (mínimo $${lowerRentLimit.toLocaleString()}).`);
         return buildExplanationResult(0, blockers, positives, negatives);
       }
 
-      positives.push(`✅ Presupuesto de arriendo cumple: Total $${totalRent.toLocaleString()} dentro del rango (>= 99% y <= 100% de $${budgetMax.toLocaleString()})`);
+      positives.push(`✅ Presupuesto de arriendo cumple: Total $${totalRent.toLocaleString()} dentro del rango (mín $${lowerRentLimit.toLocaleString()} a máx $${budgetMax.toLocaleString()})`);
     } else {
       // Para Compras / Ventas:
+      const budgetMin = requirement.presupuestoMin ? parseFloat(String(requirement.presupuestoMin)) : 0;
+      const lowerSaleLimit = budgetMin > 0 ? budgetMin * 0.95 : budgetMax * 0.80;
       let salePrice = price;
+
       if (salePrice > budgetMax) {
         blockers.push(`Guillotina Financiera (Tolerancia Cero): El precio de la propiedad ($${salePrice.toLocaleString()}) supera el presupuesto máximo del comprador ($${budgetMax.toLocaleString()}). Match inviable (0%).`);
         return buildExplanationResult(0, blockers, positives, negatives);
       }
 
-      if (salePrice < budgetMax * 0.99) {
-        blockers.push(`Guillotina Financiera Estricta: El precio del inmueble ($${salePrice.toLocaleString()}) está a más del 1% por debajo del presupuesto solicitado ($${budgetMax.toLocaleString()}). Segmento incompatible (0%).`);
+      if (salePrice < lowerSaleLimit) {
+        blockers.push(`Guillotina Financiera: El precio del inmueble ($${salePrice.toLocaleString()}) está por debajo del segmento solicitado (mínimo $${lowerSaleLimit.toLocaleString()}).`);
         return buildExplanationResult(0, blockers, positives, negatives);
       }
     }
@@ -1660,6 +1666,47 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
     blockers.push("Choque de Calidad de Vida: El comprador exige inmueble silencioso sin vías principales y la oferta está situada sobre vía principal o zona ruidosa.");
     return buildExplanationResult(0, blockers, positives, negatives);
   }
+
+  // C. Choque de Tipología Arquitectónica ("NO DUPLEX" vs "DUPLEX / 2 NIVELES") (Doctrina v22.4)
+  const reqRejectsDuplex = reqRawTextLower.includes("no duplex") || 
+                           reqRawTextLower.includes("no dúplex") || 
+                           reqRawTextLower.includes("cero duplex") || 
+                           reqRawTextLower.includes("sin duplex") || 
+                           reqRawTextLower.includes("nada de duplex") || 
+                           reqRawTextLower.includes("sin escaleras") || 
+                           reqRawTextLower.includes("un solo nivel") || 
+                           reqRawTextLower.includes("un solo piso");
+
+  const propIsDuplex = propRawTextLower.includes("duplex") || 
+                       propRawTextLower.includes("dúplex") || 
+                       propRawTextLower.includes("dos niveles") || 
+                       propRawTextLower.includes("2 niveles") || 
+                       propRawTextLower.includes("dos pisos") || 
+                       propRawTextLower.includes("2 pisos") ||
+                       (property.name || "").toLowerCase().includes("duplex") ||
+                       (property.name || "").toLowerCase().includes("dúplex");
+
+  if (reqRejectsDuplex && propIsDuplex) {
+    blockers.push("Choque de Tipología Expresa: El cliente exige expresamente 'NO DUPLEX' y el inmueble ofrecido es DÚPLEX / Dos Niveles. Match Inviable (0%).");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+
+  // D. Choque de Nivel ("NO PRIMER PISO" vs "PISO 1")
+  const reqRejectsFirstFloor = reqRawTextLower.includes("no primer piso") || 
+                               reqRawTextLower.includes("no 1er piso") || 
+                               reqRawTextLower.includes("no piso 1") || 
+                               reqRawTextLower.includes("piso alto");
+
+  const propIsFirstFloor = propRawTextLower.includes("primer piso") || 
+                           propRawTextLower.includes("piso 1") || 
+                           propRawTextLower.includes("piso primero") ||
+                           propRawTextLower.includes("1er piso");
+
+  if (reqRejectsFirstFloor && propIsFirstFloor && !reqRawTextLower.includes("primer piso")) {
+    blockers.push("Choque de Nivel Expreso: El cliente exige expresamente 'NO PRIMER PISO' y la oferta está en Piso 1. Match Inviable (0%).");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+
   // Auditoría de tipo de garaje (independiente vs lineal) v20.0
   const propGarageType = (property.garageType || "").toLowerCase();
   const reqGarageTypeRaw = (requirement.rawText || "").toLowerCase();
