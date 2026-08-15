@@ -52,11 +52,32 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v22.2 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v22.3 — Agosto 2026
 
 ---
 
 ## 📜 REGISTRO DETALLADO DE CONVERSACIONES (ORDEN CRONOLÓGICO INVERSO CON FECHA Y HORA)
+
+### 🗓️ Sesión: Sábado 15 de Agosto de 2026 — 12:25 AM a 12:35 AM (Hora Colombia UTC-5) / 15 de Agosto 05:35 AM UTC
+**Versión del Sistema**: `v22.3 — Agosto 2026`  
+
+#### 📋 Requerimientos Específicos del Usuario (Eduardo A. Rivera):
+1. **Identificación de Falso Match entre Chicó Navarra (#150) y Rosales/Cabrera (#402)**: Eduardo reportó con captura de pantalla que la web registraba un 95% Match entre Chicó Navarra ($1.150M / 137.5m²) y un Requerimiento en Rosales/Cabrera ($3.500M / Min 200m²).
+2. **Causa Raíz Requerida**: Explicar y corregir exactamente por qué se generó esa coincidencia errónea y garantizar que Chicó Navarra vs Rosales/Cabrera tenga 0% Match / Bloqueo Absoluto.
+
+#### 🛠️ Soluciones e Implementaciones Técnicas:
+- **Erradicación del Bypass RPC SQL (`executeMatchEngine`)**: En `server/_core/matching.ts`, `executeMatchEngine` ejecutaba `SELECT * FROM match_requirements_for_property(...)`, una función SQL obsoleta en Supabase PostgreSQL que ignoraba los filtros duros de TypeScript (`matchesGeography`, área mínima, etc.) y generaba matches espurios. Se reemplazó por la llamada directa al motor autoritativo TypeScript `findMatchesForProperty` y `findMatchesForRequirement`.
+- **Actualización de Registro Predial Propiedad #150 en DB**: Se corrigió el registro de la Propiedad #150 en Supabase para que `zone = 'Chicó Navarra'` y `address_neighborhood = 'Chicó Navarra'` (estaba en 'Cedritos'). Se borraron todos los 40 matches espurios dejados por la RPC SQL.
+- **Verificación Empírica TypeScript**: Al correr el motor autoritativo TypeScript (`findMatchesForProperty(150)`), el match Chicó Navarra vs Rosales/Cabrera dio **0% Match / Bloqueo Absoluto**, confirmando el cumplimiento del 100% de las reglas geográficas y físicas.
+- **Fix Supabase Client (`AdminMatches.tsx`)**: Importación explícita de `supabase` client desde `@/lib/supabase`.
+
+#### 💬 Respuestas y Confirmaciones Entregadas a Eduardo:
+- Diagnóstico completo presentado mostrando el origen exacto de la RPC SQL vieja.
+- Eliminación del bypass SQL y activación exclusiva del Motor TypeScript en `executeMatchEngine`.
+- Corrección de `zone = 'Chicó Navarra'` en Supabase DB y purga de 40 matches basura.
+- Prueba empírica confirmando 0% Match entre Chicó Navarra y Rosales/Cabrera.
+
+---
 
 ### 🗓️ Sesión: Sábado 15 de Agosto de 2026 — 12:00 AM a 12:10 AM (Hora Colombia UTC-5) / 15 de Agosto 05:10 AM UTC
 **Versión del Sistema**: `v22.2 — Agosto 2026`  

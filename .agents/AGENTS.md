@@ -162,9 +162,10 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v22.2 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL: v22.3 — Agosto 2026
 
-### Novedades v22.2:
-- **JanIA — Addendum v9 (Detector Multi-Item de 5 Heurísticas)**: Implementación de la función `evaluateMultiItemHeuristics` en `server/_core/janIA.ts` (líneas 1570-1625). Ante mensajes de WhatsApp con 2+ publicaciones mezcladas, JanIA particiona e ingesta N registros independientes en Supabase DB.
-- **Supresión de Enlaces Duplicados (`AdminMatches.tsx`)**: Eliminación del renglón duplicado `🌐 Enlace original:` cuando la URL ya se encuentra renderizada dentro de la tarjeta de la publicación original.
-- **Auditoría Retroactiva y Segregación de Propiedad #150**: Auditoría sobre 755 inmuebles y 331 requerimientos. Propiedad #150 fue segregada en 3 inmuebles independientes (#150 Chicó Navarra, #1181 Colina Duplex y #1182 Bosque Medina) con sus propios precios y enlaces de Wasi.
+### Novedades v22.3:
+- **Erradicación de Bypass RPC SQL en Matching (`executeMatchEngine`)**: Reemplazo de la llamada a la función SQL obsoleta `match_requirements_for_property` en PostgreSQL Supabase por la ejecución obligatoria del motor autoritativo TypeScript `findMatchesForProperty` y `findMatchesForRequirement` en `server/_core/matching.ts`.
+- **Corrección de Datos Prediales Propiedad #150**: Actualización de `zone = 'Chicó Navarra'` y `address_neighborhood = 'Chicó Navarra'` en Supabase DB. Eliminación de los 40 matches espurios producidos por la RPC SQL.
+- **Validación Doctrinal Estricta**: Confirmado con pruebas empíricas que Chicó Navarra vs Rosales/Cabrera produce **0% Match / Bloqueo Absoluto**.
+- **Fix Supabase Client Import (`AdminMatches.tsx`)**: Importación de `supabase` client desde `@/lib/supabase` resolviendo errores de compilación TS.

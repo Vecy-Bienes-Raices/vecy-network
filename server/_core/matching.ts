@@ -2136,55 +2136,13 @@ export async function executeMatchEngine(propertyId: number | null, requirementI
     }
 
     if (requirementId) {
-      console.log(`[MATCHING-RPC] ⚡ Ejecutando RPC Supabase para Requerimiento #${requirementId}...`);
-      const matchRows: any[] = await db.execute(
-        sql`SELECT * FROM match_properties_for_requirement(${requirementId}, 80.0)`
-      ) as any[];
-      let insertedCount = 0;
-      for (const m of matchRows) {
-        await db.insert(propertyMatches).values({
-          propertyId: m.property_id,
-          requirementId: requirementId,
-          matchScore: String(m.match_score),
-          matchReason: m.match_reason || `RPC v21.21 score=${m.match_score}`,
-          status: "suggested",
-          ownerConfirmed: false,
-          seekerConfirmed: false,
-          createdAt: new Date(),
-        }).onConflictDoNothing();
-        insertedCount++;
-        if (Number(m.match_score) >= 85) {
-          sendDirectAlertToAdmins(
-            `🚀 *VECY INTEL: Match #${m.property_id}↔${requirementId} (${m.match_score}%)*\n🏠 Propiedad: ${m.property_name || m.property_id} (${m.property_city || ''})\n💰 Precio: $${Number(m.property_price || 0).toLocaleString('es-CO')}\n👉 Ver en panel: https://vecy-network.vercel.app/admin`
-          ).catch(() => {});
-        }
-      }
-      console.log(`[MATCHING-RPC] ✅ ${insertedCount} matches registrados en Supabase para Requerimiento #${requirementId}.`);
+      console.log(`[MATCHING-TS] ⚡ Ejecutando Motor Autoritativo TypeScript para Requerimiento #${requirementId}...`);
+      const matches = await findMatchesForRequirement(requirementId);
+      console.log(`[MATCHING-TS] ✅ ${matches.length} matches validados por TypeScript para Requerimiento #${requirementId}.`);
     } else if (propertyId) {
-      console.log(`[MATCHING-RPC] ⚡ Ejecutando RPC Supabase para Propiedad #${propertyId}...`);
-      const matchRows: any[] = await db.execute(
-        sql`SELECT * FROM match_requirements_for_property(${propertyId}, 80.0)`
-      ) as any[];
-      let insertedCount = 0;
-      for (const m of matchRows) {
-        await db.insert(propertyMatches).values({
-          propertyId: propertyId,
-          requirementId: m.requirement_id,
-          matchScore: String(m.match_score),
-          matchReason: m.match_reason || `RPC v21.21 score=${m.match_score}`,
-          status: "suggested",
-          ownerConfirmed: false,
-          seekerConfirmed: false,
-          createdAt: new Date(),
-        }).onConflictDoNothing();
-        insertedCount++;
-        if (Number(m.match_score) >= 85) {
-          sendDirectAlertToAdmins(
-            `🚀 *VECY INTEL: Match #${propertyId}↔${m.requirement_id} (${m.match_score}%)*\n👉 Ver en panel: https://vecy-network.vercel.app/admin`
-          ).catch(() => {});
-        }
-      }
-      console.log(`[MATCHING-RPC] ✅ ${insertedCount} matches registrados en Supabase para Propiedad #${propertyId}.`);
+      console.log(`[MATCHING-TS] ⚡ Ejecutando Motor Autoritativo TypeScript para Propiedad #${propertyId}...`);
+      const matches = await findMatchesForProperty(propertyId);
+      console.log(`[MATCHING-TS] ✅ ${matches.length} matches validados por TypeScript para Propiedad #${propertyId}.`);
     }
   } catch (err: any) {
     console.error(`[MATCHING-RPC-ERROR] Error ejecutando RPC:`, err?.message || err);
