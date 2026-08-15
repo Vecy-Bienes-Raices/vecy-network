@@ -1147,41 +1147,48 @@ export default function AdminMatches() {
     setIsSaving(true);
     try {
       if (m.property?.id) {
-        await updatePropMut.mutateAsync({
-          propertyId: m.property.id,
-          price: editForm.propPrice !== undefined && editForm.propPrice !== '' ? String(editForm.propPrice) : undefined,
-          rentPrice: editForm.propRentPrice !== undefined && editForm.propRentPrice !== '' ? String(editForm.propRentPrice) : undefined,
-          adminFee: editForm.propAdminFee !== undefined && editForm.propAdminFee !== '' ? String(editForm.propAdminFee) : undefined,
-          areaTotal: editForm.propArea !== undefined && editForm.propArea !== '' ? String(editForm.propArea) : undefined,
-          bedrooms: editForm.propBedrooms !== undefined && editForm.propBedrooms !== '' ? Number(editForm.propBedrooms) : undefined,
-          bathrooms: editForm.propBathrooms !== undefined && editForm.propBathrooms !== '' ? Number(editForm.propBathrooms) : undefined,
-          garages: editForm.propGarages !== undefined && editForm.propGarages !== '' ? Number(editForm.propGarages) : undefined,
-          stratum: editForm.propStratum !== undefined && editForm.propStratum !== '' ? Number(editForm.propStratum) : undefined,
-          zone: editForm.propZone ? String(editForm.propZone) : undefined,
-          addressNeighborhood: editForm.propZone ? String(editForm.propZone) : undefined,
-          city: editForm.propCity ? String(editForm.propCity) : undefined,
-        });
+        const propUpdates: Record<string, any> = { updatedAt: new Date() };
+        if (editForm.propPrice !== undefined && editForm.propPrice !== '') propUpdates.price = String(editForm.propPrice);
+        if (editForm.propRentPrice !== undefined && editForm.propRentPrice !== '') propUpdates.rentPrice = String(editForm.propRentPrice);
+        if (editForm.propAdminFee !== undefined && editForm.propAdminFee !== '') propUpdates.adminFee = String(editForm.propAdminFee);
+        if (editForm.propArea !== undefined && editForm.propArea !== '') propUpdates.areaTotal = String(editForm.propArea);
+        if (editForm.propBedrooms !== undefined && editForm.propBedrooms !== '') propUpdates.bedrooms = Number(editForm.propBedrooms);
+        if (editForm.propBathrooms !== undefined && editForm.propBathrooms !== '') propUpdates.bathrooms = Number(editForm.propBathrooms);
+        if (editForm.propGarages !== undefined && editForm.propGarages !== '') propUpdates.garages = Number(editForm.propGarages);
+        if (editForm.propStratum !== undefined && editForm.propStratum !== '') propUpdates.stratum = Number(editForm.propStratum);
+        if (editForm.propZone) {
+          propUpdates.zone = String(editForm.propZone);
+          propUpdates.addressNeighborhood = String(editForm.propZone);
+        }
+        if (editForm.propCity) propUpdates.city = String(editForm.propCity);
+
+        const { error: pErr } = await supabase.from('properties').update(propUpdates).eq('id', m.property.id);
+        if (pErr) throw new Error(`Inmueble error: ${pErr.message}`);
       }
 
       if (m.requirement?.id) {
-        await updateReqMut.mutateAsync({
-          requirementId: m.requirement.id,
-          presupuestoMax: editForm.reqBudget !== undefined && editForm.reqBudget !== '' ? String(editForm.reqBudget) : undefined,
-          adminFeeMax: editForm.reqAdminMax !== undefined && editForm.reqAdminMax !== '' ? String(editForm.reqAdminMax) : undefined,
-          areaMin: editForm.reqArea !== undefined && editForm.reqArea !== '' ? String(editForm.reqArea) : undefined,
-          habitacionesMin: editForm.reqBedrooms !== undefined && editForm.reqBedrooms !== '' ? Number(editForm.reqBedrooms) : undefined,
-          banosMin: editForm.reqBathrooms !== undefined && editForm.reqBathrooms !== '' ? Number(editForm.reqBathrooms) : undefined,
-          parqueaderosMin: editForm.reqGarages !== undefined && editForm.reqGarages !== '' ? Number(editForm.reqGarages) : undefined,
-          estratoDeseado: editForm.reqStratum !== undefined && editForm.reqStratum !== '' ? Number(editForm.reqStratum) : undefined,
-          zonaDeseada: editForm.reqZone ? String(editForm.reqZone) : undefined,
-          addressNeighborhood: editForm.reqZone ? String(editForm.reqZone) : undefined,
-          ciudadDeseada: editForm.reqCity ? String(editForm.reqCity) : undefined,
-        });
+        const reqUpdates: Record<string, any> = { updatedAt: new Date() };
+        if (editForm.reqBudget !== undefined && editForm.reqBudget !== '') reqUpdates.presupuestoMax = String(editForm.reqBudget);
+        if (editForm.reqAdminMax !== undefined && editForm.reqAdminMax !== '') reqUpdates.adminFeeMax = String(editForm.reqAdminMax);
+        if (editForm.reqArea !== undefined && editForm.reqArea !== '') reqUpdates.areaMin = String(editForm.reqArea);
+        if (editForm.reqBedrooms !== undefined && editForm.reqBedrooms !== '') reqUpdates.habitacionesMin = Number(editForm.reqBedrooms);
+        if (editForm.reqBathrooms !== undefined && editForm.reqBathrooms !== '') reqUpdates.banosMin = Number(editForm.reqBathrooms);
+        if (editForm.reqGarages !== undefined && editForm.reqGarages !== '') reqUpdates.parqueaderosMin = Number(editForm.reqGarages);
+        if (editForm.reqStratum !== undefined && editForm.reqStratum !== '') reqUpdates.estratoDeseado = Number(editForm.reqStratum);
+        if (editForm.reqZone) {
+          reqUpdates.zonaDeseada = String(editForm.reqZone);
+          reqUpdates.addressNeighborhood = String(editForm.reqZone);
+        }
+        if (editForm.reqCity) reqUpdates.ciudadDeseada = String(editForm.reqCity);
+
+        const { error: rErr } = await supabase.from('requirements').update(reqUpdates).eq('id', m.requirement.id);
+        if (rErr) throw new Error(`Requerimiento error: ${rErr.message}`);
       }
 
-      toast.success("💾 Cambios guardados en Supabase", {
-        description: "Los datos prediales actualizados han sido almacenados con éxito."
+      toast.success("💾 Cambios guardados exitosamente en Supabase", {
+        description: "Los datos prediales actualizados han sido almacenados."
       });
+      refetch();
     } catch (err: any) {
       toast.error("Error al guardar en Supabase", {
         description: err.message || "No se pudieron actualizar los datos."
