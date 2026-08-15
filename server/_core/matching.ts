@@ -83,14 +83,15 @@ export function extractRealPhone(item: any): string | null {
 }
 
 /**
- * Compatibilidad inteligente de tipos de transacción (Doctrina VECY Network):
- * - Venta ↔ Venta (100% Compatible)
- * - Arriendo ↔ Arriendo (100% Compatible)
- * - Arriendo Puro ↔ Venta o Arriendo / Vendo o Arriendo (100% Compatible)
- * - Venta Pura ↔ Venta o Arriendo / Vendo o Arriendo (100% Compatible)
- * - Venta ↔ Venta/Permuta (100% Compatible)
- * - Venta ↔ Arriendo → 0% BLOQUEO ABSOLUTO
- * - Arriendo Puro ↔ Arriendo con Opción de Compra → 0% BLOQUEO ABSOLUTO (Regla Doctrinal v17.2)
+ * Compatibilidad inteligente de tipos de transacción (Doctrina VECY Network - 8 Reglas):
+ * 1. Venta ↔ Venta (100% Compatible)
+ * 2. Arriendo ↔ Arriendo (100% Compatible)
+ * 3. Arriendo Puro ↔ Venta o Arriendo / Vendo o Arriendo (100% Compatible)
+ * 4. Venta Pura ↔ Venta o Arriendo / Vendo o Arriendo (100% Compatible)
+ * 5. Venta ↔ Venta/Permuta (100% Compatible)
+ * 6. Venta ↔ Arriendo Puro → 0% BLOQUEO ABSOLUTO
+ * 7. Arriendo Puro ↔ Arriendo con Opción de Compra → 0% BLOQUEO ABSOLUTO (Regla Doctrinal v17.2)
+ * 8. Requerimiento "Arriendo con Opción de Compra" ↔ "Arriendo con Opción de Compra", "Venta o Arriendo" o "Venta" (100% Compatible)
  */
 const TRANSACTION_COMPATIBILITY_MATRIX: Record<string, Set<string>> = {
   venta: new Set(["venta", "venta_o_arriendo", "venta_permuta", "arriendo_con_opcion_de_compra"]),
