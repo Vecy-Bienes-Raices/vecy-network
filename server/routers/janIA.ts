@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { publicProcedure, router } from '../_core/trpc';
 import { invokeLLM } from '../_core/llm';
 import { getDb } from '../db';
-import { conversations, messages, leads, propertyMatches, properties, requirements, propertyImages, propertyPublicationHistory, pendingSessions } from '../../drizzle/schema';
+import { conversations, messages, leads, propertyMatches, properties, requirements, propertyImages, propertyPublicationHistory, pendingSessions, inmobiliarioLexicon, matchFeedback } from '../../drizzle/schema';
 import { eq, desc, sql, inArray, gte } from 'drizzle-orm';
 
 import { scrapePropertyLink } from '../_core/scraper';
@@ -690,6 +690,96 @@ export const janIARouter = router({
         propMatchesCount,
         reqMatchesCount,
       };
+    }),
+
+  // Registrar Retroalimentación de Match (Capa C - Feedback Loop)
+  recordMatchFeedback: publicProcedure
+    .input(z.object({
+      matchId: z.number().optional().nullable(),
+      propertyId: z.number().optional().nullable(),
+      requirementId: z.number().optional().nullable(),
+      action: z.enum(['exitoso', 'rechazado', 'en_negociacion']),
+      motivoRechazo: z.string().optional().nullable(),
+      notasBroker: z.string().optional().nullable(),
+      ajustesGuardados: z.record(z.any()).optional().nullable(),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Base de datos no disponible");
+
+      try {
+        const [feedback] = await db.insert(matchFeedback).values({
+          matchId: input.matchId || null,
+          propertyId: input.propertyId || null,
+          requirementId: input.requirementId || null,
+          action: input.action,
+          motivoRechazo: input.motivoRechazo || null,
+          notasBroker: input.notasBroker || null,
+          ajustesGuardados: input.ajustesGuardados || null,
+        }).returning();
+
+        // Si el match fue rechazado, actualizar el status en propertyMatches
+        if (input.matchId && input.action === 'rechazado') {
+          await db.update(propertyMatches)
+            .set({ status: 'rejected' })
+            .where(eq(propertyMatches.id, input.matchId));
+        }
+
+        console.log(`[JanIA-Feedback] Feedback registrado para Match #${input.matchId}: ${input.action} - ${input.motivoRechazo || 'Sin motivo'}`);
+        return { success: true, feedbackId: feedback.id };
+      } catch (e: any) {
+        console.error("[JanIA-Feedback] Error guardando feedback:", e.message);
+        throw new Error(`Error guardando feedback: ${e.message}`);
+      }
+    }),
+
+  // Obtener Glosario y Léxico Vivo de JanIA (Capa B)
+  getInmobiliarioLexicon: publicProcedure
+    .query(async () => {
+      const db = await getDb();
+      if (!db) return [];
+      try {
+        const terms = await db.select().from(inmobiliarioLexicon).orderBy(desc(inmobiliarioLexicon.frecuenciaUso)).limit(100);
+        return terms;
+      } catch (e: any) {
+        console.error("[JanIA-Lexicon] Error obteniendo léxico:", e.message);
+        return [];
+      }
+    }),
+
+  // Aprender o Registrar Nuevo Término Inmobiliario (Capa B)
+  learnNewLexiconTerm: publicProcedure
+    .input(z.object({
+      terminoColoquial: z.string(),
+      categoria: z.string(),
+      conceptoCanonico: z.string(),
+      origen: z.string().default('humano_validado'),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Base de datos no disponible");
+
+      try {
+        const cleanTerm = input.terminoColoquial.toLowerCase().trim();
+        const [term] = await db.insert(inmobiliarioLexicon).values({
+          terminoColoquial: cleanTerm,
+          categoria: input.categoria,
+          conceptoCanonico: input.conceptoCanonico,
+          frecuenciaUso: 1,
+          origen: input.origen,
+        }).onConflictDoUpdate({
+          target: inmobiliarioLexicon.terminoColoquial,
+          set: {
+            frecuenciaUso: sql`${inmobiliarioLexicon.frecuenciaUso} + 1`,
+            updatedAt: new Date(),
+          }
+        }).returning();
+
+        return { success: true, term };
+      } catch (e: any) {
+        console.error("[JanIA-Lexicon] Error registrando término:", e.message);
+        throw new Error(`Error registrando término: ${e.message}`);
+      }
     }),
 
 

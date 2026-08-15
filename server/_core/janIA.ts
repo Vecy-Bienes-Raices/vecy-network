@@ -523,6 +523,31 @@ export function extractFallbackDataFromText(text: string): any {
   else if (clean.includes("cocina abierta")) kitchenType = "Abierta";
   else if (clean.includes("cocina tipo isla") || clean.includes("isla")) kitchenType = "Abierta tipo Isla";
 
+  const hasServiceRoom = clean.includes("cbs") || 
+                         clean.includes("cuarto de servicio") || 
+                         clean.includes("alcoba de servicio") || 
+                         clean.includes("cuarto y baño de servicio") || 
+                         clean.includes("cuarto y bano de servicio") || 
+                         clean.includes("cuarto de empleada") || 
+                         clean.includes("alcoba para el servicio");
+
+  let floorType = null;
+  if (clean.includes("madera maciza") || clean.includes("madera natural") || clean.includes("granadillo")) floorType = "Madera Maciza";
+  else if (clean.includes("piso en madera") || clean.includes("pisos en madera") || clean.includes("piso de madera") || clean.includes("pisos de madera")) floorType = "Madera";
+  else if (clean.includes("laminado") || clean.includes("piso laminado")) floorType = "Laminado";
+  else if (clean.includes("porcelanato")) floorType = "Porcelanato";
+  else if (clean.includes("marmol") || clean.includes("mármol")) floorType = "Mármol";
+  else if (clean.includes("ceramica") || clean.includes("cerámica")) floorType = "Cerámica";
+
+  let sunlightOrientation = null;
+  if (clean.includes("luz de la mañana") || clean.includes("luz de manana") || clean.includes("sol de mañana") || clean.includes("sol de manana")) sunlightOrientation = "Sol de Mañana";
+  else if (clean.includes("sol de tarde") || clean.includes("luz de tarde")) sunlightOrientation = "Sol de Tarde";
+  else if (clean.includes("exterior iluminado") || clean.includes("super iluminado") || clean.includes("muy iluminado")) sunlightOrientation = "Exterior Iluminado";
+
+  const hasPowerPlant = clean.includes("planta electrica") || clean.includes("planta eléctrica") || clean.includes("suplencia total") || clean.includes("planta total") || clean.includes("planta de suplencia");
+  const hasVisitorParking = clean.includes("parqueadero de visitantes") || clean.includes("parqueadero para visitantes") || clean.includes("parqueaderos de visitantes") || clean.includes("parqueo visitantes");
+  const hasHeating = clean.includes("calentador de paso") || clean.includes("calentador a gas") || clean.includes("caldera");
+
   let city = "Bogotá";
   if (clean.includes("cali") || clean.includes("melendez") || clean.includes("jardin") || clean.includes("pacifica")) {
     city = "Cali";
@@ -573,11 +598,64 @@ export function extractFallbackDataFromText(text: string): any {
     hasStorage,
     hasElevator,
     kitchenType,
+    hasServiceRoom,
+    floorType,
+    sunlightOrientation,
+    hasPowerPlant,
+    hasVisitorParking,
+    hasHeating,
     city,
     ciudadDeseada: city,
     zone,
     zonaDeseada: zone
   };
+}
+
+/**
+ * Auto-Aprendizaje de Léxico Inmobiliario (Capa B - Glosario Vivo en Supabase)
+ */
+export async function enrichLexiconFromText(rawText: string): Promise<void> {
+  if (!rawText || rawText.length < 15) return;
+  const clean = rawText.toLowerCase();
+
+  const patterns = [
+    { match: /\b(cbs|cuarto\s+y\s+ba[ñn]o\s+de\s+servicio|alcoba\s+(?:para\s+el\s+)?servicio|cuarto\s+de\s+empleada)\b/i, cat: 'espacio', can: 'cuarto_bano_servicio' },
+    { match: /\b(cocina\s+(?:cerrada|abierta|tipo\s+isla|americana))\b/i, cat: 'espacio', can: 'tipologia_cocina' },
+    { match: /\b(pisos?\s*(?:en\s*)?(?:madera\s+maciza|madera|laminado|porcelanato|m[aá]rmol|cer[aá]mica))\b/i, cat: 'acabado', can: 'tipo_piso' },
+    { match: /\b(luz\s+de\s+(?:la\s+)?ma[ñn]ana|sol\s+de\s+(?:la\s+)?tarde|exterior\s+iluminado)\b/i, cat: 'ambiente', can: 'orientacion_asoleacion' },
+    { match: /\b(planta\s+el[eé]ctrica|suplencia\s+total|planta\s+total)\b/i, cat: 'infraestructura', can: 'planta_electrica' },
+    { match: /\b(parqueadero\s*(?:para\s*)?visitantes?|parqueo\s+visitantes?)\b/i, cat: 'amenidad', can: 'parqueadero_visitantes' },
+    { match: /\b(star\s+de\s+tv|hall\s+de\s+alcobas|estar\s+de\s+tv)\b/i, cat: 'espacio', can: 'estar_television' },
+    { match: /\b(calentador\s+de\s+paso|caldera\s+central)\b/i, cat: 'equipamiento', can: 'calentador_agua' },
+    { match: /\b(chimenea\s+(?:tradicional|a\s+gas|ecol[oó]gica))\b/i, cat: 'equipamiento', can: 'chimenea' }
+  ];
+
+  try {
+    const db = await getDb();
+    if (!db) return;
+
+    for (const p of patterns) {
+      const m = clean.match(p.match);
+      if (m && m[1]) {
+        const term = m[1].toLowerCase().trim();
+        await db.insert(inmobiliarioLexicon).values({
+          terminoColoquial: term,
+          categoria: p.cat,
+          conceptoCanonico: p.can,
+          frecuenciaUso: 1,
+          origen: 'ia_autodescubierto'
+        }).onConflictDoUpdate({
+          target: inmobiliarioLexicon.terminoColoquial,
+          set: {
+            frecuenciaUso: sql`${inmobiliarioLexicon.frecuenciaUso} + 1`,
+            updatedAt: new Date()
+          }
+        });
+      }
+    }
+  } catch (e) {
+    // Non-blocking auto-learning
+  }
 }
 
 // --- 1. ALMACENES DE MEMORIA (v12.0) ---

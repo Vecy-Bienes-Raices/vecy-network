@@ -1,9 +1,9 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { 
   Phone, MapPin, Search, Download, Building2, Calendar, 
   Sparkles, CheckCircle2, AlertTriangle, XCircle, SlidersHorizontal, 
   DollarSign, Ruler, Bed, Bath, Car, Shield, ExternalLink, Receipt, Box, Globe,
-  Edit3, Save, Loader2, RotateCcw
+  Edit3, Save, Loader2, RotateCcw, Sun, Zap, Utensils, Home, Flame, ThumbsUp, ThumbsDown
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -990,6 +990,116 @@ function scoreRows(req: any, prop: any) {
     <Building2 className="w-3.5 h-3.5" />
   );
 
+  // ── ATRIBUTOS ADAPTATIVOS AUTODESCUBIERTOS (Capa A - Matriz Dinámica) ──
+
+  // A. Tipología de Cocina
+  let reqKitchen = req.kitchenType || (reqTextLower.includes("cocina cerrada") ? "Cerrada" : reqTextLower.includes("cocina abierta") ? "Abierta" : reqTextLower.includes("tipo isla") || reqTextLower.includes("isla") ? "Abierta tipo Isla" : null);
+  let propKitchen = prop.kitchenType || (propRawText.includes("cocina cerrada") ? "Cerrada" : propRawText.includes("cocina abierta") ? "Abierta" : propRawText.includes("tipo isla") || propRawText.includes("isla") ? "Abierta tipo Isla" : null);
+  if (reqKitchen || propKitchen) {
+    let kStatus: MatchStatus = "neutral";
+    if (reqKitchen && propKitchen) {
+      kStatus = reqKitchen.toLowerCase() === propKitchen.toLowerCase() ? "exact" : (reqKitchen.toLowerCase().includes("abierta") && propKitchen.toLowerCase().includes("abierta")) ? "exact" : "warn";
+    }
+    add(
+      "Tipología de Cocina",
+      reqKitchen ? `Cocina ${reqKitchen}` : "N/E",
+      propKitchen ? `Cocina ${propKitchen}` : "N/E",
+      kStatus,
+      4,
+      <Utensils className="w-3.5 h-3.5" />
+    );
+  }
+
+  // B. Cuarto y Baño de Servicio (CBS)
+  const reqCBS = reqTextLower.includes("cbs") || reqTextLower.includes("cuarto de servicio") || reqTextLower.includes("alcoba de servicio") || reqTextLower.includes("cuarto y baño de servicio") || reqTextLower.includes("cuarto y bano de servicio");
+  const propCBS = propRawText.includes("cbs") || propRawText.includes("cuarto de servicio") || propRawText.includes("alcoba de servicio") || propRawText.includes("cuarto y baño de servicio") || propRawText.includes("alcoba para el servicio") || prop.hasServiceRoom;
+  if (reqCBS || propCBS) {
+    let cbsStatus: MatchStatus = "neutral";
+    if (reqCBS && propCBS) cbsStatus = "exact";
+    else if (reqCBS && !propCBS) cbsStatus = "warn";
+    else if (!reqCBS && propCBS) cbsStatus = "exact"; // Oferta con CBS es bono de confort
+    add(
+      "Cuarto y Baño Servicio (CBS)",
+      reqCBS ? "Exige CBS (Cuarto y Baño de Servicio)" : "N/E",
+      propCBS ? "Sí (Incluye Cuarto y Baño de Servicio)" : "Sin CBS especificado",
+      cbsStatus,
+      4,
+      <Home className="w-3.5 h-3.5" />
+    );
+  }
+
+  // C. Acabado de Pisos
+  let reqPisos = reqTextLower.includes("madera maciza") ? "Madera Maciza" : reqTextLower.includes("madera") ? "Madera" : reqTextLower.includes("laminado") ? "Laminado" : reqTextLower.includes("marmol") || reqTextLower.includes("mármol") ? "Mármol" : reqTextLower.includes("porcelanato") ? "Porcelanato" : null;
+  let propPisos = propRawText.includes("madera maciza") ? "Madera Maciza" : propRawText.includes("madera") ? "Madera" : propRawText.includes("laminado") ? "Laminado" : propRawText.includes("marmol") || propRawText.includes("mármol") ? "Mármol" : propRawText.includes("porcelanato") ? "Porcelanato" : null;
+  if (reqPisos || propPisos) {
+    let pStatus: MatchStatus = "neutral";
+    if (reqPisos && propPisos) {
+      pStatus = reqPisos === propPisos ? "exact" : (reqPisos === "Madera" && propPisos === "Laminado") ? "warn" : "warn";
+    }
+    add(
+      "Acabado de Pisos",
+      reqPisos ? `Pisos en ${reqPisos}` : "N/E",
+      propPisos ? `Pisos en ${propPisos}` : "N/E",
+      pStatus,
+      3,
+      <Sparkles className="w-3.5 h-3.5" />
+    );
+  }
+
+  // D. Orientación / Asoleación / Iluminación
+  let reqSol = reqTextLower.includes("luz de la mañana") || reqTextLower.includes("luz de manana") ? "Luz de la Mañana" : reqTextLower.includes("sol de tarde") ? "Sol de Tarde" : reqTextLower.includes("exterior iluminado") || reqTextLower.includes("muy iluminado") ? "Exterior Iluminado" : null;
+  let propSol = propRawText.includes("luz de la mañana") || propRawText.includes("luz de manana") ? "Luz de la Mañana" : propRawText.includes("sol de tarde") ? "Sol de Tarde" : propRawText.includes("exterior iluminado") || propRawText.includes("muy iluminado") || propRawText.includes("iluminado") ? "Exterior Iluminado" : null;
+  if (reqSol || propSol) {
+    let sStatus: MatchStatus = "neutral";
+    if (reqSol && propSol) {
+      sStatus = reqSol === propSol ? "exact" : (reqSol === "Luz de la Mañana" && propSol === "Exterior Iluminado") ? "exact" : "warn";
+    }
+    add(
+      "Orientación / Asoleación",
+      reqSol ? reqSol : "N/E",
+      propSol ? propSol : "N/E",
+      sStatus,
+      3,
+      <Sun className="w-3.5 h-3.5" />
+    );
+  }
+
+  // E. Planta Eléctrica e Infraestructura
+  const reqPlanta = reqTextLower.includes("planta") || reqTextLower.includes("suplencia total");
+  const propPlanta = propRawText.includes("planta electrica") || propRawText.includes("planta eléctrica") || propRawText.includes("suplencia total") || prop.hasPowerPlant;
+  if (reqPlanta || propPlanta) {
+    let plStatus: MatchStatus = "neutral";
+    if (reqPlanta && propPlanta) plStatus = "exact";
+    else if (reqPlanta && !propPlanta) plStatus = "warn";
+    else if (!reqPlanta && propPlanta) plStatus = "exact";
+    add(
+      "Planta Eléctrica Edificio",
+      reqPlanta ? "Exige Planta Eléctrica / Suplencia" : "N/E",
+      propPlanta ? "Sí (Planta Eléctrica de Suplencia)" : "Sin planta especificada",
+      plStatus,
+      3,
+      <Zap className="w-3.5 h-3.5" />
+    );
+  }
+
+  // F. Parqueadero de Visitantes
+  const reqVisitantes = reqTextLower.includes("visitantes") || reqTextLower.includes("parqueadero de visitantes") || reqTextLower.includes("parqueo visitantes");
+  const propVisitantes = propRawText.includes("visitantes") || propRawText.includes("parqueadero de visitantes") || propRawText.includes("parqueadero para visitantes") || prop.hasVisitorParking;
+  if (reqVisitantes || propVisitantes) {
+    let vStatus: MatchStatus = "neutral";
+    if (reqVisitantes && propVisitantes) vStatus = "exact";
+    else if (reqVisitantes && !propVisitantes) vStatus = "warn";
+    else if (!reqVisitantes && propVisitantes) vStatus = "exact";
+    add(
+      "Parqueadero de Visitantes",
+      reqVisitantes ? "Exige Parqueadero de Visitantes" : "N/E",
+      propVisitantes ? "Sí (Parqueadero para Visitantes)" : "Sin visitantes especificado",
+      vStatus,
+      3,
+      <Car className="w-3.5 h-3.5" />
+    );
+  }
+
   // 17. Teléfono / Contacto WhatsApp
   const reqContactPhone = extractPhoneFromItem(req);
   const propContactPhone = extractPhoneFromItem(prop);
@@ -1241,6 +1351,38 @@ export default function AdminMatches() {
   const updatePropMut = trpc.janIA.updatePropertyDetails.useMutation();
   const updateReqMut = trpc.janIA.updateRequirementDetails.useMutation();
   const recalculateMatchMut = trpc.janIA.recalculateMatchForPair.useMutation();
+  const recordFeedbackMut = trpc.janIA.recordMatchFeedback.useMutation();
+
+  // Estados para Retroalimentación de Broker (Capa C - Active Learning)
+  const [rejectModalMatch, setRejectModalMatch] = React.useState<any>(null);
+  const [rejectReason, setRejectReason] = React.useState<string>('');
+  const [customRejectNote, setCustomRejectNote] = React.useState<string>('');
+
+  const handleFeedback = async (m: any, action: 'exitoso' | 'rechazado' | 'en_negociacion', reason?: string, note?: string) => {
+    try {
+      await recordFeedbackMut.mutateAsync({
+        matchId: m.id,
+        propertyId: m.property?.id,
+        requirementId: m.requirement?.id,
+        action,
+        motivoRechazo: reason || null,
+        notasBroker: note || null,
+      });
+
+      if (action === 'exitoso') {
+        toast.success("🤝 Trato registrado exitosamente", {
+          description: "JanIA ha registrado este match exitoso para reforzar patrones de alta afinidad."
+        });
+      } else {
+        toast.info("⛔ Match descartado", {
+          description: `Motivo: "${reason || 'Descarte de broker'}". JanIA aprenderá a no sugerir pares similares.`
+        });
+        refetch();
+      }
+    } catch (e: any) {
+      toast.error("Error registrando retroalimentación", { description: e.message });
+    }
+  };
 
   const handleStartEdit = (m: any) => {
     if (editingMatchId === m.id) {
@@ -2489,13 +2631,41 @@ export default function AdminMatches() {
                     </div>
                   )}
 
+                  {/* CAPA C: RETROALIMENTACIÓN ACTIVA DE BROKER / ENTRENAMIENTO JANIA */}
+                  <div className="px-4 sm:px-6 py-3 bg-zinc-950/60 border-t border-white/5 flex flex-wrap items-center justify-between gap-3">
+                    <div className="text-[11px] text-zinc-400 flex items-center gap-1.5 font-medium">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-400/80" />
+                      <span>Calificación Comercial (Entrenamiento JanIA):</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleFeedback(m, 'exitoso')}
+                        className="h-8 px-3 text-xs text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300 border border-emerald-500/30 rounded-xl flex items-center gap-1.5 transition-all"
+                      >
+                        <ThumbsUp className="w-3.5 h-3.5" />
+                        <span>🤝 Trato en Curso</span>
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => { setRejectModalMatch(m); setRejectReason(''); setCustomRejectNote(''); }}
+                        className="h-8 px-3 text-xs text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 border border-rose-500/30 rounded-xl flex items-center gap-1.5 transition-all"
+                      >
+                        <ThumbsDown className="w-3.5 h-3.5" />
+                        <span>⛔ Descartar Match</span>
+                      </Button>
+                    </div>
+                  </div>
+
                   {/* BARRA DE EDICIÓN FLOTANTE / STICKY EN EL FOOTER DE LA TARJETA */}
                   {isEditingThisCard && (
                     <div className="sticky bottom-0 z-30 bg-gradient-to-r from-emerald-950 via-zinc-900 to-emerald-950 border-t border-emerald-500/40 p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-2xl rounded-b-3xl">
                       <div className="flex items-center gap-2.5 text-emerald-400 text-xs font-semibold">
                         <Sparkles className="w-4 h-4 text-emerald-400 animate-pulse shrink-0" />
                         <span>
-                          Modo Edición Activo: Puedes usar <strong>Guardar Cambios</strong> para almacenar en Supabase, o <strong>Recalcular Match</strong> para buscar de inmediato una nueva pareja.
+                          Modo Edición Activo: Usa <strong>💾 Guardar Cambios</strong> mientras chateas con el autor para buscar el 100% manual, o <strong>⚡ Recalcular Match</strong> si no hubo negocio para buscar nuevas parejas en la red.
                         </span>
                       </div>
                       <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto shrink-0 justify-end">
@@ -2512,7 +2682,7 @@ export default function AdminMatches() {
                           className="bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs h-10 px-3.5 shadow-md min-h-[44px] flex items-center justify-center gap-1.5"
                         >
                           {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                          💾 Guardar Cambios
+                          💾 Guardar Cambios (Modo Chat)
                         </Button>
                         <Button
                           onClick={() => handleRecalculateMatch(m)}
@@ -2530,6 +2700,100 @@ export default function AdminMatches() {
               );
             })}
           </AnimatePresence>
+        </div>
+      )}
+
+      {/* MODAL DE DESCARTE CON MOTIVO (FEEDBACK Y APRENDIZAJE JANIA) */}
+      {rejectModalMatch && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4"
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-white/5">
+              <div className="flex items-center gap-2 text-rose-400 font-bold text-base">
+                <ThumbsDown className="w-5 h-5" />
+                <span>Descartar Coincidencia Comercial</span>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => { setRejectModalMatch(null); setRejectReason(''); setCustomRejectNote(''); }}
+                className="text-zinc-400 hover:text-white"
+              >
+                ✕
+              </Button>
+            </div>
+
+            <p className="text-xs text-zinc-300 leading-relaxed">
+              Selecciona el motivo por el cual este inmueble no encajó con el requerimiento. JanIA registrará este aprendizaje en su memoria para no sugerir emparejamientos similares en el futuro:
+            </p>
+
+            <div className="space-y-2">
+              {[
+                "Cliente no quiere primer piso / exige piso alto",
+                "Inmueble muy oscuro / sin asoleación ni luz",
+                "Cuota de administración muy alta",
+                "Exige garaje independiente / oferta es lineal",
+                "No le gustó la ubicación / zona ruidosa",
+                "Inmueble ya se vendió / no disponible",
+                "Otro motivo"
+              ].map((reason) => (
+                <label 
+                  key={reason}
+                  onClick={() => setRejectReason(reason)}
+                  className={`flex items-center gap-2.5 p-3 rounded-xl border text-xs cursor-pointer transition-all ${
+                    rejectReason === reason 
+                      ? 'bg-rose-500/10 border-rose-500/50 text-rose-200' 
+                      : 'bg-zinc-950/40 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-zinc-300'
+                  }`}
+                >
+                  <input 
+                    type="radio" 
+                    name="rejectReason" 
+                    checked={rejectReason === reason} 
+                    onChange={() => setRejectReason(reason)} 
+                    className="accent-rose-500"
+                  />
+                  <span>{reason}</span>
+                </label>
+              ))}
+            </div>
+
+            {rejectReason === "Otro motivo" && (
+              <Input
+                placeholder="Escribe el motivo puntual para que JanIA lo aprenda..."
+                value={customRejectNote}
+                onChange={(e) => setCustomRejectNote(e.target.value)}
+                className="bg-black/50 border-zinc-700 text-xs text-zinc-200"
+              />
+            )}
+
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-white/5">
+              <Button
+                variant="outline"
+                onClick={() => { setRejectModalMatch(null); setRejectReason(''); setCustomRejectNote(''); }}
+                className="border-zinc-700 text-zinc-400 hover:bg-zinc-800 text-xs h-9"
+              >
+                Cancelar
+              </Button>
+              <Button
+                disabled={!rejectReason || recordFeedbackMut.isPending}
+                onClick={() => {
+                  const finalReason = rejectReason === "Otro motivo" ? customRejectNote : rejectReason;
+                  handleFeedback(rejectModalMatch, 'rechazado', finalReason, customRejectNote);
+                  setRejectModalMatch(null);
+                  setRejectReason('');
+                  setCustomRejectNote('');
+                }}
+                className="bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs h-9 px-4 flex items-center gap-1.5"
+              >
+                {recordFeedbackMut.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                Confirmar Descarte
+              </Button>
+            </div>
+          </motion.div>
         </div>
       )}
 

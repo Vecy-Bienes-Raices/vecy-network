@@ -463,3 +463,39 @@ export const zoneAliases = pgTable("zone_aliases", {
 
 export type ZoneAlias = typeof zoneAliases.$inferSelect;
 export type InsertZoneAlias = typeof zoneAliases.$inferInsert;
+
+/**
+ * Memoria y Diccionario Semántico Evolutivo de JanIA (inmobiliarioLexicon) - v22.5
+ */
+export const inmobiliarioLexicon = pgTable("inmobiliario_lexicon", {
+  id: serial("id").primaryKey(),
+  terminoColoquial: varchar("termino_coloquial", { length: 255 }).notNull().unique(),
+  categoria: varchar("categoria", { length: 100 }).notNull(), // 'espacio' | 'acabado' | 'infraestructura' | 'negocio' | 'amenidad' | 'equipamiento'
+  conceptoCanonico: varchar("concepto_canonico", { length: 150 }).notNull(), // 'cuarto_bano_servicio' | 'cocina_cerrada' | 'acabado_madera' | etc.
+  frecuenciaUso: integer("frecuencia_uso").default(1).notNull(),
+  ejemplosDetectados: jsonb("ejemplos_detectados"),
+  origen: varchar("origen", { length: 50 }).default("ia_autodescubierto").notNull(), // 'ia_autodescubierto' | 'humano_validado'
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type InmobiliarioLexicon = typeof inmobiliarioLexicon.$inferSelect;
+export type InsertInmobiliarioLexicon = typeof inmobiliarioLexicon.$inferInsert;
+
+/**
+ * Bucle de Retroalimentación y Aprendizaje de Brokers (matchFeedback) - v22.5
+ */
+export const matchFeedback = pgTable("match_feedback", {
+  id: serial("id").primaryKey(),
+  matchId: integer("match_id").references(() => propertyMatches.id),
+  propertyId: integer("property_id").references(() => properties.id),
+  requirementId: integer("requirement_id").references(() => requirements.id),
+  action: varchar("action", { length: 50 }).notNull(), // 'exitoso' | 'rechazado' | 'en_negociacion'
+  motivoRechazo: text("motivo_rechazo"),
+  notasBroker: text("notas_broker"),
+  ajustesGuardados: jsonb("ajustes_guardados"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type MatchFeedback = typeof matchFeedback.$inferSelect;
+export type InsertMatchFeedback = typeof matchFeedback.$inferInsert;

@@ -52,11 +52,38 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v22.4 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v22.5 — Agosto 2026
 
 ---
 
 ## 📜 REGISTRO DETALLADO DE CONVERSACIONES (ORDEN CRONOLÓGICO INVERSO CON FECHA Y HORA)
+
+### 🗓️ Sesión: Sábado 15 de Agosto de 2026 — 02:45 AM a 03:00 AM (Hora Colombia UTC-5) / 15 de Agosto 07:45 AM a 08:00 AM UTC
+**Versión del Sistema**: `v22.5 — Agosto 2026`  
+
+#### 📋 Requerimientos Específicos del Usuario (Eduardo A. Rivera):
+1. **Independencia Operativa Total de los Botones de Edición**: Separar estrictamente el botón *"💾 Guardar Cambios"* del botón *"⚡ Recalcular Match"*.
+   - El broker utiliza *"Guardar Cambios"* mientras chatea por WhatsApp directamente con el autor para ir completando datos `N/E` y verificar si entre ese par se alcanza el 100% de match manual, sin desvincular la tarjeta ni recalcular globalmente.
+   - El broker utiliza *"Recalcular Match"* únicamente cuando la negociación entre ese par no prosperó, para que tanto el inmueble como el requerimiento —ahora robustecidos y completos— vayan a buscar nuevas parejas en la red.
+2. **Sistema de Auto-Aprendizaje Evolutivo de JanIA en 3 Capas**:
+   - **Capa A**: Matriz de Cotejo Dinámica y Elástica (generación en tiempo real de filas para Cocina, CBS, Pisos, Asoleación, Planta Eléctrica y Parqueadero de Visitantes).
+   - **Capa B**: Memoria y Diccionario Semántico Evolutivo en Supabase (`inmobiliario_lexicon`) para que JanIA aprenda continuamente los modismos y jergas inmobiliarias colombianas.
+   - **Capa C**: Bucle de Retroalimentación Activa de Brokers en Supabase (`match_feedback`) con botones 👍 *"Trato en Curso"* y 👎 *"Descartar Match"* con catálogo de motivos reales para entrenar a la IA.
+3. **Visión a Futuro de JanIA como Broker Autónomo**: Que JanIA aprenda cómo Eduardo maneja las entrevistas, qué preguntas hace y cómo completa datos, para que cuando se active su interacción directa con humanos pueda gestionar inmuebles, agendar visitas, hacer corretajes y cerrar negocios sola.
+
+#### 🛠️ Soluciones e Implementaciones Técnicas:
+- **Independencia de Botones en `AdminMatches.tsx`**:
+  - `handleOnlySave`: Guarda en `properties` y `requirements` en Supabase, actualiza la tarjeta en caliente y el score local sin disparar el motor global.
+  - `handleRecalculateMatch`: Guarda en BD y ejecuta `recalculateMatchForPair` para re-emparejar en toda la red.
+- **Matriz de Cotejo Adaptativa (`AdminMatches.tsx`)**: Inserción dinámica de filas para Cocina, CBS, Pisos, Asoleación, Planta y Visitantes con sus iconos correspondientes.
+- **Creación de Tablas de Aprendizaje en Supabase**:
+  - `inmobiliario_lexicon`: Glosario vivo con tracking de frecuencia de modismos colombianos.
+  - `match_feedback`: Registro de motivos de descarte y acuerdos comerciales.
+- **Routers tRPC en `janIA.ts`**: Procedimientos `recordMatchFeedback`, `getInmobiliarioLexicon` y `learnNewLexiconTerm`.
+- **Extractor Multidimensional en `server/_core/janIA.ts`**: Extracción robusta de `kitchenType`, `hasServiceRoom` (CBS), `floorType`, `sunlightOrientation`, `hasPowerPlant`, `hasVisitorParking` y función no bloqueante `enrichLexiconFromText`.
+- **Validación**: Compilación de producción con `npm run build` ejecutada exitosamente con 0 errores.
+
+---
 
 ### 🗓️ Sesión: Sábado 15 de Agosto de 2026 — 12:45 AM a 01:10 AM (Hora Colombia UTC-5) / 15 de Agosto 05:45 AM a 06:10 AM UTC
 **Versión del Sistema**: `v22.4 — Agosto 2026`  

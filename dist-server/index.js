@@ -19,6 +19,7 @@ __export(schema_exports, {
   currencyEnum: () => currencyEnum,
   demandLevelEnum: () => demandLevelEnum,
   favorites: () => favorites,
+  inmobiliarioLexicon: () => inmobiliarioLexicon2,
   inquiryTypeEnum: () => inquiryTypeEnum,
   leadStatusEnum: () => leadStatusEnum,
   leads: () => leads,
@@ -26,6 +27,7 @@ __export(schema_exports, {
   mandateTypeEnum: () => mandateTypeEnum,
   marketAnalysis: () => marketAnalysis,
   marketTrendEnum: () => marketTrendEnum,
+  matchFeedback: () => matchFeedback,
   matchStatusEnum: () => matchStatusEnum,
   messageTypeEnum: () => messageTypeEnum,
   messages: () => messages,
@@ -51,7 +53,7 @@ __export(schema_exports, {
   zoneAliases: () => zoneAliases
 });
 import { serial, integer, pgEnum, pgTable, text, timestamp, varchar, decimal, boolean, jsonb, bigint, uuid } from "drizzle-orm/pg-core";
-var roleEnum, propertyTypeEnum, transactionTypeEnum, mandateStatusEnum, mandateTypeEnum, inquiryTypeEnum, leadStatusEnum, conversationStatusEnum, matchStatusEnum, statusEnum, messageTypeEnum, demandLevelEnum, supplyLevelEnum, marketTrendEnum, currencyEnum, users, properties, requirements, leads, conversations, messages, propertyMatches, notificationLogs, pendingSessions, referralLinks, shares, clientLedger, propertyImages, marketAnalysis, favorites, colombiaGeography, profiles, counters, solicitudes, propertyPublicationHistory, userBehavioralFingerprints, userPatterns, zoneAliases;
+var roleEnum, propertyTypeEnum, transactionTypeEnum, mandateStatusEnum, mandateTypeEnum, inquiryTypeEnum, leadStatusEnum, conversationStatusEnum, matchStatusEnum, statusEnum, messageTypeEnum, demandLevelEnum, supplyLevelEnum, marketTrendEnum, currencyEnum, users, properties, requirements, leads, conversations, messages, propertyMatches, notificationLogs, pendingSessions, referralLinks, shares, clientLedger, propertyImages, marketAnalysis, favorites, colombiaGeography, profiles, counters, solicitudes, propertyPublicationHistory, userBehavioralFingerprints, userPatterns, zoneAliases, inmobiliarioLexicon2, matchFeedback;
 var init_schema = __esm({
   "drizzle/schema.ts"() {
     "use strict";
@@ -452,6 +454,32 @@ var init_schema = __esm({
       fuente: varchar("fuente", { length: 50 }).default("manual"),
       // 'manual' | 'geocoding_confirmado' | 'ia_inferido'
       createdAt: timestamp("created_at").defaultNow()
+    });
+    inmobiliarioLexicon2 = pgTable("inmobiliario_lexicon", {
+      id: serial("id").primaryKey(),
+      terminoColoquial: varchar("termino_coloquial", { length: 255 }).notNull().unique(),
+      categoria: varchar("categoria", { length: 100 }).notNull(),
+      // 'espacio' | 'acabado' | 'infraestructura' | 'negocio' | 'amenidad' | 'equipamiento'
+      conceptoCanonico: varchar("concepto_canonico", { length: 150 }).notNull(),
+      // 'cuarto_bano_servicio' | 'cocina_cerrada' | 'acabado_madera' | etc.
+      frecuenciaUso: integer("frecuencia_uso").default(1).notNull(),
+      ejemplosDetectados: jsonb("ejemplos_detectados"),
+      origen: varchar("origen", { length: 50 }).default("ia_autodescubierto").notNull(),
+      // 'ia_autodescubierto' | 'humano_validado'
+      createdAt: timestamp("created_at").defaultNow().notNull(),
+      updatedAt: timestamp("updated_at").defaultNow().notNull()
+    });
+    matchFeedback = pgTable("match_feedback", {
+      id: serial("id").primaryKey(),
+      matchId: integer("match_id").references(() => propertyMatches.id),
+      propertyId: integer("property_id").references(() => properties.id),
+      requirementId: integer("requirement_id").references(() => requirements.id),
+      action: varchar("action", { length: 50 }).notNull(),
+      // 'exitoso' | 'rechazado' | 'en_negociacion'
+      motivoRechazo: text("motivo_rechazo"),
+      notasBroker: text("notas_broker"),
+      ajustesGuardados: jsonb("ajustes_guardados"),
+      createdAt: timestamp("created_at").defaultNow().notNull()
     });
   }
 });
@@ -5301,6 +5329,7 @@ __export(janIA_exports, {
   buildSystemPrompt: () => buildSystemPrompt,
   calcularCalificacionCompletitud: () => calcularCalificacionCompletitud,
   clearPromptCache: () => clearPromptCache,
+  enrichLexiconFromText: () => enrichLexiconFromText,
   esMensajeSpamOBasura: () => esMensajeSpamOBasura,
   evaluateMultiItemHeuristics: () => evaluateMultiItemHeuristics,
   extractFallbackDataFromText: () => extractFallbackDataFromText,
@@ -5616,6 +5645,21 @@ function extractFallbackDataFromText(text2) {
   if (clean.includes("cocina cerrada")) kitchenType = "Cerrada";
   else if (clean.includes("cocina abierta")) kitchenType = "Abierta";
   else if (clean.includes("cocina tipo isla") || clean.includes("isla")) kitchenType = "Abierta tipo Isla";
+  const hasServiceRoom = clean.includes("cbs") || clean.includes("cuarto de servicio") || clean.includes("alcoba de servicio") || clean.includes("cuarto y ba\xF1o de servicio") || clean.includes("cuarto y bano de servicio") || clean.includes("cuarto de empleada") || clean.includes("alcoba para el servicio");
+  let floorType = null;
+  if (clean.includes("madera maciza") || clean.includes("madera natural") || clean.includes("granadillo")) floorType = "Madera Maciza";
+  else if (clean.includes("piso en madera") || clean.includes("pisos en madera") || clean.includes("piso de madera") || clean.includes("pisos de madera")) floorType = "Madera";
+  else if (clean.includes("laminado") || clean.includes("piso laminado")) floorType = "Laminado";
+  else if (clean.includes("porcelanato")) floorType = "Porcelanato";
+  else if (clean.includes("marmol") || clean.includes("m\xE1rmol")) floorType = "M\xE1rmol";
+  else if (clean.includes("ceramica") || clean.includes("cer\xE1mica")) floorType = "Cer\xE1mica";
+  let sunlightOrientation = null;
+  if (clean.includes("luz de la ma\xF1ana") || clean.includes("luz de manana") || clean.includes("sol de ma\xF1ana") || clean.includes("sol de manana")) sunlightOrientation = "Sol de Ma\xF1ana";
+  else if (clean.includes("sol de tarde") || clean.includes("luz de tarde")) sunlightOrientation = "Sol de Tarde";
+  else if (clean.includes("exterior iluminado") || clean.includes("super iluminado") || clean.includes("muy iluminado")) sunlightOrientation = "Exterior Iluminado";
+  const hasPowerPlant = clean.includes("planta electrica") || clean.includes("planta el\xE9ctrica") || clean.includes("suplencia total") || clean.includes("planta total") || clean.includes("planta de suplencia");
+  const hasVisitorParking = clean.includes("parqueadero de visitantes") || clean.includes("parqueadero para visitantes") || clean.includes("parqueaderos de visitantes") || clean.includes("parqueo visitantes");
+  const hasHeating = clean.includes("calentador de paso") || clean.includes("calentador a gas") || clean.includes("caldera");
   let city = "Bogot\xE1";
   if (clean.includes("cali") || clean.includes("melendez") || clean.includes("jardin") || clean.includes("pacifica")) {
     city = "Cali";
@@ -5664,11 +5708,56 @@ function extractFallbackDataFromText(text2) {
     hasStorage,
     hasElevator,
     kitchenType,
+    hasServiceRoom,
+    floorType,
+    sunlightOrientation,
+    hasPowerPlant,
+    hasVisitorParking,
+    hasHeating,
     city,
     ciudadDeseada: city,
     zone,
     zonaDeseada: zone
   };
+}
+async function enrichLexiconFromText(rawText) {
+  if (!rawText || rawText.length < 15) return;
+  const clean = rawText.toLowerCase();
+  const patterns = [
+    { match: /\b(cbs|cuarto\s+y\s+ba[ñn]o\s+de\s+servicio|alcoba\s+(?:para\s+el\s+)?servicio|cuarto\s+de\s+empleada)\b/i, cat: "espacio", can: "cuarto_bano_servicio" },
+    { match: /\b(cocina\s+(?:cerrada|abierta|tipo\s+isla|americana))\b/i, cat: "espacio", can: "tipologia_cocina" },
+    { match: /\b(pisos?\s*(?:en\s*)?(?:madera\s+maciza|madera|laminado|porcelanato|m[aá]rmol|cer[aá]mica))\b/i, cat: "acabado", can: "tipo_piso" },
+    { match: /\b(luz\s+de\s+(?:la\s+)?ma[ñn]ana|sol\s+de\s+(?:la\s+)?tarde|exterior\s+iluminado)\b/i, cat: "ambiente", can: "orientacion_asoleacion" },
+    { match: /\b(planta\s+el[eé]ctrica|suplencia\s+total|planta\s+total)\b/i, cat: "infraestructura", can: "planta_electrica" },
+    { match: /\b(parqueadero\s*(?:para\s*)?visitantes?|parqueo\s+visitantes?)\b/i, cat: "amenidad", can: "parqueadero_visitantes" },
+    { match: /\b(star\s+de\s+tv|hall\s+de\s+alcobas|estar\s+de\s+tv)\b/i, cat: "espacio", can: "estar_television" },
+    { match: /\b(calentador\s+de\s+paso|caldera\s+central)\b/i, cat: "equipamiento", can: "calentador_agua" },
+    { match: /\b(chimenea\s+(?:tradicional|a\s+gas|ecol[oó]gica))\b/i, cat: "equipamiento", can: "chimenea" }
+  ];
+  try {
+    const db = await getDb();
+    if (!db) return;
+    for (const p of patterns) {
+      const m = clean.match(p.match);
+      if (m && m[1]) {
+        const term = m[1].toLowerCase().trim();
+        await db.insert(inmobiliarioLexicon).values({
+          terminoColoquial: term,
+          categoria: p.cat,
+          conceptoCanonico: p.can,
+          frecuenciaUso: 1,
+          origen: "ia_autodescubierto"
+        }).onConflictDoUpdate({
+          target: inmobiliarioLexicon.terminoColoquial,
+          set: {
+            frecuenciaUso: sql3`${inmobiliarioLexicon.frecuenciaUso} + 1`,
+            updatedAt: /* @__PURE__ */ new Date()
+          }
+        });
+      }
+    }
+  } catch (e) {
+  }
 }
 function cleanSessionJid(jid) {
   if (!jid) return "";
@@ -12407,6 +12496,80 @@ ${liveStats}${userContextInstruction}
       propMatchesCount,
       reqMatchesCount
     };
+  }),
+  // Registrar Retroalimentación de Match (Capa C - Feedback Loop)
+  recordMatchFeedback: publicProcedure.input(z2.object({
+    matchId: z2.number().optional().nullable(),
+    propertyId: z2.number().optional().nullable(),
+    requirementId: z2.number().optional().nullable(),
+    action: z2.enum(["exitoso", "rechazado", "en_negociacion"]),
+    motivoRechazo: z2.string().optional().nullable(),
+    notasBroker: z2.string().optional().nullable(),
+    ajustesGuardados: z2.record(z2.any()).optional().nullable()
+  })).mutation(async ({ input }) => {
+    const db = await getDb();
+    if (!db) throw new Error("Base de datos no disponible");
+    try {
+      const [feedback] = await db.insert(matchFeedback).values({
+        matchId: input.matchId || null,
+        propertyId: input.propertyId || null,
+        requirementId: input.requirementId || null,
+        action: input.action,
+        motivoRechazo: input.motivoRechazo || null,
+        notasBroker: input.notasBroker || null,
+        ajustesGuardados: input.ajustesGuardados || null
+      }).returning();
+      if (input.matchId && input.action === "rechazado") {
+        await db.update(propertyMatches).set({ status: "rejected" }).where(eq5(propertyMatches.id, input.matchId));
+      }
+      console.log(`[JanIA-Feedback] Feedback registrado para Match #${input.matchId}: ${input.action} - ${input.motivoRechazo || "Sin motivo"}`);
+      return { success: true, feedbackId: feedback.id };
+    } catch (e) {
+      console.error("[JanIA-Feedback] Error guardando feedback:", e.message);
+      throw new Error(`Error guardando feedback: ${e.message}`);
+    }
+  }),
+  // Obtener Glosario y Léxico Vivo de JanIA (Capa B)
+  getInmobiliarioLexicon: publicProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) return [];
+    try {
+      const terms = await db.select().from(inmobiliarioLexicon2).orderBy(desc2(inmobiliarioLexicon2.frecuenciaUso)).limit(100);
+      return terms;
+    } catch (e) {
+      console.error("[JanIA-Lexicon] Error obteniendo l\xE9xico:", e.message);
+      return [];
+    }
+  }),
+  // Aprender o Registrar Nuevo Término Inmobiliario (Capa B)
+  learnNewLexiconTerm: publicProcedure.input(z2.object({
+    terminoColoquial: z2.string(),
+    categoria: z2.string(),
+    conceptoCanonico: z2.string(),
+    origen: z2.string().default("humano_validado")
+  })).mutation(async ({ input }) => {
+    const db = await getDb();
+    if (!db) throw new Error("Base de datos no disponible");
+    try {
+      const cleanTerm = input.terminoColoquial.toLowerCase().trim();
+      const [term] = await db.insert(inmobiliarioLexicon2).values({
+        terminoColoquial: cleanTerm,
+        categoria: input.categoria,
+        conceptoCanonico: input.conceptoCanonico,
+        frecuenciaUso: 1,
+        origen: input.origen
+      }).onConflictDoUpdate({
+        target: inmobiliarioLexicon2.terminoColoquial,
+        set: {
+          frecuenciaUso: sql4`${inmobiliarioLexicon2.frecuenciaUso} + 1`,
+          updatedAt: /* @__PURE__ */ new Date()
+        }
+      }).returning();
+      return { success: true, term };
+    } catch (e) {
+      console.error("[JanIA-Lexicon] Error registrando t\xE9rmino:", e.message);
+      throw new Error(`Error registrando t\xE9rmino: ${e.message}`);
+    }
   }),
   // Create lead from conversation
   createLead: publicProcedure.input(

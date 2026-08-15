@@ -162,10 +162,12 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v22.4 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL: v22.5 — Agosto 2026
 
-### Novedades v22.4:
-- **Blindaje Geográfico Antirreferencias Comerciales (`geography.ts`)**: Modificación de `deducirGeografiaTripartita` para ignorar y limpiar frases de proximidad comercial (*"A minutos de Hacienda Santa Bárbara"*, *"Cerca de"*, etc.) evitando que referencias publicitarias contaminen el barrio predial real.
-- **Priorización de Complejos Residenciales y Longitud Descendente**: Reconocimiento directo de complejos (*"Balcones de Medina"* $\rightarrow$ *Bosque Medina, Usaquén*) y ordenamiento de búsqueda por longitud descendente de barrio.
-- **Corrección de Datos Prediales Propiedad #409**: Actualización en Supabase de `zone = 'Bosque Medina'` y `address_neighborhood = 'Bosque Medina'`. Eliminación de falso match contra Santa Bárbara.
-- **Doctrina del 100% al 80% en Cotejo Técnico**: Todos los campos coincidentes en verde producen 100% Match Perfecto; las diferencias graduales en atributos no críticos reducen proporcionalmente hasta el límite del 80%. Las incompatibilidades de barrio, negocio o física menor (`Oferta < Demanda`) producen 0% Match / Bloqueo Absoluto.
+### Novedades v22.5:
+- **Independencia Total de Botones en Modo Edición (`AdminMatches.tsx`)**:
+  - `💾 Guardar Cambios (Modo Chat)`: Guarda en Supabase (`properties` y `requirements`), actualiza la ficha y el puntaje en vivo en pantalla (permitiendo alcanzar el 100% Match manual si todo coincide en verde) sin desvincular la pareja actual.
+  - `⚡ Recalcular Match (Buscar Nueva Pareja)`: Guarda los cambios y ejecuta el motor global de búsqueda para cruzar las fichas robustecidas contra toda la base de datos de la red.
+- **Capa A: Matriz de Cotejo Dinámica y Elástica**: Inserción adaptativa en vivo de filas para Cocina *(Cerrada/Abierta/Isla)*, Cuarto y Baño de Servicio *(CBS)*, Acabado de Pisos *(Madera/Laminado/Mármol)*, Asoleación *(Sol de mañana/tarde/exterior)*, Planta Eléctrica *(Total/Parcial)* y Parqueadero de Visitantes.
+- **Capa B: Memoria y Diccionario Semántico Evolutivo (`inmobiliario_lexicon`)**: JanIA auto-aprende a diario la jerga y modismos inmobiliarios colombianos (*"cbs"*, *"pelo a pelo"*, *"star de tv"*, *"cuarto de empleada"*), normalizándolos a conceptos canónicos en Supabase.
+- **Capa C: Bucle de Retroalimentación de Brokers (`match_feedback`)**: Botones 👍 *"🤝 Trato en Curso"* y 👎 *"⛔ Descartar Match"* con modal de motivos para entrenar y calibrar continuamente las decisiones de la IA.
