@@ -107,9 +107,22 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
     - **Flujo Garantizado**:
       - **En tiempo real**: Cada nuevo inmueble o requerimiento extraído por JanIA ejecuta `executeMatchEngine`, insertando de inmediato cualquier coincidencia $\ge 85\%$ en `propertyMatches`.
       - **Visualización en Vivo**: El panel de administración (`/admin` $\rightarrow$ Coincidencias) lee directamente de Supabase mediante `janIA.getAllMatches`, reflejando cada oportunidad de negocio al instante con su mesa de cotejo y teléfonos de contacto.
-      - **Barrido Diario**: El cron de las 8:00 AM (`runNightlyRematch`) re-evalúa y actualiza continuamente todo el universo de propiedades y demandas activas.
+14. **Diagnóstico Detallado de la Advertencia de Supabase (Egress / Salida de Red)**:
+    - Eduardo compartió la captura de pantalla de Supabase (`Usage Summary`) donde se advierte que la organización superó la cuota en el ciclo anterior por **Exceso de Salida (Egress: 10.76 GB de 5 GB - 215%)**.
+    - **Causa Raíz Identificada**: El espacio en disco está perfecto (solo 56 MB de 500 MB - 11%). El Egress fue consumido en ciclos pasados por:
+      1) Descargas y consultas repetitivas de polígonos pesados de PostGIS sobre la red.
+      2) Intervalos agresivos de refresco en el frontend (`refetchInterval: 10000`, 10 segundos) cuando las pestañas de administración quedaban abiertas.
+    - **Acciones Correctivas Inmediatas Implementadas**:
+      1) Veredas (33.434) y Municipios (1.122) trasladados a **RAM local en memoria** (cero bytes de Egress hacia Supabase).
+      2) Intervalos de refresco en `AdminProperties`, `AdminRequirements`, `Admin.tsx` y `AdminGitHubSync` optimizados a 30s/60s con `refetchOnWindowFocus: false`.
+    - **Período de Gracia**: Supabase otorga un período de gracia hasta el **13 de septiembre de 2026**. Con las optimizaciones aplicadas, el consumo mensual caerá a menos de 500 MB (<10% del límite de 5 GB), garantizando funcionamiento continuo sin bloqueos.
+15. **Guía de Permisos en el Modal del IDE**:
+    - Eduardo consultó cuál opción elegir preferiblemente ante los cuadros de confirmación de comandos (`git push origin main`).
+    - **Recomendación**: Elegir **Opción 2 ("Yes, and always allow in this conversation")** u **Opción 3 ("Yes, and always allow")** para permitir que las sincronizaciones y despliegues automáticos a GitHub y VPS fluyan sin interrupciones.
 
 #### 🛠️ Diagnósticos y Acciones Técnicas Ejecutadas:
+- **Optimización de Egress en Frontend React (`AdminProperties.tsx`, `AdminRequirements.tsx`, `Admin.tsx`, `AdminGitHubSync.tsx`)**:
+  - Ajustados los intervalos de refresco y desactivado el refetch en segundo plano para ahorrar ancho de banda.
 - **Depuración y Deduplicación Segura en Supabase (`cleanup_database.ts`)**:
   - Purgados registros de spam y duplicados redundantes mediante eliminación en cascada de llaves foráneas.
   - Base de datos 100% limpia y operativa con 651 propiedades y 310 requerimientos.
