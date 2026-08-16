@@ -24,7 +24,7 @@ export default function AdminGitHubSync() {
     retry: false,
   });
 
-  const { data: syncStatus, refetch } = trpc.janIA.getGitHubSyncStatus.useQuery(undefined, {
+  const syncStatus = trpc.github.getSyncStatus.useQuery(undefined, {
     refetchInterval: 30000,
     refetchOnWindowFocus: false,
   });
