@@ -119,6 +119,9 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 15. **Guía de Permisos en el Modal del IDE**:
     - Eduardo consultó cuál opción elegir preferiblemente ante los cuadros de confirmación de comandos (`git push origin main`).
     - **Recomendación**: Elegir **Opción 2 ("Yes, and always allow in this conversation")** u **Opción 3 ("Yes, and always allow")** para permitir que las sincronizaciones y despliegues automáticos a GitHub y VPS fluyan sin interrupciones.
+16. **Auditoría de Linter de Seguridad Supabase (`public.spatial_ref_sys`)**:
+    - Se evaluó la advertencia *"RLS Disabled in Public"* para la tabla `public.spatial_ref_sys`.
+    - **Diagnóstico**: Es una tabla de catálogo del sistema creada automáticamente por la extensión espacial **PostGIS** de PostgreSQL con códigos de coordenadas EPSG. No contiene datos sensibles ni de usuarios (riesgo cero). Se documentó el comando SQL para el SQL Editor de Supabase en caso de requerir linter 100% verde.
 
 #### 🛠️ Diagnósticos y Acciones Técnicas Ejecutadas:
 - **Optimización de Egress en Frontend React (`AdminProperties.tsx`, `AdminRequirements.tsx`, `Admin.tsx`, `AdminGitHubSync.tsx`)**:
