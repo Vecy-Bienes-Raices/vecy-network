@@ -68,7 +68,8 @@ export default function AdminProperties() {
   };
 
   const { data: properties, isLoading, refetch } = trpc.properties.myList.useQuery(undefined, {
-    refetchInterval: 10000,
+    refetchInterval: 60000,
+    refetchOnWindowFocus: false,
   });
 
 

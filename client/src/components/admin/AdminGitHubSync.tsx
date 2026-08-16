@@ -24,8 +24,9 @@ export default function AdminGitHubSync() {
     retry: false,
   });
 
-  const syncStatus = trpc.github.getSyncStatus.useQuery(undefined, {
-    refetchInterval: 5000, // Actualizar cada 5 segundos
+  const { data: syncStatus, refetch } = trpc.janIA.getGitHubSyncStatus.useQuery(undefined, {
+    refetchInterval: 30000,
+    refetchOnWindowFocus: false,
   });
 
   // Mutations
