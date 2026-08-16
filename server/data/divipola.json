@@ -1,0 +1,7856 @@
+[
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05001",
+    "municipio": "MEDELLÍN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05002",
+    "municipio": "ABEJORRAL",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05004",
+    "municipio": "ABRIAQUÍ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05021",
+    "municipio": "ALEJANDRÍA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05030",
+    "municipio": "AMAGÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05031",
+    "municipio": "AMALFI",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05034",
+    "municipio": "ANDES",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05036",
+    "municipio": "ANGELÓPOLIS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05038",
+    "municipio": "ANGOSTURA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05040",
+    "municipio": "ANORÍ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05042",
+    "municipio": "SANTA FÉ DE ANTIOQUIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05044",
+    "municipio": "ANZÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05045",
+    "municipio": "APARTADÓ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05051",
+    "municipio": "ARBOLETES",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05055",
+    "municipio": "ARGELIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05059",
+    "municipio": "ARMENIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05079",
+    "municipio": "BARBOSA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05086",
+    "municipio": "BELMIRA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05088",
+    "municipio": "BELLO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05091",
+    "municipio": "BETANIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05093",
+    "municipio": "BETULIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05101",
+    "municipio": "CIUDAD BOLÍVAR",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05107",
+    "municipio": "BRICEÑO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05113",
+    "municipio": "BURITICÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05120",
+    "municipio": "CÁCERES",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05125",
+    "municipio": "CAICEDO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05129",
+    "municipio": "CALDAS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05134",
+    "municipio": "CAMPAMENTO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05138",
+    "municipio": "CAÑASGORDAS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05142",
+    "municipio": "CARACOLÍ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05145",
+    "municipio": "CARAMANTA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05147",
+    "municipio": "CAREPA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05148",
+    "municipio": "EL CARMEN DE VIBORAL",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05150",
+    "municipio": "CAROLINA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05154",
+    "municipio": "CAUCASIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05172",
+    "municipio": "CHIGORODÓ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05190",
+    "municipio": "CISNEROS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05197",
+    "municipio": "COCORNÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05206",
+    "municipio": "CONCEPCIÓN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05209",
+    "municipio": "CONCORDIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05212",
+    "municipio": "COPACABANA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05234",
+    "municipio": "DABEIBA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05237",
+    "municipio": "DONMATÍAS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05240",
+    "municipio": "EBÉJICO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05250",
+    "municipio": "EL BAGRE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05264",
+    "municipio": "ENTRERRÍOS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05266",
+    "municipio": "ENVIGADO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05282",
+    "municipio": "FREDONIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05284",
+    "municipio": "FRONTINO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05306",
+    "municipio": "GIRALDO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05308",
+    "municipio": "GIRARDOTA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05310",
+    "municipio": "GÓMEZ PLATA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05313",
+    "municipio": "GRANADA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05315",
+    "municipio": "GUADALUPE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05318",
+    "municipio": "GUARNE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05321",
+    "municipio": "GUATAPÉ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05347",
+    "municipio": "HELICONIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05353",
+    "municipio": "HISPANIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05360",
+    "municipio": "ITAGÜÍ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05361",
+    "municipio": "ITUANGO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05364",
+    "municipio": "JARDÍN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05368",
+    "municipio": "JERICÓ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05376",
+    "municipio": "LA CEJA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05380",
+    "municipio": "LA ESTRELLA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05390",
+    "municipio": "LA PINTADA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05400",
+    "municipio": "LA UNIÓN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05411",
+    "municipio": "LIBORINA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05425",
+    "municipio": "MACEO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05440",
+    "municipio": "MARINILLA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05467",
+    "municipio": "MONTEBELLO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05475",
+    "municipio": "MURINDÓ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05480",
+    "municipio": "MUTATÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05483",
+    "municipio": "NARIÑO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05490",
+    "municipio": "NECOCLÍ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05495",
+    "municipio": "NECHÍ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05501",
+    "municipio": "OLAYA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05541",
+    "municipio": "PEÑOL",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05543",
+    "municipio": "PEQUE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05576",
+    "municipio": "PUEBLORRICO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05579",
+    "municipio": "PUERTO BERRÍO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05585",
+    "municipio": "PUERTO NARE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05591",
+    "municipio": "PUERTO TRIUNFO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05604",
+    "municipio": "REMEDIOS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05607",
+    "municipio": "RETIRO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05615",
+    "municipio": "RIONEGRO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05628",
+    "municipio": "SABANALARGA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05631",
+    "municipio": "SABANETA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05642",
+    "municipio": "SALGAR",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05647",
+    "municipio": "SAN ANDRÉS DE CUERQUÍA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05649",
+    "municipio": "SAN CARLOS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05652",
+    "municipio": "SAN FRANCISCO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05656",
+    "municipio": "SAN JERÓNIMO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05658",
+    "municipio": "SAN JOSÉ DE LA MONTAÑA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05659",
+    "municipio": "SAN JUAN DE URABÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05660",
+    "municipio": "SAN LUIS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05664",
+    "municipio": "SAN PEDRO DE LOS MILAGROS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05665",
+    "municipio": "SAN PEDRO DE URABÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05667",
+    "municipio": "SAN RAFAEL",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05670",
+    "municipio": "SAN ROQUE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05674",
+    "municipio": "SAN VICENTE FERRER",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05679",
+    "municipio": "SANTA BÁRBARA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05686",
+    "municipio": "SANTA ROSA DE OSOS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05690",
+    "municipio": "SANTO DOMINGO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05697",
+    "municipio": "EL SANTUARIO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05736",
+    "municipio": "SEGOVIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05756",
+    "municipio": "SONSÓN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05761",
+    "municipio": "SOPETRÁN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05789",
+    "municipio": "TÁMESIS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05790",
+    "municipio": "TARAZÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05792",
+    "municipio": "TARSO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05809",
+    "municipio": "TITIRIBÍ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05819",
+    "municipio": "TOLEDO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05837",
+    "municipio": "TURBO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05842",
+    "municipio": "URAMITA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05847",
+    "municipio": "URRAO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05854",
+    "municipio": "VALDIVIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05856",
+    "municipio": "VALPARAÍSO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05858",
+    "municipio": "VEGACHÍ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05861",
+    "municipio": "VENECIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05873",
+    "municipio": "VIGÍA DEL FUERTE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05885",
+    "municipio": "YALÍ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05887",
+    "municipio": "YARUMAL",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05890",
+    "municipio": "YOLOMBÓ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05893",
+    "municipio": "YONDÓ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "05",
+    "departamento": "ANTIOQUIA",
+    "codigoMpio": "05895",
+    "municipio": "ZARAGOZA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "08",
+    "departamento": "ATLÁNTICO",
+    "codigoMpio": "08001",
+    "municipio": "BARRANQUILLA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "08",
+    "departamento": "ATLÁNTICO",
+    "codigoMpio": "08078",
+    "municipio": "BARANOA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "08",
+    "departamento": "ATLÁNTICO",
+    "codigoMpio": "08137",
+    "municipio": "CAMPO DE LA CRUZ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "08",
+    "departamento": "ATLÁNTICO",
+    "codigoMpio": "08141",
+    "municipio": "CANDELARIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "08",
+    "departamento": "ATLÁNTICO",
+    "codigoMpio": "08296",
+    "municipio": "GALAPA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "08",
+    "departamento": "ATLÁNTICO",
+    "codigoMpio": "08372",
+    "municipio": "JUAN DE ACOSTA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "08",
+    "departamento": "ATLÁNTICO",
+    "codigoMpio": "08421",
+    "municipio": "LURUACO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "08",
+    "departamento": "ATLÁNTICO",
+    "codigoMpio": "08433",
+    "municipio": "MALAMBO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "08",
+    "departamento": "ATLÁNTICO",
+    "codigoMpio": "08436",
+    "municipio": "MANATÍ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "08",
+    "departamento": "ATLÁNTICO",
+    "codigoMpio": "08520",
+    "municipio": "PALMAR DE VARELA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "08",
+    "departamento": "ATLÁNTICO",
+    "codigoMpio": "08549",
+    "municipio": "PIOJÓ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "08",
+    "departamento": "ATLÁNTICO",
+    "codigoMpio": "08558",
+    "municipio": "POLONUEVO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "08",
+    "departamento": "ATLÁNTICO",
+    "codigoMpio": "08560",
+    "municipio": "PONEDERA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "08",
+    "departamento": "ATLÁNTICO",
+    "codigoMpio": "08573",
+    "municipio": "PUERTO COLOMBIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "08",
+    "departamento": "ATLÁNTICO",
+    "codigoMpio": "08606",
+    "municipio": "REPELÓN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "08",
+    "departamento": "ATLÁNTICO",
+    "codigoMpio": "08634",
+    "municipio": "SABANAGRANDE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "08",
+    "departamento": "ATLÁNTICO",
+    "codigoMpio": "08638",
+    "municipio": "SABANALARGA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "08",
+    "departamento": "ATLÁNTICO",
+    "codigoMpio": "08675",
+    "municipio": "SANTA LUCÍA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "08",
+    "departamento": "ATLÁNTICO",
+    "codigoMpio": "08685",
+    "municipio": "SANTO TOMÁS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "08",
+    "departamento": "ATLÁNTICO",
+    "codigoMpio": "08758",
+    "municipio": "SOLEDAD",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "08",
+    "departamento": "ATLÁNTICO",
+    "codigoMpio": "08770",
+    "municipio": "SUAN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "08",
+    "departamento": "ATLÁNTICO",
+    "codigoMpio": "08832",
+    "municipio": "TUBARÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "08",
+    "departamento": "ATLÁNTICO",
+    "codigoMpio": "08849",
+    "municipio": "USIACURÍ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "11",
+    "departamento": "BOGOTÁ, D.C.",
+    "codigoMpio": "11001",
+    "municipio": "BOGOTÁ, D.C.",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "13",
+    "departamento": "BOLÍVAR",
+    "codigoMpio": "13001",
+    "municipio": "CARTAGENA DE INDIAS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "13",
+    "departamento": "BOLÍVAR",
+    "codigoMpio": "13006",
+    "municipio": "ACHÍ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "13",
+    "departamento": "BOLÍVAR",
+    "codigoMpio": "13030",
+    "municipio": "ALTOS DEL ROSARIO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "13",
+    "departamento": "BOLÍVAR",
+    "codigoMpio": "13042",
+    "municipio": "ARENAL",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "13",
+    "departamento": "BOLÍVAR",
+    "codigoMpio": "13052",
+    "municipio": "ARJONA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "13",
+    "departamento": "BOLÍVAR",
+    "codigoMpio": "13062",
+    "municipio": "ARROYOHONDO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "13",
+    "departamento": "BOLÍVAR",
+    "codigoMpio": "13074",
+    "municipio": "BARRANCO DE LOBA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "13",
+    "departamento": "BOLÍVAR",
+    "codigoMpio": "13140",
+    "municipio": "CALAMAR",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "13",
+    "departamento": "BOLÍVAR",
+    "codigoMpio": "13160",
+    "municipio": "CANTAGALLO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "13",
+    "departamento": "BOLÍVAR",
+    "codigoMpio": "13188",
+    "municipio": "CICUCO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "13",
+    "departamento": "BOLÍVAR",
+    "codigoMpio": "13212",
+    "municipio": "CÓRDOBA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "13",
+    "departamento": "BOLÍVAR",
+    "codigoMpio": "13222",
+    "municipio": "CLEMENCIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "13",
+    "departamento": "BOLÍVAR",
+    "codigoMpio": "13244",
+    "municipio": "EL CARMEN DE BOLÍVAR",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "13",
+    "departamento": "BOLÍVAR",
+    "codigoMpio": "13248",
+    "municipio": "EL GUAMO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "13",
+    "departamento": "BOLÍVAR",
+    "codigoMpio": "13268",
+    "municipio": "EL PEÑÓN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "13",
+    "departamento": "BOLÍVAR",
+    "codigoMpio": "13300",
+    "municipio": "HATILLO DE LOBA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "13",
+    "departamento": "BOLÍVAR",
+    "codigoMpio": "13430",
+    "municipio": "MAGANGUÉ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "13",
+    "departamento": "BOLÍVAR",
+    "codigoMpio": "13433",
+    "municipio": "MAHATES",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "13",
+    "departamento": "BOLÍVAR",
+    "codigoMpio": "13440",
+    "municipio": "MARGARITA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "13",
+    "departamento": "BOLÍVAR",
+    "codigoMpio": "13442",
+    "municipio": "MARÍA LA BAJA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "13",
+    "departamento": "BOLÍVAR",
+    "codigoMpio": "13458",
+    "municipio": "MONTECRISTO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "13",
+    "departamento": "BOLÍVAR",
+    "codigoMpio": "13468",
+    "municipio": "SANTA CRUZ DE MOMPOX",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "13",
+    "departamento": "BOLÍVAR",
+    "codigoMpio": "13473",
+    "municipio": "MORALES",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "13",
+    "departamento": "BOLÍVAR",
+    "codigoMpio": "13490",
+    "municipio": "NOROSÍ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "13",
+    "departamento": "BOLÍVAR",
+    "codigoMpio": "13549",
+    "municipio": "PINILLOS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "13",
+    "departamento": "BOLÍVAR",
+    "codigoMpio": "13580",
+    "municipio": "REGIDOR",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "13",
+    "departamento": "BOLÍVAR",
+    "codigoMpio": "13600",
+    "municipio": "RÍO VIEJO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "13",
+    "departamento": "BOLÍVAR",
+    "codigoMpio": "13620",
+    "municipio": "SAN CRISTÓBAL",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "13",
+    "departamento": "BOLÍVAR",
+    "codigoMpio": "13647",
+    "municipio": "SAN ESTANISLAO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "13",
+    "departamento": "BOLÍVAR",
+    "codigoMpio": "13650",
+    "municipio": "SAN FERNANDO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "13",
+    "departamento": "BOLÍVAR",
+    "codigoMpio": "13654",
+    "municipio": "SAN JACINTO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "13",
+    "departamento": "BOLÍVAR",
+    "codigoMpio": "13655",
+    "municipio": "SAN JACINTO DEL CAUCA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "13",
+    "departamento": "BOLÍVAR",
+    "codigoMpio": "13657",
+    "municipio": "SAN JUAN NEPOMUCENO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "13",
+    "departamento": "BOLÍVAR",
+    "codigoMpio": "13667",
+    "municipio": "SAN MARTÍN DE LOBA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "13",
+    "departamento": "BOLÍVAR",
+    "codigoMpio": "13670",
+    "municipio": "SAN PABLO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "13",
+    "departamento": "BOLÍVAR",
+    "codigoMpio": "13673",
+    "municipio": "SANTA CATALINA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "13",
+    "departamento": "BOLÍVAR",
+    "codigoMpio": "13683",
+    "municipio": "SANTA ROSA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "13",
+    "departamento": "BOLÍVAR",
+    "codigoMpio": "13688",
+    "municipio": "SANTA ROSA DEL SUR",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "13",
+    "departamento": "BOLÍVAR",
+    "codigoMpio": "13744",
+    "municipio": "SIMITÍ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "13",
+    "departamento": "BOLÍVAR",
+    "codigoMpio": "13760",
+    "municipio": "SOPLAVIENTO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "13",
+    "departamento": "BOLÍVAR",
+    "codigoMpio": "13780",
+    "municipio": "TALAIGUA NUEVO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "13",
+    "departamento": "BOLÍVAR",
+    "codigoMpio": "13810",
+    "municipio": "TIQUISIO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "13",
+    "departamento": "BOLÍVAR",
+    "codigoMpio": "13836",
+    "municipio": "TURBACO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "13",
+    "departamento": "BOLÍVAR",
+    "codigoMpio": "13838",
+    "municipio": "TURBANÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "13",
+    "departamento": "BOLÍVAR",
+    "codigoMpio": "13873",
+    "municipio": "VILLANUEVA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "13",
+    "departamento": "BOLÍVAR",
+    "codigoMpio": "13894",
+    "municipio": "ZAMBRANO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15001",
+    "municipio": "TUNJA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15022",
+    "municipio": "ALMEIDA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15047",
+    "municipio": "AQUITANIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15051",
+    "municipio": "ARCABUCO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15087",
+    "municipio": "BELÉN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15090",
+    "municipio": "BERBEO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15092",
+    "municipio": "BETÉITIVA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15097",
+    "municipio": "BOAVITA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15104",
+    "municipio": "BOYACÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15106",
+    "municipio": "BRICEÑO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15109",
+    "municipio": "BUENAVISTA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15114",
+    "municipio": "BUSBANZÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15131",
+    "municipio": "CALDAS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15135",
+    "municipio": "CAMPOHERMOSO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15162",
+    "municipio": "CERINZA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15172",
+    "municipio": "CHINAVITA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15176",
+    "municipio": "CHIQUINQUIRÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15180",
+    "municipio": "CHISCAS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15183",
+    "municipio": "CHITA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15185",
+    "municipio": "CHITARAQUE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15187",
+    "municipio": "CHIVATÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15189",
+    "municipio": "CIÉNEGA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15204",
+    "municipio": "CÓMBITA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15212",
+    "municipio": "COPER",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15215",
+    "municipio": "CORRALES",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15218",
+    "municipio": "COVARACHÍA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15223",
+    "municipio": "CUBARÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15224",
+    "municipio": "CUCAITA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15226",
+    "municipio": "CUÍTIVA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15232",
+    "municipio": "CHÍQUIZA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15236",
+    "municipio": "CHIVOR",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15238",
+    "municipio": "DUITAMA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15244",
+    "municipio": "EL COCUY",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15248",
+    "municipio": "EL ESPINO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15272",
+    "municipio": "FIRAVITOBA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15276",
+    "municipio": "FLORESTA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15293",
+    "municipio": "GACHANTIVÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15296",
+    "municipio": "GÁMEZA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15299",
+    "municipio": "GARAGOA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15317",
+    "municipio": "GUACAMAYAS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15322",
+    "municipio": "GUATEQUE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15325",
+    "municipio": "GUAYATÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15332",
+    "municipio": "GÜICÁN DE LA SIERRA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15362",
+    "municipio": "IZA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15367",
+    "municipio": "JENESANO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15368",
+    "municipio": "JERICÓ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15377",
+    "municipio": "LABRANZAGRANDE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15380",
+    "municipio": "LA CAPILLA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15401",
+    "municipio": "LA VICTORIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15403",
+    "municipio": "LA UVITA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15407",
+    "municipio": "VILLA DE LEYVA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15425",
+    "municipio": "MACANAL",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15442",
+    "municipio": "MARIPÍ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15455",
+    "municipio": "MIRAFLORES",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15464",
+    "municipio": "MONGUA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15466",
+    "municipio": "MONGUÍ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15469",
+    "municipio": "MONIQUIRÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15476",
+    "municipio": "MOTAVITA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15480",
+    "municipio": "MUZO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15491",
+    "municipio": "NOBSA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15494",
+    "municipio": "NUEVO COLÓN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15500",
+    "municipio": "OICATÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15507",
+    "municipio": "OTANCHE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15511",
+    "municipio": "PACHAVITA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15514",
+    "municipio": "PÁEZ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15516",
+    "municipio": "PAIPA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15518",
+    "municipio": "PAJARITO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15522",
+    "municipio": "PANQUEBA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15531",
+    "municipio": "PAUNA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15533",
+    "municipio": "PAYA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15537",
+    "municipio": "PAZ DE RÍO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15542",
+    "municipio": "PESCA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15550",
+    "municipio": "PISBA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15572",
+    "municipio": "PUERTO BOYACÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15580",
+    "municipio": "QUÍPAMA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15599",
+    "municipio": "RAMIRIQUÍ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15600",
+    "municipio": "RÁQUIRA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15621",
+    "municipio": "RONDÓN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15632",
+    "municipio": "SABOYÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15638",
+    "municipio": "SÁCHICA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15646",
+    "municipio": "SAMACÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15660",
+    "municipio": "SAN EDUARDO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15664",
+    "municipio": "SAN JOSÉ DE PARE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15667",
+    "municipio": "SAN LUIS DE GACENO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15673",
+    "municipio": "SAN MATEO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15676",
+    "municipio": "SAN MIGUEL DE SEMA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15681",
+    "municipio": "SAN PABLO DE BORBUR",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15686",
+    "municipio": "SANTANA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15690",
+    "municipio": "SANTA MARÍA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15693",
+    "municipio": "SANTA ROSA DE VITERBO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15696",
+    "municipio": "SANTA SOFÍA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15720",
+    "municipio": "SATIVANORTE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15723",
+    "municipio": "SATIVASUR",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15740",
+    "municipio": "SIACHOQUE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15753",
+    "municipio": "SOATÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15755",
+    "municipio": "SOCOTÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15757",
+    "municipio": "SOCHA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15759",
+    "municipio": "SOGAMOSO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15761",
+    "municipio": "SOMONDOCO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15762",
+    "municipio": "SORA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15763",
+    "municipio": "SOTAQUIRÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15764",
+    "municipio": "SORACÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15774",
+    "municipio": "SUSACÓN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15776",
+    "municipio": "SUTAMARCHÁN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15778",
+    "municipio": "SUTATENZA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15790",
+    "municipio": "TASCO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15798",
+    "municipio": "TENZA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15804",
+    "municipio": "TIBANÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15806",
+    "municipio": "TIBASOSA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15808",
+    "municipio": "TINJACÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15810",
+    "municipio": "TIPACOQUE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15814",
+    "municipio": "TOCA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15816",
+    "municipio": "TOGÜÍ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15820",
+    "municipio": "TÓPAGA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15822",
+    "municipio": "TOTA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15832",
+    "municipio": "TUNUNGUÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15835",
+    "municipio": "TURMEQUÉ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15837",
+    "municipio": "TUTA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15839",
+    "municipio": "TUTAZÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15842",
+    "municipio": "ÚMBITA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15861",
+    "municipio": "VENTAQUEMADA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15879",
+    "municipio": "VIRACACHÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "15",
+    "departamento": "BOYACÁ",
+    "codigoMpio": "15897",
+    "municipio": "ZETAQUIRA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "17",
+    "departamento": "CALDAS",
+    "codigoMpio": "17001",
+    "municipio": "MANIZALES",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "17",
+    "departamento": "CALDAS",
+    "codigoMpio": "17013",
+    "municipio": "AGUADAS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "17",
+    "departamento": "CALDAS",
+    "codigoMpio": "17042",
+    "municipio": "ANSERMA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "17",
+    "departamento": "CALDAS",
+    "codigoMpio": "17050",
+    "municipio": "ARANZAZU",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "17",
+    "departamento": "CALDAS",
+    "codigoMpio": "17088",
+    "municipio": "BELALCÁZAR",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "17",
+    "departamento": "CALDAS",
+    "codigoMpio": "17174",
+    "municipio": "CHINCHINÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "17",
+    "departamento": "CALDAS",
+    "codigoMpio": "17272",
+    "municipio": "FILADELFIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "17",
+    "departamento": "CALDAS",
+    "codigoMpio": "17380",
+    "municipio": "LA DORADA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "17",
+    "departamento": "CALDAS",
+    "codigoMpio": "17388",
+    "municipio": "LA MERCED",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "17",
+    "departamento": "CALDAS",
+    "codigoMpio": "17433",
+    "municipio": "MANZANARES",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "17",
+    "departamento": "CALDAS",
+    "codigoMpio": "17442",
+    "municipio": "MARMATO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "17",
+    "departamento": "CALDAS",
+    "codigoMpio": "17444",
+    "municipio": "MARQUETALIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "17",
+    "departamento": "CALDAS",
+    "codigoMpio": "17446",
+    "municipio": "MARULANDA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "17",
+    "departamento": "CALDAS",
+    "codigoMpio": "17486",
+    "municipio": "NEIRA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "17",
+    "departamento": "CALDAS",
+    "codigoMpio": "17495",
+    "municipio": "NORCASIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "17",
+    "departamento": "CALDAS",
+    "codigoMpio": "17513",
+    "municipio": "PÁCORA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "17",
+    "departamento": "CALDAS",
+    "codigoMpio": "17524",
+    "municipio": "PALESTINA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "17",
+    "departamento": "CALDAS",
+    "codigoMpio": "17541",
+    "municipio": "PENSILVANIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "17",
+    "departamento": "CALDAS",
+    "codigoMpio": "17614",
+    "municipio": "RIOSUCIO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "17",
+    "departamento": "CALDAS",
+    "codigoMpio": "17616",
+    "municipio": "RISARALDA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "17",
+    "departamento": "CALDAS",
+    "codigoMpio": "17653",
+    "municipio": "SALAMINA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "17",
+    "departamento": "CALDAS",
+    "codigoMpio": "17662",
+    "municipio": "SAMANÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "17",
+    "departamento": "CALDAS",
+    "codigoMpio": "17665",
+    "municipio": "SAN JOSÉ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "17",
+    "departamento": "CALDAS",
+    "codigoMpio": "17777",
+    "municipio": "SUPÍA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "17",
+    "departamento": "CALDAS",
+    "codigoMpio": "17867",
+    "municipio": "VICTORIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "17",
+    "departamento": "CALDAS",
+    "codigoMpio": "17873",
+    "municipio": "VILLAMARÍA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "17",
+    "departamento": "CALDAS",
+    "codigoMpio": "17877",
+    "municipio": "VITERBO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "18",
+    "departamento": "CAQUETÁ",
+    "codigoMpio": "18001",
+    "municipio": "FLORENCIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "18",
+    "departamento": "CAQUETÁ",
+    "codigoMpio": "18029",
+    "municipio": "ALBANIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "18",
+    "departamento": "CAQUETÁ",
+    "codigoMpio": "18094",
+    "municipio": "BELÉN DE LOS ANDAQUÍES",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "18",
+    "departamento": "CAQUETÁ",
+    "codigoMpio": "18150",
+    "municipio": "CARTAGENA DEL CHAIRÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "18",
+    "departamento": "CAQUETÁ",
+    "codigoMpio": "18205",
+    "municipio": "CURILLO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "18",
+    "departamento": "CAQUETÁ",
+    "codigoMpio": "18247",
+    "municipio": "EL DONCELLO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "18",
+    "departamento": "CAQUETÁ",
+    "codigoMpio": "18256",
+    "municipio": "EL PAUJÍL",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "18",
+    "departamento": "CAQUETÁ",
+    "codigoMpio": "18410",
+    "municipio": "LA MONTAÑITA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "18",
+    "departamento": "CAQUETÁ",
+    "codigoMpio": "18460",
+    "municipio": "MILÁN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "18",
+    "departamento": "CAQUETÁ",
+    "codigoMpio": "18479",
+    "municipio": "MORELIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "18",
+    "departamento": "CAQUETÁ",
+    "codigoMpio": "18592",
+    "municipio": "PUERTO RICO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "18",
+    "departamento": "CAQUETÁ",
+    "codigoMpio": "18610",
+    "municipio": "SAN JOSÉ DEL FRAGUA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "18",
+    "departamento": "CAQUETÁ",
+    "codigoMpio": "18753",
+    "municipio": "SAN VICENTE DEL CAGUÁN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "18",
+    "departamento": "CAQUETÁ",
+    "codigoMpio": "18756",
+    "municipio": "SOLANO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "18",
+    "departamento": "CAQUETÁ",
+    "codigoMpio": "18785",
+    "municipio": "SOLITA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "18",
+    "departamento": "CAQUETÁ",
+    "codigoMpio": "18860",
+    "municipio": "VALPARAÍSO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "19",
+    "departamento": "CAUCA",
+    "codigoMpio": "19001",
+    "municipio": "POPAYÁN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "19",
+    "departamento": "CAUCA",
+    "codigoMpio": "19022",
+    "municipio": "ALMAGUER",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "19",
+    "departamento": "CAUCA",
+    "codigoMpio": "19050",
+    "municipio": "ARGELIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "19",
+    "departamento": "CAUCA",
+    "codigoMpio": "19075",
+    "municipio": "BALBOA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "19",
+    "departamento": "CAUCA",
+    "codigoMpio": "19100",
+    "municipio": "BOLÍVAR",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "19",
+    "departamento": "CAUCA",
+    "codigoMpio": "19110",
+    "municipio": "BUENOS AIRES",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "19",
+    "departamento": "CAUCA",
+    "codigoMpio": "19130",
+    "municipio": "CAJIBÍO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "19",
+    "departamento": "CAUCA",
+    "codigoMpio": "19137",
+    "municipio": "CALDONO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "19",
+    "departamento": "CAUCA",
+    "codigoMpio": "19142",
+    "municipio": "CALOTO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "19",
+    "departamento": "CAUCA",
+    "codigoMpio": "19212",
+    "municipio": "CORINTO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "19",
+    "departamento": "CAUCA",
+    "codigoMpio": "19256",
+    "municipio": "EL TAMBO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "19",
+    "departamento": "CAUCA",
+    "codigoMpio": "19290",
+    "municipio": "FLORENCIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "19",
+    "departamento": "CAUCA",
+    "codigoMpio": "19300",
+    "municipio": "GUACHENÉ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "19",
+    "departamento": "CAUCA",
+    "codigoMpio": "19318",
+    "municipio": "GUAPI",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "19",
+    "departamento": "CAUCA",
+    "codigoMpio": "19355",
+    "municipio": "INZÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "19",
+    "departamento": "CAUCA",
+    "codigoMpio": "19364",
+    "municipio": "JAMBALÓ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "19",
+    "departamento": "CAUCA",
+    "codigoMpio": "19392",
+    "municipio": "LA SIERRA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "19",
+    "departamento": "CAUCA",
+    "codigoMpio": "19397",
+    "municipio": "LA VEGA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "19",
+    "departamento": "CAUCA",
+    "codigoMpio": "19418",
+    "municipio": "LÓPEZ DE MICAY",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "19",
+    "departamento": "CAUCA",
+    "codigoMpio": "19450",
+    "municipio": "MERCADERES",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "19",
+    "departamento": "CAUCA",
+    "codigoMpio": "19455",
+    "municipio": "MIRANDA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "19",
+    "departamento": "CAUCA",
+    "codigoMpio": "19473",
+    "municipio": "MORALES",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "19",
+    "departamento": "CAUCA",
+    "codigoMpio": "19513",
+    "municipio": "PADILLA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "19",
+    "departamento": "CAUCA",
+    "codigoMpio": "19517",
+    "municipio": "PÁEZ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "19",
+    "departamento": "CAUCA",
+    "codigoMpio": "19532",
+    "municipio": "PATÍA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "19",
+    "departamento": "CAUCA",
+    "codigoMpio": "19533",
+    "municipio": "PIAMONTE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "19",
+    "departamento": "CAUCA",
+    "codigoMpio": "19548",
+    "municipio": "PIENDAMÓ - TUNÍA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "19",
+    "departamento": "CAUCA",
+    "codigoMpio": "19573",
+    "municipio": "PUERTO TEJADA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "19",
+    "departamento": "CAUCA",
+    "codigoMpio": "19585",
+    "municipio": "PURACÉ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "19",
+    "departamento": "CAUCA",
+    "codigoMpio": "19622",
+    "municipio": "ROSAS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "19",
+    "departamento": "CAUCA",
+    "codigoMpio": "19693",
+    "municipio": "SAN SEBASTIÁN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "19",
+    "departamento": "CAUCA",
+    "codigoMpio": "19698",
+    "municipio": "SANTANDER DE QUILICHAO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "19",
+    "departamento": "CAUCA",
+    "codigoMpio": "19701",
+    "municipio": "SANTA ROSA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "19",
+    "departamento": "CAUCA",
+    "codigoMpio": "19743",
+    "municipio": "SILVIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "19",
+    "departamento": "CAUCA",
+    "codigoMpio": "19760",
+    "municipio": "SOTARÁ - PAISPAMBA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "19",
+    "departamento": "CAUCA",
+    "codigoMpio": "19780",
+    "municipio": "SUÁREZ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "19",
+    "departamento": "CAUCA",
+    "codigoMpio": "19785",
+    "municipio": "SUCRE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "19",
+    "departamento": "CAUCA",
+    "codigoMpio": "19807",
+    "municipio": "TIMBÍO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "19",
+    "departamento": "CAUCA",
+    "codigoMpio": "19809",
+    "municipio": "TIMBIQUÍ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "19",
+    "departamento": "CAUCA",
+    "codigoMpio": "19821",
+    "municipio": "TORIBÍO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "19",
+    "departamento": "CAUCA",
+    "codigoMpio": "19824",
+    "municipio": "TOTORÓ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "19",
+    "departamento": "CAUCA",
+    "codigoMpio": "19845",
+    "municipio": "VILLA RICA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "20",
+    "departamento": "CESAR",
+    "codigoMpio": "20001",
+    "municipio": "VALLEDUPAR",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "20",
+    "departamento": "CESAR",
+    "codigoMpio": "20011",
+    "municipio": "AGUACHICA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "20",
+    "departamento": "CESAR",
+    "codigoMpio": "20013",
+    "municipio": "AGUSTÍN CODAZZI",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "20",
+    "departamento": "CESAR",
+    "codigoMpio": "20032",
+    "municipio": "ASTREA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "20",
+    "departamento": "CESAR",
+    "codigoMpio": "20045",
+    "municipio": "BECERRIL",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "20",
+    "departamento": "CESAR",
+    "codigoMpio": "20060",
+    "municipio": "BOSCONIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "20",
+    "departamento": "CESAR",
+    "codigoMpio": "20175",
+    "municipio": "CHIMICHAGUA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "20",
+    "departamento": "CESAR",
+    "codigoMpio": "20178",
+    "municipio": "CHIRIGUANÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "20",
+    "departamento": "CESAR",
+    "codigoMpio": "20228",
+    "municipio": "CURUMANÍ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "20",
+    "departamento": "CESAR",
+    "codigoMpio": "20238",
+    "municipio": "EL COPEY",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "20",
+    "departamento": "CESAR",
+    "codigoMpio": "20250",
+    "municipio": "EL PASO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "20",
+    "departamento": "CESAR",
+    "codigoMpio": "20295",
+    "municipio": "GAMARRA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "20",
+    "departamento": "CESAR",
+    "codigoMpio": "20310",
+    "municipio": "GONZÁLEZ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "20",
+    "departamento": "CESAR",
+    "codigoMpio": "20383",
+    "municipio": "LA GLORIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "20",
+    "departamento": "CESAR",
+    "codigoMpio": "20400",
+    "municipio": "LA JAGUA DE IBIRICO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "20",
+    "departamento": "CESAR",
+    "codigoMpio": "20443",
+    "municipio": "MANAURE BALCÓN DEL CESAR",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "20",
+    "departamento": "CESAR",
+    "codigoMpio": "20517",
+    "municipio": "PAILITAS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "20",
+    "departamento": "CESAR",
+    "codigoMpio": "20550",
+    "municipio": "PELAYA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "20",
+    "departamento": "CESAR",
+    "codigoMpio": "20570",
+    "municipio": "PUEBLO BELLO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "20",
+    "departamento": "CESAR",
+    "codigoMpio": "20614",
+    "municipio": "RÍO DE ORO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "20",
+    "departamento": "CESAR",
+    "codigoMpio": "20621",
+    "municipio": "LA PAZ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "20",
+    "departamento": "CESAR",
+    "codigoMpio": "20710",
+    "municipio": "SAN ALBERTO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "20",
+    "departamento": "CESAR",
+    "codigoMpio": "20750",
+    "municipio": "SAN DIEGO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "20",
+    "departamento": "CESAR",
+    "codigoMpio": "20770",
+    "municipio": "SAN MARTÍN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "20",
+    "departamento": "CESAR",
+    "codigoMpio": "20787",
+    "municipio": "TAMALAMEQUE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "23",
+    "departamento": "CÓRDOBA",
+    "codigoMpio": "23001",
+    "municipio": "MONTERÍA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "23",
+    "departamento": "CÓRDOBA",
+    "codigoMpio": "23068",
+    "municipio": "AYAPEL",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "23",
+    "departamento": "CÓRDOBA",
+    "codigoMpio": "23079",
+    "municipio": "BUENAVISTA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "23",
+    "departamento": "CÓRDOBA",
+    "codigoMpio": "23090",
+    "municipio": "CANALETE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "23",
+    "departamento": "CÓRDOBA",
+    "codigoMpio": "23162",
+    "municipio": "CERETÉ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "23",
+    "departamento": "CÓRDOBA",
+    "codigoMpio": "23168",
+    "municipio": "CHIMÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "23",
+    "departamento": "CÓRDOBA",
+    "codigoMpio": "23182",
+    "municipio": "CHINÚ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "23",
+    "departamento": "CÓRDOBA",
+    "codigoMpio": "23189",
+    "municipio": "CIÉNAGA DE ORO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "23",
+    "departamento": "CÓRDOBA",
+    "codigoMpio": "23300",
+    "municipio": "COTORRA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "23",
+    "departamento": "CÓRDOBA",
+    "codigoMpio": "23350",
+    "municipio": "LA APARTADA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "23",
+    "departamento": "CÓRDOBA",
+    "codigoMpio": "23417",
+    "municipio": "LORICA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "23",
+    "departamento": "CÓRDOBA",
+    "codigoMpio": "23419",
+    "municipio": "LOS CÓRDOBAS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "23",
+    "departamento": "CÓRDOBA",
+    "codigoMpio": "23464",
+    "municipio": "MOMIL",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "23",
+    "departamento": "CÓRDOBA",
+    "codigoMpio": "23466",
+    "municipio": "MONTELÍBANO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "23",
+    "departamento": "CÓRDOBA",
+    "codigoMpio": "23500",
+    "municipio": "MOÑITOS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "23",
+    "departamento": "CÓRDOBA",
+    "codigoMpio": "23555",
+    "municipio": "PLANETA RICA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "23",
+    "departamento": "CÓRDOBA",
+    "codigoMpio": "23570",
+    "municipio": "PUEBLO NUEVO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "23",
+    "departamento": "CÓRDOBA",
+    "codigoMpio": "23574",
+    "municipio": "PUERTO ESCONDIDO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "23",
+    "departamento": "CÓRDOBA",
+    "codigoMpio": "23580",
+    "municipio": "PUERTO LIBERTADOR",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "23",
+    "departamento": "CÓRDOBA",
+    "codigoMpio": "23586",
+    "municipio": "PURÍSIMA DE LA CONCEPCIÓN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "23",
+    "departamento": "CÓRDOBA",
+    "codigoMpio": "23660",
+    "municipio": "SAHAGÚN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "23",
+    "departamento": "CÓRDOBA",
+    "codigoMpio": "23670",
+    "municipio": "SAN ANDRÉS DE SOTAVENTO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "23",
+    "departamento": "CÓRDOBA",
+    "codigoMpio": "23672",
+    "municipio": "SAN ANTERO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "23",
+    "departamento": "CÓRDOBA",
+    "codigoMpio": "23675",
+    "municipio": "SAN BERNARDO DEL VIENTO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "23",
+    "departamento": "CÓRDOBA",
+    "codigoMpio": "23678",
+    "municipio": "SAN CARLOS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "23",
+    "departamento": "CÓRDOBA",
+    "codigoMpio": "23682",
+    "municipio": "SAN JOSÉ DE URÉ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "23",
+    "departamento": "CÓRDOBA",
+    "codigoMpio": "23686",
+    "municipio": "SAN PELAYO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "23",
+    "departamento": "CÓRDOBA",
+    "codigoMpio": "23807",
+    "municipio": "TIERRALTA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "23",
+    "departamento": "CÓRDOBA",
+    "codigoMpio": "23815",
+    "municipio": "TUCHÍN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "23",
+    "departamento": "CÓRDOBA",
+    "codigoMpio": "23855",
+    "municipio": "VALENCIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25001",
+    "municipio": "AGUA DE DIOS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25019",
+    "municipio": "ALBÁN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25035",
+    "municipio": "ANAPOIMA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25040",
+    "municipio": "ANOLAIMA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25053",
+    "municipio": "ARBELÁEZ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25086",
+    "municipio": "BELTRÁN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25095",
+    "municipio": "BITUIMA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25099",
+    "municipio": "BOJACÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25120",
+    "municipio": "CABRERA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25123",
+    "municipio": "CACHIPAY",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25126",
+    "municipio": "CAJICÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25148",
+    "municipio": "CAPARRAPÍ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25151",
+    "municipio": "CÁQUEZA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25154",
+    "municipio": "CARMEN DE CARUPA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25168",
+    "municipio": "CHAGUANÍ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25175",
+    "municipio": "CHÍA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25178",
+    "municipio": "CHIPAQUE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25181",
+    "municipio": "CHOACHÍ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25183",
+    "municipio": "CHOCONTÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25200",
+    "municipio": "COGUA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25214",
+    "municipio": "COTA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25224",
+    "municipio": "CUCUNUBÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25245",
+    "municipio": "EL COLEGIO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25258",
+    "municipio": "EL PEÑÓN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25260",
+    "municipio": "EL ROSAL",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25269",
+    "municipio": "FACATATIVÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25279",
+    "municipio": "FÓMEQUE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25281",
+    "municipio": "FOSCA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25286",
+    "municipio": "FUNZA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25288",
+    "municipio": "FÚQUENE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25290",
+    "municipio": "FUSAGASUGÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25293",
+    "municipio": "GACHALÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25295",
+    "municipio": "GACHANCIPÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25297",
+    "municipio": "GACHETÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25299",
+    "municipio": "GAMA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25307",
+    "municipio": "GIRARDOT",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25312",
+    "municipio": "GRANADA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25317",
+    "municipio": "GUACHETÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25320",
+    "municipio": "GUADUAS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25322",
+    "municipio": "GUASCA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25324",
+    "municipio": "GUATAQUÍ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25326",
+    "municipio": "GUATAVITA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25328",
+    "municipio": "GUAYABAL DE SÍQUIMA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25335",
+    "municipio": "GUAYABETAL",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25339",
+    "municipio": "GUTIÉRREZ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25368",
+    "municipio": "JERUSALÉN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25372",
+    "municipio": "JUNÍN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25377",
+    "municipio": "LA CALERA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25386",
+    "municipio": "LA MESA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25394",
+    "municipio": "LA PALMA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25398",
+    "municipio": "LA PEÑA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25402",
+    "municipio": "LA VEGA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25407",
+    "municipio": "LENGUAZAQUE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25426",
+    "municipio": "MACHETÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25430",
+    "municipio": "MADRID",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25436",
+    "municipio": "MANTA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25438",
+    "municipio": "MEDINA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25473",
+    "municipio": "MOSQUERA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25483",
+    "municipio": "NARIÑO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25486",
+    "municipio": "NEMOCÓN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25488",
+    "municipio": "NILO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25489",
+    "municipio": "NIMAIMA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25491",
+    "municipio": "NOCAIMA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25506",
+    "municipio": "VENECIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25513",
+    "municipio": "PACHO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25518",
+    "municipio": "PAIME",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25524",
+    "municipio": "PANDI",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25530",
+    "municipio": "PARATEBUENO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25535",
+    "municipio": "PASCA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25572",
+    "municipio": "PUERTO SALGAR",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25580",
+    "municipio": "PULÍ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25592",
+    "municipio": "QUEBRADANEGRA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25594",
+    "municipio": "QUETAME",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25596",
+    "municipio": "QUIPILE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25599",
+    "municipio": "APULO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25612",
+    "municipio": "RICAURTE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25645",
+    "municipio": "SAN ANTONIO DEL TEQUENDAMA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25649",
+    "municipio": "SAN BERNARDO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25653",
+    "municipio": "SAN CAYETANO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25658",
+    "municipio": "SAN FRANCISCO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25662",
+    "municipio": "SAN JUAN DE RIOSECO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25718",
+    "municipio": "SASAIMA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25736",
+    "municipio": "SESQUILÉ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25740",
+    "municipio": "SIBATÉ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25743",
+    "municipio": "SILVANIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25745",
+    "municipio": "SIMIJACA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25754",
+    "municipio": "SOACHA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25758",
+    "municipio": "SOPÓ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25769",
+    "municipio": "SUBACHOQUE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25772",
+    "municipio": "SUESCA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25777",
+    "municipio": "SUPATÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25779",
+    "municipio": "SUSA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25781",
+    "municipio": "SUTATAUSA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25785",
+    "municipio": "TABIO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25793",
+    "municipio": "TAUSA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25797",
+    "municipio": "TENA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25799",
+    "municipio": "TENJO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25805",
+    "municipio": "TIBACUY",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25807",
+    "municipio": "TIBIRITA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25815",
+    "municipio": "TOCAIMA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25817",
+    "municipio": "TOCANCIPÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25823",
+    "municipio": "TOPAIPÍ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25839",
+    "municipio": "UBALÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25841",
+    "municipio": "UBAQUE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25843",
+    "municipio": "VILLA DE SAN DIEGO DE UBATÉ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25845",
+    "municipio": "UNE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25851",
+    "municipio": "ÚTICA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25862",
+    "municipio": "VERGARA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25867",
+    "municipio": "VIANÍ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25871",
+    "municipio": "VILLAGÓMEZ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25873",
+    "municipio": "VILLAPINZÓN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25875",
+    "municipio": "VILLETA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25878",
+    "municipio": "VIOTÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25885",
+    "municipio": "YACOPÍ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25898",
+    "municipio": "ZIPACÓN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "25",
+    "departamento": "CUNDINAMARCA",
+    "codigoMpio": "25899",
+    "municipio": "ZIPAQUIRÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "27",
+    "departamento": "CHOCÓ",
+    "codigoMpio": "27001",
+    "municipio": "QUIBDÓ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "27",
+    "departamento": "CHOCÓ",
+    "codigoMpio": "27006",
+    "municipio": "ACANDÍ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "27",
+    "departamento": "CHOCÓ",
+    "codigoMpio": "27025",
+    "municipio": "ALTO BAUDÓ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "27",
+    "departamento": "CHOCÓ",
+    "codigoMpio": "27050",
+    "municipio": "ATRATO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "27",
+    "departamento": "CHOCÓ",
+    "codigoMpio": "27073",
+    "municipio": "BAGADÓ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "27",
+    "departamento": "CHOCÓ",
+    "codigoMpio": "27075",
+    "municipio": "BAHÍA SOLANO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "27",
+    "departamento": "CHOCÓ",
+    "codigoMpio": "27077",
+    "municipio": "BAJO BAUDÓ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "27",
+    "departamento": "CHOCÓ",
+    "codigoMpio": "27099",
+    "municipio": "BOJAYÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "27",
+    "departamento": "CHOCÓ",
+    "codigoMpio": "27135",
+    "municipio": "EL CANTÓN DEL SAN PABLO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "27",
+    "departamento": "CHOCÓ",
+    "codigoMpio": "27150",
+    "municipio": "CARMEN DEL DARIÉN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "27",
+    "departamento": "CHOCÓ",
+    "codigoMpio": "27160",
+    "municipio": "CÉRTEGUI",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "27",
+    "departamento": "CHOCÓ",
+    "codigoMpio": "27205",
+    "municipio": "CONDOTO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "27",
+    "departamento": "CHOCÓ",
+    "codigoMpio": "27245",
+    "municipio": "EL CARMEN DE ATRATO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "27",
+    "departamento": "CHOCÓ",
+    "codigoMpio": "27250",
+    "municipio": "EL LITORAL DEL SAN JUAN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "27",
+    "departamento": "CHOCÓ",
+    "codigoMpio": "27361",
+    "municipio": "ISTMINA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "27",
+    "departamento": "CHOCÓ",
+    "codigoMpio": "27372",
+    "municipio": "JURADÓ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "27",
+    "departamento": "CHOCÓ",
+    "codigoMpio": "27413",
+    "municipio": "LLORÓ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "27",
+    "departamento": "CHOCÓ",
+    "codigoMpio": "27425",
+    "municipio": "MEDIO ATRATO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "27",
+    "departamento": "CHOCÓ",
+    "codigoMpio": "27430",
+    "municipio": "MEDIO BAUDÓ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "27",
+    "departamento": "CHOCÓ",
+    "codigoMpio": "27450",
+    "municipio": "MEDIO SAN JUAN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "27",
+    "departamento": "CHOCÓ",
+    "codigoMpio": "27491",
+    "municipio": "NÓVITA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "27",
+    "departamento": "CHOCÓ",
+    "codigoMpio": "27493",
+    "municipio": "NUEVO BELÉN DE BAJIRÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "27",
+    "departamento": "CHOCÓ",
+    "codigoMpio": "27495",
+    "municipio": "NUQUÍ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "27",
+    "departamento": "CHOCÓ",
+    "codigoMpio": "27580",
+    "municipio": "RÍO IRÓ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "27",
+    "departamento": "CHOCÓ",
+    "codigoMpio": "27600",
+    "municipio": "RÍO QUITO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "27",
+    "departamento": "CHOCÓ",
+    "codigoMpio": "27615",
+    "municipio": "RIOSUCIO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "27",
+    "departamento": "CHOCÓ",
+    "codigoMpio": "27660",
+    "municipio": "SAN JOSÉ DEL PALMAR",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "27",
+    "departamento": "CHOCÓ",
+    "codigoMpio": "27745",
+    "municipio": "SIPÍ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "27",
+    "departamento": "CHOCÓ",
+    "codigoMpio": "27787",
+    "municipio": "TADÓ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "27",
+    "departamento": "CHOCÓ",
+    "codigoMpio": "27800",
+    "municipio": "UNGUÍA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "27",
+    "departamento": "CHOCÓ",
+    "codigoMpio": "27810",
+    "municipio": "UNIÓN PANAMERICANA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "41",
+    "departamento": "HUILA",
+    "codigoMpio": "41001",
+    "municipio": "NEIVA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "41",
+    "departamento": "HUILA",
+    "codigoMpio": "41006",
+    "municipio": "ACEVEDO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "41",
+    "departamento": "HUILA",
+    "codigoMpio": "41013",
+    "municipio": "AGRADO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "41",
+    "departamento": "HUILA",
+    "codigoMpio": "41016",
+    "municipio": "AIPE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "41",
+    "departamento": "HUILA",
+    "codigoMpio": "41020",
+    "municipio": "ALGECIRAS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "41",
+    "departamento": "HUILA",
+    "codigoMpio": "41026",
+    "municipio": "ALTAMIRA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "41",
+    "departamento": "HUILA",
+    "codigoMpio": "41078",
+    "municipio": "BARAYA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "41",
+    "departamento": "HUILA",
+    "codigoMpio": "41132",
+    "municipio": "CAMPOALEGRE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "41",
+    "departamento": "HUILA",
+    "codigoMpio": "41206",
+    "municipio": "COLOMBIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "41",
+    "departamento": "HUILA",
+    "codigoMpio": "41244",
+    "municipio": "ELÍAS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "41",
+    "departamento": "HUILA",
+    "codigoMpio": "41298",
+    "municipio": "GARZÓN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "41",
+    "departamento": "HUILA",
+    "codigoMpio": "41306",
+    "municipio": "GIGANTE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "41",
+    "departamento": "HUILA",
+    "codigoMpio": "41319",
+    "municipio": "GUADALUPE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "41",
+    "departamento": "HUILA",
+    "codigoMpio": "41349",
+    "municipio": "HOBO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "41",
+    "departamento": "HUILA",
+    "codigoMpio": "41357",
+    "municipio": "ÍQUIRA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "41",
+    "departamento": "HUILA",
+    "codigoMpio": "41359",
+    "municipio": "ISNOS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "41",
+    "departamento": "HUILA",
+    "codigoMpio": "41378",
+    "municipio": "LA ARGENTINA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "41",
+    "departamento": "HUILA",
+    "codigoMpio": "41396",
+    "municipio": "LA PLATA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "41",
+    "departamento": "HUILA",
+    "codigoMpio": "41483",
+    "municipio": "NÁTAGA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "41",
+    "departamento": "HUILA",
+    "codigoMpio": "41503",
+    "municipio": "OPORAPA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "41",
+    "departamento": "HUILA",
+    "codigoMpio": "41518",
+    "municipio": "PAICOL",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "41",
+    "departamento": "HUILA",
+    "codigoMpio": "41524",
+    "municipio": "PALERMO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "41",
+    "departamento": "HUILA",
+    "codigoMpio": "41530",
+    "municipio": "PALESTINA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "41",
+    "departamento": "HUILA",
+    "codigoMpio": "41548",
+    "municipio": "PITAL",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "41",
+    "departamento": "HUILA",
+    "codigoMpio": "41551",
+    "municipio": "PITALITO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "41",
+    "departamento": "HUILA",
+    "codigoMpio": "41615",
+    "municipio": "RIVERA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "41",
+    "departamento": "HUILA",
+    "codigoMpio": "41660",
+    "municipio": "SALADOBLANCO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "41",
+    "departamento": "HUILA",
+    "codigoMpio": "41668",
+    "municipio": "SAN AGUSTÍN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "41",
+    "departamento": "HUILA",
+    "codigoMpio": "41676",
+    "municipio": "SANTA MARÍA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "41",
+    "departamento": "HUILA",
+    "codigoMpio": "41770",
+    "municipio": "SUAZA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "41",
+    "departamento": "HUILA",
+    "codigoMpio": "41791",
+    "municipio": "TARQUI",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "41",
+    "departamento": "HUILA",
+    "codigoMpio": "41797",
+    "municipio": "TESALIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "41",
+    "departamento": "HUILA",
+    "codigoMpio": "41799",
+    "municipio": "TELLO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "41",
+    "departamento": "HUILA",
+    "codigoMpio": "41801",
+    "municipio": "TERUEL",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "41",
+    "departamento": "HUILA",
+    "codigoMpio": "41807",
+    "municipio": "TIMANÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "41",
+    "departamento": "HUILA",
+    "codigoMpio": "41872",
+    "municipio": "VILLAVIEJA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "41",
+    "departamento": "HUILA",
+    "codigoMpio": "41885",
+    "municipio": "YAGUARÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "44",
+    "departamento": "LA GUAJIRA",
+    "codigoMpio": "44001",
+    "municipio": "RIOHACHA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "44",
+    "departamento": "LA GUAJIRA",
+    "codigoMpio": "44035",
+    "municipio": "ALBANIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "44",
+    "departamento": "LA GUAJIRA",
+    "codigoMpio": "44078",
+    "municipio": "BARRANCAS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "44",
+    "departamento": "LA GUAJIRA",
+    "codigoMpio": "44090",
+    "municipio": "DIBULLA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "44",
+    "departamento": "LA GUAJIRA",
+    "codigoMpio": "44098",
+    "municipio": "DISTRACCIÓN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "44",
+    "departamento": "LA GUAJIRA",
+    "codigoMpio": "44110",
+    "municipio": "EL MOLINO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "44",
+    "departamento": "LA GUAJIRA",
+    "codigoMpio": "44279",
+    "municipio": "FONSECA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "44",
+    "departamento": "LA GUAJIRA",
+    "codigoMpio": "44378",
+    "municipio": "HATONUEVO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "44",
+    "departamento": "LA GUAJIRA",
+    "codigoMpio": "44420",
+    "municipio": "LA JAGUA DEL PILAR",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "44",
+    "departamento": "LA GUAJIRA",
+    "codigoMpio": "44430",
+    "municipio": "MAICAO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "44",
+    "departamento": "LA GUAJIRA",
+    "codigoMpio": "44560",
+    "municipio": "MANAURE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "44",
+    "departamento": "LA GUAJIRA",
+    "codigoMpio": "44650",
+    "municipio": "SAN JUAN DEL CESAR",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "44",
+    "departamento": "LA GUAJIRA",
+    "codigoMpio": "44847",
+    "municipio": "URIBIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "44",
+    "departamento": "LA GUAJIRA",
+    "codigoMpio": "44855",
+    "municipio": "URUMITA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "44",
+    "departamento": "LA GUAJIRA",
+    "codigoMpio": "44874",
+    "municipio": "VILLANUEVA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "47",
+    "departamento": "MAGDALENA",
+    "codigoMpio": "47001",
+    "municipio": "SANTA MARTA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "47",
+    "departamento": "MAGDALENA",
+    "codigoMpio": "47030",
+    "municipio": "ALGARROBO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "47",
+    "departamento": "MAGDALENA",
+    "codigoMpio": "47053",
+    "municipio": "ARACATACA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "47",
+    "departamento": "MAGDALENA",
+    "codigoMpio": "47058",
+    "municipio": "ARIGUANÍ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "47",
+    "departamento": "MAGDALENA",
+    "codigoMpio": "47161",
+    "municipio": "CERRO DE SAN ANTONIO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "47",
+    "departamento": "MAGDALENA",
+    "codigoMpio": "47170",
+    "municipio": "CHIVOLO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "47",
+    "departamento": "MAGDALENA",
+    "codigoMpio": "47189",
+    "municipio": "CIÉNAGA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "47",
+    "departamento": "MAGDALENA",
+    "codigoMpio": "47205",
+    "municipio": "CONCORDIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "47",
+    "departamento": "MAGDALENA",
+    "codigoMpio": "47245",
+    "municipio": "EL BANCO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "47",
+    "departamento": "MAGDALENA",
+    "codigoMpio": "47258",
+    "municipio": "EL PIÑÓN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "47",
+    "departamento": "MAGDALENA",
+    "codigoMpio": "47268",
+    "municipio": "EL RETÉN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "47",
+    "departamento": "MAGDALENA",
+    "codigoMpio": "47288",
+    "municipio": "FUNDACIÓN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "47",
+    "departamento": "MAGDALENA",
+    "codigoMpio": "47318",
+    "municipio": "GUAMAL",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "47",
+    "departamento": "MAGDALENA",
+    "codigoMpio": "47460",
+    "municipio": "NUEVA GRANADA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "47",
+    "departamento": "MAGDALENA",
+    "codigoMpio": "47541",
+    "municipio": "PEDRAZA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "47",
+    "departamento": "MAGDALENA",
+    "codigoMpio": "47545",
+    "municipio": "PIJIÑO DEL CARMEN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "47",
+    "departamento": "MAGDALENA",
+    "codigoMpio": "47551",
+    "municipio": "PIVIJAY",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "47",
+    "departamento": "MAGDALENA",
+    "codigoMpio": "47555",
+    "municipio": "PLATO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "47",
+    "departamento": "MAGDALENA",
+    "codigoMpio": "47570",
+    "municipio": "PUEBLOVIEJO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "47",
+    "departamento": "MAGDALENA",
+    "codigoMpio": "47605",
+    "municipio": "REMOLINO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "47",
+    "departamento": "MAGDALENA",
+    "codigoMpio": "47660",
+    "municipio": "SABANAS DE SAN ÁNGEL",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "47",
+    "departamento": "MAGDALENA",
+    "codigoMpio": "47675",
+    "municipio": "SALAMINA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "47",
+    "departamento": "MAGDALENA",
+    "codigoMpio": "47692",
+    "municipio": "SAN SEBASTIÁN DE BUENAVISTA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "47",
+    "departamento": "MAGDALENA",
+    "codigoMpio": "47703",
+    "municipio": "SAN ZENÓN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "47",
+    "departamento": "MAGDALENA",
+    "codigoMpio": "47707",
+    "municipio": "SANTA ANA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "47",
+    "departamento": "MAGDALENA",
+    "codigoMpio": "47720",
+    "municipio": "SANTA BÁRBARA DE PINTO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "47",
+    "departamento": "MAGDALENA",
+    "codigoMpio": "47745",
+    "municipio": "SITIONUEVO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "47",
+    "departamento": "MAGDALENA",
+    "codigoMpio": "47798",
+    "municipio": "TENERIFE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "47",
+    "departamento": "MAGDALENA",
+    "codigoMpio": "47960",
+    "municipio": "ZAPAYÁN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "47",
+    "departamento": "MAGDALENA",
+    "codigoMpio": "47980",
+    "municipio": "ZONA BANANERA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "50",
+    "departamento": "META",
+    "codigoMpio": "50001",
+    "municipio": "VILLAVICENCIO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "50",
+    "departamento": "META",
+    "codigoMpio": "50006",
+    "municipio": "ACACÍAS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "50",
+    "departamento": "META",
+    "codigoMpio": "50110",
+    "municipio": "BARRANCA DE UPÍA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "50",
+    "departamento": "META",
+    "codigoMpio": "50124",
+    "municipio": "CABUYARO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "50",
+    "departamento": "META",
+    "codigoMpio": "50150",
+    "municipio": "CASTILLA LA NUEVA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "50",
+    "departamento": "META",
+    "codigoMpio": "50223",
+    "municipio": "CUBARRAL",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "50",
+    "departamento": "META",
+    "codigoMpio": "50226",
+    "municipio": "CUMARAL",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "50",
+    "departamento": "META",
+    "codigoMpio": "50245",
+    "municipio": "EL CALVARIO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "50",
+    "departamento": "META",
+    "codigoMpio": "50251",
+    "municipio": "EL CASTILLO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "50",
+    "departamento": "META",
+    "codigoMpio": "50270",
+    "municipio": "EL DORADO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "50",
+    "departamento": "META",
+    "codigoMpio": "50287",
+    "municipio": "FUENTE DE ORO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "50",
+    "departamento": "META",
+    "codigoMpio": "50313",
+    "municipio": "GRANADA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "50",
+    "departamento": "META",
+    "codigoMpio": "50318",
+    "municipio": "GUAMAL",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "50",
+    "departamento": "META",
+    "codigoMpio": "50325",
+    "municipio": "MAPIRIPÁN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "50",
+    "departamento": "META",
+    "codigoMpio": "50330",
+    "municipio": "MESETAS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "50",
+    "departamento": "META",
+    "codigoMpio": "50350",
+    "municipio": "LA MACARENA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "50",
+    "departamento": "META",
+    "codigoMpio": "50370",
+    "municipio": "URIBE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "50",
+    "departamento": "META",
+    "codigoMpio": "50400",
+    "municipio": "LEJANÍAS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "50",
+    "departamento": "META",
+    "codigoMpio": "50450",
+    "municipio": "PUERTO CONCORDIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "50",
+    "departamento": "META",
+    "codigoMpio": "50568",
+    "municipio": "PUERTO GAITÁN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "50",
+    "departamento": "META",
+    "codigoMpio": "50573",
+    "municipio": "PUERTO LÓPEZ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "50",
+    "departamento": "META",
+    "codigoMpio": "50577",
+    "municipio": "PUERTO LLERAS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "50",
+    "departamento": "META",
+    "codigoMpio": "50590",
+    "municipio": "PUERTO RICO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "50",
+    "departamento": "META",
+    "codigoMpio": "50606",
+    "municipio": "RESTREPO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "50",
+    "departamento": "META",
+    "codigoMpio": "50680",
+    "municipio": "SAN CARLOS DE GUAROA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "50",
+    "departamento": "META",
+    "codigoMpio": "50683",
+    "municipio": "SAN JUAN DE ARAMA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "50",
+    "departamento": "META",
+    "codigoMpio": "50686",
+    "municipio": "SAN JUANITO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "50",
+    "departamento": "META",
+    "codigoMpio": "50689",
+    "municipio": "SAN MARTÍN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "50",
+    "departamento": "META",
+    "codigoMpio": "50711",
+    "municipio": "VISTAHERMOSA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52001",
+    "municipio": "PASTO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52019",
+    "municipio": "ALBÁN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52022",
+    "municipio": "ALDANA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52036",
+    "municipio": "ANCUYA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52051",
+    "municipio": "ARBOLEDA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52079",
+    "municipio": "BARBACOAS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52083",
+    "municipio": "BELÉN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52110",
+    "municipio": "BUESACO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52203",
+    "municipio": "COLÓN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52207",
+    "municipio": "CONSACÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52210",
+    "municipio": "CONTADERO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52215",
+    "municipio": "CÓRDOBA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52224",
+    "municipio": "CUASPUD CARLOSAMA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52227",
+    "municipio": "CUMBAL",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52233",
+    "municipio": "CUMBITARA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52240",
+    "municipio": "CHACHAGÜÍ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52250",
+    "municipio": "EL CHARCO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52254",
+    "municipio": "EL PEÑOL",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52256",
+    "municipio": "EL ROSARIO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52258",
+    "municipio": "EL TABLÓN DE GÓMEZ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52260",
+    "municipio": "EL TAMBO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52287",
+    "municipio": "FUNES",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52317",
+    "municipio": "GUACHUCAL",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52320",
+    "municipio": "GUAITARILLA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52323",
+    "municipio": "GUALMATÁN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52352",
+    "municipio": "ILES",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52354",
+    "municipio": "IMUÉS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52356",
+    "municipio": "IPIALES",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52378",
+    "municipio": "LA CRUZ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52381",
+    "municipio": "LA FLORIDA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52385",
+    "municipio": "LA LLANADA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52390",
+    "municipio": "LA TOLA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52399",
+    "municipio": "LA UNIÓN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52405",
+    "municipio": "LEIVA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52411",
+    "municipio": "LINARES",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52418",
+    "municipio": "LOS ANDES",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52427",
+    "municipio": "MAGÜÍ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52435",
+    "municipio": "MALLAMA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52473",
+    "municipio": "MOSQUERA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52480",
+    "municipio": "NARIÑO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52490",
+    "municipio": "OLAYA HERRERA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52506",
+    "municipio": "OSPINA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52520",
+    "municipio": "FRANCISCO PIZARRO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52540",
+    "municipio": "POLICARPA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52560",
+    "municipio": "POTOSÍ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52565",
+    "municipio": "PROVIDENCIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52573",
+    "municipio": "PUERRES",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52585",
+    "municipio": "PUPIALES",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52612",
+    "municipio": "RICAURTE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52621",
+    "municipio": "ROBERTO PAYÁN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52678",
+    "municipio": "SAMANIEGO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52683",
+    "municipio": "SANDONÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52685",
+    "municipio": "SAN BERNARDO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52687",
+    "municipio": "SAN LORENZO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52693",
+    "municipio": "SAN PABLO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52694",
+    "municipio": "SAN PEDRO DE CARTAGO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52696",
+    "municipio": "SANTA BÁRBARA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52699",
+    "municipio": "SANTACRUZ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52720",
+    "municipio": "SAPUYES",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52786",
+    "municipio": "TAMINANGO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52788",
+    "municipio": "TANGUA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52835",
+    "municipio": "SAN ANDRÉS DE TUMACO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52838",
+    "municipio": "TÚQUERRES",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "52",
+    "departamento": "NARIÑO",
+    "codigoMpio": "52885",
+    "municipio": "YACUANQUER",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "54",
+    "departamento": "NORTE DE SANTANDER",
+    "codigoMpio": "54001",
+    "municipio": "SAN JOSÉ DE CÚCUTA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "54",
+    "departamento": "NORTE DE SANTANDER",
+    "codigoMpio": "54003",
+    "municipio": "ÁBREGO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "54",
+    "departamento": "NORTE DE SANTANDER",
+    "codigoMpio": "54051",
+    "municipio": "ARBOLEDAS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "54",
+    "departamento": "NORTE DE SANTANDER",
+    "codigoMpio": "54099",
+    "municipio": "BOCHALEMA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "54",
+    "departamento": "NORTE DE SANTANDER",
+    "codigoMpio": "54109",
+    "municipio": "BUCARASICA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "54",
+    "departamento": "NORTE DE SANTANDER",
+    "codigoMpio": "54125",
+    "municipio": "CÁCOTA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "54",
+    "departamento": "NORTE DE SANTANDER",
+    "codigoMpio": "54128",
+    "municipio": "CÁCHIRA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "54",
+    "departamento": "NORTE DE SANTANDER",
+    "codigoMpio": "54172",
+    "municipio": "CHINÁCOTA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "54",
+    "departamento": "NORTE DE SANTANDER",
+    "codigoMpio": "54174",
+    "municipio": "CHITAGÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "54",
+    "departamento": "NORTE DE SANTANDER",
+    "codigoMpio": "54206",
+    "municipio": "CONVENCIÓN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "54",
+    "departamento": "NORTE DE SANTANDER",
+    "codigoMpio": "54223",
+    "municipio": "CUCUTILLA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "54",
+    "departamento": "NORTE DE SANTANDER",
+    "codigoMpio": "54239",
+    "municipio": "DURANIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "54",
+    "departamento": "NORTE DE SANTANDER",
+    "codigoMpio": "54245",
+    "municipio": "EL CARMEN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "54",
+    "departamento": "NORTE DE SANTANDER",
+    "codigoMpio": "54250",
+    "municipio": "EL TARRA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "54",
+    "departamento": "NORTE DE SANTANDER",
+    "codigoMpio": "54261",
+    "municipio": "EL ZULIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "54",
+    "departamento": "NORTE DE SANTANDER",
+    "codigoMpio": "54313",
+    "municipio": "GRAMALOTE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "54",
+    "departamento": "NORTE DE SANTANDER",
+    "codigoMpio": "54344",
+    "municipio": "HACARÍ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "54",
+    "departamento": "NORTE DE SANTANDER",
+    "codigoMpio": "54347",
+    "municipio": "HERRÁN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "54",
+    "departamento": "NORTE DE SANTANDER",
+    "codigoMpio": "54377",
+    "municipio": "LABATECA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "54",
+    "departamento": "NORTE DE SANTANDER",
+    "codigoMpio": "54385",
+    "municipio": "LA ESPERANZA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "54",
+    "departamento": "NORTE DE SANTANDER",
+    "codigoMpio": "54398",
+    "municipio": "LA PLAYA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "54",
+    "departamento": "NORTE DE SANTANDER",
+    "codigoMpio": "54405",
+    "municipio": "LOS PATIOS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "54",
+    "departamento": "NORTE DE SANTANDER",
+    "codigoMpio": "54418",
+    "municipio": "LOURDES",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "54",
+    "departamento": "NORTE DE SANTANDER",
+    "codigoMpio": "54480",
+    "municipio": "MUTISCUA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "54",
+    "departamento": "NORTE DE SANTANDER",
+    "codigoMpio": "54498",
+    "municipio": "OCAÑA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "54",
+    "departamento": "NORTE DE SANTANDER",
+    "codigoMpio": "54518",
+    "municipio": "PAMPLONA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "54",
+    "departamento": "NORTE DE SANTANDER",
+    "codigoMpio": "54520",
+    "municipio": "PAMPLONITA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "54",
+    "departamento": "NORTE DE SANTANDER",
+    "codigoMpio": "54553",
+    "municipio": "PUERTO SANTANDER",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "54",
+    "departamento": "NORTE DE SANTANDER",
+    "codigoMpio": "54599",
+    "municipio": "RAGONVALIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "54",
+    "departamento": "NORTE DE SANTANDER",
+    "codigoMpio": "54660",
+    "municipio": "SALAZAR",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "54",
+    "departamento": "NORTE DE SANTANDER",
+    "codigoMpio": "54670",
+    "municipio": "SAN CALIXTO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "54",
+    "departamento": "NORTE DE SANTANDER",
+    "codigoMpio": "54673",
+    "municipio": "SAN CAYETANO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "54",
+    "departamento": "NORTE DE SANTANDER",
+    "codigoMpio": "54680",
+    "municipio": "SANTIAGO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "54",
+    "departamento": "NORTE DE SANTANDER",
+    "codigoMpio": "54720",
+    "municipio": "SARDINATA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "54",
+    "departamento": "NORTE DE SANTANDER",
+    "codigoMpio": "54743",
+    "municipio": "SILOS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "54",
+    "departamento": "NORTE DE SANTANDER",
+    "codigoMpio": "54800",
+    "municipio": "TEORAMA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "54",
+    "departamento": "NORTE DE SANTANDER",
+    "codigoMpio": "54810",
+    "municipio": "TIBÚ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "54",
+    "departamento": "NORTE DE SANTANDER",
+    "codigoMpio": "54820",
+    "municipio": "TOLEDO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "54",
+    "departamento": "NORTE DE SANTANDER",
+    "codigoMpio": "54871",
+    "municipio": "VILLA CARO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "54",
+    "departamento": "NORTE DE SANTANDER",
+    "codigoMpio": "54874",
+    "municipio": "VILLA DEL ROSARIO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "63",
+    "departamento": "QUINDÍO",
+    "codigoMpio": "63001",
+    "municipio": "ARMENIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "63",
+    "departamento": "QUINDÍO",
+    "codigoMpio": "63111",
+    "municipio": "BUENAVISTA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "63",
+    "departamento": "QUINDÍO",
+    "codigoMpio": "63130",
+    "municipio": "CALARCÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "63",
+    "departamento": "QUINDÍO",
+    "codigoMpio": "63190",
+    "municipio": "CIRCASIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "63",
+    "departamento": "QUINDÍO",
+    "codigoMpio": "63212",
+    "municipio": "CÓRDOBA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "63",
+    "departamento": "QUINDÍO",
+    "codigoMpio": "63272",
+    "municipio": "FILANDIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "63",
+    "departamento": "QUINDÍO",
+    "codigoMpio": "63302",
+    "municipio": "GÉNOVA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "63",
+    "departamento": "QUINDÍO",
+    "codigoMpio": "63401",
+    "municipio": "LA TEBAIDA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "63",
+    "departamento": "QUINDÍO",
+    "codigoMpio": "63470",
+    "municipio": "MONTENEGRO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "63",
+    "departamento": "QUINDÍO",
+    "codigoMpio": "63548",
+    "municipio": "PIJAO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "63",
+    "departamento": "QUINDÍO",
+    "codigoMpio": "63594",
+    "municipio": "QUIMBAYA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "63",
+    "departamento": "QUINDÍO",
+    "codigoMpio": "63690",
+    "municipio": "SALENTO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "66",
+    "departamento": "RISARALDA",
+    "codigoMpio": "66001",
+    "municipio": "PEREIRA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "66",
+    "departamento": "RISARALDA",
+    "codigoMpio": "66045",
+    "municipio": "APÍA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "66",
+    "departamento": "RISARALDA",
+    "codigoMpio": "66075",
+    "municipio": "BALBOA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "66",
+    "departamento": "RISARALDA",
+    "codigoMpio": "66088",
+    "municipio": "BELÉN DE UMBRÍA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "66",
+    "departamento": "RISARALDA",
+    "codigoMpio": "66170",
+    "municipio": "DOSQUEBRADAS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "66",
+    "departamento": "RISARALDA",
+    "codigoMpio": "66318",
+    "municipio": "GUÁTICA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "66",
+    "departamento": "RISARALDA",
+    "codigoMpio": "66383",
+    "municipio": "LA CELIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "66",
+    "departamento": "RISARALDA",
+    "codigoMpio": "66400",
+    "municipio": "LA VIRGINIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "66",
+    "departamento": "RISARALDA",
+    "codigoMpio": "66440",
+    "municipio": "MARSELLA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "66",
+    "departamento": "RISARALDA",
+    "codigoMpio": "66456",
+    "municipio": "MISTRATÓ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "66",
+    "departamento": "RISARALDA",
+    "codigoMpio": "66572",
+    "municipio": "PUEBLO RICO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "66",
+    "departamento": "RISARALDA",
+    "codigoMpio": "66594",
+    "municipio": "QUINCHÍA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "66",
+    "departamento": "RISARALDA",
+    "codigoMpio": "66682",
+    "municipio": "SANTA ROSA DE CABAL",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "66",
+    "departamento": "RISARALDA",
+    "codigoMpio": "66687",
+    "municipio": "SANTUARIO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68001",
+    "municipio": "BUCARAMANGA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68013",
+    "municipio": "AGUADA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68020",
+    "municipio": "ALBANIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68051",
+    "municipio": "ARATOCA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68077",
+    "municipio": "BARBOSA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68079",
+    "municipio": "BARICHARA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68081",
+    "municipio": "BARRANCABERMEJA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68092",
+    "municipio": "BETULIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68101",
+    "municipio": "BOLÍVAR",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68121",
+    "municipio": "CABRERA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68132",
+    "municipio": "CALIFORNIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68147",
+    "municipio": "CAPITANEJO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68152",
+    "municipio": "CARCASÍ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68160",
+    "municipio": "CEPITÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68162",
+    "municipio": "CERRITO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68167",
+    "municipio": "CHARALÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68169",
+    "municipio": "CHARTA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68176",
+    "municipio": "CHIMA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68179",
+    "municipio": "CHIPATÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68190",
+    "municipio": "CIMITARRA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68207",
+    "municipio": "CONCEPCIÓN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68209",
+    "municipio": "CONFINES",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68211",
+    "municipio": "CONTRATACIÓN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68217",
+    "municipio": "COROMORO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68229",
+    "municipio": "CURITÍ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68235",
+    "municipio": "EL CARMEN DE CHUCURÍ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68245",
+    "municipio": "EL GUACAMAYO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68250",
+    "municipio": "EL PEÑÓN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68255",
+    "municipio": "EL PLAYÓN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68264",
+    "municipio": "ENCINO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68266",
+    "municipio": "ENCISO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68271",
+    "municipio": "FLORIÁN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68276",
+    "municipio": "FLORIDABLANCA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68296",
+    "municipio": "GALÁN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68298",
+    "municipio": "GÁMBITA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68307",
+    "municipio": "GIRÓN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68318",
+    "municipio": "GUACA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68320",
+    "municipio": "GUADALUPE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68322",
+    "municipio": "GUAPOTÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68324",
+    "municipio": "GUAVATÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68327",
+    "municipio": "GÜEPSA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68344",
+    "municipio": "HATO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68368",
+    "municipio": "JESÚS MARÍA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68370",
+    "municipio": "JORDÁN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68377",
+    "municipio": "LA BELLEZA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68385",
+    "municipio": "LANDÁZURI",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68397",
+    "municipio": "LA PAZ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68406",
+    "municipio": "LEBRIJA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68418",
+    "municipio": "LOS SANTOS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68425",
+    "municipio": "MACARAVITA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68432",
+    "municipio": "MÁLAGA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68444",
+    "municipio": "MATANZA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68464",
+    "municipio": "MOGOTES",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68468",
+    "municipio": "MOLAGAVITA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68498",
+    "municipio": "OCAMONTE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68500",
+    "municipio": "OIBA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68502",
+    "municipio": "ONZAGA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68522",
+    "municipio": "PALMAR",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68524",
+    "municipio": "PALMAS DEL SOCORRO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68533",
+    "municipio": "PÁRAMO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68547",
+    "municipio": "PIEDECUESTA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68549",
+    "municipio": "PINCHOTE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68572",
+    "municipio": "PUENTE NACIONAL",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68573",
+    "municipio": "PUERTO PARRA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68575",
+    "municipio": "PUERTO WILCHES",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68615",
+    "municipio": "RIONEGRO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68655",
+    "municipio": "SABANA DE TORRES",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68669",
+    "municipio": "SAN ANDRÉS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68673",
+    "municipio": "SAN BENITO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68679",
+    "municipio": "SAN GIL",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68682",
+    "municipio": "SAN JOAQUÍN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68684",
+    "municipio": "SAN JOSÉ DE MIRANDA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68686",
+    "municipio": "SAN MIGUEL",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68689",
+    "municipio": "SAN VICENTE DE CHUCURÍ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68705",
+    "municipio": "SANTA BÁRBARA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68720",
+    "municipio": "SANTA HELENA DEL OPÓN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68745",
+    "municipio": "SIMACOTA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68755",
+    "municipio": "SOCORRO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68770",
+    "municipio": "SUAITA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68773",
+    "municipio": "SUCRE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68780",
+    "municipio": "SURATÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68820",
+    "municipio": "TONA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68855",
+    "municipio": "VALLE DE SAN JOSÉ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68861",
+    "municipio": "VÉLEZ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68867",
+    "municipio": "VETAS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68872",
+    "municipio": "VILLANUEVA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "68",
+    "departamento": "SANTANDER",
+    "codigoMpio": "68895",
+    "municipio": "ZAPATOCA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "70",
+    "departamento": "SUCRE",
+    "codigoMpio": "70001",
+    "municipio": "SINCELEJO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "70",
+    "departamento": "SUCRE",
+    "codigoMpio": "70110",
+    "municipio": "BUENAVISTA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "70",
+    "departamento": "SUCRE",
+    "codigoMpio": "70124",
+    "municipio": "CAIMITO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "70",
+    "departamento": "SUCRE",
+    "codigoMpio": "70204",
+    "municipio": "COLOSÓ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "70",
+    "departamento": "SUCRE",
+    "codigoMpio": "70215",
+    "municipio": "COROZAL",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "70",
+    "departamento": "SUCRE",
+    "codigoMpio": "70221",
+    "municipio": "COVEÑAS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "70",
+    "departamento": "SUCRE",
+    "codigoMpio": "70230",
+    "municipio": "CHALÁN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "70",
+    "departamento": "SUCRE",
+    "codigoMpio": "70233",
+    "municipio": "EL ROBLE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "70",
+    "departamento": "SUCRE",
+    "codigoMpio": "70235",
+    "municipio": "GALERAS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "70",
+    "departamento": "SUCRE",
+    "codigoMpio": "70265",
+    "municipio": "GUARANDA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "70",
+    "departamento": "SUCRE",
+    "codigoMpio": "70400",
+    "municipio": "LA UNIÓN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "70",
+    "departamento": "SUCRE",
+    "codigoMpio": "70418",
+    "municipio": "LOS PALMITOS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "70",
+    "departamento": "SUCRE",
+    "codigoMpio": "70429",
+    "municipio": "MAJAGUAL",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "70",
+    "departamento": "SUCRE",
+    "codigoMpio": "70473",
+    "municipio": "MORROA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "70",
+    "departamento": "SUCRE",
+    "codigoMpio": "70508",
+    "municipio": "OVEJAS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "70",
+    "departamento": "SUCRE",
+    "codigoMpio": "70523",
+    "municipio": "PALMITO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "70",
+    "departamento": "SUCRE",
+    "codigoMpio": "70670",
+    "municipio": "SAMPUÉS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "70",
+    "departamento": "SUCRE",
+    "codigoMpio": "70678",
+    "municipio": "SAN BENITO ABAD",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "70",
+    "departamento": "SUCRE",
+    "codigoMpio": "70702",
+    "municipio": "SAN JUAN DE BETULIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "70",
+    "departamento": "SUCRE",
+    "codigoMpio": "70708",
+    "municipio": "SAN MARCOS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "70",
+    "departamento": "SUCRE",
+    "codigoMpio": "70713",
+    "municipio": "SAN ONOFRE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "70",
+    "departamento": "SUCRE",
+    "codigoMpio": "70717",
+    "municipio": "SAN PEDRO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "70",
+    "departamento": "SUCRE",
+    "codigoMpio": "70742",
+    "municipio": "SAN LUIS DE SINCÉ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "70",
+    "departamento": "SUCRE",
+    "codigoMpio": "70771",
+    "municipio": "SUCRE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "70",
+    "departamento": "SUCRE",
+    "codigoMpio": "70820",
+    "municipio": "SANTIAGO DE TOLÚ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "70",
+    "departamento": "SUCRE",
+    "codigoMpio": "70823",
+    "municipio": "SAN JOSÉ DE TOLUVIEJO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "73",
+    "departamento": "TOLIMA",
+    "codigoMpio": "73001",
+    "municipio": "IBAGUÉ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "73",
+    "departamento": "TOLIMA",
+    "codigoMpio": "73024",
+    "municipio": "ALPUJARRA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "73",
+    "departamento": "TOLIMA",
+    "codigoMpio": "73026",
+    "municipio": "ALVARADO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "73",
+    "departamento": "TOLIMA",
+    "codigoMpio": "73030",
+    "municipio": "AMBALEMA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "73",
+    "departamento": "TOLIMA",
+    "codigoMpio": "73043",
+    "municipio": "ANZOÁTEGUI",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "73",
+    "departamento": "TOLIMA",
+    "codigoMpio": "73055",
+    "municipio": "ARMERO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "73",
+    "departamento": "TOLIMA",
+    "codigoMpio": "73067",
+    "municipio": "ATACO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "73",
+    "departamento": "TOLIMA",
+    "codigoMpio": "73124",
+    "municipio": "CAJAMARCA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "73",
+    "departamento": "TOLIMA",
+    "codigoMpio": "73148",
+    "municipio": "CARMEN DE APICALÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "73",
+    "departamento": "TOLIMA",
+    "codigoMpio": "73152",
+    "municipio": "CASABIANCA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "73",
+    "departamento": "TOLIMA",
+    "codigoMpio": "73168",
+    "municipio": "CHAPARRAL",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "73",
+    "departamento": "TOLIMA",
+    "codigoMpio": "73200",
+    "municipio": "COELLO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "73",
+    "departamento": "TOLIMA",
+    "codigoMpio": "73217",
+    "municipio": "COYAIMA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "73",
+    "departamento": "TOLIMA",
+    "codigoMpio": "73226",
+    "municipio": "CUNDAY",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "73",
+    "departamento": "TOLIMA",
+    "codigoMpio": "73236",
+    "municipio": "DOLORES",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "73",
+    "departamento": "TOLIMA",
+    "codigoMpio": "73268",
+    "municipio": "ESPINAL",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "73",
+    "departamento": "TOLIMA",
+    "codigoMpio": "73270",
+    "municipio": "FALAN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "73",
+    "departamento": "TOLIMA",
+    "codigoMpio": "73275",
+    "municipio": "FLANDES",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "73",
+    "departamento": "TOLIMA",
+    "codigoMpio": "73283",
+    "municipio": "FRESNO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "73",
+    "departamento": "TOLIMA",
+    "codigoMpio": "73319",
+    "municipio": "GUAMO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "73",
+    "departamento": "TOLIMA",
+    "codigoMpio": "73347",
+    "municipio": "HERVEO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "73",
+    "departamento": "TOLIMA",
+    "codigoMpio": "73349",
+    "municipio": "HONDA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "73",
+    "departamento": "TOLIMA",
+    "codigoMpio": "73352",
+    "municipio": "ICONONZO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "73",
+    "departamento": "TOLIMA",
+    "codigoMpio": "73408",
+    "municipio": "LÉRIDA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "73",
+    "departamento": "TOLIMA",
+    "codigoMpio": "73411",
+    "municipio": "LÍBANO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "73",
+    "departamento": "TOLIMA",
+    "codigoMpio": "73443",
+    "municipio": "SAN SEBASTIÁN DE MARIQUITA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "73",
+    "departamento": "TOLIMA",
+    "codigoMpio": "73449",
+    "municipio": "MELGAR",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "73",
+    "departamento": "TOLIMA",
+    "codigoMpio": "73461",
+    "municipio": "MURILLO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "73",
+    "departamento": "TOLIMA",
+    "codigoMpio": "73483",
+    "municipio": "NATAGAIMA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "73",
+    "departamento": "TOLIMA",
+    "codigoMpio": "73504",
+    "municipio": "ORTEGA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "73",
+    "departamento": "TOLIMA",
+    "codigoMpio": "73520",
+    "municipio": "PALOCABILDO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "73",
+    "departamento": "TOLIMA",
+    "codigoMpio": "73547",
+    "municipio": "PIEDRAS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "73",
+    "departamento": "TOLIMA",
+    "codigoMpio": "73555",
+    "municipio": "PLANADAS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "73",
+    "departamento": "TOLIMA",
+    "codigoMpio": "73563",
+    "municipio": "PRADO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "73",
+    "departamento": "TOLIMA",
+    "codigoMpio": "73585",
+    "municipio": "PURIFICACIÓN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "73",
+    "departamento": "TOLIMA",
+    "codigoMpio": "73616",
+    "municipio": "RIOBLANCO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "73",
+    "departamento": "TOLIMA",
+    "codigoMpio": "73622",
+    "municipio": "RONCESVALLES",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "73",
+    "departamento": "TOLIMA",
+    "codigoMpio": "73624",
+    "municipio": "ROVIRA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "73",
+    "departamento": "TOLIMA",
+    "codigoMpio": "73671",
+    "municipio": "SALDAÑA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "73",
+    "departamento": "TOLIMA",
+    "codigoMpio": "73675",
+    "municipio": "SAN ANTONIO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "73",
+    "departamento": "TOLIMA",
+    "codigoMpio": "73678",
+    "municipio": "SAN LUIS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "73",
+    "departamento": "TOLIMA",
+    "codigoMpio": "73686",
+    "municipio": "SANTA ISABEL",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "73",
+    "departamento": "TOLIMA",
+    "codigoMpio": "73770",
+    "municipio": "SUÁREZ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "73",
+    "departamento": "TOLIMA",
+    "codigoMpio": "73854",
+    "municipio": "VALLE DE SAN JUAN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "73",
+    "departamento": "TOLIMA",
+    "codigoMpio": "73861",
+    "municipio": "VENADILLO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "73",
+    "departamento": "TOLIMA",
+    "codigoMpio": "73870",
+    "municipio": "VILLAHERMOSA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "73",
+    "departamento": "TOLIMA",
+    "codigoMpio": "73873",
+    "municipio": "VILLARRICA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "76",
+    "departamento": "VALLE DEL CAUCA",
+    "codigoMpio": "76001",
+    "municipio": "SANTIAGO DE CALI",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "76",
+    "departamento": "VALLE DEL CAUCA",
+    "codigoMpio": "76020",
+    "municipio": "ALCALÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "76",
+    "departamento": "VALLE DEL CAUCA",
+    "codigoMpio": "76036",
+    "municipio": "ANDALUCÍA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "76",
+    "departamento": "VALLE DEL CAUCA",
+    "codigoMpio": "76041",
+    "municipio": "ANSERMANUEVO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "76",
+    "departamento": "VALLE DEL CAUCA",
+    "codigoMpio": "76054",
+    "municipio": "ARGELIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "76",
+    "departamento": "VALLE DEL CAUCA",
+    "codigoMpio": "76100",
+    "municipio": "BOLÍVAR",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "76",
+    "departamento": "VALLE DEL CAUCA",
+    "codigoMpio": "76109",
+    "municipio": "BUENAVENTURA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "76",
+    "departamento": "VALLE DEL CAUCA",
+    "codigoMpio": "76111",
+    "municipio": "GUADALAJARA DE BUGA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "76",
+    "departamento": "VALLE DEL CAUCA",
+    "codigoMpio": "76113",
+    "municipio": "BUGALAGRANDE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "76",
+    "departamento": "VALLE DEL CAUCA",
+    "codigoMpio": "76122",
+    "municipio": "CAICEDONIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "76",
+    "departamento": "VALLE DEL CAUCA",
+    "codigoMpio": "76126",
+    "municipio": "CALIMA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "76",
+    "departamento": "VALLE DEL CAUCA",
+    "codigoMpio": "76130",
+    "municipio": "CANDELARIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "76",
+    "departamento": "VALLE DEL CAUCA",
+    "codigoMpio": "76147",
+    "municipio": "CARTAGO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "76",
+    "departamento": "VALLE DEL CAUCA",
+    "codigoMpio": "76233",
+    "municipio": "DAGUA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "76",
+    "departamento": "VALLE DEL CAUCA",
+    "codigoMpio": "76243",
+    "municipio": "EL ÁGUILA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "76",
+    "departamento": "VALLE DEL CAUCA",
+    "codigoMpio": "76246",
+    "municipio": "EL CAIRO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "76",
+    "departamento": "VALLE DEL CAUCA",
+    "codigoMpio": "76248",
+    "municipio": "EL CERRITO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "76",
+    "departamento": "VALLE DEL CAUCA",
+    "codigoMpio": "76250",
+    "municipio": "EL DOVIO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "76",
+    "departamento": "VALLE DEL CAUCA",
+    "codigoMpio": "76275",
+    "municipio": "FLORIDA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "76",
+    "departamento": "VALLE DEL CAUCA",
+    "codigoMpio": "76306",
+    "municipio": "GINEBRA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "76",
+    "departamento": "VALLE DEL CAUCA",
+    "codigoMpio": "76318",
+    "municipio": "GUACARÍ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "76",
+    "departamento": "VALLE DEL CAUCA",
+    "codigoMpio": "76364",
+    "municipio": "JAMUNDÍ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "76",
+    "departamento": "VALLE DEL CAUCA",
+    "codigoMpio": "76377",
+    "municipio": "LA CUMBRE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "76",
+    "departamento": "VALLE DEL CAUCA",
+    "codigoMpio": "76400",
+    "municipio": "LA UNIÓN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "76",
+    "departamento": "VALLE DEL CAUCA",
+    "codigoMpio": "76403",
+    "municipio": "LA VICTORIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "76",
+    "departamento": "VALLE DEL CAUCA",
+    "codigoMpio": "76497",
+    "municipio": "OBANDO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "76",
+    "departamento": "VALLE DEL CAUCA",
+    "codigoMpio": "76520",
+    "municipio": "PALMIRA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "76",
+    "departamento": "VALLE DEL CAUCA",
+    "codigoMpio": "76563",
+    "municipio": "PRADERA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "76",
+    "departamento": "VALLE DEL CAUCA",
+    "codigoMpio": "76606",
+    "municipio": "RESTREPO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "76",
+    "departamento": "VALLE DEL CAUCA",
+    "codigoMpio": "76616",
+    "municipio": "RIOFRÍO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "76",
+    "departamento": "VALLE DEL CAUCA",
+    "codigoMpio": "76622",
+    "municipio": "ROLDANILLO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "76",
+    "departamento": "VALLE DEL CAUCA",
+    "codigoMpio": "76670",
+    "municipio": "SAN PEDRO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "76",
+    "departamento": "VALLE DEL CAUCA",
+    "codigoMpio": "76736",
+    "municipio": "SEVILLA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "76",
+    "departamento": "VALLE DEL CAUCA",
+    "codigoMpio": "76823",
+    "municipio": "TORO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "76",
+    "departamento": "VALLE DEL CAUCA",
+    "codigoMpio": "76828",
+    "municipio": "TRUJILLO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "76",
+    "departamento": "VALLE DEL CAUCA",
+    "codigoMpio": "76834",
+    "municipio": "TULUÁ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "76",
+    "departamento": "VALLE DEL CAUCA",
+    "codigoMpio": "76845",
+    "municipio": "ULLOA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "76",
+    "departamento": "VALLE DEL CAUCA",
+    "codigoMpio": "76863",
+    "municipio": "VERSALLES",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "76",
+    "departamento": "VALLE DEL CAUCA",
+    "codigoMpio": "76869",
+    "municipio": "VIJES",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "76",
+    "departamento": "VALLE DEL CAUCA",
+    "codigoMpio": "76890",
+    "municipio": "YOTOCO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "76",
+    "departamento": "VALLE DEL CAUCA",
+    "codigoMpio": "76892",
+    "municipio": "YUMBO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "76",
+    "departamento": "VALLE DEL CAUCA",
+    "codigoMpio": "76895",
+    "municipio": "ZARZAL",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "81",
+    "departamento": "ARAUCA",
+    "codigoMpio": "81001",
+    "municipio": "ARAUCA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "81",
+    "departamento": "ARAUCA",
+    "codigoMpio": "81065",
+    "municipio": "ARAUQUITA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "81",
+    "departamento": "ARAUCA",
+    "codigoMpio": "81220",
+    "municipio": "CRAVO NORTE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "81",
+    "departamento": "ARAUCA",
+    "codigoMpio": "81300",
+    "municipio": "FORTUL",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "81",
+    "departamento": "ARAUCA",
+    "codigoMpio": "81591",
+    "municipio": "PUERTO RONDÓN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "81",
+    "departamento": "ARAUCA",
+    "codigoMpio": "81736",
+    "municipio": "SARAVENA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "81",
+    "departamento": "ARAUCA",
+    "codigoMpio": "81794",
+    "municipio": "TAME",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "85",
+    "departamento": "CASANARE",
+    "codigoMpio": "85001",
+    "municipio": "YOPAL",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "85",
+    "departamento": "CASANARE",
+    "codigoMpio": "85010",
+    "municipio": "AGUAZUL",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "85",
+    "departamento": "CASANARE",
+    "codigoMpio": "85015",
+    "municipio": "CHÁMEZA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "85",
+    "departamento": "CASANARE",
+    "codigoMpio": "85125",
+    "municipio": "HATO COROZAL",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "85",
+    "departamento": "CASANARE",
+    "codigoMpio": "85136",
+    "municipio": "LA SALINA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "85",
+    "departamento": "CASANARE",
+    "codigoMpio": "85139",
+    "municipio": "MANÍ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "85",
+    "departamento": "CASANARE",
+    "codigoMpio": "85162",
+    "municipio": "MONTERREY",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "85",
+    "departamento": "CASANARE",
+    "codigoMpio": "85225",
+    "municipio": "NUNCHÍA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "85",
+    "departamento": "CASANARE",
+    "codigoMpio": "85230",
+    "municipio": "OROCUÉ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "85",
+    "departamento": "CASANARE",
+    "codigoMpio": "85250",
+    "municipio": "PAZ DE ARIPORO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "85",
+    "departamento": "CASANARE",
+    "codigoMpio": "85263",
+    "municipio": "PORE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "85",
+    "departamento": "CASANARE",
+    "codigoMpio": "85279",
+    "municipio": "RECETOR",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "85",
+    "departamento": "CASANARE",
+    "codigoMpio": "85300",
+    "municipio": "SABANALARGA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "85",
+    "departamento": "CASANARE",
+    "codigoMpio": "85315",
+    "municipio": "SÁCAMA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "85",
+    "departamento": "CASANARE",
+    "codigoMpio": "85325",
+    "municipio": "SAN LUIS DE PALENQUE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "85",
+    "departamento": "CASANARE",
+    "codigoMpio": "85400",
+    "municipio": "TÁMARA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "85",
+    "departamento": "CASANARE",
+    "codigoMpio": "85410",
+    "municipio": "TAURAMENA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "85",
+    "departamento": "CASANARE",
+    "codigoMpio": "85430",
+    "municipio": "TRINIDAD",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "85",
+    "departamento": "CASANARE",
+    "codigoMpio": "85440",
+    "municipio": "VILLANUEVA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "86",
+    "departamento": "PUTUMAYO",
+    "codigoMpio": "86001",
+    "municipio": "MOCOA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "86",
+    "departamento": "PUTUMAYO",
+    "codigoMpio": "86219",
+    "municipio": "COLÓN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "86",
+    "departamento": "PUTUMAYO",
+    "codigoMpio": "86320",
+    "municipio": "ORITO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "86",
+    "departamento": "PUTUMAYO",
+    "codigoMpio": "86568",
+    "municipio": "PUERTO ASÍS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "86",
+    "departamento": "PUTUMAYO",
+    "codigoMpio": "86569",
+    "municipio": "PUERTO CAICEDO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "86",
+    "departamento": "PUTUMAYO",
+    "codigoMpio": "86571",
+    "municipio": "PUERTO GUZMÁN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "86",
+    "departamento": "PUTUMAYO",
+    "codigoMpio": "86573",
+    "municipio": "PUERTO LEGUÍZAMO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "86",
+    "departamento": "PUTUMAYO",
+    "codigoMpio": "86749",
+    "municipio": "SIBUNDOY",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "86",
+    "departamento": "PUTUMAYO",
+    "codigoMpio": "86755",
+    "municipio": "SAN FRANCISCO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "86",
+    "departamento": "PUTUMAYO",
+    "codigoMpio": "86757",
+    "municipio": "SAN MIGUEL",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "86",
+    "departamento": "PUTUMAYO",
+    "codigoMpio": "86760",
+    "municipio": "SANTIAGO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "86",
+    "departamento": "PUTUMAYO",
+    "codigoMpio": "86865",
+    "municipio": "VALLE DEL GUAMUEZ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "86",
+    "departamento": "PUTUMAYO",
+    "codigoMpio": "86885",
+    "municipio": "VILLAGARZÓN",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "88",
+    "departamento": "ARCHIPIÉLAGO DE SAN ANDRÉS, PROVIDENCIA Y SANTA CATALINA",
+    "codigoMpio": "88001",
+    "municipio": "SAN ANDRÉS",
+    "tipo": "Isla"
+  },
+  {
+    "codigoDpto": "88",
+    "departamento": "ARCHIPIÉLAGO DE SAN ANDRÉS, PROVIDENCIA Y SANTA CATALINA",
+    "codigoMpio": "88564",
+    "municipio": "PROVIDENCIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "91",
+    "departamento": "AMAZONAS",
+    "codigoMpio": "91001",
+    "municipio": "LETICIA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "91",
+    "departamento": "AMAZONAS",
+    "codigoMpio": "91263",
+    "municipio": "EL ENCANTO",
+    "tipo": "Área no municipalizada"
+  },
+  {
+    "codigoDpto": "91",
+    "departamento": "AMAZONAS",
+    "codigoMpio": "91405",
+    "municipio": "LA CHORRERA",
+    "tipo": "Área no municipalizada"
+  },
+  {
+    "codigoDpto": "91",
+    "departamento": "AMAZONAS",
+    "codigoMpio": "91407",
+    "municipio": "LA PEDRERA",
+    "tipo": "Área no municipalizada"
+  },
+  {
+    "codigoDpto": "91",
+    "departamento": "AMAZONAS",
+    "codigoMpio": "91430",
+    "municipio": "LA VICTORIA",
+    "tipo": "Área no municipalizada"
+  },
+  {
+    "codigoDpto": "91",
+    "departamento": "AMAZONAS",
+    "codigoMpio": "91460",
+    "municipio": "MIRITÍ - PARANÁ",
+    "tipo": "Área no municipalizada"
+  },
+  {
+    "codigoDpto": "91",
+    "departamento": "AMAZONAS",
+    "codigoMpio": "91530",
+    "municipio": "PUERTO ALEGRÍA",
+    "tipo": "Área no municipalizada"
+  },
+  {
+    "codigoDpto": "91",
+    "departamento": "AMAZONAS",
+    "codigoMpio": "91536",
+    "municipio": "PUERTO ARICA",
+    "tipo": "Área no municipalizada"
+  },
+  {
+    "codigoDpto": "91",
+    "departamento": "AMAZONAS",
+    "codigoMpio": "91540",
+    "municipio": "PUERTO NARIÑO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "91",
+    "departamento": "AMAZONAS",
+    "codigoMpio": "91669",
+    "municipio": "PUERTO SANTANDER",
+    "tipo": "Área no municipalizada"
+  },
+  {
+    "codigoDpto": "91",
+    "departamento": "AMAZONAS",
+    "codigoMpio": "91798",
+    "municipio": "TARAPACÁ",
+    "tipo": "Área no municipalizada"
+  },
+  {
+    "codigoDpto": "94",
+    "departamento": "GUAINÍA",
+    "codigoMpio": "94001",
+    "municipio": "INÍRIDA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "94",
+    "departamento": "GUAINÍA",
+    "codigoMpio": "94343",
+    "municipio": "BARRANCOMINAS",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "94",
+    "departamento": "GUAINÍA",
+    "codigoMpio": "94883",
+    "municipio": "SAN FELIPE",
+    "tipo": "Área no municipalizada"
+  },
+  {
+    "codigoDpto": "94",
+    "departamento": "GUAINÍA",
+    "codigoMpio": "94884",
+    "municipio": "PUERTO COLOMBIA",
+    "tipo": "Área no municipalizada"
+  },
+  {
+    "codigoDpto": "94",
+    "departamento": "GUAINÍA",
+    "codigoMpio": "94885",
+    "municipio": "LA GUADALUPE",
+    "tipo": "Área no municipalizada"
+  },
+  {
+    "codigoDpto": "94",
+    "departamento": "GUAINÍA",
+    "codigoMpio": "94886",
+    "municipio": "CACAHUAL",
+    "tipo": "Área no municipalizada"
+  },
+  {
+    "codigoDpto": "94",
+    "departamento": "GUAINÍA",
+    "codigoMpio": "94887",
+    "municipio": "PANA PANA",
+    "tipo": "Área no municipalizada"
+  },
+  {
+    "codigoDpto": "94",
+    "departamento": "GUAINÍA",
+    "codigoMpio": "94888",
+    "municipio": "MORICHAL",
+    "tipo": "Área no municipalizada"
+  },
+  {
+    "codigoDpto": "95",
+    "departamento": "GUAVIARE",
+    "codigoMpio": "95001",
+    "municipio": "SAN JOSÉ DEL GUAVIARE",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "95",
+    "departamento": "GUAVIARE",
+    "codigoMpio": "95015",
+    "municipio": "CALAMAR",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "95",
+    "departamento": "GUAVIARE",
+    "codigoMpio": "95025",
+    "municipio": "EL RETORNO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "95",
+    "departamento": "GUAVIARE",
+    "codigoMpio": "95200",
+    "municipio": "MIRAFLORES",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "97",
+    "departamento": "VAUPÉS",
+    "codigoMpio": "97001",
+    "municipio": "MITÚ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "97",
+    "departamento": "VAUPÉS",
+    "codigoMpio": "97161",
+    "municipio": "CARURÚ",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "97",
+    "departamento": "VAUPÉS",
+    "codigoMpio": "97511",
+    "municipio": "PACOA",
+    "tipo": "Área no municipalizada"
+  },
+  {
+    "codigoDpto": "97",
+    "departamento": "VAUPÉS",
+    "codigoMpio": "97666",
+    "municipio": "TARAIRA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "97",
+    "departamento": "VAUPÉS",
+    "codigoMpio": "97777",
+    "municipio": "PAPUNAHUA",
+    "tipo": "Área no municipalizada"
+  },
+  {
+    "codigoDpto": "97",
+    "departamento": "VAUPÉS",
+    "codigoMpio": "97889",
+    "municipio": "YAVARATÉ",
+    "tipo": "Área no municipalizada"
+  },
+  {
+    "codigoDpto": "99",
+    "departamento": "VICHADA",
+    "codigoMpio": "99001",
+    "municipio": "PUERTO CARREÑO",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "99",
+    "departamento": "VICHADA",
+    "codigoMpio": "99524",
+    "municipio": "LA PRIMAVERA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "99",
+    "departamento": "VICHADA",
+    "codigoMpio": "99624",
+    "municipio": "SANTA ROSALÍA",
+    "tipo": "Municipio"
+  },
+  {
+    "codigoDpto": "99",
+    "departamento": "VICHADA",
+    "codigoMpio": "99773",
+    "municipio": "CUMARIBO",
+    "tipo": "Municipio"
+  }
+]

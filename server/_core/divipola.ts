@@ -5,36 +5,21 @@ let municipalitiesMap: Map<string, string> = new Map();
 
 export const initDivipola = () => {
   try {
-    const filePath = path.join(process.cwd(), 'server', 'data', 'divipola.csv');
-    if (!fs.existsSync(filePath)) {
-      console.warn("Divipola CSV not found at", filePath);
-      return;
-    }
-    
-    const content = fs.readFileSync(filePath, 'utf-8');
-    const lines = content.split('\n');
+    const jsonPath = path.join(process.cwd(), 'server', 'data', 'divipola.json');
     
     municipalitiesMap.clear();
 
-    // Skip header line
-    for (let i = 1; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (!line) continue;
-      
-      // Parse CSV line properly considering quotes
-      const parts = line.match(/(?:^|,)("(?:[^"]|"")*"|[^,]*)/g);
-      if (!parts || parts.length < 4) continue;
-      
-      // The format is: "Code Dept","Name Dept","Code Mun","Name Mun"
-      let munName = parts[3].replace(/^,?"?|"?$/g, '').trim();
-      
-      if (munName) {
-        // Normalize name: lowercase, remove accents for the key
-        const normalizedKey = munName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-        
-        // Let's store the title cased version for canonical output
-        let titleCased = munName.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
-        
+    if (!fs.existsSync(jsonPath)) {
+      console.warn("Divipola JSON data file not found at", jsonPath);
+      return;
+    }
+
+    const raw = fs.readFileSync(jsonPath, 'utf-8');
+    const list: Array<{ codigoDpto: string; departamento: string; codigoMpio: string; municipio: string }> = JSON.parse(raw);
+    for (const item of list) {
+      if (item.municipio) {
+        const normalizedKey = item.municipio.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+        let titleCased = item.municipio.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
         municipalitiesMap.set(normalizedKey, titleCased);
       }
     }

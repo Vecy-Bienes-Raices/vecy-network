@@ -8,6 +8,7 @@ import { getDb } from '../db';
 import { colombiaGeography } from '../../drizzle/schema';
 import { sql } from 'drizzle-orm';
 import { lookupBarriosByPerimeter } from './geo-lookup';
+import { lookupVereda } from './veredas-lookup';
 
 export const BARRIOS_LAS_SANTAS = [
   "Santa Bárbara",
@@ -362,6 +363,34 @@ export async function validarZona(zona: string, ciudad?: string, textoCompleto?:
       localidad: "Bogotá",
       city: "Bogotá",
       isMunicipio: false
+    };
+  }
+
+  // --- CAPA 0.5: Coincidencia Directa con Barrio Urbano Principal de Bogotá ---
+  if ((!ciudad || normalizarTextoGeografico(ciudad) === "bogota") && MAPA_BARRIOS[normZone]) {
+    const info = MAPA_BARRIOS[normZone];
+    return {
+      isValid: true,
+      barrioCanonico: info.barrioCanonico,
+      localidad: info.localidad,
+      city: info.isMunicipio ? info.barrioCanonico : "Bogotá",
+      isMunicipio: info.isMunicipio || false
+    };
+  }
+
+  // --- CAPA 0.6: Resolución Oficial de Veredas Nacionales (IGAC 33.435 Veredas) ---
+  const isExplicitVereda = /\bvereda\b/i.test(zona);
+  const veredaMatch = lookupVereda(zona, ciudad);
+  if (veredaMatch && (isExplicitVereda || (ciudad && normalizarTextoGeografico(ciudad) !== "bogota") || !MAPA_BARRIOS[normZone])) {
+    const veredaTitle = veredaMatch.vereda.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+    const mpioTitle = veredaMatch.municipio.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+    console.log(`[Geocoding-Vereda] IGAC Vereda resuelta "${zona}" ➔ "Vereda ${veredaTitle}" (${mpioTitle}, ${veredaMatch.departamento})`);
+    return {
+      isValid: true,
+      barrioCanonico: `Vereda ${veredaTitle}`,
+      localidad: mpioTitle,
+      city: mpioTitle,
+      isMunicipio: true
     };
   }
 
