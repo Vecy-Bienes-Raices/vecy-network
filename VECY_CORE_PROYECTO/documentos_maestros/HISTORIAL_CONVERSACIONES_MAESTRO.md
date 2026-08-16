@@ -102,6 +102,12 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
       - Se analizaron los mensajes con *"Bajó de precio"*, confirmando que corresponden a ofertas inmobiliarias reales y vigentes con descuento, las cuales se conservaron intactas.
       - Estado consolidado en Supabase: **651 Inmuebles Únicos** y **310 Requerimientos Únicos** 100% reales.
       - Se ejecutó el script `run_global_matching.ts` para recalcular todas las oportunidades de negocio en vivo.
+13. **Regla de Publicación Automática y Permanente de Coincidencias**:
+    - Eduardo estableció como regla mandatoria: *"Cada Match nuevo que se vaya encontrando debe subirse a la página de coincidencias siempre."*
+    - **Flujo Garantizado**:
+      - **En tiempo real**: Cada nuevo inmueble o requerimiento extraído por JanIA ejecuta `executeMatchEngine`, insertando de inmediato cualquier coincidencia $\ge 85\%$ en `propertyMatches`.
+      - **Visualización en Vivo**: El panel de administración (`/admin` $\rightarrow$ Coincidencias) lee directamente de Supabase mediante `janIA.getAllMatches`, reflejando cada oportunidad de negocio al instante con su mesa de cotejo y teléfonos de contacto.
+      - **Barrido Diario**: El cron de las 8:00 AM (`runNightlyRematch`) re-evalúa y actualiza continuamente todo el universo de propiedades y demandas activas.
 
 #### 🛠️ Diagnósticos y Acciones Técnicas Ejecutadas:
 - **Depuración y Deduplicación Segura en Supabase (`cleanup_database.ts`)**:
