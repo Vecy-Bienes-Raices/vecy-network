@@ -122,8 +122,21 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 16. **Auditoría de Linter de Seguridad Supabase (`public.spatial_ref_sys`)**:
     - Se evaluó la advertencia *"RLS Disabled in Public"* para la tabla `public.spatial_ref_sys`.
     - **Diagnóstico y Confirmación**: Al ejecutar `ALTER TABLE`, PostgreSQL arrojó `ERROR: 42501: must be owner of table spatial_ref_sys`. Esto confirma que dicha tabla pertenece exclusivamente al superusuario del motor interno de Supabase (`supabase_admin`) por ser parte de la extensión **PostGIS**. No es una tabla de datos de la aplicación y ningún usuario externo puede alterarla. Es un falso positivo conocido del escáner de Supabase con **riesgo cero**. Todas las 26 tablas reales de VECY Network están 100% protegidas con RLS.
+17. **Diagnóstico Crítico de Ingesta, Gemini 429 Rate Limit y Extracción en WhatsApp**:
+    - **Observación de Eduardo**: *"Jania si está logrando captar y extraer datos puntuales... o solamente estuviese reaccionando por reaccionar. Creo que algo anda mal!!"*
+    - **Diagnóstico Empírico en Servidor VPS**:
+      1) El sistema enviaba la reacción visual instantánea (👍 o 📝) en menos de 200 ms mediante regex.
+      2) Inmediatamente después, el buffer de ingesta llamaba a `invokeLLM` para extraer la ficha predial, pero **Google Gemini rechazaba las peticiones con `HTTP 429 Too Many Requests (RESOURCE_EXHAUSTED)`** debido al límite estricto de 20 peticiones por minuto del Free Tier en `gemini-2.5-flash`.
+      3) Al fallar la llamada a la IA, el mensaje se descartaba silenciosamente, **impidiendo que el inmueble o requerimiento se guardara en Supabase y bloqueando la generación de nuevos matches**.
+    - **Solución Robusta Implementada en [`server/_core/llm.ts`](file:///home/eddu/Proyectos/vecy-network/server/_core/llm.ts)**:
+      1) **Cascada de Modelos Inteligente**: Si `gemini-2.5-flash` satura su cuota por minuto, conmuta automáticamente en milisegundos a `gemini-flash-latest` y luego a `gemini-flash-lite-latest`.
+      2) **Pool de Claves con Enfriamiento**: Rotación automática entre múltiples claves de Gemini (`GEMINI_API_KEYS`, `GEMINI_BACKUP_KEY`) con cooldown dinámico de 30s ante errores 429.
+      3) **Cola de Pacing (600ms)**: Control de concurrencia para evitar picos simultáneos ante ráfagas de mensajes en los grupos de WhatsApp.
+      4) Validado empíricamente en local y desplegado en producción en el VPS (`dist-server/index.js`), restableciendo al 100% la extracción continua de inmuebles, requerimientos y matches.
 
 #### 🛠️ Diagnósticos y Acciones Técnicas Ejecutadas:
+- **Blindaje y Resiliencia de Invocación LLM (`server/_core/llm.ts`)**:
+  - Implementada cascada multimodelo y rotación de claves para eliminar caídas por Rate Limit 429.
 - **Optimización de Egress en Frontend React (`AdminProperties.tsx`, `AdminRequirements.tsx`, `Admin.tsx`, `AdminGitHubSync.tsx`)**:
   - Ajustados los intervalos de refresco y desactivado el refetch en segundo plano para ahorrar ancho de banda.
 - **Depuración y Deduplicación Segura en Supabase (`cleanup_database.ts`)**:
