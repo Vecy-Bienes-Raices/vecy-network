@@ -4,8 +4,75 @@ import { ENV } from "./env";
 export type LLMProvider = "google" | "anthropic";
 
 /**
+ * Gestor Inteligente de Claves y Modelos de Google Gemini (v22.7)
+ * - Pool de Claves con rotación automática ante errores 429 / Rate Limit
+ * - Cascada de Modelos (gemini-2.5-flash -> gemini-2.0-flash -> gemini-1.5-flash)
+ * - Control de Concurrencia y Cola de Pacing para evitar saturar el RPM
+ */
+
+const keyCooldowns = new Map<string, number>();
+
+function getGeminiKeys(): string[] {
+  const keysSet = new Set<string>();
+  
+  // Claves múltiples separadas por coma
+  const multiKeys = (process.env.GEMINI_API_KEYS || "").split(",").map(k => k.trim()).filter(Boolean);
+  multiKeys.forEach(k => keysSet.add(k));
+
+  if (process.env.GEMINI_API_KEY) keysSet.add(process.env.GEMINI_API_KEY.trim());
+  if (process.env.GOOGLE_API_KEY) keysSet.add(process.env.GOOGLE_API_KEY.trim());
+  if (process.env.GEMINI_BACKUP_KEY) keysSet.add(process.env.GEMINI_BACKUP_KEY.trim());
+  if (ENV.forgeApiKey) keysSet.add(ENV.forgeApiKey.trim());
+
+  return Array.from(keysSet);
+}
+
+function getNextAvailableKey(): string {
+  const allKeys = getGeminiKeys();
+  if (allKeys.length === 0) {
+    throw new Error("No hay ninguna GEMINI_API_KEY configurada en el entorno.");
+  }
+
+  const now = Date.now();
+  // Buscar una clave que no esté en cooldown
+  for (const key of allKeys) {
+    const cooldownUntil = keyCooldowns.get(key) || 0;
+    if (now > cooldownUntil) {
+      return key;
+    }
+  }
+
+  // Si todas están en cooldown, usar la que tenga el cooldown más cercano a expirar
+  return allKeys[0];
+}
+
+function markKeyCooldown(key: string, seconds: number = 30) {
+  keyCooldowns.set(key, Date.now() + seconds * 1000);
+  console.warn(`[JanIA-LLM] Clave Gemini puesta en pausa por ${seconds}s debido a Rate Limit (429).`);
+}
+
+// Modelos ordenados por prioridad de fallback (validados y activos en Google API)
+const FALLBACK_MODELS = [
+  "gemini-2.5-flash",
+  "gemini-flash-latest",
+  "gemini-flash-lite-latest"
+];
+
+// Semáforo de concurrencia y pacing para no disparar llamadas simultáneas
+let lastCallTimestamp = 0;
+const MIN_CALL_INTERVAL_MS = 600; // Mínimo 600ms entre llamadas a Google
+
+async function paceRequest() {
+  const now = Date.now();
+  const elapsed = now - lastCallTimestamp;
+  if (elapsed < MIN_CALL_INTERVAL_MS) {
+    await new Promise(r => setTimeout(r, MIN_CALL_INTERVAL_MS - elapsed));
+  }
+  lastCallTimestamp = Date.now();
+}
+
+/**
  * Invocación genérica a modelos de IA.
- * Actualmente soporta Google Gemini y está preparado para Anthropic Claude.
  */
 export async function invokeLLM({ 
   messages, 
@@ -19,12 +86,12 @@ export async function invokeLLM({
   tools
 }: { 
   messages: any[], 
-  responseFormat?: any,
+  responseFormat?: any, 
   provider?: LLMProvider,
   model?: string,
-  imageBuffer?: string,
-  pdfBuffer?: string,
-  pdfMimeType?: string,
+  imageBuffer?: string, 
+  pdfBuffer?: string, 
+  pdfMimeType?: string, 
   enableSearch?: boolean,
   tools?: any[]
 }): Promise<{ choices: { message: { content: string; functionCall?: any } }[] }> {
@@ -35,7 +102,7 @@ export async function invokeLLM({
 }
 
 /**
- * Invocación a Google Gemini con retry automático (hasta 3 intentos, backoff exponencial)
+ * Invocación a Google Gemini con cascada de modelos, rotación de claves y retry inteligente
  */
 async function invokeGemini(
   messages: any[], 
@@ -47,122 +114,130 @@ async function invokeGemini(
   enableSearch?: boolean,
   tools?: any[]
 ) {
-  const API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || ENV.forgeApiKey;
-  
-  // Ruteo Optimizado por Costos (v21.10):
-  const MODEL = customModel || "gemini-2.5-flash";
-  const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${API_KEY}`;
+  const modelsToTry = customModel ? [customModel, ...FALLBACK_MODELS.filter(m => m !== customModel)] : FALLBACK_MODELS;
+  const allKeys = getGeminiKeys();
 
-  const MAX_RETRIES = 3;
+  const systemMessage = messages.find(m => m.role === "system");
+  const userMessages = messages.filter(m => m.role !== "system");
 
-  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-    try {
-      const systemMessage = messages.find(m => m.role === "system");
-      const userMessages = messages.filter(m => m.role !== "system");
+  const contents = userMessages.map((m, idx) => {
+    const parts: any[] = [{ text: m.content }];
+    
+    if (idx === userMessages.length - 1 && m.role !== "assistant") {
+      if (imageBuffer) {
+        parts.push({
+          inline_data: {
+            mime_type: "image/jpeg",
+            data: imageBuffer
+          }
+        });
+      }
+      if (pdfBuffer) {
+        parts.push({
+          inline_data: {
+            mime_type: pdfMimeType || "application/pdf",
+            data: pdfBuffer
+          }
+        });
+      }
+    }
 
-      const contents = userMessages.map((m, idx) => {
-        const parts: any[] = [{ text: m.content }];
-        
-        if (idx === userMessages.length - 1 && m.role !== "assistant") {
-          if (imageBuffer) {
-            parts.push({
-              inline_data: {
-                mime_type: "image/jpeg",
-                data: imageBuffer
+    return {
+      role: m.role === "assistant" ? "model" : "user",
+      parts
+    };
+  });
+
+  const payload: any = {
+    contents,
+    systemInstruction: systemMessage ? { parts: [{ text: systemMessage.content }] } : undefined,
+    generationConfig: {
+      temperature: responseFormat?.type === "json_object" ? 0.2 : 0.7,
+      topP: 0.95,
+      topK: 40,
+      maxOutputTokens: 4096,
+      responseMimeType: responseFormat?.type === "json_object" ? "application/json" : "text/plain",
+      responseSchema: responseFormat?.schema || undefined,
+    }
+  };
+
+  if (tools && tools.length > 0) {
+    payload.tools = tools;
+  } else if (enableSearch && responseFormat?.type !== "json_object") {
+    payload.tools = [{ googleSearch: {} }];
+  }
+
+  let lastError: any = null;
+
+  for (const currentModel of modelsToTry) {
+    for (let keyAttempt = 0; keyAttempt < Math.max(allKeys.length, 1); keyAttempt++) {
+      const activeKey = getNextAvailableKey();
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${activeKey}`;
+
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          await paceRequest();
+          console.log(`[JanIA-LLM] Ejecutando IA con ${currentModel} (Clave: ...${activeKey.slice(-6)}, Intento ${attempt})...`);
+          
+          const response = await axios.post(apiUrl, payload, { timeout: 45000 });
+
+          if (response.data.candidates && response.data.candidates[0]) {
+            const firstPart = response.data.candidates[0].content?.parts?.[0];
+            if (firstPart) {
+              if (firstPart.functionCall) {
+                return {
+                  choices: [{
+                    message: {
+                      content: JSON.stringify({ functionCall: firstPart.functionCall }),
+                      functionCall: firstPart.functionCall
+                    }
+                  }]
+                };
               }
-            });
-          }
-          if (pdfBuffer) {
-            parts.push({
-              inline_data: {
-                mime_type: pdfMimeType || "application/pdf",
-                data: pdfBuffer
+              const text = firstPart.text;
+              if (text && text.trim() !== '') {
+                return { choices: [{ message: { content: text } }] };
               }
-            });
+            }
           }
-        }
 
-        return {
-          role: m.role === "assistant" ? "model" : "user",
-          parts
-        };
-      });
+          console.warn(`[JanIA-LLM] Respuesta vacía de ${currentModel}. Reintentando...`);
+          await new Promise(r => setTimeout(r, 1500));
 
-      const payload: any = {
-        contents,
-        systemInstruction: systemMessage ? { parts: [{ text: systemMessage.content }] } : undefined,
-        generationConfig: {
-          temperature: responseFormat?.type === "json_object" ? 0.2 : 0.7,
-          topP: 0.95,
-          topK: 40,
-          maxOutputTokens: 4096,
-          responseMimeType: responseFormat?.type === "json_object" ? "application/json" : "text/plain",
-          responseSchema: responseFormat?.schema || undefined,
-        }
-      };
+        } catch (error: any) {
+          lastError = error;
+          const status = error.response?.status;
+          const errorMsg = error.response?.data?.error?.message || error.message;
 
-      if (tools && tools.length > 0) {
-        payload.tools = tools;
-      } else if (enableSearch && responseFormat?.type !== "json_object") {
-        payload.tools = [{ googleSearch: {} }];
-      }
+          if (status === 429) {
+            // Extraer segundos sugeridos por Google si vienen en el mensaje
+            const retryMatch = errorMsg.match(/retry in ([\d\.]+)s/i);
+            const waitSec = retryMatch ? Math.ceil(parseFloat(retryMatch[1])) : 20;
+            markKeyCooldown(activeKey, waitSec);
 
-      console.log(`[JanIA-LLM] Intento ${attempt}/${MAX_RETRIES} — Gemini (${MODEL}) [Search: ${enableSearch}, Tools: ${!!tools}]...`);
-      const response = await axios.post(API_URL, payload);
-
-      if (response.data.candidates && response.data.candidates[0]) {
-        const firstPart = response.data.candidates[0].content?.parts?.[0];
-        if (firstPart) {
-          if (firstPart.functionCall) {
-            return {
-              choices: [{
-                message: {
-                  content: JSON.stringify({ functionCall: firstPart.functionCall }),
-                  functionCall: firstPart.functionCall
-                }
-              }]
-            };
+            console.warn(`[JanIA-LLM] ⚠️ Rate limit (429) en ${currentModel}. Cambiando de clave o modelo...`);
+            break; // Salir del loop de intentos de esta clave y probar siguiente clave/modelo
           }
-          const text = firstPart.text;
-          if (text && text.trim() !== '') {
-            return { choices: [{ message: { content: text } }] };
+
+          if (status === 503 || status === 500) {
+            console.warn(`[JanIA-LLM] Error ${status} de servidor Google. Reintentando en 2s...`);
+            await new Promise(r => setTimeout(r, 2000));
+            continue;
           }
+
+          console.error(`[JanIA-LLM] Error en ${currentModel}:`, errorMsg);
+          break; // Error no recuperable con esta clave/modelo, probar siguiente
         }
       }
-
-      // Respuesta vacía — reintentar si quedan intentos
-      if (attempt < MAX_RETRIES) {
-        const waitMs = attempt * 1500;
-        console.warn(`[JanIA-LLM] Respuesta vacía de Gemini (intento ${attempt}). Reintentando en ${waitMs}ms...`);
-        await new Promise(resolve => setTimeout(resolve, waitMs));
-        continue;
-      }
-
-      throw new Error("Respuesta de Gemini vacía tras todos los reintentos");
-
-    } catch (error: any) {
-      const status = error.response?.status;
-      const isRetryable = status === 429 || status === 503 || status === 500;
-
-      if (isRetryable && attempt < MAX_RETRIES) {
-        const waitMs = attempt * 2000;
-        console.warn(`[JanIA-LLM] Error ${status} de Gemini (intento ${attempt}). Reintentando en ${waitMs}ms...`);
-        await new Promise(resolve => setTimeout(resolve, waitMs));
-        continue;
-      }
-
-      console.error("[Gemini Error]:", error.response?.data?.error?.message || error.message);
-      throw error;
     }
   }
 
-  // Nunca se alcanza, pero TypeScript lo requiere
-  throw new Error("Respuesta de Gemini vacía tras todos los reintentos");
+  console.error("[Gemini Cascade Exhausted]: Todos los modelos y claves de Gemini fallaron:", lastError?.message || lastError);
+  throw lastError || new Error("No fue posible obtener respuesta de ningún modelo de Gemini");
 }
 
-
 /**
- * Placeholder para Anthropic Claude (Estructura preparada para fases futuras)
+ * Placeholder para Anthropic Claude
  */
 async function invokeClaude(messages: any[], responseFormat?: any) {
   console.log("[JanIA-LLM] Intentando procesar con Claude (Anthropic)...");
