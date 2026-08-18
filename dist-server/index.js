@@ -2582,7 +2582,7 @@ async function resolverCuadranteVial(texto) {
   } else if (minSt >= 63 && maxSt <= 85) {
     candidateBarrios = ["Chapinero Alto", "Rosales", "El Nogal", "La Cabrera", "Quinta Camacho", "El Lago"];
   } else if (minSt >= 85 && maxSt <= 106) {
-    candidateBarrios = ["Chic\xF3", "El Virrey", "Chic\xF3 Norte", "Chic\xF3 Reservado", "La Cabrera"];
+    candidateBarrios = ["Rinc\xF3n del Chic\xF3", "Chic\xF3", "Chic\xF3 Norte", "Chic\xF3 Reservado", "La Cabrera", "Antiguo Country"];
   } else if (minSt >= 106 && maxSt <= 127) {
     candidateBarrios = ["Santa B\xE1rbara Occidental", "Santa B\xE1rbara Central", "Santa B\xE1rbara Oriental", "La Calleja", "Unicentro", "San Patricio", "El Country"];
   } else if (minSt >= 127 && maxSt <= 153) {

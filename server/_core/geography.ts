@@ -871,7 +871,7 @@ export async function resolverCuadranteVial(texto: string): Promise<{ resuelto: 
   } else if (minSt >= 63 && maxSt <= 85) {
     candidateBarrios = ["Chapinero Alto", "Rosales", "El Nogal", "La Cabrera", "Quinta Camacho", "El Lago"];
   } else if (minSt >= 85 && maxSt <= 106) {
-    candidateBarrios = ["Chicó", "El Virrey", "Chicó Norte", "Chicó Reservado", "La Cabrera"];
+    candidateBarrios = ["Rincón del Chicó", "Chicó", "Chicó Norte", "Chicó Reservado", "La Cabrera", "Antiguo Country"];
   } else if (minSt >= 106 && maxSt <= 127) {
     candidateBarrios = ["Santa Bárbara Occidental", "Santa Bárbara Central", "Santa Bárbara Oriental", "La Calleja", "Unicentro", "San Patricio", "El Country"];
   } else if (minSt >= 127 && maxSt <= 153) {

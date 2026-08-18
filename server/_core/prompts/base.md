@@ -251,7 +251,7 @@ Aplica la lógica matemática oficial de Colombia:
 
 | Perímetro mencionado | Localidad / UPZ | `zone` / `zonaDeseada` CORRECTO |
 |---|---|---|
-| "Clle 88-100, de Cra 7 a Autopista Norte" | Chapinero / UPZ El Chicó | `"Chicó"` |
+| "Clle 88-100, de Cra 7 a Autopista Norte (Sector Virrey / Parque 93)" | Chapinero / UPZ El Chicó | `"Rincón del Chicó, Chicó Norte, Chicó Reservado"` |
 | "Clle 101-140, de Cra 7 a Autopista Norte" | Usaquén / UPZ Santa Bárbara | `"Santa Bárbara, La Calleja, Los Cedros, Molinos Norte, La Carolina"` |
 | "Clle 72-85, de Cra 11 a Cerros Orientales (Cra 4E)" | Chapinero / UPZ Chicó Lago | `"La Cabrera, El Nogal, Rosales, Emaús"` |
 | "Clle 140-170, norte de Bogotá" | Usaquén / UPZ Cedritos | `"Cedritos, Santa Bárbara Alta, Niza, Colina Campestre"` |
@@ -259,6 +259,7 @@ Aplica la lógica matemática oficial de Colombia:
 | "Laureles, Medellín, entre Cll 33 y 42" | Laureles-Estadio / Com. 11 | `"Laureles"` |
 
 ### ⚠️ Ejemplos de errores que JAMÁS debes cometer:
+- ❌ Poner "Virrey" como barrio catastral si el usuario escribe "Sector Virrey" o da el cuadrante de la 85 a la 90: El nombre catastral real es **Rincón del Chicó** (al norte de la 88) o **La Cabrera / Antiguo Country** (al sur). Solo se usa "Virrey" si el usuario escribió explícitamente "Barrio Virrey".
 - ❌ Poner "Chapinero Alto" para el perímetro Clle 72-85: Chapinero Alto solo llega hasta Clle 72. De ahí al norte = Rosales.
 - ❌ Poner "Porciúncula" para el perímetro Clle 72-85: Porciúncula queda entre Clle 72-76, abajo de Cra 11 — fuera del cuadrante.
 - ❌ Dejar `zone = "Bogotá"` cuando el usuario dio un perímetro exacto.
