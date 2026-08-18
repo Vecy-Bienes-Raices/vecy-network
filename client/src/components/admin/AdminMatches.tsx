@@ -1500,7 +1500,7 @@ function checkTxCompatFrontend(reqTypeRaw: string, propTypeRaw: string, propAcce
 
 export default function AdminMatches() {
   const [searchTerm, setSearchTerm] = React.useState('');
-  const [minScore, setMinScore] = React.useState('80');
+  const [minScore, setMinScore] = React.useState('85');
   const [activeTab, setActiveTab] = React.useState<'calificados' | 'incompletos'>('calificados');
   
   // Estados para Edición Interactiva de Fichas Prediales directamente desde el Cotejo
@@ -1700,14 +1700,14 @@ export default function AdminMatches() {
       const isEditingThisCard = editingMatchId === match.id;
       const displayScore = (isEditingThisCard && autoScore > 0) ? autoScore : dbScore;
 
-      // Mostrar todos los matches calificados (80% a 100%)
-      if (displayScore < 80) {
+      // Mostrar todos los matches calificados (85% a 100%)
+      if (displayScore < 85) {
         return false;
       }
 
-      // Aplicar filtro de puntuación de la interfaz (ej. "80_94" o minScore)
-      if (minScore === "80_94") {
-        if (displayScore < 80 || displayScore >= 95) return false;
+      // Aplicar filtro de puntuación de la interfaz (ej. "85_94" o minScore)
+      if (minScore === "85_94") {
+        if (displayScore < 85 || displayScore >= 95) return false;
       } else {
         const minVal = parseFloat(minScore);
         if (displayScore < minVal) return false;
@@ -1774,7 +1774,7 @@ export default function AdminMatches() {
             Reporte de Coincidencias (Matches de JanIA)
           </h2>
           <p className="text-zinc-500 text-sm mt-1 flex items-center gap-2">
-            <span>{isLoading ? 'Cargando coincidencias...' : `Coincidencias Verificadas: ${filteredMatches.length} matches (80% - 100%)`}</span>
+            <span>{isLoading ? 'Cargando coincidencias...' : `Coincidencias Verificadas: ${filteredMatches.length} matches (85% - 100%)`}</span>
             <span className="text-[10px] bg-[#bf953f]/20 text-[#bf953f] border border-[#bf953f]/30 px-2 py-0.5 rounded-full font-mono font-extrabold ml-2">
               {VECY_VERSION_LABEL}
             </span>
@@ -1813,8 +1813,8 @@ export default function AdminMatches() {
             onChange={(e) => setMinScore(e.target.value)}
             className="bg-transparent border-none text-white focus:ring-0 text-xs font-semibold cursor-pointer outline-none"
           >
-            <option className="bg-[#0c0c0c]" value="80">⚡ Todos los Matches Validados (80% - 100%)</option>
-            <option className="bg-[#0c0c0c]" value="80_94">⚡ MATCH Aproximado (80% - 94%)</option>
+            <option className="bg-[#0c0c0c]" value="85">⚡ Todos los Matches Validados (85% - 100%)</option>
+            <option className="bg-[#0c0c0c]" value="85_94">⚡ MATCH Aproximado (85% - 94%)</option>
             <option className="bg-[#0c0c0c]" value="95">🎯 MATCH Perfecto (95% - 100%)</option>
           </select>
         </div>
@@ -1870,6 +1870,7 @@ export default function AdminMatches() {
               const date = formatColombiaDate(m.createdAt);
 
               const exactCount = rows.filter(r => r.status === "exact" || r.status === "ok").length;
+              const plusCount = rows.filter(r => r.status === "plus").length;
               const warnCount = rows.filter(r => r.status === "warn").length;
               const failCount = rows.filter(r => r.status === "missing").length;
 
@@ -1903,7 +1904,7 @@ export default function AdminMatches() {
                         </span>
                       ) : (
                         <span className="text-[9px] bg-[#bf953f]/10 border border-[#bf953f]/30 text-[#bf953f] px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1">
-                          ⚡ MATCH APROXIMADO (80% - 94%)
+                          ⚡ MATCH APROXIMADO (85% - 94%)
                         </span>
                       )}
                     </div>
@@ -1931,11 +1932,16 @@ export default function AdminMatches() {
                   {/* Summary badges */}
                   <div className="px-4 sm:px-6 py-2.5 flex items-center gap-2 sm:gap-3 border-b border-white/5 flex-wrap bg-black/20">
                     <span className="text-[10px] uppercase tracking-widest text-zinc-600 font-bold">Cotejo:</span>
-                    <span className="flex items-center gap-1 text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full">
+                    <span className="flex items-center gap-1 text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full font-semibold">
                       <CheckCircle2 className="w-2.5 h-2.5" /> {exactCount} coinciden
                     </span>
+                    {plusCount > 0 && (
+                      <span className="flex items-center gap-1 text-[10px] text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 px-2.5 py-0.5 rounded-full font-semibold">
+                        <Sparkles className="w-2.5 h-2.5" /> {plusCount} plus ofertados
+                      </span>
+                    )}
                     {warnCount > 0 && (
-                      <span className="flex items-center gap-1 text-[10px] text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 rounded-full">
+                      <span className="flex items-center gap-1 text-[10px] text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 rounded-full font-semibold">
                         <AlertTriangle className="w-2.5 h-2.5" /> {warnCount} aproximados
                       </span>
                     )}
