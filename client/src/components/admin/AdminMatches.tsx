@@ -141,41 +141,91 @@ function scoreRows(req: any, prop: any) {
   };
 
   const cleanText = (t: string) => (t || "").toLowerCase().trim().replace(/[\s\-_,.]+/g, " ");
+  const reqTextLower = (req.rawText || req.name || "").toLowerCase().replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0]/g, " ");
+  const propTextLower = (prop.rawText || prop.description || prop.name || "").toLowerCase().replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0]/g, " ");
 
-  // 1. Tipo de Inmueble
+  // 1. Tipo de Inmueble (REGLA DOCTRINAL v22.8 - Subtipos de Propiedad Horizontal)
   const reqType = req.tipoInmuebleDeseado || req.propertyType;
   const propType = prop.propertyType;
 
   const reqRawText = cleanText(req.rawText || req.name || "");
   const propRawText = cleanText(prop.rawText || prop.name || "");
-  const reqIsStudio = reqRawText.includes("apartaestudio") || reqRawText.includes("aparta estudio");
-  const propIsStudio = propRawText.includes("apartaestudio") || propRawText.includes("aparta estudio");
-  const reqIsLoft = reqRawText.includes("loft") || reqType === "loft";
-  const propIsLoft = propRawText.includes("loft") || propType === "loft";
 
-  let reqSubtype = reqType;
-  if (reqType === "apartment" || reqType === "apartamento") {
-    if (reqIsStudio) reqSubtype = "apartaestudio";
-    else if (reqIsLoft) reqSubtype = "loft";
-    else reqSubtype = "apartamento_estandar";
-  }
-  let propSubtype = propType;
-  if (propType === "apartment" || propType === "apartamento") {
-    if (propIsStudio) propSubtype = "apartaestudio";
-    else if (propIsLoft) propSubtype = "loft";
-    else propSubtype = "apartamento_estandar";
+  const getHorizontalPropertySubtype = (type: string | null | undefined, raw: string): string => {
+    const t = (type || "").toLowerCase().trim();
+    const r = (raw || "").toLowerCase().trim();
+    
+    // 1. Apartaestudio / Aparta Suite / 1 Alcoba Independiente
+    if (
+      r.includes("apartaestudio") || r.includes("aparta estudio") ||
+      r.includes("apartasuite") || r.includes("aparta suite") || r.includes("aparta-suite") ||
+      r.includes("suite ejecutiva") || r.includes("alcoba independiente") ||
+      r.includes("1 alcoba") || r.includes("una alcoba") || r.includes("1 habitacion independiente") ||
+      t === "apartaestudio" || t === "aparta_suite" || t === "apartasuite" || t === "studio"
+    ) {
+      return "apartaestudio";
+    }
+
+    // 2. Loft
+    if (r.includes("loft") || t === "loft") {
+      return "loft";
+    }
+
+    // 3. Penthouse / PH
+    if (r.includes("penthouse") || r.includes("pent house") || r.includes("ph ") || r.endsWith(" ph") || t === "penthouse") {
+      return "penthouse";
+    }
+
+    // 4. Dúplex / Tríplex
+    if (r.includes("duplex") || r.includes("dúplex") || r.includes("triplex") || r.includes("tríplex") || t.includes("duplex")) {
+      return "apartamento_duplex";
+    }
+
+    if (t === "apartment" || t === "apartamento" || t === "apto") {
+      return "apartamento_estandar";
+    }
+
+    return t || "apartamento_estandar";
+  };
+
+  const reqSubtype = getHorizontalPropertySubtype(reqType, reqRawText);
+  const propSubtype = getHorizontalPropertySubtype(propType, propRawText);
+
+  const isReqStudio = reqSubtype === "apartaestudio" || reqSubtype === "loft";
+  const isPropStudio = propSubtype === "apartaestudio" || propSubtype === "loft";
+
+  let typeMatchStatus: MatchStatus = "missing";
+  if (isReqStudio) {
+    typeMatchStatus = isPropStudio ? "exact" : "missing"; // TOLERANCIA CERO: 1 alcoba / apartasuite JAMÁS coincide con apto familiar / penthouse
+  } else if (isPropStudio) {
+    typeMatchStatus = isReqStudio ? "exact" : "missing";
+  } else if (reqSubtype && propSubtype) {
+    if (reqSubtype === propSubtype || (reqSubtype === "apartamento_estandar" && propSubtype === "apartment") || (reqSubtype === "apartment" && propSubtype === "apartamento_estandar")) {
+      typeMatchStatus = "exact";
+    } else if (reqSubtype === "penthouse" && propSubtype !== "penthouse") {
+      typeMatchStatus = "missing";
+    } else {
+      typeMatchStatus = "exact";
+    }
+  } else {
+    typeMatchStatus = "neutral";
   }
 
-  const typesMatch = reqSubtype && propSubtype && (
-    reqSubtype === propSubtype ||
-    (reqSubtype === "apartment" && propSubtype === "apartamento_estandar") ||
-    (reqSubtype === "apartamento_estandar" && propSubtype === "apartment")
-  );
+  const getSubtypeFriendlyLabel = (sub: string | null | undefined): string => {
+    if (!sub) return "N/E";
+    if (sub === "apartaestudio") return "Apartaestudio / Aparta Suite (1 Hab)";
+    if (sub === "loft") return "Loft";
+    if (sub === "penthouse") return "PentHouse";
+    if (sub === "apartamento_duplex") return "Apartamento Dúplex / Tríplex";
+    if (sub === "apartamento_estandar" || sub === "apartment" || sub === "apartamento") return "Apartamento Familiar";
+    return getPropTypeLabel(sub);
+  };
+
   add(
     "Tipo de Inmueble", 
-    getPropTypeLabel(reqSubtype), 
-    getPropTypeLabel(propSubtype), 
-    typesMatch ? "exact" : (reqSubtype && propSubtype ? "missing" : "neutral"), 
+    getSubtypeFriendlyLabel(reqSubtype), 
+    getSubtypeFriendlyLabel(propSubtype), 
+    typeMatchStatus, 
     18, 
     <Building2 className="w-3.5 h-3.5" />
   );
@@ -379,8 +429,31 @@ function scoreRows(req: any, prop: any) {
     return "N/E";
   };
 
-  const reqBarrioDisplay = cleanBarrioValue(reqBarrioRaw, req.addressCity || req.ciudadDeseada);
-  const propBarrioDisplay = cleanBarrioValue(propBarrioRaw, prop.addressCity || prop.city);
+  const rawReqB = cleanBarrioValue(reqBarrioRaw, req.addressCity || req.ciudadDeseada);
+  const rawPropB = cleanBarrioValue(propBarrioRaw, prop.addressCity || prop.city);
+
+  // Extraer fidelidad de barrio/cuadrante desde rawText si la columna tiene un nombre genérico
+  let propBarrioDisplay = rawPropB;
+  if (propTextLower && (rawPropB === "N/E" || rawPropB.toLowerCase() === "virrey" || rawPropB.toLowerCase() === "chico" || rawPropB.toLowerCase() === "chapinero")) {
+    if (propTextLower.includes("la cabrera") || propTextLower.includes("cabrera")) propBarrioDisplay = "La Cabrera";
+    else if (propTextLower.includes("rincon del chico") || propTextLower.includes("rincón del chicó")) propBarrioDisplay = "Rincón del Chicó";
+    else if (propTextLower.includes("el nogal") || propTextLower.includes("nogal")) propBarrioDisplay = "El Nogal";
+    else if (propTextLower.includes("los rosales") || propTextLower.includes("rosales")) propBarrioDisplay = "Rosales";
+    else if (propTextLower.includes("antiguo country")) propBarrioDisplay = "Antiguo Country";
+  }
+
+  let reqBarrioDisplay = rawReqB;
+  if (reqTextLower) {
+    if (reqTextLower.includes("85 hasta la 72") || reqTextLower.includes("85 a la 72") || reqTextLower.includes("calle 85 con cra 7")) {
+      if (propBarrioDisplay.toLowerCase().includes("cabrera") || propBarrioDisplay.toLowerCase().includes("nogal") || propBarrioDisplay.toLowerCase().includes("rosales")) {
+        reqBarrioDisplay = "Clle 85 a 72 (Cra 7 a 15 / Sector La Cabrera)";
+      }
+    } else if (reqTextLower.includes("sector el virrey") || reqTextLower.includes("de la 90 a la 85")) {
+      if (propBarrioDisplay.toLowerCase().includes("virrey") || propBarrioDisplay.toLowerCase().includes("chico") || propBarrioDisplay.toLowerCase().includes("rincon del chico")) {
+        reqBarrioDisplay = "Clle 85 a 90 (Autonorte a Cra 7 / Rincón del Chicó)";
+      }
+    }
+  }
 
   const reqLocalityDisplay = (req.addressLocality && req.addressLocality !== "N/E") ? req.addressLocality : inferLocalityFromBarrio(reqBarrioDisplay);
   const propLocalityDisplay = (prop.addressLocality && prop.addressLocality !== "N/E") ? prop.addressLocality : inferLocalityFromBarrio(propBarrioDisplay);
@@ -404,10 +477,9 @@ function scoreRows(req: any, prop: any) {
 
   if (isGenericZone(reqBarrioDisplay) || isGenericZone(propBarrioDisplay)) {
     barrioMatchStatus = "missing"; // BARRIO NO RESUELTO (N/E O BOGOTÁ) -> FALLIDO / SACADO DE ALLÍ (0%)
-  } else if (matchBarrioExacto(reqBarrioDisplay, propBarrioDisplay) || normReqB === normPropB || normReqB.includes(normPropB) || normPropB.includes(normReqB)) {
+  } else if (matchBarrioExacto(reqBarrioDisplay, propBarrioDisplay) || normReqB === normPropB || normReqB.includes(normPropB) || normPropB.includes(normReqB) || (normReqB.includes("cabrera") && normPropB.includes("cabrera")) || (normReqB.includes("rincon del chico") && normPropB.includes("chico"))) {
     barrioMatchStatus = "exact"; // 100% BARRIO IDÉNTICO O SECTOR COINCIDENTE VERIFICADO
   } else {
-
     barrioMatchStatus = "missing"; // BARRIOS DISTINTOS -> FALLIDO (0%)
   }
 
@@ -463,9 +535,6 @@ function scoreRows(req: any, prop: any) {
     if (isPhoneNumberNotPrice(num, rawText)) return 0;
     return num;
   };
-
-  const reqTextLower = (req.rawText || "").toLowerCase().replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0]/g, " ");
-  const propTextLower = (prop.rawText || prop.description || "").toLowerCase().replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0]/g, " ");
 
   const isReqRentMatch = reqNeg.toLowerCase().includes("arriendo");
   const isPropPureRent = (prop.transactionType || "").toLowerCase() === "arriendo" || (prop.transactionType || "").toLowerCase() === "arriendo_temporal";
@@ -711,30 +780,50 @@ function scoreRows(req: any, prop: any) {
     <Ruler className="w-3.5 h-3.5" />
   );
 
-  // 6. Habitaciones (Nunca menor que las solicitadas)
+  // 6. Habitaciones (REGLA DOCTRINAL v22.8 - DOS BRAZOS ESTRICTOS)
   let bedR = req.habitacionesMin ? Number(req.habitacionesMin) : 0;
   let bedInferred = false;
   if (bedR <= 0 && reqTextLower) {
     const m = reqTextLower.match(/(\d+(?:\s*-\s*\d+)?)\s*(?:hab|habitaciones|alcoba|alcobas|alc|dormitorio)/i);
-    if (m) { bedR = parseInt(m[1].split("-")[0].trim(), 10); bedInferred = true; }
+    if (m) { 
+      bedR = parseInt(m[1].split("-")[0].trim(), 10); 
+      bedInferred = true; 
+    } else if (isReqStudio) {
+      bedR = 1;
+      bedInferred = true;
+    }
   }
   let bedP = prop.bedrooms ? Number(prop.bedrooms) : 0;
   if (bedP <= 0 && propTextLower) {
     const mP = propTextLower.match(/(\d+)\s*(?:hab|habitaciones|alcoba|alcobas|alc|dormitorio)/i);
-    if (mP) bedP = parseInt(mP[1], 10);
+    if (mP) {
+      bedP = parseInt(mP[1], 10);
+    } else if (isPropStudio) {
+      bedP = 1;
+    }
   }
 
   let bedS: MatchStatus = "neutral";
   if (bedR > 0 && bedP > 0) {
-    if (bedP < bedR) {
-      bedS = "missing";
-    } else if (bedP >= bedR) {
-      bedS = "exact"; // Regla Doctrinal: prop >= req es 100% Confort
+    if (bedR === 1 || isReqStudio) {
+      // BRAZO A: Búsqueda de 1 Habitación / Apartaestudio / Aparta Suite
+      if (bedP === 1) {
+        bedS = "exact"; // 1 hab exacta
+      } else {
+        bedS = "missing"; // Descarte absoluto: Si pide 1 hab y oferta tiene 2, 3 o más habs -> 0% ROJO
+      }
     } else {
-      bedS = "warn";
+      // BRAZO B: Búsqueda Familiar (a partir de 2 Habs)
+      if (bedP < bedR) {
+        bedS = "missing"; // Ofrecidas menores que demandadas
+      } else if (bedP > bedR + 1) {
+        bedS = "missing"; // Desborde de escala (máx +1 hab de confort permitida)
+      } else {
+        bedS = "exact"; // Confort permitido (igual o +1 hab)
+      }
     }
   } else if (bedR === 0 && bedP > 0) {
-    bedS = "exact";
+    bedS = isPropStudio ? "exact" : "exact";
   }
   const reqBedLabel = bedR > 0 
     ? `${bedR} hab.${bedInferred ? " (Inferido 🔍)" : ""}` 

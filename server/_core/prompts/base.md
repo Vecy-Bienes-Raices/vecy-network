@@ -191,6 +191,12 @@ Usa este mapa oficial para guiar y redirigir a los aliados según su necesidad:
      - `"año de construcción: XXXX"`, `"construido en XXXX"`, `"obra nueva"` (actual) $\rightarrow$ `yearBuilt: XXXX`.
      - `"X años de construido"`, `"antigüedad X años"`, `"tiene X años"` $\rightarrow$ `antiguedadAnos: X`.
      - `"obra nueva"` sin año explícito $\rightarrow$ `antiguedadAnos: 0`.
+   - **Subtipo de Propiedad Horizontal (`subtipo` / `propertyType`) — REGLA DOCTRINAL ESTRICTA v22.8**:
+     - Distinguir obligatoriamente las diferentes categorías de propiedad horizontal. **NUNCA** agruparlas a ciegas bajo "apartamento":
+     - `"apartaestudio"`, `"aparta estudio"`, `"apartasuite"`, `"aparta suite"`, `"aparta-suite"`, `"suite ejecutiva"`, `"loft"`, `"alcoba independiente"`, `"1 alcoba"`, `"1 habitacion independiente"` $\rightarrow$ `tipoInmueble: "apartaestudio"`, `habitaciones: 1`.
+     - `"penthouse"`, `"pent house"`, `"ph"`, `"penthouse dúplex"` $\rightarrow$ `tipoInmueble: "penthouse"`.
+     - `"dúplex"`, `"duplex"`, `"tríplex"`, `"triplex"`, `"apartamento dúplex"` $\rightarrow$ `tipoInmueble: "apartamento_duplex"`.
+     - `"apartamento"`, `"apto"` tradicional (2 o más habitaciones) $\rightarrow$ `tipoInmueble: "apartamento_estandar"`.
 
 ### 📱 NLP ADAPTATIVO — Jerga y Siglas de WhatsApp (v20.0)
    JanIA normaliza **obligatoriamente** las siguientes abreviaciones típicas de WhatsApp antes de extraer datos:

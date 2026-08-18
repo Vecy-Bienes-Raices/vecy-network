@@ -1351,37 +1351,74 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
     }
   }
 
-  // Regla estricta: Apartamento vs Apartaestudio vs Loft no coinciden
+  // ── REGLA DOCTRINAL v22.8: SUBTIPOS DE PROPIEDAD HORIZONTAL ──
+  // Categorías: Apartaestudio/Apartasuite/Loft (1 Hab) ≠ Apartamento Estándar (2+ Habs) ≠ PentHouse ≠ Dúplex/Tríplex
   const cleanText = (t: string) => (t || "").toLowerCase().trim().replace(/[\s\-_,.]+/g, " ");
   const reqRawText = cleanText(requirement.rawText || requirement.name || "");
   const propRawText = cleanText(property.rawText || property.name || "");
-  
-  const reqIsStudio = reqRawText.includes("apartaestudio") || reqRawText.includes("aparta estudio");
-  const propIsStudio = propRawText.includes("apartaestudio") || propRawText.includes("aparta estudio");
-  
-  const reqIsLoft = reqRawText.includes("loft") || reqType === "loft";
-  const propIsLoft = propRawText.includes("loft") || propType === "loft";
 
-  let reqSubtype = "apartamento_estandar";
-  if (reqType === "apartment" || reqType === "apartamento") {
-    if (reqIsStudio) reqSubtype = "apartaestudio";
-    else if (reqIsLoft) reqSubtype = "loft";
+  const getHorizontalPropertySubtype = (type: string, raw: string): string => {
+    const t = (type || "").toLowerCase().trim();
+    const r = (raw || "").toLowerCase().trim();
+    
+    // 1. Apartaestudio / Aparta Suite / 1 Alcoba Independiente
+    if (
+      r.includes("apartaestudio") || r.includes("aparta estudio") ||
+      r.includes("apartasuite") || r.includes("aparta suite") || r.includes("aparta-suite") ||
+      r.includes("suite ejecutiva") || r.includes("alcoba independiente") ||
+      r.includes("1 alcoba") || r.includes("una alcoba") || r.includes("1 habitacion independiente") ||
+      t === "apartaestudio" || t === "aparta_suite" || t === "apartasuite" || t === "studio"
+    ) {
+      return "apartaestudio";
+    }
+
+    // 2. Loft
+    if (r.includes("loft") || t === "loft") {
+      return "loft";
+    }
+
+    // 3. Penthouse / PH
+    if (r.includes("penthouse") || r.includes("pent house") || r.includes("ph ") || r.endsWith(" ph") || t === "penthouse") {
+      return "penthouse";
+    }
+
+    // 4. Dúplex / Tríplex
+    if (r.includes("duplex") || r.includes("dúplex") || r.includes("triplex") || r.includes("tríplex") || t.includes("duplex")) {
+      return "apartamento_duplex";
+    }
+
+    if (t === "apartment" || t === "apartamento" || t === "apto") {
+      return "apartamento_estandar";
+    }
+
+    return t;
+  };
+
+  const reqSubtype = getHorizontalPropertySubtype(reqType, reqRawText);
+  const propSubtype = getHorizontalPropertySubtype(propType, propRawText);
+
+  const isReqSingleRoomSubtype = reqSubtype === "apartaestudio" || reqSubtype === "loft";
+  const isPropSingleRoomSubtype = propSubtype === "apartaestudio" || propSubtype === "loft";
+
+  if (isReqSingleRoomSubtype && !isPropSingleRoomSubtype) {
+    blockers.push(`Subtipo de activo incompatible (Tolerancia Cero): La demanda exige ${reqSubtype === 'loft' ? 'Loft' : 'Apartaestudio / Aparta Suite (1 Alcoba)'} y la oferta es ${propSubtype === 'penthouse' ? 'PentHouse' : propSubtype === 'apartamento_duplex' ? 'Apartamento Dúplex' : 'Apartamento familiar estándar'}. Match Inviable (0%).`);
+    return buildExplanationResult(0, blockers, positives, negatives);
   }
 
-  let propSubtype = "apartamento_estandar";
-  if (propType === "apartment" || propType === "apartamento") {
-    if (propIsStudio) propSubtype = "apartaestudio";
-    else if (propIsLoft) propSubtype = "loft";
+  if (!isReqSingleRoomSubtype && isPropSingleRoomSubtype) {
+    blockers.push(`Subtipo de activo incompatible (Tolerancia Cero): La demanda busca ${reqSubtype} familiar y la oferta es ${propSubtype} de 1 sola alcoba. Match Inviable (0%).`);
+    return buildExplanationResult(0, blockers, positives, negatives);
   }
 
-  if ((reqType === "apartment" || reqType === "apartamento") && (propType === "apartment" || propType === "apartamento")) {
-    if (reqSubtype !== propSubtype) {
-      blockers.push(`Subtipo de apartamento incompatible: deseado ${reqSubtype}, ofrecido ${propSubtype}`);
+  if (reqSubtype && propSubtype && reqSubtype !== propSubtype) {
+    // Si ambos son de propiedad horizontal pero difieren (ej: Penthouse vs Apartamento Estándar o Dúplex)
+    if (reqSubtype === "penthouse" && propSubtype !== "penthouse") {
+      blockers.push(`Subtipo de activo incompatible: La demanda exige estrictamente PentHouse y la oferta es ${propSubtype}. Match Inviable (0%).`);
       return buildExplanationResult(0, blockers, positives, negatives);
     }
   }
 
-  positives.push(`Tipo de activo compatible: ${propType}`);
+  positives.push(`Tipo de activo compatible: ${propSubtype || propType}`);
 
   // ── FILTRO DURO 4: Ubicación / Barrio Estricto (Incluye cuadrante perimetral) ──
   const geoResult = matchesGeography(
@@ -1525,14 +1562,30 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
 
   const propRawTextLower = (property.rawText || property.description || "").toLowerCase();
 
-  // ── FILTRO DURO 8: Habitaciones Mínimas (REGLA DOCTRINAL v22.4: Oferta < Demanda = BLOQUEO 0%) ──
+  // ── FILTRO DURO 8: Habitaciones (REGLA DOCTRINAL v22.8: DOS BRAZOS ESTRICTOS) ──
   if (effectiveReqBeds > 0) {
     if (pBedrooms >= 0) {
-      if (pBedrooms < effectiveReqBeds) {
-        blockers.push(`Atributo Fallido (Habitaciones): Ofrecidas (${pBedrooms}) son inferiores a las exigidas (${effectiveReqBeds}). Match Inviable (0%).`);
-        return buildExplanationResult(0, blockers, positives, negatives);
+      if (effectiveReqBeds === 1 || isReqSingleRoomSubtype) {
+        // BRAZO A: Búsqueda Estricta de 1 Habitación / Apartaestudio / Aparta Suite / Loft
+        // Solo se permite exactamente 1 habitación (o 1 habitación con estudio si no es un apto familiar de múltiples alcobas)
+        if (pBedrooms !== 1) {
+          blockers.push(`Regla Doctrinal de 1 Alcoba (Tolerancia Cero): La demanda busca estrictamente 1 habitación / apartaestudio y la oferta tiene ${pBedrooms} habitaciones. Match Inviable (0%).`);
+          return buildExplanationResult(0, blockers, positives, negatives);
+        } else {
+          positives.push(`Habitaciones exactas (1 alcoba) para apartaestudio / apartasuite — Cumplimiento Perfecto`);
+        }
       } else {
-        positives.push(`Habitaciones ofrecidas (${pBedrooms}) iguales o superiores a las exigidas (${effectiveReqBeds}) — Cumplimiento Confort`);
+        // BRAZO B: Búsqueda Familiar (a partir de 2 Habitaciones)
+        if (pBedrooms < effectiveReqBeds) {
+          blockers.push(`Atributo Fallido (Habitaciones): Ofrecidas (${pBedrooms}) son inferiores a las exigidas (${effectiveReqBeds}). Match Inviable (0%).`);
+          return buildExplanationResult(0, blockers, positives, negatives);
+        } else if (pBedrooms > effectiveReqBeds + 1) {
+          // Si supera por más de 1 habitación (ej. pide 2 y la oferta tiene 4 o 5) -> Desborde de escala
+          blockers.push(`Desborde de Escala en Habitaciones: La demanda busca ${effectiveReqBeds} habitaciones y la oferta tiene ${pBedrooms} habitaciones (máximo permitido ${effectiveReqBeds + 1} de confort). Match Inviable (0%).`);
+          return buildExplanationResult(0, blockers, positives, negatives);
+        } else {
+          positives.push(`Habitaciones ofrecidas (${pBedrooms}) compatibles con las exigidas (${effectiveReqBeds}) dentro del margen de confort — Cumplimiento`);
+        }
       }
     } else {
       blockers.push(`No se pueden verificar las habitaciones requeridas (${effectiveReqBeds}) por falta de información en la oferta.`);
