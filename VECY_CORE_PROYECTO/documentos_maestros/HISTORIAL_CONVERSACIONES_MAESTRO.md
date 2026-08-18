@@ -52,11 +52,31 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v22.6 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v22.8 — Agosto 2026
 
 ---
 
 ## 📜 REGISTRO DETALLADO DE CONVERSACIONES (ORDEN CRONOLÓGICO INVERSO CON FECHA Y HORA)
+
+### 🗓️ Sesión: Martes 18 de Agosto de 2026 — 12:15 AM a 03:00 AM (Hora Colombia UTC-5)
+**Versión del Sistema**: `v22.8 — Doctrina de Subtipos de Propiedad Horizontal, Regla de 2 Brazos de Habitaciones y Descarte Fiel de Matches`
+
+#### 📋 Requerimientos y Directivas Doctrinales de Eduardo A. Rivera:
+1. **Doctrina Estricta de Subtipos de Propiedad Horizontal**:
+   - Consagrar `Apartaestudio / Apartasuite / Loft / 1 Alcoba Independiente` como subtipo categórico exclusivo.
+   - **Filtro Duro 3 Inquebrantable**: Un requerimiento de apartaestudio / apartasuite / 1 alcoba jamás hace match con un apartamento familiar estándar ni con un penthouse de múltiples habitaciones (0% Bloqueo Absoluto).
+2. **Regla Doctrinal de Habitaciones con Dos Brazos**:
+   - 🔹 **Brazo A (Demanda de 1 Habitación / Apartaestudio / Loft)**: La oferta DEBE TENER EXACTAMENTE 1 HABITACIÓN. Si tiene 2, 3 o más alcobas $\rightarrow$ ❌ 0% Match Inviable.
+   - 🔹 **Brazo B (Demanda Familiar $\ge 2$ Habitaciones)**: La oferta debe tener $req \le prop \le req + 1$ (máximo 1 habitación adicional de confort).
+3. **Fidelidad Geográfica en Mesa de Cotejo**:
+   - Preservación del barrio real en la oferta (*La Cabrera, Rincón del Chicó, El Nogal*) y del cuadrante/perímetro exacto de la demanda (*Clle 85 a 72 / Clle 85 a 90*) sin sustitución artificial por nombres genéricos como "Virrey | Virrey".
+   - "El Virrey" es un sector/parque; su nombre catastral oficial es **Rincón del Chicó** (al norte de la 88) o **La Cabrera / Antiguo Country** (al sur).
+4. **Descarte Inmediato de Matches con Falla Dura en la Web (`autoScore = 0`)**:
+   - Todo match que tenga una falla dura (🔴 `No Cumple`) es automáticamente 0% y queda excluido del filtro visual del panel admin.
+5. **Depuración en Supabase**:
+   - Se auditaron los matches de la base de datos y se eliminaron definitivamente 3 registros obsoletos que no cumplían las reglas doctrinales v22.8.
+
+---
 
 ### 🗓️ Sesión: Sábado 15 de Agosto de 2026 — 05:10 PM a 07:25 PM (Hora Colombia UTC-5) / 15 de Agosto 10:10 PM a 16 de Agosto 12:25 AM UTC
 **Versión del Sistema**: `v22.6 — Geografía y Cartografía Nacional Colombia (IGAC / DANE / CeM)`  
