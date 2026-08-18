@@ -677,6 +677,42 @@ __export(llm_exports, {
   invokeLLM: () => invokeLLM
 });
 import axios2 from "axios";
+function getGeminiKeys() {
+  const keysSet = /* @__PURE__ */ new Set();
+  const multiKeys = (process.env.GEMINI_API_KEYS || "").split(",").map((k) => k.trim()).filter(Boolean);
+  multiKeys.forEach((k) => keysSet.add(k));
+  if (process.env.GEMINI_API_KEY) keysSet.add(process.env.GEMINI_API_KEY.trim());
+  if (process.env.GOOGLE_API_KEY) keysSet.add(process.env.GOOGLE_API_KEY.trim());
+  if (process.env.GEMINI_BACKUP_KEY) keysSet.add(process.env.GEMINI_BACKUP_KEY.trim());
+  if (ENV.forgeApiKey) keysSet.add(ENV.forgeApiKey.trim());
+  return Array.from(keysSet);
+}
+function getNextAvailableKey() {
+  const allKeys = getGeminiKeys();
+  if (allKeys.length === 0) {
+    throw new Error("No hay ninguna GEMINI_API_KEY configurada en el entorno.");
+  }
+  const now = Date.now();
+  for (const key of allKeys) {
+    const cooldownUntil = keyCooldowns.get(key) || 0;
+    if (now > cooldownUntil) {
+      return key;
+    }
+  }
+  return allKeys[0];
+}
+function markKeyCooldown(key, seconds = 30) {
+  keyCooldowns.set(key, Date.now() + seconds * 1e3);
+  console.warn(`[JanIA-LLM] Clave Gemini puesta en pausa por ${seconds}s debido a Rate Limit (429).`);
+}
+async function paceRequest() {
+  const now = Date.now();
+  const elapsed = now - lastCallTimestamp;
+  if (elapsed < MIN_CALL_INTERVAL_MS) {
+    await new Promise((r) => setTimeout(r, MIN_CALL_INTERVAL_MS - elapsed));
+  }
+  lastCallTimestamp = Date.now();
+}
 async function invokeLLM({
   messages: messages2,
   responseFormat,
@@ -694,107 +730,125 @@ async function invokeLLM({
   return await invokeGemini(messages2, responseFormat, model, imageBuffer, pdfBuffer, pdfMimeType, enableSearch, tools);
 }
 async function invokeGemini(messages2, responseFormat, customModel, imageBuffer, pdfBuffer, pdfMimeType, enableSearch, tools) {
-  const API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || ENV.forgeApiKey;
-  const MODEL = customModel || "gemini-2.5-flash";
-  const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${API_KEY}`;
-  const MAX_RETRIES = 3;
-  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-    try {
-      const systemMessage = messages2.find((m) => m.role === "system");
-      const userMessages = messages2.filter((m) => m.role !== "system");
-      const contents = userMessages.map((m, idx) => {
-        const parts = [{ text: m.content }];
-        if (idx === userMessages.length - 1 && m.role !== "assistant") {
-          if (imageBuffer) {
-            parts.push({
-              inline_data: {
-                mime_type: "image/jpeg",
-                data: imageBuffer
+  const modelsToTry = customModel ? [customModel, ...FALLBACK_MODELS.filter((m) => m !== customModel)] : FALLBACK_MODELS;
+  const allKeys = getGeminiKeys();
+  const systemMessage = messages2.find((m) => m.role === "system");
+  const userMessages = messages2.filter((m) => m.role !== "system");
+  const contents = userMessages.map((m, idx) => {
+    const parts = [{ text: m.content }];
+    if (idx === userMessages.length - 1 && m.role !== "assistant") {
+      if (imageBuffer) {
+        parts.push({
+          inline_data: {
+            mime_type: "image/jpeg",
+            data: imageBuffer
+          }
+        });
+      }
+      if (pdfBuffer) {
+        parts.push({
+          inline_data: {
+            mime_type: pdfMimeType || "application/pdf",
+            data: pdfBuffer
+          }
+        });
+      }
+    }
+    return {
+      role: m.role === "assistant" ? "model" : "user",
+      parts
+    };
+  });
+  const payload = {
+    contents,
+    systemInstruction: systemMessage ? { parts: [{ text: systemMessage.content }] } : void 0,
+    generationConfig: {
+      temperature: responseFormat?.type === "json_object" ? 0.2 : 0.7,
+      topP: 0.95,
+      topK: 40,
+      maxOutputTokens: 4096,
+      responseMimeType: responseFormat?.type === "json_object" ? "application/json" : "text/plain",
+      responseSchema: responseFormat?.schema || void 0
+    }
+  };
+  if (tools && tools.length > 0) {
+    payload.tools = tools;
+  } else if (enableSearch && responseFormat?.type !== "json_object") {
+    payload.tools = [{ googleSearch: {} }];
+  }
+  let lastError = null;
+  for (const currentModel of modelsToTry) {
+    for (let keyAttempt = 0; keyAttempt < Math.max(allKeys.length, 1); keyAttempt++) {
+      const activeKey = getNextAvailableKey();
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${activeKey}`;
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          await paceRequest();
+          console.log(`[JanIA-LLM] Ejecutando IA con ${currentModel} (Clave: ...${activeKey.slice(-6)}, Intento ${attempt})...`);
+          const response = await axios2.post(apiUrl, payload, { timeout: 45e3 });
+          if (response.data.candidates && response.data.candidates[0]) {
+            const firstPart = response.data.candidates[0].content?.parts?.[0];
+            if (firstPart) {
+              if (firstPart.functionCall) {
+                return {
+                  choices: [{
+                    message: {
+                      content: JSON.stringify({ functionCall: firstPart.functionCall }),
+                      functionCall: firstPart.functionCall
+                    }
+                  }]
+                };
               }
-            });
-          }
-          if (pdfBuffer) {
-            parts.push({
-              inline_data: {
-                mime_type: pdfMimeType || "application/pdf",
-                data: pdfBuffer
+              const text2 = firstPart.text;
+              if (text2 && text2.trim() !== "") {
+                return { choices: [{ message: { content: text2 } }] };
               }
-            });
+            }
           }
-        }
-        return {
-          role: m.role === "assistant" ? "model" : "user",
-          parts
-        };
-      });
-      const payload = {
-        contents,
-        systemInstruction: systemMessage ? { parts: [{ text: systemMessage.content }] } : void 0,
-        generationConfig: {
-          temperature: responseFormat?.type === "json_object" ? 0.2 : 0.7,
-          topP: 0.95,
-          topK: 40,
-          maxOutputTokens: 4096,
-          responseMimeType: responseFormat?.type === "json_object" ? "application/json" : "text/plain",
-          responseSchema: responseFormat?.schema || void 0
-        }
-      };
-      if (tools && tools.length > 0) {
-        payload.tools = tools;
-      } else if (enableSearch && responseFormat?.type !== "json_object") {
-        payload.tools = [{ googleSearch: {} }];
-      }
-      console.log(`[JanIA-LLM] Intento ${attempt}/${MAX_RETRIES} \u2014 Gemini (${MODEL}) [Search: ${enableSearch}, Tools: ${!!tools}]...`);
-      const response = await axios2.post(API_URL, payload);
-      if (response.data.candidates && response.data.candidates[0]) {
-        const firstPart = response.data.candidates[0].content?.parts?.[0];
-        if (firstPart) {
-          if (firstPart.functionCall) {
-            return {
-              choices: [{
-                message: {
-                  content: JSON.stringify({ functionCall: firstPart.functionCall }),
-                  functionCall: firstPart.functionCall
-                }
-              }]
-            };
+          console.warn(`[JanIA-LLM] Respuesta vac\xEDa de ${currentModel}. Reintentando...`);
+          await new Promise((r) => setTimeout(r, 1500));
+        } catch (error) {
+          lastError = error;
+          const status = error.response?.status;
+          const errorMsg = error.response?.data?.error?.message || error.message;
+          if (status === 429) {
+            const retryMatch = errorMsg.match(/retry in ([\d\.]+)s/i);
+            const waitSec = retryMatch ? Math.ceil(parseFloat(retryMatch[1])) : 20;
+            markKeyCooldown(activeKey, waitSec);
+            console.warn(`[JanIA-LLM] \u26A0\uFE0F Rate limit (429) en ${currentModel}. Cambiando de clave o modelo...`);
+            break;
           }
-          const text2 = firstPart.text;
-          if (text2 && text2.trim() !== "") {
-            return { choices: [{ message: { content: text2 } }] };
+          if (status === 503 || status === 500) {
+            console.warn(`[JanIA-LLM] Error ${status} de servidor Google. Reintentando en 2s...`);
+            await new Promise((r) => setTimeout(r, 2e3));
+            continue;
           }
+          console.error(`[JanIA-LLM] Error en ${currentModel}:`, errorMsg);
+          break;
         }
       }
-      if (attempt < MAX_RETRIES) {
-        const waitMs = attempt * 1500;
-        console.warn(`[JanIA-LLM] Respuesta vac\xEDa de Gemini (intento ${attempt}). Reintentando en ${waitMs}ms...`);
-        await new Promise((resolve) => setTimeout(resolve, waitMs));
-        continue;
-      }
-      throw new Error("Respuesta de Gemini vac\xEDa tras todos los reintentos");
-    } catch (error) {
-      const status = error.response?.status;
-      const isRetryable = status === 429 || status === 503 || status === 500;
-      if (isRetryable && attempt < MAX_RETRIES) {
-        const waitMs = attempt * 2e3;
-        console.warn(`[JanIA-LLM] Error ${status} de Gemini (intento ${attempt}). Reintentando en ${waitMs}ms...`);
-        await new Promise((resolve) => setTimeout(resolve, waitMs));
-        continue;
-      }
-      console.error("[Gemini Error]:", error.response?.data?.error?.message || error.message);
-      throw error;
     }
   }
-  throw new Error("Respuesta de Gemini vac\xEDa tras todos los reintentos");
+  console.error("[Gemini Cascade Exhausted]: Todos los modelos y claves de Gemini fallaron:", lastError?.message || lastError);
+  throw lastError || new Error("No fue posible obtener respuesta de ning\xFAn modelo de Gemini");
 }
 async function invokeClaude(messages2, responseFormat) {
   console.log("[JanIA-LLM] Intentando procesar con Claude (Anthropic)...");
   throw new Error("El proveedor Anthropic est\xE1 preparado en c\xF3digo pero requiere API KEY y activaci\xF3n financiera.");
 }
+var keyCooldowns, FALLBACK_MODELS, lastCallTimestamp, MIN_CALL_INTERVAL_MS;
 var init_llm = __esm({
   "server/_core/llm.ts"() {
     "use strict";
     init_env();
+    keyCooldowns = /* @__PURE__ */ new Map();
+    FALLBACK_MODELS = [
+      "gemini-2.5-flash",
+      "gemini-flash-latest",
+      "gemini-flash-lite-latest"
+    ];
+    lastCallTimestamp = 0;
+    MIN_CALL_INTERVAL_MS = 600;
   }
 });
 
@@ -1961,6 +2015,73 @@ var init_geo_lookup = __esm({
   }
 });
 
+// server/_core/veredas-lookup.ts
+import fs2 from "fs";
+import path2 from "path";
+function normalize(text2) {
+  if (!text2) return "";
+  return text2.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+}
+function initVeredasLookup() {
+  if (isInitialized && veredasCache.length > 0) return;
+  try {
+    const indexPath = path2.join(process.cwd(), "server/data/colombia_veredas_index.json");
+    if (!fs2.existsSync(indexPath)) {
+      console.warn(`[VeredasLookup] No se encontr\xF3 el \xEDndice de veredas en: ${indexPath}`);
+      return;
+    }
+    const raw = fs2.readFileSync(indexPath, "utf8");
+    veredasCache = JSON.parse(raw);
+    veredasByNameMap.clear();
+    veredasByMpioMap.clear();
+    for (const item of veredasCache) {
+      const normVereda = normalize(item.vereda);
+      const normMpio = normalize(item.municipio);
+      if (!veredasByNameMap.has(normVereda)) {
+        veredasByNameMap.set(normVereda, []);
+      }
+      veredasByNameMap.get(normVereda).push(item);
+      if (!veredasByMpioMap.has(normMpio)) {
+        veredasByMpioMap.set(normMpio, []);
+      }
+      veredasByMpioMap.get(normMpio).push(item);
+    }
+    isInitialized = true;
+    console.log(`[VeredasLookup] \u2705 Indexadas ${veredasCache.length} veredas de Colombia en memoria.`);
+  } catch (err) {
+    console.error(`[VeredasLookup] Error inicializando veredas:`, err.message);
+  }
+}
+function lookupVereda(texto, municipioHint) {
+  if (!texto) return null;
+  if (!isInitialized) initVeredasLookup();
+  const cleanText = normalize(texto).replace(/\bvereda\b/g, "").trim();
+  if (!cleanText) return null;
+  const matches = veredasByNameMap.get(cleanText);
+  if (!matches || matches.length === 0) {
+    return null;
+  }
+  if (matches.length === 1) {
+    return matches[0];
+  }
+  if (municipioHint) {
+    const normHint = normalize(municipioHint);
+    const exactMpio = matches.find((m) => normalize(m.municipio) === normHint);
+    if (exactMpio) return exactMpio;
+  }
+  return matches[0];
+}
+var veredasCache, veredasByNameMap, veredasByMpioMap, isInitialized;
+var init_veredas_lookup = __esm({
+  "server/_core/veredas-lookup.ts"() {
+    "use strict";
+    veredasCache = [];
+    veredasByNameMap = /* @__PURE__ */ new Map();
+    veredasByMpioMap = /* @__PURE__ */ new Map();
+    isInitialized = false;
+  }
+});
+
 // server/_core/geography.ts
 import { sql } from "drizzle-orm";
 function normalizarTextoGeografico(texto) {
@@ -2063,6 +2184,30 @@ async function validarZona(zona, ciudad, textoCompleto, isRequirement = false) {
       localidad: "Bogot\xE1",
       city: "Bogot\xE1",
       isMunicipio: false
+    };
+  }
+  if ((!ciudad || normalizarTextoGeografico(ciudad) === "bogota") && MAPA_BARRIOS[normZone]) {
+    const info = MAPA_BARRIOS[normZone];
+    return {
+      isValid: true,
+      barrioCanonico: info.barrioCanonico,
+      localidad: info.localidad,
+      city: info.isMunicipio ? info.barrioCanonico : "Bogot\xE1",
+      isMunicipio: info.isMunicipio || false
+    };
+  }
+  const isExplicitVereda = /\bvereda\b/i.test(zona);
+  const veredaMatch = lookupVereda(zona, ciudad);
+  if (veredaMatch && (isExplicitVereda || ciudad && normalizarTextoGeografico(ciudad) !== "bogota" || !MAPA_BARRIOS[normZone])) {
+    const veredaTitle = veredaMatch.vereda.split(" ").map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+    const mpioTitle = veredaMatch.municipio.split(" ").map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+    console.log(`[Geocoding-Vereda] IGAC Vereda resuelta "${zona}" \u2794 "Vereda ${veredaTitle}" (${mpioTitle}, ${veredaMatch.departamento})`);
+    return {
+      isValid: true,
+      barrioCanonico: `Vereda ${veredaTitle}`,
+      localidad: mpioTitle,
+      city: mpioTitle,
+      isMunicipio: true
     };
   }
   const queryAddress = ciudad && normalizarTextoGeografico(ciudad) !== "bogota" ? `${zona}, ${ciudad}, Colombia` : `${zona}, Bogot\xE1, Colombia`;
@@ -2709,6 +2854,7 @@ var init_geography = __esm({
     init_db();
     init_schema();
     init_geo_lookup();
+    init_veredas_lookup();
     GENERIC_ZONES_SET = /* @__PURE__ */ new Set([
       "bogota",
       "bogota d c",
@@ -5039,8 +5185,8 @@ var init_matching = __esm({
 });
 
 // server/_core/divipola.ts
-import fs2 from "fs";
-import path2 from "path";
+import fs3 from "fs";
+import path3 from "path";
 var municipalitiesMap, initDivipola, validateCity;
 var init_divipola = __esm({
   "server/_core/divipola.ts"() {
@@ -5048,23 +5194,18 @@ var init_divipola = __esm({
     municipalitiesMap = /* @__PURE__ */ new Map();
     initDivipola = () => {
       try {
-        const filePath = path2.join(process.cwd(), "server", "data", "divipola.csv");
-        if (!fs2.existsSync(filePath)) {
-          console.warn("Divipola CSV not found at", filePath);
+        const jsonPath = path3.join(process.cwd(), "server", "data", "divipola.json");
+        municipalitiesMap.clear();
+        if (!fs3.existsSync(jsonPath)) {
+          console.warn("Divipola JSON data file not found at", jsonPath);
           return;
         }
-        const content = fs2.readFileSync(filePath, "utf-8");
-        const lines = content.split("\n");
-        municipalitiesMap.clear();
-        for (let i = 1; i < lines.length; i++) {
-          const line = lines[i].trim();
-          if (!line) continue;
-          const parts = line.match(/(?:^|,)("(?:[^"]|"")*"|[^,]*)/g);
-          if (!parts || parts.length < 4) continue;
-          let munName = parts[3].replace(/^,?"?|"?$/g, "").trim();
-          if (munName) {
-            const normalizedKey = munName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-            let titleCased = munName.split(" ").map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+        const raw = fs3.readFileSync(jsonPath, "utf-8");
+        const list = JSON.parse(raw);
+        for (const item of list) {
+          if (item.municipio) {
+            const normalizedKey = item.municipio.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+            let titleCased = item.municipio.split(" ").map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
             municipalitiesMap.set(normalizedKey, titleCased);
           }
         }
@@ -5286,59 +5427,53 @@ var init_voiceTranscription = __esm({
 });
 
 // server/storage.ts
-function getStorageConfig() {
-  const baseUrl = ENV.forgeApiUrl;
-  const apiKey = ENV.forgeApiKey;
-  if (!baseUrl || !apiKey) {
-    throw new Error(
-      "Storage proxy credentials missing: set BUILT_IN_FORGE_API_URL and BUILT_IN_FORGE_API_KEY"
-    );
-  }
-  return { baseUrl: baseUrl.replace(/\/+$/, ""), apiKey };
-}
-function buildUploadUrl(baseUrl, relKey) {
-  const url = new URL("v1/storage/upload", ensureTrailingSlash(baseUrl));
-  url.searchParams.set("path", normalizeKey(relKey));
-  return url;
-}
-function ensureTrailingSlash(value) {
-  return value.endsWith("/") ? value : `${value}/`;
-}
+import fs4 from "fs";
+import path4 from "path";
+import { createClient } from "@supabase/supabase-js";
 function normalizeKey(relKey) {
-  return relKey.replace(/^\/+/, "");
-}
-function toFormData(data, contentType, fileName) {
-  const blob = typeof data === "string" ? new Blob([data], { type: contentType }) : new Blob([data], { type: contentType });
-  const form = new FormData();
-  form.append("file", blob, fileName || "file");
-  return form;
-}
-function buildAuthHeaders(apiKey) {
-  return { Authorization: `Bearer ${apiKey}` };
+  return relKey.replace(/^\/+/, "").replace(/[^\w\d\-_\.\/]/g, "_");
 }
 async function storagePut(relKey, data, contentType = "application/octet-stream") {
-  const { baseUrl, apiKey } = getStorageConfig();
   const key = normalizeKey(relKey);
-  const uploadUrl = buildUploadUrl(baseUrl, key);
-  const formData = toFormData(data, contentType, key.split("/").pop() ?? key);
-  const response = await fetch(uploadUrl, {
-    method: "POST",
-    headers: buildAuthHeaders(apiKey),
-    body: formData
-  });
-  if (!response.ok) {
-    const message = await response.text().catch(() => response.statusText);
-    throw new Error(
-      `Storage upload failed (${response.status} ${response.statusText}): ${message}`
-    );
+  const targetFilePath = path4.join(uploadsDir, key);
+  const targetSubdir = path4.dirname(targetFilePath);
+  if (!fs4.existsSync(targetSubdir)) {
+    fs4.mkdirSync(targetSubdir, { recursive: true });
   }
-  const url = (await response.json()).url;
-  return { key, url };
+  const buffer = typeof data === "string" ? Buffer.from(data, "base64") : Buffer.from(data);
+  fs4.writeFileSync(targetFilePath, buffer);
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+  if (supabaseUrl && supabaseKey) {
+    try {
+      const supabase = createClient(supabaseUrl, supabaseKey);
+      const { error: uploadError } = await supabase.storage.from("property-flyers").upload(key, buffer, {
+        contentType,
+        upsert: true
+      });
+      if (!uploadError) {
+        const { data: publicData } = supabase.storage.from("property-flyers").getPublicUrl(key);
+        if (publicData?.publicUrl) {
+          console.log(`[Storage] Archivo subido exitosamente a Supabase Storage: ${publicData.publicUrl}`);
+          return { key, url: publicData.publicUrl };
+        }
+      }
+    } catch (sbErr) {
+      console.warn(`[Storage] Supabase Storage opcional omitido (${sbErr.message}), usando almacenamiento local est\xE1tico.`);
+    }
+  }
+  const publicUrl = `/uploads/${key}`;
+  console.log(`[Storage] Archivo guardado localmente en ${targetFilePath} -> URL: ${publicUrl}`);
+  return { key, url: publicUrl };
 }
+var uploadsDir;
 var init_storage = __esm({
   "server/storage.ts"() {
     "use strict";
-    init_env();
+    uploadsDir = path4.resolve(process.cwd(), "public/uploads");
+    if (!fs4.existsSync(uploadsDir)) {
+      fs4.mkdirSync(uploadsDir, { recursive: true });
+    }
   }
 });
 
@@ -5393,8 +5528,8 @@ __export(janIA_exports, {
   translateTransactionType: () => translateTransactionType
 });
 import { eq as eq4, and as and2, sql as sql3, gte, desc } from "drizzle-orm";
-import fs3 from "fs";
-import path3 from "path";
+import fs5 from "fs";
+import path5 from "path";
 import axios6 from "axios";
 import crypto from "crypto";
 function generarHashMensaje(rawText, remitente) {
@@ -6063,20 +6198,20 @@ function buildSystemPrompt(groupJid) {
     return promptCache[cacheKey];
   }
   try {
-    const baseDir = path3.resolve(process.cwd(), "server/_core/prompts");
-    const basePrompt = fs3.readFileSync(path3.join(baseDir, "base.md"), "utf-8");
+    const baseDir = path5.resolve(process.cwd(), "server/_core/prompts");
+    const basePrompt = fs5.readFileSync(path5.join(baseDir, "base.md"), "utf-8");
     let specificPrompt = "";
     if (groupJid === "120363260108880069@g.us") {
-      specificPrompt = fs3.readFileSync(path3.join(baseDir, "grupos/VECY_INMUEBLES_NETWORK.md"), "utf-8");
+      specificPrompt = fs5.readFileSync(path5.join(baseDir, "grupos/VECY_INMUEBLES_NETWORK.md"), "utf-8");
     } else if (groupJid === "120363417740040773@g.us") {
-      const legalPrompt = fs3.readFileSync(path3.join(baseDir, "grupos/VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md"), "utf-8");
+      const legalPrompt = fs5.readFileSync(path5.join(baseDir, "grupos/VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md"), "utf-8");
       specificPrompt = legalPrompt;
     } else if (groupJid === "120363403507276533@g.us") {
-      specificPrompt = fs3.readFileSync(path3.join(baseDir, "grupos/PROYECTO_Vecy Network.md"), "utf-8");
+      specificPrompt = fs5.readFileSync(path5.join(baseDir, "grupos/PROYECTO_Vecy Network.md"), "utf-8");
     } else if (groupJid && (groupJid.endsWith("@g.us") || groupJid.includes("@us"))) {
-      specificPrompt = fs3.readFileSync(path3.join(baseDir, "grupos/VECY_INMUEBLES_NETWORK.md"), "utf-8");
+      specificPrompt = fs5.readFileSync(path5.join(baseDir, "grupos/VECY_INMUEBLES_NETWORK.md"), "utf-8");
     } else {
-      specificPrompt = fs3.readFileSync(path3.join(baseDir, "web/web_console.md"), "utf-8");
+      specificPrompt = fs5.readFileSync(path5.join(baseDir, "web/web_console.md"), "utf-8");
     }
     const fullPrompt = `${basePrompt}
 
@@ -7194,7 +7329,7 @@ ${liveStats}` : buildSystemPrompt(groupJid);
         externalUrl,
         enlaceOrigen: sourceUrl,
         fechaExtraccion: /* @__PURE__ */ new Date()
-      }, userId, realName, imageBuffer);
+      }, userId, realName, imageBuffer, pdfBuffer, pdfMimeType);
       if (saved) {
         result.inserted = true;
         result.shouldSendDM = false;
@@ -7244,7 +7379,7 @@ ${liveStats}` : buildSystemPrompt(groupJid);
         origenNombre,
         enlaceOrigen: sourceUrlReq,
         fechaExtraccion: /* @__PURE__ */ new Date()
-      }, userId, realName);
+      }, userId, realName, imageBuffer, pdfBuffer, pdfMimeType);
       if (saved) {
         result.inserted = true;
         result.shouldSendDM = false;
@@ -7616,7 +7751,7 @@ async function handleAmendmentUpdate(userId, text2) {
   }
   return false;
 }
-async function saveProperty(data, userId, realName, imageBuffer) {
+async function saveProperty(data, userId, realName, imageBuffer, pdfBuffer, pdfMimeType) {
   const db = await getDb();
   if (!db) return null;
   const rawPhone = userId.split(":")[0].split("@")[0];
@@ -7626,7 +7761,7 @@ async function saveProperty(data, userId, realName, imageBuffer) {
     try {
       console.log(`[JanIA-SaveProperty] Subiendo imagen flyer de WhatsApp para ${realName}...`);
       const buffer = Buffer.from(imageBuffer, "base64");
-      const filename = `properties/whatsapp/wa_${Date.now()}_${rawPhone}.jpg`;
+      const filename = `flyers/wa_${Date.now()}_${rawPhone}.jpg`;
       const uploadResult = await storagePut(filename, buffer, "image/jpeg");
       imageUrl = uploadResult.url;
       console.log(`[JanIA-SaveProperty] Imagen subida exitosamente: ${imageUrl}`);
@@ -7634,9 +7769,31 @@ async function saveProperty(data, userId, realName, imageBuffer) {
       console.error("[JanIA-SaveProperty] Error subiendo imagen:", err);
     }
   }
+  let pdfUrl;
+  if (pdfBuffer) {
+    try {
+      console.log(`[JanIA-SaveProperty] Subiendo PDF brochure de WhatsApp para ${realName}...`);
+      const buffer = Buffer.from(pdfBuffer, "base64");
+      const filename = `documents/doc_${Date.now()}_${rawPhone}.pdf`;
+      const uploadResult = await storagePut(filename, buffer, pdfMimeType || "application/pdf");
+      pdfUrl = uploadResult.url;
+      console.log(`[JanIA-SaveProperty] PDF subido exitosamente: ${pdfUrl}`);
+    } catch (err) {
+      console.error("[JanIA-SaveProperty] Error subiendo PDF:", err);
+    }
+  }
   const finalImages = [];
   if (imageUrl) {
     finalImages.push(imageUrl);
+  }
+  if (Array.isArray(data.images)) {
+    for (const img of data.images) {
+      if (img && typeof img === "string" && !finalImages.includes(img)) finalImages.push(img);
+    }
+  }
+  if (pdfUrl) {
+    data.externalUrl = data.externalUrl || pdfUrl;
+    data.enlaceOrigen = data.enlaceOrigen || pdfUrl;
   }
   const amenitiesObj = {
     gives: data.gives || data.amenities?.gives,
@@ -7931,11 +8088,33 @@ async function saveProperty(data, userId, realName, imageBuffer) {
   }
   return result;
 }
-async function saveRequirement(data, userId, realName) {
+async function saveRequirement(data, userId, realName, imageBuffer, pdfBuffer, pdfMimeType) {
   const db = await getDb();
   if (!db) return null;
   const rawPhone = userId.split(":")[0].split("@")[0];
   const user = await findOrCreateUserByPhone(rawPhone, realName);
+  let reqPdfUrl;
+  if (pdfBuffer) {
+    try {
+      const buffer = Buffer.from(pdfBuffer, "base64");
+      const filename = `documents/req_doc_${Date.now()}_${rawPhone}.pdf`;
+      const uploadResult = await storagePut(filename, buffer, pdfMimeType || "application/pdf");
+      reqPdfUrl = uploadResult.url;
+      data.enlaceOrigen = data.enlaceOrigen || reqPdfUrl;
+    } catch (err) {
+      console.error("[JanIA-SaveRequirement] Error subiendo PDF:", err);
+    }
+  }
+  if (imageBuffer && !data.enlaceOrigen) {
+    try {
+      const buffer = Buffer.from(imageBuffer, "base64");
+      const filename = `flyers/req_wa_${Date.now()}_${rawPhone}.jpg`;
+      const uploadResult = await storagePut(filename, buffer, "image/jpeg");
+      data.enlaceOrigen = data.enlaceOrigen || uploadResult.url;
+    } catch (err) {
+      console.error("[JanIA-SaveRequirement] Error subiendo imagen:", err);
+    }
+  }
   const characteristicsObj = {
     gives: data.gives || data.caracteristicasDeseadas?.gives,
     wants: data.wants || data.caracteristicasDeseadas?.wants,
@@ -9480,8 +9659,8 @@ import _baileys, {
   Browsers
 } from "@whiskeysockets/baileys";
 import qrcodeTerminal from "qrcode-terminal";
-import fs6 from "fs";
-import path7 from "path";
+import fs8 from "fs";
+import path9 from "path";
 import { eq as eq11 } from "drizzle-orm";
 import QRCode from "qrcode";
 function getWASocket() {
@@ -9552,7 +9731,7 @@ var init_whatsapp_match = __esm({
       buzonGroupId = "120363417740040773@g.us";
       circuloGroupId = "120363403507276533@g.us";
       cooldownMap = /* @__PURE__ */ new Map();
-      cooldownFile = path7.join(process.cwd(), ".cooldown_map.json");
+      cooldownFile = path9.join(process.cwd(), ".cooldown_map.json");
       constructor(options) {
         if (options) {
           if (options.sessionFolderName) this.sessionFolderName = options.sessionFolderName;
@@ -9611,12 +9790,12 @@ var init_whatsapp_match = __esm({
       }
       async initialize() {
         try {
-          const sessionDir = path7.join(process.cwd(), this.sessionFolderName);
-          if (!fs6.existsSync(sessionDir)) {
-            fs6.mkdirSync(sessionDir, { recursive: true });
+          const sessionDir = path9.join(process.cwd(), this.sessionFolderName);
+          if (!fs8.existsSync(sessionDir)) {
+            fs8.mkdirSync(sessionDir, { recursive: true });
           }
           const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
-          if (!fs6.existsSync(path7.join(sessionDir, "creds.json"))) {
+          if (!fs8.existsSync(path9.join(sessionDir, "creds.json"))) {
             await saveCreds();
             console.log(`[${this.botName}] \u{1F4BE} Guardadas credenciales iniciales de Baileys en ${this.sessionFolderName}.`);
           }
@@ -9685,12 +9864,12 @@ var init_whatsapp_match = __esm({
             qrcodeTerminal.generate(qr, { small: true });
             global.janiaBotQr = qr;
             try {
-              const qrPath = path7.join(process.cwd(), this.qrFileName);
-              const publicQrDir = path7.join(process.cwd(), "client", "public");
-              if (!fs6.existsSync(publicQrDir)) {
-                fs6.mkdirSync(publicQrDir, { recursive: true });
+              const qrPath = path9.join(process.cwd(), this.qrFileName);
+              const publicQrDir = path9.join(process.cwd(), "client", "public");
+              if (!fs8.existsSync(publicQrDir)) {
+                fs8.mkdirSync(publicQrDir, { recursive: true });
               }
-              const publicQrPath = path7.join(publicQrDir, "qr-match.png");
+              const publicQrPath = path9.join(publicQrDir, "qr-match.png");
               await QRCode.toFile(qrPath, qr, { width: 400, margin: 2 });
               await QRCode.toFile(publicQrPath, qr, { width: 400, margin: 2 });
               console.log(`[${this.botName}] \u{1F4F8} QR guardado exitosamente en ${qrPath} y ${publicQrPath}`);
@@ -11007,10 +11186,10 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
           }
           let messagePayload = {};
           if (mediaPath) {
-            const fs8 = await import("fs");
-            const buffer = fs8.readFileSync(mediaPath);
-            const path10 = await import("path");
-            const ext = path10.extname(mediaPath).toLowerCase();
+            const fs10 = await import("fs");
+            const buffer = fs10.readFileSync(mediaPath);
+            const path12 = await import("path");
+            const ext = path12.extname(mediaPath).toLowerCase();
             if (ext === ".mp4") {
               messagePayload = {
                 video: buffer,
@@ -11028,7 +11207,7 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
                 document: buffer,
                 caption: text2,
                 mimetype: "application/octet-stream",
-                fileName: path10.basename(mediaPath)
+                fileName: path12.basename(mediaPath)
               };
             }
           } else {
@@ -11142,7 +11321,7 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
   * \u{1F3E2} *Proyectos de construcci\xF3n* o aportes de lote.
 \u25B8 *Matching Inteligente:* Cruzo ofertas y demandas en tiempo real y les aviso en el acto cuando hay negocio viable.`;
         const groups = [this.targetGroupId, this.buzonGroupId, this.circuloGroupId];
-        const imgPath = path7.resolve("./client/public/jania_perfil.png");
+        const imgPath = path9.resolve("./client/public/jania_perfil.png");
         for (const group of groups) {
           try {
             await this.sendToGroup(baseMsg, imgPath, [], group);
@@ -11173,10 +11352,10 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
           }
         } catch (e) {
         }
-        const sessionDir = path7.join(process.cwd(), ".baileys_auth");
-        if (fs6.existsSync(sessionDir)) {
+        const sessionDir = path9.join(process.cwd(), ".baileys_auth");
+        if (fs8.existsSync(sessionDir)) {
           try {
-            fs6.rmSync(sessionDir, { recursive: true, force: true });
+            fs8.rmSync(sessionDir, { recursive: true, force: true });
           } catch (err) {
             console.warn("[JANIA-MATCH] No se pudo borrar .baileys_auth:", err.message);
           }
@@ -11195,8 +11374,8 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
       }
       loadCooldowns() {
         try {
-          if (fs6.existsSync(this.cooldownFile)) {
-            const raw = JSON.parse(fs6.readFileSync(this.cooldownFile, "utf8"));
+          if (fs8.existsSync(this.cooldownFile)) {
+            const raw = JSON.parse(fs8.readFileSync(this.cooldownFile, "utf8"));
             this.cooldownMap = new Map(Object.entries(raw));
           }
         } catch (e) {
@@ -11205,7 +11384,7 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
       saveCooldowns() {
         try {
           const obj = Object.fromEntries(this.cooldownMap.entries());
-          fs6.writeFileSync(this.cooldownFile, JSON.stringify(obj), "utf8");
+          fs8.writeFileSync(this.cooldownFile, JSON.stringify(obj), "utf8");
         } catch (e) {
         }
       }
@@ -12008,8 +12187,8 @@ function liquidarImpuestosVenta(params) {
 // server/routers/janIA.ts
 init_matching();
 import axios7 from "axios";
-import fs4 from "fs";
-import path4 from "path";
+import fs6 from "fs";
+import path6 from "path";
 var janIARouter = router({
   // New: Extract property data from link
   extractFromLink: publicProcedure.input(z2.object({ url: z2.string().url() })).mutation(async ({ input }) => {
@@ -12541,7 +12720,7 @@ ${liveStats}${userContextInstruction}
     action: z2.enum(["exitoso", "rechazado", "en_negociacion"]),
     motivoRechazo: z2.string().optional().nullable(),
     notasBroker: z2.string().optional().nullable(),
-    ajustesGuardados: z2.record(z2.any()).optional().nullable()
+    ajustesGuardados: z2.record(z2.string(), z2.any()).optional().nullable()
   })).mutation(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new Error("Base de datos no disponible");
@@ -12699,11 +12878,11 @@ ${liveStats}${userContextInstruction}
   }),
   getQrCode: publicProcedure.query(async () => {
     try {
-      const qrPath = path4.join(process.cwd(), "qr-captador.png");
-      const qrMatchPath = path4.join(process.cwd(), "qr-match.png");
-      let targetPath = fs4.existsSync(qrPath) ? qrPath : fs4.existsSync(qrMatchPath) ? qrMatchPath : null;
+      const qrPath = path6.join(process.cwd(), "qr-captador.png");
+      const qrMatchPath = path6.join(process.cwd(), "qr-match.png");
+      let targetPath = fs6.existsSync(qrPath) ? qrPath : fs6.existsSync(qrMatchPath) ? qrMatchPath : null;
       if (targetPath) {
-        const fileData = fs4.readFileSync(targetPath);
+        const fileData = fs6.readFileSync(targetPath);
         return { hasQr: true, qrData: `data:image/png;base64,${fileData.toString("base64")}` };
       }
       return { hasQr: false, qrData: null };
@@ -13864,30 +14043,30 @@ async function createContext(opts) {
 
 // server/_core/vite.ts
 import express from "express";
-import fs5 from "fs";
+import fs7 from "fs";
 import { nanoid } from "nanoid";
-import path6 from "path";
+import path8 from "path";
 import { createServer as createViteServer } from "vite";
 
 // vite.config.ts
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import path5 from "node:path";
+import path7 from "node:path";
 import { defineConfig } from "vite";
 var vite_config_default = defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
-      "@": path5.resolve(import.meta.dirname, "client", "src"),
-      "@shared": path5.resolve(import.meta.dirname, "shared"),
-      "@assets": path5.resolve(import.meta.dirname, "attached_assets")
+      "@": path7.resolve(import.meta.dirname, "client", "src"),
+      "@shared": path7.resolve(import.meta.dirname, "shared"),
+      "@assets": path7.resolve(import.meta.dirname, "attached_assets")
     }
   },
-  envDir: path5.resolve(import.meta.dirname),
-  root: path5.resolve(import.meta.dirname, "client"),
-  publicDir: path5.resolve(import.meta.dirname, "client", "public"),
+  envDir: path7.resolve(import.meta.dirname),
+  root: path7.resolve(import.meta.dirname, "client"),
+  publicDir: path7.resolve(import.meta.dirname, "client", "public"),
   build: {
-    outDir: path5.resolve(import.meta.dirname, "dist"),
+    outDir: path7.resolve(import.meta.dirname, "dist"),
     emptyOutDir: true,
     chunkSizeWarningLimit: 1e3
   },
@@ -13918,13 +14097,13 @@ async function setupVite(app, server) {
   app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
     try {
-      const clientTemplate = path6.resolve(
+      const clientTemplate = path8.resolve(
         import.meta.dirname,
         "../..",
         "client",
         "index.html"
       );
-      let template = await fs5.promises.readFile(clientTemplate, "utf-8");
+      let template = await fs7.promises.readFile(clientTemplate, "utf-8");
       template = template.replace(
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid()}"`
@@ -13938,21 +14117,21 @@ async function setupVite(app, server) {
   });
 }
 function serveStatic(app) {
-  const distPath = path6.resolve(import.meta.dirname, "..", "dist");
-  if (!fs5.existsSync(distPath)) {
+  const distPath = path8.resolve(import.meta.dirname, "..", "dist");
+  if (!fs7.existsSync(distPath)) {
     console.error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`
     );
   }
   app.use(express.static(distPath));
   app.use("*", (_req, res) => {
-    res.sendFile(path6.resolve(distPath, "index.html"));
+    res.sendFile(path8.resolve(distPath, "index.html"));
   });
 }
 
 // server/_core/cronService.ts
 import cron from "node-cron";
-import path8 from "path";
+import path10 from "path";
 init_db();
 init_schema();
 init_whatsapp_match();
@@ -13961,7 +14140,7 @@ init_llm();
 import { fileURLToPath } from "url";
 import { gte as gte3, and as and7, eq as eq13, sql as sql7 } from "drizzle-orm";
 var __filename = fileURLToPath(import.meta.url);
-var __dirname = path8.dirname(__filename);
+var __dirname = path10.dirname(__filename);
 function initCronScheduler() {
   console.log("[CRON-SERVICE] Inicializando orquestador de agendas automatizadas v3.1 (Exclusivamente Audios Motivacionales y Re-matching)...");
   cron.schedule("0 11 * * 1,4", async () => {
@@ -14008,8 +14187,8 @@ init_llm();
 init_whatsapp_utils();
 init_whatsapp_match();
 import multer from "multer";
-import fs7 from "fs";
-import path9 from "path";
+import fs9 from "fs";
+import path11 from "path";
 process.on("uncaughtException", (error) => {
   console.error("[SYSTEM-CRITICAL] Uncaught Exception detectada:", error);
 });
@@ -14088,10 +14267,10 @@ async function startServer() {
   });
   app.get("/qr-match.png", (req, res) => {
     try {
-      const qrPath = path9.join(process.cwd(), "qr-match.png");
-      const distQrPath = path9.join(process.cwd(), "dist", "qr-match.png");
-      const activePath = fs7.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs7.existsSync(activePath)) {
+      const qrPath = path11.join(process.cwd(), "qr-match.png");
+      const distQrPath = path11.join(process.cwd(), "dist", "qr-match.png");
+      const activePath = fs9.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs9.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
         res.setHeader("Pragma", "no-cache");
@@ -14111,10 +14290,10 @@ async function startServer() {
         await janiaMatchBot2.initialize();
         await new Promise((resolve) => setTimeout(resolve, 3e3));
       }
-      const qrPath = path9.join(process.cwd(), "qr-match.png");
-      const distQrPath = path9.join(process.cwd(), "dist", "qr-match.png");
-      const activePath = fs7.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs7.existsSync(activePath)) {
+      const qrPath = path11.join(process.cwd(), "qr-match.png");
+      const distQrPath = path11.join(process.cwd(), "dist", "qr-match.png");
+      const activePath = fs9.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs9.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
         res.setHeader("Pragma", "no-cache");
@@ -14135,10 +14314,10 @@ async function startServer() {
       console.log("[ADMIN] Re-inicializando sesi\xF3n de Baileys para refrescar QR...");
       await janiaMatchBot2.initialize();
       await new Promise((resolve) => setTimeout(resolve, 4e3));
-      const qrPath = path9.join(process.cwd(), "qr-match.png");
-      const distQrPath = path9.join(process.cwd(), "dist", "qr-match.png");
-      const activePath = fs7.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs7.existsSync(activePath)) {
+      const qrPath = path11.join(process.cwd(), "qr-match.png");
+      const distQrPath = path11.join(process.cwd(), "dist", "qr-match.png");
+      const activePath = fs9.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs9.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         return res.sendFile(activePath);
       }
@@ -14165,10 +14344,10 @@ async function startServer() {
   });
   app.get("/qr-captador.png", (req, res) => {
     try {
-      const qrPath = path9.join(process.cwd(), "qr-captador.png");
-      const distQrPath = path9.join(process.cwd(), "dist", "qr-captador.png");
-      const activePath = fs7.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs7.existsSync(activePath)) {
+      const qrPath = path11.join(process.cwd(), "qr-captador.png");
+      const distQrPath = path11.join(process.cwd(), "dist", "qr-captador.png");
+      const activePath = fs9.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs9.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
         res.setHeader("Pragma", "no-cache");
@@ -14298,18 +14477,18 @@ async function startServer() {
       res.status(500).json({ error: err.message || "Error al procesar la transcripci\xF3n" });
     }
   });
-  const uploadsDir = path9.resolve(process.cwd(), "public/uploads");
-  if (!fs7.existsSync(uploadsDir)) {
-    fs7.mkdirSync(uploadsDir, { recursive: true });
+  const uploadsDir2 = path11.resolve(process.cwd(), "public/uploads");
+  if (!fs9.existsSync(uploadsDir2)) {
+    fs9.mkdirSync(uploadsDir2, { recursive: true });
   }
-  app.use("/uploads", express2.static(uploadsDir));
+  app.use("/uploads", express2.static(uploadsDir2));
   const diskStorage = multer.diskStorage({
     destination: (req, file, cb) => {
-      cb(null, uploadsDir);
+      cb(null, uploadsDir2);
     },
     filename: (req, file, cb) => {
       const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-      cb(null, uniqueSuffix + path9.extname(file.originalname));
+      cb(null, uniqueSuffix + path11.extname(file.originalname));
     }
   });
   const uploadDisk = multer({

@@ -2837,7 +2837,7 @@ Por lo tanto, DEBES hacer lo siguiente:
         externalUrl,
         enlaceOrigen: sourceUrl,
         fechaExtraccion: new Date()
-      }, userId, realName, imageBuffer);
+      }, userId, realName, imageBuffer, pdfBuffer, pdfMimeType);
       
       if (saved) {
         result.inserted = true;
@@ -2903,7 +2903,7 @@ Por lo tanto, DEBES hacer lo siguiente:
         origenNombre,
         enlaceOrigen: sourceUrlReq,
         fechaExtraccion: new Date()
-      }, userId, realName);
+      }, userId, realName, imageBuffer, pdfBuffer, pdfMimeType);
 
       if (saved) {
         result.inserted = true;
@@ -3394,7 +3394,7 @@ export async function handleAmendmentUpdate(userId: string, text: string): Promi
   return false;
 }
 
-async function saveProperty(data: any, userId: string, realName: string, imageBuffer?: string) {
+async function saveProperty(data: any, userId: string, realName: string, imageBuffer?: string, pdfBuffer?: string, pdfMimeType?: string) {
   const db = await getDb();
   if (!db) return null;
 
@@ -3406,7 +3406,7 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
     try {
       console.log(`[JanIA-SaveProperty] Subiendo imagen flyer de WhatsApp para ${realName}...`);
       const buffer = Buffer.from(imageBuffer, 'base64');
-      const filename = `properties/whatsapp/wa_${Date.now()}_${rawPhone}.jpg`;
+      const filename = `flyers/wa_${Date.now()}_${rawPhone}.jpg`;
       const uploadResult = await storagePut(filename, buffer, 'image/jpeg');
       imageUrl = uploadResult.url;
       console.log(`[JanIA-SaveProperty] Imagen subida exitosamente: ${imageUrl}`);
@@ -3415,10 +3415,34 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
     }
   }
 
-  // Para VRIF Core v1.0, descartamos imágenes externas del scraper y guardamos solo el flyer directo de WhatsApp
-  const finalImages = [];
+  let pdfUrl: string | undefined;
+  if (pdfBuffer) {
+    try {
+      console.log(`[JanIA-SaveProperty] Subiendo PDF brochure de WhatsApp para ${realName}...`);
+      const buffer = Buffer.from(pdfBuffer, 'base64');
+      const filename = `documents/doc_${Date.now()}_${rawPhone}.pdf`;
+      const uploadResult = await storagePut(filename, buffer, pdfMimeType || 'application/pdf');
+      pdfUrl = uploadResult.url;
+      console.log(`[JanIA-SaveProperty] PDF subido exitosamente: ${pdfUrl}`);
+    } catch (err) {
+      console.error("[JanIA-SaveProperty] Error subiendo PDF:", err);
+    }
+  }
+
+  // Para VRIF Core v1.0, guardamos el flyer directo de WhatsApp y URLs adicionales
+  const finalImages: string[] = [];
   if (imageUrl) {
     finalImages.push(imageUrl);
+  }
+  if (Array.isArray(data.images)) {
+    for (const img of data.images) {
+      if (img && typeof img === 'string' && !finalImages.includes(img)) finalImages.push(img);
+    }
+  }
+
+  if (pdfUrl) {
+    data.externalUrl = data.externalUrl || pdfUrl;
+    data.enlaceOrigen = data.enlaceOrigen || pdfUrl;
   }
 
   const amenitiesObj = {
@@ -3802,12 +3826,36 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
   return result;
 }
 
-async function saveRequirement(data: any, userId: string, realName: string) {
+async function saveRequirement(data: any, userId: string, realName: string, imageBuffer?: string, pdfBuffer?: string, pdfMimeType?: string) {
   const db = await getDb();
   if (!db) return null;
 
   const rawPhone = userId.split(':')[0].split('@')[0];
   const user = await findOrCreateUserByPhone(rawPhone, realName);
+
+  let reqPdfUrl: string | undefined;
+  if (pdfBuffer) {
+    try {
+      const buffer = Buffer.from(pdfBuffer, 'base64');
+      const filename = `documents/req_doc_${Date.now()}_${rawPhone}.pdf`;
+      const uploadResult = await storagePut(filename, buffer, pdfMimeType || 'application/pdf');
+      reqPdfUrl = uploadResult.url;
+      data.enlaceOrigen = data.enlaceOrigen || reqPdfUrl;
+    } catch (err) {
+      console.error("[JanIA-SaveRequirement] Error subiendo PDF:", err);
+    }
+  }
+
+  if (imageBuffer && !data.enlaceOrigen) {
+    try {
+      const buffer = Buffer.from(imageBuffer, 'base64');
+      const filename = `flyers/req_wa_${Date.now()}_${rawPhone}.jpg`;
+      const uploadResult = await storagePut(filename, buffer, 'image/jpeg');
+      data.enlaceOrigen = data.enlaceOrigen || uploadResult.url;
+    } catch (err) {
+      console.error("[JanIA-SaveRequirement] Error subiendo imagen:", err);
+    }
+  }
 
   const characteristicsObj = {
     gives: data.gives || data.caracteristicasDeseadas?.gives,

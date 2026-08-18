@@ -1,70 +1,23 @@
-// Preconfigured storage helpers for Manus WebDev templates
-// Uses the Biz-provided storage proxy (Authorization: Bearer <token>)
+import fs from 'fs';
+import path from 'path';
+import { createClient } from '@supabase/supabase-js';
 
-import { ENV } from './_core/env';
+/**
+ * Gestor Autónomo de Archivos y Flyers para Vecy Network (v22.7)
+ * - Guarda localmente en `public/uploads/` y `uploads/` (servidos públicamente por Express en /uploads/...)
+ * - Soporta subida opcional a Supabase Storage bucket `property-flyers`
+ * - Devuelve URLs públicas inmediatas y accesibles para la web
+ */
 
-type StorageConfig = { baseUrl: string; apiKey: string };
+const uploadsDir = path.resolve(process.cwd(), 'public/uploads');
 
-function getStorageConfig(): StorageConfig {
-  const baseUrl = ENV.forgeApiUrl;
-  const apiKey = ENV.forgeApiKey;
-
-  if (!baseUrl || !apiKey) {
-    throw new Error(
-      "Storage proxy credentials missing: set BUILT_IN_FORGE_API_URL and BUILT_IN_FORGE_API_KEY"
-    );
-  }
-
-  return { baseUrl: baseUrl.replace(/\/+$/, ""), apiKey };
-}
-
-function buildUploadUrl(baseUrl: string, relKey: string): URL {
-  const url = new URL("v1/storage/upload", ensureTrailingSlash(baseUrl));
-  url.searchParams.set("path", normalizeKey(relKey));
-  return url;
-}
-
-async function buildDownloadUrl(
-  baseUrl: string,
-  relKey: string,
-  apiKey: string
-): Promise<string> {
-  const downloadApiUrl = new URL(
-    "v1/storage/downloadUrl",
-    ensureTrailingSlash(baseUrl)
-  );
-  downloadApiUrl.searchParams.set("path", normalizeKey(relKey));
-  const response = await fetch(downloadApiUrl, {
-    method: "GET",
-    headers: buildAuthHeaders(apiKey),
-  });
-  return (await response.json()).url;
-}
-
-function ensureTrailingSlash(value: string): string {
-  return value.endsWith("/") ? value : `${value}/`;
+// Asegurar que exista la carpeta base
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
 function normalizeKey(relKey: string): string {
-  return relKey.replace(/^\/+/, "");
-}
-
-function toFormData(
-  data: Buffer | Uint8Array | string,
-  contentType: string,
-  fileName: string
-): FormData {
-  const blob =
-    typeof data === "string"
-      ? new Blob([data], { type: contentType })
-      : new Blob([data as any], { type: contentType });
-  const form = new FormData();
-  form.append("file", blob, fileName || "file");
-  return form;
-}
-
-function buildAuthHeaders(apiKey: string): HeadersInit {
-  return { Authorization: `Bearer ${apiKey}` };
+  return relKey.replace(/^\/+/, '').replace(/[^\w\d\-_\.\/]/g, '_');
 }
 
 export async function storagePut(
@@ -72,31 +25,53 @@ export async function storagePut(
   data: Buffer | Uint8Array | string,
   contentType = "application/octet-stream"
 ): Promise<{ key: string; url: string }> {
-  const { baseUrl, apiKey } = getStorageConfig();
   const key = normalizeKey(relKey);
-  const uploadUrl = buildUploadUrl(baseUrl, key);
-  const formData = toFormData(data, contentType, key.split("/").pop() ?? key);
-  const response = await fetch(uploadUrl, {
-    method: "POST",
-    headers: buildAuthHeaders(apiKey),
-    body: formData,
-  });
+  const targetFilePath = path.join(uploadsDir, key);
+  const targetSubdir = path.dirname(targetFilePath);
 
-  if (!response.ok) {
-    const message = await response.text().catch(() => response.statusText);
-    throw new Error(
-      `Storage upload failed (${response.status} ${response.statusText}): ${message}`
-    );
+  if (!fs.existsSync(targetSubdir)) {
+    fs.mkdirSync(targetSubdir, { recursive: true });
   }
-  const url = (await response.json()).url;
-  return { key, url };
+
+  const buffer = typeof data === 'string' ? Buffer.from(data, 'base64') : Buffer.from(data);
+  fs.writeFileSync(targetFilePath, buffer);
+
+  // Intentar también subir a Supabase Storage si las credenciales están disponibles
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+
+  if (supabaseUrl && supabaseKey) {
+    try {
+      const supabase = createClient(supabaseUrl, supabaseKey);
+      const { error: uploadError } = await supabase.storage
+        .from('property-flyers')
+        .upload(key, buffer, {
+          contentType,
+          upsert: true
+        });
+
+      if (!uploadError) {
+        const { data: publicData } = supabase.storage.from('property-flyers').getPublicUrl(key);
+        if (publicData?.publicUrl) {
+          console.log(`[Storage] Archivo subido exitosamente a Supabase Storage: ${publicData.publicUrl}`);
+          return { key, url: publicData.publicUrl };
+        }
+      }
+    } catch (sbErr: any) {
+      console.warn(`[Storage] Supabase Storage opcional omitido (${sbErr.message}), usando almacenamiento local estático.`);
+    }
+  }
+
+  // URL estática local servida por Express
+  const publicUrl = `/uploads/${key}`;
+  console.log(`[Storage] Archivo guardado localmente en ${targetFilePath} -> URL: ${publicUrl}`);
+  return { key, url: publicUrl };
 }
 
-export async function storageGet(relKey: string): Promise<{ key: string; url: string; }> {
-  const { baseUrl, apiKey } = getStorageConfig();
+export async function storageGet(relKey: string): Promise<{ key: string; url: string }> {
   const key = normalizeKey(relKey);
   return {
     key,
-    url: await buildDownloadUrl(baseUrl, key, apiKey),
+    url: `/uploads/${key}`
   };
 }

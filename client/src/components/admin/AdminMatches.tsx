@@ -15,7 +15,7 @@ import { formatColombiaDate } from '@/lib/dateUtils';
 import { VECY_VERSION_LABEL } from '@/const';
 import { supabase } from '@/lib/supabase';
 
-type MatchStatus = "exact" | "warn" | "missing" | "ok" | "neutral";
+type MatchStatus = "exact" | "warn" | "missing" | "ok" | "neutral" | "plus";
 
 interface ScoreRow {
   label: string;
@@ -136,7 +136,7 @@ function scoreRows(req: any, prop: any) {
   const add = (label: string, reqVal: string, propVal: string, status: MatchStatus, weight: number, icon: React.ReactNode) => {
     rows.push({ label, reqVal, propVal, status, weight, icon });
     max += weight;
-    if (status === "exact" || status === "ok" || status === "neutral") pts += weight;
+    if (status === "exact" || status === "ok" || status === "neutral" || status === "plus") pts += weight;
     else if (status === "warn") pts += weight * 0.5;
   };
 
@@ -950,7 +950,7 @@ function scoreRows(req: any, prop: any) {
   if (reqCocina !== "Cualquiera / Flexible") {
     cocinaS = propCocina.toLowerCase().includes(reqCocina.toLowerCase()) ? "exact" : "warn";
   } else {
-    cocinaS = "exact";
+    cocinaS = propCocina !== "Integral" ? "plus" : "exact";
   }
   add(
     "Cocina & Acabados",
@@ -976,7 +976,7 @@ function scoreRows(req: any, prop: any) {
     if (reqPatio) {
       patioStatus = propPatio ? "exact" : "warn";
     } else {
-      patioStatus = propPatio ? "exact" : "exact";
+      patioStatus = propPatio ? "plus" : "neutral";
     }
     add(
       reqTextLower.includes("importante patio") ? "Importante Patio (Casa)" : "Patio / Jardín Privado",
@@ -995,7 +995,7 @@ function scoreRows(req: any, prop: any) {
     if (reqConjunto) {
       conjStatus = (propConjunto || propVigilancia) ? "exact" : "warn";
     } else {
-      conjStatus = "exact";
+      conjStatus = (propConjunto || propVigilancia) ? "plus" : "neutral";
     }
     add(
       "Conjunto Cerrado & Vigilancia",
@@ -1014,7 +1014,7 @@ function scoreRows(req: any, prop: any) {
       if (reqStreetGarage) {
         garAccStatus = propStreetGarage ? "exact" : "warn";
       } else {
-        garAccStatus = "exact";
+        garAccStatus = propStreetGarage ? "plus" : "neutral";
       }
       add(
         "Acceso Garaje (Casa)",
@@ -1034,7 +1034,7 @@ function scoreRows(req: any, prop: any) {
     if (reqBalcon) {
       extSpaceS = (propBalcon || propTerraza) ? "exact" : "warn";
     } else {
-      extSpaceS = (propBalcon || propTerraza) ? "exact" : "exact";
+      extSpaceS = (propBalcon || propTerraza) ? "plus" : "neutral";
     }
     add(
       "Balcón / Terraza",
@@ -1053,7 +1053,7 @@ function scoreRows(req: any, prop: any) {
     if (reqAscensor) {
       equipS = propAscensor ? "exact" : "warn";
     } else {
-      equipS = "exact";
+      equipS = propAscensor ? "plus" : "neutral";
     }
 
     add(
@@ -1073,9 +1073,9 @@ function scoreRows(req: any, prop: any) {
   if (reqStorage) {
     storageS = propStorage ? "exact" : "warn";
   } else if (propStorage) {
-    storageS = "exact"; // Oferta con depósito -> Bono de confort
+    storageS = "plus"; // Oferta con depósito -> Bono de confort
   } else {
-    storageS = "exact";
+    storageS = "neutral";
   }
   add(
     "Depósito / Cuarto Útil",
@@ -1097,7 +1097,7 @@ function scoreRows(req: any, prop: any) {
     if (reqWants24_7) {
       vigStatus = propHas24_7 ? "exact" : "warn";
     } else if (propHas24_7) {
-      vigStatus = "exact"; // Bono de confort
+      vigStatus = "plus"; // Bono de confort
     }
     add(
       reqTextLower.includes("no automatiz") ? "Vigilancia 24/7 Presencial (No Automatizada)" : "Vigilancia 24/7 Presencial",
@@ -1117,7 +1117,7 @@ function scoreRows(req: any, prop: any) {
     let studyStatus: MatchStatus = "neutral";
     if (reqWantsStudy && propHasStudy) studyStatus = "exact";
     else if (reqWantsStudy && !propHasStudy) studyStatus = "warn";
-    else if (!reqWantsStudy && propHasStudy) studyStatus = "exact"; // Bono confort
+    else if (!reqWantsStudy && propHasStudy) studyStatus = "plus"; // Bono confort
     add(
       "Estudio / Star de TV",
       reqTextLower.includes("o estudio") ? "2 habitaciones o Estudio" : reqWantsStudy ? "Exige Estudio / Star de TV" : "Flexible",
@@ -1134,7 +1134,7 @@ function scoreRows(req: any, prop: any) {
   if (propHasFireplace || reqWantsFireplace) {
     let fpStatus: MatchStatus = "neutral";
     if (reqWantsFireplace && propHasFireplace) fpStatus = "exact";
-    else if (!reqWantsFireplace && propHasFireplace) fpStatus = "exact"; // Bono confort
+    else if (!reqWantsFireplace && propHasFireplace) fpStatus = "plus"; // Bono confort
     else fpStatus = "warn";
     add(
       "Zonas Sociales & Chimenea",
@@ -1154,7 +1154,7 @@ function scoreRows(req: any, prop: any) {
     if (reqKitchen && propKitchen) {
       kStatus = reqKitchen.toLowerCase() === propKitchen.toLowerCase() ? "exact" : (reqKitchen.toLowerCase().includes("abierta") && propKitchen.toLowerCase().includes("abierta")) ? "exact" : "warn";
     } else if (propKitchen) {
-      kStatus = "exact";
+      kStatus = "plus";
     }
     add(
       "Tipología de Cocina",
@@ -1173,7 +1173,7 @@ function scoreRows(req: any, prop: any) {
     let cbsStatus: MatchStatus = "neutral";
     if (reqCBS && propCBS) cbsStatus = "exact";
     else if (reqCBS && !propCBS) cbsStatus = "warn";
-    else if (!reqCBS && propCBS) cbsStatus = "exact"; // Oferta con CBS es bono de confort
+    else if (!reqCBS && propCBS) cbsStatus = "plus"; // Oferta con CBS es bono de confort
     add(
       "Cuarto y Baño Servicio (CBS)",
       reqCBS ? "Exige CBS (Cuarto y Baño de Servicio)" : "Flexible / No exigido",
@@ -1191,8 +1191,8 @@ function scoreRows(req: any, prop: any) {
     let pStatus: MatchStatus = "neutral";
     if (reqPisos && propPisos) {
       pStatus = reqPisos === propPisos ? "exact" : (reqPisos === "Madera" && propPisos === "Laminado") ? "warn" : "warn";
-    } else {
-      pStatus = "exact";
+    } else if (propPisos && propPisos !== "N/E") {
+      pStatus = "plus";
     }
     add(
       "Acabado de Pisos",
@@ -1211,8 +1211,8 @@ function scoreRows(req: any, prop: any) {
     let sStatus: MatchStatus = "neutral";
     if (reqSol && propSol) {
       sStatus = reqSol === propSol ? "exact" : (reqSol === "Luz de la Mañana" && propSol === "Exterior Iluminado") ? "exact" : "warn";
-    } else {
-      sStatus = "exact";
+    } else if (propSol) {
+      sStatus = "plus";
     }
     add(
       "Orientación / Asoleación",
@@ -1228,15 +1228,15 @@ function scoreRows(req: any, prop: any) {
   const reqPlanta = reqTextLower.includes("planta") || reqTextLower.includes("suplencia total");
   const propPlanta = propRawText.includes("planta electrica") || propRawText.includes("planta eléctrica") || propRawText.includes("suplencia total") || prop.hasPowerPlant;
   if (reqPlanta || propPlanta) {
-    let plStatus: MatchStatus = "neutral";
-    if (reqPlanta && propPlanta) plStatus = "exact";
-    else if (reqPlanta && !propPlanta) plStatus = "warn";
-    else if (!reqPlanta && propPlanta) plStatus = "exact";
+    let plantaStatus: MatchStatus = "neutral";
+    if (reqPlanta && propPlanta) plantaStatus = "exact";
+    else if (propPlanta) plantaStatus = "plus";
+    else plantaStatus = "warn";
     add(
       "Planta Eléctrica Edificio",
       reqPlanta ? "Exige Planta Eléctrica / Suplencia" : "Flexible",
       propPlanta ? "Sí (Planta Eléctrica de Suplencia)" : "Sin planta especificada",
-      plStatus,
+      plantaStatus,
       3,
       <Zap className="w-3.5 h-3.5" />
     );
@@ -1276,7 +1276,7 @@ function scoreRows(req: any, prop: any) {
   // ── ESTADÍSTICA Y TABULACIÓN DOCTRINAL DE MATCH VECY (REGULARES 80%, 85%, 90%, 97%, 100%) ──
   // 1. Si cualquiera de los 5 primeros campos en duro NO COINCIDE 100% (no está en verde) -> autoScore = 0
   const top5Rows = rows.slice(0, 5);
-  const hasHardMismatch = top5Rows.some(r => r.status === "missing");
+  const hasHardMismatch = top5Rows.some(r => r.status !== "exact" && r.status !== "ok");
 
   // 2. Filtros duros físicos y financieros: Precio supera presupuesto o física menor (Oferta < Demanda)
   const hardPhysicalMismatch = 
@@ -1292,10 +1292,10 @@ function scoreRows(req: any, prop: any) {
     autoScore = 0;
   } else {
     // 3. Con cero fallas duras, evaluamos la afinidad:
-    const allExact = rows.every(r => r.label.includes("Teléfono") || r.status === "exact" || r.status === "ok");
+    const allExact = rows.every(r => r.label.includes("Teléfono") || r.status === "exact" || r.status === "ok" || r.status === "plus");
 
     if (allExact) {
-      autoScore = 100; // 🎯 100% MATCH PERFECTO (TODAS LAS FILAS EN "COINCIDE")
+      autoScore = 100; // 🎯 100% MATCH PERFECTO (TODAS LAS FILAS EN "COINCIDE" O "PLUS OFERTADO")
     } else {
       const downstreamRows = rows.slice(5, -1); // Excluyendo teléfono
       const filledCount = downstreamRows.filter(r => r.reqVal !== "N/E" && r.propVal !== "N/E" && r.status !== "missing").length;
@@ -1978,24 +1978,30 @@ export default function AdminMatches() {
 
 
 
-                        {/* Enlace Público Original Limpio y Funcional en Azul (Solo si no está dentro del texto) */}
+                        {/* Enlace Público Original / Portal Web / PDF Adjunto */}
                         {(() => {
                           const origUrl = extractPublicLink(m.property);
                           if (!origUrl) return null;
-                          const pFullText = (m.property?.rawText || m.property?.description || "");
-                          if (pFullText.includes(origUrl)) return null;
+                          const isPdf = origUrl.toLowerCase().includes('.pdf');
 
                           return (
-                            <div className="mt-2 pt-2 border-t border-white/5 text-xs not-italic flex items-center gap-1.5 flex-wrap">
-                              <span className="text-zinc-400 font-semibold">🌐 Enlace original:</span>
+                            <div className="mt-2.5 pt-2.5 border-t border-white/10 text-xs not-italic flex items-center gap-2 flex-wrap">
+                              <span className="text-zinc-400 font-semibold flex items-center gap-1">
+                                {isPdf ? "📄 Documento Adjunto:" : "🌐 Enlace de Origen:"}
+                              </span>
                               <a 
                                 href={origUrl} 
                                 target="_blank" 
                                 rel="noopener noreferrer" 
-                                className="text-blue-400 hover:text-blue-300 font-medium underline break-all"
+                                className={`px-2.5 py-1 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-all shadow ${
+                                  isPdf 
+                                    ? "bg-rose-500/20 text-rose-300 border border-rose-500/30 hover:bg-rose-500/30" 
+                                    : "bg-blue-500/20 text-blue-300 border border-blue-500/30 hover:bg-blue-500/30"
+                                }`}
                                 title={origUrl}
                               >
-                                {origUrl}
+                                <ExternalLink className="w-3.5 h-3.5" />
+                                {isPdf ? "Ver / Descargar PDF Adjunto" : "Abrir Enlace Original del Inmueble"}
                               </a>
                             </div>
                           );
@@ -2120,24 +2126,30 @@ export default function AdminMatches() {
 
 
 
-                        {/* Enlace Público Original Limpio y Funcional en Azul (Solo si no está dentro del texto) */}
+                        {/* Enlace Público Original / Portal Web / PDF Adjunto */}
                         {(() => {
                           const origReqUrl = extractPublicLink(m.requirement);
                           if (!origReqUrl) return null;
-                          const rFullText = (m.requirement?.rawText || "");
-                          if (rFullText.includes(origReqUrl)) return null;
+                          const isPdf = origReqUrl.toLowerCase().includes('.pdf');
 
                           return (
-                            <div className="mt-2 pt-2 border-t border-white/5 text-xs not-italic flex items-center gap-1.5 flex-wrap">
-                              <span className="text-zinc-400 font-semibold">🌐 Enlace original:</span>
+                            <div className="mt-2.5 pt-2.5 border-t border-white/10 text-xs not-italic flex items-center gap-2 flex-wrap">
+                              <span className="text-zinc-400 font-semibold flex items-center gap-1">
+                                {isPdf ? "📄 Documento Adjunto:" : "🌐 Enlace de Origen:"}
+                              </span>
                               <a 
                                 href={origReqUrl} 
                                 target="_blank" 
                                 rel="noopener noreferrer" 
-                                className="text-blue-400 hover:text-blue-300 font-medium underline break-all"
+                                className={`px-2.5 py-1 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-all shadow ${
+                                  isPdf 
+                                    ? "bg-rose-500/20 text-rose-300 border border-rose-500/30 hover:bg-rose-500/30" 
+                                    : "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500/30"
+                                }`}
                                 title={origReqUrl}
                               >
-                                {origReqUrl}
+                                <ExternalLink className="w-3.5 h-3.5" />
+                                {isPdf ? "Ver / Descargar PDF Adjunto" : "Abrir Enlace Original del Requerimiento"}
                               </a>
                             </div>
                           );
@@ -2247,16 +2259,22 @@ export default function AdminMatches() {
                         <tbody>
                           {rows.map((row, rIdx) => {
                             const isExact = row.status === "exact" || row.status === "ok";
+                            const isPlus = row.status === "plus";
                             const isWarn = row.status === "warn";
+                            const isMissing = row.status === "missing";
                             const isNeutral = row.status === "neutral";
                             
                             const badgeBg = isExact 
                               ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" 
-                              : isWarn 
-                                ? "bg-amber-500/10 text-amber-400 border border-amber-500/20" 
-                                : "bg-zinc-800 text-zinc-400 border border-zinc-700/50";
+                              : isPlus
+                                ? "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20"
+                                : isWarn 
+                                  ? "bg-amber-500/10 text-amber-400 border border-amber-500/20" 
+                                  : isMissing
+                                    ? "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+                                    : "bg-zinc-800 text-zinc-400 border border-zinc-700/50";
                             
-                            const badgeText = isExact ? "Coincide" : isWarn ? "Aproximado" : "Dato Pendiente";
+                            const badgeText = isExact ? "Coincide" : isPlus ? "Plus Ofertado" : isWarn ? "Aproximado" : isMissing ? "No Cumple" : "Dato Pendiente";
 
                             const renderRowInput = (label: string, isOffer: boolean, defaultVal: string) => {
                               if (!isEditingThisCard) {
@@ -2599,16 +2617,22 @@ export default function AdminMatches() {
                     <div className="grid grid-cols-1 gap-2.5 md:hidden">
                       {rows.map((row, rIdx) => {
                         const isExact = row.status === "exact" || row.status === "ok";
+                        const isPlus = row.status === "plus";
                         const isWarn = row.status === "warn";
+                        const isMissing = row.status === "missing";
                         const isNeutral = row.status === "neutral";
                         
                         const badgeBg = isExact 
                           ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" 
-                          : isWarn 
-                            ? "bg-amber-500/10 text-amber-400 border border-amber-500/20" 
-                            : "bg-zinc-800 text-zinc-400 border border-zinc-700/50";
+                          : isPlus
+                            ? "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20"
+                            : isWarn 
+                              ? "bg-amber-500/10 text-amber-400 border border-amber-500/20" 
+                              : isMissing
+                                ? "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+                                : "bg-zinc-800 text-zinc-400 border border-zinc-700/50";
                         
-                        const badgeText = isExact ? "Coincide" : isWarn ? "Aproximado" : "Dato Pendiente";
+                        const badgeText = isExact ? "Coincide" : isPlus ? "Plus Ofertado" : isWarn ? "Aproximado" : isMissing ? "No Cumple" : "Dato Pendiente";
 
                         const renderMobileInput = (label: string, isOffer: boolean, defaultVal: string) => {
                           if (!isEditingThisCard) {
