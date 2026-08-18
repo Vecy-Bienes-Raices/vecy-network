@@ -162,7 +162,24 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v22.6 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL: v22.7 — Agosto 2026
+
+### Novedades v22.7:
+- **Diferenciación Doctrinal de Confort en Mesa de Cotejo (`AdminMatches.tsx`)**:
+  - 🟢 **`Coincide` (Verde)**: Coincidencia explícita mutua en lo pedido y ofrecido. Las 5 primeras filas (*Tipo Inmueble, Tipo Negocio, Barrio, Localidad, Ciudad*) son DUROS y deben estar siempre 100% en verde.
+  - 🔵 **`Plus Ofertado` (Azul Cian)**: Cuando la demanda fue *Flexible / No exigido* y la oferta aporta amenidades de confort (*Balcón, CBS, Pisos de Madera, Estudio, Ascensor, etc.*), eliminando la confusión visual de falsas coincidencias mutuas.
+  - ⚪ **`Flexible` (Gris Slate)**: Criterio no exigido ni restrictivo.
+  - 🔘 **`Dato Pendiente` (Gris Oscuro)**: Casilla `N/E` pendiente de confirmación.
+  - 🔴 **`No Cumple` (Rojo)**: Cero tolerancia al incumplimiento. Provoca `Score = 0%`, descarte absoluto y jamás sube a la web.
+- **Gestor Autónomo de Almacenamiento de Media (`server/storage.ts`)**:
+  - Reemplazado el antiguo proxy externo por almacenamiento local en `public/uploads/` (servido en `/uploads/...` por Express) con sincronización opcional en Supabase Storage.
+- **Guardado y Renderizado Permanente de Flyers, PDFs y Enlaces Web (`janIA.ts` + `AdminMatches.tsx`)**:
+  - Almacenamiento de fotos en `uploads/flyers/` y documentos en `uploads/documents/`.
+  - Botón `🌐 Abrir Enlace Original del Inmueble` / `🌐 Abrir Enlace Original del Requerimiento`.
+  - Botón `📄 Ver / Descargar PDF Adjunto`.
+  - Visor incrustado interactivo de Flyers con miniatura y descarga.
+- **Blindaje y Cascada Multimodelo ante Rate Limit 429 (`server/_core/llm.ts`)**:
+  - Conmutación automática entre `gemini-2.5-flash`, `gemini-flash-latest` y `gemini-flash-lite-latest` con rotación de claves y cola de pacing de 600ms.
 
 ### Novedades v22.6:
 - **Tratamiento Universal de Presupuesto Abierto**:
@@ -185,4 +202,3 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 - **Capa A: Matriz de Cotejo Dinámica y Elástica**: Inserción adaptativa en vivo de filas para Cocina *(Cerrada/Abierta/Isla)*, Cuarto y Baño de Servicio *(CBS)*, Acabado de Pisos *(Madera/Laminado/Mármol)*, Asoleación *(Sol de mañana/tarde/exterior)*, Planta Eléctrica *(Total/Parcial)* y Parqueadero de Visitantes.
 - **Capa B: Memoria y Diccionario Semántico Evolutivo (`inmobiliario_lexicon`)**: JanIA auto-aprende a diario la jerga y modismos inmobiliarios colombianos (*"cbs"*, *"pelo a pelo"*, *"star de tv"*, *"cuarto de empleada"*), normalizándolos a conceptos canónicos en Supabase.
 - **Capa C: Bucle de Retroalimentación de Brokers (`match_feedback`)**: Botones 👍 *"🤝 Trato en Curso"* y 👎 *"⛔ Descartar Match"* con modal de motivos para entrenar y calibrar continuamente las decisiones de la IA.
-

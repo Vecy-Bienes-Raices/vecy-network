@@ -127,14 +127,42 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
     - **Diagnóstico Empírico en Servidor VPS**:
       1) El sistema enviaba la reacción visual instantánea (👍 o 📝) en menos de 200 ms mediante regex.
       2) Inmediatamente después, el buffer de ingesta llamaba a `invokeLLM` para extraer la ficha predial, pero **Google Gemini rechazaba las peticiones con `HTTP 429 Too Many Requests (RESOURCE_EXHAUSTED)`** debido al límite estricto de 20 peticiones por minuto del Free Tier en `gemini-2.5-flash`.
+17. **Diagnóstico Crítico de Ingesta, Gemini 429 Rate Limit y Extracción en WhatsApp**:
+    - **Observación de Eduardo**: *"Jania si está logrando captar y extraer datos puntuales... o solamente estuviese reaccionando por reaccionar. Creo que algo anda mal!!"*
+    - **Diagnóstico Empírico en Servidor VPS**:
+      1) El sistema enviaba la reacción visual instantánea (👍 o 📝) en menos de 200 ms mediante regex.
+      2) Inmediatamente después, el buffer de ingesta llamaba a `invokeLLM` para extraer la ficha predial, pero **Google Gemini rechazaba las peticiones con `HTTP 429 Too Many Requests (RESOURCE_EXHAUSTED)`** debido al límite estricto de 20 peticiones por minuto del Free Tier en `gemini-2.5-flash`.
       3) Al fallar la llamada a la IA, el mensaje se descartaba silenciosamente, **impidiendo que el inmueble o requerimiento se guardara en Supabase y bloqueando la generación de nuevos matches**.
     - **Solución Robusta Implementada en [`server/_core/llm.ts`](file:///home/eddu/Proyectos/vecy-network/server/_core/llm.ts)**:
       1) **Cascada de Modelos Inteligente**: Si `gemini-2.5-flash` satura su cuota por minuto, conmuta automáticamente en milisegundos a `gemini-flash-latest` y luego a `gemini-flash-lite-latest`.
       2) **Pool de Claves con Enfriamiento**: Rotación automática entre múltiples claves de Gemini (`GEMINI_API_KEYS`, `GEMINI_BACKUP_KEY`) con cooldown dinámico de 30s ante errores 429.
       3) **Cola de Pacing (600ms)**: Control de concurrencia para evitar picos simultáneos ante ráfagas de mensajes en los grupos de WhatsApp.
       4) Validado empíricamente en local y desplegado en producción en el VPS (`dist-server/index.js`), restableciendo al 100% la extracción continua de inmuebles, requerimientos y matches.
+18. **Evolución Doctrinal v22.7 — Distinción de Confort en Mesa de Cotejo y Almacenamiento Autónomo de Media**:
+    - **Instrucciones de Eduardo**:
+      1) *"Recuerda que si la publicación viene desde un enlace ese enlace debe mostrármelo nuevamente adjunto a la publicación si es que esta se subió o clasificó para Match a nuestra web de coincidencias"*.
+      2) *"Solo se suben a la web los que sean Match Reales o clasifiquen según sus coincidencias"*.
+      3) *"En el resto del cuadro no me queda claro por qué decidiste colocarle a todo coincidencia en verde cuando en una columna hay datos existentes y en la otra no... Si algún dato llega a estar en rojo, 'No cumple', ni siquiera debes tenerlo en cuenta para subirlo... Recuerda también que se exige que las primeras 5 características deben sí o sí estar siempre en verde y coincidir plenamente o tampoco clasifica como MATCH"*.
+      4) *"Hacer ver en la web de coincidencias y adjunto a cada publicación la imagen original o el PDF"*.
+    - **Acciones y Soluciones Implementadas**:
+      1) **Mesa de Cotejo con Estados Visuales Diferenciados (`AdminMatches.tsx`)**:
+         - 🟢 **`Coincide` (Verde)**: Coincidencia explícita mutua (Las 5 primeras líneas SIEMPRE deben ser verdes obligatoriamente).
+         - 🔵 **`Plus Ofertado` (Azul Cian)**: Cuando la demanda fue *Flexible / No exigido* y la oferta aporta la amenidad de confort (Balcón, CBS, Pisos de Madera, Estudio, Ascensor, etc.).
+         - ⚪ **`Flexible` (Gris Slate)**: Criterio no exigido por ninguna de las partes.
+         - 🔘 **`Dato Pendiente` (Gris Oscuro)**: Casilla `N/E` pendiente de confirmación.
+         - 🔴 **`No Cumple` (Rojo)**: Provoca `Score = 0%`, descarte absoluto inmediato y jamás sube a la web.
+      2) **Gestor Autónomo de Almacenamiento (`server/storage.ts`)**:
+         - Implementado guardado físico local en `public/uploads/` (servido estáticamente en `/uploads/...` por Express) con subida opcional a Supabase Storage (`property-flyers`).
+         - Resuelto el fallo silencioso del antiguo proxy `storagePut`.
+      3) **Guardado de Flyers y PDFs de WhatsApp (`server/_core/janIA.ts`)**:
+         - Ahora `saveProperty` y `saveRequirement` almacenan permanentemente las imágenes en `uploads/flyers/` y los PDFs en `uploads/documents/`, registrando las URLs en Supabase.
+      4) **Visualización Permanente en Tarjetas de Coincidencias (`AdminMatches.tsx`)**:
+         - Botones interactivos destacados: `🌐 Abrir Enlace Original` y `📄 Ver / Descargar PDF Adjunto`.
+         - Visor incrustado de imágenes/flyers con miniatura y descarga.
 
 #### 🛠️ Diagnósticos y Acciones Técnicas Ejecutadas:
+- **Evolución Visual y Almacenamiento Autónomo v22.7 (`AdminMatches.tsx`, `server/storage.ts`, `server/_core/janIA.ts`)**:
+  - Implementada separación 🟢 Coincide / 🔵 Plus Ofertado, visor de Flyers y botón de PDFs.
 - **Blindaje y Resiliencia de Invocación LLM (`server/_core/llm.ts`)**:
   - Implementada cascada multimodelo y rotación de claves para eliminar caídas por Rate Limit 429.
 - **Optimización de Egress en Frontend React (`AdminProperties.tsx`, `AdminRequirements.tsx`, `Admin.tsx`, `AdminGitHubSync.tsx`)**:
