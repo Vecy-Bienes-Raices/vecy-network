@@ -1787,9 +1787,10 @@ export default function AdminMatches() {
       const { rows, autoScore } = scoreRows(requirement, property);
       const dbScore = parseFloat(match.matchScore || "0");
       const isEditingThisCard = editingMatchId === match.id;
-      const displayScore = (isEditingThisCard && autoScore > 0) ? autoScore : dbScore;
+      // REGLA DOCTRINAL VECY: Si hay cualquier incumplimiento de filtro duro (autoScore === 0 / No Cumple), el match queda descartado inmediatamente (0%) y jamás se muestra
+      const displayScore = autoScore === 0 ? 0 : (isEditingThisCard ? autoScore : (autoScore > 0 ? autoScore : dbScore));
 
-      // Mostrar todos los matches calificados (85% a 100%)
+      // Mostrar únicamente los matches calificados válidos (85% a 100%)
       if (displayScore < 85) {
         return false;
       }
@@ -1955,7 +1956,7 @@ export default function AdminMatches() {
               } : m.requirement;
 
               const { rows, autoScore } = scoreRows(effectiveReq, effectiveProp);
-              const score = isEditingThisCard ? autoScore : parseFloat(m.matchScore?.toString() || "0");
+              const score = autoScore === 0 ? 0 : (isEditingThisCard ? autoScore : (autoScore > 0 ? autoScore : parseFloat(m.matchScore?.toString() || "0")));
               const date = formatColombiaDate(m.createdAt);
 
               const exactCount = rows.filter(r => r.status === "exact" || r.status === "ok").length;
