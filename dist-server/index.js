@@ -10523,6 +10523,11 @@ Te espero. \xA1All\xED te atender\xE9 con gusto! \u{1F680}`;
       // --- RESPUESTA DIRECTA A PREGUNTAS EN GRUPOS ---
       async handleDirectGroupQuestion(msg, chatId, senderId, bodyText) {
         try {
+          const isOfficialGroup = chatId === this.targetGroupId || chatId === this.buzonGroupId || chatId === this.circuloGroupId;
+          if (!isOfficialGroup) {
+            console.log(`[JANIA-SILENT-SHIELD] \u{1F6E1}\uFE0F Mensaje directo en grupo externo ${chatId} ignorado para respuestas textuales. Silencio 100% preservado.`);
+            return;
+          }
           let resolvedSenderId = senderId;
           if (senderId.endsWith("@lid") && this.sock?.signalRepository?.lidMapping?.getPNForLID) {
             try {

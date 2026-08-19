@@ -884,6 +884,13 @@ export class JaniaMatchBot {
   // --- RESPUESTA DIRECTA A PREGUNTAS EN GRUPOS ---
   private async handleDirectGroupQuestion(msg: proto.IWebMessageInfo, chatId: string, senderId: string, bodyText: string) {
     try {
+      const isOfficialGroup = chatId === this.targetGroupId || chatId === this.buzonGroupId || chatId === this.circuloGroupId;
+      if (!isOfficialGroup) {
+        // 🛡️ BLINDAJE DOCTRINAL INQUEBRANTABLE: En grupos externos JanIA JAMÁS envía texto ni voz bajo ninguna circunstancia.
+        console.log(`[JANIA-SILENT-SHIELD] 🛡️ Mensaje directo en grupo externo ${chatId} ignorado para respuestas textuales. Silencio 100% preservado.`);
+        return;
+      }
+
       let resolvedSenderId = senderId;
       if (senderId.endsWith('@lid') && this.sock?.signalRepository?.lidMapping?.getPNForLID) {
         try {
