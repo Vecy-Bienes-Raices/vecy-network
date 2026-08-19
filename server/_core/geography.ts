@@ -902,8 +902,13 @@ export interface DeduccionGeograficaResult {
 
 
 /**
+/**
  * Deduce la geografía tripartita (Barrio/Vereda, Localidad/Comuna, Ciudad/Municipio)
- * utilizando reglas contextuales del texto, nombre del grupo de WhatsApp y diccionarios DANE/IDECA.
+ * utilizando reglas contextuales del texto y diccionarios DANE/IDECA.
+ * 
+ * REGLA DE ORO DOCTRINAL:
+ * El nombre del grupo de WhatsApp (groupName) NUNCA debe contaminar ni inventar
+ * el barrio del predio. La verdad predial reside exclusivamente en el texto y datos extraídos.
  */
 export function deducirGeografiaTripartita(
   inputZone: string | null | undefined,
@@ -915,36 +920,205 @@ export function deducirGeografiaTripartita(
   const normCity = inputCity ? normalizarTextoGeografico(inputCity) : "";
   const normGroup = groupName ? normalizarTextoGeografico(groupName) : "";
   const normText = rawText ? normalizarTextoGeografico(rawText) : "";
-  const combined = `${normZone} ${normCity} ${normGroup} ${normText}`;
+  
+  // Texto exclusivo del predio (Sin contaminación del grupo)
+  const textCombined = `${normZone} ${normCity} ${normText}`;
 
-  // 1. REGLA CALI
+  // 1. REGLA CESAR / VALLEDUPAR
+  const cesarKeywords = ["cesar", "valledupar", "aguachica", "bosconia", "codazzi", "la paz cesar"];
+  if (cesarKeywords.some(k => textCombined.includes(k))) {
+    let neighborhood = (inputZone && inputZone.trim() !== "" && !cesarKeywords.includes(normZone)) ? inputZone.trim() : "Valledupar";
+    if (textCombined.includes("lisboa")) neighborhood = "Lisboa";
+    else if (textCombined.includes("novalito")) neighborhood = "Novalito";
+    else if (textCombined.includes("los cortijos")) neighborhood = "Los Cortijos";
+    return {
+      neighborhood,
+      locality: "Valledupar",
+      city: "Valledupar",
+      department: "Cesar",
+      confidence: "alta_deduccion_cesar"
+    };
+  }
+
+  // 2. REGLA SANTANDER / BUCARAMANGA Y ÁREA METROPOLITANA
+  const santanderKeywords = [
+    "bucaramanga", "floridablanca", "giron", "piedecuesta", "san gil", "barrancabermeja",
+    "santander", "ruitoque", "cabecera del llano", "cabecera", "canaveral", "cañaveral", "sotomayor"
+  ];
+  if (santanderKeywords.some(k => textCombined.includes(k))) {
+    let city = "Bucaramanga";
+    if (textCombined.includes("floridablanca") || textCombined.includes("canaveral") || textCombined.includes("cañaveral") || textCombined.includes("ruitoque")) city = "Floridablanca";
+    else if (textCombined.includes("piedecuesta")) city = "Piedecuesta";
+    else if (textCombined.includes("giron") || textCombined.includes("girón")) city = "Girón";
+    else if (textCombined.includes("barrancabermeja")) city = "Barrancabermeja";
+    else if (textCombined.includes("san gil")) city = "San Gil";
+
+    let neighborhood = city;
+    if (textCombined.includes("cabecera")) neighborhood = "Cabecera del Llano";
+    else if (textCombined.includes("ruitoque")) neighborhood = "Ruitoque Condominio";
+    else if (textCombined.includes("canaveral") || textCombined.includes("cañaveral")) neighborhood = "Cañaveral";
+    else if (textCombined.includes("sotomayor")) neighborhood = "Sotomayor";
+    else if (inputZone && inputZone.trim() !== "" && inputZone.toLowerCase() !== "na") neighborhood = inputZone.trim();
+
+    return {
+      neighborhood,
+      locality: "Área Metropolitana Bucaramanga",
+      city,
+      department: "Santander",
+      confidence: "alta_deduccion_santander"
+    };
+  }
+
+  // 3. REGLA BOLÍVAR / CARTAGENA
+  const cartagenaKeywords = [
+    "cartagena", "bocagrande", "castillogrande", "manga", "crespo", "laguito", "el laguito",
+    "serena del mar", "morros", "los morros", "pie de la popa", "getsemani", "centro historico cartagena"
+  ];
+  if (cartagenaKeywords.some(k => textCombined.includes(k))) {
+    let neighborhood = "Cartagena";
+    if (textCombined.includes("bocagrande")) neighborhood = "Bocagrande";
+    else if (textCombined.includes("castillogrande")) neighborhood = "Castillogrande";
+    else if (textCombined.includes("manga")) neighborhood = "Manga";
+    else if (textCombined.includes("crespo")) neighborhood = "Crespo";
+    else if (textCombined.includes("laguito")) neighborhood = "El Laguito";
+    else if (textCombined.includes("serena del mar")) neighborhood = "Serena del Mar";
+    else if (inputZone && inputZone.trim() !== "" && inputZone.toLowerCase() !== "na") neighborhood = inputZone.trim();
+
+    return {
+      neighborhood,
+      locality: "Cartagena",
+      city: "Cartagena",
+      department: "Bolívar",
+      confidence: "alta_deduccion_cartagena"
+    };
+  }
+
+  // 4. REGLA MAGDALENA / SANTA MARTA
+  const santaMartaKeywords = [
+    "santa marta", "rodadero", "el rodadero", "bello horizonte", "pozos colorados",
+    "taganga", "playa dormida", "magdalena"
+  ];
+  if (santaMartaKeywords.some(k => textCombined.includes(k))) {
+    let neighborhood = "Santa Marta";
+    if (textCombined.includes("rodadero")) neighborhood = "El Rodadero";
+    else if (textCombined.includes("bello horizonte")) neighborhood = "Bello Horizonte";
+    else if (textCombined.includes("pozos colorados")) neighborhood = "Pozos Colorados";
+    else if (inputZone && inputZone.trim() !== "" && inputZone.toLowerCase() !== "na") neighborhood = inputZone.trim();
+
+    return {
+      neighborhood,
+      locality: "Santa Marta",
+      city: "Santa Marta",
+      department: "Magdalena",
+      confidence: "alta_deduccion_santamarta"
+    };
+  }
+
+  // 5. REGLA RISARALDA / PEREIRA Y EJE CAFETERO
+  const pereiraKeywords = ["pereira", "dosquebradas", "cerritos", "pinares", "alpes pereira", "circasia", "risaralda"];
+  if (pereiraKeywords.some(k => textCombined.includes(k))) {
+    let city = textCombined.includes("dosquebradas") ? "Dosquebradas" : "Pereira";
+    let neighborhood = city;
+    if (textCombined.includes("cerritos")) neighborhood = "Cerritos";
+    else if (textCombined.includes("pinares")) neighborhood = "Pinares";
+    else if (inputZone && inputZone.trim() !== "" && inputZone.toLowerCase() !== "na") neighborhood = inputZone.trim();
+
+    return {
+      neighborhood,
+      locality: "Área Metropolitana Centro Occidente",
+      city,
+      department: "Risaralda",
+      confidence: "alta_deduccion_pereira"
+    };
+  }
+
+  // 6. REGLA CALDAS / MANIZALES
+  const manizalesKeywords = ["manizales", "villamaria", "palermo manizales", "cable manizales", "caldas"];
+  if (manizalesKeywords.some(k => textCombined.includes(k))) {
+    return {
+      neighborhood: inputZone?.trim() || "Manizales",
+      locality: "Manizales",
+      city: textCombined.includes("villamaria") ? "Villamaría" : "Manizales",
+      department: "Caldas",
+      confidence: "alta_deduccion_manizales"
+    };
+  }
+
+  // 7. REGLA QUINDÍO / ARMENIA
+  const armeniaKeywords = ["armenia", "calarca", "quimbaya", "montenegro", "quindio"];
+  if (armeniaKeywords.some(k => textCombined.includes(k))) {
+    return {
+      neighborhood: inputZone?.trim() || "Armenia",
+      locality: "Armenia",
+      city: textCombined.includes("calarca") ? "Calarcá" : textCombined.includes("quimbaya") ? "Quimbaya" : "Armenia",
+      department: "Quindío",
+      confidence: "alta_deduccion_armenia"
+    };
+  }
+
+  // 8. REGLA TOLIMA / IBAGUÉ
+  const tolimaKeywords = ["ibague", "espinal", "melgar", "carmen de apicala", "flandes", "tolima"];
+  if (tolimaKeywords.some(k => textCombined.includes(k))) {
+    let city = "Ibagué";
+    if (textCombined.includes("melgar")) city = "Melgar";
+    else if (textCombined.includes("carmen de apicala")) city = "Carmen de Apicalá";
+    else if (textCombined.includes("espinal")) city = "El Espinal";
+
+    return {
+      neighborhood: inputZone?.trim() || city,
+      locality: city,
+      city,
+      department: "Tolima",
+      confidence: "alta_deduccion_tolima"
+    };
+  }
+
+  // 9. REGLA META / VILLAVICENCIO
+  const metaKeywords = ["villavicencio", "acacias", "restrepo meta", "cumaral", "meta"];
+  if (metaKeywords.some(k => textCombined.includes(k))) {
+    return {
+      neighborhood: inputZone?.trim() || "Villavicencio",
+      locality: "Villavicencio",
+      city: textCombined.includes("acacias") ? "Acacías" : "Villavicencio",
+      department: "Meta",
+      confidence: "alta_deduccion_meta"
+    };
+  }
+
+  // 10. REGLA CALI Y VALLE DEL CAUCA
   const caliSectors = [
     "alamos", "brisas de los alamos", "menga", "chipichape", "la flora", "santa monica",
     "ciudad jardin", "valle del lili", "san fernando", "granada", "el penon", "juanambu",
-    "pance", "bochalema", "caney", "el caney", "tequendama", "normandie", "imbanaco", "cali"
+    "pance", "bochalema", "caney", "el caney", "tequendama", "normandie", "imbanaco", "cali",
+    "jamundi", "yumbo", "palmira", "valle del cauca"
   ];
-  const isCali = normCity === "cali" || normGroup.includes("cali") || caliSectors.some(s => combined.includes(s));
+  const isCali = normCity === "cali" || (normCity === "" && normGroup.includes("cali") && !textCombined.includes("bogota")) || caliSectors.some(s => textCombined.includes(s));
 
   if (isCali) {
     let neighborhood = "Cali";
     let locality = "Cali Urbano";
-    if (combined.includes("alamos") || combined.includes("brisas de los alamos")) {
+    let city = "Cali";
+    if (textCombined.includes("jamundi") || textCombined.includes("jamundí")) {
+      neighborhood = "Jamundí";
+      locality = "Jamundí";
+      city = "Jamundí";
+    } else if (textCombined.includes("alamos") || textCombined.includes("brisas de los alamos")) {
       neighborhood = "Brisas de los Álamos";
       locality = "Comuna 2 (Norte)";
-    } else if (combined.includes("menga") || combined.includes("chipichape") || combined.includes("la flora")) {
-      neighborhood = combined.includes("menga") ? "Menga" : combined.includes("chipichape") ? "Chipichape" : "La Flora";
+    } else if (textCombined.includes("menga") || textCombined.includes("chipichape") || textCombined.includes("la flora")) {
+      neighborhood = textCombined.includes("menga") ? "Menga" : textCombined.includes("chipichape") ? "Chipichape" : "La Flora";
       locality = "Comuna 2 (Norte)";
-    } else if (combined.includes("ciudad jardin")) {
+    } else if (textCombined.includes("ciudad jardin")) {
       neighborhood = "Ciudad Jardín";
       locality = "Comuna 22 (Sur)";
-    } else if (combined.includes("valle del lili") || combined.includes("lili")) {
+    } else if (textCombined.includes("valle del lili") || textCombined.includes("lili")) {
       neighborhood = "Valle del Lili";
       locality = "Comuna 17 (Sur)";
-    } else if (combined.includes("san fernando") || combined.includes("tequendama") || combined.includes("imbanaco")) {
+    } else if (textCombined.includes("san fernando") || textCombined.includes("tequendama") || textCombined.includes("imbanaco")) {
       neighborhood = "San Fernando";
       locality = "Comuna 19";
-    } else if (combined.includes("granada") || combined.includes("penon") || combined.includes("juanambu")) {
-      neighborhood = combined.includes("granada") ? "Granada" : combined.includes("juanambu") ? "Juanambú" : "El Peñón";
+    } else if (textCombined.includes("granada") || textCombined.includes("penon") || textCombined.includes("juanambu")) {
+      neighborhood = textCombined.includes("granada") ? "Granada" : textCombined.includes("juanambu") ? "Juanambú" : "El Peñón";
       locality = "Comuna 3 (Oeste)";
     } else if (inputZone && inputZone.trim() !== "" && inputZone.toLowerCase() !== "na") {
       neighborhood = inputZone.trim();
@@ -952,44 +1126,48 @@ export function deducirGeografiaTripartita(
     return {
       neighborhood,
       locality,
-      city: "Cali",
+      city,
       department: "Valle del Cauca",
       confidence: "alta_deduccion_cali"
     };
   }
 
-  // 2. REGLA MEDELLÍN Y ÁREA METROPOLITANA
+  // 11. REGLA MEDELLÍN Y ÁREA METROPOLITANA
   const medellinSectors = [
     "poblado", "el poblado", "laureles", "estadio", "belen", "envigado", "sabaneta", "itagui",
-    "rionegro", "la estrella", "copacabana", "girardota", "medellin"
+    "rionegro", "la ceja", "el retiro", "la estrella", "copacabana", "girardota", "medellin", "antioquia"
   ];
-  const isMedellin = normCity === "medellin" || normGroup.includes("medellin") || medellinSectors.some(s => combined.includes(s));
+  const isMedellin = normCity === "medellin" || (normCity === "" && normGroup.includes("medellin") && !textCombined.includes("bogota")) || medellinSectors.some(s => textCombined.includes(s));
 
   if (isMedellin) {
     let neighborhood = "Medellín";
     let locality = "Valle de Aburrá";
     let city = "Medellín";
-    if (combined.includes("poblado")) {
+    if (textCombined.includes("poblado")) {
       neighborhood = "El Poblado";
       locality = "Comuna 14 (El Poblado)";
-    } else if (combined.includes("laureles") || combined.includes("estadio")) {
+    } else if (textCombined.includes("laureles") || textCombined.includes("estadio")) {
       neighborhood = "Laureles";
       locality = "Comuna 11 (Laureles-Estadio)";
-    } else if (combined.includes("belen")) {
+    } else if (textCombined.includes("belen")) {
       neighborhood = "Belén";
       locality = "Comuna 16 (Belén)";
-    } else if (combined.includes("envigado")) {
+    } else if (textCombined.includes("envigado")) {
       neighborhood = "Envigado";
       locality = "Envigado";
       city = "Envigado";
-    } else if (combined.includes("sabaneta")) {
+    } else if (textCombined.includes("sabaneta")) {
       neighborhood = "Sabaneta";
       locality = "Sabaneta";
       city = "Sabaneta";
-    } else if (combined.includes("rionegro")) {
+    } else if (textCombined.includes("rionegro")) {
       neighborhood = "Rionegro";
       locality = "Rionegro";
       city = "Rionegro";
+    } else if (textCombined.includes("la ceja")) {
+      neighborhood = "La Ceja";
+      locality = "Oriente Antioqueño";
+      city = "La Ceja";
     } else if (inputZone && inputZone.trim() !== "" && inputZone.toLowerCase() !== "na") {
       neighborhood = inputZone.trim();
     }
@@ -1002,44 +1180,17 @@ export function deducirGeografiaTripartita(
     };
   }
 
-  // 3. REGLA BARRANQUILLA
-  const barranquillaSectors = [
-    "alto prado", "el prado", "riomar", "villa santos", "buenavista", "puerto colombia", "barranquilla"
-  ];
-  const isBarranquilla = normCity === "barranquilla" || normGroup.includes("barranquilla") || barranquillaSectors.some(s => combined.includes(s));
-
-  if (isBarranquilla) {
-    let neighborhood = "Barranquilla";
-    let locality = "Norte-Centro Histórico / Riomar";
-    let city = "Barranquilla";
-    if (combined.includes("alto prado") || combined.includes("el prado")) {
-      neighborhood = "Alto Prado";
-    } else if (combined.includes("riomar") || combined.includes("villa santos") || combined.includes("buenavista")) {
-      neighborhood = combined.includes("villa santos") ? "Villa Santos" : combined.includes("buenavista") ? "Buenavista" : "Riomar";
-    } else if (combined.includes("puerto colombia")) {
-      neighborhood = "Puerto Colombia";
-      city = "Puerto Colombia";
-    } else if (inputZone && inputZone.trim() !== "" && inputZone.toLowerCase() !== "na") {
-      neighborhood = inputZone.trim();
-    }
-    return {
-      neighborhood,
-      locality,
-      city,
-      department: "Atlántico",
-      confidence: "alta_deduccion_barranquilla"
-    };
-  }
-
-  // 4. REGLA BOGOTÁ Y SABANA
+  // 12. REGLA SABANA DE BOGOTÁ Y CUNDINAMARCA
   const sabanaSectors: Record<string, string> = {
     "chia": "Chía", "cajica": "Cajicá", "sopo": "Sopó", "cota": "Cota",
     "la calera": "La Calera", "zipaquira": "Zipaquirá", "funza": "Funza",
     "mosquera": "Mosquera", "madrid": "Madrid", "facatativa": "Facatativá",
-    "fusagasuga": "Fusagasugá", "girardot": "Girardot"
+    "fusagasuga": "Fusagasugá", "girardot": "Girardot", "anapoima": "Anapoima",
+    "la mesa": "La Mesa", "villeta": "Villeta", "subachoque": "Subachoque",
+    "tabio": "Tabio", "tenjo": "Tenjo", "tocancipa": "Tocancipá"
   };
   for (const [sKey, sName] of Object.entries(sabanaSectors)) {
-    if (combined.includes(sKey)) {
+    if (textCombined.includes(sKey)) {
       return {
         neighborhood: sName,
         locality: sName,
@@ -1050,7 +1201,7 @@ export function deducirGeografiaTripartita(
     }
   }
 
-  // ── EMPAREJAMIENTO JERÁRQUICO BOGOTÁ ──
+  // ── 13. EMPAREJAMIENTO JERÁRQUICO BOGOTÁ D.C. ──
   const isGenericZone = !inputZone ||
     inputZone.trim() === "" ||
     normalizarTextoGeografico(inputZone).trim() === "na" ||
@@ -1061,7 +1212,7 @@ export function deducirGeografiaTripartita(
   let locality: string | null = null;
   let foundBarrio = false;
 
-  // 1. Limpieza de frases de proximidad publicitaria para no confundir puntos de referencia con el barrio predial
+  // Limpieza de frases de proximidad publicitaria para no confundir puntos de referencia con el barrio predial
   const cleanSearchText = normText
     .replace(/\b(?:a\s+minutos\s+de|a\s+pocos\s+minutos\s+de|cerca\s+de|cerca\s+a|proximo\s+a|frente\s+a|diagonal\s+a|al\s+lado\s+de|hacia)\s+[^,\.\n]+/gi, " ")
     .replace(/\bhacienda\s+santa\s+barbara\b/gi, "centro_comercial")
@@ -1072,9 +1223,10 @@ export function deducirGeografiaTripartita(
     .replace(/\bparque\s+93\b/gi, "parque")
     .replace(/\bparque\s+de\s+la\s+93\b/gi, "parque");
 
-  const cleanCombined = `${normZone} ${normCity} ${normGroup} ${cleanSearchText}`;
+  // NOTA MANDATORIA: cleanSearchCombined SOLO usa el texto del predio, NUNCA normGroup
+  const cleanSearchCombined = `${normZone} ${cleanSearchText}`;
 
-  // Alias y complejos residenciales conocidos
+  // Alias y complejos residenciales conocidos de Bogotá
   const COMPLEX_ALIASES: Record<string, { neighborhood: string; locality: string }> = {
     "balcones de medina": { neighborhood: "Bosque Medina", locality: "Usaquén" },
     "bosque medina": { neighborhood: "Bosque Medina", locality: "Usaquén" },
@@ -1087,12 +1239,19 @@ export function deducirGeografiaTripartita(
     "el nogal": { neighborhood: "El Nogal", locality: "Chapinero" },
     "santa ana oriental": { neighborhood: "Santa Ana Oriental", locality: "Usaquén" },
     "santa barbara central": { neighborhood: "Santa Bárbara Central", locality: "Usaquén" },
+    "santa barbara (central)": { neighborhood: "Santa Bárbara Central", locality: "Usaquén" },
     "santa barbara occidental": { neighborhood: "Santa Bárbara Occidental", locality: "Usaquén" },
     "santa barbara oriental": { neighborhood: "Santa Bárbara Oriental", locality: "Usaquén" },
+    "santa barbara alta": { neighborhood: "Santa Bárbara Alta", locality: "Usaquén" },
+    "niza norte": { neighborhood: "Niza Norte", locality: "Suba" },
+    "niza antigua": { neighborhood: "Niza", locality: "Suba" },
+    "nuevo country": { neighborhood: "Nuevo Country", locality: "Usaquén" },
+    "bella suiza": { neighborhood: "Bella Suiza", locality: "Usaquén" },
+    "bella suiza baja": { neighborhood: "Bella Suiza", locality: "Usaquén" },
   };
 
   for (const [alias, data] of Object.entries(COMPLEX_ALIASES)) {
-    if (cleanCombined.includes(alias)) {
+    if (cleanSearchCombined.includes(alias)) {
       neighborhood = data.neighborhood;
       locality = data.locality;
       foundBarrio = true;
@@ -1100,7 +1259,7 @@ export function deducirGeografiaTripartita(
     }
   }
 
-  // 2. Si no es alias directo, buscar en el diccionario ordenando por longitud descendente
+  // Si no es alias compuesto, buscar en el diccionario de Bogotá ordenado por longitud descendente
   if (!foundBarrio) {
     const allBarriosWithLoc: Array<{ name: string; locality: string; norm: string }> = [];
     for (const [, info] of Object.entries(DICCIONARIO_BOGOTA)) {
@@ -1112,10 +1271,9 @@ export function deducirGeografiaTripartita(
         });
       }
     }
-    // Ordenar por longitud de nombre descendente para que "Bosque Medina" o "Santa Bárbara Central" coincida antes que "Santa Bárbara"
     allBarriosWithLoc.sort((a, b) => b.norm.length - a.norm.length);
 
-    // Prioridad 1: Coincidencia con inputZone
+    // Prioridad 1: Coincidencia en inputZone
     if (!isGenericZone) {
       for (const item of allBarriosWithLoc) {
         if (item.norm === normZone || (normZone.includes(item.norm) && item.norm.length > 4)) {
@@ -1127,10 +1285,10 @@ export function deducirGeografiaTripartita(
       }
     }
 
-    // Prioridad 2: Coincidencia en cleanCombined
+    // Prioridad 2: Coincidencia en el texto del predio (cleanSearchCombined)
     if (!foundBarrio) {
       for (const item of allBarriosWithLoc) {
-        if (cleanCombined.includes(item.norm) && item.norm.length > 4) {
+        if (cleanSearchCombined.includes(item.norm) && item.norm.length > 4) {
           neighborhood = item.name;
           locality = item.locality;
           foundBarrio = true;
@@ -1140,7 +1298,6 @@ export function deducirGeografiaTripartita(
     }
   }
 
-  // Si no se encontró barrio específico, NUNCA rellenar con el nombre de la ciudad ("Bogotá").
   if (!foundBarrio) {
     neighborhood = isGenericZone ? null : (inputZone && !GENERIC_ZONES_SET.has(normalizarTextoGeografico(inputZone)) ? inputZone.trim() : null);
     locality = null;

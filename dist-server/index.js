@@ -2606,7 +2606,172 @@ function deducirGeografiaTripartita(inputZone, inputCity, groupName, rawText) {
   const normCity = inputCity ? normalizarTextoGeografico(inputCity) : "";
   const normGroup = groupName ? normalizarTextoGeografico(groupName) : "";
   const normText = rawText ? normalizarTextoGeografico(rawText) : "";
-  const combined = `${normZone} ${normCity} ${normGroup} ${normText}`;
+  const textCombined = `${normZone} ${normCity} ${normText}`;
+  const cesarKeywords = ["cesar", "valledupar", "aguachica", "bosconia", "codazzi", "la paz cesar"];
+  if (cesarKeywords.some((k) => textCombined.includes(k))) {
+    let neighborhood2 = inputZone && inputZone.trim() !== "" && !cesarKeywords.includes(normZone) ? inputZone.trim() : "Valledupar";
+    if (textCombined.includes("lisboa")) neighborhood2 = "Lisboa";
+    else if (textCombined.includes("novalito")) neighborhood2 = "Novalito";
+    else if (textCombined.includes("los cortijos")) neighborhood2 = "Los Cortijos";
+    return {
+      neighborhood: neighborhood2,
+      locality: "Valledupar",
+      city: "Valledupar",
+      department: "Cesar",
+      confidence: "alta_deduccion_cesar"
+    };
+  }
+  const santanderKeywords = [
+    "bucaramanga",
+    "floridablanca",
+    "giron",
+    "piedecuesta",
+    "san gil",
+    "barrancabermeja",
+    "santander",
+    "ruitoque",
+    "cabecera del llano",
+    "cabecera",
+    "canaveral",
+    "ca\xF1averal",
+    "sotomayor"
+  ];
+  if (santanderKeywords.some((k) => textCombined.includes(k))) {
+    let city = "Bucaramanga";
+    if (textCombined.includes("floridablanca") || textCombined.includes("canaveral") || textCombined.includes("ca\xF1averal") || textCombined.includes("ruitoque")) city = "Floridablanca";
+    else if (textCombined.includes("piedecuesta")) city = "Piedecuesta";
+    else if (textCombined.includes("giron") || textCombined.includes("gir\xF3n")) city = "Gir\xF3n";
+    else if (textCombined.includes("barrancabermeja")) city = "Barrancabermeja";
+    else if (textCombined.includes("san gil")) city = "San Gil";
+    let neighborhood2 = city;
+    if (textCombined.includes("cabecera")) neighborhood2 = "Cabecera del Llano";
+    else if (textCombined.includes("ruitoque")) neighborhood2 = "Ruitoque Condominio";
+    else if (textCombined.includes("canaveral") || textCombined.includes("ca\xF1averal")) neighborhood2 = "Ca\xF1averal";
+    else if (textCombined.includes("sotomayor")) neighborhood2 = "Sotomayor";
+    else if (inputZone && inputZone.trim() !== "" && inputZone.toLowerCase() !== "na") neighborhood2 = inputZone.trim();
+    return {
+      neighborhood: neighborhood2,
+      locality: "\xC1rea Metropolitana Bucaramanga",
+      city,
+      department: "Santander",
+      confidence: "alta_deduccion_santander"
+    };
+  }
+  const cartagenaKeywords = [
+    "cartagena",
+    "bocagrande",
+    "castillogrande",
+    "manga",
+    "crespo",
+    "laguito",
+    "el laguito",
+    "serena del mar",
+    "morros",
+    "los morros",
+    "pie de la popa",
+    "getsemani",
+    "centro historico cartagena"
+  ];
+  if (cartagenaKeywords.some((k) => textCombined.includes(k))) {
+    let neighborhood2 = "Cartagena";
+    if (textCombined.includes("bocagrande")) neighborhood2 = "Bocagrande";
+    else if (textCombined.includes("castillogrande")) neighborhood2 = "Castillogrande";
+    else if (textCombined.includes("manga")) neighborhood2 = "Manga";
+    else if (textCombined.includes("crespo")) neighborhood2 = "Crespo";
+    else if (textCombined.includes("laguito")) neighborhood2 = "El Laguito";
+    else if (textCombined.includes("serena del mar")) neighborhood2 = "Serena del Mar";
+    else if (inputZone && inputZone.trim() !== "" && inputZone.toLowerCase() !== "na") neighborhood2 = inputZone.trim();
+    return {
+      neighborhood: neighborhood2,
+      locality: "Cartagena",
+      city: "Cartagena",
+      department: "Bol\xEDvar",
+      confidence: "alta_deduccion_cartagena"
+    };
+  }
+  const santaMartaKeywords = [
+    "santa marta",
+    "rodadero",
+    "el rodadero",
+    "bello horizonte",
+    "pozos colorados",
+    "taganga",
+    "playa dormida",
+    "magdalena"
+  ];
+  if (santaMartaKeywords.some((k) => textCombined.includes(k))) {
+    let neighborhood2 = "Santa Marta";
+    if (textCombined.includes("rodadero")) neighborhood2 = "El Rodadero";
+    else if (textCombined.includes("bello horizonte")) neighborhood2 = "Bello Horizonte";
+    else if (textCombined.includes("pozos colorados")) neighborhood2 = "Pozos Colorados";
+    else if (inputZone && inputZone.trim() !== "" && inputZone.toLowerCase() !== "na") neighborhood2 = inputZone.trim();
+    return {
+      neighborhood: neighborhood2,
+      locality: "Santa Marta",
+      city: "Santa Marta",
+      department: "Magdalena",
+      confidence: "alta_deduccion_santamarta"
+    };
+  }
+  const pereiraKeywords = ["pereira", "dosquebradas", "cerritos", "pinares", "alpes pereira", "circasia", "risaralda"];
+  if (pereiraKeywords.some((k) => textCombined.includes(k))) {
+    let city = textCombined.includes("dosquebradas") ? "Dosquebradas" : "Pereira";
+    let neighborhood2 = city;
+    if (textCombined.includes("cerritos")) neighborhood2 = "Cerritos";
+    else if (textCombined.includes("pinares")) neighborhood2 = "Pinares";
+    else if (inputZone && inputZone.trim() !== "" && inputZone.toLowerCase() !== "na") neighborhood2 = inputZone.trim();
+    return {
+      neighborhood: neighborhood2,
+      locality: "\xC1rea Metropolitana Centro Occidente",
+      city,
+      department: "Risaralda",
+      confidence: "alta_deduccion_pereira"
+    };
+  }
+  const manizalesKeywords = ["manizales", "villamaria", "palermo manizales", "cable manizales", "caldas"];
+  if (manizalesKeywords.some((k) => textCombined.includes(k))) {
+    return {
+      neighborhood: inputZone?.trim() || "Manizales",
+      locality: "Manizales",
+      city: textCombined.includes("villamaria") ? "Villamar\xEDa" : "Manizales",
+      department: "Caldas",
+      confidence: "alta_deduccion_manizales"
+    };
+  }
+  const armeniaKeywords = ["armenia", "calarca", "quimbaya", "montenegro", "quindio"];
+  if (armeniaKeywords.some((k) => textCombined.includes(k))) {
+    return {
+      neighborhood: inputZone?.trim() || "Armenia",
+      locality: "Armenia",
+      city: textCombined.includes("calarca") ? "Calarc\xE1" : textCombined.includes("quimbaya") ? "Quimbaya" : "Armenia",
+      department: "Quind\xEDo",
+      confidence: "alta_deduccion_armenia"
+    };
+  }
+  const tolimaKeywords = ["ibague", "espinal", "melgar", "carmen de apicala", "flandes", "tolima"];
+  if (tolimaKeywords.some((k) => textCombined.includes(k))) {
+    let city = "Ibagu\xE9";
+    if (textCombined.includes("melgar")) city = "Melgar";
+    else if (textCombined.includes("carmen de apicala")) city = "Carmen de Apical\xE1";
+    else if (textCombined.includes("espinal")) city = "El Espinal";
+    return {
+      neighborhood: inputZone?.trim() || city,
+      locality: city,
+      city,
+      department: "Tolima",
+      confidence: "alta_deduccion_tolima"
+    };
+  }
+  const metaKeywords = ["villavicencio", "acacias", "restrepo meta", "cumaral", "meta"];
+  if (metaKeywords.some((k) => textCombined.includes(k))) {
+    return {
+      neighborhood: inputZone?.trim() || "Villavicencio",
+      locality: "Villavicencio",
+      city: textCombined.includes("acacias") ? "Acac\xEDas" : "Villavicencio",
+      department: "Meta",
+      confidence: "alta_deduccion_meta"
+    };
+  }
   const caliSectors = [
     "alamos",
     "brisas de los alamos",
@@ -2627,29 +2792,38 @@ function deducirGeografiaTripartita(inputZone, inputCity, groupName, rawText) {
     "tequendama",
     "normandie",
     "imbanaco",
-    "cali"
+    "cali",
+    "jamundi",
+    "yumbo",
+    "palmira",
+    "valle del cauca"
   ];
-  const isCali = normCity === "cali" || normGroup.includes("cali") || caliSectors.some((s) => combined.includes(s));
+  const isCali = normCity === "cali" || normCity === "" && normGroup.includes("cali") && !textCombined.includes("bogota") || caliSectors.some((s) => textCombined.includes(s));
   if (isCali) {
     let neighborhood2 = "Cali";
     let locality2 = "Cali Urbano";
-    if (combined.includes("alamos") || combined.includes("brisas de los alamos")) {
+    let city = "Cali";
+    if (textCombined.includes("jamundi") || textCombined.includes("jamund\xED")) {
+      neighborhood2 = "Jamund\xED";
+      locality2 = "Jamund\xED";
+      city = "Jamund\xED";
+    } else if (textCombined.includes("alamos") || textCombined.includes("brisas de los alamos")) {
       neighborhood2 = "Brisas de los \xC1lamos";
       locality2 = "Comuna 2 (Norte)";
-    } else if (combined.includes("menga") || combined.includes("chipichape") || combined.includes("la flora")) {
-      neighborhood2 = combined.includes("menga") ? "Menga" : combined.includes("chipichape") ? "Chipichape" : "La Flora";
+    } else if (textCombined.includes("menga") || textCombined.includes("chipichape") || textCombined.includes("la flora")) {
+      neighborhood2 = textCombined.includes("menga") ? "Menga" : textCombined.includes("chipichape") ? "Chipichape" : "La Flora";
       locality2 = "Comuna 2 (Norte)";
-    } else if (combined.includes("ciudad jardin")) {
+    } else if (textCombined.includes("ciudad jardin")) {
       neighborhood2 = "Ciudad Jard\xEDn";
       locality2 = "Comuna 22 (Sur)";
-    } else if (combined.includes("valle del lili") || combined.includes("lili")) {
+    } else if (textCombined.includes("valle del lili") || textCombined.includes("lili")) {
       neighborhood2 = "Valle del Lili";
       locality2 = "Comuna 17 (Sur)";
-    } else if (combined.includes("san fernando") || combined.includes("tequendama") || combined.includes("imbanaco")) {
+    } else if (textCombined.includes("san fernando") || textCombined.includes("tequendama") || textCombined.includes("imbanaco")) {
       neighborhood2 = "San Fernando";
       locality2 = "Comuna 19";
-    } else if (combined.includes("granada") || combined.includes("penon") || combined.includes("juanambu")) {
-      neighborhood2 = combined.includes("granada") ? "Granada" : combined.includes("juanambu") ? "Juanamb\xFA" : "El Pe\xF1\xF3n";
+    } else if (textCombined.includes("granada") || textCombined.includes("penon") || textCombined.includes("juanambu")) {
+      neighborhood2 = textCombined.includes("granada") ? "Granada" : textCombined.includes("juanambu") ? "Juanamb\xFA" : "El Pe\xF1\xF3n";
       locality2 = "Comuna 3 (Oeste)";
     } else if (inputZone && inputZone.trim() !== "" && inputZone.toLowerCase() !== "na") {
       neighborhood2 = inputZone.trim();
@@ -2657,7 +2831,7 @@ function deducirGeografiaTripartita(inputZone, inputCity, groupName, rawText) {
     return {
       neighborhood: neighborhood2,
       locality: locality2,
-      city: "Cali",
+      city,
       department: "Valle del Cauca",
       confidence: "alta_deduccion_cali"
     };
@@ -2672,37 +2846,44 @@ function deducirGeografiaTripartita(inputZone, inputCity, groupName, rawText) {
     "sabaneta",
     "itagui",
     "rionegro",
+    "la ceja",
+    "el retiro",
     "la estrella",
     "copacabana",
     "girardota",
-    "medellin"
+    "medellin",
+    "antioquia"
   ];
-  const isMedellin = normCity === "medellin" || normGroup.includes("medellin") || medellinSectors.some((s) => combined.includes(s));
+  const isMedellin = normCity === "medellin" || normCity === "" && normGroup.includes("medellin") && !textCombined.includes("bogota") || medellinSectors.some((s) => textCombined.includes(s));
   if (isMedellin) {
     let neighborhood2 = "Medell\xEDn";
     let locality2 = "Valle de Aburr\xE1";
     let city = "Medell\xEDn";
-    if (combined.includes("poblado")) {
+    if (textCombined.includes("poblado")) {
       neighborhood2 = "El Poblado";
       locality2 = "Comuna 14 (El Poblado)";
-    } else if (combined.includes("laureles") || combined.includes("estadio")) {
+    } else if (textCombined.includes("laureles") || textCombined.includes("estadio")) {
       neighborhood2 = "Laureles";
       locality2 = "Comuna 11 (Laureles-Estadio)";
-    } else if (combined.includes("belen")) {
+    } else if (textCombined.includes("belen")) {
       neighborhood2 = "Bel\xE9n";
       locality2 = "Comuna 16 (Bel\xE9n)";
-    } else if (combined.includes("envigado")) {
+    } else if (textCombined.includes("envigado")) {
       neighborhood2 = "Envigado";
       locality2 = "Envigado";
       city = "Envigado";
-    } else if (combined.includes("sabaneta")) {
+    } else if (textCombined.includes("sabaneta")) {
       neighborhood2 = "Sabaneta";
       locality2 = "Sabaneta";
       city = "Sabaneta";
-    } else if (combined.includes("rionegro")) {
+    } else if (textCombined.includes("rionegro")) {
       neighborhood2 = "Rionegro";
       locality2 = "Rionegro";
       city = "Rionegro";
+    } else if (textCombined.includes("la ceja")) {
+      neighborhood2 = "La Ceja";
+      locality2 = "Oriente Antioque\xF1o";
+      city = "La Ceja";
     } else if (inputZone && inputZone.trim() !== "" && inputZone.toLowerCase() !== "na") {
       neighborhood2 = inputZone.trim();
     }
@@ -2712,38 +2893,6 @@ function deducirGeografiaTripartita(inputZone, inputCity, groupName, rawText) {
       city,
       department: "Antioquia",
       confidence: "alta_deduccion_medellin"
-    };
-  }
-  const barranquillaSectors = [
-    "alto prado",
-    "el prado",
-    "riomar",
-    "villa santos",
-    "buenavista",
-    "puerto colombia",
-    "barranquilla"
-  ];
-  const isBarranquilla = normCity === "barranquilla" || normGroup.includes("barranquilla") || barranquillaSectors.some((s) => combined.includes(s));
-  if (isBarranquilla) {
-    let neighborhood2 = "Barranquilla";
-    let locality2 = "Norte-Centro Hist\xF3rico / Riomar";
-    let city = "Barranquilla";
-    if (combined.includes("alto prado") || combined.includes("el prado")) {
-      neighborhood2 = "Alto Prado";
-    } else if (combined.includes("riomar") || combined.includes("villa santos") || combined.includes("buenavista")) {
-      neighborhood2 = combined.includes("villa santos") ? "Villa Santos" : combined.includes("buenavista") ? "Buenavista" : "Riomar";
-    } else if (combined.includes("puerto colombia")) {
-      neighborhood2 = "Puerto Colombia";
-      city = "Puerto Colombia";
-    } else if (inputZone && inputZone.trim() !== "" && inputZone.toLowerCase() !== "na") {
-      neighborhood2 = inputZone.trim();
-    }
-    return {
-      neighborhood: neighborhood2,
-      locality: locality2,
-      city,
-      department: "Atl\xE1ntico",
-      confidence: "alta_deduccion_barranquilla"
     };
   }
   const sabanaSectors = {
@@ -2758,10 +2907,17 @@ function deducirGeografiaTripartita(inputZone, inputCity, groupName, rawText) {
     "madrid": "Madrid",
     "facatativa": "Facatativ\xE1",
     "fusagasuga": "Fusagasug\xE1",
-    "girardot": "Girardot"
+    "girardot": "Girardot",
+    "anapoima": "Anapoima",
+    "la mesa": "La Mesa",
+    "villeta": "Villeta",
+    "subachoque": "Subachoque",
+    "tabio": "Tabio",
+    "tenjo": "Tenjo",
+    "tocancipa": "Tocancip\xE1"
   };
   for (const [sKey, sName] of Object.entries(sabanaSectors)) {
-    if (combined.includes(sKey)) {
+    if (textCombined.includes(sKey)) {
       return {
         neighborhood: sName,
         locality: sName,
@@ -2776,7 +2932,7 @@ function deducirGeografiaTripartita(inputZone, inputCity, groupName, rawText) {
   let locality = null;
   let foundBarrio = false;
   const cleanSearchText = normText.replace(/\b(?:a\s+minutos\s+de|a\s+pocos\s+minutos\s+de|cerca\s+de|cerca\s+a|proximo\s+a|frente\s+a|diagonal\s+a|al\s+lado\s+de|hacia)\s+[^,\.\n]+/gi, " ").replace(/\bhacienda\s+santa\s+barbara\b/gi, "centro_comercial").replace(/\bcentro\s+andino\b/gi, "centro_comercial").replace(/\bunilago\b/gi, "centro_comercial").replace(/\bunicentro\b/gi, "centro_comercial").replace(/\bparque\s+(?:del\s+|el\s+)?virrey\b/gi, "parque").replace(/\bparque\s+93\b/gi, "parque").replace(/\bparque\s+de\s+la\s+93\b/gi, "parque");
-  const cleanCombined = `${normZone} ${normCity} ${normGroup} ${cleanSearchText}`;
+  const cleanSearchCombined = `${normZone} ${cleanSearchText}`;
   const COMPLEX_ALIASES = {
     "balcones de medina": { neighborhood: "Bosque Medina", locality: "Usaqu\xE9n" },
     "bosque medina": { neighborhood: "Bosque Medina", locality: "Usaqu\xE9n" },
@@ -2789,11 +2945,18 @@ function deducirGeografiaTripartita(inputZone, inputCity, groupName, rawText) {
     "el nogal": { neighborhood: "El Nogal", locality: "Chapinero" },
     "santa ana oriental": { neighborhood: "Santa Ana Oriental", locality: "Usaqu\xE9n" },
     "santa barbara central": { neighborhood: "Santa B\xE1rbara Central", locality: "Usaqu\xE9n" },
+    "santa barbara (central)": { neighborhood: "Santa B\xE1rbara Central", locality: "Usaqu\xE9n" },
     "santa barbara occidental": { neighborhood: "Santa B\xE1rbara Occidental", locality: "Usaqu\xE9n" },
-    "santa barbara oriental": { neighborhood: "Santa B\xE1rbara Oriental", locality: "Usaqu\xE9n" }
+    "santa barbara oriental": { neighborhood: "Santa B\xE1rbara Oriental", locality: "Usaqu\xE9n" },
+    "santa barbara alta": { neighborhood: "Santa B\xE1rbara Alta", locality: "Usaqu\xE9n" },
+    "niza norte": { neighborhood: "Niza Norte", locality: "Suba" },
+    "niza antigua": { neighborhood: "Niza", locality: "Suba" },
+    "nuevo country": { neighborhood: "Nuevo Country", locality: "Usaqu\xE9n" },
+    "bella suiza": { neighborhood: "Bella Suiza", locality: "Usaqu\xE9n" },
+    "bella suiza baja": { neighborhood: "Bella Suiza", locality: "Usaqu\xE9n" }
   };
   for (const [alias, data] of Object.entries(COMPLEX_ALIASES)) {
-    if (cleanCombined.includes(alias)) {
+    if (cleanSearchCombined.includes(alias)) {
       neighborhood = data.neighborhood;
       locality = data.locality;
       foundBarrio = true;
@@ -2824,7 +2987,7 @@ function deducirGeografiaTripartita(inputZone, inputCity, groupName, rawText) {
     }
     if (!foundBarrio) {
       for (const item of allBarriosWithLoc) {
-        if (cleanCombined.includes(item.norm) && item.norm.length > 4) {
+        if (cleanSearchCombined.includes(item.norm) && item.norm.length > 4) {
           neighborhood = item.name;
           locality = item.locality;
           foundBarrio = true;
@@ -5861,29 +6024,78 @@ function extractFallbackDataFromText(text2) {
   const hasPowerPlant = clean.includes("planta electrica") || clean.includes("planta el\xE9ctrica") || clean.includes("suplencia total") || clean.includes("planta total") || clean.includes("planta de suplencia");
   const hasVisitorParking = clean.includes("parqueadero de visitantes") || clean.includes("parqueadero para visitantes") || clean.includes("parqueaderos de visitantes") || clean.includes("parqueo visitantes");
   const hasHeating = clean.includes("calentador de paso") || clean.includes("calentador a gas") || clean.includes("caldera");
-  let city = "Bogot\xE1";
-  if (clean.includes("cali") || clean.includes("melendez") || clean.includes("jardin") || clean.includes("pacifica")) {
-    city = "Cali";
-  } else if (clean.includes("medellin") || clean.includes("poblado") || clean.includes("laureles")) {
-    city = "Medell\xEDn";
+  let city = "Bogot\xE1, D.C.";
+  if (clean.includes("valledupar") || clean.includes("cesar")) {
+    city = "Valledupar";
+  } else if (clean.includes("bucaramanga") || clean.includes("floridablanca") || clean.includes("piedecuesta") || clean.includes("giron") || clean.includes("gir\xF3n") || clean.includes("santander") || clean.includes("ruitoque")) {
+    city = clean.includes("floridablanca") ? "Floridablanca" : clean.includes("piedecuesta") ? "Piedecuesta" : clean.includes("giron") || clean.includes("gir\xF3n") ? "Gir\xF3n" : "Bucaramanga";
+  } else if (clean.includes("cartagena") || clean.includes("bocagrande") || clean.includes("castillogrande") || clean.includes("manga") || clean.includes("crespo") || clean.includes("laguito")) {
+    city = "Cartagena";
+  } else if (clean.includes("santa marta") || clean.includes("rodadero") || clean.includes("bello horizonte") || clean.includes("pozos colorados")) {
+    city = "Santa Marta";
+  } else if (clean.includes("pereira") || clean.includes("dosquebradas") || clean.includes("cerritos") || clean.includes("pinares")) {
+    city = clean.includes("dosquebradas") ? "Dosquebradas" : "Pereira";
+  } else if (clean.includes("manizales") || clean.includes("villamaria")) {
+    city = clean.includes("villamaria") ? "Villamar\xEDa" : "Manizales";
+  } else if (clean.includes("armenia") || clean.includes("calarca") || clean.includes("quimbaya")) {
+    city = clean.includes("calarca") ? "Calarc\xE1" : clean.includes("quimbaya") ? "Quimbaya" : "Armenia";
+  } else if (clean.includes("ibague") || clean.includes("ibagu\xE9") || clean.includes("melgar") || clean.includes("carmen de apicala")) {
+    city = clean.includes("melgar") ? "Melgar" : clean.includes("carmen de apicala") ? "Carmen de Apical\xE1" : "Ibagu\xE9";
+  } else if (clean.includes("villavicencio") || clean.includes("acacias")) {
+    city = clean.includes("acacias") ? "Acac\xEDas" : "Villavicencio";
+  } else if (clean.includes("cali") || clean.includes("melendez") || clean.includes("jardin") || clean.includes("pacifica") || clean.includes("jamundi") || clean.includes("pance") || clean.includes("valle del lili")) {
+    city = clean.includes("jamundi") || clean.includes("jamund\xED") ? "Jamund\xED" : "Cali";
+  } else if (clean.includes("medellin") || clean.includes("poblado") || clean.includes("laureles") || clean.includes("envigado") || clean.includes("sabaneta") || clean.includes("rionegro") || clean.includes("la ceja")) {
+    city = clean.includes("envigado") ? "Envigado" : clean.includes("sabaneta") ? "Sabaneta" : clean.includes("rionegro") ? "Rionegro" : clean.includes("la ceja") ? "La Ceja" : "Medell\xEDn";
+  } else if (clean.includes("chia") || clean.includes("ch\xEDa")) {
+    city = "Ch\xEDa";
+  } else if (clean.includes("cajica") || clean.includes("cajic\xE1")) {
+    city = "Cajic\xE1";
+  } else if (clean.includes("cota")) {
+    city = "Cota";
+  } else if (clean.includes("sopo") || clean.includes("sop\xF3")) {
+    city = "Sop\xF3";
+  } else if (clean.includes("la calera")) {
+    city = "La Calera";
+  } else if (clean.includes("zipaquira") || clean.includes("zipaquir\xE1")) {
+    city = "Zipaquir\xE1";
+  } else if (clean.includes("funza")) {
+    city = "Funza";
+  } else if (clean.includes("mosquera")) {
+    city = "Mosquera";
+  } else if (clean.includes("madrid")) {
+    city = "Madrid";
+  } else if (clean.includes("fusagasuga") || clean.includes("fusagasug\xE1")) {
+    city = "Fusagasug\xE1";
+  } else if (clean.includes("girardot")) {
+    city = "Girardot";
   }
   let zone = "";
   if (clean.includes("villa magdala")) zone = "Villa Magdala";
   else if (clean.includes("chico reservado")) zone = "Chic\xF3 Reservado";
-  else if (clean.includes("chico")) zone = "Chic\xF3";
-  else if (clean.includes("santa barbara central") || clean.includes("santa b\xE1rbara central")) zone = "Santa B\xE1rbara Central";
+  else if (clean.includes("chico norte")) zone = "Chic\xF3 Norte";
+  else if (clean.includes("chico navarra")) zone = "Chic\xF3 Navarra";
+  else if (clean.includes("rincon del chico")) zone = "Rinc\xF3n del Chic\xF3";
+  else if (clean.includes("chico") || clean.includes("chic\xF3")) zone = "Chic\xF3";
+  else if (clean.includes("santa barbara central") || clean.includes("santa b\xE1rbara central") || clean.includes("santa barbara (central)")) zone = "Santa B\xE1rbara Central";
+  else if (clean.includes("santa barbara occidental") || clean.includes("santa b\xE1rbara occidental")) zone = "Santa B\xE1rbara Occidental";
   else if (clean.includes("santa barbara oriental") || clean.includes("santa b\xE1rbara oriental")) zone = "Santa B\xE1rbara Oriental";
+  else if (clean.includes("santa barbara alta") || clean.includes("santa b\xE1rbara alta")) zone = "Santa B\xE1rbara Alta";
   else if (clean.includes("santa barbara") || clean.includes("santa b\xE1rbara")) zone = "Santa B\xE1rbara";
   else if (clean.includes("la cabrera")) zone = "La Cabrera";
-  else if (clean.includes("rosales")) zone = "Rosales";
+  else if (clean.includes("rosales") || clean.includes("los rosales")) zone = "Rosales";
+  else if (clean.includes("el nogal") || clean.includes("nogal")) zone = "El Nogal";
   else if (clean.includes("emaus") || clean.includes("ema\xFAs")) zone = "Ema\xFAs";
-  else if (clean.includes("colina")) zone = "Colina Campestre";
+  else if (clean.includes("colina campestre") || clean.includes("colina")) zone = "Colina Campestre";
   else if (clean.includes("ciudad melendez") || clean.includes("ciudad mel\xE9ndez")) zone = "Ciudad Mel\xE9ndez";
   else if (clean.includes("ciudad jardin") || clean.includes("ciudad jard\xEDn")) zone = "Ciudad Jard\xEDn";
-  else if (clean.includes("cedritos")) zone = "Cedritos";
-  else if (clean.includes("bella suiza")) zone = "Bella Suiza";
-  else if (clean.includes("usaquen") || clean.includes("usaqu\xE9n")) zone = "Usaqu\xE9n";
+  else if (clean.includes("nuevo country")) zone = "Nuevo Country";
+  else if (clean.includes("niza norte")) zone = "Niza Norte";
   else if (clean.includes("niza")) zone = "Niza";
+  else if (clean.includes("bella suiza")) zone = "Bella Suiza";
+  else if (clean.includes("lisboa")) zone = "Lisboa";
+  else if (clean.includes("cedritos")) zone = "Cedritos";
+  else if (clean.includes("usaquen") || clean.includes("usaqu\xE9n")) zone = "Usaqu\xE9n";
   else if (clean.includes("pasadena")) zone = "Pasadena";
   else if (clean.includes("batan") || clean.includes("bat\xE1n")) zone = "Bat\xE1n";
   else if (clean.includes("alhambra")) zone = "Alhambra";

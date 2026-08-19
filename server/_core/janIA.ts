@@ -556,30 +556,79 @@ export function extractFallbackDataFromText(text: string): any {
   const hasVisitorParking = clean.includes("parqueadero de visitantes") || clean.includes("parqueadero para visitantes") || clean.includes("parqueaderos de visitantes") || clean.includes("parqueo visitantes");
   const hasHeating = clean.includes("calentador de paso") || clean.includes("calentador a gas") || clean.includes("caldera");
 
-  let city = "Bogotá";
-  if (clean.includes("cali") || clean.includes("melendez") || clean.includes("jardin") || clean.includes("pacifica")) {
-    city = "Cali";
-  } else if (clean.includes("medellin") || clean.includes("poblado") || clean.includes("laureles")) {
-    city = "Medellín";
+  let city = "Bogotá, D.C.";
+  if (clean.includes("valledupar") || clean.includes("cesar")) {
+    city = "Valledupar";
+  } else if (clean.includes("bucaramanga") || clean.includes("floridablanca") || clean.includes("piedecuesta") || clean.includes("giron") || clean.includes("girón") || clean.includes("santander") || clean.includes("ruitoque")) {
+    city = clean.includes("floridablanca") ? "Floridablanca" : clean.includes("piedecuesta") ? "Piedecuesta" : clean.includes("giron") || clean.includes("girón") ? "Girón" : "Bucaramanga";
+  } else if (clean.includes("cartagena") || clean.includes("bocagrande") || clean.includes("castillogrande") || clean.includes("manga") || clean.includes("crespo") || clean.includes("laguito")) {
+    city = "Cartagena";
+  } else if (clean.includes("santa marta") || clean.includes("rodadero") || clean.includes("bello horizonte") || clean.includes("pozos colorados")) {
+    city = "Santa Marta";
+  } else if (clean.includes("pereira") || clean.includes("dosquebradas") || clean.includes("cerritos") || clean.includes("pinares")) {
+    city = clean.includes("dosquebradas") ? "Dosquebradas" : "Pereira";
+  } else if (clean.includes("manizales") || clean.includes("villamaria")) {
+    city = clean.includes("villamaria") ? "Villamaría" : "Manizales";
+  } else if (clean.includes("armenia") || clean.includes("calarca") || clean.includes("quimbaya")) {
+    city = clean.includes("calarca") ? "Calarcá" : clean.includes("quimbaya") ? "Quimbaya" : "Armenia";
+  } else if (clean.includes("ibague") || clean.includes("ibagué") || clean.includes("melgar") || clean.includes("carmen de apicala")) {
+    city = clean.includes("melgar") ? "Melgar" : clean.includes("carmen de apicala") ? "Carmen de Apicalá" : "Ibagué";
+  } else if (clean.includes("villavicencio") || clean.includes("acacias")) {
+    city = clean.includes("acacias") ? "Acacías" : "Villavicencio";
+  } else if (clean.includes("cali") || clean.includes("melendez") || clean.includes("jardin") || clean.includes("pacifica") || clean.includes("jamundi") || clean.includes("pance") || clean.includes("valle del lili")) {
+    city = clean.includes("jamundi") || clean.includes("jamundí") ? "Jamundí" : "Cali";
+  } else if (clean.includes("medellin") || clean.includes("poblado") || clean.includes("laureles") || clean.includes("envigado") || clean.includes("sabaneta") || clean.includes("rionegro") || clean.includes("la ceja")) {
+    city = clean.includes("envigado") ? "Envigado" : clean.includes("sabaneta") ? "Sabaneta" : clean.includes("rionegro") ? "Rionegro" : clean.includes("la ceja") ? "La Ceja" : "Medellín";
+  } else if (clean.includes("chia") || clean.includes("chía")) {
+    city = "Chía";
+  } else if (clean.includes("cajica") || clean.includes("cajicá")) {
+    city = "Cajicá";
+  } else if (clean.includes("cota")) {
+    city = "Cota";
+  } else if (clean.includes("sopo") || clean.includes("sopó")) {
+    city = "Sopó";
+  } else if (clean.includes("la calera")) {
+    city = "La Calera";
+  } else if (clean.includes("zipaquira") || clean.includes("zipaquirá")) {
+    city = "Zipaquirá";
+  } else if (clean.includes("funza")) {
+    city = "Funza";
+  } else if (clean.includes("mosquera")) {
+    city = "Mosquera";
+  } else if (clean.includes("madrid")) {
+    city = "Madrid";
+  } else if (clean.includes("fusagasuga") || clean.includes("fusagasugá")) {
+    city = "Fusagasugá";
+  } else if (clean.includes("girardot")) {
+    city = "Girardot";
   }
 
   let zone = "";
   if (clean.includes("villa magdala")) zone = "Villa Magdala";
   else if (clean.includes("chico reservado")) zone = "Chicó Reservado";
-  else if (clean.includes("chico")) zone = "Chicó";
-  else if (clean.includes("santa barbara central") || clean.includes("santa bárbara central")) zone = "Santa Bárbara Central";
+  else if (clean.includes("chico norte")) zone = "Chicó Norte";
+  else if (clean.includes("chico navarra")) zone = "Chicó Navarra";
+  else if (clean.includes("rincon del chico")) zone = "Rincón del Chicó";
+  else if (clean.includes("chico") || clean.includes("chicó")) zone = "Chicó";
+  else if (clean.includes("santa barbara central") || clean.includes("santa bárbara central") || clean.includes("santa barbara (central)")) zone = "Santa Bárbara Central";
+  else if (clean.includes("santa barbara occidental") || clean.includes("santa bárbara occidental")) zone = "Santa Bárbara Occidental";
   else if (clean.includes("santa barbara oriental") || clean.includes("santa bárbara oriental")) zone = "Santa Bárbara Oriental";
+  else if (clean.includes("santa barbara alta") || clean.includes("santa bárbara alta")) zone = "Santa Bárbara Alta";
   else if (clean.includes("santa barbara") || clean.includes("santa bárbara")) zone = "Santa Bárbara";
   else if (clean.includes("la cabrera")) zone = "La Cabrera";
-  else if (clean.includes("rosales")) zone = "Rosales";
+  else if (clean.includes("rosales") || clean.includes("los rosales")) zone = "Rosales";
+  else if (clean.includes("el nogal") || clean.includes("nogal")) zone = "El Nogal";
   else if (clean.includes("emaus") || clean.includes("emaús")) zone = "Emaús";
-  else if (clean.includes("colina")) zone = "Colina Campestre";
+  else if (clean.includes("colina campestre") || clean.includes("colina")) zone = "Colina Campestre";
   else if (clean.includes("ciudad melendez") || clean.includes("ciudad meléndez")) zone = "Ciudad Meléndez";
   else if (clean.includes("ciudad jardin") || clean.includes("ciudad jardín")) zone = "Ciudad Jardín";
-  else if (clean.includes("cedritos")) zone = "Cedritos";
-  else if (clean.includes("bella suiza")) zone = "Bella Suiza";
-  else if (clean.includes("usaquen") || clean.includes("usaquén")) zone = "Usaquén";
+  else if (clean.includes("nuevo country")) zone = "Nuevo Country";
+  else if (clean.includes("niza norte")) zone = "Niza Norte";
   else if (clean.includes("niza")) zone = "Niza";
+  else if (clean.includes("bella suiza")) zone = "Bella Suiza";
+  else if (clean.includes("lisboa")) zone = "Lisboa";
+  else if (clean.includes("cedritos")) zone = "Cedritos";
+  else if (clean.includes("usaquen") || clean.includes("usaquén")) zone = "Usaquén";
   else if (clean.includes("pasadena")) zone = "Pasadena";
   else if (clean.includes("batan") || clean.includes("batán")) zone = "Batán";
   else if (clean.includes("alhambra")) zone = "Alhambra";
