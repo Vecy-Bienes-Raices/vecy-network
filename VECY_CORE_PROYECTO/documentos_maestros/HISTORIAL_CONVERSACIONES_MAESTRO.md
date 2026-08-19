@@ -85,6 +85,25 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
+### 🗓️ Sesión: Miércoles 19 de Agosto de 2026 — 12:00 AM a 01:00 AM (Hora Colombia UTC-5)
+**Versión del Sistema**: `v22.9 — Blindaje Geográfico Nacional Multiciudad, Erradicación de Contaminación por Grupos y Saneamiento Predial`
+
+#### 📋 Requerimientos y Directivas Doctrinales de Eduardo A. Rivera:
+1. **Erradicación de Confusión Geográfica Nacional (Valledupar / Cesar vs Bogotá / Cedritos / Santa Bárbara / Niza)**:
+   - Identificación y corrección de la causa raíz: la variable `normGroup` concatenaba el nombre del grupo de WhatsApp (ej. *"Cedritos-Colina-Salitre-Alrededores"*) dentro de `deducirGeografiaTripartita`, forzando a cualquier inmueble publicado en ese grupo a quedar registrado con `zone = 'Cedritos'` y `city = 'Bogotá, D.C.'`.
+   - **Regla de Oro Doctrinal**: La verdad predial reside exclusivamente en el texto y datos del inmueble (`rawText`, `inputZone`, `inputCity`). El nombre del grupo de chat **JAMÁS** contamina la geografía del predio.
+2. **Cobertura Geográfica Multiciudad y Departamental**:
+   - Soporte nacional exhaustivo para Cesar (Valledupar, Aguachica, Codazzi), Santander (Bucaramanga, Floridablanca, Piedecuesta, Girón, Ruitoque), Bolívar (Cartagena, Bocagrande, Castillogrande, Manga), Magdalena (Santa Marta, Rodadero), Risaralda (Pereira, Dosquebradas, Cerritos), Caldas (Manizales), Quindío (Armenia), Tolima (Ibagué, Melgar, Carmen de Apicalá), Meta (Villavicencio), Cali, Medellín y municipios de Cundinamarca.
+3. **Mapeo Fiel y Preciso de Barrios de Bogotá**:
+   - Reconocimiento exacto de Santa Bárbara Central, Santa Bárbara Occidental, Santa Bárbara Oriental, Santa Bárbara Alta, Niza Norte, Niza, Bella Suiza, Nuevo Country, Lisboa, etc.
+4. **Saneamiento Masivo de la Base de Datos en Supabase (`resanitize_database_geography.ts`)**:
+   - Se re-georreferenciaron **205 propiedades** y **97 requerimientos** en Supabase, corrigiendo predios corruptos (ej. Propiedad #850 pasó a `Valledupar / Lisboa`, #525 a `Santa Bárbara Central`, #219 a `Niza Norte`, #405 a `Nuevo Country`, #66 a `Bella Suiza`).
+   - Se purgaron todos los matches corruptos incompatibles generados por la mala georreferenciación previa.
+5. **Claridad sobre Archivos GeoJSON en Carpeta `data/`**:
+   - Explicación sobre por qué `colombia_catastro_igac.geojson` y `colombia_veredas.geojson` (760 MB c/u) se muestran en gris tenue en el IDE (ignorado por `.gitignore` para proteger el repositorio de GitHub).
+
+---
+
 ### 🗓️ Sesión: Martes 18 de Agosto de 2026 — 12:15 AM a 03:00 AM (Hora Colombia UTC-5)
 **Versión del Sistema**: `v22.8 — Doctrina de Subtipos de Propiedad Horizontal, Regla de 2 Brazos de Habitaciones y Descarte Fiel de Matches`
 
