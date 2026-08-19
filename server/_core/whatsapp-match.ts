@@ -1133,24 +1133,23 @@ export class JaniaMatchBot {
       return; // Salir inmediatamente sin capturar, ni extraer datos, ni subir a Supabase
     }
 
-    // --- REACCIÓN INSTANTÁNEA (< 200ms) CON CONFIRMACIÓN VISUAL EN CELULAR ---
+    // --- REACCIÓN INSTANTÁNEA (< 200ms) PARA TEXTO INEQUÍVOCO ---
     if (!msg.key.fromMe) {
-      const rawMsg = unwrapMessage(msg.message);
       const cleanLower = (bodyText || '').toLowerCase();
-      const hasMediaOrUrl = !!rawMsg?.imageMessage || !!rawMsg?.documentMessage || cleanLower.includes('http://') || cleanLower.includes('https://') || cleanLower.includes('www.') || cleanLower.includes('.co') || cleanLower.includes('.com');
 
       const isExplicitOffer = /\b(?:ofrezco|ofrecemos|vendo|se vende|se arrienda|en venta|en arriendo|arriendo|alquilo|alquiler|rento|renta|tengo para|disponible|nuevo inmueble|venta directa|arriendo directo)\b/i.test(cleanLower);
       const isExplicitSearch = !isExplicitOffer && /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|solicitamos|compro|para cliente|busca cliente|presupuesto)\b/i.test(cleanLower);
 
       let fastEmoji: string | null = null;
 
-      if (isExplicitOffer || hasMediaOrUrl) {
-        fastEmoji = '👍'; // Oferta / Inmueble / Flyer -> 👍
+      if (isExplicitOffer) {
+        fastEmoji = '👍'; // Oferta / Inmueble explícito -> 👍
       } else if (isExplicitSearch) {
-        fastEmoji = '📝'; // Requerimiento / Demanda -> 📝
-      } else if (cleanLower.includes('apto') || cleanLower.includes('apartamento') || cleanLower.includes('casa') || cleanLower.includes('bodega') || cleanLower.includes('oficina') || cleanLower.includes('lote') || cleanLower.includes('finca') || cleanLower.includes('m2') || cleanLower.includes('mts')) {
-        fastEmoji = '👍'; // Oferta por defecto si describe características de inmueble
+        fastEmoji = '📝'; // Requerimiento / Demanda explícito -> 📝
       }
+      // NOTA DOCTRINAL: En Ofertas y Demandas puede haber Flyers, Enlaces, Imágenes, PDFs y Escritos.
+      // Cuando no hay texto explícito, NO se asume con regex. JanIA descarga la media, ejecuta OCR multimodal
+      // con Gemini, discrimina puntualmente si es Inmueble (👍) o Requerimiento (📝) y getReactionEmoji entrega el emoji exacto.
 
       if (fastEmoji && chatId !== this.buzonGroupId) {
         try {
