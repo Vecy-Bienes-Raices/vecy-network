@@ -18,9 +18,12 @@ export default function Login() {
   const [isRegister, setIsRegister] = useState(false);
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
+  const isExchangingRef = React.useRef(false);
 
   // Exchange Supabase token with backend session
-  const exchangeToken = async (accessToken: string, sessionUser?: any) => {
+  const exchangeToken = async (accessToken: string) => {
+    if (isExchangingRef.current) return;
+    isExchangingRef.current = true;
     try {
       setLoading(true);
       const res = await loginMutation.mutateAsync({ accessToken });
@@ -32,37 +35,44 @@ export default function Login() {
       navigate('/admin');
     } catch (err: any) {
       console.error('[Login] Error syncing session:', err);
-      if (sessionUser) {
-        toast.success('Sesión activa iniciada');
-        navigate('/admin');
-        return;
-      }
       toast.error('Error al sincronizar sesión con el servidor');
+      // Limpiar para permitir login fresco sin bloqueos
+      try {
+        await supabase.auth.signOut();
+      } catch (_) {}
+      localStorage.removeItem("jania-session-token");
     } finally {
       setLoading(false);
+      isExchangingRef.current = false;
     }
   };
 
   // OAuth Redirect Listener
   useEffect(() => {
+    let isMounted = true;
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        await exchangeToken(session.access_token, session.user);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session && isMounted && !isExchangingRef.current) {
+          await exchangeToken(session.access_token);
+        }
+      } catch (err) {
+        console.error('[Login] Error checking session:', err);
       }
     };
 
     // Check on mount (for OAuth callbacks)
     checkSession();
 
-    // Listen for auth changes
+    // Listen for auth changes (specifically SIGNED_IN)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session) {
-        await exchangeToken(session.access_token, session.user);
+      if (event === 'SIGNED_IN' && session && isMounted && !isExchangingRef.current) {
+        await exchangeToken(session.access_token);
       }
     });
 
     return () => {
+      isMounted = false;
       subscription.unsubscribe();
     };
   }, []);
