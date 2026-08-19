@@ -162,17 +162,22 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v22.8 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL: v23.0 — Agosto 2026
 
-### Novedades v22.8:
-- **Doctrina Estricta de Subtipos de Propiedad Horizontal (`matching.ts` + `AdminMatches.tsx` + `base.md`)**:
-  - `Apartaestudio / Apartasuite / Loft / 1 Alcoba Independiente` se consagra como subtipo categórico exclusivo.
-  - **Filtro Duro 3 Inquebrantable**: Un requerimiento de apartaestudio / apartasuite / 1 alcoba jamás hace match con un apartamento familiar estándar ni con un penthouse de múltiples habitaciones (0% Bloqueo Absoluto).
-- **Regla Doctrinal de Habitaciones con Dos Brazos (`matching.ts` + `AdminMatches.tsx`)**:
-  - 🔹 **Brazo A (Demanda de 1 Habitación / Apartaestudio / Loft)**: La oferta **DEBE TENER EXACTAMENTE 1 HABITACIÓN** (o 1 hab + estudio). Si la oferta tiene 2, 3 o más habitaciones $\rightarrow$ ❌ **0% Match Inviable**.
-  - 🔹 **Brazo B (Demanda Familiar $\ge 2$ Habitaciones)**: La oferta debe tener $req \le prop \le req + 1$ (máximo 1 habitación adicional de confort). Se prohíben desbordes de escala desproporcionados.
-- **Fidelidad Geográfica en Mesa de Cotejo**:
-  - Preservación del barrio real en la oferta (*La Cabrera, Rincón del Chicó, El Nogal*) y del cuadrante/perímetro exacto de la demanda (*Clle 85 a 72 / Clle 85 a 90*) sin sustitución artificial por nombres genéricos.
+### Novedades v23.0:
+- **Nueva Matriz Doctrinal de 6 Reacciones de Negocio (`whatsapp-match.ts`)**:
+  - `👍` **Oferta Venta**: Inmuebles en venta pura o duales.
+  - `📝` **Demanda Venta**: Requerimientos de compra / adquisición.
+  - `👌` **Oferta Arriendo**: Inmuebles en arrendamiento tradicional / temporal.
+  - `✏️` **Demanda Arriendo**: Requerimientos de búsqueda en canon de arriendo.
+  - `🔀` **Oferta con Permuta**: Inmuebles con permuta o dación de pago / permuta pura.
+  - `🔄` **Demanda con Permuta**: Requerimientos con permuta o intercambio de bienes.
+- **Despachador Blindado con Auto-Reintento (`safeReact`)**:
+  - Eliminación de stanzas manuales; uso exclusivo de `key: msg.key` nativo de Baileys con tolerancia a micro-pausas y reintento a los 2.5s.
+- **Corrección de Restricción `price NOT NULL` en Arriendos (`janIA.ts`)**:
+  - Asignación segura de `price = '0.00'` en arriendos para evitar rechazos en Supabase y garantizar la entrega inmediata del emoji.
+- **Blindaje Total de Silencio en Grupos Externos**:
+  - Guardia estricta en `handleDirectGroupQuestion` que prohíbe el envío de cualquier texto o audio fuera de los grupos oficiales.
 
 ### Novedades v22.6:
 - **Tratamiento Universal de Presupuesto Abierto**:

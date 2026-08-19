@@ -52,11 +52,43 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v22.9 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v23.0 — Agosto 2026
 
 ---
 
 ## 📜 REGISTRO DETALLADO DE CONVERSACIONES (ORDEN CRONOLÓGICO INVERSO CON FECHA Y HORA)
+
+### 🗓️ Sesión: Miércoles 19 de Agosto de 2026 — 09:30 AM a 11:40 AM (Hora Colombia UTC-5)
+**Versión del Sistema**: `v23.0 — Matriz Doctrinal de 6 Reacciones de Negocio, Despachador Blindado safeReact y Corrección de Arriendos`
+
+#### 📋 Requerimientos y Directivas Doctrinales de Eduardo A. Rivera:
+1. **Nueva Matriz Doctrinal de 6 Reacciones de Negocio en Grupos de WhatsApp**:
+   - JanIA debe reaccionar de forma especializada según el tipo y modalidad de negocio inmobiliario detectado:
+     - `👍` **Oferta Venta**: Inmuebles en venta tradicional.
+     - `📝` **Demanda Venta**: Requerimientos de compra / venta.
+     - `👌` **Oferta Arriendo**: Inmuebles en arrendamiento (habitacional / temporal).
+     - `✏️` **Demanda Arriendo**: Requerimientos de búsqueda en arriendo.
+     - `🔀` **Oferta con Permuta**: Inmuebles con permuta, venta/permuta o dación en pago.
+     - `🔄` **Demanda con Permuta**: Requerimientos con permuta o intercambio de bienes.
+2. **Corrección de Restricción `price NOT NULL` en Arriendos**:
+   - Se corrigió el error de base de datos donde inmuebles de arriendo puro asignaban `price = null`, provocando que PostgreSQL abortara la inserción e impidiera disparar la reacción. Ahora se guarda `price = '0.00'` de forma segura.
+3. **Despachador Blindado con Reintentos Automáticos (`safeReact`)**:
+   - Se erradicó la construcción manual de stanzas de reacción en Baileys, adoptando el objeto nativo `key: msg.key`.
+   - Se añadió un sistema de auto-reintento con pausa de 2.5s si el socket experimenta micro-desconexiones por conflicto con `web.whatsapp.com`.
+4. **Blindaje de Silencio Absoluto en Grupos Externos**:
+   - Se consagró la guardia inquebrantable en `handleDirectGroupQuestion`: JanIA tiene prohibido al 100% enviar cualquier mensaje de texto, audio o advertencia en grupos no oficiales de Vecy.
+
+#### 🛠️ Soluciones e Implementaciones Técnicas:
+- **`server/_core/whatsapp-match.ts`**:
+  - Implementación de `safeReact` con reintentos automáticos.
+  - Actualización de `getReactionEmoji` y `handleIncomingGroupMessage` (fast reaction <200ms) con la matriz de 6 emojis.
+  - Guardia estricta de silencio absoluto en grupos externos.
+- **`server/_core/janIA.ts`**:
+  - Corrección de restricción `price` en `upsert` de propiedades en arriendo.
+- **`shared/const.ts`** y **`run_global_matching.ts`**:
+  - Incremento canónico a **`v23.0`**.
+
+---
 
 ### 🗓️ Sesión: Martes 18 de Agosto de 2026 — 09:30 PM a 10:45 PM (Hora Colombia UTC-5)
 **Versión del Sistema**: `v22.9 — Blindaje de Reacciones Emojis en Grupos, Lectura OCR Multimodal de Afiches/Flyers y Resiliencia en Login`
