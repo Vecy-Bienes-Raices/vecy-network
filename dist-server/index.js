@@ -10513,18 +10513,14 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
           return;
         }
         if (!msg.key.fromMe) {
-          const rawMsg = unwrapMessage(msg.message);
           const cleanLower = (bodyText || "").toLowerCase();
-          const hasMediaOrUrl = !!rawMsg?.imageMessage || !!rawMsg?.documentMessage || cleanLower.includes("http://") || cleanLower.includes("https://") || cleanLower.includes("www.") || cleanLower.includes(".co") || cleanLower.includes(".com");
           const isExplicitOffer = /\b(?:ofrezco|ofrecemos|vendo|se vende|se arrienda|en venta|en arriendo|arriendo|alquilo|alquiler|rento|renta|tengo para|disponible|nuevo inmueble|venta directa|arriendo directo)\b/i.test(cleanLower);
           const isExplicitSearch = !isExplicitOffer && /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|solicitamos|compro|para cliente|busca cliente|presupuesto)\b/i.test(cleanLower);
           let fastEmoji = null;
-          if (isExplicitOffer || hasMediaOrUrl) {
+          if (isExplicitOffer) {
             fastEmoji = "\u{1F44D}";
           } else if (isExplicitSearch) {
             fastEmoji = "\u{1F4DD}";
-          } else if (cleanLower.includes("apto") || cleanLower.includes("apartamento") || cleanLower.includes("casa") || cleanLower.includes("bodega") || cleanLower.includes("oficina") || cleanLower.includes("lote") || cleanLower.includes("finca") || cleanLower.includes("m2") || cleanLower.includes("mts")) {
-            fastEmoji = "\u{1F44D}";
           }
           if (fastEmoji && chatId !== this.buzonGroupId) {
             try {
@@ -11627,7 +11623,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v22.8";
+var VECY_VERSION = "v22.9";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 
