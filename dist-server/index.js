@@ -8169,9 +8169,14 @@ async function saveProperty(data, userId, realName, imageBuffer, pdfBuffer, pdfM
     currency: sanitizeCurrency(data.currency),
     // Mapear explícitamente los campos con Sanidad Numérica Post-Extracción (Bug #6 Fix)
     price: (() => {
-      if (data.price === void 0 || data.price === null) return null;
+      const isRent = sanitizeTransactionType(data.transactionType) === "arriendo" || sanitizeTransactionType(data.transactionType) === "arriendo_temporal";
+      if (isRent) {
+        return "0.00";
+      }
+      if (data.price === void 0 || data.price === null) return "0.00";
       const v = parseFloat(String(data.price));
-      if (isNaN(v) || v < 1e7 || v > 5e10 || isPhoneNumberNotPrice(v, data.rawText)) return null;
+      if (isNaN(v) || isPhoneNumberNotPrice(v, data.rawText)) return "0.00";
+      if (v > 5e10) return "0.00";
       return String(v);
     })(),
     rentPrice: (() => {
