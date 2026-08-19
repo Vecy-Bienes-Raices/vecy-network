@@ -137,3 +137,6 @@ supabase/temp/
 # Heavy data files (>100MB)
 *.zip
 server/data/*.geojson
+
+# Uploaded files and media cache
+public/uploads/

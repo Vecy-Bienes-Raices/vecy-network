@@ -2523,9 +2523,11 @@ Por lo tanto, DEBES hacer lo siguiente:
         return result;
       }
 
-      const isOffer = /\b(?:ofrezco|ofrecemos|vendo|se vende|se arrienda|en venta|en arriendo|arriendo|alquilo|alquiler|rento|renta|tengo para|disponible|nuevo inmueble|venta directa|arriendo directo)\b/i.test(cleanText);
+      const isExplicitDemandKeyword = /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|solicitamos|compro|para cliente|busca cliente|cliente busca|comprador|arrendatario|en búsqueda|en busqueda)\b/i.test(cleanText);
+      const isExplicitOfferKeyword = /\b(?:ofrezco|ofrecemos|vendo|se vende|se arrienda|en venta|en arriendo|alquilo|alquiler directo|rento|tengo para|disponible|nuevo inmueble|venta directa|arriendo directo|arrendamos|pongo en arriendo)\b/i.test(cleanText);
 
-      const isSearch = !isOffer && /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|solicitamos|compro|para cliente|busca cliente|presupuesto)\b/i.test(cleanText);
+      const isSearch = isExplicitDemandKeyword && !isExplicitOfferKeyword;
+      const isOffer = isExplicitOfferKeyword && !isExplicitDemandKeyword;
 
       const hasRealEstateKeyword = hasRealEstateTextKeyword(cleanText);
 
@@ -3618,11 +3620,11 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
   const insertData = {
     ...data,
     name: safeSlice(data.name || `Propiedad en ${data.city || data.zone || "Colombia"}`, 255) || "Propiedad",
-    city: safeSlice(data.city || data.ciudadDeseada, 100) || null,
-    zone: safeSlice(data.zone, 100) || null,
-    addressCity: safeSlice(data.addressCity || data.address_city, 100) || null,
+    city: safeSlice(data.city || data.ciudadDeseada, 100) || "Bogotá, D.C.",
+    zone: safeSlice(data.zone || data.addressNeighborhood || data.addressLocality || data.location || data.city || data.ciudadDeseada || "Bogotá, D.C.", 100) || "Bogotá, D.C.",
+    addressCity: safeSlice(data.addressCity || data.address_city || data.city, 100) || "Bogotá, D.C.",
     addressLocality: safeSlice(data.addressLocality || data.address_locality, 100) || null,
-    addressNeighborhood: safeSlice(data.addressNeighborhood || data.address_neighborhood, 150) || null,
+    addressNeighborhood: safeSlice(data.addressNeighborhood || data.address_neighborhood || data.zone, 150) || null,
     location: safeSlice(data.location, 255) || null,
     matriculaInmobiliaria: safeSlice(data.matriculaInmobiliaria, 100) || null,
     enlaceOrigen: safeSlice(data.enlaceOrigen, 1000) || null,

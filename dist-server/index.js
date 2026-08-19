@@ -7348,8 +7348,10 @@ ${liveStats}` : buildSystemPrompt(groupJid);
         result.reactionEmoji = void 0;
         return result;
       }
-      const isOffer = /\b(?:ofrezco|ofrecemos|vendo|se vende|se arrienda|en venta|en arriendo|arriendo|alquilo|alquiler|rento|renta|tengo para|disponible|nuevo inmueble|venta directa|arriendo directo)\b/i.test(cleanText2);
-      const isSearch = !isOffer && /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|solicitamos|compro|para cliente|busca cliente|presupuesto)\b/i.test(cleanText2);
+      const isExplicitDemandKeyword = /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|solicitamos|compro|para cliente|busca cliente|cliente busca|comprador|arrendatario|en búsqueda|en busqueda)\b/i.test(cleanText2);
+      const isExplicitOfferKeyword = /\b(?:ofrezco|ofrecemos|vendo|se vende|se arrienda|en venta|en arriendo|alquilo|alquiler directo|rento|tengo para|disponible|nuevo inmueble|venta directa|arriendo directo|arrendamos|pongo en arriendo)\b/i.test(cleanText2);
+      const isSearch = isExplicitDemandKeyword && !isExplicitOfferKeyword;
+      const isOffer = isExplicitOfferKeyword && !isExplicitDemandKeyword;
       const hasRealEstateKeyword = hasRealEstateTextKeyword(cleanText2);
       const isShortComment = cleanText2.length < 50 || cleanText2.split(/\s+/).length < 6 || (cleanText2.includes("correccion:") || cleanText2.includes("correcci\xF3n:") || cleanText2.includes("fe de erratas") || cleanText2.includes("rectificacion:") || cleanText2.includes("rectificaci\xF3n:") || cleanText2.includes("bajo de precio") || cleanText2.includes("sigue este enlace") || cleanText2.includes("ver el art\xEDculo en whatsapp") || cleanText2.includes("foto por interno") || cleanText2.includes("fotos por interno") || cleanText2.includes("info por interno") || cleanText2.includes("informaci\xF3n por interno") || cleanText2.includes("escribir al interno") || cleanText2.includes("disponible?") || cleanText2.includes("a\xFAn disponible"));
       const isGeneralInquiryOrRecommendation = (cleanText2.includes("alguien maneja") || cleanText2.includes("alguien recomienda") || cleanText2.includes("alguien conoce") || cleanText2.includes("senior living") || cleanText2.includes("alguien tiene contacto") || cleanText2.includes("quien maneja") || cleanText2.includes("qui\xE9n maneja") || cleanText2.includes("quien recomienda") || cleanText2.includes("recomiendan plomero") || cleanText2.includes("recomiendan abogado") || cleanText2.includes("buscando un abogado") || cleanText2.includes("buscando abogado") || cleanText2.includes("algun abogado") || cleanText2.includes("alg\xFAn abogado") || cleanText2.includes("restitucion de inmueble") || cleanText2.includes("restituci\xF3n de inmueble") || cleanText2.includes("daviplata") || cleanText2.includes("nequi") || cleanText2.includes("comprobante de pago") || cleanText2.includes("recomiendan avaluador") || cleanText2.includes("alguien que haga") || cleanText2.includes("contacto de")) && !cleanText2.includes("busco apto") && !cleanText2.includes("busco casa") && !cleanText2.includes("busco bodega") && !cleanText2.includes("presupuesto");
@@ -8153,11 +8155,11 @@ async function saveProperty(data, userId, realName, imageBuffer, pdfBuffer, pdfM
   const insertData = {
     ...data,
     name: safeSlice(data.name || `Propiedad en ${data.city || data.zone || "Colombia"}`, 255) || "Propiedad",
-    city: safeSlice(data.city || data.ciudadDeseada, 100) || null,
-    zone: safeSlice(data.zone, 100) || null,
-    addressCity: safeSlice(data.addressCity || data.address_city, 100) || null,
+    city: safeSlice(data.city || data.ciudadDeseada, 100) || "Bogot\xE1, D.C.",
+    zone: safeSlice(data.zone || data.addressNeighborhood || data.addressLocality || data.location || data.city || data.ciudadDeseada || "Bogot\xE1, D.C.", 100) || "Bogot\xE1, D.C.",
+    addressCity: safeSlice(data.addressCity || data.address_city || data.city, 100) || "Bogot\xE1, D.C.",
     addressLocality: safeSlice(data.addressLocality || data.address_locality, 100) || null,
-    addressNeighborhood: safeSlice(data.addressNeighborhood || data.address_neighborhood, 150) || null,
+    addressNeighborhood: safeSlice(data.addressNeighborhood || data.address_neighborhood || data.zone, 150) || null,
     location: safeSlice(data.location, 255) || null,
     matriculaInmobiliaria: safeSlice(data.matriculaInmobiliaria, 100) || null,
     enlaceOrigen: safeSlice(data.enlaceOrigen, 1e3) || null,
