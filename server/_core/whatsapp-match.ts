@@ -1144,29 +1144,35 @@ export class JaniaMatchBot {
     if (!msg.key.fromMe) {
       const cleanLower = (bodyText || '').toLowerCase();
 
-      const isExplicitOffer = /\b(?:ofrezco|ofrecemos|vendo|se vende|se arrienda|en venta|en arriendo|arriendo|alquilo|alquiler|rento|renta|tengo para|disponible|nuevo inmueble|venta directa|arriendo directo)\b/i.test(cleanLower);
-      const isExplicitSearch = !isExplicitOffer && /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|solicitamos|compro|para cliente|busca cliente|presupuesto)\b/i.test(cleanLower);
+      const hasPermuta = /\b(?:permuto|permuta|permutas|permutamos|se permuta|recibo menor valor|recibo inmueble|recibo vehículo|recibo vehiculo|pelo a pelo|encime)\b/i.test(cleanLower);
+      const hasRent = /\b(?:arriendo|se arrienda|arriendan|alquilo|se alquila|alquiler|rento|se renta|renta|canon)\b/i.test(cleanLower);
+      const isExplicitOffer = /\b(?:ofrezco|ofrecemos|vendo|se vende|se arrienda|en venta|en arriendo|arriendo|alquilo|alquiler|rento|renta|tengo para|disponible|nuevo inmueble|venta directa|arriendo directo|permuto|se permuta)\b/i.test(cleanLower);
+      const isExplicitSearch = !isExplicitOffer && /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|solicitamos|compro|para cliente|busca cliente|presupuesto|comprar)\b/i.test(cleanLower);
 
       let fastEmoji: string | null = null;
 
+      // ── MATRIZ DOCTRINAL v23.0 (6 EMOJIS DE NEGOCIO) ──
+      // 👍 Oferta Venta | 📝 Demanda Venta | 👌 Oferta Arriendo | ✏️ Demanda Arriendo | 🔀 Oferta Permuta | 🔄 Demanda Permuta
       if (isExplicitOffer) {
-        fastEmoji = '👍'; // Oferta / Inmueble explícito -> 👍
+        if (hasPermuta) {
+          fastEmoji = '🔀'; // Oferta con Permuta
+        } else if (hasRent && !cleanLower.includes('vendo') && !cleanLower.includes('en venta')) {
+          fastEmoji = '👌'; // Oferta Arriendo
+        } else {
+          fastEmoji = '👍'; // Oferta Venta
+        }
       } else if (isExplicitSearch) {
-        fastEmoji = '📝'; // Requerimiento / Demanda explícito -> 📝
+        if (hasPermuta) {
+          fastEmoji = '🔄'; // Demanda con Permuta
+        } else if (hasRent && !cleanLower.includes('compro') && !cleanLower.includes('comprar')) {
+          fastEmoji = '✏️'; // Demanda Arriendo
+        } else {
+          fastEmoji = '📝'; // Demanda Venta
+        }
       }
-      // NOTA DOCTRINAL: En Ofertas y Demandas puede haber Flyers, Enlaces, Imágenes, PDFs y Escritos.
-      // Cuando no hay texto explícito, NO se asume con regex. JanIA descarga la media, ejecuta OCR multimodal
-      // con Gemini, discrimina puntualmente si es Inmueble (👍) o Requerimiento (📝) y getReactionEmoji entrega el emoji exacto.
 
       if (fastEmoji && chatId !== this.buzonGroupId) {
-        try {
-          console.log(`[JANIA-FAST-REACT] 🎯 Enviando reacción instantánea ${fastEmoji} a ${chatId} (Msg ID: ${msg.key.id})`);
-          this.sock.sendMessage(chatId, { react: { text: fastEmoji, key: msg.key } }).then(() => {
-            console.log(`[JANIA-FAST-REACT] ✅ Reacción ${fastEmoji} ENTREGADA NATIVAMENTE en WhatsApp`);
-          }).catch((err: any) => {
-            console.warn(`[JANIA-FAST-REACT] ⚠️ Error entregando reacción instantánea:`, err?.message || err);
-          });
-        } catch (err: any) {}
+        this.safeReact(chatId, msg.key, fastEmoji, 'FAST-REACT');
       }
     }
     const lockKey = `${chatId}_${senderId}`;
@@ -1233,20 +1239,58 @@ export class JaniaMatchBot {
     }
   }
 
+  private async safeReact(chatId: string, msgKey: proto.IMessageKey, emoji: string, reason: string = 'REACT') {
+    if (!msgKey || !msgKey.id || msgKey.fromMe || !emoji || !this.sock) return;
+    try {
+      console.log(`[JANIA-${reason}] 🎯 Despachando reacción ${emoji} a ${chatId} (Msg ID: ${msgKey.id})...`);
+      await this.sock.sendMessage(chatId, { react: { text: emoji, key: msgKey } });
+      console.log(`[JANIA-${reason}] ✅ Reacción ${emoji} ENTREGADA NATIVAMENTE en WhatsApp`);
+    } catch (err: any) {
+      console.warn(`[JANIA-${reason}] ⚠️ Primer intento de reacción ${emoji} falló (${err?.message || err}). Reintentando en 2.5s...`);
+      setTimeout(async () => {
+        try {
+          if (this.sock) {
+            await this.sock.sendMessage(chatId, { react: { text: emoji, key: msgKey } });
+            console.log(`[JANIA-${reason}] ✅ Reacción ${emoji} ENTREGADA en reintento`);
+          }
+        } catch (retryErr: any) {
+          console.warn(`[JANIA-${reason}] ❌ Reintento de reacción ${emoji} no pudo completarse:`, retryErr?.message || retryErr);
+        }
+      }, 2500);
+    }
+  }
+
   private getReactionEmoji(result: any, isOfficialGroup: boolean = false): string | null {
     if (!result) return null;
 
     const classification = (result.classification || '').toUpperCase();
+    const data = result.extractedData || {};
+    const txType = (data.transactionType || data.tipoNegocioDeseado || result.transactionType || '').toLowerCase();
 
-    // ── REGLA PRINCIPAL DOCTRINAL: Si el registro fue insertado exitosamente en BD ──
-    // INMUEBLE insertado → 👍 SIEMPRE (grupos oficiales y externos)
-    // REQUERIMIENTO insertado → 📝 SIEMPRE (grupos oficiales y externos)
-    if (result.inserted === true) {
-      if (classification === 'INMUEBLE' || classification.includes('INMUEBLE') || classification.includes('OFERTA')) {
-        return '👍';
+    const isPermuta = txType.includes('permuta') || txType === 'venta_permuta' || txType === 'aporte';
+    const isRent = txType.includes('arriendo') || txType === 'arriendo_temporal';
+
+    // ── REGLA DOCTRINAL v23.0: MATRIZ DE 6 EMOJIS DE NEGOCIO ──
+    // 👍 Oferta Venta
+    // 📝 Demanda Venta
+    // 👌 Oferta Arriendo
+    // ✏️ Demanda Arriendo
+    // 🔀 Oferta con Permuta
+    // 🔄 Demanda con Permuta
+
+    const isProperty = classification === 'INMUEBLE' || classification.includes('INMUEBLE') || classification.includes('OFERTA');
+    const isRequirement = classification === 'REQUERIMIENTO' || classification.includes('REQUERIMIENTO') || classification.includes('DEMANDA') || classification.includes('BUSQUEDA');
+
+    if (result.inserted === true || isProperty || isRequirement) {
+      if (isProperty) {
+        if (isPermuta) return '🔀'; // Oferta con Permuta
+        if (isRent) return '👌';    // Oferta Arriendo
+        return '👍';                // Oferta Venta (venta pura, venta_o_arriendo, etc.)
       }
-      if (classification === 'REQUERIMIENTO' || classification.includes('REQUERIMIENTO') || classification.includes('DEMANDA') || classification.includes('BUSQUEDA')) {
-        return '📝';
+      if (isRequirement) {
+        if (isPermuta) return '🔄'; // Demanda con Permuta
+        if (isRent) return '✏️';    // Demanda Arriendo
+        return '📝';                // Demanda Venta
       }
     }
 
@@ -1257,14 +1301,6 @@ export class JaniaMatchBot {
       }
       if (classification === 'DATOS_INCOMPLETOS') return '❓';
       if (classification === 'CONSULTA_GENERAL' || classification === 'RESPUESTA_A_PREGUNTA_IA') return null;
-    }
-
-    // ── FALLBACK por clasificación para casos sin inserted===true ──
-    if (classification === 'REQUERIMIENTO' || classification.includes('REQUERIMIENTO') || classification.includes('DEMANDA') || classification.includes('BUSQUEDA')) {
-      return '📝';
-    }
-    if (classification === 'INMUEBLE' || classification.includes('INMUEBLE') || classification.includes('OFERTA') || result.inserted === true) {
-      return '👍';
     }
 
     return null;
@@ -1388,13 +1424,7 @@ export class JaniaMatchBot {
           if (result) {
             const emoji = this.getReactionEmoji(result, isOfficialGroupSingle);
             if (emoji && bufferedMsg.originalMsg?.key && bufferedMsg.originalMsg.key.id && !bufferedMsg.originalMsg.key.fromMe) {
-              const reactionKey = {
-                remoteJid: bufferedMsg.originalMsg.key.remoteJid || chatId,
-                fromMe: false,
-                id: bufferedMsg.originalMsg.key.id,
-                participant: bufferedMsg.originalMsg.key.participant
-              };
-              this.sock.sendMessage(chatId, { react: { text: emoji, key: reactionKey } }).catch(() => {});
+              this.safeReact(chatId, bufferedMsg.originalMsg.key, emoji, 'MULTI-REACT');
             }
           }
         }
@@ -1484,11 +1514,7 @@ export class JaniaMatchBot {
         if (emoji) {
           const lastMsg = buffer.messages[buffer.messages.length - 1]?.originalMsg;
           if (lastMsg && lastMsg.key && lastMsg.key.id && !lastMsg.key.fromMe) {
-            this.sock.sendMessage(chatId, { react: { text: emoji, key: lastMsg.key } }).then(() => {
-              console.log(`[JANIA-BUFFER-REACT] ✅ Reacción post-análisis ${emoji} ENTREGADA a ${chatId}`);
-            }).catch((reactErr: any) => {
-              console.warn(`[JANIA-BUFFER-REACT] ⚠️ Error enviando reacción post-análisis:`, reactErr?.message || reactErr);
-            });
+            this.safeReact(chatId, lastMsg.key, emoji, 'BUFFER-REACT');
           }
         }
       }

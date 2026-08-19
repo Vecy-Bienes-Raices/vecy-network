@@ -10736,24 +10736,30 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
         }
         if (!msg.key.fromMe) {
           const cleanLower = (bodyText || "").toLowerCase();
-          const isExplicitOffer = /\b(?:ofrezco|ofrecemos|vendo|se vende|se arrienda|en venta|en arriendo|arriendo|alquilo|alquiler|rento|renta|tengo para|disponible|nuevo inmueble|venta directa|arriendo directo)\b/i.test(cleanLower);
-          const isExplicitSearch = !isExplicitOffer && /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|solicitamos|compro|para cliente|busca cliente|presupuesto)\b/i.test(cleanLower);
+          const hasPermuta = /\b(?:permuto|permuta|permutas|permutamos|se permuta|recibo menor valor|recibo inmueble|recibo vehículo|recibo vehiculo|pelo a pelo|encime)\b/i.test(cleanLower);
+          const hasRent = /\b(?:arriendo|se arrienda|arriendan|alquilo|se alquila|alquiler|rento|se renta|renta|canon)\b/i.test(cleanLower);
+          const isExplicitOffer = /\b(?:ofrezco|ofrecemos|vendo|se vende|se arrienda|en venta|en arriendo|arriendo|alquilo|alquiler|rento|renta|tengo para|disponible|nuevo inmueble|venta directa|arriendo directo|permuto|se permuta)\b/i.test(cleanLower);
+          const isExplicitSearch = !isExplicitOffer && /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|solicitamos|compro|para cliente|busca cliente|presupuesto|comprar)\b/i.test(cleanLower);
           let fastEmoji = null;
           if (isExplicitOffer) {
-            fastEmoji = "\u{1F44D}";
+            if (hasPermuta) {
+              fastEmoji = "\u{1F500}";
+            } else if (hasRent && !cleanLower.includes("vendo") && !cleanLower.includes("en venta")) {
+              fastEmoji = "\u{1F44C}";
+            } else {
+              fastEmoji = "\u{1F44D}";
+            }
           } else if (isExplicitSearch) {
-            fastEmoji = "\u{1F4DD}";
+            if (hasPermuta) {
+              fastEmoji = "\u{1F504}";
+            } else if (hasRent && !cleanLower.includes("compro") && !cleanLower.includes("comprar")) {
+              fastEmoji = "\u270F\uFE0F";
+            } else {
+              fastEmoji = "\u{1F4DD}";
+            }
           }
           if (fastEmoji && chatId !== this.buzonGroupId) {
-            try {
-              console.log(`[JANIA-FAST-REACT] \u{1F3AF} Enviando reacci\xF3n instant\xE1nea ${fastEmoji} a ${chatId} (Msg ID: ${msg.key.id})`);
-              this.sock.sendMessage(chatId, { react: { text: fastEmoji, key: msg.key } }).then(() => {
-                console.log(`[JANIA-FAST-REACT] \u2705 Reacci\xF3n ${fastEmoji} ENTREGADA NATIVAMENTE en WhatsApp`);
-              }).catch((err) => {
-                console.warn(`[JANIA-FAST-REACT] \u26A0\uFE0F Error entregando reacci\xF3n instant\xE1nea:`, err?.message || err);
-              });
-            } catch (err) {
-            }
+            this.safeReact(chatId, msg.key, fastEmoji, "FAST-REACT");
           }
         }
         const lockKey = `${chatId}_${senderId}`;
@@ -10812,14 +10818,44 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
           }
         }
       }
+      async safeReact(chatId, msgKey, emoji, reason = "REACT") {
+        if (!msgKey || !msgKey.id || msgKey.fromMe || !emoji || !this.sock) return;
+        try {
+          console.log(`[JANIA-${reason}] \u{1F3AF} Despachando reacci\xF3n ${emoji} a ${chatId} (Msg ID: ${msgKey.id})...`);
+          await this.sock.sendMessage(chatId, { react: { text: emoji, key: msgKey } });
+          console.log(`[JANIA-${reason}] \u2705 Reacci\xF3n ${emoji} ENTREGADA NATIVAMENTE en WhatsApp`);
+        } catch (err) {
+          console.warn(`[JANIA-${reason}] \u26A0\uFE0F Primer intento de reacci\xF3n ${emoji} fall\xF3 (${err?.message || err}). Reintentando en 2.5s...`);
+          setTimeout(async () => {
+            try {
+              if (this.sock) {
+                await this.sock.sendMessage(chatId, { react: { text: emoji, key: msgKey } });
+                console.log(`[JANIA-${reason}] \u2705 Reacci\xF3n ${emoji} ENTREGADA en reintento`);
+              }
+            } catch (retryErr) {
+              console.warn(`[JANIA-${reason}] \u274C Reintento de reacci\xF3n ${emoji} no pudo completarse:`, retryErr?.message || retryErr);
+            }
+          }, 2500);
+        }
+      }
       getReactionEmoji(result, isOfficialGroup = false) {
         if (!result) return null;
         const classification = (result.classification || "").toUpperCase();
-        if (result.inserted === true) {
-          if (classification === "INMUEBLE" || classification.includes("INMUEBLE") || classification.includes("OFERTA")) {
+        const data = result.extractedData || {};
+        const txType = (data.transactionType || data.tipoNegocioDeseado || result.transactionType || "").toLowerCase();
+        const isPermuta = txType.includes("permuta") || txType === "venta_permuta" || txType === "aporte";
+        const isRent = txType.includes("arriendo") || txType === "arriendo_temporal";
+        const isProperty = classification === "INMUEBLE" || classification.includes("INMUEBLE") || classification.includes("OFERTA");
+        const isRequirement = classification === "REQUERIMIENTO" || classification.includes("REQUERIMIENTO") || classification.includes("DEMANDA") || classification.includes("BUSQUEDA");
+        if (result.inserted === true || isProperty || isRequirement) {
+          if (isProperty) {
+            if (isPermuta) return "\u{1F500}";
+            if (isRent) return "\u{1F44C}";
             return "\u{1F44D}";
           }
-          if (classification === "REQUERIMIENTO" || classification.includes("REQUERIMIENTO") || classification.includes("DEMANDA") || classification.includes("BUSQUEDA")) {
+          if (isRequirement) {
+            if (isPermuta) return "\u{1F504}";
+            if (isRent) return "\u270F\uFE0F";
             return "\u{1F4DD}";
           }
         }
@@ -10829,12 +10865,6 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
           }
           if (classification === "DATOS_INCOMPLETOS") return "\u2753";
           if (classification === "CONSULTA_GENERAL" || classification === "RESPUESTA_A_PREGUNTA_IA") return null;
-        }
-        if (classification === "REQUERIMIENTO" || classification.includes("REQUERIMIENTO") || classification.includes("DEMANDA") || classification.includes("BUSQUEDA")) {
-          return "\u{1F4DD}";
-        }
-        if (classification === "INMUEBLE" || classification.includes("INMUEBLE") || classification.includes("OFERTA") || result.inserted === true) {
-          return "\u{1F44D}";
         }
         return null;
       }
@@ -10941,14 +10971,7 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
               if (result2) {
                 const emoji = this.getReactionEmoji(result2, isOfficialGroupSingle);
                 if (emoji && bufferedMsg.originalMsg?.key && bufferedMsg.originalMsg.key.id && !bufferedMsg.originalMsg.key.fromMe) {
-                  const reactionKey = {
-                    remoteJid: bufferedMsg.originalMsg.key.remoteJid || chatId,
-                    fromMe: false,
-                    id: bufferedMsg.originalMsg.key.id,
-                    participant: bufferedMsg.originalMsg.key.participant
-                  };
-                  this.sock.sendMessage(chatId, { react: { text: emoji, key: reactionKey } }).catch(() => {
-                  });
+                  this.safeReact(chatId, bufferedMsg.originalMsg.key, emoji, "MULTI-REACT");
                 }
               }
             }
@@ -11026,11 +11049,7 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
             if (emoji) {
               const lastMsg = buffer.messages[buffer.messages.length - 1]?.originalMsg;
               if (lastMsg && lastMsg.key && lastMsg.key.id && !lastMsg.key.fromMe) {
-                this.sock.sendMessage(chatId, { react: { text: emoji, key: lastMsg.key } }).then(() => {
-                  console.log(`[JANIA-BUFFER-REACT] \u2705 Reacci\xF3n post-an\xE1lisis ${emoji} ENTREGADA a ${chatId}`);
-                }).catch((reactErr) => {
-                  console.warn(`[JANIA-BUFFER-REACT] \u26A0\uFE0F Error enviando reacci\xF3n post-an\xE1lisis:`, reactErr?.message || reactErr);
-                });
+                this.safeReact(chatId, lastMsg.key, emoji, "BUFFER-REACT");
               }
             }
           }
@@ -11837,7 +11856,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v22.9";
+var VECY_VERSION = "v23.0";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 

@@ -11,7 +11,7 @@ async function runGlobalMatching() {
     return;
   }
 
-  console.log("⚡ INICIANDO MOTOR GLOBAL DE MATCHING V22.9 ULTRARRÁPIDO EN MEMORIA...");
+  console.log("⚡ INICIANDO MOTOR GLOBAL DE MATCHING V23.0 ULTRARRÁPIDO EN MEMORIA...");
 
   const allReqs = await db.execute(sql`
     SELECT * FROM requirements ORDER BY id DESC;
