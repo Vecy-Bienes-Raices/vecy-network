@@ -1153,17 +1153,11 @@ export class JaniaMatchBot {
 
       if (fastEmoji && chatId !== this.buzonGroupId) {
         try {
-          const reactionKey = {
-            remoteJid: msg.key.remoteJid || chatId,
-            fromMe: false,
-            id: msg.key.id,
-            participant: msg.key.participant || (msg as any).participant
-          };
           console.log(`[JANIA-FAST-REACT] 🎯 Enviando reacción instantánea ${fastEmoji} a ${chatId} (Msg ID: ${msg.key.id})`);
-          this.sock.sendMessage(chatId, { react: { text: fastEmoji, key: reactionKey } }).then(() => {
+          this.sock.sendMessage(chatId, { react: { text: fastEmoji, key: msg.key } }).then(() => {
             console.log(`[JANIA-FAST-REACT] ✅ Reacción ${fastEmoji} ENTREGADA NATIVAMENTE en WhatsApp`);
           }).catch((err: any) => {
-            // Silenciosamente capturar cualquier error de mapeo LID/reacción
+            console.warn(`[JANIA-FAST-REACT] ⚠️ Error entregando reacción instantánea:`, err?.message || err);
           });
         } catch (err: any) {}
       }
@@ -1483,14 +1477,10 @@ export class JaniaMatchBot {
         if (emoji) {
           const lastMsg = buffer.messages[buffer.messages.length - 1]?.originalMsg;
           if (lastMsg && lastMsg.key && lastMsg.key.id && !lastMsg.key.fromMe) {
-            const reactionKey = {
-              remoteJid: lastMsg.key.remoteJid || chatId,
-              fromMe: false,
-              id: lastMsg.key.id,
-              participant: lastMsg.key.participant
-            };
-            this.sock.sendMessage(chatId, { react: { text: emoji, key: reactionKey } }).catch((reactErr: any) => {
-              // Silencioso: no interrumpe la ingesta
+            this.sock.sendMessage(chatId, { react: { text: emoji, key: lastMsg.key } }).then(() => {
+              console.log(`[JANIA-BUFFER-REACT] ✅ Reacción post-análisis ${emoji} ENTREGADA a ${chatId}`);
+            }).catch((reactErr: any) => {
+              console.warn(`[JANIA-BUFFER-REACT] ⚠️ Error enviando reacción post-análisis:`, reactErr?.message || reactErr);
             });
           }
         }

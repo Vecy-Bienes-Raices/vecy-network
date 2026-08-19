@@ -10736,16 +10736,11 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
           }
           if (fastEmoji && chatId !== this.buzonGroupId) {
             try {
-              const reactionKey = {
-                remoteJid: msg.key.remoteJid || chatId,
-                fromMe: false,
-                id: msg.key.id,
-                participant: msg.key.participant || msg.participant
-              };
               console.log(`[JANIA-FAST-REACT] \u{1F3AF} Enviando reacci\xF3n instant\xE1nea ${fastEmoji} a ${chatId} (Msg ID: ${msg.key.id})`);
-              this.sock.sendMessage(chatId, { react: { text: fastEmoji, key: reactionKey } }).then(() => {
+              this.sock.sendMessage(chatId, { react: { text: fastEmoji, key: msg.key } }).then(() => {
                 console.log(`[JANIA-FAST-REACT] \u2705 Reacci\xF3n ${fastEmoji} ENTREGADA NATIVAMENTE en WhatsApp`);
               }).catch((err) => {
+                console.warn(`[JANIA-FAST-REACT] \u26A0\uFE0F Error entregando reacci\xF3n instant\xE1nea:`, err?.message || err);
               });
             } catch (err) {
             }
@@ -11021,13 +11016,10 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
             if (emoji) {
               const lastMsg = buffer.messages[buffer.messages.length - 1]?.originalMsg;
               if (lastMsg && lastMsg.key && lastMsg.key.id && !lastMsg.key.fromMe) {
-                const reactionKey = {
-                  remoteJid: lastMsg.key.remoteJid || chatId,
-                  fromMe: false,
-                  id: lastMsg.key.id,
-                  participant: lastMsg.key.participant
-                };
-                this.sock.sendMessage(chatId, { react: { text: emoji, key: reactionKey } }).catch((reactErr) => {
+                this.sock.sendMessage(chatId, { react: { text: emoji, key: lastMsg.key } }).then(() => {
+                  console.log(`[JANIA-BUFFER-REACT] \u2705 Reacci\xF3n post-an\xE1lisis ${emoji} ENTREGADA a ${chatId}`);
+                }).catch((reactErr) => {
+                  console.warn(`[JANIA-BUFFER-REACT] \u26A0\uFE0F Error enviando reacci\xF3n post-an\xE1lisis:`, reactErr?.message || reactErr);
                 });
               }
             }
