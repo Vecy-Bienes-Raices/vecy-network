@@ -52,11 +52,38 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v22.8 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v22.9 — Agosto 2026
 
 ---
 
 ## 📜 REGISTRO DETALLADO DE CONVERSACIONES (ORDEN CRONOLÓGICO INVERSO CON FECHA Y HORA)
+
+### 🗓️ Sesión: Martes 18 de Agosto de 2026 — 09:30 PM a 10:45 PM (Hora Colombia UTC-5)
+**Versión del Sistema**: `v22.9 — Blindaje de Reacciones Emojis en Grupos, Lectura OCR Multimodal de Afiches/Flyers y Resiliencia en Login`
+
+#### 📋 Requerimientos y Directivas de Eduardo A. Rivera:
+1. **Verificación de Funcionamiento de JanIA y Emojis**:
+   - Explicación y confirmación al usuario de que JanIA NO fue desactivada ni rota; se verificó la conexión de Baileys en vivo (`isReady=true`) y se estandarizó `reactionKey = { remoteJid, id, participant, fromMe: false }` para garantizar la entrega nativa de emojis en grupos de WhatsApp.
+2. **Corrección de Clasificación Oferta vs Demanda**:
+   - Mensajes con *"NUEVO INMUEBLE... Ofrezco en venta directa y/o arriendo..."* deben recibir siempre `👍` (Oferta/Inmueble) y jamás `📝` (Demanda).
+   - Se priorizó `isExplicitOffer` antes que `isExplicitSearch` y se refinaron los regex en `janIA.ts` y `whatsapp-match.ts`.
+3. **Lectura OCR y Procesamiento Visual de Imágenes/Flyers**:
+   - Afiches/flyers compartidos sin texto de acompañamiento (como publicaciones en Chicó) ahora son desenvueltos universalmente (`unwrapMessage` con soporte para mensajes anidados `viewOnceMessageV2` y `ephemeralMessage`) y descargados con `downloadMediaSafely` para análisis visual con Gemini Vision y reacción con `👍`.
+4. **Desbloqueo de Pantalla de Login (`/login`)**:
+   - Se incorporó `Promise.race` con timeout de 5 segundos en `exchangeToken` y botón de rescate manual en `Login.tsx` para evitar congelamiento en *"Estableciendo conexión segura..."*.
+
+#### 🛠️ Soluciones e Implementaciones Técnicas:
+- **`server/_core/whatsapp-match.ts`**:
+  - Funciones `unwrapMessage` y `downloadMediaSafely` con fallback a streaming nativo de Baileys.
+  - Lógica `fastEmoji` priorizando ofertas e imágenes con `reactionKey` canónico para grupos.
+- **`server/_core/janIA.ts`**:
+  - Regex estricto con límites de palabra para `isOffer` y `isSearch`, y corrección simétrica `result.classification = "INMUEBLE"` ante ofertas explícitas.
+- **`client/src/pages/Login.tsx`**:
+  - Timeout de 5s y botón de desbloqueo manual.
+- **Despliegue y Validación**:
+  - Compilación `pnpm build` limpia y commits `5b73535`, `207dccd` y `cf92548` desplegados en producción.
+
+---
 
 ### 🗓️ Sesión: Martes 18 de Agosto de 2026 — 12:15 AM a 03:00 AM (Hora Colombia UTC-5)
 **Versión del Sistema**: `v22.8 — Doctrina de Subtipos de Propiedad Horizontal, Regla de 2 Brazos de Habitaciones y Descarte Fiel de Matches`
