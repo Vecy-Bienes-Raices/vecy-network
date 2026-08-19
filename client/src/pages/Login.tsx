@@ -26,7 +26,10 @@ export default function Login() {
     isExchangingRef.current = true;
     try {
       setLoading(true);
-      const res = await loginMutation.mutateAsync({ accessToken });
+      // Timeout de seguridad de 5 segundos para prevenir congelamiento
+      const exchangePromise = loginMutation.mutateAsync({ accessToken });
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout de sincronización')), 5000));
+      const res: any = await Promise.race([exchangePromise, timeoutPromise]);
       if (res && res.sessionToken) {
         localStorage.setItem("jania-session-token", res.sessionToken);
       }
@@ -35,7 +38,7 @@ export default function Login() {
       navigate('/admin');
     } catch (err: any) {
       console.error('[Login] Error syncing session:', err);
-      toast.error('Error al sincronizar sesión con el servidor');
+      toast.error('No se pudo sincronizar automáticamente. Ingresa manualmente.');
       // Limpiar para permitir login fresco sin bloqueos
       try {
         await supabase.auth.signOut();
@@ -174,6 +177,18 @@ export default function Login() {
             <div className="py-12 text-center flex flex-col items-center gap-4">
               <Loader2 className="w-8 h-8 text-accent animate-spin" />
               <p className="text-sm text-muted-foreground">Estableciendo conexión segura...</p>
+              <button
+                type="button"
+                onClick={async () => {
+                  setLoading(false);
+                  isExchangingRef.current = false;
+                  try { await supabase.auth.signOut(); } catch (_) {}
+                  localStorage.removeItem("jania-session-token");
+                }}
+                className="mt-2 text-xs text-zinc-400 hover:text-white underline transition-colors"
+              >
+                ¿Tarda demasiado? Haz clic aquí para ingresar manualmente
+              </button>
             </div>
           ) : (
             <div className="space-y-4">

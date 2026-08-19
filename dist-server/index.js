@@ -7136,8 +7136,8 @@ ${liveStats}` : buildSystemPrompt(groupJid);
         result.reactionEmoji = void 0;
         return result;
       }
-      const isSearch = cleanText2.includes("busco") || cleanText2.includes("necesito") || cleanText2.includes("requiero") || cleanText2.includes("requerimiento") || cleanText2.includes("buscamos") || cleanText2.includes("compro") || cleanText2.includes("compra") || cleanText2.includes("se busca") || cleanText2.includes("se requiere") || cleanText2.includes("para arriendo") || cleanText2.includes("para compra") || cleanText2.includes("solicito") || cleanText2.includes("solicitamos") || cleanText2.includes("cliente:") || cleanText2.includes("cliente :") || cleanText2.includes("presupuesto:") || cleanText2.includes("presupuesto :") || cleanText2.includes("acci\xF3n: compra") || cleanText2.includes("acci\xF3n : compra") || cleanText2.includes("para cliente") || cleanText2.includes("para un cliente") || cleanText2.includes("para una cliente");
-      const isOffer = cleanText2.includes("vendo") || cleanText2.includes("ofrezco") || cleanText2.includes("tengo") || cleanText2.includes("rento") || cleanText2.includes("alquilo") || cleanText2.includes("alquiler") || cleanText2.includes("venta:") || cleanText2.includes("renta apartamento") || cleanText2.includes("se vende") || cleanText2.includes("se arrienda") || cleanText2.includes("en venta") || cleanText2.includes("en arriendo") || cleanText2.includes("arriendo apartamento") || cleanText2.includes("arriendo casa");
+      const isOffer = /\b(?:ofrezco|ofrecemos|vendo|se vende|se arrienda|en venta|en arriendo|arriendo|alquilo|alquiler|rento|renta|tengo para|disponible|nuevo inmueble|venta directa|arriendo directo)\b/i.test(cleanText2);
+      const isSearch = !isOffer && /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|solicitamos|compro|para cliente|busca cliente|presupuesto)\b/i.test(cleanText2);
       const hasRealEstateKeyword = hasRealEstateTextKeyword(cleanText2);
       const isShortComment = cleanText2.length < 50 || cleanText2.split(/\s+/).length < 6 || (cleanText2.includes("correccion:") || cleanText2.includes("correcci\xF3n:") || cleanText2.includes("fe de erratas") || cleanText2.includes("rectificacion:") || cleanText2.includes("rectificaci\xF3n:") || cleanText2.includes("bajo de precio") || cleanText2.includes("sigue este enlace") || cleanText2.includes("ver el art\xEDculo en whatsapp") || cleanText2.includes("foto por interno") || cleanText2.includes("fotos por interno") || cleanText2.includes("info por interno") || cleanText2.includes("informaci\xF3n por interno") || cleanText2.includes("escribir al interno") || cleanText2.includes("disponible?") || cleanText2.includes("a\xFAn disponible"));
       const isGeneralInquiryOrRecommendation = (cleanText2.includes("alguien maneja") || cleanText2.includes("alguien recomienda") || cleanText2.includes("alguien conoce") || cleanText2.includes("senior living") || cleanText2.includes("alguien tiene contacto") || cleanText2.includes("quien maneja") || cleanText2.includes("qui\xE9n maneja") || cleanText2.includes("quien recomienda") || cleanText2.includes("recomiendan plomero") || cleanText2.includes("recomiendan abogado") || cleanText2.includes("buscando un abogado") || cleanText2.includes("buscando abogado") || cleanText2.includes("algun abogado") || cleanText2.includes("alg\xFAn abogado") || cleanText2.includes("restitucion de inmueble") || cleanText2.includes("restituci\xF3n de inmueble") || cleanText2.includes("daviplata") || cleanText2.includes("nequi") || cleanText2.includes("comprobante de pago") || cleanText2.includes("recomiendan avaluador") || cleanText2.includes("alguien que haga") || cleanText2.includes("contacto de")) && !cleanText2.includes("busco apto") && !cleanText2.includes("busco casa") && !cleanText2.includes("busco bodega") && !cleanText2.includes("presupuesto");
@@ -7150,6 +7150,9 @@ ${liveStats}` : buildSystemPrompt(groupJid);
       } else if (result.classification === "INMUEBLE" && isSearch && !isOffer) {
         console.log("[JANIA-CORRECTION] Cambiando clasificaci\xF3n de INMUEBLE a REQUERIMIENTO basado en heur\xEDstica de texto.");
         result.classification = "REQUERIMIENTO";
+      } else if (result.classification === "REQUERIMIENTO" && isOffer && !isSearch) {
+        console.log("[JANIA-CORRECTION] Cambiando clasificaci\xF3n de REQUERIMIENTO a INMUEBLE basado en heur\xEDstica de texto (Oferta expl\xEDcita).");
+        result.classification = "INMUEBLE";
       } else if ((result.classification === "CONSULTA_GENERAL" || result.classification === "DATOS_INCOMPLETOS" || !result.classification) && (hasRealEstateKeyword || isSearch || isOffer)) {
         const rawWordsCount = cleanText2.split(/\s+/).length;
         const _extTmp = result.extractedData || {};
@@ -9675,8 +9678,10 @@ var init_whatsapp_utils = __esm({
 var whatsapp_match_exports = {};
 __export(whatsapp_match_exports, {
   JaniaMatchBot: () => JaniaMatchBot,
+  downloadMediaSafely: () => downloadMediaSafely,
   janiaCaptadorBot: () => janiaCaptadorBot,
-  janiaMatchBot: () => janiaMatchBot
+  janiaMatchBot: () => janiaMatchBot,
+  unwrapMessage: () => unwrapMessage
 });
 import dns from "dns";
 import _baileys, {
@@ -9698,6 +9703,37 @@ function getWASocket() {
   if (_baileys?.default && typeof _baileys.default === "function") return _baileys.default;
   if (_baileys?.makeWASocket && typeof _baileys.makeWASocket === "function") return _baileys.makeWASocket;
   return _baileys;
+}
+function unwrapMessage(msgObj) {
+  if (!msgObj) return msgObj;
+  let unwrapped = msgObj;
+  while (unwrapped.ephemeralMessage?.message || unwrapped.viewOnceMessage?.message || unwrapped.viewOnceMessageV2?.message || unwrapped.viewOnceMessageV2Extension?.message || unwrapped.documentWithCaptionMessage?.message) {
+    unwrapped = unwrapped.ephemeralMessage?.message || unwrapped.viewOnceMessage?.message || unwrapped.viewOnceMessageV2?.message || unwrapped.viewOnceMessageV2Extension?.message || unwrapped.documentWithCaptionMessage?.message;
+  }
+  return unwrapped;
+}
+async function downloadMediaSafely(msg, type) {
+  try {
+    const buf = await downloadMediaMessage(msg, "buffer", {});
+    if (buf && buf.length > 0) return buf;
+  } catch (err1) {
+  }
+  try {
+    const rawMsg = unwrapMessage(msg.message);
+    const mediaKey = type === "image" ? rawMsg?.imageMessage : type === "audio" ? rawMsg?.audioMessage : type === "video" ? rawMsg?.videoMessage : rawMsg?.documentMessage;
+    if (mediaKey) {
+      const stream = await downloadContentFromMessage(mediaKey, type);
+      const chunks = [];
+      for await (const chunk of stream) {
+        chunks.push(chunk);
+      }
+      const buf = Buffer.concat(chunks);
+      if (buf && buf.length > 0) return buf;
+    }
+  } catch (err2) {
+    console.error(`[JANIA-MEDIA] Error descargando ${type}:`, err2);
+  }
+  return null;
 }
 var SERVER_BOOT_TIME, cleanJid, outgoingQueue, JaniaMatchBot, janiaMatchBot, janiaCaptadorBot;
 var init_whatsapp_match = __esm({
@@ -9964,32 +10000,25 @@ var init_whatsapp_match = __esm({
             }
             try {
               if (isGroup) {
-                if (msg.message.stickerMessage) {
+                const rawMsg = unwrapMessage(msg.message);
+                if (rawMsg?.stickerMessage) {
                   continue;
                 }
                 let body = "";
                 let isAudioPTT = false;
-                if (msg.message.conversation) body = msg.message.conversation;
-                else if (msg.message.extendedTextMessage) {
-                  body = msg.message.extendedTextMessage.text || "";
-                } else if (msg.message.imageMessage) body = msg.message.imageMessage.caption || "";
-                else if (msg.message.documentMessage) body = msg.message.documentMessage.caption || "";
-                else if (msg.message.videoMessage) body = msg.message.videoMessage.caption || "";
-                else if (msg.message.audioMessage) {
+                if (rawMsg?.conversation) body = rawMsg.conversation;
+                else if (rawMsg?.extendedTextMessage) {
+                  body = rawMsg.extendedTextMessage.text || "";
+                } else if (rawMsg?.imageMessage) body = rawMsg.imageMessage.caption || "";
+                else if (rawMsg?.documentMessage) body = rawMsg.documentMessage.caption || "";
+                else if (rawMsg?.videoMessage) body = rawMsg.videoMessage.caption || "";
+                else if (rawMsg?.audioMessage) {
                   isAudioPTT = true;
                   try {
                     console.log(`[JANIA-MATCH] Transcribiendo audio PTT de ${senderId} en grupo ${chatId}...`);
-                    let audioBuffer = null;
-                    try {
-                      audioBuffer = await downloadMediaMessage(msg, "buffer", {});
-                    } catch (dlErr) {
-                      const stream = await downloadContentFromMessage(msg.message.audioMessage, "audio");
-                      let chunks = [];
-                      for await (const chunk of stream) chunks.push(chunk);
-                      audioBuffer = Buffer.concat(chunks);
-                    }
+                    const audioBuffer = await downloadMediaSafely(msg, "audio");
                     if (audioBuffer && audioBuffer.length > 0) {
-                      const mimeType = msg.message.audioMessage.mimetype || "audio/ogg; codecs=opus";
+                      const mimeType = rawMsg.audioMessage.mimetype || "audio/ogg; codecs=opus";
                       const transcription = await transcribeAudioBuffer(audioBuffer, mimeType);
                       if (transcription && transcription.trim() !== "") {
                         body = transcription.trim();
@@ -10484,14 +10513,17 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
           return;
         }
         if (!msg.key.fromMe) {
+          const rawMsg = unwrapMessage(msg.message);
           const cleanLower = (bodyText || "").toLowerCase();
-          const hasMediaOrUrl = !!msg.message.imageMessage || !!msg.message.documentMessage || cleanLower.includes("http://") || cleanLower.includes("https://") || cleanLower.includes("www.") || cleanLower.includes(".co") || cleanLower.includes(".com");
-          const isSearch = cleanLower.includes("busco") || cleanLower.includes("necesito") || cleanLower.includes("requiero") || cleanLower.includes("requerimiento") || cleanLower.includes("se busca") || cleanLower.includes("compro") || cleanLower.includes("compra") || cleanLower.includes("cliente");
-          const isOffer = cleanLower.includes("vendo") || cleanLower.includes("arriendo") || cleanLower.includes("en venta") || cleanLower.includes("en arriendo") || cleanLower.includes("apto") || cleanLower.includes("apartamento") || cleanLower.includes("casa") || cleanLower.includes("bodega") || cleanLower.includes("oficina") || cleanLower.includes("lote") || cleanLower.includes("finca") || cleanLower.includes("precio") || cleanLower.includes("$") || cleanLower.includes("m2") || cleanLower.includes("mts") || cleanLower.includes("pto") || cleanLower.includes("ph") || cleanLower.includes("piso") || cleanLower.includes("alcoba") || cleanLower.includes("garaje") || cleanLower.includes("oportunidad") || cleanLower.includes("\xE1rea") || cleanLower.includes("area") || hasMediaOrUrl;
+          const hasMediaOrUrl = !!rawMsg?.imageMessage || !!rawMsg?.documentMessage || cleanLower.includes("http://") || cleanLower.includes("https://") || cleanLower.includes("www.") || cleanLower.includes(".co") || cleanLower.includes(".com");
+          const isExplicitOffer = /\b(?:ofrezco|ofrecemos|vendo|se vende|se arrienda|en venta|en arriendo|arriendo|alquilo|alquiler|rento|renta|tengo para|disponible|nuevo inmueble|venta directa|arriendo directo)\b/i.test(cleanLower);
+          const isExplicitSearch = !isExplicitOffer && /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|solicitamos|compro|para cliente|busca cliente|presupuesto)\b/i.test(cleanLower);
           let fastEmoji = null;
-          if (isSearch) {
+          if (isExplicitOffer || hasMediaOrUrl) {
+            fastEmoji = "\u{1F44D}";
+          } else if (isExplicitSearch) {
             fastEmoji = "\u{1F4DD}";
-          } else if (isOffer) {
+          } else if (cleanLower.includes("apto") || cleanLower.includes("apartamento") || cleanLower.includes("casa") || cleanLower.includes("bodega") || cleanLower.includes("oficina") || cleanLower.includes("lote") || cleanLower.includes("finca") || cleanLower.includes("m2") || cleanLower.includes("mts")) {
             fastEmoji = "\u{1F44D}";
           }
           if (fastEmoji && chatId !== this.buzonGroupId) {
@@ -10609,19 +10641,26 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
         }
         console.log(`[JANIA-MATCH] Procesando buffer de ${buffer.messages.length} mensajes para ${resolvedSenderId} (Silencioso)...`);
         for (const bufferedMsg of buffer.messages) {
-          if (bufferedMsg.hasMedia && bufferedMsg.originalMsg.message?.imageMessage) {
+          const rawMsg = unwrapMessage(bufferedMsg.originalMsg.message);
+          if (bufferedMsg.hasMedia && rawMsg?.imageMessage) {
             try {
-              const mediaBuffer = await downloadMediaMessage(bufferedMsg.originalMsg, "buffer", {});
-              bufferedMsg.imageBuffer = mediaBuffer.toString("base64");
+              const mediaBuffer = await downloadMediaSafely(bufferedMsg.originalMsg, "image");
+              if (mediaBuffer) {
+                bufferedMsg.imageBuffer = mediaBuffer.toString("base64");
+              }
             } catch (e) {
+              console.error("[JANIA-BUFFER] Error descargando imagen:", e);
             }
           }
-          if (bufferedMsg.hasMedia && bufferedMsg.originalMsg.message?.documentMessage) {
+          if (bufferedMsg.hasMedia && rawMsg?.documentMessage) {
             try {
-              const mediaBuffer = await downloadMediaMessage(bufferedMsg.originalMsg, "buffer", {});
-              bufferedMsg.pdfBuffer = mediaBuffer.toString("base64");
-              bufferedMsg.pdfMimeType = bufferedMsg.originalMsg.message.documentMessage.mimetype || "application/pdf";
+              const mediaBuffer = await downloadMediaSafely(bufferedMsg.originalMsg, "document");
+              if (mediaBuffer) {
+                bufferedMsg.pdfBuffer = mediaBuffer.toString("base64");
+                bufferedMsg.pdfMimeType = rawMsg.documentMessage.mimetype || "application/pdf";
+              }
             } catch (e) {
+              console.error("[JANIA-BUFFER] Error descargando documento:", e);
             }
           }
         }

@@ -48,6 +48,55 @@ const cleanJid = (jid: string) => {
   return jid.split(':')[0];
 };
 
+// Helper para desenrollar mensajes envueltos en ephemeral, viewOnce, etc.
+export function unwrapMessage(msgObj: any): any {
+  if (!msgObj) return msgObj;
+  let unwrapped = msgObj;
+  while (
+    unwrapped.ephemeralMessage?.message ||
+    unwrapped.viewOnceMessage?.message ||
+    unwrapped.viewOnceMessageV2?.message ||
+    unwrapped.viewOnceMessageV2Extension?.message ||
+    unwrapped.documentWithCaptionMessage?.message
+  ) {
+    unwrapped =
+      unwrapped.ephemeralMessage?.message ||
+      unwrapped.viewOnceMessage?.message ||
+      unwrapped.viewOnceMessageV2?.message ||
+      unwrapped.viewOnceMessageV2Extension?.message ||
+      unwrapped.documentWithCaptionMessage?.message;
+  }
+  return unwrapped;
+}
+
+// Helper para descargar media de forma robusta con stream fallback
+export async function downloadMediaSafely(msg: proto.IWebMessageInfo, type: 'image' | 'video' | 'audio' | 'document'): Promise<Buffer | null> {
+  try {
+    const buf = await downloadMediaMessage(msg as any, 'buffer', {}) as Buffer;
+    if (buf && buf.length > 0) return buf;
+  } catch (err1) {}
+
+  try {
+    const rawMsg = unwrapMessage(msg.message);
+    const mediaKey = type === 'image' ? rawMsg?.imageMessage :
+                     type === 'audio' ? rawMsg?.audioMessage :
+                     type === 'video' ? rawMsg?.videoMessage :
+                     rawMsg?.documentMessage;
+    if (mediaKey) {
+      const stream = await downloadContentFromMessage(mediaKey, type);
+      const chunks: Buffer[] = [];
+      for await (const chunk of stream) {
+        chunks.push(chunk);
+      }
+      const buf = Buffer.concat(chunks);
+      if (buf && buf.length > 0) return buf;
+    }
+  } catch (err2) {
+    console.error(`[JANIA-MEDIA] Error descargando ${type}:`, err2);
+  }
+  return null;
+}
+
 // Cola de despacho secuencial para evitar bloqueos
 let outgoingQueue: Promise<any> = Promise.resolve();
 
@@ -357,38 +406,32 @@ export class JaniaMatchBot {
             // Escuchamos de forma global todos los grupos en los que participamos.
             // authorizedGroups se usará abajo únicamente para reaccionar con emojis.
 
+            const rawMsg = unwrapMessage(msg.message);
+
             // Ignorar stickers
-            if (msg.message.stickerMessage) {
+            if (rawMsg?.stickerMessage) {
               continue;
             }
 
             let body = '';
             let isAudioPTT = false;
-            if (msg.message.conversation) body = msg.message.conversation;
-            else if (msg.message.extendedTextMessage) {
+            if (rawMsg?.conversation) body = rawMsg.conversation;
+            else if (rawMsg?.extendedTextMessage) {
               // Mensajes normales Y mensajes reenviados (contextInfo.isForwarded)
-              body = msg.message.extendedTextMessage.text || '';
+              body = rawMsg.extendedTextMessage.text || '';
             }
-            else if (msg.message.imageMessage) body = msg.message.imageMessage.caption || '';
-            else if (msg.message.documentMessage) body = msg.message.documentMessage.caption || '';
-            else if (msg.message.videoMessage) body = msg.message.videoMessage.caption || '';
-            else if (msg.message.audioMessage) {
+            else if (rawMsg?.imageMessage) body = rawMsg.imageMessage.caption || '';
+            else if (rawMsg?.documentMessage) body = rawMsg.documentMessage.caption || '';
+            else if (rawMsg?.videoMessage) body = rawMsg.videoMessage.caption || '';
+            else if (rawMsg?.audioMessage) {
               isAudioPTT = true;
-              // Transcribir el audio real usando Gemini vía Baileys downloadMediaMessage / downloadContentFromMessage
+              // Transcribir el audio real usando Gemini vía Baileys downloadMediaSafely
               try {
                 console.log(`[JANIA-MATCH] Transcribiendo audio PTT de ${senderId} en grupo ${chatId}...`);
-                let audioBuffer: Buffer | null = null;
-                try {
-                  audioBuffer = await downloadMediaMessage(msg as any, 'buffer', {}) as Buffer;
-                } catch (dlErr) {
-                  const stream = await downloadContentFromMessage(msg.message.audioMessage, 'audio');
-                  let chunks: Buffer[] = [];
-                  for await (const chunk of stream) chunks.push(chunk);
-                  audioBuffer = Buffer.concat(chunks);
-                }
+                const audioBuffer = await downloadMediaSafely(msg as any, 'audio');
 
                 if (audioBuffer && audioBuffer.length > 0) {
-                  const mimeType = msg.message.audioMessage.mimetype || 'audio/ogg; codecs=opus';
+                  const mimeType = rawMsg.audioMessage.mimetype || 'audio/ogg; codecs=opus';
                   const transcription = await transcribeAudioBuffer(audioBuffer, mimeType);
                   if (transcription && transcription.trim() !== '') {
                     body = transcription.trim();
@@ -1092,18 +1135,21 @@ export class JaniaMatchBot {
 
     // --- REACCIÓN INSTANTÁNEA (< 200ms) CON CONFIRMACIÓN VISUAL EN CELULAR ---
     if (!msg.key.fromMe) {
+      const rawMsg = unwrapMessage(msg.message);
       const cleanLower = (bodyText || '').toLowerCase();
-      const hasMediaOrUrl = !!msg.message.imageMessage || !!msg.message.documentMessage || cleanLower.includes('http://') || cleanLower.includes('https://') || cleanLower.includes('www.') || cleanLower.includes('.co') || cleanLower.includes('.com');
+      const hasMediaOrUrl = !!rawMsg?.imageMessage || !!rawMsg?.documentMessage || cleanLower.includes('http://') || cleanLower.includes('https://') || cleanLower.includes('www.') || cleanLower.includes('.co') || cleanLower.includes('.com');
 
-      const isSearch = cleanLower.includes('busco') || cleanLower.includes('necesito') || cleanLower.includes('requiero') || cleanLower.includes('requerimiento') || cleanLower.includes('se busca') || cleanLower.includes('compro') || cleanLower.includes('compra') || cleanLower.includes('cliente');
-      const isOffer = cleanLower.includes('vendo') || cleanLower.includes('arriendo') || cleanLower.includes('en venta') || cleanLower.includes('en arriendo') || cleanLower.includes('apto') || cleanLower.includes('apartamento') || cleanLower.includes('casa') || cleanLower.includes('bodega') || cleanLower.includes('oficina') || cleanLower.includes('lote') || cleanLower.includes('finca') || cleanLower.includes('precio') || cleanLower.includes('$') || cleanLower.includes('m2') || cleanLower.includes('mts') || cleanLower.includes('pto') || cleanLower.includes('ph') || cleanLower.includes('piso') || cleanLower.includes('alcoba') || cleanLower.includes('garaje') || cleanLower.includes('oportunidad') || cleanLower.includes('área') || cleanLower.includes('area') || hasMediaOrUrl;
+      const isExplicitOffer = /\b(?:ofrezco|ofrecemos|vendo|se vende|se arrienda|en venta|en arriendo|arriendo|alquilo|alquiler|rento|renta|tengo para|disponible|nuevo inmueble|venta directa|arriendo directo)\b/i.test(cleanLower);
+      const isExplicitSearch = !isExplicitOffer && /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|solicitamos|compro|para cliente|busca cliente|presupuesto)\b/i.test(cleanLower);
 
       let fastEmoji: string | null = null;
 
-      if (isSearch) {
-        fastEmoji = '📝'; // Requerimiento / Búsqueda -> 📝
-      } else if (isOffer) {
-        fastEmoji = '👍'; // Oferta / Inmueble -> 👍
+      if (isExplicitOffer || hasMediaOrUrl) {
+        fastEmoji = '👍'; // Oferta / Inmueble / Flyer -> 👍
+      } else if (isExplicitSearch) {
+        fastEmoji = '📝'; // Requerimiento / Demanda -> 📝
+      } else if (cleanLower.includes('apto') || cleanLower.includes('apartamento') || cleanLower.includes('casa') || cleanLower.includes('bodega') || cleanLower.includes('oficina') || cleanLower.includes('lote') || cleanLower.includes('finca') || cleanLower.includes('m2') || cleanLower.includes('mts')) {
+        fastEmoji = '👍'; // Oferta por defecto si describe características de inmueble
       }
 
       if (fastEmoji && chatId !== this.buzonGroupId) {
@@ -1246,18 +1292,27 @@ export class JaniaMatchBot {
 
     // Descarga de imágenes o documentos adjuntos
     for (const bufferedMsg of buffer.messages) {
-      if (bufferedMsg.hasMedia && bufferedMsg.originalMsg.message?.imageMessage) {
+      const rawMsg = unwrapMessage(bufferedMsg.originalMsg.message);
+      if (bufferedMsg.hasMedia && rawMsg?.imageMessage) {
         try {
-          const mediaBuffer = await downloadMediaMessage(bufferedMsg.originalMsg as any, 'buffer', {});
-          bufferedMsg.imageBuffer = mediaBuffer.toString('base64');
-        } catch (e) {}
+          const mediaBuffer = await downloadMediaSafely(bufferedMsg.originalMsg as any, 'image');
+          if (mediaBuffer) {
+            bufferedMsg.imageBuffer = mediaBuffer.toString('base64');
+          }
+        } catch (e) {
+          console.error('[JANIA-BUFFER] Error descargando imagen:', e);
+        }
       }
-      if (bufferedMsg.hasMedia && bufferedMsg.originalMsg.message?.documentMessage) {
+      if (bufferedMsg.hasMedia && rawMsg?.documentMessage) {
         try {
-          const mediaBuffer = await downloadMediaMessage(bufferedMsg.originalMsg as any, 'buffer', {});
-          bufferedMsg.pdfBuffer = mediaBuffer.toString('base64');
-          bufferedMsg.pdfMimeType = bufferedMsg.originalMsg.message.documentMessage.mimetype || 'application/pdf';
-        } catch (e) {}
+          const mediaBuffer = await downloadMediaSafely(bufferedMsg.originalMsg as any, 'document');
+          if (mediaBuffer) {
+            bufferedMsg.pdfBuffer = mediaBuffer.toString('base64');
+            bufferedMsg.pdfMimeType = rawMsg.documentMessage.mimetype || 'application/pdf';
+          }
+        } catch (e) {
+          console.error('[JANIA-BUFFER] Error descargando documento:', e);
+        }
       }
     }
 

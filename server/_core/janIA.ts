@@ -2474,43 +2474,9 @@ Por lo tanto, DEBES hacer lo siguiente:
         return result;
       }
 
-      const isSearch = cleanText.includes("busco") || 
-                       cleanText.includes("necesito") || 
-                       cleanText.includes("requiero") || 
-                       cleanText.includes("requerimiento") ||
-                       cleanText.includes("buscamos") || 
-                       cleanText.includes("compro") || 
-                       cleanText.includes("compra") ||
-                       cleanText.includes("se busca") ||
-                       cleanText.includes("se requiere") ||
-                       cleanText.includes("para arriendo") ||
-                       cleanText.includes("para compra") ||
-                       cleanText.includes("solicito") ||
-                       cleanText.includes("solicitamos") ||
-                       cleanText.includes("cliente:") ||
-                       cleanText.includes("cliente :") ||
-                       cleanText.includes("presupuesto:") ||
-                       cleanText.includes("presupuesto :") ||
-                       cleanText.includes("acción: compra") ||
-                       cleanText.includes("acción : compra") ||
-                       cleanText.includes("para cliente") ||
-                       cleanText.includes("para un cliente") ||
-                       cleanText.includes("para una cliente");
+      const isOffer = /\b(?:ofrezco|ofrecemos|vendo|se vende|se arrienda|en venta|en arriendo|arriendo|alquilo|alquiler|rento|renta|tengo para|disponible|nuevo inmueble|venta directa|arriendo directo)\b/i.test(cleanText);
 
-      const isOffer = cleanText.includes("vendo") || 
-                      cleanText.includes("ofrezco") || 
-                      cleanText.includes("tengo") || 
-                      cleanText.includes("rento") || 
-                      cleanText.includes("alquilo") || 
-                      cleanText.includes("alquiler") ||
-                      cleanText.includes("venta:") ||
-                      cleanText.includes("renta apartamento") ||
-                      cleanText.includes("se vende") ||
-                      cleanText.includes("se arrienda") ||
-                      cleanText.includes("en venta") ||
-                      cleanText.includes("en arriendo") ||
-                      cleanText.includes("arriendo apartamento") ||
-                      cleanText.includes("arriendo casa");
+      const isSearch = !isOffer && /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|solicitamos|compro|para cliente|busca cliente|presupuesto)\b/i.test(cleanText);
 
       const hasRealEstateKeyword = hasRealEstateTextKeyword(cleanText);
 
@@ -2568,6 +2534,9 @@ Por lo tanto, DEBES hacer lo siguiente:
       } else if (result.classification === "INMUEBLE" && isSearch && !isOffer) {
         console.log("[JANIA-CORRECTION] Cambiando clasificación de INMUEBLE a REQUERIMIENTO basado en heurística de texto.");
         result.classification = "REQUERIMIENTO";
+      } else if (result.classification === "REQUERIMIENTO" && isOffer && !isSearch) {
+        console.log("[JANIA-CORRECTION] Cambiando clasificación de REQUERIMIENTO a INMUEBLE basado en heurística de texto (Oferta explícita).");
+        result.classification = "INMUEBLE";
       } else if ((result.classification === "CONSULTA_GENERAL" || result.classification === "DATOS_INCOMPLETOS" || !result.classification) && (hasRealEstateKeyword || isSearch || isOffer)) {
         // Exigir al menos un dato técnico real (precio, área, o contexto comercial amplio) para rescatar como INMUEBLE o REQUERIMIENTO
         const rawWordsCount = cleanText.split(/\s+/).length;
