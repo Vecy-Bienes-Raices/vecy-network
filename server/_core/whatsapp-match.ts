@@ -1154,8 +1154,14 @@ export class JaniaMatchBot {
 
       if (fastEmoji && chatId !== this.buzonGroupId) {
         try {
+          const reactionKey = {
+            remoteJid: msg.key.remoteJid || chatId,
+            fromMe: false,
+            id: msg.key.id,
+            participant: msg.key.participant || (msg as any).participant
+          };
           console.log(`[JANIA-FAST-REACT] 🎯 Enviando reacción instantánea ${fastEmoji} a ${chatId} (Msg ID: ${msg.key.id})`);
-          this.sock.sendMessage(chatId, { react: { text: fastEmoji, key: msg.key } }).then(() => {
+          this.sock.sendMessage(chatId, { react: { text: fastEmoji, key: reactionKey } }).then(() => {
             console.log(`[JANIA-FAST-REACT] ✅ Reacción ${fastEmoji} ENTREGADA NATIVAMENTE en WhatsApp`);
           }).catch((err: any) => {
             // Silenciosamente capturar cualquier error de mapeo LID/reacción

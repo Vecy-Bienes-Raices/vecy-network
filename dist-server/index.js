@@ -10528,8 +10528,14 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
           }
           if (fastEmoji && chatId !== this.buzonGroupId) {
             try {
+              const reactionKey = {
+                remoteJid: msg.key.remoteJid || chatId,
+                fromMe: false,
+                id: msg.key.id,
+                participant: msg.key.participant || msg.participant
+              };
               console.log(`[JANIA-FAST-REACT] \u{1F3AF} Enviando reacci\xF3n instant\xE1nea ${fastEmoji} a ${chatId} (Msg ID: ${msg.key.id})`);
-              this.sock.sendMessage(chatId, { react: { text: fastEmoji, key: msg.key } }).then(() => {
+              this.sock.sendMessage(chatId, { react: { text: fastEmoji, key: reactionKey } }).then(() => {
                 console.log(`[JANIA-FAST-REACT] \u2705 Reacci\xF3n ${fastEmoji} ENTREGADA NATIVAMENTE en WhatsApp`);
               }).catch((err) => {
               });
