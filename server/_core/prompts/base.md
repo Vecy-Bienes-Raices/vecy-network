@@ -370,7 +370,7 @@ DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
   "response": "Tu respuesta dinámica, natural, viva y elocuente (cadena vacía '' si realizas extracción en Grupo 1)",
   "shouldSendDM": boolean,
   "missingFields": ["string"],
-  "reactionEmoji": "string (emoji recomendado para reaccionar al mensaje original)",
+  "reactionEmoji": "string (OBLIGATORIO: usa EXACTAMENTE uno — Oferta Venta: '👍' | Oferta Arriendo: '👌' | Oferta Permuta: '🔀' | Demanda Venta: '📝' | Demanda Arriendo: '✏️' | Demanda Permuta: '🔄' | Infracción/Spam: '🚫' | Datos incompletos: '❓' | Sin categoría: '')",
   "wantsVoice": boolean,
   "voiceResponse": "string (la respuesta redactada para ser hablada si wantsVoice es true)"
 }

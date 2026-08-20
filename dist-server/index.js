@@ -7713,10 +7713,18 @@ ${greetingPrefix}, veo que tienes una consulta jur\xEDdica, procedimental o de a
       result.dmResponse = sanitizeResponseMarkdown(result.dmResponse);
     }
     if (!result.reactionEmoji) {
-      if (result.classification === "INMUEBLE") result.reactionEmoji = "\u{1F44D}";
-      else if (result.classification === "REQUERIMIENTO") result.reactionEmoji = "\u{1F4DD}";
-      else if (result.classification === "DATOS_INCOMPLETOS" || result.classification === "CONSULTA_GENERAL") result.reactionEmoji = "\u2753";
-      else if (result.classification === "VIOLACION_DE_NORMAS") result.reactionEmoji = "\u{1F6AB}";
+      const _txFallback = (extracted?.transactionType || extracted?.tipoNegocioDeseado || "").toLowerCase();
+      const _isPermutaFb = _txFallback.includes("permuta") || _txFallback === "venta_permuta" || _txFallback === "aporte";
+      const _isRentFb = _txFallback.includes("arriendo") || _txFallback === "arriendo_temporal" || _txFallback === "arriendo_con_opcion_de_compra";
+      if (result.classification === "INMUEBLE") {
+        result.reactionEmoji = _isPermutaFb ? "\u{1F500}" : _isRentFb ? "\u{1F44C}" : "\u{1F44D}";
+      } else if (result.classification === "REQUERIMIENTO") {
+        result.reactionEmoji = _isPermutaFb ? "\u{1F504}" : _isRentFb ? "\u270F\uFE0F" : "\u{1F4DD}";
+      } else if (result.classification === "DATOS_INCOMPLETOS" || result.classification === "CONSULTA_GENERAL") {
+        result.reactionEmoji = "\u2753";
+      } else if (result.classification === "VIOLACION_DE_NORMAS") {
+        result.reactionEmoji = "\u{1F6AB}";
+      }
     }
     return result;
   } catch (error) {
@@ -9451,7 +9459,7 @@ Constantemente recibes datos en diversos formatos (Texto plano, URLs de portales
   "response": "Tu respuesta elocuente para el grupo (cadena vac\xEDa '' si no hay match ni es consulta)",
   "shouldSendDM": boolean,
   "missingFields": ["string"],
-  "reactionEmoji": "string (emoji recomendado para reaccionar al mensaje original, ej: '\u274C', '\u{1F6AB}', '\u26A0\uFE0F', '\u{1F504}', '\u2705', '\u{1F4A1}', '\u{1F3AF}')",
+  "reactionEmoji": "string (OBLIGATORIO: usa EXACTAMENTE uno de estos 6 emojis seg\xFAn el tipo de negocio detectado \u2014 Oferta Venta: '\u{1F44D}' | Oferta Arriendo: '\u{1F44C}' | Oferta Permuta: '\u{1F500}' | Demanda Venta: '\u{1F4DD}' | Demanda Arriendo: '\u270F\uFE0F' | Demanda Permuta: '\u{1F504}' | Infracci\xF3n/Spam: '\u{1F6AB}' | Incompleto: '\u2753' | Sin categor\xEDa: '')",
   "wantsVoice": boolean,
   "voiceResponse": "string (un saludo y respuesta/resumen conversacional sumamente breve, directo y humanizado en espa\xF1ol de m\xE1ximo 150 caracteres, sin negritas/markdown/emojis. Usa comas y puntos suspensivos (...) de forma estrat\xE9gica para indicarle al sintetizador d\xF3nde hacer pausas naturales y respiraciones, y signos de exclamaci\xF3n para dar entonaci\xF3n)"
 }

@@ -1423,7 +1423,7 @@ Constantemente recibes datos en diversos formatos (Texto plano, URLs de portales
   "response": "Tu respuesta elocuente para el grupo (cadena vacía '' si no hay match ni es consulta)",
   "shouldSendDM": boolean,
   "missingFields": ["string"],
-  "reactionEmoji": "string (emoji recomendado para reaccionar al mensaje original, ej: '❌', '🚫', '⚠️', '🔄', '✅', '💡', '🎯')",
+  "reactionEmoji": "string (OBLIGATORIO: usa EXACTAMENTE uno de estos 6 emojis según el tipo de negocio detectado — Oferta Venta: '\ud83d\udc4d' | Oferta Arriendo: '\ud83d\udc4c' | Oferta Permuta: '\ud83d\udd00' | Demanda Venta: '\ud83d\udcdd' | Demanda Arriendo: '\u270f\ufe0f' | Demanda Permuta: '\ud83d\udd04' | Infracción/Spam: '\ud83d\udeab' | Incompleto: '\u2753' | Sin categoría: '')",
   "wantsVoice": boolean,
   "voiceResponse": "string (un saludo y respuesta/resumen conversacional sumamente breve, directo y humanizado en español de máximo 150 caracteres, sin negritas/markdown/emojis. Usa comas y puntos suspensivos (...) de forma estratégica para indicarle al sintetizador dónde hacer pausas naturales y respiraciones, y signos de exclamación para dar entonación)"
 }
@@ -3046,12 +3046,24 @@ Por lo tanto, DEBES hacer lo siguiente:
     if (result && result.dmResponse) {
       result.dmResponse = sanitizeResponseMarkdown(result.dmResponse);
     }
+    // ── FALLBACK DOCTRINAL v23.0: Solo si no se asignó emoji en los bloques de inserción ──
+    // Este bloque NUNCA debe pisar un emoji ya calculado con transactionType real.
     if (!result.reactionEmoji) {
-      if (result.classification === "INMUEBLE") result.reactionEmoji = "👍";
-      else if (result.classification === "REQUERIMIENTO") result.reactionEmoji = "📝";
-      else if (result.classification === "DATOS_INCOMPLETOS" || result.classification === "CONSULTA_GENERAL") result.reactionEmoji = "❓";
-      else if (result.classification === "VIOLACION_DE_NORMAS") result.reactionEmoji = "🚫";
+      const _txFallback = (extracted?.transactionType || extracted?.tipoNegocioDeseado || '').toLowerCase();
+      const _isPermutaFb = _txFallback.includes('permuta') || _txFallback === 'venta_permuta' || _txFallback === 'aporte';
+      const _isRentFb = _txFallback.includes('arriendo') || _txFallback === 'arriendo_temporal' || _txFallback === 'arriendo_con_opcion_de_compra';
+
+      if (result.classification === "INMUEBLE") {
+        result.reactionEmoji = _isPermutaFb ? '🔀' : _isRentFb ? '👌' : '👍';
+      } else if (result.classification === "REQUERIMIENTO") {
+        result.reactionEmoji = _isPermutaFb ? '🔄' : _isRentFb ? '✏️' : '📝';
+      } else if (result.classification === "DATOS_INCOMPLETOS" || result.classification === "CONSULTA_GENERAL") {
+        result.reactionEmoji = "❓";
+      } else if (result.classification === "VIOLACION_DE_NORMAS") {
+        result.reactionEmoji = "🚫";
+      }
     }
+
     return result;
   } catch (error) {
     console.error("Error en JanIA v11.70:", error);
