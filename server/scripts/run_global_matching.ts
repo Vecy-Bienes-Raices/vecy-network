@@ -11,7 +11,7 @@ async function runGlobalMatching() {
     return;
   }
 
-  console.log("⚡ INICIANDO MOTOR GLOBAL DE MATCHING V23.0 ULTRARRÁPIDO EN MEMORIA...");
+  console.log("⚡ INICIANDO MOTOR GLOBAL DE MATCHING V23.1 ULTRARRÁPIDO EN MEMORIA...");
 
   const allReqs = await db.execute(sql`
     SELECT * FROM requirements ORDER BY id DESC;
@@ -59,7 +59,7 @@ async function runGlobalMatching() {
               ${(prop as any).id},
               ${(req as any).id},
               ${score.toFixed(2)},
-              ${'VECY CORE v22.9 In-Memory: ' + score.toFixed(2) + '/100'},
+              ${'VECY CORE v23.1 In-Memory: ' + score.toFixed(2) + '/100'},
               ${JSON.stringify(explanation)}::jsonb,
               ${JSON.stringify(ipcObj)}::jsonb,
               'suggested',

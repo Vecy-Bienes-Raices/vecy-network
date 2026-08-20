@@ -1144,10 +1144,28 @@ export class JaniaMatchBot {
     if (!msg.key.fromMe) {
       const cleanLower = (bodyText || '').toLowerCase();
 
-      const hasPermuta = /\b(?:permuto|permuta|permutas|permutamos|se permuta|recibo menor valor|recibo inmueble|recibo vehículo|recibo vehiculo|pelo a pelo|encime)\b/i.test(cleanLower);
-      const hasRent = /\b(?:arriendo|se arrienda|arriendan|alquilo|se alquila|alquiler|rento|se renta|renta|canon)\b/i.test(cleanLower);
+      let groupSubject = "";
+      try {
+        const meta = await this.getCachedGroupMetadata(chatId);
+        if (meta && meta.subject) groupSubject = meta.subject;
+      } catch (_) {}
+
+      const isGroupRentContext = /arriend|alquil|renta/i.test(groupSubject);
+
+      const hasPermuta = /\b(?:permuto|permuta|permutas|permutamos|se permuta|recibo menor valor|recibo inmueble|recibo vehículo|recibo vehiculo|pelo a pelo|encime|parte de pago)\b/i.test(cleanLower);
+      const hasRentExplicit = /\b(?:arriendo|arriendos|arrendar|arrendamos|se arrienda|arriendan|alquilo|alquilar|alquilamos|se alquila|alquiler|alquileres|rento|rentar|se renta|renta|rentas|canon|canones|cánones|amoblado|amoblada|sin amoblar|arrendatario|arrendador|inquilino)\b/i.test(cleanLower)
+        || /(?:incluida|con|\+|más|mas)\s*(?:administraci[oó]n|admon)/i.test(cleanLower)
+        || /(?:administraci[oó]n|admon)\s*(?:incluida|adicional)/i.test(cleanLower)
+        || /valor arriendo/i.test(cleanLower);
+
+      // Si el grupo es explícitamente de arriendos o el texto tiene señales de arriendo (administración incluida, canon, etc.)
+      const isRentOperation = hasRentExplicit || (isGroupRentContext && !/\b(?:compro|comprar|en compra|para compra)\b/i.test(cleanLower) && !cleanLower.startsWith('vendo') && !cleanLower.startsWith('se vende'));
+
       const isExplicitDemand = /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|solicitamos|compro|para cliente|busca cliente|cliente busca|comprador|arrendatario|en búsqueda|en busqueda)\b/i.test(cleanLower);
-      const isExplicitOffer = !isExplicitDemand && /\b(?:ofrezco|ofrecemos|vendo|se vende|se arrienda|en venta|en arriendo|alquilo|alquiler directo|rento|tengo para|disponible|nuevo inmueble|venta directa|arriendo directo|arrendamos|pongo en arriendo|permuto|se permuta)\b/i.test(cleanLower);
+      const isExplicitOffer = !isExplicitDemand && (
+        /\b(?:ofrezco|ofrecemos|vendo|vendemos|se vende|en venta|venta directa|arriendo|arriendos|arrendamos|arrendar|se arrienda|en arriendo|arriendo directo|pongo en arriendo|alquilo|alquilamos|alquilar|se alquila|en alquiler|alquiler directo|rento|rentamos|rentar|se renta|en renta|tengo para|disponible|nuevo inmueble|permuto|permutamos|se permuta)\b/i.test(cleanLower)
+        || /(?:cuenta con|consta de|\d+\s*(?:m2|mts|m²)|alcobas|habitaciones|baños|parqueaderos?|cocina|sala|comedor|dep[oó]sito)/i.test(cleanLower)
+      );
       const isExplicitSearch = isExplicitDemand && !isExplicitOffer;
 
       let fastEmoji: string | null = null;
@@ -1157,7 +1175,7 @@ export class JaniaMatchBot {
       if (isExplicitOffer) {
         if (hasPermuta) {
           fastEmoji = '🔀'; // Oferta con Permuta
-        } else if (hasRent && !cleanLower.includes('vendo') && !cleanLower.includes('en venta')) {
+        } else if (isRentOperation) {
           fastEmoji = '👌'; // Oferta Arriendo
         } else {
           fastEmoji = '👍'; // Oferta Venta
@@ -1165,7 +1183,7 @@ export class JaniaMatchBot {
       } else if (isExplicitSearch) {
         if (hasPermuta) {
           fastEmoji = '🔄'; // Demanda con Permuta
-        } else if (hasRent && !cleanLower.includes('compro') && !cleanLower.includes('comprar')) {
+        } else if (isRentOperation) {
           fastEmoji = '✏️'; // Demanda Arriendo
         } else {
           fastEmoji = '📝'; // Demanda Venta

@@ -125,7 +125,10 @@ export const janiaResultSchema = {
         city: { type: "STRING" },
         propertyType: {
           type: "STRING",
-          enum: ["apartment", "house", "building", "warehouse", "office", "farm", "loft", "consultorio"]
+          enum: [
+            "apartment", "house", "building", "warehouse", "office", "farm",
+            "land", "commercial", "loft", "consultorio", "cabin", "hotel"
+          ]
         },
         transactionType: {
           type: "STRING",
@@ -370,7 +373,17 @@ export function extractFallbackDataFromText(text: string): any {
   const clean = text.toLowerCase().replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0]/g, " ");
   
   let transactionType = "venta";
-  if (clean.includes("arriendo") || clean.includes("alquiler") || clean.includes("renta") || clean.includes("alquilo") || clean.includes("arrendar")) {
+  const hasPermutaSignals = /\b(?:permuto|permuta|permutas|permutamos|se permuta|recibo menor valor|recibo inmueble|recibo vehículo|recibo vehiculo|pelo a pelo|encime|parte de pago)\b/i.test(clean);
+  const hasRentSignals = /\b(?:arriendo|arriendos|arrendar|arrendamos|se arrienda|arriendan|alquilo|alquilar|alquilamos|se alquila|alquiler|alquileres|rento|rentar|se renta|renta|rentas|canon|canones|cánones|amoblado|amoblada|sin amoblar|arrendatario|arrendador|inquilino)\b/i.test(clean)
+    || /(?:incluida|con|\+|más|mas)\s*(?:administraci[oó]n|admon)/i.test(clean)
+    || /(?:administraci[oó]n|admon)\s*(?:incluida|adicional)/i.test(clean)
+    || /valor arriendo/i.test(clean);
+
+  if (hasPermutaSignals) {
+    transactionType = clean.includes("venta") ? "venta_permuta" : "permuta";
+  } else if (hasRentSignals && (clean.includes("venta") || clean.includes("valor venta")) && (clean.includes("arriendo") || clean.includes("valor arriendo"))) {
+    transactionType = "venta_o_arriendo";
+  } else if (hasRentSignals && !clean.includes("compro") && !clean.includes("para compra") && !clean.includes("en compra")) {
     transactionType = "arriendo";
   }
 
@@ -436,7 +449,7 @@ export function extractFallbackDataFromText(text: string): any {
       const unit = millonMatch[2].toLowerCase();
       let mult = 1_000_000;
       if (unit.includes("mil millon")) mult = 1_000_000_000;
-      else if (val < 100 && transactionType !== "arriendo" && val > 15) mult = 10_000_000; // taquigrafía ej: 49 mm -> 490M
+      else if (unit === "mm" && val < 100 && transactionType !== "arriendo" && val > 15) mult = 10_000_000; // taquigrafía SOLO para abreviatura 'mm' (ej: 49 mm -> 490M)
       else mult = 1_000_000;
       
       const computed = Math.round(val * mult);
@@ -556,8 +569,10 @@ export function extractFallbackDataFromText(text: string): any {
   const hasVisitorParking = clean.includes("parqueadero de visitantes") || clean.includes("parqueadero para visitantes") || clean.includes("parqueaderos de visitantes") || clean.includes("parqueo visitantes");
   const hasHeating = clean.includes("calentador de paso") || clean.includes("calentador a gas") || clean.includes("caldera");
 
-  let city = "Bogotá, D.C.";
-  if (clean.includes("valledupar") || clean.includes("cesar")) {
+  let city = "";
+  if (clean.includes("bogota") || clean.includes("bogotá") || clean.includes("cedritos") || clean.includes("chico") || clean.includes("chicó") || clean.includes("rosales") || clean.includes("usaquen") || clean.includes("usaquén") || clean.includes("santa barbara") || clean.includes("santa bárbara") || clean.includes("chapinero")) {
+    city = "Bogotá, D.C.";
+  } else if (clean.includes("valledupar") || clean.includes("cesar")) {
     city = "Valledupar";
   } else if (clean.includes("bucaramanga") || clean.includes("floridablanca") || clean.includes("piedecuesta") || clean.includes("giron") || clean.includes("girón") || clean.includes("santander") || clean.includes("ruitoque")) {
     city = clean.includes("floridablanca") ? "Floridablanca" : clean.includes("piedecuesta") ? "Piedecuesta" : clean.includes("giron") || clean.includes("girón") ? "Girón" : "Bucaramanga";
@@ -2531,8 +2546,15 @@ Por lo tanto, DEBES hacer lo siguiente:
 
       const hasRealEstateKeyword = hasRealEstateTextKeyword(cleanText);
 
+      const _extTmp = result.extractedData || {};
+      const hasTechnicalSpecs = (_extTmp.price && Number(_extTmp.price) > 0) ||
+                                (_extTmp.presupuestoMax && Number(_extTmp.presupuestoMax) > 0) ||
+                                (_extTmp.area && Number(_extTmp.area) > 0) ||
+                                (_extTmp.bedrooms && Number(_extTmp.bedrooms) > 0) ||
+                                (cleanText.includes("$") || /\b\d{2,4}\s*(?:m2|mts|millones|mm|mlls)\b/i.test(cleanText));
+
       // Detectar comentarios cortos de seguimiento, correcciones o ruido de chat (ej: "Corrección: 3 parqueaderos", "Bajo de precio", "Disponible?")
-      const isShortComment = cleanText.length < 50 || cleanText.split(/\s+/).length < 6 || (
+      const isChatNoisePhrase = (
         cleanText.includes("correccion:") ||
         cleanText.includes("corrección:") ||
         cleanText.includes("fe de erratas") ||
@@ -2550,8 +2572,10 @@ Por lo tanto, DEBES hacer lo siguiente:
         cleanText.includes("aún disponible")
       );
 
+      const isShortComment = (isChatNoisePhrase || (!hasRealEstateKeyword && !isSearch && !isOffer && (cleanText.length < 25 || cleanText.split(/\s+/).length < 4))) && !hasTechnicalSpecs;
+
       // Detectar preguntas de recomendación, solicitudes de abogados/servicios legales, comprobantes o consultas no prediales
-      const isGeneralInquiryOrRecommendation = (
+      const isGeneralInquiryOrRecommendation = !hasTechnicalSpecs && !isSearch && !isOffer && (
         cleanText.includes("alguien maneja") ||
         cleanText.includes("alguien recomienda") ||
         cleanText.includes("alguien conoce") ||
@@ -2588,16 +2612,8 @@ Por lo tanto, DEBES hacer lo siguiente:
       } else if (result.classification === "REQUERIMIENTO" && isOffer && !isSearch) {
         console.log("[JANIA-CORRECTION] Cambiando clasificación de REQUERIMIENTO a INMUEBLE basado en heurística de texto (Oferta explícita).");
         result.classification = "INMUEBLE";
-      } else if ((result.classification === "CONSULTA_GENERAL" || result.classification === "DATOS_INCOMPLETOS" || !result.classification) && (hasRealEstateKeyword || isSearch || isOffer)) {
-        // Exigir al menos un dato técnico real (precio, área, o contexto comercial amplio) para rescatar como INMUEBLE o REQUERIMIENTO
-        const rawWordsCount = cleanText.split(/\s+/).length;
-        const _extTmp = result.extractedData || {};
-        const hasTechnicalSpecs = (_extTmp.price && Number(_extTmp.price) > 0) ||
-                                  (_extTmp.presupuestoMax && Number(_extTmp.presupuestoMax) > 0) ||
-                                  (_extTmp.area && Number(_extTmp.area) > 0) ||
-                                  (rawWordsCount >= 10 && (cleanText.includes("apto") || cleanText.includes("apartamento") || cleanText.includes("casa") || cleanText.includes("local") || cleanText.includes("bodega") || cleanText.includes("lote") || cleanText.includes("finca")));
-
-        if (hasTechnicalSpecs) {
+      } else if ((result.classification === "CONSULTA_GENERAL" || result.classification === "DATOS_INCOMPLETOS" || !result.classification) && (hasRealEstateKeyword || isSearch || isOffer || hasTechnicalSpecs)) {
+        if (hasTechnicalSpecs || hasRealEstateKeyword || isSearch || isOffer) {
           if (isSearch && !isOffer) {
             console.log("[JANIA-CORRECTION] Rescatando REQUERIMIENTO desde CONSULTA_GENERAL con datos técnicos verificados.");
             result.classification = "REQUERIMIENTO";
@@ -2800,9 +2816,31 @@ Por lo tanto, DEBES hacer lo siguiente:
     const origenNombre = (isGroup || groupJid) ? (groupName || "Grupo WhatsApp") : (userName || realName || "Contacto Directo");
 
     if (isProperty) {
+      const cleanCheckText = (rawUserText || text || messageToProcess || '').toLowerCase();
+      const groupForTx = (groupName || '').toLowerCase();
+      const isGroupRent = groupForTx.includes('arriend') || groupForTx.includes('alquil') || groupForTx.includes('renta');
+
+      const hasPermutaSignals = /\b(?:permuto|permuta|permutas|permutamos|se permuta|recibo menor valor|recibo inmueble|recibo vehículo|recibo vehiculo|pelo a pelo|encime|parte de pago)\b/i.test(cleanCheckText);
+      const hasRentSignals = /\b(?:arriendo|arriendos|arrendar|arrendamos|se arrienda|arriendan|alquilo|alquilar|alquilamos|se alquila|alquiler|alquileres|rento|rentar|se renta|renta|rentas|canon|canones|cánones|amoblado|amoblada|sin amoblar|arrendatario|arrendador|inquilino)\b/i.test(cleanCheckText)
+        || /(?:incluida|con|\+|más|mas)\s*(?:administraci[oó]n|admon)/i.test(cleanCheckText)
+        || /(?:administraci[oó]n|admon)\s*(?:incluida|adicional)/i.test(cleanCheckText)
+        || /valor arriendo/i.test(cleanCheckText);
+      const hasVentaSignals = /\b(?:vendo|vendemos|se vende|en venta|venta directa|valor venta)\b/i.test(cleanCheckText);
+
+      if (hasPermutaSignals) {
+        extracted.transactionType = hasVentaSignals ? "venta_permuta" : "permuta";
+      } else if (hasRentSignals && hasVentaSignals) {
+        extracted.transactionType = "venta_o_arriendo";
+      } else if (hasRentSignals || (isGroupRent && !hasVentaSignals)) {
+        extracted.transactionType = "arriendo";
+        if (extracted.price && (!extracted.rentPrice || Number(extracted.rentPrice) <= 0)) {
+          extracted.rentPrice = extracted.price;
+        }
+      } else if (hasVentaSignals) {
+        extracted.transactionType = "venta";
+      }
+
       const propertyTitle = extracted.title || `${capitalize(extracted.propertyType || 'inmueble')} en ${extracted.zone || 'Bogotá'} para ${extracted.transactionType || 'venta'}`;
-      
-      const cleanCheckText = (rawUserText || text || '').toLowerCase();
 
       // Filtro Temprano de Clasificación Inmobiliaria Estricta (Tolerancia Cero al Spam, Zoom, Meet, marketing y política)
       const spamCheckProp = esMensajeSpamOBasura(cleanCheckText);
@@ -2870,7 +2908,7 @@ Por lo tanto, DEBES hacer lo siguiente:
         // ── MATRIZ DOCTRINAL v23.0: 6 EMOJIS — INMUEBLE (OFERTA) ──
         const _txProp = (extracted.transactionType || '').toLowerCase();
         const _isPermutaProp = _txProp.includes('permuta') || _txProp === 'venta_permuta' || _txProp === 'aporte';
-        const _isRentProp = _txProp.includes('arriendo') || _txProp === 'arriendo_temporal' || _txProp === 'arriendo_con_opcion_de_compra';
+        const _isRentProp = _txProp.includes('arriendo') || _txProp === 'arriendo_temporal' || _txProp === 'arriendo_con_opcion_de_compra' || _txProp === 'venta_o_arriendo' || isGroupRent || hasRentSignals;
         result.reactionEmoji = _isPermutaProp ? '🔀' : _isRentProp ? '👌' : '👍';
 
         const { executeMatchEngine } = await import("./matching");
@@ -2879,7 +2917,26 @@ Por lo tanto, DEBES hacer lo siguiente:
         });
       }
     } else if (isRequirement) {
-      const cleanCheckReqText = (rawUserText || text || '').toLowerCase();
+      const cleanCheckReqText = (rawUserText || text || messageToProcess || '').toLowerCase();
+      const groupForReqTx = (groupName || '').toLowerCase();
+      const isGroupReqRent = groupForReqTx.includes('arriend') || groupForReqTx.includes('alquil') || groupForReqTx.includes('renta');
+
+      const hasPermutaReqSignals = /\b(?:permuto|permuta|permutas|permutamos|se permuta|recibo menor valor|recibo inmueble|recibo vehículo|recibo vehiculo|pelo a pelo|encime|parte de pago)\b/i.test(cleanCheckReqText);
+      const hasRentReqSignals = /\b(?:arriendo|arriendos|arrendar|arrendamos|se arrienda|arriendan|alquilo|alquilar|alquilamos|se alquila|alquiler|alquileres|rento|rentar|se renta|renta|rentas|canon|canones|cánones|amoblado|amoblada|sin amoblar|arrendatario|arrendador|inquilino)\b/i.test(cleanCheckReqText)
+        || /(?:incluida|con|\+|más|mas)\s*(?:administraci[oó]n|admon)/i.test(cleanCheckReqText)
+        || /(?:administraci[oó]n|admon)\s*(?:incluida|adicional)/i.test(cleanCheckReqText)
+        || /valor arriendo/i.test(cleanCheckReqText);
+      const hasVentaReqSignals = /\b(?:compro|comprar|en compra|para compra|para adquisición)\b/i.test(cleanCheckReqText);
+
+      if (hasPermutaReqSignals) {
+        extracted.transactionType = hasVentaReqSignals ? "venta_permuta" : "permuta";
+      } else if (hasRentReqSignals && hasVentaReqSignals) {
+        extracted.transactionType = "venta_o_arriendo";
+      } else if (hasRentReqSignals || (isGroupReqRent && !hasVentaReqSignals)) {
+        extracted.transactionType = "arriendo";
+      } else if (hasVentaReqSignals) {
+        extracted.transactionType = "venta";
+      }
 
       // Filtro Temprano de Clasificación Inmobiliaria Estricta (Tolerancia Cero al Spam, Zoom, Meet, marketing y política)
       const spamCheckReq = esMensajeSpamOBasura(cleanCheckReqText);
@@ -2940,7 +2997,7 @@ Por lo tanto, DEBES hacer lo siguiente:
         // ── MATRIZ DOCTRINAL v23.0: 6 EMOJIS — REQUERIMIENTO (DEMANDA) ──
         const _txReq = (extracted.transactionType || extracted.tipoNegocioDeseado || '').toLowerCase();
         const _isPermutaReq = _txReq.includes('permuta') || _txReq === 'venta_permuta' || _txReq === 'aporte';
-        const _isRentReq = _txReq.includes('arriendo') || _txReq === 'arriendo_temporal' || _txReq === 'arriendo_con_opcion_de_compra';
+        const _isRentReq = _txReq.includes('arriendo') || _txReq === 'arriendo_temporal' || _txReq === 'arriendo_con_opcion_de_compra' || _txReq === 'venta_o_arriendo' || isGroupReqRent || hasRentReqSignals;
         result.reactionEmoji = _isPermutaReq ? '🔄' : _isRentReq ? '✏️' : '📝';
 
         const { executeMatchEngine } = await import("./matching");
@@ -3640,9 +3697,9 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
   const insertData = {
     ...data,
     name: safeSlice(data.name || `Propiedad en ${data.city || data.zone || "Colombia"}`, 255) || "Propiedad",
-    city: safeSlice(data.city || data.ciudadDeseada, 100) || "Bogotá, D.C.",
-    zone: safeSlice(data.zone || data.addressNeighborhood || data.addressLocality || data.location || data.city || data.ciudadDeseada || "Bogotá, D.C.", 100) || "Bogotá, D.C.",
-    addressCity: safeSlice(data.addressCity || data.address_city || data.city, 100) || "Bogotá, D.C.",
+    city: safeSlice(data.city || data.ciudadDeseada, 100) || null,
+    zone: safeSlice(data.zone || data.addressNeighborhood || data.addressLocality || data.location, 100) || null,
+    addressCity: safeSlice(data.addressCity || data.address_city || data.city, 100) || null,
     addressLocality: safeSlice(data.addressLocality || data.address_locality, 100) || null,
     addressNeighborhood: safeSlice(data.addressNeighborhood || data.address_neighborhood || data.zone, 150) || null,
     location: safeSlice(data.location, 255) || null,

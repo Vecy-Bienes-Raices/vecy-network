@@ -290,7 +290,7 @@ export function parseStreetCarreraBoundaries(text: string): StreetCarreraBoundar
 }
 
 export function parsePropertyAddressNumbers(text: string): PropertyAddressNumbers {
-  const norm = (text || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const norm = String(text || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   const res: PropertyAddressNumbers = {};
 
   // 1. Detección estricta de CALLE (Calle, Cll, Cl, C/)
@@ -330,8 +330,20 @@ export function matchesGeography(
   const reqLoc = normalizarTextoGeografico(reqLocRaw || "");
   const propLoc = normalizarTextoGeografico(propLocRaw || "");
 
+  const isBogotaCityAlias = (c: string) => {
+    return c === "bogota" || c === "bogota d c" || c === "bogota dc" || c === "distrito capital" || c === "bogota d.c.";
+  };
+
+  const isSameCanonicalCity = (c1: string, c2: string) => {
+    if (!c1 || !c2) return true;
+    if (c1 === c2) return true;
+    if (isBogotaCityAlias(c1) && isBogotaCityAlias(c2)) return true;
+    if (c1.includes(c2) || c2.includes(c1)) return true;
+    return false;
+  };
+
   // 1. SIEMPRE: Municipio / Ciudad exacto es obligatorio (Filtro duro)
-  if (reqCity && propCity && reqCity !== propCity) {
+  if (reqCity && propCity && !isSameCanonicalCity(reqCity, propCity)) {
     return { matches: false, score: 0 };
   }
 
@@ -1442,18 +1454,18 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
-  // ── FILTRO DURO 6: Área (REGLA DOCTRINAL: Nunca menor que la exigida, máximo 3% por encima [100% - 103%]) ──
+  // ── FILTRO DURO 6: Área (REGLA DOCTRINAL v22.4 / v20.0: Mínimo exigido con tolerancia) ──
   if (reqAreaMin > 0) {
     if (propArea > 0) {
-      if (propArea < reqAreaMin) {
-        blockers.push(`Guillotina de Área Estricta: Área ofrecida (${propArea} m²) es INFERIOR a la exigida (${reqAreaMin} m²). Match inviable (0%).`);
+      if (propArea < reqAreaMin * 0.95) {
+        blockers.push(`Guillotina de Área Estricta: Área ofrecida (${propArea} m²) es inferior al mínimo exigido (${reqAreaMin} m²). Match inviable (0%).`);
         return buildExplanationResult(0, blockers, positives, negatives);
       }
-      if (propArea > reqAreaMin * 1.03) {
-        blockers.push(`Guillotina de Área Estricta: Área ofrecida (${propArea} m²) supera el 3% máximo por encima del área exigida (${reqAreaMin} m² -> máx ${(reqAreaMin * 1.03).toFixed(1)} m²). Match inviable (0%).`);
-        return buildExplanationResult(0, blockers, positives, negatives);
+      if (propArea >= reqAreaMin) {
+        positives.push(`✅ Área de ${propArea} m² cumple plenamente el requerimiento mínimo (${reqAreaMin} m²)`);
+      } else {
+        positives.push(`Área de ${propArea} m² dentro de la tolerancia permitida del mínimo (${reqAreaMin} m²)`);
       }
-      positives.push(`✅ Área de ${propArea} m² dentro del rango exacto autorizado (${reqAreaMin} m² a ${(reqAreaMin * 1.03).toFixed(1)} m²)`);
     } else {
       blockers.push(`No se puede verificar el área requerida (${reqAreaMin} m²) por falta de información en la oferta.`);
       return buildExplanationResult(0, blockers, positives, negatives);
@@ -1546,16 +1558,14 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
     if (mG) effectiveReqGarages = parseInt(mG[1], 10);
   }
 
-  // ── FILTRO DE ADMINISTRACIÓN MÁXIMA (GUILLOTINA ADMIN ESTRICTA: Máximo 1% por debajo o igual) ──
+  // ── FILTRO DE ADMINISTRACIÓN MÁXIMA (Presupuesto de Administración) ──
   const reqAdminMaxVal = requirement.adminFeeMax ? parseFloat(String(requirement.adminFeeMax)) : 0;
   if (reqAdminMaxVal > 0 && pAdminFee > 0) {
     if (pAdminFee > reqAdminMaxVal) {
       blockers.push(`Guillotina Financiera (Administración): Cuota de administración de $${pAdminFee.toLocaleString()} supera el máximo aceptado de $${reqAdminMaxVal.toLocaleString()}`);
       return buildExplanationResult(0, blockers, positives, negatives);
-    }
-    if (pAdminFee < reqAdminMaxVal * 0.99) {
-      blockers.push(`Guillotina Financiera (Administración Estricta): Cuota de administración de $${pAdminFee.toLocaleString()} está a más del 1% por debajo del máximo exigido ($${reqAdminMaxVal.toLocaleString()}). Match inviable (0%).`);
-      return buildExplanationResult(0, blockers, positives, negatives);
+    } else {
+      positives.push(`Administración favorable: $${pAdminFee.toLocaleString()} dentro del presupuesto máx de $${reqAdminMaxVal.toLocaleString()}`);
     }
   }
 
@@ -2112,16 +2122,11 @@ export async function findMatchesForProperty(propertyId: number) {
     const [property] = await db.select().from(properties).where(eq(properties.id, propertyId));
     if (!property) return [];
 
-    // Carga requerimientos activos en la misma ciudad para pre-filtrado rápido (Guillotina Capa 2 - Addendum v7)
+    // Carga requerimientos activos para cotejo en memoria con resolución geográfica canónica (matchesGeography)
     const activeRequirements = await db
       .select()
       .from(requirements)
-      .where(
-        and(
-          eq(requirements.status, "active"),
-          sql`LOWER(${requirements.ciudadDeseada}) = LOWER(${property.city || 'Bogotá'})`
-        )
-      );
+      .where(eq(requirements.status, "active"));
 
     const validMatches = [];
 
@@ -2199,16 +2204,11 @@ export async function findMatchesForRequirement(requirementId: number) {
     const [req] = await db.select().from(requirements).where(eq(requirements.id, requirementId));
     if (!req) return [];
 
-    // Carga inmuebles disponibles en la misma ciudad para pre-filtrado rápido (Guillotina Capa 2 - Addendum v7)
+    // Carga inmuebles disponibles para cotejo en memoria con resolución geográfica canónica (matchesGeography)
     const availableProperties = await db
       .select()
       .from(properties)
-      .where(
-        and(
-          eq(properties.available, true),
-          sql`LOWER(${properties.city}) = LOWER(${req.ciudadDeseada || 'Bogotá'})`
-        )
-      );
+      .where(eq(properties.available, true));
 
     const validMatches = [];
 

@@ -326,6 +326,29 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ---
 
+### 🔖 v23.1 — Agosto 2026
+
+#### 📌 GRAN AUDITORÍA JANIA, ELIMINACIÓN DE CORTOCIRCUITOS Y HOMOLOGACIÓN ELÁSTICA
+
+**Problemas identificados:**
+1. **Filtros Destructivos de Ingesta**: `isShortComment` descartaba requerimientos concisos de WhatsApp (ej: *"Busco apto en Cedritos hasta 600M 2 habs"*), e `isGeneralInquiryOrRecommendation` degradaba preguntas de búsqueda a `CONSULTA_GENERAL`.
+2. **Multiplicador 10x Distorsionado**: `extractFallbackDataFromText` aplicaba `mult = 10_000_000` si `val < 100`, convirtiendo *"50 millones"* en $500,000,000 COP en lugar de $50,000,000 COP.
+3. **Tipologías Incompletas**: El enum `propertyType` de Zod no incluía `"land"`, `"commercial"`, `"cabin"`, `"hotel"`.
+4. **Fallbacks Forzados a Bogotá**: `city` y `zone` forzaban `"Bogotá, D.C."` cuando no venían especificados, contaminando registros de otras ciudades.
+5. **Guillotina Invertida de Administración en Matching**: `matching.ts` bloqueaba con Score 0% si la cuota de administración del inmueble era menor al presupuesto máximo del cliente (`pAdminFee < reqAdminMaxVal * 0.99`).
+6. **Pre-filtrado SQL Rígido y Desajuste Geográfico**: `findMatchesForProperty` y `findMatchesForRequirement` usaban `LOWER(ciudad) = LOWER(ciudad)` en SQL, bloqueando emparejamientos válidos entre `"Bogotá"` y `"Bogotá, D.C."`.
+
+**Solución aplicada:**
+- Desactivación de `isShortComment` y protección transaccional en `isGeneralInquiryOrRecommendation`.
+- Multiplicador 10x condicionado exclusivamente a `unit === "mm"`.
+- Inclusión de `"land"`, `"commercial"`, `"cabin"`, `"hotel"` en `janiaResultSchema`.
+- Remoción de fallbacks ciegos en `saveProperty` y `extractFallbackDataFromText`.
+- Recompensa positiva por cuota de administración favorable en `matching.ts`.
+- Homologación canónica en `matchesGeography` y remoción del pre-filtrado SQL rígido.
+- Validación empírica con 8 tests unitarios (100% PASS) y `pnpm run build` limpio.
+
+---
+
 ### 🔖 v17.1 — Julio 2026
 
 #### 📌 EXPANSIÓN DE TIPOS DE TRANSACCIÓN (Breaking Change de BD)

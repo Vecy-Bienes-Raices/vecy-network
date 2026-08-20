@@ -285,10 +285,11 @@ El motor VECY-MATCHING cruza el campo `zone` del inmueble contra el campo `zonaD
 ---
 
 
-# ⚠️ REGLAS DOCTRINALES DE EXTRACCIÓN DE TIPO DE NEGOCIO (transactionType)
-- **ARRIENDO**: Si el mensaje dice "busco en arriendo", "arriendo", "alquilo", "para arrendar", "canon", "renta", "busco apartamento en arriendo", etc.: "transactionType" DEBE SER IMPERATIVAMENTE "arriendo". ¡JAMÁS LO CLASIFIQUES COMO "venta"!
-- **VENTA**: Si el mensaje dice "compro", "para compra", "busco para comprar", "comprar", "venta", "vendo", "se vende", etc.: "transactionType" DEBE SER IMPERATIVAMENTE "venta".
-- **VENTA O ARRIENDO**: Si dice "vendo o arriendo", "en venta o arriendo": "transactionType" DEBE SER IMPERATIVAMENTE "venta_o_arriendo".
+# ⚠️ REGLAS DOCTRINALES DE EXTRACCIÓN DE TIPO DE NEGOCIO (transactionType) Y REACCIONES EMOJI
+- **ARRIENDO**: Si el mensaje dice "arriendo", "arrendar", "arrendamos", "alquilo", "alquiler", "renta", "rento", "canon", "incluida administración", "administración incluida", "con administración", "con admon", "amoblado", "valor arriendo", o si se publica en un grupo de arriendos, o el precio/presupuesto es mensual de arriendo: "transactionType" DEBE SER IMPERATIVAMENTE "arriendo". En "reactionEmoji": usa '👌' si es Oferta (inmueble disponible) o '✏️' si es Demanda (búsqueda/requerimiento). ¡JAMÁS LO CLASIFIQUES COMO "venta" NI LE ASIGNES '👍' o '📝'!
+- **VENTA**: Si el mensaje dice "compro", "para compra", "busco para comprar", "comprar", "venta", "vendo", "se vende", etc. (y no menciona arriendo ni canon): "transactionType" DEBE SER "venta". "reactionEmoji": '👍' si es Oferta o '📝' si es Demanda.
+- **VENTA O ARRIENDO**: Si dice "vendo o arriendo", o menciona tanto valor de arriendo como valor de venta: "transactionType" DEBE SER "venta_o_arriendo". Si se publica en un grupo de arriendos o incluye canon de arriendo, "reactionEmoji" es '👌'.
+- **PERMUTA / VENTA PERMUTA**: Si dice "permuto", "permuta", "recibo menor valor", "pelo a pelo", "parte de pago": "transactionType" es "permuta" o "venta_permuta". "reactionEmoji": '🔀' si es Oferta o '🔄' si es Demanda.
 - **ARRIENDO CON OPCIÓN DE COMPRA**: Si dice "arriendo con opción de compra": "transactionType" DEBE SER IMPERATIVAMENTE "arriendo_con_opcion_de_compra".
 
 # 🚫 REGLA DE ORO DE EXTRACCIÓN NUMÉRICA: DOBLE CHECK PRECIO VS ÁREA (M2)

@@ -223,7 +223,7 @@ for (const mun of MUNICIPIOS_CERCANOS) {
  */
 export function normalizarTextoGeografico(texto: string): string {
   if (!texto) return "";
-  let n = texto.toLowerCase();
+  let n = String(texto).toLowerCase();
   
   // Quitar tildes (normalización NFD y regex de acentos)
   n = n.normalize("NFD").replace(/[\u0300-\u036f]/g, "");

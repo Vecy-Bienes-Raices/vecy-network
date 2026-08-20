@@ -52,11 +52,52 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v23.0 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v23.1 — Agosto 2026
 
 ---
 
 ## 📜 REGISTRO DETALLADO DE CONVERSACIONES (ORDEN CRONOLÓGICO INVERSO CON FECHA Y HORA)
+
+### 🗓️ Sesión: Jueves 20 de Agosto de 2026 — 12:15 AM a 01:15 AM (Hora Colombia UTC-5)
+**Versión del Sistema**: `v23.1 — Gran Auditoría JanIA, Eliminación de Cortocircuitos de Ingesta y Homologación Elástica de Matching`
+
+#### 📋 Requerimientos y Directivas Doctrinales de Eduardo A. Rivera:
+1. **Auditoría Integral de Captura e IA (Plan v23.1 + Addendum v10 Claude)**:
+   - Revisión profunda de la arquitectura de `janIA.ts`, `matching.ts` y `whatsapp-match.ts` para erradicar órdenes y contraórdenes, fallbacks forzados y filtros destructivos que descartaban leads o deformaban datos inmobiliarios.
+2. **Desactivación de Filtros Destructivos de Captura**:
+   - Eliminación del filtro `isShortComment` que descartaba demandas concisas (ej: *"Busco apto en Cedritos hasta 600M 2 habs"*).
+   - Eliminación de la degradación forzada a `CONSULTA_GENERAL` (`isGeneralInquiryOrRecommendation`) cuando el mensaje contiene especificaciones o intención transaccional clara.
+3. **Corrección de Multiplicador Taquigráfico 10x (`extractFallbackDataFromText`)**:
+   - La regla `mult = 10_000_000` aplica exclusivamente cuando la unidad escrita es literalmente `mm` (`unit === "mm"`), impidiendo que *"50 millones"* se convirtiera en 500M.
+4. **Ampliación Integral de Tipologías Inmobiliarias**:
+   - Inclusión de `"land"`, `"commercial"`, `"cabin"`, `"hotel"` en el enum `propertyType` de `janiaResultSchema`.
+5. **Eliminación de Fallbacks Forzados a Bogotá**:
+   - En `saveProperty` y `extractFallbackDataFromText`, `city` y `zone` ahora asignan `null` si no están presentes, evitando que inmuebles de Medellín, Cali o la Sabana sean asignados ciegamente a *"Bogotá, D.C."*.
+6. **Eliminación de Guillotina Invertida de Administración en Matching**:
+   - En `matching.ts`, se eliminó el bloqueo al 0% cuando la cuota de administración del inmueble es menor al presupuesto máximo del cliente, tratándolo como un beneficio financiero positivo.
+7. **Homologación Geográfica Canónica y Eliminación de Pre-filtrado SQL Rígido**:
+   - Se reemplazó el filtro SQL `LOWER(ciudad) = LOWER(ciudad)` en `findMatchesForProperty` y `findMatchesForRequirement` por una consulta elástica para permitir cotejo canónico en memoria (`Bogotá` ↔ `Bogotá, D.C.`).
+   - Se homologaron las variantes de Bogotá en `matchesGeography`.
+8. **Alineación Doctrinal de Área y Confort**:
+   - Se eliminó el bloqueo arbitrario de +3% en área; toda área `propArea >= reqAreaMin` cumple 100% de confort.
+9. **Validación Empírica**:
+   - Creación y ejecución de suite de 8 tests unitarios pasando al 100% y compilación limpia con `pnpm run build`.
+
+#### 🛠️ Soluciones e Implementaciones Técnicas:
+- **`server/_core/janIA.ts`**:
+  - Ampliación de `janiaResultSchema.propertyType`.
+  - Corrección de `mult = 10_000_000` solo para `mm`.
+  - Desactivación de `isShortComment` y mitigación de `isGeneralInquiryOrRecommendation`.
+  - Eliminación de fallbacks forzados ciegos a `"Bogotá, D.C."` en `saveProperty`.
+- **`server/_core/matching.ts`**:
+  - Eliminación de guillotina invertida de cuota de administración.
+  - Corrección de igualdad de ciudad en `matchesGeography`.
+  - Remoción de pre-filtrado SQL rígido en `findMatchesForProperty` y `findMatchesForRequirement`.
+  - Ajuste doctrinal de área mínima/confort.
+- **`server/_core/geography.ts`**:
+  - Blindaje con `String(texto)` en `normalizarTextoGeografico`.
+- **`.agents/AGENTS.md`** y **`HISTORIAL_CONVERSACIONES_MAESTRO.md`**:
+  - Registro de cambios e incremento a versión **`v23.1`**.
 
 ### 🗓️ Sesión: Miércoles 19 de Agosto de 2026 — 09:30 AM a 11:40 AM (Hora Colombia UTC-5)
 **Versión del Sistema**: `v23.0 — Matriz Doctrinal de 6 Reacciones de Negocio, Despachador Blindado safeReact y Corrección de Arriendos`

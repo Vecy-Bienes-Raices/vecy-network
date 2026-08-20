@@ -162,7 +162,18 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v23.0 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL: v23.1 — Agosto 2026
+
+### Novedades v23.1 (Gran Auditoría & Súper JanIA Autosuficiente):
+- **Desactivación de Filtros Destructivos de Captura (`janIA.ts`)**: Eliminación del filtro `isShortComment` que descartaba requerimientos concisos y directos de WhatsApp, y de la degradación arbitraria a `CONSULTA_GENERAL` (`isGeneralInquiryOrRecommendation`). Todo lead se ingesta y califica.
+- **Corrección de Multiplicador Taquigráfico 10x (`janIA.ts`)**: `mult = 10_000_000` aplica exclusivamente cuando la unidad escrita es literalmente `mm` (`unit === "mm"`), eliminando la distorsión donde *"50 millones"* se convertía en 500M.
+- **Ampliación Integral de Tipologías (`janiaResultSchema`)**: Inclusión de `"land"`, `"commercial"`, `"cabin"`, `"hotel"` en el enum de `propertyType`.
+- **Eliminación de Fallbacks Forzados a Bogotá (`janIA.ts`)**: `city` y `zone` devuelven `null` si no se especifican, impidiendo que inmuebles de otras ciudades o la Sabana se sobreescriban ciegamente con `"Bogotá, D.C."`.
+- **Eliminación de Guillotina Invertida de Administración (`matching.ts`)**: Las cuotas de administración por debajo del presupuesto máximo son tratadas como beneficio financiero positivo para el cliente en lugar de bloquear el match al 0%.
+- **Elasticidad Geográfica Canónica (`matching.ts`)**: Eliminación del pre-filtrado SQL rígido `LOWER(ciudad) = LOWER(ciudad)` en `findMatchesForProperty` y `findMatchesForRequirement`, y homologación canónica en `matchesGeography` (`Bogotá` ↔ `Bogotá, D.C.`).
+- **Alineación Doctrinal de Área y Confort (`matching.ts`)**: Eliminación del bloqueo erróneo de 3% por área mayor; toda área `propArea >= reqAreaMin` cumple 100% de confort.
+- **Blindaje de Tipos y Normalización Segura (`geography.ts`)**: Protección contra tipos no-string en `normalizarTextoGeografico`.
+- **Verificación Empírica Automatizada**: Suite de 8 tests unitarios pasando al 100% y compilación limpia con `pnpm run build`.
 
 ### Novedades v23.0:
 - **Nueva Matriz Doctrinal de 6 Reacciones de Negocio (`whatsapp-match.ts`)**:
