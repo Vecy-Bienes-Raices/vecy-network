@@ -1146,8 +1146,9 @@ export class JaniaMatchBot {
 
       const hasPermuta = /\b(?:permuto|permuta|permutas|permutamos|se permuta|recibo menor valor|recibo inmueble|recibo vehículo|recibo vehiculo|pelo a pelo|encime)\b/i.test(cleanLower);
       const hasRent = /\b(?:arriendo|se arrienda|arriendan|alquilo|se alquila|alquiler|rento|se renta|renta|canon)\b/i.test(cleanLower);
-      const isExplicitOffer = /\b(?:ofrezco|ofrecemos|vendo|se vende|se arrienda|en venta|en arriendo|arriendo|alquilo|alquiler|rento|renta|tengo para|disponible|nuevo inmueble|venta directa|arriendo directo|permuto|se permuta)\b/i.test(cleanLower);
-      const isExplicitSearch = !isExplicitOffer && /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|solicitamos|compro|para cliente|busca cliente|presupuesto|comprar)\b/i.test(cleanLower);
+      const isExplicitDemand = /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|solicitamos|compro|para cliente|busca cliente|cliente busca|comprador|arrendatario|en búsqueda|en busqueda)\b/i.test(cleanLower);
+      const isExplicitOffer = !isExplicitDemand && /\b(?:ofrezco|ofrecemos|vendo|se vende|se arrienda|en venta|en arriendo|alquilo|alquiler directo|rento|tengo para|disponible|nuevo inmueble|venta directa|arriendo directo|arrendamos|pongo en arriendo|permuto|se permuta)\b/i.test(cleanLower);
+      const isExplicitSearch = isExplicitDemand && !isExplicitOffer;
 
       let fastEmoji: string | null = null;
 
