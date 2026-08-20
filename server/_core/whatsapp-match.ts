@@ -1265,28 +1265,30 @@ export class JaniaMatchBot {
     if (!result) return null;
 
     const classification = (result.classification || '').toUpperCase();
+
+    // ── PRIORIDAD 1: Si janIA.ts ya calculó el emoji correcto en base a transactionType ──
+    if (result.reactionEmoji && (result.inserted === true || result.reactionEmoji === '🚫')) {
+      // 🚫 solo se emite en el grupo oficial principal VECY INMUEBLES NETWORK
+      if (result.reactionEmoji === '🚫' && !isOfficialGroup) return null;
+      return result.reactionEmoji;
+    }
+
+    // ── PRIORIDAD 2: Derivar el emoji desde los datos extraídos (cuando no hay reactionEmoji en result) ──
     const data = result.extractedData || {};
     const txType = (data.transactionType || data.tipoNegocioDeseado || result.transactionType || '').toLowerCase();
 
     const isPermuta = txType.includes('permuta') || txType === 'venta_permuta' || txType === 'aporte';
-    const isRent = txType.includes('arriendo') || txType === 'arriendo_temporal';
+    const isRent = txType.includes('arriendo') || txType === 'arriendo_temporal' || txType === 'arriendo_con_opcion_de_compra';
 
     // ── REGLA DOCTRINAL v23.0: MATRIZ DE 6 EMOJIS DE NEGOCIO ──
-    // 👍 Oferta Venta
-    // 📝 Demanda Venta
-    // 👌 Oferta Arriendo
-    // ✏️ Demanda Arriendo
-    // 🔀 Oferta con Permuta
-    // 🔄 Demanda con Permuta
-
     const isProperty = classification === 'INMUEBLE' || classification.includes('INMUEBLE') || classification.includes('OFERTA');
     const isRequirement = classification === 'REQUERIMIENTO' || classification.includes('REQUERIMIENTO') || classification.includes('DEMANDA') || classification.includes('BUSQUEDA');
 
-    if (result.inserted === true || isProperty || isRequirement) {
+    if (isProperty || isRequirement) {
       if (isProperty) {
         if (isPermuta) return '🔀'; // Oferta con Permuta
         if (isRent) return '👌';    // Oferta Arriendo
-        return '👍';                // Oferta Venta (venta pura, venta_o_arriendo, etc.)
+        return '👍';                // Oferta Venta
       }
       if (isRequirement) {
         if (isPermuta) return '🔄'; // Demanda con Permuta
@@ -1295,17 +1297,17 @@ export class JaniaMatchBot {
       }
     }
 
-    // ── SOLO EN GRUPOS OFICIALES: Reacciones de moderación ──
+    // ── SOLO EN EL GRUPO OFICIAL VECY INMUEBLES NETWORK: Reacciones de moderación ──
     if (isOfficialGroup) {
       if (classification === 'VIOLACION_DE_NORMAS' || classification.includes('SPAM') || classification.includes('INFRACCION')) {
         return '🚫';
       }
       if (classification === 'DATOS_INCOMPLETOS') return '❓';
-      if (classification === 'CONSULTA_GENERAL' || classification === 'RESPUESTA_A_PREGUNTA_IA') return null;
     }
 
     return null;
   }
+
 
 
   private async processGroupBuffer(bufferKey: string) {

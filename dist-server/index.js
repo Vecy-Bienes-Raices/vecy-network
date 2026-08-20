@@ -7585,7 +7585,10 @@ ${liveStats}` : buildSystemPrompt(groupJid);
         result.mentions = [];
         result.extraDMs = [];
         result.sendReputationHook = false;
-        result.reactionEmoji = "\u{1F44D}";
+        const _txProp = (extracted.transactionType || "").toLowerCase();
+        const _isPermutaProp = _txProp.includes("permuta") || _txProp === "venta_permuta" || _txProp === "aporte";
+        const _isRentProp = _txProp.includes("arriendo") || _txProp === "arriendo_temporal" || _txProp === "arriendo_con_opcion_de_compra";
+        result.reactionEmoji = _isPermutaProp ? "\u{1F500}" : _isRentProp ? "\u{1F44C}" : "\u{1F44D}";
         const { executeMatchEngine: executeMatchEngine2 } = await Promise.resolve().then(() => (init_matching(), matching_exports));
         setImmediate(() => {
           executeMatchEngine2(saved.id, null).catch((err) => console.error("Error executing match engine:", err));
@@ -7635,7 +7638,10 @@ ${liveStats}` : buildSystemPrompt(groupJid);
         result.mentions = [];
         result.extraDMs = [];
         result.sendReputationHook = false;
-        result.reactionEmoji = "\u{1F4DD}";
+        const _txReq = (extracted.transactionType || extracted.tipoNegocioDeseado || "").toLowerCase();
+        const _isPermutaReq = _txReq.includes("permuta") || _txReq === "venta_permuta" || _txReq === "aporte";
+        const _isRentReq = _txReq.includes("arriendo") || _txReq === "arriendo_temporal" || _txReq === "arriendo_con_opcion_de_compra";
+        result.reactionEmoji = _isPermutaReq ? "\u{1F504}" : _isRentReq ? "\u270F\uFE0F" : "\u{1F4DD}";
         const { executeMatchEngine: executeMatchEngine2 } = await Promise.resolve().then(() => (init_matching(), matching_exports));
         setImmediate(() => {
           executeMatchEngine2(null, saved.id).catch((err) => console.error("Error executing match engine:", err));
@@ -10844,13 +10850,17 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
       getReactionEmoji(result, isOfficialGroup = false) {
         if (!result) return null;
         const classification = (result.classification || "").toUpperCase();
+        if (result.reactionEmoji && (result.inserted === true || result.reactionEmoji === "\u{1F6AB}")) {
+          if (result.reactionEmoji === "\u{1F6AB}" && !isOfficialGroup) return null;
+          return result.reactionEmoji;
+        }
         const data = result.extractedData || {};
         const txType = (data.transactionType || data.tipoNegocioDeseado || result.transactionType || "").toLowerCase();
         const isPermuta = txType.includes("permuta") || txType === "venta_permuta" || txType === "aporte";
-        const isRent = txType.includes("arriendo") || txType === "arriendo_temporal";
+        const isRent = txType.includes("arriendo") || txType === "arriendo_temporal" || txType === "arriendo_con_opcion_de_compra";
         const isProperty = classification === "INMUEBLE" || classification.includes("INMUEBLE") || classification.includes("OFERTA");
         const isRequirement = classification === "REQUERIMIENTO" || classification.includes("REQUERIMIENTO") || classification.includes("DEMANDA") || classification.includes("BUSQUEDA");
-        if (result.inserted === true || isProperty || isRequirement) {
+        if (isProperty || isRequirement) {
           if (isProperty) {
             if (isPermuta) return "\u{1F500}";
             if (isRent) return "\u{1F44C}";
@@ -10867,7 +10877,6 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
             return "\u{1F6AB}";
           }
           if (classification === "DATOS_INCOMPLETOS") return "\u2753";
-          if (classification === "CONSULTA_GENERAL" || classification === "RESPUESTA_A_PREGUNTA_IA") return null;
         }
         return null;
       }

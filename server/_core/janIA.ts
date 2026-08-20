@@ -2867,7 +2867,11 @@ Por lo tanto, DEBES hacer lo siguiente:
         result.mentions = [];
         result.extraDMs = [];
         result.sendReputationHook = false;
-        result.reactionEmoji = "👍";
+        // ── MATRIZ DOCTRINAL v23.0: 6 EMOJIS — INMUEBLE (OFERTA) ──
+        const _txProp = (extracted.transactionType || '').toLowerCase();
+        const _isPermutaProp = _txProp.includes('permuta') || _txProp === 'venta_permuta' || _txProp === 'aporte';
+        const _isRentProp = _txProp.includes('arriendo') || _txProp === 'arriendo_temporal' || _txProp === 'arriendo_con_opcion_de_compra';
+        result.reactionEmoji = _isPermutaProp ? '🔀' : _isRentProp ? '👌' : '👍';
 
         const { executeMatchEngine } = await import("./matching");
         setImmediate(() => {
@@ -2933,7 +2937,11 @@ Por lo tanto, DEBES hacer lo siguiente:
         result.mentions = [];
         result.extraDMs = [];
         result.sendReputationHook = false;
-        result.reactionEmoji = "📝";
+        // ── MATRIZ DOCTRINAL v23.0: 6 EMOJIS — REQUERIMIENTO (DEMANDA) ──
+        const _txReq = (extracted.transactionType || extracted.tipoNegocioDeseado || '').toLowerCase();
+        const _isPermutaReq = _txReq.includes('permuta') || _txReq === 'venta_permuta' || _txReq === 'aporte';
+        const _isRentReq = _txReq.includes('arriendo') || _txReq === 'arriendo_temporal' || _txReq === 'arriendo_con_opcion_de_compra';
+        result.reactionEmoji = _isPermutaReq ? '🔄' : _isRentReq ? '✏️' : '📝';
 
         const { executeMatchEngine } = await import("./matching");
         setImmediate(() => {
