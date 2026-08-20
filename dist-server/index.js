@@ -5624,6 +5624,10 @@ import { createClient } from "@supabase/supabase-js";
 function normalizeKey(relKey) {
   return relKey.replace(/^\/+/, "").replace(/[^\w\d\-_\.\/]/g, "_");
 }
+function buildAbsoluteLocalUrl(key) {
+  const base = (process.env.VPS_BASE_URL || "http://13.140.149.144").replace(/\/+$/, "");
+  return `${base}/uploads/${key}`;
+}
 async function storagePut(relKey, data, contentType = "application/octet-stream") {
   const key = normalizeKey(relKey);
   const targetFilePath = path4.join(uploadsDir, key);
@@ -5633,8 +5637,8 @@ async function storagePut(relKey, data, contentType = "application/octet-stream"
   }
   const buffer = typeof data === "string" ? Buffer.from(data, "base64") : Buffer.from(data);
   fs4.writeFileSync(targetFilePath, buffer);
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+  const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
   if (supabaseUrl && supabaseKey) {
     try {
       const supabase = createClient(supabaseUrl, supabaseKey);
@@ -5645,16 +5649,18 @@ async function storagePut(relKey, data, contentType = "application/octet-stream"
       if (!uploadError) {
         const { data: publicData } = supabase.storage.from("property-flyers").getPublicUrl(key);
         if (publicData?.publicUrl) {
-          console.log(`[Storage] Archivo subido exitosamente a Supabase Storage: ${publicData.publicUrl}`);
+          console.log(`[Storage] \u2705 Archivo subido a Supabase Storage: ${publicData.publicUrl}`);
           return { key, url: publicData.publicUrl };
         }
+      } else {
+        console.warn(`[Storage] Supabase upload error: ${uploadError.message}`);
       }
     } catch (sbErr) {
-      console.warn(`[Storage] Supabase Storage opcional omitido (${sbErr.message}), usando almacenamiento local est\xE1tico.`);
+      console.warn(`[Storage] Supabase Storage omitido (${sbErr.message}), usando almacenamiento local.`);
     }
   }
-  const publicUrl = `/uploads/${key}`;
-  console.log(`[Storage] Archivo guardado localmente en ${targetFilePath} -> URL: ${publicUrl}`);
+  const publicUrl = buildAbsoluteLocalUrl(key);
+  console.log(`[Storage] \u{1F4C1} Archivo guardado localmente en ${targetFilePath} -> URL absoluta: ${publicUrl}`);
   return { key, url: publicUrl };
 }
 var uploadsDir;

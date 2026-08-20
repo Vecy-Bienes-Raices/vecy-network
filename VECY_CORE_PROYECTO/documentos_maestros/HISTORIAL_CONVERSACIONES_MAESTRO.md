@@ -52,11 +52,35 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v23.1 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v23.2 — Agosto 2026
 
 ---
 
 ## 📜 REGISTRO DETALLADO DE CONVERSACIONES (ORDEN CRONOLÓGICO INVERSO CON FECHA Y HORA)
+
+### 🗓️ Sesión: Jueves 20 de Agosto de 2026 — 06:40 PM a 06:45 PM (Hora Colombia UTC-5)
+**Versión del Sistema**: `v23.2 — Resiliencia Total de Autenticación en Producción & Normalización de Supabase Storage para Flyers`
+
+#### 📋 Requerimientos y Directivas Doctrinales de Eduardo A. Rivera:
+1. **Solución Definitiva al Acceso Administrativo en Producción (`vecy-network.vercel.app/login`)**:
+   - Diagnóstico del error *"No se pudo sincronizar automáticamente. Ingresa manualmente."* al iniciar sesión con Google.
+2. **Clarificación y Blindaje de Captura de Flyers e Imágenes**:
+   - Validación del flujo completo de ingesta visual de flyers desde WhatsApp, OCR con Gemini 2.5 Flash, guardado en Supabase Storage y visualización/descarga en `/admin`.
+
+#### 🛠️ Soluciones e Implementaciones Técnicas:
+- **`client/src/pages/Login.tsx`**:
+   - Ampliación del timeout de sincronización de sesión a **30 segundos** (en lugar de los 5s que abortaban antes de completar el salto transcontinental).
+   - Inyección instantánea del usuario autenticado en la memoria de React Query con `utils.auth.me.setData(undefined, res.user)` vía `trpc.useUtils()`.
+   - Eliminación del `supabase.auth.signOut()` destructivo en el catch para no cerrar la sesión de Google prematuramente.
+- **`server/storage.ts`**:
+   - Normalización de variables de entorno de Supabase (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`) para el bucket `property-flyers`.
+   - Generación de URLs públicas absolutas del VPS en caso de fallback local.
+- **`vercel.json`**:
+   - Inclusión de regla de rewrite proxy para `/uploads/:path*` hacia el backend VPS.
+- **`.agents/AGENTS.md`** y **`HISTORIAL_CONVERSACIONES_MAESTRO.md`**:
+   - Incremento y documentación oficial de versión **`v23.2`**.
+
+---
 
 ### 🗓️ Sesión: Jueves 20 de Agosto de 2026 — 12:15 AM a 01:15 AM (Hora Colombia UTC-5)
 **Versión del Sistema**: `v23.1 — Gran Auditoría JanIA, Eliminación de Cortocircuitos de Ingesta y Homologación Elástica de Matching`

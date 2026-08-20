@@ -162,7 +162,12 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v23.1 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL: v23.2 — Agosto 2026
+
+### Novedades v23.2 (Resiliencia de Autenticación & Storage de Flyers):
+- **Resiliencia Total en Autenticación OAuth / Supabase (`Login.tsx`)**: Eliminación del temporizador destructivo de 5s y reemplazo por timeout holgado de 30s. Sincronización instantánea de caché React Query con `utils.auth.me.setData(undefined, res.user)` y supresión del `signOut()` forzado en fallas de red.
+- **Corrección de Supabase Storage para Flyers (`storage.ts`)**: Normalización de nombres de variables de entorno (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`) para el bucket `property-flyers` y generación de URLs públicas absolutas.
+- **Proxy de Archivos Estáticos en Vercel (`vercel.json`)**: Configuración de regla de rewrite para `/uploads/:path*` hacia el servidor VPS.
 
 ### Novedades v23.1 (Gran Auditoría & Súper JanIA Autosuficiente):
 - **Desactivación de Filtros Destructivos de Captura (`janIA.ts`)**: Eliminación del filtro `isShortComment` que descartaba requerimientos concisos y directos de WhatsApp, y de la degradación arbitraria a `CONSULTA_GENERAL` (`isGeneralInquiryOrRecommendation`). Todo lead se ingesta y califica.

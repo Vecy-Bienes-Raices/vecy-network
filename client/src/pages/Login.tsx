@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 export default function Login() {
   const [, navigate] = useLocation();
   const { user, refresh } = useAuth();
+  const utils = trpc.useUtils();
   const loginMutation = trpc.auth.loginWithSupabaseToken.useMutation();
 
   const [email, setEmail] = useState('');
@@ -26,23 +27,22 @@ export default function Login() {
     isExchangingRef.current = true;
     try {
       setLoading(true);
-      // Timeout de seguridad de 5 segundos para prevenir congelamiento
+      // Timeout seguro de 30 segundos para conexiones transcontinentales / móviles
       const exchangePromise = loginMutation.mutateAsync({ accessToken });
-      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout de sincronización')), 5000));
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout de sincronización con el servidor')), 30000));
       const res: any = await Promise.race([exchangePromise, timeoutPromise]);
       if (res && res.sessionToken) {
         localStorage.setItem("jania-session-token", res.sessionToken);
+      }
+      if (res && res.user) {
+        utils.auth.me.setData(undefined, res.user);
       }
       await refresh();
       toast.success('Sesión iniciada correctamente');
       navigate('/admin');
     } catch (err: any) {
       console.error('[Login] Error syncing session:', err);
-      toast.error('No se pudo sincronizar automáticamente. Ingresa manualmente.');
-      // Limpiar para permitir login fresco sin bloqueos
-      try {
-        await supabase.auth.signOut();
-      } catch (_) {}
+      toast.error('No se pudo sincronizar la sesión con el servidor. Reintenta o ingresa con correo.');
       localStorage.removeItem("jania-session-token");
     } finally {
       setLoading(false);
