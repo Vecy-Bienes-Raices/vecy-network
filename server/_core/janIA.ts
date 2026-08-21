@@ -5,9 +5,7 @@
 import { invokeLLM } from "./llm";
 import { getDb } from "../db";
 import { properties, requirements, users, propertyImages, InsertProperty, InsertRequirement, pendingSessions, propertyMatches, messages as dbMessages, conversations as dbConversations, propertyPublicationHistory, inmobiliarioLexicon, matchFeedback } from "../../drizzle/schema";
-import { findMatchesForProperty, findMatchesForRequirement } from "./matching";
-import { validarZona, normalizarTextoGeografico, desambiguarBarriosCompuestos, deducirGeografiaTripartita } from "./geography";
-import { validateCity } from "./divipola";
+import { validarZona, normalizarTextoGeografico, desambiguarBarriosCompuestos, deducirGeografiaTripartita, resolveIntersectionToBarrio } from "./geography";
 import { transcribeAudio } from "./voiceTranscription";
 import { eq, and, sql, gte, desc, or, isNotNull } from "drizzle-orm";
 import { storagePut } from "../storage";
@@ -3813,6 +3811,18 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
     }
   }
 
+  // ── RESOLUCIÓN GEOGRÁFICA INTELIGENTE DE INTERSECCIONES Y CRUCES ──
+  if (!data.zone || data.zone.trim() === "" || data.zone.toLowerCase() === "bogota" || data.zone.toLowerCase() === "bogotá" || data.zone.toLowerCase() === "colombia") {
+    const geoInferred = resolveIntersectionToBarrio(data.rawText || data.name || data.location);
+    if (geoInferred) {
+      data.zone = geoInferred.barrio;
+      data.addressNeighborhood = geoInferred.barrio;
+      data.addressLocality = geoInferred.localidad;
+      data.city = data.city || geoInferred.ciudad;
+      console.log(`[JanIA-GeoResolver] 🧭 Inmueble: cruce vial deducido exitosamente: '${(data.rawText || "").slice(0, 45)}...' → Barrio: ${geoInferred.barrio} | Localidad: ${geoInferred.localidad} | Ciudad: ${geoInferred.ciudad}`);
+    }
+  }
+
   const insertData = {
     ...data,
     name: safeSlice(data.name || `Propiedad en ${data.city || data.zone || "Colombia"}`, 255) || "Propiedad",
@@ -4092,6 +4102,18 @@ async function saveRequirement(data: any, userId: string, realName: string, imag
     comisiones: data.comisiones || data.caracteristicasDeseadas?.comisiones,
     antiguedad: data.antiguedad || data.caracteristicasDeseadas?.antiguedad
   };
+
+  // ── RESOLUCIÓN GEOGRÁFICA INTELIGENTE DE INTERSECCIONES Y CRUCES ──
+  if (!data.zonaDeseada && (!data.zone || data.zone.trim() === "" || data.zone.toLowerCase() === "bogota" || data.zone.toLowerCase() === "bogotá" || data.zone.toLowerCase() === "colombia")) {
+    const geoInferred = resolveIntersectionToBarrio(data.rawText || data.name);
+    if (geoInferred) {
+      data.zonaDeseada = geoInferred.barrio;
+      data.addressNeighborhood = geoInferred.barrio;
+      data.addressLocality = geoInferred.localidad;
+      data.ciudadDeseada = data.ciudadDeseada || geoInferred.ciudad;
+      console.log(`[JanIA-GeoResolver] 🧭 Requerimiento: cruce vial deducido exitosamente: '${(data.rawText || "").slice(0, 45)}...' → Barrio: ${geoInferred.barrio} | Localidad: ${geoInferred.localidad} | Ciudad: ${geoInferred.ciudad}`);
+    }
+  }
 
   const insertData = {
     ...data,

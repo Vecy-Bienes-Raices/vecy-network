@@ -227,6 +227,16 @@ function sectorIntersectsPerimeter(
     }
   }
 
+  // Verificación bidireccional: ¿El centro del perímetro cae DENTRO del polígono del sector?
+  // Crucial para intersecciones o perímetros pequeños contenidos dentro de un barrio extenso
+  const centerLat = (bbox.minLat + bbox.maxLat) / 2;
+  const centerLng = (bbox.minLng + bbox.maxLng) / 2;
+  for (const ring of sector.rings) {
+    if (pointInPolygon({ lat: centerLat, lng: centerLng }, ring)) {
+      return true;
+    }
+  }
+
   return false;
 }
 

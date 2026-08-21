@@ -672,6 +672,24 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
+### 🗓️ Sesión: Jueves 20 de Agosto de 2026 — 08:30 PM a 08:50 PM (Hora Colombia UTC-5)
+**Versión del Sistema**: `v23.5 — Agosto 2026`  
+**Commit GitHub Main**: `v23.5`
+
+#### 📋 Requerimientos Específicos del Usuario (Eduardo A. Rivera):
+1. **Deducción Geográfica Pura de Intersecciones y Cruces Viales**: JanIA debe ser capaz de determinar el nombre exacto del Barrio, la Localidad y la Ciudad a partir de cruces viales (ej. *"en la 83 con 5"*, *"cra 15 con 93"*, *"calle 100 con 19"*, *"127 con 7ma"*), cuadrantes o perímetros sin necesidad de que el broker escriba la palabra literal del barrio.
+
+#### 🛠️ Soluciones e Implementaciones Técnicas:
+- **Motor de Deducción Geográfica de Cruces e Intersecciones (`resolveIntersectionToBarrio` en `geography.ts`)**:
+  - Detección precisa de patrones viales colombianos (`Calle X con Cra Y`, `Cra X con Calle Y`, `#`, `con`, `y`, `septima/7ma`, etc.).
+  - Algoritmo bidireccional Point-in-Polygon sobre la base de datos IDECA de los 1,230 sectores catastrales de Bogotá D.C.
+- **Inyección Automática en Ingesta (`saveProperty` y `saveRequirement` en `janIA.ts`)**:
+  - Si una publicación carece de barrio explícito pero menciona un cruce vial, JanIA deduce y asigna automáticamente el `zone`, `addressNeighborhood`, `addressLocality` y `city`.
+- **Actualización Doctrinal en Prompt Maestro (`prompts/base.md`)**:
+  - Instrucción obligatoria a Gemini de aplicar su conocimiento geográfico para deducir barrios y ciudades ante cualquier indicio vial o hito urbano.
+
+---
+
 ### 🗓️ Sesión: Viernes 14 de Agosto de 2026 — 02:00 AM a 05:30 AM (Hora Colombia UTC-5)
 **Versión del Sistema**: `v20.0H — Agosto 2026`  
 **Commit GitHub Main**: [`fd896b4`](https://github.com/Vecy-Bienes-Raices/vecy-network/commit/fd896b4)

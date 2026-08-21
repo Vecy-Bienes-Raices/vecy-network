@@ -1312,3 +1312,73 @@ export function deducirGeografiaTripartita(
   };
 }
 
+/**
+ * Extractor inteligente de intersecciones viales (Calles y Carreras) de Colombia
+ * Identifica cruces como "83 con 5", "cll 127 con cra 7", "cra 15 con 93", "calle 100 # 19-20"
+ */
+export function extractIntersectionFromText(text: string | null | undefined): { calle: number; carrera: number } | null {
+  if (!text) return null;
+  const clean = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, " ");
+
+  // 1. "cra 15 con 93", "carrera 7 con 83", "septima con 116", "7ma con 127", "kr 11 con 85"
+  const pCra = clean.match(/(?:carrera|cra|cr|k|kr|septima|7ma)\s*(\d{1,3})?\s*(?:con|y|#|no\.?|x)\s*(?:calle|cll|c\b)?\s*(\d{1,3})(?:a|b|c|ta|da|ra|ma)?\b/i);
+  if (pCra) {
+    let cra = pCra[1] ? parseInt(pCra[1], 10) : (clean.includes("septima") || clean.includes("7ma") ? 7 : 0);
+    const calle = parseInt(pCra[2], 10);
+    if (cra > 0 && calle > 0 && calle <= 240 && cra <= 150) {
+      return { calle, carrera: cra };
+    }
+  }
+
+  // 2. "calle 83 con 5", "cll 83 con cra 5", "en la 83 con 5", "83 con 5ta", "calle 83 # 5-20"
+  const pCll = clean.match(/(?:en\s+la|calle|cll|c\s*\.?\s*)?\s*(\d{1,3})(?:a|b|c)?\s*(?:con|#|no\.?|y|x)\s*(?:carrera|cra|cr|k|kr|septima|7ma)?\s*(\d{1,3})?(?:a|b|c|ta|da|ra|ma)?\b/i);
+  if (pCll) {
+    const num1 = parseInt(pCll[1], 10);
+    let num2 = pCll[2] ? parseInt(pCll[2], 10) : (pCll[0].includes("septima") || pCll[0].includes("7ma") ? 7 : 0);
+    if (num1 >= 1 && num1 <= 240 && num2 >= 1 && num2 <= 150) {
+      return { calle: num1, carrera: num2 };
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Resuelve una intersección o cruce vial hacia su Barrio Catastral exacto,
+ * Localidad y Ciudad utilizando el polígono IDECA Catastro de Bogotá.
+ */
+export function resolveIntersectionToBarrio(text: string | null | undefined): {
+  barrio: string;
+  barriosAlternos: string[];
+  localidad: string;
+  ciudad: string;
+} | null {
+  const coords = extractIntersectionFromText(text);
+  if (!coords) return null;
+
+  const perimeter = {
+    calleNorte: Math.min(240, coords.calle + 1),
+    calleSur: Math.max(1, coords.calle - 1),
+    craOriente: Math.max(1, coords.carrera - 1),
+    craOccidente: Math.min(150, coords.carrera + 1),
+    ciudad: 'bogota'
+  };
+
+  const lookup = lookupBarriosByPerimeter(perimeter);
+  let locality = 'Chapinero';
+  if (coords.calle >= 100 && coords.carrera <= 60) locality = 'Usaquén';
+  else if (coords.calle >= 100 && coords.carrera > 60) locality = 'Suba';
+  else if (coords.calle < 100 && coords.calle >= 39) locality = 'Chapinero';
+  else if (coords.calle < 39 && coords.calle >= 1) locality = 'Santa Fe';
+
+  const primaryBarrio = lookup.barrios[0] || `Calle ${coords.calle} con Cra ${coords.carrera}`;
+
+  return {
+    barrio: primaryBarrio,
+    barriosAlternos: lookup.barrios,
+    localidad,
+    ciudad: 'Bogotá, D.C.'
+  };
+}
+
+

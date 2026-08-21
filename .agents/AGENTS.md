@@ -162,7 +162,13 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v23.4 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL: v23.5 — Agosto 2026
+
+### Novedades v23.5 (Motor de Deducción Geográfica Pura e Intersecciones Catastrales):
+- **Extractor Inteligente de Intersecciones Viales (`extractIntersectionFromText` y `resolveIntersectionToBarrio` en `geography.ts`)**: Análisis robusto de cruces viales (`Calle X con Cra Y`, `Cra X con Calle Y`, `#`, `con`, `y`, `septima/7ma`, etc.).
+- **Point-in-Polygon Bidireccional sobre IDECA Catastro (`geo-lookup.ts`)**: Resolución espacial exacta sobre los 1,230 sectores catastrales de Bogotá D.C., asignando el Barrio oficial, Localidad y Ciudad (`Bogotá, D.C.`).
+- **Auto-Enriquecimiento Geográfico en Ingesta (`saveProperty` y `saveRequirement`)**: Si un asesor publica *"en la 83 con 5"* o *"cra 15 con 93"* sin mencionar la palabra "barrio", JanIA deduce de forma 100% matemática y catastral el Barrio (`"El Retiro"`, `"El Chicó"`, `"La Cabrera"`), la Localidad (`"Chapinero"`) y la Ciudad.
+- **Directriz Doctrinal de IA Pura (`prompts/base.md`)**: Instrucción obligatoria a Gemini de aplicar su conocimiento urbano de Colombia para inferir siempre el sector geográfico y nunca dejar `zone: null`.
 
 ### Novedades v23.4 (Extractor Inteligente de Teléfonos & Directorio de Brokers 100% Pasivo Anti-Ban):
 - **Extractor Inteligente de Teléfono Colombiano (`extractColombianPhoneFromText` en `janIA.ts`)**: Análisis robusto de enlaces `wa.me/573...`, prefijos de contacto (`Tel`, `Cel`, `WhatsApp`, `Inf`, `Contacto`, `Asesor`) y números celulares de 10 dígitos colombianos con filtrado de descarte para precios y áreas.
