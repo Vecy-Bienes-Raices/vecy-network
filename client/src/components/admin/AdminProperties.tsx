@@ -382,70 +382,128 @@ export default function AdminProperties() {
               )}
             </div>
           ) : (
-            <div className="overflow-x-auto scrollbar-thin">
-              <table className="w-full min-w-[600px]">
-                <thead>
-                  <tr className="border-b border-border">
-                    {['Inmueble', 'Ubicación', 'Precio', 'Datos', 'Estado', 'Acciones'].map(h => (
-                      <th key={h} className="px-6 py-4 text-left text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
-                        {h}
-                      </th>
+            <>
+              {/* VISTA ESCRITORIO (TABLE) */}
+              <div className="hidden md:block overflow-x-auto scrollbar-thin">
+                <table className="w-full min-w-[600px]">
+                  <thead>
+                    <tr className="border-b border-border">
+                      {['Inmueble', 'Ubicación', 'Precio', 'Datos', 'Estado', 'Acciones'].map(h => (
+                        <th key={h} className="px-6 py-4 text-left text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.map(prop => (
+                      <tr key={prop.id} className="table-row-vecy">
+                        <td className="px-6 py-4">
+                          <p className="font-semibold text-foreground">{prop.name}</p>
+                          <p className="text-xs text-muted-foreground capitalize">{prop.propertyType}</p>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-muted-foreground">{prop.location}</td>
+                        <td className="px-6 py-4">
+                          <span className="font-semibold text-primary">
+                            ${Number(prop.price).toLocaleString('es-CO')}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-muted-foreground">
+                          {[
+                            prop.bedrooms && `${prop.bedrooms} hab`,
+                            prop.bathrooms && `${prop.bathrooms} baños`,
+                            prop.areaTotal && `${prop.areaTotal}m²`,
+                          ].filter(Boolean).join(' · ') || '—'}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-wrap gap-1.5">
+                            <span className={prop.available ? 'badge-active' : 'badge-muted'}>
+                              {prop.available ? 'Disponible' : 'No disponible'}
+                            </span>
+                            {prop.featured && <span className="badge-gold">★ Destacado</span>}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex gap-1">
+                            <button
+                              onClick={() => startEdit(prop)}
+                              className="p-2 hover:bg-primary/10 rounded-lg transition text-primary/60 hover:text-primary"
+                              title="Editar"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (confirm(`¿Eliminar "${prop.name}"?`)) deleteMutation.mutate({ id: prop.id });
+                              }}
+                              className="p-2 hover:bg-destructive/10 rounded-lg transition text-destructive/40 hover:text-destructive"
+                              title="Eliminar"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
                     ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map(prop => (
-                    <tr key={prop.id} className="table-row-vecy">
-                      <td className="px-6 py-4">
-                        <p className="font-semibold text-foreground">{prop.name}</p>
-                        <p className="text-xs text-muted-foreground capitalize">{prop.propertyType}</p>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-muted-foreground">{prop.location}</td>
-                      <td className="px-6 py-4">
-                        <span className="font-semibold text-primary">
+                  </tbody>
+                </table>
+              </div>
+
+              {/* VISTA MÓVIL (CARDS) */}
+              <div className="grid grid-cols-1 gap-3 p-3 md:hidden">
+                {filtered.map(prop => (
+                  <div key={prop.id} className="bg-card border border-border p-4 rounded-2xl space-y-3 shadow-md">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h4 className="font-bold text-foreground text-sm break-words">{prop.name}</h4>
+                        <p className="text-xs text-muted-foreground capitalize mt-0.5">{prop.propertyType} · {prop.location}</p>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          onClick={() => startEdit(prop)}
+                          className="p-2 bg-primary/10 text-primary rounded-xl"
+                          title="Editar"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (confirm(`¿Eliminar "${prop.name}"?`)) deleteMutation.mutate({ id: prop.id });
+                          }}
+                          className="p-2 bg-destructive/10 text-destructive rounded-xl"
+                          title="Eliminar"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-2 border-t border-border pt-2.5">
+                      <div>
+                        <p className="text-[10px] uppercase font-bold text-muted-foreground">Precio</p>
+                        <p className="font-bold text-primary text-base">
                           ${Number(prop.price).toLocaleString('es-CO')}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-muted-foreground">
+                        </p>
+                      </div>
+                      <div className="text-right text-xs text-muted-foreground">
                         {[
                           prop.bedrooms && `${prop.bedrooms} hab`,
-                          prop.bathrooms && `${prop.bathrooms} baños`,
+                          prop.bathrooms && `${prop.bathrooms} bñ`,
                           prop.areaTotal && `${prop.areaTotal}m²`,
                         ].filter(Boolean).join(' · ') || '—'}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex flex-wrap gap-1.5">
-                          <span className={prop.available ? 'badge-active' : 'badge-muted'}>
-                            {prop.available ? 'Disponible' : 'No disponible'}
-                          </span>
-                          {prop.featured && <span className="badge-gold">★ Destacado</span>}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex gap-1">
-                          <button
-                            onClick={() => startEdit(prop)}
-                            className="p-2 hover:bg-primary/10 rounded-lg transition text-primary/60 hover:text-primary"
-                            title="Editar"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => {
-                              if (confirm(`¿Eliminar "${prop.name}"?`)) deleteMutation.mutate({ id: prop.id });
-                            }}
-                            className="p-2 hover:bg-destructive/10 rounded-lg transition text-destructive/40 hover:text-destructive"
-                            title="Eliminar"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                      <span className={prop.available ? 'badge-active text-[10px]' : 'badge-muted text-[10px]'}>
+                        {prop.available ? 'Disponible' : 'No disponible'}
+                      </span>
+                      {prop.featured && <span className="badge-gold text-[10px]">★ Destacado</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
       )}

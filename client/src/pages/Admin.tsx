@@ -33,20 +33,20 @@ function BotStatusWidget() {
 
   if (isLoading || !status) {
     return (
-      <div className="flex items-center gap-2 text-zinc-500 text-xs bg-zinc-900/50 px-3 py-1.5 rounded-xl border border-white/5">
-        <Radio className="w-3.5 h-3.5 animate-pulse" />
-        <span>Cargando estado del bot...</span>
+      <div className="flex items-center gap-2 text-zinc-500 text-xs bg-zinc-900/50 px-3 py-1.5 rounded-xl border border-white/5 w-full sm:w-auto">
+        <Radio className="w-3.5 h-3.5 animate-pulse text-zinc-400 shrink-0" />
+        <span className="truncate">Cargando estado del bot...</span>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+    <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
       {/* Indicador de conexión con verde eléctrico fluorescente incandescente */}
-      <div className="flex items-center gap-2 bg-zinc-900/80 border border-[#00ff66]/20 px-3.5 py-1.5 rounded-xl text-xs backdrop-blur-md shadow-[0_0_10px_rgba(0,255,102,0.1)]">
-        <span className={`w-3 h-3 rounded-full ${status.isReady ? 'bg-[#00ff66] shadow-[0_0_14px_#00ff66] animate-pulse' : 'bg-red-500 shadow-[0_0_10px_#ef4444]'}`} />
+      <div className="flex items-center gap-2 bg-zinc-900/90 border border-[#00ff66]/20 px-3 py-1.5 rounded-xl text-xs backdrop-blur-md shadow-[0_0_10px_rgba(0,255,102,0.1)] shrink-0">
+        <span className={`w-2.5 h-2.5 rounded-full ${status.isReady ? 'bg-[#00ff66] shadow-[0_0_12px_#00ff66] animate-pulse' : 'bg-red-500 shadow-[0_0_10px_#ef4444]'}`} />
         <span className={`font-bold ${status.isReady ? 'text-[#00ff66] drop-shadow-[0_0_6px_rgba(0,255,102,0.6)]' : 'text-zinc-300'}`}>
-          JanIA Match: {status.isReady ? 'Activo' : 'Desconectado'}
+          JanIA: {status.isReady ? 'Activo' : 'Offline'}
         </span>
         {status.phone && (
           <span className="text-[10px] text-emerald-300/80 font-mono font-medium border-l border-white/10 pl-2">
@@ -56,11 +56,11 @@ function BotStatusWidget() {
       </div>
 
       {/* Contadores del día en tiempo real */}
-      <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-zinc-400 font-bold">
-        <span className="bg-emerald-500/10 text-emerald-400 px-2.5 py-1 rounded-lg border border-emerald-500/20">
-          {status.todayProperties} Inmuebles Hoy
+      <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-zinc-400 font-bold shrink-0">
+        <span className="bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded-lg border border-emerald-500/20 whitespace-nowrap">
+          {status.todayProperties} Inm. Hoy
         </span>
-        <span className="bg-indigo-500/10 text-indigo-400 px-2.5 py-1 rounded-lg border border-indigo-500/20">
+        <span className="bg-indigo-500/10 text-indigo-400 px-2 py-1 rounded-lg border border-indigo-500/20 whitespace-nowrap">
           {status.todayRequirements} Reqs Hoy
         </span>
       </div>
@@ -71,7 +71,7 @@ function BotStatusWidget() {
 export default function Admin() {
   const { user, logout, loading } = useAuth();
   const [, navigate] = useLocation();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 768 : false);
   const [activeTab, setActiveTab] = useState('properties');
 
   if (loading) {

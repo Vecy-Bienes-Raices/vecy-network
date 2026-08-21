@@ -1695,7 +1695,10 @@ export default function AdminMatches() {
       propGarages: m.property?.garages ?? '',
       propStratum: m.property?.stratum ?? '',
       propZone: m.property?.zone || m.property?.addressNeighborhood || '',
+      propLocality: m.property?.addressLocality || '',
       propCity: m.property?.city || 'Bogotá',
+      propPropertyType: m.property?.propertyType || '',
+      propTransactionType: m.property?.transactionType || '',
       propPhone: m.property?.idUsuarioWhatsapp || m.property?.phone || m.property?.contactPhone || '',
 
       // Demanda (Requerimiento)
@@ -1707,7 +1710,10 @@ export default function AdminMatches() {
       reqGarages: m.requirement?.parqueaderosMin ?? '',
       reqStratum: m.requirement?.estratoDeseado ?? '',
       reqZone: m.requirement?.zonaDeseada || m.requirement?.addressNeighborhood || '',
+      reqLocality: m.requirement?.addressLocality || '',
       reqCity: m.requirement?.ciudadDeseada || 'Bogotá',
+      reqPropertyType: m.requirement?.tipoInmuebleDeseado || '',
+      reqTransactionType: m.requirement?.tipoNegocioDeseado || '',
       reqPhone: m.requirement?.idUsuarioWhatsapp || m.requirement?.phone || m.requirement?.contactPhone || '',
     });
   };
@@ -1739,7 +1745,10 @@ export default function AdminMatches() {
           stratum: editForm.propStratum !== undefined && editForm.propStratum !== '' ? Number(editForm.propStratum) : undefined,
           zone: editForm.propZone ? String(editForm.propZone) : undefined,
           addressNeighborhood: editForm.propZone ? String(editForm.propZone) : undefined,
+          addressLocality: editForm.propLocality ? String(editForm.propLocality) : undefined,
           city: editForm.propCity ? String(editForm.propCity) : undefined,
+          propertyType: editForm.propPropertyType ? String(editForm.propPropertyType) : undefined,
+          transactionType: editForm.propTransactionType ? String(editForm.propTransactionType) : undefined,
           idUsuarioWhatsapp: cleanPropPhone,
         });
       }
@@ -1758,6 +1767,8 @@ export default function AdminMatches() {
           zonaDeseada: editForm.reqZone ? String(editForm.reqZone) : undefined,
           addressNeighborhood: editForm.reqZone ? String(editForm.reqZone) : undefined,
           ciudadDeseada: editForm.reqCity ? String(editForm.reqCity) : undefined,
+          tipoInmuebleDeseado: editForm.reqPropertyType ? String(editForm.reqPropertyType) : undefined,
+          tipoNegocioDeseado: editForm.reqTransactionType ? String(editForm.reqTransactionType) : undefined,
           idUsuarioWhatsapp: cleanReqPhone,
         });
       }
@@ -1913,53 +1924,53 @@ export default function AdminMatches() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-zinc-950 p-6 border border-white/10 rounded-3xl">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-zinc-950 p-4 sm:p-6 border border-white/10 rounded-2xl sm:rounded-3xl">
         <div>
-          <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Sparkles className="w-6 h-6 text-[#bf953f] animate-pulse" />
-            Reporte de Coincidencias (Matches de JanIA)
+          <h2 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+            <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-[#bf953f] animate-pulse shrink-0" />
+            <span>Reporte de Coincidencias</span>
           </h2>
-          <p className="text-zinc-500 text-sm mt-1 flex items-center gap-2">
-            <span>{isLoading ? 'Cargando coincidencias...' : `Coincidencias Verificadas: ${filteredMatches.length} matches (85% - 100%)`}</span>
-            <span className="text-[10px] bg-[#bf953f]/20 text-[#bf953f] border border-[#bf953f]/30 px-2 py-0.5 rounded-full font-mono font-extrabold ml-2">
+          <p className="text-zinc-500 text-xs sm:text-sm mt-1 flex items-center gap-2 flex-wrap">
+            <span>{isLoading ? 'Cargando coincidencias...' : `Coincidencias: ${filteredMatches.length} matches (85% - 100%)`}</span>
+            <span className="text-[10px] bg-[#bf953f]/20 text-[#bf953f] border border-[#bf953f]/30 px-2 py-0.5 rounded-full font-mono font-extrabold">
               {VECY_VERSION_LABEL}
             </span>
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button onClick={() => refetch()} variant="outline" className="border-white/10 bg-white/5 text-white hover:bg-white/10 text-xs">
+        <div className="grid grid-cols-2 sm:flex gap-2 w-full sm:w-auto">
+          <Button onClick={() => refetch()} variant="outline" className="border-white/10 bg-white/5 text-white hover:bg-white/10 text-xs h-10 min-h-[40px]">
             Refrescar
           </Button>
           <Button 
             disabled={filteredMatches.length === 0}
             onClick={exportData} 
-            className="bg-[#bf953f] hover:bg-[#a67d32] text-black font-bold flex items-center gap-2 text-xs"
+            className="bg-[#bf953f] hover:bg-[#a67d32] text-black font-bold flex items-center justify-center gap-1.5 text-xs h-10 min-h-[40px]"
           >
-            <Download className="w-4 h-4" />
-            Exportar CSV
+            <Download className="w-3.5 h-3.5" />
+            <span>Exportar CSV</span>
           </Button>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="flex gap-4 flex-wrap bg-zinc-900/40 p-4 border border-white/5 rounded-2xl">
-        <div className="flex-1 min-w-64">
+      <div className="flex flex-col sm:flex-row gap-3 bg-zinc-900/40 p-3 sm:p-4 border border-white/5 rounded-2xl">
+        <div className="flex-1 w-full">
           <Input
             placeholder="Buscar por barrio, nombre, descripción o teléfono..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="bg-black/40 border-white/10 text-white placeholder-zinc-500 text-xs h-10"
+            className="bg-black/40 border-white/10 text-white placeholder-zinc-500 text-xs h-10 rounded-xl"
           />
         </div>
-        <div className="flex items-center gap-2 bg-black/40 border border-white/10 rounded-md px-3 text-white h-10">
-          <SlidersHorizontal className="w-4 h-4 text-zinc-500" />
-          <span className="text-xs text-zinc-400">Match Mínimo:</span>
+        <div className="flex items-center gap-2 bg-black/40 border border-white/10 rounded-xl px-3 text-white h-10 w-full sm:w-auto shrink-0">
+          <SlidersHorizontal className="w-4 h-4 text-zinc-500 shrink-0" />
+          <span className="text-xs text-zinc-400 shrink-0">Filtro:</span>
           <select
             value={minScore}
             onChange={(e) => setMinScore(e.target.value)}
-            className="bg-transparent border-none text-white focus:ring-0 text-xs font-semibold cursor-pointer outline-none"
+            className="bg-transparent border-none text-white focus:ring-0 text-xs font-semibold cursor-pointer outline-none w-full"
           >
-            <option className="bg-[#0c0c0c]" value="85">⚡ Todos los Matches Validados (85% - 100%)</option>
+            <option className="bg-[#0c0c0c]" value="85">⚡ Todos los Matches (85% - 100%)</option>
             <option className="bg-[#0c0c0c]" value="85_94">⚡ MATCH Aproximado (85% - 94%)</option>
             <option className="bg-[#0c0c0c]" value="95">🎯 MATCH Perfecto (95% - 100%)</option>
           </select>
@@ -2039,25 +2050,25 @@ export default function AdminMatches() {
                   <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-gradient-to-b from-[#bf953f] to-[#a67d32] opacity-50 group-hover:opacity-100 transition-opacity" />
 
                   {/* Top Bar info */}
-                  <div className="bg-white/[0.01] px-4 sm:px-6 py-3 sm:py-4 flex flex-wrap items-center justify-between gap-3 border-b border-white/5">
-                    <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
-                      <span className={`h-2.5 w-2.5 rounded-full ${dotColor}`} />
+                  <div className="bg-white/[0.01] px-3.5 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/5">
+                    <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                      <span className={`h-2.5 w-2.5 rounded-full shrink-0 ${dotColor}`} />
                       <span className={`text-lg sm:text-xl font-extrabold tracking-tight ${scoreColor}`}>{score.toFixed(0)}% Match</span>
-                      <span className="text-zinc-500 text-[11px] sm:text-xs">Afinidad registrada por IA</span>
+                      <span className="text-zinc-500 text-[11px] sm:text-xs">Afinidad por IA</span>
                       {score >= 95 ? (
-                        <span className="text-[9px] bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1">
+                        <span className="text-[9px] bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
                           🎯 MATCH PERFECTO (95% - 100%)
                         </span>
                       ) : (
-                        <span className="text-[9px] bg-[#bf953f]/10 border border-[#bf953f]/30 text-[#bf953f] px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1">
+                        <span className="text-[9px] bg-[#bf953f]/10 border border-[#bf953f]/30 text-[#bf953f] px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
                           ⚡ MATCH APROXIMADO (85% - 94%)
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 sm:gap-4 flex-wrap w-full sm:w-auto justify-between sm:justify-end">
+                    <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-4 flex-wrap w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5">
                       <button
                         onClick={() => handleStartEdit(m)}
-                        className={`text-xs px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 ${
+                        className={`text-xs px-3 py-1.5 rounded-xl font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm active:scale-95 h-9 min-h-[36px] w-full sm:w-auto ${
                           isEditingThisCard 
                             ? 'bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/40' 
                             : 'bg-[#bf953f]/15 hover:bg-[#bf953f]/25 text-[#bf953f] border border-[#bf953f]/30'
@@ -2067,11 +2078,13 @@ export default function AdminMatches() {
                         {isEditingThisCard ? 'Cancelar Edición' : '✏️ Editar Fichas (Completar N/E)'}
                       </button>
 
-                      <div className="flex items-center gap-1.5 text-zinc-500 text-xs font-mono">
-                        <Calendar className="w-3.5 h-3.5" />
-                        {date}
+                      <div className="flex items-center gap-3 text-zinc-500 text-xs font-mono ml-auto sm:ml-0">
+                        <div className="flex items-center gap-1">
+                          <Calendar className="w-3.5 h-3.5" />
+                          <span>{date}</span>
+                        </div>
+                        <span className="text-[10px] text-zinc-600 font-mono">#M{m.id}</span>
                       </div>
-                      <span className="text-[10px] text-zinc-600 font-mono">Coincidencia #M{m.id}</span>
                     </div>
                   </div>
 
@@ -3044,17 +3057,17 @@ export default function AdminMatches() {
                   )}
 
                   {/* CAPA C: RETROALIMENTACIÓN ACTIVA DE BROKER / ENTRENAMIENTO JANIA */}
-                  <div className="px-4 sm:px-6 py-3 bg-zinc-950/60 border-t border-white/5 flex flex-wrap items-center justify-between gap-3">
+                  <div className="px-4 sm:px-6 py-3 bg-zinc-950/60 border-t border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="text-[11px] text-zinc-400 flex items-center gap-1.5 font-medium">
-                      <Sparkles className="w-3.5 h-3.5 text-amber-400/80" />
+                      <Sparkles className="w-3.5 h-3.5 text-amber-400/80 shrink-0" />
                       <span>Calificación Comercial (Entrenamiento JanIA):</span>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="grid grid-cols-2 sm:flex items-center gap-2 w-full sm:w-auto">
                       <Button
                         size="sm"
                         variant="ghost"
                         onClick={() => handleFeedback(m, 'exitoso')}
-                        className="h-8 px-3 text-xs text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300 border border-emerald-500/30 rounded-xl flex items-center gap-1.5 transition-all"
+                        className="h-10 sm:h-8 px-3 text-xs text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300 border border-emerald-500/30 rounded-xl flex items-center justify-center gap-1.5 transition-all w-full sm:w-auto min-h-[40px]"
                       >
                         <ThumbsUp className="w-3.5 h-3.5" />
                         <span>🤝 Trato en Curso</span>
@@ -3063,7 +3076,7 @@ export default function AdminMatches() {
                         size="sm"
                         variant="ghost"
                         onClick={() => { setRejectModalMatch(m); setRejectReason(''); setCustomRejectNote(''); }}
-                        className="h-8 px-3 text-xs text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 border border-rose-500/30 rounded-xl flex items-center gap-1.5 transition-all"
+                        className="h-10 sm:h-8 px-3 text-xs text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 border border-rose-500/30 rounded-xl flex items-center justify-center gap-1.5 transition-all w-full sm:w-auto min-h-[40px]"
                       >
                         <ThumbsDown className="w-3.5 h-3.5" />
                         <span>⛔ Descartar Match</span>
@@ -3073,25 +3086,25 @@ export default function AdminMatches() {
 
                   {/* BARRA DE EDICIÓN FLOTANTE / STICKY EN EL FOOTER DE LA TARJETA */}
                   {isEditingThisCard && (
-                    <div className="sticky bottom-0 z-30 bg-gradient-to-r from-emerald-950 via-zinc-900 to-emerald-950 border-t border-emerald-500/40 p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-2xl rounded-b-3xl">
+                    <div className="sticky bottom-0 z-30 bg-gradient-to-r from-emerald-950 via-zinc-900 to-emerald-950 border-t border-emerald-500/40 p-3.5 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-2xl rounded-b-3xl">
                       <div className="flex items-center gap-2.5 text-emerald-400 text-xs font-semibold">
                         <Sparkles className="w-4 h-4 text-emerald-400 animate-pulse shrink-0" />
                         <span>
                           Modo Edición Activo: Usa <strong>💾 Guardar Cambios</strong> mientras chateas con el autor para buscar el 100% manual, o <strong>⚡ Recalcular Match</strong> si no hubo negocio para buscar nuevas parejas en la red.
                         </span>
                       </div>
-                      <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto shrink-0 justify-end">
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto shrink-0 justify-end">
                         <Button
                           onClick={() => { setEditingMatchId(null); setEditForm({}); }}
                           variant="outline"
-                          className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 text-xs h-10 px-3 min-h-[44px]"
+                          className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 text-xs h-10 px-3 min-h-[44px] w-full sm:w-auto"
                         >
                           Cancelar
                         </Button>
                         <Button
                           onClick={() => handleOnlySave(m)}
                           disabled={isSaving}
-                          className="bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs h-10 px-3.5 shadow-md min-h-[44px] flex items-center justify-center gap-1.5"
+                          className="bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs h-10 px-3.5 shadow-md min-h-[44px] flex items-center justify-center gap-1.5 w-full sm:w-auto"
                         >
                           {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                           💾 Guardar Cambios (Modo Chat)
@@ -3099,7 +3112,7 @@ export default function AdminMatches() {
                         <Button
                           onClick={() => handleRecalculateMatch(m)}
                           disabled={isSaving}
-                          className="bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs h-10 px-4 shadow-lg shadow-emerald-500/20 min-h-[44px] flex items-center justify-center gap-1.5"
+                          className="bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs h-10 px-4 shadow-lg shadow-emerald-500/20 min-h-[44px] flex items-center justify-center gap-1.5 w-full sm:w-auto"
                         >
                           {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                           ⚡ Recalcular Match (Buscar Nueva Pareja)

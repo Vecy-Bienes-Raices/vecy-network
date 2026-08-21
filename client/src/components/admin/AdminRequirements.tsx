@@ -151,7 +151,8 @@ export default function AdminRequirements() {
         </div>
       ) : (
         <div className="bg-zinc-900/30 border border-white/5 rounded-2xl overflow-hidden">
-          <div className="overflow-x-auto scrollbar-thin">
+          {/* VISTA ESCRITORIO (TABLE) */}
+          <div className="hidden md:block overflow-x-auto scrollbar-thin">
             <table className="w-full border-collapse text-left min-w-[650px]">
               <thead>
                 <tr className="border-b border-white/10 bg-white/[0.02] text-[10px] uppercase tracking-widest text-zinc-500 font-bold">
@@ -229,6 +230,61 @@ export default function AdminRequirements() {
                 })}
               </tbody>
             </table>
+          </div>
+
+          {/* VISTA MÓVIL (CARDS) */}
+          <div className="grid grid-cols-1 gap-3 p-3 md:hidden">
+            {filteredReqs.map((r: any) => {
+              const rawPhone = r.idUsuarioWhatsapp?.split('@')[0] || '';
+              return (
+                <div key={r.id} className="bg-zinc-900/80 border border-white/5 p-4 rounded-2xl space-y-3 shadow-md">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <span className="text-[10px] text-zinc-500 font-mono">#{r.id}</span>
+                      <h4 className="font-bold text-white text-sm break-words">{r.name || 'Búsqueda de Inmueble'}</h4>
+                    </div>
+                    {rawPhone && (
+                      <a 
+                        href={`https://wa.me/${rawPhone}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="bg-[#25D366] hover:bg-[#20ba5a] text-black text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1 shrink-0 shadow-md min-h-[36px]"
+                      >
+                        WA <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                  </div>
+
+                  <p className="text-xs text-zinc-400 bg-black/40 p-2.5 rounded-xl border border-white/5 leading-relaxed">
+                    {r.rawText || 'Sin descripción detallada.'}
+                  </p>
+
+                  <div className="flex items-center justify-between gap-2 border-t border-white/5 pt-2.5">
+                    <div>
+                      <p className="text-[10px] uppercase font-bold text-zinc-500">Presupuesto</p>
+                      <p className="font-bold text-[#bf953f] text-sm font-mono">{formatCOP(r.presupuestoMax)}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] uppercase font-bold text-zinc-500">Contacto</p>
+                      <p className="text-xs font-bold text-zinc-300 select-all">{formatPhoneDisplay(r.idUsuarioWhatsapp)}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                    <span className="bg-zinc-800 text-zinc-300 border border-zinc-700 px-2 py-0.5 rounded text-[10px] font-bold">
+                      {translateType(r.tipoInmuebleDeseado)}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                      r.tipoNegocioDeseado === 'venta' 
+                        ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' 
+                        : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
+                    }`}>
+                      {translateNeg(r.tipoNegocioDeseado)}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
