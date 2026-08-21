@@ -162,7 +162,15 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v23.9 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL: v24.0 — Agosto 2026
+
+### Novedades v24.0 (Sidebar Fijo, Expandible y Contraíble en PC/Laptops estilo JanIA Console):
+- **Layout Fijo e Independiente (`Admin.tsx`)**: Arquitectura de vista `h-screen overflow-hidden` donde el sidebar permanece 100% fijo a la izquierda en PCs y Laptops mientras el área de contenido (`main`) se desplaza con scroll independiente, eliminando el desplazamiento indeseado del menú de navegación.
+- **Modo Dual Expandible / Contraíble (`w-64` ↔ `w-20`)**:
+  - *Expandido (`w-64`)*: Título completo, logotipos, nombres de módulos y botón `PanelLeftClose` con tooltip.
+  - *Contraído (`w-20` / Icon-Only)*: Íconos centrados con `title` tooltips flotantes, indicadores activos dorados y botón interactivo para re-expandir.
+- **Persistencia en LocalStorage**: Almacenamiento en `vecy_admin_sidebar_expanded` para conservar la preferencia del usuario entre sesiones y recargas.
+- **Drawer Móvil Preservado**: Mantiene el menú deslizable con backdrop oscuro (`fixed inset-0 bg-black/80`) y la barra horizontal deslizante de pestañas para smartphones.
 
 ### Novedades v23.9 (Taxonomía Visual Maestra de Flyers & Persistencia 100% en Mesa de Edición de Matches):
 - **Taxonomía Maestra de 6 Formatos Visuales (`prompts/base.md` & `janIA.ts`)**:

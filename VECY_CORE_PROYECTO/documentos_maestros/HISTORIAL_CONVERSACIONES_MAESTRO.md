@@ -52,11 +52,31 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v23.8 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v24.0 — Agosto 2026
 
 ---
 
 ## 📜 REGISTRO DETALLADO DE CONVERSACIONES (ORDEN CRONOLÓGICO INVERSO CON FECHA Y HORA)
+
+### 📌 SESIÓN 32: SIDEBAR FIJO, EXPANDIBLE Y CONTRAÍBLE EN PC/LAPTOPS & DIAGNÓSTICO DE VISTAS (v24.0)
+- **Fecha y Hora**: 21 de Agosto de 2026 (Tarde / Noche)
+- **Versión resultante**: `v24.0`
+- **Participantes**: Eduardo A. Rivera (Director Tecnología) & Antigravity IDE (Pair Programmer)
+- **Solicitud de Eduardo**:
+  - *"¿Qué vista pública o sección del proyecto puedes revisar y optimizar ahora? 1. Vistas Públicas de Propiedades (Home.tsx, Properties.tsx, PropertyDetail.tsx), 2. Mercado de Requerimientos (RequirementsMarketplace.tsx), 3. Consola y Herramientas JanIA (JanIAConsole.tsx, AgentDashboard.tsx). NOTA: Adicionalmente primero antes de ver estas vistas y optimizarlas, quisiera que el sidebar de la página de administración quedara fijo y expandible y contraible solamente en dispositivos PC de escritorio y Laptops, un sidebar similar al de la página del Chat con JanIA."*
+  - *"Primero sube a GitHub:"*
+- **Diagnóstico Técnico**:
+  1. En `Admin.tsx`, el contenedor principal utilizaba `min-h-screen` con `<aside>` estático en desktop (`md:static`), lo cual provocaba que el menú lateral se desplazara fuera de la pantalla cuando el usuario hacía scroll vertical en tablas largas de inmuebles o matches.
+  2. No existía botón de colapso rápido estilo `PanelLeftClose`/`PanelLeft` ni persistencia del estado contraído/expandido en `localStorage`.
+- **Acciones Ejecutadas**:
+  1. **Arquitectura de Layout Fijo (`Admin.tsx`)**: Reestructuración del layout a `h-screen overflow-hidden` donde el `<aside>` permanece 100% fijo a la izquierda (`shrink-0 h-full`) y el área de contenido (`main`) gestiona el scroll independiente suave.
+  2. **Modo Dual Expandible / Contraíble (`w-64` ↔ `w-20`)**:
+     - *Expandido (`w-64`)*: Logotipo, título con degradado Gold, nombres completos de pestañas con indicador luminoso y botón `PanelLeftClose` con tooltip.
+     - *Contraído (`w-20` / Icon-Only)*: Íconos centrados con `title` tooltips flotantes, indicadores activos dorados y botón interactivo para re-expandir.
+  3. **Persistencia en LocalStorage**: Se añadió sincronización con `localStorage.getItem('vecy_admin_sidebar_expanded')` para recordar la preferencia del usuario en PC y Laptop entre recargas y sesiones.
+  4. **Protección del Drawer Móvil**: Se conservó intacto el comportamiento móvil responsivo con backdrop oscuro de desenfoque (`fixed inset-0 bg-black/80`) y la barra horizontal táctil de pestañas.
+  5. **Diagnóstico Integral de Vistas**: Presentación del mapa de optimización para las vitrinas públicas (`Home.tsx`, `Properties.tsx`, `PropertyDetail.tsx`, `RequirementsMarketplace.tsx`, `JanIAConsole.tsx`, `AgentDashboard.tsx`).
+  6. **Validación**: Verificación de compilación limpia con `npx tsc --noEmit` (0 errores) y `npm run build` exitoso. Subida a GitHub `main`.
 
 ### 📌 SESIÓN 30: CAPTACIÓN DE FLYERS, SUPABASE STORAGE & AUDITORÍA TYPESCRIPT TOTAL (v23.8)
 - **Fecha y Hora**: 20 de Agosto de 2026 (Noche)

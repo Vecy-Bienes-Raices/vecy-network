@@ -3,7 +3,7 @@ import { useAuth } from '@/_core/hooks/useAuth';
 import { useLocation } from 'wouter';
 import { getLoginUrl } from '@/const';
 import {
-  LogOut, Home, Building2, Users, MessageSquare, BarChart3, Menu, X, GitBranch, Shield, Sparkles, ClipboardList, Radio
+  LogOut, Home, Building2, Users, MessageSquare, BarChart3, Menu, X, GitBranch, Shield, Sparkles, ClipboardList, Radio, PanelLeftClose, PanelLeft
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import AdminProperties from '@/components/admin/AdminProperties';
@@ -71,8 +71,26 @@ function BotStatusWidget() {
 export default function Admin() {
   const { user, logout, loading } = useAuth();
   const [, navigate] = useLocation();
-  const [sidebarOpen, setSidebarOpen] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 768 : false);
+  const [sidebarExpanded, setSidebarExpanded] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+    const saved = localStorage.getItem('vecy_admin_sidebar_expanded');
+    if (saved !== null) {
+      return saved === 'true';
+    }
+    return window.innerWidth >= 1024;
+  });
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('properties');
+
+  const toggleSidebar = () => {
+    setSidebarExpanded((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('vecy_admin_sidebar_expanded', String(next));
+      } catch (e) {}
+      return next;
+    });
+  };
 
   if (loading) {
     return (
@@ -138,66 +156,101 @@ export default function Admin() {
     }
   };
 
-
   return (
-    <div className="min-h-screen bg-background flex flex-col md:flex-row text-foreground relative overflow-x-hidden">
+    <div className="h-screen bg-background flex flex-col md:flex-row text-foreground relative overflow-hidden font-sans select-none">
 
       {/* ===== MOBILE BACKDROP OVERLAY ===== */}
-      {sidebarOpen && (
+      {mobileDrawerOpen && (
         <div 
-          onClick={() => setSidebarOpen(false)} 
-          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 md:hidden animate-fade-in" 
+          onClick={() => setMobileDrawerOpen(false)} 
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 md:hidden animate-fade-in transition-opacity" 
         />
       )}
 
-      {/* ===== SIDEBAR ===== */}
+      {/* ===== SIDEBAR (FIXED ON DESKTOP & COLLAPSIBLE) ===== */}
       <aside
-        className={`fixed md:static inset-y-0 left-0 z-50 bg-card border-r border-border flex flex-col 
+        className={`
+          fixed md:relative inset-y-0 left-0 z-50 bg-[#0a0a0a] border-r border-white/5 flex flex-col shrink-0 h-full
           transition-all duration-300 ease-in-out shadow-2xl md:shadow-none
-          ${sidebarOpen ? 'w-64 translate-x-0' : '-translate-x-full md:translate-x-0 md:w-20'}`}
+          ${mobileDrawerOpen ? 'translate-x-0 w-64' : '-translate-x-full md:translate-x-0'}
+          ${sidebarExpanded ? 'md:w-64' : 'md:w-20'}
+        `}
       >
-        {/* Logo */}
-        <div className="p-4 border-b border-border flex items-center justify-between min-h-[72px]">
-          {sidebarOpen ? (
-            <div className="flex items-center gap-3 animate-fade-in">
+        {/* Logo & Header */}
+        <div className="p-4 border-b border-white/5 flex items-center justify-between min-h-[72px] shrink-0">
+          {/* Desktop View Header */}
+          <div className="hidden md:flex items-center justify-between w-full">
+            {sidebarExpanded ? (
+              <>
+                <div className="flex items-center gap-3 animate-fade-in overflow-hidden">
+                  <img
+                    src="/logo-vecy.png"
+                    alt="Vecy Network"
+                    className="h-8 w-auto object-contain filter drop-shadow-[0_0_8px_rgba(191,149,63,0.3)] shrink-0"
+                  />
+                  <div className="flex flex-col">
+                    <span className="font-sans font-black text-transparent bg-clip-text bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#bf953f] tracking-[0.15em] text-xs uppercase leading-tight">
+                      Vecy Network
+                    </span>
+                    <p className="text-muted-foreground text-[9px] uppercase tracking-[0.25em] whitespace-nowrap">
+                      Panel Admin
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={toggleSidebar}
+                  className="text-zinc-400 hover:text-white transition-colors p-1.5 rounded-xl hover:bg-white/5 ml-2 shrink-0 border border-transparent hover:border-white/10"
+                  title="Contraer menú"
+                >
+                  <PanelLeftClose className="w-4 h-4 text-primary/80 hover:text-primary" />
+                </button>
+              </>
+            ) : (
+              <div className="w-full flex items-center justify-center">
+                <button
+                  onClick={toggleSidebar}
+                  className="p-1.5 rounded-xl hover:bg-white/5 transition-all text-zinc-400 hover:text-white group border border-transparent hover:border-white/10"
+                  title="Expandir menú"
+                >
+                  <img
+                    src="/logo-vecy.png"
+                    alt="Vecy"
+                    className="h-7 w-auto object-contain filter drop-shadow-[0_0_6px_rgba(191,149,63,0.4)] group-hover:scale-105 transition-transform"
+                  />
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Mobile View Header */}
+          <div className="flex md:hidden items-center justify-between w-full">
+            <div className="flex items-center gap-3">
               <img
                 src="/logo-vecy.png"
                 alt="Vecy Network"
-                className="h-9 w-auto object-contain"
+                className="h-8 w-auto object-contain"
               />
-              <p className="text-muted-foreground text-[9px] uppercase tracking-[0.3em] whitespace-nowrap">
-                Panel Admin
-              </p>
+              <div className="flex flex-col">
+                <span className="font-sans font-black text-transparent bg-clip-text bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#bf953f] tracking-[0.15em] text-xs uppercase leading-tight">
+                  Vecy Network
+                </span>
+                <p className="text-muted-foreground text-[9px] uppercase tracking-[0.25em]">
+                  Panel Admin
+                </p>
+              </div>
             </div>
-          ) : (
-            <div className="mx-auto">
-              <img
-                src="/logo-vecy.png"
-                alt="Vecy"
-                className="h-7 w-auto object-contain opacity-80"
-              />
-            </div>
-          )}
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="text-muted-foreground hover:text-primary transition-colors p-1.5 rounded-lg hover:bg-secondary ml-2"
-          >
-            <X className="w-4 h-4" />
-          </button>
+            <button
+              onClick={() => setMobileDrawerOpen(false)}
+              className="text-zinc-400 hover:text-white p-1.5 rounded-xl hover:bg-white/5"
+              title="Cerrar menú"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
-        {/* Botón de expandir cuando está colapsado en desktop */}
-        {!sidebarOpen && (
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="hidden md:block mx-auto mt-3 text-muted-foreground hover:text-primary transition-colors p-1.5 rounded-lg hover:bg-secondary"
-          >
-            <Menu className="w-4 h-4" />
-          </button>
-        )}
-
-        {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto scrollbar-hide">
+        {/* Navigation Tabs */}
+        <nav className="flex-1 p-3 space-y-1.5 overflow-y-auto scrollbar-hide">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -206,53 +259,67 @@ export default function Admin() {
                 key={tab.id}
                 onClick={() => {
                   setActiveTab(tab.id);
-                  if (window.innerWidth < 768) setSidebarOpen(false);
+                  setMobileDrawerOpen(false);
                 }}
-                className={`nav-item-vecy w-full ${isActive ? 'active' : ''} ${!sidebarOpen ? 'justify-center' : ''}`}
-                title={!sidebarOpen ? tab.label : undefined}
+                className={`
+                  w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all group relative
+                  ${isActive 
+                    ? 'bg-gradient-to-r from-[#bf953f]/20 via-[#bf953f]/10 to-transparent text-[#fcf6ba] border border-[#bf953f]/30 shadow-[0_0_15px_rgba(191,149,63,0.1)]' 
+                    : 'text-zinc-400 hover:text-zinc-100 hover:bg-white/5 border border-transparent'}
+                  ${!sidebarExpanded ? 'md:justify-center md:px-0' : ''}
+                `}
+                title={!sidebarExpanded ? tab.label : undefined}
               >
-                <Icon className="w-5 h-5 flex-shrink-0" />
-                {sidebarOpen && (
-                  <span className="truncate">{tab.label}</span>
-                )}
-                {isActive && sidebarOpen && (
-                  <span className="ml-auto w-1.5 h-1.5 rounded-full bg-primary" />
+                <Icon className={`w-4 h-4 shrink-0 transition-transform group-hover:scale-110 ${isActive ? 'text-primary' : 'text-zinc-400 group-hover:text-zinc-200'}`} />
+                
+                <span className={`truncate ${!sidebarExpanded ? 'md:hidden' : ''}`}>
+                  {tab.label}
+                </span>
+
+                {isActive && (
+                  <span className={`w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_8px_#bf953f] ml-auto shrink-0 ${!sidebarExpanded ? 'md:hidden' : ''}`} />
                 )}
               </button>
             );
           })}
         </nav>
 
-        {/* Footer */}
-        <div className="p-4 border-t border-border space-y-1">
+        {/* Footer Links */}
+        <div className="p-3 border-t border-white/5 space-y-1.5 shrink-0 bg-black/20">
           <button
             onClick={() => navigate('/')}
-            className={`nav-item-vecy w-full ${!sidebarOpen ? 'justify-center' : ''}`}
-            title={!sidebarOpen ? 'Sitio Público' : undefined}
+            className={`
+              w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium text-zinc-400 hover:text-white hover:bg-white/5 transition-all
+              ${!sidebarExpanded ? 'md:justify-center md:px-0' : ''}
+            `}
+            title={!sidebarExpanded ? 'Sitio Público' : undefined}
           >
-            <Home className="w-5 h-5 flex-shrink-0" />
-            {sidebarOpen && <span>Sitio Público</span>}
+            <Home className="w-4 h-4 shrink-0 text-zinc-400" />
+            <span className={`truncate ${!sidebarExpanded ? 'md:hidden' : ''}`}>Sitio Público</span>
           </button>
           <button
             onClick={logout}
-            className={`nav-item-vecy w-full text-destructive/70 hover:text-destructive hover:bg-destructive/5 ${!sidebarOpen ? 'justify-center' : ''}`}
-            title={!sidebarOpen ? 'Cerrar Sesión' : undefined}
+            className={`
+              w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium text-red-400/80 hover:text-red-400 hover:bg-red-500/10 transition-all
+              ${!sidebarExpanded ? 'md:justify-center md:px-0' : ''}
+            `}
+            title={!sidebarExpanded ? 'Cerrar Sesión' : undefined}
           >
-            <LogOut className="w-5 h-5 flex-shrink-0" />
-            {sidebarOpen && <span>Cerrar Sesión</span>}
+            <LogOut className="w-4 h-4 shrink-0 text-red-400/80" />
+            <span className={`truncate ${!sidebarExpanded ? 'md:hidden' : ''}`}>Cerrar Sesión</span>
           </button>
         </div>
       </aside>
 
       {/* ===== MAIN CONTENT ===== */}
-      <div className="flex-1 flex flex-col min-h-screen overflow-hidden w-full">
+      <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden w-full">
 
         {/* Top bar */}
-        <header className="bg-card/90 backdrop-blur-md border-b border-border px-4 sm:px-8 py-3.5 sm:py-5 flex flex-col sm:flex-row gap-3 sm:items-center justify-between sticky top-0 z-30">
+        <header className="bg-card/90 backdrop-blur-md border-b border-border px-4 sm:px-8 py-3.5 sm:py-5 flex flex-col sm:flex-row gap-3 sm:items-center justify-between shrink-0 sticky top-0 z-30">
           <div className="flex items-center justify-between gap-3 w-full sm:w-auto">
             <div className="flex items-center gap-3">
               <button
-                onClick={() => setSidebarOpen(true)}
+                onClick={() => setMobileDrawerOpen(true)}
                 className="md:hidden p-2 text-zinc-300 bg-white/5 border border-white/10 hover:bg-white/10 rounded-xl"
                 title="Abrir menú"
               >
@@ -292,7 +359,7 @@ export default function Admin() {
         </header>
 
         {/* MOBILE SLIDING TABS BAR */}
-        <div className="flex md:hidden overflow-x-auto whitespace-nowrap gap-1.5 px-3 py-2 bg-black/40 border-b border-white/5 scrollbar-none z-20">
+        <div className="flex md:hidden overflow-x-auto whitespace-nowrap gap-1.5 px-3 py-2 bg-black/40 border-b border-white/5 scrollbar-none z-20 shrink-0">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
