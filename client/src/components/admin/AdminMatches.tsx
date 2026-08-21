@@ -107,43 +107,67 @@ function extractPublicLink(item: any): string | null {
   return null;
 }
 
+const SUPABASE_STORAGE_URL = 'https://knzmpoprlmbonejshfys.supabase.co/storage/v1/object/public/property-flyers';
+
+function normalizeImageUrl(url: string): string {
+  if (!url) return '';
+  const trimmed = url.trim();
+  if (trimmed.startsWith('https://') || trimmed.startsWith('http://')) return trimmed;
+  if (trimmed.startsWith('/uploads/')) {
+    const cleanKey = trimmed.replace(/^\/uploads\//, '');
+    return `${SUPABASE_STORAGE_URL}/${cleanKey}`;
+  }
+  if (trimmed.startsWith('/')) {
+    return `${SUPABASE_STORAGE_URL}${trimmed}`;
+  }
+  return `${SUPABASE_STORAGE_URL}/${trimmed}`;
+}
+
 function extractItemImages(item: any): string[] {
   if (!item) return [];
-  const urls: string[] = [];
+  const rawUrls: string[] = [];
   if (Array.isArray(item.images)) {
     for (const img of item.images) {
       if (typeof img === 'string' && (img.startsWith('http') || img.startsWith('/'))) {
-        if (!urls.includes(img)) urls.push(img);
+        if (!rawUrls.includes(img)) rawUrls.push(img);
       }
     }
   }
   if (item.imageUrl && typeof item.imageUrl === 'string' && (item.imageUrl.startsWith('http') || item.imageUrl.startsWith('/'))) {
-    if (!urls.includes(item.imageUrl)) urls.push(item.imageUrl);
+    if (!rawUrls.includes(item.imageUrl)) rawUrls.push(item.imageUrl);
   }
   if (item.enlaceOrigen && typeof item.enlaceOrigen === 'string') {
     const isImg = item.enlaceOrigen.includes('/flyers/') || 
                   item.enlaceOrigen.includes('property-flyers') ||
                   /\.(?:jpg|jpeg|png|webp|gif)(?:\?.*)?$/i.test(item.enlaceOrigen);
-    if (isImg && !urls.includes(item.enlaceOrigen)) {
-      urls.push(item.enlaceOrigen);
+    if (isImg && !rawUrls.includes(item.enlaceOrigen)) {
+      rawUrls.push(item.enlaceOrigen);
     }
   }
   if (item.externalUrl && typeof item.externalUrl === 'string') {
     const isImg = item.externalUrl.includes('/flyers/') || 
                   item.externalUrl.includes('property-flyers') ||
                   /\.(?:jpg|jpeg|png|webp|gif)(?:\?.*)?$/i.test(item.externalUrl);
-    if (isImg && !urls.includes(item.externalUrl)) {
-      urls.push(item.externalUrl);
+    if (isImg && !rawUrls.includes(item.externalUrl)) {
+      rawUrls.push(item.externalUrl);
     }
   }
   const text = `${item.rawText || ''} ${item.description || ''}`;
   const imgMatches = text.match(/https?:\/\/[^\s<"']+\.(?:jpg|jpeg|png|webp|gif)(?:\?[^\s<"']*)?/gi);
   if (imgMatches) {
     for (const m of imgMatches) {
-      if (!urls.includes(m)) urls.push(m);
+      if (!rawUrls.includes(m)) rawUrls.push(m);
     }
   }
-  return urls;
+
+  const normalizedUrls: string[] = [];
+  for (const u of rawUrls) {
+    const norm = normalizeImageUrl(u);
+    if (norm && !normalizedUrls.includes(norm)) {
+      normalizedUrls.push(norm);
+    }
+  }
+  return normalizedUrls;
 }
 
 function scoreRows(req: any, prop: any) {
@@ -2168,6 +2192,15 @@ export default function AdminMatches() {
                                       alt={`Flyer Inmueble ${imgIdx + 1}`} 
                                       className="w-full h-44 object-contain bg-zinc-950 group-hover:scale-105 transition-transform duration-300 cursor-pointer"
                                       onClick={() => window.open(imgUrl, '_blank')}
+                                      onError={(e) => {
+                                        const target = e.currentTarget;
+                                        if (!target.src.includes('knzmpoprlmbonejshfys.supabase.co')) {
+                                          const filename = target.src.split('/').pop();
+                                          if (filename) {
+                                            target.src = `https://knzmpoprlmbonejshfys.supabase.co/storage/v1/object/public/property-flyers/flyers/${filename}`;
+                                          }
+                                        }
+                                      }}
                                     />
                                     <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/80 to-transparent p-2 flex items-center justify-between gap-1">
                                       <span className="text-[9px] text-amber-200 font-semibold truncate">Flyer #{imgIdx + 1}</span>
@@ -2344,6 +2377,15 @@ export default function AdminMatches() {
                                       alt={`Flyer Requerimiento ${imgIdx + 1}`} 
                                       className="w-full h-44 object-contain bg-zinc-950 group-hover:scale-105 transition-transform duration-300 cursor-pointer"
                                       onClick={() => window.open(imgUrl, '_blank')}
+                                      onError={(e) => {
+                                        const target = e.currentTarget;
+                                        if (!target.src.includes('knzmpoprlmbonejshfys.supabase.co')) {
+                                          const filename = target.src.split('/').pop();
+                                          if (filename) {
+                                            target.src = `https://knzmpoprlmbonejshfys.supabase.co/storage/v1/object/public/property-flyers/flyers/${filename}`;
+                                          }
+                                        }
+                                      }}
                                     />
                                     <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/80 to-transparent p-2 flex items-center justify-between gap-1">
                                       <span className="text-[9px] text-cyan-200 font-semibold truncate">Flyer #{imgIdx + 1}</span>
