@@ -8281,7 +8281,7 @@ async function saveProperty(data, userId, realName, imageBuffer, pdfBuffer, pdfM
     ...data,
     name: safeSlice(data.name || `Propiedad en ${data.city || data.zone || "Colombia"}`, 255) || "Propiedad",
     city: safeSlice(data.city || data.ciudadDeseada, 100) || null,
-    zone: safeSlice(data.zone || data.addressNeighborhood || data.addressLocality || data.location, 100) || null,
+    zone: safeSlice(data.zone || data.addressNeighborhood || data.addressLocality || data.location || data.city || data.ciudadDeseada || "Bogot\xE1", 100) || "Bogot\xE1",
     addressCity: safeSlice(data.addressCity || data.address_city || data.city, 100) || null,
     addressLocality: safeSlice(data.addressLocality || data.address_locality, 100) || null,
     addressNeighborhood: safeSlice(data.addressNeighborhood || data.address_neighborhood || data.zone, 150) || null,
