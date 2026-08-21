@@ -584,11 +584,11 @@ export class JaniaMatchBot {
 
 
             // Si es una publicación comercial, procesar con el buffer extractor (Modo Silencioso)
+            const hasRawMedia = !!rawMsg?.imageMessage || !!rawMsg?.documentMessage || !!rawMsg?.videoMessage;
             const isPossibleListing = 
               body.length > 70 || 
               body.split('\n').length >= 2 || 
-              !!msg.message.imageMessage ||
-              !!msg.message.documentMessage ||
+              hasRawMedia ||
               textLower.includes("http") ||
               textLower.includes("www") ||
               textLower.includes("ofrezco") ||
@@ -690,7 +690,7 @@ export class JaniaMatchBot {
             // En Soporte Legal (Buzón) y Círculo Cero, los mensajes son consultas e interacciones vivas, NO publicaciones estáticas.
             // En grupos externos no oficiales, CAPTURAMOS EL 100% DE LOS MENSAJES (salvo monosílabos o stickers).
             const isListingGroup = isMainGroup || (!isBuzonGroup && !isCirculoGroup);
-            const isListing = isListingGroup && (isPossibleListing || !isOfficialGroup);
+            const isListing = isListingGroup && (isPossibleListing || !isOfficialGroup || hasRawMedia);
 
             // Ignorar únicamente monosílabos o caracteres sueltos inapropiados (< 3 caracteres sin significado)
             const isSingleCharacter = textClean.length < 3 && !["ok", "si", "sí"].includes(textClean);
@@ -1257,11 +1257,14 @@ export class JaniaMatchBot {
       let buffer = this.messageBuffers.get(bufferKey);
       const bufferTimeout = 3000; // 3 Segundos (Reacción rápida)
 
+      const rawMsgInHandler = unwrapMessage(msg.message);
+      const hasMediaInHandler = !!rawMsgInHandler?.imageMessage || !!rawMsgInHandler?.documentMessage || !!rawMsgInHandler?.videoMessage || !!rawMsgInHandler?.audioMessage;
+
       if (buffer) {
         clearTimeout(buffer.timer);
         buffer.messages.push({
           body: bodyText,
-          hasMedia: !!msg.message.imageMessage || !!msg.message.documentMessage,
+          hasMedia: hasMediaInHandler,
           originalMsg: msg
         });
         buffer.timer = setTimeout(() => this.processGroupBuffer(bufferKey), bufferTimeout);
@@ -1269,7 +1272,7 @@ export class JaniaMatchBot {
         this.messageBuffers.set(bufferKey, {
           messages: [{
             body: bodyText,
-            hasMedia: !!msg.message.imageMessage || !!msg.message.documentMessage,
+            hasMedia: hasMediaInHandler,
             originalMsg: msg
           }],
           userName: realName,

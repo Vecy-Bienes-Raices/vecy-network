@@ -162,7 +162,12 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v23.7 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL: v23.8 — Agosto 2026
+
+### Novedades v23.8 (Captación, Extracción y Desglose Integral de Flyers e Imágenes Inmobiliarias):
+- **Desbloqueo de Media Reenviada / Efímera (`unwrapMessage` en `whatsapp-match.ts`)**: Corrección de la lectura de imágenes y documentos en el buffer de mensajes (`hasMedia: !!rawMsg?.imageMessage || !!rawMsg?.documentMessage`), permitiendo que imágenes reenviadas o sin texto en el pie de foto se procesen y reaccionen con el emoji doctrinal correspondiente.
+- **Generador de Ficha y Desglose Estructurado (`buildFlyerBreakdownText` en `janIA.ts`)**: Cuando un usuario publica solo una imagen o flyer sin texto, JanIA sintetiza y almacena en `rawText` un desglose completo y estructurado (título, descripción, precio/presupuesto, canon, administración, área, habitaciones, baños, parqueaderos, sector, ciudad y contacto).
+- **Visor de Flyer & Desglose en Demandas / Requerimientos (`AdminMatches.tsx`)**: Ampliación de `extractItemImages` para leer `enlaceOrigen` y `externalUrl` en demandas, renderizando la imagen original del flyer con visor y botón de descarga junto con el desglose de especificaciones.
 
 ### Novedades v23.7 (Doctrina de Inversionistas & Propiedades Rentando + Micro-Zonificación Rosales Bajo):
 - **Doctrina de Inversión y Flujo de Renta**: *"para inversionista"*, *"rentando"*, *"esté rentando"*, *"generando renta"*, *"compra rentando"* representan intención de COMPRA / ADQUISICIÓN DE ACTIVO EN VENTA para percibir renta mensual, JAMÁS una solicitud de arriendo.

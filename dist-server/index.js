@@ -5670,6 +5670,7 @@ __export(janIA_exports, {
   MSG_TIPS_CALIDAD_COBERTURA: () => MSG_TIPS_CALIDAD_COBERTURA,
   REPUTATION_HOOK: () => REPUTATION_HOOK,
   brokerDirectoryCache: () => brokerDirectoryCache,
+  buildFlyerBreakdownText: () => buildFlyerBreakdownText,
   buildSystemPrompt: () => buildSystemPrompt,
   calcularCalificacionCompletitud: () => calcularCalificacionCompletitud,
   clearPromptCache: () => clearPromptCache,
@@ -5859,6 +5860,56 @@ function getColombiaNow() {
 function hasRealEstateTextKeyword(cleanText) {
   const text2 = cleanText.toLowerCase();
   return text2.includes("apto") || text2.includes("apartamento") || text2.includes("casa") || text2.includes("bodega") || text2.includes("oficina") || text2.includes("local") || text2.includes("locales") || text2.includes("caba\xF1a") || text2.includes("caba\xF1as") || text2.includes("lote") || text2.includes("finca") || text2.includes("habs") || text2.includes("alcoba") || text2.includes("m2") || text2.includes("mts") || text2.includes("requerimiento");
+}
+function buildFlyerBreakdownText(extracted, fallbackText) {
+  if (!extracted) return fallbackText || "";
+  const parts = [];
+  if (extracted.title) parts.push(`\u{1F4CC} ${extracted.title}`);
+  if (extracted.description && extracted.description.trim() !== "" && !extracted.description.includes("[Publicaci\xF3n de Imagen")) {
+    parts.push(extracted.description.trim());
+  }
+  const specs = [];
+  const pVal = extracted.price || extracted.presupuestoMax;
+  if (pVal && Number(pVal) > 0) {
+    specs.push(`\u{1F4B0} Precio/Presupuesto: $${Number(pVal).toLocaleString("es-CO")}`);
+  }
+  if (extracted.rentPrice && Number(extracted.rentPrice) > 0) {
+    specs.push(`\u{1F4B0} Canon Arriendo: $${Number(extracted.rentPrice).toLocaleString("es-CO")}`);
+  }
+  if (extracted.adminFee && Number(extracted.adminFee) > 0) {
+    specs.push(`\u{1F3E2} Administraci\xF3n: $${Number(extracted.adminFee).toLocaleString("es-CO")}`);
+  }
+  if (extracted.area && Number(extracted.area) > 0) {
+    specs.push(`\u{1F4D0} \xC1rea: ${extracted.area} m\xB2`);
+  } else if (extracted.areaMin && Number(extracted.areaMin) > 0) {
+    specs.push(`\u{1F4D0} \xC1rea M\xEDnima: ${extracted.areaMin} m\xB2`);
+  }
+  if (extracted.bedrooms || extracted.rooms || extracted.habitacionesMin) {
+    specs.push(`\u{1F6CF}\uFE0F ${extracted.bedrooms || extracted.rooms || extracted.habitacionesMin} Habitaciones`);
+  }
+  if (extracted.bathrooms || extracted.baths || extracted.banosMin) {
+    specs.push(`\u{1F6BF} ${extracted.bathrooms || extracted.baths || extracted.banosMin} Ba\xF1os`);
+  }
+  if (extracted.garages || extracted.parqueaderosMin) {
+    specs.push(`\u{1F697} ${extracted.garages || extracted.parqueaderosMin} Parqueaderos`);
+  }
+  const zone = extracted.zone || extracted.zonaDeseada || extracted.addressNeighborhood;
+  if (zone) {
+    specs.push(`\u{1F4CD} Sector: ${zone}`);
+  }
+  const city = extracted.city || extracted.ciudadDeseada || extracted.addressCity;
+  if (city) {
+    specs.push(`\u{1F3D9}\uFE0F Ciudad: ${city}`);
+  }
+  if (extracted.contactPhone || extracted.telefonoContacto) {
+    specs.push(`\u{1F4DE} Contacto: ${extracted.contactPhone || extracted.telefonoContacto}`);
+  }
+  if (specs.length > 0) {
+    parts.push(`\u{1F4CB} Ficha T\xE9cnica Extra\xEDda de Flyer / Imagen:
+\u2022 ` + specs.join("\n\u2022 "));
+  }
+  if (parts.length > 0) return parts.join("\n\n");
+  return fallbackText || "[Publicaci\xF3n Comercial Inmobiliaria desde Imagen / Flyer]";
 }
 function extractFallbackDataFromText(text2) {
   const clean = text2.toLowerCase().replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0]/g, " ");
@@ -7582,14 +7633,15 @@ ${liveStats}` : buildSystemPrompt(groupJid);
           externalUrl = permitted;
         }
       }
-      const sourceUrl = externalUrl || (urls && urls.length > 0 ? urls[0] : null);
+      const isImageOnlyProp = (!rawUserText || rawUserText.trim() === "" || rawUserText.includes("[Publicaci\xF3n de Imagen")) && !!imageBuffer;
+      const effectivePropRawText = isImageOnlyProp ? buildFlyerBreakdownText(extracted, rawUserText || text2) : rawUserText || text2;
       const saved = await saveProperty({
         ...extracted,
         name: propertyTitle,
         price: String(extracted.price || 0),
         areaTotal: String(extracted.area || 0),
         idUsuarioWhatsapp: rawPhone,
-        rawText: rawUserText || text2,
+        rawText: effectivePropRawText,
         amenities: { gives: extracted.gives, wants: extracted.wants, isCollaborativePool: extracted.isCollaborativePool },
         origenTipo,
         origenId,
@@ -7650,6 +7702,8 @@ ${liveStats}` : buildSystemPrompt(groupJid);
       }
       const reqTitle = extracted.title || `Requerimiento de ${extracted.propertyType || "inmueble"} en ${extracted.zonaDeseada || extracted.zone || "Bogot\xE1"} para ${extracted.transactionType || "venta"}`;
       const sourceUrlReq = urls && urls.length > 0 ? urls[0] : null;
+      const isImageOnlyReq = (!messageToProcess || messageToProcess.trim() === "" || messageToProcess.includes("[Publicaci\xF3n de Imagen")) && !!imageBuffer;
+      const effectiveReqRawText = isImageOnlyReq ? buildFlyerBreakdownText(extracted, messageToProcess) : messageToProcess;
       const saved = await saveRequirement({
         ...extracted,
         name: reqTitle,
@@ -7658,7 +7712,7 @@ ${liveStats}` : buildSystemPrompt(groupJid);
         zonaDeseada: extracted.zonaDeseada || extracted.zone,
         presupuestoMax: String(extracted.presupuestoMax || extracted.price || 0),
         idUsuarioWhatsapp: rawPhone,
-        rawText: messageToProcess,
+        rawText: effectiveReqRawText,
         caracteristicasDeseadas: { gives: extracted.gives, wants: extracted.wants },
         origenTipo,
         origenId,
@@ -10552,13 +10606,14 @@ ${quotedNote}` : quotedNote;
                     return;
                   }
                 }
-                const isPossibleListing = body.length > 70 || body.split("\n").length >= 2 || !!msg.message.imageMessage || !!msg.message.documentMessage || textLower.includes("http") || textLower.includes("www") || textLower.includes("ofrezco") || textLower.includes("busco") || textLower.includes("vendo") || textLower.includes("venta") || textLower.includes("arriendo") || textLower.includes("ariendo") || textLower.includes("compro") || textLower.includes("necesito") || textLower.includes("renta") || textLower.includes("alquilo") || textLower.includes("permuto") || textLower.includes("permuta") || textLower.includes("requiero") || textLower.includes("requerimiento") || textLower.includes("casa") || textLower.includes("apto") || textLower.includes("apartamento") || textLower.includes("bodega") || textLower.includes("oficina") || textLower.includes("edificio") || textLower.includes("lote") || textLower.includes("local") || textLower.includes("finca") || textLower.includes("terreno") || textLower.includes("predio") || textLower.includes("campestre") || textLower.includes("fanegada") || textLower.includes("fanegadas") || textLower.includes("hectarea") || textLower.includes("hect\xE1rea") || textLower.includes("hect") || textLower.includes("parque") || textLower.includes("inversion") || textLower.includes("inversi\xF3n") || textLower.includes("penthouse") || textLower.includes("apartaestudio") || textLower.includes("duplex") || textLower.includes("d\xFAplex") || textLower.includes("parqueadero") || textLower.includes("alcoba") || textLower.includes("habitacion") || textLower.includes("habitaci\xF3n") || textLower.includes("metro") || textLower.includes("mts") || textLower.includes("mts2") || textLower.includes("m2") || textLower.includes("precio") || textLower.includes("presupuesto") || textLower.includes("millones") || textLower.includes("millon") || textLower.includes("canon") || textLower.includes("comisi\xF3n") || textLower.includes("comision") || textLower.includes("valor");
+                const hasRawMedia = !!rawMsg?.imageMessage || !!rawMsg?.documentMessage || !!rawMsg?.videoMessage;
+                const isPossibleListing = body.length > 70 || body.split("\n").length >= 2 || hasRawMedia || textLower.includes("http") || textLower.includes("www") || textLower.includes("ofrezco") || textLower.includes("busco") || textLower.includes("vendo") || textLower.includes("venta") || textLower.includes("arriendo") || textLower.includes("ariendo") || textLower.includes("compro") || textLower.includes("necesito") || textLower.includes("renta") || textLower.includes("alquilo") || textLower.includes("permuto") || textLower.includes("permuta") || textLower.includes("requiero") || textLower.includes("requerimiento") || textLower.includes("casa") || textLower.includes("apto") || textLower.includes("apartamento") || textLower.includes("bodega") || textLower.includes("oficina") || textLower.includes("edificio") || textLower.includes("lote") || textLower.includes("local") || textLower.includes("finca") || textLower.includes("terreno") || textLower.includes("predio") || textLower.includes("campestre") || textLower.includes("fanegada") || textLower.includes("fanegadas") || textLower.includes("hectarea") || textLower.includes("hect\xE1rea") || textLower.includes("hect") || textLower.includes("parque") || textLower.includes("inversion") || textLower.includes("inversi\xF3n") || textLower.includes("penthouse") || textLower.includes("apartaestudio") || textLower.includes("duplex") || textLower.includes("d\xFAplex") || textLower.includes("parqueadero") || textLower.includes("alcoba") || textLower.includes("habitacion") || textLower.includes("habitaci\xF3n") || textLower.includes("metro") || textLower.includes("mts") || textLower.includes("mts2") || textLower.includes("m2") || textLower.includes("precio") || textLower.includes("presupuesto") || textLower.includes("millones") || textLower.includes("millon") || textLower.includes("canon") || textLower.includes("comisi\xF3n") || textLower.includes("comision") || textLower.includes("valor");
                 const isHelpOrSystemQuery = !isPossibleListing && (textLower.includes("c\xF3mo subo") || textLower.includes("como subo") || textLower.includes("c\xF3mo publico") || textLower.includes("como publico") || textLower.includes("c\xF3mo se publica") || textLower.includes("como se publica") || textLower.includes("c\xF3mo registrar") || textLower.includes("como registrar") || textLower.includes("c\xF3mo funciona") || textLower.includes("como funciona") || textLower.includes("de qu\xE9 consiste") || textLower.includes("de que consiste") || textLower.includes("en qu\xE9 consiste") || textLower.includes("en que consiste") || textLower.includes("c\xF3mo hago para") || textLower.includes("como hago para") || textLower.includes("c\xF3mo buscar") || textLower.includes("como buscar") || textLower.includes("c\xF3mo encontrar") || textLower.includes("como encontrar") || textLower.includes("mec\xE1nica del grupo") || textLower.includes("mecanica del grupo") || textLower.includes("qued\xF3 guardado") || textLower.includes("quedo guardado") || textLower.includes("se guard\xF3") || textLower.includes("se guardo") || textLower.includes("fue guardado") || textLower.includes("falt\xF3 alg\xFAn dato") || textLower.includes("falto algun dato") || textLower.includes("falt\xF3 un dato") || textLower.includes("falto un dato") || textLower.includes("datos faltantes") || textLower.includes("subi\xF3 correctamente") || textLower.includes("subio correctamente") || textLower.includes("fue subido") || textLower.includes("mejor forma de publicar") || textLower.includes("c\xF3mo es mejor") || textLower.includes("como es mejor") || textLower.includes("para obtener resultados") || textLower.includes("ayuda") && textLower.includes("inmueble") || textLower.includes("explicar") && textLower.includes("grupo") || textLower.includes("c\xF3mo") && textLower.includes("grupo"));
                 const textClean = body.toLowerCase().trim();
                 const isAudioFailed = body === "[audio-vac\xEDo]" || body === "[audio-sin-buffer]" || body === "[audio-error]";
                 const isShortCourtesy = !isAudioPTT && (textClean.length < 6 || ["ok", "listo", "vale", "claro", "gracias", "hola", "hola!", "jaja", "jajaja", "\u{1F44D}", "\u2705", "\u{1F44F}", "\u{1F60A}", "\u{1F64F}"].includes(textClean));
                 const isListingGroup = isMainGroup || !isBuzonGroup && !isCirculoGroup;
-                const isListing = isListingGroup && (isPossibleListing || !isOfficialGroup);
+                const isListing = isListingGroup && (isPossibleListing || !isOfficialGroup || hasRawMedia);
                 const isSingleCharacter = textClean.length < 3 && !["ok", "si", "s\xED"].includes(textClean);
                 const shouldRespond = isBuzonGroup || isCirculoGroup ? !isSingleCharacter : isOfficialGroup && hasDirectMention;
                 if (isListing) {
@@ -11005,11 +11060,13 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
           }
           let buffer = this.messageBuffers.get(bufferKey);
           const bufferTimeout = 3e3;
+          const rawMsgInHandler = unwrapMessage(msg.message);
+          const hasMediaInHandler = !!rawMsgInHandler?.imageMessage || !!rawMsgInHandler?.documentMessage || !!rawMsgInHandler?.videoMessage || !!rawMsgInHandler?.audioMessage;
           if (buffer) {
             clearTimeout(buffer.timer);
             buffer.messages.push({
               body: bodyText,
-              hasMedia: !!msg.message.imageMessage || !!msg.message.documentMessage,
+              hasMedia: hasMediaInHandler,
               originalMsg: msg
             });
             buffer.timer = setTimeout(() => this.processGroupBuffer(bufferKey), bufferTimeout);
@@ -11017,7 +11074,7 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
             this.messageBuffers.set(bufferKey, {
               messages: [{
                 body: bodyText,
-                hasMedia: !!msg.message.imageMessage || !!msg.message.documentMessage,
+                hasMedia: hasMediaInHandler,
                 originalMsg: msg
               }],
               userName: realName,

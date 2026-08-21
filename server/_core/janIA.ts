@@ -367,6 +367,58 @@ export function hasRealEstateTextKeyword(cleanText: string): boolean {
          text.includes("requerimiento");
 }
 
+export function buildFlyerBreakdownText(extracted: any, fallbackText?: string): string {
+  if (!extracted) return fallbackText || "";
+  const parts: string[] = [];
+  if (extracted.title) parts.push(`📌 ${extracted.title}`);
+  if (extracted.description && extracted.description.trim() !== "" && !extracted.description.includes("[Publicación de Imagen")) {
+    parts.push(extracted.description.trim());
+  }
+  const specs: string[] = [];
+  const pVal = extracted.price || extracted.presupuestoMax;
+  if (pVal && Number(pVal) > 0) {
+    specs.push(`💰 Precio/Presupuesto: $${Number(pVal).toLocaleString('es-CO')}`);
+  }
+  if (extracted.rentPrice && Number(extracted.rentPrice) > 0) {
+    specs.push(`💰 Canon Arriendo: $${Number(extracted.rentPrice).toLocaleString('es-CO')}`);
+  }
+  if (extracted.adminFee && Number(extracted.adminFee) > 0) {
+    specs.push(`🏢 Administración: $${Number(extracted.adminFee).toLocaleString('es-CO')}`);
+  }
+  if (extracted.area && Number(extracted.area) > 0) {
+    specs.push(`📐 Área: ${extracted.area} m²`);
+  } else if (extracted.areaMin && Number(extracted.areaMin) > 0) {
+    specs.push(`📐 Área Mínima: ${extracted.areaMin} m²`);
+  }
+  if (extracted.bedrooms || extracted.rooms || extracted.habitacionesMin) {
+    specs.push(`🛏️ ${extracted.bedrooms || extracted.rooms || extracted.habitacionesMin} Habitaciones`);
+  }
+  if (extracted.bathrooms || extracted.baths || extracted.banosMin) {
+    specs.push(`🚿 ${extracted.bathrooms || extracted.baths || extracted.banosMin} Baños`);
+  }
+  if (extracted.garages || extracted.parqueaderosMin) {
+    specs.push(`🚗 ${extracted.garages || extracted.parqueaderosMin} Parqueaderos`);
+  }
+  const zone = extracted.zone || extracted.zonaDeseada || extracted.addressNeighborhood;
+  if (zone) {
+    specs.push(`📍 Sector: ${zone}`);
+  }
+  const city = extracted.city || extracted.ciudadDeseada || extracted.addressCity;
+  if (city) {
+    specs.push(`🏙️ Ciudad: ${city}`);
+  }
+  if (extracted.contactPhone || extracted.telefonoContacto) {
+    specs.push(`📞 Contacto: ${extracted.contactPhone || extracted.telefonoContacto}`);
+  }
+
+  if (specs.length > 0) {
+    parts.push(`📋 Ficha Técnica Extraída de Flyer / Imagen:\n• ` + specs.join('\n• '));
+  }
+
+  if (parts.length > 0) return parts.join('\n\n');
+  return fallbackText || "[Publicación Comercial Inmobiliaria desde Imagen / Flyer]";
+}
+
 export function extractFallbackDataFromText(text: string): any {
   const clean = text.toLowerCase().replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0]/g, " ");
   
@@ -2891,7 +2943,10 @@ Por lo tanto, DEBES hacer lo siguiente:
         }
       }
 
-      const sourceUrl = externalUrl || (urls && urls.length > 0 ? urls[0] : null);
+      const isImageOnlyProp = (!rawUserText || rawUserText.trim() === '' || rawUserText.includes('[Publicación de Imagen')) && !!imageBuffer;
+      const effectivePropRawText = isImageOnlyProp 
+        ? buildFlyerBreakdownText(extracted, rawUserText || text) 
+        : (rawUserText || text);
 
       const saved = await saveProperty({
         ...extracted,
@@ -2899,7 +2954,7 @@ Por lo tanto, DEBES hacer lo siguiente:
         price: String(extracted.price || 0),
         areaTotal: String(extracted.area || 0),
         idUsuarioWhatsapp: rawPhone,
-        rawText: rawUserText || text,
+        rawText: effectivePropRawText,
         amenities: { gives: extracted.gives, wants: extracted.wants, isCollaborativePool: extracted.isCollaborativePool },
         origenTipo,
         origenId,
@@ -2984,6 +3039,11 @@ Por lo tanto, DEBES hacer lo siguiente:
       const reqTitle = extracted.title || `Requerimiento de ${extracted.propertyType || 'inmueble'} en ${extracted.zonaDeseada || extracted.zone || 'Bogotá'} para ${extracted.transactionType || 'venta'}`;
       const sourceUrlReq = (urls && urls.length > 0 ? urls[0] : null);
 
+      const isImageOnlyReq = (!messageToProcess || messageToProcess.trim() === '' || messageToProcess.includes('[Publicación de Imagen')) && !!imageBuffer;
+      const effectiveReqRawText = isImageOnlyReq 
+        ? buildFlyerBreakdownText(extracted, messageToProcess) 
+        : messageToProcess;
+
       const saved = await saveRequirement({
         ...extracted,
         name: reqTitle,
@@ -2992,7 +3052,7 @@ Por lo tanto, DEBES hacer lo siguiente:
         zonaDeseada: extracted.zonaDeseada || extracted.zone,
         presupuestoMax: String(extracted.presupuestoMax || extracted.price || 0),
         idUsuarioWhatsapp: rawPhone,
-        rawText: messageToProcess,
+        rawText: effectiveReqRawText,
         caracteristicasDeseadas: { gives: extracted.gives, wants: extracted.wants },
         origenTipo,
         origenId,

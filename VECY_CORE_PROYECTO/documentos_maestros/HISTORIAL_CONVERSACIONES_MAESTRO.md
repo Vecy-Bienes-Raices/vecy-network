@@ -52,11 +52,43 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v23.4 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v23.8 — Agosto 2026
 
 ---
 
 ## 📜 REGISTRO DETALLADO DE CONVERSACIONES (ORDEN CRONOLÓGICO INVERSO CON FECHA Y HORA)
+
+### 📌 SESIÓN 30: CAPTACIÓN, EXTRACCIÓN Y DESGLOSE INTEGRAL DE FLYERS E IMÁGENES INMOBILIARIAS (v23.8)
+- **Fecha y Hora**: 20 de Agosto de 2026 (Noche)
+- **Versión resultante**: `v23.8`
+- **Participantes**: Eduardo A. Rivera (Director Tecnología) & Antigravity IDE (Pair Programmer)
+- **Solicitud de Eduardo**:
+  - *"Observa la primera imagen, analiza y corrige porque creo que JanIA aún no logra captar, extraer los datos y reaccionar ante un Flyers o imágen con datos y detectar si es oferta o demanda de Venta, arriendo o permuta??"*
+  - *"También observa en la segunda imagen para que lo corrijas que JanIA no logra poner la misma imagen en el requerimiento o demanda y desglosar el texto antes o debajo de esa misma imagen."*
+- **Diagnóstico Técnico**:
+  1. En `whatsapp-match.ts`, el chequeo de imágenes en el buffer de mensajes (`handleIncomingGroupMessage` y `messages.upsert`) leía `msg.message.imageMessage` sin desenvolver el mensaje con `unwrapMessage(msg.message)`. Cuando una imagen llegaba reenviada (`isForwarded`), efímera o como vista única, `hasMedia` se evaluaba como `false` y el buffer la descartaba por considerarla vacía.
+  2. En `janIA.ts`, cuando una imagen no tenía caption (texto en pie de foto), `rawText` se guardaba con el placeholder genérico `"[Publicación de Imagen / Flyer Comercial Inmobiliario sin texto en pie de foto]"` sin incorporar el desglose detallado de lo que Gemini 2.5 Flash extrajo.
+  3. En `AdminMatches.tsx`, la función `extractItemImages` no leía `item.enlaceOrigen` ni `item.externalUrl` (donde se guardan las URLs de flyers en requerimientos), impidiendo renderizar la imagen del flyer en las demandas.
+- **Acciones Ejecutadas**:
+  1. **Desbloqueo de Ingesta de Media (`whatsapp-match.ts`)**: Uso sistemático de `unwrapMessage` para la detección de `imageMessage`, `documentMessage` y `videoMessage` en `hasPossibleListing`, `isListing` y en la inserción del buffer de mensajes, permitiendo que cualquier imagen comercial active inmediatamente el flujo multimodal y envíe la reacción emoji doctrinal.
+  2. **Generador de Ficha y Desglose Estructurado (`buildFlyerBreakdownText` en `janIA.ts`)**: Si una imagen carece de caption, JanIA genera un desglose enriquecido con título, descripción, precio/canon, administración, área, habitaciones, baños, parqueaderos, sector, ciudad y contacto, almacenándolo en `rawText`.
+  3. **Visor de Flyer y Desglose en Demandas / Ofertas (`AdminMatches.tsx`)**: Se integró `enlaceOrigen` y `externalUrl` en `extractItemImages` y se enriqueció la visualización en la ficha web para mostrar el desglose de especificaciones y la imagen con visor/descarga tanto en requerimientos como en ofertas.
+  4. **Verificación Empírica**: Compilación limpia con `pnpm run build` (0 errores).
+
+### 📌 SESIÓN 29: DOCTRINA DE INVERSIONISTAS & PROPIEDADES RENTANDO + MICRO-ZONIFICACIÓN ROSALES BAJO (v23.7)
+- **Fecha y Hora**: 20 de Agosto de 2026 (Noche)
+- **Versión resultante**: `v23.7`
+- **Participantes**: Eduardo A. Rivera (Director Tecnología) & Antigravity IDE (Pair Programmer)
+- **Solicitud de Eduardo**: *"En esta demanda que ves en la imagen lo que el agente quiere decir es que su cliente busca un apartamento en Rosales Bajo (quiere decir que quede abajo de la circunvalar y no arriba) y en Chicó reservado, pero no dice que en arriendo, cuando el remitente dice que su cliente lo busca RENTANDO = Se refiere a que es preferible que ese apartamento esté produciendo una ganancia mensual, es decir que esté ya arrendado y produciendo, más no significa que el lo busque para tomarlo en arriendo... El cliente de ese remitente quiere comprar un apartamento en cualquiera de esos dos Barrios en Bogotá pero que esté RENTANDO. NO en Arriendo para el, pero que si esté ya ARRENDADO y el quedarse con ese ingreso mensual. Así que el cotejamiento que hiciste y supuesto MATCH son incorrectos"*
+- **Diagnóstico Técnico**:
+  1. La palabra *"rentando"* o *"generando renta"* en una demanda inmobiliaria corresponde a un perfil de inversionista que busca **comprar** un activo productivo en venta, JAMÁS una solicitud de arrendatario para habitar en arriendo.
+  2. El extractor de requerimientos interpretaba *"rentando"* como una señal de arriendo (`hasRentReqSignals`), asignando `transactionType: "arriendo"`.
+  3. Esto causó que el Requerimiento #560 de Inversión se cruzara erróneamente contra apartamentos en arriendo (Match #10955 con $18M de canon), violentando la doctrina inmobiliaria.
+- **Acciones Ejecutadas**:
+  1. **Ajuste Doctrinal en Extracción (`janIA.ts`)**: Se creó el detector `isInvestorPurchaseReq` que captura *"inversionista"*, *"rentando"*, *"esté rentando"*, *"generando renta"*, *"compra rentando"*, asignando de forma inquebrantable `transactionType: "venta"` y `tipoNegocioDeseado: "venta"`.
+  2. **Actualización de Regla Doctrinal en Prompt Maestro (`prompts/base.md`)**: Inclusión de la **Regla Doctrinal v23.7** y la delimitación de *Rosales Bajo* (abajo de la Av. Circunvalar hacia Cra 7 / Cra 5) vs *Rosales Alto* (arriba de la Circunvalar hacia cerros).
+  3. **Depuración Retroactiva en Supabase**: Corrección de requerimientos históricos de inversionistas y purga de matches falsos de arriendo (eliminado match #10955).
+  4. **Recálculo Empírico de Match #560**: Al recalcular contra la base de datos, el requerimiento cruzó limpiamente con **22 propiedades en Venta** (scores de hasta el 100%).
 
 ### 📌 SESIÓN 28: EXTRACTOR INTELIGENTE DE CONTACTO & DIRECTORIO DE BROKERS ANTI-BAN (v23.4)
 - **Fecha y Hora**: 20 de Agosto de 2026 (Noche tardía)

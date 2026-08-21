@@ -112,14 +112,32 @@ function extractItemImages(item: any): string[] {
   const urls: string[] = [];
   if (Array.isArray(item.images)) {
     for (const img of item.images) {
-      if (typeof img === 'string' && (img.startsWith('http') || img.startsWith('/'))) urls.push(img);
+      if (typeof img === 'string' && (img.startsWith('http') || img.startsWith('/'))) {
+        if (!urls.includes(img)) urls.push(img);
+      }
     }
   }
   if (item.imageUrl && typeof item.imageUrl === 'string' && (item.imageUrl.startsWith('http') || item.imageUrl.startsWith('/'))) {
     if (!urls.includes(item.imageUrl)) urls.push(item.imageUrl);
   }
+  if (item.enlaceOrigen && typeof item.enlaceOrigen === 'string') {
+    const isImg = item.enlaceOrigen.includes('/flyers/') || 
+                  item.enlaceOrigen.includes('property-flyers') ||
+                  /\.(?:jpg|jpeg|png|webp|gif)(?:\?.*)?$/i.test(item.enlaceOrigen);
+    if (isImg && !urls.includes(item.enlaceOrigen)) {
+      urls.push(item.enlaceOrigen);
+    }
+  }
+  if (item.externalUrl && typeof item.externalUrl === 'string') {
+    const isImg = item.externalUrl.includes('/flyers/') || 
+                  item.externalUrl.includes('property-flyers') ||
+                  /\.(?:jpg|jpeg|png|webp|gif)(?:\?.*)?$/i.test(item.externalUrl);
+    if (isImg && !urls.includes(item.externalUrl)) {
+      urls.push(item.externalUrl);
+    }
+  }
   const text = `${item.rawText || ''} ${item.description || ''}`;
-  const imgMatches = text.match(/https?:\/\/[^\s<"']+\.(?:jpg|jpeg|png|webp|gif)/gi);
+  const imgMatches = text.match(/https?:\/\/[^\s<"']+\.(?:jpg|jpeg|png|webp|gif)(?:\?[^\s<"']*)?/gi);
   if (imgMatches) {
     for (const m of imgMatches) {
       if (!urls.includes(m)) urls.push(m);
@@ -2063,11 +2081,41 @@ export default function AdminMatches() {
                       <div className="text-xs text-zinc-300 bg-white/[0.02] border border-white/5 p-3 rounded-xl leading-relaxed whitespace-pre-wrap break-words space-y-3">
                         {(() => {
                           const pText = (m.property?.rawText || m.property?.description || "").trim();
+                          const isGenericImagePlaceholder = pText.includes("[Publicación de Imagen / Flyer Comercial Inmobiliario sin texto en pie de foto]");
+                          const propSpecs: string[] = [];
+                          if (m.property?.propertyType) propSpecs.push(`• Tipo: ${m.property.propertyType}`);
+                          if (m.property?.transactionType) propSpecs.push(`• Negocio: ${m.property.transactionType}`);
+                          if (m.property?.zone || m.property?.addressNeighborhood) propSpecs.push(`• Sector: ${m.property.zone || m.property.addressNeighborhood}`);
+                          if (m.property?.city || m.property?.addressCity) propSpecs.push(`• Ciudad: ${m.property.city || m.property.addressCity}`);
+                          if (m.property?.price && Number(m.property.price) > 0) propSpecs.push(`• Precio: ${formatCOP(m.property.price)}`);
+                          if (m.property?.rentPrice && Number(m.property.rentPrice) > 0) propSpecs.push(`• Canon: ${formatCOP(m.property.rentPrice)}`);
+                          if (m.property?.areaTotal && Number(m.property.areaTotal) > 0) propSpecs.push(`• Área: ${m.property.areaTotal} m²`);
+                          if (m.property?.bedrooms) propSpecs.push(`• Habitaciones: ${m.property.bedrooms}`);
+                          if (m.property?.bathrooms) propSpecs.push(`• Baños: ${m.property.bathrooms}`);
+                          if (m.property?.garages) propSpecs.push(`• Parqueaderos: ${m.property.garages}`);
+
                           const fallbackText = m.property?.name ? `${m.property.name}. Ciudad: ${m.property.city || 'Bogotá, D.C.'}. ${m.property.price ? 'Precio: ' + formatCOP(m.property.price) : ''}` : "Publicación sin texto descriptivo registrado";
+
                           return (
-                            <div className="space-y-1">
-                              <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold not-italic">💬 Publicación Original:</p>
-                              <p className="italic text-zinc-200">"{renderTextWithClickableLinks(pText || fallbackText)}"</p>
+                            <div className="space-y-1.5">
+                              <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold not-italic">
+                                {isGenericImagePlaceholder ? "🖼️ Desglose de Flyer / Oferta:" : "💬 Publicación Original:"}
+                              </p>
+                              {!isGenericImagePlaceholder && (
+                                <p className="italic text-zinc-200">"{renderTextWithClickableLinks(pText || fallbackText)}"</p>
+                              )}
+                              {isGenericImagePlaceholder && (
+                                <div className="space-y-1 text-zinc-200">
+                                  <p className="text-amber-300/90 font-medium text-[11px]">Captado desde Imagen / Flyer sin texto en pie de foto:</p>
+                                  {propSpecs.length > 0 && (
+                                    <div className="bg-black/30 rounded-lg p-2 font-mono text-[11px] space-y-0.5 text-zinc-300 border border-white/5">
+                                      {propSpecs.map((s, idx) => (
+                                        <p key={idx}>{s}</p>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           );
                         })()}
@@ -2212,12 +2260,40 @@ export default function AdminMatches() {
                       <div className="text-xs text-zinc-300 bg-white/[0.02] border border-white/5 p-3 rounded-xl leading-relaxed whitespace-pre-wrap break-words space-y-3">
                         {(() => {
                           const rText = (m.requirement?.rawText || "").trim();
-                          return rText ? (
-                            <div className="space-y-1">
-                              <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold not-italic">💬 Solicita:</p>
-                              <p className="italic text-zinc-200">"{renderTextWithClickableLinks(rText)}"</p>
+                          const isGenericImagePlaceholder = rText.includes("[Publicación de Imagen / Flyer Comercial Inmobiliario sin texto en pie de foto]");
+                          const reqSpecs: string[] = [];
+                          if (m.requirement?.tipoInmuebleDeseado) reqSpecs.push(`• Tipo: ${m.requirement.tipoInmuebleDeseado}`);
+                          if (m.requirement?.tipoNegocioDeseado) reqSpecs.push(`• Negocio: ${m.requirement.tipoNegocioDeseado}`);
+                          if (m.requirement?.zonaDeseada || m.requirement?.addressNeighborhood) reqSpecs.push(`• Sector: ${m.requirement.zonaDeseada || m.requirement.addressNeighborhood}`);
+                          if (m.requirement?.ciudadDeseada || m.requirement?.addressCity) reqSpecs.push(`• Ciudad: ${m.requirement.ciudadDeseada || m.requirement.addressCity}`);
+                          if (m.requirement?.presupuestoMax && Number(m.requirement.presupuestoMax) > 0) reqSpecs.push(`• Presupuesto: ${formatCOP(m.requirement.presupuestoMax)}`);
+                          if (m.requirement?.areaMin && Number(m.requirement.areaMin) > 0) reqSpecs.push(`• Área Mín: ${m.requirement.areaMin} m²`);
+                          if (m.requirement?.habitacionesMin) reqSpecs.push(`• Habitaciones: ${m.requirement.habitacionesMin}+`);
+                          if (m.requirement?.banosMin) reqSpecs.push(`• Baños: ${m.requirement.banosMin}+`);
+                          if (m.requirement?.parqueaderosMin) reqSpecs.push(`• Parqueaderos: ${m.requirement.parqueaderosMin}+`);
+
+                          return (
+                            <div className="space-y-1.5">
+                              <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold not-italic">
+                                {isGenericImagePlaceholder ? "🖼️ Desglose de Flyer / Demanda:" : "💬 Solicita:"}
+                              </p>
+                              {!isGenericImagePlaceholder && (
+                                <p className="italic text-zinc-200">"{renderTextWithClickableLinks(rText)}"</p>
+                              )}
+                              {isGenericImagePlaceholder && (
+                                <div className="space-y-1 text-zinc-200">
+                                  <p className="text-cyan-300/90 font-medium text-[11px]">Captado desde Imagen / Flyer sin texto en pie de foto:</p>
+                                  {reqSpecs.length > 0 && (
+                                    <div className="bg-black/30 rounded-lg p-2 font-mono text-[11px] space-y-0.5 text-zinc-300 border border-white/5">
+                                      {reqSpecs.map((s, idx) => (
+                                        <p key={idx}>{s}</p>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                             </div>
-                          ) : null;
+                          );
                         })()}
 
 
