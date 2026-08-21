@@ -672,6 +672,30 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
+### 🗓️ Sesión: Jueves 20 de Agosto de 2026 — 09:05 PM a 09:30 PM (Hora Colombia UTC-5)
+**Versión del Sistema**: `v23.7 — Agosto 2026`  
+**Commit GitHub Main**: `v23.7`
+
+#### 📋 Requerimientos Específicos del Usuario (Eduardo A. Rivera):
+1. **Doctrina de Inversionistas & Propiedades "Rentando" (Compra vs Arriendo)**:
+   - Cuando un asesor solicita un inmueble *"para inversionista (ojalá rentando)"* o *"rentando"*, significa que busca **COMPRAR un inmueble en venta** que ya esté arrendado produciendo renta mensual, **NO** que esté buscando un arriendo para habitarlo.
+   - El cotejamiento contra inmuebles en arriendo puro es un error doctrinal que debe ser bloqueado al 0%.
+2. **Micro-Zonificación de Rosales Bajo vs Rosales Alto**:
+   - *Rosales Bajo*: Sector abajo de la Avenida Circunvalar (hacia Cra 7 / Cra 5).
+   - *Rosales Alto*: Sector arriba de la Avenida Circunvalar (hacia Cerros Orientales).
+
+#### 🛠️ Soluciones e Implementaciones Técnicas:
+- **Blindaje Heurístico en Ingesta (`extractFallbackDataFromText` y `processWhatsAppMessage` en `janIA.ts`)**:
+  - Detección de patrones de inversión (`inversionista`, `inversion`, `rentando`, `generando renta`, `con renta activa`, `compra rentando`).
+  - Asignación obligatoria e inquebrantable de `transactionType: "venta"` y `tipoNegocioDeseado: "venta"`, evitando que caigan en la trampa semántica de `arriendo`.
+- **Actualización Doctrinal en Prompt Maestro (`prompts/base.md`)**:
+  - Regla doctrinal v23.7 que prohíbe clasificar demandas de inversionistas como arriendos y define la micro-zona de Rosales Bajo.
+- **Depuración Retroactiva en Supabase**:
+  - Requerimientos históricos de inversionistas corregidos a `tipoNegocioDeseado: "venta"`.
+  - Purga automática de matches inválidos cruzados contra propiedades en canon de arrendamiento (eliminado match falso #10955).
+
+---
+
 ### 🗓️ Sesión: Jueves 20 de Agosto de 2026 — 08:50 PM a 09:05 PM (Hora Colombia UTC-5)
 **Versión del Sistema**: `v23.6 — Agosto 2026`  
 **Commit GitHub Main**: `v23.6`

@@ -371,18 +371,23 @@ export function extractFallbackDataFromText(text: string): any {
   const clean = text.toLowerCase().replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0]/g, " ");
   
   let transactionType = "venta";
+  const isInvestorPurchase = /\b(?:inversionista|inversionistas|para inversi[oó]n|para inversion|rentando|est[eé] rentando|est[eé]n rentando|ojal[aá] rentando|ya rentando|generando renta|produciendo renta|con renta activa|para compra|compro|compra ya|busco para compra)\b/i.test(clean);
   const hasPermutaSignals = /\b(?:permuto|permuta|permutas|permutamos|se permuta|recibo menor valor|recibo inmueble|recibo vehículo|recibo vehiculo|pelo a pelo|encime|parte de pago)\b/i.test(clean);
-  const hasRentSignals = /\b(?:arriendo|arriendos|arrendar|arrendamos|se arrienda|arriendan|alquilo|alquilar|alquilamos|se alquila|alquiler|alquileres|rento|rentar|se renta|renta|rentas|canon|canones|cánones|amoblado|amoblada|sin amoblar|arrendatario|arrendador|inquilino)\b/i.test(clean)
+  const hasRentSignals = !isInvestorPurchase && (
+    /\b(?:arriendo|arriendos|arrendar|arrendamos|se arrienda|arriendan|alquilo|alquilar|alquilamos|se alquila|alquiler|alquileres|rento|rentar|se renta|canon|canones|cánones|amoblado|amoblada|sin amoblar|arrendatario|arrendador|inquilino)\b/i.test(clean)
     || /(?:incluida|con|\+|más|mas)\s*(?:administraci[oó]n|admon)/i.test(clean)
     || /(?:administraci[oó]n|admon)\s*(?:incluida|adicional)/i.test(clean)
-    || /valor arriendo/i.test(clean);
+    || /valor arriendo/i.test(clean)
+  );
 
   if (hasPermutaSignals) {
-    transactionType = clean.includes("venta") ? "venta_permuta" : "permuta";
+    transactionType = clean.includes("venta") || isInvestorPurchase ? "venta_permuta" : "permuta";
   } else if (hasRentSignals && (clean.includes("venta") || clean.includes("valor venta")) && (clean.includes("arriendo") || clean.includes("valor arriendo"))) {
     transactionType = "venta_o_arriendo";
-  } else if (hasRentSignals && !clean.includes("compro") && !clean.includes("para compra") && !clean.includes("en compra")) {
+  } else if (hasRentSignals && !clean.includes("compro") && !clean.includes("para compra") && !clean.includes("en compra") && !isInvestorPurchase) {
     transactionType = "arriendo";
+  } else {
+    transactionType = "venta";
   }
 
   let propertyType = "apartment";
@@ -2928,20 +2933,23 @@ Por lo tanto, DEBES hacer lo siguiente:
       const groupForReqTx = (groupName || '').toLowerCase();
       const isGroupReqRent = groupForReqTx.includes('arriend') || groupForReqTx.includes('alquil') || groupForReqTx.includes('renta');
 
+      const isInvestorPurchaseReq = /\b(?:inversionista|inversionistas|para inversi[oó]n|para inversion|rentando|est[eé] rentando|est[eé]n rentando|ojal[aá] rentando|ya rentando|generando renta|produciendo renta|con renta activa|con contrato de arrendamiento|para compra|compro|compra ya|busco para compra)\b/i.test(cleanCheckReqText);
       const hasPermutaReqSignals = /\b(?:permuto|permuta|permutas|permutamos|se permuta|recibo menor valor|recibo inmueble|recibo vehículo|recibo vehiculo|pelo a pelo|encime|parte de pago)\b/i.test(cleanCheckReqText);
-      const hasRentReqSignals = /\b(?:arriendo|arriendos|arrendar|arrendamos|se arrienda|arriendan|alquilo|alquilar|alquilamos|se alquila|alquiler|alquileres|rento|rentar|se renta|renta|rentas|canon|canones|cánones|amoblado|amoblada|sin amoblar|arrendatario|arrendador|inquilino)\b/i.test(cleanCheckReqText)
+      const hasRentReqSignals = !isInvestorPurchaseReq && (
+        /\b(?:arriendo|arriendos|arrendar|arrendamos|se arrienda|arriendan|alquilo|alquilar|alquilamos|se alquila|alquiler|alquileres|rento|rentar|se renta|canon|canones|cánones|amoblado|amoblada|sin amoblar|arrendatario|arrendador|inquilino)\b/i.test(cleanCheckReqText)
         || /(?:incluida|con|\+|más|mas)\s*(?:administraci[oó]n|admon)/i.test(cleanCheckReqText)
         || /(?:administraci[oó]n|admon)\s*(?:incluida|adicional)/i.test(cleanCheckReqText)
-        || /valor arriendo/i.test(cleanCheckReqText);
-      const hasVentaReqSignals = /\b(?:compro|comprar|en compra|para compra|para adquisición)\b/i.test(cleanCheckReqText);
+        || /valor arriendo/i.test(cleanCheckReqText)
+      );
+      const hasVentaReqSignals = isInvestorPurchaseReq || /\b(?:compro|comprar|en compra|para compra|para adquisición|adquirir|para comprar)\b/i.test(cleanCheckReqText);
 
       if (hasPermutaReqSignals) {
         extracted.transactionType = hasVentaReqSignals ? "venta_permuta" : "permuta";
       } else if (hasRentReqSignals && hasVentaReqSignals) {
         extracted.transactionType = "venta_o_arriendo";
-      } else if (hasRentReqSignals || (isGroupReqRent && !hasVentaReqSignals)) {
+      } else if (hasRentReqSignals || (isGroupReqRent && !hasVentaReqSignals && !isInvestorPurchaseReq)) {
         extracted.transactionType = "arriendo";
-      } else if (hasVentaReqSignals) {
+      } else {
         extracted.transactionType = "venta";
       }
 

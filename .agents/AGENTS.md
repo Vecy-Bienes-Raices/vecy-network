@@ -162,7 +162,13 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v23.6 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL: v23.7 — Agosto 2026
+
+### Novedades v23.7 (Doctrina de Inversionistas & Propiedades Rentando + Micro-Zonificación Rosales Bajo):
+- **Doctrina de Inversión y Flujo de Renta**: *"para inversionista"*, *"rentando"*, *"esté rentando"*, *"generando renta"*, *"compra rentando"* representan intención de COMPRA / ADQUISICIÓN DE ACTIVO EN VENTA para percibir renta mensual, JAMÁS una solicitud de arriendo.
+- **Blindaje en Extracción y Prompts (`janIA.ts` y `prompts/base.md`)**: Asignación forzosa de `tipoNegocioDeseado: "venta"` y `transactionType: "venta"`, evitando que caigan en la trampa semántica de `arriendo`.
+- **Depuración Retroactiva en Supabase**: Corrección de requerimientos históricos de inversionistas y purga de matches inválidos contra propiedades en arriendo (incluyendo match #10955).
+- **Micro-Zonificación Rosales**: *Rosales Bajo* (abajo de la Av. Circunvalar hacia Cra 7 / Cra 5) vs *Rosales Alto* (arriba de la Circunvalar hacia cerros).
 
 ### Novedades v23.6 (Blindaje de Lista Negra de Grupos No Inmobiliarios & Filtro Anti-Falsos Positivos):
 - **Purga Total de Grupo de Seguridad Comunitaria**: Eliminación completa en Supabase del Requerimiento #127 y su match falso originado en *"SEGURIDAD TIEMPO REAL"*.
