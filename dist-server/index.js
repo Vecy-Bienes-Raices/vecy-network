@@ -5663,12 +5663,14 @@ __export(janIA_exports, {
   MSG_RESUMEN_RETORNO_PRESENTACION: () => MSG_RESUMEN_RETORNO_PRESENTACION,
   MSG_TIPS_CALIDAD_COBERTURA: () => MSG_TIPS_CALIDAD_COBERTURA,
   REPUTATION_HOOK: () => REPUTATION_HOOK,
+  brokerDirectoryCache: () => brokerDirectoryCache,
   buildSystemPrompt: () => buildSystemPrompt,
   calcularCalificacionCompletitud: () => calcularCalificacionCompletitud,
   clearPromptCache: () => clearPromptCache,
   enrichLexiconFromText: () => enrichLexiconFromText,
   esMensajeSpamOBasura: () => esMensajeSpamOBasura,
   evaluateMultiItemHeuristics: () => evaluateMultiItemHeuristics,
+  extractColombianPhoneFromText: () => extractColombianPhoneFromText,
   extractFallbackDataFromText: () => extractFallbackDataFromText,
   extractFirstName: () => extractFirstName,
   generarHashMensaje: () => generarHashMensaje,
@@ -5679,6 +5681,7 @@ __export(janIA_exports, {
   handleAmendmentUpdate: () => handleAmendmentUpdate,
   handleDetectedMatches: () => handleDetectedMatches,
   hasRealEstateTextKeyword: () => hasRealEstateTextKeyword,
+  initBrokerDirectory: () => initBrokerDirectory,
   isGenericName: () => isGenericName,
   isOutsideWorkingHours: () => isOutsideWorkingHours,
   isPhoneNumberNotPrice: () => isPhoneNumberNotPrice,
@@ -5692,6 +5695,7 @@ __export(janIA_exports, {
   processConsultingMessage: () => processConsultingMessage,
   processWhatsAppMessage: () => processWhatsAppMessage,
   repairJSON: () => repairJSON,
+  resolveContactPhone: () => resolveContactPhone,
   sanitizeResponseMarkdown: () => sanitizeResponseMarkdown,
   scrapeUrlWithBypass: () => scrapeUrlWithBypass,
   splitMultiPropertyMessage: () => splitMultiPropertyMessage,
@@ -7754,6 +7758,94 @@ function isGenericName(n) {
   const lower = n.toLowerCase().trim();
   return lower.startsWith("asesor +") || lower === "asesor" || lower === "nuevo asesor" || lower === "colega" || lower === "";
 }
+function extractColombianPhoneFromText(text2) {
+  if (!text2) return null;
+  const clean = text2.replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0]/g, " ");
+  const waMatch = clean.match(/wa\.me\/(?:57)?(3\d{9})/i);
+  if (waMatch) return "57" + waMatch[1];
+  const contactMatch = clean.match(/(?:tel[eé]fono|tel|celular|cel|whatsapp|wapp|wa|contacto|llamar|inf|info|informaci[oó]n|asesor|escribir|comunicarse|m[oó]vil)\s*:?\s*(?:\+?57\s*)?(3[\d\s.\-]{8,14})/i);
+  if (contactMatch) {
+    const digits = contactMatch[1].replace(/\D/g, "");
+    if (digits.length === 10 && digits.startsWith("3")) {
+      return "57" + digits;
+    }
+  }
+  const genericMatches = clean.matchAll(/(?:\+?57\s*)?(3\d{2}[\s.\-]?\d{3}[\s.\-]?\d{4})\b/g);
+  for (const m of genericMatches) {
+    const digits = m[1].replace(/\D/g, "");
+    if (digits.length === 10 && digits.startsWith("3")) {
+      const idx = m.index ?? 0;
+      const before = clean.substring(Math.max(0, idx - 15), idx).toLowerCase();
+      const after = clean.substring(idx + m[0].length, idx + m[0].length + 15).toLowerCase();
+      if (before.includes("$") || before.includes("precio") || before.includes("canon") || before.includes("ppto") || before.includes("presupuesto")) {
+        continue;
+      }
+      if (after.includes("millon") || after.includes("mil") || after.includes("m2") || after.includes("mts") || after.includes("pesos")) {
+        continue;
+      }
+      return "57" + digits;
+    }
+  }
+  return null;
+}
+function resolveContactPhone(userId, rawText, userName, extractedPhone) {
+  const cleanUserId = userId.split(":")[0].split("@")[0];
+  const isLid = cleanUserId.length > 13 || cleanUserId.startsWith("1203");
+  const phoneFromText = extractColombianPhoneFromText(rawText);
+  if (phoneFromText) {
+    brokerDirectoryCache.set(cleanUserId, { phone: phoneFromText, name: userName });
+    if (userName) brokerDirectoryCache.set(userName, { phone: phoneFromText, name: userName });
+    return phoneFromText;
+  }
+  if (extractedPhone) {
+    const cleanExt = extractedPhone.replace(/\D/g, "");
+    if (cleanExt.length === 10 && cleanExt.startsWith("3")) {
+      const p = "57" + cleanExt;
+      brokerDirectoryCache.set(cleanUserId, { phone: p, name: userName });
+      return p;
+    }
+    if (cleanExt.length === 12 && cleanExt.startsWith("573")) {
+      brokerDirectoryCache.set(cleanUserId, { phone: cleanExt, name: userName });
+      return cleanExt;
+    }
+  }
+  const cached = brokerDirectoryCache.get(cleanUserId) || (userName ? brokerDirectoryCache.get(userName) : null);
+  if (cached && cached.phone) {
+    return cached.phone;
+  }
+  if (!isLid && (cleanUserId.startsWith("573") || cleanUserId.startsWith("3"))) {
+    const p = cleanUserId.startsWith("3") && cleanUserId.length === 10 ? `57${cleanUserId}` : cleanUserId;
+    brokerDirectoryCache.set(cleanUserId, { phone: p, name: userName });
+    return p;
+  }
+  return cleanUserId;
+}
+async function initBrokerDirectory() {
+  try {
+    const db = await getDb();
+    if (!db) return;
+    const knownProps = await db.select({
+      phone: properties.idUsuarioWhatsapp,
+      name: properties.nombreUsuarioWhatsapp
+    }).from(properties);
+    const knownReqs = await db.select({
+      phone: requirements.idUsuarioWhatsapp,
+      name: requirements.nombreUsuarioWhatsapp
+    }).from(requirements);
+    for (const item of [...knownProps, ...knownReqs]) {
+      if (item.phone && (item.phone.startsWith("573") || item.phone.startsWith("3")) && item.phone.length <= 12) {
+        const cleanPhone = item.phone.startsWith("3") && item.phone.length === 10 ? `57${item.phone}` : item.phone;
+        brokerDirectoryCache.set(item.phone, { phone: cleanPhone, name: item.name || void 0 });
+        if (item.name && !isGenericName(item.name)) {
+          brokerDirectoryCache.set(item.name, { phone: cleanPhone, name: item.name });
+        }
+      }
+    }
+    console.log(`[JanIA-Directory] \u2705 Directorio de brokers cargado en memoria (${brokerDirectoryCache.size} entradas conocidas).`);
+  } catch (err) {
+    console.warn(`[JanIA-Directory] Advertencia cargando directorio inicial:`, err?.message || err);
+  }
+}
 async function findOrCreateUserByPhone(phone, realName) {
   const db = await getDb();
   if (!db) return null;
@@ -8032,8 +8124,10 @@ async function handleAmendmentUpdate(userId, text2) {
 async function saveProperty(data, userId, realName, imageBuffer, pdfBuffer, pdfMimeType) {
   const db = await getDb();
   if (!db) return null;
-  const rawPhone = userId.split(":")[0].split("@")[0];
-  const user = await findOrCreateUserByPhone(rawPhone, realName);
+  const rawTextContent = `${data.rawText || ""} ${data.description || ""} ${data.name || ""}`;
+  const effectivePhone = resolveContactPhone(userId, rawTextContent, realName, data.idUsuarioWhatsapp);
+  const rawPhone = effectivePhone;
+  const user = await findOrCreateUserByPhone(effectivePhone, realName);
   let imageUrl;
   if (imageBuffer) {
     try {
@@ -8374,8 +8468,10 @@ async function saveProperty(data, userId, realName, imageBuffer, pdfBuffer, pdfM
 async function saveRequirement(data, userId, realName, imageBuffer, pdfBuffer, pdfMimeType) {
   const db = await getDb();
   if (!db) return null;
-  const rawPhone = userId.split(":")[0].split("@")[0];
-  const user = await findOrCreateUserByPhone(rawPhone, realName);
+  const rawTextContent = `${data.rawText || ""} ${data.name || ""}`;
+  const effectivePhone = resolveContactPhone(userId, rawTextContent, realName, data.idUsuarioWhatsapp);
+  const rawPhone = effectivePhone;
+  const user = await findOrCreateUserByPhone(effectivePhone, realName);
   let reqPdfUrl;
   if (pdfBuffer) {
     try {
@@ -9170,7 +9266,7 @@ function sanitizeResponseMarkdown(text2) {
   if (!text2) return "";
   return text2.replace(/\*\*/g, "*");
 }
-var janiaResultSchema, COMMON_FIRST_NAMES, GREETED_TODAY, REPUTATION_HOOK, cachedLiveStatsText, cachedLiveStatsTime, promptCache, JANIA_PROMPT, MSG_PRESENTACION_INSTITUCIONAL, MSG_PAUTAS_FORMATOS, MSG_TIPS_CALIDAD_COBERTURA, MSG_RESUMEN_RETORNO_PRESENTACION, MSG_CIERRE_OPERACIONES, MSG_PROMO_INMUEBLES, MSG_PROMO_CONSULTAS, MSG_PROMO_CIRCULO, MSG_COMUNICADO_MATCH_NETWORK, MSG_COMUNICADO_MATCH_CIRCULO;
+var janiaResultSchema, COMMON_FIRST_NAMES, GREETED_TODAY, REPUTATION_HOOK, cachedLiveStatsText, cachedLiveStatsTime, promptCache, JANIA_PROMPT, brokerDirectoryCache, MSG_PRESENTACION_INSTITUCIONAL, MSG_PAUTAS_FORMATOS, MSG_TIPS_CALIDAD_COBERTURA, MSG_RESUMEN_RETORNO_PRESENTACION, MSG_CIERRE_OPERACIONES, MSG_PROMO_INMUEBLES, MSG_PROMO_CONSULTAS, MSG_PROMO_CIRCULO, MSG_COMUNICADO_MATCH_NETWORK, MSG_COMUNICADO_MATCH_CIRCULO;
 var init_janIA = __esm({
   "server/_core/janIA.ts"() {
     "use strict";
@@ -9494,6 +9590,11 @@ Constantemente recibes datos en diversos formatos (Texto plano, URLs de portales
   "voiceResponse": "string (un saludo y respuesta/resumen conversacional sumamente breve, directo y humanizado en espa\xF1ol de m\xE1ximo 150 caracteres, sin negritas/markdown/emojis. Usa comas y puntos suspensivos (...) de forma estrat\xE9gica para indicarle al sintetizador d\xF3nde hacer pausas naturales y respiraciones, y signos de exclamaci\xF3n para dar entonaci\xF3n)"
 }
 `;
+    brokerDirectoryCache = /* @__PURE__ */ new Map();
+    setTimeout(() => {
+      initBrokerDirectory().catch(() => {
+      });
+    }, 3e3);
     MSG_PRESENTACION_INSTITUCIONAL = `\u{1F680} **PRESENTACI\xD3N INSTITUCIONAL: JanIA v2.5** \u{1F680}
 _Cerebro de Inteligencia Artificial para la Red VECY_
 

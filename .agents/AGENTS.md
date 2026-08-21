@@ -162,7 +162,13 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v23.3 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL: v23.4 — Agosto 2026
+
+### Novedades v23.4 (Extractor Inteligente de Teléfonos & Directorio de Brokers 100% Pasivo Anti-Ban):
+- **Extractor Inteligente de Teléfono Colombiano (`extractColombianPhoneFromText` en `janIA.ts`)**: Análisis robusto de enlaces `wa.me/573...`, prefijos de contacto (`Tel`, `Cel`, `WhatsApp`, `Inf`, `Contacto`, `Asesor`) y números celulares de 10 dígitos colombianos con filtrado de descarte para precios y áreas.
+- **Directorio de Brokers en Memoria (`brokerDirectoryCache` y `initBrokerDirectory`)**: Mapeo persistente y pasivo de asesores (remitentes, nombres y LIDs a números de teléfono reales). Aprende el teléfono de cada broker la primera vez y lo aplica a todas sus publicaciones futuras sin depender de APIs externas ni arriesgar el número de WhatsApp.
+- **Enriquecimiento Retroactivo en Supabase (`enrich_phones.ts`)**: Ejecución exitosa que recuperó y asignó números celulares reales a 37 inmuebles y 25 requerimientos con LIDs anónimos en la base de datos.
+- **Resolución Automática en Ingesta (`saveProperty` y `saveRequirement`)**: Asignación transparente del número real a `idUsuarioWhatsapp` y vinculación con la tabla `users`.
 
 ### Novedades v23.3 (Gran Desbloqueo Doctrinal de Matches & Geografía Canónica):
 - **Desbloqueo Doctrinal de Contacto en Matching (`matching.ts`)**: Conversión del filtro duro de teléfono (`Filtro 0B`) que descalificaba al 0% publicaciones sin teléfono explícito en el texto crudo hacia una advertencia informativa de enriquecimiento, permitiendo que JanIA califique matches viables con brokers de grupos de WhatsApp.

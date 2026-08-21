@@ -3138,6 +3138,123 @@ export function isGenericName(n: string | null | undefined): boolean {
          lower === "";
 }
 
+// ── DIRECTORIO GLOBAL DE BROKERS Y RESOLUCIÓN INTELIGENTE DE CONTACTO (100% PASIVO / SEGURO) ──
+export const brokerDirectoryCache = new Map<string, { phone: string; name?: string }>();
+
+export function extractColombianPhoneFromText(text: string | null | undefined): string | null {
+  if (!text) return null;
+  const clean = text.replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0]/g, ' ');
+
+  // 1. Enlaces directos wa.me (ej: wa.me/57310... o wa.me/310...)
+  const waMatch = clean.match(/wa\.me\/(?:57)?(3\d{9})/i);
+  if (waMatch) return '57' + waMatch[1];
+
+  // 2. Prefijos explícitos de contacto (Tel, Cel, WhatsApp, Inf, Contacto, Asesor, etc.)
+  const contactMatch = clean.match(/(?:tel[eé]fono|tel|celular|cel|whatsapp|wapp|wa|contacto|llamar|inf|info|informaci[oó]n|asesor|escribir|comunicarse|m[oó]vil)\s*:?\s*(?:\+?57\s*)?(3[\d\s.\-]{8,14})/i);
+  if (contactMatch) {
+    const digits = contactMatch[1].replace(/\D/g, '');
+    if (digits.length === 10 && digits.startsWith('3')) {
+      return '57' + digits;
+    }
+  }
+
+  // 3. Patrón genérico celular Colombia (3xx xxx xxxx) validando que no sea precio ni área
+  const genericMatches = clean.matchAll(/(?:\+?57\s*)?(3\d{2}[\s.\-]?\d{3}[\s.\-]?\d{4})\b/g);
+  for (const m of genericMatches) {
+    const digits = m[1].replace(/\D/g, '');
+    if (digits.length === 10 && digits.startsWith('3')) {
+      const idx = m.index ?? 0;
+      const before = clean.substring(Math.max(0, idx - 15), idx).toLowerCase();
+      const after = clean.substring(idx + m[0].length, idx + m[0].length + 15).toLowerCase();
+      
+      if (before.includes('$') || before.includes('precio') || before.includes('canon') || before.includes('ppto') || before.includes('presupuesto')) {
+        continue;
+      }
+      if (after.includes('millon') || after.includes('mil') || after.includes('m2') || after.includes('mts') || after.includes('pesos')) {
+        continue;
+      }
+      return '57' + digits;
+    }
+  }
+  return null;
+}
+
+export function resolveContactPhone(userId: string, rawText?: string, userName?: string, extractedPhone?: string): string {
+  const cleanUserId = userId.split(':')[0].split('@')[0];
+  const isLid = cleanUserId.length > 13 || cleanUserId.startsWith('1203');
+
+  // 1. Prioridad Máxima: Si en el texto viene un teléfono explícito
+  const phoneFromText = extractColombianPhoneFromText(rawText);
+  if (phoneFromText) {
+    brokerDirectoryCache.set(cleanUserId, { phone: phoneFromText, name: userName });
+    if (userName) brokerDirectoryCache.set(userName, { phone: phoneFromText, name: userName });
+    return phoneFromText;
+  }
+
+  // 2. Si el LLM extrajo un teléfono válido
+  if (extractedPhone) {
+    const cleanExt = extractedPhone.replace(/\D/g, '');
+    if (cleanExt.length === 10 && cleanExt.startsWith('3')) {
+      const p = '57' + cleanExt;
+      brokerDirectoryCache.set(cleanUserId, { phone: p, name: userName });
+      return p;
+    }
+    if (cleanExt.length === 12 && cleanExt.startsWith('573')) {
+      brokerDirectoryCache.set(cleanUserId, { phone: cleanExt, name: userName });
+      return cleanExt;
+    }
+  }
+
+  // 3. Consultar en el directorio de brokers previamente aprendidos
+  const cached = brokerDirectoryCache.get(cleanUserId) || (userName ? brokerDirectoryCache.get(userName) : null);
+  if (cached && cached.phone) {
+    return cached.phone;
+  }
+
+  // 4. Si el remitente es un teléfono real directo (no LID)
+  if (!isLid && (cleanUserId.startsWith('573') || cleanUserId.startsWith('3'))) {
+    const p = cleanUserId.startsWith('3') && cleanUserId.length === 10 ? `57${cleanUserId}` : cleanUserId;
+    brokerDirectoryCache.set(cleanUserId, { phone: p, name: userName });
+    return p;
+  }
+
+  return cleanUserId;
+}
+
+export async function initBrokerDirectory() {
+  try {
+    const db = await getDb();
+    if (!db) return;
+    const knownProps = await db.select({
+      phone: properties.idUsuarioWhatsapp,
+      name: properties.nombreUsuarioWhatsapp
+    }).from(properties);
+
+    const knownReqs = await db.select({
+      phone: requirements.idUsuarioWhatsapp,
+      name: requirements.nombreUsuarioWhatsapp
+    }).from(requirements);
+
+    for (const item of [...knownProps, ...knownReqs]) {
+      if (item.phone && (item.phone.startsWith('573') || item.phone.startsWith('3')) && item.phone.length <= 12) {
+        const cleanPhone = item.phone.startsWith('3') && item.phone.length === 10 ? `57${item.phone}` : item.phone;
+        brokerDirectoryCache.set(item.phone, { phone: cleanPhone, name: item.name || undefined });
+        if (item.name && !isGenericName(item.name)) {
+          brokerDirectoryCache.set(item.name, { phone: cleanPhone, name: item.name });
+        }
+      }
+    }
+    console.log(`[JanIA-Directory] ✅ Directorio de brokers cargado en memoria (${brokerDirectoryCache.size} entradas conocidas).`);
+  } catch (err: any) {
+    console.warn(`[JanIA-Directory] Advertencia cargando directorio inicial:`, err?.message || err);
+  }
+}
+
+// Inicialización automática diferida
+setTimeout(() => {
+  initBrokerDirectory().catch(() => {});
+}, 3000);
+
 async function findOrCreateUserByPhone(phone: string, realName: string) {
   const db = await getDb();
   if (!db) return null;
@@ -3495,8 +3612,10 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
   const db = await getDb();
   if (!db) return null;
 
-  const rawPhone = userId.split(':')[0].split('@')[0];
-  const user = await findOrCreateUserByPhone(rawPhone, realName);
+  const rawTextContent = `${data.rawText || ""} ${data.description || ""} ${data.name || ""}`;
+  const effectivePhone = resolveContactPhone(userId, rawTextContent, realName, data.idUsuarioWhatsapp);
+  const rawPhone = effectivePhone;
+  const user = await findOrCreateUserByPhone(effectivePhone, realName);
 
   let imageUrl: string | undefined;
   if (imageBuffer) {
@@ -3932,8 +4051,10 @@ async function saveRequirement(data: any, userId: string, realName: string, imag
   const db = await getDb();
   if (!db) return null;
 
-  const rawPhone = userId.split(':')[0].split('@')[0];
-  const user = await findOrCreateUserByPhone(rawPhone, realName);
+  const rawTextContent = `${data.rawText || ""} ${data.name || ""}`;
+  const effectivePhone = resolveContactPhone(userId, rawTextContent, realName, data.idUsuarioWhatsapp);
+  const rawPhone = effectivePhone;
+  const user = await findOrCreateUserByPhone(effectivePhone, realName);
 
   let reqPdfUrl: string | undefined;
   if (pdfBuffer) {
