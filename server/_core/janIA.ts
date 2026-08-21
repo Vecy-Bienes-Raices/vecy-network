@@ -2623,6 +2623,15 @@ Por lo tanto, DEBES hacer lo siguiente:
           console.log("[JANIA-FILTER] No se rescata como Inmueble/Requerimiento por falta de especificaciones prediales suficientes.");
         }
       }
+
+      // ── BLINDAJE ESTRICTO CONTRA FALSOS POSITIVOS (MENSAJES SIN INTENCIÓN PREDIAL) ──
+      // Si el LLM lo clasificó como INMUEBLE o REQUERIMIENTO pero el mensaje no contiene
+      // ninguna intención comercial real (no es búsqueda, no es oferta, no tiene tipología ni datos técnicos)
+      const hasRealEstateIntent = isSearch || isOffer || hasRealEstateKeyword || hasTechnicalSpecs;
+      if ((result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO") && !hasRealEstateIntent) {
+        console.log(`[JANIA-FILTER] ⛔ Descartando falso positivo de ${result.classification}: Mensaje sin intención predial explícita ("${cleanText.substring(0, 50)}..."). Degenerado a CONSULTA_GENERAL.`);
+        result.classification = "CONSULTA_GENERAL";
+      }
     }
 
     const extracted = result.extractedData || {};

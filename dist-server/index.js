@@ -7379,6 +7379,11 @@ ${liveStats}` : buildSystemPrompt(groupJid);
           console.log("[JANIA-FILTER] No se rescata como Inmueble/Requerimiento por falta de especificaciones prediales suficientes.");
         }
       }
+      const hasRealEstateIntent = isSearch || isOffer || hasRealEstateKeyword || hasTechnicalSpecs;
+      if ((result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO") && !hasRealEstateIntent) {
+        console.log(`[JANIA-FILTER] \u26D4 Descartando falso positivo de ${result.classification}: Mensaje sin intenci\xF3n predial expl\xEDcita ("${cleanText2.substring(0, 50)}..."). Degenerado a CONSULTA_GENERAL.`);
+        result.classification = "CONSULTA_GENERAL";
+      }
     }
     const extracted = result.extractedData || {};
     let isRequirement = result.classification === "REQUERIMIENTO";
@@ -10067,6 +10072,7 @@ var whatsapp_match_exports = {};
 __export(whatsapp_match_exports, {
   JaniaMatchBot: () => JaniaMatchBot,
   downloadMediaSafely: () => downloadMediaSafely,
+  isBlacklistedGroup: () => isBlacklistedGroup,
   janiaCaptadorBot: () => janiaCaptadorBot,
   janiaMatchBot: () => janiaMatchBot,
   unwrapMessage: () => unwrapMessage
@@ -10122,6 +10128,25 @@ async function downloadMediaSafely(msg, type) {
     console.error(`[JANIA-MEDIA] Error descargando ${type}:`, err2);
   }
   return null;
+}
+function isBlacklistedGroup(groupName, chatId) {
+  if (!groupName && !chatId) return false;
+  const nameLower = (groupName || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const blacklistPatterns = [
+    "seguridad tiempo real",
+    "seguridad en tiempo real",
+    "chat de seguridad",
+    "frente de seguridad",
+    "cuadrante",
+    "policia",
+    "cai ",
+    "vigilancia",
+    "red de apoyo",
+    "vecinos alerta",
+    "seguridad barrio",
+    "seguridad comunitaria"
+  ];
+  return blacklistPatterns.some((pattern) => nameLower.includes(pattern));
 }
 var SERVER_BOOT_TIME, cleanJid, outgoingQueue, JaniaMatchBot, janiaMatchBot, janiaCaptadorBot;
 var init_whatsapp_match = __esm({
@@ -10388,6 +10413,11 @@ var init_whatsapp_match = __esm({
             }
             try {
               if (isGroup) {
+                const meta = await this.getCachedGroupMetadata(chatId);
+                const groupSubject = meta?.subject || "";
+                if (isBlacklistedGroup(groupSubject, chatId)) {
+                  continue;
+                }
                 const rawMsg = unwrapMessage(msg.message);
                 if (rawMsg?.stickerMessage) {
                   continue;
@@ -11210,6 +11240,10 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
                 groupName = metadata.subject;
               }
             } catch (e) {
+            }
+            if (isBlacklistedGroup(groupName, chatId)) {
+              console.log(`[JANIA-MATCH] \u{1F6AB} Grupo '${groupName}' (${chatId}) en lista negra. Descartando buffer por completo.`);
+              return;
             }
             result = await processWhatsAppMessage2(
               fullText,

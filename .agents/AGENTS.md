@@ -162,7 +162,12 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v23.5 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL: v23.6 — Agosto 2026
+
+### Novedades v23.6 (Blindaje de Lista Negra de Grupos No Inmobiliarios & Filtro Anti-Falsos Positivos):
+- **Purga Total de Grupo de Seguridad Comunitaria**: Eliminación completa en Supabase del Requerimiento #127 y su match falso originado en *"SEGURIDAD TIEMPO REAL"*.
+- **Lista Negra Global de Grupos (`isBlacklistedGroup` en `whatsapp-match.ts` y `janIA.ts`)**: Descarte silencioso total a nivel de red para grupos de seguridad, cuadrantes policiales, frentes de seguridad o convivencia ciudadana (0 logs, 0 buffers, 0 reacciones y 0 IA).
+- **Filtro Estricto de Intención Predial (`hasRealEstateIntent` en `janIA.ts` y reglas 4-5 en `prompts/base.md`)**: Requisito inquebrantable de intención comercial (búsqueda/oferta) o tipología predial (`apto`, `casa`, `oficina`, `bodega`, etc.) para calificar como `REQUERIMIENTO` o `INMUEBLE`. Frases cortas, saludos o direcciones aisladas se degradan a `CONSULTA_GENERAL` y jamás ingresan a Supabase ni generan matches.
 
 ### Novedades v23.5 (Motor de Deducción Geográfica Pura e Intersecciones Catastrales):
 - **Extractor Inteligente de Intersecciones Viales (`extractIntersectionFromText` y `resolveIntersectionToBarrio` en `geography.ts`)**: Análisis robusto de cruces viales (`Calle X con Cra Y`, `Cra X con Calle Y`, `#`, `con`, `y`, `septima/7ma`, etc.).

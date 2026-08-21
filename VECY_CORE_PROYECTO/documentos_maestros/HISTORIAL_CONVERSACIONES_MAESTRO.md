@@ -672,6 +672,24 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
+### 🗓️ Sesión: Jueves 20 de Agosto de 2026 — 08:50 PM a 09:05 PM (Hora Colombia UTC-5)
+**Versión del Sistema**: `v23.6 — Agosto 2026`  
+**Commit GitHub Main**: `v23.6`
+
+#### 📋 Requerimientos Específicos del Usuario (Eduardo A. Rivera):
+1. **Exclusión y Purga de Grupo de Seguridad ("SEGURIDAD TIEMPO REAL")**: Eliminar de Supabase todo registro o match procedente de este grupo barrial no inmobiliario conectado a la policía y prohibir cualquier interacción futura.
+2. **Filtro Anti-Falsos Positivos de Requerimientos en Frases Cortas/Direcciones**: Frases aisladas, saludos o direcciones sueltas (ej. *"Buenos días! Calle 119 # 13-26"*) jamás deben clasificarse como requerimientos ni ingresar al motor de matching.
+
+#### 🛠️ Soluciones e Implementaciones Técnicas:
+- **Purga Inmediata en Supabase**:
+  - Requerimiento #127 y su correspondiente match falso eliminados limpiamente de las tablas `requirements` y `property_matches`.
+- **Lista Negra Global de Grupos (`isBlacklistedGroup` en `whatsapp-match.ts` y `janIA.ts`)**:
+  - Descarte total a nivel de red para grupos con nombres alusivos a seguridad, cuadrantes, policía, frentes de seguridad o convivencia. Cero logs, cero buffers, cero reacciones y cero llamadas a IA.
+- **Filtro Estricto de Intención Predial (`hasRealEstateIntent` en `janIA.ts` y regla 4-5 en `prompts/base.md`)**:
+  - Si un mensaje clasificado como requerimiento u oferta carece de verbos de acción comercial (`busco`, `vendo`, `arriendo`, `necesito`) o tipología de inmueble (`apto`, `casa`, `oficina`, `bodega`, etc.), se degrada forzosamente a `CONSULTA_GENERAL` y jamás se almacena en la base de datos.
+
+---
+
 ### 🗓️ Sesión: Jueves 20 de Agosto de 2026 — 08:30 PM a 08:50 PM (Hora Colombia UTC-5)
 **Versión del Sistema**: `v23.5 — Agosto 2026`  
 **Commit GitHub Main**: `v23.5`

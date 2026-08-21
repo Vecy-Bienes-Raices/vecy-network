@@ -97,6 +97,29 @@ export async function downloadMediaSafely(msg: proto.IWebMessageInfo, type: 'ima
   return null;
 }
 
+// Helper para verificar grupos en lista negra (seguridad, policía, cuadrantes, convivencia no inmobiliaria)
+export function isBlacklistedGroup(groupName: string | null | undefined, chatId: string | null | undefined): boolean {
+  if (!groupName && !chatId) return false;
+  const nameLower = (groupName || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+  const blacklistPatterns = [
+    "seguridad tiempo real",
+    "seguridad en tiempo real",
+    "chat de seguridad",
+    "frente de seguridad",
+    "cuadrante",
+    "policia",
+    "cai ",
+    "vigilancia",
+    "red de apoyo",
+    "vecinos alerta",
+    "seguridad barrio",
+    "seguridad comunitaria"
+  ];
+
+  return blacklistPatterns.some(pattern => nameLower.includes(pattern));
+}
+
 // Cola de despacho secuencial para evitar bloqueos
 let outgoingQueue: Promise<any> = Promise.resolve();
 
@@ -403,8 +426,12 @@ export class JaniaMatchBot {
         try {
           // --- FLUJO 1: MENSAJES DE GRUPO ---
           if (isGroup) {
-            // Escuchamos de forma global todos los grupos en los que participamos.
-            // authorizedGroups se usará abajo únicamente para reaccionar con emojis.
+            // 🚫 BLINDAJE DE LISTA NEGRA: Grupos de seguridad, policía, cuadrantes y comunitarios no inmobiliarios
+            const meta = await this.getCachedGroupMetadata(chatId);
+            const groupSubject = meta?.subject || "";
+            if (isBlacklistedGroup(groupSubject, chatId)) {
+              continue;
+            }
 
             const rawMsg = unwrapMessage(msg.message);
 
@@ -1512,6 +1539,11 @@ export class JaniaMatchBot {
             groupName = metadata.subject;
           }
         } catch (e) {}
+
+        if (isBlacklistedGroup(groupName, chatId)) {
+          console.log(`[JANIA-MATCH] 🚫 Grupo '${groupName}' (${chatId}) en lista negra. Descartando buffer por completo.`);
+          return;
+        }
         result = await processWhatsAppMessage(
           fullText,
           resolvedSenderId,

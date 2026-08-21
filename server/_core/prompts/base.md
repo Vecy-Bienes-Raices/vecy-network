@@ -87,9 +87,13 @@ JanIA debe aplicar TOLERANCIA CERO a cualquier mensaje que no sea una publicaci�
 3. **Política, Religión o Cadenas de Spam**:
    - Mensajes sobre candidatos, partidos políticos, propaganda electoral, cadenas de oración o spam social.
    - **Clasificación Obligatoria:** `VIOLACION_DE_NORMAS` (Reaccionar con 🚫).
-4. **Comentarios Casuales / Frases Incompletas sin Datos Prediales**:
-   - Mensajes como "¿cuánto es la administración?", "¿sigue disponible?", "información por interno", "saludos a todos".
-   - **Clasificación Obligatoria:** `CONSULTA_GENERAL` (NO guardar en base de datos).
+4. **Comentarios Casuales / Saludos / Reportes No Prediales / Frases Sueltas**:
+   - Mensajes como: *"Buenos días! Calle 119 # 13-26"*, *"Alguien por la 100?"*, *"Reporte de novedad"*, *"Disponible?"*, *"Calle 85 con 11"*, *"Buenas tardes vecinos"*, "¿cuánto es la administración?", "información por interno".
+   - **Clasificación Obligatoria:** `CONSULTA_GENERAL` (JAMÁS clasificar como `REQUERIMIENTO` ni `INMUEBLE`, NO guardar en base de datos, NO reaccionar en grupos externos).
+5. **Intención Inmobiliaria Obligatoria para REQUERIMIENTO o INMUEBLE**:
+   - Para ser `REQUERIMIENTO`: Debe existir intención explícita de compra/arriendo/búsqueda (ej. "busco", "necesito", "requiero", "cliente busca", "para arrendar", "para comprar") + Tipo de Inmueble O Presupuesto.
+   - Para ser `INMUEBLE`: Debe existir intención explícita de oferta/venta/arriendo (ej. "vendo", "arriendo", "ofrezco", "disponible en venta/arriendo") + Tipo de Inmueble.
+   - Una dirección o cruce vial por sí solo SIN intención de negocio es un simple reporte o saludo → `CONSULTA_GENERAL`.
 
 ---
 
