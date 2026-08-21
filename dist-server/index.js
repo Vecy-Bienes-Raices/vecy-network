@@ -4419,50 +4419,23 @@ function explicarMatch(requirement, property) {
   const propCity = resolveCityField(property.addressCity || "", property.city || "");
   const reqCityNorm = normalizarTextoGeografico(reqCity);
   const propCityNorm = normalizarTextoGeografico(propCity);
-  if (!reqCityNorm || !propCityNorm) {
-    blockers.push(`\u26D4 Ciudad no resuelta: buscada "${reqCity || "N/E"}", ofrecida "${propCity || "N/E"}". MATCH IMPOSIBLE (0%).`);
-    return buildExplanationResult(0, blockers, positives, negatives);
-  }
-  if (reqCityNorm !== propCityNorm && !reqCityNorm.includes(propCityNorm) && !propCityNorm.includes(reqCityNorm)) {
-    blockers.push(`\u26D4 Ciudad Incompatible: buscada "${reqCity}", ofrecida "${propCity}". MATCH IMPOSIBLE (0%).`);
-    return buildExplanationResult(0, blockers, positives, negatives);
-  }
-  positives.push(`Ciudad coincide: ${reqCity}`);
-  const reqLocalityNorm = normalizarTextoGeografico(requirement.addressLocality || requirement.localidadDeseada || "");
-  const propLocalityNorm = normalizarTextoGeografico(property.addressLocality || property.locality || "");
-  if (reqLocalityNorm && propLocalityNorm && reqLocalityNorm !== "n/e" && propLocalityNorm !== "n/e") {
-    if (reqLocalityNorm !== propLocalityNorm && !reqLocalityNorm.includes(propLocalityNorm) && !propLocalityNorm.includes(reqLocalityNorm)) {
-      blockers.push(`\u26D4 Localidad Incompatible: buscada "${requirement.addressLocality || requirement.localidadDeseada}", ofrecida "${property.addressLocality || property.locality}". MATCH IMPOSIBLE (0%).`);
-      return buildExplanationResult(0, blockers, positives, negatives);
-    }
-  }
-  const GENERIC_ZONES_SET2 = /* @__PURE__ */ new Set(["bogota", "bogota d c", "medellin", "cali", "barranquilla", "colombia", "norte", "sur", "centro", "n/e", "na", "null", "undefined", ""]);
   const rawReqBarrio = requirement.zonaDeseada || requirement.addressNeighborhood || "";
   const rawPropBarrio = property.zone || property.addressNeighborhood || "";
-  const reqBarrioNorm = normalizarTextoGeografico(rawReqBarrio);
-  const propBarrioNorm = normalizarTextoGeografico(rawPropBarrio);
-  const reqBarrioIsSpecific = reqBarrioNorm && !GENERIC_ZONES_SET2.has(reqBarrioNorm);
-  const propBarrioIsSpecific = propBarrioNorm && !GENERIC_ZONES_SET2.has(propBarrioNorm);
-  if (!reqBarrioIsSpecific || !propBarrioIsSpecific) {
-    blockers.push(`\u26D4 Barrio no resuelto: Requerimiento="${rawReqBarrio || "N/E"}", Oferta="${rawPropBarrio || "N/E"}". Se exige barrio espec\xEDfico verificado. MATCH IMPOSIBLE (0%).`);
+  const reqLocality = requirement.addressLocality || requirement.localidadDeseada || "";
+  const propLocality = property.addressLocality || property.locality || "";
+  const geoValidation = matchesGeography(
+    rawReqBarrio,
+    rawPropBarrio,
+    reqLocality,
+    propLocality,
+    reqCity,
+    propCity
+  );
+  if (!geoValidation.matches) {
+    blockers.push(`\u26D4 Geograf\xEDa Incompatible: Requerimiento="${rawReqBarrio || reqCity}" \u2260 Oferta="${rawPropBarrio || propCity}". MATCH IMPOSIBLE (0%).`);
     return buildExplanationResult(0, blockers, positives, negatives);
   }
-  let reqBarriosArray = [reqBarrioNorm];
-  if (rawReqBarrio.startsWith("[") && rawReqBarrio.endsWith("]")) {
-    try {
-      const parsed = JSON.parse(rawReqBarrio);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        reqBarriosArray = parsed.map((b) => normalizarTextoGeografico(b)).filter(Boolean);
-      }
-    } catch (e) {
-    }
-  }
-  const isBarrioMatched = reqBarriosArray.some((b) => b === propBarrioNorm || b.length > 5 && propBarrioNorm.length > 5 && (b.includes(propBarrioNorm) || propBarrioNorm.includes(b)));
-  if (!isBarrioMatched) {
-    blockers.push(`\u26D4 Barrio Incompatible: Requerimiento="${rawReqBarrio}" \u2260 Oferta="${rawPropBarrio}". LOS BARRIOS DEBEN COINCIDIR EXACTAMENTE (0%).`);
-    return buildExplanationResult(0, blockers, positives, negatives);
-  }
-  positives.push(`Barrio coincide: ${rawPropBarrio}`);
+  positives.push(`Geograf\xEDa compatible: ${rawPropBarrio || propCity} (${geoValidation.score} pts)`);
   function isPhoneNumberNotPrice2(val, rawText) {
     if (val === void 0 || val === null || val === "" || val === 0 || val === "0") return false;
     const numStr = String(val).replace(/\D/g, "");
@@ -4554,8 +4527,9 @@ function explicarMatch(requirement, property) {
   const propRealPhone = extractRealPhone(property);
   const reqRealPhone = extractRealPhone(requirement);
   if (!propRealPhone || !reqRealPhone) {
-    blockers.push("Match no comercializable: Falta n\xFAmero de tel\xE9fono de contacto real en una de las partes.");
-    return buildExplanationResult(0, blockers, positives, negatives);
+    negatives.push("Tel\xE9fono de contacto directo pendiente por verificar en una de las partes.");
+  } else {
+    positives.push(`Contacto verificado: +${reqRealPhone} \u2194 +${propRealPhone}`);
   }
   if (budgetMax > 0 && price <= 0 && (!property.rentPrice || parseFloat(String(property.rentPrice)) <= 0)) {
     blockers.push("Match inviable: La oferta NO especifica precio (N/E) y el requerimiento exige presupuesto.");

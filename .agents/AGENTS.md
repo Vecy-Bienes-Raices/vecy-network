@@ -162,7 +162,12 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v23.2 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL: v23.3 — Agosto 2026
+
+### Novedades v23.3 (Gran Desbloqueo Doctrinal de Matches & Geografía Canónica):
+- **Desbloqueo Doctrinal de Contacto en Matching (`matching.ts`)**: Conversión del filtro duro de teléfono (`Filtro 0B`) que descalificaba al 0% publicaciones sin teléfono explícito en el texto crudo hacia una advertencia informativa de enriquecimiento, permitiendo que JanIA califique matches viables con brokers de grupos de WhatsApp.
+- **Homologación Geográfica Completa (`matchesGeography` en `explicarMatch`)**: Unificación de la validación geográfica mediante `matchesGeography` para soportar equivalencias de zonas (`Chicó` ↔ `Chicó Norte` / `Chicó Reservado`, cuadrantes viales y municipios aledaños de la Sabana).
+- **Recálculo y Sincronización Global de Matches**: Ejecución del motor sobre los 743 inmuebles y 372 requerimientos en Supabase, incrementando los matches calificados de 6 a **131 matches de alta calidad (111 con Score ≥ 85%)** activos en el panel de administración.
 
 ### Novedades v23.2 (Resiliencia de Autenticación & Storage de Flyers):
 - **Resiliencia Total en Autenticación OAuth / Supabase (`Login.tsx`)**: Eliminación del temporizador destructivo de 5s y reemplazo por timeout holgado de 30s. Sincronización instantánea de caché React Query con `utils.auth.me.setData(undefined, res.user)` y supresión del `signOut()` forzado en fallas de red.

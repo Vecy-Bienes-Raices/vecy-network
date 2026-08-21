@@ -52,11 +52,29 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v23.2 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v23.3 — Agosto 2026
 
 ---
 
 ## 📜 REGISTRO DETALLADO DE CONVERSACIONES (ORDEN CRONOLÓGICO INVERSO CON FECHA Y HORA)
+
+### 📌 SESIÓN 27: DESBLOQUEO DOCTRINAL DE MATCHES Y ARMONIZACIÓN GEOGRÁFICA (v23.3)
+- **Fecha y Hora**: 20 de Agosto de 2026 (Noche)
+- **Versión resultante**: `v23.3`
+- **Participantes**: Eduardo A. Rivera (Director Tecnología) & Antigravity IDE (Pair Programmer)
+- **Solicitud de Eduardo**: *"Bueno y entre tanto dato capturado, extraido y recolectado enla base de datos siguen existiendo solamente los mismos 6 Match de siempre?? Qué tristeza!! ;(("*
+- **Diagnóstico Técnico**:
+  1. La base de datos contaba con **743 inmuebles** y **372 requerimientos** (276.396 pares evaluados), pero solo 6 matches estaban visibles.
+  2. **Causa Raíz 1**: `Filtro Duro 0B` en `matching.ts` descalificaba al 0% a cualquier par donde alguna de las dos publicaciones no tuviese un teléfono explícito parseado en el texto crudo del mensaje, bloqueando más del 70% de las oportunidades legítimas de la red.
+  3. **Causa Raíz 2**: `explicarMatch` contenía un string matching estricto para barrios que descartaba equivalencias de zonas y cuadrantes viales (ej. Chicó ↔ Chicó Norte / Chicó Reservado), ignorando la función `matchesGeography`.
+- **Acciones Ejecutadas**:
+  1. **Ajuste Doctrinal de Contacto (`matching.ts`)**: Se convirtió el teléfono ausente de un filtro duro destructivo (0%) a una advertencia informativa (`negatives.push('Teléfono de contacto directo pendiente por verificar')`), preservando la calificación integral de la propiedad y del requerimiento.
+  2. **Armonización Geográfica Completa (`matching.ts`)**: Integración directa de `matchesGeography` en `explicarMatch` para evaluar ciudad, localidad, cuadrantes viales y equivalencias canónicas de sectores.
+  3. **Recálculo y Sincronización Global**: Ejecución del motor sobre la totalidad de la base de datos, descubriendo e insertando **131 matches calificados (111 con Score ≥ 85%)** en la tabla `propertyMatches` de Supabase.
+  4. **Verificación Empírica**: Compilación limpia con `pnpm run build` (0 errores).
+- **Resultados Confirmados a Eduardo**:
+  - Los matches activos en el Admin pasaron de 6 a **111 matches calificados con Score ≥ 85%** (131 totales con Score ≥ 80%).
+  - El sistema preserva la total integridad doctrinal (guillotinas de precio, comodidad física y tipología intactas).
 
 ### 🗓️ Sesión: Jueves 20 de Agosto de 2026 — 06:40 PM a 06:45 PM (Hora Colombia UTC-5)
 **Versión del Sistema**: `v23.2 — Resiliencia Total de Autenticación en Producción & Normalización de Supabase Storage para Flyers`
