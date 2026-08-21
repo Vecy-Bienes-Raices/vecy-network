@@ -2947,6 +2947,20 @@ Por lo tanto, DEBES hacer lo siguiente:
       const sourceUrl = (urls && urls.length > 0 ? urls[0] : undefined);
 
       const isImageOnlyProp = (!rawUserText || rawUserText.trim() === '' || rawUserText.includes('[Publicación de Imagen')) && !!imageBuffer;
+      
+      // DOCTRINA v23.9: Si es solo una imagen sin texto y no tiene datos comerciales sobreimpresos (foto ambiental pura), DESCARTAR
+      if (isImageOnlyProp) {
+        const hasPropSpecs = (Number(extracted.price || 0) > 0) || 
+                             (Number(extracted.area || 0) > 0 && (Number(extracted.bedrooms || 0) > 0 || Number(extracted.garages || 0) > 0)) ||
+                             (!!extracted.zone && Number(extracted.bedrooms || 0) > 0);
+        if (!hasPropSpecs) {
+          console.log(`[JANIA-FILTER] ⛔ Descartando imagen fotográfica ambiental pura: no contiene ficha técnica ni datos comerciales legibles sobreimpresos.`);
+          result.inserted = false;
+          result.classification = "CONSULTA_GENERAL";
+          return result;
+        }
+      }
+
       const effectivePropRawText = isImageOnlyProp 
         ? buildFlyerBreakdownText(extracted, rawUserText || text) 
         : (rawUserText || text);
@@ -3043,6 +3057,20 @@ Por lo tanto, DEBES hacer lo siguiente:
       const sourceUrlReq = (urls && urls.length > 0 ? urls[0] : null);
 
       const isImageOnlyReq = (!messageToProcess || messageToProcess.trim() === '' || messageToProcess.includes('[Publicación de Imagen')) && !!imageBuffer;
+
+      // DOCTRINA v23.9: Si es solo una imagen sin texto y no tiene datos comerciales sobreimpresos (foto ambiental pura), DESCARTAR
+      if (isImageOnlyReq) {
+        const hasReqSpecs = (Number(extracted.presupuestoMax || extracted.price || 0) > 0) ||
+                            (!!(extracted.zonaDeseada || extracted.zone) && (Number(extracted.bedrooms || 0) > 0 || Number(extracted.area || 0) > 0)) ||
+                            (extracted.title && /compra|busco|requerimiento|solicitud|presupuesto/i.test(extracted.title));
+        if (!hasReqSpecs) {
+          console.log(`[JANIA-FILTER] ⛔ Descartando imagen fotográfica ambiental pura: no contiene criterios de requerimiento legibles sobreimpresos.`);
+          result.inserted = false;
+          result.classification = "CONSULTA_GENERAL";
+          return result;
+        }
+      }
+
       const effectiveReqRawText = isImageOnlyReq 
         ? buildFlyerBreakdownText(extracted, messageToProcess) 
         : messageToProcess;

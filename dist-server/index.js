@@ -7681,6 +7681,15 @@ ${liveStats}` : buildSystemPrompt(groupJid);
       }
       const sourceUrl = urls && urls.length > 0 ? urls[0] : void 0;
       const isImageOnlyProp = (!rawUserText || rawUserText.trim() === "" || rawUserText.includes("[Publicaci\xF3n de Imagen")) && !!imageBuffer;
+      if (isImageOnlyProp) {
+        const hasPropSpecs = Number(extracted.price || 0) > 0 || Number(extracted.area || 0) > 0 && (Number(extracted.bedrooms || 0) > 0 || Number(extracted.garages || 0) > 0) || !!extracted.zone && Number(extracted.bedrooms || 0) > 0;
+        if (!hasPropSpecs) {
+          console.log(`[JANIA-FILTER] \u26D4 Descartando imagen fotogr\xE1fica ambiental pura: no contiene ficha t\xE9cnica ni datos comerciales legibles sobreimpresos.`);
+          result.inserted = false;
+          result.classification = "CONSULTA_GENERAL";
+          return result;
+        }
+      }
       const effectivePropRawText = isImageOnlyProp ? buildFlyerBreakdownText(extracted, rawUserText || text2) : rawUserText || text2;
       const saved = await saveProperty({
         ...extracted,
@@ -7750,6 +7759,15 @@ ${liveStats}` : buildSystemPrompt(groupJid);
       const reqTitle = extracted.title || `Requerimiento de ${extracted.propertyType || "inmueble"} en ${extracted.zonaDeseada || extracted.zone || "Bogot\xE1"} para ${extracted.transactionType || "venta"}`;
       const sourceUrlReq = urls && urls.length > 0 ? urls[0] : null;
       const isImageOnlyReq = (!messageToProcess || messageToProcess.trim() === "" || messageToProcess.includes("[Publicaci\xF3n de Imagen")) && !!imageBuffer;
+      if (isImageOnlyReq) {
+        const hasReqSpecs = Number(extracted.presupuestoMax || extracted.price || 0) > 0 || !!(extracted.zonaDeseada || extracted.zone) && (Number(extracted.bedrooms || 0) > 0 || Number(extracted.area || 0) > 0) || extracted.title && /compra|busco|requerimiento|solicitud|presupuesto/i.test(extracted.title);
+        if (!hasReqSpecs) {
+          console.log(`[JANIA-FILTER] \u26D4 Descartando imagen fotogr\xE1fica ambiental pura: no contiene criterios de requerimiento legibles sobreimpresos.`);
+          result.inserted = false;
+          result.classification = "CONSULTA_GENERAL";
+          return result;
+        }
+      }
       const effectiveReqRawText = isImageOnlyReq ? buildFlyerBreakdownText(extracted, messageToProcess) : messageToProcess;
       const saved = await saveRequirement({
         ...extracted,

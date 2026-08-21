@@ -65,12 +65,36 @@ JanIA utiliza un pipeline híbrido de ingesta que clasifica fuentes antes de pro
 - **Mensajería**: Enlaces directos a catálogos o chats de WhatsApp (`wa.me`, `whatsapp.com/catalog`).
 - **Acción**: Omitir scraping. Si el mensaje solo contiene estos links sin texto explicativo, se clasifica como `VIOLACION_DE_NORMAS` o `CONSULTA_GENERAL` (Reacción: 🚫).
 
-## 3. Procesamiento Multimedia Inteligente (PDFs e Imágenes OCR):
-- **Habilitado (OCR / Lectura Visual)**:
-  - **Documentos PDF**: Certificados de tradición, prediales, promesas o fichas PDF.
-  - **Flyers / Banners / Posters**: Imágenes promocionales con texto informativo legible (datos del inmueble escritos en la foto).
-- **Deshabilitado (Ignorar OCR visual)**:
-  - **Fotos Ambientales**: Fotografías estéticas de cocinas, baños, alcobas, fachadas o zonas comunes sin texto informativo. JanIA las conserva en la ficha del inmueble pero **omite el procesamiento de visión OCR** para evitar consumo innecesario de recursos.
+# 🖼️ DOCTRINA MAESTRA DE VISIÓN OCR Y CLASIFICACIÓN DE IMÁGENES / FLYERS (v23.9)
+
+JanIA aplica una **Taxonomía Visual Rigurosa** para diferenciar entre fotos fotográficas, propaganda de servicios y verdaderas fichas comerciales de Oferta o Demanda:
+
+## 1. ⛔ TIPO 1: FOTOGRAFÍA AMBIENTAL PURA (DESCARTAR)
+- **Definición**: Fotografía de cámara directa de un espacio interior o exterior (sala, comedor, cocina, baño, alcoba, chimenea, fachada, piscina, jardín) **SIN TEXTO TIPOGRÁFICO PUBLICITARIO** ni datos estructurados de precio/negocio sobreimpresos.
+- **Doctrina**: Una foto de una sala o una fachada enviada sola NO es una oferta ni una demanda. JanIA **PROHÍBE** inventar o alucinar un requerimiento o inmueble a partir de la foto de una sala.
+- **Clasificación Obligatoria**: `CONSULTA_GENERAL` (inserted: false, 0 emojis de negocio, NO guardar en BD, NO generar matches).
+
+## 2. ⛔ TIPO 2: PROPAGANDA CORPORATIVA / PORTAFOLIO MULTI-SERVICIOS (DESCARTAR)
+- **Definición**: Banners publicitarios, volantes de agencias o tarjetas de presentación de brokers con servicios generales o portafolios múltiples (ej. "Paraíso Broker - Inmobiliaria especializada en fincas", "Compre - Venta - Permuta de fincas", "Lotes en Villavicencio, Tocaima", "Abono orgánico", "Drones: alquiler y venta", "Asesoría jurídica y avalúos").
+- **Doctrina**: Si la imagen no describe un **predio único concreto con precio y características individuales**, NI demanda un inmueble puntual con presupuesto, es publicidad corporativa/servicios, NO una ficha técnica transaccional.
+- **Clasificación Obligatoria**: `CONSULTA_GENERAL` (inserted: false, 0 emojis de negocio, NO guardar en BD).
+
+## 3. ✅ TIPO 3: FLYER EDITORIAL INFOGRÁFICO (OFERTA DE INMUEBLE)
+- **Definición**: Infografía vertical de diseño gráfico con título comercial ("APARTAMENTO EN VENTA EN MAZURÉN"), precio destacado ("$390.000.000"), cuadro de características (área 72m², piso 7, 3 alcobas, 2 baños, garaje, ascensor), administración ($450.000) y puntos de referencia.
+- **Clasificación Obligatoria**: `INMUEBLE` (`transactionType: "venta"` o `"arriendo"`). Reacción: `👍` Venta / `👌` Arriendo.
+
+## 4. ✅ TIPO 4: FLYER EN MOSAICO O COLLAGE COMERCIAL (OFERTA DE INMUEBLE)
+- **Definición**: Arte comercial con collage/mosaico de fotografías reales del inmueble acompañadas de una tabla o cuadro de especificaciones ("Edificio 81A", "Innovar Colina $453M", "Casa en Cedritos Margaritas"), dirección exacta ("Cra 18 con 150", "Cra 8 # 81A-33"), precio, administración, áreas y habitaciones.
+- **Clasificación Obligatoria**: `INMUEBLE` (`transactionType: "venta"` o `"arriendo"`). Reacción: `👍` Venta / `👌` Arriendo.
+
+## 5. ✅ TIPO 5: TARJETA GRÁFICA DE ESTADO (DEMANDA / REQUERIMIENTO)
+- **Definición**: Publicación estilo historia/estado de WhatsApp con fondo fotográfico o degradado y texto en letras grandes con o sin hashtags (ej. *"SE #COMPRA #APARTAMENTO O #CASA 2 O 3 PISO EN #CIUDADSALITRE PRESUPUESTO ABIERTO"*).
+- **Doctrina**: Contiene intención comercial clara de compra/arriendo, tipología predial y zona. "Presupuesto abierto" se interpreta como cumplimiento financiero universal.
+- **Clasificación Obligatoria**: `REQUERIMIENTO` (`transactionType: "venta"` o `"arriendo"`). Reacción: `📝` Demanda Venta / `✏️` Demanda Arriendo.
+
+## 6. ✅ TIPO 6: FLYER DE REQUERIMIENTO ESTRUCTURADO (DEMANDA)
+- **Definición**: Flyer formal con encabezado explícito de búsqueda (ej. *"REQUERIMIENTO VENTA - LAS SANTAS CEDRITOS - 2 HABITACIONES - TERRAZA - PRESUPUESTO 950 MILLONES - PERFIL COMPRADOR: HOMBRE JOVEN - CONTACTO: 3164531584"*, o *"BUSCO APARTAMENTO $600 MILLONES - ZONA: CEDRITOS/CONTADOR - 3 Alcobas, 2 Baños, 1 Garaje, Balcón con VISTA, CLUB HOUSE SI O SI"*).
+- **Clasificación Obligatoria**: `REQUERIMIENTO` (`transactionType: "venta"` o `"arriendo"`). Reacción: `📝` Demanda Venta / `✏️` Demanda Arriendo.
 
 ---
 
@@ -81,8 +105,8 @@ JanIA debe aplicar TOLERANCIA CERO a cualquier mensaje que no sea una publicaci�
 1. **Enlaces e Invitaciones a Eventos (Zoom, Google Meet, Teams, Webinars, Cursos)**:
    - Mensajes con `zoom.us`, `meet.google.com`, `teams.microsoft.com`, invitaciones a "Webinars", "Masterclass", "Capacitaciones", "Cursos", "Seminarios", "Talleres de ventas" o eventos de terceros (ej. "Inmoverso").
    - **Clasificación Obligatoria:** `VIOLACION_DE_NORMAS` o `CONSULTA_GENERAL` (Reaccionar con 🚫, JAMÁS clasificar como `INMUEBLE` ni `REQUERIMIENTO`).
-2. **Publicidad de Terceros / Marketing No Predial / Coaching**:
-   - Promociones de software, coaching, redes de mercadeo, agencias de publicidad, guías/ebooks o servicios ajenos a la oferta/demanda directa de un inmueble.
+2. **Publicidad de Terceros / Marketing No Predial / Coaching / Tarjetas Multi-Servicio**:
+   - Promociones de software, coaching, redes de mercadeo, agencias de publicidad, guías/ebooks, venta de drones, abonos o servicios ajenos a la oferta/demanda directa de un inmueble individual.
    - **Clasificación Obligatoria:** `VIOLACION_DE_NORMAS` o `CONSULTA_GENERAL`.
 3. **Política, Religión o Cadenas de Spam**:
    - Mensajes sobre candidatos, partidos políticos, propaganda electoral, cadenas de oración o spam social.
@@ -91,8 +115,8 @@ JanIA debe aplicar TOLERANCIA CERO a cualquier mensaje que no sea una publicaci�
    - Mensajes como: *"Buenos días! Calle 119 # 13-26"*, *"Alguien por la 100?"*, *"Reporte de novedad"*, *"Disponible?"*, *"Calle 85 con 11"*, *"Buenas tardes vecinos"*, "¿cuánto es la administración?", "información por interno".
    - **Clasificación Obligatoria:** `CONSULTA_GENERAL` (JAMÁS clasificar como `REQUERIMIENTO` ni `INMUEBLE`, NO guardar en base de datos, NO reaccionar en grupos externos).
 5. **Intención Inmobiliaria Obligatoria para REQUERIMIENTO o INMUEBLE**:
-   - Para ser `REQUERIMIENTO`: Debe existir intención explícita de compra/arriendo/búsqueda (ej. "busco", "necesito", "requiero", "cliente busca", "para arrendar", "para comprar") + Tipo de Inmueble O Presupuesto.
-   - Para ser `INMUEBLE`: Debe existir intención explícita de oferta/venta/arriendo (ej. "vendo", "arriendo", "ofrezco", "disponible en venta/arriendo") + Tipo de Inmueble.
+   - Para ser `REQUERIMIENTO`: Debe existir intención explícita de compra/arriendo/búsqueda (ej. "busco", "necesito", "requiero", "cliente busca", "para arrendar", "para comprar", "se compra", "requerimiento venta") + Tipo de Inmueble O Presupuesto.
+   - Para ser `INMUEBLE`: Debe existir intención explícita de oferta/venta/arriendo (ej. "vendo", "arriendo", "ofrezco", "disponible en venta/arriendo", "apartamento en venta", "tengo 2 locales disponibles") + Tipo de Inmueble.
    - Una dirección o cruce vial por sí solo SIN intención de negocio es un simple reporte o saludo → `CONSULTA_GENERAL`.
 
 ---
