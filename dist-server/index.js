@@ -3056,7 +3056,7 @@ function resolveIntersectionToBarrio(text2) {
   return {
     barrio: primaryBarrio,
     barriosAlternos: lookup.barrios,
-    localidad,
+    localidad: locality,
     ciudad: "Bogot\xE1, D.C."
   };
 }
@@ -3405,256 +3405,49 @@ var init_geography = __esm({
   }
 });
 
-// server/_core/voiceTranscription.ts
-import axios5 from "axios";
-import { spawn } from "child_process";
-async function transcodeWebmToWav(inputBuffer) {
-  return new Promise((resolve, reject) => {
-    const ffmpeg = spawn("ffmpeg", [
-      "-i",
-      "pipe:0",
-      // Read from stdin
-      "-vn",
-      // Disable video
-      "-c:a",
-      "pcm_s16le",
-      // Output uncompressed WAV (PCM 16-bit)
-      "-ac",
-      "1",
-      // Mono
-      "-ar",
-      "16000",
-      // 16kHz
-      "-f",
-      "wav",
-      // WAV container
-      "pipe:1"
-      // Write to stdout
-    ]);
-    const chunks = [];
-    ffmpeg.stdout.on("data", (chunk) => chunks.push(chunk));
-    let stderrData = "";
-    ffmpeg.stderr.on("data", (data) => {
-      stderrData += data.toString();
-    });
-    ffmpeg.on("close", (code) => {
-      if (code === 0) {
-        resolve(Buffer.concat(chunks));
-      } else {
-        reject(new Error(`ffmpeg fall\xF3 con c\xF3digo ${code}. Stderr: ${stderrData}`));
-      }
-    });
-    ffmpeg.on("error", (err) => {
-      reject(err);
-    });
-    ffmpeg.stdin.write(inputBuffer);
-    ffmpeg.stdin.end();
-  });
-}
-async function transcribeAudioWithGemini(audioBuffer, mimeType) {
-  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || ENV.forgeApiKey;
-  if (!apiKey) {
-    throw new Error("No GEMINI_API_KEY or GOOGLE_API_KEY found for transcription fallback.");
-  }
-  const model = "gemini-2.5-flash";
-  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-  let cleanMime = mimeType.split(";")[0].trim().toLowerCase();
-  let bufferToUse = audioBuffer;
-  if (cleanMime.includes("webm") || cleanMime.includes("octet-stream")) {
-    try {
-      console.log(`[STT-Fallback] Detectado audio en formato ${cleanMime}. Transcodificando a WAV usando ffmpeg...`);
-      bufferToUse = await transcodeWebmToWav(audioBuffer);
-      cleanMime = "audio/wav";
-    } catch (e) {
-      console.error(`[STT-Fallback] Error al transcodificar de WebM/octet-stream a WAV con ffmpeg:`, e.message);
-    }
-  }
-  if (cleanMime === "audio/x-wav" || cleanMime === "audio/wave") cleanMime = "audio/wav";
-  if (cleanMime === "audio/mpeg3" || cleanMime === "audio/x-mpeg-3") cleanMime = "audio/mpeg";
-  const payload = {
-    contents: [
-      {
-        role: "user",
-        parts: [
-          { text: "Transcribe el siguiente audio a texto en espa\xF1ol de manera exacta y fluida. Devuelve \xFAnicamente el texto de la transcripci\xF3n literal del audio, sin agregar introducciones, notas de autor ni comentarios adicionales. Si el audio est\xE1 completamente vac\xEDo o solo contiene ruido ininteligible, devuelve una cadena vac\xEDa." },
-          {
-            inline_data: {
-              mime_type: cleanMime,
-              data: bufferToUse.toString("base64")
-            }
-          }
-        ]
-      }
-    ],
-    generationConfig: {
-      temperature: 0.1,
-      maxOutputTokens: 2048
-    }
-  };
-  const response = await axios5.post(apiUrl, payload, { timeout: 15e3 });
-  const textCandidate = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (textCandidate && typeof textCandidate === "string") {
-    return textCandidate.trim();
-  }
-  return "";
-}
-async function transcribeAudioBuffer(audioBuffer, mimeType, prompt) {
-  const sizeMB = audioBuffer.length / (1024 * 1024);
-  if (sizeMB > 16) {
-    throw new Error(`Audio file exceeds maximum size limit (16MB). Current size: ${sizeMB.toFixed(2)}MB`);
-  }
-  if (!ENV.forgeApiUrl || !ENV.forgeApiKey) {
-    console.log(`[STT-Fallback] Forge API no configurada. Transcribiendo usando Gemini directamente...`);
-    return await transcribeAudioWithGemini(audioBuffer, mimeType);
-  }
-  const formData = new FormData();
-  const filename = `audio.${getFileExtension(mimeType)}`;
-  const audioBlob = new Blob([new Uint8Array(audioBuffer)], { type: mimeType });
-  formData.append("file", audioBlob, filename);
-  formData.append("model", "whisper-1");
-  formData.append("response_format", "verbose_json");
-  const defaultPrompt = prompt || "Notas de voz sobre bienes ra\xEDces, Real Estate, inversiones, corretaje, inmuebles, apartamentos y casas en Bogot\xE1, Colombia. Vocabulario t\xE9cnico y comercial obligatorio: venpermuto, permuta, corretaje, br\xF3ker, aval\xFAo, estrato, arras, linderos, desenglobe, Wasi, Habi, Usaqu\xE9n, Cedritos, Chic\xF3, Rosales, Cabrera, Retiro, Santa B\xE1rbara, San Patricio, Tober\xEDn, Suba, Niza, Alhambra.";
-  formData.append("prompt", defaultPrompt);
-  const baseUrl = ENV.forgeApiUrl.endsWith("/") ? ENV.forgeApiUrl : `${ENV.forgeApiUrl}/`;
-  const fullUrl = new URL("v1/audio/transcriptions", baseUrl).toString();
-  const response = await fetch(fullUrl, {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${ENV.forgeApiKey}`,
-      "Accept-Encoding": "identity"
-    },
-    body: formData
-  });
-  if (!response.ok) {
-    const errorText = await response.text().catch(() => "");
-    throw new Error(`Transcription service request failed (${response.status}): ${errorText}`);
-  }
-  const whisperResponse = await response.json();
-  if (!whisperResponse.text || typeof whisperResponse.text !== "string") {
-    throw new Error("Invalid transcription response: missing text field");
-  }
-  return whisperResponse.text;
-}
-async function transcribeAudio(options) {
-  try {
-    let audioBuffer;
-    let mimeType;
-    try {
-      const response = await fetch(options.audioUrl);
-      if (!response.ok) {
-        return {
-          error: "Failed to download audio file",
-          code: "INVALID_FORMAT",
-          details: `HTTP ${response.status}: ${response.statusText}`
-        };
-      }
-      audioBuffer = Buffer.from(await response.arrayBuffer());
-      mimeType = response.headers.get("content-type") || "audio/mpeg";
-    } catch (error) {
-      return {
-        error: "Failed to fetch audio file",
-        code: "SERVICE_ERROR",
-        details: error instanceof Error ? error.message : "Unknown error"
-      };
-    }
-    try {
-      const text2 = await transcribeAudioBuffer(audioBuffer, mimeType, options.prompt);
-      return {
-        task: "transcribe",
-        language: "es",
-        duration: 0,
-        text: text2,
-        segments: []
-      };
-    } catch (transcriptionError) {
-      return {
-        error: "Voice transcription failed",
-        code: "TRANSCRIPTION_FAILED",
-        details: transcriptionError.message || "Unknown error"
-      };
-    }
-  } catch (error) {
-    return {
-      error: "Voice transcription failed",
-      code: "SERVICE_ERROR",
-      details: error instanceof Error ? error.message : "An unexpected error occurred"
-    };
-  }
-}
-function getFileExtension(mimeType) {
-  const mimeToExt = {
-    "audio/webm": "webm",
-    "audio/mp3": "mp3",
-    "audio/mpeg": "mp3",
-    "audio/wav": "wav",
-    "audio/wave": "wav",
-    "audio/ogg": "ogg",
-    "audio/m4a": "m4a",
-    "audio/mp4": "m4a"
-  };
-  return mimeToExt[mimeType] || "audio";
-}
-var init_voiceTranscription = __esm({
-  "server/_core/voiceTranscription.ts"() {
-    "use strict";
-    init_env();
-  }
-});
-
-// server/storage.ts
+// server/_core/divipola.ts
 import fs3 from "fs";
 import path3 from "path";
-import { createClient } from "@supabase/supabase-js";
-function normalizeKey(relKey) {
-  return relKey.replace(/^\/+/, "").replace(/[^\w\d\-_\.\/]/g, "_");
-}
-function buildAbsoluteLocalUrl(key) {
-  const base = (process.env.VPS_BASE_URL || "http://13.140.149.144").replace(/\/+$/, "");
-  return `${base}/uploads/${key}`;
-}
-async function storagePut(relKey, data, contentType = "application/octet-stream") {
-  const key = normalizeKey(relKey);
-  const targetFilePath = path3.join(uploadsDir, key);
-  const targetSubdir = path3.dirname(targetFilePath);
-  if (!fs3.existsSync(targetSubdir)) {
-    fs3.mkdirSync(targetSubdir, { recursive: true });
-  }
-  const buffer = typeof data === "string" ? Buffer.from(data, "base64") : Buffer.from(data);
-  fs3.writeFileSync(targetFilePath, buffer);
-  const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
-  if (supabaseUrl && supabaseKey) {
-    try {
-      const supabase = createClient(supabaseUrl, supabaseKey);
-      const { error: uploadError } = await supabase.storage.from("property-flyers").upload(key, buffer, {
-        contentType,
-        upsert: true
-      });
-      if (!uploadError) {
-        const { data: publicData } = supabase.storage.from("property-flyers").getPublicUrl(key);
-        if (publicData?.publicUrl) {
-          console.log(`[Storage] \u2705 Archivo subido a Supabase Storage: ${publicData.publicUrl}`);
-          return { key, url: publicData.publicUrl };
-        }
-      } else {
-        console.warn(`[Storage] Supabase upload error: ${uploadError.message}`);
-      }
-    } catch (sbErr) {
-      console.warn(`[Storage] Supabase Storage omitido (${sbErr.message}), usando almacenamiento local.`);
-    }
-  }
-  const publicUrl = buildAbsoluteLocalUrl(key);
-  console.log(`[Storage] \u{1F4C1} Archivo guardado localmente en ${targetFilePath} -> URL absoluta: ${publicUrl}`);
-  return { key, url: publicUrl };
-}
-var uploadsDir;
-var init_storage = __esm({
-  "server/storage.ts"() {
+var municipalitiesMap, initDivipola, validateCity;
+var init_divipola = __esm({
+  "server/_core/divipola.ts"() {
     "use strict";
-    uploadsDir = path3.resolve(process.cwd(), "public/uploads");
-    if (!fs3.existsSync(uploadsDir)) {
-      fs3.mkdirSync(uploadsDir, { recursive: true });
-    }
+    municipalitiesMap = /* @__PURE__ */ new Map();
+    initDivipola = () => {
+      try {
+        const jsonPath = path3.join(process.cwd(), "server", "data", "divipola.json");
+        municipalitiesMap.clear();
+        if (!fs3.existsSync(jsonPath)) {
+          console.warn("Divipola JSON data file not found at", jsonPath);
+          return;
+        }
+        const raw = fs3.readFileSync(jsonPath, "utf-8");
+        const list = JSON.parse(raw);
+        for (const item of list) {
+          if (item.municipio) {
+            const normalizedKey = item.municipio.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+            let titleCased = item.municipio.split(" ").map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+            municipalitiesMap.set(normalizedKey, titleCased);
+          }
+        }
+        municipalitiesMap.set("bogota", "Bogot\xE1, D.C.");
+        municipalitiesMap.set("bogota d.c.", "Bogot\xE1, D.C.");
+        municipalitiesMap.set("bogota, d.c.", "Bogot\xE1, D.C.");
+        municipalitiesMap.set("bogota dc", "Bogot\xE1, D.C.");
+        municipalitiesMap.set("bogota d.c", "Bogot\xE1, D.C.");
+        console.log(`[Divipola] Loaded ${municipalitiesMap.size} municipalities from Divipola.`);
+      } catch (err) {
+        console.error("[Divipola] Error loading Divipola:", err);
+      }
+    };
+    validateCity = (cityName) => {
+      if (!cityName || typeof cityName !== "string") return null;
+      if (municipalitiesMap.size === 0) {
+        initDivipola();
+      }
+      const normalized = cityName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+      return municipalitiesMap.get(normalized) || null;
+    };
   }
 });
 
@@ -3672,8 +3465,8 @@ __export(matching_exports, {
   executeMatchEngine: () => executeMatchEngine,
   explicarMatch: () => explicarMatch,
   extractRealPhone: () => extractRealPhone,
-  findMatchesForProperty: () => findMatchesForProperty2,
-  findMatchesForRequirement: () => findMatchesForRequirement2,
+  findMatchesForProperty: () => findMatchesForProperty,
+  findMatchesForRequirement: () => findMatchesForRequirement,
   matchesGeography: () => matchesGeography,
   parsePropertyAddressNumbers: () => parsePropertyAddressNumbers,
   parseStreetCarreraBoundaries: () => parseStreetCarreraBoundaries
@@ -5438,7 +5231,7 @@ function calcularScoreMatch(requirement, property) {
 function evaluarMatch(requirement, property) {
   return calcularScoreMatch(requirement, property) >= 80;
 }
-async function findMatchesForProperty2(propertyId) {
+async function findMatchesForProperty(propertyId) {
   const db = await getDb();
   if (!db) return [];
   try {
@@ -5504,7 +5297,7 @@ async function findMatchesForProperty2(propertyId) {
     return [];
   }
 }
-async function findMatchesForRequirement2(requirementId) {
+async function findMatchesForRequirement(requirementId) {
   const db = await getDb();
   if (!db) return [];
   try {
@@ -5579,7 +5372,7 @@ async function executeMatchEngine(propertyId, requirementId) {
       const activeProps = await db.select({ id: properties.id }).from(properties).where(eq3(properties.available, true));
       let totalMatches = 0;
       for (const p of activeProps) {
-        const matches = await findMatchesForProperty2(p.id);
+        const matches = await findMatchesForProperty(p.id);
         totalMatches += matches.length;
       }
       console.log(`[MATCHING-FULL] \u2705 Rec\xE1lculo completo finalizado. ${activeProps.length} propiedades evaluadas, ${totalMatches} matches registrados/actualizados.`);
@@ -5587,11 +5380,11 @@ async function executeMatchEngine(propertyId, requirementId) {
     }
     if (requirementId) {
       console.log(`[MATCHING-TS] \u26A1 Ejecutando Motor Autoritativo TypeScript para Requerimiento #${requirementId}...`);
-      const matches = await findMatchesForRequirement2(requirementId);
+      const matches = await findMatchesForRequirement(requirementId);
       console.log(`[MATCHING-TS] \u2705 ${matches.length} matches validados por TypeScript para Requerimiento #${requirementId}.`);
     } else if (propertyId) {
       console.log(`[MATCHING-TS] \u26A1 Ejecutando Motor Autoritativo TypeScript para Propiedad #${propertyId}...`);
-      const matches = await findMatchesForProperty2(propertyId);
+      const matches = await findMatchesForProperty(propertyId);
       console.log(`[MATCHING-TS] \u2705 ${matches.length} matches validados por TypeScript para Propiedad #${propertyId}.`);
     }
   } catch (err) {
@@ -5654,6 +5447,259 @@ var init_matching = __esm({
   }
 });
 
+// server/_core/voiceTranscription.ts
+import axios5 from "axios";
+import { spawn } from "child_process";
+async function transcodeWebmToWav(inputBuffer) {
+  return new Promise((resolve, reject) => {
+    const ffmpeg = spawn("ffmpeg", [
+      "-i",
+      "pipe:0",
+      // Read from stdin
+      "-vn",
+      // Disable video
+      "-c:a",
+      "pcm_s16le",
+      // Output uncompressed WAV (PCM 16-bit)
+      "-ac",
+      "1",
+      // Mono
+      "-ar",
+      "16000",
+      // 16kHz
+      "-f",
+      "wav",
+      // WAV container
+      "pipe:1"
+      // Write to stdout
+    ]);
+    const chunks = [];
+    ffmpeg.stdout.on("data", (chunk) => chunks.push(chunk));
+    let stderrData = "";
+    ffmpeg.stderr.on("data", (data) => {
+      stderrData += data.toString();
+    });
+    ffmpeg.on("close", (code) => {
+      if (code === 0) {
+        resolve(Buffer.concat(chunks));
+      } else {
+        reject(new Error(`ffmpeg fall\xF3 con c\xF3digo ${code}. Stderr: ${stderrData}`));
+      }
+    });
+    ffmpeg.on("error", (err) => {
+      reject(err);
+    });
+    ffmpeg.stdin.write(inputBuffer);
+    ffmpeg.stdin.end();
+  });
+}
+async function transcribeAudioWithGemini(audioBuffer, mimeType) {
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || ENV.forgeApiKey;
+  if (!apiKey) {
+    throw new Error("No GEMINI_API_KEY or GOOGLE_API_KEY found for transcription fallback.");
+  }
+  const model = "gemini-2.5-flash";
+  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  let cleanMime = mimeType.split(";")[0].trim().toLowerCase();
+  let bufferToUse = audioBuffer;
+  if (cleanMime.includes("webm") || cleanMime.includes("octet-stream")) {
+    try {
+      console.log(`[STT-Fallback] Detectado audio en formato ${cleanMime}. Transcodificando a WAV usando ffmpeg...`);
+      bufferToUse = await transcodeWebmToWav(audioBuffer);
+      cleanMime = "audio/wav";
+    } catch (e) {
+      console.error(`[STT-Fallback] Error al transcodificar de WebM/octet-stream a WAV con ffmpeg:`, e.message);
+    }
+  }
+  if (cleanMime === "audio/x-wav" || cleanMime === "audio/wave") cleanMime = "audio/wav";
+  if (cleanMime === "audio/mpeg3" || cleanMime === "audio/x-mpeg-3") cleanMime = "audio/mpeg";
+  const payload = {
+    contents: [
+      {
+        role: "user",
+        parts: [
+          { text: "Transcribe el siguiente audio a texto en espa\xF1ol de manera exacta y fluida. Devuelve \xFAnicamente el texto de la transcripci\xF3n literal del audio, sin agregar introducciones, notas de autor ni comentarios adicionales. Si el audio est\xE1 completamente vac\xEDo o solo contiene ruido ininteligible, devuelve una cadena vac\xEDa." },
+          {
+            inline_data: {
+              mime_type: cleanMime,
+              data: bufferToUse.toString("base64")
+            }
+          }
+        ]
+      }
+    ],
+    generationConfig: {
+      temperature: 0.1,
+      maxOutputTokens: 2048
+    }
+  };
+  const response = await axios5.post(apiUrl, payload, { timeout: 15e3 });
+  const textCandidate = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (textCandidate && typeof textCandidate === "string") {
+    return textCandidate.trim();
+  }
+  return "";
+}
+async function transcribeAudioBuffer(audioBuffer, mimeType, prompt) {
+  const sizeMB = audioBuffer.length / (1024 * 1024);
+  if (sizeMB > 16) {
+    throw new Error(`Audio file exceeds maximum size limit (16MB). Current size: ${sizeMB.toFixed(2)}MB`);
+  }
+  if (!ENV.forgeApiUrl || !ENV.forgeApiKey) {
+    console.log(`[STT-Fallback] Forge API no configurada. Transcribiendo usando Gemini directamente...`);
+    return await transcribeAudioWithGemini(audioBuffer, mimeType);
+  }
+  const formData = new FormData();
+  const filename = `audio.${getFileExtension(mimeType)}`;
+  const audioBlob = new Blob([new Uint8Array(audioBuffer)], { type: mimeType });
+  formData.append("file", audioBlob, filename);
+  formData.append("model", "whisper-1");
+  formData.append("response_format", "verbose_json");
+  const defaultPrompt = prompt || "Notas de voz sobre bienes ra\xEDces, Real Estate, inversiones, corretaje, inmuebles, apartamentos y casas en Bogot\xE1, Colombia. Vocabulario t\xE9cnico y comercial obligatorio: venpermuto, permuta, corretaje, br\xF3ker, aval\xFAo, estrato, arras, linderos, desenglobe, Wasi, Habi, Usaqu\xE9n, Cedritos, Chic\xF3, Rosales, Cabrera, Retiro, Santa B\xE1rbara, San Patricio, Tober\xEDn, Suba, Niza, Alhambra.";
+  formData.append("prompt", defaultPrompt);
+  const baseUrl = ENV.forgeApiUrl.endsWith("/") ? ENV.forgeApiUrl : `${ENV.forgeApiUrl}/`;
+  const fullUrl = new URL("v1/audio/transcriptions", baseUrl).toString();
+  const response = await fetch(fullUrl, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${ENV.forgeApiKey}`,
+      "Accept-Encoding": "identity"
+    },
+    body: formData
+  });
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => "");
+    throw new Error(`Transcription service request failed (${response.status}): ${errorText}`);
+  }
+  const whisperResponse = await response.json();
+  if (!whisperResponse.text || typeof whisperResponse.text !== "string") {
+    throw new Error("Invalid transcription response: missing text field");
+  }
+  return whisperResponse.text;
+}
+async function transcribeAudio(options) {
+  try {
+    let audioBuffer;
+    let mimeType;
+    try {
+      const response = await fetch(options.audioUrl);
+      if (!response.ok) {
+        return {
+          error: "Failed to download audio file",
+          code: "INVALID_FORMAT",
+          details: `HTTP ${response.status}: ${response.statusText}`
+        };
+      }
+      audioBuffer = Buffer.from(await response.arrayBuffer());
+      mimeType = response.headers.get("content-type") || "audio/mpeg";
+    } catch (error) {
+      return {
+        error: "Failed to fetch audio file",
+        code: "SERVICE_ERROR",
+        details: error instanceof Error ? error.message : "Unknown error"
+      };
+    }
+    try {
+      const text2 = await transcribeAudioBuffer(audioBuffer, mimeType, options.prompt);
+      return {
+        task: "transcribe",
+        language: "es",
+        duration: 0,
+        text: text2,
+        segments: []
+      };
+    } catch (transcriptionError) {
+      return {
+        error: "Voice transcription failed",
+        code: "TRANSCRIPTION_FAILED",
+        details: transcriptionError.message || "Unknown error"
+      };
+    }
+  } catch (error) {
+    return {
+      error: "Voice transcription failed",
+      code: "SERVICE_ERROR",
+      details: error instanceof Error ? error.message : "An unexpected error occurred"
+    };
+  }
+}
+function getFileExtension(mimeType) {
+  const mimeToExt = {
+    "audio/webm": "webm",
+    "audio/mp3": "mp3",
+    "audio/mpeg": "mp3",
+    "audio/wav": "wav",
+    "audio/wave": "wav",
+    "audio/ogg": "ogg",
+    "audio/m4a": "m4a",
+    "audio/mp4": "m4a"
+  };
+  return mimeToExt[mimeType] || "audio";
+}
+var init_voiceTranscription = __esm({
+  "server/_core/voiceTranscription.ts"() {
+    "use strict";
+    init_env();
+  }
+});
+
+// server/storage.ts
+import fs4 from "fs";
+import path4 from "path";
+import { createClient } from "@supabase/supabase-js";
+function normalizeKey(relKey) {
+  return relKey.replace(/^\/+/, "").replace(/[^\w\d\-_\.\/]/g, "_");
+}
+function buildAbsoluteLocalUrl(key) {
+  const base = (process.env.VPS_BASE_URL || "http://13.140.149.144").replace(/\/+$/, "");
+  return `${base}/uploads/${key}`;
+}
+async function storagePut(relKey, data, contentType = "application/octet-stream") {
+  const key = normalizeKey(relKey);
+  const targetFilePath = path4.join(uploadsDir, key);
+  const targetSubdir = path4.dirname(targetFilePath);
+  if (!fs4.existsSync(targetSubdir)) {
+    fs4.mkdirSync(targetSubdir, { recursive: true });
+  }
+  const buffer = typeof data === "string" ? Buffer.from(data, "base64") : Buffer.from(data);
+  fs4.writeFileSync(targetFilePath, buffer);
+  const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+  if (supabaseUrl && supabaseKey) {
+    try {
+      const supabase = createClient(supabaseUrl, supabaseKey);
+      const { error: uploadError } = await supabase.storage.from("property-flyers").upload(key, buffer, {
+        contentType,
+        upsert: true
+      });
+      if (!uploadError) {
+        const { data: publicData } = supabase.storage.from("property-flyers").getPublicUrl(key);
+        if (publicData?.publicUrl) {
+          console.log(`[Storage] \u2705 Archivo subido a Supabase Storage: ${publicData.publicUrl}`);
+          return { key, url: publicData.publicUrl };
+        }
+      } else {
+        console.warn(`[Storage] Supabase upload error: ${uploadError.message}`);
+      }
+    } catch (sbErr) {
+      console.warn(`[Storage] Supabase Storage omitido (${sbErr.message}), usando almacenamiento local.`);
+    }
+  }
+  const publicUrl = buildAbsoluteLocalUrl(key);
+  console.log(`[Storage] \u{1F4C1} Archivo guardado localmente en ${targetFilePath} -> URL absoluta: ${publicUrl}`);
+  return { key, url: publicUrl };
+}
+var uploadsDir;
+var init_storage = __esm({
+  "server/storage.ts"() {
+    "use strict";
+    uploadsDir = path4.resolve(process.cwd(), "public/uploads");
+    if (!fs4.existsSync(uploadsDir)) {
+      fs4.mkdirSync(uploadsDir, { recursive: true });
+    }
+  }
+});
+
 // server/_core/janIA.ts
 var janIA_exports = {};
 __export(janIA_exports, {
@@ -5710,8 +5756,8 @@ __export(janIA_exports, {
   translateTransactionType: () => translateTransactionType
 });
 import { eq as eq4, and as and2, sql as sql3, gte, desc } from "drizzle-orm";
-import fs4 from "fs";
-import path4 from "path";
+import fs5 from "fs";
+import path5 from "path";
 import axios6 from "axios";
 import crypto from "crypto";
 function generarHashMensaje(rawText, remitente) {
@@ -6490,20 +6536,20 @@ function buildSystemPrompt(groupJid) {
     return promptCache[cacheKey];
   }
   try {
-    const baseDir = path4.resolve(process.cwd(), "server/_core/prompts");
-    const basePrompt = fs4.readFileSync(path4.join(baseDir, "base.md"), "utf-8");
+    const baseDir = path5.resolve(process.cwd(), "server/_core/prompts");
+    const basePrompt = fs5.readFileSync(path5.join(baseDir, "base.md"), "utf-8");
     let specificPrompt = "";
     if (groupJid === "120363260108880069@g.us") {
-      specificPrompt = fs4.readFileSync(path4.join(baseDir, "grupos/VECY_INMUEBLES_NETWORK.md"), "utf-8");
+      specificPrompt = fs5.readFileSync(path5.join(baseDir, "grupos/VECY_INMUEBLES_NETWORK.md"), "utf-8");
     } else if (groupJid === "120363417740040773@g.us") {
-      const legalPrompt = fs4.readFileSync(path4.join(baseDir, "grupos/VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md"), "utf-8");
+      const legalPrompt = fs5.readFileSync(path5.join(baseDir, "grupos/VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md"), "utf-8");
       specificPrompt = legalPrompt;
     } else if (groupJid === "120363403507276533@g.us") {
-      specificPrompt = fs4.readFileSync(path4.join(baseDir, "grupos/PROYECTO_Vecy Network.md"), "utf-8");
+      specificPrompt = fs5.readFileSync(path5.join(baseDir, "grupos/PROYECTO_Vecy Network.md"), "utf-8");
     } else if (groupJid && (groupJid.endsWith("@g.us") || groupJid.includes("@us"))) {
-      specificPrompt = fs4.readFileSync(path4.join(baseDir, "grupos/VECY_INMUEBLES_NETWORK.md"), "utf-8");
+      specificPrompt = fs5.readFileSync(path5.join(baseDir, "grupos/VECY_INMUEBLES_NETWORK.md"), "utf-8");
     } else {
-      specificPrompt = fs4.readFileSync(path4.join(baseDir, "web/web_console.md"), "utf-8");
+      specificPrompt = fs5.readFileSync(path5.join(baseDir, "web/web_console.md"), "utf-8");
     }
     const fullPrompt = `${basePrompt}
 
@@ -7633,6 +7679,7 @@ ${liveStats}` : buildSystemPrompt(groupJid);
           externalUrl = permitted;
         }
       }
+      const sourceUrl = urls && urls.length > 0 ? urls[0] : void 0;
       const isImageOnlyProp = (!rawUserText || rawUserText.trim() === "" || rawUserText.includes("[Publicaci\xF3n de Imagen")) && !!imageBuffer;
       const effectivePropRawText = isImageOnlyProp ? buildFlyerBreakdownText(extracted, rawUserText || text2) : rawUserText || text2;
       const saved = await saveProperty({
@@ -9363,6 +9410,8 @@ var init_janIA = __esm({
     init_db();
     init_schema();
     init_geography();
+    init_divipola();
+    init_matching();
     init_voiceTranscription();
     init_storage();
     init_scraper();
@@ -10146,8 +10195,8 @@ import _baileys, {
   Browsers
 } from "@whiskeysockets/baileys";
 import qrcodeTerminal from "qrcode-terminal";
-import fs7 from "fs";
-import path8 from "path";
+import fs8 from "fs";
+import path9 from "path";
 import { eq as eq11 } from "drizzle-orm";
 import QRCode from "qrcode";
 function getWASocket() {
@@ -10268,7 +10317,7 @@ var init_whatsapp_match = __esm({
       buzonGroupId = "120363417740040773@g.us";
       circuloGroupId = "120363403507276533@g.us";
       cooldownMap = /* @__PURE__ */ new Map();
-      cooldownFile = path8.join(process.cwd(), ".cooldown_map.json");
+      cooldownFile = path9.join(process.cwd(), ".cooldown_map.json");
       constructor(options) {
         if (options) {
           if (options.sessionFolderName) this.sessionFolderName = options.sessionFolderName;
@@ -10327,12 +10376,12 @@ var init_whatsapp_match = __esm({
       }
       async initialize() {
         try {
-          const sessionDir = path8.join(process.cwd(), this.sessionFolderName);
-          if (!fs7.existsSync(sessionDir)) {
-            fs7.mkdirSync(sessionDir, { recursive: true });
+          const sessionDir = path9.join(process.cwd(), this.sessionFolderName);
+          if (!fs8.existsSync(sessionDir)) {
+            fs8.mkdirSync(sessionDir, { recursive: true });
           }
           const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
-          if (!fs7.existsSync(path8.join(sessionDir, "creds.json"))) {
+          if (!fs8.existsSync(path9.join(sessionDir, "creds.json"))) {
             await saveCreds();
             console.log(`[${this.botName}] \u{1F4BE} Guardadas credenciales iniciales de Baileys en ${this.sessionFolderName}.`);
           }
@@ -10401,12 +10450,12 @@ var init_whatsapp_match = __esm({
             qrcodeTerminal.generate(qr, { small: true });
             global.janiaBotQr = qr;
             try {
-              const qrPath = path8.join(process.cwd(), this.qrFileName);
-              const publicQrDir = path8.join(process.cwd(), "client", "public");
-              if (!fs7.existsSync(publicQrDir)) {
-                fs7.mkdirSync(publicQrDir, { recursive: true });
+              const qrPath = path9.join(process.cwd(), this.qrFileName);
+              const publicQrDir = path9.join(process.cwd(), "client", "public");
+              if (!fs8.existsSync(publicQrDir)) {
+                fs8.mkdirSync(publicQrDir, { recursive: true });
               }
-              const publicQrPath = path8.join(publicQrDir, "qr-match.png");
+              const publicQrPath = path9.join(publicQrDir, "qr-match.png");
               await QRCode.toFile(qrPath, qr, { width: 400, margin: 2 });
               await QRCode.toFile(publicQrPath, qr, { width: 400, margin: 2 });
               console.log(`[${this.botName}] \u{1F4F8} QR guardado exitosamente en ${qrPath} y ${publicQrPath}`);
@@ -11768,10 +11817,10 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
           }
           let messagePayload = {};
           if (mediaPath) {
-            const fs9 = await import("fs");
-            const buffer = fs9.readFileSync(mediaPath);
-            const path11 = await import("path");
-            const ext = path11.extname(mediaPath).toLowerCase();
+            const fs10 = await import("fs");
+            const buffer = fs10.readFileSync(mediaPath);
+            const path12 = await import("path");
+            const ext = path12.extname(mediaPath).toLowerCase();
             if (ext === ".mp4") {
               messagePayload = {
                 video: buffer,
@@ -11789,7 +11838,7 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
                 document: buffer,
                 caption: text2,
                 mimetype: "application/octet-stream",
-                fileName: path11.basename(mediaPath)
+                fileName: path12.basename(mediaPath)
               };
             }
           } else {
@@ -11903,7 +11952,7 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
   * \u{1F3E2} *Proyectos de construcci\xF3n* o aportes de lote.
 \u25B8 *Matching Inteligente:* Cruzo ofertas y demandas en tiempo real y les aviso en el acto cuando hay negocio viable.`;
         const groups = [this.targetGroupId, this.buzonGroupId, this.circuloGroupId];
-        const imgPath = path8.resolve("./client/public/jania_perfil.png");
+        const imgPath = path9.resolve("./client/public/jania_perfil.png");
         for (const group of groups) {
           try {
             await this.sendToGroup(baseMsg, imgPath, [], group);
@@ -11934,10 +11983,10 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
           }
         } catch (e) {
         }
-        const sessionDir = path8.join(process.cwd(), ".baileys_auth");
-        if (fs7.existsSync(sessionDir)) {
+        const sessionDir = path9.join(process.cwd(), ".baileys_auth");
+        if (fs8.existsSync(sessionDir)) {
           try {
-            fs7.rmSync(sessionDir, { recursive: true, force: true });
+            fs8.rmSync(sessionDir, { recursive: true, force: true });
           } catch (err) {
             console.warn("[JANIA-MATCH] No se pudo borrar .baileys_auth:", err.message);
           }
@@ -11956,8 +12005,8 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
       }
       loadCooldowns() {
         try {
-          if (fs7.existsSync(this.cooldownFile)) {
-            const raw = JSON.parse(fs7.readFileSync(this.cooldownFile, "utf8"));
+          if (fs8.existsSync(this.cooldownFile)) {
+            const raw = JSON.parse(fs8.readFileSync(this.cooldownFile, "utf8"));
             this.cooldownMap = new Map(Object.entries(raw));
           }
         } catch (e) {
@@ -11966,7 +12015,7 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
       saveCooldowns() {
         try {
           const obj = Object.fromEntries(this.cooldownMap.entries());
-          fs7.writeFileSync(this.cooldownFile, JSON.stringify(obj), "utf8");
+          fs8.writeFileSync(this.cooldownFile, JSON.stringify(obj), "utf8");
         } catch (e) {
         }
       }
@@ -12769,8 +12818,8 @@ function liquidarImpuestosVenta(params) {
 // server/routers/janIA.ts
 init_matching();
 import axios7 from "axios";
-import fs5 from "fs";
-import path5 from "path";
+import fs6 from "fs";
+import path6 from "path";
 var janIARouter = router({
   // New: Extract property data from link
   extractFromLink: publicProcedure.input(z2.object({ url: z2.string().url() })).mutation(async ({ input }) => {
@@ -13272,7 +13321,7 @@ ${liveStats}${userContextInstruction}
     let reqMatchesCount = 0;
     if (input.propertyId) {
       try {
-        const resProp = await findMatchesForProperty2(input.propertyId);
+        const resProp = await findMatchesForProperty(input.propertyId);
         propMatchesCount = Array.isArray(resProp) ? resProp.length : 0;
       } catch (e) {
         console.error(`[RecalculateMatch] Error reculculando propiedad #${input.propertyId}:`, e?.message);
@@ -13280,7 +13329,7 @@ ${liveStats}${userContextInstruction}
     }
     if (input.requirementId) {
       try {
-        const resReq = await findMatchesForRequirement2(input.requirementId);
+        const resReq = await findMatchesForRequirement(input.requirementId);
         reqMatchesCount = Array.isArray(resReq) ? resReq.length : 0;
       } catch (e) {
         console.error(`[RecalculateMatch] Error recalculando requerimiento #${input.requirementId}:`, e?.message);
@@ -13460,11 +13509,11 @@ ${liveStats}${userContextInstruction}
   }),
   getQrCode: publicProcedure.query(async () => {
     try {
-      const qrPath = path5.join(process.cwd(), "qr-captador.png");
-      const qrMatchPath = path5.join(process.cwd(), "qr-match.png");
-      let targetPath = fs5.existsSync(qrPath) ? qrPath : fs5.existsSync(qrMatchPath) ? qrMatchPath : null;
+      const qrPath = path6.join(process.cwd(), "qr-captador.png");
+      const qrMatchPath = path6.join(process.cwd(), "qr-match.png");
+      let targetPath = fs6.existsSync(qrPath) ? qrPath : fs6.existsSync(qrMatchPath) ? qrMatchPath : null;
       if (targetPath) {
-        const fileData = fs5.readFileSync(targetPath);
+        const fileData = fs6.readFileSync(targetPath);
         return { hasQr: true, qrData: `data:image/png;base64,${fileData.toString("base64")}` };
       }
       return { hasQr: false, qrData: null };
@@ -14625,30 +14674,30 @@ async function createContext(opts) {
 
 // server/_core/vite.ts
 import express from "express";
-import fs6 from "fs";
+import fs7 from "fs";
 import { nanoid } from "nanoid";
-import path7 from "path";
+import path8 from "path";
 import { createServer as createViteServer } from "vite";
 
 // vite.config.ts
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import path6 from "node:path";
+import path7 from "node:path";
 import { defineConfig } from "vite";
 var vite_config_default = defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
-      "@": path6.resolve(import.meta.dirname, "client", "src"),
-      "@shared": path6.resolve(import.meta.dirname, "shared"),
-      "@assets": path6.resolve(import.meta.dirname, "attached_assets")
+      "@": path7.resolve(import.meta.dirname, "client", "src"),
+      "@shared": path7.resolve(import.meta.dirname, "shared"),
+      "@assets": path7.resolve(import.meta.dirname, "attached_assets")
     }
   },
-  envDir: path6.resolve(import.meta.dirname),
-  root: path6.resolve(import.meta.dirname, "client"),
-  publicDir: path6.resolve(import.meta.dirname, "client", "public"),
+  envDir: path7.resolve(import.meta.dirname),
+  root: path7.resolve(import.meta.dirname, "client"),
+  publicDir: path7.resolve(import.meta.dirname, "client", "public"),
   build: {
-    outDir: path6.resolve(import.meta.dirname, "dist"),
+    outDir: path7.resolve(import.meta.dirname, "dist"),
     emptyOutDir: true,
     chunkSizeWarningLimit: 1e3
   },
@@ -14679,13 +14728,13 @@ async function setupVite(app, server) {
   app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
     try {
-      const clientTemplate = path7.resolve(
+      const clientTemplate = path8.resolve(
         import.meta.dirname,
         "../..",
         "client",
         "index.html"
       );
-      let template = await fs6.promises.readFile(clientTemplate, "utf-8");
+      let template = await fs7.promises.readFile(clientTemplate, "utf-8");
       template = template.replace(
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid()}"`
@@ -14699,21 +14748,21 @@ async function setupVite(app, server) {
   });
 }
 function serveStatic(app) {
-  const distPath = path7.resolve(import.meta.dirname, "..", "dist");
-  if (!fs6.existsSync(distPath)) {
+  const distPath = path8.resolve(import.meta.dirname, "..", "dist");
+  if (!fs7.existsSync(distPath)) {
     console.error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`
     );
   }
   app.use(express.static(distPath));
   app.use("*", (_req, res) => {
-    res.sendFile(path7.resolve(distPath, "index.html"));
+    res.sendFile(path8.resolve(distPath, "index.html"));
   });
 }
 
 // server/_core/cronService.ts
 import cron from "node-cron";
-import path9 from "path";
+import path10 from "path";
 init_db();
 init_schema();
 init_whatsapp_match();
@@ -14722,7 +14771,7 @@ init_llm();
 import { fileURLToPath } from "url";
 import { gte as gte3, and as and7, eq as eq13, sql as sql7 } from "drizzle-orm";
 var __filename = fileURLToPath(import.meta.url);
-var __dirname = path9.dirname(__filename);
+var __dirname = path10.dirname(__filename);
 function initCronScheduler() {
   console.log("[CRON-SERVICE] Inicializando orquestador de agendas automatizadas v3.1 (Exclusivamente Audios Motivacionales y Re-matching)...");
   cron.schedule("0 11 * * 1,4", async () => {
@@ -14769,8 +14818,8 @@ init_llm();
 init_whatsapp_utils();
 init_whatsapp_match();
 import multer from "multer";
-import fs8 from "fs";
-import path10 from "path";
+import fs9 from "fs";
+import path11 from "path";
 process.on("uncaughtException", (error) => {
   console.error("[SYSTEM-CRITICAL] Uncaught Exception detectada:", error);
 });
@@ -14849,10 +14898,10 @@ async function startServer() {
   });
   app.get("/qr-match.png", (req, res) => {
     try {
-      const qrPath = path10.join(process.cwd(), "qr-match.png");
-      const distQrPath = path10.join(process.cwd(), "dist", "qr-match.png");
-      const activePath = fs8.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs8.existsSync(activePath)) {
+      const qrPath = path11.join(process.cwd(), "qr-match.png");
+      const distQrPath = path11.join(process.cwd(), "dist", "qr-match.png");
+      const activePath = fs9.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs9.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
         res.setHeader("Pragma", "no-cache");
@@ -14872,10 +14921,10 @@ async function startServer() {
         await janiaMatchBot2.initialize();
         await new Promise((resolve) => setTimeout(resolve, 3e3));
       }
-      const qrPath = path10.join(process.cwd(), "qr-match.png");
-      const distQrPath = path10.join(process.cwd(), "dist", "qr-match.png");
-      const activePath = fs8.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs8.existsSync(activePath)) {
+      const qrPath = path11.join(process.cwd(), "qr-match.png");
+      const distQrPath = path11.join(process.cwd(), "dist", "qr-match.png");
+      const activePath = fs9.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs9.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
         res.setHeader("Pragma", "no-cache");
@@ -14896,10 +14945,10 @@ async function startServer() {
       console.log("[ADMIN] Re-inicializando sesi\xF3n de Baileys para refrescar QR...");
       await janiaMatchBot2.initialize();
       await new Promise((resolve) => setTimeout(resolve, 4e3));
-      const qrPath = path10.join(process.cwd(), "qr-match.png");
-      const distQrPath = path10.join(process.cwd(), "dist", "qr-match.png");
-      const activePath = fs8.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs8.existsSync(activePath)) {
+      const qrPath = path11.join(process.cwd(), "qr-match.png");
+      const distQrPath = path11.join(process.cwd(), "dist", "qr-match.png");
+      const activePath = fs9.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs9.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         return res.sendFile(activePath);
       }
@@ -14926,10 +14975,10 @@ async function startServer() {
   });
   app.get("/qr-captador.png", (req, res) => {
     try {
-      const qrPath = path10.join(process.cwd(), "qr-captador.png");
-      const distQrPath = path10.join(process.cwd(), "dist", "qr-captador.png");
-      const activePath = fs8.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs8.existsSync(activePath)) {
+      const qrPath = path11.join(process.cwd(), "qr-captador.png");
+      const distQrPath = path11.join(process.cwd(), "dist", "qr-captador.png");
+      const activePath = fs9.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs9.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
         res.setHeader("Pragma", "no-cache");
@@ -15059,9 +15108,9 @@ async function startServer() {
       res.status(500).json({ error: err.message || "Error al procesar la transcripci\xF3n" });
     }
   });
-  const uploadsDir2 = path10.resolve(process.cwd(), "public/uploads");
-  if (!fs8.existsSync(uploadsDir2)) {
-    fs8.mkdirSync(uploadsDir2, { recursive: true });
+  const uploadsDir2 = path11.resolve(process.cwd(), "public/uploads");
+  if (!fs9.existsSync(uploadsDir2)) {
+    fs9.mkdirSync(uploadsDir2, { recursive: true });
   }
   app.use("/uploads", express2.static(uploadsDir2));
   const diskStorage = multer.diskStorage({
@@ -15070,7 +15119,7 @@ async function startServer() {
     },
     filename: (req, file, cb) => {
       const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-      cb(null, uniqueSuffix + path10.extname(file.originalname));
+      cb(null, uniqueSuffix + path11.extname(file.originalname));
     }
   });
   const uploadDisk = multer({

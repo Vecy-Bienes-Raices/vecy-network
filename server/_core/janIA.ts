@@ -6,6 +6,8 @@ import { invokeLLM } from "./llm";
 import { getDb } from "../db";
 import { properties, requirements, users, propertyImages, InsertProperty, InsertRequirement, pendingSessions, propertyMatches, messages as dbMessages, conversations as dbConversations, propertyPublicationHistory, inmobiliarioLexicon, matchFeedback } from "../../drizzle/schema";
 import { validarZona, normalizarTextoGeografico, desambiguarBarriosCompuestos, deducirGeografiaTripartita, resolveIntersectionToBarrio } from "./geography";
+import { validateCity } from "./divipola";
+import { findMatchesForProperty, findMatchesForRequirement } from "./matching";
 import { transcribeAudio } from "./voiceTranscription";
 import { eq, and, sql, gte, desc, or, isNotNull } from "drizzle-orm";
 import { storagePut } from "../storage";
@@ -2942,6 +2944,7 @@ Por lo tanto, DEBES hacer lo siguiente:
           externalUrl = permitted;
         }
       }
+      const sourceUrl = (urls && urls.length > 0 ? urls[0] : undefined);
 
       const isImageOnlyProp = (!rawUserText || rawUserText.trim() === '' || rawUserText.includes('[Publicación de Imagen')) && !!imageBuffer;
       const effectivePropRawText = isImageOnlyProp 
@@ -4087,7 +4090,7 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
     }
 
     // Disparar motor de matching instantáneo para propiedad actualizada
-    findMatchesForProperty(updated.id).catch(mErr => console.error("[JanIA-MatchingTrigger] Error recalculando matches para propiedad:", mErr));
+    findMatchesForProperty(updated.id).catch((mErr: any) => console.error("[JanIA-MatchingTrigger] Error recalculando matches para propiedad:", mErr));
 
     return updated;
   }
@@ -4096,7 +4099,7 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
   const [result] = await db.insert(properties).values(insertDataWithCalif).returning();
 
   // Disparar motor de matching instantáneo para propiedad nueva
-  findMatchesForProperty(result.id).catch(mErr => console.error("[JanIA-MatchingTrigger] Error calculando matches para propiedad:", mErr));
+  findMatchesForProperty(result.id).catch((mErr: any) => console.error("[JanIA-MatchingTrigger] Error calculando matches para propiedad:", mErr));
 
   // Insertar auditoría histórica inicial
   try {
@@ -4312,12 +4315,12 @@ async function saveRequirement(data: any, userId: string, realName: string, imag
       .where(eq(requirements.id, existing[0].id))
       .returning();
     console.log(`[Deduplication] Requerimiento existente detectado. Actualizando datos (ID: ${updated.id})`);
-    findMatchesForRequirement(updated.id).catch(mErr => console.error("[JanIA-MatchingTrigger] Error recalculando matches para requerimiento:", mErr));
+    findMatchesForRequirement(updated.id).catch((mErr: any) => console.error("[JanIA-MatchingTrigger] Error recalculando matches para requerimiento:", mErr));
     return updated;
   }
 
   const [result] = await db.insert(requirements).values(insertDataWithCalif).returning();
-  findMatchesForRequirement(result.id).catch(mErr => console.error("[JanIA-MatchingTrigger] Error calculando matches para requerimiento:", mErr));
+  findMatchesForRequirement(result.id).catch((mErr: any) => console.error("[JanIA-MatchingTrigger] Error calculando matches para requerimiento:", mErr));
   return result;
 }
 

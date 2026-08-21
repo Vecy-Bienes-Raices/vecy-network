@@ -1376,7 +1376,7 @@ export function resolveIntersectionToBarrio(text: string | null | undefined): {
   return {
     barrio: primaryBarrio,
     barriosAlternos: lookup.barrios,
-    localidad,
+    localidad: locality,
     ciudad: 'Bogotá, D.C.'
   };
 }
