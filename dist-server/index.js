@@ -13287,7 +13287,9 @@ ${liveStats}${userContextInstruction}
     addressLocality: z2.string().optional().nullable(),
     city: z2.string().optional().nullable(),
     propertyType: z2.string().optional().nullable(),
-    transactionType: z2.string().optional().nullable()
+    transactionType: z2.string().optional().nullable(),
+    idUsuarioWhatsapp: z2.string().optional().nullable(),
+    nombreUsuarioWhatsapp: z2.string().optional().nullable()
   })).mutation(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new Error("Database not available");
@@ -13298,7 +13300,7 @@ ${liveStats}${userContextInstruction}
     }
     updateData.updatedAt = /* @__PURE__ */ new Date();
     await db.update(properties).set(updateData).where(eq5(properties.id, propertyId));
-    console.log(`[JanIA-UpdateProperty] Propiedad #${propertyId} actualizada directamente desde Mesa de Cotejo`);
+    console.log(`[JanIA-UpdateProperty] Propiedad #${propertyId} actualizada directamente desde Mesa de Cotejo (incluyendo tel\xE9fono: ${input.idUsuarioWhatsapp || "N/A"})`);
     return { success: true, message: "Propiedad actualizada con \xE9xito" };
   }),
   // Actualizar datos prediales de un requerimiento demanda directamente desde la Mesa de Cotejo
@@ -13317,7 +13319,9 @@ ${liveStats}${userContextInstruction}
     addressNeighborhood: z2.string().optional().nullable(),
     ciudadDeseada: z2.string().optional().nullable(),
     tipoInmuebleDeseado: z2.string().optional().nullable(),
-    tipoNegocioDeseado: z2.string().optional().nullable()
+    tipoNegocioDeseado: z2.string().optional().nullable(),
+    idUsuarioWhatsapp: z2.string().optional().nullable(),
+    nombreUsuarioWhatsapp: z2.string().optional().nullable()
   })).mutation(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new Error("Database not available");
@@ -13326,8 +13330,9 @@ ${liveStats}${userContextInstruction}
     for (const [key, value] of Object.entries(updateFields)) {
       if (value !== void 0) updateData[key] = value;
     }
+    updateData.updatedAt = /* @__PURE__ */ new Date();
     await db.update(requirements).set(updateData).where(eq5(requirements.id, requirementId));
-    console.log(`[JanIA-UpdateRequirement] Requerimiento #${requirementId} actualizado directamente desde Mesa de Cotejo`);
+    console.log(`[JanIA-UpdateRequirement] Requerimiento #${requirementId} actualizado directamente desde Mesa de Cotejo (incluyendo tel\xE9fono: ${input.idUsuarioWhatsapp || "N/A"})`);
     return { success: true, message: "Requerimiento actualizado con \xE9xito" };
   }),
   // Recalcular cruces y afinidad predial para Oferta y/o Demanda tras edición en Mesa de Cotejo

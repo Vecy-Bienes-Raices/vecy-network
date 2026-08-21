@@ -604,6 +604,8 @@ export const janIARouter = router({
       city: z.string().optional().nullable(),
       propertyType: z.string().optional().nullable(),
       transactionType: z.string().optional().nullable(),
+      idUsuarioWhatsapp: z.string().optional().nullable(),
+      nombreUsuarioWhatsapp: z.string().optional().nullable(),
     }))
     .mutation(async ({ input }) => {
       const db = await getDb();
@@ -617,7 +619,7 @@ export const janIARouter = router({
       updateData.updatedAt = new Date();
 
       await db.update(properties).set(updateData).where(eq(properties.id, propertyId));
-      console.log(`[JanIA-UpdateProperty] Propiedad #${propertyId} actualizada directamente desde Mesa de Cotejo`);
+      console.log(`[JanIA-UpdateProperty] Propiedad #${propertyId} actualizada directamente desde Mesa de Cotejo (incluyendo teléfono: ${input.idUsuarioWhatsapp || 'N/A'})`);
       return { success: true, message: "Propiedad actualizada con éxito" };
     }),
 
@@ -639,6 +641,8 @@ export const janIARouter = router({
       ciudadDeseada: z.string().optional().nullable(),
       tipoInmuebleDeseado: z.string().optional().nullable(),
       tipoNegocioDeseado: z.string().optional().nullable(),
+      idUsuarioWhatsapp: z.string().optional().nullable(),
+      nombreUsuarioWhatsapp: z.string().optional().nullable(),
     }))
     .mutation(async ({ input }) => {
       const db = await getDb();
@@ -649,9 +653,10 @@ export const janIARouter = router({
       for (const [key, value] of Object.entries(updateFields)) {
         if (value !== undefined) updateData[key] = value;
       }
+      updateData.updatedAt = new Date();
 
       await db.update(requirements).set(updateData).where(eq(requirements.id, requirementId));
-      console.log(`[JanIA-UpdateRequirement] Requerimiento #${requirementId} actualizado directamente desde Mesa de Cotejo`);
+      console.log(`[JanIA-UpdateRequirement] Requerimiento #${requirementId} actualizado directamente desde Mesa de Cotejo (incluyendo teléfono: ${input.idUsuarioWhatsapp || 'N/A'})`);
       return { success: true, message: "Requerimiento actualizado con éxito" };
     }),
 
