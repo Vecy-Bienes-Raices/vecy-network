@@ -58,22 +58,32 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ## 📜 REGISTRO DETALLADO DE CONVERSACIONES (ORDEN CRONOLÓGICO INVERSO CON FECHA Y HORA)
 
-### 📌 SESIÓN 30: CAPTACIÓN, EXTRACCIÓN Y DESGLOSE INTEGRAL DE FLYERS E IMÁGENES INMOBILIARIAS (v23.8)
+### 📌 SESIÓN 30: CAPTACIÓN DE FLYERS, SUPABASE STORAGE & AUDITORÍA TYPESCRIPT TOTAL (v23.8)
 - **Fecha y Hora**: 20 de Agosto de 2026 (Noche)
 - **Versión resultante**: `v23.8`
 - **Participantes**: Eduardo A. Rivera (Director Tecnología) & Antigravity IDE (Pair Programmer)
 - **Solicitud de Eduardo**:
   - *"Observa la primera imagen, analiza y corrige porque creo que JanIA aún no logra captar, extraer los datos y reaccionar ante un Flyers o imágen con datos y detectar si es oferta o demanda de Venta, arriendo o permuta??"*
   - *"También observa en la segunda imagen para que lo corrijas que JanIA no logra poner la misma imagen en el requerimiento o demanda y desglosar el texto antes o debajo de esa misma imagen."*
+  - *"Pero espera, se te quedaron algunos problemas (10)."*
 - **Diagnóstico Técnico**:
   1. En `whatsapp-match.ts`, el chequeo de imágenes en el buffer de mensajes (`handleIncomingGroupMessage` y `messages.upsert`) leía `msg.message.imageMessage` sin desenvolver el mensaje con `unwrapMessage(msg.message)`. Cuando una imagen llegaba reenviada (`isForwarded`), efímera o como vista única, `hasMedia` se evaluaba como `false` y el buffer la descartaba por considerarla vacía.
   2. En `janIA.ts`, cuando una imagen no tenía caption (texto en pie de foto), `rawText` se guardaba con el placeholder genérico `"[Publicación de Imagen / Flyer Comercial Inmobiliario sin texto en pie de foto]"` sin incorporar el desglose detallado de lo que Gemini 2.5 Flash extrajo.
-  3. En `AdminMatches.tsx`, la función `extractItemImages` no leía `item.enlaceOrigen` ni `item.externalUrl` (donde se guardan las URLs de flyers en requerimientos), impidiendo renderizar la imagen del flyer en las demandas.
+  3. En `AdminMatches.tsx`, la función `extractItemImages` no leía `item.enlaceOrigen` ni `item.externalUrl` (donde se guardan las URLs de flyers en requerimientos), impidiendo renderizar la imagen del flyer en las demandas. Además, las rutas relativas no cargaban en Vercel porque el bucket `property-flyers` en Supabase Storage no estaba creado ni sincronizado.
+  4. En `janIA.ts` y `geography.ts`, existían 10 advertencias/errores de TypeScript relacionados con imports faltantes (`validateCity`, `findMatchesForProperty`, `findMatchesForRequirement`), una variable no declarada (`sourceUrl`), callbacks de error sin tipar y la asignación shorthand `localidad` en lugar de `localidad: locality`.
 - **Acciones Ejecutadas**:
   1. **Desbloqueo de Ingesta de Media (`whatsapp-match.ts`)**: Uso sistemático de `unwrapMessage` para la detección de `imageMessage`, `documentMessage` y `videoMessage` en `hasPossibleListing`, `isListing` y en la inserción del buffer de mensajes, permitiendo que cualquier imagen comercial active inmediatamente el flujo multimodal y envíe la reacción emoji doctrinal.
   2. **Generador de Ficha y Desglose Estructurado (`buildFlyerBreakdownText` en `janIA.ts`)**: Si una imagen carece de caption, JanIA genera un desglose enriquecido con título, descripción, precio/canon, administración, área, habitaciones, baños, parqueaderos, sector, ciudad y contacto, almacenándolo en `rawText`.
   3. **Visor de Flyer y Desglose en Demandas / Ofertas (`AdminMatches.tsx`)**: Se integró `enlaceOrigen` y `externalUrl` en `extractItemImages` y se enriqueció la visualización en la ficha web para mostrar el desglose de especificaciones y la imagen con visor/descarga tanto en requerimientos como en ofertas.
-  4. **Verificación Empírica**: Compilación limpia con `pnpm run build` (0 errores).
+  4. **Aprovisionamiento y Sincronización de Supabase Storage (`property-flyers`)**: Creación del bucket público en Supabase Storage con RLS de acceso público y migración de todos los archivos del disco al storage en la nube.
+  5. **Normalización Universal de URLs en el Frontend**: En `AdminMatches.tsx`, `normalizeImageUrl` convierte rutas relativas en URLs absolutas HTTPS directas de Supabase Storage, con controladores `onError` de auto-recuperación.
+  6. **Resolución Total de los 10 Problemas de TypeScript**:
+     - Importación de `validateCity` desde `./divipola` en `janIA.ts`.
+     - Importación de `findMatchesForProperty` y `findMatchesForRequirement` desde `./matching` en `janIA.ts`.
+     - Declaración de `sourceUrl` en el guardado de inmuebles en `janIA.ts`.
+     - Tipado explícito de `(mErr: any)` en los disparadores de matching.
+     - Corrección de `localidad: locality` en `server/_core/geography.ts`.
+  7. **Verificación Empírica y Deploy en VPS**: `npx tsc --noEmit` completó con **0 errores**, `pnpm run build` compiló al 100%, código subido a GitHub `main` y servicio `jania-server` (ID 0) desplegado y reiniciado con éxito en el VPS.
 
 ### 📌 SESIÓN 29: DOCTRINA DE INVERSIONISTAS & PROPIEDADES RENTANDO + MICRO-ZONIFICACIÓN ROSALES BAJO (v23.7)
 - **Fecha y Hora**: 20 de Agosto de 2026 (Noche)
