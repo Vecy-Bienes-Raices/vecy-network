@@ -42,7 +42,8 @@ export default function Login() {
       navigate('/admin');
     } catch (err: any) {
       console.error('[Login] Error syncing session:', err);
-      toast.error('No se pudo sincronizar la sesión con el servidor. Reintenta o ingresa con correo.');
+      const errMsg = err?.message || 'Error desconocido';
+      toast.error(`Error al sincronizar: ${errMsg}`);
       localStorage.removeItem("jania-session-token");
     } finally {
       setLoading(false);
