@@ -162,7 +162,20 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v23.8 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL: v23.9 — Agosto 2026
+
+### Novedades v23.9 (Taxonomía Visual Maestra de Flyers & Persistencia 100% en Mesa de Edición de Matches):
+- **Taxonomía Maestra de 6 Formatos Visuales (`prompts/base.md` & `janIA.ts`)**:
+  1. *Fotografía Ambiental Pura (Raw Photo)*: Descarte silencioso total a `CONSULTA_GENERAL` (0 BD, 0 matches) para fotos de salas, fachadas o baños sin texto comercial sobreimpreso.
+  2. *Banner Corporativo / Multi-Servicio*: Descarte silencioso a `CONSULTA_GENERAL` para publicidad institucional con portafolio general (fincas, drones, abono) sin un predio o canon individual.
+  3. *Flyer Editorial Infográfico (Oferta)*: Extracción integral de precio, administración, áreas y amenidades (`👍` / `👌`).
+  4. *Flyer en Mosaico / Collage Comercial (Oferta)*: Extracción precisa de fotos en collage con tabla inferior de especificaciones (`👍` / `👌`).
+  5. *Tarjeta Gráfica de Estado / Historia (Demanda)*: Captura de estados de WhatsApp con tipografía grande y hashtags (`#COMPRA`, `#PRESUPUESTO_ABIERTO` → `📝` / `✏️`).
+  6. *Flyer de Requerimiento Estructurado (Demanda)*: Extracción formal de solicitudes con presupuesto y perfil de cliente (`📝` / `✏️`).
+- **Persistencia Directa de Teléfonos en Edición de Matches (`AdminMatches.tsx` & `server/routers/janIA.ts`)**:
+  - Corrección de `handleOnlySave` y `handleRecalculateMatch` que omitían guardar `idUsuarioWhatsapp` (`propPhone` y `reqPhone`).
+  - Migración a mutaciones de backend seguras (`updatePropertyDetails` y `updateRequirementDetails`) con normalización automática de teléfonos colombianos (`573...`).
+  - Cierre automático del modo edición (`setEditingMatchId(null)`) e invalidación inmediata de caché React Query / tRPC (`utils.janIA.getAllMatches.invalidate()`), actualizando la tarjeta en pantalla al instante sin necesidad de refrescar con F5 ni perder los datos.
 
 ### Novedades v23.8 (Captación de Flyers, Storage en Supabase & Auditoría TypeScript 100% Limpia):
 - **Desbloqueo de Media Reenviada / Efímera (`unwrapMessage` en `whatsapp-match.ts`)**: Corrección de la lectura de imágenes y documentos en el buffer de mensajes (`hasMedia: !!rawMsg?.imageMessage || !!rawMsg?.documentMessage`), permitiendo que imágenes reenviadas o sin texto en el pie de foto se procesen y reaccionen con el emoji doctrinal correspondiente.
