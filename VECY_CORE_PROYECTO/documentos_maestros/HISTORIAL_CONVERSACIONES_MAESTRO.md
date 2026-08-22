@@ -77,11 +77,12 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
      - Normaliza el teléfono colombiano (`573...`).
      - Actualiza en memoria el directorio de brokers (`brokerDirectoryCache`).
      - Propaga el número en cascada a **TODAS las propiedades y requerimientos** de la base de datos que pertenezcan al mismo broker (coincidencia de `nombreUsuarioWhatsapp` o LID anterior).
-  3. **Edición Integral de Nombre y Teléfono del Broker (`AdminMatches.tsx`)**:
-     - Ahora la fila de contacto del modo edición cuenta con **dos casillas independientes**:
-       - 👤 **Nombre Asesor / Perfil**: para ingresar o cambiar el nombre real del broker (ej: *Erika Del Pilar Murcia*).
-       - 📞 **WhatsApp**: para ingresar el número celular colombiano (ej: *+57 316 444 6672*).
-     - Al guardar, el nombre se almacena permanentemente en Supabase (`nombreUsuarioWhatsapp`), se muestra destacado en la tarjeta con insignia `👤 Asesor` y se auto-propaga a todas las publicaciones del asesor.
+  3. **Edición y Propagación Bidireccional Universal de Broker (`AdminMatches.tsx` & `janIA.ts`)**:
+     - Ahora cualquier edición de **Nombre de Asesor / Perfil** o **Teléfono de WhatsApp** ejecuta una **sincronización bidireccional en cascada total** sobre toda la base de datos de Supabase:
+       - Si guardas o corriges un nombre para un teléfono $\rightarrow$ se actualiza automáticamente el nombre en **TODAS las Ofertas (propiedades) y Demandas (requerimientos)** pasadas, presentes y futuras que tengan ese número.
+       - Si guardas o corriges un teléfono para un nombre $\rightarrow$ se actualiza automáticamente el teléfono en **TODAS las Ofertas y Demandas** asociadas a ese asesor.
+     - **315 propiedades y 172 requerimientos** consolidados con nombre y teléfono real en Supabase (propagando automáticamente a asesores como *Mónica Jiménez Chacón*, *Marcela Forero*, *Monica Montaño Montes*, *Mauricio-MRG*, *María Fernanda Villegas*, *Erika Del Pilar Murcia*, entre otros).
+     - **Corrección de Falso Positivo `Rmación`**: Blindado el extractor de nombres con lista negra estricta de términos comerciales (`información`, `fotos`, `amoblado`, etc.) evitando que palabras cortadas se tomen como nombres de brokers.
   4. **Micro-Animaciones e Iluminación Incandescente Neón en Siluetas (0 Alerts)**:
      - **Eliminación Total de Alerts y Popups**: NINGÚN botón utiliza ya cuadros de alerta emergentes ni toasts flotantes. Todas las confirmaciones y estados (`¡Copiado!`, `¡Trato en Curso Registrado con Éxito!`, `¡Match Descartado y Aprendido!`, `¡Datos Guardados con Éxito en BD!`, `¡Coincidencias Recalculadas en Toda la Red!`) ocurren de forma **100% inline, interactiva y animada directamente dentro del botón**.
      - **Efecto Incandescente en Siluetas y Bordes (`🤝 Trato en Curso` y `⛔ Descartar Match`)**:
