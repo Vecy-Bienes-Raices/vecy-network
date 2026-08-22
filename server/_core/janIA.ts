@@ -3402,6 +3402,86 @@ export async function initBrokerDirectory() {
   }
 }
 
+/**
+ * Propaga en cascada un teléfono de contacto a todas las propiedades y requerimientos
+ * del mismo broker/remitente (por Nombre o por LID antiguo), y lo registra en el directorio en memoria.
+ */
+export async function propagateBrokerPhoneAcrossAllListings(params: {
+  rawPhoneOrText: string;
+  brokerName?: string | null;
+  oldPhoneOrLid?: string | null;
+}): Promise<{ updatedProps: number; updatedReqs: number; cleanPhone: string | null }> {
+  const { rawPhoneOrText, brokerName, oldPhoneOrLid } = params;
+  if (!rawPhoneOrText) return { updatedProps: 0, updatedReqs: 0, cleanPhone: null };
+
+  let cleanPhone = extractColombianPhoneFromText(rawPhoneOrText);
+  if (!cleanPhone) {
+    const digits = rawPhoneOrText.replace(/\D/g, '');
+    if (digits.length === 10 && digits.startsWith('3')) {
+      cleanPhone = '57' + digits;
+    } else if (digits.length === 12 && digits.startsWith('573')) {
+      cleanPhone = digits;
+    }
+  }
+
+  if (!cleanPhone) return { updatedProps: 0, updatedReqs: 0, cleanPhone: null };
+
+  const db = await getDb();
+  if (!db) return { updatedProps: 0, updatedReqs: 0, cleanPhone };
+
+  // 1. Actualizar memoria de directorio permanente
+  if (brokerName && !isGenericName(brokerName)) {
+    brokerDirectoryCache.set(brokerName.trim().toLowerCase(), { phone: cleanPhone, name: brokerName });
+    brokerDirectoryCache.set(brokerName, { phone: cleanPhone, name: brokerName });
+  }
+  if (oldPhoneOrLid) {
+    brokerDirectoryCache.set(oldPhoneOrLid, { phone: cleanPhone, name: brokerName || undefined });
+  }
+  brokerDirectoryCache.set(cleanPhone, { phone: cleanPhone, name: brokerName || undefined });
+
+  let updatedProps = 0;
+  let updatedReqs = 0;
+
+  // 2. Propagar a PROPIEDADES del mismo broker
+  const allProps = await db.select({
+    id: properties.id,
+    name: properties.nombreUsuarioWhatsapp,
+    phone: properties.idUsuarioWhatsapp
+  }).from(properties);
+
+  for (const p of allProps) {
+    const isSameName = brokerName && p.name && !isGenericName(brokerName) && p.name.trim().toLowerCase() === brokerName.trim().toLowerCase();
+    const isSameLid = oldPhoneOrLid && p.phone === oldPhoneOrLid;
+    const isMissingPhone = !p.phone || p.phone.length > 12 || p.phone.startsWith('1203') || p.phone === oldPhoneOrLid;
+
+    if ((isSameName || isSameLid) && isMissingPhone && p.phone !== cleanPhone) {
+      await db.update(properties).set({ idUsuarioWhatsapp: cleanPhone }).where(eq(properties.id, p.id));
+      updatedProps++;
+    }
+  }
+
+  // 3. Propagar a REQUERIMIENTOS del mismo broker
+  const allReqs = await db.select({
+    id: requirements.id,
+    name: requirements.nombreUsuarioWhatsapp,
+    phone: requirements.idUsuarioWhatsapp
+  }).from(requirements);
+
+  for (const r of allReqs) {
+    const isSameName = brokerName && r.name && !isGenericName(brokerName) && r.name.trim().toLowerCase() === brokerName.trim().toLowerCase();
+    const isSameLid = oldPhoneOrLid && r.phone === oldPhoneOrLid;
+    const isMissingPhone = !r.phone || r.phone.length > 12 || r.phone.startsWith('1203') || r.phone === oldPhoneOrLid;
+
+    if ((isSameName || isSameLid) && isMissingPhone && r.phone !== cleanPhone) {
+      await db.update(requirements).set({ idUsuarioWhatsapp: cleanPhone }).where(eq(requirements.id, r.id));
+      updatedReqs++;
+    }
+  }
+
+  console.log(`[JanIA-Propagate] 🚀 Teléfono +${cleanPhone} (${brokerName || 'Broker'}) propagado en cascada a ${updatedProps} propiedades y ${updatedReqs} requerimientos.`);
+  return { updatedProps, updatedReqs, cleanPhone };
+}
+
 // Inicialización automática diferida
 setTimeout(() => {
   initBrokerDirectory().catch(() => {});

@@ -6,7 +6,7 @@ import { conversations, messages, leads, propertyMatches, properties, requiremen
 import { eq, desc, sql, inArray, gte } from 'drizzle-orm';
 
 import { scrapePropertyLink } from '../_core/scraper';
-import { JANIA_PROMPT, processWhatsAppMessage } from '../_core/janIA';
+import { JANIA_PROMPT, processWhatsAppMessage, propagateBrokerPhoneAcrossAllListings } from '../_core/janIA';
 import { liquidarImpuestosVenta } from '../_core/taxEngine';
 import { explicarMatch, findMatchesForProperty, findMatchesForRequirement } from '../_core/matching';
 import axios from 'axios';
@@ -611,6 +611,8 @@ export const janIARouter = router({
       const db = await getDb();
       if (!db) throw new Error('Database not available');
 
+      const existingProp = await db.select().from(properties).where(eq(properties.id, input.propertyId)).limit(1).then(r => r[0]);
+
       const { propertyId, ...updateFields } = input;
       const updateData: Record<string, any> = {};
       for (const [key, value] of Object.entries(updateFields)) {
@@ -620,7 +622,21 @@ export const janIARouter = router({
 
       await db.update(properties).set(updateData).where(eq(properties.id, propertyId));
       console.log(`[JanIA-UpdateProperty] Propiedad #${propertyId} actualizada directamente desde Mesa de Cotejo (incluyendo teléfono: ${input.idUsuarioWhatsapp || 'N/A'})`);
-      return { success: true, message: "Propiedad actualizada con éxito" };
+
+      // Propagar en cascada a todas las demás publicaciones del mismo broker (pasadas y futuras)
+      if (input.idUsuarioWhatsapp || input.nombreUsuarioWhatsapp) {
+        try {
+          await propagateBrokerPhoneAcrossAllListings({
+            rawPhoneOrText: input.idUsuarioWhatsapp || existingProp?.idUsuarioWhatsapp || '',
+            brokerName: input.nombreUsuarioWhatsapp || existingProp?.nombreUsuarioWhatsapp,
+            oldPhoneOrLid: existingProp?.idUsuarioWhatsapp
+          });
+        } catch (propErr: any) {
+          console.warn(`[JanIA-UpdateProperty] Advertencia en propagación de teléfono:`, propErr?.message);
+        }
+      }
+
+      return { success: true, message: "Propiedad actualizada y teléfono propagado con éxito" };
     }),
 
   // Actualizar datos prediales de un requerimiento demanda directamente desde la Mesa de Cotejo
@@ -648,6 +664,8 @@ export const janIARouter = router({
       const db = await getDb();
       if (!db) throw new Error('Database not available');
 
+      const existingReq = await db.select().from(requirements).where(eq(requirements.id, input.requirementId)).limit(1).then(r => r[0]);
+
       const { requirementId, ...updateFields } = input;
       const updateData: Record<string, any> = {};
       for (const [key, value] of Object.entries(updateFields)) {
@@ -657,7 +675,21 @@ export const janIARouter = router({
 
       await db.update(requirements).set(updateData).where(eq(requirements.id, requirementId));
       console.log(`[JanIA-UpdateRequirement] Requerimiento #${requirementId} actualizado directamente desde Mesa de Cotejo (incluyendo teléfono: ${input.idUsuarioWhatsapp || 'N/A'})`);
-      return { success: true, message: "Requerimiento actualizado con éxito" };
+
+      // Propagar en cascada a todas las demás publicaciones del mismo broker (pasadas y futuras)
+      if (input.idUsuarioWhatsapp || input.nombreUsuarioWhatsapp) {
+        try {
+          await propagateBrokerPhoneAcrossAllListings({
+            rawPhoneOrText: input.idUsuarioWhatsapp || existingReq?.idUsuarioWhatsapp || '',
+            brokerName: input.nombreUsuarioWhatsapp || existingReq?.nombreUsuarioWhatsapp,
+            oldPhoneOrLid: existingReq?.idUsuarioWhatsapp
+          });
+        } catch (propErr: any) {
+          console.warn(`[JanIA-UpdateRequirement] Advertencia en propagación de teléfono:`, propErr?.message);
+        }
+      }
+
+      return { success: true, message: "Requerimiento actualizado y teléfono propagado con éxito" };
     }),
 
   // Recalcular cruces y afinidad predial para Oferta y/o Demanda tras edición en Mesa de Cotejo

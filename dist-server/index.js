@@ -5838,6 +5838,7 @@ __export(janIA_exports, {
   processCirculoMessage: () => processCirculoMessage,
   processConsultingMessage: () => processConsultingMessage,
   processWhatsAppMessage: () => processWhatsAppMessage,
+  propagateBrokerPhoneAcrossAllListings: () => propagateBrokerPhoneAcrossAllListings,
   repairJSON: () => repairJSON,
   resolveContactPhone: () => resolveContactPhone,
   sanitizeResponseMarkdown: () => sanitizeResponseMarkdown,
@@ -8107,6 +8108,62 @@ async function initBrokerDirectory() {
   } catch (err) {
     console.warn(`[JanIA-Directory] Advertencia cargando directorio inicial:`, err?.message || err);
   }
+}
+async function propagateBrokerPhoneAcrossAllListings(params) {
+  const { rawPhoneOrText, brokerName, oldPhoneOrLid } = params;
+  if (!rawPhoneOrText) return { updatedProps: 0, updatedReqs: 0, cleanPhone: null };
+  let cleanPhone = extractColombianPhoneFromText(rawPhoneOrText);
+  if (!cleanPhone) {
+    const digits = rawPhoneOrText.replace(/\D/g, "");
+    if (digits.length === 10 && digits.startsWith("3")) {
+      cleanPhone = "57" + digits;
+    } else if (digits.length === 12 && digits.startsWith("573")) {
+      cleanPhone = digits;
+    }
+  }
+  if (!cleanPhone) return { updatedProps: 0, updatedReqs: 0, cleanPhone: null };
+  const db = await getDb();
+  if (!db) return { updatedProps: 0, updatedReqs: 0, cleanPhone };
+  if (brokerName && !isGenericName(brokerName)) {
+    brokerDirectoryCache.set(brokerName.trim().toLowerCase(), { phone: cleanPhone, name: brokerName });
+    brokerDirectoryCache.set(brokerName, { phone: cleanPhone, name: brokerName });
+  }
+  if (oldPhoneOrLid) {
+    brokerDirectoryCache.set(oldPhoneOrLid, { phone: cleanPhone, name: brokerName || void 0 });
+  }
+  brokerDirectoryCache.set(cleanPhone, { phone: cleanPhone, name: brokerName || void 0 });
+  let updatedProps = 0;
+  let updatedReqs = 0;
+  const allProps = await db.select({
+    id: properties.id,
+    name: properties.nombreUsuarioWhatsapp,
+    phone: properties.idUsuarioWhatsapp
+  }).from(properties);
+  for (const p of allProps) {
+    const isSameName = brokerName && p.name && !isGenericName(brokerName) && p.name.trim().toLowerCase() === brokerName.trim().toLowerCase();
+    const isSameLid = oldPhoneOrLid && p.phone === oldPhoneOrLid;
+    const isMissingPhone = !p.phone || p.phone.length > 12 || p.phone.startsWith("1203") || p.phone === oldPhoneOrLid;
+    if ((isSameName || isSameLid) && isMissingPhone && p.phone !== cleanPhone) {
+      await db.update(properties).set({ idUsuarioWhatsapp: cleanPhone }).where(eq4(properties.id, p.id));
+      updatedProps++;
+    }
+  }
+  const allReqs = await db.select({
+    id: requirements.id,
+    name: requirements.nombreUsuarioWhatsapp,
+    phone: requirements.idUsuarioWhatsapp
+  }).from(requirements);
+  for (const r of allReqs) {
+    const isSameName = brokerName && r.name && !isGenericName(brokerName) && r.name.trim().toLowerCase() === brokerName.trim().toLowerCase();
+    const isSameLid = oldPhoneOrLid && r.phone === oldPhoneOrLid;
+    const isMissingPhone = !r.phone || r.phone.length > 12 || r.phone.startsWith("1203") || r.phone === oldPhoneOrLid;
+    if ((isSameName || isSameLid) && isMissingPhone && r.phone !== cleanPhone) {
+      await db.update(requirements).set({ idUsuarioWhatsapp: cleanPhone }).where(eq4(requirements.id, r.id));
+      updatedReqs++;
+    }
+  }
+  console.log(`[JanIA-Propagate] \u{1F680} Tel\xE9fono +${cleanPhone} (${brokerName || "Broker"}) propagado en cascada a ${updatedProps} propiedades y ${updatedReqs} requerimientos.`);
+  return { updatedProps, updatedReqs, cleanPhone };
 }
 async function findOrCreateUserByPhone(phone, realName) {
   const db = await getDb();
@@ -13488,6 +13545,7 @@ ${liveStats}${userContextInstruction}
   })).mutation(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new Error("Database not available");
+    const existingProp = await db.select().from(properties).where(eq5(properties.id, input.propertyId)).limit(1).then((r) => r[0]);
     const { propertyId, ...updateFields } = input;
     const updateData = {};
     for (const [key, value] of Object.entries(updateFields)) {
@@ -13496,7 +13554,18 @@ ${liveStats}${userContextInstruction}
     updateData.updatedAt = /* @__PURE__ */ new Date();
     await db.update(properties).set(updateData).where(eq5(properties.id, propertyId));
     console.log(`[JanIA-UpdateProperty] Propiedad #${propertyId} actualizada directamente desde Mesa de Cotejo (incluyendo tel\xE9fono: ${input.idUsuarioWhatsapp || "N/A"})`);
-    return { success: true, message: "Propiedad actualizada con \xE9xito" };
+    if (input.idUsuarioWhatsapp || input.nombreUsuarioWhatsapp) {
+      try {
+        await propagateBrokerPhoneAcrossAllListings({
+          rawPhoneOrText: input.idUsuarioWhatsapp || existingProp?.idUsuarioWhatsapp || "",
+          brokerName: input.nombreUsuarioWhatsapp || existingProp?.nombreUsuarioWhatsapp,
+          oldPhoneOrLid: existingProp?.idUsuarioWhatsapp
+        });
+      } catch (propErr) {
+        console.warn(`[JanIA-UpdateProperty] Advertencia en propagaci\xF3n de tel\xE9fono:`, propErr?.message);
+      }
+    }
+    return { success: true, message: "Propiedad actualizada y tel\xE9fono propagado con \xE9xito" };
   }),
   // Actualizar datos prediales de un requerimiento demanda directamente desde la Mesa de Cotejo
   updateRequirementDetails: publicProcedure.input(z2.object({
@@ -13520,6 +13589,7 @@ ${liveStats}${userContextInstruction}
   })).mutation(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new Error("Database not available");
+    const existingReq = await db.select().from(requirements).where(eq5(requirements.id, input.requirementId)).limit(1).then((r) => r[0]);
     const { requirementId, ...updateFields } = input;
     const updateData = {};
     for (const [key, value] of Object.entries(updateFields)) {
@@ -13528,7 +13598,18 @@ ${liveStats}${userContextInstruction}
     updateData.updatedAt = /* @__PURE__ */ new Date();
     await db.update(requirements).set(updateData).where(eq5(requirements.id, requirementId));
     console.log(`[JanIA-UpdateRequirement] Requerimiento #${requirementId} actualizado directamente desde Mesa de Cotejo (incluyendo tel\xE9fono: ${input.idUsuarioWhatsapp || "N/A"})`);
-    return { success: true, message: "Requerimiento actualizado con \xE9xito" };
+    if (input.idUsuarioWhatsapp || input.nombreUsuarioWhatsapp) {
+      try {
+        await propagateBrokerPhoneAcrossAllListings({
+          rawPhoneOrText: input.idUsuarioWhatsapp || existingReq?.idUsuarioWhatsapp || "",
+          brokerName: input.nombreUsuarioWhatsapp || existingReq?.nombreUsuarioWhatsapp,
+          oldPhoneOrLid: existingReq?.idUsuarioWhatsapp
+        });
+      } catch (propErr) {
+        console.warn(`[JanIA-UpdateRequirement] Advertencia en propagaci\xF3n de tel\xE9fono:`, propErr?.message);
+      }
+    }
+    return { success: true, message: "Requerimiento actualizado y tel\xE9fono propagado con \xE9xito" };
   }),
   // Recalcular cruces y afinidad predial para Oferta y/o Demanda tras edición en Mesa de Cotejo
   recalculateMatchForPair: publicProcedure.input(z2.object({
