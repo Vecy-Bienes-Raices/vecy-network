@@ -484,6 +484,35 @@ Cuando el requerimiento menciona área, extraer correctamente:
 
 **⚠️ REGLA DOCTRINAL**: Si el requerimiento dice "Mínimo 150m2" → el campo `areaMin` en el JSON de salida DEBE SER `150`. El motor de matching bloqueará al 0% cualquier inmueble con área < 142.5 m² (150 × 0.95). Un inmueble de 122m² con requerimiento "Mínimo 150m2" es un **MATCH IMPOSIBLE**.
 
+---
+
+## 🎯 DOCTRINA DE "MÁXIMO" (PRESUPUESTO/CANON) vs "MÍNIMO" (ÁREA/HABITACIONES/CONFORT)
+
+Debes comprender con total claridad la lógica asimétrica del mercado inmobiliario colombiano:
+
+### 1. 💵 PRESUPUESTOS Y CÁNONES DE ARRIENDO = LÍMITE SUPERIOR (TECHO MÁXIMO):
+- En requerimientos (compra o arriendo), el cliente define su **CAPACIDAD FINANCIERA MÁXIMA**.
+- **Frases de Techo**:
+  - `"máximo 5 millones"`, `"canon max 8.5 millones"`, `"hasta 4 millones"`, `"presupuesto máximo $1.700.000.000"`
+  - `"tope 6 millones"`, `"techo 12 MM"`, `"límite 950 millones"`, `"con admon hasta 5.5 millones"`, `"ppto max 10 millones"`
+- **Asignación Obligatoria**:
+  - Si es Arriendo: `rentPrice` = valor máximo y `presupuestoMax` = valor máximo.
+  - Si es Venta: `price` = valor máximo y `presupuestoMax` = valor máximo.
+- **Regla de Cotejo (Filtro Duro 7)**: La oferta **DEBE ser MENOR O IGUAL al presupuesto máximo** (`propPrice <= reqPresupuestoMax`). Si la oferta es más cara, el match es inviable (0%). Si es más barata, ¡es un beneficio económico total para el cliente!
+
+### 2. 🏢 CUOTAS DE ADMINISTRACIÓN = LÍMITE SUPERIOR (MÁXIMO):
+- `"Admon máxima 1.200.000"`, `"admon hasta 800 mil"`, `"admon max 500.000"` → `adminFeeMax`.
+- Si la oferta tiene una administración menor a la máxima, **es 100% compatible y positivo**.
+
+### 3. 📐 ÁREAS, HABITACIONES, BAÑOS Y PARQUEADEROS = LÍMITE INFERIOR (PISO MÍNIMO):
+- En requerimientos, el cliente define su **ESPACIO MÍNIMO TOLERABLE**.
+- **Frases de Piso**:
+  - `"mínimo 150m2"`, `"min 3 alcobas"`, `"desde 2 baños"`, `"mínimo 2 garajes independientes"`, `"más de 120 mts"`.
+- **Asignación Obligatoria**:
+  - `areaMin`, `habitacionesMin`, `banosMin`, `parqueaderosMin`.
+- **Regla de Cotejo (Filtro Duro 6 y Regla Doctrinal v22.4)**: La oferta **DEBE ser IGUAL O MAYOR al requerimiento** (`prop >= req`). Si la oferta tiene menos espacio, el match es 0%. Si tiene más espacio (ej. 4 alcobas cuando pedían 3, o 180m² cuando pedían 150m²), **es 100% confort y satisfacción total**.
+
+
 
 # 🔢 REGLAS DE SANIDAD NUMÉRICA (OBLIGATORIAS)
 - `area` SOLO se puebla si el texto trae explícitamente un sufijo de superficie

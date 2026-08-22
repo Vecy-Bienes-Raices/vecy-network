@@ -485,20 +485,45 @@ export function extractFallbackDataFromText(text: string): any {
     }
   }
 
-  // B. Detección de Canon Compuesto (ej: "Canon más administración incluida total mes $8,500,000-")
+  // B. Detección de Presupuesto / Canon Máximo con Prefijos de Techo
+  // (ej: "Máximo 5 millones con admon", "Canon máximo $8.500.000", "Hasta 4 millones", "Ppto max 12 MM", "Tope 6.5 millones")
   if (price === 0) {
-    const canonMatch = clean.match(/(?:canon|arriendo|renta|alquiler)(?:\s*(?:más|\+|con)?\s*administraci[oó]n\s*incluida)?(?:\s*total\s*mes)?\s*:?\s*\$?\s*([\d.,\s]+?)(?:-|\s|$|\n)/i);
-    if (canonMatch) {
-      let rawCNum = parseFloat(canonMatch[1].replace(/[.,\s]/g, ''));
-      if (!isNaN(rawCNum) && rawCNum > 300_000 && !isPhoneNumberNotPrice(rawCNum, text)) {
-        rentPrice = rawCNum;
-        price = rawCNum;
-        presupuestoMax = rawCNum;
+    // B.1 Prefijo de Techo + Millones (ej: "máximo 8.5 millones", "hasta 4 mm", "tope 12 millones", "canon max 10 millones")
+    const ceilingMillonMatch = clean.match(/(?:presupuesto(?:\s*m[aá]ximo)?|ppto(?:\s*m[aá]ximo)?|canon(?:\s*m[aá]ximo)?|arriendo(?:\s*m[aá]ximo)?|m[aá]ximo|max|hasta|tope|techo|l[ií]mite)\s*:?\s*\$?\s*([\d]+(?:[.,][\d]+)?)\s*(mil\s*millones?|millones?|millon|millón|mill|mm|m)\b/i);
+    if (ceilingMillonMatch) {
+      let val = parseFloat(ceilingMillonMatch[1].replace(',', '.'));
+      const unit = ceilingMillonMatch[2].toLowerCase();
+      let mult = 1_000_000;
+      if (unit.includes("mil millon")) mult = 1_000_000_000;
+      else if (unit === "mm" && val < 100 && transactionType !== "arriendo" && val > 15) mult = 10_000_000;
+      else mult = 1_000_000;
+      const computed = Math.round(val * mult);
+      if (!isPhoneNumberNotPrice(computed, text)) {
+        price = computed;
+        presupuestoMax = computed;
+        if (transactionType === "arriendo" || clean.includes("arriendo") || clean.includes("canon") || clean.includes("alquiler") || computed <= 50_000_000) {
+          rentPrice = computed;
+        }
+      }
+    }
+
+    // B.2 Prefijo de Techo + Formato Numérico Completo (ej: "Canon hasta 8.500.000", "Máximo $5.000.000 incluida administración", "ppto max $1.700.000.000")
+    if (price === 0) {
+      const ceilingNumMatch = clean.match(/(?:presupuesto(?:\s*m[aá]ximo)?|ppto(?:\s*m[aá]ximo)?|canon(?:\s*m[aá]ximo)?|arriendo(?:\s*m[aá]ximo)?|m[aá]ximo|max|hasta|tope|techo|l[ií]mite)\s*:?\s*(?:m[aá]s|\+|con)?\s*(?:administraci[oó]n\s*incluida)?(?:\s*total\s*mes)?\s*:?\s*\$?\s*([\d.,\s]+?)(?:-|\s|\(|$|\n)/i);
+      if (ceilingNumMatch) {
+        let rawCNum = parseFloat(ceilingNumMatch[1].replace(/[.,\s]/g, ''));
+        if (!isNaN(rawCNum) && rawCNum >= 300_000 && !isPhoneNumberNotPrice(rawCNum, text)) {
+          if (transactionType === "arriendo" || clean.includes("arriendo") || clean.includes("canon") || clean.includes("alquiler") || rawCNum <= 50_000_000) {
+            rentPrice = rawCNum;
+          }
+          price = rawCNum;
+          presupuestoMax = rawCNum;
+        }
       }
     }
   }
 
-  // C. Detección de Precio/Presupuesto de Millones
+  // C. Detección de Precio/Presupuesto de Millones Estándar
   if (price === 0) {
     const millonMatch = clean.match(/(\d+(?:[.,]\d+)?)\s*(mil\s*millones?|millon|millones|millón|mill|mm|m)\b/i);
     if (millonMatch) {
@@ -513,7 +538,7 @@ export function extractFallbackDataFromText(text: string): any {
       if (!isPhoneNumberNotPrice(computed, text)) {
         price = computed;
         presupuestoMax = computed;
-        if (transactionType === "arriendo") rentPrice = computed;
+        if (transactionType === "arriendo" || clean.includes("arriendo") || clean.includes("canon")) rentPrice = computed;
       }
     }
   }
@@ -4258,10 +4283,40 @@ async function saveRequirement(data: any, userId: string, realName: string, imag
     presupuestoMin: data.presupuestoMin !== undefined && data.presupuestoMin !== null ? String(data.presupuestoMin) : null,
     presupuestoMax: (() => {
       const raw = data.presupuestoMax !== undefined && data.presupuestoMax !== null ? data.presupuestoMax : data.price;
-      if (raw === undefined || raw === null) return null;
-      const v = parseFloat(String(raw));
-      if (isNaN(v) || v < 300_000 || v > 50_000_000_000 || isPhoneNumberNotPrice(v, data.rawText)) return null;
-      return String(v);
+      if (raw !== undefined && raw !== null) {
+        const v = parseFloat(String(raw));
+        if (!isNaN(v) && v >= 300_000 && v <= 50_000_000_000 && !isPhoneNumberNotPrice(v, data.rawText)) {
+          return String(v);
+        }
+      }
+      // Fallback robusto: extraer desde rawText con palabras de techo (máximo, max, hasta, ppto, canon max, tope)
+      const rawL = (data.rawText || data.name || "").toLowerCase();
+      const isRentReq = (data.tipoNegocioDeseado || data.transactionType || "").toLowerCase().includes("arriendo") || rawL.includes("arriendo") || rawL.includes("canon") || rawL.includes("alquiler");
+      
+      // Fallback 1: Techo + Millones (ej: "máximo 5 millones", "hasta 1.700 millones", "ppto max 10 mm", "tope 8 millones")
+      const millonMatch = rawL.match(/(?:presupuesto(?:\s*m[aá]ximo)?|ppto(?:\s*m[aá]ximo)?|canon(?:\s*m[aá]ximo)?|m[aá]ximo|max|hasta|tope|techo|l[ií]mite)\s*:?\s*\$?\s*([\d]+(?:[.,][\d]+)?)\s*(mil\s*millones?|millones?|millon|millón|mill|mm|m)\b/i);
+      if (millonMatch) {
+        let val = parseFloat(millonMatch[1].replace(',', '.'));
+        const unit = millonMatch[2].toLowerCase();
+        let mult = 1_000_000;
+        if (unit.includes("mil millon")) mult = 1_000_000_000;
+        else mult = 1_000_000;
+        const computed = Math.round(val * mult);
+        if (computed >= (isRentReq ? 300_000 : 10_000_000) && computed <= 50_000_000_000 && !isPhoneNumberNotPrice(computed, rawL)) {
+          return String(computed);
+        }
+      }
+
+      // Fallback 2: Formato colombiano largo o estándar (ej: "$1.700.000.000", "$8.500.000")
+      const colombianMatch = (data.rawText || "").match(/\$?\s*(\d{1,3}(?:\.\d{3}){2,4})/);
+      if (colombianMatch) {
+        const parsed = parseFloat(colombianMatch[1].replace(/\./g, ''));
+        if (!isNaN(parsed) && parsed >= 300_000 && !isPhoneNumberNotPrice(parsed, rawL)) {
+          return String(parsed);
+        }
+      }
+
+      return null;
     })(),
     areaMin: (() => {
       const raw = data.areaMin !== undefined && data.areaMin !== null ? data.areaMin : data.area;
@@ -4280,7 +4335,23 @@ async function saveRequirement(data: any, userId: string, realName: string, imag
       }
       return null;
     })(),
-    adminFeeMax: data.adminFeeMax !== undefined && data.adminFeeMax !== null ? String(data.adminFeeMax) : (data.adminFee !== undefined && data.adminFee !== null ? String(data.adminFee) : null),
+    adminFeeMax: (() => {
+      const raw = data.adminFeeMax !== undefined && data.adminFeeMax !== null ? data.adminFeeMax : (data.adminFee !== undefined && data.adminFee !== null ? data.adminFee : null);
+      if (raw !== undefined && raw !== null) {
+        const v = parseFloat(String(raw));
+        if (!isNaN(v) && v >= 10_000 && v <= 30_000_000) return String(v);
+      }
+      // Fallback robusto: extraer desde rawText ("admon max $1.200.000", "administración hasta 800 mil", "admon $960.000")
+      const rawL = (data.rawText || data.name || "").toLowerCase();
+      const adminMatch = rawL.match(/(?:administraci[oó]n|admin|admon|cta\s*admon)\s*(?:m[aá]xima|max|hasta)?\s*:?\s*(?:aprox\.?|mensual)?\s*\$?\s*([\d.,\s]+?)(?:-|\s|\(|\/|\+|$|\n)/i);
+      if (adminMatch) {
+        const parsed = parseFloat(adminMatch[1].replace(/[.,\s]/g, ''));
+        if (!isNaN(parsed) && parsed >= 10_000 && parsed <= 30_000_000 && !isPhoneNumberNotPrice(parsed, rawL)) {
+          return String(parsed);
+        }
+      }
+      return null;
+    })(),
     habitacionesMin: (() => {
       const v = data.habitacionesMin !== undefined && data.habitacionesMin !== null ? Math.round(Number(data.habitacionesMin)) : (data.bedrooms !== undefined && data.bedrooms !== null ? Math.round(Number(data.bedrooms)) : null);
       if (v !== null && !isNaN(v) && v > 0) return v;
