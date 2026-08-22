@@ -8140,11 +8140,18 @@ async function propagateBrokerPhoneAcrossAllListings(params) {
     phone: properties.idUsuarioWhatsapp
   }).from(properties);
   for (const p of allProps) {
-    const isSameName = brokerName && p.name && !isGenericName(brokerName) && p.name.trim().toLowerCase() === brokerName.trim().toLowerCase();
+    const isSameName = brokerName && p.name && !isGenericName(brokerName) && (p.name.trim().toLowerCase() === brokerName.trim().toLowerCase() || p.name.trim().toLowerCase().includes(brokerName.trim().toLowerCase()) || brokerName.trim().toLowerCase().includes(p.name.trim().toLowerCase()));
+    const isSamePhone = cleanPhone && p.phone === cleanPhone;
     const isSameLid = oldPhoneOrLid && p.phone === oldPhoneOrLid;
-    const isMissingPhone = !p.phone || p.phone.length > 12 || p.phone.startsWith("1203") || p.phone === oldPhoneOrLid;
-    if ((isSameName || isSameLid) && isMissingPhone && p.phone !== cleanPhone) {
-      await db.update(properties).set({ idUsuarioWhatsapp: cleanPhone }).where(eq4(properties.id, p.id));
+    const updates = {};
+    if ((isSameName || isSameLid) && (!p.phone || p.phone.length > 12 || p.phone.startsWith("1203") || p.phone === oldPhoneOrLid) && p.phone !== cleanPhone) {
+      updates.idUsuarioWhatsapp = cleanPhone;
+    }
+    if ((isSamePhone || isSameLid) && brokerName && !isGenericName(brokerName) && (!p.name || isGenericName(p.name) || p.name !== brokerName)) {
+      updates.nombreUsuarioWhatsapp = brokerName;
+    }
+    if (Object.keys(updates).length > 0) {
+      await db.update(properties).set(updates).where(eq4(properties.id, p.id));
       updatedProps++;
     }
   }
@@ -8154,15 +8161,22 @@ async function propagateBrokerPhoneAcrossAllListings(params) {
     phone: requirements.idUsuarioWhatsapp
   }).from(requirements);
   for (const r of allReqs) {
-    const isSameName = brokerName && r.name && !isGenericName(brokerName) && r.name.trim().toLowerCase() === brokerName.trim().toLowerCase();
+    const isSameName = brokerName && r.name && !isGenericName(brokerName) && (r.name.trim().toLowerCase() === brokerName.trim().toLowerCase() || r.name.trim().toLowerCase().includes(brokerName.trim().toLowerCase()) || brokerName.trim().toLowerCase().includes(r.name.trim().toLowerCase()));
+    const isSamePhone = cleanPhone && r.phone === cleanPhone;
     const isSameLid = oldPhoneOrLid && r.phone === oldPhoneOrLid;
-    const isMissingPhone = !r.phone || r.phone.length > 12 || r.phone.startsWith("1203") || r.phone === oldPhoneOrLid;
-    if ((isSameName || isSameLid) && isMissingPhone && r.phone !== cleanPhone) {
-      await db.update(requirements).set({ idUsuarioWhatsapp: cleanPhone }).where(eq4(requirements.id, r.id));
+    const updates = {};
+    if ((isSameName || isSameLid) && (!r.phone || r.phone.length > 12 || r.phone.startsWith("1203") || r.phone === oldPhoneOrLid) && r.phone !== cleanPhone) {
+      updates.idUsuarioWhatsapp = cleanPhone;
+    }
+    if ((isSamePhone || isSameLid) && brokerName && !isGenericName(brokerName) && (!r.name || isGenericName(r.name) || r.name !== brokerName)) {
+      updates.nombreUsuarioWhatsapp = brokerName;
+    }
+    if (Object.keys(updates).length > 0) {
+      await db.update(requirements).set(updates).where(eq4(requirements.id, r.id));
       updatedReqs++;
     }
   }
-  console.log(`[JanIA-Propagate] \u{1F680} Tel\xE9fono +${cleanPhone} (${brokerName || "Broker"}) propagado en cascada a ${updatedProps} propiedades y ${updatedReqs} requerimientos.`);
+  console.log(`[JanIA-Propagate] \u{1F680} Broker ${brokerName || "Desconocido"} (+${cleanPhone}) propagado bidireccionalmente a ${updatedProps} propiedades y ${updatedReqs} requerimientos.`);
   return { updatedProps, updatedReqs, cleanPhone };
 }
 async function findOrCreateUserByPhone(phone, realName) {
