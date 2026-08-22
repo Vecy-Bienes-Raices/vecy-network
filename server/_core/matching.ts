@@ -1133,7 +1133,9 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
   // Para Venta, si price < 30.000.000 (ej. $1.200.000 cuota de administración),
   // ese valor NO es el precio de venta. Re-parsear el rawText para encontrar el valor real (ej. $950.000.000).
   const isSaleMatch = (property.transactionType || "").toLowerCase().includes("venta") || !(property.transactionType || "").toLowerCase().includes("arriendo");
-  if (isSaleMatch && price > 0 && price < 30_000_000 && property.rawText) {
+  // Sanidad Predial de Precios: para Venta, si price < 200.000.000 (e.g. confusión de formato/millones),
+  // re-parsear el rawText para recuperar el precio real (ej: $1.390.000.000 guardado como 102.740.000).
+  if (isSaleMatch && price > 0 && price < 200_000_000 && property.rawText) {
     const rawP = property.rawText.toLowerCase();
     const saleMatch = rawP.match(/(?:v\/venta\/|precio\s*(?:de\s*)?venta|venta)\s*:?\s*\$?([\d.,]+)\s*(mil\s*millones?|millones?|m|M)?/i)
                    || rawP.match(/venta\/.*?\$?\s*([\d.]{7,12})/i);
@@ -1176,7 +1178,20 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
   }
 
   const propArea    = parseFloat(String(property.areaTotal || property.area || "0"));
-  const reqAreaMin  = parseFloat(String(requirement.areaMin || requirement.areaMinimaM2 || "0"));
+  // Filtro Duro 6 (Área): reqAreaMin se lee de BD. Si es 0/null, se intenta extraer del rawText
+  // para evitar que el filtro se salte cuando JanIA no guardó el campo correctamente.
+  let reqAreaMin  = parseFloat(String(requirement.areaMin || requirement.areaMinimaM2 || "0"));
+  if (reqAreaMin <= 0 && requirement.rawText) {
+    const rawAreaFallback = requirement.rawText.toLowerCase()
+      .match(/(?:(?:m[ií]nimo|m[aá]s\s*de|min(?:imo)?|de|desde)\s+)([\d]+(?:[.,][\d]+)?)\s*(?:m2|mts2|mts|metros(?:\s+cuadrados)?|m²)/i);
+    if (rawAreaFallback) {
+      const parsedArea = parseFloat(rawAreaFallback[1].replace(',', '.'));
+      if (!isNaN(parsedArea) && parsedArea >= 10 && parsedArea <= 5000) {
+        reqAreaMin = parsedArea;
+        console.log(`[Matching-AreaFallback] ⚠️ reqAreaMin extraído de rawText: ${parsedArea} m² (no estaba en BD para req #${requirement.id})`);
+      }
+    }
+  }
 
   const pBedrooms   = property.bedrooms   != null ? Number(property.bedrooms)   : -1;
   const reqBedrooms = requirement.habitacionesMin != null ? Number(requirement.habitacionesMin) : -1;

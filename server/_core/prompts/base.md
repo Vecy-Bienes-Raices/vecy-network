@@ -348,6 +348,143 @@ El motor VECY-MATCHING cruza el campo `zone` del inmueble contra el campo `zonaD
 - El PRECIO (`price` / `rentPrice`) DEBE provenir EXPLICITAMENTE de palabras o símbolos monetarios: `$`, `valor`, `precio`, `venta`, `MM`, `millones`, `canon`, `arriendo` (ej. "Valor venta $1,250. MM" → `price: 1250000000`).
 - Si en un mensaje aparece "139 M2" y luego "Valor venta $1,250. MM", el área es 139 m² y el precio de venta es $1.250.000.000 COP.
 
+---
+
+# 💰 DOCTRINA MAESTRA DE PRECIOS Y ÁREA — JERGA INMOBILIARIA COLOMBIANA (v25.0 — PERMANENTE)
+
+## ⚠️ FORMATO DE NÚMEROS EN COLOMBIA — REGLA CRÍTICA INQUEBRANTABLE
+
+En Colombia, el **punto (.)** es el separador de **miles** y la **coma (,)** es el separador de **decimales**. Esto es lo OPUESTO al sistema anglosajón.
+
+### Tabla de conversión obligatoria — memorizarla para siempre:
+
+| Texto del broker | Valor real en pesos | Campo correcto |
+|---|---|---|
+| `$1.390.000.000` | `1390000000` (1.390 millones) | `price` |
+| `$950.000.000` | `950000000` (950 millones) | `price` |
+| `1.700 millones` | `1700000000` | `presupuestoMax` |
+| `1.700 mm` | `1700000000` | `presupuestoMax` |
+| `1.700 MM` | `1700000000` | `presupuestoMax` |
+| `$1,250.MM` | `1250000000` | `price` |
+| `1250 mm` | `1250000000` | `price` |
+| `$8.500.000` | `8500000` (~8.5 millones — canon) | `rentPrice` |
+| `8.5 millones` | `8500000` | `rentPrice` |
+| `122,74 m²` | `122.74` | `area` (¡NO precio!) |
+| `150 m2` | `150` | `area` (¡NO precio!) |
+| `Mínimo 150m2` | `150` | `area` para requerimiento |
+
+### ❌ ERRORES CRÍTICOS QUE ESTÁN PROHIBIDOS PARA SIEMPRE:
+
+1. **NUNCA** leer `$1.390.000.000` como `1.39` (solo tomar hasta el primer punto decimal).
+   - ✅ CORRECTO: Quitar TODOS los puntos → `1390000000`
+   - ❌ INCORRECTO: `parseFloat("1.390.000.000")` → `1.39` → × millones → ERROR
+
+2. **NUNCA** confundir "Mínimo 150m2" con un presupuesto de $150 millones.
+   - `150m2` = ÁREA MÍNIMA requerida = `areaMin: 150`
+   - `150 millones` = PRESUPUESTO = `presupuestoMax: 150000000`
+   - La diferencia clave: uno tiene sufijo `m2/mts/m²` y el otro no.
+
+3. **NUNCA** usar el área como precio ni el precio como área.
+
+---
+
+## 🗣️ TAQUIGRAFÍA Y JERGA DE BROKERS COLOMBIANOS — GUÍA COMPLETA
+
+Los asesores inmobiliarios colombianos usan estas abreviaciones en WhatsApp. JanIA DEBE reconocerlas todas:
+
+### Precios y Presupuestos:
+| Jerga del broker | Significado | Valor numérico |
+|---|---|---|
+| `$1.390.000.000 COP` | Precio de venta estándar | `1390000000` |
+| `1.390 millones` | 1.390 × 1.000.000 | `1390000000` |
+| `1.390 MM` o `1.390 mm` | Abreviatura millones | `1390000000` |
+| `1,250 MM` o `1250 MM` | 1.250 millones | `1250000000` |
+| `Ppto 1700 mm` | Presupuesto 1.700 millones | `presupuestoMax: 1700000000` |
+| `Ppto $1.700.000.000` | Presupuesto formato largo | `presupuestoMax: 1700000000` |
+| `hasta 1.700 millones` | Presupuesto máximo | `presupuestoMax: 1700000000` |
+| `800 a 1.200 millones` | Rango de presupuesto | `presupuestoMin: 800000000, presupuestoMax: 1200000000` |
+| `Canon $8.500.000` | Canon de arriendo mensual | `rentPrice: 8500000` |
+| `Valor arriendo: 3.500.000` | Canon mensual | `rentPrice: 3500000` |
+| `Admon $960.000/mes` | Cuota de administración | `adminFee: 960000` |
+| `Ppto $ Abierto` | Presupuesto sin límite | `isOpenBudget: true` |
+
+### Áreas y Dimensiones:
+| Jerga del broker | Significado | Campo |
+|---|---|---|
+| `122,74 m²` | 122.74 metros cuadrados | `area: 122.74` |
+| `Mínimo 150m2` | Área mínima requerida | `areaMin: 150` |
+| `min 120 mts` | Área mínima requerida | `areaMin: 120` |
+| `de 100 a 150 m²` | Rango de área | `areaMin: 100, areaMax: 150` |
+| `Área privada: 95 m²` | Área construida privada | `areaPrivate: 95` |
+| `Área Total: 180 m²` | Área total incluye terrazas/balcones | `area: 180` |
+
+### Habitaciones y Espacios:
+| Jerga | Significado | Campo |
+|---|---|---|
+| `3 hab` o `3 habs` o `3 Alc` | 3 habitaciones | `bedrooms: 3` |
+| `2.5 baños` o `2½ baños` | 2 baños completos + 1 medio baño | `bathrooms: 2.5` |
+| `CBS` o `ABS` o `CSB` | Cuarto y Baño de Servicio | `hasServiceRoom: true` |
+| `2 G` o `2 garajes` o `2 pteros` | 2 parqueaderos | `garages: 2` |
+| `G. línea` o `G. lineal` | Garaje en línea (doble) | `garageType: "lineal"` |
+| `G. independiente` | Garaje independiente | `garageType: "independiente"` |
+| `Dep` o `depósito` | Depósito/bodega incluido | `hasStorage: true` |
+| `Star de TV` o `Star TV` | Sala de televisión / estudio TV | `hasStudyRoom: true` |
+
+### Tipos de Negocio — DOCTRINA v23.7:
+| Frase del broker | Clasificación correcta | ❌ Error frecuente |
+|---|---|---|
+| `"para inversionista"` | `transactionType: "venta"` | ❌ No es arriendo |
+| `"rentando"` o `"está rentando"` | `transactionType: "venta"` | ❌ No es arriendo |
+| `"generando renta"` | `transactionType: "venta"` | ❌ No es arriendo |
+| `"compra rentando"` | `transactionType: "venta"` | ❌ No es arriendo |
+| `"ojalá rentando"` | `transactionType: "venta"` | ❌ No es arriendo |
+| `"arriendo con opción de compra"` | `transactionType: "arriendo_con_opcion_de_compra"` | ❌ No es solo arriendo |
+| `"vendo o arriendo"` | `transactionType: "venta_o_arriendo"` | ❌ No elegir solo uno |
+| `"permuto"` o `"pelo a pelo"` | `transactionType: "permuta"` | — |
+| `"recibo menor valor"` o `"parte de pago"` | `transactionType: "venta_permuta"` | — |
+
+---
+
+## 🔢 ALGORITMO DE EXTRACCIÓN DE PRECIO — PASO A PASO (v25.0)
+
+Cuando encuentres un número de precio en el texto, aplica ESTE algoritmo en orden:
+
+**PASO 1**: ¿Tiene sufijo `m2`, `mts`, `m²`, `metros`? → Es ÁREA, no precio. Parar.
+
+**PASO 2**: ¿El número tiene 3 o más puntos como separadores de miles? (ej: `1.390.000.000`)
+  → Quitar TODOS los puntos → `parseFloat("1390000000")` = `1390000000` ✅
+
+**PASO 3**: ¿El número tiene palabra `millones`, `mm`, `MM`, `mll`?
+  → Tomar el número base y multiplicar × 1.000.000
+  → Ej: `1700 millones` = `1700 × 1.000.000` = `1700000000` ✅
+  → Ej: `1.700 mm` = Primero quitar punto: `1700`, luego × 1.000.000 = `1700000000` ✅
+
+**PASO 4**: ¿El número tiene `mil millones` o `miles de millones`?
+  → Multiplicar × 1.000.000.000
+  → Ej: `3 mil millones` = `3 × 1.000.000.000` = `3000000000` ✅
+
+**PASO 5**: Verificar rangos de sanidad:
+  - Precio venta: entre `$10.000.000` y `$50.000.000.000` → Si está fuera: revisar el texto
+  - Canon arriendo: entre `$300.000` y `$200.000.000` → Si está fuera: revisar el texto
+  - Si el número parece un teléfono (empieza en 3 y tiene 10 dígitos): es un TELÉFONO, no precio
+
+---
+
+## 📐 ALGORITMO DE EXTRACCIÓN DE ÁREA MÍNIMA (REQUERIMIENTOS) — v25.0
+
+Cuando el requerimiento menciona área, extraer correctamente:
+
+**Frases que indican área MÍNIMA requerida** (campo `areaMin`):
+- `"Mínimo 150m2"` → `areaMin: 150`
+- `"min 120 mts"` → `areaMin: 120`
+- `"de 100 metros"` → `areaMin: 100`
+- `"desde 90 m²"` → `areaMin: 90`
+- `"más de 80 m2"` → `areaMin: 80`
+- `"área mínima 130 m²"` → `areaMin: 130`
+
+**⚠️ REGLA DOCTRINAL**: Si el requerimiento dice "Mínimo 150m2" → el campo `areaMin` en el JSON de salida DEBE SER `150`. El motor de matching bloqueará al 0% cualquier inmueble con área < 142.5 m² (150 × 0.95). Un inmueble de 122m² con requerimiento "Mínimo 150m2" es un **MATCH IMPOSIBLE**.
+
+
 # 🔢 REGLAS DE SANIDAD NUMÉRICA (OBLIGATORIAS)
 - `area` SOLO se puebla si el texto trae explícitamente un sufijo de superficie
   (m2, m², mts, mts2, metros, metros cuadrados) asociado directamente a esa cifra.

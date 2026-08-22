@@ -518,15 +518,30 @@ export function extractFallbackDataFromText(text: string): any {
     }
   }
 
-  // D. Detección de Precio Estándar Formateado
+  // D. Detección de Precio Estándar Formateado (formato colombiano: 1.390.000.000)
   if (price === 0) {
-    const rawPriceMatch = text.match(/\$?\s*(\d{1,3}(?:[\.,]\d{3}){1,3})/);
-    if (rawPriceMatch) {
-      const parsed = parseFloat(rawPriceMatch[1].replace(/[\.,]/g, ''));
-      if (!isPhoneNumberNotPrice(parsed, text) && parsed >= 300_000) {
+    // Primero intentar formato largo colombiano (puntos como separadores de miles)
+    // Patrón: número de 7+ dígitos con puntos cada 3 (ej: 1.390.000.000 o 950.000.000)
+    const colombianPriceMatch = text.match(/\$?\s*(\d{1,3}(?:\.\d{3}){2,4})/);
+    if (colombianPriceMatch) {
+      // En formato colombiano, los puntos son separadores de miles → eliminar todos los puntos
+      const parsed = parseFloat(colombianPriceMatch[1].replace(/\./g, ''));
+      if (!isNaN(parsed) && !isPhoneNumberNotPrice(parsed, text) && parsed >= 10_000_000) {
         price = parsed;
         presupuestoMax = parsed;
         if (transactionType === "arriendo") rentPrice = parsed;
+      }
+    }
+    // Fallback: formato con coma decimal o mixto
+    if (price === 0) {
+      const rawPriceMatch = text.match(/\$?\s*(\d{1,3}(?:,\d{3})+)/);
+      if (rawPriceMatch) {
+        const parsed = parseFloat(rawPriceMatch[1].replace(/,/g, ''));
+        if (!isNaN(parsed) && !isPhoneNumberNotPrice(parsed, text) && parsed >= 300_000) {
+          price = parsed;
+          presupuestoMax = parsed;
+          if (transactionType === "arriendo") rentPrice = parsed;
+        }
       }
     }
   }
@@ -541,7 +556,8 @@ export function extractFallbackDataFromText(text: string): any {
   }
 
   let area = 0;
-  const areaMatch = clean.match(/(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|metros|m²)/i);
+  // Captura área con prefijos opcionales: "Mínimo 150m2", "min 150 m²", "de 122.74 m²", "122,74 m²"
+  const areaMatch = clean.match(/(?:(?:m[ií]nimo|min|m[aá]ximo|max|de|área\s*(?:m[ií]nima)?|area\s*(?:minima)?)\s+)?([\d]+(?:[.,][\d]+)?)\s*(?:m2|mts2|mts|metros(?:\s+cuadrados)?|m²)/i);
   if (areaMatch) {
     area = parseFloat(areaMatch[1].replace(',', '.'));
   }
@@ -4249,10 +4265,20 @@ async function saveRequirement(data: any, userId: string, realName: string, imag
     })(),
     areaMin: (() => {
       const raw = data.areaMin !== undefined && data.areaMin !== null ? data.areaMin : data.area;
-      if (raw === undefined || raw === null) return null;
-      const v = parseFloat(String(raw));
-      if (isNaN(v) || v < 10 || v > 5000) return null;
-      return String(v);
+      if (raw !== undefined && raw !== null) {
+        const v = parseFloat(String(raw));
+        if (!isNaN(v) && v >= 10 && v <= 5000) return String(v);
+      }
+      // Fallback robusto: extraer desde rawText capturando frases como "Mínimo 150m2", "min 120 m²", "de 150 metros"
+      const rawL = (data.rawText || data.name || "").toLowerCase();
+      const areaFallback = rawL.match(
+        /(?:(?:m[ií]nimo|m[aá]s\s*de|min(?:imo)?|m[aá]x(?:imo)?|de|desde|con)\s+)([\d]+(?:[.,][\d]+)?)\s*(?:m2|mts2|mts|metros(?:\s+cuadrados)?|m²)/i
+      );
+      if (areaFallback) {
+        const v = parseFloat(areaFallback[1].replace(',', '.'));
+        if (!isNaN(v) && v >= 10 && v <= 5000) return String(v);
+      }
+      return null;
     })(),
     adminFeeMax: data.adminFeeMax !== undefined && data.adminFeeMax !== null ? String(data.adminFeeMax) : (data.adminFee !== undefined && data.adminFee !== null ? String(data.adminFee) : null),
     habitacionesMin: (() => {
