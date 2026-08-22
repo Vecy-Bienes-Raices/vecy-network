@@ -1489,6 +1489,12 @@ function extractContactNameFromText(rawText: string | null | undefined): string 
   return null;
 }
 
+function isGenericBrokerName(name?: string | null): boolean {
+  if (!name) return true;
+  const lower = name.trim().toLowerCase();
+  return lower.startsWith('asesor +') || lower.startsWith('cliente +') || lower.startsWith('broker +') || lower.includes('sin nombre') || lower.includes('desconocido') || lower === '';
+}
+
 function extractPhoneFromItem(item: any): { display: string; cleanNumber: string | null; name: string | null } {
   if (!item) return { display: "Número no disponible", cleanNumber: null, name: null };
 
@@ -1693,6 +1699,7 @@ export default function AdminMatches() {
     setEditingMatchId(m.id);
     setEditForm({
       // Oferta (Inmueble)
+      propSenderName: m.property?.nombreUsuarioWhatsapp || '',
       propPrice: m.property?.price || '',
       propRentPrice: m.property?.rentPrice || '',
       propAdminFee: m.property?.adminFee || '',
@@ -1709,6 +1716,7 @@ export default function AdminMatches() {
       propPhone: m.property?.idUsuarioWhatsapp || m.property?.phone || m.property?.contactPhone || '',
 
       // Demanda (Requerimiento)
+      reqSenderName: m.requirement?.nombreUsuarioWhatsapp || '',
       reqBudget: m.requirement?.presupuestoMax || '',
       reqAdminMax: m.requirement?.adminFeeMax || '',
       reqArea: m.requirement?.areaMin || '',
@@ -1757,6 +1765,7 @@ export default function AdminMatches() {
           propertyType: editForm.propPropertyType ? String(editForm.propPropertyType) : undefined,
           transactionType: editForm.propTransactionType ? String(editForm.propTransactionType) : undefined,
           idUsuarioWhatsapp: cleanPropPhone,
+          nombreUsuarioWhatsapp: editForm.propSenderName !== undefined && editForm.propSenderName.trim() !== '' ? String(editForm.propSenderName).trim() : undefined,
         });
       }
 
@@ -1777,11 +1786,12 @@ export default function AdminMatches() {
           tipoInmuebleDeseado: editForm.reqPropertyType ? String(editForm.reqPropertyType) : undefined,
           tipoNegocioDeseado: editForm.reqTransactionType ? String(editForm.reqTransactionType) : undefined,
           idUsuarioWhatsapp: cleanReqPhone,
+          nombreUsuarioWhatsapp: editForm.reqSenderName !== undefined && editForm.reqSenderName.trim() !== '' ? String(editForm.reqSenderName).trim() : undefined,
         });
       }
 
       toast.success("💾 Datos guardados en la base de datos", {
-        description: "La ficha se ha actualizado permanentemente en Supabase."
+        description: "La ficha y el contacto del asesor se han actualizado permanentemente en Supabase."
       });
       setEditingMatchId(null);
       setEditForm({});
@@ -1820,6 +1830,7 @@ export default function AdminMatches() {
           propertyType: editForm.propPropertyType ? String(editForm.propPropertyType) : undefined,
           transactionType: editForm.propTransactionType ? String(editForm.propTransactionType) : undefined,
           idUsuarioWhatsapp: cleanPropPhone,
+          nombreUsuarioWhatsapp: editForm.propSenderName !== undefined && editForm.propSenderName.trim() !== '' ? String(editForm.propSenderName).trim() : undefined,
         });
       }
 
@@ -1840,6 +1851,7 @@ export default function AdminMatches() {
           tipoInmuebleDeseado: editForm.reqPropertyType ? String(editForm.reqPropertyType) : undefined,
           tipoNegocioDeseado: editForm.reqTransactionType ? String(editForm.reqTransactionType) : undefined,
           idUsuarioWhatsapp: cleanReqPhone,
+          nombreUsuarioWhatsapp: editForm.reqSenderName !== undefined && editForm.reqSenderName.trim() !== '' ? String(editForm.reqSenderName).trim() : undefined,
         });
       }
 
@@ -2318,15 +2330,39 @@ export default function AdminMatches() {
                       
                       {(() => {
                         const propContact = extractPhoneFromItem(m.property);
+                        const senderName = m.property?.nombreUsuarioWhatsapp || propContact.name;
+                        const isSenderKnown = senderName && !isGenericBrokerName(senderName);
+                        const formattedPhone = propContact.display.includes('(')
+                          ? propContact.display.split('(')[1].replace(')', '').trim()
+                          : propContact.display;
+
                         return (
-                          <div className="bg-[#bf953f]/5 border border-[#bf953f]/10 rounded-2xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                            <div className="flex items-center gap-2">
-                              <div className="w-8 h-8 rounded-full bg-[#bf953f]/10 border border-[#bf953f]/20 flex items-center justify-center text-[#bf953f] flex-shrink-0">
-                                <Phone className="w-3.5 h-3.5" />
+                          <div className="bg-gradient-to-r from-[#bf953f]/10 via-amber-950/20 to-zinc-950 border border-[#bf953f]/25 rounded-2xl p-3 sm:p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm hover:border-[#bf953f]/45 transition-all">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className="w-9 h-9 rounded-full bg-[#bf953f]/20 border border-[#bf953f]/40 flex items-center justify-center text-[#bf953f] flex-shrink-0 shadow-inner">
+                                <Phone className="w-4 h-4" />
                               </div>
-                              <div>
-                                <p className="text-[9px] text-zinc-500 uppercase tracking-wider font-semibold">Captador / Vendedor</p>
-                                <p className="text-xs font-bold text-zinc-200 select-all">{propContact.display}</p>
+                              <div className="min-w-0">
+                                <p className="text-[9px] text-[#bf953f]/80 uppercase tracking-widest font-extrabold flex items-center gap-1">
+                                  <span>Captador / Vendedor</span>
+                                </p>
+                                {isSenderKnown ? (
+                                  <div className="mt-0.5">
+                                    <p className="text-xs sm:text-sm font-extrabold text-amber-200 truncate flex items-center gap-1.5">
+                                      <span className="text-[10px] bg-amber-500/20 border border-amber-500/30 px-1.5 py-0.2 rounded text-amber-300">👤 Asesor</span>
+                                      <span>{senderName}</span>
+                                    </p>
+                                    <p className="text-xs font-bold text-zinc-300 select-all mt-0.5 flex items-center gap-1">
+                                      <span className="text-[#25D366]">📞</span>
+                                      <span>{formattedPhone}</span>
+                                    </p>
+                                  </div>
+                                ) : (
+                                  <div className="mt-0.5">
+                                    <p className="text-xs font-bold text-zinc-200 select-all">{propContact.display}</p>
+                                    <p className="text-[10px] text-zinc-500 italic mt-0.5">👤 Nombre no asignado (Completar al editar)</p>
+                                  </div>
+                                )}
                               </div>
                             </div>
                             {(() => {
@@ -2339,9 +2375,10 @@ export default function AdminMatches() {
                                   href={`https://wa.me/${waTarget}?text=${encodeURIComponent(defaultText)}`} 
                                   target="_blank" 
                                   rel="noopener noreferrer"
-                                  className="bg-[#25D366] hover:bg-[#20ba5a] text-black text-[10px] font-bold px-3.5 py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md hover:scale-105 min-h-[38px] w-full sm:w-auto"
+                                  className="group bg-[#25D366] hover:bg-[#20ba5a] text-black text-xs font-extrabold px-4 py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all duration-300 shadow-md hover:shadow-[0_0_20px_rgba(37,211,102,0.4)] hover:scale-105 active:scale-95 min-h-[38px] w-full sm:w-auto shrink-0"
                                 >
-                                  Contactar WA <ExternalLink className="w-3 h-3" />
+                                  <span>Contactar WA</span>
+                                  <ExternalLink className="w-3.5 h-3.5 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                                 </a>
                               );
                             })()}
@@ -2519,15 +2556,39 @@ export default function AdminMatches() {
                       
                       {(() => {
                         const reqContact = extractPhoneFromItem(m.requirement);
+                        const senderName = m.requirement?.nombreUsuarioWhatsapp || reqContact.name;
+                        const isSenderKnown = senderName && !isGenericBrokerName(senderName);
+                        const formattedPhone = reqContact.display.includes('(')
+                          ? reqContact.display.split('(')[1].replace(')', '').trim()
+                          : reqContact.display;
+
                         return (
-                          <div className="bg-cyan-500/5 border border-cyan-500/10 rounded-2xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                            <div className="flex items-center gap-2">
-                              <div className="w-8 h-8 rounded-full bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 flex-shrink-0">
-                                <Phone className="w-3.5 h-3.5" />
+                          <div className="bg-gradient-to-r from-cyan-950/30 via-blue-950/20 to-zinc-950 border border-cyan-500/25 rounded-2xl p-3 sm:p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm hover:border-cyan-500/45 transition-all">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className="w-9 h-9 rounded-full bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400 flex-shrink-0 shadow-inner">
+                                <Phone className="w-4 h-4" />
                               </div>
-                              <div>
-                                <p className="text-[9px] text-zinc-500 uppercase tracking-wider font-semibold">Requiriente / Comprador</p>
-                                <p className="text-xs font-bold text-zinc-200 select-all">{reqContact.display}</p>
+                              <div className="min-w-0">
+                                <p className="text-[9px] text-cyan-400/80 uppercase tracking-widest font-extrabold flex items-center gap-1">
+                                  <span>Requiriente / Comprador</span>
+                                </p>
+                                {isSenderKnown ? (
+                                  <div className="mt-0.5">
+                                    <p className="text-xs sm:text-sm font-extrabold text-cyan-200 truncate flex items-center gap-1.5">
+                                      <span className="text-[10px] bg-cyan-500/20 border border-cyan-500/30 px-1.5 py-0.2 rounded text-cyan-300">👤 Asesor</span>
+                                      <span>{senderName}</span>
+                                    </p>
+                                    <p className="text-xs font-bold text-zinc-300 select-all mt-0.5 flex items-center gap-1">
+                                      <span className="text-[#25D366]">📞</span>
+                                      <span>{formattedPhone}</span>
+                                    </p>
+                                  </div>
+                                ) : (
+                                  <div className="mt-0.5">
+                                    <p className="text-xs font-bold text-zinc-200 select-all">{reqContact.display}</p>
+                                    <p className="text-[10px] text-zinc-500 italic mt-0.5">👤 Nombre no asignado (Completar al editar)</p>
+                                  </div>
+                                )}
                               </div>
                             </div>
                             {(() => {
@@ -2540,9 +2601,10 @@ export default function AdminMatches() {
                                   href={`https://wa.me/${waTarget}?text=${encodeURIComponent(defaultText)}`} 
                                   target="_blank" 
                                   rel="noopener noreferrer"
-                                  className="bg-[#25D366] hover:bg-[#20ba5a] text-black text-[10px] font-bold px-3.5 py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md hover:scale-105 min-h-[38px] w-full sm:w-auto"
+                                  className="group bg-[#25D366] hover:bg-[#20ba5a] text-black text-xs font-extrabold px-4 py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all duration-300 shadow-md hover:shadow-[0_0_20px_rgba(37,211,102,0.4)] hover:scale-105 active:scale-95 min-h-[38px] w-full sm:w-auto shrink-0"
                                 >
-                                  Contactar WA <ExternalLink className="w-3 h-3" />
+                                  <span>Contactar WA</span>
+                                  <ExternalLink className="w-3.5 h-3.5 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                                 </a>
                               );
                             })()}
@@ -2869,23 +2931,53 @@ export default function AdminMatches() {
                                 );
                               }
 
-                              if (cleanLbl.includes('teléfono') || cleanLbl.includes('contacto')) {
+                              if (cleanLbl.includes('teléfono') || cleanLbl.includes('contacto') || cleanLbl.includes('asesor')) {
                                 return isOffer ? (
-                                  <input
-                                    type="text"
-                                    placeholder="Ej: +57 310 123 4567"
-                                    value={editForm.propPhone || ''}
-                                    onChange={(e) => setEditForm(prev => ({ ...prev, propPhone: e.target.value }))}
-                                    className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#bf953f]"
-                                  />
+                                  <div className="space-y-1.5 w-full">
+                                    <div className="relative">
+                                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs">👤</span>
+                                      <input
+                                        type="text"
+                                        placeholder="Nombre Asesor (ej: Erika Del Pilar)"
+                                        value={editForm.propSenderName || ''}
+                                        onChange={(e) => setEditForm(prev => ({ ...prev, propSenderName: e.target.value }))}
+                                        className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs pl-6 pr-2 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#bf953f]"
+                                      />
+                                    </div>
+                                    <div className="relative">
+                                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs">📞</span>
+                                      <input
+                                        type="text"
+                                        placeholder="WhatsApp (ej: +57 310 123 4567)"
+                                        value={editForm.propPhone || ''}
+                                        onChange={(e) => setEditForm(prev => ({ ...prev, propPhone: e.target.value }))}
+                                        className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs pl-6 pr-2 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#bf953f]"
+                                      />
+                                    </div>
+                                  </div>
                                 ) : (
-                                  <input
-                                    type="text"
-                                    placeholder="Ej: +57 310 123 4567"
-                                    value={editForm.reqPhone || ''}
-                                    onChange={(e) => setEditForm(prev => ({ ...prev, reqPhone: e.target.value }))}
-                                    className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400"
-                                  />
+                                  <div className="space-y-1.5 w-full">
+                                    <div className="relative">
+                                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs">👤</span>
+                                      <input
+                                        type="text"
+                                        placeholder="Nombre Asesor (ej: Erika Del Pilar)"
+                                        value={editForm.reqSenderName || ''}
+                                        onChange={(e) => setEditForm(prev => ({ ...prev, reqSenderName: e.target.value }))}
+                                        className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs pl-6 pr-2 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                                      />
+                                    </div>
+                                    <div className="relative">
+                                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs">📞</span>
+                                      <input
+                                        type="text"
+                                        placeholder="WhatsApp (ej: +57 310 123 4567)"
+                                        value={editForm.reqPhone || ''}
+                                        onChange={(e) => setEditForm(prev => ({ ...prev, reqPhone: e.target.value }))}
+                                        className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs pl-6 pr-2 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                                      />
+                                    </div>
+                                  </div>
                                 );
                               }
 
@@ -3072,11 +3164,17 @@ export default function AdminMatches() {
                               <input type="text" placeholder="Ej: Usaquén" value={editForm.reqLocality || ''} onChange={(e) => setEditForm(prev => ({ ...prev, reqLocality: e.target.value }))} className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg" />
                             );
                           }
-                          if (cleanLbl.includes('teléfono') || cleanLbl.includes('contacto')) {
+                          if (cleanLbl.includes('teléfono') || cleanLbl.includes('contacto') || cleanLbl.includes('asesor')) {
                             return isOffer ? (
-                              <input type="text" placeholder="Ej: +57 310 123 4567" value={editForm.propPhone || ''} onChange={(e) => setEditForm(prev => ({ ...prev, propPhone: e.target.value }))} className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg" />
+                              <div className="space-y-1.5 w-full">
+                                <input type="text" placeholder="👤 Nombre Asesor (ej: Erika Del Pilar)" value={editForm.propSenderName || ''} onChange={(e) => setEditForm(prev => ({ ...prev, propSenderName: e.target.value }))} className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg" />
+                                <input type="text" placeholder="📞 WhatsApp (ej: +57 310 123 4567)" value={editForm.propPhone || ''} onChange={(e) => setEditForm(prev => ({ ...prev, propPhone: e.target.value }))} className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg" />
+                              </div>
                             ) : (
-                              <input type="text" placeholder="Ej: +57 310 123 4567" value={editForm.reqPhone || ''} onChange={(e) => setEditForm(prev => ({ ...prev, reqPhone: e.target.value }))} className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg" />
+                              <div className="space-y-1.5 w-full">
+                                <input type="text" placeholder="👤 Nombre Asesor (ej: Erika Del Pilar)" value={editForm.reqSenderName || ''} onChange={(e) => setEditForm(prev => ({ ...prev, reqSenderName: e.target.value }))} className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg" />
+                                <input type="text" placeholder="📞 WhatsApp (ej: +57 310 123 4567)" value={editForm.reqPhone || ''} onChange={(e) => setEditForm(prev => ({ ...prev, reqPhone: e.target.value }))} className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg" />
+                              </div>
                             );
                           }
                           const propKey = `prop_custom_${cleanLbl.replace(/[^a-z0-9]/g, '')}`;
@@ -3138,29 +3236,29 @@ export default function AdminMatches() {
                   )}
 
                   {/* CAPA C: RETROALIMENTACIÓN ACTIVA DE BROKER / ENTRENAMIENTO JANIA */}
-                  <div className="px-4 sm:px-6 py-3 bg-zinc-950/60 border-t border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="text-[11px] text-zinc-400 flex items-center gap-1.5 font-medium">
-                      <Sparkles className="w-3.5 h-3.5 text-amber-400/80 shrink-0" />
+                  <div className="px-4 sm:px-6 py-3.5 bg-gradient-to-r from-zinc-950 via-zinc-900/90 to-zinc-950 border-t border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="text-[11px] text-zinc-300 flex items-center gap-2 font-semibold">
+                      <Sparkles className="w-4 h-4 text-amber-400 animate-pulse shrink-0" />
                       <span>Calificación Comercial (Entrenamiento JanIA):</span>
                     </div>
-                    <div className="grid grid-cols-2 sm:flex items-center gap-2 w-full sm:w-auto">
+                    <div className="grid grid-cols-2 sm:flex items-center gap-2.5 w-full sm:w-auto">
                       <Button
                         size="sm"
                         variant="ghost"
                         onClick={() => handleFeedback(m, 'exitoso')}
-                        className="h-10 sm:h-8 px-3 text-xs text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300 border border-emerald-500/30 rounded-xl flex items-center justify-center gap-1.5 transition-all w-full sm:w-auto min-h-[40px]"
+                        className="group h-10 sm:h-9 px-3.5 text-xs text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/25 hover:text-emerald-200 border border-emerald-500/30 hover:border-emerald-400 rounded-xl flex items-center justify-center gap-2 transition-all duration-300 shadow-sm hover:shadow-[0_0_20px_rgba(16,185,129,0.35)] hover:scale-105 active:scale-95 w-full sm:w-auto min-h-[40px]"
                       >
-                        <ThumbsUp className="w-3.5 h-3.5" />
-                        <span>🤝 Trato en Curso</span>
+                        <ThumbsUp className="w-4 h-4 transition-transform duration-300 group-hover:scale-125 group-hover:-rotate-12 group-hover:fill-emerald-400 group-active:scale-110" />
+                        <span className="font-bold">🤝 Trato en Curso</span>
                       </Button>
                       <Button
                         size="sm"
                         variant="ghost"
                         onClick={() => { setRejectModalMatch(m); setRejectReason(''); setCustomRejectNote(''); }}
-                        className="h-10 sm:h-8 px-3 text-xs text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 border border-rose-500/30 rounded-xl flex items-center justify-center gap-1.5 transition-all w-full sm:w-auto min-h-[40px]"
+                        className="group h-10 sm:h-9 px-3.5 text-xs text-rose-400 bg-rose-500/10 hover:bg-rose-500/25 hover:text-rose-200 border border-rose-500/30 hover:border-rose-400 rounded-xl flex items-center justify-center gap-2 transition-all duration-300 shadow-sm hover:shadow-[0_0_20px_rgba(244,63,94,0.35)] hover:scale-105 active:scale-95 w-full sm:w-auto min-h-[40px]"
                       >
-                        <ThumbsDown className="w-3.5 h-3.5" />
-                        <span>⛔ Descartar Match</span>
+                        <ThumbsDown className="w-4 h-4 transition-transform duration-300 group-hover:scale-125 group-hover:rotate-12 group-hover:fill-rose-400 group-active:scale-110" />
+                        <span className="font-bold">⛔ Descartar Match</span>
                       </Button>
                     </div>
                   </div>
