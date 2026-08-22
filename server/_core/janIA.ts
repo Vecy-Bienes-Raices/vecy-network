@@ -4879,6 +4879,27 @@ export async function processConsultingMessage(
         }
       }
     }
+
+    // Detección de mensajes triviales (solo emojis, stickers, saludos o agradecimientos aislados sin pregunta)
+    const strippedText = messageToProcess.replace(/[\p{Emoji}\p{Punctuation}\s]/gu, '').toLowerCase();
+    const isOnlyEmojiOrEmpty = strippedText.length === 0;
+    const trivialPhrases = [
+      "gracias", "muchas gracias", "mil gracias", "ok", "listo", "vale", "de una", "perfecto",
+      "entendido", "de acuerdo", "jaja", "jajaja", "jeje", "excelente", "buena tarde",
+      "buenas tardes", "buenos dias", "buen dia", "hola", "saludos", "con gusto", "igualmente"
+    ];
+    const isTrivial = isOnlyEmojiOrEmpty || trivialPhrases.includes(strippedText) || trivialPhrases.includes(messageToProcess.trim().toLowerCase());
+
+    if (isTrivial && !isMediaOrAudio) {
+      console.log(`[JanIA-Consulting] Mensaje de cortesía o emoji simple sin consulta en Soporte Legal para ${userId}: "${messageToProcess}". Reaccionando con emoji silencioso.`);
+      return {
+        classification: "SOBRE_VECY",
+        response: "", // Silencio en chat grupal para no spamear
+        dmResponse: "",
+        reactionEmoji: "👍"
+      };
+    }
+
     const textLower = messageToProcess.toLowerCase();
 
     const alreadyGreeted = await checkAlreadyGreeted(userId);
@@ -4974,7 +4995,7 @@ export async function processConsultingMessage(
       `       4. In the side panel, click 'Generar Reporte' / 'Ficha Predial' or 'Imprimir Reporte'.\n` +
       `       5. Save as a PDF and send it to you via WhatsApp private chat.\n` +
       `     * Explícale que para procesos bancarios o judiciales es indispensable contar con un avalúo oficial certificado firmado por un tasador registrado ante la R.A.A. y miembro de la Lonja de Propiedad Raíz, e invítalo a contratar el servicio con VECY.\n` +
-      `   - **REGLA OBLIGATORIA DE CIERRE**: Toda respuesta a una consulta jurídica o de avalúo en esta clasificación DEBE finalizar recomendando de forma muy persuasiva al usuario que, para resolver su caso de manera 100% personalizada y a la medida, escriba o llame directamente por WhatsApp al número *3192919978* de VECY BIENES RAÍCES para contratar una Consultoría Personalizada o un servicio de avalúo oficial.\n` +
+      `   - **REGLA OBLIGATORIA DE CIERRE**: Toda respuesta a una consulta jurídica o de avalúo en esta clasificación DEBE finalizar recomendando de forma muy persuasiva al usuario que, para resolver su caso de manera 100% personalizada y a la medida, escriba o llame directamente por WhatsApp al número de nuestro bróker *3166569719* de VECY BIENES RAÍCES para contratar una Consultoría Personalizada o un servicio de avalúo oficial.\n` +
       `   - Emoji ('reactionEmoji'): "💡"\n\n` +
       `4. **Clasificación "VIOLACION_DE_NORMAS"**:\n` +
       `   - Si el mensaje es SPAM, autopromoción de servicios no relacionados con VECY, publicidad externa, links a otros grupos, política o religión.\n` +

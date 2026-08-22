@@ -9284,6 +9284,43 @@ Por favor, realiza una pregunta orientada a estos temas inmobiliarios y con gust
         }
       }
     }
+    const strippedText = messageToProcess.replace(/[\p{Emoji}\p{Punctuation}\s]/gu, "").toLowerCase();
+    const isOnlyEmojiOrEmpty = strippedText.length === 0;
+    const trivialPhrases = [
+      "gracias",
+      "muchas gracias",
+      "mil gracias",
+      "ok",
+      "listo",
+      "vale",
+      "de una",
+      "perfecto",
+      "entendido",
+      "de acuerdo",
+      "jaja",
+      "jajaja",
+      "jeje",
+      "excelente",
+      "buena tarde",
+      "buenas tardes",
+      "buenos dias",
+      "buen dia",
+      "hola",
+      "saludos",
+      "con gusto",
+      "igualmente"
+    ];
+    const isTrivial = isOnlyEmojiOrEmpty || trivialPhrases.includes(strippedText) || trivialPhrases.includes(messageToProcess.trim().toLowerCase());
+    if (isTrivial && !isMediaOrAudio) {
+      console.log(`[JanIA-Consulting] Mensaje de cortes\xEDa o emoji simple sin consulta en Soporte Legal para ${userId}: "${messageToProcess}". Reaccionando con emoji silencioso.`);
+      return {
+        classification: "SOBRE_VECY",
+        response: "",
+        // Silencio en chat grupal para no spamear
+        dmResponse: "",
+        reactionEmoji: "\u{1F44D}"
+      };
+    }
     const textLower = messageToProcess.toLowerCase();
     const alreadyGreeted = await checkAlreadyGreeted(userId);
     const isValuationQuery = textLower.includes("valuar") || textLower.includes("avaluo") || textLower.includes("aval\xFAo") || textLower.includes("cuanto vale") || textLower.includes("cu\xE1nto vale") || textLower.includes("valor metro cuadrado") || textLower.includes("valor m2") || textLower.includes("precio metro cuadrado") || textLower.includes("precio m2") || textLower.includes("cuanto puedo cobrar") || textLower.includes("cu\xE1nto puedo cobrar") || textLower.includes("en que valor") || textLower.includes("en qu\xE9 valor") || textLower.includes("estimar precio");
@@ -9357,7 +9394,7 @@ Analiza el contexto completo antes de clasificar. Debes responder estrictamente 
        4. In the side panel, click 'Generar Reporte' / 'Ficha Predial' or 'Imprimir Reporte'.
        5. Save as a PDF and send it to you via WhatsApp private chat.
      * Expl\xEDcale que para procesos bancarios o judiciales es indispensable contar con un aval\xFAo oficial certificado firmado por un tasador registrado ante la R.A.A. y miembro de la Lonja de Propiedad Ra\xEDz, e inv\xEDtalo a contratar el servicio con VECY.
-   - **REGLA OBLIGATORIA DE CIERRE**: Toda respuesta a una consulta jur\xEDdica o de aval\xFAo en esta clasificaci\xF3n DEBE finalizar recomendando de forma muy persuasiva al usuario que, para resolver su caso de manera 100% personalizada y a la medida, escriba o llame directamente por WhatsApp al n\xFAmero *3192919978* de VECY BIENES RA\xCDCES para contratar una Consultor\xEDa Personalizada o un servicio de aval\xFAo oficial.
+   - **REGLA OBLIGATORIA DE CIERRE**: Toda respuesta a una consulta jur\xEDdica o de aval\xFAo en esta clasificaci\xF3n DEBE finalizar recomendando de forma muy persuasiva al usuario que, para resolver su caso de manera 100% personalizada y a la medida, escriba o llame directamente por WhatsApp al n\xFAmero de nuestro br\xF3ker *3166569719* de VECY BIENES RA\xCDCES para contratar una Consultor\xEDa Personalizada o un servicio de aval\xFAo oficial.
    - Emoji ('reactionEmoji'): "\u{1F4A1}"
 
 4. **Clasificaci\xF3n "VIOLACION_DE_NORMAS"**:
@@ -11253,6 +11290,9 @@ Tambi\xE9n puedes consultarme directamente en mi chat privado con mi otra yo *Ja
               });
             }
             await this.logToDb(chatId, "janIA", textToDeliver);
+          } else if (result && result.reactionEmoji && this.sock) {
+            await this.sock.sendMessage(chatId, { react: { text: result.reactionEmoji, key: msg.key } }).catch(() => {
+            });
           }
           await this.sock.sendPresenceUpdate("paused", chatId);
         } catch (err) {

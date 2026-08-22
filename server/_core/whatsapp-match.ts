@@ -1076,6 +1076,8 @@ export class JaniaMatchBot {
 
         // Registrar la respuesta enviada por JanIA en la BD de mensajes para mantener el hilo de la conversación
         await this.logToDb(chatId, 'janIA', textToDeliver);
+      } else if (result && result.reactionEmoji && this.sock) {
+        await this.sock.sendMessage(chatId, { react: { text: result.reactionEmoji, key: msg.key } }).catch(() => {});
       }
 
       await this.sock.sendPresenceUpdate('paused', chatId);
