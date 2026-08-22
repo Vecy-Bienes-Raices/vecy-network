@@ -1652,6 +1652,8 @@ export default function AdminMatches() {
   const [isRecalculating, setIsRecalculating] = React.useState(false);
   const [editForm, setEditForm] = React.useState<Record<string, any>>({});
   const [copiedId, setCopiedId] = React.useState<string | null>(null);
+  const [feedbackStatusMap, setFeedbackStatusMap] = React.useState<Record<number, 'exitoso' | 'rechazado' | 'en_negociacion'>>({});
+  const [saveStatusMap, setSaveStatusMap] = React.useState<Record<number, 'saved' | 'recalculated'>>({});
 
   const handleCopy = (text: string, id: string) => {
     try {
@@ -1678,6 +1680,7 @@ export default function AdminMatches() {
 
   const handleFeedback = async (m: any, action: 'exitoso' | 'rechazado' | 'en_negociacion', reason?: string, note?: string) => {
     try {
+      setFeedbackStatusMap(prev => ({ ...prev, [m.id]: action }));
       await recordFeedbackMut.mutateAsync({
         matchId: m.id,
         propertyId: m.property?.id,
@@ -1687,18 +1690,18 @@ export default function AdminMatches() {
         notasBroker: note || null,
       });
 
-      if (action === 'exitoso') {
-        toast.success("🤝 Trato registrado exitosamente", {
-          description: "JanIA ha registrado este match exitoso para reforzar patrones de alta afinidad."
-        });
-      } else {
-        toast.info("⛔ Match descartado", {
-          description: `Motivo: "${reason || 'Descarte de broker'}". JanIA aprenderá a no sugerir pares similares.`
-        });
-        refetch();
+      if (action === 'rechazado') {
+        setTimeout(() => {
+          refetch();
+        }, 1200);
       }
     } catch (e: any) {
-      toast.error("Error registrando retroalimentación", { description: e.message });
+      console.error("Error registrando retroalimentación:", e);
+      setFeedbackStatusMap(prev => {
+        const next = { ...prev };
+        delete next[m.id];
+        return next;
+      });
     }
   };
 
@@ -1803,18 +1806,20 @@ export default function AdminMatches() {
         });
       }
 
-      toast.success("💾 Datos guardados en la base de datos", {
-        description: "La ficha y el contacto del asesor se han actualizado permanentemente en Supabase."
-      });
-      setEditingMatchId(null);
-      setEditForm({});
+      setSaveStatusMap(prev => ({ ...prev, [m.id]: 'saved' }));
       await utils.janIA.getAllMatches.invalidate();
       await refetch();
+      setTimeout(() => {
+        setEditingMatchId(null);
+        setEditForm({});
+        setSaveStatusMap(prev => {
+          const next = { ...prev };
+          delete next[m.id];
+          return next;
+        });
+      }, 1800);
     } catch (err: any) {
       console.error("[handleOnlySave] Error:", err);
-      toast.error("Error al guardar datos", {
-        description: err.message || "No se pudieron actualizar los datos."
-      });
     } finally {
       setIsSavingOnly(false);
     }
@@ -1875,16 +1880,20 @@ export default function AdminMatches() {
         });
       }
 
-      toast.success("⚡ Coincidencias recalculadas", {
-        description: "JanIA ha re-evaluado las afinidades comerciales en toda la red para buscar nuevas coincidencias."
-      });
-      setEditingMatchId(null);
-      setEditForm({});
+      setSaveStatusMap(prev => ({ ...prev, [m.id]: 'recalculated' }));
       await utils.janIA.getAllMatches.invalidate();
       await refetch();
+      setTimeout(() => {
+        setEditingMatchId(null);
+        setEditForm({});
+        setSaveStatusMap(prev => {
+          const next = { ...prev };
+          delete next[m.id];
+          return next;
+        });
+      }, 1800);
     } catch (err: any) {
       console.error("[RecalculateMatch] Error:", err);
-      toast.error("Error al recalcular coincidencias", { description: err.message || "Intenta nuevamente." });
     } finally {
       setIsRecalculating(false);
     }
@@ -3289,26 +3298,53 @@ export default function AdminMatches() {
                       <Sparkles className="w-4 h-4 text-amber-400 animate-pulse shrink-0" />
                       <span>Calificación Comercial (Entrenamiento JanIA):</span>
                     </div>
-                    <div className="grid grid-cols-2 sm:flex items-center gap-2.5 w-full sm:w-auto">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleFeedback(m, 'exitoso')}
-                        className="group h-10 sm:h-9 px-3.5 text-xs text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/25 hover:text-emerald-200 border border-emerald-500/30 hover:border-emerald-400 rounded-xl flex items-center justify-center gap-2 transition-all duration-300 shadow-sm hover:shadow-[0_0_20px_rgba(16,185,129,0.35)] hover:scale-105 active:scale-95 w-full sm:w-auto min-h-[40px]"
-                      >
-                        <ThumbsUp className="w-4 h-4 transition-transform duration-300 group-hover:scale-125 group-hover:-rotate-12 group-hover:fill-emerald-400 group-active:scale-110" />
-                        <span className="font-bold">🤝 Trato en Curso</span>
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => { setRejectModalMatch(m); setRejectReason(''); setCustomRejectNote(''); }}
-                        className="group h-10 sm:h-9 px-3.5 text-xs text-rose-400 bg-rose-500/10 hover:bg-rose-500/25 hover:text-rose-200 border border-rose-500/30 hover:border-rose-400 rounded-xl flex items-center justify-center gap-2 transition-all duration-300 shadow-sm hover:shadow-[0_0_20px_rgba(244,63,94,0.35)] hover:scale-105 active:scale-95 w-full sm:w-auto min-h-[40px]"
-                      >
-                        <ThumbsDown className="w-4 h-4 transition-transform duration-300 group-hover:scale-125 group-hover:rotate-12 group-hover:fill-rose-400 group-active:scale-110" />
-                        <span className="font-bold">⛔ Descartar Match</span>
-                      </Button>
-                    </div>
+                    {(() => {
+                      const fbState = feedbackStatusMap[m.id];
+                      if (fbState === 'exitoso') {
+                        return (
+                          <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-black/80 border border-emerald-400 text-emerald-300 font-extrabold text-xs shadow-[0_0_25px_rgba(52,211,153,0.85),inset_0_0_12px_rgba(52,211,153,0.3)] animate-in zoom-in-95 duration-300">
+                            <Check className="w-4 h-4 text-emerald-300 animate-bounce" />
+                            <span className="drop-shadow-[0_0_8px_rgba(52,211,153,0.9)]">¡Trato en Curso Registrado con Éxito!</span>
+                          </div>
+                        );
+                      }
+                      if (fbState === 'rechazado') {
+                        return (
+                          <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-black/80 border border-rose-400 text-rose-300 font-extrabold text-xs shadow-[0_0_25px_rgba(244,63,94,0.85),inset_0_0_12px_rgba(244,63,94,0.3)] animate-in zoom-in-95 duration-300">
+                            <Check className="w-4 h-4 text-rose-300 animate-bounce" />
+                            <span className="drop-shadow-[0_0_8px_rgba(244,63,94,0.9)]">¡Match Descartado y Aprendido!</span>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div className="grid grid-cols-2 sm:flex items-center gap-2.5 w-full sm:w-auto">
+                          <button
+                            type="button"
+                            onClick={() => handleFeedback(m, 'exitoso')}
+                            className="group relative h-10 sm:h-9 px-4 text-xs font-extrabold text-emerald-400 bg-black/70 hover:bg-black/90 border border-emerald-500/40 hover:border-emerald-300 rounded-xl flex items-center justify-center gap-2 transition-all duration-300 hover:shadow-[0_0_22px_rgba(52,211,153,0.85),inset_0_0_10px_rgba(52,211,153,0.25)] hover:scale-105 active:scale-95 w-full sm:w-auto min-h-[40px] cursor-pointer"
+                            title="Registrar trato en curso"
+                          >
+                            <ThumbsUp className="w-4 h-4 stroke-[2.5] text-emerald-400 transition-all duration-300 group-hover:scale-125 group-hover:-rotate-12 group-hover:text-emerald-300 group-hover:drop-shadow-[0_0_12px_rgba(52,211,153,1)]" />
+                            <span className="font-extrabold text-emerald-400 transition-all duration-300 group-hover:text-emerald-200 group-hover:drop-shadow-[0_0_10px_rgba(52,211,153,0.9)]">
+                              🤝 Trato en Curso
+                            </span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => { setRejectModalMatch(m); setRejectReason(''); setCustomRejectNote(''); }}
+                            className="group relative h-10 sm:h-9 px-4 text-xs font-extrabold text-rose-400 bg-black/70 hover:bg-black/90 border border-rose-500/40 hover:border-rose-300 rounded-xl flex items-center justify-center gap-2 transition-all duration-300 hover:shadow-[0_0_22px_rgba(244,63,94,0.85),inset_0_0_10px_rgba(244,63,94,0.25)] hover:scale-105 active:scale-95 w-full sm:w-auto min-h-[40px] cursor-pointer"
+                            title="Descartar este match"
+                          >
+                            <ThumbsDown className="w-4 h-4 stroke-[2.5] text-rose-400 transition-all duration-300 group-hover:scale-125 group-hover:rotate-12 group-hover:text-rose-300 group-hover:drop-shadow-[0_0_12px_rgba(244,63,94,1)]" />
+                            <span className="font-extrabold text-rose-400 transition-all duration-300 group-hover:text-rose-200 group-hover:drop-shadow-[0_0_10px_rgba(244,63,94,0.9)]">
+                              ⛔ Descartar Match
+                            </span>
+                          </button>
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* BARRA DE EDICIÓN FLOTANTE / STICKY EN EL FOOTER DE LA TARJETA */}
@@ -3321,30 +3357,54 @@ export default function AdminMatches() {
                         </span>
                       </div>
                       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto shrink-0 justify-end">
-                        <Button
-                          onClick={() => { setEditingMatchId(null); setEditForm({}); }}
-                          variant="outline"
-                          disabled={isSavingOnly || isRecalculating}
-                          className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 text-xs h-10 px-3 min-h-[44px] w-full sm:w-auto"
-                        >
-                          Cancelar
-                        </Button>
-                        <Button
-                          onClick={() => handleOnlySave(m)}
-                          disabled={isSavingOnly || isRecalculating}
-                          className="bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs h-10 px-3.5 shadow-md min-h-[44px] flex items-center justify-center gap-1.5 w-full sm:w-auto transition-all"
-                        >
-                          {isSavingOnly ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                          💾 Guardar Datos
-                        </Button>
-                        <Button
-                          onClick={() => handleRecalculateMatch(m)}
-                          disabled={isSavingOnly || isRecalculating}
-                          className="bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs h-10 px-4 shadow-lg shadow-emerald-500/20 min-h-[44px] flex items-center justify-center gap-1.5 w-full sm:w-auto transition-all"
-                        >
-                          {isRecalculating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                          ⚡ Recalcular Coincidencias
-                        </Button>
+                        {(() => {
+                          const sStatus = saveStatusMap[m.id];
+                          if (sStatus === 'saved') {
+                            return (
+                              <div className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-black/90 border border-emerald-400 text-emerald-300 font-extrabold text-xs shadow-[0_0_30px_rgba(52,211,153,0.9),inset_0_0_15px_rgba(52,211,153,0.3)] animate-in zoom-in-95">
+                                <Check className="w-4 h-4 text-emerald-300 animate-bounce" />
+                                <span className="drop-shadow-[0_0_10px_rgba(52,211,153,0.9)]">¡Datos Guardados con Éxito en BD!</span>
+                              </div>
+                            );
+                          }
+                          if (sStatus === 'recalculated') {
+                            return (
+                              <div className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-black/90 border border-cyan-400 text-cyan-300 font-extrabold text-xs shadow-[0_0_30px_rgba(6,182,212,0.9),inset_0_0_15px_rgba(6,182,212,0.3)] animate-in zoom-in-95">
+                                <Sparkles className="w-4 h-4 text-cyan-300 animate-spin" />
+                                <span className="drop-shadow-[0_0_10px_rgba(6,182,212,0.9)]">¡Coincidencias Recalculadas en Toda la Red!</span>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <>
+                              <Button
+                                onClick={() => { setEditingMatchId(null); setEditForm({}); }}
+                                variant="outline"
+                                disabled={isSavingOnly || isRecalculating}
+                                className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 text-xs h-10 px-3 min-h-[44px] w-full sm:w-auto"
+                              >
+                                Cancelar
+                              </Button>
+                              <Button
+                                onClick={() => handleOnlySave(m)}
+                                disabled={isSavingOnly || isRecalculating}
+                                className="group bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs h-10 px-4 shadow-md hover:shadow-[0_0_20px_rgba(245,158,11,0.5)] min-h-[44px] flex items-center justify-center gap-2 w-full sm:w-auto transition-all hover:scale-105 active:scale-95"
+                              >
+                                {isSavingOnly ? <Loader2 className="w-4 h-4 animate-spin text-black" /> : <Save className="w-4 h-4 transition-transform group-hover:scale-110" />}
+                                <span>💾 Guardar Datos</span>
+                              </Button>
+                              <Button
+                                onClick={() => handleRecalculateMatch(m)}
+                                disabled={isSavingOnly || isRecalculating}
+                                className="group bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-xs h-10 px-4 shadow-lg hover:shadow-[0_0_25px_rgba(16,185,129,0.6)] min-h-[44px] flex items-center justify-center gap-2 w-full sm:w-auto transition-all hover:scale-105 active:scale-95"
+                              >
+                                {isRecalculating ? <Loader2 className="w-4 h-4 animate-spin text-black" /> : <Sparkles className="w-4 h-4 transition-transform group-hover:rotate-45" />}
+                                <span>⚡ Recalcular Coincidencias</span>
+                              </Button>
+                            </>
+                          );
+                        })()}
                       </div>
                     </div>
                   )}
