@@ -350,8 +350,8 @@ export const janIARouter = router({
           pdfMimeType
         );
 
-        const analysis = result.response && result.response.trim() !== "" 
-          ? (result.dmResponse ? result.dmResponse + "\n\n" : "") + result.response 
+        const analysis = result.response && result.response.trim() !== ""
+          ? (result.dmResponse ? result.dmResponse + "\n\n" : "") + result.response
           : (result.dmResponse || result.response);
 
         // Save conversation history in DB if it exists
@@ -363,7 +363,7 @@ export const janIARouter = router({
 
         if (conversation.length > 0) {
           const conversationId = conversation[0].id;
-          
+
           // Save user message with attachment URL
           await db.insert(messages).values({
             conversationId: conversationId,
@@ -841,8 +841,8 @@ export const janIARouter = router({
         const messageWithDetails = [
           input.message,
           input.budget ? `Presupuesto: ${input.budget}` : null,
-          input.preferredZones && input.preferredZones.length > 0 
-            ? `Zonas de interés: ${input.preferredZones.join(', ')}` 
+          input.preferredZones && input.preferredZones.length > 0
+            ? `Zonas de interés: ${input.preferredZones.join(', ')}`
             : null
         ].filter(Boolean).join('\n');
 
@@ -910,7 +910,7 @@ export const janIARouter = router({
   getBotStatus: publicProcedure.query(async () => {
     const db = await getDb();
     if (!db) return { isReady: true, phone: "573192919978", todayProperties: 0, todayRequirements: 0 };
-    
+
     try {
       let isReady = true;
       let phone: string | null = "573192919978";
@@ -928,13 +928,13 @@ export const janIARouter = router({
           phone = data.phone;
         }
       }
-      
+
       // Contadores del día según hora local de Bogotá (UTC-5)
       const [propTodayCount] = await db
         .select({ count: sql<number>`count(*)::int` })
         .from(properties)
         .where(sql`DATE(${properties.createdAt} AT TIME ZONE 'America/Bogota') = CURRENT_DATE`);
-        
+
       const [reqTodayCount] = await db
         .select({ count: sql<number>`count(*)::int` })
         .from(requirements)
@@ -956,9 +956,9 @@ export const janIARouter = router({
     try {
       const qrPath = path.join(process.cwd(), "qr-captador.png");
       const qrMatchPath = path.join(process.cwd(), "qr-match.png");
-      
+
       let targetPath = fs.existsSync(qrPath) ? qrPath : (fs.existsSync(qrMatchPath) ? qrMatchPath : null);
-      
+
       if (targetPath) {
         const fileData = fs.readFileSync(targetPath);
         return { hasQr: true, qrData: `data:image/png;base64,${fileData.toString("base64")}` };
