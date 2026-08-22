@@ -668,16 +668,16 @@ async function startServer() {
 
       if (groupType === 'consultoria') {
         targetId = whatsappBot.buzonGroupId;
-        nombreGrupo = "VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS";
-        promptExtra = "Enfócate en invitar a que consulten sobre temas jurídicos, disputas de comisiones de puntas compartidas, contratos de corretaje o avalúos.";
+        nombreGrupo = "VECY: SOPORTE LEGAL, TRIBUTARIO, AVALÚOS Y MARKETING";
+        promptExtra = "Enfócate en invitar a que consulten sobre temas jurídicos, liquidación tributaria, Marketing Digital Inmobiliario, contratos de corretaje o avalúos.";
       } else if (groupType === 'inmuebles') {
         targetId = whatsappBot.targetGroupId;
         nombreGrupo = "VECY INMUEBLES NETWORK";
         promptExtra = "Enfócate en la publicación activa de ofertas y demandas de inmuebles, el cruce comercial rápido, y la colaboración nacional sin pagar comisiones.";
       } else if (groupType === 'circulo') {
         targetId = whatsappBot.circuloGroupId;
-        nombreGrupo = "CÍRCULO CERO";
-        promptExtra = "Enfócate en la retroalimentación del sistema, sugerencias directas a los fundadores, ideas de mejora y el futuro del sector inmobiliario.";
+        nombreGrupo = 'PROYECTO "Vecy Network"';
+        promptExtra = "Enfócate en la comunidad, modelo de negocio, fintech inmobiliaria, sugerencias a los fundadores y el futuro de la red.";
       } else {
         return res.status(400).json({ error: 'groupType no válido. Debe ser consultoria, inmuebles o circulo.' });
       }

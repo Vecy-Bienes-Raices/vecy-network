@@ -212,7 +212,7 @@ export class JaniaMatchBot {
       this.authorizedGroups = [
         '120363260108880069@g.us', // VECY INMUEBLES NETWORK
         '120363417740040773@g.us', // VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS
-        '120363403507276533@g.us'  // CÍRCULO CERO 👌
+        '120363403507276533@g.us'  // PROYECTO "Vecy Network" 👌
       ];
     }
 
@@ -548,8 +548,8 @@ export class JaniaMatchBot {
 
             // --- IDENTIFICACIÓN DE GRUPOS OFICIALES VECY ---
             const isMainGroup = chatId === this.targetGroupId;     // VECY INMUEBLES NETWORK
-            const isBuzonGroup = chatId === this.buzonGroupId;     // SOPORTE LEGAL, TRIBUTARIO Y AVALÚOS
-            const isCirculoGroup = chatId === this.circuloGroupId; // Círculo CERO 👌
+            const isBuzonGroup = chatId === this.buzonGroupId;     // VECY: SOPORTE LEGAL, TRIBUTARIO, AVALÚOS Y MARKETING
+            const isCirculoGroup = chatId === this.circuloGroupId; // PROYECTO "Vecy Network" 👌
             const isOfficialGroup = isMainGroup || isBuzonGroup || isCirculoGroup;
 
             // --- OBTENCIÓN DEL NOMBRE DEL GRUPO Y FILTRADO INMOBILIARIO ESTRICTO ---
@@ -981,9 +981,9 @@ export class JaniaMatchBot {
           textLower.includes('eduardo');
 
         if (isOffTopicLegal || isOffTopicCirculo) {
-          const groupName = isOffTopicLegal ? 'VECY: SOPORTE LEGAL, TRIBUTARIO Y AVALÚOS' : (process.env.GROUP_ZERO_NAME || 'PROYECTO "Vecy Network"');
+          const groupName = isOffTopicLegal ? 'VECY: SOPORTE LEGAL, TRIBUTARIO, AVALÚOS Y MARKETING' : (process.env.GROUP_ZERO_NAME || 'PROYECTO "Vecy Network"');
           const redirectMsg =
-            `Hola ${realName} 👋🏻, veo que tu consulta es sobre ${isOffTopicLegal ? 'temas jurídicos, tributarios o de avalúos' : 'el funcionamiento de VECY Network y JanIA'}. ¡Perfecto! 🎯\n\n` +
+            `Hola ${realName} 👋🏻, veo que tu consulta es sobre ${isOffTopicLegal ? 'temas jurídicos, tributarios, avalúos o marketing inmobiliario' : 'el funcionamiento de VECY Network y JanIA'}. ¡Perfecto! 🎯\n\n` +
             `Ese tipo de preguntas las atiendo con más profundidad en el grupo *${groupName}* de nuestra comunidad de WhatsApp. 🏠\n\n` +
             `También puedes consultarme directamente en mi chat privado con mi otra yo *JanIA v3.5* 📲: https://wa.me/573192919978\n\n` +
             `¡Allí te atiendo con todo el detalle que mereces! 😊`;
@@ -994,7 +994,7 @@ export class JaniaMatchBot {
       }
 
       let result;
-      if (chatId === this.buzonGroupId) { // Soporte Legal, Tributario y Avalúos
+      if (chatId === this.buzonGroupId) { // VECY: Soporte Legal, Tributario, Avalúos y Marketing
         const msgTs = msg.messageTimestamp ? Number(msg.messageTimestamp) : undefined;
         result = await processConsultingMessage(
           bodyText,
@@ -1006,7 +1006,7 @@ export class JaniaMatchBot {
           isAudioPTT ? ('mock-audio:' + bodyText) : undefined,
           msgTs
         );
-      } else if (chatId === this.circuloGroupId) { // Círculo Cero
+      } else if (chatId === this.circuloGroupId) { // PROYECTO "Vecy Network"
         result = await processCirculoMessage(bodyText, resolvedSenderId, realName);
       } else if (isMainGroupChat) { // VECY INMUEBLES NETWORK — preguntas sobre el grupo/sistema
         let groupName = "VECY INMUEBLES NETWORK";

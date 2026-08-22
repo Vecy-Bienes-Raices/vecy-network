@@ -4600,20 +4600,20 @@ export async function generateWelcomeMessage(count: number, chatId?: string): Pr
   try {
     let groupDescription = "";
     
-    if (chatId === "120363417740040773@g.us") { // Soporte Legal
-      groupDescription = `el grupo de WhatsApp "VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS".
+    if (chatId === "120363417740040773@g.us") { // Soporte Legal, Tributario, Avalúos y Marketing
+      groupDescription = `el grupo de WhatsApp "VECY: SOPORTE LEGAL, TRIBUTARIO, AVALÚOS Y MARKETING".
 Dirección obligatoria para redactar el saludo de bienvenida:
-- Dales una muy cálida bienvenida y menciónales que este es el canal oficial para resolver dudas jurídicas, procedimentales, disputas de comisiones y temas de avalúos.
+- Dales una muy cálida bienvenida y menciónales que este es el canal oficial para resolver dudas jurídicas, procedimentales, liquidación tributaria, avalúos y Marketing Digital Inmobiliario (copys y estructuración de anuncios).
 - Explícales de manera clara y directa las Pautas del Grupo en viñetas bien organizadas con emojis:
-  * Qué SE PUEDE hacer: Realizar consultas de soporte legal inmobiliario, subir archivos o contratos en PDF para revisión del equipo, o enviar notas de voz detallando casos legales.
+  * Qué SE PUEDE hacer: Realizar consultas de soporte legal inmobiliario, solicitar tips de marketing y copys de publicación, subir archivos o contratos en PDF para revisión, o enviar notas de voz detallando casos legales.
   * Qué NO SE PUEDE hacer: Publicar listados de ofertas o requerimientos inmobiliarios (estos pertenecen única y exclusivamente al grupo principal de inmuebles).
   * Cómo hacerlo bien: Escribir sus consultas de forma detallada o enviar notas de voz claras para que yo (JanIA) y el equipo de abogados podamos asistirles rápidamente.`;
-    } else if (chatId === "120363403507276533@g.us") { // Círculo Cero
-      groupDescription = `el grupo de WhatsApp "CÍRCULO CERO 👌" (nuestro canal oficial de debate y comunidad de aliados).
+    } else if (chatId === "120363403507276533@g.us") { // PROYECTO "Vecy Network"
+      groupDescription = `el grupo de WhatsApp "PROYECTO \\"Vecy Network\\" 👌" (nuestro canal oficial de debate, modelo de negocio y comunidad de aliados).
 Dirección obligatoria para redactar el saludo de bienvenida:
-- Dales una muy cálida bienvenida a la mesa redonda de aliados.
+- Dales una muy cálida bienvenida a la comunidad oficial del Proyecto Vecy Network.
 - Explícales de manera clara y directa las Pautas del Grupo en viñetas bien organizadas con emojis:
-  * Qué SE PUEDE hacer: Sugerir ideas de mejora tecnológica para VECY, comentar novedades sobre el portal web privado, debatir de forma constructiva sobre el mercado inmobiliario en Colombia.
+  * Qué SE PUEDE hacer: Sugerir ideas de mejora tecnológica para VECY, comentar novedades sobre el portal web, debatir sobre el modelo fintech y comisiones del 3%, y compartir testimonios de éxito.
   * Qué NO SE PUEDE hacer: Publicar listados de inmuebles ni realizar consultas jurídicas complejas (ya que para eso existen los otros grupos dedicados).
   * Cómo hacerlo bien: Mantener un tono respetuoso, constructivo e interactuar con los otros aliados para fortalecer la comunidad.`;
     } else { // VECY INMUEBLES NETWORK (targetGroupId)
@@ -4652,12 +4652,12 @@ Dirección obligatoria para redactar el saludo de bienvenida:
     return llmRes.choices[0].message.content.trim();
   } catch (error) {
     if (chatId === "120363417740040773@g.us") {
-      return `✨ *¡Bienvenidos al grupo VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS!* 👋\n\n` +
-             `Aquí resolvemos sus dudas jurídicas, disputas de comisión y avalúos. Podrán subir PDFs o audios de sus casos.\n` +
+      return `✨ *¡Bienvenidos al grupo VECY: SOPORTE LEGAL, TRIBUTARIO, AVALÚOS Y MARKETING!* 👋\n\n` +
+             `Aquí resolvemos sus dudas jurídicas, disputas de comisión, avalúos y tips de marketing inmobiliario. Podrán subir PDFs o audios de sus casos.\n` +
              `⚠️ *Nota:* Por favor, eviten publicar inmuebles aquí; esos van en el grupo principal. ¡Estoy lista para responder! 🚀⚖️`;
     } else if (chatId === "120363403507276533@g.us") {
-      return `✨ *¡Bienvenidos a CÍRCULO CERO 👌!* 👋\n\n` +
-             `Este es el canal de debate y comunidad para sugerir mejoras y charlar de VECY.\n` +
+      return `✨ *¡Bienvenidos a PROYECTO "Vecy Network" 👌!* 👋\n\n` +
+             `Este es el canal oficial de comunidad, modelo de negocio y debate para sugerir mejoras y charlar de VECY.\n` +
              `⚠️ *Nota:* Evitemos ofertas de inmuebles aquí. ¡Bienvenidos aliados! 🚀🤝`;
     }
     return `✨ *¡Bienvenidos a VECY INMUEBLES NETWORK!* 👋\n\n` +
@@ -4805,17 +4805,18 @@ Pueden preguntar todo lo que necesiten sobre:
 
 ¡No se queden con la duda! Aprovechen esta inteligencia a su servicio para elevar su profesionalismo y acelerar sus negocios. 🚀🎯`;
 
-export const MSG_PROMO_CIRCULO = `👌 *CÍRCULO CERO — ¡CHAT ABIERTO PARA CONECTAR!* 👌
-━━━━━━━━━━━━━━━━━━━━━━
-¡Hola a todos! Este canal oficial está abierto y totalmente libre para que pregunten lo que necesiten sobre nuestro ecosistema. 🤝✨
+export const MSG_PROMO_CIRCULO = `👌 *PROYECTO "Vecy Network" — ¡CHAT ABIERTO PARA CONECTAR!* 👌
 
-Es el lugar para:
-▸ 🚀 Conocer de primera mano las novedades y actualizaciones de VECY Network.
-▸ ❓ Resolver dudas sobre el funcionamiento de mis motores de coincidencia y OCR.
-▸ 💡 Proponer mejoras, ideas innovadoras o reportar cualquier fallo.
-▸ 💬 Compartir sus testimonios de éxito para inspirar a la comunidad.
+Estimados aliados, recuerden que tenemos habilitado nuestro canal oficial:
+🚀 *PROYECTO "Vecy Network"* 🚀
+👉 https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU
 
-¡Los invito a participar activamente, preguntar sin timidez y ser parte de esta gran proeza colaborativa! 🏆💪`;
+Este es el espacio exclusivo de debate y comunidad para:
+💡 Proponer nuevas funciones y herramientas para la plataforma VECY.
+💬 Debatir sobre el modelo de negocio, comisiones y tecnología.
+🤝 Conocer a los fundadores y otros colegas aliados.
+
+¡Únanse y construyamos juntos la red colaborativa de Colombia! 🇨🇴✨`;
 
 export async function processConsultingMessage(
   text: string, 
@@ -4846,14 +4847,16 @@ export async function processConsultingMessage(
         "barranquilla", "bucaramanga", "cartagena", "barrio", "sector", "zona", "calle", "carrera", "avenida",
         "contrato", "arrendamiento", "promesa", "escritura", "notaria", "notaría", "registro", "sucesión",
         "sucesion", "herencia", "embargo", "saneamiento", "comision", "comisión", "corretaje", "avalúo", "avaluo",
-        "jania", "vecy", "bot", "ayuda", "cómo", "como", "funciona", "publicar", "registrar", "match",
-        "coincidencia", "contacto", "cuenta", "hola", "gracias", "saludo"
+        "marketing", "publicidad", "anuncio", "publicar", "copy", "copys", "copywriting", "redes", "fotos",
+        "foto", "fotografía", "flyer", "flyers", "cómo publicar", "como publicar", "anunciar", "captar", "demanda",
+        "oferta", "plantilla", "tips", "consejos", "jania", "vecy", "bot", "ayuda", "cómo", "como", "funciona",
+        "registrar", "match", "coincidencia", "contacto", "cuenta", "hola", "gracias", "saludo"
       ];
 
       const hasOnTopicKeyword = onTopicKeywords.some(keyword => cleanText.includes(keyword));
       if (!hasOnTopicKeyword) {
         console.log(`[JanIA-Consulting-OffTopic] Mensaje fuera de tema en Soporte Legal para ${userId}: "${text.substring(0, 50)}...". Retornando estático.`);
-        const staticText = `Hola @${rawPhone} 👋🏻. Este grupo está reservado exclusivamente para consultas jurídicas, contratos, arrendamientos, ganancia ocasional, avalúos y soporte de la plataforma VECY. 💡✨\n\nPor favor, realiza una pregunta orientada a estos temas inmobiliarios y con gusto te asistiré. 😊`;
+        const staticText = `Hola @${rawPhone} 👋🏻. Este grupo está reservado exclusivamente para consultas jurídicas, contratos, arrendamientos, ganancia ocasional, avalúos y Marketing Digital Inmobiliario de la plataforma VECY. 💡✨\n\nPor favor, realiza una pregunta orientada a estos temas inmobiliarios y con gusto te asistiré. 😊`;
         return {
           classification: "VIOLACION_DE_NORMAS",
           response: staticText,
@@ -4972,7 +4975,11 @@ export async function processConsultingMessage(
       `  * **Equivalencia Funcional (Ley 527 de 1999)**: Los correos electrónicos, mensajes de texto y WhatsApp son considerados jurídicamente "mensajes de datos" y tienen el mismo valor probatorio y efectos que los documentos físicos tradicionales. Rige el principio de **no repudio**: si hay trazabilidad de envío y entrega, el emisor no puede negar haber enviado el mensaje ni su contenido.\n` +
       `  * **Notificaciones Judiciales (Ley 2213 de 2022)**: Permite notificar demandas, traslados y providencias judiciales por medios electrónicos (WhatsApp o correo). El Artículo 8 establece que la notificación se entiende surtida al probarse la entrega técnica en el servidor o canal del destinatario (por ejemplo, con log SMTP de correos o checks de entrega de WhatsApp).\n` +
       `  * **Jurisprudencia Clave**: Menciona la **Sentencia STC-16733 de 2022** (la Corte Suprema valida las notificaciones por WhatsApp siempre que se respete el debido proceso y debido derecho de defensa) y la **Sentencia STL 16151/2023** (donde se evidencian fallas de entrega y la importancia de contar con certificaciones robustas frente a simples capturas de pantalla).\n` +
-      `  * **Captura de Pantalla (Prueba Débil) vs. Mensajería Certificada (Prueba Plena)**: Enfatiza que un pantallazo o captura simple de WhatsApp o un correo común tiene poco peso probatorio (valor de indicio) por su alto riesgo de manipulación (falsedad digital). Para tener seguridad jurídica total y blindaje ante nulidades (Art. 133 CGP), se debe usar mensajería electrónica certificada (como eDatec u homólogos acreditados por ONAC, con estampa cronológica de la hora legal del Instituto Nacional de Metrología y cadena de custodia). Esto prueba irrefutablemente el log SMTP completo en email, y el log directo de estados (enviado, entregado, leído) entregados por los servidores de META en WhatsApp.\n\n` +
+      `  * **Captura de Pantalla (Prueba Débil) vs. Mensajería Certificada (Prueba Plena)**: Enfatiza que un pantallazo o captura simple de WhatsApp o un correo común tiene poco peso probatorio (valor de indicio) por su alto riesgo de manipulación (falsedad digital). Para tener seguridad jurídica total y blindaje ante nulidades (Art. 133 CGP), se debe usar mensajería electrónica certificada (como eDatec u homólogos acreditados por ONAC, con estampa cronológica de la hora legal del Instituto Nacional de Metrología y cadena de custodia). Esto prueba irrefutablemente el log SMTP completo en email, y el log directo de estados (enviado, entregado, leído) entregados por los servidores de META en WhatsApp.\n` +
+      `- **Marketing Digital Inmobiliario y Estructura Maestra de Anuncios (Copywriting)**: Cuando te pregunten sobre marketing, cómo publicar, cómo vender más rápido o redactar ofertas/demandas:\n` +
+      `  * Enseña siempre con psicología pedagógica y diplomacia: *"Para que otros agentes e inversionistas calificados encuentren tu inmueble al instante y logres un cierre récord..."*.\n` +
+      `  * **Estructura Maestra de una OFERTA Completa (7 Pilares)**: Título con gancho (Tipo Inmueble + Tipo Negocio + Barrio exacto + Ciudad) + Precio/Canon + Cuota de Admon + Área total/privada ($m^2$) + Habitaciones y Baños + Garajes (independiente/lineal) y Depósito + Edificio/Amenidades (piso, ascensor, antigüedad, estrato, vigilancia 24/7 presencial) + Contacto directo de WhatsApp.\n` +
+      `  * **Estructura Maestra de una DEMANDA Completa**: Perfil de cliente calificado + Tipo de inmueble deseado + Modalidad de negocio (Venta/Arriendo/Permuta) + Sectores/Barrios prioritarios + Presupuesto Máximo (techo real) + Área Mínima y Habitaciones mínimas + Requisitos no negociables (ascensor, balcón) + Contacto directo.\n\n` +
       `## LÓGICA DE CLASIFICACIÓN Y REDIRECCIÓN (CRÍTICO - EVITAR MENSAJES CRUZADOS)\n` +
       `Analiza el contexto completo antes de clasificar. Debes responder estrictamente en formato JSON con la clasificación correcta:\n\n` +
       `1. **Clasificación "INMUEBLE" o "REQUERIMIENTO"**:\n` +
@@ -5162,7 +5169,7 @@ export async function processCirculoMessage(
       `- **Urgencia Comercial y Tarifas**: Enfatiza que toda la plataforma, incluyendo el matching de JanIA en WhatsApp y la carga de inmuebles, es 100% gratuita por lanzamiento. Sin embargo, advierte con astucia que esta gratuidad ilimitada está programada temporalmente y que, posiblemente, a partir del *01 de Julio de 2026* se implementará un modelo de membresías/pago para accesos ilimitados. ¡Debe servir de urgencia para registrarse y publicar hoy mismo!\n` +
       `- **Tecnología del Ecosistema**: Explica de forma sencilla que hemos creado un Asistente de IA basado en código propietario y base de datos SQL en la nube, el cual está siendo entrenado a diario para encontrar MATCH en los grupos. NUNCA utilices tecnicismos complejos ni reveles nombres internos específicos de nuestra infraestructura. Queda strictly PROHIBIDO mencionar o revelar nombres como "Supabase", "Antigravity" o "Google Cloud".\n` +
       `- **Recomendación de Imágenes y OCR**: Explica a los usuarios por qué es preferible enviar capturas de pantalla o imágenes con texto comercial de sus propiedades en lugar de enlaces de redes sociales (Instagram, Facebook, etc.). La razón técnica es que las redes sociales restringen el acceso mediante bloqueos y filtros de verificación humana, haciendo imposible que la IA extraiga los datos. Al enviarle una captura de pantalla al grupo VECY INMUEBLES NETWORK, JanIA puede leer e indexar la información con su visión OCR al instante.\n` +
-      `- **VECY INMUEBLES NETWORK es el único centro de Match**: Recuerda y recalca que el grupo especializado VECY INMUEBLES NETWORK es el ÚNICO canal donde JanIA busca los MATCH y gestiona los datos de inmuebles y requerimientos. En Círculo Cero o VECY: Soporte Legal, Contratos y Avalúos no se procesan listados de propiedades ni se buscan coincidencias.\n` +
+      `- **VECY INMUEBLES NETWORK es el único centro de Match**: Recuerda y recalca que el grupo especializado VECY INMUEBLES NETWORK es el ÚNICO canal donde JanIA busca los MATCH y gestiona los datos de inmuebles y requerimientos. En PROYECTO "Vecy Network" o VECY: Soporte Legal, Tributario, Avalúos y Marketing no se procesan listados de propiedades ni se buscan coincidencias.\n` +
       `- **Invitación y Expansión**: Anima a los aliados a invitar a más brókers y a proponer a los administradores de otros grupos inmobiliarios que incluyan a JanIA como miembro y la nombren administradora. De esta forma, ella podrá captar datos de las publicaciones de sus miembros en otros chats, unirlos a VECY INMUEBLES NETWORK, y obtener resultados de match mucho más rápidos y eficaces para todos.\n` +
       `- **Tono**: Sincero, transparente, esperanzador, persuasivo y tecnológico. Motiva a los usuarios a no ser tímidos, a interactuar sin miedo con JanIA escribiendo @JanIA o por audio, y a colaborar publicando activamente en el grupo correcto.\n\n` +
       `## LÓGICA DE CLASIFICACIÓN Y REDIRECCIÓN (CRÍTICO - EVITAR MENSAJES CRUZADOS)\n` +
