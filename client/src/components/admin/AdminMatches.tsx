@@ -1642,7 +1642,8 @@ export default function AdminMatches() {
   
   // Estados para Edición Interactiva de Fichas Prediales directamente desde el Cotejo
   const [editingMatchId, setEditingMatchId] = React.useState<number | null>(null);
-  const [isSaving, setIsSaving] = React.useState(false);
+  const [isSavingOnly, setIsSavingOnly] = React.useState(false);
+  const [isRecalculating, setIsRecalculating] = React.useState(false);
   const [editForm, setEditForm] = React.useState<Record<string, any>>({});
 
   const utils = trpc.useUtils();
@@ -1735,7 +1736,7 @@ export default function AdminMatches() {
   };
 
   const handleOnlySave = async (m: any) => {
-    setIsSaving(true);
+    setIsSavingOnly(true);
     try {
       if (m.property?.id) {
         const cleanPropPhone = normalizePhoneInput(editForm.propPhone);
@@ -1779,8 +1780,8 @@ export default function AdminMatches() {
         });
       }
 
-      toast.success("💾 Cambios guardados exitosamente", {
-        description: "Los datos actualizados se han guardado y sincronizado con la base de datos."
+      toast.success("💾 Datos guardados en la base de datos", {
+        description: "La ficha se ha actualizado permanentemente en Supabase."
       });
       setEditingMatchId(null);
       setEditForm({});
@@ -1788,26 +1789,69 @@ export default function AdminMatches() {
       await refetch();
     } catch (err: any) {
       console.error("[handleOnlySave] Error:", err);
-      toast.error("Error al guardar cambios", {
+      toast.error("Error al guardar datos", {
         description: err.message || "No se pudieron actualizar los datos."
       });
     } finally {
-      setIsSaving(false);
+      setIsSavingOnly(false);
     }
   };
 
   const handleRecalculateMatch = async (m: any) => {
-    setIsSaving(true);
+    setIsRecalculating(true);
     try {
-      await handleOnlySave(m);
+      // Guardar cambios si hay campos editados antes de recalcular
+      if (m.property?.id && Object.keys(editForm).some(k => k.startsWith('prop'))) {
+        const cleanPropPhone = normalizePhoneInput(editForm.propPhone);
+        await updatePropMut.mutateAsync({
+          propertyId: m.property.id,
+          price: editForm.propPrice !== undefined && editForm.propPrice !== '' ? String(editForm.propPrice) : undefined,
+          rentPrice: editForm.propRentPrice !== undefined && editForm.propRentPrice !== '' ? String(editForm.propRentPrice) : undefined,
+          adminFee: editForm.propAdminFee !== undefined && editForm.propAdminFee !== '' ? String(editForm.propAdminFee) : undefined,
+          areaTotal: editForm.propArea !== undefined && editForm.propArea !== '' ? String(editForm.propArea) : undefined,
+          bedrooms: editForm.propBedrooms !== undefined && editForm.propBedrooms !== '' ? Number(editForm.propBedrooms) : undefined,
+          bathrooms: editForm.propBathrooms !== undefined && editForm.propBathrooms !== '' ? Number(editForm.propBathrooms) : undefined,
+          garages: editForm.propGarages !== undefined && editForm.propGarages !== '' ? Number(editForm.propGarages) : undefined,
+          stratum: editForm.propStratum !== undefined && editForm.propStratum !== '' ? Number(editForm.propStratum) : undefined,
+          zone: editForm.propZone ? String(editForm.propZone) : undefined,
+          addressNeighborhood: editForm.propZone ? String(editForm.propZone) : undefined,
+          addressLocality: editForm.propLocality ? String(editForm.propLocality) : undefined,
+          city: editForm.propCity ? String(editForm.propCity) : undefined,
+          propertyType: editForm.propPropertyType ? String(editForm.propPropertyType) : undefined,
+          transactionType: editForm.propTransactionType ? String(editForm.propTransactionType) : undefined,
+          idUsuarioWhatsapp: cleanPropPhone,
+        });
+      }
+
+      if (m.requirement?.id && Object.keys(editForm).some(k => k.startsWith('req'))) {
+        const cleanReqPhone = normalizePhoneInput(editForm.reqPhone);
+        await updateReqMut.mutateAsync({
+          requirementId: m.requirement.id,
+          presupuestoMax: editForm.reqBudget !== undefined && editForm.reqBudget !== '' ? String(editForm.reqBudget) : undefined,
+          adminFeeMax: editForm.reqAdminMax !== undefined && editForm.reqAdminMax !== '' ? String(editForm.reqAdminMax) : undefined,
+          areaMin: editForm.reqArea !== undefined && editForm.reqArea !== '' ? String(editForm.reqArea) : undefined,
+          habitacionesMin: editForm.reqBedrooms !== undefined && editForm.reqBedrooms !== '' ? Number(editForm.reqBedrooms) : undefined,
+          banosMin: editForm.reqBathrooms !== undefined && editForm.reqBathrooms !== '' ? Number(editForm.reqBathrooms) : undefined,
+          parqueaderosMin: editForm.reqGarages !== undefined && editForm.reqGarages !== '' ? Number(editForm.reqGarages) : undefined,
+          estratoDeseado: editForm.reqStratum !== undefined && editForm.reqStratum !== '' ? Number(editForm.reqStratum) : undefined,
+          zonaDeseada: editForm.reqZone ? String(editForm.reqZone) : undefined,
+          addressNeighborhood: editForm.reqZone ? String(editForm.reqZone) : undefined,
+          ciudadDeseada: editForm.reqCity ? String(editForm.reqCity) : undefined,
+          tipoInmuebleDeseado: editForm.reqPropertyType ? String(editForm.reqPropertyType) : undefined,
+          tipoNegocioDeseado: editForm.reqTransactionType ? String(editForm.reqTransactionType) : undefined,
+          idUsuarioWhatsapp: cleanReqPhone,
+        });
+      }
+
       if (m.property?.id || m.requirement?.id) {
         await recalculateMatchMut.mutateAsync({
           propertyId: m.property?.id || undefined,
           requirementId: m.requirement?.id || undefined,
         });
       }
-      toast.success("⚡ Match recalculado en vivo", {
-        description: "Re-evaluando afinidad comercial con la base de datos completa..."
+
+      toast.success("⚡ Coincidencias recalculadas", {
+        description: "JanIA ha re-evaluado las afinidades comerciales en toda la red para buscar nuevas coincidencias."
       });
       setEditingMatchId(null);
       setEditForm({});
@@ -1815,9 +1859,9 @@ export default function AdminMatches() {
       await refetch();
     } catch (err: any) {
       console.error("[RecalculateMatch] Error:", err);
-      toast.error("Error recalculando match", { description: err.message || "Intenta nuevamente." });
+      toast.error("Error al recalcular coincidencias", { description: err.message || "Intenta nuevamente." });
     } finally {
-      setIsSaving(false);
+      setIsRecalculating(false);
     }
   };
 
@@ -3127,32 +3171,33 @@ export default function AdminMatches() {
                       <div className="flex items-center gap-2.5 text-emerald-400 text-xs font-semibold">
                         <Sparkles className="w-4 h-4 text-emerald-400 animate-pulse shrink-0" />
                         <span>
-                          Modo Edición Activo: Usa <strong>💾 Guardar Cambios</strong> mientras chateas con el autor para buscar el 100% manual, o <strong>⚡ Recalcular Match</strong> si no hubo negocio para buscar nuevas parejas en la red.
+                          Modo Edición Activo: Usa <strong>💾 Guardar Datos</strong> para registrar datos faltantes en la BD, o <strong>⚡ Recalcular Coincidencias</strong> si el negocio no prosperó para buscar nuevas parejas en la red.
                         </span>
                       </div>
                       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto shrink-0 justify-end">
                         <Button
                           onClick={() => { setEditingMatchId(null); setEditForm({}); }}
                           variant="outline"
+                          disabled={isSavingOnly || isRecalculating}
                           className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 text-xs h-10 px-3 min-h-[44px] w-full sm:w-auto"
                         >
                           Cancelar
                         </Button>
                         <Button
                           onClick={() => handleOnlySave(m)}
-                          disabled={isSaving}
-                          className="bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs h-10 px-3.5 shadow-md min-h-[44px] flex items-center justify-center gap-1.5 w-full sm:w-auto"
+                          disabled={isSavingOnly || isRecalculating}
+                          className="bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs h-10 px-3.5 shadow-md min-h-[44px] flex items-center justify-center gap-1.5 w-full sm:w-auto transition-all"
                         >
-                          {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                          💾 Guardar Cambios (Modo Chat)
+                          {isSavingOnly ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                          💾 Guardar Datos
                         </Button>
                         <Button
                           onClick={() => handleRecalculateMatch(m)}
-                          disabled={isSaving}
-                          className="bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs h-10 px-4 shadow-lg shadow-emerald-500/20 min-h-[44px] flex items-center justify-center gap-1.5 w-full sm:w-auto"
+                          disabled={isSavingOnly || isRecalculating}
+                          className="bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs h-10 px-4 shadow-lg shadow-emerald-500/20 min-h-[44px] flex items-center justify-center gap-1.5 w-full sm:w-auto transition-all"
                         >
-                          {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                          ⚡ Recalcular Match (Buscar Nueva Pareja)
+                          {isRecalculating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                          ⚡ Recalcular Coincidencias
                         </Button>
                       </div>
                     </div>
