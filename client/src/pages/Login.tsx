@@ -45,6 +45,7 @@ export default function Login() {
       const errMsg = err?.message || 'Error desconocido';
       toast.error(`Error al sincronizar: ${errMsg}`);
       localStorage.removeItem("jania-session-token");
+      await supabase.auth.signOut().catch(() => {});
     } finally {
       setLoading(false);
       isExchangingRef.current = false;
