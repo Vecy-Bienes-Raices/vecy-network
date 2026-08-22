@@ -82,11 +82,15 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
        - 👤 **Nombre Asesor / Perfil**: para ingresar o cambiar el nombre real del broker (ej: *Erika Del Pilar Murcia*).
        - 📞 **WhatsApp**: para ingresar el número celular colombiano (ej: *+57 316 444 6672*).
      - Al guardar, el nombre se almacena permanentemente en Supabase (`nombreUsuarioWhatsapp`), se muestra destacado en la tarjeta con insignia `👤 Asesor` y se auto-propaga a todas las publicaciones del asesor.
-  4. **Micro-Animaciones e Interactividad Visual Premium (`AdminMatches.tsx`)**:
-     - **Botón `🤝 Trato en Curso` (Pulgar Arriba)**: Al hacer hover, el icono `ThumbsUp` se rellena en verde esmeralda brillante (`fill-emerald-400`), rota suavemente (`-rotate-12`) con resplandor glow (`shadow-[0_0_20px_rgba(16,185,129,0.35)]`) y efecto spring rebote (`scale-105 active:scale-95`).
-     - **Botón `⛔ Descartar Match` (Pulgar Abajo)**: Al hacer hover, el icono `ThumbsDown` se rellena en rojo rubí (`fill-rose-400`), rota (`rotate-12`) con resplandor glow (`shadow-[0_0_20px_rgba(244,63,94,0.35)]`).
-     - **Botón `📋 Copiar` (En Oferta y Demanda)**: Eliminada la alerta flotante invasiva en la esquina inferior. Ahora el propio botón se transforma instantáneamente al hacer clic: muestra el icono de verificación `✓ Check` con zoom animado, cambia el texto a `¡Copiado!` y se ilumina en azul/cyan brillante con resplandor glow (`bg-cyan-500/25 text-cyan-300 border-cyan-400/60 shadow-[0_0_15px_rgba(6,182,212,0.45)] scale-105`), regresando suavemente a su estado inicial tras 2 segundos.
-     - **Botones `Contactar WA`, `Guardar Datos` y `Recalcular`**: Enriquecidos con micro-animaciones en iconos, estados de elevación y glows de alta fidelidad visual.
+  4. **Micro-Animaciones e Iluminación Incandescente Neón en Siluetas (0 Alerts)**:
+     - **Eliminación Total de Alerts y Popups**: NINGÚN botón utiliza ya cuadros de alerta emergentes ni toasts flotantes. Todas las confirmaciones y estados (`¡Copiado!`, `¡Trato en Curso Registrado con Éxito!`, `¡Match Descartado y Aprendido!`, `¡Datos Guardados con Éxito en BD!`, `¡Coincidencias Recalculadas en Toda la Red!`) ocurren de forma **100% inline, interactiva y animada directamente dentro del botón**.
+     - **Efecto Incandescente en Siluetas y Bordes (`🤝 Trato en Curso` y `⛔ Descartar Match`)**:
+       - Eliminado el relleno pálido/lavado de fondo.
+       - Fondo negro puro/cristalino (`bg-black/70`).
+       - **Líneas, silueta de la mano, letras y bordes se incandecen intensamente en neón**:
+         - *Verde Esmeralda Neón*: Silueta con trazo grueso `stroke-[2.5]`, resplandor eléctrico `drop-shadow-[0_0_12px_rgba(52,211,153,1)]`, texto `drop-shadow-[0_0_10px_rgba(52,211,153,0.9)]` y bordes con glow interno y externo `shadow-[0_0_22px_rgba(52,211,153,0.85),inset_0_0_10px_rgba(52,211,153,0.25)]`.
+         - *Rojo Rubí Neón*: Silueta con trazo grueso `stroke-[2.5]`, resplandor eléctrico `drop-shadow-[0_0_12px_rgba(244,63,94,1)]`, texto `drop-shadow-[0_0_10px_rgba(244,63,94,0.9)]` y bordes con glow interno y externo `shadow-[0_0_22px_rgba(244,63,94,0.85),inset_0_0_10px_rgba(244,63,94,0.25)]`.
+     - **Botón `📋 Copiar`**: Efecto inline con icono `✓ Check`, transición a azul/cyan brillante y texto `¡Copiado!`.
   5. **Separación Estricta e Independiente de Botones (`AdminMatches.tsx`)**:
      - **`💾 Guardar Datos`**: Con estado de carga independiente (`isSavingOnly`). Guarda los datos editados directamente en la base de datos de Supabase y propaga el contacto sin disparar recálculos globales. Solo gira la ruedita en su propio botón.
      - **`⚡ Recalcular Coincidencias`**: Con estado de carga independiente (`isRecalculating`). Guarda los cambios pendientes si los hay y dispara la re-evaluación contra toda la base de datos para buscar nuevas parejas comerciales cuando un negocio no prospera. Solo gira la ruedita en su propio botón.
