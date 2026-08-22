@@ -825,8 +825,45 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
+### 🗓️ Sesión: Viernes 21 de Agosto de 2026 — 07:00 PM a 08:00 PM (Hora Colombia UTC-5)
+**Versión del Sistema**: `v25.0 — Agosto 2026`  
+**Commit GitHub Main**: [`c302e76`](https://github.com/Vecy-Bienes-Raices/vecy-network/commit/c302e76)
+
+#### 📋 Requerimientos Específicos del Usuario (Eduardo A. Rivera):
+1. **Comprensión Lógica Definitiva de Matches (Cero Errores)**:
+   - Exigencia de aprendizaje permanente para JanIA en el diagnóstico, razonamiento e intuición del lenguaje y jerga inmobiliaria colombiana tradicional.
+   - Eliminación de falsos positivos donde inmuebles con precios malformateados ($1.390M guardado como $122M) o áreas menores (122 m² vs "Mínimo 150m2") arrojaban match de 97%.
+2. **Doctrina Asimétrica de MÁXIMO vs MÍNIMO en Arriendos y Ventas**:
+   - Comprensión de que en demandas y arriendos el precio/canon se expresa como **LÍMITE MÁXIMO (TECHO)** (*"máximo 5 millones"*, *"canon hasta 8.5 millones"*), mientras que las especificaciones espaciales se expresan como **PISO MÍNIMO** (*"mínimo 150m2"*, *"min 3 alcobas"*).
+3. **Enriquecimiento y Corrección Retroactiva de BD**:
+   - Corrección permanente en Supabase de todos los registros históricos con precios, cánones de arriendo, cuotas de administración y áreas malformateadas o vacías.
+
+#### 🛠️ Soluciones e Implementaciones Técnicas:
+- **Doctrina de Techo Financiero (MÁXIMO) vs Piso Físico (MÍNIMO) en Prompt Maestro (`prompts/base.md`)**:
+  - Explicación obligatoria para Gemini de la lógica de negocio: `presupuestoMax` y `rentPrice` capturan palabras de techo (*máximo*, *max*, *hasta*, *tope*, *canon max*). `areaMin` y habitaciones capturan palabras de piso (*mínimo*, *min*, *desde*).
+  - Tablas de conversión exhaustivas de jerga de WhatsApp y algoritmos paso a paso de extracción numérica.
+- **Fix Quirúrgico de Precios en `janIA.ts`**:
+  - Parser de precio estándar adaptado a la notación colombiana de miles (`1.390.000.000`), eliminando todos los puntos antes de `parseFloat` para evitar distorsiones.
+  - Fallbacks robustos en `saveRequirement` para `presupuestoMax`, `adminFeeMax` y `areaMin` directos desde `rawText`.
+- **Filtro Duro 6 Blindado en `matching.ts`**:
+  - `reqAreaMin` recupera en tiempo real el área mínima desde `rawText` del requerimiento, asegurando que un inmueble de 122m² contra un requerimiento "Mínimo 150m2" dispare **0% de match de forma inquebrantable**.
+  - Umbral de sanidad de precio de venta ampliado a $200M.
+- **Enriquecimiento Retroactivo Masivo en Supabase (`enrich_data_v25.ts`)**:
+  - Ejecutado con `npx tsx`, logrando **131 campos enriquecidos y corregidos**:
+    - 43 precios de venta de propiedades corregidos.
+    - 8 cánones de arriendo mensuales recuperados.
+    - 28 cuotas de administración añadidas.
+    - 5 áreas totales rescatadas.
+    - 14 presupuestos de requerimientos corregidos.
+    - 9 administraciones máximas asignadas en demandas.
+    - 24 áreas mínimas (`areaMin`) rellenadas.
+- **Validación y Compilación TypeScript**: 0 errores en `npx tsc --noEmit`.
+
+---
+
 ## 🛡️ PROTOCOLOS Y REGLAS DE TRABAJO INQUEBRANTABLES
 1. **Adición Pura de Código**: NUNCA borrar, modificar ni romper funcionalidades o reglas previas ya validadas al agregar nuevo código.
 2. **Revisión del Historial al Iniciar**: Consultar esta bitácora y `.agents/AGENTS.md` al comienzo de cada conversación.
 3. **Limpieza Continua**: Mantener el directorio `server/` libre de archivos script residuales o duplicados.
 4. **Rol de Co-Piloto Guardián**: La IA debe evaluar las consecuencias secundarias de cualquier instrucción y frenar a tiempo si un cambio propuesto arriesga la integridad de la base de datos o rompe reglas del negocio.
+

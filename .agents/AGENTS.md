@@ -164,13 +164,25 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ## 🔖 VERSIÓN ACTUAL: v25.0 — Agosto 2026
 
-### Novedades v25.0 (Doctrina Maestra de Precios COP & Fallback Robusto de ÁreaMin):
-- **Fix crítico `extractFallbackDataFromText` en `janIA.ts`**: Parser D (precio estándar) ahora detecta formato colombiano de miles (`1.390.000.000`) quitando TODOS los puntos antes de `parseFloat`, evitando el error `1.39 × 1M = 1.390.000` en lugar de `1.390.000.000`. Fallback secundario para formato con comas.
-- **Fix crítico `areaMatch` regex en `janIA.ts`**: Ahora captura frases como `"Mínimo 150m2"`, `"min 120 mts"`, `"de 100 metros"` correctamente en el campo `area` de requerimientos.
-- **Fix crítico `saveRequirement` `areaMin` en `janIA.ts`**: Fallback robusto que extrae el área mínima desde `rawText` cuando `data.areaMin` y `data.area` son null/0, usando el mismo regex mejorado con prefijos (`mínimo`, `min`, `de`, `desde`).
-- **Fix crítico Filtro Duro 6 en `matching.ts`**: `reqAreaMin` ahora tiene fallback desde `rawText` del requerimiento cuando el campo en BD está vacío. Garantiza que `"Mínimo 150m2"` dispare el bloqueo absoluto contra inmuebles < 142.5 m².
-- **Fix sanidad de precio en `matching.ts`**: Umbral ampliado de 30M a 200M para recuperar precios malformateados desde `rawText` (cubre propiedades hasta $200M que guardaron precio erróneo).
-- **Doctrina Maestra v25.0 en `prompts/base.md`**: Sección permanente de jerga inmobiliaria colombiana con tablas de conversión de precios, áreas, taquigrafía de brokers y algoritmos paso a paso para que Gemini nunca más confunda `$1.390.000.000` con `1.39` ni `"Mínimo 150m2"` con un presupuesto.
+### Novedades v25.0 (Doctrina Maestra de Precios COP, Techo Financiero MÁXIMO vs Piso Físico MÍNIMO & Enriquecimiento Retroactivo Total):
+- **Doctrina de Límite Financiero (MÁXIMO) vs Confort Espacial (MÍNIMO)**:
+  - *Presupuestos y Cánones de Arriendo (Techo)*: Expresiones como *"máximo 5 millones"*, *"canon max 8.5 millones"*, *"hasta 4 millones"*, *"tope 6 millones"*, *"con admon hasta 5.5 millones"* representan el `presupuestoMax` (y `rentPrice` en arriendos).
+  - *Cuota de Administración (Techo)*: *"Admon máxima 1.200.000"*, *"admon hasta 800 mil"* asignan `adminFeeMax`.
+  - *Espacio Físico (Piso Mínimo)*: *"Mínimo 150m2"*, *"min 3 alcobas"*, *"desde 2 baños"* representan `areaMin`, `habitacionesMin`, etc., donde la oferta debe ser **IGUAL O MAYOR** (`prop >= req`) para otorgar 100% de confort.
+- **Enriquecimiento Retroactivo Masivo en Supabase (`enrich_data_v25.ts`)**:
+  - **131 campos corregidos/rescatados en BD**:
+    - 43 precios de venta de propiedades corregidos (rescatando inmuebles que tenían precios malformateados como el apto de San Patricio de $1.390M guardado erróneamente como $122M).
+    - 8 cánones de arriendo mensuales recuperados.
+    - 28 cuotas de administración agregadas.
+    - 5 áreas totales rescatadas.
+    - 14 presupuestos de requerimientos corregidos.
+    - 9 administraciones máximas asignadas en demandas.
+    - 24 áreas mínimas (`areaMin`) rellenadas desde `rawText` para requerimientos que estaban en 0.
+- **Fix crítico `extractFallbackDataFromText` en `janIA.ts`**: Parser D ahora detecta formato colombiano de miles (`1.390.000.000`) quitando TODOS los puntos antes de `parseFloat`, evitando el error `1.39 × 1M = 1.390.000` en lugar de `1.390.000.000`.
+- **Fix crítico `saveRequirement` en `janIA.ts`**: Fallbacks robustos directos desde `rawText` para `presupuestoMax`, `adminFeeMax` y `areaMin` cuando vienen vacíos en la ingesta.
+- **Fix crítico Filtro Duro 6 en `matching.ts`**: `reqAreaMin` tiene fallback desde `rawText` garantizando que requerimientos exigiendo "Mínimo 150m2" bloqueen al 0% ofertas de 122m².
+- **Doctrina Maestra v25.0 en `prompts/base.md`**: Memoria permanente de jerga colombiana, tablas de conversión, algoritmos paso a paso y la distinción formal de Techo Financiero vs Piso de Confort.
+
 
 - **Layout Fijo e Independiente (`Admin.tsx`)**: Arquitectura de vista `h-screen overflow-hidden` donde el sidebar permanece 100% fijo a la izquierda en PCs y Laptops mientras el área de contenido (`main`) se desplaza con scroll independiente, eliminando el desplazamiento indeseado del menú de navegación.
 - **Modo Dual Expandible / Contraíble (`w-64` ↔ `w-20`)**:
