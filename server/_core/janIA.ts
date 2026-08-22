@@ -571,8 +571,8 @@ export function extractFallbackDataFromText(text: string): any {
     }
   }
 
-  // E. Cuota de Administración
-  const adminMatch = clean.match(/(?:administración|administracion|admin|admon)\s*:?\s*(?:aprox\.?)?\s*\$?\s*([\d.,\s]+?)(?:-|\s|\(|$|\n)/i);
+  // E. Cuota de Administración (Detecta valores fijos y techos: "Admon $960.000", "Admon máxima $1.200.000", "admon max 500k", "admon hasta 800 mil")
+  const adminMatch = clean.match(/(?:administraci[oó]n|admin|admon|cta\s*admon)\s*(?:m[aá]xima|max|hasta|tope|no\s*mayor\s*a|no\s*superior\s*a|l[ií]mite)?\s*:?\s*(?:aprox\.?)?\s*\$?\s*([\d.,\s]+?)(?:-|\s|\(|$|\n)/i);
   if (adminMatch) {
     const rawANum = parseFloat(adminMatch[1].replace(/[.,\s]/g, ''));
     if (!isNaN(rawANum) && rawANum >= 10_000 && rawANum <= 30_000_000 && !isPhoneNumberNotPrice(rawANum, text)) {

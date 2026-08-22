@@ -1537,13 +1537,36 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
   }
 
   // ── FILTRO DE ADMINISTRACIÓN MÁXIMA (Presupuesto de Administración) ──
-  const reqAdminMaxVal = requirement.adminFeeMax ? parseFloat(String(requirement.adminFeeMax)) : 0;
-  if (reqAdminMaxVal > 0 && pAdminFee > 0) {
-    if (pAdminFee > reqAdminMaxVal) {
-      blockers.push(`Guillotina Financiera (Administración): Cuota de administración de $${pAdminFee.toLocaleString()} supera el máximo aceptado de $${reqAdminMaxVal.toLocaleString()}`);
+  let reqAdminMaxVal = requirement.adminFeeMax ? parseFloat(String(requirement.adminFeeMax)) : 0;
+  if (reqAdminMaxVal <= 0 && requirement.rawText) {
+    const rawReqLow = requirement.rawText.toLowerCase();
+    const adminMaxMatch = rawReqLow.match(/(?:administraci[oó]n|admin|admon|cta\s*admon)\s*(?:m[aá]xima|max|hasta|tope|no\s*mayor\s*a|no\s*superior\s*a)?\s*:?\s*(?:aprox\.?|mensual)?\s*\$?\s*([\d.,\s]+?)(?:-|\s|\(|\/|\+|$|\n)/i);
+    if (adminMaxMatch) {
+      const parsedAdmin = parseFloat(adminMaxMatch[1].replace(/[.,\s]/g, ''));
+      if (!isNaN(parsedAdmin) && parsedAdmin >= 10_000 && parsedAdmin <= 30_000_000 && !isPhoneNumberNotPrice(parsedAdmin, requirement.rawText)) {
+        reqAdminMaxVal = parsedAdmin;
+      }
+    }
+  }
+
+  let effectivePropAdmin = pAdminFee;
+  if (effectivePropAdmin <= 0 && property.rawText) {
+    const rawPropLow = property.rawText.toLowerCase();
+    const adminPropMatch = rawPropLow.match(/(?:administraci[oó]n|admin|admon|cta\s*admon)\s*:?\s*(?:aprox\.?|mensual)?\s*\$?\s*([\d.,\s]+?)(?:-|\s|\(|\/|\+|$|\n)/i);
+    if (adminPropMatch) {
+      const parsedAdmin = parseFloat(adminPropMatch[1].replace(/[.,\s]/g, ''));
+      if (!isNaN(parsedAdmin) && parsedAdmin >= 10_000 && parsedAdmin <= 30_000_000 && !isPhoneNumberNotPrice(parsedAdmin, property.rawText)) {
+        effectivePropAdmin = parsedAdmin;
+      }
+    }
+  }
+
+  if (reqAdminMaxVal > 0 && effectivePropAdmin > 0) {
+    if (effectivePropAdmin > reqAdminMaxVal) {
+      blockers.push(`Guillotina Financiera (Administración): Cuota de administración de $${effectivePropAdmin.toLocaleString()} supera el máximo aceptado de $${reqAdminMaxVal.toLocaleString()}`);
       return buildExplanationResult(0, blockers, positives, negatives);
     } else {
-      positives.push(`Administración favorable: $${pAdminFee.toLocaleString()} dentro del presupuesto máx de $${reqAdminMaxVal.toLocaleString()}`);
+      positives.push(`Administración favorable: $${effectivePropAdmin.toLocaleString()} dentro del presupuesto máx de $${reqAdminMaxVal.toLocaleString()}`);
     }
   }
 
