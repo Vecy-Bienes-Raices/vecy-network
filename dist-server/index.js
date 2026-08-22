@@ -14932,10 +14932,10 @@ async function createContext(opts) {
         try {
           const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
           const { users: users2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-          const { eq: eq14 } = await import("drizzle-orm");
+          const { eq: eq13 } = await import("drizzle-orm");
           const db = await getDb2();
           if (db) {
-            await db.update(users2).set({ role: "admin" }).where(eq14(users2.id, user.id));
+            await db.update(users2).set({ role: "admin" }).where(eq13(users2.id, user.id));
             user = { ...user, role: "admin" };
             console.log(`[Auth] \u2705 Admin auto-promocionado: ${user.email}`);
           }
@@ -14949,10 +14949,10 @@ async function createContext(opts) {
       try {
         const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
         const { users: users2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-        const { eq: eq14 } = await import("drizzle-orm");
+        const { eq: eq13 } = await import("drizzle-orm");
         const db = await getDb2();
         if (db) {
-          const existingUser = await db.select().from(users2).where(eq14(users2.openId, "mock-local-user")).limit(1);
+          const existingUser = await db.select().from(users2).where(eq13(users2.openId, "mock-local-user")).limit(1);
           if (existingUser.length > 0) {
             user = existingUser[0];
           } else {
@@ -15076,13 +15076,10 @@ function serveStatic(app) {
 // server/_core/cronService.ts
 import cron from "node-cron";
 import path10 from "path";
-init_db();
-init_schema();
 init_whatsapp_match();
 init_nightlyRematch();
 init_llm();
 import { fileURLToPath } from "url";
-import { gte as gte3, and as and7, eq as eq13, sql as sql7 } from "drizzle-orm";
 var __filename = fileURLToPath(import.meta.url);
 var __dirname = path10.dirname(__filename);
 function initCronScheduler() {
@@ -15569,13 +15566,13 @@ async function startServer() {
     try {
       const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
       const { propertyMatches: propertyMatches2, requirements: requirements2, properties: properties2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-      const { eq: eq14, gte: gte4 } = await import("drizzle-orm");
+      const { eq: eq13, gte: gte3 } = await import("drizzle-orm");
       const { handleDetectedMatches: handleDetectedMatches2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
       const db = await getDb2();
       if (!db) return res.status(500).send("No DB connection");
       const today = /* @__PURE__ */ new Date();
       today.setHours(0, 0, 0, 0);
-      const matches = await db.select().from(propertyMatches2).where(gte4(propertyMatches2.createdAt, today));
+      const matches = await db.select().from(propertyMatches2).where(gte3(propertyMatches2.createdAt, today));
       console.log(`[API] Encontrados ${matches.length} matches creados hoy en la BD.`);
       const seen = /* @__PURE__ */ new Set();
       const uniqueMatches = [];
@@ -15591,8 +15588,8 @@ async function startServer() {
         let count = 0;
         for (const match of uniqueMatches) {
           try {
-            const [reqRec] = await db.select().from(requirements2).where(eq14(requirements2.id, match.requirementId)).limit(1);
-            const [propRec] = await db.select().from(properties2).where(eq14(properties2.id, match.propertyId)).limit(1);
+            const [reqRec] = await db.select().from(requirements2).where(eq13(requirements2.id, match.requirementId)).limit(1);
+            const [propRec] = await db.select().from(properties2).where(eq13(properties2.id, match.propertyId)).limit(1);
             if (reqRec && propRec) {
               const score = Number(match.matchScore);
               const matchedItem = {
