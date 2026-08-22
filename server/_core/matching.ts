@@ -1790,6 +1790,42 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
+  // E. Choque de Accesibilidad / Ascensor Obligatorio (Doctrina v25.0)
+  const reqDemandsElevator = reqRawTextLower.includes("con ascensor") || 
+                             reqRawTextLower.includes("exige ascensor") || 
+                             reqRawTextLower.includes("obligatorio ascensor") ||
+                             reqRawTextLower.includes("adulto mayor") ||
+                             reqRawTextLower.includes("tercera edad") ||
+                             reqRawTextLower.includes("discapacidad") ||
+                             reqRawTextLower.includes("no escaleras");
+
+  const propNoElevator = propRawTextLower.includes("sin ascensor") || 
+                         propRawTextLower.includes("no tiene ascensor") || 
+                         propRawTextLower.includes("por escaleras") || 
+                         propRawTextLower.includes("acceso por escaleras");
+
+  if (reqDemandsElevator && propNoElevator) {
+    blockers.push("Choque de Accesibilidad: El cliente exige obligatoriamente ASCENSOR (por edad/movilidad) y el inmueble ofrecido es por ESCALERAS / Sin Ascensor. Match Inviable (0%).");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+
+  // F. Choque de Orientación Visual (Exige "Solo Exterior" vs "Interior") (Doctrina v25.0)
+  const reqDemandsExterior = reqRawTextLower.includes("solo exterior") || 
+                             reqRawTextLower.includes("estrictamente exterior") || 
+                             reqRawTextLower.includes("nada interior") || 
+                             reqRawTextLower.includes("cero interior") || 
+                             reqRawTextLower.includes("no interior");
+
+  const propIsInterior = propRawTextLower.includes("es interior") || 
+                         propRawTextLower.includes("vista interior") || 
+                         propRawTextLower.includes("apartamento interior") || 
+                         propRawTextLower.includes("apto interior");
+
+  if (reqDemandsExterior && propIsInterior) {
+    blockers.push("Choque de Orientación Visual: El cliente exige expresamente 'SOLO EXTERIOR' y el inmueble ofrecido es INTERIOR. Match Inviable (0%).");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+
   // Auditoría de tipo de garaje (independiente vs lineal) v20.0
   const propGarageType = (property.garageType || "").toLowerCase();
   const reqGarageTypeRaw = (requirement.rawText || "").toLowerCase();
@@ -1808,23 +1844,84 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
     }
   }
 
-  // Auditoría de Confort Técnico (Luz y Ventilación Natural)
-  const reqWantsLightAir = reqGarageTypeRaw.includes("luz natural") || 
-                            reqGarageTypeRaw.includes("ventilacion natural") || 
-                            reqGarageTypeRaw.includes("vista panoramica") || 
-                            reqGarageTypeRaw.includes("iluminacion");
+  // Auditoría de Confort Técnico, Vistas y Luz Natural (Doctrina v25.0)
+  const reqWantsLightAir = reqRawTextLower.includes("luz natural") || 
+                            reqRawTextLower.includes("ventilacion natural") || 
+                            reqRawTextLower.includes("vista panoramica") || 
+                            reqRawTextLower.includes("vista a la ciudad") || 
+                            reqRawTextLower.includes("vista a la montana") || 
+                            reqRawTextLower.includes("vista a cerros") || 
+                            reqRawTextLower.includes("vista verde") || 
+                            reqRawTextLower.includes("frente a parque") || 
+                            reqRawTextLower.includes("iluminacion") || 
+                            reqRawTextLower.includes("iluminado") || 
+                            reqRawTextLower.includes("esquinero") || 
+                            reqRawTextLower.includes("sol de manana") || 
+                            reqRawTextLower.includes("sol de tarde");
 
   const propHasLightAir = propRawTextLower.includes("luz natural") || 
                           propRawTextLower.includes("ventilacion natural") || 
                           propRawTextLower.includes("vista panoramica") || 
+                          propRawTextLower.includes("vista a la ciudad") || 
+                          propRawTextLower.includes("vista a la montana") || 
+                          propRawTextLower.includes("vista a cerros") || 
+                          propRawTextLower.includes("vista verde") || 
+                          propRawTextLower.includes("frente a parque") || 
                           propRawTextLower.includes("iluminado") || 
-                          propRawTextLower.includes("exterior");
+                          propRawTextLower.includes("exterior") || 
+                          propRawTextLower.includes("esquinero") || 
+                          propRawTextLower.includes("sol de manana") || 
+                          propRawTextLower.includes("sol de tarde");
 
   let lightAirBonus = false;
   if (reqWantsLightAir && propHasLightAir) {
     lightAirBonus = true;
-    positives.push(`✨ Confort Técnico Coincidente: Inmueble con luz/ventilación natural y vista privilegiada (+15 pts)`);
+    positives.push(`✨ Confort Técnico & Visual Coincidente: Inmueble con excelente iluminación, vista privilegiada / panorámica / verde (+15 pts)`);
   }
+
+  // Auditoría de Climatización y Chimeneas (Gas / Leña / Bioetanol)
+  const reqWantsFireplace = reqRawTextLower.includes("chimenea");
+  const propHasFireplace = propRawTextLower.includes("chimenea") || propRawTextLower.includes("a gas") || propRawTextLower.includes("a lena") || propRawTextLower.includes("bioetanol") || propRawTextLower.includes("alcohol");
+  if (reqWantsFireplace && propHasFireplace) {
+    positives.push(`🔥 Climatización & Calidez: Cuenta con chimenea compatible (gas / leña / bioetanol)`);
+  }
+
+  // Auditoría de Distribución y Ambientes (Sala-Comedor Independiente)
+  const reqWantsIndependentLiving = reqRawTextLower.includes("sala independiente") || reqRawTextLower.includes("comedor independiente") || reqRawTextLower.includes("sala y comedor independiente");
+  const propHasIndependentLiving = propRawTextLower.includes("sala independiente") || propRawTextLower.includes("comedor independiente") || propRawTextLower.includes("sala y comedor independiente") || propRawTextLower.includes("ambientes separados");
+  if (reqWantsIndependentLiving && propHasIndependentLiving) {
+    positives.push(`🛋️ Distribución Espacial: Sala y comedor independientes con ambientes diferenciados`);
+  }
+
+  // Auditoría de Zonas Comunes & Club House (Piscina, Gym, Zonas Verdes, Seguridad 24/7)
+  const reqWantsClubHouse = reqRawTextLower.includes("club house") || reqRawTextLower.includes("piscina") || reqRawTextLower.includes("gimnasio") || reqRawTextLower.includes("zonas verdes") || reqRawTextLower.includes("vigilancia 24");
+  const propHasClubHouse = propRawTextLower.includes("club house") || propRawTextLower.includes("piscina") || propRawTextLower.includes("gimnasio") || propRawTextLower.includes("zonas verdes") || propRawTextLower.includes("vigilancia 24") || propRawTextLower.includes("porteria 24");
+  if (reqWantsClubHouse && propHasClubHouse) {
+    positives.push(`🏊 Amenidades & Seguridad: Conjunto / Edificio con Club House, zonas húmedas/verdes y vigilancia 24/7`);
+  }
+
+  // Auditoría de Entorno Urbano & Cercanías (Comercio, Hospitales, Transporte Masivo)
+  const reqWantsNearTransport = reqRawTextLower.includes("transmilenio") || reqRawTextLower.includes("transporte") || reqRawTextLower.includes("centros comerciales") || reqRawTextLower.includes("hospitales") || reqRawTextLower.includes("clinicas");
+  const propHasNearTransport = propRawTextLower.includes("transmilenio") || propRawTextLower.includes("estacion") || propRawTextLower.includes("centros comerciales") || propRawTextLower.includes("hospitales") || propRawTextLower.includes("clinicas") || propRawTextLower.includes("vias de acceso");
+  if (reqWantsNearTransport && propHasNearTransport) {
+    positives.push(`🚇 Conectividad & Servicios: Excelente ubicación cercana a transporte masivo, comercio y centros de salud`);
+  }
+
+  // Auditoría de Tipologías Especiales (Casas, Fincas, Bodegas, Oficinas, Locales)
+  if (propType === "warehouse") {
+    if (propRawTextLower.includes("triple altura") || propRawTextLower.includes("muelle") || propRawTextLower.includes("trifasica") || propRawTextLower.includes("tonelada")) {
+      positives.push(`🏭 Especificaciones Industriales: Cuenta con altura libre, muelle de carga y capacidad eléctrica trifásica`);
+    }
+  } else if (propType === "farm") {
+    if (propRawTextLower.includes("piscina") || propRawTextLower.includes("kiosko") || propRawTextLower.includes("bbq") || propRawTextLower.includes("mayordomo") || propRawTextLower.includes("nacimiento")) {
+      positives.push(`🌳 Dotación Campestre: Finca con casa de mayordomo, quiosco BBQ, piscina o fuentes hídricas`);
+    }
+  } else if (propType === "commercial" || propType === "office") {
+    if (propRawTextLower.includes("vitrina") || propRawTextLower.includes("bateria") || propRawTextLower.includes("habilitacion") || propRawTextLower.includes("trafico")) {
+      positives.push(`💼 Vocación Comercial / Corporativa: Excelente vitrina, alto flujo peatonal y batería de servicios`);
+    }
+  }
+
 
   // ── PONDERACIÓN v20.0: Compatibilidad Humana de Alta Inferencia ──────────────
   // Distribución de 100 pts:

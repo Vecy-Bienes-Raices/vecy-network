@@ -233,6 +233,28 @@ Usa este mapa oficial para guiar y redirigir a los aliados según su necesidad:
      - `"año de construcción: XXXX"`, `"construido en XXXX"`, `"obra nueva"` (actual) $\rightarrow$ `yearBuilt: XXXX`.
      - `"X años de construido"`, `"antigüedad X años"`, `"tiene X años"` $\rightarrow$ `antiguedadAnos: X`.
      - `"obra nueva"` sin año explícito $\rightarrow$ `antiguedadAnos: 0`.
+    - **Vistas y Orientación Solar (`viewsAndOrientation`) — v25.0**:
+      - `"vista panorámica"`, `"vista a la ciudad"`, `"vista a cerros"`, `"vista a la montaña"`, `"vista verde"`, `"frente a parque"` $\rightarrow$ Extraer tipo de vista privilegiada.
+      - `"exterior"`, `"iluminado"`, `"sol de mañana"`, `"sol de tarde"`, `"esquinero"` $\rightarrow$ `interiorExterior: "exterior"`.
+      - `"interior"`, `"vista interior"`, `"hacia el patio interno"` $\rightarrow$ `interiorExterior: "interior"`.
+    - **Climatización y Chimeneas (`fireplaceType`) — v25.0**:
+      - `"chimenea a gas"`, `"chimenea a leña / tradicional"`, `"chimenea ecológica / bioetanol / alcohol"` $\rightarrow$ Registrar chimenea y tipo.
+    - **Accesibilidad y Ascensor (`hasElevator`) — v25.0**:
+      - `"con ascensor"`, `"ascensor privado"`, `"ascensor directo"` $\rightarrow$ `hasElevator: true`.
+      - `"sin ascensor"`, `"escaleras"`, `"edificio por escaleras"` $\rightarrow$ `hasElevator: false`.
+    - **Distribución de Espacios (`livingDiningType`) — v25.0**:
+      - `"sala independiente"`, `"comedor independiente"`, `"sala y comedor separados"` $\rightarrow$ `salaComedor: "INDEPENDIENTE"`.
+      - `"sala comedor integrado"`, `"sala-comedor en un solo ambiente"` $\rightarrow$ `salaComedor: "INTEGRADO"`.
+    - **Zonas Comunes y Seguridad (`buildingAmenities`) — v25.0**:
+      - `"vigilancia 24/7"`, `"portería 24 horas"`, `"portería permanente"`, `"circuito cerrado de TV"` $\rightarrow$ `vigilancia24: true`.
+      - `"club house"`, `"piscina"`, `"gimnasio"`, `"sauna"`, `"turco"`, `"cancha de squash"`, `"zonas verdes"`, `"parque infantil"` $\rightarrow$ Registrar perfil Club House.
+    - **Tipologías Especiales y No Residenciales (`specialSpecs`) — v25.0**:
+      - *Casas*: Diferenciar `"conjunto cerrado / condominio"` vs `"casa independiente / sobre calle"`.
+      - *Fincas / Campestres*: Extraer `"casa de mayordomo"`, `"piscina"`, `"quiosco BBQ"`, `"pesebreras"`, `"nacimiento de agua / lago"`.
+      - *Bodegas*: Extraer `"triple altura / altura libre (X metros)"`, `"resistencia de piso (ton/m2)"`, `"muelle deprimido / a nivel"`, `"energía trifásica / KVA"`.
+      - *Oficinas / Consultorios*: Extraer `"baterías de baños"`, `"cableado estructurado"`, `"habilitación en salud"`.
+      - *Locales Comerciales*: Extraer `"vitrina comercial"`, `"tráfico peatonal"`, `"trampa de grasas"`, `"gas comercial"`.
+      - *Lotes / Terrenos*: Extraer `"uso de suelo (residencial, comercial, industrial, campestre)"`, `"disponibilidad de servicios"`.
    - **Subtipo de Propiedad Horizontal (`subtipo` / `propertyType`) — REGLA DOCTRINAL ESTRICTA v22.8**:
      - Distinguir obligatoriamente las diferentes categorías de propiedad horizontal. **NUNCA** agruparlas a ciegas bajo "apartamento":
      - `"apartaestudio"`, `"aparta estudio"`, `"apartasuite"`, `"aparta suite"`, `"aparta-suite"`, `"suite ejecutiva"`, `"loft"`, `"alcoba independiente"`, `"1 alcoba"`, `"1 habitacion independiente"` $\rightarrow$ `tipoInmueble: "apartaestudio"`, `habitaciones: 1`.
