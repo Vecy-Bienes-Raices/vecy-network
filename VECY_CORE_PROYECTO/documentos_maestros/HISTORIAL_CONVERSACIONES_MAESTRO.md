@@ -52,11 +52,40 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v25.1 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v25.2 — Agosto 2026
 
 ---
 
 ## 📜 REGISTRO DETALLADO DE CONVERSACIONES (ORDEN CRONOLÓGICO INVERSO CON FECHA Y HORA)
+
+### 📌 SESIÓN 35: MOTOR DE AUTO-APRENDIZAJE Y PROPAGACIÓN EN CASCADA DE CONTACTOS DE BROKERS (v25.2)
+- **Fecha y Hora**: 22 de Agosto de 2026 (Madrugada)
+- **Versión resultante**: `v25.2`
+- **Participantes**: Eduardo A. Rivera (Director Tecnología) & Antigravity IDE (Pair Programmer)
+- **Solicitud de Eduardo**:
+  - *"Necesito poder seleccionar los textos tanto del INMUEBLE como del REQUERIMIENTO para copiar y pegar lo que está allí adentro por escrito para poder ir a los buscadores de cada grupo y ubicar a su remitente y saber hasta su número de teléfono cuando no le es posible extraerlo o detectarlo a JanIA. Pero no me lo permite ni en la web vista en compu ni en el celular. Antes si lo podía hacer. Esto lo necesito hacer."*
+  - *"Oye, ¿es posible hacer que si existen dos o varios inmuebles del mismo remitente en la mesa de coincidencias o MATCHES, que yo encuentre el número de celular que no tenía dicho remitente en esa primera publicación bien sea REQUERIMIENTO o INMUEBLE, lo edite y lo guarde y al mismo tiempo el sistema se lo coloque para siempre a ese remitente y se actualicen todas sus publicaciones con ese número de celular o whatsapp encontrado y no siempre me toque actualizarlo a mano en todas y cada una de sus publicaciones donde JanIA no lo haya podido colocar?"*
+- **Diagnóstico Técnico**:
+  1. En `AdminMatches.tsx` existían publicaciones de un mismo asesor (ej: *María Fernanda Villegas* en Requerimiento `#529` con teléfono real `573164652482` y en Requerimiento `#528` con un LID encriptado de WhatsApp `258600031264798` renderizando `+57 N/E - Completar al editar`).
+  2. Al editar una ficha en la mesa de coincidencias, las mutaciones `updatePropertyDetails` y `updateRequirementDetails` solo actualizaban la fila específica (`properties.id` o `requirements.id`), obligando al usuario a buscar y editar manualmente cada publicación individual del mismo broker.
+  3. No existía una función de propagación en cascada que vinculara el teléfono real aprendido con el nombre y LID del broker a través de todas sus demás publicaciones en la base de datos y en la memoria persistente de JanIA.
+- **Acciones Ejecutadas**:
+  1. **Habilitación Total de Selección y Botón Rápido de Copia (`Admin.tsx` & `AdminMatches.tsx`)**:
+     - Supresión de `select-none` en el contenedor principal de `Admin.tsx`.
+     - Inclusión de `select-text cursor-text` y botones directos de copiado (`📋 Copiar`) con `navigator.clipboard.writeText` y confirmación toast tanto en la oferta como en la demanda.
+  2. **Motor de Auto-Aprendizaje y Propagación en Cascada (`propagateBrokerPhoneAcrossAllListings` en `janIA.ts`)**:
+     - Normaliza el teléfono colombiano (`573...`).
+     - Actualiza en memoria el directorio de brokers (`brokerDirectoryCache`).
+     - Propaga el número en cascada a **TODAS las propiedades y requerimientos** de la base de datos que pertenezcan al mismo broker (coincidencia de `nombreUsuarioWhatsapp` o LID anterior).
+  3. **Integración en Mutaciones de Backend (`server/routers/janIA.ts`)**:
+     - `updatePropertyDetails` y `updateRequirementDetails` ahora ejecutan la propagación automática inmediata cada vez que Eduardo o un administrador edita o corrige un número de teléfono.
+  4. **Saneamiento y Propagación Retroactiva en Supabase (`propagate_broker_phones.ts`)**:
+     - Ejecución del script que vinculó y actualizó **45 propiedades** y **17 requerimientos** con números celulares reales en Supabase (incluyendo la vinculación automática de *María Fernanda Villegas* en Requerimiento `#528` con `+57 316 465 2482`).
+  5. **Compilación y Despliegue**:
+     - `npm run check` $\rightarrow$ 0 errores TypeScript.
+     - `npm run build` $\rightarrow$ Compilado al 100% (Vite + `dist-server/index.js`). Subido a GitHub `main`.
+
+---
 
 ### 📌 SESIÓN 34: PURGA TOTAL DE DUPLICADOS, MATRIZ DOCTRINAL DE AMENIDADES & RESPONSIVIDAD MÓVIL (v25.1)
 - **Fecha y Hora**: 21 y 22 de Agosto de 2026 (Noche / Madrugada)

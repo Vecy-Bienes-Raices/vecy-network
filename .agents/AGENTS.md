@@ -162,7 +162,12 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v25.1 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL: v25.2 — Agosto 2026
+
+### Novedades v25.2 (Motor de Auto-Aprendizaje y Propagación en Cascada de Teléfonos de Brokers):
+- **Propagación en Cascada Universal (`propagateBrokerPhoneAcrossAllListings` en `janIA.ts`)**: Cada vez que se edita o extrae el teléfono de un broker, se actualizan automáticamente TODAS sus publicaciones pasadas, presentes y futuras (propiedades y requerimientos) en Supabase.
+- **Directorio de Brokers Inteligente**: Aprende el número real de cada asesor por nombre o LID de WhatsApp y lo reutiliza en todas sus publicaciones.
+- **Selección y Copia Directa (`AdminMatches.tsx`)**: Eliminación del bloqueo `select-none` y agregado de botones rápidos `📋 Copiar` para copiar el texto de ofertas y demandas con 1 solo toque.
 
 ### Novedades v25.1 (Matriz Doctrinal de Amenidades, Vistas, Climatización, Accesibilidad y Tipologías Especiales):
 - **Nuevos Filtros Duros Inquebrantables de Confort y Accesibilidad (`matching.ts`)**:
