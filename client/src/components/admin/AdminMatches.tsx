@@ -1655,9 +1655,22 @@ export default function AdminMatches() {
   const [feedbackStatusMap, setFeedbackStatusMap] = React.useState<Record<number, 'exitoso' | 'rechazado' | 'en_negociacion'>>({});
   const [saveStatusMap, setSaveStatusMap] = React.useState<Record<number, 'saved' | 'recalculated'>>({});
 
+  const cleanTextForSearch = (text: string): string => {
+    if (!text) return "";
+    return text
+      .replace(/^["'«“]|["'»”]$/g, '') // Quitar comillas de apertura o cierre
+      .replace(/\*([^*]+)\*/g, '$1')   // Quitar asteriscos de negrita *texto* -> texto
+      .replace(/_([^_]+)_/g, '$1')     // Quitar guiones bajos de cursiva _texto_ -> texto
+      .replace(/~([^~]+)~/g, '$1')     // Quitar tachado ~texto~ -> texto
+      .replace(/```([^`]+)```/g, '$1') // Quitar bloques de código
+      .replace(/\s+/g, ' ')           // Normalizar espacios múltiples
+      .trim();
+  };
+
   const handleCopy = (text: string, id: string) => {
     try {
-      navigator.clipboard.writeText(text);
+      const cleaned = cleanTextForSearch(text);
+      navigator.clipboard.writeText(cleaned || text);
       setCopiedId(id);
       setTimeout(() => {
         setCopiedId(prev => (prev === id ? null : prev));
@@ -2270,7 +2283,7 @@ export default function AdminMatches() {
                                 })()}
                               </div>
                               {!isGenericImagePlaceholder && (
-                                <p className="italic text-zinc-200 select-text cursor-text">"{renderTextWithClickableLinks(pText || fallbackText)}"</p>
+                                <p className="italic text-zinc-200 select-text cursor-text">{renderTextWithClickableLinks(pText || fallbackText)}</p>
                               )}
                               {isGenericImagePlaceholder && (
                                 <div className="space-y-1 text-zinc-200 select-text cursor-text">
@@ -2513,7 +2526,7 @@ export default function AdminMatches() {
                                 })()}
                               </div>
                               {!isGenericImagePlaceholder && (
-                                <p className="italic text-zinc-200 select-text cursor-text">"{renderTextWithClickableLinks(rText)}"</p>
+                                <p className="italic text-zinc-200 select-text cursor-text">{renderTextWithClickableLinks(rText)}</p>
                               )}
                               {isGenericImagePlaceholder && (
                                 <div className="space-y-1 text-zinc-200 select-text cursor-text">
