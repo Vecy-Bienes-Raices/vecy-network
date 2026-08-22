@@ -358,8 +358,8 @@ export default function Admin() {
           </div>
         </header>
 
-        {/* MOBILE SLIDING TABS BAR */}
-        <div className="flex md:hidden overflow-x-auto whitespace-nowrap gap-1.5 px-3 py-2 bg-black/40 border-b border-white/5 scrollbar-none z-20 shrink-0">
+        {/* MOBILE SLIDING TABS BAR — Estilo Pill Deslizable 100% Responsivo */}
+        <div className="flex md:hidden items-center gap-2 px-3 py-2.5 bg-[#0a0a0a] border-b border-white/10 overflow-x-auto scrollbar-none z-20 shrink-0 w-full">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -367,13 +367,13 @@ export default function Admin() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                className={`inline-flex shrink-0 items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
                   isActive 
-                    ? 'bg-[#bf953f] text-black shadow-md' 
-                    : 'bg-white/5 text-zinc-400 border border-white/10 hover:text-white'
+                    ? 'bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#bf953f] text-black shadow-[0_0_12px_rgba(191,149,63,0.3)] font-extrabold' 
+                    : 'bg-white/5 text-zinc-300 border border-white/10 hover:bg-white/10 hover:text-white'
                 }`}
               >
-                <Icon className="w-3.5 h-3.5" />
+                <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-black' : 'text-primary'}`} />
                 <span>{tab.label}</span>
               </button>
             );
