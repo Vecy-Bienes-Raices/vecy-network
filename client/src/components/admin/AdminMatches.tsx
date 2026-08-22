@@ -1651,6 +1651,19 @@ export default function AdminMatches() {
   const [isSavingOnly, setIsSavingOnly] = React.useState(false);
   const [isRecalculating, setIsRecalculating] = React.useState(false);
   const [editForm, setEditForm] = React.useState<Record<string, any>>({});
+  const [copiedId, setCopiedId] = React.useState<string | null>(null);
+
+  const handleCopy = (text: string, id: string) => {
+    try {
+      navigator.clipboard.writeText(text);
+      setCopiedId(id);
+      setTimeout(() => {
+        setCopiedId(prev => (prev === id ? null : prev));
+      }, 2000);
+    } catch (e) {
+      console.error("Error al copiar texto:", e);
+    }
+  };
 
   const utils = trpc.useUtils();
   const updatePropMut = trpc.janIA.updatePropertyDetails.useMutation();
@@ -2215,20 +2228,37 @@ export default function AdminMatches() {
                                 <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold not-italic">
                                   {isGenericImagePlaceholder ? "🖼️ Desglose de Flyer / Oferta:" : "💬 Publicación Original:"}
                                 </p>
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    const toCopy = pText || fallbackText;
-                                    navigator.clipboard.writeText(toCopy);
-                                    toast.success("Texto de la Oferta copiado al portapapeles");
-                                  }}
-                                  className="inline-flex items-center gap-1 text-[10px] font-semibold text-zinc-400 hover:text-amber-300 bg-white/5 hover:bg-white/10 px-2 py-0.5 rounded-md transition-all border border-white/5 cursor-pointer shrink-0"
-                                  title="Copiar texto original de la publicación"
-                                >
-                                  <Copy className="w-3 h-3" />
-                                  <span>Copiar</span>
-                                </button>
+                                {(() => {
+                                  const copyKey = `prop-${m.id}`;
+                                  const isCopied = copiedId === copyKey;
+                                  return (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleCopy(pText || fallbackText, copyKey);
+                                      }}
+                                      className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-lg transition-all duration-300 border shrink-0 ${
+                                        isCopied
+                                          ? "bg-cyan-500/25 text-cyan-300 border-cyan-400/60 shadow-[0_0_15px_rgba(6,182,212,0.45)] scale-105"
+                                          : "text-zinc-400 hover:text-cyan-300 bg-white/5 hover:bg-white/10 border-white/10 hover:border-cyan-400/30 active:scale-95"
+                                      }`}
+                                      title="Copiar texto original de la publicación"
+                                    >
+                                      {isCopied ? (
+                                        <>
+                                          <Check className="w-3.5 h-3.5 text-cyan-300 animate-in zoom-in-50 duration-200" />
+                                          <span className="text-cyan-200">¡Copiado!</span>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Copy className="w-3 h-3" />
+                                          <span>Copiar</span>
+                                        </>
+                                      )}
+                                    </button>
+                                  );
+                                })()}
                               </div>
                               {!isGenericImagePlaceholder && (
                                 <p className="italic text-zinc-200 select-text cursor-text">"{renderTextWithClickableLinks(pText || fallbackText)}"</p>
@@ -2441,19 +2471,37 @@ export default function AdminMatches() {
                                 <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold not-italic">
                                   {isGenericImagePlaceholder ? "🖼️ Desglose de Flyer / Demanda:" : "💬 Solicita:"}
                                 </p>
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    navigator.clipboard.writeText(rText);
-                                    toast.success("Texto del Requerimiento copiado al portapapeles");
-                                  }}
-                                  className="inline-flex items-center gap-1 text-[10px] font-semibold text-zinc-400 hover:text-cyan-300 bg-white/5 hover:bg-white/10 px-2 py-0.5 rounded-md transition-all border border-white/5 cursor-pointer shrink-0"
-                                  title="Copiar texto del requerimiento"
-                                >
-                                  <Copy className="w-3 h-3" />
-                                  <span>Copiar</span>
-                                </button>
+                                {(() => {
+                                  const copyKey = `req-${m.id}`;
+                                  const isCopied = copiedId === copyKey;
+                                  return (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleCopy(rText, copyKey);
+                                      }}
+                                      className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-lg transition-all duration-300 border shrink-0 ${
+                                        isCopied
+                                          ? "bg-cyan-500/25 text-cyan-300 border-cyan-400/60 shadow-[0_0_15px_rgba(6,182,212,0.45)] scale-105"
+                                          : "text-zinc-400 hover:text-cyan-300 bg-white/5 hover:bg-white/10 border-white/10 hover:border-cyan-400/30 active:scale-95"
+                                      }`}
+                                      title="Copiar texto del requerimiento"
+                                    >
+                                      {isCopied ? (
+                                        <>
+                                          <Check className="w-3.5 h-3.5 text-cyan-300 animate-in zoom-in-50 duration-200" />
+                                          <span className="text-cyan-200">¡Copiado!</span>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Copy className="w-3 h-3" />
+                                          <span>Copiar</span>
+                                        </>
+                                      )}
+                                    </button>
+                                  );
+                                })()}
                               </div>
                               {!isGenericImagePlaceholder && (
                                 <p className="italic text-zinc-200 select-text cursor-text">"{renderTextWithClickableLinks(rText)}"</p>
