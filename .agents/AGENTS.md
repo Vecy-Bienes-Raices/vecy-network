@@ -162,7 +162,27 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v25.0 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL: v25.1 — Agosto 2026
+
+### Novedades v25.1 (Matriz Doctrinal de Amenidades, Vistas, Climatización, Accesibilidad y Tipologías Especiales):
+- **Nuevos Filtros Duros Inquebrantables de Confort y Accesibilidad (`matching.ts`)**:
+  - *Filtro Duro 11E (Ascensor / Accesibilidad)*: Si el requerimiento exige obligatoriamente ascensor (por adulto mayor, tercera edad, movilidad reducida o "no escaleras") y el inmueble es por escaleras / sin ascensor en piso $\ge 2$ $\rightarrow$ ❌ **0% Bloqueo Absoluto**.
+  - *Filtro Duro 11F (Orientación Visual Estricta)*: Si la demanda exige "SOLO EXTERIOR" y la oferta es "INTERIOR" $\rightarrow$ ❌ **0% Bloqueo Absoluto**.
+- **Auditoría Integral de Amenidades y Ambientes con Bonos de Confort (+15 pts)**:
+  - *Vistas y Luz Natural*: Vista panorámica / a la ciudad, vista a la montaña / cerros, vista verde / frente a parque, sol de mañana / tarde, esquinero.
+  - *Climatización y Chimeneas*: Detección y homologación de chimeneas a gas, a leña tradicional y ecológicas de bioetanol / alcohol.
+  - *Distribución Espacial*: Sala y comedor independientes vs sala-comedor integrados.
+  - *Club House & Seguridad 24/7*: Piscina, gimnasio, zonas húmedas (sauna/turco), canchas de squash, zonas verdes, parque infantil y portería permanente.
+  - *Conectividad Urbana*: Cercanía a transporte masivo (Transmilenio/Metro), centros comerciales, supermercados y clínicas/hospitales.
+- **Tipologías Especiales y No Residenciales**:
+  - *Casas*: Conjunto cerrado / condominio vs Casa independiente sobre calle.
+  - *Fincas / Campestres*: Casa de mayordomo, piscina, quiosco BBQ, pesebreras, nacimientos de agua o lagos.
+  - *Bodegas*: Altura libre / triple altura, resistencia de piso (ton/m²), muelle deprimido/nivel, energía trifásica (KVA).
+  - *Oficinas / Consultorios*: Baterías de baños, cableado estructurado, recepción, habilitación en salud.
+  - *Locales Comerciales*: Vitrina comercial, alto tráfico peatonal/vehicular, trampa de grasas y gas comercial.
+  - *Lotes / Terrenos*: Uso de suelo (residencial, comercial, industrial, campestre) y disponibilidad de servicios.
+- **Doctrina Maestra v25.1 en `prompts/base.md`**: Instrucciones obligatorias para que JanIA capture siempre el perfil completo de amenidades y características especiales.
+- **Script Maestro de Saneamiento y Recálculo Global (`master_resanitize_and_rematch.ts`)**: Barrido cruzado de 334.000 combinaciones en BD, manteniendo **79 matches reales y de calidad indiscutible (≥85%)** con sus explicaciones enriquecidas.
 
 ### Novedades v25.0 (Doctrina Maestra de Precios COP, Techo Financiero MÁXIMO vs Piso Físico MÍNIMO & Enriquecimiento Retroactivo Total):
 - **Doctrina de Límite Financiero (MÁXIMO) vs Confort Espacial (MÍNIMO)**:
