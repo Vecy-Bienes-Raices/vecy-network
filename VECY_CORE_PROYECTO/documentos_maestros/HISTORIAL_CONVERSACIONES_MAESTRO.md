@@ -77,11 +77,14 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
      - Normaliza el teléfono colombiano (`573...`).
      - Actualiza en memoria el directorio de brokers (`brokerDirectoryCache`).
      - Propaga el número en cascada a **TODAS las propiedades y requerimientos** de la base de datos que pertenezcan al mismo broker (coincidencia de `nombreUsuarioWhatsapp` o LID anterior).
-  3. **Integración en Mutaciones de Backend (`server/routers/janIA.ts`)**:
+  3. **Separación Estricta e Independiente de Botones (`AdminMatches.tsx`)**:
+     - **`💾 Guardar Datos`**: Con estado de carga independiente (`isSavingOnly`). Guarda los datos editados directamente en la base de datos de Supabase y propaga el contacto sin disparar recálculos globales. Solo gira la ruedita en su propio botón.
+     - **`⚡ Recalcular Coincidencias`**: Con estado de carga independiente (`isRecalculating`). Guarda los cambios pendientes si los hay y dispara la re-evaluación contra toda la base de datos para buscar nuevas parejas comerciales cuando un negocio no prospera. Solo gira la ruedita en su propio botón.
+  4. **Integración en Mutaciones de Backend (`server/routers/janIA.ts`)**:
      - `updatePropertyDetails` y `updateRequirementDetails` ahora ejecutan la propagación automática inmediata cada vez que Eduardo o un administrador edita o corrige un número de teléfono.
-  4. **Saneamiento y Propagación Retroactiva en Supabase (`propagate_broker_phones.ts`)**:
+  5. **Saneamiento y Propagación Retroactiva en Supabase (`propagate_broker_phones.ts`)**:
      - Ejecución del script que vinculó y actualizó **45 propiedades** y **17 requerimientos** con números celulares reales en Supabase (incluyendo la vinculación automática de *María Fernanda Villegas* en Requerimiento `#528` con `+57 316 465 2482`).
-  5. **Compilación y Despliegue**:
+  6. **Compilación y Despliegue**:
      - `npm run check` $\rightarrow$ 0 errores TypeScript.
      - `npm run build` $\rightarrow$ Compilado al 100% (Vite + `dist-server/index.js`). Subido a GitHub `main`.
 
