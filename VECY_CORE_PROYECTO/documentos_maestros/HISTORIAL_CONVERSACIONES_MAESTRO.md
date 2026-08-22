@@ -52,13 +52,70 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v24.0 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v25.1 — Agosto 2026
 
 ---
 
 ## 📜 REGISTRO DETALLADO DE CONVERSACIONES (ORDEN CRONOLÓGICO INVERSO CON FECHA Y HORA)
 
-### 📌 SESIÓN 32: SIDEBAR FIJO, EXPANDIBLE Y CONTRAÍBLE EN PC/LAPTOPS & DIAGNÓSTICO DE VISTAS (v24.0)
+### 📌 SESIÓN 34: PURGA TOTAL DE DUPLICADOS, MATRIZ DOCTRINAL DE AMENIDADES & RESPONSIVIDAD MÓVIL (v25.1)
+- **Fecha y Hora**: 21 y 22 de Agosto de 2026 (Noche / Madrugada)
+- **Versión resultante**: `v25.1`
+- **Participantes**: Eduardo A. Rivera (Director Tecnología) & Antigravity IDE (Pair Programmer)
+- **Solicitud de Eduardo**:
+  - *"Si yo te pido que me des acá en el chat un listado de todas las LOCALIDADES DE BOGOTÁ, separando de mayor a menor por cantidad de barrios y diciéndome cuántas son rurales y cuántas urbanas, junto con su listado de barrios en cada una ¿lo puedes hacer?"*
+  - *"¿Y si te digo que me digas entre qué calles y carreras o que me describas la zona limítrofe en que se encuentra el barrio Álamos Norte, lo sabes hacer?"*
+  - *"¡Excelente! Ahora dime cómo es que no puedes lograr que JanIA sepa lo mismo o tenga ese conocimiento y sea capaz de entenderlo y aplicarlo exactamente como tú lo sabes hacer... En caso de que hayan requerimientos muy incompletos que solo dicen el barrio o la comuna y no la ciudad, ahí sí JanIA use su inteligencia y virtudes de astucia al máximo para determinar por varias razones (ej: nombre del grupo) y coloque lo que le falta a esta ubicación."*
+  - *"Dime cuántos barrios hay y cómo se llaman entre las calles 100 y la 127, y las Autopista Norte y la carrera Séptima en Bogotá y a qué localidad pertenecen... Ahí tienes un error, porque La Carolina es más allá de la calle 127, cuando yo pongo límites a no ser que incluya algún barrio adicional el límite exacto es la avenida calle 127, pero no aplica para las calles 127A, 127B ni 127C entre otras más al norte, hay que estar muy despiertos y ser muy astutos para entender lo que el cliente o agente quieren expresar y cómo lo dicen. ¿Ok?"*
+  - *"Mi pregunta ahora es, ¿cada vez que ingresa un nuevo inmueble el algoritmo sabe si ya estaba repetido y deja el más reciente dato eliminando el anterior o anteriores por si se te había olvidado a ti o a JanIA y coteja estos datos o va en busca de un MATCH entre toda la base de datos nuevamente sin afectar los que ya están registrados? Un INMUEBLE le puede servir a distintos REQUERIMIENTOS pero que son de distinto remitente..."*
+  - *"Necesito que tú y JanIA tengan muy en cuenta otras características que piden algunos clientes o sus agentes: balcón, buena vista a la ciudad, a la montaña, vista verde, zonas verdes, garajes independientes, en línea pero sin servidumbre, Sala independiente del comedor o viceversa, ascensor, vigilancia 24/7, terraza, chimenea/s a gas, convencional a leña, con alcohol para el medio ambiente, dúplex, tríplex, un solo piso, en club house, cerca a zonas comerciales, a hospitales, centros comerciales, supermercados, transmilenio, zonas industriales, iluminado, amplio, exterior, interior, sobre vía principal, en zona residencial lejos del ruido; y características de bodegas, fincas, oficinas y locales..."*
+  - *"En la página de coincidencias los dos primeros matches están repetidos, deja uno solo o averigua el por qué y verifica que todo esté funcionando perfectamente bien y que todo lo que le enseñaste a JanIA lo esté aplicando a la perfección. No quiero más errores en los cotejamientos y resultados."*
+  - *"Mira si ves que están repetidos, y también JanIA está colocando los requerimientos con la escritura rara, como con un espaciado anormal, revisa si es un error o qué sucede."*
+  - *"Qué hiciste. Se ve horrenda, muy confusa y desordenada la página de coincidencias en mi celular. Mira. No sé dónde están los requerimientos y una línea arriba se ve como montado unos sobre otro todo. Corrige por favor y haz que se vea genial como debe de ser."*
+- **Diagnóstico Técnico**:
+  1. **Matches Duplicados en Bella Suiza Baja ($545M vs $550M)**: El asesor Alfredo Rubio (`3102241073`) publicó el mismo requerimiento 3 veces en grupos de WhatsApp, creando los Requerimientos clones `#611`, `#616` y `#617`. Cada clon generó un match del 100% contra el apartamento `#66`, provocando matches gemelos al tope de la lista. Además, existían 40 requerimientos y 27 propiedades duplicadas acumuladas históricamente en Supabase, y una propiedad falsa (`#1562`) originada en una búsqueda de arriendo.
+  2. **Espaciado Anormal en el Texto de Requerimientos**: Muchos agentes en WhatsApp insertan entre 20 y 50 espacios o tabulaciones para intentar "alinear columnas" en pantallas de celulares (`2 habitaciones.                      2 baños.                                                   1 parqueadero.           `). En `AdminMatches.tsx`, la clase `whitespace-pre-wrap` pintaba literalmente todos esos espacios gigantes, distorsionando la interfaz visual.
+  3. **Solapamiento en la Barra de Pestañas Móvil de `Admin.tsx`**: La barra horizontal de navegación móvil carecía de la propiedad `shrink-0` en los botones `<button>`, provocando que el motor flexbox colapsara los botones inactivos a 0px de ancho y montara todos los textos unos encima de otros (`RequerimientocsiderRPiaspect6anversadtepostesGitHub`).
+  4. **Doctrina de Amenidades y Tipologías Especiales**: Se requería blindar filtros duros de accesibilidad (bloqueo al 0% si se exige ascensor / tercera edad y el inmueble es por escaleras en piso $\ge 2$) y orientación (bloqueo al 0% si exige "SOLO EXTERIOR" y es interior), además de auditar con bonos de confort las vistas (cerros, parque, panorámica), chimeneas (gas, leña, bioetanol), sala-comedor independientes, Club House y tipologías comerciales/rurales.
+- **Acciones Ejecutadas**:
+  1. **Matriz Doctrinal de Amenidades y Tipologías en `matching.ts` & `prompts/base.md`**:
+     - Filtros Duros 11E (Ascensor / Accesibilidad) y 11F (Orientación Exterior Estricta).
+     - Auditoría y bonos de confort (+15 pts) para vistas privilegiadas, chimeneas ecológicas/tradicionales, distribución de sala y comedor independientes, amenidades Club House, y perfiles de bodegas (triple altura, trifásica, muelle), fincas (mayordomo, lago, pesebreras) y oficinas/locales.
+  2. **Blindaje Anti-Duplicados en `janIA.ts`**:
+     - `saveRequirement` y `saveProperty` ahora auditan `rawText` y perfiles comerciales idénticos antes de insertar. Si un broker republica, el sistema actualiza el registro existente, incrementa contadores de republicación y evita duplicar registros y matches.
+  3. **Purga Total en Supabase (`purge_duplicates_and_resync.ts`)**:
+     - Desactivación y purga segura de 40 requerimientos duplicados, 27 propiedades repetidas y la propiedad falsa `#1562`, junto con sus registros en `propertyMatches`, `notificationLogs` y `matchFeedback`.
+  4. **Normalización de Espacios en `AdminMatches.tsx`**:
+     - `renderTextWithClickableLinks` colapsa automáticamente secuencias de espacios múltiples o tabulaciones de WhatsApp (`.replace(/[ \t]{2,}/g, ' ')`), dejando tipografía limpia y profesional.
+  5. **Barra de Navegación Móvil 100% Responsiva (`Admin.tsx`)**:
+     - Implementación de botones píldora con `inline-flex shrink-0 whitespace-nowrap`, espaciado táctil amplio y scroll suave sin compresión de botones.
+  6. **Compilación y Despliegue**:
+     - `npm run check` $\rightarrow$ 0 errores TypeScript.
+     - `npm run build` $\rightarrow$ Bundle frontend y `dist-server/index.js` compilados al 100%.
+     - Subido a GitHub `main` (Commits `c507fdd`, `ecc8d7a`, `7802bbe`).
+
+---
+
+### 📌 SESIÓN 33: DOCTRINA DE PRECIOS COP, TECHO MÁXIMO VS PISO MÍNIMO & SANEAMIENTO RETROACTIVO (v25.0)
+- **Fecha y Hora**: 21 de Agosto de 2026 (Tarde)
+- **Versión resultante**: `v25.0`
+- **Participantes**: Eduardo A. Rivera (Director Tecnología) & Antigravity IDE (Pair Programmer)
+- **Solicitud de Eduardo**:
+  - *"Observa que hay un error con el precio de un inmueble en San Patricio guardado como 122M cuando era de 1.390M, y un requerimiento que pedía mínimo 150m2 hizo match con ese apto de 122m2. Corrige la lectura de precios en pesos colombianos y asegúrate de que el presupuesto sea techo máximo y el área sea piso mínimo."*
+- **Diagnóstico Técnico**:
+  1. En `janIA.ts`, el Parser D de fallback interpretaba el separador de miles con puntos (`1.390.000.000`) como decimal `1.39`, multiplicando por 1M y guardando `$1.390.000` o `$122.000.000`.
+  2. En requerimientos, frases como *"canon max 8.5M"* o *"admon hasta 800 mil"* se omitían cuando Gemini no las capturaba en los campos estándar, dejando presupuestos o administraciones en 0.
+  3. En `matching.ts`, si un requerimiento pedía `areaMin = 150m2` pero estaba en 0 en la fila, el Filtro Duro 6 no bloqueaba ofertas de 122m2.
+- **Acciones Ejecutadas**:
+  1. **Doctrina Financiera COP vs Confort Físico**:
+     - *Techo Financiero*: Presupuesto, Canon de Arriendo y Cuota de Administración son límites máximos infranqueables (`Oferta <= Demanda`).
+     - *Piso de Confort*: Área, Habitaciones, Baños y Garajes son requerimientos mínimos donde la oferta debe ser igual o mayor (`Oferta >= Demanda`).
+  2. **Corrección del Parser en `janIA.ts`**: Limpieza total de puntos antes de `parseFloat` en números de más de 3 dígitos y fallbacks desde `rawText` para `presupuestoMax`, `adminFeeMax` y `areaMin`.
+  3. **Enriquecimiento Retroactivo Masivo (`enrich_data_v25.ts`)**: Saneamiento de 131 campos en Supabase (43 precios de venta, 8 cánones, 28 cuotas de administración, 5 áreas y 24 áreas mínimas de requerimientos).
+  4. **Filtro Duro 6 Blindado en `matching.ts`**: Fallback desde `rawText` para asegurar el bloqueo al 0% si el área ofertada no alcanza el mínimo exigido.
+  5. **Recálculo Global (`master_resanitize_and_rematch.ts`)**: Barrido de 334.000 combinaciones, dejando 79 matches reales con Score $\ge 85\%$. Subido a GitHub `main`.
+
+---
 - **Fecha y Hora**: 21 de Agosto de 2026 (Tarde / Noche)
 - **Versión resultante**: `v24.0`
 - **Participantes**: Eduardo A. Rivera (Director Tecnología) & Antigravity IDE (Pair Programmer)
