@@ -1586,8 +1586,14 @@ function getValidWaLink(phone: string | null | undefined, text: string): string 
 
 function renderTextWithClickableLinks(text: string | null | undefined) {
   if (!text) return null;
+  // Normalizar espacios múltiples o tabulaciones exageradas que los brokers usan para formatear columnas en WhatsApp
+  const cleanedText = text
+    .replace(/[ \t]{2,}/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+
   const urlPattern = /(https?:\/\/[^\s<"']+|wa\.me\/[^\s<"']+|whatsapp\.com\/[^\s<"']+)/gi;
-  const parts = text.split(urlPattern);
+  const parts = cleanedText.split(urlPattern);
 
   return parts.map((part, i) => {
     if (/^(https?:\/\/|wa\.me\/|whatsapp\.com\/)/i.test(part)) {

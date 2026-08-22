@@ -4097,6 +4097,20 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
       .limit(1);
   }
 
+  // 2.5 Por rawText idéntico (Anti-duplicados por publicaciones en múltiples grupos)
+  if (existing.length === 0 && finalInsertData.rawText && finalInsertData.rawText.trim().length > 25) {
+    existing = await db
+      .select()
+      .from(properties)
+      .where(
+        and(
+          eq(properties.rawText, finalInsertData.rawText.trim()),
+          eq(properties.available, true)
+        )
+      )
+      .limit(1);
+  }
+
   // 3. Fallback comercial (Mismo broker, tipo, negocio, ciudad y barrio)
   if (existing.length === 0) {
     existing = await db
@@ -4412,21 +4426,37 @@ async function saveRequirement(data: any, userId: string, realName: string, imag
     return null;
   }
 
-  // Buscar duplicado activo del mismo usuario (mismo tipo, negocio, ciudad y barrio deseados)
-  const existing = await db
-    .select()
-    .from(requirements)
-    .where(
-      and(
-        eq(requirements.idUsuarioWhatsapp, rawPhone),
-        eq(requirements.tipoInmuebleDeseado, insertData.tipoInmuebleDeseado),
-        eq(requirements.tipoNegocioDeseado, insertData.tipoNegocioDeseado),
-        eq(requirements.ciudadDeseada, insertData.ciudadDeseada),
-        eq(requirements.zonaDeseada, insertData.zonaDeseada),
-        eq(requirements.status, "active")
+  // Buscar duplicado activo (1. Por rawText idéntico, 2. Por parámetros comerciales del mismo broker)
+  let existing: any[] = [];
+  if (insertData.rawText && insertData.rawText.trim().length > 25) {
+    existing = await db
+      .select()
+      .from(requirements)
+      .where(
+        and(
+          eq(requirements.rawText, insertData.rawText.trim()),
+          eq(requirements.status, "active")
+        )
       )
-    )
-    .limit(1);
+      .limit(1);
+  }
+
+  if (existing.length === 0) {
+    existing = await db
+      .select()
+      .from(requirements)
+      .where(
+        and(
+          eq(requirements.idUsuarioWhatsapp, rawPhone),
+          eq(requirements.tipoInmuebleDeseado, insertData.tipoInmuebleDeseado),
+          eq(requirements.tipoNegocioDeseado, insertData.tipoNegocioDeseado),
+          eq(requirements.ciudadDeseada, insertData.ciudadDeseada),
+          eq(requirements.zonaDeseada, insertData.zonaDeseada),
+          eq(requirements.status, "active")
+        )
+      )
+      .limit(1);
+  }
 
   const { label: calif } = calcularCalificacionCompletitud(insertData, false);
   const insertDataWithCalif = {
