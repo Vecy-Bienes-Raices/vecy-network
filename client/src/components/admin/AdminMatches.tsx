@@ -4,7 +4,7 @@ import {
   Sparkles, CheckCircle2, AlertTriangle, XCircle, SlidersHorizontal, 
   DollarSign, Ruler, Bed, Bath, Car, Shield, ExternalLink, Receipt, Box, Globe,
   Edit3, Save, Loader2, RotateCcw, Sun, Zap, Utensils, Home, Flame, ThumbsUp, ThumbsDown,
-  Trees, ShieldCheck, BookOpen
+  Trees, ShieldCheck, BookOpen, Copy, Check
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -2135,7 +2135,7 @@ export default function AdminMatches() {
                       <h4 className="text-sm sm:text-base font-bold text-white mt-1 break-words">{m.property?.name}</h4>
                       
                       {/* Texto Completo Extraído + Resumen Estructurado Obligatorio */}
-                      <div className="text-xs text-zinc-300 bg-white/[0.02] border border-white/5 p-3 rounded-xl leading-relaxed whitespace-pre-wrap break-words space-y-3">
+                      <div className="text-xs text-zinc-300 bg-white/[0.02] border border-white/5 p-3 rounded-xl leading-relaxed whitespace-pre-wrap break-words space-y-3 select-text cursor-text">
                         {(() => {
                           const pText = (m.property?.rawText || m.property?.description || "").trim();
                           const isGenericImagePlaceholder = pText.includes("[Publicación de Imagen / Flyer Comercial Inmobiliario sin texto en pie de foto]");
@@ -2155,17 +2155,33 @@ export default function AdminMatches() {
 
                           return (
                             <div className="space-y-1.5">
-                              <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold not-italic">
-                                {isGenericImagePlaceholder ? "🖼️ Desglose de Flyer / Oferta:" : "💬 Publicación Original:"}
-                              </p>
+                              <div className="flex items-center justify-between gap-2">
+                                <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold not-italic">
+                                  {isGenericImagePlaceholder ? "🖼️ Desglose de Flyer / Oferta:" : "💬 Publicación Original:"}
+                                </p>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const toCopy = pText || fallbackText;
+                                    navigator.clipboard.writeText(toCopy);
+                                    toast.success("Texto de la Oferta copiado al portapapeles");
+                                  }}
+                                  className="inline-flex items-center gap-1 text-[10px] font-semibold text-zinc-400 hover:text-amber-300 bg-white/5 hover:bg-white/10 px-2 py-0.5 rounded-md transition-all border border-white/5 cursor-pointer shrink-0"
+                                  title="Copiar texto original de la publicación"
+                                >
+                                  <Copy className="w-3 h-3" />
+                                  <span>Copiar</span>
+                                </button>
+                              </div>
                               {!isGenericImagePlaceholder && (
-                                <p className="italic text-zinc-200">"{renderTextWithClickableLinks(pText || fallbackText)}"</p>
+                                <p className="italic text-zinc-200 select-text cursor-text">"{renderTextWithClickableLinks(pText || fallbackText)}"</p>
                               )}
                               {isGenericImagePlaceholder && (
-                                <div className="space-y-1 text-zinc-200">
+                                <div className="space-y-1 text-zinc-200 select-text cursor-text">
                                   <p className="text-amber-300/90 font-medium text-[11px]">Captado desde Imagen / Flyer sin texto en pie de foto:</p>
                                   {propSpecs.length > 0 && (
-                                    <div className="bg-black/30 rounded-lg p-2 font-mono text-[11px] space-y-0.5 text-zinc-300 border border-white/5">
+                                    <div className="bg-black/30 rounded-lg p-2 font-mono text-[11px] space-y-0.5 text-zinc-300 border border-white/5 select-text">
                                       {propSpecs.map((s, idx) => (
                                         <p key={idx}>{s}</p>
                                       ))}
@@ -2323,7 +2339,7 @@ export default function AdminMatches() {
                       </h4>
                       
                       {/* Texto Completo Extraído + Resumen Estructurado del Requerimiento */}
-                      <div className="text-xs text-zinc-300 bg-white/[0.02] border border-white/5 p-3 rounded-xl leading-relaxed whitespace-pre-wrap break-words space-y-3">
+                      <div className="text-xs text-zinc-300 bg-white/[0.02] border border-white/5 p-3 rounded-xl leading-relaxed whitespace-pre-wrap break-words space-y-3 select-text cursor-text">
                         {(() => {
                           const rText = (m.requirement?.rawText || "").trim();
                           const isGenericImagePlaceholder = rText.includes("[Publicación de Imagen / Flyer Comercial Inmobiliario sin texto en pie de foto]");
@@ -2340,17 +2356,32 @@ export default function AdminMatches() {
 
                           return (
                             <div className="space-y-1.5">
-                              <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold not-italic">
-                                {isGenericImagePlaceholder ? "🖼️ Desglose de Flyer / Demanda:" : "💬 Solicita:"}
-                              </p>
+                              <div className="flex items-center justify-between gap-2">
+                                <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold not-italic">
+                                  {isGenericImagePlaceholder ? "🖼️ Desglose de Flyer / Demanda:" : "💬 Solicita:"}
+                                </p>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigator.clipboard.writeText(rText);
+                                    toast.success("Texto del Requerimiento copiado al portapapeles");
+                                  }}
+                                  className="inline-flex items-center gap-1 text-[10px] font-semibold text-zinc-400 hover:text-cyan-300 bg-white/5 hover:bg-white/10 px-2 py-0.5 rounded-md transition-all border border-white/5 cursor-pointer shrink-0"
+                                  title="Copiar texto del requerimiento"
+                                >
+                                  <Copy className="w-3 h-3" />
+                                  <span>Copiar</span>
+                                </button>
+                              </div>
                               {!isGenericImagePlaceholder && (
-                                <p className="italic text-zinc-200">"{renderTextWithClickableLinks(rText)}"</p>
+                                <p className="italic text-zinc-200 select-text cursor-text">"{renderTextWithClickableLinks(rText)}"</p>
                               )}
                               {isGenericImagePlaceholder && (
-                                <div className="space-y-1 text-zinc-200">
+                                <div className="space-y-1 text-zinc-200 select-text cursor-text">
                                   <p className="text-cyan-300/90 font-medium text-[11px]">Captado desde Imagen / Flyer sin texto en pie de foto:</p>
                                   {reqSpecs.length > 0 && (
-                                    <div className="bg-black/30 rounded-lg p-2 font-mono text-[11px] space-y-0.5 text-zinc-300 border border-white/5">
+                                    <div className="bg-black/30 rounded-lg p-2 font-mono text-[11px] space-y-0.5 text-zinc-300 border border-white/5 select-text">
                                       {reqSpecs.map((s, idx) => (
                                         <p key={idx}>{s}</p>
                                       ))}

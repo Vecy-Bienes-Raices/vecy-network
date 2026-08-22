@@ -157,7 +157,7 @@ export default function Admin() {
   };
 
   return (
-    <div className="h-screen bg-background flex flex-col md:flex-row text-foreground relative overflow-hidden font-sans select-none">
+    <div className="h-screen bg-background flex flex-col md:flex-row text-foreground relative overflow-hidden font-sans">
 
       {/* ===== MOBILE BACKDROP OVERLAY ===== */}
       {mobileDrawerOpen && (
