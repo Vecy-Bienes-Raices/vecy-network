@@ -1479,11 +1479,19 @@ function isValidRealPhoneNumber(clean: string): boolean {
 
 function extractContactNameFromText(rawText: string | null | undefined): string | null {
   if (!rawText) return null;
-  const match = rawText.match(/(?:informes|contacto|info|atención|atencion|agente|broker)\s*:?\s*([A-Za-zÁÉÍÓÚáéíóúñÑ]{3,20})/i);
+  const blacklist = new Set([
+    'para', 'con', 'por', 'fotos', 'mas', 'más', 'informacion', 'información', 'informes',
+    'amoblado', 'sin', 'incluida', 'inmueble', 'venta', 'arriendo', 'canon', 'precio',
+    'cbs', 'piso', 'rmacion', 'rmación', 'inmobiliaria', 'inmobiliario', 'red', 'grupo',
+    'directo', 'cita', 'previa', 'whatsapp', 'telefono', 'teléfono', 'celular'
+  ]);
+
+  const match = rawText.match(/\b(?:contacto|agente|broker|asesor|asesora|atención|atencion)\s*:?\s*([A-Za-zÁÉÍÓÚáéíóúñÑ]{3,20}(?:\s+[A-Za-zÁÉÍÓÚáéíóúñÑ]{3,20})?)/i);
   if (match) {
     const foundName = match[1].trim();
-    if (foundName.toLowerCase() !== 'para' && foundName.toLowerCase() !== 'con' && foundName.toLowerCase() !== 'por') {
-      return foundName.charAt(0).toUpperCase() + foundName.slice(1).toLowerCase();
+    const firstWord = foundName.split(/\s+/)[0].toLowerCase();
+    if (!blacklist.has(firstWord) && !blacklist.has(foundName.toLowerCase())) {
+      return foundName.replace(/\b\w/g, c => c.toUpperCase());
     }
   }
   return null;

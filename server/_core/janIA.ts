@@ -3442,7 +3442,7 @@ export async function propagateBrokerPhoneAcrossAllListings(params: {
   let updatedProps = 0;
   let updatedReqs = 0;
 
-  // 2. Propagar a PROPIEDADES del mismo broker
+  // 2. Propagar a PROPIEDADES del mismo broker (Bi-direccional: Teléfono + Nombre)
   const allProps = await db.select({
     id: properties.id,
     name: properties.nombreUsuarioWhatsapp,
@@ -3450,17 +3450,33 @@ export async function propagateBrokerPhoneAcrossAllListings(params: {
   }).from(properties);
 
   for (const p of allProps) {
-    const isSameName = brokerName && p.name && !isGenericName(brokerName) && p.name.trim().toLowerCase() === brokerName.trim().toLowerCase();
+    const isSameName = brokerName && p.name && !isGenericName(brokerName) && (
+      p.name.trim().toLowerCase() === brokerName.trim().toLowerCase() ||
+      p.name.trim().toLowerCase().includes(brokerName.trim().toLowerCase()) ||
+      brokerName.trim().toLowerCase().includes(p.name.trim().toLowerCase())
+    );
+    const isSamePhone = cleanPhone && p.phone === cleanPhone;
     const isSameLid = oldPhoneOrLid && p.phone === oldPhoneOrLid;
-    const isMissingPhone = !p.phone || p.phone.length > 12 || p.phone.startsWith('1203') || p.phone === oldPhoneOrLid;
 
-    if ((isSameName || isSameLid) && isMissingPhone && p.phone !== cleanPhone) {
-      await db.update(properties).set({ idUsuarioWhatsapp: cleanPhone }).where(eq(properties.id, p.id));
+    const updates: { idUsuarioWhatsapp?: string; nombreUsuarioWhatsapp?: string } = {};
+
+    // Si coincide el nombre o LID y no tiene teléfono real, asignar teléfono
+    if ((isSameName || isSameLid) && (!p.phone || p.phone.length > 12 || p.phone.startsWith('1203') || p.phone === oldPhoneOrLid) && p.phone !== cleanPhone) {
+      updates.idUsuarioWhatsapp = cleanPhone;
+    }
+
+    // Si coincide el teléfono o LID y no tiene nombre real o tiene nombre genérico, asignar nombre del asesor
+    if ((isSamePhone || isSameLid) && brokerName && !isGenericName(brokerName) && (!p.name || isGenericName(p.name) || p.name !== brokerName)) {
+      updates.nombreUsuarioWhatsapp = brokerName;
+    }
+
+    if (Object.keys(updates).length > 0) {
+      await db.update(properties).set(updates).where(eq(properties.id, p.id));
       updatedProps++;
     }
   }
 
-  // 3. Propagar a REQUERIMIENTOS del mismo broker
+  // 3. Propagar a REQUERIMIENTOS del mismo broker (Bi-direccional: Teléfono + Nombre)
   const allReqs = await db.select({
     id: requirements.id,
     name: requirements.nombreUsuarioWhatsapp,
@@ -3468,17 +3484,33 @@ export async function propagateBrokerPhoneAcrossAllListings(params: {
   }).from(requirements);
 
   for (const r of allReqs) {
-    const isSameName = brokerName && r.name && !isGenericName(brokerName) && r.name.trim().toLowerCase() === brokerName.trim().toLowerCase();
+    const isSameName = brokerName && r.name && !isGenericName(brokerName) && (
+      r.name.trim().toLowerCase() === brokerName.trim().toLowerCase() ||
+      r.name.trim().toLowerCase().includes(brokerName.trim().toLowerCase()) ||
+      brokerName.trim().toLowerCase().includes(r.name.trim().toLowerCase())
+    );
+    const isSamePhone = cleanPhone && r.phone === cleanPhone;
     const isSameLid = oldPhoneOrLid && r.phone === oldPhoneOrLid;
-    const isMissingPhone = !r.phone || r.phone.length > 12 || r.phone.startsWith('1203') || r.phone === oldPhoneOrLid;
 
-    if ((isSameName || isSameLid) && isMissingPhone && r.phone !== cleanPhone) {
-      await db.update(requirements).set({ idUsuarioWhatsapp: cleanPhone }).where(eq(requirements.id, r.id));
+    const updates: { idUsuarioWhatsapp?: string; nombreUsuarioWhatsapp?: string } = {};
+
+    // Si coincide el nombre o LID y no tiene teléfono real, asignar teléfono
+    if ((isSameName || isSameLid) && (!r.phone || r.phone.length > 12 || r.phone.startsWith('1203') || r.phone === oldPhoneOrLid) && r.phone !== cleanPhone) {
+      updates.idUsuarioWhatsapp = cleanPhone;
+    }
+
+    // Si coincide el teléfono o LID y no tiene nombre real o tiene nombre genérico, asignar nombre del asesor
+    if ((isSamePhone || isSameLid) && brokerName && !isGenericName(brokerName) && (!r.name || isGenericName(r.name) || r.name !== brokerName)) {
+      updates.nombreUsuarioWhatsapp = brokerName;
+    }
+
+    if (Object.keys(updates).length > 0) {
+      await db.update(requirements).set(updates).where(eq(requirements.id, r.id));
       updatedReqs++;
     }
   }
 
-  console.log(`[JanIA-Propagate] 🚀 Teléfono +${cleanPhone} (${brokerName || 'Broker'}) propagado en cascada a ${updatedProps} propiedades y ${updatedReqs} requerimientos.`);
+  console.log(`[JanIA-Propagate] 🚀 Broker ${brokerName || 'Desconocido'} (+${cleanPhone}) propagado bidireccionalmente a ${updatedProps} propiedades y ${updatedReqs} requerimientos.`);
   return { updatedProps, updatedReqs, cleanPhone };
 }
 
