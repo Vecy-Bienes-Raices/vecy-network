@@ -965,9 +965,42 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
+### 🗓️ Sesión: Sábado 22 de Agosto de 2026 — 04:30 PM a 05:45 PM (Hora Colombia UTC-5)
+**Versión del Sistema**: `v25.3 — Agosto 2026`  
+**Commit GitHub Main**: [`798e927`](https://github.com/Vecy-Bienes-Raices/vecy-network/commit/798e927)
+
+#### 📋 Requerimientos Específicos del Usuario (Eduardo A. Rivera):
+1. **Auditoría y Alineación de Marcadores Diarios en Admin**:
+   - Explicación y verificación de que los contadores del header (`36 INM. HOY`, `37 REQS HOY`) y los totales de inventario (`832 Inmuebles`, `414 Requerimientos`) están sincronizados en tiempo real con Supabase.
+   - Demostración matemática del panel de Coincidencias (`52 matches 85% - 100%` en pantalla frente a los 67 registros en BD): el panel agrupa y deduplica parejas idénticas de WhatsApp en tiempo real para no mostrar la misma ficha repetida.
+2. **Eliminación Total de Reportes/Boletines de Matches por WhatsApp**:
+   - Supresión absoluta de `sendMatchBulletin` y `sendWeeklyReport` en `server/_core/cronService.ts`. JanIA no envía ningún mensaje saliente de matches por WhatsApp; todos los cruces residen de forma exclusiva en la plataforma web (`/admin`).
+3. **Optimización de Scraping de Enlaces Web (Domus, Wasi, Portales)**:
+   - Confirmación doctrinal de que `scraper.ts` opera en modo 100% texto ultraligero (descarga $<600\text{ ms}$, análisis total $\approx 1.5\text{ s}$), con extracción de imágenes externas deshabilitada (`const images = []`).
+   - Soporte multimodal y visualizador interactivo en la mesa de coincidencias para Flyers gráficos (OCR con Gemini) y Documentos PDF (brochures comerciales con almacenamiento en Supabase Storage `property-flyers`).
+4. **Actualización de Teléfono de Contacto de Broker para Consultorías y Avalúos**:
+   - Actualización del prompt de JanIA en Soporte Legal: el número de contacto de nuestro bróker y para atención personalizada de casos es **`3166569719`** (dejando el número `3192919978` exclusivamente para la operación interna del bot).
+5. **Erradicación de Respuestas Dobles a Emojis y Cortesías en Grupos de WhatsApp**:
+   - Intercepción temprana en `processConsultingMessage`: cuando un usuario envía solo emojis (`👍`, `👏`, `🤜🤛`, etc.), stickers o cortesías aisladas (`ok`, `gracias`, `listo`, `perfecto`), JanIA **silencia el texto largo y reacciona de forma elegante con un emoji directo al mensaje (`react: { text: "👍", key: msg.key }`)**, evitando spamear el chat grupal.
+
+#### 🛠️ Soluciones e Implementaciones Técnicas:
+- **`server/_core/cronService.ts`**:
+  - Eliminadas las funciones `sendMatchBulletin` y `sendWeeklyReport`.
+- **`server/_core/janIA.ts`**:
+  - Interceptor `isTrivial` para emojis y agradecimientos simples en `processConsultingMessage`, evitando disparar el boilerplate general.
+  - Actualizado el teléfono de cierre del broker de VECY BIENES RAÍCES a `*3166569719*`.
+- **`server/_core/whatsapp-match.ts`**:
+  - Soporte de despacho de `reactionEmoji` con `sock.sendMessage(chatId, { react: { text, key: msg.key } })`.
+- **Validación y Despliegue en Producción**:
+  - Compilación con `npm run build` y bundle `dist-server/index.js` (740 KB) limpios.
+  - Commits `0470a32` y `798e927` desplegados en GitHub `main` y sincronizados en el servidor VPS con PM2 en ejecución estable.
+
+---
+
 ## 🛡️ PROTOCOLOS Y REGLAS DE TRABAJO INQUEBRANTABLES
 1. **Adición Pura de Código**: NUNCA borrar, modificar ni romper funcionalidades o reglas previas ya validadas al agregar nuevo código.
 2. **Revisión del Historial al Iniciar**: Consultar esta bitácora y `.agents/AGENTS.md` al comienzo de cada conversación.
 3. **Limpieza Continua**: Mantener el directorio `server/` libre de archivos script residuales o duplicados.
 4. **Rol de Co-Piloto Guardián**: La IA debe evaluar las consecuencias secundarias de cualquier instrucción y frenar a tiempo si un cambio propuesto arriesga la integridad de la base de datos o rompe reglas del negocio.
+
 
