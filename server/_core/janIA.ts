@@ -740,6 +740,11 @@ export function extractFallbackDataFromText(text: string): any {
   else if (clean.includes("niza")) zone = "Niza";
   else if (clean.includes("bella suiza")) zone = "Bella Suiza";
   else if (clean.includes("lisboa")) zone = "Lisboa";
+  else if (clean.includes("alejandria") || clean.includes("alejandría")) zone = "Alejandría";
+  else if (clean.includes("carmel club") || clean.includes("carmel")) zone = "Carmel Club";
+  else if (clean.includes("cantalejo")) zone = "Cantalejo";
+  else if (clean.includes("sotavento")) zone = "Sotavento";
+  else if (clean.includes("san jose de bavaria") || clean.includes("san josé de bavaria")) zone = "San José de Bavaria";
   else if (clean.includes("cedritos")) zone = "Cedritos";
   else if (clean.includes("usaquen") || clean.includes("usaquén")) zone = "Usaquén";
   else if (clean.includes("pasadena")) zone = "Pasadena";

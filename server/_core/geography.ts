@@ -74,7 +74,9 @@ export const DICCIONARIO_BOGOTA: Record<string, { localidad: string, barrios: st
       "Niza", "Alhambra", "Floresta", "Lisboa", "Prado Veraniego", "Santa Cecilia",
       "La Campiña", "Suba Centro", "Tibabuyes", "Rincón", "La Gaitana",
       "Bilbao", "Casablanca", "El Rinconcito", "Britalia",
-      // Norte de Suba (campestre / alto estrato)
+      // Norte de Suba / Macroproyectos y Clubes
+      "Alejandría", "Carmel Club", "Cantalejo", "Sotavento", "San José de Bavaria", "Victoria Norte", "Britalia Norte",
+      // Norte campestre / alto estrato
       "Guaymaral", "Lagos de Torca", "La Conejera", "Torca",
       "San Pedro de Torca", "El Pradío", "Suba Rural", "Hacienda San Simón",
       "Hacienda San Sebastián", "Club Los Lagartos", "Mirandela",
@@ -1228,6 +1230,13 @@ export function deducirGeografiaTripartita(
 
   // Alias y complejos residenciales conocidos de Bogotá
   const COMPLEX_ALIASES: Record<string, { neighborhood: string; locality: string }> = {
+    "alejandria": { neighborhood: "Alejandría", locality: "Suba" },
+    "carmel club": { neighborhood: "Carmel Club", locality: "Suba" },
+    "cantalejo": { neighborhood: "Cantalejo", locality: "Suba" },
+    "sotavento": { neighborhood: "Sotavento", locality: "Suba" },
+    "san jose de bavaria": { neighborhood: "San José de Bavaria", locality: "Suba" },
+    "victoria norte": { neighborhood: "Victoria Norte", locality: "Suba" },
+    "britalia norte": { neighborhood: "Britalia Norte", locality: "Suba" },
     "balcones de medina": { neighborhood: "Bosque Medina", locality: "Usaquén" },
     "bosque medina": { neighborhood: "Bosque Medina", locality: "Usaquén" },
     "chico navarra": { neighborhood: "Chicó Navarra", locality: "Chapinero" },

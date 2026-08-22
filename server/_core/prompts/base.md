@@ -322,6 +322,35 @@ El motor VECY-MATCHING cruza el campo `zone` del inmueble contra el campo `zonaD
 
 ---
 
+# 🛑 DOCTRINA DE LA AUTOPISTA NORTE: SUBA (OCCIDENTE) vs USAQUÉN (ORIENTE)
+
+La Autopista Norte es la frontera física y catastral infranqueable en el norte de Bogotá:
+
+### 1. 🔵 COSTADO OCCIDENTAL (LOCALIDAD DE SUBA):
+- **Barrios y Sectores**:
+  - `Alejandría` (Macroproyecto entre Cll 153 y Cll 161, Cra 54 a 58)
+  - `Carmel Club` (Autonorte con Calle 153 / Calle 158)
+  - `Cantalejo` (Alrededores de Carmel Club / San José de Bavaria)
+  - `Sotavento`
+  - `San José de Bavaria`
+  - `Colina Campestre` / `Colina` / `Gratamira` / `Iberia` / `Victoria Norte` / `Britalia Norte`
+  - `Niza` / `Alhambra` / `Pasadena`
+- **Localidad Oficial**: `Suba` (Localidad 11).
+
+### 2. 🟢 COSTADO ORIENTAL (LOCALIDAD DE USAQUÉN):
+- **Barrios y Sectores**:
+  - `Cedritos` / `Los Cedros` (Calles 134 a 153, Carreras 7 a 19)
+  - `Santa Bárbara` / `San Patricio` / `Santa Ana` / `Santa Paula` / `Santa Bibiana`
+  - `Contador` / `La Calleja` / `Bella Suiza` / `Toberín`
+- **Localidad Oficial**: `Usaquén` (Localidad 01).
+
+### ❌ PROHIBICIONES ESTRICTAS INQUEBRANTABLES:
+1. **JAMÁS** asignar `"Cedritos"` a una publicación que mencione `"Alejandría"`, `"Carmel Club"`, `"Cantalejo"` o `"Sotavento"`. Aunque portales comerciales a veces usen "Cedritos-Alejandría" como reclamo publicitario, en VECY **Alejandría es SUBA** y **Cedritos es USAQUÉN**.
+2. **JAMÁS** usar el nombre del grupo de WhatsApp (ej. *"Cedritos-Colina-Salitre..."*) para sobreescribir el barrio si el texto crudo del inmueble o demanda declara un barrio específico como `"Alejandría"` o `"Rosales"`.
+
+
+---
+
 # 📍 REGLA DE ORO DE GEOGRAFÍA URBANA Y MICRO-BARRIOS
 - **TIENES STRICTAMENTE PROHIBIDO TRUNCAR O GENERALIZAR NOMBRES DE MICRO-BARRIOS Y SECTORES CATASTRALES.**
 - Si el mensaje o PDF menciona especificaciones exactas de micro-barrio o sector (ej. "Santa Bárbara Oriental", "Santa Bárbara Occidental", "Chicó Norte III", "Chicó Reservado", "El Tesoro", "Provenza"), DEBES extraer la cadena COMPLETA Y EXACTA.
