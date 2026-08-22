@@ -77,14 +77,23 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
      - Normaliza el teléfono colombiano (`573...`).
      - Actualiza en memoria el directorio de brokers (`brokerDirectoryCache`).
      - Propaga el número en cascada a **TODAS las propiedades y requerimientos** de la base de datos que pertenezcan al mismo broker (coincidencia de `nombreUsuarioWhatsapp` o LID anterior).
-  3. **Separación Estricta e Independiente de Botones (`AdminMatches.tsx`)**:
+  3. **Edición Integral de Nombre y Teléfono del Broker (`AdminMatches.tsx`)**:
+     - Ahora la fila de contacto del modo edición cuenta con **dos casillas independientes**:
+       - 👤 **Nombre Asesor / Perfil**: para ingresar o cambiar el nombre real del broker (ej: *Erika Del Pilar Murcia*).
+       - 📞 **WhatsApp**: para ingresar el número celular colombiano (ej: *+57 316 444 6672*).
+     - Al guardar, el nombre se almacena permanentemente en Supabase (`nombreUsuarioWhatsapp`), se muestra destacado en la tarjeta con insignia `👤 Asesor` y se auto-propaga a todas las publicaciones del asesor.
+  4. **Micro-Animaciones e Interactividad Visual Premium (`AdminMatches.tsx`)**:
+     - **Botón `🤝 Trato en Curso` (Pulgar Arriba)**: Al hacer hover, el icono `ThumbsUp` se rellena en verde esmeralda brillante (`fill-emerald-400`), rota suavemente (`-rotate-12`) con resplandor glow (`shadow-[0_0_20px_rgba(16,185,129,0.35)]`) y efecto spring rebote (`scale-105 active:scale-95`).
+     - **Botón `⛔ Descartar Match` (Pulgar Abajo)**: Al hacer hover, el icono `ThumbsDown` se rellena en rojo rubí (`fill-rose-400`), rota (`rotate-12`) con resplandor glow (`shadow-[0_0_20px_rgba(244,63,94,0.35)]`).
+     - **Botones `Contactar WA`, `Copiar`, `Guardar Datos` y `Recalcular`**: Enriquecidos con micro-animaciones en iconos, estados de elevación y glows de alta fidelidad visual.
+  5. **Separación Estricta e Independiente de Botones (`AdminMatches.tsx`)**:
      - **`💾 Guardar Datos`**: Con estado de carga independiente (`isSavingOnly`). Guarda los datos editados directamente en la base de datos de Supabase y propaga el contacto sin disparar recálculos globales. Solo gira la ruedita en su propio botón.
      - **`⚡ Recalcular Coincidencias`**: Con estado de carga independiente (`isRecalculating`). Guarda los cambios pendientes si los hay y dispara la re-evaluación contra toda la base de datos para buscar nuevas parejas comerciales cuando un negocio no prospera. Solo gira la ruedita en su propio botón.
-  4. **Integración en Mutaciones de Backend (`server/routers/janIA.ts`)**:
-     - `updatePropertyDetails` y `updateRequirementDetails` ahora ejecutan la propagación automática inmediata cada vez que Eduardo o un administrador edita o corrige un número de teléfono.
-  5. **Saneamiento y Propagación Retroactiva en Supabase (`propagate_broker_phones.ts`)**:
-     - Ejecución del script que vinculó y actualizó **45 propiedades** y **17 requerimientos** con números celulares reales en Supabase (incluyendo la vinculación automática de *María Fernanda Villegas* en Requerimiento `#528` con `+57 316 465 2482`).
-  6. **Compilación y Despliegue**:
+  6. **Integración en Mutaciones de Backend (`server/routers/janIA.ts`)**:
+     - `updatePropertyDetails` y `updateRequirementDetails` ahora ejecutan la propagación automática inmediata cada vez que Eduardo o un administrador edita o corrige un número de teléfono o nombre.
+  7. **Saneamiento y Propagación Retroactiva en Supabase (`propagate_broker_phones.ts`)**:
+     - Ejecución del script que vinculó y actualizó **45 propiedades** y **17 requerimientos** con números celulares reales en Supabase (incluyendo la vinculación de *María Fernanda Villegas* en Requerimiento `#528` y *Erika Del Pilar Murcia* en Requerimiento `#196`).
+  8. **Compilación y Despliegue**:
      - `npm run check` $\rightarrow$ 0 errores TypeScript.
      - `npm run build` $\rightarrow$ Compilado al 100% (Vite + `dist-server/index.js`). Subido a GitHub `main`.
 
