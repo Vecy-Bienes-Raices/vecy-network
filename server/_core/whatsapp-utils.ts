@@ -378,27 +378,23 @@ export async function textToSpeechMedia(text: string, format: "OGG_OPUS" | "MP3"
     process.env.GEMINI_BACKUP_KEY
   ].filter(k => k && k.startsWith('AIzaSy')) as string[];
 
-  // 1. Motor Oficial: Google Cloud TTS — Gemini 3.1 Flash TTS (Preview) — Voz Erinome (es-419)
+  // 1. Motor Oficial: Google Cloud Chirp3-HD Erinome (Voz Generativa de Google Cloud)
   try {
     for (const googleApiKey of candidateKeys) {
       try {
-        const response = await fetch(`https://texttospeech.googleapis.com/v1beta1/text:synthesize?key=${googleApiKey}`, {
+        const response = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${googleApiKey}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            input: {
-              prompt: "Habla con energía, claridad, tono cálido, despierto y muy profesional.",
-              text: cleaned
-            },
+            input: { text: cleaned },
             voice: {
-              languageCode: "es-419",
-              modelName: "gemini-3.1-flash-tts-preview",
-              name: "Erinome"
+              languageCode: "es-US",
+              name: "es-US-Chirp3-HD-Erinome"
             },
             audioConfig: {
               audioEncoding: format === "OGG_OPUS" ? "OGG_OPUS" : "MP3",
-              speakingRate: 1.08,
-              pitch: 0.8
+              speakingRate: 1.0,
+              pitch: 0.0
             }
           })
         });
@@ -406,7 +402,7 @@ export async function textToSpeechMedia(text: string, format: "OGG_OPUS" | "MP3"
         if (response.ok) {
           const data = await response.json();
           if (data.audioContent) {
-            console.log(`[TTS-Media] ✓ Erinome (Gemini 3.1 Flash TTS) — ${cleaned.length} chars → audio generado.`);
+            console.log(`[TTS-Media] ✓ Google Cloud Chirp3-HD Erinome — ${cleaned.length} chars → audio generado.`);
             const buffer = Buffer.from(data.audioContent, "base64");
             return {
               mimetype: format === "OGG_OPUS" ? "audio/ogg; codecs=opus" : "audio/mp3",
@@ -420,7 +416,48 @@ export async function textToSpeechMedia(text: string, format: "OGG_OPUS" | "MP3"
       }
     }
   } catch (err: any) {
-    console.warn("[TTS-Media] Google Cloud TTS Erinome no disponible:", err?.message || err);
+    console.warn("[TTS-Media] Google Cloud Chirp3-HD Erinome no disponible:", err?.message || err);
+  }
+
+  // 2. Respaldo Google Cloud: Chirp3-HD Erinome (es-ES)
+  try {
+    for (const googleApiKey of candidateKeys) {
+      try {
+        const response = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${googleApiKey}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            input: { text: cleaned },
+            voice: {
+              languageCode: "es-ES",
+              name: "es-ES-Chirp3-HD-Erinome"
+            },
+            audioConfig: {
+              audioEncoding: format === "OGG_OPUS" ? "OGG_OPUS" : "MP3",
+              speakingRate: 1.0,
+              pitch: 0.0
+            }
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.audioContent) {
+            console.log(`[TTS-Media] ✓ Google Cloud Chirp3-HD Erinome (es-ES) — ${cleaned.length} chars → audio generado.`);
+            const buffer = Buffer.from(data.audioContent, "base64");
+            return {
+              mimetype: format === "OGG_OPUS" ? "audio/ogg; codecs=opus" : "audio/mp3",
+              data: buffer.toString("base64"),
+              buffer
+            };
+          }
+        }
+      } catch (keyErr: any) {
+        // Continuar
+      }
+    }
+  } catch (err: any) {
+    console.warn("[TTS-Media] Google Cloud Chirp3-HD Erinome es-ES no disponible:", err?.message || err);
   }
 
   // 2. Motor Oficial Google Cloud Studio HD (es-US-Studio-B) — Voz de Estudio Cristalina, Despierta y Enérgica
