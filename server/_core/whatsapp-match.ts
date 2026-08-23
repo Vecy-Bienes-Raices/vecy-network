@@ -947,7 +947,7 @@ export class JaniaMatchBot {
       // Si la transcripción del audio falló, respondemos con un mensaje específico
       const isAudioFailed = bodyText === '[audio-vacío]' || bodyText === '[audio-sin-buffer]' || bodyText === '[audio-error]';
       if (isAudioFailed) {
-        const failMsg = `Hola ${realName} 👋🏻, escuché que enviaste una nota de voz. Lamentablemente tuve un inconveniente técnico al procesarla en este momento. 🙏\n\nTe pido que:\n✏️ Escribas tu consulta por texto aquí en el grupo, o\n📲 Me la envíes directamente en mi chat privado: https://wa.me/573192919978\n\n¡En el chat privado puedo escuchar y procesar tus audios sin problemas! 😊`;
+        const failMsg = `Hola ${realName} 👋🏻, escuché que enviaste una nota de voz, pero hubo una interferencia al procesar el audio en este momento. 🙏\n\nPor favor escribe tu consulta o requerimiento por texto aquí en el grupo para atenderte de inmediato. ¡Estoy lista para responderte! 😊`;
         await this.queuedSend(chatId, failMsg, { mentions: [senderId], quoted: msg });
         await this.sock.sendPresenceUpdate('paused', chatId);
         return;

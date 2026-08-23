@@ -5585,12 +5585,16 @@ async function transcodeWebmToWav(inputBuffer) {
   });
 }
 async function transcribeAudioWithGemini(audioBuffer, mimeType) {
-  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || ENV.forgeApiKey;
-  if (!apiKey) {
-    throw new Error("No GEMINI_API_KEY or GOOGLE_API_KEY found for transcription fallback.");
+  const allKeys = (process.env.GEMINI_API_KEYS || "").split(",").map((k) => k.trim()).filter(Boolean);
+  if (process.env.GEMINI_API_KEY) allKeys.push(process.env.GEMINI_API_KEY.trim());
+  if (process.env.GOOGLE_API_KEY) allKeys.push(process.env.GOOGLE_API_KEY.trim());
+  if (process.env.GEMINI_BACKUP_KEY) allKeys.push(process.env.GEMINI_BACKUP_KEY.trim());
+  if (ENV.forgeApiKey) allKeys.push(ENV.forgeApiKey.trim());
+  const uniqueKeys = Array.from(new Set(allKeys));
+  if (uniqueKeys.length === 0) {
+    throw new Error("No hay ninguna GEMINI_API_KEY configurada para la transcripci\xF3n de voz.");
   }
-  const model = "gemini-2.5-flash";
-  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const models = ["gemini-2.5-flash", "gemini-flash-latest", "gemini-flash-lite-latest"];
   let cleanMime = mimeType.split(";")[0].trim().toLowerCase();
   let bufferToUse = audioBuffer;
   if (cleanMime.includes("webm") || cleanMime.includes("octet-stream")) {
@@ -5604,6 +5608,7 @@ async function transcribeAudioWithGemini(audioBuffer, mimeType) {
   }
   if (cleanMime === "audio/x-wav" || cleanMime === "audio/wave") cleanMime = "audio/wav";
   if (cleanMime === "audio/mpeg3" || cleanMime === "audio/x-mpeg-3") cleanMime = "audio/mpeg";
+  const base64Audio = bufferToUse.toString("base64");
   const payload = {
     contents: [
       {
@@ -5613,7 +5618,7 @@ async function transcribeAudioWithGemini(audioBuffer, mimeType) {
           {
             inline_data: {
               mime_type: cleanMime,
-              data: bufferToUse.toString("base64")
+              data: base64Audio
             }
           }
         ]
@@ -5624,12 +5629,31 @@ async function transcribeAudioWithGemini(audioBuffer, mimeType) {
       maxOutputTokens: 2048
     }
   };
-  const response = await axios5.post(apiUrl, payload, { timeout: 15e3 });
-  const textCandidate = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (textCandidate && typeof textCandidate === "string") {
-    return textCandidate.trim();
+  let lastError = null;
+  for (const model of models) {
+    for (let i = 0; i < uniqueKeys.length; i++) {
+      const apiKey = uniqueKeys[i];
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      try {
+        console.log(`[STT-Gemini] Transcribiendo audio (${(audioBuffer.length / 1024).toFixed(1)} KB) con ${model} (Key #${i + 1})...`);
+        const response = await axios5.post(apiUrl, payload, { timeout: 6e4 });
+        const textCandidate = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (textCandidate && typeof textCandidate === "string") {
+          console.log(`[STT-Gemini] Transcripci\xF3n exitosa con ${model} (Key #${i + 1}): "${textCandidate.trim().substring(0, 60)}..."`);
+          return textCandidate.trim();
+        }
+      } catch (err) {
+        lastError = err;
+        const status = err.response?.status;
+        console.warn(`[STT-Gemini] Fall\xF3 intento con ${model} y Key #${i + 1} (Status: ${status || err.message}). Probando siguiente...`);
+        if (status === 429 || status === 503) {
+          await new Promise((r) => setTimeout(r, 600));
+          continue;
+        }
+      }
+    }
   }
-  return "";
+  throw lastError || new Error("No fue posible transcribir el audio tras agotar modelos y claves de Gemini.");
 }
 async function transcribeAudioBuffer(audioBuffer, mimeType, prompt) {
   const sizeMB = audioBuffer.length / (1024 * 1024);
@@ -11209,13 +11233,9 @@ Te espero. \xA1All\xED te atender\xE9 con gusto! \u{1F680}`;
           }
           const isAudioFailed = bodyText === "[audio-vac\xEDo]" || bodyText === "[audio-sin-buffer]" || bodyText === "[audio-error]";
           if (isAudioFailed) {
-            const failMsg = `Hola ${realName} \u{1F44B}\u{1F3FB}, escuch\xE9 que enviaste una nota de voz. Lamentablemente tuve un inconveniente t\xE9cnico al procesarla en este momento. \u{1F64F}
+            const failMsg = `Hola ${realName} \u{1F44B}\u{1F3FB}, escuch\xE9 que enviaste una nota de voz, pero hubo una interferencia al procesar el audio en este momento. \u{1F64F}
 
-Te pido que:
-\u270F\uFE0F Escribas tu consulta por texto aqu\xED en el grupo, o
-\u{1F4F2} Me la env\xEDes directamente en mi chat privado: https://wa.me/573192919978
-
-\xA1En el chat privado puedo escuchar y procesar tus audios sin problemas! \u{1F60A}`;
+Por favor escribe tu consulta o requerimiento por texto aqu\xED en el grupo para atenderte de inmediato. \xA1Estoy lista para responderte! \u{1F60A}`;
             await this.queuedSend(chatId, failMsg, { mentions: [senderId], quoted: msg });
             await this.sock.sendPresenceUpdate("paused", chatId);
             return;

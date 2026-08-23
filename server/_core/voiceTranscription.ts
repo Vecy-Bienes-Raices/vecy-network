@@ -112,13 +112,26 @@ async function transcodeWebmToWav(inputBuffer: Buffer): Promise<Buffer> {
  * @param options - Audio data and metadata
  * @returns Transcription result or error
  */
+/**
+ * Transcribe audio to text using Google Gemini with multi-key rotation, model fallback cascade and 60s timeout
+ */
 async function transcribeAudioWithGemini(audioBuffer: Buffer, mimeType: string): Promise<string> {
-  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || ENV.forgeApiKey;
-  if (!apiKey) {
-    throw new Error("No GEMINI_API_KEY or GOOGLE_API_KEY found for transcription fallback.");
+  const allKeys = (process.env.GEMINI_API_KEYS || "")
+    .split(",")
+    .map(k => k.trim())
+    .filter(Boolean);
+  
+  if (process.env.GEMINI_API_KEY) allKeys.push(process.env.GEMINI_API_KEY.trim());
+  if (process.env.GOOGLE_API_KEY) allKeys.push(process.env.GOOGLE_API_KEY.trim());
+  if (process.env.GEMINI_BACKUP_KEY) allKeys.push(process.env.GEMINI_BACKUP_KEY.trim());
+  if (ENV.forgeApiKey) allKeys.push(ENV.forgeApiKey.trim());
+
+  const uniqueKeys = Array.from(new Set(allKeys));
+  if (uniqueKeys.length === 0) {
+    throw new Error("No hay ninguna GEMINI_API_KEY configurada para la transcripción de voz.");
   }
-  const model = "gemini-2.5-flash";
-  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+  const models = ["gemini-2.5-flash", "gemini-flash-latest", "gemini-flash-lite-latest"];
 
   let cleanMime = mimeType.split(';')[0].trim().toLowerCase();
   let bufferToUse = audioBuffer;
@@ -130,12 +143,13 @@ async function transcribeAudioWithGemini(audioBuffer: Buffer, mimeType: string):
       cleanMime = "audio/wav";
     } catch (e: any) {
       console.error(`[STT-Fallback] Error al transcodificar de WebM/octet-stream a WAV con ffmpeg:`, e.message);
-      // Intentamos continuar con el buffer original si no se puede transcodificar
     }
   }
 
   if (cleanMime === 'audio/x-wav' || cleanMime === 'audio/wave') cleanMime = 'audio/wav';
   if (cleanMime === 'audio/mpeg3' || cleanMime === 'audio/x-mpeg-3') cleanMime = 'audio/mpeg';
+
+  const base64Audio = bufferToUse.toString("base64");
 
   const payload = {
     contents: [
@@ -146,7 +160,7 @@ async function transcribeAudioWithGemini(audioBuffer: Buffer, mimeType: string):
           {
             inline_data: {
               mime_type: cleanMime,
-              data: bufferToUse.toString("base64")
+              data: base64Audio
             }
           }
         ]
@@ -158,12 +172,35 @@ async function transcribeAudioWithGemini(audioBuffer: Buffer, mimeType: string):
     }
   };
 
-  const response = await axios.post(apiUrl, payload, { timeout: 15000 });
-  const textCandidate = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (textCandidate && typeof textCandidate === 'string') {
-    return textCandidate.trim();
+  let lastError: any = null;
+
+  for (const model of models) {
+    for (let i = 0; i < uniqueKeys.length; i++) {
+      const apiKey = uniqueKeys[i];
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+      try {
+        console.log(`[STT-Gemini] Transcribiendo audio (${(audioBuffer.length / 1024).toFixed(1)} KB) con ${model} (Key #${i + 1})...`);
+        const response = await axios.post(apiUrl, payload, { timeout: 60000 });
+        const textCandidate = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (textCandidate && typeof textCandidate === 'string') {
+          console.log(`[STT-Gemini] Transcripción exitosa con ${model} (Key #${i + 1}): "${textCandidate.trim().substring(0, 60)}..."`);
+          return textCandidate.trim();
+        }
+      } catch (err: any) {
+        lastError = err;
+        const status = err.response?.status;
+        console.warn(`[STT-Gemini] Falló intento con ${model} y Key #${i + 1} (Status: ${status || err.message}). Probando siguiente...`);
+        if (status === 429 || status === 503) {
+          // Espera breve y rota de clave/modelo
+          await new Promise(r => setTimeout(r, 600));
+          continue;
+        }
+      }
+    }
   }
-  return "";
+
+  throw lastError || new Error("No fue posible transcribir el audio tras agotar modelos y claves de Gemini.");
 }
 
 export async function transcribeAudioBuffer(
