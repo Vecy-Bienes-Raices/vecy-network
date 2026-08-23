@@ -15171,8 +15171,9 @@ var __dirname = path10.dirname(__filename);
 function initCronScheduler() {
   console.log("[CRON-SERVICE] Inicializando orquestador de agendas automatizadas v3.2 (Parrilla Semanal de Audios y Re-matching)...");
   cron.schedule("0 11 * * 1,4", async () => {
-    console.log("[CRON-SERVICE] Enviando audio motivacional a VECY INMUEBLES NETWORK...");
-    const guion = `Buenos d\xEDas a todos y a todas. Soy JanIA, la inteligencia artificial de VECY Network. Hoy quiero recordarles que este grupo es nuestro centro de operaciones comerciales. Aqu\xED publican sus inmuebles en venta o arriendo, sus requerimientos de compra o renta, y yo me encargo de cruzar toda esa informaci\xF3n en tiempo real en los 32 departamentos de Colombia para detectar MATCHES y hacer posibles cierres de negocios. \xBFYa publicaste hoy? Cada inmueble que compartes aqu\xED es una oportunidad de negocio que no puedes dejar pasar. Puedes enviar texto, nota de voz, imagen o flyer y yo lo proceso autom\xE1ticamente. Sigan publicando sus inmuebles, colegas, e inviten a m\xE1s colegas a unirse a esta red. Entre m\xE1s seamos, m\xE1s matches encontramos. \xA1Hoy puede ser el d\xEDa de tu pr\xF3ximo cierre!`;
+    console.log("[CRON-SERVICE] Generando audio din\xE1mico para VECY INMUEBLES NETWORK...");
+    const fallback = `Buenos d\xEDas a todos y a todas. Soy JanIA, la inteligencia artificial de VECY Network. Hoy quiero recordarles que este grupo es nuestro centro de operaciones comerciales. Aqu\xED publican sus inmuebles en venta o arriendo, sus requerimientos de compra o renta, y yo me encargo de cruzar toda esa informaci\xF3n en tiempo real en los 32 departamentos de Colombia para detectar MATCHES y hacer posibles cierres de negocios. \xBFYa publicaste hoy? Cada inmueble que compartes aqu\xED es una oportunidad de negocio que no puedes dejar pasar. Puedes enviar texto, nota de voz, imagen o flyer y yo lo proceso autom\xE1ticamente. Sigan publicando sus inmuebles, colegas, e inviten a m\xE1s colegas a unirse a esta red. Entre m\xE1s seamos, m\xE1s matches encontramos. \xA1Hoy puede ser el d\xEDa de tu pr\xF3ximo cierre!`;
+    const guion = await generateDynamicVoiceScript("inmuebles_network", fallback);
     try {
       await janiaMatchBot.sendVoiceToGroup(guion, janiaMatchBot.targetGroupId);
     } catch (e) {
@@ -15180,8 +15181,9 @@ function initCronScheduler() {
     }
   }, { timezone: "America/Bogota" });
   cron.schedule("0 8 * * 1", async () => {
-    console.log("[CRON-SERVICE] Enviando audio de Lunes a SOPORTE LEGAL, TRIBUTARIO, AVAL\xDAOS Y MARKETING...");
-    const guion = `\xA1Buenos d\xEDas a todos y a todas! Soy JanIA. Arrancamos una semana llena de oportunidades de negocio y cierres inmobiliarios. Recuerden que este espacio es su consultorio permanente: aqu\xED pueden preguntarme por texto o nota de voz sobre leyes inmobiliarias, c\xF3mo liquidar la ganancia ocasional ante la DIAN, aval\xFAos de mercado o c\xF3mo redactar un anuncio de alto impacto para sus inmuebles y requerimientos. La informaci\xF3n es poder en los negocios. Los invito a que no se queden con dudas hoy y a que compartan el enlace de este grupo con sus colegas de confianza: entre m\xE1s asesores capacitados seamos, m\xE1s blindados y profesionales cerramos negocios en Colombia. \xA1Que tengan una semana extraordinaria y productiva!`;
+    console.log("[CRON-SERVICE] Generando audio din\xE1mico de Lunes para SOPORTE LEGAL Y MARKETING...");
+    const fallback = `\xA1Buenos d\xEDas a todos y a todas! Soy JanIA. Arrancamos una semana llena de oportunidades de negocio y cierres inmobiliarios. Recuerden que este espacio es su consultorio permanente: aqu\xED pueden preguntarme por texto o nota de voz sobre leyes inmobiliarias, c\xF3mo liquidar la ganancia ocasional ante la DIAN, aval\xFAos de mercado o c\xF3mo redactar un anuncio de alto impacto para sus inmuebles y requerimientos. La informaci\xF3n es poder en los negocios. Los invito a que no se queden con dudas hoy y a que compartan el enlace de este grupo con sus colegas de confianza: entre m\xE1s asesores capacitados seamos, m\xE1s blindados y profesionales cerramos negocios en Colombia. \xA1Que tengan una semana extraordinaria y productiva!`;
+    const guion = await generateDynamicVoiceScript("lunes_arranque", fallback);
     try {
       await janiaMatchBot.sendVoiceToGroup(guion, janiaMatchBot.buzonGroupId);
     } catch (e) {
@@ -15189,8 +15191,9 @@ function initCronScheduler() {
     }
   }, { timezone: "America/Bogota" });
   cron.schedule("0 11 * * 2", async () => {
-    console.log("[CRON-SERVICE] Enviando audio de Martes Jur\xEDdico a SOPORTE LEGAL...");
-    const guion = `Hola, colegas. Soy JanIA con su tip jur\xEDdico del d\xEDa. \xBFSab\xEDan que un simple correo electr\xF3nico con la hoja de presentaci\xF3n del cliente o el acuerdo de puntas compartidas tiene plena validez probatoria bajo la Ley 527 de 1999? Nunca muestren un inmueble sin dejar registro escrito. Si tienen dudas sobre una promesa de compraventa, una restituci\xF3n o c\xF3mo redactar una minuta, preg\xFAntenme aqu\xED mismo o env\xEDenme el documento en PDF y lo revisamos juntos al instante.`;
+    console.log("[CRON-SERVICE] Generando audio din\xE1mico de Martes Jur\xEDdico...");
+    const fallback = `Hola, colegas. Soy JanIA con su tip jur\xEDdico del d\xEDa. \xBFSab\xEDan que un simple correo electr\xF3nico con la hoja de presentaci\xF3n del cliente o el acuerdo de puntas compartidas tiene plena validez probatoria bajo la Ley 527 de 1999? Nunca muestren un inmueble sin dejar registro escrito. Si tienen dudas sobre una promesa de compraventa, una restituci\xF3n o c\xF3mo redactar una minuta, preg\xFAntenme aqu\xED mismo o env\xEDenme el documento en PDF y lo revisamos juntos al instante.`;
+    const guion = await generateDynamicVoiceScript("martes_juridico", fallback);
     try {
       await janiaMatchBot.sendVoiceToGroup(guion, janiaMatchBot.buzonGroupId);
     } catch (e) {
@@ -15198,8 +15201,9 @@ function initCronScheduler() {
     }
   }, { timezone: "America/Bogota" });
   cron.schedule("30 11 * * 3", async () => {
-    console.log("[CRON-SERVICE] Enviando audio de Mi\xE9rcoles de Marketing a SOPORTE LEGAL...");
-    const guion = `\xA1Buenas tardes, equipo! Soy JanIA con su tip de Marketing Inmobiliario. El ochenta por ciento de los clientes y colegas descartan una publicaci\xF3n si no tiene el precio claro, el barrio exacto o el metraje. Si quieren que sus ofertas y requerimientos se cierren en tiempo r\xE9cord, incluyan siempre los siete pilares: tipo de inmueble, barrio y ciudad, precio y administraci\xF3n, \xE1rea en metros cuadrados, habitaciones, garajes independientes o en l\xEDnea, y su enlace directo de WhatsApp. \xBFTienen un inmueble dif\xEDcil de mover? Escr\xEDbanme los datos y les ayudo a redactar un copy persuasivo hoy mismo.`;
+    console.log("[CRON-SERVICE] Generando audio din\xE1mico de Mi\xE9rcoles de Marketing...");
+    const fallback = `\xA1Buenas tardes, equipo! Soy JanIA con su tip de Marketing Inmobiliario. El ochenta por ciento de los clientes y colegas descartan una publicaci\xF3n si no tiene el precio claro, el barrio exacto o el metraje. Si quieren que sus ofertas y requerimientos se cierren en tiempo r\xE9cord, incluyan siempre los siete pilares: tipo de inmueble, barrio y ciudad, precio y administraci\xF3n, \xE1rea en metros cuadrados, habitaciones, garajes independientes o en l\xEDnea, y su enlace directo de WhatsApp. \xBFTienen un inmueble dif\xEDcil de mover? Escr\xEDbanme los datos y les ayudo a redactar un copy persuasivo hoy mismo.`;
+    const guion = await generateDynamicVoiceScript("miercoles_marketing", fallback);
     try {
       await janiaMatchBot.sendVoiceToGroup(guion, janiaMatchBot.buzonGroupId);
     } catch (e) {
@@ -15207,8 +15211,9 @@ function initCronScheduler() {
     }
   }, { timezone: "America/Bogota" });
   cron.schedule("0 11 * * 4", async () => {
-    console.log("[CRON-SERVICE] Enviando audio de Jueves Tributario a SOPORTE LEGAL...");
-    const guion = `Hola a todos. Soy JanIA con un consejo financiero clave para sus clientes vendedores. Al vender vivienda de habitaci\xF3n, pueden deducir hasta cinco mil UVT exentas del impuesto de ganancia ocasional si los fondos se destinan a la compra de otra vivienda o abono a cr\xE9dito hipotecario. Si quieren saber exactamente cu\xE1nto debe pagar su cliente en retenci\xF3n en la fuente o ganancia ocasional antes de firmar escrituras, cons\xFAltenme aqu\xED y les hago la liquidaci\xF3n en segundos.`;
+    console.log("[CRON-SERVICE] Generando audio din\xE1mico de Jueves Tributario...");
+    const fallback = `Hola a todos. Soy JanIA con un consejo financiero clave para sus clientes vendedores. Al vender vivienda de habitaci\xF3n, pueden deducir hasta cinco mil UVT exentas del impuesto de ganancia ocasional si los fondos se destinan a la compra de otra vivienda o abono a cr\xE9dito hipotecario. Si quieren saber exactamente cu\xE1nto debe pagar su cliente en retenci\xF3n en la fuente o ganancia ocasional antes de firmar escrituras, cons\xFAltenme aqu\xED y les hago la liquidaci\xF3n en segundos.`;
+    const guion = await generateDynamicVoiceScript("jueves_tributario", fallback);
     try {
       await janiaMatchBot.sendVoiceToGroup(guion, janiaMatchBot.buzonGroupId);
     } catch (e) {
@@ -15216,8 +15221,9 @@ function initCronScheduler() {
     }
   }, { timezone: "America/Bogota" });
   cron.schedule("30 11 * * 5", async () => {
-    console.log("[CRON-SERVICE] Enviando audio de Viernes de Aval\xFAos a SOPORTE LEGAL...");
-    const guion = `\xA1Excelente viernes, colegas! Soy JanIA. \xBFTienen un lote o casa para desarrollo y no saben qu\xE9 altura o uso permite el POT? No se queden con la duda: descarguen la ficha catastral del SINUPOT en PDF y env\xEDenmela por WhatsApp en privado; yo les hago el estudio normativo de uso de suelo al instante. Y para estimar el valor del metro cuadrado en cualquier sector, aqu\xED estoy para asesorarlos.`;
+    console.log("[CRON-SERVICE] Generando audio din\xE1mico de Viernes de Aval\xFAos...");
+    const fallback = `\xA1Excelente viernes, colegas! Soy JanIA. \xBFTienen un lote o casa para desarrollo y no saben qu\xE9 altura o uso permite el POT? No se queden con la duda: descarguen la ficha catastral del SINUPOT en PDF y env\xEDenmela por WhatsApp en privado; yo les hago el estudio normativo de uso de suelo al instante. Y para estimar el valor del metro cuadrado en cualquier sector, aqu\xED estoy para asesorarlos.`;
+    const guion = await generateDynamicVoiceScript("viernes_avaluos", fallback);
     try {
       await janiaMatchBot.sendVoiceToGroup(guion, janiaMatchBot.buzonGroupId);
     } catch (e) {
@@ -15225,8 +15231,9 @@ function initCronScheduler() {
     }
   }, { timezone: "America/Bogota" });
   cron.schedule("0 10 * * 6", async () => {
-    console.log("[CRON-SERVICE] Enviando audio de S\xE1bado a SOPORTE LEGAL...");
-    const guion = `Buenos d\xEDas, aliados de la red. Cerramos semana de gran actividad comercial. Recuerden que para casos jur\xEDdicos de alta complejidad, sucesiones litigiosas, saneamientos o aval\xFAos certificados por perito de Lonja con R.A.A., pueden comunicarse directamente al WhatsApp tres diecis\xE9is, seis cincuenta y seis, noventa y siete diecinueve, para coordinar una Consultor\xEDa Personalizada con nuestro br\xF3ker en VECY BIENES RA\xCDCES. \xA1Disfruten de su fin de semana y a recargar energ\xEDas!`;
+    console.log("[CRON-SERVICE] Generando audio din\xE1mico de S\xE1bado Caf\xE9 Inmobiliario...");
+    const fallback = `Buenos d\xEDas, aliados de la red. Cerramos semana de gran actividad comercial. Recuerden que para casos jur\xEDdicos de alta complejidad, sucesiones litigiosas, saneamientos o aval\xFAos certificados por perito de Lonja con R.A.A., pueden comunicarse directamente al WhatsApp tres diecis\xE9is, seis cincuenta y seis, noventa y siete diecinueve, para coordinar una Consultor\xEDa Personalizada con nuestro br\xF3ker en VECY BIENES RA\xCDCES. \xA1Disfruten de su fin de semana y a recargar energ\xEDas!`;
+    const guion = await generateDynamicVoiceScript("sabado_cafe", fallback);
     try {
       await janiaMatchBot.sendVoiceToGroup(guion, janiaMatchBot.buzonGroupId);
     } catch (e) {
@@ -15234,8 +15241,9 @@ function initCronScheduler() {
     }
   }, { timezone: "America/Bogota" });
   cron.schedule("0 12 * * 3,6", async () => {
-    console.log("[CRON-SERVICE] Enviando audio motivacional a PROYECTO VECY NETWORK...");
-    const guion = `Hola, equipo VECY. Soy JanIA. Este grupo es nuestro espacio m\xE1s especial: el canal del Proyecto Vecy Network es donde nacen las ideas, donde se eval\xFAa el proyecto, donde los fundadores escuchan directamente a quienes hacen posible esta red. Aqu\xED pueden preguntarme sobre VECY Network sin filtros: c\xF3mo funciona la inteligencia artificial, qu\xE9 est\xE1 planeado para el futuro, qu\xE9 ya est\xE1 funcionando hoy, o simplemente contarme qu\xE9 les parece el proyecto. Tambi\xE9n es el lugar donde debatimos con la competencia de frente y con argumentos. Su opini\xF3n es la br\xFAjula que nos gu\xEDa. Sigan preguntando acerca de VECY Network. Cada idea que aportan aqu\xED nos hace m\xE1s fuertes. E inviten a m\xE1s colegas visionarios. Queremos construir esto juntos.`;
+    console.log("[CRON-SERVICE] Generando audio din\xE1mico para PROYECTO VECY NETWORK...");
+    const fallback = `Hola, equipo VECY. Soy JanIA. Este grupo es nuestro espacio m\xE1s especial: el canal del Proyecto Vecy Network es donde nacen las ideas, donde se eval\xFAa el proyecto, donde los fundadores escuchan directamente a quienes hacen posible esta red. Aqu\xED pueden preguntarme sobre VECY Network sin filtros: c\xF3mo funciona la inteligencia artificial, qu\xE9 est\xE1 planeado para el futuro, qu\xE9 ya est\xE1 funcionando hoy, o simplemente contarme qu\xE9 les parece el proyecto. Tambi\xE9n es el lugar donde debatimos con la competencia de frente y con argumentos. Su opini\xF3n es la br\xFAjula que nos gu\xEDa. Sigan preguntando acerca de VECY Network. Cada idea que aportan aqu\xED nos hace m\xE1s fuertes. E inviten a m\xE1s colegas visionarios. Queremos construir esto juntos.`;
+    const guion = await generateDynamicVoiceScript("proyecto_vecy", fallback);
     try {
       await janiaMatchBot.sendVoiceToGroup(guion, janiaMatchBot.circuloGroupId);
     } catch (e) {
@@ -15250,6 +15258,66 @@ function initCronScheduler() {
       console.error("[CRON-SERVICE] Error en el job de re-matching masivo:", err.message || err);
     }
   }, { timezone: "America/Bogota" });
+}
+async function generateDynamicVoiceScript(tipo, fallback) {
+  const now = /* @__PURE__ */ new Date();
+  const fechaBogota = now.toLocaleDateString("es-CO", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    timeZone: "America/Bogota"
+  });
+  const promptsMap = {
+    lunes_arranque: `Redacta un guion de audio motivacional para hoy ${fechaBogota} para el grupo "VECY: SOPORTE LEGAL, TRIBUTARIO, AVAL\xDAOS Y MARKETING".
+Objetivo: Dar la bienvenida a la semana con mucha energ\xEDa y optimismo, recordar que en el grupo pueden consultar por texto o nota de voz sobre leyes, impuestos DIAN, aval\xFAos y marketing inmobiliario, e invitar con entusiasmo a compartir el enlace del grupo con m\xE1s colegas corredores para crecer la comunidad.`,
+    martes_juridico: `Redacta un guion de audio con un TIP JUR\xCDDICO INMOBILIARIO puntual, novedoso y muy \xFAtil para hoy ${fechaBogota} en Colombia.
+Elige AL AZAR un tema jur\xEDdico clave: (ej. Ley 820 y causales de terminaci\xF3n de arriendo, cl\xE1usula penal y arras en promesas de compraventa, validez probatoria de correos y WhatsApp Ley 527/1999, cobro de comisiones con acuerdos de puntas compartidas, cesi\xF3n de leasing, o saneamiento por vicios ocultos).
+Invita a que env\xEDen sus dudas o documentos en PDF al grupo para revisarlos.`,
+    miercoles_marketing: `Redacta un guion de audio con un TIP DE MARKETING DIGITAL Y COPYWRITING INMOBILIARIO para hoy ${fechaBogota}.
+Elige AL AZAR un tema pr\xE1ctico: (ej. los 7 pilares de una publicaci\xF3n perfecta, c\xF3mo redactar t\xEDtulos con gancho que atrapen clientes, mejores \xE1ngulos y luz para fotos de inmuebles, c\xF3mo responder r\xE1pido a compradores calificados, o estructurar requerimientos con presupuesto real).
+Recuerda que JanIA los asesora a redactar anuncios de alto impacto directamente en el grupo.`,
+    jueves_tributario: `Redacta un guion de audio con un TIP TRIBUTARIO INMOBILIARIO DIAN para hoy ${fechaBogota} en Colombia.
+Elige AL AZAR un tema fiscal: (ej. exenci\xF3n de 5.000 UVT en ganancia ocasional por venta de vivienda habitual, c\xE1lculo de retenci\xF3n en la fuente del 1%, c\xF3mo deducir mejoras con facturas electr\xF3nicas, impuesto de timbre o actualizaci\xF3n de costo fiscal).
+Inv\xEDtalos a pedirle liquidaciones tributarias estimadas en el grupo antes de ir a notar\xEDa.`,
+    viernes_avaluos: `Redacta un guion de audio con un TIP DE AVAL\xDAOS Y ESTUDIO DE SUELO SINUPOT para hoy ${fechaBogota}.
+Elige AL AZAR un tema t\xE9cnico: (ej. c\xF3mo consultar el uso de suelo y altura permitida descargando la ficha del SINUPOT en PDF, c\xF3mo calcular el valor del metro cuadrado por m\xE9todo comparativo de mercado, factores de depreciaci\xF3n o la importancia del aval\xFAo pericial certificado de Lonja para evitar objeciones de bancos).
+Inv\xEDtalos a enviar fichas del SINUPOT en PDF o consultar precios de mercado.`,
+    sabado_cafe: `Redacta un guion de audio de CIERRE DE SEMANA & CAF\xC9 INMOBILIARIO para hoy ${fechaBogota}.
+Objetivo: Felicitar a los corredores por la gesti\xF3n semanal, recordar que para casos complejos, sucesiones, peritajes o aval\xFAos oficiales certificados pueden contactar directamente por WhatsApp al tres diecis\xE9is, seis cincuenta y seis, noventa y siete diecinueve para consultor\xEDas personalizadas con el br\xF3ker de VECY BIENES RA\xCDCES.`,
+    inmuebles_network: `Redacta un guion de audio comercial din\xE1mico para el grupo principal "VECY INMUEBLES NETWORK" para hoy ${fechaBogota}.
+Objetivo: Motivar la publicaci\xF3n activa de ofertas y demandas de venta, arriendo o permutas a nivel nacional en Colombia (texto, audio, imagen o links de portales), recordando que JanIA cruza datos en tiempo real sin cobrar comisi\xF3n por la conexi\xF3n.`,
+    proyecto_vecy: `Redacta un guion de audio institucional y visionario para el grupo "PROYECTO Vecy Network" para hoy ${fechaBogota}.
+Objetivo: Inspirar a la comunidad, destacar el modelo colaborativo fintech de comisiones del 3% (35/35/15/15), la tecnolog\xEDa de JanIA, invitar a debatir y sugerir ideas de mejora tecnol\xF3gica directamente a los fundadores.`
+  };
+  const promptEspecifico = promptsMap[tipo] || promptsMap.lunes_arranque;
+  const systemPrompt = `Eres JanIA, la inteligencia artificial oficial de VECY Network en Colombia.
+Hablas en primera persona con tono femenino profesional, c\xE1lido, colombiano, sumamente elocuente y motivador.
+Escribe un guion para ser locutado por s\xEDntesis de voz (Text-to-Speech).
+
+REGLAS ESTRICTAS DE LOCUCI\xD3N:
+1. Duraci\xF3n: Debe tomar entre 30 y 45 segundos al hablar (aproximadamente 60 a 90 palabras).
+2. Estilo: Conversacional, inspirador y directo al grano, sin rodeos ni introducci\xF3n de locutor (NO incluyas [M\xFAsica de fondo], [Sonido], ni etiquetas).
+3. Pronunciaci\xF3n: Escribe los n\xFAmeros y siglas en texto f\xE1cil de leer (ej. "cinco mil U-V-T", "ochenta por ciento", "metro cuadrado", "P-O-T"). Si mencionas el tel\xE9fono del br\xF3ker escribe "tres diecis\xE9is, seis cincuenta y seis, noventa y siete diecinueve".
+4. Variedad: S\xE9 creativa, usa met\xE1foras frescas y NUNCA uses la misma fraseolog\xEDa previa. Cada d\xEDa debe sentirse \xFAnico y estimulante.
+
+${promptEspecifico}`;
+  try {
+    const response = await invokeLLM({
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: `Genera el guion in\xE9dito de hoy ${fechaBogota}:` }
+      ],
+      temperature: 0.7
+    });
+    const content = response?.choices?.[0]?.message?.content?.trim();
+    if (content && content.length > 50) {
+      const cleaned = content.replace(/\[.*?\]/g, "").replace(/[*_#]/g, "").trim();
+      return cleaned;
+    }
+  } catch (err) {
+    console.warn(`[CRON-LLM-Guion] Fall\xF3 generaci\xF3n con Gemini (${err.message}). Usando guion de respaldo.`);
+  }
+  return fallback;
 }
 
 // server/_core/index.ts
