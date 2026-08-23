@@ -1043,14 +1043,10 @@ export class JaniaMatchBot {
           ? result.voiceResponse
           : textToDeliver;
 
-        // 1. Enviamos siempre la respuesta estructurada en texto profesional formateado
-        await this.queuedSend(chatId, textToDeliver, {
-          mentions: [senderId],
-          quoted: msg
-        });
+        // Decisión Autónoma de JanIA (IA Pura): O responde por Nota de Voz PTT exclusiva o por Texto exclusivo (NUNCA ambos a la vez)
+        const shouldSendVoice = (wantsVoice || isAudioPTT) && result.wantsVoice !== false;
 
-        // 2. Si el usuario envió nota de voz o pidió audio, enviamos además la nota de voz PTT
-        if (wantsVoice || isAudioPTT) {
+        if (shouldSendVoice) {
           try {
             const media = await textToSpeechMedia(voiceToDeliver);
             if (media && media.data) {
@@ -1060,11 +1056,27 @@ export class JaniaMatchBot {
                 mimetype: media.mimetype || 'audio/ogg; codecs=opus',
                 ptt: true
               }, { mentions: [senderId], quoted: msg });
-              console.log(`[JANIA-MATCH] ✓ Nota de voz PTT enviada exitosamente en grupo ${chatId}.`);
+              console.log(`[JANIA-MATCH] ✓ JanIA respondió autónomamente con Nota de Voz PTT en grupo ${chatId}.`);
+            } else {
+              // Fallback a texto solo si la síntesis de voz no produjo buffer
+              await this.queuedSend(chatId, textToDeliver, {
+                mentions: [senderId],
+                quoted: msg
+              });
             }
           } catch (audioSendErr: any) {
-            console.error('[JANIA-MATCH] Error enviando nota de voz PTT complementaria:', audioSendErr?.message || audioSendErr);
+            console.error('[JANIA-MATCH] Error enviando nota de voz. Fallback a texto:', audioSendErr?.message || audioSendErr);
+            await this.queuedSend(chatId, textToDeliver, {
+              mentions: [senderId],
+              quoted: msg
+            });
           }
+        } else {
+          // JanIA decidió responder con texto escrito
+          await this.queuedSend(chatId, textToDeliver, {
+            mentions: [senderId],
+            quoted: msg
+          });
         }
 
         // Registrar la respuesta enviada por JanIA en la BD de mensajes para mantener el hilo de la conversación
