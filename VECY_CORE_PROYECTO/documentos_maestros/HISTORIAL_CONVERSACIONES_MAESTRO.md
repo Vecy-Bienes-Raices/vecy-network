@@ -90,8 +90,15 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
      - *Jueves 11:00 AM*: Jueves Tributario DIAN (5.000 UVT y Ganancia Ocasional).
      - *Viernes 11:30 AM*: Viernes de Avalúos y Estudio de Suelo SINUPOT.
      - *Sábado 10:00 AM*: Café Inmobiliario & Consultorías con el Bróker (`3166569719`).
-  5. **Compilación y Despliegue en VPS**:
-     - `npm run build` limpio y sincronizado con PM2 en vivo.
+  5. **Generador Dinámico de Guiones de Audio 100% Inéditos con Gemini (`cronService.ts`)**:
+     - Los audios semanales se generan en vivo por Gemini con temperatura 0.7 antes de cada emisión, asegurando que cada tip y audio sea 100% nuevo y nunca se repita.
+  6. **Motor de Voz Neuronal Humana Colombiana Ultra-Realista (`server/_core/whatsapp-utils.ts`)**:
+     - Integración de `msedge-tts` con la voz neuronal colombiana **`es-CO-SalomeNeural`** (24kHz 96kbps MP3), dotando a JanIA de una voz 100% humana, cálida, natural, expresiva y con cadencia colombiana auténtica (eliminando la voz robótica de Google Translate).
+     - Respaldo neuronal alternativo con `es-MX-DaliaNeural`.
+  7. **Autonomía Pura de Entrega (Voz Exclusiva o Texto Exclusivo)**:
+     - JanIA decide autónomamente en cada interacción si responder con Nota de Voz PTT exclusiva o con Texto escrito exclusivo, sin duplicación de mensajes ni comportamientos de bot programado.
+  8. **Compilación y Despliegue en VPS**:
+     - `npm run build` limpio, paquetes sincronizados en VPS con `pnpm install` y PM2 reiniciado exitosamente.
 
 ---
 
