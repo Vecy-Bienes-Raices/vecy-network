@@ -13406,6 +13406,7 @@ function liquidarImpuestosVenta(params) {
 
 // server/routers/janIA.ts
 init_matching();
+init_voiceTranscription();
 import axios7 from "axios";
 import fs7 from "fs";
 import path7 from "path";
@@ -13628,10 +13629,12 @@ ${liveStats}${userContextInstruction}
       let imageBuffer;
       let pdfBuffer;
       let pdfMimeType;
+      let audioTranscriptionText;
       try {
         console.log(`[JanIA-Router] Descargando archivo desde URL para an\xE1lisis: ${input.fileUrl}`);
         const fileRes = await axios7.get(input.fileUrl, { responseType: "arraybuffer" });
-        const base64Data = Buffer.from(fileRes.data).toString("base64");
+        const rawBuffer = Buffer.from(fileRes.data);
+        const base64Data = rawBuffer.toString("base64");
         const contentTypeHeader = fileRes.headers["content-type"];
         const contentType = typeof contentTypeHeader === "string" ? contentTypeHeader : input.fileType || "";
         if (contentType.includes("pdf") || input.fileUrl.toLowerCase().endsWith(".pdf")) {
@@ -13641,14 +13644,27 @@ ${liveStats}${userContextInstruction}
         } else if (contentType.includes("image") || input.fileUrl.toLowerCase().match(/\.(jpe?g|png|gif|webp)$/i)) {
           imageBuffer = base64Data;
           console.log("[JanIA-Router] Archivo detectado como Imagen.");
+        } else if (contentType.includes("audio") || input.fileUrl.toLowerCase().match(/\.(ogg|mp3|wav|m4a|aac|webm)$/i)) {
+          console.log("[JanIA-Router] Archivo detectado como Audio / Nota de voz. Transcribiendo...");
+          const mime = contentType.includes("audio") ? contentType : input.fileUrl.endsWith(".ogg") ? "audio/ogg" : "audio/mp3";
+          try {
+            const transcribed = await transcribeAudioBuffer(rawBuffer, mime);
+            if (transcribed && transcribed.trim()) {
+              audioTranscriptionText = transcribed.trim();
+              console.log(`[JanIA-Router] Audio transcrito exitosamente: "${audioTranscriptionText.substring(0, 80)}..."`);
+            }
+          } catch (sttErr) {
+            console.warn("[JanIA-Router] Error en transcripci\xF3n de audio:", sttErr?.message || sttErr);
+          }
         }
       } catch (downloadError) {
         console.error("[JanIA-Router] Error descargando archivo de an\xE1lisis:", downloadError.message || downloadError);
       }
       const mockUserId = ctx.user ? `web-user-${ctx.user.id}` : `web-session-${input.sessionId}`;
       const mockUserName = ctx.user ? ctx.user.name ?? void 0 : "Usuario Web";
+      const messageText = audioTranscriptionText ? `[Nota de voz / Audio transcrito]: ${audioTranscriptionText}` : `[Archivo: ${input.fileType}]`;
       const result = await processWhatsAppMessage(
-        `[Archivo: ${input.fileType}]`,
+        messageText,
         mockUserId,
         mockUserName,
         true,

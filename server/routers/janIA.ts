@@ -12,6 +12,7 @@ import { explicarMatch, findMatchesForProperty, findMatchesForRequirement } from
 import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
+import { transcribeAudioBuffer } from '../_core/voiceTranscription';
 
 export const janIARouter = router({
   // New: Extract property data from link
@@ -314,11 +315,13 @@ export const janIARouter = router({
         let imageBuffer: string | undefined;
         let pdfBuffer: string | undefined;
         let pdfMimeType: string | undefined;
+        let audioTranscriptionText: string | undefined;
 
         try {
           console.log(`[JanIA-Router] Descargando archivo desde URL para análisis: ${input.fileUrl}`);
           const fileRes = await axios.get(input.fileUrl, { responseType: 'arraybuffer' });
-          const base64Data = Buffer.from(fileRes.data).toString('base64');
+          const rawBuffer = Buffer.from(fileRes.data);
+          const base64Data = rawBuffer.toString('base64');
           const contentTypeHeader = fileRes.headers['content-type'];
           const contentType = typeof contentTypeHeader === 'string' ? contentTypeHeader : (input.fileType || '');
 
@@ -329,6 +332,18 @@ export const janIARouter = router({
           } else if (contentType.includes('image') || input.fileUrl.toLowerCase().match(/\.(jpe?g|png|gif|webp)$/i)) {
             imageBuffer = base64Data;
             console.log('[JanIA-Router] Archivo detectado como Imagen.');
+          } else if (contentType.includes('audio') || input.fileUrl.toLowerCase().match(/\.(ogg|mp3|wav|m4a|aac|webm)$/i)) {
+            console.log('[JanIA-Router] Archivo detectado como Audio / Nota de voz. Transcribiendo...');
+            const mime = contentType.includes('audio') ? contentType : (input.fileUrl.endsWith('.ogg') ? 'audio/ogg' : 'audio/mp3');
+            try {
+              const transcribed = await transcribeAudioBuffer(rawBuffer, mime);
+              if (transcribed && transcribed.trim()) {
+                audioTranscriptionText = transcribed.trim();
+                console.log(`[JanIA-Router] Audio transcrito exitosamente: "${audioTranscriptionText.substring(0, 80)}..."`);
+              }
+            } catch (sttErr: any) {
+              console.warn('[JanIA-Router] Error en transcripción de audio:', sttErr?.message || sttErr);
+            }
           }
         } catch (downloadError: any) {
           console.error('[JanIA-Router] Error descargando archivo de análisis:', downloadError.message || downloadError);
@@ -337,8 +352,12 @@ export const janIARouter = router({
         const mockUserId = ctx.user ? `web-user-${ctx.user.id}` : `web-session-${input.sessionId}`;
         const mockUserName = ctx.user ? (ctx.user.name ?? undefined) : "Usuario Web";
 
+        const messageText = audioTranscriptionText
+          ? `[Nota de voz / Audio transcrito]: ${audioTranscriptionText}`
+          : `[Archivo: ${input.fileType}]`;
+
         const result = await processWhatsAppMessage(
-          `[Archivo: ${input.fileType}]`,
+          messageText,
           mockUserId,
           mockUserName,
           true, // hasMedia

@@ -472,6 +472,14 @@ export default function JanIAConsole() {
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+
+    // Si es un archivo de audio (nota de voz reenviada, .ogg, .mp3, .m4a, etc.)
+    if (file.type.startsWith('audio/') || file.name.toLowerCase().match(/\.(ogg|mp3|wav|m4a|aac|webm)$/i)) {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      await handleVoiceNoteUpload(file);
+      return;
+    }
+
     setIsLoading(true);
     try {
       const formData = new FormData();
@@ -496,8 +504,9 @@ export default function JanIAConsole() {
         fileType: file.type,
       });
       
+      const janIAMsgId = `msg-${Date.now()}`;
       const janIAMessage: Message = {
-        id: `msg-${Date.now()}`,
+        id: janIAMsgId,
         role: 'janIA',
         content: janIAResponse.analysis,
         messageType: 'text',
@@ -505,6 +514,13 @@ export default function JanIAConsole() {
       };
       setMessages(prev => [...prev, janIAMessage]);
       
+      // Auto-reproducir voz de JanIA
+      try {
+        playMessageVoice(janIAMsgId, janIAResponse.analysis);
+      } catch (e) {
+        console.warn('Voice play error:', e);
+      }
+
       if (isAuthenticated) {
         refetchConversations();
       }
@@ -512,6 +528,7 @@ export default function JanIAConsole() {
       console.error('Error uploading file:', error);
     } finally {
       setIsLoading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
