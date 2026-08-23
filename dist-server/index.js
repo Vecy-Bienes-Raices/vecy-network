@@ -10366,12 +10366,12 @@ async function fetchGttsAudioBuffer(text2) {
   }
   return null;
 }
-async function fetchNeuralVoiceBuffer(text2, voiceName = "es-CO-SalomeNeural") {
+async function fetchNeuralVoiceBuffer(text2, voiceName = "es-CO-SalomeNeural", rate = "+6%") {
   try {
     const { MsEdgeTTS, OUTPUT_FORMAT } = await import("msedge-tts");
     const tts = new MsEdgeTTS();
     await tts.setMetadata(voiceName, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
-    const { audioStream } = tts.toStream(text2);
+    const { audioStream } = tts.toStream(text2, { rate, pitch: "+0Hz" });
     return new Promise((resolve) => {
       const chunks = [];
       const timer = setTimeout(() => {
@@ -10398,13 +10398,13 @@ async function fetchNeuralVoiceBuffer(text2, voiceName = "es-CO-SalomeNeural") {
 async function textToSpeechMedia(text2, format = "OGG_OPUS") {
   const cleaned = cleanVoiceText(text2);
   if (!cleaned) return null;
+  const candidateKeys = [
+    process.env.GOOGLE_TTS_API_KEY,
+    process.env.GOOGLE_API_KEY,
+    process.env.GEMINI_API_KEY,
+    process.env.GEMINI_BACKUP_KEY
+  ].filter((k) => k && k.startsWith("AIzaSy"));
   try {
-    const candidateKeys = [
-      process.env.GOOGLE_TTS_API_KEY,
-      process.env.GOOGLE_API_KEY,
-      process.env.GEMINI_API_KEY,
-      process.env.GEMINI_BACKUP_KEY
-    ].filter((k) => k && k.startsWith("AIzaSy"));
     for (const googleApiKey of candidateKeys) {
       try {
         const response = await fetch(`https://texttospeech.googleapis.com/v1beta1/text:synthesize?key=${googleApiKey}`, {
@@ -10422,7 +10422,7 @@ async function textToSpeechMedia(text2, format = "OGG_OPUS") {
             },
             audioConfig: {
               audioEncoding: format === "OGG_OPUS" ? "OGG_OPUS" : "MP3",
-              speakingRate: 1,
+              speakingRate: 1.05,
               pitch: 0
             }
           })
@@ -10446,8 +10446,45 @@ async function textToSpeechMedia(text2, format = "OGG_OPUS") {
     console.warn("[TTS-Media] Google Cloud TTS Erinome no disponible:", err?.message || err);
   }
   try {
-    console.log(`[TTS-Media] \u{1F399}\uFE0F Sintetizando con voz neuronal humana (Salom\xE9 es-CO) \u2014 ${cleaned.length} caracteres...`);
-    const neuralBuffer = await fetchNeuralVoiceBuffer(cleaned, "es-CO-SalomeNeural");
+    for (const googleApiKey of candidateKeys) {
+      try {
+        const response = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${googleApiKey}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            input: { text: cleaned },
+            voice: {
+              languageCode: "es-US",
+              name: "es-US-Journey-F"
+            },
+            audioConfig: {
+              audioEncoding: format === "OGG_OPUS" ? "OGG_OPUS" : "MP3",
+              speakingRate: 1.05,
+              pitch: 0
+            }
+          })
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.audioContent) {
+            console.log(`[TTS-Media] \u2713 Google Cloud Journey-F \u2014 ${cleaned.length} chars \u2192 audio generado.`);
+            const buffer = Buffer.from(data.audioContent, "base64");
+            return {
+              mimetype: format === "OGG_OPUS" ? "audio/ogg; codecs=opus" : "audio/mp3",
+              data: buffer.toString("base64"),
+              buffer
+            };
+          }
+        }
+      } catch (keyErr) {
+      }
+    }
+  } catch (err) {
+    console.warn("[TTS-Media] Google Cloud Journey-F no disponible:", err?.message || err);
+  }
+  try {
+    console.log(`[TTS-Media] \u{1F399}\uFE0F Sintetizando con voz neuronal humana (Salom\xE9 es-CO +6%) \u2014 ${cleaned.length} caracteres...`);
+    const neuralBuffer = await fetchNeuralVoiceBuffer(cleaned, "es-CO-SalomeNeural", "+6%");
     if (neuralBuffer && neuralBuffer.length > 0) {
       console.log(`[TTS-Media] \u2713 Audio generado con voz humana de Salom\xE9 (${neuralBuffer.length} bytes).`);
       return {
@@ -10460,7 +10497,7 @@ async function textToSpeechMedia(text2, format = "OGG_OPUS") {
     console.warn("[TTS-Media] Voz Salom\xE9 fall\xF3, probando respaldo Dalia:", err?.message || err);
   }
   try {
-    const daliaBuffer = await fetchNeuralVoiceBuffer(cleaned, "es-MX-DaliaNeural");
+    const daliaBuffer = await fetchNeuralVoiceBuffer(cleaned, "es-MX-DaliaNeural", "+5%");
     if (daliaBuffer && daliaBuffer.length > 0) {
       console.log(`[TTS-Media] \u2713 Audio generado con voz neuronal de respaldo Dalia (${daliaBuffer.length} bytes).`);
       return {
