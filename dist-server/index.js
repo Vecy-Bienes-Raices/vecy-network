@@ -15169,7 +15169,7 @@ import { fileURLToPath } from "url";
 var __filename = fileURLToPath(import.meta.url);
 var __dirname = path10.dirname(__filename);
 function initCronScheduler() {
-  console.log("[CRON-SERVICE] Inicializando orquestador de agendas automatizadas v3.1 (Exclusivamente Audios Motivacionales y Re-matching)...");
+  console.log("[CRON-SERVICE] Inicializando orquestador de agendas automatizadas v3.2 (Parrilla Semanal de Audios y Re-matching)...");
   cron.schedule("0 11 * * 1,4", async () => {
     console.log("[CRON-SERVICE] Enviando audio motivacional a VECY INMUEBLES NETWORK...");
     const guion = `Buenos d\xEDas a todos y a todas. Soy JanIA, la inteligencia artificial de VECY Network. Hoy quiero recordarles que este grupo es nuestro centro de operaciones comerciales. Aqu\xED publican sus inmuebles en venta o arriendo, sus requerimientos de compra o renta, y yo me encargo de cruzar toda esa informaci\xF3n en tiempo real en los 32 departamentos de Colombia para detectar MATCHES y hacer posibles cierres de negocios. \xBFYa publicaste hoy? Cada inmueble que compartes aqu\xED es una oportunidad de negocio que no puedes dejar pasar. Puedes enviar texto, nota de voz, imagen o flyer y yo lo proceso autom\xE1ticamente. Sigan publicando sus inmuebles, colegas, e inviten a m\xE1s colegas a unirse a esta red. Entre m\xE1s seamos, m\xE1s matches encontramos. \xA1Hoy puede ser el d\xEDa de tu pr\xF3ximo cierre!`;
@@ -15179,13 +15179,58 @@ function initCronScheduler() {
       console.error("[CRON-SERVICE] Error enviando audio a VECY INMUEBLES NETWORK:", e.message);
     }
   }, { timezone: "America/Bogota" });
-  cron.schedule("30 11 * * 2,5", async () => {
-    console.log("[CRON-SERVICE] Enviando audio motivacional a VECY: SOPORTE LEGAL...");
-    const guion = `Hola a todos por aqu\xED. Soy JanIA, y este espacio es nuestro rinc\xF3n de consultor\xEDa jur\xEDdica y t\xE9cnica de VECY Network. Aqu\xED no hay preguntas tontas: si tienes dudas sobre un contrato de arrendamiento, una promesa de compraventa, una sucesi\xF3n, el c\xE1lculo de ganancia ocasional, c\xF3mo cobrar una comisi\xF3n que te deben, o simplemente quieres estimar el valor por metro cuadrado de un inmueble, este es tu lugar. El conocimiento jur\xEDdico es poder en los negocios. No dejes que la duda te frene. Escr\xEDbeme aqu\xED o env\xEDame una nota de voz y te respondo con criterio legal, rigor t\xE9cnico y total honestidad. Sigan haciendo sus consultas, colegas. Y si conocen a alguien del sector que necesita este apoyo, inv\xEDtenlos al grupo. Juntos elevamos el nivel profesional del gremio.`;
+  cron.schedule("0 8 * * 1", async () => {
+    console.log("[CRON-SERVICE] Enviando audio de Lunes a SOPORTE LEGAL, TRIBUTARIO, AVAL\xDAOS Y MARKETING...");
+    const guion = `\xA1Buenos d\xEDas a todos y a todas! Soy JanIA. Arrancamos una semana llena de oportunidades de negocio y cierres inmobiliarios. Recuerden que este espacio es su consultorio permanente: aqu\xED pueden preguntarme por texto o nota de voz sobre leyes inmobiliarias, c\xF3mo liquidar la ganancia ocasional ante la DIAN, aval\xFAos de mercado o c\xF3mo redactar un anuncio de alto impacto para sus inmuebles y requerimientos. La informaci\xF3n es poder en los negocios. Los invito a que no se queden con dudas hoy y a que compartan el enlace de este grupo con sus colegas de confianza: entre m\xE1s asesores capacitados seamos, m\xE1s blindados y profesionales cerramos negocios en Colombia. \xA1Que tengan una semana extraordinaria y productiva!`;
     try {
       await janiaMatchBot.sendVoiceToGroup(guion, janiaMatchBot.buzonGroupId);
     } catch (e) {
-      console.error("[CRON-SERVICE] Error enviando audio a SOPORTE LEGAL:", e.message);
+      console.error("[CRON-SERVICE] Error enviando audio de Lunes:", e.message);
+    }
+  }, { timezone: "America/Bogota" });
+  cron.schedule("0 11 * * 2", async () => {
+    console.log("[CRON-SERVICE] Enviando audio de Martes Jur\xEDdico a SOPORTE LEGAL...");
+    const guion = `Hola, colegas. Soy JanIA con su tip jur\xEDdico del d\xEDa. \xBFSab\xEDan que un simple correo electr\xF3nico con la hoja de presentaci\xF3n del cliente o el acuerdo de puntas compartidas tiene plena validez probatoria bajo la Ley 527 de 1999? Nunca muestren un inmueble sin dejar registro escrito. Si tienen dudas sobre una promesa de compraventa, una restituci\xF3n o c\xF3mo redactar una minuta, preg\xFAntenme aqu\xED mismo o env\xEDenme el documento en PDF y lo revisamos juntos al instante.`;
+    try {
+      await janiaMatchBot.sendVoiceToGroup(guion, janiaMatchBot.buzonGroupId);
+    } catch (e) {
+      console.error("[CRON-SERVICE] Error enviando audio de Martes:", e.message);
+    }
+  }, { timezone: "America/Bogota" });
+  cron.schedule("30 11 * * 3", async () => {
+    console.log("[CRON-SERVICE] Enviando audio de Mi\xE9rcoles de Marketing a SOPORTE LEGAL...");
+    const guion = `\xA1Buenas tardes, equipo! Soy JanIA con su tip de Marketing Inmobiliario. El ochenta por ciento de los clientes y colegas descartan una publicaci\xF3n si no tiene el precio claro, el barrio exacto o el metraje. Si quieren que sus ofertas y requerimientos se cierren en tiempo r\xE9cord, incluyan siempre los siete pilares: tipo de inmueble, barrio y ciudad, precio y administraci\xF3n, \xE1rea en metros cuadrados, habitaciones, garajes independientes o en l\xEDnea, y su enlace directo de WhatsApp. \xBFTienen un inmueble dif\xEDcil de mover? Escr\xEDbanme los datos y les ayudo a redactar un copy persuasivo hoy mismo.`;
+    try {
+      await janiaMatchBot.sendVoiceToGroup(guion, janiaMatchBot.buzonGroupId);
+    } catch (e) {
+      console.error("[CRON-SERVICE] Error enviando audio de Mi\xE9rcoles:", e.message);
+    }
+  }, { timezone: "America/Bogota" });
+  cron.schedule("0 11 * * 4", async () => {
+    console.log("[CRON-SERVICE] Enviando audio de Jueves Tributario a SOPORTE LEGAL...");
+    const guion = `Hola a todos. Soy JanIA con un consejo financiero clave para sus clientes vendedores. Al vender vivienda de habitaci\xF3n, pueden deducir hasta cinco mil UVT exentas del impuesto de ganancia ocasional si los fondos se destinan a la compra de otra vivienda o abono a cr\xE9dito hipotecario. Si quieren saber exactamente cu\xE1nto debe pagar su cliente en retenci\xF3n en la fuente o ganancia ocasional antes de firmar escrituras, cons\xFAltenme aqu\xED y les hago la liquidaci\xF3n en segundos.`;
+    try {
+      await janiaMatchBot.sendVoiceToGroup(guion, janiaMatchBot.buzonGroupId);
+    } catch (e) {
+      console.error("[CRON-SERVICE] Error enviando audio de Jueves:", e.message);
+    }
+  }, { timezone: "America/Bogota" });
+  cron.schedule("30 11 * * 5", async () => {
+    console.log("[CRON-SERVICE] Enviando audio de Viernes de Aval\xFAos a SOPORTE LEGAL...");
+    const guion = `\xA1Excelente viernes, colegas! Soy JanIA. \xBFTienen un lote o casa para desarrollo y no saben qu\xE9 altura o uso permite el POT? No se queden con la duda: descarguen la ficha catastral del SINUPOT en PDF y env\xEDenmela por WhatsApp en privado; yo les hago el estudio normativo de uso de suelo al instante. Y para estimar el valor del metro cuadrado en cualquier sector, aqu\xED estoy para asesorarlos.`;
+    try {
+      await janiaMatchBot.sendVoiceToGroup(guion, janiaMatchBot.buzonGroupId);
+    } catch (e) {
+      console.error("[CRON-SERVICE] Error enviando audio de Viernes:", e.message);
+    }
+  }, { timezone: "America/Bogota" });
+  cron.schedule("0 10 * * 6", async () => {
+    console.log("[CRON-SERVICE] Enviando audio de S\xE1bado a SOPORTE LEGAL...");
+    const guion = `Buenos d\xEDas, aliados de la red. Cerramos semana de gran actividad comercial. Recuerden que para casos jur\xEDdicos de alta complejidad, sucesiones litigiosas, saneamientos o aval\xFAos certificados por perito de Lonja con R.A.A., pueden comunicarse directamente al WhatsApp tres diecis\xE9is, seis cincuenta y seis, noventa y siete diecinueve, para coordinar una Consultor\xEDa Personalizada con nuestro br\xF3ker en VECY BIENES RA\xCDCES. \xA1Disfruten de su fin de semana y a recargar energ\xEDas!`;
+    try {
+      await janiaMatchBot.sendVoiceToGroup(guion, janiaMatchBot.buzonGroupId);
+    } catch (e) {
+      console.error("[CRON-SERVICE] Error enviando audio de S\xE1bado:", e.message);
     }
   }, { timezone: "America/Bogota" });
   cron.schedule("0 12 * * 3,6", async () => {

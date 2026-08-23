@@ -19,11 +19,11 @@ import { invokeLLM } from './llm';
  */
 
 export function initCronScheduler() {
-  console.log('[CRON-SERVICE] Inicializando orquestador de agendas automatizadas v3.1 (Exclusivamente Audios Motivacionales y Re-matching)...');
+  console.log('[CRON-SERVICE] Inicializando orquestador de agendas automatizadas v3.2 (Parrilla Semanal de Audios y Re-matching)...');
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // AUDIO MOTIVACIONAL 1: VECY INMUEBLES NETWORK — Lunes y Jueves a las 11:00 AM
-  // Tema: Operaciones comerciales, publicación de inmuebles/requerimientos y matching
+  // GRUPO 1: VECY INMUEBLES NETWORK — Lunes y Jueves a las 11:00 AM
+  // Tema: Operaciones comerciales, publicación de inmuebles/requerimientos y matching nacional
   // ─────────────────────────────────────────────────────────────────────────────
   cron.schedule('0 11 * * 1,4', async () => {
     console.log('[CRON-SERVICE] Enviando audio motivacional a VECY INMUEBLES NETWORK...');
@@ -36,21 +36,78 @@ export function initCronScheduler() {
   }, { timezone: 'America/Bogota' });
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // AUDIO MOTIVACIONAL 2: VECY: SOPORTE LEGAL, TRIBUTARIO Y AVALÚOS — Martes y Viernes a las 11:30 AM
-  // Tema: Consultoría jurídica, avalúos, trámites, impuestos y asesoría especializada
+  // GRUPO 2: VECY: SOPORTE LEGAL, TRIBUTARIO, AVALÚOS Y MARKETING
+  // PARRILLA SEMANAL DIARIA DE AUDIOS ESTRATÉGICOS (LUNES A SÁBADO)
   // ─────────────────────────────────────────────────────────────────────────────
-  cron.schedule('30 11 * * 2,5', async () => {
-    console.log('[CRON-SERVICE] Enviando audio motivacional a VECY: SOPORTE LEGAL...');
-    const guion = `Hola a todos por aquí. Soy JanIA, y este espacio es nuestro rincón de consultoría jurídica y técnica de VECY Network. Aquí no hay preguntas tontas: si tienes dudas sobre un contrato de arrendamiento, una promesa de compraventa, una sucesión, el cálculo de ganancia ocasional, cómo cobrar una comisión que te deben, o simplemente quieres estimar el valor por metro cuadrado de un inmueble, este es tu lugar. El conocimiento jurídico es poder en los negocios. No dejes que la duda te frene. Escríbeme aquí o envíame una nota de voz y te respondo con criterio legal, rigor técnico y total honestidad. Sigan haciendo sus consultas, colegas. Y si conocen a alguien del sector que necesita este apoyo, invítenlos al grupo. Juntos elevamos el nivel profesional del gremio.`;
+
+  // 🚀 LUNES 08:00 AM — Arranque Semanal & Convocatoria de Aliados
+  cron.schedule('0 8 * * 1', async () => {
+    console.log('[CRON-SERVICE] Enviando audio de Lunes a SOPORTE LEGAL, TRIBUTARIO, AVALÚOS Y MARKETING...');
+    const guion = `¡Buenos días a todos y a todas! Soy JanIA. Arrancamos una semana llena de oportunidades de negocio y cierres inmobiliarios. Recuerden que este espacio es su consultorio permanente: aquí pueden preguntarme por texto o nota de voz sobre leyes inmobiliarias, cómo liquidar la ganancia ocasional ante la DIAN, avalúos de mercado o cómo redactar un anuncio de alto impacto para sus inmuebles y requerimientos. La información es poder en los negocios. Los invito a que no se queden con dudas hoy y a que compartan el enlace de este grupo con sus colegas de confianza: entre más asesores capacitados seamos, más blindados y profesionales cerramos negocios en Colombia. ¡Que tengan una semana extraordinaria y productiva!`;
     try {
       await whatsappBot.sendVoiceToGroup(guion, whatsappBot.buzonGroupId);
     } catch (e: any) {
-      console.error('[CRON-SERVICE] Error enviando audio a SOPORTE LEGAL:', e.message);
+      console.error('[CRON-SERVICE] Error enviando audio de Lunes:', e.message);
+    }
+  }, { timezone: 'America/Bogota' });
+
+  // ⚖️ MARTES 11:00 AM — Martes Jurídico & Blindaje Notarial
+  cron.schedule('0 11 * * 2', async () => {
+    console.log('[CRON-SERVICE] Enviando audio de Martes Jurídico a SOPORTE LEGAL...');
+    const guion = `Hola, colegas. Soy JanIA con su tip jurídico del día. ¿Sabían que un simple correo electrónico con la hoja de presentación del cliente o el acuerdo de puntas compartidas tiene plena validez probatoria bajo la Ley 527 de 1999? Nunca muestren un inmueble sin dejar registro escrito. Si tienen dudas sobre una promesa de compraventa, una restitución o cómo redactar una minuta, pregúntenme aquí mismo o envíenme el documento en PDF y lo revisamos juntos al instante.`;
+    try {
+      await whatsappBot.sendVoiceToGroup(guion, whatsappBot.buzonGroupId);
+    } catch (e: any) {
+      console.error('[CRON-SERVICE] Error enviando audio de Martes:', e.message);
+    }
+  }, { timezone: 'America/Bogota' });
+
+  // 📢 MIÉRCOLES 11:30 AM — Miércoles de Marketing Inmobiliario & Copywriting
+  cron.schedule('30 11 * * 3', async () => {
+    console.log('[CRON-SERVICE] Enviando audio de Miércoles de Marketing a SOPORTE LEGAL...');
+    const guion = `¡Buenas tardes, equipo! Soy JanIA con su tip de Marketing Inmobiliario. El ochenta por ciento de los clientes y colegas descartan una publicación si no tiene el precio claro, el barrio exacto o el metraje. Si quieren que sus ofertas y requerimientos se cierren en tiempo récord, incluyan siempre los siete pilares: tipo de inmueble, barrio y ciudad, precio y administración, área en metros cuadrados, habitaciones, garajes independientes o en línea, y su enlace directo de WhatsApp. ¿Tienen un inmueble difícil de mover? Escríbanme los datos y les ayudo a redactar un copy persuasivo hoy mismo.`;
+    try {
+      await whatsappBot.sendVoiceToGroup(guion, whatsappBot.buzonGroupId);
+    } catch (e: any) {
+      console.error('[CRON-SERVICE] Error enviando audio de Miércoles:', e.message);
+    }
+  }, { timezone: 'America/Bogota' });
+
+  // 💰 JUEVES 11:00 AM — Jueves Tributario & Ahorro Fiscal DIAN
+  cron.schedule('0 11 * * 4', async () => {
+    console.log('[CRON-SERVICE] Enviando audio de Jueves Tributario a SOPORTE LEGAL...');
+    const guion = `Hola a todos. Soy JanIA con un consejo financiero clave para sus clientes vendedores. Al vender vivienda de habitación, pueden deducir hasta cinco mil UVT exentas del impuesto de ganancia ocasional si los fondos se destinan a la compra de otra vivienda o abono a crédito hipotecario. Si quieren saber exactamente cuánto debe pagar su cliente en retención en la fuente o ganancia ocasional antes de firmar escrituras, consúltenme aquí y les hago la liquidación en segundos.`;
+    try {
+      await whatsappBot.sendVoiceToGroup(guion, whatsappBot.buzonGroupId);
+    } catch (e: any) {
+      console.error('[CRON-SERVICE] Error enviando audio de Jueves:', e.message);
+    }
+  }, { timezone: 'America/Bogota' });
+
+  // 📐 VIERNES 11:30 AM — Viernes de Avalúos & Estudio de Suelo SINUPOT
+  cron.schedule('30 11 * * 5', async () => {
+    console.log('[CRON-SERVICE] Enviando audio de Viernes de Avalúos a SOPORTE LEGAL...');
+    const guion = `¡Excelente viernes, colegas! Soy JanIA. ¿Tienen un lote o casa para desarrollo y no saben qué altura o uso permite el POT? No se queden con la duda: descarguen la ficha catastral del SINUPOT en PDF y envíenmela por WhatsApp en privado; yo les hago el estudio normativo de uso de suelo al instante. Y para estimar el valor del metro cuadrado en cualquier sector, aquí estoy para asesorarlos.`;
+    try {
+      await whatsappBot.sendVoiceToGroup(guion, whatsappBot.buzonGroupId);
+    } catch (e: any) {
+      console.error('[CRON-SERVICE] Error enviando audio de Viernes:', e.message);
+    }
+  }, { timezone: 'America/Bogota' });
+
+  // ☕ SÁBADO 10:00 AM — Café Inmobiliario & Consultoría con el Bróker
+  cron.schedule('0 10 * * 6', async () => {
+    console.log('[CRON-SERVICE] Enviando audio de Sábado a SOPORTE LEGAL...');
+    const guion = `Buenos días, aliados de la red. Cerramos semana de gran actividad comercial. Recuerden que para casos jurídicos de alta complejidad, sucesiones litigiosas, saneamientos o avalúos certificados por perito de Lonja con R.A.A., pueden comunicarse directamente al WhatsApp tres dieciséis, seis cincuenta y seis, noventa y siete diecinueve, para coordinar una Consultoría Personalizada con nuestro bróker en VECY BIENES RAÍCES. ¡Disfruten de su fin de semana y a recargar energías!`;
+    try {
+      await whatsappBot.sendVoiceToGroup(guion, whatsappBot.buzonGroupId);
+    } catch (e: any) {
+      console.error('[CRON-SERVICE] Error enviando audio de Sábado:', e.message);
     }
   }, { timezone: 'America/Bogota' });
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // AUDIO MOTIVACIONAL 3: PROYECTO VECY NETWORK — Miércoles y Sábados a las 12:00 PM
+  // GRUPO 3: PROYECTO "Vecy Network" — Miércoles y Sábados a las 12:00 PM
   // Tema: Filosofía, tecnología, misión, visión y debate del proyecto Vecy Network
   // ─────────────────────────────────────────────────────────────────────────────
   cron.schedule('0 12 * * 3,6', async () => {
