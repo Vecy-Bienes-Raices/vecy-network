@@ -162,7 +162,16 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v25.2 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL: v25.4 — Agosto 2026
+
+### Novedades v25.4 (Módulo de Marketing Digital Inmobiliario, Resiliencia de Voz & Parrilla Semanal Maestra):
+- **Marketing Digital Inmobiliario & Estructura de 7 Pilares (`janIA.ts` & `prompts/grupos/`)**: JanIA asesora en copys persuasivos, anuncios y la estructura de 7 pilares para que los brokers publiquen ofertas y demandas completas con precios, áreas, alcobas, baños y garajes.
+- **Renombramiento Oficial de Grupos**:
+  - Grupo 2: `𝗩𝗘𝗖𝗬: 𝗦𝗢𝗣𝗢𝗥𝗧𝗘 𝗟𝗘𝗚𝗔𝗟, 𝗧𝗥𝗜𝗕𝗨𝗧𝗔𝗥𝗜𝗢, 𝗔𝗩𝗔𝗟Ú𝗢𝗦 𝗬 𝗠𝗔𝗥𝗞𝗘𝗧𝗜𝗡𝗚`.
+  - Grupo 3: `𝗣𝗥𝗢𝗬𝗘𝗖𝗧𝗢 "𝗩𝗲𝗰𝘆 𝗡𝗲𝘁𝘄𝗼𝗿𝗸"`.
+  - Teléfono unificado de atención del bróker: `3166569719`.
+- **Resiliencia Total en Transcripción de Audio (`voiceTranscription.ts`)**: Rotación inteligente de pool de claves Gemini, cascada de 3 modelos y timeout de 60s para notas de voz largas (hasta 3-4 minutos).
+- **Parrilla Semanal Maestra de Audios de JanIA (`cronService.ts`)**: Audios temáticos de Lunes a Sábado (Lunes 8:00 AM Convocatoria con link de grupo, Martes 11:00 AM Legal, Miércoles 11:30 AM Marketing, Jueves 11:00 AM DIAN, Viernes 11:30 AM Avalúos/SINUPOT, Sábado 10:00 AM Café y Consultoría del Bróker).
 
 ### Novedades v25.2 (Motor de Auto-Aprendizaje y Propagación en Cascada de Teléfonos de Brokers):
 - **Propagación en Cascada Universal (`propagateBrokerPhoneAcrossAllListings` en `janIA.ts`)**: Cada vez que se edita o extrae el teléfono de un broker, se actualizan automáticamente TODAS sus publicaciones pasadas, presentes y futuras (propiedades y requerimientos) en Supabase.

@@ -52,11 +52,48 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v25.2 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v25.4 — Agosto 2026
 
 ---
 
 ## 📜 REGISTRO DETALLADO DE CONVERSACIONES (ORDEN CRONOLÓGICO INVERSO CON FECHA Y HORA)
+
+### 📌 SESIÓN 36: MARKETING DIGITAL INMOBILIARIO, RESILIENCIA DE VOZ & PARRILLA SEMANAL MAESTRA DE JANIA (v25.4)
+- **Fecha y Hora**: 22 de Agosto de 2026 (Noche)
+- **Versión resultante**: `v25.4`
+- **Participantes**: Eduardo A. Rivera (Director Tecnología) & Antigravity IDE (Pair Programmer)
+- **Solicitud de Eduardo**:
+  1. *"Crees que JanIa sepa hablar y dar tips de Marketing Digital Inmobiliario y dentro de esto aconsejar tambien la mejor forma de publicar una DEMANDA o una OFERTA de manera completa en cualquier grupo, esto con el ánimo de ir amoldando los agentes y enseñandoles de manera diplomática y sin que se enteren de que es para nuestro beneficio y mejor decirles que es para su propio beneficio y lograr que otros agentes que buscan bien sea UN INMUEBLE o un REQUERIMIENTO lo localicen y/o encuentren más fácilmente..."*
+  2. Renombrar y actualizar reglas del Grupo 2 a **`𝗩𝗘𝗖𝗬: 𝗦𝗢𝗣𝗢𝗥𝗧𝗘 𝗟𝗘𝗚𝗔𝗟, 𝗧𝗥𝗜𝗕𝗨𝗧𝗔𝗥𝗜𝗢, 𝗔𝗩𝗔𝗟Ú𝗢𝗦 𝗬 𝗠𝗔𝗥𝗞𝗘𝗧𝗜𝗡𝗚`** y Grupo 3 a **`𝗣𝗥𝗢𝗬𝗘𝗖𝗧𝗢 "𝗩𝗲𝗰𝘆 𝗡𝗲𝘁𝘄𝗼𝗿𝗸"`** (erradicando "Círculo Cero").
+  3. Eliminar el número personal y unificar el teléfono del bróker a **`3166569719`**.
+  4. Diagnosticar y corregir fallo en notas de voz largas (1:33 min) en grupos oficiales sin riesgo de baneo en WhatsApp.
+  5. Activar la **Parrilla Semanal Maestra de Audios Motivacionales y Tips Estratégicos de JanIA** (Lunes a Sábado).
+- **Diagnóstico Técnico**:
+  1. El módulo de consultoría en `janIA.ts` carecía de directrices explícitas sobre Marketing Digital Inmobiliario y copy persuasivo.
+  2. La transcripción de audio en `voiceTranscription.ts` tenía un timeout de solo 15s y usaba una sola API key sin fallback en caso de error 429 (Rate Limit), causando fallos en audios de más de 60 segundos.
+  3. Las referencias a "Círculo Cero" permanecían en prompts de bienvenida y cron de audios.
+- **Acciones Ejecutadas**:
+  1. **Doctrina de Marketing Digital Inmobiliario y Estructura de 7 Pilares (`janIA.ts` & `prompts/grupos/`)**:
+     - Integración de tips de marketing, psicología pedagógica y la estructura de los 7 pilares (Tipo Inmueble + Tipo Negocio + Barrio exacto + Ciudad + Precio/Canon + Cuota de Admon + Área total/privada + Habitaciones y Baños + Garajes independientes/lineales + Amenidades y Contacto) para ofertas y demandas.
+  2. **Renombramiento Oficial y Purgado de "Círculo Cero"**:
+     - Grupo 2: `𝗩𝗘𝗖𝗬: 𝗦𝗢𝗣𝗢𝗥𝗧𝗘 𝗟𝗘𝗚𝗔𝗟, 𝗧𝗥𝗜𝗕𝗨𝗧𝗔𝗥𝗜𝗢, 𝗔𝗩𝗔𝗟Ú𝗢𝗦 𝗬 𝗠𝗔𝗥𝗞𝗘𝗧𝗜𝗡𝗚`.
+     - Grupo 3: `𝗣𝗥𝗢𝗬𝗘𝗖𝗧𝗢 "𝗩𝗲𝗰𝘆 𝗡𝗲𝘁𝘄𝗼𝗿𝗸"`.
+     - Contacto oficial del bróker para consultorías personalizadas: `3166569719`.
+  3. **Resiliencia Total en Transcripción de Voz (`voiceTranscription.ts`)**:
+     - Rotación inteligente de pool de claves de Gemini (`GEMINI_API_KEYS`, `GOOGLE_API_KEY`, etc.).
+     - Cascada de 3 modelos de IA (`gemini-2.5-flash` ➔ `gemini-flash-latest` ➔ `gemini-flash-lite-latest`).
+     - Timeout de axios ampliado a 60 segundos para notas de voz largas (hasta 3-4 minutos).
+  4. **Parrilla Semanal Maestra de Audios de JanIA (`cronService.ts`)**:
+     - *Lunes 08:00 AM*: Arranque Semanal & Convocatoria con enlace del grupo (`https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6`).
+     - *Martes 11:00 AM*: Martes Jurídico & Blindaje Notarial.
+     - *Miércoles 11:30 AM*: Miércoles de Marketing Digital Inmobiliario & Copywriting.
+     - *Jueves 11:00 AM*: Jueves Tributario DIAN (5.000 UVT y Ganancia Ocasional).
+     - *Viernes 11:30 AM*: Viernes de Avalúos y Estudio de Suelo SINUPOT.
+     - *Sábado 10:00 AM*: Café Inmobiliario & Consultorías con el Bróker (`3166569719`).
+  5. **Compilación y Despliegue en VPS**:
+     - `npm run build` limpio y sincronizado con PM2 en vivo.
+
+---
 
 ### 📌 SESIÓN 35: MOTOR DE AUTO-APRENDIZAJE Y PROPAGACIÓN EN CASCADA DE CONTACTOS DE BROKERS (v25.2)
 - **Fecha y Hora**: 22 de Agosto de 2026 (Madrugada)
