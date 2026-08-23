@@ -5875,10 +5875,10 @@ import { eq as eq4, and as and2, sql as sql3, gte, desc } from "drizzle-orm";
 import fs5 from "fs";
 import path5 from "path";
 import axios6 from "axios";
-import crypto2 from "crypto";
+import crypto from "crypto";
 function generarHashMensaje(rawText, remitente) {
   const normalizado = (rawText || "").toLowerCase().replace(/\s+/g, " ").replace(/[^\w\s]/g, "").trim();
-  return crypto2.createHash("sha256").update(`${remitente}:${normalizado}`).digest("hex");
+  return crypto.createHash("sha256").update(`${remitente}:${normalizado}`).digest("hex");
 }
 function isPhoneNumberNotPrice(val, rawText) {
   if (val === void 0 || val === null || val === "" || val === 0 || val === "0") return false;
@@ -10241,6 +10241,7 @@ __export(whatsapp_utils_exports, {
 });
 import path6 from "path";
 import fs6 from "fs";
+import { createSign } from "crypto";
 function extractFirstName2(fullName) {
   if (!fullName) return "";
   let clean = fullName.trim();
@@ -10426,7 +10427,7 @@ async function getVertexAIAccessToken() {
     const encodedHeader = base64url(JSON.stringify(header));
     const encodedClaim = base64url(JSON.stringify(claim));
     const signInput = `${encodedHeader}.${encodedClaim}`;
-    const signer = crypto.createSign("RSA-SHA256");
+    const signer = createSign("RSA-SHA256");
     signer.update(signInput);
     const signature = signer.sign(sa.private_key, "base64").replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
     const jwt = `${signInput}.${signature}`;

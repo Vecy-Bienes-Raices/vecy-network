@@ -1,5 +1,6 @@
 import path from "path";
 import fs from "fs";
+import { createSign } from "crypto";
 
 // ── Lista de nombres colombianos comunes para extractFirstName ──
 const COMMON_FIRST_NAMES = new Set([
@@ -403,7 +404,7 @@ async function getVertexAIAccessToken(): Promise<string | null> {
     const encodedClaim = base64url(JSON.stringify(claim));
     const signInput = `${encodedHeader}.${encodedClaim}`;
 
-    const signer = crypto.createSign("RSA-SHA256");
+    const signer = createSign("RSA-SHA256");
     signer.update(signInput);
     const signature = signer.sign(sa.private_key, "base64").replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
     const jwt = `${signInput}.${signature}`;
