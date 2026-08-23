@@ -5875,10 +5875,10 @@ import { eq as eq4, and as and2, sql as sql3, gte, desc } from "drizzle-orm";
 import fs5 from "fs";
 import path5 from "path";
 import axios6 from "axios";
-import crypto from "crypto";
+import crypto2 from "crypto";
 function generarHashMensaje(rawText, remitente) {
   const normalizado = (rawText || "").toLowerCase().replace(/\s+/g, " ").replace(/[^\w\s]/g, "").trim();
-  return crypto.createHash("sha256").update(`${remitente}:${normalizado}`).digest("hex");
+  return crypto2.createHash("sha256").update(`${remitente}:${normalizado}`).digest("hex");
 }
 function isPhoneNumberNotPrice(val, rawText) {
   if (val === void 0 || val === null || val === "" || val === 0 || val === "0") return false;
@@ -10239,6 +10239,8 @@ __export(whatsapp_utils_exports, {
   sendAdminNotification: () => sendAdminNotification,
   textToSpeechMedia: () => textToSpeechMedia
 });
+import path6 from "path";
+import fs6 from "fs";
 function extractFirstName2(fullName) {
   if (!fullName) return "";
   let clean = fullName.trim();
@@ -10396,9 +10398,104 @@ async function fetchNeuralVoiceBuffer(text2, voiceName = "es-CO-SalomeNeural", r
     return null;
   }
 }
+function base64url(str) {
+  return Buffer.from(str).toString("base64").replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+}
+async function getVertexAIAccessToken() {
+  const now = Math.floor(Date.now() / 1e3);
+  if (cachedVertexToken && cachedVertexToken.expiresAt > now + 300) {
+    return cachedVertexToken.token;
+  }
+  try {
+    const credPath = path6.join(process.cwd(), "server", "_core", "google-service-account.json");
+    if (!fs6.existsSync(credPath)) {
+      return null;
+    }
+    const sa = JSON.parse(fs6.readFileSync(credPath, "utf8"));
+    if (!sa.client_email || !sa.private_key) {
+      return null;
+    }
+    const header = { alg: "RS256", typ: "JWT" };
+    const claim = {
+      iss: sa.client_email,
+      scope: "https://www.googleapis.com/auth/cloud-platform",
+      aud: sa.token_uri || "https://oauth2.googleapis.com/token",
+      exp: now + 3600,
+      iat: now
+    };
+    const encodedHeader = base64url(JSON.stringify(header));
+    const encodedClaim = base64url(JSON.stringify(claim));
+    const signInput = `${encodedHeader}.${encodedClaim}`;
+    const signer = crypto.createSign("RSA-SHA256");
+    signer.update(signInput);
+    const signature = signer.sign(sa.private_key, "base64").replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+    const jwt = `${signInput}.${signature}`;
+    const res = await fetch(sa.token_uri || "https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`
+    });
+    const tokenData = await res.json();
+    if (tokenData.access_token) {
+      cachedVertexToken = {
+        token: tokenData.access_token,
+        expiresAt: now + (tokenData.expires_in || 3600)
+      };
+      return tokenData.access_token;
+    }
+  } catch (err) {
+    console.warn("[TTS-Vertex] Error al generar token OAuth2 de cuenta de servicio:", err?.message || err);
+  }
+  return null;
+}
 async function textToSpeechMedia(text2, format = "OGG_OPUS") {
   const cleaned = cleanVoiceText(text2);
   if (!cleaned) return null;
+  try {
+    const accessToken = await getVertexAIAccessToken();
+    if (accessToken) {
+      const response = await fetch("https://texttospeech.googleapis.com/v1beta1/text:synthesize", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${accessToken}`
+        },
+        body: JSON.stringify({
+          input: {
+            prompt: "Read aloud in a warm, welcoming tone.",
+            text: cleaned
+          },
+          voice: {
+            languageCode: "es-us",
+            modelName: "gemini-3.1-flash-tts-preview",
+            name: "Laomedeia"
+          },
+          audioConfig: {
+            audioEncoding: format === "OGG_OPUS" ? "OGG_OPUS" : "MP3",
+            speakingRate: 1,
+            pitch: 0
+          }
+        })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.audioContent) {
+          console.log(`[TTS-Media] \u2713 Gemini 3.1 Flash TTS (Laomedeia) \u2014 ${cleaned.length} chars \u2192 audio generado.`);
+          const buffer = Buffer.from(data.audioContent, "base64");
+          return {
+            mimetype: format === "OGG_OPUS" ? "audio/ogg; codecs=opus" : "audio/mp3",
+            data: buffer.toString("base64"),
+            buffer
+          };
+        }
+      } else {
+        const errText = await response.text();
+        console.warn(`[TTS-Media] Gemini 3.1 Flash TTS error ${response.status}: ${errText.substring(0, 200)}`);
+      }
+    }
+  } catch (err) {
+    console.warn("[TTS-Media] Gemini 3.1 Flash TTS no disponible:", err?.message || err);
+  }
   const candidateKeys = [
     process.env.GOOGLE_TTS_API_KEY,
     process.env.GOOGLE_API_KEY,
@@ -10441,43 +10538,6 @@ async function textToSpeechMedia(text2, format = "OGG_OPUS") {
     }
   } catch (err) {
     console.warn("[TTS-Media] Google Cloud Chirp3-HD Erinome no disponible:", err?.message || err);
-  }
-  try {
-    for (const googleApiKey of candidateKeys) {
-      try {
-        const response = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${googleApiKey}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            input: { text: cleaned },
-            voice: {
-              languageCode: "es-ES",
-              name: "es-ES-Chirp3-HD-Erinome"
-            },
-            audioConfig: {
-              audioEncoding: format === "OGG_OPUS" ? "OGG_OPUS" : "MP3",
-              speakingRate: 1,
-              pitch: 0
-            }
-          })
-        });
-        if (response.ok) {
-          const data = await response.json();
-          if (data.audioContent) {
-            console.log(`[TTS-Media] \u2713 Google Cloud Chirp3-HD Erinome (es-ES) \u2014 ${cleaned.length} chars \u2192 audio generado.`);
-            const buffer = Buffer.from(data.audioContent, "base64");
-            return {
-              mimetype: format === "OGG_OPUS" ? "audio/ogg; codecs=opus" : "audio/mp3",
-              data: buffer.toString("base64"),
-              buffer
-            };
-          }
-        }
-      } catch (keyErr) {
-      }
-    }
-  } catch (err) {
-    console.warn("[TTS-Media] Google Cloud Chirp3-HD Erinome es-ES no disponible:", err?.message || err);
   }
   try {
     for (const googleApiKey of candidateKeys) {
@@ -10581,7 +10641,7 @@ async function textToSpeechMedia(text2, format = "OGG_OPUS") {
 async function sendAdminNotification(text2) {
   console.log(`[WHATSAPP-UTILS] [Notificaci\xF3n Admin (WhatsApp Omitido)]: ${text2}`);
 }
-var NICKNAMES_MAP, SONOROUS_COMPOUND_BLOCKS, NON_SONOROUS_FILLERS, CONNECTORS;
+var NICKNAMES_MAP, SONOROUS_COMPOUND_BLOCKS, NON_SONOROUS_FILLERS, CONNECTORS, cachedVertexToken;
 var init_whatsapp_utils = __esm({
   "server/_core/whatsapp-utils.ts"() {
     "use strict";
@@ -10698,6 +10758,7 @@ var init_whatsapp_utils = __esm({
       "marina"
     ]);
     CONNECTORS = /* @__PURE__ */ new Set(["de", "del", "la", "las", "los", "el", "van", "von", "y", "di"]);
+    cachedVertexToken = null;
   }
 });
 
@@ -10722,8 +10783,8 @@ import _baileys, {
   Browsers
 } from "@whiskeysockets/baileys";
 import qrcodeTerminal from "qrcode-terminal";
-import fs8 from "fs";
-import path9 from "path";
+import fs9 from "fs";
+import path10 from "path";
 import { eq as eq11 } from "drizzle-orm";
 import QRCode from "qrcode";
 function getWASocket() {
@@ -10844,7 +10905,7 @@ var init_whatsapp_match = __esm({
       buzonGroupId = "120363417740040773@g.us";
       circuloGroupId = "120363403507276533@g.us";
       cooldownMap = /* @__PURE__ */ new Map();
-      cooldownFile = path9.join(process.cwd(), ".cooldown_map.json");
+      cooldownFile = path10.join(process.cwd(), ".cooldown_map.json");
       constructor(options) {
         if (options) {
           if (options.sessionFolderName) this.sessionFolderName = options.sessionFolderName;
@@ -10903,12 +10964,12 @@ var init_whatsapp_match = __esm({
       }
       async initialize() {
         try {
-          const sessionDir = path9.join(process.cwd(), this.sessionFolderName);
-          if (!fs8.existsSync(sessionDir)) {
-            fs8.mkdirSync(sessionDir, { recursive: true });
+          const sessionDir = path10.join(process.cwd(), this.sessionFolderName);
+          if (!fs9.existsSync(sessionDir)) {
+            fs9.mkdirSync(sessionDir, { recursive: true });
           }
           const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
-          if (!fs8.existsSync(path9.join(sessionDir, "creds.json"))) {
+          if (!fs9.existsSync(path10.join(sessionDir, "creds.json"))) {
             await saveCreds();
             console.log(`[${this.botName}] \u{1F4BE} Guardadas credenciales iniciales de Baileys en ${this.sessionFolderName}.`);
           }
@@ -10977,12 +11038,12 @@ var init_whatsapp_match = __esm({
             qrcodeTerminal.generate(qr, { small: true });
             global.janiaBotQr = qr;
             try {
-              const qrPath = path9.join(process.cwd(), this.qrFileName);
-              const publicQrDir = path9.join(process.cwd(), "client", "public");
-              if (!fs8.existsSync(publicQrDir)) {
-                fs8.mkdirSync(publicQrDir, { recursive: true });
+              const qrPath = path10.join(process.cwd(), this.qrFileName);
+              const publicQrDir = path10.join(process.cwd(), "client", "public");
+              if (!fs9.existsSync(publicQrDir)) {
+                fs9.mkdirSync(publicQrDir, { recursive: true });
               }
-              const publicQrPath = path9.join(publicQrDir, "qr-match.png");
+              const publicQrPath = path10.join(publicQrDir, "qr-match.png");
               await QRCode.toFile(qrPath, qr, { width: 400, margin: 2 });
               await QRCode.toFile(publicQrPath, qr, { width: 400, margin: 2 });
               console.log(`[${this.botName}] \u{1F4F8} QR guardado exitosamente en ${qrPath} y ${publicQrPath}`);
@@ -12344,10 +12405,10 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
           }
           let messagePayload = {};
           if (mediaPath) {
-            const fs10 = await import("fs");
-            const buffer = fs10.readFileSync(mediaPath);
-            const path12 = await import("path");
-            const ext = path12.extname(mediaPath).toLowerCase();
+            const fs11 = await import("fs");
+            const buffer = fs11.readFileSync(mediaPath);
+            const path13 = await import("path");
+            const ext = path13.extname(mediaPath).toLowerCase();
             if (ext === ".mp4") {
               messagePayload = {
                 video: buffer,
@@ -12365,7 +12426,7 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
                 document: buffer,
                 caption: text2,
                 mimetype: "application/octet-stream",
-                fileName: path12.basename(mediaPath)
+                fileName: path13.basename(mediaPath)
               };
             }
           } else {
@@ -12479,7 +12540,7 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
   * \u{1F3E2} *Proyectos de construcci\xF3n* o aportes de lote.
 \u25B8 *Matching Inteligente:* Cruzo ofertas y demandas en tiempo real y les aviso en el acto cuando hay negocio viable.`;
         const groups = [this.targetGroupId, this.buzonGroupId, this.circuloGroupId];
-        const imgPath = path9.resolve("./client/public/jania_perfil.png");
+        const imgPath = path10.resolve("./client/public/jania_perfil.png");
         for (const group of groups) {
           try {
             await this.sendToGroup(baseMsg, imgPath, [], group);
@@ -12510,10 +12571,10 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
           }
         } catch (e) {
         }
-        const sessionDir = path9.join(process.cwd(), ".baileys_auth");
-        if (fs8.existsSync(sessionDir)) {
+        const sessionDir = path10.join(process.cwd(), ".baileys_auth");
+        if (fs9.existsSync(sessionDir)) {
           try {
-            fs8.rmSync(sessionDir, { recursive: true, force: true });
+            fs9.rmSync(sessionDir, { recursive: true, force: true });
           } catch (err) {
             console.warn("[JANIA-MATCH] No se pudo borrar .baileys_auth:", err.message);
           }
@@ -12532,8 +12593,8 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
       }
       loadCooldowns() {
         try {
-          if (fs8.existsSync(this.cooldownFile)) {
-            const raw = JSON.parse(fs8.readFileSync(this.cooldownFile, "utf8"));
+          if (fs9.existsSync(this.cooldownFile)) {
+            const raw = JSON.parse(fs9.readFileSync(this.cooldownFile, "utf8"));
             this.cooldownMap = new Map(Object.entries(raw));
           }
         } catch (e) {
@@ -12542,7 +12603,7 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
       saveCooldowns() {
         try {
           const obj = Object.fromEntries(this.cooldownMap.entries());
-          fs8.writeFileSync(this.cooldownFile, JSON.stringify(obj), "utf8");
+          fs9.writeFileSync(this.cooldownFile, JSON.stringify(obj), "utf8");
         } catch (e) {
         }
       }
@@ -13345,8 +13406,8 @@ function liquidarImpuestosVenta(params) {
 // server/routers/janIA.ts
 init_matching();
 import axios7 from "axios";
-import fs6 from "fs";
-import path6 from "path";
+import fs7 from "fs";
+import path7 from "path";
 var janIARouter = router({
   // New: Extract property data from link
   extractFromLink: publicProcedure.input(z2.object({ url: z2.string().url() })).mutation(async ({ input }) => {
@@ -14065,11 +14126,11 @@ ${liveStats}${userContextInstruction}
   }),
   getQrCode: publicProcedure.query(async () => {
     try {
-      const qrPath = path6.join(process.cwd(), "qr-captador.png");
-      const qrMatchPath = path6.join(process.cwd(), "qr-match.png");
-      let targetPath = fs6.existsSync(qrPath) ? qrPath : fs6.existsSync(qrMatchPath) ? qrMatchPath : null;
+      const qrPath = path7.join(process.cwd(), "qr-captador.png");
+      const qrMatchPath = path7.join(process.cwd(), "qr-match.png");
+      let targetPath = fs7.existsSync(qrPath) ? qrPath : fs7.existsSync(qrMatchPath) ? qrMatchPath : null;
       if (targetPath) {
-        const fileData = fs6.readFileSync(targetPath);
+        const fileData = fs7.readFileSync(targetPath);
         return { hasQr: true, qrData: `data:image/png;base64,${fileData.toString("base64")}` };
       }
       return { hasQr: false, qrData: null };
@@ -15230,30 +15291,30 @@ async function createContext(opts) {
 
 // server/_core/vite.ts
 import express from "express";
-import fs7 from "fs";
+import fs8 from "fs";
 import { nanoid } from "nanoid";
-import path8 from "path";
+import path9 from "path";
 import { createServer as createViteServer } from "vite";
 
 // vite.config.ts
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import path7 from "node:path";
+import path8 from "node:path";
 import { defineConfig } from "vite";
 var vite_config_default = defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
-      "@": path7.resolve(import.meta.dirname, "client", "src"),
-      "@shared": path7.resolve(import.meta.dirname, "shared"),
-      "@assets": path7.resolve(import.meta.dirname, "attached_assets")
+      "@": path8.resolve(import.meta.dirname, "client", "src"),
+      "@shared": path8.resolve(import.meta.dirname, "shared"),
+      "@assets": path8.resolve(import.meta.dirname, "attached_assets")
     }
   },
-  envDir: path7.resolve(import.meta.dirname),
-  root: path7.resolve(import.meta.dirname, "client"),
-  publicDir: path7.resolve(import.meta.dirname, "client", "public"),
+  envDir: path8.resolve(import.meta.dirname),
+  root: path8.resolve(import.meta.dirname, "client"),
+  publicDir: path8.resolve(import.meta.dirname, "client", "public"),
   build: {
-    outDir: path7.resolve(import.meta.dirname, "dist"),
+    outDir: path8.resolve(import.meta.dirname, "dist"),
     emptyOutDir: true,
     chunkSizeWarningLimit: 1e3
   },
@@ -15284,13 +15345,13 @@ async function setupVite(app, server) {
   app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
     try {
-      const clientTemplate = path8.resolve(
+      const clientTemplate = path9.resolve(
         import.meta.dirname,
         "../..",
         "client",
         "index.html"
       );
-      let template = await fs7.promises.readFile(clientTemplate, "utf-8");
+      let template = await fs8.promises.readFile(clientTemplate, "utf-8");
       template = template.replace(
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid()}"`
@@ -15304,27 +15365,27 @@ async function setupVite(app, server) {
   });
 }
 function serveStatic(app) {
-  const distPath = path8.resolve(import.meta.dirname, "..", "dist");
-  if (!fs7.existsSync(distPath)) {
+  const distPath = path9.resolve(import.meta.dirname, "..", "dist");
+  if (!fs8.existsSync(distPath)) {
     console.error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`
     );
   }
   app.use(express.static(distPath));
   app.use("*", (_req, res) => {
-    res.sendFile(path8.resolve(distPath, "index.html"));
+    res.sendFile(path9.resolve(distPath, "index.html"));
   });
 }
 
 // server/_core/cronService.ts
 import cron from "node-cron";
-import path10 from "path";
+import path11 from "path";
 init_whatsapp_match();
 init_nightlyRematch();
 init_llm();
 import { fileURLToPath } from "url";
 var __filename = fileURLToPath(import.meta.url);
-var __dirname = path10.dirname(__filename);
+var __dirname = path11.dirname(__filename);
 function initCronScheduler() {
   console.log("[CRON-SERVICE] Inicializando orquestador de agendas automatizadas v3.2 (Parrilla Semanal de Audios y Re-matching)...");
   cron.schedule("0 11 * * 1,4", async () => {
@@ -15484,8 +15545,8 @@ init_llm();
 init_whatsapp_utils();
 init_whatsapp_match();
 import multer from "multer";
-import fs9 from "fs";
-import path11 from "path";
+import fs10 from "fs";
+import path12 from "path";
 process.on("uncaughtException", (error) => {
   console.error("[SYSTEM-CRITICAL] Uncaught Exception detectada:", error);
 });
@@ -15564,10 +15625,10 @@ async function startServer() {
   });
   app.get("/qr-match.png", (req, res) => {
     try {
-      const qrPath = path11.join(process.cwd(), "qr-match.png");
-      const distQrPath = path11.join(process.cwd(), "dist", "qr-match.png");
-      const activePath = fs9.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs9.existsSync(activePath)) {
+      const qrPath = path12.join(process.cwd(), "qr-match.png");
+      const distQrPath = path12.join(process.cwd(), "dist", "qr-match.png");
+      const activePath = fs10.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs10.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
         res.setHeader("Pragma", "no-cache");
@@ -15587,10 +15648,10 @@ async function startServer() {
         await janiaMatchBot2.initialize();
         await new Promise((resolve) => setTimeout(resolve, 3e3));
       }
-      const qrPath = path11.join(process.cwd(), "qr-match.png");
-      const distQrPath = path11.join(process.cwd(), "dist", "qr-match.png");
-      const activePath = fs9.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs9.existsSync(activePath)) {
+      const qrPath = path12.join(process.cwd(), "qr-match.png");
+      const distQrPath = path12.join(process.cwd(), "dist", "qr-match.png");
+      const activePath = fs10.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs10.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
         res.setHeader("Pragma", "no-cache");
@@ -15611,10 +15672,10 @@ async function startServer() {
       console.log("[ADMIN] Re-inicializando sesi\xF3n de Baileys para refrescar QR...");
       await janiaMatchBot2.initialize();
       await new Promise((resolve) => setTimeout(resolve, 4e3));
-      const qrPath = path11.join(process.cwd(), "qr-match.png");
-      const distQrPath = path11.join(process.cwd(), "dist", "qr-match.png");
-      const activePath = fs9.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs9.existsSync(activePath)) {
+      const qrPath = path12.join(process.cwd(), "qr-match.png");
+      const distQrPath = path12.join(process.cwd(), "dist", "qr-match.png");
+      const activePath = fs10.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs10.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         return res.sendFile(activePath);
       }
@@ -15641,10 +15702,10 @@ async function startServer() {
   });
   app.get("/qr-captador.png", (req, res) => {
     try {
-      const qrPath = path11.join(process.cwd(), "qr-captador.png");
-      const distQrPath = path11.join(process.cwd(), "dist", "qr-captador.png");
-      const activePath = fs9.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs9.existsSync(activePath)) {
+      const qrPath = path12.join(process.cwd(), "qr-captador.png");
+      const distQrPath = path12.join(process.cwd(), "dist", "qr-captador.png");
+      const activePath = fs10.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs10.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
         res.setHeader("Pragma", "no-cache");
@@ -15774,9 +15835,9 @@ async function startServer() {
       res.status(500).json({ error: err.message || "Error al procesar la transcripci\xF3n" });
     }
   });
-  const uploadsDir2 = path11.resolve(process.cwd(), "public/uploads");
-  if (!fs9.existsSync(uploadsDir2)) {
-    fs9.mkdirSync(uploadsDir2, { recursive: true });
+  const uploadsDir2 = path12.resolve(process.cwd(), "public/uploads");
+  if (!fs10.existsSync(uploadsDir2)) {
+    fs10.mkdirSync(uploadsDir2, { recursive: true });
   }
   app.use("/uploads", express2.static(uploadsDir2));
   const diskStorage = multer.diskStorage({
@@ -15785,7 +15846,7 @@ async function startServer() {
     },
     filename: (req, file, cb) => {
       const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-      cb(null, uniqueSuffix + path11.extname(file.originalname));
+      cb(null, uniqueSuffix + path12.extname(file.originalname));
     }
   });
   const uploadDisk = multer({

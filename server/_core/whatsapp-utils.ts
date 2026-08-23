@@ -364,12 +364,125 @@ async function fetchNeuralVoiceBuffer(text: string, voiceName = "es-CO-SalomeNeu
   }
 }
 
+let cachedVertexToken: { token: string; expiresAt: number } | null = null;
+
+function base64url(str: string): string {
+  return Buffer.from(str).toString('base64').replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+}
+
+/**
+ * Obtiene o refresca un Access Token OAuth2 para Vertex AI / Google Cloud TTS usando la Cuenta de Servicio.
+ */
+async function getVertexAIAccessToken(): Promise<string | null> {
+  const now = Math.floor(Date.now() / 1000);
+  if (cachedVertexToken && cachedVertexToken.expiresAt > now + 300) {
+    return cachedVertexToken.token;
+  }
+
+  try {
+    const credPath = path.join(process.cwd(), "server", "_core", "google-service-account.json");
+    if (!fs.existsSync(credPath)) {
+      return null;
+    }
+
+    const sa = JSON.parse(fs.readFileSync(credPath, "utf8"));
+    if (!sa.client_email || !sa.private_key) {
+      return null;
+    }
+
+    const header = { alg: "RS256", typ: "JWT" };
+    const claim = {
+      iss: sa.client_email,
+      scope: "https://www.googleapis.com/auth/cloud-platform",
+      aud: sa.token_uri || "https://oauth2.googleapis.com/token",
+      exp: now + 3600,
+      iat: now
+    };
+
+    const encodedHeader = base64url(JSON.stringify(header));
+    const encodedClaim = base64url(JSON.stringify(claim));
+    const signInput = `${encodedHeader}.${encodedClaim}`;
+
+    const signer = crypto.createSign("RSA-SHA256");
+    signer.update(signInput);
+    const signature = signer.sign(sa.private_key, "base64").replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+    const jwt = `${signInput}.${signature}`;
+
+    const res = await fetch(sa.token_uri || "https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`
+    });
+
+    const tokenData = await res.json();
+    if (tokenData.access_token) {
+      cachedVertexToken = {
+        token: tokenData.access_token,
+        expiresAt: now + (tokenData.expires_in || 3600)
+      };
+      return tokenData.access_token;
+    }
+  } catch (err: any) {
+    console.warn("[TTS-Vertex] Error al generar token OAuth2 de cuenta de servicio:", err?.message || err);
+  }
+
+  return null;
+}
+
 /**
  * Genera un buffer de audio sintetizado con voz humana ultra-realista, fluida y con cadencia colombiana.
  */
 export async function textToSpeechMedia(text: string, format: "OGG_OPUS" | "MP3" = "OGG_OPUS"): Promise<any> {
   const cleaned = cleanVoiceText(text);
   if (!cleaned) return null;
+
+  // 1. Motor Oficial Prioritario: Gemini 3.1 Flash TTS (Preview) — Voz Laomedeia (es-us) con OAuth2 Vertex AI
+  try {
+    const accessToken = await getVertexAIAccessToken();
+    if (accessToken) {
+      const response = await fetch("https://texttospeech.googleapis.com/v1beta1/text:synthesize", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${accessToken}`
+        },
+        body: JSON.stringify({
+          input: {
+            prompt: "Read aloud in a warm, welcoming tone.",
+            text: cleaned
+          },
+          voice: {
+            languageCode: "es-us",
+            modelName: "gemini-3.1-flash-tts-preview",
+            name: "Laomedeia"
+          },
+          audioConfig: {
+            audioEncoding: format === "OGG_OPUS" ? "OGG_OPUS" : "MP3",
+            speakingRate: 1.0,
+            pitch: 0.0
+          }
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.audioContent) {
+          console.log(`[TTS-Media] ✓ Gemini 3.1 Flash TTS (Laomedeia) — ${cleaned.length} chars → audio generado.`);
+          const buffer = Buffer.from(data.audioContent, "base64");
+          return {
+            mimetype: format === "OGG_OPUS" ? "audio/ogg; codecs=opus" : "audio/mp3",
+            data: buffer.toString("base64"),
+            buffer
+          };
+        }
+      } else {
+        const errText = await response.text();
+        console.warn(`[TTS-Media] Gemini 3.1 Flash TTS error ${response.status}: ${errText.substring(0, 200)}`);
+      }
+    }
+  } catch (err: any) {
+    console.warn("[TTS-Media] Gemini 3.1 Flash TTS no disponible:", err?.message || err);
+  }
 
   const candidateKeys = [
     process.env.GOOGLE_TTS_API_KEY,
@@ -378,7 +491,7 @@ export async function textToSpeechMedia(text: string, format: "OGG_OPUS" | "MP3"
     process.env.GEMINI_BACKUP_KEY
   ].filter(k => k && k.startsWith('AIzaSy')) as string[];
 
-  // 1. Motor Oficial: Google Cloud Chirp3-HD Erinome (Voz Generativa de Google Cloud)
+  // 2. Respaldo Google Cloud: Chirp3-HD Erinome (es-US)
   try {
     for (const googleApiKey of candidateKeys) {
       try {
@@ -417,47 +530,6 @@ export async function textToSpeechMedia(text: string, format: "OGG_OPUS" | "MP3"
     }
   } catch (err: any) {
     console.warn("[TTS-Media] Google Cloud Chirp3-HD Erinome no disponible:", err?.message || err);
-  }
-
-  // 2. Respaldo Google Cloud: Chirp3-HD Erinome (es-ES)
-  try {
-    for (const googleApiKey of candidateKeys) {
-      try {
-        const response = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${googleApiKey}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            input: { text: cleaned },
-            voice: {
-              languageCode: "es-ES",
-              name: "es-ES-Chirp3-HD-Erinome"
-            },
-            audioConfig: {
-              audioEncoding: format === "OGG_OPUS" ? "OGG_OPUS" : "MP3",
-              speakingRate: 1.0,
-              pitch: 0.0
-            }
-          })
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data.audioContent) {
-            console.log(`[TTS-Media] ✓ Google Cloud Chirp3-HD Erinome (es-ES) — ${cleaned.length} chars → audio generado.`);
-            const buffer = Buffer.from(data.audioContent, "base64");
-            return {
-              mimetype: format === "OGG_OPUS" ? "audio/ogg; codecs=opus" : "audio/mp3",
-              data: buffer.toString("base64"),
-              buffer
-            };
-          }
-        }
-      } catch (keyErr: any) {
-        // Continuar
-      }
-    }
-  } catch (err: any) {
-    console.warn("[TTS-Media] Google Cloud Chirp3-HD Erinome es-ES no disponible:", err?.message || err);
   }
 
   // 2. Motor Oficial Google Cloud Studio HD (es-US-Studio-B) — Voz de Estudio Cristalina, Despierta y Enérgica
