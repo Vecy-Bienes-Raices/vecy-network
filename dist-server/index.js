@@ -10314,6 +10314,7 @@ function cleanVoiceText(text2) {
   }
   cleaned = cleaned.replace(/^:\s*/, "").trim();
   cleaned = cleaned.replace(/^"|"$/g, "").trim();
+  cleaned = cleaned.replace(/\bVecy\b/gi, "Vesi").replace(/\bVECY\b/g, "Vesi").replace(/\bJanIA\b/gi, "Yan\xEDa").replace(/\bJanIa\b/gi, "Yan\xEDa").replace(/\bjania\b/gi, "Yan\xEDa").replace(/\bm²\b/gi, "metros cuadrados").replace(/\bm2\b/gi, "metros cuadrados").replace(/\bUVT\b/gi, "U-V-T").replace(/\bDIAN\b/gi, "Dian").replace(/\bSINUPOT\b/gi, "Sinu-pot").replace(/\bIDU\b/gi, "I-D-U").replace(/\bPOT\b/g, "P-O-T").replace(/\bAdmon\b/gi, "Administraci\xF3n").replace(/\badmon\b/gi, "administraci\xF3n").replace(/\bApto\b/gi, "Apartamento").replace(/\bapto\b/gi, "apartamento").replace(/\bHab\b/gi, "Habitaciones").replace(/\bhab\b/gi, "habitaciones");
   return cleaned.trim();
 }
 function splitTextIntoVoiceChunks(text2, maxLen = 180) {

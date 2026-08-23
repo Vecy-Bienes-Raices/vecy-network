@@ -242,6 +242,28 @@ export function cleanVoiceText(text: string): string {
   cleaned = cleaned.replace(/^:\s*/, "").trim();
   cleaned = cleaned.replace(/^"|"$/g, "").trim();
 
+  // 3. Normalización Fonética para Síntesis de Voz (Español Colombiano Natural)
+  // Garantiza que "Vecy" suene "Vesi" (como vecino) y no "Vici" en inglés
+  cleaned = cleaned
+    .replace(/\bVecy\b/gi, "Vesi")
+    .replace(/\bVECY\b/g, "Vesi")
+    .replace(/\bJanIA\b/gi, "Yanía")
+    .replace(/\bJanIa\b/gi, "Yanía")
+    .replace(/\bjania\b/gi, "Yanía")
+    .replace(/\bm²\b/gi, "metros cuadrados")
+    .replace(/\bm2\b/gi, "metros cuadrados")
+    .replace(/\bUVT\b/gi, "U-V-T")
+    .replace(/\bDIAN\b/gi, "Dian")
+    .replace(/\bSINUPOT\b/gi, "Sinu-pot")
+    .replace(/\bIDU\b/gi, "I-D-U")
+    .replace(/\bPOT\b/g, "P-O-T")
+    .replace(/\bAdmon\b/gi, "Administración")
+    .replace(/\badmon\b/gi, "administración")
+    .replace(/\bApto\b/gi, "Apartamento")
+    .replace(/\bapto\b/gi, "apartamento")
+    .replace(/\bHab\b/gi, "Habitaciones")
+    .replace(/\bhab\b/gi, "habitaciones");
+
   return cleaned.trim();
 }
 
