@@ -305,13 +305,79 @@ async function fetchGttsAudioBuffer(text: string): Promise<Buffer | null> {
 }
 
 /**
- * Genera un buffer de audio sintetizado utilizando la API de Google Cloud Text-to-Speech con fallback a Google Translate TTS.
+ * Síntesis de voz neuronal ultra-realista con entonación humana y modulación natural (Salomé - es-CO o Dalia - es-MX).
+ */
+async function fetchNeuralVoiceBuffer(text: string, voiceName = "es-CO-SalomeNeural"): Promise<Buffer | null> {
+  try {
+    const { MsEdgeTTS, OUTPUT_FORMAT } = await import("msedge-tts");
+    const tts = new MsEdgeTTS();
+    await tts.setMetadata(voiceName, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
+    const { audioStream } = tts.toStream(text);
+
+    return new Promise((resolve) => {
+      const chunks: Buffer[] = [];
+      const timer = setTimeout(() => {
+        if (chunks.length > 0) resolve(Buffer.concat(chunks));
+        else resolve(null);
+      }, 20000);
+
+      audioStream.on("data", (chunk: any) => chunks.push(Buffer.from(chunk)));
+      audioStream.on("end", () => {
+        clearTimeout(timer);
+        resolve(Buffer.concat(chunks));
+      });
+      audioStream.on("error", (err: any) => {
+        clearTimeout(timer);
+        console.warn(`[TTS-Neural] Error en stream de voz ${voiceName}:`, err?.message || err);
+        if (chunks.length > 0) resolve(Buffer.concat(chunks));
+        else resolve(null);
+      });
+    });
+  } catch (err: any) {
+    console.warn(`[TTS-Neural] Error al inicializar síntesis neuronal (${voiceName}):`, err?.message || err);
+    return null;
+  }
+}
+
+/**
+ * Genera un buffer de audio sintetizado con voz humana ultra-realista, fluida y con cadencia colombiana.
  */
 export async function textToSpeechMedia(text: string, format: "OGG_OPUS" | "MP3" = "OGG_OPUS"): Promise<any> {
   const cleaned = cleanVoiceText(text);
   if (!cleaned) return null;
 
-  // 1. Google Cloud TTS — Gemini 3.1 Flash TTS (Preview) — Voz Laomedeia (Latino cálida y profesional)
+  // 1. Motor Primario: Voz Neuronal Colombiana Humana (Salomé — es-CO)
+  try {
+    console.log(`[TTS-Media] 🎙️ Sintetizando con voz neuronal humana (Salomé es-CO) — ${cleaned.length} caracteres...`);
+    const neuralBuffer = await fetchNeuralVoiceBuffer(cleaned, "es-CO-SalomeNeural");
+    if (neuralBuffer && neuralBuffer.length > 0) {
+      console.log(`[TTS-Media] ✓ Audio generado exitosamente con voz humana de Salomé (${neuralBuffer.length} bytes).`);
+      return {
+        mimetype: "audio/mp3",
+        data: neuralBuffer.toString("base64"),
+        buffer: neuralBuffer
+      };
+    }
+  } catch (err: any) {
+    console.warn("[TTS-Media] Voz Salomé falló, probando respaldo neuronal Dalia:", err?.message || err);
+  }
+
+  // 2. Respaldo Neuronal Alternativo: Dalia (es-MX)
+  try {
+    const daliaBuffer = await fetchNeuralVoiceBuffer(cleaned, "es-MX-DaliaNeural");
+    if (daliaBuffer && daliaBuffer.length > 0) {
+      console.log(`[TTS-Media] ✓ Audio generado con voz neuronal de respaldo Dalia (${daliaBuffer.length} bytes).`);
+      return {
+        mimetype: "audio/mp3",
+        data: daliaBuffer.toString("base64"),
+        buffer: daliaBuffer
+      };
+    }
+  } catch (err: any) {
+    console.warn("[TTS-Media] Respaldo Dalia no disponible:", err?.message || err);
+  }
+
+  // 3. Respaldo Google Cloud TTS — Gemini 3.1 Flash TTS (Laomedeia)
   try {
     const googleApiKey = process.env.GOOGLE_TTS_API_KEY;
     if (googleApiKey && googleApiKey.startsWith('AIzaSy')) {
@@ -347,17 +413,14 @@ export async function textToSpeechMedia(text: string, format: "OGG_OPUS" | "MP3"
             buffer
           };
         }
-      } else {
-        const errText = await response.text();
-        console.warn(`[TTS-Media] Laomedeia TTS respondió con error ${response.status}: ${errText.substring(0, 300)}`);
       }
     }
   } catch (err: any) {
-    console.warn("[TTS-Media] Laomedeia TTS no disponible, activando fallback GTTS:", err.message || err);
+    console.warn("[TTS-Media] Laomedeia TTS no disponible:", err?.message || err);
   }
 
-  // 2. Fallback garantizado: Google Translate TTS libre
-  console.log("[TTS-Media] Sintetizando audio usando fallback Google Translate TTS (es-CO)...");
+  // 4. Último recurso de contingencia: Google Translate TTS libre
+  console.log("[TTS-Media] Sintetizando audio usando contingencia Google Translate TTS (es-CO)...");
   const gttsBuffer = await fetchGttsAudioBuffer(cleaned);
   if (gttsBuffer && gttsBuffer.length > 0) {
     return {

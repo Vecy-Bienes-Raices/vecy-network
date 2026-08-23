@@ -10366,9 +10366,65 @@ async function fetchGttsAudioBuffer(text2) {
   }
   return null;
 }
+async function fetchNeuralVoiceBuffer(text2, voiceName = "es-CO-SalomeNeural") {
+  try {
+    const { MsEdgeTTS, OUTPUT_FORMAT } = await import("msedge-tts");
+    const tts = new MsEdgeTTS();
+    await tts.setMetadata(voiceName, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
+    const { audioStream } = tts.toStream(text2);
+    return new Promise((resolve) => {
+      const chunks = [];
+      const timer = setTimeout(() => {
+        if (chunks.length > 0) resolve(Buffer.concat(chunks));
+        else resolve(null);
+      }, 2e4);
+      audioStream.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
+      audioStream.on("end", () => {
+        clearTimeout(timer);
+        resolve(Buffer.concat(chunks));
+      });
+      audioStream.on("error", (err) => {
+        clearTimeout(timer);
+        console.warn(`[TTS-Neural] Error en stream de voz ${voiceName}:`, err?.message || err);
+        if (chunks.length > 0) resolve(Buffer.concat(chunks));
+        else resolve(null);
+      });
+    });
+  } catch (err) {
+    console.warn(`[TTS-Neural] Error al inicializar s\xEDntesis neuronal (${voiceName}):`, err?.message || err);
+    return null;
+  }
+}
 async function textToSpeechMedia(text2, format = "OGG_OPUS") {
   const cleaned = cleanVoiceText(text2);
   if (!cleaned) return null;
+  try {
+    console.log(`[TTS-Media] \u{1F399}\uFE0F Sintetizando con voz neuronal humana (Salom\xE9 es-CO) \u2014 ${cleaned.length} caracteres...`);
+    const neuralBuffer = await fetchNeuralVoiceBuffer(cleaned, "es-CO-SalomeNeural");
+    if (neuralBuffer && neuralBuffer.length > 0) {
+      console.log(`[TTS-Media] \u2713 Audio generado exitosamente con voz humana de Salom\xE9 (${neuralBuffer.length} bytes).`);
+      return {
+        mimetype: "audio/mp3",
+        data: neuralBuffer.toString("base64"),
+        buffer: neuralBuffer
+      };
+    }
+  } catch (err) {
+    console.warn("[TTS-Media] Voz Salom\xE9 fall\xF3, probando respaldo neuronal Dalia:", err?.message || err);
+  }
+  try {
+    const daliaBuffer = await fetchNeuralVoiceBuffer(cleaned, "es-MX-DaliaNeural");
+    if (daliaBuffer && daliaBuffer.length > 0) {
+      console.log(`[TTS-Media] \u2713 Audio generado con voz neuronal de respaldo Dalia (${daliaBuffer.length} bytes).`);
+      return {
+        mimetype: "audio/mp3",
+        data: daliaBuffer.toString("base64"),
+        buffer: daliaBuffer
+      };
+    }
+  } catch (err) {
+    console.warn("[TTS-Media] Respaldo Dalia no disponible:", err?.message || err);
+  }
   try {
     const googleApiKey = process.env.GOOGLE_TTS_API_KEY;
     if (googleApiKey && googleApiKey.startsWith("AIzaSy")) {
@@ -10403,15 +10459,12 @@ async function textToSpeechMedia(text2, format = "OGG_OPUS") {
             buffer
           };
         }
-      } else {
-        const errText = await response.text();
-        console.warn(`[TTS-Media] Laomedeia TTS respondi\xF3 con error ${response.status}: ${errText.substring(0, 300)}`);
       }
     }
   } catch (err) {
-    console.warn("[TTS-Media] Laomedeia TTS no disponible, activando fallback GTTS:", err.message || err);
+    console.warn("[TTS-Media] Laomedeia TTS no disponible:", err?.message || err);
   }
-  console.log("[TTS-Media] Sintetizando audio usando fallback Google Translate TTS (es-CO)...");
+  console.log("[TTS-Media] Sintetizando audio usando contingencia Google Translate TTS (es-CO)...");
   const gttsBuffer = await fetchGttsAudioBuffer(cleaned);
   if (gttsBuffer && gttsBuffer.length > 0) {
     return {
