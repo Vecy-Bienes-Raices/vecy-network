@@ -1043,6 +1043,13 @@ export class JaniaMatchBot {
           ? result.voiceResponse
           : textToDeliver;
 
+        // 1. Enviamos siempre la respuesta estructurada en texto profesional formateado
+        await this.queuedSend(chatId, textToDeliver, {
+          mentions: [senderId],
+          quoted: msg
+        });
+
+        // 2. Si el usuario envió nota de voz o pidió audio, enviamos además la nota de voz PTT
         if (wantsVoice || isAudioPTT) {
           try {
             const media = await textToSpeechMedia(voiceToDeliver);
@@ -1053,25 +1060,11 @@ export class JaniaMatchBot {
                 mimetype: media.mimetype || 'audio/ogg; codecs=opus',
                 ptt: true
               }, { mentions: [senderId], quoted: msg });
-              console.log(`[JANIA-MATCH] ✓ Nota de voz enviada exitosamente como respuesta en grupo ${chatId}.`);
-            } else {
-              await this.queuedSend(chatId, textToDeliver, {
-                mentions: [senderId],
-                quoted: msg
-              });
+              console.log(`[JANIA-MATCH] ✓ Nota de voz PTT enviada exitosamente en grupo ${chatId}.`);
             }
           } catch (audioSendErr: any) {
-            console.error('[JANIA-MATCH] Error enviando nota de voz. Activando fallback a texto:', audioSendErr?.message || audioSendErr);
-            await this.queuedSend(chatId, textToDeliver, {
-              mentions: [senderId],
-              quoted: msg
-            });
+            console.error('[JANIA-MATCH] Error enviando nota de voz PTT complementaria:', audioSendErr?.message || audioSendErr);
           }
-        } else {
-          await this.queuedSend(chatId, textToDeliver, {
-            mentions: [senderId],
-            quoted: msg
-          });
         }
 
         // Registrar la respuesta enviada por JanIA en la BD de mensajes para mantener el hilo de la conversación

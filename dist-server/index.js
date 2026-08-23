@@ -11305,6 +11305,10 @@ Tambi\xE9n puedes consultarme directamente en mi chat privado con mi otra yo *Ja
           if (result && result.response && result.response.trim() !== "") {
             const textToDeliver = result.response;
             const voiceToDeliver = result.voiceResponse && result.voiceResponse.trim() !== "" ? result.voiceResponse : textToDeliver;
+            await this.queuedSend(chatId, textToDeliver, {
+              mentions: [senderId],
+              quoted: msg
+            });
             if (wantsVoice || isAudioPTT) {
               try {
                 const media = await textToSpeechMedia2(voiceToDeliver);
@@ -11315,25 +11319,11 @@ Tambi\xE9n puedes consultarme directamente en mi chat privado con mi otra yo *Ja
                     mimetype: media.mimetype || "audio/ogg; codecs=opus",
                     ptt: true
                   }, { mentions: [senderId], quoted: msg });
-                  console.log(`[JANIA-MATCH] \u2713 Nota de voz enviada exitosamente como respuesta en grupo ${chatId}.`);
-                } else {
-                  await this.queuedSend(chatId, textToDeliver, {
-                    mentions: [senderId],
-                    quoted: msg
-                  });
+                  console.log(`[JANIA-MATCH] \u2713 Nota de voz PTT enviada exitosamente en grupo ${chatId}.`);
                 }
               } catch (audioSendErr) {
-                console.error("[JANIA-MATCH] Error enviando nota de voz. Activando fallback a texto:", audioSendErr?.message || audioSendErr);
-                await this.queuedSend(chatId, textToDeliver, {
-                  mentions: [senderId],
-                  quoted: msg
-                });
+                console.error("[JANIA-MATCH] Error enviando nota de voz PTT complementaria:", audioSendErr?.message || audioSendErr);
               }
-            } else {
-              await this.queuedSend(chatId, textToDeliver, {
-                mentions: [senderId],
-                quoted: msg
-              });
             }
             await this.logToDb(chatId, "janIA", textToDeliver);
           } else if (result && result.reactionEmoji && this.sock) {
