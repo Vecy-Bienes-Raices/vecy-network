@@ -10399,10 +10399,57 @@ async function textToSpeechMedia(text2, format = "OGG_OPUS") {
   const cleaned = cleanVoiceText(text2);
   if (!cleaned) return null;
   try {
+    const candidateKeys = [
+      process.env.GOOGLE_TTS_API_KEY,
+      process.env.GOOGLE_API_KEY,
+      process.env.GEMINI_API_KEY,
+      process.env.GEMINI_BACKUP_KEY
+    ].filter((k) => k && k.startsWith("AIzaSy"));
+    for (const googleApiKey of candidateKeys) {
+      try {
+        const response = await fetch(`https://texttospeech.googleapis.com/v1beta1/text:synthesize?key=${googleApiKey}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            input: {
+              prompt: "Read aloud in a warm, welcoming tone.",
+              text: cleaned
+            },
+            voice: {
+              languageCode: "es-419",
+              modelName: "gemini-3.1-flash-tts-preview",
+              name: "Erinome"
+            },
+            audioConfig: {
+              audioEncoding: format === "OGG_OPUS" ? "OGG_OPUS" : "MP3",
+              speakingRate: 1,
+              pitch: 0
+            }
+          })
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.audioContent) {
+            console.log(`[TTS-Media] \u2713 Erinome (Gemini 3.1 Flash TTS Preview) \u2014 ${cleaned.length} chars \u2192 audio generado.`);
+            const buffer = Buffer.from(data.audioContent, "base64");
+            return {
+              mimetype: format === "OGG_OPUS" ? "audio/ogg; codecs=opus" : "audio/mp3",
+              data: buffer.toString("base64"),
+              buffer
+            };
+          }
+        }
+      } catch (keyErr) {
+      }
+    }
+  } catch (err) {
+    console.warn("[TTS-Media] Google Cloud TTS Erinome no disponible:", err?.message || err);
+  }
+  try {
     console.log(`[TTS-Media] \u{1F399}\uFE0F Sintetizando con voz neuronal humana (Salom\xE9 es-CO) \u2014 ${cleaned.length} caracteres...`);
     const neuralBuffer = await fetchNeuralVoiceBuffer(cleaned, "es-CO-SalomeNeural");
     if (neuralBuffer && neuralBuffer.length > 0) {
-      console.log(`[TTS-Media] \u2713 Audio generado exitosamente con voz humana de Salom\xE9 (${neuralBuffer.length} bytes).`);
+      console.log(`[TTS-Media] \u2713 Audio generado con voz humana de Salom\xE9 (${neuralBuffer.length} bytes).`);
       return {
         mimetype: "audio/mp3",
         data: neuralBuffer.toString("base64"),
@@ -10410,7 +10457,7 @@ async function textToSpeechMedia(text2, format = "OGG_OPUS") {
       };
     }
   } catch (err) {
-    console.warn("[TTS-Media] Voz Salom\xE9 fall\xF3, probando respaldo neuronal Dalia:", err?.message || err);
+    console.warn("[TTS-Media] Voz Salom\xE9 fall\xF3, probando respaldo Dalia:", err?.message || err);
   }
   try {
     const daliaBuffer = await fetchNeuralVoiceBuffer(cleaned, "es-MX-DaliaNeural");
@@ -10424,45 +10471,6 @@ async function textToSpeechMedia(text2, format = "OGG_OPUS") {
     }
   } catch (err) {
     console.warn("[TTS-Media] Respaldo Dalia no disponible:", err?.message || err);
-  }
-  try {
-    const googleApiKey = process.env.GOOGLE_TTS_API_KEY;
-    if (googleApiKey && googleApiKey.startsWith("AIzaSy")) {
-      const response = await fetch(`https://texttospeech.googleapis.com/v1beta1/text:synthesize?key=${googleApiKey}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          input: {
-            prompt: "Habla en un tono c\xE1lido, profesional y humano, como una consultora inmobiliaria experta colombiana.",
-            text: cleaned
-          },
-          voice: {
-            languageCode: "es-419",
-            modelName: "gemini-3.1-flash-tts-preview",
-            name: "Laomedeia"
-          },
-          audioConfig: {
-            audioEncoding: format === "OGG_OPUS" ? "OGG_OPUS" : "MP3",
-            speakingRate: 1,
-            pitch: 0
-          }
-        })
-      });
-      if (response.ok) {
-        const data = await response.json();
-        if (data.audioContent) {
-          console.log(`[TTS-Media] \u2713 Laomedeia (Gemini 3.1 Flash TTS) \u2014 ${cleaned.length} chars \u2192 audio generado.`);
-          const buffer = Buffer.from(data.audioContent, "base64");
-          return {
-            mimetype: format === "OGG_OPUS" ? "audio/ogg; codecs=opus" : "audio/mp3",
-            data: buffer.toString("base64"),
-            buffer
-          };
-        }
-      }
-    }
-  } catch (err) {
-    console.warn("[TTS-Media] Laomedeia TTS no disponible:", err?.message || err);
   }
   console.log("[TTS-Media] Sintetizando audio usando contingencia Google Translate TTS (es-CO)...");
   const gttsBuffer = await fetchGttsAudioBuffer(cleaned);
