@@ -14,9 +14,10 @@ export async function getDb() {
       _client = postgres(process.env.DATABASE_URL, {
         prepare: false,          // Requerido por Supabase pooler (pgBouncer)
         connect_timeout: 10,     // 10 segundos máximo para conectar
-        idle_timeout: 20,        // Cerrar conexiones inactivas tras 20 segundos
+        idle_timeout: 30,        // Cerrar conexiones inactivas tras 30 segundos
         max_lifetime: 1800,      // Reciclar conexiones cada 30 minutos
-        max: 15,                 // Máximo 15 conexiones simultáneas al pool de Supabase para evitar exhaustion
+        max: 20,                 // Máximo 20 conexiones simultáneas al pool de Supabase
+        fetch_types: false,      // Evitar queries de introspección redundantes
         onnotice: () => {},      // Silenciar NOTICEs innecesarios de PostgreSQL
       });
       _db = drizzle(_client);

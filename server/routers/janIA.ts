@@ -14,6 +14,18 @@ import fs from 'fs';
 import path from 'path';
 import { transcribeAudioBuffer } from '../_core/voiceTranscription';
 
+// In-memory micro-cache for blazing fast admin responsiveness
+let cachedAllMatchesData: any = null;
+let cachedAllMatchesTime = 0;
+
+let cachedBotStatusData: any = null;
+let cachedBotStatusTime = 0;
+
+export function invalidateAdminMatchesCache() {
+  cachedAllMatchesTime = 0;
+  cachedAllMatchesData = null;
+}
+
 export const janIARouter = router({
   // New: Extract property data from link
   extractFromLink: publicProcedure
@@ -449,8 +461,16 @@ export const janIARouter = router({
   // Get all matches in the network
   getAllMatches: publicProcedure
     .query(async () => {
+      const now = Date.now();
+      if (cachedAllMatchesData && (now - cachedAllMatchesTime) < 20000) {
+        return cachedAllMatchesData;
+      }
+
       const db = await getDb();
-      if (!db) throw new Error('Database not available');
+      if (!db) {
+        if (cachedAllMatchesData) return cachedAllMatchesData;
+        throw new Error('Database not available');
+      }
 
       try {
         const matches = await db
@@ -577,6 +597,7 @@ export const janIARouter = router({
           });
         }
 
+        let finalMatches = validEvaluatedMatches;
         const propertyIds = validEvaluatedMatches.map(m => m.property.id).filter(Boolean);
         if (propertyIds.length > 0) {
           const histories = await db
@@ -585,7 +606,7 @@ export const janIARouter = router({
             .where(inArray(propertyPublicationHistory.propertyId, propertyIds))
             .orderBy(desc(propertyPublicationHistory.fecha));
 
-          return validEvaluatedMatches.map(m => {
+          finalMatches = validEvaluatedMatches.map(m => {
             const propertyHistory = histories.filter(h => h.propertyId === m.property.id);
             return {
               ...m,
@@ -597,8 +618,11 @@ export const janIARouter = router({
           });
         }
 
-        return validEvaluatedMatches;
+        cachedAllMatchesData = finalMatches;
+        cachedAllMatchesTime = Date.now();
+        return finalMatches;
       } catch (error) {
+        if (cachedAllMatchesData) return cachedAllMatchesData;
         console.error('Error getting all matches:', error);
         throw error;
       }
@@ -655,6 +679,9 @@ export const janIARouter = router({
         }
       }
 
+      // Invalidate in-memory matches cache for immediate fresh response
+      invalidateAdminMatchesCache();
+
       return { success: true, message: "Propiedad actualizada y teléfono propagado con éxito" };
     }),
 
@@ -708,6 +735,9 @@ export const janIARouter = router({
         }
       }
 
+      // Invalidate in-memory matches cache for immediate fresh response
+      invalidateAdminMatchesCache();
+
       return { success: true, message: "Requerimiento actualizado y teléfono propagado con éxito" };
     }),
 
@@ -718,6 +748,7 @@ export const janIARouter = router({
       requirementId: z.number().optional().nullable(),
     }))
     .mutation(async ({ input }) => {
+      invalidateAdminMatchesCache();
       let propMatchesCount = 0;
       let reqMatchesCount = 0;
 
@@ -927,8 +958,13 @@ export const janIARouter = router({
 
   // Get current WhatsApp bot connection status and ingestion stats
   getBotStatus: publicProcedure.query(async () => {
+    const now = Date.now();
+    if (cachedBotStatusData && (now - cachedBotStatusTime) < 15000) {
+      return cachedBotStatusData;
+    }
+
     const db = await getDb();
-    if (!db) return { isReady: true, phone: "573192919978", todayProperties: 0, todayRequirements: 0 };
+    if (!db) return cachedBotStatusData || { isReady: true, phone: "573192919978", todayProperties: 0, todayRequirements: 0 };
 
     try {
       let isReady = true;
@@ -959,13 +995,18 @@ export const janIARouter = router({
         .from(requirements)
         .where(sql`DATE(${requirements.createdAt} AT TIME ZONE 'America/Bogota') = CURRENT_DATE`);
 
-      return {
+      const result = {
         isReady,
         phone,
         todayProperties: propTodayCount?.count || 0,
         todayRequirements: reqTodayCount?.count || 0
       };
+
+      cachedBotStatusData = result;
+      cachedBotStatusTime = Date.now();
+      return result;
     } catch (error: any) {
+      if (cachedBotStatusData) return cachedBotStatusData;
       console.error("[BotStatus] Error checking bot status:", error);
       return { isReady: true, phone: "573192919978", todayProperties: 0, todayRequirements: 0 };
     }

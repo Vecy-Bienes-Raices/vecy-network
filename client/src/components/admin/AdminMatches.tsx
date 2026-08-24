@@ -1985,7 +1985,7 @@ export default function AdminMatches() {
     const seenMatchIds = new Set<number>();
     const seenPairs = new Set<string>();
 
-    return matches.filter(match => {
+    return (matches as any[]).filter((match: any) => {
       if (!match || !match.id || !match.property || !match.requirement) return false;
 
       const property = match.property;
@@ -2040,7 +2040,7 @@ export default function AdminMatches() {
 
   const exportData = () => {
     const headers = ['ID Coincidencia', 'Porcentaje Match', 'Propiedad', 'Propietario Telefono', 'Requerimiento', 'Interesado Telefono', 'Estado', 'Fecha'];
-    const rows = filteredMatches.map(m => [
+    const rows = (filteredMatches as any[]).map((m: any) => [
       `M${m.id}`,
       `${parseFloat(String(m.matchScore)).toFixed(0)}%`,
       m.property?.name,
@@ -2051,7 +2051,7 @@ export default function AdminMatches() {
       new Date(m.createdAt).toLocaleDateString('es-CO')
     ]);
 
-    const csvContent = [headers.join(','), ...rows.map(e => e.map(val => `"${val}"`).join(','))].join('\n');
+    const csvContent = [headers.join(','), ...rows.map((e: any[]) => e.map((val: any) => `"${val}"`).join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -2133,7 +2133,7 @@ export default function AdminMatches() {
       ) : (
         <div className="grid grid-cols-1 gap-6">
           <AnimatePresence>
-            {filteredMatches.map((m, idx) => {
+            {(filteredMatches as any[]).map((m: any, idx: number) => {
               const isEditingThisCard = editingMatchId === m.id;
 
               const effectiveProp = isEditingThisCard ? {
