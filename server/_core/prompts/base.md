@@ -446,16 +446,19 @@ Los asesores inmobiliarios colombianos usan estas abreviaciones en WhatsApp. Jan
 ### Precios y Presupuestos:
 | Jerga del broker | Significado | Valor numérico |
 |---|---|---|
+| `$2.100 millones` o `2.100 mm` | 2.100 × 1.000.000 (Venta) | `price: 2100000000` |
 | `$1.390.000.000 COP` | Precio de venta estándar | `1390000000` |
 | `1.390 millones` | 1.390 × 1.000.000 | `1390000000` |
 | `1.390 MM` o `1.390 mm` | Abreviatura millones | `1390000000` |
 | `1,250 MM` o `1250 MM` | 1.250 millones | `1250000000` |
+| `Presupuesto *1.300 - 1.400*` | Rango compra 1.300 a 1.400 millones | `presupuestoMin: 1300000000, presupuestoMax: 1400000000` |
 | `Ppto 1700 mm` | Presupuesto 1.700 millones | `presupuestoMax: 1700000000` |
 | `Ppto $1.700.000.000` | Presupuesto formato largo | `presupuestoMax: 1700000000` |
 | `hasta 1.700 millones` | Presupuesto máximo | `presupuestoMax: 1700000000` |
 | `800 a 1.200 millones` | Rango de presupuesto | `presupuestoMin: 800000000, presupuestoMax: 1200000000` |
 | `Canon $8.500.000` | Canon de arriendo mensual | `rentPrice: 8500000` |
 | `Valor arriendo: 3.500.000` | Canon mensual | `rentPrice: 3500000` |
+| `Admon $2.056.503 + Caldera` | Cuota de administración | `adminFee: 2056503` |
 | `Admon $960.000/mes` | Cuota de administración | `adminFee: 960000` |
 | `Ppto $ Abierto` | Presupuesto sin límite | `isOpenBudget: true` |
 

@@ -75,7 +75,8 @@ export default function Login() {
     // Listen for auth changes (specifically SIGNED_IN)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session && isMounted && !isExchangingRef.current) {
-        await exchangeToken(session.access_token, false);
+        const isOAuthCallback = window.location.hash.includes('access_token=') || window.location.search.includes('code=');
+        await exchangeToken(session.access_token, !isOAuthCallback);
       }
     });
 

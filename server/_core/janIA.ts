@@ -470,16 +470,49 @@ export function extractFallbackDataFromText(text: string): any {
   let rentPrice = 0;
   let adminFee = 0;
 
-  // A. Detección de Rango de Canon / Presupuesto (ej: "8.500 a 11 millones", "8.5 a 11 millones", "8 a 10 mm")
-  const rangeMatch = clean.match(/(\d+(?:[.,]\d+)?)\s*(?:a|hasta|-)\s*\$?(\d+(?:[.,]\d+)?)\s*(millones|millón|mll|mlls|mm|m)\b/i);
-  if (rangeMatch) {
-    let minVal = parseFloat(rangeMatch[1].replace(',', '.'));
-    let maxVal = parseFloat(rangeMatch[2].replace(',', '.'));
-    if (minVal > 1000) minVal /= 1000;
-    if (maxVal > 1000) maxVal /= 1000;
+  function parseColombianPriceOrBudget(numStr: string, unit: string, isSale: boolean): number {
+    const cleanStr = (numStr || "").trim().replace(/\*/g, "");
+    const cleanUnit = (unit || "").toLowerCase();
     
-    presupuestoMin = Math.round(minVal * 1_000_000);
-    presupuestoMax = Math.round(maxVal * 1_000_000);
+    if (cleanUnit.includes("mil millon")) {
+      const v = parseFloat(cleanStr.replace(",", "."));
+      return Math.round(v * 1_000_000_000);
+    }
+    
+    // Si tiene formato de miles con punto (ej: "2.100", "1.390", "1.300", "3.500")
+    if (/^\d{1,3}\.\d{3}$/.test(cleanStr)) {
+      const n = parseInt(cleanStr.replace(".", ""), 10);
+      return n * 1_000_000; // 2100 * 1M = 2.100.000.000 COP
+    }
+    
+    let val = parseFloat(cleanStr.replace(",", "."));
+    if (isNaN(val)) return 0;
+    
+    if (cleanUnit.includes("millon") || cleanUnit.includes("millón") || cleanUnit.includes("mll") || cleanUnit.includes("mm") || cleanUnit === "m") {
+      if (val < 100 && isSale && val > 0) {
+        if (val < 30) {
+          return Math.round(val * 1_000_000_000); // 2.1 millones -> 2.100.000.000
+        }
+        return Math.round(val * 10_000_000); // taquigrafía ej. 49mm -> 490M
+      }
+      return Math.round(val * 1_000_000);
+    }
+    
+    if (val <= 50 && isSale) {
+      return Math.round(val * 1_000_000_000);
+    }
+    if (val < 10000) {
+      return Math.round(val * 1_000_000);
+    }
+    return Math.round(val);
+  }
+
+  // A. Rango de Presupuesto en Demanda (ej: "Presupuesto *1.300 - 1.400*", "ppto 1200 a 1400", "800 a 1.200 millones", "8.500 a 11 millones")
+  const rangeMatch = clean.match(/(?:presupuesto(?:\s*m[aá]ximo)?|ppto(?:\s*m[aá]ximo)?|hasta|tope|valor|inversi[oó]n|compra)?\s*:?\s*\*?\$?\s*(\d{1,4}(?:[.,]\d{1,3})?)\s*(?:a|hasta|-)\s*\*?\$?\s*(\d{1,4}(?:[.,]\d{1,3})?)\*?\s*(mil\s*millones?|millones?|millon|millón|mill|mm|m)?\b/i);
+  if (rangeMatch && (rangeMatch[0].includes("presupuesto") || rangeMatch[0].includes("ppto") || rangeMatch[0].includes("compra") || rangeMatch[3])) {
+    const isSale = transactionType !== "arriendo";
+    presupuestoMin = parseColombianPriceOrBudget(rangeMatch[1], rangeMatch[3] || "", isSale);
+    presupuestoMax = parseColombianPriceOrBudget(rangeMatch[2], rangeMatch[3] || "", isSale);
     price = presupuestoMax;
     if (transactionType === "arriendo") {
       rentPrice = presupuestoMax;
@@ -489,17 +522,11 @@ export function extractFallbackDataFromText(text: string): any {
   // B. Detección de Presupuesto / Canon Máximo con Prefijos de Techo
   // (ej: "Máximo 5 millones con admon", "Canon máximo $8.500.000", "Hasta 4 millones", "Ppto max 12 MM", "Tope 6.5 millones")
   if (price === 0) {
-    // B.1 Prefijo de Techo + Millones (ej: "máximo 8.5 millones", "hasta 4 mm", "tope 12 millones", "canon max 10 millones")
-    const ceilingMillonMatch = clean.match(/(?:presupuesto(?:\s*m[aá]ximo)?|ppto(?:\s*m[aá]ximo)?|canon(?:\s*m[aá]ximo)?|arriendo(?:\s*m[aá]ximo)?|m[aá]ximo|max|hasta|tope|techo|l[ií]mite)\s*:?\s*\$?\s*([\d]+(?:[.,][\d]+)?)\s*(mil\s*millones?|millones?|millon|millón|mill|mm|m)\b/i);
+    const ceilingMillonMatch = clean.match(/(?:presupuesto(?:\s*m[aá]ximo)?|ppto(?:\s*m[aá]ximo)?|canon(?:\s*m[aá]ximo)?|arriendo(?:\s*m[aá]ximo)?|m[aá]ximo|max|hasta|tope|techo|l[ií]mite)\s*:?\s*\$?\s*([\d]+(?:[.,][\d]+)?)\s*(mil\s*millones?|millones?|millon|millón|mill|mm|m)?\b/i);
     if (ceilingMillonMatch) {
-      let val = parseFloat(ceilingMillonMatch[1].replace(',', '.'));
-      const unit = ceilingMillonMatch[2].toLowerCase();
-      let mult = 1_000_000;
-      if (unit.includes("mil millon")) mult = 1_000_000_000;
-      else if (unit === "mm" && val < 100 && transactionType !== "arriendo" && val > 15) mult = 10_000_000;
-      else mult = 1_000_000;
-      const computed = Math.round(val * mult);
-      if (!isPhoneNumberNotPrice(computed, text)) {
+      const isSale = transactionType !== "arriendo";
+      const computed = parseColombianPriceOrBudget(ceilingMillonMatch[1], ceilingMillonMatch[2] || "", isSale);
+      if (computed > 0 && !isPhoneNumberNotPrice(computed, text)) {
         price = computed;
         presupuestoMax = computed;
         if (transactionType === "arriendo" || clean.includes("arriendo") || clean.includes("canon") || clean.includes("alquiler") || computed <= 50_000_000) {
@@ -524,19 +551,13 @@ export function extractFallbackDataFromText(text: string): any {
     }
   }
 
-  // C. Detección de Precio/Presupuesto de Millones Estándar
+  // C. Detección de Precio/Presupuesto de Millones Estándar (ej: "$2.100 millones", "$1.390 millones", "950 millones")
   if (price === 0) {
-    const millonMatch = clean.match(/(\d+(?:[.,]\d+)?)\s*(mil\s*millones?|millon|millones|millón|mill|mm|m)\b/i);
+    const millonMatch = clean.match(/(?:precio|valor|venta|💰)?\s*:?\s*\$?\s*(\d{1,4}(?:[.,]\d{1,3})?)\s*(mil\s*millones?|millon|millones|millón|mill|mm|m)\b/i);
     if (millonMatch) {
-      let val = parseFloat(millonMatch[1].replace(',', '.'));
-      const unit = millonMatch[2].toLowerCase();
-      let mult = 1_000_000;
-      if (unit.includes("mil millon")) mult = 1_000_000_000;
-      else if (unit === "mm" && val < 100 && transactionType !== "arriendo" && val > 15) mult = 10_000_000; // taquigrafía SOLO para abreviatura 'mm' (ej: 49 mm -> 490M)
-      else mult = 1_000_000;
-      
-      const computed = Math.round(val * mult);
-      if (!isPhoneNumberNotPrice(computed, text)) {
+      const isSale = transactionType !== "arriendo";
+      const computed = parseColombianPriceOrBudget(millonMatch[1], millonMatch[2], isSale);
+      if (computed > 0 && !isPhoneNumberNotPrice(computed, text)) {
         price = computed;
         presupuestoMax = computed;
         if (transactionType === "arriendo" || clean.includes("arriendo") || clean.includes("canon")) rentPrice = computed;
@@ -546,11 +567,8 @@ export function extractFallbackDataFromText(text: string): any {
 
   // D. Detección de Precio Estándar Formateado (formato colombiano: 1.390.000.000)
   if (price === 0) {
-    // Primero intentar formato largo colombiano (puntos como separadores de miles)
-    // Patrón: número de 7+ dígitos con puntos cada 3 (ej: 1.390.000.000 o 950.000.000)
     const colombianPriceMatch = text.match(/\$?\s*(\d{1,3}(?:\.\d{3}){2,4})/);
     if (colombianPriceMatch) {
-      // En formato colombiano, los puntos son separadores de miles → eliminar todos los puntos
       const parsed = parseFloat(colombianPriceMatch[1].replace(/\./g, ''));
       if (!isNaN(parsed) && !isPhoneNumberNotPrice(parsed, text) && parsed >= 10_000_000) {
         price = parsed;
@@ -558,7 +576,6 @@ export function extractFallbackDataFromText(text: string): any {
         if (transactionType === "arriendo") rentPrice = parsed;
       }
     }
-    // Fallback: formato con coma decimal o mixto
     if (price === 0) {
       const rawPriceMatch = text.match(/\$?\s*(\d{1,3}(?:,\d{3})+)/);
       if (rawPriceMatch) {
@@ -572,8 +589,8 @@ export function extractFallbackDataFromText(text: string): any {
     }
   }
 
-  // E. Cuota de Administración (Detecta valores fijos y techos: "Admon $960.000", "Admon máxima $1.200.000", "admon max 500k", "admon hasta 800 mil")
-  const adminMatch = clean.match(/(?:administraci[oó]n|admin|admon|cta\s*admon)\s*(?:m[aá]xima|max|hasta|tope|no\s*mayor\s*a|no\s*superior\s*a|l[ií]mite)?\s*:?\s*(?:aprox\.?)?\s*\$?\s*([\d.,\s]+?)(?:-|\s|\(|$|\n)/i);
+  // E. Cuota de Administración (ej: "Adm $2.056.503 + Caldera", "Admon $960.000", "Admon máxima $1.200.000")
+  const adminMatch = clean.match(/(?:adm|admon|administraci[oó]n|admin|cta\s*admon)\s*(?:m[aá]xima|max|hasta|tope|no\s*mayor\s*a|no\s*superior\s*a|l[ií]mite)?\s*:?\s*(?:aprox\.?)?\s*\$?\s*([\d.,\s]+?)(?:\s*\+|\s*-|\s*\(|\s*\n|$)/i);
   if (adminMatch) {
     const rawANum = parseFloat(adminMatch[1].replace(/[.,\s]/g, ''));
     if (!isNaN(rawANum) && rawANum >= 10_000 && rawANum <= 30_000_000 && !isPhoneNumberNotPrice(rawANum, text)) {
@@ -582,15 +599,15 @@ export function extractFallbackDataFromText(text: string): any {
   }
 
   let area = 0;
-  // Captura área con prefijos opcionales: "Mínimo 150m2", "min 150 m²", "de 122.74 m²", "122,74 m²"
-  const areaMatch = clean.match(/(?:(?:m[ií]nimo|min|m[aá]ximo|max|de|área\s*(?:m[ií]nima)?|area\s*(?:minima)?)\s+)?([\d]+(?:[.,][\d]+)?)\s*(?:m2|mts2|mts|metros(?:\s+cuadrados)?|m²)/i);
+  // Captura área con prefijos opcionales: "📐 183 m²", "Area: 180 Mts", "Mínimo 150m2"
+  const areaMatch = clean.match(/(?:📐|area|área|superficie)?\s*:?\s*(?:(?:m[ií]nimo|min|m[aá]ximo|max|de|área\s*(?:m[ií]nima)?|area\s*(?:minima)?)\s+)?([\d]+(?:[.,][\d]+)?)\s*(?:m2|mts2|mts|metros(?:\s+cuadrados)?|m²)/i);
   if (areaMatch) {
     area = parseFloat(areaMatch[1].replace(',', '.'));
   }
 
   let bedrooms = 0;
-  const bedMatch = clean.match(/(\d+)\s*(?:alcoba|alcobas|hab|habs|habitacion|habitaciones|dormitorio|dormitorios)/i)
-                || clean.match(/(\d+)\s*-\s*(\d+)\s*(?:alcoba|alcobas|hab|habs)/i);
+  const bedMatch = clean.match(/(\d+)\s*(?:alcoba|alcobas|hab|habs|habitacion|habitaciones|dormitorio|dormitorios|cuartos|cuarto)/i)
+                || clean.match(/(\d+)\s*-\s*(\d+)\s*(?:alcoba|alcobas|hab|habs|cuartos)/i);
   if (bedMatch) {
     bedrooms = parseInt(bedMatch[1], 10);
   }
@@ -603,7 +620,7 @@ export function extractFallbackDataFromText(text: string): any {
 
   let garages = 0;
   let garageType = null;
-  const garMatch = clean.match(/(\d+)\s*(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero)/i)
+  const garMatch = clean.match(/(?:🚙|🚗|🚘)?\s*(\d+)\s*(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero)/i)
                 || clean.match(/(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero)\s*:?\s*(\d+)/i);
   if (garMatch) {
     garages = parseInt(garMatch[1], 10);
@@ -615,8 +632,8 @@ export function extractFallbackDataFromText(text: string): any {
   }
 
   let antiguedadAnos: number | null = null;
-  const ageMatch = clean.match(/(?:edificio\s*(?:de|más\s*de|mas\s*de)?|antigüedad|antiguedad|tiene)\s*(\d{1,2})\s*años/i)
-                || clean.match(/(\d{1,2})\s*años\s*(?:de\s*)?(?:construido|antigüedad)/i);
+  const ageMatch = clean.match(/(?:🏢|⏳|⏱️|edificio|antigüedad|antiguedad|tiene|\|)\s*(\d{1,2})\s*a[ñn]os/i)
+                || clean.match(/(\d{1,2})\s*a[ñn]os\s*(?:de\s*)?(?:construido|antigüedad|edificio)/i);
   if (ageMatch) {
     antiguedadAnos = parseInt(ageMatch[1], 10);
   }
@@ -2749,15 +2766,37 @@ Por lo tanto, DEBES hacer lo siguiente:
       const fallbackData = extractFallbackDataFromText(messageToProcess);
       if (!extracted.transactionType) extracted.transactionType = fallbackData.transactionType;
       if (!extracted.propertyType) extracted.propertyType = fallbackData.propertyType;
-      if (!extracted.price || Number(extracted.price) === 0 || fallbackData.price > 0) {
-        extracted.price = fallbackData.price;
+      
+      // Sanitizar price en Venta (si venía < 100M pero en fallbackData es >= 100M)
+      const currentPriceNum = Number(extracted.price || 0);
+      if (isProperty) {
+        if (!currentPriceNum || currentPriceNum === 0 || (currentPriceNum < 100_000_000 && fallbackData.price >= 100_000_000)) {
+          extracted.price = fallbackData.price;
+        }
       }
-      if (!extracted.presupuestoMax || Number(extracted.presupuestoMax) === 0 || fallbackData.price > 0) {
-        extracted.presupuestoMax = fallbackData.price;
+      
+      if (isRequirement) {
+        const curPresupuesto = Number(extracted.presupuestoMax || 0);
+        if (!curPresupuesto || curPresupuesto === 0 || (curPresupuesto < 100_000_000 && fallbackData.presupuestoMax >= 100_000_000)) {
+          extracted.presupuestoMax = fallbackData.presupuestoMax;
+        }
+        if (fallbackData.presupuestoMin > 0 && (!extracted.presupuestoMin || Number(extracted.presupuestoMin) === 0)) {
+          extracted.presupuestoMin = fallbackData.presupuestoMin;
+        }
       }
+
+      if (!extracted.rentPrice && fallbackData.rentPrice > 0) extracted.rentPrice = fallbackData.rentPrice;
+      if (!extracted.adminFee && fallbackData.adminFee > 0) extracted.adminFee = fallbackData.adminFee;
       if (!extracted.area || Number(extracted.area) === 0) extracted.area = fallbackData.area;
-      if (!extracted.bedrooms) extracted.bedrooms = fallbackData.bedrooms;
-      if (!extracted.bathrooms) extracted.bathrooms = fallbackData.bathrooms;
+      if (!extracted.bedrooms && fallbackData.bedrooms > 0) extracted.bedrooms = fallbackData.bedrooms;
+      if (!extracted.bathrooms && fallbackData.bathrooms > 0) extracted.bathrooms = fallbackData.bathrooms;
+      if (!extracted.garages && fallbackData.garages > 0) extracted.garages = fallbackData.garages;
+      if (!extracted.garageType && fallbackData.garageType) extracted.garageType = fallbackData.garageType;
+      if (!extracted.antiguedadAnos && fallbackData.antiguedadAnos !== null) extracted.antiguedadAnos = fallbackData.antiguedadAnos;
+      if (extracted.hasBalcony === undefined && fallbackData.hasBalcony !== null) extracted.hasBalcony = fallbackData.hasBalcony;
+      if (extracted.hasTerrace === undefined && fallbackData.hasTerrace !== null) extracted.hasTerrace = fallbackData.hasTerrace;
+      if (extracted.hasStorage === undefined && fallbackData.hasStorage !== null) extracted.hasStorage = fallbackData.hasStorage;
+      if (extracted.hasElevator === undefined && fallbackData.hasElevator !== null) extracted.hasElevator = fallbackData.hasElevator;
       if (!extracted.city && fallbackData.city) extracted.city = fallbackData.city;
       if (!extracted.ciudadDeseada && fallbackData.ciudadDeseada) extracted.ciudadDeseada = fallbackData.ciudadDeseada;
       if (!extracted.zone && fallbackData.zone) extracted.zone = fallbackData.zone;
@@ -4049,32 +4088,35 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
     }
   }
 
-  // ── SANIDAD PREDIAL DE PRECIOS v20.0 (Desambiguación Administración vs Precio Venta) ──
-  // Si la propiedad es de VENTA y price < 30.000.000 (ej. $1.200.000 cuota de administración),
-  // ese valor NO es el precio de venta. Escanear el rawText para encontrar el verdadero precio de venta (ej. $950.000.000).
+  // ── SANIDAD PREDIAL DE PRECIOS v20.0 / v25.4 (Desambiguación Administración vs Precio Venta) ──
   const isVentaType = txTypeForSplit.includes("venta") || !txTypeForSplit.includes("arriendo");
   const currentPriceVal = data.price ? parseFloat(String(data.price)) : 0;
 
-  if (isVentaType && currentPriceVal > 0 && currentPriceVal < 30_000_000 && data.rawText) {
-    const rawLower = (data.rawText || "").toLowerCase();
-    const saleMatch = rawLower.match(/(?:v\/venta\/|precio\s*(?:de\s*)?venta|venta)\s*:?\s*\$?([\d.,]+)\s*(mil\s*millones?|millones?|m|M)?/i)
-                   || rawLower.match(/venta\/.*?\$?\s*([\d.]{7,12})/i);
-
-    if (saleMatch) {
-      const rawNum = parseFloat(saleMatch[1].replace(/\./g, "").replace(/,/g, ""));
-      const unitStr = (saleMatch[2] || "").toLowerCase();
-      const mult = unitStr.includes("mil millon") ? 1_000_000_000
-        : unitStr.includes("millon") || unitStr === "m" ? 1_000_000
-        : rawNum < 10_000 ? 1_000_000 : 1;
-      const realSalePrice = rawNum * mult;
-
-      if (realSalePrice >= 30_000_000) {
-        if (!data.adminFee || parseFloat(String(data.adminFee)) <= 0) {
-          data.adminFee = currentPriceVal; // $1.200.000 era la administración
-        }
-        data.price = realSalePrice; // $950.000.000 es el precio real de venta
-        console.log(`[JanIA-SanidadPredial] Corregido precio de venta corrupto $${currentPriceVal} → Real: $${realSalePrice} | AdminFee: $${data.adminFee}`);
+  if (isVentaType && (currentPriceVal < 100_000_000 || !data.price) && data.rawText) {
+    const fallbackD = extractFallbackDataFromText(data.rawText);
+    if (fallbackD.price >= 30_000_000) {
+      if ((!data.adminFee || parseFloat(String(data.adminFee)) <= 0) && fallbackD.adminFee > 0) {
+        data.adminFee = fallbackD.adminFee;
       }
+      data.price = fallbackD.price;
+      console.log(`[JanIA-SanidadPredial] Corregido precio de venta $${currentPriceVal} → Real: $${fallbackD.price} | AdminFee: $${data.adminFee}`);
+    }
+  }
+
+  // Rescatar campos físicos si vienen null o en 0
+  if (data.rawText) {
+    const fallbackD = extractFallbackDataFromText(data.rawText);
+    if ((!data.adminFee || parseFloat(String(data.adminFee)) <= 0) && fallbackD.adminFee > 0) {
+      data.adminFee = fallbackD.adminFee;
+    }
+    if ((!data.garages || Number(data.garages) <= 0) && fallbackD.garages > 0) {
+      data.garages = fallbackD.garages;
+    }
+    if ((!data.antiguedadAnos || Number(data.antiguedadAnos) <= 0) && fallbackD.antiguedadAnos !== null) {
+      data.antiguedadAnos = fallbackD.antiguedadAnos;
+    }
+    if ((!data.areaTotal && !data.area) && fallbackD.area > 0) {
+      data.areaTotal = fallbackD.area;
     }
   }
 
@@ -4412,7 +4454,22 @@ async function saveRequirement(data: any, userId: string, realName: string, imag
     tiposNegocioAceptados: sanitizeTransactionTypes(data.transactionTypes || data.tipoNegocioDeseado || data.transactionType),
     monedaPresupuesto: sanitizeCurrency(data.monedaPresupuesto || data.currency),
     // Mapear campos con Sanidad Numérica Post-Extracción (Bug #6 Fix)
-    presupuestoMin: data.presupuestoMin !== undefined && data.presupuestoMin !== null ? String(data.presupuestoMin) : null,
+    presupuestoMin: (() => {
+      const raw = data.presupuestoMin !== undefined && data.presupuestoMin !== null ? data.presupuestoMin : null;
+      if (raw !== undefined && raw !== null) {
+        const v = parseFloat(String(raw));
+        if (!isNaN(v) && v >= 300_000 && v <= 50_000_000_000 && !isPhoneNumberNotPrice(v, data.rawText)) {
+          return String(v);
+        }
+      }
+      if (data.rawText || data.name) {
+        const fallbackD = extractFallbackDataFromText(`${data.rawText || ""} ${data.name || ""}`);
+        if (fallbackD.presupuestoMin >= 300_000) {
+          return String(fallbackD.presupuestoMin);
+        }
+      }
+      return null;
+    })(),
     presupuestoMax: (() => {
       const raw = data.presupuestoMax !== undefined && data.presupuestoMax !== null ? data.presupuestoMax : data.price;
       if (raw !== undefined && raw !== null) {
@@ -4421,33 +4478,13 @@ async function saveRequirement(data: any, userId: string, realName: string, imag
           return String(v);
         }
       }
-      // Fallback robusto: extraer desde rawText con palabras de techo (máximo, max, hasta, ppto, canon max, tope)
-      const rawL = (data.rawText || data.name || "").toLowerCase();
-      const isRentReq = (data.tipoNegocioDeseado || data.transactionType || "").toLowerCase().includes("arriendo") || rawL.includes("arriendo") || rawL.includes("canon") || rawL.includes("alquiler");
-      
-      // Fallback 1: Techo + Millones (ej: "máximo 5 millones", "hasta 1.700 millones", "ppto max 10 mm", "tope 8 millones")
-      const millonMatch = rawL.match(/(?:presupuesto(?:\s*m[aá]ximo)?|ppto(?:\s*m[aá]ximo)?|canon(?:\s*m[aá]ximo)?|m[aá]ximo|max|hasta|tope|techo|l[ií]mite)\s*:?\s*\$?\s*([\d]+(?:[.,][\d]+)?)\s*(mil\s*millones?|millones?|millon|millón|mill|mm|m)\b/i);
-      if (millonMatch) {
-        let val = parseFloat(millonMatch[1].replace(',', '.'));
-        const unit = millonMatch[2].toLowerCase();
-        let mult = 1_000_000;
-        if (unit.includes("mil millon")) mult = 1_000_000_000;
-        else mult = 1_000_000;
-        const computed = Math.round(val * mult);
-        if (computed >= (isRentReq ? 300_000 : 10_000_000) && computed <= 50_000_000_000 && !isPhoneNumberNotPrice(computed, rawL)) {
-          return String(computed);
+      // Fallback robusto con extractFallbackDataFromText (soporta rangos como "Presupuesto *1.300 - 1.400*")
+      if (data.rawText || data.name) {
+        const fallbackD = extractFallbackDataFromText(`${data.rawText || ""} ${data.name || ""}`);
+        if (fallbackD.presupuestoMax >= 300_000) {
+          return String(fallbackD.presupuestoMax);
         }
       }
-
-      // Fallback 2: Formato colombiano largo o estándar (ej: "$1.700.000.000", "$8.500.000")
-      const colombianMatch = (data.rawText || "").match(/\$?\s*(\d{1,3}(?:\.\d{3}){2,4})/);
-      if (colombianMatch) {
-        const parsed = parseFloat(colombianMatch[1].replace(/\./g, ''));
-        if (!isNaN(parsed) && parsed >= 300_000 && !isPhoneNumberNotPrice(parsed, rawL)) {
-          return String(parsed);
-        }
-      }
-
       return null;
     })(),
     areaMin: (() => {

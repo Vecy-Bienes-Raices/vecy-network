@@ -4,6 +4,7 @@ import { propertyMatches, properties, requirements } from "../../drizzle/schema"
 import { normalizarTextoGeografico, isLasSantasZone, isBarrioInLasSantas, BARRIOS_LAS_SANTAS } from "./geography";
 import { lookupBarriosByPerimeter } from "./geo-lookup";
 import { VECY_VERSION_LABEL } from "../../shared/const";
+import { extractFallbackDataFromText } from "./janIA";
 
 /**
  * Motor de Matching VECY CORE v12.00 (TypeScript)
@@ -1129,51 +1130,22 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
   if (isPhoneNumberNotPrice(price, property.rawText)) price = 0;
   if (isPhoneNumberNotPrice(budgetMax, requirement.rawText)) budgetMax = 0;
 
-  // ── SANIDAD PREDIAL DE PRECIOS EN EL MOTOR v20.0 ──────────────────────────────
-  // Para Venta, si price < 30.000.000 (ej. $1.200.000 cuota de administración),
-  // ese valor NO es el precio de venta. Re-parsear el rawText para encontrar el valor real (ej. $950.000.000).
+  // ── SANIDAD PREDIAL DE PRECIOS EN EL MOTOR v20.0 / v25.4 ──────────────────────────────
   const isSaleMatch = (property.transactionType || "").toLowerCase().includes("venta") || !(property.transactionType || "").toLowerCase().includes("arriendo");
-  // Sanidad Predial de Precios: para Venta, si price < 200.000.000 (e.g. confusión de formato/millones),
-  // re-parsear el rawText para recuperar el precio real (ej: $1.390.000.000 guardado como 102.740.000).
-  if (isSaleMatch && price > 0 && price < 200_000_000 && property.rawText) {
-    const rawP = property.rawText.toLowerCase();
-    const saleMatch = rawP.match(/(?:v\/venta\/|precio\s*(?:de\s*)?venta|venta)\s*:?\s*\$?([\d.,]+)\s*(mil\s*millones?|millones?|m|M)?/i)
-                   || rawP.match(/venta\/.*?\$?\s*([\d.]{7,12})/i);
-    if (saleMatch) {
-      let rawNum = parseFloat(saleMatch[1].replace(/\./g, "").replace(/,/g, ""));
-      const unitStr = (saleMatch[2] || "").toLowerCase();
-      const mult = unitStr.includes("mil millon") ? 1_000_000_000
-        : unitStr.includes("millon") || unitStr === "m" ? 1_000_000
-        : rawNum < 10_000 ? 1_000_000 : 1;
-      let valP = rawNum * mult;
-      if (!isNaN(valP) && valP >= 30_000_000) {
-        price = valP; // Corregir price a $950.000.000
-      }
+  if (isSaleMatch && (price <= 0 || price < 100_000_000) && property.rawText) {
+    const fbP = extractFallbackDataFromText(property.rawText);
+    if (fbP.price >= 30_000_000) {
+      price = fbP.price;
     }
   }
 
   // Sanidad Predial de Precios y Presupuestos:
   let isReqRent = (requirement.tipoNegocioDeseado || requirement.transactionType || "").toLowerCase().includes("arriendo");
   
-  // Re-extraer presupuesto si el valor de presupuestoMax en BD es espurio (ej. > 50.000.000 para arriendo o 0)
-  if (requirement.rawText && (budgetMax <= 0 || (isReqRent && budgetMax > 50_000_000))) {
-    const rawR = requirement.rawText.toLowerCase().replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0]/g, " ");
-    const matchPresu = rawR.match(/(?:presupuesto|ppto|canon|valor|hasta|máximo|max)\s*(?:máximo|max)?\s*:?\s*\$?\s*([\d.,\s]+?)\s*(mil\s*millones?|millones|millón|mll|mlls|mm|m)?(?:\s|$|\n)/i)
-                    || rawR.match(/(?:presupuesto|ppto|canon|valor|hasta|máximo|max)\s*:?\s*\$?\s*([\d.]+)/i);
-    if (matchPresu) {
-      let valStr = matchPresu[1].replace(/[.,\s]/g, "");
-      let valR = parseFloat(valStr);
-      if (!isNaN(valR)) {
-        const unit = (matchPresu[2] || "").toLowerCase();
-        if (unit.includes("mil millon")) {
-          valR *= 1_000_000_000;
-        } else if (unit.includes("millon") || unit.includes("mll") || unit.includes("mm") || unit === "m") {
-          valR *= 1_000_000;
-        } else if (valR < 1000) {
-          valR *= 1_000_000;
-        }
-        if (valR > 0) budgetMax = valR;
-      }
+  if (requirement.rawText && (budgetMax <= 0 || (isReqRent && budgetMax > 50_000_000) || (!isReqRent && budgetMax < 100_000_000))) {
+    const fbR = extractFallbackDataFromText(requirement.rawText);
+    if (fbR.presupuestoMax >= 300_000) {
+      budgetMax = fbR.presupuestoMax;
     }
   }
 

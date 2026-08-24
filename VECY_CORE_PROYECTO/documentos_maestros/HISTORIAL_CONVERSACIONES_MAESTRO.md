@@ -1041,10 +1041,49 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
+### 🗓️ Sesión: Domingo 23 de Agosto de 2026 — 07:00 PM a 08:00 PM (Hora Colombia UTC-5)
+**Versión del Sistema**: `v25.5 — Agosto 2026`  
+**Objetivo Maestro**: Diagnóstico y Corrección Definitiva del Cotejamiento de Datos, Extracción de Rangos y Millones COP, Resanitización Masiva en Supabase y Purgado de Falsos Matches.
+
+#### 📋 Requerimientos Específicos del Usuario (Eduardo A. Rivera):
+1. **Diagnóstico Integral del Fallo de Cotejamiento de Datos (Caso Propiedad #1654 vs Requerimiento #704)**:
+   - Explicar por qué la mesa de coincidencias mostró el Match #11037 con 95% (Match Perfecto) cuando la propiedad valía $2.100 millones y el cliente pedía máximo $1.400 millones (inviable por $700 millones).
+   - Identificar por qué la tabla de cotejo mostraba "N/E" en precio de venta, ponía "$2.100.000 / mes" en precio de arriendo para un inmueble de venta pura, y no leía la cuota de administración ($2.056.503) ni la antigüedad (9 años).
+2. **Corrección de la Causa Raíz de Precios Truncados y Rangos Sin Palabra 'Millones'**:
+   - Asegurar que formatos como `$2.100 millones`, `2.100 mm` o `Presupuesto *1.300 - 1.400*` (con asteriscos de WhatsApp y sin la palabra explícita 'millones') se interpreten siempre matemáticamente como `$2.100.000.000 COP` y `$1.300.000.000 - $1.400.000.000 COP`.
+   - Garantizar que un inmueble en venta pura jamás filtre su precio hacia la casilla de arriendo / canon.
+3. **Saneamiento Retroactivo Masivo de la Base de Datos en Supabase**:
+   - Barrido integral de todas las 858 propiedades y 452 requerimientos para corregir precios truncados, cánones, administraciones, garajes, antigüedades y áreas.
+4. **Purga Total de Matches Inviables**:
+   - Eliminación en cascada de todos los falsos matches existentes en Supabase (`propertyMatches` y `notificationLogs`) que cayeron por debajo del 85% o violaron filtros duros financieros.
+
+#### 🛠️ Soluciones e Implementaciones Técnicas:
+- **`server/_core/janIA.ts`**:
+  - Implementada la función `parseColombianPriceOrBudget` que distingue notación de miles con punto (`2.100` -> `2.100.000.000`), rangos con asteriscos (`*1.300 - 1.400*`) y unidades de millones.
+  - Blindaje en `saveProperty` y `saveRequirement` para que `fallbackData` complete y rescate precios, administraciones, garajes, antigüedad y presupuestos directamente desde `rawText` cuando Gemini omite datos.
+- **`server/_core/matching.ts`**:
+  - Integrado `extractFallbackDataFromText` en `calcularScoreMatch` y `explicarMatch` para sanitizar precios y presupuestos en tiempo de matching.
+  - Filtro Duro 7 de Presupuesto garantizado para bloquear al **0% invariable** cualquier oferta que supere el presupuesto máximo.
+- **`client/src/components/admin/AdminMatches.tsx`**:
+  - Refactorizada la función `scoreRows` para aplicar `parseColombianPriceOrBudget`, protegiendo la casilla de arriendo con `!isPropPureVenta` y expandiendo el regex de antigüedad (`🏢 9 años`, `⏳ 9 años`).
+- **`server/_core/prompts/base.md`**:
+  - Incorporadas explícitamente a la tabla de taquigrafía las expresiones `$2.100 millones` (`price: 2100000000`), `Presupuesto *1.300 - 1.400*` (`presupuestoMin: 1300000000, presupuestoMax: 1400000000`) y `Admon $2.056.503 + Caldera`.
+- **Saneamiento Masivo y Purga en Supabase**:
+  - **238 propiedades corregidas y saneadas** (precios de venta de miles de millones, garajes, antigüedad y cuotas de administración recuperadas).
+  - **Requerimientos enriquecidos** con presupuestos mínimos y máximos en formato COP real.
+  - **39 matches falsos/inviables purgados** (incluyendo el Match #11037 que quedó en 0%).
+  - **70 matches legítimos conservados** con score exacto $\ge 85\%$.
+- **Compilación y Versionamiento**:
+  - `npm run build` ejecutado con 0 errores TypeScript.
+  - Incremento de versión a **`v25.5`** en `shared/const.ts`.
+
+---
+
 ## 🛡️ PROTOCOLOS Y REGLAS DE TRABAJO INQUEBRANTABLES
 1. **Adición Pura de Código**: NUNCA borrar, modificar ni romper funcionalidades o reglas previas ya validadas al agregar nuevo código.
 2. **Revisión del Historial al Iniciar**: Consultar esta bitácora y `.agents/AGENTS.md` al comienzo de cada conversación.
 3. **Limpieza Continua**: Mantener el directorio `server/` libre de archivos script residuales o duplicados.
 4. **Rol de Co-Piloto Guardián**: La IA debe evaluar las consecuencias secundarias de cualquier instrucción y frenar a tiempo si un cambio propuesto arriesga la integridad de la base de datos o rompe reglas del negocio.
+
 
 
