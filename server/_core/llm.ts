@@ -83,7 +83,8 @@ export async function invokeLLM({
   pdfBuffer,
   pdfMimeType,
   enableSearch = false,
-  tools
+  tools,
+  temperature
 }: { 
   messages: any[], 
   responseFormat?: any, 
@@ -93,7 +94,8 @@ export async function invokeLLM({
   pdfBuffer?: string, 
   pdfMimeType?: string, 
   enableSearch?: boolean,
-  tools?: any[]
+  tools?: any[],
+  temperature?: number
 }): Promise<{ choices: { message: { content: string; functionCall?: any } }[] }> {
   if (provider === "anthropic") {
     return await invokeClaude(messages, responseFormat) as any;

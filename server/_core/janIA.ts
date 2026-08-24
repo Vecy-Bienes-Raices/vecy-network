@@ -59,7 +59,7 @@ export function isPhoneNumberNotPrice(val: number | string | null | undefined, r
 
 
 export type JanIAResult = {
-  classification: "INMUEBLE" | "REQUERIMIENTO" | "CONSULTA_GENERAL" | "RESPUESTA_A_PREGUNTA_IA" | "DATOS_INCOMPLETOS" | "VIOLACION_DE_NORMAS" | "ANALISIS_DE_MERCADO" | "RESPUESTA_A_BURLA";
+  classification: "INMUEBLE" | "REQUERIMIENTO" | "CONSULTA_GENERAL" | "RESPUESTA_A_PREGUNTA_IA" | "DATOS_INCOMPLETOS" | "VIOLACION_DE_NORMAS" | "ANALISIS_DE_MERCADO" | "RESPUESTA_A_BURLA" | "SOBRE_VECY";
   extractedData?: any;
   missingFields?: string[];
   response: string;      // Respuesta para el grupo (Silencio de Oro si no hay match)
@@ -88,7 +88,8 @@ export const janiaResultSchema = {
         "DATOS_INCOMPLETOS",
         "VIOLACION_DE_NORMAS",
         "ANALISIS_DE_MERCADO",
-        "RESPUESTA_A_BURLA"
+        "RESPUESTA_A_BURLA",
+        "SOBRE_VECY"
       ]
     },
     response: { type: "STRING" },

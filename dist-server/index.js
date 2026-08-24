@@ -722,7 +722,8 @@ async function invokeLLM({
   pdfBuffer,
   pdfMimeType,
   enableSearch = false,
-  tools
+  tools,
+  temperature
 }) {
   if (provider === "anthropic") {
     return await invokeClaude(messages2, responseFormat);
@@ -9798,7 +9799,8 @@ var init_janIA = __esm({
             "DATOS_INCOMPLETOS",
             "VIOLACION_DE_NORMAS",
             "ANALISIS_DE_MERCADO",
-            "RESPUESTA_A_BURLA"
+            "RESPUESTA_A_BURLA",
+            "SOBRE_VECY"
           ]
         },
         response: { type: "STRING" },
