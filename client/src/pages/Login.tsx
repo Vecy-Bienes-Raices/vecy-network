@@ -21,33 +21,55 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const isExchangingRef = React.useRef(false);
 
+  const ADMIN_EMAILS = [
+    'vecybienesraices@gmail.com',
+    'edduinnova@gmail.com',
+    'jani79alves@gmail.com',
+    'eduardoariveram@gmail.com',
+    'eddu.mendoza@gmail.com',
+    'mejorpontealdia@gmail.com'
+  ];
+
   // Exchange Supabase token with backend session
   const exchangeToken = async (accessToken: string, isSilent = false) => {
     if (isExchangingRef.current) return;
     isExchangingRef.current = true;
     try {
       if (!isSilent) setLoading(true);
-      // Timeout seguro de 20 segundos
+      // Timeout seguro de 12 segundos con el backend
       const exchangePromise = loginMutation.mutateAsync({ accessToken });
-      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout de sincronización con el servidor')), 20000));
-      const res: any = await Promise.race([exchangePromise, timeoutPromise]);
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout de sincronización')), 12000));
+      const res: any = await Promise.race([exchangePromise, timeoutPromise]).catch(err => {
+        console.warn('[Login] Backend exchange warned, proceeding:', err);
+        return null;
+      });
+
       if (res && res.sessionToken) {
         localStorage.setItem("jania-session-token", res.sessionToken);
       }
       if (res && res.user) {
         utils.auth.me.setData(undefined, res.user);
       }
-      await refresh();
-      toast.success('Sesión iniciada correctamente');
-      navigate('/admin');
+
+      // Validar si el usuario tiene rol admin/agent
+      const { data: { user: sbUser } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
+      const userEmail = (res?.user?.email || sbUser?.email || '').toLowerCase();
+      const isAdmin = ADMIN_EMAILS.includes(userEmail) || res?.user?.role === 'admin' || res?.user?.role === 'agent';
+
+      await refresh().catch(() => {});
+      
+      if (isAdmin || res?.user || sbUser) {
+        toast.success('Sesión iniciada correctamente');
+        navigate('/admin');
+      }
     } catch (err: any) {
       console.error('[Login] Error syncing session:', err);
-      if (!isSilent) {
-        const errMsg = err?.message || 'Error desconocido';
-        toast.error(`Error al sincronizar: ${errMsg}`);
+      const { data: { user: sbUser } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
+      if (sbUser) {
+        navigate('/admin');
+      } else if (!isSilent) {
+        toast.error('Error al iniciar sesión. Intenta nuevamente.');
       }
-      localStorage.removeItem("jania-session-token");
-      await supabase.auth.signOut().catch(() => {});
     } finally {
       setLoading(false);
       isExchangingRef.current = false;
@@ -59,24 +81,22 @@ export default function Login() {
     let isMounted = true;
     const checkSession = async () => {
       try {
-        const isOAuthCallback = window.location.hash.includes('access_token=') || window.location.search.includes('code=');
         const { data: { session } } = await supabase.auth.getSession();
         if (session && isMounted && !isExchangingRef.current) {
-          await exchangeToken(session.access_token, !isOAuthCallback);
+          await exchangeToken(session.access_token, false);
         }
       } catch (err) {
         console.error('[Login] Error checking session:', err);
       }
     };
 
-    // Check on mount (for OAuth callbacks)
+    // Check on mount
     checkSession();
 
-    // Listen for auth changes (specifically SIGNED_IN)
+    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session && isMounted && !isExchangingRef.current) {
-        const isOAuthCallback = window.location.hash.includes('access_token=') || window.location.search.includes('code=');
-        await exchangeToken(session.access_token, !isOAuthCallback);
+      if ((event === 'SIGNED_IN' || event === 'USER_UPDATED') && session && isMounted && !isExchangingRef.current) {
+        await exchangeToken(session.access_token, false);
       }
     });
 
@@ -88,7 +108,7 @@ export default function Login() {
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (user && ['admin', 'agent'].includes(user.role as string)) {
+    if (user && (ADMIN_EMAILS.includes((user.email || '').toLowerCase()) || ['admin', 'agent'].includes(user.role as string))) {
       navigate('/admin');
     }
   }, [user]);

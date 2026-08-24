@@ -572,9 +572,11 @@ async function upsertUser(user) {
     }
     const ADMIN_EMAILS = [
       "vecybienesraices@gmail.com",
+      "edduinnova@gmail.com",
       "jani79alves@gmail.com",
       "eduardoariveram@gmail.com",
-      "eddu.mendoza@gmail.com"
+      "eddu.mendoza@gmail.com",
+      "mejorpontealdia@gmail.com"
     ];
     if (user.role !== void 0) {
       values.role = user.role;
@@ -15302,9 +15304,11 @@ var appRouter = router({
 // server/_core/context.ts
 var SUPERADMIN_EMAILS = [
   "vecybienesraices@gmail.com",
+  "edduinnova@gmail.com",
   "jani79alves@gmail.com",
   "eduardoariveram@gmail.com",
-  "eddu.mendoza@gmail.com"
+  "eddu.mendoza@gmail.com",
+  "mejorpontealdia@gmail.com"
 ];
 async function createContext(opts) {
   let user = null;

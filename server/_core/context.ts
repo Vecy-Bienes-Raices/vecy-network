@@ -5,9 +5,11 @@ import { sdk } from "./sdk";
 // Emails que SIEMPRE tienen acceso de superadministrador
 const SUPERADMIN_EMAILS = [
   "vecybienesraices@gmail.com",
+  "edduinnova@gmail.com",
   "jani79alves@gmail.com",
   "eduardoariveram@gmail.com",
-  "eddu.mendoza@gmail.com"
+  "eddu.mendoza@gmail.com",
+  "mejorpontealdia@gmail.com"
 ];
 
 export type TrpcContext = {

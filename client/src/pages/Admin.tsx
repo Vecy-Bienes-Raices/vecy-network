@@ -118,7 +118,18 @@ export default function Admin() {
     );
   }
 
-  if (!['admin', 'agent'].includes(user.role as string)) {
+  const ADMIN_EMAILS = [
+    'vecybienesraices@gmail.com',
+    'edduinnova@gmail.com',
+    'jani79alves@gmail.com',
+    'eduardoariveram@gmail.com',
+    'eddu.mendoza@gmail.com',
+    'mejorpontealdia@gmail.com'
+  ];
+
+  const isAuthorized = user && (ADMIN_EMAILS.includes((user.email || '').toLowerCase()) || ['admin', 'agent'].includes(user.role as string));
+
+  if (!isAuthorized) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="panel-card p-10 text-center max-w-md">

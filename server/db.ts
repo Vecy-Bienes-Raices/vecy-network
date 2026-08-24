@@ -65,9 +65,11 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     }
     const ADMIN_EMAILS = [
       'vecybienesraices@gmail.com',
+      'edduinnova@gmail.com',
       'jani79alves@gmail.com',
       'eduardoariveram@gmail.com',
-      'eddu.mendoza@gmail.com'
+      'eddu.mendoza@gmail.com',
+      'mejorpontealdia@gmail.com'
     ];
 
     if (user.role !== undefined) {
