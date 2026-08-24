@@ -48,7 +48,16 @@ const trpcClient = trpc.createClient({
       url: "/api/trpc",
       transformer: superjson,
       fetch(input, init) {
-        const token = localStorage.getItem("jania-session-token");
+        let token = localStorage.getItem("jania-session-token");
+        if (!token) {
+          try {
+            const sbKey = Object.keys(localStorage).find(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
+            if (sbKey) {
+              const sbData = JSON.parse(localStorage.getItem(sbKey) || '{}');
+              token = sbData.access_token || null;
+            }
+          } catch (e) {}
+        }
         const headers = new Headers(init?.headers);
         if (token) {
           headers.set("Authorization", `Bearer ${token}`);
