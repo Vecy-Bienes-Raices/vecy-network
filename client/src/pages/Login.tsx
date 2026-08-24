@@ -22,14 +22,14 @@ export default function Login() {
   const isExchangingRef = React.useRef(false);
 
   // Exchange Supabase token with backend session
-  const exchangeToken = async (accessToken: string) => {
+  const exchangeToken = async (accessToken: string, isSilent = false) => {
     if (isExchangingRef.current) return;
     isExchangingRef.current = true;
     try {
-      setLoading(true);
-      // Timeout seguro de 30 segundos para conexiones transcontinentales / móviles
+      if (!isSilent) setLoading(true);
+      // Timeout seguro de 20 segundos
       const exchangePromise = loginMutation.mutateAsync({ accessToken });
-      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout de sincronización con el servidor')), 30000));
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout de sincronización con el servidor')), 20000));
       const res: any = await Promise.race([exchangePromise, timeoutPromise]);
       if (res && res.sessionToken) {
         localStorage.setItem("jania-session-token", res.sessionToken);
@@ -42,8 +42,10 @@ export default function Login() {
       navigate('/admin');
     } catch (err: any) {
       console.error('[Login] Error syncing session:', err);
-      const errMsg = err?.message || 'Error desconocido';
-      toast.error(`Error al sincronizar: ${errMsg}`);
+      if (!isSilent) {
+        const errMsg = err?.message || 'Error desconocido';
+        toast.error(`Error al sincronizar: ${errMsg}`);
+      }
       localStorage.removeItem("jania-session-token");
       await supabase.auth.signOut().catch(() => {});
     } finally {
@@ -57,9 +59,10 @@ export default function Login() {
     let isMounted = true;
     const checkSession = async () => {
       try {
+        const isOAuthCallback = window.location.hash.includes('access_token=') || window.location.search.includes('code=');
         const { data: { session } } = await supabase.auth.getSession();
         if (session && isMounted && !isExchangingRef.current) {
-          await exchangeToken(session.access_token);
+          await exchangeToken(session.access_token, !isOAuthCallback);
         }
       } catch (err) {
         console.error('[Login] Error checking session:', err);
@@ -72,7 +75,7 @@ export default function Login() {
     // Listen for auth changes (specifically SIGNED_IN)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session && isMounted && !isExchangingRef.current) {
-        await exchangeToken(session.access_token);
+        await exchangeToken(session.access_token, false);
       }
     });
 
