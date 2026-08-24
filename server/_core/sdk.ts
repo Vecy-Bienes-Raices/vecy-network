@@ -267,15 +267,48 @@ class SDKServer {
       sessionCookie = authHeader.substring(7);
     }
 
-    const session = await this.verifySession(sessionCookie);
+    let session = await this.verifySession(sessionCookie);
+    let user: User | null = null;
+    const signedInAt = new Date();
 
-    if (!session) {
+    if (!session && sessionCookie) {
+      // Intentar validar directamente como token de Supabase
+      try {
+        const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "https://knzmpoprlmbonejshfys.supabase.co";
+        const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtuem1wb3BybG1ib25lanNoZnlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMjYyMjQsImV4cCI6MjA5MTYwMjIyNH0.yZ3AV1Rt2rmDuP61CA2rJRILpw__vwAJWp3xJUNj_FY";
+        const sbRes = await fetch(`${supabaseUrl}/auth/v1/user`, {
+          headers: {
+            Authorization: `Bearer ${sessionCookie}`,
+            apikey: supabaseAnonKey,
+          },
+        });
+        if (sbRes.ok) {
+          const userData = await sbRes.json();
+          const openId = userData.id;
+          const email = userData.email;
+          const name = userData.user_metadata?.full_name || userData.user_metadata?.name || email.split("@")[0];
+          await db.upsertUser({
+            openId,
+            name,
+            email,
+            loginMethod: "supabase",
+            lastSignedIn: signedInAt,
+          });
+          user = await db.getUserByOpenId(openId);
+        }
+      } catch (e) {
+        console.warn("[Auth] Supabase direct token validation error:", e);
+      }
+    }
+
+    if (!session && !user) {
       throw ForbiddenError("Invalid session cookie or token");
     }
 
-    const sessionUserId = session.openId;
-    const signedInAt = new Date();
-    let user = await db.getUserByOpenId(sessionUserId);
+    if (session && !user) {
+      const sessionUserId = session.openId;
+      user = await db.getUserByOpenId(sessionUserId);
+    }
 
     // If user not in DB, sync from OAuth server automatically
     if (!user) {
