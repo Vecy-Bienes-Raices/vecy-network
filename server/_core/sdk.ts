@@ -268,7 +268,7 @@ class SDKServer {
     }
 
     let session = await this.verifySession(sessionCookie);
-    let user: User | null = null;
+    let user: User | null | undefined = null;
     const signedInAt = new Date();
 
     if (!session && sessionCookie) {

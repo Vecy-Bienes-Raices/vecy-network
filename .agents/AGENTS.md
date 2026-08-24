@@ -162,7 +162,19 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v25.4 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL: v25.6 — Agosto 2026
+
+### Novedades v25.6 (Reordenamiento Cronológico Integral y Unificación Estricta de la Bitácora Maestra):
+- **Estandarización Canónica de Encabezados**: Unificación del 100% de las 31 sesiones bajo el formato único `### 🗓️ Sesión: [Día] [Fecha] — [Horario] (Hora Colombia UTC-5)`.
+- **Orden Cronológico Inverso Estricto**: Reorganización total de la bitácora (`HISTORIAL_CONVERSACIONES_MAESTRO.md`) desde el 13 de agosto hasta hoy 24 de agosto de 2026 sin saltos temporales ni fragmentaciones.
+- **Saneamiento y Fusión de Sesiones Duplicadas**: Unificación enriquecida de sesiones fragmentadas históricas (v23.7, v25.0) preservando todos los análisis, fallbacks, scripts y validaciones.
+- **Harmonización de Memoria Activa**: Sincronización de versiones en `shared/const.ts`, `.agents/AGENTS.md` y la bitácora a `v25.6`.
+
+### Novedades v25.5 (Diagnóstico y Corrección de Cotejamiento de Datos, Resanitización Masiva en Supabase & Purgado de Falsos Matches):
+- **Extractor Numérico Avanzado de Precios y Presupuestos (`parseColombianPriceOrBudget` en `janIA.ts`)**: Distingue con precisión la notación de miles con punto (`$2.100 millones` $\rightarrow \$2.100.000.000\text{ COP}$), rangos con asteriscos (`Presupuesto *1.300 - 1.400*` $\rightarrow \$1.300\text{M} - \$1.400\text{M}$) y descarte de precios ínsitos o truncados.
+- **Blindaje en `saveProperty` y `saveRequirement` (`janIA.ts`)**: Inyección directa de `fallbackData` para rescatar precios, administraciones, garajes, antigüedad y presupuestos directamente de `rawText` si Gemini los omite.
+- **Filtro Duro 7 Blindado y Explicador de Matches (`matching.ts`)**: Integración de `extractFallbackDataFromText` en `calcularScoreMatch` y `explicarMatch` asegurando bloqueo al **0% invariable** si la oferta supera el presupuesto del requerimiento.
+- **Resanitización Integral y Purga Masiva en Supabase**: Corrección y saneamiento de 238 propiedades y decenas de requerimientos con precios de venta y cánones recuperados; purga de 39 matches falsos/inviables (Match #11037 corregido al 0%), preservando 70 matches legítimos con Score $\ge 85\%$.
 
 ### Novedades v25.4 (Módulo de Marketing Digital Inmobiliario, Resiliencia de Voz & Parrilla Semanal Maestra):
 - **Marketing Digital Inmobiliario & Estructura de 7 Pilares (`janIA.ts` & `prompts/grupos/`)**: JanIA asesora en copys persuasivos, anuncios y la estructura de 7 pilares para que los brokers publiquen ofertas y demandas completas con precios, áreas, alcobas, baños y garajes.
