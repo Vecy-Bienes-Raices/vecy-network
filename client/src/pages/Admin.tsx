@@ -1,7 +1,7 @@
 import React, { useState, Suspense, lazy } from 'react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useLocation } from 'wouter';
-import { getLoginUrl } from '@/const';
+import { getLoginUrl, VECY_VERSION } from '@/const';
 import {
   LogOut, Home, Building2, Users, BarChart3, Menu, X, GitBranch, Shield, Sparkles, ClipboardList, Radio, PanelLeftClose
 } from 'lucide-react';
@@ -44,18 +44,21 @@ function BotStatusWidget() {
     return (
       <div className="flex items-center gap-2 text-zinc-500 text-xs bg-zinc-900/50 px-3 py-1.5 rounded-xl border border-white/5 w-full sm:w-auto">
         <Radio className="w-3.5 h-3.5 animate-pulse text-zinc-400 shrink-0" />
-        <span className="truncate">Cargando estado del bot...</span>
+        <span className="truncate">Cargando estado...</span>
       </div>
     );
   }
 
   return (
     <div className="flex items-center gap-2">
-      {/* Indicador de conexión con verde eléctrico fluorescente incandescente */}
+      {/* Indicador luminoso de conexión y versión oficial */}
       <div className="flex items-center gap-2 bg-zinc-900/90 border border-[#00ff66]/20 px-3 py-1.5 rounded-xl text-xs backdrop-blur-md shadow-[0_0_10px_rgba(0,255,102,0.1)] shrink-0">
         <span className={`w-2.5 h-2.5 rounded-full ${status.isReady ? 'bg-[#00ff66] shadow-[0_0_12px_#00ff66] animate-pulse' : 'bg-red-500 shadow-[0_0_10px_#ef4444]'}`} />
-        <span className={`font-bold ${status.isReady ? 'text-[#00ff66] drop-shadow-[0_0_6px_rgba(0,255,102,0.6)]' : 'text-zinc-300'}`}>
-          JanIA: {status.isReady ? 'Activo' : 'Offline'}
+        <span className={`font-bold ${status.isReady ? 'text-[#00ff66] drop-shadow-[0_0_6px_rgba(0,255,102,0.6)]' : 'text-red-400 drop-shadow-[0_0_6px_rgba(239,68,68,0.6)]'}`}>
+          JanIA {status.isReady ? '' : '(Desconectada)'}
+        </span>
+        <span className="text-[10px] text-amber-400 font-mono font-black border-l border-white/10 pl-2">
+          {VECY_VERSION}
         </span>
       </div>
     </div>

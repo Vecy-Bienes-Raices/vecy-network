@@ -12,7 +12,6 @@ import { Input } from '@/components/ui/input';
 import { trpc } from '@/lib/trpc';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatColombiaDate } from '@/lib/dateUtils';
-import { VECY_VERSION_LABEL } from '@/const';
 import { supabase } from '@/lib/supabase';
 
 type MatchStatus = "exact" | "warn" | "missing" | "ok" | "neutral" | "plus";
@@ -2094,12 +2093,6 @@ export default function AdminMatches() {
             <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-[#bf953f] animate-pulse shrink-0" />
             <span>Mesa de Control de Coincidencias</span>
           </h2>
-          <p className="text-zinc-400 text-xs sm:text-sm mt-1 flex items-center gap-2 flex-wrap">
-            <span>{isLoading ? 'Cargando coincidencias...' : `Coincidencias calificadas en vivo: ${filteredMatches.length} matches (85% - 100%)`}</span>
-            <span className="text-[10px] bg-[#bf953f]/20 text-[#bf953f] border border-[#bf953f]/30 px-2 py-0.5 rounded-full font-mono font-extrabold shadow-[0_0_8px_rgba(191,149,63,0.3)]">
-              {VECY_VERSION_LABEL}
-            </span>
-          </p>
         </div>
         <div className="grid grid-cols-2 sm:flex gap-2 w-full sm:w-auto">
           <Button onClick={() => refetch()} variant="outline" className="border-white/10 bg-white/5 text-white hover:bg-white/10 text-xs h-10 min-h-[40px] font-semibold">
