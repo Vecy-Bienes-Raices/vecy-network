@@ -11117,6 +11117,7 @@ var init_whatsapp_match = __esm({
             this.isReady = true;
             this.reconnectAttempts = 0;
             this.updateStatusInDb().catch((err) => console.error(`[${this.botName}-DB] Error updating status on open:`, err));
+            this.discoverAndSyncNewsletters().catch((err) => console.warn(`[${this.botName}] Info newsletters:`, err?.message));
           }
         });
         this.sock.ev.on("messages.upsert", async (m) => {
@@ -12522,6 +12523,30 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
         }
         if (this.channelNewsletterId) {
           await this.sendToGroup(text2, mediaPath, [], this.channelNewsletterId);
+        }
+      }
+      async discoverAndSyncNewsletters() {
+        try {
+          if (!this.sock) return;
+          if (typeof this.sock.newsletterSubscribed === "function") {
+            const newsletters = await this.sock.newsletterSubscribed();
+            if (Array.isArray(newsletters) && newsletters.length > 0) {
+              console.log(`[${this.botName}] \u{1F4E2} Canales/Newsletters detectados (${newsletters.length}):`);
+              for (const nl of newsletters) {
+                const name = nl?.thread_metadata?.name?.text || nl?.name || nl?.subject || "Canal";
+                const jid = nl.id;
+                console.log(`[${this.botName}] \u{1F4E2} Canal ID: ${jid} \u2014 "${name}"`);
+                if (!this.channelNewsletterId || name.toLowerCase().includes("vecy")) {
+                  this.channelNewsletterId = jid;
+                  console.log(`[${this.botName}] \u{1F3AF} Canal oficial auto-asignado: ${this.channelNewsletterId} ("${name}")`);
+                }
+              }
+            } else {
+              console.log(`[${this.botName}] \u2139\uFE0F No se detectaron canales suscritos a\xFAn en la cuenta.`);
+            }
+          }
+        } catch (e) {
+          console.warn(`[${this.botName}] Info: no se pudieron listar canales de WhatsApp:`, e?.message || e);
         }
       }
       async getGroupParticipants(groupId) {

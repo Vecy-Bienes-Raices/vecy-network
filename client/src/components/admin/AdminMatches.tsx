@@ -2038,6 +2038,20 @@ export default function AdminMatches() {
 
 
 
+  const kpiStats = useMemo(() => {
+    const rawList = (matches as any[]) || [];
+    const total = rawList.length;
+    const perfect = rawList.filter((m: any) => parseFloat(String(m.matchScore || 0)) >= 95).length;
+    const approx = rawList.filter((m: any) => {
+      const s = parseFloat(String(m.matchScore || 0));
+      return s >= 85 && s < 95;
+    }).length;
+    const uniqueProps = new Set(rawList.map((m: any) => m.propertyId).filter(Boolean)).size;
+    const uniqueReqs = new Set(rawList.map((m: any) => m.requirementId).filter(Boolean)).size;
+
+    return { total, perfect, approx, uniqueProps, uniqueReqs };
+  }, [matches]);
+
   const exportData = () => {
     const headers = ['ID Coincidencia', 'Porcentaje Match', 'Propiedad', 'Propietario Telefono', 'Requerimiento', 'Interesado Telefono', 'Estado', 'Fecha'];
     const rows = (filteredMatches as any[]).map((m: any) => [
@@ -2065,21 +2079,21 @@ export default function AdminMatches() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-zinc-950 p-4 sm:p-6 border border-white/10 rounded-2xl sm:rounded-3xl">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-zinc-950 p-4 sm:p-6 border border-white/10 rounded-2xl sm:rounded-3xl shadow-xl">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+          <h2 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
             <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-[#bf953f] animate-pulse shrink-0" />
-            <span>Reporte de Coincidencias</span>
+            <span>Mesa de Control de Coincidencias</span>
           </h2>
-          <p className="text-zinc-500 text-xs sm:text-sm mt-1 flex items-center gap-2 flex-wrap">
-            <span>{isLoading ? 'Cargando coincidencias...' : `Coincidencias: ${filteredMatches.length} matches (85% - 100%)`}</span>
-            <span className="text-[10px] bg-[#bf953f]/20 text-[#bf953f] border border-[#bf953f]/30 px-2 py-0.5 rounded-full font-mono font-extrabold">
+          <p className="text-zinc-400 text-xs sm:text-sm mt-1 flex items-center gap-2 flex-wrap">
+            <span>{isLoading ? 'Cargando coincidencias...' : `Coincidencias calificadas en vivo: ${filteredMatches.length} matches (85% - 100%)`}</span>
+            <span className="text-[10px] bg-[#bf953f]/20 text-[#bf953f] border border-[#bf953f]/30 px-2 py-0.5 rounded-full font-mono font-extrabold shadow-[0_0_8px_rgba(191,149,63,0.3)]">
               {VECY_VERSION_LABEL}
             </span>
           </p>
         </div>
         <div className="grid grid-cols-2 sm:flex gap-2 w-full sm:w-auto">
-          <Button onClick={() => refetch()} variant="outline" className="border-white/10 bg-white/5 text-white hover:bg-white/10 text-xs h-10 min-h-[40px]">
+          <Button onClick={() => refetch()} variant="outline" className="border-white/10 bg-white/5 text-white hover:bg-white/10 text-xs h-10 min-h-[40px] font-semibold">
             Refrescar
           </Button>
           <Button 
@@ -2090,6 +2104,49 @@ export default function AdminMatches() {
             <Download className="w-3.5 h-3.5" />
             <span>Exportar CSV</span>
           </Button>
+        </div>
+      </div>
+
+      {/* KPI Stats Ribbon */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="bg-black/60 border border-[#bf953f]/30 p-3.5 rounded-2xl flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-[#bf953f]/10 border border-[#bf953f]/30 flex items-center justify-center shrink-0">
+            <Sparkles className="w-5 h-5 text-[#bf953f]" />
+          </div>
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-zinc-400 font-bold">Matches Calificados</p>
+            <p className="text-lg sm:text-xl font-black text-white">{kpiStats.total}</p>
+          </div>
+        </div>
+
+        <div className="bg-black/60 border border-emerald-500/30 p-3.5 rounded-2xl flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center shrink-0">
+            <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+          </div>
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-zinc-400 font-bold">Matches Perfectos (≥95%)</p>
+            <p className="text-lg sm:text-xl font-black text-emerald-400">{kpiStats.perfect}</p>
+          </div>
+        </div>
+
+        <div className="bg-black/60 border border-blue-500/30 p-3.5 rounded-2xl flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center shrink-0">
+            <Building2 className="w-5 h-5 text-blue-400" />
+          </div>
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-zinc-400 font-bold">Inmuebles en Cruce</p>
+            <p className="text-lg sm:text-xl font-black text-blue-400">{kpiStats.uniqueProps}</p>
+          </div>
+        </div>
+
+        <div className="bg-black/60 border border-purple-500/30 p-3.5 rounded-2xl flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center shrink-0">
+            <Bed className="w-5 h-5 text-purple-400" />
+          </div>
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-zinc-400 font-bold">Requerimientos</p>
+            <p className="text-lg sm:text-xl font-black text-purple-400">{kpiStats.uniqueReqs}</p>
+          </div>
         </div>
       </div>
 

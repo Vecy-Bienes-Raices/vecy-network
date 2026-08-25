@@ -392,6 +392,7 @@ export class JaniaMatchBot {
         this.isReady = true;
         this.reconnectAttempts = 0; // Resetear intentos al conectar exitosamente
         this.updateStatusInDb().catch(err => console.error(`[${this.botName}-DB] Error updating status on open:`, err));
+        this.discoverAndSyncNewsletters().catch(err => console.warn(`[${this.botName}] Info newsletters:`, err?.message));
       }
     });
 
@@ -2195,6 +2196,31 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
     }
     if (this.channelNewsletterId) {
       await this.sendToGroup(text, mediaPath, [], this.channelNewsletterId);
+    }
+  }
+
+  public async discoverAndSyncNewsletters() {
+    try {
+      if (!this.sock) return;
+      if (typeof (this.sock as any).newsletterSubscribed === 'function') {
+        const newsletters = await (this.sock as any).newsletterSubscribed();
+        if (Array.isArray(newsletters) && newsletters.length > 0) {
+          console.log(`[${this.botName}] 📢 Canales/Newsletters detectados (${newsletters.length}):`);
+          for (const nl of newsletters) {
+            const name = nl?.thread_metadata?.name?.text || nl?.name || nl?.subject || 'Canal';
+            const jid = nl.id;
+            console.log(`[${this.botName}] 📢 Canal ID: ${jid} — "${name}"`);
+            if (!this.channelNewsletterId || name.toLowerCase().includes('vecy')) {
+              this.channelNewsletterId = jid;
+              console.log(`[${this.botName}] 🎯 Canal oficial auto-asignado: ${this.channelNewsletterId} ("${name}")`);
+            }
+          }
+        } else {
+          console.log(`[${this.botName}] ℹ️ No se detectaron canales suscritos aún en la cuenta.`);
+        }
+      }
+    } catch (e: any) {
+      console.warn(`[${this.botName}] Info: no se pudieron listar canales de WhatsApp:`, e?.message || e);
     }
   }
 
