@@ -3,7 +3,7 @@ import { useAuth } from '@/_core/hooks/useAuth';
 import { useLocation } from 'wouter';
 import { getLoginUrl } from '@/const';
 import {
-  LogOut, Home, Building2, Users, BarChart3, Menu, GitBranch, Shield, Sparkles, ClipboardList, Radio, PanelLeftClose
+  LogOut, Home, Building2, Users, BarChart3, Menu, X, GitBranch, Shield, Sparkles, ClipboardList, Radio, PanelLeftClose
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { getColombiaCurrentDateString } from '@/lib/dateUtils';
