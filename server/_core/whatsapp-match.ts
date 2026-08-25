@@ -2141,7 +2141,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
     }
   }
 
-  public async sendVoiceToGroup(text: string, groupId?: string, imagePath?: string) {
+  public async sendVoiceToGroup(text: string, groupId?: string, imagePath?: string, captionText?: string) {
     try {
       const target = groupId || this.targetGroupId;
       let targetJid = target;
@@ -2151,7 +2151,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
 
       if (imagePath && fs.existsSync(imagePath)) {
         try {
-          await this.sendToGroup('', imagePath, [], targetJid);
+          await this.sendToGroup(captionText || text, imagePath, [], targetJid);
         } catch (imgErr: any) {
           console.warn(`[JANIA-MATCH] Error enviando ilustración previa a ${targetJid}:`, imgErr?.message);
         }
@@ -2159,7 +2159,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
 
       const { cleanVoiceText } = await import('./whatsapp-utils');
       const cleaned = cleanVoiceText(text);
-      console.log(`[JANIA-MATCH] Generando nota de voz para enviar al grupo ${targetJid}...`);
+      console.log(`[JANIA-MATCH] Generando nota de voz para enviar a ${targetJid}...`);
       
       const { textToSpeechMedia } = await import('./whatsapp-utils');
       const voiceMedia = await textToSpeechMedia(cleaned);
@@ -2171,22 +2171,32 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
           mimetype: voiceMedia.mimetype || 'audio/ogg; codecs=opus',
           ptt: true
         });
-        console.log(`[JANIA-MATCH] ✓ Nota de voz enviada al grupo ${targetJid}.`);
+        console.log(`[JANIA-MATCH] ✓ Nota de voz enviada a ${targetJid}.`);
       } else {
-        console.warn(`[JANIA-MATCH] TTS falló para el grupo ${targetJid}, enviando texto.`);
-        await this.queuedSend(targetJid, cleaned);
+        if (!imagePath) {
+          console.warn(`[JANIA-MATCH] TTS falló para ${targetJid}, enviando texto.`);
+          await this.queuedSend(targetJid, cleaned);
+        }
       }
     } catch (e: any) {
       console.error('[JANIA-MATCH] Error enviando nota de voz al grupo:', e.message || e);
     }
   }
 
-  public async sendVoiceToBuzonAndChannel(text: string, imagePath?: string) {
+  public async sendVoiceToBuzonAndChannel(text: string, imagePath?: string, captionText?: string) {
+    // Asegurar descubrimiento activo del canal de WhatsApp
+    if (!this.channelNewsletterId) {
+      await this.discoverAndSyncNewsletters().catch(() => {});
+    }
+
     if (this.buzonGroupId) {
-      await this.sendVoiceToGroup(text, this.buzonGroupId, imagePath);
+      await this.sendVoiceToGroup(text, this.buzonGroupId, imagePath, captionText);
     }
     if (this.channelNewsletterId) {
-      await this.sendVoiceToGroup(text, this.channelNewsletterId, imagePath);
+      console.log(`[JANIA-MATCH] 📢 Despachando publicación temática al Canal de WhatsApp (${this.channelNewsletterId})...`);
+      await this.sendVoiceToGroup(text, this.channelNewsletterId, imagePath, captionText);
+    } else {
+      console.warn(`[JANIA-MATCH] ⚠️ Canal de WhatsApp no configurado aún (channelNewsletterId vacío).`);
     }
   }
 
@@ -2199,10 +2209,30 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
     }
   }
 
+  public officialChannelInviteCode: string = process.env.WHATSAPP_CHANNEL_INVITE_CODE || '0029Vb5iYUYCMY0A94zqti1b';
+
   public async discoverAndSyncNewsletters() {
     try {
       if (!this.sock) return;
-      if (typeof (this.sock as any).newsletterSubscribed === 'function') {
+
+      // 1. Intentar resolver por código de invitación oficial del Canal Vecy Bienes Raíces (0029Vb5iYUYCMY0A94zqti1b)
+      if (this.officialChannelInviteCode) {
+        try {
+          if (typeof (this.sock as any).newsletterMetadata === 'function') {
+            const inviteMeta = await (this.sock as any).newsletterMetadata("invite", this.officialChannelInviteCode);
+            if (inviteMeta && inviteMeta.id) {
+              this.channelNewsletterId = inviteMeta.id;
+              const channelName = inviteMeta?.thread_metadata?.name?.text || inviteMeta?.name || 'Vecy Bienes Raíces';
+              console.log(`[${this.botName}] 🎯 Canal oficial resuelto por Invite Code ("${this.officialChannelInviteCode}"): JID=${this.channelNewsletterId} ("${channelName}")`);
+            }
+          }
+        } catch (invErr: any) {
+          console.warn(`[${this.botName}] Info resolución canal por invite code:`, invErr?.message);
+        }
+      }
+
+      // 2. Si no se resolvió por invite, buscar en newsletters suscritos o administrados
+      if (!this.channelNewsletterId && typeof (this.sock as any).newsletterSubscribed === 'function') {
         const newsletters = await (this.sock as any).newsletterSubscribed();
         if (Array.isArray(newsletters) && newsletters.length > 0) {
           console.log(`[${this.botName}] 📢 Canales/Newsletters detectados (${newsletters.length}):`);
