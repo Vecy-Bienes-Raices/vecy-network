@@ -13908,7 +13908,7 @@ ${liveStats}${userContextInstruction}
           enlaceOrigen: requirements.enlaceOrigen,
           createdAt: requirements.createdAt
         }
-      }).from(propertyMatches).innerJoin(properties, eq5(propertyMatches.propertyId, properties.id)).innerJoin(requirements, eq5(propertyMatches.requirementId, requirements.id)).orderBy(desc2(propertyMatches.createdAt));
+      }).from(propertyMatches).innerJoin(properties, eq5(propertyMatches.propertyId, properties.id)).innerJoin(requirements, eq5(propertyMatches.requirementId, requirements.id)).orderBy(desc2(propertyMatches.id)).limit(200);
       const propIds = Array.from(new Set(matches.map((m) => m.property.id)));
       const imagesMap = {};
       if (propIds.length > 0) {

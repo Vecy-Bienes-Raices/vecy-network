@@ -555,7 +555,8 @@ export const janIARouter = router({
           .from(propertyMatches)
           .innerJoin(properties, eq(propertyMatches.propertyId, properties.id))
           .innerJoin(requirements, eq(propertyMatches.requirementId, requirements.id))
-          .orderBy(desc(propertyMatches.createdAt));
+          .orderBy(desc(propertyMatches.id))
+          .limit(200);
 
         // Obtener imágenes registradas para todas las propiedades resultantes
         const propIds = Array.from(new Set(matches.map(m => m.property.id)));
