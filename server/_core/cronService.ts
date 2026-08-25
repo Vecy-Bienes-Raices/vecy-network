@@ -21,12 +21,16 @@ import { invokeLLM } from './llm';
 /**
  * Obtiene la ruta física de la ilustración temática 3D de JanIA
  */
-function getThemedImagePath(tipo: 'juridico' | 'marketing' | 'tributario' | 'avaluos' | 'matches'): string | undefined {
-  const primaryPath = path.resolve(process.cwd(), `client/public/assets/jania/jania_${tipo}.jpg`);
-  const distPath = path.resolve(process.cwd(), `dist/assets/jania/jania_${tipo}.jpg`);
-  const serverPath = path.resolve(__dirname, `../../client/public/assets/jania/jania_${tipo}.jpg`);
-  if (fs.existsSync(primaryPath)) return primaryPath;
-  if (fs.existsSync(distPath)) return distPath;
+function getThemedImagePath(tipo: string): string | undefined {
+  const extensions = ['jpg', 'jpeg', 'png', 'webp'];
+  for (const ext of extensions) {
+    const primaryPath = path.resolve(process.cwd(), `client/public/assets/jania/jania_${tipo}.${ext}`);
+    const distPath = path.resolve(process.cwd(), `dist/assets/jania/jania_${tipo}.${ext}`);
+    const serverPath = path.resolve(__dirname, `../../client/public/assets/jania/jania_${tipo}.${ext}`);
+    if (fs.existsSync(primaryPath)) return primaryPath;
+    if (fs.existsSync(distPath)) return distPath;
+    if (fs.existsSync(serverPath)) return serverPath;
+  }
   return undefined;
 }
 

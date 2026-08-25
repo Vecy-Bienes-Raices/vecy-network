@@ -13,6 +13,7 @@ import { trpc } from '@/lib/trpc';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatColombiaDate } from '@/lib/dateUtils';
 import { supabase } from '@/lib/supabase';
+import { VECY_VERSION_LABEL } from '@/const';
 
 type MatchStatus = "exact" | "warn" | "missing" | "ok" | "neutral" | "plus";
 
