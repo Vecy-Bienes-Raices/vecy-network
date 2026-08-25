@@ -163,17 +163,22 @@ export const janIARouter = router({
             { role: "user", content: input.message }
           ];
 
-          const llmRes = await invokeLLM({
-            messages: llmMessages,
-            responseFormat: { type: "json_object" }
-          });
-
-          const rawContent = (llmRes as any)?.choices?.[0]?.message?.content || "";
           try {
-            const parsed = JSON.parse(rawContent);
-            janIAResponse = parsed.response || parsed.respuesta || rawContent;
-          } catch {
-            janIAResponse = rawContent.replace(/^\{[\s\S]*"response"\s*:\s*"/, '').replace(/"\s*\}$/, '').trim();
+            const llmRes = await invokeLLM({
+              messages: llmMessages,
+              responseFormat: { type: "json_object" }
+            });
+
+            const rawContent = (llmRes as any)?.choices?.[0]?.message?.content || "";
+            try {
+              const parsed = JSON.parse(rawContent);
+              janIAResponse = parsed.response || parsed.respuesta || rawContent;
+            } catch {
+              janIAResponse = rawContent.replace(/^\{[\s\S]*"response"\s*:\s*"/, '').replace(/"\s*\}$/, '').trim();
+            }
+          } catch (llmErr: any) {
+            console.warn("[JanIA-Chat] Fallback en LLM por congestión:", llmErr?.message);
+            janIAResponse = `Hola, con gusto te asesoro. He recibido tu consulta: "${input.message.slice(0, 100)}". Nuestros servicios de inteligencia inmobiliaria están activos y cruzando oportunidades. ¿Deseas que busquemos detalles específicos en la base de datos nacional?`;
           }
 
           if (!janIAResponse || janIAResponse.trim() === "") {

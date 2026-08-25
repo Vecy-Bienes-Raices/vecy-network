@@ -13612,16 +13612,21 @@ ${liveStats}${userContextInstruction}
           ...formattedHistory,
           { role: "user", content: input.message }
         ];
-        const llmRes = await invokeLLM2({
-          messages: llmMessages,
-          responseFormat: { type: "json_object" }
-        });
-        const rawContent = llmRes?.choices?.[0]?.message?.content || "";
         try {
-          const parsed = JSON.parse(rawContent);
-          janIAResponse = parsed.response || parsed.respuesta || rawContent;
-        } catch {
-          janIAResponse = rawContent.replace(/^\{[\s\S]*"response"\s*:\s*"/, "").replace(/"\s*\}$/, "").trim();
+          const llmRes = await invokeLLM2({
+            messages: llmMessages,
+            responseFormat: { type: "json_object" }
+          });
+          const rawContent = llmRes?.choices?.[0]?.message?.content || "";
+          try {
+            const parsed = JSON.parse(rawContent);
+            janIAResponse = parsed.response || parsed.respuesta || rawContent;
+          } catch {
+            janIAResponse = rawContent.replace(/^\{[\s\S]*"response"\s*:\s*"/, "").replace(/"\s*\}$/, "").trim();
+          }
+        } catch (llmErr) {
+          console.warn("[JanIA-Chat] Fallback en LLM por congesti\xF3n:", llmErr?.message);
+          janIAResponse = `Hola, con gusto te asesoro. He recibido tu consulta: "${input.message.slice(0, 100)}". Nuestros servicios de inteligencia inmobiliaria est\xE1n activos y cruzando oportunidades. \xBFDeseas que busquemos detalles espec\xEDficos en la base de datos nacional?`;
         }
         if (!janIAResponse || janIAResponse.trim() === "") {
           janIAResponse = `${timeGreeting}. \xA1Bienvenido a VECY Network! \xBFCon qui\xE9n tengo el gusto de interactuar? Te invito a registrarte gratuitamente en nuestra plataforma para acceder a tu historial completo de conversaciones. \xBFEn qu\xE9 consulta inmobiliaria puedo asesorarte hoy?`;
