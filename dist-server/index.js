@@ -15606,8 +15606,11 @@ Objetivo: Dar la bienvenida a la semana con mucha energ\xEDa y optimismo, record
     martes_juridico: `Redacta un guion de audio con un TIP JUR\xCDDICO INMOBILIARIO puntual, novedoso y muy \xFAtil para hoy ${fechaBogota} en Colombia.
 Elige AL AZAR un tema jur\xEDdico clave: (ej. Ley 820 y causales de terminaci\xF3n de arriendo, cl\xE1usula penal y arras en promesas de compraventa, validez probatoria de correos y WhatsApp Ley 527/1999, cobro de comisiones con acuerdos de puntas compartidas, cesi\xF3n de leasing, o saneamiento por vicios ocultos).
 Invita a que env\xEDen sus dudas o documentos en PDF al grupo para revisarlos.`,
-    miercoles_marketing: `Redacta un guion de audio con un TIP DE MARKETING DIGITAL Y COPYWRITING INMOBILIARIO para hoy ${fechaBogota}.
-Elige AL AZAR un tema pr\xE1ctico: (ej. los 7 pilares de una publicaci\xF3n perfecta, c\xF3mo redactar t\xEDtulos con gancho que atrapen clientes, mejores \xE1ngulos y luz para fotos de inmuebles, c\xF3mo responder r\xE1pido a compradores calificados, o estructurar requerimientos con presupuesto real).
+    miercoles_marketing: `Redacta un guion de audio con un TIP DE MARKETING DIGITAL Y PUBLICACI\xD3N ESTRAT\xC9GICA EN WHATSAPP para hoy ${fechaBogota}.
+Elige AL AZAR un tema pr\xE1ctico y pedag\xF3gico:
+1. C\xF3mo redactar publicaciones completas en WhatsApp para que no se pierdan en el chat (los 7 pilares: tipo de inmueble, ciudad y barrio exacto, precio/canon y administraci\xF3n, \xE1rea en m2, habitaciones, ba\xF1os, garajes independientes/lineales y contacto directo).
+2. Explicar con mucha calidez y entusiasmo que cuando publican con todos los datos, facilitan que toda la comunidad y el sistema encuentren parejas comerciales de inmediato.
+3. Sembrar sutilmente la expectativa y dar pistas de que JanIA ya est\xE1 analizando todas las publicaciones en segundo plano y encontrando decenas de coincidencias, y que muy pronto nuestros directores y asesores de cierre, Jani Alves y Eduardo, estar\xE1n contactando de forma personalizada a los colegas con matches activos para conectar las dos puntas y ayudarlos a cerrar sus comisiones en tiempo r\xE9cord.
 Recuerda que JanIA los asesora a redactar anuncios de alto impacto directamente en el grupo.`,
     jueves_tributario: `Redacta un guion de audio con un TIP TRIBUTARIO INMOBILIARIO DIAN para hoy ${fechaBogota} en Colombia.
 Elige AL AZAR un tema fiscal: (ej. exenci\xF3n de 5.000 UVT en ganancia ocasional por venta de vivienda habitual, c\xE1lculo de retenci\xF3n en la fuente del 1%, c\xF3mo deducir mejoras con facturas electr\xF3nicas, impuesto de timbre o actualizaci\xF3n de costo fiscal).
@@ -15618,7 +15621,8 @@ Inv\xEDtalos a enviar fichas del SINUPOT en PDF o consultar precios de mercado.`
     sabado_cafe: `Redacta un guion de audio de CIERRE DE SEMANA & CAF\xC9 INMOBILIARIO para hoy ${fechaBogota}.
 Objetivo: Felicitar a los corredores por la gesti\xF3n semanal, recordar que para casos complejos, sucesiones, peritajes o aval\xFAos oficiales certificados pueden contactar directamente por WhatsApp al tres diecis\xE9is, seis cincuenta y seis, noventa y siete diecinueve para consultor\xEDas personalizadas con el br\xF3ker de VECY BIENES RA\xCDCES.`,
     inmuebles_network: `Redacta un guion de audio comercial din\xE1mico para el grupo principal "VECY INMUEBLES NETWORK" para hoy ${fechaBogota}.
-Objetivo: Motivar la publicaci\xF3n activa de ofertas y demandas de venta, arriendo o permutas a nivel nacional en Colombia (texto, audio, imagen o links de portales), recordando que JanIA cruza datos en tiempo real sin cobrar comisi\xF3n por la conexi\xF3n.`,
+Objetivo: Motivar la publicaci\xF3n activa de ofertas y requerimientos con datos completos (precio real, barrio exacto, metraje y caracter\xEDsticas clave), recordando que JanIA cruza datos en tiempo real.
+Dar la primicia de que ya se est\xE1n detectando m\xFAltiples coincidencias en la red y que muy pronto el equipo comercial de VECY liderado por Jani Alves y Eduardo se comunicar\xE1 directamente con las partes para coordinar los acercamientos y cierres de negocios.`,
     proyecto_vecy: `Redacta un guion de audio institucional y visionario para el grupo "PROYECTO Vecy Network" para hoy ${fechaBogota}.
 Objetivo: Inspirar a la comunidad, destacar el modelo colaborativo fintech de comisiones del 3% (35/35/15/15), la tecnolog\xEDa de JanIA, invitar a debatir y sugerir ideas de mejora tecnol\xF3gica directamente a los fundadores.`
   };
