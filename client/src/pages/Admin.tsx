@@ -57,11 +57,6 @@ function BotStatusWidget() {
         <span className={`font-bold ${status.isReady ? 'text-[#00ff66] drop-shadow-[0_0_6px_rgba(0,255,102,0.6)]' : 'text-zinc-300'}`}>
           JanIA: {status.isReady ? 'Activo' : 'Offline'}
         </span>
-        {status.phone && (
-          <span className="text-[10px] text-emerald-300/80 font-mono font-medium border-l border-white/10 pl-2">
-            +{status.phone}
-          </span>
-        )}
       </div>
 
       {/* Contadores del día en tiempo real */}
