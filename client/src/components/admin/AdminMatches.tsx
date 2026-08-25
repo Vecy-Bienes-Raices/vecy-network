@@ -4,7 +4,7 @@ import {
   Sparkles, CheckCircle2, AlertTriangle, XCircle, SlidersHorizontal, 
   DollarSign, Ruler, Bed, Bath, Car, Shield, ExternalLink, Receipt, Box, Globe,
   Edit3, Save, Loader2, RotateCcw, Sun, Zap, Utensils, Home, Flame, ThumbsUp, ThumbsDown,
-  Trees, ShieldCheck, BookOpen, Copy, Check
+  Trees, ShieldCheck, BookOpen, Copy, Check, ClipboardList
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -2038,6 +2038,12 @@ export default function AdminMatches() {
 
 
 
+  const { data: botStatus } = trpc.janIA.getBotStatus.useQuery(undefined, {
+    refetchInterval: 30000,
+    staleTime: 15000,
+    refetchOnWindowFocus: false,
+  });
+
   const kpiStats = useMemo(() => {
     const rawList = (matches as any[]) || [];
     const total = rawList.length;
@@ -2046,11 +2052,14 @@ export default function AdminMatches() {
       const s = parseFloat(String(m.matchScore || 0));
       return s >= 85 && s < 95;
     }).length;
-    const uniqueProps = new Set(rawList.map((m: any) => m.propertyId).filter(Boolean)).size;
-    const uniqueReqs = new Set(rawList.map((m: any) => m.requirementId).filter(Boolean)).size;
+    const uniqueProps = new Set(rawList.map((m: any) => m.property?.id || m.propertyId).filter(Boolean)).size;
+    const uniqueReqs = new Set(rawList.map((m: any) => m.requirement?.id || m.requirementId).filter(Boolean)).size;
 
-    return { total, perfect, approx, uniqueProps, uniqueReqs };
-  }, [matches]);
+    const todayProps = botStatus?.todayProperties ?? uniqueProps;
+    const todayReqs = botStatus?.todayRequirements ?? uniqueReqs;
+
+    return { total, perfect, approx, uniqueProps, uniqueReqs, todayProps, todayReqs };
+  }, [matches, botStatus]);
 
   const exportData = () => {
     const headers = ['ID Coincidencia', 'Porcentaje Match', 'Propiedad', 'Propietario Telefono', 'Requerimiento', 'Interesado Telefono', 'Estado', 'Fecha'];
@@ -2129,23 +2138,23 @@ export default function AdminMatches() {
           </div>
         </div>
 
-        <div className="bg-black/60 border border-blue-500/30 p-3.5 rounded-2xl flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center shrink-0">
-            <Building2 className="w-5 h-5 text-blue-400" />
+        <div className="bg-black/60 border border-emerald-500/30 p-3.5 rounded-2xl flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center shrink-0">
+            <Building2 className="w-5 h-5 text-emerald-400" />
           </div>
           <div>
-            <p className="text-[10px] uppercase tracking-wider text-zinc-400 font-bold">Inmuebles en Cruce</p>
-            <p className="text-lg sm:text-xl font-black text-blue-400">{kpiStats.uniqueProps}</p>
+            <p className="text-[10px] uppercase tracking-wider text-emerald-400 font-bold">Inmuebles Hoy</p>
+            <p className="text-lg sm:text-xl font-black text-emerald-400">{kpiStats.todayProps}</p>
           </div>
         </div>
 
-        <div className="bg-black/60 border border-purple-500/30 p-3.5 rounded-2xl flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center shrink-0">
-            <Bed className="w-5 h-5 text-purple-400" />
+        <div className="bg-black/60 border border-indigo-500/30 p-3.5 rounded-2xl flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center shrink-0">
+            <ClipboardList className="w-5 h-5 text-indigo-400" />
           </div>
           <div>
-            <p className="text-[10px] uppercase tracking-wider text-zinc-400 font-bold">Requerimientos</p>
-            <p className="text-lg sm:text-xl font-black text-purple-400">{kpiStats.uniqueReqs}</p>
+            <p className="text-[10px] uppercase tracking-wider text-indigo-400 font-bold">Reqs Hoy</p>
+            <p className="text-lg sm:text-xl font-black text-indigo-400">{kpiStats.todayReqs}</p>
           </div>
         </div>
       </div>
