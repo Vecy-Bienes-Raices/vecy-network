@@ -10814,9 +10814,9 @@ import _baileys, {
   Browsers
 } from "@whiskeysockets/baileys";
 import qrcodeTerminal from "qrcode-terminal";
-import fs9 from "fs";
-import path10 from "path";
-import { eq as eq11 } from "drizzle-orm";
+import fs7 from "fs";
+import path7 from "path";
+import { eq as eq5 } from "drizzle-orm";
 import QRCode from "qrcode";
 function getWASocket() {
   if (typeof _baileys === "function") return _baileys;
@@ -10937,7 +10937,7 @@ var init_whatsapp_match = __esm({
       circuloGroupId = "120363403507276533@g.us";
       channelNewsletterId = process.env.WHATSAPP_CHANNEL_NEWSLETTER_ID || "";
       cooldownMap = /* @__PURE__ */ new Map();
-      cooldownFile = path10.join(process.cwd(), ".cooldown_map.json");
+      cooldownFile = path7.join(process.cwd(), ".cooldown_map.json");
       constructor(options) {
         if (options) {
           if (options.sessionFolderName) this.sessionFolderName = options.sessionFolderName;
@@ -10996,12 +10996,12 @@ var init_whatsapp_match = __esm({
       }
       async initialize() {
         try {
-          const sessionDir = path10.join(process.cwd(), this.sessionFolderName);
-          if (!fs9.existsSync(sessionDir)) {
-            fs9.mkdirSync(sessionDir, { recursive: true });
+          const sessionDir = path7.join(process.cwd(), this.sessionFolderName);
+          if (!fs7.existsSync(sessionDir)) {
+            fs7.mkdirSync(sessionDir, { recursive: true });
           }
           const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
-          if (!fs9.existsSync(path10.join(sessionDir, "creds.json"))) {
+          if (!fs7.existsSync(path7.join(sessionDir, "creds.json"))) {
             await saveCreds();
             console.log(`[${this.botName}] \u{1F4BE} Guardadas credenciales iniciales de Baileys en ${this.sessionFolderName}.`);
           }
@@ -11070,12 +11070,12 @@ var init_whatsapp_match = __esm({
             qrcodeTerminal.generate(qr, { small: true });
             global.janiaBotQr = qr;
             try {
-              const qrPath = path10.join(process.cwd(), this.qrFileName);
-              const publicQrDir = path10.join(process.cwd(), "client", "public");
-              if (!fs9.existsSync(publicQrDir)) {
-                fs9.mkdirSync(publicQrDir, { recursive: true });
+              const qrPath = path7.join(process.cwd(), this.qrFileName);
+              const publicQrDir = path7.join(process.cwd(), "client", "public");
+              if (!fs7.existsSync(publicQrDir)) {
+                fs7.mkdirSync(publicQrDir, { recursive: true });
               }
-              const publicQrPath = path10.join(publicQrDir, "qr-match.png");
+              const publicQrPath = path7.join(publicQrDir, "qr-match.png");
               await QRCode.toFile(qrPath, qr, { width: 400, margin: 2 });
               await QRCode.toFile(publicQrPath, qr, { width: 400, margin: 2 });
               console.log(`[${this.botName}] \u{1F4F8} QR guardado exitosamente en ${qrPath} y ${publicQrPath}`);
@@ -12076,7 +12076,7 @@ ${result.response}`);
         try {
           const db = await getDb();
           if (!db) return;
-          let conv = await db.select().from(conversations).where(eq11(conversations.sessionId, senderId)).limit(1);
+          let conv = await db.select().from(conversations).where(eq5(conversations.sessionId, senderId)).limit(1);
           let conversationId;
           if (conv.length === 0) {
             const [newConv] = await db.insert(conversations).values({
@@ -12090,7 +12090,7 @@ ${result.response}`);
             await db.update(conversations).set({
               lastMessage: content.slice(0, 150),
               updatedAt: /* @__PURE__ */ new Date()
-            }).where(eq11(conversations.id, conversationId));
+            }).where(eq5(conversations.id, conversationId));
           }
           await db.insert(messages).values({
             conversationId,
@@ -12256,13 +12256,13 @@ Te espero. \xA1All\xED te atender\xE9 con gusto! \u{1F680}`;
             await this.queuedSend(senderId, "\u26A0\uFE0F El sistema de base de datos no est\xE1 disponible en este momento. Int\xE9ntalo m\xE1s tarde.");
             return;
           }
-          const [match] = await db.select().from(propertyMatches).where(eq11(propertyMatches.id, matchId)).limit(1);
+          const [match] = await db.select().from(propertyMatches).where(eq5(propertyMatches.id, matchId)).limit(1);
           if (!match) {
             await this.queuedSend(senderId, `\u26A0\uFE0F No encontr\xE9 ninguna coincidencia registrada con el c\xF3digo *#M${matchId}*. Por favor verifica el n\xFAmero.`);
             return;
           }
-          const [prop] = await db.select().from(properties).where(eq11(properties.id, match.propertyId)).limit(1);
-          const [req] = await db.select().from(requirements).where(eq11(requirements.id, match.requirementId)).limit(1);
+          const [prop] = await db.select().from(properties).where(eq5(properties.id, match.propertyId)).limit(1);
+          const [req] = await db.select().from(requirements).where(eq5(requirements.id, match.requirementId)).limit(1);
           if (!prop || !req) {
             await this.queuedSend(senderId, "\u26A0\uFE0F Hubo un problema al recuperar los detalles de esta coincidencia.");
             return;
@@ -12277,7 +12277,7 @@ Te espero. \xA1All\xED te atender\xE9 con gusto! \u{1F680}`;
             return;
           }
           if (decision === "no") {
-            await db.update(propertyMatches).set({ status: "rejected" }).where(eq11(propertyMatches.id, matchId));
+            await db.update(propertyMatches).set({ status: "rejected" }).where(eq5(propertyMatches.id, matchId));
             await this.queuedSend(senderId, `Entendido. He marcado la coincidencia *#M${matchId}* como cancelada. No se compartir\xE1n tus datos de contacto.`);
             await this.logToDb(senderId, "janIA", `[Match-Rejected] Match #M${matchId} rechazado por el usuario.`);
             const otherJid = isOwner ? seekerPhone.includes("@") ? seekerPhone : `${seekerPhone}@s.whatsapp.net` : ownerPhone.includes("@") ? ownerPhone : `${ownerPhone}@s.whatsapp.net`;
@@ -12291,19 +12291,19 @@ Te espero. \xA1All\xED te atender\xE9 con gusto! \u{1F680}`;
           if (isSeeker) {
             updateFields.seekerConfirmed = true;
           }
-          await db.update(propertyMatches).set(updateFields).where(eq11(propertyMatches.id, matchId));
-          const [updatedMatch] = await db.select().from(propertyMatches).where(eq11(propertyMatches.id, matchId)).limit(1);
+          await db.update(propertyMatches).set(updateFields).where(eq5(propertyMatches.id, matchId));
+          const [updatedMatch] = await db.select().from(propertyMatches).where(eq5(propertyMatches.id, matchId)).limit(1);
           if (updatedMatch.ownerConfirmed && updatedMatch.seekerConfirmed) {
-            await db.update(propertyMatches).set({ status: "interested" }).where(eq11(propertyMatches.id, matchId));
+            await db.update(propertyMatches).set({ status: "interested" }).where(eq5(propertyMatches.id, matchId));
             let ownerName = "Oferente";
             let seekerName = "Interesado";
             try {
-              const [ownerUser] = await db.select().from(users).where(eq11(users.phone, ownerPhone)).limit(1);
+              const [ownerUser] = await db.select().from(users).where(eq5(users.phone, ownerPhone)).limit(1);
               if (ownerUser && ownerUser.name) ownerName = ownerUser.name;
             } catch {
             }
             try {
-              const [seekerUser] = await db.select().from(users).where(eq11(users.phone, seekerPhone)).limit(1);
+              const [seekerUser] = await db.select().from(users).where(eq5(users.phone, seekerPhone)).limit(1);
               if (seekerUser && seekerUser.name) seekerName = seekerUser.name;
             } catch {
             }
@@ -12481,7 +12481,7 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
           if (targetJid.endsWith("@c.us")) {
             targetJid = targetJid.replace("@c.us", "@s.whatsapp.net");
           }
-          if (imagePath && fs9.existsSync(imagePath)) {
+          if (imagePath && fs7.existsSync(imagePath)) {
             try {
               await this.sendToGroup(captionText || text2, imagePath, [], targetJid);
             } catch (imgErr) {
@@ -12644,7 +12644,7 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
   * \u{1F3E2} *Proyectos de construcci\xF3n* o aportes de lote.
 \u25B8 *Matching Inteligente:* Cruzo ofertas y demandas en tiempo real y les aviso en el acto cuando hay negocio viable.`;
         const groups = [this.targetGroupId, this.buzonGroupId, this.circuloGroupId];
-        const imgPath = path10.resolve("./client/public/jania_perfil.png");
+        const imgPath = path7.resolve("./client/public/jania_perfil.png");
         for (const group of groups) {
           try {
             await this.sendToGroup(baseMsg, imgPath, [], group);
@@ -12675,10 +12675,10 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
           }
         } catch (e) {
         }
-        const sessionDir = path10.join(process.cwd(), ".baileys_auth");
-        if (fs9.existsSync(sessionDir)) {
+        const sessionDir = path7.join(process.cwd(), ".baileys_auth");
+        if (fs7.existsSync(sessionDir)) {
           try {
-            fs9.rmSync(sessionDir, { recursive: true, force: true });
+            fs7.rmSync(sessionDir, { recursive: true, force: true });
           } catch (err) {
             console.warn("[JANIA-MATCH] No se pudo borrar .baileys_auth:", err.message);
           }
@@ -12697,8 +12697,8 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
       }
       loadCooldowns() {
         try {
-          if (fs9.existsSync(this.cooldownFile)) {
-            const raw = JSON.parse(fs9.readFileSync(this.cooldownFile, "utf8"));
+          if (fs7.existsSync(this.cooldownFile)) {
+            const raw = JSON.parse(fs7.readFileSync(this.cooldownFile, "utf8"));
             this.cooldownMap = new Map(Object.entries(raw));
           }
         } catch (e) {
@@ -12707,7 +12707,7 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
       saveCooldowns() {
         try {
           const obj = Object.fromEntries(this.cooldownMap.entries());
-          fs9.writeFileSync(this.cooldownFile, JSON.stringify(obj), "utf8");
+          fs7.writeFileSync(this.cooldownFile, JSON.stringify(obj), "utf8");
         } catch (e) {
         }
       }
@@ -12740,7 +12740,7 @@ __export(nightlyRematch_exports, {
   recalculateAndCleanupMatches: () => recalculateAndCleanupMatches,
   runNightlyRematch: () => runNightlyRematch
 });
-import { and as and6, eq as eq12 } from "drizzle-orm";
+import { and as and4, eq as eq6 } from "drizzle-orm";
 async function runNightlyRematch() {
   console.log("[NIGHTLY-REMATCH] Iniciando cruce masivo de base de datos...");
   const db = await getDb();
@@ -12749,8 +12749,8 @@ async function runNightlyRematch() {
     return;
   }
   try {
-    const activeReqs = await db.select().from(requirements).where(eq12(requirements.status, "active"));
-    const availProps = await db.select().from(properties).where(eq12(properties.available, true));
+    const activeReqs = await db.select().from(requirements).where(eq6(requirements.status, "active"));
+    const availProps = await db.select().from(properties).where(eq6(properties.available, true));
     console.log(`[NIGHTLY-REMATCH] Procesando ${activeReqs.length} requerimientos activos contra ${availProps.length} inmuebles disponibles...`);
     let newMatchesCount = 0;
     for (const req of activeReqs) {
@@ -12758,9 +12758,9 @@ async function runNightlyRematch() {
         const score = calcularScoreMatch(req, prop);
         if (score >= 60) {
           const existing = await db.select().from(propertyMatches).where(
-            and6(
-              eq12(propertyMatches.propertyId, prop.id),
-              eq12(propertyMatches.requirementId, req.id)
+            and4(
+              eq6(propertyMatches.propertyId, prop.id),
+              eq6(propertyMatches.requirementId, req.id)
             )
           ).limit(1);
           if (existing.length === 0) {
@@ -12825,24 +12825,24 @@ async function recalculateAndCleanupMatches() {
     let deletedCount = 0;
     let updatedCount = 0;
     for (const m of allMatches) {
-      const [prop] = await db.select().from(properties).where(eq12(properties.id, m.propertyId)).limit(1);
-      const [req] = await db.select().from(requirements).where(eq12(requirements.id, m.requirementId)).limit(1);
+      const [prop] = await db.select().from(properties).where(eq6(properties.id, m.propertyId)).limit(1);
+      const [req] = await db.select().from(requirements).where(eq6(requirements.id, m.requirementId)).limit(1);
       if (!prop || !req) {
         console.log(`[MATCH-CLEANUP] Eliminando Match #${m.id} por propiedad o requerimiento inexistente.`);
-        await db.delete(propertyMatches).where(eq12(propertyMatches.id, m.id));
+        await db.delete(propertyMatches).where(eq6(propertyMatches.id, m.id));
         deletedCount++;
         continue;
       }
       const newScore = calcularScoreMatch(req, prop);
       if (newScore < 85) {
         console.log(`[MATCH-CLEANUP] Eliminando Match #${m.id} por incompatibilidad (Nuevo Score: ${newScore}%, Score anterior: ${m.matchScore}%).`);
-        await db.delete(propertyMatches).where(eq12(propertyMatches.id, m.id));
+        await db.delete(propertyMatches).where(eq6(propertyMatches.id, m.id));
         deletedCount++;
       } else {
         const storedScore = parseFloat(String(m.matchScore));
         if (Math.abs(storedScore - newScore) > 0.1) {
           console.log(`[MATCH-CLEANUP] Actualizando Score de Match #${m.id}: ${storedScore}% -> ${newScore}%`);
-          await db.update(propertyMatches).set({ matchScore: newScore.toFixed(2), matchReason: `Recalculado con VECY CORE v12.0` }).where(eq12(propertyMatches.id, m.id));
+          await db.update(propertyMatches).set({ matchScore: newScore.toFixed(2), matchReason: `Recalculado con VECY CORE v12.0` }).where(eq6(propertyMatches.id, m.id));
           updatedCount++;
         }
       }
@@ -12860,6 +12860,337 @@ var init_nightlyRematch = __esm({
     init_matching();
     init_janIA();
     init_whatsapp_match();
+  }
+});
+
+// server/_core/cronService.ts
+var cronService_exports = {};
+__export(cronService_exports, {
+  initCronScheduler: () => initCronScheduler,
+  publishTodayTipNow: () => publishTodayTipNow
+});
+import cron from "node-cron";
+import path8 from "path";
+import fs8 from "fs";
+import { fileURLToPath } from "url";
+function getThemedImagePath(tipo) {
+  const primaryPath = path8.resolve(process.cwd(), `client/public/assets/jania/jania_${tipo}.jpg`);
+  const distPath = path8.resolve(process.cwd(), `dist/assets/jania/jania_${tipo}.jpg`);
+  const serverPath = path8.resolve(__dirname, `../../client/public/assets/jania/jania_${tipo}.jpg`);
+  if (fs8.existsSync(primaryPath)) return primaryPath;
+  if (fs8.existsSync(distPath)) return distPath;
+  return void 0;
+}
+function initCronScheduler() {
+  console.log("[CRON-SERVICE] Inicializando orquestador de agendas automatizadas v3.3 (Parrilla Semanal de Audios, Ilustraciones 3D, Captions y Re-matching)...");
+  cron.schedule("0 11 * * 1,4", async () => {
+    console.log("[CRON-SERVICE] Generando audio din\xE1mico para VECY INMUEBLES NETWORK...");
+    const fallbackVoice = `Buenos d\xEDas a todos y a todas. Soy JanIA, la inteligencia artificial de VECY Network. Hoy quiero recordarles que este grupo es nuestro centro de operaciones comerciales. Aqu\xED publican sus inmuebles en venta o arriendo, sus requerimientos de compra o renta, y yo me encargo de cruzar toda esa informaci\xF3n en tiempo real en los 32 departamentos de Colombia para detectar MATCHES y hacer posibles cierres de negocios. Sigan publicando sus inmuebles, colegas, e inviten a m\xE1s colegas a unirse a esta red. Entre m\xE1s seamos, m\xE1s matches encontramos. \xA1Hoy puede ser el d\xEDa de tu pr\xF3ximo cierre!`;
+    const fallbackCaption = `\u{1F3E0} *VECY INMUEBLES NETWORK \u2014 CENTRO DE OPERACIONES NACIONAL* \u{1F1E8}\u{1F1F4}
+
+\xA1Buenos d\xEDas a todos los colegas de la red!
+
+Recuerden que este espacio es nuestro centro de operaciones comerciales en los 32 departamentos de Colombia:
+\u2022 Publica tus inmuebles en venta, arriendo o permuta.
+\u2022 Comparte tus requerimientos de compra o renta con presupuesto.
+\u2022 JanIA analiza cada mensaje, extrae los datos y detecta *MATCHES* al instante.
+
+\u{1F91D} *Crezcamos juntos:* Invita a tus colegas de confianza a unirse a VECY Network. \xA1Entre m\xE1s inmuebles y solicitudes tengamos, m\xE1s comisiones compartidas cerramos!
+
+\u{1F4F2} *Consola Web JanIA:* https://vecy-network.vercel.app/jania`;
+    const content = await generateDailyContent("inmuebles_network", fallbackVoice, fallbackCaption);
+    try {
+      await janiaMatchBot.sendVoiceToGroup(content.voiceText, janiaMatchBot.targetGroupId, getThemedImagePath("matches"), content.captionText);
+    } catch (e) {
+      console.error("[CRON-SERVICE] Error enviando audio a VECY INMUEBLES NETWORK:", e.message);
+    }
+  }, { timezone: "America/Bogota" });
+  cron.schedule("0 8 * * 1", async () => {
+    console.log("[CRON-SERVICE] Generando contenido din\xE1mico de Lunes para SOPORTE LEGAL, MARKETING Y CANAL...");
+    const fallbackVoice = `\xA1Buenos d\xEDas a todos y a todas! Soy JanIA. Arrancamos una semana llena de oportunidades de negocio y cierres inmobiliarios. Recuerden que este espacio y nuestro canal oficial son su consultorio permanente: aqu\xED pueden preguntarme por texto o nota de voz sobre leyes inmobiliarias, c\xF3mo liquidar la ganancia ocasional ante la DIAN, aval\xFAos de mercado o c\xF3mo redactar un anuncio de alto impacto para sus inmuebles y requerimientos. Los invito a invitar a m\xE1s colegas a unirse a este maravilloso proyecto y a interactuar conmigo para probar nuestro sistema de consultas. \xA1Que tengan una semana extraordinaria y productiva!`;
+    const fallbackCaption = `\u{1F680} *ARRANQUE SEMANAL & CONSULTORIO INMOBILIARIO \u2014 VECY NETWORK* \u{1F1E8}\u{1F1F4}
+
+\xA1Buenos d\xEDas a todos mis queridos colegas!
+
+Iniciamos una semana llena de oportunidades comerciales y cierres de negocios. Recuerden que este espacio y nuestro canal oficial son su consultorio permanente 24/7:
+
+\u2696\uFE0F *Soporte Legal y Contratos:* Dudas sobre promesas, arras y Ley 820.
+\u{1F4B0} *Tributario DIAN:* Ganancia ocasional, retenci\xF3n en la fuente y exenciones.
+\u{1F4D0} *Aval\xFAos & SINUPOT:* Usos de suelo, valor de m2 y fichas normativas.
+\u{1F4E2} *Marketing Digital:* Estructura de 7 pilares y copys de alto impacto.
+
+\u{1F31F} *Construyamos juntos el futuro inmobiliario:* Invita a tus colegas corredores a sumarse a VECY Network y prueba interactuar con JanIA en nuestra web oficial:
+\u{1F4F2} *Chatea con JanIA:* https://vecy-network.vercel.app/jania`;
+    const content = await generateDailyContent("lunes_arranque", fallbackVoice, fallbackCaption);
+    try {
+      await janiaMatchBot.sendVoiceToBuzonAndChannel(content.voiceText, getThemedImagePath("matches"), content.captionText);
+    } catch (e) {
+      console.error("[CRON-SERVICE] Error enviando publicaci\xF3n de Lunes:", e.message);
+    }
+  }, { timezone: "America/Bogota" });
+  cron.schedule("0 11 * * 2", async () => {
+    console.log("[CRON-SERVICE] Generando contenido din\xE1mico de Martes Jur\xEDdico...");
+    const fallbackVoice = `Hola, queridos colegas. Soy JanIA con su tip jur\xEDdico del d\xEDa. \xBFSab\xEDan que un simple correo electr\xF3nico con la hoja de presentaci\xF3n del cliente o el acuerdo de puntas compartidas tiene plena validez probatoria bajo la Ley 527 de 1999? Nunca muestren un inmueble sin dejar registro escrito. Los invito a formar parte activa de VECY Network, a invitar a m\xE1s colegas y a consultar cualquier duda jur\xEDdica o revisar minutas en PDF directamente conmigo. \xA1Juntos cerramos m\xE1s blindados!`;
+    const fallbackCaption = `\u2696\uFE0F *MARTES JUR\xCDDICO & BLINDAJE NOTARIAL \u2014 VECY NETWORK* \u{1F3DB}\uFE0F
+
+\xA1Hola, queridos colegas corredores e inmobiliarios!
+
+\u{1F4CC} *Tip Jur\xEDdico del D\xEDa:* Validez de Acuerdos Comerciales y Registro Escrito.
+Bajo la *Ley 527 de 1999*, los mensajes de datos, correos electr\xF3nicos y hojas de visita tienen plena validez probatoria. Nunca muestres un predio sin pactar previamente las condiciones comerciales.
+
+\u{1F4A1} *\xBFTienes dudas contractuales?*
+Puedes enviarme tus minutas, promesas de compraventa o consultas de arrendamiento (texto, voz o PDF) y las analizamos al instante.
+
+\u{1F91D} *\xDAnete a la Red:* Invita a tus colegas a formar parte de VECY Network para elevar el est\xE1ndar profesional del corretaje en Colombia.
+\u{1F4F2} *Consultas Jur\xEDdicas JanIA:* https://vecy-network.vercel.app/jania`;
+    const content = await generateDailyContent("martes_juridico", fallbackVoice, fallbackCaption);
+    try {
+      await janiaMatchBot.sendVoiceToBuzonAndChannel(content.voiceText, getThemedImagePath("juridico"), content.captionText);
+    } catch (e) {
+      console.error("[CRON-SERVICE] Error enviando publicaci\xF3n de Martes:", e.message);
+    }
+  }, { timezone: "America/Bogota" });
+  cron.schedule("30 11 * * 3", async () => {
+    console.log("[CRON-SERVICE] Generando contenido din\xE1mico de Mi\xE9rcoles de Marketing...");
+    const fallbackVoice = `\xA1Buenas tardes, queridos colegas! Soy JanIA con su tip de Marketing Inmobiliario. El ochenta por ciento de los clientes y colegas descartan una publicaci\xF3n si no tiene el precio claro, el barrio exacto o el metraje. Si quieren que sus ofertas y requerimientos se cierren en tiempo r\xE9cord, incluyan siempre los siete pilares fundamentales. Les cuento que ya estoy detectando decenas de coincidencias en segundo plano y muy pronto nuestros asesores de cierre de VECY Network los estar\xE1n contactando para conectar las puntas. Inviten a m\xE1s colegas a unirse a la red y prueben redactar sus anuncios conmigo hoy mismo.`;
+    const fallbackCaption = `\u{1F4E2} *MI\xC9RCOLES DE MARKETING INMOBILIARIO & 7 PILARES \u2014 VECY NETWORK* \u{1F680}
+
+\xA1Buenas tardes, queridos colegas!
+
+\u{1F3AF} *La Regla de Oro:* M\xE1s del 80% de los negocios se pierden por publicaciones incompletas o ambiguas. Para que tus ofertas y solicitudes se muevan en tiempo r\xE9cord, incluye siempre los *7 Pilares*:
+
+1\uFE0F\u20E3 Tipo de Inmueble (Apto, Casa, Bodega, etc.)
+2\uFE0F\u20E3 Ciudad y Barrio Exacto
+3\uFE0F\u20E3 Precio / Canon y Cuota de Administraci\xF3n
+4\uFE0F\u20E3 \xC1rea Total Construida en m\xB2
+5\uFE0F\u20E3 Habitaciones y Ba\xF1os
+6\uFE0F\u20E3 Parqueaderos (Independientes o en l\xEDnea)
+7\uFE0F\u20E3 Enlace directo de contacto de WhatsApp
+
+\u2728 *Primicia:* \xA1JanIA ya est\xE1 encontrando matches en la red! Muy pronto nuestro equipo de asesores de cierre los contactar\xE1 para coordinar los cierres comerciales.
+
+\u{1F91D} *Invita a m\xE1s colegas y prueba el sistema:* https://vecy-network.vercel.app/jania`;
+    const content = await generateDailyContent("miercoles_marketing", fallbackVoice, fallbackCaption);
+    try {
+      await janiaMatchBot.sendVoiceToBuzonAndChannel(content.voiceText, getThemedImagePath("marketing"), content.captionText);
+    } catch (e) {
+      console.error("[CRON-SERVICE] Error enviando publicaci\xF3n de Mi\xE9rcoles:", e.message);
+    }
+  }, { timezone: "America/Bogota" });
+  cron.schedule("0 11 * * 4", async () => {
+    console.log("[CRON-SERVICE] Generando contenido din\xE1mico de Jueves Tributario...");
+    const fallbackVoice = `Hola a todos y a todas mis queridos colegas. Soy JanIA con un consejo financiero clave para sus clientes vendedores ante la DIAN. Al vender vivienda de habitaci\xF3n, pueden deducir hasta cinco mil UVT exentas del impuesto de ganancia ocasional si los fondos se destinan a la compra de otra vivienda o abono a cr\xE9dito hipotecario. Si quieren saber exactamente cu\xE1nto debe pagar su cliente en retenci\xF3n en la fuente o ganancia ocasional antes de firmar escrituras, cons\xFAltenme directamente. Los invito a invitar a m\xE1s colegas a unirse a VECY Network para que disfruten de este soporte gratuito permanente. \xA1A vender informados!`;
+    const fallbackCaption = `\u{1F4B0} *JUEVES TRIBUTARIO & AHORRO FISCAL DIAN \u2014 VECY NETWORK* \u{1F4CB}
+
+\xA1Hola a todos mis queridos colegas inmobiliarios!
+
+\u{1F4A1} *Tip Tributario del D\xEDa:* Exenci\xF3n de 5.000 UVT en Ganancia Ocasional.
+Al vender vivienda de habitaci\xF3n propia, tus clientes pueden acogerse a la exenci\xF3n del art\xEDculo 311-1 del Estatuto Tributario (hasta 5.000 UVT) si el dinero de la venta se destina a la adquisici\xF3n de otra vivienda o abono a cr\xE9dito hipotecario.
+
+\u{1F4CA} *Liquidaciones Tributarias R\xE1pidas:*
+Escr\xEDbeme o env\xEDame los valores de costo fiscal y venta, y te liquido la retenci\xF3n en la fuente y ganancia estimada en segundos.
+
+\u{1F91D} *Comparte con tus colegas:* Inv\xEDtalos a sumarse a VECY Network para acceder a consultor\xEDas tributarias especializadas.
+\u{1F4F2} *Consultas DIAN con JanIA:* https://vecy-network.vercel.app/jania`;
+    const content = await generateDailyContent("jueves_tributario", fallbackVoice, fallbackCaption);
+    try {
+      await janiaMatchBot.sendVoiceToBuzonAndChannel(content.voiceText, getThemedImagePath("tributario"), content.captionText);
+    } catch (e) {
+      console.error("[CRON-SERVICE] Error enviando publicaci\xF3n de Jueves:", e.message);
+    }
+  }, { timezone: "America/Bogota" });
+  cron.schedule("30 11 * * 5", async () => {
+    console.log("[CRON-SERVICE] Generando contenido din\xE1mico de Viernes de Aval\xFAos...");
+    const fallbackVoice = `\xA1Excelente viernes, queridos colegas! Soy JanIA. \xBFTienen un lote o casa para desarrollo y no saben qu\xE9 altura o uso permite el POT? No se queden con la duda: descarguen la ficha catastral del SINUPOT en PDF y env\xEDenmela por WhatsApp; yo les hago el estudio normativo de uso de suelo al instante. Inviten a sus colegas de confianza a formar parte de VECY Network y a consultar precios de mercado y normativas urban\xEDsticas con nuestro sistema. \xA1Que tengan un fin de semana lleno de cierres!`;
+    const fallbackCaption = `\u{1F4D0} *VIERNES DE AVAL\xDAOS COMERCIALES & SINUPOT \u2014 VECY NETWORK* \u{1F3D9}\uFE0F
+
+\xA1Excelente viernes para todos los colegas de la red!
+
+\u{1F5FA}\uFE0F *Estudios Urban\xEDsticos y de Suelo al Instante:*
+\xBFVas a captar un lote o inmueble con potencial constructor? Descarga la ficha del SINUPOT en PDF y comp\xE1rtemela: extraigo el tratamiento urban\xEDstico, usos permitidos y edificabilidad en segundos.
+
+\u{1F4B5} *Estudios de Mercado y Valor del M\xB2:*
+Cons\xFAltame valores promedio de metro cuadrado por zona y estrato para fijar precios competitivos con tus propietarios.
+
+\u{1F91D} *Suma a tu equipo:* Invita a m\xE1s colegas a VECY Network para multiplicar las opciones de negocio en todo el pa\xEDs.
+\u{1F4F2} *Estudios de Suelo y Aval\xFAos JanIA:* https://vecy-network.vercel.app/jania`;
+    const content = await generateDailyContent("viernes_avaluos", fallbackVoice, fallbackCaption);
+    try {
+      await janiaMatchBot.sendVoiceToBuzonAndChannel(content.voiceText, getThemedImagePath("avaluos"), content.captionText);
+    } catch (e) {
+      console.error("[CRON-SERVICE] Error enviando publicaci\xF3n de Viernes:", e.message);
+    }
+  }, { timezone: "America/Bogota" });
+  cron.schedule("0 10 * * 6", async () => {
+    console.log("[CRON-SERVICE] Generando contenido din\xE1mico de S\xE1bado Caf\xE9 Inmobiliario...");
+    const fallbackVoice = `Buenos d\xEDas, queridos aliados de la red. Cerramos una semana de gran actividad comercial y colaborativa. Recuerden que para casos jur\xEDdicos de alta complejidad, sucesiones litigiosas, saneamientos o aval\xFAos certificados por perito de Lonja con R.A.A., pueden comunicarse directamente al WhatsApp tres diecis\xE9is, seis cincuenta y seis, noventa y siete diecinueve, para coordinar una Consultor\xEDa Personalizada con nuestro br\xF3ker en VECY BIENES RA\xCDCES. Inviten a m\xE1s colegas a unirse a este maravilloso proyecto y a interactuar con nosotros. \xA1Disfruten de su fin de semana y a recargar energ\xEDas!`;
+    const fallbackCaption = `\u2615 *S\xC1BADO DE CAF\xC9 INMOBILIARIO & CONSULTOR\xCDA \u2014 VECY NETWORK* \u{1F91D}
+
+\xA1Buenos d\xEDas a todos los aliados y colegas de VECY Network!
+
+Culminamos una semana muy productiva. Para casos de alta complejidad jur\xEDdica, sucesiones, saneamiento de t\xEDtulos o aval\xFAos periciales oficiales con registro R.A.A. de Lonja:
+
+\u{1F4DE} *L\xEDnea de Consultor\xEDa Directa:* +57 316 656 9719
+Coordinaci\xF3n directa con la direcci\xF3n de corretaje de *VECY BIENES RA\xCDCES*.
+
+\u{1F31F} *Sigamos creciendo juntos:* Invita a m\xE1s colegas a sumarse a esta red colaborativa nacional.
+\u{1F4F2} *Consola Web JanIA:* https://vecy-network.vercel.app/jania`;
+    const content = await generateDailyContent("sabado_cafe", fallbackVoice, fallbackCaption);
+    try {
+      await janiaMatchBot.sendVoiceToBuzonAndChannel(content.voiceText, getThemedImagePath("matches"), content.captionText);
+    } catch (e) {
+      console.error("[CRON-SERVICE] Error enviando publicaci\xF3n de S\xE1bado:", e.message);
+    }
+  }, { timezone: "America/Bogota" });
+  cron.schedule("0 12 * * 3,6", async () => {
+    console.log("[CRON-SERVICE] Generando audio din\xE1mico para PROYECTO VECY NETWORK...");
+    const fallbackVoice = `Hola, equipo VECY. Soy JanIA. Este grupo es nuestro espacio m\xE1s especial: el canal del Proyecto Vecy Network es donde nacen las ideas, donde se eval\xFAa el proyecto y donde construimos juntos el futuro del corretaje inmobiliario. Aqu\xED pueden preguntarme sobre VECY Network sin filtros: c\xF3mo funciona la inteligencia artificial, qu\xE9 est\xE1 planeado para el futuro, qu\xE9 ya est\xE1 funcionando hoy, o simplemente contarme qu\xE9 les parece el proyecto. Su opini\xF3n es la br\xFAjula que nos gu\xEDa. Los invito a invitar a m\xE1s colegas visionarios para construir esto juntos.`;
+    const fallbackCaption = `\u{1F4A1} *PROYECTO VECY NETWORK \u2014 INNOVACI\xD3N & COMUNIDAD* \u{1F1E8}\u{1F1F4}
+
+\xA1Hola, queridos colegas y aliados!
+
+Este grupo es el coraz\xF3n del proyecto VECY Network. Aqu\xED debatimos, aportamos ideas y construimos la primera bolsa inmobiliaria colaborativa y fintech de Colombia con comisiones justas (35/35/15/15) e Inteligencia Artificial 24/7.
+
+\u{1F4AC} *Participa y debate:* Cu\xE9ntanos tus sugerencias para seguir enriqueciendo la plataforma.
+\u{1F4F2} *Explora la plataforma:* https://vecy-network.vercel.app/`;
+    const content = await generateDailyContent("proyecto_vecy", fallbackVoice, fallbackCaption);
+    try {
+      await janiaMatchBot.sendVoiceToGroup(content.voiceText, janiaMatchBot.circuloGroupId, getThemedImagePath("matches"), content.captionText);
+    } catch (e) {
+      console.error("[CRON-SERVICE] Error enviando audio a PROYECTO VECY NETWORK:", e.message);
+    }
+  }, { timezone: "America/Bogota" });
+  cron.schedule("0 8 * * *", async () => {
+    console.log("[CRON-SERVICE] Ejecutando cruce masivo (Re-matching)...");
+    try {
+      await runNightlyRematch();
+    } catch (err) {
+      console.error("[CRON-SERVICE] Error en el job de re-matching masivo:", err.message || err);
+    }
+  }, { timezone: "America/Bogota" });
+}
+async function publishTodayTipNow() {
+  console.log("[CRON-SERVICE] \u{1F680} Disparando publicaci\xF3n manual de tip para hoy al Canal y Grupo 2...");
+  const now = /* @__PURE__ */ new Date();
+  const dayOfWeek = now.getDay();
+  let tipo = "martes_juridico";
+  let theme = "juridico";
+  if (dayOfWeek === 1) {
+    tipo = "lunes_arranque";
+    theme = "matches";
+  } else if (dayOfWeek === 2) {
+    tipo = "martes_juridico";
+    theme = "juridico";
+  } else if (dayOfWeek === 3) {
+    tipo = "miercoles_marketing";
+    theme = "marketing";
+  } else if (dayOfWeek === 4) {
+    tipo = "jueves_tributario";
+    theme = "tributario";
+  } else if (dayOfWeek === 5) {
+    tipo = "viernes_avaluos";
+    theme = "avaluos";
+  } else if (dayOfWeek === 6) {
+    tipo = "sabado_cafe";
+    theme = "matches";
+  } else {
+    tipo = "lunes_arranque";
+    theme = "matches";
+  }
+  const fallbackVoice = `Hola, queridos colegas. Soy JanIA con su asesor\xEDa del d\xEDa en VECY Network. Recuerden que este espacio y nuestro canal oficial est\xE1n dise\xF1ados para resolver todas sus consultas legales, tributarias de la DIAN, aval\xFAos y marketing inmobiliario. Los invito a invitar a m\xE1s colegas a unirse a esta maravillosa red colaborativa y a probar nuestro sistema de consultas en la web o por WhatsApp. \xA1Juntos cerramos m\xE1s negocios!`;
+  const fallbackCaption = `\u{1F31F} *JANIA ASESOR\xCDA INMOBILIARIA \u2014 VECY NETWORK* \u{1F1E8}\u{1F1F4}
+
+\xA1Hola, queridos colegas!
+
+Recuerden que este espacio y nuestro canal oficial est\xE1n dise\xF1ados para resolver todas sus consultas legales, tributarias de la DIAN, aval\xFAos y marketing inmobiliario.
+
+\u{1F680} *\xDAnete y participa:*
+Los invito a invitar a m\xE1s colegas a unirse a esta maravillosa red colaborativa y a probar nuestro sistema de consultas en la web o por WhatsApp.
+
+\u{1F4F2} *Prueba las consultas con JanIA:* https://vecy-network.vercel.app/jania
+\xA1Juntos cerramos m\xE1s negocios! \u{1F3E0}\u{1F91D}`;
+  const content = await generateDailyContent(tipo, fallbackVoice, fallbackCaption);
+  await janiaMatchBot.sendVoiceToBuzonAndChannel(content.voiceText, getThemedImagePath(theme), content.captionText);
+  return { success: true, tipo, content };
+}
+async function generateDailyContent(tipo, fallbackVoice, fallbackCaption) {
+  const now = /* @__PURE__ */ new Date();
+  const fechaBogota = now.toLocaleDateString("es-CO", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    timeZone: "America/Bogota"
+  });
+  const promptsMap = {
+    lunes_arranque: `Tema: Arranque Semanal & Convocatoria de Aliados Inmobiliarios en Colombia (${fechaBogota}).
+Objetivo: Saludo lleno de optimismo y energ\xEDa, recordar que este espacio y el canal oficial son para resolver dudas de leyes, tributario DIAN, aval\xFAos y marketing, e invitar a compartir la red con m\xE1s colegas corredores.`,
+    martes_juridico: `Tema: Tip Jur\xEDdico Inmobiliario & Blindaje Notarial (${fechaBogota}).
+Elige un tema legal clave en Colombia: promesas de compraventa y arras, causales de terminaci\xF3n de arriendo Ley 820, validez probatoria de WhatsApp Ley 527/1999, cobro de comisiones y puntas compartidas, cesi\xF3n de leasing o saneamiento por vicios ocultos.`,
+    miercoles_marketing: `Tema: Marketing Digital Inmobiliario & Publicaci\xF3n de Alto Impacto (${fechaBogota}).
+Elige un tema clave: la estructura de 7 pilares (tipo de inmueble, ciudad y barrio exacto, precio/canon y administraci\xF3n, \xE1rea en m2, habitaciones, ba\xF1os, garajes y contacto directo). Explica que publicar completo facilita que la comunidad y JanIA encuentren matches en tiempo real, y siembra la expectativa de que muy pronto nuestros asesores de cierre de VECY Network estar\xE1n contactando a los colegas con matches calificados para conectar las puntas.`,
+    jueves_tributario: `Tema: Tip Tributario DIAN & Ahorro Fiscal Inmobiliario (${fechaBogota}).
+Elige un tema fiscal en Colombia: exenci\xF3n de 5.000 UVT en ganancia ocasional, retenci\xF3n en la fuente del 1%, deducci\xF3n de mejoras con factura electr\xF3nica, impuesto de timbre o actualizaci\xF3n de costo fiscal.`,
+    viernes_avaluos: `Tema: Aval\xFAos Comerciales, Valor del M2 & Estudio de Suelo SINUPOT (${fechaBogota}).
+Elige un tema t\xE9cnico: ficha de uso de suelo SINUPOT en PDF, m\xE9todo comparativo de mercado, depreciaci\xF3n de construcciones o aval\xFAos periciales certificados.`,
+    sabado_cafe: `Tema: Caf\xE9 del Br\xF3ker & Cierre Semanal (${fechaBogota}).
+Objetivo: Felicitar a los corredores por los logros de la semana, invitarlos a interactuar con JanIA y recordar que para casos complejos o consultor\xEDa directa pueden comunicarse al 3166569719 con el br\xF3ker de VECY Bienes Ra\xEDces.`,
+    inmuebles_network: `Tema: Operaciones Comerciales y Matching Nacional (${fechaBogota}).
+Objetivo: Motivar la publicaci\xF3n activa de inmuebles y requerimientos en toda Colombia, recordando que JanIA cruza datos en tiempo real.`,
+    proyecto_vecy: `Tema: Visi\xF3n Ecosistema VECY Network (${fechaBogota}).
+Objetivo: Inspirar a la comunidad destacando el modelo fintech de comisiones 35/35/15/15 y la tecnolog\xEDa colaborativa.`
+  };
+  const promptEspecifico = promptsMap[tipo] || promptsMap.lunes_arranque;
+  const systemPrompt = `Eres JanIA, la inteligencia artificial oficial de VECY Network en Colombia.
+Hablas en primera persona con tono femenino profesional, c\xE1lido, colombiano, sumamente elocuente y motivador.
+
+ESTRUCTURA OBLIGATORIA DEL MENSAJE (TRES PASOS INQUEBRANTABLES):
+1. Saludo inicial: Saluda siempre primero con calidez y cercan\xEDa a los colegas corredores (ej: "\xA1Hola a todos mis queridos colegas!", "\xA1Un saludo muy especial a todos los colegas de VECY Network!", "\xA1Buenas tardes, equipo inmobiliario!").
+2. Desarrollo tem\xE1tico: Explica el tip o consejo del d\xEDa de forma pedag\xF3gica, concisa y pr\xE1ctica con ejemplos reales aplicados a Colombia.
+3. Cierre y Venta de la Idea (Llamado a la Acci\xF3n): Vende siempre el proyecto VECY Network. Invita a los colegas a formar parte activa de esta red colaborativa, a invitar a m\xE1s colegas de confianza para multiplicar los negocios y a interactuar con JanIA (en la consola web https://vecy-network.vercel.app/jania o por WhatsApp) para resolver consultas legales, tributarias, aval\xFAos y encontrar compradores o inmuebles.
+
+Debes responder en formato JSON estricto con dos campos:
+{
+  "voiceText": "Texto continuo optimizado para locuci\xF3n de voz TTS (sin markdown, sin vi\xF1etas, sin emojis, n\xFAmeros escritos en palabras, 70-100 palabras)",
+  "captionText": "Texto formateado para WhatsApp con emojis, negritas en t\xEDtulos, vi\xF1etas estructuradas, llamado a la acci\xF3n y enlace web al final"
+}`;
+  try {
+    const response = await invokeLLM({
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: `Genera el contenido del d\xEDa de hoy (${fechaBogota}):
+${promptEspecifico}` }
+      ],
+      responseFormat: { type: "json_object" },
+      temperature: 0.7
+    });
+    const rawContent = response?.choices?.[0]?.message?.content?.trim();
+    if (rawContent) {
+      const parsed = JSON.parse(rawContent);
+      if (parsed.voiceText && parsed.captionText) {
+        const cleanVoice = parsed.voiceText.replace(/\[.*?\]/g, "").replace(/[*_#]/g, "").trim();
+        return {
+          voiceText: cleanVoice,
+          captionText: parsed.captionText.trim()
+        };
+      }
+    }
+  } catch (err) {
+    console.warn(`[CRON-LLM-Guion] Fall\xF3 generaci\xF3n con Gemini (${err.message}). Usando contenidos de respaldo.`);
+  }
+  return {
+    voiceText: fallbackVoice,
+    captionText: fallbackCaption
+  };
+}
+var __filename, __dirname;
+var init_cronService = __esm({
+  "server/_core/cronService.ts"() {
+    "use strict";
+    init_whatsapp_match();
+    init_nightlyRematch();
+    init_llm();
+    __filename = fileURLToPath(import.meta.url);
+    __dirname = path8.dirname(__filename);
   }
 });
 
@@ -13486,7 +13817,7 @@ init_db();
 init_schema();
 init_scraper();
 init_janIA();
-import { eq as eq5, desc as desc2, sql as sql4, inArray } from "drizzle-orm";
+import { eq as eq7, desc as desc2, sql as sql4, inArray } from "drizzle-orm";
 
 // server/_core/taxEngine.ts
 var VALOR_UVT_2026 = 50318;
@@ -13542,8 +13873,8 @@ function liquidarImpuestosVenta(params) {
 init_matching();
 init_voiceTranscription();
 import axios7 from "axios";
-import fs7 from "fs";
-import path7 from "path";
+import fs9 from "fs";
+import path9 from "path";
 var cachedAllMatchesData = null;
 var cachedAllMatchesTime = 0;
 var cachedBotStatusData = null;
@@ -13578,7 +13909,7 @@ var janIARouter = router({
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     try {
-      let conversation = await db.select().from(conversations).where(eq5(conversations.sessionId, input.sessionId)).limit(1);
+      let conversation = await db.select().from(conversations).where(eq7(conversations.sessionId, input.sessionId)).limit(1);
       let conversationId;
       if (conversation.length === 0) {
         const insertData = {
@@ -13593,7 +13924,7 @@ var janIARouter = router({
       } else {
         conversationId = conversation[0].id;
         if (ctx.user && !conversation[0].userId) {
-          await db.update(conversations).set({ userId: String(ctx.user.id) }).where(eq5(conversations.id, conversationId));
+          await db.update(conversations).set({ userId: String(ctx.user.id) }).where(eq7(conversations.id, conversationId));
         }
       }
       const mockUserId = ctx.user ? `web-user-${ctx.user.id}` : `web-session-${input.sessionId}`;
@@ -13651,7 +13982,7 @@ var janIARouter = router({
 ${liveStats}${userContextInstruction}
 
 [INSTRUCCI\xD3N MAESTRA - CHAT WEB VECY 24/7]: Eres JanIA Match, la Inteligencia Artificial viva y consultora inmobiliaria senior de VECY Network. Tienes razonamiento l\xF3gico, amplio criterio jur\xEDdico, financiero y de mercado inmobiliario. Responde directamente a la consulta del usuario de forma elocuente, profesional, completa y estructurada. PROHIBIDO usar plantillas fijas o cierres/firmas con membretes. Responde en formato JSON estrictamente como: {"response": "tu respuesta viva y razonada"}`;
-        const recentHistory = await db.select({ role: messages.role, content: messages.content }).from(messages).where(eq5(messages.conversationId, conversationId)).orderBy(desc2(messages.createdAt)).limit(6);
+        const recentHistory = await db.select({ role: messages.role, content: messages.content }).from(messages).where(eq7(messages.conversationId, conversationId)).orderBy(desc2(messages.createdAt)).limit(6);
         const formattedHistory = recentHistory.reverse().map((m) => ({
           role: m.role === "janIA" ? "assistant" : "user",
           content: m.content
@@ -13696,7 +14027,7 @@ ${liveStats}${userContextInstruction}
       await db.update(conversations).set({
         lastMessage: janIAResponse,
         updatedAt: /* @__PURE__ */ new Date()
-      }).where(eq5(conversations.id, conversationId));
+      }).where(eq7(conversations.id, conversationId));
       return {
         content: janIAResponse,
         wantsVoice,
@@ -13714,7 +14045,7 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) return [];
     try {
-      return await db.select().from(conversations).where(eq5(conversations.userId, String(ctx.user.id))).orderBy(desc2(conversations.updatedAt));
+      return await db.select().from(conversations).where(eq7(conversations.userId, String(ctx.user.id))).orderBy(desc2(conversations.updatedAt));
     } catch (error) {
       console.error("Error getting user conversations:", error);
       return [];
@@ -13736,9 +14067,9 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) return [];
     try {
-      const conv = await db.select().from(conversations).where(eq5(conversations.sessionId, input.sessionId)).limit(1);
+      const conv = await db.select().from(conversations).where(eq7(conversations.sessionId, input.sessionId)).limit(1);
       if (conv.length === 0) return [];
-      return await db.select().from(messages).where(eq5(messages.conversationId, conv[0].id)).orderBy(messages.createdAt);
+      return await db.select().from(messages).where(eq7(messages.conversationId, conv[0].id)).orderBy(messages.createdAt);
     } catch (error) {
       console.error("Error getting conversation messages:", error);
       return [];
@@ -13749,10 +14080,10 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     try {
-      const conv = await db.select().from(conversations).where(eq5(conversations.sessionId, input.sessionId)).limit(1);
+      const conv = await db.select().from(conversations).where(eq7(conversations.sessionId, input.sessionId)).limit(1);
       if (conv.length > 0) {
-        await db.delete(messages).where(eq5(messages.conversationId, conv[0].id));
-        await db.delete(conversations).where(eq5(conversations.id, conv[0].id));
+        await db.delete(messages).where(eq7(messages.conversationId, conv[0].id));
+        await db.delete(conversations).where(eq7(conversations.id, conv[0].id));
       }
       return { success: true };
     } catch (error) {
@@ -13827,7 +14158,7 @@ ${liveStats}${userContextInstruction}
         pdfMimeType
       );
       const analysis = result.response && result.response.trim() !== "" ? (result.dmResponse ? result.dmResponse + "\n\n" : "") + result.response : result.dmResponse || result.response;
-      const conversation = await db.select().from(conversations).where(eq5(conversations.sessionId, input.sessionId)).limit(1);
+      const conversation = await db.select().from(conversations).where(eq7(conversations.sessionId, input.sessionId)).limit(1);
       if (conversation.length > 0) {
         const conversationId = conversation[0].id;
         await db.insert(messages).values({
@@ -13846,7 +14177,7 @@ ${liveStats}${userContextInstruction}
         await db.update(conversations).set({
           lastMessage: analysis,
           updatedAt: /* @__PURE__ */ new Date()
-        }).where(eq5(conversations.id, conversationId));
+        }).where(eq7(conversations.id, conversationId));
       }
       return {
         analysis
@@ -13866,7 +14197,7 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     try {
-      const matches = await db.select().from(propertyMatches).where(eq5(propertyMatches.requirementId, input.requirementId)).orderBy(desc2(propertyMatches.matchScore)).limit(input.limit);
+      const matches = await db.select().from(propertyMatches).where(eq7(propertyMatches.requirementId, input.requirementId)).orderBy(desc2(propertyMatches.matchScore)).limit(input.limit);
       return matches;
     } catch (error) {
       console.error("Error getting property matches:", error);
@@ -13957,7 +14288,7 @@ ${liveStats}${userContextInstruction}
           enlaceOrigen: requirements.enlaceOrigen,
           createdAt: requirements.createdAt
         }
-      }).from(propertyMatches).innerJoin(properties, eq5(propertyMatches.propertyId, properties.id)).innerJoin(requirements, eq5(propertyMatches.requirementId, requirements.id)).orderBy(desc2(propertyMatches.id)).limit(200);
+      }).from(propertyMatches).innerJoin(properties, eq7(propertyMatches.propertyId, properties.id)).innerJoin(requirements, eq7(propertyMatches.requirementId, requirements.id)).orderBy(desc2(propertyMatches.id)).limit(200);
       const propIds = Array.from(new Set(matches.map((m) => m.property.id)));
       const imagesMap = {};
       if (propIds.length > 0) {
@@ -14038,14 +14369,14 @@ ${liveStats}${userContextInstruction}
   })).mutation(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new Error("Database not available");
-    const existingProp = await db.select().from(properties).where(eq5(properties.id, input.propertyId)).limit(1).then((r) => r[0]);
+    const existingProp = await db.select().from(properties).where(eq7(properties.id, input.propertyId)).limit(1).then((r) => r[0]);
     const { propertyId, ...updateFields } = input;
     const updateData = {};
     for (const [key, value] of Object.entries(updateFields)) {
       if (value !== void 0) updateData[key] = value;
     }
     updateData.updatedAt = /* @__PURE__ */ new Date();
-    await db.update(properties).set(updateData).where(eq5(properties.id, propertyId));
+    await db.update(properties).set(updateData).where(eq7(properties.id, propertyId));
     console.log(`[JanIA-UpdateProperty] Propiedad #${propertyId} actualizada directamente desde Mesa de Cotejo (incluyendo tel\xE9fono: ${input.idUsuarioWhatsapp || "N/A"})`);
     if (input.idUsuarioWhatsapp || input.nombreUsuarioWhatsapp) {
       try {
@@ -14083,14 +14414,14 @@ ${liveStats}${userContextInstruction}
   })).mutation(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new Error("Database not available");
-    const existingReq = await db.select().from(requirements).where(eq5(requirements.id, input.requirementId)).limit(1).then((r) => r[0]);
+    const existingReq = await db.select().from(requirements).where(eq7(requirements.id, input.requirementId)).limit(1).then((r) => r[0]);
     const { requirementId, ...updateFields } = input;
     const updateData = {};
     for (const [key, value] of Object.entries(updateFields)) {
       if (value !== void 0) updateData[key] = value;
     }
     updateData.updatedAt = /* @__PURE__ */ new Date();
-    await db.update(requirements).set(updateData).where(eq5(requirements.id, requirementId));
+    await db.update(requirements).set(updateData).where(eq7(requirements.id, requirementId));
     console.log(`[JanIA-UpdateRequirement] Requerimiento #${requirementId} actualizado directamente desde Mesa de Cotejo (incluyendo tel\xE9fono: ${input.idUsuarioWhatsapp || "N/A"})`);
     if (input.idUsuarioWhatsapp || input.nombreUsuarioWhatsapp) {
       try {
@@ -14161,7 +14492,7 @@ ${liveStats}${userContextInstruction}
         ajustesGuardados: input.ajustesGuardados || null
       }).returning();
       if (input.matchId && input.action === "rechazado") {
-        await db.update(propertyMatches).set({ status: "rejected" }).where(eq5(propertyMatches.id, input.matchId));
+        await db.update(propertyMatches).set({ status: "rejected" }).where(eq7(propertyMatches.id, input.matchId));
       }
       console.log(`[JanIA-Feedback] Feedback registrado para Match #${input.matchId}: ${input.action} - ${input.motivoRechazo || "Sin motivo"}`);
       return { success: true, feedbackId: feedback.id };
@@ -14255,7 +14586,7 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     try {
-      const zoneProperties = await db.select().from(properties).where(eq5(properties.zone, input.zone));
+      const zoneProperties = await db.select().from(properties).where(eq7(properties.zone, input.zone));
       if (zoneProperties.length === 0) {
         return {
           zone: input.zone,
@@ -14286,7 +14617,7 @@ ${liveStats}${userContextInstruction}
     try {
       let isReady = true;
       let phone = "573192919978";
-      const [statusRow] = await db.select().from(pendingSessions).where(eq5(pendingSessions.jid, "system:bot_status")).limit(1);
+      const [statusRow] = await db.select().from(pendingSessions).where(eq7(pendingSessions.jid, "system:bot_status")).limit(1);
       if (statusRow) {
         const data = statusRow.sessionData;
         if (data && data.phone) {
@@ -14312,11 +14643,11 @@ ${liveStats}${userContextInstruction}
   }),
   getQrCode: publicProcedure.query(async () => {
     try {
-      const qrPath = path7.join(process.cwd(), "qr-captador.png");
-      const qrMatchPath = path7.join(process.cwd(), "qr-match.png");
-      let targetPath = fs7.existsSync(qrPath) ? qrPath : fs7.existsSync(qrMatchPath) ? qrMatchPath : null;
+      const qrPath = path9.join(process.cwd(), "qr-captador.png");
+      const qrMatchPath = path9.join(process.cwd(), "qr-match.png");
+      let targetPath = fs9.existsSync(qrPath) ? qrPath : fs9.existsSync(qrMatchPath) ? qrMatchPath : null;
       if (targetPath) {
-        const fileData = fs7.readFileSync(targetPath);
+        const fileData = fs9.readFileSync(targetPath);
         return { hasQr: true, qrData: `data:image/png;base64,${fileData.toString("base64")}` };
       }
       return { hasQr: false, qrData: null };
@@ -14343,7 +14674,7 @@ ${liveStats}${userContextInstruction}
       const [propTotal] = await db.select({ count: sql4`count(*)::int` }).from(properties);
       const [propActive] = await db.select({ count: sql4`count(*)::int` }).from(properties).where(sql4`${properties.available} = true`);
       const [reqTotal] = await db.select({ count: sql4`count(*)::int` }).from(requirements);
-      const [reqActive] = await db.select({ count: sql4`count(*)::int` }).from(requirements).where(eq5(requirements.status, "active"));
+      const [reqActive] = await db.select({ count: sql4`count(*)::int` }).from(requirements).where(eq7(requirements.status, "active"));
       const [matchTotal] = await db.select({ count: sql4`count(*)::int` }).from(propertyMatches);
       const [convTotal] = await db.select({ count: sql4`count(*)::int` }).from(conversations);
       const monthlyProps = await db.execute(sql4`
@@ -14388,6 +14719,11 @@ ${liveStats}${userContextInstruction}
       anosPosesion: input.anosPosesion,
       esViviendaHabitacion: input.esViviendaHabitacion
     });
+  }),
+  // Disparo manual/inmediato del tip del día a Grupo 2 y Canal oficial
+  triggerDailyTip: publicProcedure.mutation(async () => {
+    const { publishTodayTipNow: publishTodayTipNow2 } = await Promise.resolve().then(() => (init_cronService(), cronService_exports));
+    return await publishTodayTipNow2();
   })
 });
 
@@ -14395,7 +14731,7 @@ ${liveStats}${userContextInstruction}
 import { z as z3 } from "zod";
 init_db();
 init_schema();
-import { eq as eq6 } from "drizzle-orm";
+import { eq as eq8 } from "drizzle-orm";
 
 // server/github-integration.ts
 import { Octokit } from "@octokit/rest";
@@ -14771,7 +15107,7 @@ var githubRouter = router({
     if (!db) throw new Error("Database not available");
     try {
       const { octokit, user } = await initializeGitHubIntegration(GITHUB_TOKEN);
-      const adminUser = await db.select().from(users).where(eq6(users.email, "vecybienesraices@gmail.com")).limit(1);
+      const adminUser = await db.select().from(users).where(eq8(users.email, "vecybienesraices@gmail.com")).limit(1);
       const adminId = adminUser.length > 0 ? adminUser[0].id : 1;
       let reposToSync = input.repositories || [];
       if (reposToSync.length === 0) {
@@ -14788,14 +15124,14 @@ var githubRouter = router({
             repoName
           );
           if (propertyData) {
-            const existing = await db.select().from(properties).where(eq6(properties.sourceRepository, repoName)).limit(1);
+            const existing = await db.select().from(properties).where(eq8(properties.sourceRepository, repoName)).limit(1);
             if (existing.length > 0) {
               await db.update(properties).set({
                 ...propertyData,
                 agentId: adminId,
                 sourceRepository: repoName,
                 lastSyncedAt: /* @__PURE__ */ new Date()
-              }).where(eq6(properties.id, existing[0].id));
+              }).where(eq8(properties.id, existing[0].id));
             } else {
               await db.insert(properties).values({
                 ...propertyData,
@@ -14884,7 +15220,7 @@ init_storage();
 init_db();
 init_db();
 init_schema();
-import { eq as eq7 } from "drizzle-orm";
+import { eq as eq9 } from "drizzle-orm";
 var imagesRouter = {
   /**
    * Upload image to S3 and save to database
@@ -14909,7 +15245,7 @@ var imagesRouter = {
       if (input.isMainImage) {
         const db = await getDb();
         if (db) {
-          await db.update(propertyImages).set({ isMainImage: false }).where(eq7(propertyImages.propertyId, input.propertyId));
+          await db.update(propertyImages).set({ isMainImage: false }).where(eq9(propertyImages.propertyId, input.propertyId));
         }
       }
       const images = await getPropertyImages(input.propertyId);
@@ -14974,7 +15310,7 @@ var imagesRouter = {
     try {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
-      await db.update(propertyImages).set({ displayOrder: input.displayOrder }).where(eq7(propertyImages.id, input.imageId));
+      await db.update(propertyImages).set({ displayOrder: input.displayOrder }).where(eq9(propertyImages.id, input.imageId));
       return {
         success: true,
         message: "Image order updated successfully"
@@ -14995,8 +15331,8 @@ var imagesRouter = {
     try {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
-      await db.update(propertyImages).set({ isMainImage: false }).where(eq7(propertyImages.propertyId, input.propertyId));
-      await db.update(propertyImages).set({ isMainImage: true }).where(eq7(propertyImages.id, input.imageId));
+      await db.update(propertyImages).set({ isMainImage: false }).where(eq9(propertyImages.propertyId, input.propertyId));
+      await db.update(propertyImages).set({ isMainImage: true }).where(eq9(propertyImages.id, input.imageId));
       return {
         success: true,
         message: "Main image updated successfully"
@@ -15011,7 +15347,7 @@ var imagesRouter = {
 import { z as z5 } from "zod";
 init_db();
 init_schema();
-import { eq as eq8, and as and3, desc as desc3, isNull } from "drizzle-orm";
+import { eq as eq10, and as and5, desc as desc3, isNull } from "drizzle-orm";
 import { TRPCError as TRPCError3 } from "@trpc/server";
 var agentRouter = router({
   // Public: Get agent profile for branding (Agenda Pro, Personal Shops)
@@ -15024,23 +15360,23 @@ var agentRouter = router({
       customLogoUrl: users.customLogoUrl,
       themeConfig: users.themeConfig,
       subdomain: users.subdomain
-    }).from(users).where(eq8(users.id, input.id)).limit(1);
+    }).from(users).where(eq10(users.id, input.id)).limit(1);
     if (agent.length === 0) throw new TRPCError3({ code: "NOT_FOUND", message: "Agent not found" });
     return agent[0];
   }),
   getMyProperties: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-    return await db.select().from(properties).where(eq8(properties.agentId, ctx.user.id)).orderBy(desc3(properties.createdAt));
+    return await db.select().from(properties).where(eq10(properties.agentId, ctx.user.id)).orderBy(desc3(properties.createdAt));
   }),
   // For testing: Allows an agent to claim a property that has no agent assigned
   claimProperty: protectedProcedure.input(z5.object({ propertyId: z5.number() })).mutation(async ({ ctx, input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-    const property = await db.select().from(properties).where(eq8(properties.id, input.propertyId)).limit(1);
+    const property = await db.select().from(properties).where(eq10(properties.id, input.propertyId)).limit(1);
     if (property.length === 0) throw new TRPCError3({ code: "NOT_FOUND", message: "Property not found" });
     if (property[0].agentId) throw new TRPCError3({ code: "FORBIDDEN", message: "Property already has an agent" });
-    await db.update(properties).set({ agentId: ctx.user.id }).where(eq8(properties.id, input.propertyId));
+    await db.update(properties).set({ agentId: ctx.user.id }).where(eq10(properties.id, input.propertyId));
     return { success: true };
   }),
   getAvailablePropertiesToClaim: protectedProcedure.query(async ({ ctx }) => {
@@ -15051,15 +15387,15 @@ var agentRouter = router({
   generateStealthLink: protectedProcedure.input(z5.object({ propertyId: z5.number() })).mutation(async ({ ctx, input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-    const property = await db.select().from(properties).where(eq8(properties.id, input.propertyId)).limit(1);
+    const property = await db.select().from(properties).where(eq10(properties.id, input.propertyId)).limit(1);
     if (property.length === 0) throw new TRPCError3({ code: "NOT_FOUND", message: "Property not found" });
     if (property[0].agentId !== ctx.user.id && ctx.user.role !== "admin") {
       throw new TRPCError3({ code: "FORBIDDEN", message: "You don't own this property" });
     }
     const existingLink = await db.select().from(referralLinks).where(
-      and3(
-        eq8(referralLinks.propertyId, input.propertyId),
-        eq8(referralLinks.agentId, ctx.user.id)
+      and5(
+        eq10(referralLinks.propertyId, input.propertyId),
+        eq10(referralLinks.agentId, ctx.user.id)
       )
     ).limit(1);
     if (existingLink.length > 0) {
@@ -15084,7 +15420,7 @@ var agentRouter = router({
         matriculaInmobiliaria: properties.matriculaInmobiliaria,
         location: properties.location
       }
-    }).from(referralLinks).innerJoin(properties, eq8(referralLinks.propertyId, properties.id)).where(eq8(referralLinks.agentId, ctx.user.id)).orderBy(desc3(referralLinks.createdAt));
+    }).from(referralLinks).innerJoin(properties, eq10(referralLinks.propertyId, properties.id)).where(eq10(referralLinks.agentId, ctx.user.id)).orderBy(desc3(referralLinks.createdAt));
   })
 });
 
@@ -15092,18 +15428,18 @@ var agentRouter = router({
 import { z as z6 } from "zod";
 init_db();
 init_schema();
-import { eq as eq9, sql as sql5 } from "drizzle-orm";
+import { eq as eq11, sql as sql5 } from "drizzle-orm";
 import { TRPCError as TRPCError4 } from "@trpc/server";
 var leadsRouter = router({
   resolveStealthLink: publicProcedure.input(z6.object({ token: z6.string() })).query(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "Database err" });
-    const linkRecord = await db.select().from(referralLinks).where(eq9(referralLinks.token, input.token)).limit(1);
+    const linkRecord = await db.select().from(referralLinks).where(eq11(referralLinks.token, input.token)).limit(1);
     if (linkRecord.length === 0) {
       throw new TRPCError4({ code: "NOT_FOUND", message: "Stealth Link invalido o expirado." });
     }
     const link = linkRecord[0];
-    await db.update(referralLinks).set({ clicks: sql5`${referralLinks.clicks} + 1` }).where(eq9(referralLinks.id, link.id));
+    await db.update(referralLinks).set({ clicks: sql5`${referralLinks.clicks} + 1` }).where(eq11(referralLinks.id, link.id));
     const prop = await db.select({
       id: properties.id,
       name: properties.name,
@@ -15114,7 +15450,7 @@ var leadsRouter = router({
       zone: properties.zone,
       // specifically NOT returning full location/latitude/longitude/matricula
       images: properties.images
-    }).from(properties).where(eq9(properties.id, link.propertyId)).limit(1);
+    }).from(properties).where(eq11(properties.id, link.propertyId)).limit(1);
     if (prop.length === 0) {
       throw new TRPCError4({ code: "NOT_FOUND", message: "Inmueble no disponible." });
     }
@@ -15131,7 +15467,7 @@ var leadsRouter = router({
   })).mutation(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "Database err" });
-    const linkRecord = await db.select().from(referralLinks).where(eq9(referralLinks.token, input.token)).limit(1);
+    const linkRecord = await db.select().from(referralLinks).where(eq11(referralLinks.token, input.token)).limit(1);
     if (linkRecord.length === 0) {
       throw new TRPCError4({ code: "BAD_REQUEST", message: "Token invalido." });
     }
@@ -15160,7 +15496,7 @@ var leadsRouter = router({
 import { z as z7 } from "zod";
 init_db();
 init_schema();
-import { eq as eq10, desc as desc4, ilike, and as and4 } from "drizzle-orm";
+import { eq as eq12, desc as desc4, ilike, and as and6 } from "drizzle-orm";
 import { TRPCError as TRPCError5 } from "@trpc/server";
 var propertyInputSchema = z7.object({
   name: z7.string().min(2),
@@ -15230,16 +15566,16 @@ var propertiesRouter = router({
   }).optional()).query(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
-    const filters = [eq10(properties.available, true)];
-    if (input?.transactionType) filters.push(eq10(properties.transactionType, input.transactionType));
-    if (input?.type) filters.push(eq10(properties.propertyType, input.type));
+    const filters = [eq12(properties.available, true)];
+    if (input?.transactionType) filters.push(eq12(properties.transactionType, input.transactionType));
+    if (input?.type) filters.push(eq12(properties.propertyType, input.type));
     if (input?.zone) filters.push(ilike(properties.zone, `%${input.zone}%`));
-    return await db.select().from(properties).where(and4(...filters)).orderBy(desc4(properties.featured), desc4(properties.createdAt)).limit(input?.limit ?? 20).offset(input?.offset ?? 0);
+    return await db.select().from(properties).where(and6(...filters)).orderBy(desc4(properties.featured), desc4(properties.createdAt)).limit(input?.limit ?? 20).offset(input?.offset ?? 0);
   }),
   getById: publicProcedure.input(z7.object({ id: z7.number() })).query(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
-    const result = await db.select().from(properties).where(eq10(properties.id, input.id)).limit(1);
+    const result = await db.select().from(properties).where(eq12(properties.id, input.id)).limit(1);
     if (result.length === 0) throw new TRPCError5({ code: "NOT_FOUND", message: "Propiedad no encontrada" });
     const property = result[0];
     return property;
@@ -15302,23 +15638,23 @@ Texto a analizar:
   })).mutation(async ({ ctx, input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
-    const existing = await db.select().from(properties).where(eq10(properties.id, input.id)).limit(1);
+    const existing = await db.select().from(properties).where(eq12(properties.id, input.id)).limit(1);
     if (existing.length === 0) throw new TRPCError5({ code: "NOT_FOUND" });
     const isOwner = existing[0].agentId === ctx.user.id;
     const isAdmin = ctx.user.role === "admin";
     if (!isOwner && !isAdmin) throw new TRPCError5({ code: "FORBIDDEN" });
-    const updated = await db.update(properties).set({ ...input.data, updatedAt: /* @__PURE__ */ new Date() }).where(eq10(properties.id, input.id)).returning();
+    const updated = await db.update(properties).set({ ...input.data, updatedAt: /* @__PURE__ */ new Date() }).where(eq12(properties.id, input.id)).returning();
     return updated[0];
   }),
   delete: protectedProcedure.input(z7.object({ id: z7.number() })).mutation(async ({ ctx, input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
-    const existing = await db.select().from(properties).where(eq10(properties.id, input.id)).limit(1);
+    const existing = await db.select().from(properties).where(eq12(properties.id, input.id)).limit(1);
     if (existing.length === 0) throw new TRPCError5({ code: "NOT_FOUND" });
     const isOwner = existing[0].agentId === ctx.user.id;
     const isAdmin = ctx.user.role === "admin";
     if (!isOwner && !isAdmin) throw new TRPCError5({ code: "FORBIDDEN" });
-    await db.delete(properties).where(eq10(properties.id, input.id));
+    await db.delete(properties).where(eq12(properties.id, input.id));
     return { success: true };
   }),
   // List my own properties (agent view)
@@ -15329,7 +15665,7 @@ Texto a analizar:
     if (isAdmin) {
       return await db.select().from(properties).orderBy(desc4(properties.id)).limit(300);
     }
-    return await db.select().from(properties).where(eq10(properties.agentId, ctx.user.id)).orderBy(desc4(properties.id)).limit(300);
+    return await db.select().from(properties).where(eq12(properties.agentId, ctx.user.id)).orderBy(desc4(properties.id)).limit(300);
   })
 });
 
@@ -15484,30 +15820,30 @@ async function createContext(opts) {
 
 // server/_core/vite.ts
 import express from "express";
-import fs8 from "fs";
+import fs10 from "fs";
 import { nanoid } from "nanoid";
-import path9 from "path";
+import path11 from "path";
 import { createServer as createViteServer } from "vite";
 
 // vite.config.ts
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import path8 from "node:path";
+import path10 from "node:path";
 import { defineConfig } from "vite";
 var vite_config_default = defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
-      "@": path8.resolve(import.meta.dirname, "client", "src"),
-      "@shared": path8.resolve(import.meta.dirname, "shared"),
-      "@assets": path8.resolve(import.meta.dirname, "attached_assets")
+      "@": path10.resolve(import.meta.dirname, "client", "src"),
+      "@shared": path10.resolve(import.meta.dirname, "shared"),
+      "@assets": path10.resolve(import.meta.dirname, "attached_assets")
     }
   },
-  envDir: path8.resolve(import.meta.dirname),
-  root: path8.resolve(import.meta.dirname, "client"),
-  publicDir: path8.resolve(import.meta.dirname, "client", "public"),
+  envDir: path10.resolve(import.meta.dirname),
+  root: path10.resolve(import.meta.dirname, "client"),
+  publicDir: path10.resolve(import.meta.dirname, "client", "public"),
   build: {
-    outDir: path8.resolve(import.meta.dirname, "dist"),
+    outDir: path10.resolve(import.meta.dirname, "dist"),
     emptyOutDir: true,
     chunkSizeWarningLimit: 600,
     rollupOptions: {
@@ -15558,13 +15894,13 @@ async function setupVite(app, server) {
   app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
     try {
-      const clientTemplate = path9.resolve(
+      const clientTemplate = path11.resolve(
         import.meta.dirname,
         "../..",
         "client",
         "index.html"
       );
-      let template = await fs8.promises.readFile(clientTemplate, "utf-8");
+      let template = await fs10.promises.readFile(clientTemplate, "utf-8");
       template = template.replace(
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid()}"`
@@ -15578,295 +15914,20 @@ async function setupVite(app, server) {
   });
 }
 function serveStatic(app) {
-  const distPath = path9.resolve(import.meta.dirname, "..", "dist");
-  if (!fs8.existsSync(distPath)) {
+  const distPath = path11.resolve(import.meta.dirname, "..", "dist");
+  if (!fs10.existsSync(distPath)) {
     console.error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`
     );
   }
   app.use(express.static(distPath));
   app.use("*", (_req, res) => {
-    res.sendFile(path9.resolve(distPath, "index.html"));
+    res.sendFile(path11.resolve(distPath, "index.html"));
   });
-}
-
-// server/_core/cronService.ts
-init_whatsapp_match();
-init_nightlyRematch();
-init_llm();
-import cron from "node-cron";
-import path11 from "path";
-import fs10 from "fs";
-import { fileURLToPath } from "url";
-var __filename = fileURLToPath(import.meta.url);
-var __dirname = path11.dirname(__filename);
-function getThemedImagePath(tipo) {
-  const primaryPath = path11.resolve(process.cwd(), `client/public/assets/jania/jania_${tipo}.jpg`);
-  const distPath = path11.resolve(process.cwd(), `dist/assets/jania/jania_${tipo}.jpg`);
-  const serverPath = path11.resolve(__dirname, `../../client/public/assets/jania/jania_${tipo}.jpg`);
-  if (fs10.existsSync(primaryPath)) return primaryPath;
-  if (fs10.existsSync(distPath)) return distPath;
-  return void 0;
-}
-function initCronScheduler() {
-  console.log("[CRON-SERVICE] Inicializando orquestador de agendas automatizadas v3.3 (Parrilla Semanal de Audios, Ilustraciones 3D, Captions y Re-matching)...");
-  cron.schedule("0 11 * * 1,4", async () => {
-    console.log("[CRON-SERVICE] Generando audio din\xE1mico para VECY INMUEBLES NETWORK...");
-    const fallbackVoice = `Buenos d\xEDas a todos y a todas. Soy JanIA, la inteligencia artificial de VECY Network. Hoy quiero recordarles que este grupo es nuestro centro de operaciones comerciales. Aqu\xED publican sus inmuebles en venta o arriendo, sus requerimientos de compra o renta, y yo me encargo de cruzar toda esa informaci\xF3n en tiempo real en los 32 departamentos de Colombia para detectar MATCHES y hacer posibles cierres de negocios. Sigan publicando sus inmuebles, colegas, e inviten a m\xE1s colegas a unirse a esta red. Entre m\xE1s seamos, m\xE1s matches encontramos. \xA1Hoy puede ser el d\xEDa de tu pr\xF3ximo cierre!`;
-    const fallbackCaption = `\u{1F3E0} *VECY INMUEBLES NETWORK \u2014 CENTRO DE OPERACIONES NACIONAL* \u{1F1E8}\u{1F1F4}
-
-\xA1Buenos d\xEDas a todos los colegas de la red!
-
-Recuerden que este espacio es nuestro centro de operaciones comerciales en los 32 departamentos de Colombia:
-\u2022 Publica tus inmuebles en venta, arriendo o permuta.
-\u2022 Comparte tus requerimientos de compra o renta con presupuesto.
-\u2022 JanIA analiza cada mensaje, extrae los datos y detecta *MATCHES* al instante.
-
-\u{1F91D} *Crezcamos juntos:* Invita a tus colegas de confianza a unirse a VECY Network. \xA1Entre m\xE1s inmuebles y solicitudes tengamos, m\xE1s comisiones compartidas cerramos!
-
-\u{1F4F2} *Consola Web JanIA:* https://vecy-network.vercel.app/jania`;
-    const content = await generateDailyContent("inmuebles_network", fallbackVoice, fallbackCaption);
-    try {
-      await janiaMatchBot.sendVoiceToGroup(content.voiceText, janiaMatchBot.targetGroupId, getThemedImagePath("matches"), content.captionText);
-    } catch (e) {
-      console.error("[CRON-SERVICE] Error enviando audio a VECY INMUEBLES NETWORK:", e.message);
-    }
-  }, { timezone: "America/Bogota" });
-  cron.schedule("0 8 * * 1", async () => {
-    console.log("[CRON-SERVICE] Generando contenido din\xE1mico de Lunes para SOPORTE LEGAL, MARKETING Y CANAL...");
-    const fallbackVoice = `\xA1Buenos d\xEDas a todos y a todas! Soy JanIA. Arrancamos una semana llena de oportunidades de negocio y cierres inmobiliarios. Recuerden que este espacio y nuestro canal oficial son su consultorio permanente: aqu\xED pueden preguntarme por texto o nota de voz sobre leyes inmobiliarias, c\xF3mo liquidar la ganancia ocasional ante la DIAN, aval\xFAos de mercado o c\xF3mo redactar un anuncio de alto impacto para sus inmuebles y requerimientos. Los invito a invitar a m\xE1s colegas a unirse a este maravilloso proyecto y a interactuar conmigo para probar nuestro sistema de consultas. \xA1Que tengan una semana extraordinaria y productiva!`;
-    const fallbackCaption = `\u{1F680} *ARRANQUE SEMANAL & CONSULTORIO INMOBILIARIO \u2014 VECY NETWORK* \u{1F1E8}\u{1F1F4}
-
-\xA1Buenos d\xEDas a todos mis queridos colegas!
-
-Iniciamos una semana llena de oportunidades comerciales y cierres de negocios. Recuerden que este espacio y nuestro canal oficial son su consultorio permanente 24/7:
-
-\u2696\uFE0F *Soporte Legal y Contratos:* Dudas sobre promesas, arras y Ley 820.
-\u{1F4B0} *Tributario DIAN:* Ganancia ocasional, retenci\xF3n en la fuente y exenciones.
-\u{1F4D0} *Aval\xFAos & SINUPOT:* Usos de suelo, valor de m2 y fichas normativas.
-\u{1F4E2} *Marketing Digital:* Estructura de 7 pilares y copys de alto impacto.
-
-\u{1F31F} *Construyamos juntos el futuro inmobiliario:* Invita a tus colegas corredores a sumarse a VECY Network y prueba interactuar con JanIA en nuestra web oficial:
-\u{1F4F2} *Chatea con JanIA:* https://vecy-network.vercel.app/jania`;
-    const content = await generateDailyContent("lunes_arranque", fallbackVoice, fallbackCaption);
-    try {
-      await janiaMatchBot.sendVoiceToBuzonAndChannel(content.voiceText, getThemedImagePath("matches"), content.captionText);
-    } catch (e) {
-      console.error("[CRON-SERVICE] Error enviando publicaci\xF3n de Lunes:", e.message);
-    }
-  }, { timezone: "America/Bogota" });
-  cron.schedule("0 11 * * 2", async () => {
-    console.log("[CRON-SERVICE] Generando contenido din\xE1mico de Martes Jur\xEDdico...");
-    const fallbackVoice = `Hola, queridos colegas. Soy JanIA con su tip jur\xEDdico del d\xEDa. \xBFSab\xEDan que un simple correo electr\xF3nico con la hoja de presentaci\xF3n del cliente o el acuerdo de puntas compartidas tiene plena validez probatoria bajo la Ley 527 de 1999? Nunca muestren un inmueble sin dejar registro escrito. Los invito a formar parte activa de VECY Network, a invitar a m\xE1s colegas y a consultar cualquier duda jur\xEDdica o revisar minutas en PDF directamente conmigo. \xA1Juntos cerramos m\xE1s blindados!`;
-    const fallbackCaption = `\u2696\uFE0F *MARTES JUR\xCDDICO & BLINDAJE NOTARIAL \u2014 VECY NETWORK* \u{1F3DB}\uFE0F
-
-\xA1Hola, queridos colegas corredores e inmobiliarios!
-
-\u{1F4CC} *Tip Jur\xEDdico del D\xEDa:* Validez de Acuerdos Comerciales y Registro Escrito.
-Bajo la *Ley 527 de 1999*, los mensajes de datos, correos electr\xF3nicos y hojas de visita tienen plena validez probatoria. Nunca muestres un predio sin pactar previamente las condiciones comerciales.
-
-\u{1F4A1} *\xBFTienes dudas contractuales?*
-Puedes enviarme tus minutas, promesas de compraventa o consultas de arrendamiento (texto, voz o PDF) y las analizamos al instante.
-
-\u{1F91D} *\xDAnete a la Red:* Invita a tus colegas a formar parte de VECY Network para elevar el est\xE1ndar profesional del corretaje en Colombia.
-\u{1F4F2} *Consultas Jur\xEDdicas JanIA:* https://vecy-network.vercel.app/jania`;
-    const content = await generateDailyContent("martes_juridico", fallbackVoice, fallbackCaption);
-    try {
-      await janiaMatchBot.sendVoiceToBuzonAndChannel(content.voiceText, getThemedImagePath("juridico"), content.captionText);
-    } catch (e) {
-      console.error("[CRON-SERVICE] Error enviando publicaci\xF3n de Martes:", e.message);
-    }
-  }, { timezone: "America/Bogota" });
-  cron.schedule("30 11 * * 3", async () => {
-    console.log("[CRON-SERVICE] Generando contenido din\xE1mico de Mi\xE9rcoles de Marketing...");
-    const fallbackVoice = `\xA1Buenas tardes, queridos colegas! Soy JanIA con su tip de Marketing Inmobiliario. El ochenta por ciento de los clientes y colegas descartan una publicaci\xF3n si no tiene el precio claro, el barrio exacto o el metraje. Si quieren que sus ofertas y requerimientos se cierren en tiempo r\xE9cord, incluyan siempre los siete pilares fundamentales. Les cuento que ya estoy detectando decenas de coincidencias en segundo plano y muy pronto nuestros asesores de cierre de VECY Network los estar\xE1n contactando para conectar las puntas. Inviten a m\xE1s colegas a unirse a la red y prueben redactar sus anuncios conmigo hoy mismo.`;
-    const fallbackCaption = `\u{1F4E2} *MI\xC9RCOLES DE MARKETING INMOBILIARIO & 7 PILARES \u2014 VECY NETWORK* \u{1F680}
-
-\xA1Buenas tardes, queridos colegas!
-
-\u{1F3AF} *La Regla de Oro:* M\xE1s del 80% de los negocios se pierden por publicaciones incompletas o ambiguas. Para que tus ofertas y solicitudes se muevan en tiempo r\xE9cord, incluye siempre los *7 Pilares*:
-
-1\uFE0F\u20E3 Tipo de Inmueble (Apto, Casa, Bodega, etc.)
-2\uFE0F\u20E3 Ciudad y Barrio Exacto
-3\uFE0F\u20E3 Precio / Canon y Cuota de Administraci\xF3n
-4\uFE0F\u20E3 \xC1rea Total Construida en m\xB2
-5\uFE0F\u20E3 Habitaciones y Ba\xF1os
-6\uFE0F\u20E3 Parqueaderos (Independientes o en l\xEDnea)
-7\uFE0F\u20E3 Enlace directo de contacto de WhatsApp
-
-\u2728 *Primicia:* \xA1JanIA ya est\xE1 encontrando matches en la red! Muy pronto nuestro equipo de asesores de cierre los contactar\xE1 para coordinar los cierres comerciales.
-
-\u{1F91D} *Invita a m\xE1s colegas y prueba el sistema:* https://vecy-network.vercel.app/jania`;
-    const content = await generateDailyContent("miercoles_marketing", fallbackVoice, fallbackCaption);
-    try {
-      await janiaMatchBot.sendVoiceToBuzonAndChannel(content.voiceText, getThemedImagePath("marketing"), content.captionText);
-    } catch (e) {
-      console.error("[CRON-SERVICE] Error enviando publicaci\xF3n de Mi\xE9rcoles:", e.message);
-    }
-  }, { timezone: "America/Bogota" });
-  cron.schedule("0 11 * * 4", async () => {
-    console.log("[CRON-SERVICE] Generando contenido din\xE1mico de Jueves Tributario...");
-    const fallbackVoice = `Hola a todos y a todas mis queridos colegas. Soy JanIA con un consejo financiero clave para sus clientes vendedores ante la DIAN. Al vender vivienda de habitaci\xF3n, pueden deducir hasta cinco mil UVT exentas del impuesto de ganancia ocasional si los fondos se destinan a la compra de otra vivienda o abono a cr\xE9dito hipotecario. Si quieren saber exactamente cu\xE1nto debe pagar su cliente en retenci\xF3n en la fuente o ganancia ocasional antes de firmar escrituras, cons\xFAltenme directamente. Los invito a invitar a m\xE1s colegas a unirse a VECY Network para que disfruten de este soporte gratuito permanente. \xA1A vender informados!`;
-    const fallbackCaption = `\u{1F4B0} *JUEVES TRIBUTARIO & AHORRO FISCAL DIAN \u2014 VECY NETWORK* \u{1F4CB}
-
-\xA1Hola a todos mis queridos colegas inmobiliarios!
-
-\u{1F4A1} *Tip Tributario del D\xEDa:* Exenci\xF3n de 5.000 UVT en Ganancia Ocasional.
-Al vender vivienda de habitaci\xF3n propia, tus clientes pueden acogerse a la exenci\xF3n del art\xEDculo 311-1 del Estatuto Tributario (hasta 5.000 UVT) si el dinero de la venta se destina a la adquisici\xF3n de otra vivienda o abono a cr\xE9dito hipotecario.
-
-\u{1F4CA} *Liquidaciones Tributarias R\xE1pidas:*
-Escr\xEDbeme o env\xEDame los valores de costo fiscal y venta, y te liquido la retenci\xF3n en la fuente y ganancia estimada en segundos.
-
-\u{1F91D} *Comparte con tus colegas:* Inv\xEDtalos a sumarse a VECY Network para acceder a consultor\xEDas tributarias especializadas.
-\u{1F4F2} *Consultas DIAN con JanIA:* https://vecy-network.vercel.app/jania`;
-    const content = await generateDailyContent("jueves_tributario", fallbackVoice, fallbackCaption);
-    try {
-      await janiaMatchBot.sendVoiceToBuzonAndChannel(content.voiceText, getThemedImagePath("tributario"), content.captionText);
-    } catch (e) {
-      console.error("[CRON-SERVICE] Error enviando publicaci\xF3n de Jueves:", e.message);
-    }
-  }, { timezone: "America/Bogota" });
-  cron.schedule("30 11 * * 5", async () => {
-    console.log("[CRON-SERVICE] Generando contenido din\xE1mico de Viernes de Aval\xFAos...");
-    const fallbackVoice = `\xA1Excelente viernes, queridos colegas! Soy JanIA. \xBFTienen un lote o casa para desarrollo y no saben qu\xE9 altura o uso permite el POT? No se queden con la duda: descarguen la ficha catastral del SINUPOT en PDF y env\xEDenmela por WhatsApp; yo les hago el estudio normativo de uso de suelo al instante. Inviten a sus colegas de confianza a formar parte de VECY Network y a consultar precios de mercado y normativas urban\xEDsticas con nuestro sistema. \xA1Que tengan un fin de semana lleno de cierres!`;
-    const fallbackCaption = `\u{1F4D0} *VIERNES DE AVAL\xDAOS COMERCIALES & SINUPOT \u2014 VECY NETWORK* \u{1F3D9}\uFE0F
-
-\xA1Excelente viernes para todos los colegas de la red!
-
-\u{1F5FA}\uFE0F *Estudios Urban\xEDsticos y de Suelo al Instante:*
-\xBFVas a captar un lote o inmueble con potencial constructor? Descarga la ficha del SINUPOT en PDF y comp\xE1rtemela: extraigo el tratamiento urban\xEDstico, usos permitidos y edificabilidad en segundos.
-
-\u{1F4B5} *Estudios de Mercado y Valor del M\xB2:*
-Cons\xFAltame valores promedio de metro cuadrado por zona y estrato para fijar precios competitivos con tus propietarios.
-
-\u{1F91D} *Suma a tu equipo:* Invita a m\xE1s colegas a VECY Network para multiplicar las opciones de negocio en todo el pa\xEDs.
-\u{1F4F2} *Estudios de Suelo y Aval\xFAos JanIA:* https://vecy-network.vercel.app/jania`;
-    const content = await generateDailyContent("viernes_avaluos", fallbackVoice, fallbackCaption);
-    try {
-      await janiaMatchBot.sendVoiceToBuzonAndChannel(content.voiceText, getThemedImagePath("avaluos"), content.captionText);
-    } catch (e) {
-      console.error("[CRON-SERVICE] Error enviando publicaci\xF3n de Viernes:", e.message);
-    }
-  }, { timezone: "America/Bogota" });
-  cron.schedule("0 10 * * 6", async () => {
-    console.log("[CRON-SERVICE] Generando contenido din\xE1mico de S\xE1bado Caf\xE9 Inmobiliario...");
-    const fallbackVoice = `Buenos d\xEDas, queridos aliados de la red. Cerramos una semana de gran actividad comercial y colaborativa. Recuerden que para casos jur\xEDdicos de alta complejidad, sucesiones litigiosas, saneamientos o aval\xFAos certificados por perito de Lonja con R.A.A., pueden comunicarse directamente al WhatsApp tres diecis\xE9is, seis cincuenta y seis, noventa y siete diecinueve, para coordinar una Consultor\xEDa Personalizada con nuestro br\xF3ker en VECY BIENES RA\xCDCES. Inviten a m\xE1s colegas a unirse a este maravilloso proyecto y a interactuar con nosotros. \xA1Disfruten de su fin de semana y a recargar energ\xEDas!`;
-    const fallbackCaption = `\u2615 *S\xC1BADO DE CAF\xC9 INMOBILIARIO & CONSULTOR\xCDA \u2014 VECY NETWORK* \u{1F91D}
-
-\xA1Buenos d\xEDas a todos los aliados y colegas de VECY Network!
-
-Culminamos una semana muy productiva. Para casos de alta complejidad jur\xEDdica, sucesiones, saneamiento de t\xEDtulos o aval\xFAos periciales oficiales con registro R.A.A. de Lonja:
-
-\u{1F4DE} *L\xEDnea de Consultor\xEDa Directa:* +57 316 656 9719
-Coordinaci\xF3n directa con la direcci\xF3n de corretaje de *VECY BIENES RA\xCDCES*.
-
-\u{1F31F} *Sigamos creciendo juntos:* Invita a m\xE1s colegas a sumarse a esta red colaborativa nacional.
-\u{1F4F2} *Consola Web JanIA:* https://vecy-network.vercel.app/jania`;
-    const content = await generateDailyContent("sabado_cafe", fallbackVoice, fallbackCaption);
-    try {
-      await janiaMatchBot.sendVoiceToBuzonAndChannel(content.voiceText, getThemedImagePath("matches"), content.captionText);
-    } catch (e) {
-      console.error("[CRON-SERVICE] Error enviando publicaci\xF3n de S\xE1bado:", e.message);
-    }
-  }, { timezone: "America/Bogota" });
-  cron.schedule("0 12 * * 3,6", async () => {
-    console.log("[CRON-SERVICE] Generando audio din\xE1mico para PROYECTO VECY NETWORK...");
-    const fallbackVoice = `Hola, equipo VECY. Soy JanIA. Este grupo es nuestro espacio m\xE1s especial: el canal del Proyecto Vecy Network es donde nacen las ideas, donde se eval\xFAa el proyecto y donde construimos juntos el futuro del corretaje inmobiliario. Aqu\xED pueden preguntarme sobre VECY Network sin filtros: c\xF3mo funciona la inteligencia artificial, qu\xE9 est\xE1 planeado para el futuro, qu\xE9 ya est\xE1 funcionando hoy, o simplemente contarme qu\xE9 les parece el proyecto. Su opini\xF3n es la br\xFAjula que nos gu\xEDa. Los invito a invitar a m\xE1s colegas visionarios para construir esto juntos.`;
-    const fallbackCaption = `\u{1F4A1} *PROYECTO VECY NETWORK \u2014 INNOVACI\xD3N & COMUNIDAD* \u{1F1E8}\u{1F1F4}
-
-\xA1Hola, queridos colegas y aliados!
-
-Este grupo es el coraz\xF3n del proyecto VECY Network. Aqu\xED debatimos, aportamos ideas y construimos la primera bolsa inmobiliaria colaborativa y fintech de Colombia con comisiones justas (35/35/15/15) e Inteligencia Artificial 24/7.
-
-\u{1F4AC} *Participa y debate:* Cu\xE9ntanos tus sugerencias para seguir enriqueciendo la plataforma.
-\u{1F4F2} *Explora la plataforma:* https://vecy-network.vercel.app/`;
-    const content = await generateDailyContent("proyecto_vecy", fallbackVoice, fallbackCaption);
-    try {
-      await janiaMatchBot.sendVoiceToGroup(content.voiceText, janiaMatchBot.circuloGroupId, getThemedImagePath("matches"), content.captionText);
-    } catch (e) {
-      console.error("[CRON-SERVICE] Error enviando audio a PROYECTO VECY NETWORK:", e.message);
-    }
-  }, { timezone: "America/Bogota" });
-  cron.schedule("0 8 * * *", async () => {
-    console.log("[CRON-SERVICE] Ejecutando cruce masivo (Re-matching)...");
-    try {
-      await runNightlyRematch();
-    } catch (err) {
-      console.error("[CRON-SERVICE] Error en el job de re-matching masivo:", err.message || err);
-    }
-  }, { timezone: "America/Bogota" });
-}
-async function generateDailyContent(tipo, fallbackVoice, fallbackCaption) {
-  const now = /* @__PURE__ */ new Date();
-  const fechaBogota = now.toLocaleDateString("es-CO", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    timeZone: "America/Bogota"
-  });
-  const promptsMap = {
-    lunes_arranque: `Tema: Arranque Semanal & Convocatoria de Aliados Inmobiliarios en Colombia (${fechaBogota}).
-Objetivo: Saludo lleno de optimismo y energ\xEDa, recordar que este espacio y el canal oficial son para resolver dudas de leyes, tributario DIAN, aval\xFAos y marketing, e invitar a compartir la red con m\xE1s colegas corredores.`,
-    martes_juridico: `Tema: Tip Jur\xEDdico Inmobiliario & Blindaje Notarial (${fechaBogota}).
-Elige un tema legal clave en Colombia: promesas de compraventa y arras, causales de terminaci\xF3n de arriendo Ley 820, validez probatoria de WhatsApp Ley 527/1999, cobro de comisiones y puntas compartidas, cesi\xF3n de leasing o saneamiento por vicios ocultos.`,
-    miercoles_marketing: `Tema: Marketing Digital Inmobiliario & Publicaci\xF3n de Alto Impacto (${fechaBogota}).
-Elige un tema clave: la estructura de 7 pilares (tipo de inmueble, ciudad y barrio exacto, precio/canon y administraci\xF3n, \xE1rea en m2, habitaciones, ba\xF1os, garajes y contacto directo). Explica que publicar completo facilita que la comunidad y JanIA encuentren matches en tiempo real, y siembra la expectativa de que muy pronto nuestros asesores de cierre de VECY Network estar\xE1n contactando a los colegas con matches calificados para conectar las puntas.`,
-    jueves_tributario: `Tema: Tip Tributario DIAN & Ahorro Fiscal Inmobiliario (${fechaBogota}).
-Elige un tema fiscal en Colombia: exenci\xF3n de 5.000 UVT en ganancia ocasional, retenci\xF3n en la fuente del 1%, deducci\xF3n de mejoras con factura electr\xF3nica, impuesto de timbre o actualizaci\xF3n de costo fiscal.`,
-    viernes_avaluos: `Tema: Aval\xFAos Comerciales, Valor del M2 & Estudio de Suelo SINUPOT (${fechaBogota}).
-Elige un tema t\xE9cnico: ficha de uso de suelo SINUPOT en PDF, m\xE9todo comparativo de mercado, depreciaci\xF3n de construcciones o aval\xFAos periciales certificados.`,
-    sabado_cafe: `Tema: Caf\xE9 del Br\xF3ker & Cierre Semanal (${fechaBogota}).
-Objetivo: Felicitar a los corredores por los logros de la semana, invitarlos a interactuar con JanIA y recordar que para casos complejos o consultor\xEDa directa pueden comunicarse al 3166569719 con el br\xF3ker de VECY Bienes Ra\xEDces.`,
-    inmuebles_network: `Tema: Operaciones Comerciales y Matching Nacional (${fechaBogota}).
-Objetivo: Motivar la publicaci\xF3n activa de inmuebles y requerimientos en toda Colombia, recordando que JanIA cruza datos en tiempo real.`,
-    proyecto_vecy: `Tema: Visi\xF3n Ecosistema VECY Network (${fechaBogota}).
-Objetivo: Inspirar a la comunidad destacando el modelo fintech de comisiones 35/35/15/15 y la tecnolog\xEDa colaborativa.`
-  };
-  const promptEspecifico = promptsMap[tipo] || promptsMap.lunes_arranque;
-  const systemPrompt = `Eres JanIA, la inteligencia artificial oficial de VECY Network en Colombia.
-Hablas en primera persona con tono femenino profesional, c\xE1lido, colombiano, sumamente elocuente y motivador.
-
-ESTRUCTURA OBLIGATORIA DEL MENSAJE (TRES PASOS INQUEBRANTABLES):
-1. Saludo inicial: Saluda siempre primero con calidez y cercan\xEDa a los colegas corredores (ej: "\xA1Hola a todos mis queridos colegas!", "\xA1Un saludo muy especial a todos los colegas de VECY Network!", "\xA1Buenas tardes, equipo inmobiliario!").
-2. Desarrollo tem\xE1tico: Explica el tip o consejo del d\xEDa de forma pedag\xF3gica, concisa y pr\xE1ctica con ejemplos reales aplicados a Colombia.
-3. Cierre y Venta de la Idea (Llamado a la Acci\xF3n): Vende siempre el proyecto VECY Network. Invita a los colegas a formar parte activa de esta red colaborativa, a invitar a m\xE1s colegas de confianza para multiplicar los negocios y a interactuar con JanIA (en la consola web https://vecy-network.vercel.app/jania o por WhatsApp) para resolver consultas legales, tributarias, aval\xFAos y encontrar compradores o inmuebles.
-
-Debes responder en formato JSON estricto con dos campos:
-{
-  "voiceText": "Texto continuo optimizado para locuci\xF3n de voz TTS (sin markdown, sin vi\xF1etas, sin emojis, n\xFAmeros escritos en palabras, 70-100 palabras)",
-  "captionText": "Texto formateado para WhatsApp con emojis, negritas en t\xEDtulos, vi\xF1etas estructuradas, llamado a la acci\xF3n y enlace web al final"
-}`;
-  try {
-    const response = await invokeLLM({
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: `Genera el contenido del d\xEDa de hoy (${fechaBogota}):
-${promptEspecifico}` }
-      ],
-      responseFormat: { type: "json_object" },
-      temperature: 0.7
-    });
-    const rawContent = response?.choices?.[0]?.message?.content?.trim();
-    if (rawContent) {
-      const parsed = JSON.parse(rawContent);
-      if (parsed.voiceText && parsed.captionText) {
-        const cleanVoice = parsed.voiceText.replace(/\[.*?\]/g, "").replace(/[*_#]/g, "").trim();
-        return {
-          voiceText: cleanVoice,
-          captionText: parsed.captionText.trim()
-        };
-      }
-    }
-  } catch (err) {
-    console.warn(`[CRON-LLM-Guion] Fall\xF3 generaci\xF3n con Gemini (${err.message}). Usando contenidos de respaldo.`);
-  }
-  return {
-    voiceText: fallbackVoice,
-    captionText: fallbackCaption
-  };
 }
 
 // server/_core/index.ts
+init_cronService();
 init_janIA();
 init_voiceTranscription();
 init_llm();

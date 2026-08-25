@@ -1111,6 +1111,13 @@ export const janIARouter = router({
         esViviendaHabitacion: input.esViviendaHabitacion,
       });
     }),
+
+  // Disparo manual/inmediato del tip del día a Grupo 2 y Canal oficial
+  triggerDailyTip: publicProcedure
+    .mutation(async () => {
+      const { publishTodayTipNow } = await import('../_core/cronService');
+      return await publishTodayTipNow();
+    }),
 });
 
 export type JanIARouter = typeof janIARouter;
