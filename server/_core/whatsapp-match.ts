@@ -188,6 +188,7 @@ export class JaniaMatchBot {
   public targetGroupId: string = '120363260108880069@g.us';
   public buzonGroupId: string = '120363417740040773@g.us';
   public circuloGroupId: string = '120363403507276533@g.us';
+  public channelNewsletterId: string = process.env.WHATSAPP_CHANNEL_NEWSLETTER_ID || '';
   private cooldownMap: Map<string, any> = new Map();
   private cooldownFile: string = path.join(process.cwd(), '.cooldown_map.json');
 
@@ -2168,6 +2169,24 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
       }
     } catch (e: any) {
       console.error('[JANIA-MATCH] Error enviando nota de voz al grupo:', e.message || e);
+    }
+  }
+
+  public async sendVoiceToBuzonAndChannel(text: string) {
+    if (this.buzonGroupId) {
+      await this.sendVoiceToGroup(text, this.buzonGroupId);
+    }
+    if (this.channelNewsletterId) {
+      await this.sendVoiceToGroup(text, this.channelNewsletterId);
+    }
+  }
+
+  public async sendToBuzonAndChannel(text: string, mediaPath?: string) {
+    if (this.buzonGroupId) {
+      await this.sendToGroup(text, mediaPath, [], this.buzonGroupId);
+    }
+    if (this.channelNewsletterId) {
+      await this.sendToGroup(text, mediaPath, [], this.channelNewsletterId);
     }
   }
 

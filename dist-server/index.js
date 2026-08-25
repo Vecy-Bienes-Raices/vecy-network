@@ -10935,6 +10935,7 @@ var init_whatsapp_match = __esm({
       targetGroupId = "120363260108880069@g.us";
       buzonGroupId = "120363417740040773@g.us";
       circuloGroupId = "120363403507276533@g.us";
+      channelNewsletterId = process.env.WHATSAPP_CHANNEL_NEWSLETTER_ID || "";
       cooldownMap = /* @__PURE__ */ new Map();
       cooldownFile = path10.join(process.cwd(), ".cooldown_map.json");
       constructor(options) {
@@ -12498,6 +12499,22 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
           }
         } catch (e) {
           console.error("[JANIA-MATCH] Error enviando nota de voz al grupo:", e.message || e);
+        }
+      }
+      async sendVoiceToBuzonAndChannel(text2) {
+        if (this.buzonGroupId) {
+          await this.sendVoiceToGroup(text2, this.buzonGroupId);
+        }
+        if (this.channelNewsletterId) {
+          await this.sendVoiceToGroup(text2, this.channelNewsletterId);
+        }
+      }
+      async sendToBuzonAndChannel(text2, mediaPath) {
+        if (this.buzonGroupId) {
+          await this.sendToGroup(text2, mediaPath, [], this.buzonGroupId);
+        }
+        if (this.channelNewsletterId) {
+          await this.sendToGroup(text2, mediaPath, [], this.channelNewsletterId);
         }
       }
       async getGroupParticipants(groupId) {
@@ -15514,11 +15531,11 @@ function initCronScheduler() {
     }
   }, { timezone: "America/Bogota" });
   cron.schedule("0 8 * * 1", async () => {
-    console.log("[CRON-SERVICE] Generando audio din\xE1mico de Lunes para SOPORTE LEGAL Y MARKETING...");
+    console.log("[CRON-SERVICE] Generando audio din\xE1mico de Lunes para SOPORTE LEGAL, MARKETING Y CANAL...");
     const fallback = `\xA1Buenos d\xEDas a todos y a todas! Soy JanIA. Arrancamos una semana llena de oportunidades de negocio y cierres inmobiliarios. Recuerden que este espacio es su consultorio permanente: aqu\xED pueden preguntarme por texto o nota de voz sobre leyes inmobiliarias, c\xF3mo liquidar la ganancia ocasional ante la DIAN, aval\xFAos de mercado o c\xF3mo redactar un anuncio de alto impacto para sus inmuebles y requerimientos. La informaci\xF3n es poder en los negocios. Los invito a que no se queden con dudas hoy y a que compartan el enlace de este grupo con sus colegas de confianza: entre m\xE1s asesores capacitados seamos, m\xE1s blindados y profesionales cerramos negocios en Colombia. \xA1Que tengan una semana extraordinaria y productiva!`;
     const guion = await generateDynamicVoiceScript("lunes_arranque", fallback);
     try {
-      await janiaMatchBot.sendVoiceToGroup(guion, janiaMatchBot.buzonGroupId);
+      await janiaMatchBot.sendVoiceToBuzonAndChannel(guion);
     } catch (e) {
       console.error("[CRON-SERVICE] Error enviando audio de Lunes:", e.message);
     }
@@ -15528,7 +15545,7 @@ function initCronScheduler() {
     const fallback = `Hola, colegas. Soy JanIA con su tip jur\xEDdico del d\xEDa. \xBFSab\xEDan que un simple correo electr\xF3nico con la hoja de presentaci\xF3n del cliente o el acuerdo de puntas compartidas tiene plena validez probatoria bajo la Ley 527 de 1999? Nunca muestren un inmueble sin dejar registro escrito. Si tienen dudas sobre una promesa de compraventa, una restituci\xF3n o c\xF3mo redactar una minuta, preg\xFAntenme aqu\xED mismo o env\xEDenme el documento en PDF y lo revisamos juntos al instante.`;
     const guion = await generateDynamicVoiceScript("martes_juridico", fallback);
     try {
-      await janiaMatchBot.sendVoiceToGroup(guion, janiaMatchBot.buzonGroupId);
+      await janiaMatchBot.sendVoiceToBuzonAndChannel(guion);
     } catch (e) {
       console.error("[CRON-SERVICE] Error enviando audio de Martes:", e.message);
     }
@@ -15538,7 +15555,7 @@ function initCronScheduler() {
     const fallback = `\xA1Buenas tardes, equipo! Soy JanIA con su tip de Marketing Inmobiliario. El ochenta por ciento de los clientes y colegas descartan una publicaci\xF3n si no tiene el precio claro, el barrio exacto o el metraje. Si quieren que sus ofertas y requerimientos se cierren en tiempo r\xE9cord, incluyan siempre los siete pilares: tipo de inmueble, barrio y ciudad, precio y administraci\xF3n, \xE1rea en metros cuadrados, habitaciones, garajes independientes o en l\xEDnea, y su enlace directo de WhatsApp. \xBFTienen un inmueble dif\xEDcil de mover? Escr\xEDbanme los datos y les ayudo a redactar un copy persuasivo hoy mismo.`;
     const guion = await generateDynamicVoiceScript("miercoles_marketing", fallback);
     try {
-      await janiaMatchBot.sendVoiceToGroup(guion, janiaMatchBot.buzonGroupId);
+      await janiaMatchBot.sendVoiceToBuzonAndChannel(guion);
     } catch (e) {
       console.error("[CRON-SERVICE] Error enviando audio de Mi\xE9rcoles:", e.message);
     }
@@ -15548,7 +15565,7 @@ function initCronScheduler() {
     const fallback = `Hola a todos. Soy JanIA con un consejo financiero clave para sus clientes vendedores. Al vender vivienda de habitaci\xF3n, pueden deducir hasta cinco mil UVT exentas del impuesto de ganancia ocasional si los fondos se destinan a la compra de otra vivienda o abono a cr\xE9dito hipotecario. Si quieren saber exactamente cu\xE1nto debe pagar su cliente en retenci\xF3n en la fuente o ganancia ocasional antes de firmar escrituras, cons\xFAltenme aqu\xED y les hago la liquidaci\xF3n en segundos.`;
     const guion = await generateDynamicVoiceScript("jueves_tributario", fallback);
     try {
-      await janiaMatchBot.sendVoiceToGroup(guion, janiaMatchBot.buzonGroupId);
+      await janiaMatchBot.sendVoiceToBuzonAndChannel(guion);
     } catch (e) {
       console.error("[CRON-SERVICE] Error enviando audio de Jueves:", e.message);
     }
@@ -15558,7 +15575,7 @@ function initCronScheduler() {
     const fallback = `\xA1Excelente viernes, colegas! Soy JanIA. \xBFTienen un lote o casa para desarrollo y no saben qu\xE9 altura o uso permite el POT? No se queden con la duda: descarguen la ficha catastral del SINUPOT en PDF y env\xEDenmela por WhatsApp en privado; yo les hago el estudio normativo de uso de suelo al instante. Y para estimar el valor del metro cuadrado en cualquier sector, aqu\xED estoy para asesorarlos.`;
     const guion = await generateDynamicVoiceScript("viernes_avaluos", fallback);
     try {
-      await janiaMatchBot.sendVoiceToGroup(guion, janiaMatchBot.buzonGroupId);
+      await janiaMatchBot.sendVoiceToBuzonAndChannel(guion);
     } catch (e) {
       console.error("[CRON-SERVICE] Error enviando audio de Viernes:", e.message);
     }
@@ -15568,7 +15585,7 @@ function initCronScheduler() {
     const fallback = `Buenos d\xEDas, aliados de la red. Cerramos semana de gran actividad comercial. Recuerden que para casos jur\xEDdicos de alta complejidad, sucesiones litigiosas, saneamientos o aval\xFAos certificados por perito de Lonja con R.A.A., pueden comunicarse directamente al WhatsApp tres diecis\xE9is, seis cincuenta y seis, noventa y siete diecinueve, para coordinar una Consultor\xEDa Personalizada con nuestro br\xF3ker en VECY BIENES RA\xCDCES. \xA1Disfruten de su fin de semana y a recargar energ\xEDas!`;
     const guion = await generateDynamicVoiceScript("sabado_cafe", fallback);
     try {
-      await janiaMatchBot.sendVoiceToGroup(guion, janiaMatchBot.buzonGroupId);
+      await janiaMatchBot.sendVoiceToBuzonAndChannel(guion);
     } catch (e) {
       console.error("[CRON-SERVICE] Error enviando audio de S\xE1bado:", e.message);
     }
@@ -15610,7 +15627,7 @@ Invita a que env\xEDen sus dudas o documentos en PDF al grupo para revisarlos.`,
 Elige AL AZAR un tema pr\xE1ctico y pedag\xF3gico:
 1. C\xF3mo redactar publicaciones completas en WhatsApp para que no se pierdan en el chat (los 7 pilares: tipo de inmueble, ciudad y barrio exacto, precio/canon y administraci\xF3n, \xE1rea en m2, habitaciones, ba\xF1os, garajes independientes/lineales y contacto directo).
 2. Explicar con mucha calidez y entusiasmo que cuando publican con todos los datos, facilitan que toda la comunidad y el sistema encuentren parejas comerciales de inmediato.
-3. Sembrar sutilmente la expectativa y dar pistas de que JanIA ya est\xE1 analizando todas las publicaciones en segundo plano y encontrando decenas de coincidencias, y que muy pronto nuestros directores y asesores de cierre, Jani Alves y Eduardo, estar\xE1n contactando de forma personalizada a los colegas con matches activos para conectar las dos puntas y ayudarlos a cerrar sus comisiones en tiempo r\xE9cord.
+3. Sembrar sutilmente la expectativa y dar pistas de que JanIA ya est\xE1 analizando todas las publicaciones en segundo plano y encontrando decenas de coincidencias, y que muy pronto nuestros asesores y directores de cierre de VECY Network estar\xE1n contactando de forma personalizada a los colegas con matches activos para conectar las dos puntas y ayudarlos a cerrar sus comisiones en tiempo r\xE9cord.
 Recuerda que JanIA los asesora a redactar anuncios de alto impacto directamente en el grupo.`,
     jueves_tributario: `Redacta un guion de audio con un TIP TRIBUTARIO INMOBILIARIO DIAN para hoy ${fechaBogota} en Colombia.
 Elige AL AZAR un tema fiscal: (ej. exenci\xF3n de 5.000 UVT en ganancia ocasional por venta de vivienda habitual, c\xE1lculo de retenci\xF3n en la fuente del 1%, c\xF3mo deducir mejoras con facturas electr\xF3nicas, impuesto de timbre o actualizaci\xF3n de costo fiscal).
@@ -15622,7 +15639,7 @@ Inv\xEDtalos a enviar fichas del SINUPOT en PDF o consultar precios de mercado.`
 Objetivo: Felicitar a los corredores por la gesti\xF3n semanal, recordar que para casos complejos, sucesiones, peritajes o aval\xFAos oficiales certificados pueden contactar directamente por WhatsApp al tres diecis\xE9is, seis cincuenta y seis, noventa y siete diecinueve para consultor\xEDas personalizadas con el br\xF3ker de VECY BIENES RA\xCDCES.`,
     inmuebles_network: `Redacta un guion de audio comercial din\xE1mico para el grupo principal "VECY INMUEBLES NETWORK" para hoy ${fechaBogota}.
 Objetivo: Motivar la publicaci\xF3n activa de ofertas y requerimientos con datos completos (precio real, barrio exacto, metraje y caracter\xEDsticas clave), recordando que JanIA cruza datos en tiempo real.
-Dar la primicia de que ya se est\xE1n detectando m\xFAltiples coincidencias en la red y que muy pronto el equipo comercial de VECY liderado por Jani Alves y Eduardo se comunicar\xE1 directamente con las partes para coordinar los acercamientos y cierres de negocios.`,
+Dar la primicia de que ya se est\xE1n detectando m\xFAltiples coincidencias en la red y que muy pronto nuestro equipo de asesores de cierre de VECY Network se comunicar\xE1 directamente con las partes para coordinar los acercamientos y cierres de negocios.`,
     proyecto_vecy: `Redacta un guion de audio institucional y visionario para el grupo "PROYECTO Vecy Network" para hoy ${fechaBogota}.
 Objetivo: Inspirar a la comunidad, destacar el modelo colaborativo fintech de comisiones del 3% (35/35/15/15), la tecnolog\xEDa de JanIA, invitar a debatir y sugerir ideas de mejora tecnol\xF3gica directamente a los fundadores.`
   };

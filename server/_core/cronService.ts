@@ -43,11 +43,11 @@ export function initCronScheduler() {
 
   // 🚀 LUNES 08:00 AM — Arranque Semanal & Convocatoria de Aliados
   cron.schedule('0 8 * * 1', async () => {
-    console.log('[CRON-SERVICE] Generando audio dinámico de Lunes para SOPORTE LEGAL Y MARKETING...');
+    console.log('[CRON-SERVICE] Generando audio dinámico de Lunes para SOPORTE LEGAL, MARKETING Y CANAL...');
     const fallback = `¡Buenos días a todos y a todas! Soy JanIA. Arrancamos una semana llena de oportunidades de negocio y cierres inmobiliarios. Recuerden que este espacio es su consultorio permanente: aquí pueden preguntarme por texto o nota de voz sobre leyes inmobiliarias, cómo liquidar la ganancia ocasional ante la DIAN, avalúos de mercado o cómo redactar un anuncio de alto impacto para sus inmuebles y requerimientos. La información es poder en los negocios. Los invito a que no se queden con dudas hoy y a que compartan el enlace de este grupo con sus colegas de confianza: entre más asesores capacitados seamos, más blindados y profesionales cerramos negocios en Colombia. ¡Que tengan una semana extraordinaria y productiva!`;
     const guion = await generateDynamicVoiceScript('lunes_arranque', fallback);
     try {
-      await whatsappBot.sendVoiceToGroup(guion, whatsappBot.buzonGroupId);
+      await whatsappBot.sendVoiceToBuzonAndChannel(guion);
     } catch (e: any) {
       console.error('[CRON-SERVICE] Error enviando audio de Lunes:', e.message);
     }
@@ -59,7 +59,7 @@ export function initCronScheduler() {
     const fallback = `Hola, colegas. Soy JanIA con su tip jurídico del día. ¿Sabían que un simple correo electrónico con la hoja de presentación del cliente o el acuerdo de puntas compartidas tiene plena validez probatoria bajo la Ley 527 de 1999? Nunca muestren un inmueble sin dejar registro escrito. Si tienen dudas sobre una promesa de compraventa, una restitución o cómo redactar una minuta, pregúntenme aquí mismo o envíenme el documento en PDF y lo revisamos juntos al instante.`;
     const guion = await generateDynamicVoiceScript('martes_juridico', fallback);
     try {
-      await whatsappBot.sendVoiceToGroup(guion, whatsappBot.buzonGroupId);
+      await whatsappBot.sendVoiceToBuzonAndChannel(guion);
     } catch (e: any) {
       console.error('[CRON-SERVICE] Error enviando audio de Martes:', e.message);
     }
@@ -71,7 +71,7 @@ export function initCronScheduler() {
     const fallback = `¡Buenas tardes, equipo! Soy JanIA con su tip de Marketing Inmobiliario. El ochenta por ciento de los clientes y colegas descartan una publicación si no tiene el precio claro, el barrio exacto o el metraje. Si quieren que sus ofertas y requerimientos se cierren en tiempo récord, incluyan siempre los siete pilares: tipo de inmueble, barrio y ciudad, precio y administración, área en metros cuadrados, habitaciones, garajes independientes o en línea, y su enlace directo de WhatsApp. ¿Tienen un inmueble difícil de mover? Escríbanme los datos y les ayudo a redactar un copy persuasivo hoy mismo.`;
     const guion = await generateDynamicVoiceScript('miercoles_marketing', fallback);
     try {
-      await whatsappBot.sendVoiceToGroup(guion, whatsappBot.buzonGroupId);
+      await whatsappBot.sendVoiceToBuzonAndChannel(guion);
     } catch (e: any) {
       console.error('[CRON-SERVICE] Error enviando audio de Miércoles:', e.message);
     }
@@ -83,7 +83,7 @@ export function initCronScheduler() {
     const fallback = `Hola a todos. Soy JanIA con un consejo financiero clave para sus clientes vendedores. Al vender vivienda de habitación, pueden deducir hasta cinco mil UVT exentas del impuesto de ganancia ocasional si los fondos se destinan a la compra de otra vivienda o abono a crédito hipotecario. Si quieren saber exactamente cuánto debe pagar su cliente en retención en la fuente o ganancia ocasional antes de firmar escrituras, consúltenme aquí y les hago la liquidación en segundos.`;
     const guion = await generateDynamicVoiceScript('jueves_tributario', fallback);
     try {
-      await whatsappBot.sendVoiceToGroup(guion, whatsappBot.buzonGroupId);
+      await whatsappBot.sendVoiceToBuzonAndChannel(guion);
     } catch (e: any) {
       console.error('[CRON-SERVICE] Error enviando audio de Jueves:', e.message);
     }
@@ -95,7 +95,7 @@ export function initCronScheduler() {
     const fallback = `¡Excelente viernes, colegas! Soy JanIA. ¿Tienen un lote o casa para desarrollo y no saben qué altura o uso permite el POT? No se queden con la duda: descarguen la ficha catastral del SINUPOT en PDF y envíenmela por WhatsApp en privado; yo les hago el estudio normativo de uso de suelo al instante. Y para estimar el valor del metro cuadrado en cualquier sector, aquí estoy para asesorarlos.`;
     const guion = await generateDynamicVoiceScript('viernes_avaluos', fallback);
     try {
-      await whatsappBot.sendVoiceToGroup(guion, whatsappBot.buzonGroupId);
+      await whatsappBot.sendVoiceToBuzonAndChannel(guion);
     } catch (e: any) {
       console.error('[CRON-SERVICE] Error enviando audio de Viernes:', e.message);
     }
@@ -107,7 +107,7 @@ export function initCronScheduler() {
     const fallback = `Buenos días, aliados de la red. Cerramos semana de gran actividad comercial. Recuerden que para casos jurídicos de alta complejidad, sucesiones litigiosas, saneamientos o avalúos certificados por perito de Lonja con R.A.A., pueden comunicarse directamente al WhatsApp tres dieciséis, seis cincuenta y seis, noventa y siete diecinueve, para coordinar una Consultoría Personalizada con nuestro bróker en VECY BIENES RAÍCES. ¡Disfruten de su fin de semana y a recargar energías!`;
     const guion = await generateDynamicVoiceScript('sabado_cafe', fallback);
     try {
-      await whatsappBot.sendVoiceToGroup(guion, whatsappBot.buzonGroupId);
+      await whatsappBot.sendVoiceToBuzonAndChannel(guion);
     } catch (e: any) {
       console.error('[CRON-SERVICE] Error enviando audio de Sábado:', e.message);
     }
@@ -169,7 +169,7 @@ Invita a que envíen sus dudas o documentos en PDF al grupo para revisarlos.`,
 Elige AL AZAR un tema práctico y pedagógico:
 1. Cómo redactar publicaciones completas en WhatsApp para que no se pierdan en el chat (los 7 pilares: tipo de inmueble, ciudad y barrio exacto, precio/canon y administración, área en m2, habitaciones, baños, garajes independientes/lineales y contacto directo).
 2. Explicar con mucha calidez y entusiasmo que cuando publican con todos los datos, facilitan que toda la comunidad y el sistema encuentren parejas comerciales de inmediato.
-3. Sembrar sutilmente la expectativa y dar pistas de que JanIA ya está analizando todas las publicaciones en segundo plano y encontrando decenas de coincidencias, y que muy pronto nuestros directores y asesores de cierre, Jani Alves y Eduardo, estarán contactando de forma personalizada a los colegas con matches activos para conectar las dos puntas y ayudarlos a cerrar sus comisiones en tiempo récord.
+3. Sembrar sutilmente la expectativa y dar pistas de que JanIA ya está analizando todas las publicaciones en segundo plano y encontrando decenas de coincidencias, y que muy pronto nuestros asesores y directores de cierre de VECY Network estarán contactando de forma personalizada a los colegas con matches activos para conectar las dos puntas y ayudarlos a cerrar sus comisiones en tiempo récord.
 Recuerda que JanIA los asesora a redactar anuncios de alto impacto directamente en el grupo.`,
 
     jueves_tributario: `Redacta un guion de audio con un TIP TRIBUTARIO INMOBILIARIO DIAN para hoy ${fechaBogota} en Colombia.
@@ -185,7 +185,7 @@ Objetivo: Felicitar a los corredores por la gestión semanal, recordar que para 
 
     inmuebles_network: `Redacta un guion de audio comercial dinámico para el grupo principal "VECY INMUEBLES NETWORK" para hoy ${fechaBogota}.
 Objetivo: Motivar la publicación activa de ofertas y requerimientos con datos completos (precio real, barrio exacto, metraje y características clave), recordando que JanIA cruza datos en tiempo real.
-Dar la primicia de que ya se están detectando múltiples coincidencias en la red y que muy pronto el equipo comercial de VECY liderado por Jani Alves y Eduardo se comunicará directamente con las partes para coordinar los acercamientos y cierres de negocios.`,
+Dar la primicia de que ya se están detectando múltiples coincidencias en la red y que muy pronto nuestro equipo de asesores de cierre de VECY Network se comunicará directamente con las partes para coordinar los acercamientos y cierres de negocios.`,
 
     proyecto_vecy: `Redacta un guion de audio institucional y visionario para el grupo "PROYECTO Vecy Network" para hoy ${fechaBogota}.
 Objetivo: Inspirar a la comunidad, destacar el modelo colaborativo fintech de comisiones del 3% (35/35/15/15), la tecnología de JanIA, invitar a debatir y sugerir ideas de mejora tecnológica directamente a los fundadores.`
