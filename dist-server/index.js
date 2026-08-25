@@ -525,12 +525,14 @@ async function getDb() {
         // Requerido por Supabase pooler (pgBouncer)
         connect_timeout: 10,
         // 10 segundos máximo para conectar
-        idle_timeout: 20,
-        // Cerrar conexiones inactivas tras 20 segundos
+        idle_timeout: 30,
+        // Cerrar conexiones inactivas tras 30 segundos
         max_lifetime: 1800,
         // Reciclar conexiones cada 30 minutos
-        max: 15,
-        // Máximo 15 conexiones simultáneas al pool de Supabase para evitar exhaustion
+        max: 20,
+        // Máximo 20 conexiones simultáneas al pool de Supabase
+        fetch_types: false,
+        // Evitar queries de introspección redundantes
         onnotice: () => {
         }
         // Silenciar NOTICEs innecesarios de PostgreSQL
@@ -12800,7 +12802,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v25.5";
+var VECY_VERSION = "v25.6";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 
@@ -13469,6 +13471,14 @@ init_voiceTranscription();
 import axios7 from "axios";
 import fs7 from "fs";
 import path7 from "path";
+var cachedAllMatchesData = null;
+var cachedAllMatchesTime = 0;
+var cachedBotStatusData = null;
+var cachedBotStatusTime = 0;
+function invalidateAdminMatchesCache() {
+  cachedAllMatchesTime = 0;
+  cachedAllMatchesData = null;
+}
 var janIARouter = router({
   // New: Extract property data from link
   extractFromLink: publicProcedure.input(z2.object({ url: z2.string().url() })).mutation(async ({ input }) => {
@@ -13787,8 +13797,15 @@ ${liveStats}${userContextInstruction}
   }),
   // Get all matches in the network
   getAllMatches: publicProcedure.query(async () => {
+    const now = Date.now();
+    if (cachedAllMatchesData && now - cachedAllMatchesTime < 2e4) {
+      return cachedAllMatchesData;
+    }
     const db = await getDb();
-    if (!db) throw new Error("Database not available");
+    if (!db) {
+      if (cachedAllMatchesData) return cachedAllMatchesData;
+      throw new Error("Database not available");
+    }
     try {
       const matches = await db.select({
         id: propertyMatches.id,
@@ -13896,10 +13913,11 @@ ${liveStats}${userContextInstruction}
           matchExplanation: evaluation
         });
       }
+      let finalMatches = validEvaluatedMatches;
       const propertyIds = validEvaluatedMatches.map((m) => m.property.id).filter(Boolean);
       if (propertyIds.length > 0) {
         const histories = await db.select().from(propertyPublicationHistory).where(inArray(propertyPublicationHistory.propertyId, propertyIds)).orderBy(desc2(propertyPublicationHistory.fecha));
-        return validEvaluatedMatches.map((m) => {
+        finalMatches = validEvaluatedMatches.map((m) => {
           const propertyHistory = histories.filter((h) => h.propertyId === m.property.id);
           return {
             ...m,
@@ -13910,8 +13928,11 @@ ${liveStats}${userContextInstruction}
           };
         });
       }
-      return validEvaluatedMatches;
+      cachedAllMatchesData = finalMatches;
+      cachedAllMatchesTime = Date.now();
+      return finalMatches;
     } catch (error) {
+      if (cachedAllMatchesData) return cachedAllMatchesData;
       console.error("Error getting all matches:", error);
       throw error;
     }
@@ -13959,6 +13980,7 @@ ${liveStats}${userContextInstruction}
         console.warn(`[JanIA-UpdateProperty] Advertencia en propagaci\xF3n de tel\xE9fono:`, propErr?.message);
       }
     }
+    invalidateAdminMatchesCache();
     return { success: true, message: "Propiedad actualizada y tel\xE9fono propagado con \xE9xito" };
   }),
   // Actualizar datos prediales de un requerimiento demanda directamente desde la Mesa de Cotejo
@@ -14003,6 +14025,7 @@ ${liveStats}${userContextInstruction}
         console.warn(`[JanIA-UpdateRequirement] Advertencia en propagaci\xF3n de tel\xE9fono:`, propErr?.message);
       }
     }
+    invalidateAdminMatchesCache();
     return { success: true, message: "Requerimiento actualizado y tel\xE9fono propagado con \xE9xito" };
   }),
   // Recalcular cruces y afinidad predial para Oferta y/o Demanda tras edición en Mesa de Cotejo
@@ -14010,6 +14033,7 @@ ${liveStats}${userContextInstruction}
     propertyId: z2.number().optional().nullable(),
     requirementId: z2.number().optional().nullable()
   })).mutation(async ({ input }) => {
+    invalidateAdminMatchesCache();
     let propMatchesCount = 0;
     let reqMatchesCount = 0;
     if (input.propertyId) {
@@ -14175,8 +14199,12 @@ ${liveStats}${userContextInstruction}
   }),
   // Get current WhatsApp bot connection status and ingestion stats
   getBotStatus: publicProcedure.query(async () => {
+    const now = Date.now();
+    if (cachedBotStatusData && now - cachedBotStatusTime < 15e3) {
+      return cachedBotStatusData;
+    }
     const db = await getDb();
-    if (!db) return { isReady: true, phone: "573192919978", todayProperties: 0, todayRequirements: 0 };
+    if (!db) return cachedBotStatusData || { isReady: true, phone: "573192919978", todayProperties: 0, todayRequirements: 0 };
     try {
       let isReady = true;
       let phone = "573192919978";
@@ -14189,13 +14217,17 @@ ${liveStats}${userContextInstruction}
       }
       const [propTodayCount] = await db.select({ count: sql4`count(*)::int` }).from(properties).where(sql4`DATE(${properties.createdAt} AT TIME ZONE 'America/Bogota') = CURRENT_DATE`);
       const [reqTodayCount] = await db.select({ count: sql4`count(*)::int` }).from(requirements).where(sql4`DATE(${requirements.createdAt} AT TIME ZONE 'America/Bogota') = CURRENT_DATE`);
-      return {
+      const result = {
         isReady,
         phone,
         todayProperties: propTodayCount?.count || 0,
         todayRequirements: reqTodayCount?.count || 0
       };
+      cachedBotStatusData = result;
+      cachedBotStatusTime = Date.now();
+      return result;
     } catch (error) {
+      if (cachedBotStatusData) return cachedBotStatusData;
       console.error("[BotStatus] Error checking bot status:", error);
       return { isReady: true, phone: "573192919978", todayProperties: 0, todayRequirements: 0 };
     }
