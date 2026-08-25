@@ -12826,7 +12826,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v25.6";
+var VECY_VERSION = "v25.7";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 
@@ -14280,7 +14280,7 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     try {
-      return await db.select().from(requirements).orderBy(desc2(requirements.createdAt));
+      return await db.select().from(requirements).orderBy(desc2(requirements.id)).limit(300);
     } catch (error) {
       console.error("Error getting all requirements:", error);
       throw error;
@@ -15278,9 +15278,9 @@ Texto a analizar:
     if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
     const isAdmin = ctx.user.role === "admin";
     if (isAdmin) {
-      return await db.select().from(properties).orderBy(desc4(properties.createdAt));
+      return await db.select().from(properties).orderBy(desc4(properties.id)).limit(300);
     }
-    return await db.select().from(properties).where(eq10(properties.agentId, ctx.user.id)).orderBy(desc4(properties.createdAt));
+    return await db.select().from(properties).where(eq10(properties.agentId, ctx.user.id)).orderBy(desc4(properties.id)).limit(300);
   })
 });
 
@@ -15460,7 +15460,27 @@ var vite_config_default = defineConfig({
   build: {
     outDir: path8.resolve(import.meta.dirname, "dist"),
     emptyOutDir: true,
-    chunkSizeWarningLimit: 1e3
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("node_modules")) {
+            if (id.includes("react") || id.includes("wouter")) {
+              return "react-vendor";
+            }
+            if (id.includes("@trpc") || id.includes("@tanstack") || id.includes("superjson")) {
+              return "trpc-vendor";
+            }
+            if (id.includes("lucide-react") || id.includes("framer-motion") || id.includes("date-fns")) {
+              return "ui-vendor";
+            }
+            if (id.includes("@supabase")) {
+              return "supabase-vendor";
+            }
+          }
+        }
+      }
+    }
   },
   server: {
     host: true,

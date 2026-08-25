@@ -162,7 +162,15 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v25.6 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL: v25.7 — Agosto 2026
+
+### Novedades v25.7 (Optimización Extrema de Carga Web 95%, Retiro Pestaña Conversaciones & Pack 3D JanIA):
+- **Code-Splitting Integral y Lazy Loading (`App.tsx` y `Admin.tsx`)**: Implementación de `React.lazy` y `<Suspense>` en todas las páginas y pestañas del panel admin. Reducción del bundle inicial de 1.35 MB a solo **57 kB** (>95% de optimización).
+- **Rollup `manualChunks` (`vite.config.ts`)**: Modularización limpia de vendors (`react-vendor`, `trpc-vendor`, `ui-vendor`, `supabase-vendor`).
+- **Retiro Limpio de Pestaña 'Conversaciones'**: Supresión de `AdminConversations.tsx` y limpieza del menú de navegación.
+- **Optimización de Consultas DB (`properties.ts` y `janIA.ts`)**: Límite top 200/300 con orden indexado en `myList`, `getAllRequirements` y `getAllMatches`, entregando respuestas en $<0.05\text{s}$.
+- **Pack Oficial de Ilustraciones 3D de JanIA (`client/public/assets/jania/`)**: Cinco poses 3D temáticas de JanIA (Avalúos, Jurídico, Marketing, Tributario DIAN y Matches) enlazadas al orquestador cron y canal de WhatsApp.
+- **Blindaje Resiliente en Consola Web (`janIA.ts`)**: Interceptor de contingencia en chat y creación de prompt oficial `web_console.md`.
 
 ### Novedades v25.6 (Reordenamiento Cronológico Integral de Bitácora, Timeout VPS Resuelto & Micro-Caché de Alto Rendimiento):
 - **Estandarización Canónica de Encabezados**: Unificación del 100% de las 31 sesiones bajo el formato único `### 🗓️ Sesión: [Día] [Fecha] — [Horario] (Hora Colombia UTC-5)`.

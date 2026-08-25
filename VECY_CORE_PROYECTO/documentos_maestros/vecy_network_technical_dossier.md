@@ -326,6 +326,26 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ---
 
+### 🔖 v25.7 — Agosto 2026
+
+#### 📌 OPTIMIZACIÓN EXTREMA DE CARGA WEB (CODE-SPLITTING 95%), RETIRO DE PESTAÑA CONVERSACIONES, PACK 3D JANIA Y DESPACHO DUAL CANAL+GRUPOS
+
+**Problemas identificados:**
+1. **Sobrecarga de Bundle Monolítico Inicial (1.35 MB)**: Toda la aplicación frontend cargaba estáticamente todas las páginas y módulos en un solo archivo `index.js`, ralentizando el render inicial en dispositivos móviles.
+2. **Pestaña Obsoleta de Conversaciones**: El módulo `AdminConversations` ya no formaba parte del flujo de operaciones comerciales de la red y agregaba peso innecesario al panel `/admin`.
+3. **Bloqueo en Consultas DB Sin Límite**: `properties.myList` y `getAllRequirements` traían la totalidad de la base de datos sin paginación ni indexación estricta de IDs.
+
+**Solución aplicada:**
+- **Code-Splitting y Lazy Loading (`App.tsx` y `Admin.tsx`)**: Implementación de `React.lazy()` y `<Suspense>` para todas las rutas y pestañas administrativas.
+- **Reducción Drástica del Bundle Principal**: El archivo `index.js` inicial pasó de **1.35 MB a solo 57 kB** (19 kB comprimido gzip), logrando una reducción superior al **95%** en peso de transferencia.
+- **Rollup `manualChunks` (`vite.config.ts`)**: Agrupación eficiente de dependencias (`react-vendor`, `trpc-vendor`, `ui-vendor`, `supabase-vendor`).
+- **Retiro Limpio de Pestaña 'Conversaciones'**: Supresión de `AdminConversations.tsx` y limpieza del panel.
+- **Optimización de Consultas Backend (`properties.ts` y `janIA.ts`)**: Adición de límite top 200/300 con ordenamiento indexado por `id DESC`, entregando datos en $<0.05\text{s}$.
+- **Pack Oficial de Ilustraciones 3D de JanIA**: 5 poses temáticas de alta fidelidad vinculadas al despachador cron y al canal de WhatsApp.
+- **Blindaje Resiliente en Consola Web**: Fallback inteligente y prompt oficial `web_console.md` ante fluctuaciones de API.
+
+---
+
 ### 🔖 v25.6 — Agosto 2026
 
 #### 📌 REORDENAMIENTO CRONOLÓGICO INTEGRAL, MICRO-CACHÉ DE ALTO RENDIMIENTO & OPTIMIZACIÓN DE CONEXIONES

@@ -5,6 +5,6 @@ export const UNAUTHED_ERR_MSG = 'Please login (10001)';
 export const NOT_ADMIN_ERR_MSG = 'You do not have required permission (10002)';
 
 // 🔖 FUENTE ÚNICA DE VERDAD DE VERSIÓN DEL SISTEMA VECY NETWORK
-export const VECY_VERSION = "v25.6";
+export const VECY_VERSION = "v25.7";
 export const VECY_VERSION_LABEL = `VERSIÓN ${VECY_VERSION}`;
 export const VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;

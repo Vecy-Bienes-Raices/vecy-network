@@ -18,7 +18,27 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist"),
     emptyOutDir: true,
-    chunkSizeWarningLimit: 1000,
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('wouter')) {
+              return 'react-vendor';
+            }
+            if (id.includes('@trpc') || id.includes('@tanstack') || id.includes('superjson')) {
+              return 'trpc-vendor';
+            }
+            if (id.includes('lucide-react') || id.includes('framer-motion') || id.includes('date-fns')) {
+              return 'ui-vendor';
+            }
+            if (id.includes('@supabase')) {
+              return 'supabase-vendor';
+            }
+          }
+        },
+      },
+    },
   },
 
   server: {

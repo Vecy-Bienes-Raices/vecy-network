@@ -1,26 +1,35 @@
-import React, { useState } from 'react';
+import React, { useState, Suspense, lazy } from 'react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useLocation } from 'wouter';
 import { getLoginUrl } from '@/const';
 import {
-  LogOut, Home, Building2, Users, MessageSquare, BarChart3, Menu, X, GitBranch, Shield, Sparkles, ClipboardList, Radio, PanelLeftClose, PanelLeft
+  LogOut, Home, Building2, Users, BarChart3, Menu, GitBranch, Shield, Sparkles, ClipboardList, Radio, PanelLeftClose
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
-import AdminProperties from '@/components/admin/AdminProperties';
-import AdminLeads from '@/components/admin/AdminLeads';
-import AdminConversations from '@/components/admin/AdminConversations';
-import AdminReports from '@/components/admin/AdminReports';
-import AdminGitHubSync from '@/components/admin/AdminGitHubSync';
-import AdminMatches from '@/components/admin/AdminMatches';
-import AdminRequirements from '@/components/admin/AdminRequirements';
 import { getColombiaCurrentDateString } from '@/lib/dateUtils';
+
+// Lazy loading modular de cada pestaña del panel administrativo para máxima velocidad
+const AdminProperties = lazy(() => import('@/components/admin/AdminProperties'));
+const AdminRequirements = lazy(() => import('@/components/admin/AdminRequirements'));
+const AdminMatches = lazy(() => import('@/components/admin/AdminMatches'));
+const AdminLeads = lazy(() => import('@/components/admin/AdminLeads'));
+const AdminReports = lazy(() => import('@/components/admin/AdminReports'));
+const AdminGitHubSync = lazy(() => import('@/components/admin/AdminGitHubSync'));
+
+function TabLoadingSkeleton() {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[300px] w-full gap-3 py-12">
+      <div className="w-8 h-8 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />
+      <p className="text-zinc-400 text-xs font-mono uppercase tracking-widest animate-pulse">Cargando módulo...</p>
+    </div>
+  );
+}
 
 const tabs = [
   { id: 'properties', label: 'Inmuebles', icon: Building2 },
   { id: 'requirements', label: 'Requerimientos', icon: ClipboardList },
   { id: 'matches', label: 'Coincidencias', icon: Sparkles },
   { id: 'leads', label: 'Prospectos', icon: Users },
-  { id: 'conversations', label: 'Conversaciones', icon: MessageSquare },
   { id: 'reports', label: 'Reportes', icon: BarChart3 },
   { id: 'github', label: 'GitHub Sync', icon: GitBranch },
 ];
@@ -155,16 +164,22 @@ export default function Admin() {
   }
 
   const renderContent = () => {
+    let Component;
     switch (activeTab) {
-      case 'properties':    return <AdminProperties />;
-      case 'requirements':  return <AdminRequirements />;
-      case 'matches':       return <AdminMatches />;
-      case 'github':        return <AdminGitHubSync />;
-      case 'leads':         return <AdminLeads />;
-      case 'conversations': return <AdminConversations />;
-      case 'reports':       return <AdminReports />;
-      default:              return <AdminProperties />;
+      case 'properties':    Component = <AdminProperties />; break;
+      case 'requirements':  Component = <AdminRequirements />; break;
+      case 'matches':       Component = <AdminMatches />; break;
+      case 'github':        Component = <AdminGitHubSync />; break;
+      case 'leads':         Component = <AdminLeads />; break;
+      case 'reports':       Component = <AdminReports />; break;
+      default:              Component = <AdminProperties />; break;
     }
+
+    return (
+      <Suspense fallback={<TabLoadingSkeleton />}>
+        {Component}
+      </Suspense>
+    );
   };
 
   return (

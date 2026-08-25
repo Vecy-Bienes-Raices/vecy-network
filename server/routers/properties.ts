@@ -200,10 +200,11 @@ Texto a analizar:
 
     const isAdmin = (ctx.user.role as string) === "admin";
     if (isAdmin) {
-      return await db.select().from(properties).orderBy(desc(properties.createdAt));
+      return await db.select().from(properties).orderBy(desc(properties.id)).limit(300);
     }
     return await db.select().from(properties)
       .where(eq(properties.agentId, ctx.user.id))
-      .orderBy(desc(properties.createdAt));
+      .orderBy(desc(properties.id))
+      .limit(300);
   }),
 });

@@ -1,57 +1,71 @@
 // @ts-nocheck
-import React, { useEffect } from "react";
+import React, { useEffect, Suspense, lazy } from "react";
 import { supabase } from "@/lib/supabase";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import NotFound from "@/pages/NotFound";
-import Admin from "@/pages/Admin";
-import Login from "@/pages/Login";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import Home from "./pages/Home";
-import PropertyDetail from "./pages/PropertyDetail";
-import Properties from "./pages/Properties";
-import Blog from "./pages/Blog";
-import Investors from "./pages/Investors";
-import Services from "./pages/Services";
-import Contact from "./pages/Contact";
-import AgentDashboard from "./pages/AgentDashboard";
-import StealthPropertyView from "./pages/StealthPropertyView";
-import UnbrandedFicha from "./pages/UnbrandedFicha";
-import Agenda from "./pages/Agenda";
-import RedColaboracion from "./pages/RedColaboracion";
-import RequirementsMarketplace from "./pages/RequirementsMarketplace";
-import NuestraHistoria from "./pages/NuestraHistoria";
-import JanIAConsole from "./pages/JanIAConsole";
 import ScrollToTop from "./components/ScrollToTop";
 import JanIAFloatingButton from "./components/JanIAFloatingButton";
 
-function Router() {
-  // make sure to consider if you need authentication for certain routes
+// Rutas críticas cargadas de forma prioritaria
+import Home from "./pages/Home";
+
+// Rutas secundarias con Code-Splitting / Lazy Loading automático
+const Properties = lazy(() => import("./pages/Properties"));
+const PropertyDetail = lazy(() => import("./pages/PropertyDetail"));
+const Blog = lazy(() => import("./pages/Blog"));
+const Investors = lazy(() => import("./pages/Investors"));
+const Services = lazy(() => import("./pages/Services"));
+const Contact = lazy(() => import("./pages/Contact"));
+const Admin = lazy(() => import("./pages/Admin"));
+const Login = lazy(() => import("./pages/Login"));
+const AgentDashboard = lazy(() => import("./pages/AgentDashboard"));
+const StealthPropertyView = lazy(() => import("./pages/StealthPropertyView"));
+const UnbrandedFicha = lazy(() => import("./pages/UnbrandedFicha"));
+const Agenda = lazy(() => import("./pages/Agenda"));
+const RedColaboracion = lazy(() => import("./pages/RedColaboracion"));
+const RequirementsMarketplace = lazy(() => import("./pages/RequirementsMarketplace"));
+const NuestraHistoria = lazy(() => import("./pages/NuestraHistoria"));
+const JanIAConsole = lazy(() => import("./pages/JanIAConsole"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+
+function PageLoadingFallback() {
   return (
-    <Switch>
-      <Route path={"/"} component={Home} />
-      <Route path={"/properties"} component={Properties} />
-      <Route path={"/property/:id"} component={PropertyDetail} />
-      <Route path={"/blog"} component={Blog} />
-      <Route path={"/investors"} component={Investors} />
-      <Route path={"/services"} component={Services} />
-      <Route path={"/contact"} component={Contact} />
-      <Route path={"/admin"} component={Admin} />
-      <Route path={"/login"} component={Login} />
-      <Route path={"/agent-dashboard"} component={AgentDashboard} />
-      <Route path={"/p/:token"} component={StealthPropertyView} />
-      <Route path={"/ficha/:id"} component={UnbrandedFicha} />
-      <Route path={"/agenda/:propertyId"} component={Agenda} />
-      <Route path={"/red-colaboracion"} component={RedColaboracion} />
-      <Route path={"/requerimientos"} component={RequirementsMarketplace} />
-      <Route path={"/historia"} component={NuestraHistoria} />
-      <Route path={"/jania"} component={JanIAConsole} />
-      <Route path={"/404"} component={NotFound} />
-      {/* Final fallback route */}
-      <Route component={NotFound} />
-    </Switch>
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-3">
+      <div className="w-9 h-9 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />
+      <p className="text-zinc-400 text-xs font-mono uppercase tracking-widest animate-pulse">Cargando...</p>
+    </div>
+  );
+}
+
+function Router() {
+  return (
+    <Suspense fallback={<PageLoadingFallback />}>
+      <Switch>
+        <Route path={"/"} component={Home} />
+        <Route path={"/properties"} component={Properties} />
+        <Route path={"/property/:id"} component={PropertyDetail} />
+        <Route path={"/blog"} component={Blog} />
+        <Route path={"/investors"} component={Investors} />
+        <Route path={"/services"} component={Services} />
+        <Route path={"/contact"} component={Contact} />
+        <Route path={"/admin"} component={Admin} />
+        <Route path={"/login"} component={Login} />
+        <Route path={"/agent-dashboard"} component={AgentDashboard} />
+        <Route path={"/p/:token"} component={StealthPropertyView} />
+        <Route path={"/ficha/:id"} component={UnbrandedFicha} />
+        <Route path={"/agenda/:propertyId"} component={Agenda} />
+        <Route path={"/red-colaboracion"} component={RedColaboracion} />
+        <Route path={"/requerimientos"} component={RequirementsMarketplace} />
+        <Route path={"/historia"} component={NuestraHistoria} />
+        <Route path={"/jania"} component={JanIAConsole} />
+        <Route path={"/404"} component={NotFound} />
+        {/* Final fallback route */}
+        <Route component={NotFound} />
+      </Switch>
+    </Suspense>
   );
 }
 

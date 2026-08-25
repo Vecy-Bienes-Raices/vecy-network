@@ -1043,7 +1043,8 @@ export const janIARouter = router({
       return await db
         .select()
         .from(requirements)
-        .orderBy(desc(requirements.createdAt));
+        .orderBy(desc(requirements.id))
+        .limit(300);
     } catch (error) {
       console.error('Error getting all requirements:', error);
       throw error;
