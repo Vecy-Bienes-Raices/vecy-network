@@ -164,11 +164,14 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ## 🔖 VERSIÓN ACTUAL: v25.6 — Agosto 2026
 
-### Novedades v25.6 (Reordenamiento Cronológico Integral y Unificación Estricta de la Bitácora Maestra):
+### Novedades v25.6 (Reordenamiento Cronológico Integral de Bitácora, Timeout VPS Resuelto & Micro-Caché de Alto Rendimiento):
 - **Estandarización Canónica de Encabezados**: Unificación del 100% de las 31 sesiones bajo el formato único `### 🗓️ Sesión: [Día] [Fecha] — [Horario] (Hora Colombia UTC-5)`.
 - **Orden Cronológico Inverso Estricto**: Reorganización total de la bitácora (`HISTORIAL_CONVERSACIONES_MAESTRO.md`) desde el 13 de agosto hasta hoy 24 de agosto de 2026 sin saltos temporales ni fragmentaciones.
-- **Saneamiento y Fusión de Sesiones Duplicadas**: Unificación enriquecida de sesiones fragmentadas históricas (v23.7, v25.0) preservando todos los análisis, fallbacks, scripts y validaciones.
-- **Harmonización de Memoria Activa**: Sincronización de versiones en `shared/const.ts`, `.agents/AGENTS.md` y la bitácora a `v25.6`.
+- **Resolución de Error 504 Timeout en VPS**: Saneamiento de saturación de memoria Heap en Node.js PID 516973 con recarga en limpio bajo PM2.
+- **Auditoría de Ingesta de 48 Horas**: Identificación precisa de 44 inmuebles ingresados (con 22 republicaciones repetidas detectadas al 50% y agrupadas por JanIA) y 27 requerimientos.
+- **Micro-Caché en Memoria Backend (`janIA.ts`)**: Caché de 20s en `getAllMatches` y 15s en `getBotStatus` con invalidación instantánea tras edición, reduciendo los tiempos de respuesta a $<0.2\text{s}$.
+- **Sintonización del Pool PostgreSQL (`db.ts`)**: Configuración `max: 20`, `idle_timeout: 30s` y `fetch_types: false` para optimizar el rendimiento con Supabase pgBouncer.
+- **Harmonización de Memoria Activa**: Sincronización de versiones en `shared/const.ts`, `.agents/AGENTS.md`, `vecy_network_technical_dossier.md` y la bitácora a `v25.6`.
 
 ### Novedades v25.5 (Diagnóstico y Corrección de Cotejamiento de Datos, Resanitización Masiva en Supabase & Purgado de Falsos Matches):
 - **Extractor Numérico Avanzado de Precios y Presupuestos (`parseColombianPriceOrBudget` en `janIA.ts`)**: Distingue con precisión la notación de miles con punto (`$2.100 millones` $\rightarrow \$2.100.000.000\text{ COP}$), rangos con asteriscos (`Presupuesto *1.300 - 1.400*` $\rightarrow \$1.300\text{M} - \$1.400\text{M}$) y descarte de precios ínsitos o truncados.

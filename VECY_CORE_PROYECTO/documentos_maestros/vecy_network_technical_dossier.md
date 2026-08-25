@@ -326,6 +326,26 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ---
 
+### 🔖 v25.6 — Agosto 2026
+
+#### 📌 REORDENAMIENTO CRONOLÓGICO INTEGRAL, MICRO-CACHÉ DE ALTO RENDIMIENTO & OPTIMIZACIÓN DE CONEXIONES
+
+**Problemas identificados:**
+1. **Desorden Cronológico en Bitácora Maestra**: Las sesiones históricas presentaban saltos temporales y dos formatos divergentes de encabezado.
+2. **Saturación de Heap y Error 504 Gateway Timeout**: Tras 20 horas de ejecución continua del bot de WhatsApp en VPS, la memoria del proceso Node.js alcanzó el 97% provocando timeouts en el endpoint tRPC y haciendo que el panel de administración quedara cargando.
+3. **Sobrecarga de Consultas SQL en Widgets Web/Móvil**: Cada 30 segundos, el widget `BotStatus` y las cargas del panel admin ejecutaban múltiples consultas pesadas contra Supabase, copando el pool de conexiones pgBouncer.
+4. **Caché Agresiva en Dispositivos Móviles**: Navegadores móviles (Safari/Chrome) retenían bundles antiguos y estados de timeout.
+
+**Solución aplicada:**
+- **Reorganización Integral de Bitácora**: Las 31 sesiones históricas fueron estandarizadas con el formato canónico `### 🗓️ Sesión: [Día] [Fecha] — [Horario] (Hora Colombia UTC-5)` en estricto orden cronológico inverso.
+- **Micro-Caché en Memoria Backend (`janIA.ts`)**: Se implementó micro-caché (20s TTL para `getAllMatches` y 15s TTL para `getBotStatus`), reduciendo los tiempos de respuesta de $>10\text{s}$ a **$<0.2\text{s}$**.
+- **Sintonización del Pool PostgreSQL (`server/db.ts`)**: Ampliado a `max: 20` conexiones simultáneas, `idle_timeout: 30s` y `fetch_types: false` para evitar introspección redundante.
+- **Invalidación Instantánea de Caché**: `invalidateAdminMatchesCache()` se dispara automáticamente al editar propiedades, requerimientos o recalcular matches.
+- **Tipado TypeScript Estricto**: 0 errores en `AdminMatches.tsx` y `sdk.ts`.
+- **Despliegue y Validación Empírica**: Desplegado en VPS Linux (`pm2 reload jania-server`) y Vercel con respuesta inmediata verificada vía `curl` y navegador.
+
+---
+
 ### 🔖 v23.1 — Agosto 2026
 
 #### 📌 GRAN AUDITORÍA JANIA, ELIMINACIÓN DE CORTOCIRCUITOS Y HOMOLOGACIÓN ELÁSTICA

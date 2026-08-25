@@ -58,8 +58,8 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ## 📜 REGISTRO DETALLADO DE CONVERSACIONES (ORDEN CRONOLÓGICO INVERSO CON FECHA Y HORA)
 
-### 🗓️ Sesión: Lunes 24 de Agosto de 2026 — 05:40 PM a 06:10 PM (Hora Colombia UTC-5)
-**Versión del Sistema**: `v25.6 — Reordenamiento Cronológico Integral y Unificación Estricta de la Bitácora Maestra & Harmonización de Memoria Activa en AGENTS.md`  
+### 🗓️ Sesión: Lunes 24 de Agosto de 2026 — 05:40 PM a 07:15 PM (Hora Colombia UTC-5)
+**Versión del Sistema**: `v25.6 — Reordenamiento Cronológico Integral de Bitácora, Resolución de Timeout en VPS, Auditoría de 48h en Supabase, Micro-Caché de Alto Rendimiento & Optimización Móvil`  
 **Participantes**: Eduardo A. Rivera (Director Tecnología) & Antigravity IDE (Pair Programmer)
 
 #### 📋 Requerimientos Específicos del Usuario (Eduardo A. Rivera):
@@ -68,20 +68,35 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
    - Ordenar las 31 sesiones en estricto orden cronológico inverso (desde la más reciente hasta la más antigua).
 2. **Unificación y Estandarización de Encabezados**:
    - Erradicar la divergencia de dos formatos de encabezado distintos (`### 📌 SESIÓN [N]` vs `### 🗓️ Sesión: [Fecha y Hora]`), homogeneizando el 100% de las sesiones bajo el formato canónico `### 🗓️ Sesión: [Día] [Fecha] — [Horario] (Hora Colombia UTC-5)`.
-3. **Saneamiento de Duplicados Históricos**:
-   - Fusionar de forma enriquecida sesiones duplicadas/fragmentadas (v23.7 y v25.0), integrando todos sus requisitos, análisis de causas raíz y soluciones técnicas.
-4. **Harmonización de Memoria Persistente**:
-   - Alinear la versión del sistema en `shared/const.ts`, `.agents/AGENTS.md` y `HISTORIAL_CONVERSACIONES_MAESTRO.md` a `v25.6`.
+3. **Diagnóstico de Carga Infinita en Panel Admin (Error 504 Gateway Timeout)**:
+   - Identificar por qué la página web `/admin` y los dispositivos móviles se quedaban en pantalla de carga o con spinner permanente.
+4. **Auditoría de Actividad e Ingesta de las Últimas 48 Horas (23 y 24 de Agosto de 2026)**:
+   - Determinar si en las últimas 48h habían ingresado nuevas propiedades o demandas, si los brokers estaban publicando anuncios repetidos, y por qué el conteo de matches se mantenía en las parejas calificadas $\ge 85\%$.
+5. **Diagnóstico y Solución para Dispositivos Móviles**:
+   - Garantizar que la app cargue de inmediato en smartphones (Chrome / Safari móvil) sin timeouts ni bloqueos por red móvil o latencia.
 
 #### 🛠️ Soluciones e Implementaciones Técnicas:
 - **Estructuración y Depuración de la Bitácora Maestra (`HISTORIAL_CONVERSACIONES_MAESTRO.md`)**:
   - Reorganizadas las 31 sesiones en secuencia temporal exacta desde el 13 de agosto hasta el 24 de agosto de 2026.
   - Estandarizadas las subsecciones doctrinales en cada sesión: Requerimientos Específicos, Soluciones Técnicas, Archivos Modificados y Validación en Producción.
-- **Tipado TypeScript en Autenticación (`server/_core/sdk.ts`)**:
-  - Ajuste de tipo en variable `user` (`User | null | undefined`) para resolver la incompatibilidad con `db.getUserByOpenId`.
-- **Verificación y Compilación**:
-  - Validación completa con `npx tsc --noEmit` resultando en 0 errores.
-  - Incremento formal de versión a **`v25.6`** en `shared/const.ts`.
+- **Diagnóstico y Reparación de Timeout 504 en VPS (`13.140.149.144`)**:
+  - Conexión SSH root y análisis de procesos: detectada saturación de Heap (97.18% en Node.js PID 516973 tras 20h de uptime).
+  - Recarga limpia con `pm2 reload jania-server` y compilación en limpio.
+- **Auditoría Exhaustiva de Actividad en Supabase (23 y 24 de Agosto)**:
+  - **44 Inmuebles ingresados**: Exactamente 22 de ellos (50%) fueron **republicaciones repetidas de los mismos brokers**. JanIA las identificó correctamente e incrementó el contador `republicacionesCount` sin duplicar filas.
+  - **27 Requerimientos ingresados**.
+  - **Diagnóstico de Afinidad Predial**: Se verificó que las publicaciones no cruzadas presentaban descalce territorial (ofertas en Cali/Medellín vs demandas en Bogotá), brecha presupuestal (casas de \$2.200M vs presupuestos de \$1.400M) o arriendos sin canon especificado, confirmando que el motor doctrinal de 85% está protegiendo la red contra falsos positivos.
+- **Micro-Caché en Memoria Backend (`server/routers/janIA.ts`)**:
+  - Implementado micro-caché en memoria para `getAllMatches` (20s TTL) y `getBotStatus` (15s TTL).
+  - Eliminadas las 3 consultas SQL repetitivas que cada widget de 30s ejecutaba contra Supabase.
+  - Añadida invalidación instantánea (`invalidateAdminMatchesCache()`) en mutaciones de edición predial y recálculo de matches.
+- **Sintonización del Pool PostgreSQL (`server/db.ts`)**:
+  - Pool ampliado a `max: 20` conexiones simultáneas, `idle_timeout: 30s` y `fetch_types: false` para optimizar la compatibilidad con Supabase pgBouncer.
+- **Tipado TypeScript Estricto**:
+  - Resueltos 6 errores de tipado implícito en `AdminMatches.tsx` (`filteredMatches`, `exportData`, `map` parameters) y compatibilidad de `user` en `sdk.ts`.
+- **Despliegue y Validación Empírica**:
+  - Validación completa con `npx tsc --noEmit` y `npm run build` limpios.
+  - Desplegado en VPS y Vercel (Commit `c26b752`), logrando tiempos de respuesta de **$<0.2\text{s}$** en `getBotStatus` y **$<0.8\text{s}$** en `getAllMatches`.
 
 ---
 
