@@ -52,11 +52,44 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v25.7 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v25.8 — Agosto 2026
 
 ---
 
 ## 📜 REGISTRO DETALLADO DE CONVERSACIONES (ORDEN CRONOLÓGICO INVERSO CON FECHA Y HORA)
+
+### 🗓️ Sesión: Martes 25 de Agosto de 2026 — 04:15 PM a 04:55 PM (Hora Colombia UTC-5)
+**Versión del Sistema**: `v25.8 — Auto-Sincronización Nativa del Canal Oficial de WhatsApp ("Vecy Bienes Raíces 🏠"), Publicaciones Simultáneas con Ilustración 3D, Audio TTS, Captions Estructurados y Venta Institucional de VECY Network`  
+**Participantes**: Eduardo A. Rivera (Director Tecnología) & Antigravity IDE (Pair Programmer)
+
+#### 📋 Requerimientos Específicos del Usuario (Eduardo A. Rivera):
+1. **Auto-Sincronización y Publicación en Canal Oficial de WhatsApp**:
+   - Enlace oficial: `https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b` (Invite Code: `0029Vb5iYUYCMY0A94zqti1b`, Nombre: *"Vecy Bienes Raíces 🏠"*).
+   - Administradora: JanIA con el número oficial `+57 319 291 9978`.
+   - Garantizar que las publicaciones diarias se despachen simultáneamente tanto al Grupo 2 (`VECY: SOPORTE LEGAL...`) como al Canal oficial con la ilustración 3D correspondiente, nota de voz TTS y texto formateado.
+2. **Estructura Doctrinal Obligatoria de 3 Pasos en Publicaciones**:
+   - **Paso 1 (Saludo Inicial)**: Saludar siempre primero con calidez y cercanía a los colegas corredores e inmobiliarios.
+   - **Paso 2 (Contenido Pedagógico)**: Explicar el tip del día (Legal, Marketing 7 Pilares, DIAN, Avalúos SINUPOT, Café del Bróker) con ejemplos claros.
+   - **Paso 3 (Cierre y Venta Institucional)**: Vender el proyecto VECY Network, invitar a sumar a más colegas a la red y motivar la interacción con JanIA en la consola web (`https://vecy-network.vercel.app/jania`) y por WhatsApp.
+3. **Persistencia y Actualización Continua**:
+   - Compilación 0 errores, push a GitHub, deploy al VPS con PM2 y registro minucioso en la bitácora maestra.
+
+#### 🛠️ Soluciones e Implementaciones Técnicas:
+- **Auto-Detección y Sincronización de Canal en Baileys (`whatsapp-match.ts`)**:
+  - Incorporación de `officialChannelInviteCode = "0029Vb5iYUYCMY0A94zqti1b"`.
+  - Método `discoverAndSyncNewsletters()` que resuelve nativamente el JID del canal (`120363399889853806@newsletter`) mediante `sock.newsletterMetadata("invite", inviteCode)`.
+- **Generador Dual de Contenido Diario con Gemini 2.5 Flash (`cronService.ts`)**:
+  - Función `generateDailyContent()` con salida JSON estructurada (`voiceText` para locución continua TTS y `captionText` formateado con emojis, negritas, viñetas y enlaces web).
+  - Regla inquebrantable de 3 pasos incorporada en el system prompt de JanIA.
+- **Despacho Dual con Ilustración 3D y Captions Enriquecidos (`sendVoiceToBuzonAndChannel`)**:
+  - Envío automático de la imagen 3D con el texto descriptivo formateado previo a la nota de voz tanto al Grupo 2 como al Canal oficial `@newsletter`.
+- **Procedimiento de Despacho On-Demand (`triggerDailyTip` en `janIA.ts`)**:
+  - Endpoint seguro en tRPC para disparar la publicación del día en caliente desde el servidor.
+- **Verificación Empírica en Producción**:
+  - Tip jurídico de hoy generado con Gemini 2.5 Flash y entregado exitosamente en tiempo real a `120363417740040773@g.us` (Grupo 2) y `120363399889853806@newsletter` (Canal Vecy Bienes Raíces) con nota de voz y arte 3D.
+  - Sincronización a `v25.8` en todo el repositorio.
+
+---
 
 ### 🗓️ Sesión: Martes 25 de Agosto de 2026 — 08:00 AM a 04:10 PM (Hora Colombia UTC-5)
 **Versión del Sistema**: `v25.7 — Optimización Extrema de Carga Web (Code-Splitting 95%), Retiro de Pestaña Conversaciones, Pack de Ilustraciones 3D de JanIA, Despacho Dual Canal+Grupos y Blindaje de Consola Web`  

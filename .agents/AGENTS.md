@@ -162,7 +162,13 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v25.7 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL: v25.8 — Agosto 2026
+
+### Novedades v25.8 (Auto-Sincronización Nativa del Canal Oficial de WhatsApp, Ilustraciones 3D, Audio TTS, Captions Estructurados y Venta Institucional VECY):
+- **Auto-Detección y Sincronización de Canal en Baileys (`whatsapp-match.ts`)**: Resolución nativa del canal oficial `https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b` (`120363399889853806@newsletter` - *"Vecy Bienes Raíces 🏠"*) mediante `sock.newsletterMetadata("invite", code)`.
+- **Generador Dual de Contenido Diario con Gemini 2.5 Flash (`cronService.ts`)**: Generación en un solo paso de `voiceText` (locución TTS fluida) y `captionText` (texto enriquecido con emojis, negritas y enlaces) aplicando la regla de 3 pasos (Saludo, Contenido Pedagógico y Cierre Institucional de Venta de VECY Network).
+- **Despacho Dual Simultáneo (Grupo 2 + Canal)**: Envío automático de la ilustración 3D con caption formateado previo a la nota de voz a ambos destinos.
+- **Endpoint On-Demand (`triggerDailyTip` en `janIA.ts`)**: Mutación tRPC para pruebas y disparos inmediatos desde la web o el servidor.
 
 ### Novedades v25.7 (Optimización Extrema de Carga Web 95%, Retiro Pestaña Conversaciones & Pack 3D JanIA):
 - **Code-Splitting Integral y Lazy Loading (`App.tsx` y `Admin.tsx`)**: Implementación de `React.lazy` y `<Suspense>` en todas las páginas y pestañas del panel admin. Reducción del bundle inicial de 1.35 MB a solo **57 kB** (>95% de optimización).

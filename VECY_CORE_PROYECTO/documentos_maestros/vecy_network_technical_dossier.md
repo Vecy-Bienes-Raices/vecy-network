@@ -757,19 +757,25 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 
 ---
 
-### Versión v22.0 — Agosto 2026: Fidelidad Verbatim 100%, Reparación Propiedad #225, Metadata de Origen y Mutación Directa Supabase
+---
 
-#### 1. CONSERVACIÓN VERBATIM 100% DE TEXTO Y ENLACES (`rawText`)
-- **Preservación Total de URLs, Montos y Emojis**: Eliminación del filtro regex que suprimía enlaces `https://...`, emojis y caracteres de montos `$`. El mensaje de WhatsApp se almacena e ilustra de forma 100% literal e idéntica en la web.
-- **Reparación de la Propiedad #225 (Venta Virrey)**: Corrección de precio a $749 Millones, Administración $680 Mil, 1 Hab, 1 Baño, 1 Garaje y enlace directo de Wasi.
-- **Visualización Activa de Enlaces Originales**: Renderizado cliqueable de URLs de portales inmobiliarios (Wasi, FincaRaíz, etc.).
+### Versión v25.8 — Agosto 2026: Auto-Sincronización Nativa del Canal Oficial de WhatsApp ("Vecy Bienes Raíces 🏠"), Publicaciones Simultáneas con Ilustración 3D, Audio TTS, Captions Estructurados y Venta Institucional de VECY Network
 
-#### 2. TRANSMISIÓN DE METADATA DE GRUPO ORIGEN (`groupName`)
-- **Trazabilidad Garantizada**: Consulta síncrona de metadata de chat (`getCachedGroupMetadata`) para asegurar que `origenNombre` registre el nombre oficial del grupo de WhatsApp emisor.
+#### 1. AUTO-SINCRONIZACIÓN NATIVA DEL CANAL DE WHATSAPP
+- **Resolución por Invite Code (`whatsapp-match.ts`)**: Auto-detección del canal oficial (`https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b`) resolviendo nativamente el JID `120363399889853806@newsletter` vía `sock.newsletterMetadata("invite", "0029Vb5iYUYCMY0A94zqti1b")`.
+- **Despacho Simultáneo Dual**: Publicación en tiempo real de tips diarios (Lunes a Sábado) tanto en el Grupo 2 (`VECY: SOPORTE LEGAL...`) como en el Canal oficial `Vecy Bienes Raíces 🏠`.
 
-#### 3. DESVÍO DE IDENTIDAD Y MUTACIÓN DIRECTA EN PANEL ADMIN
-- **Desvinculación del Admin en Contactos de Terceros**: Eliminación del fallback automático que asignaba la identidad del administrador (`Eduardo A. Rivera`) a publicaciones ajenas. Extracción de nombres en texto (ej. `INFORMES PATTY` → `Patty`).
-- **Mutación Directa Supabase Client SDK**: Reemplazo de endpoints tRPC por actualización directa en Supabase (`supabase.from('properties').update()`), logrando guardado instantáneo sin excepciones de procedimiento.
+#### 2. GENERADOR DUAL DE CONTENIDO DIARIO CON GEMINI 2.5 FLASH (`cronService.ts`)
+- **Salida Estructurada Dual**: Generación en un solo paso de `voiceText` (locución TTS continua sin markdown) y `captionText` (texto formateado para WhatsApp con títulos, negritas, emojis y viñetas).
+- **Regla Doctrinal de 3 Pasos**: 
+  1. *Saludo Inicial*: Calurosa bienvenida a los colegas corredores.
+  2. *Contenido Pedagógico*: Explicación clara del tip temático del día con ejemplos aplicados a Colombia.
+  3. *Cierre y Venta Institucional*: Llamado a la acción invitando a unirse a VECY Network, invitar a más colegas y probar la consola de JanIA (`https://vecy-network.vercel.app/jania`).
+
+#### 3. PACK DE ILUSTRACIONES 3D Y ENDPOINT DE DISPARO DIRECTO
+- **Ilustraciones 3D Integradas**: Envío automático de las ilustraciones oficiales de JanIA (`client/public/assets/jania/`) acompañando el caption y la nota de voz.
+- **Endpoint On-Demand (`janIA.triggerDailyTip`)**: Mutación tRPC para disparar y probar publicaciones inmediatas sin esperar el cron matutino.
+
 
 
 
