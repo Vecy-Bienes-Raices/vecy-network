@@ -2140,12 +2140,20 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
     }
   }
 
-  public async sendVoiceToGroup(text: string, groupId?: string) {
+  public async sendVoiceToGroup(text: string, groupId?: string, imagePath?: string) {
     try {
       const target = groupId || this.targetGroupId;
       let targetJid = target;
       if (targetJid.endsWith('@c.us')) {
         targetJid = targetJid.replace('@c.us', '@s.whatsapp.net');
+      }
+
+      if (imagePath && fs.existsSync(imagePath)) {
+        try {
+          await this.sendToGroup('', imagePath, [], targetJid);
+        } catch (imgErr: any) {
+          console.warn(`[JANIA-MATCH] Error enviando ilustración previa a ${targetJid}:`, imgErr?.message);
+        }
       }
 
       const { cleanVoiceText } = await import('./whatsapp-utils');
@@ -2172,12 +2180,12 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
     }
   }
 
-  public async sendVoiceToBuzonAndChannel(text: string) {
+  public async sendVoiceToBuzonAndChannel(text: string, imagePath?: string) {
     if (this.buzonGroupId) {
-      await this.sendVoiceToGroup(text, this.buzonGroupId);
+      await this.sendVoiceToGroup(text, this.buzonGroupId, imagePath);
     }
     if (this.channelNewsletterId) {
-      await this.sendVoiceToGroup(text, this.channelNewsletterId);
+      await this.sendVoiceToGroup(text, this.channelNewsletterId, imagePath);
     }
   }
 

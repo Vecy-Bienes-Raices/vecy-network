@@ -12437,8 +12437,8 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
           }
           let messagePayload = {};
           if (mediaPath) {
-            const fs11 = await import("fs");
-            const buffer = fs11.readFileSync(mediaPath);
+            const fs12 = await import("fs");
+            const buffer = fs12.readFileSync(mediaPath);
             const path13 = await import("path");
             const ext = path13.extname(mediaPath).toLowerCase();
             if (ext === ".mp4") {
@@ -12473,12 +12473,19 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
           console.error(`[JANIA-MATCH] Error enviando mensaje al grupo ${groupId || this.targetGroupId}:`, e.message || e);
         }
       }
-      async sendVoiceToGroup(text2, groupId) {
+      async sendVoiceToGroup(text2, groupId, imagePath) {
         try {
           const target = groupId || this.targetGroupId;
           let targetJid = target;
           if (targetJid.endsWith("@c.us")) {
             targetJid = targetJid.replace("@c.us", "@s.whatsapp.net");
+          }
+          if (imagePath && fs9.existsSync(imagePath)) {
+            try {
+              await this.sendToGroup("", imagePath, [], targetJid);
+            } catch (imgErr) {
+              console.warn(`[JANIA-MATCH] Error enviando ilustraci\xF3n previa a ${targetJid}:`, imgErr?.message);
+            }
           }
           const { cleanVoiceText: cleanVoiceText2 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
           const cleaned = cleanVoiceText2(text2);
@@ -12501,12 +12508,12 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
           console.error("[JANIA-MATCH] Error enviando nota de voz al grupo:", e.message || e);
         }
       }
-      async sendVoiceToBuzonAndChannel(text2) {
+      async sendVoiceToBuzonAndChannel(text2, imagePath) {
         if (this.buzonGroupId) {
-          await this.sendVoiceToGroup(text2, this.buzonGroupId);
+          await this.sendVoiceToGroup(text2, this.buzonGroupId, imagePath);
         }
         if (this.channelNewsletterId) {
-          await this.sendVoiceToGroup(text2, this.channelNewsletterId);
+          await this.sendVoiceToGroup(text2, this.channelNewsletterId, imagePath);
         }
       }
       async sendToBuzonAndChannel(text2, mediaPath) {
@@ -15510,22 +15517,32 @@ function serveStatic(app) {
 }
 
 // server/_core/cronService.ts
-import cron from "node-cron";
-import path11 from "path";
 init_whatsapp_match();
 init_nightlyRematch();
 init_llm();
+import cron from "node-cron";
+import path11 from "path";
+import fs10 from "fs";
 import { fileURLToPath } from "url";
 var __filename = fileURLToPath(import.meta.url);
 var __dirname = path11.dirname(__filename);
+function getThemedImagePath(tipo) {
+  const primaryPath = path11.resolve(process.cwd(), `client/public/assets/jania/jania_${tipo}.jpg`);
+  const distPath = path11.resolve(process.cwd(), `dist/assets/jania/jania_${tipo}.jpg`);
+  const serverPath = path11.resolve(__dirname, `../../client/public/assets/jania/jania_${tipo}.jpg`);
+  if (fs10.existsSync(primaryPath)) return primaryPath;
+  if (fs10.existsSync(distPath)) return distPath;
+  if (fs10.existsSync(serverPath)) return serverPath;
+  return void 0;
+}
 function initCronScheduler() {
-  console.log("[CRON-SERVICE] Inicializando orquestador de agendas automatizadas v3.2 (Parrilla Semanal de Audios y Re-matching)...");
+  console.log("[CRON-SERVICE] Inicializando orquestador de agendas automatizadas v3.2 (Parrilla Semanal de Audios, Ilustraciones 3D y Re-matching)...");
   cron.schedule("0 11 * * 1,4", async () => {
     console.log("[CRON-SERVICE] Generando audio din\xE1mico para VECY INMUEBLES NETWORK...");
     const fallback = `Buenos d\xEDas a todos y a todas. Soy JanIA, la inteligencia artificial de VECY Network. Hoy quiero recordarles que este grupo es nuestro centro de operaciones comerciales. Aqu\xED publican sus inmuebles en venta o arriendo, sus requerimientos de compra o renta, y yo me encargo de cruzar toda esa informaci\xF3n en tiempo real en los 32 departamentos de Colombia para detectar MATCHES y hacer posibles cierres de negocios. \xBFYa publicaste hoy? Cada inmueble que compartes aqu\xED es una oportunidad de negocio que no puedes dejar pasar. Puedes enviar texto, nota de voz, imagen o flyer y yo lo proceso autom\xE1ticamente. Sigan publicando sus inmuebles, colegas, e inviten a m\xE1s colegas a unirse a esta red. Entre m\xE1s seamos, m\xE1s matches encontramos. \xA1Hoy puede ser el d\xEDa de tu pr\xF3ximo cierre!`;
     const guion = await generateDynamicVoiceScript("inmuebles_network", fallback);
     try {
-      await janiaMatchBot.sendVoiceToGroup(guion, janiaMatchBot.targetGroupId);
+      await janiaMatchBot.sendVoiceToGroup(guion, janiaMatchBot.targetGroupId, getThemedImagePath("matches"));
     } catch (e) {
       console.error("[CRON-SERVICE] Error enviando audio a VECY INMUEBLES NETWORK:", e.message);
     }
@@ -15535,7 +15552,7 @@ function initCronScheduler() {
     const fallback = `\xA1Buenos d\xEDas a todos y a todas! Soy JanIA. Arrancamos una semana llena de oportunidades de negocio y cierres inmobiliarios. Recuerden que este espacio es su consultorio permanente: aqu\xED pueden preguntarme por texto o nota de voz sobre leyes inmobiliarias, c\xF3mo liquidar la ganancia ocasional ante la DIAN, aval\xFAos de mercado o c\xF3mo redactar un anuncio de alto impacto para sus inmuebles y requerimientos. La informaci\xF3n es poder en los negocios. Los invito a que no se queden con dudas hoy y a que compartan el enlace de este grupo con sus colegas de confianza: entre m\xE1s asesores capacitados seamos, m\xE1s blindados y profesionales cerramos negocios en Colombia. \xA1Que tengan una semana extraordinaria y productiva!`;
     const guion = await generateDynamicVoiceScript("lunes_arranque", fallback);
     try {
-      await janiaMatchBot.sendVoiceToBuzonAndChannel(guion);
+      await janiaMatchBot.sendVoiceToBuzonAndChannel(guion, getThemedImagePath("matches"));
     } catch (e) {
       console.error("[CRON-SERVICE] Error enviando audio de Lunes:", e.message);
     }
@@ -15545,7 +15562,7 @@ function initCronScheduler() {
     const fallback = `Hola, colegas. Soy JanIA con su tip jur\xEDdico del d\xEDa. \xBFSab\xEDan que un simple correo electr\xF3nico con la hoja de presentaci\xF3n del cliente o el acuerdo de puntas compartidas tiene plena validez probatoria bajo la Ley 527 de 1999? Nunca muestren un inmueble sin dejar registro escrito. Si tienen dudas sobre una promesa de compraventa, una restituci\xF3n o c\xF3mo redactar una minuta, preg\xFAntenme aqu\xED mismo o env\xEDenme el documento en PDF y lo revisamos juntos al instante.`;
     const guion = await generateDynamicVoiceScript("martes_juridico", fallback);
     try {
-      await janiaMatchBot.sendVoiceToBuzonAndChannel(guion);
+      await janiaMatchBot.sendVoiceToBuzonAndChannel(guion, getThemedImagePath("juridico"));
     } catch (e) {
       console.error("[CRON-SERVICE] Error enviando audio de Martes:", e.message);
     }
@@ -15555,7 +15572,7 @@ function initCronScheduler() {
     const fallback = `\xA1Buenas tardes, equipo! Soy JanIA con su tip de Marketing Inmobiliario. El ochenta por ciento de los clientes y colegas descartan una publicaci\xF3n si no tiene el precio claro, el barrio exacto o el metraje. Si quieren que sus ofertas y requerimientos se cierren en tiempo r\xE9cord, incluyan siempre los siete pilares: tipo de inmueble, barrio y ciudad, precio y administraci\xF3n, \xE1rea en metros cuadrados, habitaciones, garajes independientes o en l\xEDnea, y su enlace directo de WhatsApp. \xBFTienen un inmueble dif\xEDcil de mover? Escr\xEDbanme los datos y les ayudo a redactar un copy persuasivo hoy mismo.`;
     const guion = await generateDynamicVoiceScript("miercoles_marketing", fallback);
     try {
-      await janiaMatchBot.sendVoiceToBuzonAndChannel(guion);
+      await janiaMatchBot.sendVoiceToBuzonAndChannel(guion, getThemedImagePath("marketing"));
     } catch (e) {
       console.error("[CRON-SERVICE] Error enviando audio de Mi\xE9rcoles:", e.message);
     }
@@ -15565,7 +15582,7 @@ function initCronScheduler() {
     const fallback = `Hola a todos. Soy JanIA con un consejo financiero clave para sus clientes vendedores. Al vender vivienda de habitaci\xF3n, pueden deducir hasta cinco mil UVT exentas del impuesto de ganancia ocasional si los fondos se destinan a la compra de otra vivienda o abono a cr\xE9dito hipotecario. Si quieren saber exactamente cu\xE1nto debe pagar su cliente en retenci\xF3n en la fuente o ganancia ocasional antes de firmar escrituras, cons\xFAltenme aqu\xED y les hago la liquidaci\xF3n en segundos.`;
     const guion = await generateDynamicVoiceScript("jueves_tributario", fallback);
     try {
-      await janiaMatchBot.sendVoiceToBuzonAndChannel(guion);
+      await janiaMatchBot.sendVoiceToBuzonAndChannel(guion, getThemedImagePath("tributario"));
     } catch (e) {
       console.error("[CRON-SERVICE] Error enviando audio de Jueves:", e.message);
     }
@@ -15575,7 +15592,7 @@ function initCronScheduler() {
     const fallback = `\xA1Excelente viernes, colegas! Soy JanIA. \xBFTienen un lote o casa para desarrollo y no saben qu\xE9 altura o uso permite el POT? No se queden con la duda: descarguen la ficha catastral del SINUPOT en PDF y env\xEDenmela por WhatsApp en privado; yo les hago el estudio normativo de uso de suelo al instante. Y para estimar el valor del metro cuadrado en cualquier sector, aqu\xED estoy para asesorarlos.`;
     const guion = await generateDynamicVoiceScript("viernes_avaluos", fallback);
     try {
-      await janiaMatchBot.sendVoiceToBuzonAndChannel(guion);
+      await janiaMatchBot.sendVoiceToBuzonAndChannel(guion, getThemedImagePath("avaluos"));
     } catch (e) {
       console.error("[CRON-SERVICE] Error enviando audio de Viernes:", e.message);
     }
@@ -15585,7 +15602,7 @@ function initCronScheduler() {
     const fallback = `Buenos d\xEDas, aliados de la red. Cerramos semana de gran actividad comercial. Recuerden que para casos jur\xEDdicos de alta complejidad, sucesiones litigiosas, saneamientos o aval\xFAos certificados por perito de Lonja con R.A.A., pueden comunicarse directamente al WhatsApp tres diecis\xE9is, seis cincuenta y seis, noventa y siete diecinueve, para coordinar una Consultor\xEDa Personalizada con nuestro br\xF3ker en VECY BIENES RA\xCDCES. \xA1Disfruten de su fin de semana y a recargar energ\xEDas!`;
     const guion = await generateDynamicVoiceScript("sabado_cafe", fallback);
     try {
-      await janiaMatchBot.sendVoiceToBuzonAndChannel(guion);
+      await janiaMatchBot.sendVoiceToBuzonAndChannel(guion, getThemedImagePath("matches"));
     } catch (e) {
       console.error("[CRON-SERVICE] Error enviando audio de S\xE1bado:", e.message);
     }
@@ -15595,7 +15612,7 @@ function initCronScheduler() {
     const fallback = `Hola, equipo VECY. Soy JanIA. Este grupo es nuestro espacio m\xE1s especial: el canal del Proyecto Vecy Network es donde nacen las ideas, donde se eval\xFAa el proyecto, donde los fundadores escuchan directamente a quienes hacen posible esta red. Aqu\xED pueden preguntarme sobre VECY Network sin filtros: c\xF3mo funciona la inteligencia artificial, qu\xE9 est\xE1 planeado para el futuro, qu\xE9 ya est\xE1 funcionando hoy, o simplemente contarme qu\xE9 les parece el proyecto. Tambi\xE9n es el lugar donde debatimos con la competencia de frente y con argumentos. Su opini\xF3n es la br\xFAjula que nos gu\xEDa. Sigan preguntando acerca de VECY Network. Cada idea que aportan aqu\xED nos hace m\xE1s fuertes. E inviten a m\xE1s colegas visionarios. Queremos construir esto juntos.`;
     const guion = await generateDynamicVoiceScript("proyecto_vecy", fallback);
     try {
-      await janiaMatchBot.sendVoiceToGroup(guion, janiaMatchBot.circuloGroupId);
+      await janiaMatchBot.sendVoiceToGroup(guion, janiaMatchBot.circuloGroupId, getThemedImagePath("marketing"));
     } catch (e) {
       console.error("[CRON-SERVICE] Error enviando audio a PROYECTO VECY NETWORK:", e.message);
     }
@@ -15681,7 +15698,7 @@ init_llm();
 init_whatsapp_utils();
 init_whatsapp_match();
 import multer from "multer";
-import fs10 from "fs";
+import fs11 from "fs";
 import path12 from "path";
 process.on("uncaughtException", (error) => {
   console.error("[SYSTEM-CRITICAL] Uncaught Exception detectada:", error);
@@ -15763,8 +15780,8 @@ async function startServer() {
     try {
       const qrPath = path12.join(process.cwd(), "qr-match.png");
       const distQrPath = path12.join(process.cwd(), "dist", "qr-match.png");
-      const activePath = fs10.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs10.existsSync(activePath)) {
+      const activePath = fs11.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs11.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
         res.setHeader("Pragma", "no-cache");
@@ -15786,8 +15803,8 @@ async function startServer() {
       }
       const qrPath = path12.join(process.cwd(), "qr-match.png");
       const distQrPath = path12.join(process.cwd(), "dist", "qr-match.png");
-      const activePath = fs10.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs10.existsSync(activePath)) {
+      const activePath = fs11.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs11.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
         res.setHeader("Pragma", "no-cache");
@@ -15810,8 +15827,8 @@ async function startServer() {
       await new Promise((resolve) => setTimeout(resolve, 4e3));
       const qrPath = path12.join(process.cwd(), "qr-match.png");
       const distQrPath = path12.join(process.cwd(), "dist", "qr-match.png");
-      const activePath = fs10.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs10.existsSync(activePath)) {
+      const activePath = fs11.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs11.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         return res.sendFile(activePath);
       }
@@ -15840,8 +15857,8 @@ async function startServer() {
     try {
       const qrPath = path12.join(process.cwd(), "qr-captador.png");
       const distQrPath = path12.join(process.cwd(), "dist", "qr-captador.png");
-      const activePath = fs10.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs10.existsSync(activePath)) {
+      const activePath = fs11.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs11.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
         res.setHeader("Pragma", "no-cache");
@@ -15972,8 +15989,8 @@ async function startServer() {
     }
   });
   const uploadsDir2 = path12.resolve(process.cwd(), "public/uploads");
-  if (!fs10.existsSync(uploadsDir2)) {
-    fs10.mkdirSync(uploadsDir2, { recursive: true });
+  if (!fs11.existsSync(uploadsDir2)) {
+    fs11.mkdirSync(uploadsDir2, { recursive: true });
   }
   app.use("/uploads", express2.static(uploadsDir2));
   const diskStorage = multer.diskStorage({

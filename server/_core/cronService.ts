@@ -18,8 +18,21 @@ import { invokeLLM } from './llm';
  * Mensajes de apertura/cierre redactados en vivo por Gemini 2.5 Flash + Audios + Re-matching.
  */
 
+/**
+ * Obtiene la ruta física de la ilustración temática 3D de JanIA
+ */
+function getThemedImagePath(tipo: 'juridico' | 'marketing' | 'tributario' | 'avaluos' | 'matches'): string | undefined {
+  const primaryPath = path.resolve(process.cwd(), `client/public/assets/jania/jania_${tipo}.jpg`);
+  const distPath = path.resolve(process.cwd(), `dist/assets/jania/jania_${tipo}.jpg`);
+  const serverPath = path.resolve(__dirname, `../../client/public/assets/jania/jania_${tipo}.jpg`);
+  if (fs.existsSync(primaryPath)) return primaryPath;
+  if (fs.existsSync(distPath)) return distPath;
+  if (fs.existsSync(serverPath)) return serverPath;
+  return undefined;
+}
+
 export function initCronScheduler() {
-  console.log('[CRON-SERVICE] Inicializando orquestador de agendas automatizadas v3.2 (Parrilla Semanal de Audios y Re-matching)...');
+  console.log('[CRON-SERVICE] Inicializando orquestador de agendas automatizadas v3.2 (Parrilla Semanal de Audios, Ilustraciones 3D y Re-matching)...');
 
   // ─────────────────────────────────────────────────────────────────────────────
   // GRUPO 1: VECY INMUEBLES NETWORK — Lunes y Jueves a las 11:00 AM
@@ -30,14 +43,14 @@ export function initCronScheduler() {
     const fallback = `Buenos días a todos y a todas. Soy JanIA, la inteligencia artificial de VECY Network. Hoy quiero recordarles que este grupo es nuestro centro de operaciones comerciales. Aquí publican sus inmuebles en venta o arriendo, sus requerimientos de compra o renta, y yo me encargo de cruzar toda esa información en tiempo real en los 32 departamentos de Colombia para detectar MATCHES y hacer posibles cierres de negocios. ¿Ya publicaste hoy? Cada inmueble que compartes aquí es una oportunidad de negocio que no puedes dejar pasar. Puedes enviar texto, nota de voz, imagen o flyer y yo lo proceso automáticamente. Sigan publicando sus inmuebles, colegas, e inviten a más colegas a unirse a esta red. Entre más seamos, más matches encontramos. ¡Hoy puede ser el día de tu próximo cierre!`;
     const guion = await generateDynamicVoiceScript('inmuebles_network', fallback);
     try {
-      await whatsappBot.sendVoiceToGroup(guion, whatsappBot.targetGroupId);
+      await whatsappBot.sendVoiceToGroup(guion, whatsappBot.targetGroupId, getThemedImagePath('matches'));
     } catch (e: any) {
       console.error('[CRON-SERVICE] Error enviando audio a VECY INMUEBLES NETWORK:', e.message);
     }
   }, { timezone: 'America/Bogota' });
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // GRUPO 2: VECY: SOPORTE LEGAL, TRIBUTARIO, AVALÚOS Y MARKETING
+  // GRUPO 2: VECY: SOPORTE LEGAL, TRIBUTARIO, AVALÚOS Y MARKETING + CANAL WHATSAPP
   // PARRILLA SEMANAL DIARIA DE AUDIOS 100% DINÁMICOS E INÉDITOS (LUNES A SÁBADO)
   // ─────────────────────────────────────────────────────────────────────────────
 
@@ -47,7 +60,7 @@ export function initCronScheduler() {
     const fallback = `¡Buenos días a todos y a todas! Soy JanIA. Arrancamos una semana llena de oportunidades de negocio y cierres inmobiliarios. Recuerden que este espacio es su consultorio permanente: aquí pueden preguntarme por texto o nota de voz sobre leyes inmobiliarias, cómo liquidar la ganancia ocasional ante la DIAN, avalúos de mercado o cómo redactar un anuncio de alto impacto para sus inmuebles y requerimientos. La información es poder en los negocios. Los invito a que no se queden con dudas hoy y a que compartan el enlace de este grupo con sus colegas de confianza: entre más asesores capacitados seamos, más blindados y profesionales cerramos negocios en Colombia. ¡Que tengan una semana extraordinaria y productiva!`;
     const guion = await generateDynamicVoiceScript('lunes_arranque', fallback);
     try {
-      await whatsappBot.sendVoiceToBuzonAndChannel(guion);
+      await whatsappBot.sendVoiceToBuzonAndChannel(guion, getThemedImagePath('matches'));
     } catch (e: any) {
       console.error('[CRON-SERVICE] Error enviando audio de Lunes:', e.message);
     }
@@ -59,7 +72,7 @@ export function initCronScheduler() {
     const fallback = `Hola, colegas. Soy JanIA con su tip jurídico del día. ¿Sabían que un simple correo electrónico con la hoja de presentación del cliente o el acuerdo de puntas compartidas tiene plena validez probatoria bajo la Ley 527 de 1999? Nunca muestren un inmueble sin dejar registro escrito. Si tienen dudas sobre una promesa de compraventa, una restitución o cómo redactar una minuta, pregúntenme aquí mismo o envíenme el documento en PDF y lo revisamos juntos al instante.`;
     const guion = await generateDynamicVoiceScript('martes_juridico', fallback);
     try {
-      await whatsappBot.sendVoiceToBuzonAndChannel(guion);
+      await whatsappBot.sendVoiceToBuzonAndChannel(guion, getThemedImagePath('juridico'));
     } catch (e: any) {
       console.error('[CRON-SERVICE] Error enviando audio de Martes:', e.message);
     }
@@ -71,7 +84,7 @@ export function initCronScheduler() {
     const fallback = `¡Buenas tardes, equipo! Soy JanIA con su tip de Marketing Inmobiliario. El ochenta por ciento de los clientes y colegas descartan una publicación si no tiene el precio claro, el barrio exacto o el metraje. Si quieren que sus ofertas y requerimientos se cierren en tiempo récord, incluyan siempre los siete pilares: tipo de inmueble, barrio y ciudad, precio y administración, área en metros cuadrados, habitaciones, garajes independientes o en línea, y su enlace directo de WhatsApp. ¿Tienen un inmueble difícil de mover? Escríbanme los datos y les ayudo a redactar un copy persuasivo hoy mismo.`;
     const guion = await generateDynamicVoiceScript('miercoles_marketing', fallback);
     try {
-      await whatsappBot.sendVoiceToBuzonAndChannel(guion);
+      await whatsappBot.sendVoiceToBuzonAndChannel(guion, getThemedImagePath('marketing'));
     } catch (e: any) {
       console.error('[CRON-SERVICE] Error enviando audio de Miércoles:', e.message);
     }
@@ -83,7 +96,7 @@ export function initCronScheduler() {
     const fallback = `Hola a todos. Soy JanIA con un consejo financiero clave para sus clientes vendedores. Al vender vivienda de habitación, pueden deducir hasta cinco mil UVT exentas del impuesto de ganancia ocasional si los fondos se destinan a la compra de otra vivienda o abono a crédito hipotecario. Si quieren saber exactamente cuánto debe pagar su cliente en retención en la fuente o ganancia ocasional antes de firmar escrituras, consúltenme aquí y les hago la liquidación en segundos.`;
     const guion = await generateDynamicVoiceScript('jueves_tributario', fallback);
     try {
-      await whatsappBot.sendVoiceToBuzonAndChannel(guion);
+      await whatsappBot.sendVoiceToBuzonAndChannel(guion, getThemedImagePath('tributario'));
     } catch (e: any) {
       console.error('[CRON-SERVICE] Error enviando audio de Jueves:', e.message);
     }
@@ -95,7 +108,7 @@ export function initCronScheduler() {
     const fallback = `¡Excelente viernes, colegas! Soy JanIA. ¿Tienen un lote o casa para desarrollo y no saben qué altura o uso permite el POT? No se queden con la duda: descarguen la ficha catastral del SINUPOT en PDF y envíenmela por WhatsApp en privado; yo les hago el estudio normativo de uso de suelo al instante. Y para estimar el valor del metro cuadrado en cualquier sector, aquí estoy para asesorarlos.`;
     const guion = await generateDynamicVoiceScript('viernes_avaluos', fallback);
     try {
-      await whatsappBot.sendVoiceToBuzonAndChannel(guion);
+      await whatsappBot.sendVoiceToBuzonAndChannel(guion, getThemedImagePath('avaluos'));
     } catch (e: any) {
       console.error('[CRON-SERVICE] Error enviando audio de Viernes:', e.message);
     }
@@ -107,7 +120,7 @@ export function initCronScheduler() {
     const fallback = `Buenos días, aliados de la red. Cerramos semana de gran actividad comercial. Recuerden que para casos jurídicos de alta complejidad, sucesiones litigiosas, saneamientos o avalúos certificados por perito de Lonja con R.A.A., pueden comunicarse directamente al WhatsApp tres dieciséis, seis cincuenta y seis, noventa y siete diecinueve, para coordinar una Consultoría Personalizada con nuestro bróker en VECY BIENES RAÍCES. ¡Disfruten de su fin de semana y a recargar energías!`;
     const guion = await generateDynamicVoiceScript('sabado_cafe', fallback);
     try {
-      await whatsappBot.sendVoiceToBuzonAndChannel(guion);
+      await whatsappBot.sendVoiceToBuzonAndChannel(guion, getThemedImagePath('matches'));
     } catch (e: any) {
       console.error('[CRON-SERVICE] Error enviando audio de Sábado:', e.message);
     }
@@ -122,7 +135,7 @@ export function initCronScheduler() {
     const fallback = `Hola, equipo VECY. Soy JanIA. Este grupo es nuestro espacio más especial: el canal del Proyecto Vecy Network es donde nacen las ideas, donde se evalúa el proyecto, donde los fundadores escuchan directamente a quienes hacen posible esta red. Aquí pueden preguntarme sobre VECY Network sin filtros: cómo funciona la inteligencia artificial, qué está planeado para el futuro, qué ya está funcionando hoy, o simplemente contarme qué les parece el proyecto. También es el lugar donde debatimos con la competencia de frente y con argumentos. Su opinión es la brújula que nos guía. Sigan preguntando acerca de VECY Network. Cada idea que aportan aquí nos hace más fuertes. E inviten a más colegas visionarios. Queremos construir esto juntos.`;
     const guion = await generateDynamicVoiceScript('proyecto_vecy', fallback);
     try {
-      await whatsappBot.sendVoiceToGroup(guion, whatsappBot.circuloGroupId);
+      await whatsappBot.sendVoiceToGroup(guion, whatsappBot.circuloGroupId, getThemedImagePath('marketing'));
     } catch (e: any) {
       console.error('[CRON-SERVICE] Error enviando audio a PROYECTO VECY NETWORK:', e.message);
     }
