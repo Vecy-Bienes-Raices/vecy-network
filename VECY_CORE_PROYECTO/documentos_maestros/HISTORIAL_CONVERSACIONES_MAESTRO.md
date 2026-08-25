@@ -85,6 +85,8 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
   - Envío automático de la imagen 3D con el texto descriptivo formateado previo a la nota de voz tanto al Grupo 2 como al Canal oficial `@newsletter`.
 - **Procedimiento de Despacho On-Demand (`triggerDailyTip` en `janIA.ts`)**:
   - Endpoint seguro en tRPC para disparar la publicación del día en caliente desde el servidor.
+- **Refinamiento Visual del Indicador de JanIA (`Admin.tsx`)**:
+  - Remoción del número de teléfono (`+57319...`) en el pill de estado superior del panel web, conservando únicamente el indicador luminoso verde incandescente y la etiqueta `JanIA: Activo`.
 - **Verificación Empírica en Producción**:
   - Tip jurídico de hoy generado con Gemini 2.5 Flash y entregado exitosamente en tiempo real a `120363417740040773@g.us` (Grupo 2) y `120363399889853806@newsletter` (Canal Vecy Bienes Raíces) con nota de voz y arte 3D.
   - Sincronización a `v25.8` en todo el repositorio.
