@@ -52,11 +52,38 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v25.9 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v26.0 — Agosto 2026
 
 ---
 
 ## 📜 REGISTRO DETALLADO DE CONVERSACIONES (ORDEN CRONOLÓGICO INVERSO CON FECHA Y HORA)
+
+### 🗓️ Sesión: Miércoles 26 de Agosto de 2026 — 02:40 PM a 03:20 PM (Hora Colombia UTC-5)
+**Versión del Sistema**: `v26.0 — Auditoría Integral de Moderación en Grupos Oficiales (1, 2 y 3), Reacción Obligatoria 🚫 con Despacho Inmediato, Reacciones Robustas en Flyers/Imágenes Puras y Saneamiento de Enlaces Grupales`  
+**Participantes**: Eduardo A. Rivera (Director Tecnología) & Antigravity IDE (Pair Programmer)
+
+#### 📋 Requerimientos Específicos del Usuario (Eduardo A. Rivera):
+1. **Verificación y Cumplimiento Estricto de Normas de Moderación**:
+   - Confirmar en la documentación y código histórico que en los **3 Grupos Oficiales de VECY Network** (Grupo 1: Inmuebles, Grupo 2: Soporte/Marketing, Grupo 3: Proyecto), cuando alguien publica contenido fuera de la temática asignada, JanIA debe reaccionar **primero con el emoji 🚫** y acto seguido **escribir inmediatamente en el grupo citando el mensaje del usuario** con la advertencia cordial, invitándolo a eliminarlo y facilitándole el enlace al grupo correcto.
+2. **Diagnóstico de Reacción en Flyers e Imágenes Puras en Grupo 1**:
+   - Diagnosticar y resolver por qué el flyer del Edificio Comercial ($3.800M) publicado por Wilson Guzmán a las 14:52 en *VECY INMUEBLES NETWORK* no recibió la reacción correspondiente.
+3. **Auditoría Integral de Código, Enlaces y Eliminación de Deuda Técnica**:
+   - Realizar una revisión exhaustiva de los archivos maestros para evitar duplicidades, limpiar enlaces antiguos desactualizados y unificar los links oficiales activos (`https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ`).
+
+#### 🛠️ Soluciones e Implementaciones Técnicas:
+- **Matriz de Moderación Oficial en 2 Pasos (Reacción 🚫 + Mensaje)**:
+  - En [`server/_core/whatsapp-match.ts`](file:///home/eddu/Proyectos/vecy-network/server/_core/whatsapp-match.ts) y [`server/_core/janIA.ts`](file:///home/eddu/Proyectos/vecy-network/server/_core/janIA.ts), se garantizó que ante cualquier mensaje fuera de tema o en el grupo equivocado en los grupos 1, 2 y 3, se clasifique como `VIOLACION_DE_NORMAS`, ejecutando primero `safeReact(chatId, msg.key, '🚫')` y luego despachando la advertencia citada al chat grupal.
+  - En grupos externos de terceros, se mantiene el **silencio 100% absoluto** (cero reacciones `🚫` y cero advertencias textuales).
+- **Corrección de Reacciones en Flyers e Imágenes Puras**:
+  - Se eliminó la traba condicional `result.inserted === true` en `getReactionEmoji` de `whatsapp-match.ts`, permitiendo que toda oferta o demanda válida extraída por visión OCR (incluso si fue recibida previamente o sin texto de pie de foto) reciba inmediatamente su emoji de negocio (`👍`, `👌`, `🔀`, `📝`, `✏️`, `🔄`).
+- **Saneamiento Exhaustivo de Enlaces Oficiales**:
+  - Actualización de todos los enlaces obsoletos (`K36KrHeB9nMEKJ56s8XFcM`) al enlace activo oficial de *VECY INMUEBLES NETWORK*: `https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ` a lo largo de `whatsapp-match.ts`, `PROYECTO_Vecy Network.md`, `VECY_SOPORTE_LEGAL...md` y `base.md`.
+- **Verificación Empírica**:
+  - Compilación 0 errores con TypeScript y Vite.
+  - Sincronización de versión a `v26.0` en `shared/const.ts`, `.agents/AGENTS.md`, `vecy_network_technical_dossier.md` y la bitácora maestra.
+  - Commit y push en la rama `main` de GitHub (`f8189e3`).
+
+---
 
 ### 🗓️ Sesión: Miércoles 26 de Agosto de 2026 — 12:30 PM a 01:40 PM (Hora Colombia UTC-5)
 **Versión del Sistema**: `v25.9 — Purga de Pestañas Obsoletas en Panel Admin, Carga Instantánea de Autenticación, Domingo de Soporte JanIA, Ilustración 3D & Parrilla Semanal Completa (Lunes a Domingo)`  

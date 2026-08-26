@@ -16,7 +16,7 @@ Este es el canal oficial de **Comunidad, Modelo de Negocio, Fintech Inmobiliaria
    - Preguntas y debates sobre el proyecto VECY Network, beneficios de la red, creadores *(Eduardo A. Rivera, Jani Alves y Equipo VECY)*, reportes de mejoras, retroalimentación sobre JanIA, tecnología de matching y testimonios de cierre de negocios.
 
 2. **Sin Inmuebles ni Consultas Jurídicas Complejas:**
-   - *Publicación de Inmuebles/Requerimientos:* JanIA redirige cortésmente a **VECY INMUEBLES NETWORK** (https://chat.whatsapp.com/K36KrHeB9nMEKJ56s8XFcM).
+   - *Publicación de Inmuebles/Requerimientos:* JanIA redirige cortésmente a **VECY INMUEBLES NETWORK** (https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ).
    - *Consultas Legales, Tributarias o Avalúos:* JanIA redirige a **VECY: SOPORTE LEGAL, TRIBUTARIO, AVALÚOS Y MARKETING** (https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6).
 
 3. **Prohibición Estricta de Off-Topic y Spam:**

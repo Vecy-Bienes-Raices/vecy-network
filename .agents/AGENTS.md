@@ -162,7 +162,12 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v25.9 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL: v26.0 — Agosto 2026
+
+### Novedades v26.0 (Auditoría Integral de Moderación en Grupos 1, 2 y 3, Reacción Inmediata 🚫, Resiliencia de Flyers & Saneamiento de Enlaces):
+- **Matriz de Moderación Oficial en 2 Pasos (`whatsapp-match.ts` & `janIA.ts`)**: En los 3 grupos oficiales (Inmuebles, Soporte/Marketing y Proyecto), cualquier publicación que no corresponda a la temática recibe primero la reacción **`🚫`** e inmediatamente JanIA despacha la advertencia citada al usuario con el enlace correcto. En grupos externos de terceros, se preserva el silencio 100% absoluto.
+- **Desbloqueo de Reacción en Flyers e Imágenes Puras (`getReactionEmoji` en `whatsapp-match.ts`)**: Supresión de la traba `result.inserted === true` para que todo flyer analizado con Gemini Vision reciba su emoji de negocio (`👍`, `👌`, `🔀`, `📝`, `✏️`, `🔄`) sin importar si ya estaba en memoria.
+- **Saneamiento Exhaustivo de Enlaces Grupales**: Reemplazo de links antiguos en prompts y código por el enlace activo oficial de *VECY INMUEBLES NETWORK* (`https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ`).
 
 ### Novedades v25.9 (Purga de Pestañas Obsoletas en Panel Admin, Caché Instantánea de Autenticación & Persistencia de Navegación):
 - **Purga y Eliminación de Módulos Obsoletos**: Supresión física de `AdminLeads.tsx` (prospectos mock), `AdminGitHubSync.tsx` (sincronizador antiguo) y `AdminReports.tsx` (reportes redundantes), aligerando el bundle del panel y simplificando el menú a las 3 herramientas maestras esenciales: **Inmuebles**, **Requerimientos** y **Coincidencias**.
