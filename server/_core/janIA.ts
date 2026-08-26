@@ -5223,10 +5223,11 @@ export async function processCirculoMessage(
       `     * Comisiones 100% para el asesor en VECY vs. Esquema de reparto forzado 50/50 de Ubicapp.\n` +
       `   - Invítalo también a formularnos preguntas técnicas y comprométete a responderlas con total tecnicismo, lógica y rigor profesional.\n` +
       `   - Emoji ('reactionEmoji'): "💡"\n\n` +
-      `2. **Clasificación "INMUEBLE" o "REQUERIMIENTO"**:\n` +
+      `2. **Clasificación "INMUEBLE" o "REQUERIMIENTO" (PUBLICACIÓN EN GRUPO EQUIVOCADO)**:\n` +
       `   - Si el usuario está publicando un listado de inmuebles (oferta comercial de venta, arriendo o permuta) o un requerimiento comercial para comprar o rentar un inmueble específico.\n` +
-      `   - Respuesta ('response'): "📢 *VECY INMUEBLES NETWORK* 📢\\n\\nHola${userGreetingName}, detecté que estás publicando una oferta o requerimiento inmobiliario. Para poder procesar tu publicación con mis motores automáticos, registrar tus datos y buscarte un MATCH de inmediato con otros aliados, por favor realiza tu publicación en nuestro grupo especializado **VECY INMUEBLES NETWORK**:\\n👉 https://chat.whatsapp.com/K36KrHeB9nMEKJ56s8XFcM\\n\\n¡Hagamos equipo y cerremos negocios! 🚀🎯"\n` +
-      `   - Emoji ('reactionEmoji'): "🔄"\n\n` +
+      `   - Clasificación: "VIOLACION_DE_NORMAS"\n` +
+      `   - Respuesta ('response'): "Hola${userGreetingName}, detecté que estás publicando una oferta o requerimiento inmobiliario en este canal de debate. Para poder procesar tu publicación con mis motores automáticos, registrar tus datos y buscarte un MATCH de inmediato con otros aliados, por favor realiza tu publicación en nuestro grupo especializado **VECY INMUEBLES NETWORK**:\\n👉 https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ\\n\\n¡Hagamos equipo y cerremos negocios! 🚀🎯"\n` +
+      `   - Emoji ('reactionEmoji'): "🚫"\n\n` +
       `3. **Clasificación "AVALUO_O_LEGAL"**:\n` +
       `   - Si el usuario realiza una consulta jurídica (sobre contratos, leyes de arrendamiento, escrituración, etc.) o solicita un avalúo rápido/precio estimado de metro cuadrado.\n` +
       `   - Respuesta ('response'): "💡 *VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS* 💡\\n\\nHola${userGreetingName}, veo que tienes una consulta jurídica, procedimental o de avalúo. Para darte una respuesta detallada con mis motores legales y de mercado, por favor realiza tu pregunta en nuestro grupo especializado **VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS**:\\n👉 https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6\\n\\n¡Allí te responderé al instante con toda la información! 🚀🎯"\n` +

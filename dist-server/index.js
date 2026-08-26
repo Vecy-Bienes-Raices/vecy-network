@@ -9715,10 +9715,11 @@ Analiza el contexto completo antes de clasificar. Debes responder estrictamente 
    - Inv\xEDtalo tambi\xE9n a formularnos preguntas t\xE9cnicas y comprom\xE9tete a responderlas con total tecnicismo, l\xF3gica y rigor profesional.
    - Emoji ('reactionEmoji'): "\u{1F4A1}"
 
-2. **Clasificaci\xF3n "INMUEBLE" o "REQUERIMIENTO"**:
+2. **Clasificaci\xF3n "INMUEBLE" o "REQUERIMIENTO" (PUBLICACI\xD3N EN GRUPO EQUIVOCADO)**:
    - Si el usuario est\xE1 publicando un listado de inmuebles (oferta comercial de venta, arriendo o permuta) o un requerimiento comercial para comprar o rentar un inmueble espec\xEDfico.
-   - Respuesta ('response'): "\u{1F4E2} *VECY INMUEBLES NETWORK* \u{1F4E2}\\n\\nHola${userGreetingName}, detect\xE9 que est\xE1s publicando una oferta o requerimiento inmobiliario. Para poder procesar tu publicaci\xF3n con mis motores autom\xE1ticos, registrar tus datos y buscarte un MATCH de inmediato con otros aliados, por favor realiza tu publicaci\xF3n en nuestro grupo especializado **VECY INMUEBLES NETWORK**:\\n\u{1F449} https://chat.whatsapp.com/K36KrHeB9nMEKJ56s8XFcM\\n\\n\xA1Hagamos equipo y cerremos negocios! \u{1F680}\u{1F3AF}"
-   - Emoji ('reactionEmoji'): "\u{1F504}"
+   - Clasificaci\xF3n: "VIOLACION_DE_NORMAS"
+   - Respuesta ('response'): "Hola${userGreetingName}, detect\xE9 que est\xE1s publicando una oferta o requerimiento inmobiliario en este canal de debate. Para poder procesar tu publicaci\xF3n con mis motores autom\xE1ticos, registrar tus datos y buscarte un MATCH de inmediato con otros aliados, por favor realiza tu publicaci\xF3n en nuestro grupo especializado **VECY INMUEBLES NETWORK**:\\n\u{1F449} https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ\\n\\n\xA1Hagamos equipo y cerremos negocios! \u{1F680}\u{1F3AF}"
+   - Emoji ('reactionEmoji'): "\u{1F6AB}"
 
 3. **Clasificaci\xF3n "AVALUO_O_LEGAL"**:
    - Si el usuario realiza una consulta jur\xEDdica (sobre contratos, leyes de arrendamiento, escrituraci\xF3n, etc.) o solicita un aval\xFAo r\xE1pido/precio estimado de metro cuadrado.
@@ -12028,11 +12029,16 @@ ${result.response}`);
               }
             } else {
               const isOfficial = chatId === this.targetGroupId || chatId === this.buzonGroupId || chatId === this.circuloGroupId;
-              if (result.classification === "VIOLACION_DE_NORMAS" && isOfficial && result.response && result.response.trim() !== "") {
-                const textToDeliver = result.response;
+              if (result.classification === "VIOLACION_DE_NORMAS" && isOfficial) {
                 const lastMsg = buffer.messages[buffer.messages.length - 1]?.originalMsg;
-                await this.queuedSend(chatId, textToDeliver, { quoted: lastMsg });
-                await this.logToDb(chatId, "janIA", `[GROUP-WARNING] ${textToDeliver}`);
+                if (lastMsg && lastMsg.key && lastMsg.key.id && !lastMsg.key.fromMe) {
+                  await this.safeReact(chatId, lastMsg.key, "\u{1F6AB}", "WARNING-REACT");
+                }
+                if (result.response && result.response.trim() !== "") {
+                  const textToDeliver = result.response;
+                  await this.queuedSend(chatId, textToDeliver, { quoted: lastMsg });
+                  await this.logToDb(chatId, "janIA", `[GROUP-WARNING] ${textToDeliver}`);
+                }
               }
             }
             if (result.extraDMs && result.extraDMs.length > 0) {

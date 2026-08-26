@@ -1612,12 +1612,19 @@ export class JaniaMatchBot {
           }
         } else {
           const isOfficial = chatId === this.targetGroupId || chatId === this.buzonGroupId || chatId === this.circuloGroupId;
-          // Si el usuario cometió una infracción o publicó en grupo equivocado en un grupo oficial
-          if (result.classification === "VIOLACION_DE_NORMAS" && isOfficial && result.response && result.response.trim() !== "") {
-            const textToDeliver = result.response;
+          // Si el usuario cometió una infracción o publicó en grupo equivocado en un grupo oficial (1, 2 o 3)
+          if (result.classification === "VIOLACION_DE_NORMAS" && isOfficial) {
             const lastMsg = buffer.messages[buffer.messages.length - 1]?.originalMsg;
-            await this.queuedSend(chatId, textToDeliver, { quoted: lastMsg });
-            await this.logToDb(chatId, 'janIA', `[GROUP-WARNING] ${textToDeliver}`);
+            if (lastMsg && lastMsg.key && lastMsg.key.id && !lastMsg.key.fromMe) {
+              // 1. Reaccionar PRIMERO con 🚫 en los grupos oficiales
+              await this.safeReact(chatId, lastMsg.key, '🚫', 'WARNING-REACT');
+            }
+            if (result.response && result.response.trim() !== "") {
+              const textToDeliver = result.response;
+              // 2. Enviar el texto cordial de advertencia y redirección citando el mensaje
+              await this.queuedSend(chatId, textToDeliver, { quoted: lastMsg });
+              await this.logToDb(chatId, 'janIA', `[GROUP-WARNING] ${textToDeliver}`);
+            }
           }
         }
 
