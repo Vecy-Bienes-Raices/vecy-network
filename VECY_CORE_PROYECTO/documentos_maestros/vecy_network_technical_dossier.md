@@ -759,6 +759,21 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 
 ---
 
+### Versión v25.9 — Agosto 2026: Purga de Pestañas Obsoletas en Panel Admin, Caché Instantánea de Autenticación & Persistencia de Navegación
+
+#### 1. PURGA Y ELIMINACIÓN DE MÓDULOS OBSOLETOS
+- **Retiro Limpio de Componentes Inactivos**: Supresión física de `AdminLeads.tsx` (prospectos con datos mock), `AdminGitHubSync.tsx` (sincronizador antiguo) y `AdminReports.tsx` (métricas redundantes).
+- **Enfoque en la Tríada Maestra**: Reducción del menú de navegación a las tres herramientas operativas fundamentales de VECY Network: **`Inmuebles`**, **`Requerimientos`** y **`Coincidencias`**.
+
+#### 2. CARGA INSTANTÁNEA Y PERSISTENCIA DE NAVEGACIÓN
+- **Optimización de `useAuth.ts`**: Inicialización síncrona desde `localStorage` (`manus-runtime-user-info`), erradicando las pantallas de espera y el spinner *"Verificando acceso..."* al abrir el panel admin en PCs y smartphones ($0.01\text{s}$).
+- **Persistencia de Pestaña Activa (`Admin.tsx`)**: Almacenamiento en `localStorage` (`vecy_admin_active_tab`) para conservar la última pestaña consultada por el usuario entre recargas y sesiones.
+
+#### 3. SOPORTE DE ILUSTRACIONES 3D DE JANIA
+- **Pack Oficial Expandido (`client/public/assets/jania/`)**: Inclusión de `jania_periodista.jpg` (Vecy Network Noticias) y `jania_podcast.jpg` (Café Inmobiliario) con resolución flexible de alias (`podcast`, `potcast`, `cafe`, `periodista`, `noticias`) y extensiones en `cronService.ts`.
+
+---
+
 ### Versión v25.8 — Agosto 2026: Auto-Sincronización Nativa del Canal Oficial de WhatsApp ("Vecy Bienes Raíces 🏠"), Publicaciones Simultáneas con Ilustración 3D, Audio TTS, Captions Estructurados y Venta Institucional de VECY Network
 
 #### 1. AUTO-SINCRONIZACIÓN NATIVA DEL CANAL DE WHATSAPP

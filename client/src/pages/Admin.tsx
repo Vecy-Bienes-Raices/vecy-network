@@ -3,7 +3,7 @@ import { useAuth } from '@/_core/hooks/useAuth';
 import { useLocation } from 'wouter';
 import { getLoginUrl, VECY_VERSION } from '@/const';
 import {
-  LogOut, Home, Building2, Users, BarChart3, Menu, X, GitBranch, Shield, Sparkles, ClipboardList, Radio, PanelLeftClose
+  LogOut, Home, Building2, Menu, X, Shield, Sparkles, ClipboardList, Radio, PanelLeftClose
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { getColombiaCurrentDateString } from '@/lib/dateUtils';
@@ -12,9 +12,6 @@ import { getColombiaCurrentDateString } from '@/lib/dateUtils';
 const AdminProperties = lazy(() => import('@/components/admin/AdminProperties'));
 const AdminRequirements = lazy(() => import('@/components/admin/AdminRequirements'));
 const AdminMatches = lazy(() => import('@/components/admin/AdminMatches'));
-const AdminLeads = lazy(() => import('@/components/admin/AdminLeads'));
-const AdminReports = lazy(() => import('@/components/admin/AdminReports'));
-const AdminGitHubSync = lazy(() => import('@/components/admin/AdminGitHubSync'));
 
 function TabLoadingSkeleton() {
   return (
@@ -29,9 +26,6 @@ const tabs = [
   { id: 'properties', label: 'Inmuebles', icon: Building2 },
   { id: 'requirements', label: 'Requerimientos', icon: ClipboardList },
   { id: 'matches', label: 'Coincidencias', icon: Sparkles },
-  { id: 'leads', label: 'Prospectos', icon: Users },
-  { id: 'reports', label: 'Reportes', icon: BarChart3 },
-  { id: 'github', label: 'GitHub Sync', icon: GitBranch },
 ];
 
 function BotStatusWidget() {
@@ -77,7 +71,22 @@ export default function Admin() {
     return window.innerWidth >= 1024;
   });
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('properties');
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    if (typeof window === 'undefined') return 'properties';
+    const saved = localStorage.getItem('vecy_admin_active_tab');
+    if (saved && ['properties', 'requirements', 'matches'].includes(saved)) {
+      return saved;
+    }
+    return 'properties';
+  });
+
+  const handleSelectTab = (tabId: string) => {
+    setActiveTab(tabId);
+    setMobileDrawerOpen(false);
+    try {
+      localStorage.setItem('vecy_admin_active_tab', tabId);
+    } catch (e) {}
+  };
 
   const toggleSidebar = () => {
     setSidebarExpanded((prev) => {
@@ -157,9 +166,6 @@ export default function Admin() {
       case 'properties':    Component = <AdminProperties />; break;
       case 'requirements':  Component = <AdminRequirements />; break;
       case 'matches':       Component = <AdminMatches />; break;
-      case 'github':        Component = <AdminGitHubSync />; break;
-      case 'leads':         Component = <AdminLeads />; break;
-      case 'reports':       Component = <AdminReports />; break;
       default:              Component = <AdminProperties />; break;
     }
 
@@ -271,10 +277,7 @@ export default function Admin() {
             return (
               <button
                 key={tab.id}
-                onClick={() => {
-                  setActiveTab(tab.id);
-                  setMobileDrawerOpen(false);
-                }}
+                onClick={() => handleSelectTab(tab.id)}
                 className={`
                   w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all group relative
                   ${isActive 
@@ -380,7 +383,7 @@ export default function Admin() {
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => handleSelectTab(tab.id)}
                 className={`inline-flex shrink-0 items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
                   isActive 
                     ? 'bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#bf953f] text-black shadow-[0_0_12px_rgba(191,149,63,0.3)] font-extrabold' 

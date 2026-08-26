@@ -52,11 +52,40 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v25.8 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v25.9 — Agosto 2026
 
 ---
 
 ## 📜 REGISTRO DETALLADO DE CONVERSACIONES (ORDEN CRONOLÓGICO INVERSO CON FECHA Y HORA)
+
+### 🗓️ Sesión: Miércoles 26 de Agosto de 2026 — 12:30 PM a 01:00 PM (Hora Colombia UTC-5)
+**Versión del Sistema**: `v25.9 — Purga de Pestañas Obsoletas en Panel Admin, Caché Instantánea de Autenticación & Persistencia de Navegación`  
+**Participantes**: Eduardo A. Rivera (Director Tecnología) & Antigravity IDE (Pair Programmer)
+
+#### 📋 Requerimientos Específicos del Usuario (Eduardo A. Rivera):
+1. **Optimización de Carga del Panel de Administración**:
+   - Resolver los tiempos de espera y lentitud al abrir la página de administrador en PCs y dispositivos móviles.
+2. **Purga de Pestañas Innecesarias**:
+   - Eliminar definitivamente las pestañas y archivos obsoletos: `Prospectos` (`AdminLeads.tsx`), `GitHub Sync` (`AdminGitHubSync.tsx`) y `Reportes` (`AdminReports.tsx`).
+   - Conservar única y exclusivamente las 3 herramientas maestras operativas: **Inmuebles**, **Requerimientos** y **Coincidencias**.
+3. **Persistencia y Seguridad**:
+   - Preservar al 100% el sistema de autenticación de administradores, agilizar la verificación de acceso sin pantallas congeladas, actualizar la bitácora maestra e incrementar la versión a `v25.9`.
+
+#### 🛠️ Soluciones e Implementaciones Técnicas:
+- **Purga Limpia de Archivos**:
+  - Eliminación física de los componentes `AdminLeads.tsx`, `AdminGitHubSync.tsx` y `AdminReports.tsx`.
+- **Carga Instantánea de Autenticación (`useAuth.ts`)**:
+  - Inicialización síncrona de sesión desde `localStorage` (`manus-runtime-user-info`), erradicando la pantalla de carga *"Verificando acceso..."* al abrir el panel ($0.01\text{s}$).
+- **Persistencia de Navegación (`Admin.tsx`)**:
+  - Almacenamiento en `localStorage` (`vecy_admin_active_tab`) para que el panel recuerde siempre la última pestaña en la que estaba trabajando el usuario.
+- **Soporte de Ilustraciones 3D de JanIA (`cronService.ts`)**:
+  - Integración oficial de `jania_periodista.jpg` (Vecy Network Noticias) y `jania_podcast.jpg` (Café Inmobiliario) con resolución flexible de nombres y extensiones.
+- **Verificación Empírica**:
+  - Compilación 0 errores con TypeScript y Vite.
+  - Sincronización a `v25.9` en `shared/const.ts`, `.agents/AGENTS.md`, `vecy_network_technical_dossier.md` y la bitácora.
+  - Despliegue en producción en VPS (`13.140.149.144`) con recarga en limpio bajo PM2.
+
+---
 
 ### 🗓️ Sesión: Martes 25 de Agosto de 2026 — 04:15 PM a 04:55 PM (Hora Colombia UTC-5)
 **Versión del Sistema**: `v25.8 — Auto-Sincronización Nativa del Canal Oficial de WhatsApp ("Vecy Bienes Raíces 🏠"), Publicaciones Simultáneas con Ilustración 3D, Audio TTS, Captions Estructurados y Venta Institucional de VECY Network`  

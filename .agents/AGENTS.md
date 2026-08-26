@@ -162,7 +162,13 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v25.8 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL: v25.9 — Agosto 2026
+
+### Novedades v25.9 (Purga de Pestañas Obsoletas en Panel Admin, Caché Instantánea de Autenticación & Persistencia de Navegación):
+- **Purga y Eliminación de Módulos Obsoletos**: Supresión física de `AdminLeads.tsx` (prospectos mock), `AdminGitHubSync.tsx` (sincronizador antiguo) y `AdminReports.tsx` (reportes redundantes), aligerando el bundle del panel y simplificando el menú a las 3 herramientas maestras esenciales: **Inmuebles**, **Requerimientos** y **Coincidencias**.
+- **Carga Instantánea de Autenticación (`useAuth.ts`)**: Inicialización síncrona de sesión desde `localStorage` (`manus-runtime-user-info`), eliminando los retrasos y el spinner de "Verificando acceso..." ($0.01\text{s}$ de carga inicial).
+- **Persistencia Inteligente de Pestaña Activa (`Admin.tsx`)**: Guardado automático en `localStorage` (`vecy_admin_active_tab`) para que el panel abra directamente en la última vista de trabajo del administrador tanto en escritorio como en dispositivos móviles.
+- **Soporte de Ilustraciones 3D de JanIA (`cronService.ts`)**: Integración oficial de `jania_periodista.jpg` (Vecy Network Noticias) y `jania_podcast.jpg` (Café Inmobiliario) con resolución flexible de nombres y extensiones.
 
 ### Novedades v25.8 (Auto-Sincronización Nativa del Canal Oficial de WhatsApp, Ilustraciones 3D, Audio TTS, Captions Estructurados y Venta Institucional VECY):
 - **Auto-Detección y Sincronización de Canal en Baileys (`whatsapp-match.ts`)**: Resolución nativa del canal oficial `https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b` (`120363399889853806@newsletter` - *"Vecy Bienes Raíces 🏠"*) mediante `sock.newsletterMetadata("invite", code)`.

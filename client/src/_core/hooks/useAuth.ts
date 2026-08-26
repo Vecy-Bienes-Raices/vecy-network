@@ -13,6 +13,16 @@ export function useAuth(options?: UseAuthOptions) {
   const { redirectOnUnauthenticated = false, redirectPath = getLoginUrl() } =
     options ?? {};
   const utils = trpc.useUtils();
+  const [cachedUser, setCachedUser] = useState<any>(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const s = localStorage.getItem("manus-runtime-user-info");
+      return s ? JSON.parse(s) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+
   const [sbUser, setSbUser] = useState<any>(null);
 
   useEffect(() => {
@@ -28,6 +38,7 @@ export function useAuth(options?: UseAuthOptions) {
   const meQuery = trpc.auth.me.useQuery(undefined, {
     retry: false,
     refetchOnWindowFocus: false,
+    staleTime: 60000,
   });
 
   const logoutMutation = trpc.auth.logout.useMutation({
@@ -48,8 +59,10 @@ export function useAuth(options?: UseAuthOptions) {
       }
     } finally {
       localStorage.removeItem("jania-session-token");
+      localStorage.removeItem("manus-runtime-user-info");
       await supabase.auth.signOut().catch(() => {});
       setSbUser(null);
+      setCachedUser(null);
       utils.auth.me.setData(undefined, null);
       await utils.auth.me.invalidate();
     }
@@ -70,24 +83,27 @@ export function useAuth(options?: UseAuthOptions) {
         lastSignedIn: new Date(),
       };
     }
-    return null;
-  }, [meQuery.data, sbUser]);
+    return cachedUser;
+  }, [meQuery.data, sbUser, cachedUser]);
 
   const state = useMemo(() => {
     if (activeUser) {
-      localStorage.setItem(
-        "manus-runtime-user-info",
-        JSON.stringify(activeUser)
-      );
+      try {
+        localStorage.setItem(
+          "manus-runtime-user-info",
+          JSON.stringify(activeUser)
+        );
+      } catch (e) {}
     }
     return {
       user: activeUser,
-      loading: (meQuery.isLoading && !sbUser) || logoutMutation.isPending,
+      loading: (meQuery.isLoading && !sbUser && !cachedUser) || logoutMutation.isPending,
       error: meQuery.error ?? logoutMutation.error ?? null,
       isAuthenticated: Boolean(activeUser),
     };
   }, [
     activeUser,
+    cachedUser,
     meQuery.error,
     meQuery.isLoading,
     sbUser,
