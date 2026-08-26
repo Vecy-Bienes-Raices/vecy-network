@@ -5020,9 +5020,11 @@ export async function processConsultingMessage(
       `  * **Estructura Maestra de una DEMANDA Completa**: Perfil de cliente calificado + Tipo de inmueble deseado + Modalidad de negocio (Venta/Arriendo/Permuta) + Sectores/Barrios prioritarios + Presupuesto Máximo (techo real) + Área Mínima y Habitaciones mínimas + Requisitos no negociables (ascensor, balcón) + Contacto directo.\n\n` +
       `## LÓGICA DE CLASIFICACIÓN Y REDIRECCIÓN (CRÍTICO - EVITAR MENSAJES CRUZADOS)\n` +
       `Analiza el contexto completo antes de clasificar. Debes responder estrictamente en formato JSON con la clasificación correcta:\n\n` +
-      `1. **Clasificación "INMUEBLE" o "REQUERIMIENTO"**:\n` +
-      `   - Respuesta ('response'): "🏠 *REGISTRO DIRECTO DE INMUEBLE* 🚀\\n\\nHola @${rawPhone}, ¡excelente! Veo que estás publicando o buscando un inmueble. Recuerda que puedes enviarme los datos de tu oferta o requerimiento redactados directamente en este chat privado (incluyendo tipo de inmueble, tipo de negocio, precio, área y barrio/sector) o incluso una foto/flyer de la ficha técnica.\\n\\nYo procesaré la información de inmediato, la guardaré en la red VECY y te notificaré aquí mismo en privado en cuanto te consiga un MATCH comercial. ¡Escríbeme los detalles ahora mismo! 🤝🎯"\n` +
-      `   - Emoji ('reactionEmoji'): "🔄"\n\n` +
+      `1. **Clasificación "INMUEBLE" o "REQUERIMIENTO" (PUBLICACIÓN EN GRUPO EQUIVOCADO)**:\n` +
+      `   - Si el usuario publica una oferta de venta/arriendo, un flyer publicitario de un inmueble o un requerimiento de cliente en este grupo:\n` +
+      `   - Clasificación: "VIOLACION_DE_NORMAS"\n` +
+      `   - Respuesta ('response'): "Hola ${n}, espero te encuentres bien. Has publicado esta información en el grupo equivocado. Revisa siempre el nombre del grupo y la descripción. ¡Te invito a eliminarla! Esta publicación la debes poner en el grupo de **VECY INMUEBLES NETWORK**. Acá tienes nuevamente el enlace del grupo:\\n👉 https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ\\n\\nSaludos. 👋"\n` +
+      `   - Emoji ('reactionEmoji'): "🚫"\n\n` +
       `2. **Clasificación "SOBRE_VECY"**:\n` +
       `   - Si el usuario hace preguntas sobre el proyecto VECY Network, sus creadores (Eduardo A. Rivera, Jani Alves), beneficios, cómo funciona la IA, o sobre el canal Círculo Cero.\n` +
       `   - Respuesta ('response'): "👌 *CONEXIÓN VECY NETWORK* 👌\\n\\nHola @${rawPhone}, soy JanIA, la inteligencia estratégica detrás de VECY Network. Nuestra misión es potenciar tu gestión inmobiliaria de forma gratuita mediante cruces automatizados y herramientas digitales.\\n\\nPuedes consultarme sobre trámites legales de bienes raíces, avalúos prediales o enviarme fichas técnicas de tus inmuebles y requerimientos de clientes para guardarlos en nuestra base de datos. ¡Estoy para ayudarte a acelerar tus cierres! 🤝✨"\n` +

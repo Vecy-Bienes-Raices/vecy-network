@@ -9450,9 +9450,11 @@ Cuando respondas consultas (clasificaci\xF3n CONSULTA_GENERAL), debes guiar con 
 ## L\xD3GICA DE CLASIFICACI\xD3N Y REDIRECCI\xD3N (CR\xCDTICO - EVITAR MENSAJES CRUZADOS)
 Analiza el contexto completo antes de clasificar. Debes responder estrictamente en formato JSON con la clasificaci\xF3n correcta:
 
-1. **Clasificaci\xF3n "INMUEBLE" o "REQUERIMIENTO"**:
-   - Respuesta ('response'): "\u{1F3E0} *REGISTRO DIRECTO DE INMUEBLE* \u{1F680}\\n\\nHola @${rawPhone}, \xA1excelente! Veo que est\xE1s publicando o buscando un inmueble. Recuerda que puedes enviarme los datos de tu oferta o requerimiento redactados directamente en este chat privado (incluyendo tipo de inmueble, tipo de negocio, precio, \xE1rea y barrio/sector) o incluso una foto/flyer de la ficha t\xE9cnica.\\n\\nYo procesar\xE9 la informaci\xF3n de inmediato, la guardar\xE9 en la red VECY y te notificar\xE9 aqu\xED mismo en privado en cuanto te consiga un MATCH comercial. \xA1Escr\xEDbeme los detalles ahora mismo! \u{1F91D}\u{1F3AF}"
-   - Emoji ('reactionEmoji'): "\u{1F504}"
+1. **Clasificaci\xF3n "INMUEBLE" o "REQUERIMIENTO" (PUBLICACI\xD3N EN GRUPO EQUIVOCADO)**:
+   - Si el usuario publica una oferta de venta/arriendo, un flyer publicitario de un inmueble o un requerimiento de cliente en este grupo:
+   - Clasificaci\xF3n: "VIOLACION_DE_NORMAS"
+   - Respuesta ('response'): "Hola ${n}, espero te encuentres bien. Has publicado esta informaci\xF3n en el grupo equivocado. Revisa siempre el nombre del grupo y la descripci\xF3n. \xA1Te invito a eliminarla! Esta publicaci\xF3n la debes poner en el grupo de **VECY INMUEBLES NETWORK**. Ac\xE1 tienes nuevamente el enlace del grupo:\\n\u{1F449} https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ\\n\\nSaludos. \u{1F44B}"
+   - Emoji ('reactionEmoji'): "\u{1F6AB}"
 
 2. **Clasificaci\xF3n "SOBRE_VECY"**:
    - Si el usuario hace preguntas sobre el proyecto VECY Network, sus creadores (Eduardo A. Rivera, Jani Alves), beneficios, c\xF3mo funciona la IA, o sobre el canal C\xEDrculo Cero.
@@ -12025,27 +12027,11 @@ ${result.response}`);
                 }
               }
             } else {
-              console.log(`[JANIA-MATCH] Publicaci\xF3n con advertencia/incompleta de ${senderId} en ${chatId} procesada.`);
               const isOfficial = chatId === this.targetGroupId || chatId === this.buzonGroupId || chatId === this.circuloGroupId;
-              if (result.classification === "VIOLACION_DE_NORMAS" && isOfficial && isBotAdmin && result.response && result.response.trim() !== "") {
+              if (result.classification === "VIOLACION_DE_NORMAS" && isOfficial && result.response && result.response.trim() !== "") {
                 const textToDeliver = result.response;
-                const { textToSpeechMedia: textToSpeechMedia2 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
-                const voiceToDeliver = result.voiceResponse || textToDeliver;
-                let audioSent = false;
-                try {
-                  const media = await textToSpeechMedia2(voiceToDeliver);
-                  if (media) {
-                    const lastMsg = buffer.messages[buffer.messages.length - 1].originalMsg;
-                    await this.queuedSend(chatId, media, { sendAudioAsVoice: true, quoted: lastMsg });
-                    audioSent = true;
-                  }
-                } catch (audioErr) {
-                  console.error("[JANIA-MATCH] Error al enviar audio de amonestaci\xF3n:", audioErr);
-                }
-                if (!audioSent) {
-                  const lastMsg = buffer.messages[buffer.messages.length - 1].originalMsg;
-                  await this.queuedSend(chatId, textToDeliver, { quoted: lastMsg });
-                }
+                const lastMsg = buffer.messages[buffer.messages.length - 1]?.originalMsg;
+                await this.queuedSend(chatId, textToDeliver, { quoted: lastMsg });
                 await this.logToDb(chatId, "janIA", `[GROUP-WARNING] ${textToDeliver}`);
               }
             }

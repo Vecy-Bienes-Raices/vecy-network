@@ -1611,32 +1611,12 @@ export class JaniaMatchBot {
             }
           }
         } else {
-          console.log(`[JANIA-MATCH] Publicación con advertencia/incompleta de ${senderId} en ${chatId} procesada.`);
           const isOfficial = chatId === this.targetGroupId || chatId === this.buzonGroupId || chatId === this.circuloGroupId;
-          // Si el bot es administrador y el usuario cometió una infracción de normas (publicación no permitida) en un grupo oficial
-          if (result.classification === "VIOLACION_DE_NORMAS" && isOfficial && isBotAdmin && result.response && result.response.trim() !== "") {
+          // Si el usuario cometió una infracción o publicó en grupo equivocado en un grupo oficial
+          if (result.classification === "VIOLACION_DE_NORMAS" && isOfficial && result.response && result.response.trim() !== "") {
             const textToDeliver = result.response;
-            const { textToSpeechMedia } = await import('./whatsapp-utils');
-            const voiceToDeliver = result.voiceResponse || textToDeliver;
-
-            // 1. Enviar el audio de amonestación si es viable
-            let audioSent = false;
-            try {
-              const media = await textToSpeechMedia(voiceToDeliver);
-              if (media) {
-                const lastMsg = buffer.messages[buffer.messages.length - 1].originalMsg;
-                await this.queuedSend(chatId, media, { sendAudioAsVoice: true, quoted: lastMsg });
-                audioSent = true;
-              }
-            } catch (audioErr) {
-              console.error('[JANIA-MATCH] Error al enviar audio de amonestación:', audioErr);
-            }
-
-            // 2. Enviar texto a la comunidad amonestando al usuario solo si falló el audio
-            if (!audioSent) {
-              const lastMsg = buffer.messages[buffer.messages.length - 1].originalMsg;
-              await this.queuedSend(chatId, textToDeliver, { quoted: lastMsg });
-            }
+            const lastMsg = buffer.messages[buffer.messages.length - 1]?.originalMsg;
+            await this.queuedSend(chatId, textToDeliver, { quoted: lastMsg });
             await this.logToDb(chatId, 'janIA', `[GROUP-WARNING] ${textToDeliver}`);
           }
         }
