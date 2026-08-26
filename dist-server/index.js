@@ -13041,7 +13041,7 @@ Coordinaci\xF3n directa con la direcci\xF3n de corretaje de *VECY BIENES RA\xCDC
 \u{1F4F2} *Consola Web JanIA:* https://vecy-network.vercel.app/jania`;
     const content = await generateDailyContent("sabado_cafe", fallbackVoice, fallbackCaption);
     try {
-      await janiaMatchBot.sendVoiceToBuzonAndChannel(content.voiceText, getThemedImagePath("matches"), content.captionText);
+      await janiaMatchBot.sendVoiceToBuzonAndChannel(content.voiceText, getThemedImagePath("cafe"), content.captionText);
     } catch (e) {
       console.error("[CRON-SERVICE] Error enviando publicaci\xF3n de S\xE1bado:", e.message);
     }
@@ -13096,7 +13096,7 @@ async function publishTodayTipNow() {
     theme = "avaluos";
   } else if (dayOfWeek === 6) {
     tipo = "sabado_cafe";
-    theme = "matches";
+    theme = "cafe";
   } else {
     tipo = "lunes_arranque";
     theme = "matches";

@@ -195,7 +195,7 @@ export function initCronScheduler() {
 
     const content = await generateDailyContent('sabado_cafe', fallbackVoice, fallbackCaption);
     try {
-      await whatsappBot.sendVoiceToBuzonAndChannel(content.voiceText, getThemedImagePath('matches'), content.captionText);
+      await whatsappBot.sendVoiceToBuzonAndChannel(content.voiceText, getThemedImagePath('cafe'), content.captionText);
     } catch (e: any) {
       console.error('[CRON-SERVICE] Error enviando publicación de Sábado:', e.message);
     }
@@ -250,7 +250,7 @@ export async function publishTodayTipNow() {
   else if (dayOfWeek === 3) { tipo = 'miercoles_marketing'; theme = 'marketing'; }
   else if (dayOfWeek === 4) { tipo = 'jueves_tributario'; theme = 'tributario'; }
   else if (dayOfWeek === 5) { tipo = 'viernes_avaluos'; theme = 'avaluos'; }
-  else if (dayOfWeek === 6) { tipo = 'sabado_cafe'; theme = 'matches'; }
+  else if (dayOfWeek === 6) { tipo = 'sabado_cafe'; theme = 'cafe'; }
   else { tipo = 'lunes_arranque'; theme = 'matches'; }
 
   const fallbackVoice = `Hola, queridos colegas. Soy JanIA con su asesoría del día en VECY Network. Recuerden que este espacio y nuestro canal oficial están diseñados para resolver todas sus consultas legales, tributarias de la DIAN, avalúos y marketing inmobiliario. Los invito a invitar a más colegas a unirse a esta maravillosa red colaborativa y a probar nuestro sistema de consultas en la web o por WhatsApp. ¡Juntos cerramos más negocios!`;
