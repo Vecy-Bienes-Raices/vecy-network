@@ -769,8 +769,10 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 - **Optimización de `useAuth.ts`**: Inicialización síncrona desde `localStorage` (`manus-runtime-user-info`), erradicando las pantallas de espera y el spinner *"Verificando acceso..."* al abrir el panel admin en PCs y smartphones ($0.01\text{s}$).
 - **Persistencia de Pestaña Activa (`Admin.tsx`)**: Almacenamiento en `localStorage` (`vecy_admin_active_tab`) para conservar la última pestaña consultada por el usuario entre recargas y sesiones.
 
-#### 3. SOPORTE DE ILUSTRACIONES 3D DE JANIA
-- **Pack Oficial Expandido (`client/public/assets/jania/`)**: Inclusión de `jania_periodista.jpg` (Vecy Network Noticias) y `jania_podcast.jpg` (Café Inmobiliario) con resolución flexible de alias (`podcast`, `potcast`, `cafe`, `periodista`, `noticias`) y extensiones en `cronService.ts`.
+#### 3. SOPORTE DE ILUSTRACIONES 3D DE JANIA & PARRILLA COMPLETA 7 DÍAS
+- **Pack Oficial Expandido (`client/public/assets/jania/`)**: Inclusión de `jania_soporte.jpeg` / `jania_soporte.jpg` (Atención y Soluciones en Línea), `jania_periodista.jpg` (Vecy Network Noticias) y `jania_podcast.jpg` (Café Inmobiliario) con resolución flexible de alias (`soporte`, `servicio`, `servicios`, `atencion`, `consultoria`, `podcast`, `potcast`, `cafe`, `periodista`, `noticias`) y extensiones en `cronService.ts`.
+- **Parrilla Semanal Completa (Lunes a Domingo)**: Habilitación de emisiones temáticas los 7 días de la semana, incluyendo el *Domingo de Soporte JanIA, Consultoría & Portafolio de Servicios VECY Network* (10:30 AM) despachado simultáneamente al Grupo 2 y al Canal Oficial de WhatsApp.
+- **Doctrina de Coaching & Venta Institucional**: JanIA asume el rol de consultora, docente y estratega experta en Derecho Inmobiliario, Tributario DIAN, Avalúos RAA con Lonja y Marketing con Inteligencia Artificial.
 
 ---
 
