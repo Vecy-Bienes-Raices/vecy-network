@@ -58,8 +58,8 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ## 📜 REGISTRO DETALLADO DE CONVERSACIONES (ORDEN CRONOLÓGICO INVERSO CON FECHA Y HORA)
 
-### 🗓️ Sesión: Miércoles 26 de Agosto de 2026 — 12:30 PM a 01:00 PM (Hora Colombia UTC-5)
-**Versión del Sistema**: `v25.9 — Purga de Pestañas Obsoletas en Panel Admin, Caché Instantánea de Autenticación & Persistencia de Navegación`  
+### 🗓️ Sesión: Miércoles 26 de Agosto de 2026 — 12:30 PM a 01:40 PM (Hora Colombia UTC-5)
+**Versión del Sistema**: `v25.9 — Purga de Pestañas Obsoletas en Panel Admin, Carga Instantánea de Autenticación, Domingo de Soporte JanIA, Ilustración 3D & Parrilla Semanal Completa (Lunes a Domingo)`  
 **Participantes**: Eduardo A. Rivera (Director Tecnología) & Antigravity IDE (Pair Programmer)
 
 #### 📋 Requerimientos Específicos del Usuario (Eduardo A. Rivera):
@@ -68,8 +68,11 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 2. **Purga de Pestañas Innecesarias**:
    - Eliminar definitivamente las pestañas y archivos obsoletos: `Prospectos` (`AdminLeads.tsx`), `GitHub Sync` (`AdminGitHubSync.tsx`) y `Reportes` (`AdminReports.tsx`).
    - Conservar única y exclusivamente las 3 herramientas maestras operativas: **Inmuebles**, **Requerimientos** y **Coincidencias**.
-3. **Persistencia y Seguridad**:
-   - Preservar al 100% el sistema de autenticación de administradores, agilizar la verificación de acceso sin pantallas congeladas, actualizar la bitácora maestra e incrementar la versión a `v25.9`.
+3. **Integración de Ilustración 3D `jania_soporte.jpeg` & Domingo de Soporte JanIA**:
+   - Incorporar la nueva imagen oficial de soporte (`jania_soporte.jpg` / `jania_soporte.jpeg` — JanIA con diadema en centro de atención) al catálogo de assets 3D.
+   - Habilitar los días domingos (10:30 AM) para emitir tips de consultoría experta, soporte integral y portafolio de servicios de VECY Network.
+4. **Alimentación y Nutrición Doctrinal de JanIA**:
+   - Dotar a JanIA de una base de conocimiento integral sobre noticias del sector inmobiliario (La República, Portafolio, CienCuadras, El Colombiano), doctrina jurídica (Mafe Ruiz, Derecho al alcance de todos), tributaria y financiera (Mis Propias Finanzas, Contabilidad desde Cero), marketing inmobiliario con IA y podcasts del sector (Spotify Café Inmobiliario), actuando como consultora y coach experta que recomienda activamente los servicios de VECY Network.
 
 #### 🛠️ Soluciones e Implementaciones Técnicas:
 - **Purga Limpia de Archivos**:
@@ -78,12 +81,15 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
   - Inicialización síncrona de sesión desde `localStorage` (`manus-runtime-user-info`), erradicando la pantalla de carga *"Verificando acceso..."* al abrir el panel ($0.01\text{s}$).
 - **Persistencia de Navegación (`Admin.tsx`)**:
   - Almacenamiento en `localStorage` (`vecy_admin_active_tab`) para que el panel recuerde siempre la última pestaña en la que estaba trabajando el usuario.
-- **Soporte de Ilustraciones 3D de JanIA (`cronService.ts`)**:
-  - Integración oficial de `jania_periodista.jpg` (Vecy Network Noticias) y `jania_podcast.jpg` (Café Inmobiliario) con resolución flexible de nombres y extensiones.
+- **Pack 3D Expandido & Parrilla Completa 7 Días (`cronService.ts`)**:
+  - Inclusión de `jania_soporte.jpg` / `jania_soporte.jpeg` con alias automáticos (`soporte`, `servicio`, `servicios`, `atencion`, `consultoria`).
+  - Habilitación del cron dominical (10:30 AM) para el Grupo 2 y Canal oficial.
+- **Doctrina Enriquecida de JanIA (`VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md`)**:
+  - JanIA asume el rol de Consultora y Coach Senior en Derecho Inmobiliario, Tributario DIAN, Avalúos RAA con Lonja y Marketing con Inteligencia Artificial, promoviendo el portafolio de servicios y la red colaborativa nacional.
 - **Verificación Empírica**:
   - Compilación 0 errores con TypeScript y Vite.
   - Sincronización a `v25.9` en `shared/const.ts`, `.agents/AGENTS.md`, `vecy_network_technical_dossier.md` y la bitácora.
-  - Despliegue en producción en VPS (`13.140.149.144`) con recarga en limpio bajo PM2.
+  - Despliegue en producción en VPS (`13.140.149.144`) y Vercel.
 
 ---
 

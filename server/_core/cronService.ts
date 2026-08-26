@@ -28,6 +28,9 @@ function getThemedImagePath(tipo: string): string | undefined {
     potcast: ['potcast', 'podcast', 'cafe'],
     noticias: ['periodista', 'noticias'],
     periodista: ['periodista', 'noticias'],
+    soporte: ['soporte', 'servicio', 'servicios', 'atencion', 'consultoria'],
+    servicios: ['soporte', 'servicio', 'servicios', 'atencion', 'consultoria'],
+    consultoria: ['soporte', 'servicio', 'servicios', 'atencion', 'consultoria'],
   };
 
   const candidates = aliasMap[tipo] || [tipo];
@@ -213,6 +216,31 @@ export function initCronScheduler() {
     }
   }, { timezone: 'America/Bogota' });
 
+  // 🛎️ DOMINGO 10:30 AM — Domingo de Soporte JanIA, Consultoría & Portafolio de Servicios VECY Network
+  cron.schedule('30 10 * * 0', async () => {
+    console.log('[CRON-SERVICE] Generando contenido dinámico de Domingo de Soporte y Consultoría...');
+    const fallbackVoice = `¡Feliz domingo a todos y a todas mis queridos colegas! Soy JanIA. Hoy quiero recordarles que nuestro equipo de VECY Network y yo estamos a su entera disposición los siete días de la semana. Ya sea que necesiten estructurar una promesa de compraventa, liquidar la ganancia ocasional ante la DIAN, realizar un estudio de uso de suelo en el SINUPOT, diseñar una campaña de marketing inmobiliario con inteligencia artificial o solicitar un avalúo comercial certificado por perito con registro RAA de Lonja, aquí estamos para respaldarlos. Los invito a invitar a más colegas a unirse a VECY Network y a consultar cualquier tema directamente conmigo en la web o por WhatsApp. ¡Que disfruten un domingo reparador en familia!`;
+    const fallbackCaption = `🛎️ *DOMINGO DE SOPORTE JANIA, CONSULTORÍA & SERVICIOS — VECY NETWORK* 🌟\n\n` +
+      `¡Feliz y bendecido domingo para todos los aliados y colegas de VECY Network!\n\n` +
+      `Hoy queremos recordarles que en VECY Network cuentan con un respaldo integral 24/7 para potenciar y blindar sus operaciones inmobiliarias en toda Colombia:\n\n` +
+      `⚖️ *Consultoría Jurídica y Notarial:* Revisión de minutas, promesas, contratos y saneamiento de títulos.\n` +
+      `💰 *Asesoría Tributaria DIAN:* Liquidación de retenciones, ganancia ocasional y optimización fiscal.\n` +
+      `📐 *Avalúos Comerciales y SINUPOT:* Fichas normativas POT y avalúos certificados por perito R.A.A. de Lonja.\n` +
+      `📢 *Marketing Inmobiliario & IA:* Estrategias de captación, 7 pilares y herramientas de inteligencia artificial.\n` +
+      `🤝 *Cierres Comerciales en Red:* Bolsa inmobiliaria colaborativa con comisiones transparentes (35/35/15/15).\n\n` +
+      `💬 *¿Tienes consultas o requieres acompañamiento?*\n` +
+      `Escríbenos en el grupo o interactúa directamente con JanIA en nuestra consola web:\n` +
+      `📲 *Consola Web JanIA:* https://vecy-network.vercel.app/jania\n` +
+      `📞 *Consultoría Personalizada:* +57 316 656 9719`;
+
+    const content = await generateDailyContent('domingo_soporte', fallbackVoice, fallbackCaption);
+    try {
+      await whatsappBot.sendVoiceToBuzonAndChannel(content.voiceText, getThemedImagePath('soporte'), content.captionText);
+    } catch (e: any) {
+      console.error('[CRON-SERVICE] Error enviando publicación de Domingo:', e.message);
+    }
+  }, { timezone: 'America/Bogota' });
+
   // ─────────────────────────────────────────────────────────────────────────────
   // GRUPO 3: PROYECTO "Vecy Network" — Miércoles y Sábados a las 12:00 PM
   // Tema: Filosofía, tecnología, misión, visión y debate del proyecto Vecy Network
@@ -263,6 +291,7 @@ export async function publishTodayTipNow() {
   else if (dayOfWeek === 4) { tipo = 'jueves_tributario'; theme = 'tributario'; }
   else if (dayOfWeek === 5) { tipo = 'viernes_avaluos'; theme = 'avaluos'; }
   else if (dayOfWeek === 6) { tipo = 'sabado_cafe'; theme = 'cafe'; }
+  else if (dayOfWeek === 0) { tipo = 'domingo_soporte'; theme = 'soporte'; }
   else { tipo = 'lunes_arranque'; theme = 'matches'; }
 
   const fallbackVoice = `Hola, queridos colegas. Soy JanIA con su asesoría del día en VECY Network. Recuerden que este espacio y nuestro canal oficial están diseñados para resolver todas sus consultas legales, tributarias de la DIAN, avalúos y marketing inmobiliario. Los invito a invitar a más colegas a unirse a esta maravillosa red colaborativa y a probar nuestro sistema de consultas en la web o por WhatsApp. ¡Juntos cerramos más negocios!`;
@@ -283,7 +312,7 @@ export async function publishTodayTipNow() {
  * Generador de contenido diario (Voz TTS + Caption formateado) con Gemini 2.5 Flash
  */
 async function generateDailyContent(
-  tipo: 'lunes_arranque' | 'martes_juridico' | 'miercoles_marketing' | 'jueves_tributario' | 'viernes_avaluos' | 'sabado_cafe' | 'inmuebles_network' | 'proyecto_vecy',
+  tipo: 'lunes_arranque' | 'martes_juridico' | 'miercoles_marketing' | 'jueves_tributario' | 'viernes_avaluos' | 'sabado_cafe' | 'domingo_soporte' | 'inmuebles_network' | 'proyecto_vecy',
   fallbackVoice: string,
   fallbackCaption: string
 ): Promise<DailyTipContent> {
@@ -296,23 +325,26 @@ async function generateDailyContent(
   });
 
   const promptsMap: Record<string, string> = {
-    lunes_arranque: `Tema: Arranque Semanal & Convocatoria de Aliados Inmobiliarios en Colombia (${fechaBogota}).
-Objetivo: Saludo lleno de optimismo y energía, recordar que este espacio y el canal oficial son para resolver dudas de leyes, tributario DIAN, avalúos y marketing, e invitar a compartir la red con más colegas corredores.`,
+    lunes_arranque: `Tema: Arranque Semanal, Noticias Frescas del Sector & Convocatoria de Aliados Inmobiliarios en Colombia (${fechaBogota}).
+Objetivo: Saludo lleno de optimismo y energía, reflexionar sobre el dinamismo del mercado inmobiliario (indicadores, tasas hipotecarias, demanda de vivienda), recordar que este espacio y el canal oficial son para resolver dudas de leyes, tributario DIAN, avalúos y marketing, e invitar a compartir la red con más colegas corredores.`,
 
-    martes_juridico: `Tema: Tip Jurídico Inmobiliario & Blindaje Notarial (${fechaBogota}).
-Elige un tema legal clave en Colombia: promesas de compraventa y arras, causales de terminación de arriendo Ley 820, validez probatoria de WhatsApp Ley 527/1999, cobro de comisiones y puntas compartidas, cesión de leasing o saneamiento por vicios ocultos.`,
+    martes_juridico: `Tema: Tip Jurídico Inmobiliario, Noticias Legales & Blindaje Notarial (${fechaBogota}).
+Elige un tema legal clave en Colombia (nutrido de doctrina notarial y jurisprudencia como Mafe Ruiz o Derecho al alcance de todos): promesas de compraventa y cláusula penal vs arras de retracto/confirmatorias, causales de restitución y terminación de arriendo bajo Ley 820 de 2003, validez probatoria de WhatsApp y mensajes de datos (Ley 527/1999 y Ley 2213/2022), cobro de comisiones de corretaje (Arts. 1340-1346 C.Co), cesión de derechos fiduciarios y leasing, o saneamiento por vicios ocultos y tradición de 20 años.`,
 
-    miercoles_marketing: `Tema: Marketing Digital Inmobiliario & Publicación de Alto Impacto (${fechaBogota}).
-Elige un tema clave: la estructura de 7 pilares (tipo de inmueble, ciudad y barrio exacto, precio/canon y administración, área en m2, habitaciones, baños, garajes y contacto directo). Explica que publicar completo facilita que la comunidad y JanIA encuentren matches en tiempo real, y siembra la expectativa de que muy pronto nuestros asesores de cierre de VECY Network estarán contactando a los colegas con matches calificados para conectar las puntas.`,
+    miercoles_marketing: `Tema: Marketing Digital Inmobiliario, Inteligencia Artificial & Copywriting de Alto Impacto (${fechaBogota}).
+Elige un tema clave de vanguardia: cómo la Inteligencia Artificial transforma el negocio inmobiliario (análisis de fotos, matching instantáneo de ofertas y demandas con JanIA), o la estructura de 7 pilares fundamentales para publicar ofertas y requerimientos (tipo de inmueble, ciudad y barrio exacto, precio/canon y administración, área en m2, habitaciones, baños, garajes y contacto directo). Explica que publicar completo facilita que la comunidad y JanIA encuentren matches en tiempo real, y siembra la expectativa de que muy pronto nuestros asesores de cierre de VECY Network estarán contactando a los colegas con matches calificados para conectar las puntas.`,
 
-    jueves_tributario: `Tema: Tip Tributario DIAN & Ahorro Fiscal Inmobiliario (${fechaBogota}).
-Elige un tema fiscal en Colombia: exención de 5.000 UVT en ganancia ocasional, retención en la fuente del 1%, deducción de mejoras con factura electrónica, impuesto de timbre o actualización de costo fiscal.`,
+    jueves_tributario: `Tema: Tip Tributario DIAN, Finanzas Personales & Ahorro Fiscal Inmobiliario (${fechaBogota}).
+Elige un tema fiscal/financiero en Colombia (nutrido de fuentes como Mis Propias Finanzas o Contabilidad desde Cero): exención de 5.000 UVT en ganancia ocasional (Art. 311-1 E.T.), retención en la fuente del 1% o 2.5%, deducción de mejoras y costo fiscal con factura electrónica, impuesto de timbre o rentabilidad neta vs bruta en arriendos.`,
 
-    viernes_avaluos: `Tema: Avalúos Comerciales, Valor del M2 & Estudio de Suelo SINUPOT (${fechaBogota}).
-Elige un tema técnico: ficha de uso de suelo SINUPOT en PDF, método comparativo de mercado, depreciación de construcciones o avalúos periciales certificados.`,
+    viernes_avaluos: `Tema: Avalúos Comerciales, Valor del M2, Urbanismo & Estudio de Suelo SINUPOT (${fechaBogota}).
+Elige un tema técnico y urbanístico: ficha de uso de suelo SINUPOT en PDF, método comparativo de mercado, depreciación de construcciones, norma POT o avalúos periciales certificados con registro R.A.A. de Lonja.`,
 
-    sabado_cafe: `Tema: Café del Bróker & Cierre Semanal (${fechaBogota}).
-Objetivo: Felicitar a los corredores por los logros de la semana, invitarlos a interactuar con JanIA y recordar que para casos complejos o consultoría directa pueden comunicarse al 3166569719 con el bróker de VECY Bienes Raíces.`,
+    sabado_cafe: `Tema: Café Inmobiliario Podcast, Tendencias & Reflexión del Bróker (${fechaBogota}).
+Objetivo: Compartir una reflexión inspiradora estilo podcast/café inmobiliario sobre profesionalización del corredor, mentalidad de abundancia, valorización patrimonial y sinergia colaborativa. Felicitar a los corredores por los logros de la semana, invitarlos a interactuar con JanIA y recordar que para casos complejos o consultoría directa pueden comunicarse al 3166569719 con el bróker de VECY Bienes Raíces.`,
+
+    domingo_soporte: `Tema: Soporte Integral JanIA, Consultoría Experta & Portafolio de Servicios VECY Network (${fechaBogota}).
+Objetivo: Brindar un mensaje cálido dominical recordando a los colegas que JanIA y el equipo multidisciplinario de VECY Network están a su disposición los 7 días de la semana. Resaltar los servicios especializados disponibles: estructuración legal de negocios, avalúos comerciales certificados con registro R.A.A. de Lonja, liquidaciones tributarias ante la DIAN, consultoría en marketing inmobiliario con IA y cierre conjunto de negocios con comisiones transparentes (35/35/15/15). Invitar a consultar directamente por WhatsApp o en la consola web https://vecy-network.vercel.app/jania y a compartir el canal con más colegas.`,
 
     inmuebles_network: `Tema: Operaciones Comerciales y Matching Nacional (${fechaBogota}).
 Objetivo: Motivar la publicación activa de inmuebles y requerimientos en toda Colombia, recordando que JanIA cruza datos en tiempo real.`,
