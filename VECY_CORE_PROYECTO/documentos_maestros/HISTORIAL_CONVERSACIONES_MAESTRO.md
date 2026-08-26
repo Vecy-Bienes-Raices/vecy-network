@@ -78,10 +78,12 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
   - Se eliminó la traba condicional `result.inserted === true` en `getReactionEmoji` de `whatsapp-match.ts`, permitiendo que toda oferta o demanda válida extraída por visión OCR (incluso si fue recibida previamente o sin texto de pie de foto) reciba inmediatamente su emoji de negocio (`👍`, `👌`, `🔀`, `📝`, `✏️`, `🔄`).
 - **Saneamiento Exhaustivo de Enlaces Oficiales**:
   - Actualización de todos los enlaces obsoletos (`K36KrHeB9nMEKJ56s8XFcM`) al enlace activo oficial de *VECY INMUEBLES NETWORK*: `https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ` a lo largo de `whatsapp-match.ts`, `PROYECTO_Vecy Network.md`, `VECY_SOPORTE_LEGAL...md` y `base.md`.
+- **Blindaje Total de Grupos Externos (Cero `❓` y Cero `🚫`)**:
+  - En [`server/_core/whatsapp-match.ts`](file:///home/eddu/Proyectos/vecy-network/server/_core/whatsapp-match.ts) y [`server/_core/janIA.ts`](file:///home/eddu/Proyectos/vecy-network/server/_core/janIA.ts), se blindó que los emojis `❓` y `🚫` **JAMÁS se emitan en grupos externos no oficiales**. En grupos externos, JanIA opera exclusivamente con los 6 emojis de negocio (`👍`, `👌`, `🔀`, `📝`, `✏️`, `🔄`) e ingesta todas las publicaciones (incluso si tienen datos incompletos o provienen de flyers e imágenes).
 - **Verificación Empírica**:
   - Compilación 0 errores con TypeScript y Vite.
   - Sincronización de versión a `v26.0` en `shared/const.ts`, `.agents/AGENTS.md`, `vecy_network_technical_dossier.md` y la bitácora maestra.
-  - Commit y push en la rama `main` de GitHub (`f8189e3`).
+  - Despliegue en producción con PM2 en VPS (`13.140.149.144`) y Vercel.
 
 ---
 
