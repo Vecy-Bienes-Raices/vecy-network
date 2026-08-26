@@ -22,14 +22,26 @@ import { invokeLLM } from './llm';
  * Obtiene la ruta física de la ilustración temática 3D de JanIA
  */
 function getThemedImagePath(tipo: string): string | undefined {
+  const aliasMap: Record<string, string[]> = {
+    cafe: ['podcast', 'potcast', 'cafe'],
+    podcast: ['podcast', 'potcast', 'cafe'],
+    potcast: ['potcast', 'podcast', 'cafe'],
+    noticias: ['periodista', 'noticias'],
+    periodista: ['periodista', 'noticias'],
+  };
+
+  const candidates = aliasMap[tipo] || [tipo];
   const extensions = ['jpg', 'jpeg', 'png', 'webp'];
-  for (const ext of extensions) {
-    const primaryPath = path.resolve(process.cwd(), `client/public/assets/jania/jania_${tipo}.${ext}`);
-    const distPath = path.resolve(process.cwd(), `dist/assets/jania/jania_${tipo}.${ext}`);
-    const serverPath = path.resolve(__dirname, `../../client/public/assets/jania/jania_${tipo}.${ext}`);
-    if (fs.existsSync(primaryPath)) return primaryPath;
-    if (fs.existsSync(distPath)) return distPath;
-    if (fs.existsSync(serverPath)) return serverPath;
+
+  for (const cand of candidates) {
+    for (const ext of extensions) {
+      const primaryPath = path.resolve(process.cwd(), `client/public/assets/jania/jania_${cand}.${ext}`);
+      const distPath = path.resolve(process.cwd(), `dist/assets/jania/jania_${cand}.${ext}`);
+      const serverPath = path.resolve(__dirname, `../../client/public/assets/jania/jania_${cand}.${ext}`);
+      if (fs.existsSync(primaryPath)) return primaryPath;
+      if (fs.existsSync(distPath)) return distPath;
+      if (fs.existsSync(serverPath)) return serverPath;
+    }
   }
   return undefined;
 }

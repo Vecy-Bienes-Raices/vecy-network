@@ -12874,14 +12874,24 @@ import path8 from "path";
 import fs8 from "fs";
 import { fileURLToPath } from "url";
 function getThemedImagePath(tipo) {
+  const aliasMap = {
+    cafe: ["podcast", "potcast", "cafe"],
+    podcast: ["podcast", "potcast", "cafe"],
+    potcast: ["potcast", "podcast", "cafe"],
+    noticias: ["periodista", "noticias"],
+    periodista: ["periodista", "noticias"]
+  };
+  const candidates = aliasMap[tipo] || [tipo];
   const extensions = ["jpg", "jpeg", "png", "webp"];
-  for (const ext of extensions) {
-    const primaryPath = path8.resolve(process.cwd(), `client/public/assets/jania/jania_${tipo}.${ext}`);
-    const distPath = path8.resolve(process.cwd(), `dist/assets/jania/jania_${tipo}.${ext}`);
-    const serverPath = path8.resolve(__dirname, `../../client/public/assets/jania/jania_${tipo}.${ext}`);
-    if (fs8.existsSync(primaryPath)) return primaryPath;
-    if (fs8.existsSync(distPath)) return distPath;
-    if (fs8.existsSync(serverPath)) return serverPath;
+  for (const cand of candidates) {
+    for (const ext of extensions) {
+      const primaryPath = path8.resolve(process.cwd(), `client/public/assets/jania/jania_${cand}.${ext}`);
+      const distPath = path8.resolve(process.cwd(), `dist/assets/jania/jania_${cand}.${ext}`);
+      const serverPath = path8.resolve(__dirname, `../../client/public/assets/jania/jania_${cand}.${ext}`);
+      if (fs8.existsSync(primaryPath)) return primaryPath;
+      if (fs8.existsSync(distPath)) return distPath;
+      if (fs8.existsSync(serverPath)) return serverPath;
+    }
   }
   return void 0;
 }
