@@ -1324,8 +1324,8 @@ export class JaniaMatchBot {
     const classification = (result.classification || '').toUpperCase();
 
     // ── PRIORIDAD 1: Si janIA.ts ya calculó el emoji correcto en base a transactionType ──
-    if (result.reactionEmoji && (result.inserted === true || result.reactionEmoji === '🚫')) {
-      // 🚫 solo se emite en el grupo oficial principal VECY INMUEBLES NETWORK
+    if (result.reactionEmoji) {
+      // 🚫 solo se emite en los grupos oficiales
       if (result.reactionEmoji === '🚫' && !isOfficialGroup) return null;
       return result.reactionEmoji;
     }

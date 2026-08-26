@@ -11785,7 +11785,7 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
       getReactionEmoji(result, isOfficialGroup = false) {
         if (!result) return null;
         const classification = (result.classification || "").toUpperCase();
-        if (result.reactionEmoji && (result.inserted === true || result.reactionEmoji === "\u{1F6AB}")) {
+        if (result.reactionEmoji) {
           if (result.reactionEmoji === "\u{1F6AB}" && !isOfficialGroup) return null;
           return result.reactionEmoji;
         }
