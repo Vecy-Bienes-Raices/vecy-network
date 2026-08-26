@@ -8025,6 +8025,8 @@ ${greetingPrefix}, veo que tienes dudas o quieres saber m\xE1s sobre el proyecto
 
 \xA1Es el espacio ideal para resolver todas tus inquietudes de la comunidad! \u{1F91D}\u2728`;
         }
+        result.classification = "VIOLACION_DE_NORMAS";
+        result.reactionEmoji = "\u{1F6AB}";
       } else {
         result.response = `\u{1F4A1} *VECY: SOPORTE LEGAL, CONTRATOS Y AVAL\xDAOS* \u{1F4A1}
 
@@ -8032,7 +8034,8 @@ ${greetingPrefix}, veo que tienes una consulta jur\xEDdica, procedimental o de a
 \u{1F449} https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6
 
 \xA1All\xED te responder\xE9 al instante con toda la informaci\xF3n! \u{1F680}\u{1F3AF}`;
-        result.classification = "CONSULTA_GENERAL";
+        result.classification = "VIOLACION_DE_NORMAS";
+        result.reactionEmoji = "\u{1F6AB}";
       }
     }
     if (result && result.response) {

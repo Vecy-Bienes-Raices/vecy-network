@@ -3283,9 +3283,12 @@ Por lo tanto, DEBES hacer lo siguiente:
         } else {
           result.response = `👌 *${groupZeroName.toUpperCase()} — CONEXIÓN VECY* 👌\n\n${greetingPrefix}, veo que tienes dudas o quieres saber más sobre el proyecto VECY Network, beneficios, creadores o el plan colaborativo. Te invito a unirte y hacer tus preguntas en nuestro canal oficial **${groupZeroName}**:\n👉 https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU\n\n¡Es el espacio ideal para resolver todas tus inquietudes de la comunidad! 🤝✨`;
         }
+        result.classification = "VIOLACION_DE_NORMAS";
+        result.reactionEmoji = "🚫";
       } else {
         result.response = `💡 *VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS* 💡\n\n${greetingPrefix}, veo que tienes una consulta jurídica, procedimental o de avalúo. Para darte una respuesta detallada con mis motores legales y de mercado sin saturar este canal de ofertas y requerimientos, te invito a realizar tu pregunta en nuestro grupo especializado **VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS**:\n👉 https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6\n\n¡Allí te responderé al instante con toda la información! 🚀🎯`;
-        result.classification = "CONSULTA_GENERAL";
+        result.classification = "VIOLACION_DE_NORMAS";
+        result.reactionEmoji = "🚫";
       }
     }
 
