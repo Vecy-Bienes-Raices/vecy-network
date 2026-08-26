@@ -3309,8 +3309,6 @@ Por lo tanto, DEBES hacer lo siguiente:
         result.reactionEmoji = _isPermutaFb ? '🔀' : _isRentFb ? '👌' : '👍';
       } else if (result.classification === "REQUERIMIENTO") {
         result.reactionEmoji = _isPermutaFb ? '🔄' : _isRentFb ? '✏️' : '📝';
-      } else if (result.classification === "DATOS_INCOMPLETOS" || result.classification === "CONSULTA_GENERAL") {
-        result.reactionEmoji = "❓";
       } else if (result.classification === "VIOLACION_DE_NORMAS") {
         result.reactionEmoji = "🚫";
       }

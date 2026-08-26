@@ -1325,8 +1325,8 @@ export class JaniaMatchBot {
 
     // ── PRIORIDAD 1: Si janIA.ts ya calculó el emoji correcto en base a transactionType ──
     if (result.reactionEmoji) {
-      // 🚫 solo se emite en los grupos oficiales
-      if (result.reactionEmoji === '🚫' && !isOfficialGroup) return null;
+      // 🚫 y ❓ JAMÁS se emiten en grupos externos (solo en los 3 grupos oficiales si aplica)
+      if ((result.reactionEmoji === '🚫' || result.reactionEmoji === '❓') && !isOfficialGroup) return null;
       return result.reactionEmoji;
     }
 

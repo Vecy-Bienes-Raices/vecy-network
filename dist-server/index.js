@@ -8052,8 +8052,6 @@ ${greetingPrefix}, veo que tienes una consulta jur\xEDdica, procedimental o de a
         result.reactionEmoji = _isPermutaFb ? "\u{1F500}" : _isRentFb ? "\u{1F44C}" : "\u{1F44D}";
       } else if (result.classification === "REQUERIMIENTO") {
         result.reactionEmoji = _isPermutaFb ? "\u{1F504}" : _isRentFb ? "\u270F\uFE0F" : "\u{1F4DD}";
-      } else if (result.classification === "DATOS_INCOMPLETOS" || result.classification === "CONSULTA_GENERAL") {
-        result.reactionEmoji = "\u2753";
       } else if (result.classification === "VIOLACION_DE_NORMAS") {
         result.reactionEmoji = "\u{1F6AB}";
       }
@@ -11789,7 +11787,7 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
         if (!result) return null;
         const classification = (result.classification || "").toUpperCase();
         if (result.reactionEmoji) {
-          if (result.reactionEmoji === "\u{1F6AB}" && !isOfficialGroup) return null;
+          if ((result.reactionEmoji === "\u{1F6AB}" || result.reactionEmoji === "\u2753") && !isOfficialGroup) return null;
           return result.reactionEmoji;
         }
         const data = result.extractedData || {};
