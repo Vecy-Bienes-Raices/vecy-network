@@ -1420,13 +1420,13 @@ export class JaniaMatchBot {
 
     try {
       const distinctListings = buffer.messages.filter(m => {
-        // ✅ FIX v21.21: Mensajes solo-imagen (sin caption/body) siempre pasan
+        // ✅ FIX: Mensajes solo-imagen O solo-PDF (sin caption/body) siempre pasan
         // — JanIA los procesa visualmente con el modelo multimodal
-        if (m.imageBuffer && (!m.body || m.body.trim() === '')) return true;
+        if ((m.imageBuffer || m.pdfBuffer) && (!m.body || m.body.trim() === '')) return true;
         if (!m.body) return false;
         const clean = m.body.toLowerCase();
-        const hasType = clean.includes("apto") || clean.includes("apartamento") || clean.includes("casa") || clean.includes("bodega") || clean.includes("oficina") || clean.includes("lote") || clean.includes("finca") || clean.includes("inmueble") || clean.includes("propiedad");
-        const hasDetails = clean.includes("venta") || clean.includes("arriendo") || clean.includes("precio") || clean.includes("presupuesto") || clean.includes("millones") || clean.includes("$") || clean.includes("busco") || clean.includes("requerimiento") || clean.includes("área") || clean.includes("area") || clean.includes("m2") || clean.includes("mts");
+        const hasType = clean.includes("apto") || clean.includes("apartamento") || clean.includes("casa") || clean.includes("bodega") || clean.includes("oficina") || clean.includes("lote") || clean.includes("finca") || clean.includes("inmueble") || clean.includes("propiedad") || clean.includes("eds") || clean.includes("estacion");
+        const hasDetails = clean.includes("venta") || clean.includes("arriendo") || clean.includes("precio") || clean.includes("presupuesto") || clean.includes("millones") || clean.includes("$") || clean.includes("busco") || clean.includes("requerimiento") || clean.includes("área") || clean.includes("area") || clean.includes("m2") || clean.includes("mts") || clean.includes("http");
         return hasType && hasDetails;
       });
 
@@ -1443,27 +1443,36 @@ export class JaniaMatchBot {
         } catch (e) {}
 
         for (const bufferedMsg of buffer.messages) {
-          // ✅ FIX: Permitir mensajes imagen-sola (body vacío pero imageBuffer presente)
-          const hasImageOnly = !!bufferedMsg.imageBuffer && (!bufferedMsg.body || bufferedMsg.body.trim() === '');
+          // ✅ FIX: Permitir mensajes imagen-sola o pdf-solo (body vacío pero imageBuffer/pdfBuffer presente)
+          const hasMediaOnly = (!!bufferedMsg.imageBuffer || !!bufferedMsg.pdfBuffer) && (!bufferedMsg.body || bufferedMsg.body.trim() === '');
           if (!bufferedMsg.body || bufferedMsg.body.trim() === '') {
-            if (!hasImageOnly) continue; // Solo omitir si NO tiene imagen
+            if (!hasMediaOnly) continue; // Solo omitir si NO tiene imagen ni PDF
           }
 
           const bodyText = bufferedMsg.body || '';
           const urlMatch = bodyText.match(/https?:\/\/[^\s]+/g);
           const scrapedResults: any[] = [];
           if (urlMatch) {
-            for (const url of urlMatch.slice(0, 3)) {
-              if (esDominioPermitido(url)) {
-                try {
-                  const data = await scrapePropertyLink(url);
-                  if (data) scrapedResults.push(data);
-                } catch (err) {}
-              }
+            const urlsToScrape = urlMatch.slice(0, 2).filter(u => esDominioPermitido(u));
+            if (urlsToScrape.length > 0) {
+              try {
+                const scrapePromises = urlsToScrape.map(u => 
+                  Promise.race([
+                    scrapePropertyLink(u),
+                    new Promise<null>((resolve) => setTimeout(() => resolve(null), 3500))
+                  ])
+                );
+                const settled = await Promise.allSettled(scrapePromises);
+                for (const res of settled) {
+                  if (res.status === 'fulfilled' && res.value) {
+                    scrapedResults.push(res.value);
+                  }
+                }
+              } catch (err) {}
             }
           }
 
-          await this.logToDb(resolvedSenderId, 'user', bodyText || '[imagen]');
+          await this.logToDb(resolvedSenderId, 'user', bodyText || (bufferedMsg.pdfBuffer ? '[documento-pdf]' : '[imagen]'));
 
           const result = await processWhatsAppMessage(
             bodyText,
@@ -1497,31 +1506,39 @@ export class JaniaMatchBot {
       const pdfMsg = buffer.messages.find(m => m.pdfBuffer);
       const isAudioPTT = buffer.messages.some(m => !!m.originalMsg?.message?.audioMessage);
 
-      // ✅ FIX v21.21: Si el mensaje es solo imagen (sin texto), igual debe procesarse
-      // imageMsg?.imageBuffer presente es suficiente para continuar aunque fullText esté vacío
+      // ✅ FIX v26.0: Si el mensaje es solo imagen o solo PDF (sin texto), igual debe procesarse
       if (!fullText.trim() && !imageMsg?.imageBuffer && !pdfMsg?.pdfBuffer && !isAudioPTT) {
         console.log(`[JANIA-MATCH] Buffer vacío sin imagen/PDF/audio para ${resolvedSenderId}. Omitiendo.`);
         return;
       }
 
-      // Scraping de enlaces si existen
+      // Scraping de enlaces con ejecución paralela rápida no bloqueante
       const urlMatch = fullText.match(/https?:\/\/[^\s]+/g);
       const scrapedResults: any[] = [];
       if (urlMatch) {
-        for (const url of urlMatch.slice(0, 3)) {
-          if (esDominioPermitido(url)) {
-            try {
-              const data = await scrapePropertyLink(url);
-              if (data) scrapedResults.push(data);
-            } catch (err: any) {
-              console.error(`[SCRAPING-BUFFER] Error al raspar URL ${url}:`, err?.message || err);
+        const urlsToScrape = urlMatch.slice(0, 2).filter(u => esDominioPermitido(u));
+        if (urlsToScrape.length > 0) {
+          try {
+            const scrapePromises = urlsToScrape.map(u => 
+              Promise.race([
+                scrapePropertyLink(u),
+                new Promise<null>((resolve) => setTimeout(() => resolve(null), 3500))
+              ])
+            );
+            const settled = await Promise.allSettled(scrapePromises);
+            for (const res of settled) {
+              if (res.status === 'fulfilled' && res.value) {
+                scrapedResults.push(res.value);
+              }
             }
+          } catch (err: any) {
+            console.error(`[SCRAPING-BUFFER] Error al raspar URLs:`, err?.message || err);
           }
         }
       }
 
       // Guardar logs en BD
-      await this.logToDb(resolvedSenderId, 'user', fullText);
+      await this.logToDb(resolvedSenderId, 'user', fullText || (pdfMsg ? '[documento-pdf]' : '[imagen]'));
 
       const { sendAdminNotification } = await import('./whatsapp-utils');
 

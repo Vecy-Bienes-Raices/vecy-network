@@ -11863,11 +11863,11 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
         }
         try {
           const distinctListings = buffer.messages.filter((m) => {
-            if (m.imageBuffer && (!m.body || m.body.trim() === "")) return true;
+            if ((m.imageBuffer || m.pdfBuffer) && (!m.body || m.body.trim() === "")) return true;
             if (!m.body) return false;
             const clean = m.body.toLowerCase();
-            const hasType = clean.includes("apto") || clean.includes("apartamento") || clean.includes("casa") || clean.includes("bodega") || clean.includes("oficina") || clean.includes("lote") || clean.includes("finca") || clean.includes("inmueble") || clean.includes("propiedad");
-            const hasDetails = clean.includes("venta") || clean.includes("arriendo") || clean.includes("precio") || clean.includes("presupuesto") || clean.includes("millones") || clean.includes("$") || clean.includes("busco") || clean.includes("requerimiento") || clean.includes("\xE1rea") || clean.includes("area") || clean.includes("m2") || clean.includes("mts");
+            const hasType = clean.includes("apto") || clean.includes("apartamento") || clean.includes("casa") || clean.includes("bodega") || clean.includes("oficina") || clean.includes("lote") || clean.includes("finca") || clean.includes("inmueble") || clean.includes("propiedad") || clean.includes("eds") || clean.includes("estacion");
+            const hasDetails = clean.includes("venta") || clean.includes("arriendo") || clean.includes("precio") || clean.includes("presupuesto") || clean.includes("millones") || clean.includes("$") || clean.includes("busco") || clean.includes("requerimiento") || clean.includes("\xE1rea") || clean.includes("area") || clean.includes("m2") || clean.includes("mts") || clean.includes("http");
             return hasType && hasDetails;
           });
           const { processWhatsAppMessage: processWhatsAppMessage2, processConsultingMessage: processConsultingMessage2, processCirculoMessage: processCirculoMessage2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
@@ -11882,25 +11882,34 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
             } catch (e) {
             }
             for (const bufferedMsg of buffer.messages) {
-              const hasImageOnly = !!bufferedMsg.imageBuffer && (!bufferedMsg.body || bufferedMsg.body.trim() === "");
+              const hasMediaOnly = (!!bufferedMsg.imageBuffer || !!bufferedMsg.pdfBuffer) && (!bufferedMsg.body || bufferedMsg.body.trim() === "");
               if (!bufferedMsg.body || bufferedMsg.body.trim() === "") {
-                if (!hasImageOnly) continue;
+                if (!hasMediaOnly) continue;
               }
               const bodyText = bufferedMsg.body || "";
               const urlMatch2 = bodyText.match(/https?:\/\/[^\s]+/g);
               const scrapedResults2 = [];
               if (urlMatch2) {
-                for (const url of urlMatch2.slice(0, 3)) {
-                  if (esDominioPermitido(url)) {
-                    try {
-                      const data = await scrapePropertyLink(url);
-                      if (data) scrapedResults2.push(data);
-                    } catch (err) {
+                const urlsToScrape = urlMatch2.slice(0, 2).filter((u) => esDominioPermitido(u));
+                if (urlsToScrape.length > 0) {
+                  try {
+                    const scrapePromises = urlsToScrape.map(
+                      (u) => Promise.race([
+                        scrapePropertyLink(u),
+                        new Promise((resolve) => setTimeout(() => resolve(null), 3500))
+                      ])
+                    );
+                    const settled = await Promise.allSettled(scrapePromises);
+                    for (const res of settled) {
+                      if (res.status === "fulfilled" && res.value) {
+                        scrapedResults2.push(res.value);
+                      }
                     }
+                  } catch (err) {
                   }
                 }
               }
-              await this.logToDb(resolvedSenderId, "user", bodyText || "[imagen]");
+              await this.logToDb(resolvedSenderId, "user", bodyText || (bufferedMsg.pdfBuffer ? "[documento-pdf]" : "[imagen]"));
               const result2 = await processWhatsAppMessage2(
                 bodyText,
                 resolvedSenderId,
@@ -11937,18 +11946,27 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
           const urlMatch = fullText.match(/https?:\/\/[^\s]+/g);
           const scrapedResults = [];
           if (urlMatch) {
-            for (const url of urlMatch.slice(0, 3)) {
-              if (esDominioPermitido(url)) {
-                try {
-                  const data = await scrapePropertyLink(url);
-                  if (data) scrapedResults.push(data);
-                } catch (err) {
-                  console.error(`[SCRAPING-BUFFER] Error al raspar URL ${url}:`, err?.message || err);
+            const urlsToScrape = urlMatch.slice(0, 2).filter((u) => esDominioPermitido(u));
+            if (urlsToScrape.length > 0) {
+              try {
+                const scrapePromises = urlsToScrape.map(
+                  (u) => Promise.race([
+                    scrapePropertyLink(u),
+                    new Promise((resolve) => setTimeout(() => resolve(null), 3500))
+                  ])
+                );
+                const settled = await Promise.allSettled(scrapePromises);
+                for (const res of settled) {
+                  if (res.status === "fulfilled" && res.value) {
+                    scrapedResults.push(res.value);
+                  }
                 }
+              } catch (err) {
+                console.error(`[SCRAPING-BUFFER] Error al raspar URLs:`, err?.message || err);
               }
             }
           }
-          await this.logToDb(resolvedSenderId, "user", fullText);
+          await this.logToDb(resolvedSenderId, "user", fullText || (pdfMsg ? "[documento-pdf]" : "[imagen]"));
           const { sendAdminNotification: sendAdminNotification2 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
           let result;
           if (chatId === "120363417740040773@g.us") {
