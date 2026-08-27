@@ -162,7 +162,12 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v26.0 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL: v26.1 — Agosto 2026
+
+### Novedades v26.1 (Motor Maestro de Resolución de Nombres Compuestos y Género, Directriz Ejecutiva de Precios con Horario Comercial de VECY y Blindaje de Visitas con MailSuite):
+- **Motor Maestro `nameAndGenderResolver.ts`**: Detección morfológica y diccionario exhaustivo de nombres femeninos (anglo, franceses y colombianos no terminados en 'a', como *Jeannette, Astrid, Elizabeth, Pilar, Carmen, Luz, Beatriz, Inés, etc.*) y canónicos compuestos (*Ana María, Juan Pablo, María Fernanda, etc.*), asegurando el tratamiento exacto ("estimada Jeannette", "estimado Juan Pablo").
+- **Directriz de Cotizaciones y Precios al Grano**: Respuestas concisas y directas (máximo 2 párrafos) ante dudas de precios y honorarios, derivando a la línea del bróker **`3166569719`** de **VECY BIENES RAÍCES** en su horario comercial oficial (L-V 8:00 AM - 10:00 PM, Sáb 8:00 AM - 8:00 PM, Dom 10:00 AM - 4:00 PM).
+- **Protocolo de Blindaje de Visitas y MailSuite**: Integración de la doctrina de seguridad en 3 pasos para evitar el bypassing en visitas a predios mediante solicitudes formales por correo electrónico y MailSuite bajo la Ley 527 de 1999 y Arts. 1340-1346 C.Co.
 
 ### Novedades v26.0 (Auditoría Integral de Moderación en Grupos 1, 2 y 3, Reacción Inmediata 🚫, Resiliencia de Flyers & Saneamiento de Enlaces):
 - **Matriz de Moderación Oficial en 2 Pasos (`whatsapp-match.ts` & `janIA.ts`)**: En los 3 grupos oficiales (Inmuebles, Soporte/Marketing y Proyecto), cualquier publicación que no corresponda a la temática recibe primero la reacción **`🚫`** e inmediatamente JanIA despacha la advertencia citada al usuario con el enlace correcto. En grupos externos de terceros, se preserva el silencio 100% absoluto.

@@ -122,7 +122,8 @@ export const janIARouter = router({
           // Direct ultra-fast LLM reasoning for web consultation questions & natural chat with JanIA
           const { invokeLLM } = await import("../_core/llm");
           const { buildSystemPrompt, getLiveStats } = await import("../_core/janIA");
-          const { getGreetingByTime, extractFirstName } = await import("../_core/whatsapp-utils");
+          const { getGreetingByTime } = await import("../_core/whatsapp-utils");
+          const { resolveNameAndGender } = await import("../_core/nameAndGenderResolver");
 
           // Bogotá time calculation (Horario Oficial Bogotá: 01:00-11:59 Buenos días, 12:00-18:59 Buenas tardes, 19:00-00:59 Buenas noches)
           const timeGreeting = getGreetingByTime();
@@ -131,11 +132,10 @@ export const janIARouter = router({
 
           const isRegistered = !!ctx.user;
           const rawName = ctx.user?.name || "";
-          const resolvedName = extractFirstName(rawName);
-
-          const maleExceptions = ['luca', 'andrea', 'borja', 'joshua', 'bautista', 'sasha', 'elía', 'elias'];
-          const isFemale = resolvedName ? (resolvedName.slice(-1).toLowerCase() === 'a' && !maleExceptions.includes(resolvedName.toLowerCase())) : false;
-          const genderTerm = resolvedName ? (isFemale ? `estimada ${resolvedName}` : `estimado ${resolvedName}`) : "estimado/a usuario/a";
+          const nameInfo = resolveNameAndGender(rawName, timeGreeting);
+          const resolvedName = nameInfo.displayName;
+          const isFemale = nameInfo.isFemale;
+          const genderTerm = rawName ? nameInfo.genderTerm : "estimado/a usuario/a";
 
           const liveStats = await getLiveStats();
           const userContextInstruction = isRegistered

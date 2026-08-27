@@ -52,11 +52,40 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v26.0 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v26.1 — Agosto 2026
 
 ---
 
 ## 📜 REGISTRO DETALLADO DE CONVERSACIONES (ORDEN CRONOLÓGICO INVERSO CON FECHA Y HORA)
+
+### 🗓️ Sesión: Miércoles 26 de Agosto de 2026 — 09:40 PM a 10:25 PM (Hora Colombia UTC-5)
+**Versión del Sistema**: `v26.1 — Motor Maestro de Resolución de Nombres Compuestos y Género, Directriz Ejecutiva de Precios con Horario Comercial de VECY y Blindaje de Visitas con MailSuite`  
+**Participantes**: Eduardo A. Rivera (Director Tecnología) & Antigravity IDE (Pair Programmer)
+
+#### 📋 Requerimientos Específicos del Usuario (Eduardo A. Rivera):
+1. **Detección Rigurosa de Género y Nombres Compuestos**:
+   - Corregir de raíz el error donde JanIA se dirigió a una usuaria como *"estimado Jeannette"*.
+   - Reactivar y perfeccionar la resolución de género femenino/masculino en español colombiano para nombres no terminados en 'a' (*Jeannette, Astrid, Elizabeth, Pilar, Carmen, Luz, Beatriz, Inés, etc.*) y la identificación de nombres compuestos canónicos (*Ana María, Juan Pablo, María Cristina, María Fernanda, Pedro Pablo, etc.*).
+2. **Directriz de Cotizaciones, Precios y Servicios VECY al Grano**:
+   - Cuando pregunten por tarifas o costos de servicios legales o avalúos, responder de forma concisa, humana y directa (máximo 2 párrafos cortos), sin repetir discursos kilométricos ni recitar leyes innecesarias.
+   - Indicar que las tarifas dependen del trámite, e invitar a cotizar directamente por WhatsApp o llamada al número del bróker **`3166569719`** de **VECY BIENES RAÍCES** en su horario comercial oficial: Lunes a Viernes de 8:00 AM a 10:00 PM, Sábados de 8:00 AM a 8:00 PM y Domingos de 10:00 AM a 4:00 PM.
+3. **Blindaje de Visitas y Correo Certificado (MailSuite)**:
+   - Integrar la doctrina de respaldo probatorio en visitas inmobiliarias para evitar el salto de intermediación (bypassing) cuando un broker desconocido pide la dirección y cancela la cita.
+
+#### 🛠️ Soluciones e Implementaciones Técnicas:
+- **Motor Maestro `nameAndGenderResolver.ts`**:
+  - Creado módulo dedicado con catálogo de más de 60 combinaciones de nombres compuestos colombianos, diccionario de nombres y terminaciones femeninas explícitas (`-ette, -eth, -bel, -riz, -lyn, -len, -ine, -y, -ie`), y excepciones masculinas terminadas en 'a' (`Luca, Joshua, Borja, Bautista, Sasha, Elías, Nicolás, etc.`).
+  - Probado exhaustivamente con 27 casos de prueba (incluyendo `~ Jeannette` $\rightarrow$ `Jeannette` / Femenino / `estimada Jeannette` / `Buenas noches, estimada Jeannette 👋🏻`) con 100% de efectividad.
+  - Integrado de forma aditiva y transversal en `server/_core/janIA.ts` (`processConsultingMessage`, `processCirculoMessage`) y en `server/routers/janIA.ts` (consola web).
+- **Directriz de Precios y Horario Oficial de VECY**:
+  - Inyectada la instrucción `[INSTRUCCIÓN CRÍTICA DE PRECIOS Y TARIFAS VECY]` en `janIA.ts` y en `VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md` con los horarios comerciales oficiales de **VECY BIENES RAÍCES** y el número de atención **`3166569719`**.
+- **Blindaje Jurídico de Visitas y MailSuite**:
+  - Incorporado en prompts y cerebro de JanIA el Protocolo de Seguridad VECY en 3 Pasos (filtrar colega, solicitud formal por correo electrónico con logs SMTP / MailSuite bajo la Ley 527/1999 y Arts. 1340-1346 C.Co, y entrega segura de la dirección).
+- **Validación**:
+  - `npm run build` ejecutado exitosamente con 0 errores.
+  - Desplegado y sincronizado en VPS (`13.140.149.144`) vía PM2.
+
+---
 
 ### 🗓️ Sesión: Miércoles 26 de Agosto de 2026 — 02:40 PM a 03:20 PM (Hora Colombia UTC-5)
 **Versión del Sistema**: `v26.0 — Auditoría Integral de Moderación en Grupos Oficiales (1, 2 y 3), Reacción Obligatoria 🚫 con Despacho Inmediato, Reacciones Robustas en Flyers/Imágenes Puras y Saneamiento de Enlaces Grupales`  

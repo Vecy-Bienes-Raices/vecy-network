@@ -5801,6 +5801,346 @@ var init_storage = __esm({
   }
 });
 
+// server/_core/nameAndGenderResolver.ts
+var nameAndGenderResolver_exports = {};
+__export(nameAndGenderResolver_exports, {
+  VECY_COMMERCIAL_INFO: () => VECY_COMMERCIAL_INFO,
+  cleanRawUserName: () => cleanRawUserName,
+  resolveNameAndGender: () => resolveNameAndGender
+});
+function cleanRawUserName(name) {
+  if (!name) return "";
+  return name.replace(/^[~•\-\*\_\s]+/, "").replace(/[~•\-\*\_\s]+$/, "").replace(/\s+/g, " ").trim();
+}
+function resolveNameAndGender(rawName, timeGreeting) {
+  const cleaned = cleanRawUserName(rawName);
+  const normalizedLower = cleaned.toLowerCase();
+  let resolvedDisplayName = "";
+  for (const comp of COMPOSITE_PATTERNS) {
+    if (comp.pattern.test(cleaned)) {
+      resolvedDisplayName = comp.canonical;
+      break;
+    }
+  }
+  if (!resolvedDisplayName) {
+    const parts = cleaned.split(/\s+/).filter(Boolean);
+    if (parts.length >= 2 && (parts[0].length <= 4 || ["de", "del", "la", "san", "santa"].includes(parts[0].toLowerCase()))) {
+      resolvedDisplayName = `${parts[0]} ${parts[1]}`;
+    } else if (parts.length > 0) {
+      resolvedDisplayName = parts[0];
+    } else {
+      resolvedDisplayName = "colega";
+    }
+  }
+  const firstWord = cleaned.split(/\s+/)[0]?.toLowerCase() || "";
+  const firstWordClean = firstWord.replace(/[^a-záéíóúüñ]/g, "");
+  let isFemale = false;
+  if (FEMALE_EXPLICIT_NAMES.has(firstWordClean) || FEMALE_EXPLICIT_NAMES.has(normalizedLower)) {
+    isFemale = true;
+  } else if (firstWordClean.endsWith("a") && !MALE_EXCEPTIONS_ENDING_IN_A.has(firstWordClean)) {
+    isFemale = true;
+  } else if (firstWordClean.endsWith("ette") || firstWordClean.endsWith("eth") || firstWordClean.endsWith("bel") || firstWordClean.endsWith("riz") || firstWordClean.endsWith("lyn") || firstWordClean.endsWith("len") || firstWordClean.endsWith("ine") || firstWordClean.endsWith("y") || firstWordClean.endsWith("ie")) {
+    const maleYExceptions = ["henry", "anthony", "freddy", "fredy", "dany", "danny", "geovanny", "giovanni", "johnny", "tony", "andy"];
+    if (!maleYExceptions.includes(firstWordClean)) {
+      isFemale = true;
+    }
+  }
+  const courtesyWord = isFemale ? "estimada" : "estimado";
+  const genderTerm = `${courtesyWord} ${resolvedDisplayName}`;
+  const effectiveGreeting = timeGreeting || "Hola";
+  const fullGreeting = `${effectiveGreeting}, ${genderTerm} \u{1F44B}\u{1F3FB}`;
+  return {
+    rawName,
+    cleanName: cleaned,
+    displayName: resolvedDisplayName,
+    firstName: firstWordClean,
+    isFemale,
+    genderTerm,
+    courtesyWord,
+    greeting: fullGreeting
+  };
+}
+var COMPOSITE_PATTERNS, FEMALE_EXPLICIT_NAMES, MALE_EXCEPTIONS_ENDING_IN_A, VECY_COMMERCIAL_INFO;
+var init_nameAndGenderResolver = __esm({
+  "server/_core/nameAndGenderResolver.ts"() {
+    "use strict";
+    COMPOSITE_PATTERNS = [
+      // Femeninos
+      { pattern: /^ana\s+mar[ií]a\b/i, canonical: "Ana Mar\xEDa" },
+      { pattern: /^ana\s+sof[ií]a\b/i, canonical: "Ana Sof\xEDa" },
+      { pattern: /^ana\s+luc[ií]a\b/i, canonical: "Ana Luc\xEDa" },
+      { pattern: /^ana\s+isabel\b/i, canonical: "Ana Isabel" },
+      { pattern: /^ana\s+milena\b/i, canonical: "Ana Milena" },
+      { pattern: /^ana\s+patricia\b/i, canonical: "Ana Patricia" },
+      { pattern: /^ana\s+carolina\b/i, canonical: "Ana Carolina" },
+      { pattern: /^ana\s+victoria\b/i, canonical: "Ana Victoria" },
+      { pattern: /^mar[ií]a\s+paula\b/i, canonical: "Mar\xEDa Paula" },
+      { pattern: /^mar[ií]a\s+cristina\b/i, canonical: "Mar\xEDa Cristina" },
+      { pattern: /^mar[ií]a\s+fernanda\b/i, canonical: "Mar\xEDa Fernanda" },
+      { pattern: /^mar[ií]a\s+jos[eé]\b/i, canonical: "Mar\xEDa Jos\xE9" },
+      { pattern: /^mar[ií]a\s+alejandra\b/i, canonical: "Mar\xEDa Alejandra" },
+      { pattern: /^mar[ií]a\s+camila\b/i, canonical: "Mar\xEDa Camila" },
+      { pattern: /^mar[ií]a\s+isabel\b/i, canonical: "Mar\xEDa Isabel" },
+      { pattern: /^mar[ií]a\s+teresa\b/i, canonical: "Mar\xEDa Teresa" },
+      { pattern: /^mar[ií]a\s+victoria\b/i, canonical: "Mar\xEDa Victoria" },
+      { pattern: /^mar[ií]a\s+del\s+carmen\b/i, canonical: "Mar\xEDa del Carmen" },
+      { pattern: /^mar[ií]a\s+del\s+pilar\b/i, canonical: "Mar\xEDa del Pilar" },
+      { pattern: /^mar[ií]a\s+elena\b/i, canonical: "Mar\xEDa Elena" },
+      { pattern: /^mar[ií]a\s+eugenia\b/i, canonical: "Mar\xEDa Eugenia" },
+      { pattern: /^mar[ií]a\s+in[eé]s\b/i, canonical: "Mar\xEDa In\xE9s" },
+      { pattern: /^mar[ií]a\s+luc[ií]a\b/i, canonical: "Mar\xEDa Luc\xEDa" },
+      { pattern: /^mar[ií]a\s+mercedes\b/i, canonical: "Mar\xEDa Mercedes" },
+      { pattern: /^luz\s+marina\b/i, canonical: "Luz Marina" },
+      { pattern: /^luz\s+mery\b/i, canonical: "Luz Mery" },
+      { pattern: /^luz\s+dary\b/i, canonical: "Luz Dary" },
+      { pattern: /^luz\s+stella\b/i, canonical: "Luz Stella" },
+      { pattern: /^luz\s+helena\b/i, canonical: "Luz Helena" },
+      { pattern: /^luz\s+adriana\b/i, canonical: "Luz Adriana" },
+      { pattern: /^luz\s+amparo\b/i, canonical: "Luz Amparo" },
+      { pattern: /^luz\s+[aá]ngela\b/i, canonical: "Luz \xC1ngela" },
+      { pattern: /^luz\s+myriam\b/i, canonical: "Luz Myriam" },
+      { pattern: /^sandra\s+milena\b/i, canonical: "Sandra Milena" },
+      { pattern: /^sandra\s+patricia\b/i, canonical: "Sandra Patricia" },
+      { pattern: /^sandra\s+marcela\b/i, canonical: "Sandra Marcela" },
+      { pattern: /^diana\s+marcela\b/i, canonical: "Diana Marcela" },
+      { pattern: /^diana\s+patricia\b/i, canonical: "Diana Patricia" },
+      { pattern: /^diana\s+carolina\b/i, canonical: "Diana Carolina" },
+      { pattern: /^diana\s+cristina\b/i, canonical: "Diana Cristina" },
+      { pattern: /^claudia\s+patricia\b/i, canonical: "Claudia Patricia" },
+      { pattern: /^claudia\s+marcela\b/i, canonical: "Claudia Marcela" },
+      { pattern: /^claudia\s+elena\b/i, canonical: "Claudia Elena" },
+      { pattern: /^gloria\s+in[eé]s\b/i, canonical: "Gloria In\xE9s" },
+      { pattern: /^gloria\s+patricia\b/i, canonical: "Gloria Patricia" },
+      { pattern: /^gloria\s+stella\b/i, canonical: "Gloria Stella" },
+      { pattern: /^martha\s+cecilia\b/i, canonical: "Martha Cecilia" },
+      { pattern: /^martha\s+luc[ií]a\b/i, canonical: "Martha Luc\xEDa" },
+      { pattern: /^martha\s+patricia\b/i, canonical: "Martha Patricia" },
+      { pattern: /^martha\s+isabel\b/i, canonical: "Martha Isabel" },
+      { pattern: /^olga\s+luc[ií]a\b/i, canonical: "Olga Luc\xEDa" },
+      { pattern: /^olga\s+patricia\b/i, canonical: "Olga Patricia" },
+      { pattern: /^laura\s+camila\b/i, canonical: "Laura Camila" },
+      { pattern: /^laura\s+sof[ií]a\b/i, canonical: "Laura Sof\xEDa" },
+      { pattern: /^paola\s+andrea\b/i, canonical: "Paola Andrea" },
+      { pattern: /^adriana\s+luc[ií]a\b/i, canonical: "Adriana Luc\xEDa" },
+      // Masculinos
+      { pattern: /^juan\s+pablo\b/i, canonical: "Juan Pablo" },
+      { pattern: /^juan\s+david\b/i, canonical: "Juan David" },
+      { pattern: /^juan\s+carlos\b/i, canonical: "Juan Carlos" },
+      { pattern: /^juan\s+manuel\b/i, canonical: "Juan Manuel" },
+      { pattern: /^juan\s+camilo\b/i, canonical: "Juan Camilo" },
+      { pattern: /^juan\s+jos[eé]\b/i, canonical: "Juan Jos\xE9" },
+      { pattern: /^juan\s+diego\b/i, canonical: "Juan Diego" },
+      { pattern: /^juan\s+esteban\b/i, canonical: "Juan Esteban" },
+      { pattern: /^juan\s+felipe\b/i, canonical: "Juan Felipe" },
+      { pattern: /^juan\s+sebasti[aá]n\b/i, canonical: "Juan Sebasti\xE1n" },
+      { pattern: /^juan\s+fernando\b/i, canonical: "Juan Fernando" },
+      { pattern: /^juan\s+andr[eé]s\b/i, canonical: "Juan Andr\xE9s" },
+      { pattern: /^juan\s+antonio\b/i, canonical: "Juan Antonio" },
+      { pattern: /^juan\s+ignacio\b/i, canonical: "Juan Ignacio" },
+      { pattern: /^juan\s+guillermo\b/i, canonical: "Juan Guillermo" },
+      { pattern: /^pedro\s+pablo\b/i, canonical: "Pedro Pablo" },
+      { pattern: /^pedro\s+antonio\b/i, canonical: "Pedro Antonio" },
+      { pattern: /^pedro\s+luis\b/i, canonical: "Pedro Luis" },
+      { pattern: /^carlos\s+alberto\b/i, canonical: "Carlos Alberto" },
+      { pattern: /^carlos\s+andr[eé]s\b/i, canonical: "Carlos Andr\xE9s" },
+      { pattern: /^carlos\s+eduardo\b/i, canonical: "Carlos Eduardo" },
+      { pattern: /^carlos\s+mario\b/i, canonical: "Carlos Mario" },
+      { pattern: /^carlos\s+arturo\b/i, canonical: "Carlos Arturo" },
+      { pattern: /^carlos\s+julio\b/i, canonical: "Carlos Julio" },
+      { pattern: /^luis\s+carlos\b/i, canonical: "Luis Carlos" },
+      { pattern: /^luis\s+fernando\b/i, canonical: "Luis Fernando" },
+      { pattern: /^luis\s+eduardo\b/i, canonical: "Luis Eduardo" },
+      { pattern: /^luis\s+alberto\b/i, canonical: "Luis Alberto" },
+      { pattern: /^luis\s+miguel\b/i, canonical: "Luis Miguel" },
+      { pattern: /^luis\s+felipe\b/i, canonical: "Luis Felipe" },
+      { pattern: /^luis\s+gabriel\b/i, canonical: "Luis Gabriel" },
+      { pattern: /^luis\s+guillermo\b/i, canonical: "Luis Guillermo" },
+      { pattern: /^luis\s+alfonso\b/i, canonical: "Luis Alfonso" },
+      { pattern: /^jos[eé]\s+luis\b/i, canonical: "Jos\xE9 Luis" },
+      { pattern: /^jos[eé]\s+antonio\b/i, canonical: "Jos\xE9 Antonio" },
+      { pattern: /^jos[eé]\s+manuel\b/i, canonical: "Jos\xE9 Manuel" },
+      { pattern: /^jos[eé]\s+gregorio\b/i, canonical: "Jos\xE9 Gregorio" },
+      { pattern: /^jos[eé]\s+ignacio\b/i, canonical: "Jos\xE9 Ignacio" },
+      { pattern: /^jos[eé]\s+vicente\b/i, canonical: "Jos\xE9 Vicente" }
+    ];
+    FEMALE_EXPLICIT_NAMES = /* @__PURE__ */ new Set([
+      "jeannette",
+      "jeanette",
+      "janeth",
+      "janet",
+      "janette",
+      "jeanine",
+      "jenny",
+      "jennifer",
+      "jenn",
+      "astrid",
+      "elizabeth",
+      "elisabet",
+      "elisabeth",
+      "pilar",
+      "carmen",
+      "mercedes",
+      "luz",
+      "beatriz",
+      "ines",
+      "in\xE9s",
+      "consuelo",
+      "rocio",
+      "roc\xEDo",
+      "nohora",
+      "isabel",
+      "raquel",
+      "miriam",
+      "myriam",
+      "karen",
+      "evelyn",
+      "evelin",
+      "gladys",
+      "marlene",
+      "marlen",
+      "ivonne",
+      "nicole",
+      "michelle",
+      "denisse",
+      "denise",
+      "angie",
+      "kelly",
+      "kelli",
+      "shirley",
+      "wendy",
+      "carol",
+      "caroline",
+      "sharon",
+      "dayana",
+      "daiana",
+      "vivian",
+      "mabel",
+      "mavy",
+      "mary",
+      "marie",
+      "marion",
+      "marian",
+      "belen",
+      "bel\xE9n",
+      "rosario",
+      "amparo",
+      "socorro",
+      "concepcion",
+      "concepci\xF3n",
+      "dolores",
+      "mar",
+      "montserrat",
+      "guadalupe",
+      "abigail",
+      "esther",
+      "ester",
+      "ruth",
+      "rut",
+      "judith",
+      "judit",
+      "edith",
+      "edit",
+      "lilian",
+      "karin",
+      "alison",
+      "allison",
+      "mafe",
+      "andrea",
+      "tatiana",
+      "daniela",
+      "valentina",
+      "sofia",
+      "sof\xEDa",
+      "camila",
+      "mariana",
+      "valeria",
+      "gabriela",
+      "natalia",
+      "lucia",
+      "luc\xEDa",
+      "isabella",
+      "ximena",
+      "jimena",
+      "catalina",
+      "juliana",
+      "laura",
+      "paola",
+      "diana",
+      "claudia",
+      "monica",
+      "m\xF3nica",
+      "sandra",
+      "patricia",
+      "gloria",
+      "martha",
+      "marta",
+      "olga",
+      "sonia",
+      "adriana",
+      "marcela",
+      "carolina",
+      "elena",
+      "victoria",
+      "teresa",
+      "mercedes",
+      "fabiola",
+      "blanca",
+      "esperanza",
+      "dora",
+      "yolanda",
+      "lucero",
+      "yamile",
+      "leidys",
+      "leidy",
+      "yeimy",
+      "yuliana",
+      "yuri",
+      "ingrid",
+      "katherin",
+      "katherine",
+      "katherine",
+      "stefany",
+      "stephanie"
+    ]);
+    MALE_EXCEPTIONS_ENDING_IN_A = /* @__PURE__ */ new Set([
+      "luca",
+      "borja",
+      "joshua",
+      "bautista",
+      "sasha",
+      "elias",
+      "el\xEDas",
+      "ezra",
+      "tobias",
+      "tob\xEDas",
+      "matias",
+      "mat\xEDas",
+      "jeremias",
+      "jerem\xEDas",
+      "isaias",
+      "isa\xEDas",
+      "jonas",
+      "jon\xE1s",
+      "nicolas",
+      "nicol\xE1s",
+      "tomas",
+      "tom\xE1s",
+      "lucas"
+    ]);
+    VECY_COMMERCIAL_INFO = {
+      name: "Vecy Bienes Ra\xEDces",
+      type: "Br\xF3ker inmobiliario 100% digital \u{1F30D}\u2728",
+      services: "Aval\xFAos online \u26A1 | Compra/venta \u{1F3E1} | Marketing con IA \u{1F916} | Contratos digitales \u{1F4C4} | Pr\xE9stamos hipotecarios",
+      phone: "3166569719",
+      schedule: {
+        weekdays: "Lunes a Viernes de 8:00 AM a 10:00 PM (08:00 - 22:00)",
+        saturday: "S\xE1bados de 8:00 AM a 8:00 PM (08:00 - 20:00)",
+        sunday: "Domingos de 10:00 AM a 4:00 PM (10:00 - 16:00)"
+      }
+    };
+  }
+});
+
 // server/_core/janIA.ts
 var janIA_exports = {};
 __export(janIA_exports, {
@@ -9213,7 +9553,6 @@ async function processConsultingMessage(text2, userId, userName, imageBuffer, pd
   try {
     const rawPhone = userId.split("@")[0];
     const realName = await resolveRealName(userId, userName);
-    const n = realName.split(" ")[0];
     const cleanText = text2.toLowerCase().trim();
     const isMediaOrAudio = !!imageBuffer || !!pdfBuffer || !!audioUrl;
     if (!isMediaOrAudio && cleanText.length > 15) {
@@ -9498,21 +9837,31 @@ Analiza el contexto completo antes de clasificar. Debes responder estrictamente 
     const timeGreeting = getGreetingByTime();
     const nowBogota = new Date((/* @__PURE__ */ new Date()).toLocaleString("en-US", { timeZone: "America/Bogota" }));
     const hour = nowBogota.getHours();
-    const cleanFirstName = n.trim();
-    const lastChar = cleanFirstName.slice(-1).toLowerCase();
-    const maleExceptions = ["luca", "andrea", "borja", "joshua", "bautista", "sasha", "el\xEDa", "elias"];
-    const isFemale = lastChar === "a" && !maleExceptions.includes(cleanFirstName.toLowerCase());
-    const genderTerm = isFemale ? `estimada ${n}` : `estimado ${n}`;
+    const nameInfo = resolveNameAndGender(realName, timeGreeting);
+    const n = nameInfo.displayName;
+    const isFemale = nameInfo.isFemale;
+    const genderTerm = nameInfo.genderTerm;
     const nowMs = Date.now();
     const msgMs = msgTimestamp ? msgTimestamp * 1e3 : nowMs;
     const hoursLate = Math.floor((nowMs - msgMs) / 36e5);
     const isLateReply = hoursLate >= 6;
     const lateReplyNote = isLateReply ? `
 - RESPUESTA TARD\xCDA DETECTADA: El mensaje del usuario fue enviado hace ${hoursLate} horas. DEBES obligatoriamente incluir una disculpa humana, c\xE1lida y espont\xE1nea al inicio o final de tu respuesta (elige una de forma natural, no mec\xE1nica). Ejemplos v\xE1lidos: "Disculpa la demora, estuve en ajustes de mis motores. \xA1Aqu\xED estoy!", "Perdona la tardanza, estuve en mantenimiento t\xE9cnico.", "Lamento que haya tardado tanto en responderte.". La disculpa debe sonar viva y genuina, nunca como una frase programada.` : ``;
+    const isPricingQuery = cleanText.includes("costo") || cleanText.includes("precio") || cleanText.includes("cuanto vale") || cleanText.includes("cu\xE1nto vale") || cleanText.includes("tarifa") || cleanText.includes("honorarios") || cleanText.includes("cuanto cobran") || cleanText.includes("cu\xE1nto cobran");
+    let pricingInstruction = "";
+    if (isPricingQuery) {
+      pricingInstruction = `
+[INSTRUCCI\xD3N CR\xCDTICA DE PRECIOS Y TARIFAS VECY]:
+El usuario est\xE1 preguntando por precios, tarifas o costos de los servicios. NO des una respuesta kilom\xE9trica de 5 p\xE1rrafos ni repitas leyes o informaci\xF3n redundante. S\xE9 MUY concisa, directa, humana y ejecutiva (m\xE1ximo 2 p\xE1rrafos cortos):
+1. Explica amablemente que las tarifas var\xEDan seg\xFAn la complejidad del an\xE1lisis jur\xEDdico o el tipo de aval\xFAo.
+2. Inv\xEDtalo directamente a cotizar con nuestro equipo comunic\xE1ndose por WhatsApp o llamada a nuestra l\xEDnea del br\xF3ker: 3166569719 de VECY BIENES RA\xCDCES.
+3. Menciona amablemente nuestro horario de atenci\xF3n oficial: Lunes a Viernes de 8:00 AM a 10:00 PM, S\xE1bados de 8:00 AM a 8:00 PM y Domingos de 10:00 AM a 4:00 PM.`;
+    }
     const greetingInstruction = `
 
 [SISTEMA - INSTRUCCI\xD3N OBLIGATORIA DE SALUDO Y COMPORTAMIENTO]:
 - Hora actual Bogot\xE1: ${hour}:00 (${timeGreeting}).
+- Nombre exacto resuelto: "${n}".
 - G\xE9nero detectado para ${n}: ${isFemale ? "Femenino (estimada)" : "Masculino (estimado)"}.
 - T\xE9rmino de trato respetuoso: "${genderTerm}".
 - Ya has saludado a esta persona hoy: ${alreadyGreeted ? "S\xCD" : "NO"}.
@@ -9525,7 +9874,8 @@ Analiza el contexto completo antes de clasificar. Debes responder estrictamente 
     - \xA1PROHIBIDO SALUDAR! No uses "Hola", "${timeGreeting}", "Buenas", "Qu\xE9 gusto", ni ninguna bienvenida.
     - Integra su nombre "${n}" de forma conversacional (ej. "Mira ${n}, ...", "Entiendo tu inquietud, ${n}, ...").
 - REGLA ESPEJO MODAL: ${isFromAudio ? "El usuario envi\xF3 AUDIO. DEBES responder en nota de voz (wantsVoice: true). Redacta voiceResponse limpio sin markdown/emojis, m\xE1x 450 caracteres." : "El usuario envi\xF3 TEXTO. DEBES responder en texto (wantsVoice: false)."}
-${lateReplyNote}`;
+${lateReplyNote}
+${pricingInstruction}`;
     if (imageBuffer) {
       messageToProcess += `
 [SISTEMA: IMAGEN ADJUNTA DETECTADA. Analiza la imagen con tu visi\xF3n multimodal (documento, certificado de tradici\xF3n, impuesto predial, recibo, plano, aval\xFAo, contrato o flyer publicitario) y responde a la consulta del usuario de forma exhaustiva, estructurada y precisa.]`;
@@ -9756,17 +10106,16 @@ DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
     const timeGreeting = getGreetingByTime();
     const nowBogota = new Date((/* @__PURE__ */ new Date()).toLocaleString("en-US", { timeZone: "America/Bogota" }));
     const hour = nowBogota.getHours();
-    const targetName = firstName || realName || "colega";
-    const cleanFirstName = targetName.trim();
-    const lastChar = cleanFirstName.slice(-1).toLowerCase();
-    const maleExceptions = ["luca", "andrea", "borja", "joshua", "bautista", "sasha", "el\xEDa", "elias"];
-    const isFemale = lastChar === "a" && !maleExceptions.includes(cleanFirstName.toLowerCase());
-    const genderTerm = isFemale ? `estimada ${targetName}` : `estimado ${targetName}`;
+    const nameInfo = resolveNameAndGender(realName || firstName || "colega", timeGreeting);
+    const targetName = nameInfo.displayName;
+    const isFemale = nameInfo.isFemale;
+    const genderTerm = nameInfo.genderTerm;
     const greetingInstruction = `
 
 [SISTEMA - INSTRUCCI\xD3N OBLIGATORIA DE SALUDO Y COMPORTAMIENTO]:
 - Hora actual Bogot\xE1: ${hour}:00 (${timeGreeting}).
-- Genero detectado para ${targetName}: ${isFemale ? "Femenino (estimada)" : "Masculino (estimado)"}.
+- Nombre exacto resuelto: "${targetName}".
+- G\xE9nero detectado para ${targetName}: ${isFemale ? "Femenino (estimada)" : "Masculino (estimado)"}.
 - T\xE9rmino de trato respetuoso: "${genderTerm}".
 - Ya has saludado a esta persona hoy: ${alreadyGreeted ? "S\xCD" : "NO"}.
 - Tipo de conversaci\xF3n actual: GRUPO DE WHATSAPP ("PROYECTO VECY NETWORK").
@@ -9775,7 +10124,7 @@ DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
     - Debes iniciar tu respuesta saludando cordial y profesionalmente con el saludo de hora exacto ("${timeGreeting}"), utilizando su trato respetuoso y nombre: ej. "${timeGreeting}, ${genderTerm}" o "${timeGreeting} ${genderTerm}, aliado/a".
   * Si "Ya has saludado al usuario hoy" es S\xCD:
     - \xA1PROHIBIDO SALUDAR! No uses "Hola", "${timeGreeting}", "Buenas", "Qu\xE9 gusto", ni ninguna bienvenida.
-    - Integra su primer nombre "${targetName}" de forma conversacional y fluida dentro del cuerpo de la respuesta (ej. "Mira ${targetName}, ...", "Para complementar tu idea, ${targetName}, ...").`;
+    - Integra su nombre "${targetName}" de forma conversacional y fluida dentro del cuerpo de la respuesta (ej. "Mira ${targetName}, ...", "Para complementar tu idea, ${targetName}, ...").`;
     const messages2 = [
       { role: "system", content: systemPrompt },
       { role: "user", content: `Usuario: @${rawPhone} (${realName})
@@ -9826,6 +10175,7 @@ var init_janIA = __esm({
     init_voiceTranscription();
     init_storage();
     init_scraper();
+    init_nameAndGenderResolver();
     janiaResultSchema = {
       type: "OBJECT",
       properties: {
@@ -14067,16 +14417,17 @@ var janIARouter = router({
       } else {
         const { invokeLLM: invokeLLM2 } = await Promise.resolve().then(() => (init_llm(), llm_exports));
         const { buildSystemPrompt: buildSystemPrompt2, getLiveStats: getLiveStats2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
-        const { getGreetingByTime: getGreetingByTime3, extractFirstName: extractFirstName3 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
+        const { getGreetingByTime: getGreetingByTime3 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
+        const { resolveNameAndGender: resolveNameAndGender2 } = await Promise.resolve().then(() => (init_nameAndGenderResolver(), nameAndGenderResolver_exports));
         const timeGreeting = getGreetingByTime3();
         const nowBogota = new Date((/* @__PURE__ */ new Date()).toLocaleString("en-US", { timeZone: "America/Bogota" }));
         const hour = nowBogota.getHours();
         const isRegistered = !!ctx.user;
         const rawName = ctx.user?.name || "";
-        const resolvedName = extractFirstName3(rawName);
-        const maleExceptions = ["luca", "andrea", "borja", "joshua", "bautista", "sasha", "el\xEDa", "elias"];
-        const isFemale = resolvedName ? resolvedName.slice(-1).toLowerCase() === "a" && !maleExceptions.includes(resolvedName.toLowerCase()) : false;
-        const genderTerm = resolvedName ? isFemale ? `estimada ${resolvedName}` : `estimado ${resolvedName}` : "estimado/a usuario/a";
+        const nameInfo = resolveNameAndGender2(rawName, timeGreeting);
+        const resolvedName = nameInfo.displayName;
+        const isFemale = nameInfo.isFemale;
+        const genderTerm = rawName ? nameInfo.genderTerm : "estimado/a usuario/a";
         const liveStats = await getLiveStats2();
         const userContextInstruction = isRegistered ? `
 

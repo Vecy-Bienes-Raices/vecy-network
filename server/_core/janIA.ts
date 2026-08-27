@@ -12,6 +12,7 @@ import { transcribeAudio } from "./voiceTranscription";
 import { eq, and, sql, gte, desc, or, isNotNull } from "drizzle-orm";
 import { storagePut } from "../storage";
 import { esDominioPermitido, extractPortalAndListingId } from "./scraper";
+import { resolveNameAndGender, VECY_COMMERCIAL_INFO } from "./nameAndGenderResolver";
 import fs from "fs";
 import path from "path";
 import axios from "axios";
@@ -4870,7 +4871,6 @@ export async function processConsultingMessage(
   try {
     const rawPhone = userId.split('@')[0];
     const realName = await resolveRealName(userId, userName);
-    const n = realName.split(' ')[0];
 
     // Intercepción rápida de mensajes OFF-TOPIC para ahorrar tokens de Gemini
     const cleanText = text.toLowerCase().trim();
@@ -5075,12 +5075,11 @@ export async function processConsultingMessage(
     const nowBogota = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Bogota" }));
     const hour = nowBogota.getHours();
 
-    // Detección heurística de género según primer nombre
-    const cleanFirstName = n.trim();
-    const lastChar = cleanFirstName.slice(-1).toLowerCase();
-    const maleExceptions = ['luca', 'andrea', 'borja', 'joshua', 'bautista', 'sasha', 'elía', 'elias'];
-    const isFemale = lastChar === 'a' && !maleExceptions.includes(cleanFirstName.toLowerCase());
-    const genderTerm = isFemale ? `estimada ${n}` : `estimado ${n}`;
+    // Detección magistral de nombre compuesto y género exacto
+    const nameInfo = resolveNameAndGender(realName, timeGreeting);
+    const n = nameInfo.displayName;
+    const isFemale = nameInfo.isFemale;
+    const genderTerm = nameInfo.genderTerm;
 
     // Detectar si la respuesta es tardía (más de 6 horas desde el mensaje original)
     const nowMs = Date.now();
@@ -5091,8 +5090,21 @@ export async function processConsultingMessage(
       ? `\n- RESPUESTA TARDÍA DETECTADA: El mensaje del usuario fue enviado hace ${hoursLate} horas. DEBES obligatoriamente incluir una disculpa humana, cálida y espontánea al inicio o final de tu respuesta (elige una de forma natural, no mecánica). Ejemplos válidos: "Disculpa la demora, estuve en ajustes de mis motores. ¡Aquí estoy!", "Perdona la tardanza, estuve en mantenimiento técnico.", "Lamento que haya tardado tanto en responderte.". La disculpa debe sonar viva y genuina, nunca como una frase programada.`
       : ``;
 
+    // Detección de consultas sobre PRECIOS / COSTOS / TARIFAS de servicios VECY
+    const isPricingQuery = cleanText.includes("costo") || cleanText.includes("precio") || cleanText.includes("cuanto vale") || cleanText.includes("cuánto vale") || cleanText.includes("tarifa") || cleanText.includes("honorarios") || cleanText.includes("cuanto cobran") || cleanText.includes("cuánto cobran");
+
+    let pricingInstruction = "";
+    if (isPricingQuery) {
+      pricingInstruction = `\n[INSTRUCCIÓN CRÍTICA DE PRECIOS Y TARIFAS VECY]:
+El usuario está preguntando por precios, tarifas o costos de los servicios. NO des una respuesta kilométrica de 5 párrafos ni repitas leyes o información redundante. Sé MUY concisa, directa, humana y ejecutiva (máximo 2 párrafos cortos):
+1. Explica amablemente que las tarifas varían según la complejidad del análisis jurídico o el tipo de avalúo.
+2. Invítalo directamente a cotizar con nuestro equipo comunicándose por WhatsApp o llamada a nuestra línea del bróker: 3166569719 de VECY BIENES RAÍCES.
+3. Menciona amablemente nuestro horario de atención oficial: Lunes a Viernes de 8:00 AM a 10:00 PM, Sábados de 8:00 AM a 8:00 PM y Domingos de 10:00 AM a 4:00 PM.`;
+    }
+
     const greetingInstruction = `\n\n[SISTEMA - INSTRUCCIÓN OBLIGATORIA DE SALUDO Y COMPORTAMIENTO]:
 - Hora actual Bogotá: ${hour}:00 (${timeGreeting}).
+- Nombre exacto resuelto: "${n}".
 - Género detectado para ${n}: ${isFemale ? "Femenino (estimada)" : "Masculino (estimado)"}.
 - Término de trato respetuoso: "${genderTerm}".
 - Ya has saludado a esta persona hoy: ${alreadyGreeted ? "SÍ" : "NO"}.
@@ -5105,7 +5117,8 @@ export async function processConsultingMessage(
     - ¡PROHIBIDO SALUDAR! No uses "Hola", "${timeGreeting}", "Buenas", "Qué gusto", ni ninguna bienvenida.
     - Integra su nombre "${n}" de forma conversacional (ej. "Mira ${n}, ...", "Entiendo tu inquietud, ${n}, ...").
 - REGLA ESPEJO MODAL: ${isFromAudio ? 'El usuario envió AUDIO. DEBES responder en nota de voz (wantsVoice: true). Redacta voiceResponse limpio sin markdown/emojis, máx 450 caracteres.' : 'El usuario envió TEXTO. DEBES responder en texto (wantsVoice: false).'}
-${lateReplyNote}`;
+${lateReplyNote}
+${pricingInstruction}`;
 
     if (imageBuffer) {
       messageToProcess += `\n[SISTEMA: IMAGEN ADJUNTA DETECTADA. Analiza la imagen con tu visión multimodal (documento, certificado de tradición, impuesto predial, recibo, plano, avalúo, contrato o flyer publicitario) y responde a la consulta del usuario de forma exhaustiva, estructurada y precisa.]`;
@@ -5263,17 +5276,16 @@ export async function processCirculoMessage(
     const nowBogota = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Bogota" }));
     const hour = nowBogota.getHours();
 
-    // Detección heurística de género según primer nombre
-    const targetName = firstName || realName || "colega";
-    const cleanFirstName = targetName.trim();
-    const lastChar = cleanFirstName.slice(-1).toLowerCase();
-    const maleExceptions = ['luca', 'andrea', 'borja', 'joshua', 'bautista', 'sasha', 'elía', 'elias'];
-    const isFemale = lastChar === 'a' && !maleExceptions.includes(cleanFirstName.toLowerCase());
-    const genderTerm = isFemale ? `estimada ${targetName}` : `estimado ${targetName}`;
+    // Detección magistral de nombre compuesto y género exacto
+    const nameInfo = resolveNameAndGender(realName || firstName || "colega", timeGreeting);
+    const targetName = nameInfo.displayName;
+    const isFemale = nameInfo.isFemale;
+    const genderTerm = nameInfo.genderTerm;
 
     const greetingInstruction = `\n\n[SISTEMA - INSTRUCCIÓN OBLIGATORIA DE SALUDO Y COMPORTAMIENTO]:
 - Hora actual Bogotá: ${hour}:00 (${timeGreeting}).
-- Genero detectado para ${targetName}: ${isFemale ? "Femenino (estimada)" : "Masculino (estimado)"}.
+- Nombre exacto resuelto: "${targetName}".
+- Género detectado para ${targetName}: ${isFemale ? "Femenino (estimada)" : "Masculino (estimado)"}.
 - Término de trato respetuoso: "${genderTerm}".
 - Ya has saludado a esta persona hoy: ${alreadyGreeted ? "SÍ" : "NO"}.
 - Tipo de conversación actual: GRUPO DE WHATSAPP ("PROYECTO VECY NETWORK").
@@ -5282,7 +5294,7 @@ export async function processCirculoMessage(
     - Debes iniciar tu respuesta saludando cordial y profesionalmente con el saludo de hora exacto ("${timeGreeting}"), utilizando su trato respetuoso y nombre: ej. "${timeGreeting}, ${genderTerm}" o "${timeGreeting} ${genderTerm}, aliado/a".
   * Si "Ya has saludado al usuario hoy" es SÍ:
     - ¡PROHIBIDO SALUDAR! No uses "Hola", "${timeGreeting}", "Buenas", "Qué gusto", ni ninguna bienvenida.
-    - Integra su primer nombre "${targetName}" de forma conversacional y fluida dentro del cuerpo de la respuesta (ej. "Mira ${targetName}, ...", "Para complementar tu idea, ${targetName}, ...").`;
+    - Integra su nombre "${targetName}" de forma conversacional y fluida dentro del cuerpo de la respuesta (ej. "Mira ${targetName}, ...", "Para complementar tu idea, ${targetName}, ...").`;
 
     const messages = [
       { role: "system", content: systemPrompt },
