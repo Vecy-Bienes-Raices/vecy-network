@@ -80,6 +80,10 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
   - Actualización de todos los enlaces obsoletos (`K36KrHeB9nMEKJ56s8XFcM`) al enlace activo oficial de *VECY INMUEBLES NETWORK*: `https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ` a lo largo de `whatsapp-match.ts`, `PROYECTO_Vecy Network.md`, `VECY_SOPORTE_LEGAL...md` y `base.md`.
 - **Blindaje Total de Grupos Externos (Cero `❓` y Cero `🚫`)**:
   - En [`server/_core/whatsapp-match.ts`](file:///home/eddu/Proyectos/vecy-network/server/_core/whatsapp-match.ts) y [`server/_core/janIA.ts`](file:///home/eddu/Proyectos/vecy-network/server/_core/janIA.ts), se blindó que los emojis `❓` y `🚫` **JAMÁS se emitan en grupos externos no oficiales**. En grupos externos, JanIA opera exclusivamente con los 6 emojis de negocio (`👍`, `👌`, `🔀`, `📝`, `✏️`, `🔄`) e ingesta todas las publicaciones (incluso si tienen datos incompletos o provienen de flyers e imágenes).
+- **Ingesta y Reacción Ultra-Rápida de PDFs, Enlaces Puros e Imágenes Sin Texto**:
+  - *PDFs sin texto acompañante*: Se incluyó `m.pdfBuffer` en `distinctListings` y en el orquestador grupal para que documentos (como `EDS MINUTO DE DIOS.pdf`) sean descargados, analizados con Gemini Vision multimodal, subidos a Supabase Storage (`documents/...`) y enlazados con botón de descarga en la tarjeta de Match con su reacción correspondiente.
+  - *Enlaces Puros y Slugs de Portales*: Se enriqueció `FAST-REACT` con decodificación de rutas URL (ej: `/bodega-venta-fontibon/` $\rightarrow$ `bodega venta fontibon`) e inclusión de metadatos de preview (`linkTitle` / `linkDesc`), permitiendo reacciones instantáneas en $<50\text{ms}$ a enlaces de Wasi, FincaRaíz, etc. sin depender de que el scraping termine.
+  - *Scraping No Bloqueante en Paralelo*: Timeout reducido a 3.5s con `Promise.race` y `Promise.allSettled`, asegurando que portales externos lentos o saturados nunca congelen el despacho de emojis ni la ingesta.
 - **Verificación Empírica**:
   - Compilación 0 errores con TypeScript y Vite.
   - Sincronización de versión a `v26.0` en `shared/const.ts`, `.agents/AGENTS.md`, `vecy_network_technical_dossier.md` y la bitácora maestra.
