@@ -9522,6 +9522,10 @@ Analiza el contexto completo antes de clasificar. Debes responder estrictamente 
     - Integra su nombre "${n}" de forma conversacional (ej. "Mira ${n}, ...", "Entiendo tu inquietud, ${n}, ...").
 - REGLA ESPEJO MODAL: ${isFromAudio ? "El usuario envi\xF3 AUDIO. DEBES responder en nota de voz (wantsVoice: true). Redacta voiceResponse limpio sin markdown/emojis, m\xE1x 450 caracteres." : "El usuario envi\xF3 TEXTO. DEBES responder en texto (wantsVoice: false)."}
 ${lateReplyNote}`;
+    if (imageBuffer) {
+      messageToProcess += `
+[SISTEMA: IMAGEN ADJUNTA DETECTADA. Analiza la imagen con tu visi\xF3n multimodal (documento, certificado de tradici\xF3n, impuesto predial, recibo, plano, aval\xFAo, contrato o flyer publicitario) y responde a la consulta del usuario de forma exhaustiva, estructurada y precisa.]`;
+    }
     if (pdfBuffer) {
       messageToProcess += `
 [SISTEMA: DOCUMENTO PDF DETECTADO. Analiza el documento PDF adjunto con tus capacidades nativas para extraer todos los datos relevantes del predial, certificado de tradici\xF3n, o contrato.]`;
@@ -11526,13 +11530,37 @@ Tambi\xE9n puedes consultarme directamente en mi chat privado con mi otra yo *Ja
           let result;
           if (chatId === this.buzonGroupId) {
             const msgTs = msg.messageTimestamp ? Number(msg.messageTimestamp) : void 0;
+            const rawMsg = unwrapMessage(msg.message);
+            let imageBuffer;
+            let pdfBuffer;
+            let pdfMimeType;
+            if (rawMsg?.imageMessage) {
+              try {
+                const mediaBuffer = await downloadMediaSafely(msg, "image");
+                if (mediaBuffer) {
+                  imageBuffer = mediaBuffer.toString("base64");
+                }
+              } catch (e) {
+                console.error("[JANIA-CONSULTING] Error descargando imagen adjunta:", e);
+              }
+            } else if (rawMsg?.documentMessage) {
+              try {
+                const mediaBuffer = await downloadMediaSafely(msg, "document");
+                if (mediaBuffer) {
+                  pdfBuffer = mediaBuffer.toString("base64");
+                  pdfMimeType = rawMsg.documentMessage.mimetype || "application/pdf";
+                }
+              } catch (e) {
+                console.error("[JANIA-CONSULTING] Error descargando documento adjunto:", e);
+              }
+            }
             result = await processConsultingMessage2(
               bodyText,
               resolvedSenderId,
               realName,
-              void 0,
-              void 0,
-              void 0,
+              imageBuffer,
+              pdfBuffer,
+              pdfMimeType,
               isAudioPTT ? "mock-audio:" + bodyText : void 0,
               msgTs
             );

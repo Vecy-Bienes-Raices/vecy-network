@@ -5103,6 +5103,10 @@ export async function processConsultingMessage(
 - REGLA ESPEJO MODAL: ${isFromAudio ? 'El usuario envió AUDIO. DEBES responder en nota de voz (wantsVoice: true). Redacta voiceResponse limpio sin markdown/emojis, máx 450 caracteres.' : 'El usuario envió TEXTO. DEBES responder en texto (wantsVoice: false).'}
 ${lateReplyNote}`;
 
+    if (imageBuffer) {
+      messageToProcess += `\n[SISTEMA: IMAGEN ADJUNTA DETECTADA. Analiza la imagen con tu visión multimodal (documento, certificado de tradición, impuesto predial, recibo, plano, avalúo, contrato o flyer publicitario) y responde a la consulta del usuario de forma exhaustiva, estructurada y precisa.]`;
+    }
+
     if (pdfBuffer) {
       messageToProcess += `\n[SISTEMA: DOCUMENTO PDF DETECTADO. Analiza el documento PDF adjunto con tus capacidades nativas para extraer todos los datos relevantes del predial, certificado de tradición, o contrato.]`;
     }

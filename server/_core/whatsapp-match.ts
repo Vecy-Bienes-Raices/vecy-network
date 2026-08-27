@@ -1009,13 +1009,39 @@ export class JaniaMatchBot {
       let result;
       if (chatId === this.buzonGroupId) { // VECY: Soporte Legal, Tributario, Avalúos y Marketing
         const msgTs = msg.messageTimestamp ? Number(msg.messageTimestamp) : undefined;
+        const rawMsg = unwrapMessage(msg.message);
+        let imageBuffer: string | undefined;
+        let pdfBuffer: string | undefined;
+        let pdfMimeType: string | undefined;
+
+        if (rawMsg?.imageMessage) {
+          try {
+            const mediaBuffer = await downloadMediaSafely(msg as any, 'image');
+            if (mediaBuffer) {
+              imageBuffer = mediaBuffer.toString('base64');
+            }
+          } catch (e) {
+            console.error('[JANIA-CONSULTING] Error descargando imagen adjunta:', e);
+          }
+        } else if (rawMsg?.documentMessage) {
+          try {
+            const mediaBuffer = await downloadMediaSafely(msg as any, 'document');
+            if (mediaBuffer) {
+              pdfBuffer = mediaBuffer.toString('base64');
+              pdfMimeType = rawMsg.documentMessage.mimetype || 'application/pdf';
+            }
+          } catch (e) {
+            console.error('[JANIA-CONSULTING] Error descargando documento adjunto:', e);
+          }
+        }
+
         result = await processConsultingMessage(
           bodyText,
           resolvedSenderId,
           realName,
-          undefined,
-          undefined,
-          undefined,
+          imageBuffer,
+          pdfBuffer,
+          pdfMimeType,
           isAudioPTT ? ('mock-audio:' + bodyText) : undefined,
           msgTs
         );
