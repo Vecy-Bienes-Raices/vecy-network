@@ -332,7 +332,13 @@ Objetivo: Saludo lleno de optimismo y energía, reflexionar sobre el dinamismo d
 Elige un tema legal clave en Colombia (nutrido de doctrina notarial y jurisprudencia como Mafe Ruiz o Derecho al alcance de todos): promesas de compraventa y cláusula penal vs arras de retracto/confirmatorias, causales de restitución y terminación de arriendo bajo Ley 820 de 2003, validez probatoria de WhatsApp y mensajes de datos (Ley 527/1999 y Ley 2213/2022), cobro de comisiones de corretaje (Arts. 1340-1346 C.Co), cesión de derechos fiduciarios y leasing, o saneamiento por vicios ocultos y tradición de 20 años.`,
 
     miercoles_marketing: `Tema: Marketing Digital Inmobiliario, Inteligencia Artificial & Copywriting de Alto Impacto (${fechaBogota}).
-Elige un tema clave de vanguardia: cómo la Inteligencia Artificial transforma el negocio inmobiliario (análisis de fotos, matching instantáneo de ofertas y demandas con JanIA), o la estructura de 7 pilares fundamentales para publicar ofertas y requerimientos (tipo de inmueble, ciudad y barrio exacto, precio/canon y administración, área en m2, habitaciones, baños, garajes y contacto directo). Explica que publicar completo facilita que la comunidad y JanIA encuentren matches en tiempo real, y siembra la expectativa de que muy pronto nuestros asesores de cierre de VECY Network estarán contactando a los colegas con matches calificados para conectar las puntas.`,
+Objetivo: Enseñar la Fórmula de Oro del Título Inmobiliario y la estructura de 7 pilares para ofertas y demandas irresistibles.
+- Explica la regla de oro para el TÍTULO perfecto: [Tipo de Negocio] + [Tipo de Inmueble] + [Barrio/Vereda] + [Localidad/Comuna] + [Ciudad/Municipio].
+  Ejemplos canónicos:
+  * Oferta: "Venta de Apartamento en Chicó Reservado, Chapinero, Bogotá" o "Arriendo de Bodega en Fontibón Centro, Fontibón, Bogotá".
+  * Demanda: "Busco en Arriendo, Apartamento en Chicó Reservado, Chapinero, Bogotá" o "Busco en Compra, Casa Campestre en La Calera, Cundinamarca".
+- Enseña la importancia de los 7 pilares (título claro, precio/canon exacto con administración, área m2, habitaciones, baños, garajes y contacto directo).
+- Destaca que publicar con esta pulcritud y orden hace que JanIA y toda la comunidad encuentren coincidencias (MATCH) en tiempo real, sembrando la expectativa de que muy pronto nuestros asesores de cierre de VECY Network estarán contactando a los colegas con cruces calificados para ayudarlos a conectar las dos puntas y cerrar comisiones.`,
 
     jueves_tributario: `Tema: Tip Tributario DIAN, Finanzas Personales & Ahorro Fiscal Inmobiliario (${fechaBogota}).
 Elige un tema fiscal/financiero en Colombia (nutrido de fuentes como Mis Propias Finanzas o Contabilidad desde Cero): exención de 5.000 UVT en ganancia ocasional (Art. 311-1 E.T.), retención en la fuente del 1% o 2.5%, deducción de mejoras y costo fiscal con factura electrónica, impuesto de timbre o rentabilidad neta vs bruta en arriendos.`,
