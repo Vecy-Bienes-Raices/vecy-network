@@ -52,11 +52,39 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v26.1 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v26.2 — Agosto 2026
 
 ---
 
 ## 📜 REGISTRO DETALLADO DE CONVERSACIONES (ORDEN CRONOLÓGICO INVERSO CON FECHA Y HORA)
+
+### 🗓️ Sesión: Miércoles 26 de Agosto de 2026 — 11:15 PM a 11:55 PM (Hora Colombia UTC-5)
+**Versión del Sistema**: `v26.2 — Doctrina de Libre Albedrío y Solución Integral (IA Pura), Misión de Lanzamiento Gratuito VECY, Búsqueda Web en Vivo Potenciada y Despacho Cálido de Agradecimientos con Reseñas de Google`  
+**Participantes**: Eduardo A. Rivera (Director Tecnología) & Antigravity IDE (Pair Programmer)
+
+#### 📋 Requerimientos Específicos del Usuario (Eduardo A. Rivera):
+1. **Libre Albedrío y Capacidad Resolutiva Total (IA Pura)**:
+   - No acortar ni limitar artificialmente las respuestas de JanIA. Ella debe resolver el caso planteado por el usuario de fondo (redacción de contratos, promesas de compraventa, cartas de preaviso, liquidaciones DIAN, o avalúos comparativos ACM en tiempo real).
+   - Enseñar a los usuarios que durante esta etapa de **lanzamiento de VECY Network**, toda la asesoría y herramientas de JanIA son **100% gratuitas** para que aprovechen la oportunidad e inviten a más agentes colegas a unirse a la red.
+2. **Astucia Contextual ante Preguntas de Costos**:
+   - Si el usuario pregunta de forma corta o ambigua *"¿Qué costo tendría?"*, JanIA intuye el contexto o indaga amablemente y le aclara que su asistencia de IA y redacción es gratuita por ser aliado de VECY; y si se refiere a gastos notariales externos, peritajes oficiales con matrícula de Lonja o trámites presenciales, lo orienta con precisión o deriva a la línea del bróker **`3166569719`** en su horario comercial oficial.
+3. **Búsqueda Web en Vivo de Alta Precisión (Google AI / Gemini)**:
+   - Afinar y potenciar los motores de búsqueda web en tiempo real para que JanIA consulte normativas vigentes, decretos, resoluciones, jurisprudencia y precios del mercado inmobiliario en internet.
+4. **Respuesta Cordial a Agradecimientos y Enlace de Calificación en Google**:
+   - Cuando el usuario exprese gratitud (*"Muchas gracias", "Gracias", "Mil gracias", "Hasta pronto"*), JanIA no se queda en silencio ni repite saludos de bienvenida; responde con calidez humana deseando un excelente día, productiva tarde o merecido descanso, e invitando a dejar una reseña de 5 estrellas en Google: `https://g.page/r/CctNbwU6UpX5EBM/review`.
+
+#### 🛠️ Soluciones e Implementaciones Técnicas:
+- **Doctrina de Libre Albedrío y Lanzamiento Gratuito (`janIA.ts` & `VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md`)**:
+  - Reemplazada la antigua directriz de funnel por la doctrina de resolución total en el chat, facultando a JanIA para entregar documentos completos, cálculos y avalúos directos.
+- **Motor de Búsqueda Web en Vivo (`llm.ts`)**:
+  - Configuración dinámica en `invokeGemini` permitiendo `googleSearch: {}` con `responseMimeType: text/plain`, desbloqueando búsquedas en internet en tiempo real para consultas de consultoría y avalúos sin incompatibilidad de API.
+- **Manejador de Agradecimientos y Google Reviews (`janIA.ts`)**:
+  - Detección de expresiones de gratitud y despedida con respuesta cordial contextualizada por hora y despacho del enlace oficial de Google Reviews (`https://g.page/r/CctNbwU6UpX5EBM/review`).
+- **Validación**:
+  - `npm run build` ejecutado exitosamente con 0 errores.
+  - Desplegado y sincronizado en VPS (`13.140.149.144`) vía PM2.
+
+---
 
 ### 🗓️ Sesión: Miércoles 26 de Agosto de 2026 — 09:40 PM a 10:25 PM (Hora Colombia UTC-5)
 **Versión del Sistema**: `v26.1 — Motor Maestro de Resolución de Nombres Compuestos y Género, Directriz Ejecutiva de Precios con Horario Comercial de VECY y Blindaje de Visitas con MailSuite`  

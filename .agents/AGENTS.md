@@ -162,7 +162,13 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v26.1 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL: v26.2 — Agosto 2026
+
+### Novedades v26.2 (Doctrina de Libre Albedrío y Solución Integral IA Pura, Lanzamiento Gratuito VECY, Búsqueda Web en Vivo y Agradecimientos con Reseñas de Google):
+- **Libre Albedrío y Solución Total de Fondo**: JanIA entrega soluciones jurídicas completas, redacción de minutas/contratos/preavisos y avalúos comparativos (ACM) directamente en el chat, sin retener respuestas artificialmente.
+- **Beneficio Gratuito de Lanzamiento VECY Network**: Toda la asesoría y herramientas de JanIA son un beneficio 100% gratuito para empoderar a los agentes e invitarlos a unirse a la red.
+- **Búsqueda Web en Tiempo Real (`llm.ts`)**: Búsqueda en Google en vivo habilitada para normativas, decretos, resoluciones, jurisprudencia y precios del mercado inmobiliario.
+- **Manejador Cálido de Agradecimientos y Google Reviews**: Respuesta cordial a despedidas/agradecimientos con bendición horaria y enlace a Google Reviews (`https://g.page/r/CctNbwU6UpX5EBM/review`).
 
 ### Novedades v26.1 (Motor Maestro de Resolución de Nombres Compuestos y Género, Directriz Ejecutiva de Precios con Horario Comercial de VECY y Blindaje de Visitas con MailSuite):
 - **Motor Maestro `nameAndGenderResolver.ts`**: Detección morfológica y diccionario exhaustivo de nombres femeninos (anglo, franceses y colombianos no terminados en 'a', como *Jeannette, Astrid, Elizabeth, Pilar, Carmen, Luz, Beatriz, Inés, etc.*) y canónicos compuestos (*Ana María, Juan Pablo, María Fernanda, etc.*), asegurando el tratamiento exacto ("estimada Jeannette", "estimado Juan Pablo").
