@@ -11159,9 +11159,19 @@ var init_whatsapp_match = __esm({
                 if (rawMsg?.conversation) body = rawMsg.conversation;
                 else if (rawMsg?.extendedTextMessage) {
                   body = rawMsg.extendedTextMessage.text || "";
+                  const linkTitle = rawMsg.extendedTextMessage.title || "";
+                  const linkDesc = rawMsg.extendedTextMessage.description || "";
+                  if (linkTitle || linkDesc) {
+                    const previewText = [linkTitle, linkDesc].filter(Boolean).join(" ");
+                    if (previewText && !body.includes(previewText)) {
+                      body = `${body}
+${previewText}`.trim();
+                    }
+                  }
                 } else if (rawMsg?.imageMessage) body = rawMsg.imageMessage.caption || "";
-                else if (rawMsg?.documentMessage) body = rawMsg.documentMessage.caption || "";
-                else if (rawMsg?.videoMessage) body = rawMsg.videoMessage.caption || "";
+                else if (rawMsg?.documentMessage) {
+                  body = rawMsg.documentMessage.caption || rawMsg.documentMessage.fileName || rawMsg.documentMessage.title || "";
+                } else if (rawMsg?.videoMessage) body = rawMsg.videoMessage.caption || "";
                 else if (rawMsg?.audioMessage) {
                   isAudioPTT = true;
                   try {
@@ -11669,7 +11679,16 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
           return;
         }
         if (!msg.key.fromMe) {
-          const cleanLower = (bodyText || "").toLowerCase();
+          let cleanLower = (bodyText || "").toLowerCase();
+          const detectedUrls = cleanLower.match(/https?:\/\/[^\s]+/g) || [];
+          for (const u of detectedUrls) {
+            try {
+              const parsed = new URL(u);
+              const slugText = decodeURIComponent(parsed.pathname).replace(/[-_/.]/g, " ");
+              cleanLower += ` ${slugText}`;
+            } catch (_) {
+            }
+          }
           let groupSubject = "";
           try {
             const meta = await this.getCachedGroupMetadata(chatId);

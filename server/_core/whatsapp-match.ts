@@ -448,9 +448,20 @@ export class JaniaMatchBot {
             else if (rawMsg?.extendedTextMessage) {
               // Mensajes normales Y mensajes reenviados (contextInfo.isForwarded)
               body = rawMsg.extendedTextMessage.text || '';
+              // Enriquecer con preview de enlace si WhatsApp ya resolvió el título/descripción
+              const linkTitle = (rawMsg.extendedTextMessage as any).title || '';
+              const linkDesc = (rawMsg.extendedTextMessage as any).description || '';
+              if (linkTitle || linkDesc) {
+                const previewText = [linkTitle, linkDesc].filter(Boolean).join(' ');
+                if (previewText && !body.includes(previewText)) {
+                  body = `${body}\n${previewText}`.trim();
+                }
+              }
             }
             else if (rawMsg?.imageMessage) body = rawMsg.imageMessage.caption || '';
-            else if (rawMsg?.documentMessage) body = rawMsg.documentMessage.caption || '';
+            else if (rawMsg?.documentMessage) {
+              body = rawMsg.documentMessage.caption || rawMsg.documentMessage.fileName || rawMsg.documentMessage.title || '';
+            }
             else if (rawMsg?.videoMessage) body = rawMsg.videoMessage.caption || '';
             else if (rawMsg?.audioMessage) {
               isAudioPTT = true;
@@ -1176,9 +1187,19 @@ export class JaniaMatchBot {
       return; // Salir inmediatamente sin capturar, ni extraer datos, ni subir a Supabase
     }
 
-    // --- REACCIÓN INSTANTÁNEA (< 200ms) PARA TEXTO INEQUÍVOCO ---
+    // --- REACCIÓN INSTANTÁNEA (< 200ms) PARA TEXTO, ENLACES Y DOCUMENTOS ---
     if (!msg.key.fromMe) {
-      const cleanLower = (bodyText || '').toLowerCase();
+      let cleanLower = (bodyText || '').toLowerCase();
+
+      // Enriquecer cleanLower con las palabras clave embebidas en enlaces (slugs de portales inmobiliarios)
+      const detectedUrls = cleanLower.match(/https?:\/\/[^\s]+/g) || [];
+      for (const u of detectedUrls) {
+        try {
+          const parsed = new URL(u);
+          const slugText = decodeURIComponent(parsed.pathname).replace(/[-_/.]/g, ' ');
+          cleanLower += ` ${slugText}`;
+        } catch (_) {}
+      }
 
       let groupSubject = "";
       try {
