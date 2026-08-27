@@ -502,6 +502,9 @@ export class JaniaMatchBot {
               const prod = (msg.message as any).productMessage?.product;
               body = [prod?.title, prod?.description, prod?.priceAmount1000 ? `$${Math.round(prod.priceAmount1000/1000).toLocaleString('es-CO')}` : ''].filter(Boolean).join(' - ');
             }
+            else if (rawMsg?.reactionMessage) {
+              body = rawMsg.reactionMessage.text || '';
+            }
             // Detectar si el mensaje cita una nota de voz previa (contextInfo.quotedMessage.audioMessage)
             const quotedAudioMsg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage?.audioMessage;
             if (quotedAudioMsg) {
@@ -705,8 +708,9 @@ export class JaniaMatchBot {
             const isListingGroup = isMainGroup || (!isBuzonGroup && !isCirculoGroup);
             const isListing = isListingGroup && (isPossibleListing || !isOfficialGroup || hasRawMedia);
 
-            // Ignorar únicamente monosílabos o caracteres sueltos inapropiados (< 3 caracteres sin significado)
-            const isSingleCharacter = textClean.length < 3 && !["ok", "si", "sí"].includes(textClean);
+            // Ignorar únicamente monosílabos o caracteres sueltos inapropiados (< 3 caracteres sin significado), PERO permitir emojis y reacciones
+            const hasEmoji = /[\p{Emoji}]/u.test(body);
+            const isSingleCharacter = textClean.length < 3 && !["ok", "si", "sí"].includes(textClean) && !hasEmoji;
 
             const shouldRespond = (isBuzonGroup || isCirculoGroup) ? !isSingleCharacter : (isOfficialGroup && hasDirectMention);
 
@@ -715,7 +719,7 @@ export class JaniaMatchBot {
               continue;
             }
 
-            if (isOfficialGroup && isShortCourtesy) {
+            if (isOfficialGroup && isShortCourtesy && !isBuzonGroup) {
               const courtesyEmoji = textClean.includes("gracias") ? "🤝" : "👍";
               try {
                 await this.sock.sendMessage(chatId, {

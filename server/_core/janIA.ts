@@ -4922,9 +4922,9 @@ export async function processConsultingMessage(
       }
     }
 
-    // Detección de mensajes de cortesía, agradecimiento o despedida
+    // Detección de mensajes de cortesía, agradecimiento, despedida o reacciones con emojis
     const strippedText = messageToProcess.replace(/[\p{Emoji}\p{Punctuation}\s]/gu, '').toLowerCase();
-    const isOnlyEmojiOrEmpty = strippedText.length === 0;
+    const isOnlyEmoji = messageToProcess.trim().length > 0 && strippedText.length === 0;
     const gratitudePhrases = [
       "gracias", "muchas gracias", "mil gracias", "gracias jania", "mil gracias jania",
       "muchas gracias jania", "excelente gracias", "quedo agradecido", "quedo agradecida",
@@ -4932,13 +4932,15 @@ export async function processConsultingMessage(
       "super gracias", "súper gracias", "gracias por la ayuda", "gracias por tu ayuda",
       "gracias bendiciones", "muchas gracias bendiciones", "hasta pronto", "que descanses",
       "feliz noche", "feliz tarde", "que tengas linda noche", "que pases buena noche",
-      "muchas gracias jania bendiciones", "gracias aliada", "muchas gracias aliada"
+      "muchas gracias jania bendiciones", "gracias aliada", "muchas gracias aliada",
+      "ok", "listo", "vale", "perfecto", "entendido", "excelente", "de una", "de acuerdo", "bien"
     ];
     const textLower = messageToProcess.toLowerCase().trim();
     const isGratitude = gratitudePhrases.some(p => strippedText === p.replace(/[\p{Emoji}\p{Punctuation}\s]/gu, '') || textLower === p || textLower.startsWith(p));
+    const isGratitudeOrReaction = isGratitude || isOnlyEmoji;
 
-    if (isGratitude && !isMediaOrAudio) {
-      console.log(`[JanIA-Consulting] Mensaje de agradecimiento/despedida en Soporte Legal para ${userId}: "${messageToProcess}". Despachando respuesta cordial y link de Google Reviews.`);
+    if (isGratitudeOrReaction && !isMediaOrAudio) {
+      console.log(`[JanIA-Consulting] Mensaje de agradecimiento/despedida/reacción en Soporte Legal para ${userId}: "${messageToProcess}". Despachando respuesta cordial y link de Google Reviews.`);
       const timeGreeting = getGreetingByTime();
       const nowBogota = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Bogota" }));
       const hour = nowBogota.getHours();
@@ -4964,11 +4966,11 @@ export async function processConsultingMessage(
       };
     }
 
-    const trivialPhrases = ["ok", "listo", "vale", "de una", "perfecto", "entendido", "de acuerdo", "jaja", "jajaja", "jeje"];
-    const isTrivial = isOnlyEmojiOrEmpty || trivialPhrases.includes(strippedText) || trivialPhrases.includes(textLower);
+    const trivialPhrases = ["jaja", "jajaja", "jeje"];
+    const isTrivial = strippedText.length === 0 || trivialPhrases.includes(strippedText) || trivialPhrases.includes(textLower);
 
     if (isTrivial && !isMediaOrAudio) {
-      console.log(`[JanIA-Consulting] Mensaje trivial o emoji simple sin consulta en Soporte Legal para ${userId}: "${messageToProcess}". Reaccionando con emoji silencioso.`);
+      console.log(`[JanIA-Consulting] Mensaje trivial sin consulta en Soporte Legal para ${userId}: "${messageToProcess}". Reaccionando con emoji.`);
       return {
         classification: "SOBRE_VECY",
         response: "", // Silencio en chat grupal para no spamear

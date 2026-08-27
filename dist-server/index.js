@@ -9699,7 +9699,7 @@ Por favor, realiza una pregunta orientada a estos temas inmobiliarios y con gust
       }
     }
     const strippedText = messageToProcess.replace(/[\p{Emoji}\p{Punctuation}\s]/gu, "").toLowerCase();
-    const isOnlyEmojiOrEmpty = strippedText.length === 0;
+    const isOnlyEmoji = messageToProcess.trim().length > 0 && strippedText.length === 0;
     const gratitudePhrases = [
       "gracias",
       "muchas gracias",
@@ -9729,12 +9729,22 @@ Por favor, realiza una pregunta orientada a estos temas inmobiliarios y con gust
       "que pases buena noche",
       "muchas gracias jania bendiciones",
       "gracias aliada",
-      "muchas gracias aliada"
+      "muchas gracias aliada",
+      "ok",
+      "listo",
+      "vale",
+      "perfecto",
+      "entendido",
+      "excelente",
+      "de una",
+      "de acuerdo",
+      "bien"
     ];
     const textLower = messageToProcess.toLowerCase().trim();
     const isGratitude = gratitudePhrases.some((p) => strippedText === p.replace(/[\p{Emoji}\p{Punctuation}\s]/gu, "") || textLower === p || textLower.startsWith(p));
-    if (isGratitude && !isMediaOrAudio) {
-      console.log(`[JanIA-Consulting] Mensaje de agradecimiento/despedida en Soporte Legal para ${userId}: "${messageToProcess}". Despachando respuesta cordial y link de Google Reviews.`);
+    const isGratitudeOrReaction = isGratitude || isOnlyEmoji;
+    if (isGratitudeOrReaction && !isMediaOrAudio) {
+      console.log(`[JanIA-Consulting] Mensaje de agradecimiento/despedida/reacci\xF3n en Soporte Legal para ${userId}: "${messageToProcess}". Despachando respuesta cordial y link de Google Reviews.`);
       const timeGreeting2 = getGreetingByTime();
       const nowBogota2 = new Date((/* @__PURE__ */ new Date()).toLocaleString("en-US", { timeZone: "America/Bogota" }));
       const hour2 = nowBogota2.getHours();
@@ -9759,10 +9769,10 @@ Por favor, realiza una pregunta orientada a estos temas inmobiliarios y con gust
         reactionEmoji: "\u{1F64C}\u{1F3FB}"
       };
     }
-    const trivialPhrases = ["ok", "listo", "vale", "de una", "perfecto", "entendido", "de acuerdo", "jaja", "jajaja", "jeje"];
-    const isTrivial = isOnlyEmojiOrEmpty || trivialPhrases.includes(strippedText) || trivialPhrases.includes(textLower);
+    const trivialPhrases = ["jaja", "jajaja", "jeje"];
+    const isTrivial = strippedText.length === 0 || trivialPhrases.includes(strippedText) || trivialPhrases.includes(textLower);
     if (isTrivial && !isMediaOrAudio) {
-      console.log(`[JanIA-Consulting] Mensaje trivial o emoji simple sin consulta en Soporte Legal para ${userId}: "${messageToProcess}". Reaccionando con emoji silencioso.`);
+      console.log(`[JanIA-Consulting] Mensaje trivial sin consulta en Soporte Legal para ${userId}: "${messageToProcess}". Reaccionando con emoji.`);
       return {
         classification: "SOBRE_VECY",
         response: "",
@@ -11523,6 +11533,8 @@ ${previewText}`.trim();
                 } else if (msg.message.productMessage) {
                   const prod = msg.message.productMessage?.product;
                   body = [prod?.title, prod?.description, prod?.priceAmount1000 ? `$${Math.round(prod.priceAmount1000 / 1e3).toLocaleString("es-CO")}` : ""].filter(Boolean).join(" - ");
+                } else if (rawMsg?.reactionMessage) {
+                  body = rawMsg.reactionMessage.text || "";
                 }
                 const quotedAudioMsg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage?.audioMessage;
                 if (quotedAudioMsg) {
@@ -11618,13 +11630,14 @@ ${quotedNote}` : quotedNote;
                 const isShortCourtesy = !isAudioPTT && (textClean.length < 6 || ["ok", "listo", "vale", "claro", "gracias", "hola", "hola!", "jaja", "jajaja", "\u{1F44D}", "\u2705", "\u{1F44F}", "\u{1F60A}", "\u{1F64F}"].includes(textClean));
                 const isListingGroup = isMainGroup || !isBuzonGroup && !isCirculoGroup;
                 const isListing = isListingGroup && (isPossibleListing || !isOfficialGroup || hasRawMedia);
-                const isSingleCharacter = textClean.length < 3 && !["ok", "si", "s\xED"].includes(textClean);
+                const hasEmoji = /[\p{Emoji}]/u.test(body);
+                const isSingleCharacter = textClean.length < 3 && !["ok", "si", "s\xED"].includes(textClean) && !hasEmoji;
                 const shouldRespond = isBuzonGroup || isCirculoGroup ? !isSingleCharacter : isOfficialGroup && hasDirectMention;
                 if (isListing) {
                   await this.handleIncomingGroupMessage(msg, chatId, body);
                   continue;
                 }
-                if (isOfficialGroup && isShortCourtesy) {
+                if (isOfficialGroup && isShortCourtesy && !isBuzonGroup) {
                   const courtesyEmoji = textClean.includes("gracias") ? "\u{1F91D}" : "\u{1F44D}";
                   try {
                     await this.sock.sendMessage(chatId, {
@@ -13634,7 +13647,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v26.1";
+var VECY_VERSION = "v26.2";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 
