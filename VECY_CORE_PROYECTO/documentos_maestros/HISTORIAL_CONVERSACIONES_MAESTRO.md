@@ -84,6 +84,9 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
   - *PDFs sin texto acompañante*: Se incluyó `m.pdfBuffer` en `distinctListings` y en el orquestador grupal para que documentos (como `EDS MINUTO DE DIOS.pdf`) sean descargados, analizados con Gemini Vision multimodal, subidos a Supabase Storage (`documents/...`) y enlazados con botón de descarga en la tarjeta de Match con su reacción correspondiente.
   - *Enlaces Puros y Slugs de Portales*: Se enriqueció `FAST-REACT` con decodificación de rutas URL (ej: `/bodega-venta-fontibon/` $\rightarrow$ `bodega venta fontibon`) e inclusión de metadatos de preview (`linkTitle` / `linkDesc`), permitiendo reacciones instantáneas en $<50\text{ms}$ a enlaces de Wasi, FincaRaíz, etc. sin depender de que el scraping termine.
   - *Scraping No Bloqueante en Paralelo*: Timeout reducido a 3.5s con `Promise.race` y `Promise.allSettled`, asegurando que portales externos lentos o saturados nunca congelen el despacho de emojis ni la ingesta.
+- **Consultoría Visual Multimodal en Grupo 2 (Soporte Legal, Tributario, Avalúos y Marketing)**:
+  - Se habilitó la descarga y procesamiento automático de imágenes (`imageBuffer`) y documentos (`pdfBuffer`) en `handleDirectGroupQuestion` de `whatsapp-match.ts` y `processConsultingMessage` de `janIA.ts`.
+  - Ahora cualquier asesor que suba una foto o captura al Grupo 2 (Certificado de Tradición, liquidación del impuesto predial o DIAN, cláusula de contrato, plano, ficha del SINUPOT o flyer publicitario) recibe la lectura visual completa de Gemini 2.5 Flash y la respuesta analítica, legal y comercial directa en el chat.
 - **Verificación Empírica**:
   - Compilación 0 errores con TypeScript y Vite.
   - Sincronización de versión a `v26.0` en `shared/const.ts`, `.agents/AGENTS.md`, `vecy_network_technical_dossier.md` y la bitácora maestra.
