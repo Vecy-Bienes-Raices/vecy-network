@@ -303,6 +303,25 @@ async function startServer() {
     }
   });
 
+  app.get("/api/moderar-grupo-2", async (req, res) => {
+    try {
+      if (!whatsappBot.isReady) {
+        return res.status(503).send("El bot de WhatsApp no está listo todavía.");
+      }
+      const warningText = 
+        `Hola @573132547441 (Maria Claudia) 👋🏻, espero te encuentres muy bien.\n\n` +
+        `🚫 *Has publicado esta oferta en el grupo equivocado.* Este canal es exclusivo para consultas de **Soporte Legal, Tributario, Avalúos y Marketing Inmobiliario**.\n\n` +
+        `Te invitamos cordialmente a **eliminarla de este grupo** y publicarla en nuestro canal oficial de corretaje:\n` +
+        `👉 **VECY INMUEBLES NETWORK**: https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ\n\n` +
+        `¡Allí todos los corredores de la red podrán verla y cruzaremos tu inmueble con las demandas activas! 🏠✨`;
+
+      await whatsappBot.sendToGroup(warningText, undefined, ['573132547441@s.whatsapp.net'], whatsappBot.buzonGroupId);
+      res.send("Mensaje de moderación enviado a Grupo 2 exitosamente.");
+    } catch (err: any) {
+      res.status(500).send(err.message);
+    }
+  });
+
   app.get("/api/jania/tts", async (req, res) => {
     try {
       const text = req.query.text as string;

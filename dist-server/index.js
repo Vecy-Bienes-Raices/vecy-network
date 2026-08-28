@@ -16640,6 +16640,25 @@ async function startServer() {
       res.status(500).send(err.message);
     }
   });
+  app.get("/api/moderar-grupo-2", async (req, res) => {
+    try {
+      if (!janiaMatchBot.isReady) {
+        return res.status(503).send("El bot de WhatsApp no est\xE1 listo todav\xEDa.");
+      }
+      const warningText = `Hola @573132547441 (Maria Claudia) \u{1F44B}\u{1F3FB}, espero te encuentres muy bien.
+
+\u{1F6AB} *Has publicado esta oferta en el grupo equivocado.* Este canal es exclusivo para consultas de **Soporte Legal, Tributario, Aval\xFAos y Marketing Inmobiliario**.
+
+Te invitamos cordialmente a **eliminarla de este grupo** y publicarla en nuestro canal oficial de corretaje:
+\u{1F449} **VECY INMUEBLES NETWORK**: https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ
+
+\xA1All\xED todos los corredores de la red podr\xE1n verla y cruzaremos tu inmueble con las demandas activas! \u{1F3E0}\u2728`;
+      await janiaMatchBot.sendToGroup(warningText, void 0, ["573132547441@s.whatsapp.net"], janiaMatchBot.buzonGroupId);
+      res.send("Mensaje de moderaci\xF3n enviado a Grupo 2 exitosamente.");
+    } catch (err) {
+      res.status(500).send(err.message);
+    }
+  });
   app.get("/api/jania/tts", async (req, res) => {
     try {
       const text2 = req.query.text;
