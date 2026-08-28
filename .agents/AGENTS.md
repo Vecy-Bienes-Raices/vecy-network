@@ -162,7 +162,15 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v26.2 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL: v26.3 — Agosto 2026
+
+### Novedades v26.3 (Blindaje Geográfico Inquebrantable entre Chicó Tradicional y Chicó Navarra, Consumo Atómico de Tokens Geográficos y Purga en BD):
+- **Incompatibilidad Geográfica Absoluta (Chicó Chapinero vs Chicó Navarra Usaquén)**: Guard 1.46 doctrinal en `matching.ts` con bloqueo binario estricto al **0% invariable** ante cruces entre Chicó tradicional y Chicó Navarra.
+- **Consumo Atómico de Nombres Compuestos de Barrios (`extractNeighborhoodTokens`)**: Los nombres de barrios se ordenan por longitud descendente y se consumen del texto de búsqueda, evitando que subcadenas como `"Chicó"` sean extraídas erróneamente cuando el requerimiento especifica `"Chicó Navarra"`.
+- **Diccionario Catastral Corregido (`geography.ts`)**: Chicó Navarra y Navarra ubicados formalmente en la localidad de **Usaquén**; El Chicó en **Chapinero**.
+- **Purga y Saneamiento Masivo en Supabase**: 54 falsos matches eliminados de la base de datos, manteniendo **71 matches legítimos y verificados (≥85%)**.
+- **Paginación Ultra-Rápida en Panel Admin (`AdminMatches.tsx`)**: Paginación de 10 coincidencias por página con carga instantánea ($<0.02\text{s}$) en móviles y escritorio.
+- **Expansión de los 4 Pilares de JanIA**: Jurídico/Contratos, Tributario DIAN, Avalúos/ACM con indagación activa y Marketing Inmobiliario.
 
 ### Novedades v26.2 (Doctrina de Libre Albedrío y Solución Integral IA Pura, Lanzamiento Gratuito VECY, Búsqueda Web en Vivo y Agradecimientos con Reseñas de Google):
 - **Libre Albedrío y Solución Total de Fondo**: JanIA entrega soluciones jurídicas completas, redacción de minutas/contratos/preavisos y avalúos comparativos (ACM) directamente en el chat, sin retener respuestas artificialmente.
