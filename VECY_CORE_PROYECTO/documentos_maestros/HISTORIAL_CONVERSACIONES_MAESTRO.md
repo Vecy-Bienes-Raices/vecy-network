@@ -77,8 +77,17 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 5. **Optimización Extrema de Carga en Panel Admin (Coincidencias en Móviles y Escritorio)**:
    - Resolver la saturación y congelamiento del navegador (especialmente en dispositivos móviles como Brave/Chrome Android) donde la pestaña de Coincidencias se quedaba en *"Buscando reportes de matching..."* y los KPIs en 0.
+6. **Manejo Cálido de Saludos en Grupo 2 y Eliminación Total de Mensajes de Error Interno**:
+   - Diagnosticar por qué ante el saludo de Maria Claudia (*"Hola chicos feliz tarde"*) JanIA respondió con *"⚠️ Ocurrió un error interno al procesar tu consulta jurídica..."*.
+   - Implementar respuesta cordial inmediata ante saludos cotidianos y erradicar cualquier mensaje robótico de error interno en todos los grupos.
 
 #### 🛠️ Soluciones e Implementaciones Técnicas:
+- **Detección Instantánea de Saludos Puros (`isPureGreeting` en `janIA.ts`)**:
+  - Saludos cotidianos (*"Hola chicos feliz tarde"*, *"Buenas tardes"*, *"Buenos días"*, *"Hola a todos"*, etc.) reciben una respuesta inmediata, cálida y personalizada según el género resuelto, sin activar llamadas pesadas al LLM ni consumir cuota de búsqueda.
+- **Búsqueda Web Condicionada Inteligente (`needsSearch` en `janIA.ts`)**:
+  - `enableSearch: needsSearch` se activa únicamente si el mensaje contiene términos explícitos de normativas, leyes, decretos, avalúos o valores de mercado ($/m²), evitando saturar el límite estricto de Google Search de Gemini (Error 429 Too Many Requests).
+- **Fallback Resiliente sin Textos de Error**:
+  - Eliminados los textos `"⚠️ Ocurrió un error interno..."` de los bloques `catch` de `processConsultingMessage` y `processCirculoMessage`, sustituyéndolos por respuestas cordiales, empáticas y de asistencia profesional personalizada.
 - **Paginación Ultra-Rápida y Carga Progresiva (`AdminMatches.tsx`)**:
   - Implementada paginación de **10 coincidencias por página** con controles responsivos (`← Anterior`, `Página X / Y`, `Siguiente →`). Se redujo la renderización simultánea de más de 12.000 nodos DOM a menos de 800 nodos, pasando de bloqueos de 30-40s a **cargas instantáneas en $\le 0.02\text{s}$** tanto en móviles como en computadores de escritorio.
 - **Memoización y Precomputación de Cotejo (`_precomputedRows` y `_precomputedScore`)**:
