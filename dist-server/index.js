@@ -5642,7 +5642,7 @@ async function transcribeAudioWithGemini(audioBuffer, mimeType) {
   }
   throw lastError || new Error("No fue posible transcribir el audio tras agotar modelos y claves de Gemini.");
 }
-async function transcribeAudioBuffer(audioBuffer, mimeType, prompt) {
+async function transcribeAudioBuffer2(audioBuffer, mimeType, prompt) {
   const sizeMB = audioBuffer.length / (1024 * 1024);
   if (sizeMB > 16) {
     throw new Error(`Audio file exceeds maximum size limit (16MB). Current size: ${sizeMB.toFixed(2)}MB`);
@@ -5702,7 +5702,7 @@ async function transcribeAudio(options) {
       };
     }
     try {
-      const text2 = await transcribeAudioBuffer(audioBuffer, mimeType, options.prompt);
+      const text2 = await transcribeAudioBuffer2(audioBuffer, mimeType, options.prompt);
       return {
         task: "transcribe",
         language: "es",
@@ -9767,6 +9767,23 @@ Por favor, realiza una pregunta orientada a estos temas inmobiliarios y con gust
         };
       }
     }
+    const isPureGreeting = /^(hola|buenos d[ií]as|buenas tardes|buenas noches|feliz d[ií]a|feliz tarde|feliz noche|saludos|hola a todos|hola chicos|hola chicas|hola grupo|hola jania|buen d[ií]a|buenas)[\s!.,👋😊✨]*$/i.test(cleanText) || /^(hola|buenos d[ií]as|buenas tardes|buenas noches|feliz tarde|feliz d[ií]a)[\s\w,.]*$/i.test(cleanText) && cleanText.length < 35 && !cleanText.includes("arriendo") && !cleanText.includes("vendo") && !cleanText.includes("contrato") && !cleanText.includes("aval") && !cleanText.includes("costo") && !cleanText.includes("comisi");
+    const timeGreeting = getGreetingByTime();
+    const nameInfo = resolveNameAndGender(realName, timeGreeting);
+    const genderTerm = nameInfo.genderTerm;
+    if (!isMediaOrAudio && isPureGreeting) {
+      console.log(`[JanIA-Consulting-Greeting] Saludo puro detectado de ${userId}: "${text2}"`);
+      const greetingResponse = `\xA1${timeGreeting}, ${genderTerm}! \u{1F44B}\u{1F3FB}\u{1F60A}
+
+\xBFEn qu\xE9 te podemos colaborar hoy? Recuerda que tienes a tu disposici\xF3n asesor\xEDa jur\xEDdica, redacci\xF3n de contratos, liquidaci\xF3n de impuestos, aval\xFAos comparativos y estrategias de marketing de forma 100% gratuita en VECY Network. \u{1F4DA}\u2728`;
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: greetingResponse,
+        reactionEmoji: "\u{1F44B}",
+        wantsVoice: false,
+        voiceResponse: ""
+      };
+    }
     let messageToProcess = text2;
     let isFromAudio = false;
     if (audioUrl) {
@@ -9774,95 +9791,38 @@ Por favor, realiza una pregunta orientada a estos temas inmobiliarios y con gust
         messageToProcess = audioUrl.replace("mock-audio:", "");
         isFromAudio = true;
       } else {
-        console.log(`[JanIA-Consulting] Transcribiendo nota de voz para ${userId}...`);
-        const transcription = await transcribeAudio({ audioUrl });
-        if (!("error" in transcription)) {
-          messageToProcess = transcription.text;
-          isFromAudio = true;
+        try {
+          const transcription = await transcribeAudioBuffer(audioUrl);
+          if (transcription && transcription.trim().length > 0) {
+            messageToProcess = transcription;
+            isFromAudio = true;
+          }
+        } catch (err) {
+          console.error("[processConsultingMessage] Error transcribiendo audio:", err.message);
         }
       }
     }
-    const strippedText = messageToProcess.replace(/[\p{Emoji}\p{Punctuation}\s]/gu, "").toLowerCase();
-    const isOnlyEmoji = messageToProcess.trim().length > 0 && strippedText.length === 0;
-    const gratitudePhrases = [
-      "gracias",
-      "muchas gracias",
-      "mil gracias",
-      "gracias jania",
-      "mil gracias jania",
-      "muchas gracias jania",
-      "excelente gracias",
-      "quedo agradecido",
-      "quedo agradecida",
-      "muchisimas gracias",
-      "much\xEDsimas gracias",
-      "agradecido",
-      "agradecida",
-      "muy amable",
-      "super gracias",
-      "s\xFAper gracias",
-      "gracias por la ayuda",
-      "gracias por tu ayuda",
-      "gracias bendiciones",
-      "muchas gracias bendiciones",
-      "hasta pronto",
-      "que descanses",
-      "feliz noche",
-      "feliz tarde",
-      "que tengas linda noche",
-      "que pases buena noche",
-      "muchas gracias jania bendiciones",
-      "gracias aliada",
-      "muchas gracias aliada",
-      "ok",
-      "listo",
-      "vale",
-      "perfecto",
-      "entendido",
-      "excelente",
-      "de una",
-      "de acuerdo",
-      "bien"
-    ];
-    const textLower = messageToProcess.toLowerCase().trim();
-    const isGratitude = gratitudePhrases.some((p) => strippedText === p.replace(/[\p{Emoji}\p{Punctuation}\s]/gu, "") || textLower === p || textLower.startsWith(p));
-    const isGratitudeOrReaction = isGratitude || isOnlyEmoji;
-    if (isGratitudeOrReaction && !isMediaOrAudio) {
-      console.log(`[JanIA-Consulting] Mensaje de agradecimiento/despedida/reacci\xF3n en Soporte Legal para ${userId}: "${messageToProcess}". Despachando respuesta cordial y link de Google Reviews.`);
-      const timeGreeting2 = getGreetingByTime();
+    const isThankYouMessage = checkIsThankYou(messageToProcess);
+    if (isThankYouMessage) {
+      console.log(`[JanIA-Consulting-ThankYou] Agradecimiento/despedida detectado de ${userId}: "${messageToProcess}"`);
       const nowBogota2 = new Date((/* @__PURE__ */ new Date()).toLocaleString("en-US", { timeZone: "America/Bogota" }));
       const hour2 = nowBogota2.getHours();
-      const nameInfo2 = resolveNameAndGender(realName, timeGreeting2);
-      const genderTerm2 = nameInfo2.genderTerm;
-      let timeWish = "\xA1Que tengas un excelente d\xEDa y sigas cerrando muchos negocios exitosos! \u{1F680}\u2728";
-      if (hour2 >= 0 && hour2 < 12) {
-        timeWish = "Que termines de pasar una bonita y muy productiva ma\xF1ana. \u2600\uFE0F";
-      } else if (hour2 >= 12 && hour2 < 19) {
-        timeWish = "\xA1Que pases una excelente tarde y que sigas cerrando muchos negocios exitosos! \u{1F680}\u2728";
-      } else {
-        timeWish = "Que tengas una excelente noche y un tranquilo y muy merecido descanso. \u{1F319}\u{1F4A4}";
+      let closingBlessing = "\xA1Que pases una excelente y productiva tarde!";
+      if (hour2 >= 5 && hour2 < 12) {
+        closingBlessing = "\xA1Que tengas un grandioso y bendecido d\xEDa!";
+      } else if (hour2 >= 18 || hour2 < 5) {
+        closingBlessing = "\xA1Que tengas una feliz noche y un merecido descanso!";
       }
-      const gratitudeResponse = `\xA1Para servirte con todo el gusto, ${genderTerm2}! \u{1F60A} ${timeWish}
+      const warmResponse = `\xA1Para servirte con todo el gusto, ${genderTerm}! \u{1F60A} ${closingBlessing} \xA1Que sigas cerrando muchos negocios exitosos! \u{1F680}\u2728
 
 \u2B50 En *VECY Network* tu opini\xF3n es muy importante para nosotros. Si te ha sido \xFAtil mi asesor\xEDa, nos encantar\xEDa que nos regales una calificaci\xF3n y nos dejes un bonito comentario aqu\xED:
 \u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review`;
       return {
         classification: "SOBRE_VECY",
-        response: gratitudeResponse,
-        dmResponse: gratitudeResponse,
-        reactionEmoji: "\u{1F64C}\u{1F3FB}"
-      };
-    }
-    const trivialPhrases = ["jaja", "jajaja", "jeje"];
-    const isTrivial = strippedText.length === 0 || trivialPhrases.includes(strippedText) || trivialPhrases.includes(textLower);
-    if (isTrivial && !isMediaOrAudio) {
-      console.log(`[JanIA-Consulting] Mensaje trivial sin consulta en Soporte Legal para ${userId}: "${messageToProcess}". Reaccionando con emoji.`);
-      return {
-        classification: "SOBRE_VECY",
-        response: "",
-        // Silencio en chat grupal para no spamear
-        dmResponse: "",
-        reactionEmoji: "\u{1F44D}"
+        response: warmResponse,
+        reactionEmoji: "\u2764\uFE0F",
+        wantsVoice: false,
+        voiceResponse: ""
       };
     }
     const alreadyGreeted = await checkAlreadyGreeted(userId);
@@ -9910,13 +9870,10 @@ DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
   "voiceResponse": "Tu locuci\xF3n en audio limpia de markdown y emojis (solo si wantsVoice es true)",
   "reactionEmoji": "string (emoji recomendado)"
 }`;
-    const timeGreeting = getGreetingByTime();
     const nowBogota = new Date((/* @__PURE__ */ new Date()).toLocaleString("en-US", { timeZone: "America/Bogota" }));
     const hour = nowBogota.getHours();
-    const nameInfo = resolveNameAndGender(realName, timeGreeting);
     const n = nameInfo.displayName;
     const isFemale = nameInfo.isFemale;
-    const genderTerm = nameInfo.genderTerm;
     const nowMs = Date.now();
     const msgMs = msgTimestamp ? msgTimestamp * 1e3 : nowMs;
     const hoursLate = Math.floor((nowMs - msgMs) / 36e5);
@@ -9957,13 +9914,14 @@ ${lateReplyNote}`;
       { role: "user", content: `Usuario: @${rawPhone} (${realName})
 Consulta: ${messageToProcess}${greetingInstruction}` }
     ];
+    const needsSearch = cleanText.length > 25 && (cleanText.includes("ley ") || cleanText.includes("decreto") || cleanText.includes("resoluci") || cleanText.includes("corte") || cleanText.includes("sentencia") || cleanText.includes("jurisprudencia") || cleanText.includes("uvt") || cleanText.includes("notar") || cleanText.includes("sinupot") || cleanText.includes("aval") || cleanText.includes("valor m2") || cleanText.includes("precio del m2") || cleanText.includes("metro cuadrado"));
     const llmRes = await invokeLLM({
       messages: messages2,
       responseFormat: { type: "json_object" },
       imageBuffer,
       pdfBuffer,
       pdfMimeType,
-      enableSearch: true
+      enableSearch: needsSearch
     });
     try {
       const parsed = parseSafeJSON(llmRes.choices[0].message.content);
@@ -9986,9 +9944,15 @@ Consulta: ${messageToProcess}${greetingInstruction}` }
     }
   } catch (error) {
     console.error("[processConsultingMessage Error]:", error.message);
+    const timeGreeting = getGreetingByTime();
+    const rawPhone = userId.split("@")[0];
+    const realName = await resolveRealName(userId, userName);
+    const nameInfo = resolveNameAndGender(realName, timeGreeting);
+    const genderTerm = nameInfo.genderTerm;
     return {
       classification: "CONSULTA_GENERAL",
-      response: "\u26A0\uFE0F Ocurri\xF3 un error interno al procesar tu consulta jur\xEDdica. Por favor intenta de nuevo en unos momentos."
+      response: `\xA1${timeGreeting}, ${genderTerm}! \u{1F44B}\u{1F3FB} Con todo gusto estoy aqu\xED para asesorarte. Cu\xE9ntame cu\xE1l es tu inquietud sobre legislaci\xF3n, contratos, tr\xE1mites, aval\xFAos o marketing inmobiliario y con gusto te colaboro. \u{1F91D}`,
+      reactionEmoji: "\u{1F4A1}"
     };
   }
 }
@@ -10229,9 +10193,15 @@ Pregunta: ${text2}${greetingInstruction}` }
     }
   } catch (error) {
     console.error("[processCirculoMessage Error]:", error.message);
+    const timeGreeting = getGreetingByTime();
+    const rawPhone = userId.split("@")[0];
+    const realName = await resolveRealName(userId, userName);
+    const firstName = extractFirstName(realName);
+    const userGreetingName = firstName ? ` ${firstName}` : "";
     return {
       classification: "CONSULTA_GENERAL",
-      response: "\u26A0\uFE0F Ocurri\xF3 un error al procesar tu consulta en C\xEDrculo Cero."
+      response: `\xA1${timeGreeting}${userGreetingName}! \u{1F44B}\u{1F3FB} Con gusto estoy aqu\xED para apoyarte. Cu\xE9ntame cu\xE1l es tu consulta sobre VECY Network, nuestra tecnolog\xEDa o comisiones y con gusto te respondo. \u{1F4A1}\u2728`,
+      reactionEmoji: "\u{1F4A1}"
     };
   }
 }
@@ -11614,7 +11584,7 @@ ${previewText}`.trim();
                     const audioBuffer = await downloadMediaSafely(msg, "audio");
                     if (audioBuffer && audioBuffer.length > 0) {
                       const mimeType = rawMsg.audioMessage.mimetype || "audio/ogg; codecs=opus";
-                      const transcription = await transcribeAudioBuffer(audioBuffer, mimeType);
+                      const transcription = await transcribeAudioBuffer2(audioBuffer, mimeType);
                       if (transcription && transcription.trim() !== "") {
                         body = transcription.trim();
                         console.log(`[JANIA-MATCH] Transcripci\xF3n exitosa: "${body.substring(0, 80)}..."`);
@@ -11671,7 +11641,7 @@ ${previewText}`.trim();
                     }
                     if (audioBuffer && audioBuffer.length > 0) {
                       const mimeType = quotedAudioMsg.mimetype || "audio/ogg; codecs=opus";
-                      const transcription = await transcribeAudioBuffer(audioBuffer, mimeType);
+                      const transcription = await transcribeAudioBuffer2(audioBuffer, mimeType);
                       if (transcription && transcription.trim() !== "") {
                         console.log(`[JANIA-MATCH] Transcripci\xF3n de audio citado exitosa: "${transcription.substring(0, 80)}..."`);
                         const quotedNote = `[Consulta en audio citada de +${quotedPhone}]: "${transcription.trim()}"`;
@@ -14673,7 +14643,7 @@ ${liveStats}${userContextInstruction}
           console.log("[JanIA-Router] Archivo detectado como Audio / Nota de voz. Transcribiendo...");
           const mime = contentType.includes("audio") ? contentType : input.fileUrl.endsWith(".ogg") ? "audio/ogg" : "audio/mp3";
           try {
-            const transcribed = await transcribeAudioBuffer(rawBuffer, mime);
+            const transcribed = await transcribeAudioBuffer2(rawBuffer, mime);
             if (transcribed && transcribed.trim()) {
               audioTranscriptionText = transcribed.trim();
               console.log(`[JanIA-Router] Audio transcrito exitosamente: "${audioTranscriptionText.substring(0, 80)}..."`);
@@ -16783,7 +16753,7 @@ Te invitamos cordialmente a **eliminarla de este grupo** y publicarla en nuestro
       const buffer = req.file.buffer;
       const mimeType = req.file.mimetype || "audio/webm";
       console.log(`[TRANSCRIBE-ROUTE] Recibido archivo de audio de tipo: ${mimeType}, tama\xF1o: ${buffer.length} bytes`);
-      const text2 = await transcribeAudioBuffer(buffer, mimeType);
+      const text2 = await transcribeAudioBuffer2(buffer, mimeType);
       res.json({ transcription: text2 });
     } catch (err) {
       console.error("[TRANSCRIBE-ROUTE] Error al transcribir:", err);

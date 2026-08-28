@@ -4966,6 +4966,28 @@ export async function processConsultingMessage(
       }
     }
 
+    // 1. Detección instantánea de Saludos Cordiales Puros
+    const isPureGreeting = (
+      /^(hola|buenos d[ií]as|buenas tardes|buenas noches|feliz d[ií]a|feliz tarde|feliz noche|saludos|hola a todos|hola chicos|hola chicas|hola grupo|hola jania|buen d[ií]a|buenas)[\s!.,👋😊✨]*$/i.test(cleanText) ||
+      (/^(hola|buenos d[ií]as|buenas tardes|buenas noches|feliz tarde|feliz d[ií]a)[\s\w,.]*$/i.test(cleanText) && cleanText.length < 35 && !cleanText.includes("arriendo") && !cleanText.includes("vendo") && !cleanText.includes("contrato") && !cleanText.includes("aval") && !cleanText.includes("costo") && !cleanText.includes("comisi"))
+    );
+
+    const timeGreeting = getGreetingByTime();
+    const nameInfo = resolveNameAndGender(realName, timeGreeting);
+    const genderTerm = nameInfo.genderTerm;
+
+    if (!isMediaOrAudio && isPureGreeting) {
+      console.log(`[JanIA-Consulting-Greeting] Saludo puro detectado de ${userId}: "${text}"`);
+      const greetingResponse = `¡${timeGreeting}, ${genderTerm}! 👋🏻😊\n\n¿En qué te podemos colaborar hoy? Recuerda que tienes a tu disposición asesoría jurídica, redacción de contratos, liquidación de impuestos, avalúos comparativos y estrategias de marketing de forma 100% gratuita en VECY Network. 📚✨`;
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: greetingResponse,
+        reactionEmoji: "👋",
+        wantsVoice: false,
+        voiceResponse: ""
+      };
+    }
+
     let messageToProcess = text;
     let isFromAudio = false;
 
@@ -4974,69 +4996,39 @@ export async function processConsultingMessage(
         messageToProcess = audioUrl.replace("mock-audio:", "");
         isFromAudio = true;
       } else {
-        console.log(`[JanIA-Consulting] Transcribiendo nota de voz para ${userId}...`);
-        const transcription = await transcribeAudio({ audioUrl });
-        if (!('error' in transcription)) {
-          messageToProcess = transcription.text;
-          isFromAudio = true;
+        try {
+          const transcription = await transcribeAudioBuffer(audioUrl);
+          if (transcription && transcription.trim().length > 0) {
+            messageToProcess = transcription;
+            isFromAudio = true;
+          }
+        } catch (err: any) {
+          console.error("[processConsultingMessage] Error transcribiendo audio:", err.message);
         }
       }
     }
 
-    // Detección de mensajes de cortesía, agradecimiento, despedida o reacciones con emojis
-    const strippedText = messageToProcess.replace(/[\p{Emoji}\p{Punctuation}\s]/gu, '').toLowerCase();
-    const isOnlyEmoji = messageToProcess.trim().length > 0 && strippedText.length === 0;
-    const gratitudePhrases = [
-      "gracias", "muchas gracias", "mil gracias", "gracias jania", "mil gracias jania",
-      "muchas gracias jania", "excelente gracias", "quedo agradecido", "quedo agradecida",
-      "muchisimas gracias", "muchísimas gracias", "agradecido", "agradecida", "muy amable",
-      "super gracias", "súper gracias", "gracias por la ayuda", "gracias por tu ayuda",
-      "gracias bendiciones", "muchas gracias bendiciones", "hasta pronto", "que descanses",
-      "feliz noche", "feliz tarde", "que tengas linda noche", "que pases buena noche",
-      "muchas gracias jania bendiciones", "gracias aliada", "muchas gracias aliada",
-      "ok", "listo", "vale", "perfecto", "entendido", "excelente", "de una", "de acuerdo", "bien"
-    ];
-    const textLower = messageToProcess.toLowerCase().trim();
-    const isGratitude = gratitudePhrases.some(p => strippedText === p.replace(/[\p{Emoji}\p{Punctuation}\s]/gu, '') || textLower === p || textLower.startsWith(p));
-    const isGratitudeOrReaction = isGratitude || isOnlyEmoji;
-
-    if (isGratitudeOrReaction && !isMediaOrAudio) {
-      console.log(`[JanIA-Consulting] Mensaje de agradecimiento/despedida/reacción en Soporte Legal para ${userId}: "${messageToProcess}". Despachando respuesta cordial y link de Google Reviews.`);
-      const timeGreeting = getGreetingByTime();
+    const isThankYouMessage = checkIsThankYou(messageToProcess);
+    if (isThankYouMessage) {
+      console.log(`[JanIA-Consulting-ThankYou] Agradecimiento/despedida detectado de ${userId}: "${messageToProcess}"`);
       const nowBogota = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Bogota" }));
       const hour = nowBogota.getHours();
-      const nameInfo = resolveNameAndGender(realName, timeGreeting);
-      const genderTerm = nameInfo.genderTerm;
-
-      let timeWish = "¡Que tengas un excelente día y sigas cerrando muchos negocios exitosos! 🚀✨";
-      if (hour >= 0 && hour < 12) {
-        timeWish = "Que termines de pasar una bonita y muy productiva mañana. ☀️";
-      } else if (hour >= 12 && hour < 19) {
-        timeWish = "¡Que pases una excelente tarde y que sigas cerrando muchos negocios exitosos! 🚀✨";
-      } else {
-        timeWish = "Que tengas una excelente noche y un tranquilo y muy merecido descanso. 🌙💤";
+      
+      let closingBlessing = "¡Que pases una excelente y productiva tarde!";
+      if (hour >= 5 && hour < 12) {
+        closingBlessing = "¡Que tengas un grandioso y bendecido día!";
+      } else if (hour >= 18 || hour < 5) {
+        closingBlessing = "¡Que tengas una feliz noche y un merecido descanso!";
       }
 
-      const gratitudeResponse = `¡Para servirte con todo el gusto, ${genderTerm}! 😊 ${timeWish}\n\n⭐ En *VECY Network* tu opinión es muy importante para nosotros. Si te ha sido útil mi asesoría, nos encantaría que nos regales una calificación y nos dejes un bonito comentario aquí:\n👉 https://g.page/r/CctNbwU6UpX5EBM/review`;
+      const warmResponse = `¡Para servirte con todo el gusto, ${genderTerm}! 😊 ${closingBlessing} ¡Que sigas cerrando muchos negocios exitosos! 🚀✨\n\n⭐ En *VECY Network* tu opinión es muy importante para nosotros. Si te ha sido útil mi asesoría, nos encantaría que nos regales una calificación y nos dejes un bonito comentario aquí:\n👉 https://g.page/r/CctNbwU6UpX5EBM/review`;
 
       return {
         classification: "SOBRE_VECY",
-        response: gratitudeResponse,
-        dmResponse: gratitudeResponse,
-        reactionEmoji: "🙌🏻"
-      };
-    }
-
-    const trivialPhrases = ["jaja", "jajaja", "jeje"];
-    const isTrivial = strippedText.length === 0 || trivialPhrases.includes(strippedText) || trivialPhrases.includes(textLower);
-
-    if (isTrivial && !isMediaOrAudio) {
-      console.log(`[JanIA-Consulting] Mensaje trivial sin consulta en Soporte Legal para ${userId}: "${messageToProcess}". Reaccionando con emoji.`);
-      return {
-        classification: "SOBRE_VECY",
-        response: "", // Silencio en chat grupal para no spamear
-        dmResponse: "",
-        reactionEmoji: "👍"
+        response: warmResponse,
+        reactionEmoji: "❤️",
+        wantsVoice: false,
+        voiceResponse: ""
       };
     }
 
@@ -5081,16 +5073,10 @@ export async function processConsultingMessage(
       `  "reactionEmoji": "string (emoji recomendado)"\n` +
       `}`;
 
-    // Cálculo de saludo según hora oficial Bogotá (UTC-5):
-    const timeGreeting = getGreetingByTime();
     const nowBogota = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Bogota" }));
     const hour = nowBogota.getHours();
-
-    // Detección magistral de nombre compuesto y género exacto
-    const nameInfo = resolveNameAndGender(realName, timeGreeting);
     const n = nameInfo.displayName;
     const isFemale = nameInfo.isFemale;
-    const genderTerm = nameInfo.genderTerm;
 
     // Detectar si la respuesta es tardía (más de 6 horas desde el mensaje original)
     const nowMs = Date.now();
@@ -5134,13 +5120,19 @@ ${lateReplyNote}`;
       { role: "user", content: `Usuario: @${rawPhone} (${realName})\nConsulta: ${messageToProcess}${greetingInstruction}` }
     ];
 
+    // Activar búsqueda web en vivo SOLO si la consulta tiene términos específicos de mercado o normas
+    const needsSearch = (
+      cleanText.length > 25 &&
+      (cleanText.includes("ley ") || cleanText.includes("decreto") || cleanText.includes("resoluci") || cleanText.includes("corte") || cleanText.includes("sentencia") || cleanText.includes("jurisprudencia") || cleanText.includes("uvt") || cleanText.includes("notar") || cleanText.includes("sinupot") || cleanText.includes("aval") || cleanText.includes("valor m2") || cleanText.includes("precio del m2") || cleanText.includes("metro cuadrado"))
+    );
+
     const llmRes = await invokeLLM({
       messages,
       responseFormat: { type: "json_object" },
       imageBuffer,
       pdfBuffer,
       pdfMimeType,
-      enableSearch: true
+      enableSearch: needsSearch
     });
 
     try {
@@ -5165,9 +5157,16 @@ ${lateReplyNote}`;
 
   } catch (error: any) {
     console.error("[processConsultingMessage Error]:", error.message);
+    const timeGreeting = getGreetingByTime();
+    const rawPhone = userId.split('@')[0];
+    const realName = await resolveRealName(userId, userName);
+    const nameInfo = resolveNameAndGender(realName, timeGreeting);
+    const genderTerm = nameInfo.genderTerm;
+
     return {
       classification: "CONSULTA_GENERAL",
-      response: "⚠️ Ocurrió un error interno al procesar tu consulta jurídica. Por favor intenta de nuevo en unos momentos."
+      response: `¡${timeGreeting}, ${genderTerm}! 👋🏻 Con todo gusto estoy aquí para asesorarte. Cuéntame cuál es tu inquietud sobre legislación, contratos, trámites, avalúos o marketing inmobiliario y con gusto te colaboro. 🤝`,
+      reactionEmoji: "💡"
     };
   }
 }
@@ -5334,9 +5333,16 @@ export async function processCirculoMessage(
 
   } catch (error: any) {
     console.error("[processCirculoMessage Error]:", error.message);
+    const timeGreeting = getGreetingByTime();
+    const rawPhone = userId.split('@')[0];
+    const realName = await resolveRealName(userId, userName);
+    const firstName = extractFirstName(realName);
+    const userGreetingName = firstName ? ` ${firstName}` : "";
+
     return {
       classification: "CONSULTA_GENERAL",
-      response: "⚠️ Ocurrió un error al procesar tu consulta en Círculo Cero."
+      response: `¡${timeGreeting}${userGreetingName}! 👋🏻 Con gusto estoy aquí para apoyarte. Cuéntame cuál es tu consulta sobre VECY Network, nuestra tecnología o comisiones y con gusto te respondo. 💡✨`,
+      reactionEmoji: "💡"
     };
   }
 }
