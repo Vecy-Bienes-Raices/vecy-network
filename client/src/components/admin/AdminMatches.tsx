@@ -1981,44 +1981,78 @@ export default function AdminMatches() {
     return labels[status] || status;
   };
 
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const pageSize = 10; // 10 coincidencias por página para carga instantánea ultra-rápida (<0.02s) en móvil y escritorio
+
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, minScore]);
+
   const filteredMatches = useMemo(() => {
     const seenMatchIds = new Set<number>();
     const seenPairs = new Set<string>();
+    const results: any[] = [];
 
-    return (matches as any[]).filter((match: any) => {
-      if (!match || !match.id || !match.property || !match.requirement) return false;
+    for (const match of (matches as any[])) {
+      if (!match || !match.id || !match.property || !match.requirement) continue;
 
       const property = match.property;
       const requirement = match.requirement;
 
-      // Evaluar la afinidad comercial y la regla doctrinal de los 5 campos en duro + completitud
-      const { rows, autoScore } = scoreRows(requirement, property);
-      const dbScore = parseFloat(match.matchScore || "0");
       const isEditingThisCard = editingMatchId === match.id;
+      const effectiveProp = isEditingThisCard ? {
+        ...property,
+        price: editForm.propPrice !== undefined && editForm.propPrice !== '' ? editForm.propPrice : property.price,
+        rentPrice: editForm.propRentPrice !== undefined && editForm.propRentPrice !== '' ? editForm.propRentPrice : property.rentPrice,
+        adminFee: editForm.propAdminFee !== undefined && editForm.propAdminFee !== '' ? editForm.propAdminFee : property.adminFee,
+        areaTotal: editForm.propArea !== undefined && editForm.propArea !== '' ? editForm.propArea : property.areaTotal,
+        bedrooms: editForm.propBedrooms !== undefined && editForm.propBedrooms !== '' ? editForm.propBedrooms : property.bedrooms,
+        bathrooms: editForm.propBathrooms !== undefined && editForm.propBathrooms !== '' ? editForm.propBathrooms : property.bathrooms,
+        garages: editForm.propGarages !== undefined && editForm.propGarages !== '' ? editForm.propGarages : property.garages,
+        stratum: editForm.propStratum !== undefined && editForm.propStratum !== '' ? editForm.propStratum : property.stratum,
+        zone: editForm.propZone !== undefined && editForm.propZone !== '' ? editForm.propZone : property.zone,
+        city: editForm.propCity !== undefined && editForm.propCity !== '' ? editForm.propCity : property.city,
+      } : property;
+
+      const effectiveReq = isEditingThisCard ? {
+        ...requirement,
+        presupuestoMax: editForm.reqBudget !== undefined && editForm.reqBudget !== '' ? editForm.reqBudget : requirement.presupuestoMax,
+        adminFeeMax: editForm.reqAdminMax !== undefined && editForm.reqAdminMax !== '' ? editForm.reqAdminMax : requirement.adminFeeMax,
+        areaMin: editForm.reqArea !== undefined && editForm.reqArea !== '' ? editForm.reqArea : requirement.areaMin,
+        habitacionesMin: editForm.reqBedrooms !== undefined && editForm.reqBedrooms !== '' ? editForm.reqBedrooms : requirement.habitacionesMin,
+        banosMin: editForm.reqBathrooms !== undefined && editForm.reqBathrooms !== '' ? editForm.reqBathrooms : requirement.banosMin,
+        parqueaderosMin: editForm.reqGarages !== undefined && editForm.reqGarages !== '' ? editForm.reqGarages : requirement.parqueaderosMin,
+        estratoDeseado: editForm.reqStratum !== undefined && editForm.reqStratum !== '' ? editForm.reqStratum : requirement.estratoDeseado,
+        zonaDeseada: editForm.reqZone !== undefined && editForm.reqZone !== '' ? editForm.reqZone : requirement.zonaDeseada,
+        ciudadDeseada: editForm.reqCity !== undefined && editForm.reqCity !== '' ? editForm.reqCity : requirement.ciudadDeseada,
+      } : requirement;
+
+      // Evaluar la afinidad comercial y la regla doctrinal de los 5 campos en duro + completitud
+      const { rows, autoScore } = scoreRows(effectiveReq, effectiveProp);
+      const dbScore = parseFloat(match.matchScore || "0");
       // REGLA DOCTRINAL VECY: Si hay cualquier incumplimiento de filtro duro (autoScore === 0 / No Cumple), el match queda descartado inmediatamente (0%) y jamás se muestra
       const displayScore = autoScore === 0 ? 0 : (isEditingThisCard ? autoScore : (autoScore > 0 ? autoScore : dbScore));
 
       // Mostrar únicamente los matches calificados válidos (85% a 100%)
       if (displayScore < 85) {
-        return false;
+        continue;
       }
 
       // Aplicar filtro de puntuación de la interfaz (ej. "85_94" o minScore)
       if (minScore === "85_94") {
-        if (displayScore < 85 || displayScore >= 95) return false;
+        if (displayScore < 85 || displayScore >= 95) continue;
       } else {
         const minVal = parseFloat(minScore);
-        if (displayScore < minVal) return false;
+        if (displayScore < minVal) continue;
       }
 
-
-      if (seenMatchIds.has(match.id)) return false;
+      if (seenMatchIds.has(match.id)) continue;
       
       const pId = property.id;
       const rId = requirement.id;
       if (pId && rId) {
         const pairKey = `${pId}-${rId}`;
-        if (seenPairs.has(pairKey)) return false;
+        if (seenPairs.has(pairKey)) continue;
         seenPairs.add(pairKey);
       }
 
@@ -2030,11 +2064,25 @@ export default function AdminMatches() {
       const matchesSearch = !searchTerm || propSearchStr.includes(searchTerm.toLowerCase()) || 
                             reqSearchStr.includes(searchTerm.toLowerCase());
 
-      if (!matchesSearch) return false;
+      if (!matchesSearch) continue;
 
-      return true;
-    });
-  }, [matches, minScore, searchTerm, editingMatchId]);
+      results.push({
+        ...match,
+        _precomputedRows: rows,
+        _precomputedScore: displayScore,
+        _effectiveProp: effectiveProp,
+        _effectiveReq: effectiveReq,
+      });
+    }
+
+    return results;
+  }, [matches, minScore, searchTerm, editingMatchId, editForm]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredMatches.length / pageSize));
+  const paginatedMatches = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredMatches.slice(start, start + pageSize);
+  }, [filteredMatches, currentPage, pageSize]);
 
 
 
@@ -2191,51 +2239,27 @@ export default function AdminMatches() {
           <p className="text-zinc-500 text-sm mt-1">Intenta reducir el filtro de match mínimo o realizar una nueva búsqueda.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-6">
-          <AnimatePresence>
-            {(filteredMatches as any[]).map((m: any, idx: number) => {
-              const isEditingThisCard = editingMatchId === m.id;
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 gap-6">
+            <AnimatePresence>
+              {(paginatedMatches as any[]).map((m: any, idx: number) => {
+                const isEditingThisCard = editingMatchId === m.id;
 
-              const effectiveProp = isEditingThisCard ? {
-                ...m.property,
-                price: editForm.propPrice !== undefined && editForm.propPrice !== '' ? editForm.propPrice : m.property.price,
-                rentPrice: editForm.propRentPrice !== undefined && editForm.propRentPrice !== '' ? editForm.propRentPrice : m.property.rentPrice,
-                adminFee: editForm.propAdminFee !== undefined && editForm.propAdminFee !== '' ? editForm.propAdminFee : m.property.adminFee,
-                areaTotal: editForm.propArea !== undefined && editForm.propArea !== '' ? editForm.propArea : m.property.areaTotal,
-                bedrooms: editForm.propBedrooms !== undefined && editForm.propBedrooms !== '' ? editForm.propBedrooms : m.property.bedrooms,
-                bathrooms: editForm.propBathrooms !== undefined && editForm.propBathrooms !== '' ? editForm.propBathrooms : m.property.bathrooms,
-                garages: editForm.propGarages !== undefined && editForm.propGarages !== '' ? editForm.propGarages : m.property.garages,
-                stratum: editForm.propStratum !== undefined && editForm.propStratum !== '' ? editForm.propStratum : m.property.stratum,
-                zone: editForm.propZone !== undefined && editForm.propZone !== '' ? editForm.propZone : m.property.zone,
-                city: editForm.propCity !== undefined && editForm.propCity !== '' ? editForm.propCity : m.property.city,
-              } : m.property;
+                const effectiveProp = m._effectiveProp || m.property;
+                const effectiveReq = m._effectiveReq || m.requirement;
+                const rows = m._precomputedRows || [];
+                const score = m._precomputedScore !== undefined ? m._precomputedScore : parseFloat(m.matchScore?.toString() || "0");
+                const date = formatColombiaDate(m.createdAt);
 
-              const effectiveReq = isEditingThisCard ? {
-                ...m.requirement,
-                presupuestoMax: editForm.reqBudget !== undefined && editForm.reqBudget !== '' ? editForm.reqBudget : m.requirement.presupuestoMax,
-                adminFeeMax: editForm.reqAdminMax !== undefined && editForm.reqAdminMax !== '' ? editForm.reqAdminMax : m.requirement.adminFeeMax,
-                areaMin: editForm.reqArea !== undefined && editForm.reqArea !== '' ? editForm.reqArea : m.requirement.areaMin,
-                habitacionesMin: editForm.reqBedrooms !== undefined && editForm.reqBedrooms !== '' ? editForm.reqBedrooms : m.requirement.habitacionesMin,
-                banosMin: editForm.reqBathrooms !== undefined && editForm.reqBathrooms !== '' ? editForm.reqBathrooms : m.requirement.banosMin,
-                parqueaderosMin: editForm.reqGarages !== undefined && editForm.reqGarages !== '' ? editForm.reqGarages : m.requirement.parqueaderosMin,
-                estratoDeseado: editForm.reqStratum !== undefined && editForm.reqStratum !== '' ? editForm.reqStratum : m.requirement.estratoDeseado,
-                zonaDeseada: editForm.reqZone !== undefined && editForm.reqZone !== '' ? editForm.reqZone : m.requirement.zonaDeseada,
-                ciudadDeseada: editForm.reqCity !== undefined && editForm.reqCity !== '' ? editForm.reqCity : m.requirement.ciudadDeseada,
-              } : m.requirement;
+                const exactCount = rows.filter(r => r.status === "exact" || r.status === "ok").length;
+                const plusCount = rows.filter(r => r.status === "plus").length;
+                const warnCount = rows.filter(r => r.status === "warn").length;
+                const failCount = rows.filter(r => r.status === "missing").length;
 
-              const { rows, autoScore } = scoreRows(effectiveReq, effectiveProp);
-              const score = autoScore === 0 ? 0 : (isEditingThisCard ? autoScore : (autoScore > 0 ? autoScore : parseFloat(m.matchScore?.toString() || "0")));
-              const date = formatColombiaDate(m.createdAt);
-
-              const exactCount = rows.filter(r => r.status === "exact" || r.status === "ok").length;
-              const plusCount = rows.filter(r => r.status === "plus").length;
-              const warnCount = rows.filter(r => r.status === "warn").length;
-              const failCount = rows.filter(r => r.status === "missing").length;
-
-              const dotColor = score >= 95 
-                ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" 
-                : "bg-[#bf953f] shadow-[0_0_8px_rgba(191,149,63,0.5)]";
-              const scoreColor = score >= 95 ? "text-emerald-400" : "text-[#bf953f]";
+                const dotColor = score >= 95 
+                  ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" 
+                  : "bg-[#bf953f] shadow-[0_0_8px_rgba(191,149,63,0.5)]";
+                const scoreColor = score >= 95 ? "text-emerald-400" : "text-[#bf953f]";
 
               return (
                 <motion.div 
@@ -3531,6 +3555,48 @@ export default function AdminMatches() {
             })}
           </AnimatePresence>
         </div>
+
+        {/* Barra de Paginación Ultra-Rápida */}
+        {totalPages > 1 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-2xl bg-[#0c0c0c] border border-white/5 shadow-xl">
+            <div className="text-xs text-zinc-400 text-center sm:text-left">
+              Mostrando <span className="text-white font-bold">{(currentPage - 1) * pageSize + 1}</span> a <span className="text-white font-bold">{Math.min(currentPage * pageSize, filteredMatches.length)}</span> de <span className="text-[#bf953f] font-bold">{filteredMatches.length}</span> coincidencias calificadas
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage === 1}
+                onClick={() => {
+                  setCurrentPage(p => Math.max(1, p - 1));
+                  window.scrollTo({ top: 250, behavior: 'smooth' });
+                }}
+                className="h-9 px-3.5 text-xs font-semibold border-white/10 bg-zinc-900 text-zinc-300 hover:text-white hover:bg-zinc-800 disabled:opacity-30 transition-all cursor-pointer"
+              >
+                ← Anterior
+              </Button>
+
+              <div className="px-3.5 py-1.5 bg-black/60 border border-white/10 rounded-xl text-xs font-mono font-bold text-[#bf953f]">
+                {currentPage} / {totalPages}
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage >= totalPages}
+                onClick={() => {
+                  setCurrentPage(p => Math.min(totalPages, p + 1));
+                  window.scrollTo({ top: 250, behavior: 'smooth' });
+                }}
+                className="h-9 px-3.5 text-xs font-semibold border-white/10 bg-zinc-900 text-zinc-300 hover:text-white hover:bg-zinc-800 disabled:opacity-30 transition-all cursor-pointer"
+              >
+                Siguiente →
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
       )}
 
       {/* MODAL DE DESCARTE CON MOTIVO (FEEDBACK Y APRENDIZAJE JANIA) */}

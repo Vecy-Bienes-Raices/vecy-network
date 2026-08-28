@@ -14754,7 +14754,7 @@ ${liveStats}${userContextInstruction}
   // Get all matches in the network
   getAllMatches: publicProcedure.query(async () => {
     const now = Date.now();
-    if (cachedAllMatchesData && now - cachedAllMatchesTime < 2e4) {
+    if (cachedAllMatchesData && now - cachedAllMatchesTime < 3e4) {
       return cachedAllMatchesData;
     }
     const db = await getDb();
@@ -14835,7 +14835,7 @@ ${liveStats}${userContextInstruction}
           enlaceOrigen: requirements.enlaceOrigen,
           createdAt: requirements.createdAt
         }
-      }).from(propertyMatches).innerJoin(properties, eq7(propertyMatches.propertyId, properties.id)).innerJoin(requirements, eq7(propertyMatches.requirementId, requirements.id)).orderBy(desc2(propertyMatches.id)).limit(200);
+      }).from(propertyMatches).innerJoin(properties, eq7(propertyMatches.propertyId, properties.id)).innerJoin(requirements, eq7(propertyMatches.requirementId, requirements.id)).where(sql4`CAST(${propertyMatches.matchScore} AS NUMERIC) >= 85`).orderBy(desc2(propertyMatches.id)).limit(150);
       const propIds = Array.from(new Set(matches.map((m) => m.property.id)));
       const imagesMap = {};
       if (propIds.length > 0) {

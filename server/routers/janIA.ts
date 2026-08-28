@@ -467,7 +467,7 @@ export const janIARouter = router({
   getAllMatches: publicProcedure
     .query(async () => {
       const now = Date.now();
-      if (cachedAllMatchesData && (now - cachedAllMatchesTime) < 20000) {
+      if (cachedAllMatchesData && (now - cachedAllMatchesTime) < 30000) {
         return cachedAllMatchesData;
       }
 
@@ -555,8 +555,9 @@ export const janIARouter = router({
           .from(propertyMatches)
           .innerJoin(properties, eq(propertyMatches.propertyId, properties.id))
           .innerJoin(requirements, eq(propertyMatches.requirementId, requirements.id))
+          .where(sql`CAST(${propertyMatches.matchScore} AS NUMERIC) >= 85`)
           .orderBy(desc(propertyMatches.id))
-          .limit(200);
+          .limit(150);
 
         // Obtener imágenes registradas para todas las propiedades resultantes
         const propIds = Array.from(new Set(matches.map(m => m.property.id)));
