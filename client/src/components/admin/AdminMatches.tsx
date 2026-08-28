@@ -186,75 +186,139 @@ function scoreRows(req: any, prop: any) {
   const reqTextLower = (req.rawText || req.name || "").toLowerCase().replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0]/g, " ");
   const propTextLower = (prop.rawText || prop.description || prop.name || "").toLowerCase().replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0]/g, " ");
 
-  // 1. Tipo de Inmueble (REGLA DOCTRINAL v22.8 - Subtipos de Propiedad Horizontal)
-  const reqType = req.tipoInmuebleDeseado || req.propertyType;
-  const propType = prop.propertyType;
+  // 1. Tipo de Inmueble (REGLA DOCTRINAL v26.3 - Detección Precisa y Tolerancia Cero)
+  const reqTypeRaw = req.tipoInmuebleDeseado || req.propertyType;
+  const propTypeRaw = prop.propertyType;
 
-  const reqRawText = cleanText(req.rawText || req.name || "");
-  const propRawText = cleanText(prop.rawText || prop.name || "");
-
-  const getHorizontalPropertySubtype = (type: string | null | undefined, raw: string): string => {
+  const deduceFullPropertyType = (type: string | null | undefined, raw: string): string => {
     const t = (type || "").toLowerCase().trim();
-    const r = (raw || "").toLowerCase().trim();
+    if (t === "consultorio") return "consultorio";
+    if (t === "warehouse" || t === "bodega") return "warehouse";
+    if (t === "office" || t === "oficina") return "office";
+    if (t === "commercial" || t === "local") return "commercial";
+    if (t === "farm" || t === "finca") return "farm";
+    if (t === "land" || t === "lote" || t === "terreno") return "land";
+    if (t === "building" || t === "edificio") return "building";
+    if (t === "hotel") return "hotel";
+    if (t === "cabin" || t === "cabaña") return "cabin";
+    if (t === "loft" || t === "apartaestudio") return "loft";
+    if (t === "house" || t === "casa") return "house";
+
+    const clean = ((raw || "") + " " + (type || "")).toLowerCase().trim().replace(/[\s\-_,.]+/g, " ");
     
-    // 1. Apartaestudio / Aparta Suite / 1 Alcoba Independiente
-    if (
-      r.includes("apartaestudio") || r.includes("aparta estudio") ||
-      r.includes("apartasuite") || r.includes("aparta suite") || r.includes("aparta-suite") ||
-      r.includes("suite ejecutiva") || r.includes("alcoba independiente") ||
-      r.includes("1 alcoba") || r.includes("una alcoba") || r.includes("1 habitacion independiente") ||
-      t === "apartaestudio" || t === "aparta_suite" || t === "apartasuite" || t === "studio"
-    ) {
+    if (clean.includes("consultorio") || clean.includes("consultorios") || clean.includes("odontol") || clean.includes("médic") || clean.includes("medic")) {
+      return "consultorio";
+    }
+    if (clean.includes("bodega") || clean.includes("bodegas") || clean.includes("warehouse")) {
+      return "warehouse";
+    }
+    if (clean.includes("local comercial") || clean.includes("locales comerciales") || /\blocal\b/.test(clean) || /\blocales\b/.test(clean)) {
+      return "commercial";
+    }
+    if (clean.includes("oficina") || clean.includes("oficinas") || /\boffice\b/.test(clean)) {
+      return "office";
+    }
+    if (clean.includes("casa") || clean.includes("townhouse") || clean.includes("chalet") || clean.includes("house")) {
+      if (!clean.includes("apartamento") && !clean.includes("apto")) {
+        return "house";
+      }
+    }
+    if (clean.includes("cabaña") || clean.includes("cabana") || clean.includes("cabañas") || clean.includes("cabin")) {
+      return "cabin";
+    }
+    if (clean.includes("finca") || clean.includes("campestre") || clean.includes("farm")) {
+      return "farm";
+    }
+    if (clean.includes("lote") || clean.includes("terreno") || clean.includes("predio") || clean.includes("land")) {
+      return "land";
+    }
+    if (clean.includes("edificio") || clean.includes("building")) {
+      return "building";
+    }
+    if (clean.includes("hotel") || clean.includes("hostal") || clean.includes("hostel")) {
+      return "hotel";
+    }
+    if (clean.includes("apartaestudio") || clean.includes("aparta estudio") || clean.includes("apartasuite") || clean.includes("aparta suite") || clean.includes("studio")) {
       return "apartaestudio";
     }
-
-    // 2. Loft
-    if (r.includes("loft") || t === "loft") {
+    if (clean.includes("loft")) {
       return "loft";
     }
-
-    // 3. Penthouse / PH
-    if (r.includes("penthouse") || r.includes("pent house") || r.includes("ph ") || r.endsWith(" ph") || t === "penthouse") {
+    if (clean.includes("penthouse") || clean.includes("pent house") || clean.includes("ph ")) {
       return "penthouse";
     }
-
-    // 4. Dúplex / Tríplex
-    if (r.includes("duplex") || r.includes("dúplex") || r.includes("triplex") || r.includes("tríplex") || t.includes("duplex")) {
+    if (clean.includes("duplex") || clean.includes("dúplex") || clean.includes("triplex")) {
       return "apartamento_duplex";
     }
-
-    if (t === "apartment" || t === "apartamento" || t === "apto") {
+    if (clean.includes("apartamento") || clean.includes("apto") || clean.includes("apartment")) {
       return "apartamento_estandar";
     }
-
-    return t || "apartamento_estandar";
+    return "apartamento_estandar";
   };
 
-  const reqSubtype = getHorizontalPropertySubtype(reqType, reqRawText);
-  const propSubtype = getHorizontalPropertySubtype(propType, propRawText);
+  const reqSubtype = deduceFullPropertyType(reqTypeRaw, reqRawText);
+  const propSubtype = deduceFullPropertyType(propTypeRaw, propRawText);
 
-  const isReqStudio = reqSubtype === "apartaestudio" || reqSubtype === "loft";
-  const isPropStudio = propSubtype === "apartaestudio" || propSubtype === "loft";
+  // Categorías
+  const RESIDENCIALES = new Set(["apartamento_estandar", "apartment", "apartamento", "apartaestudio", "loft", "penthouse", "apartamento_duplex", "house", "casa", "cabin"]);
+  const NO_RESIDENCIALES = new Set(["consultorio", "office", "commercial", "warehouse", "land", "farm"]);
 
   let typeMatchStatus: MatchStatus = "missing";
-  if (isReqStudio) {
-    typeMatchStatus = isPropStudio ? "exact" : "missing"; // TOLERANCIA CERO: 1 alcoba / apartasuite JAMÁS coincide con apto familiar / penthouse
-  } else if (isPropStudio) {
-    typeMatchStatus = isReqStudio ? "exact" : "missing";
-  } else if (reqSubtype && propSubtype) {
-    if (reqSubtype === propSubtype || (reqSubtype === "apartamento_estandar" && propSubtype === "apartment") || (reqSubtype === "apartment" && propSubtype === "apartamento_estandar")) {
-      typeMatchStatus = "exact";
-    } else if (reqSubtype === "penthouse" && propSubtype !== "penthouse") {
-      typeMatchStatus = "missing";
-    } else {
-      typeMatchStatus = "exact";
-    }
+
+  // Incompatibilidad Absoluta: Residencial vs No Residencial
+  if (
+    (RESIDENCIALES.has(reqSubtype) && NO_RESIDENCIALES.has(propSubtype)) ||
+    (NO_RESIDENCIALES.has(reqSubtype) && RESIDENCIALES.has(propSubtype))
+  ) {
+    typeMatchStatus = "missing";
+  } else if (reqSubtype === propSubtype) {
+    typeMatchStatus = "exact";
+  } else if (
+    (reqSubtype === "consultorio" && propSubtype === "office") ||
+    (reqSubtype === "office" && propSubtype === "consultorio")
+  ) {
+    typeMatchStatus = "warn";
+  } else if (
+    (reqSubtype === "commercial" && propSubtype === "office") ||
+    (reqSubtype === "office" && propSubtype === "commercial")
+  ) {
+    typeMatchStatus = "warn";
+  } else if (
+    (reqSubtype === "apartamento_estandar" && (propSubtype === "penthouse" || propSubtype === "apartamento_duplex"))
+  ) {
+    typeMatchStatus = "plus";
+  } else if (
+    (reqSubtype === "penthouse" && propSubtype !== "penthouse") ||
+    (reqSubtype === "apartaestudio" && propSubtype !== "apartaestudio" && propSubtype !== "loft") ||
+    (reqSubtype !== "apartaestudio" && propSubtype === "apartaestudio")
+  ) {
+    typeMatchStatus = "missing";
+  } else if (
+    (reqSubtype === "house" && propSubtype !== "house") ||
+    (propSubtype === "house" && reqSubtype !== "house")
+  ) {
+    typeMatchStatus = "missing";
+  } else if (
+    (reqSubtype === "apartment" || reqSubtype === "apartamento_estandar") &&
+    (propSubtype === "apartment" || propSubtype === "apartamento_estandar")
+  ) {
+    typeMatchStatus = "exact";
   } else {
-    typeMatchStatus = "neutral";
+    typeMatchStatus = "missing";
   }
 
   const getSubtypeFriendlyLabel = (sub: string | null | undefined): string => {
     if (!sub) return "N/E";
+    if (sub === "consultorio") return "Consultorio Médico / Dotacional";
+    if (sub === "office") return "Oficina";
+    if (sub === "commercial") return "Local Comercial";
+    if (sub === "warehouse") return "Bodega";
+    if (sub === "house") return "Casa";
+    if (sub === "farm") return "Finca / Lote Campestre";
+    if (sub === "land") return "Lote / Terreno";
+    if (sub === "building") return "Edificio";
+    if (sub === "hotel") return "Hotel";
+    if (sub === "cabin") return "Cabaña";
     if (sub === "apartaestudio") return "Apartaestudio / Aparta Suite (1 Hab)";
     if (sub === "loft") return "Loft";
     if (sub === "penthouse") return "PentHouse";

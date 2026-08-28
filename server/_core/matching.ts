@@ -1283,24 +1283,95 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
-  // ── FILTRO DURO 3: Tipo de inmueble (Con Detección de Sanidad Predial v22.4) ──
-  let effectivePropType = propType;
-  const pTextForType = (property.rawText || property.name || "").toLowerCase();
-  if (effectivePropType === "apartment" || !effectivePropType) {
-    if (pTextForType.includes("venta casa") || pTextForType.includes("casa 2 pisos") || pTextForType.includes("casa campestre") || /\bcasa\b/i.test(pTextForType)) {
-      if (!pTextForType.includes("apartamento") && !pTextForType.includes("apto")) {
-        effectivePropType = "house";
+  // ── FILTRO DURO 3: Tipo de Inmueble y Compatibilidad de Uso de Suelo (Tolerancia Cero v26.3) ──
+  const deduceFullType = (typeRaw: string, text: string): string => {
+    const t = (typeRaw || "").toLowerCase().trim();
+    if (t === "consultorio") return "consultorio";
+    if (t === "warehouse" || t === "bodega") return "warehouse";
+    if (t === "office" || t === "oficina") return "office";
+    if (t === "commercial" || t === "local") return "commercial";
+    if (t === "farm" || t === "finca") return "farm";
+    if (t === "land" || t === "lote" || t === "terreno") return "land";
+    if (t === "building" || t === "edificio") return "building";
+    if (t === "hotel") return "hotel";
+    if (t === "cabin" || t === "cabaña") return "cabin";
+    if (t === "loft" || t === "apartaestudio") return "loft";
+    if (t === "house" || t === "casa") return "house";
+
+    const clean = (text || "").toLowerCase().trim().replace(/[\s\-_,.]+/g, " ");
+    if (clean.includes("consultorio") || clean.includes("consultorios") || clean.includes("odontol") || clean.includes("médic") || clean.includes("medic")) {
+      return "consultorio";
+    }
+    if (clean.includes("bodega") || clean.includes("bodegas") || clean.includes("warehouse")) {
+      return "warehouse";
+    }
+    if (clean.includes("local comercial") || clean.includes("locales comerciales") || /\blocal\b/.test(clean) || /\blocales\b/.test(clean)) {
+      return "commercial";
+    }
+    if (clean.includes("oficina") || clean.includes("oficinas") || /\boffice\b/.test(clean)) {
+      return "office";
+    }
+    if (clean.includes("casa") || clean.includes("townhouse") || clean.includes("chalet") || clean.includes("house")) {
+      if (!clean.includes("apartamento") && !clean.includes("apto")) {
+        return "house";
       }
     }
+    if (clean.includes("cabaña") || clean.includes("cabana") || clean.includes("cabañas") || clean.includes("cabin")) {
+      return "cabin";
+    }
+    if (clean.includes("finca") || clean.includes("campestre") || clean.includes("farm")) {
+      return "farm";
+    }
+    if (clean.includes("lote") || clean.includes("terreno") || clean.includes("predio") || clean.includes("land")) {
+      return "land";
+    }
+    if (clean.includes("edificio") || clean.includes("building")) {
+      return "building";
+    }
+    if (clean.includes("hotel") || clean.includes("hostal") || clean.includes("hostel")) {
+      return "hotel";
+    }
+    if (clean.includes("apartaestudio") || clean.includes("apartasuite") || clean.includes("loft")) {
+      return "loft";
+    }
+    if (clean.includes("apartamento") || clean.includes("apto") || clean.includes("penthouse") || clean.includes("apartment")) {
+      return "apartment";
+    }
+    return "apartment";
+  };
+
+  const effectivePropType = deduceFullType(propType, property.rawText || property.name || property.description || "");
+  const effectiveReqType = deduceFullType(reqType, requirement.rawText || requirement.name || "");
+
+  // CATEGORÍAS DE USO (TOLERANCIA CERO: UN APARTAMENTO NUNCA ES UN CONSULTORIO U OFICINA)
+  const RESIDENCIALES = new Set(["apartment", "house", "loft", "cabin"]);
+  const NO_RESIDENCIALES = new Set(["consultorio", "office", "commercial", "warehouse", "land", "farm"]);
+
+  // BLOQUEO DURO: Residencial vs No Residencial (Consultorio, Local, Bodega, Oficina)
+  if (
+    (RESIDENCIALES.has(effectiveReqType) && NO_RESIDENCIALES.has(effectivePropType)) ||
+    (NO_RESIDENCIALES.has(effectiveReqType) && RESIDENCIALES.has(effectivePropType))
+  ) {
+    blockers.push(`Incompatibilidad de uso de suelo y tipología (Tolerancia Cero 0%): Requerimiento ${effectiveReqType} (no residencial) vs Inmueble ${effectivePropType} (residencial).`);
+    return buildExplanationResult(0, blockers, positives, negatives);
   }
-  let effectiveReqType = reqType;
-  const rTextForType = (requirement.rawText || requirement.name || "").toLowerCase();
-  if (!effectiveReqType || effectiveReqType === "apartment") {
-    if (rTextForType.includes("inmueble: casa") || rTextForType.includes("busco casa") || rTextForType.includes("requiero casa")) {
-      if (!rTextForType.includes("apartamento") && !rTextForType.includes("apto")) {
-        effectiveReqType = "house";
-      }
-    }
+
+  // BLOQUEO DURO: Lote / Terreno
+  if (
+    (effectiveReqType === "land" && effectivePropType !== "land") ||
+    (effectivePropType === "land" && effectiveReqType !== "land")
+  ) {
+    blockers.push(`Incompatibilidad de tipología: Lote/Terreno no coincide con inmueble edificado (${effectivePropType} ↔ ${effectiveReqType}).`);
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+
+  // BLOQUEO DURO: Bodega vs Consultorio / Oficina
+  if (
+    (effectiveReqType === "warehouse" && effectivePropType !== "warehouse") ||
+    (effectivePropType === "warehouse" && effectiveReqType !== "warehouse")
+  ) {
+    blockers.push(`Incompatibilidad de tipología: Bodega industrial no coincide con ${effectivePropType === "warehouse" ? effectiveReqType : effectivePropType}.`);
+    return buildExplanationResult(0, blockers, positives, negatives);
   }
 
   if (effectiveReqType && effectivePropType) {
@@ -1308,8 +1379,8 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
       "apartamento": ["apto", "apartamento", "apartment"],
       "apto":        ["apto", "apartamento", "apartment"],
       "apartment":   ["apto", "apartamento", "apartment"],
-      "casa":        ["casa", "chalet", "casa campestre", "house"],
-      "house":       ["casa", "chalet", "casa campestre", "house"],
+      "casa":        ["casa", "chalet", "casa campestre", "house", "townhouse"],
+      "house":       ["casa", "chalet", "casa campestre", "house", "townhouse"],
       "finca":       ["finca", "finca raiz", "finca raíz", "farm"],
       "farm":        ["finca", "finca raiz", "finca raíz", "farm"],
       "lote":        ["lote", "terreno", "predio", "land"],
@@ -1320,8 +1391,16 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
       "warehouse":   ["bodega", "bodega industrial", "warehouse"],
       "local":       ["local", "local comercial", "commercial"],
       "commercial":  ["local", "local comercial", "commercial"],
-      "oficina":     ["oficina", "consultorio", "office"],
-      "office":      ["oficina", "consultorio", "office"],
+      "oficina":     ["oficina", "office", "consultorio"],
+      "office":      ["oficina", "office", "consultorio"],
+      "consultorio": ["consultorio", "oficina", "office"],
+      "building":    ["building", "edificio"],
+      "edificio":    ["building", "edificio"],
+      "hotel":       ["hotel", "hostal"],
+      "cabin":       ["cabin", "cabaña", "cabana"],
+      "cabaña":      ["cabin", "cabaña", "cabana"],
+      "loft":        ["loft", "apartaestudio", "apartasuite"],
+      "apartaestudio": ["loft", "apartaestudio", "apartasuite"],
     };
     const reqAlias  = aliases[effectiveReqType]  || [effectiveReqType];
     const propAlias = aliases[effectivePropType] || [effectivePropType];

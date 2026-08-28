@@ -52,11 +52,47 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v26.3 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v26.4 — Agosto 2026
 
 ---
 
 ## 📜 REGISTRO DETALLADO DE CONVERSACIONES (ORDEN CRONOLÓGICO INVERSO CON FECHA Y HORA)
+
+### 🗓️ Sesión: Viernes 28 de Agosto de 2026 — 04:30 PM a 05:00 PM (Hora Colombia UTC-5)
+**Versión del Sistema**: `v26.4 — Blindaje Doctrinal de Tipologías Inmobiliarias (Tolerancia Cero entre Comercial/Dotacional/Médico y Residencial), Detección Precisa de Tipologías en Ingesta/Fallback y Purga de Matches Inviables (#M11220)`  
+**Participantes**: Eduardo A. Rivera (Director Tecnología) & Antigravity IDE (Pair Programmer)
+
+#### 📋 Requerimientos Específicos del Usuario (Eduardo A. Rivera):
+1. **Incompatibilidad Absoluta entre Tipologías Comerciales/Médicas y Residenciales (Match Falso #M11220)**:
+   - Diagnóstico del error reportado en el Match #M11220:
+     - **Oferta**: *Apartamento en Venta – TÁMESIS 175, Usaquén, Club House* ($460M / $740M - Residencial).
+     - **Demanda**: *CLIENTE DIRECTO BUSCA CONSULTORIO EN USAQUÉN* (Busca consultorio para compra en edificio moderno hasta $800M - Comercial / Médico / Dotacional).
+     - En la tabla de cotejo técnico de admin, la columna de la demanda mostraba erróneamente `Apartamento Familiar` en lugar de `Consultorio Médico / Dotacional`, y el sistema otorgaba un 97% de coincidencia ("Coincide").
+   - **Exigencia Doctrinal**:
+     - Un **Consultorio, Oficina, Local Comercial, Bodega o Lote** es de uso de suelo comercial, institucional o industrial y **JAMÁS PUEDE COINCIDIR CON UN APARTAMENTO O CASA RESIDENCIAL** (**0% Bloqueo Absoluto / Tolerancia Cero**).
+
+#### 🛠️ Soluciones e Implementaciones Técnicas:
+1. **Corrección de Causa Raíz en Ingesta y Fallbacks (`server/_core/janIA.ts`)**:
+   - `extractFallbackDataFromText`: Incorporada la detección explícita y prioritaria de `consultorio`, `office` (oficina), `commercial` (local), `warehouse` (bodega), `cabin` (cabaña), `farm` (finca), `land` (lote), `building` (edificio), `hotel` y `loft` antes del fallback genérico de `apartment`.
+   - `sanitizePropertyType`: Priorizada la detección morfológica de `consultorio` (médico, odontológico, clínico) y tipologías comerciales para evitar que se conviertan en `apartment` por descarte.
+2. **Filtro Duro 3 de Tipología y Categoría de Uso de Suelo (`server/_core/matching.ts`)**:
+   - Función `deduceFullType` para identificar la verdadera tipología a partir del tipo declarado y del contenido textual (`rawText` y `name`).
+   - Categorización binaria estricta:
+     - `RESIDENCIALES`: `['apartment', 'house', 'loft', 'cabin']`.
+     - `NO_RESIDENCIALES` (Comercial/Dotacional/Industrial/Rural): `['consultorio', 'office', 'commercial', 'warehouse', 'land', 'farm']`.
+   - **Guard Bloqueador Absoluto**: Si la demanda es comercial/dotacional y la oferta es residencial (o viceversa), se detiene la evaluación inmediatamente retornando **0% Bloqueo Invariable**.
+   - Tabla de `aliases` enriquecida con soporte completo para `consultorio`, `oficina`, `local`, `bodega`, `edificio`, `hotel`, `cabaña`, `apartaestudio` y `loft`.
+3. **Corrección de la Tabla de Cotejo Técnico en Panel Admin (`client/src/components/admin/AdminMatches.tsx`)**:
+   - Función `deduceFullPropertyType` y asignación de labels amigables: *"Consultorio Médico / Dotacional"*, *"Local Comercial"*, *"Oficina"*, *"Bodega"*, etc.
+   - Eliminada la caída por defecto a `typeMatchStatus = "exact"` ("Coincide"), evaluando estrictamente la compatibilidad entre tipologías y marcando `missing` (✕) ante cruces incompatibles.
+4. **Saneamiento en Supabase y Purga Masiva**:
+   - Requerimiento #799 (Ruth Caro) corregido en base de datos (`tipoInmuebleDeseado = 'consultorio'`).
+   - Saneadas las dependencias de clave foránea en `notificationLogs`.
+   - Purgados **74 matches inviables de Supabase** (incluyendo el falso Match #M11220 y #M11221), preservando **106 matches legítimos y verificados con Score ≥ 85%**.
+5. **Verificación y Compilación Exitosa**:
+   - `npm run build` ejecutado con **0 errores** tanto en Vite (frontend) como en esbuild (backend dist-server).
+
+---
 
 ### 🗓️ Sesión: Viernes 28 de Agosto de 2026 — 01:15 PM a 03:30 PM (Hora Colombia UTC-5)
 **Versión del Sistema**: `v26.3 — Blindaje Geográfico Inquebrantable entre Chicó Tradicional (Chapinero) y Chicó Navarra (Usaquén), Resolución Estricta de Sub-barrios Catastrales, Expansión de los 4 Pilares de JanIA y Purga Masiva en Base de Datos`  

@@ -447,22 +447,30 @@ export function extractFallbackDataFromText(text: string): any {
   }
 
   let propertyType = "apartment";
-  if (clean.includes("casa") || clean.includes("townhouse")) {
+  if (clean.includes("consultorio") || clean.includes("consultorios") || clean.includes("odontol") || clean.includes("médic") || clean.includes("medic")) {
+    propertyType = "consultorio";
+  } else if (clean.includes("oficina") || clean.includes("oficinas") || clean.includes("office")) {
+    propertyType = "office";
+  } else if (clean.includes("local comercial") || clean.includes("locales comerciales") || clean.includes("local") || clean.includes("locales") || clean.includes("comercial") || clean.includes("commercial")) {
+    propertyType = "commercial";
+  } else if (clean.includes("bodega") || clean.includes("bodegas") || clean.includes("warehouse")) {
+    propertyType = "warehouse";
+  } else if (clean.includes("casa") || clean.includes("townhouse") || clean.includes("chalet")) {
     propertyType = "house";
   } else if (clean.includes("cabaña") || clean.includes("cabana") || clean.includes("cabañas") || clean.includes("cabanas") || clean.includes("cabin")) {
     propertyType = "cabin";
-  } else if (clean.includes("local") || clean.includes("locales") || clean.includes("comercial")) {
-    propertyType = "commercial";
-  } else if (clean.includes("bodega")) {
-    propertyType = "warehouse";
-  } else if (clean.includes("oficina")) {
-    propertyType = "office";
-  } else if (clean.includes("lote") || clean.includes("terreno")) {
+  } else if (clean.includes("lote") || clean.includes("terreno") || clean.includes("predio") || clean.includes("land")) {
     propertyType = "land";
-  } else if (clean.includes("finca")) {
+  } else if (clean.includes("finca") || clean.includes("campestre") || clean.includes("farm")) {
     propertyType = "farm";
-  } else if (clean.includes("apartaestudio") || clean.includes("loft")) {
+  } else if (clean.includes("edificio") || clean.includes("building")) {
+    propertyType = "building";
+  } else if (clean.includes("hotel") || clean.includes("hostal") || clean.includes("hostel")) {
+    propertyType = "hotel";
+  } else if (clean.includes("apartaestudio") || clean.includes("apartasuite") || clean.includes("loft")) {
     propertyType = "loft";
+  } else {
+    propertyType = "apartment";
   }
 
   let price = 0;
@@ -3611,18 +3619,18 @@ async function findOrCreateUserByPhone(phone: string, realName: string) {
 function sanitizePropertyType(type: string): "apartment" | "house" | "building" | "warehouse" | "farm" | "hotel" | "office" | "land" | "commercial" | "loft" | "consultorio" | "cabin" {
   if (!type) return "apartment";
   const t = type.toLowerCase().trim();
+  if (t === "consultorio" || t.includes("consultorio") || t.includes("odontol") || t.includes("médic") || t.includes("medic") || t === "office_medical") return "consultorio";
   if (t === "cabin" || t.includes("cabaña") || t.includes("cabana") || t.includes("cabañas") || t.includes("cabanas")) return "cabin";
-  if (t === "apartment" || t === "apartamento" || t === "apto" || t.includes("apartaestudio") || t.includes("penthouse")) return "apartment";
   if (t === "house" || t === "casa" || t.includes("chalet") || t.includes("quinta") || t.includes("campestre")) return "house";
   if (t === "building" || t === "edificio") return "building";
   if (t === "warehouse" || t === "bodega") return "warehouse";
   if (t === "farm" || t === "finca") return "farm";
   if (t === "hotel" || t.includes("hostal") || t.includes("hospedaje") || t.includes("motel") || t.includes("hostel")) return "hotel";
-  if (t === "office" || t === "oficina") return "office";
-  if (t === "land" || t === "lote" || t === "terreno") return "land";
-  if (t === "commercial" || t === "local" || t === "locales" || t.includes("local comercial") || t.includes("locales comerciales") || t === "comercial") return "commercial";
-  if (t === "loft") return "loft";
-  if (t === "consultorio" || t === "office_medical") return "consultorio";
+  if (t === "office" || t === "oficina" || t.includes("oficina")) return "office";
+  if (t === "land" || t === "lote" || t === "terreno" || t.includes("lote") || t.includes("terreno")) return "land";
+  if (t === "commercial" || t === "local" || t === "locales" || t.includes("local comercial") || t.includes("locales comerciales") || t === "comercial" || t.includes("local")) return "commercial";
+  if (t === "loft" || t.includes("loft") || t.includes("apartaestudio") || t.includes("apartasuite")) return "loft";
+  if (t === "apartment" || t === "apartamento" || t === "apto" || t.includes("apto") || t.includes("apartamento") || t.includes("penthouse")) return "apartment";
   return "apartment";
 }
 

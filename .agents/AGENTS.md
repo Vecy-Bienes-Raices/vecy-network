@@ -162,7 +162,13 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v26.3 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL: v26.4 — Agosto 2026
+
+### Novedades v26.4 (Blindaje Doctrinal de Tipologías Inmobiliarias, Tolerancia Cero entre Comercial/Médico y Residencial, Purga de Matches Inviables):
+- **Incompatibilidad Absoluta Comercial/Dotacional vs Residencial**: Implementado Guard Bloqueador en `matching.ts` al **0% invariable** ante cualquier cruce entre inmuebles comerciales/médicos (`consultorio`, `oficina`, `local`, `bodega`, `lote`) y residenciales (`apartamento`, `casa`, `apartaestudio`, `loft`).
+- **Detección Fina de Tipología en Ingesta y Fallbacks (`janIA.ts`)**: Extracción prioritaria en `extractFallbackDataFromText` y `sanitizePropertyType` para clasificar con exactitud consultorios médicos/odontológicos y locales comerciales sin caer en el default de `apartment`.
+- **Cotejo Técnico Preciso en Admin Panel (`AdminMatches.tsx`)**: Refactorizada la función de deducción y comparación de tipología; suprimida la caída indiscriminada a "Coincide", mostrando etiquetas precisas (*"Consultorio Médico / Dotacional"*, *"Local Comercial"*, etc.) y marcando estado de incompatibilidad (`missing`) cuando difieren.
+- **Purga y Saneamiento en Supabase**: Requerimiento #799 corregido formalmente a `consultorio` y eliminados **74 matches inviables** (incluyendo Match #M11220 y #M11221), manteniendo **106 matches legítimos y verificados (≥85%)**.
 
 ### Novedades v26.3 (Blindaje Geográfico Inquebrantable entre Chicó Tradicional y Chicó Navarra, Consumo Atómico de Tokens Geográficos y Purga en BD):
 - **Incompatibilidad Geográfica Absoluta (Chicó Chapinero vs Chicó Navarra Usaquén)**: Guard 1.46 doctrinal en `matching.ts` con bloqueo binario estricto al **0% invariable** ante cruces entre Chicó tradicional y Chicó Navarra.
