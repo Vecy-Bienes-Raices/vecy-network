@@ -185,8 +185,10 @@ function scoreRows(req: any, prop: any) {
   const cleanText = (t: string) => (t || "").toLowerCase().trim().replace(/[\s\-_,.]+/g, " ");
   const reqTextLower = (req.rawText || req.name || "").toLowerCase().replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0]/g, " ");
   const propTextLower = (prop.rawText || prop.description || prop.name || "").toLowerCase().replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0]/g, " ");
+  const reqRawText = cleanText(req.rawText || req.name || "");
+  const propRawText = cleanText(prop.rawText || prop.description || prop.name || "");
 
-  // 1. Tipo de Inmueble (REGLA DOCTRINAL v26.3 - Detección Precisa y Tolerancia Cero)
+  // 1. Tipo de Inmueble (REGLA DOCTRINAL v26.4 - Detección Precisa y Tolerancia Cero)
   const reqTypeRaw = req.tipoInmuebleDeseado || req.propertyType;
   const propTypeRaw = prop.propertyType;
 
