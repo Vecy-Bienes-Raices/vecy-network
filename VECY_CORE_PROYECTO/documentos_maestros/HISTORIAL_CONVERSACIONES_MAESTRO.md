@@ -77,11 +77,16 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 5. **Optimización Extrema de Carga en Panel Admin (Coincidencias en Móviles y Escritorio)**:
    - Resolver la saturación y congelamiento del navegador (especialmente en dispositivos móviles como Brave/Chrome Android) donde la pestaña de Coincidencias se quedaba en *"Buscando reportes de matching..."* y los KPIs en 0.
-6. **Manejo Cálido de Saludos en Grupo 2 y Eliminación Total de Mensajes de Error Interno**:
-   - Diagnosticar por qué ante el saludo de Maria Claudia (*"Hola chicos feliz tarde"*) JanIA respondió con *"⚠️ Ocurrió un error interno al procesar tu consulta jurídica..."*.
-   - Implementar respuesta cordial inmediata ante saludos cotidianos y erradicar cualquier mensaje robótico de error interno en todos los grupos.
+7. **Expansión Integral de los 4 Pilares de Consultoría y Pedagogía de JanIA**:
+   - Enriquecer los prompts y cerebro de JanIA para que abarque con maestría sus **4 Pilares Fundamentales**:
+     1. ⚖️ **Jurídico, Contratos y Notariado**: Redacción completa y guiada de minutas, contratos de corretaje (Arts. 1340-1346 C.Co), promesas, arrendamientos (Ley 820/2003), acuerdos de comisión compartida 50/50 y guía paso a paso de trámites (estudio de títulos con CTL de la SNR, levantamiento de hipotecas, desafectación a vivienda familiar, cancelación de patrimonio inembargable y sucesiones).
+     2. 📊 **Tributario DIAN**: Impuesto Predial, Retención en la fuente (Art. 398 y 401 E.T.), Ganancia Ocasional (Ley 2277/2022) y exención de 5.000 UVT por vivienda de habitación (Art. 311-1 E.T.).
+     3. 📐 **Avalúos Comerciales y ACM**: Estimación de valor de venta y canon de arriendo por $m^2$, con **indagación proactiva** de datos faltantes (barrio, estrato, área, antigüedad, piso, acabados, garajes, amenidades y administración).
+     4. 🎯 **Marketing Digital Inmobiliario y Estrategias de Venta**: Copys persuasivos (AIDA y PAS), fotografía y video profesional con smartphone, segmentación en Meta/Google Ads y fórmulas de títulos de alto impacto.
 
 #### 🛠️ Soluciones e Implementaciones Técnicas:
+- **Doctrina Maestra de los 4 Pilares e Indagación Activa (`janIA.ts` & `VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md`)**:
+  - Incorporadas directrices exhaustivas para que JanIA guíe paso a paso en trámites, redacte minutas completas, indague proactivamente los datos faltantes para avalúos y enseñe marketing inmobiliario según las necesidades del colega.
 - **Detección Instantánea de Saludos Puros (`isPureGreeting` en `janIA.ts`)**:
   - Saludos cotidianos (*"Hola chicos feliz tarde"*, *"Buenas tardes"*, *"Buenos días"*, *"Hola a todos"*, etc.) reciben una respuesta inmediata, cálida y personalizada según el género resuelto, sin activar llamadas pesadas al LLM ni consumir cuota de búsqueda.
 - **Búsqueda Web Condicionada Inteligente (`needsSearch` en `janIA.ts`)**:
