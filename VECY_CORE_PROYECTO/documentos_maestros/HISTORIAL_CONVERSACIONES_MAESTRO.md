@@ -58,6 +58,35 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ## 📜 REGISTRO DETALLADO DE CONVERSACIONES (ORDEN CRONOLÓGICO INVERSO CON FECHA Y HORA)
 
+### 🗓️ Sesión: Viernes 28 de Agosto de 2026 — 01:15 PM a 02:15 PM (Hora Colombia UTC-5)
+**Versión del Sistema**: `v26.2 — Compatibilidad Multimodal de PDFs/Imágenes en Consultoría, Despacho Amable ante Reacciones Nativas y Blindaje Universal Anti Off-Topic en los 3 Grupos Oficiales`  
+**Participantes**: Eduardo A. Rivera (Director Tecnología) & Antigravity IDE (Pair Programmer)
+
+#### 📋 Requerimientos Específicos del Usuario (Eduardo A. Rivera):
+1. **Respuesta Cordial ante Cualquier Reacción o Emoji**:
+   - Asegurar que si una persona no escribe texto pero pone cualquier reacción o envía un emoji (`👍`, `🙏`, `❤️`, `👏`, `😊`, etc.), JanIA le responda de forma amable, con bendición horaria y el enlace de Google Reviews (`https://g.page/r/CctNbwU6UpX5EBM/review`).
+2. **Corrección de Compatibilidad Multimodal (PDFs/Imágenes) en Consultas**:
+   - Diagnosticar y corregir el error interno que ocurrió cuando un usuario envió un PDF de oferta comercial en Grupo 2.
+   - Despachar inmediatamente el mensaje de moderación y redirección a Maria Claudia en el Grupo 2.
+3. **Doctrina Clara de Documentos Técnicos vs Ofertas Comerciales en Grupo 2**:
+   - En el Grupo 2 (Soporte Legal) **SÍ se permiten y procesan** documentos técnicos (reportes del SINUPOT, Certificados de Tradición y Libertad, recibos de Impuesto Predial, minutas contractuales y estados financieros) para emitir conceptos jurídicos, avalúos comparativos o liquidaciones tributarias.
+   - Lo que **SÍ se amonesta y redirecciona con 🚫** son los flyers, afiches o PDFs publicitarios de ofertas comerciales de venta/arriendo, indicando que su lugar de captación es el Grupo 1 (*VECY INMUEBLES NETWORK*).
+4. **Blindaje Universal contra Contenido Prohibido / Off-Topic en los 3 Grupos**:
+   - Prohibición tajante en los 3 grupos oficiales (Inmuebles, Soporte Legal y Proyecto) de: política, religión, venta de cursos ajenos, invitaciones a otros grupos de WhatsApp, memes, chistes, cadenas o spam.
+   - Todo mensaje infractor recibe la reacción **`🚫`** y una amonestación citada que exige su eliminación inmediata.
+
+#### 🛠️ Soluciones e Implementaciones Técnicas:
+- **Reacciones Nativas (`reactionMessage` en `whatsapp-match.ts`) y Emojis en `janIA.ts`**:
+  - Captura y despacho de reacciones de WhatsApp sin silenciamiento para consultas en Grupo 2.
+- **Corrección de Conflicto Multimodal (`llm.ts`)**:
+  - `canUseSearch = !!enableSearch && !imageBuffer && !pdfBuffer` para evitar errores 400 de la API de Google Gemini al enviar documentos binarios.
+- **Detector Maestro de Off-Topic (`checkStrictOffTopic` en `janIA.ts`)**:
+  - Detección precisa de política, religión, cursos, enlaces ajenos y spam con respuesta y reacción `🚫` obligatoria.
+- **Despacho Inmediato de Moderación a Maria Claudia**:
+  - Disparado y entregado exitosamente en el Grupo 2 etiquetando a la usuaria.
+
+---
+
 ### 🗓️ Sesión: Miércoles 26 de Agosto de 2026 — 11:15 PM a 11:55 PM (Hora Colombia UTC-5)
 **Versión del Sistema**: `v26.2 — Doctrina de Libre Albedrío y Solución Integral (IA Pura), Misión de Lanzamiento Gratuito VECY, Búsqueda Web en Vivo Potenciada y Despacho Cálido de Agradecimientos con Reseñas de Google`  
 **Participantes**: Eduardo A. Rivera (Director Tecnología) & Antigravity IDE (Pair Programmer)
