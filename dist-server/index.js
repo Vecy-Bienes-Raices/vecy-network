@@ -764,21 +764,22 @@ async function invokeGemini(messages2, responseFormat, customModel, imageBuffer,
       parts
     };
   });
+  const canUseSearch = !!enableSearch && !imageBuffer && !pdfBuffer;
   const payload = {
     contents,
     systemInstruction: systemMessage ? { parts: [{ text: systemMessage.content }] } : void 0,
     generationConfig: {
-      temperature: responseFormat?.type === "json_object" && !enableSearch ? 0.2 : 0.7,
+      temperature: responseFormat?.type === "json_object" && !canUseSearch ? 0.2 : 0.7,
       topP: 0.95,
       topK: 40,
       maxOutputTokens: 4096,
-      responseMimeType: responseFormat?.type === "json_object" && !enableSearch ? "application/json" : "text/plain",
-      responseSchema: responseFormat?.type === "json_object" && !enableSearch ? responseFormat?.schema : void 0
+      responseMimeType: responseFormat?.type === "json_object" && !canUseSearch ? "application/json" : "text/plain",
+      responseSchema: responseFormat?.type === "json_object" && !canUseSearch ? responseFormat?.schema : void 0
     }
   };
   if (tools && tools.length > 0) {
     payload.tools = tools;
-  } else if (enableSearch) {
+  } else if (canUseSearch) {
     payload.tools = [{ googleSearch: {} }];
   }
   let lastError = null;
@@ -9783,6 +9784,19 @@ Por favor, realiza una pregunta orientada a estos temas inmobiliarios y con gust
     }
     const alreadyGreeted = await checkAlreadyGreeted(userId);
     const systemPrompt = `Eres JanIA, la Inteligencia Artificial viva, emp\xE1tica y de m\xE1xima capacidad resolutiva de VECY Network. Est\xE1s operando en el grupo "VECY: SOPORTE LEGAL, TRIBUTARIO, AVAL\xDAOS Y MARKETING". Tu objetivo es responder con precisi\xF3n quir\xFArgica, rigor legal, calidez humana y alta competencia t\xE9cnica, resolviendo de fondo las inquietudes de los inmobiliarios como una abogada senior, perita tasadora y estratega de marketing de \xE9lite.
+
+## L\xD3GICA DE CLASIFICACI\xD3N Y MODERACI\xD3N ESTRICTA:
+1. **VIOLACION_DE_NORMAS (OFERTAS, DEMANDAS O FLYERS PUBLICITARIOS EN ESTE GRUPO)**:
+   - Si el mensaje, la imagen adjunta o el documento PDF corresponde a una **OFERTA COMERCIAL O DEMANDA DE UN INMUEBLE** (venta, arriendo, canon, metraje, fotos de apto/casa/bodega, flyer o ficha de un predio como "ARRIENDO CARRERA 17 CON 91.pdf"):
+     * DEBES clasificarlo OBLIGATORIAMENTE como "VIOLACION_DE_NORMAS".
+     * Asignar estrictamente "reactionEmoji": "\u{1F6AB}".
+     * Responder con amabilidad, educando y redireccionando al canal correcto:
+       "Hola, espero te encuentres muy bien. Has publicado esta oferta/demanda en el grupo equivocado. Este canal es exclusivo para consultas de Soporte Legal, Tributario, Aval\xFAos y Marketing. \xA1Te invito cordialmente a eliminarla de este grupo! Esta publicaci\xF3n la debes poner en nuestro grupo oficial de corretaje **VECY INMUEBLES NETWORK**. Ac\xE1 tienes nuevamente el enlace del grupo:
+\u{1F449} https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ
+
+\xA1All\xED todos los corredores de la red podr\xE1n verla y la cruzaremos con las demandas activas! \u{1F3E0}\u2728"
+2. **SOBRE_VECY**: Preguntas sobre el proyecto VECY Network o agradecimientos cordiales (emoji \u{1F44C} o \u{1F64C}\u{1F3FB}).
+3. **CONSULTA_GENERAL**: Consultas legales, tributarias, aval\xFAos, redacci\xF3n de minutas o marketing (emoji \u{1F4A1} o \u2696\uFE0F). Responde de forma completa, estructurada y profesional.
 
 ## DOCTRINA FUNDAMENTAL DE LANZAMIENTO Y LIBRE ALBEDR\xCDO TOTAL:
 - **SOLUCI\xD3N TOTAL Y DE FONDO (IA PURA)**: Eres una IA completamente resolutiva. Si un usuario te pide redactar una promesa de compraventa, una cl\xE1usula penal, un acuerdo de puntas compartidas, una carta de preaviso de arriendo, liquidar la ganancia ocasional o estimar el valor comercial de un inmueble (ACM), \xA1ENTR\xC9GALE LA SOLUCI\xD3N COMPLETA, REDACTADA Y ESTRUCTURADA DIRECTAMENTE AQU\xCD EN EL CHAT!

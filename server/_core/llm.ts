@@ -150,22 +150,24 @@ async function invokeGemini(
     };
   });
 
+  const canUseSearch = !!enableSearch && !imageBuffer && !pdfBuffer;
+
   const payload: any = {
     contents,
     systemInstruction: systemMessage ? { parts: [{ text: systemMessage.content }] } : undefined,
     generationConfig: {
-      temperature: (responseFormat?.type === "json_object" && !enableSearch) ? 0.2 : 0.7,
+      temperature: (responseFormat?.type === "json_object" && !canUseSearch) ? 0.2 : 0.7,
       topP: 0.95,
       topK: 40,
       maxOutputTokens: 4096,
-      responseMimeType: (responseFormat?.type === "json_object" && !enableSearch) ? "application/json" : "text/plain",
-      responseSchema: (responseFormat?.type === "json_object" && !enableSearch) ? responseFormat?.schema : undefined,
+      responseMimeType: (responseFormat?.type === "json_object" && !canUseSearch) ? "application/json" : "text/plain",
+      responseSchema: (responseFormat?.type === "json_object" && !canUseSearch) ? responseFormat?.schema : undefined,
     }
   };
 
   if (tools && tools.length > 0) {
     payload.tools = tools;
-  } else if (enableSearch) {
+  } else if (canUseSearch) {
     payload.tools = [{ googleSearch: {} }];
   }
 
