@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express from "express";
+import compression from "compression";
 import { createServer } from "http";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
@@ -27,6 +28,9 @@ process.on("unhandledRejection", (reason, promise) => {
 async function startServer() {
   const app = express();
   const server = createServer(app);
+
+  // Enable gzip compression for lightning-fast API responses
+  app.use(compression());
 
   // Allow Cross-Origin Requests (CORS) & Handle Preflight OPTIONS
   app.use((req, res, next) => {

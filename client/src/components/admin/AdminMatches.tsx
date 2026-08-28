@@ -1995,6 +1995,19 @@ export default function AdminMatches() {
 
   const [currentPage, setCurrentPage] = React.useState(1);
   const pageSize = 10; // 10 coincidencias por página para carga instantánea ultra-rápida (<0.02s) en móvil y escritorio
+  const [expandedMatchIds, setExpandedMatchIds] = useState<Set<number>>(new Set());
+
+  const toggleExpandMatch = (matchId: number) => {
+    setExpandedMatchIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(matchId)) {
+        next.delete(matchId);
+      } else {
+        next.add(matchId);
+      }
+      return next;
+    });
+  };
 
   React.useEffect(() => {
     setCurrentPage(1);
@@ -2825,19 +2838,61 @@ export default function AdminMatches() {
 
                   </div>
 
-                  {/* COTEJO DETALLADO CAMPO POR CAMPO (RESPONSIVE: TABLA EN DESKTOP, TARJETAS EN MÓVIL) */}
-                  <div className="bg-black/30 border-b border-white/5 p-3 sm:p-4 md:p-6 overflow-x-hidden">
-                    <h5 className="text-xs font-bold uppercase tracking-widest text-[#bf953f] mb-3 flex items-center justify-between gap-2 flex-wrap">
-                      <span className="flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4" />
-                        Cotejo técnico de afinidad comercial
-                      </span>
-                      {isEditingThisCard && (
-                        <span className="text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded font-bold animate-pulse">
-                          ⚡ Recálculo en tiempo real activo
-                        </span>
-                      )}
-                    </h5>
+                  {/* COTEJO DETALLADO CAMPO POR CAMPO (PLEGABLE / DESPLEGABLE CON BOTÓN DE CONTROL) */}
+                  {(() => {
+                    const isCotejoExpanded = expandedMatchIds.has(m.id) || isEditingThisCard;
+
+                    return (
+                      <>
+                        {/* Barra de Control de Despliegue */}
+                        <div className="bg-zinc-950/90 border-b border-white/5 px-3.5 sm:px-6 py-3 flex items-center justify-between gap-3 flex-wrap">
+                          <button
+                            type="button"
+                            onClick={() => toggleExpandMatch(m.id)}
+                            className={`flex items-center gap-2 text-xs font-bold px-3.5 py-2 rounded-xl border transition-all cursor-pointer select-none active:scale-95 ${
+                              isCotejoExpanded 
+                                ? 'bg-[#bf953f]/20 border-[#bf953f] text-[#bf953f] shadow-[0_0_12px_rgba(191,149,63,0.3)]' 
+                                : 'bg-zinc-900 border-white/10 text-zinc-300 hover:text-white hover:border-[#bf953f]/50'
+                            }`}
+                          >
+                            <SlidersHorizontal className="w-3.5 h-3.5 shrink-0" />
+                            <span>{isCotejoExpanded ? '🔼 Ocultar Tabla de Cotejo' : '📊 Ver Tabla de Cotejo Técnico (10 Atributos)'}</span>
+                          </button>
+
+                          {/* Resumen Compacto de Cumplimiento cuando está Plegado */}
+                          {!isCotejoExpanded && (
+                            <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] font-bold text-zinc-400 flex-wrap">
+                              <span className="text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                                ✓ {exactCount + plusCount} Coincidencias
+                              </span>
+                              {warnCount > 0 && (
+                                <span className="text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+                                  ⚠️ {warnCount} Aproximados
+                                </span>
+                              )}
+                              {failCount > 0 && (
+                                <span className="text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-full border border-rose-500/20">
+                                  ✕ {failCount} Diferencias
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Detalle Completo de la Tabla de Cotejo (Solo renderizado cuando se expande o edita) */}
+                        {isCotejoExpanded && (
+                          <div className="bg-black/30 border-b border-white/5 p-3 sm:p-4 md:p-6 overflow-x-hidden animate-in fade-in-50 duration-200">
+                            <h5 className="text-xs font-bold uppercase tracking-widest text-[#bf953f] mb-3 flex items-center justify-between gap-2 flex-wrap">
+                              <span className="flex items-center gap-2">
+                                <CheckCircle2 className="w-4 h-4" />
+                                Cotejo técnico de afinidad comercial
+                              </span>
+                              {isEditingThisCard && (
+                                <span className="text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded font-bold animate-pulse">
+                                  ⚡ Recálculo en tiempo real activo
+                                </span>
+                              )}
+                            </h5>
                     
                     {/* VISTA ESCRITORIO (md:table - 4 columnas) */}
                     <div className="hidden md:block overflow-x-auto scrollbar-thin">
@@ -3433,9 +3488,11 @@ export default function AdminMatches() {
                         );
                       })}
                     </div>
-
-
                   </div>
+                )}
+              </>
+            );
+          })()}
 
                   {/* Justificación de la IA */}
                   {m.matchReason && (

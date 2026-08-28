@@ -72,12 +72,12 @@ export default function Admin() {
   });
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<string>(() => {
-    if (typeof window === 'undefined') return 'properties';
+    if (typeof window === 'undefined') return 'matches';
     const saved = localStorage.getItem('vecy_admin_active_tab');
     if (saved && ['properties', 'requirements', 'matches'].includes(saved)) {
       return saved;
     }
-    return 'properties';
+    return 'matches';
   });
 
   const handleSelectTab = (tabId: string) => {

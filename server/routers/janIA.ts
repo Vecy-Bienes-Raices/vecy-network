@@ -483,8 +483,6 @@ export const janIARouter = router({
             id: propertyMatches.id,
             matchScore: propertyMatches.matchScore,
             matchReason: propertyMatches.matchReason,
-            matchExplanation: propertyMatches.matchExplanation,
-            ipc: propertyMatches.ipc,
             status: propertyMatches.status,
             ownerConfirmed: propertyMatches.ownerConfirmed,
             seekerConfirmed: propertyMatches.seekerConfirmed,

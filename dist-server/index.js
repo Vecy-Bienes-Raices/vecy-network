@@ -13762,6 +13762,7 @@ var init_cronService = __esm({
 // server/_core/index.ts
 import "dotenv/config";
 import express2 from "express";
+import compression from "compression";
 import { createServer } from "http";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 
@@ -14786,8 +14787,6 @@ ${liveStats}${userContextInstruction}
         id: propertyMatches.id,
         matchScore: propertyMatches.matchScore,
         matchReason: propertyMatches.matchReason,
-        matchExplanation: propertyMatches.matchExplanation,
-        ipc: propertyMatches.ipc,
         status: propertyMatches.status,
         ownerConfirmed: propertyMatches.ownerConfirmed,
         seekerConfirmed: propertyMatches.seekerConfirmed,
@@ -16511,6 +16510,7 @@ process.on("unhandledRejection", (reason, promise) => {
 async function startServer() {
   const app = express2();
   const server = createServer(app);
+  app.use(compression());
   app.use((req, res, next) => {
     const origin = req.headers.origin || "*";
     res.header("Access-Control-Allow-Origin", origin);
