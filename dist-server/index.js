@@ -6161,6 +6161,7 @@ __export(janIA_exports, {
   buildFlyerBreakdownText: () => buildFlyerBreakdownText,
   buildSystemPrompt: () => buildSystemPrompt,
   calcularCalificacionCompletitud: () => calcularCalificacionCompletitud,
+  checkStrictOffTopic: () => checkStrictOffTopic,
   clearPromptCache: () => clearPromptCache,
   enrichLexiconFromText: () => enrichLexiconFromText,
   esMensajeSpamOBasura: () => esMensajeSpamOBasura,
@@ -9550,10 +9551,92 @@ function obtenerCamposRequeridosYPreguntas(propertyType, isRequirement) {
   }
   return { requiredFields, fieldQuestions };
 }
+function checkStrictOffTopic(text2) {
+  if (!text2 || text2.trim() === "") return { isOffTopic: false };
+  const clean = text2.toLowerCase();
+  if (clean.includes("chat.whatsapp.com/")) {
+    const isOfficialVecyLink = clean.includes("gzmbjns1p2thi7d0v4h8wz") || clean.includes("j4u1h7nul1i1b1waiytun6") || clean.includes("cszrkr6cr56haiehheauqyu") || clean.includes("0029vb5iyuycmy0a94zqti1b");
+    if (!isOfficialVecyLink) {
+      return { isOffTopic: true, reason: "enlaces de invitaci\xF3n a grupos externos" };
+    }
+  }
+  const politicalKeywords = [
+    "petro",
+    "uribe",
+    "duque",
+    "santos",
+    "rodolfo hernandez",
+    "fico guti\xE9rrez",
+    "claudia l\xF3pez",
+    "partido pol\xEDtico",
+    "partido politico",
+    "campa\xF1a pol\xEDtica",
+    "campa\xF1a politica",
+    "votaciones",
+    "candidato a la alcald\xEDa",
+    "candidato al concejo",
+    "senado",
+    "c\xE1mara de representantes",
+    "consulta popular",
+    "plebiscito",
+    "izquierdista",
+    "derechista",
+    "uribista",
+    "petrista"
+  ];
+  if (politicalKeywords.some((kw) => clean.includes(kw))) {
+    return { isOffTopic: true, reason: "temas pol\xEDticos o proselitismo" };
+  }
+  const religiousKeywords = [
+    "cadena de oraci\xF3n",
+    "cadena de oracion",
+    "reenv\xEDa este mensaje a 10",
+    "reenvia este mensaje a 10",
+    "si amas a dios comparte",
+    "salmo del d\xEDa",
+    "vers\xEDculo del d\xEDa",
+    "evangelio de hoy",
+    "culto de sanaci\xF3n"
+  ];
+  if (religiousKeywords.some((kw) => clean.includes(kw))) {
+    return { isOffTopic: true, reason: "cadenas religiosas o cultos" };
+  }
+  const spamKeywords = [
+    "gana dinero desde casa",
+    "trabaja 2 horas al d\xEDa",
+    "trading autom\xE1tico",
+    "bot de trading",
+    "inversi\xF3n forex",
+    "libertad financiera con binance",
+    "curso de trading",
+    "ingresos pasivos en d\xF3lares",
+    "esquema multinivel",
+    "red de mercadeo",
+    "inversi\xF3n con rentabilidad del 20%",
+    "venta de cursos"
+  ];
+  if (spamKeywords.some((kw) => clean.includes(kw))) {
+    return { isOffTopic: true, reason: "publicidad no autorizada, venta de cursos o spam" };
+  }
+  return { isOffTopic: false };
+}
 async function processConsultingMessage(text2, userId, userName, imageBuffer, pdfBuffer, pdfMimeType, audioUrl, msgTimestamp) {
   try {
     const rawPhone = userId.split("@")[0];
     const realName = await resolveRealName(userId, userName);
+    const strictOffTopic = checkStrictOffTopic(text2);
+    if (strictOffTopic.isOffTopic) {
+      console.log(`[JanIA-Consulting-OffTopic] Mensaje prohibido en Soporte Legal para ${userId}: "${text2.substring(0, 50)}...". (${strictOffTopic.reason})`);
+      const warningText = `Hola @${rawPhone} (${realName}) \u{1F44B}\u{1F3FB}. El contenido relacionado con ${strictOffTopic.reason} est\xE1 estrictamente prohibido en los grupos oficiales de VECY Network. \u{1F6AB}
+
+Nuestra comunidad es 100% profesional y dedicada exclusivamente al corretaje, asesor\xEDa legal, tributaria y aval\xFAos inmobiliarios. \xA1Te invitamos cordialmente a eliminar este mensaje de inmediato! \u{1F91D}`;
+      return {
+        classification: "VIOLACION_DE_NORMAS",
+        response: warningText,
+        dmResponse: warningText,
+        reactionEmoji: "\u{1F6AB}"
+      };
+    }
     const cleanText = text2.toLowerCase().trim();
     const isMediaOrAudio = !!imageBuffer || !!pdfBuffer || !!audioUrl;
     if (!isMediaOrAudio && cleanText.length > 15) {
@@ -9673,7 +9756,7 @@ async function processConsultingMessage(text2, userId, userName, imageBuffer, pd
       const hasOnTopicKeyword = onTopicKeywords.some((keyword) => cleanText.includes(keyword));
       if (!hasOnTopicKeyword) {
         console.log(`[JanIA-Consulting-OffTopic] Mensaje fuera de tema en Soporte Legal para ${userId}: "${text2.substring(0, 50)}...". Retornando est\xE1tico.`);
-        const staticText = `Hola @${rawPhone} \u{1F44B}\u{1F3FB}. Este grupo est\xE1 reservado exclusivamente para consultas jur\xEDdicas, contratos, arrendamientos, ganancia ocasional, aval\xFAos y Marketing Digital Inmobiliario de la plataforma VECY. \u{1F4A1}\u2728
+        const staticText = `Hola @${rawPhone} (${realName}) \u{1F44B}\u{1F3FB}. Este grupo est\xE1 reservado exclusivamente para consultas jur\xEDdicas, contratos, arrendamientos, ganancia ocasional, aval\xFAos y Marketing Digital Inmobiliario de la plataforma VECY. \u{1F4A1}\u2728
 
 Por favor, realiza una pregunta orientada a estos temas inmobiliarios y con gusto te asistir\xE9. \u{1F60A}`;
         return {
@@ -9915,6 +9998,19 @@ async function processCirculoMessage(text2, userId, userName) {
     const realName = await resolveRealName(userId, userName);
     const firstName = extractFirstName(realName);
     const userGreetingName = firstName ? ` ${firstName}` : "";
+    const strictOffTopic = checkStrictOffTopic(text2);
+    if (strictOffTopic.isOffTopic) {
+      console.log(`[JanIA-Circulo-OffTopic] Mensaje prohibido en Proyecto Vecy Network para ${userId}: "${text2.substring(0, 50)}...". (${strictOffTopic.reason})`);
+      const warningText = `Hola @${rawPhone} (${realName}) \u{1F44B}\u{1F3FB}. El contenido relacionado con ${strictOffTopic.reason} est\xE1 estrictamente prohibido en nuestra comunidad de VECY Network. \u{1F6AB}
+
+Nuestros canales son 100% profesionales y dedicados exclusivamente a la tecnolog\xEDa, comisiones y el modelo colaborativo inmobiliario. \xA1Te invitamos cordialmente a eliminar este mensaje de inmediato! \u{1F91D}`;
+      return {
+        classification: "VIOLACION_DE_NORMAS",
+        response: warningText,
+        dmResponse: warningText,
+        reactionEmoji: "\u{1F6AB}"
+      };
+    }
     const cleanText = text2.toLowerCase().trim();
     if (cleanText.length > 15) {
       const onTopicKeywords = [
@@ -10015,7 +10111,7 @@ async function processCirculoMessage(text2, userId, userName) {
       const hasOnTopicKeyword = onTopicKeywords.some((keyword) => cleanText.includes(keyword));
       if (!hasOnTopicKeyword) {
         console.log(`[JanIA-Circulo-OffTopic] Mensaje fuera de tema en C\xEDrculo Cero para ${userId}: "${text2.substring(0, 50)}...". Retornando est\xE1tico.`);
-        const staticText = `Hola${userGreetingName} \u{1F44B}\u{1F3FB}. Este grupo est\xE1 reservado exclusivamente para temas, debates, testimonios y soporte relacionados con la red de VECY Network e Inteligencia Artificial. \u{1F4A1}\u2728
+        const staticText = `Hola @${rawPhone} (${realName}) \u{1F44B}\u{1F3FB}. Este grupo est\xE1 reservado exclusivamente para temas, debates, testimonios y soporte relacionados con la red de VECY Network e Inteligencia Artificial. \u{1F4A1}\u2728
 
 Por favor, realiza una pregunta o comentario relacionado con nuestro ecosistema. \u{1F60A}`;
         return {
