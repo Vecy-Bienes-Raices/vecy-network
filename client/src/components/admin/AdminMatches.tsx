@@ -395,7 +395,7 @@ function scoreRows(req: any, prop: any) {
   // REGLA: Sub-barrio exacto — "Calleja Alta" ≠ "Calleja Baja" = FALLA absoluta.
 
   // Calificadores de sub-barrio que hacen los nombres INCOMPATIBLES si difieren
-  const SUB_CALIFICADORES = ["alta", "alto", "baja", "bajo", "norte", "sur", "oriental", "occidental", "reservado", "i ", "ii ", "iii "];
+  const SUB_CALIFICADORES = ["alta", "alto", "baja", "bajo", "norte", "sur", "oriental", "occidental", "reservado", "i ", "ii ", "iii ", "navarra"];
 
   const normalizeBarrio = (s: string) =>
     (s || "").toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ");
@@ -404,9 +404,20 @@ function scoreRows(req: any, prop: any) {
   const matchBarrioExacto = (req: string, prop: string): boolean => {
     const rn = normalizeBarrio(req);
     const pn = normalizeBarrio(prop);
-    if (!rn || !prop) return false;
+    if (!rn || !pn) return false;
     // Coincidencia exacta
     if (rn === pn) return true;
+
+    // Incompatibilidad estricta entre Chicó tradicional (Chapinero) y Chicó Navarra (Usaquén)
+    const isChicoNavReq = rn.includes("chico navarra") || rn.includes("navarra");
+    const isChicoNavProp = pn.includes("chico navarra") || pn.includes("navarra");
+    const isChicoTradReq = (rn.includes("chico") || rn.includes("chico norte") || rn.includes("chico reservado") || rn.includes("rincon del chico")) && !isChicoNavReq;
+    const isChicoTradProp = (pn.includes("chico") || pn.includes("chico norte") || pn.includes("chico reservado") || pn.includes("rincon del chico")) && !isChicoNavProp;
+
+    if ((isChicoNavReq && isChicoTradProp) || (isChicoTradReq && isChicoNavProp)) {
+      return false; // INCOMPATIBLE TOTAL: Chicó tradicional ≠ Chicó Navarra
+    }
+
     // Uno contiene al otro (ej: "La Calleja" ↔ "La Calleja Baja") → solo si NO hay calificador conflictivo
     const reqHasQual = SUB_CALIFICADORES.some(q => rn.includes(q));
     const propHasQual = SUB_CALIFICADORES.some(q => pn.includes(q));
@@ -459,6 +470,7 @@ function scoreRows(req: any, prop: any) {
   const inferLocalityFromBarrio = (bName: string | null | undefined): string => {
     if (!bName || bName === "N/E") return "N/E";
     const norm = bName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+    if (norm.includes("chico navarra") || norm.includes("navarra")) return "Usaquén";
     if (norm.includes("rosales") || norm.includes("chico") || norm.includes("nogal") || norm.includes("cabrera") || norm.includes("virrey") || norm.includes("quinta camacho") || norm.includes("chapinero")) return "Chapinero";
     if (norm.includes("cedritos") || norm.includes("santa barbara") || norm.includes("santa paula") || norm.includes("bella suiza") || norm.includes("contador") || norm.includes("san patricio") || norm.includes("toberin") || norm.includes("usaquen")) return "Usaquén";
     if (norm.includes("niza") || norm.includes("pasadena") || norm.includes("colina") || norm.includes("suba")) return "Suba";
@@ -519,7 +531,7 @@ function scoreRows(req: any, prop: any) {
 
   if (isGenericZone(reqBarrioDisplay) || isGenericZone(propBarrioDisplay)) {
     barrioMatchStatus = "missing"; // BARRIO NO RESUELTO (N/E O BOGOTÁ) -> FALLIDO / SACADO DE ALLÍ (0%)
-  } else if (matchBarrioExacto(reqBarrioDisplay, propBarrioDisplay) || normReqB === normPropB || normReqB.includes(normPropB) || normPropB.includes(normReqB) || (normReqB.includes("cabrera") && normPropB.includes("cabrera")) || (normReqB.includes("rincon del chico") && normPropB.includes("chico"))) {
+  } else if (matchBarrioExacto(reqBarrioDisplay, propBarrioDisplay)) {
     barrioMatchStatus = "exact"; // 100% BARRIO IDÉNTICO O SECTOR COINCIDENTE VERIFICADO
   } else {
     barrioMatchStatus = "missing"; // BARRIOS DISTINTOS -> FALLIDO (0%)

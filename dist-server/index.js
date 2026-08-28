@@ -2956,7 +2956,8 @@ function deducirGeografiaTripartita(inputZone, inputCity, groupName, rawText) {
     "britalia norte": { neighborhood: "Britalia Norte", locality: "Suba" },
     "balcones de medina": { neighborhood: "Bosque Medina", locality: "Usaqu\xE9n" },
     "bosque medina": { neighborhood: "Bosque Medina", locality: "Usaqu\xE9n" },
-    "chico navarra": { neighborhood: "Chic\xF3 Navarra", locality: "Chapinero" },
+    "chico navarra": { neighborhood: "Chic\xF3 Navarra", locality: "Usaqu\xE9n" },
+    "navarra": { neighborhood: "Chic\xF3 Navarra", locality: "Usaqu\xE9n" },
     "chico norte": { neighborhood: "Chic\xF3 Norte", locality: "Chapinero" },
     "chico reservado": { neighborhood: "Chic\xF3 Reservado", locality: "Chapinero" },
     "rincon del chico": { neighborhood: "Rinc\xF3n del Chic\xF3", locality: "Chapinero" },
@@ -3121,6 +3122,8 @@ var init_geography = __esm({
           "Santa Bibiana",
           "San Patricio",
           "Santa Teresa",
+          "Chic\xF3 Navarra",
+          "Navarra",
           "Usaqu\xE9n",
           "Tober\xEDn",
           "Country Club",
@@ -3155,7 +3158,6 @@ var init_geography = __esm({
           "Chic\xF3 Norte II",
           "Chic\xF3 Norte III",
           "Chic\xF3 Reservado",
-          "Chic\xF3 Navarra",
           "Chic\xF3 Reservado Norte",
           "El Nogal",
           "Club El Nogal",
@@ -3769,6 +3771,14 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
       return { matches: false, score: 0 };
     }
   }
+  const isChicoNavarraReq = reqFullNorm.includes("chico navarra") || reqFullNorm.includes("navarra");
+  const isChicoNavarraProp = propFullNorm.includes("chico navarra") || propFullNorm.includes("navarra");
+  const isChicoTradicionalReq = (reqFullNorm.includes("chico") || reqFullNorm.includes("chic\xF3")) && !isChicoNavarraReq;
+  const isChicoTradicionalProp = (propFullNorm.includes("chico") || propFullNorm.includes("chic\xF3")) && !isChicoNavarraProp;
+  if (isChicoNavarraReq && isChicoTradicionalProp || isChicoTradicionalReq && isChicoNavarraProp) {
+    console.log(`[Matching-Guard] Bloqueo 0%: Incompatibilidad geogr\xE1fica absoluta entre Chic\xF3 tradicional (Chapinero) y Chic\xF3 Navarra (Usaqu\xE9n) ('${reqZoneRaw}' \u2194 '${propZoneRaw}')`);
+    return { matches: false, score: 0 };
+  }
   const GENERIC_CARDINAL_TERMS = /* @__PURE__ */ new Set([
     "norte",
     "sur",
@@ -3818,7 +3828,7 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
   if (reqZone && propZone && !tieneAledanosInicial) {
     const s1 = reqZone.toLowerCase();
     const s2 = propZone.toLowerCase();
-    const orientaciones = ["oriental", "occidental", "norte", "sur", "alta", "alto", "baja", "bajo", "reservado", " central"];
+    const orientaciones = ["oriental", "occidental", "norte", "sur", "alta", "alto", "baja", "bajo", "reservado", " central", "navarra"];
     const tieneDiffOrientacion = orientaciones.some(
       (o) => s1.includes(o) && !s2.includes(o) || !s1.includes(o) && s2.includes(o)
     );
@@ -3905,8 +3915,10 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
       "usaquen",
       "multicentro"
     ],
-    "el chico": ["chico norte", "chico reservado", "chico reservado norte", "chico", "chico navarra", "chico sur"],
-    "chico": ["chico norte", "chico reservado", "chico reservado norte", "chico", "chico navarra", "chico sur"],
+    "el chico": ["chico norte", "chico reservado", "chico reservado norte", "chico", "chico sur"],
+    "chico": ["chico norte", "chico reservado", "chico reservado norte", "chico", "chico sur"],
+    "chico navarra": ["chico navarra", "navarra"],
+    "navarra": ["chico navarra", "navarra"],
     "lagos": ["lagos de torca", "club los lagartos", "el lago"],
     "las lomas": ["lomas de niza", "lomas"]
   };
@@ -3949,64 +3961,89 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
   };
   const extractNeighborhoodTokens = (text2) => {
     if (!text2) return [];
-    const norm2 = normalizarTextoGeografico(text2);
+    let norm2 = normalizarTextoGeografico(text2);
     const found = [];
     const knownNeighborhoods = [
-      "cedritos",
-      "santa paula",
-      "santa barbara",
-      "santa barbara central",
       "santa barbara occidental",
       "santa barbara oriental",
-      "santa ana",
-      "santa ana alta",
-      "santa ana oriental",
+      "santa barbara central",
+      "santa barbara alta",
+      "santa barbara norte",
+      "santa barbara",
       "santa ana occidental",
-      "chico",
-      "chico norte",
+      "santa ana oriental",
+      "santa ana central",
+      "santa ana alta",
+      "santa ana",
+      "chico reservado norte",
       "chico reservado",
+      "chico norte iii",
+      "chico norte ii",
+      "chico norte",
+      "rincon del chico",
       "chico navarra",
-      "rosales",
-      "los rosales",
-      "el virrey",
-      "la cabrera",
-      "nogal",
-      "el nogal",
-      "antiguo country",
-      "country club",
+      "chico",
+      "cedritos",
+      "los cedros",
+      "santa paula",
+      "santa bibiana",
+      "santa teresa",
+      "san patricio",
+      "navarra",
+      "molinos norte",
       "la calleja",
+      "calleja baja",
+      "calleja alta",
       "bella suiza",
       "el contador",
-      "san patricio",
-      "molinos norte",
-      "bat\xE1n",
-      "el batan",
-      "pasadena",
-      "alhambra",
-      "colina",
+      "la carolina",
+      "mazuren",
+      "country club",
+      "antiguo country",
+      "nuevo country",
+      "usaquen",
+      "multicentro",
+      "los rosales",
+      "rosales",
+      "la cabrera",
+      "el nogal",
+      "nogal",
+      "el virrey",
+      "el retiro",
+      "el lago",
+      "quinta camacho",
+      "chapinero alto",
+      "chapinero central",
+      "chapinero",
       "colina campestre",
-      "suba",
+      "colina",
+      "san jose de bavaria",
+      "carmel club",
+      "alejandria",
+      "cantalejo",
+      "sotavento",
+      "victoria norte",
+      "britalia norte",
+      "niza norte",
       "niza",
+      "alhambra",
+      "pasadena",
+      "batan",
+      "el batan",
+      "prado veraniego",
       "pontevedra",
       "morato",
-      "salitre",
+      "suba",
       "ciudad salitre",
+      "salitre",
       "hayuelos",
       "modelia",
       "fontibon",
       "teusaquillo",
       "la soledad",
       "palermo",
-      "chapinero",
-      "chapinero alto",
-      "quinta camacho",
-      "marly",
-      "bosque izquierdo",
-      "macarena",
-      "la macarena",
-      "centro internacional",
-      "usaquen",
-      "multicentro",
+      "quinta paredes",
+      "nicolas de federmann",
       "el poblado",
       "poblado",
       "laureles",
@@ -4017,7 +4054,7 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
       "conquistadores",
       "granada",
       "el pe\xF1on",
-      "juanamb\xFA",
+      "juanambu",
       "ciudad jardin",
       "san fernando",
       "valle del lili",
@@ -4027,13 +4064,16 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
       "villa santos",
       "buenavista",
       "cabecera",
-      "ca\xF1averal",
+      "canaveral",
       "ruitoque",
       "sotomayor"
     ];
+    knownNeighborhoods.sort((a, b) => b.length - a.length);
     for (const n of knownNeighborhoods) {
-      if (norm2.includes(n)) {
+      const reg = new RegExp(`\\b${n}\\b`, "i");
+      if (reg.test(norm2)) {
         found.push(n);
+        norm2 = norm2.replace(reg, " ");
       }
     }
     return found;

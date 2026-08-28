@@ -402,6 +402,18 @@ export function matchesGeography(
     }
   }
 
+  // 1.46 Guard Doctrinal v26.3: Incompatibilidad entre Chicó tradicional (Chapinero) y Chicó Navarra / Navarra (Usaquén)
+  // "Chicó" tradicional está en Chapinero (Calles 88-100). "Chicó Navarra" está en Usaquén (Calles 100-106). Son barrios totalmente distintos.
+  const isChicoNavarraReq = reqFullNorm.includes("chico navarra") || reqFullNorm.includes("navarra");
+  const isChicoNavarraProp = propFullNorm.includes("chico navarra") || propFullNorm.includes("navarra");
+  const isChicoTradicionalReq = (reqFullNorm.includes("chico") || reqFullNorm.includes("chicó")) && !isChicoNavarraReq;
+  const isChicoTradicionalProp = (propFullNorm.includes("chico") || propFullNorm.includes("chicó")) && !isChicoNavarraProp;
+
+  if ((isChicoNavarraReq && isChicoTradicionalProp) || (isChicoTradicionalReq && isChicoNavarraProp)) {
+    console.log(`[Matching-Guard] Bloqueo 0%: Incompatibilidad geográfica absoluta entre Chicó tradicional (Chapinero) y Chicó Navarra (Usaquén) ('${reqZoneRaw}' ↔ '${propZoneRaw}')`);
+    return { matches: false, score: 0 };
+  }
+
   // 1.45 Guard Doctrinal v21.21: Cardinales y Zonas Genéricas ("Norte", "Sur", "Oriente", "Occidente", "Centro", "Sabana")
   // "Norte" NO es un barrio ni vereda. No puede coincidir como nombre de barrio ni dar 20 puntos por coincidir la palabra "Norte".
   const GENERIC_CARDINAL_TERMS = new Set([
@@ -437,7 +449,7 @@ export function matchesGeography(
     const s1 = reqZone.toLowerCase();
     const s2 = propZone.toLowerCase();
     
-    const orientaciones = ["oriental", "occidental", "norte", "sur", "alta", "alto", "baja", "bajo", "reservado", " central"];
+    const orientaciones = ["oriental", "occidental", "norte", "sur", "alta", "alto", "baja", "bajo", "reservado", " central", "navarra"];
     const tieneDiffOrientacion = orientaciones.some(o => 
       (s1.includes(o) && !s2.includes(o)) || (!s1.includes(o) && s2.includes(o))
     );
@@ -478,8 +490,10 @@ export function matchesGeography(
       "santa ana oriental", "santa ana occidental", "santa paula", "santa bibiana",
       "san patricio", "navarra", "chico navarra", "molinos norte", "usaquen", "multicentro"
     ],
-    "el chico": ["chico norte", "chico reservado", "chico reservado norte", "chico", "chico navarra", "chico sur"],
-    "chico": ["chico norte", "chico reservado", "chico reservado norte", "chico", "chico navarra", "chico sur"],
+    "el chico": ["chico norte", "chico reservado", "chico reservado norte", "chico", "chico sur"],
+    "chico": ["chico norte", "chico reservado", "chico reservado norte", "chico", "chico sur"],
+    "chico navarra": ["chico navarra", "navarra"],
+    "navarra": ["chico navarra", "navarra"],
     "lagos": ["lagos de torca", "club los lagartos", "el lago"],
     "las lomas": ["lomas de niza", "lomas"]
   };
@@ -520,27 +534,31 @@ export function matchesGeography(
 
   const extractNeighborhoodTokens = (text: string): string[] => {
     if (!text) return [];
-    const norm = normalizarTextoGeografico(text);
+    let norm = normalizarTextoGeografico(text);
     const found: string[] = [];
 
     const knownNeighborhoods = [
-      "cedritos", "santa paula", "santa barbara", "santa barbara central", "santa barbara occidental",
-      "santa barbara oriental", "santa ana", "santa ana alta", "santa ana oriental", "santa ana occidental",
-      "chico", "chico norte", "chico reservado", "chico navarra", "rosales", "los rosales", "el virrey",
-      "la cabrera", "nogal", "el nogal", "antiguo country", "country club", "la calleja", "bella suiza",
-      "el contador", "san patricio", "molinos norte", "batán", "el batan", "pasadena", "alhambra",
-      "colina", "colina campestre", "suba", "niza", "pontevedra", "morato", "salitre", "ciudad salitre",
-      "hayuelos", "modelia", "fontibon", "teusaquillo", "la soledad", "palermo", "chapinero",
-      "chapinero alto", "quinta camacho", "marly", "bosque izquierdo", "macarena", "la macarena",
-      "centro internacional", "usaquen", "multicentro", "el poblado", "poblado", "laureles",
-      "envigado", "sabaneta", "belen", "estadio", "conquistadores", "granada", "el peñon",
-      "juanambú", "ciudad jardin", "san fernando", "valle del lili", "el prado", "alto prado",
-      "riomar", "villa santos", "buenavista", "cabecera", "cañaveral", "ruitoque", "sotomayor"
+      "santa barbara occidental", "santa barbara oriental", "santa barbara central", "santa barbara alta", "santa barbara norte", "santa barbara",
+      "santa ana occidental", "santa ana oriental", "santa ana central", "santa ana alta", "santa ana",
+      "chico reservado norte", "chico reservado", "chico norte iii", "chico norte ii", "chico norte", "rincon del chico", "chico navarra", "chico",
+      "cedritos", "los cedros", "santa paula", "santa bibiana", "santa teresa", "san patricio", "navarra", "molinos norte", "la calleja", "calleja baja", "calleja alta",
+      "bella suiza", "el contador", "la carolina", "mazuren", "country club", "antiguo country", "nuevo country", "usaquen", "multicentro",
+      "los rosales", "rosales", "la cabrera", "el nogal", "nogal", "el virrey", "el retiro", "el lago", "quinta camacho", "chapinero alto", "chapinero central", "chapinero",
+      "colina campestre", "colina", "san jose de bavaria", "carmel club", "alejandria", "cantalejo", "sotavento", "victoria norte", "britalia norte", "niza norte", "niza", "alhambra", "pasadena", "batan", "el batan", "prado veraniego", "pontevedra", "morato", "suba",
+      "ciudad salitre", "salitre", "hayuelos", "modelia", "fontibon", "teusaquillo", "la soledad", "palermo", "quinta paredes", "nicolas de federmann",
+      "el poblado", "poblado", "laureles", "envigado", "sabaneta", "belen", "estadio", "conquistadores", "granada", "el peñon",
+      "juanambu", "ciudad jardin", "san fernando", "valle del lili", "el prado", "alto prado", "riomar", "villa santos", "buenavista", "cabecera", "canaveral", "ruitoque", "sotomayor"
     ];
 
+    // Ordenar de mayor a menor longitud para que compuestos como "chico navarra" se procesen antes que "chico"
+    knownNeighborhoods.sort((a, b) => b.length - a.length);
+
     for (const n of knownNeighborhoods) {
-      if (norm.includes(n)) {
+      const reg = new RegExp(`\\b${n}\\b`, "i");
+      if (reg.test(norm)) {
         found.push(n);
+        // Consumir el token encontrado para no extraer subcadenas espurias (ej: no extraer "chico" de "chico navarra")
+        norm = norm.replace(reg, " ");
       }
     }
     return found;

@@ -48,7 +48,7 @@ export const DICCIONARIO_BOGOTA: Record<string, { localidad: string, barrios: st
     barrios: [
       "Cedritos", "Los Cedros", "Santa Bárbara", "Santa Bárbara Central", "Santa Bárbara Occidental", "Santa Bárbara Oriental",
       "Santa Bárbara Norte", "Las Santas", "Todas las Santas", "Santa Ana", "Santa Ana Central", "Santa Ana Oriental", "Santa Ana Occidental",
-      "Santa Paula", "Santa Bibiana", "San Patricio", "Santa Teresa",
+      "Santa Paula", "Santa Bibiana", "San Patricio", "Santa Teresa", "Chicó Navarra", "Navarra",
       "Usaquén", "Toberín", "Country Club", "La Uribe",
       "Verbenal", "Barrancas", "Horizontes", "La Cita", "Tibabita",
       "La Cerámica", "La Unión", "Los Arrayanes", "Bosque Medina",
@@ -60,7 +60,7 @@ export const DICCIONARIO_BOGOTA: Record<string, { localidad: string, barrios: st
   "chapinero": {
     localidad: "Chapinero",
     barrios: [
-      "El Chicó", "Chicó Norte", "Chicó Norte II", "Chicó Norte III", "Chicó Reservado", "Chicó Navarra", "Chicó Reservado Norte",
+      "El Chicó", "Chicó Norte", "Chicó Norte II", "Chicó Norte III", "Chicó Reservado", "Chicó Reservado Norte",
       "El Nogal", "Club El Nogal", "El Lago", "El Retiro", "Rosales", "Los Rosales", "La Cabrera",
       "Chapinero Central", "Chapinero Alto", "Pardo Rubio", "Quinta Camacho", "El Castillo", "San Luis", "Juan XXIII",
       "El Refugio", "El Bosque", "Granada", "Porciúncula", "Lago Gaitán", "Espartillal", "La Salle", "Marly", "Rincón del Chicó", "Antiguo Country"
@@ -1239,7 +1239,8 @@ export function deducirGeografiaTripartita(
     "britalia norte": { neighborhood: "Britalia Norte", locality: "Suba" },
     "balcones de medina": { neighborhood: "Bosque Medina", locality: "Usaquén" },
     "bosque medina": { neighborhood: "Bosque Medina", locality: "Usaquén" },
-    "chico navarra": { neighborhood: "Chicó Navarra", locality: "Chapinero" },
+    "chico navarra": { neighborhood: "Chicó Navarra", locality: "Usaquén" },
+    "navarra": { neighborhood: "Chicó Navarra", locality: "Usaquén" },
     "chico norte": { neighborhood: "Chicó Norte", locality: "Chapinero" },
     "chico reservado": { neighborhood: "Chicó Reservado", locality: "Chapinero" },
     "rincon del chico": { neighborhood: "Rincón del Chicó", locality: "Chapinero" },
