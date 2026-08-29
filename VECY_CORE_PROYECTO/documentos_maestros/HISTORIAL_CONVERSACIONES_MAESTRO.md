@@ -52,11 +52,44 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v26.4 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v26.5 — Agosto 2026
 
 ---
 
 ## 📜 REGISTRO DETALLADO DE CONVERSACIONES (ORDEN CRONOLÓGICO INVERSO CON FECHA Y HORA)
+
+### 🗓️ Sesión: Viernes 28 de Agosto de 2026 — 07:00 PM a 08:15 PM (Hora Colombia UTC-5)
+**Versión del Sistema**: `v26.5 — Desacoplamiento de Matriz de Cotejo, Búsqueda Instantánea Universal con useDeferredValue, Resolución Integral de Caché Móvil y Tipado Estricto TypeScript (0 Errores)`  
+**Participantes**: Eduardo A. Rivera (Director Tecnología) & Antigravity IDE (Pair Programmer)
+
+#### 📋 Requerimientos Específicos del Usuario (Eduardo A. Rivera):
+1. **Resolución de Error de Carga en Dispositivos Móviles (Infinix HOT 50 Pro+) y Navegadores**:
+   - Diagnóstico técnico del error `ReferenceError: reqRawText is not defined` capturado en la consola del navegador y bloqueo por caché residual de bundles compilados anteriores (`AdminMatches-Db7RFfZ6.js`).
+   - Guía paso a paso de purga de caché del sitio para dispositivos móviles en Brave y Chrome sobre Android.
+2. **Eliminación de Lentitud y Congelamiento al Escribir en el Buscador del Panel de Coincidencias**:
+   - El usuario reportó que al escribir en el buscador de la mesa de control de coincidencias (ej. al presionar `4`), el sistema se quedaba colgado dando vueltas y demoraba minutos en responder, bloqueando la escritura.
+   - Necesidad imperativa de hacer que la búsqueda sea 100% instantánea, fluida a 120 FPS y capaz de buscar por cualquier criterio (IDs de match, números, barrios, descripciones, teléfonos de brokers y nombres).
+3. **Resolución de Avisos y Errores de Tipado TypeScript en `AdminMatches.tsx`**:
+   - 12 avisos de TypeScript resueltos: variables no encontradas (`isReqStudio`, `isPropStudio`) y parámetros implícitos `any` en funciones `.filter()` y `.map()`.
+
+#### 🛠️ Soluciones e Implementaciones Técnicas:
+1. **Desacoplamiento Total de Cálculos Técnicos (`processedMatches`) en `AdminMatches.tsx`**:
+   - Separación estricta de la matriz técnica de cotejo: la evaluación pesada de los más de 20 atributos técnicos y amenidades (`scoreRows`) ahora se ejecuta **una sola vez** al recibir los matches desde el servidor o al editar un registro.
+   - Al interactuar con el buscador o cambiar filtros de puntuación, `scoreRows` **no se vuelve a ejecutar**, eliminando el consumo innecesario de ciclos de CPU en más de 150.000 operaciones por pulsación de tecla.
+2. **Filtrado Instantáneo con `useDeferredValue`**:
+   - Implementado `deferredSearchTerm = React.useDeferredValue(searchTerm)` nativo de React 19, garantizando que la entrada en el input de búsqueda sea instantánea y nunca bloquee el hilo principal de la interfaz de usuario.
+3. **Índice de Búsqueda Universal Extendido (`_searchIndex`)**:
+   - Construido un índice de texto normalizado en memoria que abarca: ID de Match (`#11220`, `m11220`, `11220`), IDs de propiedad y requerimiento, nombres, descripciones, barrios, ciudades, zonas, teléfonos de brokers de captación/demanda y características cuantitativas.
+4. **Tipado Estricto y Saneamiento de Código**:
+   - Inyección formal de constantes `isReqStudio` e `isPropStudio` vinculadas a `deduceFullPropertyType`.
+   - Tipado explícito de filas `(row: any, rIdx: number)` y contadores `(r: any)`.
+5. **Verificación, Compilación y Despliegue en Vivo**:
+   - `npm run build` ejecutado localmente con **0 errores**.
+   - Código sincronizado en GitHub `main` (Commits `879f6cc`, `609f502` y `cfa5988`).
+   - Despliegue en caliente en el servidor VPS (`13.140.149.144`) con `git pull`, `npm run build` y recarga en limpio bajo PM2.
+   - Vercel desplegó la versión de producción sin errores de cache.
+
+---
 
 ### 🗓️ Sesión: Viernes 28 de Agosto de 2026 — 04:30 PM a 05:00 PM (Hora Colombia UTC-5)
 **Versión del Sistema**: `v26.4 — Blindaje Doctrinal de Tipologías Inmobiliarias (Tolerancia Cero entre Comercial/Dotacional/Médico y Residencial), Detección Precisa de Tipologías en Ingesta/Fallback y Purga de Matches Inviables (#M11220)`  

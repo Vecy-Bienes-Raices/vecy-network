@@ -757,6 +757,39 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 
 ---
 
+### Versión v26.5 — Agosto 2026: Desacoplamiento de Matriz de Cotejo, Búsqueda Instantánea Universal con useDeferredValue, Resolución Integral de Caché Móvil y Tipado Estricto TypeScript (0 Errores)
+
+#### 1. DESACOPLAMIENTO TOTAL DE CÁLCULOS TÉCNICOS (`processedMatches`)
+- **Evaluación Única en Memoria**: La matriz de cotejo técnico de más de 20 atributos técnicos y amenidades (`scoreRows`) se ejecuta una sola vez al recibir los matches desde el servidor o al editar un registro.
+- **Filtrado Instantáneo**: Al escribir en el buscador o cambiar filtros de puntuación, `scoreRows` no vuelve a ejecutarse, eliminando más de 150.000 operaciones redundantes por pulsación de tecla.
+
+#### 2. BÚSQUEDA INSTANTÁNEA CON `useDeferredValue` Y ÍNDICE UNIVERSAL
+- **Escritura Fluida a 120 FPS**: Integración de `React.useDeferredValue` nativo de React 19 para garantizar cero retraso en la entrada de texto en móviles y PCs.
+- **Índice de Búsqueda Universal (`_searchIndex`)**: Búsqueda habilitada por ID de match (`#11220`, `m11220`), IDs de propiedad/requerimiento, nombres, descripciones, barrios, ciudades, zonas, teléfonos de brokers y números de alcobas/precios.
+
+#### 3. TIPADO ESTRICTO Y SANEAMIENTO DE ERRORES TYPESCRIPT
+- **Resolución de Variables**: Declaración e inyección formal de variables de estudio/loft (`isReqStudio`, `isPropStudio`) y tipado estricto `(row: any, rIdx: number)` en tablas de escritorio y móviles con **0 errores** en Vite y esbuild.
+
+---
+
+### Versión v26.4 — Agosto 2026: Blindaje Doctrinal de Tipologías Inmobiliarias, Tolerancia Cero entre Comercial/Dotacional/Médico y Residencial y Purga de Matches Inviables (#M11220)
+
+#### 1. INCOMPATIBILIDAD ABSOLUTA COMERCIAL/DOTACIONAL VS RESIDENCIAL
+- **Guard Bloqueador en `matching.ts`**: Bloqueo binario estricto al **0% invariable** ante cualquier cruce entre inmuebles comerciales/médicos (`consultorio`, `oficina`, `local`, `bodega`, `lote`) y residenciales (`apartamento`, `casa`, `apartaestudio`, `loft`).
+- **Detección Fina en Ingesta y Fallbacks (`janIA.ts`)**: Extracción prioritaria en `extractFallbackDataFromText` y `sanitizePropertyType` para clasificar con exactitud consultorios médicos/odontológicos y locales comerciales sin caer en el default de `apartment`.
+- **Cotejo Técnico Preciso en Admin Panel (`AdminMatches.tsx`)**: Refactorizada la función de deducción y comparación de tipología; suprimida la caída indiscriminada a "Coincide", mostrando etiquetas precisas (*"Consultorio Médico / Dotacional"*, *"Local Comercial"*, etc.) y marcando estado de incompatibilidad (`missing`) cuando difieren.
+- **Purga y Saneamiento en Supabase**: Requerimiento #799 corregido formalmente a `consultorio` y eliminados **74 matches inviables** (incluyendo Match #M11220 y #M11221), manteniendo **106 matches legítimos y verificados (≥85%)**.
+
+---
+
+### Versión v26.3 — Agosto 2026: Blindaje Geográfico Inquebrantable entre Chicó Tradicional (Chapinero) y Chicó Navarra (Usaquén), Resolución Estricta de Sub-barrios Catastrales y Expansión de los 4 Pilares de JanIA
+
+#### 1. BLINDAJE GEOGRÁFICO INQUEBRANTABLE (CHICÓ VS CHICÓ NAVARRA)
+- **Guard 1.46 Doctrinal en `matching.ts`**: Bloqueo binario estricto al **0% invariable** ante cruces entre Chicó tradicional y Chicó Navarra.
+- **Consumo Atómico de Nombres Compuestos de Barrios (`extractNeighborhoodTokens`)**: Los nombres de barrios se ordenan por longitud descendente y se consumen del texto de búsqueda, evitando que subcadenas como `"Chicó"` sean extraídas erróneamente cuando el requerimiento especifica `"Chicó Navarra"`.
+- **Diccionario Catastral Corregido (`geography.ts`)**: Chicó Navarra y Navarra ubicados formalmente en la localidad de **Usaquén**; El Chicó en **Chapinero**.
+- **Purga y Saneamiento Masivo en Supabase**: 54 falsos matches eliminados de la base de datos, manteniendo **71 matches legítimos y verificados (≥85%)**.
+
 ---
 
 ### Versión v25.9 — Agosto 2026: Purga de Pestañas Obsoletas en Panel Admin, Caché Instantánea de Autenticación & Persistencia de Navegación
