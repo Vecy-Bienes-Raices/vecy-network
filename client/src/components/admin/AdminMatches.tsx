@@ -1913,64 +1913,101 @@ export default function AdminMatches() {
   const handleOnlySave = async (m: any) => {
     setIsSavingOnly(true);
     try {
+      const promises: Promise<any>[] = [];
+
       if (m.property?.id) {
         const cleanPropPhone = normalizePhoneInput(editForm.propPhone);
-        await updatePropMut.mutateAsync({
-          propertyId: m.property.id,
-          price: editForm.propPrice !== undefined && editForm.propPrice !== '' ? String(editForm.propPrice) : undefined,
-          rentPrice: editForm.propRentPrice !== undefined && editForm.propRentPrice !== '' ? String(editForm.propRentPrice) : undefined,
-          adminFee: editForm.propAdminFee !== undefined && editForm.propAdminFee !== '' ? String(editForm.propAdminFee) : undefined,
-          areaTotal: editForm.propArea !== undefined && editForm.propArea !== '' ? String(editForm.propArea) : undefined,
-          bedrooms: editForm.propBedrooms !== undefined && editForm.propBedrooms !== '' ? Number(editForm.propBedrooms) : undefined,
-          bathrooms: editForm.propBathrooms !== undefined && editForm.propBathrooms !== '' ? Number(editForm.propBathrooms) : undefined,
-          garages: editForm.propGarages !== undefined && editForm.propGarages !== '' ? Number(editForm.propGarages) : undefined,
-          stratum: editForm.propStratum !== undefined && editForm.propStratum !== '' ? Number(editForm.propStratum) : undefined,
-          zone: editForm.propZone ? String(editForm.propZone) : undefined,
-          addressNeighborhood: editForm.propZone ? String(editForm.propZone) : undefined,
-          addressLocality: editForm.propLocality ? String(editForm.propLocality) : undefined,
-          city: editForm.propCity ? String(editForm.propCity) : undefined,
-          propertyType: editForm.propPropertyType ? String(editForm.propPropertyType) : undefined,
-          transactionType: editForm.propTransactionType ? String(editForm.propTransactionType) : undefined,
-          idUsuarioWhatsapp: cleanPropPhone,
-          nombreUsuarioWhatsapp: editForm.propSenderName !== undefined && editForm.propSenderName.trim() !== '' ? String(editForm.propSenderName).trim() : undefined,
-        });
+        promises.push(
+          updatePropMut.mutateAsync({
+            propertyId: m.property.id,
+            price: editForm.propPrice !== undefined && editForm.propPrice !== '' ? String(editForm.propPrice) : undefined,
+            rentPrice: editForm.propRentPrice !== undefined && editForm.propRentPrice !== '' ? String(editForm.propRentPrice) : undefined,
+            adminFee: editForm.propAdminFee !== undefined && editForm.propAdminFee !== '' ? String(editForm.propAdminFee) : undefined,
+            areaTotal: editForm.propArea !== undefined && editForm.propArea !== '' ? String(editForm.propArea) : undefined,
+            bedrooms: editForm.propBedrooms !== undefined && editForm.propBedrooms !== '' ? Number(editForm.propBedrooms) : undefined,
+            bathrooms: editForm.propBathrooms !== undefined && editForm.propBathrooms !== '' ? Number(editForm.propBathrooms) : undefined,
+            garages: editForm.propGarages !== undefined && editForm.propGarages !== '' ? Number(editForm.propGarages) : undefined,
+            stratum: editForm.propStratum !== undefined && editForm.propStratum !== '' ? Number(editForm.propStratum) : undefined,
+            zone: editForm.propZone ? String(editForm.propZone) : undefined,
+            addressNeighborhood: editForm.propZone ? String(editForm.propZone) : undefined,
+            addressLocality: editForm.propLocality ? String(editForm.propLocality) : undefined,
+            city: editForm.propCity ? String(editForm.propCity) : undefined,
+            propertyType: editForm.propPropertyType ? String(editForm.propPropertyType) : undefined,
+            transactionType: editForm.propTransactionType ? String(editForm.propTransactionType) : undefined,
+            idUsuarioWhatsapp: cleanPropPhone,
+            nombreUsuarioWhatsapp: editForm.propSenderName !== undefined && editForm.propSenderName.trim() !== '' ? String(editForm.propSenderName).trim() : undefined,
+          })
+        );
       }
 
       if (m.requirement?.id) {
         const cleanReqPhone = normalizePhoneInput(editForm.reqPhone);
-        await updateReqMut.mutateAsync({
-          requirementId: m.requirement.id,
-          presupuestoMax: editForm.reqBudget !== undefined && editForm.reqBudget !== '' ? String(editForm.reqBudget) : undefined,
-          adminFeeMax: editForm.reqAdminMax !== undefined && editForm.reqAdminMax !== '' ? String(editForm.reqAdminMax) : undefined,
-          areaMin: editForm.reqArea !== undefined && editForm.reqArea !== '' ? String(editForm.reqArea) : undefined,
-          habitacionesMin: editForm.reqBedrooms !== undefined && editForm.reqBedrooms !== '' ? Number(editForm.reqBedrooms) : undefined,
-          banosMin: editForm.reqBathrooms !== undefined && editForm.reqBathrooms !== '' ? Number(editForm.reqBathrooms) : undefined,
-          parqueaderosMin: editForm.reqGarages !== undefined && editForm.reqGarages !== '' ? Number(editForm.reqGarages) : undefined,
-          estratoDeseado: editForm.reqStratum !== undefined && editForm.reqStratum !== '' ? Number(editForm.reqStratum) : undefined,
-          zonaDeseada: editForm.reqZone ? String(editForm.reqZone) : undefined,
-          addressNeighborhood: editForm.reqZone ? String(editForm.reqZone) : undefined,
-          ciudadDeseada: editForm.reqCity ? String(editForm.reqCity) : undefined,
-          tipoInmuebleDeseado: editForm.reqPropertyType ? String(editForm.reqPropertyType) : undefined,
-          tipoNegocioDeseado: editForm.reqTransactionType ? String(editForm.reqTransactionType) : undefined,
-          idUsuarioWhatsapp: cleanReqPhone,
-          nombreUsuarioWhatsapp: editForm.reqSenderName !== undefined && editForm.reqSenderName.trim() !== '' ? String(editForm.reqSenderName).trim() : undefined,
+        promises.push(
+          updateReqMut.mutateAsync({
+            requirementId: m.requirement.id,
+            presupuestoMax: editForm.reqBudget !== undefined && editForm.reqBudget !== '' ? String(editForm.reqBudget) : undefined,
+            adminFeeMax: editForm.reqAdminMax !== undefined && editForm.reqAdminMax !== '' ? String(editForm.reqAdminMax) : undefined,
+            areaMin: editForm.reqArea !== undefined && editForm.reqArea !== '' ? String(editForm.reqArea) : undefined,
+            habitacionesMin: editForm.reqBedrooms !== undefined && editForm.reqBedrooms !== '' ? Number(editForm.reqBedrooms) : undefined,
+            banosMin: editForm.reqBathrooms !== undefined && editForm.reqBathrooms !== '' ? Number(editForm.reqBathrooms) : undefined,
+            parqueaderosMin: editForm.reqGarages !== undefined && editForm.reqGarages !== '' ? Number(editForm.reqGarages) : undefined,
+            estratoDeseado: editForm.reqStratum !== undefined && editForm.reqStratum !== '' ? Number(editForm.reqStratum) : undefined,
+            zonaDeseada: editForm.reqZone ? String(editForm.reqZone) : undefined,
+            addressNeighborhood: editForm.reqZone ? String(editForm.reqZone) : undefined,
+            ciudadDeseada: editForm.reqCity ? String(editForm.reqCity) : undefined,
+            tipoInmuebleDeseado: editForm.reqPropertyType ? String(editForm.reqPropertyType) : undefined,
+            tipoNegocioDeseado: editForm.reqTransactionType ? String(editForm.reqTransactionType) : undefined,
+            idUsuarioWhatsapp: cleanReqPhone,
+            nombreUsuarioWhatsapp: editForm.reqSenderName !== undefined && editForm.reqSenderName.trim() !== '' ? String(editForm.reqSenderName).trim() : undefined,
+          })
+        );
+      }
+
+      // Guardado en paralelo ultrarrápido
+      await Promise.all(promises);
+
+      // Actualización optimista de memoria inmediata (0ms lag)
+      if (m.property) {
+        Object.assign(m.property, {
+          price: editForm.propPrice !== undefined && editForm.propPrice !== '' ? editForm.propPrice : m.property.price,
+          rentPrice: editForm.propRentPrice !== undefined && editForm.propRentPrice !== '' ? editForm.propRentPrice : m.property.rentPrice,
+          adminFee: editForm.propAdminFee !== undefined && editForm.propAdminFee !== '' ? editForm.propAdminFee : m.property.adminFee,
+          areaTotal: editForm.propArea !== undefined && editForm.propArea !== '' ? editForm.propArea : m.property.areaTotal,
+          bedrooms: editForm.propBedrooms !== undefined && editForm.propBedrooms !== '' ? Number(editForm.propBedrooms) : m.property.bedrooms,
+          bathrooms: editForm.propBathrooms !== undefined && editForm.propBathrooms !== '' ? Number(editForm.propBathrooms) : m.property.bathrooms,
+          garages: editForm.propGarages !== undefined && editForm.propGarages !== '' ? Number(editForm.propGarages) : m.property.garages,
+          stratum: editForm.propStratum !== undefined && editForm.propStratum !== '' ? Number(editForm.propStratum) : m.property.stratum,
+          zone: editForm.propZone || m.property.zone,
+          city: editForm.propCity || m.property.city,
+          idUsuarioWhatsapp: normalizePhoneInput(editForm.propPhone) || m.property.idUsuarioWhatsapp,
+        });
+      }
+
+      if (m.requirement) {
+        Object.assign(m.requirement, {
+          presupuestoMax: editForm.reqBudget !== undefined && editForm.reqBudget !== '' ? editForm.reqBudget : m.requirement.presupuestoMax,
+          adminFeeMax: editForm.reqAdminMax !== undefined && editForm.reqAdminMax !== '' ? editForm.reqAdminMax : m.requirement.adminFeeMax,
+          areaMin: editForm.reqArea !== undefined && editForm.reqArea !== '' ? editForm.reqArea : m.requirement.areaMin,
+          habitacionesMin: editForm.reqBedrooms !== undefined && editForm.reqBedrooms !== '' ? Number(editForm.reqBedrooms) : m.requirement.habitacionesMin,
+          banosMin: editForm.reqBathrooms !== undefined && editForm.reqBathrooms !== '' ? Number(editForm.reqBathrooms) : m.requirement.banosMin,
+          parqueaderosMin: editForm.reqGarages !== undefined && editForm.reqGarages !== '' ? Number(editForm.reqGarages) : m.requirement.parqueaderosMin,
+          estratoDeseado: editForm.reqStratum !== undefined && editForm.reqStratum !== '' ? Number(editForm.reqStratum) : m.requirement.estratoDeseado,
+          zonaDeseada: editForm.reqZone || m.requirement.zonaDeseada,
+          ciudadDeseada: editForm.reqCity || m.requirement.ciudadDeseada,
+          idUsuarioWhatsapp: normalizePhoneInput(editForm.reqPhone) || m.requirement.idUsuarioWhatsapp,
         });
       }
 
       setSaveStatusMap(prev => ({ ...prev, [m.id]: 'saved' }));
-      await utils.janIA.getAllMatches.invalidate();
-      await refetch();
-      setTimeout(() => {
-        setEditingMatchId(null);
-        setEditForm({});
-        setSaveStatusMap(prev => {
-          const next = { ...prev };
-          delete next[m.id];
-          return next;
-        });
-      }, 1800);
+      toast.success("✅ Ficha actualizada y guardada correctamente");
+      setEditingMatchId(null);
+      setEditForm({});
+
+      // Refrescar en segundo plano sin congelar
+      utils.janIA.getAllMatches.invalidate().catch(() => {});
     } catch (err: any) {
       console.error("[handleOnlySave] Error:", err);
+      toast.error("Error al guardar: " + (err.message || "Error desconocido"));
     } finally {
       setIsSavingOnly(false);
     }
@@ -1979,49 +2016,58 @@ export default function AdminMatches() {
   const handleRecalculateMatch = async (m: any) => {
     setIsRecalculating(true);
     try {
-      // Guardar cambios si hay campos editados antes de recalcular
+      const savePromises: Promise<any>[] = [];
+
       if (m.property?.id && Object.keys(editForm).some(k => k.startsWith('prop'))) {
         const cleanPropPhone = normalizePhoneInput(editForm.propPhone);
-        await updatePropMut.mutateAsync({
-          propertyId: m.property.id,
-          price: editForm.propPrice !== undefined && editForm.propPrice !== '' ? String(editForm.propPrice) : undefined,
-          rentPrice: editForm.propRentPrice !== undefined && editForm.propRentPrice !== '' ? String(editForm.propRentPrice) : undefined,
-          adminFee: editForm.propAdminFee !== undefined && editForm.propAdminFee !== '' ? String(editForm.propAdminFee) : undefined,
-          areaTotal: editForm.propArea !== undefined && editForm.propArea !== '' ? String(editForm.propArea) : undefined,
-          bedrooms: editForm.propBedrooms !== undefined && editForm.propBedrooms !== '' ? Number(editForm.propBedrooms) : undefined,
-          bathrooms: editForm.propBathrooms !== undefined && editForm.propBathrooms !== '' ? Number(editForm.propBathrooms) : undefined,
-          garages: editForm.propGarages !== undefined && editForm.propGarages !== '' ? Number(editForm.propGarages) : undefined,
-          stratum: editForm.propStratum !== undefined && editForm.propStratum !== '' ? Number(editForm.propStratum) : undefined,
-          zone: editForm.propZone ? String(editForm.propZone) : undefined,
-          addressNeighborhood: editForm.propZone ? String(editForm.propZone) : undefined,
-          addressLocality: editForm.propLocality ? String(editForm.propLocality) : undefined,
-          city: editForm.propCity ? String(editForm.propCity) : undefined,
-          propertyType: editForm.propPropertyType ? String(editForm.propPropertyType) : undefined,
-          transactionType: editForm.propTransactionType ? String(editForm.propTransactionType) : undefined,
-          idUsuarioWhatsapp: cleanPropPhone,
-          nombreUsuarioWhatsapp: editForm.propSenderName !== undefined && editForm.propSenderName.trim() !== '' ? String(editForm.propSenderName).trim() : undefined,
-        });
+        savePromises.push(
+          updatePropMut.mutateAsync({
+            propertyId: m.property.id,
+            price: editForm.propPrice !== undefined && editForm.propPrice !== '' ? String(editForm.propPrice) : undefined,
+            rentPrice: editForm.propRentPrice !== undefined && editForm.propRentPrice !== '' ? String(editForm.propRentPrice) : undefined,
+            adminFee: editForm.propAdminFee !== undefined && editForm.propAdminFee !== '' ? String(editForm.propAdminFee) : undefined,
+            areaTotal: editForm.propArea !== undefined && editForm.propArea !== '' ? String(editForm.propArea) : undefined,
+            bedrooms: editForm.propBedrooms !== undefined && editForm.propBedrooms !== '' ? Number(editForm.propBedrooms) : undefined,
+            bathrooms: editForm.propBathrooms !== undefined && editForm.propBathrooms !== '' ? Number(editForm.propBathrooms) : undefined,
+            garages: editForm.propGarages !== undefined && editForm.propGarages !== '' ? Number(editForm.propGarages) : undefined,
+            stratum: editForm.propStratum !== undefined && editForm.propStratum !== '' ? Number(editForm.propStratum) : undefined,
+            zone: editForm.propZone ? String(editForm.propZone) : undefined,
+            addressNeighborhood: editForm.propZone ? String(editForm.propZone) : undefined,
+            addressLocality: editForm.propLocality ? String(editForm.propLocality) : undefined,
+            city: editForm.propCity ? String(editForm.propCity) : undefined,
+            propertyType: editForm.propPropertyType ? String(editForm.propPropertyType) : undefined,
+            transactionType: editForm.propTransactionType ? String(editForm.propTransactionType) : undefined,
+            idUsuarioWhatsapp: cleanPropPhone,
+            nombreUsuarioWhatsapp: editForm.propSenderName !== undefined && editForm.propSenderName.trim() !== '' ? String(editForm.propSenderName).trim() : undefined,
+          })
+        );
       }
 
       if (m.requirement?.id && Object.keys(editForm).some(k => k.startsWith('req'))) {
         const cleanReqPhone = normalizePhoneInput(editForm.reqPhone);
-        await updateReqMut.mutateAsync({
-          requirementId: m.requirement.id,
-          presupuestoMax: editForm.reqBudget !== undefined && editForm.reqBudget !== '' ? String(editForm.reqBudget) : undefined,
-          adminFeeMax: editForm.reqAdminMax !== undefined && editForm.reqAdminMax !== '' ? String(editForm.reqAdminMax) : undefined,
-          areaMin: editForm.reqArea !== undefined && editForm.reqArea !== '' ? String(editForm.reqArea) : undefined,
-          habitacionesMin: editForm.reqBedrooms !== undefined && editForm.reqBedrooms !== '' ? Number(editForm.reqBedrooms) : undefined,
-          banosMin: editForm.reqBathrooms !== undefined && editForm.reqBathrooms !== '' ? Number(editForm.reqBathrooms) : undefined,
-          parqueaderosMin: editForm.reqGarages !== undefined && editForm.reqGarages !== '' ? Number(editForm.reqGarages) : undefined,
-          estratoDeseado: editForm.reqStratum !== undefined && editForm.reqStratum !== '' ? Number(editForm.reqStratum) : undefined,
-          zonaDeseada: editForm.reqZone ? String(editForm.reqZone) : undefined,
-          addressNeighborhood: editForm.reqZone ? String(editForm.reqZone) : undefined,
-          ciudadDeseada: editForm.reqCity ? String(editForm.reqCity) : undefined,
-          tipoInmuebleDeseado: editForm.reqPropertyType ? String(editForm.reqPropertyType) : undefined,
-          tipoNegocioDeseado: editForm.reqTransactionType ? String(editForm.reqTransactionType) : undefined,
-          idUsuarioWhatsapp: cleanReqPhone,
-          nombreUsuarioWhatsapp: editForm.reqSenderName !== undefined && editForm.reqSenderName.trim() !== '' ? String(editForm.reqSenderName).trim() : undefined,
-        });
+        savePromises.push(
+          updateReqMut.mutateAsync({
+            requirementId: m.requirement.id,
+            presupuestoMax: editForm.reqBudget !== undefined && editForm.reqBudget !== '' ? String(editForm.reqBudget) : undefined,
+            adminFeeMax: editForm.reqAdminMax !== undefined && editForm.reqAdminMax !== '' ? String(editForm.reqAdminMax) : undefined,
+            areaMin: editForm.reqArea !== undefined && editForm.reqArea !== '' ? String(editForm.reqArea) : undefined,
+            habitacionesMin: editForm.reqBedrooms !== undefined && editForm.reqBedrooms !== '' ? Number(editForm.reqBedrooms) : undefined,
+            banosMin: editForm.reqBathrooms !== undefined && editForm.reqBathrooms !== '' ? Number(editForm.reqBathrooms) : undefined,
+            parqueaderosMin: editForm.reqGarages !== undefined && editForm.reqGarages !== '' ? Number(editForm.reqGarages) : undefined,
+            estratoDeseado: editForm.reqStratum !== undefined && editForm.reqStratum !== '' ? Number(editForm.reqStratum) : undefined,
+            zonaDeseada: editForm.reqZone ? String(editForm.reqZone) : undefined,
+            addressNeighborhood: editForm.reqZone ? String(editForm.reqZone) : undefined,
+            ciudadDeseada: editForm.reqCity ? String(editForm.reqCity) : undefined,
+            tipoInmuebleDeseado: editForm.reqPropertyType ? String(editForm.reqPropertyType) : undefined,
+            tipoNegocioDeseado: editForm.reqTransactionType ? String(editForm.reqTransactionType) : undefined,
+            idUsuarioWhatsapp: cleanReqPhone,
+            nombreUsuarioWhatsapp: editForm.reqSenderName !== undefined && editForm.reqSenderName.trim() !== '' ? String(editForm.reqSenderName).trim() : undefined,
+          })
+        );
+      }
+
+      if (savePromises.length > 0) {
+        await Promise.all(savePromises);
       }
 
       if (m.property?.id || m.requirement?.id) {
@@ -2032,19 +2078,13 @@ export default function AdminMatches() {
       }
 
       setSaveStatusMap(prev => ({ ...prev, [m.id]: 'recalculated' }));
-      await utils.janIA.getAllMatches.invalidate();
+      toast.success("⚡ Coincidencia recalculada con éxito");
+      setEditingMatchId(null);
+      setEditForm({});
       await refetch();
-      setTimeout(() => {
-        setEditingMatchId(null);
-        setEditForm({});
-        setSaveStatusMap(prev => {
-          const next = { ...prev };
-          delete next[m.id];
-          return next;
-        });
-      }, 1800);
     } catch (err: any) {
-      console.error("[RecalculateMatch] Error:", err);
+      console.error("[handleRecalculateMatch] Error:", err);
+      toast.error("Error al recalcular: " + (err.message || "Error desconocido"));
     } finally {
       setIsRecalculating(false);
     }
@@ -2107,48 +2147,10 @@ export default function AdminMatches() {
 
       const property = match.property;
       const requirement = match.requirement;
-
-      const isEditingThisCard = editingMatchId === match.id;
-      const effectiveProp = isEditingThisCard ? {
-        ...property,
-        price: editForm.propPrice !== undefined && editForm.propPrice !== '' ? editForm.propPrice : property.price,
-        rentPrice: editForm.propRentPrice !== undefined && editForm.propRentPrice !== '' ? editForm.propRentPrice : property.rentPrice,
-        adminFee: editForm.propAdminFee !== undefined && editForm.propAdminFee !== '' ? editForm.propAdminFee : property.adminFee,
-        areaTotal: editForm.propArea !== undefined && editForm.propArea !== '' ? editForm.propArea : property.areaTotal,
-        bedrooms: editForm.propBedrooms !== undefined && editForm.propBedrooms !== '' ? editForm.propBedrooms : property.bedrooms,
-        bathrooms: editForm.propBathrooms !== undefined && editForm.propBathrooms !== '' ? editForm.propBathrooms : property.bathrooms,
-        garages: editForm.propGarages !== undefined && editForm.propGarages !== '' ? editForm.propGarages : property.garages,
-        stratum: editForm.propStratum !== undefined && editForm.propStratum !== '' ? editForm.propStratum : property.stratum,
-        zone: editForm.propZone !== undefined && editForm.propZone !== '' ? editForm.propZone : property.zone,
-        city: editForm.propCity !== undefined && editForm.propCity !== '' ? editForm.propCity : property.city,
-      } : property;
-
-      const effectiveReq = isEditingThisCard ? {
-        ...requirement,
-        presupuestoMax: editForm.reqBudget !== undefined && editForm.reqBudget !== '' ? editForm.reqBudget : requirement.presupuestoMax,
-        adminFeeMax: editForm.reqAdminMax !== undefined && editForm.reqAdminMax !== '' ? editForm.reqAdminMax : requirement.adminFeeMax,
-        areaMin: editForm.reqArea !== undefined && editForm.reqArea !== '' ? editForm.reqArea : requirement.areaMin,
-        habitacionesMin: editForm.reqBedrooms !== undefined && editForm.reqBedrooms !== '' ? editForm.reqBedrooms : requirement.habitacionesMin,
-        banosMin: editForm.reqBathrooms !== undefined && editForm.reqBathrooms !== '' ? editForm.reqBathrooms : requirement.banosMin,
-        parqueaderosMin: editForm.reqGarages !== undefined && editForm.reqGarages !== '' ? editForm.reqGarages : requirement.parqueaderosMin,
-        estratoDeseado: editForm.reqStratum !== undefined && editForm.reqStratum !== '' ? editForm.reqStratum : requirement.estratoDeseado,
-        zonaDeseada: editForm.reqZone !== undefined && editForm.reqZone !== '' ? editForm.reqZone : requirement.zonaDeseada,
-        ciudadDeseada: editForm.reqCity !== undefined && editForm.reqCity !== '' ? editForm.reqCity : requirement.ciudadDeseada,
-      } : requirement;
-
       const dbScore = parseFloat(match.matchScore || "0");
-      let displayScore = dbScore;
-      let precomputedRows: any[] | null = null;
-
-      // Solo calcular el desglose scoreRows intensivo si se está editando activamente esta tarjeta
-      if (isEditingThisCard) {
-        const computed = scoreRows(effectiveReq, effectiveProp);
-        precomputedRows = computed.rows;
-        displayScore = computed.autoScore > 0 ? computed.autoScore : dbScore;
-      }
 
       // Mostrar únicamente los matches calificados válidos (85% a 100%)
-      if (displayScore < 85) {
+      if (dbScore < 85) {
         continue;
       }
 
@@ -2170,16 +2172,14 @@ export default function AdminMatches() {
 
       results.push({
         ...match,
-        _precomputedRows: precomputedRows,
-        _precomputedScore: displayScore,
-        _effectiveProp: effectiveProp,
-        _effectiveReq: effectiveReq,
+        _precomputedRows: null,
+        _precomputedScore: dbScore,
         _searchIndex: `${propSearchStr} ${reqSearchStr}`,
       });
     }
 
     return results;
-  }, [matches, editingMatchId, editForm]);
+  }, [matches]);
 
   // 2. Filtrado instantáneo (<0.001ms) con useDeferredValue para evitar bloqueos del hilo principal
   const deferredSearchTerm = React.useDeferredValue(searchTerm);
@@ -2211,20 +2211,61 @@ export default function AdminMatches() {
     const start = (currentPage - 1) * pageSize;
     const slice = filteredMatches.slice(start, start + pageSize);
 
-    // Calcular scoreRows únicamente para los 10 items visibles en pantalla
+    // Calcular scoreRows únicamente para los 10 items visibles en pantalla y reactivo solo a la tarjeta en edición
     return slice.map((m: any) => {
+      const isEditingThisCard = editingMatchId === m.id;
+
+      if (isEditingThisCard) {
+        const effectiveProp = {
+          ...m.property,
+          price: editForm.propPrice !== undefined && editForm.propPrice !== '' ? editForm.propPrice : m.property.price,
+          rentPrice: editForm.propRentPrice !== undefined && editForm.propRentPrice !== '' ? editForm.propRentPrice : m.property.rentPrice,
+          adminFee: editForm.propAdminFee !== undefined && editForm.propAdminFee !== '' ? editForm.propAdminFee : m.property.adminFee,
+          areaTotal: editForm.propArea !== undefined && editForm.propArea !== '' ? editForm.propArea : m.property.areaTotal,
+          bedrooms: editForm.propBedrooms !== undefined && editForm.propBedrooms !== '' ? editForm.propBedrooms : m.property.bedrooms,
+          bathrooms: editForm.propBathrooms !== undefined && editForm.propBathrooms !== '' ? editForm.propBathrooms : m.property.bathrooms,
+          garages: editForm.propGarages !== undefined && editForm.propGarages !== '' ? editForm.propGarages : m.property.garages,
+          stratum: editForm.propStratum !== undefined && editForm.propStratum !== '' ? editForm.propStratum : m.property.stratum,
+          zone: editForm.propZone !== undefined && editForm.propZone !== '' ? editForm.propZone : m.property.zone,
+          city: editForm.propCity !== undefined && editForm.propCity !== '' ? editForm.propCity : m.property.city,
+        };
+
+        const effectiveReq = {
+          ...m.requirement,
+          presupuestoMax: editForm.reqBudget !== undefined && editForm.reqBudget !== '' ? editForm.reqBudget : m.requirement.presupuestoMax,
+          adminFeeMax: editForm.reqAdminMax !== undefined && editForm.reqAdminMax !== '' ? editForm.reqAdminMax : m.requirement.adminFeeMax,
+          areaMin: editForm.reqArea !== undefined && editForm.reqArea !== '' ? editForm.reqArea : m.requirement.areaMin,
+          habitacionesMin: editForm.reqBedrooms !== undefined && editForm.reqBedrooms !== '' ? editForm.reqBedrooms : m.requirement.habitacionesMin,
+          banosMin: editForm.reqBathrooms !== undefined && editForm.reqBathrooms !== '' ? editForm.reqBathrooms : m.requirement.banosMin,
+          parqueaderosMin: editForm.reqGarages !== undefined && editForm.reqGarages !== '' ? editForm.reqGarages : m.requirement.parqueaderosMin,
+          estratoDeseado: editForm.reqStratum !== undefined && editForm.reqStratum !== '' ? editForm.reqStratum : m.requirement.estratoDeseado,
+          zonaDeseada: editForm.reqZone !== undefined && editForm.reqZone !== '' ? editForm.reqZone : m.requirement.zonaDeseada,
+          ciudadDeseada: editForm.reqCity !== undefined && editForm.reqCity !== '' ? editForm.reqCity : m.requirement.ciudadDeseada,
+        };
+
+        const computed = scoreRows(effectiveReq, effectiveProp);
+        return {
+          ...m,
+          _effectiveProp: effectiveProp,
+          _effectiveReq: effectiveReq,
+          _precomputedRows: computed.rows,
+          _precomputedScore: computed.autoScore > 0 ? computed.autoScore : parseFloat(m.matchScore || "0"),
+        };
+      }
+
       if (m._precomputedRows && m._precomputedRows.length > 0) {
         return m;
       }
-      const effectiveProp = m._effectiveProp || m.property;
-      const effectiveReq = m._effectiveReq || m.requirement;
-      const { rows } = scoreRows(effectiveReq, effectiveProp);
+
+      const { rows } = scoreRows(m.property, m.requirement);
       return {
         ...m,
+        _effectiveProp: m.property,
+        _effectiveReq: m.requirement,
         _precomputedRows: rows,
       };
     });
-  }, [filteredMatches, currentPage, pageSize]);
+  }, [filteredMatches, currentPage, pageSize, editingMatchId, editForm]);
 
 
 

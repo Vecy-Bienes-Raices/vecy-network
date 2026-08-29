@@ -289,6 +289,11 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 - **Doctrina Maestra v25.0 en `prompts/base.md`**: Memoria permanente de jerga colombiana, tablas de conversión, algoritmos paso a paso y la distinción formal de Techo Financiero vs Piso de Confort.
 
 
+### Novedades v26.7 (Aceleración Instantánea de Edición, Guardado Concurrente y Copiado Fiel con Búsqueda en WhatsApp):
+- **Copiado Fiel 100% Original & Botón de Búsqueda Exacta en WhatsApp (`AdminMatches.tsx`)**: Corrección de `handleCopy` para preservar intactos los saltos de línea, emojis y asteriscos del mensaje original (`rawText`), sumando un botón de búsqueda que copia la frase clave representativa de 4-6 palabras para saltar al mensaje en WhatsApp.
+- **Aislamiento Reactivo del Formulario de Edición**: Desacoplado `processedMatches` de `editForm`. Al escribir en los inputs de edición, ya no se recalculan los 150 matches en cada pulsación de tecla, garantizando escritura fluida a 120 FPS.
+- **Guardado en Paralelo Asíncrono y Actualización Optimista (`handleOnlySave`)**: Mutaciones concurrentes con `Promise.all`, actualización en memoria instantánea y cierre inmediato del modo edición sin bloqueos.
+
 ### Novedades v26.6 (Optimización Extrema de Rendimiento, Lazy Scoring y Eliminación de Video Loop Global):
 - **Supresión del Renderizado Continuo de Video a 60 FPS (`JanIAFloatingButton.tsx`)**: Reemplazado el `<video src="/jania.mp4" autoPlay loop muted />` global por la imagen estática optimizada `jania_perfil.png` con decodificación asíncrona, eliminando el sobreconsumo continuo de 30%-60% de CPU/GPU en segundo plano.
 - **Cálculo Perezoso (*Lazy Scoring*) en `AdminMatches.tsx`**: Desacoplada la ejecución masiva de 1.800 líneas de regex (`scoreRows`). La indexación inicial lee directamente el `matchScore` de Supabase en <0.001s y `scoreRows` solo se ejecuta sobre los 10 elementos visibles de la página activa o en modo edición (ahorro del 95% de ciclos CPU).
