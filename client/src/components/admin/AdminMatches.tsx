@@ -596,12 +596,10 @@ function scoreRows(req: any, prop: any) {
   let barrioMatchStatus: MatchStatus = "missing";
   if (isGenericZone(reqBarrioDisplay) || isGenericZone(propBarrioDisplay)) {
     barrioMatchStatus = "neutral";
-  } else if (isOutStreetBounds) {
-    barrioMatchStatus = "missing";
-  } else if (isDiffSubBarrio) {
-    barrioMatchStatus = "missing";
   } else if (matchBarrioExacto(reqBarrioDisplay, propBarrioDisplay)) {
     barrioMatchStatus = "exact";
+  } else if (reqLocalityDisplay !== "N/E" && propLocalityDisplay !== "N/E" && normalizeBarrio(reqLocalityDisplay) === normalizeBarrio(propLocalityDisplay)) {
+    barrioMatchStatus = "warn"; // Mismo sector / misma localidad
   } else {
     barrioMatchStatus = "missing";
   }
@@ -612,14 +610,14 @@ function scoreRows(req: any, prop: any) {
   } else if (normalizeBarrio(reqLocalityDisplay) === normalizeBarrio(propLocalityDisplay)) {
     localityMatchStatus = "exact";
   } else {
-    localityMatchStatus = "missing";
+    localityMatchStatus = "warn";
   }
 
   let cityMatchStatus: MatchStatus = isCityMatch ? "exact" : "missing";
 
   add("Barrio / Vereda / Caserío", reqBarrioDisplay, propBarrioDisplay, barrioMatchStatus, 10, <MapPin className="w-3.5 h-3.5" />);
-  add("Localidad / Comuna", reqLocalityDisplay, propLocalityDisplay, localityMatchStatus, 5, <MapPin className="w-3.5 h-3.5" />);
-  add("Ciudad / Municipio", reqCityDisplay, propCityDisplay, cityMatchStatus, 5, <MapPin className="w-3.5 h-3.5" />);
+  add("Localidad / Comuna", reqLocalityDisplay, propLocalityDisplay, localityMatchStatus, 5, <Compass className="w-3.5 h-3.5" />);
+  add("Ciudad / Municipio", reqCityDisplay, propCityDisplay, cityMatchStatus, 5, <Building className="w-3.5 h-3.5" />);
 
   const isPhoneNumberNotPrice = (val: number | string | null | undefined, rawText?: string): boolean => {
     if (val === undefined || val === null || val === "" || val === 0 || val === "0") return false;
@@ -798,16 +796,12 @@ function scoreRows(req: any, prop: any) {
 
   let bedS: MatchStatus = "neutral";
   if (bedR > 0 && bedP > 0) {
-    if (bedR === 1) {
-      bedS = bedP === 1 ? "exact" : "missing";
+    if (bedP < bedR) {
+      bedS = "missing";
+    } else if (bedP === bedR) {
+      bedS = "exact";
     } else {
-      if (bedP < bedR) {
-        bedS = "missing";
-      } else if (bedP > bedR + 1) {
-        bedS = "missing";
-      } else {
-        bedS = "exact";
-      }
+      bedS = "plus";
     }
   } else if (bedR === 0 && bedP > 0) {
     bedS = "neutral";
@@ -822,9 +816,11 @@ function scoreRows(req: any, prop: any) {
   let bathS: MatchStatus = "neutral";
   if (bathR > 0 && bathP > 0) {
     if (bathP < bathR) {
-      bathS = "missing";
-    } else {
+      bathS = "warn";
+    } else if (bathP === bathR) {
       bathS = "exact";
+    } else {
+      bathS = "plus";
     }
   } else if (bathR === 0 && bathP > 0) {
     bathS = "neutral";
@@ -843,7 +839,7 @@ function scoreRows(req: any, prop: any) {
 
   if (garR > 0 && garP > 0) {
     if (garP < garR || (reqWantsIndep && garType === "lineal")) {
-      garS = "missing";
+      garS = "warn";
     } else {
       garS = "exact";
     }
@@ -885,11 +881,11 @@ function scoreRows(req: any, prop: any) {
     if (estratoArr.length === 1 && estratoArr[0] === Number(estratoP)) {
       estS = "exact";
     } else if (estratoArr.includes(Number(estratoP))) {
-      estS = "warn";
-    } else if (Math.abs(Number(estratoP) - estratoArr[0]) === 1) {
+      estS = "exact";
+    } else if (Math.abs(Number(estratoP) - estratoArr[0]) <= 1) {
       estS = "warn";
     } else {
-      estS = "missing";
+      estS = "warn";
     }
   } else if (!hasEstratoReq && (estratoP && Number(estratoP) > 0)) {
     estS = "neutral";
@@ -1362,7 +1358,11 @@ function scoreRows(req: any, prop: any) {
       reqLabel = "Flexible";
       propLabel = `Sí (${item.name} Incluido)`;
     } else if (inReq && !inProp) {
-      const isHard = reqTextLower.includes("indispensable") || reqTextLower.includes("obligatorio") || reqTextLower.includes("excluyente") || reqTextLower.includes("si o si");
+      const itemNameLower = item.name.toLowerCase();
+      const isHard = reqTextLower.includes(`indispensable ${itemNameLower}`) || 
+                     reqTextLower.includes(`obligatorio ${itemNameLower}`) || 
+                     reqTextLower.includes(`excluyente ${itemNameLower}`) ||
+                     reqTextLower.includes(`si o si ${itemNameLower}`);
       amS = isHard ? "missing" : "warn";
       reqLabel = isHard ? `Exige ${item.name} (Obligatorio)` : `Desea ${item.name}`;
       propLabel = `Sin ${item.name} especificado`;
