@@ -755,6 +755,19 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 - **Filtro `SERVER_BOOT_TIME`**: Los mensajes publicados con fecha/hora previa al reinicio del servidor son ignorados de forma intencional para evitar reprocesados retroactivos de historial.
 - **Protocolo de Lectura Total de Mensajes**: JanIA recibe el 100% del texto plano vía WebSocket de Baileys sin importar el botón visual "Leer más" de la interfaz gráfica de WhatsApp.
 
+### Versión v27.0 — Agosto 2026: Despliegue del Motor Reactivo de Inyección Dinámica ("Por Arte de Magia") para 64 Amenidades, 22 Tipologías Inmobiliarias y Selector Interactivo de Permutas con Porcentajes
+
+#### 1. INYECCIÓN REACTIVA EN CALIENTE DE FILAS DE COTEJO TÉCNICO ("POR ARTE DE MAGIA")
+- **Evaluación Contextual On-Demand**: La tabla de cotejo técnico evalúa dinámicamente si la Demanda o la Oferta mencionan alguna de las 23 características internas o 41 externas, o atributos cuantitativos específicos (motos, chimeneas por combustible, CBS con/sin baño, cava de vinos, terrazas con m² y BBQ, piso y vista exterior/interior).
+- **Cero Basura Visual**: Si ninguna parte menciona el atributo, la fila no se dibuja, garantizando máxima velocidad de lectura y renderizado en microsegundos.
+- **Ponderación Doctrinal**: Coincide (`exact` 🟢 Factor 1.00), Plus Ofertado (`plus` 🔵 Factor 0.90), Aproximado (`warn` 🟡 Factor 0.65) y No Cumple (`missing` 🔴 Factor 0.00 / Guillotina).
+
+#### 2. INTEGRACIÓN DE 22 TIPOLOGÍAS Y SELECTOR DESLIZABLE DE PERMUTAS
+- **22 Tipos de Inmuebles**: Cobertura integral en `deduceFullPropertyType`, `getSubtypeFriendlyLabel` y selectores de edición para Apartaestudio, Loft, Apartamento, Apto Dúplex, Pent House, Pent House Dúplex, Casa Urbana, Casa Campestre, Casa Quinta, Villa, Finca, Cabaña, Edificio, Local Comercial, Oficina, Consultorio Médico, Bodega, Lote/Terreno, Hotel, Hostal, Aparta Hotel, Aparta Suit, Motel.
+- **Permutas por Porcentajes**: Selector interactivo y compatibilidad en backend/frontend para proporciones 50/50, 60/40, 70/30, 80/20, 90/10, 10/90, 20/80, 30/70, 40/60 y permuta pura 100%.
+
+---
+
 ### Versión v26.9 — Agosto 2026: Catálogo Maestro de Atributos Inmobiliarios Dinámicos, Permutas con Ponderación Porcentual, Expansión de 64 Características/Amenidades y Arquitectura de Inyección Reactiva ("Por Arte de Magia")
 
 #### 1. CONSOLIDACIÓN DEL CATÁLOGO MAESTRO INMOBILIARIO COLOMBIANO

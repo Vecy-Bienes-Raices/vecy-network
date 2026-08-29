@@ -4,7 +4,8 @@ import {
   Sparkles, CheckCircle2, AlertTriangle, XCircle, SlidersHorizontal, 
   DollarSign, Ruler, Bed, Bath, Car, Shield, ExternalLink, Receipt, Box, Globe,
   Edit3, Save, Loader2, RotateCcw, Sun, Zap, Utensils, Home, Flame, ThumbsUp, ThumbsDown,
-  Trees, ShieldCheck, BookOpen, Copy, Check, ClipboardList, Archive, Layers
+  Trees, ShieldCheck, BookOpen, Copy, Check, ClipboardList, Archive, Layers,
+  Tv, Wine, Wind, Lock, Dumbbell, Waves, Landmark, School, Fuel, Percent, Compass, Smile, Maximize, Coffee, Mountain, Trophy, ShieldAlert, VolumeX
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -32,17 +33,38 @@ function getPropTypeLabel(type: string | null | undefined): string {
   const clean = type.toLowerCase().trim();
   const m: Record<string, string> = {
     apartment: "Apartamento",
-    house: "Casa",
-    building: "Edificio",
-    warehouse: "Bodega",
-    office: "Oficina",
-    farm: "Finca / Lote Campestre",
+    apartamento: "Apartamento",
+    apartamento_estandar: "Apartamento",
+    apartamento_duplex: "Apartamento Dúplex",
+    penthouse: "Pent House",
+    penthouse_duplex: "Pent House Dúplex",
+    apartaestudio: "Apartaestudio",
     loft: "Loft",
-    consultorio: "Consultorio",
+    house: "Casa",
+    casa: "Casa",
+    casa_campestre: "Casa Campestre",
+    casa_quinta: "Casa Quinta",
+    villa: "Villa",
+    farm: "Finca",
+    finca: "Finca",
     cabin: "Cabaña",
+    cabaña: "Cabaña",
+    building: "Edificio",
+    edificio: "Edificio",
+    warehouse: "Bodega",
+    bodega: "Bodega",
+    office: "Oficina",
+    oficina: "Oficina",
+    consultorio: "Consultorio Médico / Dotacional",
     commercial: "Local Comercial",
+    local: "Local Comercial",
     land: "Lote / Terreno",
-    hotel: "Hotel"
+    lote: "Lote / Terreno",
+    hotel: "Hotel",
+    hostal: "Hostal",
+    aparta_hotel: "Aparta Hotel",
+    aparta_suit: "Aparta Suit",
+    motel: "Motel"
   };
   return m[clean] || type;
 }
@@ -56,9 +78,18 @@ function getTransactionLabel(type: string | null | undefined): string {
     venta_o_arriendo: "Venta o Arriendo",
     arriendo_con_opcion_de_compra: "Arriendo con Opción de Compra",
     arriendo_temporal: "Arriendo Temporal",
-    permuta: "Permuta",
-    venta_permuta: "Venta / Permuta",
-    aporte: "Aporte"
+    permuta: "Permuta Pura (100%)",
+    venta_permuta: "Venta / Permuta (Venpermuto)",
+    venta_permuta_50_50: "Venta 50% / Permuta 50%",
+    venta_permuta_60_40: "Venta 60% / Permuta 40%",
+    venta_permuta_70_30: "Venta 70% / Permuta 30%",
+    venta_permuta_80_20: "Venta 80% / Permuta 20%",
+    venta_permuta_90_10: "Venta 90% / Permuta 10%",
+    venta_permuta_10_90: "Venta 10% / Permuta 90%",
+    venta_permuta_20_80: "Venta 20% / Permuta 80%",
+    venta_permuta_30_70: "Venta 30% / Permuta 70%",
+    venta_permuta_40_60: "Venta 40% / Permuta 60%",
+    aporte: "Aporte a Proyecto"
   };
   return m[clean] || type;
 }
@@ -205,6 +236,51 @@ function scoreRows(req: any, prop: any) {
     const t = (type || "").toLowerCase().trim();
     const clean = ((raw || "") + " " + (type || "")).toLowerCase().trim().replace(/[\s\-_,.]+/g, " ");
     
+    if (clean.includes("penthouse duplex") || clean.includes("pent house duplex") || clean.includes("ph duplex") || clean.includes("penthouse dúplex") || clean.includes("pent house dúplex")) {
+      return "penthouse_duplex";
+    }
+    if (clean.includes("penthouse") || clean.includes("pent house") || clean.includes("ph ")) {
+      return "penthouse";
+    }
+    if (clean.includes("apartamento duplex") || clean.includes("apartamento dúplex") || clean.includes("apto duplex") || clean.includes("apto dúplex") || clean.includes("duplex") || clean.includes("dúplex") || clean.includes("triplex")) {
+      return "apartamento_duplex";
+    }
+    if (clean.includes("apartaestudio") || clean.includes("aparta estudio") || clean.includes("studio")) {
+      return "apartaestudio";
+    }
+    if (clean.includes("apartasuit") || clean.includes("aparta suit") || clean.includes("apartasuite") || clean.includes("aparta suite")) {
+      return "aparta_suit";
+    }
+    if (clean.includes("aparta hotel") || clean.includes("apartahotel")) {
+      return "aparta_hotel";
+    }
+    if (clean.includes("loft")) {
+      return "loft";
+    }
+    if (clean.includes("hostal") || clean.includes("hostel")) {
+      return "hostal";
+    }
+    if (clean.includes("motel")) {
+      return "motel";
+    }
+    if (clean.includes("hotel")) {
+      return "hotel";
+    }
+    if (clean.includes("casa campestre")) {
+      return "casa_campestre";
+    }
+    if (clean.includes("casa quinta")) {
+      return "casa_quinta";
+    }
+    if (clean.includes("villa")) {
+      return "villa";
+    }
+    if (clean.includes("finca") || clean.includes("casa de campo") || clean.includes("farm")) {
+      return "farm";
+    }
+    if (clean.includes("cabaña") || clean.includes("cabana") || clean.includes("cabañas") || clean.includes("cabin")) {
+      return "cabin";
+    }
     if (clean.includes("consultorio") || clean.includes("consultorios") || clean.includes("odontol") || clean.includes("médic") || clean.includes("medic")) {
       return "consultorio";
     }
@@ -217,37 +293,16 @@ function scoreRows(req: any, prop: any) {
     if (clean.includes("oficina") || clean.includes("oficinas") || /\boffice\b/.test(clean)) {
       return "office";
     }
-    if (clean.includes("cabaña") || clean.includes("cabana") || clean.includes("cabañas") || clean.includes("cabin")) {
-      return "cabin";
-    }
-    if (clean.includes("finca") || clean.includes("campestre") || clean.includes("casa de campo") || clean.includes("farm")) {
-      return "farm";
-    }
-    if (clean.includes("casa") || clean.includes("townhouse") || clean.includes("chalet") || clean.includes("house")) {
-      if (!clean.includes("apartamento") && !clean.includes("apto")) {
-        return "house";
-      }
-    }
     if (clean.includes("lote") || clean.includes("terreno") || clean.includes("predio") || clean.includes("land")) {
       return "land";
     }
     if (clean.includes("edificio") || clean.includes("building")) {
       return "building";
     }
-    if (clean.includes("hotel") || clean.includes("hostal") || clean.includes("hostel")) {
-      return "hotel";
-    }
-    if (clean.includes("apartaestudio") || clean.includes("aparta estudio") || clean.includes("apartasuite") || clean.includes("aparta suite") || clean.includes("studio")) {
-      return "apartaestudio";
-    }
-    if (clean.includes("loft")) {
-      return "loft";
-    }
-    if (clean.includes("penthouse") || clean.includes("pent house") || clean.includes("ph ")) {
-      return "penthouse";
-    }
-    if (clean.includes("duplex") || clean.includes("dúplex") || clean.includes("triplex")) {
-      return "apartamento_duplex";
+    if (clean.includes("casa") || clean.includes("townhouse") || clean.includes("chalet") || clean.includes("house")) {
+      if (!clean.includes("apartamento") && !clean.includes("apto")) {
+        return "house";
+      }
     }
     if (clean.includes("apartamento") || clean.includes("apto") || clean.includes("apartment")) {
       return "apartamento_estandar";
@@ -265,6 +320,8 @@ function scoreRows(req: any, prop: any) {
     typeMatchStatus = "exact";
   } else if ((reqSubtype === "apartaestudio" && propSubtype === "loft") || (reqSubtype === "loft" && propSubtype === "apartaestudio")) {
     typeMatchStatus = "exact"; // Apartaestudio y Loft de 1 hab son compatibles
+  } else if ((reqSubtype === "apartaestudio" && propSubtype === "aparta_suit") || (reqSubtype === "aparta_suit" && propSubtype === "apartaestudio")) {
+    typeMatchStatus = "exact"; // Apartaestudio y Aparta Suit son compatibles
   } else {
     typeMatchStatus = "missing"; // No coincide -> 0% Guillotina
   }
@@ -272,20 +329,28 @@ function scoreRows(req: any, prop: any) {
   const getSubtypeFriendlyLabel = (sub: string | null | undefined): string => {
     if (!sub) return "N/E";
     if (sub === "consultorio") return "Consultorio Médico / Dotacional";
-    if (sub === "office") return "Oficina";
-    if (sub === "commercial") return "Local Comercial";
-    if (sub === "warehouse") return "Bodega";
-    if (sub === "house") return "Casa Urbana";
-    if (sub === "farm") return "Casa Campestre / Finca";
-    if (sub === "land") return "Lote / Terreno";
-    if (sub === "building") return "Edificio";
+    if (sub === "office" || sub === "oficina") return "Oficina";
+    if (sub === "commercial" || sub === "local") return "Local Comercial";
+    if (sub === "warehouse" || sub === "bodega") return "Bodega";
+    if (sub === "house" || sub === "casa") return "Casa Urbana";
+    if (sub === "casa_campestre") return "Casa Campestre";
+    if (sub === "casa_quinta") return "Casa Quinta";
+    if (sub === "villa") return "Villa";
+    if (sub === "farm" || sub === "finca") return "Finca";
+    if (sub === "land" || sub === "lote") return "Lote / Terreno";
+    if (sub === "building" || sub === "edificio") return "Edificio";
     if (sub === "hotel") return "Hotel";
-    if (sub === "cabin") return "Cabaña";
-    if (sub === "apartaestudio") return "Apartaestudio / Aparta Suite";
+    if (sub === "hostal") return "Hostal";
+    if (sub === "aparta_hotel") return "Aparta Hotel";
+    if (sub === "aparta_suit") return "Aparta Suit";
+    if (sub === "motel") return "Motel";
+    if (sub === "cabin" || sub === "cabaña") return "Cabaña";
+    if (sub === "apartaestudio") return "Apartaestudio";
     if (sub === "loft") return "Loft";
-    if (sub === "penthouse") return "PentHouse";
+    if (sub === "penthouse_duplex") return "Pent House Dúplex";
+    if (sub === "penthouse") return "Pent House";
     if (sub === "apartamento_duplex") return "Apartamento Dúplex";
-    if (sub === "apartamento_estandar" || sub === "apartment" || sub === "apartamento") return "Apartamento Familiar";
+    if (sub === "apartamento_estandar" || sub === "apartment" || sub === "apartamento") return "Apartamento";
     return getPropTypeLabel(sub);
   };
 
@@ -305,6 +370,18 @@ function scoreRows(req: any, prop: any) {
   const normalizeNegocio = (val: string, raw: string): string => {
     const combined = ((val || "") + " " + (raw || "")).toLowerCase();
     if (combined.includes("arriendo con opci") || combined.includes("rent to own")) return "arriendo_con_opcion_de_compra";
+    
+    // Detección de proporciones porcentuales de permuta
+    if (combined.includes("50%") || combined.includes("50/50") || combined.includes("50 / 50") || combined.includes("mitad")) return "venta_permuta_50_50";
+    if (combined.includes("60%") || combined.includes("60/40") || combined.includes("60 / 40")) return "venta_permuta_60_40";
+    if (combined.includes("70%") || combined.includes("70/30") || combined.includes("70 / 30")) return "venta_permuta_70_30";
+    if (combined.includes("80%") || combined.includes("80/20") || combined.includes("80 / 20")) return "venta_permuta_80_20";
+    if (combined.includes("90%") || combined.includes("90/10") || combined.includes("90 / 10")) return "venta_permuta_90_10";
+    if (combined.includes("10%") || combined.includes("10/90") || combined.includes("10 / 90")) return "venta_permuta_10_90";
+    if (combined.includes("20%") || combined.includes("20/80") || combined.includes("20 / 80")) return "venta_permuta_20_80";
+    if (combined.includes("30%") || combined.includes("30/70") || combined.includes("30 / 70")) return "venta_permuta_30_70";
+    if (combined.includes("40%") || combined.includes("40/60") || combined.includes("40 / 60")) return "venta_permuta_40_60";
+
     if (combined.includes("venpermuto") || combined.includes("venta permuta") || combined.includes("venta-permuta") || combined.includes("recibe permuta") || combined.includes("recibo menor valor") || combined.includes("permuto") || combined.includes("permuta")) return "venta_permuta";
     if (combined.includes("venta o arriendo") || combined.includes("vendo o arriendo") || combined.includes("venta/arriendo")) return "venta_o_arriendo";
     if (combined.includes("arriendo") || combined.includes("renta") || combined.includes("alquiler")) return "arriendo";
@@ -322,7 +399,9 @@ function scoreRows(req: any, prop: any) {
     negMatchStatus = "exact";
   } else if (cleanReqBiz === "arriendo" && cleanPropBiz === "venta_o_arriendo") {
     negMatchStatus = "exact";
-  } else if (cleanReqBiz === "venta_permuta" && (cleanPropBiz === "venta_permuta" || cleanPropBiz === "permuta")) {
+  } else if (cleanReqBiz.startsWith("venta_permuta") && cleanPropBiz.startsWith("venta_permuta")) {
+    negMatchStatus = cleanReqBiz === cleanPropBiz ? "exact" : "warn";
+  } else if ((cleanReqBiz === "permuta" || cleanReqBiz.startsWith("venta_permuta")) && (cleanPropBiz === "permuta" || cleanPropBiz.startsWith("venta_permuta"))) {
     negMatchStatus = "exact";
   } else {
     negMatchStatus = "missing"; // No coincide -> 0% Guillotina
@@ -330,6 +409,16 @@ function scoreRows(req: any, prop: any) {
 
   const getBusinessDisplayLabel = (bType: string): string => {
     if (bType === "arriendo_con_opcion_de_compra") return "Arriendo con Opción de Compra";
+    if (bType === "venta_permuta_50_50") return "Venta 50% / Permuta 50%";
+    if (bType === "venta_permuta_60_40") return "Venta 60% / Permuta 40%";
+    if (bType === "venta_permuta_70_30") return "Venta 70% / Permuta 30%";
+    if (bType === "venta_permuta_80_20") return "Venta 80% / Permuta 20%";
+    if (bType === "venta_permuta_90_10") return "Venta 90% / Permuta 10%";
+    if (bType === "venta_permuta_10_90") return "Venta 10% / Permuta 90%";
+    if (bType === "venta_permuta_20_80") return "Venta 20% / Permuta 80%";
+    if (bType === "venta_permuta_30_70") return "Venta 30% / Permuta 70%";
+    if (bType === "venta_permuta_40_60") return "Venta 40% / Permuta 60%";
+    if (bType === "permuta") return "Permuta Pura (100%)";
     if (bType === "venta_permuta") return "Venta / Permuta (Venpermuto)";
     if (bType === "venta_o_arriendo") return "Venta / Arriendo";
     if (bType === "arriendo") return "Arriendo";
@@ -930,92 +1019,334 @@ function scoreRows(req: any, prop: any) {
     <Utensils className="w-3.5 h-3.5" />
   );
 
-  // 19. Chimenea & Zonas Sociales
+  // 19. Chimeneas por Combustible (Leña / Gas / Bioetanol)
   const propHasFireplace = propRawText.includes("chimenea") || propRawText.includes("doble sala") || propRawText.includes("doble altura");
   const reqWantsFireplace = reqTextLower.includes("chimenea") || reqTextLower.includes("doble sala");
-  let fpStatus: MatchStatus = "neutral";
-  if (reqWantsFireplace && propHasFireplace) fpStatus = "exact";
-  else if (!reqWantsFireplace && propHasFireplace) fpStatus = "plus";
-  else if (reqWantsFireplace && !propHasFireplace) fpStatus = "warn";
-  else fpStatus = "neutral";
-  add(
-    "Chimenea & Zonas Sociales",
-    reqWantsFireplace ? "Exige Chimenea / Doble Sala" : "Flexible",
-    propHasFireplace ? "Sí (Doble sala con chimenea)" : "Sin chimenea especificada",
-    fpStatus,
-    3,
-    <Flame className="w-3.5 h-3.5" />
-  );
+  
+  const deduceFireplaceFuel = (text: string): string => {
+    if (text.includes("gas") || text.includes("chimenea a gas")) return "a Gas";
+    if (text.includes("bioetanol") || text.includes("ecol") || text.includes("bio-etanol")) return "de Bioetanol";
+    if (text.includes("leña") || text.includes("tradicional") || text.includes("madera")) return "Convencional a Leña";
+    return "Tradicional";
+  };
 
-  // 20. Cuarto y Baño de Servicio (CBS)
+  if (propHasFireplace || reqWantsFireplace) {
+    let fpStatus: MatchStatus = "neutral";
+    const propFuel = deduceFireplaceFuel(propRawText);
+    const reqFuel = deduceFireplaceFuel(reqTextLower);
+    if (reqWantsFireplace && propHasFireplace) fpStatus = "exact";
+    else if (!reqWantsFireplace && propHasFireplace) fpStatus = "plus";
+    else if (reqWantsFireplace && !propHasFireplace) fpStatus = "warn";
+    else fpStatus = "neutral";
+
+    add(
+      "Chimenea",
+      reqWantsFireplace ? `Exige Chimenea ${reqFuel}` : "Flexible",
+      propHasFireplace ? `Sí (Chimenea ${propFuel})` : "Sin chimenea especificada",
+      fpStatus,
+      3,
+      <Flame className="w-3.5 h-3.5" />
+    );
+  }
+
+  // 20. Cuarto de Servicio (CBS) con/sin baño
   const reqCBS = reqTextLower.includes("cbs") || reqTextLower.includes("cuarto de servicio") || reqTextLower.includes("alcoba de servicio") || reqTextLower.includes("cuarto y baño de servicio") || reqTextLower.includes("cuarto y bano de servicio");
   const propCBS = propRawText.includes("cbs") || propRawText.includes("cuarto de servicio") || propRawText.includes("alcoba de servicio") || propRawText.includes("cuarto y baño de servicio") || propRawText.includes("alcoba para el servicio") || prop.hasServiceRoom;
-  let cbsStatus: MatchStatus = "neutral";
-  if (reqCBS && propCBS) cbsStatus = "exact";
-  else if (reqCBS && !propCBS) cbsStatus = "warn";
-  else if (!reqCBS && propCBS) cbsStatus = "plus";
-  else cbsStatus = "neutral";
-  add(
-    "Cuarto y Baño Servicio (CBS)",
-    reqCBS ? "Exige CBS (Cuarto y Baño de Servicio)" : "Flexible / No exigido",
-    propCBS ? "Sí (Incluye Cuarto y Baño de Servicio)" : "Sin CBS especificado",
-    cbsStatus,
-    4,
-    <Home className="w-3.5 h-3.5" />
-  );
+  
+  if (reqCBS || propCBS) {
+    const reqHasBathInCBS = reqTextLower.includes("con baño") || reqTextLower.includes("con bano") || reqTextLower.includes("cuarto y baño");
+    const propHasBathInCBS = propRawText.includes("con baño") || propRawText.includes("con bano") || propRawText.includes("cuarto y baño") || propRawText.includes("cbs");
+
+    let cbsStatus: MatchStatus = "neutral";
+    if (reqCBS && propCBS) cbsStatus = "exact";
+    else if (reqCBS && !propCBS) cbsStatus = "warn";
+    else if (!reqCBS && propCBS) cbsStatus = "plus";
+    else cbsStatus = "neutral";
+
+    add(
+      "Cuarto de Servicio (CBS)",
+      reqCBS ? (reqHasBathInCBS ? "Exige CBS con Baño" : "Exige Cuarto de Servicio") : "Flexible / No exigido",
+      propCBS ? (propHasBathInCBS ? "Sí (Con Baño Privado)" : "Sí (Sin Baño)") : "Sin CBS especificado",
+      cbsStatus,
+      4,
+      <Home className="w-3.5 h-3.5" />
+    );
+  }
 
   // 21. Estudio / Star de TV / Home Office
   const propHasStudy = propRawText.includes("estudio") || propRawText.includes("estar de tv") || propRawText.includes("star de tv") || propRawText.includes("sala de tv") || prop.hasStudy;
   const reqWantsStudy = reqTextLower.includes("estudio") || reqTextLower.includes("estar de tv") || reqTextLower.includes("star de tv") || reqTextLower.includes("home office");
-  let studyStatus: MatchStatus = "neutral";
-  if (reqWantsStudy && propHasStudy) studyStatus = "exact";
-  else if (reqWantsStudy && !propHasStudy) studyStatus = "warn";
-  else if (!reqWantsStudy && propHasStudy) studyStatus = "plus";
-  else studyStatus = "neutral";
-  add(
-    "Estudio / Star de TV",
-    reqWantsStudy ? "Exige Estudio / Star de TV" : "Flexible",
-    propHasStudy ? "Sí (Estudio independiente)" : "Sin estudio especificado",
-    studyStatus,
-    4,
-    <BookOpen className="w-3.5 h-3.5" />
-  );
+  if (propHasStudy || reqWantsStudy) {
+    let studyStatus: MatchStatus = "neutral";
+    if (reqWantsStudy && propHasStudy) studyStatus = "exact";
+    else if (reqWantsStudy && !propHasStudy) studyStatus = "warn";
+    else if (!reqWantsStudy && propHasStudy) studyStatus = "plus";
+    else studyStatus = "neutral";
+    add(
+      "Estudio / Star de TV",
+      reqWantsStudy ? "Exige Estudio / Star de TV" : "Flexible",
+      propHasStudy ? "Sí (Estudio independiente)" : "Sin estudio especificado",
+      studyStatus,
+      4,
+      <Tv className="w-3.5 h-3.5" />
+    );
+  }
 
   // 22. Vigilancia & Seguridad 24/7
   const reqVig = reqTextLower.includes("vigilancia") || reqTextLower.includes("porteria") || reqTextLower.includes("portería") || reqTextLower.includes("seguridad");
   const propVig = propRawText.includes("vigilancia") || propRawText.includes("porteria") || propRawText.includes("portería") || propRawText.includes("24 horas") || propRawText.includes("24/7");
-  let vigStatus: MatchStatus = "neutral";
-  if (reqVig && propVig) vigStatus = "exact";
-  else if (reqVig && !propVig) vigStatus = "warn";
-  else if (!reqVig && propVig) vigStatus = "plus";
-  else vigStatus = "neutral";
-  add(
-    "Vigilancia & Seguridad 24/7",
-    reqVig ? "Exige Vigilancia 24 Horas" : "Flexible",
-    propVig ? "Sí (Portería y Vigilancia 24/7)" : "Sin vigilancia especificada",
-    vigStatus,
-    3,
-    <Shield className="w-3.5 h-3.5" />
-  );
+  if (reqVig || propVig) {
+    let vigStatus: MatchStatus = "neutral";
+    if (reqVig && propVig) vigStatus = "exact";
+    else if (reqVig && !propVig) vigStatus = "warn";
+    else if (!reqVig && propVig) vigStatus = "plus";
+    else vigStatus = "neutral";
+    add(
+      "Vigilancia & Seguridad 24/7",
+      reqVig ? "Exige Vigilancia 24 Horas" : "Flexible",
+      propVig ? "Sí (Portería y Vigilancia 24/7)" : "Sin vigilancia especificada",
+      vigStatus,
+      3,
+      <Shield className="w-3.5 h-3.5" />
+    );
+  }
 
   // 23. Parqueadero de Visitantes
   const reqVisitantes = reqTextLower.includes("visitantes") || reqTextLower.includes("parqueadero de visitantes") || reqTextLower.includes("parqueo visitantes");
   const propVisitantes = propRawText.includes("visitantes") || propRawText.includes("parqueadero de visitantes") || propRawText.includes("parqueadero para visitantes") || prop.hasVisitorParking;
-  let vStatus: MatchStatus = "neutral";
-  if (reqVisitantes && propVisitantes) vStatus = "exact";
-  else if (reqVisitantes && !propVisitantes) vStatus = "warn";
-  else if (!reqVisitantes && propVisitantes) vStatus = "plus";
-  else vStatus = "neutral";
-  add(
-    "Parqueadero de Visitantes",
-    reqVisitantes ? "Exige Parqueadero de Visitantes" : "Flexible",
-    propVisitantes ? "Sí (Parqueadero para Visitantes)" : "Sin visitantes especificado",
-    vStatus,
-    3,
-    <Car className="w-3.5 h-3.5" />
-  );
+  if (reqVisitantes || propVisitantes) {
+    let vStatus: MatchStatus = "neutral";
+    if (reqVisitantes && propVisitantes) vStatus = "exact";
+    else if (reqVisitantes && !propVisitantes) vStatus = "warn";
+    else if (!reqVisitantes && propVisitantes) vStatus = "plus";
+    else vStatus = "neutral";
+    add(
+      "Parqueadero de Visitantes",
+      reqVisitantes ? "Exige Parqueadero de Visitantes" : "Flexible",
+      propVisitantes ? "Sí (Parqueadero para Visitantes)" : "Sin visitantes especificado",
+      vStatus,
+      3,
+      <Car className="w-3.5 h-3.5" />
+    );
+  }
 
-  // 24. Teléfono / Contacto WhatsApp
+  // 24. Garajes para Moto
+  const reqMoto = reqTextLower.includes("moto") || reqTextLower.includes("motocicleta") || reqTextLower.includes("parqueadero moto");
+  const propMoto = propRawText.includes("moto") || propRawText.includes("motocicleta") || propRawText.includes("parqueadero moto") || propRawText.includes("garaje moto");
+  if (reqMoto || propMoto) {
+    let motoS: MatchStatus = "neutral";
+    if (reqMoto && propMoto) motoS = "exact";
+    else if (!reqMoto && propMoto) motoS = "plus";
+    else if (reqMoto && !propMoto) motoS = "warn";
+    add(
+      "Garajes para Moto",
+      reqMoto ? "Exige Parqueadero Moto" : "Flexible",
+      propMoto ? "Sí (Cuenta con Garaje Moto)" : "Sin dato de moto",
+      motoS,
+      3,
+      <Car className="w-3.5 h-3.5" />
+    );
+  }
+
+  // 25. Piso y Nivel del Edificio
+  const reqFloorMatch = reqTextLower.match(/piso\s*(\d+)|primer\s*piso|segundo\s*piso|tercer\s*piso|piso\s*alto|piso\s*bajo/i);
+  const propFloorMatch = propRawText.match(/piso\s*(\d+)|primer\s*piso|segundo\s*piso|tercer\s*piso|piso\s*alto|piso\s*bajo/i);
+  if (reqFloorMatch || propFloorMatch) {
+    const reqFloorLabel = reqFloorMatch ? reqFloorMatch[0].toUpperCase() : "Flexible";
+    const propFloorLabel = propFloorMatch ? propFloorMatch[0].toUpperCase() : "Consultar";
+    let floorS: MatchStatus = "neutral";
+    if (reqFloorMatch && propFloorMatch) {
+      floorS = reqFloorLabel === propFloorLabel ? "exact" : "warn";
+    } else if (!reqFloorMatch && propFloorMatch) {
+      floorS = "plus";
+    }
+    add(
+      "Piso / Nivel",
+      reqFloorLabel,
+      propFloorLabel,
+      floorS,
+      3,
+      <Layers className="w-3.5 h-3.5" />
+    );
+  }
+
+  // 26. Ubicación en Piso (Vista Exterior / Interior)
+  const reqExtInt = reqTextLower.includes("exterior") ? "Exterior" : (reqTextLower.includes("interior") ? "Interior" : null);
+  const propExtInt = propRawText.includes("exterior") ? "Exterior" : (propRawText.includes("interior") ? "Interior" : null);
+  if (reqExtInt || propExtInt) {
+    let viewS: MatchStatus = "neutral";
+    if (reqExtInt && propExtInt) {
+      viewS = reqExtInt === propExtInt ? "exact" : "missing";
+    } else if (!reqExtInt && propExtInt) {
+      viewS = "plus";
+    }
+    add(
+      "Ubicación en Piso (Vista)",
+      reqExtInt ? `Exige Vista ${reqExtInt}` : "Flexible",
+      propExtInt ? `Vista ${propExtInt}` : "Consultar",
+      viewS,
+      3,
+      <Compass className="w-3.5 h-3.5" />
+    );
+  }
+
+  // 27. Estado de Conservación del Inmueble
+  const reqState = reqTextLower.includes("remodelado") ? "Remodelado" : (reqTextLower.includes("remodelar") ? "A Remodelar" : (reqTextLower.includes("estrenar") ? "Excelente / A Estrenar" : null));
+  const propState = propRawText.includes("remodelado") ? "Remodelado" : (propRawText.includes("remodelar") ? "A Remodelar" : (propRawText.includes("estrenar") ? "Excelente / A Estrenar" : (propRawText.includes("excelente estado") ? "Excelente" : null)));
+  if (reqState || propState) {
+    let stateS: MatchStatus = "neutral";
+    if (reqState && propState) {
+      stateS = reqState === propState ? "exact" : "warn";
+    } else if (!reqState && propState) {
+      stateS = "plus";
+    }
+    add(
+      "Estado del Inmueble",
+      reqState ? reqState : "Flexible",
+      propState ? propState : "Bueno (Estándar)",
+      stateS,
+      3,
+      <ShieldCheck className="w-3.5 h-3.5" />
+    );
+  }
+
+  // 28. Cava de Vinos
+  const reqWine = reqTextLower.includes("cava") || reqTextLower.includes("cava de vinos");
+  const propWine = propRawText.includes("cava") || propRawText.includes("cava de vinos");
+  if (reqWine || propWine) {
+    let wineS: MatchStatus = "neutral";
+    if (reqWine && propWine) wineS = "exact";
+    else if (!reqWine && propWine) wineS = "plus";
+    else if (reqWine && !propWine) wineS = "warn";
+    add(
+      "Cava de Vinos",
+      reqWine ? "Exige Cava de Vinos" : "Flexible",
+      propWine ? "Sí (Cava de vinos incluida)" : "Sin cava especificada",
+      wineS,
+      3,
+      <Wine className="w-3.5 h-3.5" />
+    );
+  }
+
+  // 29. Terrazas con Área y BBQ Condicional
+  const reqTerraceBBQ = reqTextLower.includes("bbq") && reqTextLower.includes("terraza");
+  const propTerraceBBQ = propRawText.includes("bbq") && (propRawText.includes("terraza") || propRawText.includes("parrilla"));
+  if (reqTerraceBBQ || propTerraceBBQ) {
+    let bbqs: MatchStatus = "neutral";
+    if (reqTerraceBBQ && propTerraceBBQ) bbqs = "exact";
+    else if (!reqTerraceBBQ && propTerraceBBQ) bbqs = "plus";
+    else if (reqTerraceBBQ && !propTerraceBBQ) bbqs = "warn";
+    add(
+      "Terraza con Zona BBQ",
+      reqTerraceBBQ ? "Exige Terraza con BBQ" : "Flexible",
+      propTerraceBBQ ? "Sí (Terraza con Zona BBQ privada)" : "Sin BBQ en terraza",
+      bbqs,
+      3,
+      <Flame className="w-3.5 h-3.5" />
+    );
+  }
+
+  // ── INYECCIÓN DINÁMICA DE LAS 64 CARACTERÍSTICAS & AMENIDADES ("POR ARTE DE MAGIA") ──
+  const DYNAMIC_AMENITIES: Array<{
+    name: string;
+    patterns: string[];
+    icon: React.ReactNode;
+    weight?: number;
+  }> = [
+    // ✨ 23 CARACTERÍSTICAS INTERNAS
+    { name: "Aire Acondicionado", patterns: ["aire acondicionado", "aire acond", "climatizado", "a/a"], icon: <Wind className="w-3.5 h-3.5" /> },
+    { name: "Alarma de Seguridad", patterns: ["alarma", "sistema de alarma"], icon: <Lock className="w-3.5 h-3.5" /> },
+    { name: "Amoblado", patterns: ["amoblado", "full amoblado", "con muebles"], icon: <Home className="w-3.5 h-3.5" /> },
+    { name: "Acabados de Alta Gama", patterns: ["alta gama", "acabados de lujo", "marmol", "mármol", "acabados importados"], icon: <Maximize className="w-3.5 h-3.5" /> },
+    { name: "Acabados Modernos", patterns: ["acabados modernos", "diseño moderno"], icon: <Sparkles className="w-3.5 h-3.5" /> },
+    { name: "Bar / Zona Bar", patterns: ["barra de bar", "zona de bar", "mueble bar"], icon: <Coffee className="w-3.5 h-3.5" /> },
+    { name: "Baño en Alcoba Principal", patterns: ["baño en alcoba principal", "baño privado principal", "en suite"], icon: <Bath className="w-3.5 h-3.5" /> },
+    { name: "Baño en Todas las Alcobas", patterns: ["baño en cada alcoba", "baño en todas las", "todas con baño"], icon: <Bath className="w-3.5 h-3.5" /> },
+    { name: "Citófono", patterns: ["citofono", "citófono", "intercomunicador"], icon: <Phone className="w-3.5 h-3.5" /> },
+    { name: "Clósets Empotrados", patterns: ["closets", "clósets", "closet empotrado"], icon: <Archive className="w-3.5 h-3.5" /> },
+    { name: "Comedor Auxiliar", patterns: ["comedor auxiliar", "comedor de diario"], icon: <Utensils className="w-3.5 h-3.5" /> },
+    { name: "Despensa / Alacena", patterns: ["despensa", "alacena"], icon: <Archive className="w-3.5 h-3.5" /> },
+    { name: "Doble Ventana / Antiruido", patterns: ["doble ventana", "termoacustica", "termoacústica", "antiruido"], icon: <VolumeX className="w-3.5 h-3.5" /> },
+    { name: "Gas Domiciliario", patterns: ["gas domiciliario", "gas natural", "red de gas"], icon: <Fuel className="w-3.5 h-3.5" /> },
+    { name: "Iluminación Natural", patterns: ["iluminacion natural", "iluminación natural", "luz natural", "muy iluminado"], icon: <Sun className="w-3.5 h-3.5" /> },
+    { name: "Hall de Alcobas", patterns: ["hall de alcobas", "estar de habitaciones"], icon: <Home className="w-3.5 h-3.5" /> },
+    { name: "Jacuzzi / Hidromasaje", patterns: ["jacuzzi", "hidromasaje", "tina jacuzzi"], icon: <Waves className="w-3.5 h-3.5" /> },
+    { name: "Turco Privado", patterns: ["turco privado", "baño turco"], icon: <Waves className="w-3.5 h-3.5" /> },
+    { name: "Vestier / Walk-in Closet", patterns: ["vestier", "walk-in closet", "walking closet", "vestidor"], icon: <Archive className="w-3.5 h-3.5" /> },
+    { name: "Vista Panorámica", patterns: ["vista panoramica", "vista panorámica", "vista a la ciudad", "vista verde", "vista a los cerros"], icon: <Mountain className="w-3.5 h-3.5" /> },
+    { name: "Zona de Lavandería", patterns: ["zona de lavanderia", "zona de lavandería", "cuarto de ropas"], icon: <Zap className="w-3.5 h-3.5" /> },
+
+    // 🏢 41 CARACTERÍSTICAS EXTERNAS
+    { name: "Acceso Pavimentado", patterns: ["acceso pavimentado", "via pavimentada", "vía pavimentada", "asfalto"], icon: <MapPin className="w-3.5 h-3.5" /> },
+    { name: "Área Social / Comunal", patterns: ["area social", "área social", "salon social", "zonas sociales"], icon: <Home className="w-3.5 h-3.5" /> },
+    { name: "Áreas Turísticas", patterns: ["area turistica", "área turística", "zona turistica"], icon: <Landmark className="w-3.5 h-3.5" /> },
+    { name: "Bancos Cercanos", patterns: ["bancos cercanos", "zona bancaria"], icon: <Landmark className="w-3.5 h-3.5" /> },
+    { name: "Barbacoa / Parrilla Comunal", patterns: ["barbacoa", "quincho", "parrilla comunal"], icon: <Flame className="w-3.5 h-3.5" /> },
+    { name: "Bosques Nativos", patterns: ["bosque nativo", "bosques nativos", "reserva forestal"], icon: <Trees className="w-3.5 h-3.5" /> },
+    { name: "Caldera Central", patterns: ["caldera", "agua caliente central"], icon: <Flame className="w-3.5 h-3.5" /> },
+    { name: "Cancha de Baloncesto", patterns: ["cancha de baloncesto", "cancha baloncesto", "basket"], icon: <Trophy className="w-3.5 h-3.5" /> },
+    { name: "Cancha de Fútbol", patterns: ["cancha de futbol", "cancha de fútbol", "cancha sintetica", "cancha sintética", "futbol 5"], icon: <Trophy className="w-3.5 h-3.5" /> },
+    { name: "Cancha de Golf", patterns: ["cancha de golf", "campo de golf", "golf"], icon: <Trophy className="w-3.5 h-3.5" /> },
+    { name: "Cancha de Squash", patterns: ["cancha de squash", "cancha squash", "squash"], icon: <Trophy className="w-3.5 h-3.5" /> },
+    { name: "Cancha de Tenis", patterns: ["cancha de tenis", "cancha tenis", "tennis"], icon: <Trophy className="w-3.5 h-3.5" /> },
+    { name: "Centros Comerciales", patterns: ["centro comercial", "centros comerciales", "c.c."], icon: <Building2 className="w-3.5 h-3.5" /> },
+    { name: "Centros Médicos / Clínicas", patterns: ["centro medico", "centros medicos", "clinica", "clínica", "hospital"], icon: <ShieldAlert className="w-3.5 h-3.5" /> },
+    { name: "Club House", patterns: ["club house", "clubhouse"], icon: <Home className="w-3.5 h-3.5" /> },
+    { name: "Colegios / Universidades", patterns: ["colegio", "colegios", "universidad", "universidades"], icon: <School className="w-3.5 h-3.5" /> },
+    { name: "Edificio Inteligente", patterns: ["edificio inteligente", "domotica", "domótica"], icon: <Zap className="w-3.5 h-3.5" /> },
+    { name: "Gimnasio Dotado", patterns: ["gimnasio", "gym"], icon: <Dumbbell className="w-3.5 h-3.5" /> },
+    { name: "Kiosco / Bohío", patterns: ["kiosco", "quiosco", "bohio", "bohío"], icon: <Home className="w-3.5 h-3.5" /> },
+    { name: "Lago / Espejo de Agua", patterns: ["lago", "laguna", "espejo de agua"], icon: <Waves className="w-3.5 h-3.5" /> },
+    { name: "Lavandería Comunal", patterns: ["lavanderia comunal", "lavandería comunal"], icon: <Zap className="w-3.5 h-3.5" /> },
+    { name: "Parques Cercanos", patterns: ["parques cercanos", "frente a parque", "cerca a parque"], icon: <Trees className="w-3.5 h-3.5" /> },
+    { name: "Parque Infantil", patterns: ["parque infantil", "juegos infantiles"], icon: <Smile className="w-3.5 h-3.5" /> },
+    { name: "Piscina", patterns: ["piscina", "piscinas", "piscina climatizada", "piscina sin fin"], icon: <Waves className="w-3.5 h-3.5" /> },
+    { name: "Pista de Pádel", patterns: ["padel", "pádel", "pista de padel", "cancha de padel"], icon: <Trophy className="w-3.5 h-3.5" /> },
+    { name: "Planta Eléctrica", patterns: ["planta electrica", "planta eléctrica", "planta total", "suplencia total"], icon: <Zap className="w-3.5 h-3.5" /> },
+    { name: "Portería / Recepción", patterns: ["porteria", "portería", "recepcion", "recepción", "lobby"], icon: <Shield className="w-3.5 h-3.5" /> },
+    { name: "Salón Infantil / Playroom", patterns: ["salon infantil", "salón infantil", "playroom"], icon: <Smile className="w-3.5 h-3.5" /> },
+    { name: "Salón Comunal", patterns: ["salon comunal", "salón comunal", "salon de eventos"], icon: <Home className="w-3.5 h-3.5" /> },
+    { name: "Salón de Juegos", patterns: ["salon de juegos", "salón de juegos", "billar", "ping pong"], icon: <Smile className="w-3.5 h-3.5" /> },
+    { name: "Sauna / Turco Comunal", patterns: ["sauna", "zona humeda", "zonas humedas", "zonas húmedas"], icon: <Waves className="w-3.5 h-3.5" /> },
+    { name: "Seguridad Privada 24/7", patterns: ["seguridad 24", "cctv", "circuito cerrado"], icon: <Lock className="w-3.5 h-3.5" /> },
+    { name: "Sobre Vía Principal", patterns: ["sobre via principal", "sobre vía principal", "frente a avenida"], icon: <MapPin className="w-3.5 h-3.5" /> },
+    { name: "Shut de Basuras", patterns: ["shut", "shut de basuras"], icon: <Archive className="w-3.5 h-3.5" /> },
+    { name: "Teatrino / Cine", patterns: ["teatrino", "sala de cine", "cinema"], icon: <Tv className="w-3.5 h-3.5" /> },
+    { name: "Terraza Comunal / Rooftop", patterns: ["terraza comunal", "rooftop", "terraza comunitaria"], icon: <Layers className="w-3.5 h-3.5" /> },
+    { name: "Transporte Público Cercano", patterns: ["transporte publico", "transporte público", "transmilenio", "sitp"], icon: <MapPin className="w-3.5 h-3.5" /> },
+    { name: "Zonas Deportivas", patterns: ["zonas deportivas", "polideportivo"], icon: <Trophy className="w-3.5 h-3.5" /> },
+    { name: "Zonas Verdes", patterns: ["zonas verdes", "senderos verdes", "jardines comunales"], icon: <Trees className="w-3.5 h-3.5" /> },
+  ];
+
+  for (const item of DYNAMIC_AMENITIES) {
+    const inReq = item.patterns.some(p => reqTextLower.includes(p));
+    const inProp = item.patterns.some(p => propRawText.includes(p));
+
+    if (!inReq && !inProp) continue;
+
+    let amS: MatchStatus = "neutral";
+    let reqLabel = "Flexible";
+    let propLabel = "Sin especificar";
+
+    if (inReq && inProp) {
+      amS = "exact";
+      reqLabel = `Exige ${item.name}`;
+      propLabel = `Sí (Cuenta con ${item.name})`;
+    } else if (!inReq && inProp) {
+      amS = "plus";
+      reqLabel = "Flexible";
+      propLabel = `Sí (${item.name} Incluido)`;
+    } else if (inReq && !inProp) {
+      const isHard = reqTextLower.includes("indispensable") || reqTextLower.includes("obligatorio") || reqTextLower.includes("excluyente") || reqTextLower.includes("si o si");
+      amS = isHard ? "missing" : "warn";
+      reqLabel = isHard ? `Exige ${item.name} (Obligatorio)` : `Desea ${item.name}`;
+      propLabel = `Sin ${item.name} especificado`;
+    }
+
+    add(item.name, reqLabel, propLabel, amS, item.weight || 3, item.icon);
+  }
+
+  // 30. Teléfono / Contacto WhatsApp
   const reqContactPhone = extractPhoneFromItem(req);
   const propContactPhone = extractPhoneFromItem(prop);
   add(
@@ -2835,21 +3166,67 @@ export default function AdminMatches() {
 
                               if (cleanLbl.includes('tipo de inmueble')) {
                                 return isOffer ? (
-                                  <input
-                                    type="text"
-                                    placeholder="Ej: Apartamento, Casa"
+                                  <select
                                     value={editForm.propPropertyType || ''}
                                     onChange={(e) => setEditForm(prev => ({ ...prev, propPropertyType: e.target.value }))}
                                     className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#bf953f]"
-                                  />
+                                  >
+                                    <option value="">Seleccionar Subtipo...</option>
+                                    <option value="apartamento_estandar">Apartamento</option>
+                                    <option value="apartaestudio">Apartaestudio</option>
+                                    <option value="loft">Loft</option>
+                                    <option value="apartamento_duplex">Apartamento Dúplex</option>
+                                    <option value="penthouse">Pent House</option>
+                                    <option value="penthouse_duplex">Pent House Dúplex</option>
+                                    <option value="casa">Casa</option>
+                                    <option value="casa_campestre">Casa Campestre</option>
+                                    <option value="casa_quinta">Casa Quinta</option>
+                                    <option value="villa">Villa</option>
+                                    <option value="farm">Finca</option>
+                                    <option value="cabin">Cabaña</option>
+                                    <option value="building">Edificio</option>
+                                    <option value="commercial">Local Comercial</option>
+                                    <option value="office">Oficina</option>
+                                    <option value="consultorio">Consultorio Médico / Dotacional</option>
+                                    <option value="warehouse">Bodega</option>
+                                    <option value="land">Lote / Terreno</option>
+                                    <option value="hotel">Hotel</option>
+                                    <option value="hostal">Hostal</option>
+                                    <option value="aparta_hotel">Aparta Hotel</option>
+                                    <option value="aparta_suit">Aparta Suit</option>
+                                    <option value="motel">Motel</option>
+                                  </select>
                                 ) : (
-                                  <input
-                                    type="text"
-                                    placeholder="Ej: Apartamento, Casa"
+                                  <select
                                     value={editForm.reqPropertyType || ''}
                                     onChange={(e) => setEditForm(prev => ({ ...prev, reqPropertyType: e.target.value }))}
                                     className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400"
-                                  />
+                                  >
+                                    <option value="">Seleccionar Subtipo...</option>
+                                    <option value="apartamento_estandar">Apartamento</option>
+                                    <option value="apartaestudio">Apartaestudio</option>
+                                    <option value="loft">Loft</option>
+                                    <option value="apartamento_duplex">Apartamento Dúplex</option>
+                                    <option value="penthouse">Pent House</option>
+                                    <option value="penthouse_duplex">Pent House Dúplex</option>
+                                    <option value="casa">Casa</option>
+                                    <option value="casa_campestre">Casa Campestre</option>
+                                    <option value="casa_quinta">Casa Quinta</option>
+                                    <option value="villa">Villa</option>
+                                    <option value="farm">Finca</option>
+                                    <option value="cabin">Cabaña</option>
+                                    <option value="building">Edificio</option>
+                                    <option value="commercial">Local Comercial</option>
+                                    <option value="office">Oficina</option>
+                                    <option value="consultorio">Consultorio Médico / Dotacional</option>
+                                    <option value="warehouse">Bodega</option>
+                                    <option value="land">Lote / Terreno</option>
+                                    <option value="hotel">Hotel</option>
+                                    <option value="hostal">Hostal</option>
+                                    <option value="aparta_hotel">Aparta Hotel</option>
+                                    <option value="aparta_suit">Aparta Suit</option>
+                                    <option value="motel">Motel</option>
+                                  </select>
                                 );
                               }
 
@@ -2860,15 +3237,24 @@ export default function AdminMatches() {
                                     onChange={(e) => setEditForm(prev => ({ ...prev, propTransactionType: e.target.value }))}
                                     className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#bf953f]"
                                   >
-                                    <option value="">Seleccionar...</option>
+                                    <option value="">Seleccionar Negocio...</option>
                                     <option value="venta">Venta</option>
                                     <option value="arriendo">Arriendo</option>
                                     <option value="venta_o_arriendo">Venta o Arriendo</option>
                                     <option value="arriendo_con_opcion_de_compra">Arriendo con opción de compra</option>
                                     <option value="arriendo_temporal">Arriendo temporal</option>
-                                    <option value="permuta">Permuta</option>
-                                    <option value="venta_permuta">Venta / Permuta</option>
-                                    <option value="aporte">Aporte</option>
+                                    <option value="permuta">Permuta Pura (100%)</option>
+                                    <option value="venta_permuta">Venta / Permuta (Venpermuto General)</option>
+                                    <option value="venta_permuta_50_50">Venta 50% / Permuta 50%</option>
+                                    <option value="venta_permuta_60_40">Venta 60% / Permuta 40%</option>
+                                    <option value="venta_permuta_70_30">Venta 70% / Permuta 30%</option>
+                                    <option value="venta_permuta_80_20">Venta 80% / Permuta 20%</option>
+                                    <option value="venta_permuta_90_10">Venta 90% / Permuta 10%</option>
+                                    <option value="venta_permuta_10_90">Venta 10% / Permuta 90%</option>
+                                    <option value="venta_permuta_20_80">Venta 20% / Permuta 80%</option>
+                                    <option value="venta_permuta_30_70">Venta 30% / Permuta 70%</option>
+                                    <option value="venta_permuta_40_60">Venta 40% / Permuta 60%</option>
+                                    <option value="aporte">Aporte a Proyecto</option>
                                   </select>
                                 ) : (
                                   <select
@@ -2876,15 +3262,24 @@ export default function AdminMatches() {
                                     onChange={(e) => setEditForm(prev => ({ ...prev, reqTransactionType: e.target.value }))}
                                     className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400"
                                   >
-                                    <option value="">Seleccionar...</option>
+                                    <option value="">Seleccionar Negocio...</option>
                                     <option value="venta">Venta</option>
                                     <option value="arriendo">Arriendo</option>
                                     <option value="venta_o_arriendo">Venta o Arriendo</option>
                                     <option value="arriendo_con_opcion_de_compra">Arriendo con opción de compra</option>
                                     <option value="arriendo_temporal">Arriendo temporal</option>
-                                    <option value="permuta">Permuta</option>
-                                    <option value="venta_permuta">Venta / Permuta</option>
-                                    <option value="aporte">Aporte</option>
+                                    <option value="permuta">Permuta Pura (100%)</option>
+                                    <option value="venta_permuta">Venta / Permuta (Venpermuto General)</option>
+                                    <option value="venta_permuta_50_50">Venta 50% / Permuta 50%</option>
+                                    <option value="venta_permuta_60_40">Venta 60% / Permuta 40%</option>
+                                    <option value="venta_permuta_70_30">Venta 70% / Permuta 30%</option>
+                                    <option value="venta_permuta_80_20">Venta 80% / Permuta 20%</option>
+                                    <option value="venta_permuta_90_10">Venta 90% / Permuta 10%</option>
+                                    <option value="venta_permuta_10_90">Venta 10% / Permuta 90%</option>
+                                    <option value="venta_permuta_20_80">Venta 20% / Permuta 80%</option>
+                                    <option value="venta_permuta_30_70">Venta 30% / Permuta 70%</option>
+                                    <option value="venta_permuta_40_60">Venta 40% / Permuta 60%</option>
+                                    <option value="aporte">Aporte a Proyecto</option>
                                   </select>
                                 );
                               }

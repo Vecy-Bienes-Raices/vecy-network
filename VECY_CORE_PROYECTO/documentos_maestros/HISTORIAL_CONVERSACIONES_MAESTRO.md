@@ -52,15 +52,28 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v26.9 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v27.0 — Agosto 2026
 
 ---
 
 ## 📜 REGISTRO DETALLADO DE CONVERSACIONES (ORDEN CRONOLÓGICO INVERSO CON FECHA Y HORA)
 
-### 🗓️ Sesión: Sábado 29 de Agosto de 2026 — 12:10 AM a 12:45 AM (Hora Colombia UTC-5)
-**Versión del Sistema**: `v26.9 — Catálogo Maestro de Atributos Inmobiliarios Dinámicos, Permutas con Ponderación Porcentual, Expansión de 64 Características/Amenidades y Arquitectura de Inyección Reactiva de Cotejo ("Por Arte de Magia")`  
+### 🗓️ Sesión: Sábado 29 de Agosto de 2026 — 12:45 AM a 01:15 AM (Hora Colombia UTC-5)
+**Versión del Sistema**: `v27.0 — Implementación y Despliegue del Motor Reactivo de Inyección Dinámica ("Por Arte de Magia") para 64 Amenidades, 22 Tipologías Inmobiliarias y Selector Interactivo de Permutas con Porcentajes`  
 **Participantes**: Eduardo A. Rivera (Director Tecnología) & Antigravity IDE (Pair Programmer)
+
+#### 📋 Objetivos Cumplidos y Verificación Técnica:
+1. **Inyección Reactiva en Caliente de Filas de Cotejo Técnico ("Por Arte de Magia")**:
+   - Implementado en [`AdminMatches.tsx`](file:///home/eddu/Proyectos/vecy-network/client/src/components/admin/AdminMatches.tsx) el motor evaluador que examina la presencia de atributos en demanda (`reqTextLower`) y oferta (`propRawText`).
+   - Las 23 características internas y 41 externas, además de los atributos cuantitativos especiales (garajes para moto, chimeneas por tecnología [leña/gas/bioetanol], cuarto de servicio con/sin baño, cava de vinos, terrazas con m² y BBQ, piso y ubicación exterior/interior), se inyectan automáticamente en la tabla solo cuando alguna de las partes los menciona.
+   - Si ninguna de las partes los menciona, la tabla permanece ultra-ligera y sin filas vacías redundantes.
+   - Ponderación doctrinal inteligente: Coincidencia mutua (`exact` 🟢 Factor 1.00), Plus Ofertado (`plus` 🔵 Factor 0.90), Deseo no cubierto (`warn` 🟡 Factor 0.65) y Exigencia obligatoria no cumplida (`missing` 🔴 Factor 0.00 / Guillotina).
+2. **Taxonomía de 22 Tipos de Inmuebles Integrada**:
+   - Cobertura completa en `deduceFullPropertyType`, `getSubtypeFriendlyLabel` y `<select>` de edición: Apartaestudio, Loft, Apartamento, Apartamento Dúplex, Pent House, Pent House Dúplex, Casa, Casa Campestre, Casa Quinta, Villa, Finca, Cabaña, Edificio, Local Comercial, Oficina, Consultorio Médico / Dotacional, Bodega, Lote / Terreno, Hotel, Hostal, Aparta Hotel, Aparta Suit, Motel.
+3. **Selector Desplegable e Interactivo de Permutas con Porcentajes**:
+   - Integrado en `normalizeNegocio`, `getBusinessDisplayLabel`, `checkTransactionCompatibility` y en los selects de modo edición: `Venta 50% / Permuta 50%`, `60/40`, `70/30`, `80/20`, `90/10`, `10/90`, `20/80`, `30/70`, `40/60`, `Permuta Pura (100%)` y `Venta / Permuta General`.
+4. **Validación de Compilación y Calidad**:
+   - `npm run build` ejecutado y validado con **0 errores de TypeScript**, empaquetado de producción en Vite y `dist-server/index.js` en esbuild listos para despliegue.
 
 #### 📋 Requerimientos Específicos del Usuario (Eduardo A. Rivera):
 1. **Consolidación del Catálogo Maestro Inmobiliario Colombiano**:

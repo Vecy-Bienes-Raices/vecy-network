@@ -107,8 +107,11 @@ const TRANSACTION_COMPATIBILITY_MATRIX: Record<string, Set<string>> = {
 
 export function checkTransactionCompatibility(reqType: string | null | undefined, propType: string | null | undefined, propAccepted: string[] = []): boolean {
   if (!reqType || !propType) return false;
-  const r = reqType.toLowerCase().trim();
-  const p = propType.toLowerCase().trim();
+  let r = reqType.toLowerCase().trim();
+  let p = propType.toLowerCase().trim();
+
+  if (r.startsWith("venta_permuta")) r = "venta_permuta";
+  if (p.startsWith("venta_permuta")) p = "venta_permuta";
 
   if (propAccepted.length > 0 && propAccepted.includes(r)) return true;
 

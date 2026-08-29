@@ -3554,8 +3554,10 @@ function extractRealPhone(item) {
 }
 function checkTransactionCompatibility(reqType, propType, propAccepted = []) {
   if (!reqType || !propType) return false;
-  const r = reqType.toLowerCase().trim();
-  const p = propType.toLowerCase().trim();
+  let r = reqType.toLowerCase().trim();
+  let p = propType.toLowerCase().trim();
+  if (r.startsWith("venta_permuta")) r = "venta_permuta";
+  if (p.startsWith("venta_permuta")) p = "venta_permuta";
   if (propAccepted.length > 0 && propAccepted.includes(r)) return true;
   const compatibleSet = TRANSACTION_COMPATIBILITY_MATRIX[r];
   if (!compatibleSet) return false;
