@@ -72,21 +72,28 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
    - `Arriendo puro` **NO** coincide con `Arriendo con opción de compra` (0%).
    - `Venta pura` **NO** coincide con `Arriendo con opción de compra` (0%).
    - `Venta-Permuta / Venpermuto` solo coincide con `Venta-Permuta / Venpermuto / Permuta`.
-3. **Tratamiento Doctrinal de Datos Flexibles / Faltantes ("Dato Pendiente")**:
-   - Si en la Demanda el dato es "Flexible / Sin Restricción" (o N/E) y la Oferta tiene un valor concreto (ej: Demanda Estrato Flexible vs Oferta Estrato 6), el estado debe ser **`Dato Pendiente`** (gris/neutro), **JAMÁS "Coincide" ni "Aproximado"**.
-   - Los "Datos Pendientes" no suman puntaje para reducir la afinidad proporcionalmente. A medida que el asesor edita, completa los datos y hace clic en **"Guardar"**, el estado se transforma en "Coincide", elevando el score hacia el 100% Match Perfecto.
-4. **Guillotina Total de Afinidad Comercial (0% ante cualquier "No Coincide" / "No Cumple")**:
-   - Si en **CUALQUIERA** de las filas de la tabla de cotejo técnico llega a existir un estado `"No Cumple"` / `"No Coincide"` (`missing`), el score colapsa automáticamente a **`0%`** y la tarjeta queda 100% excluida del listado de 85%-100%.
-   - Por ende, en la mesa de coincidencias (`/admin`), **TODAS las tarjetas calificadas muestran sus primeras 5 filas obligatoriamente en verde con "Coincide"**.
+3. **Tratamiento Doctrinal de Datos Flexibles / Faltantes ("Dato Pendiente") y Ponderación Matemática**:
+   - Ponderación jerárquica de mayor a menor:
+     - 🟢 **`Coincide` (`exact` / `ok`)**: Factor **`1.00`** (100% de la puntuación). Si toda la tabla está en verde, el match alcanza el **`100% Match Perfecto`**.
+     - 🔵 **`Plus Ofertado` (`plus`)**: Factor **`0.90`** (90% de la puntuación: valor agregado / confort adicional que la demanda no exigió expresamente).
+     - 🟡 **`Aproximado` (`warn`)**: Factor **`0.65`** (65% de la puntuación: variación comercialmente admisible, ej. 1 estrato de diferencia).
+     - ⚪ **`Dato Pendiente / Faltante` (`neutral`)**: Factor **`0.35`** (35% de la puntuación: dato flexible/no definido en demanda frente a oferta concreta).
+     - 🔴 **`No Coincide / No Cumple` (`missing`)**: Factor **`0.00`** (Activa **Guillotina Total a 0%** descartando el match de inmediato).
+   - Los "Datos Pendientes" bajan la afinidad proporcionalmente; al editar y dar clic en **"Guardar"**, suben a "Coincide", elevando el score hacia el 100% Match Perfecto.
+4. **Filtro Estricto de Coincidencias en la Mesa (/admin)**:
+   - Del **84% para abajo NO se muestran** en la página de coincidencias. Únicamente se exhiben los Matches calificados entre el **85% y el 100%**.
+   - Si en **CUALQUIERA** de las filas de la tabla de cotejo técnico llega a existir un estado `"No Cumple"` / `"No Coincide"` (`missing`), el score colapsa automáticamente a **`0%`** y la tarjeta queda 100% excluida del listado.
+   - En consecuencia, en la mesa de coincidencias (`/admin`), **TODAS las tarjetas calificadas muestran sus 5 primeras filas en verde con "Coincide" y cero casillas en rojo**.
 5. **Nomenclatura Estricta de Botones de Edición**:
    - Los botones de acción al pie de la tarjeta en modo edición se establecieron exactamente como: **`Guardar`** (en amarillo ámbar) y **`Recalcular`** (en verde esmeralda).
 
 #### 🛠️ Soluciones e Implementaciones Técnicas:
 1. **Unificación en Motor de Servidor (`server/_core/matching.ts`)**:
    - Actualizada la matriz `TRANSACTION_COMPATIBILITY_MATRIX` y los alias/subtipos de propiedad horizontal y casas.
-2. **Refactorización de `scoreRows` en Panel Admin (`client/src/components/admin/AdminMatches.tsx`)**:
-   - Asignación de status `neutral` ("Dato Pendiente") con peso 0 pts para demandas sin restricción frente a ofertas concretas.
+2. **Refactorización Matemática de `scoreRows` en Panel Admin (`client/src/components/admin/AdminMatches.tsx`)**:
+   - Implementada la escala continua de ponderación (1.00, 0.90, 0.65, 0.35, 0.00).
    - Guillotina global: `if (hasAnyMissingRow) autoScore = 0`.
+   - Exclusión automática en `processedMatches` para todo score $\le 84\%$.
    - Botones renombrados a `Guardar` y `Recalcular`.
 3. **Validación de Compilación y Control de Versiones**:
    - `pnpm build` ejecutado y validado exitosamente con 0 errores TypeScript.

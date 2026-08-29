@@ -178,14 +178,16 @@ function scoreRows(req: any, prop: any) {
   const add = (label: string, reqVal: string, propVal: string, status: MatchStatus, weight: number, icon: React.ReactNode) => {
     rows.push({ label, reqVal, propVal, status, weight, icon });
     max += weight;
-    if (status === "exact" || status === "ok" || status === "plus") {
-      pts += weight;
+    if (status === "exact" || status === "ok") {
+      pts += weight * 1.0; // 🟢 100% Ponderación completa: Coincidencia Exacta (Todo en verde = 100%)
+    } else if (status === "plus") {
+      pts += weight * 0.90; // 🔵 90% Ponderación: Plus Ofertado (Beneficio adicional no exigido)
     } else if (status === "warn") {
-      pts += weight * 0.5; // Aproximado suma el 50% del puntaje
+      pts += weight * 0.65; // 🟡 65% Ponderación: Aproximado viable comercialmente
     } else if (status === "neutral") {
-      pts += 0; // Dato Pendiente / Faltante no suma puntos para bajar la puntuación proporcionalmente
+      pts += weight * 0.35; // ⚪ 35% Ponderación: Dato Pendiente / Faltante
     } else if (status === "missing") {
-      pts += 0;
+      pts += 0; // 🔴 0% No Cumple (Activa guillotina total a 0%)
     }
   };
 
@@ -933,36 +935,25 @@ function scoreRows(req: any, prop: any) {
     (bathS === "missing") || 
     (garS === "missing");
 
+  // ── REGLA DE ORO DE GUILLOTINA Y TABULACIÓN DOCTRINAL MATEMÁTICA ──
+  // 1. Si CUALQUIER FILA tiene estado "missing" ("No Coincide" / "No Cumple" en rojo) -> Guillotina Total a 0%
+  const hasAnyMissingRow = rows.some(r => r.status === "missing");
   let autoScore = 0;
-  if (hasHardMismatch || hardPhysicalMismatch) {
-    autoScore = 0;
-  } else {
-    // 3. Con cero fallas duras, evaluamos la afinidad:
-    const allExact = rows.every(r => r.label.includes("Teléfono") || r.status === "exact" || r.status === "ok" || r.status === "plus");
 
-    if (allExact) {
-      autoScore = 100; // 🎯 100% MATCH PERFECTO (TODAS LAS FILAS EN "COINCIDE" O "PLUS OFERTADO")
+  if (!hasHardMismatch && !hardPhysicalMismatch && !hasAnyMissingRow && max > 0) {
+    // 2. Si TODAS las filas evaluadas están en "exact" o "ok" (cero pluses, cero aproximados, cero pendientes)
+    const allExactGreen = rows.every(r => r.label.includes("Teléfono") || r.status === "exact" || r.status === "ok");
+
+    if (allExactGreen) {
+      autoScore = 100; // 🎯 100% MATCH PERFECTO (TODO EN VERDE "COINCIDE")
     } else {
-      const downstreamRows = rows.slice(5, -1); // Excluyendo teléfono
-      const filledCount = downstreamRows.filter(r => r.reqVal !== "N/E" && r.propVal !== "N/E" && r.status !== "missing").length;
-      const ratio = downstreamRows.length > 0 ? filledCount / downstreamRows.length : 0;
-
-      if (ratio < 0.50) {
-        autoScore = 80;
-      } else if (ratio < 0.70) {
-        autoScore = 85;
-      } else if (ratio < 0.85) {
-        autoScore = 90;
-      } else if (ratio < 0.95) {
-        autoScore = 95;
-      } else {
-        autoScore = 97;
-      }
+      // 3. Puntuación continua calculada de forma matemática de mayor a menor según los pesos:
+      const rawScore = (pts / max) * 100;
+      autoScore = Math.min(99, Math.round(rawScore));
     }
   }
 
-  return { rows, autoScore };
-
+  return { rows, autoScore, pts, max };
 }
 
 function formatCOP(val: string | number) {
@@ -1545,10 +1536,13 @@ export default function AdminMatches() {
 
       const property = match.property;
       const requirement = match.requirement;
-      const dbScore = parseFloat(match.matchScore || "0");
+      
+      // Cálculo de afinidad comercial y guillotina técnica
+      const computed = scoreRows(requirement, property);
+      const exactScore = computed.autoScore;
 
-      // Mostrar únicamente los matches calificados válidos (85% a 100%)
-      if (dbScore < 85) {
+      // Del 84% para abajo NO se mostrarán en nuestra página de coincidencias (Regla Doctrinal v26.8)
+      if (exactScore < 85) {
         continue;
       }
 
@@ -1570,8 +1564,8 @@ export default function AdminMatches() {
 
       results.push({
         ...match,
-        _precomputedRows: null,
-        _precomputedScore: dbScore,
+        _precomputedRows: computed.rows,
+        _precomputedScore: exactScore,
         _searchIndex: `${propSearchStr} ${reqSearchStr}`,
       });
     }
@@ -1647,20 +1641,14 @@ export default function AdminMatches() {
           _effectiveProp: effectiveProp,
           _effectiveReq: effectiveReq,
           _precomputedRows: computed.rows,
-          _precomputedScore: computed.autoScore > 0 ? computed.autoScore : parseFloat(m.matchScore || "0"),
+          _precomputedScore: computed.autoScore,
         };
       }
 
-      if (m._precomputedRows && m._precomputedRows.length > 0) {
-        return m;
-      }
-
-      const { rows } = scoreRows(m.property, m.requirement);
       return {
         ...m,
         _effectiveProp: m.property,
         _effectiveReq: m.requirement,
-        _precomputedRows: rows,
       };
     });
   }, [filteredMatches, currentPage, pageSize, editingMatchId, editForm]);
@@ -1861,12 +1849,16 @@ export default function AdminMatches() {
                       <span className={`h-2.5 w-2.5 rounded-full shrink-0 ${dotColor}`} />
                       <span className={`text-lg sm:text-xl font-extrabold tracking-tight ${scoreColor}`}>{score.toFixed(0)}% Match</span>
                       <span className="text-zinc-500 text-[11px] sm:text-xs">Afinidad por IA</span>
-                      {score >= 95 ? (
-                        <span className="text-[9px] bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
-                          🎯 MATCH PERFECTO (95% - 100%)
+                      {score === 100 ? (
+                        <span className="text-[9px] bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 px-2 py-0.5 rounded-full font-extrabold flex items-center gap-1 shadow-[0_0_12px_rgba(52,211,153,0.3)]">
+                          🎯 100% MATCH PERFECTO
+                        </span>
+                      ) : score >= 95 ? (
+                        <span className="text-[9px] bg-cyan-500/15 border border-cyan-500/40 text-cyan-300 px-2 py-0.5 rounded-full font-bold flex items-center gap-1 shadow-[0_0_12px_rgba(6,182,212,0.3)]">
+                          🎯 MATCH CASI PERFECTO (95% - 99%)
                         </span>
                       ) : (
-                        <span className="text-[9px] bg-[#bf953f]/10 border border-[#bf953f]/30 text-[#bf953f] px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+                        <span className="text-[9px] bg-[#bf953f]/15 border border-[#bf953f]/40 text-[#bf953f] px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
                           ⚡ MATCH APROXIMADO (85% - 94%)
                         </span>
                       )}
