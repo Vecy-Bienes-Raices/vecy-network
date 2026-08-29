@@ -784,10 +784,61 @@ function buildExplanationResult(
   };
 }
 
+export function isNonRealEstateText(text: string | null | undefined): boolean {
+  if (!text) return false;
+  const t = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const forbidden = [
+    "cantera", "canteras", "caliza", "piedra y arena", "arena y piedra", "triturado",
+    "cemento", "varilla", "volqueta", "retroexcavadora", "maquinaria amarilla",
+    "transporte de carga", "material de construccion", "materiales de construccion"
+  ];
+  return forbidden.some(term => t.includes(term));
+}
+
+export function extractTrueCityFromText(rawText: string | null | undefined, fallbackCity: string | null | undefined): string {
+  const t = (rawText || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  
+  const bogotaKeywords = [
+    "chico", "rosales", "cedritos", "santa barbara", "chapinero", "la cabrera", "el nogal", "el retiro", "virrey",
+    "calle 94", "calle 93", "calle 100", "calle 85", "calle 116", "calle 127", "calle 134", "calle 140", "calle 147", "calle 153", "calle 170", "calle 72", "calle 80",
+    "carrera 7", "carrera 9", "carrera 11", "carrera 15", "carrera 19", "carrera 30",
+    "usaquen", "suba", "niza", "alhambra", "pasadena", "batan", "colina campestre", "polo club", "castellana", "teusaquillo", "salitre", "santa ana", "santa paula", "santa bibiana", "san patricio", "toberin", "mazuren"
+  ];
+
+  const caliKeywords = [
+    "el penon", "granada cali", "san antonio cali", "ciudad jardin cali", "santa monica cali", "pance", "cristales cali", "chipichape", "san fernando cali", "valle del lili", "santa teresita cali", "menga", "dapa"
+  ];
+
+  const medellinKeywords = [
+    "el poblado", "laureles", "envigado", "sabaneta", "belen", "conquistadores", "el tesoro", "las lomas", "patio bonito", "ciudad del rio"
+  ];
+
+  if (bogotaKeywords.some(k => t.includes(k))) return "Bogotá";
+  if (caliKeywords.some(k => t.includes(k))) return "Cali";
+  if (medellinKeywords.some(k => t.includes(k))) return "Medellín";
+
+  return fallbackCity || "Bogotá";
+}
+
 export function explicarMatch(requirement: any, property: any): MatchExplanation {
   const blockers: string[] = [];
   const positives: string[] = [];
   const negatives: string[] = [];
+
+  // ── FILTRO DURO 00: PUBLICACIÓN NO INMOBILIARIA (Materiales, Canteras, etc.) ──
+  if (isNonRealEstateText(requirement.rawText) || isNonRealEstateText(requirement.name) || isNonRealEstateText(property.rawText) || isNonRealEstateText(property.name)) {
+    blockers.push("⛔ Publicación No Inmobiliaria: Solicitud de materiales de construcción, canteras o maquinaria. MATCH IMPOSIBLE 0%.");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+
+  // ── FILTRO DURO 0B: INCOMPATIBILIDAD GEOGRÁFICA REAL DEDUCIDA DEL TEXTO ──
+  const propRealCity = extractTrueCityFromText(property.rawText || property.name, property.addressCity || property.city);
+  const reqRealCity = extractTrueCityFromText(requirement.rawText || requirement.name, requirement.addressCity || requirement.ciudadDeseada);
+
+  if (propRealCity && reqRealCity && propRealCity.toLowerCase() !== reqRealCity.toLowerCase()) {
+    blockers.push(`⛔ Incompatibilidad Geográfica Real: Oferta en ${propRealCity} vs Demanda en ${reqRealCity}. MATCH IMPOSIBLE 0%.`);
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
 
   // ── FILTRO DURO 0A: DATOS EN DURO OBLIGATORIOS (Doctrinal v22.1) ──────────────────────────────
   // REGLA: Si CUALQUIERA de los datos en duro es N/E (no especificado) en el INMUEBLE o en el

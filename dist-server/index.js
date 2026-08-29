@@ -3488,8 +3488,10 @@ __export(matching_exports, {
   executeMatchEngine: () => executeMatchEngine,
   explicarMatch: () => explicarMatch,
   extractRealPhone: () => extractRealPhone,
+  extractTrueCityFromText: () => extractTrueCityFromText,
   findMatchesForProperty: () => findMatchesForProperty,
   findMatchesForRequirement: () => findMatchesForRequirement,
+  isNonRealEstateText: () => isNonRealEstateText,
   matchesGeography: () => matchesGeography,
   parsePropertyAddressNumbers: () => parsePropertyAddressNumbers,
   parseStreetCarreraBoundaries: () => parseStreetCarreraBoundaries
@@ -4259,10 +4261,122 @@ function buildExplanationResult(score, blockers, positives, negatives, isStrictC
     missingFields
   };
 }
+function isNonRealEstateText(text2) {
+  if (!text2) return false;
+  const t2 = text2.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const forbidden = [
+    "cantera",
+    "canteras",
+    "caliza",
+    "piedra y arena",
+    "arena y piedra",
+    "triturado",
+    "cemento",
+    "varilla",
+    "volqueta",
+    "retroexcavadora",
+    "maquinaria amarilla",
+    "transporte de carga",
+    "material de construccion",
+    "materiales de construccion"
+  ];
+  return forbidden.some((term) => t2.includes(term));
+}
+function extractTrueCityFromText(rawText, fallbackCity) {
+  const t2 = (rawText || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const bogotaKeywords = [
+    "chico",
+    "rosales",
+    "cedritos",
+    "santa barbara",
+    "chapinero",
+    "la cabrera",
+    "el nogal",
+    "el retiro",
+    "virrey",
+    "calle 94",
+    "calle 93",
+    "calle 100",
+    "calle 85",
+    "calle 116",
+    "calle 127",
+    "calle 134",
+    "calle 140",
+    "calle 147",
+    "calle 153",
+    "calle 170",
+    "calle 72",
+    "calle 80",
+    "carrera 7",
+    "carrera 9",
+    "carrera 11",
+    "carrera 15",
+    "carrera 19",
+    "carrera 30",
+    "usaquen",
+    "suba",
+    "niza",
+    "alhambra",
+    "pasadena",
+    "batan",
+    "colina campestre",
+    "polo club",
+    "castellana",
+    "teusaquillo",
+    "salitre",
+    "santa ana",
+    "santa paula",
+    "santa bibiana",
+    "san patricio",
+    "toberin",
+    "mazuren"
+  ];
+  const caliKeywords = [
+    "el penon",
+    "granada cali",
+    "san antonio cali",
+    "ciudad jardin cali",
+    "santa monica cali",
+    "pance",
+    "cristales cali",
+    "chipichape",
+    "san fernando cali",
+    "valle del lili",
+    "santa teresita cali",
+    "menga",
+    "dapa"
+  ];
+  const medellinKeywords = [
+    "el poblado",
+    "laureles",
+    "envigado",
+    "sabaneta",
+    "belen",
+    "conquistadores",
+    "el tesoro",
+    "las lomas",
+    "patio bonito",
+    "ciudad del rio"
+  ];
+  if (bogotaKeywords.some((k) => t2.includes(k))) return "Bogot\xE1";
+  if (caliKeywords.some((k) => t2.includes(k))) return "Cali";
+  if (medellinKeywords.some((k) => t2.includes(k))) return "Medell\xEDn";
+  return fallbackCity || "Bogot\xE1";
+}
 function explicarMatch(requirement, property) {
   const blockers = [];
   const positives = [];
   const negatives = [];
+  if (isNonRealEstateText(requirement.rawText) || isNonRealEstateText(requirement.name) || isNonRealEstateText(property.rawText) || isNonRealEstateText(property.name)) {
+    blockers.push("\u26D4 Publicaci\xF3n No Inmobiliaria: Solicitud de materiales de construcci\xF3n, canteras o maquinaria. MATCH IMPOSIBLE 0%.");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  const propRealCity = extractTrueCityFromText(property.rawText || property.name, property.addressCity || property.city);
+  const reqRealCity = extractTrueCityFromText(requirement.rawText || requirement.name, requirement.addressCity || requirement.ciudadDeseada);
+  if (propRealCity && reqRealCity && propRealCity.toLowerCase() !== reqRealCity.toLowerCase()) {
+    blockers.push(`\u26D4 Incompatibilidad Geogr\xE1fica Real: Oferta en ${propRealCity} vs Demanda en ${reqRealCity}. MATCH IMPOSIBLE 0%.`);
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
   const isNA = (v) => !v || v.trim() === "" || v.trim().toUpperCase() === "NA" || v.trim().toUpperCase() === "N/E" || v.trim().toUpperCase() === "N/A" || v.trim() === "-";
   const propTypeHard = property.propertyType || property.tipoInmueble || "";
   const reqTypeHard = requirement.tipoInmuebleDeseado || requirement.propertyType || "";
@@ -8950,6 +9064,10 @@ async function handleAmendmentUpdate(userId, text2) {
 async function saveProperty(data, userId, realName, imageBuffer, pdfBuffer, pdfMimeType) {
   const db = await getDb();
   if (!db) return null;
+  if (isNonRealEstateText(data.rawText) || isNonRealEstateText(data.name) || isNonRealEstateText(data.description)) {
+    console.log(`[JanIA-Reject] \u{1F6AB} Inmueble descartado: mensaje no corresponde a finca ra\xEDz (materiales/canteras/maquinaria): ${data.name || data.rawText}`);
+    return null;
+  }
   const rawTextContent = `${data.rawText || ""} ${data.description || ""} ${data.name || ""}`;
   const effectivePhone = resolveContactPhone(userId, rawTextContent, realName, data.idUsuarioWhatsapp);
   const rawPhone = effectivePhone;
@@ -9320,6 +9438,10 @@ async function saveProperty(data, userId, realName, imageBuffer, pdfBuffer, pdfM
 async function saveRequirement(data, userId, realName, imageBuffer, pdfBuffer, pdfMimeType) {
   const db = await getDb();
   if (!db) return null;
+  if (isNonRealEstateText(data.rawText) || isNonRealEstateText(data.name)) {
+    console.log(`[JanIA-Reject] \u{1F6AB} Requerimiento descartado: mensaje no corresponde a finca ra\xEDz (materiales/canteras/maquinaria): ${data.name || data.rawText}`);
+    return null;
+  }
   const rawTextContent = `${data.rawText || ""} ${data.name || ""}`;
   const effectivePhone = resolveContactPhone(userId, rawTextContent, realName, data.idUsuarioWhatsapp);
   const rawPhone = effectivePhone;

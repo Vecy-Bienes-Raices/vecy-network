@@ -273,6 +273,42 @@ const DYNAMIC_AMENITIES: Array<{
   { name: "Zonas Verdes", patterns: ["zonas verdes", "senderos verdes", "jardines comunales"], icon: <Trees className="w-3.5 h-3.5" /> },
 ];
 
+export function isNonRealEstateText(text: string | null | undefined): boolean {
+  if (!text) return false;
+  const t = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const forbidden = [
+    "cantera", "canteras", "caliza", "piedra y arena", "arena y piedra", "triturado",
+    "cemento", "varilla", "volqueta", "retroexcavadora", "maquinaria amarilla",
+    "transporte de carga", "material de construccion", "materiales de construccion"
+  ];
+  return forbidden.some(term => t.includes(term));
+}
+
+export function extractTrueCityFromText(rawText: string | null | undefined, fallbackCity: string | null | undefined): string {
+  const t = (rawText || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  
+  const bogotaKeywords = [
+    "chico", "rosales", "cedritos", "santa barbara", "chapinero", "la cabrera", "el nogal", "el retiro", "virrey",
+    "calle 94", "calle 93", "calle 100", "calle 85", "calle 116", "calle 127", "calle 134", "calle 140", "calle 147", "calle 153", "calle 170", "calle 72", "calle 80",
+    "carrera 7", "carrera 9", "carrera 11", "carrera 15", "carrera 19", "carrera 30",
+    "usaquen", "suba", "niza", "alhambra", "pasadena", "batan", "colina campestre", "polo club", "castellana", "teusaquillo", "salitre", "santa ana", "santa paula", "santa bibiana", "san patricio", "toberin", "mazuren"
+  ];
+
+  const caliKeywords = [
+    "el penon", "granada cali", "san antonio cali", "ciudad jardin cali", "santa monica cali", "pance", "cristales cali", "chipichape", "san fernando cali", "valle del lili", "santa teresita cali", "menga", "dapa"
+  ];
+
+  const medellinKeywords = [
+    "el poblado", "laureles", "envigado", "sabaneta", "belen", "conquistadores", "el tesoro", "las lomas", "patio bonito", "ciudad del rio"
+  ];
+
+  if (bogotaKeywords.some(k => t.includes(k))) return "Bogotá";
+  if (caliKeywords.some(k => t.includes(k))) return "Cali";
+  if (medellinKeywords.some(k => t.includes(k))) return "Medellín";
+
+  return fallbackCity || "Bogotá";
+}
+
 const scoreRowsCache = new Map<string, { rows: ScoreRow[]; autoScore: number; pts: number; max: number }>();
 
 function scoreRows(req: any, prop: any) {
@@ -651,18 +687,26 @@ function scoreRows(req: any, prop: any) {
   const reqLocalityDisplay = (req.addressLocality && req.addressLocality !== "N/E") ? req.addressLocality : inferLocalityFromBarrio(reqBarrioDisplay);
   const propLocalityDisplay = (prop.addressLocality && prop.addressLocality !== "N/E") ? prop.addressLocality : inferLocalityFromBarrio(propBarrioDisplay);
 
-  const reqCityDisplay = req.addressCity || req.ciudadDeseada || "Bogotá, D.C.";
-  const propCityDisplay = prop.addressCity || prop.city || "Bogotá, D.C.";
+  const reqTrueCity = extractTrueCityFromText(req.rawText || req.name, req.addressCity || req.ciudadDeseada || "Bogotá");
+  const propTrueCity = extractTrueCityFromText(prop.rawText || prop.name, prop.addressCity || prop.city || "Bogotá");
+
+  const reqCityDisplay = reqTrueCity;
+  const propCityDisplay = propTrueCity;
 
   const isCityMatch =
     normalizeBarrio(reqCityDisplay) === normalizeBarrio(propCityDisplay) ||
     normalizeBarrio(reqCityDisplay).includes(normalizeBarrio(propCityDisplay)) ||
     normalizeBarrio(propCityDisplay).includes(normalizeBarrio(reqCityDisplay));
 
+  const isNonRealEstateReq = isNonRealEstateText(req.rawText) || isNonRealEstateText(req.name);
+  const isNonRealEstateProp = isNonRealEstateText(prop.rawText) || isNonRealEstateText(prop.name);
+
   const isGenericZone = (zn: string) => !zn || zn === "N/E" || zn === "na" || zn === "bogota" || zn === "bogotá" || zn === "bogota, d.c.";
 
   let barrioMatchStatus: MatchStatus = "missing";
-  if (isGenericZone(reqBarrioDisplay) || isGenericZone(propBarrioDisplay)) {
+  if (isNonRealEstateReq || isNonRealEstateProp) {
+    barrioMatchStatus = "missing";
+  } else if (isGenericZone(reqBarrioDisplay) || isGenericZone(propBarrioDisplay)) {
     barrioMatchStatus = "neutral";
   } else if (matchBarrioExacto(reqBarrioDisplay, propBarrioDisplay)) {
     barrioMatchStatus = "exact";
@@ -673,7 +717,9 @@ function scoreRows(req: any, prop: any) {
   }
 
   let localityMatchStatus: MatchStatus = "neutral";
-  if (reqLocalityDisplay === "N/E" || propLocalityDisplay === "N/E") {
+  if (isNonRealEstateReq || isNonRealEstateProp) {
+    localityMatchStatus = "missing";
+  } else if (reqLocalityDisplay === "N/E" || propLocalityDisplay === "N/E") {
     localityMatchStatus = "neutral";
   } else if (normalizeBarrio(reqLocalityDisplay) === normalizeBarrio(propLocalityDisplay)) {
     localityMatchStatus = "exact";
@@ -681,7 +727,7 @@ function scoreRows(req: any, prop: any) {
     localityMatchStatus = "warn";
   }
 
-  let cityMatchStatus: MatchStatus = isCityMatch ? "exact" : "missing";
+  let cityMatchStatus: MatchStatus = (!isNonRealEstateReq && !isNonRealEstateProp && isCityMatch) ? "exact" : "missing";
 
   add("Barrio / Vereda / Caserío", reqBarrioDisplay, propBarrioDisplay, barrioMatchStatus, 10, <MapPin className="w-3.5 h-3.5" />);
   add("Localidad / Comuna", reqLocalityDisplay, propLocalityDisplay, localityMatchStatus, 5, <Compass className="w-3.5 h-3.5" />);

@@ -7,7 +7,7 @@ import { getDb } from "../db";
 import { properties, requirements, users, propertyImages, InsertProperty, InsertRequirement, pendingSessions, propertyMatches, messages as dbMessages, conversations as dbConversations, propertyPublicationHistory, inmobiliarioLexicon, matchFeedback } from "../../drizzle/schema";
 import { validarZona, normalizarTextoGeografico, desambiguarBarriosCompuestos, deducirGeografiaTripartita, resolveIntersectionToBarrio } from "./geography";
 import { validateCity } from "./divipola";
-import { findMatchesForProperty, findMatchesForRequirement } from "./matching";
+import { findMatchesForProperty, findMatchesForRequirement, isNonRealEstateText } from "./matching";
 import { transcribeAudio } from "./voiceTranscription";
 import { eq, and, sql, gte, desc, or, isNotNull } from "drizzle-orm";
 import { storagePut } from "../storage";
@@ -3926,6 +3926,11 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
   const db = await getDb();
   if (!db) return null;
 
+  if (isNonRealEstateText(data.rawText) || isNonRealEstateText(data.name) || isNonRealEstateText(data.description)) {
+    console.log(`[JanIA-Reject] 🚫 Inmueble descartado: mensaje no corresponde a finca raíz (materiales/canteras/maquinaria): ${data.name || data.rawText}`);
+    return null;
+  }
+
   const rawTextContent = `${data.rawText || ""} ${data.description || ""} ${data.name || ""}`;
   const effectivePhone = resolveContactPhone(userId, rawTextContent, realName, data.idUsuarioWhatsapp);
   const rawPhone = effectivePhone;
@@ -4393,6 +4398,11 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
 async function saveRequirement(data: any, userId: string, realName: string, imageBuffer?: string, pdfBuffer?: string, pdfMimeType?: string) {
   const db = await getDb();
   if (!db) return null;
+
+  if (isNonRealEstateText(data.rawText) || isNonRealEstateText(data.name)) {
+    console.log(`[JanIA-Reject] 🚫 Requerimiento descartado: mensaje no corresponde a finca raíz (materiales/canteras/maquinaria): ${data.name || data.rawText}`);
+    return null;
+  }
 
   const rawTextContent = `${data.rawText || ""} ${data.name || ""}`;
   const effectivePhone = resolveContactPhone(userId, rawTextContent, realName, data.idUsuarioWhatsapp);
