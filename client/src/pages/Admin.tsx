@@ -30,7 +30,8 @@ const tabs = [
 
 function BotStatusWidget() {
   const { data: status, isLoading } = trpc.janIA.getBotStatus.useQuery(undefined, {
-    refetchInterval: 30000, // Refrescar cada 30 segundos
+    refetchInterval: 120000, // Refrescar suavemente cada 2 minutos
+    staleTime: 60000,
     refetchOnWindowFocus: false,
   });
 
