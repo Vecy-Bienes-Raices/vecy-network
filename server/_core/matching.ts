@@ -380,7 +380,7 @@ export function matchesGeography(
     "san simon", "guaymaral", "hacienda fontanar", "fontanar", "fagua", "potosi",
     "sindamanoy", "yerbabuena", "yerbabona", "briceno", "hatogrande", "chia", "sopo", "cajica", "cota", "la calera"
   ];
-  
+
   const reqAskaSabana = sabanaSuburbanSectors.some(sec => reqFullNorm.includes(sec));
   const bogotaUrbanSectors = [
     "prado veraniego", "cedritos", "chico", "chico norte", "chico reservado", "chapinero",
@@ -433,7 +433,7 @@ export function matchesGeography(
   // Si la zona es genérica (ej: "Norte") y NO hay delimitación vial de calles/carreras coincidentes ni barrio específico, BLOQUEAR (0%)
   if (isReqGeneric || isPropGeneric) {
     const hasStreetBoundaryMatch = (propNumbers.street && reqBoundaries.minStreet !== undefined && reqBoundaries.maxStreet !== undefined && propNumbers.street >= reqBoundaries.minStreet && propNumbers.street <= reqBoundaries.maxStreet)
-                                || (propNumbers.carrera && reqBoundaries.minCarrera !== undefined && reqBoundaries.maxCarrera !== undefined && propNumbers.carrera >= reqBoundaries.minCarrera && propNumbers.carrera <= reqBoundaries.maxCarrera);
+      || (propNumbers.carrera && reqBoundaries.minCarrera !== undefined && reqBoundaries.maxCarrera !== undefined && propNumbers.carrera >= reqBoundaries.minCarrera && propNumbers.carrera <= reqBoundaries.maxCarrera);
     if (!hasStreetBoundaryMatch) {
       console.log(`[Matching-Guard] Bloqueo 0%: Ubicación genérica o no especificada en barrio/vereda real ('${reqZoneRaw}' ↔ '${propZoneRaw}').`);
       return { matches: false, score: 0 };
@@ -451,9 +451,9 @@ export function matchesGeography(
   if (reqZone && propZone && !tieneAledanosInicial) {
     const s1 = reqZone.toLowerCase();
     const s2 = propZone.toLowerCase();
-    
+
     const orientaciones = ["oriental", "occidental", "norte", "sur", "alta", "alto", "baja", "bajo", "reservado", " central", "navarra"];
-    const tieneDiffOrientacion = orientaciones.some(o => 
+    const tieneDiffOrientacion = orientaciones.some(o =>
       (s1.includes(o) && !s2.includes(o)) || (!s1.includes(o) && s2.includes(o))
     );
 
@@ -513,7 +513,7 @@ export function matchesGeography(
   const splitPhrases = (text: string): string[] => {
     if (!text) return [];
     let norm = normalizarTextoGeografico(text);
-    
+
     // Quitar frases de proximidad
     norm = norm.replace(/\b(u\s+)?otros\s+barrios\s+aledanos\b/gi, "");
     norm = norm.replace(/\b(y|o|u)\s+aledanos\b/gi, "");
@@ -529,7 +529,7 @@ export function matchesGeography(
       "medellin", "cali", "barranquilla", "cartagena", "bucaramanga",
       "pereira", "manizales", "cucuta", "ibague", "santa marta"
     ]);
-    
+
     return norm.split(/,|\/|\s+y\s+|\s+o\s+|\s+e\s+/)
       .map(p => p.trim())
       .filter(p => p.length > 0 && !stopGeoWords.has(p));
@@ -696,7 +696,7 @@ export function calcularIPC(requirement: any, property: any, matchScore: number)
   // 2. Freshness (Recencia)
   const propAgeDays = Math.max(0, (Date.now() - new Date(property.createdAt || new Date()).getTime()) / (1000 * 60 * 60 * 24));
   const reqAgeDays = Math.max(0, (Date.now() - new Date(requirement.createdAt || new Date()).getTime()) / (1000 * 60 * 60 * 24));
-  
+
   const getAgeFactor = (days: number) => {
     if (days <= 3) return 100;
     if (days <= 7) return 90;
@@ -764,9 +764,9 @@ export function calcularIPC(requirement: any, property: any, matchScore: number)
 }
 
 function buildExplanationResult(
-  score: number, 
-  blockers: string[], 
-  positives: string[], 
+  score: number,
+  blockers: string[],
+  positives: string[],
   negatives: string[],
   isStrictCompliant: boolean = true,
   missingFields: string[] = []
@@ -800,7 +800,7 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
 
   // Tipo de Inmueble obligatorio en ambos
   const propTypeHard = property.propertyType || property.tipoInmueble || "";
-  const reqTypeHard  = requirement.tipoInmuebleDeseado || requirement.propertyType || "";
+  const reqTypeHard = requirement.tipoInmuebleDeseado || requirement.propertyType || "";
   if (isNA(propTypeHard)) {
     blockers.push("⛔ Inmueble Incompleto: Tipo de Inmueble no especificado (N/E). No puede participar en Matches.");
     return buildExplanationResult(0, blockers, positives, negatives);
@@ -812,7 +812,7 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
 
   // Tipo de Negocio obligatorio en ambos
   const propBizHard = property.transactionType || "";
-  const reqBizHard  = requirement.tipoNegocioDeseado || requirement.transactionType || "";
+  const reqBizHard = requirement.tipoNegocioDeseado || requirement.transactionType || "";
   if (isNA(propBizHard)) {
     blockers.push("⛔ Inmueble Incompleto: Tipo de Negocio no especificado (N/E). No puede participar en Matches.");
     return buildExplanationResult(0, blockers, positives, negatives);
@@ -824,7 +824,7 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
 
   // Ciudad/Municipio obligatorio en ambos
   const propCityHard = property.addressCity || property.city || "";
-  const reqCityHard  = requirement.addressCity || requirement.ciudadDeseada || "";
+  const reqCityHard = requirement.addressCity || requirement.ciudadDeseada || "";
   if (isNA(propCityHard)) {
     blockers.push("⛔ Inmueble Incompleto: Ciudad/Municipio no especificado (N/E). No puede participar en Matches.");
     return buildExplanationResult(0, blockers, positives, negatives);
@@ -836,7 +836,7 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
 
   // Barrio/Vereda/Caserío obligatorio en ambos
   const propBarrioHard = property.zone || property.addressNeighborhood || "";
-  const reqBarrioHard  = requirement.zonaDeseada || requirement.addressNeighborhood || "";
+  const reqBarrioHard = requirement.zonaDeseada || requirement.addressNeighborhood || "";
   if (isNA(propBarrioHard)) {
     blockers.push("⛔ Inmueble Incompleto: Barrio/Vereda no especificado (N/E). No puede participar en Matches.");
     return buildExplanationResult(0, blockers, positives, negatives);
@@ -851,11 +851,11 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   // Nota: La localidad se deduce del barrio via deducirGeografiaTripartita en janIA.ts.
   // Si el barrio coincide, la localidad siempre coincide. Este filtro atrapa inconsistencias.
   const propLocalidadHard = property.addressLocality || "";
-  const reqLocalidadHard  = requirement.addressLocality || "";
+  const reqLocalidadHard = requirement.addressLocality || "";
   const bothLocalidadKnown = !isNA(propLocalidadHard) && !isNA(reqLocalidadHard);
   if (bothLocalidadKnown) {
     const normPropLoc = normalizarTextoGeografico(propLocalidadHard);
-    const normReqLoc  = normalizarTextoGeografico(reqLocalidadHard);
+    const normReqLoc = normalizarTextoGeografico(reqLocalidadHard);
     if (normPropLoc !== normReqLoc && !normPropLoc.includes(normReqLoc) && !normReqLoc.includes(normPropLoc)) {
       blockers.push(`⛔ Localidad/Comuna Incompatible: buscada "${reqLocalidadHard}", ofrecida "${propLocalidadHard}". MATCH IMPOSIBLE.`);
       return buildExplanationResult(0, blockers, positives, negatives);
@@ -879,7 +879,7 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   const reqTextLow = reqRawString.toLowerCase();
   const propRawString = (property.rawText || property.description || property.name || "").trim();
   const propTextLow = propRawString.toLowerCase();
-  
+
   const SECTORES_BOGOTA_SABANA = [
     "cedritos", "usaquen", "usaquén", "chico", "chicó", "chapinero", "suba", "engativa", "engativá",
     "teusaquillo", "kennedy", "fontibon", "fontibón", "salitre", "rosales", "colina", "niza", "cabrera",
@@ -899,7 +899,7 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   let budgetMaxCheck = parseFloat(String(requirement.presupuestoMax || "0"));
   if (budgetMaxCheck <= 0) {
     const mP = reqTextLow.match(/(?:ppto|presupuesto|busco|hasta|canon|valor)\s*:?\s*\$?([\d.]+)\s*(millones|millón|mll|mlls|mm|m|M)?/i)
-            || reqTextLow.match(/\$?\s*([\d.]+)\s*(millones|millón|mll|mlls|mm|m|M)\b/i);
+      || reqTextLow.match(/\$?\s*([\d.]+)\s*(millones|millón|mll|mlls|mm|m|M)\b/i);
     if (mP) {
       let valR = parseFloat(mP[1].replace(/\./g, ""));
       if (!isNaN(valR)) {
@@ -946,8 +946,8 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   let reqGaragesCheck = requirement.parqueaderosMin ? Number(requirement.parqueaderosMin) : 0;
   if (reqGaragesCheck <= 0) {
     const mG = reqTextLow.match(/(?:parqueadero|parqueaderos|garaje|garajes|ptero|g\.)\s*\.?\s*(\d+)/i)
-            || reqTextLow.match(/(\d+)\s*(?:parqueadero|parqueaderos|garaje|garajes|ptero|g\.|individuales)/i)
-            || /garajes|parqueaderos/i.test(reqTextLow);
+      || reqTextLow.match(/(\d+)\s*(?:parqueadero|parqueaderos|garaje|garajes|ptero|g\.|individuales)/i)
+      || /garajes|parqueaderos/i.test(reqTextLow);
     if (mG && mG[1]) reqGaragesCheck = parseInt(mG[1], 10);
     else if (/garajes|parqueaderos/i.test(reqTextLow)) reqGaragesCheck = 1;
   }
@@ -993,7 +993,7 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   let propGaragesCheck = property.garages ? Number(property.garages) : 0;
   if (propGaragesCheck <= 0) {
     const mPG = propTextLow.match(/(\d+)\s*(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero)/i)
-             || propTextLow.match(/(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero)\s*:?\s*(\d+)/i);
+      || propTextLow.match(/(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero)\s*:?\s*(\d+)/i);
     if (mPG) propGaragesCheck = parseInt(mPG[1], 10);
   }
 
@@ -1064,16 +1064,16 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   const resolveCityField = (raw1: string, raw2: string): string => {
     const n1 = normalizarTextoGeografico(raw1 || "");
     const n2 = normalizarTextoGeografico(raw2 || "");
-    
+
     const SECTORES_BOGOTA = [
-      "cedritos", "usaquen", "chico", "chapinero", "suba", "engativa", 
-      "teusaquillo", "kennedy", "fontibon", "bosa", "salitre", "rosales", 
-      "colina", "niza", "cabrera", "nogal", "recreo", "castellana", 
+      "cedritos", "usaquen", "chico", "chapinero", "suba", "engativa",
+      "teusaquillo", "kennedy", "fontibon", "bosa", "salitre", "rosales",
+      "colina", "niza", "cabrera", "nogal", "recreo", "castellana",
       "patricio", "barbara", "belmira", "suiza", "navarra", "floresta",
       "granada", "colsubsidio", "santa barbara", "santa bárbara", "chico reservado",
       "chico norte", "rincon del chico", "rincón del chicó", "norte"
     ];
-    
+
     const isBogotaSector = (val: string) => {
       return val === "" || val === "bogota" || val === "bogotá" || SECTORES_BOGOTA.some(sector => val.includes(sector));
     };
@@ -1118,34 +1118,34 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
 
 
 
-function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?: string): boolean {
-  if (val === undefined || val === null || val === "" || val === 0 || val === "0") return false;
-  const numStr = String(val).replace(/\D/g, "");
+  function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?: string): boolean {
+    if (val === undefined || val === null || val === "" || val === 0 || val === "0") return false;
+    const numStr = String(val).replace(/\D/g, "");
 
-  // Si termina en 5 o más ceros (ej: 3.500.000.000, 3.000.000.000, 3.200.000.000), es un PRECIO o PRESUPUESTO en miles de millones, NUNCA un teléfono
-  if (/000000$/.test(numStr) || /00000$/.test(numStr)) {
+    // Si termina en 5 o más ceros (ej: 3.500.000.000, 3.000.000.000, 3.200.000.000), es un PRECIO o PRESUPUESTO en miles de millones, NUNCA un teléfono
+    if (/000000$/.test(numStr) || /00000$/.test(numStr)) {
+      return false;
+    }
+
+    if (numStr.length === 10 && numStr.startsWith("3")) {
+      if (rawText && /(?:\$|precio|valor|ppto|presupuesto|canon|hasta|venta)\s*3\d{9}/i.test(rawText)) return false;
+      return true;
+    }
+    if (numStr.length === 12 && numStr.startsWith("573")) {
+      if (rawText && /(?:\$|precio|valor|ppto|presupuesto|canon|hasta|venta)\s*573\d{9}/i.test(rawText)) return false;
+      return true;
+    }
+    if (rawText) {
+      const rawLower = rawText.toLowerCase();
+      if (rawLower.includes(numStr) && numStr.length >= 8) {
+        if (/wa|whatsapp|cel|celular|tel|telefono|teléfono|contacto|llamar/i.test(rawLower)) return true;
+      }
+    }
     return false;
   }
 
-  if (numStr.length === 10 && numStr.startsWith("3")) {
-    if (rawText && /(?:\$|precio|valor|ppto|presupuesto|canon|hasta|venta)\s*3\d{9}/i.test(rawText)) return false;
-    return true;
-  }
-  if (numStr.length === 12 && numStr.startsWith("573")) {
-    if (rawText && /(?:\$|precio|valor|ppto|presupuesto|canon|hasta|venta)\s*573\d{9}/i.test(rawText)) return false;
-    return true;
-  }
-  if (rawText) {
-    const rawLower = rawText.toLowerCase();
-    if (rawLower.includes(numStr) && numStr.length >= 8) {
-      if (/wa|whatsapp|cel|celular|tel|telefono|teléfono|contacto|llamar/i.test(rawLower)) return true;
-    }
-  }
-  return false;
-}
-
-  let price       = parseFloat(String(property.price || "0"));
-  let budgetMax   = parseFloat(String(requirement.presupuestoMax || "0"));
+  let price = parseFloat(String(property.price || "0"));
+  let budgetMax = parseFloat(String(requirement.presupuestoMax || "0"));
   const budgetMin = parseFloat(String(requirement.presupuestoMin || "0"));
 
   if (isPhoneNumberNotPrice(price, property.rawText)) price = 0;
@@ -1162,7 +1162,7 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
 
   // Sanidad Predial de Precios y Presupuestos:
   let isReqRent = (requirement.tipoNegocioDeseado || requirement.transactionType || "").toLowerCase().includes("arriendo");
-  
+
   if (requirement.rawText && (budgetMax <= 0 || (isReqRent && budgetMax > 50_000_000) || (!isReqRent && budgetMax < 100_000_000))) {
     const fbR = extractFallbackDataFromText(requirement.rawText);
     if (fbR.presupuestoMax >= 300_000) {
@@ -1170,10 +1170,10 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
     }
   }
 
-  const propArea    = parseFloat(String(property.areaTotal || property.area || "0"));
+  const propArea = parseFloat(String(property.areaTotal || property.area || "0"));
   // Filtro Duro 6 (Área): reqAreaMin se lee de BD. Si es 0/null, se intenta extraer del rawText
   // para evitar que el filtro se salte cuando JanIA no guardó el campo correctamente.
-  let reqAreaMin  = parseFloat(String(requirement.areaMin || requirement.areaMinimaM2 || "0"));
+  let reqAreaMin = parseFloat(String(requirement.areaMin || requirement.areaMinimaM2 || "0"));
   if (reqAreaMin <= 0 && requirement.rawText) {
     const rawAreaFallback = requirement.rawText.toLowerCase()
       .match(/(?:(?:m[ií]nimo|m[aá]s\s*de|min(?:imo)?|de|desde)\s+)([\d]+(?:[.,][\d]+)?)\s*(?:m2|mts2|mts|metros(?:\s+cuadrados)?|m²)/i);
@@ -1186,26 +1186,26 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
     }
   }
 
-  const pBedrooms   = property.bedrooms   != null ? Number(property.bedrooms)   : -1;
+  const pBedrooms = property.bedrooms != null ? Number(property.bedrooms) : -1;
   const reqBedrooms = requirement.habitacionesMin != null ? Number(requirement.habitacionesMin) : -1;
 
-  const pBathrooms  = property.bathrooms  != null ? Number(property.bathrooms)  : -1;
+  const pBathrooms = property.bathrooms != null ? Number(property.bathrooms) : -1;
   const reqBathrooms = requirement.banosMin != null ? Number(requirement.banosMin) : -1;
 
-  const pGarages    = property.garages    != null ? Number(property.garages)    : -1;
-  const reqGarages  = requirement.parqueaderosMin != null ? Number(requirement.parqueaderosMin) : -1;
+  const pGarages = property.garages != null ? Number(property.garages) : -1;
+  const reqGarages = requirement.parqueaderosMin != null ? Number(requirement.parqueaderosMin) : -1;
 
-  const pAdminFee   = property.adminFee   != null ? parseFloat(String(property.adminFee))   : -1;
+  const pAdminFee = property.adminFee != null ? parseFloat(String(property.adminFee)) : -1;
   const reqAdminMax = requirement.adminFeeMax != null ? parseFloat(String(requirement.adminFeeMax)) : -1;
 
-  const pEstrato    = property.stratum    != null ? Number(property.stratum)    :
-                      property.estrato    != null ? Number(property.estrato)    : -1;
-  const reqEstrato  = requirement.estratoDeseado != null ? Number(requirement.estratoDeseado) : -1;
+  const pEstrato = property.stratum != null ? Number(property.stratum) :
+    property.estrato != null ? Number(property.estrato) : -1;
+  const reqEstrato = requirement.estratoDeseado != null ? Number(requirement.estratoDeseado) : -1;
 
-  const reqType  = (requirement.tipoInmuebleDeseado || requirement.propertyType || "").toLowerCase().trim();
+  const reqType = (requirement.tipoInmuebleDeseado || requirement.propertyType || "").toLowerCase().trim();
   const propType = (property.propertyType || "").toLowerCase().trim();
 
-  const reqZone  = normalizarTextoGeografico(requirement.zonaDeseada || requirement.addressNeighborhood || "");
+  const reqZone = normalizarTextoGeografico(requirement.zonaDeseada || requirement.addressNeighborhood || "");
   const propZone = normalizarTextoGeografico(property.zone || property.addressNeighborhood || "");
 
   // ── FILTRO DURO 0: Inmueble/Requerimiento Vacío o Sin Contenido Legible (Tolerancia Cero) ──
@@ -1218,10 +1218,10 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
   }
 
   const validPropSpecsCount = (price > 0 || (property.rentPrice && parseFloat(String(property.rentPrice)) > 0) ? 1 : 0) +
-                              (propArea > 0 ? 1 : 0) +
-                              (pBedrooms > 0 ? 1 : 0) +
-                              (pBathrooms > 0 ? 1 : 0) +
-                              (pGarages > 0 ? 1 : 0);
+    (propArea > 0 ? 1 : 0) +
+    (pBedrooms > 0 ? 1 : 0) +
+    (pBathrooms > 0 ? 1 : 0) +
+    (pGarages > 0 ? 1 : 0);
 
   if (validPropSpecsCount < 2) {
     blockers.push("Inmueble incompleto sin datos prediales mínimos en la oferta (menos de 2 atributos especificados). Match Inviable (0%).");
@@ -1380,32 +1380,32 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
   if (effectiveReqType && effectivePropType) {
     const aliases: Record<string, string[]> = {
       "apartamento": ["apto", "apartamento", "apartment"],
-      "apto":        ["apto", "apartamento", "apartment"],
-      "apartment":   ["apto", "apartamento", "apartment"],
-      "casa":        ["casa", "house", "townhouse"],
-      "house":       ["casa", "house", "townhouse"],
-      "finca":       ["finca", "finca raiz", "finca raíz", "farm", "casa campestre", "casa de campo"],
-      "farm":        ["finca", "finca raiz", "finca raíz", "farm", "casa campestre", "casa de campo"],
-      "lote":        ["lote", "terreno", "predio", "land"],
-      "terreno":     ["lote", "terreno", "predio", "land"],
-      "predio":      ["lote", "terreno", "predio", "land"],
-      "land":        ["lote", "terreno", "predio", "land"],
-      "bodega":      ["bodega", "bodega industrial", "warehouse"],
-      "warehouse":   ["bodega", "bodega industrial", "warehouse"],
-      "local":       ["local", "local comercial", "commercial"],
-      "commercial":  ["local", "local comercial", "commercial"],
-      "oficina":     ["oficina", "office"],
-      "office":      ["oficina", "office"],
+      "apto": ["apto", "apartamento", "apartment"],
+      "apartment": ["apto", "apartamento", "apartment"],
+      "casa": ["casa", "house", "townhouse"],
+      "house": ["casa", "house", "townhouse"],
+      "finca": ["finca", "finca raiz", "finca raíz", "farm", "casa campestre", "casa de campo"],
+      "farm": ["finca", "finca raiz", "finca raíz", "farm", "casa campestre", "casa de campo"],
+      "lote": ["lote", "terreno", "predio", "land"],
+      "terreno": ["lote", "terreno", "predio", "land"],
+      "predio": ["lote", "terreno", "predio", "land"],
+      "land": ["lote", "terreno", "predio", "land"],
+      "bodega": ["bodega", "bodega industrial", "warehouse"],
+      "warehouse": ["bodega", "bodega industrial", "warehouse"],
+      "local": ["local", "local comercial", "commercial"],
+      "commercial": ["local", "local comercial", "commercial"],
+      "oficina": ["oficina", "office"],
+      "office": ["oficina", "office"],
       "consultorio": ["consultorio"],
-      "building":    ["building", "edificio"],
-      "edificio":    ["building", "edificio"],
-      "hotel":       ["hotel", "hostal"],
-      "cabin":       ["cabin", "cabaña", "cabana"],
-      "cabaña":      ["cabin", "cabaña", "cabana"],
-      "loft":        ["loft", "apartaestudio", "apartasuite"],
+      "building": ["building", "edificio"],
+      "edificio": ["building", "edificio"],
+      "hotel": ["hotel", "hostal"],
+      "cabin": ["cabin", "cabaña", "cabana"],
+      "cabaña": ["cabin", "cabaña", "cabana"],
+      "loft": ["loft", "apartaestudio", "apartasuite"],
       "apartaestudio": ["loft", "apartaestudio", "apartasuite"],
     };
-    const reqAlias  = aliases[effectiveReqType]  || [effectiveReqType];
+    const reqAlias = aliases[effectiveReqType] || [effectiveReqType];
     const propAlias = aliases[effectivePropType] || [effectivePropType];
     if (!reqAlias.some(a => propAlias.includes(a))) {
       blockers.push(`Tipo de activo incompatible (Tolerancia Cero 0%): deseado ${effectiveReqType}, ofrecido ${effectivePropType}`);
@@ -1422,7 +1422,7 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
   const getHorizontalPropertySubtype = (type: string, raw: string): string => {
     const t = (type || "").toLowerCase().trim();
     const r = (raw || "").toLowerCase().trim();
-    
+
     // 1. Apartaestudio / Aparta Suite / 1 Alcoba Independiente
     if (
       r.includes("apartaestudio") || r.includes("aparta estudio") ||
@@ -1522,7 +1522,7 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
     positives.push(`✅ Presupuesto Abierto en la Demanda: 100% de Cumplimiento Financiero con el valor comercial ofertado.`);
   } else if (budgetMax > 0) {
     const isReqRent = reqBiz.includes("arriendo");
-    
+
     if (isReqRent) {
       let propRent = property.rentPrice ? parseFloat(String(property.rentPrice)) : 0;
       if (propRent <= 0 && property.rawText) {
@@ -1539,7 +1539,7 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
       if (propRent <= 0 && price > 0 && price < 100000000) {
         propRent = price;
       }
-      
+
       const adminVal = pAdminFee > 0 ? pAdminFee : 0;
       const totalRent = propRent + adminVal;
 
@@ -1591,14 +1591,14 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
   let effectiveReqBaths = reqBathrooms;
   if (effectiveReqBaths <= 0) {
     const mW = reqTextLow.match(/(\d+(?:\.\d+)?)\s*(?:o\s*más\s*)?(?:wc|baño|baños|bñ)/i)
-            || reqTextLow.match(/(\d+)\s*hab\s*con\s*baño/i);
+      || reqTextLow.match(/(\d+)\s*hab\s*con\s*baño/i);
     if (mW) effectiveReqBaths = parseFloat(mW[1]);
   }
 
   let effectiveReqGarages = reqGarages;
   if (effectiveReqGarages <= 0) {
     const mG = reqTextLow.match(/(?:parqueadero|parqueaderos|garaje|garajes|ptero|g\.)\s*\.?\s*(\d+)/i)
-            || reqTextLow.match(/(\d+)\s*(?:parqueadero|parqueaderos|garaje|garajes|ptero|g\.|individuales)/i);
+      || reqTextLow.match(/(\d+)\s*(?:parqueadero|parqueaderos|garaje|garajes|ptero|g\.|individuales)/i);
     if (mG) effectiveReqGarages = parseInt(mG[1], 10);
   }
 
@@ -1638,6 +1638,7 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
 
 
   const propRawTextLower = (property.rawText || property.description || "").toLowerCase();
+  const isReqSingleRoomSubtype = reqSubtype === "apartaestudio" || reqSubtype === "loft";
 
   // ── FILTRO DURO 8: Habitaciones (REGLA DOCTRINAL v22.8: DOS BRAZOS ESTRICTOS) ──
   if (effectiveReqBeds > 0) {
@@ -1779,18 +1780,18 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
   const reqRawTextLower = (requirement.rawText || "").toLowerCase();
 
   // A. Choque de Permuta ("NO PERMUTA" vs "ENTREGO CARRO / PARTE DE PAGO")
-  const propRejectsPermute = propRawTextLower.includes("no permuta") || 
-                             propRawTextLower.includes("sin permuta") || 
-                             propRawTextLower.includes("solo efectivo") || 
-                             propRawTextLower.includes("no se acepta permuta") ||
-                             propRawTextLower.includes("no se reciben vehiculos");
+  const propRejectsPermute = propRawTextLower.includes("no permuta") ||
+    propRawTextLower.includes("sin permuta") ||
+    propRawTextLower.includes("solo efectivo") ||
+    propRawTextLower.includes("no se acepta permuta") ||
+    propRawTextLower.includes("no se reciben vehiculos");
 
-  const reqOffersTradeIn = requirement.tipoNegocioDeseado === "permuta" || 
-                           reqRawTextLower.includes("entrego carro") || 
-                           reqRawTextLower.includes("doy carro") || 
-                           reqRawTextLower.includes("recibo vehiculo") || 
-                           reqRawTextLower.includes("parte de pago") || 
-                           reqRawTextLower.includes("pelo a pelo");
+  const reqOffersTradeIn = requirement.tipoNegocioDeseado === "permuta" ||
+    reqRawTextLower.includes("entrego carro") ||
+    reqRawTextLower.includes("doy carro") ||
+    reqRawTextLower.includes("recibo vehiculo") ||
+    reqRawTextLower.includes("parte de pago") ||
+    reqRawTextLower.includes("pelo a pelo");
 
   if (propRejectsPermute && reqOffersTradeIn) {
     blockers.push("Choque de Intención Negocial: La oferta especifica 'NO PERMUTA / Solo Efectivo' y la demanda busca entregar vehículo u otro bien en parte de pago.");
@@ -1798,18 +1799,18 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
   }
 
   // B. Choque de Calidad de Vida (Exige "Silencioso / Sin Vías Principales" vs "Sobre Vía Principal / Ruidoso")
-  const reqDemandsQuiet = reqRawTextLower.includes("silencioso") || 
-                          reqRawTextLower.includes("tranquilo") || 
-                          reqRawTextLower.includes("nada sobre vias principales") || 
-                          reqRawTextLower.includes("sin vias principales") || 
-                          reqRawTextLower.includes("no vias principales") || 
-                          reqRawTextLower.includes("sin ruido");
+  const reqDemandsQuiet = reqRawTextLower.includes("silencioso") ||
+    reqRawTextLower.includes("tranquilo") ||
+    reqRawTextLower.includes("nada sobre vias principales") ||
+    reqRawTextLower.includes("sin vias principales") ||
+    reqRawTextLower.includes("no vias principales") ||
+    reqRawTextLower.includes("sin ruido");
 
-  const propIsMainRoadNoise = propRawTextLower.includes("sobre avenida") || 
-                              propRawTextLower.includes("via principal") || 
-                              propRawTextLower.includes("frente a avenida") || 
-                              propRawTextLower.includes("zona de alto trafico") || 
-                              propRawTextLower.includes("zona ruidosa");
+  const propIsMainRoadNoise = propRawTextLower.includes("sobre avenida") ||
+    propRawTextLower.includes("via principal") ||
+    propRawTextLower.includes("frente a avenida") ||
+    propRawTextLower.includes("zona de alto trafico") ||
+    propRawTextLower.includes("zona ruidosa");
 
   if (reqDemandsQuiet && propIsMainRoadNoise) {
     blockers.push("Choque de Calidad de Vida: El comprador exige inmueble silencioso sin vías principales y la oferta está situada sobre vía principal o zona ruidosa.");
@@ -1817,23 +1818,23 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
   }
 
   // C. Choque de Tipología Arquitectónica ("NO DUPLEX" vs "DUPLEX / 2 NIVELES") (Doctrina v22.4)
-  const reqRejectsDuplex = reqRawTextLower.includes("no duplex") || 
-                           reqRawTextLower.includes("no dúplex") || 
-                           reqRawTextLower.includes("cero duplex") || 
-                           reqRawTextLower.includes("sin duplex") || 
-                           reqRawTextLower.includes("nada de duplex") || 
-                           reqRawTextLower.includes("sin escaleras") || 
-                           reqRawTextLower.includes("un solo nivel") || 
-                           reqRawTextLower.includes("un solo piso");
+  const reqRejectsDuplex = reqRawTextLower.includes("no duplex") ||
+    reqRawTextLower.includes("no dúplex") ||
+    reqRawTextLower.includes("cero duplex") ||
+    reqRawTextLower.includes("sin duplex") ||
+    reqRawTextLower.includes("nada de duplex") ||
+    reqRawTextLower.includes("sin escaleras") ||
+    reqRawTextLower.includes("un solo nivel") ||
+    reqRawTextLower.includes("un solo piso");
 
-  const propIsDuplex = propRawTextLower.includes("duplex") || 
-                       propRawTextLower.includes("dúplex") || 
-                       propRawTextLower.includes("dos niveles") || 
-                       propRawTextLower.includes("2 niveles") || 
-                       propRawTextLower.includes("dos pisos") || 
-                       propRawTextLower.includes("2 pisos") ||
-                       (property.name || "").toLowerCase().includes("duplex") ||
-                       (property.name || "").toLowerCase().includes("dúplex");
+  const propIsDuplex = propRawTextLower.includes("duplex") ||
+    propRawTextLower.includes("dúplex") ||
+    propRawTextLower.includes("dos niveles") ||
+    propRawTextLower.includes("2 niveles") ||
+    propRawTextLower.includes("dos pisos") ||
+    propRawTextLower.includes("2 pisos") ||
+    (property.name || "").toLowerCase().includes("duplex") ||
+    (property.name || "").toLowerCase().includes("dúplex");
 
   if (reqRejectsDuplex && propIsDuplex) {
     blockers.push("Choque de Tipología Expresa: El cliente exige expresamente 'NO DUPLEX' y el inmueble ofrecido es DÚPLEX / Dos Niveles. Match Inviable (0%).");
@@ -1841,15 +1842,15 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
   }
 
   // D. Choque de Nivel ("NO PRIMER PISO" vs "PISO 1")
-  const reqRejectsFirstFloor = reqRawTextLower.includes("no primer piso") || 
-                               reqRawTextLower.includes("no 1er piso") || 
-                               reqRawTextLower.includes("no piso 1") || 
-                               reqRawTextLower.includes("piso alto");
+  const reqRejectsFirstFloor = reqRawTextLower.includes("no primer piso") ||
+    reqRawTextLower.includes("no 1er piso") ||
+    reqRawTextLower.includes("no piso 1") ||
+    reqRawTextLower.includes("piso alto");
 
-  const propIsFirstFloor = propRawTextLower.includes("primer piso") || 
-                           propRawTextLower.includes("piso 1") || 
-                           propRawTextLower.includes("piso primero") ||
-                           propRawTextLower.includes("1er piso");
+  const propIsFirstFloor = propRawTextLower.includes("primer piso") ||
+    propRawTextLower.includes("piso 1") ||
+    propRawTextLower.includes("piso primero") ||
+    propRawTextLower.includes("1er piso");
 
   if (reqRejectsFirstFloor && propIsFirstFloor && !reqRawTextLower.includes("primer piso")) {
     blockers.push("Choque de Nivel Expreso: El cliente exige expresamente 'NO PRIMER PISO' y la oferta está en Piso 1. Match Inviable (0%).");
@@ -1857,18 +1858,18 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
   }
 
   // E. Choque de Accesibilidad / Ascensor Obligatorio (Doctrina v25.0)
-  const reqDemandsElevator = reqRawTextLower.includes("con ascensor") || 
-                             reqRawTextLower.includes("exige ascensor") || 
-                             reqRawTextLower.includes("obligatorio ascensor") ||
-                             reqRawTextLower.includes("adulto mayor") ||
-                             reqRawTextLower.includes("tercera edad") ||
-                             reqRawTextLower.includes("discapacidad") ||
-                             reqRawTextLower.includes("no escaleras");
+  const reqDemandsElevator = reqRawTextLower.includes("con ascensor") ||
+    reqRawTextLower.includes("exige ascensor") ||
+    reqRawTextLower.includes("obligatorio ascensor") ||
+    reqRawTextLower.includes("adulto mayor") ||
+    reqRawTextLower.includes("tercera edad") ||
+    reqRawTextLower.includes("discapacidad") ||
+    reqRawTextLower.includes("no escaleras");
 
-  const propNoElevator = propRawTextLower.includes("sin ascensor") || 
-                         propRawTextLower.includes("no tiene ascensor") || 
-                         propRawTextLower.includes("por escaleras") || 
-                         propRawTextLower.includes("acceso por escaleras");
+  const propNoElevator = propRawTextLower.includes("sin ascensor") ||
+    propRawTextLower.includes("no tiene ascensor") ||
+    propRawTextLower.includes("por escaleras") ||
+    propRawTextLower.includes("acceso por escaleras");
 
   if (reqDemandsElevator && propNoElevator) {
     blockers.push("Choque de Accesibilidad: El cliente exige obligatoriamente ASCENSOR (por edad/movilidad) y el inmueble ofrecido es por ESCALERAS / Sin Ascensor. Match Inviable (0%).");
@@ -1876,16 +1877,16 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
   }
 
   // F. Choque de Orientación Visual (Exige "Solo Exterior" vs "Interior") (Doctrina v25.0)
-  const reqDemandsExterior = reqRawTextLower.includes("solo exterior") || 
-                             reqRawTextLower.includes("estrictamente exterior") || 
-                             reqRawTextLower.includes("nada interior") || 
-                             reqRawTextLower.includes("cero interior") || 
-                             reqRawTextLower.includes("no interior");
+  const reqDemandsExterior = reqRawTextLower.includes("solo exterior") ||
+    reqRawTextLower.includes("estrictamente exterior") ||
+    reqRawTextLower.includes("nada interior") ||
+    reqRawTextLower.includes("cero interior") ||
+    reqRawTextLower.includes("no interior");
 
-  const propIsInterior = propRawTextLower.includes("es interior") || 
-                         propRawTextLower.includes("vista interior") || 
-                         propRawTextLower.includes("apartamento interior") || 
-                         propRawTextLower.includes("apto interior");
+  const propIsInterior = propRawTextLower.includes("es interior") ||
+    propRawTextLower.includes("vista interior") ||
+    propRawTextLower.includes("apartamento interior") ||
+    propRawTextLower.includes("apto interior");
 
   if (reqDemandsExterior && propIsInterior) {
     blockers.push("Choque de Orientación Visual: El cliente exige expresamente 'SOLO EXTERIOR' y el inmueble ofrecido es INTERIOR. Match Inviable (0%).");
@@ -1896,7 +1897,7 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
   const propGarageType = (property.garageType || "").toLowerCase();
   const reqGarageTypeRaw = (requirement.rawText || "").toLowerCase();
   const reqWantsIndependent = reqGarageTypeRaw.includes("independiente") || reqGarageTypeRaw.includes("libre") || reqGarageTypeRaw.includes("no lineal");
-  
+
   let garageComfortPenalty = 0;
   if (reqGarages > 0 && pGarages >= reqGarages) {
     if (reqWantsIndependent && propGarageType === "lineal") {
@@ -1911,33 +1912,33 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
   }
 
   // Auditoría de Confort Técnico, Vistas y Luz Natural (Doctrina v25.0)
-  const reqWantsLightAir = reqRawTextLower.includes("luz natural") || 
-                            reqRawTextLower.includes("ventilacion natural") || 
-                            reqRawTextLower.includes("vista panoramica") || 
-                            reqRawTextLower.includes("vista a la ciudad") || 
-                            reqRawTextLower.includes("vista a la montana") || 
-                            reqRawTextLower.includes("vista a cerros") || 
-                            reqRawTextLower.includes("vista verde") || 
-                            reqRawTextLower.includes("frente a parque") || 
-                            reqRawTextLower.includes("iluminacion") || 
-                            reqRawTextLower.includes("iluminado") || 
-                            reqRawTextLower.includes("esquinero") || 
-                            reqRawTextLower.includes("sol de manana") || 
-                            reqRawTextLower.includes("sol de tarde");
+  const reqWantsLightAir = reqRawTextLower.includes("luz natural") ||
+    reqRawTextLower.includes("ventilacion natural") ||
+    reqRawTextLower.includes("vista panoramica") ||
+    reqRawTextLower.includes("vista a la ciudad") ||
+    reqRawTextLower.includes("vista a la montana") ||
+    reqRawTextLower.includes("vista a cerros") ||
+    reqRawTextLower.includes("vista verde") ||
+    reqRawTextLower.includes("frente a parque") ||
+    reqRawTextLower.includes("iluminacion") ||
+    reqRawTextLower.includes("iluminado") ||
+    reqRawTextLower.includes("esquinero") ||
+    reqRawTextLower.includes("sol de manana") ||
+    reqRawTextLower.includes("sol de tarde");
 
-  const propHasLightAir = propRawTextLower.includes("luz natural") || 
-                          propRawTextLower.includes("ventilacion natural") || 
-                          propRawTextLower.includes("vista panoramica") || 
-                          propRawTextLower.includes("vista a la ciudad") || 
-                          propRawTextLower.includes("vista a la montana") || 
-                          propRawTextLower.includes("vista a cerros") || 
-                          propRawTextLower.includes("vista verde") || 
-                          propRawTextLower.includes("frente a parque") || 
-                          propRawTextLower.includes("iluminado") || 
-                          propRawTextLower.includes("exterior") || 
-                          propRawTextLower.includes("esquinero") || 
-                          propRawTextLower.includes("sol de manana") || 
-                          propRawTextLower.includes("sol de tarde");
+  const propHasLightAir = propRawTextLower.includes("luz natural") ||
+    propRawTextLower.includes("ventilacion natural") ||
+    propRawTextLower.includes("vista panoramica") ||
+    propRawTextLower.includes("vista a la ciudad") ||
+    propRawTextLower.includes("vista a la montana") ||
+    propRawTextLower.includes("vista a cerros") ||
+    propRawTextLower.includes("vista verde") ||
+    propRawTextLower.includes("frente a parque") ||
+    propRawTextLower.includes("iluminado") ||
+    propRawTextLower.includes("exterior") ||
+    propRawTextLower.includes("esquinero") ||
+    propRawTextLower.includes("sol de manana") ||
+    propRawTextLower.includes("sol de tarde");
 
   let lightAirBonus = false;
   if (reqWantsLightAir && propHasLightAir) {
@@ -2025,7 +2026,7 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
       if (effectivePrice < budgetMax) {
         earnedPoints += 15;
         positives.push(`💰 Oportunidad: precio $${effectivePrice.toLocaleString()} por debajo del presupuesto $${budgetMax.toLocaleString()}`);
-      } else if (effectivePrice === budgetMax)             earnedPoints += 15;
+      } else if (effectivePrice === budgetMax) earnedPoints += 15;
       else if (effectivePrice <= budgetMax * 1.01) earnedPoints += 13;
       else if (effectivePrice <= budgetMax * 1.05) earnedPoints += 9;
       else negatives.push(`Precio $${effectivePrice.toLocaleString()} supera presupuesto $${budgetMax.toLocaleString()}`);
@@ -2051,7 +2052,7 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
   // 6. Habitaciones (10 pts)
   if (reqBedrooms > 0) {
     if (pBedrooms >= 0) {
-      if (pBedrooms >= reqBedrooms)     earnedPoints += 10;
+      if (pBedrooms >= reqBedrooms) earnedPoints += 10;
       else negatives.push(`Habitaciones (${pBedrooms}) inferiores a las requeridas (${reqBedrooms})`);
     } else {
       negatives.push("Habitaciones no especificadas en la oferta (N/E)");
@@ -2063,7 +2064,7 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
   // 7. Baños (4 pts — redistribuido desde 5)
   if (reqBathrooms > 0) {
     if (pBathrooms >= 0) {
-      if (pBathrooms >= reqBathrooms)   earnedPoints += 4;
+      if (pBathrooms >= reqBathrooms) earnedPoints += 4;
       else negatives.push(`Baños (${pBathrooms}) inferiores a los requeridos (${reqBathrooms})`);
     } else {
       negatives.push("Baños no especificados en la oferta (N/E)");
@@ -2107,7 +2108,7 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
   let reqAntiguedadMax = requirement.antiguedadMax != null ? Number(requirement.antiguedadMax) : -1;
   if (reqAntiguedadMax < 0 && requirement.rawText) {
     const mAntig = requirement.rawText.toLowerCase().match(/(?:máximo|max|hasta)\s*(\d{1,2})\s*años?\s*(?:de\s*)?(?:construido|construccion|construcción|antigüedad|antiguedad)?/i)
-                || requirement.rawText.toLowerCase().match(/(\d{1,2})\s*años?\s*(?:de\s*)?(?:construido|antigüedad)/i);
+      || requirement.rawText.toLowerCase().match(/(\d{1,2})\s*años?\s*(?:de\s*)?(?:construido|antigüedad)/i);
     if (mAntig) {
       reqAntiguedadMax = parseInt(mAntig[1], 10);
     }
@@ -2122,7 +2123,7 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
   }
   if (propAge < 0 && property.rawText) {
     const mPropAge = property.rawText.toLowerCase().match(/(?:edificio\s*de|antigüedad|antiguedad|tiene)\s*(\d{1,2})\s*años/i)
-                  || property.rawText.toLowerCase().match(/(\d{1,2})\s*años\s*(?:de\s*)?(?:antigüedad|construido)/i);
+      || property.rawText.toLowerCase().match(/(\d{1,2})\s*años\s*(?:de\s*)?(?:antigüedad|construido)/i);
     if (mPropAge) {
       propAge = parseInt(mPropAge[1], 10);
     }
@@ -2225,7 +2226,7 @@ export function evaluarInterseccionComodidadesSemanticas(req: any, prop: any): S
   // 1. CRUCE VESTIER / WALK-IN CLOSET (100% Coincidencia Exacta)
   const reqHasVestier = req.hasWalkInCloset || reqText.includes("vestier") || reqText.includes("walk") || reqText.includes("closet");
   const propHasVestier = prop.hasWalkInCloset || propText.includes("vestier") || propText.includes("walk") || propText.includes("closet");
-  
+
   let vestierScore = 0;
   if (reqHasVestier && propHasVestier) {
     vestierScore = 1.0; // 100% de puntos

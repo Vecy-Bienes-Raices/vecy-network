@@ -5005,9 +5005,9 @@ export async function processConsultingMessage(
         isFromAudio = true;
       } else {
         try {
-          const transcription = await transcribeAudioBuffer(audioUrl);
-          if (transcription && transcription.trim().length > 0) {
-            messageToProcess = transcription;
+          const transcription = await transcribeAudio({ audioUrl });
+          if (!('error' in transcription) && transcription.text && transcription.text.trim().length > 0) {
+            messageToProcess = transcription.text;
             isFromAudio = true;
           }
         } catch (err: any) {
@@ -5015,6 +5015,23 @@ export async function processConsultingMessage(
         }
       }
     }
+
+    const checkIsThankYou = (msg: string): boolean => {
+      const low = (msg || "").toLowerCase().trim();
+      return (
+        low.includes("gracias") ||
+        low.includes("muchas gracias") ||
+        low.includes("mil gracias") ||
+        low.includes("te agradezco") ||
+        low.includes("agradecido") ||
+        low.includes("agradecida") ||
+        low.includes("dios te bendiga") ||
+        low.includes("dios le pague") ||
+        low.includes("feliz noche") ||
+        low.includes("hasta luego") ||
+        low.includes("chao")
+      );
+    };
 
     const isThankYouMessage = checkIsThankYou(messageToProcess);
     if (isThankYouMessage) {

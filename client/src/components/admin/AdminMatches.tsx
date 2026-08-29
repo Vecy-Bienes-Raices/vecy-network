@@ -603,7 +603,7 @@ function scoreRows(req: any, prop: any) {
 
   add("Barrio / Vereda / Caserío", reqBarrioDisplay, propBarrioDisplay, barrioMatchStatus, 10, <MapPin className="w-3.5 h-3.5" />);
   add("Localidad / Comuna", reqLocalityDisplay, propLocalityDisplay, localityMatchStatus, 5, <Compass className="w-3.5 h-3.5" />);
-  add("Ciudad / Municipio", reqCityDisplay, propCityDisplay, cityMatchStatus, 5, <Building className="w-3.5 h-3.5" />);
+  add("Ciudad / Municipio", reqCityDisplay, propCityDisplay, cityMatchStatus, 5, <Building2 className="w-3.5 h-3.5" />);
 
   const isPhoneNumberNotPrice = (val: number | string | null | undefined, rawText?: string): boolean => {
     if (val === undefined || val === null || val === "" || val === 0 || val === "0") return false;

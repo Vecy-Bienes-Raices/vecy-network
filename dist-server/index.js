@@ -4989,6 +4989,7 @@ function explicarMatch(requirement, property) {
     }
   }
   const propRawTextLower = (property.rawText || property.description || "").toLowerCase();
+  const isReqSingleRoomSubtype = reqSubtype === "apartaestudio" || reqSubtype === "loft";
   if (effectiveReqBeds > 0) {
     if (pBedrooms >= 0) {
       if (effectiveReqBeds === 1 || isReqSingleRoomSubtype) {
@@ -5738,7 +5739,7 @@ async function transcribeAudioWithGemini(audioBuffer, mimeType) {
   }
   throw lastError || new Error("No fue posible transcribir el audio tras agotar modelos y claves de Gemini.");
 }
-async function transcribeAudioBuffer2(audioBuffer, mimeType, prompt) {
+async function transcribeAudioBuffer(audioBuffer, mimeType, prompt) {
   const sizeMB = audioBuffer.length / (1024 * 1024);
   if (sizeMB > 16) {
     throw new Error(`Audio file exceeds maximum size limit (16MB). Current size: ${sizeMB.toFixed(2)}MB`);
@@ -5798,7 +5799,7 @@ async function transcribeAudio(options) {
       };
     }
     try {
-      const text2 = await transcribeAudioBuffer2(audioBuffer, mimeType, options.prompt);
+      const text2 = await transcribeAudioBuffer(audioBuffer, mimeType, options.prompt);
       return {
         task: "transcribe",
         language: "es",
@@ -9896,9 +9897,9 @@ Por favor, realiza una pregunta orientada a estos temas inmobiliarios y con gust
         isFromAudio = true;
       } else {
         try {
-          const transcription = await transcribeAudioBuffer(audioUrl);
-          if (transcription && transcription.trim().length > 0) {
-            messageToProcess = transcription;
+          const transcription = await transcribeAudio({ audioUrl });
+          if (!("error" in transcription) && transcription.text && transcription.text.trim().length > 0) {
+            messageToProcess = transcription.text;
             isFromAudio = true;
           }
         } catch (err) {
@@ -9906,6 +9907,10 @@ Por favor, realiza una pregunta orientada a estos temas inmobiliarios y con gust
         }
       }
     }
+    const checkIsThankYou = (msg) => {
+      const low = (msg || "").toLowerCase().trim();
+      return low.includes("gracias") || low.includes("muchas gracias") || low.includes("mil gracias") || low.includes("te agradezco") || low.includes("agradecido") || low.includes("agradecida") || low.includes("dios te bendiga") || low.includes("dios le pague") || low.includes("feliz noche") || low.includes("hasta luego") || low.includes("chao");
+    };
     const isThankYouMessage = checkIsThankYou(messageToProcess);
     if (isThankYouMessage) {
       console.log(`[JanIA-Consulting-ThankYou] Agradecimiento/despedida detectado de ${userId}: "${messageToProcess}"`);
@@ -11697,7 +11702,7 @@ ${previewText}`.trim();
                     const audioBuffer = await downloadMediaSafely(msg, "audio");
                     if (audioBuffer && audioBuffer.length > 0) {
                       const mimeType = rawMsg.audioMessage.mimetype || "audio/ogg; codecs=opus";
-                      const transcription = await transcribeAudioBuffer2(audioBuffer, mimeType);
+                      const transcription = await transcribeAudioBuffer(audioBuffer, mimeType);
                       if (transcription && transcription.trim() !== "") {
                         body = transcription.trim();
                         console.log(`[JANIA-MATCH] Transcripci\xF3n exitosa: "${body.substring(0, 80)}..."`);
@@ -11754,7 +11759,7 @@ ${previewText}`.trim();
                     }
                     if (audioBuffer && audioBuffer.length > 0) {
                       const mimeType = quotedAudioMsg.mimetype || "audio/ogg; codecs=opus";
-                      const transcription = await transcribeAudioBuffer2(audioBuffer, mimeType);
+                      const transcription = await transcribeAudioBuffer(audioBuffer, mimeType);
                       if (transcription && transcription.trim() !== "") {
                         console.log(`[JANIA-MATCH] Transcripci\xF3n de audio citado exitosa: "${transcription.substring(0, 80)}..."`);
                         const quotedNote = `[Consulta en audio citada de +${quotedPhone}]: "${transcription.trim()}"`;
@@ -14757,7 +14762,7 @@ ${liveStats}${userContextInstruction}
           console.log("[JanIA-Router] Archivo detectado como Audio / Nota de voz. Transcribiendo...");
           const mime = contentType.includes("audio") ? contentType : input.fileUrl.endsWith(".ogg") ? "audio/ogg" : "audio/mp3";
           try {
-            const transcribed = await transcribeAudioBuffer2(rawBuffer, mime);
+            const transcribed = await transcribeAudioBuffer(rawBuffer, mime);
             if (transcribed && transcribed.trim()) {
               audioTranscriptionText = transcribed.trim();
               console.log(`[JanIA-Router] Audio transcrito exitosamente: "${audioTranscriptionText.substring(0, 80)}..."`);
@@ -16870,7 +16875,7 @@ Te invitamos cordialmente a **eliminarla de este grupo** y publicarla en nuestro
       const buffer = req.file.buffer;
       const mimeType = req.file.mimetype || "audio/webm";
       console.log(`[TRANSCRIBE-ROUTE] Recibido archivo de audio de tipo: ${mimeType}, tama\xF1o: ${buffer.length} bytes`);
-      const text2 = await transcribeAudioBuffer2(buffer, mimeType);
+      const text2 = await transcribeAudioBuffer(buffer, mimeType);
       res.json({ transcription: text2 });
     } catch (err) {
       console.error("[TRANSCRIBE-ROUTE] Error al transcribir:", err);

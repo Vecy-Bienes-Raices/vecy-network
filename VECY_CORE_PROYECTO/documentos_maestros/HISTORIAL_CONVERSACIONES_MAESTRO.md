@@ -58,6 +58,33 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ## 📜 REGISTRO DETALLADO DE CONVERSACIONES (ORDEN CRONOLÓGICO INVERSO CON FECHA Y HORA)
 
+### 🗓️ Sesión: Sábado 29 de Agosto de 2026 — 01:15 AM a 01:45 AM (Hora Colombia UTC-5)
+**Versión del Sistema**: `v27.0 — Restitución Rigurosa de Datos en Duro en 5 Primeras Casillas, Calificación de Aproximado en Precio (Casilla 6), Saneamiento Global de TypeScript (0 Errores) y Despliegue en Producción`  
+**Participantes**: Eduardo A. Rivera (Director Tecnología) & Antigravity IDE (Pair Programmer)
+
+#### 📋 Objetivos Cumplidos y Verificación Técnica:
+1. **Restitución Estricta de Datos en Duro (Casillas 1 a 5: 100% Idénticos "Coincide" 🟢 o "No Coincide" 🔴)**:
+   - **Línea 1: Tipo de Inmueble (Subtipo)**: Coincidencia idéntica `reqSubtype === propSubtype` $\rightarrow$ `exact` 🟢. De lo contrario $\rightarrow$ `missing` 🔴 (Guillotina 0%).
+   - **Línea 2: Tipo de Negocio**: `cleanReqBiz === cleanPropBiz` $\rightarrow$ `exact` 🟢. De lo contrario $\rightarrow$ `missing` 🔴.
+   - **Línea 3: Barrio / Vereda / Caserío**: Mismo barrio exacto; sub-calificadores distintos $\rightarrow$ `missing` 🔴.
+   - **Línea 4: Localidad / Comuna**: Coincidencia exacta de localidad $\rightarrow$ `exact` 🟢. De lo contrario $\rightarrow$ `missing` 🔴.
+   - **Línea 5: Ciudad / Municipio**: Coincidencia exacta de ciudad $\rightarrow$ `exact` 🟢. De lo contrario $\rightarrow$ `missing` 🔴.
+2. **Lógica de Calificación en Casilla 6 (Precio de Venta / Arriendo)**:
+   - Si `Precio Oferta == Presupuesto Demanda` $\rightarrow$ `"Coincide"` 🟢 (`exact`).
+   - Si `Precio Oferta < Presupuesto Demanda` (dentro de presupuesto) $\rightarrow$ `"Aproximado"` 🟡 (`warn`).
+   - Si `Precio Oferta > Presupuesto Demanda` $\rightarrow$ `"No Cumple"` 🔴 (`missing` / Guillotina).
+3. **Resolución Integral de Errores de Compilación TypeScript (`tsc --noEmit`)**:
+   - Resuelto `isReqSingleRoomSubtype` en [`server/_core/matching.ts`](file:///home/eddu/Proyectos/vecy-network/server/_core/matching.ts#L1640).
+   - Resuelto `transcribeAudio` y función `checkIsThankYou` en [`server/_core/janIA.ts`](file:///home/eddu/Proyectos/vecy-network/server/_core/janIA.ts#L5005-L5025).
+   - Resuelto icono `Building2` en [`client/src/components/admin/AdminMatches.tsx`](file:///home/eddu/Proyectos/vecy-network/client/src/components/admin/AdminMatches.tsx#L605).
+   - `npm run check` (`tsc --noEmit`) ejecutado con **0 errores**.
+4. **Marcadores de Control KPI**:
+   - `MATCHES DETECTADOS`, `MATCHES PERFECTOS (≥95%)`, `TOTAL OFERTAS`, `TOTAL DEMANDAS` activos con refresco cada 15 segundos en segundo plano.
+5. **Validación de Compilación y Despliegue**:
+   - `npm run build` ejecutado exitosamente con **0 errores** (Vite + esbuild `dist-server/index.js`).
+
+---
+
 ### 🗓️ Sesión: Sábado 29 de Agosto de 2026 — 12:45 AM a 01:15 AM (Hora Colombia UTC-5)
 **Versión del Sistema**: `v27.0 — Implementación y Despliegue del Motor Reactivo de Inyección Dinámica ("Por Arte de Magia") para 64 Amenidades, 22 Tipologías Inmobiliarias y Selector Interactivo de Permutas con Porcentajes`  
 **Participantes**: Eduardo A. Rivera (Director Tecnología) & Antigravity IDE (Pair Programmer)
