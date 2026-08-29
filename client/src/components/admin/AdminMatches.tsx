@@ -583,7 +583,16 @@ function scoreRows(req: any, prop: any) {
     saleS = "neutral";
   }
 
-  add("Precio de Venta", reqSaleLabel, propSaleLabel, saleS, isReqRentMatch ? 0 : 15, <DollarSign className="w-3.5 h-3.5" />);
+  const isDualBiz = cleanReqBiz.includes("venta_arriendo") || cleanPropBiz.includes("venta_arriendo") || 
+    (cleanReqBiz.includes("arriendo") && cleanPropBiz.includes("venta_arriendo")) ||
+    (cleanReqBiz.includes("venta") && cleanPropBiz.includes("venta_arriendo"));
+
+  const showSalePrice = !isReqRentMatch || isDualBiz;
+  const showRentPrice = isReqRentMatch || isPropPureRent || isDualBiz;
+
+  if (showSalePrice) {
+    add("Precio de Venta", reqSaleLabel, propSaleLabel, saleS, isReqRentMatch ? 0 : 15, <DollarSign className="w-3.5 h-3.5" />);
+  }
 
   let propRentPrice = !isPropPureVenta ? parseSafePrice(prop.rentPrice || prop.priceRent, prop.rawText) : 0;
   let reqRentBudget = isReqRentMatch ? parseSafePrice(req.presupuestoMax, req.rawText) : 0;
@@ -620,7 +629,9 @@ function scoreRows(req: any, prop: any) {
     rentS = "neutral";
   }
 
-  add("Precio de Arriendo / Canon", reqRentLabel, propRentLabel, rentS, isReqRentMatch ? 15 : 0, <Receipt className="w-3.5 h-3.5" />);
+  if (showRentPrice) {
+    add("Precio de Arriendo / Canon", reqRentLabel, propRentLabel, rentS, isReqRentMatch ? 15 : 0, <Receipt className="w-3.5 h-3.5" />);
+  }
 
   let reqAdminMax = parseSafePrice(req.adminFeeMax, req.rawText);
   let propAdminFee = parseSafePrice(prop.adminFee, prop.rawText);
