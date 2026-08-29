@@ -58,6 +58,35 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ## 📜 REGISTRO DETALLADO DE CONVERSACIONES (ORDEN CRONOLÓGICO INVERSO CON FECHA Y HORA)
 
+### 🗓️ Sesión: Sábado 29 de Agosto de 2026 — 12:30 PM a 12:45 PM (Hora Colombia UTC-5)
+**Versión del Sistema**: `v27.0 — Blindaje Doctrinal Anti-Requerimientos No Inmobiliarios (Canteras/Materiales), Detección Fidedigna de Ciudad desde el Texto (Bogotá vs Cali), Purga Masiva y Saneamiento de 114 Predios en Supabase`  
+**Participantes**: Eduardo A. Rivera (Director Tecnología) & Antigravity IDE (Pair Programmer)
+
+#### 📋 Solicitud de Eduardo y Diagnóstico de la Imagen (Match #M11238):
+- **Pregunta del Usuario**: *"Tu dices que JanIA no envía coincidencias falsas. Entonces lo que ves en la imagen que es??"*
+- **Análisis Forense de la Imagen (`Match #M11238`)**:
+  - **Inmueble / Oferta (PROP #177)**: *"Apartamento Remodelado en Chico Reservado, Calle 94 A carrera 9, 230 m², Precio $2.350 M"* (Ubicación inequívoca: Chicó Reservado, Chapinero, Bogotá D.C.).
+  - **Requerimiento / Demanda (REQ #818)**: *"Hay un requerimiento de una colega de Bogotá que necesita canteras que pueda enviar caliza piedra y arena información me la pueden enviar al 311 686 2657 Humberto Vargas"*.
+  - **Causa Raíz Descubierta**:
+    1. **Mensaje No Inmobiliario en Requerimientos**: Un mensaje de compra de materiales de construcción (*canteras, caliza, piedra y arena*) fue clasificado por error en la ingesta como un `apartment en Cali para venta`.
+    2. **Propiedades Antiguas con `city = 'Cali'` por Fallback**: 114 propiedades que tenían direcciones explícitas de Bogotá (Chicó, Rosales, Cedritos, Chapinero, Santa Bárbara, etc.) tenían almacenado el valor `'Cali'` en la columna `city` de la base de datos debido a un fallback antiguo previo a la v20.0.
+    3. Al tener ambos `'Cali'` en la base de datos y estar la demanda vacía de especificaciones de alcobas/baños/presupuesto, el cotejo aprobó las casillas 1 a 5 y asignó pluses a las demás, generando un match falso del 93%.
+
+#### 🛠️ Acciones Ejecutadas y Blindaje Doctrinal:
+1. **Guard Anti-Materiales / No Inmobiliario (`isNonRealEstateText`)**:
+   - Implementado en `matching.ts`, `AdminMatches.tsx` y en la ingesta de `janIA.ts`.
+   - Si un mensaje solicita u oferta `canteras`, `caliza`, `arena y piedra`, `triturado`, `cemento`, `varilla`, `volquetas` o `maquinaria`, **JanIA lo rechaza inmediatamente** y no lo ingresa a la base de datos.
+   - En el motor de matching, cualquier publicación de este tipo recibe **0% Bloqueo Inmediato**.
+2. **Detección Fiel de Ciudad Real desde el Texto (`extractTrueCityFromText`)**:
+   - Tanto en backend (`matching.ts`) como en frontend (`AdminMatches.tsx`), el sistema analiza los barrios, calles y carreras del texto para deducir la ciudad real. Si un inmueble está en Bogotá (Chicó, Rosales, Santa Bárbara, etc.) y la demanda busca Cali, la casilla de Ciudad se califica automáticamente como `missing` 🔴, disparando la **Guillotina Inmediata al 0%**.
+3. **Saneamiento Masivo y Purga en Supabase**:
+   - **Eliminación Total de REQ #818** y purga de sus **9 matches espurios** (`#11236`, `#11237`, `#11238`, `#11239`, `#11240`, `#11241`, `#11242`, `#11243`, `#11244`).
+   - **Corrección de 114 propiedades de Bogotá** en Supabase, reasignando su ciudad y departamento a `Bogotá, D.C.`.
+4. **Despliegue y Validación**:
+   - Compilación exitosa (`npm run build` 0 errores), push a GitHub (`main`), actualización y recarga de PM2 en el VPS (`13.140.149.144`).
+
+---
+
 ### 🗓️ Sesión: Sábado 29 de Agosto de 2026 — 03:05 AM a 03:25 AM (Hora Colombia UTC-5)
 **Versión del Sistema**: `v27.0 — Optimización Extrema de Rendimiento Desktop/Móvil, Caché en Memoria Instantánea (scoreRowsCache), Paginación Ligera en Demandas/Inmuebles y Supresión de Bloqueos de CPU`  
 **Participantes**: Eduardo A. Rivera (Director Tecnología) & Antigravity IDE (Pair Programmer)
