@@ -528,10 +528,10 @@ export function extractFallbackDataFromText(text: string): any {
     }
   }
 
-  // B. Detección de Presupuesto / Canon Máximo con Prefijos de Techo
-  // (ej: "Máximo 5 millones con admon", "Canon máximo $8.500.000", "Hasta 4 millones", "Ppto max 12 MM", "Tope 6.5 millones")
+  // B. Detección de Presupuesto / Canon Máximo con Prefijos de Techo o Directos
+  // (ej: "CANON DE ARRIENDO: $4.500.000", "Canon máximo $8.500.000", "Máximo 5 millones con admon", "Hasta 4 millones", "Ppto max 12 MM", "Tope 6.5 millones")
   if (price === 0) {
-    const ceilingMillonMatch = clean.match(/(?:presupuesto(?:\s*m[aá]ximo)?|ppto(?:\s*m[aá]ximo)?|canon(?:\s*m[aá]ximo)?|arriendo(?:\s*m[aá]ximo)?|m[aá]ximo|max|hasta|tope|techo|l[ií]mite)\s*:?\s*\$?\s*([\d]+(?:[.,][\d]+)?)\s*(mil\s*millones?|millones?|millon|millón|mill|mm|m)?\b/i);
+    const ceilingMillonMatch = clean.match(/(?:presupuesto(?:\s*m[aá]ximo)?|ppto(?:\s*m[aá]ximo)?|canon(?:\s*de\s*arriendo|\s*m[aá]ximo)?|valor(?:\s*de\s*arriendo)?|precio(?:\s*de\s*arriendo)?|arriendo(?:\s*apartamento|\s*casa|\s*m[aá]ximo)?|m[aá]ximo|max|hasta|tope|techo|l[ií]mite)\s*:?\s*\$?\s*([\d]+(?:[.,][\d]+)?)\s*(mil\s*millones?|millones?|millon|millón|mill|mm|m)?\b/i);
     if (ceilingMillonMatch) {
       const isSale = transactionType !== "arriendo";
       const computed = parseColombianPriceOrBudget(ceilingMillonMatch[1], ceilingMillonMatch[2] || "", isSale);
@@ -544,9 +544,9 @@ export function extractFallbackDataFromText(text: string): any {
       }
     }
 
-    // B.2 Prefijo de Techo + Formato Numérico Completo (ej: "Canon hasta 8.500.000", "Máximo $5.000.000 incluida administración", "ppto max $1.700.000.000")
+    // B.2 Prefijo de Techo / Canon + Formato Numérico Completo (ej: "CANON DE ARRIENDO: $4.500.000 incluida administración", "Canon hasta 8.500.000", "Máximo $5.000.000", "ppto max $1.700.000.000")
     if (price === 0) {
-      const ceilingNumMatch = clean.match(/(?:presupuesto(?:\s*m[aá]ximo)?|ppto(?:\s*m[aá]ximo)?|canon(?:\s*m[aá]ximo)?|arriendo(?:\s*m[aá]ximo)?|m[aá]ximo|max|hasta|tope|techo|l[ií]mite)\s*:?\s*(?:m[aá]s|\+|con)?\s*(?:administraci[oó]n\s*incluida)?(?:\s*total\s*mes)?\s*:?\s*\$?\s*([\d.,\s]+?)(?:-|\s|\(|$|\n)/i);
+      const ceilingNumMatch = clean.match(/(?:presupuesto(?:\s*m[aá]ximo)?|ppto(?:\s*m[aá]ximo)?|canon(?:\s*de\s*arriendo|\s*m[aá]ximo)?|valor(?:\s*de\s*arriendo)?|precio(?:\s*de\s*arriendo)?|arriendo(?:\s*apartamento|\s*casa|\s*m[aá]ximo)?|m[aá]ximo|max|hasta|tope|techo|l[ií]mite)\s*:?\s*(?:m[aá]s|\+|con)?\s*(?:administraci[oó]n\s*incluida)?(?:\s*total\s*mes)?\s*:?\s*\$?\s*([\d.,\s]+?)(?:-|\s*\(|\s*\n|\s*incluid|\s*con\s*adm|\s*m2|\s*$)/i);
       if (ceilingNumMatch) {
         let rawCNum = parseFloat(ceilingNumMatch[1].replace(/[.,\s]/g, ''));
         if (!isNaN(rawCNum) && rawCNum >= 300_000 && !isPhoneNumberNotPrice(rawCNum, text)) {

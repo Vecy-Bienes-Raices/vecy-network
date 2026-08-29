@@ -696,16 +696,54 @@ function scoreRows(req: any, prop: any) {
   let propRentPrice = !isPropPureVenta ? parseSafePrice(prop.rentPrice || prop.priceRent, prop.rawText) : 0;
   let reqRentBudget = isReqRentMatch ? parseSafePrice(req.presupuestoMax, req.rawText) : 0;
 
+  // Fallback para Presupuesto de Arriendo en Requerimiento (ej: "Presupuesto $5 mm con admón", "$5.000.000 / mes", "hasta 4.5 millones")
   if (isReqRentMatch && reqTextLower && !isReqOpenBudget && reqRentBudget <= 0) {
-    const matchPresu = reqTextLower.match(/(?:presupuesto|ppto|canon|valor|hasta|máximo|max)\s*(?:máximo|max)?\s*:?\s*\$?\s*([\d.,\s]+?)\s*(mil\s*millones?|millones|millón|mll|mlls|mm|m)?(?:\s|$|\n)/i);
+    const matchPresu = reqTextLower.match(/(?:presupuesto|ppto|canon|valor|hasta|máximo|max|tope)\s*(?:máximo|max)?\s*:?\s*\$?\s*([\d.,\s]+?)\s*(mil\s*millones?|millones|millón|mll|mlls|mm|m)?(?:\s*con\s*adm|\s*incluid|\s*total|\s|$|\n)/i);
     if (matchPresu) {
       let valStr = matchPresu[1].replace(/[.,\s]/g, "");
       let valR = parseFloat(valStr);
       if (!isNaN(valR)) {
         const unit = (matchPresu[2] || "").toLowerCase();
-        if (unit.includes("millon") || unit.includes("mll") || unit.includes("mm") || unit === "m") valR *= 1_000_000;
-        else if (valR < 1000) valR *= 1_000_000;
+        if (unit.includes("millon") || unit.includes("mll") || unit.includes("mm") || unit === "m") {
+          if (valR < 100) valR *= 1_000_000;
+          else valR *= 1_000_000;
+        } else if (valR < 1000) {
+          valR *= 1_000_000;
+        }
         if (valR >= 300_000 && valR <= 100_000_000) reqRentBudget = valR;
+      }
+    }
+  }
+
+  // Fallback para Canon de Arriendo en Inmueble (ej: "CANON DE ARRIENDO: $4.500.000 incluida la administración", "Canon: $4.500.000")
+  if (propRentPrice <= 0 && propTextLower && !isPropPureVenta) {
+    const canonDirectMatch = propTextLower.match(/(?:canon(?:\s*de\s*arriendo)?|valor(?:\s*de\s*arriendo)?|precio(?:\s*de\s*arriendo)?|arriendo(?:\s*apartamento|\s*casa|\s*inmueble)?)\s*:?\s*\$?\s*([\d.,\s]+?)(?:-|\s*\(|\s*\n|\s*incluid|\s*con\s*adm|\s*m2|\s*$)/i);
+    if (canonDirectMatch) {
+      let rawCStr = canonDirectMatch[1].replace(/[.,\s]/g, "");
+      let valC = parseFloat(rawCStr);
+      if (!isNaN(valC)) {
+        if (valC < 1000) valC *= 1_000_000;
+        if (valC >= 300_000 && valC <= 100_000_000 && !isPhoneNumberNotPrice(valC, prop.rawText)) {
+          propRentPrice = valC;
+        }
+      }
+    }
+
+    if (propRentPrice <= 0) {
+      const canonMillonMatch = propTextLower.match(/(?:canon|arriendo|alquiler|renta)?\s*:?\s*\$?\s*(\d{1,3}(?:[.,]\d{1,3})?)\s*(mil\s*millones?|millon|millones|millón|mll|mm|m)\b/i);
+      if (canonMillonMatch && (canonMillonMatch[0].includes("canon") || canonMillonMatch[0].includes("arriendo") || isPropPureRent)) {
+        const computed = parseColombianPriceOrBudget(canonMillonMatch[1], canonMillonMatch[2], false);
+        if (computed >= 300_000 && computed <= 100_000_000) propRentPrice = computed;
+      }
+    }
+
+    if (propRentPrice <= 0 && isPropPureRent) {
+      const formattedPriceMatch = (prop.rawText || "").match(/\$?\s*(\d{1,3}(?:\.\d{3}){2})/);
+      if (formattedPriceMatch) {
+        const parsed = parseFloat(formattedPriceMatch[1].replace(/\./g, ''));
+        if (!isNaN(parsed) && parsed >= 300_000 && parsed <= 100_000_000 && !isPhoneNumberNotPrice(parsed, prop.rawText)) {
+          propRentPrice = parsed;
+        }
       }
     }
   }
@@ -736,9 +774,23 @@ function scoreRows(req: any, prop: any) {
 
   let reqAdminMax = parseSafePrice(req.adminFeeMax, req.rawText);
   let propAdminFee = parseSafePrice(prop.adminFee, prop.rawText);
+  const isPropAdminIncluded = propTextLower.includes("incluida la administraci") || propTextLower.includes("incluida administraci") || propTextLower.includes("admon incluida") || propTextLower.includes("administracion incluida") || propTextLower.includes("con admon") || propTextLower.includes("con administración");
+
+  if (propAdminFee <= 0 && propTextLower && !isPropAdminIncluded) {
+    const admMatch = propTextLower.match(/(?:adm|admon|administraci[oó]n|admin)\s*:?\s*(?:aprox\.?)?\s*\$?\s*([\d.,\s]+?)(?:\s*\+|\s*-|\s*\(|\s*\n|$)/i);
+    if (admMatch) {
+      let rawAStr = admMatch[1].replace(/[.,\s]/g, "");
+      let valA = parseFloat(rawAStr);
+      if (!isNaN(valA) && valA >= 10_000 && valA <= 30_000_000 && !isPhoneNumberNotPrice(valA, prop.rawText)) {
+        propAdminFee = valA;
+      }
+    }
+  }
 
   let adminS: MatchStatus = "neutral";
-  if (reqAdminMax > 0 && propAdminFee > 0) {
+  if (isPropAdminIncluded) {
+    adminS = "exact";
+  } else if (reqAdminMax > 0 && propAdminFee > 0) {
     if (propAdminFee > reqAdminMax) {
       adminS = "missing";
     } else {
@@ -749,7 +801,7 @@ function scoreRows(req: any, prop: any) {
   }
 
   const reqAdminLabel = reqAdminMax > 0 ? `≤ ${formatCOP(reqAdminMax)}` : "Flexible / Sin restricción";
-  const propAdminLabel = propAdminFee > 0 ? `${formatCOP(propAdminFee)} / mes` : "N/E";
+  const propAdminLabel = isPropAdminIncluded ? "Incluida en el canon" : (propAdminFee > 0 ? `${formatCOP(propAdminFee)} / mes` : "N/E");
 
   add("Cuota de Administración", reqAdminLabel, propAdminLabel, adminS, 5, <Receipt className="w-3.5 h-3.5" />);
 
@@ -763,6 +815,17 @@ function scoreRows(req: any, prop: any) {
   }
 
   let areaP = parseFloat(prop.areaTotal || prop.areaPrivate || "0");
+  if (propTextLower) {
+    const m2Match = propTextLower.match(/(?:m2|mts|m²|metros|área|area)?\s*:?\s*(\d{1,4}[.,]\d{1,2})\s*(?:m2|mts|m²|metros)?/i);
+    if (m2Match) {
+      const rawDec = parseFloat(m2Match[1].replace(",", "."));
+      if (!isNaN(rawDec) && rawDec > 10 && rawDec < 2000) {
+        areaP = rawDec;
+      }
+    } else if (areaP > 1000 && areaP < 100000 && !prop.propertyType?.includes("lote") && !prop.propertyType?.includes("land") && !prop.propertyType?.includes("finca") && !prop.propertyType?.includes("farm")) {
+      areaP = areaP / 100;
+    }
+  }
 
   let areS: MatchStatus = "neutral";
   let areaPropLabel = areaP > 0 ? `${areaP} m²` : "N/E";
@@ -782,7 +845,16 @@ function scoreRows(req: any, prop: any) {
   add("Área Total", reqAreaLabel, areaPropLabel, areS, 10, <Ruler className="w-3.5 h-3.5" />);
 
   let bedR = req.habitacionesMin ? Number(req.habitacionesMin) : 0;
+  if (bedR <= 0 && reqTextLower) {
+    const bedMatchR = reqTextLower.match(/(\d+)\s*(?:alcoba|alcobas|hab|habs|habitacion|habitaciones|dormitorio|dormitorios|cuartos)/i);
+    if (bedMatchR) bedR = parseInt(bedMatchR[1], 10);
+  }
+
   let bedP = prop.bedrooms ? Number(prop.bedrooms) : 0;
+  if (bedP <= 0 && propTextLower) {
+    const bedMatchP = propTextLower.match(/(\d+)\s*(?:alcoba|alcobas|hab|habs|habitacion|habitaciones|dormitorio|dormitorios|cuartos)/i);
+    if (bedMatchP) bedP = parseInt(bedMatchP[1], 10);
+  }
 
   let bedS: MatchStatus = "neutral";
   if (bedR > 0 && bedP > 0) {
@@ -801,7 +873,16 @@ function scoreRows(req: any, prop: any) {
   add("Habitaciones", reqBedLabel, bedP > 0 ? `${bedP} hab.` : "N/E", bedS, 8, <Bed className="w-3.5 h-3.5" />);
 
   let bathR = req.banosMin ? Number(req.banosMin) : 0;
+  if (bathR <= 0 && reqTextLower) {
+    const bathMatchR = reqTextLower.match(/(\d+)\s*(?:baño|baños|bano|banos|wc)/i);
+    if (bathMatchR) bathR = parseInt(bathMatchR[1], 10);
+  }
+
   let bathP = prop.bathrooms ? Number(prop.bathrooms) : 0;
+  if (bathP <= 0 && propTextLower) {
+    const bathMatchP = propTextLower.match(/(\d+)\s*(?:baño|baños|bano|banos|wc)/i);
+    if (bathMatchP) bathP = parseInt(bathMatchP[1], 10);
+  }
 
   let bathS: MatchStatus = "neutral";
   if (bathR > 0 && bathP > 0) {
@@ -820,7 +901,17 @@ function scoreRows(req: any, prop: any) {
   add("Baños", reqBathLabel, bathP > 0 ? `${bathP} baño${bathP > 1 ? "s" : ""}` : "N/E", bathS, 5, <Bath className="w-3.5 h-3.5" />);
 
   let garR = req.parqueaderosMin ? Number(req.parqueaderosMin) : 0;
+  if (garR <= 0 && reqTextLower) {
+    const garMatchR = reqTextLower.match(/(\d+)\s*(?:garaje|garajes|parqueadero|parqueaderos|parqueo|parqueos|ptero|cochera)/i);
+    if (garMatchR) garR = parseInt(garMatchR[1], 10);
+  }
+
   let garP = prop.garages ? Number(prop.garages) : 0;
+  if (garP <= 0 && propTextLower) {
+    const garMatchP = propTextLower.match(/(\d+)\s*(?:garaje|garajes|parqueadero|parqueaderos|parqueo|parqueos|ptero|cochera)/i);
+    if (garMatchP) garP = parseInt(garMatchP[1], 10);
+  }
+
   const garType = (prop.garageType || "").toLowerCase();
   const reqWantsIndep = reqTextLower.includes("independiente") || reqTextLower.includes("libre") || reqTextLower.includes("no lineal");
 
@@ -846,6 +937,15 @@ function scoreRows(req: any, prop: any) {
     : (prop.yearBuilt ? (new Date().getFullYear() - Number(prop.yearBuilt))
     : (prop.constructionYear ? (new Date().getFullYear() - Number(prop.constructionYear)) : -1));
 
+  if (ageP < 0 && propTextLower) {
+    const ageMatchP = propTextLower.match(/(?:antigüedad|antiguedad|edad|tiene|\|)\s*:?\s*(\d{1,2})\s*a[ñn]os/i)
+                   || propTextLower.match(/(\d{1,2})\s*a[ñn]os\s*(?:de\s*)?(?:construido|antigüedad|edificio)/i);
+    if (ageMatchP) ageP = parseInt(ageMatchP[1], 10);
+    else if (propTextLower.includes("a estrenar") || propTextLower.includes("para estrenar") || propTextLower.includes("sobre planos") || propTextLower.includes("nuevo")) {
+      ageP = 0;
+    }
+  }
+
   let ageS: MatchStatus = "neutral";
   if (ageR > 0 && ageP >= 0) {
     if (ageP <= ageR) ageS = "exact";
@@ -863,7 +963,17 @@ function scoreRows(req: any, prop: any) {
   // 13. Estrato Socioeconómico
   const estratoArr: number[] = Array.isArray(req.estratoDeseado) ? req.estratoDeseado
     : req.estratoDeseado ? [Number(req.estratoDeseado)] : [];
+
+  if (estratoArr.length === 0 && reqTextLower) {
+    const estMatchR = reqTextLower.match(/(?:estrato|estr\.)\s*:?\s*([1-6])\b/i);
+    if (estMatchR) estratoArr.push(Number(estMatchR[1]));
+  }
+
   let estratoP = prop.stratum || prop.estrato;
+  if ((!estratoP || Number(estratoP) <= 0) && propTextLower) {
+    const estMatchP = propTextLower.match(/(?:estrato|estr\.)\s*:?\s*([1-6])\b/i);
+    if (estMatchP) estratoP = Number(estMatchP[1]);
+  }
 
   const hasEstratoReq = estratoArr.length > 0 && estratoArr[0] > 0;
   let estS: MatchStatus = "neutral";
