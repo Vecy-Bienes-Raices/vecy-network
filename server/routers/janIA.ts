@@ -989,6 +989,15 @@ export const janIARouter = router({
         }
       }
 
+      // Totales históricos acumulados capturados en BD
+      const [totalPropCount] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(properties);
+
+      const [totalReqCount] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(requirements);
+
       // Contadores del día según hora local de Bogotá (UTC-5)
       const [propTodayCount] = await db
         .select({ count: sql<number>`count(*)::int` })
@@ -1003,6 +1012,8 @@ export const janIARouter = router({
       const result = {
         isReady,
         phone,
+        totalProperties: totalPropCount?.count || 0,
+        totalRequirements: totalReqCount?.count || 0,
         todayProperties: propTodayCount?.count || 0,
         todayRequirements: reqTodayCount?.count || 0
       };
@@ -1013,7 +1024,7 @@ export const janIARouter = router({
     } catch (error: any) {
       if (cachedBotStatusData) return cachedBotStatusData;
       console.error("[BotStatus] Error checking bot status:", error);
-      return { isReady: true, phone: "573192919978", todayProperties: 0, todayRequirements: 0 };
+      return { isReady: true, phone: "573192919978", totalProperties: 0, totalRequirements: 0, todayProperties: 0, todayRequirements: 0 };
     }
   }),
 

@@ -67,12 +67,21 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
    - Implementado en [`AdminMatches.tsx`](file:///home/eddu/Proyectos/vecy-network/client/src/components/admin/AdminMatches.tsx) el motor evaluador que examina la presencia de atributos en demanda (`reqTextLower`) y oferta (`propRawText`).
    - Las 23 características internas y 41 externas, además de los atributos cuantitativos especiales (garajes para moto, chimeneas por tecnología [leña/gas/bioetanol], cuarto de servicio con/sin baño, cava de vinos, terrazas con m² y BBQ, piso y ubicación exterior/interior), se inyectan automáticamente en la tabla solo cuando alguna de las partes los menciona.
    - Si ninguna de las partes los menciona, la tabla permanece ultra-ligera y sin filas vacías redundantes.
-   - Ponderación doctrinal inteligente: Coincidencia mutua (`exact` 🟢 Factor 1.00), Plus Ofertado (`plus` 🔵 Factor 0.90), Deseo no cubierto (`warn` 🟡 Factor 0.65) y Exigencia obligatoria no cumplida (`missing` 🔴 Factor 0.00 / Guillotina).
-2. **Taxonomía de 22 Tipos de Inmuebles Integrada**:
-   - Cobertura completa en `deduceFullPropertyType`, `getSubtypeFriendlyLabel` y `<select>` de edición: Apartaestudio, Loft, Apartamento, Apartamento Dúplex, Pent House, Pent House Dúplex, Casa, Casa Campestre, Casa Quinta, Villa, Finca, Cabaña, Edificio, Local Comercial, Oficina, Consultorio Médico / Dotacional, Bodega, Lote / Terreno, Hotel, Hostal, Aparta Hotel, Aparta Suit, Motel.
-3. **Selector Desplegable e Interactivo de Permutas con Porcentajes**:
-   - Integrado en `normalizeNegocio`, `getBusinessDisplayLabel`, `checkTransactionCompatibility` y en los selects de modo edición: `Venta 50% / Permuta 50%`, `60/40`, `70/30`, `80/20`, `90/10`, `10/90`, `20/80`, `30/70`, `40/60`, `Permuta Pura (100%)` y `Venta / Permuta General`.
-4. **Validación de Compilación y Calidad**:
+2. **Reorganización Estructural de Filas Nucleares**:
+   - Intercambiadas las casillas nucleares: **Línea 12: Antigüedad / Año de Construcción** y **Línea 13: Estrato Socioeconómico**.
+3. **Distribución Doctrinal del Puntaje (Base 85% a 88% y Guillotina a 0%)**:
+   - Casillas 1 a 6 (Tipo Inmueble, Negocio, Barrio, Localidad, Ciudad, Precio): Núcleo innegociable.
+   - Casillas 7 a 12 (Administración, Área, Habitaciones, Baños, Parqueaderos, Antigüedad): Al coincidir casillas 1 a 6 y tener datos viables (`exact`, `plus`, `warn`, `neutral`) en 7 a 12, la puntuación base se ubica entre **85% y 88%**.
+   - Casillas 13 en adelante (Estrato, exterior, amenidades): Suman progresivamente hacia 90%, 92%, 95%, 97% y 100%.
+   - Guillotina total a 0%: Si existe cualquier exigencia no satisfecha (`missing` 🔴) por parte de la oferta, el match colapsa a 0%.
+4. **Marcadores de Control KPI & Actualización Minuto a Minuto**:
+   - `"MATCHES DETECTADOS"`: Muestra el conteo de matches detectados bajo la lógica actual.
+   - `"TOTAL OFERTAS"`: Muestra la cifra total histórica de inmuebles capturados en base de datos.
+   - `"TOTAL DEMANDAS"`: Muestra la cifra total histórica de requerimientos capturados en base de datos.
+   - Actualización periódica en segundo plano cada 15 segundos (`refetchInterval: 15000`) para reflejar altas en tiempo real.
+5. **Taxonomía de 22 Tipos de Inmuebles y Permutas con Porcentajes**:
+   - Cobertura completa en `deduceFullPropertyType`, `getSubtypeFriendlyLabel`, backend `matching.ts` y selectores de edición.
+6. **Validación de Compilación y Calidad**:
    - `npm run build` ejecutado y validado con **0 errores de TypeScript**, empaquetado de producción en Vite y `dist-server/index.js` en esbuild listos para despliegue.
 
 #### 📋 Requerimientos Específicos del Usuario (Eduardo A. Rivera):

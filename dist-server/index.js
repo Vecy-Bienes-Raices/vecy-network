@@ -15253,11 +15253,15 @@ ${liveStats}${userContextInstruction}
           phone = data.phone;
         }
       }
+      const [totalPropCount] = await db.select({ count: sql4`count(*)::int` }).from(properties);
+      const [totalReqCount] = await db.select({ count: sql4`count(*)::int` }).from(requirements);
       const [propTodayCount] = await db.select({ count: sql4`count(*)::int` }).from(properties).where(sql4`DATE(${properties.createdAt} AT TIME ZONE 'America/Bogota') = CURRENT_DATE`);
       const [reqTodayCount] = await db.select({ count: sql4`count(*)::int` }).from(requirements).where(sql4`DATE(${requirements.createdAt} AT TIME ZONE 'America/Bogota') = CURRENT_DATE`);
       const result = {
         isReady,
         phone,
+        totalProperties: totalPropCount?.count || 0,
+        totalRequirements: totalReqCount?.count || 0,
         todayProperties: propTodayCount?.count || 0,
         todayRequirements: reqTodayCount?.count || 0
       };
@@ -15267,7 +15271,7 @@ ${liveStats}${userContextInstruction}
     } catch (error) {
       if (cachedBotStatusData) return cachedBotStatusData;
       console.error("[BotStatus] Error checking bot status:", error);
-      return { isReady: true, phone: "573192919978", todayProperties: 0, todayRequirements: 0 };
+      return { isReady: true, phone: "573192919978", totalProperties: 0, totalRequirements: 0, todayProperties: 0, todayRequirements: 0 };
     }
   }),
   getQrCode: publicProcedure.query(async () => {

@@ -854,6 +854,27 @@ function scoreRows(req: any, prop: any) {
 
   add("Parqueaderos", garReqLabel, garPropLabel, garS, 5, <Car className="w-3.5 h-3.5" />);
 
+  // 12. Antigüedad / Año de Construcción
+  let ageR = req.antiguedadMax ? Number(req.antiguedadMax) : (req.preferredAge ? Number(req.preferredAge) : 0);
+  let ageP = prop.antiguedadAnos != null ? Number(prop.antiguedadAnos)
+    : (prop.yearBuilt ? (new Date().getFullYear() - Number(prop.yearBuilt))
+    : (prop.constructionYear ? (new Date().getFullYear() - Number(prop.constructionYear)) : -1));
+
+  let ageS: MatchStatus = "neutral";
+  if (ageR > 0 && ageP >= 0) {
+    if (ageP <= ageR) ageS = "exact";
+    else if (ageP <= ageR + 5) ageS = "warn";
+    else ageS = "warn";
+  } else if (ageR <= 0 && ageP >= 0) {
+    ageS = "neutral";
+  } else if (ageR > 0 && ageP < 0) {
+    ageS = "neutral";
+  }
+  const reqAgeLabel = ageR > 0 ? `Máx ${ageR} años` : "Flexible / Sin restricción";
+  const propAgeLabel = ageP >= 0 ? (ageP === 0 ? "A estrenar / Sobre planos" : `${ageP} años`) : "N/E (Consultar)";
+  add("Antigüedad / Año", reqAgeLabel, propAgeLabel, ageS, 5, <Calendar className="w-3.5 h-3.5" />);
+
+  // 13. Estrato Socioeconómico
   const estratoArr: number[] = Array.isArray(req.estratoDeseado) ? req.estratoDeseado
     : req.estratoDeseado ? [Number(req.estratoDeseado)] : [];
   let estratoP = prop.stratum || prop.estrato;
@@ -876,26 +897,6 @@ function scoreRows(req: any, prop: any) {
   const reqEstratoLabel = hasEstratoReq ? `Estrato ${estratoArr.join(", ")}` : "Flexible / Sin restricción";
 
   add("Estrato", reqEstratoLabel, (estratoP && Number(estratoP) > 0) ? `Estrato ${estratoP}` : "N/E", estS, 7, <Shield className="w-3.5 h-3.5" />);
-
-  // 14. Antigüedad / Año de Construcción
-  let ageR = req.antiguedadMax ? Number(req.antiguedadMax) : (req.preferredAge ? Number(req.preferredAge) : 0);
-  let ageP = prop.antiguedadAnos != null ? Number(prop.antiguedadAnos)
-    : (prop.yearBuilt ? (new Date().getFullYear() - Number(prop.yearBuilt))
-    : (prop.constructionYear ? (new Date().getFullYear() - Number(prop.constructionYear)) : -1));
-
-  let ageS: MatchStatus = "neutral";
-  if (ageR > 0 && ageP >= 0) {
-    if (ageP <= ageR) ageS = "exact";
-    else if (ageP <= ageR + 5) ageS = "warn";
-    else ageS = "warn";
-  } else if (ageR <= 0 && ageP >= 0) {
-    ageS = "neutral";
-  } else if (ageR > 0 && ageP < 0) {
-    ageS = "neutral";
-  }
-  const reqAgeLabel = ageR > 0 ? `Máx ${ageR} años` : "Flexible / Sin restricción";
-  const propAgeLabel = ageP >= 0 ? (ageP === 0 ? "A estrenar / Sobre planos" : `${ageP} años`) : "N/E (Consultar)";
-  add("Antigüedad / Año", reqAgeLabel, propAgeLabel, ageS, 5, <Calendar className="w-3.5 h-3.5" />);
 
   // 15. Espacio Exterior (Balcón / Terraza / Patio / Jardín)
   const isHouse = (req.tipoInmuebleDeseado || req.propertyType || prop.propertyType || "").toLowerCase().includes("casa");
@@ -1383,35 +1384,48 @@ function scoreRows(req: any, prop: any) {
   );
 
 
-  // ── ESTADÍSTICA Y TABULACIÓN DOCTRINAL DE MATCH VECY (REGULARES 80%, 85%, 90%, 97%, 100%) ──
-  // 1. Si cualquiera de los 5 primeros campos en duro NO COINCIDE 100% (no está en verde) -> autoScore = 0
-  const top5Rows = rows.slice(0, 5);
-  const hasHardMismatch = top5Rows.some(r => r.status !== "exact" && r.status !== "ok");
+  // ── ESTADÍSTICA Y TABULACIÓN DOCTRINAL DE MATCH VECY (v27.0) ──
+  // 1. Primeras 6 casillas (Núcleo Innegociable Obligatorio): Tipo Inmueble, Tipo Negocio, Barrio, Localidad, Ciudad, Precio
+  const top6Rows = rows.slice(0, 6);
+  const hasHardMismatch = top6Rows.some(r => r.status === "missing");
 
-  // 2. Filtros duros físicos y financieros: Precio supera presupuesto o física menor (Oferta < Demanda)
-  const hardPhysicalMismatch = 
-    (!isReqRentMatch && saleS === "missing") || 
-    (isReqRentMatch && rentS === "missing") || 
-    (areS === "missing") || 
-    (bedS === "missing") || 
-    (bathS === "missing") || 
-    (garS === "missing");
-
-  // ── REGLA DE ORO DE GUILLOTINA Y TABULACIÓN DOCTRINAL MATEMÁTICA ──
-  // 1. Si CUALQUIER FILA tiene estado "missing" ("No Coincide" / "No Cumple" en rojo) -> Guillotina Total a 0%
+  // 2. Guillotina Total: Si CUALQUIER fila tiene estado "missing" ("No Coincide" / "No Cumple" en rojo) -> 0%
   const hasAnyMissingRow = rows.some(r => r.status === "missing");
   let autoScore = 0;
 
-  if (!hasHardMismatch && !hardPhysicalMismatch && !hasAnyMissingRow && max > 0) {
-    // 2. Si TODAS las filas evaluadas están en "exact" o "ok" (cero pluses, cero aproximados, cero pendientes)
+  if (!hasHardMismatch && !hasAnyMissingRow && max > 0) {
+    // Si todas las filas evaluadas están en exact/ok (todo verde) -> 100%
     const allExactGreen = rows.every(r => r.label.includes("Teléfono") || r.status === "exact" || r.status === "ok");
 
     if (allExactGreen) {
-      autoScore = 100; // 🎯 100% MATCH PERFECTO (TODO EN VERDE "COINCIDE")
+      autoScore = 100;
     } else {
-      // 3. Puntuación continua calculada de forma matemática de mayor a menor según los pesos:
-      const rawScore = (pts / max) * 100;
-      autoScore = Math.min(99, Math.round(rawScore));
+      // Casillas 7 a 12 (índices 6 a 11): Administración, Área, Habitaciones, Baños, Parqueaderos, Antigüedad
+      const middleRows = rows.slice(6, 12);
+      let middleBonus = 0;
+      for (const r of middleRows) {
+        if (r.status === "exact" || r.status === "ok") middleBonus += 0.5;
+        else if (r.status === "plus") middleBonus += 0.4;
+        else if (r.status === "warn") middleBonus += 0.2;
+        else if (r.status === "neutral") middleBonus += 0.1;
+      }
+      // Puntuación base garantizada de 85% a 88% al coincidir casillas 1 a 6 y tener datos viables en 7 a 12
+      const baseScore = 85 + Math.min(3, middleBonus);
+
+      // Casillas 13 en adelante (índice 12 en adelante): Estrato, Espacio exterior, Amenidades dinámicas
+      const extraRows = rows.slice(12).filter(r => !r.label.includes("Teléfono"));
+      let extraBonus = 0;
+      if (extraRows.length > 0) {
+        for (const r of extraRows) {
+          if (r.status === "exact" || r.status === "ok") extraBonus += 1.5;
+          else if (r.status === "plus") extraBonus += 1.0;
+          else if (r.status === "warn") extraBonus += 0.5;
+          else if (r.status === "neutral") extraBonus += 0.2;
+        }
+      }
+
+      const calculated = Math.min(99, Math.round(baseScore + extraBonus));
+      autoScore = Math.max(85, calculated);
     }
   }
 
@@ -1941,11 +1955,11 @@ export default function AdminMatches() {
     }
   };
 
-  // Fetch matches directly from server API (cacheado para máxima fluidez)
+  // Fetch matches directly from server API (actualización periódica en segundo plano cada 15 segundos)
   const { data: matches = [], isLoading, refetch } = trpc.janIA.getAllMatches.useQuery(undefined, {
-    refetchInterval: false,
-    staleTime: 60000,
-    refetchOnWindowFocus: false,
+    refetchInterval: 15000,
+    staleTime: 10000,
+    refetchOnWindowFocus: true,
   });
 
 
@@ -2118,9 +2132,9 @@ export default function AdminMatches() {
 
 
   const { data: botStatus } = trpc.janIA.getBotStatus.useQuery(undefined, {
-    refetchInterval: false,
-    staleTime: 60000,
-    refetchOnWindowFocus: false,
+    refetchInterval: 15000,
+    staleTime: 10000,
+    refetchOnWindowFocus: true,
   });
 
   const kpiStats = useMemo(() => {
@@ -2131,13 +2145,11 @@ export default function AdminMatches() {
       const s = m._precomputedScore;
       return s >= 85 && s < 95;
     }).length;
-    const uniqueProps = new Set(rawList.map((m: any) => m.property?.id || m.propertyId).filter(Boolean)).size;
-    const uniqueReqs = new Set(rawList.map((m: any) => m.requirement?.id || m.requirementId).filter(Boolean)).size;
 
-    const todayProps = botStatus?.todayProperties ?? uniqueProps;
-    const todayReqs = botStatus?.todayRequirements ?? uniqueReqs;
+    const totalProps = (botStatus as any)?.totalProperties ?? (botStatus?.todayProperties ?? 0);
+    const totalReqs = (botStatus as any)?.totalRequirements ?? (botStatus?.todayRequirements ?? 0);
 
-    return { total, perfect, approx, uniqueProps, uniqueReqs, todayProps, todayReqs };
+    return { total, perfect, approx, totalProps, totalReqs };
   }, [processedMatches, botStatus]);
 
   const exportData = () => {
@@ -2196,7 +2208,7 @@ export default function AdminMatches() {
             <Sparkles className="w-5 h-5 text-[#bf953f]" />
           </div>
           <div>
-            <p className="text-[10px] uppercase tracking-wider text-zinc-400 font-bold">Matches Calificados</p>
+            <p className="text-[10px] uppercase tracking-wider text-zinc-400 font-bold">Matches Detectados</p>
             <p className="text-lg sm:text-xl font-black text-white">{kpiStats.total}</p>
           </div>
         </div>
@@ -2211,23 +2223,23 @@ export default function AdminMatches() {
           </div>
         </div>
 
-        <div className="bg-black/60 border border-emerald-500/30 p-3.5 rounded-2xl flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center shrink-0">
-            <Building2 className="w-5 h-5 text-emerald-400" />
+        <div className="bg-black/60 border border-amber-500/30 p-3.5 rounded-2xl flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0">
+            <Building2 className="w-5 h-5 text-[#bf953f]" />
           </div>
           <div>
-            <p className="text-[10px] uppercase tracking-wider text-emerald-400 font-bold">Inmuebles Hoy</p>
-            <p className="text-lg sm:text-xl font-black text-emerald-400">{kpiStats.todayProps}</p>
+            <p className="text-[10px] uppercase tracking-wider text-[#bf953f] font-bold">Total Ofertas</p>
+            <p className="text-lg sm:text-xl font-black text-[#bf953f]">{kpiStats.totalProps}</p>
           </div>
         </div>
 
-        <div className="bg-black/60 border border-indigo-500/30 p-3.5 rounded-2xl flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center shrink-0">
-            <ClipboardList className="w-5 h-5 text-indigo-400" />
+        <div className="bg-black/60 border border-cyan-500/30 p-3.5 rounded-2xl flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center shrink-0">
+            <ClipboardList className="w-5 h-5 text-cyan-400" />
           </div>
           <div>
-            <p className="text-[10px] uppercase tracking-wider text-indigo-400 font-bold">Reqs Hoy</p>
-            <p className="text-lg sm:text-xl font-black text-indigo-400">{kpiStats.todayReqs}</p>
+            <p className="text-[10px] uppercase tracking-wider text-cyan-400 font-bold">Total Demandas</p>
+            <p className="text-lg sm:text-xl font-black text-cyan-400">{kpiStats.totalReqs}</p>
           </div>
         </div>
       </div>
