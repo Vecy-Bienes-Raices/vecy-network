@@ -201,7 +201,89 @@ function extractItemImages(item: any): string[] {
   return normalizedUrls;
 }
 
+// ── DEFINICIÓN ESTÁTICA EN MEMORIA DE LAS 64 CARACTERÍSTICAS & AMENIDADES ("POR ARTE DE MAGIA") ──
+const DYNAMIC_AMENITIES: Array<{
+  name: string;
+  patterns: string[];
+  icon: React.ReactNode;
+  weight?: number;
+}> = [
+  // ✨ 23 CARACTERÍSTICAS INTERNAS
+  { name: "Aire Acondicionado", patterns: ["aire acondicionado", "aire acond", "climatizado", "a/a"], icon: <Wind className="w-3.5 h-3.5" /> },
+  { name: "Alarma de Seguridad", patterns: ["alarma", "sistema de alarma"], icon: <Lock className="w-3.5 h-3.5" /> },
+  { name: "Amoblado", patterns: ["amoblado", "full amoblado", "con muebles"], icon: <Home className="w-3.5 h-3.5" /> },
+  { name: "Acabados de Alta Gama", patterns: ["alta gama", "acabados de lujo", "marmol", "mármol", "acabados importados"], icon: <Maximize className="w-3.5 h-3.5" /> },
+  { name: "Acabados Modernos", patterns: ["acabados modernos", "diseño moderno"], icon: <Sparkles className="w-3.5 h-3.5" /> },
+  { name: "Bar / Zona Bar", patterns: ["barra de bar", "zona de bar", "mueble bar"], icon: <Coffee className="w-3.5 h-3.5" /> },
+  { name: "Baño en Alcoba Principal", patterns: ["baño en alcoba principal", "baño privado principal", "en suite"], icon: <Bath className="w-3.5 h-3.5" /> },
+  { name: "Baño en Todas las Alcobas", patterns: ["baño en cada alcoba", "baño en todas las", "todas con baño"], icon: <Bath className="w-3.5 h-3.5" /> },
+  { name: "Citófono", patterns: ["citofono", "citófono", "intercomunicador"], icon: <Phone className="w-3.5 h-3.5" /> },
+  { name: "Clósets Empotrados", patterns: ["closets", "clósets", "closet empotrado"], icon: <Archive className="w-3.5 h-3.5" /> },
+  { name: "Comedor Auxiliar", patterns: ["comedor auxiliar", "comedor de diario"], icon: <Utensils className="w-3.5 h-3.5" /> },
+  { name: "Despensa / Alacena", patterns: ["despensa", "alacena"], icon: <Archive className="w-3.5 h-3.5" /> },
+  { name: "Doble Ventana / Antiruido", patterns: ["doble ventana", "termoacustica", "termoacústica", "antiruido"], icon: <VolumeX className="w-3.5 h-3.5" /> },
+  { name: "Gas Domiciliario", patterns: ["gas domiciliario", "gas natural", "red de gas"], icon: <Fuel className="w-3.5 h-3.5" /> },
+  { name: "Iluminación Natural", patterns: ["iluminacion natural", "iluminación natural", "luz natural", "muy iluminado"], icon: <Sun className="w-3.5 h-3.5" /> },
+  { name: "Hall de Alcobas", patterns: ["hall de alcobas", "estar de habitaciones"], icon: <Home className="w-3.5 h-3.5" /> },
+  { name: "Jacuzzi / Hidromasaje", patterns: ["jacuzzi", "hidromasaje", "tina jacuzzi"], icon: <Waves className="w-3.5 h-3.5" /> },
+  { name: "Turco Privado", patterns: ["turco privado", "baño turco"], icon: <Waves className="w-3.5 h-3.5" /> },
+  { name: "Vestier / Walk-in Closet", patterns: ["vestier", "walk-in closet", "walking closet", "vestidor"], icon: <Archive className="w-3.5 h-3.5" /> },
+  { name: "Vista Panorámica", patterns: ["vista panoramica", "vista panorámica", "vista a la ciudad", "vista verde", "vista a los cerros"], icon: <Mountain className="w-3.5 h-3.5" /> },
+  { name: "Zona de Lavandería", patterns: ["zona de lavanderia", "zona de lavandería", "cuarto de ropas"], icon: <Zap className="w-3.5 h-3.5" /> },
+
+  // 🏢 41 CARACTERÍSTICAS EXTERNAS
+  { name: "Acceso Pavimentado", patterns: ["acceso pavimentado", "via pavimentada", "vía pavimentada", "asfalto"], icon: <MapPin className="w-3.5 h-3.5" /> },
+  { name: "Área Social / Comunal", patterns: ["area social", "área social", "salon social", "zonas sociales"], icon: <Home className="w-3.5 h-3.5" /> },
+  { name: "Áreas Turísticas", patterns: ["area turistica", "área turística", "zona turistica"], icon: <Landmark className="w-3.5 h-3.5" /> },
+  { name: "Bancos Cercanos", patterns: ["bancos cercanos", "zona bancaria"], icon: <Landmark className="w-3.5 h-3.5" /> },
+  { name: "Barbacoa / Parrilla Comunal", patterns: ["barbacoa", "quincho", "parrilla comunal"], icon: <Flame className="w-3.5 h-3.5" /> },
+  { name: "Bosques Nativos", patterns: ["bosque nativo", "bosques nativos", "reserva forestal"], icon: <Trees className="w-3.5 h-3.5" /> },
+  { name: "Caldera Central", patterns: ["caldera", "agua caliente central"], icon: <Flame className="w-3.5 h-3.5" /> },
+  { name: "Cancha de Baloncesto", patterns: ["cancha de baloncesto", "cancha baloncesto", "basket"], icon: <Trophy className="w-3.5 h-3.5" /> },
+  { name: "Cancha de Fútbol", patterns: ["cancha de futbol", "cancha de fútbol", "cancha sintetica", "cancha sintética", "futbol 5"], icon: <Trophy className="w-3.5 h-3.5" /> },
+  { name: "Cancha de Golf", patterns: ["cancha de golf", "campo de golf", "golf"], icon: <Trophy className="w-3.5 h-3.5" /> },
+  { name: "Cancha de Squash", patterns: ["cancha de squash", "cancha squash", "squash"], icon: <Trophy className="w-3.5 h-3.5" /> },
+  { name: "Cancha de Tenis", patterns: ["cancha de tenis", "cancha tenis", "tennis"], icon: <Trophy className="w-3.5 h-3.5" /> },
+  { name: "Centros Comerciales", patterns: ["centro comercial", "centros comerciales", "c.c."], icon: <Building2 className="w-3.5 h-3.5" /> },
+  { name: "Centros Médicos / Clínicas", patterns: ["centro medico", "centros medicos", "clinica", "clínica", "hospital"], icon: <ShieldAlert className="w-3.5 h-3.5" /> },
+  { name: "Club House", patterns: ["club house", "clubhouse"], icon: <Home className="w-3.5 h-3.5" /> },
+  { name: "Colegios / Universidades", patterns: ["colegio", "colegios", "universidad", "universidades"], icon: <School className="w-3.5 h-3.5" /> },
+  { name: "Edificio Inteligente", patterns: ["edificio inteligente", "domotica", "domótica"], icon: <Zap className="w-3.5 h-3.5" /> },
+  { name: "Gimnasio Dotado", patterns: ["gimnasio", "gym"], icon: <Dumbbell className="w-3.5 h-3.5" /> },
+  { name: "Kiosco / Bohío", patterns: ["kiosco", "quiosco", "bohio", "bohío"], icon: <Home className="w-3.5 h-3.5" /> },
+  { name: "Lago / Espejo de Agua", patterns: ["lago", "laguna", "espejo de agua"], icon: <Waves className="w-3.5 h-3.5" /> },
+  { name: "Lavandería Comunal", patterns: ["lavanderia comunal", "lavandería comunal"], icon: <Zap className="w-3.5 h-3.5" /> },
+  { name: "Parques Cercanos", patterns: ["parques cercanos", "frente a parque", "cerca a parque"], icon: <Trees className="w-3.5 h-3.5" /> },
+  { name: "Parque Infantil", patterns: ["parque infantil", "juegos infantiles"], icon: <Smile className="w-3.5 h-3.5" /> },
+  { name: "Piscina", patterns: ["piscina", "piscinas", "piscina climatizada", "piscina sin fin"], icon: <Waves className="w-3.5 h-3.5" /> },
+  { name: "Pista de Pádel", patterns: ["padel", "pádel", "pista de padel", "cancha de padel"], icon: <Trophy className="w-3.5 h-3.5" /> },
+  { name: "Planta Eléctrica", patterns: ["planta electrica", "planta eléctrica", "planta total", "suplencia total"], icon: <Zap className="w-3.5 h-3.5" /> },
+  { name: "Portería / Recepción", patterns: ["porteria", "portería", "recepcion", "recepción", "lobby"], icon: <Shield className="w-3.5 h-3.5" /> },
+  { name: "Salón Infantil / Playroom", patterns: ["salon infantil", "salón infantil", "playroom"], icon: <Smile className="w-3.5 h-3.5" /> },
+  { name: "Salón Comunal", patterns: ["salon comunal", "salón comunal", "salon de eventos"], icon: <Home className="w-3.5 h-3.5" /> },
+  { name: "Salón de Juegos", patterns: ["salon de juegos", "salón de juegos", "billar", "ping pong"], icon: <Smile className="w-3.5 h-3.5" /> },
+  { name: "Sauna / Turco Comunal", patterns: ["sauna", "zona humeda", "zonas humedas", "zonas húmedas"], icon: <Waves className="w-3.5 h-3.5" /> },
+  { name: "Seguridad Privada 24/7", patterns: ["seguridad 24", "cctv", "circuito cerrado"], icon: <Lock className="w-3.5 h-3.5" /> },
+  { name: "Sobre Vía Principal", patterns: ["sobre via principal", "sobre vía principal", "frente a avenida"], icon: <MapPin className="w-3.5 h-3.5" /> },
+  { name: "Shut de Basuras", patterns: ["shut", "shut de basuras"], icon: <Archive className="w-3.5 h-3.5" /> },
+  { name: "Teatrino / Cine", patterns: ["teatrino", "sala de cine", "cinema"], icon: <Tv className="w-3.5 h-3.5" /> },
+  { name: "Terraza Comunal / Rooftop", patterns: ["terraza comunal", "rooftop", "terraza comunitaria"], icon: <Layers className="w-3.5 h-3.5" /> },
+  { name: "Transporte Público Cercano", patterns: ["transporte publico", "transporte público", "transmilenio", "sitp"], icon: <MapPin className="w-3.5 h-3.5" /> },
+  { name: "Zonas Deportivas", patterns: ["zonas deportivas", "polideportivo"], icon: <Trophy className="w-3.5 h-3.5" /> },
+  { name: "Zonas Verdes", patterns: ["zonas verdes", "senderos verdes", "jardines comunales"], icon: <Trees className="w-3.5 h-3.5" /> },
+];
+
+const scoreRowsCache = new Map<string, { rows: ScoreRow[]; autoScore: number; pts: number; max: number }>();
+
 function scoreRows(req: any, prop: any) {
+  if (!req || !prop) return { rows: [], autoScore: 0, pts: 0, max: 0 };
+
+  const cacheKey = `${req.id || 'r'}_${req.presupuestoMax || ''}_${req.areaMin || ''}_${req.habitacionesMin || ''}_${req.banosMin || ''}_${req.parqueaderosMin || ''}_${req.zonaDeseada || ''}_${req.addressNeighborhood || ''}_${req.ciudadDeseada || ''}_${req.tipoInmuebleDeseado || ''}_${req.tipoNegocioDeseado || ''}_${req.idUsuarioWhatsapp || ''}__${prop.id || 'p'}_${prop.price || ''}_${prop.rentPrice || ''}_${prop.adminFee || ''}_${prop.areaTotal || ''}_${prop.bedrooms || ''}_${prop.bathrooms || ''}_${prop.garages || ''}_${prop.stratum || ''}_${prop.zone || ''}_${prop.addressNeighborhood || ''}_${prop.city || ''}_${prop.propertyType || ''}_${prop.transactionType || ''}_${prop.idUsuarioWhatsapp || ''}`;
+
+  if (scoreRowsCache.has(cacheKey)) {
+    return scoreRowsCache.get(cacheKey)!;
+  }
+
   const rows: ScoreRow[] = [];
   let pts = 0;
   let max = 0;
@@ -1359,77 +1441,6 @@ function scoreRows(req: any, prop: any) {
   }
 
   // ── INYECCIÓN DINÁMICA DE LAS 64 CARACTERÍSTICAS & AMENIDADES ("POR ARTE DE MAGIA") ──
-  const DYNAMIC_AMENITIES: Array<{
-    name: string;
-    patterns: string[];
-    icon: React.ReactNode;
-    weight?: number;
-  }> = [
-    // ✨ 23 CARACTERÍSTICAS INTERNAS
-    { name: "Aire Acondicionado", patterns: ["aire acondicionado", "aire acond", "climatizado", "a/a"], icon: <Wind className="w-3.5 h-3.5" /> },
-    { name: "Alarma de Seguridad", patterns: ["alarma", "sistema de alarma"], icon: <Lock className="w-3.5 h-3.5" /> },
-    { name: "Amoblado", patterns: ["amoblado", "full amoblado", "con muebles"], icon: <Home className="w-3.5 h-3.5" /> },
-    { name: "Acabados de Alta Gama", patterns: ["alta gama", "acabados de lujo", "marmol", "mármol", "acabados importados"], icon: <Maximize className="w-3.5 h-3.5" /> },
-    { name: "Acabados Modernos", patterns: ["acabados modernos", "diseño moderno"], icon: <Sparkles className="w-3.5 h-3.5" /> },
-    { name: "Bar / Zona Bar", patterns: ["barra de bar", "zona de bar", "mueble bar"], icon: <Coffee className="w-3.5 h-3.5" /> },
-    { name: "Baño en Alcoba Principal", patterns: ["baño en alcoba principal", "baño privado principal", "en suite"], icon: <Bath className="w-3.5 h-3.5" /> },
-    { name: "Baño en Todas las Alcobas", patterns: ["baño en cada alcoba", "baño en todas las", "todas con baño"], icon: <Bath className="w-3.5 h-3.5" /> },
-    { name: "Citófono", patterns: ["citofono", "citófono", "intercomunicador"], icon: <Phone className="w-3.5 h-3.5" /> },
-    { name: "Clósets Empotrados", patterns: ["closets", "clósets", "closet empotrado"], icon: <Archive className="w-3.5 h-3.5" /> },
-    { name: "Comedor Auxiliar", patterns: ["comedor auxiliar", "comedor de diario"], icon: <Utensils className="w-3.5 h-3.5" /> },
-    { name: "Despensa / Alacena", patterns: ["despensa", "alacena"], icon: <Archive className="w-3.5 h-3.5" /> },
-    { name: "Doble Ventana / Antiruido", patterns: ["doble ventana", "termoacustica", "termoacústica", "antiruido"], icon: <VolumeX className="w-3.5 h-3.5" /> },
-    { name: "Gas Domiciliario", patterns: ["gas domiciliario", "gas natural", "red de gas"], icon: <Fuel className="w-3.5 h-3.5" /> },
-    { name: "Iluminación Natural", patterns: ["iluminacion natural", "iluminación natural", "luz natural", "muy iluminado"], icon: <Sun className="w-3.5 h-3.5" /> },
-    { name: "Hall de Alcobas", patterns: ["hall de alcobas", "estar de habitaciones"], icon: <Home className="w-3.5 h-3.5" /> },
-    { name: "Jacuzzi / Hidromasaje", patterns: ["jacuzzi", "hidromasaje", "tina jacuzzi"], icon: <Waves className="w-3.5 h-3.5" /> },
-    { name: "Turco Privado", patterns: ["turco privado", "baño turco"], icon: <Waves className="w-3.5 h-3.5" /> },
-    { name: "Vestier / Walk-in Closet", patterns: ["vestier", "walk-in closet", "walking closet", "vestidor"], icon: <Archive className="w-3.5 h-3.5" /> },
-    { name: "Vista Panorámica", patterns: ["vista panoramica", "vista panorámica", "vista a la ciudad", "vista verde", "vista a los cerros"], icon: <Mountain className="w-3.5 h-3.5" /> },
-    { name: "Zona de Lavandería", patterns: ["zona de lavanderia", "zona de lavandería", "cuarto de ropas"], icon: <Zap className="w-3.5 h-3.5" /> },
-
-    // 🏢 41 CARACTERÍSTICAS EXTERNAS
-    { name: "Acceso Pavimentado", patterns: ["acceso pavimentado", "via pavimentada", "vía pavimentada", "asfalto"], icon: <MapPin className="w-3.5 h-3.5" /> },
-    { name: "Área Social / Comunal", patterns: ["area social", "área social", "salon social", "zonas sociales"], icon: <Home className="w-3.5 h-3.5" /> },
-    { name: "Áreas Turísticas", patterns: ["area turistica", "área turística", "zona turistica"], icon: <Landmark className="w-3.5 h-3.5" /> },
-    { name: "Bancos Cercanos", patterns: ["bancos cercanos", "zona bancaria"], icon: <Landmark className="w-3.5 h-3.5" /> },
-    { name: "Barbacoa / Parrilla Comunal", patterns: ["barbacoa", "quincho", "parrilla comunal"], icon: <Flame className="w-3.5 h-3.5" /> },
-    { name: "Bosques Nativos", patterns: ["bosque nativo", "bosques nativos", "reserva forestal"], icon: <Trees className="w-3.5 h-3.5" /> },
-    { name: "Caldera Central", patterns: ["caldera", "agua caliente central"], icon: <Flame className="w-3.5 h-3.5" /> },
-    { name: "Cancha de Baloncesto", patterns: ["cancha de baloncesto", "cancha baloncesto", "basket"], icon: <Trophy className="w-3.5 h-3.5" /> },
-    { name: "Cancha de Fútbol", patterns: ["cancha de futbol", "cancha de fútbol", "cancha sintetica", "cancha sintética", "futbol 5"], icon: <Trophy className="w-3.5 h-3.5" /> },
-    { name: "Cancha de Golf", patterns: ["cancha de golf", "campo de golf", "golf"], icon: <Trophy className="w-3.5 h-3.5" /> },
-    { name: "Cancha de Squash", patterns: ["cancha de squash", "cancha squash", "squash"], icon: <Trophy className="w-3.5 h-3.5" /> },
-    { name: "Cancha de Tenis", patterns: ["cancha de tenis", "cancha tenis", "tennis"], icon: <Trophy className="w-3.5 h-3.5" /> },
-    { name: "Centros Comerciales", patterns: ["centro comercial", "centros comerciales", "c.c."], icon: <Building2 className="w-3.5 h-3.5" /> },
-    { name: "Centros Médicos / Clínicas", patterns: ["centro medico", "centros medicos", "clinica", "clínica", "hospital"], icon: <ShieldAlert className="w-3.5 h-3.5" /> },
-    { name: "Club House", patterns: ["club house", "clubhouse"], icon: <Home className="w-3.5 h-3.5" /> },
-    { name: "Colegios / Universidades", patterns: ["colegio", "colegios", "universidad", "universidades"], icon: <School className="w-3.5 h-3.5" /> },
-    { name: "Edificio Inteligente", patterns: ["edificio inteligente", "domotica", "domótica"], icon: <Zap className="w-3.5 h-3.5" /> },
-    { name: "Gimnasio Dotado", patterns: ["gimnasio", "gym"], icon: <Dumbbell className="w-3.5 h-3.5" /> },
-    { name: "Kiosco / Bohío", patterns: ["kiosco", "quiosco", "bohio", "bohío"], icon: <Home className="w-3.5 h-3.5" /> },
-    { name: "Lago / Espejo de Agua", patterns: ["lago", "laguna", "espejo de agua"], icon: <Waves className="w-3.5 h-3.5" /> },
-    { name: "Lavandería Comunal", patterns: ["lavanderia comunal", "lavandería comunal"], icon: <Zap className="w-3.5 h-3.5" /> },
-    { name: "Parques Cercanos", patterns: ["parques cercanos", "frente a parque", "cerca a parque"], icon: <Trees className="w-3.5 h-3.5" /> },
-    { name: "Parque Infantil", patterns: ["parque infantil", "juegos infantiles"], icon: <Smile className="w-3.5 h-3.5" /> },
-    { name: "Piscina", patterns: ["piscina", "piscinas", "piscina climatizada", "piscina sin fin"], icon: <Waves className="w-3.5 h-3.5" /> },
-    { name: "Pista de Pádel", patterns: ["padel", "pádel", "pista de padel", "cancha de padel"], icon: <Trophy className="w-3.5 h-3.5" /> },
-    { name: "Planta Eléctrica", patterns: ["planta electrica", "planta eléctrica", "planta total", "suplencia total"], icon: <Zap className="w-3.5 h-3.5" /> },
-    { name: "Portería / Recepción", patterns: ["porteria", "portería", "recepcion", "recepción", "lobby"], icon: <Shield className="w-3.5 h-3.5" /> },
-    { name: "Salón Infantil / Playroom", patterns: ["salon infantil", "salón infantil", "playroom"], icon: <Smile className="w-3.5 h-3.5" /> },
-    { name: "Salón Comunal", patterns: ["salon comunal", "salón comunal", "salon de eventos"], icon: <Home className="w-3.5 h-3.5" /> },
-    { name: "Salón de Juegos", patterns: ["salon de juegos", "salón de juegos", "billar", "ping pong"], icon: <Smile className="w-3.5 h-3.5" /> },
-    { name: "Sauna / Turco Comunal", patterns: ["sauna", "zona humeda", "zonas humedas", "zonas húmedas"], icon: <Waves className="w-3.5 h-3.5" /> },
-    { name: "Seguridad Privada 24/7", patterns: ["seguridad 24", "cctv", "circuito cerrado"], icon: <Lock className="w-3.5 h-3.5" /> },
-    { name: "Sobre Vía Principal", patterns: ["sobre via principal", "sobre vía principal", "frente a avenida"], icon: <MapPin className="w-3.5 h-3.5" /> },
-    { name: "Shut de Basuras", patterns: ["shut", "shut de basuras"], icon: <Archive className="w-3.5 h-3.5" /> },
-    { name: "Teatrino / Cine", patterns: ["teatrino", "sala de cine", "cinema"], icon: <Tv className="w-3.5 h-3.5" /> },
-    { name: "Terraza Comunal / Rooftop", patterns: ["terraza comunal", "rooftop", "terraza comunitaria"], icon: <Layers className="w-3.5 h-3.5" /> },
-    { name: "Transporte Público Cercano", patterns: ["transporte publico", "transporte público", "transmilenio", "sitp"], icon: <MapPin className="w-3.5 h-3.5" /> },
-    { name: "Zonas Deportivas", patterns: ["zonas deportivas", "polideportivo"], icon: <Trophy className="w-3.5 h-3.5" /> },
-    { name: "Zonas Verdes", patterns: ["zonas verdes", "senderos verdes", "jardines comunales"], icon: <Trees className="w-3.5 h-3.5" /> },
-  ];
-
   for (const item of DYNAMIC_AMENITIES) {
     const inReq = item.patterns.some(p => reqTextLower.includes(p));
     const inProp = item.patterns.some(p => propRawText.includes(p));
@@ -1524,7 +1535,10 @@ function scoreRows(req: any, prop: any) {
     }
   }
 
-  return { rows, autoScore, pts, max };
+  const result = { rows, autoScore, pts, max };
+  if (scoreRowsCache.size > 2000) scoreRowsCache.clear();
+  scoreRowsCache.set(cacheKey, result);
+  return result;
 }
 
 function formatCOP(val: string | number) {
@@ -2050,11 +2064,11 @@ export default function AdminMatches() {
     }
   };
 
-  // Fetch matches directly from server API (actualización periódica en segundo plano cada 15 segundos)
+  // Fetch matches directly from server API (actualización suave en segundo plano)
   const { data: matches = [], isLoading, refetch } = trpc.janIA.getAllMatches.useQuery(undefined, {
-    refetchInterval: 15000,
-    staleTime: 10000,
-    refetchOnWindowFocus: true,
+    refetchInterval: 60000,
+    staleTime: 60000,
+    refetchOnWindowFocus: false,
   });
 
 
@@ -2227,9 +2241,9 @@ export default function AdminMatches() {
 
 
   const { data: botStatus } = trpc.janIA.getBotStatus.useQuery(undefined, {
-    refetchInterval: 15000,
-    staleTime: 10000,
-    refetchOnWindowFocus: true,
+    refetchInterval: 60000,
+    staleTime: 60000,
+    refetchOnWindowFocus: false,
   });
 
   const kpiStats = useMemo(() => {
