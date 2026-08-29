@@ -261,6 +261,9 @@ function scoreRows(req: any, prop: any) {
   const reqSubtype = deduceFullPropertyType(reqTypeRaw, reqRawText);
   const propSubtype = deduceFullPropertyType(propTypeRaw, propRawText);
 
+  const isReqStudio = reqSubtype === "apartaestudio" || reqSubtype === "loft";
+  const isPropStudio = propSubtype === "apartaestudio" || propSubtype === "loft";
+
   // Categorías
   const RESIDENCIALES = new Set(["apartamento_estandar", "apartment", "apartamento", "apartaestudio", "loft", "penthouse", "apartamento_duplex", "house", "casa", "cabin"]);
   const NO_RESIDENCIALES = new Set(["consultorio", "office", "commercial", "warehouse", "land", "farm"]);
@@ -2342,10 +2345,10 @@ export default function AdminMatches() {
                 const score = m._precomputedScore !== undefined ? m._precomputedScore : parseFloat(m.matchScore?.toString() || "0");
                 const date = formatColombiaDate(m.createdAt);
 
-                const exactCount = rows.filter(r => r.status === "exact" || r.status === "ok").length;
-                const plusCount = rows.filter(r => r.status === "plus").length;
-                const warnCount = rows.filter(r => r.status === "warn").length;
-                const failCount = rows.filter(r => r.status === "missing").length;
+                const exactCount = rows.filter((r: any) => r.status === "exact" || r.status === "ok").length;
+                const plusCount = rows.filter((r: any) => r.status === "plus").length;
+                const warnCount = rows.filter((r: any) => r.status === "warn").length;
+                const failCount = rows.filter((r: any) => r.status === "missing").length;
 
                 const dotColor = score >= 95 
                   ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" 
@@ -2972,7 +2975,7 @@ export default function AdminMatches() {
                           </tr>
                         </thead>
                         <tbody>
-                          {rows.map((row, rIdx) => {
+                          {rows.map((row: any, rIdx: number) => {
                             const isExact = row.status === "exact" || row.status === "ok";
                             const isPlus = row.status === "plus";
                             const isWarn = row.status === "warn";
@@ -3360,7 +3363,7 @@ export default function AdminMatches() {
 
                     {/* VISTA MÓVIL (md:hidden - Minitarjetas Apiladas) */}
                     <div className="grid grid-cols-1 gap-2.5 md:hidden">
-                      {rows.map((row, rIdx) => {
+                      {rows.map((row: any, rIdx: number) => {
                         const isExact = row.status === "exact" || row.status === "ok";
                         const isPlus = row.status === "plus";
                         const isWarn = row.status === "warn";
