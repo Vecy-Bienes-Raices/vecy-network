@@ -1780,22 +1780,35 @@ export default function AdminMatches() {
   const [feedbackStatusMap, setFeedbackStatusMap] = React.useState<Record<number, 'exitoso' | 'rechazado' | 'en_negociacion'>>({});
   const [saveStatusMap, setSaveStatusMap] = React.useState<Record<number, 'saved' | 'recalculated'>>({});
 
-  const cleanTextForSearch = (text: string): string => {
-    if (!text) return "";
-    return text
-      .replace(/^["'«“]|["'»”]$/g, '') // Quitar comillas de apertura o cierre
-      .replace(/\*([^*]+)\*/g, '$1')   // Quitar asteriscos de negrita *texto* -> texto
-      .replace(/_([^_]+)_/g, '$1')     // Quitar guiones bajos de cursiva _texto_ -> texto
-      .replace(/~([^~]+)~/g, '$1')     // Quitar tachado ~texto~ -> texto
-      .replace(/```([^`]+)```/g, '$1') // Quitar bloques de código
-      .replace(/\s+/g, ' ')           // Normalizar espacios múltiples
-      .trim();
-  };
-
-  const handleCopy = (text: string, id: string) => {
+  const handleCopy = (text: string, id: string, asSearchSnippet = false) => {
     try {
-      const cleaned = cleanTextForSearch(text);
-      navigator.clipboard.writeText(cleaned || text);
+      if (!text) return;
+      const cleanRaw = text.replace(/__is_sub_message__/g, '').trim();
+      
+      if (asSearchSnippet) {
+        // Extraer la primera línea o frase clave corta para ubicar en el buscador de WhatsApp
+        const lines = cleanRaw
+          .split('\n')
+          .map(l => l.replace(/[*_~`#]/g, '').trim())
+          .filter(l => l.length >= 4 && !l.startsWith('http') && !l.startsWith('__'));
+        
+        let snippet = lines.length > 0 ? lines[0] : cleanRaw;
+        if (snippet.length > 45) {
+          snippet = snippet.slice(0, 45).trim();
+        }
+        
+        navigator.clipboard.writeText(snippet);
+        toast.success("🔍 Frase de búsqueda copiada", {
+          description: `Pega "${snippet}" en la lupa de WhatsApp para encontrar el mensaje.`,
+        });
+      } else {
+        // Copiar el texto 100% original con sus saltos de línea y emojis intactos
+        navigator.clipboard.writeText(cleanRaw);
+        toast.success("📋 Mensaje original copiado", {
+          description: "Texto 100% fiel con saltos de línea y formato original.",
+        });
+      }
+
       setCopiedId(id);
       setTimeout(() => {
         setCopiedId(prev => (prev === id ? null : prev));
@@ -2509,33 +2522,62 @@ export default function AdminMatches() {
                                 </p>
                                 {(() => {
                                   const copyKey = `prop-${m.id}`;
+                                  const copySearchKey = `prop-search-${m.id}`;
                                   const isCopied = copiedId === copyKey;
+                                  const isSearchCopied = copiedId === copySearchKey;
                                   return (
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleCopy(pText || fallbackText, copyKey);
-                                      }}
-                                      className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-lg transition-all duration-300 border shrink-0 ${
-                                        isCopied
-                                          ? "bg-cyan-500/25 text-cyan-300 border-cyan-400/60 shadow-[0_0_15px_rgba(6,182,212,0.45)] scale-105"
-                                          : "text-zinc-400 hover:text-cyan-300 bg-white/5 hover:bg-white/10 border-white/10 hover:border-cyan-400/30 active:scale-95"
-                                      }`}
-                                      title="Copiar texto original de la publicación"
-                                    >
-                                      {isCopied ? (
-                                        <>
-                                          <Check className="w-3.5 h-3.5 text-cyan-300 animate-in zoom-in-50 duration-200" />
-                                          <span className="text-cyan-200">¡Copiado!</span>
-                                        </>
-                                      ) : (
-                                        <>
-                                          <Copy className="w-3 h-3" />
-                                          <span>Copiar</span>
-                                        </>
-                                      )}
-                                    </button>
+                                    <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleCopy(pText || fallbackText, copyKey, false);
+                                        }}
+                                        className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-lg transition-all duration-300 border ${
+                                          isCopied
+                                            ? "bg-cyan-500/25 text-cyan-300 border-cyan-400/60 shadow-[0_0_15px_rgba(6,182,212,0.45)] scale-105"
+                                            : "text-zinc-400 hover:text-cyan-300 bg-white/5 hover:bg-white/10 border-white/10 hover:border-cyan-400/30 active:scale-95"
+                                        }`}
+                                        title="Copiar texto completo original con saltos de línea y emojis"
+                                      >
+                                        {isCopied ? (
+                                          <>
+                                            <Check className="w-3 h-3 text-cyan-300 animate-in zoom-in-50 duration-200" />
+                                            <span className="text-cyan-200">¡Copiado!</span>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Copy className="w-3 h-3" />
+                                            <span>Copiar Todo</span>
+                                          </>
+                                        )}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleCopy(pText || fallbackText, copySearchKey, true);
+                                        }}
+                                        className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg transition-all duration-300 border ${
+                                          isSearchCopied
+                                            ? "bg-amber-500/25 text-amber-300 border-amber-400/60 shadow-[0_0_15px_rgba(245,158,11,0.45)] scale-105"
+                                            : "text-zinc-400 hover:text-amber-300 bg-white/5 hover:bg-white/10 border-white/10 hover:border-amber-400/30 active:scale-95"
+                                        }`}
+                                        title="Copiar frase corta clave para pegar en el buscador de WhatsApp"
+                                      >
+                                        {isSearchCopied ? (
+                                          <>
+                                            <Check className="w-3 h-3 text-amber-300 animate-in zoom-in-50 duration-200" />
+                                            <span className="text-amber-200">¡Clave Copiada!</span>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Search className="w-3 h-3 text-amber-400" />
+                                            <span className="text-zinc-300">Buscar en WhatsApp</span>
+                                          </>
+                                        )}
+                                      </button>
+                                    </div>
                                   );
                                 })()}
                               </div>
@@ -2752,33 +2794,62 @@ export default function AdminMatches() {
                                 </p>
                                 {(() => {
                                   const copyKey = `req-${m.id}`;
+                                  const copySearchKey = `req-search-${m.id}`;
                                   const isCopied = copiedId === copyKey;
+                                  const isSearchCopied = copiedId === copySearchKey;
                                   return (
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleCopy(rText, copyKey);
-                                      }}
-                                      className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-lg transition-all duration-300 border shrink-0 ${
-                                        isCopied
-                                          ? "bg-cyan-500/25 text-cyan-300 border-cyan-400/60 shadow-[0_0_15px_rgba(6,182,212,0.45)] scale-105"
-                                          : "text-zinc-400 hover:text-cyan-300 bg-white/5 hover:bg-white/10 border-white/10 hover:border-cyan-400/30 active:scale-95"
-                                      }`}
-                                      title="Copiar texto del requerimiento"
-                                    >
-                                      {isCopied ? (
-                                        <>
-                                          <Check className="w-3.5 h-3.5 text-cyan-300 animate-in zoom-in-50 duration-200" />
-                                          <span className="text-cyan-200">¡Copiado!</span>
-                                        </>
-                                      ) : (
-                                        <>
-                                          <Copy className="w-3 h-3" />
-                                          <span>Copiar</span>
-                                        </>
-                                      )}
-                                    </button>
+                                    <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleCopy(rText, copyKey, false);
+                                        }}
+                                        className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-lg transition-all duration-300 border ${
+                                          isCopied
+                                            ? "bg-cyan-500/25 text-cyan-300 border-cyan-400/60 shadow-[0_0_15px_rgba(6,182,212,0.45)] scale-105"
+                                            : "text-zinc-400 hover:text-cyan-300 bg-white/5 hover:bg-white/10 border-white/10 hover:border-cyan-400/30 active:scale-95"
+                                        }`}
+                                        title="Copiar texto completo original del requerimiento con saltos de línea y formato"
+                                      >
+                                        {isCopied ? (
+                                          <>
+                                            <Check className="w-3 h-3 text-cyan-300 animate-in zoom-in-50 duration-200" />
+                                            <span className="text-cyan-200">¡Copiado!</span>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Copy className="w-3 h-3" />
+                                            <span>Copiar Todo</span>
+                                          </>
+                                        )}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleCopy(rText, copySearchKey, true);
+                                        }}
+                                        className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg transition-all duration-300 border ${
+                                          isSearchCopied
+                                            ? "bg-amber-500/25 text-amber-300 border-amber-400/60 shadow-[0_0_15px_rgba(245,158,11,0.45)] scale-105"
+                                            : "text-zinc-400 hover:text-amber-300 bg-white/5 hover:bg-white/10 border-white/10 hover:border-amber-400/30 active:scale-95"
+                                        }`}
+                                        title="Copiar frase corta clave para pegar en el buscador de WhatsApp"
+                                      >
+                                        {isSearchCopied ? (
+                                          <>
+                                            <Check className="w-3 h-3 text-amber-300 animate-in zoom-in-50 duration-200" />
+                                            <span className="text-amber-200">¡Clave Copiada!</span>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Search className="w-3 h-3 text-amber-400" />
+                                            <span className="text-zinc-300">Buscar en WhatsApp</span>
+                                          </>
+                                        )}
+                                      </button>
+                                    </div>
                                   );
                                 })()}
                               </div>
