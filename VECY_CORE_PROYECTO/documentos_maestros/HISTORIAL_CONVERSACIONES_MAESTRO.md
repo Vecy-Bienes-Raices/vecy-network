@@ -73,7 +73,7 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
      - `Plus Ofertado` 🔵: 100% de los puntos de la casilla ($15 / N$).
      - `Aproximado` 🟡: 70% de los puntos de la casilla.
      - `Dato Faltante / Pendiente` ⚪: 0% de los puntos (el match queda en 85%-90% esperando que el asesor llame y complete).
-     - Si **TODAS** las características activas están llenas y en verde/plus $\rightarrow$ **100% Match Perfecto** 🎯.
+     - Si **TODAS** las características activas están llenas y en verde/plus (sea porque las publicaciones ya traían todos los datos completos en la ingesta o tras completarse) $\rightarrow$ **100% Match Perfecto Nativo y Automático** 🎯 (sin necesidad obligatoria de llamadas si los mensajes venían completos).
      - Si hay cualquier rojo (`missing` 🔴) $\rightarrow$ **0% Guillotina Inmediata**.
 3. **Rescate y Normalización de Precios, Administración, M² y Estrato**:
    - Rescate desde texto para ofertas de arriendo (`CANON DE ARRIENDO: $4.500.000`), administración incluida, corrección de áreas decimales (`78.52 m²`), estrato (`Estrato 5`) y cantidades de habitaciones/baños/garajes.
