@@ -328,26 +328,12 @@ function scoreRows(req: any, prop: any) {
   const reqSubtype = deduceFullPropertyType(reqTypeRaw, reqRawText);
   const propSubtype = deduceFullPropertyType(propTypeRaw, propRawText);
 
-  // Exactitud estricta con compatibilidad residencial
+  // 1. Tipo de Inmueble (DATO EN DURO ESTRICTO - 100% IDÉNTICO: SOLAMENTE "COINCIDE" 🟢 O "NO COINCIDE" 🔴)
   let typeMatchStatus: MatchStatus = "missing";
   if (reqSubtype === propSubtype) {
     typeMatchStatus = "exact";
-  } else if ((reqSubtype === "apartaestudio" && propSubtype === "loft") || (reqSubtype === "loft" && propSubtype === "apartaestudio")) {
-    typeMatchStatus = "exact"; // Apartaestudio y Loft de 1 hab son compatibles
-  } else if ((reqSubtype === "apartaestudio" && propSubtype === "aparta_suit") || (reqSubtype === "aparta_suit" && propSubtype === "apartaestudio")) {
-    typeMatchStatus = "exact"; // Apartaestudio y Aparta Suit son compatibles
-  } else if (
-    (reqSubtype === "apartamento_estandar" && (propSubtype === "apartamento_duplex" || propSubtype === "penthouse")) ||
-    (reqSubtype === "house" && (propSubtype === "casa_campestre" || propSubtype === "casa_quinta" || propSubtype === "villa"))
-  ) {
-    typeMatchStatus = "plus"; // Plus de confort
-  } else if (
-    ((reqSubtype === "apartamento_duplex" || reqSubtype === "penthouse") && propSubtype === "apartamento_estandar") ||
-    ((reqSubtype === "casa_campestre" || reqSubtype === "casa_quinta") && propSubtype === "house")
-  ) {
-    typeMatchStatus = "warn"; // Aproximado
   } else {
-    typeMatchStatus = "missing"; // No coincide -> 0% Guillotina
+    typeMatchStatus = "missing"; // No coincide idéntico -> 0% Guillotina
   }
 
   const getSubtypeFriendlyLabel = (sub: string | null | undefined): string => {
@@ -683,12 +669,14 @@ function scoreRows(req: any, prop: any) {
   if (isReqRentMatch) {
     saleS = "exact";
   } else if (isReqOpenBudget) {
-    saleS = propSalePrice > 0 ? "exact" : "neutral";
+    saleS = propSalePrice > 0 ? "warn" : "neutral";
   } else if (reqSaleBudget > 0 && propSalePrice > 0) {
-    if (propSalePrice > reqSaleBudget) {
-      saleS = "missing"; 
+    if (propSalePrice === reqSaleBudget) {
+      saleS = "exact"; // Coincide idéntico
+    } else if (propSalePrice < reqSaleBudget) {
+      saleS = "warn";  // Aproximado (dentro de presupuesto)
     } else {
-      saleS = "exact";
+      saleS = "missing"; // Supera presupuesto -> Guillotina
     }
   } else {
     saleS = "neutral";
@@ -729,12 +717,14 @@ function scoreRows(req: any, prop: any) {
   if (!isReqRentMatch) {
     rentS = "exact";
   } else if (isReqOpenBudget) {
-    rentS = propRentPrice > 0 ? "exact" : "neutral";
+    rentS = propRentPrice > 0 ? "warn" : "neutral";
   } else if (reqRentBudget > 0 && propRentPrice > 0) {
-    if (propRentPrice > reqRentBudget) {
-      rentS = "missing";
+    if (propRentPrice === reqRentBudget) {
+      rentS = "exact"; // Coincide idéntico
+    } else if (propRentPrice < reqRentBudget) {
+      rentS = "warn";  // Aproximado (dentro de presupuesto)
     } else {
-      rentS = "exact";
+      rentS = "missing"; // Supera canon -> Guillotina
     }
   } else {
     rentS = "neutral";
