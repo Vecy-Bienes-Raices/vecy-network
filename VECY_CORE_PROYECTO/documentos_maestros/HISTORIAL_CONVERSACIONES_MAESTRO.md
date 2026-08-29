@@ -52,11 +52,51 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v26.8 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v26.9 — Agosto 2026
 
 ---
 
 ## 📜 REGISTRO DETALLADO DE CONVERSACIONES (ORDEN CRONOLÓGICO INVERSO CON FECHA Y HORA)
+
+### 🗓️ Sesión: Sábado 29 de Agosto de 2026 — 12:10 AM a 12:45 AM (Hora Colombia UTC-5)
+**Versión del Sistema**: `v26.9 — Catálogo Maestro de Atributos Inmobiliarios Dinámicos, Permutas con Ponderación Porcentual, Expansión de 64 Características/Amenidades y Arquitectura de Inyección Reactiva de Cotejo ("Por Arte de Magia")`  
+**Participantes**: Eduardo A. Rivera (Director Tecnología) & Antigravity IDE (Pair Programmer)
+
+#### 📋 Requerimientos Específicos del Usuario (Eduardo A. Rivera):
+1. **Consolidación del Catálogo Maestro Inmobiliario Colombiano**:
+   - Integrar formalmente el listado exhaustivo de atributos específicos del mercado inmobiliario colombiano guardados desde la concepción del proyecto:
+     - **Tipologías de Inmuebles (22 tipos exactos)**: Apartaestudio, Loft, Apartamento, Apartamento Dúplex, Pent House, Pent House Dúplex, Bodega, Cabaña, Casa, Casa Campestre, Casa Quinta, Edificio, Finca, Hostal, Hotel, Aparta Hotel, Aparta Suit, Motel, Local, Lote / Terreno, Oficina, Villa.
+     - **Tipologías de Cocina (7 variantes)**: Abierta, Abierta tipo isla, Cerrada convencional, Cerrada remodelada, Moderna, Integral, A remodelar.
+     - **Cuarto de Servicio (CBS)**: No / Sí, con baño / Sí, sin baño.
+     - **Parqueaderos & Garajes**: Garajes para carro (0 a 10+) y Garajes para moto (0 a 10+).
+     - **Estado de Conservación**: Excelente, Bueno, Regular, Malo, Remodelado, A Remodelar.
+     - **Estratificación Socioeconómica**: Estratos 0, 1, 2, 3, 4, 5 y 6.
+     - **Espacios Especiales y Confort**: Estar de TV (0 a 5+), Estudios / Home Office (0 a 5+), Cava de vinos (Sí [0 a 5+] / No), Depósitos (0 a 5+), Balcones (0 a 5+).
+     - **Chimeneas por Tecnología**: Sí [0 a 5+] / No (Convencional a leña, De gas, Bioetanol).
+     - **Terrazas Condicionales**: Sí [0 a 5+] / No tiene, con Área de terraza en m² y Zona BBQ (Sí/No) condicionadas a la existencia de terraza.
+     - **Nivel y Orientación**: Número de piso en torre/edificio y Ubicación en piso (Exterior / Interior).
+2. **Módulo de Permutas con Ponderación Porcentual**:
+   - Soporte interactivo para negocios mixtos de Venta/Permuta con porcentajes explícitos: `Venta 50% / Permuta 50%`, `Venta 60% / Permuta 40%`, `Venta 70% / Permuta 30%`, `Venta 80% / Permuta 20%`, `Venta 90% / Permuta 10%`, `Venta 10% / Permuta 90%`, `Venta 20% / Permuta 80%`, `Venta 30% / Permuta 70%`, `Venta 40% / Permuta 60%`, o Permuta pura 100%.
+3. **Catálogo Oficial de 64 Características y Amenidades**:
+   - **23 Características Internas**: Aire acondicionado, Alarma, Amoblado, Acabados alta gama, Acabados modernos, Balcón, Bar, Baño auxiliar, Baño en alcoba principal, Baño en todas las alcobas, Citófono, Clósets, Comedor auxiliar, Despensa, Doble Ventana, Gas domiciliario, Iluminación natural, Hall de alcobas, Jacuzzi, Patio, Turco, Vestier, Vista panorámica ciudad, Vista panorámica verde, Zona de lavandería.
+   - **41 Características Externas**: Acceso pavimentado, Área Social, Áreas turísticas, Ascensor, Bancos cercanos, Barbacoa / Parrilla / Quincho, Bosques nativos, Caldera, Cancha de Baloncesto, Cancha de futbol, Cancha de golf, Cancha de Squash, Cancha de Tenis, Centros Comerciales, Centros médicos hospitalarios, Club house, Colegios / Universidades, Conjunto residencial, Edificio de barrio, Edificio inteligente, Gimnasio, Kiosco, Lago, Lavandería, Parqueadero visitantes, Parques cercanos, Parque infantil, Piscina, Pista de pádel, Planta eléctrica, Portería / Recepción, Salón infantil, Salón comunal, Salón de juegos, Sauna/Turco, Seguridad privada 24/7, Sobre vía principal, Shut, Teatrino, Terraza, Transporte público cercano, Zona infantil, Zona residencial, Zonas deportivas, Zonas verdes.
+4. **Arquitectura de Inyección Reactiva de Filas de Cotejo ("Por Arte de Magia")**:
+   - Si la Demanda exige una característica o la Oferta la tiene destacada como valor agregado (*Plus Ofertado*), el sistema inyecta en automático esa fila adicional en la tabla de cotejo técnico.
+   - Si ninguna de las dos partes menciona la característica, la fila se omite para mantener la tabla limpia, ágil y de lectura instantánea.
+5. **Registro en Bitácora y Memoria Persistente de IA**:
+   - Asentar la sesión dual en `HISTORIAL_CONVERSACIONES_MAESTRO.md`, `vecy_network_technical_dossier.md`, `dossier_tecnico_motor_matching_vecy.md`, `.agents/AGENTS.md` y elevar la versión oficial a **`v26.9`**.
+
+#### 🛠️ Soluciones e Implementaciones Técnicas:
+1. **Definición del Modelo Jerárquico de 3 Capas de Atributos**:
+   - **Capa 1: Atributos Nucleares Fijos (Los 10 Primarios)**: Tipología/Subtipo, Tipo de Negocio, Geografía (Barrio/Localidad/Ciudad), Precios/Admin, Área Total, Habitaciones, Baños, Parqueaderos, Estrato, Antigüedad/Estado.
+   - **Capa 2: Atributos Cuantitativos y Espaciales Condicionales**: Garajes de Moto, Piso y Ubicación Interior/Exterior, Cocina, CBS (con/sin baño), Balcones/Terrazas (con m² y BBQ), Depósitos, Estar TV/Estudios, Cava de Vinos, Chimeneas (leña/gas/bioetanol).
+   - **Capa 3: Matriz de 64 Amenidades Dinámicas**: Inyección "on-demand" con evaluación semántica (`exact` verde, `plus` azul, `warn` amarillo, `missing` rojo).
+2. **Estructura del Selector Deslizable y Porcentajes de Permuta**:
+   - Diseñado el adaptador de parsing y modelado para descomponer la proporción de pago en efectivo frente a bienes recibidos en permuta.
+3. **Actualización de Documentación Maestra y Sincronización**:
+   - Versión oficial elevada a **`v26.9`** en `shared/const.ts`, `.agents/AGENTS.md`, `vecy_network_technical_dossier.md` y `HISTORIAL_CONVERSACIONES_MAESTRO.md`.
+
+---
 
 ### 🗓️ Sesión: Viernes 28 de Agosto de 2026 — 10:00 PM a 10:40 PM (Hora Colombia UTC-5)
 **Versión del Sistema**: `v26.8 — Blindaje Doctrinal de Subtipos Exactos, Matriz Estricta de Negocios, Neutralidad en Demandas Flexibles ("Dato Pendiente") y Guillotina Total a 0% ante Incompatibilidades`  

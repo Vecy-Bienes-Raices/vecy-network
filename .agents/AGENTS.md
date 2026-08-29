@@ -289,6 +289,22 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 - **Doctrina Maestra v25.0 en `prompts/base.md`**: Memoria permanente de jerga colombiana, tablas de conversión, algoritmos paso a paso y la distinción formal de Techo Financiero vs Piso de Confort.
 
 
+### Novedades v26.9 (Catálogo Maestro de Atributos Inmobiliarios Dinámicos, Permutas con Ponderación Porcentual, Expansión de 64 Características/Amenidades y Arquitectura de Inyección Reactiva "Por Arte de Magia"):
+- **Catálogo Maestro de 22 Tipologías Inmobiliarias**: Apartaestudio, Loft, Apartamento, Apartamento Dúplex, Pent House, Pent House Dúplex, Bodega, Cabaña, Casa, Casa Campestre, Casa Quinta, Edificio, Finca, Hostal, Hotel, Aparta Hotel, Aparta Suit, Motel, Local, Lote / Terreno, Oficina, Villa.
+- **Módulo de Permuta Porcentual**: Soporte interactivo y comparativo para proporciones de permuta: `Venta 50% / Permuta 50%`, `60/40`, `70/30`, `80/20`, `90/10`, `10/90`, `20/80`, `30/70`, `40/60`, o Permuta pura 100%.
+- **Atributos Cuantitativos y Específicos**:
+  - *Cocina (7 tipos)*: Abierta, Abierta tipo isla, Cerrada convencional, Cerrada remodelada, Moderna, Integral, A remodelar.
+  - *Cuarto de Servicio*: No / Sí, con baño / Sí, sin baño.
+  - *Garajes*: Carro (0..10+) y Moto (0..10+).
+  - *Estado*: Excelente, Bueno, Regular, Malo, Remodelado, A Remodelar.
+  - *Estrato*: 0 a 6.
+  - *Espacios Especiales*: Estar TV (0..5+), Estudios (0..5+), Cava de vinos (Sí [0..5+] / No), Depósitos (0..5+), Balcones (0..5+).
+  - *Chimeneas por Tecnología*: Convencional a leña, De gas, Bioetanol (0..5+ / No).
+  - *Terrazas Condicionales*: Sí [0..5+] / No tiene, con Área de terraza (m²) y Zona BBQ en terraza condicionadas a su presencia.
+  - *Piso & Orientación*: Número de piso libre, Ubicación Exterior / Interior.
+- **Catálogo de 64 Características & Amenidades**: 23 internas (AA, Alarma, Amoblado, Acabados alta gama/modernos, Balcón, Bar, Baño auxiliar/principal/en todas alcobas, Citófono, Clósets, Comedor auxiliar, Despensa, Doble Ventana, Gas domiciliario, Iluminación natural, Hall de alcobas, Jacuzzi, Patio, Turco, Vestier, Vista panorámica ciudad/verde, Zona lavandería) + 41 externas (Acceso pavimentado, Área Social, Áreas turísticas, Ascensor, Bancos, Barbacoa/Parrilla/Quincho, Bosques nativos, Caldera, Canchas Baloncesto/Fútbol/Golf/Squash/Tenis, Centros comerciales/médicos, Club house, Colegios/Universidades, Conjunto residencial, Edificio barrio/inteligente, Gimnasio, Kiosco, Lago, Lavandería, Parqueadero visitantes, Parques, Parque infantil, Piscina, Pista pádel, Planta eléctrica, Portería/Recepción, Salón infantil/comunal/juegos, Sauna/Turco, Seguridad 24/7, Sobre vía principal, Shut, Teatrino, Terraza, Transporte público, Zonas infantiles/residenciales/deportivas/verdes).
+- **Arquitectura de Inyección Dinámica ("Por Arte de Magia")**: Si la demanda exige o la oferta destaca una de las 64 características o atributos específicos, la fila se genera automáticamente en la tabla de cotejo con su icono y badge de afinidad (`exact` verde, `plus` azul, `warn` amarillo, `missing` rojo), evitando sobrecargar la vista con filas vacías cuando no aplican.
+
 ### Novedades v26.8 (Subtipos Exactos, Matriz Doctrinal de Negocios, Neutralidad en Demandas Flexibles y Guillotina Total a 0%):
 - **Tipología Inmobiliaria Estricta (Tolerancia Cero entre Subtipos)**: Apto Estándar $\neq$ Apto Dúplex $\neq$ Penthouse $\neq$ Apartaestudio/Loft $\neq$ Casa Urbana $\neq$ Casa Campestre/Finca. Si difieren $\rightarrow$ 0% Inviable.
 - **Matriz Doctrinal de Tipos de Negocio**: Venta con Venta/Arriendo; Arriendo con Venta/Arriendo; Arriendo con Opción de Compra ÚNICAMENTE con Arriendo con Opción de Compra; Venta-Permuta con Venta-Permuta. Bloqueo 0% para Arriendo Puro vs Arriendo con Opción de Compra.

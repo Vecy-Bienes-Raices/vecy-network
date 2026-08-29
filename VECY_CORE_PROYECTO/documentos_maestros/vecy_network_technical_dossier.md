@@ -755,6 +755,64 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 - **Filtro `SERVER_BOOT_TIME`**: Los mensajes publicados con fecha/hora previa al reinicio del servidor son ignorados de forma intencional para evitar reprocesados retroactivos de historial.
 - **Protocolo de Lectura Total de Mensajes**: JanIA recibe el 100% del texto plano vía WebSocket de Baileys sin importar el botón visual "Leer más" de la interfaz gráfica de WhatsApp.
 
+### Versión v26.9 — Agosto 2026: Catálogo Maestro de Atributos Inmobiliarios Dinámicos, Permutas con Ponderación Porcentual, Expansión de 64 Características/Amenidades y Arquitectura de Inyección Reactiva ("Por Arte de Magia")
+
+#### 1. CONSOLIDACIÓN DEL CATÁLOGO MAESTRO INMOBILIARIO COLOMBIANO
+- **22 Tipologías Inmobiliarias Exactas**: Apartaestudio, Loft, Apartamento, Apartamento Dúplex, Pent House, Pent House Dúplex, Bodega, Cabaña, Casa, Casa Campestre, Casa Quinta, Edificio, Finca, Hostal, Hotel, Aparta Hotel, Aparta Suit, Motel, Local, Lote / Terreno, Oficina, Villa.
+- **Cocinas Específicas (7 tipos)**: Abierta, Abierta tipo isla, Cerrada convencional, Cerrada remodelada, Moderna, Integral, A remodelar.
+- **Cuarto de Servicio (CBS)**: No / Sí, con baño / Sí, sin baño.
+- **Parqueaderos**: Carro (0..10+) y Moto (0..10+).
+- **Estado de Conservación**: Excelente, Bueno, Regular, Malo, Remodelado, A Remodelar.
+- **Estratos**: 0 a 6.
+- **Espacios & Confort**: Estar TV (0..5+), Estudios (0..5+), Cava de vinos (Sí [0..5+] / No), Depósitos (0..5+), Balcones (0..5+).
+- **Chimeneas por Tecnología**: Convencional a leña, De gas, Bioetanol (0..5+ / No).
+- **Terrazas Condicionales**: Sí [0..5+] / No tiene, con Área de terraza (m²) y Zona BBQ condicionadas a la existencia de terraza.
+- **Piso & Orientación**: Número de piso en torre/edificio y Ubicación (Exterior / Interior).
+
+#### 2. MÓDULO DE PERMUTAS CON PONDERACIÓN PORCENTUAL
+- **Proporciones de Permuta**: Modelado interactivo para `Venta 50% / Permuta 50%`, `60/40`, `70/30`, `80/20`, `90/10`, `10/90`, `20/80`, `30/70`, `40/60`, o Permuta pura 100%.
+
+#### 3. MATRIZ DE 64 CARACTERÍSTICAS Y AMENIDADES DINÁMICAS
+- **23 Internas**: Aire acondicionado, Alarma, Amoblado, Acabados alta gama, Acabados modernos, Balcón, Bar, Baño auxiliar, Baño en alcoba principal, Baño en todas las alcobas, Citófono, Clósets, Comedor auxiliar, Despensa, Doble Ventana, Gas domiciliario, Iluminación natural, Hall de alcobas, Jacuzzi, Patio, Turco, Vestier, Vista panorámica ciudad, Vista panorámica verde, Zona de lavandería.
+- **41 Externas**: Acceso pavimentado, Área Social, Áreas turísticas, Ascensor, Bancos cercanos, Barbacoa / Parrilla / Quincho, Bosques nativos, Caldera, Cancha de Baloncesto, Cancha de futbol, Cancha de golf, Cancha de Squash, Cancha de Tenis, Centros Comerciales, Centros médicos hospitalarios, Club house, Colegios / Universidades, Conjunto residencial, Edificio de barrio, Edificio inteligente, Gimnasio, Kiosco, Lago, Lavandería, Parqueadero visitantes, Parques cercanos, Parque infantil, Piscina, Pista de pádel, Planta eléctrica, Portería / Recepción, Salón infantil, Salón comunal, Salón de juegos, Sauna/Turco, Seguridad privada 24/7, Sobre vía principal, Shut, Teatrino, Terraza, Transporte público cercano, Zona infantil, Zona residencial, Zonas deportivas, Zonas verdes.
+
+#### 4. ARQUITECTURA DE INYECCIÓN REACTIVA ("POR ARTE DE MAGIA")
+- **Generación Dinámica On-Demand**: Cuando una demanda exige una amenidad o la oferta la entrega como plus, la fila nace automáticamente en la tabla de cotejo con su icono y badge de afinidad (`exact` verde, `plus` azul, `warn` amarillo, `missing` rojo), manteniendo la vista compacta cuando no aplican.
+
+---
+
+### Versión v26.8 — Agosto 2026: Blindaje Doctrinal de Subtipos Exactos, Matriz Estricta de Negocios, Neutralidad en Demandas Flexibles ("Dato Pendiente") y Guillotina Total a 0% ante Incompatibilidades
+
+#### 1. TIPOLOGÍA INMOBILIARIA ESTRICTA (TOLERANCIA CERO ENTRE SUBTIPOS)
+- Subtipos exactos obligatorios: Apto Estándar con Apto Estándar; Apto Dúplex con Apto Dúplex; PentHouse con PentHouse; Apartaestudio/Loft con Apartaestudio/Loft; Casa Urbana con Casa Urbana; Casa Campestre/Finca con Casa Campestre/Finca. Si difieren $\rightarrow$ 0% Inviable.
+
+#### 2. MATRIZ DOCTRINAL ESTRICTA DE TIPOS DE NEGOCIO
+- Venta con Venta y Venta/Arriendo; Arriendo con Arriendo y Venta/Arriendo; Arriendo con Opción de Compra solo con Arriendo con Opción de Compra; Venta-Permuta con Venta-Permuta. Bloqueo 0% para Arriendo Puro vs Arriendo con Opción de Compra.
+
+#### 3. DOCTRINA DE NEUTRALIDAD ("DATO PENDIENTE") Y GUILLOTINA A 0%
+- Escala de puntuación: Coincide (1.00), Plus Ofertado (0.90), Aproximado (0.65), Dato Pendiente (0.35), No Coincide (0.00 / Guillotina Total).
+- Filtro estricto en mesa admin: del 84% para abajo no se muestran. Todas las tarjetas visibles tienen sus primeras 5 filas en verde y cero casillas en rojo. Botones renombrados a `Guardar` y `Recalcular`.
+
+---
+
+### Versión v26.7 — Agosto 2026: Aceleración Instantánea de Edición y Guardado de Fichas (0ms UI Lag), Guardado Paralelo Asíncrono y Copiado Fiel 100% Original con Búsqueda Exacta en WhatsApp
+
+#### 1. COPIADO FIEL ORIGINAL & BÚSQUEDA RÁPIDA EN WHATSAPP
+- Corrección de `cleanTextForSearch` para preservar saltos de línea y emojis al copiar mensaje original (`rawText`) y nuevo botón con frase representativa de búsqueda en WhatsApp.
+
+#### 2. AISLAMIENTO REACTIVO DEL FORMULARIO Y GUARDADO ASÍNCRONO
+- Desacoplado `processedMatches` del estado `editForm`, permitiendo escritura fluida a 120 FPS. Mutaciones asíncronas concurrentes con `Promise.all` y actualización en memoria optimista.
+
+---
+
+### Versión v26.6 — Agosto 2026: Optimización Extrema de Rendimiento (Lazy Scoring en Panel Admin, Supresión de Video Loop Global y Blindaje de Ciclos de CPU Móvil/Escritorio)
+
+#### 1. SUPRESIÓN DE VIDEO LOOP A 60 FPS
+- Reemplazado `<video src="/jania.mp4" />` global por imagen estática optimizada `jania_perfil.png` con decodificación asíncrona, eliminando sobrecalentamiento y estrangulamiento térmico de CPU/GPU.
+
+#### 2. LAZY SCORING Y DESACTIVACIÓN DE POLLING AGRESIVO
+- `scoreRows` desacoplado de la carga inicial e indexación global; cálculo perezoso únicamente sobre los 10 elementos visibles de la página activa. Polling desactivado en segundo plano.
+
 ---
 
 ### Versión v26.5 — Agosto 2026: Desacoplamiento de Matriz de Cotejo, Búsqueda Instantánea Universal con useDeferredValue, Resolución Integral de Caché Móvil y Tipado Estricto TypeScript (0 Errores)
