@@ -497,7 +497,7 @@ export function extractFallbackDataFromText(text: string): any {
     let val = parseFloat(cleanStr.replace(",", "."));
     if (isNaN(val)) return 0;
     
-    if (cleanUnit.includes("millon") || cleanUnit.includes("millón") || cleanUnit.includes("mll") || cleanUnit.includes("mm") || cleanUnit === "m") {
+    if (cleanUnit.includes("millon") || cleanUnit.includes("millón") || cleanUnit.includes("mll") || cleanUnit.includes("mill") || cleanUnit.includes("mm") || cleanUnit === "m") {
       if (val < 100 && isSale && val > 0) {
         if (val < 30) {
           return Math.round(val * 1_000_000_000); // 2.1 millones -> 2.100.000.000
@@ -517,7 +517,7 @@ export function extractFallbackDataFromText(text: string): any {
   }
 
   // A. Rango de Presupuesto en Demanda (ej: "Presupuesto *1.300 - 1.400*", "ppto 1200 a 1400", "800 a 1.200 millones", "8.500 a 11 millones")
-  const rangeMatch = clean.match(/(?:presupuesto(?:\s*m[aá]ximo)?|ppto(?:\s*m[aá]ximo)?|hasta|tope|valor|inversi[oó]n|compra)?\s*:?\s*\*?\$?\s*(\d{1,4}(?:[.,]\d{1,3})?)\s*(?:a|hasta|-)\s*\*?\$?\s*(\d{1,4}(?:[.,]\d{1,3})?)\*?\s*(mil\s*millones?|millones?|millon|millón|mill|mm|m)?\b/i);
+  const rangeMatch = clean.match(/(?:presupuesto(?:\s*m[aá]ximo)?|ppto(?:\s*m[aá]ximo)?|hasta|tope|valor|inversi[oó]n|compra)?\s*:?\s*\*?\$?\s*(\d{1,4}(?:[.,]\d{1,3})?)\s*(?:a|hasta|-)\s*\*?\$?\s*(\d{1,4}(?:[.,]\d{1,3})?)\*?\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?\b/i);
   if (rangeMatch && (rangeMatch[0].includes("presupuesto") || rangeMatch[0].includes("ppto") || rangeMatch[0].includes("compra") || rangeMatch[3])) {
     const isSale = transactionType !== "arriendo";
     presupuestoMin = parseColombianPriceOrBudget(rangeMatch[1], rangeMatch[3] || "", isSale);
@@ -529,9 +529,9 @@ export function extractFallbackDataFromText(text: string): any {
   }
 
   // B. Detección de Presupuesto / Canon Máximo con Prefijos de Techo o Directos
-  // (ej: "CANON DE ARRIENDO: $4.500.000", "Canon máximo $8.500.000", "Máximo 5 millones con admon", "Hasta 4 millones", "Ppto max 12 MM", "Tope 6.5 millones")
+  // (ej: "CANON DE ARRIENDO: $4.500.000", "Canon máximo $8.500.000", "Presupuesto máximo de $800 mll", "Hasta 4 millones", "Ppto max 12 MM", "Tope 6.5 millones")
   if (price === 0) {
-    const ceilingMillonMatch = clean.match(/(?:presupuesto(?:\s*m[aá]ximo)?|ppto(?:\s*m[aá]ximo)?|canon(?:\s*de\s*arriendo|\s*m[aá]ximo)?|valor(?:\s*de\s*arriendo)?|precio(?:\s*de\s*arriendo)?|arriendo(?:\s*apartamento|\s*casa|\s*m[aá]ximo)?|m[aá]ximo|max|hasta|tope|techo|l[ií]mite)\s*:?\s*\$?\s*([\d]+(?:[.,][\d]+)?)\s*(mil\s*millones?|millones?|millon|millón|mill|mm|m)?\b/i);
+    const ceilingMillonMatch = clean.match(/(?:presupuesto(?:\s*m[aá]ximo)?|ppto(?:\s*m[aá]ximo)?|canon(?:\s*de\s*arriendo|\s*m[aá]ximo)?|valor(?:\s*de\s*arriendo|\s*venta|\s*de\s*venta)?|precio(?:\s*de\s*arriendo|\s*venta|\s*de\s*venta)?|arriendo(?:\s*apartamento|\s*casa|\s*m[aá]ximo)?|m[aá]ximo|max|hasta|tope|techo|l[ií]mite)\s*(?:m[aá]ximo|max)?\s*(?:de)?\s*:?\s*\*?\$?\s*([\d]+(?:[.,][\d]+)?)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?\b/i);
     if (ceilingMillonMatch) {
       const isSale = transactionType !== "arriendo";
       const computed = parseColombianPriceOrBudget(ceilingMillonMatch[1], ceilingMillonMatch[2] || "", isSale);
@@ -546,7 +546,7 @@ export function extractFallbackDataFromText(text: string): any {
 
     // B.2 Prefijo de Techo / Canon + Formato Numérico Completo (ej: "CANON DE ARRIENDO: $4.500.000 incluida administración", "Canon hasta 8.500.000", "Máximo $5.000.000", "ppto max $1.700.000.000")
     if (price === 0) {
-      const ceilingNumMatch = clean.match(/(?:presupuesto(?:\s*m[aá]ximo)?|ppto(?:\s*m[aá]ximo)?|canon(?:\s*de\s*arriendo|\s*m[aá]ximo)?|valor(?:\s*de\s*arriendo)?|precio(?:\s*de\s*arriendo)?|arriendo(?:\s*apartamento|\s*casa|\s*m[aá]ximo)?|m[aá]ximo|max|hasta|tope|techo|l[ií]mite)\s*:?\s*(?:m[aá]s|\+|con)?\s*(?:administraci[oó]n\s*incluida)?(?:\s*total\s*mes)?\s*:?\s*\$?\s*([\d.,\s]+?)(?:-|\s*\(|\s*\n|\s*incluid|\s*con\s*adm|\s*m2|\s*$)/i);
+      const ceilingNumMatch = clean.match(/(?:presupuesto(?:\s*m[aá]ximo)?|ppto(?:\s*m[aá]ximo)?|canon(?:\s*de\s*arriendo|\s*m[aá]ximo)?|valor(?:\s*de\s*arriendo)?|precio(?:\s*de\s*arriendo)?|arriendo(?:\s*apartamento|\s*casa|\s*m[aá]ximo)?|m[aá]ximo|max|hasta|tope|techo|l[ií]mite)\s*(?:m[aá]ximo|max)?\s*(?:de)?\s*:?\s*(?:m[aá]s|\+|con)?\s*(?:administraci[oó]n\s*incluida)?(?:\s*total\s*mes)?\s*:?\s*\$?\s*([\d.,\s]+?)(?:-|\s*\(|\s*\n|\s*incluid|\s*con\s*adm|\s*m2|\s*$)/i);
       if (ceilingNumMatch) {
         let rawCNum = parseFloat(ceilingNumMatch[1].replace(/[.,\s]/g, ''));
         if (!isNaN(rawCNum) && rawCNum >= 300_000 && !isPhoneNumberNotPrice(rawCNum, text)) {
@@ -560,9 +560,9 @@ export function extractFallbackDataFromText(text: string): any {
     }
   }
 
-  // C. Detección de Precio/Presupuesto de Millones Estándar (ej: "$2.100 millones", "$1.390 millones", "950 millones")
+  // C. Detección de Precio/Presupuesto de Millones Estándar (ej: "$2.100 millones", "$1.390 millones", "950 millones", "$800 mll")
   if (price === 0) {
-    const millonMatch = clean.match(/(?:precio|valor|venta|💰)?\s*:?\s*\$?\s*(\d{1,4}(?:[.,]\d{1,3})?)\s*(mil\s*millones?|millon|millones|millón|mill|mm|m)\b/i);
+    const millonMatch = clean.match(/(?:precio|valor|venta|💰)?\s*:?\s*\$?\s*(\d{1,4}(?:[.,]\d{1,3})?)\s*(mil\s*millones?|millon|millones|millón|mll|mlls|mill|mills|mm|m)\b/i);
     if (millonMatch) {
       const isSale = transactionType !== "arriendo";
       const computed = parseColombianPriceOrBudget(millonMatch[1], millonMatch[2], isSale);
@@ -608,23 +608,49 @@ export function extractFallbackDataFromText(text: string): any {
   }
 
   let area = 0;
-  // Captura área con prefijos opcionales: "📐 183 m²", "Area: 180 Mts", "Mínimo 150m2"
-  const areaMatch = clean.match(/(?:📐|area|área|superficie)?\s*:?\s*(?:(?:m[ií]nimo|min|m[aá]ximo|max|de|área\s*(?:m[ií]nima)?|area\s*(?:minima)?)\s+)?([\d]+(?:[.,][\d]+)?)\s*(?:m2|mts2|mts|metros(?:\s+cuadrados)?|m²)/i);
-  if (areaMatch) {
-    area = parseFloat(areaMatch[1].replace(',', '.'));
+  let areaMin = 0;
+  let areaMax = 0;
+  // A. Captura rango de área: "de 50-70 mt2", "50 a 70 m2", "50-70 metros"
+  const areaRangeMatch = clean.match(/(?:📐|area|área|superficie)?\s*(?:de\s+)?(\d+(?:[.,]\d+)?)\s*(?:a|-|hasta)\s*(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)/i);
+  if (areaRangeMatch) {
+    areaMin = parseFloat(areaRangeMatch[1].replace(',', '.'));
+    areaMax = parseFloat(areaRangeMatch[2].replace(',', '.'));
+    area = areaMin;
+  } else {
+    // B. Captura área simple con prefijos: "📐 183 m²", "Area: 180 Mts", "Mínimo 150m2"
+    const areaMatch = clean.match(/(?:📐|area|área|superficie)?\s*:?\s*(?:(?:m[ií]nimo|min|m[aá]ximo|max|de|área\s*(?:m[ií]nima)?|area\s*(?:minima)?)\s+)?([\d]+(?:[.,][\d]+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)/i);
+    if (areaMatch) {
+      area = parseFloat(areaMatch[1].replace(',', '.'));
+      areaMin = area;
+      areaMax = area;
+    }
   }
 
   let bedrooms = 0;
-  const bedMatch = clean.match(/(\d+)\s*(?:alcoba|alcobas|hab|habs|habitacion|habitaciones|dormitorio|dormitorios|cuartos|cuarto)/i)
-                || clean.match(/(\d+)\s*-\s*(\d+)\s*(?:alcoba|alcobas|hab|habs|cuartos)/i);
-  if (bedMatch) {
-    bedrooms = parseInt(bedMatch[1], 10);
+  let bedroomsMin = 0;
+  let bedroomsMax = 0;
+  const SPANISH_NUMBERS_MAP: Record<string, number> = {
+    "un": 1, "uno": 1, "una": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5, "seis": 6
+  };
+  function parseWordOrDigit(str?: string): number {
+    if (!str) return 0;
+    const s = str.trim().toLowerCase();
+    if (SPANISH_NUMBERS_MAP[s]) return SPANISH_NUMBERS_MAP[s];
+    const n = parseInt(s, 10);
+    return isNaN(n) ? 0 : n;
+  }
+
+  const bedWordMatch = clean.match(/(?:de\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d+)(?:\s*(?:a|-|o|hasta)\s*(un|una|uno|dos|tres|cuatro|cinco|\d+))?\s*(?:alcoba|alcobas|hab|habs|habitacion|habitaciones|dormitorio|dormitorios|cuartos|cuarto)/i);
+  if (bedWordMatch) {
+    bedroomsMin = parseWordOrDigit(bedWordMatch[1]);
+    bedroomsMax = bedWordMatch[2] ? parseWordOrDigit(bedWordMatch[2]) : bedroomsMin;
+    bedrooms = bedroomsMin;
   }
 
   let bathrooms = 0;
-  const bathMatch = clean.match(/(\d+)\s*(?:baño|baños|bano|banos|wc)/i);
+  const bathMatch = clean.match(/(?:de\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d+)\s*(?:baño|baños|bano|banos|wc)/i);
   if (bathMatch) {
-    bathrooms = parseInt(bathMatch[1], 10);
+    bathrooms = parseWordOrDigit(bathMatch[1]);
   }
 
   let garages = 0;
@@ -633,6 +659,8 @@ export function extractFallbackDataFromText(text: string): any {
                 || clean.match(/(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero)\s*:?\s*(\d+)/i);
   if (garMatch) {
     garages = parseInt(garMatch[1], 10);
+  } else if (/con\s+(?:un\s+)?(?:parqueadero|garaje)|parqueadero|garaje/i.test(clean)) {
+    garages = 1;
   }
   if (clean.includes("en linea") || clean.includes("en línea") || clean.includes("lineal")) {
     garageType = "lineal";
@@ -790,7 +818,11 @@ export function extractFallbackDataFromText(text: string): any {
     rentPrice: rentPrice > 0 ? rentPrice : null,
     adminFee: adminFee > 0 ? adminFee : null,
     area,
+    areaMin: areaMin > 0 ? areaMin : (area > 0 ? area : null),
+    areaMax: areaMax > 0 ? areaMax : (area > 0 ? area : null),
     bedrooms,
+    bedroomsMin: bedroomsMin > 0 ? bedroomsMin : (bedrooms > 0 ? bedrooms : null),
+    bedroomsMax: bedroomsMax > 0 ? bedroomsMax : (bedrooms > 0 ? bedrooms : null),
     bathrooms,
     garages,
     garageType,

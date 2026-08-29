@@ -1214,37 +1214,48 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   // Sanidad Predial de Precios y Presupuestos:
   let isReqRent = (requirement.tipoNegocioDeseado || requirement.transactionType || "").toLowerCase().includes("arriendo");
 
-  if (requirement.rawText && (budgetMax <= 0 || (isReqRent && budgetMax > 50_000_000) || (!isReqRent && budgetMax < 100_000_000))) {
-    const fbR = extractFallbackDataFromText(requirement.rawText);
-    if (fbR.presupuestoMax >= 300_000) {
-      budgetMax = fbR.presupuestoMax;
-    }
-  }
-
-  const propArea = parseFloat(String(property.areaTotal || property.area || "0"));
-  // Filtro Duro 6 (Área): reqAreaMin se lee de BD. Si es 0/null, se intenta extraer del rawText
-  // para evitar que el filtro se salte cuando JanIA no guardó el campo correctamente.
   let reqAreaMin = parseFloat(String(requirement.areaMin || requirement.areaMinimaM2 || "0"));
-  if (reqAreaMin <= 0 && requirement.rawText) {
-    const rawAreaFallback = requirement.rawText.toLowerCase()
-      .match(/(?:(?:m[ií]nimo|m[aá]s\s*de|min(?:imo)?|de|desde)\s+)([\d]+(?:[.,][\d]+)?)\s*(?:m2|mts2|mts|metros(?:\s+cuadrados)?|m²)/i);
-    if (rawAreaFallback) {
-      const parsedArea = parseFloat(rawAreaFallback[1].replace(',', '.'));
-      if (!isNaN(parsedArea) && parsedArea >= 10 && parsedArea <= 5000) {
-        reqAreaMin = parsedArea;
-        console.log(`[Matching-AreaFallback] ⚠️ reqAreaMin extraído de rawText: ${parsedArea} m² (no estaba en BD para req #${requirement.id})`);
+  let reqAreaMax = 0;
+  let pBedrooms = property.bedrooms != null ? Number(property.bedrooms) : -1;
+  let reqBedrooms = requirement.habitacionesMin != null ? Number(requirement.habitacionesMin) : -1;
+  let pBathrooms = property.bathrooms != null ? Number(property.bathrooms) : -1;
+  let reqBathrooms = requirement.banosMin != null ? Number(requirement.banosMin) : -1;
+  let pGarages = property.garages != null ? Number(property.garages) : -1;
+  let reqGarages = requirement.parqueaderosMin != null ? Number(requirement.parqueaderosMin) : -1;
+
+  if (requirement.rawText) {
+    const fbR = extractFallbackDataFromText(requirement.rawText);
+    if (budgetMax <= 0 || (isReqRent && budgetMax > 50_000_000) || (!isReqRent && budgetMax < 100_000_000)) {
+      if (fbR.presupuestoMax >= 300_000) {
+        budgetMax = fbR.presupuestoMax;
       }
     }
+    if (reqAreaMin <= 0 && fbR.areaMin) {
+      reqAreaMin = fbR.areaMin;
+    }
+    if (fbR.areaMax) {
+      reqAreaMax = fbR.areaMax;
+    }
+    if (reqBedrooms <= 0 && fbR.bedroomsMin) {
+      reqBedrooms = fbR.bedroomsMin;
+    }
+    if (reqBathrooms <= 0 && fbR.bathrooms) {
+      reqBathrooms = fbR.bathrooms;
+    }
+    if (reqGarages <= 0 && fbR.garages) {
+      reqGarages = fbR.garages;
+    }
   }
 
-  const pBedrooms = property.bedrooms != null ? Number(property.bedrooms) : -1;
-  const reqBedrooms = requirement.habitacionesMin != null ? Number(requirement.habitacionesMin) : -1;
-
-  const pBathrooms = property.bathrooms != null ? Number(property.bathrooms) : -1;
-  const reqBathrooms = requirement.banosMin != null ? Number(requirement.banosMin) : -1;
-
-  const pGarages = property.garages != null ? Number(property.garages) : -1;
-  const reqGarages = requirement.parqueaderosMin != null ? Number(requirement.parqueaderosMin) : -1;
+  let propArea = parseFloat(String(property.areaTotal || property.area || "0"));
+  if (property.rawText) {
+    const fbP = extractFallbackDataFromText(property.rawText);
+    if (price <= 0 && fbP.price) price = fbP.price;
+    if (propArea <= 0 && fbP.area) propArea = fbP.area;
+    if (pBedrooms <= 0 && fbP.bedrooms) pBedrooms = fbP.bedrooms;
+    if (pBathrooms <= 0 && fbP.bathrooms) pBathrooms = fbP.bathrooms;
+    if (pGarages <= 0 && fbP.garages) pGarages = fbP.garages;
+  }
 
   const pAdminFee = property.adminFee != null ? parseFloat(String(property.adminFee)) : -1;
   const reqAdminMax = requirement.adminFeeMax != null ? parseFloat(String(requirement.adminFeeMax)) : -1;
@@ -1549,11 +1560,15 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
-  // ── FILTRO DURO 6: Área (REGLA DOCTRINAL v22.4 / v20.0: Mínimo exigido con tolerancia) ──
+  // ── FILTRO DURO 6: Área (REGLA DOCTRINAL v22.4 / v20.0: Mínimo exigido con tolerancia y Techo Máximo) ──
   if (reqAreaMin > 0) {
     if (propArea > 0) {
       if (propArea < reqAreaMin * 0.95) {
         blockers.push(`Guillotina de Área Estricta: Área ofrecida (${propArea} m²) es inferior al mínimo exigido (${reqAreaMin} m²). Match inviable (0%).`);
+        return buildExplanationResult(0, blockers, positives, negatives);
+      }
+      if (reqAreaMax > 0 && propArea > reqAreaMax * 1.35) {
+        blockers.push(`Guillotina de Área Estricta: Área ofrecida (${propArea} m²) excede desproporcionadamente (+35%) el rango máximo buscado (${reqAreaMax} m²). Match inviable (0%).`);
         return buildExplanationResult(0, blockers, positives, negatives);
       }
       if (propArea >= reqAreaMin) {

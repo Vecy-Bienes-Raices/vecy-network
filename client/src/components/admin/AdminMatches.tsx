@@ -773,15 +773,23 @@ function scoreRows(req: any, prop: any) {
   let reqSaleBudget = (!isReqRentMatch && !isPropPureRent) ? parseSafePrice(req.presupuestoMax, req.rawText) : 0;
 
   if ((reqSaleBudget <= 0 || reqSaleBudget < 100_000_000) && reqTextLower && !isReqRentMatch && !isPropPureRent && !isReqOpenBudget) {
-    const rangeMatch = reqTextLower.match(/(?:presupuesto(?:\s*m[aá]ximo)?|ppto(?:\s*m[aá]ximo)?|hasta|tope|valor|inversi[oó]n|compra)?\s*:?\s*\*?\$?\s*(\d{1,4}(?:[.,]\d{1,3})?)\s*(?:a|hasta|-)\s*\*?\$?\s*(\d{1,4}(?:[.,]\d{1,3})?)\*?\s*(mil\s*millones?|millones?|millon|millón|mill|mm|m)?\b/i);
+    const rangeMatch = reqTextLower.match(/(?:presupuesto(?:\s*m[aá]ximo)?|ppto(?:\s*m[aá]ximo)?|hasta|tope|valor|inversi[oó]n|compra)?\s*:?\s*\*?\$?\s*(\d{1,4}(?:[.,]\d{1,3})?)\s*(?:a|hasta|-)\s*\*?\$?\s*(\d{1,4}(?:[.,]\d{1,3})?)\*?\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?\b/i);
     if (rangeMatch && (rangeMatch[0].includes("presupuesto") || rangeMatch[0].includes("ppto") || rangeMatch[0].includes("compra") || rangeMatch[3])) {
       const parsedMax = parseColombianPriceOrBudget(rangeMatch[2], rangeMatch[3] || "", true);
       if (parsedMax >= 10_000_000) reqSaleBudget = parsedMax;
     }
+    if (reqSaleBudget <= 0) {
+      const singleMatch = reqTextLower.match(/(?:presupuesto|ppto|valor|precio|inversi[oó]n|compra|m[aá]ximo|max|hasta|tope|techo)\s*(?:m[aá]ximo|max)?\s*(?:de)?\s*:?\s*\*?\$?\s*(\d{1,4}(?:[.,]\d{1,3})?)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?\b/i)
+        || reqTextLower.match(/\$\s*(\d{1,4}(?:[.,]\d{1,3})?)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?\b/i);
+      if (singleMatch) {
+        const parsed = parseColombianPriceOrBudget(singleMatch[1], singleMatch[2] || "", true);
+        if (parsed >= 10_000_000) reqSaleBudget = parsed;
+      }
+    }
   }
 
   if ((propSalePrice < 100_000_000 || propSalePrice === 0) && propTextLower && !isPropPureRent) {
-    const millonMatch = propTextLower.match(/(?:precio|valor|venta|💰)?\s*:?\s*\$?\s*(\d{1,4}(?:[.,]\d{1,3})?)\s*(mil\s*millones?|millon|millones|millón|mill|mm|m)\b/i);
+    const millonMatch = propTextLower.match(/(?:precio|valor|venta|💰)?\s*:?\s*\$?\s*(\d{1,4}(?:[.,]\d{1,3})?)\s*(mil\s*millones?|millon|millones|millón|mll|mlls|mill|mills|mm|m)\b/i);
     if (millonMatch) {
       const computed = parseColombianPriceOrBudget(millonMatch[1], millonMatch[2], true);
       if (computed >= 30_000_000) propSalePrice = computed;
@@ -865,19 +873,17 @@ function scoreRows(req: any, prop: any) {
       }
     }
 
-    if (propRentPrice <= 0 && isPropPureRent) {
-      const formattedPriceMatch = (prop.rawText || "").match(/\$?\s*(\d{1,3}(?:\.\d{3}){2})/);
-      if (formattedPriceMatch) {
-        const parsed = parseFloat(formattedPriceMatch[1].replace(/\./g, ''));
-        if (!isNaN(parsed) && parsed >= 300_000 && parsed <= 100_000_000 && !isPhoneNumberNotPrice(parsed, prop.rawText)) {
-          propRentPrice = parsed;
-        }
+    if (propRentPrice <= 0) {
+      const matchPPrice = propTextLower.match(/\$?\s*(\d{1,2}(?:\.\d{3}){2})/);
+      if (matchPPrice) {
+        let valCP = parseFloat(matchPPrice[1].replace(/\./g, ""));
+        if (!isNaN(valCP) && valCP >= 300_000 && valCP <= 50_000_000) propRentPrice = valCP;
       }
     }
   }
 
-  let reqRentLabel = !isReqRentMatch ? "N/A (Búsqueda de Compra)" : (isReqOpenBudget ? "Presupuesto Abierto" : (reqRentBudget > 0 ? `${formatCOP(reqRentBudget)} / mes` : "N/E"));
-  let propRentLabel = propRentPrice > 0 ? `${formatCOP(propRentPrice)} / mes` : (isPropPureVenta ? "N/A (Solo Venta)" : "N/E");
+  let reqRentLabel = !isReqRentMatch ? "N/A (Búsqueda de Venta)" : (isReqOpenBudget ? "Presupuesto Abierto" : (reqRentBudget > 0 ? formatCOP(reqRentBudget) : "N/E"));
+  let propRentLabel = propRentPrice > 0 ? formatCOP(propRentPrice) : (isPropPureVenta ? "N/A (Inmueble en Venta)" : "N/E");
 
   let rentS: MatchStatus = "neutral";
   if (!isReqRentMatch) {
@@ -934,11 +940,18 @@ function scoreRows(req: any, prop: any) {
   add("Cuota de Administración", reqAdminLabel, propAdminLabel, adminS, 5, <Receipt className="w-3.5 h-3.5" />);
 
   let areaR = parseFloat(req.areaMin || req.areaMinimaM2 || "0");
-  if (areaR <= 0 && reqTextLower) {
-    const mRA = reqTextLower.match(/(?:mínimo|min|de|área)?\s*([\d.,]+)\s*(?:m2|mts|m²|metros)/i);
-    if (mRA) {
-      let valRA = parseFloat(mRA[1].replace(/\./g, "").replace(",", "."));
-      if (!isNaN(valRA) && valRA > 10 && valRA < 10000) areaR = valRA;
+  let areaRMax = 0;
+  if (reqTextLower) {
+    const areaRangeR = reqTextLower.match(/(?:📐|area|área|superficie)?\s*(?:de\s+)?(\d+(?:[.,]\d+)?)\s*(?:a|-|hasta)\s*(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)/i);
+    if (areaRangeR) {
+      areaR = parseFloat(areaRangeR[1].replace(",", "."));
+      areaRMax = parseFloat(areaRangeR[2].replace(",", "."));
+    } else if (areaR <= 0) {
+      const mRA = reqTextLower.match(/(?:mínimo|min|de|área)?\s*([\d.,]+)\s*(?:m2|mts|m²|metros)/i);
+      if (mRA) {
+        let valRA = parseFloat(mRA[1].replace(/\./g, "").replace(",", "."));
+        if (!isNaN(valRA) && valRA > 10 && valRA < 10000) areaR = valRA;
+      }
     }
   }
 
@@ -960,6 +973,8 @@ function scoreRows(req: any, prop: any) {
   if (areaR > 0 && areaP > 0) {
     if (areaP < areaR * 0.95) {
       areS = "missing";
+    } else if (areaRMax > 0 && areaP > areaRMax * 1.35) {
+      areS = "missing"; // Excede +35% el área máxima solicitada -> Guillotina
     } else if (areaP >= areaR) {
       areS = "exact";
     } else {
@@ -968,14 +983,18 @@ function scoreRows(req: any, prop: any) {
   } else if (areaR === 0 && areaP > 0) {
     areS = "neutral";
   }
-  const reqAreaLabel = areaR > 0 ? `≥ ${areaR} m²` : "Flexible / Sin restricción";
+  const reqAreaLabel = areaR > 0 ? (areaRMax > 0 ? `${areaR} - ${areaRMax} m²` : `≥ ${areaR} m²`) : "Flexible / Sin restricción";
 
   add("Área Total", reqAreaLabel, areaPropLabel, areS, 10, <Ruler className="w-3.5 h-3.5" />);
 
+  const SPANISH_NUM_MAP: Record<string, number> = { "un": 1, "uno": 1, "una": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5, "seis": 6 };
   let bedR = req.habitacionesMin ? Number(req.habitacionesMin) : 0;
   if (bedR <= 0 && reqTextLower) {
-    const bedMatchR = reqTextLower.match(/(\d+)\s*(?:alcoba|alcobas|hab|habs|habitacion|habitaciones|dormitorio|dormitorios|cuartos)/i);
-    if (bedMatchR) bedR = parseInt(bedMatchR[1], 10);
+    const bedMatchR = reqTextLower.match(/(?:de\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d+)(?:\s*(?:a|-|o|hasta)\s*(un|una|uno|dos|tres|cuatro|cinco|\d+))?\s*(?:alcoba|alcobas|hab|habs|habitacion|habitaciones|dormitorio|dormitorios|cuartos|cuarto)/i);
+    if (bedMatchR) {
+      const w = bedMatchR[1].toLowerCase();
+      bedR = SPANISH_NUM_MAP[w] || parseInt(w, 10) || 0;
+    }
   }
 
   let bedP = prop.bedrooms ? Number(prop.bedrooms) : 0;
