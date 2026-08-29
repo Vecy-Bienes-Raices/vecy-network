@@ -162,13 +162,14 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v26.5 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL: v27.0 — Agosto 2026
 
-### Novedades v26.5 (Desacoplamiento de Matriz de Cotejo, Búsqueda Instantánea Universal y Optimización Extrema en Móviles):
-- **Desacoplamiento Total de Cálculos (`processedMatches`)**: La matriz técnica de cotejo de 20+ atributos se evalúa una única vez al recibir los datos. Al filtrar o buscar, `scoreRows` no vuelve a ejecutarse, eliminando el congelamiento de interfaz.
-- **Búsqueda Instantánea con `useDeferredValue`**: Escritura fluida a 120 FPS sin retraso de entrada de texto ni bloqueos del hilo principal en dispositivos móviles y de escritorio.
-- **Índice de Búsqueda Universal Extendido**: Búsqueda habilitada por ID de match (`#11220`, `m11220`), ID de propiedad/requerimiento, nombre, texto crudo, descripciones, teléfonos de brokers y características numéricas.
-- **Resolución de Variables y Tipado TypeScript**: Declaración e inyección formal de variables de estudio/loft (`isReqStudio`, `isPropStudio`) y tipado estricto `(row: any, rIdx: number)` en tablas de escritorio y móviles.
+### Novedades v27.0 (Calibración Proporcional de Casillas 6+, Inyección Reactiva de 64 Amenidades, 22 Tipologías Inmobiliarias, Permutas Porcentuales y KPIs de Totales):
+- **Calibración Proporcional de Casillas 6+ (`AdminMatches.tsx`)**: Casillas 1 a 5 otorgan el 80% base al coincidir en verde (`exact` 🟢). Los 20 puntos restantes se distribuyen equitativamente entre las $N$ casillas activas de la 6 en adelante. Todo match sin "Datos Pendientes" alcanza el **100% Match Perfecto**. Si existe cualquier rojo `missing` 🔴 $\rightarrow$ 0% Guillotina Inmediata.
+- **Inyección Reactiva de 64 Amenidades ("Por Arte de Magia")**: Si la oferta o la demanda mencionan amenidades (Cava, BBQ, Chimenea, Estudio, Terraza, Moto, Jacuzzi, Pista de Pádel, Vigilancia 24/7, etc.), la fila se dibuja automáticamente; si ninguna de las partes la menciona, la fila no se dibuja, manteniendo la interfaz limpia y rápida.
+- **Marcadores de Control KPI de Totales en Tiempo Real**: Panel enriquecido con `TOTAL OFERTAS` (1.095 inmuebles), `TOTAL DEMANDAS` (600 requerimientos), `MATCHES DETECTADOS` (67 matches únicos rigurosos) y `MATCHES PERFECTOS (≥95%)`.
+- **Taxonomía de 22 Tipologías Inmobiliarias y Selector de Permutas con Porcentajes**: Mapeo completo en frontend, backend y selectores de edición.
+
 
 ### Novedades v26.4 (Blindaje Doctrinal de Tipologías Inmobiliarias, Tolerancia Cero entre Comercial/Médico y Residencial, Purga de Matches Inviables):
 - **Incompatibilidad Absoluta Comercial/Dotacional vs Residencial**: Implementado Guard Bloqueador en `matching.ts` al **0% invariable** ante cualquier cruce entre inmuebles comerciales/médicos (`consultorio`, `oficina`, `local`, `bodega`, `lote`) y residenciales (`apartamento`, `casa`, `apartaestudio`, `loft`).

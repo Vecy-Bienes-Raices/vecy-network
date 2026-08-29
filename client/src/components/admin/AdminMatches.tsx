@@ -1375,47 +1375,51 @@ function scoreRows(req: any, prop: any) {
 
 
   // ── ESTADÍSTICA Y TABULACIÓN DOCTRINAL DE MATCH VECY (v27.0) ──
-  // 1. Primeras 6 casillas (Núcleo Innegociable Obligatorio): Tipo Inmueble, Tipo Negocio, Barrio, Localidad, Ciudad, Precio
-  const top6Rows = rows.slice(0, 6);
-  const hasHardMismatch = top6Rows.some(r => r.status === "missing");
+  // 1. Primeras 5 casillas (Núcleo Duro Innegociable): Tipo Inmueble, Tipo Negocio, Barrio, Localidad, Ciudad
+  const top5Rows = rows.slice(0, 5);
+  const hasHardMismatch = top5Rows.some(r => r.status === "missing");
 
-  // 2. Guillotina Total: Si CUALQUIER fila tiene estado "missing" ("No Coincide" / "No Cumple" en rojo) -> 0%
+  // 2. Guillotina Total: Si CUALQUIER fila en todo el cotejo tiene estado "missing" ("No Coincide" / "No Cumple" en rojo) -> 0%
   const hasAnyMissingRow = rows.some(r => r.status === "missing");
   let autoScore = 0;
 
-  if (!hasHardMismatch && !hasAnyMissingRow && max > 0) {
-    // Si todas las filas evaluadas están en exact/ok (todo verde) -> 100%
-    const allExactGreen = rows.every(r => r.label.includes("Teléfono") || r.status === "exact" || r.status === "ok");
+  if (!hasHardMismatch && !hasAnyMissingRow) {
+    // Casillas de la 6 en adelante (Precio, Área, Habitaciones, Baños, Garajes, Antigüedad, Estrato, Espacio Exterior, Cocina, Amenidades Dinámicas)
+    // Excluyendo la fila informativa de Teléfono
+    const evaluableRows6Plus = rows.slice(5).filter(r => !r.label.includes("Teléfono"));
+    const N = evaluableRows6Plus.length;
 
-    if (allExactGreen) {
+    if (N === 0) {
       autoScore = 100;
     } else {
-      // Casillas 7 a 12 (índices 6 a 11): Administración, Área, Habitaciones, Baños, Parqueaderos, Antigüedad
-      const middleRows = rows.slice(6, 12);
-      let middleBonus = 0;
-      for (const r of middleRows) {
-        if (r.status === "exact" || r.status === "ok") middleBonus += 0.5;
-        else if (r.status === "plus") middleBonus += 0.4;
-        else if (r.status === "warn") middleBonus += 0.2;
-        else if (r.status === "neutral") middleBonus += 0.1;
-      }
-      // Puntuación base garantizada de 85% a 88% al coincidir casillas 1 a 6 y tener datos viables en 7 a 12
-      const baseScore = 85 + Math.min(3, middleBonus);
+      // Base sólida del 80% al cumplir al 100% las 5 primeras casillas en duro
+      const base80 = 80;
+      const pointsPerSlot = 20 / N; // Los 20 puntos restantes se dividen equitativamente entre las N casillas activas
 
-      // Casillas 13 en adelante (índice 12 en adelante): Estrato, Espacio exterior, Amenidades dinámicas
-      const extraRows = rows.slice(12).filter(r => !r.label.includes("Teléfono"));
-      let extraBonus = 0;
-      if (extraRows.length > 0) {
-        for (const r of extraRows) {
-          if (r.status === "exact" || r.status === "ok") extraBonus += 1.5;
-          else if (r.status === "plus") extraBonus += 1.0;
-          else if (r.status === "warn") extraBonus += 0.5;
-          else if (r.status === "neutral") extraBonus += 0.2;
+      let earnedSlotPoints = 0;
+      let hasAnyPending = false;
+
+      for (const r of evaluableRows6Plus) {
+        if (r.status === "exact" || r.status === "ok") {
+          earnedSlotPoints += pointsPerSlot * 1.0; // 100% de la cuota
+        } else if (r.status === "plus") {
+          earnedSlotPoints += pointsPerSlot * 0.95; // 95% de la cuota (Plus ofertado)
+        } else if (r.status === "warn") {
+          earnedSlotPoints += pointsPerSlot * 0.75; // 75% de la cuota (Aproximado viable)
+        } else if (r.status === "neutral") {
+          hasAnyPending = true;
+          earnedSlotPoints += pointsPerSlot * 0.40; // 40% de la cuota (Dato Pendiente por completar)
         }
       }
 
-      const calculated = Math.min(99, Math.round(baseScore + extraBonus));
-      autoScore = Math.max(85, calculated);
+      // Si todas las casillas están llenas (sin "Datos Pendientes") y en verde/plus -> 100%
+      if (!hasAnyPending && evaluableRows6Plus.every(r => r.status === "exact" || r.status === "ok" || r.status === "plus")) {
+        autoScore = 100;
+      } else {
+        const totalCalc = Math.round(base80 + earnedSlotPoints);
+        // Garantizar que si no hay ningún rojo, el score califica en el piso doctrinal (mínimo 85%) hasta 99%
+        autoScore = Math.min(99, Math.max(85, totalCalc));
+      }
     }
   }
 
@@ -2199,7 +2203,7 @@ export default function AdminMatches() {
           </div>
           <div>
             <p className="text-[10px] uppercase tracking-wider text-zinc-400 font-bold">Matches Detectados</p>
-            <p className="text-lg sm:text-xl font-black text-white">{kpiStats.total}</p>
+            <p className="text-lg sm:text-xl font-black text-white">{Number(kpiStats.total || 0).toLocaleString('es-CO')}</p>
           </div>
         </div>
 
@@ -2209,7 +2213,7 @@ export default function AdminMatches() {
           </div>
           <div>
             <p className="text-[10px] uppercase tracking-wider text-zinc-400 font-bold">Matches Perfectos (≥95%)</p>
-            <p className="text-lg sm:text-xl font-black text-emerald-400">{kpiStats.perfect}</p>
+            <p className="text-lg sm:text-xl font-black text-emerald-400">{Number(kpiStats.perfect || 0).toLocaleString('es-CO')}</p>
           </div>
         </div>
 
@@ -2219,7 +2223,7 @@ export default function AdminMatches() {
           </div>
           <div>
             <p className="text-[10px] uppercase tracking-wider text-[#bf953f] font-bold">Total Ofertas</p>
-            <p className="text-lg sm:text-xl font-black text-[#bf953f]">{kpiStats.totalProps}</p>
+            <p className="text-lg sm:text-xl font-black text-[#bf953f]">{Number(kpiStats.totalProps || 0).toLocaleString('es-CO')}</p>
           </div>
         </div>
 
@@ -2229,7 +2233,7 @@ export default function AdminMatches() {
           </div>
           <div>
             <p className="text-[10px] uppercase tracking-wider text-cyan-400 font-bold">Total Demandas</p>
-            <p className="text-lg sm:text-xl font-black text-cyan-400">{kpiStats.totalReqs}</p>
+            <p className="text-lg sm:text-xl font-black text-cyan-400">{Number(kpiStats.totalReqs || 0).toLocaleString('es-CO')}</p>
           </div>
         </div>
       </div>

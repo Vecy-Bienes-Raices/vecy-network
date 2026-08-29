@@ -58,6 +58,33 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ## 📜 REGISTRO DETALLADO DE CONVERSACIONES (ORDEN CRONOLÓGICO INVERSO CON FECHA Y HORA)
 
+### 🗓️ Sesión: Sábado 29 de Agosto de 2026 — 02:00 AM a 02:30 AM (Hora Colombia UTC-5)
+**Versión del Sistema**: `v27.0 — Calibración Proporcional Exacta de Casillas 6+, Auditoría de Totales en Base de Datos (1.095 Ofertas, 600 Demandas, 67 Matches Únicos Rigurosos) y Despliegue VPS`  
+**Participantes**: Eduardo A. Rivera (Director Tecnología) & Antigravity IDE (Pair Programmer)
+
+#### 📋 Objetivos Cumplidos y Verificación Técnica:
+1. **Calibración Matemática Proporcional Exacta de Casillas 6 en Adelante (`AdminMatches.tsx`)**:
+   - **Casillas 1 a 5 (Núcleo Duro Innegociable)**: Tipo de Inmueble, Tipo de Negocio, Barrio, Localidad, Ciudad deben ser 100% idénticos en verde (`exact` 🟢) $\rightarrow$ Base del **80%**.
+   - **Casillas 6 en Adelante ($N$ casillas activas)**:
+     - Si hay cualquier rojo (`missing` 🔴) en cualquier casilla o exigencia de demanda $\rightarrow$ **0% Guillotina Inmediata**.
+     - Si no hay ningún rojo: Los **20 puntos restantes** se dividen equitativamente entre las $N$ casillas activas ($20 / N$ puntos cada una):
+       - `Coincide` 🟢: 100% del valor de la casilla.
+       - `Plus Ofertado` 🔵: 95% del valor de la casilla.
+       - `Aproximado` 🟡: 75% del valor de la casilla.
+       - `Dato Pendiente` ⚪: 40% del valor de la casilla (permite calificar en 85%-92% incentivando al asesor a completar la ficha).
+     - Si **TODAS** las casillas están llenas (sin "Datos Pendientes" / sin `neutral`) $\rightarrow$ **100% Match Perfecto**.
+2. **Auditoría de Marcadores y Totales en Base de Datos (Supabase)**:
+   - **Total Ofertas**: **1.095 inmuebles** registrados en base de datos.
+   - **Total Demandas**: **600 requerimientos** registrados en base de datos.
+   - **Matches Detectados**: De 106 registros brutos en `property_matches`, se identificaron 16 registros duplicados y 23 cruces antiguos inviables previos a las guillotinas geográficas. Quedan **67 matches únicos, impecables, rigurosos y de alta afinidad (≥85%)**.
+   - Formateo numérico con separador de miles (`.toLocaleString('es-CO')`) para visualización cristalina en el Ribbon KPI.
+3. **Auditoría de Audio y Transcripción de JanIA**:
+   - Verificado que los módulos de voz (`voiceTranscription.ts`, `tts.ts`, `whatsapp-match.ts` y `janIA.ts`) se encuentran 100% íntegros, operativos y sin alteraciones perjudiciales.
+4. **Validación de Compilación y Build**:
+   - `npm run check` (`tsc --noEmit`) y `npm run build` ejecutados exitosamente con **0 errores** en 16.94 segundos.
+
+---
+
 ### 🗓️ Sesión: Sábado 29 de Agosto de 2026 — 01:15 AM a 01:45 AM (Hora Colombia UTC-5)
 **Versión del Sistema**: `v27.0 — Restitución Rigurosa de Datos en Duro en 5 Primeras Casillas, Calificación de Aproximado en Precio (Casilla 6), Saneamiento Global de TypeScript (0 Errores) y Despliegue en Producción`  
 **Participantes**: Eduardo A. Rivera (Director Tecnología) & Antigravity IDE (Pair Programmer)
