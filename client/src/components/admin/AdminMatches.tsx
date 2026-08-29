@@ -4,7 +4,7 @@ import {
   Sparkles, CheckCircle2, AlertTriangle, XCircle, SlidersHorizontal, 
   DollarSign, Ruler, Bed, Bath, Car, Shield, ExternalLink, Receipt, Box, Globe,
   Edit3, Save, Loader2, RotateCcw, Sun, Zap, Utensils, Home, Flame, ThumbsUp, ThumbsDown,
-  Trees, ShieldCheck, BookOpen, Copy, Check, ClipboardList
+  Trees, ShieldCheck, BookOpen, Copy, Check, ClipboardList, Archive, Layers
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -753,6 +753,7 @@ function scoreRows(req: any, prop: any) {
 
   add("Estrato", reqEstratoLabel, (estratoP && Number(estratoP) > 0) ? `Estrato ${estratoP}` : "N/E", estS, 7, <Shield className="w-3.5 h-3.5" />);
 
+  // 14. Antigüedad / Año de Construcción
   let ageR = req.antiguedadMax ? Number(req.antiguedadMax) : (req.preferredAge ? Number(req.preferredAge) : 0);
   let ageP = prop.antiguedadAnos != null ? Number(prop.antiguedadAnos)
     : (prop.yearBuilt ? (new Date().getFullYear() - Number(prop.yearBuilt))
@@ -761,154 +762,249 @@ function scoreRows(req: any, prop: any) {
   let ageS: MatchStatus = "neutral";
   if (ageR > 0 && ageP >= 0) {
     if (ageP <= ageR) ageS = "exact";
+    else if (ageP <= ageR + 5) ageS = "warn";
     else ageS = "warn";
   } else if (ageR <= 0 && ageP >= 0) {
-    if (reqWantsStudy && propHasStudy) studyStatus = "exact";
-    else if (reqWantsStudy && !propHasStudy) studyStatus = "warn";
-    else if (!reqWantsStudy && propHasStudy) studyStatus = "plus"; // Bono confort
-    add(
-      "Estudio / Star de TV",
-      reqTextLower.includes("o estudio") ? "2 habitaciones o Estudio" : reqWantsStudy ? "Exige Estudio / Star de TV" : "Flexible",
-      propHasStudy ? "Sí (Estudio independiente)" : "Sin estudio independiente",
-      studyStatus,
-      4,
-      <BookOpen className="w-3.5 h-3.5" />
-    );
+    ageS = "neutral";
+  } else if (ageR > 0 && ageP < 0) {
+    ageS = "neutral";
+  }
+  const reqAgeLabel = ageR > 0 ? `Máx ${ageR} años` : "Flexible / Sin restricción";
+  const propAgeLabel = ageP >= 0 ? (ageP === 0 ? "A estrenar / Sobre planos" : `${ageP} años`) : "N/E (Consultar)";
+  add("Antigüedad / Año", reqAgeLabel, propAgeLabel, ageS, 5, <Calendar className="w-3.5 h-3.5" />);
+
+  // 15. Espacio Exterior (Balcón / Terraza / Patio / Jardín)
+  const isHouse = (req.tipoInmuebleDeseado || req.propertyType || prop.propertyType || "").toLowerCase().includes("casa");
+  let extS: MatchStatus = "neutral";
+  let reqExtLabel = "Flexible / No exigido";
+  let propExtLabel = "Sin dato especificado";
+
+  if (isHouse) {
+    const reqPatio = reqTextLower.includes("patio") || reqTextLower.includes("jardin") || reqTextLower.includes("jardín");
+    const propPatio = propRawText.includes("patio") || propRawText.includes("jardin") || propRawText.includes("jardín");
+    if (reqPatio && propPatio) {
+      extS = "exact";
+      reqExtLabel = "Exige Patio / Jardín";
+      propExtLabel = "Sí (Cuenta con Patio / Jardín)";
+    } else if (reqPatio && !propPatio) {
+      extS = "warn";
+      reqExtLabel = "Exige Patio / Jardín";
+      propExtLabel = "Sin patio especificado";
+    } else if (!reqPatio && propPatio) {
+      extS = "plus";
+      reqExtLabel = "Flexible";
+      propExtLabel = "Sí (Patio / Jardín Privado)";
+    } else {
+      extS = "neutral";
+      reqExtLabel = "Flexible";
+      propExtLabel = "N/E (Consultar)";
+    }
+    add("Espacio Exterior (Patio / Jardín)", reqExtLabel, propExtLabel, extS, 5, <Trees className="w-3.5 h-3.5" />);
+  } else {
+    const reqBalcon = reqTextLower.includes("balcon") || reqTextLower.includes("balcón");
+    const reqTerraza = reqTextLower.includes("terraza");
+    const propBalcon = propRawText.includes("balcon") || propRawText.includes("balcón") || prop.hasBalcony;
+    const propTerraza = propRawText.includes("terraza") || prop.hasTerrace;
+
+    if ((reqBalcon || reqTerraza) && (propBalcon || propTerraza)) {
+      extS = "exact";
+      reqExtLabel = reqTerraza ? "Exige Terraza" : "Exige Balcón";
+      propExtLabel = propTerraza ? "Sí (Cuenta con Terraza)" : "Sí (Cuenta con Balcón)";
+    } else if ((reqBalcon || reqTerraza) && !propBalcon && !propTerraza) {
+      extS = "warn";
+      reqExtLabel = reqTerraza ? "Exige Terraza" : "Exige Balcón";
+      propExtLabel = "Sin balcón/terraza especificado";
+    } else if (!reqBalcon && !reqTerraza && (propBalcon || propTerraza)) {
+      extS = "plus";
+      reqExtLabel = "Flexible";
+      propExtLabel = propTerraza ? "Sí (Terraza Privada)" : "Sí (Balcón Exterior)";
+    } else {
+      extS = "neutral";
+      reqExtLabel = "Flexible";
+      propExtLabel = "N/E (Consultar)";
+    }
+    add("Espacio Exterior (Balcón / Terraza)", reqExtLabel, propExtLabel, extS, 5, <Sparkles className="w-3.5 h-3.5" />);
   }
 
-  // C. Zonas Sociales & Chimenea
+  // 16. Equipamiento (Ascensor / Conjunto Cerrado)
+  let eqS: MatchStatus = "neutral";
+  let reqEqLabel = "Flexible";
+  let propEqLabel = "Sin dato especificado";
+  if (isHouse) {
+    const reqConj = reqTextLower.includes("conjunto cerrado") || reqTextLower.includes("conjunto");
+    const propConj = propRawText.includes("conjunto cerrado") || propRawText.includes("conjunto");
+    if (reqConj && propConj) {
+      eqS = "exact";
+      reqEqLabel = "Exige Conjunto Cerrado";
+      propEqLabel = "Sí (Conjunto Cerrado)";
+    } else if (reqConj && !propConj) {
+      eqS = "warn";
+      reqEqLabel = "Exige Conjunto Cerrado";
+      propEqLabel = "Casa Independiente / Sin conjunto";
+    } else if (!reqConj && propConj) {
+      eqS = "plus";
+      reqEqLabel = "Flexible";
+      propEqLabel = "Sí (Conjunto Cerrado)";
+    } else {
+      eqS = "neutral";
+      reqEqLabel = "Flexible";
+      propEqLabel = "N/E (Consultar)";
+    }
+    add("Equipamiento (Conjunto Cerrado)", reqEqLabel, propEqLabel, eqS, 5, <ShieldCheck className="w-3.5 h-3.5" />);
+  } else {
+    const reqAsc = reqTextLower.includes("ascensor");
+    const propAsc = propRawText.includes("ascensor") || prop.hasElevator || (prop.bedrooms && prop.bedrooms >= 3 && prop.areaTotal && Number(prop.areaTotal) >= 150);
+    if (reqAsc && propAsc) {
+      eqS = "exact";
+      reqEqLabel = "Exige Ascensor";
+      propEqLabel = "Sí (Edificio con Ascensor)";
+    } else if (reqAsc && !propAsc) {
+      eqS = "warn";
+      reqEqLabel = "Exige Ascensor";
+      propEqLabel = "Sin ascensor especificado";
+    } else if (!reqAsc && propAsc) {
+      eqS = "plus";
+      reqEqLabel = "Flexible";
+      propEqLabel = "Sí (Edificio con Ascensor)";
+    } else {
+      eqS = "neutral";
+      reqEqLabel = "Flexible";
+      propEqLabel = "N/E (Consultar)";
+    }
+    add("Equipamiento (Ascensor)", reqEqLabel, propEqLabel, eqS, 5, <Layers className="w-3.5 h-3.5" />);
+  }
+
+  // 17. Depósito / Cuarto Útil
+  const reqDep = reqTextLower.includes("deposito") || reqTextLower.includes("depósito") || reqTextLower.includes("cuarto util") || reqTextLower.includes("cuarto útil");
+  const propDep = propRawText.includes("deposito") || propRawText.includes("depósito") || propRawText.includes("cuarto util") || propRawText.includes("cuarto útil") || prop.hasStorage;
+  let depS: MatchStatus = "neutral";
+  let reqDepLabel = "Flexible / No exigido";
+  let propDepLabel = "Sin dato especificado";
+  if (reqDep && propDep) {
+    depS = "exact";
+    reqDepLabel = "Exige Depósito / Cuarto Útil";
+    propDepLabel = "Sí (Incluye Depósito)";
+  } else if (reqDep && !propDep) {
+    depS = "warn";
+    reqDepLabel = "Exige Depósito / Cuarto Útil";
+    propDepLabel = "Sin depósito especificado";
+  } else if (!reqDep && propDep) {
+    depS = "plus";
+    reqDepLabel = "Flexible";
+    propDepLabel = "Sí (Incluye Depósito Privado)";
+  } else {
+    depS = "neutral";
+    reqDepLabel = "Flexible";
+    propDepLabel = "N/E (Consultar)";
+  }
+  add("Depósito / Cuarto Útil", reqDepLabel, propDepLabel, depS, 4, <Archive className="w-3.5 h-3.5" />);
+
+  // 18. Tipología de Cocina
+  let reqKitchen = req.kitchenType || (reqTextLower.includes("cocina cerrada") ? "Cerrada" : reqTextLower.includes("cocina abierta") ? "Abierta" : reqTextLower.includes("tipo isla") || reqTextLower.includes("isla") ? "Abierta tipo Isla" : null);
+  let propKitchen = prop.kitchenType || (propRawText.includes("cocina cerrada") ? "Cerrada" : propRawText.includes("cocina abierta") ? "Abierta" : propRawText.includes("tipo isla") || propRawText.includes("isla") ? "Abierta tipo Isla" : propRawText.includes("integral") ? "Integral" : null);
+  let kStatus: MatchStatus = "neutral";
+  if (reqKitchen && propKitchen) {
+    kStatus = reqKitchen.toLowerCase() === propKitchen.toLowerCase() ? "exact" : "warn";
+  } else if (!reqKitchen && propKitchen) {
+    kStatus = "plus";
+  } else {
+    kStatus = "neutral";
+  }
+  add(
+    "Tipología de Cocina",
+    reqKitchen ? `Cocina ${reqKitchen}` : "Flexible / Integral",
+    propKitchen ? `Cocina ${propKitchen}` : "Integral (Consultar)",
+    kStatus,
+    4,
+    <Utensils className="w-3.5 h-3.5" />
+  );
+
+  // 19. Chimenea & Zonas Sociales
   const propHasFireplace = propRawText.includes("chimenea") || propRawText.includes("doble sala") || propRawText.includes("doble altura");
   const reqWantsFireplace = reqTextLower.includes("chimenea") || reqTextLower.includes("doble sala");
-  if (propHasFireplace || reqWantsFireplace) {
-    let fpStatus: MatchStatus = "neutral";
-    if (reqWantsFireplace && propHasFireplace) fpStatus = "exact";
-    else if (!reqWantsFireplace && propHasFireplace) fpStatus = "plus"; // Bono confort
-    else fpStatus = "warn";
-    add(
-      "Zonas Sociales & Chimenea",
-      reqWantsFireplace ? "Exige Chimenea / Doble Sala" : "Flexible",
-      propHasFireplace ? "Sí (Doble sala con chimenea)" : "Sin chimenea especificada",
-      fpStatus,
-      3,
-      <Sparkles className="w-3.5 h-3.5" />
-    );
-  }
+  let fpStatus: MatchStatus = "neutral";
+  if (reqWantsFireplace && propHasFireplace) fpStatus = "exact";
+  else if (!reqWantsFireplace && propHasFireplace) fpStatus = "plus";
+  else if (reqWantsFireplace && !propHasFireplace) fpStatus = "warn";
+  else fpStatus = "neutral";
+  add(
+    "Chimenea & Zonas Sociales",
+    reqWantsFireplace ? "Exige Chimenea / Doble Sala" : "Flexible",
+    propHasFireplace ? "Sí (Doble sala con chimenea)" : "Sin chimenea especificada",
+    fpStatus,
+    3,
+    <Flame className="w-3.5 h-3.5" />
+  );
 
-  // D. Tipología de Cocina
-  let reqKitchen = req.kitchenType || (reqTextLower.includes("cocina cerrada") ? "Cerrada" : reqTextLower.includes("cocina abierta") ? "Abierta" : reqTextLower.includes("tipo isla") || reqTextLower.includes("isla") ? "Abierta tipo Isla" : null);
-  let propKitchen = prop.kitchenType || (propRawText.includes("cocina cerrada") ? "Cerrada" : propRawText.includes("cocina abierta") ? "Abierta" : propRawText.includes("tipo isla") || propRawText.includes("isla") ? "Abierta tipo Isla" : null);
-  if (reqKitchen || propKitchen) {
-    let kStatus: MatchStatus = "neutral";
-    if (reqKitchen && propKitchen) {
-      kStatus = reqKitchen.toLowerCase() === propKitchen.toLowerCase() ? "exact" : (reqKitchen.toLowerCase().includes("abierta") && propKitchen.toLowerCase().includes("abierta")) ? "exact" : "warn";
-    } else if (propKitchen) {
-      kStatus = "plus";
-    }
-    add(
-      "Tipología de Cocina",
-      reqKitchen ? `Cocina ${reqKitchen}` : "Flexible / Integral",
-      propKitchen ? `Cocina ${propKitchen}` : "Integral",
-      kStatus,
-      4,
-      <Utensils className="w-3.5 h-3.5" />
-    );
-  }
-
-  // E. Cuarto y Baño de Servicio (CBS)
+  // 20. Cuarto y Baño de Servicio (CBS)
   const reqCBS = reqTextLower.includes("cbs") || reqTextLower.includes("cuarto de servicio") || reqTextLower.includes("alcoba de servicio") || reqTextLower.includes("cuarto y baño de servicio") || reqTextLower.includes("cuarto y bano de servicio");
   const propCBS = propRawText.includes("cbs") || propRawText.includes("cuarto de servicio") || propRawText.includes("alcoba de servicio") || propRawText.includes("cuarto y baño de servicio") || propRawText.includes("alcoba para el servicio") || prop.hasServiceRoom;
-  if (reqCBS || propCBS) {
-    let cbsStatus: MatchStatus = "neutral";
-    if (reqCBS && propCBS) cbsStatus = "exact";
-    else if (reqCBS && !propCBS) cbsStatus = "warn";
-    else if (!reqCBS && propCBS) cbsStatus = "plus"; // Oferta con CBS es bono de confort
-    add(
-      "Cuarto y Baño Servicio (CBS)",
-      reqCBS ? "Exige CBS (Cuarto y Baño de Servicio)" : "Flexible / No exigido",
-      propCBS ? "Sí (Incluye Cuarto y Baño de Servicio)" : "Sin CBS especificado",
-      cbsStatus,
-      4,
-      <Home className="w-3.5 h-3.5" />
-    );
-  }
+  let cbsStatus: MatchStatus = "neutral";
+  if (reqCBS && propCBS) cbsStatus = "exact";
+  else if (reqCBS && !propCBS) cbsStatus = "warn";
+  else if (!reqCBS && propCBS) cbsStatus = "plus";
+  else cbsStatus = "neutral";
+  add(
+    "Cuarto y Baño Servicio (CBS)",
+    reqCBS ? "Exige CBS (Cuarto y Baño de Servicio)" : "Flexible / No exigido",
+    propCBS ? "Sí (Incluye Cuarto y Baño de Servicio)" : "Sin CBS especificado",
+    cbsStatus,
+    4,
+    <Home className="w-3.5 h-3.5" />
+  );
 
-  // F. Acabado de Pisos
-  let reqPisos = reqTextLower.includes("madera maciza") ? "Madera Maciza" : reqTextLower.includes("madera") ? "Madera" : reqTextLower.includes("laminado") ? "Laminado" : reqTextLower.includes("marmol") || reqTextLower.includes("mármol") ? "Mármol" : reqTextLower.includes("porcelanato") ? "Porcelanato" : null;
-  let propPisos = propRawText.includes("madera maciza") ? "Madera Maciza" : propRawText.includes("madera") ? "Madera" : propRawText.includes("laminado") ? "Laminado" : propRawText.includes("marmol") || propRawText.includes("mármol") ? "Mármol" : propRawText.includes("porcelanato") ? "Porcelanato" : null;
-  if (reqPisos || propPisos) {
-    let pStatus: MatchStatus = "neutral";
-    if (reqPisos && propPisos) {
-      pStatus = reqPisos === propPisos ? "exact" : (reqPisos === "Madera" && propPisos === "Laminado") ? "warn" : "warn";
-    } else if (propPisos && propPisos !== "N/E") {
-      pStatus = "plus";
-    }
-    add(
-      "Acabado de Pisos",
-      reqPisos ? `Pisos en ${reqPisos}` : "Flexible",
-      propPisos ? `Pisos en ${propPisos}` : "N/E",
-      pStatus,
-      3,
-      <Sparkles className="w-3.5 h-3.5" />
-    );
-  }
+  // 21. Estudio / Star de TV / Home Office
+  const propHasStudy = propRawText.includes("estudio") || propRawText.includes("estar de tv") || propRawText.includes("star de tv") || propRawText.includes("sala de tv") || prop.hasStudy;
+  const reqWantsStudy = reqTextLower.includes("estudio") || reqTextLower.includes("estar de tv") || reqTextLower.includes("star de tv") || reqTextLower.includes("home office");
+  let studyStatus: MatchStatus = "neutral";
+  if (reqWantsStudy && propHasStudy) studyStatus = "exact";
+  else if (reqWantsStudy && !propHasStudy) studyStatus = "warn";
+  else if (!reqWantsStudy && propHasStudy) studyStatus = "plus";
+  else studyStatus = "neutral";
+  add(
+    "Estudio / Star de TV",
+    reqWantsStudy ? "Exige Estudio / Star de TV" : "Flexible",
+    propHasStudy ? "Sí (Estudio independiente)" : "Sin estudio especificado",
+    studyStatus,
+    4,
+    <BookOpen className="w-3.5 h-3.5" />
+  );
 
-  // G. Orientación / Asoleación / Iluminación
-  let reqSol = reqTextLower.includes("luz de la mañana") || reqTextLower.includes("luz de manana") ? "Luz de la Mañana" : reqTextLower.includes("sol de tarde") ? "Sol de Tarde" : reqTextLower.includes("exterior iluminado") || reqTextLower.includes("muy iluminado") ? "Exterior Iluminado" : null;
-  let propSol = propRawText.includes("luz de la mañana") || propRawText.includes("luz de manana") ? "Luz de la Mañana" : propRawText.includes("sol de tarde") ? "Sol de Tarde" : propRawText.includes("exterior iluminado") || propRawText.includes("muy iluminado") || propRawText.includes("iluminado") ? "Exterior Iluminado" : null;
-  if (reqSol || propSol) {
-    let sStatus: MatchStatus = "neutral";
-    if (reqSol && propSol) {
-      sStatus = reqSol === propSol ? "exact" : (reqSol === "Luz de la Mañana" && propSol === "Exterior Iluminado") ? "exact" : "warn";
-    } else if (propSol) {
-      sStatus = "plus";
-    }
-    add(
-      "Orientación / Asoleación",
-      reqSol ? reqSol : "Flexible / Iluminado",
-      propSol ? propSol : "Exterior Iluminado",
-      sStatus,
-      3,
-      <Sun className="w-3.5 h-3.5" />
-    );
-  }
+  // 22. Vigilancia & Seguridad 24/7
+  const reqVig = reqTextLower.includes("vigilancia") || reqTextLower.includes("porteria") || reqTextLower.includes("portería") || reqTextLower.includes("seguridad");
+  const propVig = propRawText.includes("vigilancia") || propRawText.includes("porteria") || propRawText.includes("portería") || propRawText.includes("24 horas") || propRawText.includes("24/7");
+  let vigStatus: MatchStatus = "neutral";
+  if (reqVig && propVig) vigStatus = "exact";
+  else if (reqVig && !propVig) vigStatus = "warn";
+  else if (!reqVig && propVig) vigStatus = "plus";
+  else vigStatus = "neutral";
+  add(
+    "Vigilancia & Seguridad 24/7",
+    reqVig ? "Exige Vigilancia 24 Horas" : "Flexible",
+    propVig ? "Sí (Portería y Vigilancia 24/7)" : "Sin vigilancia especificada",
+    vigStatus,
+    3,
+    <Shield className="w-3.5 h-3.5" />
+  );
 
-  // H. Planta Eléctrica e Infraestructura
-  const reqPlanta = reqTextLower.includes("planta") || reqTextLower.includes("suplencia total");
-  const propPlanta = propRawText.includes("planta electrica") || propRawText.includes("planta eléctrica") || propRawText.includes("suplencia total") || prop.hasPowerPlant;
-  if (reqPlanta || propPlanta) {
-    let plantaStatus: MatchStatus = "neutral";
-    if (reqPlanta && propPlanta) plantaStatus = "exact";
-    else if (propPlanta) plantaStatus = "plus";
-    else plantaStatus = "warn";
-    add(
-      "Planta Eléctrica Edificio",
-      reqPlanta ? "Exige Planta Eléctrica / Suplencia" : "Flexible",
-      propPlanta ? "Sí (Planta Eléctrica de Suplencia)" : "Sin planta especificada",
-      plantaStatus,
-      3,
-      <Zap className="w-3.5 h-3.5" />
-    );
-  }
-
-  // I. Parqueadero de Visitantes
+  // 23. Parqueadero de Visitantes
   const reqVisitantes = reqTextLower.includes("visitantes") || reqTextLower.includes("parqueadero de visitantes") || reqTextLower.includes("parqueo visitantes");
   const propVisitantes = propRawText.includes("visitantes") || propRawText.includes("parqueadero de visitantes") || propRawText.includes("parqueadero para visitantes") || prop.hasVisitorParking;
-  if (reqVisitantes || propVisitantes) {
-    let vStatus: MatchStatus = "neutral";
-    if (reqVisitantes && propVisitantes) vStatus = "exact";
-    else if (reqVisitantes && !propVisitantes) vStatus = "warn";
-    else if (!reqVisitantes && propVisitantes) vStatus = "exact";
-    add(
-      "Parqueadero de Visitantes",
-      reqVisitantes ? "Exige Parqueadero de Visitantes" : "Flexible",
-      propVisitantes ? "Sí (Parqueadero para Visitantes)" : "Sin visitantes especificado",
-      vStatus,
-      3,
-      <Car className="w-3.5 h-3.5" />
-    );
-  }
+  let vStatus: MatchStatus = "neutral";
+  if (reqVisitantes && propVisitantes) vStatus = "exact";
+  else if (reqVisitantes && !propVisitantes) vStatus = "warn";
+  else if (!reqVisitantes && propVisitantes) vStatus = "plus";
+  else vStatus = "neutral";
+  add(
+    "Parqueadero de Visitantes",
+    reqVisitantes ? "Exige Parqueadero de Visitantes" : "Flexible",
+    propVisitantes ? "Sí (Parqueadero para Visitantes)" : "Sin visitantes especificado",
+    vStatus,
+    3,
+    <Car className="w-3.5 h-3.5" />
+  );
 
-  // 17. Teléfono / Contacto WhatsApp
+  // 24. Teléfono / Contacto WhatsApp
   const reqContactPhone = extractPhoneFromItem(req);
   const propContactPhone = extractPhoneFromItem(prop);
   add(
@@ -1662,11 +1758,11 @@ export default function AdminMatches() {
   });
 
   const kpiStats = useMemo(() => {
-    const rawList = (matches as any[]) || [];
+    const rawList = processedMatches || [];
     const total = rawList.length;
-    const perfect = rawList.filter((m: any) => parseFloat(String(m.matchScore || 0)) >= 95).length;
+    const perfect = rawList.filter((m: any) => m._precomputedScore >= 95).length;
     const approx = rawList.filter((m: any) => {
-      const s = parseFloat(String(m.matchScore || 0));
+      const s = m._precomputedScore;
       return s >= 85 && s < 95;
     }).length;
     const uniqueProps = new Set(rawList.map((m: any) => m.property?.id || m.propertyId).filter(Boolean)).size;
@@ -1676,7 +1772,7 @@ export default function AdminMatches() {
     const todayReqs = botStatus?.todayRequirements ?? uniqueReqs;
 
     return { total, perfect, approx, uniqueProps, uniqueReqs, todayProps, todayReqs };
-  }, [matches, botStatus]);
+  }, [processedMatches, botStatus]);
 
   const exportData = () => {
     const headers = ['ID Coincidencia', 'Porcentaje Match', 'Propiedad', 'Propietario Telefono', 'Requerimiento', 'Interesado Telefono', 'Estado', 'Fecha'];
