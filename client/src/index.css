@@ -600,5 +600,20 @@
     @apply border-primary/30 shadow-[0_20px_50px_rgba(191,149,63,0.1)];
     transform: translateY(-5px);
   }
+
+  /* ── ULTRA-HIGH PERFORMANCE MOBILE UTILITIES (MODERN WEB) ── */
+  .cv-auto-card {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 320px;
+    contain: layout style paint;
+  }
+
+  .smooth-gpu {
+    transform: translateZ(0);
+    will-change: transform, opacity;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
 }
+
 

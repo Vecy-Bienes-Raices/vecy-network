@@ -14,6 +14,7 @@ export default function AdminRequirements() {
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [filterNeg, setFilterNeg] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Filtrado de requerimientos
   const filteredReqs = requirements.filter((r: any) => {
@@ -27,6 +28,10 @@ export default function AdminRequirements() {
 
     return searchMatch && typeMatch && negMatch;
   });
+
+  const ITEMS_PER_PAGE = 20;
+  const totalPages = Math.ceil(filteredReqs.length / ITEMS_PER_PAGE) || 1;
+  const paginatedReqs = filteredReqs.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   const formatPhoneDisplay = (phone: string | null) => {
     if (!phone) return 'Sin teléfono';
@@ -99,7 +104,7 @@ export default function AdminRequirements() {
             type="text"
             placeholder="Buscar por teléfono o palabras clave..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
             className="w-full bg-zinc-900/50 border border-white/5 rounded-xl py-2.5 pl-10 pr-4 text-xs text-white focus:outline-none focus:border-[#bf953f]/50 transition-colors"
           />
         </div>
@@ -109,7 +114,7 @@ export default function AdminRequirements() {
           <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
           <select
             value={filterType}
-            onChange={(e) => setFilterType(e.target.value)}
+            onChange={(e) => { setFilterType(e.target.value); setCurrentPage(1); }}
             className="w-full bg-zinc-900/50 border border-white/5 rounded-xl py-2.5 pl-10 pr-4 text-xs text-white appearance-none focus:outline-none focus:border-[#bf953f]/50 transition-colors"
           >
             <option value="all">Todos los Inmuebles</option>
@@ -129,7 +134,7 @@ export default function AdminRequirements() {
           <SlidersHorizontal className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
           <select
             value={filterNeg}
-            onChange={(e) => setFilterNeg(e.target.value)}
+            onChange={(e) => { setFilterNeg(e.target.value); setCurrentPage(1); }}
             className="w-full bg-zinc-900/50 border border-white/5 rounded-xl py-2.5 pl-10 pr-4 text-xs text-white appearance-none focus:outline-none focus:border-[#bf953f]/50 transition-colors"
           >
             <option value="all">Todos los Negocios</option>
@@ -166,11 +171,11 @@ export default function AdminRequirements() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5 text-xs">
-                {filteredReqs.map((r: any) => {
+                {paginatedReqs.map((r: any) => {
                   const rawPhone = r.idUsuarioWhatsapp?.split('@')[0] || '';
                   
                   return (
-                    <tr key={r.id} className="hover:bg-white/[0.01] transition-colors">
+                    <tr key={r.id} className="hover:bg-white/[0.01] transition-colors cv-auto-card">
                       <td className="py-4 px-4 font-mono text-zinc-500">#{r.id}</td>
                       <td className="py-4 px-4">
                         <div className="flex items-center justify-between gap-2">
@@ -234,10 +239,10 @@ export default function AdminRequirements() {
 
           {/* VISTA MÓVIL (CARDS) */}
           <div className="grid grid-cols-1 gap-3 p-3 md:hidden">
-            {filteredReqs.map((r: any) => {
+            {paginatedReqs.map((r: any) => {
               const rawPhone = r.idUsuarioWhatsapp?.split('@')[0] || '';
               return (
-                <div key={r.id} className="bg-zinc-900/80 border border-white/5 p-4 rounded-2xl space-y-3 shadow-md">
+                <div key={r.id} className="bg-zinc-900/80 border border-white/5 p-4 rounded-2xl space-y-3 shadow-md cv-auto-card">
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <span className="text-[10px] text-zinc-500 font-mono">#{r.id}</span>
@@ -286,6 +291,34 @@ export default function AdminRequirements() {
               );
             })}
           </div>
+
+          {/* PAGINACIÓN */}
+          {totalPages > 1 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-white/5 bg-black/40 text-xs">
+              <span className="text-zinc-500 text-center sm:text-left">
+                Mostrando {(currentPage - 1) * ITEMS_PER_PAGE + 1} - {Math.min(currentPage * ITEMS_PER_PAGE, filteredReqs.length)} de {filteredReqs.length} requerimientos
+              </span>
+              <div className="flex items-center gap-1.5">
+                <button 
+                  disabled={currentPage === 1} 
+                  onClick={() => { setCurrentPage(p => Math.max(1, p - 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                  className="px-3 py-1.5 rounded-lg border border-white/10 text-zinc-300 disabled:opacity-30 disabled:pointer-events-none hover:bg-white/5 transition"
+                >
+                  ‹ Anterior
+                </button>
+                <span className="px-2 font-bold text-zinc-200">
+                  Pág. {currentPage} de {totalPages}
+                </span>
+                <button 
+                  disabled={currentPage === totalPages} 
+                  onClick={() => { setCurrentPage(p => Math.min(totalPages, p + 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                  className="px-3 py-1.5 rounded-lg border border-white/10 text-zinc-300 disabled:opacity-30 disabled:pointer-events-none hover:bg-white/5 transition"
+                >
+                  Siguiente ›
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
