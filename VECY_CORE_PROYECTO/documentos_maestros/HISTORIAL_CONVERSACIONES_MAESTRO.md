@@ -58,6 +58,30 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ## 📜 REGISTRO DETALLADO DE CONVERSACIONES (ORDEN CRONOLÓGICO INVERSO CON FECHA Y HORA)
 
+### 🗓️ Sesión: Sábado 29 de Agosto de 2026 — 02:45 AM a 03:00 AM (Hora Colombia UTC-5)
+**Versión del Sistema**: `v27.0 — Filas Puramente Reactivas de Amenidades ("Por Arte de Magia"), Eliminación de Filas Fantasma, Fórmula Doctrinal 85% Base + 15 Puntos Distribuidos y Rescate Integral de Datos en Ficha de Cotejo`  
+**Participantes**: Eduardo A. Rivera (Director Tecnología) & Antigravity IDE (Pair Programmer)
+
+#### 📋 Objetivos Cumplidos y Verificación Técnica:
+1. **Filas Puramente Reactivas ("Por Arte de Magia" — Eliminación Total de Filas Fantasma)**:
+   - Supresión de filas estáticas que nadie pidió (`Balcón / Terraza`, `Ascensor`, `Depósito / Cuarto Útil`, `Tipología de Cocina`, `Chimenea`, `Cava`, etc.).
+   - **Regla Doctrinal**: Una característica o amenidad **SOLO SE DIBUJA** si la **Oferta la tiene** o la **Demanda la exige**. Si ninguna de las dos partes la mencionó, la fila no se dibuja, dejando la ficha de cotejo limpia, concisa y sin filas de `N/E (Consultar)` o `Flexible` innecesarias.
+2. **Fórmula Doctrinal de Puntuación (85% Base + 15 Puntos Proporcionales)**:
+   - **Casillas 1 a 5 (Datos en Duro)**: Coinciden en verde (`exact` 🟢) $\rightarrow$ Otorgan la **base del 85%**.
+   - **Casillas 6 en Adelante ($N$ características activas)**: Los **15 puntos restantes** se dividen equitativamente entre las $N$ casillas activas ($15 / N$ puntos cada una):
+     - `Coincide` 🟢: 100% de los puntos de la casilla ($15 / N$).
+     - `Plus Ofertado` 🔵: 100% de los puntos de la casilla ($15 / N$).
+     - `Aproximado` 🟡: 70% de los puntos de la casilla.
+     - `Dato Faltante / Pendiente` ⚪: 0% de los puntos (el match queda en 85%-90% esperando que el asesor llame y complete).
+     - Si **TODAS** las características activas están llenas y en verde/plus $\rightarrow$ **100% Match Perfecto** 🎯.
+     - Si hay cualquier rojo (`missing` 🔴) $\rightarrow$ **0% Guillotina Inmediata**.
+3. **Rescate y Normalización de Precios, Administración, M² y Estrato**:
+   - Rescate desde texto para ofertas de arriendo (`CANON DE ARRIENDO: $4.500.000`), administración incluida, corrección de áreas decimales (`78.52 m²`), estrato (`Estrato 5`) y cantidades de habitaciones/baños/garajes.
+4. **Despliegue y Validación en VPS**:
+   - `npm run check` y `npm run build` con 0 errores, push a GitHub (`main`), despliegue en VPS Linux con `pm2 reload 0`.
+
+---
+
 ### 🗓️ Sesión: Sábado 29 de Agosto de 2026 — 02:00 AM a 02:30 AM (Hora Colombia UTC-5)
 **Versión del Sistema**: `v27.0 — Calibración Proporcional Exacta de Casillas 6+, Auditoría de Totales en Base de Datos (1.095 Ofertas, 600 Demandas, 67 Matches Únicos Rigurosos) y Despliegue VPS`  
 **Participantes**: Eduardo A. Rivera (Director Tecnología) & Antigravity IDE (Pair Programmer)
