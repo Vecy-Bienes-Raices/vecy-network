@@ -994,151 +994,142 @@ function scoreRows(req: any, prop: any) {
 
   add("Estrato", reqEstratoLabel, (estratoP && Number(estratoP) > 0) ? `Estrato ${estratoP}` : "N/E", estS, 7, <Shield className="w-3.5 h-3.5" />);
 
-  // 15. Espacio Exterior (Balcón / Terraza / Patio / Jardín)
+  // 15. Espacio Exterior (Balcón / Terraza / Patio / Jardín) - REACTIVO ("POR ARTE DE MAGIA")
   const isHouse = (req.tipoInmuebleDeseado || req.propertyType || prop.propertyType || "").toLowerCase().includes("casa");
-  let extS: MatchStatus = "neutral";
-  let reqExtLabel = "Flexible / No exigido";
-  let propExtLabel = "Sin dato especificado";
+  const reqPatio = isHouse && (reqTextLower.includes("patio") || reqTextLower.includes("jardin") || reqTextLower.includes("jardín"));
+  const propPatio = isHouse && (propRawText.includes("patio") || propRawText.includes("jardin") || propRawText.includes("jardín"));
+  const reqBalcon = !isHouse && (reqTextLower.includes("balcon") || reqTextLower.includes("balcón"));
+  const reqTerraza = !isHouse && reqTextLower.includes("terraza");
+  const propBalcon = !isHouse && (propRawText.includes("balcon") || propRawText.includes("balcón") || prop.hasBalcony);
+  const propTerraza = !isHouse && (propRawText.includes("terraza") || prop.hasTerrace);
 
-  if (isHouse) {
-    const reqPatio = reqTextLower.includes("patio") || reqTextLower.includes("jardin") || reqTextLower.includes("jardín");
-    const propPatio = propRawText.includes("patio") || propRawText.includes("jardin") || propRawText.includes("jardín");
-    if (reqPatio && propPatio) {
-      extS = "exact";
-      reqExtLabel = "Exige Patio / Jardín";
-      propExtLabel = "Sí (Cuenta con Patio / Jardín)";
-    } else if (reqPatio && !propPatio) {
-      extS = "warn";
-      reqExtLabel = "Exige Patio / Jardín";
-      propExtLabel = "Sin patio especificado";
-    } else if (!reqPatio && propPatio) {
-      extS = "plus";
-      reqExtLabel = "Flexible";
-      propExtLabel = "Sí (Patio / Jardín Privado)";
-    } else {
-      extS = "neutral";
-      reqExtLabel = "Flexible";
-      propExtLabel = "N/E (Consultar)";
-    }
-    add("Espacio Exterior (Patio / Jardín)", reqExtLabel, propExtLabel, extS, 5, <Trees className="w-3.5 h-3.5" />);
-  } else {
-    const reqBalcon = reqTextLower.includes("balcon") || reqTextLower.includes("balcón");
-    const reqTerraza = reqTextLower.includes("terraza");
-    const propBalcon = propRawText.includes("balcon") || propRawText.includes("balcón") || prop.hasBalcony;
-    const propTerraza = propRawText.includes("terraza") || prop.hasTerrace;
+  if (isHouse ? (reqPatio || propPatio) : (reqBalcon || reqTerraza || propBalcon || propTerraza)) {
+    let extS: MatchStatus = "neutral";
+    let reqExtLabel = "Flexible / No exigido";
+    let propExtLabel = "Sin dato especificado";
 
-    if ((reqBalcon || reqTerraza) && (propBalcon || propTerraza)) {
-      extS = "exact";
-      reqExtLabel = reqTerraza ? "Exige Terraza" : "Exige Balcón";
-      propExtLabel = propTerraza ? "Sí (Cuenta con Terraza)" : "Sí (Cuenta con Balcón)";
-    } else if ((reqBalcon || reqTerraza) && !propBalcon && !propTerraza) {
-      extS = "warn";
-      reqExtLabel = reqTerraza ? "Exige Terraza" : "Exige Balcón";
-      propExtLabel = "Sin balcón/terraza especificado";
-    } else if (!reqBalcon && !reqTerraza && (propBalcon || propTerraza)) {
-      extS = "plus";
-      reqExtLabel = "Flexible";
-      propExtLabel = propTerraza ? "Sí (Terraza Privada)" : "Sí (Balcón Exterior)";
+    if (isHouse) {
+      if (reqPatio && propPatio) {
+        extS = "exact";
+        reqExtLabel = "Exige Patio / Jardín";
+        propExtLabel = "Sí (Cuenta con Patio / Jardín)";
+      } else if (reqPatio && !propPatio) {
+        extS = "warn";
+        reqExtLabel = "Exige Patio / Jardín";
+        propExtLabel = "Sin patio especificado";
+      } else if (!reqPatio && propPatio) {
+        extS = "plus";
+        reqExtLabel = "Flexible";
+        propExtLabel = "Sí (Patio / Jardín Privado)";
+      }
+      add("Espacio Exterior (Patio / Jardín)", reqExtLabel, propExtLabel, extS, 5, <Trees className="w-3.5 h-3.5" />);
     } else {
-      extS = "neutral";
-      reqExtLabel = "Flexible";
-      propExtLabel = "N/E (Consultar)";
+      if ((reqBalcon || reqTerraza) && (propBalcon || propTerraza)) {
+        extS = "exact";
+        reqExtLabel = reqTerraza ? "Exige Terraza" : "Exige Balcón";
+        propExtLabel = propTerraza ? "Sí (Cuenta con Terraza)" : "Sí (Cuenta con Balcón)";
+      } else if ((reqBalcon || reqTerraza) && !propBalcon && !propTerraza) {
+        extS = "warn";
+        reqExtLabel = reqTerraza ? "Exige Terraza" : "Exige Balcón";
+        propExtLabel = "Sin balcón/terraza especificado";
+      } else if (!reqBalcon && !reqTerraza && (propBalcon || propTerraza)) {
+        extS = "plus";
+        reqExtLabel = "Flexible";
+        propExtLabel = propTerraza ? "Sí (Terraza Privada)" : "Sí (Balcón Exterior)";
+      }
+      add("Espacio Exterior (Balcón / Terraza)", reqExtLabel, propExtLabel, extS, 5, <Sparkles className="w-3.5 h-3.5" />);
     }
-    add("Espacio Exterior (Balcón / Terraza)", reqExtLabel, propExtLabel, extS, 5, <Sparkles className="w-3.5 h-3.5" />);
   }
 
-  // 16. Equipamiento (Ascensor / Conjunto Cerrado)
-  let eqS: MatchStatus = "neutral";
-  let reqEqLabel = "Flexible";
-  let propEqLabel = "Sin dato especificado";
-  if (isHouse) {
-    const reqConj = reqTextLower.includes("conjunto cerrado") || reqTextLower.includes("conjunto");
-    const propConj = propRawText.includes("conjunto cerrado") || propRawText.includes("conjunto");
-    if (reqConj && propConj) {
-      eqS = "exact";
-      reqEqLabel = "Exige Conjunto Cerrado";
-      propEqLabel = "Sí (Conjunto Cerrado)";
-    } else if (reqConj && !propConj) {
-      eqS = "warn";
-      reqEqLabel = "Exige Conjunto Cerrado";
-      propEqLabel = "Casa Independiente / Sin conjunto";
-    } else if (!reqConj && propConj) {
-      eqS = "plus";
-      reqEqLabel = "Flexible";
-      propEqLabel = "Sí (Conjunto Cerrado)";
+  // 16. Equipamiento (Ascensor / Conjunto Cerrado) - REACTIVO ("POR ARTE DE MAGIA")
+  const reqConj = isHouse && (reqTextLower.includes("conjunto cerrado") || reqTextLower.includes("conjunto"));
+  const propConj = isHouse && (propRawText.includes("conjunto cerrado") || propRawText.includes("conjunto"));
+  const reqAsc = !isHouse && reqTextLower.includes("ascensor");
+  const propAsc = !isHouse && (propRawText.includes("ascensor") || prop.hasElevator);
+
+  if (isHouse ? (reqConj || propConj) : (reqAsc || propAsc)) {
+    let eqS: MatchStatus = "neutral";
+    let reqEqLabel = "Flexible";
+    let propEqLabel = "Sin dato especificado";
+    if (isHouse) {
+      if (reqConj && propConj) {
+        eqS = "exact";
+        reqEqLabel = "Exige Conjunto Cerrado";
+        propEqLabel = "Sí (Conjunto Cerrado)";
+      } else if (reqConj && !propConj) {
+        eqS = "warn";
+        reqEqLabel = "Exige Conjunto Cerrado";
+        propEqLabel = "Casa Independiente / Sin conjunto";
+      } else if (!reqConj && propConj) {
+        eqS = "plus";
+        reqEqLabel = "Flexible";
+        propEqLabel = "Sí (Conjunto Cerrado)";
+      }
+      add("Equipamiento (Conjunto Cerrado)", reqEqLabel, propEqLabel, eqS, 5, <ShieldCheck className="w-3.5 h-3.5" />);
     } else {
-      eqS = "neutral";
-      reqEqLabel = "Flexible";
-      propEqLabel = "N/E (Consultar)";
+      if (reqAsc && propAsc) {
+        eqS = "exact";
+        reqEqLabel = "Exige Ascensor";
+        propEqLabel = "Sí (Edificio con Ascensor)";
+      } else if (reqAsc && !propAsc) {
+        eqS = "warn";
+        reqEqLabel = "Exige Ascensor";
+        propEqLabel = "Sin ascensor especificado";
+      } else if (!reqAsc && propAsc) {
+        eqS = "plus";
+        reqEqLabel = "Flexible";
+        propEqLabel = "Sí (Edificio con Ascensor)";
+      }
+      add("Equipamiento (Ascensor)", reqEqLabel, propEqLabel, eqS, 5, <Layers className="w-3.5 h-3.5" />);
     }
-    add("Equipamiento (Conjunto Cerrado)", reqEqLabel, propEqLabel, eqS, 5, <ShieldCheck className="w-3.5 h-3.5" />);
-  } else {
-    const reqAsc = reqTextLower.includes("ascensor");
-    const propAsc = propRawText.includes("ascensor") || prop.hasElevator || (prop.bedrooms && prop.bedrooms >= 3 && prop.areaTotal && Number(prop.areaTotal) >= 150);
-    if (reqAsc && propAsc) {
-      eqS = "exact";
-      reqEqLabel = "Exige Ascensor";
-      propEqLabel = "Sí (Edificio con Ascensor)";
-    } else if (reqAsc && !propAsc) {
-      eqS = "warn";
-      reqEqLabel = "Exige Ascensor";
-      propEqLabel = "Sin ascensor especificado";
-    } else if (!reqAsc && propAsc) {
-      eqS = "plus";
-      reqEqLabel = "Flexible";
-      propEqLabel = "Sí (Edificio con Ascensor)";
-    } else {
-      eqS = "neutral";
-      reqEqLabel = "Flexible";
-      propEqLabel = "N/E (Consultar)";
-    }
-    add("Equipamiento (Ascensor)", reqEqLabel, propEqLabel, eqS, 5, <Layers className="w-3.5 h-3.5" />);
   }
 
-  // 17. Depósito / Cuarto Útil
+  // 17. Depósito / Cuarto Útil - REACTIVO ("POR ARTE DE MAGIA")
   const reqDep = reqTextLower.includes("deposito") || reqTextLower.includes("depósito") || reqTextLower.includes("cuarto util") || reqTextLower.includes("cuarto útil");
   const propDep = propRawText.includes("deposito") || propRawText.includes("depósito") || propRawText.includes("cuarto util") || propRawText.includes("cuarto útil") || prop.hasStorage;
-  let depS: MatchStatus = "neutral";
-  let reqDepLabel = "Flexible / No exigido";
-  let propDepLabel = "Sin dato especificado";
-  if (reqDep && propDep) {
-    depS = "exact";
-    reqDepLabel = "Exige Depósito / Cuarto Útil";
-    propDepLabel = "Sí (Incluye Depósito)";
-  } else if (reqDep && !propDep) {
-    depS = "warn";
-    reqDepLabel = "Exige Depósito / Cuarto Útil";
-    propDepLabel = "Sin depósito especificado";
-  } else if (!reqDep && propDep) {
-    depS = "plus";
-    reqDepLabel = "Flexible";
-    propDepLabel = "Sí (Incluye Depósito Privado)";
-  } else {
-    depS = "neutral";
-    reqDepLabel = "Flexible";
-    propDepLabel = "N/E (Consultar)";
-  }
-  add("Depósito / Cuarto Útil", reqDepLabel, propDepLabel, depS, 4, <Archive className="w-3.5 h-3.5" />);
 
-  // 18. Tipología de Cocina
-  let reqKitchen = req.kitchenType || (reqTextLower.includes("cocina cerrada") ? "Cerrada" : reqTextLower.includes("cocina abierta") ? "Abierta" : reqTextLower.includes("tipo isla") || reqTextLower.includes("isla") ? "Abierta tipo Isla" : null);
-  let propKitchen = prop.kitchenType || (propRawText.includes("cocina cerrada") ? "Cerrada" : propRawText.includes("cocina abierta") ? "Abierta" : propRawText.includes("tipo isla") || propRawText.includes("isla") ? "Abierta tipo Isla" : propRawText.includes("integral") ? "Integral" : null);
-  let kStatus: MatchStatus = "neutral";
-  if (reqKitchen && propKitchen) {
-    kStatus = reqKitchen.toLowerCase() === propKitchen.toLowerCase() ? "exact" : "warn";
-  } else if (!reqKitchen && propKitchen) {
-    kStatus = "plus";
-  } else {
-    kStatus = "neutral";
+  if (reqDep || propDep) {
+    let depS: MatchStatus = "neutral";
+    let reqDepLabel = "Flexible / No exigido";
+    let propDepLabel = "Sin dato especificado";
+    if (reqDep && propDep) {
+      depS = "exact";
+      reqDepLabel = "Exige Depósito / Cuarto Útil";
+      propDepLabel = "Sí (Incluye Depósito)";
+    } else if (reqDep && !propDep) {
+      depS = "warn";
+      reqDepLabel = "Exige Depósito / Cuarto Útil";
+      propDepLabel = "Sin depósito especificado";
+    } else if (!reqDep && propDep) {
+      depS = "plus";
+      reqDepLabel = "Flexible";
+      propDepLabel = "Sí (Incluye Depósito Privado)";
+    }
+    add("Depósito / Cuarto Útil", reqDepLabel, propDepLabel, depS, 4, <Archive className="w-3.5 h-3.5" />);
   }
-  add(
-    "Tipología de Cocina",
-    reqKitchen ? `Cocina ${reqKitchen}` : "Flexible / Integral",
-    propKitchen ? `Cocina ${propKitchen}` : "Integral (Consultar)",
-    kStatus,
-    4,
-    <Utensils className="w-3.5 h-3.5" />
-  );
+
+  // 18. Tipología de Cocina - REACTIVO ("POR ARTE DE MAGIA")
+  let reqKitchen = req.kitchenType || (reqTextLower.includes("cocina cerrada") ? "Cerrada" : reqTextLower.includes("cocina abierta") ? "Abierta" : reqTextLower.includes("tipo isla") || reqTextLower.includes("isla") ? "Abierta tipo Isla" : null);
+  let propKitchen = prop.kitchenType || (propRawText.includes("cocina cerrada") ? "Cerrada" : propRawText.includes("cocina abierta") ? "Abierta" : propRawText.includes("tipo isla") || propRawText.includes("isla") ? "Abierta tipo Isla" : propRawText.includes("cocina integral") ? "Integral" : null);
+
+  if (reqKitchen || propKitchen) {
+    let kStatus: MatchStatus = "neutral";
+    if (reqKitchen && propKitchen) {
+      kStatus = reqKitchen.toLowerCase() === propKitchen.toLowerCase() ? "exact" : "warn";
+    } else if (!reqKitchen && propKitchen) {
+      kStatus = "plus";
+    } else {
+      kStatus = "warn";
+    }
+    add(
+      "Tipología de Cocina",
+      reqKitchen ? `Cocina ${reqKitchen}` : "Flexible / No exigido",
+      propKitchen ? `Cocina ${propKitchen}` : "Integral (Consultar)",
+      kStatus,
+      4,
+      <Utensils className="w-3.5 h-3.5" />
+    );
+  }
 
   // 19. Chimeneas por Combustible (Leña / Gas / Bioetanol)
   const propHasFireplace = propRawText.includes("chimenea") || propRawText.includes("doble sala") || propRawText.includes("doble altura");
@@ -1494,7 +1485,7 @@ function scoreRows(req: any, prop: any) {
   let autoScore = 0;
 
   if (!hasHardMismatch && !hasAnyMissingRow) {
-    // Casillas de la 6 en adelante (Precio, Área, Habitaciones, Baños, Garajes, Antigüedad, Estrato, Espacio Exterior, Cocina, Amenidades Dinámicas)
+    // Casillas de la 6 en adelante (Precio, Área, Habitaciones, Baños, Garajes, Antigüedad, Estrato y TODAS las características dinámicas que aparecieron)
     // Excluyendo la fila informativa de Teléfono
     const evaluableRows6Plus = rows.slice(5).filter(r => !r.label.includes("Teléfono"));
     const N = evaluableRows6Plus.length;
@@ -1502,32 +1493,32 @@ function scoreRows(req: any, prop: any) {
     if (N === 0) {
       autoScore = 100;
     } else {
-      // Base sólida del 80% al cumplir al 100% las 5 primeras casillas en duro
-      const base80 = 80;
-      const pointsPerSlot = 20 / N; // Los 20 puntos restantes se dividen equitativamente entre las N casillas activas
+      // Base sólida del 85% al cumplir al 100% las 5 primeras casillas en duro
+      const base85 = 85;
+      const pointsPerSlot = 15 / N; // Los 15 puntos restantes se dividen equitativamente entre las N casillas activas que aparecieron
 
       let earnedSlotPoints = 0;
       let hasAnyPending = false;
 
       for (const r of evaluableRows6Plus) {
         if (r.status === "exact" || r.status === "ok") {
-          earnedSlotPoints += pointsPerSlot * 1.0; // 100% de la cuota
+          earnedSlotPoints += pointsPerSlot * 1.0; // 100% de la cuota de la casilla (Coincide idéntico)
         } else if (r.status === "plus") {
-          earnedSlotPoints += pointsPerSlot * 0.95; // 95% de la cuota (Plus ofertado)
+          earnedSlotPoints += pointsPerSlot * 1.0; // 100% de la cuota (Plus ofertado / Valor agregado)
         } else if (r.status === "warn") {
-          earnedSlotPoints += pointsPerSlot * 0.75; // 75% de la cuota (Aproximado viable)
+          earnedSlotPoints += pointsPerSlot * 0.70; // 70% de la cuota (Aproximado / Rango viable)
         } else if (r.status === "neutral") {
           hasAnyPending = true;
-          earnedSlotPoints += pointsPerSlot * 0.40; // 40% de la cuota (Dato Pendiente por completar)
+          earnedSlotPoints += pointsPerSlot * 0.0; // 0% de la cuota (Dato faltante / pendiente por indagar con las partes)
         }
       }
 
-      // Si todas las casillas están llenas (sin "Datos Pendientes") y en verde/plus -> 100%
+      // Si todas las casillas activas están llenas (sin Datos Faltantes/Pendientes) y en verde/plus -> 100%
       if (!hasAnyPending && evaluableRows6Plus.every(r => r.status === "exact" || r.status === "ok" || r.status === "plus")) {
         autoScore = 100;
       } else {
-        const totalCalc = Math.round(base80 + earnedSlotPoints);
-        // Garantizar que si no hay ningún rojo, el score califica en el piso doctrinal (mínimo 85%) hasta 99%
+        const totalCalc = Math.round(base85 + earnedSlotPoints);
+        // Garantizar que si no hay ningún rojo, el score califica en 85% hasta 99%
         autoScore = Math.min(99, Math.max(85, totalCalc));
       }
     }
