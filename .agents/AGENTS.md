@@ -289,6 +289,13 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 - **Doctrina Maestra v25.0 en `prompts/base.md`**: Memoria permanente de jerga colombiana, tablas de conversión, algoritmos paso a paso y la distinción formal de Techo Financiero vs Piso de Confort.
 
 
+### Novedades v26.8 (Subtipos Exactos, Matriz Doctrinal de Negocios, Neutralidad en Demandas Flexibles y Guillotina Total a 0%):
+- **Tipología Inmobiliaria Estricta (Tolerancia Cero entre Subtipos)**: Apto Estándar $\neq$ Apto Dúplex $\neq$ Penthouse $\neq$ Apartaestudio/Loft $\neq$ Casa Urbana $\neq$ Casa Campestre/Finca. Si difieren $\rightarrow$ 0% Inviable.
+- **Matriz Doctrinal de Tipos de Negocio**: Venta con Venta/Arriendo; Arriendo con Venta/Arriendo; Arriendo con Opción de Compra ÚNICAMENTE con Arriendo con Opción de Compra; Venta-Permuta con Venta-Permuta. Bloqueo 0% para Arriendo Puro vs Arriendo con Opción de Compra.
+- **Doctrina de Neutralidad ("Dato Pendiente")**: Cuando la Demanda es Flexible / Sin Restricción y la Oferta tiene un valor concreto (ej: Estrato, Administración, Garajes), el estado es `neutral` ("Dato Pendiente" / Gris), JAMÁS "Coincide" ni "Aproximado". Esto reduce el puntaje proporcionalmente hasta que el usuario rellene el dato y presione "Guardar".
+- **Guillotina Total a 0%**: Si cualquier fila de la tabla de cotejo técnico resulta en `missing` ("No Cumple" / "No Coincide"), `autoScore` colapsa automáticamente a `0%`.
+- **Botones de Edición Estandarizados**: Renombrados exactamente a `Guardar` (ámbar) y `Recalcular` (esmeralda).
+
 ### Novedades v26.7 (Aceleración Instantánea de Edición, Guardado Concurrente y Copiado Fiel con Búsqueda en WhatsApp):
 - **Copiado Fiel 100% Original & Botón de Búsqueda Exacta en WhatsApp (`AdminMatches.tsx`)**: Corrección de `handleCopy` para preservar intactos los saltos de línea, emojis y asteriscos del mensaje original (`rawText`), sumando un botón de búsqueda que copia la frase clave representativa de 4-6 palabras para saltar al mensaje en WhatsApp.
 - **Aislamiento Reactivo del Formulario de Edición**: Desacoplado `processedMatches` de `editForm`. Al escribir en los inputs de edición, ya no se recalculan los 150 matches en cada pulsación de tecla, garantizando escritura fluida a 120 FPS.

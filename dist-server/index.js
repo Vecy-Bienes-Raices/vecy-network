@@ -4791,10 +4791,10 @@ function explicarMatch(requirement, property) {
       "apartamento": ["apto", "apartamento", "apartment"],
       "apto": ["apto", "apartamento", "apartment"],
       "apartment": ["apto", "apartamento", "apartment"],
-      "casa": ["casa", "chalet", "casa campestre", "house", "townhouse"],
-      "house": ["casa", "chalet", "casa campestre", "house", "townhouse"],
-      "finca": ["finca", "finca raiz", "finca ra\xEDz", "farm"],
-      "farm": ["finca", "finca raiz", "finca ra\xEDz", "farm"],
+      "casa": ["casa", "house", "townhouse"],
+      "house": ["casa", "house", "townhouse"],
+      "finca": ["finca", "finca raiz", "finca ra\xEDz", "farm", "casa campestre", "casa de campo"],
+      "farm": ["finca", "finca raiz", "finca ra\xEDz", "farm", "casa campestre", "casa de campo"],
       "lote": ["lote", "terreno", "predio", "land"],
       "terreno": ["lote", "terreno", "predio", "land"],
       "predio": ["lote", "terreno", "predio", "land"],
@@ -4803,9 +4803,9 @@ function explicarMatch(requirement, property) {
       "warehouse": ["bodega", "bodega industrial", "warehouse"],
       "local": ["local", "local comercial", "commercial"],
       "commercial": ["local", "local comercial", "commercial"],
-      "oficina": ["oficina", "office", "consultorio"],
-      "office": ["oficina", "office", "consultorio"],
-      "consultorio": ["consultorio", "oficina", "office"],
+      "oficina": ["oficina", "office"],
+      "office": ["oficina", "office"],
+      "consultorio": ["consultorio"],
       "building": ["building", "edificio"],
       "edificio": ["building", "edificio"],
       "hotel": ["hotel", "hostal"],
@@ -4817,7 +4817,7 @@ function explicarMatch(requirement, property) {
     const reqAlias = aliases[effectiveReqType] || [effectiveReqType];
     const propAlias = aliases[effectivePropType] || [effectivePropType];
     if (!reqAlias.some((a) => propAlias.includes(a))) {
-      blockers.push(`Tipo de activo incompatible: deseado ${effectiveReqType}, ofrecido ${effectivePropType}`);
+      blockers.push(`Tipo de activo incompatible (Tolerancia Cero 0%): deseado ${effectiveReqType}, ofrecido ${effectivePropType}`);
       return buildExplanationResult(0, blockers, positives, negatives);
     }
   }
@@ -4839,6 +4839,12 @@ function explicarMatch(requirement, property) {
     if (r.includes("duplex") || r.includes("d\xFAplex") || r.includes("triplex") || r.includes("tr\xEDplex") || t2.includes("duplex")) {
       return "apartamento_duplex";
     }
+    if (r.includes("casa campestre") || r.includes("casa de campo") || r.includes("campestre") || t2 === "farm" || t2 === "finca") {
+      return "casa_campestre";
+    }
+    if (t2 === "house" || t2 === "casa" || r.includes("casa")) {
+      return "casa_urbana";
+    }
     if (t2 === "apartment" || t2 === "apartamento" || t2 === "apto") {
       return "apartamento_estandar";
     }
@@ -4846,21 +4852,9 @@ function explicarMatch(requirement, property) {
   };
   const reqSubtype = getHorizontalPropertySubtype(reqType, reqRawText);
   const propSubtype = getHorizontalPropertySubtype(propType, propRawText);
-  const isReqSingleRoomSubtype = reqSubtype === "apartaestudio" || reqSubtype === "loft";
-  const isPropSingleRoomSubtype = propSubtype === "apartaestudio" || propSubtype === "loft";
-  if (isReqSingleRoomSubtype && !isPropSingleRoomSubtype) {
-    blockers.push(`Subtipo de activo incompatible (Tolerancia Cero): La demanda exige ${reqSubtype === "loft" ? "Loft" : "Apartaestudio / Aparta Suite (1 Alcoba)"} y la oferta es ${propSubtype === "penthouse" ? "PentHouse" : propSubtype === "apartamento_duplex" ? "Apartamento D\xFAplex" : "Apartamento familiar est\xE1ndar"}. Match Inviable (0%).`);
-    return buildExplanationResult(0, blockers, positives, negatives);
-  }
-  if (!isReqSingleRoomSubtype && isPropSingleRoomSubtype) {
-    blockers.push(`Subtipo de activo incompatible (Tolerancia Cero): La demanda busca ${reqSubtype} familiar y la oferta es ${propSubtype} de 1 sola alcoba. Match Inviable (0%).`);
-    return buildExplanationResult(0, blockers, positives, negatives);
-  }
   if (reqSubtype && propSubtype && reqSubtype !== propSubtype) {
-    if (reqSubtype === "penthouse" && propSubtype !== "penthouse") {
-      blockers.push(`Subtipo de activo incompatible: La demanda exige estrictamente PentHouse y la oferta es ${propSubtype}. Match Inviable (0%).`);
-      return buildExplanationResult(0, blockers, positives, negatives);
-    }
+    blockers.push(`Subtipo de activo incompatible (Tolerancia Cero 0%): Requerimiento exige estrictamente '${reqSubtype}' y la oferta es '${propSubtype}'. No clasifica para Match.`);
+    return buildExplanationResult(0, blockers, positives, negatives);
   }
   positives.push(`Tipo de activo compatible: ${propSubtype || propType}`);
   const geoResult = matchesGeography(
@@ -5613,13 +5607,13 @@ var init_matching = __esm({
     init_janIA();
     init_events();
     TRANSACTION_COMPATIBILITY_MATRIX = {
-      venta: /* @__PURE__ */ new Set(["venta", "venta_o_arriendo", "venta_permuta", "arriendo_con_opcion_de_compra"]),
+      venta: /* @__PURE__ */ new Set(["venta", "venta_o_arriendo", "venta_permuta"]),
       arriendo: /* @__PURE__ */ new Set(["arriendo", "venta_o_arriendo", "arriendo_temporal"]),
-      venta_o_arriendo: /* @__PURE__ */ new Set(["venta", "arriendo", "venta_o_arriendo", "venta_permuta", "arriendo_temporal", "arriendo_con_opcion_de_compra"]),
+      venta_o_arriendo: /* @__PURE__ */ new Set(["venta", "arriendo", "venta_o_arriendo", "venta_permuta", "arriendo_temporal"]),
       arriendo_temporal: /* @__PURE__ */ new Set(["arriendo_temporal", "arriendo", "venta_o_arriendo"]),
-      arriendo_con_opcion_de_compra: /* @__PURE__ */ new Set(["arriendo_con_opcion_de_compra", "venta", "venta_o_arriendo"]),
+      arriendo_con_opcion_de_compra: /* @__PURE__ */ new Set(["arriendo_con_opcion_de_compra"]),
       permuta: /* @__PURE__ */ new Set(["permuta", "venta_permuta"]),
-      venta_permuta: /* @__PURE__ */ new Set(["venta_permuta", "venta", "permuta", "venta_o_arriendo"]),
+      venta_permuta: /* @__PURE__ */ new Set(["venta_permuta", "permuta"]),
       aporte: /* @__PURE__ */ new Set(["aporte"])
     };
   }

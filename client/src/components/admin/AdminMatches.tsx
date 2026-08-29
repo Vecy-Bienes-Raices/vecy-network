@@ -178,8 +178,15 @@ function scoreRows(req: any, prop: any) {
   const add = (label: string, reqVal: string, propVal: string, status: MatchStatus, weight: number, icon: React.ReactNode) => {
     rows.push({ label, reqVal, propVal, status, weight, icon });
     max += weight;
-    if (status === "exact" || status === "ok" || status === "neutral" || status === "plus") pts += weight;
-    else if (status === "warn") pts += weight * 0.5;
+    if (status === "exact" || status === "ok" || status === "plus") {
+      pts += weight;
+    } else if (status === "warn") {
+      pts += weight * 0.5; // Aproximado suma el 50% del puntaje
+    } else if (status === "neutral") {
+      pts += 0; // Dato Pendiente / Faltante no suma puntos para bajar la puntuación proporcionalmente
+    } else if (status === "missing") {
+      pts += 0;
+    }
   };
 
   const cleanText = (t: string) => (t || "").toLowerCase().trim().replace(/[\s\-_,.]+/g, " ");
@@ -188,24 +195,12 @@ function scoreRows(req: any, prop: any) {
   const reqRawText = cleanText(req.rawText || req.name || "");
   const propRawText = cleanText(prop.rawText || prop.description || prop.name || "");
 
-  // 1. Tipo de Inmueble (REGLA DOCTRINAL v26.4 - Detección Precisa y Tolerancia Cero)
+  // 1. Tipo de Inmueble (REGLA DOCTRINAL ESTRICTA - Exactitud Total de Subtipo)
   const reqTypeRaw = req.tipoInmuebleDeseado || req.propertyType;
   const propTypeRaw = prop.propertyType;
 
   const deduceFullPropertyType = (type: string | null | undefined, raw: string): string => {
     const t = (type || "").toLowerCase().trim();
-    if (t === "consultorio") return "consultorio";
-    if (t === "warehouse" || t === "bodega") return "warehouse";
-    if (t === "office" || t === "oficina") return "office";
-    if (t === "commercial" || t === "local") return "commercial";
-    if (t === "farm" || t === "finca") return "farm";
-    if (t === "land" || t === "lote" || t === "terreno") return "land";
-    if (t === "building" || t === "edificio") return "building";
-    if (t === "hotel") return "hotel";
-    if (t === "cabin" || t === "cabaña") return "cabin";
-    if (t === "loft" || t === "apartaestudio") return "loft";
-    if (t === "house" || t === "casa") return "house";
-
     const clean = ((raw || "") + " " + (type || "")).toLowerCase().trim().replace(/[\s\-_,.]+/g, " ");
     
     if (clean.includes("consultorio") || clean.includes("consultorios") || clean.includes("odontol") || clean.includes("médic") || clean.includes("medic")) {
@@ -220,16 +215,16 @@ function scoreRows(req: any, prop: any) {
     if (clean.includes("oficina") || clean.includes("oficinas") || /\boffice\b/.test(clean)) {
       return "office";
     }
+    if (clean.includes("cabaña") || clean.includes("cabana") || clean.includes("cabañas") || clean.includes("cabin")) {
+      return "cabin";
+    }
+    if (clean.includes("finca") || clean.includes("campestre") || clean.includes("casa de campo") || clean.includes("farm")) {
+      return "farm";
+    }
     if (clean.includes("casa") || clean.includes("townhouse") || clean.includes("chalet") || clean.includes("house")) {
       if (!clean.includes("apartamento") && !clean.includes("apto")) {
         return "house";
       }
-    }
-    if (clean.includes("cabaña") || clean.includes("cabana") || clean.includes("cabañas") || clean.includes("cabin")) {
-      return "cabin";
-    }
-    if (clean.includes("finca") || clean.includes("campestre") || clean.includes("farm")) {
-      return "farm";
     }
     if (clean.includes("lote") || clean.includes("terreno") || clean.includes("predio") || clean.includes("land")) {
       return "land";
@@ -255,61 +250,21 @@ function scoreRows(req: any, prop: any) {
     if (clean.includes("apartamento") || clean.includes("apto") || clean.includes("apartment")) {
       return "apartamento_estandar";
     }
+    if (t === "house" || t === "casa") return "house";
     return "apartamento_estandar";
   };
 
   const reqSubtype = deduceFullPropertyType(reqTypeRaw, reqRawText);
   const propSubtype = deduceFullPropertyType(propTypeRaw, propRawText);
 
-  const isReqStudio = reqSubtype === "apartaestudio" || reqSubtype === "loft";
-  const isPropStudio = propSubtype === "apartaestudio" || propSubtype === "loft";
-
-  // Categorías
-  const RESIDENCIALES = new Set(["apartamento_estandar", "apartment", "apartamento", "apartaestudio", "loft", "penthouse", "apartamento_duplex", "house", "casa", "cabin"]);
-  const NO_RESIDENCIALES = new Set(["consultorio", "office", "commercial", "warehouse", "land", "farm"]);
-
+  // Exactitud estricta: Subtipo de demanda debe coincidir con subtipo de oferta
   let typeMatchStatus: MatchStatus = "missing";
-
-  // Incompatibilidad Absoluta: Residencial vs No Residencial
-  if (
-    (RESIDENCIALES.has(reqSubtype) && NO_RESIDENCIALES.has(propSubtype)) ||
-    (NO_RESIDENCIALES.has(reqSubtype) && RESIDENCIALES.has(propSubtype))
-  ) {
-    typeMatchStatus = "missing";
-  } else if (reqSubtype === propSubtype) {
+  if (reqSubtype === propSubtype) {
     typeMatchStatus = "exact";
-  } else if (
-    (reqSubtype === "consultorio" && propSubtype === "office") ||
-    (reqSubtype === "office" && propSubtype === "consultorio")
-  ) {
-    typeMatchStatus = "warn";
-  } else if (
-    (reqSubtype === "commercial" && propSubtype === "office") ||
-    (reqSubtype === "office" && propSubtype === "commercial")
-  ) {
-    typeMatchStatus = "warn";
-  } else if (
-    (reqSubtype === "apartamento_estandar" && (propSubtype === "penthouse" || propSubtype === "apartamento_duplex"))
-  ) {
-    typeMatchStatus = "plus";
-  } else if (
-    (reqSubtype === "penthouse" && propSubtype !== "penthouse") ||
-    (reqSubtype === "apartaestudio" && propSubtype !== "apartaestudio" && propSubtype !== "loft") ||
-    (reqSubtype !== "apartaestudio" && propSubtype === "apartaestudio")
-  ) {
-    typeMatchStatus = "missing";
-  } else if (
-    (reqSubtype === "house" && propSubtype !== "house") ||
-    (propSubtype === "house" && reqSubtype !== "house")
-  ) {
-    typeMatchStatus = "missing";
-  } else if (
-    (reqSubtype === "apartment" || reqSubtype === "apartamento_estandar") &&
-    (propSubtype === "apartment" || propSubtype === "apartamento_estandar")
-  ) {
-    typeMatchStatus = "exact";
+  } else if ((reqSubtype === "apartaestudio" && propSubtype === "loft") || (reqSubtype === "loft" && propSubtype === "apartaestudio")) {
+    typeMatchStatus = "exact"; // Apartaestudio y Loft de 1 hab son compatibles
   } else {
-    typeMatchStatus = "missing";
+    typeMatchStatus = "missing"; // No coincide -> 0% Guillotina
   }
 
   const getSubtypeFriendlyLabel = (sub: string | null | undefined): string => {
@@ -318,16 +273,16 @@ function scoreRows(req: any, prop: any) {
     if (sub === "office") return "Oficina";
     if (sub === "commercial") return "Local Comercial";
     if (sub === "warehouse") return "Bodega";
-    if (sub === "house") return "Casa";
-    if (sub === "farm") return "Finca / Lote Campestre";
+    if (sub === "house") return "Casa Urbana";
+    if (sub === "farm") return "Casa Campestre / Finca";
     if (sub === "land") return "Lote / Terreno";
     if (sub === "building") return "Edificio";
     if (sub === "hotel") return "Hotel";
     if (sub === "cabin") return "Cabaña";
-    if (sub === "apartaestudio") return "Apartaestudio / Aparta Suite (1 Hab)";
+    if (sub === "apartaestudio") return "Apartaestudio / Aparta Suite";
     if (sub === "loft") return "Loft";
     if (sub === "penthouse") return "PentHouse";
-    if (sub === "apartamento_duplex") return "Apartamento Dúplex / Tríplex";
+    if (sub === "apartamento_duplex") return "Apartamento Dúplex";
     if (sub === "apartamento_estandar" || sub === "apartment" || sub === "apartamento") return "Apartamento Familiar";
     return getPropTypeLabel(sub);
   };
@@ -341,26 +296,50 @@ function scoreRows(req: any, prop: any) {
     <Building2 className="w-3.5 h-3.5" />
   );
 
-  // 2. Tipo de Negocio
+  // 2. Tipo de Negocio (Matriz Doctrinal Estricta de Intencionalidad)
   const reqNeg = req.tipoNegocioDeseado || req.transactionType || "";
   const propNeg = prop.transactionType || "";
-  const isDual = isPropertyDualOffer(prop);
 
-  let displayPropNeg = getTransactionLabel(propNeg);
-  if (isDual || (reqNeg && propNeg && reqNeg.toLowerCase() !== propNeg.toLowerCase())) {
-    displayPropNeg = "Venta / Arriendo";
+  const normalizeNegocio = (val: string, raw: string): string => {
+    const combined = ((val || "") + " " + (raw || "")).toLowerCase();
+    if (combined.includes("arriendo con opci") || combined.includes("rent to own")) return "arriendo_con_opcion_de_compra";
+    if (combined.includes("venpermuto") || combined.includes("venta permuta") || combined.includes("venta-permuta") || combined.includes("recibe permuta") || combined.includes("recibo menor valor") || combined.includes("permuto") || combined.includes("permuta")) return "venta_permuta";
+    if (combined.includes("venta o arriendo") || combined.includes("vendo o arriendo") || combined.includes("venta/arriendo")) return "venta_o_arriendo";
+    if (combined.includes("arriendo") || combined.includes("renta") || combined.includes("alquiler")) return "arriendo";
+    if (combined.includes("venta") || combined.includes("vendo") || combined.includes("compra") || combined.includes("compro")) return "venta";
+    return (val || "").toLowerCase().trim();
+  };
+
+  const cleanReqBiz = normalizeNegocio(reqNeg, reqRawText);
+  const cleanPropBiz = normalizeNegocio(propNeg, propRawText);
+
+  let negMatchStatus: MatchStatus = "missing";
+  if (cleanReqBiz === cleanPropBiz && cleanReqBiz !== "") {
+    negMatchStatus = "exact";
+  } else if (cleanReqBiz === "venta" && cleanPropBiz === "venta_o_arriendo") {
+    negMatchStatus = "exact";
+  } else if (cleanReqBiz === "arriendo" && cleanPropBiz === "venta_o_arriendo") {
+    negMatchStatus = "exact";
+  } else if (cleanReqBiz === "venta_permuta" && (cleanPropBiz === "venta_permuta" || cleanPropBiz === "permuta")) {
+    negMatchStatus = "exact";
+  } else {
+    negMatchStatus = "missing"; // No coincide -> 0% Guillotina
   }
-  const displayReqNeg = getTransactionLabel(reqNeg);
 
-  const negMatch = !reqNeg || !propNeg || isDual ||
-    reqNeg.toLowerCase() === propNeg.toLowerCase() ||
-    propNeg === "venta_o_arriendo" || reqNeg === "venta_o_arriendo";
+  const getBusinessDisplayLabel = (bType: string): string => {
+    if (bType === "arriendo_con_opcion_de_compra") return "Arriendo con Opción de Compra";
+    if (bType === "venta_permuta") return "Venta / Permuta (Venpermuto)";
+    if (bType === "venta_o_arriendo") return "Venta / Arriendo";
+    if (bType === "arriendo") return "Arriendo";
+    if (bType === "venta") return "Venta";
+    return getTransactionLabel(bType);
+  };
 
   add(
     "Tipo de Negocio", 
-    displayReqNeg, 
-    displayPropNeg, 
-    negMatch ? "exact" : "missing", 
+    getBusinessDisplayLabel(cleanReqBiz), 
+    getBusinessDisplayLabel(cleanPropBiz), 
+    negMatchStatus, 
     15, 
     <SlidersHorizontal className="w-3.5 h-3.5" />
   );
@@ -368,15 +347,7 @@ function scoreRows(req: any, prop: any) {
   // 3. Ubicación / Barrio
   const reqZona = cleanText(req.zonaDeseada || req.addressNeighborhood || "");
   const propZona = cleanText(prop.zone || prop.addressNeighborhood || "");
-  const reqCiudad = cleanText(req.ciudadDeseada || "bogotá");
-  const propCiudad = cleanText(prop.city || "bogotá");
-
-  const subSectores = ["oriental", "occidental", "norte", "sur", "alta", "alto", "baja", "bajo", "reservado", "iii", "ii", "i"];
-  const isDiffSubBarrio = reqZona && propZona && subSectores.some(o => 
-    (reqZona.includes(o) && !propZona.includes(o)) || (!reqZona.includes(o) && propZona.includes(o))
-  );
-
-  // Detección de perímetro numérico (Calles / Carreras)
+  
   const reqFullText = `${req.zonaDeseada || ''} ${req.rawText || ''}`.toLowerCase();
   const propFullText = `${prop.zone || ''} ${prop.rawText || ''}`.toLowerCase();
   
@@ -384,23 +355,18 @@ function scoreRows(req: any, prop: any) {
   const propStreetMatch = propFullText.match(/(?:calle|cll|cll\.)\s*(\d{1,3})/i);
 
   let isOutStreetBounds = false;
-  let boundaryLabel = '';
-
   if (reqStreetMatch && propStreetMatch) {
     const minS = Math.min(parseInt(reqStreetMatch[1]), parseInt(reqStreetMatch[2]));
     const maxS = Math.max(parseInt(reqStreetMatch[1]), parseInt(reqStreetMatch[2]));
     const pS = parseInt(propStreetMatch[1]);
-    if (pS < minS || pS > maxS) {
-      isOutStreetBounds = true;
-      boundaryLabel = `Calle ${minS}-${maxS}`;
-    }
+    if (pS < minS || pS > maxS) isOutStreetBounds = true;
   }
 
   const extractBarrioFromText = (text: string): string | null => {
     if (!text) return null;
     const lower = text.toLowerCase();
     const knowns = [
-      "cedritos", "santa paula", "santa barbara", "chico norte", "chico reservado", "chico",
+      "cedritos", "santa paula", "santa barbara", "santa bárbara", "chico norte", "chico reservado", "chico",
       "rosales", "virrey", "la cabrera", "nogal", "country club", "la calleja", "bella suiza",
       "el contador", "san patricio", "pasadena", "alhambra", "colina", "suba", "salitre",
       "modelia", "fontibon", "teusaquillo", "chapinero", "laureles", "poblado", "granada",
@@ -415,93 +381,35 @@ function scoreRows(req: any, prop: any) {
   let reqBarrioInferred = extractBarrioFromText(req.rawText || "");
   let propBarrioInferred = extractBarrioFromText(prop.rawText || prop.description || "");
 
-  const reqEffectiveZone = (req.zonaDeseada && req.zonaDeseada.toLowerCase() !== "bogotá" && req.zonaDeseada.toLowerCase() !== "bogota") 
-    ? req.zonaDeseada 
-    : (reqBarrioInferred || req.zonaDeseada || "");
+  const reqEffectiveZone = (req.zonaDeseada && req.zonaDeseada.toLowerCase() !== "bogotá" && req.zonaDeseada.toLowerCase() !== "bogota") ? req.zonaDeseada : (reqBarrioInferred || req.zonaDeseada || "");
+  const propEffectiveZone = (prop.zone && prop.zone.toLowerCase() !== "bogotá" && prop.zone.toLowerCase() !== "bogota") ? prop.zone : (propBarrioInferred || prop.zone || "");
 
-  const propEffectiveZone = (prop.zone && prop.zone.toLowerCase() !== "bogotá" && prop.zone.toLowerCase() !== "bogota")
-    ? prop.zone
-    : (propBarrioInferred || prop.zone || "");
-
-  const ciudadMatch = !reqCiudad || propCiudad.includes(reqCiudad) || reqCiudad.includes(propCiudad) || reqCiudad === "colombia";
-  const normReqZone = (reqEffectiveZone || "").toLowerCase();
-  const normPropZone = (propEffectiveZone || "").toLowerCase();
-  
-  const isExactOrAliasMatch = normReqZone && normPropZone && (normReqZone.includes(normPropZone) || normPropZone.includes(normReqZone));
-  const hasAledanosWord = normReqZone.includes("aledaños") || normReqZone.includes("aledanos") || normReqZone.includes("cercanos");
-  
-  const isNeighborhoodMismatch = normReqZone && normPropZone && !isExactOrAliasMatch && !hasAledanosWord;
-
-  let geoStatus: MatchStatus = (ciudadMatch && isExactOrAliasMatch && !isOutStreetBounds) ? "exact" : (ciudadMatch && !isNeighborhoodMismatch) ? "warn" : "missing";
-  
-  const formatZoneLabel = (z: string, c: string): string => {
-    const zClean = (z || "").trim();
-    const cClean = (c || "").trim();
-    if (!zClean && !cClean) return "N/E";
-    if (!zClean) return cClean;
-    if (!cClean || zClean.toLowerCase() === cClean.toLowerCase() || zClean.toLowerCase().includes(cClean.toLowerCase())) {
-      return zClean;
-    }
-    return `${zClean}, ${cClean}`;
-  };
-
-  let propZoneLabel = formatZoneLabel(propEffectiveZone, prop.city || "Bogotá");
-  
-  if (isOutStreetBounds) {
-    geoStatus = "missing";
-    propZoneLabel += ` ❌ (Fuera de Perímetro: ${boundaryLabel})`;
-  } else if (isNeighborhoodMismatch) {
-    geoStatus = "missing";
-    propZoneLabel += " ❌ (Barrio Incompatible)";
-  } else if (isDiffSubBarrio && !hasAledanosWord) {
-    geoStatus = "missing";
-    propZoneLabel += " ❌ (Diferente Sub-barrio)";
-  }
-
-
-  // ── EMPAREJAMIENTO GEOGRÁFICO TRIPARTITO (Doctrinal v22.1) ──
-  // REGLA: Los campos geográficos son DUROS. Solo "Coincide" o "Falla". JAMÁS "Aproximado".
-  // REGLA: Sub-barrio exacto — "Calleja Alta" ≠ "Calleja Baja" = FALLA absoluta.
-
-  // Calificadores de sub-barrio que hacen los nombres INCOMPATIBLES si difieren
   const SUB_CALIFICADORES = ["alta", "alto", "baja", "bajo", "norte", "sur", "oriental", "occidental", "reservado", "i ", "ii ", "iii ", "navarra"];
 
   const normalizeBarrio = (s: string) =>
     (s || "").toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ");
 
-  // Emparejamiento exacto de barrio con detección de sub-calificadores
-  const matchBarrioExacto = (req: string, prop: string): boolean => {
-    const rn = normalizeBarrio(req);
-    const pn = normalizeBarrio(prop);
+  const matchBarrioExacto = (rB: string, pB: string): boolean => {
+    const rn = normalizeBarrio(rB);
+    const pn = normalizeBarrio(pB);
     if (!rn || !pn) return false;
-    // Coincidencia exacta
     if (rn === pn) return true;
 
-    // Incompatibilidad estricta entre Chicó tradicional (Chapinero) y Chicó Navarra (Usaquén)
     const isChicoNavReq = rn.includes("chico navarra") || rn.includes("navarra");
     const isChicoNavProp = pn.includes("chico navarra") || pn.includes("navarra");
     const isChicoTradReq = (rn.includes("chico") || rn.includes("chico norte") || rn.includes("chico reservado") || rn.includes("rincon del chico")) && !isChicoNavReq;
     const isChicoTradProp = (pn.includes("chico") || pn.includes("chico norte") || pn.includes("chico reservado") || pn.includes("rincon del chico")) && !isChicoNavProp;
 
     if ((isChicoNavReq && isChicoTradProp) || (isChicoTradReq && isChicoNavProp)) {
-      return false; // INCOMPATIBLE TOTAL: Chicó tradicional ≠ Chicó Navarra
+      return false;
     }
 
-    // Uno contiene al otro (ej: "La Calleja" ↔ "La Calleja Baja") → solo si NO hay calificador conflictivo
     const reqHasQual = SUB_CALIFICADORES.some(q => rn.includes(q));
     const propHasQual = SUB_CALIFICADORES.some(q => pn.includes(q));
-    // Si ambos tienen calificadores distintos → FALLA
     if (reqHasQual && propHasQual && rn !== pn) return false;
-    // Si solo uno tiene calificador y el otro es el nombre base → puede coincidir (ej: "Calleja" ↔ "La Calleja Baja")
-    // Solo si el nombre base está completamente contenido y el calificador no crea conflicto
-    return (rn.includes(pn) || pn.includes(rn)) && !SUB_CALIFICADORES.some(q => {
-      const reqHas = rn.includes(q);
-      const propHas = pn.includes(q);
-      return reqHas !== propHas; // Uno tiene y el otro no → conflicto
-    });
+    return (rn.includes(pn) || pn.includes(rn)) && !SUB_CALIFICADORES.some(q => rn.includes(q) !== pn.includes(q));
   };
 
-  // Limpiador estricto para evitar que nombres de ciudades o países aparezcan como barrio
   const cleanBarrioValue = (bVal: string | null | undefined, cVal: string | null | undefined): string => {
     if (!bVal || bVal === "N/E") return "N/E";
     const b = bVal.trim();
@@ -510,7 +418,6 @@ function scoreRows(req: any, prop: any) {
     const bNorm = b.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
     const cNorm = (cVal || "bogota").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
 
-    // Si el valor asignado al barrio es el nombre de la ciudad o país, NO es un barrio -> Retornar N/E
     if (
       bNorm === cNorm ||
       bNorm === "bogota" ||
@@ -522,9 +429,6 @@ function scoreRows(req: any, prop: any) {
       bNorm === "barranquilla" ||
       bNorm === "bucaramanga" ||
       bNorm === "cartagena" ||
-      bNorm === "chia" ||
-      bNorm === "cajica" ||
-      bNorm === "soacha" ||
       bNorm === "colombia"
     ) {
       return "N/E";
@@ -532,7 +436,6 @@ function scoreRows(req: any, prop: any) {
     return b;
   };
 
-  // Valores de display priorizando los campos tripartitos ya deducidos por janIA
   const reqBarrioRaw = req.addressNeighborhood || reqEffectiveZone;
   const propBarrioRaw = prop.addressNeighborhood || propEffectiveZone;
 
@@ -545,38 +448,22 @@ function scoreRows(req: any, prop: any) {
     if (norm.includes("niza") || norm.includes("pasadena") || norm.includes("colina") || norm.includes("suba")) return "Suba";
     if (norm.includes("modelia") || norm.includes("fontibon")) return "Fontibón";
     if (norm.includes("teusaquillo")) return "Teusaquillo";
-    if (norm.includes("restrepo")) return "Antonio Nariño";
-    if (norm.includes("candelaria")) return "La Candelaria";
-    if (norm.includes("kennedy")) return "Kennedy";
-    if (norm.includes("normandia")) return "Engativá";
     return "N/E";
   };
 
   const rawReqB = cleanBarrioValue(reqBarrioRaw, req.addressCity || req.ciudadDeseada);
   const rawPropB = cleanBarrioValue(propBarrioRaw, prop.addressCity || prop.city);
 
-  // Extraer fidelidad de barrio/cuadrante desde rawText si la columna tiene un nombre genérico
   let propBarrioDisplay = rawPropB;
   if (propTextLower && (rawPropB === "N/E" || rawPropB.toLowerCase() === "virrey" || rawPropB.toLowerCase() === "chico" || rawPropB.toLowerCase() === "chapinero")) {
     if (propTextLower.includes("la cabrera") || propTextLower.includes("cabrera")) propBarrioDisplay = "La Cabrera";
     else if (propTextLower.includes("rincon del chico") || propTextLower.includes("rincón del chicó")) propBarrioDisplay = "Rincón del Chicó";
     else if (propTextLower.includes("el nogal") || propTextLower.includes("nogal")) propBarrioDisplay = "El Nogal";
     else if (propTextLower.includes("los rosales") || propTextLower.includes("rosales")) propBarrioDisplay = "Rosales";
-    else if (propTextLower.includes("antiguo country")) propBarrioDisplay = "Antiguo Country";
   }
 
   let reqBarrioDisplay = rawReqB;
-  if (reqTextLower) {
-    if (reqTextLower.includes("85 hasta la 72") || reqTextLower.includes("85 a la 72") || reqTextLower.includes("calle 85 con cra 7")) {
-      if (propBarrioDisplay.toLowerCase().includes("cabrera") || propBarrioDisplay.toLowerCase().includes("nogal") || propBarrioDisplay.toLowerCase().includes("rosales")) {
-        reqBarrioDisplay = "Clle 85 a 72 (Cra 7 a 15 / Sector La Cabrera)";
-      }
-    } else if (reqTextLower.includes("sector el virrey") || reqTextLower.includes("de la 90 a la 85")) {
-      if (propBarrioDisplay.toLowerCase().includes("virrey") || propBarrioDisplay.toLowerCase().includes("chico") || propBarrioDisplay.toLowerCase().includes("rincon del chico")) {
-        reqBarrioDisplay = "Clle 85 a 90 (Autonorte a Cra 7 / Rincón del Chicó)";
-      }
-    }
-  }
+  const isDiffSubBarrio = reqZona && propZona && SUB_CALIFICADORES.some(o => (reqZona.includes(o) && !propZona.includes(o)) || (!reqZona.includes(o) && propZona.includes(o)));
 
   const reqLocalityDisplay = (req.addressLocality && req.addressLocality !== "N/E") ? req.addressLocality : inferLocalityFromBarrio(reqBarrioDisplay);
   const propLocalityDisplay = (prop.addressLocality && prop.addressLocality !== "N/E") ? prop.addressLocality : inferLocalityFromBarrio(propBarrioDisplay);
@@ -584,70 +471,46 @@ function scoreRows(req: any, prop: any) {
   const reqCityDisplay = req.addressCity || req.ciudadDeseada || "Bogotá, D.C.";
   const propCityDisplay = prop.addressCity || prop.city || "Bogotá, D.C.";
 
-
-  // A. Ciudad / Municipio — FILTRO DURO BINARIO
   const isCityMatch =
     normalizeBarrio(reqCityDisplay) === normalizeBarrio(propCityDisplay) ||
     normalizeBarrio(reqCityDisplay).includes(normalizeBarrio(propCityDisplay)) ||
     normalizeBarrio(propCityDisplay).includes(normalizeBarrio(reqCityDisplay));
 
-  const bothLocalityKnown = reqLocalityDisplay !== "N/E" && propLocalityDisplay !== "N/E";
-  const normReqB = normalizeBarrio(reqBarrioDisplay);
-  const normPropB = normalizeBarrio(propBarrioDisplay);
-
-  let barrioMatchStatus: MatchStatus = "missing";
   const isGenericZone = (zn: string) => !zn || zn === "N/E" || zn === "na" || zn === "bogota" || zn === "bogotá" || zn === "bogota, d.c.";
 
+  let barrioMatchStatus: MatchStatus = "missing";
   if (isGenericZone(reqBarrioDisplay) || isGenericZone(propBarrioDisplay)) {
-    barrioMatchStatus = "missing"; // BARRIO NO RESUELTO (N/E O BOGOTÁ) -> FALLIDO / SACADO DE ALLÍ (0%)
+    barrioMatchStatus = "neutral";
+  } else if (isOutStreetBounds) {
+    barrioMatchStatus = "missing";
+  } else if (isDiffSubBarrio) {
+    barrioMatchStatus = "missing";
   } else if (matchBarrioExacto(reqBarrioDisplay, propBarrioDisplay)) {
-    barrioMatchStatus = "exact"; // 100% BARRIO IDÉNTICO O SECTOR COINCIDENTE VERIFICADO
+    barrioMatchStatus = "exact";
   } else {
-    barrioMatchStatus = "missing"; // BARRIOS DISTINTOS -> FALLIDO (0%)
+    barrioMatchStatus = "missing";
   }
 
+  let localityMatchStatus: MatchStatus = "neutral";
+  if (reqLocalityDisplay === "N/E" || propLocalityDisplay === "N/E") {
+    localityMatchStatus = "neutral";
+  } else if (normalizeBarrio(reqLocalityDisplay) === normalizeBarrio(propLocalityDisplay)) {
+    localityMatchStatus = "exact";
+  } else {
+    localityMatchStatus = "missing";
+  }
 
-  // A. Barrio / Vereda / Caserío
-  add(
-    "Barrio / Vereda / Caserío",
-    reqBarrioDisplay,
-    propBarrioDisplay,
-    barrioMatchStatus,
-    10,
-    <MapPin className="w-3.5 h-3.5" />
-  );
+  let cityMatchStatus: MatchStatus = isCityMatch ? "exact" : "missing";
 
-  // B. Localidad / Comuna
-  add(
-    "Localidad / Comuna",
-    reqLocalityDisplay,
-    propLocalityDisplay,
-    "exact",
-    5,
-    <MapPin className="w-3.5 h-3.5" />
-  );
-
-  // C. Ciudad / Municipio
-  add(
-    "Ciudad / Municipio",
-    reqCityDisplay,
-    propCityDisplay,
-    "exact",
-    5,
-    <MapPin className="w-3.5 h-3.5" />
-  );
+  add("Barrio / Vereda / Caserío", reqBarrioDisplay, propBarrioDisplay, barrioMatchStatus, 10, <MapPin className="w-3.5 h-3.5" />);
+  add("Localidad / Comuna", reqLocalityDisplay, propLocalityDisplay, localityMatchStatus, 5, <MapPin className="w-3.5 h-3.5" />);
+  add("Ciudad / Municipio", reqCityDisplay, propCityDisplay, cityMatchStatus, 5, <MapPin className="w-3.5 h-3.5" />);
 
   const isPhoneNumberNotPrice = (val: number | string | null | undefined, rawText?: string): boolean => {
     if (val === undefined || val === null || val === "" || val === 0 || val === "0") return false;
     const numStr = String(val).replace(/\D/g, "");
     if (numStr.length === 10 && numStr.startsWith("3")) return true;
     if (numStr.length === 12 && numStr.startsWith("573")) return true;
-    if (rawText) {
-      const rawLower = rawText.toLowerCase();
-      if (rawLower.includes(numStr) && numStr.length >= 8) {
-        if (/wa|whatsapp|cel|celular|tel|telefono|teléfono|contacto|llamar/i.test(rawLower)) return true;
-      }
-    }
     return false;
   };
 
@@ -659,62 +522,34 @@ function scoreRows(req: any, prop: any) {
     return num;
   };
 
-  const isReqRentMatch = reqNeg.toLowerCase().includes("arriendo");
-  const isPropPureRent = (prop.transactionType || "").toLowerCase() === "arriendo" || (prop.transactionType || "").toLowerCase() === "arriendo_temporal";
-  const isPropPureVenta = (prop.transactionType || "").toLowerCase() === "venta";
+  const isReqRentMatch = cleanReqBiz.includes("arriendo");
+  const isPropPureRent = cleanPropBiz === "arriendo";
+  const isPropPureVenta = cleanPropBiz === "venta";
   const isReqOpenBudget = /(?:ppto|presupuesto|canon|valor)?\s*\$?\s*(?:abierto|sin\s*l[ií]mite|ilimitado|negociable\s*sin\s*tope)\b/i.test(reqTextLower);
 
   function parseColombianPriceOrBudget(numStr: string, unit: string, isSale: boolean): number {
     const cleanStr = (numStr || "").trim().replace(/\*/g, "");
     const cleanUnit = (unit || "").toLowerCase();
-    
-    if (cleanUnit.includes("mil millon")) {
-      const v = parseFloat(cleanStr.replace(",", "."));
-      return Math.round(v * 1_000_000_000);
-    }
-    
-    if (/^\d{1,3}\.\d{3}$/.test(cleanStr)) {
-      const n = parseInt(cleanStr.replace(".", ""), 10);
-      return n * 1_000_000;
-    }
-    
+    if (cleanUnit.includes("mil millon")) return Math.round(parseFloat(cleanStr.replace(",", ".")) * 1_000_000_000);
+    if (/^\d{1,3}\.\d{3}$/.test(cleanStr)) return parseInt(cleanStr.replace(".", ""), 10) * 1_000_000;
     let val = parseFloat(cleanStr.replace(",", "."));
     if (isNaN(val)) return 0;
-    
     if (cleanUnit.includes("millon") || cleanUnit.includes("millón") || cleanUnit.includes("mll") || cleanUnit.includes("mm") || cleanUnit === "m") {
-      if (val < 100 && isSale && val > 0) {
-        if (val < 30) return Math.round(val * 1_000_000_000);
-        return Math.round(val * 10_000_000);
-      }
+      if (val < 100 && isSale && val > 0) return Math.round(val * 10_000_000);
       return Math.round(val * 1_000_000);
     }
-    
-    if (val <= 50 && isSale) {
-      return Math.round(val * 1_000_000_000);
-    }
-    if (val < 10000) {
-      return Math.round(val * 1_000_000);
-    }
+    if (val < 10000) return Math.round(val * 1_000_000);
     return Math.round(val);
   }
 
-  // A. PRECIO DE VENTA (Tolerancia máx -1%, cero si sobrepasa)
   let propSalePrice = !isPropPureRent ? parseSafePrice(prop.price, prop.rawText) : 0;
   let reqSaleBudget = (!isReqRentMatch && !isPropPureRent) ? parseSafePrice(req.presupuestoMax, req.rawText) : 0;
 
-  // Inferencia inteligente desde rawText si en BD viene 0 o N/E
   if ((reqSaleBudget <= 0 || reqSaleBudget < 100_000_000) && reqTextLower && !isReqRentMatch && !isPropPureRent && !isReqOpenBudget) {
     const rangeMatch = reqTextLower.match(/(?:presupuesto(?:\s*m[aá]ximo)?|ppto(?:\s*m[aá]ximo)?|hasta|tope|valor|inversi[oó]n|compra)?\s*:?\s*\*?\$?\s*(\d{1,4}(?:[.,]\d{1,3})?)\s*(?:a|hasta|-)\s*\*?\$?\s*(\d{1,4}(?:[.,]\d{1,3})?)\*?\s*(mil\s*millones?|millones?|millon|millón|mill|mm|m)?\b/i);
     if (rangeMatch && (rangeMatch[0].includes("presupuesto") || rangeMatch[0].includes("ppto") || rangeMatch[0].includes("compra") || rangeMatch[3])) {
       const parsedMax = parseColombianPriceOrBudget(rangeMatch[2], rangeMatch[3] || "", true);
       if (parsedMax >= 10_000_000) reqSaleBudget = parsedMax;
-    } else {
-      const matchPresu = reqTextLower.match(/(?:presupuesto|ppto|valor|hasta|máximo|max)\s*(?:máximo|max)?\s*:?\s*\$?\s*([\d.,\s]+?)\s*(mil\s*millones?|millones|millón|mll|mlls|mm|m)?(?:\s|$|\n)/i)
-                      || reqTextLower.match(/(?:presupuesto|ppto|valor|hasta|máximo|max)\s*:?\s*\$?\s*([\d.]+)/i);
-      if (matchPresu) {
-        const parsed = parseColombianPriceOrBudget(matchPresu[1], matchPresu[2] || "", true);
-        if (parsed >= 10_000_000) reqSaleBudget = parsed;
-      }
     }
   }
 
@@ -723,96 +558,46 @@ function scoreRows(req: any, prop: any) {
     if (millonMatch) {
       const computed = parseColombianPriceOrBudget(millonMatch[1], millonMatch[2], true);
       if (computed >= 30_000_000) propSalePrice = computed;
-    } else {
-      const saleMatch = propTextLower.match(/(?:precio\s*(?:de\s*)?venta|venta|valor)\s*:?\s*\$?\s*([\d.,\s]+?)\s*(mil\s*millones?|millones?|mm|mlls|m)?(?:\s|$|\n)/i)
-                     || propTextLower.match(/(?:precio\s*(?:de\s*)?venta|venta|valor)\s*:?\s*\$?\s*([\d.]+)/i);
-      if (saleMatch) {
-        const computedS = parseColombianPriceOrBudget(saleMatch[1], saleMatch[2] || "", true);
-        if (computedS >= 30_000_000) propSalePrice = computedS;
-      }
     }
   }
 
-  if (propSalePrice < 30_000_000) {
-    propSalePrice = 0;
-  }
+  if (propSalePrice < 30_000_000) propSalePrice = 0;
 
   let reqSaleLabel = isReqRentMatch ? "N/A (Búsqueda de Arriendo)" : (isReqOpenBudget ? "Presupuesto Abierto" : (reqSaleBudget > 0 ? formatCOP(reqSaleBudget) : "N/E"));
   let propSaleLabel = propSalePrice >= 30_000_000 ? formatCOP(propSalePrice) : (isPropPureRent ? "N/A (Inmueble en Arriendo)" : "N/E");
 
   let saleS: MatchStatus = "neutral";
   if (isReqRentMatch) {
-    saleS = "exact"; // En búsqueda de arriendo, venta no bloquea
+    saleS = "exact";
   } else if (isReqOpenBudget) {
-    saleS = propSalePrice > 0 ? "exact" : "warn";
+    saleS = propSalePrice > 0 ? "exact" : "neutral";
   } else if (reqSaleBudget > 0 && propSalePrice > 0) {
     if (propSalePrice > reqSaleBudget) {
-      saleS = "missing";
-    } else if (propSalePrice <= reqSaleBudget) {
-      saleS = "exact";
+      saleS = "missing"; 
     } else {
-      saleS = "warn";
+      saleS = "exact";
     }
+  } else {
+    saleS = "neutral";
   }
 
-  add(
-    "Precio de Venta",
-    reqSaleLabel,
-    propSaleLabel,
-    saleS,
-    isReqRentMatch ? 0 : 15,
-    <DollarSign className="w-3.5 h-3.5" />
-  );
+  add("Precio de Venta", reqSaleLabel, propSaleLabel, saleS, isReqRentMatch ? 0 : 15, <DollarSign className="w-3.5 h-3.5" />);
 
-  // B. PRECIO DE ARRIENDO / CANON (Tolerancia máx -1%, cero si sobrepasa)
   let propRentPrice = !isPropPureVenta ? parseSafePrice(prop.rentPrice || prop.priceRent, prop.rawText) : 0;
   let reqRentBudget = isReqRentMatch ? parseSafePrice(req.presupuestoMax, req.rawText) : 0;
 
-  if (isReqRentMatch && reqTextLower && !isReqOpenBudget) {
-    const mRange = reqTextLower.match(/(\d+(?:[.,]\d+)?)\s*(?:a|hasta|-)\s*\$?(\d+(?:[.,]\d+)?)\s*(millones|millón|mll|mlls|mm|m)\b/i);
-    if (mRange) {
-      let maxV = parseFloat(mRange[2].replace(',', '.'));
-      if (maxV > 1000) maxV /= 1000;
-      reqRentBudget = Math.round(maxV * 1_000_000);
-    } else if (reqRentBudget <= 0 || reqRentBudget > 100_000_000) {
-      const matchPresu = reqTextLower.match(/(?:presupuesto|ppto|canon|valor|hasta|máximo|max)\s*(?:máximo|max)?\s*:?\s*\$?\s*([\d.,\s]+?)\s*(mil\s*millones?|millones|millón|mll|mlls|mm|m)?(?:\s|$|\n)/i)
-                      || reqTextLower.match(/(?:presupuesto|ppto|canon|valor|hasta|máximo|max)\s*:?\s*\$?\s*([\d.]+)/i);
-      if (matchPresu) {
-        let valStr = matchPresu[1].replace(/[.,\s]/g, "");
-        let valR = parseFloat(valStr);
-        if (!isNaN(valR)) {
-          const unit = (matchPresu[2] || "").toLowerCase();
-          if (unit.includes("millon") || unit.includes("mll") || unit.includes("mm") || unit === "m") valR *= 1_000_000;
-          else if (valR < 1000) valR *= 1_000_000;
-          if (valR >= 300_000 && valR <= 100_000_000) reqRentBudget = valR;
-        }
+  if (isReqRentMatch && reqTextLower && !isReqOpenBudget && reqRentBudget <= 0) {
+    const matchPresu = reqTextLower.match(/(?:presupuesto|ppto|canon|valor|hasta|máximo|max)\s*(?:máximo|max)?\s*:?\s*\$?\s*([\d.,\s]+?)\s*(mil\s*millones?|millones|millón|mll|mlls|mm|m)?(?:\s|$|\n)/i);
+    if (matchPresu) {
+      let valStr = matchPresu[1].replace(/[.,\s]/g, "");
+      let valR = parseFloat(valStr);
+      if (!isNaN(valR)) {
+        const unit = (matchPresu[2] || "").toLowerCase();
+        if (unit.includes("millon") || unit.includes("mll") || unit.includes("mm") || unit === "m") valR *= 1_000_000;
+        else if (valR < 1000) valR *= 1_000_000;
+        if (valR >= 300_000 && valR <= 100_000_000) reqRentBudget = valR;
       }
     }
-  }
-
-  if (!isPropPureVenta && propTextLower) {
-    const mComp = propTextLower.match(/(?:canon|arriendo|renta|alquiler)(?:\s*(?:más|\+|con)?\s*administraci[oó]n\s*incluida)?(?:\s*total\s*mes)?\s*:?\s*\$?\s*([\d.,\s]+?)(?:-|\s|$|\n)/i);
-    if (mComp) {
-      let rawC = parseFloat(mComp[1].replace(/[.,\s]/g, ""));
-      if (!isNaN(rawC) && rawC >= 300_000 && rawC <= 100_000_000) {
-        propRentPrice = rawC;
-      }
-    }
-    if (propRentPrice <= 0 || propRentPrice > 100_000_000) {
-      const rentMatch = propTextLower.match(/(?:valor\s*arriendo|arriendo|canon|renta)\s*:?\s*\$?\s*([\d.,\s]+?)\s*(mil\s*millones?|millones?|m|M)?(?:\s|$|\n)/i)
-                     || propTextLower.match(/(?:valor\s*arriendo|arriendo|canon|renta)\s*:?\s*\$?\s*([\d.]+)/i);
-      if (rentMatch) {
-        let rawRNum = parseFloat(rentMatch[1].replace(/[.,\s]/g, ""));
-        const unitR = (rentMatch[2] || "").toLowerCase();
-        const multR = unitR.includes("mil millon") ? 1_000_000_000 : (unitR.includes("millon") || unitR === "m") ? 1_000_000 : rawRNum < 10_000 ? 1_000_000 : 1;
-        const computedR = rawRNum * multR;
-        if (computedR >= 300_000 && computedR <= 100_000_000) propRentPrice = computedR;
-      }
-    }
-  }
-
-  if (propRentPrice <= 0 && !isPropPureVenta && parseSafePrice(prop.price, prop.rawText) > 0 && parseSafePrice(prop.price, prop.rawText) < 100_000_000) {
-    propRentPrice = parseSafePrice(prop.price, prop.rawText);
   }
 
   let reqRentLabel = !isReqRentMatch ? "N/A (Búsqueda de Compra)" : (isReqOpenBudget ? "Presupuesto Abierto" : (reqRentBudget > 0 ? `${formatCOP(reqRentBudget)} / mes` : "N/E"));
@@ -820,78 +605,40 @@ function scoreRows(req: any, prop: any) {
 
   let rentS: MatchStatus = "neutral";
   if (!isReqRentMatch) {
-    rentS = "exact"; // En búsqueda de compra, canon no es un impedimento
+    rentS = "exact";
   } else if (isReqOpenBudget) {
-    rentS = propRentPrice > 0 ? "exact" : "warn";
+    rentS = propRentPrice > 0 ? "exact" : "neutral";
   } else if (reqRentBudget > 0 && propRentPrice > 0) {
     if (propRentPrice > reqRentBudget) {
       rentS = "missing";
-    } else if (propRentPrice <= reqRentBudget) {
-      rentS = "exact";
     } else {
-      rentS = "warn";
+      rentS = "exact";
     }
+  } else {
+    rentS = "neutral";
   }
 
-  add(
-    "Precio de Arriendo / Canon",
-    reqRentLabel,
-    propRentLabel,
-    rentS,
-    isReqRentMatch ? 15 : 0,
-    <Receipt className="w-3.5 h-3.5" />
-  );
+  add("Precio de Arriendo / Canon", reqRentLabel, propRentLabel, rentS, isReqRentMatch ? 15 : 0, <Receipt className="w-3.5 h-3.5" />);
 
-  // C. CUOTA DE ADMINISTRACIÓN (Tolerancia máx -1%, cero si sobrepasa)
   let reqAdminMax = parseSafePrice(req.adminFeeMax, req.rawText);
   let propAdminFee = parseSafePrice(prop.adminFee, prop.rawText);
-
-  if (propAdminFee <= 0 && propTextLower) {
-    const mAdmin = propTextLower.match(/(?:administración|administracion|admin|admon)\s*:?\s*(?:aprox\.?)?\s*\$?\s*([\d.,\s]+?)\s*(mil|millones?|m)?(?:\s|$|\n)/i);
-    if (mAdmin) {
-      let rawANum = parseFloat(mAdmin[1].replace(/[.,\s]/g, ""));
-      const unitA = (mAdmin[2] || "").toLowerCase();
-      const multA = unitA.includes("millon") ? 1_000_000 : unitA === "mil" ? 1_000 : rawANum < 10_000 ? 1_000 : 1;
-      const computedA = rawANum * multA;
-      if (computedA >= 10_000 && computedA <= 30_000_000) propAdminFee = computedA;
-    }
-  }
-
-  if (propAdminFee > 0) {
-    if (
-      (propRentPrice > 0 && (propAdminFee === propRentPrice || propAdminFee >= propRentPrice * 0.45)) ||
-      (propSalePrice > 0 && (propAdminFee === propSalePrice || propAdminFee >= propSalePrice * 0.20))
-    ) {
-      propAdminFee = 0;
-    }
-  }
 
   let adminS: MatchStatus = "neutral";
   if (reqAdminMax > 0 && propAdminFee > 0) {
     if (propAdminFee > reqAdminMax) {
       adminS = "missing";
-    } else if (propAdminFee <= reqAdminMax) {
-      adminS = "exact";
     } else {
-      adminS = "warn";
+      adminS = "exact";
     }
   } else if (reqAdminMax === 0 && propAdminFee > 0) {
-    adminS = "exact"; // Sin tope impuesto en demanda -> Confort
+    adminS = "neutral";
   }
 
-  const reqAdminLabel = reqAdminMax > 0 ? `≤ ${formatCOP(reqAdminMax)}` : (propAdminFee > 0 ? "Flexible / Sin tope" : "N/E");
+  const reqAdminLabel = reqAdminMax > 0 ? `≤ ${formatCOP(reqAdminMax)}` : "Flexible / Sin restricción";
   const propAdminLabel = propAdminFee > 0 ? `${formatCOP(propAdminFee)} / mes` : "N/E";
 
-  add(
-    "Cuota de Administración",
-    reqAdminLabel,
-    propAdminLabel,
-    adminS,
-    5,
-    <Receipt className="w-3.5 h-3.5" />
-  );
+  add("Cuota de Administración", reqAdminLabel, propAdminLabel, adminS, 5, <Receipt className="w-3.5 h-3.5" />);
 
-  // 5. Área Total (Nunca menor que la solicitada)
   let areaR = parseFloat(req.areaMin || req.areaMinimaM2 || "0");
   if (areaR <= 0 && reqTextLower) {
     const mRA = reqTextLower.match(/(?:mínimo|min|de|área)?\s*([\d.,]+)\s*(?:m2|mts|m²|metros)/i);
@@ -902,214 +649,89 @@ function scoreRows(req: any, prop: any) {
   }
 
   let areaP = parseFloat(prop.areaTotal || prop.areaPrivate || "0");
-  let areaPInferred = false;
-  if (areaP <= 0 && propTextLower) {
-    const mA = propTextLower.match(/área\s*:?\s*([\d.,]+)/i)
-            || propTextLower.match(/([\d.,]+)\s*(?:m2|mts|m²|metros)/i);
-    if (mA) {
-      let valA = parseFloat(mA[1].replace(/\./g, "").replace(",", "."));
-      if (!isNaN(valA) && valA > 10 && valA < 10000) {
-        areaP = valA;
-        areaPInferred = true;
-      }
-    }
-  }
 
   let areS: MatchStatus = "neutral";
-  let areaPropLabel = areaP > 0 ? `${areaP} m²${areaPInferred ? " (Inferido 🔍)" : ""}` : "N/E";
+  let areaPropLabel = areaP > 0 ? `${areaP} m²` : "N/E";
   if (areaR > 0 && areaP > 0) {
     if (areaP < areaR * 0.95) {
       areS = "missing";
     } else if (areaP >= areaR) {
-      areS = "exact"; // Regla Doctrinal: prop >= req es 100% Confort
+      areS = "exact";
     } else {
       areS = "warn";
     }
   } else if (areaR === 0 && areaP > 0) {
-    areS = "exact"; // Demanda flexible / sin mínimo y oferta espaciosa -> 100% Exacto
+    areS = "neutral";
   }
-  const reqAreaLabel = areaR > 0 ? `≥ ${areaR} m²` : (areaP > 0 ? "Flexible / Sin mínimo" : "N/E");
+  const reqAreaLabel = areaR > 0 ? `≥ ${areaR} m²` : "Flexible / Sin restricción";
 
-  add(
-    "Área Total",
-    reqAreaLabel,
-    areaPropLabel,
-    areS,
-    10,
-    <Ruler className="w-3.5 h-3.5" />
-  );
+  add("Área Total", reqAreaLabel, areaPropLabel, areS, 10, <Ruler className="w-3.5 h-3.5" />);
 
-  // 6. Habitaciones (REGLA DOCTRINAL v22.8 - DOS BRAZOS ESTRICTOS)
   let bedR = req.habitacionesMin ? Number(req.habitacionesMin) : 0;
-  let bedInferred = false;
-  if (bedR <= 0 && reqTextLower) {
-    const m = reqTextLower.match(/(\d+(?:\s*-\s*\d+)?)\s*(?:hab|habitaciones|alcoba|alcobas|alc|dormitorio)/i);
-    if (m) { 
-      bedR = parseInt(m[1].split("-")[0].trim(), 10); 
-      bedInferred = true; 
-    } else if (isReqStudio) {
-      bedR = 1;
-      bedInferred = true;
-    }
-  }
   let bedP = prop.bedrooms ? Number(prop.bedrooms) : 0;
-  if (bedP <= 0 && propTextLower) {
-    const mP = propTextLower.match(/(\d+)\s*(?:hab|habitaciones|alcoba|alcobas|alc|dormitorio)/i);
-    if (mP) {
-      bedP = parseInt(mP[1], 10);
-    } else if (isPropStudio) {
-      bedP = 1;
-    }
-  }
 
   let bedS: MatchStatus = "neutral";
   if (bedR > 0 && bedP > 0) {
-    if (bedR === 1 || isReqStudio) {
-      // BRAZO A: Búsqueda de 1 Habitación / Apartaestudio / Aparta Suite
-      if (bedP === 1) {
-        bedS = "exact"; // 1 hab exacta
-      } else {
-        bedS = "missing"; // Descarte absoluto: Si pide 1 hab y oferta tiene 2, 3 o más habs -> 0% ROJO
-      }
+    if (bedR === 1) {
+      bedS = bedP === 1 ? "exact" : "missing";
     } else {
-      // BRAZO B: Búsqueda Familiar (a partir de 2 Habs)
       if (bedP < bedR) {
-        bedS = "missing"; // Ofrecidas menores que demandadas
+        bedS = "missing";
       } else if (bedP > bedR + 1) {
-        bedS = "missing"; // Desborde de escala (máx +1 hab de confort permitida)
+        bedS = "missing";
       } else {
-        bedS = "exact"; // Confort permitido (igual o +1 hab)
+        bedS = "exact";
       }
     }
   } else if (bedR === 0 && bedP > 0) {
-    bedS = isPropStudio ? "exact" : "exact";
+    bedS = "neutral";
   }
-  const reqBedLabel = bedR > 0 
-    ? `${bedR} hab.${bedInferred ? " (Inferido 🔍)" : ""}` 
-    : "Flexible / No especificado";
+  const reqBedLabel = bedR > 0 ? `${bedR} hab.` : "Flexible / Sin restricción";
 
-  add(
-    "Habitaciones", 
-    reqBedLabel, 
-    bedP > 0 ? `${bedP} hab.` : "N/E", 
-    bedS, 
-    8, 
-    <Bed className="w-3.5 h-3.5" />
-  );
+  add("Habitaciones", reqBedLabel, bedP > 0 ? `${bedP} hab.` : "N/E", bedS, 8, <Bed className="w-3.5 h-3.5" />);
 
-  // 7. Baños (Nunca menor que los solicitados)
   let bathR = req.banosMin ? Number(req.banosMin) : 0;
-  let bathInferred = false;
-  if (bathR <= 0 && reqTextLower) {
-    const m = reqTextLower.match(/(\d+(?:\.\d+)?)\s*(?:o\s*más\s*)?(?:wc|baño|baños|bñ)/i)
-           || reqTextLower.match(/(\d+)\s*hab\s*con\s*baño/i);
-    if (m) { bathR = parseFloat(m[1]); bathInferred = true; }
-  }
   let bathP = prop.bathrooms ? Number(prop.bathrooms) : 0;
-  if (bathP <= 0 && propTextLower) {
-    const mBP = propTextLower.match(/(\d+)\s*(?:wc|baño|baños|bñ)/i);
-    if (mBP) bathP = parseInt(mBP[1], 10);
-  }
 
   let bathS: MatchStatus = "neutral";
   if (bathR > 0 && bathP > 0) {
     if (bathP < bathR) {
       bathS = "missing";
-    } else if (bathP >= bathR) {
-      bathS = "exact"; // Regla Doctrinal: prop >= req es 100% Confort
     } else {
-      bathS = "warn";
+      bathS = "exact";
     }
   } else if (bathR === 0 && bathP > 0) {
-    bathS = "exact";
+    bathS = "neutral";
   }
-  const reqBathLabel = bathR > 0 
-    ? `≥ ${bathR} baño${bathR > 1 ? "s" : ""}${bathInferred ? " (Inferido 🔍)" : ""}` 
-    : "Flexible / No especificado";
+  const reqBathLabel = bathR > 0 ? `≥ ${bathR} baño${bathR > 1 ? "s" : ""}` : "Flexible / Sin restricción";
 
-  const formatBathValue = (val: number) => {
-    if (val <= 0) return "N/E";
-    if (val % 1 !== 0) {
-      const full = Math.floor(val);
-      return `${val} (${full} com. + 1 social)`;
-    }
-    return `${val} baño${val > 1 ? "s" : ""}`;
-  };
+  add("Baños", reqBathLabel, bathP > 0 ? `${bathP} baño${bathP > 1 ? "s" : ""}` : "N/E", bathS, 5, <Bath className="w-3.5 h-3.5" />);
 
-  add(
-    "Baños", 
-    reqBathLabel, 
-    formatBathValue(bathP), 
-    bathS, 
-    5, 
-    <Bath className="w-3.5 h-3.5" />
-  );
-
-  // 8. Parqueaderos (Nunca menor que los solicitados)
   let garR = req.parqueaderosMin ? Number(req.parqueaderosMin) : 0;
-  let garInferred = false;
-  if (garR <= 0 && reqTextLower) {
-    const m = reqTextLower.match(/(?:parqueadero|parqueaderos|garaje|garajes|ptero|g\.)\s*\.?\s*(\d+)/i)
-           || reqTextLower.match(/(\d+)\s*(?:parqueadero|parqueaderos|garaje|garajes|ptero|g\.|individuales)/i)
-           || /garajes|parqueaderos/i.test(reqTextLower);
-    if (m && m[1]) { garR = parseInt(m[1], 10); garInferred = true; }
-    else if (/garajes|parqueaderos/i.test(reqTextLower)) { garR = 1; garInferred = true; }
-  }
-
   let garP = prop.garages ? Number(prop.garages) : 0;
-  let garPInferred = false;
-  if (garP <= 0 && propTextLower) {
-    const mGP = propTextLower.match(/(\d+)\s*(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero)/i)
-             || propTextLower.match(/(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero)\s*:?\s*(\d+)/i);
-    if (mGP) { garP = parseInt(mGP[1], 10); garPInferred = true; }
-  }
-
   const garType = (prop.garageType || "").toLowerCase();
   const reqWantsIndep = reqTextLower.includes("independiente") || reqTextLower.includes("libre") || reqTextLower.includes("no lineal");
 
   let garS: MatchStatus = "neutral";
-  let garPropLabel = garP > 0 ? `${garP} garaje${garP > 1 ? "s" : ""}${garPInferred ? " (Inferido 🔍)" : ""}` : "N/E";
-
-  if (garType === "independiente")  garPropLabel += " (✅ Independiente)";
-  else if (garType === "lineal")    garPropLabel += " (⚠️ Lineal)";
-  else if (garType === "mixto")     garPropLabel += " (🔄 Mixto)";
+  let garPropLabel = garP > 0 ? `${garP} garaje${garP > 1 ? "s" : ""}` : "N/E";
 
   if (garR > 0 && garP > 0) {
     if (garP < garR || (reqWantsIndep && garType === "lineal")) {
       garS = "missing";
-    } else if (garP >= garR) {
-      garS = "exact"; // Regla Doctrinal: prop >= req es 100% Confort
     } else {
-      garS = "warn";
+      garS = "exact";
     }
   } else if (garR === 0 && garP > 0) {
-    garS = "exact";
+    garS = "neutral";
   }
-  const garReqLabel = garR > 0
-    ? `≥ ${garR} ${reqWantsIndep ? "(Indep.)" : "garaje"}${garR > 1 ? "s" : ""}${garInferred ? " (Inferido 🔍)" : ""}`
-    : "Flexible / No especificado";
+  const garReqLabel = garR > 0 ? `≥ ${garR} garaje${garR > 1 ? "s" : ""}` : "Flexible / Sin restricción";
 
-  add(
-    "Parqueaderos",
-    garReqLabel,
-    garPropLabel,
-    garS,
-    5,
-    <Car className="w-3.5 h-3.5" />
-  );
+  add("Parqueaderos", garReqLabel, garPropLabel, garS, 5, <Car className="w-3.5 h-3.5" />);
 
-  // 9. Estrato
   const estratoArr: number[] = Array.isArray(req.estratoDeseado) ? req.estratoDeseado
     : req.estratoDeseado ? [Number(req.estratoDeseado)] : [];
-  if (estratoArr.length === 0 && reqTextLower) {
-    const mEstR = reqTextLower.match(/estrato\s*:?\s*(\d)/i);
-    if (mEstR) estratoArr.push(parseInt(mEstR[1], 10));
-  }
   let estratoP = prop.stratum || prop.estrato;
-  if ((!estratoP || Number(estratoP) <= 0) && propTextLower) {
-    const mEstP = propTextLower.match(/estrato\s*:?\s*(\d)/i);
-    if (mEstP) estratoP = parseInt(mEstP[1], 10);
-  }
+
   const hasEstratoReq = estratoArr.length > 0 && estratoArr[0] > 0;
   let estS: MatchStatus = "neutral";
   if (hasEstratoReq && estratoP && Number(estratoP) > 0) {
@@ -1117,252 +739,28 @@ function scoreRows(req: any, prop: any) {
       estS = "exact";
     } else if (estratoArr.includes(Number(estratoP))) {
       estS = "warn";
+    } else if (Math.abs(Number(estratoP) - estratoArr[0]) === 1) {
+      estS = "warn";
     } else {
       estS = "missing";
     }
   } else if (!hasEstratoReq && (estratoP && Number(estratoP) > 0)) {
-    estS = "exact"; // Sin restricción por la demanda -> Confort
+    estS = "neutral";
   }
   const reqEstratoLabel = hasEstratoReq ? `Estrato ${estratoArr.join(", ")}` : "Flexible / Sin restricción";
-  add(
-    "Estrato", 
-    reqEstratoLabel, 
-    (estratoP && Number(estratoP) > 0) ? `Estrato ${estratoP}` : "Estrato 5 - 6 (Sector Residencial)", 
-    estS, 
-    7, 
-    <Shield className="w-3.5 h-3.5" />
-  );
 
-  // 11. Antigüedad / Año de Construcción
+  add("Estrato", reqEstratoLabel, (estratoP && Number(estratoP) > 0) ? `Estrato ${estratoP}` : "N/E", estS, 7, <Shield className="w-3.5 h-3.5" />);
+
   let ageR = req.antiguedadMax ? Number(req.antiguedadMax) : (req.preferredAge ? Number(req.preferredAge) : 0);
-  if (ageR <= 0 && reqTextLower) {
-    const mAntig = reqTextLower.match(/(?:máximo|max|hasta)\s*(\d{1,2})\s*años?\s*(?:de\s*)?(?:construido|construccion|construcción|antigüedad|antiguedad)?/i)
-                || reqTextLower.match(/(\d{1,2})\s*años?\s*(?:de\s*)?(?:construido|antigüedad)/i);
-    if (mAntig) ageR = parseInt(mAntig[1], 10);
-  }
-
   let ageP = prop.antiguedadAnos != null ? Number(prop.antiguedadAnos)
     : (prop.yearBuilt ? (new Date().getFullYear() - Number(prop.yearBuilt))
     : (prop.constructionYear ? (new Date().getFullYear() - Number(prop.constructionYear)) : -1));
-
-  if (ageP < 0 && propTextLower) {
-    const mPropAge = propTextLower.match(/(?:🏢|⏳|⏱️|edificio\s*(?:de|más\s*de|mas\s*de)?|antigüedad|antiguedad|tiene|\|)\s*(\d{1,2})\s*a[ñn]os/i)
-                  || propTextLower.match(/(\d{1,2})\s*a[ñn]os\s*(?:de\s*)?(?:antigüedad|construido|edificio)/i);
-    if (mPropAge) ageP = parseInt(mPropAge[1], 10);
-  }
 
   let ageS: MatchStatus = "neutral";
   if (ageR > 0 && ageP >= 0) {
     if (ageP <= ageR) ageS = "exact";
     else ageS = "warn";
   } else if (ageR <= 0 && ageP >= 0) {
-    ageS = "exact"; // Sin restricción por la demanda -> Confort
-  }
-
-  const reqAgeLabel = ageR > 0 ? `≤ ${ageR} años de construcción` : "Flexible / Sin restricción";
-  const propAgeLabel = ageP >= 0
-    ? (ageP === 0 ? "🏗️ Obra nueva" : `${ageP} años${prop.yearBuilt ? ` (${prop.yearBuilt})` : ""}`)
-    : "N/E (Consultar al Asesor)";
-
-  add(
-    "Antigüedad / Año",
-    reqAgeLabel,
-    propAgeLabel,
-    ageS,
-    5,
-    <Calendar className="w-3.5 h-3.5" />
-  );
-
-  // 12. Permuta & Modalidad de Pago
-  const reqPermuta = reqTextLower.includes("permuta") || (req.tipoNegocioDeseado || "").toLowerCase().includes("permuta");
-  const propPermuta = propRawText.includes("permuta") || (prop.transactionType || "").toLowerCase().includes("permuta");
-  let permutaS: MatchStatus = "neutral";
-  if (reqPermuta || propPermuta) {
-    permutaS = (reqPermuta && propPermuta) ? "exact" : "warn";
-  } else {
-    permutaS = "exact";
-  }
-  add(
-    "Permuta / Pago",
-    reqPermuta ? "Acepta Permuta / Parte de pago" : "Venta Directa / Tradicional",
-    propPermuta ? "Acepta Permuta / Recibe menor valor" : "Venta Directa / Tradicional",
-    permutaS,
-    5,
-    <SlidersHorizontal className="w-3.5 h-3.5" />
-  );
-
-  // 13. Cocina & Acabados
-  const propCocina = prop.kitchenType || (propRawText.includes("isla") ? "Abierta tipo Isla" : propRawText.includes("integral") ? "Integral" : propRawText.includes("abierta") ? "Abierta" : "Integral");
-  const reqCocina = reqTextLower.includes("isla") ? "Abierta tipo Isla" : reqTextLower.includes("abierta") ? "Abierta" : "Cualquiera / Flexible";
-  let cocinaS: MatchStatus = "neutral";
-  if (reqCocina !== "Cualquiera / Flexible") {
-    cocinaS = propCocina.toLowerCase().includes(reqCocina.toLowerCase()) ? "exact" : "warn";
-  } else {
-    cocinaS = propCocina !== "Integral" ? "plus" : "exact";
-  }
-  add(
-    "Cocina & Acabados",
-    reqCocina !== "Cualquiera / Flexible" ? reqCocina : "Integral / Flexible",
-    propCocina,
-    cocinaS,
-    4,
-    <Sparkles className="w-3.5 h-3.5" />
-  );
-
-  // 14. Espacio Exterior Condicional (Patio / Jardín si es Casa vs Balcón / Terraza si es Apartamento)
-  const isHouse = (prop.propertyType || "").toLowerCase().includes("casa") || 
-                  (prop.propertyType || "").toLowerCase() === "house" || 
-                  propRawText.toLowerCase().startsWith("ofrezco casa") ||
-                  propRawText.toLowerCase().includes("casa en venta") ||
-                  propRawText.toLowerCase().includes("casa en arriendo") ||
-                  (prop.name || "").toLowerCase().includes("casa");
-
-  if (isHouse) {
-    const propPatio = propRawText.includes("patio") || propRawText.includes("jardin") || propRawText.includes("jardín") || propRawText.includes("solar") || propRawText.includes("zona verde");
-    const reqPatio = reqTextLower.includes("patio") || reqTextLower.includes("jardin") || reqTextLower.includes("jardín") || reqTextLower.includes("importante patio");
-    let patioStatus: MatchStatus = "neutral";
-    if (reqPatio) {
-      patioStatus = propPatio ? "exact" : "warn";
-    } else {
-      patioStatus = propPatio ? "plus" : "neutral";
-    }
-    add(
-      reqTextLower.includes("importante patio") ? "Importante Patio (Casa)" : "Patio / Jardín Privado",
-      reqPatio ? (reqTextLower.includes("importante patio") ? "Importante Patio (Condición Si es Casa)" : "Exige Patio / Zona Verde") : "Flexible",
-      propPatio ? "Sí (Incluye Patio / Jardín)" : "Sin patio especificado (Consultar al Asesor)",
-      patioStatus,
-      5,
-      <Trees className="w-3.5 h-3.5" />
-    );
-
-    // Conjunto Cerrado & Vigilancia para Casa
-    const propConjunto = propRawText.includes("conjunto cerrado") || propRawText.includes("conjunto") || propRawText.includes("club house");
-    const propVigilancia = propRawText.includes("vigilancia") || propRawText.includes("porteria") || propRawText.includes("portería") || propRawText.includes("24 horas");
-    const reqConjunto = reqTextLower.includes("conjunto cerrado") || reqTextLower.includes("vigilancia");
-    let conjStatus: MatchStatus = "neutral";
-    if (reqConjunto) {
-      conjStatus = (propConjunto || propVigilancia) ? "exact" : "warn";
-    } else {
-      conjStatus = (propConjunto || propVigilancia) ? "plus" : "neutral";
-    }
-    add(
-      "Conjunto Cerrado & Vigilancia",
-      reqConjunto ? "Conjunto Cerrado con Vigilancia" : "Flexible",
-      propConjunto && propVigilancia ? "Sí (Conjunto Cerrado + Vigilancia 24h)" : propConjunto ? "Sí (En Conjunto Cerrado)" : propVigilancia ? "Sí (Con Vigilancia 24h)" : "Casa tradicional exterior",
-      conjStatus,
-      6,
-      <ShieldCheck className="w-3.5 h-3.5" />
-    );
-
-    // Acceso Garaje para Casa
-    const reqStreetGarage = reqTextLower.includes("nivel de la calle") || reqTextLower.includes("a nivel") || reqTextLower.includes("garaje a nivel");
-    const propStreetGarage = propRawText.includes("nivel") || propRawText.includes("cubierto") || propRawText.includes("parqueadero") || (prop.garages && prop.garages > 0);
-    if (reqStreetGarage || propStreetGarage) {
-      let garAccStatus: MatchStatus = "neutral";
-      if (reqStreetGarage) {
-        garAccStatus = propStreetGarage ? "exact" : "warn";
-      } else {
-        garAccStatus = propStreetGarage ? "plus" : "neutral";
-      }
-      add(
-        "Acceso Garaje (Casa)",
-        reqStreetGarage ? "Garaje a Nivel de la Calle" : "Flexible",
-        propStreetGarage ? "Sí (Garaje Cubierto a Nivel)" : "Sin garaje a nivel especificado",
-        garAccStatus,
-        4,
-        <Car className="w-3.5 h-3.5" />
-      );
-    }
-  } else {
-    // Para Apartamentos: Balcón / Terraza
-    const propBalcon = propRawText.includes("balcon") || propRawText.includes("balcón") || prop.hasBalcony;
-    const propTerraza = propRawText.includes("terraza") || prop.hasTerrace;
-    const reqBalcon = reqTextLower.includes("balcon") || reqTextLower.includes("balcón") || reqTextLower.includes("terraza");
-    let extSpaceS: MatchStatus = "neutral";
-    if (reqBalcon) {
-      extSpaceS = (propBalcon || propTerraza) ? "exact" : "warn";
-    } else {
-      extSpaceS = (propBalcon || propTerraza) ? "plus" : "neutral";
-    }
-    add(
-      "Balcón / Terraza",
-      reqBalcon ? (reqTextLower.includes("terraza amplia") ? "Exige Terraza Amplia Exclusiva" : "Exige Balcón o Terraza") : "Flexible / No exigido",
-      propTerraza ? "Sí (Con Terraza)" : propBalcon ? "Sí (Con Balcón)" : "Sin balcón especificado",
-      extSpaceS,
-      5,
-      <Ruler className="w-3.5 h-3.5" />
-    );
-
-    // Equipamiento Edificio
-    const propAscensor = propRawText.includes("ascensor") || prop.hasElevator || (prop.bedrooms && prop.bedrooms >= 3 && prop.areaTotal && Number(prop.areaTotal) >= 150);
-    const propConjunto = propRawText.includes("club house") || propRawText.includes("gimnasio") || propRawText.includes("piscina") || propRawText.includes("conjunto");
-    const reqAscensor = reqTextLower.includes("ascensor");
-    let equipS: MatchStatus = "neutral";
-    if (reqAscensor) {
-      equipS = propAscensor ? "exact" : "warn";
-    } else {
-      equipS = propAscensor ? "plus" : "neutral";
-    }
-
-    add(
-      "Equipamiento Edificio",
-      reqAscensor ? "Con Ascensor obligatorio" : "Flexible",
-      propAscensor && propConjunto ? "Ascensor + Club House / Zonas Comunes" : propAscensor ? "Con Ascensor" : "Edificio convencional",
-      equipS,
-      6,
-      <Building2 className="w-3.5 h-3.5" />
-    );
-  }
-
-  // 16. Depósito / Bodega Interna
-  const reqStorage = reqTextLower.includes("deposito") || reqTextLower.includes("depósito") || reqTextLower.includes("bodega interna") || reqTextLower.includes("cuarto util") || reqTextLower.includes("cuarto útil");
-  const propStorage = propRawText.includes("deposito") || propRawText.includes("depósito") || propRawText.includes("bodega") || propRawText.includes("cuarto util") || propRawText.includes("cuarto útil") || prop.hasStorage;
-  let storageS: MatchStatus = "neutral";
-  if (reqStorage) {
-    storageS = propStorage ? "exact" : "warn";
-  } else if (propStorage) {
-    storageS = "plus"; // Oferta con depósito -> Bono de confort
-  } else {
-    storageS = "neutral";
-  }
-  add(
-    "Depósito / Cuarto Útil",
-    reqStorage ? "Exige Depósito / Cuarto Útil" : "Flexible / No exigido",
-    propStorage ? (propRawText.includes("2 depósitos") ? "Sí (2 Depósitos independientes)" : "Sí (Con Depósito)") : "Sin depósito especificado",
-    storageS,
-    4,
-    <Building2 className="w-3.5 h-3.5" />
-  );
-
-  // ── ATRIBUTOS ADAPTATIVOS AUTODESCUBIERTOS (Capa A - Matriz Dinámica) ──
-
-  // A. Vigilancia 24/7 Presencial (No Automatizada)
-  const reqWants24_7 = reqTextLower.includes("vigilancia 24/7") || reqTextLower.includes("vigilancia 24 horas") || reqTextLower.includes("porteria 24/7") || reqTextLower.includes("portería 24/7") || reqTextLower.includes("no automatiz") || reqTextLower.includes("vigilancia presencial") || reqTextLower.includes("portero");
-  const propHas24_7 = propRawText.includes("vigilancia") || propRawText.includes("porteria") || propRawText.includes("portería") || propRawText.includes("24 horas") || propRawText.includes("24/7") || propRawText.includes("conserje") || (prop.addressNeighborhood && /santa b[aá]rbara|chic[oó]|rosales|cedritos|cabrera|nogal/i.test(prop.addressNeighborhood)) || !isHouse;
-  
-  if (reqWants24_7 || propRawText.includes("vigilancia") || propRawText.includes("porteria") || propRawText.includes("portería")) {
-    let vigStatus: MatchStatus = "neutral";
-    if (reqWants24_7) {
-      vigStatus = propHas24_7 ? "exact" : "warn";
-    } else if (propHas24_7) {
-      vigStatus = "plus"; // Bono de confort
-    }
-    add(
-      reqTextLower.includes("no automatiz") ? "Vigilancia 24/7 Presencial (No Automatizada)" : "Vigilancia 24/7 Presencial",
-      reqTextLower.includes("no automatiz") ? "Exige Vigilancia Presencial 24/7 (No automatizada)" : reqWants24_7 ? "Exige Vigilancia 24/7" : "Flexible",
-      propHas24_7 ? "Sí (Vigilancia 24 Horas Presencial / Portería Física)" : "Sin vigilancia física especificada",
-      vigStatus,
-      4,
-      <ShieldCheck className="w-3.5 h-3.5" />
-    );
-  }
-
-  // B. Estudio / Star de TV / Hall de Alcobas
-  const reqWantsStudy = reqTextLower.includes("estudio") || reqTextLower.includes("estar de tv") || reqTextLower.includes("star de tv") || reqTextLower.includes("hall de alcobas");
-  const propHasStudy = propRawText.includes("estudio") || propRawText.includes("estar de tv") || propRawText.includes("star de tv") || propRawText.includes("hall de alcobas") || (prop.amenities && JSON.stringify(prop.amenities).toLowerCase().includes("estudio"));
-  
-  if (reqWantsStudy || propHasStudy) {
-    let studyStatus: MatchStatus = "neutral";
     if (reqWantsStudy && propHasStudy) studyStatus = "exact";
     else if (reqWantsStudy && !propHasStudy) studyStatus = "warn";
     else if (!reqWantsStudy && propHasStudy) studyStatus = "plus"; // Bono confort
@@ -3779,7 +3177,7 @@ export default function AdminMatches() {
                       <div className="flex items-center gap-2.5 text-emerald-400 text-xs font-semibold">
                         <Sparkles className="w-4 h-4 text-emerald-400 animate-pulse shrink-0" />
                         <span>
-                          Modo Edición Activo: Usa <strong>💾 Guardar Datos</strong> para registrar datos faltantes en la BD, o <strong>⚡ Recalcular Coincidencias</strong> si el negocio no prosperó para buscar nuevas parejas en la red.
+                          Modo Edición Activo: Usa <strong>Guardar</strong> para registrar datos faltantes en la BD, o <strong>Recalcular</strong> si deseas buscar nuevas parejas en toda la red.
                         </span>
                       </div>
                       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto shrink-0 justify-end">
@@ -3818,7 +3216,7 @@ export default function AdminMatches() {
                                 className="group bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs h-10 px-4 shadow-md hover:shadow-[0_0_20px_rgba(245,158,11,0.5)] min-h-[44px] flex items-center justify-center gap-2 w-full sm:w-auto transition-all hover:scale-105 active:scale-95"
                               >
                                 {isSavingOnly ? <Loader2 className="w-4 h-4 animate-spin text-black" /> : <Save className="w-4 h-4 transition-transform group-hover:scale-110" />}
-                                <span>💾 Guardar Datos</span>
+                                <span>Guardar</span>
                               </Button>
                               <Button
                                 onClick={() => handleRecalculateMatch(m)}
@@ -3826,7 +3224,7 @@ export default function AdminMatches() {
                                 className="group bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-xs h-10 px-4 shadow-lg hover:shadow-[0_0_25px_rgba(16,185,129,0.6)] min-h-[44px] flex items-center justify-center gap-2 w-full sm:w-auto transition-all hover:scale-105 active:scale-95"
                               >
                                 {isRecalculating ? <Loader2 className="w-4 h-4 animate-spin text-black" /> : <Sparkles className="w-4 h-4 transition-transform group-hover:rotate-45" />}
-                                <span>⚡ Recalcular Coincidencias</span>
+                                <span>Recalcular</span>
                               </Button>
                             </>
                           );

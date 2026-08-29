@@ -95,13 +95,13 @@ export function extractRealPhone(item: any): string | null {
  * 8. Requerimiento "Arriendo con Opción de Compra" ↔ "Arriendo con Opción de Compra", "Venta o Arriendo" o "Venta" (100% Compatible)
  */
 const TRANSACTION_COMPATIBILITY_MATRIX: Record<string, Set<string>> = {
-  venta: new Set(["venta", "venta_o_arriendo", "venta_permuta", "arriendo_con_opcion_de_compra"]),
+  venta: new Set(["venta", "venta_o_arriendo", "venta_permuta"]),
   arriendo: new Set(["arriendo", "venta_o_arriendo", "arriendo_temporal"]),
-  venta_o_arriendo: new Set(["venta", "arriendo", "venta_o_arriendo", "venta_permuta", "arriendo_temporal", "arriendo_con_opcion_de_compra"]),
+  venta_o_arriendo: new Set(["venta", "arriendo", "venta_o_arriendo", "venta_permuta", "arriendo_temporal"]),
   arriendo_temporal: new Set(["arriendo_temporal", "arriendo", "venta_o_arriendo"]),
-  arriendo_con_opcion_de_compra: new Set(["arriendo_con_opcion_de_compra", "venta", "venta_o_arriendo"]),
+  arriendo_con_opcion_de_compra: new Set(["arriendo_con_opcion_de_compra"]),
   permuta: new Set(["permuta", "venta_permuta"]),
-  venta_permuta: new Set(["venta_permuta", "venta", "permuta", "venta_o_arriendo"]),
+  venta_permuta: new Set(["venta_permuta", "permuta"]),
   aporte: new Set(["aporte"]),
 };
 
@@ -1379,10 +1379,10 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
       "apartamento": ["apto", "apartamento", "apartment"],
       "apto":        ["apto", "apartamento", "apartment"],
       "apartment":   ["apto", "apartamento", "apartment"],
-      "casa":        ["casa", "chalet", "casa campestre", "house", "townhouse"],
-      "house":       ["casa", "chalet", "casa campestre", "house", "townhouse"],
-      "finca":       ["finca", "finca raiz", "finca raíz", "farm"],
-      "farm":        ["finca", "finca raiz", "finca raíz", "farm"],
+      "casa":        ["casa", "house", "townhouse"],
+      "house":       ["casa", "house", "townhouse"],
+      "finca":       ["finca", "finca raiz", "finca raíz", "farm", "casa campestre", "casa de campo"],
+      "farm":        ["finca", "finca raiz", "finca raíz", "farm", "casa campestre", "casa de campo"],
       "lote":        ["lote", "terreno", "predio", "land"],
       "terreno":     ["lote", "terreno", "predio", "land"],
       "predio":      ["lote", "terreno", "predio", "land"],
@@ -1391,9 +1391,9 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
       "warehouse":   ["bodega", "bodega industrial", "warehouse"],
       "local":       ["local", "local comercial", "commercial"],
       "commercial":  ["local", "local comercial", "commercial"],
-      "oficina":     ["oficina", "office", "consultorio"],
-      "office":      ["oficina", "office", "consultorio"],
-      "consultorio": ["consultorio", "oficina", "office"],
+      "oficina":     ["oficina", "office"],
+      "office":      ["oficina", "office"],
+      "consultorio": ["consultorio"],
       "building":    ["building", "edificio"],
       "edificio":    ["building", "edificio"],
       "hotel":       ["hotel", "hostal"],
@@ -1405,13 +1405,13 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
     const reqAlias  = aliases[effectiveReqType]  || [effectiveReqType];
     const propAlias = aliases[effectivePropType] || [effectivePropType];
     if (!reqAlias.some(a => propAlias.includes(a))) {
-      blockers.push(`Tipo de activo incompatible: deseado ${effectiveReqType}, ofrecido ${effectivePropType}`);
+      blockers.push(`Tipo de activo incompatible (Tolerancia Cero 0%): deseado ${effectiveReqType}, ofrecido ${effectivePropType}`);
       return buildExplanationResult(0, blockers, positives, negatives);
     }
   }
 
-  // ── REGLA DOCTRINAL v22.8: SUBTIPOS DE PROPIEDAD HORIZONTAL ──
-  // Categorías: Apartaestudio/Apartasuite/Loft (1 Hab) ≠ Apartamento Estándar (2+ Habs) ≠ PentHouse ≠ Dúplex/Tríplex
+  // ── REGLA DOCTRINAL v22.8 / v26.7: SUBTIPOS EXACTOS DE PROPIEDAD ──
+  // Categorías: Apartaestudio/Apartasuite/Loft ≠ Apartamento Estándar ≠ PentHouse ≠ Dúplex/Tríplex ≠ Casa Urbana ≠ Casa Campestre/Finca
   const cleanText = (t: string) => (t || "").toLowerCase().trim().replace(/[\s\-_,.]+/g, " ");
   const reqRawText = cleanText(requirement.rawText || requirement.name || "");
   const propRawText = cleanText(property.rawText || property.name || "");
@@ -1446,6 +1446,16 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
       return "apartamento_duplex";
     }
 
+    // 5. Casa Campestre / Finca / Casa de Campo
+    if (r.includes("casa campestre") || r.includes("casa de campo") || r.includes("campestre") || t === "farm" || t === "finca") {
+      return "casa_campestre";
+    }
+
+    // 6. Casa Urbana
+    if (t === "house" || t === "casa" || r.includes("casa")) {
+      return "casa_urbana";
+    }
+
     if (t === "apartment" || t === "apartamento" || t === "apto") {
       return "apartamento_estandar";
     }
@@ -1456,25 +1466,9 @@ function isPhoneNumberNotPrice(val: number | string | null | undefined, rawText?
   const reqSubtype = getHorizontalPropertySubtype(reqType, reqRawText);
   const propSubtype = getHorizontalPropertySubtype(propType, propRawText);
 
-  const isReqSingleRoomSubtype = reqSubtype === "apartaestudio" || reqSubtype === "loft";
-  const isPropSingleRoomSubtype = propSubtype === "apartaestudio" || propSubtype === "loft";
-
-  if (isReqSingleRoomSubtype && !isPropSingleRoomSubtype) {
-    blockers.push(`Subtipo de activo incompatible (Tolerancia Cero): La demanda exige ${reqSubtype === 'loft' ? 'Loft' : 'Apartaestudio / Aparta Suite (1 Alcoba)'} y la oferta es ${propSubtype === 'penthouse' ? 'PentHouse' : propSubtype === 'apartamento_duplex' ? 'Apartamento Dúplex' : 'Apartamento familiar estándar'}. Match Inviable (0%).`);
-    return buildExplanationResult(0, blockers, positives, negatives);
-  }
-
-  if (!isReqSingleRoomSubtype && isPropSingleRoomSubtype) {
-    blockers.push(`Subtipo de activo incompatible (Tolerancia Cero): La demanda busca ${reqSubtype} familiar y la oferta es ${propSubtype} de 1 sola alcoba. Match Inviable (0%).`);
-    return buildExplanationResult(0, blockers, positives, negatives);
-  }
-
   if (reqSubtype && propSubtype && reqSubtype !== propSubtype) {
-    // Si ambos son de propiedad horizontal pero difieren (ej: Penthouse vs Apartamento Estándar o Dúplex)
-    if (reqSubtype === "penthouse" && propSubtype !== "penthouse") {
-      blockers.push(`Subtipo de activo incompatible: La demanda exige estrictamente PentHouse y la oferta es ${propSubtype}. Match Inviable (0%).`);
-      return buildExplanationResult(0, blockers, positives, negatives);
-    }
+    blockers.push(`Subtipo de activo incompatible (Tolerancia Cero 0%): Requerimiento exige estrictamente '${reqSubtype}' y la oferta es '${propSubtype}'. No clasifica para Match.`);
+    return buildExplanationResult(0, blockers, positives, negatives);
   }
 
   positives.push(`Tipo de activo compatible: ${propSubtype || propType}`);

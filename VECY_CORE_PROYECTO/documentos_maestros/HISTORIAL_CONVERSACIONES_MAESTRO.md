@@ -52,11 +52,47 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v26.7 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v26.8 — Agosto 2026
 
 ---
 
 ## 📜 REGISTRO DETALLADO DE CONVERSACIONES (ORDEN CRONOLÓGICO INVERSO CON FECHA Y HORA)
+
+### 🗓️ Sesión: Viernes 28 de Agosto de 2026 — 10:00 PM a 10:40 PM (Hora Colombia UTC-5)
+**Versión del Sistema**: `v26.8 — Blindaje Doctrinal de Subtipos Exactos, Matriz Estricta de Negocios, Neutralidad en Demandas Flexibles ("Dato Pendiente") y Guillotina Total a 0% ante Incompatibilidades`  
+**Participantes**: Eduardo A. Rivera (Director Tecnología) & Antigravity IDE (Pair Programmer)
+
+#### 📋 Requerimientos Específicos del Usuario (Eduardo A. Rivera):
+1. **Tipología Inmobiliaria Estricta (Tolerancia Cero entre Subtipos)**:
+   - Los subtipos deben coincidir exactamente: Apartamento Estándar solo con Apartamento Estándar; Apartamento Dúplex solo con Apartamento Dúplex; PentHouse solo con PentHouse; Apartaestudio/Loft solo con Apartaestudio/Loft; Casa Urbana solo con Casa Urbana; Casa Campestre/Finca solo con Casa Campestre/Finca. Si difieren $\rightarrow$ **0% Inviable**.
+2. **Matriz Doctrinal Estricta de Tipos de Negocio**:
+   - `Venta` coincide con `Venta` y `Venta/Arriendo`.
+   - `Arriendo` coincide con `Arriendo` y `Venta/Arriendo`.
+   - `Arriendo con opción de compra` solo coincide con `Arriendo con opción de compra`.
+   - `Arriendo puro` **NO** coincide con `Arriendo con opción de compra` (0%).
+   - `Venta pura` **NO** coincide con `Arriendo con opción de compra` (0%).
+   - `Venta-Permuta / Venpermuto` solo coincide con `Venta-Permuta / Venpermuto / Permuta`.
+3. **Tratamiento Doctrinal de Datos Flexibles / Faltantes ("Dato Pendiente")**:
+   - Si en la Demanda el dato es "Flexible / Sin Restricción" (o N/E) y la Oferta tiene un valor concreto (ej: Demanda Estrato Flexible vs Oferta Estrato 6), el estado debe ser **`Dato Pendiente`** (gris/neutro), **JAMÁS "Coincide" ni "Aproximado"**.
+   - Los "Datos Pendientes" no suman puntaje para reducir la afinidad proporcionalmente. A medida que el asesor edita, completa los datos y hace clic en **"Guardar"**, el estado se transforma en "Coincide", elevando el score hacia el 100% Match Perfecto.
+4. **Guillotina Total de Afinidad Comercial (0% ante cualquier "No Coincide" / "No Cumple")**:
+   - Si en **CUALQUIERA** de las filas de la tabla de cotejo técnico llega a existir un estado `"No Cumple"` / `"No Coincide"` (`missing`), el score colapsa automáticamente a **`0%`** y la tarjeta queda 100% excluida del listado de 85%-100%.
+   - Por ende, en la mesa de coincidencias (`/admin`), **TODAS las tarjetas calificadas muestran sus primeras 5 filas obligatoriamente en verde con "Coincide"**.
+5. **Nomenclatura Estricta de Botones de Edición**:
+   - Los botones de acción al pie de la tarjeta en modo edición se establecieron exactamente como: **`Guardar`** (en amarillo ámbar) y **`Recalcular`** (en verde esmeralda).
+
+#### 🛠️ Soluciones e Implementaciones Técnicas:
+1. **Unificación en Motor de Servidor (`server/_core/matching.ts`)**:
+   - Actualizada la matriz `TRANSACTION_COMPATIBILITY_MATRIX` y los alias/subtipos de propiedad horizontal y casas.
+2. **Refactorización de `scoreRows` en Panel Admin (`client/src/components/admin/AdminMatches.tsx`)**:
+   - Asignación de status `neutral` ("Dato Pendiente") con peso 0 pts para demandas sin restricción frente a ofertas concretas.
+   - Guillotina global: `if (hasAnyMissingRow) autoScore = 0`.
+   - Botones renombrados a `Guardar` y `Recalcular`.
+3. **Validación de Compilación y Control de Versiones**:
+   - `pnpm build` ejecutado y validado exitosamente con 0 errores TypeScript.
+   - Versión del sistema elevada a **`v26.8`** en `shared/const.ts`, `.agents/AGENTS.md` y bitácora maestra.
+
+---
 
 ### 🗓️ Sesión: Viernes 28 de Agosto de 2026 — 09:15 PM a 09:50 PM (Hora Colombia UTC-5)
 **Versión del Sistema**: `v26.7 — Aceleración Instantánea de Edición y Guardado de Fichas (0ms UI Lag), Guardado Paralelo Asíncrono y Copiado Fiel 100% Original con Búsqueda Exacta en WhatsApp`  
