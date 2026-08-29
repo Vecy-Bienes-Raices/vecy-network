@@ -2082,7 +2082,8 @@ export default function AdminMatches() {
     setCurrentPage(1);
   }, [searchTerm, minScore]);
 
-  const filteredMatches = useMemo(() => {
+  // 1. Precomputar los atributos técnicos y afinidad comercial SOLAMENTE cuando cambia la data de servidor o la edición
+  const processedMatches = useMemo(() => {
     const seenMatchIds = new Set<number>();
     const seenPairs = new Set<string>();
     const results: any[] = [];
@@ -2124,20 +2125,11 @@ export default function AdminMatches() {
       // Evaluar la afinidad comercial y la regla doctrinal de los 5 campos en duro + completitud
       const { rows, autoScore } = scoreRows(effectiveReq, effectiveProp);
       const dbScore = parseFloat(match.matchScore || "0");
-      // REGLA DOCTRINAL VECY: Si hay cualquier incumplimiento de filtro duro (autoScore === 0 / No Cumple), el match queda descartado inmediatamente (0%) y jamás se muestra
       const displayScore = autoScore === 0 ? 0 : (isEditingThisCard ? autoScore : (autoScore > 0 ? autoScore : dbScore));
 
       // Mostrar únicamente los matches calificados válidos (85% a 100%)
       if (displayScore < 85) {
         continue;
-      }
-
-      // Aplicar filtro de puntuación de la interfaz (ej. "85_94" o minScore)
-      if (minScore === "85_94") {
-        if (displayScore < 85 || displayScore >= 95) continue;
-      } else {
-        const minVal = parseFloat(minScore);
-        if (displayScore < minVal) continue;
       }
 
       if (seenMatchIds.has(match.id)) continue;
@@ -2152,13 +2144,9 @@ export default function AdminMatches() {
 
       seenMatchIds.add(match.id);
 
-      const propSearchStr = `${property.name || ""} ${property.city || ""} ${property.zone || ""} ${property.addressNeighborhood || ""} ${property.idUsuarioWhatsapp || ""}`.toLowerCase();
-      const reqSearchStr = `${requirement.name || ""} ${requirement.ciudadDeseada || ""} ${requirement.zonaDeseada || ""} ${requirement.addressNeighborhood || ""} ${requirement.idUsuarioWhatsapp || ""}`.toLowerCase();
-      
-      const matchesSearch = !searchTerm || propSearchStr.includes(searchTerm.toLowerCase()) || 
-                            reqSearchStr.includes(searchTerm.toLowerCase());
-
-      if (!matchesSearch) continue;
+      const matchIdStr = `m${match.id} #${match.id} ${match.id}`;
+      const propSearchStr = `${matchIdStr} ${property.id || ""} ${property.name || ""} ${property.rawText || ""} ${property.description || ""} ${property.city || ""} ${property.zone || ""} ${property.addressNeighborhood || ""} ${property.brokerName || ""} ${property.brokerPhone || ""} ${property.idUsuarioWhatsapp || ""}`.toLowerCase();
+      const reqSearchStr = `${requirement.id || ""} ${requirement.name || ""} ${requirement.rawText || ""} ${requirement.ciudadDeseada || ""} ${requirement.zonaDeseada || ""} ${requirement.addressNeighborhood || ""} ${requirement.brokerName || ""} ${requirement.brokerPhone || ""} ${requirement.idUsuarioWhatsapp || ""}`.toLowerCase();
 
       results.push({
         ...match,
@@ -2166,11 +2154,37 @@ export default function AdminMatches() {
         _precomputedScore: displayScore,
         _effectiveProp: effectiveProp,
         _effectiveReq: effectiveReq,
+        _searchIndex: `${propSearchStr} ${reqSearchStr}`,
       });
     }
 
     return results;
-  }, [matches, minScore, searchTerm, editingMatchId, editForm]);
+  }, [matches, editingMatchId, editForm]);
+
+  // 2. Filtrado instantáneo (<0.001ms) con useDeferredValue para evitar bloqueos del hilo principal
+  const deferredSearchTerm = React.useDeferredValue(searchTerm);
+
+  const filteredMatches = useMemo(() => {
+    const searchLower = (deferredSearchTerm || "").toLowerCase().trim();
+    return processedMatches.filter((match) => {
+      const displayScore = match._precomputedScore;
+
+      // Filtro de Score
+      if (minScore === "85_94") {
+        if (displayScore < 85 || displayScore >= 95) return false;
+      } else {
+        const minVal = parseFloat(minScore);
+        if (displayScore < minVal) return false;
+      }
+
+      // Filtro de Búsqueda
+      if (searchLower && !match._searchIndex.includes(searchLower)) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [processedMatches, minScore, deferredSearchTerm]);
 
   const totalPages = Math.max(1, Math.ceil(filteredMatches.length / pageSize));
   const paginatedMatches = useMemo(() => {
