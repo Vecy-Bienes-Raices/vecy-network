@@ -15265,7 +15265,7 @@ ${liveStats}${userContextInstruction}
         const key = `${m.property.id}-${m.requirement.id}`;
         if (seenPairs.has(key)) continue;
         const evaluation = explicarMatch(m.requirement, m.property);
-        if (evaluation.score < 85) {
+        if (evaluation.score < 75 || evaluation.blockers.length > 0) {
           continue;
         }
         const finalScore = evaluation.score;

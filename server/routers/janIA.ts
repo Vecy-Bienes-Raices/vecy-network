@@ -583,8 +583,8 @@ export const janIARouter = router({
           // Re-evaluar en tiempo real con el motor de guillotinas estrictas (explicarMatch)
           const evaluation = explicarMatch(m.requirement, m.property);
 
-          // Si el score recalculado en tiempo real es menor a 85% o falla cualquier filtro duro -> Descartar
-          if (evaluation.score < 85) {
+          // Si el score recalculado en tiempo real es menor a 75% o falla cualquier filtro duro -> Descartar
+          if (evaluation.score < 75 || evaluation.blockers.length > 0) {
             continue;
           }
 
