@@ -788,11 +788,40 @@ export function isNonRealEstateText(text: string | null | undefined): boolean {
   if (!text) return false;
   const t = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   const forbidden = [
-    "cantera", "canteras", "caliza", "piedra y arena", "arena y piedra", "triturado",
-    "cemento", "varilla", "volqueta", "retroexcavadora", "maquinaria amarilla",
-    "transporte de carga", "material de construccion", "materiales de construccion"
+    // Minería, Canteras, Carbón y Materiales Pétreos
+    "cantera", "canteras", "mina de", "minas de", "carbon termico", "carbon mineral", "carbon coque", "antracita",
+    "caliza", "piedra y arena", "arena y piedra", "triturado", "recebo", "balasto", "viaje de arena", "viajes de arena",
+    "petroleo", "gasolina", "crudo", "esmeraldas", "oro de aluvion", "chatarra", "lingotes",
+    // Materiales de Construcción y Ferretería
+    "cemento", "varilla", "varillas", "ladrillo", "ladrillos", "bloque estructural", "tejas de zinc",
+    "hierro figurado", "material de construccion", "materiales de construccion", "concreto premezclado",
+    // Maquinaria Pesada, Vehículos y Transporte
+    "volqueta", "volquetas", "retroexcavadora", "maquinaria amarilla", "tractomula", "tractomulas",
+    "cargador frontal", "camion sencillo", "camiones doble troque", "transporte de carga", "fletes pesados",
+    // Servicios No Inmobiliarios, Empleo, Finanzas y Cripto
+    "prestamos de dinero", "creditos al instante", "prestamos gota a gota", "trading", "criptomonedas", "bitcoin",
+    "inversionistas forex", "oferta de empleo", "se busca conductor", "se busca vigilante", "servicios de mudanza"
   ];
   return forbidden.some(term => t.includes(term));
+}
+
+export function normalizeCanonicalCity(city: string | null | undefined): string {
+  if (!city) return "Bogotá";
+  const c = city.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  if (c.includes("bogota")) return "Bogotá";
+  if (c.includes("cali")) return "Cali";
+  if (c.includes("medellin")) return "Medellín";
+  if (c.includes("barranquilla")) return "Barranquilla";
+  if (c.includes("bucaramanga")) return "Bucaramanga";
+  if (c.includes("cartagena")) return "Cartagena";
+  if (c.includes("pereira")) return "Pereira";
+  if (c.includes("manizales")) return "Manizales";
+  if (c.includes("armenia")) return "Armenia";
+  if (c.includes("chia")) return "Chía";
+  if (c.includes("cajica")) return "Cajicá";
+  if (c.includes("cota")) return "Cota";
+  if (c.includes("sopo")) return "Sopó";
+  return city.trim();
 }
 
 export function extractTrueCityFromText(rawText: string | null | undefined, fallbackCity: string | null | undefined): string {
@@ -817,7 +846,7 @@ export function extractTrueCityFromText(rawText: string | null | undefined, fall
   if (caliKeywords.some(k => t.includes(k))) return "Cali";
   if (medellinKeywords.some(k => t.includes(k))) return "Medellín";
 
-  return fallbackCity || "Bogotá";
+  return normalizeCanonicalCity(fallbackCity);
 }
 
 export function explicarMatch(requirement: any, property: any): MatchExplanation {
@@ -835,7 +864,7 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   const propRealCity = extractTrueCityFromText(property.rawText || property.name, property.addressCity || property.city);
   const reqRealCity = extractTrueCityFromText(requirement.rawText || requirement.name, requirement.addressCity || requirement.ciudadDeseada);
 
-  if (propRealCity && reqRealCity && propRealCity.toLowerCase() !== reqRealCity.toLowerCase()) {
+  if (propRealCity && reqRealCity && normalizeCanonicalCity(propRealCity).toLowerCase() !== normalizeCanonicalCity(reqRealCity).toLowerCase()) {
     blockers.push(`⛔ Incompatibilidad Geográfica Real: Oferta en ${propRealCity} vs Demanda en ${reqRealCity}. MATCH IMPOSIBLE 0%.`);
     return buildExplanationResult(0, blockers, positives, negatives);
   }

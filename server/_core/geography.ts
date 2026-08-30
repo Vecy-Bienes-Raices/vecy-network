@@ -247,13 +247,15 @@ export function normalizarTextoGeografico(texto: string): string {
   n = n.replace(/\bsto\b/g, "santo");
   n = n.replace(/\bapto\b/g, "apartamento");
   n = n.replace(/\bhab\b/g, "habitacion");
-  n = n.replace(/\bhabs\b/g, "habitaciones");
   n = n.replace(/\bfusa\b/g, "fusagasuga");
   n = n.replace(/\bfaca\b/g, "facatativa");
   n = n.replace(/\bzipa\b/g, "zipaquira");
   n = n.replace(/\bgirardor\b/g, "girardot");
+
+  // Normalizar artículos iniciales para evitar desajustes como "El Virrey" vs "Virrey", "El Chicó" vs "Chicó"
+  n = n.replace(/^(?:el|la|los|las)\s+/i, "");
   
-  return n;
+  return n.trim();
 }
 
 export type ValidacionZonaResult = {

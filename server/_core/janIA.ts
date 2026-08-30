@@ -2154,10 +2154,22 @@ export async function processWhatsAppMessage(
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // FILTRO ABSOLUTO IMPERMEABLE DE SPAM, WEBINARS, CURSOS Y PUBLICIDAD
+    // FILTRO ABSOLUTO IMPERMEABLE DE SPAM, PUBLICIDAD Y CONTENIDO NO INMOBILIARIO
     // ══════════════════════════════════════════════════════════════════════════
     if (!isWebUser && text) {
       const checkText = text.toLowerCase();
+      if (isNonRealEstateText(checkText)) {
+        console.log(`[JANIA-NON-REALESTATE-GUARD] ⛔ Publicación NO inmobiliaria (canteras, materiales, minas, vehículos, carbón, etc.). Operación silenciosa total, sin guardar en BD ni emoji: "${checkText.substring(0, 60)}..."`);
+        return {
+          classification: "VIOLACION_DE_NORMAS",
+          response: "",
+          dmResponse: "",
+          shouldSendDM: false,
+          reactionEmoji: undefined,
+          inserted: false
+        };
+      }
+
       const isSpamOrWebinar = (
         checkText.includes("zoom.us") ||
         checkText.includes("us06web.zoom.us") ||

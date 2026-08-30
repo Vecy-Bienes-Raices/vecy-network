@@ -32,6 +32,7 @@ import { esDominioPermitido, scrapePropertyLink } from './scraper';
 import QRCode from 'qrcode';
 import { extractFirstName, getGreetingByTime } from './whatsapp-utils';
 import { transcribeAudioBuffer } from './voiceTranscription';
+import { isNonRealEstateText } from './matching';
 
 
 // Tiempo de arranque para omitir mensajes históricos (con 2 min de margen por desfase de reloj)
@@ -1372,6 +1373,12 @@ export class JaniaMatchBot {
   private getReactionEmoji(result: any, isOfficialGroup: boolean = false): string | null {
     if (!result) return null;
 
+    const data = result.extractedData || {};
+    const textToCheck = `${data.rawText || ''} ${result.rawText || ''} ${data.name || ''}`.trim();
+    if (isNonRealEstateText(textToCheck)) {
+      return null;
+    }
+
     const classification = (result.classification || '').toUpperCase();
 
     // ── PRIORIDAD 1: Si janIA.ts ya calculó el emoji correcto en base a transactionType ──
@@ -1382,7 +1389,6 @@ export class JaniaMatchBot {
     }
 
     // ── PRIORIDAD 2: Derivar el emoji desde los datos extraídos (cuando no hay reactionEmoji en result) ──
-    const data = result.extractedData || {};
     const txType = (data.transactionType || data.tipoNegocioDeseado || result.transactionType || '').toLowerCase();
 
     const isPermuta = txType.includes('permuta') || txType === 'venta_permuta' || txType === 'aporte';
