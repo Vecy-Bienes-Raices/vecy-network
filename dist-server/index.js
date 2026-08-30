@@ -5483,7 +5483,7 @@ function explicarMatch(requirement, property) {
   }
   if (reqAreaMin > 0) {
     if (propArea > 0) {
-      if (propArea >= reqAreaMin && propArea <= reqAreaMin * 1.03) earnedPoints += 10;
+      if (propArea >= reqAreaMin) earnedPoints += 10;
     } else {
       negatives.push("\xC1rea no especificada en la oferta (N/E)");
     }

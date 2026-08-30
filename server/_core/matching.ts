@@ -2203,10 +2203,10 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
     earnedPoints += 10; // sin restricción de presupuesto → crédito neutral
   }
 
-  // 5. Área v20.0 — Rango Exacto [100% - 103%] (10 pts)
+  // 5. Área v27.4 — Mínimo Exigido con Tolerancia 0% (10 pts)
   if (reqAreaMin > 0) {
     if (propArea > 0) {
-      if (propArea >= reqAreaMin && propArea <= reqAreaMin * 1.03) earnedPoints += 10;
+      if (propArea >= reqAreaMin) earnedPoints += 10;
     } else {
       negatives.push("Área no especificada en la oferta (N/E)");
     }

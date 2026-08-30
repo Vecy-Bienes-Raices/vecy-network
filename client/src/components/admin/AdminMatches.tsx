@@ -988,10 +988,10 @@ function scoreRows(req: any, prop: any) {
       areS = "missing"; // Área inferior al mínimo exigido (Tolerancia 0%) -> 0% Guillotina Inmediata
     } else if (areaRMax > 0 && areaP > areaRMax * 1.35) {
       areS = "missing"; // Excede +35% el área máxima solicitada -> Guillotina
+    } else if (areaRMax > 0 && areaP > areaRMax * 1.15 && areaP <= areaRMax * 1.35) {
+      areS = "plus"; // 10 pts + Bono Confort (Plus Ofertado)
     } else if (areaP >= areaR) {
-      areS = "exact";
-    } else {
-      areS = "warn";
+      areS = "exact"; // 10 pts (100% de la casilla - Coincide)
     }
   } else if (areaR === 0 && areaP > 0) {
     areS = "neutral";
