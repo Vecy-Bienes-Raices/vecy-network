@@ -52,11 +52,50 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v27.0 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v27.1 — Agosto 2026
 
 ---
 
 ## 📜 REGISTRO DETALLADO DE CONVERSACIONES (ORDEN CRONOLÓGICO INVERSO CON FECHA Y HORA)
+
+### 🗓️ Sesión: Sábado 29 de Agosto de 2026 — 07:00 PM a 07:25 PM (Hora Colombia UTC-5)
+**Versión del Sistema**: `v27.1 — Blindaje Total Anti-Publicaciones No Inmobiliarias (Minería/Canteras/Maquinaria/Carbón), Supresión de Reacciones Emoji Ajenas a Bienes Raíces, Guillotina de Área Máxima (+35%), Extractor Numérico Robusto y Purga Masiva de 56 Matches Inviables en Supabase`  
+**Participantes**: Eduardo A. Rivera (Director Tecnología) & Antigravity IDE (Pair Programmer)
+
+#### 📋 Solicitud de Eduardo y Diagnóstico de Fallas Residuales:
+- **Exigencia del Usuario**: 
+  1. Que JanIA y el sistema de matching **nunca más** confundan requerimientos u ofertas no inmobiliarias (carbón, minas, canteras, materiales de construcción, maquinaria, fletes) con bienes raíces y que **ni siquiera reaccione con emojis** a publicaciones ajenas a las 22 tipologías autorizadas.
+  2. Que el motor de matching y el cotejador condicional aprendan a extraer y contrastar fielmente todos los datos de texto (incluyendo números escritos en palabras como *"una a dos alcobas"*, prefijos como *"máximo de $800 mll"* y rangos de área como *"50-70 mt2"*).
+  3. Diagnóstico y auditoría forense del supuesto Match `#M11286` y depuración exhaustiva de cualquier falso match residual en la base de datos de Supabase.
+
+#### 🔍 Diagnóstico Forense del Match #M11286 (`REQ #720` vs `PROP #64`):
+- **Demanda (`REQ #720` - Sandra Ochoa)**: *"Busco apartamento para la venta en Rosales Chico o Cabrera... de una o dos alcobas... de 50 a 70 mt2... presupuesto máximo de $800 mll"*.
+- **Oferta (`PROP #64` - Noraldy Beltrán)**: Penthouse de 248 m² en $3.600 Millones.
+- **Fallas Detectadas**:
+  1. `Fallback Extractor` omitía números en palabras (*"una a dos"*), prefijos con *"de"* (*"máximo de $800 mll"*) y rangos de área (*"50-70 mt2"*), dejando los campos numéricos en `null` en BD.
+  2. La falta de la guillotina de área máxima permitía que un cliente que busca 50-70 m² fuera emparejado con un inmueble gigante de 248 m² por coincidencia en barrio y tipología.
+
+#### 🛠️ Acciones Ejecutadas y Blindaje Doctrinal v27.1:
+1. **Blindaje de No Finca Raíz & Supresión de Reacciones (`isNonRealEstateText`)**:
+   - Catálogo ampliado con minería, carbón, canteras, caliza, áridos, materiales de construcción (cemento, varilla, ladrillos), maquinaria pesada (volquetas, retroexcavadoras, camiones) y servicios no inmobiliarios (préstamos, cripto, empleo).
+   - Inyección en `janIA.ts` (`processWhatsAppMessage`) y `whatsapp-match.ts` (`getReactionEmoji`): cualquier mensaje no inmobiliario es descartado en silencio absoluto, **sin guardar en BD y con CERO emojis de reacción**.
+2. **Extractor Numérico Avanzado y Taquigrafías Colombianas (`extractFallbackDataFromText`)**:
+   - Parseo de sufijos y taquigrafías de millones (`mll`, `mlls`, `mill`, `mm`, `m`).
+   - Reconocimiento de números en palabras en español (`un, una, dos, tres, cuatro, cinco`).
+   - Extracción precisa de rangos de área mínima y máxima (`areaMin` y `areaMax`).
+3. **Guillotina Doctrinal de Área Máxima (+35% $\rightarrow$ 0% Bloqueo Inmediato)**:
+   - Si la oferta supera en más del 35% el área máxima solicitada en la demanda, el match es bloqueado automáticamente al **0%**.
+4. **Normalización Geográfica y Canónica**:
+   - Eliminación de artículos iniciales (`"El Virrey"` $\leftrightarrow$ `"Virrey"`, `"El Chicó"` $\leftrightarrow$ `"Chicó"`) en `normalizarTextoGeografico`.
+   - Normalización de variantes de ciudad (`"Bogotá, D.C."` $\leftrightarrow$ `"Bogotá"`).
+5. **Auditoría Forense Global y Purga Masiva en Supabase**:
+   - Ejecutado script de auditoría exhaustiva evaluando todos los matches de la base de datos contra el motor doctrinal.
+   - **56 matches inviables y falsos eliminados definitivamente** de Supabase (cruces con presupuestos rebasados, áreas desproporcionadas, tipologías incompatibles y geografía discordante).
+   - Preservados **79 matches legítimos, verificados y 100% compatibles (≥85%)**.
+6. **Despliegue y Validación en Producción**:
+   - Compilación sin errores (`npm run build`), sincronización en GitHub y recarga en caliente con PM2 en el servidor VPS (`13.140.149.144`).
+
+---
 
 ### 🗓️ Sesión: Sábado 29 de Agosto de 2026 — 12:30 PM a 12:45 PM (Hora Colombia UTC-5)
 **Versión del Sistema**: `v27.0 — Blindaje Doctrinal Anti-Requerimientos No Inmobiliarios (Canteras/Materiales), Detección Fidedigna de Ciudad desde el Texto (Bogotá vs Cali), Purga Masiva y Saneamiento de 114 Predios en Supabase`  
