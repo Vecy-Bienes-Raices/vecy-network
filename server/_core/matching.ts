@@ -879,8 +879,16 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
     || v.trim().toUpperCase() === "N/A" || v.trim() === "-";
 
   // Tipo de Inmueble obligatorio en ambos
-  const propTypeHard = property.propertyType || property.tipoInmueble || "";
-  const reqTypeHard = requirement.tipoInmuebleDeseado || requirement.propertyType || "";
+  let propTypeHard = property.propertyType || (property as any).tipoInmueble || (property as any).property_type || "";
+  let reqTypeHard = requirement.tipoInmuebleDeseado || requirement.propertyType || (requirement as any).property_type || "";
+  if (!propTypeHard && property.rawText) {
+    const fb = extractFallbackDataFromText(property.rawText);
+    if (fb.propertyType) propTypeHard = fb.propertyType;
+  }
+  if (!reqTypeHard && requirement.rawText) {
+    const fb = extractFallbackDataFromText(requirement.rawText);
+    if (fb.propertyType) reqTypeHard = fb.propertyType;
+  }
   if (isNA(propTypeHard)) {
     blockers.push("⛔ Inmueble Incompleto: Tipo de Inmueble no especificado (N/E). No puede participar en Matches.");
     return buildExplanationResult(0, blockers, positives, negatives);
@@ -891,8 +899,16 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   }
 
   // Tipo de Negocio obligatorio en ambos
-  const propBizHard = property.transactionType || "";
-  const reqBizHard = requirement.tipoNegocioDeseado || requirement.transactionType || "";
+  let propBizHard = property.transactionType || (property as any).transaction_type || "";
+  let reqBizHard = requirement.tipoNegocioDeseado || requirement.transactionType || (requirement as any).transaction_type || "";
+  if (!propBizHard && property.rawText) {
+    const fb = extractFallbackDataFromText(property.rawText);
+    if (fb.transactionType) propBizHard = fb.transactionType;
+  }
+  if (!reqBizHard && requirement.rawText) {
+    const fb = extractFallbackDataFromText(requirement.rawText);
+    if (fb.transactionType) reqBizHard = fb.transactionType;
+  }
   if (isNA(propBizHard)) {
     blockers.push("⛔ Inmueble Incompleto: Tipo de Negocio no especificado (N/E). No puede participar en Matches.");
     return buildExplanationResult(0, blockers, positives, negatives);
@@ -902,9 +918,25 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
-  // Ciudad/Municipio obligatorio en ambos
-  const propCityHard = property.addressCity || property.city || "";
-  const reqCityHard = requirement.addressCity || requirement.ciudadDeseada || "";
+  // Ciudad/Municipio obligatorio en ambos (con resolución canónica de texto/zona)
+  let propCityHard = property.addressCity || (property as any).address_city || property.city || "";
+  if (!propCityHard || isNA(propCityHard)) {
+    const rawProp = (property.rawText || property.zone || (property as any).address_neighborhood || "").toLowerCase();
+    if (rawProp.includes("cali") || rawProp.includes("jamundi") || rawProp.includes("yumbo")) propCityHard = "Cali";
+    else if (rawProp.includes("medellin") || rawProp.includes("envigado") || rawProp.includes("poblado") || rawProp.includes("laureles")) propCityHard = "Medellín";
+    else if (rawProp.includes("chia") || rawProp.includes("cajica")) propCityHard = "Chía";
+    else if (rawProp.length > 0) propCityHard = "Bogotá";
+  }
+
+  let reqCityHard = requirement.addressCity || (requirement as any).address_city || requirement.ciudadDeseada || "";
+  if (!reqCityHard || isNA(reqCityHard)) {
+    const rawReq = (requirement.rawText || requirement.zonaDeseada || (requirement as any).address_neighborhood || "").toLowerCase();
+    if (rawReq.includes("cali") || rawReq.includes("jamundi") || rawReq.includes("yumbo")) reqCityHard = "Cali";
+    else if (rawReq.includes("medellin") || rawReq.includes("envigado") || rawReq.includes("poblado") || rawReq.includes("laureles")) reqCityHard = "Medellín";
+    else if (rawReq.includes("chia") || rawReq.includes("cajica")) reqCityHard = "Chía";
+    else if (rawReq.length > 0) reqCityHard = "Bogotá";
+  }
+
   if (isNA(propCityHard)) {
     blockers.push("⛔ Inmueble Incompleto: Ciudad/Municipio no especificado (N/E). No puede participar en Matches.");
     return buildExplanationResult(0, blockers, positives, negatives);
@@ -915,8 +947,16 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   }
 
   // Barrio/Vereda/Caserío obligatorio en ambos
-  const propBarrioHard = property.zone || property.addressNeighborhood || "";
-  const reqBarrioHard = requirement.zonaDeseada || requirement.addressNeighborhood || "";
+  let propBarrioHard = property.zone || property.addressNeighborhood || (property as any).address_neighborhood || "";
+  let reqBarrioHard = requirement.zonaDeseada || requirement.addressNeighborhood || (requirement as any).address_neighborhood || "";
+  if (!propBarrioHard && property.rawText) {
+    const fb = extractFallbackDataFromText(property.rawText);
+    if (fb.zone) propBarrioHard = fb.zone;
+  }
+  if (!reqBarrioHard && requirement.rawText) {
+    const fb = extractFallbackDataFromText(requirement.rawText);
+    if (fb.zone) reqBarrioHard = fb.zone;
+  }
   if (isNA(propBarrioHard)) {
     blockers.push("⛔ Inmueble Incompleto: Barrio/Vereda no especificado (N/E). No puede participar en Matches.");
     return buildExplanationResult(0, blockers, positives, negatives);
