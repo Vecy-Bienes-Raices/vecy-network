@@ -949,13 +949,17 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   // Barrio/Vereda/Caserío obligatorio en ambos
   let propBarrioHard = property.zone || property.addressNeighborhood || (property as any).address_neighborhood || "";
   let reqBarrioHard = requirement.zonaDeseada || requirement.addressNeighborhood || (requirement as any).address_neighborhood || "";
-  if (!propBarrioHard && property.rawText) {
+  if (property.rawText) {
     const fb = extractFallbackDataFromText(property.rawText);
-    if (fb.zone) propBarrioHard = fb.zone;
+    if (fb.zone && (!propBarrioHard || !property.rawText.toLowerCase().includes(propBarrioHard.toLowerCase()))) {
+      propBarrioHard = fb.zone;
+    }
   }
-  if (!reqBarrioHard && requirement.rawText) {
+  if (requirement.rawText) {
     const fb = extractFallbackDataFromText(requirement.rawText);
-    if (fb.zone) reqBarrioHard = fb.zone;
+    if (fb.zone && (!reqBarrioHard || !requirement.rawText.toLowerCase().includes(reqBarrioHard.toLowerCase()))) {
+      reqBarrioHard = fb.zone;
+    }
   }
   if (isNA(propBarrioHard)) {
     blockers.push("⛔ Inmueble Incompleto: Barrio/Vereda no especificado (N/E). No puede participar en Matches.");
@@ -1063,7 +1067,7 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
       }
     }
   }
-  const isReqOpenBudget = /(?:ppto|presupuesto|canon|valor)?\s*\$?\s*(?:abierto|sin\s*l[ií]mite|ilimitado|negociable\s*sin\s*tope)\b/i.test(reqTextLow);
+  const isReqOpenBudget = /(?:ppto|presupuesto|canon|precio|valor)\s*(?:es\s*)?:?\s*(?:abierto|sin\s*l[ií]mite|ilimitado|negociable\s*sin\s*tope)\b/i.test(reqTextLow);
   const hasReqBudget = budgetMaxCheck > 0 || isReqOpenBudget;
 
   if (isReqOpenBudget) {
