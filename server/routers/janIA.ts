@@ -492,6 +492,7 @@ export const janIARouter = router({
               name: properties.name,
               description: properties.description,
               price: properties.price,
+              rentPrice: properties.rentPrice,
               city: properties.city,
               zone: properties.zone,
               addressNeighborhood: properties.addressNeighborhood,
@@ -553,7 +554,7 @@ export const janIARouter = router({
           .from(propertyMatches)
           .innerJoin(properties, eq(propertyMatches.propertyId, properties.id))
           .innerJoin(requirements, eq(propertyMatches.requirementId, requirements.id))
-          .where(sql`CAST(${propertyMatches.matchScore} AS NUMERIC) >= 85`)
+          .where(sql`CAST(${propertyMatches.matchScore} AS NUMERIC) >= 75`)
           .orderBy(desc(propertyMatches.id))
           .limit(150);
 
