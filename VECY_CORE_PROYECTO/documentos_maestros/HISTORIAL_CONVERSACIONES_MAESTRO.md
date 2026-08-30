@@ -52,7 +52,28 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v27.2 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v27.3 — Agosto 2026
+
+### 🗓️ Sesión: Domingo 30 de Agosto de 2026 — 00:00 a 00:45 (Hora Colombia UTC-5)
+**Versión**: `v27.3` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)
+
+#### 🎯 Objetivo y Logros de la Sesión:
+1. **Diagnóstico Profundo de Causa Raíz de Bloqueo de Matches**:
+   - Se identificaron dos bloqueadores que impedían que las demandas y ofertas legítimas hicieran match:
+     a) El bloqueador de demanda incompleta (`missingReqFields.length >= 3`) bloqueaba requerimientos 100% reales que no especificaban estrato o baños pero sí tenían presupuesto, área y habitaciones claras. Se refinó la condición a solo bloquear demandas verdaderamente ciegas (`!hasCoreDemandSpec`).
+     b) La verificación rígida de ciudad (`isNA(propCityHard)`) bloqueaba inmuebles cuya columna `city` en Supabase estaba en `null` a pesar de que su barrio (`zone`) y texto indicaban claramente barrios como *Santa Bárbara, Rosales, Cedritos, Chicó* (Bogotá). Se implementó la resolución canónica automática a partir de la zona y el texto descriptivo.
+2. **Generación y Registro de Matches Verídicos en Base de Datos**:
+   - Se ejecutó el escaneo indexado por zonas, identificando y guardando en Supabase matches auténticos y rigurosos con cotejo técnico completo.
+   - **Ejemplos destacados en vivo**:
+     - *Santa Bárbara*: Demanda #167 (Liliana Jurado, Ppto: $800M, 2 habs) ↔ Oferta #141 (Mónica Jiménez Chacón, Precio: $795M, 135m², 3 habs).
+     - *Santa Bárbara*: Demanda #167 (Liliana Jurado, Ppto: $800M, 2 habs) ↔ Oferta #1053 (Jessica Hernández, Precio: $799M, 80m², 2 habs).
+     - *Santa Bárbara*: Demanda #196 (Erika Murcia, Ppto: $950M, 3 habs) ↔ Oferta #141 (Mónica Jiménez Chacón, Precio: $795M, 135m², 3 habs).
+     - *Rosales*: Demanda #756 (Raúl Uribe, Ppto: $800M, 80m², 2 habs) ↔ Oferta #1042 (Diana Auntamanjar, Precio: $600M, 90m², 3 habs).
+     - *Cedritos*: Demanda #700 (Gloria, Ppto: $800M, 2 habs) ↔ Oferta #144 (Casa en conjunto, Precio: $800M, 3 habs).
+     - *Cedritos*: Demanda #616 (Alfredo Rubio, Ppto: $550M) ↔ Oferta #556 (Apto Cedritos, Precio: $450M).
+3. **Despliegue y Sincronización**:
+   - Servidor Node.js/tRPC y frontend compilados y recargados en PM2 en VPS.
+   - Sincronizado en GitHub (`main`).
 
 ---
 
