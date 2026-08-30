@@ -52,11 +52,44 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v27.1 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v27.2 — Agosto 2026
 
 ---
 
 ## 📜 REGISTRO DETALLADO DE CONVERSACIONES (ORDEN CRONOLÓGICO INVERSO CON FECHA Y HORA)
+
+### 🗓️ Sesión: Sábado 29 de Agosto de 2026 — 10:20 PM a 10:45 PM (Hora Colombia UTC-5)
+**Versión del Sistema**: `v27.2 — Filtro Duro 0A-BIS de Demandas Ciegas (Datos Insuficientes), Filtro 0A-TER de Incompatibilidad de Estado (Para Remodelar vs Remodelado/Estrenar), Cotejo Bilateral y Purga Definitiva de Matches Espurios en Supabase`  
+**Participantes**: Eduardo A. Rivera (Director Tecnología) & Antigravity IDE (Pair Programmer)
+
+#### 📋 Solicitud de Eduardo y Diagnóstico de la Falla del Match #M11265:
+- **Exigencia del Usuario**: 
+  1. Identificar por qué el sistema generó un match del 85% entre un requerimiento de 8 palabras (*"Busco Rosales para remodelar precio de oportunidad"*) y un dúplex ya remodelado de $5.300 Millones.
+  2. Aclarar por qué existe el catálogo de bloqueo de minería/canteras (`forbidden` en `isNonRealEstateText`).
+  3. Asegurar el registro disciplinado y cronológico inverso de cada conversación y su despliegue verificado en producción.
+
+#### 🔍 Diagnóstico Forense del Match #M11265 (`REQ #736` vs `PROP #284`):
+- **Demanda (`REQ #736` - Adriana León)**: *"Busco Rosales para remodelar precio de oportunidad"*. (Presupuesto: null, Área: null, Alcobas: null, Baños: null, Garajes: null).
+- **Oferta (`PROP #284`)**: Dúplex 100% remodelado de 210 m² en $5.300 Millones.
+- **Causas Raíz Identificadas**:
+  1. El sistema no contrastaba el estado de conservación (`"Para Remodelar"` vs `"Remodelado / Estrenar"`).
+  2. La función de completitud downstream evaluaba únicamente la oferta, otorgando 85% a demandas ciegas que carecían de los 3 parámetros de búsqueda primarios.
+
+#### 🛠️ Acciones Ejecutadas y Blindaje Doctrinal v27.2:
+1. **Propósito del Catálogo `isNonRealEstateText` (Filtro Escudo de Descarte)**:
+   - Ese listado (`canteras`, `carbón`, `caliza`, `arena`, `volquetas`, `maquinaria`) es una **lista negra de exclusión**: sirve para que cuando personas en los grupos envíen mensajes de minas o materiales, JanIA **los descarte en silencio total**, con **cero emojis de reacción**, sin guardarlos en Supabase y sin contaminar las 22 tipologías inmobiliarias.
+2. **Filtro Duro 0A-BIS (Tolerancia Cero a Demandas Ciegas / Datos Insuficientes)**:
+   - Si una demanda no especifica al menos 1 parámetro cuantitativo entre Presupuesto, Área o Habitaciones, recibe **0% Bloqueo Inmediato** hasta que el asesor enriquezca la ficha.
+3. **Filtro Duro 0A-TER (Incompatibilidad de Estado de Conservación - 0% Bloqueo)**:
+   - Cruces entre *"Para Remodelar"* y *"Remodelado / A Estrenar / Sobre Planos"* reciben **0% Bloqueo Inmediato** y estado `missing` 🔴 en `AdminMatches.tsx`.
+4. **Cotejo Bilateral Downstream**:
+   - Para calificar a scores $\ge 85\%$, la compatibilidad debe cumplirse en ambos sentidos (Demanda y Oferta).
+5. **Auditoría Forense y Purga en Supabase**:
+   - Purgados los 67 matches ciegos e inviables en Supabase.
+6. **Despliegue y Validación en VPS**:
+   - Compilación limpia con 0 errores (`npm run build`), sincronización en GitHub (`main`) y recarga en caliente con PM2 (`13.140.149.144`).
+
+---
 
 ### 🗓️ Sesión: Sábado 29 de Agosto de 2026 — 07:00 PM a 07:25 PM (Hora Colombia UTC-5)
 **Versión del Sistema**: `v27.1 — Blindaje Total Anti-Publicaciones No Inmobiliarias (Minería/Canteras/Maquinaria/Carbón), Supresión de Reacciones Emoji Ajenas a Bienes Raíces, Guillotina de Área Máxima (+35%), Extractor Numérico Robusto y Purga Masiva de 56 Matches Inviables en Supabase`  
