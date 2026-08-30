@@ -86,7 +86,50 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ## 📜 REGISTRO DETALLADO DE CONVERSACIONES (ORDEN CRONOLÓGICO INVERSO CON FECHA Y HORA)
 
-### 🗓️ Sesión: Sábado 29 de Agosto de 2026 — 10:20 PM a 10:45 PM (Hora Colombia UTC-5)
+### 🗓️ Sesión: Domingo 30 de Agosto de 2026 — 05:40 PM a 06:45 PM (Hora Colombia UTC-5)
+**Versión del Sistema**: `v27.4 — Regla Doctrinal de Metrajes con Tolerancia Cero (-0%), Blindaje de Presupuesto Abierto (Anti-Falsos Positivos 'Cocina Abierta'), Extractor Robusto de Rango de Área, Jerga Escalonada de Administración, Números Textuales, Saneamiento Geográfico y Despliegue de Matches Verídicos en Supabase y VPS`  
+**Participantes**: Eduardo A. Rivera (Director Tecnología) & Antigravity IDE (Pair Programmer)
+
+#### 📋 Solicitud de Eduardo y Hallazgos de la Auditoría Externa:
+- **Exigencia del Usuario**:
+  1. Corregir la ausencia de coincidencias en el panel de administración (`/admin` ➔ Coincidencias = 0 matches), garantizando que se muestren únicamente coincidencias verídicas, perfectamente cotejadas y ajustadas a la realidad.
+  2. Ajustar la Guillotina de Área a **Tolerancia Cero (-0%)**: Si la oferta tiene un área menor al 100% del mínimo demandado (`propArea < reqAreaMin`), se debe disparar la Guillotina Absoluta al 0% sin ningún margen permisivo ni zonas intermedias.
+  3. Resolver los errores en la extracción de rangos de área cuando el texto incluye unidades intermedias (ej: *"Estoy buscando un apto de 70m2 a 80m2"* no debe interpretarse como *"2 - 80 m²"* ni marcar coincidencia con 56 m²).
+  4. Atender y solucionar los 5 puntos críticos detectados en la auditoría de `matching.ts`:
+     - *Bug de `isReqOpenBudget`*: La opcionalidad del prefijo monetario activaba "Presupuesto Abierto" con frases como "cocina abierta" o "vista abierta", anulando la guillotina de precio.
+     - *Múltiples resoluciones de ciudad*: Inconsistencias por cascadas redundantes.
+     - *Llamadas dobles geográficas*.
+     - *Sincronización total entre backend (`matching.ts`) y frontend (`AdminMatches.tsx`)*.
+
+#### 🔍 Diagnóstico Técnico y Causas Raíz:
+1. **Falso Positivo en `isReqOpenBudget`**: En `matching.ts` y `AdminMatches.tsx`, la expresión regular `/(?:ppto|presupuesto|canon|valor)?\s*\$?\s*(?:abierto|sin\s*l[ií]mite|ilimitado)/i` tenía el prefijo como opcional (`?`). Cualquier aviso que mencionara *"cocina abierta"*, *"vista abierta"* o *"espacios abiertos"* anulaba el Filtro Duro de Precio.
+2. **Margen Permisivo en Área**: El sistema utilizaba un factor de tolerancia del -5% (`propArea < reqAreaMin * 0.95`), permitiendo que ofertas inferiores al mínimo demandado pasaran a la mesa de cotejo técnico.
+3. **Parseo de Rangos de Área con Unidades Intermedias**: En expresiones como `"de 70m2 a 80m2"`, el extractor consumía el dígito `"2"` de `"m2"` como el inicio del rango, asignando erróneamente `areaMin = 2` y `areaMax = 80`.
+4. **Discrepancia entre Columna de BD y Texto Real**: Inmuebles con ubicaciones incorrectas en columnas de Supabase (por ejemplo, inmueble #1042 con columna `zone: 'Rosales'` pero texto explícito *"Vendo apartamento Niza"*) generaban emparejamientos espurios.
+5. **Cero Matches Temporales en `/admin`**: Durante la ejecución del limpiador previo en base de datos, la tabla `propertyMatches` quedó transitoriamente vacía antes de completarse la reinserción de los matches verificados.
+
+#### 🛠️ Acciones Ejecutadas y Blindaje Doctrinal v27.4:
+1. **Blindaje Estricto de `isReqOpenBudget`**:
+   - Corregido en `server/_core/matching.ts` y `client/src/components/admin/AdminMatches.tsx` para exigir obligatoriamente el término financiero (`presupuesto`, `ppto`, `canon`, `precio`, `valor`):
+     ```ts
+     const isReqOpenBudget = /(?:ppto|presupuesto|canon|precio|valor)\s*(?:es\s*)?:?\s*(?:abierto|sin\s*l[ií]mite|ilimitado|negociable\s*sin\s*tope)\b/i.test(reqTextLow);
+     ```
+2. **Doctrina de Área con Tolerancia Cero (-0%)**:
+   - Modificado en `matching.ts` y `AdminMatches.tsx`:
+     - `propArea < reqAreaMin` $\rightarrow$ **0 pts, Guillotina 0% Global, 🔴 missing** (Incompatible e Inviable).
+     - `reqAreaMin <= propArea <= reqAreaMax * 1.15` $\rightarrow$ **10 pts, 🟢 exact** (Coincide).
+     - `propArea > reqAreaMax * 1.15` y `<= reqAreaMax * 1.35` $\rightarrow$ **10 pts + Bono Confort, 🔵 plus** (Plus Ofertado).
+     - `propArea > reqAreaMax * 1.35` $\rightarrow$ **0% Guillotina por exceso desmedido de área**.
+3. **Extractor Robusto de Rangos de Área, Administración Escalonada y Números Textuales**:
+   - Soporte exacto en `server/_core/janIA.ts` y `AdminMatches.tsx` para rangos `"de 70m2 a 80m2"` ($\rightarrow$ `areaMin = 70`, `areaMax = 80`), precios escalonados (`💰💰 $ 445 MILLONES` y `💰 $ 606 MIL` $\rightarrow$ `adminFee = 606.000 COP`) y números textuales redundantes (`"2 dos parqueaderos"`, `"dos (2) alcobas"`).
+4. **Prioridad del Texto Real contra Columnas Hallucinadas**:
+   - Implementada validación en `matching.ts` para que el texto descriptivo real (`rawText`) tenga precedencia y sobreescriba cualquier columna de base de datos desfasada. Saneado el registro #1042 a Niza (Suba).
+5. **Poblamiento y Persistencia de Matches Verídicos en Supabase**:
+   - Generación e inserción de las coincidencias legítimas en `propertyMatches` con scores $\ge 80\%$ y 0 bloqueadores.
+6. **Despliegue Completo en Servidor VPS y Baileys**:
+   - Compilación exitosa (`npm run build`), sincronización en GitHub (`main`) y recarga de procesos en el VPS (`13.140.149.144`) bajo PM2 (`jania-server`), el cual orquesta de forma unificada tanto el router tRPC/Express como el socket nativo de Baileys WhatsApp.
+
+---
 **Versión del Sistema**: `v27.2 — Filtro Duro 0A-BIS de Demandas Ciegas (Datos Insuficientes), Filtro 0A-TER de Incompatibilidad de Estado (Para Remodelar vs Remodelado/Estrenar), Cotejo Bilateral y Purga Definitiva de Matches Espurios en Supabase`  
 **Participantes**: Eduardo A. Rivera (Director Tecnología) & Antigravity IDE (Pair Programmer)
 
