@@ -926,6 +926,41 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
+  // ── FILTRO DURO 0A-BIS: DEMANDA CIEGA / SIN PARÁMETROS FÍSICOS O FINANCIEROS (Doctrinal v27.2) ──
+  const reqRawCheckText = (requirement.rawText || requirement.name || "").toLowerCase();
+  const hasBudgetSpec = (requirement.presupuestoMax != null && parseFloat(String(requirement.presupuestoMax)) > 0) ||
+    /(?:ppto|presupuesto|hasta|valor|canon)\s*:?\s*\$?([\d.]+)/i.test(reqRawCheckText) ||
+    /\$?\s*([\d.]+)\s*(?:millones|millon|mll|mlls|mm|m)\b/i.test(reqRawCheckText) ||
+    /(?:abierto|sin\s*limite|ilimitado|negociable\s*sin\s*tope)/i.test(reqRawCheckText);
+
+  const hasAreaSpec = (requirement.areaMin != null && parseFloat(String(requirement.areaMin)) > 0) ||
+    /(?:m2|mts|m²|metros)/i.test(reqRawCheckText);
+
+  const hasBedroomsSpec = (requirement.habitacionesMin != null && parseInt(String(requirement.habitacionesMin), 10) > 0) ||
+    /(?:hab|habitacion|habitaciones|alcoba|alcobas|dormitorio|cuarto)/i.test(reqRawCheckText);
+
+  if (!hasBudgetSpec && !hasAreaSpec && !hasBedroomsSpec) {
+    blockers.push("⛔ Demanda con Datos Insuficientes: El requerimiento no especifica Presupuesto, Área ni Habitaciones para contrastar. Match Inviable (0%).");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+
+  // ── FILTRO DURO 0A-TER: INCOMPATIBILIDAD DE ESTADO DE CONSERVACIÓN (Doctrinal v27.2) ──
+  const propRawCheckText = (property.rawText || property.description || property.name || "").toLowerCase();
+  const isReqParaRemodelar = /\b(para remodelar|por remodelar|a remodelar|para reformar|a reformar|para reconstruir|destruido|precio de oportunidad|de oportunidad)\b/i.test(reqRawCheckText);
+  const isPropRemodelado = /\b(remodelad[oa]|totalmente remodelad[oa]|completamente remodelad[oa]|estrenar|para estrenar|a estrenar|nuevo|sobre planos)\b/i.test(propRawCheckText);
+  const isPropParaRemodelar = /\b(para remodelar|por remodelar|a remodelar|para reformar|a reformar|en obra gris|en obra negra)\b/i.test(propRawCheckText);
+  const isReqParaEstrenar = /\b(para estrenar|a estrenar|estrenar|nuevo|sobre planos)\b/i.test(reqRawCheckText);
+
+  if (isReqParaRemodelar && isPropRemodelado && !isPropParaRemodelar) {
+    blockers.push("⛔ Incompatibilidad de Estado del Inmueble (Tolerancia Cero 0%): Requerimiento exige inmueble 'Para Remodelar / Precio de Oportunidad' y la oferta es un inmueble 'Ya Remodelado / A Estrenar'. Match Inviable (0%).");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+
+  if (isReqParaEstrenar && isPropParaRemodelar && !isPropRemodelado) {
+    blockers.push("⛔ Incompatibilidad de Estado del Inmueble (Tolerancia Cero 0%): Requerimiento exige inmueble 'A Estrenar / Nuevo' y la oferta es 'Para Remodelar'. Match Inviable (0%).");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+
   // ── CAMPO 4: Localidad / Comuna — BLOQUEADOR DURO (Doctrinal v22.1) ──
   // Si AMBOS tienen Localidad/Comuna y son distintas → 0% ABSOLUTO. No se almacena ni muestra.
   // Nota: La localidad se deduce del barrio via deducirGeografiaTripartita en janIA.ts.
@@ -2259,23 +2294,34 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
     return buildExplanationResult(0, blockers, positives, negatives, false, missingFieldsList);
   }
 
-  // 2. Con los 5 campos en duro 100% en VERDE, calculamos la completitud de los campos de ahí hacia abajo:
-  // Específicos evaluados: Precio/Canon, Admin, Área, Habs, Baños, Garajes, Estrato, Antigüedad, Balcón/Terraza/Patio, Depósito, Estudio/StarTV, CBS
-  let totalDownstreamSpecs = 10;
+  // 2. Con los 5 campos en duro 100% en VERDE, calculamos la completitud BILATERAL de los campos de ahí hacia abajo:
+  // Si a la demanda le faltan 3 o más especificaciones esenciales (Presupuesto, Área, Habitaciones, Baños, Garajes), es inviable
+  if (missingReqFields.length >= 3) {
+    blockers.push(`Demanda incompleta: a la demanda le faltan ${missingReqFields.length} especificaciones esenciales (${missingReqFields.join(", ")}). Match Inviable (0%).`);
+    return buildExplanationResult(0, blockers, positives, negatives, false, missingFieldsList);
+  }
+
+  let totalDownstreamSpecs = 8;
   let filledDownstreamSpecs = 0;
 
-  if (price > 0 || (property.rentPrice && parseFloat(String(property.rentPrice)) > 0) || isReqOpenBudget) filledDownstreamSpecs++;
-  if (pAdminFee > 0 || /administraci[oó]n|admon|admin/i.test(property.rawText || "")) filledDownstreamSpecs++;
-  if (propArea > 0) filledDownstreamSpecs++;
-  if (pBedrooms > 0) filledDownstreamSpecs++;
-  if (pBathrooms > 0) filledDownstreamSpecs++;
-  if (pGarages > 0) filledDownstreamSpecs++;
-  if (pEstrato > 0 || (property.zone && /(?:santa b[aá]rbara|chic[oó]|rosales|cedritos|nogal|cabrera)/i.test(property.zone))) filledDownstreamSpecs++;
-  if (propAge >= 0 || /construido|a[nñ]os|estrenar|nueva/i.test(property.rawText || "")) filledDownstreamSpecs++;
-  if (property.hasBalcony || property.hasTerrace || /balc[oó]n|terraza|patio/i.test(property.rawText || "")) filledDownstreamSpecs++;
-  if (property.hasStorageRoom || /dep[oó]sito|bodega|cuarto [uú]til/i.test(property.rawText || "")) filledDownstreamSpecs++;
-  if (/estudio|star|estar de tv/i.test(property.rawText || "")) filledDownstreamSpecs++;
-  if (/cuarto de servicio|cbs|alcoba de servicio/i.test(property.rawText || "")) filledDownstreamSpecs++;
+  // 1. Precio / Presupuesto
+  if ((price > 0 && budgetMaxCheck > 0) || isReqOpenBudget) filledDownstreamSpecs++;
+  // 2. Admin Fee
+  if ((pAdminFee > 0 || /administraci[oó]n|admon|admin/i.test(property.rawText || "")) && hasReqAdmin) filledDownstreamSpecs++;
+  else if (pAdminFee > 0) filledDownstreamSpecs += 0.5;
+  // 3. Área Total
+  if (propArea > 0 && hasReqArea) filledDownstreamSpecs++;
+  // 4. Habitaciones
+  if (pBedrooms > 0 && hasReqBedrooms) filledDownstreamSpecs++;
+  // 5. Baños
+  if (pBathrooms > 0 && hasReqBathrooms) filledDownstreamSpecs++;
+  // 6. Parqueaderos
+  if (pGarages > 0 && hasReqGarages) filledDownstreamSpecs++;
+  // 7. Estrato
+  if (pEstrato > 0) filledDownstreamSpecs += 0.5;
+  if (reqEstrato > 0 && pEstrato === reqEstrato) filledDownstreamSpecs += 0.5;
+  // 8. Antigüedad
+  if (propAge >= 0) filledDownstreamSpecs++;
 
   const completionRatio = Math.min(1.0, filledDownstreamSpecs / totalDownstreamSpecs);
 

@@ -1449,13 +1449,25 @@ function scoreRows(req: any, prop: any) {
     );
   }
 
-  // 27. Estado de Conservación del Inmueble
-  const reqState = reqTextLower.includes("remodelado") ? "Remodelado" : (reqTextLower.includes("remodelar") ? "A Remodelar" : (reqTextLower.includes("estrenar") ? "Excelente / A Estrenar" : null));
-  const propState = propRawText.includes("remodelado") ? "Remodelado" : (propRawText.includes("remodelar") ? "A Remodelar" : (propRawText.includes("estrenar") ? "Excelente / A Estrenar" : (propRawText.includes("excelente estado") ? "Excelente" : null)));
+  // 27. Estado de Conservación del Inmueble (Tolerancia Cero: Para Remodelar vs Remodelado / Estrenar)
+  const isReqParaRemodelar = /\b(para remodelar|por remodelar|a remodelar|para reformar|a reformar|destruido|precio de oportunidad|de oportunidad)\b/i.test(reqTextLower);
+  const isPropRemodelado = /\b(remodelad[oa]|totalmente remodelad[oa]|completamente remodelad[oa]|estrenar|para estrenar|a estrenar|nuevo|sobre planos)\b/i.test(propRawText);
+  const isPropParaRemodelar = /\b(para remodelar|por remodelar|a remodelar|para reformar|a reformar|en obra gris|en obra negra)\b/i.test(propRawText);
+  const isReqParaEstrenar = /\b(para estrenar|a estrenar|estrenar|nuevo|sobre planos)\b/i.test(reqTextLower);
+
+  const reqState = isReqParaRemodelar ? "A Remodelar / Oportunidad" : (reqTextLower.includes("remodelado") ? "Remodelado" : (isReqParaEstrenar ? "Excelente / A Estrenar" : null));
+  const propState = isPropParaRemodelar ? "A Remodelar" : (isPropRemodelado ? "Remodelado / Excelente" : (propRawText.includes("excelente estado") ? "Excelente" : null));
+
   if (reqState || propState) {
     let stateS: MatchStatus = "neutral";
     if (reqState && propState) {
-      stateS = reqState === propState ? "exact" : "warn";
+      if (reqState === propState || (reqState.includes("Remodelar") && propState.includes("Remodelar")) || (reqState.includes("Remodelado") && propState.includes("Remodelado"))) {
+        stateS = "exact";
+      } else {
+        stateS = "missing"; // 🔴 Incompatibilidad fatal: Remodelar vs Remodelado/Estrenar
+      }
+    } else if (isReqParaRemodelar && !isPropParaRemodelar) {
+      stateS = "missing"; // 🔴 Exige para remodelar y el predio no es para remodelar
     } else if (!reqState && propState) {
       stateS = "plus";
     }
