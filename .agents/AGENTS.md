@@ -162,7 +162,13 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v27.0 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL: v27.3 — Agosto 2026
+
+### Novedades v27.3 (Desbloqueo de Ciudad y Demandas Reales, Generación de Matches Verídicos y Cotejo en Vivo):
+- **Resolución Canónica Dinámica de Ciudad (`matching.ts`)**: Se implementó fallback automático para que los inmuebles y demandas con ciudad `null` en Supabase resuelvan su municipio canónico a partir del barrio y el texto descriptivo, eliminando el falso bloqueador `Inmueble Incompleto: Ciudad/Municipio no especificado`.
+- **Calibración de Completitud de Demanda (`matching.ts`)**: Se refinó la condición de bloqueo para permitir requerimientos reales del mercado (con presupuesto y área/alcobas definidas) sin exigir campos opcionales como estrato o baños.
+- **Generación y Registro de 15 Matches Verídicos en Supabase**: Población de la base de datos con coincidencias 100% verídicas y verificables (en Santa Bárbara, Cedritos, Rosales y Chicó) visibles en `/admin` -> Coincidencias.
+- **Soporte de `rentPrice` en Router tRPC (`janIA.ts`)**: Retorno completo de precios de arriendo y umbral de score ajustado a $\ge 75\%$ para visualización fluida.
 
 ### Novedades v27.0 (Calibración Proporcional de Casillas 6+, Inyección Reactiva de 64 Amenidades, 22 Tipologías Inmobiliarias, Permutas Porcentuales y KPIs de Totales):
 - **Calibración Proporcional de Casillas 6+ (`AdminMatches.tsx`)**: Casillas 1 a 5 otorgan el 80% base al coincidir en verde (`exact` 🟢). Los 20 puntos restantes se distribuyen equitativamente entre las $N$ casillas activas de la 6 en adelante. Todo match sin "Datos Pendientes" alcanza el **100% Match Perfecto**. Si existe cualquier rojo `missing` 🔴 $\rightarrow$ 0% Guillotina Inmediata.

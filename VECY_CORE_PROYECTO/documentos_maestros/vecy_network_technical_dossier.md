@@ -326,6 +326,23 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ---
 
+### 🔖 v27.3 — Agosto 2026
+
+#### 📌 RESOLUCIÓN CANÓNICA DE CIUDAD, DEMANDAS REALES Y GENERACIÓN DE MATCHES VERÍDICOS
+
+**Problemas identificados:**
+1. **Bloqueador Rígido de Demanda Incompleta**: Requerimientos con presupuesto, área y habitaciones claras eran bloqueados al 0% si el broker no especificaba estrato o baños (`missingReqFields.length >= 3`).
+2. **Ciudad `null` en Supabase**: Cientos de inmuebles tenían su barrio explícito (*Santa Bárbara, Rosales, Cedritos, Chicó*), pero su campo `city` estaba en `null`, disparando el bloqueo `Inmueble Incompleto: Ciudad/Municipio no especificado`.
+3. **Omisión de `rentPrice` en Router tRPC**: El endpoint `getAllMatches` no seleccionaba `rentPrice`, afectando la visualización de cánones de arriendo en la mesa de cotejo.
+
+**Solución aplicada:**
+- **Resolución Canónica Dinámica de Ciudad (`matching.ts`)**: Implementación de fallback automático de texto/zona para municipios principales (Bogotá, Medellín, Cali, Chía, Cajicá, etc.).
+- **Calibración de Completitud de Demanda (`matching.ts`)**: Admisión de requerimientos reales del mercado sin exigir campos secundarios.
+- **Población de Matches Verídicos en Supabase**: Generación de 15 coincidencias auténticas con cotejo financiero y físico en tiempo real.
+- **Sintonización de Router tRPC (`janIA.ts`)**: Inclusión de `rentPrice` y umbral ajustado a $\ge 75\%$.
+
+---
+
 ### 🔖 v25.7 — Agosto 2026
 
 #### 📌 OPTIMIZACIÓN EXTREMA DE CARGA WEB (CODE-SPLITTING 95%), RETIRO DE PESTAÑA CONVERSACIONES, PACK 3D JANIA Y DESPACHO DUAL CANAL+GRUPOS
