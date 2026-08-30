@@ -919,6 +919,19 @@ function scoreRows(req: any, prop: any) {
         propAdminFee = valA;
       }
     }
+    // Detección de Administración por jerga escalonada (ej: 💰💰 $ 445 MILLONES \n 💰 $ 606 MIL)
+    if (propAdminFee <= 0) {
+      const adminMilMatch = propTextLower.match(/(?:💰|admon|adm|admin|cuota)?\s*\$?\s*(\d{1,4}(?:[.,]\d{1,3})?)\s*(?:mil|k)\b/i);
+      if (adminMilMatch) {
+        const numParsed = parseFloat(adminMilMatch[1].replace(',', '.'));
+        if (!isNaN(numParsed) && numParsed >= 20 && numParsed <= 15000) {
+          const calculatedFee = Math.round(numParsed * 1000);
+          if (calculatedFee >= 50_000 && calculatedFee <= 15_000_000) {
+            propAdminFee = calculatedFee;
+          }
+        }
+      }
+    }
   }
 
   let adminS: MatchStatus = "neutral";
@@ -942,7 +955,7 @@ function scoreRows(req: any, prop: any) {
   let areaR = parseFloat(req.areaMin || req.areaMinimaM2 || "0");
   let areaRMax = 0;
   if (reqTextLower) {
-    const areaRangeR = reqTextLower.match(/(?:📐|area|área|superficie)?\s*(?:de\s+)?(\d+(?:[.,]\d+)?)\s*(?:a|-|hasta)\s*(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)/i);
+    const areaRangeR = reqTextLower.match(/(?:📐|area|área|superficie)?\s*(?:de\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)?\s*(?:a|-|hasta)\s*(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)/i);
     if (areaRangeR) {
       areaR = parseFloat(areaRangeR[1].replace(",", "."));
       areaRMax = parseFloat(areaRangeR[2].replace(",", "."));
@@ -971,8 +984,8 @@ function scoreRows(req: any, prop: any) {
   let areS: MatchStatus = "neutral";
   let areaPropLabel = areaP > 0 ? `${areaP} m²` : "N/E";
   if (areaR > 0 && areaP > 0) {
-    if (areaP < areaR * 0.95) {
-      areS = "missing";
+    if (areaP < areaR) {
+      areS = "missing"; // Área inferior al mínimo exigido (Tolerancia 0%) -> 0% Guillotina Inmediata
     } else if (areaRMax > 0 && areaP > areaRMax * 1.35) {
       areS = "missing"; // Excede +35% el área máxima solicitada -> Guillotina
     } else if (areaP >= areaR) {
@@ -990,7 +1003,7 @@ function scoreRows(req: any, prop: any) {
   const SPANISH_NUM_MAP: Record<string, number> = { "un": 1, "uno": 1, "una": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5, "seis": 6 };
   let bedR = req.habitacionesMin ? Number(req.habitacionesMin) : 0;
   if (bedR <= 0 && reqTextLower) {
-    const bedMatchR = reqTextLower.match(/(?:de\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d+)(?:\s*(?:a|-|o|hasta)\s*(un|una|uno|dos|tres|cuatro|cinco|\d+))?\s*(?:alcoba|alcobas|hab|habs|habitacion|habitaciones|dormitorio|dormitorios|cuartos|cuarto)/i);
+    const bedMatchR = reqTextLower.match(/(?:de\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d+)(?:\s*(?:\([0-9]+\)|un|una|uno|dos|tres|cuatro|cinco|\d+)?\s*(?:a|-|o|hasta)\s*(un|una|uno|dos|tres|cuatro|cinco|\d+))?\s*(?:alcoba|alcobas|hab|habs|habitacion|habitaciones|dormitorio|dormitorios|cuartos|cuarto)/i);
     if (bedMatchR) {
       const w = bedMatchR[1].toLowerCase();
       bedR = SPANISH_NUM_MAP[w] || parseInt(w, 10) || 0;
@@ -1006,7 +1019,7 @@ function scoreRows(req: any, prop: any) {
   let bedS: MatchStatus = "neutral";
   if (bedR > 0 && bedP > 0) {
     if (bedP < bedR) {
-      bedS = "missing";
+      bedS = "missing"; // Oferta < Demanda -> Bloqueo Doctrinal
     } else if (bedP === bedR) {
       bedS = "exact";
     } else {
@@ -1021,20 +1034,26 @@ function scoreRows(req: any, prop: any) {
 
   let bathR = req.banosMin ? Number(req.banosMin) : 0;
   if (bathR <= 0 && reqTextLower) {
-    const bathMatchR = reqTextLower.match(/(\d+)\s*(?:baño|baños|bano|banos|wc)/i);
-    if (bathMatchR) bathR = parseInt(bathMatchR[1], 10);
+    const bathMatchR = reqTextLower.match(/(?:de\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d+)(?:\s*(?:\([0-9]+\)|un|una|uno|dos|tres|cuatro|cinco|\d+))?\s*(?:baño|baños|bano|banos|wc)/i);
+    if (bathMatchR) {
+      const bw = bathMatchR[1].toLowerCase();
+      bathR = SPANISH_NUM_MAP[bw] || parseInt(bw, 10) || 0;
+    }
   }
 
   let bathP = prop.bathrooms ? Number(prop.bathrooms) : 0;
   if (bathP <= 0 && propTextLower) {
-    const bathMatchP = propTextLower.match(/(\d+)\s*(?:baño|baños|bano|banos|wc)/i);
-    if (bathMatchP) bathP = parseInt(bathMatchP[1], 10);
+    const bathMatchP = propTextLower.match(/(?:de\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d+)(?:\s*(?:\([0-9]+\)|un|una|uno|dos|tres|cuatro|cinco|\d+))?\s*(?:baño|baños|bano|banos|wc)/i);
+    if (bathMatchP) {
+      const bw = bathMatchP[1].toLowerCase();
+      bathP = SPANISH_NUM_MAP[bw] || parseInt(bw, 10) || 0;
+    }
   }
 
   let bathS: MatchStatus = "neutral";
   if (bathR > 0 && bathP > 0) {
     if (bathP < bathR) {
-      bathS = "warn";
+      bathS = "missing"; // Oferta < Demanda -> Bloqueo Doctrinal
     } else if (bathP === bathR) {
       bathS = "exact";
     } else {
@@ -1049,14 +1068,22 @@ function scoreRows(req: any, prop: any) {
 
   let garR = req.parqueaderosMin ? Number(req.parqueaderosMin) : 0;
   if (garR <= 0 && reqTextLower) {
-    const garMatchR = reqTextLower.match(/(\d+)\s*(?:garaje|garajes|parqueadero|parqueaderos|parqueo|parqueos|ptero|cochera)/i);
-    if (garMatchR) garR = parseInt(garMatchR[1], 10);
+    const garMatchR = reqTextLower.match(/(?:🚙|🚗|🚘)?\s*(?:con\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d+)(?:\s*(?:\([0-9]+\)|un|una|uno|dos|tres|cuatro|cinco|\d+))?\s*(?:garaje|garajes|parqueadero|parqueaderos|parqueo|parqueos|ptero|cochera|parq|parqs)/i)
+                   || reqTextLower.match(/(?:parqueadero|parqueaderos|garaje|garajes|parqueo|parqueos)\s*:?\s*(un|una|uno|dos|tres|cuatro|cinco|\d+)/i);
+    if (garMatchR) {
+      const gw = garMatchR[1].toLowerCase();
+      garR = SPANISH_NUM_MAP[gw] || parseInt(gw, 10) || 0;
+    }
   }
 
   let garP = prop.garages ? Number(prop.garages) : 0;
   if (garP <= 0 && propTextLower) {
-    const garMatchP = propTextLower.match(/(\d+)\s*(?:garaje|garajes|parqueadero|parqueaderos|parqueo|parqueos|ptero|cochera)/i);
-    if (garMatchP) garP = parseInt(garMatchP[1], 10);
+    const garMatchP = propTextLower.match(/(?:🚙|🚗|🚘)?\s*(?:con\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d+)(?:\s*(?:\([0-9]+\)|un|una|uno|dos|tres|cuatro|cinco|\d+))?\s*(?:garaje|garajes|parqueadero|parqueaderos|parqueo|parqueos|ptero|cochera|parq|parqs)/i)
+                   || propTextLower.match(/(?:parqueadero|parqueaderos|garaje|garajes|parqueo|parqueos)\s*:?\s*(un|una|uno|dos|tres|cuatro|cinco|\d+)/i);
+    if (garMatchP) {
+      const gw = garMatchP[1].toLowerCase();
+      garP = SPANISH_NUM_MAP[gw] || parseInt(gw, 10) || 0;
+    }
   }
 
   const garType = (prop.garageType || "").toLowerCase();
@@ -1066,7 +1093,9 @@ function scoreRows(req: any, prop: any) {
   let garPropLabel = garP > 0 ? `${garP} garaje${garP > 1 ? "s" : ""}` : "N/E";
 
   if (garR > 0 && garP > 0) {
-    if (garP < garR || (reqWantsIndep && garType === "lineal")) {
+    if (garP < garR) {
+      garS = "missing"; // Oferta < Demanda -> Bloqueo Doctrinal
+    } else if (reqWantsIndep && garType === "lineal") {
       garS = "warn";
     } else {
       garS = "exact";

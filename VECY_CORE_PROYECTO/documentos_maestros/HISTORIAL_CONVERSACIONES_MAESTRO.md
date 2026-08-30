@@ -52,7 +52,19 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v27.3 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v27.4 — Agosto 2026
+
+### 🗓️ Sesión: Domingo 30 de Agosto de 2026 — 17:40 a 18:00 (Hora Colombia UTC-5)
+**Versión**: `v27.4` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)
+
+#### 🎯 Objetivo y Logros de la Sesión:
+1. **Regla Doctrinal de Metrajes con Tolerancia Cero (-0%)**: Modificación formal del filtro duro de Área (`propArea < reqAreaMin` $\rightarrow$ **0% Guillotina Inmediata**). Si la oferta tiene un área menor al mínimo solicitado por la demanda (incluso por 1 m²), queda automáticamente descartada al 0% como inviable.
+2. **Corrección de Extracción de Rango de Área (`janIA.ts` y `AdminMatches.tsx`)**: Ajuste de las expresiones regulares para reconocer unidades en el primer término de rangos como `"de 70m2 a 80m2"` o `"70m2 a 80m2"`, asignando fielmente `areaMin = 70` y `areaMax = 80` (eliminando el falso valor `"2 - 80 m²"` que capturaba el dígito `2` de `m2`).
+3. **Comprensión de Jerga Inmobiliaria de Doble Precio / Administración**: Detección automática en ofertas que listan el valor del inmueble en millones y su administración en miles (`💰💰 $ 445 MILLONES` y `💰 $ 606 MIL`), asignando el segundo valor como `adminFee = 606.000 COP`.
+4. **Soporte de Números Textuales y Redundantes en Parqueaderos/Baños/Alcobas**: Extracción exacta de expresiones como `"Con 2 dos parqueaderos"`, `"dos (2) parqueaderos"`, `"2 dos baños"`, etc., garantizando que las demandas con 2 garajes bloqueen al 0% a ofertas con 1 garaje.
+5. **Saneamiento y Purga en Supabase**: Purgados los falsos matches y repoblada la base de datos con coincidencias 100% verídicas bajo la doctrina v27.4.
+
+---
 
 ### 🗓️ Sesión: Domingo 30 de Agosto de 2026 — 00:00 a 01:40 (Hora Colombia UTC-5)
 **Versión**: `v27.3` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)

@@ -5132,19 +5132,15 @@ function explicarMatch(requirement, property) {
   }
   if (reqAreaMin > 0) {
     if (propArea > 0) {
-      if (propArea < reqAreaMin * 0.95) {
-        blockers.push(`Guillotina de \xC1rea Estricta: \xC1rea ofrecida (${propArea} m\xB2) es inferior al m\xEDnimo exigido (${reqAreaMin} m\xB2). Match inviable (0%).`);
+      if (propArea < reqAreaMin) {
+        blockers.push(`Guillotina de \xC1rea Estricta (Tolerancia 0%): \xC1rea ofrecida (${propArea} m\xB2) es inferior al m\xEDnimo exigido (${reqAreaMin} m\xB2). Match inviable (0%).`);
         return buildExplanationResult(0, blockers, positives, negatives);
       }
       if (reqAreaMax > 0 && propArea > reqAreaMax * 1.35) {
         blockers.push(`Guillotina de \xC1rea Estricta: \xC1rea ofrecida (${propArea} m\xB2) excede desproporcionadamente (+35%) el rango m\xE1ximo buscado (${reqAreaMax} m\xB2). Match inviable (0%).`);
         return buildExplanationResult(0, blockers, positives, negatives);
       }
-      if (propArea >= reqAreaMin) {
-        positives.push(`\u2705 \xC1rea de ${propArea} m\xB2 cumple plenamente el requerimiento m\xEDnimo (${reqAreaMin} m\xB2)`);
-      } else {
-        positives.push(`\xC1rea de ${propArea} m\xB2 dentro de la tolerancia permitida del m\xEDnimo (${reqAreaMin} m\xB2)`);
-      }
+      positives.push(`\u2705 \xC1rea de ${propArea} m\xB2 cumple plenamente el requerimiento m\xEDnimo (${reqAreaMin} m\xB2)`);
     } else {
       blockers.push(`No se puede verificar el \xE1rea requerida (${reqAreaMin} m\xB2) por falta de informaci\xF3n en la oferta.`);
       return buildExplanationResult(0, blockers, positives, negatives);
@@ -6913,16 +6909,28 @@ function extractFallbackDataFromText(text2) {
       adminFee = rawANum;
     }
   }
+  if (adminFee === 0) {
+    const adminMilMatch = clean.match(/(?:💰|admon|adm|admin|cuota)?\s*\$?\s*(\d{1,4}(?:[.,]\d{1,3})?)\s*(?:mil|k)\b/i);
+    if (adminMilMatch) {
+      const numParsed = parseFloat(adminMilMatch[1].replace(",", "."));
+      if (!isNaN(numParsed) && numParsed >= 20 && numParsed <= 15e3) {
+        const calculatedFee = Math.round(numParsed * 1e3);
+        if (calculatedFee >= 5e4 && calculatedFee <= 15e6 && calculatedFee !== price) {
+          adminFee = calculatedFee;
+        }
+      }
+    }
+  }
   let area = 0;
   let areaMin = 0;
   let areaMax = 0;
-  const areaRangeMatch = clean.match(/(?:📐|area|área|superficie)?\s*(?:de\s+)?(\d+(?:[.,]\d+)?)\s*(?:a|-|hasta)\s*(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)/i);
+  const areaRangeMatch = clean.match(/(?:📐|area|área|superficie)?\s*(?:de\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)?\s*(?:a|-|hasta)\s*(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)/i);
   if (areaRangeMatch) {
     areaMin = parseFloat(areaRangeMatch[1].replace(",", "."));
     areaMax = parseFloat(areaRangeMatch[2].replace(",", "."));
     area = areaMin;
   } else {
-    const areaMatch = clean.match(/(?:📐|area|área|superficie)?\s*:?\s*(?:(?:m[ií]nimo|min|m[aá]ximo|max|de|área\s*(?:m[ií]nima)?|area\s*(?:minima)?)\s+)?([\d]+(?:[.,][\d]+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)/i);
+    const areaMatch = clean.match(/(?:📐|area|área|superficie)?\s*:?\s*(?:(?:m[ií]nimo|min|m[aá]ximo|max|de|área\s*(?:m[ií]nima)?|area\s*(?:minima)?)\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)/i);
     if (areaMatch) {
       area = parseFloat(areaMatch[1].replace(",", "."));
       areaMin = area;
@@ -6949,22 +6957,22 @@ function extractFallbackDataFromText(text2) {
     const n = parseInt(s, 10);
     return isNaN(n) ? 0 : n;
   }
-  const bedWordMatch = clean.match(/(?:de\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d+)(?:\s*(?:a|-|o|hasta)\s*(un|una|uno|dos|tres|cuatro|cinco|\d+))?\s*(?:alcoba|alcobas|hab|habs|habitacion|habitaciones|dormitorio|dormitorios|cuartos|cuarto)/i);
+  const bedWordMatch = clean.match(/(?:de\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d+)(?:\s*(?:\([0-9]+\)|un|una|uno|dos|tres|cuatro|cinco|\d+)?\s*(?:a|-|o|hasta)\s*(un|una|uno|dos|tres|cuatro|cinco|\d+))?\s*(?:alcoba|alcobas|hab|habs|habitacion|habitaciones|dormitorio|dormitorios|cuartos|cuarto)/i);
   if (bedWordMatch) {
     bedroomsMin = parseWordOrDigit(bedWordMatch[1]);
     bedroomsMax = bedWordMatch[2] ? parseWordOrDigit(bedWordMatch[2]) : bedroomsMin;
     bedrooms = bedroomsMin;
   }
   let bathrooms = 0;
-  const bathMatch = clean.match(/(?:de\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d+)\s*(?:baño|baños|bano|banos|wc)/i);
+  const bathMatch = clean.match(/(?:de\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d+)(?:\s*(?:\([0-9]+\)|un|una|uno|dos|tres|cuatro|cinco|\d+))?\s*(?:baño|baños|bano|banos|wc)/i);
   if (bathMatch) {
     bathrooms = parseWordOrDigit(bathMatch[1]);
   }
   let garages = 0;
   let garageType = null;
-  const garMatch = clean.match(/(?:🚙|🚗|🚘)?\s*(\d+)\s*(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero)/i) || clean.match(/(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero)\s*:?\s*(\d+)/i);
+  const garMatch = clean.match(/(?:🚙|🚗|🚘)?\s*(?:con\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d+)(?:\s*(?:\([0-9]+\)|un|una|uno|dos|tres|cuatro|cinco|\d+))?\s*(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero|parq|parqs|pks|estacionamiento|estacionamientos)/i) || clean.match(/(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero|parq|parqs|pks|estacionamiento|estacionamientos)\s*:?\s*(\d+|un|una|uno|dos|tres|cuatro|cinco)/i);
   if (garMatch) {
-    garages = parseInt(garMatch[1], 10);
+    garages = parseWordOrDigit(garMatch[1]);
   } else if (/con\s+(?:un\s+)?(?:parqueadero|garaje)|parqueadero|garaje/i.test(clean)) {
     garages = 1;
   }
@@ -14164,7 +14172,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v27.3";
+var VECY_VERSION = "v27.4";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 

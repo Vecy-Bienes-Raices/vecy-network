@@ -598,7 +598,7 @@ export function extractFallbackDataFromText(text: string): any {
     }
   }
 
-  // E. Cuota de Administración (ej: "Adm $2.056.503 + Caldera", "Admon $960.000", "Admon máxima $1.200.000")
+  // E. Cuota de Administración (ej: "Adm $2.056.503 + Caldera", "Admon $960.000", "Admon máxima $1.200.000", "💰 $ 606 MIL")
   const adminMatch = clean.match(/(?:adm|admon|administraci[oó]n|admin|cta\s*admon)\s*(?:m[aá]xima|max|hasta|tope|no\s*mayor\s*a|no\s*superior\s*a|l[ií]mite)?\s*:?\s*(?:aprox\.?)?\s*\$?\s*([\d.,\s]+?)(?:\s*\+|\s*-|\s*\(|\s*\n|$)/i);
   if (adminMatch) {
     const rawANum = parseFloat(adminMatch[1].replace(/[.,\s]/g, ''));
@@ -607,18 +607,32 @@ export function extractFallbackDataFromText(text: string): any {
     }
   }
 
+  // Detección de Administración por jerga escalonada (ej: 💰💰 $ 445 MILLONES \n 💰 $ 606 MIL o similar)
+  if (adminFee === 0) {
+    const adminMilMatch = clean.match(/(?:💰|admon|adm|admin|cuota)?\s*\$?\s*(\d{1,4}(?:[.,]\d{1,3})?)\s*(?:mil|k)\b/i);
+    if (adminMilMatch) {
+      const numParsed = parseFloat(adminMilMatch[1].replace(',', '.'));
+      if (!isNaN(numParsed) && numParsed >= 20 && numParsed <= 15000) {
+        const calculatedFee = Math.round(numParsed * 1000);
+        if (calculatedFee >= 50_000 && calculatedFee <= 15_000_000 && calculatedFee !== price) {
+          adminFee = calculatedFee;
+        }
+      }
+    }
+  }
+
   let area = 0;
   let areaMin = 0;
   let areaMax = 0;
-  // A. Captura rango de área: "de 50-70 mt2", "50 a 70 m2", "50-70 metros"
-  const areaRangeMatch = clean.match(/(?:📐|area|área|superficie)?\s*(?:de\s+)?(\d+(?:[.,]\d+)?)\s*(?:a|-|hasta)\s*(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)/i);
+  // A. Captura rango de área con soporte para unidades intermedias (ej: "de 70m2 a 80m2", "de 50-70 mt2", "50 a 70 m2", "50-70 metros")
+  const areaRangeMatch = clean.match(/(?:📐|area|área|superficie)?\s*(?:de\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)?\s*(?:a|-|hasta)\s*(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)/i);
   if (areaRangeMatch) {
     areaMin = parseFloat(areaRangeMatch[1].replace(',', '.'));
     areaMax = parseFloat(areaRangeMatch[2].replace(',', '.'));
     area = areaMin;
   } else {
     // B. Captura área simple con prefijos: "📐 183 m²", "Area: 180 Mts", "Mínimo 150m2"
-    const areaMatch = clean.match(/(?:📐|area|área|superficie)?\s*:?\s*(?:(?:m[ií]nimo|min|m[aá]ximo|max|de|área\s*(?:m[ií]nima)?|area\s*(?:minima)?)\s+)?([\d]+(?:[.,][\d]+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)/i);
+    const areaMatch = clean.match(/(?:📐|area|área|superficie)?\s*:?\s*(?:(?:m[ií]nimo|min|m[aá]ximo|max|de|área\s*(?:m[ií]nima)?|area\s*(?:minima)?)\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)/i);
     if (areaMatch) {
       area = parseFloat(areaMatch[1].replace(',', '.'));
       areaMin = area;
@@ -640,7 +654,7 @@ export function extractFallbackDataFromText(text: string): any {
     return isNaN(n) ? 0 : n;
   }
 
-  const bedWordMatch = clean.match(/(?:de\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d+)(?:\s*(?:a|-|o|hasta)\s*(un|una|uno|dos|tres|cuatro|cinco|\d+))?\s*(?:alcoba|alcobas|hab|habs|habitacion|habitaciones|dormitorio|dormitorios|cuartos|cuarto)/i);
+  const bedWordMatch = clean.match(/(?:de\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d+)(?:\s*(?:\([0-9]+\)|un|una|uno|dos|tres|cuatro|cinco|\d+)?\s*(?:a|-|o|hasta)\s*(un|una|uno|dos|tres|cuatro|cinco|\d+))?\s*(?:alcoba|alcobas|hab|habs|habitacion|habitaciones|dormitorio|dormitorios|cuartos|cuarto)/i);
   if (bedWordMatch) {
     bedroomsMin = parseWordOrDigit(bedWordMatch[1]);
     bedroomsMax = bedWordMatch[2] ? parseWordOrDigit(bedWordMatch[2]) : bedroomsMin;
@@ -648,17 +662,17 @@ export function extractFallbackDataFromText(text: string): any {
   }
 
   let bathrooms = 0;
-  const bathMatch = clean.match(/(?:de\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d+)\s*(?:baño|baños|bano|banos|wc)/i);
+  const bathMatch = clean.match(/(?:de\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d+)(?:\s*(?:\([0-9]+\)|un|una|uno|dos|tres|cuatro|cinco|\d+))?\s*(?:baño|baños|bano|banos|wc)/i);
   if (bathMatch) {
     bathrooms = parseWordOrDigit(bathMatch[1]);
   }
 
   let garages = 0;
   let garageType = null;
-  const garMatch = clean.match(/(?:🚙|🚗|🚘)?\s*(\d+)\s*(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero)/i)
-                || clean.match(/(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero)\s*:?\s*(\d+)/i);
+  const garMatch = clean.match(/(?:🚙|🚗|🚘)?\s*(?:con\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d+)(?:\s*(?:\([0-9]+\)|un|una|uno|dos|tres|cuatro|cinco|\d+))?\s*(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero|parq|parqs|pks|estacionamiento|estacionamientos)/i)
+                || clean.match(/(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero|parq|parqs|pks|estacionamiento|estacionamientos)\s*:?\s*(\d+|un|una|uno|dos|tres|cuatro|cinco)/i);
   if (garMatch) {
-    garages = parseInt(garMatch[1], 10);
+    garages = parseWordOrDigit(garMatch[1]);
   } else if (/con\s+(?:un\s+)?(?:parqueadero|garaje)|parqueadero|garaje/i.test(clean)) {
     garages = 1;
   }

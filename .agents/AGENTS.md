@@ -122,17 +122,18 @@ TOTAL          → 100 pts ✅
 
 ### Filtros Duros Inquebrantables
 - `transactionType` incompatible → ❌ 0%
-- `propArea < reqAreaMin * 0.95` → ❌ 0% (piso -5%, NUEVO v20.0 — antes -2%)
+- `propArea < reqAreaMin` → ❌ 0% (Tolerancia 0% por debajo del mínimo exigido, REGLA DOCTRINAL v27.4 — Oferta < Demanda = Bloqueo Inmediato)
 - `propertyType` incompatible → ❌ 0%
 - Barrio incompatible → ❌ 0%
 - Precio supera presupuesto máximo → ❌ 0%
-- **Especificaciones Físicas Mínimas (REGLA DOCTRINAL v22.4)**:
+- **Especificaciones Físicas Mínimas (REGLA DOCTRINAL v22.4 / v27.4)**:
   `Habitaciones`, `Baños`, `Parqueaderos`, `Depósitos`, `Balcones` y `Terrazas` **JAMÁS pueden ser menores en la Oferta que en lo Demandado (`prop < req` → ❌ 0% Match Inviable / Bloqueo Absoluto)**. Sin embargo, **SIEMPRE se aceptan cuando en la Oferta son IGUALES O MAYORES que en la Demanda (`prop >= req` → ✅ 100% Cumplimiento / Confort)**.
 
-### Campana de Tolerancia de Área (v20.0)
-- `< reqMin * 0.95`              → Bloqueo 0%
-- `0.95 ≤ propArea ≤ 1.15`       → Zona confort — puntaje completo (10 pts)
-- `> reqMin * 1.15`              → Pasa con advertencia "Inmueble significativamente más grande (+X%)"
+### Campana de Tolerancia de Área (v27.4)
+- `< reqMin`                     → Bloqueo 0% (Tolerancia 0% por debajo del piso exigido)
+- `reqMin ≤ propArea ≤ reqMin * 1.15` → Zona confort — puntaje completo (10 pts)
+- `> reqMin * 1.15` y `≤ reqMax * 1.35` → Pasa con advertencia/plus de mayor metraje
+- `> reqMax * 1.35`              → Bloqueo 0% por desborde excesivo de área
 
 ### Auditoría de Confort de Parqueaderos (v20.0)
 - Garaje lineal cuando se pide independiente → 40% del atributo + negativa informativa
@@ -162,7 +163,14 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v27.3 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL: v27.4 — Agosto 2026
+
+### Novedades v27.4 (Regla Doctrinal de Metrajes con Tolerancia Cero, Captura Robusta de Rangos de Área, Doble Precio para Administración y Bloqueo de Déficit Físico):
+- **Tolerancia Cero en Área Mínima (`propArea < reqAreaMin` $\rightarrow$ 0% Guillotina)**: En `matching.ts` y `AdminMatches.tsx` se eliminó cualquier margen permisivo por debajo del requerimiento mínimo solicitado por el cliente. Si la demanda exige un metraje (ej: $70\text{ m²}$), cualquier oferta con menor metraje ($56\text{ m²}$) es bloqueada al **0% Inviable**.
+- **Extractor Robusto de Rangos con Unidades Intermedias (`janIA.ts` & `AdminMatches.tsx`)**: Corrección de expresiones regulares para parsear sintaxis reales como `"de 70m2 a 80m2"` o `"70 a 80 mts"` asignando fielmente `areaMin = 70` y `areaMax = 80` (resolviendo el bug que extraía `"2 - 80 m²"` al capturar el dígito de `m2`).
+- **Detección de Jerga Escalonada de Administración (`💰 $ 606 MIL`)**: Procesamiento automático cuando un inmueble publica su valor de venta en millones y su administración en miles en líneas consecutivas con emojis, registrando correctamente la cuota de administración (`adminFee = 606.000 COP`).
+- **Soporte de Números Textuales y Redundantes en Parqueaderos/Baños/Alcobas**: Extracción exacta de expresiones como `"2 dos parqueaderos"`, `"dos (2) alcobas"`, `"2 dos baños"` aplicando el bloqueo estricto si la oferta tiene menor cantidad que la demanda.
+- **Saneamiento y Purga en Supabase**: Eliminación de falsos matches y actualización a la doctrina v27.4.
 
 ### Novedades v27.3 (Desbloqueo de Ciudad y Demandas Reales, Generación de Matches Verídicos y Cotejo en Vivo):
 - **Resolución Canónica Dinámica de Ciudad (`matching.ts`)**: Se implementó fallback automático para que los inmuebles y demandas con ciudad `null` en Supabase resuelvan su municipio canónico a partir del barrio y el texto descriptivo, eliminando el falso bloqueador `Inmueble Incompleto: Ciudad/Municipio no especificado`.

@@ -1664,22 +1664,18 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
-  // ── FILTRO DURO 6: Área (REGLA DOCTRINAL v22.4 / v20.0: Mínimo exigido con tolerancia y Techo Máximo) ──
+  // ── FILTRO DURO 6: Área (REGLA DOCTRINAL v27.4: Mínimo exigido con Tolerancia 0% e Inmueble dentro de Rango) ──
   if (reqAreaMin > 0) {
     if (propArea > 0) {
-      if (propArea < reqAreaMin * 0.95) {
-        blockers.push(`Guillotina de Área Estricta: Área ofrecida (${propArea} m²) es inferior al mínimo exigido (${reqAreaMin} m²). Match inviable (0%).`);
+      if (propArea < reqAreaMin) {
+        blockers.push(`Guillotina de Área Estricta (Tolerancia 0%): Área ofrecida (${propArea} m²) es inferior al mínimo exigido (${reqAreaMin} m²). Match inviable (0%).`);
         return buildExplanationResult(0, blockers, positives, negatives);
       }
       if (reqAreaMax > 0 && propArea > reqAreaMax * 1.35) {
         blockers.push(`Guillotina de Área Estricta: Área ofrecida (${propArea} m²) excede desproporcionadamente (+35%) el rango máximo buscado (${reqAreaMax} m²). Match inviable (0%).`);
         return buildExplanationResult(0, blockers, positives, negatives);
       }
-      if (propArea >= reqAreaMin) {
-        positives.push(`✅ Área de ${propArea} m² cumple plenamente el requerimiento mínimo (${reqAreaMin} m²)`);
-      } else {
-        positives.push(`Área de ${propArea} m² dentro de la tolerancia permitida del mínimo (${reqAreaMin} m²)`);
-      }
+      positives.push(`✅ Área de ${propArea} m² cumple plenamente el requerimiento mínimo (${reqAreaMin} m²)`);
     } else {
       blockers.push(`No se puede verificar el área requerida (${reqAreaMin} m²) por falta de información en la oferta.`);
       return buildExplanationResult(0, blockers, positives, negatives);

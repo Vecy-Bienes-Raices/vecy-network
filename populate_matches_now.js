@@ -10,6 +10,7 @@ async function run() {
   console.log("⚡ POBLANDO SUPABASE CON MATCHES VERÍDICOS AHORA MISMO...");
 
   // Limpiar antes de insertar
+  await sql`DELETE FROM "notificationLogs" WHERE "matchId" IS NOT NULL`;
   await sql`DELETE FROM "propertyMatches"`;
 
   const topZones = [
@@ -47,9 +48,10 @@ async function run() {
       const fbR = extractFallbackDataFromText(r.rawText);
       const reqData = {
         ...r,
-        presupuestoMax: r.presupuestoMax || fbR.budget,
-        areaMin: r.areaMin || fbR.area,
-        habitacionesMin: r.habitacionesMin || fbR.bedrooms,
+        presupuestoMax: r.presupuestoMax || fbR.presupuestoMax || fbR.budget,
+        areaMin: r.areaMin || fbR.areaMin || fbR.area,
+        habitacionesMin: r.habitacionesMin || fbR.bedroomsMin || fbR.bedrooms,
+        parqueaderosMin: r.parqueaderosMin || fbR.garages,
         zonaDeseada: r.zonaDeseada || fbR.zone,
         tipoInmuebleDeseado: r.tipoInmuebleDeseado || fbR.propertyType,
         tipoNegocioDeseado: r.tipoNegocioDeseado || fbR.transactionType
@@ -66,6 +68,9 @@ async function run() {
           rentPrice: p.rentPrice || p.rent_price || fbP.rentPrice,
           areaTotal: p.areaTotal || fbP.area,
           bedrooms: p.bedrooms || fbP.bedrooms,
+          bathrooms: p.bathrooms || fbP.bathrooms,
+          garages: p.garages || fbP.garages,
+          adminFee: p.adminFee || fbP.adminFee,
           zone: p.zone || fbP.zone,
           propertyType: p.propertyType || fbP.propertyType,
           transactionType: p.transactionType || fbP.transactionType
@@ -76,7 +81,7 @@ async function run() {
           matchesCount++;
           insertedPairs.add(pairKey);
 
-          const reason = "VECY DOCTRINAL v27.3: " + exp.score.toFixed(0) + "/100";
+          const reason = "VECY DOCTRINAL v27.4: " + exp.score.toFixed(0) + "/100";
           await sql`
             INSERT INTO "propertyMatches" (
               "requirementId", "propertyId", "matchScore", "matchReason", "status", "matchExplanation", "createdAt"

@@ -880,6 +880,23 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 
 ---
 
+### Versión v27.4 — Agosto 2026: Regla Doctrinal de Metrajes con Tolerancia Cero, Captura Robusta de Rangos de Área, Doble Precio para Administración y Bloqueo de Déficit Físico
+
+#### 1. TOLERANCIA CERO EN ÁREA MÍNIMA (OFERTA < DEMANDA = BLOQUEO 0%)
+- **Guillotina Estricta de Área**: En `matching.ts` y `AdminMatches.tsx`, si la oferta tiene un área inferior al mínimo exigido por la demanda (`propArea < reqAreaMin`), el sistema aplica de forma irrevocable el bloqueo al **0% Inviable**. Se eliminó cualquier margen permisivo por debajo del requerimiento mínimo del cliente.
+- **Rango y Techo Máximo (+35%)**: El inmueble debe estar dentro del rango o ser superior (`propArea >= reqAreaMin`). Si supera el +35% del tope máximo fijado por la demanda (`propArea > reqAreaMax * 1.35`), se bloquea al 0% para prevenir costos de administración o desbordes no deseados.
+
+#### 2. EXTRACTOR ROBUSTO DE RANGOS DE ÁREA CON UNIDADES INTERMEDIAS
+- **Sintaxis Inmobiliaria Real**: Resuelto el bug donde expresiones como `"de 70m2 a 80m2"` o `"70m2 a 80m2"` capturaban el dígito `2` de `m2` como mínimo generando el error `"2 - 80 m²"`. Ahora el extractor reconoce la unidad en ambos términos del rango asignando con exactitud `areaMin = 70` y `areaMax = 80`.
+
+#### 3. DETECCIÓN DE JERGA ESCALONADA DE ADMINISTRACIÓN
+- **Doble Precio (`💰💰 $ 445 MILLONES` y `💰 $ 606 MIL`)**: Si un aviso publica el valor del inmueble en millones y su administración en miles en líneas consecutivas con emojis, JanIA y el panel admin asignan automáticamente el segundo monto a `adminFee` ($606.000 COP).
+
+#### 4. SOPORTE DE NÚMEROS TEXTUALES Y REDUNDANTES EN ESPECIFICACIONES FÍSICAS
+- **Parqueaderos, Alcobas y Baños**: Extracción exacta de expresiones como `"2 dos parqueaderos"`, `"dos (2) alcobas"`, `"2 dos baños"`, bloqueando al 0% cualquier oferta que tenga menor cantidad que la demanda.
+
+---
+
 ### Versión v25.9 — Agosto 2026: Purga de Pestañas Obsoletas en Panel Admin, Caché Instantánea de Autenticación & Persistencia de Navegación
 
 #### 1. PURGA Y ELIMINACIÓN DE MÓDULOS OBSOLETOS
