@@ -1819,7 +1819,7 @@ function checkTxCompatFrontend(reqTypeRaw: string, propTypeRaw: string, propAcce
 
 export default function AdminMatches() {
   const [searchTerm, setSearchTerm] = React.useState('');
-  const [minScore, setMinScore] = React.useState('85');
+  const [minScore, setMinScore] = React.useState('80');
   const [activeTab, setActiveTab] = React.useState<'calificados' | 'incompletos'>('calificados');
   
   // Estados para Edición Interactiva de Fichas Prediales directamente desde el Cotejo
@@ -2203,8 +2203,8 @@ export default function AdminMatches() {
       const computed = scoreRows(requirement, property);
       const exactScore = computed.autoScore;
 
-      // Del 84% para abajo NO se mostrarán en nuestra página de coincidencias (Regla Doctrinal v26.8)
-      if (exactScore < 85) {
+      // Del 79% para abajo NO se mostrarán en nuestra página de coincidencias (Regla Doctrinal v26.8)
+      if (exactScore < 80) {
         continue;
       }
 
@@ -2244,8 +2244,8 @@ export default function AdminMatches() {
       const displayScore = match._precomputedScore;
 
       // Filtro de Score
-      if (minScore === "85_94") {
-        if (displayScore < 85 || displayScore >= 95) return false;
+      if (minScore === "80_94") {
+        if (displayScore < 80 || displayScore >= 95) return false;
       } else {
         const minVal = parseFloat(minScore);
         if (displayScore < minVal) return false;
@@ -2448,8 +2448,8 @@ export default function AdminMatches() {
             onChange={(e) => setMinScore(e.target.value)}
             className="bg-transparent border-none text-white focus:ring-0 text-xs font-semibold cursor-pointer outline-none w-full"
           >
-            <option className="bg-[#0c0c0c]" value="85">⚡ Todos los Matches (85% - 100%)</option>
-            <option className="bg-[#0c0c0c]" value="85_94">⚡ MATCH Aproximado (85% - 94%)</option>
+            <option className="bg-[#0c0c0c]" value="80">⚡ Todos los Matches (80% - 100%)</option>
+            <option className="bg-[#0c0c0c]" value="80_94">⚡ MATCH Aproximado (80% - 94%)</option>
             <option className="bg-[#0c0c0c]" value="95">🎯 MATCH Perfecto (95% - 100%)</option>
           </select>
         </div>
