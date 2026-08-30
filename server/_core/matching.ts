@@ -2295,9 +2295,10 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   }
 
   // 2. Con los 5 campos en duro 100% en VERDE, calculamos la completitud BILATERAL de los campos de ahí hacia abajo:
-  // Si a la demanda le faltan 3 o más especificaciones esenciales (Presupuesto, Área, Habitaciones, Baños, Garajes), es inviable
-  if (missingReqFields.length >= 3) {
-    blockers.push(`Demanda incompleta: a la demanda le faltan ${missingReqFields.length} especificaciones esenciales (${missingReqFields.join(", ")}). Match Inviable (0%).`);
+  // Si a la demanda le faltan tanto presupuesto como área Y habitaciones (demanda totalmente ciega), es inviable
+  const hasCoreDemandSpec = (budgetMaxCheck > 0 || isReqOpenBudget) && (hasReqArea || hasReqBedrooms);
+  if (!hasCoreDemandSpec && missingReqFields.length >= 4) {
+    blockers.push(`Demanda incompleta: a la demanda le faltan especificaciones cuantitativas esenciales (${missingReqFields.join(", ")}). Match Inviable (0%).`);
     return buildExplanationResult(0, blockers, positives, negatives, false, missingFieldsList);
   }
 
