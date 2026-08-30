@@ -2168,7 +2168,7 @@ export default function AdminMatches() {
   };
 
   const [currentPage, setCurrentPage] = React.useState(1);
-  const pageSize = 10; // 10 coincidencias por página para carga instantánea ultra-rápida (<0.02s) en móvil y escritorio
+  const [pageSize, setPageSize] = React.useState(25); // 25 por defecto para ver todos los matches sin truncar
   const [expandedMatchIds, setExpandedMatchIds] = useState<Set<number>>(new Set());
 
   const toggleExpandMatch = (matchId: number) => {
@@ -2451,6 +2451,23 @@ export default function AdminMatches() {
             <option className="bg-[#0c0c0c]" value="80">⚡ Todos los Matches (80% - 100%)</option>
             <option className="bg-[#0c0c0c]" value="80_94">⚡ MATCH Aproximado (80% - 94%)</option>
             <option className="bg-[#0c0c0c]" value="95">🎯 MATCH Perfecto (95% - 100%)</option>
+          </select>
+        </div>
+
+        <div className="flex items-center gap-2 bg-black/40 border border-white/10 rounded-xl px-3 text-white h-10 w-full sm:w-auto shrink-0">
+          <span className="text-xs text-zinc-400 shrink-0">Ver:</span>
+          <select
+            value={pageSize}
+            onChange={(e) => {
+              setPageSize(Number(e.target.value));
+              setCurrentPage(1);
+            }}
+            className="bg-transparent border-none text-white focus:ring-0 text-xs font-semibold cursor-pointer outline-none w-full"
+          >
+            <option className="bg-[#0c0c0c]" value="10">10 por pág.</option>
+            <option className="bg-[#0c0c0c]" value="25">25 por pág.</option>
+            <option className="bg-[#0c0c0c]" value="50">50 por pág.</option>
+            <option className="bg-[#0c0c0c]" value="100">100 (Todos)</option>
           </select>
         </div>
       </div>
