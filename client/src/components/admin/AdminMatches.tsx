@@ -751,6 +751,7 @@ function scoreRows(req: any, prop: any) {
 
   const isReqRentMatch = cleanReqBiz.includes("arriendo");
   const isPropPureRent = cleanPropBiz === "arriendo";
+  const isPropPureVenta = cleanPropBiz === "venta" || cleanPropBiz === "venta_permuta" || cleanPropBiz === "permuta" || cleanPropBiz === "aporte";
   const isReqOpenBudget = /(?:ppto|presupuesto|canon|precio|valor)\s*(?:es\s*)?:?\s*(?:abierto|sin\s*l[ií]mite|ilimitado|negociable\s*sin\s*tope)\b/i.test(reqTextLower);
 
   function parseColombianPriceOrBudget(numStr: string, unit: string, isSale: boolean): number {
@@ -1489,7 +1490,7 @@ function scoreRows(req: any, prop: any) {
   if (reqState || propState) {
     let stateS: MatchStatus = "neutral";
     if (reqState && propState) {
-      if (reqState === propState || (reqState.includes("Remodelar") && propState.includes("Remodelar")) || (reqState.includes("Remodelado") && propState.includes("Remodelado"))) {
+      if ((reqState as string) === (propState as string) || (reqState.includes("Remodelar") && propState.includes("Remodelar")) || (reqState.includes("Remodelado") && propState.includes("Remodelado"))) {
         stateS = "exact";
       } else {
         stateS = "missing"; // 🔴 Incompatibilidad fatal: Remodelar vs Remodelado/Estrenar
