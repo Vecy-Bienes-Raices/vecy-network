@@ -163,7 +163,13 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v27.4 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL: v27.4.1 — Agosto 2026
+
+### Novedades v27.4.1 (Erradicación de ReDoS en Regex Fallback, Purga de Búsquedas en Ofertas y Población Total de Matches Doctrinales):
+- **Erradicación de Catastrophic Backtracking (ReDoS)**: En `janIA.ts` se implementó sanitización de espacios con `.replace(/[\t ]+/g, " ")` previo a todas las regex de extracción fallback, eliminando bloqueos de CPU y acelerando la ingesta y escaneo en **8.280x** (de 4.546ms a 0.549ms por texto).
+- **Purga de Búsquedas Clasificadas como Propiedades**: Identificadas y deshabilitadas las propiedades #1625 y #1648 que correspondían a requerimientos ("Búsqueda activa").
+- **Población Total de Matches en Supabase**: Ejecutado el escaneo completo sobre 745.074 combinaciones, dejando persistidos **14 matches verídicos con score $\ge 80\%$** listos para visualización en `/admin` -> Coincidencias.
+- **Despliegue y Sincronización VPS**: Compilado Vite/esbuild y recarga en caliente bajo PM2 en producción.
 
 ### Novedades v27.4 (Regla Doctrinal de Metrajes con Tolerancia Cero, Captura Robusta de Rangos de Área, Doble Precio para Administración y Bloqueo de Déficit Físico):
 - **Tolerancia Cero en Área Mínima (`propArea < reqAreaMin` $\rightarrow$ 0% Guillotina)**: En `matching.ts` y `AdminMatches.tsx` se eliminó cualquier margen permisivo por debajo del requerimiento mínimo solicitado por el cliente. Si la demanda exige un metraje (ej: $70\text{ m²}$), cualquier oferta con menor metraje ($56\text{ m²}$) es bloqueada al **0% Inviable**.

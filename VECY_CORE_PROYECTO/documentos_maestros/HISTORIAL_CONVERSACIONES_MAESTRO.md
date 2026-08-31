@@ -52,7 +52,25 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v27.4 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v27.4.1 — Agosto 2026
+
+### 🗓️ Sesión: Lunes 31 de Agosto de 2026 — 15:00 a 15:45 (Hora Colombia UTC-5)
+**Versión**: `v27.4.1` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)
+
+#### 🎯 Objetivo y Logros de la Sesión:
+1. **Erradicación de Catastrophic Backtracking (ReDoS) en Extractor Fallback (`janIA.ts`)**:
+   - Se diagnosticó que textos de WhatsApp con padding de 500+ espacios en blanco bloqueaban el bucle de eventos de Node.js por 4.5 segundos por cada texto en las expresiones regulares de `extractFallbackDataFromText`.
+   - Se aplicó sanitización previa colapsando espacios continuos (`.replace(/[\t ]+/g, " ")`), reduciendo el tiempo de ejecución de 4.546 ms a solo **0.549 ms** por texto (**aceleración de 8.280x**).
+2. **Purga de Búsquedas en Tabla de Ofertas**:
+   - Identificadas y deshabilitadas 2 propiedades (#1625 y #1648) que correspondían a requerimientos ("Búsqueda activa") ingestadas accidentalmente como ofertas.
+3. **Escaneo y Población Total de Coincidencias Doctrinales en Supabase**:
+   - Escaneo integral de las 745.074 combinaciones (639 requerimientos ↔ 1.164 inmuebles).
+   - Inserción y persistencia de **14 matches verídicos y rigurosos** con score $\ge 80\%$ y 0 bloqueadores doctrinales en `propertyMatches`.
+4. **Verificación de Endpoint tRPC y Despliegue en Producción**:
+   - Verificado el router `janIA.getAllMatches` entregando los matches con relaciones de `requirement` y `property`.
+   - Commit y push a GitHub (`main`) y despliegue exitoso en el VPS con build de Vite/esbuild y recarga en caliente bajo PM2.
+
+---
 
 ### 🗓️ Sesión: Domingo 30 de Agosto de 2026 — 17:40 a 18:00 (Hora Colombia UTC-5)
 **Versión**: `v27.4` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)
