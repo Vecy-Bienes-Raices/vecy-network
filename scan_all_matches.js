@@ -116,20 +116,13 @@ async function run() {
 
     if (chunkMatches.length > 0) {
       validMatches.push(...chunkMatches);
-      // Guardar lote inmediatamente en Supabase
-      await sql`
-        INSERT INTO "propertyMatches" ${sql(
-          chunkMatches.map(m => ({
-            requirementId: m.requirementId,
-            propertyId: m.propertyId,
-            matchScore: m.matchScore,
-            matchReason: m.matchReason,
-            status: m.status,
-            matchExplanation: sql.json(m.matchExplanation),
-            createdAt: new Date()
-          }))
-        )}
-      `;
+      // Guardar lote inmediatamente en Supabase con nombres de columna entrecomillados
+      for (const m of chunkMatches) {
+        await sql`
+          INSERT INTO "propertyMatches" ("requirementId", "propertyId", "matchScore", "matchReason", status, "matchExplanation", "createdAt")
+          VALUES (${m.requirementId}, ${m.propertyId}, ${m.matchScore}, ${m.matchReason}, ${m.status}, ${sql.json(m.matchExplanation)}, NOW())
+        `;
+      }
     }
 
     const percent = Math.min(100, Math.round(((i + reqChunk.length) / enrichedReqs.length) * 100));
