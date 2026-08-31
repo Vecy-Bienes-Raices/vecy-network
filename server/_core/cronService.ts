@@ -57,29 +57,13 @@ interface DailyTipContent {
 export function initCronScheduler() {
   console.log('[CRON-SERVICE] Inicializando orquestador de agendas automatizadas v3.3 (Parrilla Semanal de Audios, Ilustraciones 3D, Captions y Re-matching)...');
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // GRUPO 1: VECY INMUEBLES NETWORK — Lunes y Jueves a las 11:00 AM
-  // Tema: Operaciones comerciales, publicación de inmuebles/requerimientos y matching nacional
-  // ─────────────────────────────────────────────────────────────────────────────
-  cron.schedule('0 11 * * 1,4', async () => {
-    console.log('[CRON-SERVICE] Generando audio dinámico para VECY INMUEBLES NETWORK...');
-    const fallbackVoice = `Buenos días a todos y a todas. Soy JanIA, la inteligencia artificial de VECY Network. Hoy quiero recordarles que este grupo es nuestro centro de operaciones comerciales. Aquí publican sus inmuebles en venta o arriendo, sus requerimientos de compra o renta, y yo me encargo de cruzar toda esa información en tiempo real en los 32 departamentos de Colombia para detectar MATCHES y hacer posibles cierres de negocios. Sigan publicando sus inmuebles, colegas, e inviten a más colegas a unirse a esta red. Entre más seamos, más matches encontramos. ¡Hoy puede ser el día de tu próximo cierre!`;
-    const fallbackCaption = `🏠 *VECY INMUEBLES NETWORK — CENTRO DE OPERACIONES NACIONAL* 🇨🇴\n\n` +
-      `¡Buenos días a todos los colegas de la red!\n\n` +
-      `Recuerden que este espacio es nuestro centro de operaciones comerciales en los 32 departamentos de Colombia:\n` +
-      `• Publica tus inmuebles en venta, arriendo o permuta.\n` +
-      `• Comparte tus requerimientos de compra o renta con presupuesto.\n` +
-      `• JanIA analiza cada mensaje, extrae los datos y detecta *MATCHES* al instante.\n\n` +
-      `🤝 *Crezcamos juntos:* Invita a tus colegas de confianza a unirse a VECY Network. ¡Entre más inmuebles y solicitudes tengamos, más comisiones compartidas cerramos!\n\n` +
-      `📲 *Consola Web JanIA:* https://vecy-network.vercel.app/jania`;
 
-    const content = await generateDailyContent('inmuebles_network', fallbackVoice, fallbackCaption);
-    try {
-      await whatsappBot.sendVoiceToGroup(content.voiceText, whatsappBot.targetGroupId, getThemedImagePath('matches'), content.captionText);
-    } catch (e: any) {
-      console.error('[CRON-SERVICE] Error enviando audio a VECY INMUEBLES NETWORK:', e.message);
-    }
-  }, { timezone: 'America/Bogota' });
+  // ─────────────────────────────────────────────────────────────────────────────
+  // NOTA DOCTRINAL v28.0: Los mensajes programados de marketing, asesoría y
+  // contenido educativo se publican EXCLUSIVAMENTE en el Grupo 2 (Soporte Legal,
+  // Tributario, Avalúos y Marketing) y en el Canal oficial de WhatsApp.
+  // El Grupo 1 (VECY INMUEBLES NETWORK) mantiene silencio absoluto de texto.
+  // ─────────────────────────────────────────────────────────────────────────────
 
   // ─────────────────────────────────────────────────────────────────────────────
   // GRUPO 2: VECY: SOPORTE LEGAL, TRIBUTARIO, AVALÚOS Y MARKETING + CANAL WHATSAPP

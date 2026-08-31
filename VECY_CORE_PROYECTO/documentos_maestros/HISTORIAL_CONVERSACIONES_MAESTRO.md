@@ -52,10 +52,34 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v27.4.1 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v28.0 — Agosto 2026
+
+### 🗓️ Sesión: Lunes 31 de Agosto de 2026 — 17:28 a 18:00 (Hora Colombia UTC-5)
+**Versión**: `v28.0` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)
+
+#### 🎯 Objetivo y Logros de la Sesión:
+1. **Corrección de Errores TypeScript en `AdminMatches.tsx`** (2 bugs resueltos):
+   - **TS2552 — `isPropPureVenta` no declarada**: Se añadió la variable `isPropPureVenta` (línea 753) con la lógica correcta: `cleanPropBiz === "venta" || "venta_permuta" || "permuta" || "aporte"`. Esta variable faltaba en el archivo a pesar de ser referenciada en las líneas 831, 854 y 885.
+   - **TS2367 — Comparación de tipos union sin solapamiento**: En la línea 1493, la comparación `reqState === propState` fue corregida con cast explícito `(reqState as string) === (propState as string)` ya que los tipos union inferidos por TypeScript para `reqState` (`"A Remodelar / Oportunidad" | "Remodelado" | "Excelente / A Estrenar"`) y `propState` (`"Excelente" | "A Remodelar" | "Remodelado / Excelente"`) no se solapaban exactamente.
+   - `tsc --noEmit` confirma **cero errores** tras ambas correcciones.
+
+2. **Migración Doctrinal de Mensajes Programados — Doctrina v28.0**:
+   - **Problema**: JanIA enviaba mensajes de marketing/asesoría al **Grupo 1 (VECY INMUEBLES NETWORK)** los lunes y jueves a las 11 AM, violando la regla de silencio absoluto de texto en ese grupo.
+   - **Solución aplicada en `cronService.ts`**: Eliminado completamente el bloque `cron.schedule('0 11 * * 1,4', ...)` destinado al Grupo 1. Reemplazado por el **comentario doctrinal v28.0** que formaliza la regla: *"Los mensajes programados se publican EXCLUSIVAMENTE en el Grupo 2 y en el Canal oficial de WhatsApp"*.
+   - **Todos los mensajes programados** (Lunes 8 AM, Martes Jurídico 11 AM, Miércoles Marketing 11:30 AM, Jueves Tributario 11 AM, Viernes Avalúos 11:30 AM, Sábado Café 10 AM y Domingo Soporte 10:30 AM) ya usaban correctamente `sendVoiceToBuzonAndChannel` para enviar simultáneamente al **Grupo 2 + Canal** — solo se erradicó el cron duplicado y mal asignado al Grupo 1.
+
+3. **Commit y Push a GitHub + Deploy VPS**:
+   - `fix(AdminMatches): add isPropPureVenta declaration and fix TS2367 state comparison cast`
+   - `fix(cronService): remove Group 1 scheduled messages - doctrine v28.0 exclusive to Group 2 + Channel`
+   - Deploy completo en VPS con `git pull + npm run build + pm2 reload all`.
+
+#### ⚠️ Regla Doctrinal Registrada:
+> **DOCTRINA v28.0 — Mensajes Programados**: Los mensajes diarios de marketing, asesoría jurídica, tributaria, avalúos y contenido educativo de JanIA se publican **EXCLUSIVAMENTE** en el **Grupo 2 (Soporte Legal, Tributario, Avalúos y Marketing)** y en el **Canal Oficial de WhatsApp** (`Vecy Bienes Raíces 🏠`). El **Grupo 1 (VECY INMUEBLES NETWORK)** mantiene **silencio absoluto** de mensajes de texto salientes. Los **Grupos Externos** también permanecen en silencio absoluto.
+
+---
 
 ### 🗓️ Sesión: Lunes 31 de Agosto de 2026 — 15:00 a 15:45 (Hora Colombia UTC-5)
-**Versión**: `v27.4.1` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)
+**Versión**: `v27.4.1` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)\
 
 #### 🎯 Objetivo y Logros de la Sesión:
 1. **Erradicación de Catastrophic Backtracking (ReDoS) en Extractor Fallback (`janIA.ts`)**:

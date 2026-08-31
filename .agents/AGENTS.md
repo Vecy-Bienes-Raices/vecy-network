@@ -163,7 +163,12 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v27.4.1 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL: v28.0 — Agosto 2026
+
+### Novedades v28.0 (Doctrina de Mensajes Programados Exclusivos Grupo 2 + Canal, y Correcciones TypeScript en AdminMatches):
+- **DOCTRINA v28.0 — Mensajes Programados Exclusivos**: Eliminado el cron del Grupo 1 (VECY INMUEBLES NETWORK) que enviaba mensajes los lunes y jueves a las 11 AM. Todos los mensajes diarios programados (Lunes a Domingo) se publican **EXCLUSIVAMENTE** en el **Grupo 2 (Soporte Legal, Tributario, Avalúos y Marketing)** y en el **Canal Oficial de WhatsApp** mediante `sendVoiceToBuzonAndChannel`. El Grupo 1 mantiene silencio absoluto de texto.
+- **Fix TS2552 — `isPropPureVenta` no declarada (`AdminMatches.tsx`)**: Se añadió la variable `isPropPureVenta` con lógica correcta (`cleanPropBiz === "venta" || "venta_permuta" || "permuta" || "aporte"`) referenciada en las líneas 831, 854 y 885 pero que nunca había sido declarada formalmente.
+- **Fix TS2367 — Comparación de tipos union sin solapamiento (`AdminMatches.tsx`)**: Corrección con cast explícito `(reqState as string) === (propState as string)` en la comparación de estado de conservación del inmueble. `tsc --noEmit` confirma **cero errores** en cliente y servidor.
 
 ### Novedades v27.4.1 (Erradicación de ReDoS en Regex Fallback, Purga de Búsquedas en Ofertas y Población Total de Matches Doctrinales):
 - **Erradicación de Catastrophic Backtracking (ReDoS)**: En `janIA.ts` se implementó sanitización de espacios con `.replace(/[\t ]+/g, " ")` previo a todas las regex de extracción fallback, eliminando bloqueos de CPU y acelerando la ingesta y escaneo en **8.280x** (de 4.546ms a 0.549ms por texto).
