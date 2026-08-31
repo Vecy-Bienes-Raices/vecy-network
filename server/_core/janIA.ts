@@ -424,7 +424,7 @@ export function buildFlyerBreakdownText(extracted: any, fallbackText?: string): 
 }
 
 export function extractFallbackDataFromText(text: string): any {
-  const clean = text.toLowerCase().replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0]/g, " ");
+  const clean = (text || "").toLowerCase().replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0]/g, " ").replace(/[\t ]+/g, " ");
   
   let transactionType = "venta";
   const isInvestorPurchase = /\b(?:inversionista|inversionistas|para inversi[oó]n|para inversion|rentando|est[eé] rentando|est[eé]n rentando|ojal[aá] rentando|ya rentando|generando renta|produciendo renta|con renta activa|para compra|compro|compra ya|busco para compra)\b/i.test(clean);
