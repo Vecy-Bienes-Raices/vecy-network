@@ -163,7 +163,15 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v28.8 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v28.9 — Septiembre 2026
+
+### Novedades v28.9 (Separación Estricta de las 3 Familias Chicó y Guillotina Absoluta de Score):
+- **REGLA DOCTRINAL v28.9 — Separación Geográfica de las 3 Familias Chicó**:
+  1) **Familia 1 — El Chicó (Chapinero)**: Barrio histórico entre Calles 88-100, Cra 7 a Autopista Norte. Localidad Chapinero. Incluye: `el chico`, `chico`, `chico sur`.
+  2) **Familia 2 — Chicó Norte / Reservado (Usaquén)**: Al norte de Calle 100 sobre la Autopista. Localidad Usaquén. Incluye: `chico norte`, `chico norte ii`, `chico norte iii`, `chico reservado`, `chico reservado norte`.
+  3) **Familia 3 — Chicó Navarra (Usaquén)**: ~Calles 106-120. Localidad Usaquén. Incluye: `chico navarra`, `navarra`.
+  > **ESTAS TRES FAMILIAS SON INCOMPATIBLES ENTRE SÍ** en `matching.ts` (servidor) y `AdminMatches.tsx` (frontend).
+- **REGLA DOCTRINAL v28.9 — Guillotina de Score Absoluta**: Si `autoScore = 0` (cualquier casilla en rojo `missing`), el `dbScore` de Supabase **NUNCA** puede rescatar el match. `effectiveScore = exactScore > 0 ? exactScore : 0`. La guillotina es absoluta.
 
 ### Novedades v28.8 (Resolución de Causas Raíz de Precios, Cuotas de Administración, Habitaciones y Saneamiento DB):
 - **Resolución de las 5 Causas Raíz de Discrepancia de Precios y Administración**:
