@@ -3802,18 +3802,12 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
       return { matches: false, score: 0 };
     }
   }
-  const isChicoNavarraReq = reqFullNorm.includes("chico navarra") || reqFullNorm.includes("navarra") && !reqFullNorm.includes("chico reservado");
-  const isChicoNavarraProp = propFullNorm.includes("chico navarra") || propFullNorm.includes("navarra") && !propFullNorm.includes("chico reservado");
-  const isChicoNorteUsaquenReq = reqFullNorm.includes("chico norte") || reqFullNorm.includes("chico reservado");
-  const isChicoNorteUsaquenProp = propFullNorm.includes("chico norte") || propFullNorm.includes("chico reservado");
-  const isChicoTradicionalReq = (reqFullNorm.includes("chico") || reqFullNorm.includes("chico sur") || reqFullNorm.includes("rincon del chico")) && !isChicoNavarraReq && !isChicoNorteUsaquenReq;
-  const isChicoTradicionalProp = (propFullNorm.includes("chico") || propFullNorm.includes("chico sur") || propFullNorm.includes("rincon del chico")) && !isChicoNavarraProp && !isChicoNorteUsaquenProp;
-  if (isChicoNavarraReq && (isChicoNorteUsaquenProp || isChicoTradicionalProp) || isChicoNavarraProp && (isChicoNorteUsaquenReq || isChicoTradicionalReq)) {
-    console.log(`[Matching-Guard] Bloqueo 0%: Incompatibilidad Chic\xF3 Navarra (Usaqu\xE9n ~Cl 106-120) vs otra familia Chic\xF3 ('${reqZoneRaw}' \u2194 '${propZoneRaw}')`);
-    return { matches: false, score: 0 };
-  }
-  if (isChicoNorteUsaquenReq && isChicoTradicionalProp || isChicoNorteUsaquenProp && isChicoTradicionalReq) {
-    console.log(`[Matching-Guard] Bloqueo 0%: Incompatibilidad Chic\xF3 Norte/Reservado (Usaqu\xE9n, norte Cl 100) vs El Chic\xF3 tradicional (Chapinero, Cls 88-100) ('${reqZoneRaw}' \u2194 '${propZoneRaw}')`);
+  const isChicoNavarraReq = reqFullNorm.includes("chico navarra") || reqFullNorm.includes("navarra");
+  const isChicoNavarraProp = propFullNorm.includes("chico navarra") || propFullNorm.includes("navarra");
+  const isChicoTradicionalReq = (reqFullNorm.includes("chico") || reqFullNorm.includes("chic\xF3")) && !isChicoNavarraReq;
+  const isChicoTradicionalProp = (propFullNorm.includes("chico") || propFullNorm.includes("chic\xF3")) && !isChicoNavarraProp;
+  if (isChicoNavarraReq && isChicoTradicionalProp || isChicoTradicionalReq && isChicoNavarraProp) {
+    console.log(`[Matching-Guard] Bloqueo 0%: Navarra/Chic\xF3 Navarra (Usaqu\xE9n) vs Chic\xF3 (Chapinero) ('${reqZoneRaw}' \u2194 '${propZoneRaw}')`);
     return { matches: false, score: 0 };
   }
   const GENERIC_CARDINAL_TERMS = /* @__PURE__ */ new Set([
@@ -3952,16 +3946,13 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
       "usaquen",
       "multicentro"
     ],
-    // REGLA DOCTRINAL v28.9: Las 3 familias Chicó son INCOMPATIBLES entre sí:
-    // Familia 1 - El Chicó (Chapinero, Cls 88-100): "el chico", "chico", "chico sur"
-    // Familia 2 - Chicó Norte (Usaquén, norte Cl 100): "chico norte", "chico reservado", "chico reservado norte"
-    // Familia 3 - Chicó Navarra (Usaquén, ~Cls 106-120): "chico navarra", "navarra"
-    "el chico": ["chico", "chico sur"],
-    "chico": ["el chico", "chico sur"],
-    // Familia 2 es solo compatible entre sus miembros
-    "chico norte": ["chico norte", "chico norte ii", "chico norte iii", "chico reservado norte", "chico reservado"],
-    "chico reservado": ["chico reservado norte", "chico norte", "chico norte ii", "chico norte iii"],
+    // REGLA DOCTRINAL v28.9: Todos los Chicó son CHAPINERO, excepto Navarra = Usaquén.
+    "el chico": ["chico", "chico sur", "chico norte", "chico reservado", "chico reservado norte"],
+    "chico": ["el chico", "chico sur", "chico norte", "chico reservado", "chico reservado norte"],
+    "chico norte": ["chico norte", "chico norte ii", "chico norte iii", "chico reservado norte", "chico reservado", "chico", "el chico"],
+    "chico reservado": ["chico reservado norte", "chico norte", "chico norte ii", "chico norte iii", "chico", "el chico"],
     "chico reservado norte": ["chico reservado", "chico norte", "chico norte ii", "chico norte iii"],
+    // Navarra → USAQUÉN (incompatible con TODOS los Chicó de Chapinero):
     "chico navarra": ["chico navarra", "navarra"],
     "navarra": ["chico navarra", "navarra"],
     "lagos": ["lagos de torca", "club los lagartos", "el lago"],
@@ -4020,14 +4011,18 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
       "santa ana central",
       "santa ana alta",
       "santa ana",
+      // Familia 2 Chicó: USAQUÉN norte Cl 100 (sin mezclar con Rincón del Chicó que es Chapinero)
       "chico reservado norte",
       "chico reservado",
       "chico norte iii",
       "chico norte ii",
       "chico norte",
-      "rincon del chico",
+      // Familia 3 Chicó: USAQUÉN ~Cls 106-120
       "chico navarra",
+      // Familia 1 Chicó: CHAPINERO Cls 88-100 (Rincón del Chicó = junto al Parque El Virrey, Chapinero)
+      "rincon del chico",
       "chico",
+      // Barrios Usaquén Cls 100-127 (oriente Autopista Norte)
       "cedritos",
       "los cedros",
       "santa paula",
@@ -4060,6 +4055,7 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
       "san cipriano",
       "toberin",
       "villa magdala",
+      // Chapinero
       "los rosales",
       "rosales",
       "la cabrera",
@@ -4077,6 +4073,7 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
       "polo club",
       "polo",
       "san felipe",
+      // Suba (Prado Veraniego está al OESTE de la Autopista Norte, pertenece a Suba, NO a Usaquén)
       "colina campestre",
       "colina",
       "san jose de bavaria",
