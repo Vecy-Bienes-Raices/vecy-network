@@ -163,7 +163,17 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v28.9 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v29.2 — Septiembre 2026
+
+### Novedades v29.2 (Desbloqueo de Bloqueadores Artificiales y Aumento a 82 Matches Certificados):
+- **Desbloqueo de Bloqueadores Artificiales en Matching (`matching.ts`)**:
+  1) `deduceFullType`: Jerarquía corregida para detectar `apartment` y `loft` antes de la palabra `edificio` en descripciones mixtas (evitando falsas asignaciones a `building`).
+  2) Compatibilidad Doctrinal `Apartaestudio / Loft` ↔ `Apartamento` de 1 alcoba o $\le 65\text{ m²}$.
+  3) Eliminación de la guillotina artificial de completitud de ficha (<50%), permitiendo que pares con 100% de cumplimiento en los 5 núcleos duros y límites cuantitativos inicien en score base 80% y escalen proporcionalmente sin rojos (`missing`).
+- **Población Total de 82 Matches Certificados en Supabase (`master_audit_and_match.ts`)**: 82 cruces reales y verificados con score $\ge 80\%$ y cero casillas en rojo.
+
+### Novedades v29.1 (Erradicación de Datos Sintéticos y Taxonomía Integral de Subclases):
+- Purgados registros de prueba (#363, #365, #366) y clasificación integral de tipologías según Ley 388/1997.
 
 ### Novedades v28.9 (Separación Estricta de las 3 Familias Chicó y Guillotina Absoluta de Score):
 - **REGLA DOCTRINAL v28.9 — Separación Geográfica de las 3 Familias Chicó**:

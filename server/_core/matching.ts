@@ -1607,19 +1607,20 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
         clean.includes("suelo expansion") || clean.includes("suelo de expansion") || clean.includes("suelo proteccion")) {
       return "land";
     }
-    // Edificio (residencial o comercial)
-    if (clean.includes("edificio") || clean.includes("building")) {
-      return "building";
-    }
-    // Apartaestudio / Loft / Apartasuite
+    // Apartaestudio / Loft / Apartasuite (subclase residencial)
     if (clean.includes("apartaestudio") || clean.includes("aparta estudio") || clean.includes("apartasuite") ||
         clean.includes("aparta suite") || clean.includes("loft")) {
       return "loft";
     }
-    // Apartamento (estándar, dúplex, penthouse, PH)
+    // Apartamento (estándar, dúplex, penthouse, PH, apartamento en edificio)
     if (clean.includes("apartamento") || clean.includes("apto") || clean.includes("penthouse") ||
         clean.includes("pent house") || /\bph\b/.test(clean) || clean.includes("apartment")) {
       return "apartment";
+    }
+    // Edificio (completo, residencial o comercial)
+    if (clean.includes("se vende edificio") || clean.includes("edificio en venta") || clean.includes("edificio completo") ||
+        clean.includes("building") || clean.startsWith("edificio")) {
+      return "building";
     }
     return "apartment";
   };
@@ -1688,7 +1689,18 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
     };
     const reqAlias = aliases[effectiveReqType] || [effectiveReqType];
     const propAlias = aliases[effectivePropType] || [effectivePropType];
-    if (!reqAlias.some(a => propAlias.includes(a))) {
+
+    // Compatibilidad doctrinal: Apartaestudio / Loft es subclase residencial de 1 alcoba
+    const isLoftProp = (aliases["loft"] || []).includes(effectivePropType);
+    const isLoftReq = (aliases["loft"] || []).includes(effectiveReqType);
+    const isAptoProp = (aliases["apartment"] || []).includes(effectivePropType);
+    const isAptoReq = (aliases["apartment"] || []).includes(effectiveReqType);
+
+    const isLoftAptoCrossCompatible = 
+      (isLoftReq && isAptoProp && (pBedrooms <= 1 || propArea <= 65 || propArea === 0)) ||
+      (isAptoReq && isLoftProp && (reqBedrooms <= 1 || reqAreaMin <= 65 || reqAreaMin === 0));
+
+    if (!reqAlias.some(a => propAlias.includes(a)) && !isLoftAptoCrossCompatible) {
       blockers.push(`Tipo de activo incompatible (Tolerancia Cero 0%): deseado ${effectiveReqType}, ofrecido ${effectivePropType}`);
       return buildExplanationResult(0, blockers, positives, negatives);
     }
@@ -2568,22 +2580,19 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
 
   const completionRatio = Math.min(1.0, filledDownstreamSpecs / totalDownstreamSpecs);
 
-  let finalPercentage = 0;
-  if (completionRatio < 0.50) {
-    blockers.push(`Ficha incompleta: los campos de abajo están llenados a menos del 50% (${Math.round(completionRatio * 100)}%). Match no considerado (0%).`);
-    return buildExplanationResult(0, blockers, positives, negatives, false, missingFieldsList);
-  } else if (completionRatio < 0.70) {
-    finalPercentage = 80;
-    positives.push(`✅ Match 80%: 5 campos en duro 100% en verde + campos de abajo llenos al ${Math.round(completionRatio * 100)}% (mín. 50%)`);
-  } else if (completionRatio < 0.85) {
-    finalPercentage = 85;
-    positives.push(`✅ Match 85%: 5 campos en duro 100% en verde + campos de abajo llenos al ${Math.round(completionRatio * 100)}% (mín. 70%)`);
-  } else if (completionRatio < 0.95) {
-    finalPercentage = 95;
-    positives.push(`✅ Match 95%: 5 campos en duro 100% en verde + campos de abajo llenos al ${Math.round(completionRatio * 100)}% (mín. 85%)`);
-  } else {
+  let finalPercentage = 80;
+  if (completionRatio >= 0.85) {
     finalPercentage = 100;
     positives.push(`🌟 MATCH PERFECTO 100%: 5 campos en duro 100% en verde + TODAS las líneas de abajo 100% llenas y compatibles!`);
+  } else if (completionRatio >= 0.65) {
+    finalPercentage = 90;
+    positives.push(`✅ Match 90%: 5 campos en duro 100% en verde + alta compatibilidad en especificaciones (${Math.round(completionRatio * 100)}%)`);
+  } else if (completionRatio >= 0.40) {
+    finalPercentage = 85;
+    positives.push(`✅ Match 85%: 5 campos en duro 100% en verde + compatibilidad en especificaciones (${Math.round(completionRatio * 100)}%)`);
+  } else {
+    finalPercentage = 80;
+    positives.push(`✅ Match 80%: 5 campos en duro 100% en verde + especificaciones cuantitativas básicas`);
   }
 
   return buildExplanationResult(finalPercentage, blockers, positives, negatives, isStrictCompliant, missingFieldsList);

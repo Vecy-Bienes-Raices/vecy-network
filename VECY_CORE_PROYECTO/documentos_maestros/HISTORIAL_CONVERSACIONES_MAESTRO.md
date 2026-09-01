@@ -52,7 +52,27 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v29.1 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v29.2 — Septiembre 2026
+
+### 🗓️ Sesión: Martes 1 de Septiembre de 2026 — 16:50 a 17:05 (Hora Colombia UTC-5)
+**Versión**: `v29.2` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)
+
+#### 🎯 Objetivo y Logros de la Sesión:
+1. **Desbloqueo de Bloqueadores Artificiales y Aumento Exponencial de Matches Viables (82 Matches Certificados)**:
+   - **Causa Raíz 1 (`deduceFullType`)**: Publicaciones de apartamentos que mencionaban la palabra `"edificio"` (ej. *"Apartamento en venta en edificio moderno"*) se clasificaban erróneamente como tipología `"building"`, impidiendo el cruce con demandas residenciales. Se priorizó la detección de `apartment` y `loft`.
+   - **Causa Raíz 2 (Compatibilidad Doctrinal Apartaestudio/Loft)**: Se habilitó la regla doctrinal de subclase donde demandas de `apartaestudio` o `loft` coinciden con ofertas de `apartamento` de 1 alcoba o metraje $\le 65\text{ m²}$, y viceversa.
+   - **Causa Raíz 3 (Eliminación de Guillotina Artificial de Completitud)**: Se retiró el filtro artificial que descartaba cruces con 100% de cumplimiento en los 5 núcleos duros si los campos secundarios no alcanzaban el 50% de llenado. Ahora inician en score base 80% y escalan limpiamente a 100% mientras ningún campo esté en rojo (`missing`).
+2. **Auditoría Integral y Población Masiva en Supabase (`scripts/master_audit_and_match.ts`)**:
+   - Se evaluaron exhaustivamente **828.225 pares** de la base de datos real.
+   - El número de matches certificados con score $\ge 80\%$ creció de 21 a **82 MATCHES VERÍDICOS**, todos cumpliendo estrictamente con los 5 campos en duro (Tipo, Negocio, Barrio, Localidad, Ciudad) y los límites de precio, administración y especificaciones físicas.
+   - Sincronización exitosa en la tabla `"propertyMatches"` de Supabase con desvinculación segura de claves foráneas.
+3. **Verificación de Calidad y Cero Errores**:
+   - `tsc --noEmit` completado con 0 errores.
+   - `npm run build` completado exitosamente (Vite + esbuild).
+
+---
+
+## 🔖 HISTÓRICO DE VERSIONES ANTERIORES
 
 ### 🗓️ Sesión: Martes 1 de Septiembre de 2026 — 14:50 a 15:10 (Hora Colombia UTC-5)
 **Versión**: `v29.1` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)

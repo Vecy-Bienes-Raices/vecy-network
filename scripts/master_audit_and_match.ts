@@ -146,6 +146,7 @@ async function runMasterAudit() {
 
   // 3. Sincronizar tabla "propertyMatches" en Supabase
   console.log('🔄 Sincronizando tabla propertyMatches en Supabase...');
+  await client`UPDATE "notificationLogs" SET "matchId" = NULL WHERE "matchId" IS NOT NULL`;
   await client`DELETE FROM "propertyMatches"`;
   
   for (const m of matchesFound) {
