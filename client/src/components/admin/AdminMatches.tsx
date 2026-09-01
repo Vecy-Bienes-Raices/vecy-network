@@ -659,14 +659,30 @@ function scoreRows(req: any, prop: any) {
     if (!rn || !pn) return false;
     if (rn === pn) return true;
 
-    const isChicoNavReq = rn.includes("chico navarra") || rn.includes("navarra");
-    const isChicoNavProp = pn.includes("chico navarra") || pn.includes("navarra");
-    const isChicoTradReq = (rn.includes("chico") || rn.includes("chico norte") || rn.includes("chico reservado") || rn.includes("rincon del chico")) && !isChicoNavReq;
-    const isChicoTradProp = (pn.includes("chico") || pn.includes("chico norte") || pn.includes("chico reservado") || pn.includes("rincon del chico")) && !isChicoNavProp;
+    // --- REGLA DOCTRINAL v28.9: Separación estricta entre familias del Chicó ---
+    // El Chicó CHAPINERO: barrio histórico entre Calles 88 y 100, Cra 7 - Autopista Norte. Localidad Chapinero.
+    //   → Incluye: "el chico", "chico", "chico sur"
+    // El Chicó USAQUÉN: barrios al norte de Calle 100 sobre Autopista. Localidad Usaquén.
+    //   → Incluye: "chico norte", "chico norte ii", "chico norte iii", "chico reservado norte"
+    // El Chicó NAVARRA: más al norte, entre Calles 106-120 aprox. Localidad Usaquén.
+    //   → Incluye: "chico navarra", "navarra"
+    // ESTAS TRES FAMILIAS SON INCOMPATIBLES ENTRE SÍ.
+    const isChicoNavReq = rn.includes("chico navarra") || (rn.includes("navarra") && !rn.includes("chico reservado"));
+    const isChicoNavProp = pn.includes("chico navarra") || (pn.includes("navarra") && !pn.includes("chico reservado"));
 
-    if ((isChicoNavReq && isChicoTradProp) || (isChicoTradReq && isChicoNavProp)) {
-      return false;
-    }
+    // Chicó Norte / Chicó Reservado Norte = USAQUÉN (Calles 100-127)
+    const isChicoNorteUsaquenReq = rn.includes("chico norte") || rn.includes("chico reservado");
+    const isChicoNorteUsaquenProp = pn.includes("chico norte") || pn.includes("chico reservado");
+
+    // El Chicó tradicional = CHAPINERO (Calles 88-100, cra 7 a Autopista)
+    const isChicoChapiReq = rn.includes("chico") && !isChicoNavReq && !isChicoNorteUsaquenReq;
+    const isChicoChapiProp = pn.includes("chico") && !isChicoNavProp && !isChicoNorteUsaquenProp;
+
+    // Incompatibilidades: las tres familias NO se mezclan
+    if ((isChicoNavReq && (isChicoNorteUsaquenProp || isChicoChapiProp)) ||
+        (isChicoNavProp && (isChicoNorteUsaquenReq || isChicoChapiReq))) return false;
+    if ((isChicoNorteUsaquenReq && isChicoChapiProp) ||
+        (isChicoNorteUsaquenProp && isChicoChapiReq)) return false;
 
     const isAlamedaReq = rn.includes("alameda");
     const isAlamedaProp = pn.includes("alameda");
@@ -681,8 +697,13 @@ function scoreRows(req: any, prop: any) {
   const inferLocalityFromBarrio = (bName: string | null | undefined): string => {
     if (!bName || isGenericZone(bName)) return "N/E";
     const norm = bName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+    // ⚠️ ORDEN CRÍTICO: más específico primero para evitar que "chico norte" caiga en la regla genérica de "chico"
+    // Chicó Norte / Chicó Reservado Norte / Chicó Reservado → USAQUÉN (norte de Calle 100)
+    if (norm.includes("chico norte") || norm.includes("chico reservado") || norm.includes("rincon del chico")) return "Usaquén";
+    // Chicó Navarra / Navarra → USAQUÉN
     if (norm.includes("chico navarra") || norm.includes("navarra")) return "Usaquén";
-    if (norm.includes("rosales") || norm.includes("chico") || norm.includes("nogal") || norm.includes("cabrera") || norm.includes("virrey") || norm.includes("quinta camacho") || norm.includes("chapinero")) return "Chapinero";
+    // El Chicó tradicional (sin calificador "norte" o "reservado") + otros barrios de Chapinero
+    if (norm.includes("chico") || norm.includes("rosales") || norm.includes("nogal") || norm.includes("cabrera") || norm.includes("virrey") || norm.includes("quinta camacho") || norm.includes("chapinero")) return "Chapinero";
     if (norm.includes("alameda") || norm.includes("san antonio") || norm.includes("cedritos") || norm.includes("santa barbara") || norm.includes("santa paula") || norm.includes("bella suiza") || norm.includes("contador") || norm.includes("san patricio") || norm.includes("toberin") || norm.includes("usaquen") || norm.includes("belmira") || norm.includes("portales del norte") || norm.includes("alcala")) return "Usaquén";
     if (norm.includes("castellana") || norm.includes("polo") || norm.includes("san felipe")) return "Barrios Unidos";
     if (norm.includes("niza") || norm.includes("pasadena") || norm.includes("colina") || norm.includes("suba") || norm.includes("pontevedra") || norm.includes("morato") || norm.includes("floresta") || norm.includes("batan") || norm.includes("alhambra")) return "Suba";
@@ -2350,9 +2371,10 @@ export default function AdminMatches() {
       const computed = scoreRows(requirement, property);
       const exactScore = computed.autoScore;
 
-      // Preservar score validado en BD para que no se descarte si el frontend tiene micro-diferencia
+      // REGLA DOCTRINAL v28.9: Si la guillotina técnica (missing en barrio, tipo, negocio, ciudad o núcleo físico)
+      // condena el match a 0%, el dbScore de Supabase NUNCA puede rescatarlo. La guillotina es absoluta.
       const dbScore = parseFloat(String(match.matchScore || "0"));
-      const effectiveScore = exactScore >= 80 ? exactScore : (dbScore >= 80 ? dbScore : exactScore);
+      const effectiveScore = exactScore > 0 ? exactScore : 0; // Si autoScore=0 (guillotina activa) → 0%. Punto.
 
       // Del 79% para abajo NO se mostrarán en nuestra página de coincidencias (Regla Doctrinal v26.8)
       if (effectiveScore < 80) {

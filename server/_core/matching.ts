@@ -405,15 +405,31 @@ export function matchesGeography(
     }
   }
 
-  // 1.46 Guard Doctrinal v26.3: Incompatibilidad entre Chicó tradicional (Chapinero) y Chicó Navarra / Navarra (Usaquén)
-  // "Chicó" tradicional está en Chapinero (Calles 88-100). "Chicó Navarra" está en Usaquén (Calles 100-106). Son barrios totalmente distintos.
-  const isChicoNavarraReq = reqFullNorm.includes("chico navarra") || reqFullNorm.includes("navarra");
-  const isChicoNavarraProp = propFullNorm.includes("chico navarra") || propFullNorm.includes("navarra");
-  const isChicoTradicionalReq = (reqFullNorm.includes("chico") || reqFullNorm.includes("chicó")) && !isChicoNavarraReq;
-  const isChicoTradicionalProp = (propFullNorm.includes("chico") || propFullNorm.includes("chicó")) && !isChicoNavarraProp;
+  // 1.46 Guard Doctrinal v28.9: Separación estricta entre las TRES familias del Chicó
+  // Familia 1 — El Chicó CHAPINERO: barrio histórico. Límites: Calles 88 a 100, Cra 7 a Autopista Norte. Localidad Chapinero.
+  //              Incluye: "el chico", "chico", "chico sur", "rincon del chico"
+  // Familia 2 — El Chicó USAQUÉN (Norte): al norte de Calle 100 sobre la Autopista. Localidad Usaquén.
+  //              Incluye: "chico norte", "chico norte ii", "chico norte iii", "chico reservado", "chico reservado norte"
+  // Familia 3 — El Chicó NAVARRA: más al norte aún, ~Calles 106-120. Localidad Usaquén.
+  //              Incluye: "chico navarra", "navarra"
+  // ESTAS TRES FAMILIAS SON GEOGRÁFICAMENTE INCOMPATIBLES: se ubican en localidades distintas.
+  const isChicoNavarraReq = reqFullNorm.includes("chico navarra") || (reqFullNorm.includes("navarra") && !reqFullNorm.includes("chico reservado"));
+  const isChicoNavarraProp = propFullNorm.includes("chico navarra") || (propFullNorm.includes("navarra") && !propFullNorm.includes("chico reservado"));
+  // Familia 2: Chicó Norte / Chicó Reservado → USAQUÉN (norte de Calle 100)
+  const isChicoNorteUsaquenReq = reqFullNorm.includes("chico norte") || reqFullNorm.includes("chico reservado");
+  const isChicoNorteUsaquenProp = propFullNorm.includes("chico norte") || propFullNorm.includes("chico reservado");
+  // Familia 1: El Chicó tradicional de Chapinero
+  const isChicoTradicionalReq = (reqFullNorm.includes("chico") || reqFullNorm.includes("chico sur") || reqFullNorm.includes("rincon del chico")) && !isChicoNavarraReq && !isChicoNorteUsaquenReq;
+  const isChicoTradicionalProp = (propFullNorm.includes("chico") || propFullNorm.includes("chico sur") || propFullNorm.includes("rincon del chico")) && !isChicoNavarraProp && !isChicoNorteUsaquenProp;
 
-  if ((isChicoNavarraReq && isChicoTradicionalProp) || (isChicoTradicionalReq && isChicoNavarraProp)) {
-    console.log(`[Matching-Guard] Bloqueo 0%: Incompatibilidad geográfica absoluta entre Chicó tradicional (Chapinero) y Chicó Navarra (Usaquén) ('${reqZoneRaw}' ↔ '${propZoneRaw}')`);
+  // Incompatibilidad entre las 3 familias
+  if ((isChicoNavarraReq && (isChicoNorteUsaquenProp || isChicoTradicionalProp)) ||
+      (isChicoNavarraProp && (isChicoNorteUsaquenReq || isChicoTradicionalReq))) {
+    console.log(`[Matching-Guard] Bloqueo 0%: Incompatibilidad Chicó Navarra (Usaquén ~Cl 106-120) vs otra familia Chicó ('${reqZoneRaw}' ↔ '${propZoneRaw}')`);
+    return { matches: false, score: 0 };
+  }
+  if ((isChicoNorteUsaquenReq && isChicoTradicionalProp) || (isChicoNorteUsaquenProp && isChicoTradicionalReq)) {
+    console.log(`[Matching-Guard] Bloqueo 0%: Incompatibilidad Chicó Norte/Reservado (Usaquén, norte Cl 100) vs El Chicó tradicional (Chapinero, Cls 88-100) ('${reqZoneRaw}' ↔ '${propZoneRaw}')`);
     return { matches: false, score: 0 };
   }
 
@@ -493,8 +509,16 @@ export function matchesGeography(
       "santa ana oriental", "santa ana occidental", "santa paula", "santa bibiana",
       "san patricio", "navarra", "chico navarra", "molinos norte", "usaquen", "multicentro"
     ],
-    "el chico": ["chico norte", "chico reservado", "chico reservado norte", "chico", "chico sur"],
-    "chico": ["chico norte", "chico reservado", "chico reservado norte", "chico", "chico sur"],
+    // REGLA DOCTRINAL v28.9: Las 3 familias Chicó son INCOMPATIBLES entre sí:
+    // Familia 1 - El Chicó (Chapinero, Cls 88-100): "el chico", "chico", "chico sur"
+    // Familia 2 - Chicó Norte (Usaquén, norte Cl 100): "chico norte", "chico reservado", "chico reservado norte"
+    // Familia 3 - Chicó Navarra (Usaquén, ~Cls 106-120): "chico navarra", "navarra"
+    "el chico": ["chico", "chico sur"],
+    "chico": ["el chico", "chico sur"],
+    // Familia 2 es solo compatible entre sus miembros
+    "chico norte": ["chico norte", "chico norte ii", "chico norte iii", "chico reservado norte", "chico reservado"],
+    "chico reservado": ["chico reservado norte", "chico norte", "chico norte ii", "chico norte iii"],
+    "chico reservado norte": ["chico reservado", "chico norte", "chico norte ii", "chico norte iii"],
     "chico navarra": ["chico navarra", "navarra"],
     "navarra": ["chico navarra", "navarra"],
     "lagos": ["lagos de torca", "club los lagartos", "el lago"],
