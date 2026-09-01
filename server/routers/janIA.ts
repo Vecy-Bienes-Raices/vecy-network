@@ -1234,6 +1234,13 @@ export const janIARouter = router({
       const { publishTodayTipNow } = await import('../_core/cronService');
       return await publishTodayTipNow();
     }),
+
+  // Disparo manual/inmediato del Reporte Semanal de la Bolsa Inmobiliaria (Lunes 7:00 PM)
+  triggerWeeklyReport: publicProcedure
+    .mutation(async () => {
+      const { publishWeeklyReportNow } = await import('../_core/cronService');
+      return await publishWeeklyReportNow();
+    }),
 });
 
 export type JanIARouter = typeof janIARouter;

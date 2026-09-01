@@ -52,7 +52,20 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v28.1 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v28.2 — Agosto 2026
+
+### 🗓️ Sesión: Lunes 31 de Agosto de 2026 — 21:15 a 21:35 (Hora Colombia UTC-5)
+**Versión**: `v28.2` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)
+
+#### 🎯 Objetivo y Logros de la Sesión:
+1. **Implementación del Reporte Semanal de la Bolsa Inmobiliaria & Coaching de Eficiencia (Lunes 7:00 PM)**:
+   - **Concepto**: Emisión semanal nocturna todos los lunes a las 7:00 PM (`0 19 * * 1`) que combina balance analítico con pedagogía y llamado de atención sobre la pérdida masiva de negocios por "demandas fantasma" o incompletas (solicitudes sin barrio, sin presupuesto real, sin metraje ni alcobas).
+   - **Estadísticas Dinámicas en Vivo (`getLiveMarketStats`)**: Consulta en tiempo real de la base de datos de Supabase (`totalProps`, `totalReqs`, `totalMatches`, `ciudadesCount` y `totalPairs`), inyectando las cifras reales del momento a Gemini 2.5 Flash.
+   - **Despacho Multimodal**: Envío simultáneo de infografía 3D, caption estructurado con tablas en monospace y nota de voz (TTS) fluida al **Grupo 2 (Soporte)** y al **Canal Oficial de WhatsApp** vía `sendVoiceToBuzonAndChannel`.
+   - **Endpoint On-Demand (`janIA.triggerWeeklyReport`)**: Mutación tRPC para pruebas y disparos manuales inmediatos.
+2. **Preservación Intacta de la Parrilla**: El mensaje motivador y de convocatoria de los Lunes 8:00 AM se mantiene inalterado en su horario habitual.
+
+---
 
 ### 🗓️ Sesión: Lunes 31 de Agosto de 2026 — 19:50 a 20:15 (Hora Colombia UTC-5)
 **Versión**: `v28.1` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)

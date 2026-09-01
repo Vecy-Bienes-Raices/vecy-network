@@ -880,6 +880,18 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 
 ---
 
+### Versión v28.2 — Agosto 2026: Orquestación del Reporte Semanal de la Bolsa Inmobiliaria & Coaching de Eficiencia (Lunes 7:00 PM)
+
+#### 1. REPORTE SEMANAL NOCTURNO EN VIVO (LUNES 7:00 PM)
+- **Orquestación Cron (`0 19 * * 1`)**: Programación en `cronService.ts` de la emisión semanal que presenta el balance de la bolsa con estadísticas en vivo de Supabase (`getLiveMarketStats`: total de ofertas, demandas, ciudades y pares evaluados).
+- **Contenido y Pedagogía de Choque**: Reflexión dirigida a los corredores sobre el descarte masivo de solicitudes "ciegas" o incompletas (sin barrio, sin presupuesto real, sin metraje ni alcobas), explicando que si una IA avanzada no puede descifrar una solicitud incompleta, ningún colega humano podrá adivinar qué busca su cliente.
+- **Formato Multimodal**: Despacho automático al Grupo 2 y Canal Oficial de WhatsApp con infografía 3D, tablas estructuradas en bloque monoespaciado y nota de voz (TTS) elocuente.
+
+#### 2. ENDPOINT ON-DEMAND
+- **Mutación tRPC `janIA.triggerWeeklyReport`**: Habilitada para pruebas y ejecuciones inmediatas desde el panel administrativo.
+
+---
+
 ### Versión v28.1 — Agosto 2026: Sanitización Estricta de Guardado SQL en Mesa de Cotejo, Corrección de Regex de Metraje vs Administración y Auditoría Geográfica Nacional de Coincidencias
 
 #### 1. RESOLUCIÓN DEFINITIVA DE ERROR SQL DE GUARDADO EN MESA DE COTEJO

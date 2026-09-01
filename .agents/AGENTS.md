@@ -163,7 +163,13 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v28.1 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL: v28.2 — Agosto 2026
+
+### Novedades v28.2 (Orquestación del Reporte Semanal de la Bolsa Inmobiliaria, Cifras en Vivo y Coaching de Eficiencia los Lunes 7:00 PM):
+- **Orquestación Cron Nocturna de Lunes 7:00 PM (`0 19 * * 1` en `cronService.ts`)**: Programada la emisión semanal que audita la bolsa con estadísticas en vivo de Supabase (`getLiveMarketStats`: conteo dinámico de ofertas, requerimientos, combinaciones y matches certificados).
+- **Contenido Dinámico y Coaching Pedagógico**: Llamado de atención y pedagogía directa para los agentes sobre la pérdida masiva de cierres debido a "demandas fantasma" o incompletas (solicitudes sin barrio, sin presupuesto real, sin metraje ni alcobas).
+- **Despacho Multimodal Simultáneo**: Ilustración 3D, texto estructurado con tablas en monospace y audio TTS enviados al Grupo 2 y Canal Oficial de WhatsApp vía `sendVoiceToBuzonAndChannel`. El mensaje motivador matutino de los lunes (8:00 AM) se preserva intacto.
+- **Endpoint On-Demand (`janIA.triggerWeeklyReport`)**: Mutación tRPC disponible para pruebas y disparos manuales.
 
 ### Novedades v28.1 (Sanitización Estricta de Guardado SQL en Mesa de Cotejo, Corrección de Regex de Metraje y Sincronización de Coincidencias):
 - **Sanitización Exhaustiva en Guardado SQL (`updatePropertyDetails` / `updateRequirementDetails` en `janIA.ts` y `AdminMatches.tsx`)**: Implementadas funciones `sanitizeNumeric` y `sanitizeInt` que limpian signos de moneda, puntos y strings no numéricos (`"N/E (Consultar)"`), convirtiéndolos a `null` o `undefined` para evitar el error `invalid input syntax for type numeric` en Postgres.
