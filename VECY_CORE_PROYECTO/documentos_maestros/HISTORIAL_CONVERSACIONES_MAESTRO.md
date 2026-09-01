@@ -52,12 +52,30 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v28.8 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v29.1 — Septiembre 2026
 
-### 🗓️ Sesión: Martes 1 de Septiembre de 2026 — 03:45 a 04:10 (Hora Colombia UTC-5)
-**Versión**: `v28.8` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)
+### 🗓️ Sesión: Martes 1 de Septiembre de 2026 — 14:50 a 15:10 (Hora Colombia UTC-5)
+**Versión**: `v29.1` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)
 
 #### 🎯 Objetivo y Logros de la Sesión:
+1. **Erradicación de Datos Sintéticos / De Prueba en Base de Datos**:
+   - Se detectó el origen de los requerimientos que aparecían como *"Prueba Auditoría Realtime VECY 3"* (con teléfono ficticio `+57 300 111 2233` y grupo *"Grupo Prueba Realtime"*).
+   - Eran registros antiguos de pruebas (IDs #363, #365, #366) que estaban emparejándose con el inmueble de Ricardo Castillo Fraiz en Nueva Autopista (#485), generando 3 coincidencias repetidas.
+   - **Acción ejecutada**: Se purgaron físicamente de Supabase los requerimientos #363, #365 y #366 y sus matches asociados.
+2. **Taxonomía Integral de Tipos y Subclases (Ley 388 de 1997 / POT)**:
+   - Implementadas todas las subclases de inmuebles:
+     - **Casas**: `casa_barrio`, `casa_conjunto`, `casa_condominio`, `casa_campestre`, `casa_campestre_condominio`, `casa_quinta`.
+     - **Apartamentos**: `apartamento_estandar`, `apartamento_duplex`, `penthouse`, `penthouse_duplex`, `apartaestudio`, `loft`.
+     - **Lotes / Suelos**: `lote_urbano`, `lote_rural`, `lote_suburbano`, `lote_expansion`, `lote_proteccion`.
+     - **Alojamiento**: `hotel`, `hostal`, `aparta_hotel`, `aparta_suit`, `motel`.
+     - **Edificios**: `edificio_residencial`, `edificio_comercial`, `edificio_oficinas`.
+   - Implementada matriz de grupos de compatibilidad de subtipos para evitar falsos bloqueos (ej. `casa_conjunto` es compatible con `casa_barrio` si la demanda no exige conjunto cerrado).
+3. **Módulo de Detección de Porcentajes de Permutas (`extractPermutaPercentage`)**:
+   - Soporte para estructuras `50/50`, `60/40`, `70/30`, `80/20`, `90/10` tanto en demanda como en oferta.
+4. **Población Limpia de 21 Matches Certificados 100% Reales**:
+   - Escaneo integral de 817.000 combinaciones con datos reales de brokers conocidos en Supabase.
+
+---
 1. **Resolución de las 5 Causas Raíz de Discrepancia de Precios y Administración (Match #M11523 / CSV)**:
    - **Causa 1 (Caracteres Invisibles y Apóstrofes)**: Se identificó que símbolos como `´`, `'`, `’` y caracteres Unicode invisibles (`\u2060`, `\uFEFF`, `\u00A0`, `\u2028`, etc.) partían los números de precio (`$1.100´000.000` se cortaba en `1.100`), normalizándose a `.` y eliminando caracteres basura en `janIA.ts` y `AdminMatches.tsx`.
    - **Causa 2 (Falso Positivo de Celulares `isPhoneNumberNotPrice`)**: Precios legítimos entre 3.000M y 3.999M (como los $3.400.000.000 de la Prop #137) eran descartados por comenzar con `3` y tener 10 dígitos. Se blindó la función exigiendo que valores $\ge 50\text{M}$ múltiplos de $100\text{k}$ o con etiquetas de precio jamás se traten como números de celular.
