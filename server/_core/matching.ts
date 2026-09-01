@@ -105,6 +105,31 @@ const TRANSACTION_COMPATIBILITY_MATRIX: Record<string, Set<string>> = {
   aporte: new Set(["aporte"]),
 };
 
+/**
+ * Extrae el porcentaje de permuta de un texto (ej: "50/50", "70/30", "venta 60% permuta 40%")
+ * Retorna { ventaPct, permutaPct } o null si no hay porcentaje explícito.
+ */
+export function extractPermutaPercentage(text: string): { ventaPct: number; permutaPct: number } | null {
+  const t = (text || "").toLowerCase();
+  // Formato "XX/YY" (ej: "50/50", "70/30")
+  const slashMatch = t.match(/(\d{1,3})\s*\/\s*(\d{1,3})/);
+  if (slashMatch) {
+    const a = parseInt(slashMatch[1], 10);
+    const b = parseInt(slashMatch[2], 10);
+    if (a + b === 100) {
+      // Determinar cuál es venta y cuál permuta por contexto
+      const ventaFirst = t.indexOf("venta") < t.indexOf("permuta") || !t.includes("permuta");
+      return ventaFirst ? { ventaPct: a, permutaPct: b } : { ventaPct: b, permutaPct: a };
+    }
+  }
+  // Formato "venta X% / permuta Y%" o "X% venta Y% permuta"
+  const pctMatch = t.match(/(?:venta|vdo|vdo\.)\s*(\d{1,3})\s*%.*?(?:permuta|carro|vehiculo|bien)\s*(\d{1,3})\s*%/);
+  if (pctMatch) {
+    return { ventaPct: parseInt(pctMatch[1], 10), permutaPct: parseInt(pctMatch[2], 10) };
+  }
+  return null;
+}
+
 export function checkTransactionCompatibility(reqType: string | null | undefined, propType: string | null | undefined, propAccepted: string[] = []): boolean {
   if (!reqType || !propType) return false;
   let r = reqType.toLowerCase().trim();
@@ -249,14 +274,14 @@ export function parseStreetCarreraBoundaries(text: string): StreetCarreraBoundar
   const norm = (text || "").toLowerCase();
   const res: StreetCarreraBoundaries = {};
 
-  // 1. Rango de Calles: "entre la 106 y la 127", "entre 106 y 127", "calle 100 a 127", "cll 100 a 127", "de la 80 a la 94"
+  // 1. Rango de Calles: soporta "calle 100 a calle 127", "entre calle 100 y 127", "de la 80 a la 94"
+  //    La regex ahora acepta la palabra "calle" explícita entre los dos números.
   const streetRangeMatch = norm.match(
     /(?:entre|de|cll|calle|calles)?\s*(?:la|las)?\s*(?:calle|clle|cll|cna|cera)?\s*(\d{1,3})\s*(?:a|y|-|hasta)\s*(?:la|las)?\s*(?:calle|clle|cll|cna|cera)?\s*(\d{1,3})/i
   );
   if (streetRangeMatch) {
     const n1 = parseInt(streetRangeMatch[1], 10);
     const n2 = parseInt(streetRangeMatch[2], 10);
-    // Filtrar falsos positivos de rangos pequeños o de horas/habitaciones
     if (!isNaN(n1) && !isNaN(n2) && (n1 > 20 || n2 > 20)) {
       res.minStreet = Math.min(n1, n2);
       res.maxStreet = Math.max(n1, n2);
@@ -276,18 +301,29 @@ export function parseStreetCarreraBoundaries(text: string): StreetCarreraBoundar
   }
 
   // 3. Orientación en cuadrante arterial (Autopista Norte = Cra 45, Séptima = Cra 7)
-  if (norm.includes("arriba de la autopista") || norm.includes("oriente de la autopista")) {
-    res.maxCarrera = 45;
-    res.minCarrera = 1;
-  } else if (norm.includes("abajo de la autopista") || norm.includes("occidente de la autopista")) {
-    res.minCarrera = 45;
+  //    Soporta: "arriba de la Autopista Norte", "al oriente de la Autopista", "sobre la Autopista Norte"
+  const normNFD = norm.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const mencionaAutopistaNorte = normNFD.includes("autopista norte") || normNFD.includes("autonorte") || normNFD.includes("autopista norte");
+  const orienteAutopista = normNFD.includes("arriba de la autopista") || normNFD.includes("oriente de la autopista") || normNFD.includes("sobre la autopista");
+  const occidenteAutopista = normNFD.includes("abajo de la autopista") || normNFD.includes("occidente de la autopista");
+
+  // "Calle 100 a Calle 127, arriba de la Autopista Norte" → calles 100-127, carreras 1-45 (oriente)
+  if (mencionaAutopistaNorte || orienteAutopista) {
+    if (!occidenteAutopista) {
+      // Oriente de la Autopista = carreras 1 al 45 (aproximado; los cerros son cra 1-7)
+      if (!res.minCarrera) res.minCarrera = 1;
+      if (!res.maxCarrera) res.maxCarrera = 44;  // < cra 45 = Autopista
+    }
+  }
+  if (occidenteAutopista) {
+    if (!res.minCarrera) res.minCarrera = 45;
   }
 
-  if (norm.includes("arriba de la septima") || norm.includes("arriba de la séptima") || norm.includes("arriba de la 7")) {
-    res.maxCarrera = 7;
-    res.minCarrera = 1;
-  } else if (norm.includes("abajo de la septima") || norm.includes("abajo de la séptima") || norm.includes("abajo de la 7")) {
-    res.minCarrera = 7;
+  if (normNFD.includes("arriba de la septima") || normNFD.includes("arriba de la 7")) {
+    if (!res.minCarrera) res.minCarrera = 1;
+    if (!res.maxCarrera) res.maxCarrera = 7;
+  } else if (normNFD.includes("abajo de la septima") || normNFD.includes("abajo de la 7")) {
+    if (!res.minCarrera) res.minCarrera = 7;
   }
 
   return res;
@@ -1504,58 +1540,85 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
-  // ── FILTRO DURO 3: Tipo de Inmueble y Compatibilidad de Uso de Suelo (Tolerancia Cero v26.3) ──
+  // ── FILTRO DURO 3: Tipo de Inmueble y Compatibilidad de Uso de Suelo (Tolerancia Cero v29.0) ──
+  // Taxonomía completa Colombia: Ley 388/1997 + tipologías comerciales y residenciales
   const deduceFullType = (typeRaw: string, text: string): string => {
     const t = (typeRaw || "").toLowerCase().trim();
+    // ── Tipos exactos por BD ──
     if (t === "consultorio") return "consultorio";
     if (t === "warehouse" || t === "bodega") return "warehouse";
     if (t === "office" || t === "oficina") return "office";
     if (t === "commercial" || t === "local") return "commercial";
     if (t === "farm" || t === "finca") return "farm";
-    if (t === "land" || t === "lote" || t === "terreno") return "land";
+    if (t === "land" || t === "lote" || t === "terreno" || t === "predio") return "land";
     if (t === "building" || t === "edificio") return "building";
-    if (t === "hotel") return "hotel";
+    if (t === "hotel" || t === "hostal" || t === "aparta_hotel" || t === "motel" || t === "aparta_suit") return "hotel";
     if (t === "cabin" || t === "cabaña") return "cabin";
-    if (t === "loft" || t === "apartaestudio") return "loft";
-    if (t === "house" || t === "casa") return "house";
+    if (t === "loft" || t === "apartaestudio" || t === "apartasuite" || t === "aparta_suite") return "loft";
+    if (t === "villa") return "villa";
+    if (t === "house" || t === "casa" || t.includes("casa_")) return "house";
+    if (t === "penthouse" || t === "pent_house" || t === "ph") return "apartment";
 
     const clean = (text || "").toLowerCase().trim().replace(/[\s\-_,.]+/g, " ");
-    if (clean.includes("consultorio") || clean.includes("consultorios") || clean.includes("odontol") || clean.includes("médic") || clean.includes("medic")) {
+    // Consultorios / clínicas
+    if (clean.includes("consultorio") || clean.includes("consultorios") || clean.includes("odontol") || clean.includes("medic")) {
       return "consultorio";
     }
+    // Bodega industrial
     if (clean.includes("bodega") || clean.includes("bodegas") || clean.includes("warehouse")) {
       return "warehouse";
     }
+    // Local comercial (antes de "oficina" para no colisionar)
     if (clean.includes("local comercial") || clean.includes("locales comerciales") || /\blocal\b/.test(clean) || /\blocales\b/.test(clean)) {
       return "commercial";
     }
+    // Oficinas / edificio de oficinas
     if (clean.includes("oficina") || clean.includes("oficinas") || /\boffice\b/.test(clean)) {
       return "office";
     }
-    if (clean.includes("casa") || clean.includes("townhouse") || clean.includes("chalet") || clean.includes("house")) {
-      if (!clean.includes("apartamento") && !clean.includes("apto")) {
-        return "house";
-      }
+    // Villa
+    if (/\bvilla\b/.test(clean) && !clean.includes("villa magdala") && !clean.includes("villa santos") && !clean.includes("villavicencio")) {
+      return "villa";
     }
+    // Hotel / hostal / aparta-hotel / motel / aparta-suite
+    if (clean.includes("aparta hotel") || clean.includes("aparta-hotel") || clean.includes("apartahotel") ||
+        clean.includes("aparta suit") || clean.includes("aparta-suit") || clean.includes("apartasuit") ||
+        clean.includes("motel") || clean.includes("hostal") || clean.includes("hostel")) {
+      return "hotel";
+    }
+    if (/\bhotel\b/.test(clean)) return "hotel";
+    // Casa (todas sus subclases: conjunto, condominio, barrio, campestre, quinta)
+    // IMPORTANTE: Verificar primero que no sea apartamento
+    if ((clean.includes("casa") || clean.includes("townhouse") || clean.includes("chalet") || clean.includes("house")) &&
+        !clean.includes("apartamento") && !clean.includes("apto")) {
+      return "house";
+    }
+    // Cabaña
     if (clean.includes("cabaña") || clean.includes("cabana") || clean.includes("cabañas") || clean.includes("cabin")) {
       return "cabin";
     }
-    if (clean.includes("finca") || clean.includes("campestre") || clean.includes("farm")) {
+    // Finca / casa campestre
+    if (clean.includes("finca") || clean.includes("farm") || (clean.includes("campestre") && !clean.includes("casa campestre"))) {
       return "farm";
     }
-    if (clean.includes("lote") || clean.includes("terreno") || clean.includes("predio") || clean.includes("land")) {
+    // Lote / Terreno / Suelo (Urbano, Rural, Expansión, Suburbano, Protección)
+    if (clean.includes("lote") || clean.includes("terreno") || clean.includes("predio") || clean.includes("land") ||
+        clean.includes("suelo urbano") || clean.includes("suelo rural") || clean.includes("suelo suburbano") ||
+        clean.includes("suelo expansion") || clean.includes("suelo de expansion") || clean.includes("suelo proteccion")) {
       return "land";
     }
+    // Edificio (residencial o comercial)
     if (clean.includes("edificio") || clean.includes("building")) {
       return "building";
     }
-    if (clean.includes("hotel") || clean.includes("hostal") || clean.includes("hostel")) {
-      return "hotel";
-    }
-    if (clean.includes("apartaestudio") || clean.includes("apartasuite") || clean.includes("loft")) {
+    // Apartaestudio / Loft / Apartasuite
+    if (clean.includes("apartaestudio") || clean.includes("aparta estudio") || clean.includes("apartasuite") ||
+        clean.includes("aparta suite") || clean.includes("loft")) {
       return "loft";
     }
-    if (clean.includes("apartamento") || clean.includes("apto") || clean.includes("penthouse") || clean.includes("apartment")) {
+    // Apartamento (estándar, dúplex, penthouse, PH)
+    if (clean.includes("apartamento") || clean.includes("apto") || clean.includes("penthouse") ||
+        clean.includes("pent house") || /\bph\b/.test(clean) || clean.includes("apartment")) {
       return "apartment";
     }
     return "apartment";
@@ -1641,42 +1704,90 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
     const t = (type || "").toLowerCase().trim();
     const r = (raw || "").toLowerCase().trim();
 
-    // 1. Apartaestudio / Aparta Suite / 1 Alcoba Independiente
-    if (
-      r.includes("apartaestudio") || r.includes("aparta estudio") ||
-      r.includes("apartasuite") || r.includes("aparta suite") || r.includes("aparta-suite") ||
-      r.includes("suite ejecutiva") || r.includes("alcoba independiente") ||
-      r.includes("1 alcoba") || r.includes("una alcoba") || r.includes("1 habitacion independiente") ||
-      t === "apartaestudio" || t === "aparta_suite" || t === "apartasuite" || t === "studio"
-    ) {
+    // ── HOTELES y ALOJAMIENTO (antes de todo para evitar colisiones) ──
+    if (t === "hotel" || r.includes("hotel") || r.includes("hostal") || r.includes("aparta hotel") ||
+        r.includes("aparta suit") || r.includes("motel")) {
+      if (r.includes("aparta hotel") || r.includes("apartahotel") || r.includes("aparta-hotel")) return "aparta_hotel";
+      if (r.includes("aparta suit") || r.includes("apartasuite") || r.includes("aparta-suit")) return "aparta_suit";
+      if (r.includes("motel")) return "motel";
+      if (r.includes("hostal") || r.includes("hostel")) return "hostal";
+      return "hotel";
+    }
+
+    // ── VILLA ──
+    if (t === "villa" || (/\bvilla\b/.test(r) && !r.includes("villa magdala") && !r.includes("villavicencio"))) {
+      return "villa";
+    }
+
+    // ── BODEGA INDUSTRIAL ──
+    if (t === "warehouse" || t === "bodega" || r.includes("bodega")) return "bodega";
+
+    // ── LOCAL COMERCIAL ──
+    if (t === "commercial" || t === "local" || r.includes("local comercial") || /\blocal\b/.test(r)) return "local";
+
+    // ── OFICINA / EDIFICIO DE OFICINAS ──
+    if (t === "office" || r.includes("oficina")) {
+      if (r.includes("edificio")) return "edificio_oficinas";
+      return "oficina";
+    }
+
+    // ── EDIFICIO (Residencial o Comercial) ──
+    if (t === "building" || r.includes("edificio")) {
+      if (r.includes("apartamento") || r.includes("apto") || r.includes("residencial")) return "edificio_residencial";
+      if (r.includes("oficina") || r.includes("local") || r.includes("comercial")) return "edificio_comercial";
+      return "edificio";
+    }
+
+    // ── LOTE / TERRENO — Subclases según Ley 388/1997 ──
+    if (t === "land" || r.includes("lote") || r.includes("terreno") || r.includes("predio")) {
+      if (r.includes("suelo rural") || r.includes("rural")) return "lote_rural";
+      if (r.includes("suelo suburbano") || r.includes("suburbano") || r.includes("campestre")) return "lote_suburbano";
+      if (r.includes("suelo expansion") || r.includes("expansion urbana")) return "lote_expansion";
+      if (r.includes("suelo proteccion") || r.includes("proteccion ambiental") || r.includes("reserva")) return "lote_proteccion";
+      return "lote_urbano"; // Default: suelo urbano
+    }
+
+    // ── FINCA / CASA CAMPESTRE ──
+    if (t === "farm" || t === "finca" || r.includes("finca") || r.includes("casa de campo")) {
+      return "finca";
+    }
+
+    // ── CABAÑA ──
+    if (t === "cabin" || r.includes("cabaña") || r.includes("cabana")) return "cabaña";
+
+    // ── APARTAESTUDIO / LOFT / APARTA-SUITE ──
+    if (r.includes("apartaestudio") || r.includes("aparta estudio") ||
+        r.includes("suite ejecutiva") || r.includes("alcoba independiente") ||
+        t === "apartaestudio" || t === "studio") {
       return "apartaestudio";
     }
+    if (r.includes("loft") || t === "loft") return "loft";
 
-    // 2. Loft
-    if (r.includes("loft") || t === "loft") {
-      return "loft";
-    }
+    // ── PENTHOUSE / PH (Dúplex o Estándar) ──
+    const isPH = r.includes("penthouse") || r.includes("pent house") || /\bph\b/.test(r) || t === "penthouse";
+    const isDuplex = r.includes("duplex") || r.includes("dúplex") || r.includes("triplex") || r.includes("tríplex");
+    if (isPH && isDuplex) return "penthouse_duplex";
+    if (isPH) return "penthouse";
+    if (isDuplex) return "apartamento_duplex";
 
-    // 3. Penthouse / PH
-    if (r.includes("penthouse") || r.includes("pent house") || r.includes("ph ") || r.endsWith(" ph") || t === "penthouse") {
-      return "penthouse";
-    }
-
-    // 4. Dúplex / Tríplex
-    if (r.includes("duplex") || r.includes("dúplex") || r.includes("triplex") || r.includes("tríplex") || t.includes("duplex")) {
-      return "apartamento_duplex";
-    }
-
-    // 5. Casa Campestre / Finca / Casa de Campo
-    if (r.includes("casa campestre") || r.includes("casa de campo") || r.includes("campestre") || t === "farm" || t === "finca") {
-      return "casa_campestre";
-    }
-
-    // 6. Casa Urbana
+    // ── CASAS — Subclases completas ──
     if (t === "house" || t === "casa" || r.includes("casa")) {
+      // Casa Campestre en Condominio o Conjunto
+      if ((r.includes("campestre") || r.includes("campo")) && (r.includes("conjunto") || r.includes("condominio"))) return "casa_campestre_condominio";
+      // Casa Campestre sola
+      if (r.includes("campestre") || r.includes("finca raiz") || r.includes("finca raíz")) return "casa_campestre";
+      // Casa Quinta (grande, con jardines extensos)
+      if (r.includes("quinta") || r.includes("mansion")) return "casa_quinta";
+      // Casa de Condominio (cerrado, puertas privadas, sin portería común)
+      if (r.includes("condominio")) return "casa_condominio";
+      // Casa de Conjunto (portería compartida, zonas comunes)
+      if (r.includes("conjunto") || r.includes("unidad") || r.includes("urbanizacion") || r.includes("urbanización")) return "casa_conjunto";
+      // Casa de Barrio (sin conjunto ni condominio)
+      if (r.includes("barrio") || (!r.includes("conjunto") && !r.includes("condominio"))) return "casa_barrio";
       return "casa_urbana";
     }
 
+    // ── APARTAMENTO ESTÁNDAR (default residencial) ──
     if (t === "apartment" || t === "apartamento" || t === "apto") {
       return "apartamento_estandar";
     }
@@ -1684,12 +1795,52 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
     return t;
   };
 
+  // Grupo de compatibilidad de subtipos (subtipos que pueden emparejarse entre sí)
+  const SUBTYPE_COMPATIBILITY_GROUPS: Record<string, string[]> = {
+    // Casas — todas las subclases son compatibles entre sí cuando el req no especifica subclase
+    "casa_urbana": ["casa_urbana", "casa_barrio", "casa_conjunto", "casa_condominio"],
+    "casa_barrio": ["casa_urbana", "casa_barrio"],
+    "casa_conjunto": ["casa_urbana", "casa_barrio", "casa_conjunto", "casa_condominio"],
+    "casa_condominio": ["casa_urbana", "casa_barrio", "casa_conjunto", "casa_condominio"],
+    "casa_campestre": ["casa_campestre", "casa_campestre_condominio", "casa_quinta", "finca"],
+    "casa_campestre_condominio": ["casa_campestre", "casa_campestre_condominio", "casa_quinta"],
+    "casa_quinta": ["casa_campestre", "casa_campestre_condominio", "casa_quinta"],
+    "finca": ["finca", "casa_campestre", "casa_campestre_condominio"],
+    // Apartamentos — estándar y dúplex son compatibles; penthouse NO es estándar
+    "apartamento_estandar": ["apartamento_estandar", "apartamento_duplex"],
+    "apartamento_duplex": ["apartamento_estandar", "apartamento_duplex"],
+    "penthouse": ["penthouse", "penthouse_duplex"],
+    "penthouse_duplex": ["penthouse", "penthouse_duplex"],
+    // Lotes — todos son incompatibles entre sí excepto dentro de la misma familia
+    "lote_urbano": ["lote_urbano"],
+    "lote_rural": ["lote_rural", "lote_suburbano"],
+    "lote_suburbano": ["lote_rural", "lote_suburbano"],
+    "lote_expansion": ["lote_expansion"],
+    "lote_proteccion": ["lote_proteccion"],
+    // Hoteles y alojamiento
+    "hotel": ["hotel", "hostal", "aparta_hotel", "aparta_suit", "motel"],
+    "hostal": ["hotel", "hostal"],
+    "aparta_hotel": ["aparta_hotel", "aparta_suit", "hotel"],
+    "aparta_suit": ["aparta_hotel", "aparta_suit", "hotel"],
+    "motel": ["motel"],
+    // Edificios
+    "edificio": ["edificio", "edificio_residencial", "edificio_comercial", "edificio_oficinas"],
+    "edificio_residencial": ["edificio", "edificio_residencial"],
+    "edificio_comercial": ["edificio", "edificio_comercial", "edificio_oficinas"],
+    "edificio_oficinas": ["edificio", "edificio_comercial", "edificio_oficinas", "oficina"],
+  };
+
   const reqSubtype = getHorizontalPropertySubtype(reqType, reqRawText);
   const propSubtype = getHorizontalPropertySubtype(propType, propRawText);
 
   if (reqSubtype && propSubtype && reqSubtype !== propSubtype) {
-    blockers.push(`Subtipo de activo incompatible (Tolerancia Cero 0%): Requerimiento exige estrictamente '${reqSubtype}' y la oferta es '${propSubtype}'. No clasifica para Match.`);
-    return buildExplanationResult(0, blockers, positives, negatives);
+    // Verificar grupo de compatibilidad antes de bloquear
+    const compatGroup = SUBTYPE_COMPATIBILITY_GROUPS[reqSubtype];
+    const isCompatibleSubtype = compatGroup ? compatGroup.includes(propSubtype) : false;
+    if (!isCompatibleSubtype) {
+      blockers.push(`Subtipo de activo incompatible (Tolerancia Cero 0%): Requerimiento exige estrictamente '${reqSubtype}' y la oferta es '${propSubtype}'. No clasifica para Match.`);
+      return buildExplanationResult(0, blockers, positives, negatives);
+    }
   }
 
   positives.push(`Tipo de activo compatible: ${propSubtype || propType}`);

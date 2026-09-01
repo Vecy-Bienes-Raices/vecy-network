@@ -2375,6 +2375,7 @@ export default function AdminMatches() {
       if (!match || !match.id || !match.property || !match.requirement) continue;
 
       const property = match.property;
+      const requirement = match.requirement;
       // REGLA DOCTRINAL v29.0: Descartar inmediatamente auto-matches (la misma publicación guardada como oferta y demanda)
       const rCleanChars = (requirement.rawText || requirement.name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
       const pCleanChars = (property.rawText || property.description || property.name || "").toLowerCase().replace(/[^a-z0-9]/g, "");

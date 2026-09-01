@@ -3513,6 +3513,7 @@ __export(matching_exports, {
   evaluarMatch: () => evaluarMatch,
   executeMatchEngine: () => executeMatchEngine,
   explicarMatch: () => explicarMatch,
+  extractPermutaPercentage: () => extractPermutaPercentage,
   extractRealPhone: () => extractRealPhone,
   extractTrueCityFromText: () => extractTrueCityFromText,
   findMatchesForProperty: () => findMatchesForProperty,
@@ -3578,6 +3579,23 @@ function extractRealPhone(item) {
         return `57${clean10}`;
       }
     }
+  }
+  return null;
+}
+function extractPermutaPercentage(text2) {
+  const t2 = (text2 || "").toLowerCase();
+  const slashMatch = t2.match(/(\d{1,3})\s*\/\s*(\d{1,3})/);
+  if (slashMatch) {
+    const a = parseInt(slashMatch[1], 10);
+    const b = parseInt(slashMatch[2], 10);
+    if (a + b === 100) {
+      const ventaFirst = t2.indexOf("venta") < t2.indexOf("permuta") || !t2.includes("permuta");
+      return ventaFirst ? { ventaPct: a, permutaPct: b } : { ventaPct: b, permutaPct: a };
+    }
+  }
+  const pctMatch = t2.match(/(?:venta|vdo|vdo\.)\s*(\d{1,3})\s*%.*?(?:permuta|carro|vehiculo|bien)\s*(\d{1,3})\s*%/);
+  if (pctMatch) {
+    return { ventaPct: parseInt(pctMatch[1], 10), permutaPct: parseInt(pctMatch[2], 10) };
   }
   return null;
 }
@@ -3682,17 +3700,24 @@ function parseStreetCarreraBoundaries(text2) {
       res.maxCarrera = Math.max(n1, n2);
     }
   }
-  if (norm2.includes("arriba de la autopista") || norm2.includes("oriente de la autopista")) {
-    res.maxCarrera = 45;
-    res.minCarrera = 1;
-  } else if (norm2.includes("abajo de la autopista") || norm2.includes("occidente de la autopista")) {
-    res.minCarrera = 45;
+  const normNFD = norm2.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const mencionaAutopistaNorte = normNFD.includes("autopista norte") || normNFD.includes("autonorte") || normNFD.includes("autopista norte");
+  const orienteAutopista = normNFD.includes("arriba de la autopista") || normNFD.includes("oriente de la autopista") || normNFD.includes("sobre la autopista");
+  const occidenteAutopista = normNFD.includes("abajo de la autopista") || normNFD.includes("occidente de la autopista");
+  if (mencionaAutopistaNorte || orienteAutopista) {
+    if (!occidenteAutopista) {
+      if (!res.minCarrera) res.minCarrera = 1;
+      if (!res.maxCarrera) res.maxCarrera = 44;
+    }
   }
-  if (norm2.includes("arriba de la septima") || norm2.includes("arriba de la s\xE9ptima") || norm2.includes("arriba de la 7")) {
-    res.maxCarrera = 7;
-    res.minCarrera = 1;
-  } else if (norm2.includes("abajo de la septima") || norm2.includes("abajo de la s\xE9ptima") || norm2.includes("abajo de la 7")) {
-    res.minCarrera = 7;
+  if (occidenteAutopista) {
+    if (!res.minCarrera) res.minCarrera = 45;
+  }
+  if (normNFD.includes("arriba de la septima") || normNFD.includes("arriba de la 7")) {
+    if (!res.minCarrera) res.minCarrera = 1;
+    if (!res.maxCarrera) res.maxCarrera = 7;
+  } else if (normNFD.includes("abajo de la septima") || normNFD.includes("abajo de la 7")) {
+    if (!res.minCarrera) res.minCarrera = 7;
   }
   return res;
 }
@@ -5067,14 +5092,16 @@ function explicarMatch(requirement, property) {
     if (t2 === "office" || t2 === "oficina") return "office";
     if (t2 === "commercial" || t2 === "local") return "commercial";
     if (t2 === "farm" || t2 === "finca") return "farm";
-    if (t2 === "land" || t2 === "lote" || t2 === "terreno") return "land";
+    if (t2 === "land" || t2 === "lote" || t2 === "terreno" || t2 === "predio") return "land";
     if (t2 === "building" || t2 === "edificio") return "building";
-    if (t2 === "hotel") return "hotel";
+    if (t2 === "hotel" || t2 === "hostal" || t2 === "aparta_hotel" || t2 === "motel" || t2 === "aparta_suit") return "hotel";
     if (t2 === "cabin" || t2 === "caba\xF1a") return "cabin";
-    if (t2 === "loft" || t2 === "apartaestudio") return "loft";
-    if (t2 === "house" || t2 === "casa") return "house";
+    if (t2 === "loft" || t2 === "apartaestudio" || t2 === "apartasuite" || t2 === "aparta_suite") return "loft";
+    if (t2 === "villa") return "villa";
+    if (t2 === "house" || t2 === "casa" || t2.includes("casa_")) return "house";
+    if (t2 === "penthouse" || t2 === "pent_house" || t2 === "ph") return "apartment";
     const clean = (text2 || "").toLowerCase().trim().replace(/[\s\-_,.]+/g, " ");
-    if (clean.includes("consultorio") || clean.includes("consultorios") || clean.includes("odontol") || clean.includes("m\xE9dic") || clean.includes("medic")) {
+    if (clean.includes("consultorio") || clean.includes("consultorios") || clean.includes("odontol") || clean.includes("medic")) {
       return "consultorio";
     }
     if (clean.includes("bodega") || clean.includes("bodegas") || clean.includes("warehouse")) {
@@ -5086,30 +5113,32 @@ function explicarMatch(requirement, property) {
     if (clean.includes("oficina") || clean.includes("oficinas") || /\boffice\b/.test(clean)) {
       return "office";
     }
-    if (clean.includes("casa") || clean.includes("townhouse") || clean.includes("chalet") || clean.includes("house")) {
-      if (!clean.includes("apartamento") && !clean.includes("apto")) {
-        return "house";
-      }
+    if (/\bvilla\b/.test(clean) && !clean.includes("villa magdala") && !clean.includes("villa santos") && !clean.includes("villavicencio")) {
+      return "villa";
+    }
+    if (clean.includes("aparta hotel") || clean.includes("aparta-hotel") || clean.includes("apartahotel") || clean.includes("aparta suit") || clean.includes("aparta-suit") || clean.includes("apartasuit") || clean.includes("motel") || clean.includes("hostal") || clean.includes("hostel")) {
+      return "hotel";
+    }
+    if (/\bhotel\b/.test(clean)) return "hotel";
+    if ((clean.includes("casa") || clean.includes("townhouse") || clean.includes("chalet") || clean.includes("house")) && !clean.includes("apartamento") && !clean.includes("apto")) {
+      return "house";
     }
     if (clean.includes("caba\xF1a") || clean.includes("cabana") || clean.includes("caba\xF1as") || clean.includes("cabin")) {
       return "cabin";
     }
-    if (clean.includes("finca") || clean.includes("campestre") || clean.includes("farm")) {
+    if (clean.includes("finca") || clean.includes("farm") || clean.includes("campestre") && !clean.includes("casa campestre")) {
       return "farm";
     }
-    if (clean.includes("lote") || clean.includes("terreno") || clean.includes("predio") || clean.includes("land")) {
+    if (clean.includes("lote") || clean.includes("terreno") || clean.includes("predio") || clean.includes("land") || clean.includes("suelo urbano") || clean.includes("suelo rural") || clean.includes("suelo suburbano") || clean.includes("suelo expansion") || clean.includes("suelo de expansion") || clean.includes("suelo proteccion")) {
       return "land";
     }
     if (clean.includes("edificio") || clean.includes("building")) {
       return "building";
     }
-    if (clean.includes("hotel") || clean.includes("hostal") || clean.includes("hostel")) {
-      return "hotel";
-    }
-    if (clean.includes("apartaestudio") || clean.includes("apartasuite") || clean.includes("loft")) {
+    if (clean.includes("apartaestudio") || clean.includes("aparta estudio") || clean.includes("apartasuite") || clean.includes("aparta suite") || clean.includes("loft")) {
       return "loft";
     }
-    if (clean.includes("apartamento") || clean.includes("apto") || clean.includes("penthouse") || clean.includes("apartment")) {
+    if (clean.includes("apartamento") || clean.includes("apto") || clean.includes("penthouse") || clean.includes("pent house") || /\bph\b/.test(clean) || clean.includes("apartment")) {
       return "apartment";
     }
     return "apartment";
@@ -5171,22 +5200,54 @@ function explicarMatch(requirement, property) {
   const getHorizontalPropertySubtype = (type, raw) => {
     const t2 = (type || "").toLowerCase().trim();
     const r = (raw || "").toLowerCase().trim();
-    if (r.includes("apartaestudio") || r.includes("aparta estudio") || r.includes("apartasuite") || r.includes("aparta suite") || r.includes("aparta-suite") || r.includes("suite ejecutiva") || r.includes("alcoba independiente") || r.includes("1 alcoba") || r.includes("una alcoba") || r.includes("1 habitacion independiente") || t2 === "apartaestudio" || t2 === "aparta_suite" || t2 === "apartasuite" || t2 === "studio") {
+    if (t2 === "hotel" || r.includes("hotel") || r.includes("hostal") || r.includes("aparta hotel") || r.includes("aparta suit") || r.includes("motel")) {
+      if (r.includes("aparta hotel") || r.includes("apartahotel") || r.includes("aparta-hotel")) return "aparta_hotel";
+      if (r.includes("aparta suit") || r.includes("apartasuite") || r.includes("aparta-suit")) return "aparta_suit";
+      if (r.includes("motel")) return "motel";
+      if (r.includes("hostal") || r.includes("hostel")) return "hostal";
+      return "hotel";
+    }
+    if (t2 === "villa" || /\bvilla\b/.test(r) && !r.includes("villa magdala") && !r.includes("villavicencio")) {
+      return "villa";
+    }
+    if (t2 === "warehouse" || t2 === "bodega" || r.includes("bodega")) return "bodega";
+    if (t2 === "commercial" || t2 === "local" || r.includes("local comercial") || /\blocal\b/.test(r)) return "local";
+    if (t2 === "office" || r.includes("oficina")) {
+      if (r.includes("edificio")) return "edificio_oficinas";
+      return "oficina";
+    }
+    if (t2 === "building" || r.includes("edificio")) {
+      if (r.includes("apartamento") || r.includes("apto") || r.includes("residencial")) return "edificio_residencial";
+      if (r.includes("oficina") || r.includes("local") || r.includes("comercial")) return "edificio_comercial";
+      return "edificio";
+    }
+    if (t2 === "land" || r.includes("lote") || r.includes("terreno") || r.includes("predio")) {
+      if (r.includes("suelo rural") || r.includes("rural")) return "lote_rural";
+      if (r.includes("suelo suburbano") || r.includes("suburbano") || r.includes("campestre")) return "lote_suburbano";
+      if (r.includes("suelo expansion") || r.includes("expansion urbana")) return "lote_expansion";
+      if (r.includes("suelo proteccion") || r.includes("proteccion ambiental") || r.includes("reserva")) return "lote_proteccion";
+      return "lote_urbano";
+    }
+    if (t2 === "farm" || t2 === "finca" || r.includes("finca") || r.includes("casa de campo")) {
+      return "finca";
+    }
+    if (t2 === "cabin" || r.includes("caba\xF1a") || r.includes("cabana")) return "caba\xF1a";
+    if (r.includes("apartaestudio") || r.includes("aparta estudio") || r.includes("suite ejecutiva") || r.includes("alcoba independiente") || t2 === "apartaestudio" || t2 === "studio") {
       return "apartaestudio";
     }
-    if (r.includes("loft") || t2 === "loft") {
-      return "loft";
-    }
-    if (r.includes("penthouse") || r.includes("pent house") || r.includes("ph ") || r.endsWith(" ph") || t2 === "penthouse") {
-      return "penthouse";
-    }
-    if (r.includes("duplex") || r.includes("d\xFAplex") || r.includes("triplex") || r.includes("tr\xEDplex") || t2.includes("duplex")) {
-      return "apartamento_duplex";
-    }
-    if (r.includes("casa campestre") || r.includes("casa de campo") || r.includes("campestre") || t2 === "farm" || t2 === "finca") {
-      return "casa_campestre";
-    }
+    if (r.includes("loft") || t2 === "loft") return "loft";
+    const isPH = r.includes("penthouse") || r.includes("pent house") || /\bph\b/.test(r) || t2 === "penthouse";
+    const isDuplex = r.includes("duplex") || r.includes("d\xFAplex") || r.includes("triplex") || r.includes("tr\xEDplex");
+    if (isPH && isDuplex) return "penthouse_duplex";
+    if (isPH) return "penthouse";
+    if (isDuplex) return "apartamento_duplex";
     if (t2 === "house" || t2 === "casa" || r.includes("casa")) {
+      if ((r.includes("campestre") || r.includes("campo")) && (r.includes("conjunto") || r.includes("condominio"))) return "casa_campestre_condominio";
+      if (r.includes("campestre") || r.includes("finca raiz") || r.includes("finca ra\xEDz")) return "casa_campestre";
+      if (r.includes("quinta") || r.includes("mansion")) return "casa_quinta";
+      if (r.includes("condominio")) return "casa_condominio";
+      if (r.includes("conjunto") || r.includes("unidad") || r.includes("urbanizacion") || r.includes("urbanizaci\xF3n")) return "casa_conjunto";
+      if (r.includes("barrio") || !r.includes("conjunto") && !r.includes("condominio")) return "casa_barrio";
       return "casa_urbana";
     }
     if (t2 === "apartment" || t2 === "apartamento" || t2 === "apto") {
@@ -5194,11 +5255,48 @@ function explicarMatch(requirement, property) {
     }
     return t2;
   };
+  const SUBTYPE_COMPATIBILITY_GROUPS = {
+    // Casas — todas las subclases son compatibles entre sí cuando el req no especifica subclase
+    "casa_urbana": ["casa_urbana", "casa_barrio", "casa_conjunto", "casa_condominio"],
+    "casa_barrio": ["casa_urbana", "casa_barrio"],
+    "casa_conjunto": ["casa_urbana", "casa_barrio", "casa_conjunto", "casa_condominio"],
+    "casa_condominio": ["casa_urbana", "casa_barrio", "casa_conjunto", "casa_condominio"],
+    "casa_campestre": ["casa_campestre", "casa_campestre_condominio", "casa_quinta", "finca"],
+    "casa_campestre_condominio": ["casa_campestre", "casa_campestre_condominio", "casa_quinta"],
+    "casa_quinta": ["casa_campestre", "casa_campestre_condominio", "casa_quinta"],
+    "finca": ["finca", "casa_campestre", "casa_campestre_condominio"],
+    // Apartamentos — estándar y dúplex son compatibles; penthouse NO es estándar
+    "apartamento_estandar": ["apartamento_estandar", "apartamento_duplex"],
+    "apartamento_duplex": ["apartamento_estandar", "apartamento_duplex"],
+    "penthouse": ["penthouse", "penthouse_duplex"],
+    "penthouse_duplex": ["penthouse", "penthouse_duplex"],
+    // Lotes — todos son incompatibles entre sí excepto dentro de la misma familia
+    "lote_urbano": ["lote_urbano"],
+    "lote_rural": ["lote_rural", "lote_suburbano"],
+    "lote_suburbano": ["lote_rural", "lote_suburbano"],
+    "lote_expansion": ["lote_expansion"],
+    "lote_proteccion": ["lote_proteccion"],
+    // Hoteles y alojamiento
+    "hotel": ["hotel", "hostal", "aparta_hotel", "aparta_suit", "motel"],
+    "hostal": ["hotel", "hostal"],
+    "aparta_hotel": ["aparta_hotel", "aparta_suit", "hotel"],
+    "aparta_suit": ["aparta_hotel", "aparta_suit", "hotel"],
+    "motel": ["motel"],
+    // Edificios
+    "edificio": ["edificio", "edificio_residencial", "edificio_comercial", "edificio_oficinas"],
+    "edificio_residencial": ["edificio", "edificio_residencial"],
+    "edificio_comercial": ["edificio", "edificio_comercial", "edificio_oficinas"],
+    "edificio_oficinas": ["edificio", "edificio_comercial", "edificio_oficinas", "oficina"]
+  };
   const reqSubtype = getHorizontalPropertySubtype(reqType, reqRawText);
   const propSubtype = getHorizontalPropertySubtype(propType, propRawText);
   if (reqSubtype && propSubtype && reqSubtype !== propSubtype) {
-    blockers.push(`Subtipo de activo incompatible (Tolerancia Cero 0%): Requerimiento exige estrictamente '${reqSubtype}' y la oferta es '${propSubtype}'. No clasifica para Match.`);
-    return buildExplanationResult(0, blockers, positives, negatives);
+    const compatGroup = SUBTYPE_COMPATIBILITY_GROUPS[reqSubtype];
+    const isCompatibleSubtype = compatGroup ? compatGroup.includes(propSubtype) : false;
+    if (!isCompatibleSubtype) {
+      blockers.push(`Subtipo de activo incompatible (Tolerancia Cero 0%): Requerimiento exige estrictamente '${reqSubtype}' y la oferta es '${propSubtype}'. No clasifica para Match.`);
+      return buildExplanationResult(0, blockers, positives, negatives);
+    }
   }
   positives.push(`Tipo de activo compatible: ${propSubtype || propType}`);
   const geoResult = matchesGeography(
