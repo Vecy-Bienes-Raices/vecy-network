@@ -6760,7 +6760,7 @@ function buildFlyerBreakdownText(extracted, fallbackText) {
   return fallbackText || "[Publicaci\xF3n Comercial Inmobiliaria desde Imagen / Flyer]";
 }
 function extractFallbackDataFromText(text2) {
-  const clean = text2.toLowerCase().replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0]/g, " ");
+  const clean = (text2 || "").toLowerCase().replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0]/g, " ").replace(/[\t ]+/g, " ");
   let transactionType = "venta";
   const isInvestorPurchase = /\b(?:inversionista|inversionistas|para inversi[oó]n|para inversion|rentando|est[eé] rentando|est[eé]n rentando|ojal[aá] rentando|ya rentando|generando renta|produciendo renta|con renta activa|para compra|compro|compra ya|busco para compra)\b/i.test(clean);
   const hasPermutaSignals = /\b(?:permuto|permuta|permutas|permutamos|se permuta|recibo menor valor|recibo inmueble|recibo vehículo|recibo vehiculo|pelo a pelo|encime|parte de pago)\b/i.test(clean);
@@ -13657,69 +13657,137 @@ __export(nightlyRematch_exports, {
 });
 import { and as and4, eq as eq6 } from "drizzle-orm";
 async function runNightlyRematch() {
-  console.log("[NIGHTLY-REMATCH] Iniciando cruce masivo de base de datos...");
+  console.log("[NIGHTLY-REMATCH v28.0] Iniciando cruce masivo doctrinal...");
   const db = await getDb();
   if (!db) {
     console.error("[NIGHTLY-REMATCH] No se pudo conectar a la base de datos.");
     return;
   }
   try {
-    const activeReqs = await db.select().from(requirements).where(eq6(requirements.status, "active"));
-    const availProps = await db.select().from(properties).where(eq6(properties.available, true));
-    console.log(`[NIGHTLY-REMATCH] Procesando ${activeReqs.length} requerimientos activos contra ${availProps.length} inmuebles disponibles...`);
-    let newMatchesCount = 0;
-    for (const req of activeReqs) {
-      for (const prop of availProps) {
-        const score = calcularScoreMatch(req, prop);
-        if (score >= 60) {
-          const existing = await db.select().from(propertyMatches).where(
+    const [activeReqs, availProps] = await Promise.all([
+      db.select().from(requirements).where(eq6(requirements.status, "active")),
+      db.select().from(properties).where(eq6(properties.available, true))
+    ]);
+    console.log(
+      `[NIGHTLY-REMATCH] ${activeReqs.length} reqs \xD7 ${availProps.length} props = ${activeReqs.length * availProps.length} pares a evaluar`
+    );
+    const enrichedReqs = activeReqs.map((r) => {
+      const cleanText = (r.rawText || "").replace(/[\t ]+/g, " ");
+      const fb = extractFallbackDataFromText(cleanText);
+      const city = extractTrueCityFromText(cleanText || r.name || "", r.ciudadDeseada || "");
+      return {
+        ...r,
+        rawText: cleanText,
+        _city: city ? normalizeCanonicalCity(city).toLowerCase() : null,
+        presupuestoMax: r.presupuestoMax || fb.presupuestoMax || fb.budget,
+        areaMin: r.areaMin || fb.areaMin || fb.area,
+        habitacionesMin: r.habitacionesMin || fb.bedroomsMin || fb.bedrooms,
+        parqueaderosMin: r.parqueaderosMin || fb.garages,
+        zonaDeseada: r.zonaDeseada || fb.zone,
+        tipoInmuebleDeseado: r.tipoInmuebleDeseado || fb.propertyType,
+        tipoNegocioDeseado: r.tipoNegocioDeseado || fb.transactionType
+      };
+    });
+    const enrichedProps = availProps.map((p) => {
+      const cleanText = (p.rawText || "").replace(/[\t ]+/g, " ");
+      const fb = extractFallbackDataFromText(cleanText);
+      const city = extractTrueCityFromText(cleanText || p.name || "", p.city || "");
+      return {
+        ...p,
+        rawText: cleanText,
+        _city: city ? normalizeCanonicalCity(city).toLowerCase() : null,
+        price: p.price || fb.price,
+        rentPrice: p.rentPrice || p.rent_price || fb.rentPrice,
+        areaTotal: p.areaTotal || fb.area,
+        bedrooms: p.bedrooms || fb.bedrooms,
+        bathrooms: p.bathrooms || fb.bathrooms,
+        garages: p.garages || fb.garages,
+        propertyType: p.propertyType || fb.propertyType,
+        transactionType: p.transactionType || fb.transactionType
+      };
+    });
+    let insertedCount = 0;
+    let updatedCount = 0;
+    let skippedCount = 0;
+    const seenPairs = /* @__PURE__ */ new Set();
+    const origLog = console.log;
+    const CHUNK_SIZE = 50;
+    for (let i = 0; i < enrichedReqs.length; i += CHUNK_SIZE) {
+      const chunk = enrichedReqs.slice(i, i + CHUNK_SIZE);
+      for (const req of chunk) {
+        for (const prop of enrichedProps) {
+          const pairKey = `${req.id}-${prop.id}`;
+          if (seenPairs.has(pairKey)) continue;
+          if (req._city && prop._city && req._city !== prop._city) continue;
+          const transScore = checkTransactionCompatibility(
+            req.tipoNegocioDeseado,
+            prop.transactionType
+          );
+          if (transScore === false) continue;
+          if (req.areaMin && prop.areaTotal && Number(prop.areaTotal) < Number(req.areaMin))
+            continue;
+          if (req.habitacionesMin && prop.bedrooms && Number(prop.bedrooms) < Number(req.habitacionesMin))
+            continue;
+          console.log = () => {
+          };
+          let exp;
+          try {
+            exp = explicarMatch(req, prop);
+          } catch {
+            exp = null;
+          }
+          console.log = origLog;
+          if (!exp || exp.score < 80 || exp.blockers.length > 0) {
+            skippedCount++;
+            continue;
+          }
+          seenPairs.add(pairKey);
+          const existing = await db.select({ id: propertyMatches.id, matchScore: propertyMatches.matchScore }).from(propertyMatches).where(
             and4(
-              eq6(propertyMatches.propertyId, prop.id),
-              eq6(propertyMatches.requirementId, req.id)
+              eq6(propertyMatches.requirementId, req.id),
+              eq6(propertyMatches.propertyId, prop.id)
             )
           ).limit(1);
           if (existing.length === 0) {
-            console.log(`[NIGHTLY-REMATCH] \xA1Match nuevo detectado! Req #${req.id} <-> Prop #${prop.id} (Score: ${score.toFixed(0)}%)`);
-            const [newMatch] = await db.insert(propertyMatches).values({
-              propertyId: prop.id,
+            await db.insert(propertyMatches).values({
               requirementId: req.id,
-              matchScore: score.toFixed(2),
-              matchReason: `VECY CORE TS Scoring (Nightly): ${score.toFixed(2)}/100`,
+              propertyId: prop.id,
+              matchScore: exp.score.toFixed(2),
+              matchReason: `VECY DOCTRINAL v28.0: ${exp.score.toFixed(0)}/100`,
               status: "suggested",
               ownerConfirmed: false,
               seekerConfirmed: false
-            }).returning();
-            newMatchesCount++;
-            if (janiaMatchBot && janiaMatchBot.isReady) {
-              const matchedItem = {
-                ...prop,
-                score,
-                matchId: newMatch.id,
-                idUsuarioWhatsapp: prop.idUsuarioWhatsapp
-              };
-              const matchDetails = await handleDetectedMatches(
-                [matchedItem],
-                false,
-                req,
-                req.idUsuarioWhatsapp || "",
-                "Aliado VECY"
-              );
-              if (matchDetails.response && janiaMatchBot.targetGroupId) {
-                await janiaMatchBot.sendToGroup(matchDetails.response, void 0, matchDetails.mentions);
-              }
-              if (matchDetails.extraDMs && matchDetails.extraDMs.length > 0) {
-                for (const dm of matchDetails.extraDMs) {
-                  await janiaMatchBot.queuedSend(dm.jid, dm.message);
-                }
-              }
+            });
+            insertedCount++;
+          } else {
+            const storedScore = parseFloat(String(existing[0].matchScore));
+            if (Math.abs(storedScore - exp.score) > 0.5) {
+              await db.update(propertyMatches).set({
+                matchScore: exp.score.toFixed(2),
+                matchReason: `VECY DOCTRINAL v28.0: ${exp.score.toFixed(0)}/100`
+              }).where(eq6(propertyMatches.id, existing[0].id));
+              updatedCount++;
             }
           }
         }
       }
+      const pct = Math.min(
+        100,
+        Math.round((i + chunk.length) / enrichedReqs.length * 100)
+      );
+      origLog(
+        `[NIGHTLY-REMATCH ${pct}%] Procesados ${i + chunk.length}/${enrichedReqs.length} reqs | Nuevos: ${insertedCount} | Actualizados: ${updatedCount}`
+      );
     }
-    console.log(`[NIGHTLY-REMATCH] Proceso finalizado. Se registraron ${newMatchesCount} nuevos matches.`);
+    console.log = origLog;
+    console.log(
+      `[NIGHTLY-REMATCH] \u2705 Finalizado. Nuevos: ${insertedCount} | Actualizados: ${updatedCount} | Descartados: ${skippedCount}`
+    );
   } catch (error) {
-    console.error("[NIGHTLY-REMATCH] Error durante el cruce masivo nocturno:", error.message || error);
+    console.error(
+      "[NIGHTLY-REMATCH] Error durante el cruce masivo nocturno:",
+      error.message || error
+    );
   }
 }
 async function recalculateAndCleanupMatches() {
@@ -13739,30 +13807,40 @@ async function recalculateAndCleanupMatches() {
     console.log(`[MATCH-CLEANUP] Encontrados ${allMatches.length} registros para evaluar.`);
     let deletedCount = 0;
     let updatedCount = 0;
+    const origLog = console.log;
     for (const m of allMatches) {
       const [prop] = await db.select().from(properties).where(eq6(properties.id, m.propertyId)).limit(1);
       const [req] = await db.select().from(requirements).where(eq6(requirements.id, m.requirementId)).limit(1);
       if (!prop || !req) {
-        console.log(`[MATCH-CLEANUP] Eliminando Match #${m.id} por propiedad o requerimiento inexistente.`);
         await db.delete(propertyMatches).where(eq6(propertyMatches.id, m.id));
         deletedCount++;
         continue;
       }
-      const newScore = calcularScoreMatch(req, prop);
-      if (newScore < 85) {
-        console.log(`[MATCH-CLEANUP] Eliminando Match #${m.id} por incompatibilidad (Nuevo Score: ${newScore}%, Score anterior: ${m.matchScore}%).`);
+      console.log = () => {
+      };
+      let exp;
+      try {
+        exp = explicarMatch(req, prop);
+      } catch {
+        exp = null;
+      }
+      console.log = origLog;
+      const newScore = exp ? exp.score : 0;
+      const hasBlockers = exp ? exp.blockers.length > 0 : true;
+      if (newScore < 80 || hasBlockers) {
         await db.delete(propertyMatches).where(eq6(propertyMatches.id, m.id));
         deletedCount++;
       } else {
         const storedScore = parseFloat(String(m.matchScore));
-        if (Math.abs(storedScore - newScore) > 0.1) {
-          console.log(`[MATCH-CLEANUP] Actualizando Score de Match #${m.id}: ${storedScore}% -> ${newScore}%`);
-          await db.update(propertyMatches).set({ matchScore: newScore.toFixed(2), matchReason: `Recalculado con VECY CORE v12.0` }).where(eq6(propertyMatches.id, m.id));
+        if (Math.abs(storedScore - newScore) > 0.5) {
+          await db.update(propertyMatches).set({ matchScore: newScore.toFixed(2), matchReason: `Recalculado v28.0: ${newScore.toFixed(0)}/100` }).where(eq6(propertyMatches.id, m.id));
           updatedCount++;
         }
       }
     }
-    console.log(`[MATCH-CLEANUP] Limpieza finalizada. Eliminados: ${deletedCount}, Actualizados: ${updatedCount}`);
+    console.log(
+      `[MATCH-CLEANUP] Limpieza finalizada. Eliminados: ${deletedCount}, Actualizados: ${updatedCount}`
+    );
   } catch (error) {
     console.error("[MATCH-CLEANUP] Error durante la limpieza:", error.message || error);
   }
@@ -13774,7 +13852,6 @@ var init_nightlyRematch = __esm({
     init_schema();
     init_matching();
     init_janIA();
-    init_whatsapp_match();
   }
 });
 
@@ -13815,28 +13892,6 @@ function getThemedImagePath(tipo) {
 }
 function initCronScheduler() {
   console.log("[CRON-SERVICE] Inicializando orquestador de agendas automatizadas v3.3 (Parrilla Semanal de Audios, Ilustraciones 3D, Captions y Re-matching)...");
-  cron.schedule("0 11 * * 1,4", async () => {
-    console.log("[CRON-SERVICE] Generando audio din\xE1mico para VECY INMUEBLES NETWORK...");
-    const fallbackVoice = `Buenos d\xEDas a todos y a todas. Soy JanIA, la inteligencia artificial de VECY Network. Hoy quiero recordarles que este grupo es nuestro centro de operaciones comerciales. Aqu\xED publican sus inmuebles en venta o arriendo, sus requerimientos de compra o renta, y yo me encargo de cruzar toda esa informaci\xF3n en tiempo real en los 32 departamentos de Colombia para detectar MATCHES y hacer posibles cierres de negocios. Sigan publicando sus inmuebles, colegas, e inviten a m\xE1s colegas a unirse a esta red. Entre m\xE1s seamos, m\xE1s matches encontramos. \xA1Hoy puede ser el d\xEDa de tu pr\xF3ximo cierre!`;
-    const fallbackCaption = `\u{1F3E0} *VECY INMUEBLES NETWORK \u2014 CENTRO DE OPERACIONES NACIONAL* \u{1F1E8}\u{1F1F4}
-
-\xA1Buenos d\xEDas a todos los colegas de la red!
-
-Recuerden que este espacio es nuestro centro de operaciones comerciales en los 32 departamentos de Colombia:
-\u2022 Publica tus inmuebles en venta, arriendo o permuta.
-\u2022 Comparte tus requerimientos de compra o renta con presupuesto.
-\u2022 JanIA analiza cada mensaje, extrae los datos y detecta *MATCHES* al instante.
-
-\u{1F91D} *Crezcamos juntos:* Invita a tus colegas de confianza a unirse a VECY Network. \xA1Entre m\xE1s inmuebles y solicitudes tengamos, m\xE1s comisiones compartidas cerramos!
-
-\u{1F4F2} *Consola Web JanIA:* https://vecy-network.vercel.app/jania`;
-    const content = await generateDailyContent("inmuebles_network", fallbackVoice, fallbackCaption);
-    try {
-      await janiaMatchBot.sendVoiceToGroup(content.voiceText, janiaMatchBot.targetGroupId, getThemedImagePath("matches"), content.captionText);
-    } catch (e) {
-      console.error("[CRON-SERVICE] Error enviando audio a VECY INMUEBLES NETWORK:", e.message);
-    }
-  }, { timezone: "America/Bogota" });
   cron.schedule("0 8 * * 1", async () => {
     console.log("[CRON-SERVICE] Generando contenido din\xE1mico de Lunes para SOPORTE LEGAL, MARKETING Y CANAL...");
     const fallbackVoice = `\xA1Buenos d\xEDas a todos y a todas! Soy JanIA. Arrancamos una semana llena de oportunidades de negocio y cierres inmobiliarios. Recuerden que este espacio y nuestro canal oficial son su consultorio permanente: aqu\xED pueden preguntarme por texto o nota de voz sobre leyes inmobiliarias, c\xF3mo liquidar la ganancia ocasional ante la DIAN, aval\xFAos de mercado o c\xF3mo redactar un anuncio de alto impacto para sus inmuebles y requerimientos. Los invito a invitar a m\xE1s colegas a unirse a este maravilloso proyecto y a interactuar conmigo para probar nuestro sistema de consultas. \xA1Que tengan una semana extraordinaria y productiva!`;
@@ -14176,7 +14231,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v27.4";
+var VECY_VERSION = "v27.4.1";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 
@@ -15323,11 +15378,11 @@ ${liveStats}${userContextInstruction}
     price: z2.string().optional(),
     rentPrice: z2.string().optional().nullable(),
     adminFee: z2.string().optional().nullable(),
-    bedrooms: z2.number().optional().nullable(),
-    bathrooms: z2.number().optional().nullable(),
-    garages: z2.number().optional().nullable(),
+    bedrooms: z2.union([z2.number(), z2.string()]).optional().nullable(),
+    bathrooms: z2.union([z2.number(), z2.string()]).optional().nullable(),
+    garages: z2.union([z2.number(), z2.string()]).optional().nullable(),
     areaTotal: z2.string().optional().nullable(),
-    stratum: z2.number().optional().nullable(),
+    stratum: z2.union([z2.number(), z2.string()]).optional().nullable(),
     zone: z2.string().optional().nullable(),
     addressNeighborhood: z2.string().optional().nullable(),
     addressLocality: z2.string().optional().nullable(),
@@ -15340,14 +15395,65 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     const existingProp = await db.select().from(properties).where(eq7(properties.id, input.propertyId)).limit(1).then((r) => r[0]);
-    const { propertyId, ...updateFields } = input;
-    const updateData = {};
-    for (const [key, value] of Object.entries(updateFields)) {
-      if (value !== void 0) updateData[key] = value;
+    const sanitizeNumeric = (val) => {
+      if (val === void 0 || val === null) return null;
+      const s = String(val).trim();
+      if (!s || s === "N/E" || /consultar|n\/e|na|n\/a|sin\s*restricci[oó]n|flexible/i.test(s)) return null;
+      const cleaned = s.replace(/[^0-9.]/g, "");
+      return cleaned && !isNaN(Number(cleaned)) ? cleaned : null;
+    };
+    const sanitizeInt = (val) => {
+      if (val === void 0 || val === null) return null;
+      const s = String(val).trim();
+      if (!s || s === "N/E" || /consultar|n\/e|na|n\/a|sin\s*restricci[oó]n|flexible/i.test(s)) return null;
+      const n = parseInt(s.replace(/[^0-9]/g, ""), 10);
+      return isNaN(n) ? null : n;
+    };
+    const updateData = {
+      updatedAt: /* @__PURE__ */ new Date()
+    };
+    if (input.name !== void 0) updateData.name = input.name;
+    if (input.price !== void 0) {
+      const cleanP = sanitizeNumeric(input.price);
+      if (cleanP !== null) updateData.price = cleanP;
     }
-    updateData.updatedAt = /* @__PURE__ */ new Date();
-    await db.update(properties).set(updateData).where(eq7(properties.id, propertyId));
-    console.log(`[JanIA-UpdateProperty] Propiedad #${propertyId} actualizada directamente desde Mesa de Cotejo (incluyendo tel\xE9fono: ${input.idUsuarioWhatsapp || "N/A"})`);
+    if (input.rentPrice !== void 0) {
+      updateData.rentPrice = sanitizeNumeric(input.rentPrice);
+    }
+    if (input.adminFee !== void 0) {
+      updateData.adminFee = sanitizeNumeric(input.adminFee);
+    }
+    if (input.areaTotal !== void 0) {
+      updateData.areaTotal = sanitizeNumeric(input.areaTotal);
+    }
+    if (input.bedrooms !== void 0) {
+      updateData.bedrooms = sanitizeInt(input.bedrooms);
+    }
+    if (input.bathrooms !== void 0) {
+      updateData.bathrooms = sanitizeInt(input.bathrooms);
+    }
+    if (input.garages !== void 0) {
+      updateData.garages = sanitizeInt(input.garages);
+    }
+    if (input.stratum !== void 0) {
+      updateData.stratum = sanitizeInt(input.stratum);
+    }
+    if (input.zone !== void 0 && input.zone && !/n\/e/i.test(input.zone)) {
+      updateData.zone = input.zone;
+    }
+    if (input.addressNeighborhood !== void 0 && input.addressNeighborhood && !/n\/e/i.test(input.addressNeighborhood)) {
+      updateData.addressNeighborhood = input.addressNeighborhood;
+    }
+    if (input.addressLocality !== void 0) {
+      updateData.addressLocality = input.addressLocality && !/n\/e/i.test(input.addressLocality) ? input.addressLocality : null;
+    }
+    if (input.city !== void 0 && input.city) updateData.city = input.city;
+    if (input.propertyType !== void 0 && input.propertyType) updateData.propertyType = input.propertyType;
+    if (input.transactionType !== void 0 && input.transactionType) updateData.transactionType = input.transactionType;
+    if (input.idUsuarioWhatsapp !== void 0) updateData.idUsuarioWhatsapp = input.idUsuarioWhatsapp;
+    if (input.nombreUsuarioWhatsapp !== void 0) updateData.nombreUsuarioWhatsapp = input.nombreUsuarioWhatsapp;
+    await db.update(properties).set(updateData).where(eq7(properties.id, input.propertyId));
+    console.log(`[JanIA-UpdateProperty] Propiedad #${input.propertyId} actualizada directamente desde Mesa de Cotejo (incluyendo tel\xE9fono: ${input.idUsuarioWhatsapp || "N/A"})`);
     if (input.idUsuarioWhatsapp || input.nombreUsuarioWhatsapp) {
       try {
         await propagateBrokerPhoneAcrossAllListings({
@@ -15369,11 +15475,11 @@ ${liveStats}${userContextInstruction}
     presupuestoMax: z2.string().optional(),
     presupuestoMin: z2.string().optional().nullable(),
     adminFeeMax: z2.string().optional().nullable(),
-    habitacionesMin: z2.number().optional().nullable(),
-    banosMin: z2.number().optional().nullable(),
-    parqueaderosMin: z2.number().optional().nullable(),
+    habitacionesMin: z2.union([z2.number(), z2.string()]).optional().nullable(),
+    banosMin: z2.union([z2.number(), z2.string()]).optional().nullable(),
+    parqueaderosMin: z2.union([z2.number(), z2.string()]).optional().nullable(),
     areaMin: z2.string().optional().nullable(),
-    estratoDeseado: z2.number().optional().nullable(),
+    estratoDeseado: z2.union([z2.number(), z2.string()]).optional().nullable(),
     zonaDeseada: z2.string().optional().nullable(),
     addressNeighborhood: z2.string().optional().nullable(),
     ciudadDeseada: z2.string().optional().nullable(),
@@ -15385,14 +15491,62 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     const existingReq = await db.select().from(requirements).where(eq7(requirements.id, input.requirementId)).limit(1).then((r) => r[0]);
-    const { requirementId, ...updateFields } = input;
-    const updateData = {};
-    for (const [key, value] of Object.entries(updateFields)) {
-      if (value !== void 0) updateData[key] = value;
+    const sanitizeNumeric = (val) => {
+      if (val === void 0 || val === null) return null;
+      const s = String(val).trim();
+      if (!s || s === "N/E" || /consultar|n\/e|na|n\/a|sin\s*restricci[oó]n|flexible/i.test(s)) return null;
+      const cleaned = s.replace(/[^0-9.]/g, "");
+      return cleaned && !isNaN(Number(cleaned)) ? cleaned : null;
+    };
+    const sanitizeInt = (val) => {
+      if (val === void 0 || val === null) return null;
+      const s = String(val).trim();
+      if (!s || s === "N/E" || /consultar|n\/e|na|n\/a|sin\s*restricci[oó]n|flexible/i.test(s)) return null;
+      const n = parseInt(s.replace(/[^0-9]/g, ""), 10);
+      return isNaN(n) ? null : n;
+    };
+    const updateData = {
+      updatedAt: /* @__PURE__ */ new Date()
+    };
+    if (input.name !== void 0) updateData.name = input.name;
+    if (input.presupuestoMax !== void 0) {
+      const cleanP = sanitizeNumeric(input.presupuestoMax);
+      if (cleanP !== null) updateData.presupuestoMax = cleanP;
     }
-    updateData.updatedAt = /* @__PURE__ */ new Date();
-    await db.update(requirements).set(updateData).where(eq7(requirements.id, requirementId));
-    console.log(`[JanIA-UpdateRequirement] Requerimiento #${requirementId} actualizado directamente desde Mesa de Cotejo (incluyendo tel\xE9fono: ${input.idUsuarioWhatsapp || "N/A"})`);
+    if (input.presupuestoMin !== void 0) {
+      updateData.presupuestoMin = sanitizeNumeric(input.presupuestoMin);
+    }
+    if (input.adminFeeMax !== void 0) {
+      updateData.adminFeeMax = sanitizeNumeric(input.adminFeeMax);
+    }
+    if (input.areaMin !== void 0) {
+      updateData.areaMin = sanitizeNumeric(input.areaMin);
+    }
+    if (input.habitacionesMin !== void 0) {
+      updateData.habitacionesMin = sanitizeInt(input.habitacionesMin);
+    }
+    if (input.banosMin !== void 0) {
+      updateData.banosMin = sanitizeInt(input.banosMin);
+    }
+    if (input.parqueaderosMin !== void 0) {
+      updateData.parqueaderosMin = sanitizeInt(input.parqueaderosMin);
+    }
+    if (input.estratoDeseado !== void 0) {
+      updateData.estratoDeseado = sanitizeInt(input.estratoDeseado);
+    }
+    if (input.zonaDeseada !== void 0 && input.zonaDeseada && !/n\/e/i.test(input.zonaDeseada)) {
+      updateData.zonaDeseada = input.zonaDeseada;
+    }
+    if (input.addressNeighborhood !== void 0 && input.addressNeighborhood && !/n\/e/i.test(input.addressNeighborhood)) {
+      updateData.addressNeighborhood = input.addressNeighborhood;
+    }
+    if (input.ciudadDeseada !== void 0 && input.ciudadDeseada) updateData.ciudadDeseada = input.ciudadDeseada;
+    if (input.tipoInmuebleDeseado !== void 0 && input.tipoInmuebleDeseado) updateData.tipoInmuebleDeseado = input.tipoInmuebleDeseado;
+    if (input.tipoNegocioDeseado !== void 0 && input.tipoNegocioDeseado) updateData.tipoNegocioDeseado = input.tipoNegocioDeseado;
+    if (input.idUsuarioWhatsapp !== void 0) updateData.idUsuarioWhatsapp = input.idUsuarioWhatsapp;
+    if (input.nombreUsuarioWhatsapp !== void 0) updateData.nombreUsuarioWhatsapp = input.nombreUsuarioWhatsapp;
+    await db.update(requirements).set(updateData).where(eq7(requirements.id, input.requirementId));
+    console.log(`[JanIA-UpdateRequirement] Requerimiento #${input.requirementId} actualizado directamente desde Mesa de Cotejo (incluyendo tel\xE9fono: ${input.idUsuarioWhatsapp || "N/A"})`);
     if (input.idUsuarioWhatsapp || input.nombreUsuarioWhatsapp) {
       try {
         await propagateBrokerPhoneAcrossAllListings({

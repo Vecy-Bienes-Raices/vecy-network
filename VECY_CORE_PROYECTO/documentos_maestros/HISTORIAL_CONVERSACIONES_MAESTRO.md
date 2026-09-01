@@ -79,6 +79,9 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
+### 🗓️ Sesión: Lunes 31 de Agosto de 2026 — 17:28 a 18:00 (Hora Colombia UTC-5)
+**Versión**: `v28.0` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)
+
 #### 🎯 Objetivo y Logros de la Sesión:
 1. **Corrección de Errores TypeScript en `AdminMatches.tsx`** (2 bugs resueltos):
    - **TS2552 — `isPropPureVenta` no declarada**: Se añadió la variable `isPropPureVenta` (línea 753) con la lógica correcta: `cleanPropBiz === "venta" || "venta_permuta" || "permuta" || "aporte"`. Esta variable faltaba en el archivo a pesar de ser referenciada en las líneas 831, 854 y 885.

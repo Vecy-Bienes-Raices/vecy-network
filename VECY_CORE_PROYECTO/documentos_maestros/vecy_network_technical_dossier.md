@@ -880,6 +880,42 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 
 ---
 
+### Versión v28.1 — Agosto 2026: Sanitización Estricta de Guardado SQL en Mesa de Cotejo, Corrección de Regex de Metraje vs Administración y Auditoría Geográfica Nacional de Coincidencias
+
+#### 1. RESOLUCIÓN DEFINITIVA DE ERROR SQL DE GUARDADO EN MESA DE COTEJO
+- **Sanitización Estricta (`janIA.ts` & `AdminMatches.tsx`)**: Implementadas funciones `sanitizeNumeric` y `sanitizeInt` que limpian signos de moneda, puntos y strings no numéricos (`"N/E (Consultar)"`, `"Consultar"`, etc.), convirtiéndolos a `null` o `undefined` previo a la mutación en Supabase/Postgres. Esto eliminó de raíz el error `invalid input syntax for type numeric: "N/E (Consultar)"` al guardar cambios o recalcular fichas.
+
+#### 2. CORRECCIÓN DE REGEX DE METRAJE QUE CONFUNDÍA ADMINISTRACIÓN CON ÁREA
+- **Unidades Obligatorias de Área**: Se corrigió la expresión regular en `AdminMatches.tsx` exigiendo obligatoriamente unidades de área (`m2|mts|m²|mt2|metros`) o prefijo explícito (`área:`, `superficie:`), impidiendo que cifras de administración como `"($1040.000)"` en ofertas sean capturadas como `1040 m²`.
+
+#### 3. AUDITORÍA MATEMÁTICA Y COBERTURA GEOGRÁFICA NACIONAL
+- **Desglose de 770.012 Combinaciones (652 Demandas × 1.181 Ofertas)**: Auditoría formal de los filtros doctrinales: 195.199 descartes por ciudad cruzada, 233.903 por incompatibilidad de negocio (arriendo vs venta), 53.126 por déficit de área mínima y 30.679 por déficit de alcobas.
+- **Sincronización de Coincidencias Frontend**: Ajustado el visor `processedMatches` para preservar los matches certificados de base de datos ($\ge 80\%$) con 0 bloqueadores.
+
+---
+
+### Versión v28.0 — Agosto 2026: Doctrina de Mensajes Programados Exclusivos Grupo 2 + Canal, y Correcciones TypeScript en AdminMatches
+
+#### 1. DOCTRINA v28.0 — MENSAJES PROGRAMADOS EXCLUSIVOS
+- **Silencio Absoluto en Grupo 1**: Erradicado el cron duplicado de los lunes y jueves a las 11 AM dirigido al Grupo 1 (VECY INMUEBLES NETWORK). Los mensajes diarios de JanIA (Lunes a Domingo) se publican **EXCLUSIVAMENTE** en el **Grupo 2 (Soporte Legal, Tributario, Avalúos y Marketing)** y en el **Canal Oficial de WhatsApp** vía `sendVoiceToBuzonAndChannel`.
+
+#### 2. CORRECCIONES TYPESCRIPT (TS2552 & TS2367)
+- **Declaración de `isPropPureVenta`**: Añadida la variable formalmente con la lógica canónica de negocio (`cleanPropBiz === "venta" || "venta_permuta" || "permuta" || "aporte"`).
+- **Cast Explícito en Comparación de Estados**: Resuelta la comparación de tipos union en el estado de conservación del inmueble con cast `(reqState as string) === (propState as string)`.
+
+---
+
+### Versión v27.4.1 — Agosto 2026: Erradicación de ReDoS en Regex Fallback, Purga de Búsquedas en Ofertas y Población Total de Matches Doctrinales
+
+#### 1. ERRADICACIÓN DE CATASTROPHIC BACKTRACKING (ReDoS)
+- **Sanitización Previa de Espacios**: Colapso de espacios continuos con `.replace(/[\t ]+/g, " ")` previo a todas las regex de extracción fallback en `janIA.ts`, acelerando el tiempo de procesamiento en **8.280x** (de 4.546ms a 0.549ms).
+
+#### 2. PURGA Y POBLACIÓN TOTAL DE MATCHES
+- **Purga de Ofertas Erróneas**: Deshabilitadas propiedades #1625 y #1648 que eran búsquedas activas.
+- **Población en Supabase**: Persistidos los matches verídicos con score $\ge 80\%$ y 0 bloqueadores doctrinales.
+
+---
+
 ### Versión v27.4 — Agosto 2026: Regla Doctrinal de Metrajes con Tolerancia Cero, Captura Robusta de Rangos de Área, Doble Precio para Administración y Bloqueo de Déficit Físico
 
 #### 1. TOLERANCIA CERO EN ÁREA MÍNIMA (OFERTA < DEMANDA = BLOQUEO 0%)
