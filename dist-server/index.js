@@ -13870,6 +13870,9 @@ import { fileURLToPath } from "url";
 import { gte as gte2, eq as eq7, sql as sql4 } from "drizzle-orm";
 function getThemedImagePath(tipo) {
   const aliasMap = {
+    reporte_semanal: ["reporte_semanal", "reporte", "pulso", "matches", "periodista"],
+    reporte: ["reporte_semanal", "reporte", "pulso", "matches", "periodista"],
+    pulso: ["reporte_semanal", "reporte", "pulso", "matches", "periodista"],
     cafe: ["podcast", "potcast", "cafe"],
     podcast: ["podcast", "potcast", "cafe"],
     potcast: ["potcast", "podcast", "cafe"],
@@ -14213,7 +14216,7 @@ Cuando publicas con datos completos, VECY Network te conecta en segundos con la 
 
 #VecyNetwork #InteligenciaInmobiliaria #BolsaColaborativa #CorretajeProfesional`;
   const content = await generateDailyContent("lunes_reporte_semanal", fallbackVoice, fallbackCaption);
-  await janiaMatchBot.sendVoiceToBuzonAndChannel(content.voiceText, getThemedImagePath("matches"), content.captionText);
+  await janiaMatchBot.sendVoiceToBuzonAndChannel(content.voiceText, getThemedImagePath("reporte_semanal"), content.captionText);
   return { success: true, tipo: "lunes_reporte_semanal", content, stats };
 }
 async function generateDailyContent(tipo, fallbackVoice, fallbackCaption) {

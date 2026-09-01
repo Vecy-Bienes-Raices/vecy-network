@@ -23,6 +23,9 @@ import { invokeLLM } from './llm';
  */
 function getThemedImagePath(tipo: string): string | undefined {
   const aliasMap: Record<string, string[]> = {
+    reporte_semanal: ['reporte_semanal', 'reporte', 'pulso', 'matches', 'periodista'],
+    reporte: ['reporte_semanal', 'reporte', 'pulso', 'matches', 'periodista'],
+    pulso: ['reporte_semanal', 'reporte', 'pulso', 'matches', 'periodista'],
     cafe: ['podcast', 'potcast', 'cafe'],
     podcast: ['podcast', 'potcast', 'cafe'],
     potcast: ['potcast', 'podcast', 'cafe'],
@@ -378,7 +381,7 @@ export async function publishWeeklyReportNow() {
     `#VecyNetwork #InteligenciaInmobiliaria #BolsaColaborativa #CorretajeProfesional`;
 
   const content = await generateDailyContent('lunes_reporte_semanal', fallbackVoice, fallbackCaption);
-  await whatsappBot.sendVoiceToBuzonAndChannel(content.voiceText, getThemedImagePath('matches'), content.captionText);
+  await whatsappBot.sendVoiceToBuzonAndChannel(content.voiceText, getThemedImagePath('reporte_semanal'), content.captionText);
   return { success: true, tipo: 'lunes_reporte_semanal', content, stats };
 }
 
