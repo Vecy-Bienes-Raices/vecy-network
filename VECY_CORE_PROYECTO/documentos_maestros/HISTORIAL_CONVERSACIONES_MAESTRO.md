@@ -52,7 +52,25 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v28.6 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v28.7 — Septiembre 2026
+
+### 🗓️ Sesión: Martes 1 de Septiembre de 2026 — 03:07 a 03:15 (Hora Colombia UTC-5)
+**Versión**: `v28.7` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)
+
+#### 🎯 Objetivo y Logros de la Sesión:
+1. **Resolución de Error TypeScript TS2305 en Scripts (`parseColombianPriceOrBudget`)**:
+   - Se diagnosticó la causa por la cual el panel de problemas del IDE marcaba errores en `scripts/sanitize_all_db.ts` y `scripts/master_audit_and_match.ts` (`Module '"../server/_core/janIA"' has no exported member 'parseColombianPriceOrBudget'`).
+   - La función `parseColombianPriceOrBudget` estaba anidada internamente dentro de `extractFallbackDataFromText` en `server/_core/janIA.ts`, impidiendo su exportación a otros módulos y herramientas de auditoría.
+   - Se elevó `parseColombianPriceOrBudget` al nivel superior de `server/_core/janIA.ts` exportándola explícitamente (`export function parseColombianPriceOrBudget`).
+2. **Inclusión de la Carpeta de Scripts en `tsconfig.json`**:
+   - Se añadió `"scripts/**/*"` a la directiva `"include"` de `tsconfig.json`, permitiendo que el compilador de TypeScript y el Language Server del IDE validen uniformemente todos los scripts del proyecto con tipado estricto.
+3. **Verificación Integral y Compilación**:
+   - `tsc --noEmit` completado con **0 errores**.
+   - `npm run build` ejecutado exitosamente generando bundles óptimos para cliente y servidor.
+
+---
+
+## 🔖 HISTÓRICO DE VERSIONES ANTERIORES
 
 ### 🗓️ Sesión: Martes 1 de Septiembre de 2026 — 02:45 a 03:05 (Hora Colombia UTC-5)
 **Versión**: `v28.6` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)

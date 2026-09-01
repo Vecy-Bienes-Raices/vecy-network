@@ -948,6 +948,29 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 
 ---
 
+### Versión v28.7 — Septiembre 2026: Exportación Modular de parseColombianPriceOrBudget, Inclusión de Scripts en tsconfig y Cero Errores TS
+
+#### 1. EXPORTACIÓN MODULAR DE `parseColombianPriceOrBudget`
+- **Elevación a Nivel de Módulo (`janIA.ts`)**: Se exportó explícitamente `parseColombianPriceOrBudget` para permitir su importación directa en scripts de backend, auditoría y saneamiento (`sanitize_all_db.ts` y `master_audit_and_match.ts`), erradicando el error TS2305 del IDE.
+
+#### 2. INCLUSIÓN DE SCRIPTS EN TSCONFIG
+- **Cobertura Total**: Se añadió `"scripts/**/*"` a la configuración del compilador TypeScript (`tsconfig.json`), garantizando validación y chequeo continuo en todo el repositorio.
+
+---
+
+### Versión v28.6 — Septiembre 2026: Auditoría Integral 1 a 1 de 5 Filtros Duros, Saneamiento Masivo de BD y Población de 27 Matches Certificados
+
+#### 1. AUDITORÍA INTEGRAL Y COTEJO 1 A 1
+- **Motor Maestro Determinista (`master_audit_and_match.ts`)**: Evaluación exhaustiva de los 5 filtros inquebrantables (Negocio, Usos/Tipología, Geografía, Presupuesto Máximo y Cumplimiento Físico Núcleo Duro).
+
+#### 2. SANEAMIENTO MASIVO DETERMINISTA EN SUPABASE (`sanitize_all_db.ts`)
+- **549 Propiedades y 368 Requerimientos**: Re-procesados desde su texto crudo (`rawText`) con extracción rigurosa de metrajes, precios, negocios y zonas.
+
+#### 3. POBLACIÓN TOTAL DE 27 MATCHES CERTIFICADOS
+- **Cero Suposiciones**: Persistidos 27 matches verificados con score $\ge 80\%$ y 100% de cumplimiento en núcleos duros.
+
+---
+
 ### Versión v28.0 — Agosto 2026: Doctrina de Mensajes Programados Exclusivos Grupo 2 + Canal, y Correcciones TypeScript en AdminMatches
 
 #### 1. DOCTRINA v28.0 — MENSAJES PROGRAMADOS EXCLUSIVOS

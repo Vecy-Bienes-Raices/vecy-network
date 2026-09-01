@@ -6610,6 +6610,7 @@ __export(janIA_exports, {
   muteSession: () => muteSession,
   normalizePhoneNumber: () => normalizePhoneNumber,
   obtenerCamposRequeridosYPreguntas: () => obtenerCamposRequeridosYPreguntas,
+  parseColombianPriceOrBudget: () => parseColombianPriceOrBudget,
   parseSafeJSON: () => parseSafeJSON,
   processCirculoMessage: () => processCirculoMessage,
   processConsultingMessage: () => processConsultingMessage,
@@ -6825,6 +6826,55 @@ function buildFlyerBreakdownText(extracted, fallbackText) {
   if (parts.length > 0) return parts.join("\n\n");
   return fallbackText || "[Publicaci\xF3n Comercial Inmobiliaria desde Imagen / Flyer]";
 }
+function parseColombianPriceOrBudget(numStr, unit, isSale) {
+  const cleanStr = (numStr || "").trim().replace(/\*/g, "");
+  const cleanUnit = (unit || "").toLowerCase();
+  if (cleanUnit.includes("mil millon")) {
+    const v = parseFloat(cleanStr.replace(",", "."));
+    return Math.round(v * 1e9);
+  }
+  if (/^\d{1,3}(?:\.\d{3}){2,4}$/.test(cleanStr)) {
+    return parseInt(cleanStr.replace(/\./g, ""), 10);
+  }
+  if (/^\d{1,3}\.\d{3}$/.test(cleanStr)) {
+    const n = parseInt(cleanStr.replace(".", ""), 10);
+    if (!isSale) {
+      return n * 1e3;
+    }
+    return n * 1e6;
+  }
+  let val = parseFloat(cleanStr.replace(",", "."));
+  if (isNaN(val)) return 0;
+  if (cleanUnit.includes("millon") || cleanUnit.includes("mill\xF3n") || cleanUnit.includes("mll") || cleanUnit.includes("mill") || cleanUnit.includes("mm") || cleanUnit === "m") {
+    if (!isSale) {
+      if (val <= 100 && val > 0) {
+        return Math.round(val * 1e6);
+      }
+      if (val > 100 && val < 1e5) {
+        return Math.round(val * 1e3);
+      }
+      return Math.round(val);
+    }
+    if (val < 100 && isSale && val > 0) {
+      if (val < 30) {
+        return Math.round(val * 1e9);
+      }
+      return Math.round(val * 1e7);
+    }
+    return Math.round(val * 1e6);
+  }
+  if (val <= 50 && isSale) {
+    return Math.round(val * 1e9);
+  }
+  if (val <= 50 && !isSale) {
+    return Math.round(val * 1e6);
+  }
+  if (val < 1e4) {
+    if (!isSale) return Math.round(val * 1e3);
+    return Math.round(val * 1e6);
+  }
+  return Math.round(val);
+}
 function extractFallbackDataFromText(text2) {
   const clean = (text2 || "").toLowerCase().replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0]/g, " ").replace(/[\t ]+/g, " ");
   let transactionType = "venta";
@@ -6871,55 +6921,6 @@ function extractFallbackDataFromText(text2) {
   let presupuestoMax = 0;
   let rentPrice = 0;
   let adminFee = 0;
-  function parseColombianPriceOrBudget(numStr, unit, isSale) {
-    const cleanStr = (numStr || "").trim().replace(/\*/g, "");
-    const cleanUnit = (unit || "").toLowerCase();
-    if (cleanUnit.includes("mil millon")) {
-      const v = parseFloat(cleanStr.replace(",", "."));
-      return Math.round(v * 1e9);
-    }
-    if (/^\d{1,3}(?:\.\d{3}){2,4}$/.test(cleanStr)) {
-      return parseInt(cleanStr.replace(/\./g, ""), 10);
-    }
-    if (/^\d{1,3}\.\d{3}$/.test(cleanStr)) {
-      const n = parseInt(cleanStr.replace(".", ""), 10);
-      if (!isSale) {
-        return n * 1e3;
-      }
-      return n * 1e6;
-    }
-    let val = parseFloat(cleanStr.replace(",", "."));
-    if (isNaN(val)) return 0;
-    if (cleanUnit.includes("millon") || cleanUnit.includes("mill\xF3n") || cleanUnit.includes("mll") || cleanUnit.includes("mill") || cleanUnit.includes("mm") || cleanUnit === "m") {
-      if (!isSale) {
-        if (val <= 100 && val > 0) {
-          return Math.round(val * 1e6);
-        }
-        if (val > 100 && val < 1e5) {
-          return Math.round(val * 1e3);
-        }
-        return Math.round(val);
-      }
-      if (val < 100 && isSale && val > 0) {
-        if (val < 30) {
-          return Math.round(val * 1e9);
-        }
-        return Math.round(val * 1e7);
-      }
-      return Math.round(val * 1e6);
-    }
-    if (val <= 50 && isSale) {
-      return Math.round(val * 1e9);
-    }
-    if (val <= 50 && !isSale) {
-      return Math.round(val * 1e6);
-    }
-    if (val < 1e4) {
-      if (!isSale) return Math.round(val * 1e3);
-      return Math.round(val * 1e6);
-    }
-    return Math.round(val);
-  }
   const rangeMatch = clean.match(/(?:presupuesto(?:\s*m[aá]ximo)?|ppto(?:\s*m[aá]ximo)?|hasta|tope|valor|inversi[oó]n|compra)?\s*:?\s*\*?\$?\s*(\d{1,4}(?:[.,]\d{1,3})?)\s*(?:a|hasta|-)\s*\*?\$?\s*(\d{1,4}(?:[.,]\d{1,3})?)\*?\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?\b/i);
   if (rangeMatch && (rangeMatch[0].includes("presupuesto") || rangeMatch[0].includes("ppto") || rangeMatch[0].includes("compra") || rangeMatch[3])) {
     const isSale = transactionType !== "arriendo";

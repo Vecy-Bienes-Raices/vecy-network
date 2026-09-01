@@ -423,6 +423,64 @@ export function buildFlyerBreakdownText(extracted: any, fallbackText?: string): 
   return fallbackText || "[Publicación Comercial Inmobiliaria desde Imagen / Flyer]";
 }
 
+export function parseColombianPriceOrBudget(numStr: string, unit: string, isSale: boolean): number {
+  const cleanStr = (numStr || "").trim().replace(/\*/g, "");
+  const cleanUnit = (unit || "").toLowerCase();
+  
+  if (cleanUnit.includes("mil millon")) {
+    const v = parseFloat(cleanStr.replace(",", "."));
+    return Math.round(v * 1_000_000_000);
+  }
+  
+  // Si tiene formato de número completo colombiano con puntos (ej: "3.800.000", "2.900.000", "1.390.000.000")
+  if (/^\d{1,3}(?:\.\d{3}){2,4}$/.test(cleanStr)) {
+    return parseInt(cleanStr.replace(/\./g, ""), 10);
+  }
+
+  // Si tiene formato de miles con punto (ej: "2.100", "1.390", "1.300", "3.500")
+  if (/^\d{1,3}\.\d{3}$/.test(cleanStr)) {
+    const n = parseInt(cleanStr.replace(".", ""), 10);
+    if (!isSale) {
+      return n * 1_000; // 3800 -> 3.800.000 COP en arriendo
+    }
+    return n * 1_000_000; // 2100 * 1M = 2.100.000.000 COP en venta
+  }
+  
+  let val = parseFloat(cleanStr.replace(",", "."));
+  if (isNaN(val)) return 0;
+  
+  if (cleanUnit.includes("millon") || cleanUnit.includes("millón") || cleanUnit.includes("mll") || cleanUnit.includes("mill") || cleanUnit.includes("mm") || cleanUnit === "m") {
+    if (!isSale) {
+      if (val <= 100 && val > 0) {
+        return Math.round(val * 1_000_000); // 3.8 mm -> 3.800.000 COP arriendo
+      }
+      if (val > 100 && val < 100_000) {
+        return Math.round(val * 1_000); // 3800 -> 3.800.000 COP
+      }
+      return Math.round(val);
+    }
+    if (val < 100 && isSale && val > 0) {
+      if (val < 30) {
+        return Math.round(val * 1_000_000_000); // 2.1 millones -> 2.100.000.000
+      }
+      return Math.round(val * 10_000_000); // taquigrafía ej. 49mm -> 490M
+    }
+    return Math.round(val * 1_000_000);
+  }
+  
+  if (val <= 50 && isSale) {
+    return Math.round(val * 1_000_000_000);
+  }
+  if (val <= 50 && !isSale) {
+    return Math.round(val * 1_000_000); // 4 -> 4.000.000 COP arriendo
+  }
+  if (val < 10000) {
+    if (!isSale) return Math.round(val * 1_000);
+    return Math.round(val * 1_000_000);
+  }
+  return Math.round(val);
+}
+
 export function extractFallbackDataFromText(text: string): any {
   const clean = (text || "").toLowerCase().replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0]/g, " ").replace(/[\t ]+/g, " ");
   
@@ -479,64 +537,6 @@ export function extractFallbackDataFromText(text: string): any {
   let presupuestoMax = 0;
   let rentPrice = 0;
   let adminFee = 0;
-
-  function parseColombianPriceOrBudget(numStr: string, unit: string, isSale: boolean): number {
-    const cleanStr = (numStr || "").trim().replace(/\*/g, "");
-    const cleanUnit = (unit || "").toLowerCase();
-    
-    if (cleanUnit.includes("mil millon")) {
-      const v = parseFloat(cleanStr.replace(",", "."));
-      return Math.round(v * 1_000_000_000);
-    }
-    
-    // Si tiene formato de número completo colombiano con puntos (ej: "3.800.000", "2.900.000", "1.390.000.000")
-    if (/^\d{1,3}(?:\.\d{3}){2,4}$/.test(cleanStr)) {
-      return parseInt(cleanStr.replace(/\./g, ""), 10);
-    }
-
-    // Si tiene formato de miles con punto (ej: "2.100", "1.390", "1.300", "3.500")
-    if (/^\d{1,3}\.\d{3}$/.test(cleanStr)) {
-      const n = parseInt(cleanStr.replace(".", ""), 10);
-      if (!isSale) {
-        return n * 1_000; // 3800 -> 3.800.000 COP en arriendo
-      }
-      return n * 1_000_000; // 2100 * 1M = 2.100.000.000 COP en venta
-    }
-    
-    let val = parseFloat(cleanStr.replace(",", "."));
-    if (isNaN(val)) return 0;
-    
-    if (cleanUnit.includes("millon") || cleanUnit.includes("millón") || cleanUnit.includes("mll") || cleanUnit.includes("mill") || cleanUnit.includes("mm") || cleanUnit === "m") {
-      if (!isSale) {
-        if (val <= 100 && val > 0) {
-          return Math.round(val * 1_000_000); // 3.8 mm -> 3.800.000 COP arriendo
-        }
-        if (val > 100 && val < 100_000) {
-          return Math.round(val * 1_000); // 3800 -> 3.800.000 COP
-        }
-        return Math.round(val);
-      }
-      if (val < 100 && isSale && val > 0) {
-        if (val < 30) {
-          return Math.round(val * 1_000_000_000); // 2.1 millones -> 2.100.000.000
-        }
-        return Math.round(val * 10_000_000); // taquigrafía ej. 49mm -> 490M
-      }
-      return Math.round(val * 1_000_000);
-    }
-    
-    if (val <= 50 && isSale) {
-      return Math.round(val * 1_000_000_000);
-    }
-    if (val <= 50 && !isSale) {
-      return Math.round(val * 1_000_000); // 4 -> 4.000.000 COP arriendo
-    }
-    if (val < 10000) {
-      if (!isSale) return Math.round(val * 1_000);
-      return Math.round(val * 1_000_000);
-    }
-    return Math.round(val);
-  }
 
   // A. Rango de Presupuesto en Demanda (ej: "Presupuesto *1.300 - 1.400*", "ppto 1200 a 1400", "800 a 1.200 millones", "8.500 a 11 millones")
   const rangeMatch = clean.match(/(?:presupuesto(?:\s*m[aá]ximo)?|ppto(?:\s*m[aá]ximo)?|hasta|tope|valor|inversi[oó]n|compra)?\s*:?\s*\*?\$?\s*(\d{1,4}(?:[.,]\d{1,3})?)\s*(?:a|hasta|-)\s*\*?\$?\s*(\d{1,4}(?:[.,]\d{1,3})?)\*?\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?\b/i);

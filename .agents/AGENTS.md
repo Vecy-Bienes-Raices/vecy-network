@@ -163,7 +163,12 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v28.6 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v28.7 — Septiembre 2026
+
+### Novedades v28.7 (Exportación Modular de parseColombianPriceOrBudget, Inclusión de Scripts en tsconfig y Cero Errores TS):
+- **Exportación Modular de `parseColombianPriceOrBudget` (`janIA.ts`)**: Se elevó la función de parseo de precios y presupuestos al nivel de módulo para ser consumida limpiamente por los scripts de saneamiento y auditoría (`sanitize_all_db.ts` y `master_audit_and_match.ts`), erradicando el error TS2305 del IDE.
+- **Inclusión de `scripts/**/*` en `tsconfig.json`**: Cobertura total de tipado estricto para todos los scripts del workspace.
+- **Validación Exitosa**: `tsc --noEmit` y `npm run build` con 0 errores en todo el proyecto.
 
 ### Novedades v28.6 (Auditoría Integral 1 a 1 de 5 Filtros Duros, Saneamiento Masivo de BD y Población de 27 Matches Certificados):
 - **Auditoría Integral y Cotejo 1 a 1 sin Suposiciones**: Implementado motor maestro de cotejo exhaustivo (`master_audit_and_match.ts`) que evalúa los 5 Filtros Duros Inquebrantables: 1) Compatibilidad de Negocio (`venta` vs `arriendo`), 2) Compatibilidad de Usos y Tipologías (Residencial, Comercial, Oficinas), 3) Geografía Canónica (Barrio/Municipio sin cruces inviables), 4) Presupuesto Máximo (`precio <= pptoMax`), y 5) Cumplimiento Físico de Núcleo Duro (`prop >= req` en Metraje, Alcobas, Baños y Garajes).
