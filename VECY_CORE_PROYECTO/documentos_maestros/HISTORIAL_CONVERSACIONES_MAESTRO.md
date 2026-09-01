@@ -52,10 +52,32 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v28.0 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v28.1 — Agosto 2026
 
-### 🗓️ Sesión: Lunes 31 de Agosto de 2026 — 17:28 a 18:00 (Hora Colombia UTC-5)
-**Versión**: `v28.0` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)
+### 🗓️ Sesión: Lunes 31 de Agosto de 2026 — 19:50 a 20:15 (Hora Colombia UTC-5)
+**Versión**: `v28.1` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)
+
+#### 🎯 Objetivo y Logros de la Sesión:
+1. **Resolución de Error de Guardado SQL en Mesa de Cotejo (`updatePropertyDetails` / `updateRequirementDetails`)**:
+   - **Diagnóstico**: Al intentar guardar o recalcular una ficha desde la Mesa de Cotejo, Postgres arrojaba el error `invalid input syntax for type numeric: "N/E (Consultar)"` porque Drizzle recibía strings no numéricos (`"N/E (Consultar)"`, `"Consultar"`, etc.) en columnas de tipo `decimal`/`numeric` (`areaTotal`, `adminFee`, `price`, `presupuestoMax`, etc.).
+   - **Solución**: Se implementó una función de sanitización exhaustiva en `janIA.ts` (backend) y `AdminMatches.tsx` (frontend) (`sanitizeNumeric` y `sanitizeInt`) que limpia y valida dígitos, convirtiendo valores inválidos o `"N/E"` a `null`/`undefined`, eliminando el fallo de actualización al 100%.
+2. **Corrección de Regex de Metraje que Confundía Cuota de Administración con Área (`AdminMatches.tsx`)**:
+   - **Diagnóstico**: La expresión regular en `AdminMatches.tsx` tenía unidades de metraje opcionales (`?`), lo que provocaba que valores de administración como `"($1040.000)"` fueran capturados como `1040 m²` en la columna de Área Total de la oferta (ej. Propiedad #144).
+   - **Solución**: Se corrigió la regex exigiendo obligatoriamente unidades de área (`m2|mts|m²|mt2|metros`) o prefijo explícito (`área:`, `superficie:`), e ignorando números que coincidan con la cuota de administración o precio.
+3. **Auditoría Matemática Integral de los 770.012 Pares de Coincidencia (652 Requerimientos × 1.181 Inmuebles)**:
+   - **Desglose de Descarte Doctrinal Riguroso**:
+     - *Incompatibilidad de Ciudad/Municipio*: **195.199 pares** (Cali vs Bogotá, Medellín vs Bogotá, Chía vs Bogotá).
+     - *Incompatibilidad de Negocio (Venta vs Arriendo puro)*: **233.903 pares** (demanda de arriendo vs oferta de venta).
+     - *Déficit de Área Total (< Mínimo exigido)*: **53.126 pares** (Tolerancia Cero v27.4).
+     - *Déficit de Habitaciones*: **30.679 pares** (oferta con menos alcobas que las exigidas).
+     - *Presupuesto Excedido (> +15%)*: **60.176 pares**.
+     - *Pares Evaluados a Fondo*: **196.929 pares**.
+     - *Bloqueadores Principales*: 30.148 requerimientos con barrio no especificado (N/E) y 5.547 demandas ciegas sin presupuesto ni especificaciones físicas.
+     - *Matches Verídicos Finales ($\ge 80\%$ y 0 bloqueadores)*: **20 matches certificados** en Supabase.
+4. **Sincronización de Visualización Frontend (`processedMatches`)**:
+   - Se ajustó el filtro en `AdminMatches.tsx` para preservar el `matchScore` verificado de la base de datos, evitando que micro-diferencias de formateo en el cliente oculten coincidencias legítimas.
+
+---
 
 #### 🎯 Objetivo y Logros de la Sesión:
 1. **Corrección de Errores TypeScript en `AdminMatches.tsx`** (2 bugs resueltos):

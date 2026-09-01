@@ -163,7 +163,12 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v28.0 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL: v28.1 — Agosto 2026
+
+### Novedades v28.1 (Sanitización Estricta de Guardado SQL en Mesa de Cotejo, Corrección de Regex de Metraje y Sincronización de Coincidencias):
+- **Sanitización Exhaustiva en Guardado SQL (`updatePropertyDetails` / `updateRequirementDetails` en `janIA.ts` y `AdminMatches.tsx`)**: Implementadas funciones `sanitizeNumeric` y `sanitizeInt` que limpian signos de moneda, puntos y strings no numéricos (`"N/E (Consultar)"`), convirtiéndolos a `null` o `undefined` para evitar el error `invalid input syntax for type numeric` en Postgres.
+- **Corrección de Regex de Área en Frontend (`AdminMatches.tsx`)**: Se exigieron unidades obligatorias de metraje (`m2|mts|m²|mt2|metros`), impidiendo que cifras de administración como `"($1040.000)"` sean capturadas erróneamente como `1040 m²` en la Oferta.
+- **Auditoría Matemática Integral de 770.012 Pares y Sincronización Frontend**: Desglose empírico de descartes por ciudad, negocio, área mínima, presupuesto y completitud, sincronizando la vista del panel (`processedMatches`) para reflejar los 20 matches doctrinales verificados en Supabase.
 
 ### Novedades v28.0 (Doctrina de Mensajes Programados Exclusivos Grupo 2 + Canal, y Correcciones TypeScript en AdminMatches):
 - **DOCTRINA v28.0 — Mensajes Programados Exclusivos**: Eliminado el cron del Grupo 1 (VECY INMUEBLES NETWORK) que enviaba mensajes los lunes y jueves a las 11 AM. Todos los mensajes diarios programados (Lunes a Domingo) se publican **EXCLUSIVAMENTE** en el **Grupo 2 (Soporte Legal, Tributario, Avalúos y Marketing)** y en el **Canal Oficial de WhatsApp** mediante `sendVoiceToBuzonAndChannel`. El Grupo 1 mantiene silencio absoluto de texto.

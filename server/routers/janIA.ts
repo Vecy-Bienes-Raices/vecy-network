@@ -642,11 +642,11 @@ export const janIARouter = router({
       price: z.string().optional(),
       rentPrice: z.string().optional().nullable(),
       adminFee: z.string().optional().nullable(),
-      bedrooms: z.number().optional().nullable(),
-      bathrooms: z.number().optional().nullable(),
-      garages: z.number().optional().nullable(),
+      bedrooms: z.union([z.number(), z.string()]).optional().nullable(),
+      bathrooms: z.union([z.number(), z.string()]).optional().nullable(),
+      garages: z.union([z.number(), z.string()]).optional().nullable(),
       areaTotal: z.string().optional().nullable(),
-      stratum: z.number().optional().nullable(),
+      stratum: z.union([z.number(), z.string()]).optional().nullable(),
       zone: z.string().optional().nullable(),
       addressNeighborhood: z.string().optional().nullable(),
       addressLocality: z.string().optional().nullable(),
@@ -662,15 +662,69 @@ export const janIARouter = router({
 
       const existingProp = await db.select().from(properties).where(eq(properties.id, input.propertyId)).limit(1).then(r => r[0]);
 
-      const { propertyId, ...updateFields } = input;
-      const updateData: Record<string, any> = {};
-      for (const [key, value] of Object.entries(updateFields)) {
-        if (value !== undefined) updateData[key] = value;
-      }
-      updateData.updatedAt = new Date();
+      const sanitizeNumeric = (val: any): string | null => {
+        if (val === undefined || val === null) return null;
+        const s = String(val).trim();
+        if (!s || s === 'N/E' || /consultar|n\/e|na|n\/a|sin\s*restricci[oó]n|flexible/i.test(s)) return null;
+        const cleaned = s.replace(/[^0-9.]/g, '');
+        return cleaned && !isNaN(Number(cleaned)) ? cleaned : null;
+      };
 
-      await db.update(properties).set(updateData).where(eq(properties.id, propertyId));
-      console.log(`[JanIA-UpdateProperty] Propiedad #${propertyId} actualizada directamente desde Mesa de Cotejo (incluyendo teléfono: ${input.idUsuarioWhatsapp || 'N/A'})`);
+      const sanitizeInt = (val: any): number | null => {
+        if (val === undefined || val === null) return null;
+        const s = String(val).trim();
+        if (!s || s === 'N/E' || /consultar|n\/e|na|n\/a|sin\s*restricci[oó]n|flexible/i.test(s)) return null;
+        const n = parseInt(s.replace(/[^0-9]/g, ''), 10);
+        return isNaN(n) ? null : n;
+      };
+
+      const updateData: Record<string, any> = {
+        updatedAt: new Date()
+      };
+
+      if (input.name !== undefined) updateData.name = input.name;
+      if (input.price !== undefined) {
+        const cleanP = sanitizeNumeric(input.price);
+        if (cleanP !== null) updateData.price = cleanP;
+      }
+      if (input.rentPrice !== undefined) {
+        updateData.rentPrice = sanitizeNumeric(input.rentPrice);
+      }
+      if (input.adminFee !== undefined) {
+        updateData.adminFee = sanitizeNumeric(input.adminFee);
+      }
+      if (input.areaTotal !== undefined) {
+        updateData.areaTotal = sanitizeNumeric(input.areaTotal);
+      }
+      if (input.bedrooms !== undefined) {
+        updateData.bedrooms = sanitizeInt(input.bedrooms);
+      }
+      if (input.bathrooms !== undefined) {
+        updateData.bathrooms = sanitizeInt(input.bathrooms);
+      }
+      if (input.garages !== undefined) {
+        updateData.garages = sanitizeInt(input.garages);
+      }
+      if (input.stratum !== undefined) {
+        updateData.stratum = sanitizeInt(input.stratum);
+      }
+      if (input.zone !== undefined && input.zone && !/n\/e/i.test(input.zone)) {
+        updateData.zone = input.zone;
+      }
+      if (input.addressNeighborhood !== undefined && input.addressNeighborhood && !/n\/e/i.test(input.addressNeighborhood)) {
+        updateData.addressNeighborhood = input.addressNeighborhood;
+      }
+      if (input.addressLocality !== undefined) {
+        updateData.addressLocality = input.addressLocality && !/n\/e/i.test(input.addressLocality) ? input.addressLocality : null;
+      }
+      if (input.city !== undefined && input.city) updateData.city = input.city;
+      if (input.propertyType !== undefined && input.propertyType) updateData.propertyType = input.propertyType;
+      if (input.transactionType !== undefined && input.transactionType) updateData.transactionType = input.transactionType;
+      if (input.idUsuarioWhatsapp !== undefined) updateData.idUsuarioWhatsapp = input.idUsuarioWhatsapp;
+      if (input.nombreUsuarioWhatsapp !== undefined) updateData.nombreUsuarioWhatsapp = input.nombreUsuarioWhatsapp;
+
+      await db.update(properties).set(updateData).where(eq(properties.id, input.propertyId));
+      console.log(`[JanIA-UpdateProperty] Propiedad #${input.propertyId} actualizada directamente desde Mesa de Cotejo (incluyendo teléfono: ${input.idUsuarioWhatsapp || 'N/A'})`);
 
       // Propagar en cascada a todas las demás publicaciones del mismo broker (pasadas y futuras)
       if (input.idUsuarioWhatsapp || input.nombreUsuarioWhatsapp) {
@@ -699,11 +753,11 @@ export const janIARouter = router({
       presupuestoMax: z.string().optional(),
       presupuestoMin: z.string().optional().nullable(),
       adminFeeMax: z.string().optional().nullable(),
-      habitacionesMin: z.number().optional().nullable(),
-      banosMin: z.number().optional().nullable(),
-      parqueaderosMin: z.number().optional().nullable(),
+      habitacionesMin: z.union([z.number(), z.string()]).optional().nullable(),
+      banosMin: z.union([z.number(), z.string()]).optional().nullable(),
+      parqueaderosMin: z.union([z.number(), z.string()]).optional().nullable(),
       areaMin: z.string().optional().nullable(),
-      estratoDeseado: z.number().optional().nullable(),
+      estratoDeseado: z.union([z.number(), z.string()]).optional().nullable(),
       zonaDeseada: z.string().optional().nullable(),
       addressNeighborhood: z.string().optional().nullable(),
       ciudadDeseada: z.string().optional().nullable(),
@@ -718,15 +772,66 @@ export const janIARouter = router({
 
       const existingReq = await db.select().from(requirements).where(eq(requirements.id, input.requirementId)).limit(1).then(r => r[0]);
 
-      const { requirementId, ...updateFields } = input;
-      const updateData: Record<string, any> = {};
-      for (const [key, value] of Object.entries(updateFields)) {
-        if (value !== undefined) updateData[key] = value;
-      }
-      updateData.updatedAt = new Date();
+      const sanitizeNumeric = (val: any): string | null => {
+        if (val === undefined || val === null) return null;
+        const s = String(val).trim();
+        if (!s || s === 'N/E' || /consultar|n\/e|na|n\/a|sin\s*restricci[oó]n|flexible/i.test(s)) return null;
+        const cleaned = s.replace(/[^0-9.]/g, '');
+        return cleaned && !isNaN(Number(cleaned)) ? cleaned : null;
+      };
 
-      await db.update(requirements).set(updateData).where(eq(requirements.id, requirementId));
-      console.log(`[JanIA-UpdateRequirement] Requerimiento #${requirementId} actualizado directamente desde Mesa de Cotejo (incluyendo teléfono: ${input.idUsuarioWhatsapp || 'N/A'})`);
+      const sanitizeInt = (val: any): number | null => {
+        if (val === undefined || val === null) return null;
+        const s = String(val).trim();
+        if (!s || s === 'N/E' || /consultar|n\/e|na|n\/a|sin\s*restricci[oó]n|flexible/i.test(s)) return null;
+        const n = parseInt(s.replace(/[^0-9]/g, ''), 10);
+        return isNaN(n) ? null : n;
+      };
+
+      const updateData: Record<string, any> = {
+        updatedAt: new Date()
+      };
+
+      if (input.name !== undefined) updateData.name = input.name;
+      if (input.presupuestoMax !== undefined) {
+        const cleanP = sanitizeNumeric(input.presupuestoMax);
+        if (cleanP !== null) updateData.presupuestoMax = cleanP;
+      }
+      if (input.presupuestoMin !== undefined) {
+        updateData.presupuestoMin = sanitizeNumeric(input.presupuestoMin);
+      }
+      if (input.adminFeeMax !== undefined) {
+        updateData.adminFeeMax = sanitizeNumeric(input.adminFeeMax);
+      }
+      if (input.areaMin !== undefined) {
+        updateData.areaMin = sanitizeNumeric(input.areaMin);
+      }
+      if (input.habitacionesMin !== undefined) {
+        updateData.habitacionesMin = sanitizeInt(input.habitacionesMin);
+      }
+      if (input.banosMin !== undefined) {
+        updateData.banosMin = sanitizeInt(input.banosMin);
+      }
+      if (input.parqueaderosMin !== undefined) {
+        updateData.parqueaderosMin = sanitizeInt(input.parqueaderosMin);
+      }
+      if (input.estratoDeseado !== undefined) {
+        updateData.estratoDeseado = sanitizeInt(input.estratoDeseado);
+      }
+      if (input.zonaDeseada !== undefined && input.zonaDeseada && !/n\/e/i.test(input.zonaDeseada)) {
+        updateData.zonaDeseada = input.zonaDeseada;
+      }
+      if (input.addressNeighborhood !== undefined && input.addressNeighborhood && !/n\/e/i.test(input.addressNeighborhood)) {
+        updateData.addressNeighborhood = input.addressNeighborhood;
+      }
+      if (input.ciudadDeseada !== undefined && input.ciudadDeseada) updateData.ciudadDeseada = input.ciudadDeseada;
+      if (input.tipoInmuebleDeseado !== undefined && input.tipoInmuebleDeseado) updateData.tipoInmuebleDeseado = input.tipoInmuebleDeseado;
+      if (input.tipoNegocioDeseado !== undefined && input.tipoNegocioDeseado) updateData.tipoNegocioDeseado = input.tipoNegocioDeseado;
+      if (input.idUsuarioWhatsapp !== undefined) updateData.idUsuarioWhatsapp = input.idUsuarioWhatsapp;
+      if (input.nombreUsuarioWhatsapp !== undefined) updateData.nombreUsuarioWhatsapp = input.nombreUsuarioWhatsapp;
+
+      await db.update(requirements).set(updateData).where(eq(requirements.id, input.requirementId));
+      console.log(`[JanIA-UpdateRequirement] Requerimiento #${input.requirementId} actualizado directamente desde Mesa de Cotejo (incluyendo teléfono: ${input.idUsuarioWhatsapp || 'N/A'})`);
 
       // Propagar en cascada a todas las demás publicaciones del mismo broker (pasadas y futuras)
       if (input.idUsuarioWhatsapp || input.nombreUsuarioWhatsapp) {

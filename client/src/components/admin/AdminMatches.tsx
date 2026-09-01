@@ -969,16 +969,18 @@ function scoreRows(req: any, prop: any) {
   }
 
   let areaP = parseFloat(prop.areaTotal || prop.areaPrivate || "0");
-  if (propTextLower) {
-    const m2Match = propTextLower.match(/(?:m2|mts|m²|metros|área|area)?\s*:?\s*(\d{1,4}[.,]\d{1,2})\s*(?:m2|mts|m²|metros)?/i);
+  if (areaP <= 0 && propTextLower) {
+    // Solo extraer metraje si viene acompañado explícitamente de unidades de área o prefijo 'área:'
+    const m2Match = propTextLower.match(/(?:área|area|superficie)\s*:?\s*(\d{1,4}(?:[.,]\d{1,2})?)\s*(?:m2|mts2|mts|mt2|metros|m²)?/i)
+      || propTextLower.match(/(\d{1,4}(?:[.,]\d{1,2})?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)/i);
     if (m2Match) {
       const rawDec = parseFloat(m2Match[1].replace(",", "."));
-      if (!isNaN(rawDec) && rawDec > 10 && rawDec < 2000) {
+      if (!isNaN(rawDec) && rawDec > 10 && rawDec < 2000 && rawDec !== propAdminFee && rawDec !== propSalePrice) {
         areaP = rawDec;
       }
-    } else if (areaP > 1000 && areaP < 100000 && !prop.propertyType?.includes("lote") && !prop.propertyType?.includes("land") && !prop.propertyType?.includes("finca") && !prop.propertyType?.includes("farm")) {
-      areaP = areaP / 100;
     }
+  } else if (areaP > 1000 && areaP < 100000 && !prop.propertyType?.includes("lote") && !prop.propertyType?.includes("land") && !prop.propertyType?.includes("finca") && !prop.propertyType?.includes("farm")) {
+    areaP = areaP / 100;
   }
 
   let areS: MatchStatus = "neutral";
@@ -1990,6 +1992,22 @@ export default function AdminMatches() {
     return digits || raw;
   };
 
+  const cleanNumberForSave = (val: any): string | undefined => {
+    if (val === undefined || val === null) return undefined;
+    const s = String(val).trim();
+    if (!s || s === 'N/E' || /consultar|n\/e|na|n\/a|sin\s*restricci[oó]n|flexible/i.test(s)) return undefined;
+    const cleaned = s.replace(/[^0-9.]/g, '');
+    return cleaned && !isNaN(Number(cleaned)) ? cleaned : undefined;
+  };
+
+  const cleanIntForSave = (val: any): number | undefined => {
+    if (val === undefined || val === null) return undefined;
+    const s = String(val).trim();
+    if (!s || s === 'N/E' || /consultar|n\/e|na|n\/a|sin\s*restricci[oó]n|flexible/i.test(s)) return undefined;
+    const n = parseInt(s.replace(/[^0-9]/g, ''), 10);
+    return isNaN(n) ? undefined : n;
+  };
+
   const handleOnlySave = async (m: any) => {
     setIsSavingOnly(true);
     try {
@@ -2000,18 +2018,18 @@ export default function AdminMatches() {
         promises.push(
           updatePropMut.mutateAsync({
             propertyId: m.property.id,
-            price: editForm.propPrice !== undefined && editForm.propPrice !== '' ? String(editForm.propPrice) : undefined,
-            rentPrice: editForm.propRentPrice !== undefined && editForm.propRentPrice !== '' ? String(editForm.propRentPrice) : undefined,
-            adminFee: editForm.propAdminFee !== undefined && editForm.propAdminFee !== '' ? String(editForm.propAdminFee) : undefined,
-            areaTotal: editForm.propArea !== undefined && editForm.propArea !== '' ? String(editForm.propArea) : undefined,
-            bedrooms: editForm.propBedrooms !== undefined && editForm.propBedrooms !== '' ? Number(editForm.propBedrooms) : undefined,
-            bathrooms: editForm.propBathrooms !== undefined && editForm.propBathrooms !== '' ? Number(editForm.propBathrooms) : undefined,
-            garages: editForm.propGarages !== undefined && editForm.propGarages !== '' ? Number(editForm.propGarages) : undefined,
-            stratum: editForm.propStratum !== undefined && editForm.propStratum !== '' ? Number(editForm.propStratum) : undefined,
-            zone: editForm.propZone ? String(editForm.propZone) : undefined,
-            addressNeighborhood: editForm.propZone ? String(editForm.propZone) : undefined,
-            addressLocality: editForm.propLocality ? String(editForm.propLocality) : undefined,
-            city: editForm.propCity ? String(editForm.propCity) : undefined,
+            price: cleanNumberForSave(editForm.propPrice),
+            rentPrice: cleanNumberForSave(editForm.propRentPrice),
+            adminFee: cleanNumberForSave(editForm.propAdminFee),
+            areaTotal: cleanNumberForSave(editForm.propArea),
+            bedrooms: cleanIntForSave(editForm.propBedrooms),
+            bathrooms: cleanIntForSave(editForm.propBathrooms),
+            garages: cleanIntForSave(editForm.propGarages),
+            stratum: cleanIntForSave(editForm.propStratum),
+            zone: editForm.propZone && !/n\/e/i.test(editForm.propZone) ? String(editForm.propZone) : undefined,
+            addressNeighborhood: editForm.propZone && !/n\/e/i.test(editForm.propZone) ? String(editForm.propZone) : undefined,
+            addressLocality: editForm.propLocality && !/n\/e/i.test(editForm.propLocality) ? String(editForm.propLocality) : undefined,
+            city: editForm.propCity && !/n\/e/i.test(editForm.propCity) ? String(editForm.propCity) : undefined,
             propertyType: editForm.propPropertyType ? String(editForm.propPropertyType) : undefined,
             transactionType: editForm.propTransactionType ? String(editForm.propTransactionType) : undefined,
             idUsuarioWhatsapp: cleanPropPhone,
@@ -2025,16 +2043,16 @@ export default function AdminMatches() {
         promises.push(
           updateReqMut.mutateAsync({
             requirementId: m.requirement.id,
-            presupuestoMax: editForm.reqBudget !== undefined && editForm.reqBudget !== '' ? String(editForm.reqBudget) : undefined,
-            adminFeeMax: editForm.reqAdminMax !== undefined && editForm.reqAdminMax !== '' ? String(editForm.reqAdminMax) : undefined,
-            areaMin: editForm.reqArea !== undefined && editForm.reqArea !== '' ? String(editForm.reqArea) : undefined,
-            habitacionesMin: editForm.reqBedrooms !== undefined && editForm.reqBedrooms !== '' ? Number(editForm.reqBedrooms) : undefined,
-            banosMin: editForm.reqBathrooms !== undefined && editForm.reqBathrooms !== '' ? Number(editForm.reqBathrooms) : undefined,
-            parqueaderosMin: editForm.reqGarages !== undefined && editForm.reqGarages !== '' ? Number(editForm.reqGarages) : undefined,
-            estratoDeseado: editForm.reqStratum !== undefined && editForm.reqStratum !== '' ? Number(editForm.reqStratum) : undefined,
-            zonaDeseada: editForm.reqZone ? String(editForm.reqZone) : undefined,
-            addressNeighborhood: editForm.reqZone ? String(editForm.reqZone) : undefined,
-            ciudadDeseada: editForm.reqCity ? String(editForm.reqCity) : undefined,
+            presupuestoMax: cleanNumberForSave(editForm.reqBudget),
+            adminFeeMax: cleanNumberForSave(editForm.reqAdminMax),
+            areaMin: cleanNumberForSave(editForm.reqArea),
+            habitacionesMin: cleanIntForSave(editForm.reqBedrooms),
+            banosMin: cleanIntForSave(editForm.reqBathrooms),
+            parqueaderosMin: cleanIntForSave(editForm.reqGarages),
+            estratoDeseado: cleanIntForSave(editForm.reqStratum),
+            zonaDeseada: editForm.reqZone && !/n\/e/i.test(editForm.reqZone) ? String(editForm.reqZone) : undefined,
+            addressNeighborhood: editForm.reqZone && !/n\/e/i.test(editForm.reqZone) ? String(editForm.reqZone) : undefined,
+            ciudadDeseada: editForm.reqCity && !/n\/e/i.test(editForm.reqCity) ? String(editForm.reqCity) : undefined,
             tipoInmuebleDeseado: editForm.reqPropertyType ? String(editForm.reqPropertyType) : undefined,
             tipoNegocioDeseado: editForm.reqTransactionType ? String(editForm.reqTransactionType) : undefined,
             idUsuarioWhatsapp: cleanReqPhone,
@@ -2103,18 +2121,18 @@ export default function AdminMatches() {
         savePromises.push(
           updatePropMut.mutateAsync({
             propertyId: m.property.id,
-            price: editForm.propPrice !== undefined && editForm.propPrice !== '' ? String(editForm.propPrice) : undefined,
-            rentPrice: editForm.propRentPrice !== undefined && editForm.propRentPrice !== '' ? String(editForm.propRentPrice) : undefined,
-            adminFee: editForm.propAdminFee !== undefined && editForm.propAdminFee !== '' ? String(editForm.propAdminFee) : undefined,
-            areaTotal: editForm.propArea !== undefined && editForm.propArea !== '' ? String(editForm.propArea) : undefined,
-            bedrooms: editForm.propBedrooms !== undefined && editForm.propBedrooms !== '' ? Number(editForm.propBedrooms) : undefined,
-            bathrooms: editForm.propBathrooms !== undefined && editForm.propBathrooms !== '' ? Number(editForm.propBathrooms) : undefined,
-            garages: editForm.propGarages !== undefined && editForm.propGarages !== '' ? Number(editForm.propGarages) : undefined,
-            stratum: editForm.propStratum !== undefined && editForm.propStratum !== '' ? Number(editForm.propStratum) : undefined,
-            zone: editForm.propZone ? String(editForm.propZone) : undefined,
-            addressNeighborhood: editForm.propZone ? String(editForm.propZone) : undefined,
-            addressLocality: editForm.propLocality ? String(editForm.propLocality) : undefined,
-            city: editForm.propCity ? String(editForm.propCity) : undefined,
+            price: cleanNumberForSave(editForm.propPrice),
+            rentPrice: cleanNumberForSave(editForm.propRentPrice),
+            adminFee: cleanNumberForSave(editForm.propAdminFee),
+            areaTotal: cleanNumberForSave(editForm.propArea),
+            bedrooms: cleanIntForSave(editForm.propBedrooms),
+            bathrooms: cleanIntForSave(editForm.propBathrooms),
+            garages: cleanIntForSave(editForm.propGarages),
+            stratum: cleanIntForSave(editForm.propStratum),
+            zone: editForm.propZone && !/n\/e/i.test(editForm.propZone) ? String(editForm.propZone) : undefined,
+            addressNeighborhood: editForm.propZone && !/n\/e/i.test(editForm.propZone) ? String(editForm.propZone) : undefined,
+            addressLocality: editForm.propLocality && !/n\/e/i.test(editForm.propLocality) ? String(editForm.propLocality) : undefined,
+            city: editForm.propCity && !/n\/e/i.test(editForm.propCity) ? String(editForm.propCity) : undefined,
             propertyType: editForm.propPropertyType ? String(editForm.propPropertyType) : undefined,
             transactionType: editForm.propTransactionType ? String(editForm.propTransactionType) : undefined,
             idUsuarioWhatsapp: cleanPropPhone,
@@ -2128,16 +2146,16 @@ export default function AdminMatches() {
         savePromises.push(
           updateReqMut.mutateAsync({
             requirementId: m.requirement.id,
-            presupuestoMax: editForm.reqBudget !== undefined && editForm.reqBudget !== '' ? String(editForm.reqBudget) : undefined,
-            adminFeeMax: editForm.reqAdminMax !== undefined && editForm.reqAdminMax !== '' ? String(editForm.reqAdminMax) : undefined,
-            areaMin: editForm.reqArea !== undefined && editForm.reqArea !== '' ? String(editForm.reqArea) : undefined,
-            habitacionesMin: editForm.reqBedrooms !== undefined && editForm.reqBedrooms !== '' ? Number(editForm.reqBedrooms) : undefined,
-            banosMin: editForm.reqBathrooms !== undefined && editForm.reqBathrooms !== '' ? Number(editForm.reqBathrooms) : undefined,
-            parqueaderosMin: editForm.reqGarages !== undefined && editForm.reqGarages !== '' ? Number(editForm.reqGarages) : undefined,
-            estratoDeseado: editForm.reqStratum !== undefined && editForm.reqStratum !== '' ? Number(editForm.reqStratum) : undefined,
-            zonaDeseada: editForm.reqZone ? String(editForm.reqZone) : undefined,
-            addressNeighborhood: editForm.reqZone ? String(editForm.reqZone) : undefined,
-            ciudadDeseada: editForm.reqCity ? String(editForm.reqCity) : undefined,
+            presupuestoMax: cleanNumberForSave(editForm.reqBudget),
+            adminFeeMax: cleanNumberForSave(editForm.reqAdminMax),
+            areaMin: cleanNumberForSave(editForm.reqArea),
+            habitacionesMin: cleanIntForSave(editForm.reqBedrooms),
+            banosMin: cleanIntForSave(editForm.reqBathrooms),
+            parqueaderosMin: cleanIntForSave(editForm.reqGarages),
+            estratoDeseado: cleanIntForSave(editForm.reqStratum),
+            zonaDeseada: editForm.reqZone && !/n\/e/i.test(editForm.reqZone) ? String(editForm.reqZone) : undefined,
+            addressNeighborhood: editForm.reqZone && !/n\/e/i.test(editForm.reqZone) ? String(editForm.reqZone) : undefined,
+            ciudadDeseada: editForm.reqCity && !/n\/e/i.test(editForm.reqCity) ? String(editForm.reqCity) : undefined,
             tipoInmuebleDeseado: editForm.reqPropertyType ? String(editForm.reqPropertyType) : undefined,
             tipoNegocioDeseado: editForm.reqTransactionType ? String(editForm.reqTransactionType) : undefined,
             idUsuarioWhatsapp: cleanReqPhone,
@@ -2158,10 +2176,11 @@ export default function AdminMatches() {
       }
 
       setSaveStatusMap(prev => ({ ...prev, [m.id]: 'recalculated' }));
-      toast.success("⚡ Coincidencia recalculada con éxito");
+      toast.success("⚡ Recalculado y sincronizado en tiempo real");
       setEditingMatchId(null);
       setEditForm({});
-      await refetch();
+
+      utils.janIA.getAllMatches.invalidate().catch(() => {});
     } catch (err: any) {
       console.error("[handleRecalculateMatch] Error:", err);
       toast.error("Error al recalcular: " + (err.message || "Error desconocido"));
@@ -2232,8 +2251,12 @@ export default function AdminMatches() {
       const computed = scoreRows(requirement, property);
       const exactScore = computed.autoScore;
 
+      // Preservar score validado en BD para que no se descarte si el frontend tiene micro-diferencia
+      const dbScore = parseFloat(String(match.matchScore || "0"));
+      const effectiveScore = exactScore >= 80 ? exactScore : (dbScore >= 80 ? dbScore : exactScore);
+
       // Del 79% para abajo NO se mostrarán en nuestra página de coincidencias (Regla Doctrinal v26.8)
-      if (exactScore < 80) {
+      if (effectiveScore < 80) {
         continue;
       }
 
@@ -2256,7 +2279,7 @@ export default function AdminMatches() {
       results.push({
         ...match,
         _precomputedRows: computed.rows,
-        _precomputedScore: exactScore,
+        _precomputedScore: effectiveScore,
         _searchIndex: `${propSearchStr} ${reqSearchStr}`,
       });
     }
