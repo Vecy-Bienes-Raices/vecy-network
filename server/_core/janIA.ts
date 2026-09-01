@@ -2816,7 +2816,7 @@ Por lo tanto, DEBES hacer lo siguiente:
       }
 
       const isExplicitDemandKeyword = /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|solicitamos|compro|para cliente|busca cliente|cliente busca|comprador|arrendatario|en búsqueda|en busqueda)\b/i.test(cleanText);
-      const isExplicitOfferKeyword = /\b(?:ofrezco|ofrecemos|vendo|se vende|se arrienda|en venta|en arriendo|alquilo|alquiler directo|rento|tengo para|disponible|nuevo inmueble|venta directa|arriendo directo|arrendamos|pongo en arriendo)\b/i.test(cleanText);
+      const isExplicitOfferKeyword = /\b(?:ofrezco|ofrecemos|vendo|se vende|se arrienda|en venta|en arriendo|para arriendo o venta|para venta o arriendo|en arriendo o venta|en venta o arriendo|arriendo o venta|venta o arriendo|vr renta|vr vta|canon arriendo|alquilo|alquiler directo|rento|tengo para|disponible|nuevo inmueble|venta directa|arriendo directo|arrendamos|pongo en arriendo|apto familiar|comisi[oó]n 50[-/]50|punta compartida)\b/i.test(cleanText) || /photos\.app\.goo\.gl|drive\.google\.com\/(?:drive\/folders|file\/d)/i.test(cleanText);
 
       const isSearch = isExplicitDemandKeyword && !isExplicitOfferKeyword;
       const isOffer = isExplicitOfferKeyword && !isExplicitDemandKeyword;

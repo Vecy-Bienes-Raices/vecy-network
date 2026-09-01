@@ -354,6 +354,19 @@ function scoreRows(req: any, prop: any) {
   const reqRawText = cleanText(req.rawText || req.name || "");
   const propRawText = cleanText(prop.rawText || prop.description || prop.name || "");
 
+  // ── REGLA DOCTRINAL v29.0: ANTI-AUTO-MATCH / ANTI-CLON (0% Match Imposible) ──
+  const rCleanChars = reqRawText.replace(/[^a-z0-9]/g, "");
+  const pCleanChars = propRawText.replace(/[^a-z0-9]/g, "");
+  const rPhotoLink = (req.enlace_origen || req.externalUrl || "").trim().toLowerCase();
+  const pPhotoLink = (prop.enlace_origen || prop.externalUrl || "").trim().toLowerCase();
+  const isSharedPhotoLink = rPhotoLink.length > 15 && pPhotoLink.length > 15 && rPhotoLink === pPhotoLink;
+  const isExactClone = rCleanChars.length > 30 && pCleanChars.length > 30 && (rCleanChars === pCleanChars || rCleanChars.includes(pCleanChars) || pCleanChars.includes(rCleanChars));
+
+  if (isExactClone || isSharedPhotoLink) {
+    add("Validación Cruzada", "Demanda Independiente", "Oferta Duplicada (Auto-Match)", "missing", 100, null);
+    return { rows, autoScore: 0, pts: 0, max };
+  }
+
   // 1. Tipo de Inmueble (REGLA DOCTRINAL ESTRICTA - Exactitud Total de Subtipo)
   const reqTypeRaw = req.tipoInmuebleDeseado || req.propertyType;
   const propTypeRaw = prop.propertyType;
@@ -2362,8 +2375,18 @@ export default function AdminMatches() {
       if (!match || !match.id || !match.property || !match.requirement) continue;
 
       const property = match.property;
-      const requirement = match.requirement;
-      
+      // REGLA DOCTRINAL v29.0: Descartar inmediatamente auto-matches (la misma publicación guardada como oferta y demanda)
+      const rCleanChars = (requirement.rawText || requirement.name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+      const pCleanChars = (property.rawText || property.description || property.name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+      const rPhotoLink = (requirement.enlace_origen || requirement.externalUrl || "").trim().toLowerCase();
+      const pPhotoLink = (property.enlace_origen || property.externalUrl || "").trim().toLowerCase();
+      const isSharedPhotoLink = rPhotoLink.length > 15 && pPhotoLink.length > 15 && rPhotoLink === pPhotoLink;
+      const isExactClone = rCleanChars.length > 30 && pCleanChars.length > 30 && (rCleanChars === pCleanChars || rCleanChars.includes(pCleanChars) || pCleanChars.includes(rCleanChars));
+
+      if (isExactClone || isSharedPhotoLink) {
+        continue;
+      }
+
       // Cálculo de afinidad comercial y guillotina técnica
       const computed = scoreRows(requirement, property);
       const exactScore = computed.autoScore;

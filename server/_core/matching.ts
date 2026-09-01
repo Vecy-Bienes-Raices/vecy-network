@@ -877,6 +877,19 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
+  // ── FILTRO DURO 00-A: ANTI-AUTO-MATCH / ANTI-CLON (Misma Publicación o Mismo Enlace) ──
+  const propRawClean = (property.rawText || property.description || property.name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const reqRawClean = (requirement.rawText || requirement.name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const propLink = (property.externalUrl || property.enlace_origen || "").trim().toLowerCase();
+  const reqLink = (requirement.externalUrl || requirement.enlace_origen || "").trim().toLowerCase();
+  const isSharedPhotoLink = propLink.length > 15 && reqLink.length > 15 && propLink === reqLink;
+  const isExactClone = propRawClean.length > 30 && reqRawClean.length > 30 && (propRawClean === reqRawClean || propRawClean.includes(reqRawClean) || reqRawClean.includes(propRawClean));
+
+  if (isExactClone || isSharedPhotoLink) {
+    blockers.push("⛔ Auto-Match / Publicación Duplicada: La oferta y la demanda contienen la misma publicación clonada. MATCH IMPOSIBLE 0%.");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+
   // ── FILTRO DURO 0B: INCOMPATIBILIDAD GEOGRÁFICA REAL DEDUCIDA DEL TEXTO ──
   const propRealCity = extractTrueCityFromText(property.rawText || property.name, property.addressCity || property.city);
   const reqRealCity = extractTrueCityFromText(requirement.rawText || requirement.name, requirement.addressCity || requirement.ciudadDeseada);

@@ -4494,6 +4494,16 @@ function explicarMatch(requirement, property) {
     blockers.push("\u26D4 Publicaci\xF3n No Inmobiliaria: Solicitud de materiales de construcci\xF3n, canteras o maquinaria. MATCH IMPOSIBLE 0%.");
     return buildExplanationResult(0, blockers, positives, negatives);
   }
+  const propRawClean = (property.rawText || property.description || property.name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const reqRawClean = (requirement.rawText || requirement.name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const propLink = (property.externalUrl || property.enlace_origen || "").trim().toLowerCase();
+  const reqLink = (requirement.externalUrl || requirement.enlace_origen || "").trim().toLowerCase();
+  const isSharedPhotoLink = propLink.length > 15 && reqLink.length > 15 && propLink === reqLink;
+  const isExactClone = propRawClean.length > 30 && reqRawClean.length > 30 && (propRawClean === reqRawClean || propRawClean.includes(reqRawClean) || reqRawClean.includes(propRawClean));
+  if (isExactClone || isSharedPhotoLink) {
+    blockers.push("\u26D4 Auto-Match / Publicaci\xF3n Duplicada: La oferta y la demanda contienen la misma publicaci\xF3n clonada. MATCH IMPOSIBLE 0%.");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
   const propRealCity = extractTrueCityFromText(property.rawText || property.name, property.addressCity || property.city);
   const reqRealCity = extractTrueCityFromText(requirement.rawText || requirement.name, requirement.addressCity || requirement.ciudadDeseada);
   if (propRealCity && reqRealCity && normalizeCanonicalCity(propRealCity).toLowerCase() !== normalizeCanonicalCity(reqRealCity).toLowerCase()) {
@@ -8532,7 +8542,7 @@ ${liveStats}` : buildSystemPrompt(groupJid);
         return result;
       }
       const isExplicitDemandKeyword = /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|solicitamos|compro|para cliente|busca cliente|cliente busca|comprador|arrendatario|en búsqueda|en busqueda)\b/i.test(cleanText2);
-      const isExplicitOfferKeyword = /\b(?:ofrezco|ofrecemos|vendo|se vende|se arrienda|en venta|en arriendo|alquilo|alquiler directo|rento|tengo para|disponible|nuevo inmueble|venta directa|arriendo directo|arrendamos|pongo en arriendo)\b/i.test(cleanText2);
+      const isExplicitOfferKeyword = /\b(?:ofrezco|ofrecemos|vendo|se vende|se arrienda|en venta|en arriendo|para arriendo o venta|para venta o arriendo|en arriendo o venta|en venta o arriendo|arriendo o venta|venta o arriendo|vr renta|vr vta|canon arriendo|alquilo|alquiler directo|rento|tengo para|disponible|nuevo inmueble|venta directa|arriendo directo|arrendamos|pongo en arriendo|apto familiar|comisi[oó]n 50[-/]50|punta compartida)\b/i.test(cleanText2) || /photos\.app\.goo\.gl|drive\.google\.com\/(?:drive\/folders|file\/d)/i.test(cleanText2);
       const isSearch = isExplicitDemandKeyword && !isExplicitOfferKeyword;
       const isOffer = isExplicitOfferKeyword && !isExplicitDemandKeyword;
       const hasRealEstateKeyword = hasRealEstateTextKeyword(cleanText2);

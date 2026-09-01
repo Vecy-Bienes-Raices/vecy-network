@@ -67,6 +67,7 @@ async function runMasterAudit() {
     banosDeficitarios: 0,
     garajesDeficitarios: 0,
     ocupacionIncompatible: 0,
+    autoMatches: 0,
     otrosFiltros: 0
   };
 
@@ -93,7 +94,8 @@ async function runMasterAudit() {
         });
       } else {
         const blk = exp.blockers.join(' | ');
-        if (blk.includes('negocio')) discardCounters.negocioIncompatible++;
+        if (blk.includes('Auto-Match') || blk.includes('Duplicada')) discardCounters.autoMatches++;
+        else if (blk.includes('negocio')) discardCounters.negocioIncompatible++;
         else if (blk.includes('Geografía') || blk.includes('geográfica') || blk.includes('Barrio')) discardCounters.geografiaIncompatible++;
         else if (blk.includes('presupuesto') || blk.includes('Financiera')) discardCounters.presupuestoSuperado++;
         else if (blk.includes('Área') || blk.includes('metraje')) discardCounters.areaDeficitaria++;
@@ -108,6 +110,7 @@ async function runMasterAudit() {
 
   console.log('----------------------------------------------------------------');
   console.log('📊 ESTADÍSTICAS DE DESCARTES POR FILTROS DUROS:');
+  console.log(`  - Descartados por Auto-Match / Publicación Clonada: ${discardCounters.autoMatches.toLocaleString()}`);
   console.log(`  - Descartados por Uso Incompatible (ej. Residencial vs Comercial): ${discardCounters.usoDistinto.toLocaleString()}`);
   console.log(`  - Descartados por Negocio Incompatible (Venta vs Arriendo): ${discardCounters.negocioIncompatible.toLocaleString()}`);
   console.log(`  - Descartados por Geografía Incompatible (Ciudad/Barrio distinto): ${discardCounters.geografiaIncompatible.toLocaleString()}`);
