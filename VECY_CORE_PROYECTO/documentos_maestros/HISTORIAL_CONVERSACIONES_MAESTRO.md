@@ -52,7 +52,30 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v28.5 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v28.6 — Septiembre 2026
+
+### 🗓️ Sesión: Martes 1 de Septiembre de 2026 — 02:45 a 03:05 (Hora Colombia UTC-5)
+**Versión**: `v28.6` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)
+
+#### 🎯 Objetivo y Logros de la Sesión:
+1. **Auditoría Integral y Cotejo 1 a 1 sin Suposiciones sobre Toda la Base de Datos**:
+   - En respuesta a la exigencia de Eduardo de evaluar sin fantasías y con rigor matemático absoluto cada requerimiento e inmueble de la base de datos, se construyó y ejecutó una auditoría determinista (`scripts/master_audit_and_match.ts`).
+   - Se evaluaron los 5 Filtros Duros Inquebrantables de Núcleo Duro: 
+     1) **Compatibilidad de Negocio**: `venta` vs `arriendo` (0% de tolerancia).
+     2) **Compatibilidad de Usos y Tipologías**: Residencial (Apartamentos/Casas) vs Comercial/Oficinas (incompatibilidad absoluta).
+     3) **Geografía Canónica**: Barrio/Municipio coincidente sin colisiones ni herencias falsas.
+     4) **Presupuesto Máximo**: Precio de oferta $\le$ Presupuesto máximo del comprador/arrendatario.
+     5) **Cumplimiento Físico**: Metraje, Alcobas, Baños y Garajes de la Oferta $\ge$ Mínimo exigido en la Demanda.
+2. **Saneamiento Masivo Determinista en Supabase (`scripts/sanitize_all_db.ts`)**:
+   - Se re-procesaron y actualizaron **549 propiedades** y **368 requerimientos** directamente desde su `rawText`, asegurando que cada metraje, alcobas, baños, garajes, negocio y barrio reflejaran la verdad textual.
+3. **Población Total de 27 Matches Certificados**:
+   - Purgada la tabla `"propertyMatches"` en Supabase y persistidos **27 matches certificados** con score $\ge 80\%$ (con 100% de cumplimiento en sus núcleos duros).
+4. **Blindaje en Parser de Garajes (`server/_core/janIA.ts`)**:
+   - Añadido filtro protector para evitar que números de 4 dígitos correspondientes al año de construcción (ej: `2004`) sean interpretados como garajes. Corregida la propiedad #1999 (`garages = 2`, `yearBuilt = 2004`).
+
+---
+
+## 🔖 HISTÓRICO DE VERSIONES ANTERIORES
 
 ### 🗓️ Sesión: Martes 1 de Septiembre de 2026 — 02:00 a 02:10 (Hora Colombia UTC-5)
 **Versión**: `v28.5` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)

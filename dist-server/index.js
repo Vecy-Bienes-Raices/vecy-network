@@ -7059,9 +7059,16 @@ function extractFallbackDataFromText(text2) {
   }
   let garages = 0;
   let garageType = null;
-  const garMatch = clean.match(/(?:🚙|🚗|🚘)?\s*(?:con\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d+)(?:\s*(?:\([0-9]+\)|un|una|uno|dos|tres|cuatro|cinco|\d+))?\s*(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero|parq|parqs|pks|estacionamiento|estacionamientos)/i) || clean.match(/(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero|parq|parqs|pks|estacionamiento|estacionamientos)\s*:?\s*(\d+|un|una|uno|dos|tres|cuatro|cinco)/i);
+  const garMatch = clean.match(/(?:🚙|🚗|🚘)?\s*(?:con\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d{1,2})(?:\s*(?:\([0-9]+\)|un|una|uno|dos|tres|cuatro|cinco|\d{1,2}))?\s*(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero|parq|parqs|pks|estacionamiento|estacionamientos)/i) || clean.match(/(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero|parq|parqs|pks|estacionamiento|estacionamientos)\s*:?\s*(\d{1,2}|un|una|uno|dos|tres|cuatro|cinco)/i);
   if (garMatch) {
-    garages = parseWordOrDigit(garMatch[1]);
+    const val = parseWordOrDigit(garMatch[1]);
+    if (val >= 1900 && val <= 2100) {
+      garages = 0;
+    } else if (val > 20) {
+      garages = 0;
+    } else {
+      garages = val;
+    }
   } else if (/\b(?:parqueaderos|garajes|estacionamientos|parqs|pks)\b/i.test(clean)) {
     garages = 2;
   } else if (/con\s+(?:un\s+)?(?:parqueadero|garaje)|parqueadero|garaje/i.test(clean)) {
@@ -9621,7 +9628,14 @@ async function saveProperty(data, userId, realName, imageBuffer, pdfBuffer, pdfM
     })(),
     bedrooms: data.bedrooms !== void 0 && data.bedrooms !== null ? Math.round(Number(data.bedrooms)) : null,
     bathrooms: data.bathrooms !== void 0 && data.bathrooms !== null ? Math.round(Number(data.bathrooms)) : null,
-    garages: data.garages !== void 0 && data.garages !== null ? Math.round(Number(data.garages)) : null,
+    garages: (() => {
+      if (data.garages === void 0 || data.garages === null) return null;
+      const g = Math.round(Number(data.garages));
+      if (isNaN(g) || g < 0) return null;
+      if (g >= 1900 && g <= 2100) return null;
+      if (g > 30) return null;
+      return g;
+    })(),
     garageType: data.garageType || null,
     // "independiente" | "lineal" | "mixto" | null (v20.0)
     stratum: data.stratum !== void 0 && data.stratum !== null ? Math.round(Number(data.stratum)) : null,

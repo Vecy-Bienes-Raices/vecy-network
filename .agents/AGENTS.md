@@ -163,7 +163,13 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v28.5 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v28.6 — Septiembre 2026
+
+### Novedades v28.6 (Auditoría Integral 1 a 1 de 5 Filtros Duros, Saneamiento Masivo de BD y Población de 27 Matches Certificados):
+- **Auditoría Integral y Cotejo 1 a 1 sin Suposiciones**: Implementado motor maestro de cotejo exhaustivo (`master_audit_and_match.ts`) que evalúa los 5 Filtros Duros Inquebrantables: 1) Compatibilidad de Negocio (`venta` vs `arriendo`), 2) Compatibilidad de Usos y Tipologías (Residencial, Comercial, Oficinas), 3) Geografía Canónica (Barrio/Municipio sin cruces inviables), 4) Presupuesto Máximo (`precio <= pptoMax`), y 5) Cumplimiento Físico de Núcleo Duro (`prop >= req` en Metraje, Alcobas, Baños y Garajes).
+- **Saneamiento Masivo Determinista en Supabase (`sanitize_all_db.ts`)**: 549 propiedades y 368 requerimientos re-procesados directamente desde su texto original (`rawText`) con extracción matemática estricta.
+- **Población Total de 27 Matches Certificados**: Purgada la tabla `"propertyMatches"` en Supabase y persistidos los 27 cruces legítimos y verificados con score $\ge 80\%$, todos con 100% de cumplimiento en sus núcleos duros.
+- **Blindaje en Parser de Garajes (`janIA.ts`)**: Adición de filtro protector para evitar que años de construcción (ej: `2004`) o cifras espurias sean capturados erróneamente en el campo de parqueaderos.
 
 ### Novedades v28.5 (Filtro Duro de Condición de Ocupación, Plural de Garajes y Corrección Geográfica North Point):
 - **Filtro Duro de Inmueble Ocupado vs Demanda con Crédito/Habitar (`matching.ts`)**: Inmuebles vendidos exclusivamente para inversionistas con contrato de arrendamiento vigente (`"arrendado hasta..."`, `"rentando actualmente"`) quedan bloqueados al **0% Inviable** ante clientes que buscan adquirir para habitar o con crédito hipotecario.
