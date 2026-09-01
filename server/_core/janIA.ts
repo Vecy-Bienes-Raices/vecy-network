@@ -695,6 +695,8 @@ export function extractFallbackDataFromText(text: string): any {
                 || clean.match(/(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero|parq|parqs|pks|estacionamiento|estacionamientos)\s*:?\s*(\d+|un|una|uno|dos|tres|cuatro|cinco)/i);
   if (garMatch) {
     garages = parseWordOrDigit(garMatch[1]);
+  } else if (/\b(?:parqueaderos|garajes|estacionamientos|parqs|pks)\b/i.test(clean)) {
+    garages = 2; // Plural explícito "garajes", "parqueaderos" -> mínimo 2
   } else if (/con\s+(?:un\s+)?(?:parqueadero|garaje)|parqueadero|garaje/i.test(clean)) {
     garages = 1;
   }
@@ -808,7 +810,8 @@ export function extractFallbackDataFromText(text: string): any {
   }
 
   let zone = "";
-  if (clean.includes("alameda 170") || clean.includes("alameda norte") || clean.includes("la alameda") || clean.includes("barrio alameda") || clean.includes("alameda")) zone = "La Alameda";
+  if (clean.includes("north point") || clean.includes("north point lift") || clean.includes("san cristobal norte") || clean.includes("san cristóbal norte")) zone = "San Cristóbal Norte";
+  else if (clean.includes("alameda 170") || clean.includes("alameda norte") || clean.includes("la alameda") || clean.includes("barrio alameda") || clean.includes("alameda")) zone = "La Alameda";
   else if (clean.includes("san antonio noroccidental") || clean.includes("san antonio norte")) zone = "San Antonio Norte";
   else if (clean.includes("villa magdala")) zone = "Villa Magdala";
   else if (clean.includes("chico reservado")) zone = "Chicó Reservado";

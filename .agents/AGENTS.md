@@ -163,7 +163,13 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v28.4 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v28.5 — Septiembre 2026
+
+### Novedades v28.5 (Filtro Duro de Condición de Ocupación, Plural de Garajes y Corrección Geográfica North Point):
+- **Filtro Duro de Inmueble Ocupado vs Demanda con Crédito/Habitar (`matching.ts`)**: Inmuebles vendidos exclusivamente para inversionistas con contrato de arrendamiento vigente (`"arrendado hasta..."`, `"rentando actualmente"`) quedan bloqueados al **0% Inviable** ante clientes que buscan adquirir para habitar o con crédito hipotecario.
+- **Parser de Plural en Garajes (`janIA.ts` & `matching.ts`)**: Solicitudes que mencionan `"garajes"` o `"parqueaderos"` en plural sin número exigen mínimo $\ge 2$ parqueaderos.
+- **Corrección Geográfica de North Point**: Asignado a **San Cristóbal Norte (Usaquén)** en catálogos y Supabase, impidiendo que herede Santa Bárbara.
+- **Saneamiento y Purga en Supabase**: Purgados los matches inviables #11484 y #11478, dejando **4 matches legítimos y verificados**.
 
 ### Novedades v28.4 (Blindaje de Modismos de Arriendo, Normalización de Presupuestos en Millones y Erradicación de Falsos Matches Venta vs Arriendo):
 - **Captura de Modismos de Arriendo (`hasRentSignals`)**: Inclusión formal de expresiones colombianas (`"para tomar ya"`, `"tomar ya"`, `"toma ya"`, `"para tomar de inmediato"`, `"toma inmediata"`, `"para tomar"`, `"en renta"`, `"para renta"`, `"en arriendo"`).

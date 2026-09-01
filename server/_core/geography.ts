@@ -50,7 +50,7 @@ export const DICCIONARIO_BOGOTA: Record<string, { localidad: string, barrios: st
       "Santa Bárbara Norte", "Las Santas", "Todas las Santas", "Santa Ana", "Santa Ana Central", "Santa Ana Oriental", "Santa Ana Occidental",
       "Santa Paula", "Santa Bibiana", "San Patricio", "Santa Teresa", "Chicó Navarra", "Navarra",
       "La Alameda", "Alameda 170", "Alameda", "Alameda Norte", "Belmira", "Alcalá", "San Antonio Noroccidental", "San Antonio Norte",
-      "Usaquén", "Toberín", "Country Club", "La Uribe", "Portales del Norte", "San Cristóbal Norte", "San Cipriano", "Villa Magdala",
+      "Usaquén", "Toberín", "Country Club", "La Uribe", "Portales del Norte", "San Cristóbal Norte", "North Point", "San Cipriano", "Villa Magdala",
       "Verbenal", "Barrancas", "Horizontes", "La Cita", "Tibabita", "El Contador", "Molinos Norte", "Multicentro",
       "La Cerámica", "La Unión", "Los Arrayanes", "Bosque Medina",
       "La Calleja", "Calleja Baja", "Calleja Alta", "Bosque De Pinos",

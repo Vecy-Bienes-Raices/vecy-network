@@ -3138,6 +3138,7 @@ var init_geography = __esm({
           "La Uribe",
           "Portales del Norte",
           "San Crist\xF3bal Norte",
+          "North Point",
           "San Cipriano",
           "Villa Magdala",
           "Verbenal",
@@ -4797,6 +4798,14 @@ function explicarMatch(requirement, property) {
     return buildExplanationResult(0, blockers, positives, negatives);
   }
   positives.push(`Tipo de negocio compatible: req='${reqBiz}' \u2194 prop='${propBiz}'`);
+  const propTextCleanLow = (property.rawText || property.description || property.name || "").toLowerCase();
+  const reqTextCleanLow = (requirement.rawText || requirement.name || "").toLowerCase();
+  const isPropInvestorOnly = /\b(?:para inversionista|inversionistas|arrendado|rentando actualmente|con contrato vigente)\b/i.test(propTextCleanLow) && !/\b(?:desocupado|entrega inmediata|libre|para habitar)\b/i.test(propTextCleanLow);
+  const isReqCreditOrHabitar = /\b(?:cr[eé]dito|crédito bancolombia|crédito davivienda|crédito hipotecario|para habitar|para vivir|entrega inmediata)\b/i.test(reqTextCleanLow);
+  if (isPropInvestorOnly && isReqCreditOrHabitar) {
+    blockers.push("Incompatibilidad de Condici\xF3n: Oferta se vende ocupada/rentando (Solo para Inversionista) vs Demanda busca predio con cr\xE9dito/entrega para habitar.");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
   const CIUDADES_CO = [
     "bogota",
     "medellin",
@@ -5269,6 +5278,9 @@ function explicarMatch(requirement, property) {
   if (effectiveReqGarages <= 0) {
     const mG = reqTextLow.match(/(?:parqueadero|parqueaderos|garaje|garajes|ptero|g\.)\s*\.?\s*(\d+)/i) || reqTextLow.match(/(\d+)\s*(?:parqueadero|parqueaderos|garaje|garajes|ptero|g\.|individuales)/i);
     if (mG) effectiveReqGarages = parseInt(mG[1], 10);
+    else if (/\b(?:parqueaderos|garajes|estacionamientos|pks)\b/i.test(reqTextLow)) {
+      effectiveReqGarages = 2;
+    }
   }
   let reqAdminMaxVal = requirement.adminFeeMax ? parseFloat(String(requirement.adminFeeMax)) : 0;
   if (reqAdminMaxVal <= 0 && requirement.rawText) {
@@ -7050,6 +7062,8 @@ function extractFallbackDataFromText(text2) {
   const garMatch = clean.match(/(?:🚙|🚗|🚘)?\s*(?:con\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d+)(?:\s*(?:\([0-9]+\)|un|una|uno|dos|tres|cuatro|cinco|\d+))?\s*(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero|parq|parqs|pks|estacionamiento|estacionamientos)/i) || clean.match(/(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero|parq|parqs|pks|estacionamiento|estacionamientos)\s*:?\s*(\d+|un|una|uno|dos|tres|cuatro|cinco)/i);
   if (garMatch) {
     garages = parseWordOrDigit(garMatch[1]);
+  } else if (/\b(?:parqueaderos|garajes|estacionamientos|parqs|pks)\b/i.test(clean)) {
+    garages = 2;
   } else if (/con\s+(?:un\s+)?(?:parqueadero|garaje)|parqueadero|garaje/i.test(clean)) {
     garages = 1;
   }
@@ -7145,7 +7159,8 @@ function extractFallbackDataFromText(text2) {
     city = "Girardot";
   }
   let zone = "";
-  if (clean.includes("alameda 170") || clean.includes("alameda norte") || clean.includes("la alameda") || clean.includes("barrio alameda") || clean.includes("alameda")) zone = "La Alameda";
+  if (clean.includes("north point") || clean.includes("north point lift") || clean.includes("san cristobal norte") || clean.includes("san crist\xF3bal norte")) zone = "San Crist\xF3bal Norte";
+  else if (clean.includes("alameda 170") || clean.includes("alameda norte") || clean.includes("la alameda") || clean.includes("barrio alameda") || clean.includes("alameda")) zone = "La Alameda";
   else if (clean.includes("san antonio noroccidental") || clean.includes("san antonio norte")) zone = "San Antonio Norte";
   else if (clean.includes("villa magdala")) zone = "Villa Magdala";
   else if (clean.includes("chico reservado")) zone = "Chic\xF3 Reservado";

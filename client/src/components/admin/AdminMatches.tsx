@@ -597,6 +597,7 @@ function scoreRows(req: any, prop: any) {
     "chico reservado norte", "chico reservado", "chico norte iii", "chico norte ii", "chico norte", "rincón del chicó", "rincon del chico", "chico navarra", "el chicó", "chico",
     "cedritos", "los cedros", "santa paula", "santa bibiana", "santa teresa", "san patricio", "navarra", "molinos norte", "la calleja", "calleja baja", "calleja alta",
     "bella suiza", "el contador", "la carolina", "mazurén", "mazuren", "country club", "antiguo country", "nuevo country", "usaquén", "usaquen", "multicentro",
+    "north point", "san cristóbal norte", "san cristobal norte",
     "alameda 170", "alameda norte", "la alameda", "barrio alameda", "alameda", "san antonio noroccidental", "san antonio norte", "alcalá", "alcala", "belmira", "portales del norte", "san cipriano", "toberín", "toberin", "villa magdala",
     "los rosales", "rosales", "la cabrera", "el nogal", "nogal", "el virrey", "el retiro", "el lago", "quinta camacho", "chapinero alto", "chapinero central", "chapinero",
     "la castellana", "castellana", "polo club", "polo", "san felipe",

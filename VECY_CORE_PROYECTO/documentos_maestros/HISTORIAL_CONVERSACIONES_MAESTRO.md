@@ -52,7 +52,22 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v28.4 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v28.5 — Septiembre 2026
+
+### 🗓️ Sesión: Martes 1 de Septiembre de 2026 — 02:00 a 02:10 (Hora Colombia UTC-5)
+**Versión**: `v28.5` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)
+
+#### 🎯 Objetivo y Logros de la Sesión:
+1. **Erradicación de Falsos Matches #M11484 y #M11478 (Inmueble Ocupado vs Crédito y North Point vs Santa Bárbara)**:
+   - **Match #M11484 (Prop #141 vs Req #196)**: La Oferta #141 es un predio `"VENDO PARA INVERSIONISTA... Arrendado $4.290.000 hasta noviembre 2026"` con 1 solo garaje. La Demanda #196 busca comprar con crédito Bancolombia para habitar y exige `"garajes"` en plural ($\ge 2$). Se implementó el **Filtro Duro de Condición de Ocupación** y el parser de **Plural en Parqueaderos**, bloqueando el match al **0% Inviable**.
+   - **Match #M11478 (Prop #553 vs Req #118)**: La Oferta #553 es en **North Point (Calle 156 / San Cristóbal Norte)**. En la ingesta se le había asignado erróneamente `zone = 'Santa Bárbara'`. La Demanda #118 pide exclusivamente *Colina, La Calleja o Santa Bárbara*. Se corrigió la ubicación de North Point a San Cristóbal Norte en los catálogos y en la base de datos, bloqueando el match al **0% Geográfico Incompatible**.
+2. **Saneamiento y Purga en Supabase**:
+   - Propiedad #553 actualizada a `zone = 'San Cristóbal Norte'`, `address_locality = 'Usaquén'`.
+   - Purgados físicamente de `"propertyMatches"` los falsos matches #11484 y #11478, dejando **4 matches 100% verificados y legítimos** en Supabase.
+
+---
+
+## 🔖 HISTÓRICO DE VERSIONES ANTERIORES
 
 ### 🗓️ Sesión: Martes 1 de Septiembre de 2026 — 01:45 a 01:55 (Hora Colombia UTC-5)
 **Versión**: `v28.4` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)

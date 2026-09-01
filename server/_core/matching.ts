@@ -1224,6 +1224,16 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   }
   positives.push(`Tipo de negocio compatible: req='${reqBiz}' ↔ prop='${propBiz}'`);
 
+  // ── FILTRO DURO 1.5: Inmueble Vendido Ocupado/Rentando (Solo Inversionista) vs Comprador con Crédito/Habitar ──
+  const propTextCleanLow = (property.rawText || property.description || property.name || "").toLowerCase();
+  const reqTextCleanLow = (requirement.rawText || requirement.name || "").toLowerCase();
+  const isPropInvestorOnly = /\b(?:para inversionista|inversionistas|arrendado|rentando actualmente|con contrato vigente)\b/i.test(propTextCleanLow) && !/\b(?:desocupado|entrega inmediata|libre|para habitar)\b/i.test(propTextCleanLow);
+  const isReqCreditOrHabitar = /\b(?:cr[eé]dito|crédito bancolombia|crédito davivienda|crédito hipotecario|para habitar|para vivir|entrega inmediata)\b/i.test(reqTextCleanLow);
+  if (isPropInvestorOnly && isReqCreditOrHabitar) {
+    blockers.push("Incompatibilidad de Condición: Oferta se vende ocupada/rentando (Solo para Inversionista) vs Demanda busca predio con crédito/entrega para habitar.");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+
   // ── FILTRO DURO 2: Ciudad ──
   const CIUDADES_CO = ["bogota", "medellin", "cali", "barranquilla", "cartagena",
     "bucaramanga", "pereira", "manizales", "cucuta", "ibague", "santa marta",
@@ -1780,6 +1790,9 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
     const mG = reqTextLow.match(/(?:parqueadero|parqueaderos|garaje|garajes|ptero|g\.)\s*\.?\s*(\d+)/i)
       || reqTextLow.match(/(\d+)\s*(?:parqueadero|parqueaderos|garaje|garajes|ptero|g\.|individuales)/i);
     if (mG) effectiveReqGarages = parseInt(mG[1], 10);
+    else if (/\b(?:parqueaderos|garajes|estacionamientos|pks)\b/i.test(reqTextLow)) {
+      effectiveReqGarages = 2; // "garajes" en plural sin número -> exige mínimo 2
+    }
   }
 
   // ── FILTRO DE ADMINISTRACIÓN MÁXIMA (Presupuesto de Administración) ──

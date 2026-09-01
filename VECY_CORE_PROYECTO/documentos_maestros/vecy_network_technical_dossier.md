@@ -880,6 +880,21 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 
 ---
 
+### Versión v28.5 — Septiembre 2026: Filtro Duro de Condición de Ocupación (Inversionista vs Crédito/Habitar), Parser Plural de Garajes y Corrección Geográfica North Point
+
+#### 1. FILTRO DURO DE CONDICIÓN DE OCUPACIÓN / ARRENDADO
+- **Incompatibilidad Inversionista vs Crédito Hipotecario (`matching.ts`)**: Inmuebles que se venden exclusivamente para inversionistas con contrato de arrendamiento vigente (`"arrendado hasta..."`) quedan bloqueados al **0% Inviable** si la demanda busca adquirir para habitar o con crédito hipotecario de vivienda.
+- **Parser de Plural en Parqueaderos (`janIA.ts` & `matching.ts`)**: Solicitudes con la palabra en plural `"garajes"` o `"parqueaderos"` sin dígito explícito exigen $\ge 2$ parqueaderos.
+
+#### 2. RESOLUCIÓN GEOGRÁFICA DE NORTH POINT
+- **Mapeo Canónico**: North Point (Carrera 7 con Calle 156) asignado a **San Cristóbal Norte (Usaquén)**, evitando que herede Santa Bárbara.
+
+#### 3. SANEAMIENTO Y PURGA EN SUPABASE
+- **Propiedad #553**: Saneada a `zone = 'San Cristóbal Norte'`.
+- **Purga de Falsos Matches**: Eliminados físicamente los cruces #11484 y #11478.
+
+---
+
 ### Versión v28.4 — Septiembre 2026: Blindaje de Modismos de Arriendo ("Para Tomar Ya"), Normalización de Presupuestos en Millones y Erradicación de Falsos Matches Venta vs Arriendo
 
 #### 1. BLINDAJE DOCTRINAL DE SEÑALES DE ARRIENDO
