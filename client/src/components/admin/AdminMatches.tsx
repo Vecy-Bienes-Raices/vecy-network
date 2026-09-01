@@ -581,27 +581,55 @@ function scoreRows(req: any, prop: any) {
     if (pS < minS || pS > maxS) isOutStreetBounds = true;
   }
 
-  const extractBarrioFromText = (text: string): string | null => {
-    if (!text) return null;
-    const lower = text.toLowerCase();
-    const knowns = [
-      "cedritos", "santa paula", "santa barbara", "santa bárbara", "chico norte", "chico reservado", "chico",
-      "rosales", "virrey", "la cabrera", "nogal", "country club", "la calleja", "bella suiza",
-      "el contador", "san patricio", "pasadena", "alhambra", "colina", "suba", "salitre",
-      "modelia", "fontibon", "teusaquillo", "chapinero", "laureles", "poblado", "granada",
-      "el peñon", "ciudad jardin", "cabecera", "cañaveral"
-    ];
-    for (const k of knowns) {
-      if (lower.includes(k)) return k.charAt(0).toUpperCase() + k.slice(1);
+  const KNOWN_BARRIOS_CANONICAL = [
+    "santa bárbara occidental", "santa barbara occidental", "santa bárbara oriental", "santa barbara oriental",
+    "santa bárbara central", "santa barbara central", "santa bárbara alta", "santa barbara alta",
+    "santa bárbara norte", "santa barbara norte", "santa bárbara", "santa barbara",
+    "santa ana occidental", "santa ana oriental", "santa ana central", "santa ana alta", "santa ana",
+    "chico reservado norte", "chico reservado", "chico norte iii", "chico norte ii", "chico norte", "rincón del chicó", "rincon del chico", "chico navarra", "el chicó", "chico",
+    "cedritos", "los cedros", "santa paula", "santa bibiana", "santa teresa", "san patricio", "navarra", "molinos norte", "la calleja", "calleja baja", "calleja alta",
+    "bella suiza", "el contador", "la carolina", "mazurén", "mazuren", "country club", "antiguo country", "nuevo country", "usaquén", "usaquen", "multicentro",
+    "alameda 170", "alameda norte", "la alameda", "barrio alameda", "alameda", "san antonio noroccidental", "san antonio norte", "alcalá", "alcala", "belmira", "portales del norte", "san cipriano", "toberín", "toberin", "villa magdala",
+    "los rosales", "rosales", "la cabrera", "el nogal", "nogal", "el virrey", "el retiro", "el lago", "quinta camacho", "chapinero alto", "chapinero central", "chapinero",
+    "la castellana", "castellana", "polo club", "polo", "san felipe",
+    "colina campestre", "colina", "san josé de bavaria", "san jose de bavaria", "carmel club", "alejandría", "alejandria", "cantalejo", "sotavento", "victoria norte", "britalia norte", "niza norte", "niza", "la alhambra", "alhambra", "pasadena", "batán", "batan", "el batán", "el batan", "prado veraniego", "pontevedra", "morato", "la floresta", "floresta", "suba",
+    "ciudad salitre", "salitre", "hayuelos", "modelia", "fontibón", "fontibon", "teusaquillo", "la soledad", "palermo", "quinta paredes", "la esmeralda", "nicolás de federmann", "nicolas de federmann",
+    "el poblado", "poblado", "laureles", "envigado", "sabaneta", "belén", "belen", "estadio", "conquistadores", "granada", "el peñón", "el peñon",
+    "juanambú", "juanambu", "ciudad jardín", "ciudad jardin", "san fernando", "valle del lili", "el prado", "alto prado", "riomar", "villa santos", "buenavista", "cabecera", "cañaveral", "canaveral", "ruitoque", "sotomayor"
+  ];
+  KNOWN_BARRIOS_CANONICAL.sort((a, b) => b.length - a.length);
+
+  const extractAllBarriosFromText = (text: string): string[] => {
+    if (!text) return [];
+    let norm = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const found: string[] = [];
+    for (const b of KNOWN_BARRIOS_CANONICAL) {
+      const bNorm = b.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const reg = new RegExp(`\\b${bNorm}\\b`, "i");
+      if (reg.test(norm)) {
+        found.push(b.charAt(0).toUpperCase() + b.slice(1));
+        norm = norm.replace(reg, " ");
+      }
     }
-    return null;
+    return found;
   };
 
-  let reqBarrioInferred = extractBarrioFromText(req.rawText || "");
-  let propBarrioInferred = extractBarrioFromText(prop.rawText || prop.description || "");
+  const isGenericZone = (zn: string | null | undefined) => {
+    if (!zn) return true;
+    const z = zn.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    return z === "" || z === "n/e" || z === "na" || z === "n/a" || z === "bogota" || z === "bogota d.c." || z === "bogota dc" || z === "colombia";
+  };
 
-  const reqEffectiveZone = (req.zonaDeseada && req.zonaDeseada.toLowerCase() !== "bogotá" && req.zonaDeseada.toLowerCase() !== "bogota") ? req.zonaDeseada : (reqBarrioInferred || req.zonaDeseada || "");
-  const propEffectiveZone = (prop.zone && prop.zone.toLowerCase() !== "bogotá" && prop.zone.toLowerCase() !== "bogota") ? prop.zone : (propBarrioInferred || prop.zone || "");
+  const propBarriosInText = extractAllBarriosFromText(prop.rawText || prop.description || prop.name || "");
+  const reqBarriosInText = extractAllBarriosFromText(req.rawText || req.name || "");
+
+  // Prioridad Ground Truth del Texto: Si el texto del inmueble dice explícitamente "ALAMEDA 170", esa es la verdad
+  // absoluta y anula cualquier zone fallback heredada del grupo de WhatsApp (ej: "Cedritos").
+  const propTrueBarrio = propBarriosInText[0] || (!isGenericZone(prop.zone) ? prop.zone : (!isGenericZone(prop.addressNeighborhood) ? prop.addressNeighborhood : "")) || "";
+
+  const reqTrueBarriosList = reqBarriosInText.length > 0 
+    ? reqBarriosInText 
+    : (!isGenericZone(req.zonaDeseada) ? [req.zonaDeseada!] : (!isGenericZone(req.addressNeighborhood) ? [req.addressNeighborhood!] : []));
 
   const SUB_CALIFICADORES = ["alta", "alto", "baja", "bajo", "norte", "sur", "oriental", "occidental", "reservado", "i ", "ii ", "iii ", "navarra"];
 
@@ -623,69 +651,61 @@ function scoreRows(req: any, prop: any) {
       return false;
     }
 
+    const isAlamedaReq = rn.includes("alameda");
+    const isAlamedaProp = pn.includes("alameda");
+    if (isAlamedaReq !== isAlamedaProp) return false;
+
     const reqHasQual = SUB_CALIFICADORES.some(q => rn.includes(q));
     const propHasQual = SUB_CALIFICADORES.some(q => pn.includes(q));
     if (reqHasQual && propHasQual && rn !== pn) return false;
     return (rn.includes(pn) || pn.includes(rn)) && !SUB_CALIFICADORES.some(q => rn.includes(q) !== pn.includes(q));
   };
 
-  const cleanBarrioValue = (bVal: string | null | undefined, cVal: string | null | undefined): string => {
-    if (!bVal || bVal === "N/E") return "N/E";
-    const b = bVal.trim();
-    if (!b) return "N/E";
-
-    const bNorm = b.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-    const cNorm = (cVal || "bogota").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-
-    if (
-      bNorm === cNorm ||
-      bNorm === "bogota" ||
-      bNorm === "bogota d.c." ||
-      bNorm === "bogota d.c" ||
-      bNorm === "bogota, d.c." ||
-      bNorm === "medellin" ||
-      bNorm === "cali" ||
-      bNorm === "barranquilla" ||
-      bNorm === "bucaramanga" ||
-      bNorm === "cartagena" ||
-      bNorm === "colombia"
-    ) {
-      return "N/E";
-    }
-    return b;
-  };
-
-  const reqBarrioRaw = req.addressNeighborhood || reqEffectiveZone;
-  const propBarrioRaw = prop.addressNeighborhood || propEffectiveZone;
-
   const inferLocalityFromBarrio = (bName: string | null | undefined): string => {
-    if (!bName || bName === "N/E") return "N/E";
+    if (!bName || isGenericZone(bName)) return "N/E";
     const norm = bName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
     if (norm.includes("chico navarra") || norm.includes("navarra")) return "Usaquén";
     if (norm.includes("rosales") || norm.includes("chico") || norm.includes("nogal") || norm.includes("cabrera") || norm.includes("virrey") || norm.includes("quinta camacho") || norm.includes("chapinero")) return "Chapinero";
-    if (norm.includes("cedritos") || norm.includes("santa barbara") || norm.includes("santa paula") || norm.includes("bella suiza") || norm.includes("contador") || norm.includes("san patricio") || norm.includes("toberin") || norm.includes("usaquen")) return "Usaquén";
-    if (norm.includes("niza") || norm.includes("pasadena") || norm.includes("colina") || norm.includes("suba")) return "Suba";
-    if (norm.includes("modelia") || norm.includes("fontibon")) return "Fontibón";
-    if (norm.includes("teusaquillo")) return "Teusaquillo";
+    if (norm.includes("alameda") || norm.includes("san antonio") || norm.includes("cedritos") || norm.includes("santa barbara") || norm.includes("santa paula") || norm.includes("bella suiza") || norm.includes("contador") || norm.includes("san patricio") || norm.includes("toberin") || norm.includes("usaquen") || norm.includes("belmira") || norm.includes("portales del norte") || norm.includes("alcala")) return "Usaquén";
+    if (norm.includes("castellana") || norm.includes("polo") || norm.includes("san felipe")) return "Barrios Unidos";
+    if (norm.includes("niza") || norm.includes("pasadena") || norm.includes("colina") || norm.includes("suba") || norm.includes("pontevedra") || norm.includes("morato") || norm.includes("floresta") || norm.includes("batan") || norm.includes("alhambra")) return "Suba";
+    if (norm.includes("modelia") || norm.includes("fontibon") || norm.includes("hayuelos")) return "Fontibón";
+    if (norm.includes("teusaquillo") || norm.includes("palermo") || norm.includes("salitre") || norm.includes("federmann") || norm.includes("esmeralda") || norm.includes("quinta paredes")) return "Teusaquillo";
     return "N/E";
   };
 
-  const rawReqB = cleanBarrioValue(reqBarrioRaw, req.addressCity || req.ciudadDeseada);
-  const rawPropB = cleanBarrioValue(propBarrioRaw, prop.addressCity || prop.city);
+  let barrioMatchStatus: MatchStatus = "missing";
+  let matchedReqBarrio = "";
 
-  let propBarrioDisplay = rawPropB;
-  if (propTextLower && (rawPropB === "N/E" || rawPropB.toLowerCase() === "virrey" || rawPropB.toLowerCase() === "chico" || rawPropB.toLowerCase() === "chapinero")) {
-    if (propTextLower.includes("la cabrera") || propTextLower.includes("cabrera")) propBarrioDisplay = "La Cabrera";
-    else if (propTextLower.includes("rincon del chico") || propTextLower.includes("rincón del chicó")) propBarrioDisplay = "Rincón del Chicó";
-    else if (propTextLower.includes("el nogal") || propTextLower.includes("nogal")) propBarrioDisplay = "El Nogal";
-    else if (propTextLower.includes("los rosales") || propTextLower.includes("rosales")) propBarrioDisplay = "Rosales";
+  const isNonRealEstateReq = isNonRealEstateText(req.rawText) || isNonRealEstateText(req.name);
+  const isNonRealEstateProp = isNonRealEstateText(prop.rawText) || isNonRealEstateText(prop.name);
+
+  if (isNonRealEstateReq || isNonRealEstateProp) {
+    barrioMatchStatus = "missing";
+  } else if (reqTrueBarriosList.length === 0 && !propTrueBarrio) {
+    barrioMatchStatus = "neutral";
+  } else if (!propTrueBarrio) {
+    barrioMatchStatus = "missing";
+  } else {
+    for (const demandedBarrio of reqTrueBarriosList) {
+      if (matchBarrioExacto(demandedBarrio, propTrueBarrio)) {
+        barrioMatchStatus = "exact";
+        matchedReqBarrio = demandedBarrio;
+        break;
+      }
+    }
+    if (barrioMatchStatus !== "exact") {
+      barrioMatchStatus = "missing";
+    }
   }
 
-  let reqBarrioDisplay = rawReqB;
-  const isDiffSubBarrio = reqZona && propZona && SUB_CALIFICADORES.some(o => (reqZona.includes(o) && !propZona.includes(o)) || (!reqZona.includes(o) && propZona.includes(o)));
+  const propBarrioDisplay = propTrueBarrio || "N/E (Consultar)";
+  const reqBarrioDisplay = matchedReqBarrio 
+    ? matchedReqBarrio 
+    : (reqTrueBarriosList.length > 0 ? (reqTrueBarriosList.length > 2 ? `${reqTrueBarriosList.slice(0, 2).join(", ")} (+${reqTrueBarriosList.length - 2})` : reqTrueBarriosList.join(", ")) : "Flexible / Bogotá");
 
-  const reqLocalityDisplay = (req.addressLocality && req.addressLocality !== "N/E") ? req.addressLocality : inferLocalityFromBarrio(reqBarrioDisplay);
-  const propLocalityDisplay = (prop.addressLocality && prop.addressLocality !== "N/E") ? prop.addressLocality : inferLocalityFromBarrio(propBarrioDisplay);
+  const reqLocalityDisplay = (req.addressLocality && req.addressLocality !== "N/E") ? req.addressLocality : inferLocalityFromBarrio(matchedReqBarrio || reqBarriosInText[0] || req.zonaDeseada);
+  const propLocalityDisplay = (prop.addressLocality && prop.addressLocality !== "N/E") ? prop.addressLocality : inferLocalityFromBarrio(propTrueBarrio);
 
   const reqTrueCity = extractTrueCityFromText(req.rawText || req.name, req.addressCity || req.ciudadDeseada || "Bogotá");
   const propTrueCity = extractTrueCityFromText(prop.rawText || prop.name, prop.addressCity || prop.city || "Bogotá");
@@ -697,24 +717,6 @@ function scoreRows(req: any, prop: any) {
     normalizeBarrio(reqCityDisplay) === normalizeBarrio(propCityDisplay) ||
     normalizeBarrio(reqCityDisplay).includes(normalizeBarrio(propCityDisplay)) ||
     normalizeBarrio(propCityDisplay).includes(normalizeBarrio(reqCityDisplay));
-
-  const isNonRealEstateReq = isNonRealEstateText(req.rawText) || isNonRealEstateText(req.name);
-  const isNonRealEstateProp = isNonRealEstateText(prop.rawText) || isNonRealEstateText(prop.name);
-
-  const isGenericZone = (zn: string) => !zn || zn === "N/E" || zn === "na" || zn === "bogota" || zn === "bogotá" || zn === "bogota, d.c.";
-
-  let barrioMatchStatus: MatchStatus = "missing";
-  if (isNonRealEstateReq || isNonRealEstateProp) {
-    barrioMatchStatus = "missing";
-  } else if (isGenericZone(reqBarrioDisplay) || isGenericZone(propBarrioDisplay)) {
-    barrioMatchStatus = "neutral";
-  } else if (matchBarrioExacto(reqBarrioDisplay, propBarrioDisplay)) {
-    barrioMatchStatus = "exact";
-  } else if (reqLocalityDisplay !== "N/E" && propLocalityDisplay !== "N/E" && normalizeBarrio(reqLocalityDisplay) === normalizeBarrio(propLocalityDisplay)) {
-    barrioMatchStatus = "warn"; // Mismo sector / misma localidad
-  } else {
-    barrioMatchStatus = "missing";
-  }
 
   let localityMatchStatus: MatchStatus = "neutral";
   if (isNonRealEstateReq || isNonRealEstateProp) {

@@ -3124,15 +3124,30 @@ var init_geography = __esm({
           "Santa Teresa",
           "Chic\xF3 Navarra",
           "Navarra",
+          "La Alameda",
+          "Alameda 170",
+          "Alameda",
+          "Alameda Norte",
+          "Belmira",
+          "Alcal\xE1",
+          "San Antonio Noroccidental",
+          "San Antonio Norte",
           "Usaqu\xE9n",
           "Tober\xEDn",
           "Country Club",
           "La Uribe",
+          "Portales del Norte",
+          "San Crist\xF3bal Norte",
+          "San Cipriano",
+          "Villa Magdala",
           "Verbenal",
           "Barrancas",
           "Horizontes",
           "La Cita",
           "Tibabita",
+          "El Contador",
+          "Molinos Norte",
+          "Multicentro",
           "La Cer\xE1mica",
           "La Uni\xF3n",
           "Los Arrayanes",
@@ -3146,7 +3161,6 @@ var init_geography = __esm({
           "Los Alcaparros",
           "La Carolina",
           "Mazur\xE9n",
-          "San Antonio Norte",
           "Gratamira M\xF3nica"
         ]
       },
@@ -3182,19 +3196,28 @@ var init_geography = __esm({
           "La Salle",
           "Marly",
           "Rinc\xF3n del Chic\xF3",
-          "Antiguo Country"
+          "Antiguo Country",
+          "El Virrey"
         ]
       },
       "suba": {
         localidad: "Suba",
         barrios: [
-          // Suba tradicional
+          // Suba tradicional y occidental
           "Niza",
+          "Niza Norte",
           "Alhambra",
+          "La Alhambra",
           "Floresta",
+          "La Floresta",
+          "Pontevedra",
+          "Morato",
           "Lisboa",
           "Prado Veraniego",
           "Santa Cecilia",
+          "Bat\xE1n",
+          "El Bat\xE1n",
+          "Pasadena",
           "La Campi\xF1a",
           "Suba Centro",
           "Tibabuyes",
@@ -3234,22 +3257,24 @@ var init_geography = __esm({
           "Cerros de Suba",
           "Niza Suba",
           "Reservado de Niza",
-          "El Country",
-          "Pasadena"
+          "El Country"
         ]
       },
       "barrios unidos": {
         localidad: "Barrios Unidos",
         barrios: [
+          "La Castellana",
+          "Castellana",
+          "Polo Club",
+          "Polo",
+          "San Felipe",
           "Doce de Octubre",
           "Los Andes",
-          "Polo Club",
           "Jorge Eli\xE9cer Gait\xE1n",
           "La Patria",
           "Alc\xE1zares",
           "Siete de Agosto",
-          "Lourdes",
-          "San Felipe"
+          "Lourdes"
         ]
       },
       "teusaquillo": {
@@ -4008,6 +4033,18 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
       "nuevo country",
       "usaquen",
       "multicentro",
+      "alameda 170",
+      "alameda norte",
+      "la alameda",
+      "alameda",
+      "san antonio noroccidental",
+      "san antonio norte",
+      "alcala",
+      "belmira",
+      "portales del norte",
+      "san cipriano",
+      "toberin",
+      "villa magdala",
       "los rosales",
       "rosales",
       "la cabrera",
@@ -4020,6 +4057,11 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
       "chapinero alto",
       "chapinero central",
       "chapinero",
+      "la castellana",
+      "castellana",
+      "polo club",
+      "polo",
+      "san felipe",
       "colina campestre",
       "colina",
       "san jose de bavaria",
@@ -4032,12 +4074,15 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
       "niza norte",
       "niza",
       "alhambra",
+      "la alhambra",
       "pasadena",
       "batan",
       "el batan",
       "prado veraniego",
       "pontevedra",
       "morato",
+      "la floresta",
+      "floresta",
       "suba",
       "ciudad salitre",
       "salitre",
@@ -4048,6 +4093,7 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
       "la soledad",
       "palermo",
       "quinta paredes",
+      "la esmeralda",
       "nicolas de federmann",
       "el poblado",
       "poblado",
@@ -7072,20 +7118,42 @@ function extractFallbackDataFromText(text2) {
     city = "Girardot";
   }
   let zone = "";
-  if (clean.includes("villa magdala")) zone = "Villa Magdala";
+  if (clean.includes("alameda 170") || clean.includes("alameda norte") || clean.includes("la alameda") || clean.includes("barrio alameda") || clean.includes("alameda")) zone = "La Alameda";
+  else if (clean.includes("san antonio noroccidental") || clean.includes("san antonio norte")) zone = "San Antonio Norte";
+  else if (clean.includes("villa magdala")) zone = "Villa Magdala";
   else if (clean.includes("chico reservado")) zone = "Chic\xF3 Reservado";
   else if (clean.includes("chico norte")) zone = "Chic\xF3 Norte";
   else if (clean.includes("chico navarra")) zone = "Chic\xF3 Navarra";
-  else if (clean.includes("rincon del chico")) zone = "Rinc\xF3n del Chic\xF3";
-  else if (clean.includes("chico") || clean.includes("chic\xF3")) zone = "Chic\xF3";
+  else if (clean.includes("rincon del chico") || clean.includes("rinc\xF3n del chic\xF3")) zone = "Rinc\xF3n del Chic\xF3";
+  else if (clean.includes("el chico") || clean.includes("chico") || clean.includes("chic\xF3")) zone = "Chic\xF3";
   else if (clean.includes("santa barbara central") || clean.includes("santa b\xE1rbara central") || clean.includes("santa barbara (central)")) zone = "Santa B\xE1rbara Central";
   else if (clean.includes("santa barbara occidental") || clean.includes("santa b\xE1rbara occidental")) zone = "Santa B\xE1rbara Occidental";
   else if (clean.includes("santa barbara oriental") || clean.includes("santa b\xE1rbara oriental")) zone = "Santa B\xE1rbara Oriental";
   else if (clean.includes("santa barbara alta") || clean.includes("santa b\xE1rbara alta")) zone = "Santa B\xE1rbara Alta";
   else if (clean.includes("santa barbara") || clean.includes("santa b\xE1rbara")) zone = "Santa B\xE1rbara";
-  else if (clean.includes("la cabrera")) zone = "La Cabrera";
+  else if (clean.includes("santa paula")) zone = "Santa Paula";
+  else if (clean.includes("santa bibiana")) zone = "Santa Bibiana";
+  else if (clean.includes("san patricio")) zone = "San Patricio";
+  else if (clean.includes("santa teresa")) zone = "Santa Teresa";
+  else if (clean.includes("santa ana")) zone = "Santa Ana";
+  else if (clean.includes("la cabrera") || clean.includes("cabrera")) zone = "La Cabrera";
   else if (clean.includes("rosales") || clean.includes("los rosales")) zone = "Rosales";
   else if (clean.includes("el nogal") || clean.includes("nogal")) zone = "El Nogal";
+  else if (clean.includes("el virrey") || clean.includes("virrey")) zone = "El Virrey";
+  else if (clean.includes("el retiro")) zone = "El Retiro";
+  else if (clean.includes("el refugio")) zone = "El Refugio";
+  else if (clean.includes("quinta camacho")) zone = "Quinta Camacho";
+  else if (clean.includes("antiguo country")) zone = "Antiguo Country";
+  else if (clean.includes("country club") || clean.includes("el country")) zone = "Country Club";
+  else if (clean.includes("la calleja") || clean.includes("calleja")) zone = "La Calleja";
+  else if (clean.includes("la carolina") || clean.includes("carolina")) zone = "La Carolina";
+  else if (clean.includes("bosque medina")) zone = "Bosque Medina";
+  else if (clean.includes("el contador") || clean.includes("contador")) zone = "El Contador";
+  else if (clean.includes("alcala") || clean.includes("alcal\xE1")) zone = "Alcal\xE1";
+  else if (clean.includes("belmira")) zone = "Belmira";
+  else if (clean.includes("la castellana") || clean.includes("castellana")) zone = "La Castellana";
+  else if (clean.includes("polo club") || clean.includes("polo")) zone = "Polo Club";
+  else if (clean.includes("san felipe")) zone = "San Felipe";
   else if (clean.includes("emaus") || clean.includes("ema\xFAs")) zone = "Ema\xFAs";
   else if (clean.includes("colina campestre") || clean.includes("colina")) zone = "Colina Campestre";
   else if (clean.includes("ciudad melendez") || clean.includes("ciudad mel\xE9ndez")) zone = "Ciudad Mel\xE9ndez";
@@ -7100,12 +7168,32 @@ function extractFallbackDataFromText(text2) {
   else if (clean.includes("cantalejo")) zone = "Cantalejo";
   else if (clean.includes("sotavento")) zone = "Sotavento";
   else if (clean.includes("san jose de bavaria") || clean.includes("san jos\xE9 de bavaria")) zone = "San Jos\xE9 de Bavaria";
-  else if (clean.includes("cedritos")) zone = "Cedritos";
-  else if (clean.includes("usaquen") || clean.includes("usaqu\xE9n")) zone = "Usaqu\xE9n";
-  else if (clean.includes("pasadena")) zone = "Pasadena";
-  else if (clean.includes("batan") || clean.includes("bat\xE1n")) zone = "Bat\xE1n";
-  else if (clean.includes("alhambra")) zone = "Alhambra";
+  else if (clean.includes("cedritos") || clean.includes("los cedros")) zone = "Cedritos";
+  else if (clean.includes("toberin") || clean.includes("tober\xEDn")) zone = "Tober\xEDn";
+  else if (clean.includes("mazuren") || clean.includes("mazur\xE9n")) zone = "Mazur\xE9n";
+  else if (clean.includes("mirandela")) zone = "Mirandela";
+  else if (clean.includes("portales del norte")) zone = "Portales del Norte";
+  else if (clean.includes("victoria norte")) zone = "Victoria Norte";
+  else if (clean.includes("prado veraniego")) zone = "Prado Veraniego";
+  else if (clean.includes("la floresta") || clean.includes("floresta")) zone = "La Floresta";
   else if (clean.includes("pontevedra")) zone = "Pontevedra";
+  else if (clean.includes("morato")) zone = "Morato";
+  else if (clean.includes("alhambra") || clean.includes("la alhambra")) zone = "Alhambra";
+  else if (clean.includes("batan") || clean.includes("bat\xE1n") || clean.includes("el batan")) zone = "Bat\xE1n";
+  else if (clean.includes("pasadena")) zone = "Pasadena";
+  else if (clean.includes("ciudad salitre") || clean.includes("salitre")) zone = "Ciudad Salitre";
+  else if (clean.includes("modelia")) zone = "Modelia";
+  else if (clean.includes("hayuelos")) zone = "Hayuelos";
+  else if (clean.includes("fontibon") || clean.includes("fontib\xF3n")) zone = "Fontib\xF3n";
+  else if (clean.includes("nicolas de federmann") || clean.includes("federmann")) zone = "Nicol\xE1s de Federmann";
+  else if (clean.includes("la esmeralda")) zone = "La Esmeralda";
+  else if (clean.includes("quinta paredes")) zone = "Quinta Paredes";
+  else if (clean.includes("palermo")) zone = "Palermo";
+  else if (clean.includes("teusaquillo")) zone = "Teusaquillo";
+  else if (clean.includes("chapinero alto")) zone = "Chapinero Alto";
+  else if (clean.includes("chapinero central")) zone = "Chapinero Central";
+  else if (clean.includes("chapinero")) zone = "Chapinero";
+  else if (clean.includes("usaquen") || clean.includes("usaqu\xE9n")) zone = "Usaqu\xE9n";
   return {
     propertyType,
     transactionType,

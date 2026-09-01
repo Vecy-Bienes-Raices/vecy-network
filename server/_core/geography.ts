@@ -49,12 +49,13 @@ export const DICCIONARIO_BOGOTA: Record<string, { localidad: string, barrios: st
       "Cedritos", "Los Cedros", "Santa Bárbara", "Santa Bárbara Central", "Santa Bárbara Occidental", "Santa Bárbara Oriental",
       "Santa Bárbara Norte", "Las Santas", "Todas las Santas", "Santa Ana", "Santa Ana Central", "Santa Ana Oriental", "Santa Ana Occidental",
       "Santa Paula", "Santa Bibiana", "San Patricio", "Santa Teresa", "Chicó Navarra", "Navarra",
-      "Usaquén", "Toberín", "Country Club", "La Uribe",
-      "Verbenal", "Barrancas", "Horizontes", "La Cita", "Tibabita",
+      "La Alameda", "Alameda 170", "Alameda", "Alameda Norte", "Belmira", "Alcalá", "San Antonio Noroccidental", "San Antonio Norte",
+      "Usaquén", "Toberín", "Country Club", "La Uribe", "Portales del Norte", "San Cristóbal Norte", "San Cipriano", "Villa Magdala",
+      "Verbenal", "Barrancas", "Horizontes", "La Cita", "Tibabita", "El Contador", "Molinos Norte", "Multicentro",
       "La Cerámica", "La Unión", "Los Arrayanes", "Bosque Medina",
       "La Calleja", "Calleja Baja", "Calleja Alta", "Bosque De Pinos",
       "Bella Suiza", "Colina Campestre", "Los Alcaparros", "La Carolina", "Mazurén",
-      "San Antonio Norte", "Gratamira Mónica"
+      "Gratamira Mónica"
     ]
   },
   "chapinero": {
@@ -63,16 +64,16 @@ export const DICCIONARIO_BOGOTA: Record<string, { localidad: string, barrios: st
       "El Chicó", "Chicó Norte", "Chicó Norte II", "Chicó Norte III", "Chicó Reservado", "Chicó Reservado Norte",
       "El Nogal", "Club El Nogal", "El Lago", "El Retiro", "Rosales", "Los Rosales", "La Cabrera",
       "Chapinero Central", "Chapinero Alto", "Pardo Rubio", "Quinta Camacho", "El Castillo", "San Luis", "Juan XXIII",
-      "El Refugio", "El Bosque", "Granada", "Porciúncula", "Lago Gaitán", "Espartillal", "La Salle", "Marly", "Rincón del Chicó", "Antiguo Country"
+      "El Refugio", "El Bosque", "Granada", "Porciúncula", "Lago Gaitán", "Espartillal", "La Salle", "Marly", "Rincón del Chicó", "Antiguo Country", "El Virrey"
     ]
   },
 
   "suba": {
     localidad: "Suba",
     barrios: [
-      // Suba tradicional
-      "Niza", "Alhambra", "Floresta", "Lisboa", "Prado Veraniego", "Santa Cecilia",
-      "La Campiña", "Suba Centro", "Tibabuyes", "Rincón", "La Gaitana",
+      // Suba tradicional y occidental
+      "Niza", "Niza Norte", "Alhambra", "La Alhambra", "Floresta", "La Floresta", "Pontevedra", "Morato", "Lisboa", "Prado Veraniego", "Santa Cecilia",
+      "Batán", "El Batán", "Pasadena", "La Campiña", "Suba Centro", "Tibabuyes", "Rincón", "La Gaitana",
       "Bilbao", "Casablanca", "El Rinconcito", "Britalia",
       // Norte de Suba / Macroproyectos y Clubes
       "Alejandría", "Carmel Club", "Cantalejo", "Sotavento", "San José de Bavaria", "Victoria Norte", "Britalia Norte",
@@ -83,14 +84,14 @@ export const DICCIONARIO_BOGOTA: Record<string, { localidad: string, barrios: st
       "San José del Prado", "El Cerezo", "La Isabela",
       // Suba estrato alto - Niza / Gratamira
       "Gratamira", "Gratamira Mónica", "Bella Suiza", "Cerros de Suba",
-      "Niza Suba", "Reservado de Niza", "El Country", "Pasadena"
+      "Niza Suba", "Reservado de Niza", "El Country"
     ]
   },
   "barrios unidos": {
     localidad: "Barrios Unidos",
     barrios: [
-      "Doce de Octubre", "Los Andes", "Polo Club", "Jorge Eliécer Gaitán",
-      "La Patria", "Alcázares", "Siete de Agosto", "Lourdes", "San Felipe"
+      "La Castellana", "Castellana", "Polo Club", "Polo", "San Felipe", "Doce de Octubre", "Los Andes", "Jorge Eliécer Gaitán",
+      "La Patria", "Alcázares", "Siete de Agosto", "Lourdes"
     ]
   },
   "teusaquillo": {

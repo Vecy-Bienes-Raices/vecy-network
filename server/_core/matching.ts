@@ -546,9 +546,11 @@ export function matchesGeography(
       "chico reservado norte", "chico reservado", "chico norte iii", "chico norte ii", "chico norte", "rincon del chico", "chico navarra", "chico",
       "cedritos", "los cedros", "santa paula", "santa bibiana", "santa teresa", "san patricio", "navarra", "molinos norte", "la calleja", "calleja baja", "calleja alta",
       "bella suiza", "el contador", "la carolina", "mazuren", "country club", "antiguo country", "nuevo country", "usaquen", "multicentro",
+      "alameda 170", "alameda norte", "la alameda", "alameda", "san antonio noroccidental", "san antonio norte", "alcala", "belmira", "portales del norte", "san cipriano", "toberin", "villa magdala",
       "los rosales", "rosales", "la cabrera", "el nogal", "nogal", "el virrey", "el retiro", "el lago", "quinta camacho", "chapinero alto", "chapinero central", "chapinero",
-      "colina campestre", "colina", "san jose de bavaria", "carmel club", "alejandria", "cantalejo", "sotavento", "victoria norte", "britalia norte", "niza norte", "niza", "alhambra", "pasadena", "batan", "el batan", "prado veraniego", "pontevedra", "morato", "suba",
-      "ciudad salitre", "salitre", "hayuelos", "modelia", "fontibon", "teusaquillo", "la soledad", "palermo", "quinta paredes", "nicolas de federmann",
+      "la castellana", "castellana", "polo club", "polo", "san felipe",
+      "colina campestre", "colina", "san jose de bavaria", "carmel club", "alejandria", "cantalejo", "sotavento", "victoria norte", "britalia norte", "niza norte", "niza", "alhambra", "la alhambra", "pasadena", "batan", "el batan", "prado veraniego", "pontevedra", "morato", "la floresta", "floresta", "suba",
+      "ciudad salitre", "salitre", "hayuelos", "modelia", "fontibon", "teusaquillo", "la soledad", "palermo", "quinta paredes", "la esmeralda", "nicolas de federmann",
       "el poblado", "poblado", "laureles", "envigado", "sabaneta", "belen", "estadio", "conquistadores", "granada", "el peñon",
       "juanambu", "ciudad jardin", "san fernando", "valle del lili", "el prado", "alto prado", "riomar", "villa santos", "buenavista", "cabecera", "canaveral", "ruitoque", "sotomayor"
     ];

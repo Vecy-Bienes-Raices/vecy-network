@@ -880,6 +880,21 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 
 ---
 
+### Versión v28.3 — Septiembre 2026: Prioridad Ground Truth del Texto en Detección de Barrios, Demandas Multi-Barrio y Erradicación de Falsos Matches por Nombres de Grupo
+
+#### 1. PRIORIDAD DOCTRINAL GROUND TRUTH DEL TEXTO ORIGINAL
+- **Jerarquía Suprema del Texto (`AdminMatches.tsx` & `matching.ts`)**: Si el texto de la publicación original (`rawText`) menciona explícitamente un barrio (`"ALAMEDA 170"`, `"La Alameda"`, `"Belmira"`), este valor prevalece de forma absoluta sobre cualquier columna `zone` heredada automáticamente del prefijo del grupo de WhatsApp (ej: `"Cedritos-Colina-Salitre-Alrededores"`).
+- **Catálogo Canónico `KNOWN_BARRIOS_CANONICAL`**: Diccionario de más de 100 barrios ordenado por longitud descendente para impedir que subcadenas cortas colisionen con sectores compuestos.
+
+#### 2. MOTOR DE EVALUACIÓN PARA DEMANDAS MULTI-BARRIO
+- **Matching 1 a N**: Cuando un requerimiento solicita múltiples barrios alternativos (ej: *Cedritos, Alcalá, Belmira, Castellana, Polo, Pasadena, San Felipe, Chapinero, Pontevedra, Bella Suiza*), el sistema valida si la oferta se ubica en al menos uno de ellos. Si no se encuentra en la lista solicitada, el estado es `missing` (🔴) y la **Guillotina Doctrinal de Núcleo Duro bloquea el score al 0%**.
+
+#### 3. SANEAMIENTO Y PURGA EN SUPABASE
+- **Propiedades Saneadas**: Actualizadas las propiedades #556 y #557 a `zone = 'La Alameda'`, `address_neighborhood = 'La Alameda'`, `address_locality = 'Usaquén'`.
+- **Purga de Falsos Matches**: Eliminados físicamente de `"propertyMatches"` los cruces inviables #11488, #11481, #11489 y #11490 que emparejaban Alameda 170 con demandas de Cedritos o Bella Suiza.
+
+---
+
 ### Versión v28.2 — Agosto 2026: Orquestación del Reporte Semanal de la Bolsa Inmobiliaria & Coaching de Eficiencia (Lunes 7:00 PM)
 
 #### 1. REPORTE SEMANAL NOCTURNO EN VIVO (LUNES 7:00 PM)

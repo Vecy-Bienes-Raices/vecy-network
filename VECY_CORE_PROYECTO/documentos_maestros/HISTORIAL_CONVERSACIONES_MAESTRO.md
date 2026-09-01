@@ -52,7 +52,28 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v28.2 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v28.3 — Septiembre 2026
+
+### 🗓️ Sesión: Martes 1 de Septiembre de 2026 — 01:20 a 01:40 (Hora Colombia UTC-5)
+**Versión**: `v28.3` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)
+
+#### 🎯 Objetivo y Logros de la Sesión:
+1. **Erradicación del Falso Match Alameda 170 vs Cedritos (#M11488) y Saneamiento Geográfico**:
+   - Se diagnosticó la causa raíz: la Propiedad #556 (`*VENTA APTO ALAMEDA 170.*`) fue captada en el grupo `Cedritos-Colina-Salitre-Alrededores`. Al no estar `"Alameda 170"` / `"La Alameda"` en los diccionarios geográficos, JanIA le asignó por defecto `zone = 'Cedritos'`.
+   - El Requerimiento #301 ("Gabo") listaba múltiples sectores (`Cedritos, Alcalá, Belmira, Castellana, Polo, Pasadena, San Felipe, Chapinero, Pontevedra, Bella Suiza`), tomando `"Cedritos"` como zona principal. El motor antiguo contrastó `Cedritos` con `Cedritos` arrojando un falso 93%.
+2. **Prioridad Doctrinal Ground Truth del Texto (`AdminMatches.tsx` & `matching.ts`)**:
+   - El texto original (`rawText`) tiene jerarquía suprema sobre cualquier columna `zone` heredada de nombres de grupos de WhatsApp.
+   - Implementado `KNOWN_BARRIOS_CANONICAL` con más de 100 barrios ordenados de mayor a menor longitud para evitar colisiones de subcadenas.
+   - Soporte nativo para **Demandas Multi-Barrio**: si la demanda enumera hasta 10 barrios, la oferta debe coincidir con al menos uno de ellos. Si no coincide, el estado es `missing` (🔴) y la **Guillotina Doctrinal bloquea el score al 0%**.
+3. **Ampliación Exhaustiva de Diccionarios (`geography.ts`, `janIA.ts`, `matching.ts`)**:
+   - Incorporados formalmente: `La Alameda`, `Alameda 170`, `Alameda Norte`, `San Antonio Noroccidental`, `Alcalá`, `Belmira`, `La Castellana`, `Polo Club`, `San Felipe`, `Pontevedra`, `Morato`, `La Floresta`, `Batán`, `Toberín`, `Portales del Norte`, `San Cipriano`.
+4. **Saneamiento y Purga en Supabase**:
+   - Propiedades #556 y #557 actualizadas a `zone = 'La Alameda'`, `address_neighborhood = 'La Alameda'`, `address_locality = 'Usaquén'`.
+   - Purga física de los falsos matches #11488, #11481, #11489 y #11490 en la tabla `"propertyMatches"`, dejando la base de datos limpia con 8 matches legítimos y verificados.
+
+---
+
+## 🔖 HISTÓRICO DE VERSIONES ANTERIORES
 
 ### 🗓️ Sesión: Lunes 31 de Agosto de 2026 — 21:15 a 21:35 (Hora Colombia UTC-5)
 **Versión**: `v28.2` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)

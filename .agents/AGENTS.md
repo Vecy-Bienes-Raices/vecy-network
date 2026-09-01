@@ -163,7 +163,13 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v28.2 — Agosto 2026
+## 🔖 VERSIÓN ACTUAL: v28.3 — Septiembre 2026
+
+### Novedades v28.3 (Prioridad Ground Truth del Texto en Barrios, Demandas Multi-Barrio y Erradicación de Falsos Matches por Grupos de WhatsApp):
+- **Prioridad Suprema del Texto Original (`rawText`)**: Si la publicación menciona explícitamente un barrio (`"ALAMEDA 170"`, `"La Alameda"`, etc.), este prevalece siempre sobre cualquier columna `zone` heredada automáticamente del prefijo del grupo de WhatsApp (ej. `"Cedritos-Colina-Salitre-Alrededores"`).
+- **Catálogo Canónico Expandido (`KNOWN_BARRIOS_CANONICAL`)**: Diccionario de más de 100 barrios ordenado por longitud descendente, impidiendo colisiones de subcadenas.
+- **Soporte Doctrinal para Demandas Multi-Barrio**: Si el cliente solicita una lista de barrios (ej: *Cedritos, Alcalá, Belmira, Castellana, Polo, Pasadena, San Felipe, Chapinero, Pontevedra, Bella Suiza*), la oferta debe pertenecer a al menos uno de ellos. Si no coincide, el estado es `missing` (🔴) y el score se bloquea al **0% (Guillotina de Núcleo Duro)**.
+- **Saneamiento y Purga en Supabase**: Actualizadas propiedades #556 y #557 a `La Alameda (Usaquén)` y purgados físicamente de `"propertyMatches"` los cruces inviables #11488, #11481, #11489 y #11490.
 
 ### Novedades v28.2 (Orquestación del Reporte Semanal de la Bolsa Inmobiliaria, Cifras en Vivo y Coaching de Eficiencia los Lunes 7:00 PM):
 - **Orquestación Cron Nocturna de Lunes 7:00 PM (`0 19 * * 1` en `cronService.ts`)**: Programada la emisión semanal que audita la bolsa con estadísticas en vivo de Supabase (`getLiveMarketStats`: conteo dinámico de ofertas, requerimientos, combinaciones y matches certificados).
