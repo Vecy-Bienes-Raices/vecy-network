@@ -948,6 +948,20 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 
 ---
 
+### Versión v28.8 — Septiembre 2026: Resolución de Causas Raíz de Precios, Cuotas de Administración, Habitaciones y Saneamiento DB
+
+#### 1. RESOLUCIÓN DE LAS 5 CAUSAS RAÍZ DE DISCREPANCIAS
+- **Normalización de Invisibles y Apóstrofes**: Soporte de símbolos `´`, `'`, `’` y limpieza de caracteres Unicode invisibles (`\u2060`, `\uFEFF`, etc.) en `janIA.ts` y `AdminMatches.tsx` evitando truncamientos de números (`$1.100´000.000` $\rightarrow 1.100.000.000$ COP).
+- **Blindaje en Detección de Celulares (`isPhoneNumberNotPrice`)**: Precios $\ge 50\text{M}$ múltiplos de $100\text{k}$ o con etiquetas de precio no se descartan como teléfonos celulares.
+- **Jerarquía Limpia de Extracción de Precios y Admin**: Extracción prioritaria de cuotas de administración (`adminFee`) y precios explícitos de venta (`precio de venta:`, `valor venta:`), suprimiendo colisiones con metrajes de área (`180 m2`).
+- **Soporte de Adjetivos en Habitaciones**: Extracción robusta de expresiones como `3 amplias habitaciones` o `3 hermosas alcobas`.
+
+#### 2. SANEAMIENTO DETERMINISTA Y REGENERACIÓN DE MATCHES
+- **Saneamiento DB (`sanitize_all_db.ts`)**: 1.210 propiedades y 658 requerimientos re-procesados con datos numéricos fidedignos en Supabase.
+- **Población Total de 22 Matches Certificados (`master_audit_and_match.ts`)**: Base de datos poblada con 22 cruces legítimos que cumplen al 100% sus núcleos duros.
+
+---
+
 ### Versión v28.7 — Septiembre 2026: Exportación Modular de parseColombianPriceOrBudget, Inclusión de Scripts en tsconfig y Cero Errores TS
 
 #### 1. EXPORTACIÓN MODULAR DE `parseColombianPriceOrBudget`

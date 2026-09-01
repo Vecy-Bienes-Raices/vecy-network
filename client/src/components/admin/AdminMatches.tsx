@@ -341,8 +341,16 @@ function scoreRows(req: any, prop: any) {
   };
 
   const cleanText = (t: string) => (t || "").toLowerCase().trim().replace(/[\s\-_,.]+/g, " ");
-  const reqTextLower = (req.rawText || req.name || "").toLowerCase().replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0]/g, " ");
-  const propTextLower = (prop.rawText || prop.description || prop.name || "").toLowerCase().replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0]/g, " ");
+  const reqTextLower = (req.rawText || req.name || "")
+    .toLowerCase()
+    .replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0\u200E\u200F\u2028\u2029]/g, "")
+    .replace(/['´`’‘\u00B4\u2019\u2018]/g, ".")
+    .replace(/[\t ]+/g, " ");
+  const propTextLower = (prop.rawText || prop.description || prop.name || "")
+    .toLowerCase()
+    .replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0\u200E\u200F\u2028\u2029]/g, "")
+    .replace(/['´`’‘\u00B4\u2019\u2018]/g, ".")
+    .replace(/[\t ]+/g, " ");
   const reqRawText = cleanText(req.rawText || req.name || "");
   const propRawText = cleanText(prop.rawText || prop.description || prop.name || "");
 
@@ -746,9 +754,22 @@ function scoreRows(req: any, prop: any) {
 
   const isPhoneNumberNotPrice = (val: number | string | null | undefined, rawText?: string): boolean => {
     if (val === undefined || val === null || val === "" || val === 0 || val === "0") return false;
-    const numStr = String(val).replace(/\D/g, "");
-    if (numStr.length === 10 && numStr.startsWith("3")) return true;
-    if (numStr.length === 12 && numStr.startsWith("573")) return true;
+    const num = typeof val === "number" ? val : parseFloat(String(val).replace(/[^\d.]/g, ""));
+    if (isNaN(num) || num <= 0) return false;
+
+    // Si es un número terminado en miles/millones (múltiplo de 10.000 o 100.000 o termina en 4+ ceros), es un PRECIO o CANON, NUNCA un teléfono
+    if (num >= 50_000_000 && num % 100_000 === 0) return false;
+    if (num >= 300_000 && num <= 50_000_000 && num % 50_000 === 0) return false;
+
+    const numStr = String(Math.round(num));
+    if (numStr.length === 10 && /^3(0[0-5]|1[0-9]|2[0-4]|5[0-1])/.test(numStr) && num % 1_000_000 !== 0) {
+      if (rawText && /(?:\$|precio|valor|ppto|presupuesto|canon|hasta|venta)\s*:?\s*\$?\s*3\d{9}/i.test(rawText)) return false;
+      return true;
+    }
+    if (numStr.length === 12 && numStr.startsWith("573") && num % 1_000_000 !== 0) {
+      if (rawText && /(?:\$|precio|valor|ppto|presupuesto|canon|hasta|venta)\s*:?\s*\$?\s*573\d{9}/i.test(rawText)) return false;
+      return true;
+    }
     return false;
   };
 
@@ -766,23 +787,100 @@ function scoreRows(req: any, prop: any) {
   const isReqOpenBudget = /(?:ppto|presupuesto|canon|precio|valor)\s*(?:es\s*)?:?\s*(?:abierto|sin\s*l[ií]mite|ilimitado|negociable\s*sin\s*tope)\b/i.test(reqTextLower);
 
   function parseColombianPriceOrBudget(numStr: string, unit: string, isSale: boolean): number {
-    const cleanStr = (numStr || "").trim().replace(/\*/g, "");
+    const cleanStr = (numStr || "").trim().replace(/[\*\s\u2060\u200B\u200C\u200D\uFEFF\u00A0\u200E\u200F\u2028\u2029]/g, "");
     const cleanUnit = (unit || "").toLowerCase();
-    if (cleanUnit.includes("mil millon")) return Math.round(parseFloat(cleanStr.replace(",", ".")) * 1_000_000_000);
-    if (/^\d{1,3}\.\d{3}$/.test(cleanStr)) return parseInt(cleanStr.replace(".", ""), 10) * 1_000_000;
+    
+    if (cleanUnit.includes("mil millon")) {
+      const v = parseFloat(cleanStr.replace(",", "."));
+      return Math.round(v * 1_000_000_000);
+    }
+    
+    if (/^\d{1,3}(?:\.\d{3}){2,4}$/.test(cleanStr)) {
+      const parsed = parseInt(cleanStr.replace(/\./g, ""), 10);
+      if (isSale && parsed >= 300_000 && parsed <= 30_000_000) {
+        return parsed * 1_000;
+      }
+      return parsed;
+    }
+
+    if (/^\d{1,3}\.\d{3}$/.test(cleanStr)) {
+      const n = parseInt(cleanStr.replace(".", ""), 10);
+      if (!isSale) return n * 1_000;
+      return n * 1_000_000;
+    }
+    
     let val = parseFloat(cleanStr.replace(",", "."));
     if (isNaN(val)) return 0;
-    if (cleanUnit.includes("millon") || cleanUnit.includes("millón") || cleanUnit.includes("mll") || cleanUnit.includes("mm") || cleanUnit === "m") {
-      if (val < 100 && isSale && val > 0) return Math.round(val * 10_000_000);
+    
+    if (cleanUnit.includes("millon") || cleanUnit.includes("millón") || cleanUnit.includes("mll") || cleanUnit.includes("mill") || cleanUnit.includes("mm") || cleanUnit === "m") {
+      if (!isSale) {
+        if (val <= 100 && val > 0) return Math.round(val * 1_000_000);
+        if (val > 100 && val < 100_000) return Math.round(val * 1_000);
+        return Math.round(val);
+      }
+      if (val < 100 && isSale && val > 0) {
+        if (val < 30) return Math.round(val * 1_000_000_000);
+        return Math.round(val * 10_000_000);
+      }
       return Math.round(val * 1_000_000);
     }
-    if (val < 10000) return Math.round(val * 1_000_000);
+    
+    if (val <= 50 && isSale) return Math.round(val * 1_000_000_000);
+    if (val <= 50 && !isSale) return Math.round(val * 1_000_000);
+    if (val < 10000) {
+      if (!isSale) return Math.round(val * 1_000);
+      return Math.round(val * 1_000_000);
+    }
+    if (isSale && val >= 300_000 && val <= 30_000_000) {
+      return Math.round(val * 1_000);
+    }
     return Math.round(val);
   }
 
-  let propSalePrice = !isPropPureRent ? parseSafePrice(prop.price, prop.rawText) : 0;
-  let reqSaleBudget = (!isReqRentMatch && !isPropPureRent) ? parseSafePrice(req.presupuestoMax, req.rawText) : 0;
+  // 1. Extracción de Precio de Venta en Oferta
+  let propSalePrice = 0;
+  if (!isPropPureRent && propTextLower) {
+    const saleExplicitMatch = propTextLower.match(/(?:precio\s*(?:de\s*)?venta|valor\s*(?:de\s*)?venta|valor\s*un\s*poco\s*negociable|valor\s*negociable|precio\s*negociable)\s*:?\s*\*?\$?\s*([\d.]+)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i);
+    if (saleExplicitMatch) {
+      const computed = parseColombianPriceOrBudget(saleExplicitMatch[1], saleExplicitMatch[2] || "", true);
+      if (computed >= 30_000_000 && !isPhoneNumberNotPrice(computed, prop.rawText)) {
+        propSalePrice = computed;
+      }
+    }
+    if (propSalePrice === 0) {
+      const simplePriceMatch = propTextLower.match(/(?:precio|valor)\s*:\s*\*?\$?\s*([\d.]+)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i);
+      if (simplePriceMatch) {
+        const computed = parseColombianPriceOrBudget(simplePriceMatch[1], simplePriceMatch[2] || "", true);
+        if (computed >= 30_000_000 && !isPhoneNumberNotPrice(computed, prop.rawText)) {
+          propSalePrice = computed;
+        }
+      }
+    }
+    if (propSalePrice === 0) {
+      const millonMatch = propTextLower.match(/\$?\s*(\d{1,4}(?:[.,]\d{1,3})?)\s*(mil\s*millones?|millon|millones|millón|mll|mlls|mill|mills|mm)\b/i);
+      if (millonMatch) {
+        const computed = parseColombianPriceOrBudget(millonMatch[1], millonMatch[2], true);
+        if (computed >= 30_000_000 && !isPhoneNumberNotPrice(computed, prop.rawText)) {
+          propSalePrice = computed;
+        }
+      }
+    }
+    if (propSalePrice === 0) {
+      const colMatch = propTextLower.match(/\$\s*(\d{1,3}(?:\.\d{3}){2,4})/);
+      if (colMatch) {
+        const parsed = parseFloat(colMatch[1].replace(/\./g, ''));
+        if (!isNaN(parsed) && parsed >= 50_000_000 && !isPhoneNumberNotPrice(parsed, prop.rawText)) {
+          propSalePrice = parsed;
+        }
+      }
+    }
+  }
+  if (propSalePrice === 0 && !isPropPureRent) {
+    propSalePrice = parseSafePrice(prop.price, prop.rawText);
+  }
 
+  // 2. Extracción de Presupuesto de Venta en Demanda
+  let reqSaleBudget = (!isReqRentMatch && !isPropPureRent) ? parseSafePrice(req.presupuestoMax, req.rawText) : 0;
   if ((reqSaleBudget <= 0 || reqSaleBudget < 100_000_000) && reqTextLower && !isReqRentMatch && !isPropPureRent && !isReqOpenBudget) {
     const rangeMatch = reqTextLower.match(/(?:presupuesto(?:\s*m[aá]ximo)?|ppto(?:\s*m[aá]ximo)?|hasta|tope|valor|inversi[oó]n|compra)?\s*:?\s*\*?\$?\s*(\d{1,4}(?:[.,]\d{1,3})?)\s*(?:a|hasta|-)\s*\*?\$?\s*(\d{1,4}(?:[.,]\d{1,3})?)\*?\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?\b/i);
     if (rangeMatch && (rangeMatch[0].includes("presupuesto") || rangeMatch[0].includes("ppto") || rangeMatch[0].includes("compra") || rangeMatch[3])) {
@@ -790,20 +888,18 @@ function scoreRows(req: any, prop: any) {
       if (parsedMax >= 10_000_000) reqSaleBudget = parsedMax;
     }
     if (reqSaleBudget <= 0) {
-      const singleMatch = reqTextLower.match(/(?:presupuesto|ppto|valor|precio|inversi[oó]n|compra|m[aá]ximo|max|hasta|tope|techo)\s*(?:m[aá]ximo|max)?\s*(?:de)?\s*:?\s*\*?\$?\s*(\d{1,4}(?:[.,]\d{1,3})?)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?\b/i)
-        || reqTextLower.match(/\$\s*(\d{1,4}(?:[.,]\d{1,3})?)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?\b/i);
+      const ceilingMatch = reqTextLower.match(/(?:presupuesto(?:\s*m[aá]ximo)?|ppto(?:\s*m[aá]ximo)?|m[aá]ximo|max|hasta|tope|techo|l[ií]mite)\s*(?:m[aá]ximo|max)?\s*(?:de)?\s*:?\s*\*?\$?\s*([\d.]+)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i);
+      if (ceilingMatch) {
+        const parsed = parseColombianPriceOrBudget(ceilingMatch[1], ceilingMatch[2] || "", true);
+        if (parsed >= 10_000_000) reqSaleBudget = parsed;
+      }
+    }
+    if (reqSaleBudget <= 0) {
+      const singleMatch = reqTextLower.match(/\$\s*(\d{1,4}(?:[.,]\d{1,3})?)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?\b/i);
       if (singleMatch) {
         const parsed = parseColombianPriceOrBudget(singleMatch[1], singleMatch[2] || "", true);
         if (parsed >= 10_000_000) reqSaleBudget = parsed;
       }
-    }
-  }
-
-  if ((propSalePrice < 100_000_000 || propSalePrice === 0) && propTextLower && !isPropPureRent) {
-    const millonMatch = propTextLower.match(/(?:precio|valor|venta|💰)?\s*:?\s*\$?\s*(\d{1,4}(?:[.,]\d{1,3})?)\s*(mil\s*millones?|millon|millones|millón|mll|mlls|mill|mills|mm|m)\b/i);
-    if (millonMatch) {
-      const computed = parseColombianPriceOrBudget(millonMatch[1], millonMatch[2], true);
-      if (computed >= 30_000_000) propSalePrice = computed;
     }
   }
 
@@ -840,56 +936,46 @@ function scoreRows(req: any, prop: any) {
     add("Precio de Venta", reqSaleLabel, propSaleLabel, saleS, isReqRentMatch ? 0 : 15, <DollarSign className="w-3.5 h-3.5" />);
   }
 
-  let propRentPrice = !isPropPureVenta ? parseSafePrice(prop.rentPrice || prop.priceRent, prop.rawText) : 0;
-  let reqRentBudget = isReqRentMatch ? parseSafePrice(req.presupuestoMax, req.rawText) : 0;
-
-  // Fallback para Presupuesto de Arriendo en Requerimiento (ej: "Presupuesto $5 mm con admón", "$5.000.000 / mes", "hasta 4.5 millones")
-  if (isReqRentMatch && reqTextLower && !isReqOpenBudget && reqRentBudget <= 0) {
-    const matchPresu = reqTextLower.match(/(?:presupuesto|ppto|canon|valor|hasta|máximo|max|tope)\s*(?:máximo|max)?\s*:?\s*\$?\s*([\d.,\s]+?)\s*(mil\s*millones?|millones|millón|mll|mlls|mm|m)?(?:\s*con\s*adm|\s*incluid|\s*total|\s|$|\n)/i);
-    if (matchPresu) {
-      let valStr = matchPresu[1].replace(/[.,\s]/g, "");
-      let valR = parseFloat(valStr);
-      if (!isNaN(valR)) {
-        const unit = (matchPresu[2] || "").toLowerCase();
-        if (unit.includes("millon") || unit.includes("mll") || unit.includes("mm") || unit === "m") {
-          if (valR < 100) valR *= 1_000_000;
-          else valR *= 1_000_000;
-        } else if (valR < 1000) {
-          valR *= 1_000_000;
+  // 3. Canon de Arriendo en Oferta
+  let propRentPrice = 0;
+  if (!isPropPureVenta && propTextLower) {
+    const canonExplicitMatch = propTextLower.match(/(?:canon(?:\s*de\s*arriendo)?|valor\s*(?:de\s*)?arriendo|precio\s*(?:de\s*)?arriendo)\s*:?\s*\*?\$?\s*([\d.]+)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i);
+    if (canonExplicitMatch) {
+      const computed = parseColombianPriceOrBudget(canonExplicitMatch[1], canonExplicitMatch[2] || "", false);
+      if (computed > 0 && computed <= 100_000_000 && !isPhoneNumberNotPrice(computed, prop.rawText)) {
+        propRentPrice = computed;
+      }
+    }
+    if (propRentPrice === 0 && isPropPureRent) {
+      const simplePriceMatch = propTextLower.match(/(?:precio|valor)\s*:\s*\*?\$?\s*([\d.]+)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i);
+      if (simplePriceMatch) {
+        const computed = parseColombianPriceOrBudget(simplePriceMatch[1], simplePriceMatch[2] || "", false);
+        if (computed > 0 && computed <= 100_000_000 && !isPhoneNumberNotPrice(computed, prop.rawText)) {
+          propRentPrice = computed;
         }
-        if (valR >= 300_000 && valR <= 100_000_000) reqRentBudget = valR;
+      }
+    }
+    if (propRentPrice === 0) {
+      const colRentMatch = propTextLower.match(/\$\s*(\d{1,2}(?:\.\d{3}){2})/);
+      if (colRentMatch) {
+        const parsed = parseFloat(colRentMatch[1].replace(/\./g, ''));
+        if (!isNaN(parsed) && parsed >= 300_000 && parsed <= 50_000_000 && !isPhoneNumberNotPrice(parsed, prop.rawText)) {
+          propRentPrice = parsed;
+        }
       }
     }
   }
+  if (propRentPrice === 0 && !isPropPureVenta) {
+    propRentPrice = parseSafePrice(prop.rentPrice || prop.priceRent, prop.rawText);
+  }
 
-  // Fallback para Canon de Arriendo en Inmueble (ej: "CANON DE ARRIENDO: $4.500.000 incluida la administración", "Canon: $4.500.000")
-  if (propRentPrice <= 0 && propTextLower && !isPropPureVenta) {
-    const canonDirectMatch = propTextLower.match(/(?:canon(?:\s*de\s*arriendo)?|valor(?:\s*de\s*arriendo)?|precio(?:\s*de\s*arriendo)?|arriendo(?:\s*apartamento|\s*casa|\s*inmueble)?)\s*:?\s*\$?\s*([\d.,\s]+?)(?:-|\s*\(|\s*\n|\s*incluid|\s*con\s*adm|\s*m2|\s*$)/i);
-    if (canonDirectMatch) {
-      let rawCStr = canonDirectMatch[1].replace(/[.,\s]/g, "");
-      let valC = parseFloat(rawCStr);
-      if (!isNaN(valC)) {
-        if (valC < 1000) valC *= 1_000_000;
-        if (valC >= 300_000 && valC <= 100_000_000 && !isPhoneNumberNotPrice(valC, prop.rawText)) {
-          propRentPrice = valC;
-        }
-      }
-    }
-
-    if (propRentPrice <= 0) {
-      const canonMillonMatch = propTextLower.match(/(?:canon|arriendo|alquiler|renta)?\s*:?\s*\$?\s*(\d{1,3}(?:[.,]\d{1,3})?)\s*(mil\s*millones?|millon|millones|millón|mll|mm|m)\b/i);
-      if (canonMillonMatch && (canonMillonMatch[0].includes("canon") || canonMillonMatch[0].includes("arriendo") || isPropPureRent)) {
-        const computed = parseColombianPriceOrBudget(canonMillonMatch[1], canonMillonMatch[2], false);
-        if (computed >= 300_000 && computed <= 100_000_000) propRentPrice = computed;
-      }
-    }
-
-    if (propRentPrice <= 0) {
-      const matchPPrice = propTextLower.match(/\$?\s*(\d{1,2}(?:\.\d{3}){2})/);
-      if (matchPPrice) {
-        let valCP = parseFloat(matchPPrice[1].replace(/\./g, ""));
-        if (!isNaN(valCP) && valCP >= 300_000 && valCP <= 50_000_000) propRentPrice = valCP;
-      }
+  // 4. Presupuesto de Arriendo en Demanda
+  let reqRentBudget = isReqRentMatch ? parseSafePrice(req.presupuestoMax, req.rawText) : 0;
+  if (isReqRentMatch && reqTextLower && !isReqOpenBudget && reqRentBudget <= 0) {
+    const matchPresu = reqTextLower.match(/(?:presupuesto|ppto|canon|valor|hasta|máximo|max|tope)\s*(?:máximo|max)?\s*:?\s*\$?\s*([\d.]+)\s*(mil\s*millones?|millones|millón|mll|mlls|mm|m)?(?:\s*con\s*adm|\s*incluid|\s*total|\s|$|\n)/i);
+    if (matchPresu) {
+      const computed = parseColombianPriceOrBudget(matchPresu[1], matchPresu[2] || "", false);
+      if (computed >= 300_000 && computed <= 100_000_000) reqRentBudget = computed;
     }
   }
 
@@ -917,22 +1003,21 @@ function scoreRows(req: any, prop: any) {
     add("Precio de Arriendo / Canon", reqRentLabel, propRentLabel, rentS, isReqRentMatch ? 15 : 0, <Receipt className="w-3.5 h-3.5" />);
   }
 
+  // 5. Cuota de Administración
   let reqAdminMax = parseSafePrice(req.adminFeeMax, req.rawText);
-  let propAdminFee = parseSafePrice(prop.adminFee, prop.rawText);
+  let propAdminFee = 0;
   const isPropAdminIncluded = propTextLower.includes("incluida la administraci") || propTextLower.includes("incluida administraci") || propTextLower.includes("admon incluida") || propTextLower.includes("administracion incluida") || propTextLower.includes("con admon") || propTextLower.includes("con administración");
 
-  if (propAdminFee <= 0 && propTextLower && !isPropAdminIncluded) {
-    const admMatch = propTextLower.match(/(?:adm|admon|administraci[oó]n|admin)\s*:?\s*(?:aprox\.?)?\s*\$?\s*([\d.,\s]+?)(?:\s*\+|\s*-|\s*\(|\s*\n|$)/i);
+  if (propTextLower && !isPropAdminIncluded) {
+    const admMatch = propTextLower.match(/(?:adm|admon|administraci[oó]n|admin|cta\s*admon)\s*(?:m[aá]xima|max|hasta|tope|no\s*mayor\s*a|no\s*superior\s*a|l[ií]mite)?\s*:?\s*(?:aprox\.?)?\s*\$?\s*([\d.]+)(?:\s*mil\b|\s*k\b)?/i);
     if (admMatch) {
-      let rawAStr = admMatch[1].replace(/[.,\s]/g, "");
-      let valA = parseFloat(rawAStr);
-      if (!isNaN(valA) && valA >= 10_000 && valA <= 30_000_000 && !isPhoneNumberNotPrice(valA, prop.rawText)) {
-        propAdminFee = valA;
+      const rawANum = parseFloat(admMatch[1].replace(/\./g, ''));
+      if (!isNaN(rawANum) && rawANum >= 10_000 && rawANum <= 30_000_000 && !isPhoneNumberNotPrice(rawANum, prop.rawText)) {
+        propAdminFee = rawANum;
       }
     }
-    // Detección de Administración por jerga escalonada (ej: 💰💰 $ 445 MILLONES \n 💰 $ 606 MIL)
     if (propAdminFee <= 0) {
-      const adminMilMatch = propTextLower.match(/(?:💰|admon|adm|admin|cuota)?\s*\$?\s*(\d{1,4}(?:[.,]\d{1,3})?)\s*(?:mil|k)\b/i);
+      const adminMilMatch = propTextLower.match(/(?:admon|adm|admin|cuota)\s*:?\s*\$?\s*(\d{1,4}(?:[.,]\d{1,3})?)\s*(?:mil|k)\b/i);
       if (adminMilMatch) {
         const numParsed = parseFloat(adminMilMatch[1].replace(',', '.'));
         if (!isNaN(numParsed) && numParsed >= 20 && numParsed <= 15000) {
@@ -943,6 +1028,9 @@ function scoreRows(req: any, prop: any) {
         }
       }
     }
+  }
+  if (propAdminFee <= 0) {
+    propAdminFee = parseSafePrice(prop.adminFee, prop.rawText);
   }
 
   let adminS: MatchStatus = "neutral";

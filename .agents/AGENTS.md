@@ -163,7 +163,17 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v28.7 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v28.8 — Septiembre 2026
+
+### Novedades v28.8 (Resolución de Causas Raíz de Precios, Cuotas de Administración, Habitaciones y Saneamiento DB):
+- **Resolución de las 5 Causas Raíz de Discrepancia de Precios y Administración**:
+  1) Normalización de caracteres Unicode invisibles (`\u2060`, `\uFEFF`, etc.) y apóstrofes (`´`, `'`, `’`) en `janIA.ts` y `AdminMatches.tsx` para evitar que precios como `$1.100´000.000` se cortaran en `1.100`.
+  2) Blindaje contra falsos positivos de celulares en `isPhoneNumberNotPrice`: valores $\ge 50\text{M}$ múltiplos de $100\text{k}$ o con prefijos de precio jamás se clasifican como teléfonos.
+  3) Extracción estricta de precios de venta con prioridad para `precio de venta:`, evitando colisiones con números de área (`180 m2`).
+  4) Detección y extracción exacta de cuotas de administración (`adminFee`), visualizadas y cotejadas en la mesa de coincidencias.
+  5) Reconocimiento de adjetivos intermedios en habitaciones (`3 amplias habitaciones`, `3 hermosas alcobas`).
+- **Saneamiento Masivo Determinista en Supabase (`sanitize_all_db.ts`)**: 1.210 propiedades y 658 requerimientos actualizados directamente desde su texto original.
+- **Población Total de 22 Matches Certificados (`master_audit_and_match.ts`)**: 22 cruces legítimos y verificados con score $\ge 80\%$ y 100% de cumplimiento en núcleos duros.
 
 ### Novedades v28.7 (Exportación Modular de parseColombianPriceOrBudget, Inclusión de Scripts en tsconfig y Cero Errores TS):
 - **Exportación Modular de `parseColombianPriceOrBudget` (`janIA.ts`)**: Se elevó la función de parseo de precios y presupuestos al nivel de módulo para ser consumida limpiamente por los scripts de saneamiento y auditoría (`sanitize_all_db.ts` y `master_audit_and_match.ts`), erradicando el error TS2305 del IDE.

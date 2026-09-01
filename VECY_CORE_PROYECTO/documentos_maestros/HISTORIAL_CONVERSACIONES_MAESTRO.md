@@ -52,7 +52,32 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v28.7 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v28.8 — Septiembre 2026
+
+### 🗓️ Sesión: Martes 1 de Septiembre de 2026 — 03:45 a 04:10 (Hora Colombia UTC-5)
+**Versión**: `v28.8` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)
+
+#### 🎯 Objetivo y Logros de la Sesión:
+1. **Resolución de las 5 Causas Raíz de Discrepancia de Precios y Administración (Match #M11523 / CSV)**:
+   - **Causa 1 (Caracteres Invisibles y Apóstrofes)**: Se identificó que símbolos como `´`, `'`, `’` y caracteres Unicode invisibles (`\u2060`, `\uFEFF`, `\u00A0`, `\u2028`, etc.) partían los números de precio (`$1.100´000.000` se cortaba en `1.100`), normalizándose a `.` y eliminando caracteres basura en `janIA.ts` y `AdminMatches.tsx`.
+   - **Causa 2 (Falso Positivo de Celulares `isPhoneNumberNotPrice`)**: Precios legítimos entre 3.000M y 3.999M (como los $3.400.000.000 de la Prop #137) eran descartados por comenzar con `3` y tener 10 dígitos. Se blindó la función exigiendo que valores $\ge 50\text{M}$ múltiplos de $100\text{k}$ o con etiquetas de precio jamás se traten como números de celular.
+   - **Causa 3 (Colisión de Texto de Área con Precio de Venta)**: Expresiones como `"...apartamento en venta... 180 m2"` capturaban `180` ($180.000.000) debido a etiquetas sueltas. Se reestructuró la jerarquía de extracción: 1) Cuota de Administración, 2) Canon Explícito, 3) Precio Venta Explícito (`precio de venta:`, `valor venta:`), 4) Precio Simple con colon (`precio:`), 5) Cifras en millones con guardias negativas para unidades de metraje (`m2`).
+   - **Causa 4 (Jerga de Cuota de Administración)**: Detección y extracción exacta de administraciones en miles/millones (ej. `$1´425.000`, `$825.000`, `$979.000`, `$606 MIL`), poblando el campo `adminFee` en Supabase y en la mesa de cotejo.
+   - **Causa 5 (Adjetivos Intermedios en Habitaciones)**: Expresiones como `3 amplias habitaciones`, `3 hermosas alcobas`, `3 cómodas habitaciones` ahora se capturan con precisión total, evitando lecturas truncadas o interferencia con metrajes iniciales.
+2. **Saneamiento Masivo Determinista en Supabase (`scripts/sanitize_all_db.ts`)**:
+   - Re-procesadas **1.210 propiedades** y **658 requerimientos** en Supabase, corrigiendo directamente en la base de datos:
+     - Prop #162: `Precio: $1.100.000.000 | Admin: $1.425.000 | Área: 180 m² | 3 Habs | 4 Baños | 2 Garajes`
+     - Prop #1789: `Precio: $2.400.000.000 | Canon: $11.500.000 | Admin: $2.326.000 | 210 m² | 3 Habs | 4 Baños | 3 Garajes`
+     - Prop #137: `Precio: $3.400.000.000 | Admin: $2.058.000 | 280 m² | 3 Habs | 5 Baños | 4 Garajes`
+     - Prop #462: `Precio: $780.000.000 | Admin: $825.000 | 110 m² | 3 Habs | 3 Baños | 2 Garajes`
+     - Prop #485: `Precio: $885.000.000 | Admin: $979.000 | 110 m² | 3 Habs | 2 Baños | 2 Garajes`
+     - Prop #786: `Precio: $4.300.000.000 | Admin: $2.730.000 | 242 m² | 3 Habs | 4 Baños | 3 Garajes`
+3. **Regeneración de Coincidencias Certificadas (`scripts/master_audit_and_match.ts`)**:
+   - Escaneo integral de los 5 Filtros Duros sobre toda la base de datos, persistiendo **22 matches verídicos y certificados** en Supabase con total coherencia de precios, administraciones y especificaciones físicas.
+
+---
+
+## 🔖 HISTÓRICO DE VERSIONES ANTERIORES
 
 ### 🗓️ Sesión: Martes 1 de Septiembre de 2026 — 03:07 a 03:15 (Hora Colombia UTC-5)
 **Versión**: `v28.7` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)
