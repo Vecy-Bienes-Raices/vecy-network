@@ -163,7 +163,12 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v28.3 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v28.4 — Septiembre 2026
+
+### Novedades v28.4 (Blindaje de Modismos de Arriendo, Normalización de Presupuestos en Millones y Erradicación de Falsos Matches Venta vs Arriendo):
+- **Captura de Modismos de Arriendo (`hasRentSignals`)**: Inclusión formal de expresiones colombianas (`"para tomar ya"`, `"tomar ya"`, `"toma ya"`, `"para tomar de inmediato"`, `"toma inmediata"`, `"para tomar"`, `"en renta"`, `"para renta"`, `"en arriendo"`).
+- **Calibración Numérica en Parser Colombiano (`parseColombianPriceOrBudget`)**: Cifras con puntos (`3.800.000`, `2.900.000`) se leen exactamente en pesos. En arriendo, valores taquigráficos $\le 100$ se escalan a millones ($3.8\text{M} \rightarrow \$3.800.000$), erradicando presupuestos falsos de miles de millones.
+- **Saneamiento Masivo y Purga en Supabase**: Corregidos 96 requerimientos descalibrados y purgados físicamente los matches inviables #11479 y #11480.
 
 ### Novedades v28.3 (Prioridad Ground Truth del Texto en Barrios, Demandas Multi-Barrio y Erradicación de Falsos Matches por Grupos de WhatsApp):
 - **Prioridad Suprema del Texto Original (`rawText`)**: Si la publicación menciona explícitamente un barrio (`"ALAMEDA 170"`, `"La Alameda"`, etc.), este prevalece siempre sobre cualquier columna `zone` heredada automáticamente del prefijo del grupo de WhatsApp (ej. `"Cedritos-Colina-Salitre-Alrededores"`).

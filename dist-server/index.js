@@ -4509,11 +4509,11 @@ function explicarMatch(requirement, property) {
   }
   let propBizHard = property.transactionType || property.transaction_type || "";
   let reqBizHard = requirement.tipoNegocioDeseado || requirement.transactionType || requirement.transaction_type || "";
-  if (!propBizHard && property.rawText) {
+  if (property.rawText) {
     const fb = extractFallbackDataFromText(property.rawText);
     if (fb.transactionType) propBizHard = fb.transactionType;
   }
-  if (!reqBizHard && requirement.rawText) {
+  if (requirement.rawText) {
     const fb = extractFallbackDataFromText(requirement.rawText);
     if (fb.transactionType) reqBizHard = fb.transactionType;
   }
@@ -4780,8 +4780,16 @@ function explicarMatch(requirement, property) {
     blockers.push("Auto-match: el inmueble y el requerimiento pertenecen al mismo asesor.");
     return buildExplanationResult(0, blockers, positives, negatives);
   }
-  const reqBiz = (requirement.tipoNegocioDeseado || requirement.transactionType || "").toLowerCase();
-  const propBiz = (property.transactionType || "").toLowerCase();
+  let reqBiz = (requirement.tipoNegocioDeseado || requirement.transactionType || "").toLowerCase();
+  let propBiz = (property.transactionType || "").toLowerCase();
+  if (property.rawText) {
+    const fb = extractFallbackDataFromText(property.rawText);
+    if (fb.transactionType) propBiz = fb.transactionType.toLowerCase();
+  }
+  if (requirement.rawText) {
+    const fb = extractFallbackDataFromText(requirement.rawText);
+    if (fb.transactionType) reqBiz = fb.transactionType.toLowerCase();
+  }
   const propAccepted = Array.isArray(property.acceptedTransactionTypes) ? property.acceptedTransactionTypes.map((t2) => t2.toLowerCase()) : [];
   const transactionCompatible = checkTransactionCompatibility(reqBiz, propBiz, propAccepted);
   if (!transactionCompatible) {
@@ -6810,7 +6818,7 @@ function extractFallbackDataFromText(text2) {
   let transactionType = "venta";
   const isInvestorPurchase = /\b(?:inversionista|inversionistas|para inversi[oó]n|para inversion|rentando|est[eé] rentando|est[eé]n rentando|ojal[aá] rentando|ya rentando|generando renta|produciendo renta|con renta activa|para compra|compro|compra ya|busco para compra)\b/i.test(clean);
   const hasPermutaSignals = /\b(?:permuto|permuta|permutas|permutamos|se permuta|recibo menor valor|recibo inmueble|recibo vehículo|recibo vehiculo|pelo a pelo|encime|parte de pago)\b/i.test(clean);
-  const hasRentSignals = !isInvestorPurchase && (/\b(?:arriendo|arriendos|arrendar|arrendamos|se arrienda|arriendan|alquilo|alquilar|alquilamos|se alquila|alquiler|alquileres|rento|rentar|se renta|canon|canones|cánones|amoblado|amoblada|sin amoblar|arrendatario|arrendador|inquilino)\b/i.test(clean) || /(?:incluida|con|\+|más|mas)\s*(?:administraci[oó]n|admon)/i.test(clean) || /(?:administraci[oó]n|admon)\s*(?:incluida|adicional)/i.test(clean) || /valor arriendo/i.test(clean));
+  const hasRentSignals = !isInvestorPurchase && (/\b(?:arriendo|arriendos|arrendar|arrendamos|se arrienda|arriendan|alquilo|alquilar|alquilamos|se alquila|alquiler|alquileres|rento|rentar|se renta|en renta|para renta|busca para renta|canon|canones|cánones|amoblado|amoblada|sin amoblar|arrendatario|arrendador|inquilino)\b/i.test(clean) || /\b(?:para tomar ya|tomar ya|toma ya|para tomar de inmediato|toma inmediata|toma de inmediato|para tomar|para alquilar|para arrendar|en arriendo)\b/i.test(clean) || /(?:incluida|con|\+|más|mas)\s*(?:administraci[oó]n|admon)/i.test(clean) || /(?:administraci[oó]n|admon)\s*(?:incluida|adicional)/i.test(clean) || /valor arriendo/i.test(clean));
   if (hasPermutaSignals) {
     transactionType = clean.includes("venta") || isInvestorPurchase ? "venta_permuta" : "permuta";
   } else if (hasRentSignals && (clean.includes("venta") || clean.includes("valor venta")) && (clean.includes("arriendo") || clean.includes("valor arriendo"))) {
@@ -6858,13 +6866,28 @@ function extractFallbackDataFromText(text2) {
       const v = parseFloat(cleanStr.replace(",", "."));
       return Math.round(v * 1e9);
     }
+    if (/^\d{1,3}(?:\.\d{3}){2,4}$/.test(cleanStr)) {
+      return parseInt(cleanStr.replace(/\./g, ""), 10);
+    }
     if (/^\d{1,3}\.\d{3}$/.test(cleanStr)) {
       const n = parseInt(cleanStr.replace(".", ""), 10);
+      if (!isSale) {
+        return n * 1e3;
+      }
       return n * 1e6;
     }
     let val = parseFloat(cleanStr.replace(",", "."));
     if (isNaN(val)) return 0;
     if (cleanUnit.includes("millon") || cleanUnit.includes("mill\xF3n") || cleanUnit.includes("mll") || cleanUnit.includes("mill") || cleanUnit.includes("mm") || cleanUnit === "m") {
+      if (!isSale) {
+        if (val <= 100 && val > 0) {
+          return Math.round(val * 1e6);
+        }
+        if (val > 100 && val < 1e5) {
+          return Math.round(val * 1e3);
+        }
+        return Math.round(val);
+      }
       if (val < 100 && isSale && val > 0) {
         if (val < 30) {
           return Math.round(val * 1e9);
@@ -6876,7 +6899,11 @@ function extractFallbackDataFromText(text2) {
     if (val <= 50 && isSale) {
       return Math.round(val * 1e9);
     }
+    if (val <= 50 && !isSale) {
+      return Math.round(val * 1e6);
+    }
     if (val < 1e4) {
+      if (!isSale) return Math.round(val * 1e3);
       return Math.round(val * 1e6);
     }
     return Math.round(val);
@@ -6892,7 +6919,7 @@ function extractFallbackDataFromText(text2) {
     }
   }
   if (price === 0) {
-    const ceilingMillonMatch = clean.match(/(?:presupuesto(?:\s*m[aá]ximo)?|ppto(?:\s*m[aá]ximo)?|canon(?:\s*de\s*arriendo|\s*m[aá]ximo)?|valor(?:\s*de\s*arriendo|\s*venta|\s*de\s*venta)?|precio(?:\s*de\s*arriendo|\s*venta|\s*de\s*venta)?|arriendo(?:\s*apartamento|\s*casa|\s*m[aá]ximo)?|m[aá]ximo|max|hasta|tope|techo|l[ií]mite)\s*(?:m[aá]ximo|max)?\s*(?:de)?\s*:?\s*\*?\$?\s*([\d]+(?:[.,][\d]+)?)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?\b/i);
+    const ceilingMillonMatch = clean.match(/(?:presupuesto(?:\s*m[aá]ximo)?|ppto(?:\s*m[aá]ximo)?|canon(?:\s*de\s*arriendo|\s*m[aá]ximo)?|valor(?:\s*de\s*arriendo|\s*venta|\s*de\s*venta)?|precio(?:\s*de\s*arriendo|\s*venta|\s*de\s*venta)?|arriendo(?:\s*apartamento|\s*casa|\s*m[aá]ximo)?|m[aá]ximo|max|hasta|tope|techo|l[ií]mite)\s*(?:m[aá]ximo|max)?\s*(?:de)?\s*:?\s*\*?\$?\s*([\d]+(?:[.,][\d]+)*)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?\b/i);
     if (ceilingMillonMatch) {
       const isSale = transactionType !== "arriendo";
       const computed = parseColombianPriceOrBudget(ceilingMillonMatch[1], ceilingMillonMatch[2] || "", isSale);

@@ -430,7 +430,8 @@ export function extractFallbackDataFromText(text: string): any {
   const isInvestorPurchase = /\b(?:inversionista|inversionistas|para inversi[oó]n|para inversion|rentando|est[eé] rentando|est[eé]n rentando|ojal[aá] rentando|ya rentando|generando renta|produciendo renta|con renta activa|para compra|compro|compra ya|busco para compra)\b/i.test(clean);
   const hasPermutaSignals = /\b(?:permuto|permuta|permutas|permutamos|se permuta|recibo menor valor|recibo inmueble|recibo vehículo|recibo vehiculo|pelo a pelo|encime|parte de pago)\b/i.test(clean);
   const hasRentSignals = !isInvestorPurchase && (
-    /\b(?:arriendo|arriendos|arrendar|arrendamos|se arrienda|arriendan|alquilo|alquilar|alquilamos|se alquila|alquiler|alquileres|rento|rentar|se renta|canon|canones|cánones|amoblado|amoblada|sin amoblar|arrendatario|arrendador|inquilino)\b/i.test(clean)
+    /\b(?:arriendo|arriendos|arrendar|arrendamos|se arrienda|arriendan|alquilo|alquilar|alquilamos|se alquila|alquiler|alquileres|rento|rentar|se renta|en renta|para renta|busca para renta|canon|canones|cánones|amoblado|amoblada|sin amoblar|arrendatario|arrendador|inquilino)\b/i.test(clean)
+    || /\b(?:para tomar ya|tomar ya|toma ya|para tomar de inmediato|toma inmediata|toma de inmediato|para tomar|para alquilar|para arrendar|en arriendo)\b/i.test(clean)
     || /(?:incluida|con|\+|más|mas)\s*(?:administraci[oó]n|admon)/i.test(clean)
     || /(?:administraci[oó]n|admon)\s*(?:incluida|adicional)/i.test(clean)
     || /valor arriendo/i.test(clean)
@@ -488,16 +489,33 @@ export function extractFallbackDataFromText(text: string): any {
       return Math.round(v * 1_000_000_000);
     }
     
+    // Si tiene formato de número completo colombiano con puntos (ej: "3.800.000", "2.900.000", "1.390.000.000")
+    if (/^\d{1,3}(?:\.\d{3}){2,4}$/.test(cleanStr)) {
+      return parseInt(cleanStr.replace(/\./g, ""), 10);
+    }
+
     // Si tiene formato de miles con punto (ej: "2.100", "1.390", "1.300", "3.500")
     if (/^\d{1,3}\.\d{3}$/.test(cleanStr)) {
       const n = parseInt(cleanStr.replace(".", ""), 10);
-      return n * 1_000_000; // 2100 * 1M = 2.100.000.000 COP
+      if (!isSale) {
+        return n * 1_000; // 3800 -> 3.800.000 COP en arriendo
+      }
+      return n * 1_000_000; // 2100 * 1M = 2.100.000.000 COP en venta
     }
     
     let val = parseFloat(cleanStr.replace(",", "."));
     if (isNaN(val)) return 0;
     
     if (cleanUnit.includes("millon") || cleanUnit.includes("millón") || cleanUnit.includes("mll") || cleanUnit.includes("mill") || cleanUnit.includes("mm") || cleanUnit === "m") {
+      if (!isSale) {
+        if (val <= 100 && val > 0) {
+          return Math.round(val * 1_000_000); // 3.8 mm -> 3.800.000 COP arriendo
+        }
+        if (val > 100 && val < 100_000) {
+          return Math.round(val * 1_000); // 3800 -> 3.800.000 COP
+        }
+        return Math.round(val);
+      }
       if (val < 100 && isSale && val > 0) {
         if (val < 30) {
           return Math.round(val * 1_000_000_000); // 2.1 millones -> 2.100.000.000
@@ -510,7 +528,11 @@ export function extractFallbackDataFromText(text: string): any {
     if (val <= 50 && isSale) {
       return Math.round(val * 1_000_000_000);
     }
+    if (val <= 50 && !isSale) {
+      return Math.round(val * 1_000_000); // 4 -> 4.000.000 COP arriendo
+    }
     if (val < 10000) {
+      if (!isSale) return Math.round(val * 1_000);
       return Math.round(val * 1_000_000);
     }
     return Math.round(val);
@@ -531,7 +553,7 @@ export function extractFallbackDataFromText(text: string): any {
   // B. Detección de Presupuesto / Canon Máximo con Prefijos de Techo o Directos
   // (ej: "CANON DE ARRIENDO: $4.500.000", "Canon máximo $8.500.000", "Presupuesto máximo de $800 mll", "Hasta 4 millones", "Ppto max 12 MM", "Tope 6.5 millones")
   if (price === 0) {
-    const ceilingMillonMatch = clean.match(/(?:presupuesto(?:\s*m[aá]ximo)?|ppto(?:\s*m[aá]ximo)?|canon(?:\s*de\s*arriendo|\s*m[aá]ximo)?|valor(?:\s*de\s*arriendo|\s*venta|\s*de\s*venta)?|precio(?:\s*de\s*arriendo|\s*venta|\s*de\s*venta)?|arriendo(?:\s*apartamento|\s*casa|\s*m[aá]ximo)?|m[aá]ximo|max|hasta|tope|techo|l[ií]mite)\s*(?:m[aá]ximo|max)?\s*(?:de)?\s*:?\s*\*?\$?\s*([\d]+(?:[.,][\d]+)?)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?\b/i);
+    const ceilingMillonMatch = clean.match(/(?:presupuesto(?:\s*m[aá]ximo)?|ppto(?:\s*m[aá]ximo)?|canon(?:\s*de\s*arriendo|\s*m[aá]ximo)?|valor(?:\s*de\s*arriendo|\s*venta|\s*de\s*venta)?|precio(?:\s*de\s*arriendo|\s*venta|\s*de\s*venta)?|arriendo(?:\s*apartamento|\s*casa|\s*m[aá]ximo)?|m[aá]ximo|max|hasta|tope|techo|l[ií]mite)\s*(?:m[aá]ximo|max)?\s*(?:de)?\s*:?\s*\*?\$?\s*([\d]+(?:[.,][\d]+)*)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?\b/i);
     if (ceilingMillonMatch) {
       const isSale = transactionType !== "arriendo";
       const computed = parseColombianPriceOrBudget(ceilingMillonMatch[1], ceilingMillonMatch[2] || "", isSale);

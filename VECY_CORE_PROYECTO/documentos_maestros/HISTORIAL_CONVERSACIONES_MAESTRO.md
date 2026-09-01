@@ -52,7 +52,27 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v28.3 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v28.4 — Septiembre 2026
+
+### 🗓️ Sesión: Martes 1 de Septiembre de 2026 — 01:45 a 01:55 (Hora Colombia UTC-5)
+**Versión**: `v28.4` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)
+
+#### 🎯 Objetivo y Logros de la Sesión:
+1. **Erradicación del Falso Match Arriendo $3.8M vs Venta $799M (#M11480 / #M11479)**:
+   - Se diagnosticó la causa raíz: la Demanda #167 (`*Urgente - Busco en Santa Barbara* Apartamento de 2 habitaciones, mínimo 2 baños, para tomar Ya. *Presupuesto maximo $3.800.000 mm*`) contenía la expresión coloquial `"para tomar Ya"`. Al no estar catalogada `"para tomar Ya"` en las señales de arriendo (`hasRentSignals`), el sistema la clasificó por defecto como `tipoNegocioDeseado = 'venta'`.
+   - Además, el parser numérico (`parseColombianPriceOrBudget`) interpretó erróneamente la terminación `mm` de `$3.800.000 mm` como un multiplicador de venta de $800 millones (`presupuestoMax = 800000000.00`), provocando que coincidiera con la Oferta #1053 (Venta $799M) arrojando un falso match del 96%.
+2. **Blindaje Integral de Señales de Arriendo y Parser Colombiano (`janIA.ts`, `matching.ts`, `AdminMatches.tsx`)**:
+   - Inclusión obligatoria de modismos de arrendamiento: `para tomar ya`, `tomar ya`, `toma ya`, `para tomar de inmediato`, `toma inmediata`, `toma de inmediato`, `para tomar`, `en renta`, `para renta`, `en arriendo`, `para alquilar`.
+   - Calibración de `parseColombianPriceOrBudget`: cifras con formato de puntos completos (`3.800.000`, `2.900.000`) se leen fielmente como su valor en pesos COP. En transacciones de arriendo, valores $\le 100$ se escalan a millones de pesos ($3.8\text{M} \rightarrow \$3.800.000$), jamás a miles de millones.
+   - En `AdminMatches.tsx` y `matching.ts`, el Ground Truth del texto detecta automáticamente el arriendo y aplica **Guillotina Inmediata al 0% (Incompatible)** contra inmuebles en venta.
+3. **Saneamiento Masivo y Purga en Supabase**:
+   - Requerimiento #167 corregido a `tipoNegocioDeseado = 'arriendo'`, `presupuestoMax = 3800000.00`.
+   - Saneados **96 requerimientos** de arriendo que tenían presupuestos inflados o estaban guardados como venta.
+   - Purgados físicamente de `"propertyMatches"` los falsos matches #11479 y #11480, dejando **6 matches 100% legítimos y homogéneos** en la bolsa.
+
+---
+
+## 🔖 HISTÓRICO DE VERSIONES ANTERIORES
 
 ### 🗓️ Sesión: Martes 1 de Septiembre de 2026 — 01:20 a 01:40 (Hora Colombia UTC-5)
 **Versión**: `v28.3` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)

@@ -880,6 +880,18 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 
 ---
 
+### Versión v28.4 — Septiembre 2026: Blindaje de Modismos de Arriendo ("Para Tomar Ya"), Normalización de Presupuestos en Millones y Erradicación de Falsos Matches Venta vs Arriendo
+
+#### 1. BLINDAJE DOCTRINAL DE SEÑALES DE ARRIENDO
+- **Captura de Modismos Colombianos (`janIA.ts` & `matching.ts`)**: Se incluyeron formalmente expresiones coloquiales como `"para tomar ya"`, `"tomar ya"`, `"toma ya"`, `"para tomar de inmediato"`, `"toma inmediata"`, `"para tomar"`, `"en renta"`, `"para renta"`, `"en arriendo"`, asegurando que requerimientos como el #167 no caigan en el default de `venta`.
+- **Calibración Numérica en Parser Colombiano (`parseColombianPriceOrBudget`)**: Cifras completas con formato de miles (`3.800.000`, `2.900.000`) se preservan exactamente en pesos COP sin multiplicadores erróneos. En búsquedas de arriendo, valores taquigráficos $\le 100$ se escalan a millones de pesos ($3.8\text{M} \rightarrow \$3.800.000$).
+
+#### 2. SANEAMIENTO MASIVO Y PURGA EN SUPABASE
+- **Corrección de 96 Requerimientos**: Saneados registros de demandas de arriendo que tenían presupuestos inflados o estaban clasificadas como venta.
+- **Purga de Falsos Matches**: Eliminados definitivamente de `"propertyMatches"` los cruces inviables #11479 y #11480 (Inmuebles en Venta de $799M vs Demandas en Arriendo de $3.8M).
+
+---
+
 ### Versión v28.3 — Septiembre 2026: Prioridad Ground Truth del Texto en Detección de Barrios, Demandas Multi-Barrio y Erradicación de Falsos Matches por Nombres de Grupo
 
 #### 1. PRIORIDAD DOCTRINAL GROUND TRUTH DEL TEXTO ORIGINAL

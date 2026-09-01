@@ -496,25 +496,33 @@ function scoreRows(req: any, prop: any) {
   const propNeg = prop.transactionType || "";
 
   const normalizeNegocio = (val: string, raw: string): string => {
-    const combined = ((val || "") + " " + (raw || "")).toLowerCase();
-    if (combined.includes("arriendo con opci") || combined.includes("rent to own")) return "arriendo_con_opcion_de_compra";
+    const cleanRaw = (raw || "").toLowerCase();
+    const cleanVal = (val || "").toLowerCase().trim();
+    
+    if (cleanRaw.includes("arriendo con opci") || cleanRaw.includes("rent to own") || cleanVal.includes("arriendo_con_opcion_de_compra")) return "arriendo_con_opcion_de_compra";
     
     // Detección de proporciones porcentuales de permuta
-    if (combined.includes("50%") || combined.includes("50/50") || combined.includes("50 / 50") || combined.includes("mitad")) return "venta_permuta_50_50";
-    if (combined.includes("60%") || combined.includes("60/40") || combined.includes("60 / 40")) return "venta_permuta_60_40";
-    if (combined.includes("70%") || combined.includes("70/30") || combined.includes("70 / 30")) return "venta_permuta_70_30";
-    if (combined.includes("80%") || combined.includes("80/20") || combined.includes("80 / 20")) return "venta_permuta_80_20";
-    if (combined.includes("90%") || combined.includes("90/10") || combined.includes("90 / 10")) return "venta_permuta_90_10";
-    if (combined.includes("10%") || combined.includes("10/90") || combined.includes("10 / 90")) return "venta_permuta_10_90";
-    if (combined.includes("20%") || combined.includes("20/80") || combined.includes("20 / 80")) return "venta_permuta_20_80";
-    if (combined.includes("30%") || combined.includes("30/70") || combined.includes("30 / 70")) return "venta_permuta_30_70";
-    if (combined.includes("40%") || combined.includes("40/60") || combined.includes("40 / 60")) return "venta_permuta_40_60";
+    if (cleanRaw.includes("50%") || cleanRaw.includes("50/50") || cleanRaw.includes("50 / 50") || cleanRaw.includes("mitad")) return "venta_permuta_50_50";
+    if (cleanRaw.includes("60%") || cleanRaw.includes("60/40") || cleanRaw.includes("60 / 40")) return "venta_permuta_60_40";
+    if (cleanRaw.includes("70%") || cleanRaw.includes("70/30") || cleanRaw.includes("70 / 30")) return "venta_permuta_70_30";
+    if (cleanRaw.includes("80%") || cleanRaw.includes("80/20") || cleanRaw.includes("80 / 20")) return "venta_permuta_80_20";
+    if (cleanRaw.includes("90%") || cleanRaw.includes("90/10") || cleanRaw.includes("90 / 10")) return "venta_permuta_90_10";
+    if (cleanRaw.includes("10%") || cleanRaw.includes("10/90") || cleanRaw.includes("10 / 90")) return "venta_permuta_10_90";
+    if (cleanRaw.includes("20%") || cleanRaw.includes("20/80") || cleanRaw.includes("20 / 80")) return "venta_permuta_20_80";
+    if (cleanRaw.includes("30%") || cleanRaw.includes("30/70") || cleanRaw.includes("30 / 70")) return "venta_permuta_30_70";
+    if (cleanRaw.includes("40%") || cleanRaw.includes("40/60") || cleanRaw.includes("40 / 60")) return "venta_permuta_40_60";
 
-    if (combined.includes("venpermuto") || combined.includes("venta permuta") || combined.includes("venta-permuta") || combined.includes("recibe permuta") || combined.includes("recibo menor valor") || combined.includes("permuto") || combined.includes("permuta")) return "venta_permuta";
-    if (combined.includes("venta o arriendo") || combined.includes("vendo o arriendo") || combined.includes("venta/arriendo")) return "venta_o_arriendo";
-    if (combined.includes("arriendo") || combined.includes("renta") || combined.includes("alquiler")) return "arriendo";
-    if (combined.includes("venta") || combined.includes("vendo") || combined.includes("compra") || combined.includes("compro")) return "venta";
-    return (val || "").toLowerCase().trim();
+    if (cleanRaw.includes("venpermuto") || cleanRaw.includes("venta permuta") || cleanRaw.includes("venta-permuta") || cleanRaw.includes("recibe permuta") || cleanRaw.includes("recibo menor valor") || cleanRaw.includes("permuto") || cleanRaw.includes("permuta")) return "venta_permuta";
+    if (cleanRaw.includes("venta o arriendo") || cleanRaw.includes("vendo o arriendo") || cleanRaw.includes("venta/arriendo")) return "venta_o_arriendo";
+    
+    // Señales explícitas de arriendo en el texto original (Ground Truth del texto)
+    const isExplicitRentText = /\b(?:arriendo|arriendos|alquilo|alquilar|alquiler|en renta|para renta|renta|canon|para tomar ya|tomar ya|toma ya|para tomar de inmediato|toma inmediata|toma de inmediato|para tomar|para alquilar|para arrendar|en arriendo)\b/i.test(cleanRaw) && !cleanRaw.includes("para inversionista") && !cleanRaw.includes("para compra") && !cleanRaw.includes("compro");
+    if (isExplicitRentText) return "arriendo";
+
+    if (cleanVal.includes("arriendo") || cleanVal.includes("renta") || cleanVal.includes("alquiler")) return "arriendo";
+    if (cleanVal.includes("venta") || cleanVal.includes("vendo") || cleanVal.includes("compra") || cleanVal.includes("compro")) return "venta";
+    if (cleanRaw.includes("venta") || cleanRaw.includes("vendo") || cleanRaw.includes("compra") || cleanRaw.includes("compro")) return "venta";
+    return cleanVal;
   };
 
   const cleanReqBiz = normalizeNegocio(reqNeg, reqRawText);

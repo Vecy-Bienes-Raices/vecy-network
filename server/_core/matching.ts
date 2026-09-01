@@ -903,11 +903,11 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   // Tipo de Negocio obligatorio en ambos
   let propBizHard = property.transactionType || (property as any).transaction_type || "";
   let reqBizHard = requirement.tipoNegocioDeseado || requirement.transactionType || (requirement as any).transaction_type || "";
-  if (!propBizHard && property.rawText) {
+  if (property.rawText) {
     const fb = extractFallbackDataFromText(property.rawText);
     if (fb.transactionType) propBizHard = fb.transactionType;
   }
-  if (!reqBizHard && requirement.rawText) {
+  if (requirement.rawText) {
     const fb = extractFallbackDataFromText(requirement.rawText);
     if (fb.transactionType) reqBizHard = fb.transactionType;
   }
@@ -1203,8 +1203,16 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   }
 
   // ── FILTRO DURO 1: Tipo de Negocio (arriendo vs venta NUNCA coinciden) ──
-  const reqBiz = (requirement.tipoNegocioDeseado || requirement.transactionType || "").toLowerCase();
-  const propBiz = (property.transactionType || "").toLowerCase();
+  let reqBiz = (requirement.tipoNegocioDeseado || requirement.transactionType || "").toLowerCase();
+  let propBiz = (property.transactionType || "").toLowerCase();
+  if (property.rawText) {
+    const fb = extractFallbackDataFromText(property.rawText);
+    if (fb.transactionType) propBiz = fb.transactionType.toLowerCase();
+  }
+  if (requirement.rawText) {
+    const fb = extractFallbackDataFromText(requirement.rawText);
+    if (fb.transactionType) reqBiz = fb.transactionType.toLowerCase();
+  }
   const propAccepted: string[] = Array.isArray(property.acceptedTransactionTypes)
     ? (property.acceptedTransactionTypes as string[]).map((t: string) => t.toLowerCase())
     : [];
