@@ -664,10 +664,29 @@ export const janIARouter = router({
 
       const sanitizeNumeric = (val: any): string | null => {
         if (val === undefined || val === null) return null;
-        const s = String(val).trim();
+        let s = String(val).trim();
         if (!s || s === 'N/E' || /consultar|n\/e|na|n\/a|sin\s*restricci[oó]n|flexible/i.test(s)) return null;
-        const cleaned = s.replace(/[^0-9.]/g, '');
-        return cleaned && !isNaN(Number(cleaned)) ? cleaned : null;
+        s = s.replace(/[^0-9.,]/g, '');
+        if (!s) return null;
+        if (s.includes('.') && s.includes(',')) {
+          if (s.lastIndexOf('.') > s.lastIndexOf(',')) {
+            s = s.replace(/,/g, '');
+          } else {
+            s = s.replace(/\./g, '').replace(',', '.');
+          }
+        } else if (s.includes(',')) {
+          if (/,\d{3}(?:,|$)/.test(s)) s = s.replace(/,/g, '');
+          else s = s.replace(',', '.');
+        } else if (s.includes('.')) {
+          const dotCount = (s.match(/\./g) || []).length;
+          if (dotCount > 1) {
+            s = s.replace(/\./g, '');
+          } else if (/\.\d{3}$/.test(s)) {
+            s = s.replace('.', '');
+          }
+        }
+        const n = Number(s);
+        return !isNaN(n) && n >= 0 ? s : null;
       };
 
       const sanitizeInt = (val: any): number | null => {
@@ -726,23 +745,30 @@ export const janIARouter = router({
       await db.update(properties).set(updateData).where(eq(properties.id, input.propertyId));
       console.log(`[JanIA-UpdateProperty] Propiedad #${input.propertyId} actualizada directamente desde Mesa de Cotejo (incluyendo teléfono: ${input.idUsuarioWhatsapp || 'N/A'})`);
 
-      // Propagar en cascada a todas las demás publicaciones del mismo broker (pasadas y futuras)
-      if (input.idUsuarioWhatsapp || input.nombreUsuarioWhatsapp) {
-        try {
-          await propagateBrokerPhoneAcrossAllListings({
-            rawPhoneOrText: input.idUsuarioWhatsapp || existingProp?.idUsuarioWhatsapp || '',
-            brokerName: input.nombreUsuarioWhatsapp || existingProp?.nombreUsuarioWhatsapp,
-            oldPhoneOrLid: existingProp?.idUsuarioWhatsapp
-          });
-        } catch (propErr: any) {
+      // Propagar en cascada en segundo plano SOLO si teléfono o nombre cambiaron (0ms bloqueo para el usuario)
+      const phoneChanged = Boolean(input.idUsuarioWhatsapp && input.idUsuarioWhatsapp !== existingProp?.idUsuarioWhatsapp);
+      const nameChanged = Boolean(input.nombreUsuarioWhatsapp && input.nombreUsuarioWhatsapp !== existingProp?.nombreUsuarioWhatsapp);
+      if (phoneChanged || nameChanged) {
+        propagateBrokerPhoneAcrossAllListings({
+          rawPhoneOrText: input.idUsuarioWhatsapp || existingProp?.idUsuarioWhatsapp || '',
+          brokerName: input.nombreUsuarioWhatsapp || existingProp?.nombreUsuarioWhatsapp,
+          oldPhoneOrLid: existingProp?.idUsuarioWhatsapp
+        }).catch((propErr: any) => {
           console.warn(`[JanIA-UpdateProperty] Advertencia en propagación de teléfono:`, propErr?.message);
-        }
+        });
       }
 
-      // Invalidate in-memory matches cache for immediate fresh response
-      invalidateAdminMatchesCache();
+      // Actualizar en caliente el caché en memoria para refresco instantáneo sin congelar la app
+      if (Array.isArray(cachedAllMatchesData)) {
+        for (const m of cachedAllMatchesData) {
+          if (m.property?.id === input.propertyId) {
+            Object.assign(m.property, updateData);
+          }
+        }
+      }
+      cachedAllMatchesTime = Date.now();
 
-      return { success: true, message: "Propiedad actualizada y teléfono propagado con éxito" };
+      return { success: true, message: "Propiedad actualizada con éxito" };
     }),
 
   // Actualizar datos prediales de un requerimiento demanda directamente desde la Mesa de Cotejo
@@ -774,10 +800,29 @@ export const janIARouter = router({
 
       const sanitizeNumeric = (val: any): string | null => {
         if (val === undefined || val === null) return null;
-        const s = String(val).trim();
+        let s = String(val).trim();
         if (!s || s === 'N/E' || /consultar|n\/e|na|n\/a|sin\s*restricci[oó]n|flexible/i.test(s)) return null;
-        const cleaned = s.replace(/[^0-9.]/g, '');
-        return cleaned && !isNaN(Number(cleaned)) ? cleaned : null;
+        s = s.replace(/[^0-9.,]/g, '');
+        if (!s) return null;
+        if (s.includes('.') && s.includes(',')) {
+          if (s.lastIndexOf('.') > s.lastIndexOf(',')) {
+            s = s.replace(/,/g, '');
+          } else {
+            s = s.replace(/\./g, '').replace(',', '.');
+          }
+        } else if (s.includes(',')) {
+          if (/,\d{3}(?:,|$)/.test(s)) s = s.replace(/,/g, '');
+          else s = s.replace(',', '.');
+        } else if (s.includes('.')) {
+          const dotCount = (s.match(/\./g) || []).length;
+          if (dotCount > 1) {
+            s = s.replace(/\./g, '');
+          } else if (/\.\d{3}$/.test(s)) {
+            s = s.replace('.', '');
+          }
+        }
+        const n = Number(s);
+        return !isNaN(n) && n >= 0 ? s : null;
       };
 
       const sanitizeInt = (val: any): number | null => {
@@ -833,23 +878,30 @@ export const janIARouter = router({
       await db.update(requirements).set(updateData).where(eq(requirements.id, input.requirementId));
       console.log(`[JanIA-UpdateRequirement] Requerimiento #${input.requirementId} actualizado directamente desde Mesa de Cotejo (incluyendo teléfono: ${input.idUsuarioWhatsapp || 'N/A'})`);
 
-      // Propagar en cascada a todas las demás publicaciones del mismo broker (pasadas y futuras)
-      if (input.idUsuarioWhatsapp || input.nombreUsuarioWhatsapp) {
-        try {
-          await propagateBrokerPhoneAcrossAllListings({
-            rawPhoneOrText: input.idUsuarioWhatsapp || existingReq?.idUsuarioWhatsapp || '',
-            brokerName: input.nombreUsuarioWhatsapp || existingReq?.nombreUsuarioWhatsapp,
-            oldPhoneOrLid: existingReq?.idUsuarioWhatsapp
-          });
-        } catch (propErr: any) {
+      // Propagar en cascada en segundo plano SOLO si teléfono o nombre cambiaron (0ms bloqueo para el usuario)
+      const phoneChanged = Boolean(input.idUsuarioWhatsapp && input.idUsuarioWhatsapp !== existingReq?.idUsuarioWhatsapp);
+      const nameChanged = Boolean(input.nombreUsuarioWhatsapp && input.nombreUsuarioWhatsapp !== existingReq?.nombreUsuarioWhatsapp);
+      if (phoneChanged || nameChanged) {
+        propagateBrokerPhoneAcrossAllListings({
+          rawPhoneOrText: input.idUsuarioWhatsapp || existingReq?.idUsuarioWhatsapp || '',
+          brokerName: input.nombreUsuarioWhatsapp || existingReq?.nombreUsuarioWhatsapp,
+          oldPhoneOrLid: existingReq?.idUsuarioWhatsapp
+        }).catch((propErr: any) => {
           console.warn(`[JanIA-UpdateRequirement] Advertencia en propagación de teléfono:`, propErr?.message);
-        }
+        });
       }
 
-      // Invalidate in-memory matches cache for immediate fresh response
-      invalidateAdminMatchesCache();
+      // Actualizar en caliente el caché en memoria para refresco instantáneo sin congelar la app
+      if (Array.isArray(cachedAllMatchesData)) {
+        for (const m of cachedAllMatchesData) {
+          if (m.requirement?.id === input.requirementId) {
+            Object.assign(m.requirement, updateData);
+          }
+        }
+      }
+      cachedAllMatchesTime = Date.now();
 
-      return { success: true, message: "Requerimiento actualizado y teléfono propagado con éxito" };
+      return { success: true, message: "Requerimiento actualizado con éxito" };
     }),
 
   // Recalcular cruces y afinidad predial para Oferta y/o Demanda tras edición en Mesa de Cotejo

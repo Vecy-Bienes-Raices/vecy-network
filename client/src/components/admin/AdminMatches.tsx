@@ -2288,10 +2288,29 @@ export default function AdminMatches() {
 
   const cleanNumberForSave = (val: any): string | undefined => {
     if (val === undefined || val === null) return undefined;
-    const s = String(val).trim();
+    let s = String(val).trim();
     if (!s || s === 'N/E' || /consultar|n\/e|na|n\/a|sin\s*restricci[oó]n|flexible/i.test(s)) return undefined;
-    const cleaned = s.replace(/[^0-9.]/g, '');
-    return cleaned && !isNaN(Number(cleaned)) ? cleaned : undefined;
+    s = s.replace(/[^0-9.,]/g, '');
+    if (!s) return undefined;
+    if (s.includes('.') && s.includes(',')) {
+      if (s.lastIndexOf('.') > s.lastIndexOf(',')) {
+        s = s.replace(/,/g, '');
+      } else {
+        s = s.replace(/\./g, '').replace(',', '.');
+      }
+    } else if (s.includes(',')) {
+      if (/,\d{3}(?:,|$)/.test(s)) s = s.replace(/,/g, '');
+      else s = s.replace(',', '.');
+    } else if (s.includes('.')) {
+      const dotCount = (s.match(/\./g) || []).length;
+      if (dotCount > 1) {
+        s = s.replace(/\./g, '');
+      } else if (/\.\d{3}$/.test(s)) {
+        s = s.replace('.', '');
+      }
+    }
+    const n = Number(s);
+    return !isNaN(n) && n >= 0 ? s : undefined;
   };
 
   const cleanIntForSave = (val: any): number | undefined => {
@@ -2355,8 +2374,14 @@ export default function AdminMatches() {
         );
       }
 
-      // Guardado en paralelo ultrarrápido
-      await Promise.all(promises);
+      // Guardado en paralelo ultrarrápido con carrera protectora contra timeouts de red (máx 9s)
+      if (promises.length > 0) {
+        const savePromise = Promise.all(promises);
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error("Tiempo de espera de red agotado al guardar")), 9000)
+        );
+        await Promise.race([savePromise, timeoutPromise]);
+      }
 
       // Actualización optimista de memoria inmediata (0ms lag)
       if (m.property) {
@@ -2459,7 +2484,11 @@ export default function AdminMatches() {
       }
 
       if (savePromises.length > 0) {
-        await Promise.all(savePromises);
+        const p = Promise.all(savePromises);
+        const timeoutP = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Tiempo de espera de red agotado")), 9000)
+        );
+        await Promise.race([p, timeoutP]);
       }
 
       if (m.property?.id || m.requirement?.id) {

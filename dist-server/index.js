@@ -14515,7 +14515,6 @@ async function runNightlyRematch() {
     let updatedCount = 0;
     let skippedCount = 0;
     const seenPairs = /* @__PURE__ */ new Set();
-    const origLog = console.log;
     const CHUNK_SIZE = 50;
     for (let i = 0; i < enrichedReqs.length; i += CHUNK_SIZE) {
       const chunk = enrichedReqs.slice(i, i + CHUNK_SIZE);
@@ -14533,15 +14532,12 @@ async function runNightlyRematch() {
             continue;
           if (req.habitacionesMin && prop.bedrooms && Number(prop.bedrooms) < Number(req.habitacionesMin))
             continue;
-          console.log = () => {
-          };
           let exp;
           try {
             exp = explicarMatch(req, prop);
           } catch {
             exp = null;
           }
-          console.log = origLog;
           if (!exp || exp.score < 80 || exp.blockers.length > 0) {
             skippedCount++;
             continue;
@@ -14580,11 +14576,10 @@ async function runNightlyRematch() {
         100,
         Math.round((i + chunk.length) / enrichedReqs.length * 100)
       );
-      origLog(
+      console.log(
         `[NIGHTLY-REMATCH ${pct}%] Procesados ${i + chunk.length}/${enrichedReqs.length} reqs | Nuevos: ${insertedCount} | Actualizados: ${updatedCount}`
       );
     }
-    console.log = origLog;
     console.log(
       `[NIGHTLY-REMATCH] \u2705 Finalizado. Nuevos: ${insertedCount} | Actualizados: ${updatedCount} | Descartados: ${skippedCount}`
     );
@@ -14612,7 +14607,6 @@ async function recalculateAndCleanupMatches() {
     console.log(`[MATCH-CLEANUP] Encontrados ${allMatches.length} registros para evaluar.`);
     let deletedCount = 0;
     let updatedCount = 0;
-    const origLog = console.log;
     for (const m of allMatches) {
       const [prop] = await db.select().from(properties).where(eq6(properties.id, m.propertyId)).limit(1);
       const [req] = await db.select().from(requirements).where(eq6(requirements.id, m.requirementId)).limit(1);
@@ -14621,15 +14615,12 @@ async function recalculateAndCleanupMatches() {
         deletedCount++;
         continue;
       }
-      console.log = () => {
-      };
       let exp;
       try {
         exp = explicarMatch(req, prop);
       } catch {
         exp = null;
       }
-      console.log = origLog;
       const newScore = exp ? exp.score : 0;
       const hasBlockers = exp ? exp.blockers.length > 0 : true;
       if (newScore < 80 || hasBlockers) {
@@ -16310,10 +16301,29 @@ ${liveStats}${userContextInstruction}
     const existingProp = await db.select().from(properties).where(eq8(properties.id, input.propertyId)).limit(1).then((r) => r[0]);
     const sanitizeNumeric = (val) => {
       if (val === void 0 || val === null) return null;
-      const s = String(val).trim();
+      let s = String(val).trim();
       if (!s || s === "N/E" || /consultar|n\/e|na|n\/a|sin\s*restricci[oó]n|flexible/i.test(s)) return null;
-      const cleaned = s.replace(/[^0-9.]/g, "");
-      return cleaned && !isNaN(Number(cleaned)) ? cleaned : null;
+      s = s.replace(/[^0-9.,]/g, "");
+      if (!s) return null;
+      if (s.includes(".") && s.includes(",")) {
+        if (s.lastIndexOf(".") > s.lastIndexOf(",")) {
+          s = s.replace(/,/g, "");
+        } else {
+          s = s.replace(/\./g, "").replace(",", ".");
+        }
+      } else if (s.includes(",")) {
+        if (/,\d{3}(?:,|$)/.test(s)) s = s.replace(/,/g, "");
+        else s = s.replace(",", ".");
+      } else if (s.includes(".")) {
+        const dotCount = (s.match(/\./g) || []).length;
+        if (dotCount > 1) {
+          s = s.replace(/\./g, "");
+        } else if (/\.\d{3}$/.test(s)) {
+          s = s.replace(".", "");
+        }
+      }
+      const n = Number(s);
+      return !isNaN(n) && n >= 0 ? s : null;
     };
     const sanitizeInt = (val) => {
       if (val === void 0 || val === null) return null;
@@ -16367,19 +16377,26 @@ ${liveStats}${userContextInstruction}
     if (input.nombreUsuarioWhatsapp !== void 0) updateData.nombreUsuarioWhatsapp = input.nombreUsuarioWhatsapp;
     await db.update(properties).set(updateData).where(eq8(properties.id, input.propertyId));
     console.log(`[JanIA-UpdateProperty] Propiedad #${input.propertyId} actualizada directamente desde Mesa de Cotejo (incluyendo tel\xE9fono: ${input.idUsuarioWhatsapp || "N/A"})`);
-    if (input.idUsuarioWhatsapp || input.nombreUsuarioWhatsapp) {
-      try {
-        await propagateBrokerPhoneAcrossAllListings({
-          rawPhoneOrText: input.idUsuarioWhatsapp || existingProp?.idUsuarioWhatsapp || "",
-          brokerName: input.nombreUsuarioWhatsapp || existingProp?.nombreUsuarioWhatsapp,
-          oldPhoneOrLid: existingProp?.idUsuarioWhatsapp
-        });
-      } catch (propErr) {
+    const phoneChanged = Boolean(input.idUsuarioWhatsapp && input.idUsuarioWhatsapp !== existingProp?.idUsuarioWhatsapp);
+    const nameChanged = Boolean(input.nombreUsuarioWhatsapp && input.nombreUsuarioWhatsapp !== existingProp?.nombreUsuarioWhatsapp);
+    if (phoneChanged || nameChanged) {
+      propagateBrokerPhoneAcrossAllListings({
+        rawPhoneOrText: input.idUsuarioWhatsapp || existingProp?.idUsuarioWhatsapp || "",
+        brokerName: input.nombreUsuarioWhatsapp || existingProp?.nombreUsuarioWhatsapp,
+        oldPhoneOrLid: existingProp?.idUsuarioWhatsapp
+      }).catch((propErr) => {
         console.warn(`[JanIA-UpdateProperty] Advertencia en propagaci\xF3n de tel\xE9fono:`, propErr?.message);
+      });
+    }
+    if (Array.isArray(cachedAllMatchesData)) {
+      for (const m of cachedAllMatchesData) {
+        if (m.property?.id === input.propertyId) {
+          Object.assign(m.property, updateData);
+        }
       }
     }
-    invalidateAdminMatchesCache();
-    return { success: true, message: "Propiedad actualizada y tel\xE9fono propagado con \xE9xito" };
+    cachedAllMatchesTime = Date.now();
+    return { success: true, message: "Propiedad actualizada con \xE9xito" };
   }),
   // Actualizar datos prediales de un requerimiento demanda directamente desde la Mesa de Cotejo
   updateRequirementDetails: publicProcedure.input(z2.object({
@@ -16406,10 +16423,29 @@ ${liveStats}${userContextInstruction}
     const existingReq = await db.select().from(requirements).where(eq8(requirements.id, input.requirementId)).limit(1).then((r) => r[0]);
     const sanitizeNumeric = (val) => {
       if (val === void 0 || val === null) return null;
-      const s = String(val).trim();
+      let s = String(val).trim();
       if (!s || s === "N/E" || /consultar|n\/e|na|n\/a|sin\s*restricci[oó]n|flexible/i.test(s)) return null;
-      const cleaned = s.replace(/[^0-9.]/g, "");
-      return cleaned && !isNaN(Number(cleaned)) ? cleaned : null;
+      s = s.replace(/[^0-9.,]/g, "");
+      if (!s) return null;
+      if (s.includes(".") && s.includes(",")) {
+        if (s.lastIndexOf(".") > s.lastIndexOf(",")) {
+          s = s.replace(/,/g, "");
+        } else {
+          s = s.replace(/\./g, "").replace(",", ".");
+        }
+      } else if (s.includes(",")) {
+        if (/,\d{3}(?:,|$)/.test(s)) s = s.replace(/,/g, "");
+        else s = s.replace(",", ".");
+      } else if (s.includes(".")) {
+        const dotCount = (s.match(/\./g) || []).length;
+        if (dotCount > 1) {
+          s = s.replace(/\./g, "");
+        } else if (/\.\d{3}$/.test(s)) {
+          s = s.replace(".", "");
+        }
+      }
+      const n = Number(s);
+      return !isNaN(n) && n >= 0 ? s : null;
     };
     const sanitizeInt = (val) => {
       if (val === void 0 || val === null) return null;
@@ -16460,19 +16496,26 @@ ${liveStats}${userContextInstruction}
     if (input.nombreUsuarioWhatsapp !== void 0) updateData.nombreUsuarioWhatsapp = input.nombreUsuarioWhatsapp;
     await db.update(requirements).set(updateData).where(eq8(requirements.id, input.requirementId));
     console.log(`[JanIA-UpdateRequirement] Requerimiento #${input.requirementId} actualizado directamente desde Mesa de Cotejo (incluyendo tel\xE9fono: ${input.idUsuarioWhatsapp || "N/A"})`);
-    if (input.idUsuarioWhatsapp || input.nombreUsuarioWhatsapp) {
-      try {
-        await propagateBrokerPhoneAcrossAllListings({
-          rawPhoneOrText: input.idUsuarioWhatsapp || existingReq?.idUsuarioWhatsapp || "",
-          brokerName: input.nombreUsuarioWhatsapp || existingReq?.nombreUsuarioWhatsapp,
-          oldPhoneOrLid: existingReq?.idUsuarioWhatsapp
-        });
-      } catch (propErr) {
+    const phoneChanged = Boolean(input.idUsuarioWhatsapp && input.idUsuarioWhatsapp !== existingReq?.idUsuarioWhatsapp);
+    const nameChanged = Boolean(input.nombreUsuarioWhatsapp && input.nombreUsuarioWhatsapp !== existingReq?.nombreUsuarioWhatsapp);
+    if (phoneChanged || nameChanged) {
+      propagateBrokerPhoneAcrossAllListings({
+        rawPhoneOrText: input.idUsuarioWhatsapp || existingReq?.idUsuarioWhatsapp || "",
+        brokerName: input.nombreUsuarioWhatsapp || existingReq?.nombreUsuarioWhatsapp,
+        oldPhoneOrLid: existingReq?.idUsuarioWhatsapp
+      }).catch((propErr) => {
         console.warn(`[JanIA-UpdateRequirement] Advertencia en propagaci\xF3n de tel\xE9fono:`, propErr?.message);
+      });
+    }
+    if (Array.isArray(cachedAllMatchesData)) {
+      for (const m of cachedAllMatchesData) {
+        if (m.requirement?.id === input.requirementId) {
+          Object.assign(m.requirement, updateData);
+        }
       }
     }
-    invalidateAdminMatchesCache();
-    return { success: true, message: "Requerimiento actualizado y tel\xE9fono propagado con \xE9xito" };
+    cachedAllMatchesTime = Date.now();
+    return { success: true, message: "Requerimiento actualizado con \xE9xito" };
   }),
   // Recalcular cruces y afinidad predial para Oferta y/o Demanda tras edición en Mesa de Cotejo
   recalculateMatchForPair: publicProcedure.input(z2.object({

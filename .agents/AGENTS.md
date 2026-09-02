@@ -163,7 +163,20 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v29.5 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v29.6 — Septiembre 2026
+
+### Novedades v29.6 (Reparación Definitiva del Botón Guardar en Mesa de Coincidencias, Sanitización de Cifras Colombianas y Desacoplamiento Asíncrono):
+- **Reparación Definitiva del Botón Guardar (`AdminMatches.tsx` & `server/routers/janIA.ts`)**:
+  1) Desacoplamiento asíncrono en segundo plano (`.catch(...)` sin `await`) de la propagación en cascada de teléfonos y nombres de asesores (`propagateBrokerPhoneAcrossAllListings`). Las mutaciones `updatePropertyDetails` y `updateRequirementDetails` responden al navegador en **<100ms** sin retardo ni bloqueos de red (`504 Gateway Timeout`).
+  2) Condición inteligente de propagación: solo se ejecuta si el teléfono o el nombre del asesor cambiaron realmente respecto al registro previo en base de datos (`phoneChanged || nameChanged`).
+- **Sanitización Numérica Colombiana de Alta Fidelidad en Frontend y Backend**:
+  1) `cleanNumberForSave` y `sanitizeNumeric` soportan formalmente cifras colombianas con separadores de miles con puntos (`$850.000.000`, `$2.500.000`), comas y decimales de área (`85.5`), previniendo que se conviertan en `NaN` o valores nulos.
+- **Actualización Optimista en Memoria (0ms Lag)**:
+  1) Actualización en caliente de `cachedAllMatchesData` en memoria en el servidor, eliminando la invalidación destructiva de caché y el re-escaneo masivo de toda la base de datos al refrescar la vista.
+- **Protección Contra Congelamiento en Cliente**:
+  1) Incorporación de carrera protectora con `Promise.race` (timeout de 9 segundos) en `handleOnlySave` y `handleRecalculateMatch` para garantizar que el estado de carga (`isSavingOnly`) siempre se libere y el botón nunca quede congelado indefinidamente.
+- **Erradicación de Sobreescritura de Logs Globales**:
+  1) Eliminadas las asignaciones `console.log = () => {}` en `nightlyRematch.ts`, restaurando la visibilidad completa de logs del runtime.
 
 ### Novedades v29.5 (Motor Multimodal de Visión OCR para Flyers/Banners de Oferta y Demanda, Desglose Estructurado de Texto y Blindaje contra Fotos Ambientales Comunes):
 - **Motor Multimodal de Visión OCR para Flyers y Banners Comerciales**:

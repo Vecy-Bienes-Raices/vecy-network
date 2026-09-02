@@ -52,7 +52,45 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v29.4 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v29.6 — Septiembre 2026
+
+### 🗓️ Sesión: Miércoles 2 de Septiembre de 2026 — 15:15 a 15:30 (Hora Colombia UTC-5)
+**Versión**: `v29.6` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)
+
+#### 🎯 Objetivo y Logros de la Sesión:
+1. **Reparación Definitiva del Botón "Guardar" en la Mesa de Coincidencias (`AdminMatches.tsx`)**:
+   - **Diagnóstico de Causa Raíz**: Al hacer clic en "Guardar", el botón quedaba en estado de carga infinito (`isSavingOnly = true`) debido a que las mutaciones `updatePropertyDetails` y `updateRequirementDetails` ejecutaban de forma síncrona `await propagateBrokerPhoneAcrossAllListings(...)`. Esta función consultaba todas las propiedades y requerimientos de la base de datos y realizaba actualizaciones SQL individuales secuenciales, causando que la petición HTTP se congelara por más de 15 segundos y Vercel/Nginx respondieran con `504 Gateway Timeout`.
+   - **Desacoplamiento Asíncrono en Background**: Se eliminó el `await` bloqueante de la propagación en cascada de teléfonos y nombres de asesores, ejecutándola ahora en segundo plano con `.catch(...)`. La mutación responde al navegador en **<100ms** sin retardo.
+   - **Condición Inteligente de Propagación**: La propagación a otras publicaciones del mismo broker solo se dispara si el teléfono o el nombre del asesor cambiaron realmente respecto al registro existente en la base de datos (`phoneChanged || nameChanged`).
+2. **Sanitización Numérica Colombiana de Alta Fidelidad en Frontend y Backend**:
+   - Se actualizó tanto `cleanNumberForSave` en `client/src/components/admin/AdminMatches.tsx` como `sanitizeNumeric` en `server/routers/janIA.ts`.
+   - Soporte nativo para cifras colombianas con separadores de miles con puntos (ej: `$850.000.000`, `$2.500.000`), comas de miles/decimales, y valores decimales legítimos de área (ej: `85.5`), evitando que evaluaran `NaN` y se perdieran o convirtieran en nulos.
+3. **Actualización Optimista en Memoria (0ms Lag)**:
+   - Se actualiza en caliente el array `cachedAllMatchesData` en memoria en `server/routers/janIA.ts` al guardar, eliminando la invalidación destructiva de caché y evitando el re-escaneo masivo de toda la base de datos al refrescar la vista.
+4. **Protección Contra Congelamiento en Cliente con Timeout de Red**:
+   - En `AdminMatches.tsx` (`handleOnlySave` y `handleRecalculateMatch`), se incorporó una carrera protectora con `Promise.race` (timeout máximo de 9 segundos). Si por alguna razón de conectividad o red el servidor se demora, el botón libera el loader y emite advertencia al usuario, impidiendo que el botón quede bloqueado permanentemente.
+5. **Erradicación de la Sobreescritura Destructiva de `console.log`**:
+   - Se eliminaron las asignaciones globales `console.log = () => {}` en `server/jobs/nightlyRematch.ts`, preservando la visibilidad completa de logs en todo el runtime de Node.js.
+
+---
+
+## 🔖 HISTÓRICO DE VERSIONES PREVIAS
+
+### 🗓️ Sesión: Miércoles 2 de Septiembre de 2026 — 05:30 a 06:15 (Hora Colombia UTC-5)
+**Versión**: `v29.5` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)
+
+#### 🎯 Objetivo y Logros de la Sesión:
+1. **Motor Multimodal de Visión OCR para Flyers y Banners Comerciales**:
+   - Corrección del payload en Google Gemini REST API a `inlineData: { mimeType, data }` para procesamiento multimodal nativo de imágenes y PDFs.
+   - Extracción de datos estructurados (precio, área, alcobas, baños, garajes, administración, zona, ciudad, broker y teléfono) directamente desde la imagen tipográfica del flyer.
+   - Guardado automático del flyer original en Supabase Storage (`flyers/`) y persistencia en `property.images` y `enlaceOrigen`.
+   - Desglose técnico enriquecido en `rawText` combinando transcripción fiel del flyer y ficha tabular formateada (`buildFlyerBreakdownText`).
+2. **Blindaje y Descarte de Fotografías Ambientales Comunes**:
+   - Fotos directas de cámaras de salas, cocinas, baños o fachadas sin texto tipográfico se identifican con `isFlyerOrBanner: false` y se descartan como `CONSULTA_GENERAL` si vienen solas, sin guardarse en BD.
+3. **Blindaje de Despacho Multimedia a Canales de WhatsApp (`@newsletter`)**:
+   - Inyección de cabeceras de stanza XML (`type="media"`, `mediatype="image/video/audio/document"`) en `queuedSend`.
+
+---
 
 ### 🗓️ Sesión: Martes 1 de Septiembre de 2026 — 23:25 a 23:35 (Hora Colombia UTC-5)
 **Versión**: `v29.4` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)

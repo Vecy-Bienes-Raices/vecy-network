@@ -78,9 +78,6 @@ export async function runNightlyRematch() {
     let skippedCount = 0;
     const seenPairs = new Set<string>();
 
-    // Silenciar console.log durante explicarMatch
-    const origLog = console.log;
-
     const CHUNK_SIZE = 50;
     for (let i = 0; i < enrichedReqs.length; i += CHUNK_SIZE) {
       const chunk = enrichedReqs.slice(i, i + CHUNK_SIZE);
@@ -110,14 +107,12 @@ export async function runNightlyRematch() {
           )
             continue;
 
-          console.log = () => {};
           let exp: any;
           try {
             exp = explicarMatch(req, prop);
           } catch {
             exp = null;
           }
-          console.log = origLog;
 
           if (!exp || exp.score < 80 || exp.blockers.length > 0) {
             skippedCount++;
@@ -169,12 +164,11 @@ export async function runNightlyRematch() {
         100,
         Math.round(((i + chunk.length) / enrichedReqs.length) * 100)
       );
-      origLog(
+      console.log(
         `[NIGHTLY-REMATCH ${pct}%] Procesados ${i + chunk.length}/${enrichedReqs.length} reqs | Nuevos: ${insertedCount} | Actualizados: ${updatedCount}`
       );
     }
 
-    console.log = origLog;
     console.log(
       `[NIGHTLY-REMATCH] ✅ Finalizado. Nuevos: ${insertedCount} | Actualizados: ${updatedCount} | Descartados: ${skippedCount}`
     );
@@ -212,8 +206,6 @@ export async function recalculateAndCleanupMatches() {
     let deletedCount = 0;
     let updatedCount = 0;
 
-    const origLog = console.log;
-
     for (const m of allMatches) {
       const [prop] = await db
         .select()
@@ -232,14 +224,12 @@ export async function recalculateAndCleanupMatches() {
         continue;
       }
 
-      console.log = () => {};
       let exp: any;
       try {
         exp = explicarMatch(req, prop);
       } catch {
         exp = null;
       }
-      console.log = origLog;
 
       const newScore = exp ? exp.score : 0;
       const hasBlockers = exp ? exp.blockers.length > 0 : true;
