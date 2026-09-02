@@ -2194,6 +2194,36 @@ ightarrow$ número de celular para aplicarlas de forma automática a todas sus p
 
 ---
 
+### 📅 Sesión del 2 de Septiembre de 2026 — v29.5 (Motor Multimodal de Visión OCR para Flyers / Banners Comerciales, Extracción Estructurada de Fichas y Descarte Quirúrgico de Fotos Ambientales)
+
+**Fecha**: 2 de Septiembre de 2026  
+**Versión del Sistema**: `v29.5 — Ingesta Multimodal con Visión OCR de Flyers/Banners de Oferta y Demanda, Desglose Estructurado de Texto y Blindaje contra Fotos Ambientales Comunes`
+
+#### 📋 Requerimientos y Directivas Doctrinales de Eduardo A. Rivera:
+1. **Captura y Extracción Integral desde Flyers, Banners e Infografías de Oferta o Demanda**:
+   - Cuando un asesor publica un flyer comercial, afiche, banner o collage con información estructurada de venta, arriendo o búsqueda (precio, área, alcobas, baños, garajes, sector, teléfono de contacto), JanIA debe analizar la imagen con visión artificial (Gemini Vision OCR), extraer todos sus datos, almacenarla en Supabase Storage (`flyers/`), registrarla en la base de datos, desglosar el texto técnico completo en `rawText`, reaccionar con el emoji correspondiente en WhatsApp y ejecutar el motor de matching.
+2. **Descarte Quirúrgico de Fotos Ambientales Comunes (Sin Texto Sobreimpreso)**:
+   - Fotos sueltas de cámaras fotográficas (salas, cocinas, baños, fachadas, lámparas) que NO contienen texto comercial estructurado NO deben ser tratadas como flyers ni almacenadas en la casilla de flyers de la web, y si vienen solas sin texto, deben ser descartadas sin inventar datos ni emitir reacciones erróneas.
+3. **Despacho Multimodal a Canales de WhatsApp (`@newsletter`)**:
+   - Corrección de atributos de cabecera XML para mensajes multimedia (`type="media"`, `mediatype="image/video/audio"`) y unificación de generación de voz TTS centralizada para Grupo 2 y Canal Oficial.
+
+#### 🛠️ Soluciones e Implementaciones Técnicas:
+- **`server/_core/llm.ts`**:
+  - Corrección del payload de Google Gemini REST API v1beta a formato camelCase estándar: `inlineData: { mimeType, data }` (reemplazando `inline_data`), permitiendo el flujo nativo de visión multimodal OCR de imágenes y documentos PDF.
+- **`server/_core/janIA.ts`**:
+  - Inclusión de `isFlyerOrBanner: boolean` y `flyerVerbatimText: string` en el esquema JSON `janiaResultSchema` y en los metadatos de clasificación.
+  - Enriquecimiento del prompt contextual para análisis visual discriminativo: identificación precisa entre infografías/flyers/banners comerciales vs fotografías ambientales comunes.
+  - Actualización de `buildFlyerBreakdownText`: construcción de ficha técnica estructurada combinando la transcripción verbatim del flyer con la tabla tabular con viñetas.
+  - Almacenamiento condicional en `saveProperty` y `saveRequirement`: solo los verdaderos flyers/banners son subidos y registrados en `property.images` y `enlaceOrigen`.
+- **`server/_core/whatsapp-match.ts`**:
+  - Inyección de atributos de cabecera en `queuedSend` para canales de WhatsApp (`@newsletter`).
+  - Centralización de TTS en `sendVoiceToBuzonAndChannel`.
+- **Despliegue y Validación**:
+  - `npm run check` (0 errores TS).
+  - `npm run build` (Vite + esbuild exitosos).
+
+---
+
 ---
 
 ## 🛡️ PROTOCOLOS Y REGLAS DE TRABAJO INQUEBRANTABLES

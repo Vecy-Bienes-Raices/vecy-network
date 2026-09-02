@@ -163,7 +163,22 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v29.4 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v29.5 — Septiembre 2026
+
+### Novedades v29.5 (Motor Multimodal de Visión OCR para Flyers/Banners de Oferta y Demanda, Desglose Estructurado de Texto y Blindaje contra Fotos Ambientales Comunes):
+- **Motor Multimodal de Visión OCR para Flyers y Banners Comerciales**:
+  1) Corrección de payload Google Gemini REST API a `inlineData: { mimeType, data }` para procesamiento multimodal nativo de imágenes y PDFs.
+  2) Extracción integral de datos estructurados (precio, área, alcobas, baños, garajes, administración, zona, ciudad, broker y teléfono) directamente desde la imagen tipográfica del flyer (ofertas o demandas).
+  3) Guardado automático de la imagen original del flyer en Supabase Storage (`flyers/`) y persistencia en `property.images` y `enlaceOrigen`.
+  4) Desglose técnico enriquecido en `rawText` combinando transcripción fiel del flyer y ficha tabular formateada (`buildFlyerBreakdownText`).
+  5) Reacción automática nativa en WhatsApp (`👍`/`👌`/`🔀` para ofertas, `📝`/`✏️`/`🔄` para demandas) y disparo del motor de matching.
+- **Blindaje y Descarte Quirúrgico de Fotografías Ambientales Comunes**:
+  1) Fotos fotográficas directas de cámaras (salas, cocinas, baños, fachadas, lámparas) SIN texto tipográfico publicitario se identifican con `isFlyerOrBanner: false`.
+  2) Si vienen solas sin texto técnico, se descartan automáticamente como `CONSULTA_GENERAL` sin guardar en BD ni reaccionar.
+  3) Si acompañan a un mensaje de texto, el inmueble se guarda desde el texto pero la foto ambiental NO se registra como flyer publicitario en `property.images`.
+- **Blindaje de Despacho Multimedia a Canales de WhatsApp (`@newsletter`)**:
+  1) Inyección obligatoria de cabeceras de stanza XML (`type="media"`, `mediatype="image/video/audio/document"`) en `queuedSend`.
+  2) Generación TTS centralizada única para Grupo 2 y Canal Oficial en `sendVoiceToBuzonAndChannel`.
 
 ### Novedades v29.4 (Guard Doctrinal Rosales Alto vs Bajo, Macro-Sector "Las Santas", Homónimos Opuestos y Modal Pop-Up de Descarte):
 - **Guard Doctrinal v29.4 — Rosales Alto vs Rosales Bajo**:

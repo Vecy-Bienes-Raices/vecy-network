@@ -128,16 +128,16 @@ async function invokeGemini(
     if (idx === userMessages.length - 1 && m.role !== "assistant") {
       if (imageBuffer) {
         parts.push({
-          inline_data: {
-            mime_type: "image/jpeg",
+          inlineData: {
+            mimeType: "image/jpeg",
             data: imageBuffer
           }
         });
       }
       if (pdfBuffer) {
         parts.push({
-          inline_data: {
-            mime_type: pdfMimeType || "application/pdf",
+          inlineData: {
+            mimeType: pdfMimeType || "application/pdf",
             data: pdfBuffer
           }
         });

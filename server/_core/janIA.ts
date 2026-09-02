@@ -64,6 +64,8 @@ export type JanIAResult = {
   voiceResponse?: string;
   sendReputationHook?: boolean;
   inserted?: boolean;
+  isFlyerOrBanner?: boolean;
+  flyerVerbatimText?: string;
 };
 
 export const janiaResultSchema = {
@@ -90,6 +92,8 @@ export const janiaResultSchema = {
     reactionEmoji: { type: "STRING" },
     wantsVoice: { type: "BOOLEAN" },
     voiceResponse: { type: "STRING" },
+    isFlyerOrBanner: { type: "BOOLEAN" },
+    flyerVerbatimText: { type: "STRING" },
     missingFields: {
       type: "ARRAY",
       items: { type: "STRING" }
@@ -98,6 +102,8 @@ export const janiaResultSchema = {
       type: "OBJECT",
       properties: {
         title: { type: "STRING" },
+        isFlyerOrBanner: { type: "BOOLEAN" },
+        flyerVerbatimText: { type: "STRING" },
         gives: {
           type: "OBJECT",
           properties: {
@@ -364,10 +370,19 @@ export function hasRealEstateTextKeyword(cleanText: string): boolean {
 export function buildFlyerBreakdownText(extracted: any, fallbackText?: string): string {
   if (!extracted) return fallbackText || "";
   const parts: string[] = [];
-  if (extracted.title) parts.push(`📌 ${extracted.title}`);
-  if (extracted.description && extracted.description.trim() !== "" && !extracted.description.includes("[Publicación de Imagen")) {
+  
+  // 1. Encabezado o texto transcrito del flyer
+  if (fallbackText && fallbackText.trim() !== "" && !fallbackText.includes("[Publicación de Imagen")) {
+    parts.push(fallbackText.trim());
+  } else if (extracted.title) {
+    parts.push(`📌 ${extracted.title}`);
+  }
+
+  if (extracted.description && extracted.description.trim() !== "" && !extracted.description.includes("[Publicación de Imagen") && (!fallbackText || !fallbackText.includes(extracted.description.trim()))) {
     parts.push(extracted.description.trim());
   }
+
+  // 2. Ficha técnica estructurada
   const specs: string[] = [];
   const pVal = extracted.price || extracted.presupuestoMax;
   if (pVal && Number(pVal) > 0) {
@@ -402,11 +417,11 @@ export function buildFlyerBreakdownText(extracted: any, fallbackText?: string): 
     specs.push(`🏙️ Ciudad: ${city}`);
   }
   if (extracted.contactPhone || extracted.telefonoContacto) {
-    specs.push(`📞 Contacto: ${extracted.contactPhone || extracted.telefonoContacto}`);
+    specs.push(`📞 Contacto Broker: ${extracted.contactPhone || extracted.telefonoContacto}`);
   }
 
   if (specs.length > 0) {
-    parts.push(`📋 Ficha Técnica Extraída de Flyer / Imagen:\n• ` + specs.join('\n• '));
+    parts.push(`📋 Ficha Técnica Extraída de Flyer / Banner:\n• ` + specs.join('\n• '));
   }
 
   if (parts.length > 0) return parts.join('\n\n');
@@ -2659,7 +2674,18 @@ export async function processWhatsAppMessage(
       contextText += `\n[SISTEMA - NOTA DE VOZ]: El usuario te envió este mensaje como nota de voz (audio). Dado que te enviaron audio, es preferible y de alta importancia que respondas en audio ("wantsVoice": true) si tu respuesta es corta (saludos, confirmaciones, consultas breves, o respuestas de menos de 250 caracteres). **EXCEPCIÓN CRÍTICA**: Si el usuario te pide explícitamente que le respondas por audio, nota de voz o de viva voz por cualquier razón, debes omitir el límite de longitud y responder obligatoriamente por audio ("wantsVoice": true y colocar toda tu respuesta en "voiceResponse" de forma limpia), a menos que sea un contrato extenso o tabla de datos que no se pueda leer de manera natural. Si la respuesta requiere explicaciones largas, tablas o minutas/contratos y el usuario NO pidió expresamente que fuera audio, responde obligatoriamente por escrito ("wantsVoice": false).`;
     }
     if (scrapedData.length > 0) contextText += `\n[SISTEMA - DATOS SCRAPED]: ${JSON.stringify(scrapedData)}`;
-    if (imageBuffer) contextText += `\n[SISTEMA: IMAGEN DETECTADA. Analiza la imagen con visión OCR para extraer todos los datos del flyer o captura comercial.]`;
+    if (imageBuffer) {
+      contextText += `\n[SISTEMA - ANÁLISIS MULTIMODAL DE IMAGEN / FLYER / BANNER (OCR Y VISIÓN COMERCIAL)]:
+Se ha adjuntado una imagen. Analízala con visión artificial avanzada y determina:
+1. "isFlyerOrBanner":
+   - Asigna TRUE si la imagen es una infografía publicitaria, flyer comercial, banner, afiche o collage que contiene texto tipográfico impreso con especificaciones inmobiliarias de OFERTA (precio, área, alcobas, baños, garajes, sector, teléfono de contacto) o de DEMANDA (búsqueda de cliente, compro casa/apto, presupuesto, sectores solicitados).
+   - Asigna FALSE si es simplemente una FOTOGRAFÍA AMBIENTAL COMÚN (foto fotográfica de una sala, comedor, cocina, fachada, baño, lámpara, etc.) SIN texto publicitario estructurado.
+2. Si "isFlyerOrBanner" es TRUE:
+   - Transcribe TODO el texto literal y legible de la imagen en "flyerVerbatimText".
+   - Extrae todas las especificaciones numéricas y textuales en "extractedData" (precio, rentPrice, adminFee, area, bedrooms, bathrooms, garages, stratum, zone, city, contactPhone, propertyType, transactionType).
+   - Clasifica como "INMUEBLE" si describe una oferta de venta/arriendo, o como "REQUERIMIENTO" si describe una búsqueda o demanda de cliente comprador/arrendatario.
+3. Si "isFlyerOrBanner" es FALSE y el mensaje NO contiene una ficha técnica escrita por el usuario, clasifica como "CONSULTA_GENERAL" con "inserted": false.`;
+    }
     if (pdfBuffer) contextText += `\n[SISTEMA: DOCUMENTO PDF DETECTADO. Analiza el documento PDF adjunto con tus capacidades nativas para extraer todos los datos relevantes del predial, certificado de tradición, o contrato.]`;
 
     const statsSummary = await getLiveStats();
@@ -3266,14 +3292,16 @@ Por lo tanto, DEBES hacer lo siguiente:
       }
       const sourceUrl = (urls && urls.length > 0 ? urls[0] : undefined);
 
+      const isFlyerDetected = result.isFlyerOrBanner === true || extracted.isFlyerOrBanner === true;
+      const flyerVerbatim = result.flyerVerbatimText || extracted.flyerVerbatimText || "";
       const isImageOnlyProp = (!rawUserText || rawUserText.trim() === '' || rawUserText.includes('[Publicación de Imagen')) && !!imageBuffer;
       
-      // DOCTRINA v23.9: Si es solo una imagen sin texto y no tiene datos comerciales sobreimpresos (foto ambiental pura), DESCARTAR
+      // DOCTRINA v23.9: Si es solo una imagen sin texto del usuario
       if (isImageOnlyProp) {
         const hasPropSpecs = (Number(extracted.price || 0) > 0) || 
                              (Number(extracted.area || 0) > 0 && (Number(extracted.bedrooms || 0) > 0 || Number(extracted.garages || 0) > 0)) ||
                              (!!extracted.zone && Number(extracted.bedrooms || 0) > 0);
-        if (!hasPropSpecs) {
+        if (!hasPropSpecs && !isFlyerDetected) {
           console.log(`[JANIA-FILTER] ⛔ Descartando imagen fotográfica ambiental pura: no contiene ficha técnica ni datos comerciales legibles sobreimpresos.`);
           result.inserted = false;
           result.classification = "CONSULTA_GENERAL";
@@ -3281,8 +3309,12 @@ Por lo tanto, DEBES hacer lo siguiente:
         }
       }
 
-      const effectivePropRawText = isImageOnlyProp 
-        ? buildFlyerBreakdownText(extracted, rawUserText || text) 
+      // Solo guardamos imageBuffer en BD como flyer si realmente es un Flyer/Banner comercial
+      // Si fue una foto ambiental que acompañaba a un texto, no se sube como flyer
+      const flyerBufferToSave = (isImageOnlyProp || isFlyerDetected) ? imageBuffer : undefined;
+
+      const effectivePropRawText = (isImageOnlyProp || isFlyerDetected) 
+        ? (flyerVerbatim ? buildFlyerBreakdownText(extracted, flyerVerbatim) : buildFlyerBreakdownText(extracted, rawUserText || text)) 
         : (rawUserText || text);
 
       const saved = await saveProperty({
@@ -3299,7 +3331,7 @@ Por lo tanto, DEBES hacer lo siguiente:
         externalUrl,
         enlaceOrigen: sourceUrl,
         fechaExtraccion: new Date()
-      }, userId, realName, imageBuffer, pdfBuffer, pdfMimeType);
+      }, userId, realName, flyerBufferToSave, pdfBuffer, pdfMimeType);
       
       if (saved) {
         result.inserted = true;
@@ -3376,14 +3408,16 @@ Por lo tanto, DEBES hacer lo siguiente:
       const reqTitle = extracted.title || `Requerimiento de ${extracted.propertyType || 'inmueble'} en ${extracted.zonaDeseada || extracted.zone || 'Bogotá'} para ${extracted.transactionType || 'venta'}`;
       const sourceUrlReq = (urls && urls.length > 0 ? urls[0] : null);
 
+      const isFlyerDetectedReq = result.isFlyerOrBanner === true || extracted.isFlyerOrBanner === true;
+      const flyerVerbatimReq = result.flyerVerbatimText || extracted.flyerVerbatimText || "";
       const isImageOnlyReq = (!messageToProcess || messageToProcess.trim() === '' || messageToProcess.includes('[Publicación de Imagen')) && !!imageBuffer;
 
-      // DOCTRINA v23.9: Si es solo una imagen sin texto y no tiene datos comerciales sobreimpresos (foto ambiental pura), DESCARTAR
+      // DOCTRINA v23.9: Si es solo una imagen sin texto del usuario
       if (isImageOnlyReq) {
         const hasReqSpecs = (Number(extracted.presupuestoMax || extracted.price || 0) > 0) ||
                             (!!(extracted.zonaDeseada || extracted.zone) && (Number(extracted.bedrooms || 0) > 0 || Number(extracted.area || 0) > 0)) ||
                             (extracted.title && /compra|busco|requerimiento|solicitud|presupuesto/i.test(extracted.title));
-        if (!hasReqSpecs) {
+        if (!hasReqSpecs && !isFlyerDetectedReq) {
           console.log(`[JANIA-FILTER] ⛔ Descartando imagen fotográfica ambiental pura: no contiene criterios de requerimiento legibles sobreimpresos.`);
           result.inserted = false;
           result.classification = "CONSULTA_GENERAL";
@@ -3391,8 +3425,10 @@ Por lo tanto, DEBES hacer lo siguiente:
         }
       }
 
-      const effectiveReqRawText = isImageOnlyReq 
-        ? buildFlyerBreakdownText(extracted, messageToProcess) 
+      const flyerBufferToSaveReq = (isImageOnlyReq || isFlyerDetectedReq) ? imageBuffer : undefined;
+
+      const effectiveReqRawText = (isImageOnlyReq || isFlyerDetectedReq) 
+        ? (flyerVerbatimReq ? buildFlyerBreakdownText(extracted, flyerVerbatimReq) : buildFlyerBreakdownText(extracted, messageToProcess)) 
         : messageToProcess;
 
       const saved = await saveRequirement({
@@ -3410,7 +3446,7 @@ Por lo tanto, DEBES hacer lo siguiente:
         origenNombre,
         enlaceOrigen: sourceUrlReq,
         fechaExtraccion: new Date()
-      }, userId, realName, imageBuffer, pdfBuffer, pdfMimeType);
+      }, userId, realName, flyerBufferToSaveReq, pdfBuffer, pdfMimeType);
 
       if (saved) {
         result.inserted = true;

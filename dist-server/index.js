@@ -744,16 +744,16 @@ async function invokeGemini(messages2, responseFormat, customModel, imageBuffer,
     if (idx === userMessages.length - 1 && m.role !== "assistant") {
       if (imageBuffer) {
         parts.push({
-          inline_data: {
-            mime_type: "image/jpeg",
+          inlineData: {
+            mimeType: "image/jpeg",
             data: imageBuffer
           }
         });
       }
       if (pdfBuffer) {
         parts.push({
-          inline_data: {
-            mime_type: pdfMimeType || "application/pdf",
+          inlineData: {
+            mimeType: pdfMimeType || "application/pdf",
             data: pdfBuffer
           }
         });
@@ -7201,8 +7201,12 @@ function hasRealEstateTextKeyword(cleanText) {
 function buildFlyerBreakdownText(extracted, fallbackText) {
   if (!extracted) return fallbackText || "";
   const parts = [];
-  if (extracted.title) parts.push(`\u{1F4CC} ${extracted.title}`);
-  if (extracted.description && extracted.description.trim() !== "" && !extracted.description.includes("[Publicaci\xF3n de Imagen")) {
+  if (fallbackText && fallbackText.trim() !== "" && !fallbackText.includes("[Publicaci\xF3n de Imagen")) {
+    parts.push(fallbackText.trim());
+  } else if (extracted.title) {
+    parts.push(`\u{1F4CC} ${extracted.title}`);
+  }
+  if (extracted.description && extracted.description.trim() !== "" && !extracted.description.includes("[Publicaci\xF3n de Imagen") && (!fallbackText || !fallbackText.includes(extracted.description.trim()))) {
     parts.push(extracted.description.trim());
   }
   const specs = [];
@@ -7239,10 +7243,10 @@ function buildFlyerBreakdownText(extracted, fallbackText) {
     specs.push(`\u{1F3D9}\uFE0F Ciudad: ${city}`);
   }
   if (extracted.contactPhone || extracted.telefonoContacto) {
-    specs.push(`\u{1F4DE} Contacto: ${extracted.contactPhone || extracted.telefonoContacto}`);
+    specs.push(`\u{1F4DE} Contacto Broker: ${extracted.contactPhone || extracted.telefonoContacto}`);
   }
   if (specs.length > 0) {
-    parts.push(`\u{1F4CB} Ficha T\xE9cnica Extra\xEDda de Flyer / Imagen:
+    parts.push(`\u{1F4CB} Ficha T\xE9cnica Extra\xEDda de Flyer / Banner:
 \u2022 ` + specs.join("\n\u2022 "));
   }
   if (parts.length > 0) return parts.join("\n\n");
@@ -8926,8 +8930,19 @@ Por favor, hazme una consulta que est\xE9 relacionada con estos temas. \xA1Con g
     }
     if (scrapedData.length > 0) contextText += `
 [SISTEMA - DATOS SCRAPED]: ${JSON.stringify(scrapedData)}`;
-    if (imageBuffer) contextText += `
-[SISTEMA: IMAGEN DETECTADA. Analiza la imagen con visi\xF3n OCR para extraer todos los datos del flyer o captura comercial.]`;
+    if (imageBuffer) {
+      contextText += `
+[SISTEMA - AN\xC1LISIS MULTIMODAL DE IMAGEN / FLYER / BANNER (OCR Y VISI\xD3N COMERCIAL)]:
+Se ha adjuntado una imagen. Anal\xEDzala con visi\xF3n artificial avanzada y determina:
+1. "isFlyerOrBanner":
+   - Asigna TRUE si la imagen es una infograf\xEDa publicitaria, flyer comercial, banner, afiche o collage que contiene texto tipogr\xE1fico impreso con especificaciones inmobiliarias de OFERTA (precio, \xE1rea, alcobas, ba\xF1os, garajes, sector, tel\xE9fono de contacto) o de DEMANDA (b\xFAsqueda de cliente, compro casa/apto, presupuesto, sectores solicitados).
+   - Asigna FALSE si es simplemente una FOTOGRAF\xCDA AMBIENTAL COM\xDAN (foto fotogr\xE1fica de una sala, comedor, cocina, fachada, ba\xF1o, l\xE1mpara, etc.) SIN texto publicitario estructurado.
+2. Si "isFlyerOrBanner" es TRUE:
+   - Transcribe TODO el texto literal y legible de la imagen en "flyerVerbatimText".
+   - Extrae todas las especificaciones num\xE9ricas y textuales en "extractedData" (precio, rentPrice, adminFee, area, bedrooms, bathrooms, garages, stratum, zone, city, contactPhone, propertyType, transactionType).
+   - Clasifica como "INMUEBLE" si describe una oferta de venta/arriendo, o como "REQUERIMIENTO" si describe una b\xFAsqueda o demanda de cliente comprador/arrendatario.
+3. Si "isFlyerOrBanner" es FALSE y el mensaje NO contiene una ficha t\xE9cnica escrita por el usuario, clasifica como "CONSULTA_GENERAL" con "inserted": false.`;
+    }
     if (pdfBuffer) contextText += `
 [SISTEMA: DOCUMENTO PDF DETECTADO. Analiza el documento PDF adjunto con tus capacidades nativas para extraer todos los datos relevantes del predial, certificado de tradici\xF3n, o contrato.]`;
     const statsSummary = await getLiveStats();
@@ -9331,17 +9346,20 @@ ${liveStats}` : buildSystemPrompt(groupJid);
         }
       }
       const sourceUrl = urls && urls.length > 0 ? urls[0] : void 0;
+      const isFlyerDetected = result.isFlyerOrBanner === true || extracted.isFlyerOrBanner === true;
+      const flyerVerbatim = result.flyerVerbatimText || extracted.flyerVerbatimText || "";
       const isImageOnlyProp = (!rawUserText || rawUserText.trim() === "" || rawUserText.includes("[Publicaci\xF3n de Imagen")) && !!imageBuffer;
       if (isImageOnlyProp) {
         const hasPropSpecs = Number(extracted.price || 0) > 0 || Number(extracted.area || 0) > 0 && (Number(extracted.bedrooms || 0) > 0 || Number(extracted.garages || 0) > 0) || !!extracted.zone && Number(extracted.bedrooms || 0) > 0;
-        if (!hasPropSpecs) {
+        if (!hasPropSpecs && !isFlyerDetected) {
           console.log(`[JANIA-FILTER] \u26D4 Descartando imagen fotogr\xE1fica ambiental pura: no contiene ficha t\xE9cnica ni datos comerciales legibles sobreimpresos.`);
           result.inserted = false;
           result.classification = "CONSULTA_GENERAL";
           return result;
         }
       }
-      const effectivePropRawText = isImageOnlyProp ? buildFlyerBreakdownText(extracted, rawUserText || text2) : rawUserText || text2;
+      const flyerBufferToSave = isImageOnlyProp || isFlyerDetected ? imageBuffer : void 0;
+      const effectivePropRawText = isImageOnlyProp || isFlyerDetected ? flyerVerbatim ? buildFlyerBreakdownText(extracted, flyerVerbatim) : buildFlyerBreakdownText(extracted, rawUserText || text2) : rawUserText || text2;
       const saved = await saveProperty({
         ...extracted,
         name: propertyTitle,
@@ -9356,7 +9374,7 @@ ${liveStats}` : buildSystemPrompt(groupJid);
         externalUrl,
         enlaceOrigen: sourceUrl,
         fechaExtraccion: /* @__PURE__ */ new Date()
-      }, userId, realName, imageBuffer, pdfBuffer, pdfMimeType);
+      }, userId, realName, flyerBufferToSave, pdfBuffer, pdfMimeType);
       if (saved) {
         result.inserted = true;
         result.shouldSendDM = false;
@@ -9409,17 +9427,20 @@ ${liveStats}` : buildSystemPrompt(groupJid);
       }
       const reqTitle = extracted.title || `Requerimiento de ${extracted.propertyType || "inmueble"} en ${extracted.zonaDeseada || extracted.zone || "Bogot\xE1"} para ${extracted.transactionType || "venta"}`;
       const sourceUrlReq = urls && urls.length > 0 ? urls[0] : null;
+      const isFlyerDetectedReq = result.isFlyerOrBanner === true || extracted.isFlyerOrBanner === true;
+      const flyerVerbatimReq = result.flyerVerbatimText || extracted.flyerVerbatimText || "";
       const isImageOnlyReq = (!messageToProcess || messageToProcess.trim() === "" || messageToProcess.includes("[Publicaci\xF3n de Imagen")) && !!imageBuffer;
       if (isImageOnlyReq) {
         const hasReqSpecs = Number(extracted.presupuestoMax || extracted.price || 0) > 0 || !!(extracted.zonaDeseada || extracted.zone) && (Number(extracted.bedrooms || 0) > 0 || Number(extracted.area || 0) > 0) || extracted.title && /compra|busco|requerimiento|solicitud|presupuesto/i.test(extracted.title);
-        if (!hasReqSpecs) {
+        if (!hasReqSpecs && !isFlyerDetectedReq) {
           console.log(`[JANIA-FILTER] \u26D4 Descartando imagen fotogr\xE1fica ambiental pura: no contiene criterios de requerimiento legibles sobreimpresos.`);
           result.inserted = false;
           result.classification = "CONSULTA_GENERAL";
           return result;
         }
       }
-      const effectiveReqRawText = isImageOnlyReq ? buildFlyerBreakdownText(extracted, messageToProcess) : messageToProcess;
+      const flyerBufferToSaveReq = isImageOnlyReq || isFlyerDetectedReq ? imageBuffer : void 0;
+      const effectiveReqRawText = isImageOnlyReq || isFlyerDetectedReq ? flyerVerbatimReq ? buildFlyerBreakdownText(extracted, flyerVerbatimReq) : buildFlyerBreakdownText(extracted, messageToProcess) : messageToProcess;
       const saved = await saveRequirement({
         ...extracted,
         name: reqTitle,
@@ -9435,7 +9456,7 @@ ${liveStats}` : buildSystemPrompt(groupJid);
         origenNombre,
         enlaceOrigen: sourceUrlReq,
         fechaExtraccion: /* @__PURE__ */ new Date()
-      }, userId, realName, imageBuffer, pdfBuffer, pdfMimeType);
+      }, userId, realName, flyerBufferToSaveReq, pdfBuffer, pdfMimeType);
       if (saved) {
         result.inserted = true;
         result.shouldSendDM = false;
@@ -11417,6 +11438,8 @@ var init_janIA = __esm({
         reactionEmoji: { type: "STRING" },
         wantsVoice: { type: "BOOLEAN" },
         voiceResponse: { type: "STRING" },
+        isFlyerOrBanner: { type: "BOOLEAN" },
+        flyerVerbatimText: { type: "STRING" },
         missingFields: {
           type: "ARRAY",
           items: { type: "STRING" }
@@ -11425,6 +11448,8 @@ var init_janIA = __esm({
           type: "OBJECT",
           properties: {
             title: { type: "STRING" },
+            isFlyerOrBanner: { type: "BOOLEAN" },
+            flyerVerbatimText: { type: "STRING" },
             gives: {
               type: "OBJECT",
               properties: {
@@ -14037,24 +14062,40 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
                 };
               }
             }
+            const isNewsletter = targetJid.endsWith("@newsletter");
             const sendOptions = {};
             if (options.quoted) {
               sendOptions.quoted = options.quoted;
             }
-            if (messagePayload.text && typeof messagePayload.text === "string") {
-              try {
-                await this.sock.sendPresenceUpdate("composing", targetJid);
-                const typingDelay = Math.min(5e3, Math.max(2e3, messagePayload.text.length * 40));
-                await delay(typingDelay);
-              } catch (_) {
+            if (isNewsletter) {
+              if (messagePayload.image) {
+                sendOptions.additionalAttributes = { type: "media", mediatype: "image" };
+              } else if (messagePayload.video) {
+                sendOptions.additionalAttributes = { type: "media", mediatype: "video" };
+              } else if (messagePayload.audio) {
+                sendOptions.additionalAttributes = { type: "media", mediatype: "audio" };
+              } else if (messagePayload.document) {
+                sendOptions.additionalAttributes = { type: "media", mediatype: "document" };
               }
-            } else if (messagePayload.audio) {
-              try {
-                await this.sock.sendPresenceUpdate("recording", targetJid);
-                const recordingDelay = Math.min(1500, Math.max(300, (options.voiceLength || 2) * 200));
-                await delay(recordingDelay);
-              } catch (_) {
+            }
+            if (!isNewsletter) {
+              if (messagePayload.text && typeof messagePayload.text === "string") {
+                try {
+                  await this.sock.sendPresenceUpdate("composing", targetJid);
+                  const typingDelay = Math.min(5e3, Math.max(2e3, messagePayload.text.length * 40));
+                  await delay(typingDelay);
+                } catch (_) {
+                }
+              } else if (messagePayload.audio) {
+                try {
+                  await this.sock.sendPresenceUpdate("recording", targetJid);
+                  const recordingDelay = Math.min(1500, Math.max(300, (options.voiceLength || 2) * 200));
+                  await delay(recordingDelay);
+                } catch (_) {
+                }
               }
+            } else {
+              await delay(2e3);
             }
             const sent = await this.sock.sendMessage(targetJid, messagePayload, sendOptions);
             if (sent && sent.key && sent.key.id) {
@@ -14103,13 +14144,13 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
           } else {
             messagePayload = { text: text2 };
           }
-          if (mentions && mentions.length > 0) {
+          if (mentions && mentions.length > 0 && !targetJid.endsWith("@newsletter")) {
             messagePayload.mentions = mentions.map((m) => m.endsWith("@s.whatsapp.net") ? m : m.replace("@c.us", "@s.whatsapp.net"));
           }
           await this.queuedSend(targetJid, messagePayload);
-          console.log(`[JANIA-MATCH] \u2713 Mensaje enviado al grupo ${targetJid}.`);
+          console.log(`[JANIA-MATCH] \u2713 Mensaje enviado al destino ${targetJid}.`);
         } catch (e) {
-          console.error(`[JANIA-MATCH] Error enviando mensaje al grupo ${groupId || this.targetGroupId}:`, e.message || e);
+          console.error(`[JANIA-MATCH] Error enviando mensaje al destino ${groupId || this.targetGroupId}:`, e.message || e);
         }
       }
       async sendVoiceToGroup(text2, groupId, imagePath, captionText) {
@@ -14119,7 +14160,8 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
           if (targetJid.endsWith("@c.us")) {
             targetJid = targetJid.replace("@c.us", "@s.whatsapp.net");
           }
-          if (imagePath && fs7.existsSync(imagePath)) {
+          const fs12 = await import("fs");
+          if (imagePath && fs12.existsSync(imagePath)) {
             try {
               await this.sendToGroup(captionText || text2, imagePath, [], targetJid);
             } catch (imgErr) {
@@ -14146,7 +14188,7 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
             }
           }
         } catch (e) {
-          console.error("[JANIA-MATCH] Error enviando nota de voz al grupo:", e.message || e);
+          console.error("[JANIA-MATCH] Error enviando nota de voz al destino:", e.message || e);
         }
       }
       async sendVoiceToBuzonAndChannel(text2, imagePath, captionText) {
@@ -14154,12 +14196,52 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
           await this.discoverAndSyncNewsletters().catch(() => {
           });
         }
+        const { cleanVoiceText: cleanVoiceText2, textToSpeechMedia: textToSpeechMedia2 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
+        const cleaned = cleanVoiceText2(text2);
+        console.log(`[JANIA-MATCH] \u{1F399}\uFE0F Generando nota de voz TTS centralizada para Buz\xF3n y Canal...`);
+        const voiceMedia = await textToSpeechMedia2(cleaned);
+        const audioBuffer = voiceMedia && voiceMedia.data ? Buffer.from(voiceMedia.data, "base64") : null;
+        const audioMimetype = voiceMedia?.mimetype || "audio/ogg; codecs=opus";
+        const fs12 = await import("fs");
         if (this.buzonGroupId) {
-          await this.sendVoiceToGroup(text2, this.buzonGroupId, imagePath, captionText);
+          try {
+            console.log(`[JANIA-MATCH] \u{1F4E4} Despachando publicaci\xF3n a Grupo 2 (${this.buzonGroupId})...`);
+            if (imagePath && fs12.existsSync(imagePath)) {
+              await this.sendToGroup(captionText || text2, imagePath, [], this.buzonGroupId);
+            }
+            if (audioBuffer) {
+              await this.queuedSend(this.buzonGroupId, {
+                audio: audioBuffer,
+                mimetype: audioMimetype,
+                ptt: true
+              });
+              console.log(`[JANIA-MATCH] \u2713 Nota de voz enviada al Grupo 2 (${this.buzonGroupId}).`);
+            } else if (!imagePath) {
+              await this.queuedSend(this.buzonGroupId, cleaned);
+            }
+          } catch (grpErr) {
+            console.error(`[JANIA-MATCH] Error despachando a Grupo 2:`, grpErr?.message);
+          }
         }
         if (this.channelNewsletterId) {
-          console.log(`[JANIA-MATCH] \u{1F4E2} Despachando publicaci\xF3n tem\xE1tica al Canal de WhatsApp (${this.channelNewsletterId})...`);
-          await this.sendVoiceToGroup(text2, this.channelNewsletterId, imagePath, captionText);
+          try {
+            console.log(`[JANIA-MATCH] \u{1F4E2} Despachando publicaci\xF3n tem\xE1tica al Canal de WhatsApp (${this.channelNewsletterId})...`);
+            if (imagePath && fs12.existsSync(imagePath)) {
+              await this.sendToGroup(captionText || text2, imagePath, [], this.channelNewsletterId);
+            }
+            if (audioBuffer) {
+              await this.queuedSend(this.channelNewsletterId, {
+                audio: audioBuffer,
+                mimetype: audioMimetype,
+                ptt: true
+              });
+              console.log(`[JANIA-MATCH] \u2713 Nota de voz enviada al Canal de WhatsApp (${this.channelNewsletterId}).`);
+            } else if (!imagePath) {
+              await this.queuedSend(this.channelNewsletterId, cleaned);
+            }
+          } catch (chanErr) {
+            console.error(`[JANIA-MATCH] Error despachando a Canal de WhatsApp:`, chanErr?.message);
+          }
         } else {
           console.warn(`[JANIA-MATCH] \u26A0\uFE0F Canal de WhatsApp no configurado a\xFAn (channelNewsletterId vac\xEDo).`);
         }
