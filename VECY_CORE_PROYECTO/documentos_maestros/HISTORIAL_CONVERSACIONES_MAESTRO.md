@@ -2156,6 +2156,42 @@ ightarrow$ número de celular para aplicarlas de forma automática a todas sus p
 - **Filtro Duro Doctrinal v22.4**: Si `Oferta < Demanda` en Habitaciones, Baños, Garajes, Depósitos o Terrazas → **0% Match (Bloqueo Absoluto)**. Si `Oferta >= Demanda` → **100% Confort**.
 - **Reseed Geoespacial IDECA**: Carga y verificación de los 1,230 polígonos oficiales de Bogotá (Usaquén `01` a Sumapaz `20`).
 
+### 🗓️ Sesión: Miércoles 2 de Septiembre de 2026 — 05:00 AM a 10:30 AM (Hora Colombia UTC-5)
+**Versión del Sistema**: `v29.4 — Sistema Robusto de Copiado y Snippets Discriminativos para WhatsApp, Badges Interactivos 1-Click y Propagación en Cascada de Asesores`
+
+#### 📋 Requerimientos y Directivas Doctrinales de Eduardo A. Rivera:
+1. **Solución a Falla de Copiado y Pegado en Grupos de WhatsApp (Match #M11741 y Demás)**:
+   - Diagnóstico y resolución de la falla donde al copiar ofertas o demandas para buscar en los chats de WhatsApp no se encontraba el mensaje original.
+   - Implementación de un extractor inteligente discriminativo (`extractSmartSearchSnippet`) que extrae frases únicas (direcciones exactas, cruces de calles, cánones específicos o especificaciones singulares) en vez de títulos genéricos repetitivos como *"Arriendo apartamento"*.
+2. **Sistema Robusto de Copiado Portapapeles con Doble Capa**:
+   - `copyToClipboard` con soporte primario a la API `navigator.clipboard.writeText` y fallback transparente con elemento `<textarea>` temporal y `document.execCommand('copy')` para garantizar 100% de efectividad incluso sin foco en ventana.
+3. **Badges Interactivos de Grupo con Copiado Rápido (1-Click)**:
+   - El origen del grupo en las fichas de Oferta y Demanda (`📍 Nombre del Grupo`) es ahora un botón interactivo que copia con un solo clic el nombre exacto del chat de WhatsApp con toast contextual.
+4. **Fecha y Hora de Publicación Formateada**:
+   - Inclusión de badge `📅 Fecha` con hora colombiana en cabecera de fichas de inmuebles y requerimientos.
+5. **Propagación en Cascada de Asesores y Teléfonos**:
+   - Al editar y guardar el nombre o teléfono de un asesor en una tarjeta de match, el cambio se propaga y sincroniza automáticamente en todas las publicaciones históricas y futuras de dicho asesor en Supabase (`propagateBrokerPhoneAcrossAllListings`).
+6. **Reconciliación Masiva de Teléfonos y Asesores (`scripts/reconcile_all_brokers.ts`)**:
+   - Enriquecidos 126 teléfonos en ofertas, 89 en demandas, 152 ofertas vinculadas a asesores verificados y 34 demandas corregidas.
+7. **Corrección de Bug 500 / 504 en `getAllMatches`**:
+   - Resuelto el casteo de enum `matchStatus` a `TEXT` en la cláusula SQL WHERE en `server/routers/janIA.ts`.
+
+#### 🛠️ Soluciones e Implementaciones Técnicas:
+- **`client/src/components/admin/AdminMatches.tsx`**:
+  - `copyToClipboard` (doble capa asíncrono/síncrono).
+  - `extractSmartSearchSnippet` (direcciones, cánones exactos, metrajes con decimales).
+  - Badges interactivos `📍 Grupo 📋` con 1-click copy.
+  - Fechas formateadas en hora Colombia (`formatColombiaDate`).
+- **`server/_core/janIA.ts`**:
+  - `propagateBrokerPhoneAcrossAllListings` para propagación en cascada en Supabase.
+- **`server/routers/janIA.ts`**:
+  - Corrección de casteo de enum `matchStatus` a TEXT en `getAllMatches`.
+- **Despliegue y Validación**:
+  - `npm run check` (0 errores TS).
+  - `npm run build` (Vite + esbuild exitosos).
+  - Git push a `main` (`dc50453`).
+  - Deploy y PM2 reload ejecutados exitosamente en VPS (`13.140.149.144`).
+
 ---
 
 ---
