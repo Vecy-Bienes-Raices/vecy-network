@@ -52,7 +52,34 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v29.3 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v29.4 — Septiembre 2026
+
+### 🗓️ Sesión: Martes 1 de Septiembre de 2026 — 23:25 a 23:35 (Hora Colombia UTC-5)
+**Versión**: `v29.4` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)
+
+#### 🎯 Objetivo y Logros de la Sesión:
+1. **Guard Doctrinal v29.4 Rosales Alto vs Rosales Bajo**:
+   - Rosales Bajo (sector plano/caminable entre Cra 7 y Cra 5 / Circunvalar) es estrictamente incompatible con Rosales Alto (ladera oriental / cerros arriba de la Circunvalar) cuando uno de los dos es solicitado explícitamente (`Bloqueo 0%`).
+2. **Taxonomía Doctrinal del Macro-Sector "Las Santas" (Usaquén)**:
+   - Implementado el soporte integral para búsquedas taquigráficas de agentes (*"Busco en Las Santas"*), que engloba canónicamente:
+     - Las 4 Santa Bárbaras: `Santa Bárbara Alta`, `Santa Bárbara Oriental`, `Santa Bárbara Central`, `Santa Bárbara Occidental`.
+     - Las 2 Santa Anas: `Santa Ana Oriental` (alta/cerros) y `Santa Ana Occidental`.
+     - `Santa Paula` y `Santa Bibiana`.
+     - `San Patricio` (circuito contiguo Calles 106-116).
+3. **Guardián de Homónimos Opuestos (Norte vs Sur / Alta vs Baja / Centro vs Sur)**:
+   - `Ciudad Jardín Norte` (Suba/Usaquén) ↔ `Ciudad Jardín Sur` (San Cristóbal/Antonio Nariño): Incompatibilidad Absoluta (0%).
+   - `Álamos Norte` (Engativá) ↔ `Álamos Sur` / `Álamos`: Incompatibilidad Absoluta (0%).
+   - `La Candelaria Centro` (Centro Histórico) ↔ `Candelaria la Nueva` / `Candelaria Sur` (Ciudad Bolívar): Incompatibilidad Absoluta (0%).
+   - `La Calleja Alta` ↔ `La Calleja Baja`: Incompatibilidad cuando se especifica altura/sector.
+4. **Modal Pop-Up Centrado de Descarte en Mesa de Coincidencias (`AdminMatches.tsx`)**:
+   - Modal Pop-up flotante con `backdrop-blur` centrado en pantalla para descartar matches no deseados manualmente por el usuario.
+   - Resumen visual comparativo de Oferta vs Demanda, catálogo exhaustivo de motivos de descarte, remoción reactiva instantánea e invalidación automática de caché en backend (`server/routers/janIA.ts`).
+5. **Auditoría Exhaustiva y Población Certificada en Supabase (`master_audit_and_match.ts`)**:
+   - Evaluadas +1.047.000 combinaciones con los nuevos guards doctrinales y persistencia certificada en Supabase.
+
+---
+
+## 🔖 HISTÓRICO DE VERSIONES PREVIAS
 
 ### 🗓️ Sesión: Martes 1 de Septiembre de 2026 — 19:15 a 19:30 (Hora Colombia UTC-5)
 **Versión**: `v29.3` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)

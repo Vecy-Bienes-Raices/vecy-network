@@ -620,12 +620,16 @@ function scoreRows(req: any, prop: any) {
     "bella suiza", "el contador", "la carolina", "mazurén", "mazuren", "country club", "antiguo country", "nuevo country", "usaquén", "usaquen", "multicentro",
     "north point", "san cristóbal norte", "san cristobal norte",
     "alameda 170", "alameda norte", "la alameda", "barrio alameda", "alameda", "san antonio noroccidental", "san antonio norte", "alcalá", "alcala", "belmira", "portales del norte", "san cipriano", "toberín", "toberin", "villa magdala",
-    "los rosales", "rosales", "la cabrera", "el nogal", "nogal", "el virrey", "el retiro", "el lago", "quinta camacho", "chapinero alto", "chapinero central", "chapinero",
+    "los rosales alto", "rosales alto", "los rosales bajo", "rosales bajo", "los rosales", "rosales",
+    "la cabrera", "el nogal", "nogal", "el virrey", "el retiro", "el lago", "quinta camacho", "chapinero alto", "chapinero central", "chapinero",
     "la castellana", "castellana", "polo club", "polo", "san felipe",
     "colina campestre", "colina", "san josé de bavaria", "san jose de bavaria", "carmel club", "alejandría", "alejandria", "cantalejo", "sotavento", "victoria norte", "britalia norte", "niza norte", "niza", "la alhambra", "alhambra", "pasadena", "batán", "batan", "el batán", "el batan", "prado veraniego", "pontevedra", "morato", "la floresta", "floresta", "suba",
     "ciudad salitre", "salitre", "hayuelos", "modelia", "fontibón", "fontibon", "teusaquillo", "la soledad", "palermo", "quinta paredes", "la esmeralda", "nicolás de federmann", "nicolas de federmann",
+    "ciudad jardín norte", "ciudad jardin norte", "ciudad jardín sur", "ciudad jardin sur", "ciudad jardín", "ciudad jardin",
+    "álamos norte", "alamos norte", "álamos sur", "alamos sur", "álamos", "alamos",
+    "la candelaria centro", "candelaria centro", "candelaria la nueva", "candelaria sur", "la candelaria", "candelaria",
     "el poblado", "poblado", "laureles", "envigado", "sabaneta", "belén", "belen", "estadio", "conquistadores", "granada", "el peñón", "el peñon",
-    "juanambú", "juanambu", "ciudad jardín", "ciudad jardin", "san fernando", "valle del lili", "el prado", "alto prado", "riomar", "villa santos", "buenavista", "cabecera", "cañaveral", "canaveral", "ruitoque", "sotomayor"
+    "juanambú", "juanambu", "san fernando", "valle del lili", "el prado", "alto prado", "riomar", "villa santos", "buenavista", "cabecera", "cañaveral", "canaveral", "ruitoque", "sotomayor"
   ];
   KNOWN_BARRIOS_CANONICAL.sort((a, b) => b.length - a.length);
 
@@ -672,6 +676,17 @@ function scoreRows(req: any, prop: any) {
     if (!rn || !pn) return false;
     if (rn === pn) return true;
 
+    // Macro-Sector Doctrinal: "Las Santas" (Usaquén)
+    const isSantasReq = rn === "las santas" || rn === "santas" || rn === "sector de las santas" || rn === "zona santas" || rn === "santas de usaquen";
+    if (isSantasReq) {
+      const santasBarrios = [
+        "santa barbara", "santa barbara alta", "santa barbara oriental", "santa barbara central", "santa barbara occidental", "santa barbara norte",
+        "santa ana", "santa ana oriental", "santa ana occidental", "santa ana alta", "santa ana central",
+        "santa paula", "santa bibiana", "san patricio", "navarra", "chico navarra", "molinos norte", "usaquen", "multicentro"
+      ];
+      return santasBarrios.some(sb => pn.includes(sb) || sb.includes(pn));
+    }
+
     // REGLA DOCTRINAL v28.9: Todos los Chicó (Norte, Reservado, Rincón) = CHAPINERO.
     // La única excepción: Navarra / Chicó Navarra = USAQUÉN.
     // Bloqueo: Navarra (Usaquén) vs cualquier Chicó (Chapinero) = incompatible.
@@ -684,6 +699,43 @@ function scoreRows(req: any, prop: any) {
       return false;
     }
 
+    // REGLA DOCTRINAL v29.4: Rosales Alto vs Rosales Bajo
+    // Rosales Bajo = Sector plano / caminable (entre Cra 7 y Cra 5 / Circunvalar).
+    // Rosales Alto = Sector de montaña / ladera oriental (arriba de la Circunvalar).
+    const isRosalesAltoReq = rn.includes("rosales alto") || rn.includes("rosales parte alta") || rn.includes("rosales arriba");
+    const isRosalesBajoReq = rn.includes("rosales bajo") || rn.includes("rosales parte baja") || rn.includes("rosales abajo") || rn.includes("rosales plano");
+    const isRosalesAltoProp = pn.includes("rosales alto") || pn.includes("rosales parte alta") || pn.includes("rosales arriba");
+    const isRosalesBajoProp = pn.includes("rosales bajo") || pn.includes("rosales parte baja") || pn.includes("rosales abajo") || pn.includes("rosales plano");
+
+    if ((isRosalesBajoReq && isRosalesAltoProp) || (isRosalesAltoReq && isRosalesBajoProp)) {
+      return false;
+    }
+
+    // REGLA DOCTRINAL v29.4: Homónimos de Extremos Opuestos
+    const isCjNorteReq = rn.includes("ciudad jardin norte") || rn.includes("ciudad jardin (norte)");
+    const isCjSurReq = rn.includes("ciudad jardin sur") || rn.includes("ciudad jardin (sur)");
+    const isCjNorteProp = pn.includes("ciudad jardin norte") || pn.includes("ciudad jardin (norte)");
+    const isCjSurProp = pn.includes("ciudad jardin sur") || pn.includes("ciudad jardin (sur)");
+    if ((isCjNorteReq && isCjSurProp) || (isCjSurReq && isCjNorteProp)) return false;
+
+    const isAlamosNorteReq = rn.includes("alamos norte") || rn.includes("álamos norte");
+    const isAlamosSurReq = rn.includes("alamos sur") || rn.includes("álamos sur");
+    const isAlamosNorteProp = pn.includes("alamos norte") || pn.includes("álamos norte");
+    const isAlamosSurProp = pn.includes("alamos sur") || pn.includes("álamos sur");
+    if ((isAlamosNorteReq && isAlamosSurProp) || (isAlamosSurReq && isAlamosNorteProp)) return false;
+
+    const isCandelariaCentroReq = rn.includes("candelaria centro") || (rn.includes("candelaria") && !rn.includes("nueva") && !rn.includes("sur"));
+    const isCandelariaSurReq = rn.includes("candelaria la nueva") || rn.includes("candelaria sur");
+    const isCandelariaCentroProp = pn.includes("candelaria centro") || (pn.includes("candelaria") && !pn.includes("nueva") && !pn.includes("sur"));
+    const isCandelariaSurProp = pn.includes("candelaria la nueva") || pn.includes("candelaria sur");
+    if ((isCandelariaCentroReq && isCandelariaSurProp) || (isCandelariaSurReq && isCandelariaCentroProp)) return false;
+
+    const isCallejaAltaReq = rn.includes("calleja alta") || rn.includes("la calleja alta");
+    const isCallejaBajaReq = rn.includes("calleja baja") || rn.includes("la calleja baja");
+    const isCallejaAltaProp = pn.includes("calleja alta") || pn.includes("la calleja alta");
+    const isCallejaBajaProp = pn.includes("calleja baja") || pn.includes("la calleja baja");
+    if ((isCallejaAltaReq && isCallejaBajaProp) || (isCallejaBajaReq && isCallejaAltaProp)) return false;
+
     const isAlamedaReq = rn.includes("alameda");
     const isAlamedaProp = pn.includes("alameda");
     if (isAlamedaReq !== isAlamedaProp) return false;
@@ -694,12 +746,28 @@ function scoreRows(req: any, prop: any) {
     return (rn.includes(pn) || pn.includes(rn)) && !SUB_CALIFICADORES.some(q => rn.includes(q) !== pn.includes(q));
   };
 
-  const inferLocalityFromBarrio = (bName: string | null | undefined): string => {
+  const inferLocalityFromBarrio = (bName: string | null | undefined, fullText?: string): string => {
     if (!bName || isGenericZone(bName)) return "N/E";
     const norm = bName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-    // Única excepción del grupo Chicó que es Usaquén:
+    const textNorm = (fullText || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+    // Rincón del Chicó: Distinción Doctrinal IDECA (Calle 100 como frontera catastral)
+    // Al norte de la Calle 100 (Calles 100 a 106) => Sector catastral oficial IDECA "Rincón del Chicó (Usaquén)"
+    // Al sur de la Calle 100 (Calles 88 a 100) => "Rincón del Chicó (Chapinero)"
+    if (norm.includes("rincon del chico") || norm.includes("rincón del chicó")) {
+      const streetMatch = textNorm.match(/(?:calle|cll|cl|c\/)\s*#?\s*(\d{1,3})\b/i);
+      if (streetMatch) {
+        const sNum = parseInt(streetMatch[1], 10);
+        if (sNum >= 100) return "Usaquén";
+        if (sNum > 0 && sNum < 100) return "Chapinero";
+      }
+      if (textNorm.includes("usaquen") || textNorm.includes("usaquén")) return "Usaquén";
+      if (textNorm.includes("chapinero")) return "Chapinero";
+    }
+
+    // Única excepción clásica del grupo Chicó que es Usaquén siempre:
     if (norm.includes("chico navarra") || norm.includes("navarra")) return "Usaquén";
-    // TODOS los demás Chicó (Norte, Reservado, Rincón, base) + clásicos Chapinero:
+    // TODOS los demás Chicó tradicionales (Norte, Reservado, base) + clásicos Chapinero:
     if (norm.includes("rosales") || norm.includes("chico") || norm.includes("nogal") || norm.includes("cabrera") || norm.includes("virrey") || norm.includes("quinta camacho") || norm.includes("chapinero")) return "Chapinero";
     // Barrios Usaquén (Calles 100-127 oriente Autopista Norte + norte de la ciudad):
     if (norm.includes("alameda") || norm.includes("san antonio") || norm.includes("cedritos") ||
@@ -752,8 +820,8 @@ function scoreRows(req: any, prop: any) {
     ? matchedReqBarrio 
     : (reqTrueBarriosList.length > 0 ? (reqTrueBarriosList.length > 2 ? `${reqTrueBarriosList.slice(0, 2).join(", ")} (+${reqTrueBarriosList.length - 2})` : reqTrueBarriosList.join(", ")) : "Flexible / Bogotá");
 
-  const reqLocalityDisplay = (req.addressLocality && req.addressLocality !== "N/E") ? req.addressLocality : inferLocalityFromBarrio(matchedReqBarrio || reqBarriosInText[0] || req.zonaDeseada);
-  const propLocalityDisplay = (prop.addressLocality && prop.addressLocality !== "N/E") ? prop.addressLocality : inferLocalityFromBarrio(propTrueBarrio);
+  const reqLocalityDisplay = (req.addressLocality && req.addressLocality !== "N/E") ? req.addressLocality : inferLocalityFromBarrio(matchedReqBarrio || reqBarriosInText[0] || req.zonaDeseada, req.rawText || req.name);
+  const propLocalityDisplay = (prop.addressLocality && prop.addressLocality !== "N/E") ? prop.addressLocality : inferLocalityFromBarrio(propTrueBarrio, prop.rawText || prop.description || prop.name);
 
   const reqTrueCity = extractTrueCityFromText(req.rawText || req.name, req.addressCity || req.ciudadDeseada || "Bogotá");
   const propTrueCity = extractTrueCityFromText(prop.rawText || prop.name, prop.addressCity || prop.city || "Bogotá");
@@ -1036,6 +1104,19 @@ function scoreRows(req: any, prop: any) {
 
   // 5. Cuota de Administración
   let reqAdminMax = parseSafePrice(req.adminFeeMax, req.rawText);
+  if (reqAdminMax <= 0 && reqTextLower) {
+    const admReqMatch = reqTextLower.match(/(?:adm|admon|administraci[oó]n|admin|cta\s*admon)\s*(?:m[aá]xima|max|hasta|tope|no\s*mayor\s*a|no\s*superior\s*a|l[ií]mite|menor\s*a)?\s*:?\s*(?:aprox\.?)?\s*\$?\s*([\d.]+)(?:\s*mil\b|\s*k\b|\s*millones\b)?/i);
+    if (admReqMatch) {
+      const rawNumStr = admReqMatch[1].replace(/\./g, '');
+      let rawANum = parseFloat(rawNumStr);
+      if (!isNaN(rawANum)) {
+        if (rawANum >= 500 && rawANum <= 15000) rawANum = rawANum * 1000;
+        if (rawANum >= 50_000 && rawANum <= 30_000_000 && !isPhoneNumberNotPrice(rawANum, req.rawText)) {
+          reqAdminMax = rawANum;
+        }
+      }
+    }
+  }
   let propAdminFee = 0;
   const isPropAdminIncluded = propTextLower.includes("incluida la administraci") || propTextLower.includes("incluida administraci") || propTextLower.includes("admon incluida") || propTextLower.includes("administracion incluida") || propTextLower.includes("con admon") || propTextLower.includes("con administración");
 
@@ -1990,6 +2071,7 @@ export default function AdminMatches() {
   const [editForm, setEditForm] = React.useState<Record<string, any>>({});
   const [copiedId, setCopiedId] = React.useState<string | null>(null);
   const [feedbackStatusMap, setFeedbackStatusMap] = React.useState<Record<number, 'exitoso' | 'rechazado' | 'en_negociacion'>>({});
+  const [dismissedMatchIds, setDismissedMatchIds] = React.useState<Set<number>>(new Set());
   const [saveStatusMap, setSaveStatusMap] = React.useState<Record<number, 'saved' | 'recalculated'>>({});
 
   const handleCopy = (text: string, id: string, asSearchSnippet = false) => {
@@ -2044,6 +2126,13 @@ export default function AdminMatches() {
   const handleFeedback = async (m: any, action: 'exitoso' | 'rechazado' | 'en_negociacion', reason?: string, note?: string) => {
     try {
       setFeedbackStatusMap(prev => ({ ...prev, [m.id]: action }));
+      if (action === 'rechazado') {
+        setDismissedMatchIds(prev => new Set([...Array.from(prev), m.id]));
+        toast.success("⛔ Coincidencia descartada", {
+          description: reason ? `Motivo: ${reason}` : "La coincidencia ha sido retirada del panel.",
+        });
+      }
+
       await recordFeedbackMut.mutateAsync({
         matchId: m.id,
         propertyId: m.property?.id,
@@ -2053,10 +2142,11 @@ export default function AdminMatches() {
         notasBroker: note || null,
       });
 
+      utils.janIA.getAllMatches.invalidate();
       if (action === 'rechazado') {
         setTimeout(() => {
           refetch();
-        }, 1200);
+        }, 800);
       }
     } catch (e: any) {
       console.error("Error registrando retroalimentación:", e);
@@ -2065,6 +2155,12 @@ export default function AdminMatches() {
         delete next[m.id];
         return next;
       });
+      setDismissedMatchIds(prev => {
+        const next = new Set(prev);
+        next.delete(m.id);
+        return next;
+      });
+      toast.error("Error al descartar la coincidencia");
     }
   };
 
@@ -2373,6 +2469,7 @@ export default function AdminMatches() {
 
     for (const match of (matches as any[])) {
       if (!match || !match.id || !match.property || !match.requirement) continue;
+      if (dismissedMatchIds.has(match.id) || feedbackStatusMap[match.id] === 'rechazado' || match.status === 'rejected' || match.status === 'rechazado') continue;
 
       const property = match.property;
       const requirement = match.requirement;
@@ -4211,91 +4308,127 @@ export default function AdminMatches() {
 
       {/* MODAL DE DESCARTE CON MOTIVO (FEEDBACK Y APRENDIZAJE JANIA) */}
       {rejectModalMatch && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[99999] bg-black/85 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 overflow-y-auto animate-in fade-in duration-200">
           <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4"
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+            className="bg-[#121212] border border-rose-500/30 rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-[0_0_50px_rgba(244,63,94,0.25)] space-y-4 my-auto relative"
           >
-            <div className="flex items-center justify-between pb-3 border-b border-white/5">
-              <div className="flex items-center gap-2 text-rose-400 font-bold text-base">
-                <ThumbsDown className="w-5 h-5" />
-                <span>Descartar Coincidencia Comercial</span>
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <div className="flex items-center gap-2.5 text-rose-400 font-extrabold text-base">
+                <div className="p-2 bg-rose-500/10 border border-rose-500/30 rounded-xl">
+                  <ThumbsDown className="w-5 h-5 text-rose-400" />
+                </div>
+                <div>
+                  <span className="block text-sm sm:text-base text-white font-bold">Descartar Coincidencia Comercial</span>
+                  <span className="text-[11px] font-mono text-rose-400 font-medium">JanIA Active Feedback Loop</span>
+                </div>
               </div>
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <button 
+                type="button"
                 onClick={() => { setRejectModalMatch(null); setRejectReason(''); setCustomRejectNote(''); }}
-                className="text-zinc-400 hover:text-white"
+                className="w-8 h-8 rounded-full bg-zinc-800/80 hover:bg-zinc-700 text-zinc-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
               >
                 ✕
-              </Button>
+              </button>
             </div>
 
-            <p className="text-xs text-zinc-300 leading-relaxed">
-              Selecciona el motivo por el cual este inmueble no encajó con el requerimiento. JanIA registrará este aprendizaje en su memoria para no sugerir emparejamientos similares en el futuro:
+            {/* Ficha Resumen de la Coincidencia a Descartar */}
+            <div className="p-3 rounded-xl bg-black/60 border border-white/5 space-y-1.5 text-xs">
+              <div className="flex items-center justify-between text-zinc-400 font-mono text-[11px]">
+                <span className="text-emerald-400 font-bold">🏢 Oferta #{rejectModalMatch.property?.id || '—'}</span>
+                <span className="text-zinc-500">↔</span>
+                <span className="text-amber-400 font-bold">🔍 Demanda #{rejectModalMatch.requirement?.id || '—'}</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-[11px]">
+                <div className="bg-zinc-900/60 p-2 rounded-lg border border-white/5 truncate">
+                  <div className="text-zinc-400 font-semibold truncate">{rejectModalMatch.property?.name || 'Inmueble'}</div>
+                  <div className="text-emerald-300 text-[10px] truncate">📍 {rejectModalMatch.property?.zone || rejectModalMatch.property?.addressNeighborhood || 'Bogotá'}</div>
+                </div>
+                <div className="bg-zinc-900/60 p-2 rounded-lg border border-white/5 truncate">
+                  <div className="text-zinc-400 font-semibold truncate">{rejectModalMatch.requirement?.name || rejectModalMatch.requirement?.nombreUsuarioWhatsapp || 'Requerimiento'}</div>
+                  <div className="text-amber-300 text-[10px] truncate">📍 {rejectModalMatch.requirement?.zonaDeseada || rejectModalMatch.requirement?.addressNeighborhood || 'Bogotá'}</div>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-xs text-zinc-300 leading-relaxed font-medium">
+              Selecciona el motivo puntual por el cual este inmueble no encaja. JanIA registrará este aprendizaje doctrinal para no sugerir este emparejamiento:
             </p>
 
-            <div className="space-y-2">
+            {/* Lista de Motivos Doctrinales */}
+            <div className="space-y-2 max-h-[42vh] overflow-y-auto pr-1">
               {[
-                "Cliente no quiere primer piso / exige piso alto",
-                "Inmueble muy oscuro / sin asoleación ni luz",
-                "Cuota de administración muy alta",
-                "Exige garaje independiente / oferta es lineal",
-                "No le gustó la ubicación / zona ruidosa",
-                "Inmueble ya se vendió / no disponible",
-                "Otro motivo"
-              ].map((reason) => (
+                { label: "Zona o micro-sector incompatible (ej: Rosales Alto vs Rosales Bajo, Chicó Norte vs Chicó Navarra)", icon: "📍" },
+                { label: "Cuota de administración muy alta / supera límite del comprador", icon: "💰" },
+                { label: "Piso no deseado (cliente no quiere 1er piso / exige piso alto)", icon: "🏢" },
+                { label: "Inmueble muy oscuro / sin asoleación ni luz natural", icon: "☀️" },
+                { label: "Incompatibilidad de garajes (exige independiente y oferta es lineal)", icon: "🚗" },
+                { label: "Distribución o metraje no se ajusta al requerimiento", icon: "📐" },
+                { label: "Ubicación no deseada / zona ruidosa / sobre vía principal", icon: "🔇" },
+                { label: "Inmueble ya se vendió / arrendó / no disponible", icon: "🔒" },
+                { label: "Otro motivo (especificar a continuación)", icon: "✍️" }
+              ].map(({ label, icon }) => (
                 <label 
-                  key={reason}
-                  onClick={() => setRejectReason(reason)}
-                  className={`flex items-center gap-2.5 p-3 rounded-xl border text-xs cursor-pointer transition-all ${
-                    rejectReason === reason 
-                      ? 'bg-rose-500/10 border-rose-500/50 text-rose-200' 
-                      : 'bg-zinc-950/40 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-zinc-300'
+                  key={label}
+                  onClick={() => setRejectReason(label)}
+                  className={`flex items-start gap-2.5 p-2.5 sm:p-3 rounded-xl border text-xs cursor-pointer transition-all ${
+                    rejectReason === label 
+                      ? 'bg-rose-500/15 border-rose-500 text-rose-200 shadow-[0_0_15px_rgba(244,63,94,0.3)]' 
+                      : 'bg-zinc-950/60 border-zinc-800/80 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200'
                   }`}
                 >
                   <input 
                     type="radio" 
                     name="rejectReason" 
-                    checked={rejectReason === reason} 
-                    onChange={() => setRejectReason(reason)} 
-                    className="accent-rose-500"
+                    checked={rejectReason === label} 
+                    onChange={() => setRejectReason(label)} 
+                    className="accent-rose-500 mt-0.5 shrink-0"
                   />
-                  <span>{reason}</span>
+                  <span className="leading-snug">
+                    <span className="mr-1.5">{icon}</span>
+                    {label}
+                  </span>
                 </label>
               ))}
             </div>
 
-            {rejectReason === "Otro motivo" && (
-              <Input
-                placeholder="Escribe el motivo puntual para que JanIA lo aprenda..."
-                value={customRejectNote}
-                onChange={(e) => setCustomRejectNote(e.target.value)}
-                className="bg-black/50 border-zinc-700 text-xs text-zinc-200"
-              />
+            {(rejectReason.includes("Otro motivo") || rejectReason !== "") && (
+              <div className="pt-1">
+                <Input
+                  placeholder="Nota adicional u observación para el aprendizaje de JanIA (opcional)..."
+                  value={customRejectNote}
+                  onChange={(e) => setCustomRejectNote(e.target.value)}
+                  className="bg-black/60 border-zinc-700 text-xs text-zinc-200 placeholder:text-zinc-500 focus:border-rose-500 h-9"
+                />
+              </div>
             )}
 
-            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-white/5">
+            {/* Acciones */}
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-white/10">
               <Button
                 variant="outline"
+                type="button"
                 onClick={() => { setRejectModalMatch(null); setRejectReason(''); setCustomRejectNote(''); }}
-                className="border-zinc-700 text-zinc-400 hover:bg-zinc-800 text-xs h-9"
+                className="border-zinc-700 text-zinc-400 hover:bg-zinc-800 hover:text-white text-xs h-9 px-4 cursor-pointer"
               >
                 Cancelar
               </Button>
               <Button
                 disabled={!rejectReason || recordFeedbackMut.isPending}
+                type="button"
                 onClick={() => {
-                  const finalReason = rejectReason === "Otro motivo" ? customRejectNote : rejectReason;
+                  const finalReason = rejectReason.includes("Otro motivo") && customRejectNote ? customRejectNote : rejectReason;
                   handleFeedback(rejectModalMatch, 'rechazado', finalReason, customRejectNote);
                   setRejectModalMatch(null);
                   setRejectReason('');
                   setCustomRejectNote('');
                 }}
-                className="bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs h-9 px-4 flex items-center gap-1.5"
+                className="bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white font-extrabold text-xs h-9 px-5 flex items-center gap-2 shadow-lg shadow-rose-900/40 cursor-pointer disabled:opacity-40"
               >
-                {recordFeedbackMut.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                {recordFeedbackMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ThumbsDown className="w-4 h-4" />}
                 Confirmar Descarte
               </Button>
             </div>

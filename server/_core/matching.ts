@@ -355,13 +355,53 @@ export function parsePropertyAddressNumbers(text: string): PropertyAddressNumber
   return res;
 }
 
+export const KNOWN_BARRIOS_CANONICAL = [
+  "santa bárbara occidental", "santa barbara occidental", "santa bárbara oriental", "santa barbara oriental",
+  "santa bárbara central", "santa barbara central", "santa bárbara alta", "santa barbara alta",
+  "santa bárbara norte", "santa barbara norte", "santa bárbara", "santa barbara",
+  "santa ana occidental", "santa ana oriental", "santa ana central", "santa ana alta", "santa ana",
+  "chico reservado norte", "chico reservado", "chico norte iii", "chico norte ii", "chico norte", "rincón del chicó", "rincon del chico", "chico navarra", "el chicó", "chico",
+  "cedritos", "los cedros", "santa paula", "santa bibiana", "santa teresa", "san patricio", "navarra", "molinos norte", "la calleja", "calleja baja", "calleja alta",
+  "bella suiza", "el contador", "la carolina", "mazurén", "mazuren", "country club", "antiguo country", "nuevo country", "usaquén", "usaquen", "multicentro",
+  "north point", "san cristóbal norte", "san cristobal norte",
+  "alameda 170", "alameda norte", "la alameda", "barrio alameda", "alameda", "san antonio noroccidental", "san antonio norte", "alcalá", "alcala", "belmira", "portales del norte", "san cipriano", "toberín", "toberin", "villa magdala",
+  "los rosales alto", "rosales alto", "los rosales bajo", "rosales bajo", "los rosales", "rosales",
+  "la cabrera", "el nogal", "nogal", "el virrey", "el retiro", "el lago", "quinta camacho", "chapinero alto", "chapinero central", "chapinero",
+  "la castellana", "castellana", "polo club", "polo", "san felipe",
+  "colina campestre", "colina", "san josé de bavaria", "san jose de bavaria", "carmel club", "alejandría", "alejandria", "cantalejo", "sotavento", "victoria norte", "britalia norte", "niza norte", "niza", "la alhambra", "alhambra", "pasadena", "batán", "batan", "el batán", "el batan", "prado veraniego", "pontevedra", "morato", "la floresta", "floresta", "suba",
+  "ciudad salitre", "salitre", "hayuelos", "modelia", "fontibón", "fontibon", "teusaquillo", "la soledad", "palermo", "quinta paredes", "la esmeralda", "nicolás de federmann", "nicolas de federmann",
+  "ciudad jardín norte", "ciudad jardin norte", "ciudad jardín sur", "ciudad jardin sur", "ciudad jardín", "ciudad jardin",
+  "álamos norte", "alamos norte", "álamos sur", "alamos sur", "álamos", "alamos",
+  "la candelaria centro", "candelaria centro", "candelaria la nueva", "candelaria sur", "la candelaria", "candelaria",
+  "el poblado", "poblado", "laureles", "envigado", "sabaneta", "belén", "belen", "estadio", "conquistadores", "granada", "el peñón", "el peñon",
+  "juanambú", "juanambu", "san fernando", "valle del lili", "el prado", "alto prado", "riomar", "villa santos", "buenavista", "cabecera", "cañaveral", "canaveral", "ruitoque", "sotomayor"
+];
+KNOWN_BARRIOS_CANONICAL.sort((a, b) => b.length - a.length);
+
+export function extractAllBarriosFromText(text: string): string[] {
+  if (!text) return [];
+  let norm = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const found: string[] = [];
+  for (const b of KNOWN_BARRIOS_CANONICAL) {
+    const bNorm = b.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const reg = new RegExp(`\\b${bNorm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, "i");
+    if (reg.test(norm)) {
+      found.push(b.charAt(0).toUpperCase() + b.slice(1));
+      norm = norm.replace(reg, " ");
+    }
+  }
+  return found;
+}
+
 export function matchesGeography(
   reqZoneRaw: string,
   propZoneRaw: string,
   reqLocRaw: string,
   propLocRaw: string,
   reqCityRaw: string,
-  propCityRaw: string
+  propCityRaw: string,
+  reqFullText?: string,
+  propFullText?: string
 ): { matches: boolean; score: number } {
   const reqCity = normalizarTextoGeografico(reqCityRaw || "");
   const propCity = normalizarTextoGeografico(propCityRaw || "");
@@ -388,8 +428,8 @@ export function matchesGeography(
   }
 
   // 1.3 Delimitación de Perímetro Vial (Calles y Carreras - Bounding Box Guard)
-  const reqBoundaries = parseStreetCarreraBoundaries(`${reqZoneRaw} ${reqLocRaw}`);
-  const propNumbers = parsePropertyAddressNumbers(propZoneRaw);
+  const reqBoundaries = parseStreetCarreraBoundaries(`${reqZoneRaw} ${reqLocRaw} ${reqFullText || ""}`);
+  const propNumbers = parsePropertyAddressNumbers(`${propZoneRaw} ${propFullText || ""}`);
 
   if (propNumbers.street && reqBoundaries.minStreet && reqBoundaries.maxStreet) {
     if (propNumbers.street < reqBoundaries.minStreet || propNumbers.street > reqBoundaries.maxStreet) {
@@ -409,8 +449,8 @@ export function matchesGeography(
   }
 
   // 1.4 Guard de Sabana Norte Campestre vs Bogotá Urbano DENSIDAD (Regla Doctrinal v21.20)
-  const reqFullNorm = normalizarTextoGeografico(`${reqZoneRaw} ${reqLocRaw} ${reqCityRaw}`);
-  const propFullNorm = normalizarTextoGeografico(`${propZoneRaw} ${propLocRaw} ${propCityRaw}`);
+  const reqFullNorm = normalizarTextoGeografico(`${reqZoneRaw} ${reqLocRaw} ${reqCityRaw} ${reqFullText || ""}`);
+  const propFullNorm = normalizarTextoGeografico(`${propZoneRaw} ${propLocRaw} ${propCityRaw} ${propFullText || ""}`);
 
   const sabanaSuburbanSectors = [
     "san simon", "guaymaral", "hacienda fontanar", "fontanar", "fagua", "potosi",
@@ -441,16 +481,79 @@ export function matchesGeography(
     }
   }
 
-  // 1.46 Guard Doctrinal v28.9: Todos los Chicó (El Chicó, Chicó Norte, Chicó Reservado, Rincón del Chicó) son CHAPINERO.
-  // La Única excepción: "Navarra" / "Chicó Navarra" → USAQUÉN.
-  // Bloqueo absoluto: Navarra (Usaquén) vs cualquier Chicó (Chapinero) = 0% inviable.
-  const isChicoNavarraReq = reqFullNorm.includes("chico navarra") || reqFullNorm.includes("navarra");
-  const isChicoNavarraProp = propFullNorm.includes("chico navarra") || propFullNorm.includes("navarra");
+  // 1.46 Guard Doctrinal v28.9 / v29.4: Familias Chicó y Delimitación Catastral IDECA de Rincón del Chicó
+  // - Chicó Tradicional (El Chicó, Chicó Norte, Chicó Reservado) = CHAPINERO.
+  // - Chicó Navarra / Navarra = USAQUÉN.
+  // - Rincón del Chicó: 
+  //     * Con Calle >= 100 o 'Usaquén' = USAQUÉN (Sector catastral oficial IDECA al norte de Calle 100).
+  //     * Con Calle < 100 o 'Chapinero' = CHAPINERO (Sector tradicional al sur de Calle 100).
+  const isRinconChicoReq = reqFullNorm.includes("rincon del chico") || reqFullNorm.includes("rincón del chicó");
+  const isRinconChicoProp = propFullNorm.includes("rincon del chico") || propFullNorm.includes("rincón del chicó");
+  
+  const reqStreetNum = parsePropertyAddressNumbers(reqFullText || reqZoneRaw || "").street;
+  const propStreetNum = parsePropertyAddressNumbers(propFullText || propZoneRaw || "").street;
+  
+  const isRinconUsaquenReq = isRinconChicoReq && (reqFullNorm.includes("usaquen") || (reqStreetNum !== undefined && reqStreetNum >= 100));
+  const isRinconUsaquenProp = isRinconChicoProp && (propFullNorm.includes("usaquen") || (propStreetNum !== undefined && propStreetNum >= 100));
+  
+  const isChicoNavarraReq = reqFullNorm.includes("chico navarra") || reqFullNorm.includes("navarra") || isRinconUsaquenReq;
+  const isChicoNavarraProp = propFullNorm.includes("chico navarra") || propFullNorm.includes("navarra") || isRinconUsaquenProp;
   const isChicoTradicionalReq = (reqFullNorm.includes("chico") || reqFullNorm.includes("chicó")) && !isChicoNavarraReq;
   const isChicoTradicionalProp = (propFullNorm.includes("chico") || propFullNorm.includes("chicó")) && !isChicoNavarraProp;
 
   if ((isChicoNavarraReq && isChicoTradicionalProp) || (isChicoTradicionalReq && isChicoNavarraProp)) {
-    console.log(`[Matching-Guard] Bloqueo 0%: Navarra/Chicó Navarra (Usaquén) vs Chicó (Chapinero) ('${reqZoneRaw}' ↔ '${propZoneRaw}')`);
+    console.log(`[Matching-Guard] Bloqueo 0%: Chicó Usaquén (Navarra / Rincón del Chicó Cll >= 100) vs Chicó Chapinero ('${reqZoneRaw}' ↔ '${propZoneRaw}')`);
+    return { matches: false, score: 0 };
+  }
+
+  // 1.47 Guard Doctrinal v29.4: Rosales Alto vs Rosales Bajo
+  // Rosales Bajo = Sector plano / caminable (entre Cra 7 y Circunvalar / Cra 5).
+  // Rosales Alto = Sector de montaña / ladera oriental (arriba de la Circunvalar).
+  // Bloqueo absoluto cuando una parte exige explícitamente Alto o Bajo y la otra es lo opuesto.
+  const isRosalesAltoReq = reqFullNorm.includes("rosales alto") || reqFullNorm.includes("rosales parte alta") || reqFullNorm.includes("rosales arriba");
+  const isRosalesBajoReq = reqFullNorm.includes("rosales bajo") || reqFullNorm.includes("rosales parte baja") || reqFullNorm.includes("rosales abajo") || reqFullNorm.includes("rosales plano");
+  const isRosalesAltoProp = propFullNorm.includes("rosales alto") || propFullNorm.includes("rosales parte alta") || propFullNorm.includes("rosales arriba");
+  const isRosalesBajoProp = propFullNorm.includes("rosales bajo") || propFullNorm.includes("rosales parte baja") || propFullNorm.includes("rosales abajo") || propFullNorm.includes("rosales plano");
+
+  if ((isRosalesBajoReq && isRosalesAltoProp) || (isRosalesAltoReq && isRosalesBajoProp)) {
+    console.log(`[Matching-Guard] Bloqueo 0%: Rosales Alto vs Rosales Bajo ('${reqZoneRaw}' ↔ '${propZoneRaw}')`);
+    return { matches: false, score: 0 };
+  }
+
+  // 1.48 Guard Doctrinal v29.4: Homónimos de Extremos Opuestos (Ciudad Jardín Norte vs Sur, Álamos Norte vs Sur, Candelaria Centro vs Sur, Calleja Alta vs Baja)
+  const isCjNorteReq = reqFullNorm.includes("ciudad jardin norte") || reqFullNorm.includes("ciudad jardin (norte)");
+  const isCjSurReq = reqFullNorm.includes("ciudad jardin sur") || reqFullNorm.includes("ciudad jardin (sur)");
+  const isCjNorteProp = propFullNorm.includes("ciudad jardin norte") || propFullNorm.includes("ciudad jardin (norte)");
+  const isCjSurProp = propFullNorm.includes("ciudad jardin sur") || propFullNorm.includes("ciudad jardin (sur)");
+  if ((isCjNorteReq && isCjSurProp) || (isCjSurReq && isCjNorteProp)) {
+    console.log(`[Matching-Guard] Bloqueo 0%: Incompatibilidad Ciudad Jardín Norte vs Ciudad Jardín Sur ('${reqZoneRaw}' ↔ '${propZoneRaw}')`);
+    return { matches: false, score: 0 };
+  }
+
+  const isAlamosNorteReq = reqFullNorm.includes("alamos norte") || reqFullNorm.includes("álamos norte");
+  const isAlamosSurReq = reqFullNorm.includes("alamos sur") || reqFullNorm.includes("álamos sur");
+  const isAlamosNorteProp = propFullNorm.includes("alamos norte") || propFullNorm.includes("álamos norte");
+  const isAlamosSurProp = propFullNorm.includes("alamos sur") || propFullNorm.includes("álamos sur");
+  if ((isAlamosNorteReq && isAlamosSurProp) || (isAlamosSurReq && isAlamosNorteProp)) {
+    console.log(`[Matching-Guard] Bloqueo 0%: Incompatibilidad Álamos Norte vs Álamos Sur ('${reqZoneRaw}' ↔ '${propZoneRaw}')`);
+    return { matches: false, score: 0 };
+  }
+
+  const isCandelariaCentroReq = reqFullNorm.includes("candelaria centro") || (reqFullNorm.includes("candelaria") && !reqFullNorm.includes("nueva") && !reqFullNorm.includes("sur"));
+  const isCandelariaSurReq = reqFullNorm.includes("candelaria la nueva") || reqFullNorm.includes("candelaria sur");
+  const isCandelariaCentroProp = propFullNorm.includes("candelaria centro") || (propFullNorm.includes("candelaria") && !propFullNorm.includes("nueva") && !propFullNorm.includes("sur"));
+  const isCandelariaSurProp = propFullNorm.includes("candelaria la nueva") || propFullNorm.includes("candelaria sur");
+  if ((isCandelariaCentroReq && isCandelariaSurProp) || (isCandelariaSurReq && isCandelariaCentroProp)) {
+    console.log(`[Matching-Guard] Bloqueo 0%: Incompatibilidad La Candelaria Centro vs Candelaria Sur/La Nueva ('${reqZoneRaw}' ↔ '${propZoneRaw}')`);
+    return { matches: false, score: 0 };
+  }
+
+  const isCallejaAltaReq = reqFullNorm.includes("calleja alta") || reqFullNorm.includes("la calleja alta");
+  const isCallejaBajaReq = reqFullNorm.includes("calleja baja") || reqFullNorm.includes("la calleja baja");
+  const isCallejaAltaProp = propFullNorm.includes("calleja alta") || propFullNorm.includes("la calleja alta");
+  const isCallejaBajaProp = propFullNorm.includes("calleja baja") || propFullNorm.includes("la calleja baja");
+  if ((isCallejaAltaReq && isCallejaBajaProp) || (isCallejaBajaReq && isCallejaAltaProp)) {
+    console.log(`[Matching-Guard] Bloqueo 0%: Incompatibilidad Calleja Alta vs Calleja Baja ('${reqZoneRaw}' ↔ '${propZoneRaw}')`);
     return { matches: false, score: 0 };
   }
 
@@ -506,29 +609,39 @@ export function matchesGeography(
   // 2. Definimos las equivalencias de zonas coloquiales (F4)
   const equivalenciasZonas: Record<string, string[]> = {
     "las santas": [
-      "santa barbara oriental", "santa barbara central", "santa barbara occidental",
-      "santa ana oriental", "santa ana occidental", "santa paula", "santa bibiana",
-      "san patricio", "navarra", "chico navarra", "molinos norte", "usaquen", "multicentro"
+      "santa barbara", "santa barbara alta", "santa barbara oriental", "santa barbara central", "santa barbara occidental", "santa barbara norte",
+      "santa ana", "santa ana oriental", "santa ana occidental", "santa ana alta", "santa ana central",
+      "santa paula", "santa bibiana", "san patricio", "navarra", "chico navarra", "molinos norte", "usaquen", "multicentro"
+    ],
+    "santas": [
+      "santa barbara", "santa barbara alta", "santa barbara oriental", "santa barbara central", "santa barbara occidental", "santa barbara norte",
+      "santa ana", "santa ana oriental", "santa ana occidental", "santa ana alta", "santa ana central",
+      "santa paula", "santa bibiana", "san patricio", "navarra", "chico navarra", "molinos norte", "usaquen", "multicentro"
     ],
     "zona santas": [
-      "santa barbara oriental", "santa barbara central", "santa barbara occidental",
-      "santa ana oriental", "santa ana occidental", "santa paula", "santa bibiana",
-      "san patricio", "navarra", "chico navarra", "molinos norte", "usaquen", "multicentro"
-    ],
-    "santas de usaquen": [
-      "santa barbara oriental", "santa barbara central", "santa barbara occidental",
-      "santa ana oriental", "santa ana occidental", "santa paula", "santa bibiana",
-      "san patricio", "navarra", "chico navarra", "molinos norte", "usaquen", "multicentro"
+      "santa barbara", "santa barbara alta", "santa barbara oriental", "santa barbara central", "santa barbara occidental", "santa barbara norte",
+      "santa ana", "santa ana oriental", "santa ana occidental", "santa ana alta", "santa ana central",
+      "santa paula", "santa bibiana", "san patricio", "navarra", "chico navarra", "molinos norte", "usaquen", "multicentro"
     ],
     "sector santas": [
-      "santa barbara oriental", "santa barbara central", "santa barbara occidental",
-      "santa ana oriental", "santa ana occidental", "santa paula", "santa bibiana",
-      "san patricio", "navarra", "chico navarra", "molinos norte", "usaquen", "multicentro"
+      "santa barbara", "santa barbara alta", "santa barbara oriental", "santa barbara central", "santa barbara occidental", "santa barbara norte",
+      "santa ana", "santa ana oriental", "santa ana occidental", "santa ana alta", "santa ana central",
+      "santa paula", "santa bibiana", "san patricio", "navarra", "chico navarra", "molinos norte", "usaquen", "multicentro"
+    ],
+    "sector de las santas": [
+      "santa barbara", "santa barbara alta", "santa barbara oriental", "santa barbara central", "santa barbara occidental", "santa barbara norte",
+      "santa ana", "santa ana oriental", "santa ana occidental", "santa ana alta", "santa ana central",
+      "santa paula", "santa bibiana", "san patricio", "navarra", "chico navarra", "molinos norte", "usaquen", "multicentro"
+    ],
+    "santas de usaquen": [
+      "santa barbara", "santa barbara alta", "santa barbara oriental", "santa barbara central", "santa barbara occidental", "santa barbara norte",
+      "santa ana", "santa ana oriental", "santa ana occidental", "santa ana alta", "santa ana central",
+      "santa paula", "santa bibiana", "san patricio", "navarra", "chico navarra", "molinos norte", "usaquen", "multicentro"
     ],
     "barrios santa norte": [
-      "santa barbara oriental", "santa barbara central", "santa barbara occidental",
-      "santa ana oriental", "santa ana occidental", "santa paula", "santa bibiana",
-      "san patricio", "navarra", "chico navarra", "molinos norte", "usaquen", "multicentro"
+      "santa barbara", "santa barbara alta", "santa barbara oriental", "santa barbara central", "santa barbara occidental", "santa barbara norte",
+      "santa ana", "santa ana oriental", "santa ana occidental", "santa ana alta", "santa ana central",
+      "santa paula", "santa bibiana", "san patricio", "navarra", "chico navarra", "molinos norte", "usaquen", "multicentro"
     ],
     // REGLA DOCTRINAL v28.9: Todos los Chicó son CHAPINERO, excepto Navarra = Usaquén.
     "el chico": ["chico", "chico sur", "chico norte", "chico reservado", "chico reservado norte"],
@@ -539,6 +652,11 @@ export function matchesGeography(
     // Navarra → USAQUÉN (incompatible con TODOS los Chicó de Chapinero):
     "chico navarra": ["chico navarra", "navarra"],
     "navarra": ["chico navarra", "navarra"],
+    // Rosales: Distinción Doctrinal v29.4
+    "rosales alto": ["rosales alto", "los rosales alto", "rosales parte alta"],
+    "rosales bajo": ["rosales bajo", "los rosales bajo", "rosales parte baja"],
+    "rosales": ["rosales", "los rosales", "rosales alto", "rosales bajo", "los rosales alto", "los rosales bajo"],
+    "los rosales": ["rosales", "los rosales", "rosales alto", "rosales bajo", "los rosales alto", "los rosales bajo"],
     "lagos": ["lagos de torca", "club los lagartos", "el lago"],
     "las lomas": ["lomas de niza", "lomas"]
   };
@@ -558,23 +676,13 @@ export function matchesGeography(
 
     // Quitar frases de proximidad
     norm = norm.replace(/\b(u\s+)?otros\s+barrios\s+aledanos\b/gi, "");
-    norm = norm.replace(/\b(y|o|u)\s+aledanos\b/gi, "");
-    norm = norm.replace(/\b(y|o|u)\s+sectores\s+cercanos\b/gi, "");
-    norm = norm.replace(/\b(y|o|u)\s+alrededores\b/gi, "");
-    norm = norm.replace(/\b(y|o)\s+similares\b/gi, "");
-    norm = norm.replace(/\baledanos\b/gi, "");
-    norm = norm.replace(/\bcercanos\b/gi, "");
+    norm = norm.replace(/\by\s+aleda[nñ]os\b/gi, "");
+    norm = norm.replace(/\baleda[nñ]os\b/gi, "");
+    norm = norm.replace(/\by\s+alrededores\b/gi, "");
     norm = norm.replace(/\balrededores\b/gi, "");
 
-    const stopGeoWords = new Set([
-      "bogota", "bogota d c", "bogota dc", "d c", "dc", "colombia",
-      "medellin", "cali", "barranquilla", "cartagena", "bucaramanga",
-      "pereira", "manizales", "cucuta", "ibague", "santa marta"
-    ]);
-
-    return norm.split(/,|\/|\s+y\s+|\s+o\s+|\s+e\s+/)
-      .map(p => p.trim())
-      .filter(p => p.length > 0 && !stopGeoWords.has(p));
+    const parts = norm.split(/[,;\/\-\n|]|\by\b|\bo\b/gi);
+    return parts.map(p => p.trim()).filter(p => p.length >= 2);
   };
 
   const extractNeighborhoodTokens = (text: string): string[] => {
@@ -582,10 +690,9 @@ export function matchesGeography(
     let norm = normalizarTextoGeografico(text);
     const found: string[] = [];
 
+    // Catálogo canónico de barrios reales
     const knownNeighborhoods = [
-      "santa barbara occidental", "santa barbara oriental", "santa barbara central", "santa barbara alta", "santa barbara norte", "santa barbara",
-      "santa ana occidental", "santa ana oriental", "santa ana central", "santa ana alta", "santa ana",
-      // Familia 2 Chicó: USAQUÉN norte Cl 100 (sin mezclar con Rincón del Chicó que es Chapinero)
+      // Familia 2 Chicó: USAQUÉN Cls 100-106
       "chico reservado norte", "chico reservado", "chico norte iii", "chico norte ii", "chico norte",
       // Familia 3 Chicó: USAQUÉN ~Cls 106-120
       "chico navarra",
@@ -597,7 +704,8 @@ export function matchesGeography(
       "bella suiza", "el contador", "la carolina", "mazuren", "country club", "antiguo country", "nuevo country", "usaquen", "multicentro",
       "alameda 170", "alameda norte", "la alameda", "alameda", "san antonio noroccidental", "san antonio norte", "alcala", "belmira", "portales del norte", "san cipriano", "toberin", "villa magdala",
       // Chapinero
-      "los rosales", "rosales", "la cabrera", "el nogal", "nogal", "el virrey", "el retiro", "el lago", "quinta camacho", "chapinero alto", "chapinero central", "chapinero",
+      "los rosales alto", "rosales alto", "los rosales bajo", "rosales bajo", "los rosales", "rosales",
+      "la cabrera", "el nogal", "nogal", "el virrey", "el retiro", "el lago", "quinta camacho", "chapinero alto", "chapinero central", "chapinero",
       "la castellana", "castellana", "polo club", "polo", "san felipe",
       // Suba (Prado Veraniego está al OESTE de la Autopista Norte, pertenece a Suba, NO a Usaquén)
       "colina campestre", "colina", "san jose de bavaria", "carmel club", "alejandria", "cantalejo", "sotavento", "victoria norte", "britalia norte", "niza norte", "niza", "alhambra", "la alhambra", "pasadena", "batan", "el batan", "prado veraniego", "pontevedra", "morato", "la floresta", "floresta", "suba",
@@ -1337,22 +1445,38 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   const reqCityNorm = normalizarTextoGeografico(reqCity);
   const propCityNorm = normalizarTextoGeografico(propCity);
 
-  const rawReqBarrio = requirement.zonaDeseada || requirement.addressNeighborhood || "";
-  const rawPropBarrio = property.zone || property.addressNeighborhood || "";
+  const propBarriosInText = extractAllBarriosFromText((property as any).rawText || (property as any).description || property.name || "");
+  const reqBarriosInText = extractAllBarriosFromText((requirement as any).rawText || (requirement as any).description || requirement.name || "");
+
+  const rawPropBarrio = propBarriosInText[0] || property.zone || property.addressNeighborhood || "";
+  const rawReqBarriosList = reqBarriosInText.length > 0
+    ? reqBarriosInText
+    : [requirement.zonaDeseada || requirement.addressNeighborhood || ""].filter(Boolean);
+
   const reqLocality = requirement.addressLocality || requirement.localidadDeseada || "";
   const propLocality = property.addressLocality || property.locality || "";
 
-  const geoValidation = matchesGeography(
-    rawReqBarrio,
-    rawPropBarrio,
-    reqLocality,
-    propLocality,
-    reqCity,
-    propCity
-  );
+  let geoValidation = { matches: false, score: 0 };
+  const barriosToTest = rawReqBarriosList.length > 0 ? rawReqBarriosList : [""];
+  for (const rBarrio of barriosToTest) {
+    const res = matchesGeography(
+      rBarrio,
+      rawPropBarrio,
+      reqLocality,
+      propLocality,
+      reqCity,
+      propCity,
+      (requirement as any).rawText || requirement.name || "",
+      (property as any).rawText || (property as any).description || property.name || ""
+    );
+    if (res.matches) {
+      geoValidation = res;
+      break;
+    }
+  }
 
   if (!geoValidation.matches) {
-    blockers.push(`⛔ Geografía Incompatible: Requerimiento="${rawReqBarrio || reqCity}" ≠ Oferta="${rawPropBarrio || propCity}". MATCH IMPOSIBLE (0%).`);
+    blockers.push(`⛔ Geografía Incompatible: Requerimiento="${rawReqBarriosList.join(', ') || reqCity}" ≠ Oferta="${rawPropBarrio || propCity}". MATCH IMPOSIBLE (0%).`);
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
@@ -1858,20 +1982,29 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   positives.push(`Tipo de activo compatible: ${propSubtype || propType}`);
 
   // ── FILTRO DURO 4: Ubicación / Barrio Estricto (Incluye cuadrante perimetral) ──
-  const geoResult = matchesGeography(
-    requirement.zonaDeseada || requirement.addressNeighborhood || "",
-    property.zone || property.addressNeighborhood || "",
-    requirement.addressLocality || "",
-    property.addressLocality || "",
-    requirement.ciudadDeseada || requirement.city || "",
-    property.addressCity || property.city || ""
-  );
+  let geoResult = { matches: false, score: 0 };
+  for (const rBarrio of barriosToTest) {
+    const res = matchesGeography(
+      rBarrio,
+      rawPropBarrio,
+      requirement.addressLocality || "",
+      property.addressLocality || "",
+      requirement.ciudadDeseada || requirement.city || "",
+      property.addressCity || property.city || "",
+      (requirement as any).rawText || requirement.name || "",
+      (property as any).rawText || (property as any).description || property.name || ""
+    );
+    if (res.matches) {
+      geoResult = res;
+      break;
+    }
+  }
 
   if (!geoResult.matches) {
-    blockers.push(`Ubicación incompatible: requerida zona '${requirement.zonaDeseada || ""}', ofrecida '${property.zone || ""}'`);
+    blockers.push(`Ubicación incompatible: requerida zona '${rawReqBarriosList.join(', ') || ""}', ofrecida '${rawPropBarrio || ""}'`);
     return buildExplanationResult(0, blockers, positives, negatives);
   }
-  positives.push(`Ubicación compatible en zona: ${property.zone || ""}`);
+  positives.push(`Ubicación compatible en zona: ${rawPropBarrio || ""}`);
 
   // ── FILTRO DURO 5: Estrato ──
   if (reqEstrato >= 1 && pEstrato >= 1 && reqEstrato !== pEstrato) {

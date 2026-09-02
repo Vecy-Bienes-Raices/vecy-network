@@ -146,11 +146,18 @@ async function runMasterAudit() {
 
   // 3. Sincronizar tabla "propertyMatches" en Supabase
   console.log('🔄 Sincronizando tabla propertyMatches en Supabase...');
-  await client`UPDATE "notificationLogs" SET "matchId" = NULL WHERE "matchId" IS NOT NULL`;
-  await client`DELETE FROM "propertyMatches"`;
+  const saveClient = postgres(process.env.DATABASE_URL!, { idle_timeout: 60, connect_timeout: 30, max: 2 });
+  
+  try {
+    await saveClient`UPDATE "notificationLogs" SET "matchId" = NULL WHERE "matchId" IS NOT NULL`;
+  } catch (e: any) {
+    console.log('Aviso al desvincular notificationLogs:', e.message);
+  }
+
+  await saveClient`DELETE FROM "propertyMatches" WHERE 1=1`;
   
   for (const m of matchesFound) {
-    await client`
+    await saveClient`
       INSERT INTO "propertyMatches" (
         "propertyId",
         "requirementId",
@@ -174,6 +181,7 @@ async function runMasterAudit() {
       )
     `;
   }
+  await saveClient.end();
   console.log(`✅ Base de datos actualizada con los ${matchesFound.length} matches certificados.\n`);
 
   process.exit(0);

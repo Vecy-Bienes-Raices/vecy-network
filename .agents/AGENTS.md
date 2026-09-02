@@ -163,7 +163,27 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v29.3 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v29.4 — Septiembre 2026
+
+### Novedades v29.4 (Guard Doctrinal Rosales Alto vs Bajo, Macro-Sector "Las Santas", Homónimos Opuestos y Modal Pop-Up de Descarte):
+- **Guard Doctrinal v29.4 — Rosales Alto vs Rosales Bajo**:
+  1) `Rosales Bajo` (sector plano / caminable entre Cra 7 y Cra 5 / Circunvalar) es estrictamente incompatible con `Rosales Alto` (ladera oriental / cerros arriba de la Circunvalar) ante exigencias explícitas de una de las partes (`Bloqueo 0%`).
+- **Taxonomía Doctrinal del Macro-Sector "Las Santas" (Usaquén)**:
+  1) Reconocimiento integral para búsquedas taquigráficas (*"Busco en Las Santas"*), que engloba:
+     - Las 4 Santa Bárbaras: `Santa Bárbara Alta`, `Santa Bárbara Oriental`, `Santa Bárbara Central`, `Santa Bárbara Occidental`.
+     - Las 2 Santa Anas: `Santa Ana Oriental` (cerros) y `Santa Ana Occidental`.
+     - `Santa Paula` y `Santa Bibiana`.
+     - `San Patricio` (circuito contiguo Calles 106-116).
+- **Guardián de Homónimos Opuestos (Norte vs Sur / Alta vs Baja / Centro vs Sur)**:
+  1) `Ciudad Jardín Norte` (Suba/Usaquén) ↔ `Ciudad Jardín Sur` (San Cristóbal/Antonio Nariño): Incompatibilidad Absoluta (0%).
+  2) `Álamos Norte` (Engativá) ↔ `Álamos Sur` / `Álamos`: Incompatibilidad Absoluta (0%).
+  3) `La Candelaria Centro` (Centro Histórico) ↔ `Candelaria la Nueva` / `Candelaria Sur` (Ciudad Bolívar): Incompatibilidad Absoluta (0%).
+  4) `La Calleja Alta` ↔ `La Calleja Baja`: Incompatibilidad cuando se especifica cota o sector.
+- **Modal Pop-Up Centrado de Descarte en Mesa de Coincidencias (`AdminMatches.tsx`)**:
+  1) Pop-up modal centrado con `backdrop-blur` (`z-[99999]`) con comparativo Oferta vs Demanda y catálogo exhaustivo de motivos de descarte.
+  2) Remoción reactiva instantánea e invalidación automática de caché de matches en el backend (`server/routers/janIA.ts`).
+- **Saneamiento Masivo y Población Certificada en Supabase (`master_audit_and_match.ts`)**:
+  1) Evaluadas +1.047.000 combinaciones con los nuevos guards doctrinales y persistencia certificada en Supabase.
 
 ### Novedades v29.3 (Segmentación Determinista Multi-Item, Guardián Anti-Negaciones Geográficas y Saneamiento DB):
 - **Segmentación Determinista Multi-Publicación (`splitMultiItemMessage` / `split_and_sanitize_multi_items.ts`)**:

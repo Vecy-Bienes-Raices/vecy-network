@@ -3503,6 +3503,7 @@ var init_divipola = __esm({
 // server/_core/matching.ts
 var matching_exports = {};
 __export(matching_exports, {
+  KNOWN_BARRIOS_CANONICAL: () => KNOWN_BARRIOS_CANONICAL,
   buildBigTechAdminReport: () => buildBigTechAdminReport,
   calcularIPC: () => calcularIPC,
   calcularScoreMatch: () => calcularScoreMatch,
@@ -3513,6 +3514,7 @@ __export(matching_exports, {
   evaluarMatch: () => evaluarMatch,
   executeMatchEngine: () => executeMatchEngine,
   explicarMatch: () => explicarMatch,
+  extractAllBarriosFromText: () => extractAllBarriosFromText,
   extractPermutaPercentage: () => extractPermutaPercentage,
   extractRealPhone: () => extractRealPhone,
   extractTrueCityFromText: () => extractTrueCityFromText,
@@ -3739,7 +3741,21 @@ function parsePropertyAddressNumbers(text2) {
   }
   return res;
 }
-function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCityRaw, propCityRaw) {
+function extractAllBarriosFromText(text2) {
+  if (!text2) return [];
+  let norm2 = text2.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const found = [];
+  for (const b of KNOWN_BARRIOS_CANONICAL) {
+    const bNorm = b.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const reg = new RegExp(`\\b${bNorm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i");
+    if (reg.test(norm2)) {
+      found.push(b.charAt(0).toUpperCase() + b.slice(1));
+      norm2 = norm2.replace(reg, " ");
+    }
+  }
+  return found;
+}
+function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCityRaw, propCityRaw, reqFullText, propFullText) {
   const reqCity = normalizarTextoGeografico(reqCityRaw || "");
   const propCity = normalizarTextoGeografico(propCityRaw || "");
   const reqZone = normalizarTextoGeografico(reqZoneRaw || "");
@@ -3759,8 +3775,8 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
   if (reqCity && propCity && !isSameCanonicalCity(reqCity, propCity)) {
     return { matches: false, score: 0 };
   }
-  const reqBoundaries = parseStreetCarreraBoundaries(`${reqZoneRaw} ${reqLocRaw}`);
-  const propNumbers = parsePropertyAddressNumbers(propZoneRaw);
+  const reqBoundaries = parseStreetCarreraBoundaries(`${reqZoneRaw} ${reqLocRaw} ${reqFullText || ""}`);
+  const propNumbers = parsePropertyAddressNumbers(`${propZoneRaw} ${propFullText || ""}`);
   if (propNumbers.street && reqBoundaries.minStreet && reqBoundaries.maxStreet) {
     if (propNumbers.street < reqBoundaries.minStreet || propNumbers.street > reqBoundaries.maxStreet) {
       return { matches: false, score: 0 };
@@ -3774,8 +3790,8 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
   if (esFormatoCuadrante(reqZoneRaw) && !reqBoundaries.minStreet && !reqBoundaries.minCarrera) {
     return { matches: false, score: 0 };
   }
-  const reqFullNorm = normalizarTextoGeografico(`${reqZoneRaw} ${reqLocRaw} ${reqCityRaw}`);
-  const propFullNorm = normalizarTextoGeografico(`${propZoneRaw} ${propLocRaw} ${propCityRaw}`);
+  const reqFullNorm = normalizarTextoGeografico(`${reqZoneRaw} ${reqLocRaw} ${reqCityRaw} ${reqFullText || ""}`);
+  const propFullNorm = normalizarTextoGeografico(`${propZoneRaw} ${propLocRaw} ${propCityRaw} ${propFullText || ""}`);
   const sabanaSuburbanSectors = [
     "san simon",
     "guaymaral",
@@ -3827,12 +3843,58 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
       return { matches: false, score: 0 };
     }
   }
-  const isChicoNavarraReq = reqFullNorm.includes("chico navarra") || reqFullNorm.includes("navarra");
-  const isChicoNavarraProp = propFullNorm.includes("chico navarra") || propFullNorm.includes("navarra");
+  const isRinconChicoReq = reqFullNorm.includes("rincon del chico") || reqFullNorm.includes("rinc\xF3n del chic\xF3");
+  const isRinconChicoProp = propFullNorm.includes("rincon del chico") || propFullNorm.includes("rinc\xF3n del chic\xF3");
+  const reqStreetNum = parsePropertyAddressNumbers(reqFullText || reqZoneRaw || "").street;
+  const propStreetNum = parsePropertyAddressNumbers(propFullText || propZoneRaw || "").street;
+  const isRinconUsaquenReq = isRinconChicoReq && (reqFullNorm.includes("usaquen") || reqStreetNum !== void 0 && reqStreetNum >= 100);
+  const isRinconUsaquenProp = isRinconChicoProp && (propFullNorm.includes("usaquen") || propStreetNum !== void 0 && propStreetNum >= 100);
+  const isChicoNavarraReq = reqFullNorm.includes("chico navarra") || reqFullNorm.includes("navarra") || isRinconUsaquenReq;
+  const isChicoNavarraProp = propFullNorm.includes("chico navarra") || propFullNorm.includes("navarra") || isRinconUsaquenProp;
   const isChicoTradicionalReq = (reqFullNorm.includes("chico") || reqFullNorm.includes("chic\xF3")) && !isChicoNavarraReq;
   const isChicoTradicionalProp = (propFullNorm.includes("chico") || propFullNorm.includes("chic\xF3")) && !isChicoNavarraProp;
   if (isChicoNavarraReq && isChicoTradicionalProp || isChicoTradicionalReq && isChicoNavarraProp) {
-    console.log(`[Matching-Guard] Bloqueo 0%: Navarra/Chic\xF3 Navarra (Usaqu\xE9n) vs Chic\xF3 (Chapinero) ('${reqZoneRaw}' \u2194 '${propZoneRaw}')`);
+    console.log(`[Matching-Guard] Bloqueo 0%: Chic\xF3 Usaqu\xE9n (Navarra / Rinc\xF3n del Chic\xF3 Cll >= 100) vs Chic\xF3 Chapinero ('${reqZoneRaw}' \u2194 '${propZoneRaw}')`);
+    return { matches: false, score: 0 };
+  }
+  const isRosalesAltoReq = reqFullNorm.includes("rosales alto") || reqFullNorm.includes("rosales parte alta") || reqFullNorm.includes("rosales arriba");
+  const isRosalesBajoReq = reqFullNorm.includes("rosales bajo") || reqFullNorm.includes("rosales parte baja") || reqFullNorm.includes("rosales abajo") || reqFullNorm.includes("rosales plano");
+  const isRosalesAltoProp = propFullNorm.includes("rosales alto") || propFullNorm.includes("rosales parte alta") || propFullNorm.includes("rosales arriba");
+  const isRosalesBajoProp = propFullNorm.includes("rosales bajo") || propFullNorm.includes("rosales parte baja") || propFullNorm.includes("rosales abajo") || propFullNorm.includes("rosales plano");
+  if (isRosalesBajoReq && isRosalesAltoProp || isRosalesAltoReq && isRosalesBajoProp) {
+    console.log(`[Matching-Guard] Bloqueo 0%: Rosales Alto vs Rosales Bajo ('${reqZoneRaw}' \u2194 '${propZoneRaw}')`);
+    return { matches: false, score: 0 };
+  }
+  const isCjNorteReq = reqFullNorm.includes("ciudad jardin norte") || reqFullNorm.includes("ciudad jardin (norte)");
+  const isCjSurReq = reqFullNorm.includes("ciudad jardin sur") || reqFullNorm.includes("ciudad jardin (sur)");
+  const isCjNorteProp = propFullNorm.includes("ciudad jardin norte") || propFullNorm.includes("ciudad jardin (norte)");
+  const isCjSurProp = propFullNorm.includes("ciudad jardin sur") || propFullNorm.includes("ciudad jardin (sur)");
+  if (isCjNorteReq && isCjSurProp || isCjSurReq && isCjNorteProp) {
+    console.log(`[Matching-Guard] Bloqueo 0%: Incompatibilidad Ciudad Jard\xEDn Norte vs Ciudad Jard\xEDn Sur ('${reqZoneRaw}' \u2194 '${propZoneRaw}')`);
+    return { matches: false, score: 0 };
+  }
+  const isAlamosNorteReq = reqFullNorm.includes("alamos norte") || reqFullNorm.includes("\xE1lamos norte");
+  const isAlamosSurReq = reqFullNorm.includes("alamos sur") || reqFullNorm.includes("\xE1lamos sur");
+  const isAlamosNorteProp = propFullNorm.includes("alamos norte") || propFullNorm.includes("\xE1lamos norte");
+  const isAlamosSurProp = propFullNorm.includes("alamos sur") || propFullNorm.includes("\xE1lamos sur");
+  if (isAlamosNorteReq && isAlamosSurProp || isAlamosSurReq && isAlamosNorteProp) {
+    console.log(`[Matching-Guard] Bloqueo 0%: Incompatibilidad \xC1lamos Norte vs \xC1lamos Sur ('${reqZoneRaw}' \u2194 '${propZoneRaw}')`);
+    return { matches: false, score: 0 };
+  }
+  const isCandelariaCentroReq = reqFullNorm.includes("candelaria centro") || reqFullNorm.includes("candelaria") && !reqFullNorm.includes("nueva") && !reqFullNorm.includes("sur");
+  const isCandelariaSurReq = reqFullNorm.includes("candelaria la nueva") || reqFullNorm.includes("candelaria sur");
+  const isCandelariaCentroProp = propFullNorm.includes("candelaria centro") || propFullNorm.includes("candelaria") && !propFullNorm.includes("nueva") && !propFullNorm.includes("sur");
+  const isCandelariaSurProp = propFullNorm.includes("candelaria la nueva") || propFullNorm.includes("candelaria sur");
+  if (isCandelariaCentroReq && isCandelariaSurProp || isCandelariaSurReq && isCandelariaCentroProp) {
+    console.log(`[Matching-Guard] Bloqueo 0%: Incompatibilidad La Candelaria Centro vs Candelaria Sur/La Nueva ('${reqZoneRaw}' \u2194 '${propZoneRaw}')`);
+    return { matches: false, score: 0 };
+  }
+  const isCallejaAltaReq = reqFullNorm.includes("calleja alta") || reqFullNorm.includes("la calleja alta");
+  const isCallejaBajaReq = reqFullNorm.includes("calleja baja") || reqFullNorm.includes("la calleja baja");
+  const isCallejaAltaProp = propFullNorm.includes("calleja alta") || propFullNorm.includes("la calleja alta");
+  const isCallejaBajaProp = propFullNorm.includes("calleja baja") || propFullNorm.includes("la calleja baja");
+  if (isCallejaAltaReq && isCallejaBajaProp || isCallejaBajaReq && isCallejaAltaProp) {
+    console.log(`[Matching-Guard] Bloqueo 0%: Incompatibilidad Calleja Alta vs Calleja Baja ('${reqZoneRaw}' \u2194 '${propZoneRaw}')`);
     return { matches: false, score: 0 };
   }
   const GENERIC_CARDINAL_TERMS = /* @__PURE__ */ new Set([
@@ -3897,11 +3959,38 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
   }
   const equivalenciasZonas = {
     "las santas": [
+      "santa barbara",
+      "santa barbara alta",
       "santa barbara oriental",
       "santa barbara central",
       "santa barbara occidental",
+      "santa barbara norte",
+      "santa ana",
       "santa ana oriental",
       "santa ana occidental",
+      "santa ana alta",
+      "santa ana central",
+      "santa paula",
+      "santa bibiana",
+      "san patricio",
+      "navarra",
+      "chico navarra",
+      "molinos norte",
+      "usaquen",
+      "multicentro"
+    ],
+    "santas": [
+      "santa barbara",
+      "santa barbara alta",
+      "santa barbara oriental",
+      "santa barbara central",
+      "santa barbara occidental",
+      "santa barbara norte",
+      "santa ana",
+      "santa ana oriental",
+      "santa ana occidental",
+      "santa ana alta",
+      "santa ana central",
       "santa paula",
       "santa bibiana",
       "san patricio",
@@ -3912,26 +4001,17 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
       "multicentro"
     ],
     "zona santas": [
+      "santa barbara",
+      "santa barbara alta",
       "santa barbara oriental",
       "santa barbara central",
       "santa barbara occidental",
+      "santa barbara norte",
+      "santa ana",
       "santa ana oriental",
       "santa ana occidental",
-      "santa paula",
-      "santa bibiana",
-      "san patricio",
-      "navarra",
-      "chico navarra",
-      "molinos norte",
-      "usaquen",
-      "multicentro"
-    ],
-    "santas de usaquen": [
-      "santa barbara oriental",
-      "santa barbara central",
-      "santa barbara occidental",
-      "santa ana oriental",
-      "santa ana occidental",
+      "santa ana alta",
+      "santa ana central",
       "santa paula",
       "santa bibiana",
       "san patricio",
@@ -3942,11 +4022,59 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
       "multicentro"
     ],
     "sector santas": [
+      "santa barbara",
+      "santa barbara alta",
       "santa barbara oriental",
       "santa barbara central",
       "santa barbara occidental",
+      "santa barbara norte",
+      "santa ana",
       "santa ana oriental",
       "santa ana occidental",
+      "santa ana alta",
+      "santa ana central",
+      "santa paula",
+      "santa bibiana",
+      "san patricio",
+      "navarra",
+      "chico navarra",
+      "molinos norte",
+      "usaquen",
+      "multicentro"
+    ],
+    "sector de las santas": [
+      "santa barbara",
+      "santa barbara alta",
+      "santa barbara oriental",
+      "santa barbara central",
+      "santa barbara occidental",
+      "santa barbara norte",
+      "santa ana",
+      "santa ana oriental",
+      "santa ana occidental",
+      "santa ana alta",
+      "santa ana central",
+      "santa paula",
+      "santa bibiana",
+      "san patricio",
+      "navarra",
+      "chico navarra",
+      "molinos norte",
+      "usaquen",
+      "multicentro"
+    ],
+    "santas de usaquen": [
+      "santa barbara",
+      "santa barbara alta",
+      "santa barbara oriental",
+      "santa barbara central",
+      "santa barbara occidental",
+      "santa barbara norte",
+      "santa ana",
+      "santa ana oriental",
+      "santa ana occidental",
+      "santa ana alta",
+      "santa ana central",
       "santa paula",
       "santa bibiana",
       "san patricio",
@@ -3957,11 +4085,17 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
       "multicentro"
     ],
     "barrios santa norte": [
+      "santa barbara",
+      "santa barbara alta",
       "santa barbara oriental",
       "santa barbara central",
       "santa barbara occidental",
+      "santa barbara norte",
+      "santa ana",
       "santa ana oriental",
       "santa ana occidental",
+      "santa ana alta",
+      "santa ana central",
       "santa paula",
       "santa bibiana",
       "san patricio",
@@ -3980,6 +4114,11 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
     // Navarra → USAQUÉN (incompatible con TODOS los Chicó de Chapinero):
     "chico navarra": ["chico navarra", "navarra"],
     "navarra": ["chico navarra", "navarra"],
+    // Rosales: Distinción Doctrinal v29.4
+    "rosales alto": ["rosales alto", "los rosales alto", "rosales parte alta"],
+    "rosales bajo": ["rosales bajo", "los rosales bajo", "rosales parte baja"],
+    "rosales": ["rosales", "los rosales", "rosales alto", "rosales bajo", "los rosales alto", "los rosales bajo"],
+    "los rosales": ["rosales", "los rosales", "rosales alto", "rosales bajo", "los rosales alto", "los rosales bajo"],
     "lagos": ["lagos de torca", "club los lagartos", "el lago"],
     "las lomas": ["lomas de niza", "lomas"]
   };
@@ -3993,50 +4132,19 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
     if (!text2) return [];
     let norm2 = normalizarTextoGeografico(text2);
     norm2 = norm2.replace(/\b(u\s+)?otros\s+barrios\s+aledanos\b/gi, "");
-    norm2 = norm2.replace(/\b(y|o|u)\s+aledanos\b/gi, "");
-    norm2 = norm2.replace(/\b(y|o|u)\s+sectores\s+cercanos\b/gi, "");
-    norm2 = norm2.replace(/\b(y|o|u)\s+alrededores\b/gi, "");
-    norm2 = norm2.replace(/\b(y|o)\s+similares\b/gi, "");
-    norm2 = norm2.replace(/\baledanos\b/gi, "");
-    norm2 = norm2.replace(/\bcercanos\b/gi, "");
+    norm2 = norm2.replace(/\by\s+aleda[nñ]os\b/gi, "");
+    norm2 = norm2.replace(/\baleda[nñ]os\b/gi, "");
+    norm2 = norm2.replace(/\by\s+alrededores\b/gi, "");
     norm2 = norm2.replace(/\balrededores\b/gi, "");
-    const stopGeoWords = /* @__PURE__ */ new Set([
-      "bogota",
-      "bogota d c",
-      "bogota dc",
-      "d c",
-      "dc",
-      "colombia",
-      "medellin",
-      "cali",
-      "barranquilla",
-      "cartagena",
-      "bucaramanga",
-      "pereira",
-      "manizales",
-      "cucuta",
-      "ibague",
-      "santa marta"
-    ]);
-    return norm2.split(/,|\/|\s+y\s+|\s+o\s+|\s+e\s+/).map((p) => p.trim()).filter((p) => p.length > 0 && !stopGeoWords.has(p));
+    const parts = norm2.split(/[,;\/\-\n|]|\by\b|\bo\b/gi);
+    return parts.map((p) => p.trim()).filter((p) => p.length >= 2);
   };
   const extractNeighborhoodTokens = (text2) => {
     if (!text2) return [];
     let norm2 = normalizarTextoGeografico(text2);
     const found = [];
     const knownNeighborhoods = [
-      "santa barbara occidental",
-      "santa barbara oriental",
-      "santa barbara central",
-      "santa barbara alta",
-      "santa barbara norte",
-      "santa barbara",
-      "santa ana occidental",
-      "santa ana oriental",
-      "santa ana central",
-      "santa ana alta",
-      "santa ana",
-      // Familia 2 Chicó: USAQUÉN norte Cl 100 (sin mezclar con Rincón del Chicó que es Chapinero)
+      // Familia 2 Chicó: USAQUÉN Cls 100-106
       "chico reservado norte",
       "chico reservado",
       "chico norte iii",
@@ -4081,6 +4189,10 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
       "toberin",
       "villa magdala",
       // Chapinero
+      "los rosales alto",
+      "rosales alto",
+      "los rosales bajo",
+      "rosales bajo",
       "los rosales",
       "rosales",
       "la cabrera",
@@ -4931,20 +5043,32 @@ function explicarMatch(requirement, property) {
   const propCity = resolveCityField(property.addressCity || "", property.city || "");
   const reqCityNorm = normalizarTextoGeografico(reqCity);
   const propCityNorm = normalizarTextoGeografico(propCity);
-  const rawReqBarrio = requirement.zonaDeseada || requirement.addressNeighborhood || "";
-  const rawPropBarrio = property.zone || property.addressNeighborhood || "";
+  const propBarriosInText = extractAllBarriosFromText(property.rawText || property.description || property.name || "");
+  const reqBarriosInText = extractAllBarriosFromText(requirement.rawText || requirement.description || requirement.name || "");
+  const rawPropBarrio = propBarriosInText[0] || property.zone || property.addressNeighborhood || "";
+  const rawReqBarriosList = reqBarriosInText.length > 0 ? reqBarriosInText : [requirement.zonaDeseada || requirement.addressNeighborhood || ""].filter(Boolean);
   const reqLocality = requirement.addressLocality || requirement.localidadDeseada || "";
   const propLocality = property.addressLocality || property.locality || "";
-  const geoValidation = matchesGeography(
-    rawReqBarrio,
-    rawPropBarrio,
-    reqLocality,
-    propLocality,
-    reqCity,
-    propCity
-  );
+  let geoValidation = { matches: false, score: 0 };
+  const barriosToTest = rawReqBarriosList.length > 0 ? rawReqBarriosList : [""];
+  for (const rBarrio of barriosToTest) {
+    const res = matchesGeography(
+      rBarrio,
+      rawPropBarrio,
+      reqLocality,
+      propLocality,
+      reqCity,
+      propCity,
+      requirement.rawText || requirement.name || "",
+      property.rawText || property.description || property.name || ""
+    );
+    if (res.matches) {
+      geoValidation = res;
+      break;
+    }
+  }
   if (!geoValidation.matches) {
-    blockers.push(`\u26D4 Geograf\xEDa Incompatible: Requerimiento="${rawReqBarrio || reqCity}" \u2260 Oferta="${rawPropBarrio || propCity}". MATCH IMPOSIBLE (0%).`);
+    blockers.push(`\u26D4 Geograf\xEDa Incompatible: Requerimiento="${rawReqBarriosList.join(", ") || reqCity}" \u2260 Oferta="${rawPropBarrio || propCity}". MATCH IMPOSIBLE (0%).`);
     return buildExplanationResult(0, blockers, positives, negatives);
   }
   positives.push(`Geograf\xEDa compatible: ${rawPropBarrio || propCity} (${geoValidation.score} pts)`);
@@ -5304,19 +5428,28 @@ function explicarMatch(requirement, property) {
     }
   }
   positives.push(`Tipo de activo compatible: ${propSubtype || propType}`);
-  const geoResult = matchesGeography(
-    requirement.zonaDeseada || requirement.addressNeighborhood || "",
-    property.zone || property.addressNeighborhood || "",
-    requirement.addressLocality || "",
-    property.addressLocality || "",
-    requirement.ciudadDeseada || requirement.city || "",
-    property.addressCity || property.city || ""
-  );
+  let geoResult = { matches: false, score: 0 };
+  for (const rBarrio of barriosToTest) {
+    const res = matchesGeography(
+      rBarrio,
+      rawPropBarrio,
+      requirement.addressLocality || "",
+      property.addressLocality || "",
+      requirement.ciudadDeseada || requirement.city || "",
+      property.addressCity || property.city || "",
+      requirement.rawText || requirement.name || "",
+      property.rawText || property.description || property.name || ""
+    );
+    if (res.matches) {
+      geoResult = res;
+      break;
+    }
+  }
   if (!geoResult.matches) {
-    blockers.push(`Ubicaci\xF3n incompatible: requerida zona '${requirement.zonaDeseada || ""}', ofrecida '${property.zone || ""}'`);
+    blockers.push(`Ubicaci\xF3n incompatible: requerida zona '${rawReqBarriosList.join(", ") || ""}', ofrecida '${rawPropBarrio || ""}'`);
     return buildExplanationResult(0, blockers, positives, negatives);
   }
-  positives.push(`Ubicaci\xF3n compatible en zona: ${property.zone || ""}`);
+  positives.push(`Ubicaci\xF3n compatible en zona: ${rawPropBarrio || ""}`);
   if (reqEstrato >= 1 && pEstrato >= 1 && reqEstrato !== pEstrato) {
     blockers.push(`Estrato incompatible: deseado ${reqEstrato}, ofrecido ${pEstrato}`);
     return buildExplanationResult(0, blockers, positives, negatives);
@@ -6047,7 +6180,7 @@ function buildBigTechAdminReport(prop, req, score) {
 
 \u{1F449} Ver en el panel web: https://vecy-network.vercel.app/admin`;
 }
-var TRANSACTION_COMPATIBILITY_MATRIX;
+var TRANSACTION_COMPATIBILITY_MATRIX, KNOWN_BARRIOS_CANONICAL;
 var init_matching = __esm({
   "server/_core/matching.ts"() {
     "use strict";
@@ -6067,6 +6200,180 @@ var init_matching = __esm({
       venta_permuta: /* @__PURE__ */ new Set(["venta_permuta", "permuta"]),
       aporte: /* @__PURE__ */ new Set(["aporte"])
     };
+    KNOWN_BARRIOS_CANONICAL = [
+      "santa b\xE1rbara occidental",
+      "santa barbara occidental",
+      "santa b\xE1rbara oriental",
+      "santa barbara oriental",
+      "santa b\xE1rbara central",
+      "santa barbara central",
+      "santa b\xE1rbara alta",
+      "santa barbara alta",
+      "santa b\xE1rbara norte",
+      "santa barbara norte",
+      "santa b\xE1rbara",
+      "santa barbara",
+      "santa ana occidental",
+      "santa ana oriental",
+      "santa ana central",
+      "santa ana alta",
+      "santa ana",
+      "chico reservado norte",
+      "chico reservado",
+      "chico norte iii",
+      "chico norte ii",
+      "chico norte",
+      "rinc\xF3n del chic\xF3",
+      "rincon del chico",
+      "chico navarra",
+      "el chic\xF3",
+      "chico",
+      "cedritos",
+      "los cedros",
+      "santa paula",
+      "santa bibiana",
+      "santa teresa",
+      "san patricio",
+      "navarra",
+      "molinos norte",
+      "la calleja",
+      "calleja baja",
+      "calleja alta",
+      "bella suiza",
+      "el contador",
+      "la carolina",
+      "mazur\xE9n",
+      "mazuren",
+      "country club",
+      "antiguo country",
+      "nuevo country",
+      "usaqu\xE9n",
+      "usaquen",
+      "multicentro",
+      "north point",
+      "san crist\xF3bal norte",
+      "san cristobal norte",
+      "alameda 170",
+      "alameda norte",
+      "la alameda",
+      "barrio alameda",
+      "alameda",
+      "san antonio noroccidental",
+      "san antonio norte",
+      "alcal\xE1",
+      "alcala",
+      "belmira",
+      "portales del norte",
+      "san cipriano",
+      "tober\xEDn",
+      "toberin",
+      "villa magdala",
+      "los rosales alto",
+      "rosales alto",
+      "los rosales bajo",
+      "rosales bajo",
+      "los rosales",
+      "rosales",
+      "la cabrera",
+      "el nogal",
+      "nogal",
+      "el virrey",
+      "el retiro",
+      "el lago",
+      "quinta camacho",
+      "chapinero alto",
+      "chapinero central",
+      "chapinero",
+      "la castellana",
+      "castellana",
+      "polo club",
+      "polo",
+      "san felipe",
+      "colina campestre",
+      "colina",
+      "san jos\xE9 de bavaria",
+      "san jose de bavaria",
+      "carmel club",
+      "alejandr\xEDa",
+      "alejandria",
+      "cantalejo",
+      "sotavento",
+      "victoria norte",
+      "britalia norte",
+      "niza norte",
+      "niza",
+      "la alhambra",
+      "alhambra",
+      "pasadena",
+      "bat\xE1n",
+      "batan",
+      "el bat\xE1n",
+      "el batan",
+      "prado veraniego",
+      "pontevedra",
+      "morato",
+      "la floresta",
+      "floresta",
+      "suba",
+      "ciudad salitre",
+      "salitre",
+      "hayuelos",
+      "modelia",
+      "fontib\xF3n",
+      "fontibon",
+      "teusaquillo",
+      "la soledad",
+      "palermo",
+      "quinta paredes",
+      "la esmeralda",
+      "nicol\xE1s de federmann",
+      "nicolas de federmann",
+      "ciudad jard\xEDn norte",
+      "ciudad jardin norte",
+      "ciudad jard\xEDn sur",
+      "ciudad jardin sur",
+      "ciudad jard\xEDn",
+      "ciudad jardin",
+      "\xE1lamos norte",
+      "alamos norte",
+      "\xE1lamos sur",
+      "alamos sur",
+      "\xE1lamos",
+      "alamos",
+      "la candelaria centro",
+      "candelaria centro",
+      "candelaria la nueva",
+      "candelaria sur",
+      "la candelaria",
+      "candelaria",
+      "el poblado",
+      "poblado",
+      "laureles",
+      "envigado",
+      "sabaneta",
+      "bel\xE9n",
+      "belen",
+      "estadio",
+      "conquistadores",
+      "granada",
+      "el pe\xF1\xF3n",
+      "el pe\xF1on",
+      "juanamb\xFA",
+      "juanambu",
+      "san fernando",
+      "valle del lili",
+      "el prado",
+      "alto prado",
+      "riomar",
+      "villa santos",
+      "buenavista",
+      "cabecera",
+      "ca\xF1averal",
+      "canaveral",
+      "ruitoque",
+      "sotomayor"
+    ];
+    KNOWN_BARRIOS_CANONICAL.sort((a, b) => b.length - a.length);
   }
 });
 
@@ -7332,11 +7639,16 @@ function extractFallbackDataFromText(text2) {
   }
   let zone = "";
   const KNOWN_BARRIOS_CANONICAL_SORTED = [
-    "Santa B\xE1rbara Central",
     "Santa B\xE1rbara Occidental",
     "Santa B\xE1rbara Oriental",
+    "Santa B\xE1rbara Central",
     "Santa B\xE1rbara Alta",
     "Santa B\xE1rbara",
+    "Santa Ana Occidental",
+    "Santa Ana Oriental",
+    "Santa Ana Alta",
+    "Santa Ana Central",
+    "Santa Ana",
     "San Crist\xF3bal Norte",
     "La Alameda",
     "San Antonio Norte",
@@ -7351,8 +7663,11 @@ function extractFallbackDataFromText(text2) {
     "Santa Bibiana",
     "San Patricio",
     "Santa Teresa",
-    "Santa Ana",
     "La Cabrera",
+    "Los Rosales Alto",
+    "Rosales Alto",
+    "Los Rosales Bajo",
+    "Rosales Bajo",
     "Los Rosales",
     "Rosales",
     "El Nogal",
@@ -7363,6 +7678,8 @@ function extractFallbackDataFromText(text2) {
     "Antiguo Country",
     "Country Club",
     "La Calleja",
+    "Calleja Alta",
+    "Calleja Baja",
     "La Carolina",
     "Bosque Medina",
     "El Contador",
@@ -7374,7 +7691,16 @@ function extractFallbackDataFromText(text2) {
     "Ema\xFAs",
     "Colina Campestre",
     "Ciudad Mel\xE9ndez",
+    "Ciudad Jard\xEDn Norte",
+    "Ciudad Jard\xEDn Sur",
     "Ciudad Jard\xEDn",
+    "\xC1lamos Norte",
+    "\xC1lamos Sur",
+    "\xC1lamos",
+    "La Candelaria Centro",
+    "Candelaria la Nueva",
+    "Candelaria Sur",
+    "La Candelaria",
     "Nuevo Country",
     "Niza Norte",
     "Niza",
@@ -7386,6 +7712,7 @@ function extractFallbackDataFromText(text2) {
     "Sotavento",
     "San Jos\xE9 de Bavaria",
     "Chapinero Alto",
+    "Chapinero Central",
     "Chapinero",
     "Cedritos"
   ];
@@ -7428,8 +7755,12 @@ function extractFallbackDataFromText(text2) {
     else if (clean.includes("santa bibiana")) zone = "Santa Bibiana";
     else if (clean.includes("san patricio")) zone = "San Patricio";
     else if (clean.includes("santa teresa")) zone = "Santa Teresa";
+    else if (clean.includes("santa ana oriental") || clean.includes("santa ana alta")) zone = "Santa Ana Oriental";
+    else if (clean.includes("santa ana occidental")) zone = "Santa Ana Occidental";
     else if (clean.includes("santa ana")) zone = "Santa Ana";
     else if (clean.includes("la cabrera") || clean.includes("cabrera")) zone = "La Cabrera";
+    else if (clean.includes("rosales alto") || clean.includes("los rosales alto") || clean.includes("rosales parte alta") || clean.includes("rosales arriba")) zone = "Rosales Alto";
+    else if (clean.includes("rosales bajo") || clean.includes("los rosales bajo") || clean.includes("rosales parte baja") || clean.includes("rosales abajo") || clean.includes("rosales plano")) zone = "Rosales Bajo";
     else if (clean.includes("rosales") || clean.includes("los rosales")) zone = "Rosales";
     else if (clean.includes("el nogal") || clean.includes("nogal")) zone = "El Nogal";
     else if (clean.includes("el virrey") || clean.includes("virrey")) zone = "El Virrey";
@@ -7438,6 +7769,8 @@ function extractFallbackDataFromText(text2) {
     else if (clean.includes("quinta camacho")) zone = "Quinta Camacho";
     else if (clean.includes("antiguo country")) zone = "Antiguo Country";
     else if (clean.includes("country club") || clean.includes("el country")) zone = "Country Club";
+    else if (clean.includes("calleja alta") || clean.includes("la calleja alta")) zone = "Calleja Alta";
+    else if (clean.includes("calleja baja") || clean.includes("la calleja baja")) zone = "Calleja Baja";
     else if (clean.includes("la calleja") || clean.includes("calleja")) zone = "La Calleja";
     else if (clean.includes("la carolina") || clean.includes("carolina")) zone = "La Carolina";
     else if (clean.includes("bosque medina")) zone = "Bosque Medina";
@@ -7450,7 +7783,15 @@ function extractFallbackDataFromText(text2) {
     else if (clean.includes("emaus") || clean.includes("ema\xFAs")) zone = "Ema\xFAs";
     else if (clean.includes("colina campestre") || clean.includes("colina")) zone = "Colina Campestre";
     else if (clean.includes("ciudad melendez") || clean.includes("ciudad mel\xE9ndez")) zone = "Ciudad Mel\xE9ndez";
+    else if (clean.includes("ciudad jardin norte") || clean.includes("ciudad jard\xEDn norte")) zone = "Ciudad Jard\xEDn Norte";
+    else if (clean.includes("ciudad jardin sur") || clean.includes("ciudad jard\xEDn sur")) zone = "Ciudad Jard\xEDn Sur";
     else if (clean.includes("ciudad jardin") || clean.includes("ciudad jard\xEDn")) zone = "Ciudad Jard\xEDn";
+    else if (clean.includes("alamos norte") || clean.includes("\xE1lamos norte")) zone = "\xC1lamos Norte";
+    else if (clean.includes("alamos sur") || clean.includes("\xE1lamos sur")) zone = "\xC1lamos Sur";
+    else if (clean.includes("alamos") || clean.includes("\xE1lamos")) zone = "\xC1lamos";
+    else if (clean.includes("candelaria centro") || clean.includes("la candelaria centro")) zone = "La Candelaria Centro";
+    else if (clean.includes("candelaria la nueva") || clean.includes("candelaria sur")) zone = "Candelaria la Nueva";
+    else if (clean.includes("la candelaria") || clean.includes("candelaria")) zone = "La Candelaria";
     else if (clean.includes("nuevo country")) zone = "Nuevo Country";
     else if (clean.includes("niza norte")) zone = "Niza Norte";
     else if (clean.includes("niza")) zone = "Niza";
@@ -10139,15 +10480,22 @@ async function saveRequirement(data, userId, realName, imageBuffer, pdfBuffer, p
     adminFeeMax: (() => {
       const raw = data.adminFeeMax !== void 0 && data.adminFeeMax !== null ? data.adminFeeMax : data.adminFee !== void 0 && data.adminFee !== null ? data.adminFee : null;
       if (raw !== void 0 && raw !== null) {
-        const v = parseFloat(String(raw));
-        if (!isNaN(v) && v >= 1e4 && v <= 3e7) return String(v);
+        let v = parseFloat(String(raw));
+        if (!isNaN(v)) {
+          if (v >= 500 && v <= 15e3) v = v * 1e3;
+          if (v >= 1e4 && v <= 3e7) return String(v);
+        }
       }
       const rawL = (data.rawText || data.name || "").toLowerCase();
-      const adminMatch = rawL.match(/(?:administraci[oó]n|admin|admon|cta\s*admon)\s*(?:m[aá]xima|max|hasta)?\s*:?\s*(?:aprox\.?|mensual)?\s*\$?\s*([\d.,\s]+?)(?:-|\s|\(|\/|\+|$|\n)/i);
+      const adminMatch = rawL.match(/(?:administraci[oó]n|admin|admon|cta\s*admon)\s*(?:m[aá]xima|max|hasta|tope|no\s*mayor\s*a|no\s*superior\s*a|menor\s*a)?\s*:?\s*(?:aprox\.?|mensual)?\s*\$?\s*([\d.,\s]+?)(?:\s*mil\b|\s*k\b|\s*millones\b|-|\s|\(|\/|\+|$|\n)/i);
       if (adminMatch) {
-        const parsed = parseFloat(adminMatch[1].replace(/[.,\s]/g, ""));
-        if (!isNaN(parsed) && parsed >= 1e4 && parsed <= 3e7 && !isPhoneNumberNotPrice(parsed, rawL)) {
-          return String(parsed);
+        const cleanNum = adminMatch[1].replace(/[.,\s]/g, "");
+        let parsed = parseFloat(cleanNum);
+        if (!isNaN(parsed)) {
+          if (parsed >= 500 && parsed <= 15e3) parsed = parsed * 1e3;
+          if (parsed >= 1e4 && parsed <= 3e7 && !isPhoneNumberNotPrice(parsed, rawL)) {
+            return String(parsed);
+          }
         }
       }
       return null;
@@ -15796,7 +16144,7 @@ ${liveStats}${userContextInstruction}
           enlaceOrigen: requirements.enlaceOrigen,
           createdAt: requirements.createdAt
         }
-      }).from(propertyMatches).innerJoin(properties, eq8(propertyMatches.propertyId, properties.id)).innerJoin(requirements, eq8(propertyMatches.requirementId, requirements.id)).where(sql5`CAST(${propertyMatches.matchScore} AS NUMERIC) >= 75`).orderBy(desc2(propertyMatches.id)).limit(150);
+      }).from(propertyMatches).innerJoin(properties, eq8(propertyMatches.propertyId, properties.id)).innerJoin(requirements, eq8(propertyMatches.requirementId, requirements.id)).where(sql5`CAST(${propertyMatches.matchScore} AS NUMERIC) >= 75 AND (${propertyMatches.status} IS NULL OR ${propertyMatches.status} NOT IN ('rejected', 'rechazado'))`).orderBy(desc2(propertyMatches.id)).limit(150);
       const propIds = Array.from(new Set(matches.map((m) => m.property.id)));
       const imagesMap = {};
       if (propIds.length > 0) {
@@ -16099,8 +16447,10 @@ ${liveStats}${userContextInstruction}
         ajustesGuardados: input.ajustesGuardados || null
       }).returning();
       if (input.matchId && input.action === "rechazado") {
-        await db.update(propertyMatches).set({ status: "rejected" }).where(eq8(propertyMatches.id, input.matchId));
+        await db.delete(propertyMatches).where(eq8(propertyMatches.id, input.matchId));
       }
+      cachedAllMatchesData = null;
+      cachedAllMatchesTime = 0;
       console.log(`[JanIA-Feedback] Feedback registrado para Match #${input.matchId}: ${input.action} - ${input.motivoRechazo || "Sin motivo"}`);
       return { success: true, feedbackId: feedback.id };
     } catch (e) {

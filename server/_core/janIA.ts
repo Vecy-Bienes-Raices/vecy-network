@@ -869,15 +869,20 @@ export function extractFallbackDataFromText(text: string): any {
   let zone = "";
   // ── EXTRACTOR CATASTRAL CON BLINDAJE DE NEGACIONES (Anti-Negation Guard) ──
   const KNOWN_BARRIOS_CANONICAL_SORTED = [
-    "Santa Bárbara Central", "Santa Bárbara Occidental", "Santa Bárbara Oriental", "Santa Bárbara Alta", "Santa Bárbara",
+    "Santa Bárbara Occidental", "Santa Bárbara Oriental", "Santa Bárbara Central", "Santa Bárbara Alta", "Santa Bárbara",
+    "Santa Ana Occidental", "Santa Ana Oriental", "Santa Ana Alta", "Santa Ana Central", "Santa Ana",
     "San Cristóbal Norte", "La Alameda", "San Antonio Norte", "Villa Magdala",
     "Chicó Reservado", "Chicó Norte", "Chicó Navarra", "Rincón del Chicó", "El Chicó", "Chicó",
-    "Santa Paula", "Santa Bibiana", "San Patricio", "Santa Teresa", "Santa Ana", "La Cabrera", "Los Rosales", "Rosales",
+    "Santa Paula", "Santa Bibiana", "San Patricio", "Santa Teresa", "La Cabrera",
+    "Los Rosales Alto", "Rosales Alto", "Los Rosales Bajo", "Rosales Bajo", "Los Rosales", "Rosales",
     "El Nogal", "El Virrey", "El Retiro", "El Refugio", "Quinta Camacho", "Antiguo Country", "Country Club",
-    "La Calleja", "La Carolina", "Bosque Medina", "El Contador", "Alcalá", "Belmira", "La Castellana",
-    "Polo Club", "San Felipe", "Emaús", "Colina Campestre", "Ciudad Meléndez", "Ciudad Jardín",
+    "La Calleja", "Calleja Alta", "Calleja Baja", "La Carolina", "Bosque Medina", "El Contador", "Alcalá", "Belmira", "La Castellana",
+    "Polo Club", "San Felipe", "Emaús", "Colina Campestre", "Ciudad Meléndez",
+    "Ciudad Jardín Norte", "Ciudad Jardín Sur", "Ciudad Jardín",
+    "Álamos Norte", "Álamos Sur", "Álamos",
+    "La Candelaria Centro", "Candelaria la Nueva", "Candelaria Sur", "La Candelaria",
     "Nuevo Country", "Niza Norte", "Niza", "Bella Suiza", "Lisboa", "Alejandría", "Carmel Club",
-    "Cantalejo", "Sotavento", "San José de Bavaria", "Chapinero Alto", "Chapinero", "Cedritos"
+    "Cantalejo", "Sotavento", "San José de Bavaria", "Chapinero Alto", "Chapinero Central", "Chapinero", "Cedritos"
   ];
 
   const acceptedNeighborhoods: string[] = [];
@@ -922,8 +927,12 @@ export function extractFallbackDataFromText(text: string): any {
     else if (clean.includes("santa bibiana")) zone = "Santa Bibiana";
     else if (clean.includes("san patricio")) zone = "San Patricio";
     else if (clean.includes("santa teresa")) zone = "Santa Teresa";
+    else if (clean.includes("santa ana oriental") || clean.includes("santa ana alta")) zone = "Santa Ana Oriental";
+    else if (clean.includes("santa ana occidental")) zone = "Santa Ana Occidental";
     else if (clean.includes("santa ana")) zone = "Santa Ana";
     else if (clean.includes("la cabrera") || clean.includes("cabrera")) zone = "La Cabrera";
+    else if (clean.includes("rosales alto") || clean.includes("los rosales alto") || clean.includes("rosales parte alta") || clean.includes("rosales arriba")) zone = "Rosales Alto";
+    else if (clean.includes("rosales bajo") || clean.includes("los rosales bajo") || clean.includes("rosales parte baja") || clean.includes("rosales abajo") || clean.includes("rosales plano")) zone = "Rosales Bajo";
     else if (clean.includes("rosales") || clean.includes("los rosales")) zone = "Rosales";
     else if (clean.includes("el nogal") || clean.includes("nogal")) zone = "El Nogal";
     else if (clean.includes("el virrey") || clean.includes("virrey")) zone = "El Virrey";
@@ -932,6 +941,8 @@ export function extractFallbackDataFromText(text: string): any {
     else if (clean.includes("quinta camacho")) zone = "Quinta Camacho";
     else if (clean.includes("antiguo country")) zone = "Antiguo Country";
     else if (clean.includes("country club") || clean.includes("el country")) zone = "Country Club";
+    else if (clean.includes("calleja alta") || clean.includes("la calleja alta")) zone = "Calleja Alta";
+    else if (clean.includes("calleja baja") || clean.includes("la calleja baja")) zone = "Calleja Baja";
     else if (clean.includes("la calleja") || clean.includes("calleja")) zone = "La Calleja";
     else if (clean.includes("la carolina") || clean.includes("carolina")) zone = "La Carolina";
     else if (clean.includes("bosque medina")) zone = "Bosque Medina";
@@ -944,7 +955,15 @@ export function extractFallbackDataFromText(text: string): any {
     else if (clean.includes("emaus") || clean.includes("emaús")) zone = "Emaús";
     else if (clean.includes("colina campestre") || clean.includes("colina")) zone = "Colina Campestre";
     else if (clean.includes("ciudad melendez") || clean.includes("ciudad meléndez")) zone = "Ciudad Meléndez";
+    else if (clean.includes("ciudad jardin norte") || clean.includes("ciudad jardín norte")) zone = "Ciudad Jardín Norte";
+    else if (clean.includes("ciudad jardin sur") || clean.includes("ciudad jardín sur")) zone = "Ciudad Jardín Sur";
     else if (clean.includes("ciudad jardin") || clean.includes("ciudad jardín")) zone = "Ciudad Jardín";
+    else if (clean.includes("alamos norte") || clean.includes("álamos norte")) zone = "Álamos Norte";
+    else if (clean.includes("alamos sur") || clean.includes("álamos sur")) zone = "Álamos Sur";
+    else if (clean.includes("alamos") || clean.includes("álamos")) zone = "Álamos";
+    else if (clean.includes("candelaria centro") || clean.includes("la candelaria centro")) zone = "La Candelaria Centro";
+    else if (clean.includes("candelaria la nueva") || clean.includes("candelaria sur")) zone = "Candelaria la Nueva";
+    else if (clean.includes("la candelaria") || clean.includes("candelaria")) zone = "La Candelaria";
     else if (clean.includes("nuevo country")) zone = "Nuevo Country";
     else if (clean.includes("niza norte")) zone = "Niza Norte";
     else if (clean.includes("niza")) zone = "Niza";
@@ -4740,16 +4759,23 @@ async function saveRequirement(data: any, userId: string, realName: string, imag
     adminFeeMax: (() => {
       const raw = data.adminFeeMax !== undefined && data.adminFeeMax !== null ? data.adminFeeMax : (data.adminFee !== undefined && data.adminFee !== null ? data.adminFee : null);
       if (raw !== undefined && raw !== null) {
-        const v = parseFloat(String(raw));
-        if (!isNaN(v) && v >= 10_000 && v <= 30_000_000) return String(v);
+        let v = parseFloat(String(raw));
+        if (!isNaN(v)) {
+          if (v >= 500 && v <= 15000) v = v * 1000;
+          if (v >= 10_000 && v <= 30_000_000) return String(v);
+        }
       }
-      // Fallback robusto: extraer desde rawText ("admon max $1.200.000", "administración hasta 800 mil", "admon $960.000")
+      // Fallback robusto: extraer desde rawText ("admon max $1.200.000", "administración hasta 800 mil", "admon no mayor a 1900")
       const rawL = (data.rawText || data.name || "").toLowerCase();
-      const adminMatch = rawL.match(/(?:administraci[oó]n|admin|admon|cta\s*admon)\s*(?:m[aá]xima|max|hasta)?\s*:?\s*(?:aprox\.?|mensual)?\s*\$?\s*([\d.,\s]+?)(?:-|\s|\(|\/|\+|$|\n)/i);
+      const adminMatch = rawL.match(/(?:administraci[oó]n|admin|admon|cta\s*admon)\s*(?:m[aá]xima|max|hasta|tope|no\s*mayor\s*a|no\s*superior\s*a|menor\s*a)?\s*:?\s*(?:aprox\.?|mensual)?\s*\$?\s*([\d.,\s]+?)(?:\s*mil\b|\s*k\b|\s*millones\b|-|\s|\(|\/|\+|$|\n)/i);
       if (adminMatch) {
-        const parsed = parseFloat(adminMatch[1].replace(/[.,\s]/g, ''));
-        if (!isNaN(parsed) && parsed >= 10_000 && parsed <= 30_000_000 && !isPhoneNumberNotPrice(parsed, rawL)) {
-          return String(parsed);
+        const cleanNum = adminMatch[1].replace(/[.,\s]/g, '');
+        let parsed = parseFloat(cleanNum);
+        if (!isNaN(parsed)) {
+          if (parsed >= 500 && parsed <= 15000) parsed = parsed * 1000;
+          if (parsed >= 10_000 && parsed <= 30_000_000 && !isPhoneNumberNotPrice(parsed, rawL)) {
+            return String(parsed);
+          }
         }
       }
       return null;

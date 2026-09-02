@@ -554,7 +554,7 @@ export const janIARouter = router({
           .from(propertyMatches)
           .innerJoin(properties, eq(propertyMatches.propertyId, properties.id))
           .innerJoin(requirements, eq(propertyMatches.requirementId, requirements.id))
-          .where(sql`CAST(${propertyMatches.matchScore} AS NUMERIC) >= 75`)
+          .where(sql`CAST(${propertyMatches.matchScore} AS NUMERIC) >= 75 AND (${propertyMatches.status} IS NULL OR ${propertyMatches.status} NOT IN ('rejected', 'rechazado'))`)
           .orderBy(desc(propertyMatches.id))
           .limit(150);
 
@@ -916,12 +916,15 @@ export const janIARouter = router({
           ajustesGuardados: input.ajustesGuardados || null,
         }).returning();
 
-        // Si el match fue rechazado, actualizar el status en propertyMatches
+        // Si el match fue rechazado, eliminar o actualizar en propertyMatches y limpiar caché
         if (input.matchId && input.action === 'rechazado') {
-          await db.update(propertyMatches)
-            .set({ status: 'rejected' })
+          await db.delete(propertyMatches)
             .where(eq(propertyMatches.id, input.matchId));
         }
+
+        // Invalidar caché de matches inmediatamente
+        cachedAllMatchesData = null;
+        cachedAllMatchesTime = 0;
 
         console.log(`[JanIA-Feedback] Feedback registrado para Match #${input.matchId}: ${input.action} - ${input.motivoRechazo || 'Sin motivo'}`);
         return { success: true, feedbackId: feedback.id };
