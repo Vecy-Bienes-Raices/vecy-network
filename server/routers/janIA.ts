@@ -554,7 +554,7 @@ export const janIARouter = router({
           .from(propertyMatches)
           .innerJoin(properties, eq(propertyMatches.propertyId, properties.id))
           .innerJoin(requirements, eq(propertyMatches.requirementId, requirements.id))
-          .where(sql`CAST(${propertyMatches.matchScore} AS NUMERIC) >= 75 AND (${propertyMatches.status} IS NULL OR ${propertyMatches.status} NOT IN ('rejected', 'rechazado'))`)
+          .where(sql`CAST(${propertyMatches.matchScore} AS NUMERIC) >= 75 AND (${propertyMatches.status} IS NULL OR CAST(${propertyMatches.status} AS TEXT) NOT IN ('rejected', 'rechazado'))`)
           .orderBy(desc(propertyMatches.id))
           .limit(150);
 

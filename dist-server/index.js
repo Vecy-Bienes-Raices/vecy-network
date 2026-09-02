@@ -16144,7 +16144,7 @@ ${liveStats}${userContextInstruction}
           enlaceOrigen: requirements.enlaceOrigen,
           createdAt: requirements.createdAt
         }
-      }).from(propertyMatches).innerJoin(properties, eq8(propertyMatches.propertyId, properties.id)).innerJoin(requirements, eq8(propertyMatches.requirementId, requirements.id)).where(sql5`CAST(${propertyMatches.matchScore} AS NUMERIC) >= 75 AND (${propertyMatches.status} IS NULL OR ${propertyMatches.status} NOT IN ('rejected', 'rechazado'))`).orderBy(desc2(propertyMatches.id)).limit(150);
+      }).from(propertyMatches).innerJoin(properties, eq8(propertyMatches.propertyId, properties.id)).innerJoin(requirements, eq8(propertyMatches.requirementId, requirements.id)).where(sql5`CAST(${propertyMatches.matchScore} AS NUMERIC) >= 75 AND (${propertyMatches.status} IS NULL OR CAST(${propertyMatches.status} AS TEXT) NOT IN ('rejected', 'rechazado'))`).orderBy(desc2(propertyMatches.id)).limit(150);
       const propIds = Array.from(new Set(matches.map((m) => m.property.id)));
       const imagesMap = {};
       if (propIds.length > 0) {
