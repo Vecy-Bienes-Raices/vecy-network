@@ -2120,24 +2120,43 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
           }
         }
 
+        const isNewsletter = targetJid.endsWith('@newsletter');
         const sendOptions: any = {};
         if (options.quoted) {
           sendOptions.quoted = options.quoted;
         }
 
+        // ── ATRIBUTOS DE STANZA PARA CANALES / NEWSLETTERS DE WHATSAPP ──
+        if (isNewsletter) {
+          if (messagePayload.image) {
+            sendOptions.additionalAttributes = { type: 'media', mediatype: 'image' };
+          } else if (messagePayload.video) {
+            sendOptions.additionalAttributes = { type: 'media', mediatype: 'video' };
+          } else if (messagePayload.audio) {
+            sendOptions.additionalAttributes = { type: 'media', mediatype: 'audio' };
+          } else if (messagePayload.document) {
+            sendOptions.additionalAttributes = { type: 'media', mediatype: 'document' };
+          }
+        }
+
         // ── ESCUDO DE SIMULACIÓN HUMANA (Human-Like Delay & Presence Updates) ──
-        if (messagePayload.text && typeof messagePayload.text === 'string') {
-          try {
-            await this.sock.sendPresenceUpdate('composing', targetJid);
-            const typingDelay = Math.min(5000, Math.max(2000, messagePayload.text.length * 40));
-            await delay(typingDelay);
-          } catch (_) {}
-        } else if (messagePayload.audio) {
-          try {
-            await this.sock.sendPresenceUpdate('recording', targetJid);
-            const recordingDelay = Math.min(1500, Math.max(300, (options.voiceLength || 2) * 200));
-            await delay(recordingDelay);
-          } catch (_) {}
+        if (!isNewsletter) {
+          if (messagePayload.text && typeof messagePayload.text === 'string') {
+            try {
+              await this.sock.sendPresenceUpdate('composing', targetJid);
+              const typingDelay = Math.min(5000, Math.max(2000, messagePayload.text.length * 40));
+              await delay(typingDelay);
+            } catch (_) {}
+          } else if (messagePayload.audio) {
+            try {
+              await this.sock.sendPresenceUpdate('recording', targetJid);
+              const recordingDelay = Math.min(1500, Math.max(300, (options.voiceLength || 2) * 200));
+              await delay(recordingDelay);
+            } catch (_) {}
+          }
+        } else {
+          // Espaciado seguro para canales para garantizar orden y procesamiento CDN
+          await delay(2000);
         }
 
         const sent = await this.sock.sendMessage(targetJid, messagePayload, sendOptions);
@@ -2191,14 +2210,15 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         messagePayload = { text };
       }
 
-      if (mentions && mentions.length > 0) {
+      // Los canales de WhatsApp no admiten menciones grupales
+      if (mentions && mentions.length > 0 && !targetJid.endsWith('@newsletter')) {
         messagePayload.mentions = mentions.map(m => m.endsWith('@s.whatsapp.net') ? m : m.replace('@c.us', '@s.whatsapp.net'));
       }
 
       await this.queuedSend(targetJid, messagePayload);
-      console.log(`[JANIA-MATCH] ✓ Mensaje enviado al grupo ${targetJid}.`);
+      console.log(`[JANIA-MATCH] ✓ Mensaje enviado al destino ${targetJid}.`);
     } catch (e: any) {
-      console.error(`[JANIA-MATCH] Error enviando mensaje al grupo ${groupId || this.targetGroupId}:`, e.message || e);
+      console.error(`[JANIA-MATCH] Error enviando mensaje al destino ${groupId || this.targetGroupId}:`, e.message || e);
     }
   }
 
@@ -2210,6 +2230,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         targetJid = targetJid.replace('@c.us', '@s.whatsapp.net');
       }
 
+      const fs = await import('fs');
       if (imagePath && fs.existsSync(imagePath)) {
         try {
           await this.sendToGroup(captionText || text, imagePath, [], targetJid);
@@ -2240,7 +2261,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         }
       }
     } catch (e: any) {
-      console.error('[JANIA-MATCH] Error enviando nota de voz al grupo:', e.message || e);
+      console.error('[JANIA-MATCH] Error enviando nota de voz al destino:', e.message || e);
     }
   }
 
@@ -2250,12 +2271,56 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
       await this.discoverAndSyncNewsletters().catch(() => {});
     }
 
+    const { cleanVoiceText, textToSpeechMedia } = await import('./whatsapp-utils');
+    const cleaned = cleanVoiceText(text);
+    console.log(`[JANIA-MATCH] 🎙️ Generando nota de voz TTS centralizada para Buzón y Canal...`);
+    const voiceMedia = await textToSpeechMedia(cleaned);
+    const audioBuffer = voiceMedia && voiceMedia.data ? Buffer.from(voiceMedia.data, 'base64') : null;
+    const audioMimetype = voiceMedia?.mimetype || 'audio/ogg; codecs=opus';
+    const fs = await import('fs');
+
+    // 1. Despachar a Grupo 2 (Buzón Oficial / Soporte Legal)
     if (this.buzonGroupId) {
-      await this.sendVoiceToGroup(text, this.buzonGroupId, imagePath, captionText);
+      try {
+        console.log(`[JANIA-MATCH] 📤 Despachando publicación a Grupo 2 (${this.buzonGroupId})...`);
+        if (imagePath && fs.existsSync(imagePath)) {
+          await this.sendToGroup(captionText || text, imagePath, [], this.buzonGroupId);
+        }
+        if (audioBuffer) {
+          await this.queuedSend(this.buzonGroupId, {
+            audio: audioBuffer,
+            mimetype: audioMimetype,
+            ptt: true
+          });
+          console.log(`[JANIA-MATCH] ✓ Nota de voz enviada al Grupo 2 (${this.buzonGroupId}).`);
+        } else if (!imagePath) {
+          await this.queuedSend(this.buzonGroupId, cleaned);
+        }
+      } catch (grpErr: any) {
+        console.error(`[JANIA-MATCH] Error despachando a Grupo 2:`, grpErr?.message);
+      }
     }
+
+    // 2. Despachar a Canal de WhatsApp (Newsletter)
     if (this.channelNewsletterId) {
-      console.log(`[JANIA-MATCH] 📢 Despachando publicación temática al Canal de WhatsApp (${this.channelNewsletterId})...`);
-      await this.sendVoiceToGroup(text, this.channelNewsletterId, imagePath, captionText);
+      try {
+        console.log(`[JANIA-MATCH] 📢 Despachando publicación temática al Canal de WhatsApp (${this.channelNewsletterId})...`);
+        if (imagePath && fs.existsSync(imagePath)) {
+          await this.sendToGroup(captionText || text, imagePath, [], this.channelNewsletterId);
+        }
+        if (audioBuffer) {
+          await this.queuedSend(this.channelNewsletterId, {
+            audio: audioBuffer,
+            mimetype: audioMimetype,
+            ptt: true
+          });
+          console.log(`[JANIA-MATCH] ✓ Nota de voz enviada al Canal de WhatsApp (${this.channelNewsletterId}).`);
+        } else if (!imagePath) {
+          await this.queuedSend(this.channelNewsletterId, cleaned);
+        }
+      } catch (chanErr: any) {
+        console.error(`[JANIA-MATCH] Error despachando a Canal de WhatsApp:`, chanErr?.message);
+      }
     } else {
       console.warn(`[JANIA-MATCH] ⚠️ Canal de WhatsApp no configurado aún (channelNewsletterId vacío).`);
     }
