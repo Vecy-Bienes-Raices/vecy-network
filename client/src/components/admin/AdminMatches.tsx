@@ -2074,39 +2074,107 @@ export default function AdminMatches() {
   const [dismissedMatchIds, setDismissedMatchIds] = React.useState<Set<number>>(new Set());
   const [saveStatusMap, setSaveStatusMap] = React.useState<Record<number, 'saved' | 'recalculated'>>({});
 
-  const handleCopy = (text: string, id: string, asSearchSnippet = false) => {
+  // Función de copiado al portapapeles infalible (Async Clipboard API con fallback a ExecCommand Textarea)
+  const copyToClipboard = async (text: string): Promise<boolean> => {
+    if (!text) return false;
     try {
-      if (!text) return;
-      const cleanRaw = text.replace(/__is_sub_message__/g, '').trim();
-      
-      if (asSearchSnippet) {
-        // Extraer la primera línea o frase clave corta para ubicar en el buscador de WhatsApp
-        const lines = cleanRaw
-          .split('\n')
-          .map(l => l.replace(/[*_~`#]/g, '').trim())
-          .filter(l => l.length >= 4 && !l.startsWith('http') && !l.startsWith('__'));
-        
-        let snippet = lines.length > 0 ? lines[0] : cleanRaw;
-        if (snippet.length > 45) {
-          snippet = snippet.slice(0, 45).trim();
-        }
-        
-        navigator.clipboard.writeText(snippet);
-        toast.success("🔍 Frase de búsqueda copiada", {
-          description: `Pega "${snippet}" en la lupa de WhatsApp para encontrar el mensaje.`,
-        });
-      } else {
-        // Copiar el texto 100% original con sus saltos de línea y emojis intactos
-        navigator.clipboard.writeText(cleanRaw);
-        toast.success("📋 Mensaje original copiado", {
-          description: "Texto 100% fiel con saltos de línea y formato original.",
-        });
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+    } catch (err) {
+      console.warn("navigator.clipboard.writeText falló o no tiene foco, intentando fallback:", err);
+    }
+
+    try {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-999999px";
+      textArea.style.top = "-999999px";
+      textArea.setAttribute("readonly", "");
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      const successful = document.execCommand("copy");
+      document.body.removeChild(textArea);
+      return successful;
+    } catch (fallbackErr) {
+      console.error("Fallback execCommand falló:", fallbackErr);
+      return false;
+    }
+  };
+
+  // Extractor de frase o dato clave único para búsqueda instantánea en WhatsApp
+  const extractSmartSearchSnippet = (rawText?: string | null, fallback?: string): { snippet: string; description: string } => {
+    const text = (rawText || fallback || "").replace(/__is_sub_message__/g, "").trim();
+    if (!text) return { snippet: "", description: "" };
+
+    const lines = text
+      .split("\n")
+      .map(l => l.replace(/[*_~`#]/g, "").trim())
+      .filter(l => l.length >= 4 && !l.startsWith("http") && !l.startsWith("__"));
+
+    // 1. Buscar línea de dirección o cruce específico (Cra, Cll, Cl, Ak, Auto, etc.)
+    const addressLine = lines.find(l => /(?:cra|carrera|cll|calle|diag|diagonal|trans|transversal|av|avenida|ak|ac)\.?\s*\d+/i.test(l));
+    if (addressLine && addressLine.length >= 6 && addressLine.length <= 45) {
+      return { snippet: addressLine, description: "Dirección o cruce específico" };
+    }
+
+    // 2. Buscar frase con canon/precio único
+    const priceLine = lines.find(l => /(?:canon|precio|valor|arriendo|venta)[\s:]*\$?\s*\d[\d.,]+/i.test(l) && l.length <= 45);
+    if (priceLine && priceLine.length <= 40) {
+      return { snippet: priceLine, description: "Precio o canon exacto" };
+    }
+
+    // 3. Buscar especificación distintiva (vigilancia, metraje, piso, etc.)
+    const specLine = lines.find(l => /(?:m2|mts|vigilancia|porter[ií]a|no\s*automatizad|disponibilidad|amoblado|garajes?|estudio)/i.test(l) && l.length <= 40);
+    if (specLine && specLine.length <= 40) {
+      return { snippet: specLine, description: "Especificación técnica única" };
+    }
+
+    // 4. Si la segunda línea es más específica que la primera (evitar títulos genéricos)
+    if (lines.length > 1 && lines[1].length >= 8 && lines[1].length <= 45 && !/(?:arriendo|vendo|venta|busco)\s*(?:apartamento|apto|casa|inmueble)/i.test(lines[1])) {
+      return { snippet: lines[1], description: "Frase descriptiva del inmueble" };
+    }
+
+    let snippet = lines.length > 0 ? lines[0] : text;
+    if (snippet.length > 40) {
+      snippet = snippet.slice(0, 40).trim();
+    }
+    return { snippet, description: "Texto clave" };
+  };
+
+  const handleCopy = async (text: string, id: string, mode: 'full' | 'search' | 'group' = 'full', groupName?: string) => {
+    try {
+      if (!text && mode !== 'group') return;
+      let targetText = text;
+      let title = "📋 Mensaje original copiado";
+      let desc = "Texto 100% fiel con saltos de línea y emojis intactos.";
+
+      if (mode === 'search') {
+        const smart = extractSmartSearchSnippet(text);
+        targetText = smart.snippet;
+        title = "🔍 Clave única de búsqueda copiada";
+        desc = groupName 
+          ? `Pega "${targetText}" en el buscador del grupo "${groupName}" de WhatsApp para ubicarlo de inmediato.`
+          : `Pega "${targetText}" en la lupa de WhatsApp para encontrar este mensaje.`;
+      } else if (mode === 'group') {
+        targetText = (groupName || text || "").trim();
+        title = "🏷️ Nombre de grupo copiado";
+        desc = `Pega "${targetText}" en la barra de búsqueda de WhatsApp para abrir el grupo.`;
       }
 
-      setCopiedId(id);
-      setTimeout(() => {
-        setCopiedId(prev => (prev === id ? null : prev));
-      }, 2000);
+      const success = await copyToClipboard(targetText);
+      if (success) {
+        toast.success(title, { description: desc });
+        setCopiedId(id);
+        setTimeout(() => {
+          setCopiedId(prev => (prev === id ? null : prev));
+        }, 2000);
+      } else {
+        toast.error("Error al copiar al portapapeles");
+      }
     } catch (e) {
       console.error("Error al copiar texto:", e);
     }
@@ -2885,10 +2953,24 @@ export default function AdminMatches() {
                           🏢 Inmueble / Oferta
                         </span>
                         <div className="flex items-center gap-2 flex-wrap">
-                          {m.property?.origenNombre && (
-                            <span className="text-[10px] text-zinc-400 bg-white/5 border border-white/10 px-2 py-0.5 rounded-md truncate max-w-[180px] sm:max-w-[200px]" title={m.property.origenNombre}>
-                              📍 {m.property.origenNombre}
+                          {m.property?.createdAt && (
+                            <span className="text-[10px] text-zinc-400 bg-white/5 border border-white/10 px-2 py-0.5 rounded-md flex items-center gap-1 font-mono" title="Fecha de publicación del inmueble">
+                              📅 {formatColombiaDate(m.property.createdAt)}
                             </span>
+                          )}
+                          {m.property?.origenNombre && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCopy(m.property.origenNombre, `grp-prop-${m.id}`, 'group', m.property.origenNombre);
+                              }}
+                              className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-300 hover:text-amber-200 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 hover:border-amber-400/40 px-2 py-0.5 rounded-md transition-all truncate max-w-[220px]"
+                              title={`Clic para copiar nombre exacto del grupo: "${m.property.origenNombre}"`}
+                            >
+                              <span>📍 {m.property.origenNombre}</span>
+                              <Copy className="w-2.5 h-2.5 opacity-70 hover:opacity-100" />
+                            </button>
                           )}
                         </div>
                       </div>
@@ -2930,7 +3012,7 @@ export default function AdminMatches() {
                                         type="button"
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          handleCopy(pText || fallbackText, copyKey, false);
+                                          handleCopy(pText || fallbackText, copyKey, 'full');
                                         }}
                                         className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-lg transition-all duration-300 border ${
                                           isCopied
@@ -2955,14 +3037,14 @@ export default function AdminMatches() {
                                         type="button"
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          handleCopy(pText || fallbackText, copySearchKey, true);
+                                          handleCopy(pText || fallbackText, copySearchKey, 'search', m.property?.origenNombre);
                                         }}
                                         className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg transition-all duration-300 border ${
                                           isSearchCopied
                                             ? "bg-amber-500/25 text-amber-300 border-amber-400/60 shadow-[0_0_15px_rgba(245,158,11,0.45)] scale-105"
                                             : "text-zinc-400 hover:text-amber-300 bg-white/5 hover:bg-white/10 border-white/10 hover:border-amber-400/30 active:scale-95"
                                         }`}
-                                        title="Copiar frase corta clave para pegar en el buscador de WhatsApp"
+                                        title={`Copiar frase o dirección clave para buscar en WhatsApp (${m.property?.origenNombre || 'Grupo'})`}
                                       >
                                         {isSearchCopied ? (
                                           <>
@@ -3144,6 +3226,11 @@ export default function AdminMatches() {
                           🔍 Requerimiento / Demanda
                         </span>
                         <div className="flex items-center gap-2 flex-wrap">
+                          {m.requirement?.createdAt && (
+                            <span className="text-[10px] text-zinc-400 bg-white/5 border border-white/10 px-2 py-0.5 rounded-md flex items-center gap-1 font-mono" title="Fecha de publicación del requerimiento">
+                              📅 {formatColombiaDate(m.requirement.createdAt)}
+                            </span>
+                          )}
                           {(() => {
                             const reqPublicUrl = extractPublicLink(m.requirement);
                             return reqPublicUrl ? (
@@ -3159,9 +3246,18 @@ export default function AdminMatches() {
                             ) : null;
                           })()}
                           {m.requirement?.origenNombre && (
-                            <span className="text-[10px] text-zinc-400 bg-white/5 border border-white/10 px-2 py-0.5 rounded-md truncate max-w-[180px] sm:max-w-[200px]" title={m.requirement.origenNombre}>
-                              📍 {m.requirement.origenNombre}
-                            </span>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCopy(m.requirement.origenNombre, `grp-req-${m.id}`, 'group', m.requirement.origenNombre);
+                              }}
+                              className="inline-flex items-center gap-1 text-[10px] font-semibold text-cyan-300 hover:text-cyan-200 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 hover:border-cyan-400/40 px-2 py-0.5 rounded-md transition-all truncate max-w-[220px]"
+                              title={`Clic para copiar nombre exacto del grupo: "${m.requirement.origenNombre}"`}
+                            >
+                              <span>📍 {m.requirement.origenNombre}</span>
+                              <Copy className="w-2.5 h-2.5 opacity-70 hover:opacity-100" />
+                            </button>
                           )}
                         </div>
                       </div>
@@ -3202,7 +3298,7 @@ export default function AdminMatches() {
                                         type="button"
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          handleCopy(rText, copyKey, false);
+                                          handleCopy(rText, copyKey, 'full');
                                         }}
                                         className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-lg transition-all duration-300 border ${
                                           isCopied
@@ -3227,14 +3323,14 @@ export default function AdminMatches() {
                                         type="button"
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          handleCopy(rText, copySearchKey, true);
+                                          handleCopy(rText, copySearchKey, 'search', m.requirement?.origenNombre);
                                         }}
                                         className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg transition-all duration-300 border ${
                                           isSearchCopied
                                             ? "bg-amber-500/25 text-amber-300 border-amber-400/60 shadow-[0_0_15px_rgba(245,158,11,0.45)] scale-105"
                                             : "text-zinc-400 hover:text-amber-300 bg-white/5 hover:bg-white/10 border-white/10 hover:border-amber-400/30 active:scale-95"
                                         }`}
-                                        title="Copiar frase corta clave para pegar en el buscador de WhatsApp"
+                                        title={`Copiar frase o detalle clave para buscar en WhatsApp (${m.requirement?.origenNombre || 'Grupo'})`}
                                       >
                                         {isSearchCopied ? (
                                           <>
