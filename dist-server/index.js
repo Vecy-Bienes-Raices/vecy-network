@@ -6741,6 +6741,7 @@ __export(janIA_exports, {
   resolveContactPhone: () => resolveContactPhone,
   sanitizeResponseMarkdown: () => sanitizeResponseMarkdown,
   scrapeUrlWithBypass: () => scrapeUrlWithBypass,
+  splitMultiItemMessage: () => splitMultiItemMessage,
   splitMultiPropertyMessage: () => splitMultiPropertyMessage,
   translatePropertyType: () => translatePropertyType,
   translateTransactionType: () => translateTransactionType
@@ -6997,7 +6998,7 @@ function parseColombianPriceOrBudget(numStr, unit, isSale) {
   return Math.round(val);
 }
 function extractFallbackDataFromText(text2) {
-  const clean = (text2 || "").toLowerCase().replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0\u200E\u200F\u2028\u2029]/g, "").replace(/['´`’‘\u00B4\u2019\u2018]/g, ".").replace(/[\t ]+/g, " ");
+  const clean = (text2 || "").toLowerCase().replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0\u200E\u200F\u2028\u2029]/g, "").replace(/['´`’‘\u00B4\u2019\u2018]/g, ".").replace(/[*_~]/g, "").replace(/[\t ]+/g, " ");
   let transactionType = "venta";
   const isInvestorPurchase = /\b(?:inversionista|inversionistas|para inversi[oó]n|para inversion|rentando|est[eé] rentando|est[eé]n rentando|ojal[aá] rentando|ya rentando|generando renta|produciendo renta|con renta activa|para compra|compro|compra ya|busco para compra)\b/i.test(clean);
   const hasPermutaSignals = /\b(?:permuto|permuta|permutas|permutamos|se permuta|recibo menor valor|recibo inmueble|recibo vehículo|recibo vehiculo|pelo a pelo|encime|parte de pago)\b/i.test(clean);
@@ -7061,7 +7062,7 @@ function extractFallbackDataFromText(text2) {
       }
     }
   }
-  const canonMatch = clean.match(/(?:canon(?:\s*de\s*arriendo)?|valor\s*(?:de\s*)?arriendo|precio\s*(?:de\s*)?arriendo)\s*:?\s*\*?\$?\s*([\d.]+)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i);
+  const canonMatch = clean.match(/(?:canon(?:\s*de\s*arriendo)?|valor\s*(?:de\s*)?arriendo|precio\s*(?:de\s*)?arriendo)\s*:?\s*\$?\s*([\d.]+)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i);
   if (canonMatch) {
     const isSale = false;
     const computed = parseColombianPriceOrBudget(canonMatch[1], canonMatch[2] || "", isSale);
@@ -7069,7 +7070,7 @@ function extractFallbackDataFromText(text2) {
       rentPrice = computed;
     }
   }
-  const saleMatch = clean.match(/(?:precio\s*(?:de\s*)?venta|valor\s*(?:de\s*)?venta|valor\s*un\s*poco\s*negociable|valor\s*negociable|precio\s*negociable)\s*:?\s*\*?\$?\s*([\d.]+)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i);
+  const saleMatch = clean.match(/(?:precio\s*(?:de\s*)?venta|valor\s*(?:de\s*)?venta|valor\s*un\s*poco\s*negociable|valor\s*negociable|precio\s*negociable)\s*:?\s*\$?\s*([\d.]+)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i);
   if (saleMatch) {
     const isSale = true;
     const computed = parseColombianPriceOrBudget(saleMatch[1], saleMatch[2] || "", isSale);
@@ -7079,23 +7080,8 @@ function extractFallbackDataFromText(text2) {
     }
   }
   if (price === 0 && rentPrice === 0) {
-    const simplePriceMatch = clean.match(/(?:precio|valor)\s*:\s*\*?\$?\s*([\d.]+)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i);
-    if (simplePriceMatch) {
-      const isSale = transactionType !== "arriendo";
-      const computed = parseColombianPriceOrBudget(simplePriceMatch[1], simplePriceMatch[2] || "", isSale);
-      if (computed > 0 && !isPhoneNumberNotPrice(computed, text2) && computed !== adminFee) {
-        if (transactionType === "arriendo" || computed <= 5e7) {
-          rentPrice = computed;
-        } else {
-          price = computed;
-        }
-        presupuestoMax = computed;
-      }
-    }
-  }
-  if (price === 0 && rentPrice === 0) {
-    const rangeMatch = clean.match(/(?:presupuesto(?:\s*m[aá]ximo)?|ppto(?:\s*m[aá]ximo)?|hasta|tope|inversi[oó]n|compra)?\s*:?\s*\*?\$?\s*(\d{1,4}(?:[.,]\d{1,3})?)\s*(?:a|hasta|-)\s*\*?\$?\s*(\d{1,4}(?:[.,]\d{1,3})?)\*?\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i);
-    if (rangeMatch && (rangeMatch[0].includes("presupuesto") || rangeMatch[0].includes("ppto") || rangeMatch[0].includes("compra") || rangeMatch[3])) {
+    const rangeMatch = clean.match(/(?:presupuesto|ppto|inversi[oó]n|compra)\s*:?\s*(?:entre\s+)?\$?\s*(\d+(?:[.,]\d+)?)\s*(?:a|hasta|-|y)\s*\$?\s*(\d+(?:[.,]\d+)?)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i) || clean.match(/(?:entre\s+)\$?\s*(\d+(?:[.,]\d+)?)\s*(?:a|hasta|-|y)\s*\$?\s*(\d+(?:[.,]\d+)?)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)\b/i);
+    if (rangeMatch) {
       const isSale = transactionType !== "arriendo";
       presupuestoMin = parseColombianPriceOrBudget(rangeMatch[1], rangeMatch[3] || "", isSale);
       presupuestoMax = parseColombianPriceOrBudget(rangeMatch[2], rangeMatch[3] || "", isSale);
@@ -7106,11 +7092,26 @@ function extractFallbackDataFromText(text2) {
     }
   }
   if (price === 0 && rentPrice === 0) {
-    const ceilingMatch = clean.match(/(?:presupuesto(?:\s*m[aá]ximo)?|ppto(?:\s*m[aá]ximo)?|m[aá]ximo|max|hasta|tope|techo|l[ií]mite)\s*(?:m[aá]ximo|max)?\s*(?:de)?\s*:?\s*\*?\$?\s*([\d.]+)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i);
+    const ceilingMatch = clean.match(/(?:presupuesto(?:\s*m[aá]ximo)?|ppto(?:\s*m[aá]ximo)?|\bhasta\b|\btope\b|\btecho\b|\bl[ií]mite\b)\s*(?:m[aá]ximo|max)?\s*(?:de)?\s*:?\s*\$?\s*(\d+(?:[.,]\d+)*)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i);
     if (ceilingMatch) {
       const isSale = transactionType !== "arriendo";
       const computed = parseColombianPriceOrBudget(ceilingMatch[1], ceilingMatch[2] || "", isSale);
       if (computed > 0 && !isPhoneNumberNotPrice(computed, text2)) {
+        if (transactionType === "arriendo" || computed <= 5e7) {
+          rentPrice = computed;
+        } else {
+          price = computed;
+        }
+        presupuestoMax = computed;
+      }
+    }
+  }
+  if (price === 0 && rentPrice === 0) {
+    const simplePriceMatch = clean.match(/(?:precio|valor)\s*:\s*\$?\s*([\d.]+)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i);
+    if (simplePriceMatch) {
+      const isSale = transactionType !== "arriendo";
+      const computed = parseColombianPriceOrBudget(simplePriceMatch[1], simplePriceMatch[2] || "", isSale);
+      if (computed > 0 && !isPhoneNumberNotPrice(computed, text2) && computed !== adminFee) {
         if (transactionType === "arriendo" || computed <= 5e7) {
           rentPrice = computed;
         } else {
@@ -7165,7 +7166,11 @@ function extractFallbackDataFromText(text2) {
     "tres": 3,
     "cuatro": 4,
     "cinco": 5,
-    "seis": 6
+    "seis": 6,
+    "siete": 7,
+    "ocho": 8,
+    "nueve": 9,
+    "diez": 10
   };
   function parseWordOrDigit(str) {
     if (!str) return 0;
@@ -7174,40 +7179,65 @@ function extractFallbackDataFromText(text2) {
     const n = parseInt(s, 10);
     return isNaN(n) ? 0 : n;
   }
-  const bedRangeMatch = clean.match(/(?:🛏️\s*)?(?:de\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d{1,2})\s*(?:a|-|o|hasta)\s*(un|una|uno|dos|tres|cuatro|cinco|\d{1,2})\s*(?:amplias?|grandes?|c[oó]modas?|hermosas?|iluminadas?|confortables?|lindas?|buenas?|espaciosas?|principales?)?\s*(?:alcobas?|hab(?:s|itaciones|itacion)?|dormitorios?|cuartos?)\b/i);
-  if (bedRangeMatch) {
-    bedroomsMin = parseWordOrDigit(bedRangeMatch[1]);
-    bedroomsMax = parseWordOrDigit(bedRangeMatch[2]);
+  const rangePrefixMatch = clean.match(/(?:🛏️|🛌)?\s*(?:alcobas?|hab(?:s|itaciones|itaci[oó]n)?|dormitorios?|cuartos?)\s*[:\-=]\s*(?:de\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d{1,2})\s*(?:a|-|o|hasta)\s*(un|una|uno|dos|tres|cuatro|cinco|\d{1,2})/i);
+  if (rangePrefixMatch) {
+    bedroomsMin = parseWordOrDigit(rangePrefixMatch[1]);
+    bedroomsMax = parseWordOrDigit(rangePrefixMatch[2]);
     bedrooms = bedroomsMin;
   } else {
-    const bedWordMatch = clean.match(/(?:🛏️\s*)?(?:(?:tiene|con|de)\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d{1,2})\s*(?:amplias?|grandes?|c[oó]modas?|hermosas?|iluminadas?|confortables?|lindas?|buenas?|espaciosas?|principales?)?\s*(?:alcobas?|hab(?:s|itaciones|itacion)?|dormitorios?|cuartos?)\b/i);
-    if (bedWordMatch) {
-      bedroomsMin = parseWordOrDigit(bedWordMatch[1]);
-      bedroomsMax = bedroomsMin;
-      bedrooms = bedroomsMin;
+    const kvPrefixMatch = clean.match(/(?:🛏️|🛌)?\s*(?:alcobas?|hab(?:s|itaciones|itaci[oó]n)?|dormitorios?|cuartos?)\s*[:\-=]\s*(?:m[ií]nimo\s*|minimo\s*|m[ií]n\s*|min\s*)?(un|una|uno|dos|tres|cuatro|cinco|\d{1,2})\b/i);
+    if (kvPrefixMatch) {
+      bedrooms = parseWordOrDigit(kvPrefixMatch[1]);
+      bedroomsMin = bedrooms;
+      bedroomsMax = bedrooms;
+    } else {
+      const bedRangeMatch = clean.match(/(?:🛏️\s*)?(?:de\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d{1,2})\s*(?:a|-|o|hasta)\s*(un|una|uno|dos|tres|cuatro|cinco|\d{1,2})\s*(?:amplias?|grandes?|c[oó]modas?|hermosas?|iluminadas?|confortables?|lindas?|buenas?|espaciosas?|principales?)?\s*(?:alcobas?|hab(?:s|itaciones|itacion)?|dormitorios?|cuartos?)\b/i);
+      if (bedRangeMatch) {
+        bedroomsMin = parseWordOrDigit(bedRangeMatch[1]);
+        bedroomsMax = parseWordOrDigit(bedRangeMatch[2]);
+        bedrooms = bedroomsMin;
+      } else {
+        const bedWordMatch = clean.match(/(?:🛏️\s*)?(?:(?:tiene|con|de)\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d{1,2})\s*(?:amplias?|grandes?|c[oó]modas?|hermosas?|iluminadas?|confortables?|lindas?|buenas?|espaciosas?|principales?)?\s*(?:alcobas?|hab(?:s|itaciones|itacion)?|dormitorios?|cuartos?)\b/i);
+        if (bedWordMatch) {
+          bedroomsMin = parseWordOrDigit(bedWordMatch[1]);
+          bedroomsMax = bedroomsMin;
+          bedrooms = bedroomsMin;
+        }
+      }
     }
   }
   let bathrooms = 0;
-  const bathMatch = clean.match(/(?:🚿|🛁|🚽|de\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d+)(?:\s*(?:\([0-9]+\)|un|una|uno|dos|tres|cuatro|cinco|\d+))?\s*(?:amplios?|completos?|sociales?|grandes?)?\s*(?:baño|baños|bano|banos|wc)/i);
-  if (bathMatch) {
-    bathrooms = parseWordOrDigit(bathMatch[1]);
+  const kvBathMatch = clean.match(/(?:🚿|🛁|🚽)?\s*(?:baños?|banos?|wc)\s*[:\-=]\s*(?:m[ií]nimo\s*|minimo\s*|m[ií]n\s*|min\s*)?(un|una|uno|dos|tres|cuatro|cinco|\d{1,2})\b/i);
+  if (kvBathMatch) {
+    bathrooms = parseWordOrDigit(kvBathMatch[1]);
+  } else {
+    const bathMatch = clean.match(/(?:🚿|🛁|🚽|de\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d+)(?:\s*(?:\([0-9]+\)|un|una|uno|dos|tres|cuatro|cinco|\d+))?\s*(?:amplios?|completos?|sociales?|grandes?)?\s*(?:baño|baños|bano|banos|wc)/i);
+    if (bathMatch) {
+      bathrooms = parseWordOrDigit(bathMatch[1]);
+    }
   }
   let garages = 0;
   let garageType = null;
-  const garMatch = clean.match(/(?:🚙|🚗|🚘)?\s*(?:con\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d{1,2})(?:\s*(?:\([0-9]+\)|un|una|uno|dos|tres|cuatro|cinco|\d{1,2}))?\s*(?:amplios?|cubiertos?|privados?|independientes?|en\s*l[ií]nea|lineales?)?\s*(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero|parq|parqs|pks|estacionamiento|estacionamientos)/i) || clean.match(/(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero|parq|parqs|pks|estacionamiento|estacionamientos)\s*:?\s*(\d{1,2}|un|una|uno|dos|tres|cuatro|cinco)/i);
-  if (garMatch) {
-    const val = parseWordOrDigit(garMatch[1]);
-    if (val >= 1900 && val <= 2100) {
-      garages = 0;
-    } else if (val > 20) {
-      garages = 0;
-    } else {
-      garages = val;
+  const kvGarMatch = clean.match(/(?:🚙|🚗|🚘)?\s*(?:parqueaderos?|garajes?|parqueos?|estacionamientos?|pks?|parqs?)\s*[:\-=]\s*(?:m[ií]nimo\s*|minimo\s*|m[ií]n\s*|min\s*)?(un|una|uno|dos|tres|cuatro|cinco|\d{1,2})\b/i);
+  if (kvGarMatch) {
+    const val = parseWordOrDigit(kvGarMatch[1]);
+    if (val <= 20) garages = val;
+  } else {
+    const garMatch = clean.match(/(?:🚙|🚗|🚘)?\s*(?:con\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d{1,2})(?:\s*(?:\([0-9]+\)|un|una|uno|dos|tres|cuatro|cinco|\d{1,2}))?\s*(?:amplios?|cubiertos?|privados?|independientes?|en\s*l[ií]nea|lineales?)?\s*(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero|parq|parqs|pks|estacionamiento|estacionamientos)/i) || clean.match(/(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero|parq|parqs|pks|estacionamiento|estacionamientos)\s*:?\s*(\d{1,2}|un|una|uno|dos|tres|cuatro|cinco)/i);
+    if (garMatch) {
+      const val = parseWordOrDigit(garMatch[1]);
+      if (val >= 1900 && val <= 2100) {
+        garages = 0;
+      } else if (val > 20) {
+        garages = 0;
+      } else {
+        garages = val;
+      }
+    } else if (/\b(?:parqueaderos|garajes|estacionamientos|parqs|pks)\b/i.test(clean)) {
+      garages = 2;
+    } else if (/con\s+(?:un\s+)?(?:parqueadero|garaje)|parqueadero|garaje/i.test(clean)) {
+      garages = 1;
     }
-  } else if (/\b(?:parqueaderos|garajes|estacionamientos|parqs|pks)\b/i.test(clean)) {
-    garages = 2;
-  } else if (/con\s+(?:un\s+)?(?:parqueadero|garaje)|parqueadero|garaje/i.test(clean)) {
-    garages = 1;
   }
   if (clean.includes("en linea") || clean.includes("en l\xEDnea") || clean.includes("lineal")) {
     garageType = "lineal";
@@ -7301,58 +7331,137 @@ function extractFallbackDataFromText(text2) {
     city = "Girardot";
   }
   let zone = "";
-  if (clean.includes("north point") || clean.includes("north point lift") || clean.includes("san cristobal norte") || clean.includes("san crist\xF3bal norte")) zone = "San Crist\xF3bal Norte";
-  else if (clean.includes("alameda 170") || clean.includes("alameda norte") || clean.includes("la alameda") || clean.includes("barrio alameda") || clean.includes("alameda")) zone = "La Alameda";
-  else if (clean.includes("san antonio noroccidental") || clean.includes("san antonio norte")) zone = "San Antonio Norte";
-  else if (clean.includes("villa magdala")) zone = "Villa Magdala";
-  else if (clean.includes("chico reservado")) zone = "Chic\xF3 Reservado";
-  else if (clean.includes("chico norte")) zone = "Chic\xF3 Norte";
-  else if (clean.includes("chico navarra")) zone = "Chic\xF3 Navarra";
-  else if (clean.includes("rincon del chico") || clean.includes("rinc\xF3n del chic\xF3")) zone = "Rinc\xF3n del Chic\xF3";
-  else if (clean.includes("el chico") || clean.includes("chico") || clean.includes("chic\xF3")) zone = "Chic\xF3";
-  else if (clean.includes("santa barbara central") || clean.includes("santa b\xE1rbara central") || clean.includes("santa barbara (central)")) zone = "Santa B\xE1rbara Central";
-  else if (clean.includes("santa barbara occidental") || clean.includes("santa b\xE1rbara occidental")) zone = "Santa B\xE1rbara Occidental";
-  else if (clean.includes("santa barbara oriental") || clean.includes("santa b\xE1rbara oriental")) zone = "Santa B\xE1rbara Oriental";
-  else if (clean.includes("santa barbara alta") || clean.includes("santa b\xE1rbara alta")) zone = "Santa B\xE1rbara Alta";
-  else if (clean.includes("santa barbara") || clean.includes("santa b\xE1rbara")) zone = "Santa B\xE1rbara";
-  else if (clean.includes("santa paula")) zone = "Santa Paula";
-  else if (clean.includes("santa bibiana")) zone = "Santa Bibiana";
-  else if (clean.includes("san patricio")) zone = "San Patricio";
-  else if (clean.includes("santa teresa")) zone = "Santa Teresa";
-  else if (clean.includes("santa ana")) zone = "Santa Ana";
-  else if (clean.includes("la cabrera") || clean.includes("cabrera")) zone = "La Cabrera";
-  else if (clean.includes("rosales") || clean.includes("los rosales")) zone = "Rosales";
-  else if (clean.includes("el nogal") || clean.includes("nogal")) zone = "El Nogal";
-  else if (clean.includes("el virrey") || clean.includes("virrey")) zone = "El Virrey";
-  else if (clean.includes("el retiro")) zone = "El Retiro";
-  else if (clean.includes("el refugio")) zone = "El Refugio";
-  else if (clean.includes("quinta camacho")) zone = "Quinta Camacho";
-  else if (clean.includes("antiguo country")) zone = "Antiguo Country";
-  else if (clean.includes("country club") || clean.includes("el country")) zone = "Country Club";
-  else if (clean.includes("la calleja") || clean.includes("calleja")) zone = "La Calleja";
-  else if (clean.includes("la carolina") || clean.includes("carolina")) zone = "La Carolina";
-  else if (clean.includes("bosque medina")) zone = "Bosque Medina";
-  else if (clean.includes("el contador") || clean.includes("contador")) zone = "El Contador";
-  else if (clean.includes("alcala") || clean.includes("alcal\xE1")) zone = "Alcal\xE1";
-  else if (clean.includes("belmira")) zone = "Belmira";
-  else if (clean.includes("la castellana") || clean.includes("castellana")) zone = "La Castellana";
-  else if (clean.includes("polo club") || clean.includes("polo")) zone = "Polo Club";
-  else if (clean.includes("san felipe")) zone = "San Felipe";
-  else if (clean.includes("emaus") || clean.includes("ema\xFAs")) zone = "Ema\xFAs";
-  else if (clean.includes("colina campestre") || clean.includes("colina")) zone = "Colina Campestre";
-  else if (clean.includes("ciudad melendez") || clean.includes("ciudad mel\xE9ndez")) zone = "Ciudad Mel\xE9ndez";
-  else if (clean.includes("ciudad jardin") || clean.includes("ciudad jard\xEDn")) zone = "Ciudad Jard\xEDn";
-  else if (clean.includes("nuevo country")) zone = "Nuevo Country";
-  else if (clean.includes("niza norte")) zone = "Niza Norte";
-  else if (clean.includes("niza")) zone = "Niza";
-  else if (clean.includes("bella suiza")) zone = "Bella Suiza";
-  else if (clean.includes("lisboa")) zone = "Lisboa";
-  else if (clean.includes("alejandria") || clean.includes("alejandr\xEDa")) zone = "Alejandr\xEDa";
-  else if (clean.includes("carmel club") || clean.includes("carmel")) zone = "Carmel Club";
-  else if (clean.includes("cantalejo")) zone = "Cantalejo";
-  else if (clean.includes("sotavento")) zone = "Sotavento";
-  else if (clean.includes("san jose de bavaria") || clean.includes("san jos\xE9 de bavaria")) zone = "San Jos\xE9 de Bavaria";
-  else if (clean.includes("cedritos") || clean.includes("los cedros")) zone = "Cedritos";
+  const KNOWN_BARRIOS_CANONICAL_SORTED = [
+    "Santa B\xE1rbara Central",
+    "Santa B\xE1rbara Occidental",
+    "Santa B\xE1rbara Oriental",
+    "Santa B\xE1rbara Alta",
+    "Santa B\xE1rbara",
+    "San Crist\xF3bal Norte",
+    "La Alameda",
+    "San Antonio Norte",
+    "Villa Magdala",
+    "Chic\xF3 Reservado",
+    "Chic\xF3 Norte",
+    "Chic\xF3 Navarra",
+    "Rinc\xF3n del Chic\xF3",
+    "El Chic\xF3",
+    "Chic\xF3",
+    "Santa Paula",
+    "Santa Bibiana",
+    "San Patricio",
+    "Santa Teresa",
+    "Santa Ana",
+    "La Cabrera",
+    "Los Rosales",
+    "Rosales",
+    "El Nogal",
+    "El Virrey",
+    "El Retiro",
+    "El Refugio",
+    "Quinta Camacho",
+    "Antiguo Country",
+    "Country Club",
+    "La Calleja",
+    "La Carolina",
+    "Bosque Medina",
+    "El Contador",
+    "Alcal\xE1",
+    "Belmira",
+    "La Castellana",
+    "Polo Club",
+    "San Felipe",
+    "Ema\xFAs",
+    "Colina Campestre",
+    "Ciudad Mel\xE9ndez",
+    "Ciudad Jard\xEDn",
+    "Nuevo Country",
+    "Niza Norte",
+    "Niza",
+    "Bella Suiza",
+    "Lisboa",
+    "Alejandr\xEDa",
+    "Carmel Club",
+    "Cantalejo",
+    "Sotavento",
+    "San Jos\xE9 de Bavaria",
+    "Chapinero Alto",
+    "Chapinero",
+    "Cedritos"
+  ];
+  const acceptedNeighborhoods = [];
+  const rejectedNeighborhoods = [];
+  for (const b of KNOWN_BARRIOS_CANONICAL_SORTED) {
+    const bLower = b.toLowerCase();
+    let pos = 0;
+    while ((pos = clean.indexOf(bLower, pos)) !== -1) {
+      const precedingText = clean.slice(Math.max(0, pos - 45), pos);
+      const isNegated = /(?:no\s+les?\s+gusta|no\s+gusta|no\s+quiere|no\s+|excepto\s+|menos\s+|sin\s+|descartado\s+|fuera\s+de\s+|abstenerse\s+|no\s+enviar\s+|no\s+recibo\s+|no\s+buscar\s+)/i.test(precedingText);
+      if (isNegated) {
+        if (!rejectedNeighborhoods.includes(b)) rejectedNeighborhoods.push(b);
+      } else {
+        if (!acceptedNeighborhoods.includes(b)) acceptedNeighborhoods.push(b);
+      }
+      pos += bLower.length;
+    }
+  }
+  const validNeighborhoods = acceptedNeighborhoods.filter((b) => !rejectedNeighborhoods.includes(b));
+  if (validNeighborhoods.length > 0) {
+    zone = validNeighborhoods[0];
+  }
+  if (!zone) {
+    if (clean.includes("north point") || clean.includes("north point lift") || clean.includes("san cristobal norte") || clean.includes("san crist\xF3bal norte")) zone = "San Crist\xF3bal Norte";
+    else if (clean.includes("alameda 170") || clean.includes("alameda norte") || clean.includes("la alameda") || clean.includes("barrio alameda") || clean.includes("alameda")) zone = "La Alameda";
+    else if (clean.includes("san antonio noroccidental") || clean.includes("san antonio norte")) zone = "San Antonio Norte";
+    else if (clean.includes("villa magdala")) zone = "Villa Magdala";
+    else if (clean.includes("chico reservado")) zone = "Chic\xF3 Reservado";
+    else if (clean.includes("chico norte")) zone = "Chic\xF3 Norte";
+    else if (clean.includes("chico navarra")) zone = "Chic\xF3 Navarra";
+    else if (clean.includes("rincon del chico") || clean.includes("rinc\xF3n del chic\xF3")) zone = "Rinc\xF3n del Chic\xF3";
+    else if (clean.includes("el chico") || clean.includes("chico") || clean.includes("chic\xF3")) zone = "Chic\xF3";
+    else if (clean.includes("santa barbara central") || clean.includes("santa b\xE1rbara central") || clean.includes("santa barbara (central)")) zone = "Santa B\xE1rbara Central";
+    else if (clean.includes("santa barbara occidental") || clean.includes("santa b\xE1rbara occidental")) zone = "Santa B\xE1rbara Occidental";
+    else if (clean.includes("santa barbara oriental") || clean.includes("santa b\xE1rbara oriental")) zone = "Santa B\xE1rbara Oriental";
+    else if (clean.includes("santa barbara alta") || clean.includes("santa b\xE1rbara alta")) zone = "Santa B\xE1rbara Alta";
+    else if (clean.includes("santa barbara") || clean.includes("santa b\xE1rbara")) zone = "Santa B\xE1rbara";
+    else if (clean.includes("santa paula")) zone = "Santa Paula";
+    else if (clean.includes("santa bibiana")) zone = "Santa Bibiana";
+    else if (clean.includes("san patricio")) zone = "San Patricio";
+    else if (clean.includes("santa teresa")) zone = "Santa Teresa";
+    else if (clean.includes("santa ana")) zone = "Santa Ana";
+    else if (clean.includes("la cabrera") || clean.includes("cabrera")) zone = "La Cabrera";
+    else if (clean.includes("rosales") || clean.includes("los rosales")) zone = "Rosales";
+    else if (clean.includes("el nogal") || clean.includes("nogal")) zone = "El Nogal";
+    else if (clean.includes("el virrey") || clean.includes("virrey")) zone = "El Virrey";
+    else if (clean.includes("el retiro")) zone = "El Retiro";
+    else if (clean.includes("el refugio")) zone = "El Refugio";
+    else if (clean.includes("quinta camacho")) zone = "Quinta Camacho";
+    else if (clean.includes("antiguo country")) zone = "Antiguo Country";
+    else if (clean.includes("country club") || clean.includes("el country")) zone = "Country Club";
+    else if (clean.includes("la calleja") || clean.includes("calleja")) zone = "La Calleja";
+    else if (clean.includes("la carolina") || clean.includes("carolina")) zone = "La Carolina";
+    else if (clean.includes("bosque medina")) zone = "Bosque Medina";
+    else if (clean.includes("el contador") || clean.includes("contador")) zone = "El Contador";
+    else if (clean.includes("alcala") || clean.includes("alcal\xE1")) zone = "Alcal\xE1";
+    else if (clean.includes("belmira")) zone = "Belmira";
+    else if (clean.includes("la castellana") || clean.includes("castellana")) zone = "La Castellana";
+    else if (clean.includes("polo club") || clean.includes("polo")) zone = "Polo Club";
+    else if (clean.includes("san felipe")) zone = "San Felipe";
+    else if (clean.includes("emaus") || clean.includes("ema\xFAs")) zone = "Ema\xFAs";
+    else if (clean.includes("colina campestre") || clean.includes("colina")) zone = "Colina Campestre";
+    else if (clean.includes("ciudad melendez") || clean.includes("ciudad mel\xE9ndez")) zone = "Ciudad Mel\xE9ndez";
+    else if (clean.includes("ciudad jardin") || clean.includes("ciudad jard\xEDn")) zone = "Ciudad Jard\xEDn";
+    else if (clean.includes("nuevo country")) zone = "Nuevo Country";
+    else if (clean.includes("niza norte")) zone = "Niza Norte";
+    else if (clean.includes("niza")) zone = "Niza";
+    else if (clean.includes("bella suiza")) zone = "Bella Suiza";
+    else if (clean.includes("lisboa")) zone = "Lisboa";
+    else if (clean.includes("alejandria") || clean.includes("alejandr\xEDa")) zone = "Alejandr\xEDa";
+    else if (clean.includes("carmel club") || clean.includes("carmel")) zone = "Carmel Club";
+    else if (clean.includes("cantalejo")) zone = "Cantalejo";
+    else if (clean.includes("sotavento")) zone = "Sotavento";
+    else if (clean.includes("san jose de bavaria") || clean.includes("san jos\xE9 de bavaria")) zone = "San Jos\xE9 de Bavaria";
+  } else if (clean.includes("cedritos") || clean.includes("los cedros")) zone = "Cedritos";
   else if (clean.includes("toberin") || clean.includes("tober\xEDn")) zone = "Tober\xEDn";
   else if (clean.includes("mazuren") || clean.includes("mazur\xE9n")) zone = "Mazur\xE9n";
   else if (clean.includes("mirandela")) zone = "Mirandela";
@@ -8067,33 +8176,19 @@ function evaluateMultiItemHeuristics(text2) {
     signals
   };
 }
-function splitMultiPropertyMessage(text2) {
-  if (!text2 || text2.length < 100) return [text2];
-  const evalResult = evaluateMultiItemHeuristics(text2);
-  if (!evalResult.isMultiItem) return [text2];
-  console.log(`[JanIA-MultiItemDetector] \u2702\uFE0F Evaluaci\xF3n Addendum v9 activa (Score ${evalResult.score}/5): ${evalResult.signals.join(" | ")}`);
+function splitMultiItemMessage(text2) {
+  if (!text2 || text2.length < 80) return [text2];
   const delimiterSplit = text2.split(/(?:\r?\n){1,}\s*(?:_{3,}|-{3,}|={3,}|\*{3,})\s*(?:\r?\n){1,}/);
   if (delimiterSplit.length >= 2) {
-    const validBlocks = delimiterSplit.map((b) => b.trim()).filter((b) => b.length >= 30);
+    const validBlocks = delimiterSplit.map((b) => b.trim()).filter((b) => b.length >= 35);
     if (validBlocks.length >= 2) {
       return validBlocks;
     }
   }
-  const headerRegex = /(?:^|\r?\n)(?=(?:[^\n]*?\b(?:ATL|VENTA|SE VENDE|VENDO|SE ARRIENDA|ARRIENDO|BUSCO|REQUERIMIENTO|SOLICITO|CLIENTE DIRECTO)\b)|(?:^\s*1[\.\)\️⃣]\s*))/gi;
-  const matches = Array.from(text2.matchAll(headerRegex));
-  if (matches.length >= 2) {
-    const blocks = [];
-    for (let i = 0; i < matches.length; i++) {
-      const startIdx = matches[i].index || 0;
-      const endIdx = i + 1 < matches.length ? matches[i + 1].index || text2.length : text2.length;
-      const blockText = text2.substring(startIdx, endIdx).trim();
-      if (blockText.length >= 35) {
-        blocks.push(blockText);
-      }
-    }
-    if (blocks.length >= 2) {
-      return blocks;
-    }
+  const headerSplitRegex = /(?=(?:^|\n)\s*(?:🚨\s*\*?(?:REQUERIMIENTO|INMUEBLE|OFERTA|DEMANDA)\*?\s*🚨|\*?(?:REQUERIMIENTO|INMUEBLE|OFERTA|DEMANDA)\*?\s*[:\n]|\*?Cliente\*?\s*:\s*[A-ZÁÉÍÓÚÑ]|\b(?:VENDO|SE VENDE|ARRIENDO|SE ARRIENDA|BUSCO|SE BUSCA)\s+(?:APARTAMENTO|APTO|CASA|BODEGA|OFICINA|LOTE|LOCAL|PENTHOUSE|DÚPLEX)\b|(?:^|\n)\s*(?:[1-9][\.\)\️⃣]|\([1-9]\))\s*(?:APARTAMENTO|APTO|CASA|BODEGA|OFICINA|LOTE|LOCAL|VENTA|ARRIENDO|BUSCO|SE VENDE)))/gi;
+  const rawBlocks = text2.split(headerSplitRegex).map((b) => b.trim()).filter((b) => b.length >= 40);
+  if (rawBlocks.length >= 2) {
+    return rawBlocks;
   }
   const paragraphs = text2.split(/(?:\r?\n){2,}/);
   if (paragraphs.length >= 3) {
@@ -8102,8 +8197,8 @@ function splitMultiPropertyMessage(text2) {
     for (const p of paragraphs) {
       const cleanP = p.trim();
       if (!cleanP) continue;
-      const isNewProp = /(?:SE VENDE|VENDO|SE ARRIENDA|ARRIENDO|APARTAMENTO|CASA|BUSCO|SOLICITO|ATL)\b/i.test(cleanP) && /\$|\b\d{3,}\b|\bm2\b|\bhab\b|\bbaños\b/i.test(cleanP);
-      if (currentBlock && isNewProp) {
+      const isNewItem = /(?:SE VENDE|VENDO|SE ARRIENDA|ARRIENDO|APARTAMENTO|CASA|BUSCO|SOLICITO|ATL|REQUERIMIENTO)\b/i.test(cleanP) && /\$|\b\d{3,}\b|\bm2\b|\bhab\b|\bbaños\b|\balcobas\b/i.test(cleanP);
+      if (currentBlock && isNewItem) {
         blocks.push(currentBlock.trim());
         currentBlock = cleanP;
       } else {
@@ -8132,9 +8227,9 @@ async function processWhatsAppMessage(text2, userId, userName, hasMedia = false,
     var isScrapeable = isScrapeable2;
     const isWebUser = userId.startsWith("web-");
     if (text2 && !text2.includes("__is_sub_message__")) {
-      const subBlocks = splitMultiPropertyMessage(text2);
+      const subBlocks = splitMultiItemMessage(text2);
       if (subBlocks.length >= 2) {
-        console.log(`[JanIA-MultiPropertySplitter] \u{1F680} Ingestando ${subBlocks.length} inmuebles individuales de manera independiente...`);
+        console.log(`[JanIA-MultiItemSplitter] \u{1F680} Ingestando ${subBlocks.length} publicaciones individuales de manera independiente...`);
         let finalResult = { classification: "INMUEBLE", response: "", inserted: true };
         for (const subText of subBlocks) {
           finalResult = await processWhatsAppMessage(
@@ -10936,7 +11031,7 @@ function sanitizeResponseMarkdown(text2) {
   if (!text2) return "";
   return text2.replace(/\*\*/g, "*");
 }
-var janiaResultSchema, COMMON_FIRST_NAMES, GREETED_TODAY, REPUTATION_HOOK, cachedLiveStatsText, cachedLiveStatsTime, promptCache, JANIA_PROMPT, brokerDirectoryCache, MSG_PRESENTACION_INSTITUCIONAL, MSG_PAUTAS_FORMATOS, MSG_TIPS_CALIDAD_COBERTURA, MSG_RESUMEN_RETORNO_PRESENTACION, MSG_CIERRE_OPERACIONES, MSG_PROMO_INMUEBLES, MSG_PROMO_CONSULTAS, MSG_PROMO_CIRCULO, MSG_COMUNICADO_MATCH_NETWORK, MSG_COMUNICADO_MATCH_CIRCULO;
+var janiaResultSchema, COMMON_FIRST_NAMES, GREETED_TODAY, REPUTATION_HOOK, cachedLiveStatsText, cachedLiveStatsTime, promptCache, JANIA_PROMPT, splitMultiPropertyMessage, brokerDirectoryCache, MSG_PRESENTACION_INSTITUCIONAL, MSG_PAUTAS_FORMATOS, MSG_TIPS_CALIDAD_COBERTURA, MSG_RESUMEN_RETORNO_PRESENTACION, MSG_CIERRE_OPERACIONES, MSG_PROMO_INMUEBLES, MSG_PROMO_CONSULTAS, MSG_PROMO_CIRCULO, MSG_COMUNICADO_MATCH_NETWORK, MSG_COMUNICADO_MATCH_CIRCULO;
 var init_janIA = __esm({
   "server/_core/janIA.ts"() {
     "use strict";
@@ -11262,6 +11357,7 @@ Constantemente recibes datos en diversos formatos (Texto plano, URLs de portales
   "voiceResponse": "string (un saludo y respuesta/resumen conversacional sumamente breve, directo y humanizado en espa\xF1ol de m\xE1ximo 150 caracteres, sin negritas/markdown/emojis. Usa comas y puntos suspensivos (...) de forma estrat\xE9gica para indicarle al sintetizador d\xF3nde hacer pausas naturales y respiraciones, y signos de exclamaci\xF3n para dar entonaci\xF3n)"
 }
 `;
+    splitMultiPropertyMessage = splitMultiItemMessage;
     brokerDirectoryCache = /* @__PURE__ */ new Map();
     setTimeout(() => {
       initBrokerDirectory().catch(() => {

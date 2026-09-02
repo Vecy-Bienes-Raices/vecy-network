@@ -163,7 +163,22 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v29.2 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v29.3 — Septiembre 2026
+
+### Novedades v29.3 (Segmentación Determinista Multi-Item, Guardián Anti-Negaciones Geográficas y Saneamiento DB):
+- **Segmentación Determinista Multi-Publicación (`splitMultiItemMessage` / `split_and_sanitize_multi_items.ts`)**:
+  1) Los mensajes combinados de WhatsApp que contienen 2 o más requerimientos o propiedades independientes son desglosados automáticamente en registros autónomos e individuales en Supabase (ej: Requerimiento #296 de Marta S. e Isabel C. separado en dos fichas independientes con sus respectivos presupuestos, áreas y barrios aislados).
+  2) Extracción de +133 nuevas ofertas individuales a partir de 110 publicaciones compuestas previas, maximizando la oferta real sin mezclar datos entre inmuebles.
+- **Guardián Anti-Negaciones Geográficas (`extractSafeNeighborhoods` en `janIA.ts`)**:
+  1) Detección y filtrado de expresiones negativas (`"no les gusta..."`, `"no..."`, `"excepto..."`, `"sin..."`, `"descartado..."`).
+  2) Erradica falsos positivos donde barrios rechazados por el cliente eran asignados erróneamente a la demanda.
+- **Parser Robusto de Especificaciones Key-Value de WhatsApp (`janIA.ts`)**:
+  1) Limpieza de formato Markdown con asteriscos (`*Alcobas*: 3`, `*Baños*: 3`, `*Parqueaderos*: 2`).
+  2) Extracción exacta de rangos de presupuesto (`"entre 800 y 900 millones"`) y techos máximos (`"1.500 millones máximo"`).
+- **Saneamiento Masivo y Población de Matches Certificados (`master_audit_and_match.ts`)**:
+  1) Evaluadas 1.047.940 combinaciones tras la segmentación y saneamiento.
+  2) Purgados los falsos matches derivados de mezclas (como el falso match de Rosales #423 vs Marta S.).
+  3) Actualizada la tabla `propertyMatches` en Supabase con los matches 100% legítimos y certificados.
 
 ### Novedades v29.2 (Desbloqueo de Bloqueadores Artificiales y Aumento a 82 Matches Certificados):
 - **Desbloqueo de Bloqueadores Artificiales en Matching (`matching.ts`)**:

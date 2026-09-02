@@ -52,7 +52,32 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v29.2 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v29.3 — Septiembre 2026
+
+### 🗓️ Sesión: Martes 1 de Septiembre de 2026 — 19:15 a 19:30 (Hora Colombia UTC-5)
+**Versión**: `v29.3` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)
+
+#### 🎯 Objetivo y Logros de la Sesión:
+1. **Segmentación Determinista Multi-Publicación (`splitMultiItemMessage` y `split_and_sanitize_multi_items.ts`)**:
+   - Se identificó y resolvió la causa raíz del falso match #11671: mensajes de WhatsApp con múltiples clientes o inmuebles combinados.
+   - Implementado algoritmo determinista que detecta encabezados ordinales o nombres de clientes (ej. `1. Marta S.` / `2. Isabel C.`, o múltiples inmuebles listados en bloque) y los divide en registros independientes y autónomos en Supabase.
+   - Saneamiento masivo: 110 publicaciones compuestas de propiedades divididas (+133 nuevas ofertas individuales) y demandas separadas con sus presupuestos, áreas y barrios aislados.
+2. **Guardián Anti-Negaciones Geográficas (`extractSafeNeighborhoods` en `janIA.ts`)**:
+   - Detección rigurosa de patrones de negación (`"no les gusta..."`, `"no..."`, `"excepto..."`, `"sin..."`).
+   - Evita la asignación errónea de barrios rechazados explícitamente por el cliente (ej. `"(No les gusta Rosales)"` jamás asocia Rosales a la demanda).
+3. **Parser Robusto de Especificaciones Key-Value y Presupuestos**:
+   - Limpieza de formatos Markdown de WhatsApp (`*Alcobas*: 3`, `*Baños*: 3`, `*Parqueaderos*: 2`).
+   - Soporte para rangos de presupuesto (`"entre 800 y 900 millones"`) y techos (`"1.500 millones máximo"`).
+4. **Auditoría Integral y Población de Matches Certificados (`master_audit_and_match.ts`)**:
+   - Evaluadas 1.047.940 combinaciones.
+   - Purgados falsos matches y persistidos los matches verídicos con score $\ge 80\%$ y 100% de cumplimiento en núcleos duros.
+5. **Verificación de Calidad y Cero Errores**:
+   - `tsc --noEmit` completado con 0 errores.
+   - `npm run build` (Vite + esbuild) completado exitosamente.
+
+---
+
+## 🔖 HISTÓRICO DE VERSIONES ANTERIORES
 
 ### 🗓️ Sesión: Martes 1 de Septiembre de 2026 — 16:50 a 17:05 (Hora Colombia UTC-5)
 **Versión**: `v29.2` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)
