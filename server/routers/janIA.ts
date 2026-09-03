@@ -968,10 +968,39 @@ export const janIARouter = router({
           ajustesGuardados: input.ajustesGuardados || null,
         }).returning();
 
-        // Si el match fue rechazado, eliminar o actualizar en propertyMatches y limpiar caché
-        if (input.matchId && input.action === 'rechazado') {
-          await db.delete(propertyMatches)
-            .where(eq(propertyMatches.id, input.matchId));
+        // Si el match fue rechazado, eliminar en propertyMatches y actualizar disponibilidad
+        if (input.action === 'rechazado') {
+          if (input.matchId) {
+            await db.delete(propertyMatches)
+              .where(eq(propertyMatches.id, input.matchId));
+          }
+
+          // Si el motivo indica que el inmueble ya no está disponible (arrendado o vendido)
+          const reasonLower = (input.motivoRechazo || '').toLowerCase();
+          const isUnavailable = reasonLower.includes('arrend') || 
+                                reasonLower.includes('vendi') || 
+                                reasonLower.includes('no disponible');
+
+          if (isUnavailable && input.propertyId) {
+            const nuevoEstado = reasonLower.includes('vendi') ? 'VENDIDO' : 'ARRENDADO';
+            await db.update(properties).set({
+              available: false,
+              estadoComercial: nuevoEstado,
+              vigenciaIa: 'NO_DISPONIBLE',
+              updatedAt: new Date()
+            }).where(eq(properties.id, input.propertyId));
+
+            // Purgar cualquier otro match abierto que involucre este inmueble no disponible
+            await db.delete(propertyMatches).where(eq(propertyMatches.propertyId, input.propertyId));
+            console.log(`[JanIA-Feedback] Propiedad #${input.propertyId} marcada como ${nuevoEstado} y purgada de matches`);
+          }
+
+          // Disparar en segundo plano la búsqueda de nuevas opciones para la demanda
+          if (input.requirementId) {
+            findMatchesForRequirement(input.requirementId).catch((err: any) => {
+              console.error(`[JanIA-Feedback] Error buscando alternativas para Req #${input.requirementId}:`, err);
+            });
+          }
         }
 
         // Invalidar caché de matches inmediatamente

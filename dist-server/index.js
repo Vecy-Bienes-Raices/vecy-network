@@ -16571,8 +16571,28 @@ ${liveStats}${userContextInstruction}
         notasBroker: input.notasBroker || null,
         ajustesGuardados: input.ajustesGuardados || null
       }).returning();
-      if (input.matchId && input.action === "rechazado") {
-        await db.delete(propertyMatches).where(eq8(propertyMatches.id, input.matchId));
+      if (input.action === "rechazado") {
+        if (input.matchId) {
+          await db.delete(propertyMatches).where(eq8(propertyMatches.id, input.matchId));
+        }
+        const reasonLower = (input.motivoRechazo || "").toLowerCase();
+        const isUnavailable = reasonLower.includes("arrend") || reasonLower.includes("vendi") || reasonLower.includes("no disponible");
+        if (isUnavailable && input.propertyId) {
+          const nuevoEstado = reasonLower.includes("vendi") ? "VENDIDO" : "ARRENDADO";
+          await db.update(properties).set({
+            available: false,
+            estadoComercial: nuevoEstado,
+            vigenciaIa: "NO_DISPONIBLE",
+            updatedAt: /* @__PURE__ */ new Date()
+          }).where(eq8(properties.id, input.propertyId));
+          await db.delete(propertyMatches).where(eq8(propertyMatches.propertyId, input.propertyId));
+          console.log(`[JanIA-Feedback] Propiedad #${input.propertyId} marcada como ${nuevoEstado} y purgada de matches`);
+        }
+        if (input.requirementId) {
+          findMatchesForRequirement(input.requirementId).catch((err) => {
+            console.error(`[JanIA-Feedback] Error buscando alternativas para Req #${input.requirementId}:`, err);
+          });
+        }
       }
       cachedAllMatchesData = null;
       cachedAllMatchesTime = 0;
