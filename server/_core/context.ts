@@ -25,7 +25,12 @@ export async function createContext(
   let user: User | null = null;
 
   try {
-    user = await sdk.authenticateRequest(opts.req);
+    // Timeout protector de 1200ms: si la validación OAuth/Supabase tarda o está bloqueada por red/pagos,
+    // se resuelve de inmediato con null para que las peticiones y mutaciones NUNCA se congelen ni den 504.
+    user = await Promise.race([
+      sdk.authenticateRequest(opts.req),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 1200))
+    ]);
 
     // Auto-promote known admin emails on every login
     if (user && SUPERADMIN_EMAILS.includes(user.email || "")) {

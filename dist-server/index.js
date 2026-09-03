@@ -17851,7 +17851,10 @@ async function createContext(opts) {
   console.log(`[TRPC-CONTEXT] createContext called for ${opts.req.method} ${opts.req.url}`);
   let user = null;
   try {
-    user = await sdk.authenticateRequest(opts.req);
+    user = await Promise.race([
+      sdk.authenticateRequest(opts.req),
+      new Promise((resolve) => setTimeout(() => resolve(null), 1200))
+    ]);
     if (user && SUPERADMIN_EMAILS.includes(user.email || "")) {
       if (user.role !== "admin") {
         try {

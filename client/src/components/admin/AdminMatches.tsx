@@ -2326,7 +2326,7 @@ export default function AdminMatches() {
     try {
       const promises: Promise<any>[] = [];
 
-      if (m.property?.id) {
+      if (m.property?.id && (Object.keys(editForm).some(k => k.startsWith('prop')) || editForm.propPhone || editForm.propSenderName)) {
         const cleanPropPhone = normalizePhoneInput(editForm.propPhone);
         promises.push(
           updatePropMut.mutateAsync({
@@ -2351,7 +2351,7 @@ export default function AdminMatches() {
         );
       }
 
-      if (m.requirement?.id) {
+      if (m.requirement?.id && (Object.keys(editForm).some(k => k.startsWith('req')) || editForm.reqPhone || editForm.reqSenderName)) {
         const cleanReqPhone = normalizePhoneInput(editForm.reqPhone);
         promises.push(
           updateReqMut.mutateAsync({
@@ -2374,11 +2374,11 @@ export default function AdminMatches() {
         );
       }
 
-      // Guardado en paralelo ultrarrápido con carrera protectora contra timeouts de red (máx 9s)
+      // Guardado en paralelo ultrarrápido con carrera protectora contra timeouts de red (máx 15s)
       if (promises.length > 0) {
         const savePromise = Promise.all(promises);
         const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error("Tiempo de espera de red agotado al guardar")), 9000)
+          setTimeout(() => reject(new Error("Tiempo de espera de red agotado al guardar")), 15000)
         );
         await Promise.race([savePromise, timeoutPromise]);
       }
@@ -2486,7 +2486,7 @@ export default function AdminMatches() {
       if (savePromises.length > 0) {
         const p = Promise.all(savePromises);
         const timeoutP = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Tiempo de espera de red agotado")), 9000)
+          setTimeout(() => reject(new Error("Tiempo de espera de red agotado")), 15000)
         );
         await Promise.race([p, timeoutP]);
       }
