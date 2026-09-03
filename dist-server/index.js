@@ -8821,11 +8821,15 @@ ${content.substring(0, 15e3)}
         "metros",
         "habitacion",
         "habitaci\xF3n",
+        "alcoba",
+        "alcobas",
         "ba\xF1o",
         "ba\xF1os",
         "cocina",
         "garaje",
+        "garajes",
         "parqueadero",
+        "parqueaderos",
         "canon",
         "administracion",
         "administraci\xF3n",
@@ -8881,7 +8885,31 @@ ${content.substring(0, 15e3)}
         "cuenta",
         "hola",
         "gracias",
-        "saludo"
+        "saludo",
+        "req",
+        "tengo",
+        "disponible",
+        "cliente",
+        "clientes",
+        "comprando",
+        "buscando",
+        "solicito",
+        "solicitamos",
+        "piso",
+        "balcon",
+        "balc\xF3n",
+        "terraza",
+        "deposito",
+        "dep\xF3sito",
+        "conjunto",
+        "edificio",
+        "ph",
+        "penthouse",
+        "duplex",
+        "d\xFAplex",
+        "triplex",
+        "tr\xEDplex",
+        "estudio"
       ];
       const hasOnTopicKeyword = onTopicKeywords.some((keyword) => cleanText.includes(keyword));
       if (!hasOnTopicKeyword) {
@@ -13340,7 +13368,7 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
           const hasPermuta = /\b(?:permuto|permuta|permutas|permutamos|se permuta|recibo menor valor|recibo inmueble|recibo vehículo|recibo vehiculo|pelo a pelo|encime|parte de pago)\b/i.test(cleanLower);
           const hasRentExplicit = /\b(?:arriendo|arriendos|arrendar|arrendamos|se arrienda|arriendan|alquilo|alquilar|alquilamos|se alquila|alquiler|alquileres|rento|rentar|se renta|renta|rentas|canon|canones|cánones|amoblado|amoblada|sin amoblar|arrendatario|arrendador|inquilino)\b/i.test(cleanLower) || /(?:incluida|con|\+|más|mas)\s*(?:administraci[oó]n|admon)/i.test(cleanLower) || /(?:administraci[oó]n|admon)\s*(?:incluida|adicional)/i.test(cleanLower) || /valor arriendo/i.test(cleanLower);
           const isRentOperation = hasRentExplicit || isGroupRentContext && !/\b(?:compro|comprar|en compra|para compra)\b/i.test(cleanLower) && !cleanLower.startsWith("vendo") && !cleanLower.startsWith("se vende");
-          const isExplicitDemand = /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|solicitamos|compro|para cliente|busca cliente|cliente busca|comprador|arrendatario|en búsqueda|en busqueda)\b/i.test(cleanLower);
+          const isExplicitDemand = /\b(?:req\b|requerimiento|requiero|se requiere|requerimos|busco|buscamos|se busca|buscando|en búsqueda|en busqueda|necesito|necesitamos|necesitando|solicito|solicitamos|solicitando|compro|comprando|comprador|compradores|en compra|para compra|para cliente|para clientes|tengo cliente|tenemos cliente|busca cliente|cliente busca|clientes buscan|arrendatario|inquilino)\b/i.test(cleanLower);
           const isExplicitOffer = !isExplicitDemand && (/\b(?:ofrezco|ofrecemos|vendo|vendemos|se vende|en venta|venta directa|arriendo|arriendos|arrendamos|arrendar|se arrienda|en arriendo|arriendo directo|pongo en arriendo|alquilo|alquilamos|alquilar|se alquila|en alquiler|alquiler directo|rento|rentamos|rentar|se renta|en renta|tengo para|disponible|nuevo inmueble|permuto|permutamos|se permuta)\b/i.test(cleanLower) || /(?:cuenta con|consta de|\d+\s*(?:m2|mts|m²)|alcobas|habitaciones|baños|parqueaderos?|cocina|sala|comedor|dep[oó]sito)/i.test(cleanLower));
           const isExplicitSearch = isExplicitDemand && !isExplicitOffer;
           let fastEmoji = null;
@@ -15147,7 +15175,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v30.5";
+var VECY_VERSION = "v30.7";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 
@@ -18262,7 +18290,7 @@ async function startServer() {
   });
   app.post("/api/send-whatsapp-notification", async (req, res) => {
     try {
-      const { text: text2, token, phone } = req.body;
+      const { text: text2, token, phone, mentions } = req.body;
       const verifyToken = process.env.WEBHOOK_VERIFY_TOKEN || "vecy_network_secret_token";
       if (token !== verifyToken) {
         return res.status(401).json({ error: "Unauthorized. Invalid token." });
@@ -18272,12 +18300,21 @@ async function startServer() {
       }
       const defaultAdminPhone = "573192919978";
       const rawPhone = phone || defaultAdminPhone;
-      const cleanPhone = typeof rawPhone === "string" ? rawPhone.replace(/\D/g, "") : String(rawPhone).replace(/\D/g, "");
+      let targetPhone = "";
+      if (typeof rawPhone === "string" && (rawPhone.endsWith("@g.us") || rawPhone.endsWith("@newsletter") || rawPhone.endsWith("@s.whatsapp.net"))) {
+        targetPhone = rawPhone;
+      } else {
+        const cleanPhone = typeof rawPhone === "string" ? rawPhone.replace(/\D/g, "") : String(rawPhone).replace(/\D/g, "");
+        targetPhone = cleanPhone.endsWith("@s.whatsapp.net") ? cleanPhone : `${cleanPhone}@s.whatsapp.net`;
+      }
       const matchBot = global.janiaMatchBotInstance;
       if (matchBot && matchBot.isReady) {
-        const targetPhone = cleanPhone.endsWith("@s.whatsapp.net") ? cleanPhone : `${cleanPhone}@s.whatsapp.net`;
         console.log(`[NOTIFICACI\xD3N-API] Retransmitiendo mensaje a ${targetPhone} v\xEDa JanIA Match Bot (Baileys)...`);
-        await matchBot.queuedSend(targetPhone, text2);
+        const options = {};
+        if (mentions && Array.isArray(mentions)) {
+          options.mentions = mentions;
+        }
+        await matchBot.queuedSend(targetPhone, text2, options);
       }
       res.json({ ok: true, message: "Notification sent successfully." });
     } catch (err) {

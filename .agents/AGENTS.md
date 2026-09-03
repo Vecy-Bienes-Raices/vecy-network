@@ -163,7 +163,17 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v30.6 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v30.7 — Septiembre 2026
+
+### Novedades v30.7 (Deduplicación en Ingesta WhatsApp y Desbloqueo de Visualización de Matches en Admin Panel):
+- **Doctrina de Deduplicación y No Re-reacción en WhatsApp**:
+  1) JanIA identifica republicaciones y reenvíos de inmuebles y demandas ya existentes en BD mediante matching de firma de texto y enlaces de origen, evitando reaccionar repetidamente y previniendo duplicados innecesarios.
+- **Desbloqueo de Visualización de Matches en Admin Panel (`AdminMatches.tsx`)**:
+  1) Inclusión canónica de `"el refugio"`, `"refugio"`, `"cabrera"` en `KNOWN_BARRIOS_CANONICAL` en el cliente web, y clasificación automática de `refugio` en localidad Chapinero (`inferLocalityFromBarrio`).
+  2) Desbloqueado el Match #M11878 (León Aguilar Medina #126 ↔ Fernanda Torres #1558, Apartamento en El Refugio, 200m², canon $9.2M total) con calificación de ~90% visible de inmediato en la mesa de coincidencias (`https://vecy-network.vercel.app/admin`).
+  3) Enriquecido el índice de búsqueda en vivo (`_searchIndex`) con `property.nombreUsuarioWhatsapp` y `requirement.nombreUsuarioWhatsapp`.
+- **Incremento Oficial de Versión**:
+  1) Elevado a `v30.7` en `shared/const.ts`.
 
 ### Novedades v30.6 (Doctrina de Avalúos Rurales sin Peritos In Situ y Despacho Verificado a Grupo 2):
 - **Doctrina Estricta de Avalúos y Delimitación de Servicios JanIA (Cero Personal In Situ)**:

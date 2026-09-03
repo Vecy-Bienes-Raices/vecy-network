@@ -52,7 +52,28 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v30.6 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v30.7 — Septiembre 2026
+
+### 🗓️ Sesión: Jueves 3 de Septiembre de 2026 — 18:40 a 18:58 (Hora Colombia UTC-5)
+**Versión**: `v30.7` | **Ambiente**: Producción VPS (`13.140.149.144`) + Admin Panel Vercel (`https://vecy-network.vercel.app/admin`) + Supabase (PostgreSQL) + GitHub (`main`)
+
+#### 🎯 Objetivo y Logros de la Sesión:
+1. **Ratificación y Clarificación Doctrinal de Deduplicación en WhatsApp**:
+   - Se explicó la doctrina de ingesta inteligente: Cuando un asesor republica o reenvía la misma propiedad o requerimiento a través de múltiples grupos (ej. *Zona Marlboro* y luego *VECY INMUEBLES NETWORK*), JanIA detecta la firma del inmueble y enlace de origen para evitar duplicados en la base de datos y prevenir spam de reacciones repetidas.
+2. **Reparación y Desbloqueo de Visualización de Matches en Admin Panel (`AdminMatches.tsx`)**:
+   - **Diagnóstico**: El Match #M11878 (Requerimiento #126 León Aguilar ↔ Propiedad #1558 Fernanda Torres, Score 85.00%, Apartamento 200m² en El Refugio, canon $9.2M total) ya existía en la base de datos Supabase y era retornado correctamente por el backend en `/api/trpc/janIA.getAllMatches`.
+   - **Causa Raíz de Desaparición**: En el componente de frontend `client/src/components/admin/AdminMatches.tsx`, la lista `KNOWN_BARRIOS_CANONICAL` carecía de `"el refugio"` y `"refugio"` (mientras que en el backend ya habían sido agregados en v30.1), y `inferLocalityFromBarrio` no asociaba `"refugio"` con Chapinero. Al recalcular el score en cliente mediante `scoreRows`, el cotejo de barrio marcaba `missing` (rojo), activando la guillotina total (`effectiveScore = 0`) que descartaba la tarjeta en `processedMatches` (`if (effectiveScore < 80) continue`).
+   - **Solución Quirúrgica**:
+     - Sincronizados `"el refugio"`, `"refugio"`, `"cabrera"` en `KNOWN_BARRIOS_CANONICAL` en `AdminMatches.tsx`.
+     - Actualizada `inferLocalityFromBarrio` para clasificar `refugio` en localidad Chapinero.
+     - Enriquecido el índice de búsqueda en vivo (`_searchIndex`) incorporando `property.nombreUsuarioWhatsapp` y `requirement.nombreUsuarioWhatsapp` para que las búsquedas por nombre de contacto ("León", "Aguilar", "Fernanda Torres") funcionen de forma instantánea.
+3. **Incremento de Versión a v30.7**:
+   - Actualizada la fuente única de verdad en `shared/const.ts` (`VECY_VERSION = "v30.7"`).
+   - Compilación exitosa en cliente y servidor (`pnpm build`).
+
+---
+
+## 🔖 HISTÓRICO DE VERSIONES ANTERIORES:
 
 ### 🗓️ Sesión: Jueves 3 de Septiembre de 2026 — 18:05 a 18:18 (Hora Colombia UTC-5)
 **Versión**: `v30.6` | **Ambiente**: Producción VPS (`13.140.149.144`) + Baileys WhatsApp Match Bot (`573192919978`) + GitHub (`main`)

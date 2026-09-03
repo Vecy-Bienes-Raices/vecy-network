@@ -621,7 +621,7 @@ function scoreRows(req: any, prop: any) {
     "north point", "san cristóbal norte", "san cristobal norte",
     "alameda 170", "alameda norte", "la alameda", "barrio alameda", "alameda", "san antonio noroccidental", "san antonio norte", "alcalá", "alcala", "belmira", "portales del norte", "san cipriano", "toberín", "toberin", "villa magdala",
     "los rosales alto", "rosales alto", "los rosales bajo", "rosales bajo", "los rosales", "rosales",
-    "la cabrera", "el nogal", "nogal", "el virrey", "el retiro", "el lago", "quinta camacho", "chapinero alto", "chapinero central", "chapinero",
+    "el refugio", "refugio", "la cabrera", "cabrera", "el nogal", "nogal", "el virrey", "el retiro", "el lago", "quinta camacho", "chapinero alto", "chapinero central", "chapinero",
     "la castellana", "castellana", "polo club", "polo", "san felipe",
     "colina campestre", "colina", "san josé de bavaria", "san jose de bavaria", "carmel club", "alejandría", "alejandria", "cantalejo", "sotavento", "victoria norte", "britalia norte", "niza norte", "niza", "la alhambra", "alhambra", "pasadena", "batán", "batan", "el batán", "el batan", "prado veraniego", "pontevedra", "morato", "la floresta", "floresta", "suba",
     "ciudad salitre", "salitre", "hayuelos", "modelia", "fontibón", "fontibon", "teusaquillo", "la soledad", "palermo", "quinta paredes", "la esmeralda", "nicolás de federmann", "nicolas de federmann",
@@ -639,7 +639,7 @@ function scoreRows(req: any, prop: any) {
     const found: string[] = [];
     for (const b of KNOWN_BARRIOS_CANONICAL) {
       const bNorm = b.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-      const reg = new RegExp(`\\b${bNorm}\\b`, "i");
+      const reg = new RegExp(`\\b${bNorm.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')}\\b`, "i");
       if (reg.test(norm)) {
         found.push(b.charAt(0).toUpperCase() + b.slice(1));
         norm = norm.replace(reg, " ");
@@ -768,7 +768,7 @@ function scoreRows(req: any, prop: any) {
     // Única excepción clásica del grupo Chicó que es Usaquén siempre:
     if (norm.includes("chico navarra") || norm.includes("navarra")) return "Usaquén";
     // TODOS los demás Chicó tradicionales (Norte, Reservado, base) + clásicos Chapinero:
-    if (norm.includes("rosales") || norm.includes("chico") || norm.includes("nogal") || norm.includes("cabrera") || norm.includes("virrey") || norm.includes("quinta camacho") || norm.includes("chapinero")) return "Chapinero";
+    if (norm.includes("rosales") || norm.includes("refugio") || norm.includes("chico") || norm.includes("nogal") || norm.includes("cabrera") || norm.includes("virrey") || norm.includes("quinta camacho") || norm.includes("chapinero")) return "Chapinero";
     // Barrios Usaquén (Calles 100-127 oriente Autopista Norte + norte de la ciudad):
     if (norm.includes("alameda") || norm.includes("san antonio") || norm.includes("cedritos") ||
         norm.includes("santa barbara") || norm.includes("santa paula") || norm.includes("bella suiza") ||
@@ -2609,8 +2609,8 @@ export default function AdminMatches() {
       seenMatchIds.add(match.id);
 
       const matchIdStr = `m${match.id} #${match.id} ${match.id}`;
-      const propSearchStr = `${matchIdStr} ${property.id || ""} ${property.name || ""} ${property.rawText || ""} ${property.description || ""} ${property.city || ""} ${property.zone || ""} ${property.addressNeighborhood || ""} ${property.brokerName || ""} ${property.brokerPhone || ""} ${property.idUsuarioWhatsapp || ""}`.toLowerCase();
-      const reqSearchStr = `${requirement.id || ""} ${requirement.name || ""} ${requirement.rawText || ""} ${requirement.ciudadDeseada || ""} ${requirement.zonaDeseada || ""} ${requirement.addressNeighborhood || ""} ${requirement.brokerName || ""} ${requirement.brokerPhone || ""} ${requirement.idUsuarioWhatsapp || ""}`.toLowerCase();
+      const propSearchStr = `${matchIdStr} ${property.id || ""} ${property.name || ""} ${property.rawText || ""} ${property.description || ""} ${property.city || ""} ${property.zone || ""} ${property.addressNeighborhood || ""} ${property.brokerName || ""} ${property.brokerPhone || ""} ${property.nombreUsuarioWhatsapp || ""} ${property.idUsuarioWhatsapp || ""}`.toLowerCase();
+      const reqSearchStr = `${requirement.id || ""} ${requirement.name || ""} ${requirement.rawText || ""} ${requirement.ciudadDeseada || ""} ${requirement.zonaDeseada || ""} ${requirement.addressNeighborhood || ""} ${requirement.brokerName || ""} ${requirement.brokerPhone || ""} ${requirement.nombreUsuarioWhatsapp || ""} ${requirement.idUsuarioWhatsapp || ""}`.toLowerCase();
 
       results.push({
         ...match,
