@@ -52,7 +52,22 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v29.8 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v29.9 — Septiembre 2026
+
+### 🗓️ Sesión: Jueves 3 de Septiembre de 2026 — 12:45 a 12:55 (Hora Colombia UTC-5)
+**Versión**: `v29.9` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)
+
+#### 🎯 Objetivo y Logros de la Sesión:
+- **Purga de Procesos Zombis en VPS y Restauración Inmediata de Rendimiento**:
+  - **Diagnóstico**: La web de coincidencias se quedaba en "Buscando reportes de matching..." y "Cargando estado..." debido a dos procesos residuales en segundo plano en el VPS (`test_caller.cjs` y `updatePropertyDetails` test runner, PIDs 762429 y 767512) que consumían más de 150% de CPU de forma continua, asfixiando el bucle de eventos de Node.js y congelando todas las peticiones entrantes de tRPC.
+  - **Resolución Quirúrgica**: Se eliminaron definitivamente los procesos colgados (`kill -9 762429 767512`), liberando el 100% de la CPU del servidor. Se reinició limpiamente PM2 (`PID 795270`).
+  - **Validación en Producción**:
+    - `getBotStatus` responde en **429ms**.
+    - `getAllMatches` responde en **1.167ms** desde Vercel (65 matches entregados sin error).
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v29.8 — Septiembre 2026
 
 ### 🗓️ Sesión: Jueves 3 de Septiembre de 2026 — 03:15 a 03:30 (Hora Colombia UTC-5)
 **Versión**: `v29.8` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)

@@ -163,7 +163,12 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v29.8 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v29.9 — Septiembre 2026
+
+### Novedades v29.9 (Purga de Procesos Zombis en VPS y Restauración de Rendimiento):
+- **Purga Quirúrgica de Procesos Ocupantes de CPU en VPS**:
+  1) Se detectaron y eliminaron procesos de pruebas residuales colgados (`test_caller.cjs` y `updatePropertyDetails` test runner) que consumían 150% de CPU y asfixiaban el servidor de producción.
+  2) PM2 reiniciado limpiamente (`PID 795270`). Las consultas de coincidencias (`getAllMatches` y `getBotStatus`) responden en menos de 1 segundo.
 
 ### Novedades v29.8 (Avatar de JanIA a Marco Completo Edge-to-Edge y Reemplazo en Chat Widget):
 - **Avatar de JanIA a Marco Completo Edge-to-Edge (`JanIAFloatingButton.tsx` & `JanIAWidget.tsx`)**:
