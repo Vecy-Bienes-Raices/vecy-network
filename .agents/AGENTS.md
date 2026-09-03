@@ -163,7 +163,15 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v29.7 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v29.8 — Septiembre 2026
+
+### Novedades v29.8 (Avatar de JanIA a Marco Completo Edge-to-Edge y Reemplazo en Chat Widget):
+- **Avatar de JanIA a Marco Completo Edge-to-Edge (`JanIAFloatingButton.tsx` & `JanIAWidget.tsx`)**:
+  1) Eliminado el margen interior (`w-[88%] h-[88%]`) que creaba un aro negro entre el borde dorado y el rostro de JanIA.
+  2) Configurado `w-full h-full object-cover object-center` con contenedor `p-0 overflow-hidden` y borde dorado `border-2 border-primary/50`.
+  3) Reemplazado el `<video src="/jania.mp4" />` antiguo en `JanIAWidget.tsx` por la nueva imagen oficial `jania_perfil.png` en el botón flotante, en la cabecera del chat y en los avatares de mensajes.
+- **Sincronización Dual de Asset (`/jania_perfil.png` & `/assets/jania_perfil.png`)**:
+  1) Sincronizada la imagen de alta resolución (2048x2048) en `client/public/` y `client/public/assets/`.
 
 ### Novedades v29.7 (Blindaje de Tiempo de Espera en Contexto HTTP, Extracción de Celular Oculto Ana Karina Rojas y Solución de Guardado):
 - **Blindaje de Tiempo de Espera en `createContext` (Timeout 1.2s)**:

@@ -52,7 +52,22 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v29.7 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v29.8 — Septiembre 2026
+
+### 🗓️ Sesión: Jueves 3 de Septiembre de 2026 — 03:15 a 03:30 (Hora Colombia UTC-5)
+**Versión**: `v29.8` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)
+
+#### 🎯 Objetivo y Logros de la Sesión:
+- **Actualización de Avatar de JanIA a Marco Completo Edge-to-Edge (`JanIAFloatingButton.tsx` & `JanIAWidget.tsx`)**:
+  - Eliminado el margen/espacio interior previo (`w-[88%] h-[88%]`) que dejaba un anillo negro entre el borde circular dorado y la imagen.
+  - El avatar ahora ocupa el 100% del marco circular (`w-full h-full object-cover object-center`) con contenedor `p-0 overflow-hidden` y borde dorado de alta fidelidad `border-2 border-primary/50`.
+  - Reemplazado el `<video src="/jania.mp4" />` antiguo en `JanIAWidget.tsx` por la nueva imagen oficial `jania_perfil.png` en el botón flotante, en la cabecera del chat y en los avatares de mensajes.
+- **Sincronización Dual de Asset (`/jania_perfil.png` & `/assets/jania_perfil.png`)**:
+  - Sincronizada la nueva imagen de 2048x2048 (4.19MB) tanto en la raíz de `client/public/` como en `client/public/assets/`, garantizando compatibilidad absoluta en todas las rutas del frontend.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v29.7 — Septiembre 2026
 
 ### 🗓️ Sesión: Miércoles 2 de Septiembre de 2026 — 23:45 a 00:00 (Hora Colombia UTC-5)
 **Versión**: `v29.7` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)
