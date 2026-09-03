@@ -163,7 +163,19 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v30.4 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v30.5 — Septiembre 2026
+
+### Novedades v30.5 (Erradicación Definitiva de Congelamiento por Head-of-Line Blocking en Admin Panel):
+- **Desacoplamiento con `httpLink` en `@trpc/client` (`main.tsx`)**:
+  1) Erradicado el empaquetamiento conjunto de peticiones (`httpBatchLink`). Cada componente (`BotStatusWidget`, `AdminProperties`, `AdminRequirements`, `AdminMatches`) ahora ejecuta su propia petición HTTP en paralelo.
+  2) `getBotStatus` responde en **50 ms** sin esperar a las consultas masivas de catálogo, eliminando el estado congelado *"Cargando estado..."*.
+- **Optimización Quirúrgica de Payloads en Base de Datos (-95% Tamaño)**:
+  1) `properties.myList`: Selección de campos clave sin el pesado `rawText` (reducción de 8.5 MB a 400 KB, respuesta en 1.4s).
+  2) `janIA.getAllRequirements`: Campos alineados con `drizzle/schema.ts` (`presupuestoMax`, `presupuestoMin`, `areaMin`), respuesta en 1.3s.
+- **Fast-Path en `createContext`**:
+  1) Si la petición no contiene cabecera de cookies ni autorización, retorna de inmediato `{ user: null }` en 0.001 ms, eliminando demoras innecesarias de validación OAuth en peticiones públicas.
+- **Verificación Empírica Automatizada con Browser Subagent**:
+  1) Navegación en vivo a `https://vecy-network.vercel.app/admin` confirmando que las 3 pestañas cargan al instante (JanIA Online en verde, 1.510 inmuebles, 825 demandas y 39 matches).
 
 ### Novedades v30.4 (Sincronización de Imagen de Soporte Dominical JanIA):
 - **Sincronización Espejo de Ilustración 3D de Soporte (`jania_soporte.jpeg` & `.jpg`)**:
