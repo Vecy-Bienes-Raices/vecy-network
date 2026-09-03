@@ -16778,7 +16778,7 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     try {
-      return await db.select().from(requirements).orderBy(desc2(requirements.id)).limit(300);
+      return await db.select().from(requirements).orderBy(desc2(requirements.id));
     } catch (error) {
       console.error("Error getting all requirements:", error);
       throw error;
