@@ -52,7 +52,20 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v30.3 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v30.4 — Septiembre 2026
+
+### 🗓️ Sesión: Jueves 3 de Septiembre de 2026 — 15:40 a 15:45 (Hora Colombia UTC-5)
+**Versión**: `v30.4` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)
+
+#### 🎯 Objetivo y Logros de la Sesión:
+- **Sincronización Dual y Blindaje de Ilustración 3D de Soporte (`jania_soporte.jpeg` & `jania_soporte.jpg`)**:
+  1) Reconocida la nueva ilustración 3D en alta resolución (2.0 MB) cargada por Eduardo para el contenido dominical de JanIA.
+  2) Sincronizada de forma espejo en formatos `.jpeg` y `.jpg` tanto en `client/public/assets/jania/` como en `dist/assets/jania/` en VPS.
+  3) Garantizada la compatibilidad absoluta para el cron de los domingos a las 10:30 AM (`domingo_soporte` vía `getThemedImagePath`), asegurando que tanto WhatsApp como la web resuelvan el asset sin errores 404.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v30.3 — Septiembre 2026
 
 ### 🗓️ Sesión: Jueves 3 de Septiembre de 2026 — 15:25 a 15:35 (Hora Colombia UTC-5)
 **Versión**: `v30.3` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)

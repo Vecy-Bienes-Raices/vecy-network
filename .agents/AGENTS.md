@@ -163,7 +163,12 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v30.3 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v30.4 — Septiembre 2026
+
+### Novedades v30.4 (Sincronización de Imagen de Soporte Dominical JanIA):
+- **Sincronización Espejo de Ilustración 3D de Soporte (`jania_soporte.jpeg` & `.jpg`)**:
+  1) Reconocida la nueva imagen en alta resolución de 2.0 MB subida por Eduardo.
+  2) Sincronizada en espejo dual (`.jpeg` y `.jpg`) en cliente y VPS para garantizar despacho sin errores 404 en el cron dominical de las 10:30 AM (`domingo_soporte`).
 
 ### Novedades v30.3 (Desbloqueo de Catálogo Total de Inmuebles y Demandas en Admin Panel):
 - **Desbloqueo de Inmuebles en `AdminProperties.tsx`**:
