@@ -15147,7 +15147,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v29.4";
+var VECY_VERSION = "v30.5";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 
@@ -17883,6 +17883,7 @@ var appRouter = router({
 var SUPERADMIN_EMAILS = [
   "vecybienesraices@gmail.com",
   "edduinnova@gmail.com",
+  "edduainnova@gmail.com",
   "jani79alves@gmail.com",
   "eduardoariveram@gmail.com",
   "eddu.mendoza@gmail.com",

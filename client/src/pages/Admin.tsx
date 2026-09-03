@@ -128,6 +128,7 @@ export default function Admin() {
   const ADMIN_EMAILS = [
     'vecybienesraices@gmail.com',
     'edduinnova@gmail.com',
+    'edduainnova@gmail.com',
     'jani79alves@gmail.com',
     'eduardoariveram@gmail.com',
     'eddu.mendoza@gmail.com',
