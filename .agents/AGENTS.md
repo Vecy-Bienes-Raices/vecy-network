@@ -163,7 +163,16 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v30.5 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v30.6 — Septiembre 2026
+
+### Novedades v30.6 (Doctrina de Avalúos Rurales sin Peritos In Situ y Despacho Verificado a Grupo 2):
+- **Doctrina Estricta de Avalúos y Delimitación de Servicios JanIA (Cero Personal In Situ)**:
+  1) Erradicada cualquier promesa de peritos avaluadores propios o visitas de inspección física in situ en nombre de VECY Network.
+  2) JanIA ofrece exclusivamente el Análisis Comparativo de Mercado (ACM) preliminar y orientativo vía IA, supeditado estrictamente a que el usuario provea toda la documentación técnica y jurídica requerida (Certificado de Tradición y Libertad, escrituras, predial y especificaciones de cabida y mejoras).
+  3) Actualizado el prompt maestro de Grupo 2 (`VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md`), purgando además cualquier remanente histórico de líneas telefónicas no autorizadas y blindando la orientación institucional.
+- **Habilitación de Despacho a Grupos en `/api/send-whatsapp-notification`**:
+  1) Extendido el endpoint API interno para preservar JIDs de grupos (`@g.us`) y canales (`@newsletter`), admitiendo parámetros de menciones estructuradas (`mentions`).
+  2) Despachada y confirmada la respuesta técnica oficial sobre avalúos rurales a Amanda (`573182578569@s.whatsapp.net`) en el Grupo 2 Oficial de Soporte.
 
 ### Novedades v30.5 (Erradicación Definitiva de Congelamiento por Head-of-Line Blocking en Admin Panel):
 - **Desacoplamiento con `httpLink` en `@trpc/client` (`main.tsx`)**:

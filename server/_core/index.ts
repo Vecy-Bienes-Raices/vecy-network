@@ -233,7 +233,7 @@ async function startServer() {
 
   app.post("/api/send-whatsapp-notification", async (req, res) => {
     try {
-      const { text, token, phone } = req.body;
+      const { text, token, phone, mentions } = req.body;
       const verifyToken = process.env.WEBHOOK_VERIFY_TOKEN || "vecy_network_secret_token";
       
       if (token !== verifyToken) {
@@ -246,13 +246,22 @@ async function startServer() {
 
       const defaultAdminPhone = "573192919978";
       const rawPhone = phone || defaultAdminPhone;
-      const cleanPhone = typeof rawPhone === "string" ? rawPhone.replace(/\D/g, "") : String(rawPhone).replace(/\D/g, "");
+      let targetPhone = "";
+      if (typeof rawPhone === "string" && (rawPhone.endsWith("@g.us") || rawPhone.endsWith("@newsletter") || rawPhone.endsWith("@s.whatsapp.net"))) {
+        targetPhone = rawPhone;
+      } else {
+        const cleanPhone = typeof rawPhone === "string" ? rawPhone.replace(/\D/g, "") : String(rawPhone).replace(/\D/g, "");
+        targetPhone = cleanPhone.endsWith("@s.whatsapp.net") ? cleanPhone : `${cleanPhone}@s.whatsapp.net`;
+      }
 
       const matchBot = (global as any).janiaMatchBotInstance;
       if (matchBot && matchBot.isReady) {
-        const targetPhone = cleanPhone.endsWith("@s.whatsapp.net") ? cleanPhone : `${cleanPhone}@s.whatsapp.net`;
         console.log(`[NOTIFICACIÓN-API] Retransmitiendo mensaje a ${targetPhone} vía JanIA Match Bot (Baileys)...`);
-        await matchBot.queuedSend(targetPhone, text);
+        const options: any = {};
+        if (mentions && Array.isArray(mentions)) {
+          options.mentions = mentions;
+        }
+        await matchBot.queuedSend(targetPhone, text, options);
       }
       
       res.json({ ok: true, message: "Notification sent successfully." });

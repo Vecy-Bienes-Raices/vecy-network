@@ -52,7 +52,27 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v30.5 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v30.6 — Septiembre 2026
+
+### 🗓️ Sesión: Jueves 3 de Septiembre de 2026 — 18:05 a 18:18 (Hora Colombia UTC-5)
+**Versión**: `v30.6` | **Ambiente**: Producción VPS (`13.140.149.144`) + Baileys WhatsApp Match Bot (`573192919978`) + GitHub (`main`)
+
+#### 🎯 Objetivo y Logros de la Sesión:
+1. **Atención a Inquietud de Eduardo sobre Amanda en Grupo 2**:
+   - Se investigó por qué JanIA no respondió a Amanda (+57 318 257 8569) a las 17:11 respecto a su consulta de avalúo rural ("*Que información necesitas para hacer el avalúo?*").
+   - Diagnóstico: Se identificó una desincronización de sesión criptográfica en Baileys y reinicio del servidor a las 17:33 UTC-5.
+2. **Doctrina Institucional de Avalúos (Cero Personal Propio In Situ)**:
+   - Siguiendo la orden expresa de Eduardo, se erradicó por completo cualquier oferta o mención a visitas físicas o peritos avaluadores certificados propios de VECY Network.
+   - Se delimitó el servicio exclusivamente al **Análisis Comparativo de Mercado (ACM) preliminar y orientativo vía JanIA**, condicionado 100% a la entrega previa de la documentación completa del predio.
+   - Se actualizó el prompt maestro de Grupo 2 (`VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md`), purgando además cualquier remanente del número histórico baneado.
+3. **Extensión del Endpoint `/api/send-whatsapp-notification`**:
+   - Se amplió el endpoint en `server/_core/index.ts` y en producción VPS (`dist-server/index.js`) para admitir el despacho a grupos (`@g.us`) y canales (`@newsletter`) preservando los JIDs y soportando menciones directas (`mentions`).
+4. **Despacho Verificado a Grupo 2**:
+   - Se envió el mensaje técnico completo y cordial a Amanda en el Grupo Oficial #2 (`120363417740040773@g.us`) mencionando `@573182578569` y confirmando la entrega nativa en WhatsApp.
+
+---
+
+## 🔖 HISTÓRICO DE VERSIONES ANTERIORES:
 
 ### 🗓️ Sesión: Jueves 3 de Septiembre de 2026 — 16:15 a 16:35 (Hora Colombia UTC-5)
 **Versión**: `v30.5` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)
