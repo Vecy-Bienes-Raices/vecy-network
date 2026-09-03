@@ -307,19 +307,18 @@ export default function JanIAWidget({ propertyId, leadId }: JanIAWidgetProps) {
         <motion.button
           initial={{ scale: 0, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
+          whileHover={{ scale: 1.08 }}
+          whileTap={{ scale: 0.92 }}
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 md:bottom-8 md:right-8 w-16 h-16 md:w-24 md:h-24 rounded-full flex items-center justify-center z-40 glow-gold pulse-glow overflow-hidden bg-black border-2 border-primary/40"
+          className="fixed bottom-6 right-6 md:bottom-8 md:right-8 w-16 h-16 md:w-24 md:h-24 rounded-full p-0 flex items-center justify-center z-40 glow-gold pulse-glow overflow-hidden bg-black border-2 border-primary/50 shadow-2xl"
           title="Chat con JanIA"
         >
-          <video 
-            src="/jania.mp4" 
-            autoPlay 
-            loop 
-            muted 
-            playsInline
-            className="w-[88%] h-[88%] rounded-full object-cover contrast-110 saturate-105" 
+          <img 
+            src="/jania_perfil.png" 
+            alt="JanIA"
+            className="w-full h-full object-cover object-center" 
+            loading="eager"
+            decoding="async"
           />
         </motion.button>
       )}
@@ -336,8 +335,8 @@ export default function JanIAWidget({ propertyId, leadId }: JanIAWidgetProps) {
             {/* Header */}
             <div className="bg-gradient-to-r from-black via-accent/20 to-black p-4 rounded-t-2xl flex items-center justify-between border-b border-accent/20">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full overflow-hidden glow-gold-sm border border-primary/20 bg-black flex items-center justify-center">
-                  <video src="/jania.mp4" autoPlay loop muted playsInline className="w-[88%] h-[88%] rounded-full object-cover" />
+                <div className="w-10 h-10 rounded-full overflow-hidden glow-gold-sm border border-primary/30 bg-black flex items-center justify-center p-0">
+                  <img src="/jania_perfil.png" alt="JanIA" className="w-full h-full object-cover object-center" />
                 </div>
                 <div>
                   <h3 className="text-primary font-bold text-sm tracking-widest uppercase">JanIA</h3>
@@ -360,8 +359,13 @@ export default function JanIAWidget({ propertyId, leadId }: JanIAWidgetProps) {
                   initial={{ opacity: 0, x: message.role === 'user' ? 20 : -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.05 }}
-                  className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                  className={`flex gap-2.5 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
+                  {message.role === 'janIA' && (
+                    <div className="w-7 h-7 rounded-full overflow-hidden shrink-0 border border-primary/30 bg-black mt-1">
+                      <img src="/jania_perfil.png" alt="JanIA" className="w-full h-full object-cover object-center" />
+                    </div>
+                  )}
                   <div
                     className={`max-w-[80%] px-4 py-3 rounded-2xl shadow-sm ${
                       message.role === 'user'
