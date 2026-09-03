@@ -366,7 +366,7 @@ export const KNOWN_BARRIOS_CANONICAL = [
   "north point", "san cristóbal norte", "san cristobal norte",
   "alameda 170", "alameda norte", "la alameda", "barrio alameda", "alameda", "san antonio noroccidental", "san antonio norte", "alcalá", "alcala", "belmira", "portales del norte", "san cipriano", "toberín", "toberin", "villa magdala",
   "los rosales alto", "rosales alto", "los rosales bajo", "rosales bajo", "los rosales", "rosales",
-  "la cabrera", "el nogal", "nogal", "el virrey", "el retiro", "el lago", "quinta camacho", "chapinero alto", "chapinero central", "chapinero",
+  "el refugio", "refugio", "la cabrera", "cabrera", "el nogal", "nogal", "el virrey", "el retiro", "el lago", "quinta camacho", "chapinero alto", "chapinero central", "chapinero",
   "la castellana", "castellana", "polo club", "polo", "san felipe",
   "colina campestre", "colina", "san josé de bavaria", "san jose de bavaria", "carmel club", "alejandría", "alejandria", "cantalejo", "sotavento", "victoria norte", "britalia norte", "niza norte", "niza", "la alhambra", "alhambra", "pasadena", "batán", "batan", "el batán", "el batan", "prado veraniego", "pontevedra", "morato", "la floresta", "floresta", "suba",
   "ciudad salitre", "salitre", "hayuelos", "modelia", "fontibón", "fontibon", "teusaquillo", "la soledad", "palermo", "quinta paredes", "la esmeralda", "nicolás de federmann", "nicolas de federmann",
@@ -2063,23 +2063,25 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
       }
 
       const budgetMin = requirement.presupuestoMin ? parseFloat(String(requirement.presupuestoMin)) : 0;
-      const lowerRentLimit = budgetMin > 0 ? budgetMin * 0.95 : budgetMax * 0.80;
 
       if (totalRent > budgetMax) {
         blockers.push(`Guillotina Financiera (Tolerancia Cero): Canon de arriendo total ($${totalRent.toLocaleString()}) supera el presupuesto máximo de $${budgetMax.toLocaleString()}`);
         return buildExplanationResult(0, blockers, positives, negatives);
       }
 
-      if (totalRent < lowerRentLimit) {
-        blockers.push(`Guillotina Financiera: Canon de arriendo total ($${totalRent.toLocaleString()}) está por debajo del segmento solicitado (mínimo $${lowerRentLimit.toLocaleString()}).`);
-        return buildExplanationResult(0, blockers, positives, negatives);
+      if (budgetMin > 0) {
+        const lowerRentLimit = budgetMin * 0.95;
+        if (totalRent < lowerRentLimit) {
+          blockers.push(`Guillotina Financiera: Canon de arriendo total ($${totalRent.toLocaleString()}) está por debajo del segmento solicitado (mínimo $${lowerRentLimit.toLocaleString()}).`);
+          return buildExplanationResult(0, blockers, positives, negatives);
+        }
+        positives.push(`✅ Presupuesto de arriendo cumple: Total $${totalRent.toLocaleString()} dentro del rango (mín $${lowerRentLimit.toLocaleString()} a máx $${budgetMax.toLocaleString()})`);
+      } else {
+        positives.push(`✅ Presupuesto de arriendo cumple: Total $${totalRent.toLocaleString()} dentro del presupuesto máximo ($${budgetMax.toLocaleString()})`);
       }
-
-      positives.push(`✅ Presupuesto de arriendo cumple: Total $${totalRent.toLocaleString()} dentro del rango (mín $${lowerRentLimit.toLocaleString()} a máx $${budgetMax.toLocaleString()})`);
     } else {
       // Para Compras / Ventas:
       const budgetMin = requirement.presupuestoMin ? parseFloat(String(requirement.presupuestoMin)) : 0;
-      const lowerSaleLimit = budgetMin > 0 ? budgetMin * 0.95 : budgetMax * 0.80;
       let salePrice = price;
 
       if (salePrice > budgetMax) {
@@ -2087,9 +2089,12 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
         return buildExplanationResult(0, blockers, positives, negatives);
       }
 
-      if (salePrice < lowerSaleLimit) {
-        blockers.push(`Guillotina Financiera: El precio del inmueble ($${salePrice.toLocaleString()}) está por debajo del segmento solicitado (mínimo $${lowerSaleLimit.toLocaleString()}).`);
-        return buildExplanationResult(0, blockers, positives, negatives);
+      if (budgetMin > 0) {
+        const lowerSaleLimit = budgetMin * 0.95;
+        if (salePrice < lowerSaleLimit) {
+          blockers.push(`Guillotina Financiera: El precio del inmueble ($${salePrice.toLocaleString()}) está por debajo del segmento solicitado (mínimo $${lowerSaleLimit.toLocaleString()}).`);
+          return buildExplanationResult(0, blockers, positives, negatives);
+        }
       }
     }
   }

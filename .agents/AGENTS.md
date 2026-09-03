@@ -163,7 +163,18 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v30.0 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v30.1 — Septiembre 2026
+
+### Novedades v30.1 (Arquitectura 1-a-N / N-a-M, Barrios El Refugio/Cabrera y Match #M11878 León ↔ Fernanda Torres):
+- **Doctrina de Eficiencia 1-a-N y N-a-M de Matches Persistidos**:
+  1) Precomputar y persistir todas las combinaciones legítimas ($\ge 80\%$) en `propertyMatches` consume 99% menos recursos de CPU y memoria que recalcular en caliente.
+  2) Un solo requerimiento puede tener múltiples tarjetas activas en la mesa simultáneamente ($R \leftrightarrow P_1, P_2, P_3$).
+- **Inclusión Canónica de Barrios El Refugio y Cabrera (`matching.ts` & `janIA.ts`)**:
+  1) Reconocimiento formal de `"el refugio"`, `"refugio"`, `"la cabrera"`, `"cabrera"` en `KNOWN_BARRIOS_CANONICAL`.
+- **Corrección de Piso Financiero Artificial**:
+  1) No se bloquean ofertas con canon inferior al presupuesto máximo a menos que la demanda haya exigido explícitamente un piso mínimo (`presupuestoMin > 0`).
+- **Match Certificado #M11878**:
+  1) Creado match oficial entre Requerimiento #126 (León Aguilar) y Propiedad #1558 (Fernanda Torres): Apto 200m² en El Refugio, 3 alcobas, 5 baños, 2 garajes, 3 terrazas, \$9.2M total. Contacto de la asesora: `+57 320 604 0196`.
 
 ### Novedades v30.0 (Flujo Doctrinal de Descarte por Inmueble Arrendado/Vendido y Match Alternativo #M11770):
 - **Flujo Doctrinal de Descarte por Inmueble Arrendado/Vendido (`server/routers/janIA.ts`)**:

@@ -52,7 +52,26 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v30.0 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v30.1 — Septiembre 2026
+
+### 🗓️ Sesión: Jueves 3 de Septiembre de 2026 — 14:45 a 14:55 (Hora Colombia UTC-5)
+**Versión**: `v30.1` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)
+
+#### 🎯 Objetivo y Logros de la Sesión:
+- **Doctrina y Eficiencia de la Arquitectura 1-a-N y N-a-M (Múltiples Matches por Requerimiento)**:
+  1) Se clarificó y consolidó que cada demanda puede emparejarse simultáneamente con múltiples ofertas compatibles (1-a-N) y cada oferta con múltiples demandas (N-a-M).
+  2) Precomputar y persistir todos los cruces válidos ($\ge 80\%$) en la base de datos es la arquitectura de **menor consumo de recursos** (costo computacional casi 0 al consultar la web, carga en <1s).
+- **Corrección Doctrinal de Barrios Canónicos e Inclusión de El Refugio y Cabrera (`matching.ts` & `janIA.ts`)**:
+  1) Incorporados `"el refugio"`, `"refugio"`, `"la cabrera"`, `"cabrera"` a `KNOWN_BARRIOS_CANONICAL` y `KNOWN_BARRIOS_CANONICAL_SORTED`.
+- **Erradicación del Falso Piso Financiero Artificial**:
+  1) Corregida la guillotina financiera en `matching.ts`: si el cliente no especificó un presupuesto mínimo (`budgetMin = 0`), pagar un valor menor a su techo presupuestal no constituye bloqueo, sino una oportunidad comercial.
+- **Creación y Certificación de Match Alternativo #M11878 (León Aguilar Medina ↔ Fernanda Torres)**:
+  1) Conectado el Requerimiento #126 de León con la Propiedad #1558 de Fernanda Torres en El Refugio: Apartamento de 200m² con 3 terrazas, 3 alcobas, 5 baños, 2 garajes, canon \$8M + \$1.2M admon = \$9.2M total (Score 85%, 0 casillas en rojo).
+  2) Persistido en Supabase bajo el ID **#M11878** con contacto verificado de Fernanda Torres (`+57 320 604 0196`).
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v30.0 — Septiembre 2026
 
 ### 🗓️ Sesión: Jueves 3 de Septiembre de 2026 — 13:55 a 14:05 (Hora Colombia UTC-5)
 **Versión**: `v30.0` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)

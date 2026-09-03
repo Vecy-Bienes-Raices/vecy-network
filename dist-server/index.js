@@ -5497,27 +5497,33 @@ function explicarMatch(requirement, property) {
         return buildExplanationResult(0, blockers, positives, negatives);
       }
       const budgetMin2 = requirement.presupuestoMin ? parseFloat(String(requirement.presupuestoMin)) : 0;
-      const lowerRentLimit = budgetMin2 > 0 ? budgetMin2 * 0.95 : budgetMax * 0.8;
       if (totalRent > budgetMax) {
         blockers.push(`Guillotina Financiera (Tolerancia Cero): Canon de arriendo total ($${totalRent.toLocaleString()}) supera el presupuesto m\xE1ximo de $${budgetMax.toLocaleString()}`);
         return buildExplanationResult(0, blockers, positives, negatives);
       }
-      if (totalRent < lowerRentLimit) {
-        blockers.push(`Guillotina Financiera: Canon de arriendo total ($${totalRent.toLocaleString()}) est\xE1 por debajo del segmento solicitado (m\xEDnimo $${lowerRentLimit.toLocaleString()}).`);
-        return buildExplanationResult(0, blockers, positives, negatives);
+      if (budgetMin2 > 0) {
+        const lowerRentLimit = budgetMin2 * 0.95;
+        if (totalRent < lowerRentLimit) {
+          blockers.push(`Guillotina Financiera: Canon de arriendo total ($${totalRent.toLocaleString()}) est\xE1 por debajo del segmento solicitado (m\xEDnimo $${lowerRentLimit.toLocaleString()}).`);
+          return buildExplanationResult(0, blockers, positives, negatives);
+        }
+        positives.push(`\u2705 Presupuesto de arriendo cumple: Total $${totalRent.toLocaleString()} dentro del rango (m\xEDn $${lowerRentLimit.toLocaleString()} a m\xE1x $${budgetMax.toLocaleString()})`);
+      } else {
+        positives.push(`\u2705 Presupuesto de arriendo cumple: Total $${totalRent.toLocaleString()} dentro del presupuesto m\xE1ximo ($${budgetMax.toLocaleString()})`);
       }
-      positives.push(`\u2705 Presupuesto de arriendo cumple: Total $${totalRent.toLocaleString()} dentro del rango (m\xEDn $${lowerRentLimit.toLocaleString()} a m\xE1x $${budgetMax.toLocaleString()})`);
     } else {
       const budgetMin2 = requirement.presupuestoMin ? parseFloat(String(requirement.presupuestoMin)) : 0;
-      const lowerSaleLimit = budgetMin2 > 0 ? budgetMin2 * 0.95 : budgetMax * 0.8;
       let salePrice = price;
       if (salePrice > budgetMax) {
         blockers.push(`Guillotina Financiera (Tolerancia Cero): El precio de la propiedad ($${salePrice.toLocaleString()}) supera el presupuesto m\xE1ximo del comprador ($${budgetMax.toLocaleString()}). Match inviable (0%).`);
         return buildExplanationResult(0, blockers, positives, negatives);
       }
-      if (salePrice < lowerSaleLimit) {
-        blockers.push(`Guillotina Financiera: El precio del inmueble ($${salePrice.toLocaleString()}) est\xE1 por debajo del segmento solicitado (m\xEDnimo $${lowerSaleLimit.toLocaleString()}).`);
-        return buildExplanationResult(0, blockers, positives, negatives);
+      if (budgetMin2 > 0) {
+        const lowerSaleLimit = budgetMin2 * 0.95;
+        if (salePrice < lowerSaleLimit) {
+          blockers.push(`Guillotina Financiera: El precio del inmueble ($${salePrice.toLocaleString()}) est\xE1 por debajo del segmento solicitado (m\xEDnimo $${lowerSaleLimit.toLocaleString()}).`);
+          return buildExplanationResult(0, blockers, positives, negatives);
+        }
       }
     }
   }
@@ -6274,7 +6280,10 @@ var init_matching = __esm({
       "rosales bajo",
       "los rosales",
       "rosales",
+      "el refugio",
+      "refugio",
       "la cabrera",
+      "cabrera",
       "el nogal",
       "nogal",
       "el virrey",
@@ -7668,6 +7677,7 @@ function extractFallbackDataFromText(text2) {
     "San Patricio",
     "Santa Teresa",
     "La Cabrera",
+    "Cabrera",
     "Los Rosales Alto",
     "Rosales Alto",
     "Los Rosales Bajo",
@@ -7675,9 +7685,11 @@ function extractFallbackDataFromText(text2) {
     "Los Rosales",
     "Rosales",
     "El Nogal",
+    "Nogal",
     "El Virrey",
     "El Retiro",
     "El Refugio",
+    "Refugio",
     "Quinta Camacho",
     "Antiguo Country",
     "Country Club",
