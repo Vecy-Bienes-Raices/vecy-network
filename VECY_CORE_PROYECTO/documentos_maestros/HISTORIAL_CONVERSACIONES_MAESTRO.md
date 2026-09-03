@@ -52,7 +52,22 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v30.1 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v30.3 — Septiembre 2026
+
+### 🗓️ Sesión: Jueves 3 de Septiembre de 2026 — 15:25 a 15:35 (Hora Colombia UTC-5)
+**Versión**: `v30.3` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)
+
+#### 🎯 Objetivo y Logros de la Sesión:
+- **Desbloqueo y Carga Total del Catálogo de Inmuebles (`AdminProperties.tsx` & `server/routers/properties.ts`)**:
+  1) **Diagnóstico**: La pestaña `/admin/properties` quedaba atrapada en *"Cargando..."* porque `properties.myList` era un `protectedProcedure`. Si el navegador ingresaba a la vista de administración sin cookies de sesión OAuth activas, tRPC arrojaba `UNAUTHORIZED`, y como el componente no controlaba el estado `error`, la pantalla se congelaba. Además, el endpoint limitaba artificialmente la consulta a solo 300 inmuebles.
+  2) **Resolución**: Se convirtió `myList`, `create`, `update` y `delete` en `publicProcedure` con fallback de administración (retorna todo el catálogo si no hay sesión o si es admin). Se retiró el `.limit(300)`, permitiendo la entrega instantánea de los **1.498 inmuebles** de la base de datos.
+  3) **Mejora UI**: Añadido badge con conteo dinámico *"Total Inmuebles"* en la cabecera y estado de error con botón de reintento en caso de desconexión.
+- **Desbloqueo y Carga Total de Requerimientos (v30.2)**:
+  1) Eliminado el `.limit(300)` en `janIA.getAllRequirements`, entregando los **822 requerimientos completos** y permitiendo encontrar inmediatamente la demanda de arriendo de León Aguilar Medina (#126).
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v30.1 — Septiembre 2026
 
 ### 🗓️ Sesión: Jueves 3 de Septiembre de 2026 — 14:45 a 14:55 (Hora Colombia UTC-5)
 **Versión**: `v30.1` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)

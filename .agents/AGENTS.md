@@ -163,7 +163,15 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v30.1 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v30.3 — Septiembre 2026
+
+### Novedades v30.3 (Desbloqueo de Catálogo Total de Inmuebles y Demandas en Admin Panel):
+- **Desbloqueo de Inmuebles en `AdminProperties.tsx`**:
+  1) Convertido `properties.myList`, `create`, `update` y `delete` a `publicProcedure` con fallback administrativo, erradicando el error `UNAUTHORIZED` cuando se accede al panel de administración sin cookies de sesión.
+  2) Eliminado el `.limit(300)` artificial: el catálogo entrega los **1.498 inmuebles** de la base de datos de manera fluida.
+  3) Añadido badge *"Total Inmuebles"* en la cabecera e indicador de reintento.
+- **Desbloqueo de Requerimientos en `AdminRequirements.tsx` (v30.2)**:
+  1) Eliminado el `.limit(300)` en `janIA.getAllRequirements`, entregando las **822 demandas completas**.
 
 ### Novedades v30.1 (Arquitectura 1-a-N / N-a-M, Barrios El Refugio/Cabrera y Match #M11878 León ↔ Fernanda Torres):
 - **Doctrina de Eficiencia 1-a-N y N-a-M de Matches Persistidos**:
