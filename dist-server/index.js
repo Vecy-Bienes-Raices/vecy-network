@@ -17848,6 +17848,7 @@ var SUPERADMIN_EMAILS = [
   "mejorpontealdia@gmail.com"
 ];
 async function createContext(opts) {
+  console.log(`[TRPC-CONTEXT] createContext called for ${opts.req.method} ${opts.req.url}`);
   let user = null;
   try {
     user = await sdk.authenticateRequest(opts.req);
@@ -18648,6 +18649,10 @@ Direcci\xF3n obligatoria:
       res.status(500).json({ error: err.message });
     }
   });
+  app.use("/api/trpc", (req, res, next) => {
+    console.log(`[TRPC-ROUTER] ${req.method} ${req.url}`);
+    next();
+  });
   app.use(
     "/api/trpc",
     createExpressMiddleware({
@@ -18663,13 +18668,15 @@ Direcci\xF3n obligatoria:
   const port = parseInt(process.env.PORT || "3000");
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
-    Promise.resolve().then(() => (init_nightlyRematch(), nightlyRematch_exports)).then(({ recalculateAndCleanupMatches: recalculateAndCleanupMatches2 }) => {
-      recalculateAndCleanupMatches2().catch((err) => {
-        console.error("[STARTUP-CLEANUP] Error ejecutando la limpieza de matches:", err);
+    setTimeout(() => {
+      Promise.resolve().then(() => (init_nightlyRematch(), nightlyRematch_exports)).then(({ recalculateAndCleanupMatches: recalculateAndCleanupMatches2 }) => {
+        recalculateAndCleanupMatches2().catch((err) => {
+          console.error("[STARTUP-CLEANUP] Error ejecutando la limpieza de matches:", err);
+        });
+      }).catch((err) => {
+        console.error("[STARTUP-CLEANUP] Error importando funci\xF3n de limpieza:", err);
       });
-    }).catch((err) => {
-      console.error("[STARTUP-CLEANUP] Error importando funci\xF3n de limpieza:", err);
-    });
+    }, 3e5);
     const shouldStartBot = process.env.ENABLE_WHATSAPP_BOT !== "false" || process.env.ENABLE_JANIA_MATCH_BOT === "true";
     if (shouldStartBot) {
       console.log("Iniciando Bot Oficial JanIA (+573192919978) Baileys (.baileys_auth)...");

@@ -741,6 +741,10 @@ Dirección obligatoria:
   });
 
   // tRPC API
+  app.use("/api/trpc", (req, res, next) => {
+    console.log(`[TRPC-ROUTER] ${req.method} ${req.url}`);
+    next();
+  });
   app.use(
     "/api/trpc",
     createExpressMiddleware({
@@ -760,14 +764,16 @@ Dirección obligatoria:
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
     
-    // Ejecutar recalculo y limpieza de matches obsoletos en la BD en segundo plano al iniciar
-    import("../jobs/nightlyRematch").then(({ recalculateAndCleanupMatches }) => {
-      recalculateAndCleanupMatches().catch(err => {
-        console.error("[STARTUP-CLEANUP] Error ejecutando la limpieza de matches:", err);
+    // Ejecutar recalculo y limpieza de matches diferido (5 minutos tras iniciar para no sobrecargar el arranque)
+    setTimeout(() => {
+      import("../jobs/nightlyRematch").then(({ recalculateAndCleanupMatches }) => {
+        recalculateAndCleanupMatches().catch(err => {
+          console.error("[STARTUP-CLEANUP] Error ejecutando la limpieza de matches:", err);
+        });
+      }).catch(err => {
+        console.error("[STARTUP-CLEANUP] Error importando función de limpieza:", err);
       });
-    }).catch(err => {
-      console.error("[STARTUP-CLEANUP] Error importando función de limpieza:", err);
-    });
+    }, 300000);
 
     // Inicializar los Bots de WhatsApp de Vecy Network (Baileys)
     // Operación exclusiva del Bot Oficial JanIA (+573192919978).

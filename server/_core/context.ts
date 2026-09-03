@@ -21,6 +21,7 @@ export type TrpcContext = {
 export async function createContext(
   opts: CreateExpressContextOptions
 ): Promise<TrpcContext> {
+  console.log(`[TRPC-CONTEXT] createContext called for ${opts.req.method} ${opts.req.url}`);
   let user: User | null = null;
 
   try {
