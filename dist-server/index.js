@@ -16783,12 +16783,12 @@ ${liveStats}${userContextInstruction}
         name: requirements.name,
         rawText: requirements.rawText,
         idUsuarioWhatsapp: requirements.idUsuarioWhatsapp,
+        nombreUsuarioWhatsapp: requirements.nombreUsuarioWhatsapp,
         tipoInmuebleDeseado: requirements.tipoInmuebleDeseado,
         tipoNegocioDeseado: requirements.tipoNegocioDeseado,
-        presupuestoMaximo: requirements.presupuestoMaximo,
-        presupuestoMinimo: requirements.presupuestoMinimo,
-        areaMinima: requirements.areaMinima,
-        barriosInteres: requirements.barriosInteres,
+        presupuestoMax: requirements.presupuestoMax,
+        presupuestoMin: requirements.presupuestoMin,
+        areaMin: requirements.areaMin,
         createdAt: requirements.createdAt
       }).from(requirements).orderBy(desc2(requirements.id));
     } catch (error) {
