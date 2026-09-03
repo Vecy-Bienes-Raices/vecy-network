@@ -166,11 +166,37 @@ export const propertiesRouter = router({
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
 
+    const propertyFields = {
+      id: properties.id,
+      name: properties.name,
+      price: properties.price,
+      rentPrice: properties.rentPrice,
+      location: properties.location,
+      zone: properties.zone,
+      addressNeighborhood: properties.addressNeighborhood,
+      propertyType: properties.propertyType,
+      transactionType: properties.transactionType,
+      description: properties.description,
+      bedrooms: properties.bedrooms,
+      bathrooms: properties.bathrooms,
+      garages: properties.garages,
+      stratum: properties.stratum,
+      floorDetail: properties.floorDetail,
+      areaTotal: properties.areaTotal,
+      yearBuilt: properties.yearBuilt,
+      adminFee: properties.adminFee,
+      matriculaInmobiliaria: properties.matriculaInmobiliaria,
+      featured: properties.featured,
+      available: properties.available,
+      images: properties.images,
+      createdAt: properties.createdAt,
+    };
+
     const user = ctx?.user;
     if (!user || (user.role as string) === "admin") {
-      return await db.select().from(properties).orderBy(desc(properties.id));
+      return await db.select(propertyFields).from(properties).orderBy(desc(properties.id));
     }
-    return await db.select().from(properties)
+    return await db.select(propertyFields).from(properties)
       .where(eq(properties.agentId, user.id))
       .orderBy(desc(properties.id));
   }),

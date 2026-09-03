@@ -1241,7 +1241,19 @@ export const janIARouter = router({
     if (!db) throw new Error('Database not available');
     try {
       return await db
-        .select()
+        .select({
+          id: requirements.id,
+          name: requirements.name,
+          rawText: requirements.rawText,
+          idUsuarioWhatsapp: requirements.idUsuarioWhatsapp,
+          tipoInmuebleDeseado: requirements.tipoInmuebleDeseado,
+          tipoNegocioDeseado: requirements.tipoNegocioDeseado,
+          presupuestoMaximo: requirements.presupuestoMaximo,
+          presupuestoMinimo: requirements.presupuestoMinimo,
+          areaMinima: requirements.areaMinima,
+          barriosInteres: requirements.barriosInteres,
+          createdAt: requirements.createdAt,
+        })
         .from(requirements)
         .orderBy(desc(requirements.id));
     } catch (error) {

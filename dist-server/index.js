@@ -16778,7 +16778,19 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     try {
-      return await db.select().from(requirements).orderBy(desc2(requirements.id));
+      return await db.select({
+        id: requirements.id,
+        name: requirements.name,
+        rawText: requirements.rawText,
+        idUsuarioWhatsapp: requirements.idUsuarioWhatsapp,
+        tipoInmuebleDeseado: requirements.tipoInmuebleDeseado,
+        tipoNegocioDeseado: requirements.tipoNegocioDeseado,
+        presupuestoMaximo: requirements.presupuestoMaximo,
+        presupuestoMinimo: requirements.presupuestoMinimo,
+        areaMinima: requirements.areaMinima,
+        barriosInteres: requirements.barriosInteres,
+        createdAt: requirements.createdAt
+      }).from(requirements).orderBy(desc2(requirements.id));
     } catch (error) {
       console.error("Error getting all requirements:", error);
       throw error;
@@ -17756,11 +17768,36 @@ Texto: ${input.text}`;
   myList: publicProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+    const propertyFields = {
+      id: properties.id,
+      name: properties.name,
+      price: properties.price,
+      rentPrice: properties.rentPrice,
+      location: properties.location,
+      zone: properties.zone,
+      addressNeighborhood: properties.addressNeighborhood,
+      propertyType: properties.propertyType,
+      transactionType: properties.transactionType,
+      description: properties.description,
+      bedrooms: properties.bedrooms,
+      bathrooms: properties.bathrooms,
+      garages: properties.garages,
+      stratum: properties.stratum,
+      floorDetail: properties.floorDetail,
+      areaTotal: properties.areaTotal,
+      yearBuilt: properties.yearBuilt,
+      adminFee: properties.adminFee,
+      matriculaInmobiliaria: properties.matriculaInmobiliaria,
+      featured: properties.featured,
+      available: properties.available,
+      images: properties.images,
+      createdAt: properties.createdAt
+    };
     const user = ctx?.user;
     if (!user || user.role === "admin") {
-      return await db.select().from(properties).orderBy(desc4(properties.id));
+      return await db.select(propertyFields).from(properties).orderBy(desc4(properties.id));
     }
-    return await db.select().from(properties).where(eq13(properties.agentId, user.id)).orderBy(desc4(properties.id));
+    return await db.select(propertyFields).from(properties).where(eq13(properties.agentId, user.id)).orderBy(desc4(properties.id));
   })
 });
 
@@ -17855,10 +17892,13 @@ async function createContext(opts) {
   console.log(`[TRPC-CONTEXT] createContext called for ${opts.req.method} ${opts.req.url}`);
   let user = null;
   try {
-    user = await Promise.race([
-      sdk.authenticateRequest(opts.req),
-      new Promise((resolve) => setTimeout(() => resolve(null), 1200))
-    ]);
+    const hasAuth = !!(opts.req.headers.cookie || opts.req.headers.authorization);
+    if (hasAuth) {
+      user = await Promise.race([
+        sdk.authenticateRequest(opts.req),
+        new Promise((resolve) => setTimeout(() => resolve(null), 1200))
+      ]);
+    }
     if (user && SUPERADMIN_EMAILS.includes(user.email || "")) {
       if (user.role !== "admin") {
         try {
