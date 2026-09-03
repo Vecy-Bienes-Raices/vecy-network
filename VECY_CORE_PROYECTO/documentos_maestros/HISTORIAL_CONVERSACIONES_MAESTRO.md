@@ -52,7 +52,28 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v29.6 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v29.7 — Septiembre 2026
+
+### 🗓️ Sesión: Miércoles 2 de Septiembre de 2026 — 23:45 a 00:00 (Hora Colombia UTC-5)
+**Versión**: `v29.7` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)
+
+#### 🎯 Objetivo y Logros de la Sesión:
+- **Blindaje de Tiempo de Espera en `createContext` (Timeout 1.2s)**:
+  - En `server/_core/context.ts`, se blindó la resolución de contexto HTTP envolviendo `sdk.authenticateRequest` en `Promise.race` con un timeout estricto de 1.200ms. Si los servicios de Google Cloud o Supabase Auth sufren latencia o suspensión por pagos, el contexto se resuelve de inmediato con `user = null` para procedimientos públicos, evitando que la API de tRPC devuelva `504 Gateway Timeout` o congele la web móvil y de escritorio.
+- **Reparación Definitiva del Guardado en Mesa de Coincidencias (`AdminMatches.tsx`)**:
+  - Elevada la carrera protectora contra timeouts de 9s a 15s en `handleOnlySave` y `handleRecalculateMatch`.
+  - Mutaciones condicionales: `updatePropMut` y `updateReqMut` solo se despachan para las entidades que hayan sido realmente modificadas en el formulario de edición.
+- **Extracción de Teléfono Real de Asesora Oculta (Ana Karina Rojas)**:
+  - Se analizó el enlace Wasi publicado por la asesora (`info.wasi.co/apartamento-alquiler-cabrera-bogotá-d-c/10081231`), recuperando su número celular real **`+57 318 243 3016`** (`573182433016`), el cual estaba oculto bajo el LID de privacidad de WhatsApp (`81247929917620@lid`).
+  - Actualizado masivamente en Supabase para las propiedades #638, #1967, #1968, #1969 y requerimientos #753, #754.
+- **Actualización de Ficha de Demanda Match #M11837 (María Cristina Parra)**:
+  - Asignado el número celular verificado **`+57 310 325 9159`** en el requerimiento #614.
+- **Doctrina de Google Cloud y Supabase Auth**:
+  - Confirmado que Google OAuth 2.0 es 100% gratuito y no requiere cuentas de facturación abierta. Se documenta la migración a proyecto libre para blindar el inicio de sesión.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v29.6 — Septiembre 2026
 
 ### 🗓️ Sesión: Miércoles 2 de Septiembre de 2026 — 15:15 a 15:30 (Hora Colombia UTC-5)
 **Versión**: `v29.6` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)

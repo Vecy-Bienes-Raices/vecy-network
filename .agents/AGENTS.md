@@ -163,7 +163,21 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v29.6 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v29.7 — Septiembre 2026
+
+### Novedades v29.7 (Blindaje de Tiempo de Espera en Contexto HTTP, Extracción de Celular Oculto Ana Karina Rojas y Solución de Guardado):
+- **Blindaje de Tiempo de Espera en `createContext` (Timeout 1.2s)**:
+  1) En `server/_core/context.ts`, se envolvió la resolución de autenticación `sdk.authenticateRequest` en `Promise.race` con un límite estricto de 1.200ms. Si servicios externos de OAuth/Google Cloud o Supabase Auth sufren latencia o suspensión por pagos, el contexto se resuelve de inmediato sin congelar la API ni bloquear mutaciones de guardado.
+- **Resolución Definitiva del Timeout de Guardado en la Mesa de Coincidencias (`AdminMatches.tsx`)**:
+  1) Elevada la carrera protectora contra timeouts de 9s a 15s en `handleOnlySave` y `handleRecalculateMatch`.
+  2) Mutaciones condicionales: `updatePropMut` y `updateReqMut` solo se despachan para las entidades modificadas en el formulario de edición.
+- **Identificación y Extracción del Celular Real de Ana Karina Rojas**:
+  1) A través de la inspección estructurada del enlace Wasi publicado por la asesora (`info.wasi.co/apartamento-alquiler-cabrera-bogotá-d-c/10081231`), se extrajo su teléfono celular real **`+57 318 243 3016`** (`573182433016`), sustituyendo el LID interno de WhatsApp (`81247929917620@lid`).
+  2) Actualizado masivamente en Supabase para las propiedades #638, #1967, #1968, #1969 y requerimientos #753, #754.
+- **Actualización de Demanda Match #M11837 (María Cristina Parra)**:
+  1) Asignado el número celular verificado **`+57 310 325 9159`** en el requerimiento #614.
+- **Doctrina de Google Cloud y Supabase Auth**:
+  1) Confirmado que Google OAuth 2.0 es 100% gratuito y no requiere cuentas de facturación abierta. Se documenta la migración a proyecto libre para blindar el inicio de sesión.
 
 ### Novedades v29.6 (Reparación Definitiva del Botón Guardar en Mesa de Coincidencias, Sanitización de Cifras Colombianas y Desacoplamiento Asíncrono):
 - **Reparación Definitiva del Botón Guardar (`AdminMatches.tsx` & `server/routers/janIA.ts`)**:
