@@ -1249,7 +1249,7 @@ export class JaniaMatchBot {
       // Si el grupo es explícitamente de arriendos o el texto tiene señales de arriendo (administración incluida, canon, etc.)
       const isRentOperation = hasRentExplicit || (isGroupRentContext && !/\b(?:compro|comprar|en compra|para compra)\b/i.test(cleanLower) && !cleanLower.startsWith('vendo') && !cleanLower.startsWith('se vende'));
 
-      const isExplicitDemand = /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|solicitamos|compro|para cliente|busca cliente|cliente busca|comprador|arrendatario|en búsqueda|en busqueda)\b/i.test(cleanLower);
+      const isExplicitDemand = /\b(?:req\b|requerimiento|requiero|se requiere|requerimos|busco|buscamos|se busca|buscando|en búsqueda|en busqueda|necesito|necesitamos|necesitando|solicito|solicitamos|solicitando|compro|comprando|comprador|compradores|en compra|para compra|para cliente|para clientes|tengo cliente|tenemos cliente|busca cliente|cliente busca|clientes buscan|arrendatario|inquilino)\b/i.test(cleanLower);
       const isExplicitOffer = !isExplicitDemand && (
         /\b(?:ofrezco|ofrecemos|vendo|vendemos|se vende|en venta|venta directa|arriendo|arriendos|arrendamos|arrendar|se arrienda|en arriendo|arriendo directo|pongo en arriendo|alquilo|alquilamos|alquilar|se alquila|en alquiler|alquiler directo|rento|rentamos|rentar|se renta|en renta|tengo para|disponible|nuevo inmueble|permuto|permutamos|se permuta)\b/i.test(cleanLower)
         || /(?:cuenta con|consta de|\d+\s*(?:m2|mts|m²)|alcobas|habitaciones|baños|parqueaderos?|cocina|sala|comedor|dep[oó]sito)/i.test(cleanLower)

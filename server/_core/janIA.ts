@@ -2603,13 +2603,16 @@ export async function processWhatsAppMessage(
         "apto", "apartamento", "casa", "lote", "finca", "bodega", "oficina", "local", "inmueble", "propiedad",
         "predio", "terreno", "proyecto", "arriendo", "alquiler", "vendo", "venta", "compro", "compra", "busco",
         "ofrezco", "necesito", "permuto", "venpermuto", "estrato", "m2", "metros", "habitacion", "habitación",
-        "baño", "baños", "cocina", "garaje", "parqueadero", "canon", "administracion", "administración", "precio",
-        "millones", "cop", "arrendar", "vender", "comprar", "bogota", "bogotá", "medellin", "medellín", "cali",
-        "barranquilla", "bucaramanga", "cartagena", "barrio", "sector", "zona", "calle", "carrera", "avenida",
-        "contrato", "arrendamiento", "promesa", "escritura", "notaria", "notaría", "registro", "sucesión",
-        "sucesion", "herencia", "embargo", "saneamiento", "comision", "comisión", "corretaje", "avalúo", "avaluo",
-        "jania", "vecy", "bot", "ayuda", "cómo", "como", "funciona", "publicar", "registrar", "match",
-        "coincidencia", "contacto", "cuenta", "hola", "gracias", "saludo"
+        "alcoba", "alcobas", "baño", "baños", "cocina", "garaje", "garajes", "parqueadero", "parqueaderos",
+        "canon", "administracion", "administración", "precio", "millones", "cop", "arrendar", "vender", "comprar",
+        "bogota", "bogotá", "medellin", "medellín", "cali", "barranquilla", "bucaramanga", "cartagena",
+        "barrio", "sector", "zona", "calle", "carrera", "avenida", "contrato", "arrendamiento", "promesa",
+        "escritura", "notaria", "notaría", "registro", "sucesión", "sucesion", "herencia", "embargo",
+        "saneamiento", "comision", "comisión", "corretaje", "avalúo", "avaluo", "jania", "vecy", "bot", "ayuda",
+        "cómo", "como", "funciona", "publicar", "registrar", "match", "coincidencia", "contacto", "cuenta",
+        "hola", "gracias", "saludo", "req", "tengo", "disponible", "cliente", "clientes", "comprando",
+        "buscando", "solicito", "solicitamos", "piso", "balcon", "balcón", "terraza", "deposito", "depósito",
+        "conjunto", "edificio", "ph", "penthouse", "duplex", "dúplex", "triplex", "tríplex", "estudio"
       ];
 
       const hasOnTopicKeyword = onTopicKeywords.some(keyword => cleanText.includes(keyword));
