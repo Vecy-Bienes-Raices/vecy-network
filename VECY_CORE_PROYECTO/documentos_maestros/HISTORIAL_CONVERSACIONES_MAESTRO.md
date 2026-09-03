@@ -52,7 +52,23 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v29.9 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v30.0 — Septiembre 2026
+
+### 🗓️ Sesión: Jueves 3 de Septiembre de 2026 — 13:55 a 14:05 (Hora Colombia UTC-5)
+**Versión**: `v30.0` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)
+
+#### 🎯 Objetivo y Logros de la Sesión:
+- **Flujo Doctrinal de Descarte por Inmueble Arrendado/Vendido (`AdminMatches.tsx` & `server/routers/janIA.ts`)**:
+  1) Al descartar una coincidencia comercial con motivo *"Inmueble ya se vendió / arrendó / no disponible"*, el backend en `recordMatchFeedback` actualiza de inmediato el registro del inmueble en `properties` a `available: false`, `estadoComercial: "ARRENDADO"` (o `"VENDIDO"`), y `vigenciaIa: "NO_DISPONIBLE"`, impidiendo que vuelva a generar falsos matches en el futuro.
+  2) Purga en cascada de todos los demás matches abiertos en `propertyMatches` que estuvieran vinculados a ese inmueble no disponible.
+  3) Disparo automático en segundo plano de `findMatchesForRequirement(requirementId)` para que JanIA rastree inmediatamente alternativas para el cliente demandante huérfano.
+- **Descubrimiento y Certificación de Match Alternativo #M11770 (León Aguilar Medina)**:
+  1) Identificado el Match alternativo **#M11770** en Rosales para el cliente León Aguilar Medina: Apartamento en Rosales de 200m², \$12.000.000 (presupuesto máx \$14M), 3 alcobas, 3 baños, 3 garajes.
+  2) Rastreó del enlace de Wasi de la oferta (#434) y extracción del contacto verificado de la asesora captadora: **Natalia Duque** (`+57 310 239 7788`), persistido en la base de datos para habilitar contacto directo por WhatsApp.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v29.9 — Septiembre 2026
 
 ### 🗓️ Sesión: Jueves 3 de Septiembre de 2026 — 12:45 a 12:55 (Hora Colombia UTC-5)
 **Versión**: `v29.9` | **Ambiente**: Producción VPS (`13.140.149.144`) + Supabase (PostgreSQL) + GitHub (`main`)

@@ -163,7 +163,16 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v29.9 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v30.0 — Septiembre 2026
+
+### Novedades v30.0 (Flujo Doctrinal de Descarte por Inmueble Arrendado/Vendido y Match Alternativo #M11770):
+- **Flujo Doctrinal de Descarte por Inmueble Arrendado/Vendido (`server/routers/janIA.ts`)**:
+  1) Al descartar un match con motivo *"Inmueble ya se vendió / arrendó / no disponible"*, el backend actualiza de inmediato el inmueble a `available: false`, `estadoComercial: "ARRENDADO"` (o `"VENDIDO"`), y `vigenciaIa: "NO_DISPONIBLE"`, impidiendo que vuelva a generar falsos matches en el futuro.
+  2) Purga en cascada de todos los demás matches abiertos que estuvieran vinculados a ese inmueble no disponible.
+  3) Disparo automático en segundo plano de `findMatchesForRequirement(requirementId)` para que JanIA rastree inmediatamente alternativas para el cliente demandante.
+- **Descubrimiento y Certificación de Match Alternativo #M11770 (León Aguilar Medina)**:
+  1) Identificado el Match alternativo **#M11770** en Rosales para el cliente León Aguilar Medina: Apartamento en Rosales de 200m², \$12.000.000 (presupuesto máx \$14M), 3 alcobas, 3 baños, 3 garajes.
+  2) Rastreó del enlace de Wasi de la oferta (#434) y extracción del contacto verificado de la asesora captadora: **Natalia Duque** (`+57 310 239 7788`), persistido en la base de datos para habilitar contacto directo por WhatsApp.
 
 ### Novedades v29.9 (Purga de Procesos Zombis en VPS y Restauración de Rendimiento):
 - **Purga Quirúrgica de Procesos Ocupantes de CPU en VPS**:
