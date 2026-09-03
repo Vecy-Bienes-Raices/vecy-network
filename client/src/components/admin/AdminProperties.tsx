@@ -68,7 +68,7 @@ export default function AdminProperties() {
     }));
   };
 
-  const { data: properties, isLoading, refetch } = trpc.properties.myList.useQuery(undefined, {
+  const { data: properties = [], isLoading, error, refetch } = trpc.properties.myList.useQuery(undefined, {
     refetchInterval: 60000,
     refetchOnWindowFocus: false,
   });
@@ -160,11 +160,19 @@ export default function AdminProperties() {
           <h2 className="text-xl font-bold text-foreground">Gestión de Inmuebles</h2>
           <p className="text-sm text-muted-foreground">Catálogo de inmuebles en venta y arriendo</p>
         </div>
-        {!showForm && (
-          <button onClick={() => { cancelForm(); setShowForm(true); }} className="btn-gold">
-            <Plus className="w-4 h-4 mr-2" /> Nuevo Inmueble
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 bg-zinc-900 border border-white/5 px-4 py-2 rounded-xl text-center">
+            <div>
+              <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-semibold">Total Inmuebles</p>
+              <p className="text-xl font-black text-white">{isLoading ? '...' : (properties || []).length}</p>
+            </div>
+          </div>
+          {!showForm && (
+            <button onClick={() => { cancelForm(); setShowForm(true); }} className="btn-gold">
+              <Plus className="w-4 h-4 mr-2" /> Nuevo Inmueble
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Search Bar */}
@@ -363,7 +371,17 @@ export default function AdminProperties() {
       {!showForm && (
         <div className="panel-card overflow-hidden">
           {isLoading ? (
-            <div className="py-20 text-center text-muted-foreground">Cargando...</div>
+            <div className="py-20 text-center text-muted-foreground flex flex-col items-center justify-center gap-3">
+              <div className="w-8 h-8 border-2 border-[#bf953f] border-t-transparent rounded-full animate-spin" />
+              <span>Cargando catálogo de inmuebles...</span>
+            </div>
+          ) : error ? (
+            <div className="py-20 text-center text-red-400 space-y-3">
+              <p>Error al cargar inmuebles: {error.message}</p>
+              <button onClick={() => refetch()} className="px-4 py-2 bg-primary/20 hover:bg-primary/30 text-primary rounded-xl text-xs font-bold transition">
+                Reintentar
+              </button>
+            </div>
           ) : filtered.length === 0 ? (
             <div className="py-20 text-center text-muted-foreground">No hay inmuebles encontrados.</div>
           ) : (
