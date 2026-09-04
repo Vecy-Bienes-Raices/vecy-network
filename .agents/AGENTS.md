@@ -163,7 +163,19 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.1 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.2 — Septiembre 2026
+
+### Novedades v31.2 (Doctrina de Distinción entre Chat Privado / DM a JanIA y Grupos de WhatsApp):
+- **Diagnóstico y Esclarecimiento de Ofertas Recibidas por Mensaje Directo**:
+  1) **Causa de la Confusión**: En publicaciones recibidas por chat directo/privado (DM) al WhatsApp de JanIA (`+573192919978`), el motor de ingesta almacena `origen_tipo = 'contacto_directo'` y en `origen_nombre` el `pushName` del remitente (e.g. `Nathalia Castellanos`). Previamente, el Admin Panel anteponía un pin de mapa `📍` y el texto `"📍 Sin teléfono en texto · Ubicar en: [Nombre]"`, induciendo al error de creer que era un grupo de WhatsApp.
+  2) **Distinción Visual y Funcional en AdminMatches.tsx**:
+     - **Insignia de Origen**: Si `origenTipo === 'contacto_directo' || origenTipo === 'dm'`, se despliega la insignia verde `💬 Chat Privado (DM JanIA)` con tooltip explicativo, erradicando el pin de grupo `📍`.
+     - **Reconocimiento Automático del Asesor**: Si `nombreUsuarioWhatsapp` no estaba asignado, el sistema toma `origenNombre` como el nombre verídico del asesor (`👤 Asesor Nathalia Castellanos`), erradicando el texto `"Nombre no asignado"`.
+     - **Aviso de Contacto Limpio**: Si el texto no traía celular explícito, se notifica claramente `💬 Enviado por Chat Privado · [Asesor]`.
+     - **Copiado de Publicación**: Toast adaptado informando que el texto proviene de un chat directo con el asesor.
+  3) **Saneamiento de `rawText`**: Purgado cualquier prefijo residual `undefined` de publicaciones tanto en Supabase como en cliente con filtro protector regex.
+- **Incremento Oficial de Versión**:
+  1) Elevado a `v31.2` en `shared/const.ts`.
 
 ### Novedades v31.1 (Doctrina de Propagación en Cascada de Asesor a Publicaciones en Espera, Interfaz Limpia y Copiado Fiel de Publicación):
 - **Propagación en Cascada a Publicaciones en Espera en Supabase (`propagateBrokerPhoneAcrossAllListings`)**:

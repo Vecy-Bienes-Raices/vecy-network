@@ -52,9 +52,35 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.1 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.2 — Septiembre 2026
 
-### 🗓️ Sesión: Viernes 4 de Septiembre de 2026 — 00:30 a 00:50 (Hora Colombia UTC-5)
+### 🗓️ Sesión: Viernes 4 de Septiembre de 2026 — 01:10 a 01:30 (Hora Colombia UTC-5)
+**Versión**: `v31.2` | **Ambiente**: Producción VPS (`13.140.149.144`) + Mesa de Cotejo Admin Panel (`vecy-network.vercel.app/admin`) + Supabase DB + GitHub (`main`)
+
+#### 🎯 Solicitud de Eduardo A. Rivera:
+- Esclarecer por qué en la oferta de "Apartamento en venta en Santa Bárbara frente a parque" aparecía `"Nathalia Castellanos"` como si fuera el nombre de un grupo de WhatsApp con pin `📍`, y por qué al buscarla en WhatsApp no se encontraba el mensaje.
+
+#### 🛠️ Diagnóstico Técnico e Implementación:
+1. **Diagnóstico de Causa Raíz (Nathalia Castellanos NO es un grupo)**:
+   - **Verificación en Base de Datos Supabase (Propiedad #162)**: `origen_tipo` era `"contacto_directo"`, `origen_nombre` era `"Nathalia Castellanos"` (su pushName de WhatsApp), `idUsuarioWhatsapp` era su LID `"115062224199699"`, y la fecha de recepción fue el **18 de julio de 2026**.
+   - **Por qué aparecía como grupo en el Admin Panel**: `AdminMatches.tsx` asumía erróneamente que cualquier `origenNombre` correspondía a un grupo, anteponiendo el icono `📍` y el texto `"📍 Sin teléfono en texto · Ubicar en: Nathalia Castellanos"`, induciendo a confusión.
+   - **Por qué WhatsApp Web arrojaba "No se encontró ningún mensaje"**:
+     a) WhatsApp Web mostró la advertencia explícita en pantalla: *"Usa WhatsApp en tu teléfono para buscar mensajes anteriores al 3/3/2026."* (WhatsApp Web de escritorio no indexa historial antiguo fuera de memoria local).
+     b) Se estaba buscando la cadena estructurada con emojis de JanIA en vez del texto conversacional.
+     c) **Eduardo ya tenía abierto el chat directo con ella**: `Nathalia Castellanos Inmo` (`IG:@natabienesraices`), por lo que su teléfono y perfil estaban disponibles directamente en ese chat privado.
+2. **Distinción Doctrinal entre Chat Privado (DM a JanIA) y Grupos de WhatsApp (`AdminMatches.tsx`)**:
+   - Evaluado `isPropDirect` e `isReqDirect` (`origenTipo === 'contacto_directo' || origenTipo === 'dm'`).
+   - **Header Badge**: Si es directo, muestra la insignia verde `💬 Chat Privado (DM JanIA)` con tooltip informativo, eliminando el pin `📍` de grupo.
+   - **Asignación Automática de Asesor**: Si `nombreUsuarioWhatsapp` estaba vacío pero `origenTipo === 'contacto_directo'`, el sistema toma automáticamente `origenNombre` como el nombre del asesor (`👤 Asesor Nathalia Castellanos`), erradicando el mensaje `"Nombre no asignado"`.
+   - **Aviso de Contacto Veraz**: Si no hay teléfono en el texto, muestra `💬 Enviado por Chat Privado · Nathalia Castellanos` en lugar de `"Ubicar en: Nathalia Castellanos"`.
+   - **Toast de Copiado Ajustado**: En `handleCopy`, si es chat directo, el toast informa: `"Texto original copiado con 100% de fidelidad (recibido por chat directo con [Asesor])."`
+   - **Erradicación de `undefined`**: Limpiado el residuo `undefined` de `rawText` tanto en la base de datos como con filtro protector `.replace(/^undefined\s*/i, "")` en el cliente.
+3. **Verificación Empírica Automatizada con Browser Subagent**:
+   - Navegación a `https://vecy-network.vercel.app/admin`: confirmada la tarjeta con badge `💬 Chat Privado (DM JanIA)`, sin `undefined`, con `👤 Asesor Nathalia Castellanos` y estado `JanIA v31.2` en verde.
+
+---
+
+### 🗓️ Sesión Previa: Viernes 4 de Septiembre de 2026 — 00:30 a 00:50 (Hora Colombia UTC-5)
 **Versión**: `v31.1` | **Ambiente**: Producción VPS (`13.140.149.144`) + Mesa de Cotejo Admin Panel (`vecy-network.vercel.app/admin`) + Baileys Ingesta WhatsApp + GitHub (`main`)
 
 #### 🎯 Solicitud de Eduardo A. Rivera:
