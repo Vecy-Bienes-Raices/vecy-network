@@ -2436,6 +2436,44 @@ ightarrow$ número de celular para aplicarlas de forma automática a todas sus p
 
 ---
 
+### 📅 Sesión del 3 de Septiembre de 2026 — v30.8 (Optimización Móvil de Búsqueda y Ubicación Instantánea de Asesores en WhatsApp)
+
+**Fecha**: 3 de Septiembre de 2026  
+**Versión del Sistema**: `v30.8 — Optimización Móvil de Búsqueda y Ubicación Instantánea de Asesores en WhatsApp`
+
+#### 📋 Requerimientos y Directivas Doctrinales de Eduardo A. Rivera:
+1. **Fallo Crítico en Búsqueda Móvil de WhatsApp**:
+   - Al copiar requerimientos o inmuebles desde el celular y pegarlos en el grupo correspondiente de WhatsApp para localizar quién los publicó, WhatsApp en el móvil no ubica al autor y en su lugar resalta en amarillo cientos de palabras comunes en docenas de chats ajenos.
+   - En computador (WhatsApp Web) funciona porque la búsqueda realiza coincidencia literal en el DOM del chat, mientras que en móviles WhatsApp tokeniza y parte cualquier texto de más de 3 palabras resaltando palabras genéricas como `"busco"`, `"apartamento"`, `"m2"`, `"arriendo"` en todas las publicaciones.
+2. **Imposibilidad de Identificar al Publicador en Móvil por Equipo Remoto**:
+   - Los miembros del equipo trabajan directamente desde el celular y quedaban atascados sin poder saber quién publicó el requerimiento o inmueble en el grupo de WhatsApp.
+   - Si el contacto tenía LID o no traía teléfono directo, el botón `"Contactar WA"` conducía a JanIA (`+573192919978`) en vez de al autor real, confundiendo al equipo.
+3. **Regla de Integridad**:
+   - Corregir el comportamiento en celulares sin alterar ni romper la funcionalidad que ya opera de forma óptima en computadores de escritorio.
+
+#### 🛠️ Soluciones e Implementaciones Técnicas:
+- **`client/src/components/admin/AdminMatches.tsx`**:
+  - **Jerarquía Estricta de 6 Niveles para Búsqueda en WhatsApp Móvil (`extractSmartSearchSnippet`)**:
+    1. **Nivel 1 (Prioridad Máxima)**: Celular colombiano de 10 dígitos (del asesor o extraído del texto/JID). Pegar 10 dígitos en la lupa de WhatsApp ubica de forma unívoca el chat o mensaje sin ningún resaltado amarillo disperso.
+    2. **Nivel 2**: Nombre verificado del autor remitente (`nombreUsuarioWhatsapp` / `m.pushName`), e.g., `"Johana Boutin Homes"`, `"León Aguilar Medina"`, `"Fernanda Torres"`. En WhatsApp móvil, pegar el nombre del autor en la búsqueda del grupo filtra de inmediato sus mensajes y abre su perfil de contacto.
+    3. **Nivel 3**: Código o ID de portal inmobiliario (Wasi, FincaRaíz, Metrocuadrado).
+    4. **Nivel 4**: Firma explícita o contacto detectado en el texto (`"Informes Patty"`, `"profe Carlos"`).
+    5. **Nivel 5**: Dirección o cruce específico (`Calle 127 # 7-15`).
+    6. **Nivel 6**: Término distintivo purgado al 100% de *stop-words* inmobiliarias comunes.
+  - **Copiado al Toque (1-Tap Copy) en Tarjetas de Contacto**:
+    - El nombre del asesor (`👤 Asesor [Nombre]`) cuenta con botón y cursor interactivo para copiar su nombre directamente.
+    - El número de teléfono (`📞 [Teléfono]`) cuenta con botón de 1 toque que copia los 10 dígitos listos para WhatsApp.
+  - **Botón Inteligente "Ubicar en Grupo" en Casos sin Teléfono Directo (LID)**:
+    - Si el teléfono está disponible: Enlace directo oficial `"Contactar WA"` (`https://wa.me/57...`).
+    - Si el remitente es un LID sin teléfono: Se sustituye el enlace ambiguo a JanIA por el botón `"🔍 Ubicar a [Nombre]"` / `"Ubicar en Grupo"`, que copia el nombre exacto del asesor y orienta al usuario mediante un Toast descriptivo de 6 segundos sobre cómo pegarlo en la lupa del grupo de WhatsApp.
+    - Se preserva un enlace secundario `"Pedir a JanIA"` para asistencia opcional del bot.
+- **`shared/const.ts`**:
+  - Elevada la versión oficial del sistema a `v30.8`.
+- **Despliegue y Validación**:
+  - `pnpm build` ejecutado y validado exitosamente (0 errores, 26.42s).
+
+---
+
 ## 🛡️ PROTOCOLOS Y REGLAS DE TRABAJO INQUEBRANTABLES
 1. **Adición Pura de Código**: NUNCA borrar, modificar ni romper funcionalidades o reglas previas ya validadas al agregar nuevo código.
 2. **Revisión del Historial al Iniciar**: Consultar esta bitácora y `.agents/AGENTS.md` al comienzo de cada conversación.

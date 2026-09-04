@@ -1957,7 +1957,8 @@ function extractPhoneFromItem(item: any): { display: string; cleanNumber: string
 
   // 2. Buscar en el texto del mensaje por cualquier celular colombiano de 10 dígitos que NO sea el del sistema
   const textToSearch = `${item.rawText || ""} ${item.description || ""} ${item.name || ""} ${item.rawMessage || ""}`;
-  const phoneMatches = textToSearch.match(/(?:\+?57\s*)?3\d{2}[\s.-]?\d{3}[\s.-]?\d{4}\b/g);
+  // Regex flexible para: 310 856 1634, 310 856 16 34, 310-856-1634, +57 310 856 16 34, (310) 856 1634, 3108561634
+  const phoneMatches = textToSearch.match(/(?:\+?57[\s.-]*)?(?:\(?3\d{2}\)?[\s.-]*\d{3}[\s.-]*\d{2}[\s.-]*\d{2}|\(?3\d{2}\)?[\s.-]*\d{3}[\s.-]*\d{4}|3\d{9})\b/g);
   if (phoneMatches && phoneMatches.length > 0) {
     for (const pMatch of phoneMatches) {
       const rawMatch = pMatch.replace(/\D/g, "");
@@ -2105,47 +2106,104 @@ export default function AdminMatches() {
     }
   };
 
-  // Extractor de frase o dato clave único para búsqueda instantánea en WhatsApp
-  const extractSmartSearchSnippet = (rawText?: string | null, fallback?: string): { snippet: string; description: string } => {
+  // Extractor de frase o dato clave único para búsqueda instantánea en WhatsApp (Móvil y Web)
+  const extractSmartSearchSnippet = (
+    rawText?: string | null,
+    fallback?: string,
+    senderName?: string | null,
+    groupName?: string | null,
+    knownPhone?: string | null
+  ): { snippet: string; description: string } => {
     const text = (rawText || fallback || "").replace(/__is_sub_message__/g, "").trim();
-    if (!text) return { snippet: "", description: "" };
 
+    // 1. Prioridad Máxima: Celular colombiano de 10 dígitos (Búsqueda 100% infalible y única en WhatsApp Móvil y Web)
+    if (knownPhone) {
+      const clean = String(knownPhone).replace(/\D/g, "");
+      const num10 = clean.startsWith("57") && clean.length === 12 ? clean.substring(2) : clean;
+      if (num10.length === 10 && num10.startsWith("3") && num10 !== "3192919978") {
+        return { snippet: num10, description: "Celular del asesor (búsqueda 100% exacta)" };
+      }
+    }
+
+    const phoneMatches = text.match(/(?:\+?57[\s.-]*)?(?:\(?3\d{2}\)?[\s.-]*\d{3}[\s.-]*\d{2}[\s.-]*\d{2}|\(?3\d{2}\)?[\s.-]*\d{3}[\s.-]*\d{4}|3\d{9})\b/g);
+    if (phoneMatches && phoneMatches.length > 0) {
+      for (const p of phoneMatches) {
+        const clean = p.replace(/\D/g, "");
+        const num10 = clean.startsWith("57") && clean.length === 12 ? clean.substring(2) : clean;
+        if (num10.length === 10 && num10.startsWith("3") && num10 !== "3192919978") {
+          return { snippet: num10, description: "Celular del asesor (búsqueda 100% exacta)" };
+        }
+      }
+    }
+
+    // 2. Prioridad 2: Nombre del Asesor / Remitente (si está identificado en WhatsApp y no es genérico)
+    const isGeneric = (n?: string | null) => !n || n.toLowerCase().startsWith("asesor +") || n.toLowerCase().startsWith("cliente +") || n.toLowerCase().startsWith("broker +") || n.toLowerCase().includes("sin nombre") || n.toLowerCase().includes("desconocido") || n.toLowerCase().includes("completar al editar");
+    if (senderName && !isGeneric(senderName)) {
+      const cleanName = senderName.split(/[\n,|-]/)[0].trim();
+      if (cleanName.length >= 3 && cleanName.length <= 32) {
+        return { snippet: cleanName, description: "Nombre de quien publicó" };
+      }
+    }
+
+    // 3. Prioridad 3: Código o ID único de portal inmobiliario (Wasi, FincaRaíz, Metrocuadrado)
+    const urlCodeMatch = text.match(/(?:wasi\.co\/[^\/]+\/|fincaraiz\.com\.co\/[^\/]+\/|metrocuadrado\.com\/[^\/]+\/)(\d{5,10})\b/i)
+                      || text.match(/(?:c[oó]digo|id|ref|referencia)\s*:?\s*#?\s*(\d{5,10})\b/i);
+    if (urlCodeMatch) {
+      return { snippet: urlCodeMatch[1], description: "Código único de publicación / portal" };
+    }
+
+    // 4. Prioridad 4: Firma o mención de contacto en el texto (ej: "León Aguilar Medina", "Cliente profe Carlos", "Informes Patty")
+    const sigMatch = text.match(/(?:informes|contacto|asesor|asesora|atenci[oó]n|cliente|firma)\s*:?\s*\*?([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+(?:\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+){1,2})\*?/i);
+    if (sigMatch) {
+      const sig = sigMatch[1].trim();
+      const blacklist = ["Apartamento", "Arriendo", "Venta", "Excelente", "Oportunidad", "Edificio", "Bogota", "Bogotá"];
+      if (!blacklist.includes(sig) && sig.length >= 4) {
+        return { snippet: sig, description: "Firma / Contacto en la publicación" };
+      }
+    }
+
+    // 5. Prioridad 5: Dirección o cruce específico (Cra, Cll, Cl, Ak, Auto, etc.)
     const lines = text
       .split("\n")
-      .map(l => l.replace(/[*_~`#]/g, "").trim())
-      .filter(l => l.length >= 4 && !l.startsWith("http") && !l.startsWith("__"));
+      .map(l => l.replace(/[*_~`#•-]/g, "").trim())
+      .filter(l => l.length >= 6 && !l.startsWith("http") && !l.startsWith("__"));
 
-    // 1. Buscar línea de dirección o cruce específico (Cra, Cll, Cl, Ak, Auto, etc.)
     const addressLine = lines.find(l => /(?:cra|carrera|cll|calle|diag|diagonal|trans|transversal|av|avenida|ak|ac)\.?\s*\d+/i.test(l));
-    if (addressLine && addressLine.length >= 6 && addressLine.length <= 45) {
-      return { snippet: addressLine, description: "Dirección o cruce específico" };
+    if (addressLine && addressLine.length >= 6 && addressLine.length <= 35) {
+      return { snippet: addressLine.trim(), description: "Dirección o cruce específico" };
     }
 
-    // 2. Buscar frase con canon/precio único
-    const priceLine = lines.find(l => /(?:canon|precio|valor|arriendo|venta)[\s:]*\$?\s*\d[\d.,]+/i.test(l) && l.length <= 45);
-    if (priceLine && priceLine.length <= 40) {
-      return { snippet: priceLine, description: "Precio o canon exacto" };
+    // 6. Prioridad 6: Frase distintiva PURGADA de stop-words comunes de bienes raíces
+    // NUNCA incluir palabras genéricas como 'busco', 'arriendo', 'venta', 'apartamento', 'm2', 'habitaciones', etc.
+    const STOP_WORDS = new Set([
+      "busco", "arriendo", "arrendar", "venta", "vendo", "compro", "compra",
+      "apartamento", "apto", "casa", "inmueble", "propiedad", "lote", "oficina", "bodega",
+      "para", "con", "por", "en", "de", "la", "el", "los", "las", "un", "una", "unos", "unas",
+      "presupuesto", "precio", "valor", "canon", "millones", "mll", "mm", "cop",
+      "m2", "mts", "mts2", "mt2", "metros", "habitaciones", "habs", "hab", "alcobas", "baños", "garajes", "parqueaderos",
+      "mínimo", "minimo", "máximo", "maximo", "excelente", "sector", "zona", "zonas", "bogota", "bogotá"
+    ]);
+
+    for (const line of lines) {
+      const words = line.split(/\s+/).filter(w => w.length >= 3 && !STOP_WORDS.has(w.toLowerCase().replace(/[^a-záéíóúñ]/g, "")));
+      if (words.length >= 2 && words.length <= 4) {
+        return { snippet: words.join(" "), description: "Frase distintiva única" };
+      }
     }
 
-    // 3. Buscar especificación distintiva (vigilancia, metraje, piso, etc.)
-    const specLine = lines.find(l => /(?:m2|mts|vigilancia|porter[ií]a|no\s*automatizad|disponibilidad|amoblado|garajes?|estudio)/i.test(l) && l.length <= 40);
-    if (specLine && specLine.length <= 40) {
-      return { snippet: specLine, description: "Especificación técnica única" };
-    }
-
-    // 4. Si la segunda línea es más específica que la primera (evitar títulos genéricos)
-    if (lines.length > 1 && lines[1].length >= 8 && lines[1].length <= 45 && !/(?:arriendo|vendo|venta|busco)\s*(?:apartamento|apto|casa|inmueble)/i.test(lines[1])) {
-      return { snippet: lines[1], description: "Frase descriptiva del inmueble" };
-    }
-
-    let snippet = lines.length > 0 ? lines[0] : text;
-    if (snippet.length > 40) {
-      snippet = snippet.slice(0, 40).trim();
-    }
-    return { snippet, description: "Texto clave" };
+    const safeFirstLine = lines.find(l => !/(?:busco|vendo|arriendo|venta|compra)\s*(?:apartamento|apto|casa|inmueble)/i.test(l)) || lines[0] || text;
+    const cleanWords = safeFirstLine.split(/\s+/).filter(w => !STOP_WORDS.has(w.toLowerCase().replace(/[^a-záéíóúñ]/g, ""))).slice(0, 3).join(" ");
+    return { snippet: (cleanWords || safeFirstLine.slice(0, 25)).trim(), description: "Texto clave" };
   };
 
-  const handleCopy = async (text: string, id: string, mode: 'full' | 'search' | 'group' = 'full', groupName?: string) => {
+  const handleCopy = async (
+    text: string, 
+    id: string, 
+    mode: 'full' | 'search' | 'group' | 'author' | 'phone' = 'full', 
+    groupName?: string,
+    senderName?: string | null,
+    knownPhone?: string | null
+  ) => {
     try {
       if (!text && mode !== 'group') return;
       let targetText = text;
@@ -2153,21 +2211,31 @@ export default function AdminMatches() {
       let desc = "Texto 100% fiel con saltos de línea y emojis intactos.";
 
       if (mode === 'search') {
-        const smart = extractSmartSearchSnippet(text);
+        const smart = extractSmartSearchSnippet(text, undefined, senderName, groupName, knownPhone);
         targetText = smart.snippet;
-        title = "🔍 Clave única de búsqueda copiada";
+        title = `🎯 Clave única copiada: "${targetText}"`;
         desc = groupName 
-          ? `Pega "${targetText}" en el buscador del grupo "${groupName}" de WhatsApp para ubicarlo de inmediato.`
-          : `Pega "${targetText}" en la lupa de WhatsApp para encontrar este mensaje.`;
+          ? `(${smart.description}) 👉 Abre WhatsApp, entra al grupo "${groupName}" y pega esta clave en la lupa para ubicar al autor de una.`
+          : `(${smart.description}) 👉 Pégala en el buscador de WhatsApp para ubicarlo de inmediato.`;
       } else if (mode === 'group') {
         targetText = (groupName || text || "").trim();
         title = "🏷️ Nombre de grupo copiado";
         desc = `Pega "${targetText}" en la barra de búsqueda de WhatsApp para abrir el grupo.`;
+      } else if (mode === 'author') {
+        targetText = text.trim();
+        title = `👤 Asesor copiado: "${targetText}"`;
+        desc = groupName 
+          ? `Abre WhatsApp, entra al grupo "${groupName}" y pega su nombre en la lupa para ver su publicación.`
+          : `Pega su nombre en la lupa de WhatsApp para ubicarlo.`;
+      } else if (mode === 'phone') {
+        targetText = text.trim();
+        title = `📞 Celular copiado: ${targetText}`;
+        desc = `Pégalo en WhatsApp para chatear o buscar los mensajes de este asesor.`;
       }
 
       const success = await copyToClipboard(targetText);
       if (success) {
-        toast.success(title, { description: desc });
+        toast.success(title, { description: desc, duration: 6000 });
         setCopiedId(id);
         setTimeout(() => {
           setCopiedId(prev => (prev === id ? null : prev));
@@ -3010,6 +3078,8 @@ export default function AdminMatches() {
                         {(() => {
                           const pText = (m.property?.rawText || m.property?.description || "").trim();
                           const isGenericImagePlaceholder = pText.includes("[Publicación de Imagen / Flyer Comercial Inmobiliario sin texto en pie de foto]");
+                          const propContact = extractPhoneFromItem(m.property);
+                          const propSender = m.property?.nombreUsuarioWhatsapp || propContact.name;
                           const propSpecs: string[] = [];
                           if (m.property?.propertyType) propSpecs.push(`• Tipo: ${m.property.propertyType}`);
                           if (m.property?.transactionType) propSpecs.push(`• Negocio: ${m.property.transactionType}`);
@@ -3066,14 +3136,14 @@ export default function AdminMatches() {
                                         type="button"
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          handleCopy(pText || fallbackText, copySearchKey, 'search', m.property?.origenNombre);
+                                          handleCopy(pText || fallbackText, copySearchKey, 'search', m.property?.origenNombre, propSender, propContact.cleanNumber);
                                         }}
                                         className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg transition-all duration-300 border ${
                                           isSearchCopied
                                             ? "bg-amber-500/25 text-amber-300 border-amber-400/60 shadow-[0_0_15px_rgba(245,158,11,0.45)] scale-105"
                                             : "text-zinc-400 hover:text-amber-300 bg-white/5 hover:bg-white/10 border-white/10 hover:border-amber-400/30 active:scale-95"
                                         }`}
-                                        title={`Copiar frase o dirección clave para buscar en WhatsApp (${m.property?.origenNombre || 'Grupo'})`}
+                                        title={`Copiar clave única (celular o autor) para buscar en WhatsApp (${m.property?.origenNombre || 'Grupo'})`}
                                       >
                                         {isSearchCopied ? (
                                           <>
@@ -3196,6 +3266,9 @@ export default function AdminMatches() {
                         const formattedPhone = propContact.display.includes('(')
                           ? propContact.display.split('(')[1].replace(')', '').trim()
                           : propContact.display;
+                        const clean10 = propContact.cleanNumber 
+                          ? (propContact.cleanNumber.startsWith("57") && propContact.cleanNumber.length === 12 ? propContact.cleanNumber.substring(2) : propContact.cleanNumber)
+                          : null;
 
                         return (
                           <div className="bg-gradient-to-r from-[#bf953f]/10 via-amber-950/20 to-zinc-950 border border-[#bf953f]/25 rounded-2xl p-3 sm:p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm hover:border-[#bf953f]/45 transition-all">
@@ -3209,40 +3282,106 @@ export default function AdminMatches() {
                                 </p>
                                 {isSenderKnown ? (
                                   <div className="mt-0.5">
-                                    <p className="text-xs sm:text-sm font-extrabold text-amber-200 truncate flex items-center gap-1.5">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleCopy(senderName, `prop-sender-${m.id}`, 'author', m.property?.origenNombre);
+                                      }}
+                                      className="text-xs sm:text-sm font-extrabold text-amber-200 hover:text-amber-100 flex items-center gap-1.5 group cursor-pointer text-left transition-all"
+                                      title="Toca para copiar el nombre del asesor y ubicarlo en WhatsApp"
+                                    >
                                       <span className="text-[10px] bg-amber-500/20 border border-amber-500/30 px-1.5 py-0.2 rounded text-amber-300">👤 Asesor</span>
-                                      <span>{senderName}</span>
-                                    </p>
-                                    <p className="text-xs font-bold text-zinc-300 select-all mt-0.5 flex items-center gap-1">
-                                      <span className="text-[#25D366]">📞</span>
-                                      <span>{formattedPhone}</span>
-                                    </p>
+                                      <span className="underline decoration-dotted decoration-amber-400/50 group-hover:decoration-amber-300">{senderName}</span>
+                                      <Copy className="w-3 h-3 opacity-60 group-hover:opacity-100 text-amber-300 shrink-0 transition-opacity" />
+                                    </button>
+                                    {clean10 ? (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleCopy(clean10, `prop-phone-${m.id}`, 'phone', m.property?.origenNombre);
+                                        }}
+                                        className="text-xs font-bold text-zinc-300 hover:text-white flex items-center gap-1 group cursor-pointer mt-0.5 transition-all text-left"
+                                        title="Toca para copiar el celular de 10 dígitos para WhatsApp"
+                                      >
+                                        <span className="text-[#25D366]">📞</span>
+                                        <span className="group-hover:underline">{formattedPhone}</span>
+                                        <Copy className="w-2.5 h-2.5 opacity-60 group-hover:opacity-100 text-zinc-400 shrink-0 transition-opacity" />
+                                      </button>
+                                    ) : (
+                                      <p className="text-xs font-semibold text-zinc-400 mt-0.5 flex items-center gap-1">
+                                        <span className="text-zinc-500">📞</span>
+                                        <span>{formattedPhone}</span>
+                                      </p>
+                                    )}
                                   </div>
                                 ) : (
                                   <div className="mt-0.5">
-                                    <p className="text-xs font-bold text-zinc-200 select-all">{propContact.display}</p>
+                                    {clean10 ? (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleCopy(clean10, `prop-phone-${m.id}`, 'phone', m.property?.origenNombre);
+                                        }}
+                                        className="text-xs font-bold text-zinc-200 hover:text-white flex items-center gap-1 group cursor-pointer text-left"
+                                        title="Toca para copiar el celular de 10 dígitos para WhatsApp"
+                                      >
+                                        <span className="text-[#25D366]">📞</span>
+                                        <span className="group-hover:underline">{formattedPhone}</span>
+                                        <Copy className="w-2.5 h-2.5 opacity-60 group-hover:opacity-100 text-zinc-400 shrink-0 transition-opacity" />
+                                      </button>
+                                    ) : (
+                                      <p className="text-xs font-bold text-zinc-200 select-all">{propContact.display}</p>
+                                    )}
                                     <p className="text-[10px] text-zinc-500 italic mt-0.5">👤 Nombre no asignado (Completar al editar)</p>
                                   </div>
                                 )}
                               </div>
                             </div>
-                            {(() => {
-                              const waTarget = propContact.cleanNumber || "573192919978";
-                              const defaultText = propContact.cleanNumber
-                                ? `Hola! Te contacto por el inmueble "${m.property?.name || 'de la red'}" publicado en ${m.property?.origenNombre || 'VECY Network'}. Tienes un Match del ${score.toFixed(0)}% con un requerimiento activo.`
-                                : `Hola JanIA! Necesito contactar al vendedor/broker del inmueble "${m.property?.name || 'de la red'}" publicado en el grupo "${m.property?.origenNombre || 'VECY Network'}".`;
-                              return (
-                                <a 
-                                  href={`https://wa.me/${waTarget}?text=${encodeURIComponent(defaultText)}`} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="group bg-[#25D366] hover:bg-[#20ba5a] text-black text-xs font-extrabold px-4 py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all duration-300 shadow-md hover:shadow-[0_0_20px_rgba(37,211,102,0.4)] hover:scale-105 active:scale-95 min-h-[38px] w-full sm:w-auto shrink-0"
+                            {clean10 ? (
+                              <a 
+                                href={`https://wa.me/57${clean10}?text=${encodeURIComponent(`Hola! Te contacto por el inmueble "${m.property?.name || 'de la red'}" publicado en ${m.property?.origenNombre || 'VECY Network'}. Tienes un Match del ${score.toFixed(0)}% con un requerimiento activo.`)}`} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="group bg-[#25D366] hover:bg-[#20ba5a] text-black text-xs font-extrabold px-4 py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all duration-300 shadow-md hover:shadow-[0_0_20px_rgba(37,211,102,0.4)] hover:scale-105 active:scale-95 min-h-[38px] w-full sm:w-auto shrink-0"
+                              >
+                                <span>Contactar WA</span>
+                                <ExternalLink className="w-3.5 h-3.5 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                              </a>
+                            ) : (
+                              <div className="flex flex-col sm:flex-row items-center gap-1.5 w-full sm:w-auto shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleCopy(
+                                      senderName || m.property?.name || "inmueble", 
+                                      `prop-loc-${m.id}`, 
+                                      senderName && isSenderKnown ? 'author' : 'search', 
+                                      m.property?.origenNombre,
+                                      senderName,
+                                      null
+                                    );
+                                  }}
+                                  className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 text-xs font-extrabold px-3.5 py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all duration-300 shadow-sm hover:scale-105 active:scale-95 min-h-[38px] w-full sm:w-auto"
+                                  title={isSenderKnown ? `Copiar nombre de ${senderName} para buscarlo en WhatsApp` : "Copiar clave para buscar en el grupo de WhatsApp"}
                                 >
-                                  <span>Contactar WA</span>
-                                  <ExternalLink className="w-3.5 h-3.5 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                                  <Search className="w-3.5 h-3.5 text-amber-400" />
+                                  <span>{isSenderKnown ? `Ubicar a ${senderName.split(' ')[0]}` : "Ubicar en Grupo"}</span>
+                                </button>
+                                <a
+                                  href={`https://wa.me/573192919978?text=${encodeURIComponent(`Hola JanIA! Necesito contactar al captador del inmueble "${m.property?.name || 'de la red'}" publicado en el grupo "${m.property?.origenNombre || 'VECY Network'}" (Asesor: ${senderName || 'No identificado'}).`)}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-[10px] text-zinc-500 hover:text-zinc-300 underline py-1 px-1 flex items-center gap-1"
+                                  title="Pedir ayuda a JanIA para conseguir el contacto"
+                                >
+                                  <span>Pedir a JanIA</span>
                                 </a>
-                              );
-                            })()}
+                              </div>
+                            )}
                           </div>
                         );
                       })()}
@@ -3299,6 +3438,8 @@ export default function AdminMatches() {
                         {(() => {
                           const rText = (m.requirement?.rawText || "").trim();
                           const isGenericImagePlaceholder = rText.includes("[Publicación de Imagen / Flyer Comercial Inmobiliario sin texto en pie de foto]");
+                          const reqContact = extractPhoneFromItem(m.requirement);
+                          const reqSender = m.requirement?.nombreUsuarioWhatsapp || reqContact.name;
                           const reqSpecs: string[] = [];
                           if (m.requirement?.tipoInmuebleDeseado) reqSpecs.push(`• Tipo: ${m.requirement.tipoInmuebleDeseado}`);
                           if (m.requirement?.tipoNegocioDeseado) reqSpecs.push(`• Negocio: ${m.requirement.tipoNegocioDeseado}`);
@@ -3352,14 +3493,14 @@ export default function AdminMatches() {
                                         type="button"
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          handleCopy(rText, copySearchKey, 'search', m.requirement?.origenNombre);
+                                          handleCopy(rText, copySearchKey, 'search', m.requirement?.origenNombre, reqSender, reqContact.cleanNumber);
                                         }}
                                         className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg transition-all duration-300 border ${
                                           isSearchCopied
                                             ? "bg-amber-500/25 text-amber-300 border-amber-400/60 shadow-[0_0_15px_rgba(245,158,11,0.45)] scale-105"
                                             : "text-zinc-400 hover:text-amber-300 bg-white/5 hover:bg-white/10 border-white/10 hover:border-amber-400/30 active:scale-95"
                                         }`}
-                                        title={`Copiar frase o detalle clave para buscar en WhatsApp (${m.requirement?.origenNombre || 'Grupo'})`}
+                                        title={`Copiar clave única (celular o autor) para buscar en WhatsApp (${m.requirement?.origenNombre || 'Grupo'})`}
                                       >
                                         {isSearchCopied ? (
                                           <>
@@ -3483,6 +3624,9 @@ export default function AdminMatches() {
                         const formattedPhone = reqContact.display.includes('(')
                           ? reqContact.display.split('(')[1].replace(')', '').trim()
                           : reqContact.display;
+                        const clean10 = reqContact.cleanNumber 
+                          ? (reqContact.cleanNumber.startsWith("57") && reqContact.cleanNumber.length === 12 ? reqContact.cleanNumber.substring(2) : reqContact.cleanNumber)
+                          : null;
 
                         return (
                           <div className="bg-gradient-to-r from-cyan-950/30 via-blue-950/20 to-zinc-950 border border-cyan-500/25 rounded-2xl p-3 sm:p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm hover:border-cyan-500/45 transition-all">
@@ -3496,40 +3640,106 @@ export default function AdminMatches() {
                                 </p>
                                 {isSenderKnown ? (
                                   <div className="mt-0.5">
-                                    <p className="text-xs sm:text-sm font-extrabold text-cyan-200 truncate flex items-center gap-1.5">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleCopy(senderName, `req-sender-${m.id}`, 'author', m.requirement?.origenNombre);
+                                      }}
+                                      className="text-xs sm:text-sm font-extrabold text-cyan-200 hover:text-cyan-100 flex items-center gap-1.5 group cursor-pointer text-left transition-all"
+                                      title="Toca para copiar el nombre del asesor y ubicarlo en WhatsApp"
+                                    >
                                       <span className="text-[10px] bg-cyan-500/20 border border-cyan-500/30 px-1.5 py-0.2 rounded text-cyan-300">👤 Asesor</span>
-                                      <span>{senderName}</span>
-                                    </p>
-                                    <p className="text-xs font-bold text-zinc-300 select-all mt-0.5 flex items-center gap-1">
-                                      <span className="text-[#25D366]">📞</span>
-                                      <span>{formattedPhone}</span>
-                                    </p>
+                                      <span className="underline decoration-dotted decoration-cyan-400/50 group-hover:decoration-cyan-300">{senderName}</span>
+                                      <Copy className="w-3 h-3 opacity-60 group-hover:opacity-100 text-cyan-300 shrink-0 transition-opacity" />
+                                    </button>
+                                    {clean10 ? (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleCopy(clean10, `req-phone-${m.id}`, 'phone', m.requirement?.origenNombre);
+                                        }}
+                                        className="text-xs font-bold text-zinc-300 hover:text-white flex items-center gap-1 group cursor-pointer mt-0.5 transition-all text-left"
+                                        title="Toca para copiar el celular de 10 dígitos para WhatsApp"
+                                      >
+                                        <span className="text-[#25D366]">📞</span>
+                                        <span className="group-hover:underline">{formattedPhone}</span>
+                                        <Copy className="w-2.5 h-2.5 opacity-60 group-hover:opacity-100 text-zinc-400 shrink-0 transition-opacity" />
+                                      </button>
+                                    ) : (
+                                      <p className="text-xs font-semibold text-zinc-400 mt-0.5 flex items-center gap-1">
+                                        <span className="text-zinc-500">📞</span>
+                                        <span>{formattedPhone}</span>
+                                      </p>
+                                    )}
                                   </div>
                                 ) : (
                                   <div className="mt-0.5">
-                                    <p className="text-xs font-bold text-zinc-200 select-all">{reqContact.display}</p>
+                                    {clean10 ? (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleCopy(clean10, `req-phone-${m.id}`, 'phone', m.requirement?.origenNombre);
+                                        }}
+                                        className="text-xs font-bold text-zinc-200 hover:text-white flex items-center gap-1 group cursor-pointer text-left"
+                                        title="Toca para copiar el celular de 10 dígitos para WhatsApp"
+                                      >
+                                        <span className="text-[#25D366]">📞</span>
+                                        <span className="group-hover:underline">{formattedPhone}</span>
+                                        <Copy className="w-2.5 h-2.5 opacity-60 group-hover:opacity-100 text-zinc-400 shrink-0 transition-opacity" />
+                                      </button>
+                                    ) : (
+                                      <p className="text-xs font-bold text-zinc-200 select-all">{reqContact.display}</p>
+                                    )}
                                     <p className="text-[10px] text-zinc-500 italic mt-0.5">👤 Nombre no asignado (Completar al editar)</p>
                                   </div>
                                 )}
                               </div>
                             </div>
-                            {(() => {
-                              const waTarget = reqContact.cleanNumber || "573192919978";
-                              const defaultText = reqContact.cleanNumber
-                                ? `Hola! Te contacto por tu requerimiento de inmueble en ${m.requirement?.zonaDeseada || m.requirement?.ciudadDeseada || 'VECY Network'}. Encontramos una propiedad con un Match del ${score.toFixed(0)}%.`
-                                : `Hola JanIA! Necesito contactar al requiriente del inmueble en el grupo "${m.requirement?.origenNombre || 'VECY Network'}".`;
-                              return (
-                                <a 
-                                  href={`https://wa.me/${waTarget}?text=${encodeURIComponent(defaultText)}`} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="group bg-[#25D366] hover:bg-[#20ba5a] text-black text-xs font-extrabold px-4 py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all duration-300 shadow-md hover:shadow-[0_0_20px_rgba(37,211,102,0.4)] hover:scale-105 active:scale-95 min-h-[38px] w-full sm:w-auto shrink-0"
+                            {clean10 ? (
+                              <a 
+                                href={`https://wa.me/57${clean10}?text=${encodeURIComponent(`Hola! Te contacto por tu requerimiento de inmueble en ${m.requirement?.zonaDeseada || m.requirement?.ciudadDeseada || 'VECY Network'}. Encontramos una propiedad con un Match del ${score.toFixed(0)}%.`)}`} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="group bg-[#25D366] hover:bg-[#20ba5a] text-black text-xs font-extrabold px-4 py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all duration-300 shadow-md hover:shadow-[0_0_20px_rgba(37,211,102,0.4)] hover:scale-105 active:scale-95 min-h-[38px] w-full sm:w-auto shrink-0"
+                              >
+                                <span>Contactar WA</span>
+                                <ExternalLink className="w-3.5 h-3.5 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                              </a>
+                            ) : (
+                              <div className="flex flex-col sm:flex-row items-center gap-1.5 w-full sm:w-auto shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleCopy(
+                                      senderName || m.requirement?.name || "requerimiento", 
+                                      `req-loc-${m.id}`, 
+                                      senderName && isSenderKnown ? 'author' : 'search', 
+                                      m.requirement?.origenNombre,
+                                      senderName,
+                                      null
+                                    );
+                                  }}
+                                  className="bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-200 border border-cyan-500/40 text-xs font-extrabold px-3.5 py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all duration-300 shadow-sm hover:scale-105 active:scale-95 min-h-[38px] w-full sm:w-auto"
+                                  title={isSenderKnown ? `Copiar nombre de ${senderName} para buscarlo en WhatsApp` : "Copiar clave para buscar en el grupo de WhatsApp"}
                                 >
-                                  <span>Contactar WA</span>
-                                  <ExternalLink className="w-3.5 h-3.5 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                                  <Search className="w-3.5 h-3.5 text-cyan-400" />
+                                  <span>{isSenderKnown ? `Ubicar a ${senderName.split(' ')[0]}` : "Ubicar en Grupo"}</span>
+                                </button>
+                                <a
+                                  href={`https://wa.me/573192919978?text=${encodeURIComponent(`Hola JanIA! Necesito contactar al requiriente del inmueble en el grupo "${m.requirement?.origenNombre || 'VECY Network'}" (Asesor: ${senderName || 'No identificado'}).`)}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-[10px] text-zinc-500 hover:text-zinc-300 underline py-1 px-1 flex items-center gap-1"
+                                  title="Pedir ayuda a JanIA para conseguir el contacto"
+                                >
+                                  <span>Pedir a JanIA</span>
                                 </a>
-                              );
-                            })()}
+                              </div>
+                            )}
                           </div>
                         );
                       })()}

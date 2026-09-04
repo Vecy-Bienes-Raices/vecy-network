@@ -163,7 +163,25 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v30.7 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v30.8 — Septiembre 2026
+
+### Novedades v30.8 (Optimización Móvil de Búsqueda y Ubicación Instantánea de Asesores en WhatsApp):
+- **Resolución Definitiva del Problema de Búsqueda Móvil en WhatsApp (Cero Resaltados Amarillos Falsos)**:
+  1) En WhatsApp Móvil (Android/iOS), la búsqueda divide frases largas en palabras sueltas, provocando que términos inmobiliarios comunes (`"m2"`, `"apartamento"`, `"arriendo"`) resalten docenas de mensajes ajenos en amarillo sin encontrar al autor.
+  2) Implementada jerarquía estricta de 6 niveles en `extractSmartSearchSnippet` y `handleCopy`:
+     - **Nivel 1**: Celular colombiano de 10 dígitos (búsqueda 100% unívoca y exacta).
+     - **Nivel 2**: Nombre real del asesor remitente (`nombreUsuarioWhatsapp`), e.g., `"Johana Boutin Homes"`, `"León Aguilar Medina"`.
+     - **Nivel 3**: Código o ID de portal (Wasi, FincaRaíz, Metrocuadrado).
+     - **Nivel 4**: Firma o contacto explícito en texto.
+     - **Nivel 5**: Dirección física específica.
+     - **Nivel 6**: Término distintivo completamente purgado de *stop-words* inmobiliarias.
+- **Botones de Copiado Rápido al Toque y "Ubicar en Grupo" en Tarjetas de Contacto**:
+  1) **Copiado al Toque**: El nombre del asesor (`👤 Asesor [Nombre]`) y su número de teléfono (`📞 [Teléfono]`) ahora son botones interactivos con icono de copiado directo con 1 solo toque en móvil.
+  2) **Desacoplamiento de LIDs y Botón Inteligente "Ubicar en Grupo"**:
+     - Si el teléfono está disponible: Enlace directo verificado `"Contactar WA"` (`wa.me/57...`).
+     - Si el remitente tiene LID o teléfono no disponible: Se sustituye el enlace ambiguo a JanIA por el botón `"🔍 Ubicar a [Asesor]"` / `"Ubicar en Grupo"`, que copia el nombre exacto del asesor y despliega instrucciones claras para pegarlo en la lupa de WhatsApp del grupo correspondiente.
+- **Incremento Oficial de Versión**:
+  1) Elevado a `v30.8` en `shared/const.ts`.
 
 ### Novedades v30.7 (Deduplicación en Ingesta WhatsApp y Desbloqueo de Visualización de Matches en Admin Panel):
 - **Doctrina de Deduplicación y No Re-reacción en WhatsApp**:
