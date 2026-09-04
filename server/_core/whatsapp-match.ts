@@ -1040,6 +1040,20 @@ export class JaniaMatchBot {
           }
         }
 
+        let quotedContext: string | undefined;
+        try {
+          const contextInfo = (rawMsg as any)?.extendedTextMessage?.contextInfo 
+                           || (msg.message as any)?.extendedTextMessage?.contextInfo
+                           || (rawMsg as any)?.contextInfo;
+          if (contextInfo?.quotedMessage) {
+            const unwrappedQuoted = unwrapMessage(contextInfo.quotedMessage);
+            quotedContext = (unwrappedQuoted as any)?.conversation 
+                         || (unwrappedQuoted as any)?.extendedTextMessage?.text
+                         || (unwrappedQuoted as any)?.imageMessage?.caption
+                         || undefined;
+          }
+        } catch (e) {}
+
         result = await processConsultingMessage(
           bodyText,
           resolvedSenderId,
@@ -1048,7 +1062,8 @@ export class JaniaMatchBot {
           pdfBuffer,
           pdfMimeType,
           isAudioPTT ? ('mock-audio:' + bodyText) : undefined,
-          msgTs
+          msgTs,
+          quotedContext
         );
       } else if (chatId === this.circuloGroupId) { // PROYECTO "Vecy Network"
         result = await processCirculoMessage(bodyText, resolvedSenderId, realName);

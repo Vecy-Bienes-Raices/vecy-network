@@ -52,7 +52,45 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v30.9 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.0 — Septiembre 2026
+
+### 🗓️ Sesión: Jueves 3 de Septiembre de 2026 — 22:15 a 22:35 (Hora Colombia UTC-5)
+**Versión**: `v31.0` | **Ambiente**: Producción VPS (`13.140.149.144`) + WhatsApp Grupo 2 (Soporte Legal, Tributario y Avalúos) + Google Gemini LLM Engine + GitHub (`main`)
+
+#### 🎯 Objetivo y Logros de la Sesión:
+1. **Diagnóstico y Erradicación del Bucle de Saludos en Grupo 2 (Caso Amanda - Avalúos)**:
+   - **Problema Reportado por Eduardo**: En el Grupo 2 Oficial de Soporte, Amanda preguntó: *"Perdóname el predio está ubicado en un pueblo de Cundinamarca lo que indica que es urbano. Que información necesitas para realizar el avalúo?"*. JanIA respondió con un saludo genérico introductorio: *"¡Buenas noches, estimada Amanda! 👋 Con todo gusto estoy aquí para asesorarte. Cuéntame cuál es tu inquietud sobre legislación, contratos, trámites, avalúos o marketing inmobiliario y con gusto te colaboro. 🤝"*. Amanda insistió con la misma pregunta técnica y JanIA le repitió exactamente el mismo saludo textual palabra por palabra, pareciendo un bot básico sin entendimiento ni continuidad conversacional.
+   - **Causa Raíz Descubierta en Logs de VPS (`jania-server-error.log`)**:
+     1) **Pico de Cuota Gemini 429**: Ante ráfagas de ingesta de mensajes con 1 sola API key activa de Gemini en tier gratuito (15 RPM), Google devolvió `429 Too Many Requests / Resource Exhausted`.
+     2) **Cascada en Ráfaga sin Backoff en `llm.ts`**: La cascada de fallback recorrió los 3 modelos alternativos en 50ms sobre la misma clave sin esperar la pausa sugerida por Google (`Please retry in 2.5s`), consumiendo los reintentos y colapsando hacia el bloque `catch` de `processConsultingMessage`.
+     3) **Plantilla de Saludo Estática en el Catch**: El bloque de contingencia de `processConsultingMessage` retornaba de forma fija la plantilla de saludo inicial para mensajes nuevos, provocando el loop de saludos ante cualquier falla de red.
+2. **Despacho Inmediato de Respuesta Técnica Verificada a Amanda**:
+   - Se despachó a través de la API oficial de WhatsApp a Amanda en Grupo 2 la respuesta técnica y jurídica integral de 4 puntos:
+     1) Ubicación exacta (municipio, sector, nomenclatura).
+     2) Documentos jurídicos (Certificado de Tradición y Libertad reciente y recibo predial).
+     3) Características físicas (área lote m², área construida m², distribución, pisos y antigüedad).
+     4) Registro fotográfico (3 a 5 fotos de fachada e interiores).
+     Explicando la metodología del Análisis Comparativo de Mercado (ACM) orientativo de JanIA.
+3. **Memoria Conversacional Continua en Memoria RAM para Grupo 2**:
+   - Implementado `consultingConversationHistory` en `server/_core/janIA.ts`.
+   - Almacena hasta 8 turnos de diálogo (`user` / `assistant`) por usuario durante 12 horas.
+   - Cada nueva consulta del usuario se envía a Gemini intercalada con los turnos previos, garantizando continuidad temática, seguimiento de predios y preguntas encadenadas como una IA conversacional de primer nivel.
+4. **Conciencia de Mensajes Citados (`quotedMessage`)**:
+   - En `whatsapp-match.ts`, extracción de citas de mensajes (`extendedTextMessage.contextInfo.quotedMessage`).
+   - Inyección explícita del mensaje citado en el prompt a Gemini para que JanIA siempre sepa a qué punto o respuesta anterior se refiere el usuario.
+5. **Pausa Inteligente Anti-429 con Backoff en `llm.ts`**:
+   - En `invokeGemini`, ante error 429 se extraen los segundos sugeridos por Google (`retry in X s`) y se ejecuta una pausa asíncrona de 2 a 3 segundos para que el bucket de RPM se restablezca antes de agotar la clave, previniendo caídas accidentales al fallback.
+6. **Fallbacks Técnicos Temáticos en Caso de Falla Extrema de Red**:
+   - Si la IA sufriera una caída total, el bloque `catch` ahora detecta la temática (avalúos, predios, contratos, arriendos) y responde con los requisitos de fondo correspondientes en lugar de saludar de nuevo.
+7. **Purga Definitiva de Número Baneado**:
+   - Se purgó el número telefónico baneado `3166569719` que aún permanecía en la línea 5366 de `server/_core/janIA.ts`, reemplazado por el número activo de Eduardo `+573192919978`.
+8. **Incremento Oficial de Versión**:
+   - Elevado a `v31.0` en `shared/const.ts`.
+   - Compilación 100% limpia validada con `pnpm build`.
+
+---
+
+## 🔖 HISTÓRICO DE VERSIONES ANTERIORES:
 
 ### 🗓️ Sesión: Jueves 3 de Septiembre de 2026 — 21:05 a 21:25 (Hora Colombia UTC-5)
 **Versión**: `v30.9` | **Ambiente**: Producción VPS (`13.140.149.144`) + Admin Panel Vercel (`https://vecy-network.vercel.app/admin`) + WhatsApp Móvil / Web + GitHub (`main`)

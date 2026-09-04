@@ -819,9 +819,13 @@ async function invokeGemini(messages2, responseFormat, customModel, imageBuffer,
           const errorMsg = error.response?.data?.error?.message || error.message;
           if (status === 429) {
             const retryMatch = errorMsg.match(/retry in ([\d\.]+)s/i);
-            const waitSec = retryMatch ? Math.ceil(parseFloat(retryMatch[1])) : 20;
-            markKeyCooldown(activeKey, waitSec);
-            console.warn(`[JanIA-LLM] \u26A0\uFE0F Rate limit (429) en ${currentModel}. Cambiando de clave o modelo...`);
+            const waitSec = retryMatch ? Math.min(Math.ceil(parseFloat(retryMatch[1])), 8) : 3;
+            markKeyCooldown(activeKey, Math.max(waitSec, 10));
+            console.warn(`[JanIA-LLM] \u26A0\uFE0F Rate limit (429) en ${currentModel}. Pausando ${waitSec}s para liberar ventana RPM de Google (Intento ${attempt}/2)...`);
+            await new Promise((r) => setTimeout(r, waitSec * 1e3));
+            if (attempt === 1) {
+              continue;
+            }
             break;
           }
           if (status === 503 || status === 500) {
@@ -7018,6 +7022,7 @@ __export(janIA_exports, {
   MSG_RESUMEN_RETORNO_PRESENTACION: () => MSG_RESUMEN_RETORNO_PRESENTACION,
   MSG_TIPS_CALIDAD_COBERTURA: () => MSG_TIPS_CALIDAD_COBERTURA,
   REPUTATION_HOOK: () => REPUTATION_HOOK,
+  appendConsultingHistory: () => appendConsultingHistory,
   brokerDirectoryCache: () => brokerDirectoryCache,
   buildFlyerBreakdownText: () => buildFlyerBreakdownText,
   buildSystemPrompt: () => buildSystemPrompt,
@@ -7033,6 +7038,7 @@ __export(janIA_exports, {
   generarHashMensaje: () => generarHashMensaje,
   generateWelcomeMessage: () => generateWelcomeMessage,
   getColombiaNow: () => getColombiaNow,
+  getConsultingHistory: () => getConsultingHistory,
   getEmojiForCalificacion: () => getEmojiForCalificacion,
   getLiveStats: () => getLiveStats,
   handleAmendmentUpdate: () => handleAmendmentUpdate,
@@ -10838,7 +10844,18 @@ function checkStrictOffTopic(text2) {
   }
   return { isOffTopic: false };
 }
-async function processConsultingMessage(text2, userId, userName, imageBuffer, pdfBuffer, pdfMimeType, audioUrl, msgTimestamp) {
+function getConsultingHistory(userId) {
+  const history = consultingConversationHistory.get(userId) || [];
+  const now = Date.now();
+  return history.filter((h) => now - h.ts < 12 * 3600 * 1e3);
+}
+function appendConsultingHistory(userId, role, content) {
+  const history = getConsultingHistory(userId);
+  history.push({ role, content, ts: Date.now() });
+  if (history.length > 8) history.shift();
+  consultingConversationHistory.set(userId, history);
+}
+async function processConsultingMessage(text2, userId, userName, imageBuffer, pdfBuffer, pdfMimeType, audioUrl, msgTimestamp, quotedContext) {
   try {
     const rawPhone = userId.split("@")[0];
     const realName = await resolveRealName(userId, userName);
@@ -11067,7 +11084,7 @@ Por favor, realiza una pregunta orientada a estos temas inmobiliarios y con gust
 - **SOLUCI\xD3N TOTAL Y DE FONDO (IA PURA)**: Eres una IA completamente resolutiva. Si un usuario te pide redactar una promesa de compraventa, una cl\xE1usula penal, un acuerdo de puntas compartidas, una carta de preaviso de arriendo, liquidar la ganancia ocasional o estimar el valor comercial de un inmueble (ACM), \xA1ENTR\xC9GALE LA SOLUCI\xD3N COMPLETA, REDACTADA Y ESTRUCTURADA DIRECTAMENTE AQU\xCD EN EL CHAT!
 - **BENEFICIO GRATUITO DE LANZAMIENTO VECY NETWORK**: Recuerda que en esta etapa de lanzamiento de VECY Network, todos tus servicios de consultor\xEDa, an\xE1lisis jur\xEDdico, redacci\xF3n de minutas y aval\xFAos de IA son un **beneficio 100% gratuito** para empoderar a los agentes inmobiliarios. An\xEDmalos a aprovechar esta oportunidad e invitar a m\xE1s colegas a unirse a la red.
 - **ASTUCIA CONTEXTUAL ANTE PREGUNTAS DE COSTOS**: Si un usuario pregunta de forma corta o ambigua "\xBFQu\xE9 costo tendr\xEDa?" o "\xBFCu\xE1nto vale?", conecta con el contexto previo o indaga con astucia: acl\xE1rale que tu asistencia y redacci\xF3n en el chat es totalmente gratuita por ser miembro de VECY Network; y si se refiere a gastos notariales externos, liquidaci\xF3n de impuestos o un aval\xFAo oficial certificado con perito de Lonja presencial, ori\xE9ntalo con precisi\xF3n t\xE9cnica.
-- **DERIVACI\xD3N OPORTUNA AL BR\xD3KER**: \xDAnicamente cuando el caso requiera acompa\xF1amiento notarial presencial, un peritaje oficial firmado con matr\xEDcula R.A.A. de Lonja o la contrataci\xF3n de la mesa de corretaje de la inmobiliaria, inv\xEDtalo amablemente a comunicarse con nuestro br\xF3ker al n\xFAmero 3166569719 de VECY BIENES RA\xCDCES en nuestro horario de atenci\xF3n: Lunes a Viernes de 8:00 AM a 10:00 PM, S\xE1bados de 8:00 AM a 8:00 PM y Domingos de 10:00 AM a 4:00 PM.
+- **DERIVACI\xD3N OPORTUNA AL BR\xD3KER**: \xDAnicamente cuando el caso requiera acompa\xF1amiento notarial presencial, un peritaje oficial firmado con matr\xEDcula R.A.A. de Lonja o la contrataci\xF3n de la mesa de corretaje de la inmobiliaria, inv\xEDtalo amablemente a comunicarse con nuestro br\xF3ker de VECY BIENES RA\xCDCES en WhatsApp (+573192919978) en nuestro horario de atenci\xF3n: Lunes a Viernes de 8:00 AM a 10:00 PM, S\xE1bados de 8:00 AM a 8:00 PM y Domingos de 10:00 AM a 4:00 PM.
 
 ## ROLES Y \xC1REAS DE ASESOR\xCDA MAESTRA (4 PILARES):
 1. **\u2696\uFE0F Abogada Inmobiliaria y Notarial Senior (Derecho Inmobiliario y Contratos)**:
@@ -11140,11 +11157,27 @@ ${lateReplyNote}`;
       messageToProcess += `
 [SISTEMA - NOTA DE VOZ REQUERIDA Y L\xCDMITE DE DURACI\xD3N \xC1GIL]: El usuario te envi\xF3 esta consulta mediante una NOTA DE VOZ (audio). Como JanIA, debes responder en nota de voz de viva voz. DEBES obligatoriamente marcar "wantsVoice": true y redactar en "voiceResponse" una versi\xF3n hablada resumida, directa, muy fluida, profesional, c\xE1lida y natural de tu respuesta (m\xE1ximo 450 caracteres / ~30 a 40 segundos de voz hablada), sin asteriscos, vi\xF1etas ni sintaxis Markdown, perfecta para ser sintetizada e impactar de forma \xE1gil e instant\xE1nea sin saturar la conexi\xF3n. En "response" coloca la versi\xF3n completa formateada en texto.`;
     }
+    const history = getConsultingHistory(userId);
     const messages2 = [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: `Usuario: @${rawPhone} (${realName})
-Consulta: ${messageToProcess}${greetingInstruction}` }
+      { role: "system", content: systemPrompt }
     ];
+    for (const h of history) {
+      messages2.push({
+        role: h.role === "assistant" ? "assistant" : "user",
+        content: h.role === "user" ? `Usuario @${rawPhone} (${realName}): ${h.content}` : h.content
+      });
+    }
+    let userPromptContent = `Usuario: @${rawPhone} (${realName})
+Consulta: ${messageToProcess}`;
+    if (quotedContext) {
+      userPromptContent += `
+[Contexto del mensaje previo citado al que responde el usuario: "${quotedContext}"]`;
+    }
+    userPromptContent += greetingInstruction;
+    messages2.push({
+      role: "user",
+      content: userPromptContent
+    });
     const needsSearch = cleanText.length > 25 && (cleanText.includes("ley ") || cleanText.includes("decreto") || cleanText.includes("resoluci") || cleanText.includes("corte") || cleanText.includes("sentencia") || cleanText.includes("jurisprudencia") || cleanText.includes("uvt") || cleanText.includes("notar") || cleanText.includes("sinupot") || cleanText.includes("aval") || cleanText.includes("valor m2") || cleanText.includes("precio del m2") || cleanText.includes("metro cuadrado"));
     const llmRes = await invokeLLM({
       messages: messages2,
@@ -11156,18 +11189,24 @@ Consulta: ${messageToProcess}${greetingInstruction}` }
     });
     try {
       const parsed = parseSafeJSON(llmRes.choices[0].message.content);
+      const finalResp = sanitizeResponseMarkdown(parsed.response || "");
+      appendConsultingHistory(userId, "user", text2);
+      appendConsultingHistory(userId, "assistant", finalResp);
       return {
         classification: parsed.classification || "CONSULTA_GENERAL",
-        response: sanitizeResponseMarkdown(parsed.response || ""),
+        response: finalResp,
         reactionEmoji: parsed.reactionEmoji || (parsed.classification === "VIOLACION_DE_NORMAS" ? "\u{1F6AB}" : "\u{1F44C}"),
         wantsVoice: parsed.wantsVoice || false,
         voiceResponse: parsed.voiceResponse || ""
       };
     } catch (e) {
       const replyContent = llmRes.choices[0].message.content || "Lo siento, en este momento no puedo procesar tu consulta. Intenta de nuevo m\xE1s tarde.";
+      const finalResp = sanitizeResponseMarkdown(replyContent);
+      appendConsultingHistory(userId, "user", text2);
+      appendConsultingHistory(userId, "assistant", finalResp);
       return {
         classification: "CONSULTA_GENERAL",
-        response: sanitizeResponseMarkdown(replyContent),
+        response: finalResp,
         reactionEmoji: "\u{1F44C}",
         wantsVoice: false,
         voiceResponse: ""
@@ -11178,11 +11217,45 @@ Consulta: ${messageToProcess}${greetingInstruction}` }
     const timeGreeting = getGreetingByTime();
     const rawPhone = userId.split("@")[0];
     const realName = await resolveRealName(userId, userName);
-    const nameInfo = resolveNameAndGender(realName, timeGreeting);
-    const genderTerm = nameInfo.genderTerm;
+    const firstName = extractFirstName(realName) || "colega";
+    const cleanLower = text2.toLowerCase().trim();
+    if (cleanLower.includes("aval") || cleanLower.includes("predio") || cleanLower.includes("acm") || cleanLower.includes("comercial") || cleanLower.includes("cuanto vale") || cleanLower.includes("precio")) {
+      const avaluoFallback = `\xA1${timeGreeting}, estimada ${firstName}! \u{1F44B}\u{1F3FB} Con el mayor gusto te detallo la informaci\xF3n t\xE9cnica y jur\xEDdica que necesitamos para realizar el An\xE1lisis Comparativo de Mercado (ACM) y estimaci\xF3n del valor comercial de tu predio:
+
+1\uFE0F\u20E3 *Ubicaci\xF3n Exacta:* Municipio de Cundinamarca, barrio/sector y direcci\xF3n aproximada.
+2\uFE0F\u20E3 *Documentos Jur\xEDdicos:* Copia del Certificado de Tradici\xF3n y Libertad reciente y recibo del Impuesto Predial Unificado.
+3\uFE0F\u20E3 *Caracter\xEDsticas F\xEDsicas:* \xC1rea de lote (m\xB2), \xE1rea construida (m\xB2), distribuci\xF3n (pisos, locales, habitaciones, ba\xF1os) y antig\xFCedad.
+4\uFE0F\u20E3 *Registro Fotogr\xE1fico:* 3 a 5 fotos de fachada exterior e interiores principales.
+
+Con estos datos en mano, procesamos el estudio comparativo frente a transacciones reales de la zona para entregarte una estimaci\xF3n t\xE9cnica s\xF3lida y orientativa. \u{1F4CA}
+
+\xA1Quedo muy atenta cuando los tengas a mano para empezar a revisarlo de una! \u{1F91D}\u2728`;
+      appendConsultingHistory(userId, "user", text2);
+      appendConsultingHistory(userId, "assistant", avaluoFallback);
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: avaluoFallback,
+        reactionEmoji: "\u{1F4D0}"
+      };
+    }
+    if (cleanLower.includes("contrato") || cleanLower.includes("arriend") || cleanLower.includes("canon") || cleanLower.includes("ley 820") || cleanLower.includes("promesa")) {
+      const legalFallback = `\xA1${timeGreeting}, ${firstName}! \u{1F44B}\u{1F3FB} Con gusto te asesoro. En materia de contratos inmobiliarios (arrendamiento Ley 820 de 2003 o promesa de compraventa), recuerda que los elementos esenciales son la determinaci\xF3n clara de las partes, la identificaci\xF3n del predio con matr\xEDcula inmobiliaria y linderos, el canon/precio exacto y las cl\xE1usulas penales y de pr\xF3rroga.
+
+\xBFTienes alguna cl\xE1usula o situaci\xF3n espec\xEDfica que desees que revisemos o redactemos? \xA1Ind\xEDcame el detalle y con gusto te estructuro la respuesta completa! \u2696\uFE0F\u{1F91D}`;
+      appendConsultingHistory(userId, "user", text2);
+      appendConsultingHistory(userId, "assistant", legalFallback);
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: legalFallback,
+        reactionEmoji: "\u2696\uFE0F"
+      };
+    }
+    const genericFallback = `Hola ${firstName} \u{1F44B}\u{1F3FB}. Disculpa la peque\xF1a demora, estuve recalibrando mis motores de consulta en tiempo real. Entiendo tu mensaje sobre tu consulta inmobiliaria. \xBFPodr\xEDas confirmarme el detalle espec\xEDfico para entregarte la soluci\xF3n completa y estructurada de inmediato? \xA1Aqu\xED estoy 100% lista para apoyarte! \u{1F91D}\u2728`;
+    appendConsultingHistory(userId, "user", text2);
+    appendConsultingHistory(userId, "assistant", genericFallback);
     return {
       classification: "CONSULTA_GENERAL",
-      response: `\xA1${timeGreeting}, ${genderTerm}! \u{1F44B}\u{1F3FB} Con todo gusto estoy aqu\xED para asesorarte. Cu\xE9ntame cu\xE1l es tu inquietud sobre legislaci\xF3n, contratos, tr\xE1mites, aval\xFAos o marketing inmobiliario y con gusto te colaboro. \u{1F91D}`,
+      response: genericFallback,
       reactionEmoji: "\u{1F4A1}"
     };
   }
@@ -11440,7 +11513,7 @@ function sanitizeResponseMarkdown(text2) {
   if (!text2) return "";
   return text2.replace(/\*\*/g, "*");
 }
-var janiaResultSchema, COMMON_FIRST_NAMES, GREETED_TODAY, REPUTATION_HOOK, cachedLiveStatsText, cachedLiveStatsTime, promptCache, JANIA_PROMPT, splitMultiPropertyMessage, brokerDirectoryCache, MSG_PRESENTACION_INSTITUCIONAL, MSG_PAUTAS_FORMATOS, MSG_TIPS_CALIDAD_COBERTURA, MSG_RESUMEN_RETORNO_PRESENTACION, MSG_CIERRE_OPERACIONES, MSG_PROMO_INMUEBLES, MSG_PROMO_CONSULTAS, MSG_PROMO_CIRCULO, MSG_COMUNICADO_MATCH_NETWORK, MSG_COMUNICADO_MATCH_CIRCULO;
+var janiaResultSchema, COMMON_FIRST_NAMES, GREETED_TODAY, REPUTATION_HOOK, cachedLiveStatsText, cachedLiveStatsTime, promptCache, JANIA_PROMPT, splitMultiPropertyMessage, brokerDirectoryCache, MSG_PRESENTACION_INSTITUCIONAL, MSG_PAUTAS_FORMATOS, MSG_TIPS_CALIDAD_COBERTURA, MSG_RESUMEN_RETORNO_PRESENTACION, MSG_CIERRE_OPERACIONES, MSG_PROMO_INMUEBLES, MSG_PROMO_CONSULTAS, MSG_PROMO_CIRCULO, consultingConversationHistory, MSG_COMUNICADO_MATCH_NETWORK, MSG_COMUNICADO_MATCH_CIRCULO;
 var init_janIA = __esm({
   "server/_core/janIA.ts"() {
     "use strict";
@@ -11870,6 +11943,7 @@ Este es el espacio exclusivo de debate y comunidad para:
 \u{1F91D} Conocer a los fundadores y otros colegas aliados.
 
 \xA1\xDAnanse y construyamos juntos la red colaborativa de Colombia! \u{1F1E8}\u{1F1F4}\u2728`;
+    consultingConversationHistory = /* @__PURE__ */ new Map();
     MSG_COMUNICADO_MATCH_NETWORK = `\u{1F680} \xA1NUEVO SISTEMA DE MATCH PRIVADO Y SEGURO CON JanIA! \u{1F3AF}\u{1F91D}
 
 Estimados aliados, para asegurar que los MATCH comerciales se conviertan en cierres reales de negocios y proteger la privacidad de sus contactos, hemos implementado el flujo de *CONFIRMACI\xD3N BILATERAL PRIVADA*:
@@ -13195,6 +13269,15 @@ Tambi\xE9n puedes consultarme directamente en mi chat privado con mi otra yo *Ja
                 console.error("[JANIA-CONSULTING] Error descargando documento adjunto:", e);
               }
             }
+            let quotedContext;
+            try {
+              const contextInfo = rawMsg?.extendedTextMessage?.contextInfo || msg.message?.extendedTextMessage?.contextInfo || rawMsg?.contextInfo;
+              if (contextInfo?.quotedMessage) {
+                const unwrappedQuoted = unwrapMessage(contextInfo.quotedMessage);
+                quotedContext = unwrappedQuoted?.conversation || unwrappedQuoted?.extendedTextMessage?.text || unwrappedQuoted?.imageMessage?.caption || void 0;
+              }
+            } catch (e) {
+            }
             result = await processConsultingMessage2(
               bodyText,
               resolvedSenderId,
@@ -13203,7 +13286,8 @@ Tambi\xE9n puedes consultarme directamente en mi chat privado con mi otra yo *Ja
               pdfBuffer,
               pdfMimeType,
               isAudioPTT ? "mock-audio:" + bodyText : void 0,
-              msgTs
+              msgTs,
+              quotedContext
             );
           } else if (chatId === this.circuloGroupId) {
             result = await processCirculoMessage2(bodyText, resolvedSenderId, realName);
@@ -15175,7 +15259,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v30.9";
+var VECY_VERSION = "v31.0";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 

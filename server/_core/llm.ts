@@ -214,12 +214,18 @@ async function invokeGemini(
           const errorMsg = error.response?.data?.error?.message || error.message;
 
           if (status === 429) {
-            // Extraer segundos sugeridos por Google si vienen en el mensaje
+            // Extraer segundos sugeridos por Google si vienen en el mensaje (ej: "Please retry in 2.5s")
             const retryMatch = errorMsg.match(/retry in ([\d\.]+)s/i);
-            const waitSec = retryMatch ? Math.ceil(parseFloat(retryMatch[1])) : 20;
-            markKeyCooldown(activeKey, waitSec);
+            const waitSec = retryMatch ? Math.min(Math.ceil(parseFloat(retryMatch[1])), 8) : 3;
+            markKeyCooldown(activeKey, Math.max(waitSec, 10));
 
-            console.warn(`[JanIA-LLM] ⚠️ Rate limit (429) en ${currentModel}. Cambiando de clave o modelo...`);
+            console.warn(`[JanIA-LLM] ⚠️ Rate limit (429) en ${currentModel}. Pausando ${waitSec}s para liberar ventana RPM de Google (Intento ${attempt}/2)...`);
+            await new Promise(r => setTimeout(r, waitSec * 1000));
+            
+            // Si es el primer intento con este modelo/clave, reintentar tras la pausa en lugar de romper
+            if (attempt === 1) {
+              continue;
+            }
             break; // Salir del loop de intentos de esta clave y probar siguiente clave/modelo
           }
 

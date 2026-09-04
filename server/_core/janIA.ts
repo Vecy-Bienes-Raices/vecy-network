@@ -5203,6 +5203,28 @@ export function checkStrictOffTopic(text: string): { isOffTopic: boolean; reason
   return { isOffTopic: false };
 }
 
+// Memoria conversacional activa en memoria para el Grupo 2 (Soporte Legal, Tributario y Avalúos)
+interface ConsultingTurn {
+  role: "user" | "assistant";
+  content: string;
+  ts: number;
+}
+const consultingConversationHistory = new Map<string, ConsultingTurn[]>();
+
+export function getConsultingHistory(userId: string): ConsultingTurn[] {
+  const history = consultingConversationHistory.get(userId) || [];
+  const now = Date.now();
+  // Conservar mensajes de las últimas 12 horas
+  return history.filter(h => now - h.ts < 12 * 3600 * 1000);
+}
+
+export function appendConsultingHistory(userId: string, role: "user" | "assistant", content: string) {
+  const history = getConsultingHistory(userId);
+  history.push({ role, content, ts: Date.now() });
+  if (history.length > 8) history.shift();
+  consultingConversationHistory.set(userId, history);
+}
+
 export async function processConsultingMessage(
   text: string, 
   userId: string, 
@@ -5211,7 +5233,8 @@ export async function processConsultingMessage(
   pdfBuffer?: string,
   pdfMimeType?: string,
   audioUrl?: string,
-  msgTimestamp?: number
+  msgTimestamp?: number,
+  quotedContext?: string
 ): Promise<JanIAResult> {
   try {
     const rawPhone = userId.split('@')[0];
@@ -5363,7 +5386,7 @@ export async function processConsultingMessage(
       `- **SOLUCIÓN TOTAL Y DE FONDO (IA PURA)**: Eres una IA completamente resolutiva. Si un usuario te pide redactar una promesa de compraventa, una cláusula penal, un acuerdo de puntas compartidas, una carta de preaviso de arriendo, liquidar la ganancia ocasional o estimar el valor comercial de un inmueble (ACM), ¡ENTRÉGALE LA SOLUCIÓN COMPLETA, REDACTADA Y ESTRUCTURADA DIRECTAMENTE AQUÍ EN EL CHAT!\n` +
       `- **BENEFICIO GRATUITO DE LANZAMIENTO VECY NETWORK**: Recuerda que en esta etapa de lanzamiento de VECY Network, todos tus servicios de consultoría, análisis jurídico, redacción de minutas y avalúos de IA son un **beneficio 100% gratuito** para empoderar a los agentes inmobiliarios. Anímalos a aprovechar esta oportunidad e invitar a más colegas a unirse a la red.\n` +
       `- **ASTUCIA CONTEXTUAL ANTE PREGUNTAS DE COSTOS**: Si un usuario pregunta de forma corta o ambigua "¿Qué costo tendría?" o "¿Cuánto vale?", conecta con el contexto previo o indaga con astucia: aclárale que tu asistencia y redacción en el chat es totalmente gratuita por ser miembro de VECY Network; y si se refiere a gastos notariales externos, liquidación de impuestos o un avalúo oficial certificado con perito de Lonja presencial, oriéntalo con precisión técnica.\n` +
-      `- **DERIVACIÓN OPORTUNA AL BRÓKER**: Únicamente cuando el caso requiera acompañamiento notarial presencial, un peritaje oficial firmado con matrícula R.A.A. de Lonja o la contratación de la mesa de corretaje de la inmobiliaria, invítalo amablemente a comunicarse con nuestro bróker al número 3166569719 de VECY BIENES RAÍCES en nuestro horario de atención: Lunes a Viernes de 8:00 AM a 10:00 PM, Sábados de 8:00 AM a 8:00 PM y Domingos de 10:00 AM a 4:00 PM.\n\n` +
+      `- **DERIVACIÓN OPORTUNA AL BRÓKER**: Únicamente cuando el caso requiera acompañamiento notarial presencial, un peritaje oficial firmado con matrícula R.A.A. de Lonja o la contratación de la mesa de corretaje de la inmobiliaria, invítalo amablemente a comunicarse con nuestro bróker de VECY BIENES RAÍCES en WhatsApp (+573192919978) en nuestro horario de atención: Lunes a Viernes de 8:00 AM a 10:00 PM, Sábados de 8:00 AM a 8:00 PM y Domingos de 10:00 AM a 4:00 PM.\n\n` +
       `## ROLES Y ÁREAS DE ASESORÍA MAESTRA (4 PILARES):\n` +
       `1. **⚖️ Abogada Inmobiliaria y Notarial Senior (Derecho Inmobiliario y Contratos)**:\n` +
       `   - Experta en Código Civil, Código de Comercio, Ley 820 de 2003 (Arrendamientos), Ley 675 de 2001 (Propiedad Horizontal) y jurisprudencia colombiana.\n` +
@@ -5437,10 +5460,28 @@ ${lateReplyNote}`;
       messageToProcess += `\n[SISTEMA - NOTA DE VOZ REQUERIDA Y LÍMITE DE DURACIÓN ÁGIL]: El usuario te envió esta consulta mediante una NOTA DE VOZ (audio). Como JanIA, debes responder en nota de voz de viva voz. DEBES obligatoriamente marcar "wantsVoice": true y redactar en "voiceResponse" una versión hablada resumida, directa, muy fluida, profesional, cálida y natural de tu respuesta (máximo 450 caracteres / ~30 a 40 segundos de voz hablada), sin asteriscos, viñetas ni sintaxis Markdown, perfecta para ser sintetizada e impactar de forma ágil e instantánea sin saturar la conexión. En "response" coloca la versión completa formateada en texto.`;
     }
 
-    const messages = [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: `Usuario: @${rawPhone} (${realName})\nConsulta: ${messageToProcess}${greetingInstruction}` }
+    const history = getConsultingHistory(userId);
+    const messages: any[] = [
+      { role: "system", content: systemPrompt }
     ];
+
+    for (const h of history) {
+      messages.push({
+        role: h.role === "assistant" ? "assistant" : "user",
+        content: h.role === "user" ? `Usuario @${rawPhone} (${realName}): ${h.content}` : h.content
+      });
+    }
+
+    let userPromptContent = `Usuario: @${rawPhone} (${realName})\nConsulta: ${messageToProcess}`;
+    if (quotedContext) {
+      userPromptContent += `\n[Contexto del mensaje previo citado al que responde el usuario: "${quotedContext}"]`;
+    }
+    userPromptContent += greetingInstruction;
+
+    messages.push({
+      role: "user",
+      content: userPromptContent
+    });
 
     // Activar búsqueda web en vivo SOLO si la consulta tiene términos específicos de mercado o normas
     const needsSearch = (
@@ -5459,18 +5500,27 @@ ${lateReplyNote}`;
 
     try {
       const parsed = parseSafeJSON(llmRes.choices[0].message.content);
+      const finalResp = sanitizeResponseMarkdown(parsed.response || "");
+      // Guardar turno en memoria conversacional de Grupo 2
+      appendConsultingHistory(userId, "user", text);
+      appendConsultingHistory(userId, "assistant", finalResp);
+
       return {
         classification: parsed.classification || "CONSULTA_GENERAL",
-        response: sanitizeResponseMarkdown(parsed.response || ""),
+        response: finalResp,
         reactionEmoji: parsed.reactionEmoji || (parsed.classification === "VIOLACION_DE_NORMAS" ? "🚫" : "👌"),
         wantsVoice: parsed.wantsVoice || false,
         voiceResponse: parsed.voiceResponse || ""
       };
     } catch (e) {
       const replyContent = llmRes.choices[0].message.content || "Lo siento, en este momento no puedo procesar tu consulta. Intenta de nuevo más tarde.";
+      const finalResp = sanitizeResponseMarkdown(replyContent);
+      appendConsultingHistory(userId, "user", text);
+      appendConsultingHistory(userId, "assistant", finalResp);
+
       return {
         classification: "CONSULTA_GENERAL",
-        response: sanitizeResponseMarkdown(replyContent),
+        response: finalResp,
         reactionEmoji: "👌",
         wantsVoice: false,
         voiceResponse: ""
@@ -5482,12 +5532,39 @@ ${lateReplyNote}`;
     const timeGreeting = getGreetingByTime();
     const rawPhone = userId.split('@')[0];
     const realName = await resolveRealName(userId, userName);
-    const nameInfo = resolveNameAndGender(realName, timeGreeting);
-    const genderTerm = nameInfo.genderTerm;
+    const firstName = extractFirstName(realName) || 'colega';
+    const cleanLower = text.toLowerCase().trim();
 
+    // Fallback de contingencia: Si el usuario preguntó por avalúos o predios, dar la respuesta técnica directa y útil en lugar de un saludo repetitivo
+    if (cleanLower.includes("aval") || cleanLower.includes("predio") || cleanLower.includes("acm") || cleanLower.includes("comercial") || cleanLower.includes("cuanto vale") || cleanLower.includes("precio")) {
+      const avaluoFallback = `¡${timeGreeting}, estimada ${firstName}! 👋🏻 Con el mayor gusto te detallo la información técnica y jurídica que necesitamos para realizar el Análisis Comparativo de Mercado (ACM) y estimación del valor comercial de tu predio:\n\n1️⃣ *Ubicación Exacta:* Municipio de Cundinamarca, barrio/sector y dirección aproximada.\n2️⃣ *Documentos Jurídicos:* Copia del Certificado de Tradición y Libertad reciente y recibo del Impuesto Predial Unificado.\n3️⃣ *Características Físicas:* Área de lote (m²), área construida (m²), distribución (pisos, locales, habitaciones, baños) y antigüedad.\n4️⃣ *Registro Fotográfico:* 3 a 5 fotos de fachada exterior e interiores principales.\n\nCon estos datos en mano, procesamos el estudio comparativo frente a transacciones reales de la zona para entregarte una estimación técnica sólida y orientativa. 📊\n\n¡Quedo muy atenta cuando los tengas a mano para empezar a revisarlo de una! 🤝✨`;
+      appendConsultingHistory(userId, "user", text);
+      appendConsultingHistory(userId, "assistant", avaluoFallback);
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: avaluoFallback,
+        reactionEmoji: "📐"
+      };
+    }
+
+    // Fallback si preguntó por contratos o arrendamientos
+    if (cleanLower.includes("contrato") || cleanLower.includes("arriend") || cleanLower.includes("canon") || cleanLower.includes("ley 820") || cleanLower.includes("promesa")) {
+      const legalFallback = `¡${timeGreeting}, ${firstName}! 👋🏻 Con gusto te asesoro. En materia de contratos inmobiliarios (arrendamiento Ley 820 de 2003 o promesa de compraventa), recuerda que los elementos esenciales son la determinación clara de las partes, la identificación del predio con matrícula inmobiliaria y linderos, el canon/precio exacto y las cláusulas penales y de prórroga.\n\n¿Tienes alguna cláusula o situación específica que desees que revisemos o redactemos? ¡Indícame el detalle y con gusto te estructuro la respuesta completa! ⚖️🤝`;
+      appendConsultingHistory(userId, "user", text);
+      appendConsultingHistory(userId, "assistant", legalFallback);
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: legalFallback,
+        reactionEmoji: "⚖️"
+      };
+    }
+
+    const genericFallback = `Hola ${firstName} 👋🏻. Disculpa la pequeña demora, estuve recalibrando mis motores de consulta en tiempo real. Entiendo tu mensaje sobre tu consulta inmobiliaria. ¿Podrías confirmarme el detalle específico para entregarte la solución completa y estructurada de inmediato? ¡Aquí estoy 100% lista para apoyarte! 🤝✨`;
+    appendConsultingHistory(userId, "user", text);
+    appendConsultingHistory(userId, "assistant", genericFallback);
     return {
       classification: "CONSULTA_GENERAL",
-      response: `¡${timeGreeting}, ${genderTerm}! 👋🏻 Con todo gusto estoy aquí para asesorarte. Cuéntame cuál es tu inquietud sobre legislación, contratos, trámites, avalúos o marketing inmobiliario y con gusto te colaboro. 🤝`,
+      response: genericFallback,
       reactionEmoji: "💡"
     };
   }

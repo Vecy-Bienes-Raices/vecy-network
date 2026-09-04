@@ -163,7 +163,27 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v30.9 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.0 — Septiembre 2026
+
+### Novedades v31.0 (Doctrina de Memoria Conversacional en Grupo 2 y Resiliencia Anti-429 de JanIA):
+- **Diagnóstico y Erradicación del Bucle de Saludos en Consultoría (Caso Amanda)**:
+  1) **Causa Raíz del 429 y Colapso a Saludo**: Ante ráfagas de ingesta de mensajes en WhatsApp con una sola API key de Gemini (15 RPM en tier gratuito de Google), la API arrojó `429 Too Many Requests / Resource Exhausted`.
+  2) **Falla de Cascada en `llm.ts`**: La cascada de modelos recorría los nombres alternativos (`gemini-2.5-flash`, `gemini-flash-latest`, `gemini-flash-lite-latest`) en 50 milisegundos sobre la misma clave sin pausar el tiempo sugerido por Google (`Please retry in 2.5s`), agotando los intentos y disparando el bloque `catch` de `processConsultingMessage`.
+  3) **El Falso "Bot Tonto" del Catch**: El `catch` de `processConsultingMessage` retornaba un saludo estático genérico: *"¡Buenas noches, estimada Amanda! 👋 Con todo gusto estoy aquí para asesorarte. Cuéntame cuál es tu inquietud..."*, haciendo que JanIA repitiera dos veces exactamente el mismo texto ignorando la pregunta técnica sobre avalúos.
+- **Memoria Conversacional Continua (Rolling History de 8 Turnos)**:
+  1) Implementado `consultingConversationHistory` en memoria RAM de JanIA para Grupo 2 (Soporte Legal, Tributario y Avalúos), preservando hasta 8 turnos de diálogo (`user` / `assistant`) durante 12 horas por usuario.
+  2) Cada nueva consulta del usuario se envía a Gemini intercalada con su historial previo, permitiendo sostener conversaciones profundas, acordarse de predios mencionados y hacer seguimiento continuo como una IA Pura experta.
+- **Conciencia de Mensajes Citados (`quotedMessage`)**:
+  1) En `whatsapp-match.ts`, extracción profunda del contenido de `extendedTextMessage.contextInfo.quotedMessage`.
+  2) Si el usuario responde citando una respuesta previa de JanIA o de otro colega, el texto citado se inyecta explícitamente en el prompt: `[Contexto del mensaje previo citado al que responde el usuario: "..."]`.
+- **Pausa Inteligente Anti-429 con Backoff en `llm.ts`**:
+  1) En `invokeGemini`, al recibir error 429 se extraen los segundos sugeridos por Google (`retry in X s`, default 3s) y se pausa la ejecución (`await sleep(waitSec)`), reintentando antes de agotar la clave. Esto permite que el bucket de RPM de Google se restablezca sin interrumpir la experiencia conversacional.
+- **Respuestas de Contingencia Temáticas (Cero Saludos Repetitivos en Fallbacks)**:
+  1) Si la red o IA colapsara por completo, el bloque de contingencia analiza las palabras clave de la consulta. Si pregunta por avalúos o predios, entrega directamente la lista técnica de 4 puntos para el ACM (Ubicación, Certificado de Tradición y Predial, Áreas lote/construcción, Fotos). Si pregunta por contratos o arriendos, orienta sobre Ley 820 y promesa de compraventa, erradicando los saludos en bucle.
+- **Purga de Número Baneado**:
+  1) Purgado el número telefónico baneado `3166569719` que residía en la línea 5366 del systemPrompt de `janIA.ts`, sustituido por el número oficial activo de Eduardo `+573192919978`.
+- **Incremento Oficial de Versión**:
+  1) Elevado a `v31.0` en `shared/const.ts`.
 
 ### Novedades v30.9 (Doctrina de Ubicación de Publicaciones para Capturas de Pantalla y Erradicación de Resaltados Amarillos en WhatsApp Móvil):
 - **Diagnóstico y Resolución del Desfase de Búsqueda Móvil vs Web (Cero Resaltados Amarillos Falsos en Chats)**:
