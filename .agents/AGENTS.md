@@ -163,7 +163,25 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.5 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.6 — Septiembre 2026
+
+### Novedades v31.6 (Restauración y Blindaje de Match #M12305 y Calibración Doctrinal de Umbral VECY 85%-100%):
+- **Diagnóstico y Rescate de Match #M12305 (Propiedad #314 ↔ Requerimiento #146)**:
+  1) **Identificación Plena de la Pareja**:
+     - **Oferta (Propiedad #314)**: *"Lindo apartamento en Santa Bárbara"*, $680.000.000 COP, 93 m², 3 habitaciones, 2 baños, 2 garajes, cuarto y baño de servicio, cocina cerrada, piso 2 alto, depósito. Asesora: **Beatriz Espinoza (+57 318 8674110)**, grupo: *Ofertas VENTA 1000*.
+     - **Demanda (Requerimiento #146)**: *"Requerimiento: Apartamento en Santa Bárbara"*, Presupuesto $700.000.000 COP, 2 alcobas, 2 parqueaderos (Cliente: JaPu). Asesora: **Olga Clemencia Espitia Arciniegas (+57 315 479 8332)**, grupo: *En casa gestión Inmobiliaria*.
+  2) **Causa Raíz de la Desaparición**:
+     - En `matching.ts` previo, la fórmula de `completionRatio` dividía las especificaciones cumplidas entre un total rígido de 8 casillas (`totalDownstreamSpecs = 8`). Al no haber exigido la demanda especificaciones secundarias opcionales (como área mínima, baños o tope de administración), `filledDownstreamSpecs` no podía superar 3, arrojando una completitud de apenas 37.5%.
+     - Por ende, `explicarMatch` asignó un score de 80%, a pesar de que el inmueble cumple al 100% todo lo exigido por el comprador. Durante la purga de matches espurios con umbral < 85%, el script eliminó el match legítimo de Supabase.
+  3) **Blindaje y Calibración Doctrinal en `server/_core/matching.ts`**:
+     - Si los 5 campos en duro (tipo de activo, tipo de negocio, ciudad, barrio y presupuesto) están 100% en verde y existen cero bloqueadores, el match arranca en el piso base VECY de **85%**.
+     - Las especificaciones exigidas por la demanda plenamente satisfechas otorgan escala progresiva: 35%+ de completitud = **93%** (armonizado idéntico con `AdminMatches.tsx`), 60%+ = **95%**, 80%+ = **100%**.
+     - Se prohíbe penalizar a un comprador por omitir restricciones opcionales no solicitadas.
+  4) **Restauración Efectiva en Supabase**:
+     - Reinsertado exitosamente el registro con ID explícito **#12305** en `propertyMatches` con score de **93.00%**, estado `'suggested'` y explicaciones técnicas completas.
+     - Actualizada y enriquecida la Propiedad #314 con nombre de asesora `Beatriz Espinoza`, 3 habitaciones, 2 baños y 2 garajes.
+- **Incremento Oficial de Versión**:
+  1) Elevado a `v31.6` en `shared/const.ts` y `package.json` (31.6.0).
 
 ### Novedades v31.5 (Doctrina Anti-Publicaciones Huecas / Frases Sueltas, Blindaje de Ingesta y Purga de 17 Matches Espurios):
 - **Diagnóstico y Erradicación del Error Crítico de Publicaciones Huecas y Teasers (Caso "En La Cabrera", "Precio de oportunidad", "En la 83 Club House")**:

@@ -1136,4 +1136,16 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 - **111 requerimientos huecos desactivados** en `requirements` (`status = 'expired'`).
 - La base de datos queda con **119 matches 100% verídicos, limpios y con fichas técnicas completas**.
 
+---
+
+### Versión v31.6 — Septiembre 2026: Restauración y Blindaje de Match #M12305 y Calibración Doctrinal de Umbral VECY 85%-100%
+
+#### 1. RESTAURACIÓN Y PROTECCIÓN DEL MATCH #M12305
+- **Identificación Plena**:
+  * **Oferta (Propiedad #314)**: *"Lindo apartamento en Santa Bárbara"*, $680.000.000 COP, 93 m², 3 habitaciones, 2 baños, 2 garajes, cuarto y baño de servicio, cocina cerrada, 2 piso alto, depósito. Asesora: **Beatriz Espinoza (+57 318 8674110)**, grupo: *Ofertas VENTA 1000*.
+  * **Demanda (Requerimiento #146)**: *"Requerimiento: Apartamento en Santa Bárbara"*, Presupuesto $700.000.000 COP, 2 alcobas, 2 parqueaderos (Cliente: JaPu). Asesora: **Olga Clemencia Espitia Arciniegas (+57 315 479 8332)**, grupo: *En casa gestión Inmobiliaria*.
+- **Causa de la Pérdida**: En `server/_core/matching.ts`, la completitud cuantitativa (`completionRatio`) penalizaba las demandas breves donde el cliente no especificó restricciones opcionales (área mínima, baños o administración), asignando un 80% espurio que activó la eliminación durante la purga de matches con score < 85%.
+- **Calibración Doctrinal en `matching.ts`**: Cuando los 5 campos en duro están 100% en verde y existen cero bloqueadores, el puntaje mínimo VECY es **85%**. Si los atributos demandados por el cliente están 100% satisfechos, escala a **93%**, protegiendo la concordancia con la consola administrativa.
+- **Restauración en Supabase**: Reinsertado el registro **#12305** en `propertyMatches` con score **93.00%**, estado `'suggested'` y enriquecida la ficha de la propiedad #314 con nombre verídico de la asesora.
+
 

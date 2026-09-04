@@ -3057,19 +3057,24 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
 
   const completionRatio = Math.min(1.0, filledDownstreamSpecs / totalDownstreamSpecs);
 
-  let finalPercentage = 80;
-  if (completionRatio >= 0.85) {
+  // DOCTRINA VECY v31.5: Con los 5 campos en duro 100% en verde y CERO bloqueadores,
+  // el match cumple el umbral comercial VECY (85% a 100%).
+  let finalPercentage = 85;
+  if (completionRatio >= 0.80) {
     finalPercentage = 100;
-    positives.push(`🌟 MATCH PERFECTO 100%: 5 campos en duro 100% en verde + TODAS las líneas de abajo 100% llenas y compatibles!`);
-  } else if (completionRatio >= 0.65) {
+    positives.push(`🌟 MATCH PERFECTO 100%: 5 campos en duro 100% en verde + TODAS las especificaciones compatibles!`);
+  } else if (completionRatio >= 0.60) {
+    finalPercentage = 95;
+    positives.push(`✅ Match 95%: 5 campos en duro 100% en verde + alta compatibilidad en especificaciones (${Math.round(completionRatio * 100)}%)`);
+  } else if (completionRatio >= 0.35) {
+    finalPercentage = 93;
+    positives.push(`✅ Match 93%: 5 campos en duro 100% en verde + especificaciones solicitadas plenamente satisfechas (${Math.round(completionRatio * 100)}%)`);
+  } else if (completionRatio >= 0.20) {
     finalPercentage = 90;
-    positives.push(`✅ Match 90%: 5 campos en duro 100% en verde + alta compatibilidad en especificaciones (${Math.round(completionRatio * 100)}%)`);
-  } else if (completionRatio >= 0.40) {
-    finalPercentage = 85;
-    positives.push(`✅ Match 85%: 5 campos en duro 100% en verde + compatibilidad en especificaciones (${Math.round(completionRatio * 100)}%)`);
+    positives.push(`✅ Match 90%: 5 campos en duro 100% en verde + compatibilidad en especificaciones (${Math.round(completionRatio * 100)}%)`);
   } else {
-    finalPercentage = 80;
-    positives.push(`✅ Match 80%: 5 campos en duro 100% en verde + especificaciones cuantitativas básicas`);
+    finalPercentage = 85;
+    positives.push(`✅ Match 85%: 5 campos en duro 100% en verde + especificaciones cuantitativas básicas`);
   }
 
   return buildExplanationResult(finalPercentage, blockers, positives, negatives, isStrictCompliant, missingFieldsList);

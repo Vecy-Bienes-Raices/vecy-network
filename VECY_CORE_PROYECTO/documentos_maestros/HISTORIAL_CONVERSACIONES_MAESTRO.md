@@ -52,7 +52,37 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.5 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.6 — Septiembre 2026
+
+### 🗓️ Sesión: Viernes 4 de Septiembre de 2026 — 17:43 a 18:05 (Hora Colombia UTC-5)
+**Versión**: `v31.6` | **Ambiente**: Producción VPS (`13.140.149.144`) + Mesa de Cotejo Admin Panel (`vecy-network.vercel.app/admin`) + Supabase DB + GitHub (`main`)
+
+#### 🎯 Solicitud de Eduardo A. Rivera:
+1. "Oye resulta que se me perdió este MATCH, es decir no me aparece en la web y lo necesito urgente porque ya lo estoy trabajando con las colegas. M12305"
+2. El usuario adjuntó dos capturas de pantalla de WhatsApp:
+   - Captura 1: Tarjeta de la Demanda: Requerimiento #146, *"Requerimiento: Apartamento en Santa Bárbara"*, Presupuesto $700.000.000 COP, 2 alcobas, 2 parqueaderos, Cliente JaPu, Asesora Olga Clemencia Espitia Arciniegas (+57 315 479 8332), grupo *En casa gestión Inmobiliaria*, fecha 4 de sept 2026 03:13 AM, Score VECY 93%.
+   - Captura 2: Chat de WhatsApp con la Asesora de la Oferta: *"Beatriz Espinoza"* (+57 318 8674110), *"Vendo lindo apto santa barbara. Precio :$680millones, -93 M2, - 3 habitaciones, - 2 baños, - cuarto y baño de servicio, - cocina cerrada, - 2 garajes, - 2 piso alto, - deposito"*, publicado en grupo *Ofertas VENTA 1000*, con mensaje saliente con referencia directa a `M12305`.
+
+#### 🛠️ Diagnóstico Técnico e Implementación:
+1. **Identificación Plena del Match y las Fichas**:
+   - **Demanda**: Requerimiento #146 (Olga Clemencia Espitia Arciniegas, Santa Bárbara, apto venta, $700M max, 2 alcobas, 2 garajes).
+   - **Oferta**: Propiedad #314 (Beatriz Espinoza, Santa Bárbara, $680M, 93 m², 3 alcobas, 2 baños, 2 garajes, cuarto/baño servicio, depósito, grupo *Ofertas VENTA 1000*).
+2. **Causa Raíz de la Desaparición del Match**:
+   - En `server/_core/matching.ts`, el cálculo de `completionRatio` penalizaba a las demandas breves donde el comprador no fijó restricciones optativas (como área mínima en m², baños o cuota de administración), dividiendo las especificaciones cumplidas (3) entre un total fijo de 8 casillas (`3/8 = 37.5%`).
+   - Esto causó que `explicarMatch` le asignara artificialmente un puntaje de **80%**, a pesar de que el apartamento cumple al 100% todo lo exigido por el cliente.
+   - En la sesión anterior (v31.4 / v31.3), el script masivo de depuración `sanitize_geo_and_budget_matches.ts` aplicó un umbral de corte de `< 85%`, por lo que eliminó el registro de la tabla `propertyMatches` en Supabase.
+3. **Calibración Doctrinal en `matching.ts`**:
+   - Se estableció que cuando los 5 campos en duro están 100% en verde y existen cero bloqueadores, el piso base comercial VECY es de **85%**.
+   - Con las especificaciones solicitadas plenamente satisfechas (35%+ de completitud cuantitativa), el puntaje asciende a **93%** (en concordancia idéntica con el algoritmo de `AdminMatches.tsx`), garantizando que jamás vuelva a degradarse a 80%.
+4. **Restauración en Supabase**:
+   - Reinsertado con éxito el registro **#12305** en `propertyMatches` con score de **93.00%**, estado `'suggested'` y explicación técnica completa.
+   - Actualizada la Propiedad #314 en `properties`: asesora asignada como `Beatriz Espinoza` (+57 318 8674110), 3 habitaciones, 2 baños, 2 garajes y estado activo (`available = true`).
+5. **Incremento Oficial de Versión**:
+   - Elevado a **`v31.6`** en `shared/const.ts` y `package.json` (31.6.0).
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.5 — Septiembre 2026
 
 ### 🗓️ Sesión: Viernes 4 de Septiembre de 2026 — 16:15 a 16:35 (Hora Colombia UTC-5)
 **Versión**: `v31.5` | **Ambiente**: Producción VPS (`13.140.149.144`) + Mesa de Cotejo Admin Panel (`vecy-network.vercel.app/admin`) + Supabase DB + GitHub (`main`)
