@@ -2340,6 +2340,7 @@ export default function AdminMatches() {
       propPropertyType: m.property?.propertyType || '',
       propTransactionType: m.property?.transactionType || '',
       propPhone: m.property?.idUsuarioWhatsapp || m.property?.phone || m.property?.contactPhone || '',
+      propOrigenNombre: m.property?.origenNombre || '',
 
       // Demanda (Requerimiento)
       reqSenderName: m.requirement?.nombreUsuarioWhatsapp || '',
@@ -2356,6 +2357,7 @@ export default function AdminMatches() {
       reqPropertyType: m.requirement?.tipoInmuebleDeseado || '',
       reqTransactionType: m.requirement?.tipoNegocioDeseado || '',
       reqPhone: m.requirement?.idUsuarioWhatsapp || m.requirement?.phone || m.requirement?.contactPhone || '',
+      reqOrigenNombre: m.requirement?.origenNombre || '',
     });
   };
 
@@ -2409,7 +2411,7 @@ export default function AdminMatches() {
     try {
       const promises: Promise<any>[] = [];
 
-      if (m.property?.id && (Object.keys(editForm).some(k => k.startsWith('prop')) || editForm.propPhone || editForm.propSenderName)) {
+      if (m.property?.id && (Object.keys(editForm).some(k => k.startsWith('prop')) || editForm.propPhone || editForm.propSenderName || editForm.propOrigenNombre)) {
         const cleanPropPhone = normalizePhoneInput(editForm.propPhone);
         promises.push(
           updatePropMut.mutateAsync({
@@ -2430,11 +2432,12 @@ export default function AdminMatches() {
             transactionType: editForm.propTransactionType ? String(editForm.propTransactionType) : undefined,
             idUsuarioWhatsapp: cleanPropPhone,
             nombreUsuarioWhatsapp: editForm.propSenderName !== undefined && editForm.propSenderName.trim() !== '' ? String(editForm.propSenderName).trim() : undefined,
+            origenNombre: editForm.propOrigenNombre !== undefined && editForm.propOrigenNombre.trim() !== '' ? String(editForm.propOrigenNombre).trim() : undefined,
           })
         );
       }
 
-      if (m.requirement?.id && (Object.keys(editForm).some(k => k.startsWith('req')) || editForm.reqPhone || editForm.reqSenderName)) {
+      if (m.requirement?.id && (Object.keys(editForm).some(k => k.startsWith('req')) || editForm.reqPhone || editForm.reqSenderName || editForm.reqOrigenNombre)) {
         const cleanReqPhone = normalizePhoneInput(editForm.reqPhone);
         promises.push(
           updateReqMut.mutateAsync({
@@ -2453,6 +2456,7 @@ export default function AdminMatches() {
             tipoNegocioDeseado: editForm.reqTransactionType ? String(editForm.reqTransactionType) : undefined,
             idUsuarioWhatsapp: cleanReqPhone,
             nombreUsuarioWhatsapp: editForm.reqSenderName !== undefined && editForm.reqSenderName.trim() !== '' ? String(editForm.reqSenderName).trim() : undefined,
+            origenNombre: editForm.reqOrigenNombre !== undefined && editForm.reqOrigenNombre.trim() !== '' ? String(editForm.reqOrigenNombre).trim() : undefined,
           })
         );
       }
@@ -2480,6 +2484,7 @@ export default function AdminMatches() {
           zone: editForm.propZone || m.property.zone,
           city: editForm.propCity || m.property.city,
           idUsuarioWhatsapp: normalizePhoneInput(editForm.propPhone) || m.property.idUsuarioWhatsapp,
+          origenNombre: editForm.propOrigenNombre ? String(editForm.propOrigenNombre).trim() : m.property.origenNombre,
         });
       }
 
@@ -2495,6 +2500,7 @@ export default function AdminMatches() {
           zonaDeseada: editForm.reqZone || m.requirement.zonaDeseada,
           ciudadDeseada: editForm.reqCity || m.requirement.ciudadDeseada,
           idUsuarioWhatsapp: normalizePhoneInput(editForm.reqPhone) || m.requirement.idUsuarioWhatsapp,
+          origenNombre: editForm.reqOrigenNombre ? String(editForm.reqOrigenNombre).trim() : m.requirement.origenNombre,
         });
       }
 
@@ -2539,6 +2545,7 @@ export default function AdminMatches() {
             transactionType: editForm.propTransactionType ? String(editForm.propTransactionType) : undefined,
             idUsuarioWhatsapp: cleanPropPhone,
             nombreUsuarioWhatsapp: editForm.propSenderName !== undefined && editForm.propSenderName.trim() !== '' ? String(editForm.propSenderName).trim() : undefined,
+            origenNombre: editForm.propOrigenNombre !== undefined && editForm.propOrigenNombre.trim() !== '' ? String(editForm.propOrigenNombre).trim() : undefined,
           })
         );
       }
@@ -2562,6 +2569,7 @@ export default function AdminMatches() {
             tipoNegocioDeseado: editForm.reqTransactionType ? String(editForm.reqTransactionType) : undefined,
             idUsuarioWhatsapp: cleanReqPhone,
             nombreUsuarioWhatsapp: editForm.reqSenderName !== undefined && editForm.reqSenderName.trim() !== '' ? String(editForm.reqSenderName).trim() : undefined,
+            origenNombre: editForm.reqOrigenNombre !== undefined && editForm.reqOrigenNombre.trim() !== '' ? String(editForm.reqOrigenNombre).trim() : undefined,
           })
         );
       }
@@ -3070,7 +3078,7 @@ export default function AdminMatches() {
                               📅 {formatColombiaDate(m.property.createdAt)}
                             </span>
                           )}
-                          {m.property?.origenNombre && (
+                          {m.property?.origenNombre ? (
                             <button
                               type="button"
                               onClick={(e) => {
@@ -3083,6 +3091,13 @@ export default function AdminMatches() {
                               <span>📍 {m.property.origenNombre}</span>
                               <Copy className="w-2.5 h-2.5 opacity-70 hover:opacity-100" />
                             </button>
+                          ) : (
+                            <span
+                              className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-300/80 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md"
+                              title="Inmueble histórico pionero de julio 2026. Puedes asignarle el grupo haciendo clic en 'Editar Fichas'."
+                            >
+                              <span>📍 Registro Histórico Red (Julio 2026)</span>
+                            </span>
                           )}
                         </div>
                       </div>
@@ -3428,7 +3443,7 @@ export default function AdminMatches() {
                               </a>
                             ) : null;
                           })()}
-                          {m.requirement?.origenNombre && (
+                          {m.requirement?.origenNombre ? (
                             <button
                               type="button"
                               onClick={(e) => {
@@ -3441,6 +3456,13 @@ export default function AdminMatches() {
                               <span>📍 {m.requirement.origenNombre}</span>
                               <Copy className="w-2.5 h-2.5 opacity-70 hover:opacity-100" />
                             </button>
+                          ) : (
+                            <span
+                              className="inline-flex items-center gap-1 text-[10px] font-medium text-cyan-300/80 bg-cyan-500/10 border border-cyan-500/20 px-2 py-0.5 rounded-md"
+                              title="Requerimiento sin trazabilidad de grupo. Puedes asignárselo haciendo clic en 'Editar Fichas'."
+                            >
+                              <span>📍 Red Histórica (Sin grupo asignado)</span>
+                            </span>
                           )}
                         </div>
                       </div>
@@ -4207,6 +4229,16 @@ export default function AdminMatches() {
                                         className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs pl-6 pr-2 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#bf953f]"
                                       />
                                     </div>
+                                    <div className="relative">
+                                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs">📍</span>
+                                      <input
+                                        type="text"
+                                        placeholder="Grupo WhatsApp (ej: Rosales-Chicó)"
+                                        value={editForm.propOrigenNombre || ''}
+                                        onChange={(e) => setEditForm(prev => ({ ...prev, propOrigenNombre: e.target.value }))}
+                                        className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs pl-6 pr-2 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#bf953f]"
+                                      />
+                                    </div>
                                   </div>
                                 ) : (
                                   <div className="space-y-1.5 w-full">
@@ -4227,6 +4259,16 @@ export default function AdminMatches() {
                                         placeholder="WhatsApp (ej: +57 310 123 4567)"
                                         value={editForm.reqPhone || ''}
                                         onChange={(e) => setEditForm(prev => ({ ...prev, reqPhone: e.target.value }))}
+                                        className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs pl-6 pr-2 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                                      />
+                                    </div>
+                                    <div className="relative">
+                                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs">📍</span>
+                                      <input
+                                        type="text"
+                                        placeholder="Grupo WhatsApp (ej: VECY INMUEBLES NETWORK)"
+                                        value={editForm.reqOrigenNombre || ''}
+                                        onChange={(e) => setEditForm(prev => ({ ...prev, reqOrigenNombre: e.target.value }))}
                                         className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs pl-6 pr-2 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400"
                                       />
                                     </div>
@@ -4422,11 +4464,13 @@ export default function AdminMatches() {
                               <div className="space-y-1.5 w-full">
                                 <input type="text" placeholder="👤 Nombre Asesor (ej: Erika Del Pilar)" value={editForm.propSenderName || ''} onChange={(e) => setEditForm(prev => ({ ...prev, propSenderName: e.target.value }))} className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg" />
                                 <input type="text" placeholder="📞 WhatsApp (ej: +57 310 123 4567)" value={editForm.propPhone || ''} onChange={(e) => setEditForm(prev => ({ ...prev, propPhone: e.target.value }))} className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg" />
+                                <input type="text" placeholder="📍 Grupo WhatsApp (ej: Rosales-Chicó)" value={editForm.propOrigenNombre || ''} onChange={(e) => setEditForm(prev => ({ ...prev, propOrigenNombre: e.target.value }))} className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg" />
                               </div>
                             ) : (
                               <div className="space-y-1.5 w-full">
                                 <input type="text" placeholder="👤 Nombre Asesor (ej: Erika Del Pilar)" value={editForm.reqSenderName || ''} onChange={(e) => setEditForm(prev => ({ ...prev, reqSenderName: e.target.value }))} className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg" />
                                 <input type="text" placeholder="📞 WhatsApp (ej: +57 310 123 4567)" value={editForm.reqPhone || ''} onChange={(e) => setEditForm(prev => ({ ...prev, reqPhone: e.target.value }))} className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg" />
+                                <input type="text" placeholder="📍 Grupo WhatsApp (ej: VECY INMUEBLES NETWORK)" value={editForm.reqOrigenNombre || ''} onChange={(e) => setEditForm(prev => ({ ...prev, reqOrigenNombre: e.target.value }))} className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg" />
                               </div>
                             );
                           }

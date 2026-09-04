@@ -655,6 +655,7 @@ export const janIARouter = router({
       transactionType: z.string().optional().nullable(),
       idUsuarioWhatsapp: z.string().optional().nullable(),
       nombreUsuarioWhatsapp: z.string().optional().nullable(),
+      origenNombre: z.string().optional().nullable(),
     }))
     .mutation(async ({ input }) => {
       const db = await getDb();
@@ -741,6 +742,7 @@ export const janIARouter = router({
       if (input.transactionType !== undefined && input.transactionType) updateData.transactionType = input.transactionType;
       if (input.idUsuarioWhatsapp !== undefined) updateData.idUsuarioWhatsapp = input.idUsuarioWhatsapp;
       if (input.nombreUsuarioWhatsapp !== undefined) updateData.nombreUsuarioWhatsapp = input.nombreUsuarioWhatsapp;
+      if (input.origenNombre !== undefined) updateData.origenNombre = input.origenNombre;
 
       await db.update(properties).set(updateData).where(eq(properties.id, input.propertyId));
       console.log(`[JanIA-UpdateProperty] Propiedad #${input.propertyId} actualizada directamente desde Mesa de Cotejo (incluyendo teléfono: ${input.idUsuarioWhatsapp || 'N/A'})`);
@@ -791,6 +793,7 @@ export const janIARouter = router({
       tipoNegocioDeseado: z.string().optional().nullable(),
       idUsuarioWhatsapp: z.string().optional().nullable(),
       nombreUsuarioWhatsapp: z.string().optional().nullable(),
+      origenNombre: z.string().optional().nullable(),
     }))
     .mutation(async ({ input }) => {
       const db = await getDb();
@@ -874,6 +877,7 @@ export const janIARouter = router({
       if (input.tipoNegocioDeseado !== undefined && input.tipoNegocioDeseado) updateData.tipoNegocioDeseado = input.tipoNegocioDeseado;
       if (input.idUsuarioWhatsapp !== undefined) updateData.idUsuarioWhatsapp = input.idUsuarioWhatsapp;
       if (input.nombreUsuarioWhatsapp !== undefined) updateData.nombreUsuarioWhatsapp = input.nombreUsuarioWhatsapp;
+      if (input.origenNombre !== undefined) updateData.origenNombre = input.origenNombre;
 
       await db.update(requirements).set(updateData).where(eq(requirements.id, input.requirementId));
       console.log(`[JanIA-UpdateRequirement] Requerimiento #${input.requirementId} actualizado directamente desde Mesa de Cotejo (incluyendo teléfono: ${input.idUsuarioWhatsapp || 'N/A'})`);

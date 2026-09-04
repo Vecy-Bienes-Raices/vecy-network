@@ -16418,7 +16418,8 @@ ${liveStats}${userContextInstruction}
     propertyType: z2.string().optional().nullable(),
     transactionType: z2.string().optional().nullable(),
     idUsuarioWhatsapp: z2.string().optional().nullable(),
-    nombreUsuarioWhatsapp: z2.string().optional().nullable()
+    nombreUsuarioWhatsapp: z2.string().optional().nullable(),
+    origenNombre: z2.string().optional().nullable()
   })).mutation(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new Error("Database not available");
@@ -16499,6 +16500,7 @@ ${liveStats}${userContextInstruction}
     if (input.transactionType !== void 0 && input.transactionType) updateData.transactionType = input.transactionType;
     if (input.idUsuarioWhatsapp !== void 0) updateData.idUsuarioWhatsapp = input.idUsuarioWhatsapp;
     if (input.nombreUsuarioWhatsapp !== void 0) updateData.nombreUsuarioWhatsapp = input.nombreUsuarioWhatsapp;
+    if (input.origenNombre !== void 0) updateData.origenNombre = input.origenNombre;
     await db.update(properties).set(updateData).where(eq8(properties.id, input.propertyId));
     console.log(`[JanIA-UpdateProperty] Propiedad #${input.propertyId} actualizada directamente desde Mesa de Cotejo (incluyendo tel\xE9fono: ${input.idUsuarioWhatsapp || "N/A"})`);
     const phoneChanged = Boolean(input.idUsuarioWhatsapp && input.idUsuarioWhatsapp !== existingProp?.idUsuarioWhatsapp);
@@ -16540,7 +16542,8 @@ ${liveStats}${userContextInstruction}
     tipoInmuebleDeseado: z2.string().optional().nullable(),
     tipoNegocioDeseado: z2.string().optional().nullable(),
     idUsuarioWhatsapp: z2.string().optional().nullable(),
-    nombreUsuarioWhatsapp: z2.string().optional().nullable()
+    nombreUsuarioWhatsapp: z2.string().optional().nullable(),
+    origenNombre: z2.string().optional().nullable()
   })).mutation(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new Error("Database not available");
@@ -16618,6 +16621,7 @@ ${liveStats}${userContextInstruction}
     if (input.tipoNegocioDeseado !== void 0 && input.tipoNegocioDeseado) updateData.tipoNegocioDeseado = input.tipoNegocioDeseado;
     if (input.idUsuarioWhatsapp !== void 0) updateData.idUsuarioWhatsapp = input.idUsuarioWhatsapp;
     if (input.nombreUsuarioWhatsapp !== void 0) updateData.nombreUsuarioWhatsapp = input.nombreUsuarioWhatsapp;
+    if (input.origenNombre !== void 0) updateData.origenNombre = input.origenNombre;
     await db.update(requirements).set(updateData).where(eq8(requirements.id, input.requirementId));
     console.log(`[JanIA-UpdateRequirement] Requerimiento #${input.requirementId} actualizado directamente desde Mesa de Cotejo (incluyendo tel\xE9fono: ${input.idUsuarioWhatsapp || "N/A"})`);
     const phoneChanged = Boolean(input.idUsuarioWhatsapp && input.idUsuarioWhatsapp !== existingReq?.idUsuarioWhatsapp);
