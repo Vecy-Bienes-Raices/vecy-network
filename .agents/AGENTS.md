@@ -163,7 +163,27 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.6 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.7 — Septiembre 2026
+
+### Novedades v31.7 (Doctrina de Edición Integral, Auto-Cálculo de Antigüedad, Adición Dinámica de Amenidades y Persistencia en Ficha Técnica):
+- **Diagnóstico y Solución de Persistencia en Edición de Fichas (Caso Año 1994 / Antigüedad 32 años)**:
+  1) **Causa Raíz de la Pérdida de Datos**:
+     - Al editar la fila "Antigüedad / Año", el input caía en un fallback genérico (`prop_custom_antiguedadano`), el cual no estaba mapeado ni en `updatePropMut` ni en `updatePropertyDetails` del backend.
+     - `getAllMatches` en `server/routers/janIA.ts` no realizaba el `select` de `yearBuilt` ni `antiguedadAnos`, provocando que al refrescar o recargar la página el valor siempre quedara vacío (`N/E (Consultar)`).
+     - En `scoreRows`, cuando la demanda tenía "Flexible / Sin restricción" y la oferta aportaba año/edad, el estado se marcaba `"neutral"`, proyectando erróneamente un badge gris de *"Dato Pendiente"* en lugar de verde *"Coincide"*.
+  2) **Auto-Cálculo Inteligente de Año y Antigüedad (Año Base 2026)**:
+     - Al tipear el año (e.g. `1994`), el sistema calcula automáticamente la edad: `2026 - 1994 = 32 años`.
+     - Si el usuario tipea directamente la edad (e.g. `32`), el sistema infiere el año de construcción (`1994`).
+     - Despliegue visual simultáneo e interactivo: `📅 Año: 1994 · ⏳ 32 años`.
+     - Calibración de insignia de cumplimiento: pasa inmediatamente a **🟢 Coincide**.
+  3) **Persistencia Total en Base de Datos (`janIA.ts` Router)**:
+     - `updatePropertyDetails` y `updateRequirementDetails` soportan y almacenan taxativamente `yearBuilt`, `antiguedadAnos`, `interiorExterior`, `garageType`, `amenities` (JSONB) y `caracteristicasDeseadas` (JSONB).
+     - Los procedimientos `handleOnlySave` y `handleRecalculateMatch` aplican actualización optimista inmediata (0ms lag) y propagación en cascada.
+  4) **Inputs Dedicados y Creación Dinámica de Atributos ("➕ Completar / Agregar Atributo...")**:
+     - Selectores e inputs especializados para **Ubicación en Piso (Interior / Exterior / Mixto)**, **Tipología de Cocina (Cerrada / Abierta / Isla / Integral)**, **Cuarto y Baño de Servicio (CBS)**, **Depósito / Cuarto Útil**, **Balcón / Terraza / Patio**, **Tipo de Garaje (Independiente / Lineal)**, **Piso / Nivel** y **Estado de Conservación**.
+     - Toolbar interactiva con menú desplegable para incorporar características faltantes (Ascensor, Conjunto Club House, Gas Natural, Chimenea, Gimnasio, Piscina, Canchas, Vigilancia 24/7, Planta Eléctrica, etc.) o cualquier "✏️ Otro Atributo Personalizado", reflejándose de forma alineada en la tabla desktop y en las minitarjetas móviles.
+- **Incremento Oficial de Versión**:
+  1) Elevado a `v31.7` en `shared/const.ts` y `package.json` (31.7.0).
 
 ### Novedades v31.6 (Restauración y Blindaje de Match #M12305 y Calibración Doctrinal de Umbral VECY 85%-100%):
 - **Diagnóstico y Rescate de Match #M12305 (Propiedad #314 ↔ Requerimiento #146)**:

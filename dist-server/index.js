@@ -15650,7 +15650,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.6";
+var VECY_VERSION = "v31.7";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 
@@ -16688,10 +16688,15 @@ ${liveStats}${userContextInstruction}
           bedrooms: properties.bedrooms,
           bathrooms: properties.bathrooms,
           garages: properties.garages,
+          garageType: properties.garageType,
+          floorDetail: properties.floorDetail,
           stratum: properties.stratum,
           areaTotal: properties.areaTotal,
           areaPrivate: properties.areaPrivate,
           adminFee: properties.adminFee,
+          yearBuilt: properties.yearBuilt,
+          antiguedadAnos: properties.antiguedadAnos,
+          amenities: properties.amenities,
           isAmoblado: properties.isAmoblado,
           rawText: properties.rawText,
           externalUrl: properties.externalUrl,
@@ -16712,6 +16717,7 @@ ${liveStats}${userContextInstruction}
           name: requirements.name,
           presupuestoMin: requirements.presupuestoMin,
           presupuestoMax: requirements.presupuestoMax,
+          adminFeeMax: requirements.adminFeeMax,
           ciudadDeseada: requirements.ciudadDeseada,
           zonaDeseada: requirements.zonaDeseada,
           addressNeighborhood: requirements.addressNeighborhood,
@@ -16728,6 +16734,7 @@ ${liveStats}${userContextInstruction}
           areaMin: requirements.areaMin,
           estratoDeseado: requirements.estratoDeseado,
           amobladoDeseado: requirements.amobladoDeseado,
+          caracteristicasDeseadas: requirements.caracteristicasDeseadas,
           rawText: requirements.rawText,
           enlaceOrigen: requirements.enlaceOrigen,
           createdAt: requirements.createdAt
@@ -16812,7 +16819,12 @@ ${liveStats}${userContextInstruction}
     transactionType: z2.string().optional().nullable(),
     idUsuarioWhatsapp: z2.string().optional().nullable(),
     nombreUsuarioWhatsapp: z2.string().optional().nullable(),
-    origenNombre: z2.string().optional().nullable()
+    origenNombre: z2.string().optional().nullable(),
+    yearBuilt: z2.union([z2.number(), z2.string()]).optional().nullable(),
+    antiguedadAnos: z2.union([z2.number(), z2.string()]).optional().nullable(),
+    interiorExterior: z2.string().optional().nullable(),
+    garageType: z2.string().optional().nullable(),
+    amenities: z2.record(z2.string(), z2.any()).optional().nullable()
   })).mutation(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new Error("Database not available");
@@ -16894,6 +16906,43 @@ ${liveStats}${userContextInstruction}
     if (input.idUsuarioWhatsapp !== void 0) updateData.idUsuarioWhatsapp = input.idUsuarioWhatsapp;
     if (input.nombreUsuarioWhatsapp !== void 0) updateData.nombreUsuarioWhatsapp = input.nombreUsuarioWhatsapp;
     if (input.origenNombre !== void 0) updateData.origenNombre = input.origenNombre;
+    if (input.garageType !== void 0) updateData.garageType = input.garageType;
+    const currentYear = 2026;
+    let computedYear = sanitizeInt(input.yearBuilt);
+    let computedAge = sanitizeInt(input.antiguedadAnos);
+    if (computedYear !== null && computedYear > 1900 && computedYear <= currentYear + 2) {
+      updateData.yearBuilt = computedYear;
+      if (computedAge === null) {
+        computedAge = Math.max(0, currentYear - computedYear);
+        updateData.antiguedadAnos = computedAge;
+      }
+    } else if (computedAge !== null && computedAge >= 0 && computedAge <= 150) {
+      updateData.antiguedadAnos = computedAge;
+      if (computedYear === null) {
+        computedYear = currentYear - computedAge;
+        updateData.yearBuilt = computedYear;
+      }
+    }
+    const existingAmenities = existingProp?.amenities || {};
+    const mergedAmenities = { ...existingAmenities };
+    let hasAmenitiesChange = false;
+    if (input.interiorExterior !== void 0) {
+      mergedAmenities.interiorExterior = input.interiorExterior;
+      hasAmenitiesChange = true;
+    }
+    if (computedYear || computedAge !== null) {
+      const yStr = computedYear || (computedAge !== null ? currentYear - computedAge : "");
+      const aStr = computedAge !== null ? computedAge : computedYear ? currentYear - computedYear : "";
+      mergedAmenities.antiguedad = `${yStr} (${aStr} a\xF1os)`;
+      hasAmenitiesChange = true;
+    }
+    if (input.amenities && typeof input.amenities === "object") {
+      Object.assign(mergedAmenities, input.amenities);
+      hasAmenitiesChange = true;
+    }
+    if (hasAmenitiesChange) {
+      updateData.amenities = mergedAmenities;
+    }
     await db.update(properties).set(updateData).where(eq8(properties.id, input.propertyId));
     console.log(`[JanIA-UpdateProperty] Propiedad #${input.propertyId} actualizada directamente desde Mesa de Cotejo (incluyendo tel\xE9fono: ${input.idUsuarioWhatsapp || "N/A"})`);
     const hasPhone = Boolean(input.idUsuarioWhatsapp || existingProp?.idUsuarioWhatsapp);
@@ -16954,7 +17003,10 @@ ${liveStats}${userContextInstruction}
     tipoNegocioDeseado: z2.string().optional().nullable(),
     idUsuarioWhatsapp: z2.string().optional().nullable(),
     nombreUsuarioWhatsapp: z2.string().optional().nullable(),
-    origenNombre: z2.string().optional().nullable()
+    origenNombre: z2.string().optional().nullable(),
+    antiguedadMax: z2.union([z2.number(), z2.string()]).optional().nullable(),
+    interiorExterior: z2.string().optional().nullable(),
+    caracteristicasDeseadas: z2.record(z2.string(), z2.any()).optional().nullable()
   })).mutation(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new Error("Database not available");
@@ -17033,6 +17085,25 @@ ${liveStats}${userContextInstruction}
     if (input.idUsuarioWhatsapp !== void 0) updateData.idUsuarioWhatsapp = input.idUsuarioWhatsapp;
     if (input.nombreUsuarioWhatsapp !== void 0) updateData.nombreUsuarioWhatsapp = input.nombreUsuarioWhatsapp;
     if (input.origenNombre !== void 0) updateData.origenNombre = input.origenNombre;
+    const existingCaract = existingReq?.caracteristicasDeseadas || {};
+    const mergedCaract = { ...existingCaract };
+    let hasCaractChange = false;
+    if (input.interiorExterior !== void 0) {
+      mergedCaract.interiorExterior = input.interiorExterior;
+      hasCaractChange = true;
+    }
+    if (input.antiguedadMax !== void 0) {
+      const aMax = sanitizeInt(input.antiguedadMax);
+      mergedCaract.antiguedadMax = aMax;
+      hasCaractChange = true;
+    }
+    if (input.caracteristicasDeseadas && typeof input.caracteristicasDeseadas === "object") {
+      Object.assign(mergedCaract, input.caracteristicasDeseadas);
+      hasCaractChange = true;
+    }
+    if (hasCaractChange) {
+      updateData.caracteristicasDeseadas = mergedCaract;
+    }
     await db.update(requirements).set(updateData).where(eq8(requirements.id, input.requirementId));
     console.log(`[JanIA-UpdateRequirement] Requerimiento #${input.requirementId} actualizado directamente desde Mesa de Cotejo (incluyendo tel\xE9fono: ${input.idUsuarioWhatsapp || "N/A"})`);
     const hasPhone = Boolean(input.idUsuarioWhatsapp || existingReq?.idUsuarioWhatsapp);

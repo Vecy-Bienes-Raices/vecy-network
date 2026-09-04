@@ -52,7 +52,41 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.6 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.7 — Septiembre 2026
+
+### 🗓️ Sesión: Viernes 4 de Septiembre de 2026 — 18:25 a 18:45 (Hora Colombia UTC-5)
+**Versión**: `v31.7` | **Ambiente**: Producción VPS (`13.140.149.144`) + Mesa de Cotejo Admin Panel (`vecy-network.vercel.app/admin`) + Supabase DB + GitHub (`main`)
+
+#### 🎯 Solicitud de Eduardo A. Rivera:
+1. "Yo le doy editar, pongo el año "1994", le doy guardar y el campo vuelve a quedar sin nada. NO Guarda ese dato en especial. Aunque deberías revisarlos todos para que en realidad se guarden y deje crear nuevos campos por si tiene terraza, balcón, etc otras cosas o características."
+2. "En esa que acabamos de subir como ya lo estoy gestionando. No me deja subir el año o antiguedad. estoy intentando colocarle 1994 que es el año de construcción y debería salir allí como al lado que tiene 32 años, tambien el apartamento tiene otras características como la que es de ubicación en piso: 'Interior', pero debería la tabla dejarme crear campos para yo completar esos datos. Y todos deberían tener estas funciones bien alineaditas y hechas y lógicamente FUNCIONANDO a la PERFECCIÓN."
+
+#### 🛠️ Diagnóstico Técnico e Implementación:
+1. **Causa Raíz de la Desaparición del Año / Antigüedad**:
+   - En `AdminMatches.tsx`, la fila "Antigüedad / Año" no tenía un input mapeado a las columnas formales de la base de datos (`yearBuilt`, `antiguedadAnos`), sino que caía en un fallback dinámico `prop_custom_antiguedadano` desvinculado de la mutación de guardado.
+   - En el backend (`server/routers/janIA.ts`), el procedimiento `getAllMatches` omitía las columnas `yearBuilt` y `antiguedadAnos` en su sentencia de selección, por lo que al recargar la vista el cliente recibía siempre `undefined`.
+   - En la lógica de evaluación `scoreRows`, cuando la demanda tenía "Flexible / Sin restricción" y la oferta indicaba año/antigüedad, el estado se marcaba `"neutral"`, proyectando un badge gris de *"Dato Pendiente"* en lugar de verde *"Coincide"*.
+2. **Auto-Cálculo Inteligente de Año y Antigüedad (Año Base 2026)**:
+   - Al digitar el año (e.g. `1994`), calcula automáticamente la edad: `2026 - 1994 = 32 años`.
+   - Si se ingresan los años de edad (e.g. `32`), deduce el año de construcción (`1994`).
+   - Muestra en tiempo real la insignia explicativa: `📅 Año: 1994 · ⏳ 32 años`.
+   - La casilla de cumplimiento se calibra automáticamente a **🟢 Coincide**.
+3. **Persistencia Total en Base de Datos (`janIA.ts` Router)**:
+   - Actualizado `updatePropertyDetails` y `updateRequirementDetails` para aceptar y almacenar formalmente `yearBuilt`, `antiguedadAnos`, `interiorExterior`, `garageType`, `amenities` (JSONB) y `caracteristicasDeseadas` (JSONB).
+   - `handleOnlySave` y `handleRecalculateMatch` aplican actualización optimista local inmediata (0ms lag) y propagación en cascada.
+4. **Inputs Dedicados en Cotejo Técnico (Desktop y Móvil)**:
+   - **Ubicación en Piso (Vista)**: Selector para `Interior`, `Exterior`, `Exterior e Interior (Mixto)`.
+   - **Tipología de Cocina**: Selector para `Cerrada / Tradicional`, `Abierta / Tipo Americano`, `Abierta tipo Isla`, `Integral`, `Semi-abierta`.
+   - **Cuarto y Baño de Servicio (CBS)**, **Depósito / Cuarto Útil**, **Balcón / Terraza / Patio**, **Tipo de Garaje (Independiente / Lineal)**, **Piso / Nivel** y **Estado de Conservación**.
+5. **Creación Dinámica de Atributos ("➕ Completar / Agregar Atributo...")**:
+   - Barra interactiva con menú desplegable al pie del cotejo técnico que permite anexar amenidades (Ascensor, Conjunto Club House, Gas Natural, Chimenea, Gimnasio, Piscina, Canchas, Vigilancia 24/7, Planta Eléctrica, etc.) o cualquier característica personalizada.
+   - Las filas creadas se renderizan de forma alineada en la tabla y en móvil, y se guardan directamente en el JSONB de `amenities` o `caracteristicasDeseadas`.
+6. **Incremento Oficial de Versión**:
+   - Elevado a **`v31.7`** en `shared/const.ts` y `package.json` (31.7.0).
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.6 — Septiembre 2026
 
 ### 🗓️ Sesión: Viernes 4 de Septiembre de 2026 — 17:43 a 18:05 (Hora Colombia UTC-5)
 **Versión**: `v31.6` | **Ambiente**: Producción VPS (`13.140.149.144`) + Mesa de Cotejo Admin Panel (`vecy-network.vercel.app/admin`) + Supabase DB + GitHub (`main`)

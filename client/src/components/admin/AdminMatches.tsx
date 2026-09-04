@@ -5,7 +5,7 @@ import {
   DollarSign, Ruler, Bed, Bath, Car, Shield, ExternalLink, Receipt, Box, Globe,
   Edit3, Save, Loader2, RotateCcw, Sun, Zap, Utensils, Home, Flame, ThumbsUp, ThumbsDown,
   Trees, ShieldCheck, BookOpen, Copy, Check, ClipboardList, Archive, Layers,
-  Tv, Wine, Wind, Lock, Dumbbell, Waves, Landmark, School, Fuel, Percent, Compass, Smile, Maximize, Coffee, Mountain, Trophy, ShieldAlert, VolumeX
+  Tv, Wine, Wind, Lock, Dumbbell, Waves, Landmark, School, Fuel, Percent, Compass, Smile, Maximize, Coffee, Mountain, Trophy, ShieldAlert, VolumeX, Plus
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -374,7 +374,7 @@ const scoreRowsCache = new Map<string, { rows: ScoreRow[]; autoScore: number; pt
 function scoreRows(req: any, prop: any) {
   if (!req || !prop) return { rows: [], autoScore: 0, pts: 0, max: 0 };
 
-  const cacheKey = `${req.id || 'r'}_${req.presupuestoMax || ''}_${req.areaMin || ''}_${req.habitacionesMin || ''}_${req.banosMin || ''}_${req.parqueaderosMin || ''}_${req.zonaDeseada || ''}_${req.addressNeighborhood || ''}_${req.ciudadDeseada || ''}_${req.tipoInmuebleDeseado || ''}_${req.tipoNegocioDeseado || ''}_${req.idUsuarioWhatsapp || ''}__${prop.id || 'p'}_${prop.price || ''}_${prop.rentPrice || ''}_${prop.adminFee || ''}_${prop.areaTotal || ''}_${prop.bedrooms || ''}_${prop.bathrooms || ''}_${prop.garages || ''}_${prop.stratum || ''}_${prop.zone || ''}_${prop.addressNeighborhood || ''}_${prop.city || ''}_${prop.propertyType || ''}_${prop.transactionType || ''}_${prop.idUsuarioWhatsapp || ''}`;
+  const cacheKey = `${req.id || 'r'}_${req.presupuestoMax || ''}_${req.areaMin || ''}_${req.habitacionesMin || ''}_${req.banosMin || ''}_${req.parqueaderosMin || ''}_${req.zonaDeseada || ''}_${req.addressNeighborhood || ''}_${req.ciudadDeseada || ''}_${req.tipoInmuebleDeseado || ''}_${req.tipoNegocioDeseado || ''}_${req.idUsuarioWhatsapp || ''}_${req.antiguedadMax || ''}_${(req.caracteristicasDeseadas as any)?.interiorExterior || ''}__${prop.id || 'p'}_${prop.price || ''}_${prop.rentPrice || ''}_${prop.adminFee || ''}_${prop.areaTotal || ''}_${prop.bedrooms || ''}_${prop.bathrooms || ''}_${prop.garages || ''}_${prop.stratum || ''}_${prop.zone || ''}_${prop.addressNeighborhood || ''}_${prop.city || ''}_${prop.propertyType || ''}_${prop.transactionType || ''}_${prop.idUsuarioWhatsapp || ''}_${prop.yearBuilt || ''}_${prop.antiguedadAnos || ''}_${(prop.amenities as any)?.interiorExterior || ''}_${(prop.amenities as any)?.antiguedad || ''}`;
 
   if (scoreRowsCache.has(cacheKey)) {
     return scoreRowsCache.get(cacheKey)!;
@@ -1393,19 +1393,49 @@ function scoreRows(req: any, prop: any) {
 
   add("Parqueaderos", garReqLabel, garPropLabel, garS, 5, <Car className="w-3.5 h-3.5" />);
 
-  // 12. Antigüedad / Año de Construcción
+  // 12. Antigüedad / Año de Construcción (Doctrina v31.7)
+  const currentSystemYear = 2026;
   let ageR = req.antiguedadMax ? Number(req.antiguedadMax) : (req.preferredAge ? Number(req.preferredAge) : 0);
+  if (ageR <= 0 && (req.caracteristicasDeseadas as any)?.antiguedadMax) {
+    ageR = Number((req.caracteristicasDeseadas as any).antiguedadMax);
+  }
+
+  let yearBuiltP = prop.yearBuilt ? Number(prop.yearBuilt) : (prop.constructionYear ? Number(prop.constructionYear) : null);
   let ageP = prop.antiguedadAnos != null ? Number(prop.antiguedadAnos)
-    : (prop.yearBuilt ? (new Date().getFullYear() - Number(prop.yearBuilt))
-    : (prop.constructionYear ? (new Date().getFullYear() - Number(prop.constructionYear)) : -1));
+    : (yearBuiltP ? (currentSystemYear - yearBuiltP) : -1);
+
+  if (ageP < 0 && (prop.amenities as any)?.antiguedad) {
+    const rawAnt = String((prop.amenities as any).antiguedad);
+    const mY = rawAnt.match(/\b(19\d\d|20\d\d)\b/);
+    if (mY) {
+      yearBuiltP = parseInt(mY[1], 10);
+      ageP = Math.max(0, currentSystemYear - yearBuiltP);
+    } else {
+      const mA = rawAnt.match(/(\d{1,2})\s*años/i);
+      if (mA) ageP = parseInt(mA[1], 10);
+    }
+  }
 
   if (ageP < 0 && propTextLower) {
-    const ageMatchP = propTextLower.match(/(?:antigüedad|antiguedad|edad|tiene|\|)\s*:?\s*(\d{1,2})\s*a[ñn]os/i)
-                   || propTextLower.match(/(\d{1,2})\s*a[ñn]os\s*(?:de\s*)?(?:construido|antigüedad|edificio)/i);
-    if (ageMatchP) ageP = parseInt(ageMatchP[1], 10);
-    else if (propTextLower.includes("a estrenar") || propTextLower.includes("para estrenar") || propTextLower.includes("sobre planos") || propTextLower.includes("nuevo")) {
-      ageP = 0;
+    const yMatch = propTextLower.match(/\b(?:año|construido en|de)\s*:?\s*(19\d\d|20\d\d)\b/i);
+    if (yMatch) {
+      yearBuiltP = parseInt(yMatch[1], 10);
+      ageP = Math.max(0, currentSystemYear - yearBuiltP);
+    } else {
+      const ageMatchP = propTextLower.match(/(?:antigüedad|antiguedad|edad|tiene|\|)\s*:?\s*(\d{1,2})\s*a[ñn]os/i)
+                     || propTextLower.match(/(\d{1,2})\s*a[ñn]os\s*(?:de\s*)?(?:construido|antigüedad|edificio)/i);
+      if (ageMatchP) {
+        ageP = parseInt(ageMatchP[1], 10);
+        if (!yearBuiltP) yearBuiltP = currentSystemYear - ageP;
+      } else if (propTextLower.includes("a estrenar") || propTextLower.includes("para estrenar") || propTextLower.includes("sobre planos") || propTextLower.includes("nuevo")) {
+        ageP = 0;
+        yearBuiltP = currentSystemYear;
+      }
     }
+  }
+
+  if (ageP >= 0 && !yearBuiltP && ageP <= 120) {
+    yearBuiltP = currentSystemYear - ageP;
   }
 
   let ageS: MatchStatus = "neutral";
@@ -1414,12 +1444,14 @@ function scoreRows(req: any, prop: any) {
     else if (ageP <= ageR + 5) ageS = "warn";
     else ageS = "warn";
   } else if (ageR <= 0 && ageP >= 0) {
-    ageS = "neutral";
+    ageS = "exact"; // 🟢 Coincide: la demanda no puso restricción y la oferta tiene el dato claro
   } else if (ageR > 0 && ageP < 0) {
     ageS = "neutral";
   }
   const reqAgeLabel = ageR > 0 ? `Máx ${ageR} años` : "Flexible / Sin restricción";
-  const propAgeLabel = ageP >= 0 ? (ageP === 0 ? "A estrenar / Sobre planos" : `${ageP} años`) : "N/E (Consultar)";
+  const propAgeLabel = ageP >= 0 
+    ? (ageP === 0 ? "A estrenar / Sobre planos (0 años)" : (yearBuiltP ? `${yearBuiltP} (${ageP} años)` : `${ageP} años`))
+    : "N/E (Consultar)";
   add("Antigüedad / Año", reqAgeLabel, propAgeLabel, ageS, 5, <Calendar className="w-3.5 h-3.5" />);
 
   // 13. Estrato Socioeconómico
@@ -1744,20 +1776,29 @@ function scoreRows(req: any, prop: any) {
     );
   }
 
-  // 26. Ubicación en Piso (Vista Exterior / Interior)
-  const reqExtInt = reqTextLower.includes("exterior") ? "Exterior" : (reqTextLower.includes("interior") ? "Interior" : null);
-  const propExtInt = propRawText.includes("exterior") ? "Exterior" : (propRawText.includes("interior") ? "Interior" : null);
-  if (reqExtInt || propExtInt) {
+  // 26. Ubicación en Piso (Vista Exterior / Interior) (Doctrina v31.7)
+  let reqExtInt = (req.caracteristicasDeseadas as any)?.interiorExterior 
+    || (reqTextLower.includes("exterior") ? "Exterior" : (reqTextLower.includes("interior") ? "Interior" : null));
+  let propExtInt = (prop.amenities as any)?.interiorExterior 
+    || prop.interiorExterior 
+    || (propRawText.includes("exterior") ? "Exterior" : (propRawText.includes("interior") ? "Interior" : null));
+  if (propExtInt && /na|n\/a|sin\s*especificar/i.test(String(propExtInt))) propExtInt = null;
+  if (reqExtInt && /na|n\/a|flexible|sin\s*restricci[oó]n/i.test(String(reqExtInt))) reqExtInt = null;
+
+  const isMultiUnit = /apartamento|apto|apartaestudio|loft|penthouse|oficina|consultorio/i.test(prop.propertyType || req.tipoInmuebleDeseado || "");
+  if (reqExtInt || propExtInt || isMultiUnit) {
     let viewS: MatchStatus = "neutral";
     if (reqExtInt && propExtInt) {
-      viewS = reqExtInt === propExtInt ? "exact" : "missing";
+      viewS = String(reqExtInt).toLowerCase() === String(propExtInt).toLowerCase() ? "exact" : "missing";
     } else if (!reqExtInt && propExtInt) {
-      viewS = "plus";
+      viewS = "exact"; // Oferta tiene vista definida y demanda es flexible -> Coincide!
+    } else if (reqExtInt && !propExtInt) {
+      viewS = "neutral";
     }
     add(
       "Ubicación en Piso (Vista)",
-      reqExtInt ? `Exige Vista ${reqExtInt}` : "Flexible",
-      propExtInt ? `Vista ${propExtInt}` : "Consultar",
+      reqExtInt ? `Exige Vista ${reqExtInt}` : "Flexible / Sin restricción",
+      propExtInt ? `Vista ${propExtInt}` : "Consultar / N/E",
       viewS,
       3,
       <Compass className="w-3.5 h-3.5" />
@@ -2147,6 +2188,59 @@ export default function AdminMatches() {
   const [feedbackStatusMap, setFeedbackStatusMap] = React.useState<Record<number, 'exitoso' | 'rechazado' | 'en_negociacion'>>({});
   const [dismissedMatchIds, setDismissedMatchIds] = React.useState<Set<number>>(new Set());
   const [saveStatusMap, setSaveStatusMap] = React.useState<Record<number, 'saved' | 'recalculated'>>({});
+  const [customAttributesByMatch, setCustomAttributesByMatch] = React.useState<Record<number, { key: string; label: string }[]>>({});
+
+  const handleAddAttributeToCard = (matchId: number, attrKey: string) => {
+    const attributeDefs: Record<string, { key: string; label: string }> = {
+      vista: { key: 'vista', label: 'Ubicación en Piso (Vista)' },
+      antiguedad: { key: 'antiguedad', label: 'Antigüedad / Año' },
+      cocina: { key: 'cocina', label: 'Tipología de Cocina' },
+      cbs: { key: 'cbs', label: 'Cuarto de Servicio (CBS)' },
+      deposito: { key: 'deposito', label: 'Depósito / Cuarto Útil' },
+      balcon: { key: 'balcon', label: 'Balcón / Terraza / Patio' },
+      garaje_tipo: { key: 'garaje_tipo', label: 'Tipo de Garaje' },
+      ascensor: { key: 'ascensor', label: 'Equipamiento (Ascensor)' },
+      conjunto: { key: 'conjunto', label: 'Equipamiento (Conjunto Cerrado)' },
+      chimenea: { key: 'chimenea', label: 'Chimenea' },
+      gas: { key: 'gas', label: 'Gas Natural' },
+      gimnasio: { key: 'gimnasio', label: 'Gimnasio' },
+      piscina: { key: 'piscina', label: 'Piscina' },
+      cancha: { key: 'cancha', label: 'Cancha Deportiva / Squash' },
+      zona_infantil: { key: 'zona_infantil', label: 'Zona Infantil' },
+      vigilancia: { key: 'vigilancia', label: 'Vigilancia & Seguridad 24/7' },
+      planta: { key: 'planta', label: 'Planta Eléctrica' },
+      estado: { key: 'estado', label: 'Estado del Inmueble' },
+      lavanderia: { key: 'lavanderia', label: 'Zona de Lavandería' },
+    };
+
+    if (attrKey === 'custom') {
+      const customName = window.prompt("Ingrese el nombre de la nueva característica (ej: Piscina Privada, Chimenea, Terraza BBQ):");
+      if (!customName || !customName.trim()) return;
+      const cleanKey = customName.trim().toLowerCase().replace(/[^a-z0-9]/g, '_');
+      setCustomAttributesByMatch(prev => ({
+        ...prev,
+        [matchId]: [...(prev[matchId] || []), { key: cleanKey, label: customName.trim() }]
+      }));
+      toast.success(`Característica "${customName.trim()}" agregada a la tabla`);
+      return;
+    }
+
+    const def = attributeDefs[attrKey];
+    if (!def) return;
+
+    setCustomAttributesByMatch(prev => {
+      const current = prev[matchId] || [];
+      if (current.some(item => item.key === def.key)) {
+        toast.info(`La característica "${def.label}" ya se encuentra en la tabla`);
+        return prev;
+      }
+      toast.success(`Característica "${def.label}" agregada a la tabla`);
+      return {
+        ...prev,
+        [matchId]: [...current, def]
+      };
+    });
+  };
 
   // Función de copiado al portapapeles infalible (Async Clipboard API con fallback a ExecCommand Textarea)
   const copyToClipboard = async (text: string): Promise<boolean> => {
@@ -2421,6 +2515,15 @@ export default function AdminMatches() {
       propTransactionType: m.property?.transactionType || '',
       propPhone: m.property?.idUsuarioWhatsapp || m.property?.phone || m.property?.contactPhone || '',
       propOrigenNombre: isPropDirect ? '' : (m.property?.origenNombre || ''),
+      propYearBuilt: m.property?.yearBuilt ?? '',
+      propAntiguedadAnos: m.property?.antiguedadAnos ?? '',
+      propAntiguedadRaw: m.property?.yearBuilt ? `${m.property.yearBuilt}` : (m.property?.antiguedadAnos !== null && m.property?.antiguedadAnos !== undefined ? `${m.property.antiguedadAnos}` : (m.property?.amenities?.antiguedad || '')),
+      propExtInt: m.property?.amenities?.interiorExterior || (m.property?.rawText?.toLowerCase().includes('interior') ? 'Interior' : (m.property?.rawText?.toLowerCase().includes('exterior') ? 'Exterior' : '')),
+      propCocina: m.property?.amenities?.cocina || '',
+      propDepositos: m.property?.amenities?.depositos ?? '',
+      propCuartoServicio: m.property?.amenities?.cuartoBanoServicio || '',
+      propBalcon: m.property?.amenities?.balcon || '',
+      propGarageType: m.property?.garageType || '',
 
       // Demanda (Requerimiento)
       reqSenderName: m.requirement?.nombreUsuarioWhatsapp || (isReqDirect ? m.requirement?.origenNombre : '') || '',
@@ -2438,6 +2541,12 @@ export default function AdminMatches() {
       reqTransactionType: m.requirement?.tipoNegocioDeseado || '',
       reqPhone: m.requirement?.idUsuarioWhatsapp || m.requirement?.phone || m.requirement?.contactPhone || '',
       reqOrigenNombre: isReqDirect ? '' : (m.requirement?.origenNombre || ''),
+      reqAntiguedadMax: m.requirement?.antiguedadMax || m.requirement?.caracteristicasDeseadas?.antiguedadMax || '',
+      reqExtInt: m.requirement?.caracteristicasDeseadas?.interiorExterior || (m.requirement?.rawText?.toLowerCase().includes('interior') ? 'Interior' : (m.requirement?.rawText?.toLowerCase().includes('exterior') ? 'Exterior' : '')),
+      reqCocina: m.requirement?.caracteristicasDeseadas?.cocina || '',
+      reqDepositos: m.requirement?.caracteristicasDeseadas?.depositos ?? '',
+      reqCuartoServicio: m.requirement?.caracteristicasDeseadas?.cuartoBanoServicio || '',
+      reqBalcon: m.requirement?.caracteristicasDeseadas?.balcon || '',
     });
   };
 
@@ -2493,6 +2602,36 @@ export default function AdminMatches() {
 
       if (m.property?.id && (Object.keys(editForm).some(k => k.startsWith('prop')) || editForm.propPhone || editForm.propSenderName || editForm.propOrigenNombre)) {
         const cleanPropPhone = normalizePhoneInput(editForm.propPhone);
+        const propAmenitiesToSave: Record<string, any> = { ...(m.property?.amenities || {}) };
+        if (editForm.propExtInt !== undefined && editForm.propExtInt !== '') {
+          propAmenitiesToSave.interiorExterior = editForm.propExtInt;
+        }
+        if (editForm.propCocina !== undefined && editForm.propCocina !== '') {
+          propAmenitiesToSave.cocina = editForm.propCocina;
+        }
+        if (editForm.propDepositos !== undefined && editForm.propDepositos !== '') {
+          propAmenitiesToSave.depositos = cleanIntForSave(editForm.propDepositos);
+        }
+        if (editForm.propCuartoServicio !== undefined && editForm.propCuartoServicio !== '') {
+          propAmenitiesToSave.cuartoBanoServicio = editForm.propCuartoServicio;
+        }
+        if (editForm.propBalcon !== undefined && editForm.propBalcon !== '') {
+          propAmenitiesToSave.balcon = editForm.propBalcon;
+        }
+        const parsedYear = cleanIntForSave(editForm.propYearBuilt);
+        const parsedAge = cleanIntForSave(editForm.propAntiguedadAnos);
+        if (parsedYear || parsedAge !== undefined) {
+          const yr = parsedYear || (parsedAge !== undefined ? 2026 - parsedAge : '');
+          const ag = parsedAge !== undefined ? parsedAge : (parsedYear ? 2026 - parsedYear : '');
+          propAmenitiesToSave.antiguedad = `${yr} (${ag} años)`;
+        }
+        Object.keys(editForm).forEach(k => {
+          if (k.startsWith('prop_custom_')) {
+            const attrKey = k.replace('prop_custom_', '');
+            propAmenitiesToSave[attrKey] = editForm[k];
+          }
+        });
+
         promises.push(
           updatePropMut.mutateAsync({
             propertyId: m.property.id,
@@ -2513,12 +2652,43 @@ export default function AdminMatches() {
             idUsuarioWhatsapp: cleanPropPhone,
             nombreUsuarioWhatsapp: editForm.propSenderName !== undefined && editForm.propSenderName.trim() !== '' ? String(editForm.propSenderName).trim() : undefined,
             origenNombre: editForm.propOrigenNombre !== undefined && editForm.propOrigenNombre.trim() !== '' ? String(editForm.propOrigenNombre).trim() : undefined,
+            yearBuilt: parsedYear,
+            antiguedadAnos: parsedAge,
+            interiorExterior: editForm.propExtInt || undefined,
+            garageType: editForm.propGarageType || undefined,
+            amenities: propAmenitiesToSave,
           })
         );
       }
 
       if (m.requirement?.id && (Object.keys(editForm).some(k => k.startsWith('req')) || editForm.reqPhone || editForm.reqSenderName || editForm.reqOrigenNombre)) {
         const cleanReqPhone = normalizePhoneInput(editForm.reqPhone);
+        const reqCaractToSave: Record<string, any> = { ...(m.requirement?.caracteristicasDeseadas || {}) };
+        if (editForm.reqExtInt !== undefined && editForm.reqExtInt !== '') {
+          reqCaractToSave.interiorExterior = editForm.reqExtInt;
+        }
+        if (editForm.reqAntiguedadMax !== undefined && editForm.reqAntiguedadMax !== '') {
+          reqCaractToSave.antiguedadMax = cleanIntForSave(editForm.reqAntiguedadMax);
+        }
+        if (editForm.reqCocina !== undefined && editForm.reqCocina !== '') {
+          reqCaractToSave.cocina = editForm.reqCocina;
+        }
+        if (editForm.reqDepositos !== undefined && editForm.reqDepositos !== '') {
+          reqCaractToSave.depositos = cleanIntForSave(editForm.reqDepositos);
+        }
+        if (editForm.reqCuartoServicio !== undefined && editForm.reqCuartoServicio !== '') {
+          reqCaractToSave.cuartoBanoServicio = editForm.reqCuartoServicio;
+        }
+        if (editForm.reqBalcon !== undefined && editForm.reqBalcon !== '') {
+          reqCaractToSave.balcon = editForm.reqBalcon;
+        }
+        Object.keys(editForm).forEach(k => {
+          if (k.startsWith('req_custom_')) {
+            const attrKey = k.replace('req_custom_', '');
+            reqCaractToSave[attrKey] = editForm[k];
+          }
+        });
+
         promises.push(
           updateReqMut.mutateAsync({
             requirementId: m.requirement.id,
@@ -2537,6 +2707,9 @@ export default function AdminMatches() {
             idUsuarioWhatsapp: cleanReqPhone,
             nombreUsuarioWhatsapp: editForm.reqSenderName !== undefined && editForm.reqSenderName.trim() !== '' ? String(editForm.reqSenderName).trim() : undefined,
             origenNombre: editForm.reqOrigenNombre !== undefined && editForm.reqOrigenNombre.trim() !== '' ? String(editForm.reqOrigenNombre).trim() : undefined,
+            antiguedadMax: cleanIntForSave(editForm.reqAntiguedadMax),
+            interiorExterior: editForm.reqExtInt || undefined,
+            caracteristicasDeseadas: reqCaractToSave,
           })
         );
       }
@@ -2552,6 +2725,20 @@ export default function AdminMatches() {
 
       // Actualización optimista de memoria inmediata (0ms lag)
       if (m.property) {
+        const parsedYear = cleanIntForSave(editForm.propYearBuilt);
+        const parsedAge = cleanIntForSave(editForm.propAntiguedadAnos);
+        const propAmenitiesToSave: Record<string, any> = { ...(m.property?.amenities || {}) };
+        if (editForm.propExtInt) propAmenitiesToSave.interiorExterior = editForm.propExtInt;
+        if (editForm.propCocina) propAmenitiesToSave.cocina = editForm.propCocina;
+        if (editForm.propDepositos) propAmenitiesToSave.depositos = cleanIntForSave(editForm.propDepositos);
+        if (editForm.propCuartoServicio) propAmenitiesToSave.cuartoBanoServicio = editForm.propCuartoServicio;
+        if (editForm.propBalcon) propAmenitiesToSave.balcon = editForm.propBalcon;
+        if (parsedYear || parsedAge !== undefined) {
+          const yr = parsedYear || (parsedAge !== undefined ? 2026 - parsedAge : '');
+          const ag = parsedAge !== undefined ? parsedAge : (parsedYear ? 2026 - parsedYear : '');
+          propAmenitiesToSave.antiguedad = `${yr} (${ag} años)`;
+        }
+
         Object.assign(m.property, {
           price: editForm.propPrice !== undefined && editForm.propPrice !== '' ? editForm.propPrice : m.property.price,
           rentPrice: editForm.propRentPrice !== undefined && editForm.propRentPrice !== '' ? editForm.propRentPrice : m.property.rentPrice,
@@ -2566,10 +2753,23 @@ export default function AdminMatches() {
           idUsuarioWhatsapp: normalizePhoneInput(editForm.propPhone) || m.property.idUsuarioWhatsapp,
           nombreUsuarioWhatsapp: editForm.propSenderName !== undefined && editForm.propSenderName.trim() !== '' ? String(editForm.propSenderName).trim() : m.property.nombreUsuarioWhatsapp,
           origenNombre: editForm.propOrigenNombre ? String(editForm.propOrigenNombre).trim() : m.property.origenNombre,
+          yearBuilt: parsedYear ?? m.property.yearBuilt,
+          antiguedadAnos: parsedAge ?? m.property.antiguedadAnos,
+          interiorExterior: editForm.propExtInt || m.property.interiorExterior,
+          garageType: editForm.propGarageType || m.property.garageType,
+          amenities: propAmenitiesToSave,
         });
       }
 
       if (m.requirement) {
+        const reqCaractToSave: Record<string, any> = { ...(m.requirement?.caracteristicasDeseadas || {}) };
+        if (editForm.reqExtInt) reqCaractToSave.interiorExterior = editForm.reqExtInt;
+        if (editForm.reqAntiguedadMax) reqCaractToSave.antiguedadMax = cleanIntForSave(editForm.reqAntiguedadMax);
+        if (editForm.reqCocina) reqCaractToSave.cocina = editForm.reqCocina;
+        if (editForm.reqDepositos) reqCaractToSave.depositos = cleanIntForSave(editForm.reqDepositos);
+        if (editForm.reqCuartoServicio) reqCaractToSave.cuartoBanoServicio = editForm.reqCuartoServicio;
+        if (editForm.reqBalcon) reqCaractToSave.balcon = editForm.reqBalcon;
+
         Object.assign(m.requirement, {
           presupuestoMax: editForm.reqBudget !== undefined && editForm.reqBudget !== '' ? editForm.reqBudget : m.requirement.presupuestoMax,
           adminFeeMax: editForm.reqAdminMax !== undefined && editForm.reqAdminMax !== '' ? editForm.reqAdminMax : m.requirement.adminFeeMax,
@@ -2583,8 +2783,12 @@ export default function AdminMatches() {
           idUsuarioWhatsapp: normalizePhoneInput(editForm.reqPhone) || m.requirement.idUsuarioWhatsapp,
           nombreUsuarioWhatsapp: editForm.reqSenderName !== undefined && editForm.reqSenderName.trim() !== '' ? String(editForm.reqSenderName).trim() : m.requirement.nombreUsuarioWhatsapp,
           origenNombre: editForm.reqOrigenNombre ? String(editForm.reqOrigenNombre).trim() : m.requirement.origenNombre,
+          antiguedadMax: cleanIntForSave(editForm.reqAntiguedadMax) ?? m.requirement.antiguedadMax,
+          caracteristicasDeseadas: reqCaractToSave,
         });
       }
+
+      scoreRowsCache.clear();
 
       setSaveStatusMap(prev => ({ ...prev, [m.id]: 'saved' }));
       toast.success("✅ Ficha guardada y propagada en cascada a todas sus publicaciones");
@@ -2606,8 +2810,38 @@ export default function AdminMatches() {
     try {
       const savePromises: Promise<any>[] = [];
 
-      if (m.property?.id && Object.keys(editForm).some(k => k.startsWith('prop'))) {
+      if (m.property?.id && (Object.keys(editForm).some(k => k.startsWith('prop')) || editForm.propPhone || editForm.propSenderName || editForm.propOrigenNombre)) {
         const cleanPropPhone = normalizePhoneInput(editForm.propPhone);
+        const propAmenitiesToSave: Record<string, any> = { ...(m.property?.amenities || {}) };
+        if (editForm.propExtInt !== undefined && editForm.propExtInt !== '') {
+          propAmenitiesToSave.interiorExterior = editForm.propExtInt;
+        }
+        if (editForm.propCocina !== undefined && editForm.propCocina !== '') {
+          propAmenitiesToSave.cocina = editForm.propCocina;
+        }
+        if (editForm.propDepositos !== undefined && editForm.propDepositos !== '') {
+          propAmenitiesToSave.depositos = cleanIntForSave(editForm.propDepositos);
+        }
+        if (editForm.propCuartoServicio !== undefined && editForm.propCuartoServicio !== '') {
+          propAmenitiesToSave.cuartoBanoServicio = editForm.propCuartoServicio;
+        }
+        if (editForm.propBalcon !== undefined && editForm.propBalcon !== '') {
+          propAmenitiesToSave.balcon = editForm.propBalcon;
+        }
+        const parsedYear = cleanIntForSave(editForm.propYearBuilt);
+        const parsedAge = cleanIntForSave(editForm.propAntiguedadAnos);
+        if (parsedYear || parsedAge !== undefined) {
+          const yr = parsedYear || (parsedAge !== undefined ? 2026 - parsedAge : '');
+          const ag = parsedAge !== undefined ? parsedAge : (parsedYear ? 2026 - parsedYear : '');
+          propAmenitiesToSave.antiguedad = `${yr} (${ag} años)`;
+        }
+        Object.keys(editForm).forEach(k => {
+          if (k.startsWith('prop_custom_')) {
+            const attrKey = k.replace('prop_custom_', '');
+            propAmenitiesToSave[attrKey] = editForm[k];
+          }
+        });
+
         savePromises.push(
           updatePropMut.mutateAsync({
             propertyId: m.property.id,
@@ -2628,12 +2862,43 @@ export default function AdminMatches() {
             idUsuarioWhatsapp: cleanPropPhone,
             nombreUsuarioWhatsapp: editForm.propSenderName !== undefined && editForm.propSenderName.trim() !== '' ? String(editForm.propSenderName).trim() : undefined,
             origenNombre: editForm.propOrigenNombre !== undefined && editForm.propOrigenNombre.trim() !== '' ? String(editForm.propOrigenNombre).trim() : undefined,
+            yearBuilt: parsedYear,
+            antiguedadAnos: parsedAge,
+            interiorExterior: editForm.propExtInt || undefined,
+            garageType: editForm.propGarageType || undefined,
+            amenities: propAmenitiesToSave,
           })
         );
       }
 
-      if (m.requirement?.id && Object.keys(editForm).some(k => k.startsWith('req'))) {
+      if (m.requirement?.id && (Object.keys(editForm).some(k => k.startsWith('req')) || editForm.reqPhone || editForm.reqSenderName || editForm.reqOrigenNombre)) {
         const cleanReqPhone = normalizePhoneInput(editForm.reqPhone);
+        const reqCaractToSave: Record<string, any> = { ...(m.requirement?.caracteristicasDeseadas || {}) };
+        if (editForm.reqExtInt !== undefined && editForm.reqExtInt !== '') {
+          reqCaractToSave.interiorExterior = editForm.reqExtInt;
+        }
+        if (editForm.reqAntiguedadMax !== undefined && editForm.reqAntiguedadMax !== '') {
+          reqCaractToSave.antiguedadMax = cleanIntForSave(editForm.reqAntiguedadMax);
+        }
+        if (editForm.reqCocina !== undefined && editForm.reqCocina !== '') {
+          reqCaractToSave.cocina = editForm.reqCocina;
+        }
+        if (editForm.reqDepositos !== undefined && editForm.reqDepositos !== '') {
+          reqCaractToSave.depositos = cleanIntForSave(editForm.reqDepositos);
+        }
+        if (editForm.reqCuartoServicio !== undefined && editForm.reqCuartoServicio !== '') {
+          reqCaractToSave.cuartoBanoServicio = editForm.reqCuartoServicio;
+        }
+        if (editForm.reqBalcon !== undefined && editForm.reqBalcon !== '') {
+          reqCaractToSave.balcon = editForm.reqBalcon;
+        }
+        Object.keys(editForm).forEach(k => {
+          if (k.startsWith('req_custom_')) {
+            const attrKey = k.replace('req_custom_', '');
+            reqCaractToSave[attrKey] = editForm[k];
+          }
+        });
+
         savePromises.push(
           updateReqMut.mutateAsync({
             requirementId: m.requirement.id,
@@ -2652,6 +2917,9 @@ export default function AdminMatches() {
             idUsuarioWhatsapp: cleanReqPhone,
             nombreUsuarioWhatsapp: editForm.reqSenderName !== undefined && editForm.reqSenderName.trim() !== '' ? String(editForm.reqSenderName).trim() : undefined,
             origenNombre: editForm.reqOrigenNombre !== undefined && editForm.reqOrigenNombre.trim() !== '' ? String(editForm.reqOrigenNombre).trim() : undefined,
+            antiguedadMax: cleanIntForSave(editForm.reqAntiguedadMax),
+            interiorExterior: editForm.reqExtInt || undefined,
+            caracteristicasDeseadas: reqCaractToSave,
           })
         );
       }
@@ -2663,6 +2931,73 @@ export default function AdminMatches() {
         );
         await Promise.race([p, timeoutP]);
       }
+
+      // Actualización optimista inmediata en memoria local
+      if (m.property) {
+        const parsedYear = cleanIntForSave(editForm.propYearBuilt);
+        const parsedAge = cleanIntForSave(editForm.propAntiguedadAnos);
+        const propAmenitiesToSave: Record<string, any> = { ...(m.property?.amenities || {}) };
+        if (editForm.propExtInt) propAmenitiesToSave.interiorExterior = editForm.propExtInt;
+        if (editForm.propCocina) propAmenitiesToSave.cocina = editForm.propCocina;
+        if (editForm.propDepositos) propAmenitiesToSave.depositos = cleanIntForSave(editForm.propDepositos);
+        if (editForm.propCuartoServicio) propAmenitiesToSave.cuartoBanoServicio = editForm.propCuartoServicio;
+        if (editForm.propBalcon) propAmenitiesToSave.balcon = editForm.propBalcon;
+        if (parsedYear || parsedAge !== undefined) {
+          const yr = parsedYear || (parsedAge !== undefined ? 2026 - parsedAge : '');
+          const ag = parsedAge !== undefined ? parsedAge : (parsedYear ? 2026 - parsedYear : '');
+          propAmenitiesToSave.antiguedad = `${yr} (${ag} años)`;
+        }
+
+        Object.assign(m.property, {
+          price: editForm.propPrice !== undefined && editForm.propPrice !== '' ? editForm.propPrice : m.property.price,
+          rentPrice: editForm.propRentPrice !== undefined && editForm.propRentPrice !== '' ? editForm.propRentPrice : m.property.rentPrice,
+          adminFee: editForm.propAdminFee !== undefined && editForm.propAdminFee !== '' ? editForm.propAdminFee : m.property.adminFee,
+          areaTotal: editForm.propArea !== undefined && editForm.propArea !== '' ? editForm.propArea : m.property.areaTotal,
+          bedrooms: editForm.propBedrooms !== undefined && editForm.propBedrooms !== '' ? Number(editForm.propBedrooms) : m.property.bedrooms,
+          bathrooms: editForm.propBathrooms !== undefined && editForm.propBathrooms !== '' ? Number(editForm.propBathrooms) : m.property.bathrooms,
+          garages: editForm.propGarages !== undefined && editForm.propGarages !== '' ? Number(editForm.propGarages) : m.property.garages,
+          stratum: editForm.propStratum !== undefined && editForm.propStratum !== '' ? Number(editForm.propStratum) : m.property.stratum,
+          zone: editForm.propZone || m.property.zone,
+          city: editForm.propCity || m.property.city,
+          idUsuarioWhatsapp: normalizePhoneInput(editForm.propPhone) || m.property.idUsuarioWhatsapp,
+          nombreUsuarioWhatsapp: editForm.propSenderName !== undefined && editForm.propSenderName.trim() !== '' ? String(editForm.propSenderName).trim() : m.property.nombreUsuarioWhatsapp,
+          origenNombre: editForm.propOrigenNombre ? String(editForm.propOrigenNombre).trim() : m.property.origenNombre,
+          yearBuilt: parsedYear ?? m.property.yearBuilt,
+          antiguedadAnos: parsedAge ?? m.property.antiguedadAnos,
+          interiorExterior: editForm.propExtInt || m.property.interiorExterior,
+          garageType: editForm.propGarageType || m.property.garageType,
+          amenities: propAmenitiesToSave,
+        });
+      }
+
+      if (m.requirement) {
+        const reqCaractToSave: Record<string, any> = { ...(m.requirement?.caracteristicasDeseadas || {}) };
+        if (editForm.reqExtInt) reqCaractToSave.interiorExterior = editForm.reqExtInt;
+        if (editForm.reqAntiguedadMax) reqCaractToSave.antiguedadMax = cleanIntForSave(editForm.reqAntiguedadMax);
+        if (editForm.reqCocina) reqCaractToSave.cocina = editForm.reqCocina;
+        if (editForm.reqDepositos) reqCaractToSave.depositos = cleanIntForSave(editForm.reqDepositos);
+        if (editForm.reqCuartoServicio) reqCaractToSave.cuartoBanoServicio = editForm.reqCuartoServicio;
+        if (editForm.reqBalcon) reqCaractToSave.balcon = editForm.reqBalcon;
+
+        Object.assign(m.requirement, {
+          presupuestoMax: editForm.reqBudget !== undefined && editForm.reqBudget !== '' ? editForm.reqBudget : m.requirement.presupuestoMax,
+          adminFeeMax: editForm.reqAdminMax !== undefined && editForm.reqAdminMax !== '' ? editForm.reqAdminMax : m.requirement.adminFeeMax,
+          areaMin: editForm.reqArea !== undefined && editForm.reqArea !== '' ? editForm.reqArea : m.requirement.areaMin,
+          habitacionesMin: editForm.reqBedrooms !== undefined && editForm.reqBedrooms !== '' ? Number(editForm.reqBedrooms) : m.requirement.habitacionesMin,
+          banosMin: editForm.reqBathrooms !== undefined && editForm.reqBathrooms !== '' ? Number(editForm.reqBathrooms) : m.requirement.banosMin,
+          parqueaderosMin: editForm.reqGarages !== undefined && editForm.reqGarages !== '' ? Number(editForm.reqGarages) : m.requirement.parqueaderosMin,
+          estratoDeseado: editForm.reqStratum !== undefined && editForm.reqStratum !== '' ? Number(editForm.reqStratum) : m.requirement.estratoDeseado,
+          zonaDeseada: editForm.reqZone || m.requirement.zonaDeseada,
+          ciudadDeseada: editForm.reqCity || m.requirement.ciudadDeseada,
+          idUsuarioWhatsapp: normalizePhoneInput(editForm.reqPhone) || m.requirement.idUsuarioWhatsapp,
+          nombreUsuarioWhatsapp: editForm.reqSenderName !== undefined && editForm.reqSenderName.trim() !== '' ? String(editForm.reqSenderName).trim() : m.requirement.nombreUsuarioWhatsapp,
+          origenNombre: editForm.reqOrigenNombre ? String(editForm.reqOrigenNombre).trim() : m.requirement.origenNombre,
+          antiguedadMax: cleanIntForSave(editForm.reqAntiguedadMax) ?? m.requirement.antiguedadMax,
+          caracteristicasDeseadas: reqCaractToSave,
+        });
+      }
+
+      scoreRowsCache.clear();
 
       if (m.property?.id || m.requirement?.id) {
         await recalculateMatchMut.mutateAsync({
@@ -2831,31 +3166,71 @@ export default function AdminMatches() {
       const isEditingThisCard = editingMatchId === m.id;
 
       if (isEditingThisCard) {
+        const parsedYear = cleanIntForSave(editForm.propYearBuilt);
+        const parsedAge = cleanIntForSave(editForm.propAntiguedadAnos);
+        const effectivePropAmenities = { ...(m.property?.amenities || {}) };
+        if (editForm.propExtInt !== undefined) effectivePropAmenities.interiorExterior = editForm.propExtInt;
+        if (editForm.propCocina !== undefined) effectivePropAmenities.cocina = editForm.propCocina;
+        if (editForm.propDepositos !== undefined) effectivePropAmenities.depositos = cleanIntForSave(editForm.propDepositos);
+        if (editForm.propCuartoServicio !== undefined) effectivePropAmenities.cuartoBanoServicio = editForm.propCuartoServicio;
+        if (editForm.propBalcon !== undefined) effectivePropAmenities.balcon = editForm.propBalcon;
+        if (parsedYear || parsedAge !== undefined) {
+          const yr = parsedYear || (parsedAge !== undefined ? 2026 - parsedAge : '');
+          const ag = parsedAge !== undefined ? parsedAge : (parsedYear ? 2026 - parsedYear : '');
+          effectivePropAmenities.antiguedad = `${yr} (${ag} años)`;
+        }
+        Object.keys(editForm).forEach(k => {
+          if (k.startsWith('prop_custom_')) {
+            effectivePropAmenities[k.replace('prop_custom_', '')] = editForm[k];
+          }
+        });
+
         const effectiveProp = {
           ...m.property,
-          price: editForm.propPrice !== undefined && editForm.propPrice !== '' ? editForm.propPrice : m.property.price,
-          rentPrice: editForm.propRentPrice !== undefined && editForm.propRentPrice !== '' ? editForm.propRentPrice : m.property.rentPrice,
-          adminFee: editForm.propAdminFee !== undefined && editForm.propAdminFee !== '' ? editForm.propAdminFee : m.property.adminFee,
-          areaTotal: editForm.propArea !== undefined && editForm.propArea !== '' ? editForm.propArea : m.property.areaTotal,
-          bedrooms: editForm.propBedrooms !== undefined && editForm.propBedrooms !== '' ? editForm.propBedrooms : m.property.bedrooms,
-          bathrooms: editForm.propBathrooms !== undefined && editForm.propBathrooms !== '' ? editForm.propBathrooms : m.property.bathrooms,
-          garages: editForm.propGarages !== undefined && editForm.propGarages !== '' ? editForm.propGarages : m.property.garages,
-          stratum: editForm.propStratum !== undefined && editForm.propStratum !== '' ? editForm.propStratum : m.property.stratum,
-          zone: editForm.propZone !== undefined && editForm.propZone !== '' ? editForm.propZone : m.property.zone,
-          city: editForm.propCity !== undefined && editForm.propCity !== '' ? editForm.propCity : m.property.city,
+          price: editForm.propPrice !== undefined && editForm.propPrice !== '' ? editForm.propPrice : m.property?.price,
+          rentPrice: editForm.propRentPrice !== undefined && editForm.propRentPrice !== '' ? editForm.propRentPrice : m.property?.rentPrice,
+          adminFee: editForm.propAdminFee !== undefined && editForm.propAdminFee !== '' ? editForm.propAdminFee : m.property?.adminFee,
+          areaTotal: editForm.propArea !== undefined && editForm.propArea !== '' ? editForm.propArea : m.property?.areaTotal,
+          bedrooms: editForm.propBedrooms !== undefined && editForm.propBedrooms !== '' ? editForm.propBedrooms : m.property?.bedrooms,
+          bathrooms: editForm.propBathrooms !== undefined && editForm.propBathrooms !== '' ? editForm.propBathrooms : m.property?.bathrooms,
+          garages: editForm.propGarages !== undefined && editForm.propGarages !== '' ? editForm.propGarages : m.property?.garages,
+          stratum: editForm.propStratum !== undefined && editForm.propStratum !== '' ? editForm.propStratum : m.property?.stratum,
+          zone: editForm.propZone !== undefined && editForm.propZone !== '' ? editForm.propZone : m.property?.zone,
+          city: editForm.propCity !== undefined && editForm.propCity !== '' ? editForm.propCity : m.property?.city,
+          yearBuilt: parsedYear ?? m.property?.yearBuilt,
+          antiguedadAnos: parsedAge ?? m.property?.antiguedadAnos,
+          interiorExterior: editForm.propExtInt !== undefined ? editForm.propExtInt : m.property?.interiorExterior,
+          garageType: editForm.propGarageType !== undefined ? editForm.propGarageType : m.property?.garageType,
+          amenities: effectivePropAmenities,
         };
+
+        const effectiveReqCaract = { ...(m.requirement?.caracteristicasDeseadas || {}) };
+        if (editForm.reqExtInt !== undefined) effectiveReqCaract.interiorExterior = editForm.reqExtInt;
+        if (editForm.reqAntiguedadMax !== undefined) effectiveReqCaract.antiguedadMax = cleanIntForSave(editForm.reqAntiguedadMax);
+        if (editForm.reqCocina !== undefined) effectiveReqCaract.cocina = editForm.reqCocina;
+        if (editForm.reqDepositos !== undefined) effectiveReqCaract.depositos = cleanIntForSave(editForm.reqDepositos);
+        if (editForm.reqCuartoServicio !== undefined) effectiveReqCaract.cuartoBanoServicio = editForm.reqCuartoServicio;
+        if (editForm.reqBalcon !== undefined) effectiveReqCaract.balcon = editForm.reqBalcon;
+        Object.keys(editForm).forEach(k => {
+          if (k.startsWith('req_custom_')) {
+            effectiveReqCaract[k.replace('req_custom_', '')] = editForm[k];
+          }
+        });
 
         const effectiveReq = {
           ...m.requirement,
-          presupuestoMax: editForm.reqBudget !== undefined && editForm.reqBudget !== '' ? editForm.reqBudget : m.requirement.presupuestoMax,
-          adminFeeMax: editForm.reqAdminMax !== undefined && editForm.reqAdminMax !== '' ? editForm.reqAdminMax : m.requirement.adminFeeMax,
-          areaMin: editForm.reqArea !== undefined && editForm.reqArea !== '' ? editForm.reqArea : m.requirement.areaMin,
-          habitacionesMin: editForm.reqBedrooms !== undefined && editForm.reqBedrooms !== '' ? editForm.reqBedrooms : m.requirement.habitacionesMin,
-          banosMin: editForm.reqBathrooms !== undefined && editForm.reqBathrooms !== '' ? editForm.reqBathrooms : m.requirement.banosMin,
-          parqueaderosMin: editForm.reqGarages !== undefined && editForm.reqGarages !== '' ? editForm.reqGarages : m.requirement.parqueaderosMin,
-          estratoDeseado: editForm.reqStratum !== undefined && editForm.reqStratum !== '' ? editForm.reqStratum : m.requirement.estratoDeseado,
-          zonaDeseada: editForm.reqZone !== undefined && editForm.reqZone !== '' ? editForm.reqZone : m.requirement.zonaDeseada,
-          ciudadDeseada: editForm.reqCity !== undefined && editForm.reqCity !== '' ? editForm.reqCity : m.requirement.ciudadDeseada,
+          presupuestoMax: editForm.reqBudget !== undefined && editForm.reqBudget !== '' ? editForm.reqBudget : m.requirement?.presupuestoMax,
+          adminFeeMax: editForm.reqAdminMax !== undefined && editForm.reqAdminMax !== '' ? editForm.reqAdminMax : m.requirement?.adminFeeMax,
+          areaMin: editForm.reqArea !== undefined && editForm.reqArea !== '' ? editForm.reqArea : m.requirement?.areaMin,
+          habitacionesMin: editForm.reqBedrooms !== undefined && editForm.reqBedrooms !== '' ? editForm.reqBedrooms : m.requirement?.habitacionesMin,
+          banosMin: editForm.reqBathrooms !== undefined && editForm.reqBathrooms !== '' ? editForm.reqBathrooms : m.requirement?.banosMin,
+          parqueaderosMin: editForm.reqGarages !== undefined && editForm.reqGarages !== '' ? editForm.reqGarages : m.requirement?.parqueaderosMin,
+          estratoDeseado: editForm.reqStratum !== undefined && editForm.reqStratum !== '' ? editForm.reqStratum : m.requirement?.estratoDeseado,
+          zonaDeseada: editForm.reqZone !== undefined && editForm.reqZone !== '' ? editForm.reqZone : m.requirement?.zonaDeseada,
+          ciudadDeseada: editForm.reqCity !== undefined && editForm.reqCity !== '' ? editForm.reqCity : m.requirement?.ciudadDeseada,
+          antiguedadMax: cleanIntForSave(editForm.reqAntiguedadMax) ?? m.requirement?.antiguedadMax,
+          interiorExterior: editForm.reqExtInt !== undefined ? editForm.reqExtInt : m.requirement?.interiorExterior,
+          caracteristicasDeseadas: effectiveReqCaract,
         };
 
         const computed = scoreRows(effectiveReq, effectiveProp);
@@ -3054,7 +3429,29 @@ export default function AdminMatches() {
 
                 const effectiveProp = m._effectiveProp || m.property;
                 const effectiveReq = m._effectiveReq || m.requirement;
-                const rows = m._precomputedRows || [];
+                const baseRows = m._precomputedRows || [];
+                const dynamicAttrs = (customAttributesByMatch[m.id] || []).filter(
+                  (attr) => !baseRows.some((r: any) => r.label.toLowerCase() === attr.label.toLowerCase())
+                );
+                const rows = [
+                  ...baseRows,
+                  ...dynamicAttrs.map((attr) => {
+                    const propVal = editForm[`prop_custom_${attr.label.toLowerCase().replace(/[^a-z0-9]/g, '')}`] !== undefined
+                      ? editForm[`prop_custom_${attr.label.toLowerCase().replace(/[^a-z0-9]/g, '')}`]
+                      : ((effectiveProp?.amenities as any)?.[attr.key] || 'N/E');
+                    const reqVal = editForm[`req_custom_${attr.label.toLowerCase().replace(/[^a-z0-9]/g, '')}`] !== undefined
+                      ? editForm[`req_custom_${attr.label.toLowerCase().replace(/[^a-z0-9]/g, '')}`]
+                      : ((effectiveReq?.caracteristicasDeseadas as any)?.[attr.key] || 'Flexible / Sin restricción');
+                    return {
+                      label: attr.label,
+                      propVal: propVal || 'N/E',
+                      reqVal: reqVal || 'Flexible / Sin restricción',
+                      status: 'exact' as MatchStatus,
+                      weight: 3,
+                      icon: <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                    };
+                  })
+                ];
                 const score = m._precomputedScore !== undefined ? m._precomputedScore : parseFloat(m.matchScore?.toString() || "0");
                 const date = formatColombiaDate(m.createdAt);
 
@@ -4425,6 +4822,244 @@ export default function AdminMatches() {
                                 );
                               }
 
+                              if (cleanLbl.includes('antigüedad') || cleanLbl.includes('antiguedad') || cleanLbl.includes('año')) {
+                                const displayYear = editForm.propYearBuilt ?? '';
+                                const displayAge = editForm.propAntiguedadAnos ?? '';
+                                const rawInput = editForm.propAntiguedadRaw !== undefined
+                                  ? editForm.propAntiguedadRaw
+                                  : (displayYear ? `${displayYear}` : (displayAge !== '' ? `${displayAge}` : ''));
+                                return isOffer ? (
+                                  <div className="space-y-1 w-full">
+                                    <input
+                                      type="text"
+                                      placeholder="Ej: 1994 ó 32"
+                                      value={rawInput}
+                                      onChange={(e) => {
+                                        const val = e.target.value;
+                                        let digits = val.replace(/[^0-9]/g, '');
+                                        let y: number | undefined = undefined;
+                                        let a: number | undefined = undefined;
+                                        if (digits.length === 4) {
+                                          const num = parseInt(digits, 10);
+                                          if (num >= 1900 && num <= 2030) {
+                                            y = num;
+                                            a = Math.max(0, 2026 - num);
+                                          }
+                                        } else if (digits.length > 0 && digits.length <= 3) {
+                                          const num = parseInt(digits, 10);
+                                          if (num >= 0 && num <= 120) {
+                                            a = num;
+                                            y = 2026 - num;
+                                          }
+                                        }
+                                        setEditForm(prev => ({
+                                          ...prev,
+                                          propAntiguedadRaw: val,
+                                          propYearBuilt: y !== undefined ? y : (digits.length === 4 ? parseInt(digits, 10) : prev.propYearBuilt),
+                                          propAntiguedadAnos: a !== undefined ? a : (digits.length <= 3 && digits.length > 0 ? parseInt(digits, 10) : prev.propAntiguedadAnos),
+                                        }));
+                                      }}
+                                      className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#bf953f]"
+                                    />
+                                    {(displayYear || displayAge !== '') && (
+                                      <span className="text-[10px] text-emerald-400 font-bold block">
+                                        📅 Año: {displayYear || (displayAge ? 2026 - Number(displayAge) : '1994')} · ⏳ {displayAge !== '' ? displayAge : (displayYear ? 2026 - Number(displayYear) : '32')} años
+                                      </span>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <div className="space-y-1 w-full">
+                                    <input
+                                      type="number"
+                                      placeholder="Máx años (ej: 10, o vacío flexible)"
+                                      value={editForm.reqAntiguedadMax !== undefined ? editForm.reqAntiguedadMax : ''}
+                                      onChange={(e) => setEditForm(prev => ({ ...prev, reqAntiguedadMax: e.target.value }))}
+                                      className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                                    />
+                                    <span className="text-[10px] text-cyan-400/80 block">
+                                      {editForm.reqAntiguedadMax && Number(editForm.reqAntiguedadMax) > 0 ? `Tope: Máx ${editForm.reqAntiguedadMax} años` : 'Flexible / Sin restricción de edad'}
+                                    </span>
+                                  </div>
+                                );
+                              }
+
+                              if (cleanLbl.includes('ubicación en piso') || cleanLbl.includes('vista')) {
+                                return isOffer ? (
+                                  <select
+                                    value={editForm.propExtInt || ''}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, propExtInt: e.target.value }))}
+                                    className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#bf953f]"
+                                  >
+                                    <option value="">Seleccionar Vista...</option>
+                                    <option value="Interior">Interior</option>
+                                    <option value="Exterior">Exterior</option>
+                                    <option value="Exterior e Interior">Exterior e Interior (Mixto)</option>
+                                  </select>
+                                ) : (
+                                  <select
+                                    value={editForm.reqExtInt || ''}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, reqExtInt: e.target.value }))}
+                                    className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                                  >
+                                    <option value="">Flexible / Sin restricción</option>
+                                    <option value="Exterior">Exige Vista Exterior</option>
+                                    <option value="Interior">Exige Vista Interior</option>
+                                    <option value="Exterior e Interior">Exige Mixto</option>
+                                  </select>
+                                );
+                              }
+
+                              if (cleanLbl.includes('cocina')) {
+                                return isOffer ? (
+                                  <select
+                                    value={editForm.propCocina || ''}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, propCocina: e.target.value }))}
+                                    className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#bf953f]"
+                                  >
+                                    <option value="">Seleccionar Tipo Cocina...</option>
+                                    <option value="Cerrada">Cocina Cerrada / Tradicional</option>
+                                    <option value="Abierta">Cocina Abierta / Tipo Americano</option>
+                                    <option value="Abierta tipo Isla">Abierta con Isla</option>
+                                    <option value="Integral">Cocina Integral</option>
+                                    <option value="Semi-abierta">Semi-abierta</option>
+                                  </select>
+                                ) : (
+                                  <select
+                                    value={editForm.reqCocina || ''}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, reqCocina: e.target.value }))}
+                                    className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                                  >
+                                    <option value="">Flexible / No exigido</option>
+                                    <option value="Cerrada">Exige Cocina Cerrada</option>
+                                    <option value="Abierta">Exige Cocina Abierta</option>
+                                    <option value="Abierta tipo Isla">Exige Isla</option>
+                                    <option value="Integral">Exige Cocina Integral</option>
+                                  </select>
+                                );
+                              }
+
+                              if (cleanLbl.includes('servicio') || cleanLbl.includes('cbs')) {
+                                return isOffer ? (
+                                  <select
+                                    value={editForm.propCuartoServicio || ''}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, propCuartoServicio: e.target.value }))}
+                                    className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#bf953f]"
+                                  >
+                                    <option value="">Seleccionar Opción CBS...</option>
+                                    <option value="Sí (Con Baño Privado)">Sí (Con Baño Privado)</option>
+                                    <option value="Sí (Sin Baño)">Sí (Sin Baño)</option>
+                                    <option value="Solo baño de servicio">Solo baño de servicio</option>
+                                    <option value="No tiene">No tiene</option>
+                                  </select>
+                                ) : (
+                                  <select
+                                    value={editForm.reqCuartoServicio || ''}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, reqCuartoServicio: e.target.value }))}
+                                    className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                                  >
+                                    <option value="">Flexible / No exigido</option>
+                                    <option value="Exige CBS con Baño">Exige CBS con Baño</option>
+                                    <option value="Exige Cuarto de Servicio">Exige Cuarto de Servicio</option>
+                                    <option value="No requerido">No requerido</option>
+                                  </select>
+                                );
+                              }
+
+                              if (cleanLbl.includes('depósito') || cleanLbl.includes('deposito') || cleanLbl.includes('cuarto útil') || cleanLbl.includes('cuarto util')) {
+                                return isOffer ? (
+                                  <input
+                                    type="text"
+                                    placeholder="Ej: 1 ó Si (Incluye Depósito)"
+                                    value={editForm.propDepositos !== undefined ? editForm.propDepositos : (defaultVal !== 'N/E' ? defaultVal : '')}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, propDepositos: e.target.value }))}
+                                    className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#bf953f]"
+                                  />
+                                ) : (
+                                  <input
+                                    type="text"
+                                    placeholder="Ej: 1 ó Exige Depósito"
+                                    value={editForm.reqDepositos !== undefined ? editForm.reqDepositos : (defaultVal !== 'N/E' ? defaultVal : '')}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, reqDepositos: e.target.value }))}
+                                    className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                                  />
+                                );
+                              }
+
+                              if (cleanLbl.includes('balcón') || cleanLbl.includes('balcon') || cleanLbl.includes('terraza') || cleanLbl.includes('patio')) {
+                                return isOffer ? (
+                                  <select
+                                    value={editForm.propBalcon || ''}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, propBalcon: e.target.value }))}
+                                    className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#bf953f]"
+                                  >
+                                    <option value="">Seleccionar...</option>
+                                    <option value="Balcón">Balcón</option>
+                                    <option value="Terraza">Terraza Privada</option>
+                                    <option value="Balcón y Terraza">Balcón y Terraza</option>
+                                    <option value="Patio">Patio / Jardín</option>
+                                    <option value="No tiene">No tiene</option>
+                                  </select>
+                                ) : (
+                                  <select
+                                    value={editForm.reqBalcon || ''}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, reqBalcon: e.target.value }))}
+                                    className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                                  >
+                                    <option value="">Flexible / No exigido</option>
+                                    <option value="Exige Balcón">Exige Balcón</option>
+                                    <option value="Exige Terraza">Exige Terraza</option>
+                                    <option value="Exige Patio">Exige Patio / Jardín</option>
+                                  </select>
+                                );
+                              }
+
+                              if (cleanLbl.includes('tipo de garaje')) {
+                                return isOffer ? (
+                                  <select
+                                    value={editForm.propGarageType || ''}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, propGarageType: e.target.value }))}
+                                    className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#bf953f]"
+                                  >
+                                    <option value="">Seleccionar Garaje...</option>
+                                    <option value="independiente">Independiente</option>
+                                    <option value="lineal">Lineal (Servidumbre)</option>
+                                    <option value="mixto">Mixto</option>
+                                    <option value="cubierto">Cubierto</option>
+                                    <option value="descubierto">Descubierto</option>
+                                  </select>
+                                ) : (
+                                  <select
+                                    value={editForm.reqGarageType || ''}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, reqGarageType: e.target.value }))}
+                                    className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                                  >
+                                    <option value="">Flexible / Sin restricción</option>
+                                    <option value="independiente">Exige Independientes</option>
+                                    <option value="cubierto">Exige Cubiertos</option>
+                                  </select>
+                                );
+                              }
+
+                              if (cleanLbl.includes('piso / nivel')) {
+                                return isOffer ? (
+                                  <input
+                                    type="text"
+                                    placeholder="Ej: Piso 2 alto"
+                                    value={editForm.propPisoNivel !== undefined ? editForm.propPisoNivel : (defaultVal !== 'N/E' ? defaultVal : '')}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, propPisoNivel: e.target.value }))}
+                                    className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#bf953f]"
+                                  />
+                                ) : (
+                                  <input
+                                    type="text"
+                                    placeholder="Ej: Piso alto, Flexible"
+                                    value={editForm.reqPisoNivel !== undefined ? editForm.reqPisoNivel : (defaultVal !== 'N/E' ? defaultVal : '')}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, reqPisoNivel: e.target.value }))}
+                                    className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                                  />
+                                );
+                              }
+
                               // Fallback general para cualquier otra casilla (Antigüedad, Permuta, Cocina, Balcón, Equipamiento, Depósito)
                               const propKey = `prop_custom_${cleanLbl.replace(/[^a-z0-9]/g, '')}`;
                               const reqKey = `req_custom_${cleanLbl.replace(/[^a-z0-9]/g, '')}`;
@@ -4623,6 +5258,180 @@ export default function AdminMatches() {
                               </div>
                             );
                           }
+                          if (cleanLbl.includes('antigüedad') || cleanLbl.includes('antiguedad') || cleanLbl.includes('año')) {
+                            const displayYear = editForm.propYearBuilt ?? '';
+                            const displayAge = editForm.propAntiguedadAnos ?? '';
+                            const rawInput = editForm.propAntiguedadRaw !== undefined
+                              ? editForm.propAntiguedadRaw
+                              : (displayYear ? `${displayYear}` : (displayAge !== '' ? `${displayAge}` : ''));
+                            return isOffer ? (
+                              <div className="space-y-1 w-full">
+                                <input
+                                  type="text"
+                                  placeholder="Ej: 1994 ó 32"
+                                  value={rawInput}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    let digits = val.replace(/[^0-9]/g, '');
+                                    let y: number | undefined = undefined;
+                                    let a: number | undefined = undefined;
+                                    if (digits.length === 4) {
+                                      const parsedY = parseInt(digits, 10);
+                                      if (parsedY >= 1900 && parsedY <= 2030) {
+                                        y = parsedY;
+                                        a = Math.max(0, 2026 - parsedY);
+                                      }
+                                    } else if (digits.length > 0 && digits.length <= 3) {
+                                      const parsedA = parseInt(digits, 10);
+                                      if (parsedA >= 0 && parsedA <= 120) {
+                                        a = parsedA;
+                                        y = 2026 - parsedA;
+                                      }
+                                    }
+                                    setEditForm(prev => ({
+                                      ...prev,
+                                      propAntiguedadRaw: val,
+                                      propYearBuilt: y !== undefined ? y : (digits.length === 4 ? parseInt(digits, 10) : prev.propYearBuilt),
+                                      propAntiguedadAnos: a !== undefined ? a : (digits.length <= 3 && digits.length > 0 ? parseInt(digits, 10) : prev.propAntiguedadAnos),
+                                    }));
+                                  }}
+                                  className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg"
+                                />
+                                {(displayYear || displayAge !== '') && (
+                                  <span className="text-[10px] text-emerald-400 font-bold block">
+                                    📅 Año: {displayYear || (displayAge ? 2026 - Number(displayAge) : '1994')} · ⏳ {displayAge !== '' ? displayAge : (displayYear ? 2026 - Number(displayYear) : '32')} años
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="space-y-1 w-full">
+                                <input
+                                  type="number"
+                                  placeholder="Máx años (ej: 10, o vacío flexible)"
+                                  value={editForm.reqAntiguedadMax !== undefined ? editForm.reqAntiguedadMax : ''}
+                                  onChange={(e) => setEditForm(prev => ({ ...prev, reqAntiguedadMax: e.target.value }))}
+                                  className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg"
+                                />
+                                <span className="text-[10px] text-cyan-400/80 block">
+                                  {editForm.reqAntiguedadMax && Number(editForm.reqAntiguedadMax) > 0 ? `Tope: Máx ${editForm.reqAntiguedadMax} años` : 'Flexible / Sin restricción de edad'}
+                                </span>
+                              </div>
+                            );
+                          }
+
+                          if (cleanLbl.includes('ubicación en piso') || cleanLbl.includes('vista')) {
+                            return isOffer ? (
+                              <select value={editForm.propExtInt || ''} onChange={(e) => setEditForm(prev => ({ ...prev, propExtInt: e.target.value }))} className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg">
+                                <option value="">Seleccionar Vista...</option>
+                                <option value="Interior">Interior</option>
+                                <option value="Exterior">Exterior</option>
+                                <option value="Exterior e Interior">Exterior e Interior (Mixto)</option>
+                              </select>
+                            ) : (
+                              <select value={editForm.reqExtInt || ''} onChange={(e) => setEditForm(prev => ({ ...prev, reqExtInt: e.target.value }))} className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg">
+                                <option value="">Flexible / Sin restricción</option>
+                                <option value="Exterior">Exige Vista Exterior</option>
+                                <option value="Interior">Exige Vista Interior</option>
+                                <option value="Exterior e Interior">Exige Mixto</option>
+                              </select>
+                            );
+                          }
+
+                          if (cleanLbl.includes('cocina')) {
+                            return isOffer ? (
+                              <select value={editForm.propCocina || ''} onChange={(e) => setEditForm(prev => ({ ...prev, propCocina: e.target.value }))} className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg">
+                                <option value="">Seleccionar Cocina...</option>
+                                <option value="Cerrada">Cocina Cerrada</option>
+                                <option value="Abierta">Cocina Abierta</option>
+                                <option value="Abierta tipo Isla">Con Isla</option>
+                                <option value="Integral">Integral</option>
+                                <option value="Semi-abierta">Semi-abierta</option>
+                              </select>
+                            ) : (
+                              <select value={editForm.reqCocina || ''} onChange={(e) => setEditForm(prev => ({ ...prev, reqCocina: e.target.value }))} className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg">
+                                <option value="">Flexible</option>
+                                <option value="Cerrada">Exige Cocina Cerrada</option>
+                                <option value="Abierta">Exige Cocina Abierta</option>
+                                <option value="Abierta tipo Isla">Exige Isla</option>
+                                <option value="Integral">Exige Integral</option>
+                              </select>
+                            );
+                          }
+
+                          if (cleanLbl.includes('servicio') || cleanLbl.includes('cbs')) {
+                            return isOffer ? (
+                              <select value={editForm.propCuartoServicio || ''} onChange={(e) => setEditForm(prev => ({ ...prev, propCuartoServicio: e.target.value }))} className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg">
+                                <option value="">Seleccionar CBS...</option>
+                                <option value="Sí (Con Baño Privado)">Sí (Con Baño Privado)</option>
+                                <option value="Sí (Sin Baño)">Sí (Sin Baño)</option>
+                                <option value="Solo baño de servicio">Solo baño de servicio</option>
+                                <option value="No tiene">No tiene</option>
+                              </select>
+                            ) : (
+                              <select value={editForm.reqCuartoServicio || ''} onChange={(e) => setEditForm(prev => ({ ...prev, reqCuartoServicio: e.target.value }))} className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg">
+                                <option value="">Flexible</option>
+                                <option value="Exige CBS con Baño">Exige CBS con Baño</option>
+                                <option value="Exige Cuarto de Servicio">Exige Cuarto de Servicio</option>
+                                <option value="No requerido">No requerido</option>
+                              </select>
+                            );
+                          }
+
+                          if (cleanLbl.includes('depósito') || cleanLbl.includes('deposito') || cleanLbl.includes('cuarto útil') || cleanLbl.includes('cuarto util')) {
+                            return isOffer ? (
+                              <input type="text" placeholder="Ej: 1 ó Sí" value={editForm.propDepositos !== undefined ? editForm.propDepositos : (defaultVal !== 'N/E' ? defaultVal : '')} onChange={(e) => setEditForm(prev => ({ ...prev, propDepositos: e.target.value }))} className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg" />
+                            ) : (
+                              <input type="text" placeholder="Ej: 1 ó Exige Depósito" value={editForm.reqDepositos !== undefined ? editForm.reqDepositos : (defaultVal !== 'N/E' ? defaultVal : '')} onChange={(e) => setEditForm(prev => ({ ...prev, reqDepositos: e.target.value }))} className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg" />
+                            );
+                          }
+
+                          if (cleanLbl.includes('balcón') || cleanLbl.includes('balcon') || cleanLbl.includes('terraza') || cleanLbl.includes('patio')) {
+                            return isOffer ? (
+                              <select value={editForm.propBalcon || ''} onChange={(e) => setEditForm(prev => ({ ...prev, propBalcon: e.target.value }))} className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg">
+                                <option value="">Seleccionar...</option>
+                                <option value="Balcón">Balcón</option>
+                                <option value="Terraza">Terraza Privada</option>
+                                <option value="Balcón y Terraza">Balcón y Terraza</option>
+                                <option value="Patio">Patio</option>
+                                <option value="No tiene">No tiene</option>
+                              </select>
+                            ) : (
+                              <select value={editForm.reqBalcon || ''} onChange={(e) => setEditForm(prev => ({ ...prev, reqBalcon: e.target.value }))} className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg">
+                                <option value="">Flexible</option>
+                                <option value="Exige Balcón">Exige Balcón</option>
+                                <option value="Exige Terraza">Exige Terraza</option>
+                                <option value="Exige Patio">Exige Patio / Jardín</option>
+                              </select>
+                            );
+                          }
+
+                          if (cleanLbl.includes('tipo de garaje')) {
+                            return isOffer ? (
+                              <select value={editForm.propGarageType || ''} onChange={(e) => setEditForm(prev => ({ ...prev, propGarageType: e.target.value }))} className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg">
+                                <option value="">Seleccionar...</option>
+                                <option value="independiente">Independiente</option>
+                                <option value="lineal">Lineal</option>
+                                <option value="mixto">Mixto</option>
+                                <option value="cubierto">Cubierto</option>
+                                <option value="descubierto">Descubierto</option>
+                              </select>
+                            ) : (
+                              <select value={editForm.reqGarageType || ''} onChange={(e) => setEditForm(prev => ({ ...prev, reqGarageType: e.target.value }))} className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg">
+                                <option value="">Flexible</option>
+                                <option value="independiente">Exige Independientes</option>
+                                <option value="cubierto">Exige Cubiertos</option>
+                              </select>
+                            );
+                          }
+
+                          if (cleanLbl.includes('piso / nivel')) {
+                            return isOffer ? (
+                              <input type="text" placeholder="Ej: Piso 2 alto" value={editForm.propPisoNivel !== undefined ? editForm.propPisoNivel : (defaultVal !== 'N/E' ? defaultVal : '')} onChange={(e) => setEditForm(prev => ({ ...prev, propPisoNivel: e.target.value }))} className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg" />
+                            ) : (
+                              <input type="text" placeholder="Ej: Piso alto, Flexible" value={editForm.reqPisoNivel !== undefined ? editForm.reqPisoNivel : (defaultVal !== 'N/E' ? defaultVal : '')} onChange={(e) => setEditForm(prev => ({ ...prev, reqPisoNivel: e.target.value }))} className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg" />
+                            );
+                          }
+
                           const propKey = `prop_custom_${cleanLbl.replace(/[^a-z0-9]/g, '')}`;
                           const reqKey = `req_custom_${cleanLbl.replace(/[^a-z0-9]/g, '')}`;
                           return isOffer ? (
@@ -4669,6 +5478,50 @@ export default function AdminMatches() {
                         );
                       })}
                     </div>
+
+                    {/* BARRA DE ACCIÓN: COMPLETAR / AGREGAR CARACTERÍSTICAS A LA FICHA */}
+                    {isEditingThisCard && (
+                      <div className="mt-4 pt-3.5 border-t border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-zinc-950/60 p-3 rounded-2xl border border-dashed border-[#bf953f]/30">
+                        <div className="flex items-center gap-2 text-xs text-[#bf953f] font-semibold">
+                          <Plus className="w-4 h-4 text-amber-400 shrink-0" />
+                          <span>¿Faltan datos en la ficha? Agrega una característica o amenidad:</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <select
+                            defaultValue=""
+                            onChange={(e) => {
+                              if (e.target.value) {
+                                handleAddAttributeToCard(m.id, e.target.value);
+                                e.target.value = "";
+                              }
+                            }}
+                            className="bg-black/90 border border-[#bf953f]/50 text-zinc-200 text-xs py-1.5 px-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#bf953f] cursor-pointer"
+                          >
+                            <option value="" disabled>➕ Completar / Agregar Atributo...</option>
+                            <option value="antiguedad">📅 Antigüedad / Año de Construcción</option>
+                            <option value="vista">🧭 Ubicación en Piso (Vista)</option>
+                            <option value="balcon">🌿 Balcón / Terraza / Patio</option>
+                            <option value="cocina">🍽️ Tipología de Cocina</option>
+                            <option value="cbs">🏠 Cuarto y Baño de Servicio (CBS)</option>
+                            <option value="deposito">📦 Depósito / Cuarto Útil</option>
+                            <option value="garaje_tipo">🚗 Tipo de Garaje (Independiente/Lineal)</option>
+                            <option value="ascensor">🛗 Ascensor</option>
+                            <option value="conjunto">🛡️ Conjunto Cerrado / Club House</option>
+                            <option value="chimenea">🔥 Chimenea</option>
+                            <option value="gas">🔥 Gas Natural</option>
+                            <option value="gimnasio">🏋️ Gimnasio</option>
+                            <option value="piscina">🏊 Piscina</option>
+                            <option value="cancha">🎾 Cancha Deportiva / Squash</option>
+                            <option value="zona_infantil">🎠 Zona Infantil</option>
+                            <option value="vigilancia">👮 Vigilancia & Portería 24/7</option>
+                            <option value="planta">⚡ Planta Eléctrica</option>
+                            <option value="estado">🛠️ Estado del Inmueble</option>
+                            <option value="lavanderia">🧺 Zona de Lavandería</option>
+                            <option value="custom">✏️ Otro Atributo Personalizado...</option>
+                          </select>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </>

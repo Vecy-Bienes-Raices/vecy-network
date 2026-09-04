@@ -506,10 +506,15 @@ export const janIARouter = router({
               bedrooms: properties.bedrooms,
               bathrooms: properties.bathrooms,
               garages: properties.garages,
+              garageType: properties.garageType,
+              floorDetail: properties.floorDetail,
               stratum: properties.stratum,
               areaTotal: properties.areaTotal,
               areaPrivate: properties.areaPrivate,
               adminFee: properties.adminFee,
+              yearBuilt: properties.yearBuilt,
+              antiguedadAnos: properties.antiguedadAnos,
+              amenities: properties.amenities,
               isAmoblado: properties.isAmoblado,
               rawText: properties.rawText,
               externalUrl: properties.externalUrl,
@@ -530,6 +535,7 @@ export const janIARouter = router({
               name: requirements.name,
               presupuestoMin: requirements.presupuestoMin,
               presupuestoMax: requirements.presupuestoMax,
+              adminFeeMax: requirements.adminFeeMax,
               ciudadDeseada: requirements.ciudadDeseada,
               zonaDeseada: requirements.zonaDeseada,
               addressNeighborhood: requirements.addressNeighborhood,
@@ -546,6 +552,7 @@ export const janIARouter = router({
               areaMin: requirements.areaMin,
               estratoDeseado: requirements.estratoDeseado,
               amobladoDeseado: requirements.amobladoDeseado,
+              caracteristicasDeseadas: requirements.caracteristicasDeseadas,
               rawText: requirements.rawText,
               enlaceOrigen: requirements.enlaceOrigen,
               createdAt: requirements.createdAt,
@@ -658,6 +665,11 @@ export const janIARouter = router({
       idUsuarioWhatsapp: z.string().optional().nullable(),
       nombreUsuarioWhatsapp: z.string().optional().nullable(),
       origenNombre: z.string().optional().nullable(),
+      yearBuilt: z.union([z.number(), z.string()]).optional().nullable(),
+      antiguedadAnos: z.union([z.number(), z.string()]).optional().nullable(),
+      interiorExterior: z.string().optional().nullable(),
+      garageType: z.string().optional().nullable(),
+      amenities: z.record(z.string(), z.any()).optional().nullable(),
     }))
     .mutation(async ({ input }) => {
       const db = await getDb();
@@ -745,6 +757,50 @@ export const janIARouter = router({
       if (input.idUsuarioWhatsapp !== undefined) updateData.idUsuarioWhatsapp = input.idUsuarioWhatsapp;
       if (input.nombreUsuarioWhatsapp !== undefined) updateData.nombreUsuarioWhatsapp = input.nombreUsuarioWhatsapp;
       if (input.origenNombre !== undefined) updateData.origenNombre = input.origenNombre;
+      if (input.garageType !== undefined) updateData.garageType = input.garageType;
+
+      // Cálculo y persistencia inteligente de Antigüedad y Año de Construcción (Doctrina v31.7)
+      const currentYear = 2026;
+      let computedYear = sanitizeInt(input.yearBuilt);
+      let computedAge = sanitizeInt(input.antiguedadAnos);
+
+      if (computedYear !== null && computedYear > 1900 && computedYear <= currentYear + 2) {
+        updateData.yearBuilt = computedYear;
+        if (computedAge === null) {
+          computedAge = Math.max(0, currentYear - computedYear);
+          updateData.antiguedadAnos = computedAge;
+        }
+      } else if (computedAge !== null && computedAge >= 0 && computedAge <= 150) {
+        updateData.antiguedadAnos = computedAge;
+        if (computedYear === null) {
+          computedYear = currentYear - computedAge;
+          updateData.yearBuilt = computedYear;
+        }
+      }
+
+      // Integración y persistencia de comodidades / amenities (Interior/Exterior, Cocina, etc.)
+      const existingAmenities = (existingProp?.amenities as Record<string, any>) || {};
+      const mergedAmenities: Record<string, any> = { ...existingAmenities };
+      let hasAmenitiesChange = false;
+
+      if (input.interiorExterior !== undefined) {
+        mergedAmenities.interiorExterior = input.interiorExterior;
+        hasAmenitiesChange = true;
+      }
+      if (computedYear || computedAge !== null) {
+        const yStr = computedYear || (computedAge !== null ? currentYear - computedAge : '');
+        const aStr = computedAge !== null ? computedAge : (computedYear ? currentYear - computedYear : '');
+        mergedAmenities.antiguedad = `${yStr} (${aStr} años)`;
+        hasAmenitiesChange = true;
+      }
+      if (input.amenities && typeof input.amenities === 'object') {
+        Object.assign(mergedAmenities, input.amenities);
+        hasAmenitiesChange = true;
+      }
+
+      if (hasAmenitiesChange) {
+        updateData.amenities = mergedAmenities;
+      }
 
       await db.update(properties).set(updateData).where(eq(properties.id, input.propertyId));
       console.log(`[JanIA-UpdateProperty] Propiedad #${input.propertyId} actualizada directamente desde Mesa de Cotejo (incluyendo teléfono: ${input.idUsuarioWhatsapp || 'N/A'})`);
@@ -816,6 +872,9 @@ export const janIARouter = router({
       idUsuarioWhatsapp: z.string().optional().nullable(),
       nombreUsuarioWhatsapp: z.string().optional().nullable(),
       origenNombre: z.string().optional().nullable(),
+      antiguedadMax: z.union([z.number(), z.string()]).optional().nullable(),
+      interiorExterior: z.string().optional().nullable(),
+      caracteristicasDeseadas: z.record(z.string(), z.any()).optional().nullable(),
     }))
     .mutation(async ({ input }) => {
       const db = await getDb();
@@ -900,6 +959,29 @@ export const janIARouter = router({
       if (input.idUsuarioWhatsapp !== undefined) updateData.idUsuarioWhatsapp = input.idUsuarioWhatsapp;
       if (input.nombreUsuarioWhatsapp !== undefined) updateData.nombreUsuarioWhatsapp = input.nombreUsuarioWhatsapp;
       if (input.origenNombre !== undefined) updateData.origenNombre = input.origenNombre;
+
+      // Integración y persistencia de restricciones y características deseadas
+      const existingCaract = (existingReq?.caracteristicasDeseadas as Record<string, any>) || {};
+      const mergedCaract: Record<string, any> = { ...existingCaract };
+      let hasCaractChange = false;
+
+      if (input.interiorExterior !== undefined) {
+        mergedCaract.interiorExterior = input.interiorExterior;
+        hasCaractChange = true;
+      }
+      if (input.antiguedadMax !== undefined) {
+        const aMax = sanitizeInt(input.antiguedadMax);
+        mergedCaract.antiguedadMax = aMax;
+        hasCaractChange = true;
+      }
+      if (input.caracteristicasDeseadas && typeof input.caracteristicasDeseadas === 'object') {
+        Object.assign(mergedCaract, input.caracteristicasDeseadas);
+        hasCaractChange = true;
+      }
+
+      if (hasCaractChange) {
+        updateData.caracteristicasDeseadas = mergedCaract;
+      }
 
       await db.update(requirements).set(updateData).where(eq(requirements.id, input.requirementId));
       console.log(`[JanIA-UpdateRequirement] Requerimiento #${input.requirementId} actualizado directamente desde Mesa de Cotejo (incluyendo teléfono: ${input.idUsuarioWhatsapp || 'N/A'})`);

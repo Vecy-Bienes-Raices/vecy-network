@@ -1148,4 +1148,32 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 - **Calibración Doctrinal en `matching.ts`**: Cuando los 5 campos en duro están 100% en verde y existen cero bloqueadores, el puntaje mínimo VECY es **85%**. Si los atributos demandados por el cliente están 100% satisfechos, escala a **93%**, protegiendo la concordancia con la consola administrativa.
 - **Restauración en Supabase**: Reinsertado el registro **#12305** en `propertyMatches` con score **93.00%**, estado `'suggested'` y enriquecida la ficha de la propiedad #314 con nombre verídico de la asesora.
 
+---
+
+### Versión v31.7 — Septiembre 2026: Doctrina de Edición Integral, Auto-Cálculo de Antigüedad, Adición Dinámica de Amenidades y Persistencia en Ficha Técnica
+
+#### 1. PERSISTENCIA INTEGRAL Y AUTO-CÁLCULO DE AÑO Y EDAD
+- **Diagnóstico del Fallo de Guardado**:
+  * En la interfaz de edición (`AdminMatches.tsx`), la fila "Antigüedad / Año" no contaba con campos específicos en el formulario de mutación y caía en un fallback genérico desvinculado de la base de datos.
+  * El router `server/routers/janIA.ts` en `getAllMatches` omitía las columnas `yearBuilt` y `antiguedadAnos`, provocando que al recargar la página el valor persistido no fuera recuperado.
+  * En la función de calificación `scoreRows`, cuando la demanda no exigía restricción de antigüedad y la oferta aportaba año de construcción, la casilla se marcaba erróneamente en gris como *"Dato Pendiente"* en lugar de verde *"Coincide"*.
+- **Mecanismo de Auto-Cálculo Bidireccional (Año Base 2026)**:
+  * Al ingresar el año de construcción (e.g. `1994`), el sistema infiere automáticamente los años de antigüedad (`2026 - 1994 = 32 años`).
+  * Al ingresar directamente los años (e.g. `32`), calcula el año de construcción correspondiente (`1994`).
+  * Indicador visual en vivo: `📅 Año: 1994 · ⏳ 32 años`.
+  * La insignia de cumplimiento pasa de forma inmediata a **🟢 Coincide**.
+
+#### 2. INCORPORACIÓN DE INPUTS DEDICADOS Y ADICIÓN DINÁMICA DE CARACTERÍSTICAS
+- **Campos Especializados en Cotejo Técnico**:
+  * **Ubicación en Piso (Vista)**: Selector para `Interior`, `Exterior`, `Exterior e Interior (Mixto)`.
+  * **Tipología de Cocina**: Selector para `Cerrada / Tradicional`, `Abierta / Tipo Americano`, `Abierta tipo Isla`, `Integral`, `Semi-abierta`.
+  * **Cuarto y Baño de Servicio (CBS)**: Selectores para con/sin baño o no tiene.
+  * **Depósito / Cuarto Útil**, **Balcón / Terraza / Patio**, **Tipo de Garaje (Independiente / Lineal)**, **Piso / Nivel** y **Estado de Conservación**.
+- **Panel Interactivo de Incorporación Dinámica ("➕ Completar / Agregar Atributo...")**:
+  * Barra de herramientas al pie de la tabla de cotejo que permite agregar amenidades (Ascensor, Conjunto Club House, Gas Natural, Chimenea, Gimnasio, Piscina, Canchas, Vigilancia 24/7, Planta Eléctrica, etc.) o campos personalizados ingresados por el usuario.
+  * Las nuevas filas se despliegan de forma alineada en la tabla desktop y en las minitarjetas móviles, guardándose en `amenities` de la propiedad o en `caracteristicasDeseadas` del requerimiento.
+- **Sincronización Total en `handleOnlySave` y `handleRecalculateMatch`**:
+  * Actualización optimista inmediata en memoria local (0ms lag) y persistencia en Supabase.
+
+
 
