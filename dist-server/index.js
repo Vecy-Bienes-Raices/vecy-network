@@ -3527,6 +3527,7 @@ __export(matching_exports, {
   findMatchesForRequirement: () => findMatchesForRequirement,
   getRejectedPairsSet: () => getRejectedPairsSet,
   invalidateRejectedPairsCache: () => invalidateRejectedPairsCache,
+  isHollowListing: () => isHollowListing,
   isNonRealEstateText: () => isNonRealEstateText,
   isPairRejectedInMemory: () => isPairRejectedInMemory,
   matchesGeography: () => matchesGeography,
@@ -4750,10 +4751,53 @@ function extractTrueCityFromText(rawText, fallbackCity) {
   if (medellinKeywords.some((k) => t2.includes(k))) return "Medell\xEDn";
   return normalizeCanonicalCity(fallbackCity);
 }
+function isHollowListing(rawText, name, externalUrl) {
+  if (!rawText || rawText.trim() === "") {
+    return { isHollow: true, reason: "Texto original vac\xEDo o nulo" };
+  }
+  const clean = rawText.trim();
+  if (/https?:\/\/[^\s]+/i.test(clean) || externalUrl && /https?:\/\/[^\s]+/i.test(externalUrl)) {
+    return { isHollow: false, reason: "Ficha t\xE9cnica en enlace web externo" };
+  }
+  const words = clean.split(/\s+/).filter(Boolean);
+  const lower = clean.toLowerCase();
+  const isGreetingOrTeaser = lower === "como est\xE1n? \u{1F917}" || lower === "buen d\xEDa \u{1F917}\u2600\uFE0F" || lower.startsWith("hola ") && words.length < 8 || lower.startsWith("buenas ") && words.length < 8 || lower === "en santa barbara" || lower === "*en santa barbara*" || lower === "en la cabrera" || lower === "*en la cabrera*" || lower === "*requerimiento*" || lower === "*requerimientos*" || lower === "inversion" || lower.includes("comparto requerimiento:") && words.length < 10 || lower.includes("busco para cliente") && words.length < 8 || lower.includes("qui\xE9n tiene") && words.length < 8 || lower.includes("quien tiene") && words.length < 8 || lower.includes("qui\xE9n mand\xF3") && words.length < 8 || lower.includes("quien mando") && words.length < 8 || lower.includes("cu\xE1l es el presupuesto") && words.length < 8 || lower.includes("sigue estando disponible") && words.length < 8;
+  if (isGreetingOrTeaser) {
+    return { isHollow: true, reason: `Mensaje conversacional informal o teaser sin ficha t\xE9cnica: "${clean.slice(0, 60)}"` };
+  }
+  if (words.length < 15) {
+    const hasPrice = /(?:\$|\b(?:millones|mdp|cop|pesos|canon|precio|valor|renta|arriendo)\b|\d{3,}\.\d{3})/i.test(clean);
+    const hasArea = /(?:\b(?:m2|mts|metros)\b)/i.test(clean);
+    const hasRooms = /(?:\b(?:alcobas?|hab(?:itaciones)?|cuartos?|dormitorios?|baños?)\b)/i.test(clean);
+    const hasLocation = /(?:\b(?:calle|carrera|cll|cra|diagonal|transversal|clle|cr|chico|rosales|cabrera|nogal|cedritos|santa barbara|usaquen|suba|chapinero|salitre)\b)/i.test(clean);
+    let technicalSignals = 0;
+    if (hasPrice) technicalSignals++;
+    if (hasArea) technicalSignals++;
+    if (hasRooms) technicalSignals++;
+    if (hasLocation) technicalSignals++;
+    if (technicalSignals < 2) {
+      return {
+        isHollow: true,
+        reason: `Frase suelta sin ficha t\xE9cnica m\xEDnima (${words.length} palabras, ${technicalSignals}/4 datos t\xE9cnicos verificables): "${clean.slice(0, 60)}"`
+      };
+    }
+  }
+  return { isHollow: false, reason: "Publicaci\xF3n con contenido suficiente" };
+}
 function explicarMatch(requirement, property) {
   const blockers = [];
   const positives = [];
   const negatives = [];
+  const propHollow = isHollowListing(property.rawText, property.name, property.externalUrl || property.enlace_origen);
+  if (propHollow.isHollow) {
+    blockers.push(`\u26D4 Oferta Inviable (Publicaci\xF3n Hueca / Frase Suelta): ${propHollow.reason}. MATCH IMPOSIBLE 0%.`);
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  const reqHollow = isHollowListing(requirement.rawText, requirement.name, requirement.externalUrl || requirement.enlace_origen);
+  if (reqHollow.isHollow) {
+    blockers.push(`\u26D4 Demanda Inviable (Requerimiento Hueco / Frase Suelta): ${reqHollow.reason}. MATCH IMPOSIBLE 0%.`);
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
   if (property.id && requirement.id && isPairRejectedInMemory(property.id, requirement.id)) {
     blockers.push("\u26D4 Descarte Doctrinal Humano (JanIA Feedback Memory): Este emparejamiento fue descartado manualmente por el operador comercial. JanIA respeta este veto absoluto y no volver\xE1 a sugerir esta pareja. MATCH INVIABLE 0%.");
     return buildExplanationResult(0, blockers, positives, negatives);
@@ -6145,6 +6189,10 @@ async function findMatchesForProperty(propertyId) {
   try {
     const [property] = await db.select().from(properties).where(eq3(properties.id, propertyId));
     if (!property) return [];
+    if (isHollowListing(property.rawText, property.name, property.externalUrl).isHollow) {
+      console.log(`[MATCHING-FILTER] \u26D4 Propiedad #${propertyId} omitida por ser publicaci\xF3n hueca o frase suelta sin ficha t\xE9cnica.`);
+      return [];
+    }
     const activeRequirements = await db.select().from(requirements).where(eq3(requirements.status, "active"));
     const rejectedSet = await getRejectedPairsSet();
     const validMatches = [];
@@ -6221,6 +6269,10 @@ async function findMatchesForRequirement(requirementId) {
   try {
     const [req] = await db.select().from(requirements).where(eq3(requirements.id, requirementId));
     if (!req) return [];
+    if (isHollowListing(req.rawText, req.name, req.enlaceOrigen).isHollow) {
+      console.log(`[MATCHING-FILTER] \u26D4 Requerimiento #${requirementId} omitido por ser frase suelta sin criterios de b\xFAsqueda.`);
+      return [];
+    }
     const availableProperties = await db.select().from(properties).where(eq3(properties.available, true));
     const rejectedSet = await getRejectedPairsSet();
     const validMatches = [];
@@ -9446,6 +9498,11 @@ ${liveStats}` : buildSystemPrompt(groupJid);
         console.log(`[JANIA-FILTER] \u26D4 Descartando falso positivo de ${result.classification}: Mensaje sin intenci\xF3n predial expl\xEDcita ("${cleanText2.substring(0, 50)}..."). Degenerado a CONSULTA_GENERAL.`);
         result.classification = "CONSULTA_GENERAL";
       }
+      const hollowEarlyCheck = isHollowListing(cleanText2, null, urls && urls.length > 0 ? urls[0] : null);
+      if ((result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO") && hollowEarlyCheck.isHollow && !imageBuffer) {
+        console.log(`[JANIA-FILTER] \u26D4 Descartando publicaci\xF3n hueca o frase suelta (${hollowEarlyCheck.reason}): "${cleanText2.substring(0, 60)}...". Degenerado a CONSULTA_GENERAL.`);
+        result.classification = "CONSULTA_GENERAL";
+      }
     }
     const extracted = result.extractedData || {};
     let isRequirement = result.classification === "REQUERIMIENTO";
@@ -9644,10 +9701,9 @@ ${liveStats}` : buildSystemPrompt(groupJid);
         result.reactionEmoji = "\u{1F6AB}";
         return result;
       }
-      const isShortCommentText = cleanCheckText.length < 100 && (cleanCheckText.includes("sigue este enlace para ver el art\xEDculo en whatsapp") || cleanCheckText.includes("sigue este enlace") || cleanCheckText.includes("bajo de precio") || cleanCheckText.includes("foto por interno") || cleanCheckText.includes("info por interno") || cleanCheckText.includes("escribir al interno") || cleanCheckText.includes("a\xFAn disponible"));
-      const hasZeroSpecs = (!extracted.price || Number(extracted.price) <= 0) && (!extracted.area || Number(extracted.area) <= 0) && cleanCheckText.split(/\s+/).length < 8;
-      if (isShortCommentText && hasZeroSpecs) {
-        console.log(`[JANIA-FILTER] \u26D4 Omitiendo guardado en BD: "${cleanCheckText.substring(0, 50)}..." es un comentario/seguimiento sin ficha t\xE9cnica.`);
+      const hollowCheckProp = isHollowListing(cleanCheckText, propertyTitle, urls && urls.length > 0 ? urls[0] : void 0);
+      if (hollowCheckProp.isHollow && !imageBuffer) {
+        console.log(`[JANIA-FILTER] \u26D4 Omitiendo guardado de propiedad en BD (${hollowCheckProp.reason}): "${cleanCheckText.substring(0, 60)}..."`);
         result.inserted = false;
         result.classification = "CONSULTA_GENERAL";
         return result;
@@ -9731,15 +9787,14 @@ ${liveStats}` : buildSystemPrompt(groupJid);
         result.reactionEmoji = "\u{1F6AB}";
         return result;
       }
-      const isShortCommentReqText = cleanCheckReqText.length < 100 && (cleanCheckReqText.includes("sigue este enlace para ver el art\xEDculo en whatsapp") || cleanCheckReqText.includes("sigue este enlace") || cleanCheckReqText.includes("bajo de precio") || cleanCheckReqText.includes("foto por interno") || cleanCheckReqText.includes("info por interno") || cleanCheckReqText.includes("escribir al interno") || cleanCheckReqText.includes("a\xFAn disponible"));
-      const hasZeroReqSpecs = (!extracted.presupuestoMax || Number(extracted.presupuestoMax) <= 0) && (!extracted.price || Number(extracted.price) <= 0) && cleanCheckReqText.split(/\s+/).length < 8;
-      if (isShortCommentReqText && hasZeroReqSpecs) {
-        console.log(`[JANIA-FILTER] \u26D4 Omitiendo guardado de requerimiento en BD: "${cleanCheckReqText.substring(0, 50)}..." es un comentario sin criterios de b\xFAsqueda.`);
+      const reqTitle = extracted.title || `Requerimiento de ${extracted.propertyType || "inmueble"} en ${extracted.zonaDeseada || extracted.zone || "Bogot\xE1"} para ${extracted.transactionType || "venta"}`;
+      const hollowCheckReq = isHollowListing(cleanCheckReqText, reqTitle, urls && urls.length > 0 ? urls[0] : void 0);
+      if (hollowCheckReq.isHollow) {
+        console.log(`[JANIA-FILTER] \u26D4 Omitiendo guardado de requerimiento en BD (${hollowCheckReq.reason}): "${cleanCheckReqText.substring(0, 60)}..."`);
         result.inserted = false;
         result.classification = "CONSULTA_GENERAL";
         return result;
       }
-      const reqTitle = extracted.title || `Requerimiento de ${extracted.propertyType || "inmueble"} en ${extracted.zonaDeseada || extracted.zone || "Bogot\xE1"} para ${extracted.transactionType || "venta"}`;
       const sourceUrlReq = urls && urls.length > 0 ? urls[0] : null;
       const isFlyerDetectedReq = result.isFlyerOrBanner === true || extracted.isFlyerOrBanner === true;
       const flyerVerbatimReq = result.flyerVerbatimText || extracted.flyerVerbatimText || "";
@@ -14951,6 +15006,19 @@ async function runNightlyRematch() {
             }
             continue;
           }
+          if (isHollowListing(prop.rawText, prop.name, prop.externalUrl).isHollow || isHollowListing(req.rawText, req.name, req.enlaceOrigen).isHollow) {
+            skippedCount++;
+            try {
+              await db.delete(propertyMatches).where(
+                and4(
+                  eq6(propertyMatches.requirementId, req.id),
+                  eq6(propertyMatches.propertyId, prop.id)
+                )
+              );
+            } catch {
+            }
+            continue;
+          }
           if (req._city && prop._city && req._city !== prop._city) continue;
           const transScore = checkTransactionCompatibility(
             req.tipoNegocioDeseado,
@@ -15579,7 +15647,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.4";
+var VECY_VERSION = "v31.5";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 

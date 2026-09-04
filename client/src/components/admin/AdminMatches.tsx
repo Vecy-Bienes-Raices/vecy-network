@@ -309,6 +309,66 @@ export function extractTrueCityFromText(rawText: string | null | undefined, fall
   return fallbackCity || "Bogotá";
 }
 
+export function isHollowListing(rawText: string | null | undefined, name?: string | null, externalUrl?: string | null): { isHollow: boolean; reason: string } {
+  if (!rawText || rawText.trim() === '') {
+    return { isHollow: true, reason: 'Texto original vacío o nulo' };
+  }
+  const clean = rawText.trim();
+
+  if (/https?:\/\/[^\s]+/i.test(clean) || (externalUrl && /https?:\/\/[^\s]+/i.test(externalUrl))) {
+    return { isHollow: false, reason: 'Ficha técnica en enlace web externo' };
+  }
+
+  const words = clean.split(/\s+/).filter(Boolean);
+  const lower = clean.toLowerCase();
+  const isGreetingOrTeaser = (
+    lower === 'como están? 🤗' ||
+    lower === 'buen día 🤗☀️' ||
+    (lower.startsWith('hola ') && words.length < 8) ||
+    (lower.startsWith('buenas ') && words.length < 8) ||
+    lower === 'en santa barbara' ||
+    lower === '*en santa barbara*' ||
+    lower === 'en la cabrera' ||
+    lower === '*en la cabrera*' ||
+    lower === '*requerimiento*' ||
+    lower === '*requerimientos*' ||
+    lower === 'inversion' ||
+    (lower.includes('comparto requerimiento:') && words.length < 10) ||
+    (lower.includes('busco para cliente') && words.length < 8) ||
+    (lower.includes('quién tiene') && words.length < 8) ||
+    (lower.includes('quien tiene') && words.length < 8) ||
+    (lower.includes('quién mandó') && words.length < 8) ||
+    (lower.includes('quien mando') && words.length < 8) ||
+    (lower.includes('cuál es el presupuesto') && words.length < 8) ||
+    (lower.includes('sigue estando disponible') && words.length < 8)
+  );
+  if (isGreetingOrTeaser) {
+    return { isHollow: true, reason: `Mensaje conversacional informal o teaser: "${clean.slice(0, 50)}"` };
+  }
+
+  if (words.length < 15) {
+    const hasPrice = /(?:\$|\b(?:millones|mdp|cop|pesos|canon|precio|valor|renta|arriendo)\b|\d{3,}\.\d{3})/i.test(clean);
+    const hasArea = /(?:\b(?:m2|mts|metros)\b)/i.test(clean);
+    const hasRooms = /(?:\b(?:alcobas?|hab(?:itaciones)?|cuartos?|dormitorios?|baños?)\b)/i.test(clean);
+    const hasLocation = /(?:\b(?:calle|carrera|cll|cra|diagonal|transversal|clle|cr|chico|rosales|cabrera|nogal|cedritos|santa barbara|usaquen|suba|chapinero|salitre)\b)/i.test(clean);
+
+    let technicalSignals = 0;
+    if (hasPrice) technicalSignals++;
+    if (hasArea) technicalSignals++;
+    if (hasRooms) technicalSignals++;
+    if (hasLocation) technicalSignals++;
+
+    if (technicalSignals < 2) {
+      return {
+        isHollow: true,
+        reason: `Frase suelta sin ficha técnica mínima (${words.length} palabras, ${technicalSignals}/4 datos técnicos): "${clean.slice(0, 50)}"`
+      };
+    }
+  }
+
+  return { isHollow: false, reason: 'Publicación con contenido suficiente' };
+}
+
 const scoreRowsCache = new Map<string, { rows: ScoreRow[]; autoScore: number; pts: number; max: number }>();
 
 function scoreRows(req: any, prop: any) {
@@ -353,6 +413,19 @@ function scoreRows(req: any, prop: any) {
     .replace(/[\t ]+/g, " ");
   const reqRawText = cleanText(req.rawText || req.name || "");
   const propRawText = cleanText(prop.rawText || prop.description || prop.name || "");
+
+  // ── REGLA DOCTRINAL v31.5: ANTI-PUBLICACIONES HUECAS / FRASES SUELTAS (0% Match Imposible) ──
+  const propHollow = isHollowListing(prop.rawText, prop.name, prop.externalUrl || prop.enlace_origen);
+  if (propHollow.isHollow) {
+    add("Ficha Técnica", "Demanda Completa", `Oferta Incompleta / Hueca: ${propHollow.reason}`, "missing", 100, null);
+    return { rows, autoScore: 0, pts: 0, max };
+  }
+
+  const reqHollow = isHollowListing(req.rawText, req.name, req.enlace_origen || req.externalUrl);
+  if (reqHollow.isHollow) {
+    add("Ficha Técnica", `Demanda Incompleta / Hueca: ${reqHollow.reason}`, "Oferta Completa", "missing", 100, null);
+    return { rows, autoScore: 0, pts: 0, max };
+  }
 
   // ── REGLA DOCTRINAL v29.0: ANTI-AUTO-MATCH / ANTI-CLON (0% Match Imposible) ──
   const rCleanChars = reqRawText.replace(/[^a-z0-9]/g, "");

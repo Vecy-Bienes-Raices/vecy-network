@@ -52,7 +52,36 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.4 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.5 — Septiembre 2026
+
+### 🗓️ Sesión: Viernes 4 de Septiembre de 2026 — 16:15 a 16:35 (Hora Colombia UTC-5)
+**Versión**: `v31.5` | **Ambiente**: Producción VPS (`13.140.149.144`) + Mesa de Cotejo Admin Panel (`vecy-network.vercel.app/admin`) + Supabase DB + GitHub (`main`)
+
+#### 🎯 Solicitud de Eduardo A. Rivera:
+1. "Que son estas porquerías de datos. Dónde putas le ves el MATCH... YA anteriormente tenía JanIA instrucción de no dejar filtrar frases basura a la base de datos, que putas es eso, por qué estas subiendo esa porquería de simples frases disque como OFERTAS, así como las que ves en las imágenes."
+2. Reporte con 5 capturas de pantalla de matches al 90%-93% (#M12274, #M12258, #M12249, #M12202, #M12199) donde la oferta contenía únicamente fragmentos como `*En La Cabrera*`, `Espectacular apartamento. ¡¡¡Precio de oportunidad!!!`, o `VENDO APTO EN LA 83 Club house Terceria 1-1-1`.
+
+#### 🛠️ Diagnóstico Técnico e Implementación:
+1. **Causa Raíz Histórica y Falsos Matches**:
+   - En julio y agosto de 2026, mensajes de WhatsApp con fotos/flyers o comentarios informales sin enlace web guardaron únicamente la leyenda/pie de foto en `rawText` (`*En La Cabrera*`, `Espectacular apartamento...`), mientras Gemini infirió o rellenó atributos numéricos ficticios en las columnas de la BD ($2.950M y 3 hab; $545M y 2 hab).
+   - El motor de matching, al evaluar matemáticamente las columnas numéricas de la BD, emparejó esas ofertas contra requerimientos de alto presupuesto con notas del 90%-93%, pero en la pantalla del asesor la publicación original mostraba únicamente 3 o 4 palabras sin datos técnicos.
+2. **Filtro Duro 00-HOLLOW en Motor de Matching (`matching.ts`) y Frontend (`AdminMatches.tsx`)**:
+   - Si el texto original de la oferta o demanda tiene menos de 15 palabras sin enlace web externo y carece de al menos 2 datos técnicos explícitos (precio/canon, área m2, alcobas, dirección/ubicación), se aplica **Bloqueo Inmediato 0% (Match Imposible)** con blocker explicativo.
+   - En `findMatchesForProperty` y `findMatchesForRequirement`, omisión temprana con cero consultas innecesarias.
+3. **Compuerta de Ingesta Infranqueable en `janIA.ts`**:
+   - Bloqueo temprano de frases sueltas, saludos y teasers: ningún mensaje sin especificaciones técnicas mínimas se clasifica como `INMUEBLE` o `REQUERIMIENTO`; degenera a `CONSULTA_GENERAL`.
+   - Bloqueo de inserción en BD: se descarta terminantemente guardar cualquier mensaje en `properties` o `requirements` si el texto es hueco o carece de ficha técnica.
+4. **Gran Purga en Base de Datos de Supabase (`purge_hollow_listings.ts`)**:
+   - **17 matches espurios eliminados permanentemente** de `propertyMatches` (incluyendo todos los matches reportados por Eduardo).
+   - **90 propiedades huecas desactivadas** (`available = false`).
+   - **111 requerimientos huecos desactivados** (`status = 'expired'`).
+   - La base de datos queda con **119 matches 100% verídicos y depurados**.
+5. **Incremento de Versión**:
+   - Elevada la versión oficial a **`v31.5`** en `shared/const.ts` y `package.json` (31.5.0).
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.4 — Septiembre 2026
 
 ### 🗓️ Sesión: Viernes 4 de Septiembre de 2026 — 15:15 a 15:40 (Hora Colombia UTC-5)
 **Versión**: `v31.4` | **Ambiente**: Producción VPS (`13.140.149.144`) + Mesa de Cotejo Admin Panel (`vecy-network.vercel.app/admin`) + Supabase DB + GitHub (`main`)

@@ -7,6 +7,7 @@ import {
   normalizeCanonicalCity,
   checkTransactionCompatibility,
   getRejectedPairsSet,
+  isHollowListing,
 } from "../_core/matching";
 import { extractFallbackDataFromText } from "../_core/janIA";
 
@@ -93,6 +94,20 @@ export async function runNightlyRematch() {
 
           // Veto Doctrinal Humano (Tolerancia Cero): si fue descartado previamente, nunca reinsertar
           if (rejectedPairsSet.has(`${prop.id}_${req.id}`)) {
+            skippedCount++;
+            try {
+              await db.delete(propertyMatches).where(
+                and(
+                  eq(propertyMatches.requirementId, req.id),
+                  eq(propertyMatches.propertyId, prop.id)
+                )
+              );
+            } catch {}
+            continue;
+          }
+
+          // Filtro Doctrinal Anti-Publicaciones Huecas / Frases Sueltas (Doctrina v31.5)
+          if (isHollowListing(prop.rawText, prop.name, prop.externalUrl).isHollow || isHollowListing(req.rawText, req.name, req.enlaceOrigen).isHollow) {
             skippedCount++;
             try {
               await db.delete(propertyMatches).where(

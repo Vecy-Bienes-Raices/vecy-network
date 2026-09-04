@@ -1244,10 +1244,92 @@ export function extractTrueCityFromText(rawText: string | null | undefined, fall
   return normalizeCanonicalCity(fallbackCity);
 }
 
+/**
+ * Doctrina v31.5: Detección estricta de publicaciones huecas, frases sueltas, teasers o comentarios de chat
+ * que carecen de ficha técnica o especificaciones mínimas en su texto original.
+ */
+export function isHollowListing(rawText: string | null | undefined, name?: string | null, externalUrl?: string | null): { isHollow: boolean; reason: string } {
+  if (!rawText || rawText.trim() === '') {
+    return { isHollow: true, reason: 'Texto original vacío o nulo' };
+  }
+  const clean = rawText.trim();
+
+  // Si contiene un enlace web externo verificado, cuenta con ficha técnica en la web
+  if (/https?:\/\/[^\s]+/i.test(clean) || (externalUrl && /https?:\/\/[^\s]+/i.test(externalUrl))) {
+    return { isHollow: false, reason: 'Ficha técnica en enlace web externo' };
+  }
+
+  const words = clean.split(/\s+/).filter(Boolean);
+
+  // Mensajes de saludo, avisos o frases fragmentadas típicas de chat
+  const lower = clean.toLowerCase();
+  const isGreetingOrTeaser = (
+    lower === 'como están? 🤗' ||
+    lower === 'buen día 🤗☀️' ||
+    (lower.startsWith('hola ') && words.length < 8) ||
+    (lower.startsWith('buenas ') && words.length < 8) ||
+    lower === 'en santa barbara' ||
+    lower === '*en santa barbara*' ||
+    lower === 'en la cabrera' ||
+    lower === '*en la cabrera*' ||
+    lower === '*requerimiento*' ||
+    lower === '*requerimientos*' ||
+    lower === 'inversion' ||
+    (lower.includes('comparto requerimiento:') && words.length < 10) ||
+    (lower.includes('busco para cliente') && words.length < 8) ||
+    (lower.includes('quién tiene') && words.length < 8) ||
+    (lower.includes('quien tiene') && words.length < 8) ||
+    (lower.includes('quién mandó') && words.length < 8) ||
+    (lower.includes('quien mando') && words.length < 8) ||
+    (lower.includes('cuál es el presupuesto') && words.length < 8) ||
+    (lower.includes('sigue estando disponible') && words.length < 8)
+  );
+  if (isGreetingOrTeaser) {
+    return { isHollow: true, reason: `Mensaje conversacional informal o teaser sin ficha técnica: "${clean.slice(0, 60)}"` };
+  }
+
+  // Si tiene menos de 15 palabras sin enlace web:
+  if (words.length < 15) {
+    const hasPrice = /(?:\$|\b(?:millones|mdp|cop|pesos|canon|precio|valor|renta|arriendo)\b|\d{3,}\.\d{3})/i.test(clean);
+    const hasArea = /(?:\b(?:m2|mts|metros)\b)/i.test(clean);
+    const hasRooms = /(?:\b(?:alcobas?|hab(?:itaciones)?|cuartos?|dormitorios?|baños?)\b)/i.test(clean);
+    const hasLocation = /(?:\b(?:calle|carrera|cll|cra|diagonal|transversal|clle|cr|chico|rosales|cabrera|nogal|cedritos|santa barbara|usaquen|suba|chapinero|salitre)\b)/i.test(clean);
+
+    let technicalSignals = 0;
+    if (hasPrice) technicalSignals++;
+    if (hasArea) technicalSignals++;
+    if (hasRooms) technicalSignals++;
+    if (hasLocation) technicalSignals++;
+
+    // Debe contener al menos 2 datos técnicos explícitos en el texto mismo
+    if (technicalSignals < 2) {
+      return {
+        isHollow: true,
+        reason: `Frase suelta sin ficha técnica mínima (${words.length} palabras, ${technicalSignals}/4 datos técnicos verificables): "${clean.slice(0, 60)}"`
+      };
+    }
+  }
+
+  return { isHollow: false, reason: 'Publicación con contenido suficiente' };
+}
+
 export function explicarMatch(requirement: any, property: any): MatchExplanation {
   const blockers: string[] = [];
   const positives: string[] = [];
   const negatives: string[] = [];
+
+  // ── FILTRO DURO 00-HOLLOW: ANTI-PUBLICACIONES HUECAS O FRASES SUELTAS (Doctrinal v31.5) ──
+  const propHollow = isHollowListing(property.rawText, property.name, property.externalUrl || property.enlace_origen);
+  if (propHollow.isHollow) {
+    blockers.push(`⛔ Oferta Inviable (Publicación Hueca / Frase Suelta): ${propHollow.reason}. MATCH IMPOSIBLE 0%.`);
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+
+  const reqHollow = isHollowListing(requirement.rawText, requirement.name, requirement.externalUrl || requirement.enlace_origen);
+  if (reqHollow.isHollow) {
+    blockers.push(`⛔ Demanda Inviable (Requerimiento Hueco / Frase Suelta): ${reqHollow.reason}. MATCH IMPOSIBLE 0%.`);
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
 
   // ── FILTRO DURO 00-VETO: VETO DOCTRINAL HUMANO (JanIA Feedback Memory v31.4) ──
   if (property.id && requirement.id && isPairRejectedInMemory(property.id, requirement.id)) {
@@ -3074,6 +3156,10 @@ export async function findMatchesForProperty(propertyId: number) {
   try {
     const [property] = await db.select().from(properties).where(eq(properties.id, propertyId));
     if (!property) return [];
+    if (isHollowListing(property.rawText, property.name, property.externalUrl).isHollow) {
+      console.log(`[MATCHING-FILTER] ⛔ Propiedad #${propertyId} omitida por ser publicación hueca o frase suelta sin ficha técnica.`);
+      return [];
+    }
 
     // Carga requerimientos activos para cotejo en memoria con resolución geográfica canónica (matchesGeography)
     const activeRequirements = await db
@@ -3166,6 +3252,10 @@ export async function findMatchesForRequirement(requirementId: number) {
   try {
     const [req] = await db.select().from(requirements).where(eq(requirements.id, requirementId));
     if (!req) return [];
+    if (isHollowListing(req.rawText, req.name, req.enlaceOrigen).isHollow) {
+      console.log(`[MATCHING-FILTER] ⛔ Requerimiento #${requirementId} omitido por ser frase suelta sin criterios de búsqueda.`);
+      return [];
+    }
 
     // Carga inmuebles disponibles para cotejo en memoria con resolución geográfica canónica (matchesGeography)
     const availableProperties = await db

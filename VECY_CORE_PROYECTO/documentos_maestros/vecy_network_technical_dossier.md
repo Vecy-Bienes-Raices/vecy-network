@@ -1118,4 +1118,22 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 - **338 matches inválidos purgados permanentemente** de `propertyMatches` tras desvincular llaves foráneas (`notificationLogs`, `matchFeedback`).
 - Retenidos **136 matches 100% verídicos y rigurosos**.
 
+---
+
+### Versión v31.5 — Septiembre 2026: Doctrina Anti-Publicaciones Huecas / Frases Sueltas, Blindaje de Ingesta y Purga de 17 Matches Espurios
+
+#### 1. ERRADICACIÓN DE PUBLICACIONES HUECAS Y FRASES SUELTAS
+- **Diagnóstico de Causa Raíz**: Mensajes cortos de 3 a 8 palabras sin ficha técnica (e.g. `*En La Cabrera*`, `Espectacular apartamento. ¡¡¡Precio de oportunidad!!!`, `VENDO APTO EN LA 83`) ingresaron a Supabase en julio/agosto con atributos numéricos inferidos/alucinados en BD, produciendo emparejamientos espurios al 90%-93% contra demandas reales completas.
+- **Filtro Duro 00-HOLLOW en Motor de Matching y Frontend (`matching.ts`, `AdminMatches.tsx`)**: Bloqueo absoluto al 0% (Match Inviable) para cualquier oferta o demanda con menos de 15 palabras sin enlace externo que no contenga al menos 2 datos técnicos explícitos en el texto (precio, área, habitaciones, ubicación).
+- **Compuerta de Ingesta Infranqueable en `janIA.ts`**:
+  * Clasificación heurística temprana: Frases sueltas, teasers y saludos se degradan automáticamente a `CONSULTA_GENERAL`.
+  * Bloqueo de inserción en BD: Cero inserciones en `properties` o `requirements` si el texto carece de ficha técnica o enlace comercial.
+- **Sincronización en `nightlyRematch.ts`**: Cruce masivo nocturno omite de antemano cualquier oferta o requerimiento hueco.
+
+#### 2. GRAN PURGA EN BASE DE DATOS SUPABASE
+- **17 matches espurios eliminados permanentemente** de `propertyMatches` (#M12274, #M12258, #M12249, #M12202, #M12199 y demás registros asociados a publicaciones huecas).
+- **90 propiedades huecas desactivadas** en `properties` (`available = false`).
+- **111 requerimientos huecos desactivados** en `requirements` (`status = 'expired'`).
+- La base de datos queda con **119 matches 100% verídicos, limpios y con fichas técnicas completas**.
+
 

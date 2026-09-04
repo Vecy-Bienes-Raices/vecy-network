@@ -163,7 +163,27 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.4 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.5 — Septiembre 2026
+
+### Novedades v31.5 (Doctrina Anti-Publicaciones Huecas / Frases Sueltas, Blindaje de Ingesta y Purga de 17 Matches Espurios):
+- **Diagnóstico y Erradicación del Error Crítico de Publicaciones Huecas y Teasers (Caso "En La Cabrera", "Precio de oportunidad", "En la 83 Club House")**:
+  1) **Causa Raíz de Ingesta**: Mensajes fragmentados de WhatsApp con frases cortas de 3 a 8 palabras sin ficha técnica (e.g. `*En La Cabrera*`, `Espectacular apartamento. ¡¡¡Precio de oportunidad!!!`, `VENDO APTO EN LA 83 Club house Terceria 1-1-1`, `Inversion`, `Como están? 🤗`) burlaban el filtro anterior de ruido de chat porque dicho filtro requería cadenas literales específicas (`sigue este enlace`, `bajo de precio`).
+  2) **Alucinación de Atributos en Ingesta Histórica**: En meses anteriores (julio-agosto 2026), Gemini infería o rellenaba atributos ficticios (e.g. $2.950M y 3 hab para `*En La Cabrera*`; $545M y 2 hab para `Espectacular apartamento...`), guardando esas columnas en Supabase mientras la columna `rawText` quedaba con apenas 3 palabras.
+  3) **Falsos Matches al 90%-93%**: Al evaluar matemáticamente las columnas de la BD, el motor otorgaba puntajes altos (90%-93%) frente a requerimientos millonarios completos, pero en la mesa de cotejo el asesor veía una oferta de 3 palabras sin especificaciones.
+- **Blindaje Doctrinal Integral Anti-Frases Huecas**:
+  1) **Filtro Duro 00-HOLLOW en `matching.ts` y `AdminMatches.tsx`**: Si el texto original de la oferta o de la demanda tiene menos de 15 palabras, no tiene enlace web externo verificado y carece de al menos 2 datos técnicos explícitos en el texto (precio/canon, área m2, habitaciones/alcobas, ubicación específica), **Bloqueo Inmediato 0% (Match Imposible)** con blocker explicativo.
+  2) **Compuerta de Ingesta Infranqueable en `janIA.ts`**:
+     - Descarte temprano en clasificación heurística: ningún mensaje hueco se clasifica como `INMUEBLE` ni como `REQUERIMIENTO`; degenera a `CONSULTA_GENERAL`.
+     - Compuerta de inserción en BD: se bloquea taxativamente el guardado en `properties` o `requirements` si el texto original es una frase suelta, saludo, teaser o consulta informal de chat sin ficha técnica.
+  3) **Sincronización en `nightlyRematch.ts`**: El cruce masivo nocturno omite de antemano cualquier propiedad o requerimiento que sea detectado como publicación hueca.
+- **Gran Purga en Base de Datos de Supabase**:
+  - Ejecutado script `purge_hollow_listings.ts`:
+    - **17 matches espurios eliminados permanentemente** de `propertyMatches` (incluyendo #M12274, #M12249, #M12202, #M12199 y todos los matches vinculados a ofertas huecas).
+    - **90 propiedades huecas desactivadas** en `properties` (`available = false`).
+    - **111 requerimientos huecos desactivados** en `requirements` (`status = 'expired'`).
+    - La base de datos queda con **119 matches 100% verídicos, limpios y con fichas técnicas completas**.
+- **Incremento Oficial de Versión**:
+  1) Elevado a `v31.5` en `shared/const.ts` y `package.json` (31.5.0).
 
 ### Novedades v31.4 (Doctrina de Blindaje Geográfico por Micro-Sectores, Delimitación Vial Resiliente, Memoria Permanente de Descarte y Purga de 338 Matches Espurios):
 - **Diagnóstico y Erradicación del Error Crítico de Ubicación y Zonas (Caso Nogal / Rincón del Chicó vs El Virrey)**:

@@ -7,7 +7,7 @@ import { getDb } from "../db";
 import { properties, requirements, users, propertyImages, InsertProperty, InsertRequirement, pendingSessions, propertyMatches, messages as dbMessages, conversations as dbConversations, propertyPublicationHistory, inmobiliarioLexicon, matchFeedback } from "../../drizzle/schema";
 import { validarZona, normalizarTextoGeografico, desambiguarBarriosCompuestos, deducirGeografiaTripartita, resolveIntersectionToBarrio } from "./geography";
 import { validateCity } from "./divipola";
-import { findMatchesForProperty, findMatchesForRequirement, isNonRealEstateText } from "./matching";
+import { findMatchesForProperty, findMatchesForRequirement, isNonRealEstateText, isHollowListing } from "./matching";
 import { transcribeAudio } from "./voiceTranscription";
 import { eq, and, sql, gte, desc, or, isNotNull } from "drizzle-orm";
 import { storagePut } from "../storage";
@@ -3057,6 +3057,13 @@ Por lo tanto, DEBES hacer lo siguiente:
         console.log(`[JANIA-FILTER] ⛔ Descartando falso positivo de ${result.classification}: Mensaje sin intención predial explícita ("${cleanText.substring(0, 50)}..."). Degenerado a CONSULTA_GENERAL.`);
         result.classification = "CONSULTA_GENERAL";
       }
+
+      // Doctrina v31.5: Descarte estricto de frases sueltas, teasers o saludos clasificados erróneamente
+      const hollowEarlyCheck = isHollowListing(cleanText, null, (urls && urls.length > 0 ? urls[0] : null));
+      if ((result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO") && hollowEarlyCheck.isHollow && !imageBuffer) {
+        console.log(`[JANIA-FILTER] ⛔ Descartando publicación hueca o frase suelta (${hollowEarlyCheck.reason}): "${cleanText.substring(0, 60)}...". Degenerado a CONSULTA_GENERAL.`);
+        result.classification = "CONSULTA_GENERAL";
+      }
     }
 
     const extracted = result.extractedData || {};
@@ -3306,20 +3313,10 @@ Por lo tanto, DEBES hacer lo siguiente:
         return result;
       }
 
-      // Filtro de Seguridad Final de Calidad Comercial: Rechazar comentarios o enlaces de WhatsApp sin ficha técnica
-      const isShortCommentText = cleanCheckText.length < 100 && (
-        cleanCheckText.includes("sigue este enlace para ver el artículo en whatsapp") ||
-        cleanCheckText.includes("sigue este enlace") ||
-        cleanCheckText.includes("bajo de precio") ||
-        cleanCheckText.includes("foto por interno") ||
-        cleanCheckText.includes("info por interno") ||
-        cleanCheckText.includes("escribir al interno") ||
-        cleanCheckText.includes("aún disponible")
-      );
-      const hasZeroSpecs = (!extracted.price || Number(extracted.price) <= 0) && (!extracted.area || Number(extracted.area) <= 0) && cleanCheckText.split(/\s+/).length < 8;
-
-      if (isShortCommentText && hasZeroSpecs) {
-        console.log(`[JANIA-FILTER] ⛔ Omitiendo guardado en BD: "${cleanCheckText.substring(0, 50)}..." es un comentario/seguimiento sin ficha técnica.`);
+      // Filtro de Seguridad Final de Calidad Comercial: Rechazar publicaciones huecas, frases sueltas o sin ficha técnica
+      const hollowCheckProp = isHollowListing(cleanCheckText, propertyTitle, (urls && urls.length > 0 ? urls[0] : undefined));
+      if (hollowCheckProp.isHollow && !imageBuffer) {
+        console.log(`[JANIA-FILTER] ⛔ Omitiendo guardado de propiedad en BD (${hollowCheckProp.reason}): "${cleanCheckText.substring(0, 60)}..."`);
         result.inserted = false;
         result.classification = "CONSULTA_GENERAL";
         return result;
@@ -3429,25 +3426,17 @@ Por lo tanto, DEBES hacer lo siguiente:
         return result;
       }
 
-      const isShortCommentReqText = cleanCheckReqText.length < 100 && (
-        cleanCheckReqText.includes("sigue este enlace para ver el artículo en whatsapp") ||
-        cleanCheckReqText.includes("sigue este enlace") ||
-        cleanCheckReqText.includes("bajo de precio") ||
-        cleanCheckReqText.includes("foto por interno") ||
-        cleanCheckReqText.includes("info por interno") ||
-        cleanCheckReqText.includes("escribir al interno") ||
-        cleanCheckReqText.includes("aún disponible")
-      );
-      const hasZeroReqSpecs = (!extracted.presupuestoMax || Number(extracted.presupuestoMax) <= 0) && (!extracted.price || Number(extracted.price) <= 0) && cleanCheckReqText.split(/\s+/).length < 8;
+      const reqTitle = extracted.title || `Requerimiento de ${extracted.propertyType || 'inmueble'} en ${extracted.zonaDeseada || extracted.zone || 'Bogotá'} para ${extracted.transactionType || 'venta'}`;
 
-      if (isShortCommentReqText && hasZeroReqSpecs) {
-        console.log(`[JANIA-FILTER] ⛔ Omitiendo guardado de requerimiento en BD: "${cleanCheckReqText.substring(0, 50)}..." es un comentario sin criterios de búsqueda.`);
+      // Filtro de Seguridad Final de Calidad Comercial: Rechazar requerimientos huecos, saludos o frases sueltas
+      const hollowCheckReq = isHollowListing(cleanCheckReqText, reqTitle, (urls && urls.length > 0 ? urls[0] : undefined));
+      if (hollowCheckReq.isHollow) {
+        console.log(`[JANIA-FILTER] ⛔ Omitiendo guardado de requerimiento en BD (${hollowCheckReq.reason}): "${cleanCheckReqText.substring(0, 60)}..."`);
         result.inserted = false;
         result.classification = "CONSULTA_GENERAL";
         return result;
       }
 
-      const reqTitle = extracted.title || `Requerimiento de ${extracted.propertyType || 'inmueble'} en ${extracted.zonaDeseada || extracted.zone || 'Bogotá'} para ${extracted.transactionType || 'venta'}`;
       const sourceUrlReq = (urls && urls.length > 0 ? urls[0] : null);
 
       const isFlyerDetectedReq = result.isFlyerOrBanner === true || extracted.isFlyerOrBanner === true;
