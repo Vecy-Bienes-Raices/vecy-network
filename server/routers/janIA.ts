@@ -8,7 +8,7 @@ import { eq, desc, sql, inArray, gte } from 'drizzle-orm';
 import { scrapePropertyLink } from '../_core/scraper';
 import { JANIA_PROMPT, processWhatsAppMessage, propagateBrokerPhoneAcrossAllListings } from '../_core/janIA';
 import { liquidarImpuestosVenta } from '../_core/taxEngine';
-import { explicarMatch, findMatchesForProperty, findMatchesForRequirement } from '../_core/matching';
+import { explicarMatch, findMatchesForProperty, findMatchesForRequirement, getRejectedPairsSet, invalidateRejectedPairsCache } from '../_core/matching';
 import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
@@ -573,12 +573,14 @@ export const janIARouter = router({
         }
 
         // Re-evaluación en tiempo real con Motor v20.0 y Deduplicación en Servidor
+        const rejectedPairs = await getRejectedPairsSet();
         const seenPairs = new Set<string>();
         const validEvaluatedMatches: any[] = [];
 
         for (const m of matches) {
           const key = `${m.property.id}-${m.requirement.id}`;
           if (seenPairs.has(key)) continue; // Eliminar duplicados
+          if (rejectedPairs.has(`${m.property.id}_${m.requirement.id}`)) continue; // Veto Doctrinal Humano (v31.4)
 
           // Re-evaluar en tiempo real con el motor de guillotinas estrictas (explicarMatch)
           const evaluation = explicarMatch(m.requirement, m.property);
@@ -1018,6 +1020,14 @@ export const janIARouter = router({
             await db.delete(propertyMatches)
               .where(eq(propertyMatches.id, input.matchId));
           }
+          if (input.propertyId && input.requirementId) {
+            await db.delete(propertyMatches).where(
+              and(
+                eq(propertyMatches.propertyId, input.propertyId),
+                eq(propertyMatches.requirementId, input.requirementId)
+              )
+            );
+          }
 
           // Si el motivo indica que el inmueble ya no está disponible (arrendado o vendido)
           const reasonLower = (input.motivoRechazo || '').toLowerCase();
@@ -1047,7 +1057,8 @@ export const janIARouter = router({
           }
         }
 
-        // Invalidar caché de matches inmediatamente
+        // Invalidar caché de matches y pares rechazados inmediatamente
+        invalidateRejectedPairsCache();
         cachedAllMatchesData = null;
         cachedAllMatchesTime = 0;
 

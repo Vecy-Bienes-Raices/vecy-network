@@ -3008,6 +3008,133 @@ export default function AdminMatches() {
                 >
                   <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-gradient-to-b from-[#bf953f] to-[#a67d32] opacity-50 group-hover:opacity-100 transition-opacity" />
 
+                  {/* PANEL INLINE DE DESCARTE Y APRENDIZAJE JANIA (SOBRE LA TARJETA) */}
+                  {rejectModalMatch?.id === m.id && (
+                    <div className="absolute inset-0 z-50 bg-[#0e0e0e]/98 backdrop-blur-2xl p-4 sm:p-6 overflow-y-auto flex flex-col justify-between border-2 border-rose-500/60 shadow-[0_0_50px_rgba(244,63,94,0.35)] animate-in fade-in zoom-in-95 duration-200 rounded-3xl">
+                      <div className="space-y-4">
+                        {/* Header */}
+                        <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                          <div className="flex items-center gap-2.5 text-rose-400 font-extrabold text-base">
+                            <div className="p-2 bg-rose-500/10 border border-rose-500/30 rounded-xl">
+                              <ThumbsDown className="w-5 h-5 text-rose-400" />
+                            </div>
+                            <div>
+                              <span className="block text-sm sm:text-base text-white font-bold">Descartar Coincidencia Comercial</span>
+                              <span className="text-[11px] font-mono text-rose-400 font-medium">JanIA Active Feedback Loop · Memoria Doctrinal Permanente</span>
+                            </div>
+                          </div>
+                          <button 
+                            type="button"
+                            onClick={() => { setRejectModalMatch(null); setRejectReason(''); setCustomRejectNote(''); }}
+                            className="w-8 h-8 rounded-full bg-zinc-800/80 hover:bg-zinc-700 text-zinc-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                            title="Cerrar sin descartar"
+                          >
+                            ✕
+                          </button>
+                        </div>
+
+                        {/* Ficha Resumen de la Coincidencia a Descartar */}
+                        <div className="p-3 rounded-xl bg-black/70 border border-white/5 space-y-1.5 text-xs">
+                          <div className="flex items-center justify-between text-zinc-400 font-mono text-[11px]">
+                            <span className="text-emerald-400 font-bold">🏢 Oferta #{m.property?.id || '—'}</span>
+                            <span className="text-zinc-500">↔</span>
+                            <span className="text-amber-400 font-bold">🔍 Demanda #{m.requirement?.id || '—'}</span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2 text-[11px]">
+                            <div className="bg-zinc-900/60 p-2 rounded-lg border border-white/5 truncate">
+                              <div className="text-zinc-300 font-semibold truncate">{m.property?.name || 'Inmueble'}</div>
+                              <div className="text-emerald-300 text-[10px] truncate">📍 {computed?.rows.find(r => r.label.includes("Barrio"))?.propVal || m.property?.zone || m.property?.addressNeighborhood || 'Bogotá'}</div>
+                            </div>
+                            <div className="bg-zinc-900/60 p-2 rounded-lg border border-white/5 truncate">
+                              <div className="text-zinc-300 font-semibold truncate">{m.requirement?.name || m.requirement?.nombreUsuarioWhatsapp || 'Requerimiento'}</div>
+                              <div className="text-amber-300 text-[10px] truncate">📍 {computed?.rows.find(r => r.label.includes("Barrio"))?.reqVal || m.requirement?.zonaDeseada || m.requirement?.addressNeighborhood || 'Bogotá'}</div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <p className="text-xs text-zinc-300 leading-relaxed font-medium">
+                          Selecciona el motivo puntual por el cual este inmueble no encaja. JanIA grabará esta regla en su memoria permanente y nunca volverá a proponer esta pareja:
+                        </p>
+
+                        {/* Lista de Motivos Doctrinales */}
+                        <div className="space-y-2 max-h-[36vh] sm:max-h-[42vh] overflow-y-auto pr-1">
+                          {[
+                            { label: "Incompatibilidad de estado (ej: Demanda pide Moderno / Estrenar y Oferta es para Remodelar)", icon: "🔨" },
+                            { label: "Zona o micro-sector incompatible (ej: Rosales Alto vs Rosales Bajo, Chicó Norte vs Chicó Navarra)", icon: "📍" },
+                            { label: "Cuota de administración muy alta / supera límite del comprador", icon: "💰" },
+                            { label: "Piso no deseado (cliente no quiere 1er piso / exige piso alto)", icon: "🏢" },
+                            { label: "Inmueble muy oscuro / sin asoleación ni luz natural", icon: "☀️" },
+                            { label: "Incompatibilidad de garajes (exige independiente y oferta es lineal)", icon: "🚗" },
+                            { label: "Distribución o metraje no se ajusta al requerimiento", icon: "📐" },
+                            { label: "Ubicación no deseada / zona ruidosa / sobre vía principal", icon: "🔇" },
+                            { label: "Inmueble ya se vendió / arrendó / no disponible", icon: "🔒" },
+                            { label: "Otro motivo (especificar a continuación)", icon: "✍️" }
+                          ].map(({ label, icon }) => (
+                            <label 
+                              key={label}
+                              onClick={() => setRejectReason(label)}
+                              className={`flex items-start gap-2.5 p-2.5 rounded-xl border text-xs cursor-pointer transition-all ${
+                                rejectReason === label 
+                                  ? 'bg-rose-500/15 border-rose-500 text-rose-200 shadow-[0_0_15px_rgba(244,63,94,0.3)]' 
+                                  : 'bg-zinc-950/60 border-zinc-800/80 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200'
+                              }`}
+                            >
+                              <input 
+                                type="radio" 
+                                name={`rejectReason-${m.id}`}
+                                checked={rejectReason === label} 
+                                onChange={() => setRejectReason(label)} 
+                                className="accent-rose-500 mt-0.5 shrink-0"
+                              />
+                              <span className="leading-snug">
+                                <span className="mr-1.5">{icon}</span>
+                                {label}
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+
+                        {(rejectReason.includes("Otro motivo") || rejectReason !== "") && (
+                          <div className="pt-1">
+                            <Input
+                              placeholder="Especifica el motivo puntual u observación para el aprendizaje de JanIA..."
+                              value={customRejectNote}
+                              onChange={(e) => setCustomRejectNote(e.target.value)}
+                              className="bg-black/60 border-zinc-700 text-xs text-zinc-200 placeholder:text-zinc-500 focus:border-rose-500 h-9"
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Acciones */}
+                      <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-white/10 mt-4">
+                        <Button
+                          variant="outline"
+                          type="button"
+                          onClick={() => { setRejectModalMatch(null); setRejectReason(''); setCustomRejectNote(''); }}
+                          className="border-zinc-700 text-zinc-400 hover:bg-zinc-800 hover:text-white text-xs h-9 px-4 cursor-pointer"
+                        >
+                          Cancelar
+                        </Button>
+                        <Button
+                          disabled={!rejectReason || recordFeedbackMut.isPending}
+                          type="button"
+                          onClick={() => {
+                            const finalReason = rejectReason.includes("Otro motivo") && customRejectNote ? customRejectNote : rejectReason;
+                            handleFeedback(m, 'rechazado', finalReason, customRejectNote);
+                            setRejectModalMatch(null);
+                            setRejectReason('');
+                            setCustomRejectNote('');
+                          }}
+                          className="bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white font-extrabold text-xs h-9 px-5 flex items-center gap-2 shadow-lg shadow-rose-900/40 cursor-pointer disabled:opacity-40"
+                        >
+                          {recordFeedbackMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ThumbsDown className="w-4 h-4" />}
+                          Confirmar Descarte
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Top Bar info */}
                   <div className="bg-white/[0.01] px-3.5 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/5">
                     <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
@@ -4647,136 +4774,6 @@ export default function AdminMatches() {
           </div>
         )}
       </div>
-      )}
-
-      {/* MODAL DE DESCARTE CON MOTIVO (FEEDBACK Y APRENDIZAJE JANIA) */}
-      {rejectModalMatch && (
-        <div className="fixed inset-0 z-[99999] bg-black/85 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 overflow-y-auto animate-in fade-in duration-200">
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95, y: 10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 10 }}
-            className="bg-[#121212] border border-rose-500/30 rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-[0_0_50px_rgba(244,63,94,0.25)] space-y-4 my-auto relative"
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-white/10">
-              <div className="flex items-center gap-2.5 text-rose-400 font-extrabold text-base">
-                <div className="p-2 bg-rose-500/10 border border-rose-500/30 rounded-xl">
-                  <ThumbsDown className="w-5 h-5 text-rose-400" />
-                </div>
-                <div>
-                  <span className="block text-sm sm:text-base text-white font-bold">Descartar Coincidencia Comercial</span>
-                  <span className="text-[11px] font-mono text-rose-400 font-medium">JanIA Active Feedback Loop</span>
-                </div>
-              </div>
-              <button 
-                type="button"
-                onClick={() => { setRejectModalMatch(null); setRejectReason(''); setCustomRejectNote(''); }}
-                className="w-8 h-8 rounded-full bg-zinc-800/80 hover:bg-zinc-700 text-zinc-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Ficha Resumen de la Coincidencia a Descartar */}
-            <div className="p-3 rounded-xl bg-black/60 border border-white/5 space-y-1.5 text-xs">
-              <div className="flex items-center justify-between text-zinc-400 font-mono text-[11px]">
-                <span className="text-emerald-400 font-bold">🏢 Oferta #{rejectModalMatch.property?.id || '—'}</span>
-                <span className="text-zinc-500">↔</span>
-                <span className="text-amber-400 font-bold">🔍 Demanda #{rejectModalMatch.requirement?.id || '—'}</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-[11px]">
-                <div className="bg-zinc-900/60 p-2 rounded-lg border border-white/5 truncate">
-                  <div className="text-zinc-400 font-semibold truncate">{rejectModalMatch.property?.name || 'Inmueble'}</div>
-                  <div className="text-emerald-300 text-[10px] truncate">📍 {rejectModalMatch.property?.zone || rejectModalMatch.property?.addressNeighborhood || 'Bogotá'}</div>
-                </div>
-                <div className="bg-zinc-900/60 p-2 rounded-lg border border-white/5 truncate">
-                  <div className="text-zinc-400 font-semibold truncate">{rejectModalMatch.requirement?.name || rejectModalMatch.requirement?.nombreUsuarioWhatsapp || 'Requerimiento'}</div>
-                  <div className="text-amber-300 text-[10px] truncate">📍 {rejectModalMatch.requirement?.zonaDeseada || rejectModalMatch.requirement?.addressNeighborhood || 'Bogotá'}</div>
-                </div>
-              </div>
-            </div>
-
-            <p className="text-xs text-zinc-300 leading-relaxed font-medium">
-              Selecciona el motivo puntual por el cual este inmueble no encaja. JanIA registrará este aprendizaje doctrinal para no sugerir este emparejamiento:
-            </p>
-
-            {/* Lista de Motivos Doctrinales */}
-            <div className="space-y-2 max-h-[42vh] overflow-y-auto pr-1">
-              {[
-                { label: "Zona o micro-sector incompatible (ej: Rosales Alto vs Rosales Bajo, Chicó Norte vs Chicó Navarra)", icon: "📍" },
-                { label: "Cuota de administración muy alta / supera límite del comprador", icon: "💰" },
-                { label: "Piso no deseado (cliente no quiere 1er piso / exige piso alto)", icon: "🏢" },
-                { label: "Inmueble muy oscuro / sin asoleación ni luz natural", icon: "☀️" },
-                { label: "Incompatibilidad de garajes (exige independiente y oferta es lineal)", icon: "🚗" },
-                { label: "Distribución o metraje no se ajusta al requerimiento", icon: "📐" },
-                { label: "Ubicación no deseada / zona ruidosa / sobre vía principal", icon: "🔇" },
-                { label: "Inmueble ya se vendió / arrendó / no disponible", icon: "🔒" },
-                { label: "Otro motivo (especificar a continuación)", icon: "✍️" }
-              ].map(({ label, icon }) => (
-                <label 
-                  key={label}
-                  onClick={() => setRejectReason(label)}
-                  className={`flex items-start gap-2.5 p-2.5 sm:p-3 rounded-xl border text-xs cursor-pointer transition-all ${
-                    rejectReason === label 
-                      ? 'bg-rose-500/15 border-rose-500 text-rose-200 shadow-[0_0_15px_rgba(244,63,94,0.3)]' 
-                      : 'bg-zinc-950/60 border-zinc-800/80 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200'
-                  }`}
-                >
-                  <input 
-                    type="radio" 
-                    name="rejectReason" 
-                    checked={rejectReason === label} 
-                    onChange={() => setRejectReason(label)} 
-                    className="accent-rose-500 mt-0.5 shrink-0"
-                  />
-                  <span className="leading-snug">
-                    <span className="mr-1.5">{icon}</span>
-                    {label}
-                  </span>
-                </label>
-              ))}
-            </div>
-
-            {(rejectReason.includes("Otro motivo") || rejectReason !== "") && (
-              <div className="pt-1">
-                <Input
-                  placeholder="Nota adicional u observación para el aprendizaje de JanIA (opcional)..."
-                  value={customRejectNote}
-                  onChange={(e) => setCustomRejectNote(e.target.value)}
-                  className="bg-black/60 border-zinc-700 text-xs text-zinc-200 placeholder:text-zinc-500 focus:border-rose-500 h-9"
-                />
-              </div>
-            )}
-
-            {/* Acciones */}
-            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-white/10">
-              <Button
-                variant="outline"
-                type="button"
-                onClick={() => { setRejectModalMatch(null); setRejectReason(''); setCustomRejectNote(''); }}
-                className="border-zinc-700 text-zinc-400 hover:bg-zinc-800 hover:text-white text-xs h-9 px-4 cursor-pointer"
-              >
-                Cancelar
-              </Button>
-              <Button
-                disabled={!rejectReason || recordFeedbackMut.isPending}
-                type="button"
-                onClick={() => {
-                  const finalReason = rejectReason.includes("Otro motivo") && customRejectNote ? customRejectNote : rejectReason;
-                  handleFeedback(rejectModalMatch, 'rechazado', finalReason, customRejectNote);
-                  setRejectModalMatch(null);
-                  setRejectReason('');
-                  setCustomRejectNote('');
-                }}
-                className="bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white font-extrabold text-xs h-9 px-5 flex items-center gap-2 shadow-lg shadow-rose-900/40 cursor-pointer disabled:opacity-40"
-              >
-                {recordFeedbackMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ThumbsDown className="w-4 h-4" />}
-                Confirmar Descarte
-              </Button>
-            </div>
-          </motion.div>
-        </div>
       )}
 
       {/* Footer Version Stamp */}

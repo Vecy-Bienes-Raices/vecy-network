@@ -6,6 +6,7 @@ import {
   extractTrueCityFromText,
   normalizeCanonicalCity,
   checkTransactionCompatibility,
+  getRejectedPairsSet,
 } from "../_core/matching";
 import { extractFallbackDataFromText } from "../_core/janIA";
 
@@ -78,6 +79,9 @@ export async function runNightlyRematch() {
     let skippedCount = 0;
     const seenPairs = new Set<string>();
 
+    const rejectedPairsSet = await getRejectedPairsSet();
+    console.log(`[NIGHTLY-REMATCH v31.4] Pares vetados por feedback humano cargados: ${rejectedPairsSet.size}`);
+
     const CHUNK_SIZE = 50;
     for (let i = 0; i < enrichedReqs.length; i += CHUNK_SIZE) {
       const chunk = enrichedReqs.slice(i, i + CHUNK_SIZE);
@@ -86,6 +90,20 @@ export async function runNightlyRematch() {
         for (const prop of enrichedProps) {
           const pairKey = `${req.id}-${prop.id}`;
           if (seenPairs.has(pairKey)) continue;
+
+          // Veto Doctrinal Humano (Tolerancia Cero): si fue descartado previamente, nunca reinsertar
+          if (rejectedPairsSet.has(`${prop.id}_${req.id}`)) {
+            skippedCount++;
+            try {
+              await db.delete(propertyMatches).where(
+                and(
+                  eq(propertyMatches.requirementId, req.id),
+                  eq(propertyMatches.propertyId, prop.id)
+                )
+              );
+            } catch {}
+            continue;
+          }
 
           // Pre-filtros rápidos (mismos que scan_all_matches)
           if (req._city && prop._city && req._city !== prop._city) continue;
@@ -211,11 +229,17 @@ export async function recalculateAndCleanupMatches() {
       })
       .from(propertyMatches);
 
-    console.log(`[MATCH-CLEANUP] Encontrados ${allMatches.length} registros para evaluar.`);
+    const rejectedPairsSet = await getRejectedPairsSet();
+    console.log(`[MATCH-CLEANUP] Encontrados ${allMatches.length} registros para evaluar. Pares vetados: ${rejectedPairsSet.size}`);
     let deletedCount = 0;
     let updatedCount = 0;
 
     for (const m of allMatches) {
+      if (rejectedPairsSet.has(`${m.propertyId}_${m.requirementId}`)) {
+        await db.delete(propertyMatches).where(eq(propertyMatches.id, m.id));
+        deletedCount++;
+        continue;
+      }
       const [prop] = await db
         .select()
         .from(properties)

@@ -1,10 +1,56 @@
 import { getDb } from "../db";
 import { and, eq, sql } from "drizzle-orm";
-import { propertyMatches, properties, requirements } from "../../drizzle/schema";
+import { propertyMatches, properties, requirements, matchFeedback } from "../../drizzle/schema";
 import { normalizarTextoGeografico, isLasSantasZone, isBarrioInLasSantas, BARRIOS_LAS_SANTAS } from "./geography";
 import { lookupBarriosByPerimeter } from "./geo-lookup";
 import { VECY_VERSION_LABEL } from "../../shared/const";
 import { extractFallbackDataFromText } from "./janIA";
+
+/**
+ * Caché en memoria de pares rechazados por feedback doctrinal humano (v31.4)
+ * Clave: `${propertyId}_${requirementId}`
+ */
+let cachedRejectedPairs: Set<string> | null = null;
+let lastRejectedPairsFetch = 0;
+const REJECTED_PAIRS_TTL_MS = 25000; // 25 segundos
+
+export async function getRejectedPairsSet(): Promise<Set<string>> {
+  const now = Date.now();
+  if (cachedRejectedPairs && (now - lastRejectedPairsFetch < REJECTED_PAIRS_TTL_MS)) {
+    return cachedRejectedPairs;
+  }
+  try {
+    const db = await getDb();
+    if (!db) return cachedRejectedPairs || new Set();
+    const rejected = await db
+      .select({ propertyId: matchFeedback.propertyId, requirementId: matchFeedback.requirementId })
+      .from(matchFeedback)
+      .where(eq(matchFeedback.action, 'rechazado'));
+
+    const set = new Set<string>();
+    for (const r of rejected) {
+      if (r.propertyId && r.requirementId) {
+        set.add(`${r.propertyId}_${r.requirementId}`);
+      }
+    }
+    cachedRejectedPairs = set;
+    lastRejectedPairsFetch = now;
+    return set;
+  } catch (e: any) {
+    console.error("[Matching] Error cargando rejected pairs cache:", e.message);
+    return cachedRejectedPairs || new Set();
+  }
+}
+
+export function invalidateRejectedPairsCache() {
+  cachedRejectedPairs = null;
+  lastRejectedPairsFetch = 0;
+}
+
+export function isPairRejectedInMemory(propertyId: number | string, requirementId: number | string): boolean {
+  if (!cachedRejectedPairs) return false;
+  return cachedRejectedPairs.has(`${propertyId}_${requirementId}`);
+}
 
 /**
  * Motor de Matching VECY CORE v12.00 (TypeScript)
@@ -271,58 +317,91 @@ export function esFormatoCuadrante(texto: string): boolean {
 }
 
 export function parseStreetCarreraBoundaries(text: string): StreetCarreraBoundaries {
-  const norm = (text || "").toLowerCase();
+  const norm = String(text || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   const res: StreetCarreraBoundaries = {};
 
-  // 1. Rango de Calles: soporta "calle 100 a calle 127", "entre calle 100 y 127", "de la 80 a la 94"
-  //    La regex ahora acepta la palabra "calle" explícita entre los dos números.
-  const streetRangeMatch = norm.match(
-    /(?:entre|de|cll|calle|calles)?\s*(?:la|las)?\s*(?:calle|clle|cll|cna|cera)?\s*(\d{1,3})\s*(?:a|y|-|hasta)\s*(?:la|las)?\s*(?:calle|clle|cll|cna|cera)?\s*(\d{1,3})/i
-  );
-  if (streetRangeMatch) {
-    const n1 = parseInt(streetRangeMatch[1], 10);
-    const n2 = parseInt(streetRangeMatch[2], 10);
+  // 1. Rango de Calles:
+  // Excluir terminantemente unidades de área (m2, mts), precio (millones, mdp), habitaciones, baños, etc.
+  // Caso 1A: Con prefijo explícito de calle (calle, calles, clle, cll, cna)
+  const explicitStreetRegex = /(?:entre|de)?\s*(?:la|las)?\s*(?:calle|calles|clle|cll|cna)\s*(\d{1,3})\s*(?:a|y|-|hasta)\s*(?:la|las)?\s*(?:calle|calles|clle|cll|cna)?\s*(\d{1,3})(?!\s*(?:m2|mts|mt2|metros|millones|mdp|hab|bano|alcoba|parqueadero))/i;
+  let streetMatch = norm.match(explicitStreetRegex);
+
+  // Caso 1B: 'de la 100 a la 127' o 'entre la 86 y la 92' en contexto geográfico sin unidades métricas
+  if (!streetMatch) {
+    const contextStreetRegex = /(?:entre|de)\s+(?:la|las)\s+(\d{1,3})\s+(?:a|y|-|hasta)\s+(?:la|las)\s+(\d{1,3})(?!\s*(?:m2|mts|mt2|metros|millones|mdp|hab|bano|alcoba|parqueadero|garaje|piso|ano))/i;
+    const candidate = norm.match(contextStreetRegex);
+    if (candidate) {
+      const n1 = parseInt(candidate[1], 10);
+      const n2 = parseInt(candidate[2], 10);
+      if (!isNaN(n1) && !isNaN(n2) && n1 >= 20 && n1 <= 250 && n2 >= 20 && n2 <= 250) {
+        streetMatch = candidate;
+      }
+    }
+  }
+
+  // Caso 1C: 'calle 100 a 127' o 'cll 86 a 92'
+  if (!streetMatch) {
+    const singlePrefixRegex = /(?:calle|calles|clle|cll)\s+(\d{1,3})\s*(?:a|y|-|hasta)\s*(\d{1,3})(?!\s*(?:m2|mts|mt2|metros|millones|mdp|hab|bano))/i;
+    const candidate = norm.match(singlePrefixRegex);
+    if (candidate) {
+      streetMatch = candidate;
+    }
+  }
+
+  if (streetMatch) {
+    const n1 = parseInt(streetMatch[1], 10);
+    const n2 = parseInt(streetMatch[2], 10);
     if (!isNaN(n1) && !isNaN(n2) && (n1 > 20 || n2 > 20)) {
       res.minStreet = Math.min(n1, n2);
       res.maxStreet = Math.max(n1, n2);
     }
   }
 
-  // 2. Rango de Carreras: "entre cra 7 y 15", "entre la 7 y la 15"
-  const carreraRangeMatch = norm.match(/(?:cra|carrera|carreras)\s*(?:la|las)?\s*(circunvalar|cerros|\d{1,3})\s*(?:a|y|-|hasta)\s*(?:la|las)?\s*(\d{1,3})/i);
-  if (carreraRangeMatch) {
-    const rawN1 = carreraRangeMatch[1];
-    const n1 = (rawN1 === "circunvalar" || rawN1 === "cerros") ? 1 : parseInt(rawN1, 10);
-    const n2 = parseInt(carreraRangeMatch[2], 10);
-    if (!isNaN(n1) && !isNaN(n2)) {
-      res.minCarrera = Math.min(n1, n2);
-      res.maxCarrera = Math.max(n1, n2);
+  // 2. Rango de Carreras:
+  // Caso 2A: 'entre 7 y autopista' / 'séptima y autopista' / 'entre la 7 y la autopista'
+  const autoMatch = norm.match(/(?:entre|de)?\s*(?:la)?\s*(?:cra|carrera)?\s*(?:la)?\s*(7|septima)\s*(?:a|y|-|hasta)\s*(?:la)?\s*(?:autopista|autonorte)/i);
+  if (autoMatch) {
+    res.minCarrera = 7;
+    // Si la calle es < 100, la autopista en Chapinero es Carrera 20. Si es >= 100 en Usaquén, es Cra 45.
+    const isUnder100 = res.maxStreet && res.maxStreet <= 100;
+    res.maxCarrera = isUnder100 ? 20 : 45;
+  }
+
+  // Caso 2B: 'entre cra 7 y 15', 'entre carrera 9 y 15'
+  if (!res.minCarrera || !res.maxCarrera) {
+    const carreraRangeMatch = norm.match(/(?:cra|carrera|carreras)\s*(?:la|las)?\s*(circunvalar|cerros|\d{1,3})\s*(?:a|y|-|hasta)\s*(?:la|las)?\s*(\d{1,3})/i);
+    if (carreraRangeMatch) {
+      const rawN1 = carreraRangeMatch[1];
+      const n1 = (rawN1 === "circunvalar" || rawN1 === "cerros") ? 1 : parseInt(rawN1, 10);
+      const n2 = parseInt(carreraRangeMatch[2], 10);
+      if (!isNaN(n1) && !isNaN(n2)) {
+        res.minCarrera = Math.min(n1, n2);
+        res.maxCarrera = Math.max(n1, n2);
+      }
     }
   }
 
-  // 3. Orientación en cuadrante arterial (Autopista Norte = Cra 45, Séptima = Cra 7)
-  //    Soporta: "arriba de la Autopista Norte", "al oriente de la Autopista", "sobre la Autopista Norte"
-  const normNFD = norm.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  const mencionaAutopistaNorte = normNFD.includes("autopista norte") || normNFD.includes("autonorte") || normNFD.includes("autopista norte");
-  const orienteAutopista = normNFD.includes("arriba de la autopista") || normNFD.includes("oriente de la autopista") || normNFD.includes("sobre la autopista");
-  const occidenteAutopista = normNFD.includes("abajo de la autopista") || normNFD.includes("occidente de la autopista");
+  // 3. Orientación en cuadrante arterial
+  const mencionaAutopistaNorte = norm.includes("autopista norte") || norm.includes("autonorte");
+  const orienteAutopista = norm.includes("arriba de la autopista") || norm.includes("oriente de la autopista") || norm.includes("sobre la autopista");
+  const occidenteAutopista = norm.includes("abajo de la autopista") || norm.includes("occidente de la autopista");
 
-  // "Calle 100 a Calle 127, arriba de la Autopista Norte" → calles 100-127, carreras 1-45 (oriente)
   if (mencionaAutopistaNorte || orienteAutopista) {
     if (!occidenteAutopista) {
-      // Oriente de la Autopista = carreras 1 al 45 (aproximado; los cerros son cra 1-7)
       if (!res.minCarrera) res.minCarrera = 1;
-      if (!res.maxCarrera) res.maxCarrera = 44;  // < cra 45 = Autopista
+      const isUnder100 = res.maxStreet && res.maxStreet <= 100;
+      if (!res.maxCarrera) res.maxCarrera = isUnder100 ? 20 : 44;
     }
   }
   if (occidenteAutopista) {
-    if (!res.minCarrera) res.minCarrera = 45;
+    const isUnder100 = res.maxStreet && res.maxStreet <= 100;
+    if (!res.minCarrera) res.minCarrera = isUnder100 ? 20 : 45;
   }
 
-  if (normNFD.includes("arriba de la septima") || normNFD.includes("arriba de la 7")) {
+  if (norm.includes("arriba de la septima") || norm.includes("arriba de la 7")) {
     if (!res.minCarrera) res.minCarrera = 1;
     if (!res.maxCarrera) res.maxCarrera = 7;
-  } else if (normNFD.includes("abajo de la septima") || normNFD.includes("abajo de la 7")) {
+  } else if (norm.includes("abajo de la septima") || norm.includes("abajo de la 7")) {
     if (!res.minCarrera) res.minCarrera = 7;
   }
 
@@ -393,6 +472,78 @@ export function extractAllBarriosFromText(text: string): string[] {
   return found;
 }
 
+// ─── Catálogo de Límites Viales por Barrio (Bogotá Norte / Chapinero / Usaquén / Suba) ───
+export const BOGOTA_BARRIO_STREET_BOUNDS: Record<string, { minStreet: number; maxStreet: number; minCra?: number; maxCra?: number }> = {
+  // Chapinero
+  "rosales": { minStreet: 70, maxStreet: 85, minCra: 1, maxCra: 7 },
+  "los rosales": { minStreet: 70, maxStreet: 85, minCra: 1, maxCra: 7 },
+  "rosales alto": { minStreet: 70, maxStreet: 85, minCra: 1, maxCra: 5 },
+  "rosales bajo": { minStreet: 70, maxStreet: 85, minCra: 5, maxCra: 7 },
+  "el nogal": { minStreet: 76, maxStreet: 82, minCra: 7, maxCra: 15 },
+  "nogal": { minStreet: 76, maxStreet: 82, minCra: 7, maxCra: 15 },
+  "el retiro": { minStreet: 81, maxStreet: 85, minCra: 11, maxCra: 15 },
+  "retiro": { minStreet: 81, maxStreet: 85, minCra: 11, maxCra: 15 },
+  "la cabrera": { minStreet: 84, maxStreet: 88, minCra: 7, maxCra: 15 },
+  "cabrera": { minStreet: 84, maxStreet: 88, minCra: 7, maxCra: 15 },
+  "antiguo country": { minStreet: 84, maxStreet: 88, minCra: 15, maxCra: 20 },
+  "el virrey": { minStreet: 85, maxStreet: 90, minCra: 7, maxCra: 20 },
+  "virrey": { minStreet: 85, maxStreet: 90, minCra: 7, maxCra: 20 },
+  "parque el virrey": { minStreet: 85, maxStreet: 90, minCra: 7, maxCra: 20 },
+  "chico": { minStreet: 88, maxStreet: 100, minCra: 7, maxCra: 15 },
+  "el chico": { minStreet: 88, maxStreet: 100, minCra: 7, maxCra: 15 },
+  "chico norte": { minStreet: 92, maxStreet: 100, minCra: 11, maxCra: 15 },
+  "chico norte ii": { minStreet: 94, maxStreet: 100, minCra: 11, maxCra: 15 },
+  "chico norte iii": { minStreet: 94, maxStreet: 100, minCra: 15, maxCra: 20 },
+  "chico reservado": { minStreet: 92, maxStreet: 98, minCra: 7, maxCra: 11 },
+  "chico reservado norte": { minStreet: 94, maxStreet: 100, minCra: 7, maxCra: 11 },
+  "quinta camacho": { minStreet: 67, maxStreet: 72, minCra: 7, maxCra: 15 },
+  "chapinero alto": { minStreet: 53, maxStreet: 72, minCra: 1, maxCra: 7 },
+  "chapinero central": { minStreet: 53, maxStreet: 67, minCra: 7, maxCra: 14 },
+  // Usaquén
+  "rincon del chico": { minStreet: 100, maxStreet: 106, minCra: 9, maxCra: 15 },
+  "rincón del chicó": { minStreet: 100, maxStreet: 106, minCra: 9, maxCra: 15 },
+  "navarra": { minStreet: 106, maxStreet: 116, minCra: 15, maxCra: 20 },
+  "chico navarra": { minStreet: 106, maxStreet: 116, minCra: 15, maxCra: 20 },
+  "san patricio": { minStreet: 106, maxStreet: 116, minCra: 15, maxCra: 19 },
+  "santa paula": { minStreet: 106, maxStreet: 116, minCra: 11, maxCra: 15 },
+  "santa bibiana": { minStreet: 100, maxStreet: 106, minCra: 15, maxCra: 20 },
+  "santa ana": { minStreet: 108, minCra: 7, maxCra: 9, maxStreet: 116 },
+  "santa ana oriental": { minStreet: 108, maxStreet: 116, minCra: 1, maxCra: 7 },
+  "santa ana occidental": { minStreet: 108, maxStreet: 116, minCra: 7, maxCra: 9 },
+  "santa barbara": { minStreet: 116, maxStreet: 127, minCra: 7, maxCra: 19 },
+  "santa barbara central": { minStreet: 116, maxStreet: 127, minCra: 11, maxCra: 15 },
+  "santa barbara occidental": { minStreet: 116, maxStreet: 127, minCra: 15, maxCra: 19 },
+  "santa barbara oriental": { minStreet: 116, maxStreet: 127, minCra: 7, maxCra: 11 },
+  "santa barbara alta": { minStreet: 116, maxStreet: 127, minCra: 1, maxCra: 7 },
+  "la carolina": { minStreet: 127, maxStreet: 134, minCra: 9, maxCra: 15 },
+  "la calleja": { minStreet: 127, maxStreet: 134, minCra: 15, maxCra: 19 },
+  "country club": { minStreet: 127, maxStreet: 134, minCra: 15, maxCra: 19 },
+  "multicentro": { minStreet: 122, maxStreet: 127, minCra: 11, maxCra: 15 },
+  "unicentro": { minStreet: 122, maxStreet: 127, minCra: 11, maxCra: 15 },
+  "cedritos": { minStreet: 134, maxStreet: 153, minCra: 7, maxCra: 19 },
+  "los cedros": { minStreet: 134, maxStreet: 153, minCra: 7, maxCra: 19 },
+  "el contador": { minStreet: 134, maxStreet: 140, minCra: 9, maxCra: 19 },
+  "contador": { minStreet: 134, maxStreet: 140, minCra: 9, maxCra: 19 },
+  "belmira": { minStreet: 138, maxStreet: 147, minCra: 7, maxCra: 9 },
+  "toberin": { minStreet: 161, maxStreet: 170, minCra: 16, maxCra: 21 },
+  "toberín": { minStreet: 161, maxStreet: 170, minCra: 16, maxCra: 21 },
+  // Suba
+  "pasadena": { minStreet: 100, maxStreet: 106, minCra: 45, maxCra: 55 },
+  "alhambra": { minStreet: 114, maxStreet: 116, minCra: 45, maxCra: 55 },
+  "la alhambra": { minStreet: 114, maxStreet: 116, minCra: 45, maxCra: 55 },
+  "el batan": { minStreet: 122, maxStreet: 127, minCra: 45, maxCra: 55 },
+  "batan": { minStreet: 122, maxStreet: 127, minCra: 45, maxCra: 55 },
+  "prado veraniego": { minStreet: 128, maxStreet: 138, minCra: 45, maxCra: 55 },
+  "niza": { minStreet: 118, maxStreet: 129, minCra: 60, maxCra: 72 },
+  "colina campestre": { minStreet: 134, maxStreet: 160, minCra: 55, maxCra: 72 },
+  "colina": { minStreet: 134, maxStreet: 160, minCra: 55, maxCra: 72 },
+  // Barrios Unidos
+  "polo club": { minStreet: 80, maxStreet: 87, minCra: 20, maxCra: 28 },
+  "polo": { minStreet: 80, maxStreet: 87, minCra: 20, maxCra: 28 },
+  "la castellana": { minStreet: 92, maxStreet: 100, minCra: 28, maxCra: 50 },
+  "castellana": { minStreet: 92, maxStreet: 100, minCra: 28, maxCra: 50 },
+};
+
 export function matchesGeography(
   reqZoneRaw: string,
   propZoneRaw: string,
@@ -440,6 +591,30 @@ export function matchesGeography(
   if (propNumbers.carrera && reqBoundaries.minCarrera && reqBoundaries.maxCarrera) {
     if (propNumbers.carrera < reqBoundaries.minCarrera || propNumbers.carrera > reqBoundaries.maxCarrera) {
       return { matches: false, score: 0 };
+    }
+  }
+
+  // 1.35 Bounding Box Catastral por Barrio (Regla Doctrinal v31.4)
+  // Si la oferta no especifica número de calle exacto, pero está en un barrio con límites viales conocidos:
+  if (reqBoundaries.minStreet && reqBoundaries.maxStreet) {
+    const propCleanNorm = normalizarTextoGeografico(`${propZoneRaw} ${propFullText || ""}`);
+    for (const [barrioKey, bounds] of Object.entries(BOGOTA_BARRIO_STREET_BOUNDS)) {
+      if (propCleanNorm.includes(barrioKey)) {
+        // Validar si el rango de calles del barrio ofertado tiene solapamiento con el perímetro exigido
+        if (bounds.maxStreet < reqBoundaries.minStreet || bounds.minStreet > reqBoundaries.maxStreet) {
+          console.log(`[Matching-Guard] Bloqueo 0%: Barrio de oferta '${barrioKey}' (Calles ${bounds.minStreet}-${bounds.maxStreet}) fuera del perímetro exigido (Calles ${reqBoundaries.minStreet}-${reqBoundaries.maxStreet})`);
+          return { matches: false, score: 0 };
+        }
+        if (reqBoundaries.maxCarrera && bounds.minCra && bounds.minCra > reqBoundaries.maxCarrera) {
+          console.log(`[Matching-Guard] Bloqueo 0%: Barrio de oferta '${barrioKey}' (Cra ${bounds.minCra}+) supera carrera máxima exigida (${reqBoundaries.maxCarrera})`);
+          return { matches: false, score: 0 };
+        }
+        if (reqBoundaries.minCarrera && bounds.maxCra && bounds.maxCra < reqBoundaries.minCarrera) {
+          console.log(`[Matching-Guard] Bloqueo 0%: Barrio de oferta '${barrioKey}' (Cra <=${bounds.maxCra}) por debajo de carrera mínima exigida (${reqBoundaries.minCarrera})`);
+          return { matches: false, score: 0 };
+        }
+        break;
+      }
     }
   }
 
@@ -554,6 +729,58 @@ export function matchesGeography(
   const isCallejaBajaProp = propFullNorm.includes("calleja baja") || propFullNorm.includes("la calleja baja");
   if ((isCallejaAltaReq && isCallejaBajaProp) || (isCallejaBajaReq && isCallejaAltaProp)) {
     console.log(`[Matching-Guard] Bloqueo 0%: Incompatibilidad Calleja Alta vs Calleja Baja ('${reqZoneRaw}' ↔ '${propZoneRaw}')`);
+    return { matches: false, score: 0 };
+  }
+
+  // 1.481 Guard Doctrinal v31.4: Incompatibilidad Absoluta El Virrey vs El Nogal / Rincón del Chicó / Polo Club
+  // El Virrey (Cl 85-90, Chapinero) es un micro-sector estrictamente delimitado alrededor del Parque El Virrey.
+  // Es incompatible con El Nogal (Cl 76-82), Rincón del Chicó (Cl 100-106) y Polo Club (Barrios Unidos / occidente de Autopista).
+  const isVirreySpecificReq = (reqFullNorm.includes("virrey") || reqFullNorm.includes("parque el virrey")) && !reqFullNorm.includes("nogal") && !reqFullNorm.includes("rincon del chico") && !reqFullNorm.includes("rincón del chicó");
+  const isNogalProp = propFullNorm.includes("el nogal") || propFullNorm.includes("nogal");
+  const isRinconProp = propFullNorm.includes("rincon del chico") || propFullNorm.includes("rincón del chicó");
+  const isPoloProp = propFullNorm.includes("polo club") || propFullNorm.includes("polo");
+
+  if (isVirreySpecificReq && (isNogalProp || isRinconProp || isPoloProp)) {
+    if (!hasAledanos(reqZoneRaw)) {
+      console.log(`[Matching-Guard] Bloqueo 0%: Requerimiento pide El Virrey pero oferta es incompatible ('${reqZoneRaw}' ↔ '${propZoneRaw}')`);
+      return { matches: false, score: 0 };
+    }
+  }
+
+  // Si la oferta es en El Virrey y la demanda pide expresamente El Nogal o Rincón del Chicó sin pedir Virrey:
+  const isVirreyPropSpecific = (propFullNorm.includes("virrey") || propFullNorm.includes("parque el virrey")) && !propFullNorm.includes("nogal") && !propFullNorm.includes("rincon del chico") && !propFullNorm.includes("rincón del chicó");
+  const isNogalReq = (reqFullNorm.includes("el nogal") || reqFullNorm.includes("nogal")) && !reqFullNorm.includes("virrey");
+  const isRinconReq = (reqFullNorm.includes("rincon del chico") || reqFullNorm.includes("rincón del chicó")) && !reqFullNorm.includes("virrey");
+  if (isVirreyPropSpecific && (isNogalReq || isRinconReq)) {
+    if (!hasAledanos(reqZoneRaw)) {
+      console.log(`[Matching-Guard] Bloqueo 0%: Oferta en El Virrey incompatible con demanda ('${reqZoneRaw}' ↔ '${propZoneRaw}')`);
+      return { matches: false, score: 0 };
+    }
+  }
+
+  // 1.482 Guard Doctrinal v31.4: Incompatibilidad Absoluta Rosales vs Chicó Tradicional
+  // Rosales (al oriente de Cra 7, ladera de los cerros) vs Chicó (al occidente de Cra 7).
+  // Solo se permite si la demanda solicita explícitamente AMBOS en su texto (ej: "Rosales o Chicó") o aledaños.
+  const isRosalesReqOnly = (reqFullNorm.includes("rosales") || reqFullNorm.includes("los rosales")) && !reqFullNorm.includes("chico") && !reqFullNorm.includes("chicó") && !hasAledanos(reqZoneRaw);
+  const isChicoPropOnly = (propFullNorm.includes("chico") || propFullNorm.includes("chicó")) && !propFullNorm.includes("chico navarra") && !propFullNorm.includes("rosales");
+  if (isRosalesReqOnly && isChicoPropOnly) {
+    console.log(`[Matching-Guard] Bloqueo 0%: Requerimiento exclusivo en Rosales incompatible con oferta en Chicó ('${reqZoneRaw}' ↔ '${propZoneRaw}')`);
+    return { matches: false, score: 0 };
+  }
+
+  const isChicoReqOnly = (reqFullNorm.includes("chico") || reqFullNorm.includes("chicó")) && !reqFullNorm.includes("chico navarra") && !reqFullNorm.includes("rosales") && !hasAledanos(reqZoneRaw);
+  const isRosalesPropOnly = (propFullNorm.includes("rosales") || propFullNorm.includes("los rosales")) && !propFullNorm.includes("chico") && !propFullNorm.includes("chicó");
+  if (isChicoReqOnly && isRosalesPropOnly) {
+    console.log(`[Matching-Guard] Bloqueo 0%: Requerimiento exclusivo en Chicó incompatible con oferta en Rosales ('${reqZoneRaw}' ↔ '${propZoneRaw}')`);
+    return { matches: false, score: 0 };
+  }
+
+  // 1.483 Guard Doctrinal v31.4: Incompatibilidad Absoluta El Nogal vs Chicó Norte / Chicó Reservado
+  // El Nogal (Cl 76-82) vs Chicó Norte / Chicó Reservado (Cl 92-100). Distancia > 10 cuadras comerciales.
+  const isNogalReqOnly = (reqFullNorm.includes("el nogal") || reqFullNorm.includes("nogal")) && !reqFullNorm.includes("chico") && !reqFullNorm.includes("chicó") && !hasAledanos(reqZoneRaw);
+  const isChicoNortePropOnly = (propFullNorm.includes("chico norte") || propFullNorm.includes("chico reservado")) && !propFullNorm.includes("nogal");
+  if (isNogalReqOnly && isChicoNortePropOnly) {
+    console.log(`[Matching-Guard] Bloqueo 0%: Requerimiento exclusivo en El Nogal incompatible con oferta en Chicó Norte/Reservado ('${reqZoneRaw}' ↔ '${propZoneRaw}')`);
     return { matches: false, score: 0 };
   }
 
@@ -743,16 +970,23 @@ export function matchesGeography(
   // Inserción IDECA Catastral (1,230 sectores Bogotá): resolver perímetros viales en barrios reales
   if (reqBoundaries.minStreet && reqBoundaries.maxStreet) {
     try {
+      const defaultMaxCra = (reqBoundaries.maxStreet <= 100) ? 20 : 45;
       const idecaRes = lookupBarriosByPerimeter({
         calleNorte: reqBoundaries.maxStreet,
         calleSur: reqBoundaries.minStreet,
         craOriente: reqBoundaries.minCarrera || 1,
-        craOccidente: reqBoundaries.maxCarrera || 30,
+        craOccidente: reqBoundaries.maxCarrera || defaultMaxCra,
         ciudad: "bogota"
       });
       if (idecaRes.barrios && idecaRes.barrios.length > 0) {
         const idecaNorm = idecaRes.barrios.map(b => normalizarTextoGeografico(b));
-        reqPhrases = Array.from(new Set([...reqPhrases, ...idecaNorm]));
+        // Si el requerimiento NO especificó ningún barrio por nombre, poblar con los del perímetro
+        if (reqPhrases.length === 0) {
+          reqPhrases = idecaNorm;
+        } else if (hasAledanos(reqZoneRaw)) {
+          // Solo si pide aledaños, agregar los barrios adicionales del perímetro
+          reqPhrases = Array.from(new Set([...reqPhrases, ...idecaNorm]));
+        }
       }
     } catch (idecaErr) {
       console.warn("[Matching-IDECA] Error resolviendo perímetro en matching:", idecaErr);
@@ -1015,6 +1249,12 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   const positives: string[] = [];
   const negatives: string[] = [];
 
+  // ── FILTRO DURO 00-VETO: VETO DOCTRINAL HUMANO (JanIA Feedback Memory v31.4) ──
+  if (property.id && requirement.id && isPairRejectedInMemory(property.id, requirement.id)) {
+    blockers.push("⛔ Descarte Doctrinal Humano (JanIA Feedback Memory): Este emparejamiento fue descartado manualmente por el operador comercial. JanIA respeta este veto absoluto y no volverá a sugerir esta pareja. MATCH INVIABLE 0%.");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+
   // ── FILTRO DURO 00: PUBLICACIÓN NO INMOBILIARIA (Materiales, Canteras, etc.) ──
   if (isNonRealEstateText(requirement.rawText) || isNonRealEstateText(requirement.name) || isNonRealEstateText(property.rawText) || isNonRealEstateText(property.name)) {
     blockers.push("⛔ Publicación No Inmobiliaria: Solicitud de materiales de construcción, canteras o maquinaria. MATCH IMPOSIBLE 0%.");
@@ -1162,20 +1402,20 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
-  // ── FILTRO DURO 0A-TER: INCOMPATIBILIDAD DE ESTADO DE CONSERVACIÓN (Doctrinal v27.2) ──
+  // ── FILTRO DURO 0A-TER: INCOMPATIBILIDAD DE ESTADO DE CONSERVACIÓN (Doctrinal v27.2 / v31.4) ──
   const propRawCheckText = (property.rawText || property.description || property.name || "").toLowerCase();
   const isReqParaRemodelar = /\b(para remodelar|por remodelar|a remodelar|para reformar|a reformar|para reconstruir|destruido|precio de oportunidad|de oportunidad)\b/i.test(reqRawCheckText);
   const isPropRemodelado = /\b(remodelad[oa]|totalmente remodelad[oa]|completamente remodelad[oa]|estrenar|para estrenar|a estrenar|nuevo|sobre planos)\b/i.test(propRawCheckText);
-  const isPropParaRemodelar = /\b(para remodelar|por remodelar|a remodelar|para reformar|a reformar|en obra gris|en obra negra)\b/i.test(propRawCheckText);
-  const isReqParaEstrenar = /\b(para estrenar|a estrenar|estrenar|nuevo|sobre planos)\b/i.test(reqRawCheckText);
+  const isPropParaRemodelar = /\b(para remodelar|por remodelar|a remodelar|para reformar|a reformar|remodelar|para actualizar|por actualizar|a actualizar|en obra gris|en obra negra|antiguo sin remodelar)\b/i.test(propRawCheckText);
+  const isReqModernoOEstrenar = /\b(moderno[s]?|moderna[s]?|contempor[aá]neo[s]?|excelentes acabados|acabados de lujo|full acabados|acabados modernos|estilo moderno|para estrenar|a estrenar|estrenar|nuevo|sobre planos|no remodelar|no para remodelar|cero remodelaci[oó]n|sin remodelar nada)\b/i.test(reqRawCheckText);
 
   if (isReqParaRemodelar && isPropRemodelado && !isPropParaRemodelar) {
     blockers.push("⛔ Incompatibilidad de Estado del Inmueble (Tolerancia Cero 0%): Requerimiento exige inmueble 'Para Remodelar / Precio de Oportunidad' y la oferta es un inmueble 'Ya Remodelado / A Estrenar'. Match Inviable (0%).");
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
-  if (isReqParaEstrenar && isPropParaRemodelar && !isPropRemodelado) {
-    blockers.push("⛔ Incompatibilidad de Estado del Inmueble (Tolerancia Cero 0%): Requerimiento exige inmueble 'A Estrenar / Nuevo' y la oferta es 'Para Remodelar'. Match Inviable (0%).");
+  if (isReqModernoOEstrenar && isPropParaRemodelar && !isPropRemodelado) {
+    blockers.push("⛔ Incompatibilidad de Estado del Inmueble (Tolerancia Cero 0% Doctrinal v31.4): El requerimiento exige expresamente inmueble 'Moderno / A Estrenar / Excelentes Acabados' y la oferta es 'Para Remodelar / Por Actualizar'. Match Inviable (0%).");
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
@@ -2841,9 +3081,19 @@ export async function findMatchesForProperty(propertyId: number) {
       .from(requirements)
       .where(eq(requirements.status, "active"));
 
+    const rejectedSet = await getRejectedPairsSet();
     const validMatches = [];
 
     for (const req of activeRequirements) {
+      if (rejectedSet.has(`${propertyId}_${req.id}`)) {
+        await db.delete(propertyMatches).where(
+          and(
+            eq(propertyMatches.propertyId, propertyId),
+            eq(propertyMatches.requirementId, req.id)
+          )
+        );
+        continue;
+      }
       const explanation = explicarMatch(req, property);
       const score = explanation.score;
       if (score >= 80) {
@@ -2923,9 +3173,19 @@ export async function findMatchesForRequirement(requirementId: number) {
       .from(properties)
       .where(eq(properties.available, true));
 
+    const rejectedSet = await getRejectedPairsSet();
     const validMatches = [];
 
     for (const prop of availableProperties) {
+      if (rejectedSet.has(`${prop.id}_${requirementId}`)) {
+        await db.delete(propertyMatches).where(
+          and(
+            eq(propertyMatches.propertyId, prop.id),
+            eq(propertyMatches.requirementId, requirementId)
+          )
+        );
+        continue;
+      }
       const explanation = explicarMatch(req, prop);
       const score = explanation.score;
       if (score >= 80) {

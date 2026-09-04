@@ -1078,3 +1078,44 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 #### 3. ORIENTACIÓN PROACTIVA AL COPIAR
 - Al usar el botón `Copiar Todo`, el sistema orienta activamente al usuario para evitar pegar textos extensos en el buscador del chat móvil y ofrece usar `Buscar en WhatsApp` para una localización limpia e instantánea.
 
+---
+
+### Versión v31.3 — Septiembre 2026: Doctrina de Sanidad Financiera en Venta, Tolerancia Cero en Guillotina de Presupuesto y Purga de Matches Espurios
+
+#### 1. DESAMBIGUACIÓN ADMINISTRACIÓN VS PRECIO DE VENTA
+- **Causa Raíz de Ingesta**: En publicaciones mixtas (e.g. `V/Administ/$1.260.000 PRECIO DE VENTA/ $950.000.000`), el extractor regex anterior no contemplaba separadores tipo barra `/` (`V/Administ/`, `PRECIO DE VENTA/`), guardando la cuota de administración ($1.260.000 COP) como precio de venta en Supabase.
+- **Sanidad Predial en Venta**: En Colombia ningún inmueble urbano en venta cuesta menos de $30M COP. Todo valor < 30M en transacciones de venta se reclasifica como precio no especificado (`price = 0`).
+- **Guillotina de Presupuesto Inquebrantable**: Si el precio del inmueble supera el presupuesto del comprador (`salePrice > budgetMax`), bloqueo inmediato al **0% Inviable**.
+- **Purga de 55 Matches Inválidos**: Saneadas 15 propiedades en Supabase y purgados 55 matches que violaban presupuesto o tenían ofertas viciadas.
+
+---
+
+### Versión v31.4 — Septiembre 2026: Doctrina de Blindaje Geográfico por Micro-Sectores, Delimitación Vial Resiliente, Memoria Permanente de Descarte y Purga de 338 Matches Espurios
+
+#### 1. BLINDAJE GEOGRÁFICO INTEGRAL Y DELIMITACIÓN VIAL RESILIENTE
+- **Causa Raíz en `parseStreetCarreraBoundaries`**: El regex previo no exigía la palabra clave `calle`/`cll`. En el Requerimiento #972 (`📍*Mts2*: 80 a 100 mts. 📌 *Ubicación*: Entre las calles 86 y la 92, entre 7 y autopista, sector del Virrey`), el motor extrajo `80 a 100` del área cuadrada como si fuera el rango de calles (`minStreet: 80, maxStreet: 100`), perdiendo el rango real (86 a 92).
+- **Parser Vial Estricto**: Exclusión terminante de unidades métricas (`m2`, `mts`, `metros`), presupuestos (`millones`), habitaciones, baños, etc. Detección nativa de `entre 7 y autopista` asignando `minCarrera = 7` y `maxCarrera = 20` (Chapinero Cl < 100) o `45` (Usaquén).
+- **Catálogo Canónico de Límites Viales (`BOGOTA_BARRIO_STREET_BOUNDS`)**: Mapeo estricto de coordenadas viales por barrio en Bogotá (El Nogal 76-82, El Virrey 85-90, Chicó 88-100, Rincón del Chicó 100-106, Rosales 70-85 oriente, Polo Club 80-87 occidente, etc.).
+- **Bounding Box Catastral por Barrio**: Si la oferta no tiene número de calle exacto, el motor valida si el barrio ofertado tiene solapamiento con el perímetro demandado. Si `propBounds.maxStreet < reqBoundaries.minStreet` o `propBounds.minStreet > reqBoundaries.maxStreet` → **Match Inviable 0% inmediato**.
+- **Aislamiento Doctrinal de Micro-Sectores**:
+  * `El Virrey` ↔ `El Nogal`, `Rincón del Chicó`, `Polo Club` → ❌ **Bloqueo 0%**.
+  * `Rosales` (oriente Cra 7) ↔ `Chicó Tradicional` (occidente Cra 7) → ❌ **Bloqueo 0%** (salvo solicitud explícita de ambos).
+  * `El Nogal` ↔ `Chicó Norte` / `Chicó Reservado` → ❌ **Bloqueo 0%**.
+- **Restricción de `lookupBarriosByPerimeter`**: Si la demanda ya especificó un barrio concreto, el motor no diluye ni contamina la preferencia inyectando barrios adicionales del perímetro a menos que use la cláusula `y aledaños`.
+
+#### 2. FILTRO DURO 0A-TER: INCOMPATIBILIDAD DE ESTADO (MODERNO VS PARA REMODELAR)
+- Bloqueo 0% inmediato si la demanda exige inmueble `Moderno / A Estrenar` y la oferta es `Para Remodelar / Por Actualizar` (e.g. Prop #713 vs Req #961).
+
+#### 3. MEMORIA PERMANENTE Y HARD VETO DE DESCARTE HUMANO (FILTRO DURO 00-VETO)
+- Todo descarte humano realizado por el operador comercial bloquea a perpetuidad la pareja oferta ↔ demanda a **Score 0%** mediante integración de `match_feedback` en memoria RAM y base de datos, garantizando que JanIA aprenda permanentemente y nunca vuelva a proponer matches descartados.
+
+#### 4. EXPERIENCIA DE USUARIO EN ADMIN PANEL (`AdminMatches.tsx`)
+- **Modal de Descarte Inline en Tarjeta**: Sustituido el modal flotante fijo por un overlay integrado directamente sobre la tarjeta del match activo, eliminando la necesidad de scroll vertical y saltos a la parte superior.
+- **Reflejo Fiel de Barrios Múltiples**: El modal y las especificaciones reflejan todos los sectores solicitados en el texto original (`📍 Chicó (+ Rosales, Cabrera)`) y no solo el primer término residual.
+
+#### 5. GRAN PURGA DOCTRINAL EN BASE DE DATOS DE SUPABASE
+- Ejecutado script `sanitize_geo_and_budget_matches.ts`.
+- **338 matches inválidos purgados permanentemente** de `propertyMatches` tras desvincular llaves foráneas (`notificationLogs`, `matchFeedback`).
+- Retenidos **136 matches 100% verídicos y rigurosos**.
+
+

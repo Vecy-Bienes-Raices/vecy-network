@@ -52,9 +52,60 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.2 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.4 — Septiembre 2026
 
-### 🗓️ Sesión: Viernes 4 de Septiembre de 2026 — 01:10 a 01:30 (Hora Colombia UTC-5)
+### 🗓️ Sesión: Viernes 4 de Septiembre de 2026 — 15:15 a 15:40 (Hora Colombia UTC-5)
+**Versión**: `v31.4` | **Ambiente**: Producción VPS (`13.140.149.144`) + Mesa de Cotejo Admin Panel (`vecy-network.vercel.app/admin`) + Supabase DB + GitHub (`main`)
+
+#### 🎯 Solicitud de Eduardo A. Rivera:
+1. "Si logras ver el descarte anterior fue por zona o ubicación, al parecer seguimos con ese error y no lo hemos logrado superar ni corregir completamente."
+2. "Hay bastantes errores en los MATCH subidos a la página de coincidencias... Si los voy descartando uno a uno y colocando en ese pop up que sale allí, que debería abrirse encima del inmueble a descartar y no tener que ir hasta arriba a colocar cada descarte en ese Pop Up vamos a hacer una cosa. Si yo coloco allí dentro en las anotaciones una nota diciendo algo muy bien especificado del porqué se descarta dicho MATCH, ¿puedes hacer que la IA JanIA vaya aprendiendo y tomando nota para no fallar la próxima vez que recalcule un Match para ambas partes DEMANDA y OFERTA? o ¿eso no serviría de nada y voy a tener que seguir mitigando y corrigiendo una a una manualmente?"
+
+#### 🛠️ Diagnóstico Técnico e Implementación:
+1. **Diagnóstico de Causa Raíz de Mismatches Geográficos (El Virrey vs El Nogal / Rincón del Chicó / Chicó)**:
+   - **Causa Raíz en `parseStreetCarreraBoundaries`**: El regex previo no exigía obligatoriamente la palabra clave `calle`/`cll`. En el Requerimiento #972 (`📍*Mts2*: 80 a 100 mts. 📌 *Ubicación*: Entre las calles 86 y la 92, entre 7 y autopista, sector del Virrey`), el motor extrajo `80 a 100` del área cuadrada como si fuera el rango de calles (`minStreet: 80, maxStreet: 100`), perdiendo el rango real (86 a 92).
+   - **Inyección Espuria por `lookupBarriosByPerimeter`**: Con calles 80 a 100, IDECA devolvió 12 barrios catastrales que fueron inyectados a `reqPhrases`, incluyendo `El Nogal` (Calles 76-82) y `Rincón del Chicó` (Calles 100-106). Como consecuencia, propiedades como #492 (El Nogal) y #124 (Rincón del Chicó) calificaron falsamente con 85% y 90% para compradores exclusivos de El Virrey.
+   - **Multi-Barrios en Demanda vs Badge de la Interfaz**: En el Requerimiento #961, el cliente solicitó *"Chico reservado, Cabrera, chico o Rosales bajo"*, pero JanIA solo guardó `"Rosales"` en `zona_deseada`. En pantalla se mostraba `Oferta: 📍 Chicó` vs `Demanda: 📍 Rosales`, aparentando un error de compatibilidad cuando la demanda sí aceptaba Chicó.
+2. **Blindaje Geográfico Integral y Micro-Sectores Inviolables**:
+   - **Parser Vial Resiliente (`parseStreetCarreraBoundaries`)**: Exclusión rigurosa de unidades de metraje (`m2`, `mts`), presupuestos (`millones`), alcobas, baños, etc. Detección nativa de `entre 7 y autopista` asignando `minCarrera = 7` y `maxCarrera = 20` (Chapinero Cl < 100) o `45` (Usaquén).
+   - **Catálogo de Límites Viales (`BOGOTA_BARRIO_STREET_BOUNDS`)**: Mapeo estricto de coordenadas viales por barrio en Bogotá.
+   - **Bounding Box Catastral por Barrio**: Si la oferta no tiene número de calle exacto, el motor valida si el barrio ofertado tiene solapamiento con el perímetro demandado. Si `propBounds.maxStreet < reqBoundaries.minStreet` o `propBounds.minStreet > reqBoundaries.maxStreet` → **Match Inviable 0% inmediato**.
+   - **Aislamiento Doctrinal de Micro-Sectores**:
+     * `El Virrey` ↔ `El Nogal`, `Rincón del Chicó`, `Polo Club` → ❌ **Bloqueo 0%**.
+     * `Rosales` ↔ `Chicó Tradicional` → ❌ **Bloqueo 0%** (salvo solicitud explícita de ambos).
+     * `El Nogal` ↔ `Chicó Norte` / `Chicó Reservado` → ❌ **Bloqueo 0%**.
+   - **Restricción de `lookupBarriosByPerimeter`**: Si la demanda ya especificó un barrio, no se agregan barrios del perímetro a menos que use la cláusula `y aledaños`.
+3. **Filtro Duro 0A-TER: Incompatibilidad de Estado (Moderno vs Para Remodelar)**:
+   - Bloqueo 0% inmediato si la demanda exige inmueble `Moderno / A Estrenar` y la oferta es `Para Remodelar / Por Actualizar` (e.g. Prop #713 vs Req #961).
+4. **Memoria Permanente y Hard Veto de Descarte Humano (Filtro Duro 00-VETO)**:
+   - Implementada integración en memoria y base de datos con `match_feedback` (`getRejectedPairsSet()`): JanIA recuerda permanentemente cada pareja descartada por el operador humano y le asigna **Score 0%** con blocker explicativo, asegurando que jamás vuelva a sugerir matches rechazados.
+   - Sincronizado en `nightlyRematch.ts` y en `recordMatchFeedback` de `janIA.ts`.
+5. **Experiencia de Usuario en Admin Panel (`AdminMatches.tsx`)**:
+   - **Modal de Descarte Inline en Tarjeta**: Sustituido el modal flotante fijo por un overlay integrado directamente sobre la tarjeta del match activo, eliminando la necesidad de scroll vertical y saltos a la parte superior.
+   - **Reflejo Fiel de Barrios Múltiples**: El modal y las especificaciones reflejan todos los sectores solicitados en el texto original (`📍 Chicó (+ Rosales, Cabrera)`) y no solo el primer término residual.
+6. **Gran Purga Doctrinal en Base de Datos de Supabase**:
+   - Ejecutado script `sanitize_geo_and_budget_matches.ts`.
+   - **338 matches inválidos purgados permanentemente** de `propertyMatches` tras desvincular llaves foráneas (`notificationLogs`, `matchFeedback`).
+   - Retenidos **136 matches 100% verídicos y rigurosos**.
+
+---
+
+### 🗓️ Sesión: Viernes 4 de Septiembre de 2026 — 03:20 a 04:00 (Hora Colombia UTC-5)
+**Versión**: `v31.3` | **Ambiente**: Producción VPS (`13.140.149.144`) + Mesa de Cotejo Admin Panel (`vecy-network.vercel.app/admin`) + Supabase DB + GitHub (`main`)
+
+#### 🎯 Solicitud de Eduardo A. Rivera:
+- Investigar el error crítico en el Match #M12306 donde un apartamento en venta por $950.000.000 COP fue emparejado con un requerimiento de $700.000.000 COP con score de 85/100 ("💰 Oportunidad comercial").
+
+#### 🛠️ Diagnóstico Técnico e Implementación:
+1. **Causa Raíz**: En publicaciones con administración y venta (e.g. `V/Administ/$1.260.000 PRECIO DE VENTA/ $950.000.000`), el extractor regex anterior guardó la cuota de administración ($1.260.000) en el campo `price` de Supabase. El motor de matching comparó 1.26 millones contra 700 millones, otorgando los 15 puntos de presupuesto.
+2. **Blindaje Financiero y Saneamiento**:
+   - Sanidad Predial: Todo valor < 30M COP en venta se reclasifica como precio no especificado (`price = 0`).
+   - Guillotina de Tolerancia Cero: Bloqueo inmediato al 0% si el precio real supera el presupuesto del comprador.
+   - Saneadas 15 propiedades en Supabase con precios viciados y purgados 55 matches espurios.
+
+---
+
+### 🗓️ Sesión Previa: Viernes 4 de Septiembre de 2026 — 01:10 a 01:30 (Hora Colombia UTC-5)
 **Versión**: `v31.2` | **Ambiente**: Producción VPS (`13.140.149.144`) + Mesa de Cotejo Admin Panel (`vecy-network.vercel.app/admin`) + Supabase DB + GitHub (`main`)
 
 #### 🎯 Solicitud de Eduardo A. Rivera:

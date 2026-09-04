@@ -163,7 +163,35 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.3 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.4 — Septiembre 2026
+
+### Novedades v31.4 (Doctrina de Blindaje Geográfico por Micro-Sectores, Delimitación Vial Resiliente, Memoria Permanente de Descarte y Purga de 338 Matches Espurios):
+- **Diagnóstico y Erradicación del Error Crítico de Ubicación y Zonas (Caso Nogal / Rincón del Chicó vs El Virrey)**:
+  1) **Causa Raíz en `parseStreetCarreraBoundaries`**: El extractor regex previo de calles (`(?:entre|de)?...(\d{1,3}) a (\d{1,3})`) no obligaba a la presencia de la palabra clave `calle`/`cll` y no discriminaba unidades de medida física. En publicaciones como el Requerimiento #972 (`📍*Mts2*: 80 a 100 mts. 📌 *Ubicación*: Entre las calles 86 y la 92, entre 7 y autopista, sector del Virrey`), el motor extrajo erróneamente `80 a 100` del metraje cuadrado como si fuera el rango de calles (`minStreet: 80, maxStreet: 100`), ignorando por completo el verdadero rango vial (86 a 92).
+  2) **Contaminación por `lookupBarriosByPerimeter`**: Con el rango espurio 80-100, la búsqueda catastral IDECA trajo 12 sectores colindantes (incluyendo `El Nogal` en Calle 76-82 y `Rincón del Chicó` en Calle 100-106) y los anexó a los barrios demandados. Como consecuencia, propiedades como #492 (El Nogal) y #124 (Rincón del Chicó) fueron emparejadas con calificación de 85% y 90% con compradores que buscaban estrictamente en El Virrey.
+- **Blindaje Geográfico Integral y Micro-Sectores Inviolables**:
+  1) **Parser Vial Estricto (`parseStreetCarreraBoundaries`)**: Exclusión rigurosa de unidades de área (`m2`, `mts`, `metros`), presupuestos (`millones`, `mdp`), habitaciones, baños, etc. Obligatoriedad de prefijo explícito de calle o estructura vial en contexto geográfico. Soporte nativo para `entre 7 y autopista` / `séptima y autonorte` calibrando `minCarrera = 7` y `maxCarrera = 20` (en Chapinero Cl < 100) o `45` (en Usaquén).
+  2) **Catálogo Canónico de Límites Viales (`BOGOTA_BARRIO_STREET_BOUNDS`)**: Mapeo estricto de coordenadas viales (Calles y Carreras) de los barrios icónicos de Bogotá (El Nogal 76-82, El Virrey 85-90, Chicó 88-100, Rincón del Chicó 100-106, Rosales 70-85 oriente, Polo Club 80-87 occidente, etc.).
+  3) **Filtro Bounding Box Catastral por Barrio**: Si una oferta no tiene número de dirección exacto (e.g. "Vendo en El Nogal"), el motor coteja los límites del barrio contra el perímetro exigido por la demanda. Si no hay solapamiento (`propBounds.maxStreet < reqBoundaries.minStreet` o `propBounds.minStreet > reqBoundaries.maxStreet`), **Match Inviable 0% inmediato**.
+  4) **Aislamiento Doctrinal de Micro-Sectores**:
+     - `El Virrey` ↔ `El Nogal`, `Rincón del Chicó`, `Polo Club` → ❌ **Bloqueo Absoluto 0%**.
+     - `Rosales` (oriente Cra 7) ↔ `Chicó Tradicional` (occidente Cra 7) → ❌ **Bloqueo Absoluto 0%** (salvo que la demanda pida expresamente ambos).
+     - `El Nogal` ↔ `Chicó Norte` / `Chicó Reservado` → ❌ **Bloqueo Absoluto 0%**.
+  5) **Restricción de `lookupBarriosByPerimeter`**: Si la demanda ya especificó un barrio concreto, el motor no diluye ni contamina la preferencia inyectando barrios adicionales del perímetro a menos que el cliente use la cláusula `y aledaños`.
+- **Filtro Duro 0A-TER: Incompatibilidad de Estado (Moderno vs Para Remodelar)**:
+  - Si la demanda exige expresamente inmueble `Moderno / A Estrenar / Excelentes Acabados` y la oferta es `Para Remodelar / Por Actualizar` (e.g. Prop #713 vs Req #961), **Bloqueo Inmediato 0% (Inviable)**.
+- **Memoria Permanente y Hard Veto de Descarte Humano (Filtro Duro 00-VETO)**:
+  - Cache en memoria y consulta a `match_feedback` (`getRejectedPairsSet()`): Todo descarte humano realizado por el operador comercial bloquea a perpetuidad la pareja oferta ↔ demanda a **Score 0%**, asegurando que JanIA aprenda permanentemente y nunca vuelva a proponer matches descartados.
+  - Sincronización en `nightlyRematch.ts` y eliminación en caliente en `janIA.ts`.
+- **Experiencia de Usuario en Admin Panel (`AdminMatches.tsx`)**:
+  - **Descarte Inline en Tarjeta**: Erradicado el modal fijo flotante que obligaba a hacer scroll al inicio de la página. Ahora el modal de descarte es un overlay integrado directamente sobre la tarjeta activa, permitiendo descartar fluidamente sin perder la posición de lectura.
+  - **Fidelidad de Barrios Múltiples en Demanda**: El modal y las especificaciones reflejan todos los sectores solicitados en el texto (`📍 Chicó (+ Rosales, Cabrera)`) y no solo el primer término residual de la base de datos, erradicando falsas apariencias de discrepancia geográfica.
+- **Gran Purga Doctrinal en Base de Datos de Supabase**:
+  - Ejecutado script `sanitize_geo_and_budget_matches.ts` con desvinculación segura de llaves foráneas (`notificationLogs`, `matchFeedback`).
+  - **338 matches inválidos purgados permanentemente** (violaciones geográficas, incompatibilidades de estado, desbordes de presupuesto y scores espurios < 85%).
+  - La base de datos queda con **136 matches 100% verídicos, limpios y rigurosos**.
+- **Incremento Oficial de Versión**:
+  1) Elevado a `v31.4` en `shared/const.ts`.
 
 ### Novedades v31.3 (Doctrina de Sanidad Financiera en Venta, Tolerancia Cero en Guillotina de Presupuesto y Purga de Matches Espurios):
 - **Diagnóstico y Resolución del Error Crítico de Presupuesto en Match #M12306**:

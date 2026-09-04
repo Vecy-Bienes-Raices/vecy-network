@@ -3507,6 +3507,7 @@ var init_divipola = __esm({
 // server/_core/matching.ts
 var matching_exports = {};
 __export(matching_exports, {
+  BOGOTA_BARRIO_STREET_BOUNDS: () => BOGOTA_BARRIO_STREET_BOUNDS,
   KNOWN_BARRIOS_CANONICAL: () => KNOWN_BARRIOS_CANONICAL,
   buildBigTechAdminReport: () => buildBigTechAdminReport,
   calcularIPC: () => calcularIPC,
@@ -3524,13 +3525,47 @@ __export(matching_exports, {
   extractTrueCityFromText: () => extractTrueCityFromText,
   findMatchesForProperty: () => findMatchesForProperty,
   findMatchesForRequirement: () => findMatchesForRequirement,
+  getRejectedPairsSet: () => getRejectedPairsSet,
+  invalidateRejectedPairsCache: () => invalidateRejectedPairsCache,
   isNonRealEstateText: () => isNonRealEstateText,
+  isPairRejectedInMemory: () => isPairRejectedInMemory,
   matchesGeography: () => matchesGeography,
   normalizeCanonicalCity: () => normalizeCanonicalCity,
   parsePropertyAddressNumbers: () => parsePropertyAddressNumbers,
   parseStreetCarreraBoundaries: () => parseStreetCarreraBoundaries
 });
-import { and, eq as eq3 } from "drizzle-orm";
+import { and as and2, eq as eq3 } from "drizzle-orm";
+async function getRejectedPairsSet() {
+  const now = Date.now();
+  if (cachedRejectedPairs && now - lastRejectedPairsFetch < REJECTED_PAIRS_TTL_MS) {
+    return cachedRejectedPairs;
+  }
+  try {
+    const db = await getDb();
+    if (!db) return cachedRejectedPairs || /* @__PURE__ */ new Set();
+    const rejected = await db.select({ propertyId: matchFeedback.propertyId, requirementId: matchFeedback.requirementId }).from(matchFeedback).where(eq3(matchFeedback.action, "rechazado"));
+    const set = /* @__PURE__ */ new Set();
+    for (const r of rejected) {
+      if (r.propertyId && r.requirementId) {
+        set.add(`${r.propertyId}_${r.requirementId}`);
+      }
+    }
+    cachedRejectedPairs = set;
+    lastRejectedPairsFetch = now;
+    return set;
+  } catch (e) {
+    console.error("[Matching] Error cargando rejected pairs cache:", e.message);
+    return cachedRejectedPairs || /* @__PURE__ */ new Set();
+  }
+}
+function invalidateRejectedPairsCache() {
+  cachedRejectedPairs = null;
+  lastRejectedPairsFetch = 0;
+}
+function isPairRejectedInMemory(propertyId, requirementId) {
+  if (!cachedRejectedPairs) return false;
+  return cachedRejectedPairs.has(`${propertyId}_${requirementId}`);
+}
 function hasAledanos(text2) {
   if (!text2) return false;
   const n = normalizarTextoGeografico(text2);
@@ -3683,46 +3718,72 @@ function esFormatoCuadrante(texto) {
   return /(?:entre|calle|clle|cll|carrera|cra|autopista|circunvalar|septima)/i.test(norm2) && /\d/.test(norm2);
 }
 function parseStreetCarreraBoundaries(text2) {
-  const norm2 = (text2 || "").toLowerCase();
+  const norm2 = String(text2 || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   const res = {};
-  const streetRangeMatch = norm2.match(
-    /(?:entre|de|cll|calle|calles)?\s*(?:la|las)?\s*(?:calle|clle|cll|cna|cera)?\s*(\d{1,3})\s*(?:a|y|-|hasta)\s*(?:la|las)?\s*(?:calle|clle|cll|cna|cera)?\s*(\d{1,3})/i
-  );
-  if (streetRangeMatch) {
-    const n1 = parseInt(streetRangeMatch[1], 10);
-    const n2 = parseInt(streetRangeMatch[2], 10);
+  const explicitStreetRegex = /(?:entre|de)?\s*(?:la|las)?\s*(?:calle|calles|clle|cll|cna)\s*(\d{1,3})\s*(?:a|y|-|hasta)\s*(?:la|las)?\s*(?:calle|calles|clle|cll|cna)?\s*(\d{1,3})(?!\s*(?:m2|mts|mt2|metros|millones|mdp|hab|bano|alcoba|parqueadero))/i;
+  let streetMatch = norm2.match(explicitStreetRegex);
+  if (!streetMatch) {
+    const contextStreetRegex = /(?:entre|de)\s+(?:la|las)\s+(\d{1,3})\s+(?:a|y|-|hasta)\s+(?:la|las)\s+(\d{1,3})(?!\s*(?:m2|mts|mt2|metros|millones|mdp|hab|bano|alcoba|parqueadero|garaje|piso|ano))/i;
+    const candidate = norm2.match(contextStreetRegex);
+    if (candidate) {
+      const n1 = parseInt(candidate[1], 10);
+      const n2 = parseInt(candidate[2], 10);
+      if (!isNaN(n1) && !isNaN(n2) && n1 >= 20 && n1 <= 250 && n2 >= 20 && n2 <= 250) {
+        streetMatch = candidate;
+      }
+    }
+  }
+  if (!streetMatch) {
+    const singlePrefixRegex = /(?:calle|calles|clle|cll)\s+(\d{1,3})\s*(?:a|y|-|hasta)\s*(\d{1,3})(?!\s*(?:m2|mts|mt2|metros|millones|mdp|hab|bano))/i;
+    const candidate = norm2.match(singlePrefixRegex);
+    if (candidate) {
+      streetMatch = candidate;
+    }
+  }
+  if (streetMatch) {
+    const n1 = parseInt(streetMatch[1], 10);
+    const n2 = parseInt(streetMatch[2], 10);
     if (!isNaN(n1) && !isNaN(n2) && (n1 > 20 || n2 > 20)) {
       res.minStreet = Math.min(n1, n2);
       res.maxStreet = Math.max(n1, n2);
     }
   }
-  const carreraRangeMatch = norm2.match(/(?:cra|carrera|carreras)\s*(?:la|las)?\s*(circunvalar|cerros|\d{1,3})\s*(?:a|y|-|hasta)\s*(?:la|las)?\s*(\d{1,3})/i);
-  if (carreraRangeMatch) {
-    const rawN1 = carreraRangeMatch[1];
-    const n1 = rawN1 === "circunvalar" || rawN1 === "cerros" ? 1 : parseInt(rawN1, 10);
-    const n2 = parseInt(carreraRangeMatch[2], 10);
-    if (!isNaN(n1) && !isNaN(n2)) {
-      res.minCarrera = Math.min(n1, n2);
-      res.maxCarrera = Math.max(n1, n2);
+  const autoMatch = norm2.match(/(?:entre|de)?\s*(?:la)?\s*(?:cra|carrera)?\s*(?:la)?\s*(7|septima)\s*(?:a|y|-|hasta)\s*(?:la)?\s*(?:autopista|autonorte)/i);
+  if (autoMatch) {
+    res.minCarrera = 7;
+    const isUnder100 = res.maxStreet && res.maxStreet <= 100;
+    res.maxCarrera = isUnder100 ? 20 : 45;
+  }
+  if (!res.minCarrera || !res.maxCarrera) {
+    const carreraRangeMatch = norm2.match(/(?:cra|carrera|carreras)\s*(?:la|las)?\s*(circunvalar|cerros|\d{1,3})\s*(?:a|y|-|hasta)\s*(?:la|las)?\s*(\d{1,3})/i);
+    if (carreraRangeMatch) {
+      const rawN1 = carreraRangeMatch[1];
+      const n1 = rawN1 === "circunvalar" || rawN1 === "cerros" ? 1 : parseInt(rawN1, 10);
+      const n2 = parseInt(carreraRangeMatch[2], 10);
+      if (!isNaN(n1) && !isNaN(n2)) {
+        res.minCarrera = Math.min(n1, n2);
+        res.maxCarrera = Math.max(n1, n2);
+      }
     }
   }
-  const normNFD = norm2.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  const mencionaAutopistaNorte = normNFD.includes("autopista norte") || normNFD.includes("autonorte") || normNFD.includes("autopista norte");
-  const orienteAutopista = normNFD.includes("arriba de la autopista") || normNFD.includes("oriente de la autopista") || normNFD.includes("sobre la autopista");
-  const occidenteAutopista = normNFD.includes("abajo de la autopista") || normNFD.includes("occidente de la autopista");
+  const mencionaAutopistaNorte = norm2.includes("autopista norte") || norm2.includes("autonorte");
+  const orienteAutopista = norm2.includes("arriba de la autopista") || norm2.includes("oriente de la autopista") || norm2.includes("sobre la autopista");
+  const occidenteAutopista = norm2.includes("abajo de la autopista") || norm2.includes("occidente de la autopista");
   if (mencionaAutopistaNorte || orienteAutopista) {
     if (!occidenteAutopista) {
       if (!res.minCarrera) res.minCarrera = 1;
-      if (!res.maxCarrera) res.maxCarrera = 44;
+      const isUnder100 = res.maxStreet && res.maxStreet <= 100;
+      if (!res.maxCarrera) res.maxCarrera = isUnder100 ? 20 : 44;
     }
   }
   if (occidenteAutopista) {
-    if (!res.minCarrera) res.minCarrera = 45;
+    const isUnder100 = res.maxStreet && res.maxStreet <= 100;
+    if (!res.minCarrera) res.minCarrera = isUnder100 ? 20 : 45;
   }
-  if (normNFD.includes("arriba de la septima") || normNFD.includes("arriba de la 7")) {
+  if (norm2.includes("arriba de la septima") || norm2.includes("arriba de la 7")) {
     if (!res.minCarrera) res.minCarrera = 1;
     if (!res.maxCarrera) res.maxCarrera = 7;
-  } else if (normNFD.includes("abajo de la septima") || normNFD.includes("abajo de la 7")) {
+  } else if (norm2.includes("abajo de la septima") || norm2.includes("abajo de la 7")) {
     if (!res.minCarrera) res.minCarrera = 7;
   }
   return res;
@@ -3789,6 +3850,26 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
   if (propNumbers.carrera && reqBoundaries.minCarrera && reqBoundaries.maxCarrera) {
     if (propNumbers.carrera < reqBoundaries.minCarrera || propNumbers.carrera > reqBoundaries.maxCarrera) {
       return { matches: false, score: 0 };
+    }
+  }
+  if (reqBoundaries.minStreet && reqBoundaries.maxStreet) {
+    const propCleanNorm = normalizarTextoGeografico(`${propZoneRaw} ${propFullText || ""}`);
+    for (const [barrioKey, bounds] of Object.entries(BOGOTA_BARRIO_STREET_BOUNDS)) {
+      if (propCleanNorm.includes(barrioKey)) {
+        if (bounds.maxStreet < reqBoundaries.minStreet || bounds.minStreet > reqBoundaries.maxStreet) {
+          console.log(`[Matching-Guard] Bloqueo 0%: Barrio de oferta '${barrioKey}' (Calles ${bounds.minStreet}-${bounds.maxStreet}) fuera del per\xEDmetro exigido (Calles ${reqBoundaries.minStreet}-${reqBoundaries.maxStreet})`);
+          return { matches: false, score: 0 };
+        }
+        if (reqBoundaries.maxCarrera && bounds.minCra && bounds.minCra > reqBoundaries.maxCarrera) {
+          console.log(`[Matching-Guard] Bloqueo 0%: Barrio de oferta '${barrioKey}' (Cra ${bounds.minCra}+) supera carrera m\xE1xima exigida (${reqBoundaries.maxCarrera})`);
+          return { matches: false, score: 0 };
+        }
+        if (reqBoundaries.minCarrera && bounds.maxCra && bounds.maxCra < reqBoundaries.minCarrera) {
+          console.log(`[Matching-Guard] Bloqueo 0%: Barrio de oferta '${barrioKey}' (Cra <=${bounds.maxCra}) por debajo de carrera m\xEDnima exigida (${reqBoundaries.minCarrera})`);
+          return { matches: false, score: 0 };
+        }
+        break;
+      }
     }
   }
   if (esFormatoCuadrante(reqZoneRaw) && !reqBoundaries.minStreet && !reqBoundaries.minCarrera) {
@@ -3899,6 +3980,43 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
   const isCallejaBajaProp = propFullNorm.includes("calleja baja") || propFullNorm.includes("la calleja baja");
   if (isCallejaAltaReq && isCallejaBajaProp || isCallejaBajaReq && isCallejaAltaProp) {
     console.log(`[Matching-Guard] Bloqueo 0%: Incompatibilidad Calleja Alta vs Calleja Baja ('${reqZoneRaw}' \u2194 '${propZoneRaw}')`);
+    return { matches: false, score: 0 };
+  }
+  const isVirreySpecificReq = (reqFullNorm.includes("virrey") || reqFullNorm.includes("parque el virrey")) && !reqFullNorm.includes("nogal") && !reqFullNorm.includes("rincon del chico") && !reqFullNorm.includes("rinc\xF3n del chic\xF3");
+  const isNogalProp = propFullNorm.includes("el nogal") || propFullNorm.includes("nogal");
+  const isRinconProp = propFullNorm.includes("rincon del chico") || propFullNorm.includes("rinc\xF3n del chic\xF3");
+  const isPoloProp = propFullNorm.includes("polo club") || propFullNorm.includes("polo");
+  if (isVirreySpecificReq && (isNogalProp || isRinconProp || isPoloProp)) {
+    if (!hasAledanos(reqZoneRaw)) {
+      console.log(`[Matching-Guard] Bloqueo 0%: Requerimiento pide El Virrey pero oferta es incompatible ('${reqZoneRaw}' \u2194 '${propZoneRaw}')`);
+      return { matches: false, score: 0 };
+    }
+  }
+  const isVirreyPropSpecific = (propFullNorm.includes("virrey") || propFullNorm.includes("parque el virrey")) && !propFullNorm.includes("nogal") && !propFullNorm.includes("rincon del chico") && !propFullNorm.includes("rinc\xF3n del chic\xF3");
+  const isNogalReq = (reqFullNorm.includes("el nogal") || reqFullNorm.includes("nogal")) && !reqFullNorm.includes("virrey");
+  const isRinconReq = (reqFullNorm.includes("rincon del chico") || reqFullNorm.includes("rinc\xF3n del chic\xF3")) && !reqFullNorm.includes("virrey");
+  if (isVirreyPropSpecific && (isNogalReq || isRinconReq)) {
+    if (!hasAledanos(reqZoneRaw)) {
+      console.log(`[Matching-Guard] Bloqueo 0%: Oferta en El Virrey incompatible con demanda ('${reqZoneRaw}' \u2194 '${propZoneRaw}')`);
+      return { matches: false, score: 0 };
+    }
+  }
+  const isRosalesReqOnly = (reqFullNorm.includes("rosales") || reqFullNorm.includes("los rosales")) && !reqFullNorm.includes("chico") && !reqFullNorm.includes("chic\xF3") && !hasAledanos(reqZoneRaw);
+  const isChicoPropOnly = (propFullNorm.includes("chico") || propFullNorm.includes("chic\xF3")) && !propFullNorm.includes("chico navarra") && !propFullNorm.includes("rosales");
+  if (isRosalesReqOnly && isChicoPropOnly) {
+    console.log(`[Matching-Guard] Bloqueo 0%: Requerimiento exclusivo en Rosales incompatible con oferta en Chic\xF3 ('${reqZoneRaw}' \u2194 '${propZoneRaw}')`);
+    return { matches: false, score: 0 };
+  }
+  const isChicoReqOnly = (reqFullNorm.includes("chico") || reqFullNorm.includes("chic\xF3")) && !reqFullNorm.includes("chico navarra") && !reqFullNorm.includes("rosales") && !hasAledanos(reqZoneRaw);
+  const isRosalesPropOnly = (propFullNorm.includes("rosales") || propFullNorm.includes("los rosales")) && !propFullNorm.includes("chico") && !propFullNorm.includes("chic\xF3");
+  if (isChicoReqOnly && isRosalesPropOnly) {
+    console.log(`[Matching-Guard] Bloqueo 0%: Requerimiento exclusivo en Chic\xF3 incompatible con oferta en Rosales ('${reqZoneRaw}' \u2194 '${propZoneRaw}')`);
+    return { matches: false, score: 0 };
+  }
+  const isNogalReqOnly = (reqFullNorm.includes("el nogal") || reqFullNorm.includes("nogal")) && !reqFullNorm.includes("chico") && !reqFullNorm.includes("chic\xF3") && !hasAledanos(reqZoneRaw);
+  const isChicoNortePropOnly = (propFullNorm.includes("chico norte") || propFullNorm.includes("chico reservado")) && !propFullNorm.includes("nogal");
+  if (isNogalReqOnly && isChicoNortePropOnly) {
+    console.log(`[Matching-Guard] Bloqueo 0%: Requerimiento exclusivo en El Nogal incompatible con oferta en Chic\xF3 Norte/Reservado ('${reqZoneRaw}' \u2194 '${propZoneRaw}')`);
     return { matches: false, score: 0 };
   }
   const GENERIC_CARDINAL_TERMS = /* @__PURE__ */ new Set([
@@ -4292,16 +4410,21 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
   else if (propExtracted.length > 0) propPhrases = Array.from(/* @__PURE__ */ new Set([...propPhrases, ...propExtracted]));
   if (reqBoundaries.minStreet && reqBoundaries.maxStreet) {
     try {
+      const defaultMaxCra = reqBoundaries.maxStreet <= 100 ? 20 : 45;
       const idecaRes = lookupBarriosByPerimeter({
         calleNorte: reqBoundaries.maxStreet,
         calleSur: reqBoundaries.minStreet,
         craOriente: reqBoundaries.minCarrera || 1,
-        craOccidente: reqBoundaries.maxCarrera || 30,
+        craOccidente: reqBoundaries.maxCarrera || defaultMaxCra,
         ciudad: "bogota"
       });
       if (idecaRes.barrios && idecaRes.barrios.length > 0) {
         const idecaNorm = idecaRes.barrios.map((b) => normalizarTextoGeografico(b));
-        reqPhrases = Array.from(/* @__PURE__ */ new Set([...reqPhrases, ...idecaNorm]));
+        if (reqPhrases.length === 0) {
+          reqPhrases = idecaNorm;
+        } else if (hasAledanos(reqZoneRaw)) {
+          reqPhrases = Array.from(/* @__PURE__ */ new Set([...reqPhrases, ...idecaNorm]));
+        }
       }
     } catch (idecaErr) {
       console.warn("[Matching-IDECA] Error resolviendo per\xEDmetro en matching:", idecaErr);
@@ -4631,6 +4754,10 @@ function explicarMatch(requirement, property) {
   const blockers = [];
   const positives = [];
   const negatives = [];
+  if (property.id && requirement.id && isPairRejectedInMemory(property.id, requirement.id)) {
+    blockers.push("\u26D4 Descarte Doctrinal Humano (JanIA Feedback Memory): Este emparejamiento fue descartado manualmente por el operador comercial. JanIA respeta este veto absoluto y no volver\xE1 a sugerir esta pareja. MATCH INVIABLE 0%.");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
   if (isNonRealEstateText(requirement.rawText) || isNonRealEstateText(requirement.name) || isNonRealEstateText(property.rawText) || isNonRealEstateText(property.name)) {
     blockers.push("\u26D4 Publicaci\xF3n No Inmobiliaria: Solicitud de materiales de construcci\xF3n, canteras o maquinaria. MATCH IMPOSIBLE 0%.");
     return buildExplanationResult(0, blockers, positives, negatives);
@@ -4745,14 +4872,14 @@ function explicarMatch(requirement, property) {
   const propRawCheckText = (property.rawText || property.description || property.name || "").toLowerCase();
   const isReqParaRemodelar = /\b(para remodelar|por remodelar|a remodelar|para reformar|a reformar|para reconstruir|destruido|precio de oportunidad|de oportunidad)\b/i.test(reqRawCheckText);
   const isPropRemodelado = /\b(remodelad[oa]|totalmente remodelad[oa]|completamente remodelad[oa]|estrenar|para estrenar|a estrenar|nuevo|sobre planos)\b/i.test(propRawCheckText);
-  const isPropParaRemodelar = /\b(para remodelar|por remodelar|a remodelar|para reformar|a reformar|en obra gris|en obra negra)\b/i.test(propRawCheckText);
-  const isReqParaEstrenar = /\b(para estrenar|a estrenar|estrenar|nuevo|sobre planos)\b/i.test(reqRawCheckText);
+  const isPropParaRemodelar = /\b(para remodelar|por remodelar|a remodelar|para reformar|a reformar|remodelar|para actualizar|por actualizar|a actualizar|en obra gris|en obra negra|antiguo sin remodelar)\b/i.test(propRawCheckText);
+  const isReqModernoOEstrenar = /\b(moderno[s]?|moderna[s]?|contempor[aá]neo[s]?|excelentes acabados|acabados de lujo|full acabados|acabados modernos|estilo moderno|para estrenar|a estrenar|estrenar|nuevo|sobre planos|no remodelar|no para remodelar|cero remodelaci[oó]n|sin remodelar nada)\b/i.test(reqRawCheckText);
   if (isReqParaRemodelar && isPropRemodelado && !isPropParaRemodelar) {
     blockers.push("\u26D4 Incompatibilidad de Estado del Inmueble (Tolerancia Cero 0%): Requerimiento exige inmueble 'Para Remodelar / Precio de Oportunidad' y la oferta es un inmueble 'Ya Remodelado / A Estrenar'. Match Inviable (0%).");
     return buildExplanationResult(0, blockers, positives, negatives);
   }
-  if (isReqParaEstrenar && isPropParaRemodelar && !isPropRemodelado) {
-    blockers.push("\u26D4 Incompatibilidad de Estado del Inmueble (Tolerancia Cero 0%): Requerimiento exige inmueble 'A Estrenar / Nuevo' y la oferta es 'Para Remodelar'. Match Inviable (0%).");
+  if (isReqModernoOEstrenar && isPropParaRemodelar && !isPropRemodelado) {
+    blockers.push("\u26D4 Incompatibilidad de Estado del Inmueble (Tolerancia Cero 0% Doctrinal v31.4): El requerimiento exige expresamente inmueble 'Moderno / A Estrenar / Excelentes Acabados' y la oferta es 'Para Remodelar / Por Actualizar'. Match Inviable (0%).");
     return buildExplanationResult(0, blockers, positives, negatives);
   }
   const propLocalidadHard = property.addressLocality || "";
@@ -6019,14 +6146,24 @@ async function findMatchesForProperty(propertyId) {
     const [property] = await db.select().from(properties).where(eq3(properties.id, propertyId));
     if (!property) return [];
     const activeRequirements = await db.select().from(requirements).where(eq3(requirements.status, "active"));
+    const rejectedSet = await getRejectedPairsSet();
     const validMatches = [];
     for (const req of activeRequirements) {
+      if (rejectedSet.has(`${propertyId}_${req.id}`)) {
+        await db.delete(propertyMatches).where(
+          and2(
+            eq3(propertyMatches.propertyId, propertyId),
+            eq3(propertyMatches.requirementId, req.id)
+          )
+        );
+        continue;
+      }
       const explanation = explicarMatch(req, property);
       const score = explanation.score;
       if (score >= 80) {
         let matchId;
         const existing = await db.select().from(propertyMatches).where(
-          and(
+          and2(
             eq3(propertyMatches.propertyId, propertyId),
             eq3(propertyMatches.requirementId, req.id)
           )
@@ -6064,7 +6201,7 @@ async function findMatchesForProperty(propertyId) {
         });
       } else {
         await db.delete(propertyMatches).where(
-          and(
+          and2(
             eq3(propertyMatches.propertyId, propertyId),
             eq3(propertyMatches.requirementId, req.id)
           )
@@ -6085,14 +6222,24 @@ async function findMatchesForRequirement(requirementId) {
     const [req] = await db.select().from(requirements).where(eq3(requirements.id, requirementId));
     if (!req) return [];
     const availableProperties = await db.select().from(properties).where(eq3(properties.available, true));
+    const rejectedSet = await getRejectedPairsSet();
     const validMatches = [];
     for (const prop of availableProperties) {
+      if (rejectedSet.has(`${prop.id}_${requirementId}`)) {
+        await db.delete(propertyMatches).where(
+          and2(
+            eq3(propertyMatches.propertyId, prop.id),
+            eq3(propertyMatches.requirementId, requirementId)
+          )
+        );
+        continue;
+      }
       const explanation = explicarMatch(req, prop);
       const score = explanation.score;
       if (score >= 80) {
         let matchId;
         const existing = await db.select().from(propertyMatches).where(
-          and(
+          and2(
             eq3(propertyMatches.propertyId, prop.id),
             eq3(propertyMatches.requirementId, requirementId)
           )
@@ -6130,7 +6277,7 @@ async function findMatchesForRequirement(requirementId) {
         });
       } else {
         await db.delete(propertyMatches).where(
-          and(
+          and2(
             eq3(propertyMatches.propertyId, prop.id),
             eq3(propertyMatches.requirementId, requirementId)
           )
@@ -6206,7 +6353,7 @@ function buildBigTechAdminReport(prop, req, score) {
 
 \u{1F449} Ver en el panel web: https://vecy-network.vercel.app/admin`;
 }
-var TRANSACTION_COMPATIBILITY_MATRIX, KNOWN_BARRIOS_CANONICAL;
+var cachedRejectedPairs, lastRejectedPairsFetch, REJECTED_PAIRS_TTL_MS, TRANSACTION_COMPATIBILITY_MATRIX, KNOWN_BARRIOS_CANONICAL, BOGOTA_BARRIO_STREET_BOUNDS;
 var init_matching = __esm({
   "server/_core/matching.ts"() {
     "use strict";
@@ -6216,6 +6363,9 @@ var init_matching = __esm({
     init_geo_lookup();
     init_janIA();
     init_events();
+    cachedRejectedPairs = null;
+    lastRejectedPairsFetch = 0;
+    REJECTED_PAIRS_TTL_MS = 25e3;
     TRANSACTION_COMPATIBILITY_MATRIX = {
       venta: /* @__PURE__ */ new Set(["venta", "venta_o_arriendo", "venta_permuta"]),
       arriendo: /* @__PURE__ */ new Set(["arriendo", "venta_o_arriendo", "arriendo_temporal"]),
@@ -6403,6 +6553,76 @@ var init_matching = __esm({
       "sotomayor"
     ];
     KNOWN_BARRIOS_CANONICAL.sort((a, b) => b.length - a.length);
+    BOGOTA_BARRIO_STREET_BOUNDS = {
+      // Chapinero
+      "rosales": { minStreet: 70, maxStreet: 85, minCra: 1, maxCra: 7 },
+      "los rosales": { minStreet: 70, maxStreet: 85, minCra: 1, maxCra: 7 },
+      "rosales alto": { minStreet: 70, maxStreet: 85, minCra: 1, maxCra: 5 },
+      "rosales bajo": { minStreet: 70, maxStreet: 85, minCra: 5, maxCra: 7 },
+      "el nogal": { minStreet: 76, maxStreet: 82, minCra: 7, maxCra: 15 },
+      "nogal": { minStreet: 76, maxStreet: 82, minCra: 7, maxCra: 15 },
+      "el retiro": { minStreet: 81, maxStreet: 85, minCra: 11, maxCra: 15 },
+      "retiro": { minStreet: 81, maxStreet: 85, minCra: 11, maxCra: 15 },
+      "la cabrera": { minStreet: 84, maxStreet: 88, minCra: 7, maxCra: 15 },
+      "cabrera": { minStreet: 84, maxStreet: 88, minCra: 7, maxCra: 15 },
+      "antiguo country": { minStreet: 84, maxStreet: 88, minCra: 15, maxCra: 20 },
+      "el virrey": { minStreet: 85, maxStreet: 90, minCra: 7, maxCra: 20 },
+      "virrey": { minStreet: 85, maxStreet: 90, minCra: 7, maxCra: 20 },
+      "parque el virrey": { minStreet: 85, maxStreet: 90, minCra: 7, maxCra: 20 },
+      "chico": { minStreet: 88, maxStreet: 100, minCra: 7, maxCra: 15 },
+      "el chico": { minStreet: 88, maxStreet: 100, minCra: 7, maxCra: 15 },
+      "chico norte": { minStreet: 92, maxStreet: 100, minCra: 11, maxCra: 15 },
+      "chico norte ii": { minStreet: 94, maxStreet: 100, minCra: 11, maxCra: 15 },
+      "chico norte iii": { minStreet: 94, maxStreet: 100, minCra: 15, maxCra: 20 },
+      "chico reservado": { minStreet: 92, maxStreet: 98, minCra: 7, maxCra: 11 },
+      "chico reservado norte": { minStreet: 94, maxStreet: 100, minCra: 7, maxCra: 11 },
+      "quinta camacho": { minStreet: 67, maxStreet: 72, minCra: 7, maxCra: 15 },
+      "chapinero alto": { minStreet: 53, maxStreet: 72, minCra: 1, maxCra: 7 },
+      "chapinero central": { minStreet: 53, maxStreet: 67, minCra: 7, maxCra: 14 },
+      // Usaquén
+      "rincon del chico": { minStreet: 100, maxStreet: 106, minCra: 9, maxCra: 15 },
+      "rinc\xF3n del chic\xF3": { minStreet: 100, maxStreet: 106, minCra: 9, maxCra: 15 },
+      "navarra": { minStreet: 106, maxStreet: 116, minCra: 15, maxCra: 20 },
+      "chico navarra": { minStreet: 106, maxStreet: 116, minCra: 15, maxCra: 20 },
+      "san patricio": { minStreet: 106, maxStreet: 116, minCra: 15, maxCra: 19 },
+      "santa paula": { minStreet: 106, maxStreet: 116, minCra: 11, maxCra: 15 },
+      "santa bibiana": { minStreet: 100, maxStreet: 106, minCra: 15, maxCra: 20 },
+      "santa ana": { minStreet: 108, minCra: 7, maxCra: 9, maxStreet: 116 },
+      "santa ana oriental": { minStreet: 108, maxStreet: 116, minCra: 1, maxCra: 7 },
+      "santa ana occidental": { minStreet: 108, maxStreet: 116, minCra: 7, maxCra: 9 },
+      "santa barbara": { minStreet: 116, maxStreet: 127, minCra: 7, maxCra: 19 },
+      "santa barbara central": { minStreet: 116, maxStreet: 127, minCra: 11, maxCra: 15 },
+      "santa barbara occidental": { minStreet: 116, maxStreet: 127, minCra: 15, maxCra: 19 },
+      "santa barbara oriental": { minStreet: 116, maxStreet: 127, minCra: 7, maxCra: 11 },
+      "santa barbara alta": { minStreet: 116, maxStreet: 127, minCra: 1, maxCra: 7 },
+      "la carolina": { minStreet: 127, maxStreet: 134, minCra: 9, maxCra: 15 },
+      "la calleja": { minStreet: 127, maxStreet: 134, minCra: 15, maxCra: 19 },
+      "country club": { minStreet: 127, maxStreet: 134, minCra: 15, maxCra: 19 },
+      "multicentro": { minStreet: 122, maxStreet: 127, minCra: 11, maxCra: 15 },
+      "unicentro": { minStreet: 122, maxStreet: 127, minCra: 11, maxCra: 15 },
+      "cedritos": { minStreet: 134, maxStreet: 153, minCra: 7, maxCra: 19 },
+      "los cedros": { minStreet: 134, maxStreet: 153, minCra: 7, maxCra: 19 },
+      "el contador": { minStreet: 134, maxStreet: 140, minCra: 9, maxCra: 19 },
+      "contador": { minStreet: 134, maxStreet: 140, minCra: 9, maxCra: 19 },
+      "belmira": { minStreet: 138, maxStreet: 147, minCra: 7, maxCra: 9 },
+      "toberin": { minStreet: 161, maxStreet: 170, minCra: 16, maxCra: 21 },
+      "tober\xEDn": { minStreet: 161, maxStreet: 170, minCra: 16, maxCra: 21 },
+      // Suba
+      "pasadena": { minStreet: 100, maxStreet: 106, minCra: 45, maxCra: 55 },
+      "alhambra": { minStreet: 114, maxStreet: 116, minCra: 45, maxCra: 55 },
+      "la alhambra": { minStreet: 114, maxStreet: 116, minCra: 45, maxCra: 55 },
+      "el batan": { minStreet: 122, maxStreet: 127, minCra: 45, maxCra: 55 },
+      "batan": { minStreet: 122, maxStreet: 127, minCra: 45, maxCra: 55 },
+      "prado veraniego": { minStreet: 128, maxStreet: 138, minCra: 45, maxCra: 55 },
+      "niza": { minStreet: 118, maxStreet: 129, minCra: 60, maxCra: 72 },
+      "colina campestre": { minStreet: 134, maxStreet: 160, minCra: 55, maxCra: 72 },
+      "colina": { minStreet: 134, maxStreet: 160, minCra: 55, maxCra: 72 },
+      // Barrios Unidos
+      "polo club": { minStreet: 80, maxStreet: 87, minCra: 20, maxCra: 28 },
+      "polo": { minStreet: 80, maxStreet: 87, minCra: 20, maxCra: 28 },
+      "la castellana": { minStreet: 92, maxStreet: 100, minCra: 28, maxCra: 50 },
+      "castellana": { minStreet: 92, maxStreet: 100, minCra: 28, maxCra: 50 }
+    };
   }
 });
 
@@ -7084,7 +7304,7 @@ __export(janIA_exports, {
   translatePropertyType: () => translatePropertyType,
   translateTransactionType: () => translateTransactionType
 });
-import { eq as eq4, and as and2, sql as sql3, gte, desc } from "drizzle-orm";
+import { eq as eq4, and as and3, sql as sql3, gte, desc } from "drizzle-orm";
 import fs5 from "fs";
 import path5 from "path";
 import axios6 from "axios";
@@ -8065,7 +8285,7 @@ async function hasGreetedUserToday(userId) {
     const startOfToday = /* @__PURE__ */ new Date();
     startOfToday.setHours(0, 0, 0, 0);
     const recentMsgs = await db.select({ id: messages.id }).from(messages).innerJoin(conversations, eq4(messages.conversationId, conversations.id)).where(
-      and2(
+      and3(
         eq4(conversations.sessionId, userId),
         eq4(messages.role, "janIA"),
         gte(messages.createdAt, startOfToday)
@@ -8100,7 +8320,7 @@ async function getRecentChatHistory(userId, limit = 20) {
       content: messages.content,
       createdAt: messages.createdAt
     }).from(messages).innerJoin(conversations, eq4(messages.conversationId, conversations.id)).where(
-      and2(
+      and3(
         eq4(conversations.sessionId, userId),
         gte(messages.createdAt, fourDaysAgo)
       )
@@ -10041,7 +10261,7 @@ async function handleAmendmentUpdate(userId, text2) {
   const isAmendmentTrigger = cleanTextLower.startsWith("correccion") || cleanTextLower.startsWith("correcci\xF3n") || cleanTextLower.startsWith("fe de erratas") || cleanTextLower.startsWith("fe de errata") || cleanTextLower.startsWith("rectificacion") || cleanTextLower.startsWith("rectificaci\xF3n") || cleanTextLower.startsWith("ajuste:") || cleanTextLower.startsWith("ajuste ") || cleanTextLower.startsWith("disculpen");
   if (!isAmendmentTrigger) return false;
   const fallbackData = extractFallbackDataFromText(text2);
-  const lastReqs = await db.select().from(requirements).where(and2(
+  const lastReqs = await db.select().from(requirements).where(and3(
     eq4(requirements.idUsuarioWhatsapp, rawPhone),
     gte(requirements.createdAt, twoHoursAgo)
   )).orderBy(desc(requirements.createdAt)).limit(1);
@@ -10074,7 +10294,7 @@ async function handleAmendmentUpdate(userId, text2) {
       return true;
     }
   }
-  const lastProps = await db.select().from(properties).where(and2(
+  const lastProps = await db.select().from(properties).where(and3(
     eq4(properties.idUsuarioWhatsapp, rawPhone),
     gte(properties.createdAt, twoHoursAgo)
   )).orderBy(desc(properties.createdAt)).limit(1);
@@ -10391,7 +10611,7 @@ async function saveProperty(data, userId, realName, imageBuffer, pdfBuffer, pdfM
   let existing = [];
   if (canonicalExternalId) {
     existing = await db.select().from(properties).where(
-      and2(
+      and3(
         eq4(properties.canonicalExternalId, canonicalExternalId),
         eq4(properties.available, true)
       )
@@ -10399,7 +10619,7 @@ async function saveProperty(data, userId, realName, imageBuffer, pdfBuffer, pdfM
   }
   if (existing.length === 0 && finalInsertData.matriculaInmobiliaria) {
     existing = await db.select().from(properties).where(
-      and2(
+      and3(
         eq4(properties.matriculaInmobiliaria, finalInsertData.matriculaInmobiliaria),
         eq4(properties.available, true)
       )
@@ -10407,7 +10627,7 @@ async function saveProperty(data, userId, realName, imageBuffer, pdfBuffer, pdfM
   }
   if (existing.length === 0 && finalInsertData.rawText && finalInsertData.rawText.trim().length > 25) {
     existing = await db.select().from(properties).where(
-      and2(
+      and3(
         eq4(properties.rawText, finalInsertData.rawText.trim()),
         eq4(properties.available, true)
       )
@@ -10415,7 +10635,7 @@ async function saveProperty(data, userId, realName, imageBuffer, pdfBuffer, pdfM
   }
   if (existing.length === 0) {
     existing = await db.select().from(properties).where(
-      and2(
+      and3(
         eq4(properties.idUsuarioWhatsapp, rawPhone),
         eq4(properties.propertyType, finalInsertData.propertyType),
         eq4(properties.transactionType, finalInsertData.transactionType),
@@ -10700,7 +10920,7 @@ async function saveRequirement(data, userId, realName, imageBuffer, pdfBuffer, p
   let existing = [];
   if (insertData.rawText && insertData.rawText.trim().length > 25) {
     existing = await db.select().from(requirements).where(
-      and2(
+      and3(
         eq4(requirements.rawText, insertData.rawText.trim()),
         eq4(requirements.status, "active")
       )
@@ -10708,7 +10928,7 @@ async function saveRequirement(data, userId, realName, imageBuffer, pdfBuffer, p
   }
   if (existing.length === 0) {
     existing = await db.select().from(requirements).where(
-      and2(
+      and3(
         eq4(requirements.idUsuarioWhatsapp, rawPhone),
         eq4(requirements.tipoInmuebleDeseado, insertData.tipoInmuebleDeseado),
         eq4(requirements.tipoNegocioDeseado, insertData.tipoNegocioDeseado),
@@ -14654,7 +14874,7 @@ __export(nightlyRematch_exports, {
   recalculateAndCleanupMatches: () => recalculateAndCleanupMatches,
   runNightlyRematch: () => runNightlyRematch
 });
-import { and as and4, eq as eq6 } from "drizzle-orm";
+import { and as and5, eq as eq6 } from "drizzle-orm";
 async function runNightlyRematch() {
   console.log("[NIGHTLY-REMATCH v28.0] Iniciando cruce masivo doctrinal...");
   const db = await getDb();
@@ -14709,6 +14929,8 @@ async function runNightlyRematch() {
     let updatedCount = 0;
     let skippedCount = 0;
     const seenPairs = /* @__PURE__ */ new Set();
+    const rejectedPairsSet = await getRejectedPairsSet();
+    console.log(`[NIGHTLY-REMATCH v31.4] Pares vetados por feedback humano cargados: ${rejectedPairsSet.size}`);
     const CHUNK_SIZE = 50;
     for (let i = 0; i < enrichedReqs.length; i += CHUNK_SIZE) {
       const chunk = enrichedReqs.slice(i, i + CHUNK_SIZE);
@@ -14716,6 +14938,19 @@ async function runNightlyRematch() {
         for (const prop of enrichedProps) {
           const pairKey = `${req.id}-${prop.id}`;
           if (seenPairs.has(pairKey)) continue;
+          if (rejectedPairsSet.has(`${prop.id}_${req.id}`)) {
+            skippedCount++;
+            try {
+              await db.delete(propertyMatches).where(
+                and5(
+                  eq6(propertyMatches.requirementId, req.id),
+                  eq6(propertyMatches.propertyId, prop.id)
+                )
+              );
+            } catch {
+            }
+            continue;
+          }
           if (req._city && prop._city && req._city !== prop._city) continue;
           const transScore = checkTransactionCompatibility(
             req.tipoNegocioDeseado,
@@ -14736,7 +14971,7 @@ async function runNightlyRematch() {
             skippedCount++;
             try {
               await db.delete(propertyMatches).where(
-                and4(
+                and5(
                   eq6(propertyMatches.requirementId, req.id),
                   eq6(propertyMatches.propertyId, prop.id)
                 )
@@ -14747,7 +14982,7 @@ async function runNightlyRematch() {
           }
           seenPairs.add(pairKey);
           const existing = await db.select({ id: propertyMatches.id, matchScore: propertyMatches.matchScore }).from(propertyMatches).where(
-            and4(
+            and5(
               eq6(propertyMatches.requirementId, req.id),
               eq6(propertyMatches.propertyId, prop.id)
             )
@@ -14807,10 +15042,16 @@ async function recalculateAndCleanupMatches() {
       requirementId: propertyMatches.requirementId,
       matchScore: propertyMatches.matchScore
     }).from(propertyMatches);
-    console.log(`[MATCH-CLEANUP] Encontrados ${allMatches.length} registros para evaluar.`);
+    const rejectedPairsSet = await getRejectedPairsSet();
+    console.log(`[MATCH-CLEANUP] Encontrados ${allMatches.length} registros para evaluar. Pares vetados: ${rejectedPairsSet.size}`);
     let deletedCount = 0;
     let updatedCount = 0;
     for (const m of allMatches) {
+      if (rejectedPairsSet.has(`${m.propertyId}_${m.requirementId}`)) {
+        await db.delete(propertyMatches).where(eq6(propertyMatches.id, m.id));
+        deletedCount++;
+        continue;
+      }
       const [prop] = await db.select().from(properties).where(eq6(properties.id, m.propertyId)).limit(1);
       const [req] = await db.select().from(requirements).where(eq6(requirements.id, m.requirementId)).limit(1);
       if (!prop || !req) {
@@ -15338,7 +15579,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.3";
+var VECY_VERSION = "v31.4";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 
@@ -16433,11 +16674,13 @@ ${liveStats}${userContextInstruction}
           imagesMap[img.propertyId].push(img.imageUrl);
         }
       }
+      const rejectedPairs = await getRejectedPairsSet();
       const seenPairs = /* @__PURE__ */ new Set();
       const validEvaluatedMatches = [];
       for (const m of matches) {
         const key = `${m.property.id}-${m.requirement.id}`;
         if (seenPairs.has(key)) continue;
+        if (rejectedPairs.has(`${m.property.id}_${m.requirement.id}`)) continue;
         const evaluation = explicarMatch(m.requirement, m.property);
         if (evaluation.score < 75 || evaluation.blockers.length > 0) {
           continue;
@@ -16818,6 +17061,14 @@ ${liveStats}${userContextInstruction}
         if (input.matchId) {
           await db.delete(propertyMatches).where(eq8(propertyMatches.id, input.matchId));
         }
+        if (input.propertyId && input.requirementId) {
+          await db.delete(propertyMatches).where(
+            and(
+              eq8(propertyMatches.propertyId, input.propertyId),
+              eq8(propertyMatches.requirementId, input.requirementId)
+            )
+          );
+        }
         const reasonLower = (input.motivoRechazo || "").toLowerCase();
         const isUnavailable = reasonLower.includes("arrend") || reasonLower.includes("vendi") || reasonLower.includes("no disponible");
         if (isUnavailable && input.propertyId) {
@@ -16837,6 +17088,7 @@ ${liveStats}${userContextInstruction}
           });
         }
       }
+      invalidateRejectedPairsCache();
       cachedAllMatchesData = null;
       cachedAllMatchesTime = 0;
       console.log(`[JanIA-Feedback] Feedback registrado para Match #${input.matchId}: ${input.action} - ${input.motivoRechazo || "Sin motivo"}`);
@@ -17713,7 +17965,7 @@ var imagesRouter = {
 import { z as z5 } from "zod";
 init_db();
 init_schema();
-import { eq as eq11, and as and6, desc as desc3, isNull } from "drizzle-orm";
+import { eq as eq11, and as and7, desc as desc3, isNull } from "drizzle-orm";
 import { TRPCError as TRPCError3 } from "@trpc/server";
 var agentRouter = router({
   // Public: Get agent profile for branding (Agenda Pro, Personal Shops)
@@ -17759,7 +18011,7 @@ var agentRouter = router({
       throw new TRPCError3({ code: "FORBIDDEN", message: "You don't own this property" });
     }
     const existingLink = await db.select().from(referralLinks).where(
-      and6(
+      and7(
         eq11(referralLinks.propertyId, input.propertyId),
         eq11(referralLinks.agentId, ctx.user.id)
       )
@@ -17862,7 +18114,7 @@ var leadsRouter = router({
 import { z as z7 } from "zod";
 init_db();
 init_schema();
-import { eq as eq13, desc as desc4, ilike, and as and7 } from "drizzle-orm";
+import { eq as eq13, desc as desc4, ilike, and as and8 } from "drizzle-orm";
 import { TRPCError as TRPCError5 } from "@trpc/server";
 var propertyInputSchema = z7.object({
   name: z7.string().min(2),
@@ -17936,7 +18188,7 @@ var propertiesRouter = router({
     if (input?.transactionType) filters.push(eq13(properties.transactionType, input.transactionType));
     if (input?.type) filters.push(eq13(properties.propertyType, input.type));
     if (input?.zone) filters.push(ilike(properties.zone, `%${input.zone}%`));
-    return await db.select().from(properties).where(and7(...filters)).orderBy(desc4(properties.featured), desc4(properties.createdAt)).limit(input?.limit ?? 20).offset(input?.offset ?? 0);
+    return await db.select().from(properties).where(and8(...filters)).orderBy(desc4(properties.featured), desc4(properties.createdAt)).limit(input?.limit ?? 20).offset(input?.offset ?? 0);
   }),
   getById: publicProcedure.input(z7.object({ id: z7.number() })).query(async ({ input }) => {
     const db = await getDb();
