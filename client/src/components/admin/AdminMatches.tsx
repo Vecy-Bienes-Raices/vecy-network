@@ -2225,7 +2225,9 @@ export default function AdminMatches() {
       let title = "📋 Publicación original copiada";
       let desc = groupName 
         ? `Texto original copiado con 100% de fidelidad para ubicar en el grupo "${groupName}".` 
-        : "Texto original copiado con 100% de fidelidad al portapapeles.";
+        : senderName
+          ? `Texto original copiado con 100% de fidelidad (recibido por chat directo con ${senderName}).`
+          : "Texto original copiado con 100% de fidelidad al portapapeles.";
 
       if (mode === 'search') {
         const smart = extractSmartSearchSnippet(text, undefined, senderName, groupName, knownPhone);
@@ -2243,7 +2245,7 @@ export default function AdminMatches() {
         title = `👤 Asesor copiado: "${targetText}"`;
         desc = groupName 
           ? `Abre WhatsApp, entra al grupo "${groupName}" y pega su nombre en la lupa para ver su publicación.`
-          : `Pega su nombre en la lupa de WhatsApp para ubicarlo.`;
+          : `Abre WhatsApp y busca a "${targetText}" en tus chats directos para ver sus mensajes.`;
       } else if (mode === 'phone') {
         targetText = text.trim();
         title = `📞 Celular copiado: ${targetText}`;
@@ -2325,9 +2327,12 @@ export default function AdminMatches() {
     }
 
     setEditingMatchId(m.id);
+    const isPropDirect = m.property?.origenTipo === 'contacto_directo' || m.property?.origenTipo === 'dm';
+    const isReqDirect = m.requirement?.origenTipo === 'contacto_directo' || m.requirement?.origenTipo === 'dm';
+
     setEditForm({
       // Oferta (Inmueble)
-      propSenderName: m.property?.nombreUsuarioWhatsapp || '',
+      propSenderName: m.property?.nombreUsuarioWhatsapp || (isPropDirect ? m.property?.origenNombre : '') || '',
       propPrice: m.property?.price || '',
       propRentPrice: m.property?.rentPrice || '',
       propAdminFee: m.property?.adminFee || '',
@@ -2342,10 +2347,10 @@ export default function AdminMatches() {
       propPropertyType: m.property?.propertyType || '',
       propTransactionType: m.property?.transactionType || '',
       propPhone: m.property?.idUsuarioWhatsapp || m.property?.phone || m.property?.contactPhone || '',
-      propOrigenNombre: m.property?.origenNombre || '',
+      propOrigenNombre: isPropDirect ? '' : (m.property?.origenNombre || ''),
 
       // Demanda (Requerimiento)
-      reqSenderName: m.requirement?.nombreUsuarioWhatsapp || '',
+      reqSenderName: m.requirement?.nombreUsuarioWhatsapp || (isReqDirect ? m.requirement?.origenNombre : '') || '',
       reqBudget: m.requirement?.presupuestoMax || '',
       reqAdminMax: m.requirement?.adminFeeMax || '',
       reqArea: m.requirement?.areaMin || '',
@@ -2359,7 +2364,7 @@ export default function AdminMatches() {
       reqPropertyType: m.requirement?.tipoInmuebleDeseado || '',
       reqTransactionType: m.requirement?.tipoNegocioDeseado || '',
       reqPhone: m.requirement?.idUsuarioWhatsapp || m.requirement?.phone || m.requirement?.contactPhone || '',
-      reqOrigenNombre: m.requirement?.origenNombre || '',
+      reqOrigenNombre: isReqDirect ? '' : (m.requirement?.origenNombre || ''),
     });
   };
 
@@ -2704,8 +2709,8 @@ export default function AdminMatches() {
       seenMatchIds.add(match.id);
 
       const matchIdStr = `m${match.id} #${match.id} ${match.id}`;
-      const propSearchStr = `${matchIdStr} ${property.id || ""} ${property.name || ""} ${property.rawText || ""} ${property.description || ""} ${property.city || ""} ${property.zone || ""} ${property.addressNeighborhood || ""} ${property.brokerName || ""} ${property.brokerPhone || ""} ${property.nombreUsuarioWhatsapp || ""} ${property.idUsuarioWhatsapp || ""}`.toLowerCase();
-      const reqSearchStr = `${requirement.id || ""} ${requirement.name || ""} ${requirement.rawText || ""} ${requirement.ciudadDeseada || ""} ${requirement.zonaDeseada || ""} ${requirement.addressNeighborhood || ""} ${requirement.brokerName || ""} ${requirement.brokerPhone || ""} ${requirement.nombreUsuarioWhatsapp || ""} ${requirement.idUsuarioWhatsapp || ""}`.toLowerCase();
+      const propSearchStr = `${matchIdStr} ${property.id || ""} ${property.name || ""} ${property.rawText || ""} ${property.description || ""} ${property.city || ""} ${property.zone || ""} ${property.addressNeighborhood || ""} ${property.brokerName || ""} ${property.brokerPhone || ""} ${property.nombreUsuarioWhatsapp || ""} ${property.idUsuarioWhatsapp || ""} ${property.origenNombre || ""}`.toLowerCase();
+      const reqSearchStr = `${requirement.id || ""} ${requirement.name || ""} ${requirement.rawText || ""} ${requirement.ciudadDeseada || ""} ${requirement.zonaDeseada || ""} ${requirement.addressNeighborhood || ""} ${requirement.brokerName || ""} ${requirement.brokerPhone || ""} ${requirement.nombreUsuarioWhatsapp || ""} ${requirement.idUsuarioWhatsapp || ""} ${requirement.origenNombre || ""}`.toLowerCase();
 
       results.push({
         ...match,
@@ -3082,27 +3087,43 @@ export default function AdminMatches() {
                               📅 {formatColombiaDate(m.property.createdAt)}
                             </span>
                           )}
-                          {m.property?.origenNombre ? (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleCopy(m.property.origenNombre, `grp-prop-${m.id}`, 'group', m.property.origenNombre);
-                              }}
-                              className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-300 hover:text-amber-200 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 hover:border-amber-400/40 px-2 py-0.5 rounded-md transition-all truncate max-w-[220px]"
-                              title={`Clic para copiar nombre exacto del grupo: "${m.property.origenNombre}"`}
-                            >
-                              <span>📍 {m.property.origenNombre}</span>
-                              <Copy className="w-2.5 h-2.5 opacity-70 hover:opacity-100" />
-                            </button>
-                          ) : (
-                            <span
-                              className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-300/80 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md"
-                              title="Inmueble histórico pionero de julio 2026. Puedes asignarle el grupo haciendo clic en 'Editar Fichas'."
-                            >
-                              <span>📍 Registro Histórico Red (Julio 2026)</span>
-                            </span>
-                          )}
+                          {(() => {
+                            const isPropDirect = m.property?.origenTipo === 'contacto_directo' || m.property?.origenTipo === 'dm';
+                            if (isPropDirect) {
+                              return (
+                                <span
+                                  className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-300 bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 rounded-md"
+                                  title="Inmueble recibido por mensaje directo (chat privado) a JanIA"
+                                >
+                                  <span>💬 Chat Privado (DM JanIA)</span>
+                                </span>
+                              );
+                            }
+                            if (m.property?.origenNombre) {
+                              return (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleCopy(m.property.origenNombre, `grp-prop-${m.id}`, 'group', m.property.origenNombre);
+                                  }}
+                                  className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-300 hover:text-amber-200 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 hover:border-amber-400/40 px-2 py-0.5 rounded-md transition-all truncate max-w-[220px]"
+                                  title={`Clic para copiar nombre exacto del grupo: "${m.property.origenNombre}"`}
+                                >
+                                  <span>📍 {m.property.origenNombre}</span>
+                                  <Copy className="w-2.5 h-2.5 opacity-70 hover:opacity-100" />
+                                </button>
+                              );
+                            }
+                            return (
+                              <span
+                                className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-300/80 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md"
+                                title="Inmueble histórico pionero de julio 2026. Puedes asignarle el grupo haciendo clic en 'Editar Fichas'."
+                              >
+                                <span>📍 Registro Histórico Red (Julio 2026)</span>
+                              </span>
+                            );
+                          })()}
                         </div>
                       </div>
                       <h4 className="text-sm sm:text-base font-bold text-white mt-1 break-words">{m.property?.name}</h4>
@@ -3110,10 +3131,11 @@ export default function AdminMatches() {
                       {/* Texto Completo Extraído + Resumen Estructurado Obligatorio */}
                       <div className="text-xs text-zinc-300 bg-white/[0.02] border border-white/5 p-3 rounded-xl leading-relaxed whitespace-pre-wrap break-words space-y-3 select-text cursor-text">
                         {(() => {
-                          const pText = (m.property?.rawText || m.property?.description || "").trim();
+                          const pText = (m.property?.rawText || m.property?.description || "").replace(/^undefined\s*/i, "").trim();
                           const isGenericImagePlaceholder = pText.includes("[Publicación de Imagen / Flyer Comercial Inmobiliario sin texto en pie de foto]");
                           const propContact = extractPhoneFromItem(m.property);
-                          const propSender = m.property?.nombreUsuarioWhatsapp || propContact.name;
+                          const isPropDirect = m.property?.origenTipo === 'contacto_directo' || m.property?.origenTipo === 'dm';
+                          const propSender = m.property?.nombreUsuarioWhatsapp || (isPropDirect ? m.property?.origenNombre : null) || propContact.name;
                           const propSpecs: string[] = [];
                           if (m.property?.propertyType) propSpecs.push(`• Tipo: ${m.property.propertyType}`);
                           if (m.property?.transactionType) propSpecs.push(`• Negocio: ${m.property.transactionType}`);
@@ -3143,14 +3165,14 @@ export default function AdminMatches() {
                                         type="button"
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          handleCopy(pText || fallbackText, copyKey, 'full', m.property?.origenNombre);
+                                          handleCopy(pText || fallbackText, copyKey, 'full', isPropDirect ? undefined : m.property?.origenNombre, propSender, propContact.cleanNumber);
                                         }}
                                         className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg transition-all duration-300 border shadow-sm ${
                                           isCopied
                                             ? "bg-cyan-500/25 text-cyan-300 border-cyan-400/60 shadow-[0_0_15px_rgba(6,182,212,0.45)] scale-105"
                                             : "text-cyan-300 hover:text-cyan-200 bg-cyan-500/10 hover:bg-cyan-500/20 border-cyan-500/30 hover:border-cyan-400/50 active:scale-95"
                                         }`}
-                                        title="Copiar texto original fiel de la oferta para ubicar en el grupo de WhatsApp"
+                                        title={isPropDirect ? "Copiar texto original fiel de la oferta recibida por chat privado" : "Copiar texto original fiel de la oferta para ubicar en el grupo de WhatsApp"}
                                       >
                                         {isCopied ? (
                                           <>
@@ -3268,7 +3290,8 @@ export default function AdminMatches() {
                       
                       {(() => {
                         const propContact = extractPhoneFromItem(m.property);
-                        const senderName = m.property?.nombreUsuarioWhatsapp || propContact.name;
+                        const isPropDirect = m.property?.origenTipo === 'contacto_directo' || m.property?.origenTipo === 'dm';
+                        const senderName = m.property?.nombreUsuarioWhatsapp || (isPropDirect ? m.property?.origenNombre : null) || propContact.name;
                         const isSenderKnown = senderName && !isGenericBrokerName(senderName);
                         const formattedPhone = propContact.display.includes('(')
                           ? propContact.display.split('(')[1].replace(')', '').trim()
@@ -3293,7 +3316,7 @@ export default function AdminMatches() {
                                       type="button"
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        handleCopy(senderName, `prop-sender-${m.id}`, 'author', m.property?.origenNombre);
+                                        handleCopy(senderName, `prop-sender-${m.id}`, 'author', isPropDirect ? undefined : m.property?.origenNombre);
                                       }}
                                       className="text-xs sm:text-sm font-extrabold text-amber-200 hover:text-amber-100 flex items-center gap-1.5 group cursor-pointer text-left transition-all"
                                       title="Toca para copiar el nombre del asesor y ubicarlo en WhatsApp"
@@ -3307,7 +3330,7 @@ export default function AdminMatches() {
                                         type="button"
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          handleCopy(clean10, `prop-phone-${m.id}`, 'phone', m.property?.origenNombre);
+                                          handleCopy(clean10, `prop-phone-${m.id}`, 'phone', isPropDirect ? undefined : m.property?.origenNombre);
                                         }}
                                         className="text-xs font-bold text-zinc-300 hover:text-white flex items-center gap-1 group cursor-pointer mt-0.5 transition-all text-left"
                                         title="Toca para copiar el celular de 10 dígitos para WhatsApp"
@@ -3330,7 +3353,7 @@ export default function AdminMatches() {
                                         type="button"
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          handleCopy(clean10, `prop-phone-${m.id}`, 'phone', m.property?.origenNombre);
+                                          handleCopy(clean10, `prop-phone-${m.id}`, 'phone', isPropDirect ? undefined : m.property?.origenNombre);
                                         }}
                                         className="text-xs font-bold text-zinc-200 hover:text-white flex items-center gap-1 group cursor-pointer text-left"
                                         title="Toca para copiar el celular de 10 dígitos para WhatsApp"
@@ -3349,7 +3372,7 @@ export default function AdminMatches() {
                             </div>
                             {clean10 ? (
                               <a 
-                                href={`https://wa.me/57${clean10}?text=${encodeURIComponent(`Hola! Te contacto por el inmueble "${m.property?.name || 'de la red'}" publicado en ${m.property?.origenNombre || 'VECY Network'}. Tienes un Match del ${score.toFixed(0)}% con un requerimiento activo.`)}`} 
+                                href={`https://wa.me/57${clean10}?text=${encodeURIComponent(`Hola! Te contacto por el inmueble "${m.property?.name || 'de la red'}" publicado en ${isPropDirect ? 'VECY Network' : (m.property?.origenNombre || 'VECY Network')}. Tienes un Match del ${score.toFixed(0)}% con un requerimiento activo.`)}`} 
                                 target="_blank" 
                                 rel="noopener noreferrer"
                                 className="group bg-[#25D366] hover:bg-[#20ba5a] text-black text-xs font-extrabold px-4 py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all duration-300 shadow-md hover:shadow-[0_0_20px_rgba(37,211,102,0.4)] hover:scale-105 active:scale-95 min-h-[38px] w-full sm:w-auto shrink-0"
@@ -3357,6 +3380,11 @@ export default function AdminMatches() {
                                 <span>Contactar WA</span>
                                 <ExternalLink className="w-3.5 h-3.5 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                               </a>
+                            ) : isPropDirect ? (
+                              <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 w-full sm:w-auto shrink-0" title="Publicación recibida por mensaje directo en el WhatsApp de JanIA">
+                                <span>💬 Enviado por Chat Privado</span>
+                                {senderName && <span className="font-bold text-white">· {senderName}</span>}
+                              </div>
                             ) : (
                               <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-zinc-300 w-full sm:w-auto shrink-0">
                                 <span className="text-zinc-400">📍 Sin teléfono en texto · Ubicar en:</span>
@@ -3394,27 +3422,43 @@ export default function AdminMatches() {
                               </a>
                             ) : null;
                           })()}
-                          {m.requirement?.origenNombre ? (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleCopy(m.requirement.origenNombre, `grp-req-${m.id}`, 'group', m.requirement.origenNombre);
-                              }}
-                              className="inline-flex items-center gap-1 text-[10px] font-semibold text-cyan-300 hover:text-cyan-200 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 hover:border-cyan-400/40 px-2 py-0.5 rounded-md transition-all truncate max-w-[220px]"
-                              title={`Clic para copiar nombre exacto del grupo: "${m.requirement.origenNombre}"`}
-                            >
-                              <span>📍 {m.requirement.origenNombre}</span>
-                              <Copy className="w-2.5 h-2.5 opacity-70 hover:opacity-100" />
-                            </button>
-                          ) : (
-                            <span
-                              className="inline-flex items-center gap-1 text-[10px] font-medium text-cyan-300/80 bg-cyan-500/10 border border-cyan-500/20 px-2 py-0.5 rounded-md"
-                              title="Requerimiento sin trazabilidad de grupo. Puedes asignárselo haciendo clic en 'Editar Fichas'."
-                            >
-                              <span>📍 Red Histórica (Sin grupo asignado)</span>
-                            </span>
-                          )}
+                          {(() => {
+                            const isReqDirect = m.requirement?.origenTipo === 'contacto_directo' || m.requirement?.origenTipo === 'dm';
+                            if (isReqDirect) {
+                              return (
+                                <span
+                                  className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-300 bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 rounded-md"
+                                  title="Requerimiento recibido por mensaje directo (chat privado) a JanIA"
+                                >
+                                  <span>💬 Chat Privado (DM JanIA)</span>
+                                </span>
+                              );
+                            }
+                            if (m.requirement?.origenNombre) {
+                              return (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleCopy(m.requirement.origenNombre, `grp-req-${m.id}`, 'group', m.requirement.origenNombre);
+                                  }}
+                                  className="inline-flex items-center gap-1 text-[10px] font-semibold text-cyan-300 hover:text-cyan-200 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 hover:border-cyan-400/40 px-2 py-0.5 rounded-md transition-all truncate max-w-[220px]"
+                                  title={`Clic para copiar nombre exacto del grupo: "${m.requirement.origenNombre}"`}
+                                >
+                                  <span>📍 {m.requirement.origenNombre}</span>
+                                  <Copy className="w-2.5 h-2.5 opacity-70 hover:opacity-100" />
+                                </button>
+                              );
+                            }
+                            return (
+                              <span
+                                className="inline-flex items-center gap-1 text-[10px] font-medium text-cyan-300/80 bg-cyan-500/10 border border-cyan-500/20 px-2 py-0.5 rounded-md"
+                                title="Requerimiento sin trazabilidad de grupo. Puedes asignárselo haciendo clic en 'Editar Fichas'."
+                              >
+                                <span>📍 Red Histórica (Sin grupo asignado)</span>
+                              </span>
+                            );
+                          })()}
                         </div>
                       </div>
                       <h4 className="text-sm sm:text-base font-bold text-white mt-1 break-words">
@@ -3424,10 +3468,11 @@ export default function AdminMatches() {
                       {/* Texto Completo Extraído + Resumen Estructurado del Requerimiento */}
                       <div className="text-xs text-zinc-300 bg-white/[0.02] border border-white/5 p-3 rounded-xl leading-relaxed whitespace-pre-wrap break-words space-y-3 select-text cursor-text">
                         {(() => {
-                          const rText = (m.requirement?.rawText || "").trim();
+                          const rText = (m.requirement?.rawText || "").replace(/^undefined\s*/i, "").trim();
                           const isGenericImagePlaceholder = rText.includes("[Publicación de Imagen / Flyer Comercial Inmobiliario sin texto en pie de foto]");
                           const reqContact = extractPhoneFromItem(m.requirement);
-                          const reqSender = m.requirement?.nombreUsuarioWhatsapp || reqContact.name;
+                          const isReqDirect = m.requirement?.origenTipo === 'contacto_directo' || m.requirement?.origenTipo === 'dm';
+                          const reqSender = m.requirement?.nombreUsuarioWhatsapp || (isReqDirect ? m.requirement?.origenNombre : null) || reqContact.name;
                           const reqSpecs: string[] = [];
                           if (m.requirement?.tipoInmuebleDeseado) reqSpecs.push(`• Tipo: ${m.requirement.tipoInmuebleDeseado}`);
                           if (m.requirement?.tipoNegocioDeseado) reqSpecs.push(`• Negocio: ${m.requirement.tipoNegocioDeseado}`);
@@ -3454,14 +3499,14 @@ export default function AdminMatches() {
                                         type="button"
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          handleCopy(rText, copyKey, 'full', m.requirement?.origenNombre);
+                                          handleCopy(rText, copyKey, 'full', isReqDirect ? undefined : m.requirement?.origenNombre, reqSender, reqContact.cleanNumber);
                                         }}
                                         className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg transition-all duration-300 border shadow-sm ${
                                           isCopied
                                             ? "bg-cyan-500/25 text-cyan-300 border-cyan-400/60 shadow-[0_0_15px_rgba(6,182,212,0.45)] scale-105"
                                             : "text-cyan-300 hover:text-cyan-200 bg-cyan-500/10 hover:bg-cyan-500/20 border-cyan-500/30 hover:border-cyan-400/50 active:scale-95"
                                         }`}
-                                        title="Copiar texto original fiel del requerimiento para ubicar en el grupo de WhatsApp"
+                                        title={isReqDirect ? "Copiar texto original fiel del requerimiento recibido por chat privado" : "Copiar texto original fiel del requerimiento para ubicar en el grupo de WhatsApp"}
                                       >
                                         {isCopied ? (
                                           <>
@@ -3580,7 +3625,8 @@ export default function AdminMatches() {
                       
                       {(() => {
                         const reqContact = extractPhoneFromItem(m.requirement);
-                        const senderName = m.requirement?.nombreUsuarioWhatsapp || reqContact.name;
+                        const isReqDirect = m.requirement?.origenTipo === 'contacto_directo' || m.requirement?.origenTipo === 'dm';
+                        const senderName = m.requirement?.nombreUsuarioWhatsapp || (isReqDirect ? m.requirement?.origenNombre : null) || reqContact.name;
                         const isSenderKnown = senderName && !isGenericBrokerName(senderName);
                         const formattedPhone = reqContact.display.includes('(')
                           ? reqContact.display.split('(')[1].replace(')', '').trim()
@@ -3605,7 +3651,7 @@ export default function AdminMatches() {
                                       type="button"
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        handleCopy(senderName, `req-sender-${m.id}`, 'author', m.requirement?.origenNombre);
+                                        handleCopy(senderName, `req-sender-${m.id}`, 'author', isReqDirect ? undefined : m.requirement?.origenNombre);
                                       }}
                                       className="text-xs sm:text-sm font-extrabold text-cyan-200 hover:text-cyan-100 flex items-center gap-1.5 group cursor-pointer text-left transition-all"
                                       title="Toca para copiar el nombre del asesor y ubicarlo en WhatsApp"
@@ -3619,7 +3665,7 @@ export default function AdminMatches() {
                                         type="button"
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          handleCopy(clean10, `req-phone-${m.id}`, 'phone', m.requirement?.origenNombre);
+                                          handleCopy(clean10, `req-phone-${m.id}`, 'phone', isReqDirect ? undefined : m.requirement?.origenNombre);
                                         }}
                                         className="text-xs font-bold text-zinc-300 hover:text-white flex items-center gap-1 group cursor-pointer mt-0.5 transition-all text-left"
                                         title="Toca para copiar el celular de 10 dígitos para WhatsApp"
@@ -3642,7 +3688,7 @@ export default function AdminMatches() {
                                         type="button"
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          handleCopy(clean10, `req-phone-${m.id}`, 'phone', m.requirement?.origenNombre);
+                                          handleCopy(clean10, `req-phone-${m.id}`, 'phone', isReqDirect ? undefined : m.requirement?.origenNombre);
                                         }}
                                         className="text-xs font-bold text-zinc-200 hover:text-white flex items-center gap-1 group cursor-pointer text-left"
                                         title="Toca para copiar el celular de 10 dígitos para WhatsApp"
@@ -3669,6 +3715,11 @@ export default function AdminMatches() {
                                 <span>Contactar WA</span>
                                 <ExternalLink className="w-3.5 h-3.5 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                               </a>
+                            ) : isReqDirect ? (
+                              <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 w-full sm:w-auto shrink-0" title="Requerimiento recibido por mensaje directo en el WhatsApp de JanIA">
+                                <span>💬 Enviado por Chat Privado</span>
+                                {senderName && <span className="font-bold text-white">· {senderName}</span>}
+                              </div>
                             ) : (
                               <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-zinc-300 w-full sm:w-auto shrink-0">
                                 <span className="text-zinc-400">📍 Sin teléfono en texto · Ubicar en:</span>
