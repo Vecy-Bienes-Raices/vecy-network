@@ -1058,16 +1058,23 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 - **Ilustraciones 3D Integradas**: Envío automático de las ilustraciones oficiales de JanIA (`client/public/assets/jania/`) acompañando el caption y la nota de voz.
 - **Endpoint On-Demand (`janIA.triggerDailyTip`)**: Mutación tRPC para disparar y probar publicaciones inmediatas sin esperar el cron matutino.
 
+---
 
+### Versión v30.9 — Septiembre 2026: Doctrina de Ubicación de Publicaciones para Capturas de Pantalla y Erradicación de Resaltados Amarillos en WhatsApp Móvil
 
+#### 1. RESOLUCIÓN DE BÚSQUEDA MÓVIL EN WHATSAPP (CERO RESALTADOS AMARILLOS FALSOS)
+- **Diagnóstico del Comportamiento Móvil de WhatsApp**: Al pegar textos largos (de 10-15 líneas) en la lupa de búsqueda en chat de WhatsApp Móvil (Android/iOS), el motor de búsqueda móvil desglosa las palabras en tokens independientes. Las palabras típicas del sector (`estudio`, `piso`, `parqueaderos`, `2`, `baño`, `cocina`, `más`) se resaltan en amarillo brillante en decenas de publicaciones ajenas del grupo, impidiendo ubicar el mensaje original.
+- **Búsqueda Exacta Carácter por Carácter**: Se descubrió que WhatsApp in-chat search realiza un cotejo literal. Si un teléfono fue publicado con guión (`310-6189450`), buscar sin guión (`3106189450`) o buscar texto entrecortado por saltos de línea (`jaramillo M  310-6189450`) arroja 0 resultados.
 
+#### 2. EXTRACTOR DE CLAVE INTELIGENTE DE BÚSQUEDA (`extractSmartSearchSnippet`)
+- **Jerarquía Avanzada de 6 Niveles de Anclaje**:
+  1. *Marcas / Handles*: Identificación de identificadores únicos (`Clauproraiz`, `@boutinhomes`).
+  2. *Celular Publicado Exacto*: Extracción literal preservando guiones o espacios (`310-6189450`).
+  3. *Celular Registrado en Base de Datos*: Celular colombiano de 10 dígitos verificado (`3212532444`).
+  4. *Nombre del Asesor*: Nombre verídico de la publicación (`Juan Alberto Duque`, `Claudia Jaraamillo`).
+  5. *Rango de Calles / Dirección Cruce*: Detección de rangos viales exactos (`"De la 90 a la 79 y de la 7 a la 11"`).
+  6. *Códigos de Portal / Firmas / Términos Purgados de Stop-Words*.
 
-
-
-
-
-
-
-
-
+#### 3. ORIENTACIÓN PROACTIVA AL COPIAR
+- Al usar el botón `Copiar Todo`, el sistema orienta activamente al usuario para evitar pegar textos extensos en el buscador del chat móvil y ofrece usar `Buscar en WhatsApp` para una localización limpia e instantánea.
 

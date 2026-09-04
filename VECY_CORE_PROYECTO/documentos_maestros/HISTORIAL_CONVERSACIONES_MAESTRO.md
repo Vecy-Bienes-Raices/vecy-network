@@ -52,7 +52,44 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v30.7 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v30.9 — Septiembre 2026
+
+### 🗓️ Sesión: Jueves 3 de Septiembre de 2026 — 21:05 a 21:25 (Hora Colombia UTC-5)
+**Versión**: `v30.9` | **Ambiente**: Producción VPS (`13.140.149.144`) + Admin Panel Vercel (`https://vecy-network.vercel.app/admin`) + WhatsApp Móvil / Web + GitHub (`main`)
+
+#### 🎯 Objetivo y Logros de la Sesión:
+1. **Resolución Definitiva de la Búsqueda Móvil en WhatsApp (Cero Resaltados Amarillos Falsos)**:
+   - **Diagnóstico Preciso de las Imágenes de Eduardo**:
+     - **Imagen 1 (PC / Web)**: Muestra el flujo exitoso donde al copiar o ubicar el texto, Eduardo abre el chat en la computadora, ve al autor (`Juan Alberto Duque Cliente Apto`), hace clic en su perfil y obtiene su número telefónico verificado (`+57 321 253 2444`) para tomar captura de pantalla de la publicación.
+     - **Imagen 2 (Móvil Android)**: Muestra el desastre visual en Android al pegar un texto largo con palabras genéricas inmobiliarias en la lupa de WhatsApp: WhatsApp divide la consulta en palabras sueltas (`estudio`, `piso`, `parqueaderos`, `2`, `más`, `leer`) y resalta en amarillo chillón decenas de mensajes no relacionados de otros asesores (como Jhon Roberto C Rodríguez), extraviando al usuario.
+     - **Causa de "No se encuentra"**: En WhatsApp Móvil, la búsqueda en chat es literal carácter por carácter. Si el teléfono en el texto lleva guión (`310-6189450`), buscar sin guión o con espacios a través de saltos de línea (`jaramillo M  310-6189450`) arroja cero resultados. Además, la búsqueda debe realizarse en el grupo exacto que indica el badge (`📍 Agentes` vs otros grupos).
+2. **Refactorización de `extractSmartSearchSnippet` con Jerarquía Superior**:
+   - **Prioridad 1 (Marca / Handle)**: Reconoce manijas únicas al inicio como `Clauproraiz`, `@boutinhomes`.
+   - **Prioridad 2 (Celular Literal de la Publicación)**: Extrae el teléfono con su puntuación exacta (`310-6189450`), garantizando coincidencia exacta al 100% en WhatsApp.
+   - **Prioridad 3 (Celular de BD)**: Extrae el número de 10 dígitos verificado en base de datos.
+   - **Prioridad 4 (Nombre del Asesor)**: Extrae el nombre verificado del remitente (`Juan Alberto Duque`, `Claudia Jaraamillo`).
+   - **Prioridad 5 (Rango de Calles / Dirección)**: Extrae anclajes viales precisos (e.g. `"De la 90 a la 79 y de la 7 a la 11"`).
+   - **Prioridad 6 (Portal / Firma / Frase Purgada de Stop-Words)**.
+3. **Alerta Pedagógica Proactiva en Botón "Copiar Todo"**:
+   - Al usar `Copiar Todo`, el sistema orienta: *"Texto 100% fiel copiado. 💡 Tip: Para buscar en WhatsApp usa 'Buscar en WhatsApp' o el nombre del asesor, no pegues todo el texto para evitar resaltados amarillos."*
+4. **Incremento de Versión a v30.9**:
+   - Actualizada la fuente única de verdad en `shared/const.ts` (`VECY_VERSION = "v30.9"`).
+   - Compilación exitosa en cliente y servidor (`pnpm build`).
+
+---
+
+## 🔖 HISTÓRICO DE VERSIONES ANTERIORES:
+
+### 🗓️ Sesión: Jueves 3 de Septiembre de 2026 — 20:35 a 21:00 (Hora Colombia UTC-5)
+**Versión**: `v30.8` | **Ambiente**: Producción VPS (`13.140.149.144`) + Admin Panel Vercel (`https://vecy-network.vercel.app/admin`) + GitHub (`main`)
+
+#### 🎯 Objetivo y Logros de la Sesión:
+1. **Optimización Móvil de Búsqueda y Ubicación Instantánea de Asesores en WhatsApp**:
+   - Botones de 1 toque con copiado rápido de nombre de asesor (`👤 Asesor [Nombre]`) y teléfono (`📞 [Teléfono]`).
+   - Desacoplamiento de LIDs y botón inteligente `"🔍 Ubicar a [Asesor]"` / `"Ubicar en Grupo"` para búsqueda directa sin depender del número.
+   - Jerarquía inicial de búsqueda con exclusión de stop-words inmobiliarias comunes.
+
+---
 
 ### 🗓️ Sesión: Jueves 3 de Septiembre de 2026 — 18:40 a 18:58 (Hora Colombia UTC-5)
 **Versión**: `v30.7` | **Ambiente**: Producción VPS (`13.140.149.144`) + Admin Panel Vercel (`https://vecy-network.vercel.app/admin`) + Supabase (PostgreSQL) + GitHub (`main`)

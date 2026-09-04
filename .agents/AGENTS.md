@@ -163,7 +163,23 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v30.8 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v30.9 — Septiembre 2026
+
+### Novedades v30.9 (Doctrina de Ubicación de Publicaciones para Capturas de Pantalla y Erradicación de Resaltados Amarillos en WhatsApp Móvil):
+- **Diagnóstico y Resolución del Desfase de Búsqueda Móvil vs Web (Cero Resaltados Amarillos Falsos en Chats)**:
+  1) **Causa Raíz de Resaltados Amarillos Masivos en Móvil**: Al copiar textos extensos de 10-15 líneas con el botón `Copiar Todo` y pegarlos en la barra de búsqueda de WhatsApp Android/iOS, el motor de búsqueda móvil de WhatsApp no realiza una búsqueda exacta de la frase con saltos de línea, sino que desglosa el texto en tokens independientes. Dado que los anuncios inmobiliarios comparten palabras genéricas (`estudio`, `piso`, `parqueaderos`, `2`, `baño`, `cocina`, `más`), WhatsApp resalta en amarillo brillante decenas de mensajes ajenos en el grupo (e.g. mensajes de Jhon Roberto C Rodríguez u otros asesores), desorientando por completo al usuario.
+  2) **Causa de "No se encuentran resultados"**: En WhatsApp Móvil, la búsqueda en chat es literal carácter por carácter. Si el teléfono en el mensaje incluye guión (`310-6189450`), buscar sin guión (`3106189450`) o buscar texto entrecortado por saltos de línea (`jaramillo M  310-6189450`) arroja 0 resultados. Asimismo, buscar en un grupo diferente al indicado en el badge de la tarjeta (`📍 Agentes` vs `Rosales-Chicó`) inevitablemente no encuentra nada.
+- **Refinamiento de `extractSmartSearchSnippet` con Jerarquía Avanzada de Anclaje**:
+  1) **Nivel 1 (Handles de Marca)**: Identifica manijas o marcas únicas iniciales como `Clauproraiz`, `@boutinhomes`, etc.
+  2) **Nivel 2 (Celular Literal de la Publicación)**: Extrae el teléfono con su formato exacto de publicación (`310-6189450` o `310 618 9450`) preservando la puntuación literal que WhatsApp necesita.
+  3) **Nivel 3 (Celular de 10 Dígitos de Base de Datos)**: Usa el celular verificado del usuario si no venía en el cuerpo (`3212532444`).
+  4) **Nivel 4 (Nombre del Asesor/Remitente)**: Usa el nombre real (`Juan Alberto Duque`, `Claudia Jaraamillo`).
+  5) **Nivel 5 (Rango de Calles / Dirección Cruce)**: Extrae anclajes viales precisos como `"De la 90 a la 79 y de la 7 a la 11"` o `"Cra 11 BIS con 123"`.
+  6) **Nivel 6 (Código de Portal / Firma / Término Distintivo Purgado)**.
+- **Alerta Pedagógica Proactiva en Botón "Copiar Todo"**:
+  1) Al usar `Copiar Todo`, el sistema notifica: *"Texto 100% fiel copiado. 💡 Tip: Para buscar en WhatsApp usa 'Buscar en WhatsApp' o el nombre del asesor, no pegues todo el texto para evitar resaltados amarillos."*
+- **Incremento Oficial de Versión**:
+  1) Elevado a `v30.9` en `shared/const.ts`.
 
 ### Novedades v30.8 (Optimización Móvil de Búsqueda y Ubicación Instantánea de Asesores en WhatsApp):
 - **Resolución Definitiva del Problema de Búsqueda Móvil en WhatsApp (Cero Resaltados Amarillos Falsos)**:

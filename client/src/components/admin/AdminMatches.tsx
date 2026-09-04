@@ -2116,7 +2116,26 @@ export default function AdminMatches() {
   ): { snippet: string; description: string } => {
     const text = (rawText || fallback || "").replace(/__is_sub_message__/g, "").trim();
 
-    // 1. Prioridad Máxima: Celular colombiano de 10 dígitos (Búsqueda 100% infalible y única en WhatsApp Móvil y Web)
+    // 1. Manija / Handle de marca única al inicio (ej: "🟠Clauproraiz", "@boutinhomes", "Wasi", etc.)
+    const handleMatch = text.match(/(?:^|\s)[@🟠🟣🔵🟢]?([A-Za-z0-9_]{5,25}(?:raiz|inmo|homes|propiedades|inmobiliaria|realty))\b/i);
+    if (handleMatch) {
+      return { snippet: handleMatch[1], description: "Marca / Identificador del asesor" };
+    }
+
+    // 2. Teléfono literal escrito en el texto (con su formato exacto, ej: "310-6189450" o "310 618 9450")
+    // En WhatsApp in-chat search, si el mensaje tiene guiones o espacios, el término exacto es el que encuentra el mensaje al 100%
+    const phoneMatches = text.match(/(?:\+?57[\s.-]*)?(?:\(?3\d{2}\)?[\s.-]*\d{3}[\s.-]*\d{2}[\s.-]*\d{2}|\(?3\d{2}\)?[\s.-]*\d{3}[\s.-]*\d{4}|3\d{9})\b/g);
+    if (phoneMatches && phoneMatches.length > 0) {
+      for (const p of phoneMatches) {
+        const clean = p.replace(/\D/g, "");
+        const num10 = clean.startsWith("57") && clean.length === 12 ? clean.substring(2) : clean;
+        if (num10.length === 10 && num10.startsWith("3") && num10 !== "3192919978") {
+          return { snippet: p.trim(), description: "Celular del asesor tal como está publicado" };
+        }
+      }
+    }
+
+    // 3. Celular conocido de 10 dígitos (si no venía en el texto pero lo tenemos en BD)
     if (knownPhone) {
       const clean = String(knownPhone).replace(/\D/g, "");
       const num10 = clean.startsWith("57") && clean.length === 12 ? clean.substring(2) : clean;
@@ -2125,18 +2144,7 @@ export default function AdminMatches() {
       }
     }
 
-    const phoneMatches = text.match(/(?:\+?57[\s.-]*)?(?:\(?3\d{2}\)?[\s.-]*\d{3}[\s.-]*\d{2}[\s.-]*\d{2}|\(?3\d{2}\)?[\s.-]*\d{3}[\s.-]*\d{4}|3\d{9})\b/g);
-    if (phoneMatches && phoneMatches.length > 0) {
-      for (const p of phoneMatches) {
-        const clean = p.replace(/\D/g, "");
-        const num10 = clean.startsWith("57") && clean.length === 12 ? clean.substring(2) : clean;
-        if (num10.length === 10 && num10.startsWith("3") && num10 !== "3192919978") {
-          return { snippet: num10, description: "Celular del asesor (búsqueda 100% exacta)" };
-        }
-      }
-    }
-
-    // 2. Prioridad 2: Nombre del Asesor / Remitente (si está identificado en WhatsApp y no es genérico)
+    // 4. Nombre del Asesor / Remitente (si está identificado en WhatsApp y no es genérico)
     const isGeneric = (n?: string | null) => !n || n.toLowerCase().startsWith("asesor +") || n.toLowerCase().startsWith("cliente +") || n.toLowerCase().startsWith("broker +") || n.toLowerCase().includes("sin nombre") || n.toLowerCase().includes("desconocido") || n.toLowerCase().includes("completar al editar");
     if (senderName && !isGeneric(senderName)) {
       const cleanName = senderName.split(/[\n,|-]/)[0].trim();
@@ -2145,15 +2153,22 @@ export default function AdminMatches() {
       }
     }
 
-    // 3. Prioridad 3: Código o ID único de portal inmobiliario (Wasi, FincaRaíz, Metrocuadrado)
+    // 5. Rango de calles o dirección específica (ej: "De la 90 a la 79", "Cra 11 BIS con 123", "Calle 123 #45-67")
+    const streetRangeMatch = text.match(/(?:de la\s+\d{1,3}\s+a la\s+\d{1,3}(?:\s+y de la\s+\d{1,3}\s+a la\s+\d{1,3})?)/i)
+                          || text.match(/(?:entre\s+(?:calles?|carreras?|clls?|cras?)\s+\d{1,3}\s+y\s+\d{1,3})/i);
+    if (streetRangeMatch) {
+      return { snippet: streetRangeMatch[0].trim(), description: "Rango de calles exacto de la búsqueda" };
+    }
+
+    // 6. Código o ID único de portal inmobiliario (Wasi, FincaRaíz, Metrocuadrado)
     const urlCodeMatch = text.match(/(?:wasi\.co\/[^\/]+\/|fincaraiz\.com\.co\/[^\/]+\/|metrocuadrado\.com\/[^\/]+\/)(\d{5,10})\b/i)
                       || text.match(/(?:c[oó]digo|id|ref|referencia)\s*:?\s*#?\s*(\d{5,10})\b/i);
     if (urlCodeMatch) {
       return { snippet: urlCodeMatch[1], description: "Código único de publicación / portal" };
     }
 
-    // 4. Prioridad 4: Firma o mención de contacto en el texto (ej: "León Aguilar Medina", "Cliente profe Carlos", "Informes Patty")
-    const sigMatch = text.match(/(?:informes|contacto|asesor|asesora|atenci[oó]n|cliente|firma)\s*:?\s*\*?([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+(?:\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+){1,2})\*?/i);
+    // 7. Firma o mención de contacto en el texto (ej: "León Aguilar Medina", "Cliente Roc", "Informes Patty")
+    const sigMatch = text.match(/(?:informes|contacto|asesor|asesora|atenci[oó]n|cliente|firma)\s*:?\s*\*?([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+(?:\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+){0,2})\*?/i);
     if (sigMatch) {
       const sig = sigMatch[1].trim();
       const blacklist = ["Apartamento", "Arriendo", "Venta", "Excelente", "Oportunidad", "Edificio", "Bogota", "Bogotá"];
@@ -2162,7 +2177,7 @@ export default function AdminMatches() {
       }
     }
 
-    // 5. Prioridad 5: Dirección o cruce específico (Cra, Cll, Cl, Ak, Auto, etc.)
+    // 8. Dirección o cruce específico (Cra, Cll, Cl, Ak, Auto, etc.)
     const lines = text
       .split("\n")
       .map(l => l.replace(/[*_~`#•-]/g, "").trim())
@@ -2173,26 +2188,26 @@ export default function AdminMatches() {
       return { snippet: addressLine.trim(), description: "Dirección o cruce específico" };
     }
 
-    // 6. Prioridad 6: Frase distintiva PURGADA de stop-words comunes de bienes raíces
-    // NUNCA incluir palabras genéricas como 'busco', 'arriendo', 'venta', 'apartamento', 'm2', 'habitaciones', etc.
+    // 9. Frase distintiva PURGADA de stop-words comunes de bienes raíces
     const STOP_WORDS = new Set([
       "busco", "arriendo", "arrendar", "venta", "vendo", "compro", "compra",
       "apartamento", "apto", "casa", "inmueble", "propiedad", "lote", "oficina", "bodega",
       "para", "con", "por", "en", "de", "la", "el", "los", "las", "un", "una", "unos", "unas",
       "presupuesto", "precio", "valor", "canon", "millones", "mll", "mm", "cop",
       "m2", "mts", "mts2", "mt2", "metros", "habitaciones", "habs", "hab", "alcobas", "baños", "garajes", "parqueaderos",
-      "mínimo", "minimo", "máximo", "maximo", "excelente", "sector", "zona", "zonas", "bogota", "bogotá"
+      "mínimo", "minimo", "máximo", "maximo", "excelente", "sector", "zona", "zonas", "bogota", "bogotá",
+      "mas", "más", "menos", "menos.", "que", "sea", "tenga", "mucho", "poco", "pero", "nada", "tiene", "ojalá", "ojala"
     ]);
 
     for (const line of lines) {
-      const words = line.split(/\s+/).filter(w => w.length >= 3 && !STOP_WORDS.has(w.toLowerCase().replace(/[^a-záéíóúñ]/g, "")));
+      const words = line.split(/\s+/).filter(w => w.length >= 4 && !STOP_WORDS.has(w.toLowerCase().replace(/[^a-záéíóúñ]/g, "")));
       if (words.length >= 2 && words.length <= 4) {
         return { snippet: words.join(" "), description: "Frase distintiva única" };
       }
     }
 
     const safeFirstLine = lines.find(l => !/(?:busco|vendo|arriendo|venta|compra)\s*(?:apartamento|apto|casa|inmueble)/i.test(l)) || lines[0] || text;
-    const cleanWords = safeFirstLine.split(/\s+/).filter(w => !STOP_WORDS.has(w.toLowerCase().replace(/[^a-záéíóúñ]/g, ""))).slice(0, 3).join(" ");
+    const cleanWords = safeFirstLine.split(/\s+/).filter(w => w.length >= 4 && !STOP_WORDS.has(w.toLowerCase().replace(/[^a-záéíóúñ]/g, ""))).slice(0, 3).join(" ");
     return { snippet: (cleanWords || safeFirstLine.slice(0, 25)).trim(), description: "Texto clave" };
   };
 
@@ -2208,14 +2223,14 @@ export default function AdminMatches() {
       if (!text && mode !== 'group') return;
       let targetText = text;
       let title = "📋 Mensaje original copiado";
-      let desc = "Texto 100% fiel con saltos de línea y emojis intactos.";
+      let desc = "Texto 100% fiel copiado. 💡 Tip: Para buscar en WhatsApp usa 'Buscar en WhatsApp' o el nombre del asesor, no pegues todo el texto para evitar resaltados amarillos.";
 
       if (mode === 'search') {
         const smart = extractSmartSearchSnippet(text, undefined, senderName, groupName, knownPhone);
         targetText = smart.snippet;
         title = `🎯 Clave única copiada: "${targetText}"`;
         desc = groupName 
-          ? `(${smart.description}) 👉 Abre WhatsApp, entra al grupo "${groupName}" y pega esta clave en la lupa para ubicar al autor de una.`
+          ? `(${smart.description}) 👉 Abre WhatsApp, entra al grupo "${groupName}" y pega esta clave en la lupa para ubicar al autor de una sin resaltados amarillos.`
           : `(${smart.description}) 👉 Pégala en el buscador de WhatsApp para ubicarlo de inmediato.`;
       } else if (mode === 'group') {
         targetText = (groupName || text || "").trim();
