@@ -3,7 +3,7 @@ import { publicProcedure, router } from '../_core/trpc';
 import { invokeLLM } from '../_core/llm';
 import { getDb } from '../db';
 import { conversations, messages, leads, propertyMatches, properties, requirements, propertyImages, propertyPublicationHistory, pendingSessions, inmobiliarioLexicon, matchFeedback } from '../../drizzle/schema';
-import { eq, desc, sql, inArray, gte } from 'drizzle-orm';
+import { eq, and, desc, sql, inArray, gte } from 'drizzle-orm';
 
 import { scrapePropertyLink } from '../_core/scraper';
 import { JANIA_PROMPT, processWhatsAppMessage, propagateBrokerPhoneAcrossAllListings } from '../_core/janIA';

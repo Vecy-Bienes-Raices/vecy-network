@@ -3534,7 +3534,7 @@ __export(matching_exports, {
   parsePropertyAddressNumbers: () => parsePropertyAddressNumbers,
   parseStreetCarreraBoundaries: () => parseStreetCarreraBoundaries
 });
-import { and as and2, eq as eq3 } from "drizzle-orm";
+import { and, eq as eq3 } from "drizzle-orm";
 async function getRejectedPairsSet() {
   const now = Date.now();
   if (cachedRejectedPairs && now - lastRejectedPairsFetch < REJECTED_PAIRS_TTL_MS) {
@@ -6151,7 +6151,7 @@ async function findMatchesForProperty(propertyId) {
     for (const req of activeRequirements) {
       if (rejectedSet.has(`${propertyId}_${req.id}`)) {
         await db.delete(propertyMatches).where(
-          and2(
+          and(
             eq3(propertyMatches.propertyId, propertyId),
             eq3(propertyMatches.requirementId, req.id)
           )
@@ -6163,7 +6163,7 @@ async function findMatchesForProperty(propertyId) {
       if (score >= 80) {
         let matchId;
         const existing = await db.select().from(propertyMatches).where(
-          and2(
+          and(
             eq3(propertyMatches.propertyId, propertyId),
             eq3(propertyMatches.requirementId, req.id)
           )
@@ -6201,7 +6201,7 @@ async function findMatchesForProperty(propertyId) {
         });
       } else {
         await db.delete(propertyMatches).where(
-          and2(
+          and(
             eq3(propertyMatches.propertyId, propertyId),
             eq3(propertyMatches.requirementId, req.id)
           )
@@ -6227,7 +6227,7 @@ async function findMatchesForRequirement(requirementId) {
     for (const prop of availableProperties) {
       if (rejectedSet.has(`${prop.id}_${requirementId}`)) {
         await db.delete(propertyMatches).where(
-          and2(
+          and(
             eq3(propertyMatches.propertyId, prop.id),
             eq3(propertyMatches.requirementId, requirementId)
           )
@@ -6239,7 +6239,7 @@ async function findMatchesForRequirement(requirementId) {
       if (score >= 80) {
         let matchId;
         const existing = await db.select().from(propertyMatches).where(
-          and2(
+          and(
             eq3(propertyMatches.propertyId, prop.id),
             eq3(propertyMatches.requirementId, requirementId)
           )
@@ -6277,7 +6277,7 @@ async function findMatchesForRequirement(requirementId) {
         });
       } else {
         await db.delete(propertyMatches).where(
-          and2(
+          and(
             eq3(propertyMatches.propertyId, prop.id),
             eq3(propertyMatches.requirementId, requirementId)
           )
@@ -7304,7 +7304,7 @@ __export(janIA_exports, {
   translatePropertyType: () => translatePropertyType,
   translateTransactionType: () => translateTransactionType
 });
-import { eq as eq4, and as and3, sql as sql3, gte, desc } from "drizzle-orm";
+import { eq as eq4, and as and2, sql as sql3, gte, desc } from "drizzle-orm";
 import fs5 from "fs";
 import path5 from "path";
 import axios6 from "axios";
@@ -8285,7 +8285,7 @@ async function hasGreetedUserToday(userId) {
     const startOfToday = /* @__PURE__ */ new Date();
     startOfToday.setHours(0, 0, 0, 0);
     const recentMsgs = await db.select({ id: messages.id }).from(messages).innerJoin(conversations, eq4(messages.conversationId, conversations.id)).where(
-      and3(
+      and2(
         eq4(conversations.sessionId, userId),
         eq4(messages.role, "janIA"),
         gte(messages.createdAt, startOfToday)
@@ -8320,7 +8320,7 @@ async function getRecentChatHistory(userId, limit = 20) {
       content: messages.content,
       createdAt: messages.createdAt
     }).from(messages).innerJoin(conversations, eq4(messages.conversationId, conversations.id)).where(
-      and3(
+      and2(
         eq4(conversations.sessionId, userId),
         gte(messages.createdAt, fourDaysAgo)
       )
@@ -10261,7 +10261,7 @@ async function handleAmendmentUpdate(userId, text2) {
   const isAmendmentTrigger = cleanTextLower.startsWith("correccion") || cleanTextLower.startsWith("correcci\xF3n") || cleanTextLower.startsWith("fe de erratas") || cleanTextLower.startsWith("fe de errata") || cleanTextLower.startsWith("rectificacion") || cleanTextLower.startsWith("rectificaci\xF3n") || cleanTextLower.startsWith("ajuste:") || cleanTextLower.startsWith("ajuste ") || cleanTextLower.startsWith("disculpen");
   if (!isAmendmentTrigger) return false;
   const fallbackData = extractFallbackDataFromText(text2);
-  const lastReqs = await db.select().from(requirements).where(and3(
+  const lastReqs = await db.select().from(requirements).where(and2(
     eq4(requirements.idUsuarioWhatsapp, rawPhone),
     gte(requirements.createdAt, twoHoursAgo)
   )).orderBy(desc(requirements.createdAt)).limit(1);
@@ -10294,7 +10294,7 @@ async function handleAmendmentUpdate(userId, text2) {
       return true;
     }
   }
-  const lastProps = await db.select().from(properties).where(and3(
+  const lastProps = await db.select().from(properties).where(and2(
     eq4(properties.idUsuarioWhatsapp, rawPhone),
     gte(properties.createdAt, twoHoursAgo)
   )).orderBy(desc(properties.createdAt)).limit(1);
@@ -10611,7 +10611,7 @@ async function saveProperty(data, userId, realName, imageBuffer, pdfBuffer, pdfM
   let existing = [];
   if (canonicalExternalId) {
     existing = await db.select().from(properties).where(
-      and3(
+      and2(
         eq4(properties.canonicalExternalId, canonicalExternalId),
         eq4(properties.available, true)
       )
@@ -10619,7 +10619,7 @@ async function saveProperty(data, userId, realName, imageBuffer, pdfBuffer, pdfM
   }
   if (existing.length === 0 && finalInsertData.matriculaInmobiliaria) {
     existing = await db.select().from(properties).where(
-      and3(
+      and2(
         eq4(properties.matriculaInmobiliaria, finalInsertData.matriculaInmobiliaria),
         eq4(properties.available, true)
       )
@@ -10627,7 +10627,7 @@ async function saveProperty(data, userId, realName, imageBuffer, pdfBuffer, pdfM
   }
   if (existing.length === 0 && finalInsertData.rawText && finalInsertData.rawText.trim().length > 25) {
     existing = await db.select().from(properties).where(
-      and3(
+      and2(
         eq4(properties.rawText, finalInsertData.rawText.trim()),
         eq4(properties.available, true)
       )
@@ -10635,7 +10635,7 @@ async function saveProperty(data, userId, realName, imageBuffer, pdfBuffer, pdfM
   }
   if (existing.length === 0) {
     existing = await db.select().from(properties).where(
-      and3(
+      and2(
         eq4(properties.idUsuarioWhatsapp, rawPhone),
         eq4(properties.propertyType, finalInsertData.propertyType),
         eq4(properties.transactionType, finalInsertData.transactionType),
@@ -10920,7 +10920,7 @@ async function saveRequirement(data, userId, realName, imageBuffer, pdfBuffer, p
   let existing = [];
   if (insertData.rawText && insertData.rawText.trim().length > 25) {
     existing = await db.select().from(requirements).where(
-      and3(
+      and2(
         eq4(requirements.rawText, insertData.rawText.trim()),
         eq4(requirements.status, "active")
       )
@@ -10928,7 +10928,7 @@ async function saveRequirement(data, userId, realName, imageBuffer, pdfBuffer, p
   }
   if (existing.length === 0) {
     existing = await db.select().from(requirements).where(
-      and3(
+      and2(
         eq4(requirements.idUsuarioWhatsapp, rawPhone),
         eq4(requirements.tipoInmuebleDeseado, insertData.tipoInmuebleDeseado),
         eq4(requirements.tipoNegocioDeseado, insertData.tipoNegocioDeseado),
@@ -14874,7 +14874,7 @@ __export(nightlyRematch_exports, {
   recalculateAndCleanupMatches: () => recalculateAndCleanupMatches,
   runNightlyRematch: () => runNightlyRematch
 });
-import { and as and5, eq as eq6 } from "drizzle-orm";
+import { and as and4, eq as eq6 } from "drizzle-orm";
 async function runNightlyRematch() {
   console.log("[NIGHTLY-REMATCH v28.0] Iniciando cruce masivo doctrinal...");
   const db = await getDb();
@@ -14942,7 +14942,7 @@ async function runNightlyRematch() {
             skippedCount++;
             try {
               await db.delete(propertyMatches).where(
-                and5(
+                and4(
                   eq6(propertyMatches.requirementId, req.id),
                   eq6(propertyMatches.propertyId, prop.id)
                 )
@@ -14971,7 +14971,7 @@ async function runNightlyRematch() {
             skippedCount++;
             try {
               await db.delete(propertyMatches).where(
-                and5(
+                and4(
                   eq6(propertyMatches.requirementId, req.id),
                   eq6(propertyMatches.propertyId, prop.id)
                 )
@@ -14982,7 +14982,7 @@ async function runNightlyRematch() {
           }
           seenPairs.add(pairKey);
           const existing = await db.select({ id: propertyMatches.id, matchScore: propertyMatches.matchScore }).from(propertyMatches).where(
-            and5(
+            and4(
               eq6(propertyMatches.requirementId, req.id),
               eq6(propertyMatches.propertyId, prop.id)
             )
@@ -16190,7 +16190,7 @@ init_db();
 init_schema();
 init_scraper();
 init_janIA();
-import { eq as eq8, desc as desc2, sql as sql5, inArray } from "drizzle-orm";
+import { eq as eq8, and as and6, desc as desc2, sql as sql5, inArray } from "drizzle-orm";
 
 // server/_core/taxEngine.ts
 var VALOR_UVT_2026 = 50318;
@@ -17063,7 +17063,7 @@ ${liveStats}${userContextInstruction}
         }
         if (input.propertyId && input.requirementId) {
           await db.delete(propertyMatches).where(
-            and(
+            and6(
               eq8(propertyMatches.propertyId, input.propertyId),
               eq8(propertyMatches.requirementId, input.requirementId)
             )

@@ -3043,11 +3043,11 @@ export default function AdminMatches() {
                           <div className="grid grid-cols-2 gap-2 text-[11px]">
                             <div className="bg-zinc-900/60 p-2 rounded-lg border border-white/5 truncate">
                               <div className="text-zinc-300 font-semibold truncate">{m.property?.name || 'Inmueble'}</div>
-                              <div className="text-emerald-300 text-[10px] truncate">📍 {computed?.rows.find(r => r.label.includes("Barrio"))?.propVal || m.property?.zone || m.property?.addressNeighborhood || 'Bogotá'}</div>
+                              <div className="text-emerald-300 text-[10px] truncate">📍 {rows.find((r: any) => r.label?.includes("Barrio"))?.propVal || m.property?.zone || m.property?.addressNeighborhood || 'Bogotá'}</div>
                             </div>
                             <div className="bg-zinc-900/60 p-2 rounded-lg border border-white/5 truncate">
                               <div className="text-zinc-300 font-semibold truncate">{m.requirement?.name || m.requirement?.nombreUsuarioWhatsapp || 'Requerimiento'}</div>
-                              <div className="text-amber-300 text-[10px] truncate">📍 {computed?.rows.find(r => r.label.includes("Barrio"))?.reqVal || m.requirement?.zonaDeseada || m.requirement?.addressNeighborhood || 'Bogotá'}</div>
+                              <div className="text-amber-300 text-[10px] truncate">📍 {rows.find((r: any) => r.label?.includes("Barrio"))?.reqVal || m.requirement?.zonaDeseada || m.requirement?.addressNeighborhood || 'Bogotá'}</div>
                             </div>
                           </div>
                         </div>
