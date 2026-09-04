@@ -3136,36 +3136,36 @@ export default function AdminMatches() {
                                 </p>
                                 {(() => {
                                   const copyKey = `prop-${m.id}`;
-                                  const copySearchKey = `prop-search-${m.id}`;
                                   const isCopied = copiedId === copyKey;
-                                  const isSearchCopied = copiedId === copySearchKey;
-                                  <div className="flex items-center gap-1.5 shrink-0">
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleCopy(pText || fallbackText, copyKey, 'full', m.property?.origenNombre);
-                                      }}
-                                      className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-3 py-1 rounded-lg transition-all duration-300 border ${
-                                        isCopied
-                                          ? "bg-cyan-500/25 text-cyan-300 border-cyan-400/60 shadow-[0_0_15px_rgba(6,182,212,0.45)] scale-105"
-                                          : "text-zinc-300 hover:text-cyan-300 bg-white/5 hover:bg-white/10 border-white/10 hover:border-cyan-400/30 active:scale-95"
-                                      }`}
-                                      title="Copiar texto original fiel de la oferta para ubicar en el grupo de WhatsApp"
-                                    >
-                                      {isCopied ? (
-                                        <>
-                                          <Check className="w-3.5 h-3.5 text-cyan-300 animate-in zoom-in-50 duration-200" />
-                                          <span className="text-cyan-200">¡Copiado!</span>
-                                        </>
-                                      ) : (
-                                        <>
-                                          <Copy className="w-3.5 h-3.5" />
-                                          <span>Copiar Publicación</span>
-                                        </>
-                                      )}
-                                    </button>
-                                  </div>
+                                  return (
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleCopy(pText || fallbackText, copyKey, 'full', m.property?.origenNombre);
+                                        }}
+                                        className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg transition-all duration-300 border shadow-sm ${
+                                          isCopied
+                                            ? "bg-cyan-500/25 text-cyan-300 border-cyan-400/60 shadow-[0_0_15px_rgba(6,182,212,0.45)] scale-105"
+                                            : "text-cyan-300 hover:text-cyan-200 bg-cyan-500/10 hover:bg-cyan-500/20 border-cyan-500/30 hover:border-cyan-400/50 active:scale-95"
+                                        }`}
+                                        title="Copiar texto original fiel de la oferta para ubicar en el grupo de WhatsApp"
+                                      >
+                                        {isCopied ? (
+                                          <>
+                                            <Check className="w-3.5 h-3.5 text-cyan-300 animate-in zoom-in-50 duration-200" />
+                                            <span className="text-cyan-200 font-extrabold">¡Copiado!</span>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Copy className="w-3.5 h-3.5 text-cyan-400" />
+                                            <span>📋 Copiar Publicación</span>
+                                          </>
+                                        )}
+                                      </button>
+                                    </div>
+                                  );
                                 })()}
                               </div>
                               {!isGenericImagePlaceholder && (
@@ -3447,36 +3447,36 @@ export default function AdminMatches() {
                                 </p>
                                 {(() => {
                                   const copyKey = `req-${m.id}`;
-                                  const copySearchKey = `req-search-${m.id}`;
                                   const isCopied = copiedId === copyKey;
-                                  const isSearchCopied = copiedId === copySearchKey;
-                                  <div className="flex items-center gap-1.5 shrink-0">
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleCopy(rText, copyKey, 'full', m.requirement?.origenNombre);
-                                      }}
-                                      className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-3 py-1 rounded-lg transition-all duration-300 border ${
-                                        isCopied
-                                          ? "bg-cyan-500/25 text-cyan-300 border-cyan-400/60 shadow-[0_0_15px_rgba(6,182,212,0.45)] scale-105"
-                                          : "text-zinc-300 hover:text-cyan-300 bg-white/5 hover:bg-white/10 border-white/10 hover:border-cyan-400/30 active:scale-95"
-                                      }`}
-                                      title="Copiar texto original fiel del requerimiento para ubicar en el grupo de WhatsApp"
-                                    >
-                                      {isCopied ? (
-                                        <>
-                                          <Check className="w-3.5 h-3.5 text-cyan-300 animate-in zoom-in-50 duration-200" />
-                                          <span className="text-cyan-200">¡Copiado!</span>
-                                        </>
-                                      ) : (
-                                        <>
-                                          <Copy className="w-3.5 h-3.5" />
-                                          <span>Copiar Publicación</span>
-                                        </>
-                                      )}
-                                    </button>
-                                  </div>
+                                  return (
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleCopy(rText, copyKey, 'full', m.requirement?.origenNombre);
+                                        }}
+                                        className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg transition-all duration-300 border shadow-sm ${
+                                          isCopied
+                                            ? "bg-cyan-500/25 text-cyan-300 border-cyan-400/60 shadow-[0_0_15px_rgba(6,182,212,0.45)] scale-105"
+                                            : "text-cyan-300 hover:text-cyan-200 bg-cyan-500/10 hover:bg-cyan-500/20 border-cyan-500/30 hover:border-cyan-400/50 active:scale-95"
+                                        }`}
+                                        title="Copiar texto original fiel del requerimiento para ubicar en el grupo de WhatsApp"
+                                      >
+                                        {isCopied ? (
+                                          <>
+                                            <Check className="w-3.5 h-3.5 text-cyan-300 animate-in zoom-in-50 duration-200" />
+                                            <span className="text-cyan-200 font-extrabold">¡Copiado!</span>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Copy className="w-3.5 h-3.5 text-cyan-400" />
+                                            <span>📋 Copiar Publicación</span>
+                                          </>
+                                        )}
+                                      </button>
+                                    </div>
+                                  );
                                 })()}
                               </div>
                               {!isGenericImagePlaceholder && (
