@@ -1518,12 +1518,21 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   if (isPhoneNumberNotPrice(price, property.rawText)) price = 0;
   if (isPhoneNumberNotPrice(budgetMax, requirement.rawText)) budgetMax = 0;
 
-  // ── SANIDAD PREDIAL DE PRECIOS EN EL MOTOR v20.0 / v25.4 ──────────────────────────────
+  // ── SANIDAD PREDIAL DE PRECIOS EN EL MOTOR v20.0 / v25.4 / v31.3 ──────────────────────────────
   const isSaleMatch = (property.transactionType || "").toLowerCase().includes("venta") || !(property.transactionType || "").toLowerCase().includes("arriendo");
-  if (isSaleMatch && (price <= 0 || price < 100_000_000) && property.rawText) {
-    const fbP = extractFallbackDataFromText(property.rawText);
-    if (fbP.price >= 30_000_000) {
-      price = fbP.price;
+  if (isSaleMatch) {
+    if ((price <= 0 || price < 30_000_000) && property.rawText) {
+      const fbP = extractFallbackDataFromText(property.rawText);
+      if (fbP.price >= 30_000_000) {
+        price = fbP.price;
+        if ((!property.adminFee || parseFloat(String(property.adminFee)) <= 0) && fbP.adminFee > 0) {
+          (property as any).adminFee = fbP.adminFee;
+        }
+      } else {
+        price = 0; // En venta, valores < 30M son cuotas de administración o residuos, NUNCA precio de venta
+      }
+    } else if (price > 0 && price < 30_000_000) {
+      price = 0;
     }
   }
 
@@ -1617,8 +1626,9 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   }
 
   // ── FILTRO DURO 0C: Oferta sin precio vs Demanda con Presupuesto Especificado (Tolerancia Cero 0%) ──
-  if (budgetMax > 0 && price <= 0 && (!property.rentPrice || parseFloat(String(property.rentPrice)) <= 0)) {
-    blockers.push("Match inviable: La oferta NO especifica precio (N/E) y el requerimiento exige presupuesto.");
+  const effectivePropPriceForCheck = isSaleMatch ? price : (price > 0 ? price : (property.rentPrice ? parseFloat(String(property.rentPrice)) : 0));
+  if (budgetMax > 0 && effectivePropPriceForCheck <= 0) {
+    blockers.push("Match inviable: La oferta NO especifica precio comercial válido (N/E) y el requerimiento exige presupuesto.");
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
@@ -2084,6 +2094,11 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
       const budgetMin = requirement.presupuestoMin ? parseFloat(String(requirement.presupuestoMin)) : 0;
       let salePrice = price;
 
+      if (salePrice <= 0 || salePrice < 30_000_000) {
+        blockers.push(`Guillotina Financiera (Tolerancia Cero): La oferta no especifica un precio de venta comercial válido (N/E o menor a $30M) para contrastar con el presupuesto máximo de $${budgetMax.toLocaleString()}. Match inviable (0%).`);
+        return buildExplanationResult(0, blockers, positives, negatives);
+      }
+
       if (salePrice > budgetMax) {
         blockers.push(`Guillotina Financiera (Tolerancia Cero): El precio de la propiedad ($${salePrice.toLocaleString()}) supera el presupuesto máximo del comprador ($${budgetMax.toLocaleString()}). Match inviable (0%).`);
         return buildExplanationResult(0, blockers, positives, negatives);
@@ -2539,8 +2554,10 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
     const rp = property.rentPrice ? parseFloat(String(property.rentPrice)) : 0;
     if (rp > 0) effectivePrice = rp;
     else if (price > 0 && price < 100_000_000) effectivePrice = price;
-  } else if (isReqSaleForScore && propBiz === "venta_o_arriendo" && price > 0 && price < 100_000_000) {
-    effectivePrice = 0; // price tiene valor de arriendo, no de venta → 0 pts
+  } else if (isReqSaleForScore) {
+    if (effectivePrice < 30_000_000) {
+      effectivePrice = 0; // en ventas, valores < 30M son cuotas de administración o N/E
+    }
   }
 
   if (budgetMax > 0) {

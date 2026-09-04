@@ -116,6 +116,15 @@ export async function runNightlyRematch() {
 
           if (!exp || exp.score < 80 || exp.blockers.length > 0) {
             skippedCount++;
+            // Si el match existía previamente pero ahora es inviable o tiene blockers, purgarlo
+            try {
+              await db.delete(propertyMatches).where(
+                and(
+                  eq(propertyMatches.requirementId, req.id),
+                  eq(propertyMatches.propertyId, prop.id)
+                )
+              );
+            } catch {}
             continue;
           }
 

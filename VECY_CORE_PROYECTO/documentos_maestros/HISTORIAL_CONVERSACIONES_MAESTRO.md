@@ -2605,8 +2605,59 @@ ightarrow$ número de celular para aplicarlas de forma automática a todas sus p
 
 ---
 
+### 📅 Sesión del 4 de Septiembre de 2026 — v31.3 (Doctrina de Sanidad Financiera en Venta, Tolerancia Cero en Guillotina de Presupuesto y Purga de Matches Espurios)
+
+**Fecha**: 4 de Septiembre de 2026  
+**Versión del Sistema**: `v31.3 — Doctrina de Sanidad Financiera en Venta, Tolerancia Cero en Guillotina de Presupuesto y Purga de Matches Espurios`
+
+#### 📋 Requerimientos y Directivas Doctrinales de Eduardo A. Rivera:
+1. **Error Crítico en Match #M12306 (4 de sept de 2026, 03:13 a. m.)**:
+   - Detección de una grave incongruencia financiera en el Match #M12306: un inmueble cuyo precio real de venta supera por cientos de millones de pesos el presupuesto del comprador fue emparejado y calificado con 85/100.
+   - Exigencia de identificar exactamente la ubicación de la lógica condicional de los MATCH, explicar la norma doctrinal de presupuestos y demostrar con rigor técnico la causa raíz que originó este fallo.
+   - Auditoría y saneamiento exhaustivo de todos los matches y publicaciones para erradicar cualquier error similar y garantizar resultados 100% verídicos y fiables sin necesidad de supervisión manual.
+
+#### 🔍 Diagnóstico Técnico y Causa Raíz Incontrovertible:
+1. **La Publicación de la Oferta (Propiedad #1213)**:
+   - Texto original: `... V/Administ/$1.260.000 PRECIO DE VENTA/ $950.000.000 ...` (Alfredo Rubio Célis, Apartamento en Santa Bárbara Central).
+   - Precio real de venta: **$950.000.000 COP**. Cuota de administración: **$1.260.000 COP**.
+2. **El Fallo de Ingesta (Falta de soporte de separador `/`)**:
+   - En `extractFallbackDataFromText`, las expresiones regulares de precio y administración buscaban únicamente `:` opcional (`:?`), pero no barras oblicuas `/`.
+   - Como el texto decía `V/Administ/` y `PRECIO DE VENTA/`, la regex no capturó la venta y confundió la cuota de administración ($1.260.000) guardándola en la columna `price` de Supabase.
+3. **El Colapso de la Guillotina Financiera a las 03:13 a. m.**:
+   - Al cotejar contra el Requerimiento #146 (presupuesto de compra: $700.000.000 COP), el motor comparó `salePrice = 1260000` ($1.260.000).
+   - Como $1.26M < $700M, la condición `salePrice > budgetMax` dio `false` (no bloqueó) y en el cálculo de puntaje otorgó los 15 puntos completos diciendo "💰 Oportunidad comercial", generando el match #M12306 con score 85/100, cuando el inmueble realmente cuesta $950 millones ($250M por encima del techo del comprador).
+
+#### 🛠️ Soluciones e Implementaciones Técnicas:
+- **`server/_core/janIA.ts`**:
+  - **Extractor Resiliente de Precios y Administración (`extractFallbackDataFromText`)**:
+    1. Soporte para separadores `[:/\-=~]` tanto en cuota de administración como en precios de venta (`V/Administ/$1.260.000`, `PRECIO DE VENTA/ $950.000.000`, `VR. VENTA $1.600.000.000`).
+    2. Detección de administración por sufijo (`$ 575.000 admón`).
+    3. Búsqueda global de cifras en millones descartando montos de administración y teléfonos.
+  - **Sanidad Predial Estricta en Persistencia de `properties`**:
+    1. En Colombia, ningún inmueble urbano en venta cuesta menos de $30.000.000 COP. Todo valor < 30M en venta es una cuota de administración o residuo. Si es < 30M, se traslada a `adminFee` y `price` se resetea a `"0.00"` (N/E).
+    2. Erradicada la persistencia de `rentPrice` residual en ventas puras (`isPureSale -> rentPrice = null`).
+- **`server/_core/matching.ts`**:
+  - **Blindaje en `explicarMatch` y `evaluateMatch`**:
+    1. Si `isSaleMatch` y `price < 30_000_000`, el motor ejecuta rescate forzado desde `rawText`. Si no encuentra precio ≥ 30M, asigna `price = 0` (N/E).
+    2. **Filtro Duro 0C Inquebrantable**: Si `budgetMax > 0` y la oferta de venta no tiene precio comercial válido (`price <= 0` o < 30M), bloqueo inmediato al 0%.
+    3. **Guillotina Financiera de Tolerancia Cero**: Si `salePrice > budgetMax` (o si es N/E), bloqueo absoluto (0% match inviable).
+    4. **Puntaje de Presupuesto (15 pts)**: Cero puntos de oportunidad para precios < 30M en transacciones de venta.
+- **`server/jobs/nightlyRematch.ts`**:
+  - Integrada purga reactiva: si un match existente arroja `score < 80` o `blockers.length > 0`, se elimina automáticamente de `propertyMatches`.
+- **Saneamiento en Base de Datos de Supabase**:
+  - Saneadas 15 propiedades en venta que tenían la administración guardada como precio de venta (incluida Prop #1213 a su precio real de $950.000.000 COP).
+  - Purgados 55 matches espurios que violaban presupuesto, erradicando permanentemente el Match **#M12306**.
+- **`shared/const.ts`**:
+  - Elevada la versión oficial del sistema a `v31.3`.
+- **Validación Empírica**:
+  - Test de `explicarMatch(req146, prop1213)` ejecutado: arrojó **Score 0%** con el blocker `'Guillotina Financiera (Tolerancia Cero): El precio de la propiedad ($950.000.000) supera el presupuesto máximo del comprador ($700.000.000). Match inviable (0%).'`.
+  - Compilación backend con esbuild exitosa en 56ms.
+
+---
+
 ## 🛡️ PROTOCOLOS Y REGLAS DE TRABAJO INQUEBRANTABLES
 1. **Adición Pura de Código**: NUNCA borrar, modificar ni romper funcionalidades o reglas previas ya validadas al agregar nuevo código.
 2. **Revisión del Historial al Iniciar**: Consultar esta bitácora y `.agents/AGENTS.md` al comienzo de cada conversación.
 3. **Limpieza Continua**: Mantener el directorio `server/` libre de archivos script residuales o duplicados.
 4. **Rol de Co-Piloto Guardián**: La IA debe evaluar las consecuencias secundarias de cualquier instrucción y frenar a tiempo si un cambio propuesto arriesga la integridad de la base de datos o rompe reglas del negocio.
+

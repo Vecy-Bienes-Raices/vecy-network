@@ -556,16 +556,27 @@ export function extractFallbackDataFromText(text: string): any {
   let rentPrice = 0;
   let adminFee = 0;
 
-  // 1. Cuota de Administración (ej: "Administración: $1´425.000", "Adm $2.056.503", "Admon $825.000", "Admon $960.000")
-  const adminMatch = clean.match(/(?:adm|admon|administraci[oó]n|admin|cta\s*admon)\s*(?:m[aá]xima|max|hasta|tope|no\s*mayor\s*a|no\s*superior\s*a|l[ií]mite)?\s*:?\s*(?:aprox\.?)?\s*\$?\s*([\d.]+)(?:\s*mil\b|\s*k\b)?/i);
+  // 1. Cuota de Administración (ej: "Administración: $1´425.000", "Adm $2.056.503", "Admon $825.000", "V/Administ/$1.260.000", "$ 575.000 admón")
+  // 1A. Prefijo: "Administración: $1.260.000", "Admi: $1.628.000", "V/Administ/$1.260.000"
+  const adminMatch = clean.match(/(?:v\s*[\/\-]\s*)?(?:adm|admon|administraci[oó]n|administ|admin|cta\s*admon)\s*(?:m[aá]xima|max|hasta|tope|no\s*mayor\s*a|no\s*superior\s*a|l[ií]mite)?\s*[:\/\-=\s]?\s*(?:aprox\.?)?\s*\$?\s*([\d.]+)(?:\s*mil\b|\s*k\b)?/i);
   if (adminMatch) {
     const rawANum = parseFloat(adminMatch[1].replace(/\./g, ''));
     if (!isNaN(rawANum) && rawANum >= 10_000 && rawANum <= 30_000_000 && !isPhoneNumberNotPrice(rawANum, text)) {
       adminFee = rawANum;
     }
   }
+  // 1B. Sufijo: "$ 575.000 admón", "$1.175.000 administración"
   if (adminFee === 0) {
-    const adminMilMatch = clean.match(/(?:admon|adm|admin|cuota)\s*:?\s*\$?\s*(\d{1,4}(?:[.,]\d{1,3})?)\s*(?:mil|k)\b/i);
+    const adminSuffixMatch = clean.match(/\$?\s*([\d.]+)\s*(?:mil\b|\s*k\b)?\s*[:\/\-=\s]?\s*(?:adm|admon|administraci[oó]n|administ|admin)\b/i);
+    if (adminSuffixMatch) {
+      const rawANum = parseFloat(adminSuffixMatch[1].replace(/\./g, ''));
+      if (!isNaN(rawANum) && rawANum >= 10_000 && rawANum <= 30_000_000 && !isPhoneNumberNotPrice(rawANum, text)) {
+        adminFee = rawANum;
+      }
+    }
+  }
+  if (adminFee === 0) {
+    const adminMilMatch = clean.match(/(?:admon|adm|admin|cuota)\s*[:\/\-=\s]?\s*\$?\s*(\d{1,4}(?:[.,]\d{1,3})?)\s*(?:mil|k)\b/i);
     if (adminMilMatch) {
       const numParsed = parseFloat(adminMilMatch[1].replace(',', '.'));
       if (!isNaN(numParsed) && numParsed >= 20 && numParsed <= 15000) {
@@ -577,8 +588,8 @@ export function extractFallbackDataFromText(text: string): any {
     }
   }
 
-  // 2. Canon de Arriendo Explícito (ej: "CANON $11'500.000", "CANON DE ARRIENDO: $4.500.000", "Canon: $6.200.000", "Arriendo $3.800.000")
-  const canonMatch = clean.match(/(?:canon(?:\s*de\s*arriendo)?|valor\s*(?:de\s*)?arriendo|precio\s*(?:de\s*)?arriendo)\s*:?\s*\$?\s*([\d.]+)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i);
+  // 2. Canon de Arriendo Explícito (ej: "CANON $11'500.000", "CANON DE ARRIENDO: $4.500.000", "Canon: $6.200.000", "Arriendo $3.800.000", "VR RENTA $5.300.000")
+  const canonMatch = clean.match(/(?:canon(?:\s*de\s*arriendo)?|valor\s*(?:de\s*)?arriendo|precio\s*(?:de\s*)?arriendo|vr\s*[\.\/]?\s*renta|renta)\s*[:\/\-=\s]?\s*\$?\s*([\d.]+)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i);
   if (canonMatch) {
     const isSale = false;
     const computed = parseColombianPriceOrBudget(canonMatch[1], canonMatch[2] || "", isSale);
@@ -587,8 +598,8 @@ export function extractFallbackDataFromText(text: string): any {
     }
   }
 
-  // 3. Precio de Venta Explícito (ej: "Precio de venta: $3.400.000.000", "Precio de venta: $1.100´000.000", "VALOR VENTA: $2.400'000.000", "Venta: $885.000.000", "Valor un poco negociable $780 MM")
-  const saleMatch = clean.match(/(?:precio\s*(?:de\s*)?venta|valor\s*(?:de\s*)?venta|valor\s*un\s*poco\s*negociable|valor\s*negociable|precio\s*negociable)\s*:?\s*\$?\s*([\d.]+)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i);
+  // 3. Precio de Venta Explícito (ej: "PRECIO DE VENTA/ $950.000.000", "Precio de venta: $3.400.000.000", "VALOR VENTA: $2.400'000.000", "VR. VENTA $1.600.000.000", "Venta: $885.000.000", "Valor un poco negociable $780 MM")
+  const saleMatch = clean.match(/(?:precio\s*(?:de\s*)?venta|valor\s*(?:de\s*)?venta|vr\s*[\.\/]?\s*venta|venta\s*(?:de\s*apartamento|de\s*apto|de\s*casa)?|valor\s*un\s*poco\s*negociable|valor\s*negociable|precio\s*negociable)\s*[:\/\-=\s]\s*\$?\s*([\d.]+)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i);
   if (saleMatch) {
     const isSale = true;
     const computed = parseColombianPriceOrBudget(saleMatch[1], saleMatch[2] || "", isSale);
@@ -632,7 +643,7 @@ export function extractFallbackDataFromText(text: string): any {
 
   // 6. Etiqueta Simple "Precio: $..." o "Valor: $..."
   if (price === 0 && rentPrice === 0) {
-    const simplePriceMatch = clean.match(/(?:precio|valor)\s*:\s*\$?\s*([\d.]+)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i);
+    const simplePriceMatch = clean.match(/(?:precio|valor)\s*[:\/\-=\s]\s*\$?\s*([\d.]+)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i);
     if (simplePriceMatch) {
       const isSale = transactionType !== "arriendo";
       const computed = parseColombianPriceOrBudget(simplePriceMatch[1], simplePriceMatch[2] || "", isSale);
@@ -647,18 +658,46 @@ export function extractFallbackDataFromText(text: string): any {
     }
   }
 
-  // 7. Formato de número completo colombiano general (ej: "$1.390.000.000", "$885.000.000", "$6.200.000")
+  // 7. Rescate Robusto Global de Cifras Inmobiliarias (Venta vs Arriendo)
   if (price === 0 && rentPrice === 0) {
-    const colMatch = clean.match(/\$\s*(\d{1,3}(?:\.\d{3}){1,4})/);
-    if (colMatch) {
-      const parsed = parseFloat(colMatch[1].replace(/\./g, ''));
-      if (!isNaN(parsed) && !isPhoneNumberNotPrice(parsed, text) && parsed !== adminFee) {
-        if (parsed >= 50_000_000) {
-          price = parsed;
-          presupuestoMax = parsed;
-        } else if (parsed >= 300_000) {
-          rentPrice = parsed;
-          presupuestoMax = parsed;
+    // Si la publicación es de venta o contiene pistas claras de venta
+    const isSaleContext = transactionType !== "arriendo" || clean.includes("venta") || clean.includes("vendo");
+    if (isSaleContext) {
+      // 7A. Buscar todas las cifras completas colombianas $...
+      const allColMatches = [...clean.matchAll(/\$\s*(\d{1,3}(?:\.\d{3}){1,4})/g)];
+      for (const m of allColMatches) {
+        const parsed = parseFloat(m[1].replace(/\./g, ''));
+        if (!isNaN(parsed) && !isPhoneNumberNotPrice(parsed, text) && parsed !== adminFee && parsed >= 30_000_000) {
+          if (parsed > price) {
+            price = parsed;
+            presupuestoMax = parsed;
+          }
+        }
+      }
+
+      // 7B. Buscar cifras con taquigrafía tipo "$1,250. MM" o "850 millones"
+      if (price === 0) {
+        const mmMatches = [...clean.matchAll(/(?:precio|valor|venta)?\s*[:\/\-=\s]?\s*\$?\s*([\d.,]+)\s*(?:mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)\b/gi)];
+        for (const m of mmMatches) {
+          const computed = parseColombianPriceOrBudget(m[1], "millones", true);
+          if (computed >= 30_000_000 && computed !== adminFee && !isPhoneNumberNotPrice(computed, text)) {
+            if (computed > price) {
+              price = computed;
+              presupuestoMax = computed;
+            }
+          }
+        }
+      }
+    } else {
+      // Para arriendo: buscar cifras < 100M
+      const colMatch = clean.match(/\$\s*(\d{1,3}(?:\.\d{3}){1,4})/);
+      if (colMatch) {
+        const parsed = parseFloat(colMatch[1].replace(/\./g, ''));
+        if (!isNaN(parsed) && !isPhoneNumberNotPrice(parsed, text) && parsed !== adminFee) {
+          if (parsed <= 50_000_000 && parsed >= 300_000) {
+            rentPrice = parsed;
+            presupuestoMax = parsed;
+          }
         }
       }
     }
@@ -4399,6 +4438,13 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
       }
       data.price = fallbackD.price;
       console.log(`[JanIA-SanidadPredial] Corregido precio de venta $${currentPriceVal} → Real: $${fallbackD.price} | AdminFee: $${data.adminFee}`);
+    } else if (currentPriceVal < 30_000_000) {
+      // En venta, ningún inmueble vale < 30M: si está en rango de administración, moverlo a adminFee
+      if ((!data.adminFee || parseFloat(String(data.adminFee)) <= 0) && currentPriceVal >= 100_000 && currentPriceVal <= 30_000_000) {
+        data.adminFee = currentPriceVal;
+      }
+      data.price = 0;
+      console.log(`[JanIA-SanidadPredial] Precio de venta menor a 30M ($${currentPriceVal}) desambiguado como AdminFee: $${data.adminFee} y Price: 0 (N/E)`);
     }
   }
 
@@ -4458,9 +4504,12 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
       const v = parseFloat(String(data.price));
       if (isNaN(v) || isPhoneNumberNotPrice(v, data.rawText)) return "0.00";
       if (v > 50_000_000_000) return "0.00";
+      if (v < 30_000_000) return "0.00"; // Sanidad Doctrinal VECY: en venta, precios < 30M son N/E
       return String(v);
     })(),
     rentPrice: (() => {
+      const isPureSale = sanitizeTransactionType(data.transactionType) === "venta";
+      if (isPureSale) return null; // En venta pura, rentPrice NUNCA debe existir
       if (data.rentPrice === undefined || data.rentPrice === null) return null;
       const v = parseFloat(String(data.rentPrice));
       if (isNaN(v) || v < 300_000 || v > 200_000_000 || isPhoneNumberNotPrice(v, data.rawText)) return null;

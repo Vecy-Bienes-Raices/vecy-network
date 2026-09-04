@@ -163,7 +163,23 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.2 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.3 — Septiembre 2026
+
+### Novedades v31.3 (Doctrina de Sanidad Financiera en Venta, Tolerancia Cero en Guillotina de Presupuesto y Purga de Matches Espurios):
+- **Diagnóstico y Resolución del Error Crítico de Presupuesto en Match #M12306**:
+  1) **Causa Raíz de Ingesta (Desambiguación Administración vs Precio Venta)**: En publicaciones con cuota de administración y precio de venta (e.g. `V/Administ/$1.260.000 PRECIO DE VENTA/ $950.000.000`), el extractor regex anterior no contemplaba separadores tipo barra `/` (`V/Administ/`, `PRECIO DE VENTA/`). Como consecuencia, la cuota de administración ($1.260.000 COP) se guardó erróneamente en la columna `price` de Supabase para la Propiedad #1213.
+  2) **Falso Match y Violación de la Guillotina Financiera**: Al cotejar con el Requerimiento #146 (presupuesto de compra de $700.000.000 COP), el motor comparó el valor de administración ($1.260.000) como si fuera el precio del apartamento, considerando erróneamente que "cumplía sobradísimo", otorgando los 15 puntos de presupuesto ("💰 Oportunidad comercial") y asignando 85/100 al Match #M12306, cuando en realidad el apartamento cuesta **$950.000.000 COP** (sobrepasa el presupuesto por $250 millones).
+- **Blindaje Doctrinal Integral de Precios y Presupuestos**:
+  1) **Sanidad Predial Estricta en Venta**: En Colombia, ningún inmueble urbano en venta cuesta menos de $30.000.000 COP. Todo valor < 30M en transacciones de venta es una cuota de administración o residuo. Si el precio de venta en BD es < 30M, el motor intenta rescatar el precio legítimo de venta desde el `rawText`. Si no lo encuentra, lo clasifica como `price = 0` (N/E).
+  2) **Bloqueo Inmediato por Filtro Duro 0C**: Si una oferta de venta no tiene precio comercial válido (N/E o < 30M) y el requerimiento exige presupuesto, el match se bloquea al 0% de inmediato.
+  3) **Guillotina Financiera de Tolerancia Cero Inviolable**: Si el precio real del inmueble supera el presupuesto del comprador (`salePrice > budgetMax`), match inviable 0%.
+  4) **Extractor de Precios y Administración Resiliente**: Soporte universal para separadores `[:/\-=~]` y estructuras prefijas/sufijas (`v/administ/`, `admi:`, `admón`), búsqueda global de montos en millones descartando administración, y erradicación de asignaciones residuales a `rentPrice` en ventas puras.
+  5) **Purga en nightlyRematch**: Cuando un match existente ya no cumple o arroja blockers, se elimina de inmediato de `propertyMatches`.
+- **Saneamiento en Base de Datos de Supabase**:
+  1) Saneadas las 15 propiedades en venta que tenían la cuota de administración guardada como precio (incluyendo Prop #1213 a su precio real de $950.000.000, Prop #2109 a $1.980.000.000, Prop #640 a $1.290.000.000, Prop #1510 a $1.250.000.000, etc.).
+  2) Eliminado permanentemente el match **#M12306** y purgados los 55 matches inválidos que violaban presupuesto o tenían ofertas viciadas.
+- **Incremento Oficial de Versión**:
+  1) Elevado a `v31.3` en `shared/const.ts`.
 
 ### Novedades v31.2 (Doctrina de Distinción entre Chat Privado / DM a JanIA y Grupos de WhatsApp):
 - **Diagnóstico y Esclarecimiento de Ofertas Recibidas por Mensaje Directo**:
