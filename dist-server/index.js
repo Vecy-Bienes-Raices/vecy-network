@@ -9005,7 +9005,7 @@ ${statsSummary}`;
 
 [SISTEMA - METADATOS DEL MENSAJE (VARIABLES CR\xCDTICAS)]:
 - {{hora}}: ${bogotaTime}
-- {{canal}}: ${isWebUser ? "Consola Web 24/7" : isGroup ? `Grupo WhatsApp - [${groupName || "Nombre Real del Grupo"}]` : "dm"}
+- {{canal}}: ${isWebUser ? "Consola Web 24/7" : isGroup ? `Grupo WhatsApp - [${groupName || "Grupo Inmobiliario WhatsApp"}]` : "dm"}
 - {{genero}}: ${userGender}
 - {{es_nuevo_usuario}}: ${!alreadyGreeted ? "true" : "false"}
 - {{estado_operacion}}: ${estadoOperacion}
@@ -9701,27 +9701,34 @@ async function initBrokerDirectory() {
 }
 async function propagateBrokerPhoneAcrossAllListings(params) {
   const { rawPhoneOrText, brokerName, oldPhoneOrLid } = params;
-  if (!rawPhoneOrText) return { updatedProps: 0, updatedReqs: 0, cleanPhone: null };
-  let cleanPhone = extractColombianPhoneFromText(rawPhoneOrText);
-  if (!cleanPhone) {
-    const digits = rawPhoneOrText.replace(/\D/g, "");
-    if (digits.length === 10 && digits.startsWith("3")) {
-      cleanPhone = "57" + digits;
-    } else if (digits.length === 12 && digits.startsWith("573")) {
-      cleanPhone = digits;
+  let cleanPhone = null;
+  if (rawPhoneOrText) {
+    cleanPhone = extractColombianPhoneFromText(rawPhoneOrText);
+    if (!cleanPhone) {
+      const digits = rawPhoneOrText.replace(/\D/g, "");
+      if (digits.length === 10 && digits.startsWith("3")) {
+        cleanPhone = "57" + digits;
+      } else if (digits.length === 12 && digits.startsWith("573")) {
+        cleanPhone = digits;
+      }
     }
   }
-  if (!cleanPhone) return { updatedProps: 0, updatedReqs: 0, cleanPhone: null };
+  const validBrokerName = brokerName && !isGenericName(brokerName) ? brokerName.trim() : null;
+  if (!cleanPhone && !validBrokerName) {
+    return { updatedProps: 0, updatedReqs: 0, cleanPhone: null };
+  }
   const db = await getDb();
   if (!db) return { updatedProps: 0, updatedReqs: 0, cleanPhone };
-  if (brokerName && !isGenericName(brokerName)) {
-    brokerDirectoryCache.set(brokerName.trim().toLowerCase(), { phone: cleanPhone, name: brokerName });
-    brokerDirectoryCache.set(brokerName, { phone: cleanPhone, name: brokerName });
+  if (cleanPhone && validBrokerName) {
+    brokerDirectoryCache.set(validBrokerName.toLowerCase(), { phone: cleanPhone, name: validBrokerName });
+    brokerDirectoryCache.set(validBrokerName, { phone: cleanPhone, name: validBrokerName });
+    brokerDirectoryCache.set(cleanPhone, { phone: cleanPhone, name: validBrokerName });
+  } else if (cleanPhone) {
+    brokerDirectoryCache.set(cleanPhone, { phone: cleanPhone, name: validBrokerName || void 0 });
   }
-  if (oldPhoneOrLid) {
-    brokerDirectoryCache.set(oldPhoneOrLid, { phone: cleanPhone, name: brokerName || void 0 });
+  if (oldPhoneOrLid && cleanPhone) {
+    brokerDirectoryCache.set(oldPhoneOrLid, { phone: cleanPhone, name: validBrokerName || void 0 });
   }
-  brokerDirectoryCache.set(cleanPhone, { phone: cleanPhone, name: brokerName || void 0 });
   let updatedProps = 0;
   let updatedReqs = 0;
   const allProps = await db.select({
@@ -9730,15 +9737,20 @@ async function propagateBrokerPhoneAcrossAllListings(params) {
     phone: properties.idUsuarioWhatsapp
   }).from(properties);
   for (const p of allProps) {
-    const isSameName = brokerName && p.name && !isGenericName(brokerName) && (p.name.trim().toLowerCase() === brokerName.trim().toLowerCase() || p.name.trim().toLowerCase().includes(brokerName.trim().toLowerCase()) || brokerName.trim().toLowerCase().includes(p.name.trim().toLowerCase()));
+    const isSameName = validBrokerName && p.name && !isGenericName(p.name) && (p.name.trim().toLowerCase() === validBrokerName.toLowerCase() || p.name.trim().toLowerCase().includes(validBrokerName.toLowerCase()) || validBrokerName.toLowerCase().includes(p.name.trim().toLowerCase()));
     const isSamePhone = cleanPhone && p.phone === cleanPhone;
     const isSameLid = oldPhoneOrLid && p.phone === oldPhoneOrLid;
+    if (!isSameLid && !isSameName && !isSamePhone) continue;
     const updates = {};
-    if ((isSameName || isSameLid) && (!p.phone || p.phone.length > 12 || p.phone.startsWith("1203") || p.phone === oldPhoneOrLid) && p.phone !== cleanPhone) {
-      updates.idUsuarioWhatsapp = cleanPhone;
+    if (cleanPhone && p.phone !== cleanPhone) {
+      if (!p.phone || p.phone.length > 12 || p.phone.startsWith("1203") || p.phone.includes("@") || p.phone === oldPhoneOrLid || isSameName) {
+        updates.idUsuarioWhatsapp = cleanPhone;
+      }
     }
-    if ((isSamePhone || isSameLid) && brokerName && !isGenericName(brokerName) && (!p.name || isGenericName(p.name) || p.name !== brokerName)) {
-      updates.nombreUsuarioWhatsapp = brokerName;
+    if (validBrokerName && p.name !== validBrokerName) {
+      if (!p.name || isGenericName(p.name) || isSameLid || isSamePhone) {
+        updates.nombreUsuarioWhatsapp = validBrokerName;
+      }
     }
     if (Object.keys(updates).length > 0) {
       await db.update(properties).set(updates).where(eq4(properties.id, p.id));
@@ -9751,22 +9763,27 @@ async function propagateBrokerPhoneAcrossAllListings(params) {
     phone: requirements.idUsuarioWhatsapp
   }).from(requirements);
   for (const r of allReqs) {
-    const isSameName = brokerName && r.name && !isGenericName(brokerName) && (r.name.trim().toLowerCase() === brokerName.trim().toLowerCase() || r.name.trim().toLowerCase().includes(brokerName.trim().toLowerCase()) || brokerName.trim().toLowerCase().includes(r.name.trim().toLowerCase()));
+    const isSameName = validBrokerName && r.name && !isGenericName(r.name) && (r.name.trim().toLowerCase() === validBrokerName.toLowerCase() || r.name.trim().toLowerCase().includes(validBrokerName.toLowerCase()) || validBrokerName.toLowerCase().includes(r.name.trim().toLowerCase()));
     const isSamePhone = cleanPhone && r.phone === cleanPhone;
     const isSameLid = oldPhoneOrLid && r.phone === oldPhoneOrLid;
+    if (!isSameLid && !isSameName && !isSamePhone) continue;
     const updates = {};
-    if ((isSameName || isSameLid) && (!r.phone || r.phone.length > 12 || r.phone.startsWith("1203") || r.phone === oldPhoneOrLid) && r.phone !== cleanPhone) {
-      updates.idUsuarioWhatsapp = cleanPhone;
+    if (cleanPhone && r.phone !== cleanPhone) {
+      if (!r.phone || r.phone.length > 12 || r.phone.startsWith("1203") || r.phone.includes("@") || r.phone === oldPhoneOrLid || isSameName) {
+        updates.idUsuarioWhatsapp = cleanPhone;
+      }
     }
-    if ((isSamePhone || isSameLid) && brokerName && !isGenericName(brokerName) && (!r.name || isGenericName(r.name) || r.name !== brokerName)) {
-      updates.nombreUsuarioWhatsapp = brokerName;
+    if (validBrokerName && r.name !== validBrokerName) {
+      if (!r.name || isGenericName(r.name) || isSameLid || isSamePhone) {
+        updates.nombreUsuarioWhatsapp = validBrokerName;
+      }
     }
     if (Object.keys(updates).length > 0) {
       await db.update(requirements).set(updates).where(eq4(requirements.id, r.id));
       updatedReqs++;
     }
   }
-  console.log(`[JanIA-Propagate] \u{1F680} Broker ${brokerName || "Desconocido"} (+${cleanPhone}) propagado bidireccionalmente a ${updatedProps} propiedades y ${updatedReqs} requerimientos.`);
+  console.log(`[JanIA-Propagate] \u{1F680} Broker ${validBrokerName || "Sin Nombre"} (+${cleanPhone || "Sin Celular"}) propagado a ${updatedProps} propiedades y ${updatedReqs} requerimientos en Supabase.`);
   return { updatedProps, updatedReqs, cleanPhone };
 }
 async function findOrCreateUserByPhone(phone, realName) {
@@ -12652,6 +12669,23 @@ var init_whatsapp_match = __esm({
           return cached?.data || null;
         }
       }
+      async resolveGroupName(chatId) {
+        const KNOWN_GROUPS = {
+          "120363260108880069@g.us": "VECY INMUEBLES NETWORK",
+          "120363417740040773@g.us": "VECY: SOPORTE LEGAL, TRIBUTARIO Y AVAL\xDAOS",
+          "120363403507276533@g.us": "PROYECTO Vecy Network",
+          "120363029834368375@g.us": "Santas-Carolina-Bosques-Calleja"
+        };
+        if (KNOWN_GROUPS[chatId]) return KNOWN_GROUPS[chatId];
+        try {
+          const metadata = await this.getCachedGroupMetadata(chatId);
+          if (metadata && metadata.subject && metadata.subject.trim()) {
+            return metadata.subject.trim();
+          }
+        } catch (_) {
+        }
+        return "Grupo Inmobiliario WhatsApp";
+      }
       targetGroupId = "120363260108880069@g.us";
       buzonGroupId = "120363417740040773@g.us";
       circuloGroupId = "120363403507276533@g.us";
@@ -12977,14 +13011,7 @@ ${quotedNote}` : quotedNote;
                 const isBuzonGroup = chatId === this.buzonGroupId;
                 const isCirculoGroup = chatId === this.circuloGroupId;
                 const isOfficialGroup = isMainGroup || isBuzonGroup || isCirculoGroup;
-                let groupName = "Nombre Real del Grupo";
-                try {
-                  const metadata = await this.getCachedGroupMetadata(chatId);
-                  if (metadata && metadata.subject) {
-                    groupName = metadata.subject;
-                  }
-                } catch (e) {
-                }
+                const groupName = await this.resolveGroupName(chatId);
                 if (!isOfficialGroup) {
                   const gNameLower = groupName.toLowerCase();
                   const NON_REAL_ESTATE_KEYWORDS = [
@@ -13649,14 +13676,7 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
           const { processWhatsAppMessage: processWhatsAppMessage2, processConsultingMessage: processConsultingMessage2, processCirculoMessage: processCirculoMessage2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
           if (distinctListings.length > 1 && chatId !== "120363417740040773@g.us" && chatId !== "120363403507276533@g.us") {
             console.log(`[JANIA-MATCH] Detectadas ${distinctListings.length} publicaciones independientes en el mismo minuto para ${resolvedSenderId}. Procesando cada una por separado...`);
-            let groupName = "Nombre Real del Grupo";
-            try {
-              const metadata = await this.getCachedGroupMetadata(chatId);
-              if (metadata && metadata.subject) {
-                groupName = metadata.subject;
-              }
-            } catch (e) {
-            }
+            const groupName = await this.resolveGroupName(chatId);
             for (const bufferedMsg of buffer.messages) {
               const hasMediaOnly = (!!bufferedMsg.imageBuffer || !!bufferedMsg.pdfBuffer) && (!bufferedMsg.body || bufferedMsg.body.trim() === "");
               if (!bufferedMsg.body || bufferedMsg.body.trim() === "") {
@@ -13762,14 +13782,7 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
               userName
             );
           } else {
-            let groupName = "Nombre Real del Grupo";
-            try {
-              const metadata = await this.getCachedGroupMetadata(chatId);
-              if (metadata && metadata.subject) {
-                groupName = metadata.subject;
-              }
-            } catch (e) {
-            }
+            const groupName = await this.resolveGroupName(chatId);
             if (isBlacklistedGroup(groupName, chatId)) {
               console.log(`[JANIA-MATCH] \u{1F6AB} Grupo '${groupName}' (${chatId}) en lista negra. Descartando buffer por completo.`);
               return;
@@ -15259,7 +15272,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.0";
+var VECY_VERSION = "v31.1";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 
@@ -16503,15 +16516,33 @@ ${liveStats}${userContextInstruction}
     if (input.origenNombre !== void 0) updateData.origenNombre = input.origenNombre;
     await db.update(properties).set(updateData).where(eq8(properties.id, input.propertyId));
     console.log(`[JanIA-UpdateProperty] Propiedad #${input.propertyId} actualizada directamente desde Mesa de Cotejo (incluyendo tel\xE9fono: ${input.idUsuarioWhatsapp || "N/A"})`);
-    const phoneChanged = Boolean(input.idUsuarioWhatsapp && input.idUsuarioWhatsapp !== existingProp?.idUsuarioWhatsapp);
-    const nameChanged = Boolean(input.nombreUsuarioWhatsapp && input.nombreUsuarioWhatsapp !== existingProp?.nombreUsuarioWhatsapp);
-    if (phoneChanged || nameChanged) {
+    const hasPhone = Boolean(input.idUsuarioWhatsapp || existingProp?.idUsuarioWhatsapp);
+    const hasName = Boolean(input.nombreUsuarioWhatsapp || existingProp?.nombreUsuarioWhatsapp);
+    if (hasPhone || hasName) {
       propagateBrokerPhoneAcrossAllListings({
         rawPhoneOrText: input.idUsuarioWhatsapp || existingProp?.idUsuarioWhatsapp || "",
         brokerName: input.nombreUsuarioWhatsapp || existingProp?.nombreUsuarioWhatsapp,
         oldPhoneOrLid: existingProp?.idUsuarioWhatsapp
+      }).then((res) => {
+        if (Array.isArray(cachedAllMatchesData) && (res.cleanPhone || input.nombreUsuarioWhatsapp)) {
+          const targetPhone = res.cleanPhone;
+          const targetName = input.nombreUsuarioWhatsapp || existingProp?.nombreUsuarioWhatsapp;
+          const targetLid = existingProp?.idUsuarioWhatsapp;
+          for (const m of cachedAllMatchesData) {
+            const pMatches = targetLid && m.property?.idUsuarioWhatsapp === targetLid || targetName && m.property?.nombreUsuarioWhatsapp?.toLowerCase() === targetName.toLowerCase();
+            if (pMatches) {
+              if (targetPhone) m.property.idUsuarioWhatsapp = targetPhone;
+              if (targetName) m.property.nombreUsuarioWhatsapp = targetName;
+            }
+            const rMatches = targetLid && m.requirement?.idUsuarioWhatsapp === targetLid || targetName && m.requirement?.nombreUsuarioWhatsapp?.toLowerCase() === targetName.toLowerCase();
+            if (rMatches) {
+              if (targetPhone) m.requirement.idUsuarioWhatsapp = targetPhone;
+              if (targetName) m.requirement.nombreUsuarioWhatsapp = targetName;
+            }
+          }
+        }
       }).catch((propErr) => {
-        console.warn(`[JanIA-UpdateProperty] Advertencia en propagaci\xF3n de tel\xE9fono:`, propErr?.message);
+        console.warn(`[JanIA-UpdateProperty] Advertencia en propagaci\xF3n de asesor:`, propErr?.message);
       });
     }
     if (Array.isArray(cachedAllMatchesData)) {
@@ -16624,15 +16655,33 @@ ${liveStats}${userContextInstruction}
     if (input.origenNombre !== void 0) updateData.origenNombre = input.origenNombre;
     await db.update(requirements).set(updateData).where(eq8(requirements.id, input.requirementId));
     console.log(`[JanIA-UpdateRequirement] Requerimiento #${input.requirementId} actualizado directamente desde Mesa de Cotejo (incluyendo tel\xE9fono: ${input.idUsuarioWhatsapp || "N/A"})`);
-    const phoneChanged = Boolean(input.idUsuarioWhatsapp && input.idUsuarioWhatsapp !== existingReq?.idUsuarioWhatsapp);
-    const nameChanged = Boolean(input.nombreUsuarioWhatsapp && input.nombreUsuarioWhatsapp !== existingReq?.nombreUsuarioWhatsapp);
-    if (phoneChanged || nameChanged) {
+    const hasPhone = Boolean(input.idUsuarioWhatsapp || existingReq?.idUsuarioWhatsapp);
+    const hasName = Boolean(input.nombreUsuarioWhatsapp || existingReq?.nombreUsuarioWhatsapp);
+    if (hasPhone || hasName) {
       propagateBrokerPhoneAcrossAllListings({
         rawPhoneOrText: input.idUsuarioWhatsapp || existingReq?.idUsuarioWhatsapp || "",
         brokerName: input.nombreUsuarioWhatsapp || existingReq?.nombreUsuarioWhatsapp,
         oldPhoneOrLid: existingReq?.idUsuarioWhatsapp
+      }).then((res) => {
+        if (Array.isArray(cachedAllMatchesData) && (res.cleanPhone || input.nombreUsuarioWhatsapp)) {
+          const targetPhone = res.cleanPhone;
+          const targetName = input.nombreUsuarioWhatsapp || existingReq?.nombreUsuarioWhatsapp;
+          const targetLid = existingReq?.idUsuarioWhatsapp;
+          for (const m of cachedAllMatchesData) {
+            const pMatches = targetLid && m.property?.idUsuarioWhatsapp === targetLid || targetName && m.property?.nombreUsuarioWhatsapp?.toLowerCase() === targetName.toLowerCase();
+            if (pMatches) {
+              if (targetPhone) m.property.idUsuarioWhatsapp = targetPhone;
+              if (targetName) m.property.nombreUsuarioWhatsapp = targetName;
+            }
+            const rMatches = targetLid && m.requirement?.idUsuarioWhatsapp === targetLid || targetName && m.requirement?.nombreUsuarioWhatsapp?.toLowerCase() === targetName.toLowerCase();
+            if (rMatches) {
+              if (targetPhone) m.requirement.idUsuarioWhatsapp = targetPhone;
+              if (targetName) m.requirement.nombreUsuarioWhatsapp = targetName;
+            }
+          }
+        }
       }).catch((propErr) => {
-        console.warn(`[JanIA-UpdateRequirement] Advertencia en propagaci\xF3n de tel\xE9fono:`, propErr?.message);
+        console.warn(`[JanIA-UpdateRequirement] Advertencia en propagaci\xF3n de asesor:`, propErr?.message);
       });
     }
     if (Array.isArray(cachedAllMatchesData)) {

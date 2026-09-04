@@ -163,7 +163,24 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.0 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.1 — Septiembre 2026
+
+### Novedades v31.1 (Doctrina de Propagación en Cascada de Asesor a Publicaciones en Espera, Interfaz Limpia y Copiado Fiel de Publicación):
+- **Propagación en Cascada a Publicaciones en Espera en Supabase (`propagateBrokerPhoneAcrossAllListings`)**:
+  1) Al editar y guardar un nombre o número de teléfono (o ambos) de un asesor en una ficha de oferta o demanda, el cambio se propaga de forma inmediata y automática a **todas las demás publicaciones del mismo asesor que están en espera en Supabase** (incluso las que aún no tienen pareja o match generado), actualizando tanto `properties` como `requirements`.
+  2) Desacoplada la dependencia de teléfono obligatorio: la función ahora propaga si se actualiza el nombre (por LID o nombre previo) o si se actualiza el teléfono, o ambos a la vez, actualizando además en caliente el directorio en memoria (`brokerDirectoryCache`) y las tarjetas de la mesa de cotejo (`cachedAllMatchesData`).
+- **Copiado Fiel de la Publicación Original (`📋 Copiar Publicación`)**:
+  1) Erradicados los botones que sobrecargaban la interfaz (`Buscar en WhatsApp`, `Ubicar en Grupo`, `Pedir a JanIA`).
+  2) Introducido un botón único, limpio y elegante: `📋 Copiar Publicación` tanto en Oferta como en Demanda, que copia al portapapeles el texto original 100% verídico con sus saltos de línea, emojis y enlaces (e.g. Wasi), permitiendo ubicar la publicación exacta en WhatsApp.
+  3) Notificación toast clara y contextual indicando el grupo al que pertenece la publicación.
+- **Área de Contacto Limpia y Veraz**:
+  1) Si el teléfono está disponible: se muestra el botón verde `Contactar WA`.
+  2) Si no hay teléfono en el texto o el remitente tiene LID: se muestra un aviso limpio y discreto: `📍 Sin teléfono en texto · Ubicar en: [Nombre del Grupo]`, sin botones rotos ni enlaces engañosos.
+- **Blindaje en la Ingesta de Grupos de Baileys (`resolveGroupName`)**:
+  1) Erradicada cualquier inserción de la cadena `"Nombre Real del Grupo"` en la base de datos.
+  2) Implementada resolución garantizada por diccionario de JIDs oficiales y caché de metadatos con fallback a `"Grupo Inmobiliario WhatsApp"`.
+- **Incremento Oficial de Versión**:
+  1) Elevado a `v31.1` en `shared/const.ts`.
 
 ### Novedades v31.0 (Doctrina de Memoria Conversacional en Grupo 2 y Resiliencia Anti-429 de JanIA):
 - **Diagnóstico y Erradicación del Bucle de Saludos en Consultoría (Caso Amanda)**:

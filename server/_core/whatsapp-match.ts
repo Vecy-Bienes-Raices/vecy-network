@@ -186,6 +186,26 @@ export class JaniaMatchBot {
     }
   }
 
+  public async resolveGroupName(chatId: string): Promise<string> {
+    const KNOWN_GROUPS: Record<string, string> = {
+      '120363260108880069@g.us': 'VECY INMUEBLES NETWORK',
+      '120363417740040773@g.us': 'VECY: SOPORTE LEGAL, TRIBUTARIO Y AVALÚOS',
+      '120363403507276533@g.us': 'PROYECTO Vecy Network',
+      '120363029834368375@g.us': 'Santas-Carolina-Bosques-Calleja',
+    };
+
+    if (KNOWN_GROUPS[chatId]) return KNOWN_GROUPS[chatId];
+
+    try {
+      const metadata = await this.getCachedGroupMetadata(chatId);
+      if (metadata && metadata.subject && metadata.subject.trim()) {
+        return metadata.subject.trim();
+      }
+    } catch (_) {}
+
+    return 'Grupo Inmobiliario WhatsApp';
+  }
+
   public targetGroupId: string = '120363260108880069@g.us';
   public buzonGroupId: string = '120363417740040773@g.us';
   public circuloGroupId: string = '120363403507276533@g.us';
@@ -570,13 +590,7 @@ export class JaniaMatchBot {
             const isOfficialGroup = isMainGroup || isBuzonGroup || isCirculoGroup;
 
             // --- OBTENCIÓN DEL NOMBRE DEL GRUPO Y FILTRADO INMOBILIARIO ESTRICTO ---
-            let groupName = "Nombre Real del Grupo";
-            try {
-              const metadata = await this.getCachedGroupMetadata(chatId);
-              if (metadata && metadata.subject) {
-                groupName = metadata.subject;
-              }
-            } catch (e) {}
+            const groupName = await this.resolveGroupName(chatId);
 
             // Si no es grupo oficial VECY, omitir únicamente si es un chat explícito ajeno (familia, seguridad, etc.)
             if (!isOfficialGroup) {
@@ -1506,13 +1520,7 @@ export class JaniaMatchBot {
 
       if (distinctListings.length > 1 && chatId !== '120363417740040773@g.us' && chatId !== '120363403507276533@g.us') {
         console.log(`[JANIA-MATCH] Detectadas ${distinctListings.length} publicaciones independientes en el mismo minuto para ${resolvedSenderId}. Procesando cada una por separado...`);
-        let groupName = "Nombre Real del Grupo";
-        try {
-          const metadata = await this.getCachedGroupMetadata(chatId);
-          if (metadata && metadata.subject) {
-            groupName = metadata.subject;
-          }
-        } catch (e) {}
+        const groupName = await this.resolveGroupName(chatId);
 
         for (const bufferedMsg of buffer.messages) {
           // ✅ FIX: Permitir mensajes imagen-sola o pdf-solo (body vacío pero imageBuffer/pdfBuffer presente)
@@ -1633,13 +1641,7 @@ export class JaniaMatchBot {
           userName
         );
       } else {
-        let groupName = "Nombre Real del Grupo";
-        try {
-          const metadata = await this.getCachedGroupMetadata(chatId);
-          if (metadata && metadata.subject) {
-            groupName = metadata.subject;
-          }
-        } catch (e) {}
+        const groupName = await this.resolveGroupName(chatId);
 
         if (isBlacklistedGroup(groupName, chatId)) {
           console.log(`[JANIA-MATCH] 🚫 Grupo '${groupName}' (${chatId}) en lista negra. Descartando buffer por completo.`);

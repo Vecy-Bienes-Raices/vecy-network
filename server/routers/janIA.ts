@@ -747,16 +747,36 @@ export const janIARouter = router({
       await db.update(properties).set(updateData).where(eq(properties.id, input.propertyId));
       console.log(`[JanIA-UpdateProperty] Propiedad #${input.propertyId} actualizada directamente desde Mesa de Cotejo (incluyendo teléfono: ${input.idUsuarioWhatsapp || 'N/A'})`);
 
-      // Propagar en cascada en segundo plano SOLO si teléfono o nombre cambiaron (0ms bloqueo para el usuario)
-      const phoneChanged = Boolean(input.idUsuarioWhatsapp && input.idUsuarioWhatsapp !== existingProp?.idUsuarioWhatsapp);
-      const nameChanged = Boolean(input.nombreUsuarioWhatsapp && input.nombreUsuarioWhatsapp !== existingProp?.nombreUsuarioWhatsapp);
-      if (phoneChanged || nameChanged) {
+      // Propagar en cascada en segundo plano si hay teléfono o nombre disponible (0ms bloqueo para el usuario)
+      const hasPhone = Boolean(input.idUsuarioWhatsapp || existingProp?.idUsuarioWhatsapp);
+      const hasName = Boolean(input.nombreUsuarioWhatsapp || existingProp?.nombreUsuarioWhatsapp);
+      if (hasPhone || hasName) {
         propagateBrokerPhoneAcrossAllListings({
           rawPhoneOrText: input.idUsuarioWhatsapp || existingProp?.idUsuarioWhatsapp || '',
           brokerName: input.nombreUsuarioWhatsapp || existingProp?.nombreUsuarioWhatsapp,
           oldPhoneOrLid: existingProp?.idUsuarioWhatsapp
+        }).then((res) => {
+          if (Array.isArray(cachedAllMatchesData) && (res.cleanPhone || input.nombreUsuarioWhatsapp)) {
+            const targetPhone = res.cleanPhone;
+            const targetName = input.nombreUsuarioWhatsapp || existingProp?.nombreUsuarioWhatsapp;
+            const targetLid = existingProp?.idUsuarioWhatsapp;
+            for (const m of cachedAllMatchesData) {
+              const pMatches = (targetLid && m.property?.idUsuarioWhatsapp === targetLid) ||
+                               (targetName && m.property?.nombreUsuarioWhatsapp?.toLowerCase() === targetName.toLowerCase());
+              if (pMatches) {
+                if (targetPhone) m.property.idUsuarioWhatsapp = targetPhone;
+                if (targetName) m.property.nombreUsuarioWhatsapp = targetName;
+              }
+              const rMatches = (targetLid && m.requirement?.idUsuarioWhatsapp === targetLid) ||
+                               (targetName && m.requirement?.nombreUsuarioWhatsapp?.toLowerCase() === targetName.toLowerCase());
+              if (rMatches) {
+                if (targetPhone) m.requirement.idUsuarioWhatsapp = targetPhone;
+                if (targetName) m.requirement.nombreUsuarioWhatsapp = targetName;
+              }
+            }
+          }
         }).catch((propErr: any) => {
-          console.warn(`[JanIA-UpdateProperty] Advertencia en propagación de teléfono:`, propErr?.message);
+          console.warn(`[JanIA-UpdateProperty] Advertencia en propagación de asesor:`, propErr?.message);
         });
       }
 
@@ -882,16 +902,36 @@ export const janIARouter = router({
       await db.update(requirements).set(updateData).where(eq(requirements.id, input.requirementId));
       console.log(`[JanIA-UpdateRequirement] Requerimiento #${input.requirementId} actualizado directamente desde Mesa de Cotejo (incluyendo teléfono: ${input.idUsuarioWhatsapp || 'N/A'})`);
 
-      // Propagar en cascada en segundo plano SOLO si teléfono o nombre cambiaron (0ms bloqueo para el usuario)
-      const phoneChanged = Boolean(input.idUsuarioWhatsapp && input.idUsuarioWhatsapp !== existingReq?.idUsuarioWhatsapp);
-      const nameChanged = Boolean(input.nombreUsuarioWhatsapp && input.nombreUsuarioWhatsapp !== existingReq?.nombreUsuarioWhatsapp);
-      if (phoneChanged || nameChanged) {
+      // Propagar en cascada en segundo plano si hay teléfono o nombre disponible (0ms bloqueo para el usuario)
+      const hasPhone = Boolean(input.idUsuarioWhatsapp || existingReq?.idUsuarioWhatsapp);
+      const hasName = Boolean(input.nombreUsuarioWhatsapp || existingReq?.nombreUsuarioWhatsapp);
+      if (hasPhone || hasName) {
         propagateBrokerPhoneAcrossAllListings({
           rawPhoneOrText: input.idUsuarioWhatsapp || existingReq?.idUsuarioWhatsapp || '',
           brokerName: input.nombreUsuarioWhatsapp || existingReq?.nombreUsuarioWhatsapp,
           oldPhoneOrLid: existingReq?.idUsuarioWhatsapp
+        }).then((res) => {
+          if (Array.isArray(cachedAllMatchesData) && (res.cleanPhone || input.nombreUsuarioWhatsapp)) {
+            const targetPhone = res.cleanPhone;
+            const targetName = input.nombreUsuarioWhatsapp || existingReq?.nombreUsuarioWhatsapp;
+            const targetLid = existingReq?.idUsuarioWhatsapp;
+            for (const m of cachedAllMatchesData) {
+              const pMatches = (targetLid && m.property?.idUsuarioWhatsapp === targetLid) ||
+                               (targetName && m.property?.nombreUsuarioWhatsapp?.toLowerCase() === targetName.toLowerCase());
+              if (pMatches) {
+                if (targetPhone) m.property.idUsuarioWhatsapp = targetPhone;
+                if (targetName) m.property.nombreUsuarioWhatsapp = targetName;
+              }
+              const rMatches = (targetLid && m.requirement?.idUsuarioWhatsapp === targetLid) ||
+                               (targetName && m.requirement?.nombreUsuarioWhatsapp?.toLowerCase() === targetName.toLowerCase());
+              if (rMatches) {
+                if (targetPhone) m.requirement.idUsuarioWhatsapp = targetPhone;
+                if (targetName) m.requirement.nombreUsuarioWhatsapp = targetName;
+              }
+            }
+          }
         }).catch((propErr: any) => {
-          console.warn(`[JanIA-UpdateRequirement] Advertencia en propagación de teléfono:`, propErr?.message);
+          console.warn(`[JanIA-UpdateRequirement] Advertencia en propagación de asesor:`, propErr?.message);
         });
       }
 

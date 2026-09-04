@@ -2222,8 +2222,10 @@ export default function AdminMatches() {
     try {
       if (!text && mode !== 'group') return;
       let targetText = text;
-      let title = "📋 Mensaje original copiado";
-      let desc = "Texto 100% fiel copiado. 💡 Tip: Para buscar en WhatsApp usa 'Buscar en WhatsApp' o el nombre del asesor, no pegues todo el texto para evitar resaltados amarillos.";
+      let title = "📋 Publicación original copiada";
+      let desc = groupName 
+        ? `Texto original copiado con 100% de fidelidad para ubicar en el grupo "${groupName}".` 
+        : "Texto original copiado con 100% de fidelidad al portapapeles.";
 
       if (mode === 'search') {
         const smart = extractSmartSearchSnippet(text, undefined, senderName, groupName, knownPhone);
@@ -2484,6 +2486,7 @@ export default function AdminMatches() {
           zone: editForm.propZone || m.property.zone,
           city: editForm.propCity || m.property.city,
           idUsuarioWhatsapp: normalizePhoneInput(editForm.propPhone) || m.property.idUsuarioWhatsapp,
+          nombreUsuarioWhatsapp: editForm.propSenderName !== undefined && editForm.propSenderName.trim() !== '' ? String(editForm.propSenderName).trim() : m.property.nombreUsuarioWhatsapp,
           origenNombre: editForm.propOrigenNombre ? String(editForm.propOrigenNombre).trim() : m.property.origenNombre,
         });
       }
@@ -2500,12 +2503,13 @@ export default function AdminMatches() {
           zonaDeseada: editForm.reqZone || m.requirement.zonaDeseada,
           ciudadDeseada: editForm.reqCity || m.requirement.ciudadDeseada,
           idUsuarioWhatsapp: normalizePhoneInput(editForm.reqPhone) || m.requirement.idUsuarioWhatsapp,
+          nombreUsuarioWhatsapp: editForm.reqSenderName !== undefined && editForm.reqSenderName.trim() !== '' ? String(editForm.reqSenderName).trim() : m.requirement.nombreUsuarioWhatsapp,
           origenNombre: editForm.reqOrigenNombre ? String(editForm.reqOrigenNombre).trim() : m.requirement.origenNombre,
         });
       }
 
       setSaveStatusMap(prev => ({ ...prev, [m.id]: 'saved' }));
-      toast.success("✅ Ficha actualizada y guardada correctamente");
+      toast.success("✅ Ficha guardada y propagada en cascada a todas sus publicaciones");
       setEditingMatchId(null);
       setEditForm({});
 
@@ -3135,60 +3139,33 @@ export default function AdminMatches() {
                                   const copySearchKey = `prop-search-${m.id}`;
                                   const isCopied = copiedId === copyKey;
                                   const isSearchCopied = copiedId === copySearchKey;
-                                  return (
-                                    <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleCopy(pText || fallbackText, copyKey, 'full');
-                                        }}
-                                        className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-lg transition-all duration-300 border ${
-                                          isCopied
-                                            ? "bg-cyan-500/25 text-cyan-300 border-cyan-400/60 shadow-[0_0_15px_rgba(6,182,212,0.45)] scale-105"
-                                            : "text-zinc-400 hover:text-cyan-300 bg-white/5 hover:bg-white/10 border-white/10 hover:border-cyan-400/30 active:scale-95"
-                                        }`}
-                                        title="Copiar texto completo original con saltos de línea y emojis"
-                                      >
-                                        {isCopied ? (
-                                          <>
-                                            <Check className="w-3 h-3 text-cyan-300 animate-in zoom-in-50 duration-200" />
-                                            <span className="text-cyan-200">¡Copiado!</span>
-                                          </>
-                                        ) : (
-                                          <>
-                                            <Copy className="w-3 h-3" />
-                                            <span>Copiar Todo</span>
-                                          </>
-                                        )}
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleCopy(pText || fallbackText, copySearchKey, 'search', m.property?.origenNombre, propSender, propContact.cleanNumber);
-                                        }}
-                                        className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg transition-all duration-300 border ${
-                                          isSearchCopied
-                                            ? "bg-amber-500/25 text-amber-300 border-amber-400/60 shadow-[0_0_15px_rgba(245,158,11,0.45)] scale-105"
-                                            : "text-zinc-400 hover:text-amber-300 bg-white/5 hover:bg-white/10 border-white/10 hover:border-amber-400/30 active:scale-95"
-                                        }`}
-                                        title={`Copiar clave única (celular o autor) para buscar en WhatsApp (${m.property?.origenNombre || 'Grupo'})`}
-                                      >
-                                        {isSearchCopied ? (
-                                          <>
-                                            <Check className="w-3 h-3 text-amber-300 animate-in zoom-in-50 duration-200" />
-                                            <span className="text-amber-200">¡Clave Copiada!</span>
-                                          </>
-                                        ) : (
-                                          <>
-                                            <Search className="w-3 h-3 text-amber-400" />
-                                            <span className="text-zinc-300">Buscar en WhatsApp</span>
-                                          </>
-                                        )}
-                                      </button>
-                                    </div>
-                                  );
+                                  <div className="flex items-center gap-1.5 shrink-0">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleCopy(pText || fallbackText, copyKey, 'full', m.property?.origenNombre);
+                                      }}
+                                      className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-3 py-1 rounded-lg transition-all duration-300 border ${
+                                        isCopied
+                                          ? "bg-cyan-500/25 text-cyan-300 border-cyan-400/60 shadow-[0_0_15px_rgba(6,182,212,0.45)] scale-105"
+                                          : "text-zinc-300 hover:text-cyan-300 bg-white/5 hover:bg-white/10 border-white/10 hover:border-cyan-400/30 active:scale-95"
+                                      }`}
+                                      title="Copiar texto original fiel de la oferta para ubicar en el grupo de WhatsApp"
+                                    >
+                                      {isCopied ? (
+                                        <>
+                                          <Check className="w-3.5 h-3.5 text-cyan-300 animate-in zoom-in-50 duration-200" />
+                                          <span className="text-cyan-200">¡Copiado!</span>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Copy className="w-3.5 h-3.5" />
+                                          <span>Copiar Publicación</span>
+                                        </>
+                                      )}
+                                    </button>
+                                  </div>
                                 })()}
                               </div>
                               {!isGenericImagePlaceholder && (
@@ -3381,35 +3358,9 @@ export default function AdminMatches() {
                                 <ExternalLink className="w-3.5 h-3.5 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                               </a>
                             ) : (
-                              <div className="flex flex-col sm:flex-row items-center gap-1.5 w-full sm:w-auto shrink-0">
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleCopy(
-                                      senderName || m.property?.name || "inmueble", 
-                                      `prop-loc-${m.id}`, 
-                                      senderName && isSenderKnown ? 'author' : 'search', 
-                                      m.property?.origenNombre,
-                                      senderName,
-                                      null
-                                    );
-                                  }}
-                                  className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 text-xs font-extrabold px-3.5 py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all duration-300 shadow-sm hover:scale-105 active:scale-95 min-h-[38px] w-full sm:w-auto"
-                                  title={isSenderKnown ? `Copiar nombre de ${senderName} para buscarlo en WhatsApp` : "Copiar clave para buscar en el grupo de WhatsApp"}
-                                >
-                                  <Search className="w-3.5 h-3.5 text-amber-400" />
-                                  <span>{isSenderKnown ? `Ubicar a ${senderName.split(' ')[0]}` : "Ubicar en Grupo"}</span>
-                                </button>
-                                <a
-                                  href={`https://wa.me/573192919978?text=${encodeURIComponent(`Hola JanIA! Necesito contactar al captador del inmueble "${m.property?.name || 'de la red'}" publicado en el grupo "${m.property?.origenNombre || 'VECY Network'}" (Asesor: ${senderName || 'No identificado'}).`)}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-[10px] text-zinc-500 hover:text-zinc-300 underline py-1 px-1 flex items-center gap-1"
-                                  title="Pedir ayuda a JanIA para conseguir el contacto"
-                                >
-                                  <span>Pedir a JanIA</span>
-                                </a>
+                              <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-zinc-300 w-full sm:w-auto shrink-0">
+                                <span className="text-zinc-400">📍 Sin teléfono en texto · Ubicar en:</span>
+                                <span className="font-bold text-amber-300">{m.property?.origenNombre || 'Grupo de WhatsApp'}</span>
                               </div>
                             )}
                           </div>
@@ -3499,60 +3450,33 @@ export default function AdminMatches() {
                                   const copySearchKey = `req-search-${m.id}`;
                                   const isCopied = copiedId === copyKey;
                                   const isSearchCopied = copiedId === copySearchKey;
-                                  return (
-                                    <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleCopy(rText, copyKey, 'full');
-                                        }}
-                                        className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-lg transition-all duration-300 border ${
-                                          isCopied
-                                            ? "bg-cyan-500/25 text-cyan-300 border-cyan-400/60 shadow-[0_0_15px_rgba(6,182,212,0.45)] scale-105"
-                                            : "text-zinc-400 hover:text-cyan-300 bg-white/5 hover:bg-white/10 border-white/10 hover:border-cyan-400/30 active:scale-95"
-                                        }`}
-                                        title="Copiar texto completo original del requerimiento con saltos de línea y formato"
-                                      >
-                                        {isCopied ? (
-                                          <>
-                                            <Check className="w-3 h-3 text-cyan-300 animate-in zoom-in-50 duration-200" />
-                                            <span className="text-cyan-200">¡Copiado!</span>
-                                          </>
-                                        ) : (
-                                          <>
-                                            <Copy className="w-3 h-3" />
-                                            <span>Copiar Todo</span>
-                                          </>
-                                        )}
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleCopy(rText, copySearchKey, 'search', m.requirement?.origenNombre, reqSender, reqContact.cleanNumber);
-                                        }}
-                                        className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg transition-all duration-300 border ${
-                                          isSearchCopied
-                                            ? "bg-amber-500/25 text-amber-300 border-amber-400/60 shadow-[0_0_15px_rgba(245,158,11,0.45)] scale-105"
-                                            : "text-zinc-400 hover:text-amber-300 bg-white/5 hover:bg-white/10 border-white/10 hover:border-amber-400/30 active:scale-95"
-                                        }`}
-                                        title={`Copiar clave única (celular o autor) para buscar en WhatsApp (${m.requirement?.origenNombre || 'Grupo'})`}
-                                      >
-                                        {isSearchCopied ? (
-                                          <>
-                                            <Check className="w-3 h-3 text-amber-300 animate-in zoom-in-50 duration-200" />
-                                            <span className="text-amber-200">¡Clave Copiada!</span>
-                                          </>
-                                        ) : (
-                                          <>
-                                            <Search className="w-3 h-3 text-amber-400" />
-                                            <span className="text-zinc-300">Buscar en WhatsApp</span>
-                                          </>
-                                        )}
-                                      </button>
-                                    </div>
-                                  );
+                                  <div className="flex items-center gap-1.5 shrink-0">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleCopy(rText, copyKey, 'full', m.requirement?.origenNombre);
+                                      }}
+                                      className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-3 py-1 rounded-lg transition-all duration-300 border ${
+                                        isCopied
+                                          ? "bg-cyan-500/25 text-cyan-300 border-cyan-400/60 shadow-[0_0_15px_rgba(6,182,212,0.45)] scale-105"
+                                          : "text-zinc-300 hover:text-cyan-300 bg-white/5 hover:bg-white/10 border-white/10 hover:border-cyan-400/30 active:scale-95"
+                                      }`}
+                                      title="Copiar texto original fiel del requerimiento para ubicar en el grupo de WhatsApp"
+                                    >
+                                      {isCopied ? (
+                                        <>
+                                          <Check className="w-3.5 h-3.5 text-cyan-300 animate-in zoom-in-50 duration-200" />
+                                          <span className="text-cyan-200">¡Copiado!</span>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Copy className="w-3.5 h-3.5" />
+                                          <span>Copiar Publicación</span>
+                                        </>
+                                      )}
+                                    </button>
+                                  </div>
                                 })()}
                               </div>
                               {!isGenericImagePlaceholder && (
@@ -3746,35 +3670,9 @@ export default function AdminMatches() {
                                 <ExternalLink className="w-3.5 h-3.5 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                               </a>
                             ) : (
-                              <div className="flex flex-col sm:flex-row items-center gap-1.5 w-full sm:w-auto shrink-0">
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleCopy(
-                                      senderName || m.requirement?.name || "requerimiento", 
-                                      `req-loc-${m.id}`, 
-                                      senderName && isSenderKnown ? 'author' : 'search', 
-                                      m.requirement?.origenNombre,
-                                      senderName,
-                                      null
-                                    );
-                                  }}
-                                  className="bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-200 border border-cyan-500/40 text-xs font-extrabold px-3.5 py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all duration-300 shadow-sm hover:scale-105 active:scale-95 min-h-[38px] w-full sm:w-auto"
-                                  title={isSenderKnown ? `Copiar nombre de ${senderName} para buscarlo en WhatsApp` : "Copiar clave para buscar en el grupo de WhatsApp"}
-                                >
-                                  <Search className="w-3.5 h-3.5 text-cyan-400" />
-                                  <span>{isSenderKnown ? `Ubicar a ${senderName.split(' ')[0]}` : "Ubicar en Grupo"}</span>
-                                </button>
-                                <a
-                                  href={`https://wa.me/573192919978?text=${encodeURIComponent(`Hola JanIA! Necesito contactar al requiriente del inmueble en el grupo "${m.requirement?.origenNombre || 'VECY Network'}" (Asesor: ${senderName || 'No identificado'}).`)}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-[10px] text-zinc-500 hover:text-zinc-300 underline py-1 px-1 flex items-center gap-1"
-                                  title="Pedir ayuda a JanIA para conseguir el contacto"
-                                >
-                                  <span>Pedir a JanIA</span>
-                                </a>
+                              <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-zinc-300 w-full sm:w-auto shrink-0">
+                                <span className="text-zinc-400">📍 Sin teléfono en texto · Ubicar en:</span>
+                                <span className="font-bold text-cyan-300">{m.requirement?.origenNombre || 'Grupo de WhatsApp'}</span>
                               </div>
                             )}
                           </div>

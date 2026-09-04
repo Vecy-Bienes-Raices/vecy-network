@@ -52,9 +52,39 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.0 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.1 — Septiembre 2026
 
-### 🗓️ Sesión: Jueves 3 de Septiembre de 2026 — 22:15 a 22:35 (Hora Colombia UTC-5)
+### 🗓️ Sesión: Viernes 4 de Septiembre de 2026 — 00:30 a 00:50 (Hora Colombia UTC-5)
+**Versión**: `v31.1` | **Ambiente**: Producción VPS (`13.140.149.144`) + Mesa de Cotejo Admin Panel (`vecy-network.vercel.app/admin`) + Baileys Ingesta WhatsApp + GitHub (`main`)
+
+#### 🎯 Solicitud de Eduardo A. Rivera:
+1. Asegurar que al actualizar un nombre o número de teléfono (o ambos) de un asesor para completar los datos en una ficha, si este individuo tiene más publicaciones que no han encontrado pareja y se encuentran a la espera en Supabase, estas también se actualicen automáticamente con nombre y número de teléfono al presionar el botón guardar (Propagación en Cascada de Asesor).
+2. Garantizar que todas las publicaciones se puedan copiar fielmente en original para que WhatsApp las acepte y dé la ubicación correcta de cada una.
+3. Erradicar los botones innecesarios o recargados que no aportaban valor (`Ubicar en Grupo`, `Pedir a JanIA`, `Buscar en WhatsApp`) y dejar una interfaz limpia y minimalista.
+4. Asegurar que la ingesta de JanIA nunca vuelva a guardar publicaciones con `origen_nombre: null` o textos ficticios como `"Nombre Real del Grupo"`.
+
+#### 🛠️ Diagnóstico Técnico e Implementación:
+1. **Propagación en Cascada de Asesor a Publicaciones en Espera (`server/_core/janIA.ts`)**:
+   - **Limitación Previa**: `propagateBrokerPhoneAcrossAllListings` requería de forma estricta un teléfono válido (`if (!rawPhoneOrText) return; if (!cleanPhone) return;`). Si el usuario solo corregía o completaba el nombre del asesor (e.g. Sara Rodríguez), la función abortaba sin actualizar nada en Supabase.
+   - **Solución Doctrinal v31.1**: Desacoplada la dependencia obligatoria de teléfono. La función ahora procesa tanto si se envía un teléfono limpio como si se envía un nombre verificado de asesor (`validBrokerName`), o ambos.
+   - Consulta `properties` y `requirements` en Supabase (abarcando todas las ofertas y demandas en espera sin match) y actualiza bi-direccionalmente por coincidencia de LID (`oldPhoneOrLid`), teléfono previo o nombre del asesor.
+   - Actualiza en caliente el caché de directorio permanente `brokerDirectoryCache` y actualiza inmediatamente los objetos en `cachedAllMatchesData` en memoria para reflejo instantáneo en la mesa de cotejo.
+2. **Copiado Fiel de la Publicación Original (`📋 Copiar Publicación`)**:
+   - Reemplazados los botones confusos por un único botón estético `📋 Copiar Publicación` con icono y feedback interactivo (`¡Copiado!`), copiando el texto original al 100% de fidelidad con sus saltos de línea, emojis y enlaces (e.g. Wasi).
+   - Toast contextual notificando el grupo destino: `Texto original copiado con 100% de fidelidad para ubicar en el grupo "[Nombre del Grupo]"`.
+3. **Erradicación de Botones Rotos y Diseño Minimalista**:
+   - Eliminados `Buscar en WhatsApp`, `Ubicar en Grupo` y `Pedir a JanIA`.
+   - En el bloque de contacto: si hay celular, se presenta el botón verde de acción directa `Contactar WA`. Si no hay teléfono o es LID, se muestra el aviso honesto y elegante: `📍 Sin teléfono en texto · Ubicar en: [Nombre del Grupo]`.
+4. **Blindaje de Ingesta Baileys (`server/_core/whatsapp-match.ts`)**:
+   - Creado el método `resolveGroupName(chatId)` con mapeo estricto de JIDs oficiales (`VECY INMUEBLES NETWORK`, `VECY: SOPORTE LEGAL, TRIBUTARIO Y AVALÚOS`, `PROYECTO Vecy Network`, `Santas-Carolina-Bosques-Calleja`), consulta al caché de metadatos de Baileys y fallback a `"Grupo Inmobiliario WhatsApp"`. Erradicada la inserción de `"Nombre Real del Grupo"`.
+5. **Saneamiento de Ficha Sara Rodríguez (#12 / Match #M11885)**:
+   - Asignado su grupo verídico `Santas-Carolina-Bosques-Calleja`, su JID `120363029834368375@g.us` y enlace directo de Wasi.
+6. **Incremento a `v31.1`**:
+   - Actualizado en `shared/const.ts`, `.agents/AGENTS.md` y bitácora maestra.
+
+---
+
+### 🗓️ Sesión Previa: Jueves 3 de Septiembre de 2026 — 22:15 a 22:35 (Hora Colombia UTC-5)
 **Versión**: `v31.0` | **Ambiente**: Producción VPS (`13.140.149.144`) + WhatsApp Grupo 2 (Soporte Legal, Tributario y Avalúos) + Google Gemini LLM Engine + GitHub (`main`)
 
 #### 🎯 Objetivo y Logros de la Sesión:
