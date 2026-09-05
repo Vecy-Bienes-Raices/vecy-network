@@ -669,6 +669,7 @@ export const janIARouter = router({
       antiguedadAnos: z.union([z.number(), z.string()]).optional().nullable(),
       interiorExterior: z.string().optional().nullable(),
       garageType: z.string().optional().nullable(),
+      floorDetail: z.string().optional().nullable(),
       amenities: z.record(z.string(), z.any()).optional().nullable(),
     }))
     .mutation(async ({ input }) => {
@@ -758,6 +759,9 @@ export const janIARouter = router({
       if (input.nombreUsuarioWhatsapp !== undefined) updateData.nombreUsuarioWhatsapp = input.nombreUsuarioWhatsapp;
       if (input.origenNombre !== undefined) updateData.origenNombre = input.origenNombre;
       if (input.garageType !== undefined) updateData.garageType = input.garageType;
+      if (input.floorDetail !== undefined) {
+        updateData.floorDetail = input.floorDetail ? input.floorDetail.trim() : null;
+      }
 
       // Cálculo y persistencia inteligente de Antigüedad y Año de Construcción (Doctrina v31.7)
       const currentYear = 2026;
@@ -785,6 +789,10 @@ export const janIARouter = router({
 
       if (input.interiorExterior !== undefined) {
         mergedAmenities.interiorExterior = input.interiorExterior;
+        hasAmenitiesChange = true;
+      }
+      if (input.floorDetail !== undefined) {
+        mergedAmenities.piso = input.floorDetail ? input.floorDetail.trim() : null;
         hasAmenitiesChange = true;
       }
       if (computedYear || computedAge !== null) {

@@ -163,7 +163,31 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.8 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.9 — Septiembre 2026
+
+### Novedades v31.9 (Doctrina de Botones de Acción Permanentes en Cotejo, Persistencia y Tipología de Piso Elevado, y Auto-Recarga en Producción):
+- **Diagnóstico y Erradicación del Bloqueo en Guardado (Botón Guardar Desaparecido)**:
+  1) **Causa Raíz**:
+     - En `AdminMatches.tsx`, la barra sticky del pie de la tarjeta evaluaba `if (sStatus === 'saved') return (<div ...>¡Datos Guardados con Éxito en BD!</div>)`.
+     - Al guardar por primera vez, `saveStatusMap[m.id]` quedaba en `'saved'`. Al no resetearse nunca, si el usuario abría la edición de nuevo para corregir otro campo (e.g. Piso / Nivel), los botones `[Cancelar]`, `[Guardar]` y `[Recalcular]` eran reemplazados por el banner verde estático, impidiendo guardar.
+  2) **Solución y Blindaje Integral**:
+     - Los botones `[Cancelar]`, `[Guardar]` y `[Recalcular]` **NUNCA se ocultan ni se reemplazan**.
+     - Las insignias de confirmación se posicionan a la izquierda de los botones de forma elegante.
+     - `handleStartEdit` limpia inmediatamente `saveStatusMap[m.id]`.
+     - `handleOnlySave` y `handleRecalculateMatch` auto-limpian el status tras 4 segundos vía `setTimeout`.
+- **Desbloqueo y Persistencia de "Piso / Nivel" (Caso Segundo Piso Elevado que Parece Tercero)**:
+  1) **Causa Raíz**:
+     - `scoreRows` ignoraba `floorDetail` y `amenities.piso`, evaluando un regex rígido sobre `propRawText` que siempre fijaba `"PISO ALTO"`.
+     - `updatePropertyDetails` en `janIA.ts` no admitía ni persistía `floorDetail`.
+  2) **Solución Integral**:
+     - `updatePropertyDetails` acepta y persiste `floorDetail` en `properties.floorDetail` y en `amenities.piso` e invalida `cachedAllMatchesData = null`.
+     - `handleStartEdit` inicializa `propPisoNivel` desde `floorDetail` o `amenities.piso`.
+     - `scoreRows` prioriza `prop.floorDetail` y `prop.amenities?.piso`, reflejando exactamente el piso real con insignia **🟢 Plus Ofertado / Coincide**.
+     - Actualizada la Propiedad #314 en Supabase con `floorDetail: "Piso 2 elevado (equivale a 3 por parqueaderos en 1er piso)"`.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.8 — Septiembre 2026
 
 ### Novedades v31.8 (Doctrina de Reactividad Inmediata en Guardado de Ficha, Auto-Refresco de Cotejo y Erradicación de Volcados Crudos JSON):
 - **Diagnóstico y Blindaje Reactivo en Guardado de Ficha Técnica (Caso Antigüedad 1994 / 32 años en Match #12305)**:

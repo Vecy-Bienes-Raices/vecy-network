@@ -52,7 +52,61 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.8 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.9 — Septiembre 2026
+
+### 🗓️ Sesión: Viernes 4 de Septiembre de 2026 — 20:30 a 20:55 (Hora Colombia UTC-5)
+**Versión**: `v31.9` | **Ambiente**: Producción VPS (`13.140.149.144`) + Mesa de Cotejo Admin Panel (`vecy-network.vercel.app/admin`) + Supabase DB + GitHub (`main`)
+
+#### 🎯 Solicitud de Eduardo A. Rivera:
+1. "Sigo sin poder que se quede guardada la Antigüedad. Le fuí a dar guardar nuevamente a ver si se quedaba y no sale el botón guardar, sale como lo ves en la imagen 2 y en la 3 queda así. Tampoco me dejó cambiar eso que dice PISO ALTO, pues no es PISO ALTO es un segundo piso elevado que parece un tercero."
+2. El usuario adjuntó 4 imágenes:
+   - Imagen 1: Modo edición mostrando Antigüedad 1994 y Piso / Nivel: PISO ALTO.
+   - Imagen 2: Pie de la tarjeta en edición mostrando `[✓ ¡Datos Guardados con Éxito en BD!]` en lugar de los botones `[Cancelar]`, `[Guardar]` y `[Recalcular]`, atrapando al usuario sin poder pulsar Guardar tras editar Piso / Nivel a `3`.
+   - Imagen 3: Modo lectura donde Antigüedad decía `N/E (Consultar)` y Piso / Nivel `PISO ALTO`.
+   - Imagen 4: Conversación real de WhatsApp con Beatriz Espinoza (+57 318 867 4110) confirmando:
+     - *"Tiene 32 año pero muy conservado el edificio"* (Año 1994 / 32 años)
+     - *"Adm $1.120.000"*
+     - *"Es interior pero tiene un gran espacio hacia las ventanas y es claro .los cuartos no son interiores ."*
+     - *"2 piso pero alto porq los parquesderos estan primero ."* (Piso 2 elevado que parece 3 por garajes en 1er piso)
+     - *"Si total si puede ser negociable"*
+
+#### 🔬 Diagnóstico de Causas Raíz:
+1. **Desaparición de los Botones Guardar / Recalcular (Imagen 2)**:
+   - En `AdminMatches.tsx`, la barra sticky del footer evaluaba `if (sStatus === 'saved') return (<div ...>¡Datos Guardados con Éxito en BD!</div>)`.
+   - Cuando el usuario guardó por primera vez, `saveStatusMap[m.id]` quedó en `'saved'`.
+   - `saveStatusMap[m.id]` NUNCA se reseteaba ni al volver a abrir la tarjeta (`handleStartEdit`), ni por timeout, ni al cambiar campos.
+   - Al abrir la tarjeta de nuevo y cambiar Piso a `3`, el componente renderizaba el div estático de éxito sin los botones `[Cancelar]`, `[Guardar]`, `[Recalcular]`.
+2. **Inmutabilidad y Rigidez de "Piso / Nivel" ("PISO ALTO")**:
+   - `handleStartEdit` no inicializaba `propPisoNivel`.
+   - `scoreRows` ignoraba por completo `prop.floorDetail` y `prop.amenities?.piso`, aplicando exclusivamente un regex sobre `propRawText`, donde el texto original hacía match primero con `"piso alto"`, fijando `"PISO ALTO"` de forma inmutable.
+   - `handleOnlySave` y `handleRecalculateMatch` no enviaban `floorDetail` al backend ni lo guardaban en `m.property` ni en `amenities.piso`.
+   - `server/routers/janIA.ts` en `updatePropertyDetails` no tenía `floorDetail` en su esquema Zod ni en el `update` a la tabla `properties`.
+3. **Persistencia y Caché Desactualizado del VPS (Imagen 3)**:
+   - El proceso PM2 en el servidor VPS de producción (`13.140.149.144`) estaba corriendo la versión anterior `31.6.0` (de hacía más de 2 horas) sin haber recargado los cambios de backend.
+   - Al recargar el navegador, las llamadas a `/api/trpc/janIA.getAllMatches` golpeaban el backend desactualizado con caché viejo.
+
+#### 🛠️ Soluciones y Blindaje Doctrinal v31.9:
+1. **Botones de Acción Permanentes e Inocultables**:
+   - En `AdminMatches.tsx`, los botones `[Cancelar]`, `[Guardar]` y `[Recalcular]` NUNCA se ocultan ni se reemplazan.
+   - Las insignias de confirmación (`¡Guardado en BD!`, `¡Recalculado!`) se despliegan elegantemente junto a los botones sin bloquear la interacción.
+   - `handleStartEdit` limpia inmediatamente `saveStatusMap[m.id]`.
+   - `handleOnlySave` y `handleRecalculateMatch` auto-resetean el estado tras 4 segundos vía `setTimeout`.
+2. **Soporte Integral y Respetuoso de Piso / Nivel**:
+   - `server/routers/janIA.ts`: añadido `floorDetail: z.string().optional().nullable()` al esquema Zod de `updatePropertyDetails`, persistiendo tanto en la columna `properties.floorDetail` como en `amenities.piso` e invalidando `cachedAllMatchesData = null`.
+   - `AdminMatches.tsx`: `handleStartEdit` inicializa `propPisoNivel: m.property?.floorDetail || m.property?.amenities?.piso || ''`.
+   - `handleOnlySave` y `handleRecalculateMatch` envían y persisten `floorDetail`.
+   - `paginatedMatches` mapea `floorDetail` en `effectiveProp` en tiempo real (0ms lag).
+   - `scoreRows` prioriza `prop.floorDetail` y `prop.amenities?.piso`. Muestra exactamente `"Piso 2 elevado (equivale a 3 por parqueaderos en 1er piso)"` con insignia **🟢 Plus Ofertado / Coincide**, erradicando la etiqueta rígida `"PISO ALTO"`.
+3. **Actualización Verídica en Supabase (Propiedad #314)**:
+   - `yearBuilt: 1994`, `antiguedadAnos: 32`.
+   - `floorDetail: "Piso 2 elevado (equivale a 3 por parqueaderos en 1er piso)"`.
+   - `adminFee: "1120000.00"`, `interiorExterior: "Interior"`, `cuartoBanoServicio: "Si"`, `cocina: "cerrada"`, `depositos: 1`.
+4. **Despliegue y Recarga en VPS (`13.140.149.144`)**:
+   - Sincronización completa en GitHub (`main`) y recarga en caliente de PM2 (`pm2 reload 0`) en el VPS.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.8 — Septiembre 2026
 
 ### 🗓️ Sesión: Viernes 4 de Septiembre de 2026 — 19:10 a 19:25 (Hora Colombia UTC-5)
 **Versión**: `v31.8` | **Ambiente**: Producción VPS (`13.140.149.144`) + Mesa de Cotejo Admin Panel (`vecy-network.vercel.app/admin`) + Supabase DB + GitHub (`main`)

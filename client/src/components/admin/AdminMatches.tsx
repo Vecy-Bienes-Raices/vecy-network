@@ -1754,16 +1754,19 @@ function scoreRows(req: any, prop: any) {
     );
   }
 
-  // 25. Piso y Nivel del Edificio
-  const reqFloorMatch = reqTextLower.match(/piso\s*(\d+)|primer\s*piso|segundo\s*piso|tercer\s*piso|piso\s*alto|piso\s*bajo/i);
-  const propFloorMatch = propRawText.match(/piso\s*(\d+)|primer\s*piso|segundo\s*piso|tercer\s*piso|piso\s*alto|piso\s*bajo/i);
-  if (reqFloorMatch || propFloorMatch) {
-    const reqFloorLabel = reqFloorMatch ? reqFloorMatch[0].toUpperCase() : "Flexible";
-    const propFloorLabel = propFloorMatch ? propFloorMatch[0].toUpperCase() : "Consultar";
+  // 25. Piso y Nivel del Edificio (Doctrina v31.9)
+  const reqFloorFromField = (req.caracteristicasDeseadas as any)?.piso || (req as any).floorDetail || null;
+  const propFloorFromField = prop.floorDetail || (prop.amenities as any)?.piso || null;
+  const reqFloorMatch = reqFloorFromField ? null : reqTextLower.match(/piso\s*(\d+)|primer\s*piso|segundo\s*piso|tercer\s*piso|piso\s*alto|piso\s*bajo/i);
+  const propFloorMatch = propFloorFromField ? null : propRawText.match(/piso\s*(\d+)|primer\s*piso|segundo\s*piso|tercer\s*piso|piso\s*alto|piso\s*bajo/i);
+
+  if (reqFloorFromField || propFloorFromField || reqFloorMatch || propFloorMatch) {
+    const reqFloorLabel = reqFloorFromField ? String(reqFloorFromField) : (reqFloorMatch ? reqFloorMatch[0].toUpperCase() : "Flexible");
+    const propFloorLabel = propFloorFromField ? String(propFloorFromField) : (propFloorMatch ? propFloorMatch[0].toUpperCase() : "Consultar");
     let floorS: MatchStatus = "neutral";
-    if (reqFloorMatch && propFloorMatch) {
-      floorS = reqFloorLabel === propFloorLabel ? "exact" : "warn";
-    } else if (!reqFloorMatch && propFloorMatch) {
+    if (reqFloorLabel !== "Flexible" && propFloorLabel !== "Consultar") {
+      floorS = reqFloorLabel.toLowerCase() === propFloorLabel.toLowerCase() ? "exact" : "warn";
+    } else if (reqFloorLabel === "Flexible" && propFloorLabel !== "Consultar") {
       floorS = "plus";
     }
     add(
@@ -2519,6 +2522,12 @@ export default function AdminMatches() {
     const isPropDirect = m.property?.origenTipo === 'contacto_directo' || m.property?.origenTipo === 'dm';
     const isReqDirect = m.requirement?.origenTipo === 'contacto_directo' || m.requirement?.origenTipo === 'dm';
 
+    setSaveStatusMap(prev => {
+      const next = { ...prev };
+      delete next[m.id];
+      return next;
+    });
+
     setEditForm({
       // Oferta (Inmueble)
       propSenderName: m.property?.nombreUsuarioWhatsapp || (isPropDirect ? m.property?.origenNombre : '') || '',
@@ -2546,6 +2555,7 @@ export default function AdminMatches() {
       propCuartoServicio: m.property?.amenities?.cuartoBanoServicio || '',
       propBalcon: m.property?.amenities?.balcon || '',
       propGarageType: m.property?.garageType || '',
+      propPisoNivel: m.property?.floorDetail || m.property?.amenities?.piso || '',
 
       // Demanda (Requerimiento)
       reqSenderName: m.requirement?.nombreUsuarioWhatsapp || (isReqDirect ? m.requirement?.origenNombre : '') || '',
@@ -2569,6 +2579,7 @@ export default function AdminMatches() {
       reqDepositos: m.requirement?.caracteristicasDeseadas?.depositos ?? '',
       reqCuartoServicio: m.requirement?.caracteristicasDeseadas?.cuartoBanoServicio || '',
       reqBalcon: m.requirement?.caracteristicasDeseadas?.balcon || '',
+      reqPisoNivel: m.requirement?.caracteristicasDeseadas?.piso || '',
     });
   };
 
@@ -2678,6 +2689,7 @@ export default function AdminMatches() {
             antiguedadAnos: parsedAge,
             interiorExterior: editForm.propExtInt || undefined,
             garageType: editForm.propGarageType || undefined,
+            floorDetail: editForm.propPisoNivel !== undefined && editForm.propPisoNivel !== '' ? String(editForm.propPisoNivel).trim() : undefined,
             amenities: propAmenitiesToSave,
           })
         );
@@ -2703,6 +2715,9 @@ export default function AdminMatches() {
         }
         if (editForm.reqBalcon !== undefined && editForm.reqBalcon !== '') {
           reqCaractToSave.balcon = editForm.reqBalcon;
+        }
+        if (editForm.reqPisoNivel !== undefined && editForm.reqPisoNivel !== '') {
+          reqCaractToSave.piso = editForm.reqPisoNivel;
         }
         Object.keys(editForm).forEach(k => {
           if (k.startsWith('req_custom_')) {
@@ -2755,6 +2770,7 @@ export default function AdminMatches() {
         if (editForm.propDepositos) propAmenitiesToSave.depositos = cleanIntForSave(editForm.propDepositos);
         if (editForm.propCuartoServicio) propAmenitiesToSave.cuartoBanoServicio = editForm.propCuartoServicio;
         if (editForm.propBalcon) propAmenitiesToSave.balcon = editForm.propBalcon;
+        if (editForm.propPisoNivel) propAmenitiesToSave.piso = editForm.propPisoNivel;
         if (parsedYear || parsedAge !== undefined) {
           const yr = parsedYear || (parsedAge !== undefined ? 2026 - parsedAge : '');
           const ag = parsedAge !== undefined ? parsedAge : (parsedYear ? 2026 - parsedYear : '');
@@ -2779,6 +2795,7 @@ export default function AdminMatches() {
           antiguedadAnos: parsedAge !== undefined ? parsedAge : (parsedYear ? 2026 - parsedYear : m.property.antiguedadAnos),
           interiorExterior: editForm.propExtInt || m.property.interiorExterior,
           garageType: editForm.propGarageType || m.property.garageType,
+          floorDetail: editForm.propPisoNivel !== undefined && editForm.propPisoNivel !== '' ? String(editForm.propPisoNivel).trim() : m.property.floorDetail,
           amenities: propAmenitiesToSave,
         });
       }
@@ -2791,6 +2808,7 @@ export default function AdminMatches() {
         if (editForm.reqDepositos) reqCaractToSave.depositos = cleanIntForSave(editForm.reqDepositos);
         if (editForm.reqCuartoServicio) reqCaractToSave.cuartoBanoServicio = editForm.reqCuartoServicio;
         if (editForm.reqBalcon) reqCaractToSave.balcon = editForm.reqBalcon;
+        if (editForm.reqPisoNivel) reqCaractToSave.piso = editForm.reqPisoNivel;
 
         Object.assign(m.requirement, {
           presupuestoMax: editForm.reqBudget !== undefined && editForm.reqBudget !== '' ? editForm.reqBudget : m.requirement.presupuestoMax,
@@ -2816,6 +2834,13 @@ export default function AdminMatches() {
       m._precomputedScore = freshComputed.autoScore;
 
       setSaveStatusMap(prev => ({ ...prev, [m.id]: 'saved' }));
+      setTimeout(() => {
+        setSaveStatusMap(prev => {
+          const next = { ...prev };
+          delete next[m.id];
+          return next;
+        });
+      }, 4000);
       toast.success("✅ Ficha guardada y propagada en cascada a todas sus publicaciones");
       setEditingMatchId(null);
       setEditForm({});
@@ -2892,6 +2917,7 @@ export default function AdminMatches() {
             antiguedadAnos: parsedAge,
             interiorExterior: editForm.propExtInt || undefined,
             garageType: editForm.propGarageType || undefined,
+            floorDetail: editForm.propPisoNivel !== undefined && editForm.propPisoNivel !== '' ? String(editForm.propPisoNivel).trim() : undefined,
             amenities: propAmenitiesToSave,
           })
         );
@@ -2917,6 +2943,9 @@ export default function AdminMatches() {
         }
         if (editForm.reqBalcon !== undefined && editForm.reqBalcon !== '') {
           reqCaractToSave.balcon = editForm.reqBalcon;
+        }
+        if (editForm.reqPisoNivel !== undefined && editForm.reqPisoNivel !== '') {
+          reqCaractToSave.piso = editForm.reqPisoNivel;
         }
         Object.keys(editForm).forEach(k => {
           if (k.startsWith('req_custom_')) {
@@ -2951,11 +2980,11 @@ export default function AdminMatches() {
       }
 
       if (savePromises.length > 0) {
-        const p = Promise.all(savePromises);
-        const timeoutP = new Promise((_, reject) =>
+        const savePromise = Promise.all(savePromises);
+        const timeoutPromise = new Promise((_, reject) => 
           setTimeout(() => reject(new Error("Tiempo de espera de red agotado")), 15000)
         );
-        await Promise.race([p, timeoutP]);
+        await Promise.race([savePromise, timeoutPromise]);
       }
 
       // Actualización optimista inmediata en memoria local
@@ -2968,6 +2997,7 @@ export default function AdminMatches() {
         if (editForm.propDepositos) propAmenitiesToSave.depositos = cleanIntForSave(editForm.propDepositos);
         if (editForm.propCuartoServicio) propAmenitiesToSave.cuartoBanoServicio = editForm.propCuartoServicio;
         if (editForm.propBalcon) propAmenitiesToSave.balcon = editForm.propBalcon;
+        if (editForm.propPisoNivel) propAmenitiesToSave.piso = editForm.propPisoNivel;
         if (parsedYear || parsedAge !== undefined) {
           const yr = parsedYear || (parsedAge !== undefined ? 2026 - parsedAge : '');
           const ag = parsedAge !== undefined ? parsedAge : (parsedYear ? 2026 - parsedYear : '');
@@ -2992,6 +3022,7 @@ export default function AdminMatches() {
           antiguedadAnos: parsedAge !== undefined ? parsedAge : (parsedYear ? 2026 - parsedYear : m.property.antiguedadAnos),
           interiorExterior: editForm.propExtInt || m.property.interiorExterior,
           garageType: editForm.propGarageType || m.property.garageType,
+          floorDetail: editForm.propPisoNivel !== undefined && editForm.propPisoNivel !== '' ? String(editForm.propPisoNivel).trim() : m.property.floorDetail,
           amenities: propAmenitiesToSave,
         });
       }
@@ -3004,6 +3035,7 @@ export default function AdminMatches() {
         if (editForm.reqDepositos) reqCaractToSave.depositos = cleanIntForSave(editForm.reqDepositos);
         if (editForm.reqCuartoServicio) reqCaractToSave.cuartoBanoServicio = editForm.reqCuartoServicio;
         if (editForm.reqBalcon) reqCaractToSave.balcon = editForm.reqBalcon;
+        if (editForm.reqPisoNivel) reqCaractToSave.piso = editForm.reqPisoNivel;
 
         Object.assign(m.requirement, {
           presupuestoMax: editForm.reqBudget !== undefined && editForm.reqBudget !== '' ? editForm.reqBudget : m.requirement.presupuestoMax,
@@ -3036,6 +3068,13 @@ export default function AdminMatches() {
       }
 
       setSaveStatusMap(prev => ({ ...prev, [m.id]: 'recalculated' }));
+      setTimeout(() => {
+        setSaveStatusMap(prev => {
+          const next = { ...prev };
+          delete next[m.id];
+          return next;
+        });
+      }, 4000);
       toast.success("⚡ Recalculado y sincronizado en tiempo real");
       setEditingMatchId(null);
       setEditForm({});
@@ -3204,6 +3243,7 @@ export default function AdminMatches() {
         if (editForm.propDepositos !== undefined) effectivePropAmenities.depositos = cleanIntForSave(editForm.propDepositos);
         if (editForm.propCuartoServicio !== undefined) effectivePropAmenities.cuartoBanoServicio = editForm.propCuartoServicio;
         if (editForm.propBalcon !== undefined) effectivePropAmenities.balcon = editForm.propBalcon;
+        if (editForm.propPisoNivel !== undefined) effectivePropAmenities.piso = editForm.propPisoNivel;
         if (parsedYear || parsedAge !== undefined) {
           const yr = parsedYear || (parsedAge !== undefined ? 2026 - parsedAge : '');
           const ag = parsedAge !== undefined ? parsedAge : (parsedYear ? 2026 - parsedYear : '');
@@ -3231,6 +3271,7 @@ export default function AdminMatches() {
           antiguedadAnos: parsedAge ?? m.property?.antiguedadAnos,
           interiorExterior: editForm.propExtInt !== undefined ? editForm.propExtInt : m.property?.interiorExterior,
           garageType: editForm.propGarageType !== undefined ? editForm.propGarageType : m.property?.garageType,
+          floorDetail: editForm.propPisoNivel !== undefined ? editForm.propPisoNivel : m.property?.floorDetail,
           amenities: effectivePropAmenities,
         };
 
@@ -3241,6 +3282,7 @@ export default function AdminMatches() {
         if (editForm.reqDepositos !== undefined) effectiveReqCaract.depositos = cleanIntForSave(editForm.reqDepositos);
         if (editForm.reqCuartoServicio !== undefined) effectiveReqCaract.cuartoBanoServicio = editForm.reqCuartoServicio;
         if (editForm.reqBalcon !== undefined) effectiveReqCaract.balcon = editForm.reqBalcon;
+        if (editForm.reqPisoNivel !== undefined) effectiveReqCaract.piso = editForm.reqPisoNivel;
         Object.keys(editForm).forEach(k => {
           if (k.startsWith('req_custom_')) {
             effectiveReqCaract[k.replace('req_custom_', '')] = editForm[k];
@@ -5640,25 +5682,20 @@ export default function AdminMatches() {
                       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto shrink-0 justify-end">
                         {(() => {
                           const sStatus = saveStatusMap[m.id];
-                          if (sStatus === 'saved') {
-                            return (
-                              <div className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-black/90 border border-emerald-400 text-emerald-300 font-extrabold text-xs shadow-[0_0_30px_rgba(52,211,153,0.9),inset_0_0_15px_rgba(52,211,153,0.3)] animate-in zoom-in-95">
-                                <Check className="w-4 h-4 text-emerald-300 animate-bounce" />
-                                <span className="drop-shadow-[0_0_10px_rgba(52,211,153,0.9)]">¡Datos Guardados con Éxito en BD!</span>
-                              </div>
-                            );
-                          }
-                          if (sStatus === 'recalculated') {
-                            return (
-                              <div className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-black/90 border border-cyan-400 text-cyan-300 font-extrabold text-xs shadow-[0_0_30px_rgba(6,182,212,0.9),inset_0_0_15px_rgba(6,182,212,0.3)] animate-in zoom-in-95">
-                                <Sparkles className="w-4 h-4 text-cyan-300 animate-spin" />
-                                <span className="drop-shadow-[0_0_10px_rgba(6,182,212,0.9)]">¡Coincidencias Recalculadas en Toda la Red!</span>
-                              </div>
-                            );
-                          }
-
                           return (
                             <>
+                              {sStatus === 'saved' && (
+                                <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-black/90 border border-emerald-400 text-emerald-300 font-extrabold text-xs shadow-[0_0_20px_rgba(52,211,153,0.8)] animate-in zoom-in-95 shrink-0">
+                                  <Check className="w-4 h-4 text-emerald-300 animate-bounce" />
+                                  <span className="drop-shadow-[0_0_8px_rgba(52,211,153,0.9)]">¡Guardado en BD!</span>
+                                </div>
+                              )}
+                              {sStatus === 'recalculated' && (
+                                <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-black/90 border border-cyan-400 text-cyan-300 font-extrabold text-xs shadow-[0_0_20px_rgba(6,182,212,0.8)] animate-in zoom-in-95 shrink-0">
+                                  <Sparkles className="w-4 h-4 text-cyan-300 animate-spin" />
+                                  <span className="drop-shadow-[0_0_8px_rgba(6,182,212,0.9)]">¡Recalculado!</span>
+                                </div>
+                              )}
                               <Button
                                 onClick={() => { setEditingMatchId(null); setEditForm({}); }}
                                 variant="outline"

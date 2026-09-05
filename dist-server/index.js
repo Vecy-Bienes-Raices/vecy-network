@@ -15650,7 +15650,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.8";
+var VECY_VERSION = "v31.9";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 
@@ -16824,6 +16824,7 @@ ${liveStats}${userContextInstruction}
     antiguedadAnos: z2.union([z2.number(), z2.string()]).optional().nullable(),
     interiorExterior: z2.string().optional().nullable(),
     garageType: z2.string().optional().nullable(),
+    floorDetail: z2.string().optional().nullable(),
     amenities: z2.record(z2.string(), z2.any()).optional().nullable()
   })).mutation(async ({ input }) => {
     const db = await getDb();
@@ -16907,6 +16908,9 @@ ${liveStats}${userContextInstruction}
     if (input.nombreUsuarioWhatsapp !== void 0) updateData.nombreUsuarioWhatsapp = input.nombreUsuarioWhatsapp;
     if (input.origenNombre !== void 0) updateData.origenNombre = input.origenNombre;
     if (input.garageType !== void 0) updateData.garageType = input.garageType;
+    if (input.floorDetail !== void 0) {
+      updateData.floorDetail = input.floorDetail ? input.floorDetail.trim() : null;
+    }
     const currentYear = 2026;
     let computedYear = sanitizeInt(input.yearBuilt);
     let computedAge = sanitizeInt(input.antiguedadAnos);
@@ -16928,6 +16932,10 @@ ${liveStats}${userContextInstruction}
     let hasAmenitiesChange = false;
     if (input.interiorExterior !== void 0) {
       mergedAmenities.interiorExterior = input.interiorExterior;
+      hasAmenitiesChange = true;
+    }
+    if (input.floorDetail !== void 0) {
+      mergedAmenities.piso = input.floorDetail ? input.floorDetail.trim() : null;
       hasAmenitiesChange = true;
     }
     if (computedYear || computedAge !== null) {
