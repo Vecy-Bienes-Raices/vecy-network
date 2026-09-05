@@ -143,15 +143,27 @@ const SUPABASE_STORAGE_URL = 'https://knzmpoprlmbonejshfys.supabase.co/storage/v
 function normalizeImageUrl(url: string): string {
   if (!url) return '';
   const trimmed = url.trim();
-  if (trimmed.startsWith('https://') || trimmed.startsWith('http://')) return trimmed;
-  if (trimmed.startsWith('/uploads/')) {
-    const cleanKey = trimmed.replace(/^\/uploads\//, '');
-    return `${SUPABASE_STORAGE_URL}/${cleanKey}`;
+
+  // Si la URL apunta al directorio local /uploads/ (ya sea con la IP http://13.140.149.144/uploads/... o relativa):
+  // Convertirla a ruta relativa /uploads/... para que el navegador la cargue vía HTTPS a través del proxy de Vercel
+  // y evitar el error y bloqueo de "Mixed Content" en Chrome/Brave.
+  if (trimmed.includes('/uploads/')) {
+    const uploadIndex = trimmed.indexOf('/uploads/');
+    return trimmed.substring(uploadIndex);
   }
+
+  // Si ya es HTTPS segura
+  if (trimmed.startsWith('https://')) return trimmed;
+
+  // Si es HTTP externo, mejorar a HTTPS para evitar bloqueo del navegador
+  if (trimmed.startsWith('http://')) {
+    return trimmed.replace(/^http:\/\//i, 'https://');
+  }
+
   if (trimmed.startsWith('/')) {
-    return `${SUPABASE_STORAGE_URL}${trimmed}`;
+    return `/uploads${trimmed}`;
   }
-  return `${SUPABASE_STORAGE_URL}/${trimmed}`;
+  return `/uploads/${trimmed}`;
 }
 
 function extractItemImages(item: any): string[] {

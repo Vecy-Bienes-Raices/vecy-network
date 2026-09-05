@@ -6917,7 +6917,7 @@ function normalizeKey(relKey) {
   return relKey.replace(/^\/+/, "").replace(/[^\w\d\-_\.\/]/g, "_");
 }
 function buildAbsoluteLocalUrl(key) {
-  const base = (process.env.VPS_BASE_URL || "http://13.140.149.144").replace(/\/+$/, "");
+  const base = (process.env.VPS_BASE_URL || "https://vecy-network.vercel.app").replace(/\/+$/, "");
   return `${base}/uploads/${key}`;
 }
 async function storagePut(relKey, data, contentType = "application/octet-stream") {
