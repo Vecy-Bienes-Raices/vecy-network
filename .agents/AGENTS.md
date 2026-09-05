@@ -163,7 +163,24 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.10 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.11 — Septiembre 2026
+
+### Novedades v31.11 (Blindaje del Connection Pool de Base de Datos, Consolidación SQL de Alto Desempeño y Erradicación Definitiva de Timeouts 504):
+- **Diagnóstico y Erradicación de Inanición de Conexiones a Supabase (Caso Timeouts 504 en PC y Móvil)**:
+  1) **Causa Raíz de la Fuga de Conexiones**:
+     - Cada mensaje entrante en los grupos de WhatsApp ejecutaba `getLiveStats()` dentro de `janIA.ts`, el cual lanzaba 6 consultas concurrentes envueltas en un `Promise.race([..., timeoutPromise(5000)])`.
+     - Cuando Supabase se demoraba más de 5 segundos, la promesa de JS abortaba por timeout, pero los 6 sockets TCP en Node.js seguían ocupando conexiones en el pooler de PostgreSQL (`postgres-js`), acumulándose hasta copar el límite máximo (`max: 20`).
+     - Al agotarse el pool, cualquier petición entrante (`getBotStatus`, `getAllMatches`) quedaba encolada indefinidamente hasta que Nginx cortaba a los 60s arrojando `504 Gateway Time-out`.
+  2) **Blindaje Integral de Infraestructura y Base de Datos**:
+     - `server/db.ts`: Pool ampliado a `max: 30`, incorporado `connection: { statement_timeout: 10000 }` (la base de datos corta cualquier consulta huérfana a los 10s liberando el socket), `idle_timeout: 15s` y `max_lifetime: 900s`.
+     - `server/_core/janIA.ts`: Semáforo anti-stampede (`isFetchingLiveStats`) y consolidación de las 6 consultas en **una sola consulta SQL agrupada**, reduciendo el tiempo de 6s a 1.2s en 1 socket.
+     - `server/routers/janIA.ts`: `getBotStatus` unificado en una sola consulta SQL rápida (0.67s de respuesta en HTTP 200). `getAllMatches` blindado con manejo seguro de excepciones y caché restaurada a 0.75s.
+  3) **Sincronización Total**:
+     - Versión oficial elevada a **v31.11** en frontend (Vercel) y backend PM2 (`jania-server`).
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.10 — Septiembre 2026
 
 ### Novedades v31.10 (Erradicación de Procesos Zombis en VPS, Resiliencia de Red y Prevención de Falsos Ceros en UI Móvil):
 - **Diagnóstico y Erradicación de Bloqueo por Timeout 504 (Caso "Móvil en Ceros vs PC con Tarjetas")**:

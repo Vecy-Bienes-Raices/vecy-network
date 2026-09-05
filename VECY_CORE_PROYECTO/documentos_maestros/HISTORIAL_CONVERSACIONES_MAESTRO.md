@@ -52,7 +52,56 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.10 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.11 — Septiembre 2026
+
+### 🗓️ Sesión: Sábado 5 de Septiembre de 2026 — 12:10 a 12:35 (Hora Colombia UTC-5)
+**Versión**: `v31.11` | **Ambiente**: Producción VPS (`13.140.149.144`) + Mesa de Cotejo Admin Panel (`vecy-network.vercel.app/admin`) + Supabase DB + GitHub (`main`)
+
+#### 🎯 Solicitud de Eduardo A. Rivera:
+1. "Ahora si quedo peor. Mira mi compu y el celu."
+2. Adjuntó dos capturas:
+   - Imagen 1 (PC / Chrome DevTools): Consola llena de errores `Failed to load resource: the server responded with a status of 504 (Gateway Timeout)` en `janIA.getBotStatus` y `janIA.getAllMatches`. La UI mostraba `Error de red` en los 4 KPIs, botón superior `[Reconectar JanIA]` y en la mesa de cotejo una tarjeta de alerta `No se pudieron cargar las coincidencias` con el botón `[Reintentar Conexión]`.
+   - Imagen 2 (Celular Android / Brave): Barra superior congelada en `((•)) Conectando con JanIA...` y los 4 KPIs mostrando `...` de forma indefinida, sin tarjetas.
+
+#### 🔍 Diagnóstico Técnico Profundo (Causa Raíz Real - Inanición del Pool de Conexiones a Supabase):
+1. **Inanición y Bloqueo Total del Pool de PostgreSQL (`Connection Pool Exhaustion`)**:
+   - Al inspeccionar los sockets de red activos en el VPS (`ss -tanp | grep 847620`), se constató que el proceso `jania-server` tenía **exactamente 20 conexiones TCP persistentes en estado ESTAB contra el Transaction Pooler de Supabase (puerto 6543)**, copando el límite configurado (`max: 20` en `server/db.ts`).
+2. **Fuga Crítica de Conexiones por `Promise.race` en `getLiveStats`**:
+   - Cada mensaje entrante en los grupos de WhatsApp dispara `processWhatsAppMessage` $\rightarrow$ `buildSystemPrompt` $\rightarrow$ `getLiveStats()`.
+   - `getLiveStats()` ejecutaba `Promise.race([ Promise.all([6 consultas SQL separadas]), timeoutPromise(5000ms) ])`.
+   - Cuando Supabase tardaba más de 5 segundos bajo ráfagas de mensajes, `timeoutPromise` cancelaba la promesa en JavaScript, pero **en Node.js las 6 consultas continuaban activas a nivel de socket TCP**, reteniendo conexiones abiertas en el pool de `postgres-js`.
+   - Ante la llegada continua de mensajes en los grupos, el pool de 20 conexiones se saturó al 100% en segundos.
+   - Una vez saturado el pool, todas las peticiones posteriores (`getBotStatus`, `getAllMatches`, etc.) entraron a una cola de espera FIFO infinita.
+   - Nginx en el VPS, tras esperar 60 segundos sin respuesta de Node.js, cerraba la conexión devolviendo `504 Gateway Time-out` a Vercel, y este entregaba la página HTML de error al navegador del usuario (`TRPCClientError: Unexpected token '<', "<html>... is not valid JSON"`).
+
+#### 🛠️ Acciones Ejecutadas y Blindaje Arquitectural:
+1. **Blindaje del Pool y Forzado de Timeout en PostgreSQL (`server/db.ts`)**:
+   - Ampliado el pool de conexiones de 20 a 30 (`max: 30`).
+   - Configurado `connection: { statement_timeout: 10000 }` (10 segundos a nivel de motor PostgreSQL) para que la base de datos aborte automáticamente cualquier consulta rezagada y libere el socket de inmediato sin fugar conexiones.
+   - Ajustados `idle_timeout: 15` y `max_lifetime: 900` para reciclaje proactivo de sockets inactivos.
+   - Exportada la función `getRawSql()` para ejecutar consultas consolidadas ultraeficientes.
+2. **Consolidación SQL y Semáforo Anti-Stampede en `getLiveStats` (`server/_core/janIA.ts`)**:
+   - Implementado semáforo de vuelo (`isFetchingLiveStats`). Si una consulta de métricas ya está en ejecución, cualquier solicitud concurrente devuelve la caché previa al instante (0ms).
+   - Reemplazadas las 6 consultas concurrentes dispersas por **una única consulta SQL consolidada de agregación**:
+     `SELECT (SELECT count(*)::int FROM properties) as prop_count, (SELECT count(*)::int FROM requirements) as req_count, ...`
+   - Tiempo de ejecución de métricas reducido de 6+ segundos con 6 sockets a **1.2 segundos en 1 solo socket**.
+3. **Consolidación de `getBotStatus` (`server/routers/janIA.ts`)**:
+   - Reemplazadas 5 consultas secuenciales por una única consulta SQL unificada contra `pendingSessions`, `properties` y `requirements`.
+   - Latencia del endpoint reducida a **0.67 segundos** (HTTP 200).
+4. **Resiliencia en `getAllMatches` (`server/routers/janIA.ts`)**:
+   - Manejador de excepciones blindado: ante cualquier demora o reintento de la BD, si el backend está recalculando, retorna array seguro `[]` o la caché existente, evitando propagar errores TRPC no controlados.
+   - Latencia de `getAllMatches` con caché restaurada a **0.75 segundos** (HTTP 200).
+5. **Validación, Build y Deploy Sincronizado**:
+   - Chequeo de tipos estricto: `npm run check` (`tsc --noEmit`) → 0 errores.
+   - Build de producción ejecutado con éxito.
+   - Versión oficial incrementada a **v31.11** en `shared/const.ts` y `package.json`.
+   - Cambios comiteados y subidos a GitHub `main`.
+   - Desplegado en el VPS (`git pull` + `pm2 reload jania-server`).
+   - Verificado con `curl` directo desde Vercel: ambos endpoints responden en < 0.8s con HTTP 200.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR EN PRODUCCIÓN: v31.10 — Septiembre 2026
 
 ### 🗓️ Sesión: Sábado 5 de Septiembre de 2026 — 09:20 a 09:35 (Hora Colombia UTC-5)
 **Versión**: `v31.10` | **Ambiente**: Producción VPS (`13.140.149.144`) + Mesa de Cotejo Admin Panel (`vecy-network.vercel.app/admin`) + Supabase DB + GitHub (`main`)
