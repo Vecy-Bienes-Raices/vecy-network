@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { publicProcedure, router } from '../_core/trpc';
 import { invokeLLM } from '../_core/llm';
-import { getDb } from '../db';
+import { getDb, getRawSql } from '../db';
 import { conversations, messages, leads, propertyMatches, properties, requirements, propertyImages, propertyPublicationHistory, pendingSessions, inmobiliarioLexicon, matchFeedback } from '../../drizzle/schema';
 import { eq, and, desc, sql, inArray, gte } from 'drizzle-orm';
 
@@ -637,9 +637,9 @@ export const janIARouter = router({
         cachedAllMatchesTime = Date.now();
         return finalMatches;
       } catch (error) {
-        if (cachedAllMatchesData) return cachedAllMatchesData;
         console.error('Error getting all matches:', error);
-        throw error;
+        if (cachedAllMatchesData) return cachedAllMatchesData;
+        return [];
       }
     }),
 
@@ -1291,54 +1291,58 @@ export const janIARouter = router({
       return cachedBotStatusData;
     }
 
-    const db = await getDb();
-    if (!db) return cachedBotStatusData || { isReady: true, phone: "573192919978", todayProperties: 0, todayRequirements: 0 };
-
     try {
       let isReady = true;
       let phone: string | null = "573192919978";
+      let totalProps = 0;
+      let totalReqs = 0;
+      let todayProps = 0;
+      let todayReqs = 0;
 
-      // 1. Query the database-persisted bot status heartbeat (written by the VPS bot)
-      const [statusRow] = await db
-        .select()
-        .from(pendingSessions)
-        .where(eq(pendingSessions.jid, "system:bot_status"))
-        .limit(1);
-
-      if (statusRow) {
-        const data = statusRow.sessionData as { isReady: boolean; phone: string | null; updatedAt: string };
-        if (data && data.phone) {
-          phone = data.phone;
+      const rawSql = getRawSql();
+      if (rawSql) {
+        const res = await rawSql`
+          SELECT
+            (SELECT "sessionData" FROM "pendingSessions" WHERE jid = 'system:bot_status' LIMIT 1) as bot_session,
+            (SELECT count(*)::int FROM properties) as total_props,
+            (SELECT count(*)::int FROM requirements) as total_reqs,
+            (SELECT count(*)::int FROM properties WHERE DATE("createdAt" AT TIME ZONE 'America/Bogota') = CURRENT_DATE) as prop_today,
+            (SELECT count(*)::int FROM requirements WHERE DATE("createdAt" AT TIME ZONE 'America/Bogota') = CURRENT_DATE) as req_today
+        `;
+        const row = res[0];
+        if (row) {
+          if (row.bot_session && row.bot_session.phone) {
+            phone = row.bot_session.phone;
+          }
+          totalProps = row.total_props || 0;
+          totalReqs = row.total_reqs || 0;
+          todayProps = row.prop_today || 0;
+          todayReqs = row.req_today || 0;
+        }
+      } else {
+        const db = await getDb();
+        if (db) {
+          const [statusRow] = await db
+            .select()
+            .from(pendingSessions)
+            .where(eq(pendingSessions.jid, "system:bot_status"))
+            .limit(1);
+          const sessionData = statusRow?.sessionData as any;
+          if (sessionData?.phone) phone = sessionData.phone;
+          const [tp] = await db.select({ count: sql<number>`count(*)::int` }).from(properties);
+          const [tr] = await db.select({ count: sql<number>`count(*)::int` }).from(requirements);
+          totalProps = tp?.count || 0;
+          totalReqs = tr?.count || 0;
         }
       }
-
-      // Totales históricos acumulados capturados en BD
-      const [totalPropCount] = await db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(properties);
-
-      const [totalReqCount] = await db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(requirements);
-
-      // Contadores del día según hora local de Bogotá (UTC-5)
-      const [propTodayCount] = await db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(properties)
-        .where(sql`DATE(${properties.createdAt} AT TIME ZONE 'America/Bogota') = CURRENT_DATE`);
-
-      const [reqTodayCount] = await db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(requirements)
-        .where(sql`DATE(${requirements.createdAt} AT TIME ZONE 'America/Bogota') = CURRENT_DATE`);
 
       const result = {
         isReady,
         phone,
-        totalProperties: totalPropCount?.count || 0,
-        totalRequirements: totalReqCount?.count || 0,
-        todayProperties: propTodayCount?.count || 0,
-        todayRequirements: reqTodayCount?.count || 0
+        totalProperties: totalProps,
+        totalRequirements: totalReqs,
+        todayProperties: todayProps,
+        todayRequirements: todayReqs
       };
 
       cachedBotStatusData = result;

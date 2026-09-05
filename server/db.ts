@@ -14,9 +14,12 @@ export async function getDb() {
       _client = postgres(process.env.DATABASE_URL, {
         prepare: false,          // Requerido por Supabase pooler (pgBouncer)
         connect_timeout: 10,     // 10 segundos máximo para conectar
-        idle_timeout: 30,        // Cerrar conexiones inactivas tras 30 segundos
-        max_lifetime: 1800,      // Reciclar conexiones cada 30 minutos
-        max: 20,                 // Máximo 20 conexiones simultáneas al pool de Supabase
+        idle_timeout: 15,        // Cerrar conexiones inactivas tras 15 segundos
+        max_lifetime: 900,       // Reciclar conexiones cada 15 minutos
+        max: 30,                 // Máximo 30 conexiones simultáneas
+        connection: {
+          statement_timeout: 10000, // Timeout estricto de 10s en PostgreSQL: jamás deja queries zombis
+        },
         fetch_types: false,      // Evitar queries de introspección redundantes
         onnotice: () => {},      // Silenciar NOTICEs innecesarios de PostgreSQL
       });
@@ -27,6 +30,10 @@ export async function getDb() {
     }
   }
   return _db;
+}
+
+export function getRawSql() {
+  return _client;
 }
 
 

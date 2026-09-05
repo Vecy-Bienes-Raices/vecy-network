@@ -510,6 +510,7 @@ __export(db_exports, {
   getDb: () => getDb,
   getMainPropertyImage: () => getMainPropertyImage,
   getPropertyImages: () => getPropertyImages,
+  getRawSql: () => getRawSql,
   getUserByOpenId: () => getUserByOpenId,
   updatePropertyImageOrder: () => updatePropertyImageOrder,
   upsertUser: () => upsertUser
@@ -525,12 +526,16 @@ async function getDb() {
         // Requerido por Supabase pooler (pgBouncer)
         connect_timeout: 10,
         // 10 segundos máximo para conectar
-        idle_timeout: 30,
-        // Cerrar conexiones inactivas tras 30 segundos
-        max_lifetime: 1800,
-        // Reciclar conexiones cada 30 minutos
-        max: 20,
-        // Máximo 20 conexiones simultáneas al pool de Supabase
+        idle_timeout: 15,
+        // Cerrar conexiones inactivas tras 15 segundos
+        max_lifetime: 900,
+        // Reciclar conexiones cada 15 minutos
+        max: 30,
+        // Máximo 30 conexiones simultáneas
+        connection: {
+          statement_timeout: 1e4
+          // Timeout estricto de 10s en PostgreSQL: jamás deja queries zombis
+        },
         fetch_types: false,
         // Evitar queries de introspección redundantes
         onnotice: () => {
@@ -544,6 +549,9 @@ async function getDb() {
     }
   }
   return _db;
+}
+function getRawSql() {
+  return _client;
 }
 async function upsertUser(user) {
   if (!user.openId) {
@@ -8463,35 +8471,31 @@ async function getLiveStats() {
   if (cachedLiveStatsText && nowMs - cachedLiveStatsTime < 3e5) {
     return cachedLiveStatsText;
   }
+  if (isFetchingLiveStats) {
+    return cachedLiveStatsText || "";
+  }
+  isFetchingLiveStats = true;
   try {
-    const db = await getDb();
-    if (!db) return cachedLiveStatsText || "";
-    const today = /* @__PURE__ */ new Date();
-    today.setHours(0, 0, 0, 0);
-    let timer;
-    const timeoutPromise = new Promise((_, reject) => {
-      timer = setTimeout(() => reject(new Error("LiveStats DB query timeout")), 5e3);
-    });
-    const [
-      [propCount],
-      [reqCount],
-      [matchCount],
-      [propHoy],
-      [reqHoy],
-      [matchHoy]
-    ] = await Promise.race([
-      Promise.all([
-        db.select({ total: sql3`count(*)::int` }).from(properties),
-        db.select({ total: sql3`count(*)::int` }).from(requirements),
-        db.select({ total: sql3`count(*)::int` }).from(propertyMatches),
-        db.select({ total: sql3`count(*)::int` }).from(properties).where(gte(properties.createdAt, today)),
-        db.select({ total: sql3`count(*)::int` }).from(requirements).where(gte(requirements.createdAt, today)),
-        db.select({ total: sql3`count(*)::int` }).from(propertyMatches).where(gte(propertyMatches.createdAt, today))
-      ]),
-      timeoutPromise
-    ]);
-    if (timer) clearTimeout(timer);
-    cachedLiveStatsTime = nowMs;
+    const rawSql = getRawSql();
+    let stats = {};
+    if (rawSql) {
+      const res = await rawSql`
+        SELECT 
+          (SELECT count(*)::int FROM properties) as prop_count,
+          (SELECT count(*)::int FROM requirements) as req_count,
+          (SELECT count(*)::int FROM "propertyMatches") as match_count,
+          (SELECT count(*)::int FROM properties WHERE "createdAt" >= CURRENT_DATE) as prop_today,
+          (SELECT count(*)::int FROM requirements WHERE "createdAt" >= CURRENT_DATE) as req_today,
+          (SELECT count(*)::int FROM "propertyMatches" WHERE "createdAt" >= CURRENT_DATE) as match_today
+      `;
+      stats = res[0] || {};
+    } else {
+      const db = await getDb();
+      if (!db) return cachedLiveStatsText || "";
+      const [propCount] = await db.select({ total: sql3`count(*)::int` }).from(properties);
+      const [reqCount] = await db.select({ total: sql3`count(*)::int` }).from(requirements);
+      stats = { prop_count: propCount?.total ?? 0, req_count: reqCount?.total ?? 0, match_count: 0, prop_today: 0, req_today: 0, match_today: 0 };
+    }
     const now = (/* @__PURE__ */ new Date()).toLocaleString("es-CO", { timeZone: "America/Bogota", dateStyle: "short", timeStyle: "short" });
     cachedLiveStatsText = `
 ## \u{1F4CA} ESTAD\xCDSTICAS EN TIEMPO REAL DE VECY NETWORK (Actualizado: ${now} hora Colombia)
@@ -8499,16 +8503,18 @@ Esta informaci\xF3n es EXACTA y proviene directamente de la base de datos en est
 
 | Categor\xEDa | Total Hist\xF3rico | Nuevos Hoy |
 |-----------|----------------|------------|
-| \u{1F3E2} Inmuebles publicados | **${propCount?.total ?? 0}** | ${propHoy?.total ?? 0} |
-| \u{1F4CB} Requerimientos de b\xFAsqueda | **${reqCount?.total ?? 0}** | ${reqHoy?.total ?? 0} |
-| \u{1F3AF} Coincidencias (Matches) detectadas | **${matchCount?.total ?? 0}** | ${matchHoy?.total ?? 0} |
+| \u{1F3E2} Inmuebles publicados | **${stats.prop_count ?? 0}** | ${stats.prop_today ?? 0} |
+| \u{1F4CB} Requerimientos de b\xFAsqueda | **${stats.req_count ?? 0}** | ${stats.req_today ?? 0} |
+| \u{1F3AF} Coincidencias (Matches) detectadas | **${stats.match_count ?? 0}** | ${stats.match_today ?? 0} |
 
 Si alguien te pregunta por estos n\xFAmeros, responde CON PRECISI\xD3N usando exactamente los datos de esta tabla. No inventes, no estimes. Estos son los datos reales del sistema VECY en este momento.`;
-    cachedLiveStatsTime = nowMs;
+    cachedLiveStatsTime = Date.now();
     return cachedLiveStatsText;
   } catch (err) {
     console.warn("[JanIA-LiveStats] No se pudo obtener estad\xEDsticas en tiempo real:", err);
     return cachedLiveStatsText || "";
+  } finally {
+    isFetchingLiveStats = false;
   }
 }
 function buildSystemPrompt(groupJid) {
@@ -11865,7 +11871,7 @@ function sanitizeResponseMarkdown(text2) {
   if (!text2) return "";
   return text2.replace(/\*\*/g, "*");
 }
-var janiaResultSchema, COMMON_FIRST_NAMES, GREETED_TODAY, REPUTATION_HOOK, cachedLiveStatsText, cachedLiveStatsTime, promptCache, JANIA_PROMPT, splitMultiPropertyMessage, brokerDirectoryCache, MSG_PRESENTACION_INSTITUCIONAL, MSG_PAUTAS_FORMATOS, MSG_TIPS_CALIDAD_COBERTURA, MSG_RESUMEN_RETORNO_PRESENTACION, MSG_CIERRE_OPERACIONES, MSG_PROMO_INMUEBLES, MSG_PROMO_CONSULTAS, MSG_PROMO_CIRCULO, consultingConversationHistory, MSG_COMUNICADO_MATCH_NETWORK, MSG_COMUNICADO_MATCH_CIRCULO;
+var janiaResultSchema, COMMON_FIRST_NAMES, GREETED_TODAY, REPUTATION_HOOK, cachedLiveStatsText, cachedLiveStatsTime, isFetchingLiveStats, promptCache, JANIA_PROMPT, splitMultiPropertyMessage, brokerDirectoryCache, MSG_PRESENTACION_INSTITUCIONAL, MSG_PAUTAS_FORMATOS, MSG_TIPS_CALIDAD_COBERTURA, MSG_RESUMEN_RETORNO_PRESENTACION, MSG_CIERRE_OPERACIONES, MSG_PROMO_INMUEBLES, MSG_PROMO_CONSULTAS, MSG_PROMO_CIRCULO, consultingConversationHistory, MSG_COMUNICADO_MATCH_NETWORK, MSG_COMUNICADO_MATCH_CIRCULO;
 var init_janIA = __esm({
   "server/_core/janIA.ts"() {
     "use strict";
@@ -12119,6 +12125,7 @@ var init_janIA = __esm({
     REPUTATION_HOOK = "\u26A0\uFE0F *IMPORTANTE:* Colega y cliente, recuerda que este ecosistema tecnol\xF3gico fue creado pensando en tu beneficio y en el de toda nuestra comunidad. Te contamos que operamos en *Etapa de Prueba Gratuita y 100% SIN COMISIONES*. Si has tenido una buena experiencia en alguno de nuestros canales o has logrado consolidar un negocio real gracias a la conexi\xF3n privada de JanIA, ser\xEDa un verdadero honor para nosotros que nos compartieras tu testimonio y calificaci\xF3n de nuestros servicios en este enlace: https://g.page/r/CctNbwU6UpX5EBM/review";
     cachedLiveStatsText = "";
     cachedLiveStatsTime = 0;
+    isFetchingLiveStats = false;
     promptCache = {};
     JANIA_PROMPT = `
 # JANIA \u2014 BASE CORE IDENTITY & BEHAVIOR v17.00
@@ -15650,7 +15657,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.10";
+var VECY_VERSION = "v31.11";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 
@@ -16794,9 +16801,9 @@ ${liveStats}${userContextInstruction}
       cachedAllMatchesTime = Date.now();
       return finalMatches;
     } catch (error) {
-      if (cachedAllMatchesData) return cachedAllMatchesData;
       console.error("Error getting all matches:", error);
-      throw error;
+      if (cachedAllMatchesData) return cachedAllMatchesData;
+      return [];
     }
   }),
   // Actualizar datos prediales de un inmueble oferta directamente desde la Mesa de Cotejo
@@ -17347,29 +17354,52 @@ ${liveStats}${userContextInstruction}
     if (cachedBotStatusData && now - cachedBotStatusTime < 15e3) {
       return cachedBotStatusData;
     }
-    const db = await getDb();
-    if (!db) return cachedBotStatusData || { isReady: true, phone: "573192919978", todayProperties: 0, todayRequirements: 0 };
     try {
       let isReady = true;
       let phone = "573192919978";
-      const [statusRow] = await db.select().from(pendingSessions).where(eq8(pendingSessions.jid, "system:bot_status")).limit(1);
-      if (statusRow) {
-        const data = statusRow.sessionData;
-        if (data && data.phone) {
-          phone = data.phone;
+      let totalProps = 0;
+      let totalReqs = 0;
+      let todayProps = 0;
+      let todayReqs = 0;
+      const rawSql = getRawSql();
+      if (rawSql) {
+        const res = await rawSql`
+          SELECT
+            (SELECT "sessionData" FROM "pendingSessions" WHERE jid = 'system:bot_status' LIMIT 1) as bot_session,
+            (SELECT count(*)::int FROM properties) as total_props,
+            (SELECT count(*)::int FROM requirements) as total_reqs,
+            (SELECT count(*)::int FROM properties WHERE DATE("createdAt" AT TIME ZONE 'America/Bogota') = CURRENT_DATE) as prop_today,
+            (SELECT count(*)::int FROM requirements WHERE DATE("createdAt" AT TIME ZONE 'America/Bogota') = CURRENT_DATE) as req_today
+        `;
+        const row = res[0];
+        if (row) {
+          if (row.bot_session && row.bot_session.phone) {
+            phone = row.bot_session.phone;
+          }
+          totalProps = row.total_props || 0;
+          totalReqs = row.total_reqs || 0;
+          todayProps = row.prop_today || 0;
+          todayReqs = row.req_today || 0;
+        }
+      } else {
+        const db = await getDb();
+        if (db) {
+          const [statusRow] = await db.select().from(pendingSessions).where(eq8(pendingSessions.jid, "system:bot_status")).limit(1);
+          const sessionData = statusRow?.sessionData;
+          if (sessionData?.phone) phone = sessionData.phone;
+          const [tp] = await db.select({ count: sql5`count(*)::int` }).from(properties);
+          const [tr] = await db.select({ count: sql5`count(*)::int` }).from(requirements);
+          totalProps = tp?.count || 0;
+          totalReqs = tr?.count || 0;
         }
       }
-      const [totalPropCount] = await db.select({ count: sql5`count(*)::int` }).from(properties);
-      const [totalReqCount] = await db.select({ count: sql5`count(*)::int` }).from(requirements);
-      const [propTodayCount] = await db.select({ count: sql5`count(*)::int` }).from(properties).where(sql5`DATE(${properties.createdAt} AT TIME ZONE 'America/Bogota') = CURRENT_DATE`);
-      const [reqTodayCount] = await db.select({ count: sql5`count(*)::int` }).from(requirements).where(sql5`DATE(${requirements.createdAt} AT TIME ZONE 'America/Bogota') = CURRENT_DATE`);
       const result = {
         isReady,
         phone,
-        totalProperties: totalPropCount?.count || 0,
-        totalRequirements: totalReqCount?.count || 0,
-        todayProperties: propTodayCount?.count || 0,
-        todayRequirements: reqTodayCount?.count || 0
+        totalProperties: totalProps,
+        totalRequirements: totalReqs,
+        todayProperties: todayProps,
+        todayRequirements: todayReqs
       };
       cachedBotStatusData = result;
       cachedBotStatusTime = Date.now();
@@ -19161,14 +19191,14 @@ Te invitamos cordialmente a **eliminarla de este grupo** y publicarla en nuestro
   app.get("/api/resend-today-matches", async (req, res) => {
     try {
       const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
-      const { propertyMatches: propertyMatches2, requirements: requirements2, properties: properties2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+      const { propertyMatches: propertyMatches3, requirements: requirements2, properties: properties2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
       const { eq: eq14, gte: gte4 } = await import("drizzle-orm");
       const { handleDetectedMatches: handleDetectedMatches2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
       const db = await getDb2();
       if (!db) return res.status(500).send("No DB connection");
       const today = /* @__PURE__ */ new Date();
       today.setHours(0, 0, 0, 0);
-      const matches = await db.select().from(propertyMatches2).where(gte4(propertyMatches2.createdAt, today));
+      const matches = await db.select().from(propertyMatches3).where(gte4(propertyMatches3.createdAt, today));
       console.log(`[API] Encontrados ${matches.length} matches creados hoy en la BD.`);
       const seen = /* @__PURE__ */ new Set();
       const uniqueMatches = [];

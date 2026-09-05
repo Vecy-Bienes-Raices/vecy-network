@@ -3,7 +3,7 @@
  * Version: 11.70.0 (JanIA v2.5 - Conversational Naturalness Edition)
  */
 import { invokeLLM } from "./llm";
-import { getDb } from "../db";
+import { getDb, getRawSql } from "../db";
 import { properties, requirements, users, propertyImages, InsertProperty, InsertRequirement, pendingSessions, propertyMatches, messages as dbMessages, conversations as dbConversations, propertyPublicationHistory, inmobiliarioLexicon, matchFeedback } from "../../drizzle/schema";
 import { validarZona, normalizarTextoGeografico, desambiguarBarriosCompuestos, deducirGeografiaTripartita, resolveIntersectionToBarrio } from "./geography";
 import { validateCity } from "./divipola";
@@ -1676,48 +1676,43 @@ function analyzeSender(name: string, userId: string, alreadyGreeted: boolean): {
 
 let cachedLiveStatsText = "";
 let cachedLiveStatsTime = 0;
+let isFetchingLiveStats = false;
 
 // Consulta los contadores reales de la base de datos en tiempo real (con caché de 5 minutos)
 export async function getLiveStats(): Promise<string> {
   const nowMs = Date.now();
+  // 1. Si está en caché fresca (menos de 5 min), retornar de inmediato
   if (cachedLiveStatsText && nowMs - cachedLiveStatsTime < 300000) {
     return cachedLiveStatsText;
   }
 
+  // 2. Si ya hay una consulta en vuelo, retornar la caché previa para evitar saturar el pool de conexiones
+  if (isFetchingLiveStats) {
+    return cachedLiveStatsText || "";
+  }
+
+  isFetchingLiveStats = true;
   try {
-    const db = await getDb();
-    if (!db) return cachedLiveStatsText || "";
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    let timer: any;
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      timer = setTimeout(() => reject(new Error("LiveStats DB query timeout")), 5000);
-    });
-
-    const [
-      [propCount],
-      [reqCount],
-      [matchCount],
-      [propHoy],
-      [reqHoy],
-      [matchHoy]
-    ] = await Promise.race([
-      Promise.all([
-        db.select({ total: sql<number>`count(*)::int` }).from(properties),
-        db.select({ total: sql<number>`count(*)::int` }).from(requirements),
-        db.select({ total: sql<number>`count(*)::int` }).from(propertyMatches),
-        db.select({ total: sql<number>`count(*)::int` }).from(properties).where(gte(properties.createdAt, today)),
-        db.select({ total: sql<number>`count(*)::int` }).from(requirements).where(gte(requirements.createdAt, today)),
-        db.select({ total: sql<number>`count(*)::int` }).from(propertyMatches).where(gte(propertyMatches.createdAt, today))
-      ]),
-      timeoutPromise
-    ]);
-
-    if (timer) clearTimeout(timer);
-
-    cachedLiveStatsTime = nowMs;
+    const rawSql = getRawSql();
+    let stats: any = {};
+    if (rawSql) {
+      const res = await rawSql`
+        SELECT 
+          (SELECT count(*)::int FROM properties) as prop_count,
+          (SELECT count(*)::int FROM requirements) as req_count,
+          (SELECT count(*)::int FROM "propertyMatches") as match_count,
+          (SELECT count(*)::int FROM properties WHERE "createdAt" >= CURRENT_DATE) as prop_today,
+          (SELECT count(*)::int FROM requirements WHERE "createdAt" >= CURRENT_DATE) as req_today,
+          (SELECT count(*)::int FROM "propertyMatches" WHERE "createdAt" >= CURRENT_DATE) as match_today
+      `;
+      stats = res[0] || {};
+    } else {
+      const db = await getDb();
+      if (!db) return cachedLiveStatsText || "";
+      const [propCount] = await db.select({ total: sql<number>`count(*)::int` }).from(properties);
+      const [reqCount] = await db.select({ total: sql<number>`count(*)::int` }).from(requirements);
+      stats = { prop_count: propCount?.total ?? 0, req_count: reqCount?.total ?? 0, match_count: 0, prop_today: 0, req_today: 0, match_today: 0 };
+    }
 
     const now = new Date().toLocaleString('es-CO', { timeZone: 'America/Bogota', dateStyle: 'short', timeStyle: 'short' });
     cachedLiveStatsText = `
@@ -1726,16 +1721,18 @@ Esta información es EXACTA y proviene directamente de la base de datos en este 
 
 | Categoría | Total Histórico | Nuevos Hoy |
 |-----------|----------------|------------|
-| 🏢 Inmuebles publicados | **${propCount?.total ?? 0}** | ${propHoy?.total ?? 0} |
-| 📋 Requerimientos de búsqueda | **${reqCount?.total ?? 0}** | ${reqHoy?.total ?? 0} |
-| 🎯 Coincidencias (Matches) detectadas | **${matchCount?.total ?? 0}** | ${matchHoy?.total ?? 0} |
+| 🏢 Inmuebles publicados | **${stats.prop_count ?? 0}** | ${stats.prop_today ?? 0} |
+| 📋 Requerimientos de búsqueda | **${stats.req_count ?? 0}** | ${stats.req_today ?? 0} |
+| 🎯 Coincidencias (Matches) detectadas | **${stats.match_count ?? 0}** | ${stats.match_today ?? 0} |
 
 Si alguien te pregunta por estos números, responde CON PRECISIÓN usando exactamente los datos de esta tabla. No inventes, no estimes. Estos son los datos reales del sistema VECY en este momento.`;
-    cachedLiveStatsTime = nowMs;
+    cachedLiveStatsTime = Date.now();
     return cachedLiveStatsText;
   } catch (err) {
     console.warn("[JanIA-LiveStats] No se pudo obtener estadísticas en tiempo real:", err);
     return cachedLiveStatsText || "";
+  } finally {
+    isFetchingLiveStats = false;
   }
 }
 
