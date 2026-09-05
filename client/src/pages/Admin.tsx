@@ -3,7 +3,7 @@ import { useAuth } from '@/_core/hooks/useAuth';
 import { useLocation } from 'wouter';
 import { getLoginUrl, VECY_VERSION } from '@/const';
 import {
-  LogOut, Home, Building2, Menu, X, Shield, Sparkles, ClipboardList, Radio, PanelLeftClose
+  LogOut, Home, Building2, Menu, X, Shield, Sparkles, ClipboardList, Radio, PanelLeftClose, RefreshCw
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { getColombiaCurrentDateString } from '@/lib/dateUtils';
@@ -29,18 +29,32 @@ const tabs = [
 ];
 
 function BotStatusWidget() {
-  const { data: status, isLoading } = trpc.janIA.getBotStatus.useQuery(undefined, {
+  const { data: status, isLoading, isError, refetch } = trpc.janIA.getBotStatus.useQuery(undefined, {
     refetchInterval: 120000, // Refrescar suavemente cada 2 minutos
     staleTime: 60000,
     refetchOnWindowFocus: false,
+    retry: 2,
   });
 
-  if (isLoading || !status) {
+  if (isLoading) {
     return (
       <div className="flex items-center gap-2 text-zinc-500 text-xs bg-zinc-900/50 px-3 py-1.5 rounded-xl border border-white/5 w-full sm:w-auto">
         <Radio className="w-3.5 h-3.5 animate-pulse text-zinc-400 shrink-0" />
-        <span className="truncate">Cargando estado...</span>
+        <span className="truncate">Conectando con JanIA...</span>
       </div>
+    );
+  }
+
+  if (isError || !status) {
+    return (
+      <button
+        onClick={() => refetch()}
+        className="flex items-center gap-2 text-amber-400 hover:text-amber-300 text-xs bg-amber-500/10 hover:bg-amber-500/20 px-3 py-1.5 rounded-xl border border-amber-500/30 transition-all cursor-pointer w-full sm:w-auto"
+        title="Reintentar conexión con JanIA"
+      >
+        <RefreshCw className="w-3.5 h-3.5 text-amber-400 shrink-0 animate-spin" style={{ animationDuration: '3s' }} />
+        <span className="truncate font-semibold">Reconectar JanIA</span>
+      </button>
     );
   }
 

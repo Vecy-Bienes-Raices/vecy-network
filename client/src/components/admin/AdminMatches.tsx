@@ -3090,10 +3090,11 @@ export default function AdminMatches() {
   };
 
   // Fetch matches directly from server API (actualización suave en segundo plano)
-  const { data: matches = [], isLoading, refetch } = trpc.janIA.getAllMatches.useQuery(undefined, {
+  const { data: matches = [], isLoading, isError, refetch } = trpc.janIA.getAllMatches.useQuery(undefined, {
     refetchInterval: 60000,
     staleTime: 60000,
     refetchOnWindowFocus: false,
+    retry: 2,
   });
 
 
@@ -3329,10 +3330,11 @@ export default function AdminMatches() {
 
 
 
-  const { data: botStatus } = trpc.janIA.getBotStatus.useQuery(undefined, {
+  const { data: botStatus, isLoading: isBotStatusLoading, isError: isBotStatusError, refetch: refetchBotStatus } = trpc.janIA.getBotStatus.useQuery(undefined, {
     refetchInterval: 60000,
     staleTime: 60000,
     refetchOnWindowFocus: false,
+    retry: 2,
   });
 
   const kpiStats = useMemo(() => {
@@ -3385,7 +3387,7 @@ export default function AdminMatches() {
           </h2>
         </div>
         <div className="grid grid-cols-2 sm:flex gap-2 w-full sm:w-auto">
-          <Button onClick={() => refetch()} variant="outline" className="border-white/10 bg-white/5 text-white hover:bg-white/10 text-xs h-10 min-h-[40px] font-semibold">
+          <Button onClick={() => { refetch(); refetchBotStatus(); }} variant="outline" className="border-white/10 bg-white/5 text-white hover:bg-white/10 text-xs h-10 min-h-[40px] font-semibold">
             Refrescar
           </Button>
           <Button 
@@ -3407,7 +3409,15 @@ export default function AdminMatches() {
           </div>
           <div>
             <p className="text-[10px] uppercase tracking-wider text-zinc-400 font-bold">Matches Detectados</p>
-            <p className="text-lg sm:text-xl font-black text-white">{Number(kpiStats.total || 0).toLocaleString('es-CO')}</p>
+            <p className="text-lg sm:text-xl font-black text-white">
+              {isLoading ? (
+                <span className="animate-pulse text-zinc-500 font-medium text-sm">...</span>
+              ) : isError ? (
+                <span className="text-amber-400 font-normal text-xs">Error de red</span>
+              ) : (
+                Number(kpiStats.total || 0).toLocaleString('es-CO')
+              )}
+            </p>
           </div>
         </div>
 
@@ -3417,7 +3427,15 @@ export default function AdminMatches() {
           </div>
           <div>
             <p className="text-[10px] uppercase tracking-wider text-zinc-400 font-bold">Matches Perfectos (≥95%)</p>
-            <p className="text-lg sm:text-xl font-black text-emerald-400">{Number(kpiStats.perfect || 0).toLocaleString('es-CO')}</p>
+            <p className="text-lg sm:text-xl font-black text-emerald-400">
+              {isLoading ? (
+                <span className="animate-pulse text-zinc-500 font-medium text-sm">...</span>
+              ) : isError ? (
+                <span className="text-amber-400 font-normal text-xs">Error de red</span>
+              ) : (
+                Number(kpiStats.perfect || 0).toLocaleString('es-CO')
+              )}
+            </p>
           </div>
         </div>
 
@@ -3427,7 +3445,15 @@ export default function AdminMatches() {
           </div>
           <div>
             <p className="text-[10px] uppercase tracking-wider text-[#bf953f] font-bold">Total Ofertas</p>
-            <p className="text-lg sm:text-xl font-black text-[#bf953f]">{Number(kpiStats.totalProps || 0).toLocaleString('es-CO')}</p>
+            <p className="text-lg sm:text-xl font-black text-[#bf953f]">
+              {isBotStatusLoading ? (
+                <span className="animate-pulse text-zinc-500 font-medium text-sm">...</span>
+              ) : isBotStatusError ? (
+                <span className="text-amber-400 font-normal text-xs">Error de red</span>
+              ) : (
+                Number(kpiStats.totalProps || 0).toLocaleString('es-CO')
+              )}
+            </p>
           </div>
         </div>
 
@@ -3437,7 +3463,15 @@ export default function AdminMatches() {
           </div>
           <div>
             <p className="text-[10px] uppercase tracking-wider text-cyan-400 font-bold">Total Demandas</p>
-            <p className="text-lg sm:text-xl font-black text-cyan-400">{Number(kpiStats.totalReqs || 0).toLocaleString('es-CO')}</p>
+            <p className="text-lg sm:text-xl font-black text-cyan-400">
+              {isBotStatusLoading ? (
+                <span className="animate-pulse text-zinc-500 font-medium text-sm">...</span>
+              ) : isBotStatusError ? (
+                <span className="text-amber-400 font-normal text-xs">Error de red</span>
+              ) : (
+                Number(kpiStats.totalReqs || 0).toLocaleString('es-CO')
+              )}
+            </p>
           </div>
         </div>
       </div>
@@ -3489,6 +3523,15 @@ export default function AdminMatches() {
         <div className="py-20 flex flex-col items-center justify-center gap-4">
           <div className="w-8 h-8 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
           <p className="text-zinc-500 text-sm">Buscando reportes de matching...</p>
+        </div>
+      ) : isError ? (
+        <div className="p-12 text-center border border-amber-500/20 rounded-2xl bg-amber-500/5">
+          <AlertTriangle className="w-10 h-10 text-amber-400 mx-auto mb-3" />
+          <h3 className="text-base font-bold text-amber-200">No se pudieron cargar las coincidencias</h3>
+          <p className="text-zinc-400 text-xs mt-1 mb-4">Ocurrió un error temporal de conexión o tiempo de espera con el servidor.</p>
+          <Button onClick={() => { refetch(); refetchBotStatus(); }} className="bg-[#bf953f] hover:bg-[#a67d32] text-black text-xs font-bold px-4 py-2 rounded-xl">
+            Reintentar Conexión
+          </Button>
         </div>
       ) : filteredMatches.length === 0 ? (
         <div className="p-20 text-center border border-white/5 rounded-2xl bg-zinc-950/40">
