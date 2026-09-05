@@ -163,7 +163,28 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.9 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.10 — Septiembre 2026
+
+### Novedades v31.10 (Erradicación de Procesos Zombis en VPS, Resiliencia de Red y Prevención de Falsos Ceros en UI Móvil):
+- **Diagnóstico y Erradicación de Bloqueo por Timeout 504 (Caso "Móvil en Ceros vs PC con Tarjetas")**:
+  1) **Causa Raíz en VPS**:
+     - Al auditar el servidor VPS (`13.140.149.144`), se hallaron 3 procesos zombis de Node.js (PIDs `806113`, `817354`, `824982`) corriendo durante más de 40 horas al 100% de CPU cada uno, asfixiando los 4 núcleos del servidor al 98%-100% de CPU continuo.
+     - Como consecuencia, las peticiones HTTP entrantes (`getBotStatus` y `getAllMatches`) superaban el tiempo de espera de Nginx (60s), arrojando `504 Gateway Time-out`.
+     - En PC, TanStack Query mantenía los datos cacheados en memoria de la sesión anterior, mientras que en el móvil (sesión fresca sin caché), las peticiones fallaron, dejando `botStatus` en `undefined` (`Cargando estado...`) y los KPIs en `0`.
+  2) **Solución y Blindaje de Infraestructura**:
+     - Procesos zombis terminados con `kill -9`. CPU liberada de 100% a 0.5% (95.5% libre), memoria RAM > 7 GB libres.
+     - Latencia de respuesta restaurada: `getBotStatus` en 1.4s y `getAllMatches` en 0.7s (HTTP 200).
+  3) **Resiliencia de Red y UX Anti-Confusión en Frontend**:
+     - `BotStatusWidget` (`Admin.tsx`): si la conexión falla, no se queda congelado en `Cargando estado...`, sino que despliega botón interactivo `[🔄 Reconectar JanIA]` con reintentos automáticos (`retry: 2`).
+     - `AdminMatches.tsx`:
+       - Bloques de KPIs muestran `...` pulsante durante la carga o `Error de red` si falla, impidiendo mostrar un confuso `0`.
+       - La grilla de coincidencias ante un fallo de red despliega una tarjeta de error amigable con botón `[Reintentar Conexión]`, erradicando el falso aviso de "No se encontraron coincidencias".
+  4) **Sincronización Total**:
+     - Versión oficial elevada a **v31.10** en frontend (Vercel) y backend PM2 (`jania-server`).
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.9 — Septiembre 2026
 
 ### Novedades v31.9 (Doctrina de Botones de Acción Permanentes en Cotejo, Persistencia y Tipología de Piso Elevado, y Auto-Recarga en Producción):
 - **Diagnóstico y Erradicación del Bloqueo en Guardado (Botón Guardar Desaparecido)**:

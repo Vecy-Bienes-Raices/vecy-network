@@ -52,7 +52,54 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.9 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.10 — Septiembre 2026
+
+### 🗓️ Sesión: Sábado 5 de Septiembre de 2026 — 09:20 a 09:35 (Hora Colombia UTC-5)
+**Versión**: `v31.10` | **Ambiente**: Producción VPS (`13.140.149.144`) + Mesa de Cotejo Admin Panel (`vecy-network.vercel.app/admin`) + Supabase DB + GitHub (`main`)
+
+#### 🎯 Solicitud de Eduardo A. Rivera:
+1. "No se si es que yo veo la página por caché guardado y persistente en mi compu(imagen1) o qué sucede. porque en mi celular sale en ceros todo, es muy raro(Imagen 2)."
+2. Adjuntó dos capturas:
+   - Imagen 1 (PC): Panel de Coincidencias mostrando todas las tarjetas de matching y datos de indicadores normalmente.
+   - Imagen 2 (Celular Android / Brave): Indicador superior en `((•)) Cargando estado...`, y los cuatro bloques de KPIs en `0` (*Matches Detectados: 0*, *Matches Perfectos: 0*, *Total Ofertas: 0*, *Total Demandas: 0*), sin desplegar ninguna tarjeta.
+
+#### 🔍 Diagnóstico Técnico Profundo (Causa Raíz Real):
+1. **Sobrecarga Extrema de CPU en VPS por Procesos Zombis**:
+   - Al auditar el VPS (`13.140.149.144`), se detectaron **3 procesos Node.js huérfanos/zombis** (PIDs `806113`, `817354`, `824982`) ejecutándose continuamente durante más de 40 horas al 100% de CPU cada uno, asfixiando los 4 núcleos del servidor al 98%-100% de carga constante.
+   - Estos procesos habían sido invocados en días previos mediante comandos CLI de prueba que importaban el servidor completo y no cerraban el ciclo de eventos.
+2. **Timeout 504 Gateway Time-out en Nginx**:
+   - Con la CPU saturada al 100%, las peticiones HTTP entrantes a `/api/trpc/janIA.getBotStatus` y `/api/trpc/janIA.getAllMatches` no alcanzaban a procesarse a tiempo. Nginx superaba los 60 segundos de espera y arrojaba `504 Gateway Time-out`.
+3. **Comportamiento Dispar entre PC y Celular**:
+   - **En PC**: El navegador ya tenía en memoria RAM la caché de TanStack Query (React Query) de la sesión de trabajo anterior. Mientras las peticiones en segundo plano fallaban silenciosamente por 504, React Query conservaba los datos en pantalla para no dejar la vista en blanco.
+   - **En Móvil (Brave)**: Al abrir la aplicación en una sesión fresca sin datos en memoria local, el navegador consultó el servidor. Al recibir `504 Gateway Time-out`:
+     - `botStatus` quedó `undefined` → El widget superior permaneció indefinidamente en `((•)) Cargando estado...`.
+     - `matches` quedó vacío `[]` → Los KPIs evaluaron a `0` y la grilla no renderizó tarjetas.
+
+#### 🛠️ Acciones Ejecutadas y Blindaje de Infraestructura:
+1. **Erradicación de Procesos Zombis en VPS**:
+   - Terminados de forma inmediata e irreversible (`kill -9`) los 3 procesos zombis en el VPS.
+   - La carga de CPU cayó inmediatamente de **98%-100% a 0.5% (95.5% libre / idle)**.
+   - Memoria RAM liberada: más de 7 GB disponibles.
+   - `jania-server` reloaded en PM2 online con salud perfecta.
+2. **Verificación de Latencias Ultrarrápidas**:
+   - Endpoint `janIA.getBotStatus`: responde ahora en **1.4 segundos** (HTTP 200).
+   - Endpoint `janIA.getAllMatches`: responde y descarga **700 KB en 0.7 segundos** (HTTP 200).
+3. **Resiliencia de Red y UX Anti-Confusión en Frontend**:
+   - **`Admin.tsx` (BotStatusWidget)**:
+     - Añadido `retry: 2` y control explícito de error `isError`.
+     - Si la conexión falla, en vez de congelarse en `Cargando estado...`, despliega un botón interactivo `[🔄 Reconectar JanIA]` para reintentar la conexión con un clic.
+   - **`AdminMatches.tsx` (KPI Ribbon y Grilla)**:
+     - En los 4 bloques de indicadores (Matches Detectados, Matches Perfectos, Total Ofertas, Total Demandas): si están cargando, muestran `...` con pulsación sutil en lugar de un engañoso `0`. Si ocurre un fallo de red, muestran `Error de red`.
+     - En la grilla de coincidencias: si ocurre un timeout o error de conexión, se muestra un banner amigable con icono de advertencia y botón `[Reintentar Conexión]` (que reintenta tanto las coincidencias como el estado del bot simultáneamente), evitando falsos positivos de "No se encontraron coincidencias".
+4. **Validación, Build y Deploy Sincronizado**:
+   - Chequeo de tipos estricto: `npm run check` (`tsc --noEmit`) → 0 errores.
+   - Build Vite + esbuild local y en VPS exitoso.
+   - Cambios comiteados y pusheados a `main` (despliegue automático en Vercel).
+   - Servidor VPS actualizado vía `git pull` y `pm2 reload jania-server` bajo versión **v31.10.0**.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR EN PRODUCCIÓN: v31.9 — Septiembre 2026
 
 ### 🗓️ Sesión: Viernes 4 de Septiembre de 2026 — 20:30 a 20:55 (Hora Colombia UTC-5)
 **Versión**: `v31.9` | **Ambiente**: Producción VPS (`13.140.149.144`) + Mesa de Cotejo Admin Panel (`vecy-network.vercel.app/admin`) + Supabase DB + GitHub (`main`)
