@@ -768,14 +768,14 @@ export const janIARouter = router({
         updateData.yearBuilt = computedYear;
         if (computedAge === null) {
           computedAge = Math.max(0, currentYear - computedYear);
-          updateData.antiguedadAnos = computedAge;
         }
+        updateData.antiguedadAnos = computedAge;
       } else if (computedAge !== null && computedAge >= 0 && computedAge <= 150) {
         updateData.antiguedadAnos = computedAge;
         if (computedYear === null) {
           computedYear = currentYear - computedAge;
-          updateData.yearBuilt = computedYear;
         }
+        updateData.yearBuilt = computedYear;
       }
 
       // Integración y persistencia de comodidades / amenities (Interior/Exterior, Cocina, etc.)
@@ -838,15 +838,9 @@ export const janIARouter = router({
         });
       }
 
-      // Actualizar en caliente el caché en memoria para refresco instantáneo sin congelar la app
-      if (Array.isArray(cachedAllMatchesData)) {
-        for (const m of cachedAllMatchesData) {
-          if (m.property?.id === input.propertyId) {
-            Object.assign(m.property, updateData);
-          }
-        }
-      }
-      cachedAllMatchesTime = Date.now();
+      // Invalidar caché en memoria para forzar lectura fresca y veraz de la base de datos
+      cachedAllMatchesData = null;
+      cachedAllMatchesTime = 0;
 
       return { success: true, message: "Propiedad actualizada con éxito" };
     }),
@@ -1019,15 +1013,9 @@ export const janIARouter = router({
         });
       }
 
-      // Actualizar en caliente el caché en memoria para refresco instantáneo sin congelar la app
-      if (Array.isArray(cachedAllMatchesData)) {
-        for (const m of cachedAllMatchesData) {
-          if (m.requirement?.id === input.requirementId) {
-            Object.assign(m.requirement, updateData);
-          }
-        }
-      }
-      cachedAllMatchesTime = Date.now();
+      // Invalidar caché en memoria para forzar lectura fresca y veraz de la base de datos
+      cachedAllMatchesData = null;
+      cachedAllMatchesTime = 0;
 
       return { success: true, message: "Requerimiento actualizado con éxito" };
     }),

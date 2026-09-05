@@ -163,7 +163,25 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.7 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.8 — Septiembre 2026
+
+### Novedades v31.8 (Doctrina de Reactividad Inmediata en Guardado de Ficha, Auto-Refresco de Cotejo y Erradicación de Volcados Crudos JSON):
+- **Diagnóstico y Blindaje Reactivo en Guardado de Ficha Técnica (Caso Antigüedad 1994 / 32 años en Match #12305)**:
+  1) **Causa Raíz de la Inconsistencia Visual al Guardar**:
+     - Aunque `updatePropertyDetails` guardaba en Supabase los datos (`yearBuilt: 1994`, `antiguedadAnos: 32`), el frontend (`AdminMatches.tsx`) en modo lectura (`!isEditingThisCard`) dependía de `m._precomputedRows`, el cual había sido memorizado una única vez al montar el componente.
+     - `handleOnlySave` actualizaba `m.property`, pero no recalculaba `m._precomputedRows`. Al volver al modo lectura, la tarjeta mostraba las filas anteriores en memoria caché (`N/E (Consultar)` y "Dato Pendiente").
+     - En el backend (`janIA.ts`), `updatePropertyDetails` omitía registrar `antiguedadAnos` cuando `computedYear` y `computedAge` venían ambos definidos, y `cachedAllMatchesData` retenía el estado por 30s.
+  2) **Solución y Blindaje Integral**:
+     - `paginatedMatches` evalúa `scoreRows(m.requirement, m.property)` en tiempo real para las tarjetas visibles de la página activa tanto en lectura como en edición.
+     - `handleOnlySave` y `handleRecalculateMatch` recomputan `m._precomputedRows` y `m._precomputedScore`, limpian `scoreRowsCache` y disparan `localUpdateTick` para invalidar reactivamente todas las memorizaciones, reflejando al instante `1994 (32 años)` con insignia **🟢 Coincide**.
+     - `updatePropertyDetails` persiste taxativamente tanto `yearBuilt` como `antiguedadAnos` e invalida `cachedAllMatchesData = null`.
+- **Erradicación del Letrero Feo (Volcado Crudo de JSON en Justificación IA)**:
+  - En `AdminMatches.tsx`, la justificación imprimía la cadena cruda `{m.matchReason && <div>"{m.matchReason}"</div>}`. Para los matches VRF-2.0, `matchReason` es un string JSON (`{"score":95,"blockers":[],"positives":[...]}`), apareciendo como un letrero feo de depuración técnica.
+  - Implementado `getCleanMatchReason`: detecta JSON y descarta el volcado técnico, mostrando únicamente resúmenes en lenguaje natural con icono de síntesis JanIA o suprimiendo el contenedor por completo si solo hay arrays técnicos.
+- **Refinamiento de Toolbar**:
+  - Reemplazado el banner con borde punteado por un selector sutil y compacto ("Enriquecer ficha técnica") alineado con la base de la tabla.
+- **Incremento Oficial de Versión**:
+  1) Elevado a `v31.8` en `shared/const.ts` y `package.json` (31.8.0).
 
 ### Novedades v31.7 (Doctrina de Edición Integral, Auto-Cálculo de Antigüedad, Adición Dinámica de Amenidades y Persistencia en Ficha Técnica):
 - **Diagnóstico y Solución de Persistencia en Edición de Fichas (Caso Año 1994 / Antigüedad 32 años)**:

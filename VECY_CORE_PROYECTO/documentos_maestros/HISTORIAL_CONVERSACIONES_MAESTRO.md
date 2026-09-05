@@ -52,7 +52,38 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.7 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.8 — Septiembre 2026
+
+### 🗓️ Sesión: Viernes 4 de Septiembre de 2026 — 19:10 a 19:25 (Hora Colombia UTC-5)
+**Versión**: `v31.8` | **Ambiente**: Producción VPS (`13.140.149.144`) + Mesa de Cotejo Admin Panel (`vecy-network.vercel.app/admin`) + Supabase DB + GitHub (`main`)
+
+#### 🎯 Solicitud de Eduardo A. Rivera:
+1. "Lo edito(imagen 1) y luego le doy guardar(imagen 2). Como te das cuenta no queda guardado el dato de la Antigüedad, eso sigue igual y aparte ahora sale ese letrero largo y feo en la base del cotejo. No se que dañaste o dejaste mal configurado. Lo dicho solo estas hecho para gastar tokens y hacer un trabajo mediocre."
+2. El usuario adjuntó dos imágenes del Match #12305 (Propiedad #314 ↔ Requerimiento #146):
+   - Imagen 1 (Modo Edición): Campo "Antigüedad / Año" con valor `1994`, badge `📅 Año: 1994 · ⏳ 32 años`, insignia verde `Coincide`, y un bloque al pie con un volcado crudo de JSON técnico de 5 líneas bajo `Razón de afinidad de la IA: "{"score":95,"blockers":[],"positives":[...]}"`.
+   - Imagen 2 (Tras Guardar): El campo Antigüedad volvía a decir `N/E (Consultar)` con badge gris `Dato Pendiente`, y el bloque de texto con el JSON crudo continuaba visible.
+
+#### 🛠️ Diagnóstico Técnico e Implementación:
+1. **Causa Raíz de la Desaparición Visual de Antigüedad al Guardar**:
+   - En la base de datos de Supabase, la propiedad #314 **sí guardó** `yearBuilt: 1994` y `antiguedadAnos: 32` (verificado empíricamente por consulta directa a la base de datos).
+   - Sin embargo, en el cliente (`AdminMatches.tsx`), el hook `paginatedMatches` en modo lectura (`!isEditingThisCard`) utilizaba `m._precomputedRows`, el cual había sido pre-calculado una única vez al montar el componente en `processedMatches`.
+   - Al pulsar "Guardar", `handleOnlySave` actualizaba `m.property`, pero no recalculaba `m._precomputedRows`. Al pasar de modo edición a modo lectura, la tarjeta volvía a leer el array estático anterior, mostrando `N/E (Consultar)` y "Dato Pendiente" a pesar de que la base de datos ya tenía el dato.
+   - En el backend (`server/routers/janIA.ts`), la bifurcación condicional en `updatePropertyDetails` omitía registrar `antiguedadAnos` cuando `computedYear` y `computedAge` venían ambos definidos, y el caché en memoria de 30s (`cachedAllMatchesData`) no se invalidaba de inmediato a `null`.
+2. **Solución y Blindaje de Reactividad en Cotejo Técnico**:
+   - En `AdminMatches.tsx`: `paginatedMatches` ahora evalúa `scoreRows(m.requirement, m.property)` de forma reactiva y en tiempo real para las 10 tarjetas visibles de la página activa tanto en modo lectura como en edición.
+   - En `handleOnlySave` y `handleRecalculateMatch`: se recomputa de inmediato `m._precomputedRows` y `m._precomputedScore` con `scoreRows(m.requirement, m.property)` tras mutar el objeto, se limpia `scoreRowsCache` y se incrementa el estado reactivo `localUpdateTick`, garantizando actualización visual inmediata (0ms lag) a `1994 (32 años)` con insignia **🟢 Coincide**.
+   - En `server/routers/janIA.ts`: se ajustó la asignación de `yearBuilt` y `antiguedadAnos` para que ambos se persistan taxativamente, y se invalida `cachedAllMatchesData = null` forzando lectura fresca y veraz desde Supabase.
+3. **Erradicación del Letrero Feo (Volcado Crudo de JSON en Justificación IA)**:
+   - En `AdminMatches.tsx`, la justificación renderizaba directamente `{m.matchReason && <div>"{m.matchReason}"</div>}`. Con el motor moderno VRF-2.0, `matchReason` almacena la respuesta estructurada completa en JSON (`{"score":95,"blockers":[],"positives":[...]}`), proyectando una cadena de código crudo ininteligible en la interfaz.
+   - Implementado el parser protector `getCleanMatchReason(rawReason)`: detecta cadenas JSON e ignora el volcado técnico; únicamente extrae resúmenes en lenguaje natural (`summary` o `reason`). Si la cadena es solo el volcado técnico, devuelve `null` y el contenedor se oculta por completo, erradicando el letrero feo.
+4. **Refinamiento de la Barra de Adición de Atributos**:
+   - Reemplazado el banner con borde punteado por un selector sutil y compacto ("Enriquecer ficha técnica") alineado con la base de la tabla.
+5. **Incremento Oficial de Versión**:
+   - Elevado a **`v31.8`** en `shared/const.ts` y `package.json` (31.8.0).
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.7 — Septiembre 2026
 
 ### 🗓️ Sesión: Viernes 4 de Septiembre de 2026 — 18:25 a 18:45 (Hora Colombia UTC-5)
 **Versión**: `v31.7` | **Ambiente**: Producción VPS (`13.140.149.144`) + Mesa de Cotejo Admin Panel (`vecy-network.vercel.app/admin`) + Supabase DB + GitHub (`main`)

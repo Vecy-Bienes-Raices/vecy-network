@@ -2189,6 +2189,28 @@ export default function AdminMatches() {
   const [dismissedMatchIds, setDismissedMatchIds] = React.useState<Set<number>>(new Set());
   const [saveStatusMap, setSaveStatusMap] = React.useState<Record<number, 'saved' | 'recalculated'>>({});
   const [customAttributesByMatch, setCustomAttributesByMatch] = React.useState<Record<number, { key: string; label: string }[]>>({});
+  const [localUpdateTick, setLocalUpdateTick] = React.useState(0);
+
+  const getCleanMatchReason = (rawReason?: string | null): string | null => {
+    if (!rawReason) return null;
+    const s = String(rawReason).trim();
+    if (!s) return null;
+    if (s.startsWith('{')) {
+      try {
+        const parsed = JSON.parse(s);
+        if (typeof parsed.summary === 'string' && parsed.summary.trim()) {
+          return parsed.summary.trim();
+        }
+        if (typeof parsed.reason === 'string' && parsed.reason.trim()) {
+          return parsed.reason.trim();
+        }
+        return null;
+      } catch {
+        return null;
+      }
+    }
+    return s;
+  };
 
   const handleAddAttributeToCard = (matchId: number, attrKey: string) => {
     const attributeDefs: Record<string, { key: string; label: string }> = {
@@ -2753,8 +2775,8 @@ export default function AdminMatches() {
           idUsuarioWhatsapp: normalizePhoneInput(editForm.propPhone) || m.property.idUsuarioWhatsapp,
           nombreUsuarioWhatsapp: editForm.propSenderName !== undefined && editForm.propSenderName.trim() !== '' ? String(editForm.propSenderName).trim() : m.property.nombreUsuarioWhatsapp,
           origenNombre: editForm.propOrigenNombre ? String(editForm.propOrigenNombre).trim() : m.property.origenNombre,
-          yearBuilt: parsedYear ?? m.property.yearBuilt,
-          antiguedadAnos: parsedAge ?? m.property.antiguedadAnos,
+          yearBuilt: parsedYear !== undefined ? parsedYear : m.property.yearBuilt,
+          antiguedadAnos: parsedAge !== undefined ? parsedAge : (parsedYear ? 2026 - parsedYear : m.property.antiguedadAnos),
           interiorExterior: editForm.propExtInt || m.property.interiorExterior,
           garageType: editForm.propGarageType || m.property.garageType,
           amenities: propAmenitiesToSave,
@@ -2789,11 +2811,15 @@ export default function AdminMatches() {
       }
 
       scoreRowsCache.clear();
+      const freshComputed = scoreRows(m.requirement, m.property);
+      m._precomputedRows = freshComputed.rows;
+      m._precomputedScore = freshComputed.autoScore;
 
       setSaveStatusMap(prev => ({ ...prev, [m.id]: 'saved' }));
       toast.success("✅ Ficha guardada y propagada en cascada a todas sus publicaciones");
       setEditingMatchId(null);
       setEditForm({});
+      setLocalUpdateTick(prev => prev + 1);
 
       // Refrescar en segundo plano sin congelar
       utils.janIA.getAllMatches.invalidate().catch(() => {});
@@ -2962,8 +2988,8 @@ export default function AdminMatches() {
           idUsuarioWhatsapp: normalizePhoneInput(editForm.propPhone) || m.property.idUsuarioWhatsapp,
           nombreUsuarioWhatsapp: editForm.propSenderName !== undefined && editForm.propSenderName.trim() !== '' ? String(editForm.propSenderName).trim() : m.property.nombreUsuarioWhatsapp,
           origenNombre: editForm.propOrigenNombre ? String(editForm.propOrigenNombre).trim() : m.property.origenNombre,
-          yearBuilt: parsedYear ?? m.property.yearBuilt,
-          antiguedadAnos: parsedAge ?? m.property.antiguedadAnos,
+          yearBuilt: parsedYear !== undefined ? parsedYear : m.property.yearBuilt,
+          antiguedadAnos: parsedAge !== undefined ? parsedAge : (parsedYear ? 2026 - parsedYear : m.property.antiguedadAnos),
           interiorExterior: editForm.propExtInt || m.property.interiorExterior,
           garageType: editForm.propGarageType || m.property.garageType,
           amenities: propAmenitiesToSave,
@@ -2998,6 +3024,9 @@ export default function AdminMatches() {
       }
 
       scoreRowsCache.clear();
+      const freshComputed = scoreRows(m.requirement, m.property);
+      m._precomputedRows = freshComputed.rows;
+      m._precomputedScore = freshComputed.autoScore;
 
       if (m.property?.id || m.requirement?.id) {
         await recalculateMatchMut.mutateAsync({
@@ -3010,6 +3039,7 @@ export default function AdminMatches() {
       toast.success("⚡ Recalculado y sincronizado en tiempo real");
       setEditingMatchId(null);
       setEditForm({});
+      setLocalUpdateTick(prev => prev + 1);
 
       utils.janIA.getAllMatches.invalidate().catch(() => {});
     } catch (err: any) {
@@ -3129,7 +3159,7 @@ export default function AdminMatches() {
     }
 
     return results;
-  }, [matches]);
+  }, [matches, localUpdateTick]);
 
   // 2. Filtrado instantáneo (<0.001ms) con useDeferredValue para evitar bloqueos del hilo principal
   const deferredSearchTerm = React.useDeferredValue(searchTerm);
@@ -3161,7 +3191,7 @@ export default function AdminMatches() {
     const start = (currentPage - 1) * pageSize;
     const slice = filteredMatches.slice(start, start + pageSize);
 
-    // Calcular scoreRows únicamente para los 10 items visibles en pantalla y reactivo solo a la tarjeta en edición
+    // Calcular scoreRows únicamente para los 10 items visibles en pantalla y reactivo a edición y guardado
     return slice.map((m: any) => {
       const isEditingThisCard = editingMatchId === m.id;
 
@@ -3243,13 +3273,17 @@ export default function AdminMatches() {
         };
       }
 
+      // En modo lectura: evaluar scoreRows directamente sobre los datos vigentes de m.property y m.requirement
+      const computed = scoreRows(m.requirement, m.property);
       return {
         ...m,
         _effectiveProp: m.property,
         _effectiveReq: m.requirement,
+        _precomputedRows: computed.rows,
+        _precomputedScore: computed.autoScore,
       };
     });
-  }, [filteredMatches, currentPage, pageSize, editingMatchId, editForm]);
+  }, [filteredMatches, currentPage, pageSize, editingMatchId, editForm, localUpdateTick]);
 
 
 
@@ -5479,47 +5513,45 @@ export default function AdminMatches() {
                       })}
                     </div>
 
-                    {/* BARRA DE ACCIÓN: COMPLETAR / AGREGAR CARACTERÍSTICAS A LA FICHA */}
+                    {/* BARRA DE ACCIÓN: AGREGAR CARACTERÍSTICAS A LA FICHA */}
                     {isEditingThisCard && (
-                      <div className="mt-4 pt-3.5 border-t border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-zinc-950/60 p-3 rounded-2xl border border-dashed border-[#bf953f]/30">
-                        <div className="flex items-center gap-2 text-xs text-[#bf953f] font-semibold">
-                          <Plus className="w-4 h-4 text-amber-400 shrink-0" />
-                          <span>¿Faltan datos en la ficha? Agrega una característica o amenidad:</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <select
-                            defaultValue=""
-                            onChange={(e) => {
-                              if (e.target.value) {
-                                handleAddAttributeToCard(m.id, e.target.value);
-                                e.target.value = "";
-                              }
-                            }}
-                            className="bg-black/90 border border-[#bf953f]/50 text-zinc-200 text-xs py-1.5 px-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#bf953f] cursor-pointer"
-                          >
-                            <option value="" disabled>➕ Completar / Agregar Atributo...</option>
-                            <option value="antiguedad">📅 Antigüedad / Año de Construcción</option>
-                            <option value="vista">🧭 Ubicación en Piso (Vista)</option>
-                            <option value="balcon">🌿 Balcón / Terraza / Patio</option>
-                            <option value="cocina">🍽️ Tipología de Cocina</option>
-                            <option value="cbs">🏠 Cuarto y Baño de Servicio (CBS)</option>
-                            <option value="deposito">📦 Depósito / Cuarto Útil</option>
-                            <option value="garaje_tipo">🚗 Tipo de Garaje (Independiente/Lineal)</option>
-                            <option value="ascensor">🛗 Ascensor</option>
-                            <option value="conjunto">🛡️ Conjunto Cerrado / Club House</option>
-                            <option value="chimenea">🔥 Chimenea</option>
-                            <option value="gas">🔥 Gas Natural</option>
-                            <option value="gimnasio">🏋️ Gimnasio</option>
-                            <option value="piscina">🏊 Piscina</option>
-                            <option value="cancha">🎾 Cancha Deportiva / Squash</option>
-                            <option value="zona_infantil">🎠 Zona Infantil</option>
-                            <option value="vigilancia">👮 Vigilancia & Portería 24/7</option>
-                            <option value="planta">⚡ Planta Eléctrica</option>
-                            <option value="estado">🛠️ Estado del Inmueble</option>
-                            <option value="lavanderia">🧺 Zona de Lavandería</option>
-                            <option value="custom">✏️ Otro Atributo Personalizado...</option>
-                          </select>
-                        </div>
+                      <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-between gap-3">
+                        <span className="text-[11px] text-zinc-400 flex items-center gap-1.5 font-medium">
+                          <Sparkles className="w-3.5 h-3.5 text-[#bf953f]" />
+                          <span>Enriquecer ficha técnica:</span>
+                        </span>
+                        <select
+                          defaultValue=""
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              handleAddAttributeToCard(m.id, e.target.value);
+                              e.target.value = "";
+                            }
+                          }}
+                          className="bg-black/90 border border-[#bf953f]/40 text-amber-300 text-xs py-1.5 px-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-[#bf953f] cursor-pointer hover:border-[#bf953f] transition-colors"
+                        >
+                          <option value="" disabled>➕ Agregar Atributo o Amenidad...</option>
+                          <option value="antiguedad">📅 Antigüedad / Año de Construcción</option>
+                          <option value="vista">🧭 Ubicación en Piso (Vista)</option>
+                          <option value="balcon">🌿 Balcón / Terraza / Patio</option>
+                          <option value="cocina">🍽️ Tipología de Cocina</option>
+                          <option value="cbs">🏠 Cuarto y Baño de Servicio (CBS)</option>
+                          <option value="deposito">📦 Depósito / Cuarto Útil</option>
+                          <option value="garaje_tipo">🚗 Tipo de Garaje (Independiente/Lineal)</option>
+                          <option value="ascensor">🛗 Ascensor</option>
+                          <option value="conjunto">🛡️ Conjunto Cerrado / Club House</option>
+                          <option value="chimenea">🔥 Chimenea</option>
+                          <option value="gas">🔥 Gas Natural</option>
+                          <option value="gimnasio">🏋️ Gimnasio</option>
+                          <option value="piscina">🏊 Piscina</option>
+                          <option value="cancha">🎾 Cancha Deportiva / Squash</option>
+                          <option value="zona_infantil">🎠 Zona Infantil</option>
+                          <option value="vigilancia">👮 Vigilancia & Portería 24/7</option>
+                          <option value="planta">⚡ Planta Eléctrica</option>
+                          <option value="estado">🛠️ Estado del Inmueble</option>
+                          <option value="lavanderia">🧺 Zona de Lavandería</option>
+                          <option value="custom">✏️ Otro Atributo Personalizado...</option>
+                        </select>
                       </div>
                     )}
                   </div>
@@ -5528,13 +5560,18 @@ export default function AdminMatches() {
             );
           })()}
 
-                  {/* Justificación de la IA */}
-                  {m.matchReason && (
-                    <div className="p-4 sm:p-6 bg-white/[0.01] text-xs text-zinc-400 leading-relaxed">
-                      <span className="font-bold text-zinc-300 block mb-1">Razón de afinidad de la IA:</span>
-                      "{m.matchReason}"
-                    </div>
-                  )}
+                  {/* Síntesis o Justificación Humana de la IA (Limpia, sin volcados de JSON) */}
+                  {(() => {
+                    const cleanReason = getCleanMatchReason(m.matchReason);
+                    if (!cleanReason) return null;
+                    return (
+                      <div className="px-4 sm:px-6 py-2.5 bg-white/[0.01] border-t border-white/5 text-xs text-zinc-400 leading-relaxed flex items-center gap-2">
+                        <Sparkles className="w-3.5 h-3.5 text-[#bf953f] shrink-0" />
+                        <span className="font-semibold text-zinc-300">Síntesis JanIA:</span>
+                        <span className="text-zinc-400 italic">"{cleanReason}"</span>
+                      </div>
+                    );
+                  })()}
 
                   {/* CAPA C: RETROALIMENTACIÓN ACTIVA DE BROKER / ENTRENAMIENTO JANIA */}
                   <div className="px-4 sm:px-6 py-3.5 bg-gradient-to-r from-zinc-950 via-zinc-900/90 to-zinc-950 border-t border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
