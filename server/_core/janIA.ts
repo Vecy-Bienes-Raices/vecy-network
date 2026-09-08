@@ -255,6 +255,35 @@ function getGreetingByTime(): string {
   }
 }
 
+/**
+ * Repara comillas dobles no escapadas dentro de strings JSON generados por LLMs (ej: La mención de "Honorarios 50/50" indica...)
+ */
+export function cleanUnescapedQuotesInJSON(content: string): string {
+  const lines = content.split("\n");
+  const cleanedLines = lines.map(line => {
+    // Coincidencia con clave-valor donde el valor es un string: "key": "valor con "comillas" internas",
+    const kvMatch = line.match(/^(\s*"[^"]+"\s*:\s*)"([\s\S]*)"(\s*,?\s*)$/);
+    if (kvMatch) {
+      const prefix = kvMatch[1];
+      const val = kvMatch[2];
+      const suffix = kvMatch[3];
+      const fixedVal = val.replace(/(^|[^\\])(")/g, '$1\\"');
+      return `${prefix}"${fixedVal}"${suffix}`;
+    }
+    // Coincidencia con elemento de array string: "valor con "comillas"",
+    const arrValMatch = line.match(/^(\s*)"([\s\S]*)"(\s*,?\s*)$/);
+    if (arrValMatch && !line.includes(":")) {
+      const prefix = arrValMatch[1];
+      const val = arrValMatch[2];
+      const suffix = arrValMatch[3];
+      const fixedVal = val.replace(/(^|[^\\])(")/g, '$1\\"');
+      return `${prefix}"${fixedVal}"${suffix}`;
+    }
+    return line;
+  });
+  return cleanedLines.join("\n");
+}
+
 export function parseSafeJSON(content: string): any {
   let text = content.trim();
   // Strip markdown code fences
@@ -273,12 +302,24 @@ export function parseSafeJSON(content: string): any {
   if (lastClose > start) {
     const extracted = text.substring(start, lastClose + 1);
     try { return JSON.parse(extracted); } catch (_) {}
+
+    // 2.5 Reparar comillas internas sin escapar en valores de texto generados por el LLM
+    try {
+      const cleaned = cleanUnescapedQuotesInJSON(extracted);
+      return JSON.parse(cleaned);
+    } catch (_) {}
   }
   
   // 3. JSON truncado — reparar usando máquina de estados
   const partial = text.substring(start);
   const repaired = repairJSON(partial);
   try { return JSON.parse(repaired); } catch (_) {}
+
+  // 3.5 Intentar reparar con limpieza de comillas sobre el JSON reparado
+  try {
+    const cleanedRepaired = cleanUnescapedQuotesInJSON(repaired);
+    return JSON.parse(cleanedRepaired);
+  } catch (_) {}
 
   throw new Error("Could not parse or repair JSON from LLM output");
 }
@@ -532,12 +573,12 @@ export function extractFallbackDataFromText(text: string): any {
     propertyType = "commercial";
   } else if (clean.includes("bodega") || clean.includes("bodegas") || clean.includes("warehouse")) {
     propertyType = "warehouse";
+  } else if (clean.includes("casalote") || clean.includes("lote") || clean.includes("terreno") || clean.includes("predio") || clean.includes("land")) {
+    propertyType = "land";
   } else if (clean.includes("casa") || clean.includes("townhouse") || clean.includes("chalet")) {
     propertyType = "house";
   } else if (clean.includes("cabaña") || clean.includes("cabana") || clean.includes("cabañas") || clean.includes("cabanas") || clean.includes("cabin")) {
     propertyType = "cabin";
-  } else if (clean.includes("lote") || clean.includes("terreno") || clean.includes("predio") || clean.includes("land")) {
-    propertyType = "land";
   } else if (clean.includes("finca") || clean.includes("campestre") || clean.includes("farm")) {
     propertyType = "farm";
   } else if (clean.includes("edificio") || clean.includes("building")) {
@@ -710,19 +751,34 @@ export function extractFallbackDataFromText(text: string): any {
   let area = 0;
   let areaMin = 0;
   let areaMax = 0;
-  // A. Captura rango de área con soporte para unidades intermedias (ej: "de 70m2 a 80m2", "de 50-70 mt2", "50 a 70 m2", "50-70 metros")
-  const areaRangeMatch = clean.match(/(?:📐|area|área|superficie)?\s*(?:de\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)?\s*(?:a|-|hasta)\s*(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)/i);
-  if (areaRangeMatch) {
-    areaMin = parseFloat(areaRangeMatch[1].replace(',', '.'));
-    areaMax = parseFloat(areaRangeMatch[2].replace(',', '.'));
-    area = areaMin;
-  } else {
-    // B. Captura área simple con prefijos: "📐 183 m²", "Area: 180 Mts", "Mínimo 150m2"
-    const areaMatch = clean.match(/(?:📐|area|área|superficie)?\s*:?\s*(?:(?:m[ií]nimo|min|m[aá]ximo|max|de|área\s*(?:m[ií]nima)?|area\s*(?:minima)?)\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)/i);
-    if (areaMatch) {
-      area = parseFloat(areaMatch[1].replace(',', '.'));
+
+  // 0. Captura dimensiones multiplicadas (ej: "8*25 MTS2", "8x25 m2", "10*30 mts")
+  const dimMultMatch = (text || "").match(/(\d+(?:[.,]\d+)?)\s*[*xX]\s*(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)?/i);
+  if (dimMultMatch) {
+    const d1 = parseFloat(dimMultMatch[1].replace(',', '.'));
+    const d2 = parseFloat(dimMultMatch[2].replace(',', '.'));
+    if (!isNaN(d1) && !isNaN(d2) && d1 > 0 && d2 > 0 && d1 <= 500 && d2 <= 500) {
+      area = Math.round(d1 * d2 * 100) / 100;
       areaMin = area;
       areaMax = area;
+    }
+  }
+
+  if (area === 0) {
+    // A. Captura rango de área con soporte para unidades intermedias (ej: "de 70m2 a 80m2", "de 50-70 mt2", "50 a 70 m2", "50-70 metros")
+    const areaRangeMatch = clean.match(/(?:📐|area|área|superficie)?\s*(?:de\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)?\s*(?:a|-|hasta)\s*(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)/i);
+    if (areaRangeMatch) {
+      areaMin = parseFloat(areaRangeMatch[1].replace(',', '.'));
+      areaMax = parseFloat(areaRangeMatch[2].replace(',', '.'));
+      area = areaMin;
+    } else {
+      // B. Captura área simple con prefijos: "📐 183 m²", "Area: 180 Mts", "Mínimo 150m2"
+      const areaMatch = clean.match(/(?:📐|area|área|superficie)?\s*:?\s*(?:(?:m[ií]nimo|min|m[aá]ximo|max|de|área\s*(?:m[ií]nima)?|area\s*(?:minima)?)\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)/i);
+      if (areaMatch) {
+        area = parseFloat(areaMatch[1].replace(',', '.'));
+        areaMin = area;
+        areaMax = area;
+      }
     }
   }
 
@@ -872,7 +928,9 @@ export function extractFallbackDataFromText(text: string): any {
   const hasHeating = clean.includes("calentador de paso") || clean.includes("calentador a gas") || clean.includes("caldera");
 
   let city = "";
-  if (clean.includes("bogota") || clean.includes("bogotá") || clean.includes("cedritos") || clean.includes("chico") || clean.includes("chicó") || clean.includes("rosales") || clean.includes("usaquen") || clean.includes("usaquén") || clean.includes("santa barbara") || clean.includes("santa bárbara") || clean.includes("chapinero")) {
+  const isBogotaContext = clean.includes("bogota") || clean.includes("bogotá") || clean.includes("cedritos") || clean.includes("chico") || clean.includes("chicó") || clean.includes("rosales") || clean.includes("usaquen") || clean.includes("usaquén") || clean.includes("santa barbara") || clean.includes("santa bárbara") || clean.includes("chapinero") || clean.includes("suba") || clean.includes("engativa") || clean.includes("engativá") || clean.includes("tabora") || clean.includes("floresta") || clean.includes("santa maria del lago") || clean.includes("santa maría del lago") || clean.includes("fontibon") || clean.includes("fontibón") || clean.includes("kennedy") || clean.includes("teusaquillo") || clean.includes("salitre") || clean.includes("barrios unidos");
+
+  if (isBogotaContext) {
     city = "Bogotá, D.C.";
   } else if (clean.includes("valledupar") || clean.includes("cesar")) {
     city = "Valledupar";
@@ -894,7 +952,7 @@ export function extractFallbackDataFromText(text: string): any {
     city = clean.includes("acacias") ? "Acacías" : "Villavicencio";
   } else if (clean.includes("cali") || clean.includes("melendez") || clean.includes("jardin") || clean.includes("pacifica") || clean.includes("jamundi") || clean.includes("pance") || clean.includes("valle del lili")) {
     city = clean.includes("jamundi") || clean.includes("jamundí") ? "Jamundí" : "Cali";
-  } else if (clean.includes("medellin") || clean.includes("poblado") || clean.includes("laureles") || clean.includes("envigado") || clean.includes("sabaneta") || clean.includes("rionegro") || clean.includes("la ceja")) {
+  } else if (clean.includes("medellin") || clean.includes("poblado") || clean.includes("laureles") || clean.includes("envigado") || clean.includes("sabaneta") || (clean.includes("rionegro") && !clean.includes("suba") && !clean.includes("bogota")) || clean.includes("la ceja")) {
     city = clean.includes("envigado") ? "Envigado" : clean.includes("sabaneta") ? "Sabaneta" : clean.includes("rionegro") ? "Rionegro" : clean.includes("la ceja") ? "La Ceja" : "Medellín";
   } else if (clean.includes("chia") || clean.includes("chía")) {
     city = "Chía";
@@ -3753,6 +3811,12 @@ export async function initBrokerDirectory() {
       name: requirements.nombreUsuarioWhatsapp
     }).from(requirements);
 
+    const knownUsers = await db.select({
+      openId: users.openId,
+      phone: users.phone,
+      name: users.name
+    }).from(users);
+
     for (const item of [...knownProps, ...knownReqs]) {
       if (item.phone && (item.phone.startsWith('573') || item.phone.startsWith('3')) && item.phone.length <= 12) {
         const cleanPhone = item.phone.startsWith('3') && item.phone.length === 10 ? `57${item.phone}` : item.phone;
@@ -3762,6 +3826,20 @@ export async function initBrokerDirectory() {
         }
       }
     }
+
+    for (const u of knownUsers) {
+      if (u.phone && (u.phone.startsWith('573') || u.phone.startsWith('3')) && u.phone.length <= 12) {
+        const cleanPhone = u.phone.startsWith('3') && u.phone.length === 10 ? `57${u.phone}` : u.phone;
+        if (u.openId && u.openId.startsWith('wa-')) {
+          const lidOrId = u.openId.replace('wa-', '');
+          brokerDirectoryCache.set(lidOrId, { phone: cleanPhone, name: u.name || undefined });
+        }
+        if (u.name && !isGenericName(u.name)) {
+          brokerDirectoryCache.set(u.name, { phone: cleanPhone, name: u.name });
+        }
+      }
+    }
+
     console.log(`[JanIA-Directory] ✅ Directorio de brokers cargado en memoria (${brokerDirectoryCache.size} entradas conocidas).`);
   } catch (err: any) {
     console.warn(`[JanIA-Directory] Advertencia cargando directorio inicial:`, err?.message || err);

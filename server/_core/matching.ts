@@ -3175,30 +3175,30 @@ export async function findMatchesForProperty(propertyId: number) {
     const rejectedSet = await getRejectedPairsSet();
     const validMatches = [];
 
+    // Carga de matches existentes para esta propiedad en 1 sola consulta
+    const existingMatches = await db
+      .select({ id: propertyMatches.id, requirementId: propertyMatches.requirementId })
+      .from(propertyMatches)
+      .where(eq(propertyMatches.propertyId, propertyId));
+    const existingMatchesMap = new Map<number, number>(existingMatches.map(m => [m.requirementId, m.id]));
+
     for (const req of activeRequirements) {
       if (rejectedSet.has(`${propertyId}_${req.id}`)) {
-        await db.delete(propertyMatches).where(
-          and(
-            eq(propertyMatches.propertyId, propertyId),
-            eq(propertyMatches.requirementId, req.id)
-          )
-        );
+        if (existingMatchesMap.has(req.id)) {
+          await db.delete(propertyMatches).where(eq(propertyMatches.id, existingMatchesMap.get(req.id)!));
+          existingMatchesMap.delete(req.id);
+        }
         continue;
       }
       const explanation = explicarMatch(req, property);
       const score = explanation.score;
       if (score >= 80) {
         let matchId: number;
-        const existing = await db.select().from(propertyMatches).where(
-          and(
-            eq(propertyMatches.propertyId, propertyId),
-            eq(propertyMatches.requirementId, req.id)
-          )
-        ).limit(1);
+        const matchIdExisting = existingMatchesMap.get(req.id);
         const ipcObj = calcularIPC(req, property, score);
         explanation.ipc = ipcObj;
-        if (existing.length > 0) {
-          matchId = existing[0].id;
+        if (matchIdExisting) {
+          matchId = matchIdExisting;
           await db.update(propertyMatches).set({
             matchScore: score.toFixed(2),
             matchExplanation: explanation,
@@ -3228,14 +3228,10 @@ export async function findMatchesForProperty(propertyId: number) {
           matchId: matchId,
           idUsuarioWhatsapp: req.idUsuarioWhatsapp,
         });
-      } else {
-        // Si el score bajó de 80 o es inviable, purgar de la base de datos
-        await db.delete(propertyMatches).where(
-          and(
-            eq(propertyMatches.propertyId, propertyId),
-            eq(propertyMatches.requirementId, req.id)
-          )
-        );
+      } else if (existingMatchesMap.has(req.id)) {
+        // Si el score bajó de 80 o es inviable, purgar SOLO si existía previamente
+        await db.delete(propertyMatches).where(eq(propertyMatches.id, existingMatchesMap.get(req.id)!));
+        existingMatchesMap.delete(req.id);
       }
     }
 
@@ -3271,30 +3267,30 @@ export async function findMatchesForRequirement(requirementId: number) {
     const rejectedSet = await getRejectedPairsSet();
     const validMatches = [];
 
+    // Carga de matches existentes para este requerimiento en 1 sola consulta
+    const existingMatches = await db
+      .select({ id: propertyMatches.id, propertyId: propertyMatches.propertyId })
+      .from(propertyMatches)
+      .where(eq(propertyMatches.requirementId, requirementId));
+    const existingMatchesMap = new Map<number, number>(existingMatches.map(m => [m.propertyId, m.id]));
+
     for (const prop of availableProperties) {
       if (rejectedSet.has(`${prop.id}_${requirementId}`)) {
-        await db.delete(propertyMatches).where(
-          and(
-            eq(propertyMatches.propertyId, prop.id),
-            eq(propertyMatches.requirementId, requirementId)
-          )
-        );
+        if (existingMatchesMap.has(prop.id)) {
+          await db.delete(propertyMatches).where(eq(propertyMatches.id, existingMatchesMap.get(prop.id)!));
+          existingMatchesMap.delete(prop.id);
+        }
         continue;
       }
       const explanation = explicarMatch(req, prop);
       const score = explanation.score;
       if (score >= 80) {
         let matchId: number;
-        const existing = await db.select().from(propertyMatches).where(
-          and(
-            eq(propertyMatches.propertyId, prop.id),
-            eq(propertyMatches.requirementId, requirementId)
-          )
-        ).limit(1);
+        const matchIdExisting = existingMatchesMap.get(prop.id);
         const ipcObj = calcularIPC(req, prop, score);
         explanation.ipc = ipcObj;
-        if (existing.length > 0) {
-          matchId = existing[0].id;
+        if (matchIdExisting) {
+          matchId = matchIdExisting;
           await db.update(propertyMatches).set({
             matchScore: score.toFixed(2),
             matchExplanation: explanation,
@@ -3324,14 +3320,10 @@ export async function findMatchesForRequirement(requirementId: number) {
           matchId: matchId,
           idUsuarioWhatsapp: prop.idUsuarioWhatsapp,
         });
-      } else {
-        // Si el score bajó de 80 o es inviable, purgar de la base de datos
-        await db.delete(propertyMatches).where(
-          and(
-            eq(propertyMatches.propertyId, prop.id),
-            eq(propertyMatches.requirementId, requirementId)
-          )
-        );
+      } else if (existingMatchesMap.has(prop.id)) {
+        // Si el score bajó de 80 o es inviable, purgar SOLO si existía previamente
+        await db.delete(propertyMatches).where(eq(propertyMatches.id, existingMatchesMap.get(prop.id)!));
+        existingMatchesMap.delete(prop.id);
       }
     }
 

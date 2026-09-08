@@ -418,7 +418,8 @@ export class JaniaMatchBot {
     });
 
     this.sock.ev.on('messages.upsert', async (m: { messages: proto.IWebMessageInfo[], type: string }) => {
-      if (m.type !== 'notify') return;
+      // Permitir tanto mensajes en vivo ('notify') como mensajes encolados durante micro-reconexiones ('append')
+      if (m.type !== 'notify' && m.type !== 'append') return;
 
       for (const msg of m.messages) {
         if (!msg.key || !msg.message) continue;

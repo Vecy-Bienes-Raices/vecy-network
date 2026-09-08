@@ -3543,7 +3543,7 @@ __export(matching_exports, {
   parsePropertyAddressNumbers: () => parsePropertyAddressNumbers,
   parseStreetCarreraBoundaries: () => parseStreetCarreraBoundaries
 });
-import { and, eq as eq3 } from "drizzle-orm";
+import { eq as eq3 } from "drizzle-orm";
 async function getRejectedPairsSet() {
   const now = Date.now();
   if (cachedRejectedPairs && now - lastRejectedPairsFetch < REJECTED_PAIRS_TTL_MS) {
@@ -6207,30 +6207,25 @@ async function findMatchesForProperty(propertyId) {
     const activeRequirements = await db.select().from(requirements).where(eq3(requirements.status, "active"));
     const rejectedSet = await getRejectedPairsSet();
     const validMatches = [];
+    const existingMatches = await db.select({ id: propertyMatches.id, requirementId: propertyMatches.requirementId }).from(propertyMatches).where(eq3(propertyMatches.propertyId, propertyId));
+    const existingMatchesMap = new Map(existingMatches.map((m) => [m.requirementId, m.id]));
     for (const req of activeRequirements) {
       if (rejectedSet.has(`${propertyId}_${req.id}`)) {
-        await db.delete(propertyMatches).where(
-          and(
-            eq3(propertyMatches.propertyId, propertyId),
-            eq3(propertyMatches.requirementId, req.id)
-          )
-        );
+        if (existingMatchesMap.has(req.id)) {
+          await db.delete(propertyMatches).where(eq3(propertyMatches.id, existingMatchesMap.get(req.id)));
+          existingMatchesMap.delete(req.id);
+        }
         continue;
       }
       const explanation = explicarMatch(req, property);
       const score = explanation.score;
       if (score >= 80) {
         let matchId;
-        const existing = await db.select().from(propertyMatches).where(
-          and(
-            eq3(propertyMatches.propertyId, propertyId),
-            eq3(propertyMatches.requirementId, req.id)
-          )
-        ).limit(1);
+        const matchIdExisting = existingMatchesMap.get(req.id);
         const ipcObj = calcularIPC(req, property, score);
         explanation.ipc = ipcObj;
-        if (existing.length > 0) {
-          matchId = existing[0].id;
+        if (matchIdExisting) {
+          matchId = matchIdExisting;
           await db.update(propertyMatches).set({
             matchScore: score.toFixed(2),
             matchExplanation: explanation,
@@ -6258,13 +6253,9 @@ async function findMatchesForProperty(propertyId) {
           matchId,
           idUsuarioWhatsapp: req.idUsuarioWhatsapp
         });
-      } else {
-        await db.delete(propertyMatches).where(
-          and(
-            eq3(propertyMatches.propertyId, propertyId),
-            eq3(propertyMatches.requirementId, req.id)
-          )
-        );
+      } else if (existingMatchesMap.has(req.id)) {
+        await db.delete(propertyMatches).where(eq3(propertyMatches.id, existingMatchesMap.get(req.id)));
+        existingMatchesMap.delete(req.id);
       }
     }
     console.log(`[Matching] Inmueble #${propertyId}: ${validMatches.length} matches detectados.`);
@@ -6287,30 +6278,25 @@ async function findMatchesForRequirement(requirementId) {
     const availableProperties = await db.select().from(properties).where(eq3(properties.available, true));
     const rejectedSet = await getRejectedPairsSet();
     const validMatches = [];
+    const existingMatches = await db.select({ id: propertyMatches.id, propertyId: propertyMatches.propertyId }).from(propertyMatches).where(eq3(propertyMatches.requirementId, requirementId));
+    const existingMatchesMap = new Map(existingMatches.map((m) => [m.propertyId, m.id]));
     for (const prop of availableProperties) {
       if (rejectedSet.has(`${prop.id}_${requirementId}`)) {
-        await db.delete(propertyMatches).where(
-          and(
-            eq3(propertyMatches.propertyId, prop.id),
-            eq3(propertyMatches.requirementId, requirementId)
-          )
-        );
+        if (existingMatchesMap.has(prop.id)) {
+          await db.delete(propertyMatches).where(eq3(propertyMatches.id, existingMatchesMap.get(prop.id)));
+          existingMatchesMap.delete(prop.id);
+        }
         continue;
       }
       const explanation = explicarMatch(req, prop);
       const score = explanation.score;
       if (score >= 80) {
         let matchId;
-        const existing = await db.select().from(propertyMatches).where(
-          and(
-            eq3(propertyMatches.propertyId, prop.id),
-            eq3(propertyMatches.requirementId, requirementId)
-          )
-        ).limit(1);
+        const matchIdExisting = existingMatchesMap.get(prop.id);
         const ipcObj = calcularIPC(req, prop, score);
         explanation.ipc = ipcObj;
-        if (existing.length > 0) {
-          matchId = existing[0].id;
+        if (matchIdExisting) {
+          matchId = matchIdExisting;
           await db.update(propertyMatches).set({
             matchScore: score.toFixed(2),
             matchExplanation: explanation,
@@ -6338,13 +6324,9 @@ async function findMatchesForRequirement(requirementId) {
           matchId,
           idUsuarioWhatsapp: prop.idUsuarioWhatsapp
         });
-      } else {
-        await db.delete(propertyMatches).where(
-          and(
-            eq3(propertyMatches.propertyId, prop.id),
-            eq3(propertyMatches.requirementId, requirementId)
-          )
-        );
+      } else if (existingMatchesMap.has(prop.id)) {
+        await db.delete(propertyMatches).where(eq3(propertyMatches.id, existingMatchesMap.get(prop.id)));
+        existingMatchesMap.delete(prop.id);
       }
     }
     console.log(`[Matching] Requerimiento #${requirementId}: ${validMatches.length} matches detectados.`);
@@ -7327,6 +7309,7 @@ __export(janIA_exports, {
   buildSystemPrompt: () => buildSystemPrompt,
   calcularCalificacionCompletitud: () => calcularCalificacionCompletitud,
   checkStrictOffTopic: () => checkStrictOffTopic,
+  cleanUnescapedQuotesInJSON: () => cleanUnescapedQuotesInJSON,
   clearPromptCache: () => clearPromptCache,
   enrichLexiconFromText: () => enrichLexiconFromText,
   esMensajeSpamOBasura: () => esMensajeSpamOBasura,
@@ -7436,6 +7419,29 @@ function getGreetingByTime() {
     return "Buenas noches";
   }
 }
+function cleanUnescapedQuotesInJSON(content) {
+  const lines = content.split("\n");
+  const cleanedLines = lines.map((line) => {
+    const kvMatch = line.match(/^(\s*"[^"]+"\s*:\s*)"([\s\S]*)"(\s*,?\s*)$/);
+    if (kvMatch) {
+      const prefix = kvMatch[1];
+      const val = kvMatch[2];
+      const suffix = kvMatch[3];
+      const fixedVal = val.replace(/(^|[^\\])(")/g, '$1\\"');
+      return `${prefix}"${fixedVal}"${suffix}`;
+    }
+    const arrValMatch = line.match(/^(\s*)"([\s\S]*)"(\s*,?\s*)$/);
+    if (arrValMatch && !line.includes(":")) {
+      const prefix = arrValMatch[1];
+      const val = arrValMatch[2];
+      const suffix = arrValMatch[3];
+      const fixedVal = val.replace(/(^|[^\\])(")/g, '$1\\"');
+      return `${prefix}"${fixedVal}"${suffix}`;
+    }
+    return line;
+  });
+  return cleanedLines.join("\n");
+}
 function parseSafeJSON(content) {
   let text2 = content.trim();
   if (text2.startsWith("```json")) text2 = text2.substring(7);
@@ -7451,11 +7457,21 @@ function parseSafeJSON(content) {
       return JSON.parse(extracted);
     } catch (_) {
     }
+    try {
+      const cleaned = cleanUnescapedQuotesInJSON(extracted);
+      return JSON.parse(cleaned);
+    } catch (_) {
+    }
   }
   const partial = text2.substring(start);
   const repaired = repairJSON(partial);
   try {
     return JSON.parse(repaired);
+  } catch (_) {
+  }
+  try {
+    const cleanedRepaired = cleanUnescapedQuotesInJSON(repaired);
+    return JSON.parse(cleanedRepaired);
   } catch (_) {
   }
   throw new Error("Could not parse or repair JSON from LLM output");
@@ -7646,12 +7662,12 @@ function extractFallbackDataFromText(text2) {
     propertyType = "commercial";
   } else if (clean.includes("bodega") || clean.includes("bodegas") || clean.includes("warehouse")) {
     propertyType = "warehouse";
+  } else if (clean.includes("casalote") || clean.includes("lote") || clean.includes("terreno") || clean.includes("predio") || clean.includes("land")) {
+    propertyType = "land";
   } else if (clean.includes("casa") || clean.includes("townhouse") || clean.includes("chalet")) {
     propertyType = "house";
   } else if (clean.includes("caba\xF1a") || clean.includes("cabana") || clean.includes("caba\xF1as") || clean.includes("cabanas") || clean.includes("cabin")) {
     propertyType = "cabin";
-  } else if (clean.includes("lote") || clean.includes("terreno") || clean.includes("predio") || clean.includes("land")) {
-    propertyType = "land";
   } else if (clean.includes("finca") || clean.includes("campestre") || clean.includes("farm")) {
     propertyType = "farm";
   } else if (clean.includes("edificio") || clean.includes("building")) {
@@ -7799,17 +7815,29 @@ function extractFallbackDataFromText(text2) {
   let area = 0;
   let areaMin = 0;
   let areaMax = 0;
-  const areaRangeMatch = clean.match(/(?:📐|area|área|superficie)?\s*(?:de\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)?\s*(?:a|-|hasta)\s*(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)/i);
-  if (areaRangeMatch) {
-    areaMin = parseFloat(areaRangeMatch[1].replace(",", "."));
-    areaMax = parseFloat(areaRangeMatch[2].replace(",", "."));
-    area = areaMin;
-  } else {
-    const areaMatch = clean.match(/(?:📐|area|área|superficie)?\s*:?\s*(?:(?:m[ií]nimo|min|m[aá]ximo|max|de|área\s*(?:m[ií]nima)?|area\s*(?:minima)?)\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)/i);
-    if (areaMatch) {
-      area = parseFloat(areaMatch[1].replace(",", "."));
+  const dimMultMatch = (text2 || "").match(/(\d+(?:[.,]\d+)?)\s*[*xX]\s*(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)?/i);
+  if (dimMultMatch) {
+    const d1 = parseFloat(dimMultMatch[1].replace(",", "."));
+    const d2 = parseFloat(dimMultMatch[2].replace(",", "."));
+    if (!isNaN(d1) && !isNaN(d2) && d1 > 0 && d2 > 0 && d1 <= 500 && d2 <= 500) {
+      area = Math.round(d1 * d2 * 100) / 100;
       areaMin = area;
       areaMax = area;
+    }
+  }
+  if (area === 0) {
+    const areaRangeMatch = clean.match(/(?:📐|area|área|superficie)?\s*(?:de\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)?\s*(?:a|-|hasta)\s*(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)/i);
+    if (areaRangeMatch) {
+      areaMin = parseFloat(areaRangeMatch[1].replace(",", "."));
+      areaMax = parseFloat(areaRangeMatch[2].replace(",", "."));
+      area = areaMin;
+    } else {
+      const areaMatch = clean.match(/(?:📐|area|área|superficie)?\s*:?\s*(?:(?:m[ií]nimo|min|m[aá]ximo|max|de|área\s*(?:m[ií]nima)?|area\s*(?:minima)?)\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)/i);
+      if (areaMatch) {
+        area = parseFloat(areaMatch[1].replace(",", "."));
+        areaMin = area;
+        areaMax = area;
+      }
     }
   }
   let bedrooms = 0;
@@ -7940,7 +7968,8 @@ function extractFallbackDataFromText(text2) {
   const hasVisitorParking = clean.includes("parqueadero de visitantes") || clean.includes("parqueadero para visitantes") || clean.includes("parqueaderos de visitantes") || clean.includes("parqueo visitantes");
   const hasHeating = clean.includes("calentador de paso") || clean.includes("calentador a gas") || clean.includes("caldera");
   let city = "";
-  if (clean.includes("bogota") || clean.includes("bogot\xE1") || clean.includes("cedritos") || clean.includes("chico") || clean.includes("chic\xF3") || clean.includes("rosales") || clean.includes("usaquen") || clean.includes("usaqu\xE9n") || clean.includes("santa barbara") || clean.includes("santa b\xE1rbara") || clean.includes("chapinero")) {
+  const isBogotaContext = clean.includes("bogota") || clean.includes("bogot\xE1") || clean.includes("cedritos") || clean.includes("chico") || clean.includes("chic\xF3") || clean.includes("rosales") || clean.includes("usaquen") || clean.includes("usaqu\xE9n") || clean.includes("santa barbara") || clean.includes("santa b\xE1rbara") || clean.includes("chapinero") || clean.includes("suba") || clean.includes("engativa") || clean.includes("engativ\xE1") || clean.includes("tabora") || clean.includes("floresta") || clean.includes("santa maria del lago") || clean.includes("santa mar\xEDa del lago") || clean.includes("fontibon") || clean.includes("fontib\xF3n") || clean.includes("kennedy") || clean.includes("teusaquillo") || clean.includes("salitre") || clean.includes("barrios unidos");
+  if (isBogotaContext) {
     city = "Bogot\xE1, D.C.";
   } else if (clean.includes("valledupar") || clean.includes("cesar")) {
     city = "Valledupar";
@@ -7962,7 +7991,7 @@ function extractFallbackDataFromText(text2) {
     city = clean.includes("acacias") ? "Acac\xEDas" : "Villavicencio";
   } else if (clean.includes("cali") || clean.includes("melendez") || clean.includes("jardin") || clean.includes("pacifica") || clean.includes("jamundi") || clean.includes("pance") || clean.includes("valle del lili")) {
     city = clean.includes("jamundi") || clean.includes("jamund\xED") ? "Jamund\xED" : "Cali";
-  } else if (clean.includes("medellin") || clean.includes("poblado") || clean.includes("laureles") || clean.includes("envigado") || clean.includes("sabaneta") || clean.includes("rionegro") || clean.includes("la ceja")) {
+  } else if (clean.includes("medellin") || clean.includes("poblado") || clean.includes("laureles") || clean.includes("envigado") || clean.includes("sabaneta") || clean.includes("rionegro") && !clean.includes("suba") && !clean.includes("bogota") || clean.includes("la ceja")) {
     city = clean.includes("envigado") ? "Envigado" : clean.includes("sabaneta") ? "Sabaneta" : clean.includes("rionegro") ? "Rionegro" : clean.includes("la ceja") ? "La Ceja" : "Medell\xEDn";
   } else if (clean.includes("chia") || clean.includes("ch\xEDa")) {
     city = "Ch\xEDa";
@@ -10035,12 +10064,29 @@ async function initBrokerDirectory() {
       phone: requirements.idUsuarioWhatsapp,
       name: requirements.nombreUsuarioWhatsapp
     }).from(requirements);
+    const knownUsers = await db.select({
+      openId: users.openId,
+      phone: users.phone,
+      name: users.name
+    }).from(users);
     for (const item of [...knownProps, ...knownReqs]) {
       if (item.phone && (item.phone.startsWith("573") || item.phone.startsWith("3")) && item.phone.length <= 12) {
         const cleanPhone = item.phone.startsWith("3") && item.phone.length === 10 ? `57${item.phone}` : item.phone;
         brokerDirectoryCache.set(item.phone, { phone: cleanPhone, name: item.name || void 0 });
         if (item.name && !isGenericName(item.name)) {
           brokerDirectoryCache.set(item.name, { phone: cleanPhone, name: item.name });
+        }
+      }
+    }
+    for (const u of knownUsers) {
+      if (u.phone && (u.phone.startsWith("573") || u.phone.startsWith("3")) && u.phone.length <= 12) {
+        const cleanPhone = u.phone.startsWith("3") && u.phone.length === 10 ? `57${u.phone}` : u.phone;
+        if (u.openId && u.openId.startsWith("wa-")) {
+          const lidOrId = u.openId.replace("wa-", "");
+          brokerDirectoryCache.set(lidOrId, { phone: cleanPhone, name: u.name || void 0 });
+        }
+        if (u.name && !isGenericName(u.name)) {
+          brokerDirectoryCache.set(u.name, { phone: cleanPhone, name: u.name });
         }
       }
     }
@@ -13235,7 +13281,7 @@ var init_whatsapp_match = __esm({
           }
         });
         this.sock.ev.on("messages.upsert", async (m) => {
-          if (m.type !== "notify") return;
+          if (m.type !== "notify" && m.type !== "append") return;
           for (const msg of m.messages) {
             if (!msg.key || !msg.message) continue;
             const fromMe = msg.key.fromMe;
@@ -15675,7 +15721,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.16";
+var VECY_VERSION = "v31.17";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 

@@ -322,7 +322,41 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
-> Esta sección documenta de forma permanente los cambios de ingeniería, correcciones de errores críticos y decisiones de diseño tomadas durante el desarrollo del sistema. Sirve como referencia histórica y de contexto para cualquier desarrollador o agente de IA que retome el proyecto.
+### 🔖 v31.17 — Septiembre 2026
+
+#### 📌 BLINDAJE DE INGESTA WHATSAPP BAILEYS ('append'), SANITIZACIÓN JSON LLM Y OPTIMIZACIÓN O(1) DE MATCHING
+
+**Problemas identificados:**
+1. **Caída Silenciosa de Mensajes de WhatsApp por Reconexión (`m.type === 'append'`)**:
+   - En `server/_core/whatsapp-match.ts`, el socket de Baileys descartaba cualquier mensaje entrante donde `m.type !== 'notify'`.
+   - Cuando Baileys sufre una micro-desconexión temporal por timeout de red (código 408), WhatsApp reanuda la conexión y entrega los mensajes acumulados con `type: 'append'`. Estos mensajes eran descartados en el acto antes de cualquier reacción con emoji o extracción, causando que mensajes válidos (como el de Daniel Cáceres de las 12:01 PM) no fueran procesados.
+2. **Falla de Extracción por Comillas Dobles No Escapadas en JSON de Gemini**:
+   - Google Gemini 2.5 Flash devuelve respuestas que a veces incluyen citas textuales entre comillas dentro de campos como `adminStrategy`.
+   - `JSON.parse` fallaba por sintaxis inválida y `repairJSON` no lograba reparar el contenido, haciendo que `parseSafeJSON` abortara la extracción hacia la base de datos.
+3. **Fallas en la Extracción Heurística de Respaldo (`extractFallbackDataFromText`)**:
+   - La regla heurística para `casa` evaluaba antes de `lote`, provocando que solicitudes de `"casalote"` se tipificaran erróneamente como casa (`house`) en lugar de lote (`land`).
+   - La limpieza de texto eliminaba el caracter `*`, convirtiendo dimensiones como `8*25 MTS2` en `825 MTS2` (825 m² en lugar de 200 m²).
+   - Localidades de Bogotá como `Rionegro (Suba)` se interpretaban como el municipio de Rionegro, Antioquia.
+4. **Asfixia de Conexiones por Más de 1.700 Borrados Secuenciales en Matching**:
+   - `findMatchesForRequirement` y `findMatchesForProperty` ejecutaban consultas `delete` individuales para cada elemento no coincidente en la base de datos, consumiendo decenas de conexiones y demorando la respuesta hasta 68 segundos.
+
+**Solución aplicada:**
+- **Inclusión de Mensajes `'append'` en Ingesta (`server/_core/whatsapp-match.ts`)**:
+  - `if (m.type !== 'notify' && m.type !== 'append') return;` garantizando que los mensajes recibidos tras reconexiones sean procesados y clasificados.
+- **Sanitizador Automático de Comillas en JSON de LLM (`cleanUnescapedQuotesInJSON`)**:
+  - Implementada función que detecta y escapa comillas internas en strings de JSON línea por línea, evitando fallos de sintaxis en `parseSafeJSON`.
+- **Blindaje Heurístico (`janIA.ts`)**:
+  - Priorizada la detección de `casalote`, `lote`, `terreno` a `land`.
+  - Añadido soporte de multiplicación de dimensiones `(\d+)\s*[*xX]\s*(\d+)` para calcular áreas reales (`8*25 = 200 m²`).
+  - Contexto de Bogotá enriquecido con localidades y barrios (`Suba`, `Engativá`, `Tabora`, `Floresta`, `Santa María del Lago`), evitando falsas derivaciones geográficas.
+- **Enriquecimiento del Directorio en Memoria (`initBrokerDirectory`)**:
+  - Carga de usuarios registrados en la tabla `users` para resolver LIDs de WhatsApp a números reales y nombres conocidos.
+- **Optimización O(1) con Mapa en Memoria (`matching.ts`)**:
+  - Pre-carga de matches existentes en un `Map<number, number>`, eliminando más de 1.700 consultas SQL redundantes por corrida y reduciendo la latencia de 68s a 1ms.
+- **Curación y Verificación en Supabase**:
+  - Requerimiento #1217 y Usuario #404 normalizados y validados en Supabase.
+
+---
 
 ### 🔖 v31.16 — Septiembre 2026
 
