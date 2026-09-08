@@ -326,6 +326,18 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ---
 
+### 🔖 v31.15 — Septiembre 2026
+
+#### 📌 ERRADICACIÓN DE AVISOS 'SIN TELÉFONO EN TEXTO' Y LIMPIEZA VISUAL DEL BLOQUE DE CONTACTO
+
+**Problemas identificados:**
+1. **Avisos Redundantes e Invasivos en Tarjetas**: En `AdminMatches.tsx`, en el bloque de contacto del captador o comprador, cuando no se detectaba un teléfono de 10 dígitos, se desplegaba la píldora informativa `📍 Sin teléfono en texto · Ubicar en: [Nombre del Grupo]`. Esta indicación resultaba superflua dado que el nombre del grupo ya se exhibe en el encabezado de la tarjeta y rompía la simetría y limpieza de la interfaz.
+
+**Solución aplicada:**
+- **Retiro Total del Fallback Invasivo (`AdminMatches.tsx`)**: Se removió el bloque de texto informativo en las tarjetas de Oferta y Demanda, retornando `null` cuando no existe teléfono directo de WhatsApp (`!clean10`). La tarjeta conserva su estructura sobria y equilibrada sin letreros innecesarios.
+
+---
+
 ### 🔖 v31.14 — Septiembre 2026
 
 #### 📌 UNIFICACIÓN DOCTRINAL DE ENLACES EN PUBLICACIÓN, RETIRO DE BOTONES REDUNDANTES Y PRESENTACIÓN FIEL A IMAGEN 1

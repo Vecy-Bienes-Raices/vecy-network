@@ -163,7 +163,18 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.14 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.15 — Septiembre 2026
+
+### Novedades v31.15 (Erradicación de Avisos 'Sin Teléfono en Texto' y Limpieza Estética de Bloque de Contacto):
+- **Diagnóstico y Eliminación de Avisos Redundantes**:
+  1) **Eliminación de la Caja Gris 'Sin Teléfono en Texto'**:
+     - Retirada la caja `📍 Sin teléfono en texto · Ubicar en: [Nombre del Grupo]` en las tarjetas de Oferta y Demanda de la mesa de coincidencias (`AdminMatches.tsx`).
+     - Al no haber teléfono registrado, el bloque no despliega nada (`null`), evitando elementos visuales invasivos y manteniendo el diseño equilibrado y atractivo.
+     - Si existe un número válido de 10 dígitos, se mantiene el botón verde de acción directa `[Contactar WA ↗]`.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.14 — Septiembre 2026
 
 ### Novedades v31.14 (Unificación Doctrinal de Enlaces en Publicación, Retiro de Botones Redundantes y Formato Fiel a Imagen 1):
 - **Diagnóstico y Eliminación de Botones Redundantes en Coincidencias**:

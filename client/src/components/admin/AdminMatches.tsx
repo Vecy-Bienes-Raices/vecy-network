@@ -4128,17 +4128,7 @@ export default function AdminMatches() {
                                 <span>Contactar WA</span>
                                 <ExternalLink className="w-3.5 h-3.5 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                               </a>
-                            ) : isPropDirect ? (
-                              <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 w-full sm:w-auto shrink-0" title="Publicación recibida por mensaje directo en el WhatsApp de JanIA">
-                                <span>💬 Enviado por Chat Privado</span>
-                                {senderName && <span className="font-bold text-white">· {senderName}</span>}
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-zinc-300 w-full sm:w-auto shrink-0">
-                                <span className="text-zinc-400">📍 Sin teléfono en texto · Ubicar en:</span>
-                                <span className="font-bold text-amber-300">{m.property?.origenNombre || 'Grupo de WhatsApp'}</span>
-                              </div>
-                            )}
+                            ) : null}
                           </div>
                         );
                       })()}
@@ -4430,17 +4420,7 @@ export default function AdminMatches() {
                                 <span>Contactar WA</span>
                                 <ExternalLink className="w-3.5 h-3.5 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                               </a>
-                            ) : isReqDirect ? (
-                              <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 w-full sm:w-auto shrink-0" title="Requerimiento recibido por mensaje directo en el WhatsApp de JanIA">
-                                <span>💬 Enviado por Chat Privado</span>
-                                {senderName && <span className="font-bold text-white">· {senderName}</span>}
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-zinc-300 w-full sm:w-auto shrink-0">
-                                <span className="text-zinc-400">📍 Sin teléfono en texto · Ubicar en:</span>
-                                <span className="font-bold text-cyan-300">{m.requirement?.origenNombre || 'Grupo de WhatsApp'}</span>
-                              </div>
-                            )}
+                            ) : null}
                           </div>
                         );
                       })()}

@@ -50,7 +50,34 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.14 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.15 — Septiembre 2026
+
+### 🗓️ Sesión: Martes 8 de Septiembre de 2026 — 03:00 a 03:15 (Hora Colombia UTC-5)
+**Versión**: `v31.15` | **Ambiente**: Producción VPS (`13.140.149.144`) + Mesa de Cotejo Admin Panel (`vecy-network.vercel.app/admin`) + Supabase DB + GitHub (`main`)
+
+#### 🎯 Solicitud de Eduardo A. Rivera:
+1. "Esto es otra cosa que no se por qué la creaste y la verdad ese aviso de: ("📍 Sin teléfono en texto · Ubicar en: Ofertas VENTA 1000"), me parece que sobra, no entiendo la finalidad si yo ya se manejar el administrador y la página de coincidencias, creo que sobra y está desatinado ya que también rompe el diseño de la página y lo hace menos atractivo. ¿No te parece?. Tu déja sin ese aviso a todos los que se lo pusiste que en verdad no lo necesitamos y si de aquí a mañana necesito explicarle a alguien cómo se hace para buscar el nombre y número de teléfono del usuario, yo se lo explicaré muy bien y detalladamente. Ok. ¿Me entendiste?"
+
+#### 🔍 Diagnóstico Técnico y Decisión de Diseño Limpio:
+1. **Píldora de Advertencia Redundante y Anti-Estética**:
+   - En `AdminMatches.tsx`, en el bloque inferior de contacto de captador/comprador, cuando un inmueble o requerimiento no tenía un número de teléfono de 10 dígitos capturado en el texto (`!clean10`), se desplegaba una caja gris de aviso:
+     `📍 Sin teléfono en texto · Ubicar en: [Nombre del Grupo]`.
+   - Este aviso era completamente redundante puesto que el nombre del grupo de WhatsApp ya figura de forma destacada en la insignia superior de la ficha junto a la fecha (`📍 Ofertas VENTA 1000 📋`).
+   - Además, generaba una asimetría visual desprolija frente a las fichas que sí tienen contacto directo (`[Contactar WA ↗]`).
+2. **Erradicación Total del Aviso**:
+   - Se eliminó taxativamente el fallback de la caja informativa tanto en la columna de Inmueble (Oferta) como en la de Requerimiento (Demanda).
+   - Cuando no haya número telefónico disponible para botón directo de WhatsApp, el bloque no renderiza nada (`null`), permitiendo que la tarjeta mantenga un diseño limpio, sobrio y armónico.
+
+#### 🛠️ Acciones Ejecutadas:
+1. **Limpieza en Bloque de Contacto (`client/src/components/admin/AdminMatches.tsx`)**:
+   - Tarjeta de Inmueble / Oferta: Retirado el contenedor `📍 Sin teléfono en texto · Ubicar en: [Nombre del Grupo]` y el badge redundante de chat privado en ese sector, retornando `null` cuando no exista `clean10`.
+   - Tarjeta de Requerimiento / Demanda: Retirado el contenedor `📍 Sin teléfono en texto · Ubicar en: [Nombre del Grupo]` y el badge redundante de chat privado en ese sector, retornando `null` cuando no exista `clean10`.
+2. **Verificación y Compilación**:
+   - Ejecutados `npm run check` (`tsc --noEmit`) y `npm run build` con 0 errores.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.14 — Septiembre 2026
 
 ### 🗓️ Sesión: Martes 8 de Septiembre de 2026 — 02:40 a 03:00 (Hora Colombia UTC-5)
 **Versión**: `v31.14` | **Ambiente**: Producción VPS (`13.140.149.144`) + Mesa de Cotejo Admin Panel (`vecy-network.vercel.app/admin`) + Supabase DB + GitHub (`main`)
