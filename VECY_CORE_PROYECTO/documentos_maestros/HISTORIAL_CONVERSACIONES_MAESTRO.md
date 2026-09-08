@@ -50,7 +50,57 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.12 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.13 — Septiembre 2026
+
+### 🗓️ Sesión: Lunes 7 de Septiembre de 2026 — 23:45 a 00:15 (Hora Colombia UTC-5)
+**Versión**: `v31.13` | **Ambiente**: Producción VPS (`13.140.149.144`) + Mesa de Cotejo Admin Panel (`vecy-network.vercel.app/admin`) + Supabase DB + GitHub (`main`)
+
+#### 🎯 Solicitud de Eduardo A. Rivera:
+1. "Mira esta OFERTA llavaba enlace: https://info.wasi.co/apartamento-venta-chico-alto-bogota-dc/10295048. Tal vez se esta pasando colocarles su respectivo enlace a los que lo tienen, revisa este y colócaselo y si puedes estar pendiente de los próximos que vengan para la mesa de coincidencias para ponérselos y que no se te olvide o si de casualidad no gastas mucho y lo puedes hace para revisar aquellos que se te pudieron haber pasado y corregirlos colocándoselos, será cosa que te agradezco inmensamente."
+
+#### 🔍 Diagnóstico Técnico Profundo (Causa Raíz de Enlaces Omitidos y Fragmentación de Mensajes):
+1. **La Oferta del Caso (Propiedad #2527 - Chicó Alto La Raqueta)**:
+   - Publicación en el grupo *"OFERTAS ANDRÉS NIETO"* enviada por la asesora **Maria V Miranda Matchmaker Inmobiliaria**.
+   - En el mensaje original de WhatsApp venía:
+     ```
+     CONTACTO: https://api.whatsapp.com/send?phone=573187755390
+     Info y galería acá:
+     https://info.wasi.co/apartamento-venta-chico-alto-bogota-dc/10295048
+     ```
+   - En la tarjeta del Match #M12605 (98% match con el requerimiento de Luisa Cardona Inmo), la propiedad no mostraba el botón de enlace de origen, el teléfono del asesor aparecía como `+57 N/E` y al final del texto se visualizaba la etiqueta interna `__is_sub_message__`.
+2. **Causa Raíz en el Motor de Ingesta (`splitMultiItemMessage` en `server/_core/janIA.ts`)**:
+   - Al recibir el mensaje, el parser de mensajes múltiples evaluaba si los párrafos correspondían a inmuebles independientes:
+     `const isNewItem = /(?:SE VENDE|VENDO|SE ARRIENDA|ARRIENDO|APARTAMENTO|CASA|...)\b/i.test(cleanP) && (/\$|\b\d{3,}\b|\bm2\b|\bhab\b/i.test(cleanP))`.
+   - En el último párrafo venía la URL: `https://info.wasi.co/apartamento-venta-chico-alto-bogota-dc/10295048`.
+   - La palabra `apartamento` dentro del slug de la URL activó el regex de tipo de inmueble, y el número `10295048` de Wasi activó `\b\d{3,}\b`.
+   - En consecuencia, el sistema creyó erróneamente que el enlace final era un segundo inmueble nuevo independiente, partiendo el mensaje en dos:
+     - Bloque 1: El apartamento con precio y especificaciones, guardado como Propiedad #2527 pero sin enlace ni teléfono de contacto (y con la marca `__is_sub_message__`).
+     - Bloque 2: El enlace y contacto, descartado por el filtro de ofertas huecas.
+3. **Causa Raíz en la Extracción del Celular del Asesor**:
+   - WhatsApp asignó al remitente un identificador de dispositivo (LID: `63303623688321`).
+   - El teléfono real del asesor estaba dentro del enlace `https://api.whatsapp.com/send?phone=573187755390`.
+   - `extractColombianPhoneFromText` detectaba `wa.me/`, pero no tenía la variante `api.whatsapp.com/send?phone=`, dejando el teléfono en blanco (`N/E`).
+
+#### 🛠️ Acciones Ejecutadas y Blindaje Integral:
+1. **Blindaje Definitivo de `splitMultiItemMessage` en `server/_core/janIA.ts`**:
+   - **Sanitización Previa de URLs**: Antes de evaluar si un párrafo es un nuevo inmueble, se despojan todas las URLs (`https?://...`) para que ninguna palabra dentro del enlace (como `apartamento`, `casa`, o IDs numéricos) active falsamente `isNewItem`.
+   - **Detección de Bloques de Enlace/Contacto**: Si un párrafo está compuesto por enlaces (`wasi.co`, `api.whatsapp.com`, `wa.me`, `fincaraiz`, etc.) o textos de enlace ("Info y galería acá", "Contacto", "Fotos"), **NUNCA** se separa; se concatena obligatoriamente al inmueble precedente.
+   - **Función `cleanAndMergeSubstantiveBlocks`**: Si cualquier delimitador o encabezado produce un bloque residual sin ficha técnica (< 35 caracteres de texto real), se fusiona automáticamente con la oferta precedente.
+2. **Detección Inteligente de Celulares en Enlaces de WhatsApp (`janIA.ts` y `AdminMatches.tsx`)**:
+   - Enriquecida la función `extractColombianPhoneFromText` y la tarjeta de coincidencias (`extractPhoneFromItem`) para capturar automáticamente números de 10 dígitos en enlaces `api.whatsapp.com/send?phone=57...` y `wa.me/...`.
+   - Cuando un broker publica desde una cuenta con identificador de dispositivo (LID), el sistema detecta su celular real en el texto y lo asigna a la tarjeta, permitiendo contacto directo por WhatsApp con 1 clic.
+3. **Priorización de Enlaces en Mesa de Coincidencias (`extractPublicLink`)**:
+   - `AdminMatches.tsx`: Prioriza taxativamente `externalUrl` sobre `enlaceOrigen` y excluye enlaces de WhatsApp del botón *"🌐 Enlace de Origen"*, dirigiéndolo limpiamente a la ficha del portal web (Wasi, Metrocuadrado, etc.).
+4. **Saneamiento Masivo en Base de Datos (100% Pasivo, Cero Costo en Tokens)**:
+   - Propiedad #2527 curada: enlace `https://info.wasi.co/apartamento-venta-chico-alto-bogota-dc/10295048`, teléfono `573187755390` y texto libre de `__is_sub_message__`.
+   - Propiedad #2344 (publicación previa del 3 de Septiembre) sanada con su enlace de Wasi.
+   - Escaneo pasivo de todas las propiedades en Supabase: **12 enlaces de portales recuperados** y **87 teléfonos de contacto directo de asesores normalizados**.
+5. **Incremento Oficial de Versión**:
+   - Elevado a **v31.13** en `shared/const.ts`, `package.json` (31.13.0), `.agents/AGENTS.md` y bitácora maestra.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.12 — Septiembre 2026
 
 ### 🗓️ Sesión: Lunes 7 de Septiembre de 2026 — 19:15 a 19:45 (Hora Colombia UTC-5)
 **Versión**: `v31.12` | **Ambiente**: Producción VPS (`13.140.149.144`) + Mesa de Cotejo Admin Panel (`vecy-network.vercel.app/admin`) + Supabase DB + GitHub (`main`)

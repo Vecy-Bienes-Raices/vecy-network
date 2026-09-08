@@ -2290,13 +2290,28 @@ export function evaluateMultiItemHeuristics(text: string): { isMultiItem: boolea
   };
 }
 
+function cleanAndMergeSubstantiveBlocks(rawList: string[]): string[] {
+  const merged: string[] = [];
+  for (const b of rawList) {
+    const textNoUrls = b.replace(/https?:\/\/[^\s]+/gi, "").trim();
+    // Si el bloque es residual (menos de 35 caracteres de texto real o solo contiene enlaces/intro de contacto), se fusiona con el anterior
+    const isTrailer = textNoUrls.length < 35 || /^(?:contacto|info|galer[ií]a|fotos?|link|enlace|agendar|visitas?|escr[ií]beme|ll[aá]mame|whatsapp|asesor)\b/i.test(textNoUrls);
+    if (isTrailer && merged.length > 0) {
+      merged[merged.length - 1] += `\n\n${b}`;
+    } else {
+      merged.push(b);
+    }
+  }
+  return merged.filter(b => b.trim().length >= 40);
+}
+
 export function splitMultiItemMessage(text: string): string[] {
   if (!text || text.length < 80) return [text];
 
   // 1. Delimitadores explícitos de corte (guiones largos, asteriscos repetidos, etc.)
   const delimiterSplit = text.split(/(?:\r?\n){1,}\s*(?:_{3,}|-{3,}|={3,}|\*{3,})\s*(?:\r?\n){1,}/);
   if (delimiterSplit.length >= 2) {
-    const validBlocks = delimiterSplit.map(b => b.trim()).filter(b => b.length >= 35);
+    const validBlocks = cleanAndMergeSubstantiveBlocks(delimiterSplit.map(b => b.trim()).filter(b => b.length >= 35));
     if (validBlocks.length >= 2) {
       return validBlocks;
     }
@@ -2304,12 +2319,12 @@ export function splitMultiItemMessage(text: string): string[] {
 
   // 2. Encabezados formales repetidos (Requerimientos, Inmuebles, Clientes, Búsquedas, Ofertas)
   const headerSplitRegex = /(?=(?:^|\n)\s*(?:🚨\s*\*?(?:REQUERIMIENTO|INMUEBLE|OFERTA|DEMANDA)\*?\s*🚨|\*?(?:REQUERIMIENTO|INMUEBLE|OFERTA|DEMANDA)\*?\s*[:\n]|\*?Cliente\*?\s*:\s*[A-ZÁÉÍÓÚÑ]|\b(?:VENDO|SE VENDE|ARRIENDO|SE ARRIENDA|BUSCO|SE BUSCA)\s+(?:APARTAMENTO|APTO|CASA|BODEGA|OFICINA|LOTE|LOCAL|PENTHOUSE|DÚPLEX)\b|(?:^|\n)\s*(?:[1-9][\.\)\️⃣]|\([1-9]\))\s*(?:APARTAMENTO|APTO|CASA|BODEGA|OFICINA|LOTE|LOCAL|VENTA|ARRIENDO|BUSCO|SE VENDE)))/gi;
-  const rawBlocks = text.split(headerSplitRegex).map(b => b.trim()).filter(b => b.length >= 40);
+  const rawBlocks = cleanAndMergeSubstantiveBlocks(text.split(headerSplitRegex).map(b => b.trim()).filter(b => b.length >= 40));
   if (rawBlocks.length >= 2) {
     return rawBlocks;
   }
 
-  // 3. Fallback por párrafos cuando hay múltiples declaraciones
+  // 3. Fallback por párrafos cuando hay múltiples declaraciones independientes
   const paragraphs = text.split(/(?:\r?\n){2,}/);
   if (paragraphs.length >= 3) {
     const blocks: string[] = [];
@@ -2317,7 +2332,18 @@ export function splitMultiItemMessage(text: string): string[] {
     for (const p of paragraphs) {
       const cleanP = p.trim();
       if (!cleanP) continue;
-      const isNewItem = /(?:SE VENDE|VENDO|SE ARRIENDA|ARRIENDO|APARTAMENTO|CASA|BUSCO|SOLICITO|ATL|REQUERIMIENTO)\b/i.test(cleanP) && (/\$|\b\d{3,}\b|\bm2\b|\bhab\b|\bbaños\b|\balcobas\b/i.test(cleanP));
+
+      // Sanitizar URLs antes de analizar si es un nuevo item independiente
+      const textWithoutUrls = cleanP.replace(/https?:\/\/[^\s]+/gi, "").replace(/[\r\n\t]+/g, " ").trim();
+
+      // Si el párrafo es predominantemente enlaces, contacto o texto corto de referencia, JAMÁS es un nuevo item
+      const isContactOrLinkOnly = !textWithoutUrls || textWithoutUrls.length < 35 || 
+        /^(?:contacto|info|galer[ií]a|fotos?|m[aá]s\s+info|link|enlace|agendar|visitas?|escr[ií]beme|ll[aá]mame|whatsapp|asesor)\b/i.test(textWithoutUrls);
+
+      const isNewItem = !isContactOrLinkOnly && 
+        /(?:SE VENDE|VENDO|SE ARRIENDA|ARRIENDO|APARTAMENTO|CASA|BUSCO|SOLICITO|ATL|REQUERIMIENTO)\b/i.test(textWithoutUrls) && 
+        (/\$|\b\d{3,}\b|\bm2\b|\bhab\b|\bbaños\b|\balcobas\b/i.test(textWithoutUrls));
+
       if (currentBlock && isNewItem) {
         blocks.push(currentBlock.trim());
         currentBlock = cleanP;
@@ -2326,8 +2352,9 @@ export function splitMultiItemMessage(text: string): string[] {
       }
     }
     if (currentBlock) blocks.push(currentBlock.trim());
-    if (blocks.length >= 2) {
-      return blocks;
+    const validParagraphBlocks = cleanAndMergeSubstantiveBlocks(blocks);
+    if (validParagraphBlocks.length >= 2) {
+      return validParagraphBlocks;
     }
   }
 
@@ -3326,7 +3353,7 @@ Por lo tanto, DEBES hacer lo siguiente:
           externalUrl = permitted;
         }
       }
-      const sourceUrl = (urls && urls.length > 0 ? urls[0] : undefined);
+      const sourceUrl = externalUrl || (urls && urls.length > 0 ? (urls.find(url => esDominioPermitido(url)) || urls[0]) : undefined);
 
       const isFlyerDetected = result.isFlyerOrBanner === true || extracted.isFlyerOrBanner === true;
       const flyerVerbatim = result.flyerVerbatimText || extracted.flyerVerbatimText || "";
@@ -3434,7 +3461,7 @@ Por lo tanto, DEBES hacer lo siguiente:
         return result;
       }
 
-      const sourceUrlReq = (urls && urls.length > 0 ? urls[0] : null);
+      const sourceUrlReq = (urls && urls.length > 0 ? (urls.find(url => esDominioPermitido(url)) || urls[0]) : null);
 
       const isFlyerDetectedReq = result.isFlyerOrBanner === true || extracted.isFlyerOrBanner === true;
       const flyerVerbatimReq = result.flyerVerbatimText || extracted.flyerVerbatimText || "";
@@ -3636,8 +3663,8 @@ export function extractColombianPhoneFromText(text: string | null | undefined): 
   if (!text) return null;
   const clean = text.replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0]/g, ' ');
 
-  // 1. Enlaces directos wa.me (ej: wa.me/57310... o wa.me/310...)
-  const waMatch = clean.match(/wa\.me\/(?:57)?(3\d{9})/i);
+  // 1. Enlaces directos wa.me y api.whatsapp.com (ej: wa.me/57310... o api.whatsapp.com/send?phone=57318...)
+  const waMatch = clean.match(/(?:wa\.me\/|api\.whatsapp\.com\/send\/?\?(?:[^&\s]*&)*phone=)(?:\+?57)?(3\d{9})/i);
   if (waMatch) return '57' + waMatch[1];
 
   // 2. Prefijos explícitos de contacto (Tel, Cel, WhatsApp, Inf, Contacto, Asesor, etc.)

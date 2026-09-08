@@ -119,21 +119,39 @@ function isPropertyDualOffer(prop: any): boolean {
   return false;
 }
 
+function isWhatsAppContactLink(url: string | null | undefined): boolean {
+  if (!url) return false;
+  return /wa\.me\/|api\.whatsapp\.com|whatsapp\.com/i.test(url);
+}
+
 function extractPublicLink(item: any): string | null {
   if (!item) return null;
-  if (item.enlaceOrigen && (item.enlaceOrigen.startsWith("http://") || item.enlaceOrigen.startsWith("https://"))) {
-    return item.enlaceOrigen;
-  }
+
+  // 1. Prioridad Máxima: externalUrl (siempre que sea un portal web/documento y no un link de WhatsApp)
   if (item.externalUrl && (item.externalUrl.startsWith("http://") || item.externalUrl.startsWith("https://"))) {
-    return item.externalUrl;
+    if (!isWhatsAppContactLink(item.externalUrl)) {
+      return item.externalUrl;
+    }
   }
-  const text = `${item.enlaceOrigen || ''} ${item.rawText || ''} ${item.description || ''} ${item.externalUrl || ''}`;
-  const match = text.match(/https?:\/\/[^\s<"']+/i);
-  if (match) return match[0];
+
+  // 2. enlaceOrigen (siempre que no sea un link de WhatsApp)
+  if (item.enlaceOrigen && (item.enlaceOrigen.startsWith("http://") || item.enlaceOrigen.startsWith("https://"))) {
+    if (!isWhatsAppContactLink(item.enlaceOrigen)) {
+      return item.enlaceOrigen;
+    }
+  }
+
+  // 3. Buscar enlaces de portales inmobiliarios dentro de rawText o description
+  const text = `${item.rawText || ''} ${item.description || ''}`;
+  const allUrls = text.match(/https?:\/\/[^\s<"']+/gi);
+  if (allUrls && allUrls.length > 0) {
+    const portalUrl = allUrls.find(u => !isWhatsAppContactLink(u));
+    if (portalUrl) return portalUrl;
+  }
   
-  // Expresión para enlaces inmobiliarios comunes de portales públicos (wasi.co, fincaraiz.com.co, etc.)
+  // 4. Expresión para enlaces inmobiliarios comunes de portales públicos (wasi.co, fincaraiz.com.co, etc.)
   const domainMatch = text.match(/(?:[a-zA-Z0-9-]+\.)+(?:com|co|net|org|app|io|tools|store)\/[^\s<"']+/i);
-  if (domainMatch) return `https://${domainMatch[0]}`;
+  if (domainMatch && !isWhatsAppContactLink(domainMatch[0])) return `https://${domainMatch[0]}`;
 
   return null;
 }
@@ -2084,8 +2102,22 @@ function extractPhoneFromItem(item: any): { display: string; cleanNumber: string
     }
   }
 
-  // 2. Buscar en el texto del mensaje por cualquier celular colombiano de 10 dígitos que NO sea el del sistema
+  // 1.5. Buscar enlaces directos wa.me o api.whatsapp.com en el texto
   const textToSearch = `${item.rawText || ""} ${item.description || ""} ${item.name || ""} ${item.rawMessage || ""}`;
+  const waMatch = textToSearch.match(/(?:wa\.me\/|api\.whatsapp\.com\/send\/?\?(?:[^&\s]*&)*phone=)(?:\+?57)?(3\d{9})/i);
+  if (waMatch) {
+    const clean10 = waMatch[1];
+    if (clean10 !== "3192919978") {
+      const formatted = `+57 ${clean10.substring(0, 3)} ${clean10.substring(3, 6)} ${clean10.substring(6)}`;
+      return {
+        display: senderName ? `${senderName} (${formatted})` : formatted,
+        cleanNumber: `57${clean10}`,
+        name: senderName
+      };
+    }
+  }
+
+  // 2. Buscar en el texto del mensaje por cualquier celular colombiano de 10 dígitos que NO sea el del sistema
   // Regex flexible para: 310 856 1634, 310 856 16 34, 310-856-1634, +57 310 856 16 34, (310) 856 1634, 3108561634
   const phoneMatches = textToSearch.match(/(?:\+?57[\s.-]*)?(?:\(?3\d{2}\)?[\s.-]*\d{3}[\s.-]*\d{2}[\s.-]*\d{2}|\(?3\d{2}\)?[\s.-]*\d{3}[\s.-]*\d{4}|3\d{9})\b/g);
   if (phoneMatches && phoneMatches.length > 0) {

@@ -163,7 +163,31 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.12 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.13 — Septiembre 2026
+
+### Novedades v31.13 (Blindaje de Ingesta contra Fragmentación Indebida de Enlaces, Detección de WhatsApp API Links y Saneamiento de Portales):
+- **Diagnóstico y Erradicación del "Corte de Enlaces" en Ofertas Inmobiliarias (Caso Chicó Alto - La Raqueta #2527)**:
+  1) **Causa Raíz de la Desaparición de Enlaces y Contacto**:
+     - En `server/_core/janIA.ts`, el motor `splitMultiItemMessage` evaluaba por párrafos si una publicación contenía múltiples inmuebles:
+       `const isNewItem = /(?:SE VENDE|...|APARTAMENTO|...)\b/i.test(cleanP) && (/\$|\b\d{3,}\b|\bm2\b/i.test(cleanP))`.
+     - Cuando una oferta incluía enlaces como `https://info.wasi.co/apartamento-venta-chico-alto-bogota-dc/10295048`, el término `apartamento` y el ID numérico `10295048` dentro de la URL activaban `isNewItem: true`.
+     - En consecuencia, el sistema partía la publicación en dos: el bloque principal (guardado con `__is_sub_message__`, sin link y con teléfono `+57 N/E`) y el bloque del enlace/contacto (descartado por el filtro de ofertas huecas).
+  2) **Blindaje Integral del Parser Multimensaje (`splitMultiItemMessage`)**:
+     - Sanitización obligatoria de URLs antes de evaluar si un párrafo es una publicación independiente.
+     - Detección de bloques de contacto/enlaces/galería ("Contacto", "Info y galería acá", "wa.me", "wasi.co", etc.): **JAMÁS** generan un corte de publicación y se mantienen soldados a la propiedad correspondiente.
+     - Función `cleanAndMergeSubstantiveBlocks`: si cualquier delimitador o encabezado produce un bloque residual sin ficha técnica (< 35 caracteres de texto real), se fusiona automáticamente con la oferta precedente.
+  3) **Detección de Teléfonos en Enlaces de WhatsApp (`api.whatsapp.com/send?phone=`)**:
+     - Enriquecida la función `extractColombianPhoneFromText` y la tarjeta de coincidencias (`extractPhoneFromItem`) para capturar automáticamente números de 10 dígitos en enlaces `api.whatsapp.com/send?phone=57...` y `wa.me/...`.
+     - Cuando un broker publica desde una cuenta con identificador de dispositivo (LID), el sistema detecta su celular real en el texto y lo asigna a la tarjeta, permitiendo contacto directo por WhatsApp con 1 clic.
+  4) **Priorización de Enlaces en Mesa de Coincidencias (`extractPublicLink`)**:
+     - `AdminMatches.tsx`: Prioriza taxativamente `externalUrl` sobre `enlaceOrigen` y excluye enlaces de WhatsApp del botón *"🌐 Enlace de Origen"*, dirigiéndolo limpiamente a la ficha del portal web (Wasi, Metrocuadrado, etc.).
+  5) **Saneamiento Masivo en Base de Datos (100% Pasivo, Cero Costo en Tokens)**:
+     - Propiedad #2527 curada: enlace `https://info.wasi.co/apartamento-venta-chico-alto-bogota-dc/10295048`, teléfono `573187755390` y texto libre de `__is_sub_message__`.
+     - Escaneo pasivo de todas las propiedades en Supabase: **12 enlaces de portales recuperados** y **87 teléfonos de contacto directo de asesores normalizados**.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.12 — Septiembre 2026
 
 ### Novedades v31.12 (Blindaje del Límite de Egress de Supabase, Erradicación de Polling Redundante y Micro-Caché en Routers):
 - **Diagnóstico y Solución de Alerta de Cuota Supabase (3.181 GB consumidos en 7 días)**:

@@ -8868,17 +8868,32 @@ function evaluateMultiItemHeuristics(text2) {
     signals
   };
 }
+function cleanAndMergeSubstantiveBlocks(rawList) {
+  const merged = [];
+  for (const b of rawList) {
+    const textNoUrls = b.replace(/https?:\/\/[^\s]+/gi, "").trim();
+    const isTrailer = textNoUrls.length < 35 || /^(?:contacto|info|galer[ií]a|fotos?|link|enlace|agendar|visitas?|escr[ií]beme|ll[aá]mame|whatsapp|asesor)\b/i.test(textNoUrls);
+    if (isTrailer && merged.length > 0) {
+      merged[merged.length - 1] += `
+
+${b}`;
+    } else {
+      merged.push(b);
+    }
+  }
+  return merged.filter((b) => b.trim().length >= 40);
+}
 function splitMultiItemMessage(text2) {
   if (!text2 || text2.length < 80) return [text2];
   const delimiterSplit = text2.split(/(?:\r?\n){1,}\s*(?:_{3,}|-{3,}|={3,}|\*{3,})\s*(?:\r?\n){1,}/);
   if (delimiterSplit.length >= 2) {
-    const validBlocks = delimiterSplit.map((b) => b.trim()).filter((b) => b.length >= 35);
+    const validBlocks = cleanAndMergeSubstantiveBlocks(delimiterSplit.map((b) => b.trim()).filter((b) => b.length >= 35));
     if (validBlocks.length >= 2) {
       return validBlocks;
     }
   }
   const headerSplitRegex = /(?=(?:^|\n)\s*(?:🚨\s*\*?(?:REQUERIMIENTO|INMUEBLE|OFERTA|DEMANDA)\*?\s*🚨|\*?(?:REQUERIMIENTO|INMUEBLE|OFERTA|DEMANDA)\*?\s*[:\n]|\*?Cliente\*?\s*:\s*[A-ZÁÉÍÓÚÑ]|\b(?:VENDO|SE VENDE|ARRIENDO|SE ARRIENDA|BUSCO|SE BUSCA)\s+(?:APARTAMENTO|APTO|CASA|BODEGA|OFICINA|LOTE|LOCAL|PENTHOUSE|DÚPLEX)\b|(?:^|\n)\s*(?:[1-9][\.\)\️⃣]|\([1-9]\))\s*(?:APARTAMENTO|APTO|CASA|BODEGA|OFICINA|LOTE|LOCAL|VENTA|ARRIENDO|BUSCO|SE VENDE)))/gi;
-  const rawBlocks = text2.split(headerSplitRegex).map((b) => b.trim()).filter((b) => b.length >= 40);
+  const rawBlocks = cleanAndMergeSubstantiveBlocks(text2.split(headerSplitRegex).map((b) => b.trim()).filter((b) => b.length >= 40));
   if (rawBlocks.length >= 2) {
     return rawBlocks;
   }
@@ -8889,7 +8904,9 @@ function splitMultiItemMessage(text2) {
     for (const p of paragraphs) {
       const cleanP = p.trim();
       if (!cleanP) continue;
-      const isNewItem = /(?:SE VENDE|VENDO|SE ARRIENDA|ARRIENDO|APARTAMENTO|CASA|BUSCO|SOLICITO|ATL|REQUERIMIENTO)\b/i.test(cleanP) && /\$|\b\d{3,}\b|\bm2\b|\bhab\b|\bbaños\b|\balcobas\b/i.test(cleanP);
+      const textWithoutUrls = cleanP.replace(/https?:\/\/[^\s]+/gi, "").replace(/[\r\n\t]+/g, " ").trim();
+      const isContactOrLinkOnly = !textWithoutUrls || textWithoutUrls.length < 35 || /^(?:contacto|info|galer[ií]a|fotos?|m[aá]s\s+info|link|enlace|agendar|visitas?|escr[ií]beme|ll[aá]mame|whatsapp|asesor)\b/i.test(textWithoutUrls);
+      const isNewItem = !isContactOrLinkOnly && /(?:SE VENDE|VENDO|SE ARRIENDA|ARRIENDO|APARTAMENTO|CASA|BUSCO|SOLICITO|ATL|REQUERIMIENTO)\b/i.test(textWithoutUrls) && /\$|\b\d{3,}\b|\bm2\b|\bhab\b|\bbaños\b|\balcobas\b/i.test(textWithoutUrls);
       if (currentBlock && isNewItem) {
         blocks.push(currentBlock.trim());
         currentBlock = cleanP;
@@ -8900,8 +8917,9 @@ ${cleanP}` : cleanP;
       }
     }
     if (currentBlock) blocks.push(currentBlock.trim());
-    if (blocks.length >= 2) {
-      return blocks;
+    const validParagraphBlocks = cleanAndMergeSubstantiveBlocks(blocks);
+    if (validParagraphBlocks.length >= 2) {
+      return validParagraphBlocks;
     }
   }
   return [text2];
@@ -9724,7 +9742,7 @@ ${liveStats}` : buildSystemPrompt(groupJid);
           externalUrl = permitted;
         }
       }
-      const sourceUrl = urls && urls.length > 0 ? urls[0] : void 0;
+      const sourceUrl = externalUrl || (urls && urls.length > 0 ? urls.find((url) => esDominioPermitido(url)) || urls[0] : void 0);
       const isFlyerDetected = result.isFlyerOrBanner === true || extracted.isFlyerOrBanner === true;
       const flyerVerbatim = result.flyerVerbatimText || extracted.flyerVerbatimText || "";
       const isImageOnlyProp = (!rawUserText || rawUserText.trim() === "" || rawUserText.includes("[Publicaci\xF3n de Imagen")) && !!imageBuffer;
@@ -9804,7 +9822,7 @@ ${liveStats}` : buildSystemPrompt(groupJid);
         result.classification = "CONSULTA_GENERAL";
         return result;
       }
-      const sourceUrlReq = urls && urls.length > 0 ? urls[0] : null;
+      const sourceUrlReq = urls && urls.length > 0 ? urls.find((url) => esDominioPermitido(url)) || urls[0] : null;
       const isFlyerDetectedReq = result.isFlyerOrBanner === true || extracted.isFlyerOrBanner === true;
       const flyerVerbatimReq = result.flyerVerbatimText || extracted.flyerVerbatimText || "";
       const isImageOnlyReq = (!messageToProcess || messageToProcess.trim() === "" || messageToProcess.includes("[Publicaci\xF3n de Imagen")) && !!imageBuffer;
@@ -9946,7 +9964,7 @@ function isGenericName(n) {
 function extractColombianPhoneFromText(text2) {
   if (!text2) return null;
   const clean = text2.replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0]/g, " ");
-  const waMatch = clean.match(/wa\.me\/(?:57)?(3\d{9})/i);
+  const waMatch = clean.match(/(?:wa\.me\/|api\.whatsapp\.com\/send\/?\?(?:[^&\s]*&)*phone=)(?:\+?57)?(3\d{9})/i);
   if (waMatch) return "57" + waMatch[1];
   const contactMatch = clean.match(/(?:tel[eé]fono|tel|celular|cel|whatsapp|wapp|wa|contacto|llamar|inf|info|informaci[oó]n|asesor|escribir|comunicarse|m[oó]vil)\s*:?\s*(?:\+?57\s*)?(3[\d\s.\-]{8,14})/i);
   if (contactMatch) {
@@ -15657,7 +15675,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.12";
+var VECY_VERSION = "v31.13";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 
