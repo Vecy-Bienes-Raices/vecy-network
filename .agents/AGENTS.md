@@ -163,7 +163,36 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.15 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.16 — Septiembre 2026
+
+### Novedades v31.16 (Insignia de Republicación y Frescura Predial, Menú Rápido de Estado Comercial y Filtro Venta vs Arriendo):
+- **Diagnóstico y Solución Integral de Inmuebles Desactualizados y Filtro Doctrinal**:
+  1) **Insignia de Republicación y Eliminación de Fecha Anterior**:
+     - Si `republicacionesCount > 0`, la tarjeta de Oferta en la mesa de coincidencias (`AdminMatches.tsx`) despliega la insignia destacada:
+       `🔥 Republicado y Actualizado hace X días (100% Activo)`.
+     - La fecha visible del inmueble se sustituye taxativamente por `fechaUltimaPublicacion` (eliminando la fecha previa desactualizada).
+     - Para publicaciones sin republicar de más de 30 días de antigüedad, se añade el aviso preventivo: `⏳ Publicación de hace X días · Confirmar disponibilidad`.
+  2) **Menú Rápido de Estado Comercial (1-Clic en BD)**:
+     - Añadido el selector desplegable en el pie de la tarjeta con opciones directas y emojis solicitados:
+       - `🔑 Marcar como Vendido`
+       - `🗝️ Marcar como Arrendado`
+       - `🤦🏻‍♀️ Marcar como Ya No Disponible / Inactivo`
+     - Al seleccionarse, invoca el nuevo procedimiento `trpc.janIA.updatePropertyCommercialStatus`, el cual:
+       - Establece en Supabase `properties.available = false`, `properties.estadoComercial = status`, `properties.vigenciaIa = 'NO_DISPONIBLE'`, `updatedAt = new Date()`.
+       - Elimina automáticamente los registros de `propertyMatches` asociados para que el inmueble desaparezca de la mesa de coincidencias.
+       - Dispara recálculo en segundo plano de alternativas activas para la demanda asociada (`findMatchesForRequirement`).
+       - Registra auditoría de cierre en `matchFeedback`.
+       - Despliega confirmación inmediata en la tarjeta y toast al asesor.
+  3) **Filtro de Tipo de Negocio (Compra / Venta vs Arriendo)**:
+     - Incorporado grupo de botones en la barra de filtros superior de la mesa de coincidencias:
+       - `Todos`: Despliega todas las coincidencias calificadas.
+       - `🏷️ Compra / Venta`: Filtra exclusivamente coincidencias de compra (demanda) y venta (oferta), descartando operaciones de arriendo puro.
+       - `🔑 Arriendo`: Filtra exclusivamente coincidencias de arriendo.
+     - Permite a Vecy Bienes Raíces concentrarse en su foco comercial de compra/venta sin interferencia de operaciones de alquiler.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.15 — Septiembre 2026
 
 ### Novedades v31.15 (Erradicación de Avisos 'Sin Teléfono en Texto' y Limpieza Estética de Bloque de Contacto):
 - **Diagnóstico y Eliminación de Avisos Redundantes**:

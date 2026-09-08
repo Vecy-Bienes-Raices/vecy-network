@@ -324,6 +324,28 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 > Esta sección documenta de forma permanente los cambios de ingeniería, correcciones de errores críticos y decisiones de diseño tomadas durante el desarrollo del sistema. Sirve como referencia histórica y de contexto para cualquier desarrollador o agente de IA que retome el proyecto.
 
+### 🔖 v31.16 — Septiembre 2026
+
+#### 📌 INSIGNIA DE REPUBLICACIÓN Y FRESCURA PREDIAL, MENÚ RÁPIDO DE ESTADO COMERCIAL (1-CLIC EN BD) Y FILTRO VENTA VS ARRIENDO
+
+**Problemas identificados:**
+1. **Inmuebles Antiguos Desactualizados o Vendidos**: Gran cantidad de captadores publican ofertas que se venden o arriendan rápidamente. Al intentar contactarlos semanas o meses después, el inmueble ya no está disponible, generando frustración y pérdida de tiempo.
+2. **Fecha de Publicación Oculta tras Republicaciones**: Cuando un captador volvía a publicar su inmueble, JanIA actualizaba `republicacionesCount` y `fechaUltimaPublicacion` en Supabase, pero la tarjeta mostraba estáticamente `createdAt` (la fecha inicial antigua), haciendo parecer que la oferta estaba abandonada o inactiva.
+3. **Falta de Acción Rápida para Marcar Inmuebles No Disponibles**: No existía una vía directa de 1 clic en la mesa de coincidencias para marcar un inmueble como Vendido, Arrendado o Inactivo, lo que hacía que siguiera apareciendo en nuevos cruces con demandas.
+4. **Mezcla de Negocios en Coincidencias (Venta vs Arriendo)**: Los agentes de Vecy Bienes Raíces se enfocan predominantemente en Compra (Demanda) y Venta (Oferta), pero la mesa mezclaba coincidencias de Arriendo sin permitir filtrar por tipo de negocio de forma aislada.
+
+**Solución aplicada:**
+- **Insignia Doctrinal de Republicación y Sustitución de Fecha (`AdminMatches.tsx`)**:
+  - Si `republicacionesCount > 0`, se calcula el tiempo transcurrido desde `fechaUltimaPublicacion` y se despliega la insignia `🔥 Republicado y Actualizado hace X días (100% Activo)`.
+  - La fecha visible de la propiedad pasa a ser taxativamente `fechaUltimaPublicacion` (eliminando la fecha anterior obsoleta).
+  - Si la oferta tiene más de 30 días sin republicar, se despliega una alerta sutil: `⏳ Publicación de hace X días · Confirmar disponibilidad`.
+- **Menú Rápido de Estado Comercial en 1-Clic (`server/routers/janIA.ts` + `AdminMatches.tsx`)**:
+  - Procedimiento `updatePropertyCommercialStatus` que en una sola transacción actualiza en Supabase `properties.available = false`, `properties.estadoComercial = 'VENDIDO' | 'ARRENDADO' | 'INACTIVO'`, `vigenciaIa = 'NO_DISPONIBLE'`, purga todos los matches asociados en `propertyMatches` y dispara en segundo plano la búsqueda de alternativas frescas para el requerimiento (`findMatchesForRequirement`).
+  - Menú interactivo `🏷️ Estado Inmueble ▾` con opciones: `🔑 Marcar como Vendido`, `🗝️ Marcar como Arrendado` y `🤦🏻‍♀️ Marcar como Ya No Disponible / Inactivo` con feedback visual inmediato en la tarjeta.
+  - En `getAllMatches`, se blinda la consulta SQL con `AND (${properties.available} IS NULL OR ${properties.available} = true)`.
+- **Filtro de Tipo de Operación en Barra Superior (`AdminMatches.tsx`)**:
+  - Grupo de botones de selección directa: `[Todos]`, `[🏷️ Compra / Venta]` y `[🔑 Arriendo]`, permitiendo a los brokers filtrar con 1 clic únicamente las oportunidades de compraventa inmobiliaria.
+
 ---
 
 ### 🔖 v31.15 — Septiembre 2026

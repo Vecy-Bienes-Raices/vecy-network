@@ -15675,7 +15675,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.15";
+var VECY_VERSION = "v31.16";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 
@@ -16768,7 +16768,7 @@ ${liveStats}${userContextInstruction}
           enlaceOrigen: requirements.enlaceOrigen,
           createdAt: requirements.createdAt
         }
-      }).from(propertyMatches).innerJoin(properties, eq8(propertyMatches.propertyId, properties.id)).innerJoin(requirements, eq8(propertyMatches.requirementId, requirements.id)).where(sql5`CAST(${propertyMatches.matchScore} AS NUMERIC) >= 75 AND (${propertyMatches.status} IS NULL OR CAST(${propertyMatches.status} AS TEXT) NOT IN ('rejected', 'rechazado'))`).orderBy(desc2(propertyMatches.id)).limit(150);
+      }).from(propertyMatches).innerJoin(properties, eq8(propertyMatches.propertyId, properties.id)).innerJoin(requirements, eq8(propertyMatches.requirementId, requirements.id)).where(sql5`CAST(${propertyMatches.matchScore} AS NUMERIC) >= 75 AND (${propertyMatches.status} IS NULL OR CAST(${propertyMatches.status} AS TEXT) NOT IN ('rejected', 'rechazado')) AND (${properties.available} IS NULL OR ${properties.available} = true)`).orderBy(desc2(propertyMatches.id)).limit(150);
       const propIds = Array.from(new Set(matches.map((m) => m.property.id)));
       const imagesMap = {};
       if (propIds.length > 0) {
@@ -17264,6 +17264,50 @@ ${liveStats}${userContextInstruction}
       console.error("[JanIA-Feedback] Error guardando feedback:", e.message);
       throw new Error(`Error guardando feedback: ${e.message}`);
     }
+  }),
+  // Menú Rápido de Estado Comercial (Vendido, Arrendado, Inactivo / Ya No Disponible) - v31.16
+  updatePropertyCommercialStatus: publicProcedure.input(z2.object({
+    propertyId: z2.number(),
+    status: z2.enum(["VENDIDO", "ARRENDADO", "INACTIVO"]),
+    matchId: z2.number().optional().nullable(),
+    requirementId: z2.number().optional().nullable()
+  })).mutation(async ({ input }) => {
+    const db = await getDb();
+    if (!db) throw new Error("Base de datos no disponible");
+    const nuevoEstado = input.status;
+    await db.update(properties).set({
+      available: false,
+      estadoComercial: nuevoEstado,
+      vigenciaIa: "NO_DISPONIBLE",
+      updatedAt: /* @__PURE__ */ new Date()
+    }).where(eq8(properties.id, input.propertyId));
+    await db.delete(propertyMatches).where(eq8(propertyMatches.propertyId, input.propertyId));
+    try {
+      await db.insert(matchFeedback).values({
+        matchId: input.matchId || null,
+        propertyId: input.propertyId,
+        requirementId: input.requirementId || null,
+        action: "rechazado",
+        motivoRechazo: `Inmueble marcado como ${nuevoEstado}`,
+        notasBroker: `Cerrado comercialmente por asesor desde mesa de coincidencias: ${nuevoEstado}`
+      });
+    } catch (err) {
+      console.warn("[updatePropertyCommercialStatus] Error registrando auditor\xEDa en matchFeedback:", err?.message);
+    }
+    if (input.requirementId) {
+      findMatchesForRequirement(input.requirementId).catch((err) => {
+        console.error(`[updatePropertyCommercialStatus] Error recalculando alternativas para Req #${input.requirementId}:`, err);
+      });
+    }
+    invalidateRejectedPairsCache();
+    invalidateAdminMatchesCache();
+    cachedAllMatchesData = null;
+    cachedAllMatchesTime = 0;
+    console.log(`[JanIA-CommercialStatus] Propiedad #${input.propertyId} marcada como ${nuevoEstado} y purgada de matches activos`);
+    return {
+      success: true,
+      message: `Inmueble #${input.propertyId} marcado como ${nuevoEstado} exitosamente.`
+    };
   }),
   // Obtener Glosario y Léxico Vivo de JanIA (Capa B)
   getInmobiliarioLexicon: publicProcedure.query(async () => {

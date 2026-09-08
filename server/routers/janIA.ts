@@ -571,7 +571,7 @@ export const janIARouter = router({
           .from(propertyMatches)
           .innerJoin(properties, eq(propertyMatches.propertyId, properties.id))
           .innerJoin(requirements, eq(propertyMatches.requirementId, requirements.id))
-          .where(sql`CAST(${propertyMatches.matchScore} AS NUMERIC) >= 75 AND (${propertyMatches.status} IS NULL OR CAST(${propertyMatches.status} AS TEXT) NOT IN ('rejected', 'rechazado'))`)
+          .where(sql`CAST(${propertyMatches.matchScore} AS NUMERIC) >= 75 AND (${propertyMatches.status} IS NULL OR CAST(${propertyMatches.status} AS TEXT) NOT IN ('rejected', 'rechazado')) AND (${properties.available} IS NULL OR ${properties.available} = true)`)
           .orderBy(desc(propertyMatches.id))
           .limit(150);
 
@@ -1156,6 +1156,63 @@ export const janIARouter = router({
         console.error("[JanIA-Feedback] Error guardando feedback:", e.message);
         throw new Error(`Error guardando feedback: ${e.message}`);
       }
+    }),
+
+  // Menú Rápido de Estado Comercial (Vendido, Arrendado, Inactivo / Ya No Disponible) - v31.16
+  updatePropertyCommercialStatus: publicProcedure
+    .input(z.object({
+      propertyId: z.number(),
+      status: z.enum(['VENDIDO', 'ARRENDADO', 'INACTIVO']),
+      matchId: z.number().optional().nullable(),
+      requirementId: z.number().optional().nullable(),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Base de datos no disponible");
+
+      const nuevoEstado = input.status;
+      await db.update(properties).set({
+        available: false,
+        estadoComercial: nuevoEstado,
+        vigenciaIa: 'NO_DISPONIBLE',
+        updatedAt: new Date()
+      }).where(eq(properties.id, input.propertyId));
+
+      // Eliminar todos los matches abiertos de este inmueble para que no vuelva a aparecer en la mesa
+      await db.delete(propertyMatches).where(eq(propertyMatches.propertyId, input.propertyId));
+
+      // Registrar feedback de auditoría
+      try {
+        await db.insert(matchFeedback).values({
+          matchId: input.matchId || null,
+          propertyId: input.propertyId,
+          requirementId: input.requirementId || null,
+          action: 'rechazado',
+          motivoRechazo: `Inmueble marcado como ${nuevoEstado}`,
+          notasBroker: `Cerrado comercialmente por asesor desde mesa de coincidencias: ${nuevoEstado}`,
+        });
+      } catch (err: any) {
+        console.warn("[updatePropertyCommercialStatus] Error registrando auditoría en matchFeedback:", err?.message);
+      }
+
+      // Si había un requerimiento en el match, recalcular alternativas activas en segundo plano
+      if (input.requirementId) {
+        findMatchesForRequirement(input.requirementId).catch((err: any) => {
+          console.error(`[updatePropertyCommercialStatus] Error recalculando alternativas para Req #${input.requirementId}:`, err);
+        });
+      }
+
+      // Invalidar caches inmediatamente
+      invalidateRejectedPairsCache();
+      invalidateAdminMatchesCache();
+      cachedAllMatchesData = null;
+      cachedAllMatchesTime = 0;
+
+      console.log(`[JanIA-CommercialStatus] Propiedad #${input.propertyId} marcada como ${nuevoEstado} y purgada de matches activos`);
+      return {
+        success: true,
+        message: `Inmueble #${input.propertyId} marcado como ${nuevoEstado} exitosamente.`
+      };
     }),
 
   // Obtener Glosario y Léxico Vivo de JanIA (Capa B)

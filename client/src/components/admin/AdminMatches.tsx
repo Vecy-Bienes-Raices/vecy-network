@@ -5,11 +5,12 @@ import {
   DollarSign, Ruler, Bed, Bath, Car, Shield, ExternalLink, Receipt, Box, Globe,
   Edit3, Save, Loader2, RotateCcw, Sun, Zap, Utensils, Home, Flame, ThumbsUp, ThumbsDown,
   Trees, ShieldCheck, BookOpen, Copy, Check, ClipboardList, Archive, Layers,
-  Tv, Wine, Wind, Lock, Dumbbell, Waves, Landmark, School, Fuel, Percent, Compass, Smile, Maximize, Coffee, Mountain, Trophy, ShieldAlert, VolumeX, Plus
+  Tv, Wine, Wind, Lock, Dumbbell, Waves, Landmark, School, Fuel, Percent, Compass, Smile, Maximize, Coffee, Mountain, Trophy, ShieldAlert, VolumeX, Plus, Tag
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { trpc } from '@/lib/trpc';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatColombiaDate } from '@/lib/dateUtils';
@@ -2231,6 +2232,7 @@ function checkTxCompatFrontend(reqTypeRaw: string, propTypeRaw: string, propAcce
 export default function AdminMatches() {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [minScore, setMinScore] = React.useState('80');
+  const [transactionFilter, setTransactionFilter] = React.useState<'all' | 'venta' | 'arriendo'>('all');
   const [activeTab, setActiveTab] = React.useState<'calificados' | 'incompletos'>('calificados');
   
   // Estados para Edición Interactiva de Fichas Prediales directamente desde el Cotejo
@@ -2240,6 +2242,8 @@ export default function AdminMatches() {
   const [editForm, setEditForm] = React.useState<Record<string, any>>({});
   const [copiedId, setCopiedId] = React.useState<string | null>(null);
   const [feedbackStatusMap, setFeedbackStatusMap] = React.useState<Record<number, 'exitoso' | 'rechazado' | 'en_negociacion'>>({});
+  const [commercialStatusFeedbackMap, setCommercialStatusFeedbackMap] = React.useState<Record<number, string>>({});
+  const [statusUpdatingMatchId, setStatusUpdatingMatchId] = React.useState<number | null>(null);
   const [dismissedMatchIds, setDismissedMatchIds] = React.useState<Set<number>>(new Set());
   const [saveStatusMap, setSaveStatusMap] = React.useState<Record<number, 'saved' | 'recalculated'>>({});
   const [customAttributesByMatch, setCustomAttributesByMatch] = React.useState<Record<number, { key: string; label: string }[]>>({});
@@ -2515,6 +2519,52 @@ export default function AdminMatches() {
   const updateReqMut = trpc.janIA.updateRequirementDetails.useMutation();
   const recalculateMatchMut = trpc.janIA.recalculateMatchForPair.useMutation();
   const recordFeedbackMut = trpc.janIA.recordMatchFeedback.useMutation();
+  const updateCommercialStatusMut = trpc.janIA.updatePropertyCommercialStatus.useMutation();
+
+  const handleUpdateCommercialStatus = async (m: any, status: 'VENDIDO' | 'ARRENDADO' | 'INACTIVO') => {
+    const propId = m.property?.id;
+    if (!propId) return;
+
+    const statusLabel = status === 'VENDIDO' ? 'Vendido' : status === 'ARRENDADO' ? 'Arrendado' : 'Ya No Disponible / Inactivo';
+    const statusEmoji = status === 'VENDIDO' ? '🔑' : status === 'ARRENDADO' ? '🗝️' : '🤦🏻‍♀️';
+
+    try {
+      setStatusUpdatingMatchId(m.id);
+      setCommercialStatusFeedbackMap(prev => ({ ...prev, [m.id]: `${statusEmoji} ¡Inmueble #${propId} marcado como ${statusLabel}!` }));
+      setDismissedMatchIds(prev => new Set([...Array.from(prev), m.id]));
+
+      toast.success(`${statusEmoji} Inmueble #${propId} marcado como ${statusLabel}`, {
+        description: "Se ha actualizado en la base de datos y retirado de todas las coincidencias activas.",
+      });
+
+      await updateCommercialStatusMut.mutateAsync({
+        propertyId: propId,
+        status,
+        matchId: m.id,
+        requirementId: m.requirement?.id,
+      });
+
+      utils.janIA.getAllMatches.invalidate();
+      setTimeout(() => {
+        refetch();
+      }, 600);
+    } catch (e: any) {
+      console.error("Error actualizando estado comercial:", e);
+      toast.error("Error al actualizar el estado comercial del inmueble");
+      setCommercialStatusFeedbackMap(prev => {
+        const next = { ...prev };
+        delete next[m.id];
+        return next;
+      });
+      setDismissedMatchIds(prev => {
+        const next = new Set(prev);
+        next.delete(m.id);
+        return next;
+      });
+    } finally {
+      setStatusUpdatingMatchId(null);
+    }
+  };
 
   // Estados para Retroalimentación de Broker (Capa C - Active Learning)
   const [rejectModalMatch, setRejectModalMatch] = React.useState<any>(null);
@@ -3185,7 +3235,7 @@ export default function AdminMatches() {
 
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, minScore]);
+  }, [searchTerm, minScore, transactionFilter]);
 
   // 1. Indexación ultra-rápida sin bloqueo de hilo principal (<1ms)
   const processedMatches = useMemo(() => {
@@ -3268,6 +3318,27 @@ export default function AdminMatches() {
         if (displayScore < minVal) return false;
       }
 
+      // Filtro de Transacción: Compra / Venta vs Arriendo (v31.16)
+      if (transactionFilter !== 'all') {
+        const propTx = String(match.property?.transactionType || '').toLowerCase();
+        const reqTx = String(match.requirement?.tipoNegocioDeseado || '').toLowerCase();
+        const propRaw = String(match.property?.rawText || '').toLowerCase();
+        const reqRaw = String(match.requirement?.rawText || '').toLowerCase();
+
+        const isPureRentProp = propTx === 'arriendo' || propTx === 'arriendo_temporal';
+        const isPureRentReq = reqTx === 'arriendo' || reqTx === 'arriendo_temporal';
+        const isRentMatch = isPureRentProp || isPureRentReq || 
+          /\b(?:en arriendo|arriendo|alquilo|alquiler|canon)\b/i.test(propRaw) ||
+          /\b(?:tomo en arriendo|para arrendar|busco arriendo|en renta)\b/i.test(reqRaw);
+
+        if (transactionFilter === 'venta') {
+          if (isPureRentProp || isPureRentReq) return false;
+          if (isRentMatch && !propTx.includes('venta') && !reqTx.includes('venta')) return false;
+        } else if (transactionFilter === 'arriendo') {
+          if (!isRentMatch && propTx !== 'venta_o_arriendo' && reqTx !== 'venta_o_arriendo') return false;
+        }
+      }
+
       // Filtro de Búsqueda
       if (searchLower && !match._searchIndex.includes(searchLower)) {
         return false;
@@ -3275,7 +3346,7 @@ export default function AdminMatches() {
 
       return true;
     });
-  }, [processedMatches, minScore, deferredSearchTerm]);
+  }, [processedMatches, minScore, deferredSearchTerm, transactionFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredMatches.length / pageSize));
   const paginatedMatches = useMemo(() => {
@@ -3536,6 +3607,45 @@ export default function AdminMatches() {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="bg-black/40 border-white/10 text-white placeholder-zinc-500 text-xs h-10 rounded-xl"
           />
+        </div>
+
+        {/* Filtro Operación Comercial: Compra / Venta vs Arriendo - v31.16 */}
+        <div className="flex items-center gap-1 bg-black/40 border border-white/10 rounded-xl p-1 text-white h-10 w-full sm:w-auto shrink-0">
+          <button
+            type="button"
+            onClick={() => { setTransactionFilter('all'); setCurrentPage(1); }}
+            className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+              transactionFilter === 'all'
+                ? 'bg-[#bf953f] text-black shadow-md'
+                : 'text-zinc-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            Todos
+          </button>
+          <button
+            type="button"
+            onClick={() => { setTransactionFilter('venta'); setCurrentPage(1); }}
+            className={`px-3 py-1 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+              transactionFilter === 'venta'
+                ? 'bg-emerald-600 text-white shadow-md'
+                : 'text-zinc-400 hover:text-white hover:bg-white/5'
+            }`}
+            title="Filtrar únicamente coincidencias de Compra (Demanda) y Venta (Oferta)"
+          >
+            <span>🏷️ Compra / Venta</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => { setTransactionFilter('arriendo'); setCurrentPage(1); }}
+            className={`px-3 py-1 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+              transactionFilter === 'arriendo'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'text-zinc-400 hover:text-white hover:bg-white/5'
+            }`}
+            title="Filtrar únicamente coincidencias de Arriendo"
+          >
+            <span>🔑 Arriendo</span>
+          </button>
         </div>
         <div className="flex items-center gap-2 bg-black/40 border border-white/10 rounded-xl px-3 text-white h-10 w-full sm:w-auto shrink-0">
           <SlidersHorizontal className="w-4 h-4 text-zinc-500 shrink-0" />
@@ -3849,11 +3959,52 @@ export default function AdminMatches() {
                           🏢 Inmueble / Oferta
                         </span>
                         <div className="flex items-center gap-2 flex-wrap">
-                          {m.property?.createdAt && (
-                            <span className="text-[10px] text-zinc-400 bg-white/5 border border-white/10 px-2 py-0.5 rounded-md flex items-center gap-1 font-mono" title="Fecha de publicación del inmueble">
-                              📅 {formatColombiaDate(m.property.createdAt)}
-                            </span>
-                          )}
+                          {(() => {
+                            const repCount = Number(m.property?.republicacionesCount || 0);
+                            const effectiveDate = (repCount > 0 && m.property?.fechaUltimaPublicacion)
+                              ? m.property.fechaUltimaPublicacion
+                              : (m.property?.fechaUltimaPublicacion || m.property?.createdAt);
+
+                            const getDaysAgo = (d: any): number => {
+                              if (!d) return 0;
+                              const dateObj = new Date(d);
+                              return Math.max(0, Math.floor((Date.now() - dateObj.getTime()) / (1000 * 60 * 60 * 24)));
+                            };
+
+                            const daysAgo = getDaysAgo(effectiveDate);
+                            const diasTexto = daysAgo === 0 ? "hoy" : daysAgo === 1 ? "1 día" : `${daysAgo} días`;
+
+                            return (
+                              <>
+                                {/* Insignia de Republicación y Actualización Doctrinal v31.16 */}
+                                {repCount > 0 ? (
+                                  <span
+                                    className="inline-flex items-center gap-1.5 text-[10px] sm:text-[11px] font-extrabold text-amber-300 bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/20 border border-amber-500/50 px-2.5 py-0.5 rounded-md shadow-[0_0_14px_rgba(245,158,11,0.35)] animate-in fade-in"
+                                    title={`Inmueble republicado ${repCount} ${repCount === 1 ? 'vez' : 'veces'}. Fecha de última actualización: ${formatColombiaDate(effectiveDate)}`}
+                                  >
+                                    <span>🔥 Republicado y Actualizado hace {diasTexto} (100% Activo)</span>
+                                  </span>
+                                ) : daysAgo > 30 ? (
+                                  <span
+                                    className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-400/90 bg-amber-500/10 border border-amber-500/25 px-2 py-0.5 rounded-md"
+                                    title={`Publicación inicial de hace ${daysAgo} días. Verificar disponibilidad con el captador.`}
+                                  >
+                                    <span>⏳ Publicación de hace {daysAgo} días · Confirmar disponibilidad</span>
+                                  </span>
+                                ) : null}
+
+                                {/* Fecha vigente de publicación (eliminando la fecha anterior desactualizada) */}
+                                {effectiveDate && (
+                                  <span
+                                    className="text-[10px] text-zinc-400 bg-white/5 border border-white/10 px-2 py-0.5 rounded-md flex items-center gap-1 font-mono"
+                                    title={repCount > 0 ? `Fecha de última actualización comercial (${repCount} republicaciones)` : "Fecha de publicación del inmueble"}
+                                  >
+                                    📅 {formatColombiaDate(effectiveDate)}
+                                  </span>
+                                )}
+                              </>
+                            );
+                          })()}
                           {(() => {
                             const isPropDirect = m.property?.origenTipo === 'contacto_directo' || m.property?.origenTipo === 'dm';
                             if (isPropDirect) {
@@ -5644,6 +5795,15 @@ export default function AdminMatches() {
                       <span>Calificación Comercial (Entrenamiento JanIA):</span>
                     </div>
                     {(() => {
+                      if (commercialStatusFeedbackMap[m.id]) {
+                        return (
+                          <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-black/80 border border-amber-400 text-amber-300 font-extrabold text-xs shadow-[0_0_25px_rgba(245,158,11,0.85),inset_0_0_12px_rgba(245,158,11,0.3)] animate-in zoom-in-95 duration-300">
+                            <Check className="w-4 h-4 text-amber-300 animate-bounce" />
+                            <span className="drop-shadow-[0_0_8px_rgba(245,158,11,0.9)]">{commercialStatusFeedbackMap[m.id]}</span>
+                          </div>
+                        );
+                      }
+
                       const fbState = feedbackStatusMap[m.id];
                       if (fbState === 'exitoso') {
                         return (
@@ -5663,7 +5823,7 @@ export default function AdminMatches() {
                       }
 
                       return (
-                        <div className="grid grid-cols-2 sm:flex items-center gap-2.5 w-full sm:w-auto">
+                        <div className="grid grid-cols-1 sm:flex items-center gap-2.5 w-full sm:w-auto">
                           <button
                             type="button"
                             onClick={() => handleFeedback(m, 'exitoso')}
@@ -5687,6 +5847,54 @@ export default function AdminMatches() {
                               ⛔ Descartar Match
                             </span>
                           </button>
+
+                          {/* Menú Rápido de Estado Comercial del Inmueble (v31.16) */}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                type="button"
+                                disabled={statusUpdatingMatchId === m.id}
+                                className="group relative h-10 sm:h-9 px-3.5 text-xs font-extrabold text-amber-300 bg-black/70 hover:bg-black/90 border border-amber-500/40 hover:border-amber-300 rounded-xl flex items-center justify-center gap-1.5 transition-all duration-300 hover:shadow-[0_0_20px_rgba(245,158,11,0.7),inset_0_0_8px_rgba(245,158,11,0.2)] hover:scale-105 active:scale-95 w-full sm:w-auto min-h-[40px] cursor-pointer"
+                                title="Actualizar estado comercial del inmueble si ya no está disponible"
+                              >
+                                {statusUpdatingMatchId === m.id ? (
+                                  <Loader2 className="w-4 h-4 animate-spin text-amber-300" />
+                                ) : (
+                                  <Tag className="w-4 h-4 text-amber-400 transition-transform duration-300 group-hover:rotate-12" />
+                                )}
+                                <span className="font-extrabold text-amber-300">
+                                  🏷️ Estado Inmueble ▾
+                                </span>
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="bg-zinc-950/95 border border-zinc-800 text-white min-w-[260px] p-2 shadow-2xl backdrop-blur-2xl rounded-2xl z-50">
+                              <div className="px-2.5 py-1.5 text-[10px] font-extrabold text-zinc-400 uppercase tracking-wider border-b border-white/10 mb-1 flex items-center justify-between">
+                                <span>Estado Predial #{m.property?.id}</span>
+                                <span className="text-amber-400 text-[9px]">1-Clic BD</span>
+                              </div>
+                              <DropdownMenuItem
+                                onClick={() => handleUpdateCommercialStatus(m, 'VENDIDO')}
+                                className="flex items-center gap-2.5 px-3 py-2.5 text-xs font-bold text-emerald-300 hover:text-emerald-100 hover:bg-emerald-950/60 rounded-xl cursor-pointer transition-colors"
+                              >
+                                <span className="text-sm">🔑</span>
+                                <span>Marcar como Vendido</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleUpdateCommercialStatus(m, 'ARRENDADO')}
+                                className="flex items-center gap-2.5 px-3 py-2.5 text-xs font-bold text-cyan-300 hover:text-cyan-100 hover:bg-cyan-950/60 rounded-xl cursor-pointer transition-colors"
+                              >
+                                <span className="text-sm">🗝️</span>
+                                <span>Marcar como Arrendado</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleUpdateCommercialStatus(m, 'INACTIVO')}
+                                className="flex items-center gap-2.5 px-3 py-2.5 text-xs font-bold text-rose-300 hover:text-rose-100 hover:bg-rose-950/60 rounded-xl cursor-pointer transition-colors"
+                              >
+                                <span className="text-sm">🤦🏻‍♀️</span>
+                                <span>Marcar como Ya No Disponible / Inactivo</span>
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       );
                     })()}

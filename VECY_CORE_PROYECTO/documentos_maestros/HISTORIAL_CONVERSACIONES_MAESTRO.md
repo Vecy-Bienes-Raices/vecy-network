@@ -50,7 +50,58 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.15 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.16 — Septiembre 2026
+
+### 🗓️ Sesión: Martes 8 de Septiembre de 2026 — 03:45 a 04:05 (Hora Colombia UTC-5)
+**Versión**: `v31.16` | **Ambiente**: Producción VPS (`13.140.149.144`) + Mesa de Cotejo Admin Panel (`vecy-network.vercel.app/admin`) + Supabase DB + GitHub (`main`)
+
+#### 🎯 Solicitud de Eduardo A. Rivera:
+1. "🔄 Insignia de Republicación: Si el captador volvió a publicar el inmueble hace poco (republicacionesCount > 0), mostrar: 🔥 Republicado y Actualizado hace X días (100% Activo). [Esto nos garantizará de que además de que fue republicado ha quedado actualizado a la última y actual fecha de publicación eliminando así la fecha anterior]"
+2. "La solución: Agregar en la tarjeta un menú rápido de estado comercial:
+   🔑 Marcar como Vendido
+   🗝️ Marcar como Arrendado
+   🤦🏻‍♀️ Marcar como Ya No Disponible / Inactivo"
+3. "NOTA: También me gustaría mucho que se pudiera filtrar por aparte las coincidencias de VENTA y las de ARRIENDO por aparte. Sé que muchos agentes buscan es ARRIENDO(DEMANDA) y ARRIENDAN(OFERTA), pero nosotros en VECY BIENES RAÍCES nos enfocamos más en COMPRA(DEMANDA)/VENTA(OFERTA). Me entiendes"
+
+#### 🔍 Diagnóstico Técnico y Arquitectura de la Solución:
+1. **Inmuebles Desactualizados y Frescura Predial**:
+   - Muchos inmuebles capturados en grupos de WhatsApp son cerrados comercialmente (vendidos o arrendados) sin que los brokers notifiquen a la red. Cuando un asesor contacta al captador, pierde tiempo en inmuebles ya no disponibles.
+   - Sin embargo, cuando un captador vuelve a enviar la oferta a los grupos, JanIA detecta la deduplicación y actualiza `republicacionesCount` y `fechaUltimaPublicacion`. La tarjeta anteriormente mostraba `createdAt` (la fecha original antigua), ocultando que el inmueble seguía fresco y revalidado por el captador.
+   - **Solución Doctrinal**:
+     - Si `republicacionesCount > 0`, se calcula el tiempo transcurrido desde `fechaUltimaPublicacion` y se despliega la insignia prominente: `🔥 Republicado y Actualizado hace X días (100% Activo)`.
+     - La fecha visible del inmueble pasa a ser taxativamente `fechaUltimaPublicacion`, eliminando la fecha antigua desfasada.
+     - Si no ha sido republicado y tiene más de 30 días, se añade el aviso preventivo: `⏳ Publicación de hace X días · Confirmar disponibilidad`.
+2. **Acción Comercial Rápida en 1-Clic**:
+   - Cuando el asesor o broker confirma que una propiedad ya se vendió, se arrendó o no está disponible, necesita darla de baja inmediatamente sin navegar a otras pantallas ni modificar tablas complejas.
+   - **Solución Doctrinal**:
+     - Se creó el procedimiento `updatePropertyCommercialStatus` en `server/routers/janIA.ts`. Al marcar `VENDIDO`, `ARRENDADO` o `INACTIVO`:
+       - En `properties`: `available = false`, `estadoComercial = status`, `vigenciaIa = 'NO_DISPONIBLE'`, `updatedAt = new Date()`.
+       - En `propertyMatches`: se purgan todos los cruces activos de esa propiedad (`delete where propertyId = id`).
+       - En `getAllMatches`: se filtran exclusivamente propiedades donde `available = true`.
+       - Se dispara recálculo automático en segundo plano (`findMatchesForRequirement`) para dotar de nuevas opciones activas a la demanda involucrada.
+       - En el frontend, se despliega un menú elegante `🏷️ Estado Inmueble ▾` con las 3 opciones solicitadas y confirmación visual inmediata.
+3. **Discriminador de Negocio VENTA vs ARRIENDO**:
+   - Vecy Bienes Raíces prioriza la compraventa inmobiliaria sobre el arrendamiento.
+   - **Solución Doctrinal**:
+     - Se añadió un grupo de filtros con 3 botones interactivos: `[Todos]`, `[🏷️ Compra / Venta]` y `[🔑 Arriendo]`.
+     - Permite aislar en un clic las operaciones de compra y venta, facilitando el enfoque comercial del equipo sin mezclar cánones ni demandas de alquiler.
+
+#### 🛠️ Acciones Ejecutadas:
+1. **Backend (`server/routers/janIA.ts`)**:
+   - Creada la mutación `updatePropertyCommercialStatus` que actualiza el estado comercial, disponibilidad en Supabase, purga los matches del inmueble y recalcula alternativas para el requerimiento.
+   - Asegurado filtro `(${properties.available} IS NULL OR ${properties.available} = true)` en `getAllMatches`.
+2. **Frontend (`client/src/components/admin/AdminMatches.tsx`)**:
+   - Integrado estado `transactionFilter` y selector de 3 botones en la barra de herramientas.
+   - Modificado `filteredMatches` para discriminar con precisión quirúrgica operaciones de venta frente a alquiler.
+   - Implementada la insignia `🔥 Republicado y Actualizado hace X días (100% Activo)` y sustitución de fecha por `fechaUltimaPublicacion`.
+   - Incorporado el menú `🏷️ Estado Inmueble ▾` con opciones `🔑 Marcar como Vendido`, `🗝️ Marcar como Arrendado` y `🤦🏻‍♀️ Marcar como Ya No Disponible / Inactivo` con confirmación inmediata en la tarjeta.
+3. **Versión y Compilación**:
+   - Versión oficial elevada a `v31.16` en `shared/const.ts` y `31.16.0` en `package.json`.
+   - Validada la compilación con `npm run check` (`tsc --noEmit`) y `npm run build` con 0 errores.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.15 — Septiembre 2026
 
 ### 🗓️ Sesión: Martes 8 de Septiembre de 2026 — 03:00 a 03:15 (Hora Colombia UTC-5)
 **Versión**: `v31.15` | **Ambiente**: Producción VPS (`13.140.149.144`) + Mesa de Cotejo Admin Panel (`vecy-network.vercel.app/admin`) + Supabase DB + GitHub (`main`)
