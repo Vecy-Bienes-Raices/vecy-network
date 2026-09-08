@@ -7,7 +7,8 @@ import {
 
 export default function AdminRequirements() {
   const { data: requirements = [], isLoading, refetch } = trpc.janIA.getAllRequirements.useQuery(undefined, {
-    refetchInterval: 60000,
+    refetchInterval: false, // Evita descargar todos los requerimientos cada 60s
+    staleTime: 300000,      // 5 minutos de frescura
     refetchOnWindowFocus: false,
   });
 

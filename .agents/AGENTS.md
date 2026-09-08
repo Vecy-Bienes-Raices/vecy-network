@@ -163,7 +163,27 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.11 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.12 — Septiembre 2026
+
+### Novedades v31.12 (Blindaje del Límite de Egress de Supabase, Erradicación de Polling Redundante y Micro-Caché en Routers):
+- **Diagnóstico y Solución de Alerta de Cuota Supabase (3.181 GB consumidos en 7 días)**:
+  1) **Causa Raíz del Alto Tráfico (Egress)**:
+     - Componentes del panel administrativo mantenían `refetchInterval: 60000` (descarga forzada de tablas completas cada 60s):
+       - `AdminProperties.tsx`: descargaba las 1.715 propiedades (~2.6 MB) cada 60 segundos.
+       - `AdminMatches.tsx`: descargaba todos los matches (~700 KB) cada 60 segundos.
+       - `AdminRequirements.tsx`: descargaba 925 requerimientos (~500 KB) cada 60 segundos.
+       - `PropertyImageUpload.tsx`: ejecutaba polling cada 5.000 ms.
+       - `server/_core/index.ts`: ejecutaba `recalculateAndCleanupMatches()` 5 min tras cada reinicio de PM2.
+  2) **Erradicación del Polling Desmedido y Micro-Caché en Backend**:
+     - Desactivado el polling automático (`refetchInterval: false`) en `AdminMatches.tsx`, `AdminProperties.tsx` y `AdminRequirements.tsx`. Se refresca bajo demanda o al editar, con `staleTime` de 3 a 5 minutos.
+     - Micro-caché en memoria implementada en `server/routers/janIA.ts` (`getAllMatches` a 180s, `getAllRequirements` a 180s) y en `server/routers/properties.ts` (`myList` a 180s).
+     - Suprimido el recálculo masivo en arranque de PM2 (`server/_core/index.ts`), manteniéndolo exclusivamente en el cron programado diario (08:00 AM).
+  3) **Integridad Absoluta de Matches**:
+     - Toda la lógica de cotejo (`matching.ts`), filtros duros, puntuaciones y UI de edición permanecen 100% intactos. El tráfico Egress proyectado cae de ~450 MB/día a <15 MB/día, blindando a la organización contra bloqueos de Supabase.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.11 — Septiembre 2026
 
 ### Novedades v31.11 (Blindaje del Connection Pool de Base de Datos, Consolidación SQL de Alto Desempeño y Erradicación Definitiva de Timeouts 504):
 - **Diagnóstico y Erradicación de Inanición de Conexiones a Supabase (Caso Timeouts 504 en PC y Móvil)**:

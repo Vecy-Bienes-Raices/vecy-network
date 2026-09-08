@@ -15657,7 +15657,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.11";
+var VECY_VERSION = "v31.12";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 
@@ -16330,9 +16330,13 @@ var cachedAllMatchesData = null;
 var cachedAllMatchesTime = 0;
 var cachedBotStatusData = null;
 var cachedBotStatusTime = 0;
+var cachedRequirementsData = null;
+var cachedRequirementsTime = 0;
 function invalidateAdminMatchesCache() {
   cachedAllMatchesTime = 0;
   cachedAllMatchesData = null;
+  cachedRequirementsTime = 0;
+  cachedRequirementsData = null;
 }
 var janIARouter = router({
   // New: Extract property data from link
@@ -16659,7 +16663,7 @@ ${liveStats}${userContextInstruction}
   // Get all matches in the network
   getAllMatches: publicProcedure.query(async () => {
     const now = Date.now();
-    if (cachedAllMatchesData && now - cachedAllMatchesTime < 3e4) {
+    if (cachedAllMatchesData && now - cachedAllMatchesTime < 18e4) {
       return cachedAllMatchesData;
     }
     const db = await getDb();
@@ -17424,12 +17428,19 @@ ${liveStats}${userContextInstruction}
       return { hasQr: false, qrData: null };
     }
   }),
-  // Get all requirements registered in the database
+  // Get all requirements registered in the database (con micro-caché para proteger Supabase Egress)
   getAllRequirements: publicProcedure.query(async () => {
+    const now = Date.now();
+    if (cachedRequirementsData && now - cachedRequirementsTime < 18e4) {
+      return cachedRequirementsData;
+    }
     const db = await getDb();
-    if (!db) throw new Error("Database not available");
+    if (!db) {
+      if (cachedRequirementsData) return cachedRequirementsData;
+      throw new Error("Database not available");
+    }
     try {
-      return await db.select({
+      const data = await db.select({
         id: requirements.id,
         name: requirements.name,
         rawText: requirements.rawText,
@@ -17442,7 +17453,11 @@ ${liveStats}${userContextInstruction}
         areaMin: requirements.areaMin,
         createdAt: requirements.createdAt
       }).from(requirements).orderBy(desc2(requirements.id));
+      cachedRequirementsData = data;
+      cachedRequirementsTime = now;
+      return data;
     } catch (error) {
+      if (cachedRequirementsData) return cachedRequirementsData;
       console.error("Error getting all requirements:", error);
       throw error;
     }
@@ -18340,6 +18355,37 @@ var propertyInputSchema = z7.object({
   idUsuarioWhatsapp: z7.string().optional().nullable(),
   images: z7.array(z7.string()).optional().nullable()
 });
+var propertyFields = {
+  id: properties.id,
+  name: properties.name,
+  price: properties.price,
+  rentPrice: properties.rentPrice,
+  location: properties.location,
+  zone: properties.zone,
+  addressNeighborhood: properties.addressNeighborhood,
+  propertyType: properties.propertyType,
+  transactionType: properties.transactionType,
+  description: properties.description,
+  bedrooms: properties.bedrooms,
+  bathrooms: properties.bathrooms,
+  garages: properties.garages,
+  stratum: properties.stratum,
+  floorDetail: properties.floorDetail,
+  areaTotal: properties.areaTotal,
+  yearBuilt: properties.yearBuilt,
+  adminFee: properties.adminFee,
+  matriculaInmobiliaria: properties.matriculaInmobiliaria,
+  featured: properties.featured,
+  available: properties.available,
+  images: properties.images,
+  createdAt: properties.createdAt
+};
+var cachedAdminMyList = null;
+var cachedAdminMyListTime = 0;
+function invalidatePropertiesListCache() {
+  cachedAdminMyList = null;
+  cachedAdminMyListTime = 0;
+}
 var propertiesRouter = router({
   // --- PUBLIC ---
   list: publicProcedure.input(z7.object({
@@ -18374,6 +18420,7 @@ var propertiesRouter = router({
       ...input,
       agentId: ctx?.user?.id ?? 1
     }).returning();
+    invalidatePropertiesListCache();
     return newProperty[0];
   }),
   parseText: publicProcedure.input(z7.object({ text: z7.string() })).mutation(async ({ input }) => {
@@ -18402,6 +18449,7 @@ Texto: ${input.text}`;
       throw new TRPCError5({ code: "FORBIDDEN" });
     }
     const updated = await db.update(properties).set({ ...input.data, updatedAt: /* @__PURE__ */ new Date() }).where(eq13(properties.id, input.id)).returning();
+    invalidatePropertiesListCache();
     return updated[0];
   }),
   delete: publicProcedure.input(z7.object({ id: z7.number() })).mutation(async ({ ctx, input }) => {
@@ -18413,40 +18461,23 @@ Texto: ${input.text}`;
       throw new TRPCError5({ code: "FORBIDDEN" });
     }
     await db.delete(properties).where(eq13(properties.id, input.id));
+    invalidatePropertiesListCache();
     return { success: true };
   }),
-  // List my own properties (agent view) or all properties (admin view)
+  // List my own properties (agent view) or all properties (admin view) - Protegido con micro-caché para Supabase Egress
   myList: publicProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
-    const propertyFields = {
-      id: properties.id,
-      name: properties.name,
-      price: properties.price,
-      rentPrice: properties.rentPrice,
-      location: properties.location,
-      zone: properties.zone,
-      addressNeighborhood: properties.addressNeighborhood,
-      propertyType: properties.propertyType,
-      transactionType: properties.transactionType,
-      description: properties.description,
-      bedrooms: properties.bedrooms,
-      bathrooms: properties.bathrooms,
-      garages: properties.garages,
-      stratum: properties.stratum,
-      floorDetail: properties.floorDetail,
-      areaTotal: properties.areaTotal,
-      yearBuilt: properties.yearBuilt,
-      adminFee: properties.adminFee,
-      matriculaInmobiliaria: properties.matriculaInmobiliaria,
-      featured: properties.featured,
-      available: properties.available,
-      images: properties.images,
-      createdAt: properties.createdAt
-    };
     const user = ctx?.user;
     if (!user || user.role === "admin") {
-      return await db.select(propertyFields).from(properties).orderBy(desc4(properties.id));
+      const now = Date.now();
+      if (cachedAdminMyList && now - cachedAdminMyListTime < 18e4) {
+        return cachedAdminMyList;
+      }
+      const data = await db.select(propertyFields).from(properties).orderBy(desc4(properties.id));
+      cachedAdminMyList = data;
+      cachedAdminMyListTime = now;
+      return data;
     }
     return await db.select(propertyFields).from(properties).where(eq13(properties.agentId, user.id)).orderBy(desc4(properties.id));
   })
@@ -19376,15 +19407,6 @@ Direcci\xF3n obligatoria:
   const port = parseInt(process.env.PORT || "3000");
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
-    setTimeout(() => {
-      Promise.resolve().then(() => (init_nightlyRematch(), nightlyRematch_exports)).then(({ recalculateAndCleanupMatches: recalculateAndCleanupMatches2 }) => {
-        recalculateAndCleanupMatches2().catch((err) => {
-          console.error("[STARTUP-CLEANUP] Error ejecutando la limpieza de matches:", err);
-        });
-      }).catch((err) => {
-        console.error("[STARTUP-CLEANUP] Error importando funci\xF3n de limpieza:", err);
-      });
-    }, 3e5);
     const shouldStartBot = process.env.ENABLE_WHATSAPP_BOT !== "false" || process.env.ENABLE_JANIA_MATCH_BOT === "true";
     if (shouldStartBot) {
       console.log("Iniciando Bot Oficial JanIA (+573192919978) Baileys (.baileys_auth)...");

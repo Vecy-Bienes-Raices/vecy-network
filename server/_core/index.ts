@@ -773,16 +773,8 @@ Dirección obligatoria:
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
     
-    // Ejecutar recalculo y limpieza de matches diferido (5 minutos tras iniciar para no sobrecargar el arranque)
-    setTimeout(() => {
-      import("../jobs/nightlyRematch").then(({ recalculateAndCleanupMatches }) => {
-        recalculateAndCleanupMatches().catch(err => {
-          console.error("[STARTUP-CLEANUP] Error ejecutando la limpieza de matches:", err);
-        });
-      }).catch(err => {
-        console.error("[STARTUP-CLEANUP] Error importando función de limpieza:", err);
-      });
-    }, 300000);
+    // NOTA PROTECCIÓN SUPABASE EGRESS: El recálculo y limpieza se ejecuta en el cron diario (08:00 AM)
+    // para evitar descargar miles de registros en cada reinicio del servidor PM2.
 
     // Inicializar los Bots de WhatsApp de Vecy Network (Baileys)
     // Operación exclusiva del Bot Oficial JanIA (+573192919978).

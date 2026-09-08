@@ -24,7 +24,7 @@ export default function PropertyImageUpload({ propertyId, onUploadSuccess }: Pro
   // Queries
   const imagesQuery = trpc.images.getPropertyImages.useQuery(
     { propertyId },
-    { refetchInterval: 5000 }
+    { staleTime: 60000, refetchOnWindowFocus: false }
   );
 
   // Mutations

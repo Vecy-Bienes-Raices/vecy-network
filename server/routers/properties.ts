@@ -48,6 +48,66 @@ const propertyInputSchema = z.object({
   images: z.array(z.string()).optional().nullable(),
 });
 
+type AdminPropertyListItem = {
+  id: number;
+  name: string;
+  price: string;
+  rentPrice: string | null;
+  location: string | null;
+  zone: string;
+  addressNeighborhood: string | null;
+  propertyType: typeof properties.$inferSelect.propertyType;
+  transactionType: typeof properties.$inferSelect.transactionType;
+  description: string | null;
+  bedrooms: number | null;
+  bathrooms: number | null;
+  garages: number | null;
+  stratum: number | null;
+  floorDetail: string | null;
+  areaTotal: string | null;
+  yearBuilt: number | null;
+  adminFee: string | null;
+  matriculaInmobiliaria: string | null;
+  featured: boolean | null;
+  available: boolean | null;
+  images: unknown;
+  createdAt: Date;
+};
+
+const propertyFields = {
+  id: properties.id,
+  name: properties.name,
+  price: properties.price,
+  rentPrice: properties.rentPrice,
+  location: properties.location,
+  zone: properties.zone,
+  addressNeighborhood: properties.addressNeighborhood,
+  propertyType: properties.propertyType,
+  transactionType: properties.transactionType,
+  description: properties.description,
+  bedrooms: properties.bedrooms,
+  bathrooms: properties.bathrooms,
+  garages: properties.garages,
+  stratum: properties.stratum,
+  floorDetail: properties.floorDetail,
+  areaTotal: properties.areaTotal,
+  yearBuilt: properties.yearBuilt,
+  adminFee: properties.adminFee,
+  matriculaInmobiliaria: properties.matriculaInmobiliaria,
+  featured: properties.featured,
+  available: properties.available,
+  images: properties.images,
+  createdAt: properties.createdAt,
+};
+
+let cachedAdminMyList: AdminPropertyListItem[] | null = null;
+let cachedAdminMyListTime = 0;
+
+export function invalidatePropertiesListCache() {
+  cachedAdminMyList = null;
+  cachedAdminMyListTime = 0;
+}
+
 export const propertiesRouter = router({
   // --- PUBLIC ---
   list: publicProcedure
@@ -100,6 +160,7 @@ export const propertiesRouter = router({
         agentId: ctx?.user?.id ?? 1,
       }).returning();
 
+      invalidatePropertiesListCache();
       return newProperty[0];
     }),
 
@@ -140,6 +201,7 @@ export const propertiesRouter = router({
         .where(eq(properties.id, input.id))
         .returning();
 
+      invalidatePropertiesListCache();
       return updated[0];
     }),
 
@@ -158,43 +220,24 @@ export const propertiesRouter = router({
       }
 
       await db.delete(properties).where(eq(properties.id, input.id));
+      invalidatePropertiesListCache();
       return { success: true };
     }),
 
-  // List my own properties (agent view) or all properties (admin view)
+  // List my own properties (agent view) or all properties (admin view) - Protegido con micro-caché para Supabase Egress
   myList: publicProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
-
-    const propertyFields = {
-      id: properties.id,
-      name: properties.name,
-      price: properties.price,
-      rentPrice: properties.rentPrice,
-      location: properties.location,
-      zone: properties.zone,
-      addressNeighborhood: properties.addressNeighborhood,
-      propertyType: properties.propertyType,
-      transactionType: properties.transactionType,
-      description: properties.description,
-      bedrooms: properties.bedrooms,
-      bathrooms: properties.bathrooms,
-      garages: properties.garages,
-      stratum: properties.stratum,
-      floorDetail: properties.floorDetail,
-      areaTotal: properties.areaTotal,
-      yearBuilt: properties.yearBuilt,
-      adminFee: properties.adminFee,
-      matriculaInmobiliaria: properties.matriculaInmobiliaria,
-      featured: properties.featured,
-      available: properties.available,
-      images: properties.images,
-      createdAt: properties.createdAt,
-    };
-
     const user = ctx?.user;
     if (!user || (user.role as string) === "admin") {
-      return await db.select(propertyFields).from(properties).orderBy(desc(properties.id));
+      const now = Date.now();
+      if (cachedAdminMyList && (now - cachedAdminMyListTime) < 180000) {
+        return cachedAdminMyList;
+      }
+      const data = await db.select(propertyFields).from(properties).orderBy(desc(properties.id));
+      cachedAdminMyList = data;
+      cachedAdminMyListTime = now;
+      return data;
     }
     return await db.select(propertyFields).from(properties)
       .where(eq(properties.agentId, user.id))

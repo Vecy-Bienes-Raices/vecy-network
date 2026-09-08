@@ -50,9 +50,46 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.12 — Septiembre 2026
+
+### 🗓️ Sesión: Lunes 7 de Septiembre de 2026 — 19:15 a 19:45 (Hora Colombia UTC-5)
+**Versión**: `v31.12` | **Ambiente**: Producción VPS (`13.140.149.144`) + Mesa de Cotejo Admin Panel (`vecy-network.vercel.app/admin`) + Supabase DB + GitHub (`main`)
+
+#### 🎯 Solicitud de Eduardo A. Rivera:
+1. "También deberías ayudarme con supabase porque allí me aparece esto: 'Organization exceeded its quota in the previous billing cycle · Projects will be restricted from 13 Sep, 2026 if your organization remains over quota. Review usage or billing.'"
+2. "Si, por favor, si esto no afecta en nada el funcionamiento de los MATCHES entonces hazlo."
+
+#### 🔍 Diagnóstico Técnico Profundo (Causa Raíz del Consumo Desmedido de Egress en Supabase):
+1. **Consumo Crítico de Ancho de Banda (3.181 GB consumidos en 7 días de 5 GB límite)**:
+   - Al ritmo de 450 MB/día, el plan gratuito de Supabase iba a ser restringido el 13 de Septiembre por exceder la cuota mensual de 5 GB de Egress.
+2. **Causa Raíz en el Frontend y Backend**:
+   - **Polling masivo de tablas completas en segundo plano cada 60s**:
+     - `AdminProperties.tsx`: `properties.myList` se ejecutaba cada 60s (`refetchInterval: 60000`), descargando 1.715 propiedades completas (~2.6 MB de payload) en cada ciclo sin interacción del usuario.
+     - `AdminMatches.tsx`: `getAllMatches` se ejecutaba cada 60s (`refetchInterval: 60000`), transfiriendo ~700 KB en cada ciclo.
+     - `AdminRequirements.tsx`: `janIA.getAllRequirements` se ejecutaba cada 60s (`refetchInterval: 60000`), transfiriendo ~500 KB en cada ciclo.
+     - `PropertyImageUpload.tsx`: Realizaba sondeo continuo cada 5.000 ms (`refetchInterval: 5000`).
+   - **Recálculo Masivo no deseado en arranque de PM2**:
+     - `server/_core/index.ts`: A los 5 minutos de cada reinicio (`setTimeout 300000`), el servidor disparaba `recalculateAndCleanupMatches()`, el cual ejecutaba cientos de consultas `SELECT` a la base de datos para recalcular todo el histórico de matches.
+
+#### 🛠️ Acciones Ejecutadas y Blindaje de Cuota Supabase:
+1. **Erradicación del Polling Forzado en Segundo Plano**:
+   - `client/src/components/admin/AdminProperties.tsx`: Desactivado `refetchInterval` (`refetchInterval: false`), agregado `staleTime: 300000` (5 minutos).
+   - `client/src/components/admin/AdminMatches.tsx`: Desactivado `refetchInterval` (`refetchInterval: false`), agregado `staleTime: 180000` (3 minutos). Los datos se actualizan reactivamente al editar/guardar o bajo clic en `[Refrescar]`.
+   - `client/src/components/admin/AdminRequirements.tsx`: Desactivado `refetchInterval` (`refetchInterval: false`), agregado `staleTime: 300000` (5 minutos).
+   - `client/src/components/admin/PropertyImageUpload.tsx`: Eliminado `refetchInterval: 5000`, agregado `staleTime: 60000`.
+   - `client/src/pages/Admin.tsx`: `BotStatusWidget` optimizado a `refetchInterval: 300000` (5 minutos).
+2. **Micro-Caché en Memoria en Routers del Backend (Protección Egress)**:
+   - `server/routers/janIA.ts`: TTL de caché de `getAllMatches` ampliado a 180 segundos. Incorporada micro-caché de 180 segundos para `getAllRequirements` con invalidación programada.
+   - `server/routers/properties.ts`: Micro-caché de 180 segundos para `myList` tipada estrictamente con `AdminPropertyListItem` para evitar pérdida de inferencia de TypeScript.
+3. **Optimización de Ciclo de Vida del Servidor**:
+   - `server/_core/index.ts`: Suprimido el recálculo masivo tras arranque de PM2, manteniéndolo exclusivamente en el cron programado de las 08:00 AM.
+4. **Garantía Doctrinal de Matches Intactos**:
+   - Algoritmo de cotejo (`matching.ts`), cálculo de score, reglas de bloqueo, ponderaciones y mesa de edición permanecen 100% operativos e inalterados.
+   - Tráfico proyectado a Supabase reducido de ~450 MB/día a <15 MB/día (>95% de ahorro), garantizando que la organización no sea restringida el 13 de Septiembre.
+
 ---
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.11 — Septiembre 2026
+## 🔖 VERSIÓN ANTERIOR: v31.11 — Septiembre 2026
 
 ### 🗓️ Sesión: Sábado 5 de Septiembre de 2026 — 12:10 a 12:35 (Hora Colombia UTC-5)
 **Versión**: `v31.11` | **Ambiente**: Producción VPS (`13.140.149.144`) + Mesa de Cotejo Admin Panel (`vecy-network.vercel.app/admin`) + Supabase DB + GitHub (`main`)

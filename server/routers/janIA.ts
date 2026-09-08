@@ -14,16 +14,26 @@ import fs from 'fs';
 import path from 'path';
 import { transcribeAudioBuffer } from '../_core/voiceTranscription';
 
-// In-memory micro-cache for blazing fast admin responsiveness
+// In-memory micro-cache for blazing fast admin responsiveness & Supabase Egress protection
 let cachedAllMatchesData: any = null;
 let cachedAllMatchesTime = 0;
 
 let cachedBotStatusData: any = null;
 let cachedBotStatusTime = 0;
 
+let cachedRequirementsData: any = null;
+let cachedRequirementsTime = 0;
+
 export function invalidateAdminMatchesCache() {
   cachedAllMatchesTime = 0;
   cachedAllMatchesData = null;
+  cachedRequirementsTime = 0;
+  cachedRequirementsData = null;
+}
+
+export function invalidateRequirementsCache() {
+  cachedRequirementsTime = 0;
+  cachedRequirementsData = null;
 }
 
 export const janIARouter = router({
@@ -467,7 +477,7 @@ export const janIARouter = router({
   getAllMatches: publicProcedure
     .query(async () => {
       const now = Date.now();
-      if (cachedAllMatchesData && (now - cachedAllMatchesTime) < 30000) {
+      if (cachedAllMatchesData && (now - cachedAllMatchesTime) < 180000) {
         return cachedAllMatchesData;
       }
 
@@ -1372,12 +1382,20 @@ export const janIARouter = router({
     }
   }),
 
-  // Get all requirements registered in the database
+  // Get all requirements registered in the database (con micro-caché para proteger Supabase Egress)
   getAllRequirements: publicProcedure.query(async () => {
+    const now = Date.now();
+    if (cachedRequirementsData && (now - cachedRequirementsTime) < 180000) {
+      return cachedRequirementsData;
+    }
+
     const db = await getDb();
-    if (!db) throw new Error('Database not available');
+    if (!db) {
+      if (cachedRequirementsData) return cachedRequirementsData;
+      throw new Error('Database not available');
+    }
     try {
-      return await db
+      const data = await db
         .select({
           id: requirements.id,
           name: requirements.name,
@@ -1393,7 +1411,12 @@ export const janIARouter = router({
         })
         .from(requirements)
         .orderBy(desc(requirements.id));
+
+      cachedRequirementsData = data;
+      cachedRequirementsTime = now;
+      return data;
     } catch (error) {
+      if (cachedRequirementsData) return cachedRequirementsData;
       console.error('Error getting all requirements:', error);
       throw error;
     }

@@ -3101,10 +3101,10 @@ export default function AdminMatches() {
     }
   };
 
-  // Fetch matches directly from server API (actualización suave en segundo plano)
+  // Fetch matches directly from server API (actualización inteligente sin sobrecargar Supabase Egress)
   const { data: matches = [], isLoading, isError, refetch } = trpc.janIA.getAllMatches.useQuery(undefined, {
-    refetchInterval: 60000,
-    staleTime: 60000,
+    refetchInterval: false, // Evita descargar megabytes en bucle cada 60s; se actualiza con [Refrescar] o al editar
+    staleTime: 180000,      // Mantiene los datos frescos durante 3 minutos
     refetchOnWindowFocus: false,
     retry: 2,
   });
@@ -3343,8 +3343,8 @@ export default function AdminMatches() {
 
 
   const { data: botStatus, isLoading: isBotStatusLoading, isError: isBotStatusError, refetch: refetchBotStatus } = trpc.janIA.getBotStatus.useQuery(undefined, {
-    refetchInterval: 60000,
-    staleTime: 60000,
+    refetchInterval: 180000, // 3 minutos
+    staleTime: 120000,
     refetchOnWindowFocus: false,
     retry: 2,
   });

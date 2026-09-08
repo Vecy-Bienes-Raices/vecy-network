@@ -69,7 +69,8 @@ export default function AdminProperties() {
   };
 
   const { data: properties = [], isLoading, error, refetch } = trpc.properties.myList.useQuery(undefined, {
-    refetchInterval: 60000,
+    refetchInterval: false, // Evita descargar 1.715 propiedades (2.6 MB) cada 60s en segundo plano
+    staleTime: 300000,      // 5 minutos de frescura
     refetchOnWindowFocus: false,
   });
 
