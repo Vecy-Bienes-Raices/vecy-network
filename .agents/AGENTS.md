@@ -163,7 +163,24 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.13 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.14 — Septiembre 2026
+
+### Novedades v31.14 (Unificación Doctrinal de Enlaces en Publicación, Retiro de Botones Redundantes y Formato Fiel a Imagen 1):
+- **Diagnóstico y Eliminación de Botones Redundantes en Coincidencias**:
+  1) **Eliminación de Botones de Enlace Duplicados**:
+     - Retirado el bloque inferior `🌐 Enlace de Origen: [Abrir Enlace Original del Inmueble]` en la tarjeta de Oferta.
+     - Retirado el bloque inferior `🌐 Enlace de Origen: [Abrir Enlace Original del Requerimiento]` en la tarjeta de Demanda.
+     - Retirado el badge redundante `🔗 Enlace Público` en el encabezado del requerimiento.
+  2) **Unificación Automática de Enlaces en el Texto de la Publicación (`pText` / `rText`)**:
+     - Si cualquier propiedad o requerimiento cuenta con un enlace público (`externalUrl`, `enlaceOrigen`, etc.) y este no figura en el cuerpo del texto crudo, el frontend lo anexa automáticamente al pie de la publicación: `\n\nInfo y galería acá:\n${propUrl}` (o `\n\n📄 Documento adjunto:` si es PDF).
+     - Al renderizarse con `renderTextWithClickableLinks`, se despliega como un hipervínculo azul, interactivo y con icono externo `↗`, logrando una visualización sobria, limpia y 100% idéntica a la Imagen 1.
+     - Al pulsar `[📋 Copiar Publicación]`, el texto copiado incluye el enlace y contacto de forma fiel y completa.
+  3) **Blindaje del Parser de Enlaces (`renderTextWithClickableLinks`)**:
+     - Separación y preservación de puntuación final (`.`, `,`, `;`, `:`) para evitar enlaces caídos o rotos por tipeo del asesor.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.13 — Septiembre 2026
 
 ### Novedades v31.13 (Blindaje de Ingesta contra Fragmentación Indebida de Enlaces, Detección de WhatsApp API Links y Saneamiento de Portales):
 - **Diagnóstico y Erradicación del "Corte de Enlaces" en Ofertas Inmobiliarias (Caso Chicó Alto - La Raqueta #2527)**:

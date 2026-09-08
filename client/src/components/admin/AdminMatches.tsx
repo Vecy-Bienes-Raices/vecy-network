@@ -128,16 +128,18 @@ function extractPublicLink(item: any): string | null {
   if (!item) return null;
 
   // 1. Prioridad Máxima: externalUrl (siempre que sea un portal web/documento y no un link de WhatsApp)
-  if (item.externalUrl && (item.externalUrl.startsWith("http://") || item.externalUrl.startsWith("https://"))) {
-    if (!isWhatsAppContactLink(item.externalUrl)) {
-      return item.externalUrl;
+  if (item.externalUrl && typeof item.externalUrl === 'string' && item.externalUrl.trim()) {
+    const trimmed = item.externalUrl.trim();
+    if (!isWhatsAppContactLink(trimmed)) {
+      return trimmed.startsWith("http") ? trimmed : `https://${trimmed}`;
     }
   }
 
   // 2. enlaceOrigen (siempre que no sea un link de WhatsApp)
-  if (item.enlaceOrigen && (item.enlaceOrigen.startsWith("http://") || item.enlaceOrigen.startsWith("https://"))) {
-    if (!isWhatsAppContactLink(item.enlaceOrigen)) {
-      return item.enlaceOrigen;
+  if (item.enlaceOrigen && typeof item.enlaceOrigen === 'string' && item.enlaceOrigen.trim()) {
+    const trimmed = item.enlaceOrigen.trim();
+    if (!isWhatsAppContactLink(trimmed)) {
+      return trimmed.startsWith("http") ? trimmed : `https://${trimmed}`;
     }
   }
 
@@ -2183,17 +2185,22 @@ function renderTextWithClickableLinks(text: string | null | undefined) {
 
   return parts.map((part, i) => {
     if (/^(https?:\/\/|wa\.me\/|whatsapp\.com\/)/i.test(part)) {
-      const href = part.startsWith("http") ? part : `https://${part}`;
+      const punctMatch = part.match(/[.,;:)]+$/);
+      const trailingPunct = punctMatch ? punctMatch[0] : '';
+      const cleanUrl = part.slice(0, part.length - trailingPunct.length);
+      const href = cleanUrl.startsWith("http") ? cleanUrl : `https://${cleanUrl}`;
       return (
-        <a
-          key={i}
-          href={href}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-blue-400 hover:text-blue-300 underline font-semibold break-all inline-flex items-center gap-1 my-0.5"
-        >
-          {part} <ExternalLink className="w-3 h-3 inline" />
-        </a>
+        <span key={i}>
+          <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-400 hover:text-blue-300 underline font-semibold break-all inline-flex items-center gap-1 my-0.5"
+          >
+            {cleanUrl} <ExternalLink className="w-3 h-3 inline" />
+          </a>
+          {trailingPunct}
+        </span>
       );
     }
     return part;
@@ -3891,7 +3898,14 @@ export default function AdminMatches() {
                       {/* Texto Completo Extraído + Resumen Estructurado Obligatorio */}
                       <div className="text-xs text-zinc-300 bg-white/[0.02] border border-white/5 p-3 rounded-xl leading-relaxed whitespace-pre-wrap break-words space-y-3 select-text cursor-text">
                         {(() => {
-                          const pText = (m.property?.rawText || m.property?.description || "").replace(/^undefined\s*/i, "").trim();
+                          const rawPText = (m.property?.rawText || m.property?.description || "").replace(/^undefined\s*/i, "").trim();
+                          const propUrl = extractPublicLink(m.property);
+                          let pText = rawPText;
+                          if (propUrl && !pText.includes(propUrl) && !pText.includes(propUrl.replace(/^https?:\/\//i, ''))) {
+                            const isPdf = propUrl.toLowerCase().includes('.pdf');
+                            const label = isPdf ? "📄 Documento adjunto:" : "Info y galería acá:";
+                            pText = pText ? `${pText}\n\n${label}\n${propUrl}` : `${label}\n${propUrl}`;
+                          }
                           const isGenericImagePlaceholder = pText.includes("[Publicación de Imagen / Flyer Comercial Inmobiliario sin texto en pie de foto]");
                           const propContact = extractPhoneFromItem(m.property);
                           const isPropDirect = m.property?.origenTipo === 'contacto_directo' || m.property?.origenTipo === 'dm';
@@ -3963,39 +3977,13 @@ export default function AdminMatches() {
                                       ))}
                                     </div>
                                   )}
+                                  {propUrl && (
+                                    <p className="text-xs text-blue-400 font-semibold pt-1 select-text">
+                                      {renderTextWithClickableLinks(propUrl)}
+                                    </p>
+                                  )}
                                 </div>
                               )}
-                            </div>
-                          );
-                        })()}
-
-
-
-                        {/* Enlace Público Original / Portal Web / PDF Adjunto */}
-                        {(() => {
-                          const origUrl = extractPublicLink(m.property);
-                          if (!origUrl) return null;
-                          const isPdf = origUrl.toLowerCase().includes('.pdf');
-
-                          return (
-                            <div className="mt-2.5 pt-2.5 border-t border-white/10 text-xs not-italic flex items-center gap-2 flex-wrap">
-                              <span className="text-zinc-400 font-semibold flex items-center gap-1">
-                                {isPdf ? "📄 Documento Adjunto:" : "🌐 Enlace de Origen:"}
-                              </span>
-                              <a 
-                                href={origUrl} 
-                                target="_blank" 
-                                rel="noopener noreferrer" 
-                                className={`px-2.5 py-1 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-all shadow ${
-                                  isPdf 
-                                    ? "bg-rose-500/20 text-rose-300 border border-rose-500/30 hover:bg-rose-500/30" 
-                                    : "bg-blue-500/20 text-blue-300 border border-blue-500/30 hover:bg-blue-500/30"
-                                }`}
-                                title={origUrl}
-                              >
-                                <ExternalLink className="w-3.5 h-3.5" />
-                                {isPdf ? "Ver / Descargar PDF Adjunto" : "Abrir Enlace Original del Inmueble"}
-                              </a>
                             </div>
                           );
                         })()}
@@ -4169,20 +4157,6 @@ export default function AdminMatches() {
                             </span>
                           )}
                           {(() => {
-                            const reqPublicUrl = extractPublicLink(m.requirement);
-                            return reqPublicUrl ? (
-                              <a
-                                href={reqPublicUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-[10px] text-cyan-300 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 px-2.5 py-0.5 rounded-md flex items-center gap-1 font-bold transition-all shadow-sm"
-                                title="Ver enlace público original del requerimiento"
-                              >
-                                🔗 Enlace Público <ExternalLink className="w-2.5 h-2.5" />
-                              </a>
-                            ) : null;
-                          })()}
-                          {(() => {
                             const isReqDirect = m.requirement?.origenTipo === 'contacto_directo' || m.requirement?.origenTipo === 'dm';
                             if (isReqDirect) {
                               return (
@@ -4228,7 +4202,14 @@ export default function AdminMatches() {
                       {/* Texto Completo Extraído + Resumen Estructurado del Requerimiento */}
                       <div className="text-xs text-zinc-300 bg-white/[0.02] border border-white/5 p-3 rounded-xl leading-relaxed whitespace-pre-wrap break-words space-y-3 select-text cursor-text">
                         {(() => {
-                          const rText = (m.requirement?.rawText || "").replace(/^undefined\s*/i, "").trim();
+                          const rawRText = (m.requirement?.rawText || m.requirement?.description || "").replace(/^undefined\s*/i, "").trim();
+                          const reqUrl = extractPublicLink(m.requirement);
+                          let rText = rawRText;
+                          if (reqUrl && !rText.includes(reqUrl) && !rText.includes(reqUrl.replace(/^https?:\/\//i, ''))) {
+                            const isPdf = reqUrl.toLowerCase().includes('.pdf');
+                            const label = isPdf ? "📄 Documento adjunto:" : "Info y enlace acá:";
+                            rText = rText ? `${rText}\n\n${label}\n${reqUrl}` : `${label}\n${reqUrl}`;
+                          }
                           const isGenericImagePlaceholder = rText.includes("[Publicación de Imagen / Flyer Comercial Inmobiliario sin texto en pie de foto]");
                           const reqContact = extractPhoneFromItem(m.requirement);
                           const isReqDirect = m.requirement?.origenTipo === 'contacto_directo' || m.requirement?.origenTipo === 'dm';
@@ -4297,39 +4278,13 @@ export default function AdminMatches() {
                                       ))}
                                     </div>
                                   )}
+                                  {reqUrl && (
+                                    <p className="text-xs text-blue-400 font-semibold pt-1 select-text">
+                                      {renderTextWithClickableLinks(reqUrl)}
+                                    </p>
+                                  )}
                                 </div>
                               )}
-                            </div>
-                          );
-                        })()}
-
-
-
-                        {/* Enlace Público Original / Portal Web / PDF Adjunto */}
-                        {(() => {
-                          const origReqUrl = extractPublicLink(m.requirement);
-                          if (!origReqUrl) return null;
-                          const isPdf = origReqUrl.toLowerCase().includes('.pdf');
-
-                          return (
-                            <div className="mt-2.5 pt-2.5 border-t border-white/10 text-xs not-italic flex items-center gap-2 flex-wrap">
-                              <span className="text-zinc-400 font-semibold flex items-center gap-1">
-                                {isPdf ? "📄 Documento Adjunto:" : "🌐 Enlace de Origen:"}
-                              </span>
-                              <a 
-                                href={origReqUrl} 
-                                target="_blank" 
-                                rel="noopener noreferrer" 
-                                className={`px-2.5 py-1 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-all shadow ${
-                                  isPdf 
-                                    ? "bg-rose-500/20 text-rose-300 border border-rose-500/30 hover:bg-rose-500/30" 
-                                    : "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500/30"
-                                }`}
-                                title={origReqUrl}
-                              >
-                                <ExternalLink className="w-3.5 h-3.5" />
-                                {isPdf ? "Ver / Descargar PDF Adjunto" : "Abrir Enlace Original del Requerimiento"}
-                              </a>
                             </div>
                           );
                         })()}

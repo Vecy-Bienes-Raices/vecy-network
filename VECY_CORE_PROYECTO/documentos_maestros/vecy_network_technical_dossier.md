@@ -326,6 +326,22 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ---
 
+### 🔖 v31.14 — Septiembre 2026
+
+#### 📌 UNIFICACIÓN DOCTRINAL DE ENLACES EN PUBLICACIÓN, RETIRO DE BOTONES REDUNDANTES Y PRESENTACIÓN FIEL A IMAGEN 1
+
+**Problemas identificados:**
+1. **Redundancia Visual y Botones Duplicados en Coincidencias**: La caja de publicación en `AdminMatches.tsx` ya presentaba los enlaces mediante `renderTextWithClickableLinks` de forma interactiva y con icono `↗`. El botón inferior adicional *"🌐 Enlace de Origen: [Abrir Enlace Original del Inmueble]"* duplicaba la acción y recargaba la vista innecesariamente.
+2. **Inconsistencia de Publicaciones sin Enlace Visible**: Si una propiedad o requerimiento disponía de `externalUrl` o `enlaceOrigen` en la base de datos pero el texto crudo no lo incluía, la publicación en la tarjeta no lo desplegaba de forma homogénea.
+
+**Solución aplicada:**
+- **Retiro de Botones y Badges Redundantes (`AdminMatches.tsx`)**: Se eliminaron los botones inferiores de enlace de origen tanto en la tarjeta de Oferta como en la de Requerimiento, así como el badge *"🔗 Enlace Público"* del encabezado del requerimiento.
+- **Inyección Automática y Uniforme en Texto de Publicación (`pText` y `rText`)**: Si el inmueble o requerimiento tiene un enlace registrado y no está en su texto, se anexa automáticamente al pie (`\n\nInfo y galería acá:\n${propUrl}` o `📄 Documento adjunto:` si es PDF), garantizando que todas las publicaciones con enlaces se visualicen exactamente igual a la Imagen 1.
+- **Copiado Fiel de Publicación**: Al pulsar `[📋 Copiar Publicación]`, el texto copiado al portapapeles incluye el enlace y datos de contacto de forma nativa.
+- **Protección de Puntuación en Parser de URLs**: `renderTextWithClickableLinks` separa signos de puntuación finales (`. , ; :`) para que los enlaces nunca se rompan.
+
+---
+
 ### 🔖 v31.13 — Septiembre 2026
 
 #### 📌 BLINDAJE DE INGESTA CONTRA FRAGMENTACIÓN DE ENLACES, DETECCIÓN DE NÚMEROS EN ENLACES DE WHATSAPP Y SANEAMIENTO MASIVO

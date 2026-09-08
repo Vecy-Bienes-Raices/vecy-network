@@ -31,7 +31,7 @@ async function healProperties() {
       idUsuarioWhatsapp: '573187755390',
       portal: portalInfo.portal || 'Wasi',
       externalListingId: portalInfo.listingId || '10295048',
-      canonicalExternalId: portalInfo.canonicalExternalId || 'WASI:10295048',
+      canonicalExternalId: (portalInfo as any).canonicalExternalId || (portalInfo.listingId ? `${portalInfo.portal || 'WASI'}:${portalInfo.listingId}` : 'WASI:10295048'),
       rawText: cleanedRawText,
       updatedAt: new Date(),
     }).where(eq(properties.id, 2527));
@@ -91,8 +91,10 @@ async function healProperties() {
       updates.externalUrl = targetUrl;
       updates.enlaceOrigen = targetUrl;
       if (pInfo.portal) updates.portal = pInfo.portal;
-      if (pInfo.listingId) updates.externalListingId = pInfo.listingId;
-      if (pInfo.canonicalExternalId) updates.canonicalExternalId = pInfo.canonicalExternalId;
+      if (pInfo.listingId) {
+        updates.externalListingId = pInfo.listingId;
+        updates.canonicalExternalId = `${pInfo.portal || 'PORTAL'}:${pInfo.listingId}`;
+      }
       recoveredCount++;
     }
 

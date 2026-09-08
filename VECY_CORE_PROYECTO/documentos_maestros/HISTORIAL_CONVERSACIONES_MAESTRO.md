@@ -50,7 +50,43 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.13 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.14 — Septiembre 2026
+
+### 🗓️ Sesión: Martes 8 de Septiembre de 2026 — 02:40 a 03:00 (Hora Colombia UTC-5)
+**Versión**: `v31.14` | **Ambiente**: Producción VPS (`13.140.149.144`) + Mesa de Cotejo Admin Panel (`vecy-network.vercel.app/admin`) + Supabase DB + GitHub (`main`)
+
+#### 🎯 Solicitud de Eduardo A. Rivera:
+1. "Mira así y hasta ahí debería quedar una publicación de un inmueble( como en la imagen1). Entonces No entiendo para que un botón adicional para el enlace si ya el que aparece allí es completamente funcional, no se si eso sea un gasto más o un diseño recargado o cómo tu lo llames, pero para mi sobra el botón que abre el enlace del inmueble. No te parece?? Solo mira esa parte y dime si estoy en lo cierto y si se puede solucionar o no es necesario y no gasta recursos o no molesta."
+2. "Si, retíralo por favor. Pero no olvides arreglar todo que todos los que lleven enlaces queden y se vean igual en la mesa de coincidencias, tal y como sugerí el de la imagen 1. Ok"
+
+#### 🔍 Diagnóstico Técnico y Decisión de Diseño Limpio:
+1. **Redundancia Visual de Enlaces**:
+   - En `AdminMatches.tsx`, la caja de publicación de la oferta y del requerimiento ya renderiza cualquier enlace o URL web/portal mediante `renderTextWithClickableLinks`, presentándolo como un hipervínculo azul, interactivo, subrayado y con icono de apertura externa `↗`.
+   - Debajo de la caja de publicación existía un bloque adicional con el botón `🌐 Enlace de Origen: [Abrir Enlace Original del Inmueble]`, y en el encabezado del requerimiento un botón badge `🔗 Enlace Público`.
+   - Este botón duplicaba la acción, sobrecargaba la interfaz visual y creaba inconsistencias cuando la oferta ya exponía su link formateado (`Info y galería acá:` o `CONTACTO: wa.me`).
+2. **Unificación Doctrinal en Publicación**:
+   - La publicación debe verse limpia, sobria y profesional, exactamente como en la Imagen 1 compartida por Eduardo.
+   - Si una propiedad o requerimiento tiene `externalUrl` o `enlaceOrigen` registrado en base de datos pero dicho enlace no está en el texto de la publicación, el frontend lo concatena automáticamente al final de la publicación bajo la etiqueta `Info y galería acá:` (o `📄 Documento adjunto:` si es PDF), garantizando que **todas las fichas con enlaces queden idénticas a la Imagen 1** tanto en visualización como al usar el botón `[📋 Copiar Publicación]`.
+
+#### 🛠️ Acciones Ejecutadas y Saneamiento UI:
+1. **Retiro de Botones y Badges Redundantes (`client/src/components/admin/AdminMatches.tsx`)**:
+   - Eliminado el bloque inferior `🌐 Enlace de Origen: [Abrir Enlace Original del Inmueble]` en la columna de Inmueble / Oferta.
+   - Eliminado el bloque inferior `🌐 Enlace de Origen: [Abrir Enlace Original del Requerimiento]` en la columna de Requerimiento / Demanda.
+   - Eliminado el badge duplicado `🔗 Enlace Público` del encabezado del requerimiento.
+2. **Unificación Automática de Enlaces en Texto de Publicación (`pText` y `rText`)**:
+   - Si la propiedad cuenta con enlace público (`extractPublicLink(m.property)`) y este no se encuentra en el texto crudo, se anexa limpiamente:
+     `\n\nInfo y galería acá:\n${propUrl}` (o `\n\n📄 Documento adjunto:\n${propUrl}`).
+   - Si el requerimiento cuenta con enlace público (`extractPublicLink(m.requirement)`) y no está en el texto crudo, se anexa limpiamente:
+     `\n\nInfo y enlace acá:\n${reqUrl}` (o `\n\n📄 Documento adjunto:\n${reqUrl}`).
+   - Al hacer clic en `[📋 Copiar Publicación]`, el enlace queda incluido en el portapapeles del broker de forma transparente.
+3. **Refinamiento de Parser de Enlaces (`renderTextWithClickableLinks`)**:
+   - Separación de signos de puntuación finales (`.`, `,`, `;`, `:`) para evitar enlaces rotos o 404 por puntuación accidental del broker.
+4. **Verificación y Compilación Limpia**:
+   - Ejecutados `npm run check` (`tsc --noEmit`) y `npm run build` con 0 errores.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.13 — Septiembre 2026
 
 ### 🗓️ Sesión: Lunes 7 de Septiembre de 2026 — 23:45 a 00:15 (Hora Colombia UTC-5)
 **Versión**: `v31.13` | **Ambiente**: Producción VPS (`13.140.149.144`) + Mesa de Cotejo Admin Panel (`vecy-network.vercel.app/admin`) + Supabase DB + GitHub (`main`)
