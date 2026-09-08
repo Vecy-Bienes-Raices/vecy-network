@@ -326,6 +326,24 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ---
 
+### 🔖 v31.13 — Septiembre 2026
+
+#### 📌 BLINDAJE DE INGESTA CONTRA FRAGMENTACIÓN DE ENLACES, DETECCIÓN DE NÚMEROS EN ENLACES DE WHATSAPP Y SANEAMIENTO MASIVO
+
+**Problemas identificados:**
+1. **Fragmentación por URLs en `splitMultiItemMessage`**: Cuando una oferta inmobiliaria contenía al final enlaces con palabras como `apartamento` o `casa` y números de ID (ej. `https://info.wasi.co/apartamento-venta-chico-alto-bogota-dc/10295048`), el evaluador multimensaje creía que la URL era un segundo inmueble nuevo independiente, partiendo la publicación en dos. La ficha técnica quedaba sin enlace ni teléfono, y el bloque del enlace era descartado por el filtro de ofertas huecas.
+2. **Teléfonos Ocultos por IDs de Dispositivo (LID)**: Brokers que publicaban desde cuentas de WhatsApp Business con identificador LID aparecían como `+57 N/E`, a pesar de que su celular real estaba escrito en enlaces de contacto tipo `api.whatsapp.com/send?phone=57...`.
+3. **Pérdida de Enlace en la Mesa de Coincidencias**: Inmuebles con enlaces válidos en `rawText` no desplegaban el botón *"🌐 Enlace de Origen"*.
+
+**Solución aplicada:**
+- **Sanitización Previa de URLs (`janIA.ts`)**: Se despojan todas las URLs antes de testear si un párrafo es una publicación nueva, impidiendo falsos cortes.
+- **Protección de Bloques de Contacto y Enlace**: Se detectan trailers y se fusionan obligatoriamente con el inmueble precedente mediante `cleanAndMergeSubstantiveBlocks`.
+- **Detección de Celulares en Enlaces de WhatsApp (`janIA.ts` y `AdminMatches.tsx`)**: Extracción automática de números de 10 dígitos en enlaces `api.whatsapp.com/send?phone=` y `wa.me/`.
+- **Priorización de Portales (`AdminMatches.tsx`)**: `extractPublicLink` prioriza `externalUrl` y excluye enlaces de chat de WhatsApp del botón *"🌐 Enlace de Origen"*.
+- **Saneamiento Pasivo en Base de Datos**: Actualizada la propiedad #2527 y escaneadas todas las propiedades en Supabase, recuperando 12 enlaces de portales y normalizando 87 teléfonos de asesores a costo cero de tokens.
+
+---
+
 ### 🔖 v27.3 — Agosto 2026
 
 #### 📌 RESOLUCIÓN CANÓNICA DE CIUDAD, DEMANDAS REALES Y GENERACIÓN DE MATCHES VERÍDICOS

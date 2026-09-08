@@ -22,3 +22,15 @@
 ## 5. Atención Estricta a las Órdenes del Usuario
 - **Cumplimiento Total:** Prioriza y respeta al 100% las preferencias y límites definidos por el usuario.
 - **Claridad ante la duda:** Si una instrucción es ambigua o presenta riesgos de romper el sistema, explica brevemente las opciones y consulta antes de actuar de forma destructiva.
+
+## 6. Registro Obligatorio y Persistente en Documentos Maestros (Triple Bitácora)
+- **Actualización Documental Obligatoria:** En CADA conversación o sesión donde se resuelva un requerimiento o se modifique el sistema, es MANDATORIO e INELUDIBLE registrar lo realizado en los tres (3) documentos maestros del proyecto antes de dar la tarea por concluida:
+  1. `VECY_CORE_PROYECTO/documentos_maestros/HISTORIAL_CONVERSACIONES_MAESTRO.md`: Registro exhaustivo con solicitud exacta de Eduardo, diagnóstico técnico profundo, causas raíz identificadas y acciones ejecutadas.
+  2. `.agents/AGENTS.md`: Registro de memoria persistente con la versión actual y el resumen de cambios.
+  3. `VECY_CORE_PROYECTO/documentos_maestros/vecy_network_technical_dossier.md`: Sección 10 (Changelog Técnico y Decisiones de Arquitectura) con problemas identificados y soluciones aplicadas.
+
+## 7. Incremento de Versión, Compilación y Despliegue Obligatorio
+- **Incremento de Versión Oficial:** Cada sesión finalizada debe incrementar la versión en `shared/const.ts` y `package.json`.
+- **Compilación Limpia:** Ejecutar `npm run check` y `npm run build` garantizando cero errores.
+- **Commit y Push a Producción:** Confirmar todos los cambios de código y de documentación en git (`git commit`) y enviarlos a GitHub (`git push origin main`), recargando el servicio en el servidor VPS con PM2.
+
