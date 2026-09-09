@@ -6894,7 +6894,6 @@ var init_voiceTranscription = __esm({
 // server/storage.ts
 import fs4 from "fs";
 import path4 from "path";
-import { createClient } from "@supabase/supabase-js";
 function normalizeKey(relKey) {
   return relKey.replace(/^\/+/, "").replace(/[^\w\d\-_\.\/]/g, "_");
 }
@@ -6911,31 +6910,9 @@ async function storagePut(relKey, data, contentType = "application/octet-stream"
   }
   const buffer = typeof data === "string" ? Buffer.from(data, "base64") : Buffer.from(data);
   fs4.writeFileSync(targetFilePath, buffer);
-  const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
-  if (supabaseUrl && supabaseKey) {
-    try {
-      const supabase = createClient(supabaseUrl, supabaseKey);
-      const { error: uploadError } = await supabase.storage.from("property-flyers").upload(key, buffer, {
-        contentType,
-        upsert: true
-      });
-      if (!uploadError) {
-        const { data: publicData } = supabase.storage.from("property-flyers").getPublicUrl(key);
-        if (publicData?.publicUrl) {
-          console.log(`[Storage] \u2705 Archivo subido a Supabase Storage: ${publicData.publicUrl}`);
-          return { key, url: publicData.publicUrl };
-        }
-      } else {
-        console.warn(`[Storage] Supabase upload error: ${uploadError.message}`);
-      }
-    } catch (sbErr) {
-      console.warn(`[Storage] Supabase Storage omitido (${sbErr.message}), usando almacenamiento local.`);
-    }
-  }
   const publicUrl = buildAbsoluteLocalUrl(key);
-  console.log(`[Storage] \u{1F4C1} Archivo guardado localmente en ${targetFilePath} -> URL absoluta: ${publicUrl}`);
-  return { key, url: publicUrl };
+  console.log(`[Storage] \u{1F4C1} Archivo guardado localmente en VPS ${targetFilePath} -> URL: ${publicUrl}`);
+  return { key, url: `/uploads/${key}` };
 }
 var uploadsDir;
 var init_storage = __esm({
@@ -7317,6 +7294,7 @@ __export(janIA_exports, {
   extractColombianPhoneFromText: () => extractColombianPhoneFromText,
   extractFallbackDataFromText: () => extractFallbackDataFromText,
   extractFirstName: () => extractFirstName,
+  extractFlyerVision: () => extractFlyerVision,
   generarHashMensaje: () => generarHashMensaje,
   generateWelcomeMessage: () => generateWelcomeMessage,
   getColombiaNow: () => getColombiaNow,
@@ -8953,7 +8931,99 @@ ${cleanP}` : cleanP;
   }
   return [text2];
 }
-async function processWhatsAppMessage(text2, userId, userName, hasMedia = false, scrapedData = [], audioUrl, imageBuffer, isGroup = false, pdfBuffer, pdfMimeType, groupJid, groupName) {
+async function extractFlyerVision(imageBufferBase64) {
+  if (!imageBufferBase64 || imageBufferBase64.trim() === "") return null;
+  const allKeys = (process.env.GEMINI_API_KEYS || "").split(",").map((k) => k.trim()).filter(Boolean);
+  if (process.env.GEMINI_API_KEY) allKeys.push(process.env.GEMINI_API_KEY.trim());
+  if (process.env.GOOGLE_API_KEY) allKeys.push(process.env.GOOGLE_API_KEY.trim());
+  if (process.env.GEMINI_BACKUP_KEY) allKeys.push(process.env.GEMINI_BACKUP_KEY.trim());
+  const uniqueKeys = Array.from(new Set(allKeys));
+  if (uniqueKeys.length === 0) {
+    console.warn("[JanIA-Vision] \u26A0\uFE0F No hay GEMINI_API_KEY configurada para an\xE1lisis visual.");
+    return null;
+  }
+  const models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.5-flash-lite"];
+  const prompt = `Eres la IA experta en visi\xF3n documental y extracci\xF3n de flyers inmobiliarios de VECY Network en Colombia.
+Analiza la imagen enviada a un grupo inmobiliario de WhatsApp.
+Determina si es:
+1. "INMUEBLE" (Oferta de venta, arriendo o permuta de una propiedad).
+2. "REQUERIMIENTO" (Demanda o b\xFAsqueda: un asesor o cliente busca/necesita/compra un inmueble para un cliente o para s\xED mismo).
+3. "CONSULTA_GENERAL" (Foto ambiental com\xFAn sin texto publicitario relevante sobreimpreso, comprobante bancario, meme o ajeno a bienes ra\xEDces).
+
+Si es INMUEBLE o REQUERIMIENTO, extrae TODOS los datos t\xE9cnicos y comerciales legibles en la imagen:
+- isFlyerOrBanner: boolean (true si tiene texto publicitario o comercial sobreimpreso, false si es foto limpia ambiental).
+- classification: "INMUEBLE" | "REQUERIMIENTO" | "CONSULTA_GENERAL".
+- transactionType: "venta" | "arriendo" | "venta_permuta" | "arriendo_temporal".
+- propertyType: string (ej. "apartamento", "casa", "lote", "bodega", "oficina", "local", "finca", "edificio", "apartaestudio").
+- title: string (t\xEDtulo conciso del inmueble o solicitud, ej. "Lote Comercial en Venta", "Busco Apartamento en Cedritos").
+- price: number en COP sin puntos ni comas (ej. 800000000). Si es arriendo puro, poner 0 o null.
+- rentPrice: number en COP si es arriendo.
+- presupuestoMax: number en COP si es REQUERIMIENTO (presupuesto m\xE1ximo de compra o canon m\xE1ximo).
+- area: number en metros cuadrados m\xB2 (ej. 200, 450).
+- bedrooms: number (n\xFAmero de habitaciones o alcobas).
+- bathrooms: number (n\xFAmero de ba\xF1os).
+- garages: number (n\xFAmero de parqueaderos/garajes).
+- city: string (ciudad, ej. "Bogot\xE1", "Medell\xEDn", "Ch\xEDa", "Cali", etc.).
+- zone: string (barrio, sector o localidad, ej. "Cedritos", "Suba", "Chic\xF3", etc.).
+- contactPhone: string (tel\xE9fono celular de 10 d\xEDgitos, ej. "3112911829" o "573112911829").
+- contactName: string (nombre del asesor o inmobiliaria anunciante).
+- flyerVerbatimText: string (transcripci\xF3n textual completa y fiel de TODO el texto legible en el flyer).
+
+Devuelve EXCLUSIVAMENTE un JSON v\xE1lido con esta estructura.`;
+  const payload = {
+    contents: [
+      {
+        parts: [
+          { text: prompt },
+          { inline_data: { mime_type: "image/jpeg", data: imageBufferBase64 } }
+        ]
+      }
+    ],
+    generationConfig: {
+      temperature: 0.1,
+      response_mime_type: "application/json"
+    }
+  };
+  for (const model of models) {
+    for (let i = 0; i < uniqueKeys.length; i++) {
+      const apiKey = uniqueKeys[i];
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      try {
+        console.log(`[JanIA-Vision] \u{1F441}\uFE0F Analizando flyer con ${model} (Key #${i + 1})...`);
+        const response = await axios6.post(apiUrl, payload, { timeout: 15e3 });
+        const textCandidate = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (textCandidate && typeof textCandidate === "string") {
+          const parsed = JSON.parse(textCandidate);
+          if (parsed && (parsed.isFlyerOrBanner || parsed.classification === "INMUEBLE" || parsed.classification === "REQUERIMIENTO")) {
+            const tx = (parsed.transactionType || "").toLowerCase();
+            const isPermuta = tx.includes("permuta") || tx === "venta_permuta";
+            const isRent = tx.includes("arriendo") || tx === "arriendo_temporal";
+            if (parsed.classification === "INMUEBLE") {
+              parsed.reactionEmoji = isPermuta ? "\u{1F500}" : isRent ? "\u{1F44C}" : "\u{1F44D}";
+            } else if (parsed.classification === "REQUERIMIENTO") {
+              parsed.reactionEmoji = isPermuta ? "\u{1F504}" : isRent ? "\u270F\uFE0F" : "\u{1F4DD}";
+            }
+            console.log(`[JanIA-Vision] \u2705 Flyer clasificado exitosamente como ${parsed.classification} (${parsed.reactionEmoji}) con ${model}: "${parsed.title || ""}"`);
+            return parsed;
+          } else {
+            console.log(`[JanIA-Vision] \u2139\uFE0F Imagen analizada: No es flyer comercial (${parsed?.classification || "CONSULTA_GENERAL"}).`);
+            return parsed;
+          }
+        }
+      } catch (err) {
+        const status = err.response?.status;
+        console.warn(`[JanIA-Vision] \u26A0\uFE0F Intento con ${model} (Key #${i + 1}) fall\xF3 (${status || err.message}). Probando siguiente...`);
+        if (status === 429 || status === 503) {
+          await new Promise((r) => setTimeout(r, 400));
+          continue;
+        }
+      }
+    }
+  }
+  console.error("[JanIA-Vision] \u274C No fue posible analizar el flyer con ning\xFAn modelo/clave de Gemini.");
+  return null;
+}
+async function processWhatsAppMessage(text2, userId, userName, hasMedia = false, scrapedData = [], audioUrl, imageBuffer, isGroup = false, pdfBuffer, pdfMimeType, groupJid, groupName, flyerVisionData) {
   try {
     let isScrapeable2 = function(url) {
       try {
@@ -8984,7 +9054,8 @@ __is_sub_message__`,
             pdfBuffer,
             pdfMimeType,
             groupJid,
-            groupName
+            groupName,
+            flyerVisionData
           );
         }
         return finalResult;
@@ -9342,7 +9413,24 @@ Por favor, hazme una consulta que est\xE9 relacionada con estos temas. \xA1Con g
         }
       }
     }
-    if ((!messageToProcess || messageToProcess.trim() === "") && imageBuffer) {
+    let flyerData = flyerVisionData;
+    if (!flyerData && imageBuffer) {
+      console.log(`[JanIA] \u{1F441}\uFE0F Analizando imagen/flyer con visi\xF3n artificial especializada...`);
+      try {
+        flyerData = await extractFlyerVision(imageBuffer);
+      } catch (errVision) {
+        console.warn(`[JanIA] \u26A0\uFE0F Error en extractFlyerVision:`, errVision?.message || errVision);
+      }
+    }
+    if (flyerData && (flyerData.isFlyerOrBanner || flyerData.classification === "INMUEBLE" || flyerData.classification === "REQUERIMIENTO")) {
+      const verbatim = flyerData.flyerVerbatimText || "";
+      if (verbatim) {
+        messageToProcess = messageToProcess && messageToProcess.trim() !== "" && !messageToProcess.includes("[Publicaci\xF3n de Imagen") ? `${messageToProcess}
+
+[FICHA T\xC9CNICA EXTRA\xCDDA DEL FLYER]:
+${verbatim}` : verbatim;
+      }
+    } else if ((!messageToProcess || messageToProcess.trim() === "") && imageBuffer) {
       messageToProcess = "[Publicaci\xF3n de Imagen / Flyer Comercial Inmobiliario sin texto en pie de foto]";
     }
     let contextText = `Mensaje de ${userName || userId}: ${messageToProcess}`;
@@ -9488,6 +9576,34 @@ ${liveStats}` : buildSystemPrompt(groupJid);
       }
     }
     result.mentions = result.mentions || [];
+    if (flyerData && (flyerData.isFlyerOrBanner || flyerData.classification === "INMUEBLE" || flyerData.classification === "REQUERIMIENTO")) {
+      result.isFlyerOrBanner = true;
+      result.flyerVerbatimText = flyerData.flyerVerbatimText;
+      if (result.classification === "CONSULTA_GENERAL" || !result.classification || result.classification === "DATOS_INCOMPLETOS") {
+        result.classification = flyerData.classification;
+      }
+      result.reactionEmoji = result.reactionEmoji || flyerData.reactionEmoji;
+      result.extractedData = {
+        ...result.extractedData || {},
+        title: result.extractedData?.title || flyerData.title,
+        propertyType: result.extractedData?.propertyType || flyerData.propertyType,
+        transactionType: result.extractedData?.transactionType || flyerData.transactionType,
+        price: result.extractedData?.price && Number(result.extractedData.price) > 0 ? result.extractedData.price : flyerData.price,
+        rentPrice: result.extractedData?.rentPrice && Number(result.extractedData.rentPrice) > 0 ? result.extractedData.rentPrice : flyerData.rentPrice,
+        presupuestoMax: result.extractedData?.presupuestoMax && Number(result.extractedData.presupuestoMax) > 0 ? result.extractedData.presupuestoMax : flyerData.presupuestoMax,
+        area: result.extractedData?.area && Number(result.extractedData.area) > 0 ? result.extractedData.area : flyerData.area,
+        bedrooms: result.extractedData?.bedrooms ?? flyerData.bedrooms,
+        bathrooms: result.extractedData?.bathrooms ?? flyerData.bathrooms,
+        garages: result.extractedData?.garages ?? flyerData.garages,
+        city: result.extractedData?.city || flyerData.city,
+        zone: result.extractedData?.zone || flyerData.zone,
+        contactPhone: result.extractedData?.contactPhone || flyerData.contactPhone,
+        contactName: result.extractedData?.contactName || flyerData.contactName,
+        isFlyerOrBanner: true,
+        flyerVerbatimText: flyerData.flyerVerbatimText
+      };
+      console.log(`[JanIA-Vision] \u{1F4D1} Datos de flyer integrados a result. (Clasificaci\xF3n: ${result.classification}, Emoji: ${result.reactionEmoji})`);
+    }
     if (messageToProcess) {
       const isAmendmentHandled = await handleAmendmentUpdate(userId, messageToProcess);
       if (isAmendmentHandled) {
@@ -9522,9 +9638,9 @@ ${liveStats}` : buildSystemPrompt(groupJid);
       const _extTmp = result.extractedData || {};
       const hasTechnicalSpecs = _extTmp.price && Number(_extTmp.price) > 0 || _extTmp.presupuestoMax && Number(_extTmp.presupuestoMax) > 0 || _extTmp.area && Number(_extTmp.area) > 0 || _extTmp.bedrooms && Number(_extTmp.bedrooms) > 0 || (cleanText2.includes("$") || /\b\d{2,4}\s*(?:m2|mts|millones|mm|mlls)\b/i.test(cleanText2));
       const isChatNoisePhrase = cleanText2.includes("correccion:") || cleanText2.includes("correcci\xF3n:") || cleanText2.includes("fe de erratas") || cleanText2.includes("rectificacion:") || cleanText2.includes("rectificaci\xF3n:") || cleanText2.includes("bajo de precio") || cleanText2.includes("sigue este enlace") || cleanText2.includes("ver el art\xEDculo en whatsapp") || cleanText2.includes("foto por interno") || cleanText2.includes("fotos por interno") || cleanText2.includes("info por interno") || cleanText2.includes("informaci\xF3n por interno") || cleanText2.includes("escribir al interno") || cleanText2.includes("disponible?") || cleanText2.includes("a\xFAn disponible");
-      const isShortComment = (isChatNoisePhrase || !hasRealEstateKeyword && !isSearch && !isOffer && (cleanText2.length < 25 || cleanText2.split(/\s+/).length < 4)) && !hasTechnicalSpecs;
+      const isShortComment = !result.isFlyerOrBanner && (isChatNoisePhrase || !hasRealEstateKeyword && !isSearch && !isOffer && (cleanText2.length < 25 || cleanText2.split(/\s+/).length < 4)) && !hasTechnicalSpecs;
       const isGeneralInquiryOrRecommendation = !hasTechnicalSpecs && !isSearch && !isOffer && (cleanText2.includes("alguien maneja") || cleanText2.includes("alguien recomienda") || cleanText2.includes("alguien conoce") || cleanText2.includes("senior living") || cleanText2.includes("alguien tiene contacto") || cleanText2.includes("quien maneja") || cleanText2.includes("qui\xE9n maneja") || cleanText2.includes("quien recomienda") || cleanText2.includes("recomiendan plomero") || cleanText2.includes("recomiendan abogado") || cleanText2.includes("buscando un abogado") || cleanText2.includes("buscando abogado") || cleanText2.includes("algun abogado") || cleanText2.includes("alg\xFAn abogado") || cleanText2.includes("restitucion de inmueble") || cleanText2.includes("restituci\xF3n de inmueble") || cleanText2.includes("daviplata") || cleanText2.includes("nequi") || cleanText2.includes("comprobante de pago") || cleanText2.includes("recomiendan avaluador") || cleanText2.includes("alguien que haga") || cleanText2.includes("contacto de")) && !cleanText2.includes("busco apto") && !cleanText2.includes("busco casa") && !cleanText2.includes("busco bodega") && !cleanText2.includes("presupuesto");
-      if (isGeneralInquiryOrRecommendation) {
+      if (!result.isFlyerOrBanner && isGeneralInquiryOrRecommendation) {
         console.log(`[JANIA-FILTER] \u26D4 Pregunta de recomendaci\xF3n o servicio general ignorada como Requerimiento/Inmueble: "${cleanText2.substring(0, 50)}..."`);
         result.classification = "CONSULTA_GENERAL";
       } else if (isShortComment) {
@@ -9549,13 +9665,13 @@ ${liveStats}` : buildSystemPrompt(groupJid);
           console.log("[JANIA-FILTER] No se rescata como Inmueble/Requerimiento por falta de especificaciones prediales suficientes.");
         }
       }
-      const hasRealEstateIntent = isSearch || isOffer || hasRealEstateKeyword || hasTechnicalSpecs;
+      const hasRealEstateIntent = result.isFlyerOrBanner || isSearch || isOffer || hasRealEstateKeyword || hasTechnicalSpecs;
       if ((result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO") && !hasRealEstateIntent) {
         console.log(`[JANIA-FILTER] \u26D4 Descartando falso positivo de ${result.classification}: Mensaje sin intenci\xF3n predial expl\xEDcita ("${cleanText2.substring(0, 50)}..."). Degenerado a CONSULTA_GENERAL.`);
         result.classification = "CONSULTA_GENERAL";
       }
       const hollowEarlyCheck = isHollowListing(cleanText2, null, urls && urls.length > 0 ? urls[0] : null);
-      if ((result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO") && hollowEarlyCheck.isHollow && !imageBuffer) {
+      if ((result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO") && hollowEarlyCheck.isHollow && !imageBuffer && !result.isFlyerOrBanner) {
         console.log(`[JANIA-FILTER] \u26D4 Descartando publicaci\xF3n hueca o frase suelta (${hollowEarlyCheck.reason}): "${cleanText2.substring(0, 60)}...". Degenerado a CONSULTA_GENERAL.`);
         result.classification = "CONSULTA_GENERAL";
       }
@@ -9758,7 +9874,7 @@ ${liveStats}` : buildSystemPrompt(groupJid);
         return result;
       }
       const hollowCheckProp = isHollowListing(cleanCheckText, propertyTitle, urls && urls.length > 0 ? urls[0] : void 0);
-      if (hollowCheckProp.isHollow && !imageBuffer) {
+      if (hollowCheckProp.isHollow && !imageBuffer && !result.isFlyerOrBanner) {
         console.log(`[JANIA-FILTER] \u26D4 Omitiendo guardado de propiedad en BD (${hollowCheckProp.reason}): "${cleanCheckText.substring(0, 60)}..."`);
         result.inserted = false;
         result.classification = "CONSULTA_GENERAL";
@@ -9845,7 +9961,7 @@ ${liveStats}` : buildSystemPrompt(groupJid);
       }
       const reqTitle = extracted.title || `Requerimiento de ${extracted.propertyType || "inmueble"} en ${extracted.zonaDeseada || extracted.zone || "Bogot\xE1"} para ${extracted.transactionType || "venta"}`;
       const hollowCheckReq = isHollowListing(cleanCheckReqText, reqTitle, urls && urls.length > 0 ? urls[0] : void 0);
-      if (hollowCheckReq.isHollow) {
+      if (hollowCheckReq.isHollow && !imageBuffer && !result.isFlyerOrBanner) {
         console.log(`[JANIA-FILTER] \u26D4 Omitiendo guardado de requerimiento en BD (${hollowCheckReq.reason}): "${cleanCheckReqText.substring(0, 60)}..."`);
         result.inserted = false;
         result.classification = "CONSULTA_GENERAL";
@@ -10870,12 +10986,13 @@ async function saveRequirement(data, userId, realName, imageBuffer, pdfBuffer, p
       console.error("[JanIA-SaveRequirement] Error subiendo PDF:", err);
     }
   }
-  if (imageBuffer && !data.enlaceOrigen) {
+  if (imageBuffer) {
     try {
       const buffer = Buffer.from(imageBuffer, "base64");
       const filename = `flyers/req_wa_${Date.now()}_${rawPhone}.jpg`;
       const uploadResult = await storagePut(filename, buffer, "image/jpeg");
-      data.enlaceOrigen = data.enlaceOrigen || uploadResult.url;
+      data.enlaceOrigen = uploadResult.url;
+      console.log(`[JanIA-SaveRequirement] \u2705 Flyer de requerimiento guardado localmente en VPS: ${uploadResult.url}`);
     } catch (err) {
       console.error("[JanIA-SaveRequirement] Error subiendo imagen:", err);
     }
@@ -13312,6 +13429,9 @@ var init_whatsapp_match = __esm({
                 }
                 let body = "";
                 let isAudioPTT = false;
+                let imageBufferImmediate = void 0;
+                let pdfBufferImmediate = void 0;
+                let pdfMimeTypeImmediate = void 0;
                 if (rawMsg?.conversation) body = rawMsg.conversation;
                 else if (rawMsg?.extendedTextMessage) {
                   body = rawMsg.extendedTextMessage.text || "";
@@ -13324,9 +13444,27 @@ var init_whatsapp_match = __esm({
 ${previewText}`.trim();
                     }
                   }
-                } else if (rawMsg?.imageMessage) body = rawMsg.imageMessage.caption || "";
-                else if (rawMsg?.documentMessage) {
+                } else if (rawMsg?.imageMessage) {
+                  body = rawMsg.imageMessage.caption || "";
+                  try {
+                    const downloadedImg = await downloadMediaSafely(msg, "image");
+                    if (downloadedImg && downloadedImg.length > 0) {
+                      imageBufferImmediate = downloadedImg.toString("base64");
+                      console.log(`[JANIA-MATCH] \u{1F4F7} Imagen flyer descargada inmediatamente (${(downloadedImg.length / 1024).toFixed(1)} KB) de ${senderId}`);
+                    }
+                  } catch (imgErr) {
+                    console.warn("[JANIA-MATCH] Error descargando imagen flyer inmediatamente:", imgErr?.message || imgErr);
+                  }
+                } else if (rawMsg?.documentMessage) {
                   body = rawMsg.documentMessage.caption || rawMsg.documentMessage.fileName || rawMsg.documentMessage.title || "";
+                  try {
+                    const downloadedDoc = await downloadMediaSafely(msg, "document");
+                    if (downloadedDoc && downloadedDoc.length > 0) {
+                      pdfBufferImmediate = downloadedDoc.toString("base64");
+                      pdfMimeTypeImmediate = rawMsg.documentMessage.mimetype || "application/pdf";
+                    }
+                  } catch (docErr) {
+                  }
                 } else if (rawMsg?.videoMessage) body = rawMsg.videoMessage.caption || "";
                 else if (rawMsg?.audioMessage) {
                   isAudioPTT = true;
@@ -13453,7 +13591,7 @@ ${quotedNote}` : quotedNote;
                 const isSingleCharacter = textClean.length < 3 && !["ok", "si", "s\xED"].includes(textClean) && !hasEmoji;
                 const shouldRespond = isBuzonGroup || isCirculoGroup ? !isSingleCharacter : isOfficialGroup && hasDirectMention;
                 if (isListing) {
-                  await this.handleIncomingGroupMessage(msg, chatId, body);
+                  await this.handleIncomingGroupMessage(msg, chatId, body, imageBufferImmediate, pdfBufferImmediate, pdfMimeTypeImmediate);
                   continue;
                 }
                 if (isOfficialGroup && isShortCourtesy && !isBuzonGroup) {
@@ -13836,7 +13974,7 @@ Tambi\xE9n puedes consultarme directamente en mi chat privado con mi otra yo *Ja
         return false;
       }
       // --- LOGÍSTICA DE BUFFER GRUPAL Y REACCIÓN INSTANTÁNEA ---
-      async handleIncomingGroupMessage(msg, chatId, bodyText) {
+      async handleIncomingGroupMessage(msg, chatId, bodyText, imageBufferImmediate, pdfBufferImmediate, pdfMimeTypeImmediate) {
         if (!msg.key || !msg.message) return;
         const rawSender = msg.key.participant || msg.participant || "";
         if (!rawSender || rawSender.endsWith("@g.us")) {
@@ -13864,6 +14002,7 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
           }
           return;
         }
+        let flyerVisionData = null;
         if (!msg.key.fromMe) {
           let cleanLower = (bodyText || "").toLowerCase();
           const detectedUrls = cleanLower.match(/https?:\/\/[^\s]+/g) || [];
@@ -13906,6 +14045,18 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
               fastEmoji = "\u{1F4DD}";
             }
           }
+          if (!fastEmoji && imageBufferImmediate) {
+            try {
+              const { extractFlyerVision: extractFlyerVision2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+              flyerVisionData = await extractFlyerVision2(imageBufferImmediate);
+              if (flyerVisionData && (flyerVisionData.isFlyerOrBanner || flyerVisionData.classification === "INMUEBLE" || flyerVisionData.classification === "REQUERIMIENTO")) {
+                fastEmoji = flyerVisionData.reactionEmoji || (flyerVisionData.classification === "REQUERIMIENTO" ? "\u{1F4DD}" : "\u{1F44D}");
+                console.log(`[JANIA-FAST-REACT] \u{1F3AF} Flyer detectado visualmente (${flyerVisionData.classification}). Reacci\xF3n r\xE1pida: ${fastEmoji}`);
+              }
+            } catch (visErr) {
+              console.warn("[JANIA-FAST-REACT] Error en an\xE1lisis visual de flyer:", visErr?.message || visErr);
+            }
+          }
           if (fastEmoji && chatId !== this.buzonGroupId) {
             this.safeReact(chatId, msg.key, fastEmoji, "FAST-REACT");
           }
@@ -13941,21 +14092,22 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
           const bufferTimeout = 3e3;
           const rawMsgInHandler = unwrapMessage(msg.message);
           const hasMediaInHandler = !!rawMsgInHandler?.imageMessage || !!rawMsgInHandler?.documentMessage || !!rawMsgInHandler?.videoMessage || !!rawMsgInHandler?.audioMessage;
+          const msgEntry = {
+            body: bodyText,
+            hasMedia: hasMediaInHandler,
+            imageBuffer: imageBufferImmediate,
+            pdfBuffer: pdfBufferImmediate,
+            pdfMimeType: pdfMimeTypeImmediate,
+            flyerVisionData,
+            originalMsg: msg
+          };
           if (buffer) {
             clearTimeout(buffer.timer);
-            buffer.messages.push({
-              body: bodyText,
-              hasMedia: hasMediaInHandler,
-              originalMsg: msg
-            });
+            buffer.messages.push(msgEntry);
             buffer.timer = setTimeout(() => this.processGroupBuffer(bufferKey), bufferTimeout);
           } else {
             this.messageBuffers.set(bufferKey, {
-              messages: [{
-                body: bodyText,
-                hasMedia: hasMediaInHandler,
-                originalMsg: msg
-              }],
+              messages: [msgEntry],
               userName: realName,
               chatId,
               timer: setTimeout(() => this.processGroupBuffer(bufferKey), bufferTimeout)
@@ -14048,7 +14200,7 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
         console.log(`[JANIA-MATCH] Procesando buffer de ${buffer.messages.length} mensajes para ${resolvedSenderId} (Silencioso)...`);
         for (const bufferedMsg of buffer.messages) {
           const rawMsg = unwrapMessage(bufferedMsg.originalMsg.message);
-          if (bufferedMsg.hasMedia && rawMsg?.imageMessage) {
+          if (bufferedMsg.hasMedia && rawMsg?.imageMessage && !bufferedMsg.imageBuffer) {
             try {
               const mediaBuffer = await downloadMediaSafely(bufferedMsg.originalMsg, "image");
               if (mediaBuffer) {
@@ -14058,7 +14210,7 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
               console.error("[JANIA-BUFFER] Error descargando imagen:", e);
             }
           }
-          if (bufferedMsg.hasMedia && rawMsg?.documentMessage) {
+          if (bufferedMsg.hasMedia && rawMsg?.documentMessage && !bufferedMsg.pdfBuffer) {
             try {
               const mediaBuffer = await downloadMediaSafely(bufferedMsg.originalMsg, "document");
               if (mediaBuffer) {
@@ -14124,7 +14276,8 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
                 bufferedMsg.pdfBuffer,
                 bufferedMsg.pdfMimeType,
                 chatId,
-                groupName
+                groupName,
+                bufferedMsg.flyerVisionData
               );
               const isOfficialGroupSingle = chatId === this.targetGroupId || chatId === this.buzonGroupId || chatId === this.circuloGroupId;
               if (result2) {
@@ -14205,7 +14358,8 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
               pdfMsg?.pdfBuffer,
               pdfMsg?.pdfMimeType,
               chatId,
-              groupName
+              groupName,
+              imageMsg?.flyerVisionData || buffer.messages.find((m) => m.flyerVisionData)?.flyerVisionData
             );
           }
           const isOfficialGroup = chatId === this.targetGroupId || chatId === this.buzonGroupId || chatId === this.circuloGroupId;
@@ -15748,7 +15902,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.21";
+var VECY_VERSION = "v31.22";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 

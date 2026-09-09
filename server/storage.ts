@@ -45,38 +45,13 @@ export async function storagePut(
   const buffer = typeof data === 'string' ? Buffer.from(data, 'base64') : Buffer.from(data);
   fs.writeFileSync(targetFilePath, buffer);
 
-  // Intentar subir a Supabase Storage (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY son los nombres reales en .env)
-  const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
-
-  if (supabaseUrl && supabaseKey) {
-    try {
-      const supabase = createClient(supabaseUrl, supabaseKey);
-      const { error: uploadError } = await supabase.storage
-        .from('property-flyers')
-        .upload(key, buffer, {
-          contentType,
-          upsert: true
-        });
-
-      if (!uploadError) {
-        const { data: publicData } = supabase.storage.from('property-flyers').getPublicUrl(key);
-        if (publicData?.publicUrl) {
-          console.log(`[Storage] ✅ Archivo subido a Supabase Storage: ${publicData.publicUrl}`);
-          return { key, url: publicData.publicUrl };
-        }
-      } else {
-        console.warn(`[Storage] Supabase upload error: ${uploadError.message}`);
-      }
-    } catch (sbErr: any) {
-      console.warn(`[Storage] Supabase Storage omitido (${sbErr.message}), usando almacenamiento local.`);
-    }
-  }
-
-  // Fallback: URL ABSOLUTA del VPS (funciona desde Vercel y cualquier origen externo)
+  // ── BLINDAJE DE CUOTA SUPABASE (v31.22) ──
+  // Para evitar exceder los límites gratuitos de Supabase Storage (1 GB) y Egress (5 GB/mes),
+  // los archivos binarios se almacenan al 100% en el disco local del VPS (136 GB libres).
+  // Se sirven públicamente y con SSL seguro a través del proxy HTTPS de Vercel (/uploads/...).
   const publicUrl = buildAbsoluteLocalUrl(key);
-  console.log(`[Storage] 📁 Archivo guardado localmente en ${targetFilePath} -> URL absoluta: ${publicUrl}`);
-  return { key, url: publicUrl };
+  console.log(`[Storage] 📁 Archivo guardado localmente en VPS ${targetFilePath} -> URL: ${publicUrl}`);
+  return { key, url: `/uploads/${key}` };
 }
 
 export async function storageGet(relKey: string): Promise<{ key: string; url: string }> {

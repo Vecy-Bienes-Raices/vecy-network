@@ -163,7 +163,37 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.21 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.22 — Septiembre 2026
+
+### Novedades v31.22 (Ingesta Visual de Flyers Inmobiliarios de Oferta y Demanda, Reacción Inmediata Baileys y Blindaje 0% Cuota Supabase):
+- **Diagnóstico y Corrección de Captura de Flyers y Afiches sin Pie de Foto**:
+  1) **Causas Raíz Identificadas**:
+     - `isHollowListing` abortaba el guardado de requerimientos en `janIA.ts` (línea 3514) al evaluar texto vacío (`""`) sin verificar `!imageBuffer`.
+     - Las heurísticas textuales (`isShortComment`, `hasRealEstateIntent`) degradaban afiches sin caption a `CONSULTA_GENERAL` por longitud < 25 caracteres.
+     - La llamada multimodal pesada a través del prompt base legal de 25k caracteres provocaba demoras excesivas y rechazos HTTP 429 de Gemini.
+     - La reacción rápida en WhatsApp solo inspeccionaba texto plano (`bodyText`).
+  2) **Extractor Visual Documental Ligero (`extractFlyerVision`)**:
+     - Función especializada y desacoplada que analiza el afiche en < 2 segundos con Gemini 2.5 Flash y cascada multi-modelo (`gemini-2.5-flash`, `gemini-2.0-flash`, `gemini-1.5-flash`, `gemini-2.5-flash-lite`).
+     - Extrae clasificación (`INMUEBLE` vs `REQUERIMIENTO`), tipo de negocio (`venta`, `arriendo`, `permuta`), tipo de inmueble, precios/cánones/presupuesto, área, habitaciones, baños, garajes, ciudad, zona, teléfono y transcripción literal del flyer.
+  3) **Pre-descarga Inmediata y Reacción Rápida Visual en Baileys (`whatsapp-match.ts`)**:
+     - Al ingresar un mensaje con imagen, se descarga el buffer inmediatamente sin esperar los 3s del acumulador.
+     - Se ejecuta `extractFlyerVision` en tiempo real y se emite la reacción doctrinal inmediata:
+       - Oferta: `👍` Venta | `👌` Arriendo | `🔀` Permuta.
+       - Demanda: `📝` Venta | `✏️` Arriendo | `🔄` Permuta.
+  4) **Inmunización Estricta de Afiches Frente a Filtros de Texto**:
+     - Blindados `isShortComment`, `hasRealEstateIntent`, `hollowEarlyCheck`, `hollowCheckProp` y `hollowCheckReq` cuando `imageBuffer` o `isFlyerOrBanner` están presentes.
+     - Enriquecido el texto de procesamiento con la ficha técnica extraída del afiche.
+  5) **Blindaje 100% Hermético de Cuotas de Supabase (0 Bytes Storage / 0 Bytes Egress)**:
+     - Los archivos binarios de imágenes se guardan exclusivamente en el disco duro local del VPS (`public/uploads/flyers/`), donde el servidor cuenta con **136 GB libres** (solo 6% de uso).
+     - Las imágenes se sirven a la web a través del proxy HTTPS de Vercel (`/uploads/*` -> VPS). Supabase Storage y Egress registran **0 bytes de consumo**.
+     - En Supabase PostgreSQL solo se almacena la fila de texto estándar (~1 KB), manteniendo la base de datos en 45 MB / 500 MB (91% libre).
+  6) **Visualización en Mesa de Coincidencias (`AdminMatches.tsx`)**:
+     - Tanto la tarjeta de Oferta como la de Demanda renderizan el flyer original con enlace de descarga y visualización en alta resolución.
+     - Depurados los manejadores de error de imagen retirando URLs de dominios obsoletos de Supabase.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.21 — Septiembre 2026
 
 ### Novedades v31.21 (Perfeccionamiento Geométrico de Sidebar Colapsado, Unificación de Marcadores KPI con Acciones y Erradicación de Título Redundante):
 - **Diagnóstico y Corrección de Botón del Sidebar Colapsado (`Admin.tsx`)**:

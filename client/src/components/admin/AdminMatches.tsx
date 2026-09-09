@@ -4354,13 +4354,7 @@ export default function AdminMatches() {
                                       className="w-full h-44 object-contain bg-zinc-950 group-hover:scale-105 transition-transform duration-300 cursor-pointer"
                                       onClick={() => window.open(imgUrl, '_blank')}
                                       onError={(e) => {
-                                        const target = e.currentTarget;
-                                        if (!target.src.includes('knzmpoprlmbonejshfys.supabase.co')) {
-                                          const filename = target.src.split('/').pop();
-                                          if (filename) {
-                                            target.src = `https://knzmpoprlmbonejshfys.supabase.co/storage/v1/object/public/property-flyers/flyers/${filename}`;
-                                          }
-                                        }
+                                        e.currentTarget.style.display = 'none';
                                       }}
                                     />
                                     <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/80 to-transparent p-2 flex items-center justify-between gap-1">
@@ -4645,13 +4639,7 @@ export default function AdminMatches() {
                                       className="w-full h-44 object-contain bg-zinc-950 group-hover:scale-105 transition-transform duration-300 cursor-pointer"
                                       onClick={() => window.open(imgUrl, '_blank')}
                                       onError={(e) => {
-                                        const target = e.currentTarget;
-                                        if (!target.src.includes('knzmpoprlmbonejshfys.supabase.co')) {
-                                          const filename = target.src.split('/').pop();
-                                          if (filename) {
-                                            target.src = `https://knzmpoprlmbonejshfys.supabase.co/storage/v1/object/public/property-flyers/flyers/${filename}`;
-                                          }
-                                        }
+                                        e.currentTarget.style.display = 'none';
                                       }}
                                     />
                                     <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/80 to-transparent p-2 flex items-center justify-between gap-1">

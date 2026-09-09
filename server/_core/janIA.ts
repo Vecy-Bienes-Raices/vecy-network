@@ -2419,6 +2419,137 @@ export function splitMultiItemMessage(text: string): string[] {
   return [text];
 }
 
+export interface FlyerVisionResult {
+  isFlyerOrBanner: boolean;
+  classification: "INMUEBLE" | "REQUERIMIENTO" | "CONSULTA_GENERAL";
+  transactionType: "venta" | "arriendo" | "venta_permuta" | "arriendo_temporal";
+  propertyType?: string;
+  title?: string;
+  price?: number;
+  rentPrice?: number;
+  presupuestoMax?: number;
+  area?: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  garages?: number;
+  city?: string;
+  zone?: string;
+  contactPhone?: string;
+  contactName?: string;
+  flyerVerbatimText?: string;
+  reactionEmoji?: string;
+}
+
+/**
+ * Extractor visual especializado y ultraligero para Flyers y Afiches Inmobiliarios (v31.22).
+ * Procesa afiches de Oferta o Demanda en < 2 segundos con Gemini 2.5 Flash / cascada multi-modelo
+ * sin sobrecargar el prompt base de 25k tokens y evitando cuellos de botella.
+ */
+export async function extractFlyerVision(imageBufferBase64: string): Promise<FlyerVisionResult | null> {
+  if (!imageBufferBase64 || imageBufferBase64.trim() === '') return null;
+
+  const allKeys = (process.env.GEMINI_API_KEYS || "")
+    .split(",")
+    .map(k => k.trim())
+    .filter(Boolean);
+  if (process.env.GEMINI_API_KEY) allKeys.push(process.env.GEMINI_API_KEY.trim());
+  if (process.env.GOOGLE_API_KEY) allKeys.push(process.env.GOOGLE_API_KEY.trim());
+  if (process.env.GEMINI_BACKUP_KEY) allKeys.push(process.env.GEMINI_BACKUP_KEY.trim());
+
+  const uniqueKeys = Array.from(new Set(allKeys));
+  if (uniqueKeys.length === 0) {
+    console.warn("[JanIA-Vision] ⚠️ No hay GEMINI_API_KEY configurada para análisis visual.");
+    return null;
+  }
+
+  const models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.5-flash-lite"];
+
+  const prompt = `Eres la IA experta en visión documental y extracción de flyers inmobiliarios de VECY Network en Colombia.
+Analiza la imagen enviada a un grupo inmobiliario de WhatsApp.
+Determina si es:
+1. "INMUEBLE" (Oferta de venta, arriendo o permuta de una propiedad).
+2. "REQUERIMIENTO" (Demanda o búsqueda: un asesor o cliente busca/necesita/compra un inmueble para un cliente o para sí mismo).
+3. "CONSULTA_GENERAL" (Foto ambiental común sin texto publicitario relevante sobreimpreso, comprobante bancario, meme o ajeno a bienes raíces).
+
+Si es INMUEBLE o REQUERIMIENTO, extrae TODOS los datos técnicos y comerciales legibles en la imagen:
+- isFlyerOrBanner: boolean (true si tiene texto publicitario o comercial sobreimpreso, false si es foto limpia ambiental).
+- classification: "INMUEBLE" | "REQUERIMIENTO" | "CONSULTA_GENERAL".
+- transactionType: "venta" | "arriendo" | "venta_permuta" | "arriendo_temporal".
+- propertyType: string (ej. "apartamento", "casa", "lote", "bodega", "oficina", "local", "finca", "edificio", "apartaestudio").
+- title: string (título conciso del inmueble o solicitud, ej. "Lote Comercial en Venta", "Busco Apartamento en Cedritos").
+- price: number en COP sin puntos ni comas (ej. 800000000). Si es arriendo puro, poner 0 o null.
+- rentPrice: number en COP si es arriendo.
+- presupuestoMax: number en COP si es REQUERIMIENTO (presupuesto máximo de compra o canon máximo).
+- area: number en metros cuadrados m² (ej. 200, 450).
+- bedrooms: number (número de habitaciones o alcobas).
+- bathrooms: number (número de baños).
+- garages: number (número de parqueaderos/garajes).
+- city: string (ciudad, ej. "Bogotá", "Medellín", "Chía", "Cali", etc.).
+- zone: string (barrio, sector o localidad, ej. "Cedritos", "Suba", "Chicó", etc.).
+- contactPhone: string (teléfono celular de 10 dígitos, ej. "3112911829" o "573112911829").
+- contactName: string (nombre del asesor o inmobiliaria anunciante).
+- flyerVerbatimText: string (transcripción textual completa y fiel de TODO el texto legible en el flyer).
+
+Devuelve EXCLUSIVAMENTE un JSON válido con esta estructura.`;
+
+  const payload = {
+    contents: [
+      {
+        parts: [
+          { text: prompt },
+          { inline_data: { mime_type: "image/jpeg", data: imageBufferBase64 } }
+        ]
+      }
+    ],
+    generationConfig: {
+      temperature: 0.1,
+      response_mime_type: "application/json"
+    }
+  };
+
+  for (const model of models) {
+    for (let i = 0; i < uniqueKeys.length; i++) {
+      const apiKey = uniqueKeys[i];
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+      try {
+        console.log(`[JanIA-Vision] 👁️ Analizando flyer con ${model} (Key #${i + 1})...`);
+        const response = await axios.post(apiUrl, payload, { timeout: 15000 });
+        const textCandidate = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (textCandidate && typeof textCandidate === "string") {
+          const parsed = JSON.parse(textCandidate) as FlyerVisionResult;
+          if (parsed && (parsed.isFlyerOrBanner || parsed.classification === "INMUEBLE" || parsed.classification === "REQUERIMIENTO")) {
+            // Asignar el emoji doctrinal (Matriz v23.0)
+            const tx = (parsed.transactionType || "").toLowerCase();
+            const isPermuta = tx.includes("permuta") || tx === "venta_permuta";
+            const isRent = tx.includes("arriendo") || tx === "arriendo_temporal";
+            if (parsed.classification === "INMUEBLE") {
+              parsed.reactionEmoji = isPermuta ? "🔀" : (isRent ? "👌" : "👍");
+            } else if (parsed.classification === "REQUERIMIENTO") {
+              parsed.reactionEmoji = isPermuta ? "🔄" : (isRent ? "✏️" : "📝");
+            }
+            console.log(`[JanIA-Vision] ✅ Flyer clasificado exitosamente como ${parsed.classification} (${parsed.reactionEmoji}) con ${model}: "${parsed.title || ''}"`);
+            return parsed;
+          } else {
+            console.log(`[JanIA-Vision] ℹ️ Imagen analizada: No es flyer comercial (${parsed?.classification || 'CONSULTA_GENERAL'}).`);
+            return parsed;
+          }
+        }
+      } catch (err: any) {
+        const status = err.response?.status;
+        console.warn(`[JanIA-Vision] ⚠️ Intento con ${model} (Key #${i + 1}) falló (${status || err.message}). Probando siguiente...`);
+        if (status === 429 || status === 503) {
+          await new Promise(r => setTimeout(r, 400));
+          continue;
+        }
+      }
+    }
+  }
+
+  console.error("[JanIA-Vision] ❌ No fue posible analizar el flyer con ningún modelo/clave de Gemini.");
+  return null;
+}
+
 // Alias para retrocompatibilidad
 export const splitMultiPropertyMessage = splitMultiItemMessage;
 
@@ -2437,7 +2568,8 @@ export async function processWhatsAppMessage(
   pdfBuffer?: string,
   pdfMimeType?: string,
   groupJid?: string,
-  groupName?: string
+  groupName?: string,
+  flyerVisionData?: FlyerVisionResult
 ): Promise<JanIAResult> {
   try {
     const isWebUser = userId.startsWith("web-");
@@ -2463,7 +2595,8 @@ export async function processWhatsAppMessage(
             pdfBuffer,
             pdfMimeType,
             groupJid,
-            groupName
+            groupName,
+            flyerVisionData
           );
         }
         return finalResult;
@@ -2788,7 +2921,24 @@ export async function processWhatsAppMessage(
       }
     }
 
-    if ((!messageToProcess || messageToProcess.trim() === "") && imageBuffer) {
+    let flyerData: FlyerVisionResult | null | undefined = flyerVisionData;
+    if (!flyerData && imageBuffer) {
+      console.log(`[JanIA] 👁️ Analizando imagen/flyer con visión artificial especializada...`);
+      try {
+        flyerData = await extractFlyerVision(imageBuffer);
+      } catch (errVision: any) {
+        console.warn(`[JanIA] ⚠️ Error en extractFlyerVision:`, errVision?.message || errVision);
+      }
+    }
+
+    if (flyerData && (flyerData.isFlyerOrBanner || flyerData.classification === "INMUEBLE" || flyerData.classification === "REQUERIMIENTO")) {
+      const verbatim = flyerData.flyerVerbatimText || "";
+      if (verbatim) {
+        messageToProcess = (messageToProcess && messageToProcess.trim() !== "" && !messageToProcess.includes("[Publicación de Imagen"))
+          ? `${messageToProcess}\n\n[FICHA TÉCNICA EXTRAÍDA DEL FLYER]:\n${verbatim}`
+          : verbatim;
+      }
+    } else if ((!messageToProcess || messageToProcess.trim() === "") && imageBuffer) {
       messageToProcess = "[Publicación de Imagen / Flyer Comercial Inmobiliario sin texto en pie de foto]";
     }
 
@@ -2994,6 +3144,36 @@ Por lo tanto, DEBES hacer lo siguiente:
     
     result.mentions = result.mentions || [];
 
+    // Inyectar datos del flyer detectado por visión documental
+    if (flyerData && (flyerData.isFlyerOrBanner || flyerData.classification === "INMUEBLE" || flyerData.classification === "REQUERIMIENTO")) {
+      result.isFlyerOrBanner = true;
+      result.flyerVerbatimText = flyerData.flyerVerbatimText;
+      if (result.classification === "CONSULTA_GENERAL" || !result.classification || result.classification === "DATOS_INCOMPLETOS") {
+        result.classification = flyerData.classification;
+      }
+      result.reactionEmoji = result.reactionEmoji || flyerData.reactionEmoji;
+      result.extractedData = {
+        ...(result.extractedData || {}),
+        title: result.extractedData?.title || flyerData.title,
+        propertyType: result.extractedData?.propertyType || flyerData.propertyType,
+        transactionType: result.extractedData?.transactionType || flyerData.transactionType,
+        price: (result.extractedData?.price && Number(result.extractedData.price) > 0) ? result.extractedData.price : flyerData.price,
+        rentPrice: (result.extractedData?.rentPrice && Number(result.extractedData.rentPrice) > 0) ? result.extractedData.rentPrice : flyerData.rentPrice,
+        presupuestoMax: (result.extractedData?.presupuestoMax && Number(result.extractedData.presupuestoMax) > 0) ? result.extractedData.presupuestoMax : flyerData.presupuestoMax,
+        area: (result.extractedData?.area && Number(result.extractedData.area) > 0) ? result.extractedData.area : flyerData.area,
+        bedrooms: result.extractedData?.bedrooms ?? flyerData.bedrooms,
+        bathrooms: result.extractedData?.bathrooms ?? flyerData.bathrooms,
+        garages: result.extractedData?.garages ?? flyerData.garages,
+        city: result.extractedData?.city || flyerData.city,
+        zone: result.extractedData?.zone || flyerData.zone,
+        contactPhone: result.extractedData?.contactPhone || flyerData.contactPhone,
+        contactName: result.extractedData?.contactName || flyerData.contactName,
+        isFlyerOrBanner: true,
+        flyerVerbatimText: flyerData.flyerVerbatimText
+      };
+      console.log(`[JanIA-Vision] 📑 Datos de flyer integrados a result. (Clasificación: ${result.classification}, Emoji: ${result.reactionEmoji})`);
+    }
+
     // --- EVALUACIÓN DE ENMIENDAS Y CORRECCIONES EN VENTANA DE 2 HORAS ---
     if (messageToProcess) {
       const isAmendmentHandled = await handleAmendmentUpdate(userId, messageToProcess);
@@ -3077,7 +3257,7 @@ Por lo tanto, DEBES hacer lo siguiente:
         cleanText.includes("aún disponible")
       );
 
-      const isShortComment = (isChatNoisePhrase || (!hasRealEstateKeyword && !isSearch && !isOffer && (cleanText.length < 25 || cleanText.split(/\s+/).length < 4))) && !hasTechnicalSpecs;
+      const isShortComment = !result.isFlyerOrBanner && (isChatNoisePhrase || (!hasRealEstateKeyword && !isSearch && !isOffer && (cleanText.length < 25 || cleanText.split(/\s+/).length < 4))) && !hasTechnicalSpecs;
 
       // Detectar preguntas de recomendación, solicitudes de abogados/servicios legales, comprobantes o consultas no prediales
       const isGeneralInquiryOrRecommendation = !hasTechnicalSpecs && !isSearch && !isOffer && (
@@ -3105,7 +3285,7 @@ Por lo tanto, DEBES hacer lo siguiente:
         cleanText.includes("contacto de")
       ) && !cleanText.includes("busco apto") && !cleanText.includes("busco casa") && !cleanText.includes("busco bodega") && !cleanText.includes("presupuesto");
 
-      if (isGeneralInquiryOrRecommendation) {
+      if (!result.isFlyerOrBanner && isGeneralInquiryOrRecommendation) {
         console.log(`[JANIA-FILTER] ⛔ Pregunta de recomendación o servicio general ignorada como Requerimiento/Inmueble: "${cleanText.substring(0, 50)}..."`);
         result.classification = "CONSULTA_GENERAL";
       } else if (isShortComment) {
@@ -3134,7 +3314,7 @@ Por lo tanto, DEBES hacer lo siguiente:
       // ── BLINDAJE ESTRICTO CONTRA FALSOS POSITIVOS (MENSAJES SIN INTENCIÓN PREDIAL) ──
       // Si el LLM lo clasificó como INMUEBLE o REQUERIMIENTO pero el mensaje no contiene
       // ninguna intención comercial real (no es búsqueda, no es oferta, no tiene tipología ni datos técnicos)
-      const hasRealEstateIntent = isSearch || isOffer || hasRealEstateKeyword || hasTechnicalSpecs;
+      const hasRealEstateIntent = result.isFlyerOrBanner || isSearch || isOffer || hasRealEstateKeyword || hasTechnicalSpecs;
       if ((result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO") && !hasRealEstateIntent) {
         console.log(`[JANIA-FILTER] ⛔ Descartando falso positivo de ${result.classification}: Mensaje sin intención predial explícita ("${cleanText.substring(0, 50)}..."). Degenerado a CONSULTA_GENERAL.`);
         result.classification = "CONSULTA_GENERAL";
@@ -3142,7 +3322,7 @@ Por lo tanto, DEBES hacer lo siguiente:
 
       // Doctrina v31.5: Descarte estricto de frases sueltas, teasers o saludos clasificados erróneamente
       const hollowEarlyCheck = isHollowListing(cleanText, null, (urls && urls.length > 0 ? urls[0] : null));
-      if ((result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO") && hollowEarlyCheck.isHollow && !imageBuffer) {
+      if ((result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO") && hollowEarlyCheck.isHollow && !imageBuffer && !result.isFlyerOrBanner) {
         console.log(`[JANIA-FILTER] ⛔ Descartando publicación hueca o frase suelta (${hollowEarlyCheck.reason}): "${cleanText.substring(0, 60)}...". Degenerado a CONSULTA_GENERAL.`);
         result.classification = "CONSULTA_GENERAL";
       }
@@ -3397,7 +3577,7 @@ Por lo tanto, DEBES hacer lo siguiente:
 
       // Filtro de Seguridad Final de Calidad Comercial: Rechazar publicaciones huecas, frases sueltas o sin ficha técnica
       const hollowCheckProp = isHollowListing(cleanCheckText, propertyTitle, (urls && urls.length > 0 ? urls[0] : undefined));
-      if (hollowCheckProp.isHollow && !imageBuffer) {
+      if (hollowCheckProp.isHollow && !imageBuffer && !result.isFlyerOrBanner) {
         console.log(`[JANIA-FILTER] ⛔ Omitiendo guardado de propiedad en BD (${hollowCheckProp.reason}): "${cleanCheckText.substring(0, 60)}..."`);
         result.inserted = false;
         result.classification = "CONSULTA_GENERAL";
@@ -3512,7 +3692,7 @@ Por lo tanto, DEBES hacer lo siguiente:
 
       // Filtro de Seguridad Final de Calidad Comercial: Rechazar requerimientos huecos, saludos o frases sueltas
       const hollowCheckReq = isHollowListing(cleanCheckReqText, reqTitle, (urls && urls.length > 0 ? urls[0] : undefined));
-      if (hollowCheckReq.isHollow) {
+      if (hollowCheckReq.isHollow && !imageBuffer && !result.isFlyerOrBanner) {
         console.log(`[JANIA-FILTER] ⛔ Omitiendo guardado de requerimiento en BD (${hollowCheckReq.reason}): "${cleanCheckReqText.substring(0, 60)}..."`);
         result.inserted = false;
         result.classification = "CONSULTA_GENERAL";
@@ -4853,12 +5033,13 @@ async function saveRequirement(data: any, userId: string, realName: string, imag
     }
   }
 
-  if (imageBuffer && !data.enlaceOrigen) {
+  if (imageBuffer) {
     try {
       const buffer = Buffer.from(imageBuffer, 'base64');
       const filename = `flyers/req_wa_${Date.now()}_${rawPhone}.jpg`;
       const uploadResult = await storagePut(filename, buffer, 'image/jpeg');
-      data.enlaceOrigen = data.enlaceOrigen || uploadResult.url;
+      data.enlaceOrigen = uploadResult.url;
+      console.log(`[JanIA-SaveRequirement] ✅ Flyer de requerimiento guardado localmente en VPS: ${uploadResult.url}`);
     } catch (err) {
       console.error("[JanIA-SaveRequirement] Error subiendo imagen:", err);
     }

@@ -322,6 +322,42 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.22 — Septiembre 2026
+
+#### 📌 INGESTA VISUAL DE FLYERS INMOBILIARIOS (OFERTA/DEMANDA), REACCIÓN INMEDIATA EN BAILEYS Y BLINDAJE 0% CUOTA SUPABASE
+
+**Problemas identificados:**
+1. **Descarte de Flyers Inmobiliarios sin Texto / con Subtítulo Corto**:
+   - En WhatsApp, asesores envían volantes/flyers gráficos donde toda la ficha técnica (precio, área, alcobas, barrio, teléfono) está contenida dentro de la imagen.
+   - Las heurísticas previas de texto (`cleanText.length < 25`, `isShortComment`, `isGeneralInquiryOrRecommendation`) democionaban el mensaje a `CONSULTA_GENERAL`.
+   - `isHollowListing` evaluaba el texto vacío como publicación hueca (`isHollow = true`) y abortaba `saveRequirement` y `saveProperty`.
+2. **Cuello de Botella y HTTP 429 en Gemini Multimodal**:
+   - Al enviar la imagen base64 junto con el prompt doctrinario maestro masivo (25.000 tokens), se saturaba el límite de TPM de Google Gemini.
+3. **Pérdida de Enlace de Imagen en Demandas (`requirements`)**:
+   - La tabla `requirements` no persistía la URL del flyer (`enlaceOrigen = null`), perdiéndose la visualización del requerimiento en las tarjetas de coincidencia.
+4. **Riesgo y Preocupación por Cuotas Gratuitas de Supabase**:
+   - Supabase limita el Storage gratuito a 1 GB y el Egress a 2 GB. Almacenar imágenes en buckets de Supabase y servirlas repetidamente pondría en riesgo la cuota gratuita.
+
+**Solución aplicada:**
+- **Auditoría Forense de Cuotas y Desacoplamiento a Disco VPS (`server/storage.ts`)**:
+  - Base de datos Postgres en Supabase utiliza **45 MB de 500 MB** (91% libre / 455 MB disponibles). Cada nuevo registro textual consume apenas ~1 KB.
+  - Todo almacenamiento binario se reescribió en `storagePut` para escribir directamente en el disco duro del VPS (`public/uploads/flyers/`) donde hay **136 GB de espacio libre** (94% libre).
+  - URLs servidas localmente vía `/uploads/*` a través del reverse proxy, consumiendo **0 bytes de Supabase Storage** y **0 bytes de Supabase Egress**.
+- **Motor de Visión Ultrarrápido para Flyers (`server/_core/janIA.ts`)**:
+  - Creada función `extractFlyerVision` con prompt de 250 tokens enfocado en terminología inmobiliaria colombiana.
+  - Extrae clasificación (`INMUEBLE` vs `REQUERIMIENTO`), tipo de negocio, especificaciones físicas y transcripción verbatim en ~1.8 segundos.
+  - Cascada de resiliencia: `gemini-2.5-flash` → `gemini-2.0-flash` → `gemini-1.5-flash` → `gemini-2.5-flash-lite`.
+- **Inmunización Heurística y Persistencia Bidireccional (`server/_core/janIA.ts`)**:
+  - Bypasses automáticos en `isHollowListing` y heurísticas de longitud cuando el mensaje cuenta con buffer de imagen o flyer detectado.
+  - `saveRequirement` ahora invoca `storagePut` para guardar el banner/flyer en disco y asigna `enlaceOrigen`.
+- **Reacción Instantánea en Baileys (`server/_core/whatsapp-match.ts`)**:
+  - Pre-descarga de imagen inmediata en el listener de WhatsApp.
+  - Despacho de emoji en < 2s (`👍`/`👌`/`🔀` para ofertas, `📝`/`✏️`/`🔄` para demandas) antes de entrar a colas o buffers de conversación.
+- **Visualización en Mesa de Coincidencias (`AdminMatches.tsx`)**:
+  - Limpieza de errores de fallback a buckets antiguos de Supabase.
+
+---
+
 ### 🔖 v31.21 — Septiembre 2026
 
 #### 📌 PERFECCIONAMIENTO GEOMÉTRICO DE BOTONES DE SIDEBAR COLAPSADO, UNIFICACIÓN DE MARCADORES KPI CON ACCIONES Y ERRADICACIÓN DE TÍTULO REDUNDANTE

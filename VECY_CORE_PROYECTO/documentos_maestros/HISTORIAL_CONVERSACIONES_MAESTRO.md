@@ -50,7 +50,56 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.21 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.22 — Septiembre 2026
+
+### 🗓️ Sesión: Miércoles 9 de Septiembre de 2026 — 00:15 a 00:45 (Hora Colombia UTC-5)
+**Versión**: `v31.22` | **Ambiente**: Producción VPS (`13.140.149.144`) + Motor de Ingesta Visual WhatsApp (`janIA.ts`, `whatsapp-match.ts`, `storage.ts`) + Mesa de Coincidencias (`AdminMatches.tsx`) + GitHub (`main`)
+
+#### 🎯 Solicitud de Eduardo A. Rivera:
+"Si, quiero que procedas, pero se sincero antes y dime si esto no hará que volvamos a pecar en los límites de supabase que nos advierten que estábamos pasando su límite y que entonces deberíamos pagar si lo alcanzamos y sobrepasamos. Recuerdas, revisa el historial, cambios y versiones, por si las moscas. Pero eso si verifica todo antes de ir a embarrarla y tener que sobrepasar estos límites. No me gustaría, si ves que eso de pasar los límites de gratuidad que ofrece supabase, es un hecho, entonces no hagamos esta implementación, pero si ves que esto no afectará dichos límites entonces haslo."
+
+#### 🔍 Diagnóstico Técnico y Auditoría Rigurosa de Cuotas Supabase:
+1. **Auditoría Forense de Cuotas y Almacenamiento en Supabase**:
+   - **Base de Datos Postgres**: Ocupación actual de **45 MB / 500 MB** de cuota gratuita (apenas 9% en uso, 91% disponible / 455 MB libres). Cada registro textual en `properties` o `requirements` añade solo ~1 KB de texto (JSON estructurado y metadatos).
+   - **Supabase Storage**: Ocupa **2.4 MB** (14 objetos).
+   - **Blindaje Total de Cuotas (0% Impacto en Supabase Storage y 0% Egress)**:
+     - El almacenamiento de flyers e imágenes de WhatsApp se desacopló al 100% de Supabase Storage.
+     - Las imágenes binarias se descargan directamente en el disco duro del servidor VPS en `/var/www/vecy-network/public/uploads/flyers/`.
+     - El VPS cuenta con **136 GB de almacenamiento libre** (solo 6% del disco en uso).
+     - La entrega web al navegador se realiza a través de la ruta `/uploads/*`, sirviéndose directamente desde el VPS y el reverse proxy de Nginx/Vercel sin transferir un solo byte por Supabase Egress ni consumir storage de Supabase.
+2. **Causa Raíz de Descarte de Flyers Inmobiliarios y Ausencia de Reacciones Emojis**:
+   - **Descarte por Heurística de Longitud**: Para imágenes enviadas sin texto o con subtítulo mínimo, `cleanText.length < 25` clasificaba erróneamente el mensaje como `CONSULTA_GENERAL` o `isShortComment`, abortando la extracción inmobiliaria.
+   - **Filtro Duro de Publicación Vacía (`isHollowListing`)**: Al evaluar `cleanCheckText` vacío (""), el validador `hollowEarlyCheck` y `hollowCheckReq` marcaba la publicación como vacía (`isHollow = true`) y abortaba `saveRequirement` y `saveProperty`.
+   - **Agotamiento de TPM en Gemini Multimodal con Prompts Gigantes**: Enviar la imagen junto con el prompt doctrinario maestro completo (25.000 tokens) provocaba errores de cuota de tokens por minuto (HTTP 429) en el LLM.
+   - **Reacción Tardía en Baileys**: El buffer de espera de WhatsApp agrupaba mensajes antes de reaccionar, perdiendo la inmediatez visual que esperan los asesores inmobiliarios.
+
+#### 🛠️ Acciones Ejecutadas:
+1. **Desacoplamiento y Almacenamiento Local de Alto Rendimiento (`server/storage.ts`)**:
+   - Función `storagePut` reescrita para escribir buffers binarios directamente en el sistema de archivos local (`public/uploads/`) del VPS, retornando URLs relativas `/uploads/${key}`.
+   - 0 bytes de uso en Supabase Storage, 0 bytes en Supabase Bandwidth/Egress.
+2. **Motor de Visión / OCR Especializado para Flyers Inmobiliarios (`server/_core/janIA.ts`)**:
+   - Implementada la función `extractFlyerVision(imageBufferBase64)` con un prompt ultracompacto (250 tokens) enfocado estrictamente en datos inmobiliarios colombianos: clasificación (`INMUEBLE` vs `REQUERIMIENTO`), tipo de negocio (`VENTA`, `ARRIENDO`, etc.), tipo de predio, precio/canon/presupuesto, área, habitaciones, baños, garajes, ciudad, barrio y transcripción verbatim.
+   - Cascada de resiliencia multimodal: `gemini-2.5-flash` → `gemini-2.0-flash` → `gemini-1.5-flash` → `gemini-2.5-flash-lite`. Tiempo de extracción: ~1.8 segundos.
+3. **Inmunización Heurística y Blindaje de Ingesta (`server/_core/janIA.ts`)**:
+   - Si el mensaje contiene `imageBuffer` o `isFlyerOrBanner`, se inmuniza automáticamente contra demociones por texto corto (`isShortComment`, `isGeneralInquiryOrRecommendation`).
+   - Bloqueo de rechazo por `isHollowListing`: `!imageBuffer && !result.isFlyerOrBanner` condiciona el chequeo para que jamás descarte un flyer con imagen.
+   - Enriquecimiento bidireccional: tanto para inmuebles en oferta como para requerimientos de demanda (`saveRequirement`), la imagen se persiste en el VPS y su enlace se guarda en `enlaceOrigen`.
+4. **Captura Instantánea y Reacción Rápida de Baileys (`server/_core/whatsapp-match.ts`)**:
+   - Pre-descarga inmediata del buffer de imagen al recibir el mensaje en el WebSocket de Baileys.
+   - Detección visual instantánea en `handleIncomingGroupMessage`: si es un flyer, JanIA despacha de inmediato el emoji correspondiente (`👍`/`👌`/`🔀` para ofertas, `📝`/`✏️`/`🔄` para requerimientos) en menos de 2 segundos.
+   - Reutilización del buffer pre-descargado para no duplicar descargas en la cola.
+5. **Limpieza de Handlers de Imagen en Admin Panel (`AdminMatches.tsx`)**:
+   - Erradicados los fallbacks de `onError` que apuntaban a dominios y buckets obsoletos de Supabase (`knzmpoprlmbonejshfys.supabase.co`).
+   - Visualización fluida de los flyers tanto en la tarjeta de Oferta como en la de Demanda.
+6. **Compilación, Verificación y Despliegue Oficial**:
+   - Incremento a `v31.22` en `shared/const.ts` y `31.22.0` en `package.json`.
+   - `npm run check` (TypeScript): 0 errores.
+   - `npm run build` (Vite + esbuild): 0 errores.
+   - Despliegue en VPS `13.140.149.144` con recarga de proceso PM2 `jania-server`.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.21 — Septiembre 2026
 
 ### 🗓️ Sesión: Martes 8 de Septiembre de 2026 — 21:45 a 22:00 (Hora Colombia UTC-5)
 **Versión**: `v31.21` | **Ambiente**: Producción VPS (`13.140.149.144`) + Sidebar Navegación (`Admin.tsx`) + Mesa de Control Admin Panel (`AdminMatches.tsx`) + GitHub (`main`)

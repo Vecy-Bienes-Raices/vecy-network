@@ -131,6 +131,7 @@ interface BufferedMessage {
   audioUrl?: string;
   pdfBuffer?: string;
   pdfMimeType?: string;
+  flyerVisionData?: any;
   originalMsg: proto.IWebMessageInfo;
 }
 
@@ -466,6 +467,9 @@ export class JaniaMatchBot {
 
             let body = '';
             let isAudioPTT = false;
+            let imageBufferImmediate: string | undefined = undefined;
+            let pdfBufferImmediate: string | undefined = undefined;
+            let pdfMimeTypeImmediate: string | undefined = undefined;
             if (rawMsg?.conversation) body = rawMsg.conversation;
             else if (rawMsg?.extendedTextMessage) {
               // Mensajes normales Y mensajes reenviados (contextInfo.isForwarded)
@@ -480,9 +484,27 @@ export class JaniaMatchBot {
                 }
               }
             }
-            else if (rawMsg?.imageMessage) body = rawMsg.imageMessage.caption || '';
+            else if (rawMsg?.imageMessage) {
+              body = rawMsg.imageMessage.caption || '';
+              try {
+                const downloadedImg = await downloadMediaSafely(msg as any, 'image');
+                if (downloadedImg && downloadedImg.length > 0) {
+                  imageBufferImmediate = downloadedImg.toString('base64');
+                  console.log(`[JANIA-MATCH] 📷 Imagen flyer descargada inmediatamente (${(downloadedImg.length / 1024).toFixed(1)} KB) de ${senderId}`);
+                }
+              } catch (imgErr: any) {
+                console.warn('[JANIA-MATCH] Error descargando imagen flyer inmediatamente:', imgErr?.message || imgErr);
+              }
+            }
             else if (rawMsg?.documentMessage) {
               body = rawMsg.documentMessage.caption || rawMsg.documentMessage.fileName || rawMsg.documentMessage.title || '';
+              try {
+                const downloadedDoc = await downloadMediaSafely(msg as any, 'document');
+                if (downloadedDoc && downloadedDoc.length > 0) {
+                  pdfBufferImmediate = downloadedDoc.toString('base64');
+                  pdfMimeTypeImmediate = rawMsg.documentMessage.mimetype || 'application/pdf';
+                }
+              } catch (docErr: any) {}
             }
             else if (rawMsg?.videoMessage) body = rawMsg.videoMessage.caption || '';
             else if (rawMsg?.audioMessage) {
@@ -731,7 +753,7 @@ export class JaniaMatchBot {
             const shouldRespond = (isBuzonGroup || isCirculoGroup) ? !isSingleCharacter : (isOfficialGroup && hasDirectMention);
 
             if (isListing) {
-              await this.handleIncomingGroupMessage(msg, chatId, body);
+              await this.handleIncomingGroupMessage(msg, chatId, body, imageBufferImmediate, pdfBufferImmediate, pdfMimeTypeImmediate);
               continue;
             }
 
@@ -1214,7 +1236,14 @@ export class JaniaMatchBot {
   }
 
   // --- LOGÍSTICA DE BUFFER GRUPAL Y REACCIÓN INSTANTÁNEA ---
-  private async handleIncomingGroupMessage(msg: proto.IWebMessageInfo, chatId: string, bodyText: string) {
+  private async handleIncomingGroupMessage(
+    msg: proto.IWebMessageInfo, 
+    chatId: string, 
+    bodyText: string,
+    imageBufferImmediate?: string,
+    pdfBufferImmediate?: string,
+    pdfMimeTypeImmediate?: string
+  ) {
     if (!msg.key || !msg.message) return;
 
     const rawSender = msg.key.participant || msg.participant || '';
@@ -1249,6 +1278,7 @@ export class JaniaMatchBot {
     }
 
     // --- REACCIÓN INSTANTÁNEA (< 200ms) PARA TEXTO, ENLACES Y DOCUMENTOS ---
+    let flyerVisionData: any = null;
     if (!msg.key.fromMe) {
       let cleanLower = (bodyText || '').toLowerCase();
 
@@ -1308,6 +1338,22 @@ export class JaniaMatchBot {
         }
       }
 
+      // ── REACCIÓN RÁPIDA VISUAL PARA FLYERS/AFICHES (v31.22) ──
+      // Si el texto no tenía señales explícitas (afiche enviado sin texto o con pie corto),
+      // evaluamos el buffer de imagen con visión ligera en tiempo real
+      if (!fastEmoji && imageBufferImmediate) {
+        try {
+          const { extractFlyerVision } = await import('./janIA');
+          flyerVisionData = await extractFlyerVision(imageBufferImmediate);
+          if (flyerVisionData && (flyerVisionData.isFlyerOrBanner || flyerVisionData.classification === "INMUEBLE" || flyerVisionData.classification === "REQUERIMIENTO")) {
+            fastEmoji = flyerVisionData.reactionEmoji || (flyerVisionData.classification === "REQUERIMIENTO" ? "📝" : "👍");
+            console.log(`[JANIA-FAST-REACT] 🎯 Flyer detectado visualmente (${flyerVisionData.classification}). Reacción rápida: ${fastEmoji}`);
+          }
+        } catch (visErr: any) {
+          console.warn('[JANIA-FAST-REACT] Error en análisis visual de flyer:', visErr?.message || visErr);
+        }
+      }
+
       if (fastEmoji && chatId !== this.buzonGroupId) {
         this.safeReact(chatId, msg.key, fastEmoji, 'FAST-REACT');
       }
@@ -1351,21 +1397,23 @@ export class JaniaMatchBot {
       const rawMsgInHandler = unwrapMessage(msg.message);
       const hasMediaInHandler = !!rawMsgInHandler?.imageMessage || !!rawMsgInHandler?.documentMessage || !!rawMsgInHandler?.videoMessage || !!rawMsgInHandler?.audioMessage;
 
+      const msgEntry: BufferedMessage = {
+        body: bodyText,
+        hasMedia: hasMediaInHandler,
+        imageBuffer: imageBufferImmediate,
+        pdfBuffer: pdfBufferImmediate,
+        pdfMimeType: pdfMimeTypeImmediate,
+        flyerVisionData: flyerVisionData,
+        originalMsg: msg
+      };
+
       if (buffer) {
         clearTimeout(buffer.timer);
-        buffer.messages.push({
-          body: bodyText,
-          hasMedia: hasMediaInHandler,
-          originalMsg: msg
-        });
+        buffer.messages.push(msgEntry);
         buffer.timer = setTimeout(() => this.processGroupBuffer(bufferKey), bufferTimeout);
       } else {
         this.messageBuffers.set(bufferKey, {
-          messages: [{
-            body: bodyText,
-            hasMedia: hasMediaInHandler,
-            originalMsg: msg
-          }],
+          messages: [msgEntry],
           userName: realName,
           chatId,
           timer: setTimeout(() => this.processGroupBuffer(bufferKey), bufferTimeout)
@@ -1479,10 +1527,10 @@ export class JaniaMatchBot {
 
     console.log(`[JANIA-MATCH] Procesando buffer de ${buffer.messages.length} mensajes para ${resolvedSenderId} (Silencioso)...`);
 
-    // Descarga de imágenes o documentos adjuntos
+    // Descarga de imágenes o documentos adjuntos (si no fueron pre-descargados al llegar)
     for (const bufferedMsg of buffer.messages) {
       const rawMsg = unwrapMessage(bufferedMsg.originalMsg.message);
-      if (bufferedMsg.hasMedia && rawMsg?.imageMessage) {
+      if (bufferedMsg.hasMedia && rawMsg?.imageMessage && !bufferedMsg.imageBuffer) {
         try {
           const mediaBuffer = await downloadMediaSafely(bufferedMsg.originalMsg as any, 'image');
           if (mediaBuffer) {
@@ -1492,7 +1540,7 @@ export class JaniaMatchBot {
           console.error('[JANIA-BUFFER] Error descargando imagen:', e);
         }
       }
-      if (bufferedMsg.hasMedia && rawMsg?.documentMessage) {
+      if (bufferedMsg.hasMedia && rawMsg?.documentMessage && !bufferedMsg.pdfBuffer) {
         try {
           const mediaBuffer = await downloadMediaSafely(bufferedMsg.originalMsg as any, 'document');
           if (mediaBuffer) {
@@ -1567,7 +1615,8 @@ export class JaniaMatchBot {
             bufferedMsg.pdfBuffer,
             bufferedMsg.pdfMimeType,
             chatId,
-            groupName
+            groupName,
+            bufferedMsg.flyerVisionData
           );
 
           const isOfficialGroupSingle = chatId === this.targetGroupId || chatId === this.buzonGroupId || chatId === this.circuloGroupId;
@@ -1660,7 +1709,8 @@ export class JaniaMatchBot {
           pdfMsg?.pdfBuffer,
           pdfMsg?.pdfMimeType,
           chatId,
-          groupName
+          groupName,
+          imageMsg?.flyerVisionData || buffer.messages.find(m => m.flyerVisionData)?.flyerVisionData
         );
       }
 
