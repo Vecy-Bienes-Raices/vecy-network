@@ -3553,59 +3553,20 @@ export default function AdminMatches() {
 
   return (
     <div className="pt-4 sm:pt-6">
-      {/* Header Maestro */}
-      <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-br from-[#121216] via-[#09090b] to-black p-5 sm:p-6 border border-[#bf953f]/30 rounded-2xl sm:rounded-3xl shadow-[0_10px_30px_rgba(0,0,0,0.6)] relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-96 h-36 bg-[#bf953f]/5 blur-3xl pointer-events-none" />
-        
-        <div className="relative z-10">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#bf953f]/10 border border-[#bf953f]/30 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(191,149,63,0.2)]">
-              <Sparkles className="w-5 h-5 text-[#bf953f] animate-pulse" />
-            </div>
-            <div>
-              <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2">
-                <span>Mesa de Control de Coincidencias</span>
-              </h2>
-              <p className="text-xs text-zinc-400 mt-0.5 hidden sm:block">
-                Cruce algorítmico inteligente en tiempo real entre inventario captado y demandas activas
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2.5 w-full sm:w-auto relative z-10 justify-end">
-          <Button 
-            onClick={() => { refetch(); refetchBotStatus(); }} 
-            variant="outline" 
-            className="border-white/15 bg-white/5 hover:bg-white/10 hover:border-[#bf953f]/40 text-zinc-200 hover:text-white text-xs h-10 px-3.5 rounded-xl font-bold transition-all gap-1.5 cursor-pointer"
-          >
-            <RotateCcw className={`w-3.5 h-3.5 text-[#bf953f] ${isLoading ? 'animate-spin' : ''}`} />
-            <span>Refrescar</span>
-          </Button>
-          <Button 
-            disabled={filteredMatches.length === 0}
-            onClick={exportData} 
-            className="bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#bf953f] hover:brightness-110 text-black font-extrabold flex items-center justify-center gap-1.5 text-xs h-10 px-4 rounded-xl shadow-[0_0_15px_rgba(191,149,63,0.3)] transition-all cursor-pointer"
-          >
-            <Download className="w-3.5 h-3.5 stroke-[2.5]" />
-            <span>Exportar CSV</span>
-          </Button>
-        </div>
-      </div>
-
-      {/* KPI Stats Ribbon */}
-      <div className="mb-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-gradient-to-b from-[#16161b] to-black/80 border border-[#bf953f]/30 p-3.5 rounded-2xl flex items-center gap-3 shadow-md hover:border-[#bf953f]/60 transition-all">
+      {/* Ribbon Maestro Unificado: Marcadores KPI de Alto Nivel y Estación de Acciones */}
+      <div className="mb-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        {/* Marcador 1: Matches Detectados */}
+        <div className="bg-gradient-to-b from-[#16161b] to-black/80 border border-[#bf953f]/30 p-3 rounded-2xl flex items-center gap-3 shadow-md hover:border-[#bf953f]/60 transition-all">
           <div className="w-10 h-10 rounded-xl bg-[#bf953f]/10 border border-[#bf953f]/30 flex items-center justify-center shrink-0">
             <Sparkles className="w-5 h-5 text-[#bf953f]" />
           </div>
-          <div>
-            <p className="text-[10px] uppercase tracking-wider text-zinc-400 font-bold">Matches Detectados</p>
-            <p className="text-lg sm:text-xl font-black text-white">
+          <div className="min-w-0">
+            <p className="text-[10px] uppercase tracking-wider text-zinc-400 font-bold truncate">Matches Detectados</p>
+            <p className="text-lg sm:text-xl font-black text-white leading-tight">
               {isLoading ? (
                 <span className="animate-pulse text-zinc-500 font-medium text-sm">...</span>
               ) : isError ? (
-                <span className="text-amber-400 font-normal text-xs">Error de red</span>
+                <span className="text-amber-400 font-normal text-xs">Error</span>
               ) : (
                 Number(kpiStats.total || 0).toLocaleString('es-CO')
               )}
@@ -3613,17 +3574,18 @@ export default function AdminMatches() {
           </div>
         </div>
 
-        <div className="bg-gradient-to-b from-[#0f1f17] to-black/80 border border-emerald-500/30 p-3.5 rounded-2xl flex items-center gap-3 shadow-md hover:border-emerald-500/60 transition-all">
+        {/* Marcador 2: Matches Perfectos (≥95%) */}
+        <div className="bg-gradient-to-b from-[#0f1f17] to-black/80 border border-emerald-500/30 p-3 rounded-2xl flex items-center gap-3 shadow-md hover:border-emerald-500/60 transition-all">
           <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center shrink-0">
             <CheckCircle2 className="w-5 h-5 text-emerald-400" />
           </div>
-          <div>
-            <p className="text-[10px] uppercase tracking-wider text-emerald-400/80 font-bold">Matches Perfectos (≥95%)</p>
-            <p className="text-lg sm:text-xl font-black text-emerald-400">
+          <div className="min-w-0">
+            <p className="text-[10px] uppercase tracking-wider text-emerald-400/80 font-bold truncate">Perfectos (≥95%)</p>
+            <p className="text-lg sm:text-xl font-black text-emerald-400 leading-tight">
               {isLoading ? (
                 <span className="animate-pulse text-zinc-500 font-medium text-sm">...</span>
               ) : isError ? (
-                <span className="text-amber-400 font-normal text-xs">Error de red</span>
+                <span className="text-amber-400 font-normal text-xs">Error</span>
               ) : (
                 Number(kpiStats.perfect || 0).toLocaleString('es-CO')
               )}
@@ -3631,17 +3593,18 @@ export default function AdminMatches() {
           </div>
         </div>
 
-        <div className="bg-gradient-to-b from-[#1d170a] to-black/80 border border-amber-500/30 p-3.5 rounded-2xl flex items-center gap-3 shadow-md hover:border-amber-500/60 transition-all">
+        {/* Marcador 3: Total Ofertas */}
+        <div className="bg-gradient-to-b from-[#1d170a] to-black/80 border border-amber-500/30 p-3 rounded-2xl flex items-center gap-3 shadow-md hover:border-amber-500/60 transition-all">
           <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0">
             <Building2 className="w-5 h-5 text-[#bf953f]" />
           </div>
-          <div>
-            <p className="text-[10px] uppercase tracking-wider text-amber-400/80 font-bold">Total Ofertas</p>
-            <p className="text-lg sm:text-xl font-black text-[#bf953f]">
+          <div className="min-w-0">
+            <p className="text-[10px] uppercase tracking-wider text-amber-400/80 font-bold truncate">Total Ofertas</p>
+            <p className="text-lg sm:text-xl font-black text-[#bf953f] leading-tight">
               {isBotStatusLoading ? (
                 <span className="animate-pulse text-zinc-500 font-medium text-sm">...</span>
               ) : isBotStatusError ? (
-                <span className="text-amber-400 font-normal text-xs">Error de red</span>
+                <span className="text-amber-400 font-normal text-xs">Error</span>
               ) : (
                 Number(kpiStats.totalProps || 0).toLocaleString('es-CO')
               )}
@@ -3649,22 +3612,46 @@ export default function AdminMatches() {
           </div>
         </div>
 
-        <div className="bg-gradient-to-b from-[#0a171d] to-black/80 border border-cyan-500/30 p-3.5 rounded-2xl flex items-center gap-3 shadow-md hover:border-cyan-500/60 transition-all">
+        {/* Marcador 4: Total Demandas */}
+        <div className="bg-gradient-to-b from-[#0a171d] to-black/80 border border-cyan-500/30 p-3 rounded-2xl flex items-center gap-3 shadow-md hover:border-cyan-500/60 transition-all">
           <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center shrink-0">
             <ClipboardList className="w-5 h-5 text-cyan-400" />
           </div>
-          <div>
-            <p className="text-[10px] uppercase tracking-wider text-cyan-400/80 font-bold">Total Demandas</p>
-            <p className="text-lg sm:text-xl font-black text-cyan-400">
+          <div className="min-w-0">
+            <p className="text-[10px] uppercase tracking-wider text-cyan-400/80 font-bold truncate">Total Demandas</p>
+            <p className="text-lg sm:text-xl font-black text-cyan-400 leading-tight">
               {isBotStatusLoading ? (
                 <span className="animate-pulse text-zinc-500 font-medium text-sm">...</span>
               ) : isBotStatusError ? (
-                <span className="text-amber-400 font-normal text-xs">Error de red</span>
+                <span className="text-amber-400 font-normal text-xs">Error</span>
               ) : (
                 Number(kpiStats.totalReqs || 0).toLocaleString('es-CO')
               )}
             </p>
           </div>
+        </div>
+
+        {/* Módulo 5: Acciones Rápidas (Refrescar en vivo y Exportar reporte CSV) */}
+        <div className="col-span-2 sm:col-span-3 lg:col-span-1 bg-gradient-to-b from-[#141418] to-black/80 border border-white/10 p-2.5 rounded-2xl flex flex-row lg:flex-col justify-center gap-1.5 shadow-md hover:border-[#bf953f]/40 transition-all">
+          <Button 
+            onClick={() => { refetch(); refetchBotStatus(); }} 
+            variant="outline" 
+            className="flex-1 lg:flex-initial h-7 border-white/15 bg-white/5 hover:bg-white/10 hover:border-[#bf953f]/40 text-zinc-200 hover:text-white text-xs px-2.5 rounded-xl font-bold transition-all gap-1.5 cursor-pointer justify-center"
+            title="Consultar la base de datos para cargar nuevas coincidencias detectadas por JanIA al instante sin recargar la página"
+          >
+            <RotateCcw className={`w-3.5 h-3.5 text-[#bf953f] ${isLoading ? 'animate-spin' : ''}`} />
+            <span>Refrescar</span>
+          </Button>
+
+          <Button 
+            disabled={filteredMatches.length === 0}
+            onClick={exportData} 
+            className="flex-1 lg:flex-initial h-7 bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#bf953f] hover:brightness-110 text-black font-extrabold flex items-center justify-center gap-1.5 text-xs px-2.5 rounded-xl shadow-[0_0_12px_rgba(191,149,63,0.3)] transition-all cursor-pointer"
+            title="Descargar reporte en formato Excel (.CSV) con los datos, teléfonos y porcentajes de las coincidencias filtradas"
+          >
+            <Download className="w-3.5 h-3.5 stroke-[2.5]" />
+            <span>Exportar CSV</span>
+          </Button>
         </div>
       </div>
 

@@ -322,6 +322,35 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.21 — Septiembre 2026
+
+#### 📌 PERFECCIONAMIENTO GEOMÉTRICO DE BOTONES DE SIDEBAR COLAPSADO, UNIFICACIÓN DE MARCADORES KPI CON ACCIONES Y ERRADICACIÓN DE TÍTULO REDUNDANTE
+
+**Problemas identificados:**
+1. **Deformación y Desalineación del Botón de Coincidencias en Sidebar Colapsado**:
+   - En `client/src/pages/Admin.tsx`, cuando el sidebar se contraía a `md:w-20` (80px), el botón activo mantenía la clase `w-full` (56px) con altura de ~38px, generando una forma rectangular oblonga.
+   - El elemento indicador activo (`span w-1.5 h-1.5 bg-primary shadow-[0_0_8px_#bf953f] ml-auto`) se montaba con `ml-auto`, empujando el icono `Sparkles` hacia la izquierda y produciendo una evidente asimetría y distorsión visual.
+2. **Duplicación del Título 'Coincidencias' y Desperdicio Vertical**:
+   - El cabecero superior del panel ya muestra `Coincidencias · VECY BIENES RAÍCES | SUPERADMIN`.
+   - Inmediatamente debajo, se renderizaba una caja gigante con el título redundante "Mesa de Control de Coincidencias" y un subtítulo, ocupando más de 120px de altura y separando las métricas de las acciones.
+
+**Solución aplicada:**
+- **Geometría Cuadrada Perfecta Centrada en Sidebar (`Admin.tsx`)**:
+  - En estado colapsado, el botón se renderiza como un contenedor cuadrado exacto de 44x44px (`w-11 h-11 justify-center rounded-xl p-0 mx-auto`), centrando el icono en la columna del sidebar con 18px libres a cada lado.
+  - Tamaño de icono ampliado a `w-5 h-5` para visibilidad equilibrada.
+  - Indicador de punto activo condicionado estrictamente a `sidebarExpanded && (...)`, eliminándolo por completo del DOM en estado colapsado para evitar cualquier desplazamiento del eje central.
+- **Ribbon Maestro Unificado de 5 Columnas (`AdminMatches.tsx`)**:
+  - Eliminada la caja redundante "Mesa de Control de Coincidencias", recuperando 120px de espacio vertical útil para las fichas inmobiliarias.
+  - Integradas en una sola fila continua de 5 módulos en computadora (`lg:grid-cols-5`):
+    - Módulo 1: `Matches Detectados` (Dorado)
+    - Módulo 2: `Matches Perfectos (≥95%)` (Esmeralda)
+    - Módulo 3: `Total Ofertas` (Ámbar)
+    - Módulo 4: `Total Demandas` (Cian)
+    - Módulo 5: `Estación de Acciones` con botones `Refrescar` (consulta instantánea a Supabase) y `Exportar CSV` (descarga organizada para Microsoft Excel).
+  - Ambos botones cuentan con tooltips descriptivos para orientar al asesor sobre su uso y finalidad.
+
+---
+
 ### 🔖 v31.20 — Septiembre 2026
 
 #### 📌 SEPARACIÓN TOTAL DE BOTÓN FLOTANTE RESPECTO A WIDGET JANIA Y SELLADO A 0PX DEL CABECERO STICKY

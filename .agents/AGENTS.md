@@ -163,7 +163,30 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.20 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.21 — Septiembre 2026
+
+### Novedades v31.21 (Perfeccionamiento Geométrico de Sidebar Colapsado, Unificación de Marcadores KPI con Acciones y Erradicación de Título Redundante):
+- **Diagnóstico y Corrección de Botón del Sidebar Colapsado (`Admin.tsx`)**:
+  1) **Causa Raíz de Deformación y Desalineación**:
+     - Al contraer el sidebar a 80px (`md:w-20`), el botón mantenía `w-full px-3 py-2.5 rounded-xl` y `gap-3`.
+     - Internamente, el elemento indicador activo (`span w-1.5 h-1.5 bg-primary shadow-[0_0_8px_#bf953f] ml-auto`) se montaba en el DOM con `ml-auto`, empujando el icono `Sparkles` hacia la izquierda y forzando un botón rectangular alargado asimétrico.
+  2) **Geometría Cuadrada Perfecta Centrada**:
+     - En estado colapsado, el botón se renderiza como un contenedor cuadrado perfecto de 44x44px (`w-11 h-11 justify-center rounded-xl p-0 mx-auto`), centrando milimétricamente el icono en la columna de navegación.
+     - El icono se amplió a `w-5 h-5` para una lectura visual limpia y equilibrada.
+     - Se eliminó el renderizado del indicador de punto y del texto cuando el sidebar está cerrado (`sidebarExpanded && (...)`), erradicando cualquier elemento fantasma o desvío de eje.
+     - Se aplicó la misma arquitectura a los botones inferiores (`Sitio Público` y `Cerrar Sesión`).
+- **Unificación de Marcadores KPI y Acciones Rápidas en 1 Solo Ribbon (`AdminMatches.tsx`)**:
+  1) **Eliminación del Título Redundante de Coincidencias**:
+     - El cabecero principal de la página (`Admin.tsx`) ya expone claramente `Coincidencias · VECY BIENES RAÍCES | SUPERADMIN`.
+     - Se eliminó el bloque gigante redundante "Mesa de Control de Coincidencias", ahorrando más de 120px de altura vertical útil.
+  2) **Ribbon Maestro Modular de 5 Columnas**:
+     - Las 4 métricas clave (`Matches Detectados`, `Perfectos ≥95%`, `Total Ofertas`, `Total Demandas`) y la estación de acciones (`Refrescar` y `Exportar CSV`) se integran en una sola fila continua en computadora (`lg:grid-cols-5`).
+     - Todos los módulos comparten exactamente la misma altura, estética oscura y bordes luminosos corporativos.
+     - Los botones `Refrescar` (consulta instantánea a Supabase) y `Exportar CSV` (descarga para Excel) cuentan con tooltips informativos completos.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.20 — Septiembre 2026
 
 ### Novedades v31.20 (Separación Total de Botón Flotante respecto al Avatar de JanIA y Sellado a 0px del Cabecero Sticky):
 - **Diagnóstico y Corrección de Superposición con JanIA (`JanIAFloatingButton.tsx` vs `AdminMatches.tsx`)**:

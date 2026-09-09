@@ -50,7 +50,46 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.20 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.21 — Septiembre 2026
+
+### 🗓️ Sesión: Martes 8 de Septiembre de 2026 — 21:45 a 22:00 (Hora Colombia UTC-5)
+**Versión**: `v31.21` | **Ambiente**: Producción VPS (`13.140.149.144`) + Sidebar Navegación (`Admin.tsx`) + Mesa de Control Admin Panel (`AdminMatches.tsx`) + GitHub (`main`)
+
+#### 🎯 Solicitud de Eduardo A. Rivera:
+"Arreglame ese botón donde está el símbolo ✨ de este botón para Coincidencias y que cuando cierras el sidebar se ve como un poco deforme y decentrado o no se. Y también veo como muy repetido el título o la palabra Coincidencias, por facor deja una sola y tal vez puedas acomodar los marcadores junto a los botones de Refrescar y descargar que a todas estas no se si funcionan o cómo funcionan y cómo se usan o qué hacen mejor dicho o cual es su finalidad y si en verdad se necesitan."
+
+#### 🔍 Diagnóstico Técnico Profundo:
+1. **Deformación y Asimetría del Botón de Coincidencias en Sidebar Colapsado**:
+   - En `client/src/pages/Admin.tsx`, al contraerse el sidebar (`md:w-20`), el botón mantenía `w-full` (56px) con altura de ~38px, generando una caja rectangular oblonga.
+   - El elemento indicador activo (`span w-1.5 h-1.5 bg-primary shadow-[0_0_8px_#bf953f] ml-auto`) se montaba con `ml-auto`, empujando el icono `Sparkles` hacia la izquierda y dejando el icono descentrado respecto a la columna del menú.
+2. **Duplicación Innecesaria del Título 'Coincidencias'**:
+   - El encabezado superior principal del panel (`Admin.tsx`) ya desplegaba `Coincidencias · VECY BIENES RAÍCES | SUPERADMIN`.
+   - Inmediatamente debajo, en `AdminMatches.tsx`, se renderizaba un bloque gigante ("Mesa de Control de Coincidencias"), reiterando el término y consumiendo 120px de espacio vertical que empujaba hacia abajo las fichas de coincidencias.
+3. **Desconexión entre Marcadores KPI y Acciones Rápidas**:
+   - Los botones `Refrescar` y `Exportar CSV` estaban aislados a la derecha del bloque de título, separados de los 4 marcadores numéricos.
+
+#### 🛠️ Acciones Ejecutadas:
+1. **Rediseño Geométrico Cuadrado y Centrado en Sidebar (`Admin.tsx`)**:
+   - En estado colapsado, el botón se renderiza como un contenedor cuadrado exacto de 44x44px (`w-11 h-11 justify-center rounded-xl p-0 mx-auto`), centrando el icono en el eje del sidebar (18px libres a cada lado).
+   - Icono ampliado a `w-5 h-5` para visibilidad armónica.
+   - El indicador de punto y el texto se condicionan a `sidebarExpanded && (...)`, erradicando cualquier desbalance por `ml-auto`.
+   - Se aplicó la misma simetría a los botones inferiores (`Sitio Público` y `Cerrar Sesión`).
+2. **Ribbon Maestro Unificado de 5 Módulos (`AdminMatches.tsx`)**:
+   - Se eliminó el bloque redundante "Mesa de Control de Coincidencias", ahorrando 120px de altura y dejando una sola mención del título en el encabezado general.
+   - Se integraron los 4 marcadores (`Matches Detectados`, `Perfectos ≥95%`, `Total Ofertas`, `Total Demandas`) y la estación de acciones (`Refrescar` y `Exportar CSV`) en una sola fila continua en computadora (`lg:grid-cols-5`).
+   - Todos los módulos comparten exactamente la misma altura y bordes luminosos corporativos.
+3. **Explicación Doctrinal de Funcionalidad y Finalidad para Eduardo**:
+   - **Refrescar**: Consulta la base de datos Supabase en vivo (`refetch()` de tRPC) y el estado de JanIA sin recargar la página del navegador, permitiendo ver al instante nuevas capturas de WhatsApp.
+   - **Exportar CSV**: Genera y descarga un archivo Excel con todas las coincidencias filtradas, teléfonos de contacto y porcentajes, útil para reportes ejecutivos, reuniones y seguimiento off-line.
+4. **Verificación y Despliegue en Producción**:
+   - `npm run check` (`tsc --noEmit`) verificado con cero errores.
+   - `npm run build` compilado exitosamente.
+   - Versión incrementada a `v31.21` en `shared/const.ts` y `package.json`.
+   - Cambios commiteados y enviados a GitHub (`main`) y desplegados en el servidor VPS recargando el proceso `jania-server` en PM2.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.20 — Septiembre 2026
 
 ### 🗓️ Sesión: Martes 8 de Septiembre de 2026 — 21:00 a 21:15 (Hora Colombia UTC-5)
 **Versión**: `v31.20` | **Ambiente**: Producción VPS (`13.140.149.144`) + Mesa de Control Admin Panel (`AdminMatches.tsx`) + Layout Principal (`Admin.tsx`) + GitHub (`main`)
