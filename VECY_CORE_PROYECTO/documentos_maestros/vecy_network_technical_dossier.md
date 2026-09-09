@@ -322,6 +322,34 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.18 — Septiembre 2026
+
+#### 📌 SOLUCIÓN DEFINITIVA A FALLO DE CRON DE JANIA, CABECERO FIJO Y FLOTANTE EN COINCIDENCIAS Y BOTÓN VOLVER ARRIBA
+
+**Problemas identificados:**
+1. **Fallo Crítico de `node-cron 4.2.1` en Tareas Semanales (Caso Martes 11:00 AM / 11:30 AM en Grupo 2 y Canal)**:
+   - El archivo `matcher-walker.js` de `node-cron` versión 4.2.1 contenía un error algorítmico grave: al calcular la próxima ejecución para días específicos de la semana (`0 11 * * 2`), incrementaba el año (`date.set('year', year + 1)`) en lugar del día, arrojando fechas en el año 2030 (`2030-01-01`).
+   - Debido a esto, el ejecutor de `node-cron` calculaba un delay superior a 24 horas (`86400000 ms`), estableciendo un timeout de hibernación estático y no disparando la tarea en su horario programado.
+2. **Navegación Frecuente y Pérdida del Cabecero en Coincidencias**:
+   - Al explorar decenas de coincidencias en la mesa de control (`AdminMatches.tsx`), especialmente en dispositivos móviles, la barra de búsqueda y filtros desaparecía de la pantalla al hacer scroll.
+   - El asesor o superadmin se veía obligado a desplazarse de regreso al inicio repetidamente para cambiar de filtro, buscar un inmueble o revisar estadísticas.
+
+**Solución aplicada:**
+- **Downgrade Estable a `node-cron 3.0.3` (`package.json`)**:
+  - Sustituida la versión 4.2.1 por `node-cron 3.0.3`, la cual posee un algoritmo de cálculo de fechas probado y sin el defecto de salto de años.
+- **Heartbeat Failsafe en `cronService.ts`**:
+  - Creado un intervalo de respaldo cada 60 segundos que consulta directamente la hora local de Bogotá (`America/Bogota`, UTC-5) para garantizar que, incluso ante cualquier reinicio o anomalía en el scheduler, las publicaciones programadas (11:00 AM, 11:30 AM, 8:00 AM) se ejecuten con puntualidad y resiliencia total.
+  - Sanitizados los recordatorios de fines de semana para erradicar cualquier mención residual del número baneado `3166569719`.
+- **Cabecero Fijo y Flotante (Sticky Header) en `AdminMatches.tsx` (`sticky top-0 z-30`)**:
+  - Barra de búsqueda y controles anclada al tope del contenedor de scroll con efecto translúcido `backdrop-blur-xl` y borde dorado sutil.
+  - Botón de limpieza rápida `X` en el buscador.
+  - Conteo en tiempo real en los botones de filtrado: `Todos (98)`, `🏷️ Compra / Venta (74)` y `🔑 Arriendo (24)`.
+  - Botones de acción rápida integrados (Refrescar y Exportar CSV).
+- **Botón Flotante 'Volver al Inicio' (Scroll to Top)**:
+  - Botón dorado interactivo en `fixed bottom-6 right-6` que aparece tras desplazarse 250px hacia abajo y realiza un scroll suave inmediato hasta la cima.
+
+---
+
 ### 🔖 v31.17 — Septiembre 2026
 
 #### 📌 BLINDAJE DE INGESTA WHATSAPP BAILEYS ('append'), SANITIZACIÓN JSON LLM Y OPTIMIZACIÓN O(1) DE MATCHING

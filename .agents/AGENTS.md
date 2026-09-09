@@ -163,7 +163,30 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.17 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.18 — Septiembre 2026
+
+### Novedades v31.18 (Solución Definitiva a Fallo de Cron de JanIA, Cabecero Fijo y Flotante en Coincidencias y Botón Volver Arriba):
+- **Diagnóstico y Corrección de Publicaciones Programadas de JanIA (Caso Martes 11:00 AM / 11:30 AM en Grupo 2 y Canal)**:
+  1) **Causa Raíz en `node-cron 4.2.1`**:
+     - En `node-cron 4.2.1` (`matcher-walker.js`), al calcular la siguiente ejecución para expresiones de días específicos de la semana (como `0 11 * * 2`), el algoritmo iteraba sumando años (`date.set('year', year + 1)`) en lugar de días, proyectando la próxima ejecución hasta el año 2030 (`2030-01-01`).
+     - Al superar el límite de 24 horas (`delay > 86400000`), el `runner` interno entraba en un timeout estático de hibernación de 24 horas y jamás ejecutaba la tarea a las 11:00 AM.
+  2) **Downgrade Estable y Blindaje Anti-Fallo (`cronService.ts`)**:
+     - Reemplazado `node-cron` por la versión estable probada `3.0.3` (`pnpm add -w node-cron@3.0.3`).
+     - Incorporado **Heartbeat Failsafe** cada 60 segundos evaluando la hora oficial de Colombia (`America/Bogota`, UTC-5) para garantizar la publicación puntual incluso ante reinicios o desincronizaciones de timers.
+     - Depurados todos los bloques `try/catch` con logs detallados y eliminada cualquier referencia residual al número baneado `3166569719` en los recordatorios de fines de semana.
+- **Rediseño de Cabecero Fijo y Flotante (Sticky Header) en Coincidencias (`AdminMatches.tsx`)**:
+  1) **Cabecero Fijo de Búsqueda y Filtros (`sticky top-0 z-30`)**:
+     - Al deslizarse por la mesa de coincidencias, la barra de búsqueda y filtros permanece fija en el tope de la pantalla con efecto translúcido `backdrop-blur-xl`.
+     - Permite buscar en cualquier momento sin tener que volver al inicio de la página.
+     - Botón de limpieza rápida `X` en el buscador.
+  2) **Pills de Operación con Conteo en Tiempo Real**:
+     - Cada botón muestra el conteo exacto de coincidencias: `Todos (98)`, `🏷️ Compra / Venta (74)`, `🔑 Arriendo (24)`.
+  3) **Botón Flotante 'Volver al Inicio' (Scroll to Top)**:
+     - Botón flotante dorado en `fixed bottom-6 right-6` que aparece tras desplazarse 250px y devuelve suavemente al usuario al inicio de la pantalla en un solo toque en móvil o PC.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.17 — Septiembre 2026
 
 ### Novedades v31.17 (Blindaje de Ingesta WhatsApp Baileys 'append', Sanitización JSON LLM y Optimización O(1) de Matching):
 - **Diagnóstico y Solución Integral de Ingesta y Captura de Requerimientos (Caso Daniel Cáceres)**:

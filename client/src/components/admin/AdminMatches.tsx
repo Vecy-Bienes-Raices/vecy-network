@@ -5,7 +5,8 @@ import {
   DollarSign, Ruler, Bed, Bath, Car, Shield, ExternalLink, Receipt, Box, Globe,
   Edit3, Save, Loader2, RotateCcw, Sun, Zap, Utensils, Home, Flame, ThumbsUp, ThumbsDown,
   Trees, ShieldCheck, BookOpen, Copy, Check, ClipboardList, Archive, Layers,
-  Tv, Wine, Wind, Lock, Dumbbell, Waves, Landmark, School, Fuel, Percent, Compass, Smile, Maximize, Coffee, Mountain, Trophy, ShieldAlert, VolumeX, Plus, Tag
+  Tv, Wine, Wind, Lock, Dumbbell, Waves, Landmark, School, Fuel, Percent, Compass, Smile, Maximize, Coffee, Mountain, Trophy, ShieldAlert, VolumeX, Plus, Tag,
+  ArrowUp, X
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -2248,6 +2249,33 @@ export default function AdminMatches() {
   const [saveStatusMap, setSaveStatusMap] = React.useState<Record<number, 'saved' | 'recalculated'>>({});
   const [customAttributesByMatch, setCustomAttributesByMatch] = React.useState<Record<number, { key: string; label: string }[]>>({});
   const [localUpdateTick, setLocalUpdateTick] = React.useState(0);
+  const [showScrollTop, setShowScrollTop] = React.useState(false);
+
+  React.useEffect(() => {
+    const mainEl = document.querySelector('main');
+    const handleScroll = () => {
+      if (mainEl) {
+        setShowScrollTop(mainEl.scrollTop > 250);
+      } else {
+        setShowScrollTop(window.scrollY > 250);
+      }
+    };
+    mainEl?.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      mainEl?.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
+  const scrollToTop = () => {
+    const mainEl = document.querySelector('main');
+    if (mainEl) {
+      mainEl.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
 
   const getCleanMatchReason = (rawReason?: string | null): string | null => {
     if (!rawReason) return null;
@@ -3474,6 +3502,29 @@ export default function AdminMatches() {
     return { total, perfect, approx, totalProps, totalReqs };
   }, [processedMatches, botStatus]);
 
+  const filterCounts = useMemo(() => {
+    const list = processedMatches || [];
+    let countVenta = 0;
+    let countArriendo = 0;
+    for (const m of list) {
+      const reqType = (m.requirement?.tipoNegocioDeseado || "").toLowerCase();
+      const propType = (m.property?.transactionType || "").toLowerCase();
+      const dual = isPropertyDualOffer(m.property);
+      const isReqVenta = reqType === 'venta' || !reqType;
+      const isPropVenta = propType === 'venta' || propType === 'venta_o_arriendo' || dual;
+      if (isReqVenta && isPropVenta) countVenta++;
+
+      const isReqArriendo = reqType === 'arriendo';
+      const isPropArriendo = propType === 'arriendo' || propType === 'venta_o_arriendo' || dual;
+      if (isReqArriendo && isPropArriendo) countArriendo++;
+    }
+    return {
+      all: list.length,
+      venta: countVenta,
+      arriendo: countArriendo
+    };
+  }, [processedMatches]);
+
   const exportData = () => {
     const headers = ['ID Coincidencia', 'Porcentaje Match', 'Propiedad', 'Propietario Telefono', 'Requerimiento', 'Interesado Telefono', 'Estado', 'Fecha'];
     const rows = (filteredMatches as any[]).map((m: any) => [
@@ -3598,84 +3649,150 @@ export default function AdminMatches() {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3 bg-zinc-900/40 p-3 sm:p-4 border border-white/5 rounded-2xl">
-        <div className="flex-1 w-full">
-          <Input
-            placeholder="Buscar por barrio, nombre, descripción o teléfono..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="bg-black/40 border-white/10 text-white placeholder-zinc-500 text-xs h-10 rounded-xl"
-          />
-        </div>
+      {/* ===== CABECERO FIJO Y FLOTANTE (STICKY SEARCH & FILTER TOOLBAR) ===== */}
+      <div className="sticky top-0 z-30 -mx-3 sm:-mx-6 lg:-mx-8 px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3 bg-[#09090c]/95 backdrop-blur-xl border-y border-[#bf953f]/30 shadow-[0_12px_35px_rgba(0,0,0,0.85)] transition-all">
+        <div className="flex flex-col gap-2.5">
+          {/* Fila Principal: Búsqueda y Acciones Rápidas */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Input de Búsqueda con Icono y Botón de Limpiar */}
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#bf953f] pointer-events-none" />
+              <Input
+                placeholder="Buscar por barrio, nombre, descripción o teléfono..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9 pr-8 bg-black/60 border-white/15 focus:border-[#bf953f] text-white placeholder-zinc-500 text-xs sm:text-sm h-10 rounded-xl transition-all"
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white p-1 rounded-md transition-colors cursor-pointer"
+                  title="Limpiar búsqueda"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
 
-        {/* Filtro Operación Comercial: Compra / Venta vs Arriendo - v31.16 */}
-        <div className="flex items-center gap-1 bg-black/40 border border-white/10 rounded-xl p-1 text-white h-10 w-full sm:w-auto shrink-0">
-          <button
-            type="button"
-            onClick={() => { setTransactionFilter('all'); setCurrentPage(1); }}
-            className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-              transactionFilter === 'all'
-                ? 'bg-[#bf953f] text-black shadow-md'
-                : 'text-zinc-400 hover:text-white hover:bg-white/5'
-            }`}
-          >
-            Todos
-          </button>
-          <button
-            type="button"
-            onClick={() => { setTransactionFilter('venta'); setCurrentPage(1); }}
-            className={`px-3 py-1 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-              transactionFilter === 'venta'
-                ? 'bg-emerald-600 text-white shadow-md'
-                : 'text-zinc-400 hover:text-white hover:bg-white/5'
-            }`}
-            title="Filtrar únicamente coincidencias de Compra (Demanda) y Venta (Oferta)"
-          >
-            <span>🏷️ Compra / Venta</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => { setTransactionFilter('arriendo'); setCurrentPage(1); }}
-            className={`px-3 py-1 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-              transactionFilter === 'arriendo'
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'text-zinc-400 hover:text-white hover:bg-white/5'
-            }`}
-            title="Filtrar únicamente coincidencias de Arriendo"
-          >
-            <span>🔑 Arriendo</span>
-          </button>
-        </div>
-        <div className="flex items-center gap-2 bg-black/40 border border-white/10 rounded-xl px-3 text-white h-10 w-full sm:w-auto shrink-0">
-          <SlidersHorizontal className="w-4 h-4 text-zinc-500 shrink-0" />
-          <span className="text-xs text-zinc-400 shrink-0">Filtro:</span>
-          <select
-            value={minScore}
-            onChange={(e) => setMinScore(e.target.value)}
-            className="bg-transparent border-none text-white focus:ring-0 text-xs font-semibold cursor-pointer outline-none w-full"
-          >
-            <option className="bg-[#0c0c0c]" value="80">⚡ Todos los Matches (80% - 100%)</option>
-            <option className="bg-[#0c0c0c]" value="80_94">⚡ MATCH Aproximado (80% - 94%)</option>
-            <option className="bg-[#0c0c0c]" value="95">🎯 MATCH Perfecto (95% - 100%)</option>
-          </select>
-        </div>
+            {/* Contador Compacto de Resultados */}
+            <div className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-bold text-[#fcf6ba] shrink-0">
+              <Sparkles className="w-3.5 h-3.5 text-[#bf953f]" />
+              <span>{filteredMatches.length}</span>
+              <span className="text-zinc-400 font-normal">matches</span>
+            </div>
 
-        <div className="flex items-center gap-2 bg-black/40 border border-white/10 rounded-xl px-3 text-white h-10 w-full sm:w-auto shrink-0">
-          <span className="text-xs text-zinc-400 shrink-0">Ver:</span>
-          <select
-            value={pageSize}
-            onChange={(e) => {
-              setPageSize(Number(e.target.value));
-              setCurrentPage(1);
-            }}
-            className="bg-transparent border-none text-white focus:ring-0 text-xs font-semibold cursor-pointer outline-none w-full"
-          >
-            <option className="bg-[#0c0c0c]" value="10">10 por pág.</option>
-            <option className="bg-[#0c0c0c]" value="25">25 por pág.</option>
-            <option className="bg-[#0c0c0c]" value="50">50 por pág.</option>
-            <option className="bg-[#0c0c0c]" value="100">100 (Todos)</option>
-          </select>
+            {/* Botón Refrescar Rápido */}
+            <Button
+              onClick={() => { refetch(); refetchBotStatus(); }}
+              variant="outline"
+              size="sm"
+              className="border-white/15 bg-white/5 hover:bg-white/10 text-zinc-200 hover:text-white h-10 px-3 rounded-xl shrink-0 text-xs font-semibold gap-1.5 cursor-pointer"
+              title="Actualizar coincidencias y estado"
+            >
+              <RotateCcw className={`w-3.5 h-3.5 text-[#bf953f] ${isLoading ? 'animate-spin' : ''}`} />
+              <span className="hidden md:inline">Refrescar</span>
+            </Button>
+
+            {/* Botón Exportar CSV */}
+            <Button
+              disabled={filteredMatches.length === 0}
+              onClick={exportData}
+              size="sm"
+              className="bg-[#bf953f] hover:bg-[#a67d32] text-black font-extrabold h-10 px-3 rounded-xl shrink-0 text-xs flex items-center gap-1.5 shadow-[0_0_12px_rgba(191,149,63,0.3)] cursor-pointer"
+              title="Descargar reporte en CSV"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span className="hidden lg:inline">Exportar CSV</span>
+            </Button>
+          </div>
+
+          {/* Segunda Fila: Filtros de Operación, Umbral de Match y Paginación */}
+          <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
+            {/* Filtro Operación Comercial: Compra / Venta vs Arriendo con Pills */}
+            <div className="flex items-center gap-1 bg-black/60 border border-white/15 rounded-xl p-1 text-white h-9 shrink-0 overflow-x-auto scrollbar-none w-full sm:w-auto justify-between sm:justify-start">
+              <button
+                type="button"
+                onClick={() => { setTransactionFilter('all'); setCurrentPage(1); }}
+                className={`px-3 py-1 text-[11px] sm:text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
+                  transactionFilter === 'all'
+                    ? 'bg-gradient-to-r from-[#bf953f] to-[#aa771c] text-black shadow-md font-extrabold'
+                    : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <span>Todos</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${transactionFilter === 'all' ? 'bg-black/25 text-black' : 'bg-white/10 text-zinc-400'}`}>
+                  {filterCounts.all}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => { setTransactionFilter('venta'); setCurrentPage(1); }}
+                className={`px-3 py-1 text-[11px] sm:text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                  transactionFilter === 'venta'
+                    ? 'bg-emerald-600 text-white shadow-md font-extrabold'
+                    : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                }`}
+                title="Filtrar únicamente coincidencias de Compra (Demanda) y Venta (Oferta)"
+              >
+                <span>🏷️ Compra / Venta</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${transactionFilter === 'venta' ? 'bg-black/30 text-white' : 'bg-white/10 text-zinc-400'}`}>
+                  {filterCounts.venta}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => { setTransactionFilter('arriendo'); setCurrentPage(1); }}
+                className={`px-3 py-1 text-[11px] sm:text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                  transactionFilter === 'arriendo'
+                    ? 'bg-blue-600 text-white shadow-md font-extrabold'
+                    : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                }`}
+                title="Filtrar únicamente coincidencias de Arriendo"
+              >
+                <span>🔑 Arriendo</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${transactionFilter === 'arriendo' ? 'bg-black/30 text-white' : 'bg-white/10 text-zinc-400'}`}>
+                  {filterCounts.arriendo}
+                </span>
+              </button>
+            </div>
+
+            {/* Controles Derecha: Filtro de Calificación y Ver Por Página */}
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+              {/* Score Dropdown */}
+              <div className="flex items-center gap-1.5 bg-black/60 border border-white/15 rounded-xl px-2.5 text-white h-9 text-xs shrink-0 flex-1 sm:flex-initial">
+                <SlidersHorizontal className="w-3.5 h-3.5 text-[#bf953f] shrink-0" />
+                <span className="text-zinc-400 shrink-0 hidden md:inline text-[11px]">Filtro:</span>
+                <select
+                  value={minScore}
+                  onChange={(e) => setMinScore(e.target.value)}
+                  className="bg-transparent border-none text-white focus:ring-0 text-[11px] sm:text-xs font-semibold cursor-pointer outline-none w-full"
+                >
+                  <option className="bg-[#0c0c0e]" value="80">⚡ Todos (80% - 100%)</option>
+                  <option className="bg-[#0c0c0e]" value="80_94">⚡ Aprox. (80% - 94%)</option>
+                  <option className="bg-[#0c0c0e]" value="95">🎯 Perfectos (95% - 100%)</option>
+                </select>
+              </div>
+
+              {/* Page Size Dropdown */}
+              <div className="flex items-center gap-1 bg-black/60 border border-white/15 rounded-xl px-2.5 text-white h-9 text-xs shrink-0">
+                <span className="text-zinc-400 shrink-0 text-[11px]">Ver:</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="bg-transparent border-none text-white focus:ring-0 text-[11px] sm:text-xs font-semibold cursor-pointer outline-none"
+                >
+                  <option className="bg-[#0c0c0e]" value="10">10</option>
+                  <option className="bg-[#0c0c0e]" value="25">25</option>
+                  <option className="bg-[#0c0c0e]" value="50">50</option>
+                  <option className="bg-[#0c0c0e]" value="100">100</option>
+                </select>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -6011,6 +6128,22 @@ export default function AdminMatches() {
         <div>VECY Network Colombia &copy; 2026</div>
         <div className="text-[#bf953f] font-bold">{VECY_VERSION_LABEL}</div>
       </div>
+
+      {/* Botón Flotante Volver Arriba */}
+      <AnimatePresence>
+        {showScrollTop && (
+          <motion.button
+            initial={{ opacity: 0, scale: 0.8, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.8, y: 20 }}
+            onClick={scrollToTop}
+            className="fixed bottom-6 right-6 z-50 p-3.5 rounded-full bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#bf953f] text-black shadow-[0_4px_25px_rgba(191,149,63,0.6)] hover:scale-110 active:scale-95 transition-all flex items-center justify-center cursor-pointer border-2 border-black/20"
+            title="Volver al inicio"
+          >
+            <ArrowUp className="w-5 h-5 text-black stroke-[3]" />
+          </motion.button>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

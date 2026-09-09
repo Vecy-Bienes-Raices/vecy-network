@@ -50,7 +50,52 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.17 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.18 — Septiembre 2026
+
+### 🗓️ Sesión: Martes 8 de Septiembre de 2026 — 20:15 a 20:30 (Hora Colombia UTC-5)
+**Versión**: `v31.18` | **Ambiente**: Producción VPS (`13.140.149.144`) + Mesa de Cotejo Admin Panel (`AdminMatches.tsx`) + Orquestador Cron (`cronService.ts`) + GitHub (`main`)
+
+#### 🎯 Solicitud de Eduardo A. Rivera:
+1. "No se si por esa misma razón que me acabas de contar fue que JanIA dejó de publicar en el 'Grupo Oficial #2' y el 'Canal de Vecy Bienes Raíces' hoy a las 11:00 AM o 11:30 AM como lo debe hacer normalmente. Revisa sin embargo."
+2. "Y aparte quisiera que me ayudaras a diseñar mejor este cabecero y sobre todo como para que quede fijo y poderlo ver en cada publicación en especial en el celular para no llegar a una publicación final en la pantalla y si tengo que buscar otra devolverme nuevamente hasta el inicio y así sucesivamente, debería tener un mejor diseño o no se cómo se le llama a eso." (Imagen adjunta de la cabecera y barra de filtros de coincidencias).
+
+#### 🔍 Diagnóstico Técnico Profundo y Causas Raíz:
+1. **Bug Crítico de Cálculo de Años en `node-cron 4.2.1` para Publicaciones Automatizadas**:
+   - `package.json` tenía la dependencia `"node-cron": "^4.2.1"`.
+   - En `node-cron 4.2.1`, el archivo interno `dist/cjs/time/matcher-walker.js` (líneas 73-77) contiene un error crítico de cálculo:
+     ```javascript
+     while (!(weekdays.indexOf(currentWeekday) > -1)) {
+         date.set('year', date.getParts().year + 1); // <--- Salto de años en lugar de días
+         currentWeekday = parseInt(weekDayNamesConversion(date.getParts().weekday));
+     }
+     ```
+   - Al programar `0 11 * * 2` (Martes 11:00 AM) con `{ timezone: 'America/Bogota' }`, `node-cron 4.2.1` calculó la próxima ejecución para el año **`2030-01-01` (¡4 años en el futuro!)**.
+   - Al recibir un retraso mayor a 24 horas, `runner.js` estableció un temporizador inactivo de 24 horas (`_idleTimeout: 86400000`), suspendiendo la tarea e impidiendo que se ejecutara hoy a las 11:00 AM.
+   - Además, existían menciones residuales de un número telefónico deprecado en prompts de fin de semana.
+2. **Cabecera Estática y Falta de Persistencia Visual al Desplazarse (Pain Point Móvil)**:
+   - En `AdminMatches.tsx`, la barra de búsqueda y filtros era estática (`bg-zinc-900/40 rounded-2xl`). Al desplazarse por la cuadrícula de publicaciones (25 a 50 coincidencias compuestas por tarjetas dobles extensas), los controles desaparecían inmediatamente de la vista.
+   - En dispositivos móviles, el usuario debía desplazarse cientos de píxeles hacia abajo y luego retroceder penosamente hasta el principio para cambiar filtros o realizar una nueva búsqueda.
+
+#### 🛠️ Acciones Ejecutadas:
+1. **Solución Definitiva del Orquestador de Publicaciones (`server/_core/cronService.ts` & `package.json`)**:
+   - Downgrade oficial a `node-cron@3.0.3` (versión estándar e inmutable probada sin el bug de saltos anuales).
+   - Erradicación total de menciones al número deprecado en prompts y captions.
+   - Envoltura integral de todos los callbacks diarios dentro de bloques `try / catch` para garantizar tolerancia a fallos.
+   - Implementación de la **Guardia de Seguridad Minutera (Failsafe Heartbeat Ticker)**: un temporizador cada 60 segundos que coteja la hora oficial de Colombia (`America/Bogota`, UTC-5) y dispara las agendas si `node-cron` no se activase.
+2. **Cabecero Fijo y Flotante Ultra-Premium (`client/src/components/admin/AdminMatches.tsx`)**:
+   - Barra de control convertida en **Sticky Header** (`sticky top-0 z-30 -mx-3 sm:-mx-6 lg:-mx-8 px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3 bg-[#09090c]/95 backdrop-blur-xl border-y border-[#bf953f]/30 shadow-[0_12px_35px_rgba(0,0,0,0.85)]`).
+   - Se mantiene anclada en la parte superior tanto en PC como en móviles mientras el usuario explora las publicaciones.
+   - **Búsqueda Avanzada**: Input con icono dorado, botón de limpieza rápida (`X`) y focus ring dorado.
+   - **Contadores en Vivo por Filtro**: Pills de operación con conteo en tiempo real (`Todos (X)`, `🏷️ Compra / Venta (Y)`, `🔑 Arriendo (Z)`).
+   - **Acciones Rápidas Integradas**: Botón `Refrescar` con icono giratorio y `Exportar CSV` accesibles en todo momento sin subir al inicio.
+   - **Botón Flotante "Volver al Inicio" (`Scroll to Top`)**: Botón circular dorado flotante (`fixed bottom-6 right-6 z-50`) con animación Framer Motion que aparece al desplazarse más de 250px y permite volver a la cabecera con 1 solo toque.
+3. **Versión, Compilación y Despliegue**:
+   - Versión oficial elevada a `v31.18` en `shared/const.ts` y `package.json`.
+   - Compilación limpia con `npm run check` y `npm run build` (0 errores).
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.17 — Septiembre 2026
 
 ### 🗓️ Sesión: Martes 8 de Septiembre de 2026 — 13:30 a 13:45 (Hora Colombia UTC-5)
 **Versión**: `v31.17` | **Ambiente**: Producción VPS (`13.140.149.144`) + WhatsApp Ingesta Baileys (`+573192919978`) + Motor Matching + Supabase DB + GitHub (`main`)
