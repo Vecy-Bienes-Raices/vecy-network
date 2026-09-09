@@ -163,7 +163,32 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.19 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.20 — Septiembre 2026
+
+### Novedades v31.20 (Separación Total de Botón Flotante respecto al Avatar de JanIA y Sellado a 0px del Cabecero Sticky):
+- **Diagnóstico y Corrección de Superposición con JanIA (`JanIAFloatingButton.tsx` vs `AdminMatches.tsx`)**:
+  1) **Causa Raíz del Solapamiento**:
+     - El avatar flotante de JanIA se monta globalmente en `fixed bottom-6 right-6 md:bottom-8 md:right-8` (64px ancho en móvil, 96px en computadora).
+     - Al colocar el botón de retorno al inicio en `bottom-6 right-6`, quedaba montado directamente sobre la cara de JanIA, tapándola por completo.
+  2) **Desacople Espacial y Rediseño Circular Dorado (`createPortal`)**:
+     - Reubicado el botón a la izquierda de JanIA en `fixed bottom-6 right-26 sm:right-28 md:bottom-8 md:right-36 lg:right-40 z-[99999]`.
+     - Separación garantizada de más de 24px en móvil y 32px en computadora respecto al widget de JanIA: cero solapamiento o conflicto táctil.
+     - Transformado de un botón rectangular grande a un botón de acción flotante (FAB) circular de alta gama (`w-12 h-12 md:w-14 md:h-14`), con gradiente dorado metálico, icono `ArrowUp` nítido, micro-animación en hover y tooltip flotante elegante `"Volver Arriba"`.
+- **Diagnóstico y Sellado a 0px del Cabecero Fijo (Eliminación de Filtración Superior de Fichas)**:
+  1) **Causa Raíz de Fichas que Asomaban sobre la Barra**:
+     - En CSS, cuando un elemento `sticky top-0` hereda `margin-top: 1.5rem` (generado por `space-y-6` en el contenedor padre) o cuando el contenedor `<main>` posee `padding-top: 32px`, el elemento se adhiere dejando una franja abierta en la parte superior.
+     - Al desplazarse por las coincidencias, las tarjetas subían y asomaban por encima de la barra de búsqueda antes de desaparecer.
+  2) **Sellado Hermético a Cero Píxeles**:
+     - Retirado `space-y-6` del contenedor raíz y asignado `mb-6` directo a `Header Maestro` y `Ribbon KPI`, asegurando que la barra sticky tenga `mt-0`.
+     - Establecido `<main>` con `pt-0` y fondo 100% sólido opaco (`bg-[#09090c]`) con bordes extendidos (`-mx-4 sm:-mx-6 lg:-mx-8`).
+     - Al hacer scroll, la barra de búsqueda se acopla inmediatamente a `top: 0` sin un solo píxel de luz; las tarjetas pasan limpiamente por debajo sin asomar ni desbordar jamás.
+- **Armonización de la Barra de Comandos en Computadora (`media_1788916804225.png`)**:
+  - Retirados los botones duplicados de `Refrescar` y `CSV` del interior de la barra de búsqueda (estos permanecen en el Header Maestro de la mesa).
+  - El buscador recupera amplitud y comodidad visual con `min-w-[280px] flex-1`, manteniendo centradas las pills de negocio (`Todos`, `Compra/Venta`, `Arriendo`) y los selectores a la derecha.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.19 — Septiembre 2026
 
 ### Novedades v31.19 (Rediseño Ejecutivo de Cabecero en Computadora, Barra de Comandos en 1 Fila y Botón Flotante Permanente con React Portal):
 - **Diagnóstico y Solución de Comportamiento del Botón Flotante de Retorno al Inicio**:

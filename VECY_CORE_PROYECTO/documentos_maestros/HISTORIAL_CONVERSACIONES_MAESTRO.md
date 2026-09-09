@@ -50,7 +50,46 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.19 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.20 — Septiembre 2026
+
+### 🗓️ Sesión: Martes 8 de Septiembre de 2026 — 21:00 a 21:15 (Hora Colombia UTC-5)
+**Versión**: `v31.20` | **Ambiente**: Producción VPS (`13.140.149.144`) + Mesa de Control Admin Panel (`AdminMatches.tsx`) + Layout Principal (`Admin.tsx`) + GitHub (`main`)
+
+#### 🎯 Solicitud de Eduardo A. Rivera:
+"Como te das cuenta siguen cositas fuera de lugar. y el botón flotante volver está tapando el widget de JanIA. Sigue sin gustarme"
+
+#### 🔍 Diagnóstico Técnico Profundo:
+1. **Solapamiento Crítico con el Avatar de JanIA en la Esquina Inferior Derecha**:
+   - En `client/src/components/JanIAFloatingButton.tsx`, el widget de JanIA está fijado en `fixed bottom-6 right-6 md:bottom-8 md:right-8` (64px ancho en móvil, 96px en computadora).
+   - En la versión previa, el botón de retorno al inicio (`Volver Arriba`) se montó directamente en `bottom-6 right-6` con formato de píldora ancha, quedando posicionado encima de la cara del avatar de JanIA y bloqueando su visibilidad y clic.
+2. **Brecha Superior y Fichas que Asomaban sobre el Cabecero Sticky**:
+   - En `client/src/components/admin/AdminMatches.tsx`, el contenedor padre tenía la clase Tailwind `space-y-6`, la cual inyecta automáticamente `margin-top: 1.5rem` (24px) a todos sus hijos directos.
+   - Según la especificación W3C de CSS Sticky Positioning, un elemento con `position: sticky; top: 0;` y `margin-top: 24px` se adhiere desplazado 24px por debajo del borde superior del contenedor de scroll.
+   - Debido a esto, sumado al padding previo del contenedor `<main>`, al hacer scroll hacia abajo las tarjetas de coincidencias ascendían y se asomaban por encima de la barra de búsqueda antes de desaparecer, produciendo la percepción de elementos rotos y "fuera de lugar".
+3. **Sobrecarga en la Barra de Comandos en Computadora**:
+   - La inclusión de botones adicionales de `Refrescar` y `CSV` en la misma fila de búsqueda comprimía el campo de texto y alteraba el equilibrio estético que Eduardo prefería de la versión original.
+
+#### 🛠️ Acciones Ejecutadas:
+1. **Desacople Espacial Total y Rediseño Circular de Alta Gama (`AdminMatches.tsx`)**:
+   - Reubicado el botón flotante a la izquierda del avatar de JanIA en `fixed bottom-6 right-26 sm:right-28 md:bottom-8 md:right-36 lg:right-40 z-[99999]` montado en `document.body` vía `createPortal`.
+   - Garantizada una separación nítida de 24px a 32px respecto a JanIA: cero interferencias visuales ni conflicto táctil.
+   - Transformado en un botón circular compacto de lujo (`w-12 h-12 md:w-14 md:h-14`) con gradiente dorado metálico, icono `ArrowUp` de trazo grueso, micro-animación en hover y tooltip explicativo `"Volver Arriba"`.
+2. **Sellado Hermético a Cero Píxeles del Cabecero Fijo**:
+   - Retirado `space-y-6` del contenedor padre de `AdminMatches.tsx` y aplicado `mb-6` directo a `Header Maestro` y `Ribbon KPI`, garantizando que la barra sticky tenga `margin-top: 0` exacto.
+   - Configurado `<main>` en `Admin.tsx` con `pt-0` y fondo 100% sólido opaco (`bg-[#09090c]`) con márgenes negativos compensados (`-mx-4 sm:-mx-6 lg:-mx-8`).
+   - Al hacer scroll, la barra se adhiere herméticamente a `top: 0` sin un solo píxel de luz; las tarjetas se ocultan limpiamente por debajo sin desbordar ni asomar jamás.
+3. **Armonización de la Barra de Comandos en Computadora**:
+   - Removidos los botones duplicados de `Refrescar` y `CSV` de la barra sticky en escritorio (permanecen accesibles y destacados en el Header Maestro de la mesa).
+   - El buscador recupera amplitud y comodidad (`min-w-[280px] flex-1`), logrando un equilibrio visual perfecto y una experiencia de filtrado instantánea.
+4. **Verificación y Despliegue en Producción**:
+   - `npm run check` (`tsc --noEmit`) verificado con cero errores.
+   - `npm run build` compilado exitosamente.
+   - Versión incrementada a `v31.20` en `shared/const.ts` y `package.json`.
+   - Cambios commiteados y enviados a GitHub (`main`) y desplegados en el servidor VPS recargando el proceso `jania-server` en PM2.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.19 — Septiembre 2026
 
 ### 🗓️ Sesión: Martes 8 de Septiembre de 2026 — 20:45 a 20:55 (Hora Colombia UTC-5)
 **Versión**: `v31.19` | **Ambiente**: Producción VPS (`13.140.149.144`) + Mesa de Control Admin Panel (`AdminMatches.tsx`) + Layout Principal (`Admin.tsx`) + GitHub (`main`)

@@ -3552,9 +3552,9 @@ export default function AdminMatches() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="pt-4 sm:pt-6">
       {/* Header Maestro */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-br from-[#121216] via-[#09090b] to-black p-5 sm:p-6 border border-[#bf953f]/30 rounded-2xl sm:rounded-3xl shadow-[0_10px_30px_rgba(0,0,0,0.6)] relative overflow-hidden">
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-br from-[#121216] via-[#09090b] to-black p-5 sm:p-6 border border-[#bf953f]/30 rounded-2xl sm:rounded-3xl shadow-[0_10px_30px_rgba(0,0,0,0.6)] relative overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-36 bg-[#bf953f]/5 blur-3xl pointer-events-none" />
         
         <div className="relative z-10">
@@ -3594,7 +3594,7 @@ export default function AdminMatches() {
       </div>
 
       {/* KPI Stats Ribbon */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="mb-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="bg-gradient-to-b from-[#16161b] to-black/80 border border-[#bf953f]/30 p-3.5 rounded-2xl flex items-center gap-3 shadow-md hover:border-[#bf953f]/60 transition-all">
           <div className="w-10 h-10 rounded-xl bg-[#bf953f]/10 border border-[#bf953f]/30 flex items-center justify-center shrink-0">
             <Sparkles className="w-5 h-5 text-[#bf953f]" />
@@ -3669,14 +3669,14 @@ export default function AdminMatches() {
       </div>
 
       {/* ===== BARRA DE BÚSQUEDA Y FILTROS FIJA (STICKY COMMAND TOOLBAR) ===== */}
-      <div className="sticky top-0 z-30 -mx-3 sm:-mx-6 lg:-mx-8 px-3 sm:px-6 lg:px-8 py-3 bg-[#0a0a0d]/95 backdrop-blur-xl border-y border-[#bf953f]/30 shadow-[0_12px_35px_rgba(0,0,0,0.85)] transition-all">
-        {/* VISTA COMPUTADORA (>= lg: Una sola fila continua, ultra-elegante y proporcionada) */}
-        <div className="hidden lg:flex items-center justify-between gap-3 w-full">
-          {/* Buscador */}
-          <div className="relative flex-1 min-w-[240px] max-w-[380px]">
+      <div className="sticky top-0 z-30 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-3 bg-[#09090c] border-b border-[#bf953f]/40 shadow-[0_15px_35px_rgba(0,0,0,0.95)] transition-all">
+        {/* VISTA COMPUTADORA (>= lg: Una sola fila continua, amplia, ultra-elegante y proporcionada) */}
+        <div className="hidden lg:flex items-center justify-between gap-4 w-full">
+          {/* Buscador amplio */}
+          <div className="relative flex-1 min-w-[280px]">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#bf953f] pointer-events-none" />
             <Input
-              placeholder="Buscar por barrio, asesor, teléfono..."
+              placeholder="Buscar por barrio, nombre, asesor, teléfono..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9 pr-8 bg-black/70 border-white/15 focus:border-[#bf953f] text-white placeholder-zinc-500 text-xs h-10 rounded-xl transition-all shadow-inner"
@@ -3698,7 +3698,7 @@ export default function AdminMatches() {
             <button
               type="button"
               onClick={() => { setTransactionFilter('all'); setCurrentPage(1); }}
-              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+              className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-2 cursor-pointer ${
                 transactionFilter === 'all'
                   ? 'bg-gradient-to-r from-[#bf953f] to-[#aa771c] text-black shadow-md font-extrabold'
                   : 'text-zinc-400 hover:text-white hover:bg-white/5'
@@ -3712,7 +3712,7 @@ export default function AdminMatches() {
             <button
               type="button"
               onClick={() => { setTransactionFilter('venta'); setCurrentPage(1); }}
-              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+              className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-2 cursor-pointer ${
                 transactionFilter === 'venta'
                   ? 'bg-emerald-600 text-white shadow-md font-extrabold'
                   : 'text-zinc-400 hover:text-white hover:bg-white/5'
@@ -3727,7 +3727,7 @@ export default function AdminMatches() {
             <button
               type="button"
               onClick={() => { setTransactionFilter('arriendo'); setCurrentPage(1); }}
-              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+              className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-2 cursor-pointer ${
                 transactionFilter === 'arriendo'
                   ? 'bg-blue-600 text-white shadow-md font-extrabold'
                   : 'text-zinc-400 hover:text-white hover:bg-white/5'
@@ -3742,7 +3742,7 @@ export default function AdminMatches() {
           </div>
 
           {/* Filtro de Calificación */}
-          <div className="flex items-center gap-1.5 bg-black/70 border border-white/15 rounded-xl px-3 text-white h-10 text-xs shrink-0">
+          <div className="flex items-center gap-2 bg-black/70 border border-white/15 rounded-xl px-3 text-white h-10 text-xs shrink-0">
             <SlidersHorizontal className="w-3.5 h-3.5 text-[#bf953f] shrink-0" />
             <span className="text-zinc-400 text-[11px] shrink-0">Filtro:</span>
             <select
@@ -3757,7 +3757,7 @@ export default function AdminMatches() {
           </div>
 
           {/* Ver Por Página */}
-          <div className="flex items-center gap-1.5 bg-black/70 border border-white/15 rounded-xl px-3 text-white h-10 text-xs shrink-0">
+          <div className="flex items-center gap-2 bg-black/70 border border-white/15 rounded-xl px-3 text-white h-10 text-xs shrink-0">
             <span className="text-zinc-400 text-[11px] shrink-0">Ver:</span>
             <select
               value={pageSize}
@@ -3772,28 +3772,6 @@ export default function AdminMatches() {
               <option className="bg-[#0c0c0e]" value="50">50 por pág.</option>
               <option className="bg-[#0c0c0e]" value="100">100 por pág.</option>
             </select>
-          </div>
-
-          {/* Acciones Rápidas Disponibles en Modo Sticky */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            <button
-              onClick={() => { refetch(); refetchBotStatus(); }}
-              className="h-10 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 text-zinc-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
-              title="Refrescar coincidencias"
-            >
-              <RotateCcw className={`w-3.5 h-3.5 text-[#bf953f] ${isLoading ? 'animate-spin' : ''}`} />
-              <span className="text-[11px]">Refrescar</span>
-            </button>
-
-            <button
-              disabled={filteredMatches.length === 0}
-              onClick={exportData}
-              className="h-10 px-3 rounded-xl bg-[#bf953f] hover:bg-[#a67d32] text-black font-extrabold text-xs flex items-center gap-1.5 shadow-[0_0_12px_rgba(191,149,63,0.3)] transition-all cursor-pointer"
-              title="Exportar reporte CSV"
-            >
-              <Download className="w-3.5 h-3.5 stroke-[2.5]" />
-              <span className="text-[11px]">CSV</span>
-            </button>
           </div>
         </div>
 
@@ -3913,12 +3891,12 @@ export default function AdminMatches() {
 
       {/* Matches Grid */}
       {isLoading ? (
-        <div className="py-20 flex flex-col items-center justify-center gap-4">
+        <div className="mt-6 py-20 flex flex-col items-center justify-center gap-4">
           <div className="w-8 h-8 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
           <p className="text-zinc-500 text-sm">Buscando reportes de matching...</p>
         </div>
       ) : isError ? (
-        <div className="p-12 text-center border border-amber-500/20 rounded-2xl bg-amber-500/5">
+        <div className="mt-6 p-12 text-center border border-amber-500/20 rounded-2xl bg-amber-500/5">
           <AlertTriangle className="w-10 h-10 text-amber-400 mx-auto mb-3" />
           <h3 className="text-base font-bold text-amber-200">No se pudieron cargar las coincidencias</h3>
           <p className="text-zinc-400 text-xs mt-1 mb-4">Ocurrió un error temporal de conexión o tiempo de espera con el servidor.</p>
@@ -3927,13 +3905,13 @@ export default function AdminMatches() {
           </Button>
         </div>
       ) : filteredMatches.length === 0 ? (
-        <div className="p-20 text-center border border-white/5 rounded-2xl bg-zinc-950/40">
+        <div className="mt-6 p-20 text-center border border-white/5 rounded-2xl bg-zinc-950/40">
           <Sparkles className="w-12 h-12 text-[#bf953f] mx-auto mb-4 opacity-40 animate-pulse" />
           <h3 className="text-lg font-semibold text-zinc-300">No se encontraron coincidencias</h3>
           <p className="text-zinc-500 text-sm mt-1">Intenta reducir el filtro de match mínimo o realizar una nueva búsqueda.</p>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="mt-6 space-y-6">
           <div className="grid grid-cols-1 gap-6">
             <AnimatePresence>
               {(paginatedMatches as any[]).map((m: any, idx: number) => {
@@ -6244,21 +6222,23 @@ export default function AdminMatches() {
         <div className="text-[#bf953f] font-bold">{VECY_VERSION_LABEL}</div>
       </div>
 
-      {/* Botón Flotante Volver Arriba (Montado en document.body para permanecer 100% fijo al viewport) */}
+      {/* Botón Flotante Volver Arriba (Ubicado a la izquierda del avatar de JanIA para no taparlo jamás) */}
       {typeof document !== 'undefined' && showScrollTop && createPortal(
         <AnimatePresence>
           <motion.button
             initial={{ opacity: 0, scale: 0.8, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.8, y: 20 }}
-            whileHover={{ scale: 1.06 }}
-            whileTap={{ scale: 0.94 }}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
             onClick={scrollToTop}
-            className="fixed bottom-6 right-6 z-[99999] flex items-center gap-2 px-4 py-3 rounded-full bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#bf953f] text-black font-extrabold text-xs shadow-[0_8px_30px_rgba(191,149,63,0.7)] border-2 border-black/30 cursor-pointer backdrop-blur-md transition-all hover:shadow-[0_12px_35px_rgba(191,149,63,0.9)]"
+            className="fixed bottom-6 right-26 sm:right-28 md:bottom-8 md:right-36 lg:right-40 z-[99999] w-12 h-12 md:w-14 md:h-14 rounded-full bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#bf953f] text-black shadow-[0_6px_25px_rgba(191,149,63,0.7)] hover:shadow-[0_8px_35px_rgba(191,149,63,0.95)] border-2 border-black/40 flex items-center justify-center cursor-pointer transition-all group"
             title="Volver al inicio de la página"
           >
-            <ArrowUp className="w-4 h-4 text-black stroke-[3]" />
-            <span className="hidden sm:inline tracking-wider uppercase text-[11px] font-black text-black">Volver Arriba</span>
+            <ArrowUp className="w-5 h-5 md:w-6 md:h-6 text-black stroke-[3] group-hover:-translate-y-0.5 transition-transform" />
+            <span className="absolute -top-9 left-1/2 -translate-x-1/2 bg-black/90 text-[#bf953f] border border-[#bf953f]/40 text-[10px] font-black px-2.5 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap shadow-xl">
+              Volver Arriba
+            </span>
           </motion.button>
         </AnimatePresence>,
         document.body

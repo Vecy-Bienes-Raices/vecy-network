@@ -322,6 +322,35 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.20 — Septiembre 2026
+
+#### 📌 SEPARACIÓN TOTAL DE BOTÓN FLOTANTE RESPECTO A WIDGET JANIA Y SELLADO A 0PX DEL CABECERO STICKY
+
+**Problemas identificados:**
+1. **Solapamiento Crítico con el Avatar de JanIA**:
+   - El widget de JanIA (`JanIAFloatingButton.tsx`) está posicionado globalmente en la esquina inferior derecha (`fixed bottom-6 right-6 md:bottom-8 md:right-8`).
+   - Al renderizar el botón de retorno al inicio en las mismas coordenadas, tapaba físicamente la cara de JanIA, impidiendo su visibilidad e interacción fluida.
+2. **Filtración y Asomado Superior de Fichas Inmobiliarias (Brecha de 24px-32px)**:
+   - Al tener `space-y-6` en el contenedor padre, la barra sticky heredaba un `margin-top: 1.5rem` (24px). En CSS, `position: sticky; top: 0;` con margen superior genera un desplazamiento hacia abajo del elemento adherido.
+   - Sumado al padding superior del contenedor `<main>`, las tarjetas que ascendían durante el scroll pasaban por detrás y asomaban por encima de la barra de búsqueda antes de desaparecer, dando una impresión visual de elementos rotos y fuera de lugar.
+3. **Sobrecarga de Botones en la Barra de Búsqueda de Computadora**:
+   - La inclusión de botones redundantes de `Refrescar` y `CSV` en la misma línea de búsqueda reducía el campo de texto y alteraba la armonía ejecutiva deseada.
+
+**Solución aplicada:**
+- **Desacople Espacial y Rediseño Circular Dorado (`createPortal` en `AdminMatches.tsx`)**:
+  - Reubicado el botón flotante a la izquierda de JanIA en `fixed bottom-6 right-26 sm:right-28 md:bottom-8 md:right-36 lg:right-40 z-[99999]`.
+  - Deja una separación nítida de 24px a 32px respecto a JanIA: cero interferencias visuales ni conflictos de tap.
+  - Transformado en un botón circular compacto de lujo (`w-12 h-12 md:w-14 md:h-14`) con gradiente dorado metálico, icono `ArrowUp` de trazo grueso, micro-animación en hover y tooltip explicativo `"Volver Arriba"`.
+- **Sellado a Cero Píxeles del Cabecero Fijo**:
+  - Eliminado `space-y-6` del contenedor padre de `AdminMatches.tsx`, aplicando espaciado inferior (`mb-6`) directo al Header Maestro y Ribbon KPI. De este modo, la barra sticky posee `margin-top: 0` exacto.
+  - Establecido `<main>` en `Admin.tsx` con `pt-0` y fondo 100% sólido opaco (`bg-[#09090c]`) con márgenes negativos compensados (`-mx-4 sm:-mx-6 lg:-mx-8`).
+  - Al hacer scroll, la barra se adhiere herméticamente a `top: 0` sin un solo píxel de luz; las tarjetas se ocultan limpiamente por debajo sin desbordar ni asomar jamás.
+- **Armonización de la Barra de Comandos en Computadora**:
+  - Removidos los botones duplicados de `Refrescar` y `CSV` de la barra sticky en escritorio (permanecen accesibles y destacados en el Header Maestro de la mesa).
+  - El buscador recupera amplitud y comodidad (`min-w-[280px] flex-1`), logrando un equilibrio visual perfecto y una experiencia de filtrado instantánea.
+
+---
+
 ### 🔖 v31.19 — Septiembre 2026
 
 #### 📌 REDISEÑO EJECUTIVO DE CABECERO EN COMPUTADORA, BARRA DE COMANDOS EN 1 FILA Y BOTÓN FLOTANTE PERMANENTE CON REACT PORTAL
