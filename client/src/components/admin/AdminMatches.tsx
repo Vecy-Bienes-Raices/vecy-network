@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Phone, MapPin, Search, Download, Building2, Calendar, 
   Sparkles, CheckCircle2, AlertTriangle, XCircle, SlidersHorizontal, 
@@ -2254,17 +2255,17 @@ export default function AdminMatches() {
   React.useEffect(() => {
     const mainEl = document.querySelector('main');
     const handleScroll = () => {
-      if (mainEl) {
-        setShowScrollTop(mainEl.scrollTop > 250);
-      } else {
-        setShowScrollTop(window.scrollY > 250);
-      }
+      const mainTop = mainEl ? mainEl.scrollTop : 0;
+      const winTop = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
+      setShowScrollTop(mainTop > 180 || winTop > 180);
     };
     mainEl?.addEventListener('scroll', handleScroll, { passive: true });
     window.addEventListener('scroll', handleScroll, { passive: true });
+    document.addEventListener('scroll', handleScroll, { passive: true });
     return () => {
       mainEl?.removeEventListener('scroll', handleScroll);
       window.removeEventListener('scroll', handleScroll);
+      document.removeEventListener('scroll', handleScroll);
     };
   }, []);
 
@@ -2272,9 +2273,10 @@ export default function AdminMatches() {
     const mainEl = document.querySelector('main');
     if (mainEl) {
       mainEl.scrollTo({ top: 0, behavior: 'smooth' });
-    } else {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    document.documentElement.scrollTo({ top: 0, behavior: 'smooth' });
+    document.body.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const getCleanMatchReason = (rawReason?: string | null): string | null => {
@@ -3551,24 +3553,41 @@ export default function AdminMatches() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-zinc-950 p-4 sm:p-6 border border-white/10 rounded-2xl sm:rounded-3xl shadow-xl">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
-            <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-[#bf953f] animate-pulse shrink-0" />
-            <span>Mesa de Control de Coincidencias</span>
-          </h2>
+      {/* Header Maestro */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-br from-[#121216] via-[#09090b] to-black p-5 sm:p-6 border border-[#bf953f]/30 rounded-2xl sm:rounded-3xl shadow-[0_10px_30px_rgba(0,0,0,0.6)] relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-96 h-36 bg-[#bf953f]/5 blur-3xl pointer-events-none" />
+        
+        <div className="relative z-10">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#bf953f]/10 border border-[#bf953f]/30 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(191,149,63,0.2)]">
+              <Sparkles className="w-5 h-5 text-[#bf953f] animate-pulse" />
+            </div>
+            <div>
+              <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2">
+                <span>Mesa de Control de Coincidencias</span>
+              </h2>
+              <p className="text-xs text-zinc-400 mt-0.5 hidden sm:block">
+                Cruce algorítmico inteligente en tiempo real entre inventario captado y demandas activas
+              </p>
+            </div>
+          </div>
         </div>
-        <div className="grid grid-cols-2 sm:flex gap-2 w-full sm:w-auto">
-          <Button onClick={() => { refetch(); refetchBotStatus(); }} variant="outline" className="border-white/10 bg-white/5 text-white hover:bg-white/10 text-xs h-10 min-h-[40px] font-semibold">
-            Refrescar
+
+        <div className="flex items-center gap-2.5 w-full sm:w-auto relative z-10 justify-end">
+          <Button 
+            onClick={() => { refetch(); refetchBotStatus(); }} 
+            variant="outline" 
+            className="border-white/15 bg-white/5 hover:bg-white/10 hover:border-[#bf953f]/40 text-zinc-200 hover:text-white text-xs h-10 px-3.5 rounded-xl font-bold transition-all gap-1.5 cursor-pointer"
+          >
+            <RotateCcw className={`w-3.5 h-3.5 text-[#bf953f] ${isLoading ? 'animate-spin' : ''}`} />
+            <span>Refrescar</span>
           </Button>
           <Button 
             disabled={filteredMatches.length === 0}
             onClick={exportData} 
-            className="bg-[#bf953f] hover:bg-[#a67d32] text-black font-bold flex items-center justify-center gap-1.5 text-xs h-10 min-h-[40px]"
+            className="bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#bf953f] hover:brightness-110 text-black font-extrabold flex items-center justify-center gap-1.5 text-xs h-10 px-4 rounded-xl shadow-[0_0_15px_rgba(191,149,63,0.3)] transition-all cursor-pointer"
           >
-            <Download className="w-3.5 h-3.5" />
+            <Download className="w-3.5 h-3.5 stroke-[2.5]" />
             <span>Exportar CSV</span>
           </Button>
         </div>
@@ -3576,7 +3595,7 @@ export default function AdminMatches() {
 
       {/* KPI Stats Ribbon */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-black/60 border border-[#bf953f]/30 p-3.5 rounded-2xl flex items-center gap-3">
+        <div className="bg-gradient-to-b from-[#16161b] to-black/80 border border-[#bf953f]/30 p-3.5 rounded-2xl flex items-center gap-3 shadow-md hover:border-[#bf953f]/60 transition-all">
           <div className="w-10 h-10 rounded-xl bg-[#bf953f]/10 border border-[#bf953f]/30 flex items-center justify-center shrink-0">
             <Sparkles className="w-5 h-5 text-[#bf953f]" />
           </div>
@@ -3594,12 +3613,12 @@ export default function AdminMatches() {
           </div>
         </div>
 
-        <div className="bg-black/60 border border-emerald-500/30 p-3.5 rounded-2xl flex items-center gap-3">
+        <div className="bg-gradient-to-b from-[#0f1f17] to-black/80 border border-emerald-500/30 p-3.5 rounded-2xl flex items-center gap-3 shadow-md hover:border-emerald-500/60 transition-all">
           <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center shrink-0">
             <CheckCircle2 className="w-5 h-5 text-emerald-400" />
           </div>
           <div>
-            <p className="text-[10px] uppercase tracking-wider text-zinc-400 font-bold">Matches Perfectos (≥95%)</p>
+            <p className="text-[10px] uppercase tracking-wider text-emerald-400/80 font-bold">Matches Perfectos (≥95%)</p>
             <p className="text-lg sm:text-xl font-black text-emerald-400">
               {isLoading ? (
                 <span className="animate-pulse text-zinc-500 font-medium text-sm">...</span>
@@ -3612,12 +3631,12 @@ export default function AdminMatches() {
           </div>
         </div>
 
-        <div className="bg-black/60 border border-amber-500/30 p-3.5 rounded-2xl flex items-center gap-3">
+        <div className="bg-gradient-to-b from-[#1d170a] to-black/80 border border-amber-500/30 p-3.5 rounded-2xl flex items-center gap-3 shadow-md hover:border-amber-500/60 transition-all">
           <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0">
             <Building2 className="w-5 h-5 text-[#bf953f]" />
           </div>
           <div>
-            <p className="text-[10px] uppercase tracking-wider text-[#bf953f] font-bold">Total Ofertas</p>
+            <p className="text-[10px] uppercase tracking-wider text-amber-400/80 font-bold">Total Ofertas</p>
             <p className="text-lg sm:text-xl font-black text-[#bf953f]">
               {isBotStatusLoading ? (
                 <span className="animate-pulse text-zinc-500 font-medium text-sm">...</span>
@@ -3630,12 +3649,12 @@ export default function AdminMatches() {
           </div>
         </div>
 
-        <div className="bg-black/60 border border-cyan-500/30 p-3.5 rounded-2xl flex items-center gap-3">
+        <div className="bg-gradient-to-b from-[#0a171d] to-black/80 border border-cyan-500/30 p-3.5 rounded-2xl flex items-center gap-3 shadow-md hover:border-cyan-500/60 transition-all">
           <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center shrink-0">
             <ClipboardList className="w-5 h-5 text-cyan-400" />
           </div>
           <div>
-            <p className="text-[10px] uppercase tracking-wider text-cyan-400 font-bold">Total Demandas</p>
+            <p className="text-[10px] uppercase tracking-wider text-cyan-400/80 font-bold">Total Demandas</p>
             <p className="text-lg sm:text-xl font-black text-cyan-400">
               {isBotStatusLoading ? (
                 <span className="animate-pulse text-zinc-500 font-medium text-sm">...</span>
@@ -3649,141 +3668,237 @@ export default function AdminMatches() {
         </div>
       </div>
 
-      {/* ===== CABECERO FIJO Y FLOTANTE (STICKY SEARCH & FILTER TOOLBAR) ===== */}
-      <div className="sticky top-0 z-30 -mx-3 sm:-mx-6 lg:-mx-8 px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3 bg-[#09090c]/95 backdrop-blur-xl border-y border-[#bf953f]/30 shadow-[0_12px_35px_rgba(0,0,0,0.85)] transition-all">
-        <div className="flex flex-col gap-2.5">
-          {/* Fila Principal: Búsqueda y Acciones Rápidas */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            {/* Input de Búsqueda con Icono y Botón de Limpiar */}
+      {/* ===== BARRA DE BÚSQUEDA Y FILTROS FIJA (STICKY COMMAND TOOLBAR) ===== */}
+      <div className="sticky top-0 z-30 -mx-3 sm:-mx-6 lg:-mx-8 px-3 sm:px-6 lg:px-8 py-3 bg-[#0a0a0d]/95 backdrop-blur-xl border-y border-[#bf953f]/30 shadow-[0_12px_35px_rgba(0,0,0,0.85)] transition-all">
+        {/* VISTA COMPUTADORA (>= lg: Una sola fila continua, ultra-elegante y proporcionada) */}
+        <div className="hidden lg:flex items-center justify-between gap-3 w-full">
+          {/* Buscador */}
+          <div className="relative flex-1 min-w-[240px] max-w-[380px]">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#bf953f] pointer-events-none" />
+            <Input
+              placeholder="Buscar por barrio, asesor, teléfono..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 pr-8 bg-black/70 border-white/15 focus:border-[#bf953f] text-white placeholder-zinc-500 text-xs h-10 rounded-xl transition-all shadow-inner"
+            />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white p-1 rounded-md transition-colors cursor-pointer"
+                title="Limpiar búsqueda"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Pills de Operación Comercial (Todos, Compra/Venta, Arriendo con badges) */}
+          <div className="flex items-center gap-1 bg-black/70 border border-white/15 rounded-xl p-1 text-white h-10 shrink-0">
+            <button
+              type="button"
+              onClick={() => { setTransactionFilter('all'); setCurrentPage(1); }}
+              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                transactionFilter === 'all'
+                  ? 'bg-gradient-to-r from-[#bf953f] to-[#aa771c] text-black shadow-md font-extrabold'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <span>Todos</span>
+              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${transactionFilter === 'all' ? 'bg-black/25 text-black' : 'bg-white/10 text-zinc-400'}`}>
+                {filterCounts.all}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => { setTransactionFilter('venta'); setCurrentPage(1); }}
+              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                transactionFilter === 'venta'
+                  ? 'bg-emerald-600 text-white shadow-md font-extrabold'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/5'
+              }`}
+              title="Filtrar únicamente coincidencias de Compra (Demanda) y Venta (Oferta)"
+            >
+              <span>🏷️ Compra / Venta</span>
+              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${transactionFilter === 'venta' ? 'bg-black/30 text-white' : 'bg-white/10 text-zinc-400'}`}>
+                {filterCounts.venta}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => { setTransactionFilter('arriendo'); setCurrentPage(1); }}
+              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                transactionFilter === 'arriendo'
+                  ? 'bg-blue-600 text-white shadow-md font-extrabold'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/5'
+              }`}
+              title="Filtrar únicamente coincidencias de Arriendo"
+            >
+              <span>🔑 Arriendo</span>
+              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${transactionFilter === 'arriendo' ? 'bg-black/30 text-white' : 'bg-white/10 text-zinc-400'}`}>
+                {filterCounts.arriendo}
+              </span>
+            </button>
+          </div>
+
+          {/* Filtro de Calificación */}
+          <div className="flex items-center gap-1.5 bg-black/70 border border-white/15 rounded-xl px-3 text-white h-10 text-xs shrink-0">
+            <SlidersHorizontal className="w-3.5 h-3.5 text-[#bf953f] shrink-0" />
+            <span className="text-zinc-400 text-[11px] shrink-0">Filtro:</span>
+            <select
+              value={minScore}
+              onChange={(e) => setMinScore(e.target.value)}
+              className="bg-transparent border-none text-white focus:ring-0 text-xs font-semibold cursor-pointer outline-none"
+            >
+              <option className="bg-[#0c0c0e]" value="80">⚡ Todos (80% - 100%)</option>
+              <option className="bg-[#0c0c0e]" value="80_94">⚡ Aprox. (80% - 94%)</option>
+              <option className="bg-[#0c0c0e]" value="95">🎯 Perfectos (95% - 100%)</option>
+            </select>
+          </div>
+
+          {/* Ver Por Página */}
+          <div className="flex items-center gap-1.5 bg-black/70 border border-white/15 rounded-xl px-3 text-white h-10 text-xs shrink-0">
+            <span className="text-zinc-400 text-[11px] shrink-0">Ver:</span>
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+              className="bg-transparent border-none text-white focus:ring-0 text-xs font-semibold cursor-pointer outline-none"
+            >
+              <option className="bg-[#0c0c0e]" value="10">10 por pág.</option>
+              <option className="bg-[#0c0c0e]" value="25">25 por pág.</option>
+              <option className="bg-[#0c0c0e]" value="50">50 por pág.</option>
+              <option className="bg-[#0c0c0e]" value="100">100 por pág.</option>
+            </select>
+          </div>
+
+          {/* Acciones Rápidas Disponibles en Modo Sticky */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={() => { refetch(); refetchBotStatus(); }}
+              className="h-10 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 text-zinc-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
+              title="Refrescar coincidencias"
+            >
+              <RotateCcw className={`w-3.5 h-3.5 text-[#bf953f] ${isLoading ? 'animate-spin' : ''}`} />
+              <span className="text-[11px]">Refrescar</span>
+            </button>
+
+            <button
+              disabled={filteredMatches.length === 0}
+              onClick={exportData}
+              className="h-10 px-3 rounded-xl bg-[#bf953f] hover:bg-[#a67d32] text-black font-extrabold text-xs flex items-center gap-1.5 shadow-[0_0_12px_rgba(191,149,63,0.3)] transition-all cursor-pointer"
+              title="Exportar reporte CSV"
+            >
+              <Download className="w-3.5 h-3.5 stroke-[2.5]" />
+              <span className="text-[11px]">CSV</span>
+            </button>
+          </div>
+        </div>
+
+        {/* VISTA MÓVIL Y TABLET (< lg: Adaptada limpiamente en 2 niveles sin desbordes) */}
+        <div className="flex lg:hidden flex-col gap-2.5">
+          <div className="flex items-center gap-2">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#bf953f] pointer-events-none" />
               <Input
-                placeholder="Buscar por barrio, nombre, descripción o teléfono..."
+                placeholder="Buscar por barrio, asesor..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 pr-8 bg-black/60 border-white/15 focus:border-[#bf953f] text-white placeholder-zinc-500 text-xs sm:text-sm h-10 rounded-xl transition-all"
+                className="pl-9 pr-8 bg-black/70 border-white/15 focus:border-[#bf953f] text-white placeholder-zinc-500 text-xs h-10 rounded-xl"
               />
               {searchTerm && (
                 <button
                   type="button"
                   onClick={() => setSearchTerm('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white p-1 rounded-md transition-colors cursor-pointer"
-                  title="Limpiar búsqueda"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white p-1"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
 
-            {/* Contador Compacto de Resultados */}
-            <div className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-bold text-[#fcf6ba] shrink-0">
-              <Sparkles className="w-3.5 h-3.5 text-[#bf953f]" />
-              <span>{filteredMatches.length}</span>
-              <span className="text-zinc-400 font-normal">matches</span>
-            </div>
-
-            {/* Botón Refrescar Rápido */}
-            <Button
+            <button
               onClick={() => { refetch(); refetchBotStatus(); }}
-              variant="outline"
-              size="sm"
-              className="border-white/15 bg-white/5 hover:bg-white/10 text-zinc-200 hover:text-white h-10 px-3 rounded-xl shrink-0 text-xs font-semibold gap-1.5 cursor-pointer"
-              title="Actualizar coincidencias y estado"
+              className="h-10 w-10 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 text-zinc-300 hover:text-white flex items-center justify-center shrink-0"
+              title="Refrescar"
             >
               <RotateCcw className={`w-3.5 h-3.5 text-[#bf953f] ${isLoading ? 'animate-spin' : ''}`} />
-              <span className="hidden md:inline">Refrescar</span>
-            </Button>
+            </button>
 
-            {/* Botón Exportar CSV */}
-            <Button
+            <button
               disabled={filteredMatches.length === 0}
               onClick={exportData}
-              size="sm"
-              className="bg-[#bf953f] hover:bg-[#a67d32] text-black font-extrabold h-10 px-3 rounded-xl shrink-0 text-xs flex items-center gap-1.5 shadow-[0_0_12px_rgba(191,149,63,0.3)] cursor-pointer"
-              title="Descargar reporte en CSV"
+              className="h-10 px-2.5 rounded-xl bg-[#bf953f] hover:bg-[#a67d32] text-black font-extrabold flex items-center justify-center gap-1 text-xs shrink-0"
+              title="Exportar CSV"
             >
               <Download className="w-3.5 h-3.5" />
-              <span className="hidden lg:inline">Exportar CSV</span>
-            </Button>
+              <span className="text-[10px]">CSV</span>
+            </button>
           </div>
 
-          {/* Segunda Fila: Filtros de Operación, Umbral de Match y Paginación */}
-          <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
-            {/* Filtro Operación Comercial: Compra / Venta vs Arriendo con Pills */}
-            <div className="flex items-center gap-1 bg-black/60 border border-white/15 rounded-xl p-1 text-white h-9 shrink-0 overflow-x-auto scrollbar-none w-full sm:w-auto justify-between sm:justify-start">
+          <div className="flex items-center justify-between gap-2 overflow-x-auto scrollbar-none pb-0.5">
+            <div className="flex items-center gap-1 bg-black/70 border border-white/15 rounded-xl p-1 text-white h-9 shrink-0">
               <button
                 type="button"
                 onClick={() => { setTransactionFilter('all'); setCurrentPage(1); }}
-                className={`px-3 py-1 text-[11px] sm:text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
+                className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1 ${
                   transactionFilter === 'all'
                     ? 'bg-gradient-to-r from-[#bf953f] to-[#aa771c] text-black shadow-md font-extrabold'
-                    : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                    : 'text-zinc-400 hover:text-white'
                 }`}
               >
                 <span>Todos</span>
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${transactionFilter === 'all' ? 'bg-black/25 text-black' : 'bg-white/10 text-zinc-400'}`}>
-                  {filterCounts.all}
-                </span>
+                <span className="text-[9px] px-1 rounded-full bg-black/25">{filterCounts.all}</span>
               </button>
               <button
                 type="button"
                 onClick={() => { setTransactionFilter('venta'); setCurrentPage(1); }}
-                className={`px-3 py-1 text-[11px] sm:text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1 ${
                   transactionFilter === 'venta'
                     ? 'bg-emerald-600 text-white shadow-md font-extrabold'
-                    : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                    : 'text-zinc-400 hover:text-white'
                 }`}
-                title="Filtrar únicamente coincidencias de Compra (Demanda) y Venta (Oferta)"
               >
-                <span>🏷️ Compra / Venta</span>
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${transactionFilter === 'venta' ? 'bg-black/30 text-white' : 'bg-white/10 text-zinc-400'}`}>
-                  {filterCounts.venta}
-                </span>
+                <span>🏷️ Venta</span>
+                <span className="text-[9px] px-1 rounded-full bg-black/30">{filterCounts.venta}</span>
               </button>
               <button
                 type="button"
                 onClick={() => { setTransactionFilter('arriendo'); setCurrentPage(1); }}
-                className={`px-3 py-1 text-[11px] sm:text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1 ${
                   transactionFilter === 'arriendo'
                     ? 'bg-blue-600 text-white shadow-md font-extrabold'
-                    : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                    : 'text-zinc-400 hover:text-white'
                 }`}
-                title="Filtrar únicamente coincidencias de Arriendo"
               >
                 <span>🔑 Arriendo</span>
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${transactionFilter === 'arriendo' ? 'bg-black/30 text-white' : 'bg-white/10 text-zinc-400'}`}>
-                  {filterCounts.arriendo}
-                </span>
+                <span className="text-[9px] px-1 rounded-full bg-black/30">{filterCounts.arriendo}</span>
               </button>
             </div>
 
-            {/* Controles Derecha: Filtro de Calificación y Ver Por Página */}
-            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-              {/* Score Dropdown */}
-              <div className="flex items-center gap-1.5 bg-black/60 border border-white/15 rounded-xl px-2.5 text-white h-9 text-xs shrink-0 flex-1 sm:flex-initial">
-                <SlidersHorizontal className="w-3.5 h-3.5 text-[#bf953f] shrink-0" />
-                <span className="text-zinc-400 shrink-0 hidden md:inline text-[11px]">Filtro:</span>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <div className="flex items-center bg-black/70 border border-white/15 rounded-xl px-2 h-9 text-xs">
                 <select
                   value={minScore}
                   onChange={(e) => setMinScore(e.target.value)}
-                  className="bg-transparent border-none text-white focus:ring-0 text-[11px] sm:text-xs font-semibold cursor-pointer outline-none w-full"
+                  className="bg-transparent border-none text-white focus:ring-0 text-[11px] font-semibold cursor-pointer outline-none"
                 >
-                  <option className="bg-[#0c0c0e]" value="80">⚡ Todos (80% - 100%)</option>
-                  <option className="bg-[#0c0c0e]" value="80_94">⚡ Aprox. (80% - 94%)</option>
-                  <option className="bg-[#0c0c0e]" value="95">🎯 Perfectos (95% - 100%)</option>
+                  <option className="bg-[#0c0c0e]" value="80">⚡ 80%-100%</option>
+                  <option className="bg-[#0c0c0e]" value="80_94">⚡ 80%-94%</option>
+                  <option className="bg-[#0c0c0e]" value="95">🎯 ≥95%</option>
                 </select>
               </div>
 
-              {/* Page Size Dropdown */}
-              <div className="flex items-center gap-1 bg-black/60 border border-white/15 rounded-xl px-2.5 text-white h-9 text-xs shrink-0">
-                <span className="text-zinc-400 shrink-0 text-[11px]">Ver:</span>
+              <div className="flex items-center bg-black/70 border border-white/15 rounded-xl px-2 h-9 text-xs">
                 <select
                   value={pageSize}
                   onChange={(e) => {
                     setPageSize(Number(e.target.value));
                     setCurrentPage(1);
                   }}
-                  className="bg-transparent border-none text-white focus:ring-0 text-[11px] sm:text-xs font-semibold cursor-pointer outline-none"
+                  className="bg-transparent border-none text-white focus:ring-0 text-[11px] font-semibold cursor-pointer outline-none"
                 >
                   <option className="bg-[#0c0c0e]" value="10">10</option>
                   <option className="bg-[#0c0c0e]" value="25">25</option>
@@ -6129,21 +6244,25 @@ export default function AdminMatches() {
         <div className="text-[#bf953f] font-bold">{VECY_VERSION_LABEL}</div>
       </div>
 
-      {/* Botón Flotante Volver Arriba */}
-      <AnimatePresence>
-        {showScrollTop && (
+      {/* Botón Flotante Volver Arriba (Montado en document.body para permanecer 100% fijo al viewport) */}
+      {typeof document !== 'undefined' && showScrollTop && createPortal(
+        <AnimatePresence>
           <motion.button
             initial={{ opacity: 0, scale: 0.8, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.8, y: 20 }}
+            whileHover={{ scale: 1.06 }}
+            whileTap={{ scale: 0.94 }}
             onClick={scrollToTop}
-            className="fixed bottom-6 right-6 z-50 p-3.5 rounded-full bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#bf953f] text-black shadow-[0_4px_25px_rgba(191,149,63,0.6)] hover:scale-110 active:scale-95 transition-all flex items-center justify-center cursor-pointer border-2 border-black/20"
-            title="Volver al inicio"
+            className="fixed bottom-6 right-6 z-[99999] flex items-center gap-2 px-4 py-3 rounded-full bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#bf953f] text-black font-extrabold text-xs shadow-[0_8px_30px_rgba(191,149,63,0.7)] border-2 border-black/30 cursor-pointer backdrop-blur-md transition-all hover:shadow-[0_12px_35px_rgba(191,149,63,0.9)]"
+            title="Volver al inicio de la página"
           >
-            <ArrowUp className="w-5 h-5 text-black stroke-[3]" />
+            <ArrowUp className="w-4 h-4 text-black stroke-[3]" />
+            <span className="hidden sm:inline tracking-wider uppercase text-[11px] font-black text-black">Volver Arriba</span>
           </motion.button>
-        )}
-      </AnimatePresence>
+        </AnimatePresence>,
+        document.body
+      )}
     </div>
   );
 }

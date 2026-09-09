@@ -163,7 +163,30 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.18 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.19 — Septiembre 2026
+
+### Novedades v31.19 (Rediseño Ejecutivo de Cabecero en Computadora, Barra de Comandos en 1 Fila y Botón Flotante Permanente con React Portal):
+- **Diagnóstico y Solución de Comportamiento del Botón Flotante de Retorno al Inicio**:
+  1) **Causa Raíz de Desplazamiento del Botón con el Scroll**:
+     - En `client/src/pages/Admin.tsx`, el contenedor `<main>` tenía `className="... animate-fade-in"`.
+     - Según la especificación W3C de CSS Transforms, `transform: translateY(0)` con `animation-fill-mode: both` crea un nuevo bloque contenedor de coordenadas para elementos `position: fixed`, atrapándolos dentro de `<main>` en lugar del viewport del navegador. Al hacer scroll, el botón se desplazaba con el contenido y desaparecía.
+  2) **Montaje Directo en `document.body` vía `createPortal`**:
+     - Encapsulado el botón flotante en `createPortal(..., document.body)` con `fixed bottom-6 right-6 z-[99999]`.
+     - Eliminado `animate-fade-in` del elemento `<main>` para evitar cualquier distorsión de coordenadas.
+     - El botón permanece 100% visible, fijo y anclado en la esquina inferior derecha al descender 180px, sin importar la velocidad o profundidad del scroll.
+     - Al pulsarlo, ejecuta `scrollToTop` coordinado sobre `<main>`, `window` y `document.documentElement` con animación suave (`behavior: 'smooth'`).
+- **Rediseño Ejecutivo del Cabecero de Coincidencias (`AdminMatches.tsx`)**:
+  1) **Barra de Comandos Sticky Continua en 1 Sola Fila en Computadora (`hidden lg:flex`)**:
+     - Agrupados en una sola línea elegante de 48px: Buscador expandible con borrado rápido `X`, segmented pills con conteos en vivo (`Todos 98`, `Compra/Venta 74`, `Arriendo 24`), selector de score (`⚡ 80%-100%`, `80%-94%`, `🎯 ≥95%`), selector de registros por página y botones de acción rápida (`Refrescar` y `CSV`).
+     - Cero duplicidad de botones; maximiza el espacio vertical útil para visualizar las fichas de coincidencias sin interrupciones.
+  2) **Adaptación Móvil y Tablet Impecable (`flex lg:hidden`)**:
+     - Dos filas táctiles limpias: Fila 1 para búsqueda + refrescar + CSV; Fila 2 para pills deslizables de operación + umbral + paginación.
+  3) **Header Maestro y Ribbon KPI con Estética de Alta Gama**:
+     - Paneles oscuros con bordes brillantes y códigos de color corporativos (dorado, esmeralda, ámbar, cian).
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.18 — Septiembre 2026
 
 ### Novedades v31.18 (Solución Definitiva a Fallo de Cron de JanIA, Cabecero Fijo y Flotante en Coincidencias y Botón Volver Arriba):
 - **Diagnóstico y Corrección de Publicaciones Programadas de JanIA (Caso Martes 11:00 AM / 11:30 AM en Grupo 2 y Canal)**:

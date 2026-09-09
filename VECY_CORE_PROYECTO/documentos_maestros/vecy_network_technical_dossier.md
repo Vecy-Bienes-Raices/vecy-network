@@ -322,6 +322,29 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.19 — Septiembre 2026
+
+#### 📌 REDISEÑO EJECUTIVO DE CABECERO EN COMPUTADORA, BARRA DE COMANDOS EN 1 FILA Y BOTÓN FLOTANTE PERMANENTE CON REACT PORTAL
+
+**Problemas identificados:**
+1. **Desplazamiento del Botón Flotante con el Scroll**:
+   - `<main>` en `Admin.tsx` mantenía `animate-fade-in` (`transform: translateY(0)` persistente por `animation-fill-mode: both`), lo que según la especificación W3C convierte al contenedor en el nuevo contexto de apilamiento para elementos `position: fixed`.
+   - Por esta razón, el botón flotante se desplazaba hacia arriba junto con el contenido al hacer scroll y se perdía de vista.
+2. **Distribución Fragmentada en Pantallas de Computadora**:
+   - La barra de búsqueda y filtros previa se mostraba en dos filas apiladas en desktop, con botones redundantes y ocupando demasiado espacio vertical en la pantalla.
+
+**Solución aplicada:**
+- **Montaje Directo en `document.body` vía `createPortal` (`AdminMatches.tsx`)**:
+  - El botón flotante de retorno al inicio se teletransporta directamente al nodo raíz `document.body`, blindándolo contra cualquier propiedad `transform` o `overflow` de los contenedores intermedios.
+  - Se eliminó la clase `animate-fade-in` de `<main>` en `Admin.tsx`.
+  - El botón permanece 100% fijo y flotante en `fixed bottom-6 right-6 z-[99999]`, visible al desplazarse más de 180px y ejecutando scroll suave hasta la cima en un clic.
+- **Rediseño de la Barra de Comandos Fija (Sticky Command Toolbar)**:
+  - En computadora (`hidden lg:flex`), la barra se unifica en una sola fila continua de 48px: Buscador expandible + Pills de operación comercial (`Todos 98`, `Compra/Venta 74`, `Arriendo 24`) + Filtro de Score + Selector de paginación + Botones compactos de `Refrescar` y `CSV`.
+  - En móviles (`flex lg:hidden`), se adapta limpiamente en dos filas ergonómicas para dedos sin desbordes horizontales.
+  - Header maestro y ribbon KPI renovados con estética de alta gama corporativa.
+
+---
+
 ### 🔖 v31.18 — Septiembre 2026
 
 #### 📌 SOLUCIÓN DEFINITIVA A FALLO DE CRON DE JANIA, CABECERO FIJO Y FLOTANTE EN COINCIDENCIAS Y BOTÓN VOLVER ARRIBA

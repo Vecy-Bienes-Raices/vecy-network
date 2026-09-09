@@ -50,7 +50,49 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.18 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.19 — Septiembre 2026
+
+### 🗓️ Sesión: Martes 8 de Septiembre de 2026 — 20:45 a 20:55 (Hora Colombia UTC-5)
+**Versión**: `v31.19` | **Ambiente**: Producción VPS (`13.140.149.144`) + Mesa de Control Admin Panel (`AdminMatches.tsx`) + Layout Principal (`Admin.tsx`) + GitHub (`main`)
+
+#### 🎯 Solicitud de Eduardo A. Rivera:
+"Pues la verdad el diseño que dejaste para computadora no me gusto mucho además el botón flotante de regreso al principio no se queda flotante y fijo sino que se va al darle scroll a la página. No se si puedas proponer o hacer algo mejor."
+
+#### 🔬 Diagnóstico Técnico Profundo:
+1. **Causa Raíz del Desplazamiento del Botón Flotante (`position: fixed`)**:
+   - En `client/src/pages/Admin.tsx` (línea 417), el contenedor `<main>` poseía la clase CSS `animate-fade-in`.
+   - Según el estándar W3C de CSS (CSS Transforms Level 1 §2), cualquier elemento con `transform`, `filter` o `animation` con `animation-fill-mode: both` establece un nuevo bloque contenedor de coordenadas para todos sus descendientes `position: fixed`.
+   - Dado que el botón `fixed bottom-6 right-6` estaba renderizado dentro del árbol de componentes de `<AdminMatches>`, su posicionamiento quedó atrapado dentro de `<main>`, provocando que al hacer scroll, el botón se desplazara verticalmente y saliera de la pantalla.
+2. **Causa del Descontento en la Vista de Computadora (Desktop)**:
+   - La implementación previa fraccionó la barra de búsqueda y filtros en dos filas apiladas en pantallas de escritorio, duplicando botones de acción (`Refrescar` y `Exportar CSV`) y consumiendo innecesariamente espacio vertical útil para la inspección de coincidencias.
+
+#### 🛠️ Acciones Técnicas Ejecutadas:
+1. **Montaje Universal mediante Portal (`createPortal` en `document.body`)**:
+   - El botón flotante de regreso al principio se encapsuló en `createPortal(..., document.body)` con `fixed bottom-6 right-6 z-[99999]`. Al montarse directamente sobre el nodo raíz del documento, es matemáticamente imposible que se desplace o desaparezca con el scroll.
+   - Mejorado el disparador de scroll evaluando tanto `<main>` como `window` y `document.documentElement` (`scrollTop > 180px`).
+   - Botón con diseño ejecutivo dorado de alto impacto: icono de flecha hacia arriba con etiqueta `VOLVER ARRIBA` en desktop y círculo táctil en móvil, con micro-animaciones Framer Motion (`whileHover={{ scale: 1.06 }}`, `whileTap={{ scale: 0.94 }}`).
+2. **Erradicación del Contexto de Transformación en `<main>` (`Admin.tsx`)**:
+   - Eliminada la clase `animate-fade-in` de `<main>` en `client/src/pages/Admin.tsx` para garantizar que no existan propiedades de transformación residuales que afecten el renderizado de elementos sticky y fixed.
+3. **Rediseño Integral de la Mesa de Control en Computadora y Celular**:
+   - **Header Maestro**: Fondo degradado oscuro con acento dorado sutil, icono pulsante `Sparkles`, subtítulo explicativo y botones directos de acción (`Refrescar` y `Exportar CSV`).
+   - **KPI Ribbon Refinado**: Tarjetas con bordes brillantes dorados, esmeralda, ámbar y cian, e indicadores de estado.
+   - **Barra de Comandos Sticky en 1 Sola Fila Continua en Computadora (`hidden lg:flex`)**:
+     - Buscador inteligente expandible con botón de borrado rápido `X`.
+     - Segmented pills táctiles con conteos en vivo: `Todos (98)`, `🏷️ Compra / Venta (74)` y `🔑 Arriendo (24)`.
+     - Selector de Umbral de Calificación (`⚡ 80%-100%`, `80%-94%`, `🎯 ≥95%`).
+     - Selector de cantidad de registros por página (`10`, `25`, `50`, `100`).
+     - Botones compactos de `Refrescar` y `CSV` integrados, manteniendo todas las herramientas disponibles sin importar qué tan abajo se navegue.
+   - **Vista Móvil y Tablet (`flex lg:hidden`)**: Adaptación limpia en dos filas proporcionadas sin desbordes horizontales ni botones amontonados.
+
+#### 🚀 Validación Empírica y Despliegue:
+- `npm run check` (TypeScript): 0 errores.
+- `npm run build`: Bundles generados limpiamente (client en 19.81s, server en 82ms).
+- Versionado: Actualizado a `v31.19` en `shared/const.ts` y `package.json`.
+- Desplegado a GitHub (`main`) y VPS (`13.140.149.144`) con reinicio de servicio PM2 `jania-server`.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.18 — Septiembre 2026
 
 ### 🗓️ Sesión: Martes 8 de Septiembre de 2026 — 20:15 a 20:30 (Hora Colombia UTC-5)
 **Versión**: `v31.18` | **Ambiente**: Producción VPS (`13.140.149.144`) + Mesa de Cotejo Admin Panel (`AdminMatches.tsx`) + Orquestador Cron (`cronService.ts`) + GitHub (`main`)

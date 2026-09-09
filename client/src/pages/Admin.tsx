@@ -414,7 +414,7 @@ export default function Admin() {
         </div>
 
         {/* Content */}
-        <main className="flex-1 overflow-y-auto p-3 sm:p-6 lg:p-8 bg-background animate-fade-in">
+        <main className="flex-1 overflow-y-auto p-3 sm:p-6 lg:p-8 bg-background">
           {renderContent()}
         </main>
       </div>
